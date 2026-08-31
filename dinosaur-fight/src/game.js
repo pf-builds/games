@@ -275,7 +275,7 @@
     return {
       type, x, y, vx: type === "walker" ? -c.speed : 0, vy: 0,
       hp: c.hp, facing: -1, state: "idle", t: 0, cd: 1 + Math.random(),
-      flashT: 0, dead: false, animT: Math.random() * 2,
+      flashT: 0, hitCd: 0, dead: false, animT: Math.random() * 2,
       // boss extras
       chargeDir: -1, fanT: c.fanCooldown || 0,
     };
@@ -568,7 +568,7 @@
     for (const e of S.enemies) {
       if (e.dead) continue;
       const ed = enemyDims(e), c = CFG.enemies[e.type];
-      e.animT += dt; e.flashT = Math.max(0, e.flashT - dt);
+      e.animT += dt; e.flashT = Math.max(0, e.flashT - dt); e.hitCd = Math.max(0, e.hitCd - dt);
       const dx = pl.x - e.x, adx = Math.abs(dx), ady = Math.abs(pl.y - e.y);
 
       if (e.type === "walker") {
@@ -620,14 +620,18 @@
 
       if (e.type === "boss") {
         if (e.state === "dizzy") bossHit(e); // he's helpless — any contact counts for little hands
-        else {
-          if (stomping) {
-            // bouncing off his helmet is safe — it teaches "wait until he's dizzy"
-            pl.vy = -CFG.player.stompBounce;
-            AU.ding(); P.ding(pl.x, e.y - enemyDims(e).h);
-          } else if (pl.size === "big") { pl.vx = -Math.sign(e.x - pl.x) * 120; } // shove apart, no damage
-          else hurt(e.x, c.touchDamage);
-        }
+        else if (pl.size === "big") {
+          // a T-rex mauls the boss on ANY contact — rate-limited so it's a brawl, not a melt
+          if (e.hitCd <= 0) {
+            bossHit(e);
+            e.hitCd = 1.2;
+            pl.vx = -Math.sign(e.x - pl.x) * 160; // rebound to re-approach
+          } else pl.vx = -Math.sign(e.x - pl.x) * 120;
+        } else if (stomping) {
+          // bouncing off his helmet is safe — it teaches "wait until he's dizzy"
+          pl.vy = -CFG.player.stompBounce;
+          AU.ding(); P.ding(pl.x, e.y - enemyDims(e).h);
+        } else hurt(e.x, c.touchDamage);
       } else if (pl.pounceT > 0 || stomping || pl.size === "big") {
         killEnemy(e);
         if (stomping) { pl.vy = -CFG.player.stompBounce; pl.squash = 0; }
