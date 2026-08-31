@@ -39,7 +39,7 @@ button:disabled { opacity: .42; filter: saturate(.3); cursor: default; }
 .howto { color: #9AACC4; font-size: .88rem; text-align: center; max-width: 26rem; }
 
 /* Game layout */
-#screen-game { justify-content: center; gap: .5rem; padding-top: max(.8rem, env(safe-area-inset-top)); }
+#screen-game { justify-content: flex-start; gap: .5rem; padding-top: max(.8rem, env(safe-area-inset-top)); }
 .hud {
   width: min(96vw, 44rem); display: flex; align-items: center; gap: .8rem;
   font-size: .95rem; letter-spacing: .05em;
@@ -66,7 +66,10 @@ button:disabled { opacity: .42; filter: saturate(.3); cursor: default; }
 .bb-track::after { content: ""; position: absolute; inset: 0;
   background: repeating-linear-gradient(90deg, transparent 0 calc(25% - 1px), rgba(0,0,0,.6) calc(25% - 1px) 25%); }
 
-#arena-wrap { width: min(96vw, 88dvh, 56rem); height: min(96vw, 74dvh, 56rem); display: flex; align-items: center; justify-content: center; }
+/* HUD and shop are fixed; the arena takes whatever height remains and the
+   canvas sizes itself to the smaller dimension — resizing can never push the
+   HUD off-screen. */
+#arena-wrap { flex: 1 1 auto; min-height: 0; width: min(96vw, 56rem); display: flex; align-items: center; justify-content: center; }
 #arena { border-radius: 12px; }
 
 body:not(.in-game) #screen-game { display: flex; position: absolute; inset: 0; z-index: 1; }
@@ -174,7 +177,7 @@ body.danger::after {
   #hud-wave { grid-area: wave; } .gold { grid-area: gold; justify-self: end; }
   .hud .btn-sound { grid-area: sound; } .hud #btn-quit { grid-area: quit; }
   .hpbar { grid-area: hp; }
-  #arena-wrap { width: min(96vw, 52dvh); height: min(96vw, 52dvh); }
+  #arena-wrap { width: 96vw; }
 }
 @media (prefers-reduced-motion: reduce) {
   body.danger::after, #boss-banner.show { animation: none; opacity: 1; }
