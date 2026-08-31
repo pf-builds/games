@@ -1,0 +1,21 @@
+{
+  "board": 6,
+  "tiers": {
+    "easy":   { "label": "Easy",   "count": 20, "parMin": 4,  "parMax": 8,  "vehiclesMin": 6,  "vehiclesMax": 9,  "accent": "#5CB85C" },
+    "medium": { "label": "Medium", "count": 20, "parMin": 9,  "parMax": 13, "vehiclesMin": 8,  "vehiclesMax": 12, "accent": "#4C86E8" },
+    "hard":   { "label": "Hard",   "count": 20, "parMin": 14, "parMax": 99, "vehiclesMin": 10, "vehiclesMax": 13, "accent": "#E4573D" }
+  },
+  "endlessTier": "medium",
+  "generator": { "attemptsPerLevel": 200, "bfsStateCap": 50000, "seed": 20260831, "fallbackParSlack": 2, "hardenIters": 80 },
+  "palette": {
+    "page": "#EFE6D2",
+    "grass": "#8CC063",
+    "sand": "#E8DCC0",
+    "curb": "#CFCABB",
+    "board": "#4A4E57",
+    "lane": "#F5F2E8",
+    "accent": "#F6A93F",
+    "ink": "#2A2E35",
+    "vehicles": ["#F6C93F", "#4C86E8", "#E4573D", "#5CB85C", "#9B59D0", "#F08A3C", "#3EC1C9"]
+  }
+}

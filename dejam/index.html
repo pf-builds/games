@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DeJam — slide the traffic, free the taxi</title>
+<meta name="description" content="A free sliding-block traffic puzzle. 30 levels plus endless mode. Slide the cars, clear a path, drive the taxi out.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@600;700;800&display=swap">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%23F6C93F'/><rect x='18' y='38' width='64' height='24' rx='8' fill='%232A2E35'/></svg>">
+</head>
+<body>
+
+<div class="screen active" id="screen-loading">
+  <div class="logo">De<span>Jam</span></div>
+  <p id="loadmsg">Starting up…</p>
+  <div id="loadbar"><div id="loadbar-fill"></div></div>
+</div>
+
+<div class="screen" id="screen-title">
+  <button class="btn-sound corner-sound" aria-label="Toggle sound">🔊</button>
+  <div class="logo">De<span>Jam</span></div>
+  <p class="tagline">Slide the traffic. Free the taxi.</p>
+  <canvas id="hero" aria-hidden="true"></canvas>
+  <div class="menu">
+    <button class="primary" id="btn-play">Play</button>
+    <button id="btn-levels">Levels</button>
+    <button id="btn-endless">Endless</button>
+  </div>
+  <p class="howto">Drag cars out of the way — get the yellow taxi to the glowing exit.</p>
+</div>
+
+<div class="screen" id="screen-levels">
+  <div class="panel">
+    <h2>Levels</h2>
+    <div id="tier-tabs"></div>
+    <div id="tier-info"></div>
+    <div id="level-grid"></div>
+    <button id="btn-back-title">Back</button>
+  </div>
+</div>
+
+<div class="screen" id="screen-game">
+  <div class="hud">
+    <button id="btn-back-game" aria-label="Back">←</button>
+    <div class="mid">
+      <div id="hud-level">Level</div>
+      <div id="hud-moves">Moves 0 · Par 0</div>
+    </div>
+    <button class="btn-sound" aria-label="Toggle sound">🔊</button>
+  </div>
+  <div id="board-wrap"><canvas id="board"></canvas></div>
+  <div class="toolbar">
+    <button id="btn-undo">Undo</button>
+    <button id="btn-reset">Reset</button>
+    <button id="btn-new-endless" style="display:none">New puzzle</button>
+  </div>
+</div>
+
+<div id="win-overlay">
+  <div class="win-card">
+    <div id="win-title">Solved!</div>
+    <div id="win-stars"></div>
+    <div id="win-stats"></div>
+    <div id="win-records">
+      <div class="name-row">
+        <label for="gamer-name">Name</label>
+        <input id="gamer-name" maxlength="10" autocomplete="off" spellcheck="false">
+      </div>
+      <ol id="record-list"></ol>
+    </div>
+    <button class="primary" id="btn-next">Next level</button>
+    <button id="btn-replay">Replay</button>
+    <button id="btn-win-menu">Level select</button>
+  </div>
+</div>
+
+<script src="src/rng.js"></script>
+<script src="src/audio.js"></script>
+<script src="src/generator.js"></script>
+<script src="src/game.js"></script>
+</body>
+</html>
