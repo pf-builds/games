@@ -94,6 +94,7 @@
     S.enemies = []; S.shots = []; S.rings = []; S.queue = [];
     S.fireCd = 0; S.novaCd = 0; S.shake = 0; S.timeScale = 1;
     S.flash = 0; S.flashWhite = 0; S.shotIdx = 0;
+    S.turrets = [{ a: 0, muzzle: 0 }];
     S.bossRef = null; S.over = null; S.endless = false;
     hideBossUi();
     particles = VK.Particles(cfg.fx.particleCap);
@@ -441,53 +442,56 @@
     }
     S.enemies = S.enemies.filter((e) => !e.dead);
 
-    // tower fire
+    // tower fire — one visible barrel per Multi shot, each tracking its own target
     S.fireCd -= pdt;
-    let target = null, bestD = st.range;
+    const nShots = st.multi ? st.multi.shots : 1;
+    while (S.turrets.length < nShots) {
+      const base = S.turrets[S.turrets.length - 1];
+      S.turrets.push({ a: (base ? base.a : 0) + 0.6, muzzle: 0 });
+    }
+    if (S.turrets.length > nShots) S.turrets.length = nShots;
+    const inRange = [];
     for (const e of S.enemies) {
       const d = Math.hypot(e.x - cx, e.y - cy);
-      if (d < bestD) { bestD = d; target = e; }
+      if (d < st.range) inRange.push({ e, d });
     }
-    if (target && !S.over) {
-      const want = Math.atan2(target.y - cy, target.x - cx);
-      let da = want - S.turretA;
+    inRange.sort((a, b) => a.d - b.d);
+    const aimAt = (pick) => {
+      const lead = Math.hypot(pick.x - cx, pick.y - cy) / cfg.tower.projSpeed;
+      const tdx = cx - pick.x, tdy = cy - pick.y;
+      const td = Math.hypot(tdx, tdy) || 1;
+      return Math.atan2(pick.y + (tdy / td) * pick.speed * lead - cy,
+                        pick.x + (tdx / td) * pick.speed * lead - cx);
+    };
+    for (let i = 0; i < S.turrets.length; i++) {
+      const t = S.turrets[i];
+      t.muzzle = Math.max(0, t.muzzle - dt);
+      let want;
+      if (inRange.length && !S.over) want = aimAt(inRange[i % inRange.length].e);
+      else want = (i / S.turrets.length) * Math.PI * 2 + performance.now() / 4000; // idle: slow even fan
+      let da = want - t.a;
       while (da > Math.PI) da -= Math.PI * 2;
       while (da < -Math.PI) da += Math.PI * 2;
-      S.turretA += da * Math.min(1, dt * 10);
-      if (S.fireCd <= 0) {
-        S.fireCd = 1 / st.rate;
-        S.muzzle = 0.14;
-        // Multi-Target: each shot independently aims at a DIFFERENT enemy
-        // (nearest first); surplus shots round-robin back onto the list.
-        const nShots = st.multi ? st.multi.shots : 1;
-        const inRange = [];
-        for (const e of S.enemies) {
-          const d = Math.hypot(e.x - cx, e.y - cy);
-          if (d < st.range) inRange.push({ e, d });
-        }
-        inRange.sort((a, b) => a.d - b.d);
-        for (let i = 0; i < nShots; i++) {
-          const pick = inRange[i % inRange.length].e;
-          const lead = Math.hypot(pick.x - cx, pick.y - cy) / cfg.tower.projSpeed;
-          const tdx = cx - pick.x, tdy = cy - pick.y;
-          const td = Math.hypot(tdx, tdy) || 1;
-          const aimX = pick.x + (tdx / td) * pick.speed * lead;
-          const aimY = pick.y + (tdy / td) * pick.speed * lead;
-          const a = Math.atan2(aimY - cy, aimX - cx);
-          S.shots.push({
-            x: cx + Math.cos(a) * W * 0.06, y: cy + Math.sin(a) * W * 0.06,
-            vx: Math.cos(a) * cfg.tower.projSpeed, vy: Math.sin(a) * cfg.tower.projSpeed,
-            dmg: st.dmg, bomb: false, hist: [],
-            pierce: st.pierce ? st.pierce.through : 0,
-            pierceMax: st.pierce ? st.pierce.through : 0,
-            falloff: st.pierce ? st.pierce.falloff : 1,
-            hit: st.pierce ? new Set() : null
-          });
-        }
-        VK.audio.shot();
-      }
+      t.a += da * Math.min(1, dt * (inRange.length ? 10 : 2));
     }
-    S.muzzle = Math.max(0, S.muzzle - dt);
+    if (inRange.length && !S.over && S.fireCd <= 0) {
+      S.fireCd = 1 / st.rate;
+      for (let i = 0; i < S.turrets.length; i++) {
+        const t = S.turrets[i];
+        const a = aimAt(inRange[i % inRange.length].e);
+        t.a = a; t.muzzle = 0.14;
+        S.shots.push({
+          x: cx + Math.cos(a) * W * 0.06, y: cy + Math.sin(a) * W * 0.06,
+          vx: Math.cos(a) * cfg.tower.projSpeed, vy: Math.sin(a) * cfg.tower.projSpeed,
+          dmg: st.dmg, bomb: false, hist: [],
+          pierce: st.pierce ? st.pierce.through : 0,
+          pierceMax: st.pierce ? st.pierce.through : 0,
+          falloff: st.pierce ? st.pierce.falloff : 1,
+          hit: st.pierce ? new Set() : null
+        });
+      }
+      VK.audio.shot();
+    }
 
     // Bomb launcher: independent weapon on its own cooldown, seeks the thickest cluster.
     if (st.bomb && (S.phase === "wave" || S.demo) && !S.over && S.enemies.length) {
@@ -767,17 +771,22 @@
       else if (hpFrac < 0.25) strokeCol = (Math.sin(now / 90) > 0) ? P.hpLow : "#8A2A24";
       else if (hpFrac < 0.5) strokeCol = P.bomb;
       ctx.strokeStyle = strokeCol; ctx.lineWidth = 3; ctx.stroke();
-      const recoil = S.muzzle > 0.06 ? towerR * 0.16 : 0;
-      ctx.save();
-      ctx.translate(cx, cy); ctx.rotate(S.turretA);
-      ctx.fillStyle = P.tower;
-      ctx.fillRect(towerR * 0.3 - recoil, -3.5, towerR * 1.15, 7);
-      if (S.muzzle > 0) {
-        ctx.globalCompositeOperation = "lighter";
-        const ms = 20;
-        ctx.drawImage(VK.glow(P.shot, ms), towerR * 1.35 - recoil - ms, -ms, ms * 2, ms * 2);
+      for (let ti = 0; ti < S.turrets.length; ti++) {
+        const t = S.turrets[ti];
+        const recoil = t.muzzle > 0.06 ? towerR * 0.16 : 0;
+        // lateral mount offset so stacked barrels still read as separate guns
+        const mount = (ti - (S.turrets.length - 1) / 2) * Math.min(5, towerR * 0.16);
+        ctx.save();
+        ctx.translate(cx, cy); ctx.rotate(t.a); ctx.translate(0, mount);
+        ctx.fillStyle = P.tower;
+        ctx.fillRect(towerR * 0.3 - recoil, -3.5, towerR * 1.15, 7);
+        if (t.muzzle > 0) {
+          ctx.globalCompositeOperation = "lighter";
+          const ms = 20;
+          ctx.drawImage(VK.glow(P.shot, ms), towerR * 1.35 - recoil - ms, -ms, ms * 2, ms * 2);
+        }
+        ctx.restore();
       }
-      ctx.restore();
     } else {
       // crater
       ctx.beginPath(); ctx.arc(cx, cy, towerR * 1.1, 0, 7);

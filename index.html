@@ -8,43 +8,152 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@600;700;800&display=swap">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%232A2E35'/><text x='50' y='68' font-size='52' text-anchor='middle'>🕹️</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%230E1116'/><text x='50' y='68' font-size='52' text-anchor='middle'>🕹️</text></svg>">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    background: #EFE6D2; color: #2A2E35;
+    background: #0E1116; color: #E8ECF2;
     font-family: "Nunito", system-ui, sans-serif;
     min-height: 100vh; display: flex; flex-direction: column; align-items: center;
-    padding: 2.5rem 1.2rem 3rem; gap: 1.6rem;
+    padding: 0 1.2rem 3rem; overflow-x: hidden;
   }
-  h1 { font-family: "Baloo 2", sans-serif; font-size: clamp(2.2rem, 7vw, 3.2rem); font-weight: 800; }
-  h1 .pf { color: #E8A020; }
-  .sub { color: #5C5648; text-align: center; max-width: 34rem; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: 1.2rem; width: min(60rem, 94vw); }
+
+  /* ambient floating shapes */
+  .bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .bg span {
+    position: absolute; display: block; border-radius: 20%;
+    opacity: .13; filter: blur(2px);
+    animation: floaty 16s ease-in-out infinite;
+  }
+  .bg span:nth-child(1) { width: 90px; height: 90px; background: #F6C93F; top: 12%; left: 6%; animation-delay: 0s; }
+  .bg span:nth-child(2) { width: 60px; height: 60px; background: #4FD8EB; top: 65%; left: 12%; animation-delay: -4s; border-radius: 50%; }
+  .bg span:nth-child(3) { width: 120px; height: 120px; background: #B07FF0; top: 20%; right: 8%; animation-delay: -8s; }
+  .bg span:nth-child(4) { width: 70px; height: 70px; background: #FF5C7A; bottom: 12%; right: 14%; animation-delay: -12s; border-radius: 50%; }
+  .bg span:nth-child(5) { width: 50px; height: 50px; background: #5CB85C; bottom: 30%; left: 45%; animation-delay: -6s; }
+  @keyframes floaty {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-46px) rotate(14deg); }
+  }
+
+  header { position: relative; z-index: 1; text-align: center; padding: 3.2rem 0 1.4rem; }
+  h1 {
+    font-family: "Baloo 2", sans-serif; font-weight: 800;
+    font-size: clamp(2.6rem, 8vw, 4.2rem); line-height: 1.05;
+  }
+  h1 .it {
+    background: linear-gradient(90deg, #F6C93F, #FF9A3D, #FF5C7A, #F6C93F);
+    background-size: 300% 100%;
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    animation: shimmer 5s linear infinite;
+  }
+  @keyframes shimmer { to { background-position: 300% 0; } }
+  .sub { color: #9AA6B8; max-width: 34rem; margin: .6rem auto 0; font-size: 1.05rem; }
+  .stats {
+    display: flex; gap: .6rem; justify-content: center; margin-top: 1.1rem; flex-wrap: wrap;
+  }
+  .stat {
+    font-size: .78rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+    background: #171C26; border: 1px solid #242C3B; color: #8FA0B8;
+    border-radius: 99px; padding: .35rem .85rem;
+  }
+
+  .grid {
+    position: relative; z-index: 1;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+    gap: 1.3rem; width: min(62rem, 94vw); margin-top: 1.6rem;
+  }
   .card {
-    background: #FDFBF4; border: 2px solid #D8CFBB; border-bottom-width: 5px; border-radius: 18px;
+    position: relative;
+    background: #141924; border: 1px solid #232C3D; border-radius: 18px;
     overflow: hidden; text-decoration: none; color: inherit; display: flex; flex-direction: column;
-    transition: transform .12s, box-shadow .12s;
+    transition: transform .16s, box-shadow .16s, border-color .16s;
   }
-  .card:hover { transform: translateY(-3px); box-shadow: 0 10px 26px rgba(80,60,20,.18); }
-  .card:focus-visible { outline: 3px solid #E8A020; outline-offset: 3px; }
-  .thumb { aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; }
-  .card-body { padding: .9rem 1.1rem 1.1rem; display: flex; flex-direction: column; gap: .3rem; }
-  .card-body h2 { font-family: "Baloo 2", sans-serif; font-size: 1.35rem; }
-  .card-body p { color: #5C5648; font-size: .95rem; line-height: 1.45; }
-  .tags { display: flex; gap: .4rem; margin-top: .4rem; flex-wrap: wrap; }
-  .tag { font-size: .72rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
-    background: #F1E8D2; color: #7A6E52; border-radius: 99px; padding: .18rem .6rem; }
-  .soon { opacity: .55; pointer-events: none; }
-  footer { color: #8A8272; font-size: .85rem; text-align: center; margin-top: auto; padding-top: 1.5rem; }
-  footer a { color: #B07A18; }
+  a.card:hover { transform: translateY(-5px) scale(1.01); border-color: #F6C93F; box-shadow: 0 14px 40px rgba(246, 201, 63, .18); }
+  a.card:focus-visible { outline: 3px solid #F6C93F; outline-offset: 3px; }
+  .thumb { aspect-ratio: 16/9; display: flex; position: relative; }
+  .play {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: rgba(10, 13, 20, 0); transition: background .16s;
+  }
+  .play b {
+    font-family: "Baloo 2", sans-serif; font-size: 1.2rem; letter-spacing: .12em;
+    background: #F6C93F; color: #241B05; padding: .45rem 1.5rem; border-radius: 99px;
+    opacity: 0; transform: translateY(8px); transition: opacity .16s, transform .16s;
+    box-shadow: 0 6px 22px rgba(246, 201, 63, .45);
+  }
+  a.card:hover .play { background: rgba(10, 13, 20, .35); }
+  a.card:hover .play b { opacity: 1; transform: translateY(0); }
+  .badge {
+    position: absolute; top: .7rem; left: .7rem; z-index: 2;
+    font-size: .68rem; font-weight: 800; letter-spacing: .12em;
+    background: #FF5C7A; color: #fff; border-radius: 99px; padding: .25rem .7rem;
+    animation: pulseBadge 1.6s ease-in-out infinite;
+  }
+  @keyframes pulseBadge { 50% { transform: scale(1.08); } }
+  .card-body { padding: 1rem 1.15rem 1.15rem; display: flex; flex-direction: column; gap: .35rem; }
+  .card-body h2 { font-family: "Baloo 2", sans-serif; font-size: 1.4rem; }
+  .card-body p { color: #9AA6B8; font-size: .95rem; line-height: 1.5; }
+  .tags { display: flex; gap: .4rem; margin-top: .45rem; flex-wrap: wrap; }
+  .tag {
+    font-size: .7rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+    background: #1B2230; color: #7E92AE; border-radius: 99px; padding: .2rem .65rem;
+  }
+  .soon { opacity: .5; }
+  .soon .thumb { align-items: center; justify-content: center; }
+
+  footer {
+    position: relative; z-index: 1;
+    color: #6C7A90; font-size: .88rem; text-align: center; margin-top: auto; padding-top: 2.4rem;
+  }
+  footer a { color: #F6C93F; font-weight: 700; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bg span, h1 .it, .badge { animation: none; }
+    .card, .play b { transition: none; }
+  }
 </style>
 </head>
 <body>
-  <h1>Click <span class="pf">it!</span> Studios</h1>
-  <p class="sub">Free browser games. No installs, no accounts, nothing to buy — click a cabinet and play.</p>
+  <div class="bg" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+
+  <header>
+    <h1>Click <span class="it">it!</span> Studios</h1>
+    <p class="sub">Free browser games. No installs, no accounts, nothing to buy — click a cabinet and play.</p>
+    <div class="stats">
+      <span class="stat">🎮 2 games</span>
+      <span class="stat">⚡ Instant play</span>
+      <span class="stat">📱 Phone friendly</span>
+      <span class="stat">🆓 Actually free</span>
+    </div>
+  </header>
 
   <div class="grid">
+    <a class="card" href="vector-keep/">
+      <span class="badge">NEW</span>
+      <div class="thumb" style="background:#10131A">
+        <svg viewBox="0 0 320 180" width="100%" height="100%" role="img" aria-label="Vector Keep preview">
+          <rect width="320" height="180" fill="#10131A"/>
+          <circle cx="160" cy="90" r="78" fill="#161C2B" stroke="#4FD8EB" stroke-opacity=".45" stroke-width="2"/>
+          <circle cx="160" cy="90" r="52" fill="none" stroke="#2A3550" stroke-width="1"/>
+          <circle cx="160" cy="90" r="26" fill="none" stroke="#2A3550" stroke-width="1"/>
+          <polygon points="160,74 174,82 174,98 160,106 146,98 146,82" fill="#0E7A8C" stroke="#4FD8EB" stroke-width="3"/>
+          <line x1="160" y1="90" x2="196" y2="66" stroke="#FFD75A" stroke-width="4" stroke-linecap="round"/>
+          <line x1="160" y1="90" x2="120" y2="118" stroke="#FFD75A" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="204" cy="61" r="5" fill="#FFD75A"/>
+          <polygon points="236,44 246,54 232,58" fill="none" stroke="#FF5C7A" stroke-width="2.5"/>
+          <rect x="84" y="118" width="16" height="16" fill="none" stroke="#FF9A3D" stroke-width="2.5" transform="rotate(12 92 126)"/>
+          <circle cx="228" cy="124" r="8" fill="none" stroke="#9FB4D8" stroke-width="2.5"/>
+          <polygon points="96,48 104,54 101,63 91,63 88,54" fill="none" stroke="#B07FF0" stroke-width="2.5"/>
+        </svg>
+        <div class="play"><b>PLAY</b></div>
+      </div>
+      <div class="card-body">
+        <h2>Vector Keep</h2>
+        <p>Neon single-tower defense. Twenty waves, ten upgrade paths, enemy weaknesses, endless mode. Hold the keep.</p>
+        <div class="tags"><span class="tag">Tower defense</span><span class="tag">Strategy</span><span class="tag">Endless</span></div>
+      </div>
+    </a>
+
     <a class="card" href="dejam/">
       <div class="thumb" style="background:#4A4E57">
         <svg viewBox="0 0 320 180" width="100%" height="100%" role="img" aria-label="DeJam preview">
@@ -65,6 +174,7 @@
             <path d="M292 84 l12 10 l-12 10"/><path d="M274 84 l12 10 l-12 10"/>
           </g>
         </svg>
+        <div class="play"><b>PLAY</b></div>
       </div>
       <div class="card-body">
         <h2>DeJam</h2>
@@ -73,44 +183,21 @@
       </div>
     </a>
 
-    <a class="card" href="vector-keep/">
-      <div class="thumb" style="background:#10131A">
-        <svg viewBox="0 0 320 180" width="100%" height="100%" role="img" aria-label="Vector Keep preview">
-          <rect width="320" height="180" fill="#10131A"/>
-          <circle cx="160" cy="90" r="78" fill="#161C2B" stroke="#4FD8EB" stroke-opacity=".45" stroke-width="2"/>
-          <circle cx="160" cy="90" r="52" fill="none" stroke="#2A3550" stroke-width="1"/>
-          <circle cx="160" cy="90" r="26" fill="none" stroke="#2A3550" stroke-width="1"/>
-          <polygon points="160,74 174,82 174,98 160,106 146,98 146,82" fill="#0E7A8C" stroke="#4FD8EB" stroke-width="3"/>
-          <line x1="160" y1="90" x2="196" y2="66" stroke="#FFD75A" stroke-width="4" stroke-linecap="round"/>
-          <circle cx="204" cy="61" r="5" fill="#FFD75A"/>
-          <polygon points="236,44 246,54 232,58" fill="none" stroke="#FF5C7A" stroke-width="2.5"/>
-          <rect x="84" y="118" width="16" height="16" fill="none" stroke="#FF9A3D" stroke-width="2.5" transform="rotate(12 92 126)"/>
-          <circle cx="228" cy="124" r="8" fill="none" stroke="#9FB4D8" stroke-width="2.5"/>
-          <polygon points="96,48 104,54 101,63 91,63 88,54" fill="none" stroke="#B07FF0" stroke-width="2.5"/>
-        </svg>
-      </div>
-      <div class="card-body">
-        <h2>Vector Keep</h2>
-        <p>Neon single-tower defense. Twenty waves, ten upgrade paths, enemy weaknesses, endless mode. Hold the keep.</p>
-        <div class="tags"><span class="tag">Tower defense</span><span class="tag">Strategy</span><span class="tag">Endless</span></div>
-      </div>
-    </a>
-
     <div class="card soon">
-      <div class="thumb" style="background:#E8DCC0">
+      <div class="thumb" style="background:#141924">
         <svg viewBox="0 0 320 180" width="100%" height="100%" role="img" aria-label="Coming soon">
-          <rect width="320" height="180" fill="#E8DCC0"/>
-          <text x="160" y="100" fill="#B8AA88" font-family="system-ui" font-size="20" font-weight="700" text-anchor="middle">Next cabinet…</text>
+          <rect width="320" height="180" fill="#141924"/>
+          <text x="160" y="96" fill="#3D4A61" font-family="system-ui" font-size="20" font-weight="700" text-anchor="middle">Next cabinet…</text>
         </svg>
       </div>
       <div class="card-body">
         <h2>Coming soon</h2>
-        <p>More games are on the bench. The peasants are getting restless.</p>
+        <p>More games are on the bench. The dwarves are sharpening their pickaxes.</p>
         <div class="tags"><span class="tag">In the shop</span></div>
       </div>
     </div>
   </div>
 
-  <footer>Click it! Studios · built by Peter Frutchey · <a href="https://peterfrutchey.com">peterfrutchey.com</a></footer>
+  <footer>Click it! Studios · a <a href="https://pf-builds.github.io/">pf-builds</a> project</footer>
 </body>
 </html>
