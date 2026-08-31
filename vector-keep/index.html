@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&display=swap">
-<link rel="stylesheet" href="style.css?v=7">
+<link rel="stylesheet" href="style.css?v=8">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%2310131A'/><polygon points='50,18 78,34 78,66 50,82 22,66 22,34' fill='none' stroke='%234FD8EB' stroke-width='7'/></svg>">
 </head>
 <body>
@@ -41,6 +41,7 @@
   <div id="arena-wrap"><canvas id="arena"></canvas></div>
   <button id="btn-shop-toggle" aria-label="Toggle upgrade shop">◆ <span id="tgl-gold">0</span> · <span class="tgl-label">UPGRADES</span></button>
   <div id="shop">
+    <div id="shop-hint">Tap a card name to see what it does</div>
     <div class="cards">
       <div class="card" id="card-cannon"><h3>Cannon</h3><div class="desc">Damage &amp; fire rate</div><div class="pips"></div><button></button></div>
       <div class="card" id="card-multi"><h3>Multi</h3><div class="desc">Targets extra enemies at once</div><div class="pips"></div><button></button></div>
@@ -60,6 +61,15 @@
 <div id="boss-banner"><div class="beyebrow">⚠ BOSS</div><div class="bname"></div></div>
 
 <div id="threat-toast"><span class="tglyph">■</span><span class="tbody"><span class="ttitle"></span><span class="ttext"></span></span></div>
+
+<div id="info-pop">
+  <div class="ip-card">
+    <h3 class="ip-title"></h3>
+    <p class="ip-desc"></p>
+    <p class="ip-tier"></p>
+    <button id="ip-close">GOT IT</button>
+  </div>
+</div>
 <div id="pause-overlay">PAUSED</div>
 
 <div class="screen" id="screen-over">
@@ -80,6 +90,6 @@
 
 <script src="src/audio.js?v=5"></script>
 <script src="src/particles.js?v=5"></script>
-<script src="src/game.js?v=7"></script>
+<script src="src/game.js?v=8"></script>
 </body>
 </html>

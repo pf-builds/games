@@ -902,12 +902,52 @@
     });
   }
 
+  // Fuller explanations than the card one-liners — surfaced in a tap popup
+  // (the drawer hides descriptions on mobile to fit the grid).
+  const INFO = {
+    cannon: "Your main gun. Every tier raises damage and fire rate. Mobs (squares) are weak to cannon fire — 1.5x damage.",
+    multi: "Targets extra enemies at the same time, one shot each. A force multiplier for everything else you buy.",
+    bomb: "Adds a bomb launcher that seeks out clusters and explodes on impact, damaging and knocking back the whole group. Brutes (big squares) are weak to bombs — 2x damage.",
+    pierce: "Shots punch through and hit enemies lined up behind, at reduced damage each pass-through. Splitters (circles) are weak to pierce — 1.75x damage.",
+    nova: "A shockwave that bursts out from the keep, damaging everything close and hurling it backward. Darts (triangles) are weak to nova — 2x damage.",
+    stasis: "Projects a slow field around the keep. Everything inside it moves slower.",
+    hull: "+40 max hull per tier, and the keep heals that amount the moment you buy it.",
+    armor: "Flat damage reduction on every hit the keep takes. Strong against swarms of weak hits.",
+    vault: "Earn more interest on the gold you DON'T spend — paid out at the end of every wave. Saving becomes a strategy.",
+    repair: "Restores hull. Only available between waves, and the price climbs each time you use it.",
+  };
+  function showInfo(key) {
+    const pop = $("#info-pop"), card = $("#card-" + key);
+    pop.querySelector(".ip-card").style.setProperty("--accent",
+      getComputedStyle(card).getPropertyValue("--accent"));
+    pop.querySelector(".ip-title").textContent = card.querySelector("h3").textContent;
+    pop.querySelector(".ip-desc").textContent = INFO[key] || card.querySelector(".desc").textContent;
+    let tierTxt;
+    if (key === "repair") {
+      tierTxt = "Next repair: +" + UPG.repair.amount + " hull for ◆" + repairPrice();
+    } else {
+      const tier = S.tiers[key], maxT = UPG[key].tiers.length;
+      const next = tier < maxT ? UPG[key].tiers[tier] : null;
+      tierTxt = "Level " + tier + " of " + maxT + (next ? " · next upgrade ◆" + next.price : " · MAXED OUT");
+    }
+    pop.querySelector(".ip-tier").textContent = tierTxt;
+    pop.classList.add("show");
+  }
+
   function wireUi() {
     $("#btn-play").addEventListener("click", () => { VK.audio.unlock(); startGame(); });
     $("#btn-wave").addEventListener("click", startWave);
     $("#btn-shop-toggle").addEventListener("click", () => setShopOpen(!shopIsOpen()));
     [...BRANCHES, "repair"].forEach((k) => {
       $("#card-" + k).querySelector("button").addEventListener("click", () => buy(k));
+      // tapping the card anywhere BUT the buy button explains the upgrade
+      $("#card-" + k).addEventListener("click", (e) => {
+        if (e.target.closest("button")) return;
+        showInfo(k);
+      });
+    });
+    $("#info-pop").addEventListener("click", (e) => {
+      if (e.target.id === "info-pop" || e.target.id === "ip-close") $("#info-pop").classList.remove("show");
     });
     $("#btn-again").addEventListener("click", () => startGame());
     $("#btn-continue").addEventListener("click", continueEndless);
