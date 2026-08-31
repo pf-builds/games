@@ -6,6 +6,11 @@
   const cv = document.getElementById("game");
   const ctx = cv.getContext("2d");
   ctx.imageSmoothingEnabled = false;
+  // text overlay: native-resolution canvas stacked on top so text stays sharp
+  const hudCv = document.getElementById("hud");
+  const hctx = hudCv.getContext("2d");
+  let hudScale = 1;                  // overlay device px per game px
+  const textOff = { x: 0, y: 0 };    // world→screen offset for in-world text
 
   let CFG = null, LEVELS = null, SPR = null;
   const P = DF.Particles, AU = DF.Audio;
@@ -59,8 +64,15 @@
     const w = window.innerWidth, h = window.innerHeight;
     let s = Math.min(w / 480, h / 272);
     if (s >= 2 && Math.abs(s - Math.round(s)) < 0.22) s = Math.round(s);
-    cv.style.width = Math.floor(480 * s) + "px";
-    cv.style.height = Math.floor(272 * s) + "px";
+    const cw = Math.floor(480 * s), chh = Math.floor(272 * s);
+    cv.style.width = cw + "px";
+    cv.style.height = chh + "px";
+    const dpr = Math.min(2.5, window.devicePixelRatio || 1);
+    hudCv.width = Math.round(cw * dpr);
+    hudCv.height = Math.round(chh * dpr);
+    hudCv.style.width = cw + "px";
+    hudCv.style.height = chh + "px";
+    hudScale = (cw * dpr) / 480;
   }
   window.addEventListener("resize", resize);
 
@@ -944,6 +956,7 @@
     const th = THEMES[S.theme] || THEMES.jungle;
     const w = 480, h = 272;
     // sky
+    clearHud();
     if (bgSky) ctx.drawImage(bgSky, 0, 0);
     else { ctx.fillStyle = th.skyTop; ctx.fillRect(0, 0, w, h); }
     // parallax
@@ -954,6 +967,7 @@
 
     ctx.save();
     ctx.translate(Math.round(-S.camX + shx), Math.round(shy));
+    textOff.x = Math.round(-S.camX + shx); textOff.y = Math.round(shy);
 
     // tiles
     const x0 = Math.floor(S.camX / 16) - 1, x1 = x0 + 32;
@@ -1063,6 +1077,7 @@
     P.draw(ctx, 0);
 
     ctx.restore();
+    textOff.x = 0; textOff.y = 0;
 
     // foreground foliage strip (parallax slightly faster than the action)
     if (bgNear) {
@@ -1130,14 +1145,18 @@
     if (pl.slowT > 0) ctx.drawImage(SPR.net, Math.round(pl.x - 4), Math.round(pl.y - d.h - 12));
   }
 
+  // draws on the sharp overlay canvas; honors the current world offset
   function pixText(txt, x, y, col, size, align) {
-    ctx.font = `800 ${size}px "Baloo 2", sans-serif`;
-    ctx.textAlign = align || "left";
-    ctx.fillStyle = "rgba(0,0,0,.55)";
-    ctx.fillText(txt, Math.round(x) + 1, Math.round(y) + 1);
-    ctx.fillStyle = col;
-    ctx.fillText(txt, Math.round(x), Math.round(y));
+    const k = hudScale;
+    const sx = (x + textOff.x) * k, sy = (y + textOff.y) * k;
+    hctx.font = `800 ${size * k}px "Baloo 2", sans-serif`;
+    hctx.textAlign = align || "left";
+    hctx.fillStyle = "rgba(0,0,0,.6)";
+    hctx.fillText(txt, sx + k, sy + k);
+    hctx.fillStyle = col;
+    hctx.fillText(txt, sx, sy);
   }
+  function clearHud() { hctx.clearRect(0, 0, hudCv.width, hudCv.height); }
 
   function drawHUD() {
     if (S.mode !== "play" && S.mode !== "pause" && S.mode !== "win" && S.mode !== "lose") return;
@@ -1195,6 +1214,7 @@
   let titleT = 0;
   function drawTitle(dt) {
     titleT += dt;
+    clearHud();
     S.theme = "jungle";
     if (!bgFar || builtTheme !== "jungle") buildBackgrounds();
     if (bgSky) ctx.drawImage(bgSky, 0, 0);

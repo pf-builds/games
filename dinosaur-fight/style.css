@@ -15,6 +15,11 @@ body {
   image-rendering: pixelated; image-rendering: crisp-edges;
   background: #0B1C12;
 }
+/* text overlay: native-resolution, NOT pixelated — keeps HUD/hint text sharp */
+#hud {
+  position: absolute; inset: 0; z-index: 2;
+  pointer-events: none;
+}
 
 /* ---------- overlays ---------- */
 .overlay {
