@@ -1,0 +1,27 @@
+{
+  "palette": {
+    "bg": "#10131A",
+    "grid": "#2A3550",
+    "arena": "#161C2B",
+    "tower": "#4FD8EB",
+    "towerCore": "#0E7A8C",
+    "shot": "#FFD75A",
+    "nova": "#C9A6FF",
+    "multi": "#7BE5F2",
+    "bomb": "#FF9A3D",
+    "stasis": "#6FE3C1",
+    "hp": "#5CE07A",
+    "hpLow": "#FF4D4D",
+    "gold": "#FFD75A",
+    "text": "#DCE6F2",
+    "dim": "#7C8AA0",
+    "panel": "#171C28",
+    "panelLine": "#242B3B",
+    "enemies": { "mob": "#9FB4D8", "dart": "#FF5C7A", "brute": "#FF9A3D", "splitter": "#B07FF0", "boss": "#FF3B30" }
+  },
+  "paceOptions": [0.3, 0.7, 1.0],
+  "tower": { "baseHp": 100, "baseDamage": 8, "baseFireRate": 2.0, "rangeFrac": 0.46, "projSpeed": 620 },
+  "economy": { "startGold": 40, "waveBonusBase": 12, "waveBonusPerWave": 3, "interestBase": 0.05 },
+  "fx": { "particleCap": 400, "shakeMax": 14, "slowMoScale": 0.3, "slowMoMs": 420 },
+  "music": true
+}

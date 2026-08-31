@@ -1,0 +1,181 @@
+/* Vector Keep — neon-vector on dark navy. Single deliberate dark theme. */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: #10131A; color: #DCE6F2;
+  font-family: "Chakra Petch", system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent; overflow: hidden;
+  user-select: none; -webkit-user-select: none;
+}
+.screen { display: none; height: 100dvh; flex-direction: column; align-items: center; justify-content: center; gap: .9rem; padding: .8rem; }
+.screen.active { display: flex; }
+
+button {
+  font: inherit; font-weight: 700; letter-spacing: .04em; color: #DCE6F2;
+  background: #171C28; border: 1px solid #2C3550; border-radius: 10px;
+  padding: .7rem 1.1rem; font-size: 1rem; min-height: 44px; min-width: 44px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
+}
+button:hover { border-color: #4FD8EB; }
+button:active { transform: translateY(1px); }
+button:focus-visible { outline: 2px solid #4FD8EB; outline-offset: 2px; }
+button:disabled { opacity: .42; filter: saturate(.3); cursor: default; }
+.primary { background: #4FD8EB; color: #06222A; border-color: #4FD8EB; }
+.primary:hover { background: #7BE5F2; }
+
+/* Title over the live demo canvas — plated so it never fights the sim */
+#screen-title { position: relative; z-index: 2; background: radial-gradient(ellipse at center, rgba(16,19,26,.82) 0%, rgba(16,19,26,.55) 45%, rgba(16,19,26,.15) 100%); pointer-events: none; }
+#screen-title > * { pointer-events: auto; }
+.logo {
+  font-size: clamp(2.6rem, 9vw, 4.4rem); font-weight: 700; letter-spacing: .1em;
+  color: #4FD8EB;
+  text-shadow: 0 0 24px #10131A, 0 0 10px #10131A, 0 0 18px rgba(79, 216, 235, .55), 0 0 60px rgba(79, 216, 235, .25);
+}
+.logo span { color: #FFD75A; text-shadow: 0 0 24px #10131A, 0 0 18px rgba(255, 215, 90, .5); }
+#title-sub, #title-best, .howto { text-shadow: 0 0 14px #10131A, 0 1px 3px #10131A; }
+#title-sub { color: #9AACC4; letter-spacing: .06em; }
+#title-best { color: #FFD75A; font-size: .9rem; letter-spacing: .08em; min-height: 1.2em; }
+.menu { display: flex; flex-direction: column; gap: .7rem; width: min(18rem, 78vw); }
+.howto { color: #9AACC4; font-size: .88rem; text-align: center; max-width: 26rem; }
+
+/* Game layout */
+#screen-game { justify-content: center; gap: .5rem; padding-top: max(.8rem, env(safe-area-inset-top)); }
+.hud {
+  width: min(96vw, 44rem); display: flex; align-items: center; gap: .8rem;
+  font-size: .95rem; letter-spacing: .05em;
+}
+#hud-wave { font-weight: 700; color: #4FD8EB; white-space: nowrap; }
+.gold { color: #FFD75A; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.hpbar { flex: 1; min-width: 140px; height: 16px; background: #171C28; border: 1px solid #2C3550; border-radius: 99px; overflow: hidden; position: relative; }
+#hp-fill { height: 100%; width: 100%; background: #5CE07A; transition: width .18s; }
+#hp-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: .74rem; font-weight: 700; color: #DCE6F2; letter-spacing: .05em;
+  text-shadow: 0 1px 2px rgba(0,0,0,.9); }
+.hud .btn-sound, .hud #btn-quit { padding: .4rem .7rem; }
+
+/* Boss bar docked under the HUD */
+#bossbar {
+  display: none; width: min(96vw, 44rem); align-items: center; gap: .6rem;
+}
+#bossbar.show { display: flex; }
+#bossbar .bb-name { font-size: .8rem; font-weight: 700; letter-spacing: .14em; color: #FF6B60; white-space: nowrap; }
+.bb-track { flex: 1; height: 12px; background: #171C28; border: 1px solid #4A2430; border-radius: 99px; overflow: hidden; position: relative;
+  box-shadow: 0 0 20px rgba(255, 59, 48, .35); }
+#bb-ghost { position: absolute; inset: 0; width: 100%; background: rgba(255,255,255,.35); }
+#bb-fill { position: absolute; inset: 0; width: 100%; background: #FF3B30; }
+.bb-track::after { content: ""; position: absolute; inset: 0;
+  background: repeating-linear-gradient(90deg, transparent 0 calc(25% - 1px), rgba(0,0,0,.6) calc(25% - 1px) 25%); }
+
+#arena-wrap { width: min(96vw, 88dvh, 56rem); height: min(96vw, 74dvh, 56rem); display: flex; align-items: center; justify-content: center; }
+#arena { border-radius: 12px; }
+
+body:not(.in-game) #screen-game { display: flex; position: absolute; inset: 0; z-index: 1; }
+body:not(.in-game) .hud, body:not(.in-game) #shop, body:not(.in-game) #bossbar { visibility: hidden; }
+
+/* Boss banner */
+#boss-banner {
+  position: fixed; top: 18vh; left: 0; right: 0; z-index: 6; text-align: center;
+  opacity: 0; pointer-events: none; transform: scaleX(.6);
+}
+#boss-banner.show { animation: bannerIn 2.4s cubic-bezier(.2,.9,.3,1) forwards; }
+@keyframes bannerIn {
+  0% { opacity: 0; transform: scaleX(.6); }
+  10% { opacity: 1; transform: scaleX(1); }
+  75% { opacity: 1; }
+  100% { opacity: 0; transform: scaleX(1.05); }
+}
+#boss-banner .beyebrow { font-size: .8rem; letter-spacing: .5em; color: #FF6B60; }
+#boss-banner .bname {
+  font-size: clamp(1.6rem, 5vw, 2.6rem); font-weight: 700; letter-spacing: .3em; color: #FF3B30;
+  text-shadow: 0 0 30px rgba(255,59,48,.8), 0 0 8px #10131A;
+  background: linear-gradient(90deg, transparent, rgba(255,59,48,.12), transparent);
+  padding: .2em 0;
+}
+
+/* Shop */
+#shop { width: min(96vw, 44rem); display: flex; flex-direction: column; gap: .5rem; padding-bottom: max(.5rem, env(safe-area-inset-bottom)); }
+.cards { display: grid; grid-template-columns: repeat(5, 1fr); grid-auto-rows: 1fr; gap: .45rem; }
+.card {
+  --accent: #4FD8EB;
+  background: #171C28; border: 1px solid #242B3B; border-top: 2px solid var(--accent);
+  border-radius: 12px;
+  padding: .5rem .55rem .55rem; display: flex; flex-direction: column; gap: .3rem;
+}
+.card h3 { font-size: .74rem; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+#card-cannon { --accent: #FFD75A; } #card-multi { --accent: #7BE5F2; }
+#card-bomb { --accent: #FF9A3D; } #card-pierce { --accent: #D6E5F5; }
+#card-nova { --accent: #C9A6FF; }
+#card-stasis { --accent: #6FE3C1; } #card-hull { --accent: #FF7A9C; }
+#card-armor { --accent: #AEBBD0; } #card-vault { --accent: #A8E060; }
+#card-repair { --accent: #5CE07A; }
+.card .desc { font-size: .66rem; color: #7C8AA0; line-height: 1.25; flex: 1; }
+.pips { display: flex; gap: .22rem; min-height: .6rem; flex-wrap: wrap; }
+.pip { width: .5rem; height: .5rem; border-radius: 50%; background: transparent; border: 1px solid #3A4560; }
+.pip.on { background: var(--accent, #4FD8EB); border-color: var(--accent, #4FD8EB); box-shadow: 0 0 6px var(--accent, #4FD8EB); }
+.card button { padding: .42rem .2rem; font-size: .72rem; font-variant-numeric: tabular-nums; color: #FFD75A; min-height: 40px; }
+.card button.afford { box-shadow: 0 0 12px rgba(255, 215, 90, .22); border-color: #6a5a22; }
+.card.maxed { border-color: #FFD75A; }
+.card.maxed button { color: #7C8AA0; }
+#btn-wave { width: 100%; font-size: 1.05rem; letter-spacing: .1em; }
+#shop.locked { opacity: .55; }
+#shop.locked .card button { pointer-events: none; }
+
+/* First-encounter threat explainer */
+#threat-toast {
+  position: fixed; top: max(4.5rem, calc(env(safe-area-inset-top) + 4rem)); left: 50%;
+  transform: translate(-50%, -12px); z-index: 6;
+  display: flex; align-items: center; gap: .7rem;
+  background: rgba(16, 19, 26, .92); border: 1px solid #2C3550; border-left: 3px solid #4FD8EB;
+  border-radius: 12px; padding: .6rem .9rem; width: min(92vw, 26rem);
+  opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s;
+}
+#threat-toast.show { opacity: 1; transform: translate(-50%, 0); }
+#threat-toast .tglyph { font-size: 1.6rem; line-height: 1; text-shadow: 0 0 12px currentColor; }
+#threat-toast .tbody { display: flex; flex-direction: column; gap: .1rem; }
+#threat-toast .ttitle { font-size: .78rem; font-weight: 700; letter-spacing: .16em; }
+#threat-toast .ttext { font-size: .82rem; color: #9AACC4; line-height: 1.35; }
+
+/* Pause */
+#pause-overlay {
+  position: fixed; inset: 0; z-index: 7; display: none;
+  align-items: center; justify-content: center;
+  background: rgba(10, 12, 18, .55);
+  font-size: clamp(2rem, 7vw, 3.4rem); font-weight: 700; letter-spacing: .4em;
+  color: #4FD8EB; text-shadow: 0 0 30px rgba(79, 216, 235, .6);
+  pointer-events: none;
+}
+body.paused #pause-overlay { display: flex; }
+
+/* Danger — radial vignette, not a border */
+body.danger::after {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 5;
+  background: radial-gradient(ellipse at center, transparent 35%, rgba(255, 40, 40, .28) 100%);
+  animation: dangerPulse 1.1s ease-in-out infinite;
+}
+@keyframes dangerPulse { 50% { opacity: .45; } }
+
+/* Over screen */
+#screen-over { position: relative; z-index: 3; background: rgba(10, 12, 18, .82); }
+#over-title { font-size: clamp(1.8rem, 6vw, 3rem); font-weight: 700; letter-spacing: .12em;
+  text-shadow: 0 0 24px currentColor; text-align: center; }
+#over-sub { color: #9AACC4; letter-spacing: .06em; }
+#over-newbest { color: #FFD75A; font-weight: 700; letter-spacing: .2em; text-shadow: 0 0 16px rgba(255,215,90,.6); }
+.statrow { display: flex; gap: 2rem; margin: .4rem 0 .2rem; }
+.stat { display: flex; flex-direction: column; align-items: center; gap: .1rem; }
+.stat b { font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+#stat-kills { color: #FF5C7A; } #stat-gold { color: #FFD75A; } #stat-time { color: #4FD8EB; }
+.stat span { font-size: .7rem; letter-spacing: .18em; color: #7C8AA0; text-transform: uppercase; }
+#screen-over .menu { margin-top: .5rem; }
+
+@media (max-width: 700px) {
+  .cards { grid-template-columns: repeat(3, 1fr); }
+  .card .desc { display: none; }
+  .hud { display: grid; grid-template-columns: auto 1fr auto auto; grid-template-areas: "wave gold sound quit" "hp hp hp hp"; row-gap: .35rem; }
+  #hud-wave { grid-area: wave; } .gold { grid-area: gold; justify-self: end; }
+  .hud .btn-sound { grid-area: sound; } .hud #btn-quit { grid-area: quit; }
+  .hpbar { grid-area: hp; }
+  #arena-wrap { width: min(96vw, 52dvh); height: min(96vw, 52dvh); }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.danger::after, #boss-banner.show { animation: none; opacity: 1; }
+}

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vector Keep — single-tower defense</title>
+<meta name="description" content="A free neon single-tower defense. Twenty waves, five upgrade paths, endless mode. Hold the keep.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="style.css?v=5">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%2310131A'/><polygon points='50,18 78,34 78,66 50,82 22,66 22,34' fill='none' stroke='%234FD8EB' stroke-width='7'/></svg>">
+</head>
+<body>
+
+<div class="screen active" id="screen-title">
+  <div class="logo">VECTOR <span>KEEP</span></div>
+  <p id="title-sub">Twenty waves. Five paths. One keep.</p>
+  <p id="title-best"></p>
+  <div class="menu">
+    <button class="primary" id="btn-play">DEFEND</button>
+    <button class="btn-sound" aria-label="Toggle sound"></button>
+  </div>
+  <p class="howto">Your tower fires on its own — you spend the gold. Bosses every fifth wave. Clear all twenty and keep going in Endless.</p>
+</div>
+
+<div class="screen" id="screen-game">
+  <div class="hud">
+    <span id="hud-wave">WAVE 1/20</span>
+    <div class="hpbar"><div id="hp-fill"></div><span id="hp-text"></span></div>
+    <span class="gold">◆ <span id="hud-gold">0</span></span>
+    <button id="btn-pause" aria-label="Pause">⏸</button>
+    <button id="btn-speed" aria-label="Game speed">1×</button>
+    <button class="btn-sound" aria-label="Toggle sound"></button>
+    <button id="btn-quit" aria-label="Quit to title">✕</button>
+  </div>
+  <div id="bossbar">
+    <span class="bb-name"></span>
+    <div class="bb-track"><div id="bb-ghost"></div><div id="bb-fill"></div></div>
+  </div>
+  <div id="arena-wrap"><canvas id="arena"></canvas></div>
+  <div id="shop">
+    <div class="cards">
+      <div class="card" id="card-cannon"><h3>Cannon</h3><div class="desc">Damage &amp; fire rate</div><div class="pips"></div><button></button></div>
+      <div class="card" id="card-multi"><h3>Multi</h3><div class="desc">Targets extra enemies at once</div><div class="pips"></div><button></button></div>
+      <div class="card" id="card-bomb"><h3>Bomb</h3><div class="desc">Cluster-seeking launcher, explodes on impact</div><div class="pips"></div><button></button></div>
+      <div class="card" id="card-pierce"><h3>Pierce</h3><div class="desc">Shots punch through extra enemies</div><div class="pips"></div><button></button></div>
+      <div class="card" id="card-nova"><h3>Nova</h3><div class="desc">Shockwave: damage + hurls enemies back</div><div class="pips"></div><button></button></div>
+      <div class="card" id="card-stasis"><h3>Stasis</h3><div class="desc">Slow field around the keep</div><div class="pips"></div><button></button></div>
+      <div class="card" id="card-hull"><h3>Hull</h3><div class="desc">+40 max hull, healed on install</div><div class="pips"></div><button></button></div>
+      <div class="card" id="card-armor"><h3>Armor</h3><div class="desc">Flat damage reduction per hit</div><div class="pips"></div><button></button></div>
+      <div class="card" id="card-vault"><h3>Vault</h3><div class="desc">More interest on unspent gold</div><div class="pips"></div><button></button></div>
+      <div class="card" id="card-repair"><h3>Repair</h3><div class="desc">Restore hull</div><div class="pips"></div><button></button></div>
+    </div>
+    <button class="primary" id="btn-wave">START WAVE 1</button>
+  </div>
+</div>
+
+<div id="boss-banner"><div class="beyebrow">⚠ BOSS</div><div class="bname"></div></div>
+
+<div id="threat-toast"><span class="tglyph">■</span><span class="tbody"><span class="ttitle"></span><span class="ttext"></span></span></div>
+<div id="pause-overlay">PAUSED</div>
+
+<div class="screen" id="screen-over">
+  <div id="over-title">THE KEEP STANDS</div>
+  <p id="over-sub"></p>
+  <p id="over-newbest" style="display:none">★ NEW BEST ★</p>
+  <div class="statrow">
+    <div class="stat"><b id="stat-kills">0</b><span>Kills</span></div>
+    <div class="stat"><b id="stat-gold">0</b><span>Gold</span></div>
+    <div class="stat"><b id="stat-time">0</b><span>Time</span></div>
+  </div>
+  <div class="menu">
+    <button class="primary" id="btn-continue">CONTINUE · ENDLESS</button>
+    <button id="btn-again">DEFEND AGAIN</button>
+    <button id="btn-menu">TITLE</button>
+  </div>
+</div>
+
+<script src="src/audio.js?v=5"></script>
+<script src="src/particles.js?v=5"></script>
+<script src="src/game.js?v=5"></script>
+</body>
+</html>
