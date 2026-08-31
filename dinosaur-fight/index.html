@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Dinosaur Fight! — a game by Henry</title>
+<meta name="description" content="You're a Compy with a super power: grow HUGE or shrink tiny. Stomp the baddies, clear the jungle. A free browser game designed by Henry, age 5.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@700;800&display=swap">
+<link rel="stylesheet" href="style.css?v=4">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%23163A22'/><text x='50' y='68' font-size='52' text-anchor='middle'>🦖</text></svg>">
+</head>
+<body>
+
+<div id="stage">
+  <canvas id="game" width="480" height="272"></canvas>
+
+  <!-- Title -->
+  <div class="overlay active" id="ov-title">
+    <div class="logo"><span class="l1">DINOSAUR</span><span class="l2">FIGHT!</span></div>
+    <p class="byline">a game designed by <b>Henry</b>, age 5</p>
+    <div class="menu">
+      <button class="primary big" id="btn-play">PLAY</button>
+      <button id="btn-sound-title" class="btn-sound"></button>
+    </div>
+    <p class="howto">You're a Compy with a superpower: grow <b>HUGE</b> or shrink <b>tiny</b>.<br>Stomp every baddie, then race to the flag!<br>
+    <span class="keys"><b>W A S D</b> move · <b>SPACE</b> jump (press again to double-jump) · <b>↑</b> grow · <b>↓</b> shrink · <b>←</b> <b>→</b> pounce</span></p>
+  </div>
+
+  <!-- Level select -->
+  <div class="overlay" id="ov-levels">
+    <h2>PICK A LEVEL</h2>
+    <div id="level-grid"></div>
+    <button id="btn-back-title">◂ TITLE</button>
+  </div>
+
+  <!-- Win -->
+  <div class="overlay" id="ov-win">
+    <div class="bigtitle" id="win-title">LEVEL CLEAR!</div>
+    <div id="win-stars"></div>
+    <p id="win-sub"></p>
+    <div class="menu">
+      <button class="primary big" id="btn-next">NEXT LEVEL ▸</button>
+      <button id="btn-replay">REPLAY</button>
+      <button id="btn-map">LEVEL MAP</button>
+    </div>
+  </div>
+
+  <!-- Lose -->
+  <div class="overlay" id="ov-lose">
+    <div class="bigtitle ouch">OUCH!</div>
+    <p>The baddies got you. Shake it off, little Compy!</p>
+    <div class="menu">
+      <button class="primary big" id="btn-retry">TRY AGAIN</button>
+      <button id="btn-map2">LEVEL MAP</button>
+    </div>
+  </div>
+
+  <!-- Pause -->
+  <div class="overlay" id="ov-pause">
+    <div class="bigtitle">PAUSED</div>
+    <div class="menu">
+      <button class="primary big" id="btn-resume">KEEP PLAYING</button>
+      <button id="btn-sound-pause" class="btn-sound"></button>
+      <button id="btn-quit-level">QUIT LEVEL</button>
+    </div>
+  </div>
+
+  <!-- In-game corner buttons -->
+  <button id="btn-pause" aria-label="Pause">⏸</button>
+
+  <!-- Touch controls -->
+  <div id="touch-ui">
+    <div class="t-left">
+      <button class="tbtn" id="t-left">◀</button>
+      <button class="tbtn" id="t-right">▶</button>
+    </div>
+    <div class="t-right">
+      <div class="t-powers">
+        <button class="tbtn small" id="t-shrink">🐜</button>
+        <button class="tbtn small" id="t-grow">🦖</button>
+      </div>
+      <button class="tbtn" id="t-pounce">💥</button>
+      <button class="tbtn jump" id="t-jump">⬆</button>
+    </div>
+  </div>
+</div>
+
+<script src="src/sprites.js?v=3"></script>
+<script src="src/particles.js?v=3"></script>
+<script src="src/audio.js?v=3"></script>
+<script src="src/game.js?v=7"></script>
+</body>
+</html>

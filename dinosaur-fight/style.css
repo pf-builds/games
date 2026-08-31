@@ -1,0 +1,124 @@
+/* Dinosaur Fight! — chunky 16-bit look. Canvas 480x272 scaled to fit. */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: #10201A; color: #F2EFE2;
+  font-family: "Nunito", system-ui, sans-serif;
+  overflow: hidden; user-select: none; -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  display: flex; align-items: center; justify-content: center;
+}
+
+#stage { position: relative; }
+#game {
+  display: block;
+  image-rendering: pixelated; image-rendering: crisp-edges;
+  background: #0B1C12;
+}
+
+/* ---------- overlays ---------- */
+.overlay {
+  position: absolute; inset: 0; z-index: 5;
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  gap: .7rem; text-align: center; padding: 1rem;
+  background: rgba(8, 18, 12, .78);
+}
+.overlay.active { display: flex; }
+#ov-title { background: rgba(10, 24, 16, .35); }
+
+.logo { display: flex; flex-direction: column; line-height: .92; font-family: "Baloo 2", sans-serif; font-weight: 800; }
+.logo .l1 {
+  font-size: clamp(2.2rem, 9vmin, 4rem); color: #8FE08A;
+  text-shadow: 3px 3px 0 #1E6E2F, 6px 6px 0 rgba(0,0,0,.45);
+  letter-spacing: .04em;
+}
+.logo .l2 {
+  font-size: clamp(2.8rem, 12vmin, 5.4rem); color: #FFE066;
+  text-shadow: 3px 3px 0 #B0402F, 7px 7px 0 rgba(0,0,0,.45);
+  letter-spacing: .06em; transform: rotate(-2deg);
+}
+.byline { color: #D8EFC8; font-size: .95rem; text-shadow: 0 2px 4px rgba(0,0,0,.8); }
+.byline b { color: #FFE066; }
+.howto { color: #D8EFC8; font-size: .88rem; line-height: 1.5; text-shadow: 0 2px 4px rgba(0,0,0,.8); max-width: 26rem; }
+.howto b { color: #FFE066; }
+.howto .keys { font-size: .74rem; color: #9AB8A0; }
+body.touch .howto .keys { display: none; }
+
+.bigtitle {
+  font-family: "Baloo 2", sans-serif; font-weight: 800;
+  font-size: clamp(2rem, 9vmin, 3.6rem); color: #FFE066;
+  text-shadow: 3px 3px 0 #1E6E2F, 6px 6px 0 rgba(0,0,0,.4);
+}
+.bigtitle.ouch { color: #FF8A7A; text-shadow: 3px 3px 0 #7E2C20, 6px 6px 0 rgba(0,0,0,.4); }
+
+button {
+  font: inherit; font-weight: 800; color: #F2EFE2; cursor: pointer;
+  background: #1C3A2A; border: 3px solid #57BE59; border-radius: 14px;
+  padding: .55rem 1.3rem; font-size: 1rem; min-height: 46px; min-width: 46px;
+  box-shadow: 0 4px 0 #0C1F14;
+}
+button:active { transform: translateY(3px); box-shadow: 0 1px 0 #0C1F14; }
+button:focus-visible { outline: 3px solid #FFE066; outline-offset: 2px; }
+.primary { background: #57BE59; border-color: #8FE08A; color: #0C2410; }
+.primary.big { font-size: 1.3rem; padding: .7rem 2.2rem; font-family: "Baloo 2", sans-serif; }
+.menu { display: flex; flex-direction: column; gap: .6rem; align-items: center; }
+
+h2 { font-family: "Baloo 2", sans-serif; color: #FFE066; text-shadow: 2px 2px 0 rgba(0,0,0,.5); font-size: 1.6rem; }
+
+#level-grid { display: flex; gap: .7rem; flex-wrap: wrap; justify-content: center; }
+.lvl-card {
+  width: 7.4rem; padding: .6rem .4rem; border-radius: 10px;
+  background: linear-gradient(#4A2E1A, #3A2412); border: 3px solid #6B4A2A;
+  border-top-color: #8A5A34; border-bottom-color: #4A3018;
+  display: flex; flex-direction: column; gap: .2rem; align-items: center;
+  cursor: pointer; box-shadow: 0 4px 0 #1A0F08; color: #F2EFE2; font-weight: 800;
+}
+.lvl-card:active { transform: translateY(3px); box-shadow: 0 1px 0 #1A0F08; }
+.lvl-card .num { font-family: "Baloo 2", sans-serif; font-size: 1.5rem; color: #FFE066; }
+.lvl-card .nm { font-size: .72rem; line-height: 1.1; }
+.lvl-card .st { font-size: .85rem; letter-spacing: .1em; color: #FFE066; }
+.lvl-card.locked { opacity: .7; filter: saturate(.3) brightness(.8); cursor: default; }
+.lvl-card.locked:active { transform: none; box-shadow: 0 4px 0 #1A0F08; }
+.lvl-card.locked .nm { color: #C8CCD4; }
+.lvl-card.boss { border-color: #FF8A7A; }
+.lvl-card.boss .num { color: #FF8A7A; }
+
+#win-stars { font-size: 2.6rem; letter-spacing: .3rem; color: #FFE066; text-shadow: 2px 2px 0 rgba(0,0,0,.5); min-height: 3rem; }
+#win-stars .dim { color: #2E4433; -webkit-text-stroke: 1px rgba(255,224,102,.25); }
+#win-sub { color: #D8EFC8; text-shadow: 0 2px 4px rgba(0,0,0,.8); }
+
+/* in-game pause corner button */
+#btn-pause {
+  position: absolute; top: .5rem; right: .5rem; z-index: 4; display: none;
+  padding: .2rem .6rem; min-height: 38px; min-width: 38px; font-size: 1rem;
+  border-width: 2px; border-radius: 10px; opacity: .85;
+}
+body.playing #btn-pause { display: block; }
+
+/* ---------- touch controls ---------- */
+#touch-ui { display: none; }
+body.touch.playing #touch-ui { display: block; }
+#touch-ui .t-left, #touch-ui .t-right {
+  position: fixed; bottom: max(.6rem, env(safe-area-inset-bottom));
+  z-index: 4; display: flex; gap: .5rem; align-items: flex-end;
+}
+#touch-ui .t-left { left: max(.6rem, env(safe-area-inset-left)); }
+#touch-ui .t-right { right: max(.6rem, env(safe-area-inset-right)); }
+#touch-ui .t-powers { display: flex; flex-direction: column; gap: .4rem; margin-right: .2rem; }
+.tbtn {
+  width: 3.4rem; height: 3.4rem; border-radius: 50%;
+  font-size: 1.4rem; padding: 0;
+  background: rgba(28, 58, 42, .75); border: 3px solid rgba(87, 190, 89, .9);
+  touch-action: none;
+}
+.tbtn.jump { width: 4.2rem; height: 4.2rem; background: rgba(87, 190, 89, .8); color: #0C2410; font-size: 1.8rem; }
+.tbtn.small { width: 2.8rem; height: 2.8rem; font-size: 1.1rem; }
+.tbtn:active { transform: scale(.94); box-shadow: none; }
+
+/* sound button glyph is set from JS via data-on */
+.btn-sound::before { content: "🔊 SOUND ON"; }
+.btn-sound.off::before { content: "🔇 SOUND OFF"; }
+
+@media (prefers-reduced-motion: reduce) {
+  button, .lvl-card { transition: none; }
+}
