@@ -73,7 +73,10 @@ button:disabled { opacity: .42; filter: saturate(.3); cursor: default; }
 #arena { border-radius: 12px; }
 
 body:not(.in-game) #screen-game { display: flex; position: absolute; inset: 0; z-index: 1; }
-body:not(.in-game) .hud, body:not(.in-game) #shop, body:not(.in-game) #bossbar { visibility: hidden; }
+body:not(.in-game) .hud, body:not(.in-game) #shop, body:not(.in-game) #bossbar, body:not(.in-game) #btn-shop-toggle { visibility: hidden; }
+
+/* Mobile shop-drawer toggle — desktop never sees it */
+#btn-shop-toggle { display: none; }
 
 /* Boss banner */
 #boss-banner {
@@ -178,6 +181,37 @@ body.danger::after {
   .hud .btn-sound { grid-area: sound; } .hud #btn-quit { grid-area: quit; }
   .hpbar { grid-area: hp; }
   #arena-wrap { width: 96vw; }
+
+  /* Shop becomes a slide-up drawer so the arena keeps the full viewport.
+     The fixed toggle button (gold readout) opens/closes it; game.js auto-opens
+     it between waves and closes it when a wave starts. */
+  #screen-game { padding-bottom: calc(3.4rem + max(.5rem, env(safe-area-inset-bottom))); }
+  #btn-shop-toggle {
+    display: inline-flex; position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: max(.5rem, env(safe-area-inset-bottom)); z-index: 12;
+    width: min(92vw, 22rem); color: #FFD75A; letter-spacing: .08em;
+    font-variant-numeric: tabular-nums;
+    background: rgba(23, 28, 40, .96); box-shadow: 0 4px 18px rgba(0, 0, 0, .5);
+  }
+  #btn-shop-toggle:active { transform: translateX(-50%) translateY(1px); }
+  #tgl-gold { margin: 0 .1rem; }
+  #btn-shop-toggle .tgl-label { color: #DCE6F2; }
+  #shop {
+    position: fixed; left: 0; right: 0; bottom: 0; width: 100%; z-index: 11;
+    max-height: 72dvh; overflow-y: auto;
+    background: rgba(16, 19, 26, .97);
+    border-top: 1px solid #2C3550; border-radius: 16px 16px 0 0;
+    padding: .7rem .7rem calc(3.9rem + max(.5rem, env(safe-area-inset-bottom)));
+    transform: translateY(103%);
+    transition: transform .28s cubic-bezier(.2, .9, .3, 1);
+    box-shadow: 0 -12px 34px rgba(0, 0, 0, .55);
+  }
+  body.shop-open #shop { transform: translateY(0); }
+  /* START WAVE first inside the drawer — no scrolling to find it */
+  #shop #btn-wave { order: -1; }
+}
+@media (max-width: 700px) and (prefers-reduced-motion: reduce) {
+  #shop { transition: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   body.danger::after, #boss-banner.show { animation: none; opacity: 1; }

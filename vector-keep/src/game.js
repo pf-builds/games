@@ -102,6 +102,7 @@
   }
 
   function startDemo() {
+    setShopOpen(false);
     S.screen = "title"; S.demo = true;
     freshRun();
     S.tiers.cannon = 2; S.tiers.multi = 1;
@@ -116,6 +117,7 @@
     freshRun();
     show("game");
     updateHud(); renderShop();
+    autoOpenShop();
     VK.audio.unlock();
   }
 
@@ -175,6 +177,7 @@
   function startWave() {
     if (S.phase !== "shop" || S.over) return;
     setPaused(false);
+    setShopOpen(false); // drawer out of the way — the wave is starting
     S.phase = "wave";
     S.waveT = 0;
     S.queue = buildQueue(S.wave);
@@ -246,7 +249,7 @@
       S.gold += e.gold; S.goldEarned += e.gold;
       floaters.add(e.x, e.y - 10, "+" + e.gold, cfg.palette.gold, isBoss ? 20 : 16);
       VK.audio.coin();
-      if (!S.demo) $("#hud-gold").textContent = S.gold; // live gold while shopping mid-wave
+      if (!S.demo) { $("#hud-gold").textContent = S.gold; $("#tgl-gold").textContent = S.gold; } // live gold while shopping mid-wave
     }
     if (isBoss) {
       S.bossRef = null; hideBossUi();
@@ -305,6 +308,7 @@
 
   function endRun(won) {
     S.over = won ? "win" : "lose";
+    setShopOpen(false); // drawer would sit above the over screen otherwise
     renderShop(); updateHud();
     VK.audio.stopMusic();
     const color = won ? cfg.palette.tower : cfg.palette.enemies.boss;
@@ -358,6 +362,7 @@
     S.phase = "shop";
     show("game");
     updateHud(); renderShop();
+    autoOpenShop();
   }
 
   // ---------- boss DOM ui ----------
@@ -415,7 +420,7 @@
         VK.audio.stopMusic();
         S.wave++;
         if (S.wave === nWaves() && !S.endless) endRun(true);
-        else { S.phase = "shop"; updateHud(); renderShop(); }
+        else { S.phase = "shop"; updateHud(); renderShop(); autoOpenShop(); }
       }
     }
 
@@ -808,12 +813,24 @@
   }
 
   // ---------- HUD / shop ----------
+  // Mobile shop drawer. On narrow screens the shop is a slide-up drawer so the
+  // arena keeps the full viewport; desktop layout is untouched (CSS gates it).
+  const mobileLayout = () => window.matchMedia("(max-width: 700px)").matches;
+  function setShopOpen(open) {
+    document.body.classList.toggle("shop-open", !!open);
+    const lbl = $("#btn-shop-toggle .tgl-label");
+    if (lbl) lbl.textContent = open ? "CLOSE" : "UPGRADES";
+  }
+  const shopIsOpen = () => document.body.classList.contains("shop-open");
+  function autoOpenShop() { if (mobileLayout()) setShopOpen(true); }
+
   function updateHud() {
     if (S.demo) return;
     $("#hud-wave").textContent = S.wave < nWaves()
       ? "WAVE " + Math.min(S.wave + 1, nWaves()) + "/" + nWaves()
       : "WAVE " + (S.wave + 1) + " · ENDLESS";
     $("#hud-gold").textContent = S.gold;
+    $("#tgl-gold").textContent = S.gold;
     const f = Math.max(0, S.hp / S.maxHp);
     $("#hp-fill").style.width = (f * 100).toFixed(1) + "%";
     $("#hp-fill").style.background = f < 0.25 ? cfg.palette.hpLow : cfg.palette.hp;
@@ -888,6 +905,7 @@
   function wireUi() {
     $("#btn-play").addEventListener("click", () => { VK.audio.unlock(); startGame(); });
     $("#btn-wave").addEventListener("click", startWave);
+    $("#btn-shop-toggle").addEventListener("click", () => setShopOpen(!shopIsOpen()));
     [...BRANCHES, "repair"].forEach((k) => {
       $("#card-" + k).querySelector("button").addEventListener("click", () => buy(k));
     });
