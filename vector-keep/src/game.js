@@ -551,7 +551,9 @@
                 e2.hp -= Math.max(1, Math.round(s.dmg * m2) - e2.armor);
                 const push = st2.knockback * Math.max(0.25, 1 - d2 / R);
                 const nd = d2 || 1;
+                const preD = Math.hypot(e2.x - cx, e2.y - cy);
                 e2.x += ((e2.x - s.x) / nd) * push; e2.y += ((e2.y - s.y) / nd) * push;
+                clampKnockback(e2, preD);
                 if (e2.hp <= 0) killEnemy(e2, false);
               }
             }
@@ -596,6 +598,7 @@
             const push = st.nova.knockback * Math.max(0.3, 1 - d / R);
             const nd = d || 1;
             e.x += ((e.x - cx) / nd) * push; e.y += ((e.y - cy) / nd) * push;
+            clampKnockback(e, d);
             if (e.hp <= 0) killEnemy(e, false);
           }
         }
@@ -838,6 +841,20 @@
   }
 
   function repairPrice() { return Math.round(UPG.repair.basePrice * Math.pow(UPG.repair.priceGrowth, S.repairs)); }
+
+  // Knockback can hurl an enemy around, but never OUT of the tower's kill zone:
+  // an enemy inside range ends the push at the range ring at worst, and one
+  // already outside can't be shoved farther away. Fixes the deep-endless boss
+  // stall where nova ping-ponged bosses out of range forever.
+  function clampKnockback(e, preD) {
+    const lim = Math.max(preD, stat().range - e.r);
+    const d = Math.hypot(e.x - cx, e.y - cy);
+    if (d > lim) {
+      const f = lim / (d || 1);
+      e.x = cx + (e.x - cx) * f;
+      e.y = cy + (e.y - cy) * f;
+    }
+  }
 
   function renderShop() {
     const shop = $("#shop");
