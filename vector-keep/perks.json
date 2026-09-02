@@ -1,0 +1,29 @@
+{
+  "draftEvery": 5,
+  "rarityWeights": { "common": 6, "rare": 3, "epic": 1 },
+  "perks": [
+    { "id": "heavy",     "rarity": "common", "glyph": "◆", "name": "Heavy Shot",      "desc": "+20% cannon damage.",                                          "effect": { "dmgMult": 0.20 } },
+    { "id": "rapid",     "rarity": "common", "glyph": "»", "name": "Rapid Fire",      "desc": "+15% fire rate.",                                              "effect": { "rateMult": 0.15 } },
+    { "id": "thick",     "rarity": "common", "glyph": "▣", "name": "Thick Hull",      "desc": "+60 max hull, healed now.",                                    "effect": { "hull": 60 } },
+    { "id": "interest",  "rarity": "common", "glyph": "%", "name": "Ledger",          "desc": "+3% interest on unspent gold.",                                "effect": { "interest": 0.03 } },
+    { "id": "dartgold",  "rarity": "common", "glyph": "▲", "name": "Dart Tax",        "desc": "Darts drop double gold.",                                      "effect": { "dartGold": 1 } },
+    { "id": "cheaprep",  "rarity": "common", "glyph": "+", "name": "Cheap Welds",     "desc": "Repairs cost 35% less.",                                       "effect": { "repairDisc": 0.35 } },
+    { "id": "slowfield", "rarity": "common", "glyph": "◌", "name": "Deep Stasis",     "desc": "Stasis slows 10% more and reaches 10% farther.",               "effect": { "stasisSlow": 0.10, "stasisRadius": 0.10 } },
+    { "id": "bigbomb",   "rarity": "common", "glyph": "✸", "name": "Wide Blast",      "desc": "+30% bomb radius.",                                            "effect": { "bombRadius": 0.30 } },
+    { "id": "lucky",     "rarity": "common", "glyph": "★", "name": "Lucky Strike",    "desc": "10% of kills drop double gold.",                               "effect": { "luckyGold": 0.10 } },
+    { "id": "firststrike","rarity": "common","glyph": "!", "name": "First Strike",    "desc": "+30% damage to enemies at full health.",                       "effect": { "firstStrike": 0.30 } },
+
+    { "id": "chain",     "rarity": "rare",   "glyph": "⚡", "name": "Chain Arc",       "desc": "A quarter of your kills arc lightning to the nearest enemy.",  "effect": { "chain": 0.25 } },
+    { "id": "novaheal",  "rarity": "rare",   "glyph": "❂", "name": "Nova Mending",    "desc": "Every nova pulse heals the keep 3 hull.",                      "effect": { "novaHeal": 3 } },
+    { "id": "bossbounty","rarity": "rare",   "glyph": "♛", "name": "Trophy Hunter",   "desc": "+50% gold from bosses.",                                       "effect": { "bossGold": 0.50 } },
+    { "id": "weaken",    "rarity": "rare",   "glyph": "◎", "name": "Frozen Marks",    "desc": "Enemies inside the stasis field take 20% more damage.",        "effect": { "stasisWeaken": 0.20 } },
+    { "id": "paingold",  "rarity": "rare",   "glyph": "⚒", "name": "Blood Money",     "desc": "+3 gold every time the keep takes a hit.",                     "effect": { "painGold": 3 } },
+    { "id": "breaker",   "rarity": "rare",   "glyph": "⊘", "name": "Armor Breaker",   "desc": "Your shots ignore enemy armor.",                               "effect": { "ignoreArmor": 1 } },
+    { "id": "nosplit",   "rarity": "rare",   "glyph": "⬟", "name": "Clean Kill",      "desc": "Splitters no longer split.",                                   "effect": { "noSplit": 1 } },
+    { "id": "shardhunger","rarity": "rare",  "glyph": "◈", "name": "Shard Hunger",    "desc": "+25% shards at the end of this run.",                          "effect": { "shardMult": 0.25 } },
+
+    { "id": "glass",     "rarity": "epic",   "glyph": "✦", "name": "Glass Cannon",    "desc": "+35% damage. −30% max hull.",                                  "effect": { "dmgMult": 0.35, "hullMult": -0.30 } },
+    { "id": "laststand", "rarity": "epic",   "glyph": "⚔", "name": "Last Stand",      "desc": "Below 25% hull, +40% damage and +20% fire rate.",              "effect": { "lastStand": 1 } },
+    { "id": "overclock", "rarity": "epic",   "glyph": "⟳", "name": "Overclock",       "desc": "Nova and bomb fire 25% more often.",                           "effect": { "cdMult": 0.25 } }
+  ]
+}

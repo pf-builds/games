@@ -17,11 +17,56 @@
     "dim": "#7C8AA0",
     "panel": "#171C28",
     "panelLine": "#242B3B",
-    "enemies": { "mob": "#9FB4D8", "dart": "#FF5C7A", "brute": "#FF9A3D", "splitter": "#B07FF0", "boss": "#FF3B30" }
+    "enemies": {
+      "mob": "#9FB4D8",
+      "dart": "#FF5C7A",
+      "brute": "#FF9A3D",
+      "splitter": "#B07FF0",
+      "boss": "#FF3B30",
+      "shield": "#5CB8FF",
+      "mender": "#3DFFC8",
+      "bomber": "#E8FF5C",
+      "phaser": "#F0F4FF"
+    }
   },
-  "paceOptions": [0.3, 0.7, 1.0],
-  "tower": { "baseHp": 100, "baseDamage": 8, "baseFireRate": 2.0, "rangeFrac": 0.46, "projSpeed": 620 },
-  "economy": { "startGold": 40, "waveBonusBase": 12, "waveBonusPerWave": 3, "interestBase": 0.05 },
-  "fx": { "particleCap": 400, "shakeMax": 14, "slowMoScale": 0.3, "slowMoMs": 420 },
-  "music": true
+  "paceOptions": [
+    0.3,
+    0.7,
+    1.0
+  ],
+  "tower": {
+    "baseHp": 100,
+    "baseDamage": 8,
+    "baseFireRate": 2.0,
+    "rangeFrac": 0.46,
+    "projSpeed": 620,
+    "refArena": 560
+  },
+  "economy": {
+    "startGold": 40,
+    "waveBonusBase": 12,
+    "waveBonusPerWave": 3,
+    "interestBase": 0.05,
+    "interestCapBase": 80,
+    "interestCapPerWave": 12,
+    "endlessGoldScale": 0.35,
+    "goldScaleCap": 3
+  },
+  "fx": {
+    "particleCap": 400,
+    "shakeMax": 14,
+    "slowMoScale": 0.3,
+    "slowMoMs": 420,
+    "kbFalloff": 0.65
+  },
+  "music": true,
+  "endless": {
+    "hpGrowth": 1.25,
+    "countCap": 110
+  },
+  "late": {
+    "startWave": 20,
+    "hpPerWave": 0.9,
+    "dmgPerWave": 0.12
+  }
 }

@@ -241,3 +241,70 @@ body.danger::after {
 @media (prefers-reduced-motion: reduce) {
   body.danger::after, #boss-banner.show { animation: none; opacity: 1; }
 }
+
+/* ---------- v6: Forge, perk draft, perk row, shards ---------- */
+#title-meta { color: #9AACC4; font-size: .82rem; letter-spacing: .08em; min-height: 1.2em; text-shadow: 0 0 14px #10131A; }
+#title-meta b { color: #C9A6FF; }
+.menu.row { flex-direction: row; width: auto; }
+
+#screen-forge { position: relative; z-index: 3; background: rgba(10, 12, 18, .94); justify-content: flex-start; gap: .6rem; overflow-y: auto; padding-top: max(.9rem, env(safe-area-inset-top)); }
+.forge-head { display: flex; align-items: center; justify-content: space-between; width: min(96vw, 52rem); }
+.logo.small { font-size: clamp(1.5rem, 5vw, 2.2rem); }
+.logo.small span { color: #C9A6FF; text-shadow: 0 0 18px rgba(201,166,255,.5); }
+#forge-shards { font-size: 1.3rem; font-weight: 700; color: #C9A6FF; font-variant-numeric: tabular-nums; text-shadow: 0 0 16px rgba(201,166,255,.6); }
+#forge-shards.bump { animation: shardBump .35s ease-out; }
+@keyframes shardBump { 30% { transform: scale(1.18); } }
+.forge-sub { color: #7C8AA0; font-size: .82rem; letter-spacing: .04em; text-align: center; }
+#forge-lanes { display: grid; grid-template-columns: repeat(4, 1fr); gap: .55rem; width: min(96vw, 52rem); }
+.lane { --accent: #4FD8EB; background: #12161F; border: 1px solid #242B3B; border-top: 2px solid var(--accent); border-radius: 12px; padding: .5rem; display: flex; flex-direction: column; gap: .4rem; }
+.lane h3 { font-size: .74rem; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); text-align: center; }
+.node { background: #171C28; border: 1px solid #242B3B; border-radius: 10px; padding: .45rem .5rem; display: flex; flex-direction: column; gap: .25rem; }
+.node.maxed { border-color: var(--accent); }
+.node .nname { font-size: .78rem; font-weight: 700; letter-spacing: .04em; color: #DCE6F2; }
+.node .ndesc { font-size: .68rem; color: #9AACC4; line-height: 1.3; min-height: 2.4em; }
+.node .ndesc b { color: var(--accent); }
+.node button { padding: .38rem .3rem; font-size: .7rem; min-height: 38px; color: #C9A6FF; font-variant-numeric: tabular-nums; }
+.node button.afford { border-color: #6a4a9a; box-shadow: 0 0 12px rgba(201,166,255,.22); }
+.node.maxed button { color: #7C8AA0; }
+
+#perk-draft { position: fixed; inset: 0; z-index: 21; display: none; align-items: center; justify-content: center; background: rgba(8, 10, 16, .78); padding: 1rem; }
+#perk-draft.show { display: flex; }
+.pd-card { width: min(94vw, 40rem); background: #12161F; border: 1px solid #2C3550; border-top: 3px solid #C9A6FF; border-radius: 14px; padding: 1rem; display: flex; flex-direction: column; gap: .7rem; box-shadow: 0 14px 40px rgba(0,0,0,.6); }
+.pd-eyebrow { font-size: .72rem; letter-spacing: .3em; color: #7C8AA0; text-align: center; }
+.pd-card h2 { text-align: center; font-size: 1.3rem; letter-spacing: .12em; color: #C9A6FF; text-shadow: 0 0 18px rgba(201,166,255,.5); }
+#pd-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: .55rem; }
+.perk { --accent: #9AACC4; background: #171C28; border: 1px solid #242B3B; border-top: 3px solid var(--accent); border-radius: 12px; padding: .7rem .6rem .6rem; display: flex; flex-direction: column; align-items: center; gap: .35rem; cursor: pointer; text-align: center; min-height: 9rem; }
+.perk:hover, .perk:focus-visible { border-color: var(--accent); box-shadow: 0 0 18px rgba(255,255,255,.08); outline: none; }
+.perk .pglyph { font-size: 1.7rem; line-height: 1; color: var(--accent); text-shadow: 0 0 14px currentColor; }
+.perk .pname { font-size: .82rem; font-weight: 700; letter-spacing: .06em; }
+.perk .prar { font-size: .62rem; letter-spacing: .2em; text-transform: uppercase; color: var(--accent); }
+.perk .pdesc { font-size: .74rem; color: #9AACC4; line-height: 1.35; }
+.perk.common { --accent: #9AACC4; } .perk.rare { --accent: #4FD8EB; } .perk.epic { --accent: #FFD75A; }
+.pd-foot { display: flex; align-items: center; justify-content: space-between; gap: .6rem; }
+#pd-hint { font-size: .72rem; color: #7C8AA0; letter-spacing: .04em; }
+#pd-reroll { font-size: .8rem; padding: .45rem .8rem; }
+
+#perkrow { display: none; width: min(96vw, 44rem); gap: .35rem; flex-wrap: wrap; }
+#perkrow.show { display: flex; }
+.pchip { --accent: #9AACC4; display: inline-flex; align-items: center; gap: .3rem; padding: .18rem .5rem; border-radius: 99px; background: #171C28; border: 1px solid #2C3550; border-left: 3px solid var(--accent); font-size: .68rem; letter-spacing: .05em; cursor: pointer; min-height: 28px; }
+.pchip .pg { color: var(--accent); font-size: .85rem; }
+.pchip.common { --accent: #9AACC4; } .pchip.rare { --accent: #4FD8EB; } .pchip.epic { --accent: #FFD75A; }
+body:not(.in-game) #perkrow { visibility: hidden; }
+
+#over-shards { display: flex; align-items: center; gap: .8rem; background: #12161F; border: 1px solid #2C3550; border-radius: 12px; padding: .5rem 1rem; }
+#over-shards .os-label { font-size: .7rem; letter-spacing: .2em; color: #7C8AA0; }
+#over-shards b { font-size: 1.5rem; color: #C9A6FF; font-variant-numeric: tabular-nums; text-shadow: 0 0 16px rgba(201,166,255,.6); }
+#over-shards .os-total { font-size: .78rem; color: #9AACC4; font-variant-numeric: tabular-nums; }
+
+.card.locked button { color: #7C8AA0; font-size: .64rem; }
+
+@media (max-width: 700px) {
+  #forge-lanes { grid-template-columns: repeat(2, 1fr); }
+  .node .ndesc { min-height: 3.2em; }
+  #pd-options { grid-template-columns: 1fr; }
+  .perk { flex-direction: row; text-align: left; min-height: 0; align-items: flex-start; gap: .6rem; padding: .6rem; }
+  .perk .pglyph { font-size: 1.4rem; }
+  .perk .ptext { display: flex; flex-direction: column; gap: .15rem; }
+  #perkrow { width: 96vw; }
+}
+@media (min-width: 701px) { .perk .ptext { display: contents; } }

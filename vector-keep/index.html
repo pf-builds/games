@@ -4,24 +4,26 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Vector Keep — single-tower defense</title>
-<meta name="description" content="A free neon single-tower defense. Twenty waves, deep upgrades, endless mode. Hold the keep.">
+<meta name="description" content="A free neon single-tower defense. Forty waves, perk drafts, a permanent Forge between runs, endless mode. Hold the keep.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&display=swap">
-<link rel="stylesheet" href="style.css?v=8">
+<link rel="stylesheet" href="style.css?v=9">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%2310131A'/><polygon points='50,18 78,34 78,66 50,82 22,66 22,34' fill='none' stroke='%234FD8EB' stroke-width='7'/></svg>">
 </head>
 <body>
 
 <div class="screen active" id="screen-title">
   <div class="logo">VECTOR <span>KEEP</span></div>
-  <p id="title-sub">Twenty waves. One keep.</p>
+  <p id="title-sub">Forty waves. One keep.</p>
   <p id="title-best"></p>
+  <p id="title-meta"></p>
   <div class="menu">
     <button class="primary" id="btn-play">DEFEND</button>
+    <button id="btn-forge">◈ THE FORGE</button>
     <button class="btn-sound" aria-label="Toggle sound"></button>
   </div>
-  <p class="howto">Your tower fires on its own — you spend the gold. Bosses every fifth wave. Clear all twenty and keep going in Endless.</p>
+  <p class="howto">Your tower fires on its own — you spend the gold. Bosses every fifth wave, a perk to pick after each. Every run earns Shards for the Forge, and the Forge makes the next run stronger.</p>
 </div>
 
 <div class="screen" id="screen-game">
@@ -34,6 +36,7 @@
     <button class="btn-sound" aria-label="Toggle sound"></button>
     <button id="btn-quit" aria-label="Quit to title">✕</button>
   </div>
+  <div id="perkrow"></div>
   <div id="bossbar">
     <span class="bb-name"></span>
     <div class="bb-track"><div id="bb-ghost"></div><div id="bb-fill"></div></div>
@@ -72,10 +75,35 @@
 </div>
 <div id="pause-overlay">PAUSED</div>
 
+<!-- Perk draft: pick one of three after every fifth wave -->
+<div id="perk-draft">
+  <div class="pd-card">
+    <div class="pd-eyebrow">WAVE <span id="pd-wave"></span> CLEARED</div>
+    <h2>Choose a perk</h2>
+    <div id="pd-options"></div>
+    <div class="pd-foot"><button id="pd-reroll">⟳ REROLL</button><span id="pd-hint">Perks last for this run</span></div>
+  </div>
+</div>
+
+<!-- The Forge: permanent upgrades bought with Shards between runs -->
+<div class="screen" id="screen-forge">
+  <div class="forge-head">
+    <div class="logo small">THE <span>FORGE</span></div>
+    <div id="forge-shards">◈ 0</div>
+  </div>
+  <p class="forge-sub">Shards are earned every run and never lost. Everything here is permanent.</p>
+  <div id="forge-lanes"></div>
+  <div class="menu row">
+    <button class="primary" id="btn-forge-play">DEFEND</button>
+    <button id="btn-forge-back">TITLE</button>
+  </div>
+</div>
+
 <div class="screen" id="screen-over">
   <div id="over-title">THE KEEP STANDS</div>
   <p id="over-sub"></p>
   <p id="over-newbest" style="display:none">★ NEW BEST ★</p>
+  <div id="over-shards"><span class="os-label">SHARDS EARNED</span><b id="os-earned">+0</b><span class="os-total">◈ <span id="os-total">0</span> total</span></div>
   <div class="statrow">
     <div class="stat"><b id="stat-kills">0</b><span>Kills</span></div>
     <div class="stat"><b id="stat-gold">0</b><span>Gold</span></div>
@@ -83,13 +111,14 @@
   </div>
   <div class="menu">
     <button class="primary" id="btn-continue">CONTINUE · ENDLESS</button>
+    <button id="btn-over-forge">◈ THE FORGE</button>
     <button id="btn-again">DEFEND AGAIN</button>
     <button id="btn-menu">TITLE</button>
   </div>
 </div>
 
-<script src="src/audio.js?v=5"></script>
+<script src="src/audio.js?v=6"></script>
 <script src="src/particles.js?v=5"></script>
-<script src="src/game.js?v=9"></script>
+<script src="src/game.js?v=20"></script>
 </body>
 </html>

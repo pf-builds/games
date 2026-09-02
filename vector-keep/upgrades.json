@@ -1,95 +1,399 @@
 {
   "cannon": {
-    "name": "Cannon", "desc": "Damage and fire rate",
+    "name": "Cannon",
+    "desc": "Damage and fire rate",
     "tiers": [
-      { "price": 25,  "damage": 11, "fireRate": 2.5 },
-      { "price": 60,  "damage": 17, "fireRate": 3.0 },
-      { "price": 130, "damage": 28, "fireRate": 3.8 },
-      { "price": 260, "damage": 50, "fireRate": 5.0 },
-      { "price": 450, "damage": 72, "fireRate": 6.0 },
-      { "price": 700, "damage": 100, "fireRate": 7.0 }
-    ]
+      {
+        "price": 25,
+        "damage": 11,
+        "fireRate": 2.5
+      },
+      {
+        "price": 60,
+        "damage": 17,
+        "fireRate": 3.0
+      },
+      {
+        "price": 130,
+        "damage": 28,
+        "fireRate": 3.8
+      },
+      {
+        "price": 260,
+        "damage": 50,
+        "fireRate": 5.0
+      },
+      {
+        "price": 450,
+        "damage": 72,
+        "fireRate": 6.0
+      },
+      {
+        "price": 700,
+        "damage": 100,
+        "fireRate": 7.0
+      },
+      {
+        "price": 1600,
+        "damage": 135,
+        "fireRate": 8.0
+      },
+      {
+        "price": 2240,
+        "damage": 180,
+        "fireRate": 9.0
+      }
+    ],
+    "lockAfter": 6
   },
   "multi": {
-    "name": "Multi-Target", "desc": "Fires at extra enemies at once",
+    "name": "Multi-Target",
+    "desc": "Fires at extra enemies at once",
     "tiers": [
-      { "price": 80,   "shots": 2 },
-      { "price": 220,  "shots": 3 },
-      { "price": 480,  "shots": 4 },
-      { "price": 850,  "shots": 5 },
-      { "price": 1300, "shots": 6 }
-    ]
+      {
+        "price": 80,
+        "shots": 2
+      },
+      {
+        "price": 220,
+        "shots": 3
+      },
+      {
+        "price": 480,
+        "shots": 4
+      },
+      {
+        "price": 850,
+        "shots": 5
+      },
+      {
+        "price": 1300,
+        "shots": 6
+      },
+      {
+        "price": 3040,
+        "shots": 7
+      },
+      {
+        "price": 4160,
+        "shots": 8
+      }
+    ],
+    "lockAfter": 5
   },
   "bomb": {
-    "name": "Bomb", "desc": "Launcher: seeks the thickest cluster, explodes on impact",
+    "name": "Bomb",
+    "desc": "Launcher: seeks the thickest cluster, explodes on impact",
     "tiers": [
-      { "price": 60,  "damage": 30,  "radiusFrac": 0.10, "period": 5.0, "knockback": 90 },
-      { "price": 150, "damage": 50,  "radiusFrac": 0.115, "period": 4.2, "knockback": 110 },
-      { "price": 320, "damage": 80,  "radiusFrac": 0.13, "period": 3.4, "knockback": 130 },
-      { "price": 550, "damage": 120, "radiusFrac": 0.15, "period": 2.8, "knockback": 160 },
-      { "price": 850, "damage": 170, "radiusFrac": 0.17, "period": 2.2, "knockback": 200 }
-    ]
+      {
+        "price": 60,
+        "damage": 30,
+        "radiusFrac": 0.1,
+        "period": 5.0,
+        "knockback": 90
+      },
+      {
+        "price": 150,
+        "damage": 50,
+        "radiusFrac": 0.115,
+        "period": 4.2,
+        "knockback": 110
+      },
+      {
+        "price": 320,
+        "damage": 80,
+        "radiusFrac": 0.13,
+        "period": 3.4,
+        "knockback": 130
+      },
+      {
+        "price": 550,
+        "damage": 120,
+        "radiusFrac": 0.15,
+        "period": 2.8,
+        "knockback": 160
+      },
+      {
+        "price": 850,
+        "damage": 170,
+        "radiusFrac": 0.17,
+        "period": 2.2,
+        "knockback": 200
+      },
+      {
+        "price": 2000,
+        "damage": 240,
+        "radiusFrac": 0.19,
+        "period": 1.8,
+        "knockback": 230
+      },
+      {
+        "price": 2880,
+        "damage": 330,
+        "radiusFrac": 0.21,
+        "period": 1.5,
+        "knockback": 260
+      }
+    ],
+    "lockAfter": 5
   },
   "pierce": {
-    "name": "Pierce", "desc": "Shots punch through extra enemies",
+    "name": "Pierce",
+    "desc": "Shots punch through extra enemies",
     "tiers": [
-      { "price": 70,   "through": 1, "falloff": 0.75 },
-      { "price": 180,  "through": 2, "falloff": 0.75 },
-      { "price": 380,  "through": 3, "falloff": 0.8 },
-      { "price": 650,  "through": 4, "falloff": 0.8 },
-      { "price": 1000, "through": 6, "falloff": 0.85 }
-    ]
+      {
+        "price": 70,
+        "through": 1,
+        "falloff": 0.75
+      },
+      {
+        "price": 180,
+        "through": 2,
+        "falloff": 0.75
+      },
+      {
+        "price": 380,
+        "through": 3,
+        "falloff": 0.8
+      },
+      {
+        "price": 650,
+        "through": 4,
+        "falloff": 0.8
+      },
+      {
+        "price": 1000,
+        "through": 6,
+        "falloff": 0.85
+      },
+      {
+        "price": 2320,
+        "through": 8,
+        "falloff": 0.88
+      },
+      {
+        "price": 3200,
+        "through": 10,
+        "falloff": 0.9
+      }
+    ],
+    "lockAfter": 5
   },
   "nova": {
-    "name": "Nova", "desc": "Shockwave: damage + hurls enemies back",
+    "name": "Nova",
+    "desc": "Shockwave: damage + hurls enemies back",
     "tiers": [
-      { "price": 40,  "damage": 12, "radiusFrac": 0.22, "period": 4.0, "knockback": 70 },
-      { "price": 90,  "damage": 20, "radiusFrac": 0.27, "period": 3.4, "knockback": 90 },
-      { "price": 170, "damage": 34, "radiusFrac": 0.33, "period": 2.8, "knockback": 110 },
-      { "price": 300, "damage": 55, "radiusFrac": 0.40, "period": 2.2, "knockback": 140 },
-      { "price": 500, "damage": 82, "radiusFrac": 0.46, "period": 1.8, "knockback": 170 },
-      { "price": 780, "damage": 120, "radiusFrac": 0.52, "period": 1.5, "knockback": 200 }
-    ]
+      {
+        "price": 40,
+        "damage": 12,
+        "radiusFrac": 0.22,
+        "period": 4.0,
+        "knockback": 70
+      },
+      {
+        "price": 90,
+        "damage": 20,
+        "radiusFrac": 0.27,
+        "period": 3.4,
+        "knockback": 90
+      },
+      {
+        "price": 170,
+        "damage": 34,
+        "radiusFrac": 0.33,
+        "period": 2.8,
+        "knockback": 110
+      },
+      {
+        "price": 300,
+        "damage": 55,
+        "radiusFrac": 0.4,
+        "period": 2.2,
+        "knockback": 140
+      },
+      {
+        "price": 500,
+        "damage": 82,
+        "radiusFrac": 0.46,
+        "period": 1.8,
+        "knockback": 170
+      },
+      {
+        "price": 780,
+        "damage": 120,
+        "radiusFrac": 0.52,
+        "period": 1.5,
+        "knockback": 200
+      },
+      {
+        "price": 1840,
+        "damage": 170,
+        "radiusFrac": 0.58,
+        "period": 1.3,
+        "knockback": 230
+      },
+      {
+        "price": 2640,
+        "damage": 240,
+        "radiusFrac": 0.64,
+        "period": 1.1,
+        "knockback": 260
+      }
+    ],
+    "lockAfter": 6
   },
   "stasis": {
-    "name": "Stasis", "desc": "Slow field around the keep",
+    "name": "Stasis",
+    "desc": "Slow field around the keep",
     "tiers": [
-      { "price": 35,  "slow": 0.25, "radiusFrac": 0.22 },
-      { "price": 80,  "slow": 0.36, "radiusFrac": 0.26 },
-      { "price": 150, "slow": 0.46, "radiusFrac": 0.30 },
-      { "price": 280, "slow": 0.55, "radiusFrac": 0.32 },
-      { "price": 460, "slow": 0.62, "radiusFrac": 0.34 }
-    ]
+      {
+        "price": 35,
+        "slow": 0.25,
+        "radiusFrac": 0.22
+      },
+      {
+        "price": 80,
+        "slow": 0.36,
+        "radiusFrac": 0.26
+      },
+      {
+        "price": 150,
+        "slow": 0.46,
+        "radiusFrac": 0.3
+      },
+      {
+        "price": 280,
+        "slow": 0.55,
+        "radiusFrac": 0.32
+      },
+      {
+        "price": 460,
+        "slow": 0.62,
+        "radiusFrac": 0.34
+      },
+      {
+        "price": 1120,
+        "slow": 0.68,
+        "radiusFrac": 0.37
+      },
+      {
+        "price": 1680,
+        "slow": 0.74,
+        "radiusFrac": 0.4
+      }
+    ],
+    "lockAfter": 5
   },
   "hull": {
-    "name": "Hull", "desc": "+40 max hull, healed on install",
+    "name": "Hull",
+    "desc": "+40 max hull, healed on install",
     "tiers": [
-      { "price": 45,  "amount": 40 },
-      { "price": 110, "amount": 40 },
-      { "price": 220, "amount": 40 },
-      { "price": 400, "amount": 40 },
-      { "price": 640, "amount": 40 }
-    ]
+      {
+        "price": 45,
+        "amount": 40
+      },
+      {
+        "price": 110,
+        "amount": 40
+      },
+      {
+        "price": 220,
+        "amount": 40
+      },
+      {
+        "price": 400,
+        "amount": 40
+      },
+      {
+        "price": 640,
+        "amount": 40
+      },
+      {
+        "price": 1520,
+        "amount": 60
+      },
+      {
+        "price": 2160,
+        "amount": 80
+      }
+    ],
+    "lockAfter": 5
   },
   "armor": {
-    "name": "Armor", "desc": "Flat damage reduction per hit",
+    "name": "Armor",
+    "desc": "Flat damage reduction per hit",
     "tiers": [
-      { "price": 50,  "reduce": 2 },
-      { "price": 120, "reduce": 4 },
-      { "price": 260, "reduce": 7 },
-      { "price": 480, "reduce": 10 },
-      { "price": 750, "reduce": 14 }
-    ]
+      {
+        "price": 50,
+        "reduce": 2
+      },
+      {
+        "price": 120,
+        "reduce": 4
+      },
+      {
+        "price": 260,
+        "reduce": 7
+      },
+      {
+        "price": 480,
+        "reduce": 10
+      },
+      {
+        "price": 750,
+        "reduce": 14
+      },
+      {
+        "price": 1760,
+        "reduce": 19
+      },
+      {
+        "price": 2480,
+        "reduce": 25
+      }
+    ],
+    "lockAfter": 5
   },
   "vault": {
-    "name": "Vault", "desc": "More interest on unspent gold each wave",
+    "name": "Vault",
+    "desc": "More interest on unspent gold each wave",
     "tiers": [
-      { "price": 40,  "bonus": 0.02 },
-      { "price": 100, "bonus": 0.04 },
-      { "price": 200, "bonus": 0.06 },
-      { "price": 380, "bonus": 0.08 },
-      { "price": 650, "bonus": 0.10 }
-    ]
+      {
+        "price": 40,
+        "bonus": 0.02
+      },
+      {
+        "price": 100,
+        "bonus": 0.04
+      },
+      {
+        "price": 200,
+        "bonus": 0.06
+      },
+      {
+        "price": 380,
+        "bonus": 0.08
+      },
+      {
+        "price": 650,
+        "bonus": 0.1
+      },
+      {
+        "price": 1600,
+        "bonus": 0.12
+      },
+      {
+        "price": 2320,
+        "bonus": 0.14
+      }
+    ],
+    "lockAfter": 5
   },
-  "repair": { "name": "Repair", "desc": "+25 hull, between waves only", "amount": 25, "basePrice": 55, "priceGrowth": 1.55 }
+  "repair": {
+    "name": "Repair",
+    "desc": "+25 hull, between waves only",
+    "amount": 25,
+    "basePrice": 55,
+    "priceGrowth": 1.55
+  }
 }

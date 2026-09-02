@@ -1,0 +1,385 @@
+{
+  "shards": {
+    "perWave": 2,
+    "perBoss": 10,
+    "perKill": 0.05,
+    "endlessPer10": 25,
+    "winBonus": 60
+  },
+  "lanes": [
+    {
+      "id": "offense",
+      "name": "Offense",
+      "accent": "#FFD75A"
+    },
+    {
+      "id": "defense",
+      "name": "Defense",
+      "accent": "#FF7A9C"
+    },
+    {
+      "id": "economy",
+      "name": "Economy",
+      "accent": "#A8E060"
+    },
+    {
+      "id": "keep",
+      "name": "Keep",
+      "accent": "#4FD8EB"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "dmg",
+      "lane": "offense",
+      "name": "Tempered Barrels",
+      "effect": "dmgMult",
+      "unit": "%",
+      "desc": "+{v}% cannon damage",
+      "ranks": [
+        {
+          "cost": 20,
+          "value": 10
+        },
+        {
+          "cost": 45,
+          "value": 20
+        },
+        {
+          "cost": 90,
+          "value": 32
+        },
+        {
+          "cost": 160,
+          "value": 45
+        }
+      ]
+    },
+    {
+      "id": "rate",
+      "lane": "offense",
+      "name": "Quick Loaders",
+      "effect": "rateMult",
+      "unit": "%",
+      "desc": "+{v}% fire rate",
+      "ranks": [
+        {
+          "cost": 25,
+          "value": 8
+        },
+        {
+          "cost": 55,
+          "value": 16
+        },
+        {
+          "cost": 110,
+          "value": 25
+        }
+      ]
+    },
+    {
+      "id": "crit",
+      "lane": "offense",
+      "name": "Keen Edge",
+      "effect": "crit",
+      "unit": "%",
+      "desc": "{v}% chance a shot deals double",
+      "ranks": [
+        {
+          "cost": 35,
+          "value": 6
+        },
+        {
+          "cost": 80,
+          "value": 12
+        },
+        {
+          "cost": 150,
+          "value": 20
+        }
+      ]
+    },
+    {
+      "id": "bossdmg",
+      "lane": "offense",
+      "name": "Giant Slayer",
+      "effect": "bossMult",
+      "unit": "%",
+      "desc": "+{v}% damage to bosses",
+      "ranks": [
+        {
+          "cost": 30,
+          "value": 20
+        },
+        {
+          "cost": 70,
+          "value": 40
+        },
+        {
+          "cost": 140,
+          "value": 65
+        }
+      ]
+    },
+    {
+      "id": "hull",
+      "lane": "defense",
+      "name": "Reinforced Core",
+      "effect": "hullBonus",
+      "unit": "",
+      "desc": "+{v} starting hull",
+      "ranks": [
+        {
+          "cost": 20,
+          "value": 30
+        },
+        {
+          "cost": 45,
+          "value": 60
+        },
+        {
+          "cost": 90,
+          "value": 100
+        },
+        {
+          "cost": 160,
+          "value": 150
+        }
+      ]
+    },
+    {
+      "id": "plating",
+      "lane": "defense",
+      "name": "Plating",
+      "effect": "armorFlat",
+      "unit": "",
+      "desc": "Every hit on the keep does {v} less",
+      "ranks": [
+        {
+          "cost": 30,
+          "value": 1
+        },
+        {
+          "cost": 70,
+          "value": 3
+        },
+        {
+          "cost": 140,
+          "value": 5
+        }
+      ]
+    },
+    {
+      "id": "repair",
+      "lane": "defense",
+      "name": "Field Mechanics",
+      "effect": "repairDisc",
+      "unit": "%",
+      "desc": "Repairs cost {v}% less",
+      "ranks": [
+        {
+          "cost": 25,
+          "value": 15
+        },
+        {
+          "cost": 55,
+          "value": 30
+        },
+        {
+          "cost": 110,
+          "value": 45
+        }
+      ]
+    },
+    {
+      "id": "regen",
+      "lane": "defense",
+      "name": "Self-Sealing Hull",
+      "effect": "regen",
+      "unit": "",
+      "desc": "Heal {v} hull after every wave",
+      "ranks": [
+        {
+          "cost": 40,
+          "value": 5
+        },
+        {
+          "cost": 90,
+          "value": 10
+        },
+        {
+          "cost": 170,
+          "value": 18
+        }
+      ]
+    },
+    {
+      "id": "gold",
+      "lane": "economy",
+      "name": "War Chest",
+      "effect": "startGold",
+      "unit": "",
+      "desc": "Start each run with +{v} gold",
+      "ranks": [
+        {
+          "cost": 15,
+          "value": 25
+        },
+        {
+          "cost": 35,
+          "value": 55
+        },
+        {
+          "cost": 70,
+          "value": 95
+        },
+        {
+          "cost": 130,
+          "value": 150
+        }
+      ]
+    },
+    {
+      "id": "interest",
+      "lane": "economy",
+      "name": "Compound Vault",
+      "effect": "interest",
+      "unit": "%",
+      "desc": "+{v}% interest on unspent gold",
+      "ranks": [
+        {
+          "cost": 30,
+          "value": 1
+        },
+        {
+          "cost": 65,
+          "value": 2
+        },
+        {
+          "cost": 130,
+          "value": 4
+        }
+      ]
+    },
+    {
+      "id": "bounty",
+      "lane": "economy",
+      "name": "Bounty Board",
+      "effect": "bountyMult",
+      "unit": "%",
+      "desc": "+{v}% gold per kill",
+      "ranks": [
+        {
+          "cost": 25,
+          "value": 10
+        },
+        {
+          "cost": 60,
+          "value": 20
+        },
+        {
+          "cost": 120,
+          "value": 32
+        }
+      ]
+    },
+    {
+      "id": "wavebonus",
+      "lane": "economy",
+      "name": "Tithe",
+      "effect": "waveBonusMult",
+      "unit": "%",
+      "desc": "+{v}% wave-clear bonus",
+      "ranks": [
+        {
+          "cost": 20,
+          "value": 20
+        },
+        {
+          "cost": 50,
+          "value": 40
+        },
+        {
+          "cost": 100,
+          "value": 70
+        }
+      ]
+    },
+    {
+      "id": "starttier",
+      "lane": "keep",
+      "name": "Armory",
+      "effect": "startTier",
+      "unit": "",
+      "desc": "Runs start with Cannon at tier {v}",
+      "ranks": [
+        {
+          "cost": 40,
+          "value": 1
+        },
+        {
+          "cost": 100,
+          "value": 2
+        },
+        {
+          "cost": 220,
+          "value": 3
+        }
+      ]
+    },
+    {
+      "id": "reroll",
+      "lane": "keep",
+      "name": "Second Opinion",
+      "effect": "rerolls",
+      "unit": "",
+      "desc": "{v} perk reroll(s) per run",
+      "ranks": [
+        {
+          "cost": 35,
+          "value": 1
+        },
+        {
+          "cost": 90,
+          "value": 2
+        }
+      ]
+    },
+    {
+      "id": "loadout",
+      "lane": "keep",
+      "name": "Loadout",
+      "effect": "loadout",
+      "unit": "",
+      "desc": "Draft a perk before wave 1",
+      "ranks": [
+        {
+          "cost": 120,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "shards",
+      "lane": "keep",
+      "name": "Deep Mining",
+      "effect": "shardMult",
+      "unit": "%",
+      "desc": "+{v}% shards from every run",
+      "ranks": [
+        {
+          "cost": 50,
+          "value": 15
+        },
+        {
+          "cost": 120,
+          "value": 30
+        },
+        {
+          "cost": 240,
+          "value": 50
+        }
+      ]
+    }
+  ]
+}

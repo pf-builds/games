@@ -9,10 +9,13 @@
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   };
   const KEY = "vectorkeep.v1";
+  const MKEY = "vectorkeep.meta.v1"; // v6 meta progression, separate from the v5 keys
   const BRANCHES = ["cannon", "multi", "bomb", "pierce", "nova", "stasis", "hull", "armor", "vault"];
+  const LATE_TIER_WAVE = 20; // upgrade tiers past the v5 count unlock once 20 waves are cleared
 
-  let cfg = null, WAVES = null, UPG = null;
-  let canvas, ctx, dpr = 1, W = 0, H = 0, cx = 0, cy = 0, arenaR = 0;
+  let cfg = null, WAVES = null, UPG = null, FORGE = null, PERKS = null, META = null;
+  const DEBUG = new URLSearchParams(location.search).get("debug");
+  let canvas, ctx, dpr = 1, W = 0, H = 0, cx = 0, cy = 0, arenaR = 0, K = 1; // K: arena scale vs the 560px reference; all px/s speeds multiply by it
   let particles = null, floaters = null;
 
   const S = {
@@ -23,8 +26,28 @@
     enemies: [], shots: [], rings: [], queue: [], waveT: 0,
     fireCd: 0, novaCd: 0, turretA: 0, muzzle: 0, shotIdx: 0,
     shake: 0, timeScale: 1, slowT: 0, flash: 0, flashWhite: 0, over: null,
-    bossRef: null, bossGhost: 1, demoSpawnCd: 0, endless: false
+    bossRef: null, bossGhost: 1, demoSpawnCd: 0, endless: false,
+    perks: [], rerolls: 0, bossKills: 0, shardsPaid: 0, drafting: false, draftOpts: [], st: null
   };
+  if (DEBUG) window.VKS = S;
+
+  // ---------- meta (Forge + Shards) ----------
+  function loadMeta() {
+    const m = LS.get(MKEY, null);
+    if (!m || m.v !== 1 || typeof m.shards !== "number") return { v: 1, shards: 0, forge: {}, runs: 0, best: 0, earned: 0 };
+    if (!m.forge || typeof m.forge !== "object") m.forge = {};
+    return m;
+  }
+  function saveMeta() { LS.set(MKEY, META); }
+  function forgeNode(id) { return FORGE.nodes.find((n) => n.id === id); }
+  function forgeRank(id) { return META.forge[id] || 0; }
+  function forgeVal(effect) {
+    let v = 0;
+    for (const n of FORGE.nodes) { const r = forgeRank(n.id); if (r > 0 && n.effect === effect) v = n.ranks[r - 1].value; }
+    return v;
+  }
+  function perkDef(id) { return PERKS.perks.find((p) => p.id === id); }
+  function perkSum(key) { let v = 0; for (const id of S.perks) { const d = perkDef(id); if (d && d.effect[key]) v += d.effect[key]; } return v; }
 
   const GATES = 16; // 8 felt too predictable — attacks now come from 16 directions
   const nWaves = () => WAVES.waves.length;
@@ -51,12 +74,16 @@
     try {
       // ?v must match the asset version in index.html — stale tuning JSON against
       // new code caused undefined-type crashes once already (browser caching).
-      const V = "?v=5";
-      [cfg, WAVES, UPG] = await Promise.all([
+      const V = "?v=15";
+      [cfg, WAVES, UPG, FORGE, PERKS] = await Promise.all([
         fetch("config.json" + V).then((r) => r.json()),
         fetch("waves.json" + V).then((r) => r.json()),
-        fetch("upgrades.json" + V).then((r) => r.json())
+        fetch("upgrades.json" + V).then((r) => r.json()),
+        fetch("forge.json" + V).then((r) => r.json()),
+        fetch("perks.json" + V).then((r) => r.json())
       ]);
+      META = loadMeta();
+      if (DEBUG === "reset") { META = { v: 1, shards: 0, forge: {}, runs: 0, best: 0, earned: 0 }; saveMeta(); }
       if (paceIdx >= cfg.paceOptions.length) paceIdx = 0;
       syncPaceButton();
     } catch (e) {
@@ -82,6 +109,7 @@
     canvas.width = Math.round(s * dpr); canvas.height = Math.round(s * dpr);
     cx = W / 2; cy = H / 2;
     arenaR = W * 0.47;
+    K = W / ((cfg && cfg.tower.refArena) || 560);
   }
 
   // ---------- run lifecycle ----------
@@ -96,7 +124,14 @@
     S.flash = 0; S.flashWhite = 0; S.shotIdx = 0;
     S.turrets = [{ a: 0, muzzle: 0 }];
     S.bossRef = null; S.over = null; S.endless = false;
+    S.perks = []; S.rerolls = forgeVal("rerolls"); S.bossKills = 0; S.shardsPaid = 0; S.drafting = false; S.draftOpts = []; S.shardsRunCounted = false; S.runId = (S.runId || 0) + 1;
+    S.bombCd = 0; S.chainFx = [];
+    // Forge bonuses (permanent, from meta)
+    S.gold += forgeVal("startGold");
+    S.maxHp += forgeVal("hullBonus"); S.hp = S.maxHp;
+    S.tiers.cannon = forgeVal("startTier");
     hideBossUi();
+    renderPerkRow();
     particles = VK.Particles(cfg.fx.particleCap);
     floaters = VK.Floaters();
   }
@@ -117,26 +152,78 @@
     freshRun();
     show("game");
     updateHud(); renderShop();
-    autoOpenShop();
+    if (forgeVal("loadout")) openDraft(true); else autoOpenShop();
     VK.audio.unlock();
   }
 
   function show(name) {
-    ["title", "game", "over"].forEach((n) => $("#screen-" + n).classList.toggle("active", n === name));
+    ["title", "game", "over", "forge"].forEach((n) => $("#screen-" + n).classList.toggle("active", n === name));
+    if (name !== "game") { const tt = $("#threat-toast"); if (tt) tt.classList.remove("show"); }
     document.body.classList.toggle("in-game", name === "game");
+    if (name === "title") renderTitleMeta();
+  }
+  function renderTitleMeta() {
+    const el = $("#title-meta"); if (!el || !META) return;
+    el.innerHTML = "<b>◈ " + META.shards + "</b> shards · " + META.runs + " run" + (META.runs === 1 ? "" : "s") + (META.best ? " · best wave " + META.best : "");
   }
 
   // ---------- tower stats ----------
   function tierVal(branch) { return S.tiers[branch] ? UPG[branch].tiers[S.tiers[branch] - 1] : null; }
   function stat() {
     const c = tierVal("cannon") || { damage: cfg.tower.baseDamage, fireRate: cfg.tower.baseFireRate };
+    const meta = FORGE ? true : false;
+    const low = !S.demo && S.maxHp > 0 && S.hp / S.maxHp < 0.25;
+    const lastStand = perkSum("lastStand") > 0 && low;
+    const dmgMult = 1 + (meta ? forgeVal("dmgMult") / 100 : 0) + perkSum("dmgMult") + (lastStand ? 0.4 : 0);
+    const rateMult = 1 + (meta ? forgeVal("rateMult") / 100 : 0) + perkSum("rateMult") + (lastStand ? 0.2 : 0);
+    const cd = 1 - perkSum("cdMult");
+    let stasis = tierVal("stasis");
+    if (stasis && (perkSum("stasisSlow") || perkSum("stasisRadius"))) stasis = { slow: Math.min(0.9, stasis.slow + perkSum("stasisSlow")), radiusFrac: stasis.radiusFrac * (1 + perkSum("stasisRadius")) };
+    let bomb = tierVal("bomb");
+    if (bomb && (perkSum("bombRadius") || cd !== 1)) bomb = Object.assign({}, bomb, { radiusFrac: bomb.radiusFrac * (1 + perkSum("bombRadius")), period: bomb.period * cd });
+    let nova = tierVal("nova");
+    if (nova && cd !== 1) nova = Object.assign({}, nova, { period: nova.period * cd });
     return {
-      dmg: c.damage, rate: c.fireRate,
-      multi: tierVal("multi"), bomb: tierVal("bomb"), pierce: tierVal("pierce"),
-      nova: tierVal("nova"), stasis: tierVal("stasis"),
+      dmg: Math.round(c.damage * dmgMult), rate: c.fireRate * rateMult,
+      multi: tierVal("multi"), bomb, pierce: tierVal("pierce"),
+      nova, stasis,
       armor: tierVal("armor"), vault: tierVal("vault"),
-      range: W * cfg.tower.rangeFrac
+      range: W * cfg.tower.rangeFrac,
+      crit: meta ? forgeVal("crit") / 100 : 0, bossMult: 1 + (meta ? forgeVal("bossMult") / 100 : 0),
+      firstStrike: perkSum("firstStrike"), stasisWeaken: perkSum("stasisWeaken"), ignoreArmor: perkSum("ignoreArmor") > 0,
+      chain: perkSum("chain"), novaHeal: perkSum("novaHeal"), luckyGold: perkSum("luckyGold"),
+      dartGold: perkSum("dartGold") > 0, bossGold: perkSum("bossGold"), painGold: perkSum("painGold"), noSplit: perkSum("noSplit") > 0
     };
+  }
+
+  // Every point of damage to an enemy goes through here: boss/first-strike/stasis
+  // multipliers, crit, armor rules, shields, and the kill. Returns damage dealt.
+  function applyDamage(e, amount, src, noChain) {
+    if (e.dead) return 0;
+    const st = S.st || stat();
+    if (e.type === "boss") amount *= st.bossMult;
+    if (st.firstStrike && e.hp >= e.maxHp) amount *= 1 + st.firstStrike;
+    if (st.stasisWeaken && st.stasis && Math.hypot(e.x - cx, e.y - cy) < W * st.stasis.radiusFrac) amount *= 1 + st.stasisWeaken;
+    let crit = false;
+    if (src === "cannon" && st.crit > 0 && Math.random() < st.crit) { amount *= 2; crit = true; }
+    const armor = st.ignoreArmor ? 0 : e.armor;
+    let dmg = Math.max(1, Math.round(amount) - armor);
+    if (e.shieldHp > 0) {
+      if (src === "nova" || src === "bomb") { // shatter
+        e.shieldHp = 0; VK.audio.clang(); killRing(e.x, e.y, e.r * 1.3, cfg.palette.enemies.shield, 4);
+        particles.shards(e.x, e.y, cfg.palette.enemies.shield, 8, 260);
+      } else {
+        const soak = Math.min(e.shieldHp, dmg);
+        e.shieldHp -= soak; dmg -= soak;
+        particles.burst(e.x, e.y, cfg.palette.enemies.shield, 3, 90, 0.2, 3);
+        if (e.shieldHp <= 0) { VK.audio.clang(); killRing(e.x, e.y, e.r * 1.3, cfg.palette.enemies.shield, 4); }
+        if (dmg <= 0) return 0;
+      }
+    }
+    e.hp -= dmg;
+    if (crit) { floaters.add(e.x, e.y - e.r - 6, "CRIT", "#FFFFFF", 13); particles.burst(e.x, e.y, "#FFFFFF", 6, 140, 0.25, 4); }
+    if (e.hp <= 0) killEnemy(e, false, noChain);
+    return dmg;
   }
 
   // ---------- wave defs (authored + endless synthesis) ----------
@@ -145,18 +232,27 @@
     if (n < nWaves()) return WAVES.waves[n];
     const k = n - nWaves() + 1;
     const p = cfg.pace || 1;
+    const cap = (cfg.endless && cfg.endless.countCap) || 110;
     const def = {
       groups: [
         { type: "mob", count: 20 + k * 4, interval: Math.max(0.2, 0.4 - k * 0.006) / p, delay: 0, gates: 6 },
         { type: "dart", count: 24 + k * 5, interval: Math.max(0.12, 0.2 - k * 0.004) / p, delay: 2, gates: 7 },
         { type: "brute", count: 10 + k * 2, interval: Math.max(0.4, 0.8 - k * 0.015) / p, delay: 4, gates: 5 },
-        { type: "splitter", count: 10 + k * 2, interval: Math.max(0.3, 0.6 - k * 0.012) / p, delay: 7, gates: 5 }
+        { type: "splitter", count: 10 + k * 2, interval: Math.max(0.3, 0.6 - k * 0.012) / p, delay: 7, gates: 5 },
+        { type: "shield", count: 8 + k * 2, interval: Math.max(0.35, 0.7 - k * 0.012) / p, delay: 3, gates: 5 },
+        { type: "bomber", count: 8 + k * 2, interval: Math.max(0.35, 0.7 - k * 0.012) / p, delay: 6, gates: 5 },
+        { type: "phaser", count: 8 + k * 2, interval: Math.max(0.3, 0.6 - k * 0.012) / p, delay: 5, gates: 5 },
+        { type: "mender", count: 3 + Math.floor(k / 2), interval: 2.0, delay: 8, gates: 3 }
       ]
     };
-    if ((n + 1) % 5 === 0) def.boss = 3;
+    for (const g of def.groups) g.count = Math.min(cap, g.count);
+    if ((n + 1) % 5 === 0) def.boss = 4 + (Math.floor((n + 1) / 5) % 4);
     return def;
   }
-  function endlessMult(n) { return n < nWaves() ? 1 : Math.pow(1.16, n - nWaves() + 1); }
+  function lateMult(n) { const L = cfg.late; if (!L || n < L.startWave) return 1; return 1 + (Math.min(n, nWaves() - 1) - L.startWave + 1) * L.hpPerWave; }
+  function endlessMult(n) { return lateMult(n) * (n < nWaves() ? 1 : Math.pow((cfg.endless && cfg.endless.hpGrowth) || 1.16, n - nWaves() + 1)); }
+  function lateDmg(n) { const L = cfg.late; if (!L || n < L.startWave) return 1; return 1 + (n - L.startWave + 1) * L.dmgPerWave; }
+  function goldScale(mult) { return Math.min(cfg.economy.goldScaleCap || 3, 1 + (mult - 1) * ((cfg.economy.endlessGoldScale !== undefined) ? cfg.economy.endlessGoldScale : 0.6)); }
 
   function buildQueue(w) {
     const def = waveDef(w);
@@ -175,7 +271,7 @@
   }
 
   function startWave() {
-    if (S.phase !== "shop" || S.over) return;
+    if (S.phase !== "shop" || S.over || S.drafting) return;
     setPaused(false);
     setShopOpen(false); // drawer out of the way — the wave is starting
     S.phase = "wave";
@@ -198,16 +294,20 @@
     const e = {
       type, x: cx + Math.cos(a) * arenaR, y: cy + Math.sin(a) * arenaR,
       hp: Math.round(t.hp * mult), maxHp: Math.round(t.hp * mult),
-      speed: t.speed, dmg: t.dmg, gold: Math.max(1, Math.round(t.gold * (1 + (mult - 1) * 0.6))),
+      speed: t.speed, dmg: Math.round(t.dmg * (S.demo ? 1 : lateDmg(S.wave))), gold: Math.max(1, Math.round(t.gold * goldScale(mult))),
       armor: t.armor || 0, weak: t.weak || null, weakMult: t.weakMult || 1,
-      r: t.r, rot: Math.random() * 6.3, wob: Math.random() * 6.3, dead: false, bossIdx: undefined
+      r: t.r, rot: Math.random() * 6.3, wob: Math.random() * 6.3, dead: false, bossIdx: undefined,
+      shieldHp: t.shield ? Math.round(t.shield * mult) : 0, shieldMax: t.shield ? Math.round(t.shield * mult) : 0,
+      phaseT: t.phaseEvery ? t.phaseEvery * (0.5 + Math.random() * 0.5) : 0, abilityT: 0
     };
     if (!S.demo && type !== "boss") introduceThreat(type);
     if (type === "boss") {
       const bmult = (t.scaling[bossIdx] || 1) * mult;
       e.hp = e.maxHp = Math.round(t.hp * bmult);
-      e.gold = Math.round(t.gold * (1 + bossIdx) * (1 + (mult - 1) * 0.6));
+      e.gold = Math.round(t.gold * (1 + bossIdx) * goldScale(mult));
       e.bossIdx = bossIdx;
+      e.behavior = (WAVES.bossBehavior || {})[String(bossIdx)] || null;
+      if (e.behavior === "phase") { e.phaseT = 3; }
       S.bossRef = e; S.bossGhost = 1;
       showBossBar(WAVES.bossNames[bossIdx] + (S.wave >= nWaves() ? " Ω" + endlessK() : ""));
     }
@@ -240,14 +340,22 @@
     S.rings.push({ r, R: r * 3.5, t: 0.18, t0: 0.18, color, lw: lw || 3 });
   }
 
-  function killEnemy(e, byContact) {
+  function killEnemy(e, byContact, noChain) {
+    if (e.dead) return;
     e.dead = true;
     S.kills++;
     const isBoss = e.type === "boss";
+    if (isBoss) S.bossKills++;
     const c = colorOf(e);
     if (!byContact) {
-      S.gold += e.gold; S.goldEarned += e.gold;
-      floaters.add(e.x, e.y - 10, "+" + e.gold, cfg.palette.gold, isBoss ? 20 : 16);
+      const st = S.st || stat();
+      let g = e.gold * (1 + (FORGE ? forgeVal("bountyMult") / 100 : 0));
+      if (e.type === "dart" && st.dartGold) g *= 2;
+      if (isBoss && st.bossGold) g *= 1 + st.bossGold;
+      const lucky = st.luckyGold > 0 && Math.random() < st.luckyGold; if (lucky) g *= 2;
+      g = Math.max(1, Math.round(g));
+      S.gold += g; S.goldEarned += g;
+      floaters.add(e.x, e.y - 10, "+" + g + (lucky ? " ★" : ""), lucky ? "#FFFFFF" : cfg.palette.gold, isBoss ? 20 : 16);
       VK.audio.coin();
       if (!S.demo) { $("#hud-gold").textContent = S.gold; $("#tgl-gold").textContent = S.gold; } // live gold while shopping mid-wave
     }
@@ -275,30 +383,59 @@
       particles.burst(e.x, e.y, c, 12, 190, 0.5, 5);
       particles.shards(e.x, e.y, c, e.type === "dart" ? 4 : 6, 240);
       if (e.type !== "dart") S.flashWhite = Math.max(S.flashWhite, 0.1);
-      if (WAVES.types[e.type].splitInto && !byContact) {
+      if (WAVES.types[e.type].splitInto && !byContact && !(S.st && S.st.noSplit)) {
         VK.audio.crack();
-        const st = WAVES.types[WAVES.types[e.type].splitInto];
-        const mult = S.demo ? 1 : endlessMult(S.wave);
         for (let k = 0; k < WAVES.types[e.type].splitCount; k++) {
           const a = Math.random() * Math.PI * 2;
-          S.enemies.push({
-            type: WAVES.types[e.type].splitInto,
-            x: e.x + Math.cos(a) * 12, y: e.y + Math.sin(a) * 12,
-            hp: Math.round(st.hp * mult), maxHp: Math.round(st.hp * mult),
-            speed: st.speed, dmg: st.dmg, gold: Math.max(1, Math.round(st.gold * (1 + (mult - 1) * 0.6))),
-            armor: st.armor || 0, weak: st.weak || null, weakMult: st.weakMult || 1,
-            r: st.r, rot: Math.random() * 6.3, wob: Math.random() * 6.3, dead: false
-          });
+          spawnAt(WAVES.types[e.type].splitInto, e.x + Math.cos(a) * 12, e.y + Math.sin(a) * 12);
+        }
+      }
+      // bomber: dies loud; close to the keep, the keep eats the blast
+      if (WAVES.types[e.type].blastFrac) {
+        const tt = WAVES.types[e.type];
+        const d = Math.hypot(e.x - cx, e.y - cy);
+        killRing(e.x, e.y, e.r * 1.2, c, 5);
+        particles.burst(e.x, e.y, c, 18, 220, 0.6, 6);
+        VK.audio.explode(false);
+        if (d < W * tt.blastFrac && !byContact) { damageTower(tt.blastDmg); floaters.add(cx, cy - 30, "BLAST −" + tt.blastDmg, cfg.palette.hpLow, 15); }
+      }
+      // chain arc perk
+      if (!noChain && !byContact && S.st && S.st.chain > 0 && Math.random() < S.st.chain) {
+        let best = null, bd = W * 0.28;
+        for (const o of S.enemies) { if (o.dead || o === e) continue; const d = Math.hypot(o.x - e.x, o.y - e.y); if (d < bd) { bd = d; best = o; } }
+        if (best) {
+          S.chainFx.push({ x0: e.x, y0: e.y, x1: best.x, y1: best.y, t: 0.18 });
+          VK.audio.zap();
+          applyDamage(best, S.st.dmg * 1.5, "chain", true);
         }
       }
     }
   }
 
+  function spawnAt(type, x, y) {
+    const st = WAVES.types[type];
+    const mult = S.demo ? 1 : endlessMult(S.wave);
+    const e = {
+      type, x, y,
+      hp: Math.round(st.hp * mult), maxHp: Math.round(st.hp * mult),
+      speed: st.speed, dmg: st.dmg, gold: Math.max(1, Math.round(st.gold * goldScale(mult))),
+      armor: st.armor || 0, weak: st.weak || null, weakMult: st.weakMult || 1,
+      r: st.r, rot: Math.random() * 6.3, wob: Math.random() * 6.3, dead: false,
+      shieldHp: st.shield ? Math.round(st.shield * mult) : 0, shieldMax: st.shield ? Math.round(st.shield * mult) : 0,
+      phaseT: st.phaseEvery ? st.phaseEvery : 0, abilityT: 0
+    };
+    if (!S.demo) introduceThreat(type);
+    S.enemies.push(e);
+    particles.burst(x, y, colorOf(e), 6, 100, 0.3, 4);
+    return e;
+  }
+
   function damageTower(amount) {
     if (S.demo || S.over) return;
     const ar = tierVal("armor");
-    amount = Math.max(1, amount - (ar ? ar.reduce : 0));
+    amount = Math.max(1, amount - (ar ? ar.reduce : 0) - (FORGE ? forgeVal("armorFlat") : 0));
     S.hp = Math.max(0, S.hp - amount);
+    if (S.st && S.st.painGold) { S.gold += S.st.painGold; S.goldEarned += S.st.painGold; }
     S.flash = 0.5;
     S.shake = Math.min(cfg.fx.shakeMax, S.shake + 6);
     VK.audio.towerHit();
@@ -340,7 +477,11 @@
     const reached = won ? nWaves() : S.wave + 1;
     const newBest = reached > prevBest;
     if (newBest) LS.set(KEY + ".best", reached);
+    const earned = awardShards(won);
+    if (S.drafting) closeDraft(false);
+    const runId = S.runId;
     setTimeout(() => {
+      if (S.runId !== runId || S.demo || S.over === null) return; // a new run or the title took over during the delay
       $("#over-title").textContent = won ? "THE KEEP STANDS" : "THE KEEP HAS FALLEN";
       $("#over-title").style.color = color;
       const secs = Math.round((performance.now() - S.t0) / 1000);
@@ -352,13 +493,42 @@
       $("#stat-gold").textContent = S.goldEarned;
       $("#stat-time").textContent = Math.floor(secs / 60) + "m " + (secs % 60) + "s";
       $("#btn-continue").style.display = won ? "" : "none";
+      $("#os-total").textContent = META.shards;
+      tallyShards(earned);
       show("over");
     }, won ? 2000 : 1400);
   }
 
+  // Shards: paid for progress not yet paid for, so a win at 40 then an endless death pays the difference only.
+  function shardsFor(won) {
+    const F = FORGE.shards, cleared = S.wave;
+    let s = F.perWave * cleared + F.perBoss * S.bossKills + F.perKill * S.kills;
+    if (won || cleared >= nWaves()) s += F.winBonus;
+    if (cleared > nWaves()) s += F.endlessPer10 * Math.floor((cleared - nWaves()) / 10);
+    s *= 1 + forgeVal("shardMult") / 100 + perkSum("shardMult");
+    return Math.floor(s);
+  }
+  function awardShards(won) {
+    const total = shardsFor(won), earned = Math.max(0, total - S.shardsPaid);
+    S.shardsPaid = total;
+    META.shards += earned; META.earned += earned;
+    if (S.over && S.shardsRunCounted !== true) { META.runs++; S.shardsRunCounted = true; }
+    const reached = won ? nWaves() : S.wave + 1;
+    if (reached > META.best) META.best = reached;
+    saveMeta();
+    return earned;
+  }
+  let tallyTimer = null;
+  function tallyShards(n) {
+    const el = $("#os-earned"); if (tallyTimer) clearInterval(tallyTimer);
+    let shown = 0; el.textContent = "+0";
+    const step = Math.max(1, Math.ceil(n / 40));
+    tallyTimer = setInterval(() => { shown = Math.min(n, shown + step); el.textContent = "+" + shown; VK.audio.tick(); if (shown >= n) { clearInterval(tallyTimer); tallyTimer = null; } }, 35);
+  }
+
   function continueEndless() {
     if (S.over !== "win") return;
-    S.over = null; S.endless = true;
+    S.over = null; S.endless = true; S.shardsRunCounted = true;
     S.phase = "shop";
     show("game");
     updateHud(); renderShop();
@@ -391,7 +561,8 @@
 
   // ---------- update ----------
   function update(dt) {
-    const st = stat();
+    if (S.drafting) { particles.update(dt); floaters.update(dt); return; }
+    const st = stat(); S.st = st;
     // gameplay clock (player-selected speed); juice stays on raw dt
     const pdt = dt * (S.demo ? 0.7 : pace());
 
@@ -410,17 +581,24 @@
       if (!S.queue.length && S.enemies.length === 0) {
         // interest pays on gold still unspent at the horn — the vault build's whole game
         const vault = tierVal("vault");
-        const rate = cfg.economy.interestBase + (vault ? vault.bonus : 0);
-        const interest = Math.floor(S.gold * rate);
-        const bonus = cfg.economy.waveBonusBase + cfg.economy.waveBonusPerWave * S.wave;
+        const rate = cfg.economy.interestBase + (vault ? vault.bonus : 0) + forgeVal("interest") / 100 + perkSum("interest");
+        const interest = Math.min(Math.floor(S.gold * rate), cfg.economy.interestCapBase + cfg.economy.interestCapPerWave * S.wave); // capped: compounding vaults ran to six figures in deep endless
+        const bonus = Math.round((cfg.economy.waveBonusBase + cfg.economy.waveBonusPerWave * S.wave) * (1 + forgeVal("waveBonusMult") / 100));
         S.gold += bonus + interest; S.goldEarned += bonus + interest;
         floaters.add(cx, cy - 40, "WAVE CLEAR +" + bonus, cfg.palette.gold, 18);
         if (interest > 0) floaters.add(cx, cy - 14, "INTEREST +" + interest, "#A8E060", 15);
+        const regen = forgeVal("regen");
+        if (regen > 0 && S.hp < S.maxHp) { S.hp = Math.min(S.maxHp, S.hp + regen); floaters.add(cx, cy + 12, "SEALED +" + regen, cfg.palette.hp, 14); }
         VK.audio.upgrade();
         VK.audio.stopMusic();
         S.wave++;
+        const ms = (WAVES.milestones || []).indexOf(S.wave);
+        if (ms >= 0) { setTimeout(() => { showBanner("WAVE " + S.wave); VK.audio.bossHorn(); }, 300); }
         if (S.wave === nWaves() && !S.endless) endRun(true);
-        else { S.phase = "shop"; updateHud(); renderShop(); autoOpenShop(); }
+        else {
+          S.phase = "shop"; updateHud(); renderShop();
+          if (S.wave % PERKS.draftEvery === 0 && draftPool().length > 0) openDraft(false); else autoOpenShop();
+        }
       }
     }
 
@@ -429,10 +607,39 @@
       if (e.dead) continue;
       const dx = cx - e.x, dy = cy - e.y;
       const d = Math.hypot(dx, dy) || 1;
-      let sp = e.speed;
-      if (st.stasis && d < W * st.stasis.radiusFrac) sp *= (1 - st.stasis.slow);
+      const T = WAVES.types[e.type];
+      let sp = e.speed * K;
+      const phases = T.phaseEvery || e.behavior === "phase";
+      if (st.stasis && d < W * st.stasis.radiusFrac && !phases) sp *= (1 - st.stasis.slow);
+      // mender: heals everything nearby (not itself)
+      if (T.healRate) {
+        e.abilityT += pdt;
+        const R = W * T.healRadiusFrac, mult = S.demo ? 1 : endlessMult(S.wave);
+        for (const o of S.enemies) {
+          if (o.dead || o === e || o.hp >= o.maxHp) continue;
+          if (Math.hypot(o.x - e.x, o.y - e.y) < R) { o.hp = Math.min(o.maxHp, o.hp + T.healRate * mult * pdt); if (e.abilityT > 0.5) particles.burst(o.x, o.y, colorOf(e), 1, 40, 0.4, 3); }
+        }
+        if (e.abilityT > 0.5) e.abilityT = 0;
+      }
+      // phaser (and phasing bosses): blink toward the keep
+      if (phases) {
+        e.phaseT -= pdt;
+        if (e.phaseT <= 0) {
+          e.phaseT = T.phaseEvery || 3;
+          const jump = Math.min(W * (T.phaseDist || 0.06), Math.max(0, d - W * 0.055 - e.r - 4));
+          particles.burst(e.x, e.y, colorOf(e), 8, 120, 0.3, 4);
+          e.x += (dx / d) * jump; e.y += (dy / d) * jump;
+          particles.burst(e.x, e.y, colorOf(e), 8, 120, 0.3, 4);
+          if (Math.hypot(e.x - cx, e.y - cy) < W * 0.35) VK.audio.blink();
+        }
+      }
+      // boss: spawns menders
+      if (e.behavior === "spawnMenders" && !S.demo) {
+        e.abilityT += pdt;
+        if (e.abilityT >= 6) { e.abilityT = 0; const a = Math.random() * 6.3; spawnAt("mender", e.x + Math.cos(a) * 30, e.y + Math.sin(a) * 30); VK.audio.crack(); }
+      }
       e.wob += pdt * 4;
-      const wobble = e.type === "dart" ? Math.sin(e.wob) * 26 : 0;
+      const wobble = e.type === "dart" ? Math.sin(e.wob) * 26 * K : 0;
       const px = -dy / d, py = dx / d;
       e.x += (dx / d) * sp * pdt + px * wobble * pdt;
       e.y += (dy / d) * sp * pdt + py * wobble * pdt;
@@ -461,12 +668,13 @@
       if (d < st.range) inRange.push({ e, d });
     }
     inRange.sort((a, b) => a.d - b.d);
+    const PSPD = cfg.tower.projSpeed * K;
     const aimAt = (pick) => {
-      const lead = Math.hypot(pick.x - cx, pick.y - cy) / cfg.tower.projSpeed;
+      const lead = Math.hypot(pick.x - cx, pick.y - cy) / PSPD;
       const tdx = cx - pick.x, tdy = cy - pick.y;
       const td = Math.hypot(tdx, tdy) || 1;
-      return Math.atan2(pick.y + (tdy / td) * pick.speed * lead - cy,
-                        pick.x + (tdx / td) * pick.speed * lead - cx);
+      return Math.atan2(pick.y + (tdy / td) * pick.speed * K * lead - cy,
+                        pick.x + (tdx / td) * pick.speed * K * lead - cx);
     };
     for (let i = 0; i < S.turrets.length; i++) {
       const t = S.turrets[i];
@@ -487,7 +695,7 @@
         t.a = a; t.muzzle = 0.14;
         S.shots.push({
           x: cx + Math.cos(a) * W * 0.06, y: cy + Math.sin(a) * W * 0.06,
-          vx: Math.cos(a) * cfg.tower.projSpeed, vy: Math.sin(a) * cfg.tower.projSpeed,
+          vx: Math.cos(a) * PSPD, vy: Math.sin(a) * PSPD,
           dmg: st.dmg, bomb: false, hist: [],
           pierce: st.pierce ? st.pierce.through : 0,
           pierceMax: st.pierce ? st.pierce.through : 0,
@@ -505,16 +713,20 @@
         S.bombCd = st.bomb.period;
         const R = W * st.bomb.radiusFrac;
         let best = null, bestScore = -1;
-        for (const e of S.enemies) {
+        const N = S.enemies.length, samples = Math.min(N, 24), step = Math.max(1, Math.floor(N / samples));
+        const start = Math.floor(Math.random() * step);
+        for (let i = start; i < N; i += step) {
+          const e = S.enemies[i]; if (e.dead) continue;
           let score = 0;
-          for (const o of S.enemies) if (Math.hypot(o.x - e.x, o.y - e.y) < R) score++;
+          for (let j = 0; j < N; j++) { const o = S.enemies[j]; if (Math.abs(o.x - e.x) < R && Math.abs(o.y - e.y) < R && Math.hypot(o.x - e.x, o.y - e.y) < R) score++; }
           if (score > bestScore) { bestScore = score; best = e; }
         }
-        const bs = cfg.tower.projSpeed * 0.55;
+        if (!best) best = S.enemies[0];
+        const bs = PSPD * 0.55;
         const lead = Math.hypot(best.x - cx, best.y - cy) / bs;
         const tdx = cx - best.x, tdy = cy - best.y;
         const td = Math.hypot(tdx, tdy) || 1;
-        const a = Math.atan2(best.y + (tdy / td) * best.speed * lead - cy, best.x + (tdx / td) * best.speed * lead - cx);
+        const a = Math.atan2(best.y + (tdy / td) * best.speed * K * lead - cy, best.x + (tdx / td) * best.speed * K * lead - cx);
         S.shots.push({
           x: cx + Math.cos(a) * W * 0.06, y: cy + Math.sin(a) * W * 0.06,
           vx: Math.cos(a) * bs, vy: Math.sin(a) * bs,
@@ -548,13 +760,13 @@
               const d2 = Math.hypot(e2.x - s.x, e2.y - s.y);
               if (d2 < R + e2.r) {
                 const m2 = e2.weak === "bomb" ? e2.weakMult : 1;
-                e2.hp -= Math.max(1, Math.round(s.dmg * m2) - e2.armor);
-                const push = st2.knockback * Math.max(0.25, 1 - d2 / R);
+                applyDamage(e2, s.dmg * m2, "bomb");
+                if (e2.dead) continue;
+                const push = kbPush(e2, st2.knockback * K * Math.max(0.25, 1 - d2 / R));
                 const nd = d2 || 1;
                 const preD = Math.hypot(e2.x - cx, e2.y - cy);
                 e2.x += ((e2.x - s.x) / nd) * push; e2.y += ((e2.y - s.y) / nd) * push;
                 clampKnockback(e2, preD);
-                if (e2.hp <= 0) killEnemy(e2, false);
               }
             }
           } else {
@@ -563,9 +775,8 @@
             if (e.weak === "cannon") m = e.weakMult;
             else if (e.weak === "pierce" && s.pierceMax > 0) m = e.weakMult;
             const weakHit = m > 1;
-            e.hp -= Math.max(1, Math.round(s.dmg * m) - e.armor);
+            applyDamage(e, s.dmg * m, "cannon");
             particles.burst(s.x, s.y, e.armor ? "#AEBBD0" : (weakHit ? "#FFFFFF" : cfg.palette.shot), weakHit ? 7 : 4, 110, 0.22, 3);
-            if (e.hp <= 0) killEnemy(e, false);
             if (s.pierce > 0) {
               s.pierce--;
               s.dmg = Math.max(1, Math.round(s.dmg * s.falloff));
@@ -589,17 +800,18 @@
         const R = W * st.nova.radiusFrac;
         S.rings.push({ r: W * 0.06, R, t: 0.25, t0: 0.25, color: cfg.palette.nova, lw: 8, nova: true });
         VK.audio.novaPulse();
+        if (st.novaHeal && !S.demo && S.hp < S.maxHp) { S.hp = Math.min(S.maxHp, S.hp + st.novaHeal); updateHud(); }
         for (const e of S.enemies) {
           const d = Math.hypot(e.x - cx, e.y - cy);
           if (d < R) {
             const mn = e.weak === "nova" ? e.weakMult : 1;
-            e.hp -= Math.max(1, Math.round(st.nova.damage * mn) - e.armor);
+            applyDamage(e, st.nova.damage * mn, "nova");
+            if (e.dead) continue;
             // real, visible hurl — scaled by proximity to the keep
-            const push = st.nova.knockback * Math.max(0.3, 1 - d / R);
+            const push = kbPush(e, st.nova.knockback * K * Math.max(0.3, 1 - d / R));
             const nd = d || 1;
             e.x += ((e.x - cx) / nd) * push; e.y += ((e.y - cy) / nd) * push;
             clampKnockback(e, d);
-            if (e.hp <= 0) killEnemy(e, false);
           }
         }
         S.enemies = S.enemies.filter((e) => !e.dead);
@@ -607,6 +819,8 @@
     }
     for (const r of S.rings) { r.t -= dt; r.r += (r.R - r.r) * Math.min(1, dt * 11); }
     S.rings = S.rings.filter((r) => r.t > 0);
+    for (const c of S.chainFx) c.t -= dt;
+    S.chainFx = S.chainFx.filter((c) => c.t > 0);
 
     particles.update(dt);
     floaters.update(dt);
@@ -635,6 +849,16 @@
     S.lastT = now;
     if (!S.paused) update(rawDt * S.timeScale);
     draw(now);
+  }
+  // Synchronous sim advance for automated critics (?debug=1): VK.step(5) = 5 sim-seconds, no rendering.
+  if (DEBUG) {
+    VK.step = (sec) => { const n = Math.round(sec * 60); for (let i = 0; i < n; i++) { if (S.over || S.demo) break; update(1 / 60); } return S.over || S.phase; };
+    VK.dbg = {
+      meta: () => META, setShards: (n) => { META.shards = n; saveMeta(); renderTitleMeta(); },
+      maxForge: () => { for (const nd of FORGE.nodes) META.forge[nd.id] = nd.ranks.length; saveMeta(); },
+      resetMeta: () => { META = { v: 1, shards: 0, forge: {}, runs: 0, best: 0, earned: 0 }; saveMeta(); },
+      stat: () => stat(), forgeVal, perkSum, givePerk: (id) => applyPerk(id), pick: (i) => pickPerk(i), openDraft: () => openDraft(false), startWave, buy
+    };
   }
 
   function setPaused(p) {
@@ -715,17 +939,35 @@
       const gs = e.r * 2.2;
       ctx.drawImage(VK.glow(c, gs), e.x - gs, e.y - gs, gs * 2, gs * 2);
       ctx.restore();
-      // shape = identity: circle mob, triangle dart, square brute, pentagon splitter, 7-gon boss
-      if (e.type === "mob") { ctx.beginPath(); ctx.arc(e.x, e.y, e.r, 0, 7); }
+      // shape = identity: circle mob, triangle dart, square brute, pentagon splitter, 7-gon boss,
+      // hexagon shield, ringed circle mender, 4-point star bomber, diamond phaser
+      if (e.type === "mob" || e.type === "mender") { ctx.beginPath(); ctx.arc(e.x, e.y, e.r, 0, 7); }
+      else if (e.type === "bomber") {
+        ctx.beginPath();
+        for (let i = 0; i < 8; i++) { const a = e.rot + i * Math.PI / 4, rr = i % 2 ? e.r * 0.45 : e.r; const px = e.x + Math.cos(a) * rr, py = e.y + Math.sin(a) * rr; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
+        ctx.closePath();
+      }
       else {
-        const n = e.type === "dart" ? 3 : e.type === "brute" ? 4 : e.type === "splitter" ? 5 : 7;
-        poly(e.x, e.y, e.r, n, e.rot);
+        const n = e.type === "dart" ? 3 : e.type === "brute" ? 4 : e.type === "splitter" ? 5 : e.type === "shield" ? 6 : e.type === "phaser" ? 4 : 7;
+        poly(e.x, e.y, e.r, n, e.type === "phaser" ? Math.PI / 4 : e.rot);
       }
       ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.fill();
       ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = 0.4;
       ctx.strokeStyle = c; ctx.lineWidth = (e.type === "boss" ? 4 : 2.5) * 2; ctx.stroke();
       ctx.restore();
       ctx.strokeStyle = c; ctx.lineWidth = e.type === "boss" ? 4 : 2.5; ctx.stroke();
+      if (e.type === "mender") { // heal cross
+        ctx.strokeStyle = c; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(e.x - e.r * 0.55, e.y); ctx.lineTo(e.x + e.r * 0.55, e.y); ctx.moveTo(e.x, e.y - e.r * 0.55); ctx.lineTo(e.x, e.y + e.r * 0.55); ctx.stroke();
+        ctx.globalAlpha = 0.18 + 0.1 * Math.sin(now / 200); ctx.beginPath(); ctx.arc(e.x, e.y, W * WAVES.types.mender.healRadiusFrac, 0, 7); ctx.strokeStyle = c; ctx.lineWidth = 1; ctx.setLineDash([4, 6]); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+      }
+      if (e.type === "phaser") { ctx.setLineDash([3, 3]); ctx.strokeStyle = c; ctx.lineWidth = 1.5; poly(e.x, e.y, e.r * 1.5, 4, Math.PI / 4); ctx.stroke(); ctx.setLineDash([]); }
+      if (e.shieldHp > 0) { // shield: bright arc facing the keep
+        const ang = Math.atan2(cy - e.y, cx - e.x), f = e.shieldHp / e.shieldMax;
+        ctx.save(); ctx.globalCompositeOperation = "lighter";
+        ctx.strokeStyle = cfg.palette.enemies.shield; ctx.lineWidth = 3 + 2 * f; ctx.globalAlpha = 0.6 + 0.4 * f;
+        ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 6, ang - 1.1, ang + 1.1); ctx.stroke(); ctx.restore();
+      }
       if (e.type === "brute") { // armor plate: inner counter-square
         poly(e.x, e.y, e.r * 0.55, 4, e.rot + 0.79);
         ctx.strokeStyle = "#AEBBD0"; ctx.lineWidth = 2; ctx.stroke();
@@ -803,6 +1045,18 @@
       if (Math.random() < 0.15) particles.burst(cx + (Math.random() - 0.5) * towerR, cy + (Math.random() - 0.5) * towerR, P.bomb, 1, 40, 0.8, 3);
     }
 
+    // chain arcs
+    if (S.chainFx.length) {
+      ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.lineCap = "round";
+      for (const c of S.chainFx) {
+        ctx.globalAlpha = Math.min(1, c.t * 8); ctx.strokeStyle = "#FFFFFF"; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(c.x0, c.y0);
+        const mx = (c.x0 + c.x1) / 2 + (Math.random() - 0.5) * 18, my = (c.y0 + c.y1) / 2 + (Math.random() - 0.5) * 18;
+        ctx.lineTo(mx, my); ctx.lineTo(c.x1, c.y1); ctx.stroke();
+        ctx.strokeStyle = P.multi; ctx.lineWidth = 1.2; ctx.stroke();
+      }
+      ctx.restore();
+    }
     particles.draw(ctx);
     floaters.draw(ctx);
 
@@ -840,12 +1094,20 @@
     $("#hp-text").textContent = S.hp + "/" + S.maxHp;
   }
 
-  function repairPrice() { return Math.round(UPG.repair.basePrice * Math.pow(UPG.repair.priceGrowth, S.repairs)); }
+  function repairPrice() { return Math.max(5, Math.round(UPG.repair.basePrice * Math.pow(UPG.repair.priceGrowth, S.repairs) * (1 - forgeVal("repairDisc") / 100) * (1 - perkSum("repairDisc")))); }
+  function tierLocked(key, tier) { const la = UPG[key].lockAfter; return la !== undefined && tier >= la && S.wave < LATE_TIER_WAVE; }
 
   // Knockback can hurl an enemy around, but never OUT of the tower's kill zone:
   // an enemy inside range ends the push at the range ring at worst, and one
   // already outside can't be shoved farther away. Fixes the deep-endless boss
   // stall where nova ping-ponged bosses out of range forever.
+  // Knockback diminishes on repeat hits (and is weak on bosses) so nova + stasis
+  // can't stun-lock a wave at the range ring forever. First hit full, then 65%, 42%...
+  function kbPush(e, push) {
+    e.kb = (e.kb || 0) + 1;
+    const f = (cfg.fx.kbFalloff || 0.65) ** (e.kb - 1) * (e.type === "boss" ? 0.3 : 1);
+    return push * f;
+  }
   function clampKnockback(e, preD) {
     const lim = Math.max(preD, stat().range - e.r);
     const d = Math.hypot(e.x - cx, e.y - cy);
@@ -868,8 +1130,11 @@
       card.querySelector(".pips").innerHTML =
         Array.from({ length: maxT }, (_, i) => "<span class='pip" + (i < tier ? " on" : "") + "'></span>").join("");
       card.classList.toggle("maxed", !next);
+      const locked = next && tierLocked(key, tier);
+      card.classList.toggle("locked", !!locked);
       const btn = card.querySelector("button");
-      if (next) {
+      if (locked) { btn.textContent = "WAVE " + (LATE_TIER_WAVE + 1) + "+"; btn.disabled = true; btn.classList.remove("afford"); }
+      else if (next) {
         btn.textContent = "UPGRADE ◆" + next.price;
         btn.disabled = !shopOpen || S.gold < next.price;
         btn.classList.toggle("afford", shopOpen && S.gold >= next.price);
@@ -881,7 +1146,7 @@
     rbtn.textContent = S.phase !== "shop" && !S.over ? "AFTER WAVE" : full ? "FULL" : "+" + UPG.repair.amount + " ◆" + repairPrice();
     rbtn.disabled = !repairOpen || full || S.gold < repairPrice();
     rbtn.classList.toggle("afford", repairOpen && !full && S.gold >= repairPrice());
-    const canStart = S.phase === "shop" && !S.over;
+    const canStart = S.phase === "shop" && !S.over && !S.drafting;
     $("#btn-wave").disabled = !canStart;
     $("#btn-wave").textContent = canStart ? "START WAVE " + (S.wave + 1) : (S.over ? "—" : "WAVE " + (S.wave + 1) + " ACTIVE");
   }
@@ -897,6 +1162,7 @@
     } else {
       const tier = S.tiers[key];
       if (tier >= UPG[key].tiers.length) return;
+      if (tierLocked(key, tier)) { VK.audio.deny(); return; }
       const next = UPG[key].tiers[tier];
       if (S.gold < next.price) { VK.audio.deny(); return; }
       S.gold -= next.price; S.tiers[key]++;
@@ -907,6 +1173,115 @@
     particles.burst(cx, cy, cfg.palette.tower, 18, 200, 0.6, 5);
     killRing(cx, cy, W * 0.06, cfg.palette.tower, 4);
     updateHud(); renderShop();
+  }
+
+  // ---------- perk draft ----------
+  function draftPool() { return PERKS.perks.filter((p) => !S.perks.includes(p.id)); }
+  function rollDraft() {
+    const pool = draftPool().slice(), out = [];
+    while (out.length < 3 && pool.length) {
+      let tot = 0; for (const p of pool) tot += PERKS.rarityWeights[p.rarity] || 1;
+      let r = Math.random() * tot, pick = pool[0];
+      for (const p of pool) { r -= PERKS.rarityWeights[p.rarity] || 1; if (r <= 0) { pick = p; break; } }
+      out.push(pick); pool.splice(pool.indexOf(pick), 1);
+    }
+    return out;
+  }
+  function openDraft(loadout) {
+    if (S.demo || S.over) return;
+    S.drafting = true; S.draftOpts = rollDraft();
+    setShopOpen(false);
+    $(".pd-eyebrow").textContent = loadout ? "LOADOUT · BEFORE WAVE 1" : "WAVE " + S.wave + " CLEARED";
+    renderDraft();
+    $("#perk-draft").classList.add("show");
+    VK.audio.upgrade();
+  }
+  function renderDraft() {
+    const box = $("#pd-options"); box.innerHTML = "";
+    S.draftOpts.forEach((p, i) => {
+      const el = document.createElement("div"); el.className = "perk " + p.rarity; el.tabIndex = 0;
+      el.innerHTML = "<span class='pglyph'>" + p.glyph + "</span><span class='ptext'><span class='pname'>" + p.name + "</span><span class='prar'>" + p.rarity + "</span><span class='pdesc'>" + p.desc + "</span></span>";
+      el.addEventListener("click", () => pickPerk(i));
+      el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") pickPerk(i); });
+      box.appendChild(el);
+    });
+    const rb = $("#pd-reroll"); rb.disabled = S.rerolls <= 0; rb.textContent = "⟳ REROLL" + (S.rerolls > 0 ? " (" + S.rerolls + ")" : "");
+  }
+  function pickPerk(i) {
+    if (!S.drafting) return;
+    const p = S.draftOpts[i]; if (!p) return;
+    applyPerk(p.id);
+    VK.audio.perk();
+    floaters.add(cx, cy - 40, p.name.toUpperCase(), "#C9A6FF", 18);
+    killRing(cx, cy, W * 0.06, "#C9A6FF", 5);
+    closeDraft(true);
+  }
+  function closeDraft(thenShop) {
+    S.drafting = false; S.draftOpts = [];
+    $("#perk-draft").classList.remove("show");
+    updateHud(); renderShop();
+    if (thenShop) autoOpenShop();
+  }
+  function applyPerk(id) {
+    const p = perkDef(id); if (!p || S.perks.includes(id)) return;
+    S.perks.push(id);
+    if (p.effect.hull) { S.maxHp += p.effect.hull; S.hp += p.effect.hull; }
+    if (p.effect.hullMult) { S.maxHp = Math.max(40, Math.round(S.maxHp * (1 + p.effect.hullMult))); S.hp = Math.min(S.hp, S.maxHp); }
+    renderPerkRow(); updateHud(); renderShop();
+  }
+  function renderPerkRow() {
+    const row = $("#perkrow"); if (!row) return;
+    row.innerHTML = "";
+    for (const id of S.perks) {
+      const p = perkDef(id); if (!p) continue;
+      const chip = document.createElement("span"); chip.className = "pchip " + p.rarity;
+      chip.innerHTML = "<span class='pg'>" + p.glyph + "</span>" + p.name;
+      chip.addEventListener("click", () => showPerkInfo(p));
+      row.appendChild(chip);
+    }
+    row.classList.toggle("show", S.perks.length > 0);
+  }
+  function showPerkInfo(p) {
+    const pop = $("#info-pop");
+    pop.querySelector(".ip-card").style.setProperty("--accent", p.rarity === "epic" ? "#FFD75A" : p.rarity === "rare" ? "#4FD8EB" : "#9AACC4");
+    pop.querySelector(".ip-title").textContent = p.glyph + " " + p.name;
+    pop.querySelector(".ip-desc").textContent = p.desc;
+    pop.querySelector(".ip-tier").textContent = p.rarity.toUpperCase() + " PERK · lasts this run";
+    pop.classList.add("show");
+  }
+
+  // ---------- The Forge ----------
+  function showForge() { setShopOpen(false); renderForge(); show("forge"); }
+  function renderForge() {
+    $("#forge-shards").textContent = "◈ " + META.shards;
+    const box = $("#forge-lanes"); box.innerHTML = "";
+    for (const lane of FORGE.lanes) {
+      const el = document.createElement("div"); el.className = "lane"; el.style.setProperty("--accent", lane.accent);
+      el.innerHTML = "<h3>" + lane.name + "</h3>";
+      for (const n of FORGE.nodes.filter((x) => x.lane === lane.id)) {
+        const r = forgeRank(n.id), max = n.ranks.length, next = r < max ? n.ranks[r] : null;
+        const cur = r > 0 ? n.ranks[r - 1].value : 0;
+        const node = document.createElement("div"); node.className = "node" + (next ? "" : " maxed");
+        const pips = Array.from({ length: max }, (_, i) => "<span class='pip" + (i < r ? " on" : "") + "'></span>").join("");
+        const descNow = n.desc.replace("{v}", "<b>" + (next ? next.value : cur) + "</b>");
+        node.innerHTML = "<div class='nname'>" + n.name + "</div><div class='ndesc'>" + (next ? (r > 0 ? "Now " + cur + n.unit + " → " : "") + descNow : descNow + " (max)") + "</div><div class='pips'>" + pips + "</div><button></button>";
+        const b = node.querySelector("button");
+        if (next) { b.textContent = "◈ " + next.cost; b.disabled = META.shards < next.cost; b.classList.toggle("afford", META.shards >= next.cost); b.addEventListener("click", () => buyNode(n.id)); }
+        else { b.textContent = "MAX"; b.disabled = true; }
+        el.appendChild(node);
+      }
+      box.appendChild(el);
+    }
+  }
+  function buyNode(id) {
+    const n = forgeNode(id), r = forgeRank(id);
+    if (r >= n.ranks.length) return;
+    const cost = n.ranks[r].cost;
+    if (META.shards < cost) { VK.audio.deny(); return; }
+    META.shards -= cost; META.forge[id] = r + 1; saveMeta();
+    VK.audio.forge();
+    renderForge();
+    const fs = $("#forge-shards"); fs.classList.remove("bump"); void fs.offsetWidth; fs.classList.add("bump");
   }
 
   function syncSound() {
@@ -945,7 +1320,7 @@
     } else {
       const tier = S.tiers[key], maxT = UPG[key].tiers.length;
       const next = tier < maxT ? UPG[key].tiers[tier] : null;
-      tierTxt = "Level " + tier + " of " + maxT + (next ? " · next upgrade ◆" + next.price : " · MAXED OUT");
+      tierTxt = "Level " + tier + " of " + maxT + (next ? (tierLocked(key, tier) ? " · next tier unlocks after wave " + LATE_TIER_WAVE : " · next upgrade ◆" + next.price) : " · MAXED OUT");
     }
     pop.querySelector(".ip-tier").textContent = tierTxt;
     pop.classList.add("show");
@@ -969,7 +1344,13 @@
     $("#btn-again").addEventListener("click", () => startGame());
     $("#btn-continue").addEventListener("click", continueEndless);
     $("#btn-menu").addEventListener("click", () => startDemo());
-    $("#btn-quit").addEventListener("click", () => { VK.audio.stopMusic(); S.paused = false; document.body.classList.remove("paused"); startDemo(); });
+    $("#btn-forge").addEventListener("click", () => { VK.audio.unlock(); showForge(); });
+    $("#btn-over-forge").addEventListener("click", () => showForge());
+    $("#btn-forge-play").addEventListener("click", () => startGame());
+    $("#btn-forge-back").addEventListener("click", () => startDemo());
+    $("#pd-reroll").addEventListener("click", () => { if (S.rerolls > 0 && S.drafting) { S.rerolls--; S.draftOpts = rollDraft(); renderDraft(); VK.audio.click ? VK.audio.click() : VK.audio.coin(); } });
+    renderTitleMeta();
+    $("#btn-quit").addEventListener("click", () => { VK.audio.stopMusic(); S.paused = false; document.body.classList.remove("paused"); if (S.drafting) closeDraft(false); startDemo(); });
     $("#btn-pause").addEventListener("click", () => setPaused(!S.paused));
     $("#btn-speed").addEventListener("click", cyclePace);
     syncPaceButton();
@@ -995,7 +1376,7 @@
       bar.querySelector("#dbg-skip").addEventListener("click", () => {
         if (S.screen === "over" || S.demo || S.over) return;
         S.enemies = []; S.queue = []; S.shots = []; S.bossRef = null; hideBossUi();
-        if (S.phase === "shop") { S.wave = S.endless ? S.wave + 1 : Math.min(S.wave + 1, nWaves() - 1); updateHud(); renderShop(); }
+        if (S.phase === "shop" && !S.drafting) { S.wave = S.endless ? S.wave + 1 : Math.min(S.wave + 1, nWaves() - 1); updateHud(); renderShop(); }
       });
       bar.querySelector("#dbg-hurt").addEventListener("click", () => damageTower(40));
     }

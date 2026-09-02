@@ -38,3 +38,31 @@ Steady frame rate with 30+ enemies and 200+ live particles. Pools for enemies/pr
 
 ## Tuning
 waves.json (spawn schedule, enemy stats, bounties, boss scaling) and upgrades.json (prices, per-tier values) — retunable without code changes.
+
+---
+
+# v6 addendum — "The Long Keep" (approved 2026-09-01)
+
+Turns the 20-wave run into a run-based progression game. Nothing from v5 is removed.
+
+## Shards and The Forge (meta progression)
+- Every run pays **Shards**: 2 per wave cleared, 10 per boss, 0.05 per kill, +60 for clearing wave 40, +25 per 10 endless waves. Multiplied by Deep Mining (Forge) and Shard Hunger (perk). Paid once per run for progress not yet paid (win at 40, then an endless death pays only the endless part).
+- Persisted under `vectorkeep.meta.v1` (`{v, shards, forge:{nodeId:rank}, runs, best, earned}`). Unknown/corrupt data falls back to empty. v5 keys untouched.
+- **The Forge** (title and over screens): 16 permanent nodes in 4 lanes, 2–4 ranks each, defined in `forge.json`. Offense (damage, fire rate, crit, boss damage), Defense (hull, plating, repair discount, regen per wave), Economy (start gold, interest, bounty, wave bonus), Keep (starting cannon tier, perk rerolls, loadout draft, shard multiplier). Full tree ≈ 2,900 shards.
+
+## Perk draft
+- After waves 5, 10, 15, … (and every 5 in endless while perks remain): pick 1 of 3 from `perks.json` (21 perks, common/rare/epic weighted 6/3/1, no repeats). Loadout node adds a draft before wave 1. Rerolls come from the Forge.
+- Perks last the run. Shown as chips under the HUD; tap for the description.
+
+## Content to 40
+- Waves 21–40 authored in `waves.json`; endless synthesis from 41 includes all nine types, bosses cycle 4–7.
+- New enemies: **SHIELD** (barrier soaks cannon fire, nova/bomb shatter it), **MENDER** (heals allies in a radius), **BOMBER** (explodes on death; inside 20% of the arena the keep takes 12), **PHASER** (blinks forward every 1.6 s, ignores stasis).
+- New bosses: THE MENDER QUEEN (spawns menders), VOIDWALKER (phases), TRIAGON REBORN (phases), OMEGA VERTEX Ω (spawns menders). Scaling array extended.
+- Upgrade tiers past the v5 count unlock after wave 20 (`lockAfter` in `upgrades.json`). Cannon/nova to 8, others to 7.
+- Milestone banners at waves 50, 75, 100, 150, 200.
+
+## Damage pipeline (new, `applyDamage`)
+boss multiplier → first strike → stasis weaken → crit (cannon only, ×2) → armor (unless Armor Breaker) → shield soak/shatter → hp → kill (→ chain arc, bomber blast, splitter split unless Clean Kill).
+
+## Debug (`?debug=1`)
+`window.VKS` = state, `VK.step(sec)` synchronous sim, `VK.dbg.{setShards, maxForge, resetMeta, stat, givePerk, pick, openDraft, startWave, buy}`. `?debug=reset` wipes meta.
