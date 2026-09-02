@@ -35,7 +35,7 @@
 
   // ---------------------------------------------------------------- setup
   async function boot() {
-    const res = await fetch("config.json?v=18");
+    const res = await fetch("config.json?v=19");
     S.cfg = await res.json();
     S.spr = PS.buildSprites(S.cfg);
     particles = PS.Particles(1400);

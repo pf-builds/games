@@ -12,7 +12,7 @@ Swarm battler: crowd × open arena. Fourth Click it! Studios cabinet. Peter's or
 - Neutrals trickle onto the map over time so it never runs dry.
 
 ## Difficulty
-Title-screen picker (Easy / Normal / Hard), persisted in localStorage. Scales rival speed, reaction time, and hunt eagerness; Normal starts the player with 2 extra peasants, Easy with 4. Values in `config.json` → `difficulty`.
+Title-screen picker (Easy / Normal / Hard), persisted in localStorage. Scales rival speed, reaction time, and hunt eagerness; Normal starts the player with 3 extra peasants, Easy with 5. Values in `config.json` → `difficulty`.
 
 ## Win / Lose
 - Win: all three rivals eliminated, OR the biggest swarm when the 4-minute bell rings.
