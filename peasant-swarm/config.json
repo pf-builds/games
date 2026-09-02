@@ -1,0 +1,176 @@
+{
+  "world": {
+    "w": 3000,
+    "h": 3000,
+    "tile": 64,
+    "trees": 72,
+    "rocks": 32,
+    "matchSeconds": 240,
+    "finalSeconds": 60,
+    "decals": 340,
+    "trailDist": 560,
+    "campLabelDist": 340
+  },
+  "spawn": {
+    "neutralCamps": 58,
+    "campMin": 3,
+    "campMax": 7,
+    "campSpread": 26,
+    "starterCamps": 2,
+    "starterDist": [
+      180,
+      320
+    ],
+    "trickleEvery": 2.0,
+    "trickleCap": 640,
+    "agentCap": 860,
+    "minTrickleDistFromTeams": 320,
+    "underdogBias": 0.65,
+    "trickleCamps": 2
+  },
+  "agent": {
+    "radius": 6,
+    "speed": 96,
+    "hp": 5,
+    "damage": 1,
+    "attackInterval": 1.0,
+    "engageRadius": 34,
+    "attackRange": 22,
+    "recruitRadius": 22,
+    "fightSpeedMult": 0.9
+  },
+  "flock": {
+    "seek": 1.0,
+    "arrive": 70,
+    "separation": 1.5,
+    "sepRadius": 14,
+    "cohesion": 0.5,
+    "cohesionStart": 36,
+    "cohesionFull": 220,
+    "huddleCohesion": 2.2,
+    "huddleSepRadius": 10,
+    "huddleSpeedMult": 0.75,
+    "steerLerp": 7.0,
+    "neutralWander": 0.22,
+    "neutralWanderRadius": 26,
+    "enemySepMult": 1.5,
+    "enemyHardRadius": 15
+  },
+  "combat": {
+    "breakRatio": 0.42,
+    "minRoutSize": 3,
+    "engageDelay": 1.0,
+    "engageDecay": 0.6,
+    "fightPull": 0.65,
+    "moraleBreak": 0.6
+  },
+  "powerups": {
+    "count": 9,
+    "respawn": 22,
+    "pickupRadius": 18,
+    "minDistFromStart": 300,
+    "duration": {
+      "speed": 8,
+      "armor": 10,
+      "frenzy": 8,
+      "rally": 0.6
+    },
+    "speedMult": 1.45,
+    "armorMult": 0.5,
+    "frenzyMult": 2.0,
+    "rallyRadius": 240,
+    "weights": {
+      "speed": 3,
+      "armor": 3,
+      "frenzy": 2,
+      "rally": 2
+    }
+  },
+  "ai": {
+    "think": 0.7,
+    "sight": 560,
+    "leadTime": 0.6,
+    "fleeDistance": 320,
+    "personalities": [
+      {
+        "name": "Greedy",
+        "color": "#E8701A",
+        "huntRatio": 1.35,
+        "fleeRatio": 1.25,
+        "neutralBias": 1.6,
+        "powerBias": 1.0,
+        "hatesPlayer": 1.0
+      },
+      {
+        "name": "Bully",
+        "color": "#2F7BD8",
+        "huntRatio": 1.1,
+        "fleeRatio": 1.6,
+        "neutralBias": 0.9,
+        "powerBias": 1.0,
+        "hatesPlayer": 1.6
+      },
+      {
+        "name": "Wary",
+        "color": "#F2D23C",
+        "huntRatio": 1.7,
+        "fleeRatio": 1.05,
+        "neutralBias": 1.2,
+        "powerBias": 1.1,
+        "hatesPlayer": 1.0
+      }
+    ],
+    "finalHuntRatio": 0.0,
+    "finalFleeRatio": 2.5,
+    "huntSpeed": 1.07,
+    "fleeSpeed": 0.88,
+    "corneredDist": 200,
+    "gracePeriod": 60,
+    "aiVsAiHuntMult": 1.6,
+    "powerupSight": 650,
+    "powerScore": 170,
+    "neutralScore": 100,
+    "huntTimeout": 10,
+    "huntCooldown": 12
+  },
+  "player": {
+    "name": "You",
+    "color": "#1FD1A3"
+  },
+  "neutral": {
+    "color": "#B8A88A"
+  },
+  "camera": {
+    "lerp": 5.0,
+    "zoomDesktop": 1.0,
+    "zoomMobile": 0.75,
+    "mobileBreak": 700
+  },
+  "pace": [
+    1,
+    2
+  ],
+  "difficulty": {
+    "easy": {
+      "label": "EASY",
+      "aiSpeed": 0.88,
+      "think": 1.0,
+      "huntMult": 1.4,
+      "startBonus": 4
+    },
+    "normal": {
+      "label": "NORMAL",
+      "aiSpeed": 0.95,
+      "think": 0.8,
+      "huntMult": 1.15,
+      "startBonus": 2
+    },
+    "hard": {
+      "label": "HARD",
+      "aiSpeed": 1.06,
+      "think": 0.5,
+      "huntMult": 0.9,
+      "startBonus": 0
+    }
+  }
+}

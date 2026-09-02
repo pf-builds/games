@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Peasant Swarm — Click it! Studios</title>
+<meta name="description" content="Start as one peasant. Recruit the village, grow a swarm, crush the rival mobs and absorb their survivors. A free browser game from Click it! Studios.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@700;800&display=swap">
+<link rel="stylesheet" href="style.css?v=5">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%231FD1A3'/><text x='50' y='68' font-size='52' text-anchor='middle'>🔱</text></svg>">
+</head>
+<body>
+
+<div id="stage">
+  <canvas id="game"></canvas>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div id="topbar">
+      <div id="teams"></div>
+      <div id="timer">5:00</div>
+      <div id="ctrls">
+        <button id="btn-pace" title="Game speed">1×</button>
+        <button id="btn-pause" title="Pause (P)">⏸</button>
+        <button id="btn-sound" class="btn-sound" title="Sound (M)"></button>
+      </div>
+    </div>
+    <div id="buffs"></div>
+    <canvas id="minimap" width="150" height="150"></canvas>
+    <div id="hint"></div>
+    <button id="t-huddle" class="tbtn">HUDDLE</button>
+  </div>
+
+  <!-- Title -->
+  <div class="overlay active" id="ov-title">
+    <div class="logo"><span class="l1">PEASANT</span><span class="l2">SWARM</span></div>
+    <p class="tag">One peasant. A whole village to recruit. Three rival mobs who want your people.</p>
+    <div class="menu">
+      <button class="primary big" id="btn-play">PLAY</button>
+      <button id="btn-sound-title" class="btn-sound"></button>
+    </div>
+    <div class="diffrow"><span>Rivals:</span><div id="difficulty"></div></div>
+    <div class="howto">
+      <div><b>Move</b> the swarm toward your cursor (drag on phone)</div>
+      <div><b>Touch</b> grey peasants to recruit them</div>
+      <div><b>Fight</b> only when you're bigger. Win a clash and the losers join you</div>
+      <div><b>Huddle</b> (hold Space) to tighten up before contact</div>
+      <div><b>4-minute matches.</b> Wipe out the rivals, or be the biggest swarm when the bell rings</div>
+    </div>
+  </div>
+
+  <!-- Win -->
+  <div class="overlay" id="ov-win">
+    <div class="bigtitle win">THE SWARM RULES</div>
+    <p id="win-sub"></p>
+    <div class="statgrid" id="win-stats"></div>
+    <div class="menu">
+      <button class="primary big" id="btn-again">PLAY AGAIN</button>
+      <button id="btn-title-w">TITLE</button>
+    </div>
+  </div>
+
+  <!-- Lose -->
+  <div class="overlay" id="ov-lose">
+    <div class="bigtitle lose">SCATTERED</div>
+    <p id="lose-sub"></p>
+    <div class="statgrid" id="lose-stats"></div>
+    <div class="menu">
+      <button class="primary big" id="btn-retry">TRY AGAIN</button>
+      <button id="btn-title-l">TITLE</button>
+    </div>
+  </div>
+
+  <!-- Pause -->
+  <div class="overlay" id="ov-pause">
+    <div class="bigtitle">PAUSED</div>
+    <div class="menu">
+      <button class="primary big" id="btn-resume">KEEP PLAYING</button>
+      <button id="btn-sound-pause" class="btn-sound"></button>
+      <button id="btn-quit">QUIT TO TITLE</button>
+    </div>
+  </div>
+</div>
+
+<script src="src/sprites.js?v=4"></script>
+<script src="src/particles.js?v=2"></script>
+<script src="src/audio.js?v=2"></script>
+<script src="src/game.js?v=16"></script>
+</body>
+</html>

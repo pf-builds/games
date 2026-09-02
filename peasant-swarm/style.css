@@ -1,0 +1,115 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: #1B2A18; overflow: hidden; }
+body {
+  font-family: "Nunito", system-ui, sans-serif; color: #F1EEDF;
+  -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+}
+#stage { position: fixed; inset: 0; overflow: hidden; }
+#game { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: crosshair; image-rendering: pixelated; }
+
+/* ---------- HUD ---------- */
+#hud { position: absolute; inset: 0; pointer-events: none; }
+#hud.hidden { display: none; }
+#topbar {
+  position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: flex-start; gap: .6rem;
+  padding: max(.5rem, env(safe-area-inset-top)) .6rem .4rem;
+}
+#teams { display: flex; flex-wrap: wrap; gap: .35rem; flex: 1; }
+.chip {
+  display: inline-flex; align-items: center; gap: .4rem; padding: .28rem .6rem .28rem .45rem;
+  background: rgba(10,18,8,.78); border: 1px solid rgba(255,255,255,.12); border-radius: 99px;
+  font-weight: 800; font-size: .85rem; letter-spacing: .02em; backdrop-filter: blur(4px);
+  transition: transform .15s;
+}
+.chip.dead { opacity: .4; text-decoration: line-through; }
+.chip.you { border-color: rgba(255,255,255,.35); }
+.chip .sw { width: 12px; height: 12px; border-radius: 3px; box-shadow: 0 0 0 2px rgba(0,0,0,.35) inset; }
+.chip .n { font-variant-numeric: tabular-nums; min-width: 2ch; text-align: right; }
+.chip.bump { transform: scale(1.12); }
+#timer {
+  font-family: "Baloo 2", sans-serif; font-weight: 800; font-size: 1.35rem; line-height: 1;
+  padding: .3rem .7rem; background: rgba(10,18,8,.78); border: 1px solid rgba(255,255,255,.12);
+  border-radius: 10px; font-variant-numeric: tabular-nums; color: #FFE49A;
+}
+#timer.urgent { color: #FF7A6E; animation: pulse .6s infinite alternate; }
+@keyframes pulse { to { transform: scale(1.06); } }
+#ctrls { display: flex; gap: .35rem; pointer-events: auto; }
+#ctrls button, .tbtn, .overlay button {
+  font: inherit; font-weight: 800; color: #F1EEDF; cursor: pointer;
+  background: rgba(10,18,8,.78); border: 1px solid rgba(255,255,255,.14); border-radius: 10px;
+}
+#ctrls button { min-width: 44px; height: 40px; padding: 0 .6rem; font-size: 1rem; }
+#ctrls button:active { transform: translateY(1px); }
+.btn-sound::before { content: "🔊"; }
+.btn-sound.off::before { content: "🔇"; }
+
+#buffs { position: absolute; left: .6rem; bottom: max(.6rem, env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: .3rem; }
+.buff {
+  display: flex; align-items: center; gap: .45rem; padding: .3rem .6rem; border-radius: 8px;
+  background: rgba(10,18,8,.8); border-left: 4px solid; font-weight: 800; font-size: .8rem; min-width: 8.5rem;
+}
+.buff .bar { flex: 1; height: 5px; background: rgba(255,255,255,.12); border-radius: 3px; overflow: hidden; }
+.buff .bar i { display: block; height: 100%; background: currentColor; }
+
+#minimap {
+  position: absolute; right: .6rem; bottom: max(.6rem, env(safe-area-inset-bottom));
+  width: 150px; height: 150px; border-radius: 8px; border: 2px solid rgba(255,255,255,.18);
+  background: #0e170c; image-rendering: pixelated;
+}
+#hint {
+  position: absolute; left: 50%; top: 4.2rem; transform: translateX(-50%);
+  background: rgba(10,18,8,.82); padding: .45rem .9rem; border-radius: 99px; font-weight: 800; font-size: .9rem;
+  white-space: nowrap; opacity: 0; transition: opacity .3s; border: 1px solid rgba(255,255,255,.12);
+}
+#hint.show { opacity: 1; }
+#t-huddle {
+  position: absolute; left: 50%; bottom: max(.8rem, env(safe-area-inset-bottom)); transform: translateX(-50%);
+  width: 118px; height: 56px; font-size: 1rem; letter-spacing: .08em; pointer-events: auto; display: none;
+  border-radius: 99px; touch-action: none;
+}
+#t-huddle.on { background: #1FD1A3; color: #08140b; }
+body.touch #t-huddle { display: block; }
+body.touch #minimap { width: 110px; height: 110px; }
+
+/* ---------- overlays ---------- */
+.overlay {
+  position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 1.5rem; gap: .9rem; background: rgba(8,14,6,.5); backdrop-filter: blur(1.5px);
+}
+.overlay.active { display: flex; }
+.logo { font-family: "Baloo 2", sans-serif; font-weight: 800; line-height: .9; display: flex; flex-direction: column; text-shadow: 0 6px 0 rgba(0,0,0,.45), 0 0 24px rgba(0,0,0,.6); }
+.logo .l1 { font-size: clamp(2.4rem, 9vw, 4.6rem); color: #F1EEDF; letter-spacing: .06em; }
+.logo .l2 { font-size: clamp(3.4rem, 13vw, 6.8rem); color: #1FD1A3; letter-spacing: .04em; }
+.tag { max-width: 30rem; color: #F1EEDF; font-weight: 700; font-size: 1.05rem; text-shadow: 0 2px 6px rgba(0,0,0,.8); }
+.diffrow { display: flex; align-items: center; gap: .5rem; font-weight: 800; color: #E4E0CE; font-size: .85rem; text-shadow: 0 2px 4px rgba(0,0,0,.85); }
+.diffrow #difficulty { display: flex; gap: .3rem; }
+.diffrow button { padding: .4rem .8rem; font-size: .8rem; min-height: 38px; letter-spacing: .06em; }
+.diffrow button.sel { background: #FFE49A; color: #08140b; border-color: #FFF0C2; }
+.howto { display: grid; gap: .35rem; max-width: 30rem; color: #E4E0CE; font-size: .92rem; margin-top: .3rem; text-shadow: 0 2px 4px rgba(0,0,0,.85); background: rgba(8,14,6,.45); padding: .7rem 1rem; border-radius: 12px; }
+.howto b { color: #FFE49A; }
+.bigtitle { font-family: "Baloo 2", sans-serif; font-weight: 800; font-size: clamp(2.4rem, 9vw, 4.4rem); line-height: 1; text-shadow: 0 6px 0 rgba(0,0,0,.35); }
+.bigtitle.win { color: #FFE49A; }
+.bigtitle.lose { color: #FF7A6E; }
+.overlay p { max-width: 30rem; font-weight: 700; color: #D6D2C0; }
+.menu { display: flex; gap: .6rem; flex-wrap: wrap; justify-content: center; margin-top: .4rem; }
+.overlay button { padding: .7rem 1.3rem; font-size: 1.05rem; min-width: 44px; min-height: 48px; }
+.overlay button.primary { background: #1FD1A3; color: #08140b; border-color: #6FE8C6; }
+.overlay button.big { font-size: 1.35rem; padding: .8rem 2.2rem; font-family: "Baloo 2", sans-serif; letter-spacing: .06em; }
+.overlay button:active { transform: translateY(1px); }
+.statgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .4rem; max-width: 30rem; width: 100%; }
+.stat { background: rgba(255,255,255,.07); border-radius: 8px; padding: .5rem; min-height: 4.2rem; display: flex; flex-direction: column; justify-content: center; }
+.stat b { display: block; font-family: "Baloo 2", sans-serif; font-size: 1.5rem; color: #FFE49A; line-height: 1.1; }
+.stat span { font-size: .75rem; color: #B9B5A3; text-transform: uppercase; letter-spacing: .08em; font-weight: 800; }
+
+@media (max-width: 700px) {
+  #topbar { flex-wrap: wrap; gap: .4rem; }
+  #timer { order: 1; font-size: 1.1rem; margin-right: auto; }
+  #ctrls { order: 2; }
+  #ctrls button { min-width: 48px; height: 48px; }
+  #teams { order: 3; flex-basis: 100%; gap: .3rem; }
+  .chip { font-size: .72rem; padding: .2rem .45rem .2rem .35rem; gap: .3rem; }
+  .chip .sw { width: 10px; height: 10px; }
+  #hint { top: 6.4rem; font-size: .78rem; white-space: normal; max-width: 90vw; text-align: center; }
+  .diffrow { flex-wrap: wrap; justify-content: center; font-size: .78rem; }
+  .diffrow button { padding: .35rem .6rem; font-size: .72rem; min-height: 36px; }
+}
