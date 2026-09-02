@@ -36,6 +36,12 @@
     const m = LS.get(MKEY, null);
     if (!m || m.v !== 1 || typeof m.shards !== "number") return { v: 1, shards: 0, forge: {}, runs: 0, best: 0, earned: 0 };
     if (!m.forge || typeof m.forge !== "object") m.forge = {};
+    // clamp ranks to what forge.json defines today and drop unknown ids, so a save from a
+    // different forge.json can never index past a node's rank list and crash boot
+    const clean = {};
+    for (const n of FORGE.nodes) { const r = Math.floor(Number(m.forge[n.id]) || 0); if (r > 0) clean[n.id] = Math.min(r, n.ranks.length); }
+    m.forge = clean;
+    for (const k of ["shards", "runs", "best", "earned"]) if (typeof m[k] !== "number" || !isFinite(m[k]) || m[k] < 0) m[k] = 0;
     return m;
   }
   function saveMeta() { LS.set(MKEY, META); }
@@ -74,7 +80,7 @@
     try {
       // ?v must match the asset version in index.html — stale tuning JSON against
       // new code caused undefined-type crashes once already (browser caching).
-      const V = "?v=15";
+      const V = "?v=16";
       [cfg, WAVES, UPG, FORGE, PERKS] = await Promise.all([
         fetch("config.json" + V).then((r) => r.json()),
         fetch("waves.json" + V).then((r) => r.json()),
