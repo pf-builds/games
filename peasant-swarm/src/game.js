@@ -21,7 +21,7 @@
     mode: "title", t: 0, timeLeft: 0, pace: 1,
     agents: [], teams: [], obstacles: [], powerups: [], camps: [],
     cam: { x: 0, y: 0, zoom: 1 }, vw: 0, vh: 0, dpr: 1,
-    input: { px: 0, py: 0, active: false, huddle: false, keys: {}, touch: false },
+    input: { px: 0, py: 0, active: false, huddle: false, keys: {}, touch: false, joy: { active: false, id: -1, ox: 0, oy: 0, cx: 0, cy: 0, mag: 0, dx: 0, dy: 0 } },
     rng: null, seed: 0, trickleT: 0, shake: 0, banners: [], hintT: 0,
     stats: { recruited: 0, kills: 0, routs: 0, lost: 0, peak: 1, powerups: 0 },
     fps: 60, fpsT0: 0, frameN: 0, engagedNow: false, result: null,
@@ -35,7 +35,7 @@
 
   // ---------------------------------------------------------------- setup
   async function boot() {
-    const res = await fetch("config.json?v=16");
+    const res = await fetch("config.json?v=18");
     S.cfg = await res.json();
     S.spr = PS.buildSprites(S.cfg);
     particles = PS.Particles(1400);
@@ -168,7 +168,7 @@
     S.cam.x = S.teams[1].cx; S.cam.y = S.teams[1].cy;
     S.teams[1].tx = S.teams[1].cx; S.teams[1].ty = S.teams[1].cy;
     buildTeamChips();
-    if (!S.attract) showHint("Walk into grey peasants to recruit them", 4);
+    if (!S.attract) showHint(S.input.touch ? "Touch and drag anywhere: the swarm walks the way you drag" : "Walk into grey peasants to recruit them", 4);
   }
 
   function diff() { return S.cfg.difficulty[S.difficulty] || S.cfg.difficulty.normal; }
@@ -244,7 +244,14 @@
     let kx = 0, ky = 0;
     if (inp.keys.w || inp.keys.ArrowUp) ky -= 1; if (inp.keys.s || inp.keys.ArrowDown) ky += 1;
     if (inp.keys.a || inp.keys.ArrowLeft) kx -= 1; if (inp.keys.d || inp.keys.ArrowRight) kx += 1;
+    const joy = inp.joy;
     if (S.attract) { /* player is AI-driven under the title */ }
+    else if (joy.active) {
+      const J = cfg.touch; let jx = joy.cx - joy.ox, jy = joy.cy - joy.oy; const len = Math.hypot(jx, jy);
+      if (len > J.joyDead) { const mag = Math.min(1, (len - J.joyDead) / (J.joyRadius - J.joyDead)); jx /= len; jy /= len; joy.dx = jx; joy.dy = jy; joy.mag = mag;
+        player.tx = clamp(player.cx + jx * mag * J.joyLead, 40, W - 40); player.ty = clamp(player.cy + jy * mag * J.joyLead, 40, H - 40); }
+      else { joy.mag = 0; player.tx = player.cx; player.ty = player.cy; }
+    }
     else if (kx || ky) { const l = Math.hypot(kx, ky); player.tx = clamp(player.cx + (kx / l) * 170, 10, W - 10); player.ty = clamp(player.cy + (ky / l) * 170, 10, H - 10); }
     else if (inp.active) { const w = screenToWorld(inp.px, inp.py); player.tx = clamp(w.x, 40, W - 40); player.ty = clamp(w.y, 40, H - 40); }
 
@@ -632,7 +639,7 @@
     const T = cfg.world.tile;
     const i0 = Math.max(0, Math.floor(x0 / T)), i1 = Math.min(Math.ceil(cfg.world.w / T) - 1, Math.floor(x1 / T));
     const j0 = Math.max(0, Math.floor(y0 / T)), j1 = Math.min(Math.ceil(cfg.world.h / T) - 1, Math.floor(y1 / T));
-    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { let h = (i * 374761393 + j * 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); h = (h ^ (h >>> 16)) >>> 0; const v = h % 11; ctx.drawImage(spr.tiles[v < 6 ? 0 : v < 10 ? 1 : 2], i * T, j * T); }
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { let h = (i * 374761393 + j * 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); h = (h ^ (h >>> 16)) >>> 0; const v = h % 11; ctx.drawImage(spr.tiles[v < 6 ? 0 : v < 10 ? 1 : 2], i * T, j * T, T + 0.6, T + 0.6); } // slight overlap hides sub-pixel seams at fractional zoom
     // world edge: dark line + a hedge of trees just outside the map
     ctx.strokeStyle = "rgba(20,36,16,.55)"; ctx.lineWidth = 10; ctx.strokeRect(0, 0, cfg.world.w, cfg.world.h);
     const W = cfg.world.w, H = cfg.world.h, tr = spr.trees[1], step = 34;
@@ -786,6 +793,17 @@
       if (outn) { const g = ctx.createRadialGradient(S.vw / 2, S.vh / 2, S.vh * 0.35, S.vw / 2, S.vh / 2, S.vh * 0.85); g.addColorStop(0, "rgba(200,30,30,0)"); g.addColorStop(1, "rgba(200,30,30," + (0.22 + 0.1 * Math.sin(S.t * 10)) + ")"); ctx.fillStyle = g; ctx.fillRect(0, 0, S.vw, S.vh); }
     }
     if (S.vignette) ctx.drawImage(S.vignette, 0, 0, S.vw, S.vh);
+    // floating joystick (touch): anchor ring at first touch, knob follows the finger, clamped to the ring
+    const joy = S.input.joy;
+    if (joy.active && S.mode === "play") {
+      const J = cfg.touch; let kx = joy.cx - joy.ox, ky = joy.cy - joy.oy; const len = Math.hypot(kx, ky);
+      if (len > J.joyRadius) { kx *= J.joyRadius / len; ky *= J.joyRadius / len; }
+      ctx.globalAlpha = 0.28; ctx.fillStyle = "#08140b"; ctx.beginPath(); ctx.arc(joy.ox, joy.oy, J.joyRadius, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 0.55; ctx.strokeStyle = "#F1EEDF"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(joy.ox, joy.oy, J.joyRadius, 0, Math.PI * 2); ctx.stroke();
+      if (joy.mag > 0) { ctx.globalAlpha = 0.5; ctx.strokeStyle = pl.color; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(joy.ox, joy.oy); ctx.lineTo(joy.ox + kx, joy.oy + ky); ctx.stroke(); }
+      ctx.globalAlpha = 0.85; ctx.fillStyle = pl.color; ctx.beginPath(); ctx.arc(joy.ox + kx, joy.oy + ky, 22, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
     if (S.debug) { ctx.font = "12px monospace"; ctx.fillStyle = "#fff"; ctx.textAlign = "left"; ctx.fillText("fps " + S.fps + "  agents " + S.agents.length + "  seed " + S.seed, 8, S.vh - 8); }
 
     drawMinimap();
@@ -827,10 +845,23 @@
   // ---------------------------------------------------------------- input
   function bindInput() {
     const inp = S.input;
-    canvas.addEventListener("pointermove", (e) => { inp.px = e.clientX; inp.py = e.clientY; if (e.pointerType === "mouse" || e.buttons) inp.active = true; });
-    canvas.addEventListener("pointerdown", (e) => { inp.px = e.clientX; inp.py = e.clientY; inp.active = true; if (e.pointerType !== "mouse") { inp.touch = true; document.body.classList.add("touch"); } PS.audio.unlock(); try { canvas.setPointerCapture(e.pointerId); } catch (x) {} });
-    canvas.addEventListener("pointerup", (e) => { if (e.pointerType !== "mouse") inp.active = false; });
-    canvas.addEventListener("pointercancel", () => { inp.active = false; });
+    const joy = inp.joy;
+    canvas.addEventListener("pointermove", (e) => {
+      if (e.pointerType === "mouse") { inp.px = e.clientX; inp.py = e.clientY; inp.active = true; return; }
+      if (joy.active && e.pointerId === joy.id) { joy.cx = e.clientX; joy.cy = e.clientY; }
+    });
+    canvas.addEventListener("pointerdown", (e) => {
+      PS.audio.unlock();
+      if (e.pointerType === "mouse") { inp.px = e.clientX; inp.py = e.clientY; inp.active = true; return; }
+      inp.touch = true; document.body.classList.add("touch"); inp.active = false;
+      if (joy.active) return; // one finger steers; a second finger is ignored
+      joy.active = true; joy.id = e.pointerId; joy.ox = joy.cx = e.clientX; joy.oy = joy.cy = e.clientY; joy.mag = 0;
+      try { canvas.setPointerCapture(e.pointerId); } catch (x) {}
+    });
+    const joyEnd = (e) => { if (e.pointerType === "mouse") return; if (e.pointerId === joy.id) { joy.active = false; joy.id = -1; joy.mag = 0; } };
+    canvas.addEventListener("pointerup", joyEnd);
+    canvas.addEventListener("pointercancel", joyEnd);
+    canvas.addEventListener("lostpointercapture", joyEnd);
     canvas.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") inp.active = false; });
     window.addEventListener("keydown", (e) => {
       if (e.repeat) return;
@@ -843,7 +874,7 @@
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(k)) e.preventDefault();
     });
     window.addEventListener("keyup", (e) => { const k = e.key.length === 1 ? e.key.toLowerCase() : e.key; inp.keys[k] = false; if (k === " ") setHuddle(false); });
-    window.addEventListener("blur", () => { inp.keys = {}; setHuddle(false); });
+    window.addEventListener("blur", () => { inp.keys = {}; setHuddle(false); joy.active = false; joy.id = -1; });
     const hb = $("t-huddle");
     hb.addEventListener("pointerdown", (e) => { e.preventDefault(); setHuddle(true); });
     hb.addEventListener("pointerup", () => setHuddle(false));
@@ -878,7 +909,7 @@
   function showOverlay(id) { document.querySelectorAll(".overlay").forEach((o) => o.classList.toggle("active", o.id === id)); }
   function startGame() { PS.audio.setSilent(false); PS.audio.unlock(); PS.audio.click(); newGame(false); S.mode = "play"; S._hintFight = S._hintHud = S._hintRecruit = false; S._routedBy = null; showOverlay(null); $("hud").classList.remove("hidden"); updateHUD(); }
   function toTitle() { PS.audio.stopDrum(); S.mode = "title"; showOverlay("ov-title"); $("hud").classList.add("hidden"); setHuddle(false); newGame(true); }
-  function pause() { S.mode = "pause"; PS.audio.stopDrum(); showOverlay("ov-pause"); setHuddle(false); }
+  function pause() { S.mode = "pause"; PS.audio.stopDrum(); showOverlay("ov-pause"); setHuddle(false); S.input.joy.active = false; S.input.joy.id = -1; }
   function resume() { S.mode = "play"; showOverlay(null); lastFrame = performance.now(); }
   function setPace(i) { S.pace = S.cfg.pace[i]; $("btn-pace").textContent = S.pace + "×"; }
   function toggleSound() { PS.audio.setMuted(!PS.audio.isMuted()); syncSound(); }

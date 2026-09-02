@@ -21,7 +21,7 @@ Title-screen picker (Easy / Normal / Hard), persisted in localStorage. Scales ri
 
 ## Controls
 - Mouse: swarm follows the cursor while it's over the arena. Space = huddle.
-- Touch: drag anywhere to steer; on-screen HUDDLE button.
+- Touch: floating joystick. First touch sets an anchor; the drag vector from the anchor is the direction (magnitude scales speed via the arrive radius); lifting resets. Second finger ignored. On-screen HUDDLE button.
 - Keyboard: WASD/arrows nudge the target; P pause; M mute; 1/2 pace.
 
 ## Entities

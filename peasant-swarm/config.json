@@ -172,5 +172,10 @@
       "huntMult": 0.9,
       "startBonus": 0
     }
+  },
+  "touch": {
+    "joyRadius": 70,
+    "joyDead": 8,
+    "joyLead": 260
   }
 }
