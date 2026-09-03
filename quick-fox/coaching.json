@@ -1,0 +1,28 @@
+{
+ "posture": [
+  "Feet flat on the floor, back tall.",
+  "Wrists float above the desk, not resting on it.",
+  "Fingers curled, resting lightly on the home row.",
+  "Eyes on the screen. The keyboard is a map you're learning by feel."
+ ],
+ "homeRow": "Home row is home. After every reach, your fingers come straight back to A S D F and J K L ;.",
+ "tips": {
+  "lowAcc": "Slow down. Accuracy first, speed comes on its own.",
+  "keyErrors": "{key} tripped you {n} times. That's the {finger}. Reach and return.",
+  "highAcc": "Clean run. Next time, push a little faster.",
+  "great": "That's how it's done. Three stars.",
+  "backspace": "Lots of backspacing. Pause a beat before each key instead of fixing after.",
+  "shift": "Capitals: the OTHER hand holds Shift while you tap the letter."
+ },
+ "fingers": {
+  "Lp": "left pinky",
+  "Lr": "left ring finger",
+  "Lm": "left middle finger",
+  "Li": "left index finger",
+  "Ri": "right index finger",
+  "Rm": "right middle finger",
+  "Rr": "right ring finger",
+  "Rp": "right pinky",
+  "T": "thumb"
+ }
+}

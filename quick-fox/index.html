@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quick Fox — learn to type</title>
+<meta name="description" content="Learn to type with a fox. Finger-by-finger lessons, a typing arcade, and one-minute tests with words per minute. Free, in the browser, no account.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="style.css?v=3">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%23F28C28'/><text x='50' y='68' font-size='52' text-anchor='middle'>🦊</text></svg>">
+</head>
+<body>
+
+<div class="screen" id="s-gate">
+  <canvas class="fox" id="fox-gate"></canvas>
+  <h1>Quick Fox needs a real keyboard</h1>
+  <p>This one is for desktops and laptops. Come back on a computer with a keyboard, or try the other cabinets.</p>
+  <div class="menu"><a class="btn" href="../">Back to Click it! Arcade</a><button id="btn-gate-override">I have a keyboard</button></div>
+</div>
+
+<div class="screen active" id="s-title">
+  <div class="title-wrap">
+    <canvas class="fox" id="fox-title"></canvas>
+    <div class="logo"><span class="l1">QUICK</span><span class="l2">FOX</span></div>
+    <p class="tag">Learn to type with a fox. Zap some words. Watch your speed climb.</p>
+  </div>
+  <div class="panel">
+    <h2>Who's typing?</h2>
+    <div id="profiles"></div>
+    <form id="add-form" autocomplete="off"><input id="add-name" maxlength="12" placeholder="Type a name" spellcheck="false"><button class="primary" type="submit">Add player</button></form>
+    <p class="note">Players are saved in this browser only. Nothing leaves this computer.</p>
+  </div>
+  <button class="btn-sound" id="btn-sound-title" aria-label="Sound"></button>
+</div>
+
+<div class="screen" id="s-hub">
+  <div class="hub-head">
+    <canvas class="fox small" id="fox-hub"></canvas>
+    <div><h2 id="hub-name">Player</h2><p id="hub-sub" class="muted"></p></div>
+    <div class="spacer"></div>
+    <button id="btn-switch">Switch player</button>
+    <button class="btn-sound" id="btn-sound-hub" aria-label="Sound"></button>
+  </div>
+  <div class="modes">
+    <button class="mode learn" id="m-learn" data-glyph="Aa"><span class="mk">LEARN</span><span class="md">24 lessons, one finger at a time</span><span class="mp" id="learn-progress"></span></button>
+    <button class="mode play" id="m-play" data-glyph="⚡"><span class="mk">PLAY</span><span class="md">Zap the words before they reach the fox. How high a level can you reach?</span><span class="mp" id="play-best"></span></button>
+    <button class="mode test" id="m-test" data-glyph="60"><span class="mk">TEST</span><span class="md">One minute. Words per minute.</span><span class="mp" id="test-best"></span></button>
+  </div>
+  <div class="hub-stats">
+    <div class="stat"><b id="st-wpm">–</b><span>Best WPM</span></div>
+    <div class="stat"><b id="st-acc">–</b><span>Accuracy</span></div>
+    <div class="stat"><b id="st-keys">0</b><span>Keys typed</span></div>
+    <div class="stat"><b id="st-stars">0</b><span>Stars</span></div>
+  </div>
+  <div id="weak-keys" class="weak"></div>
+</div>
+
+<div class="screen" id="s-map">
+  <div class="bar"><button class="back" id="btn-map-back">◂ Hub</button><h2>Lessons</h2><div class="spacer"></div><p class="muted" id="map-sub"></p></div>
+  <div id="lesson-grid"></div>
+</div>
+
+<div class="screen" id="s-intro">
+  <div class="intro-card">
+    <div class="eyebrow" id="intro-eyebrow">LESSON 1</div>
+    <h2 id="intro-title">F and J</h2>
+    <p id="intro-text"></p>
+    <div class="intro-hands"><canvas class="hands" id="hands-intro"></canvas></div>
+    <ul id="intro-coach" class="coach"></ul>
+    <div class="menu row"><button class="primary big" id="btn-intro-go">Start</button><button id="btn-intro-back">Back</button></div>
+  </div>
+</div>
+
+<div class="screen" id="s-drill">
+  <div class="bar">
+    <button class="back" id="btn-drill-quit">✕ Quit</button>
+    <div class="drill-title" id="drill-title"></div>
+    <div class="spacer"></div>
+    <div class="pill" id="drill-timer"></div>
+    <div class="pill" id="drill-acc">100%</div>
+    <div class="pill" id="drill-wpm">0 wpm</div>
+  </div>
+  <div class="progress"><div id="drill-prog"></div></div>
+  <div class="text-wrap"><div id="drill-text" class="text"></div></div>
+  <div class="hint-row"><canvas class="fox tiny" id="fox-drill"></canvas><div id="drill-hint" class="hint">Press any key to begin</div><canvas class="hands" id="hands-drill"></canvas><button id="btn-kb-toggle" class="small">Hide keyboard</button></div>
+  <div id="keyboard" class="keyboard"></div>
+  <div class="legend" id="legend"></div>
+</div>
+
+<div class="screen" id="s-result">
+  <div class="result-card">
+    <canvas class="fox" id="fox-result"></canvas>
+    <div class="eyebrow" id="res-eyebrow">LESSON COMPLETE</div>
+    <h2 id="res-title"></h2>
+    <div class="stars" id="res-stars"></div>
+    <div class="statgrid" id="res-stats"></div>
+    <p class="tip" id="res-tip"></p>
+    <div class="res-kb-label" id="res-kb-label"></div>
+    <div id="res-keyboard" class="keyboard mini"></div>
+    <canvas id="res-trend" width="360" height="90"></canvas>
+    <div class="menu row"><button class="primary big" id="btn-res-next">Next</button><button id="btn-res-again">Again</button><button id="btn-res-hub">Hub</button></div>
+  </div>
+</div>
+
+<div class="screen" id="s-play">
+  <div class="bar"><button class="back" id="btn-play-quit">✕ Quit</button><div class="drill-title">PLAY</div><div class="spacer"></div><div class="pill" id="play-timer">1:30</div><div class="pill" id="play-score">0</div><div class="pill" id="play-combo">×1</div></div>
+  <canvas id="arena"></canvas>
+  <div class="hint-row center"><div id="play-hint" class="hint">Type the words. Press any key to start.</div></div>
+</div>
+
+<div id="toast"></div>
+
+<script src="src/keyboard.js?v=2"></script>
+<script src="src/sprites.js?v=2"></script>
+<script src="src/audio.js?v=1"></script>
+<script src="src/game.js?v=7"></script>
+</body>
+</html>

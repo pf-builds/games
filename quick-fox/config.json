@@ -1,0 +1,101 @@
+{
+  "stars": {
+    "three": 0.97,
+    "two": 0.92
+  },
+  "learn": {
+    "drillLen": {
+      "keys": 36,
+      "words": 40,
+      "shift": 44,
+      "sentences": 90,
+      "numbers": 40,
+      "punct": 60
+    },
+    "dimKeyboardFrom": 12
+  },
+  "test": {
+    "seconds": 60,
+    "minChars": 320
+  },
+  "play": {
+    "hearts": 3,
+    "baseSpeed": 30,
+    "maxSpeed": 170,
+    "spawnEvery": 3.2,
+    "minSpawn": 0.9,
+    "openingRampSec": 12,
+    "laneCount": 5,
+    "zapsPerLevel": 6,
+    "speedPerLevel": 0.13,
+    "spawnPerLevel": 0.9,
+    "heartEveryLevels": 2,
+    "lengthByLevel": [
+      [
+        2,
+        4
+      ],
+      [
+        2,
+        5
+      ],
+      [
+        3,
+        5
+      ],
+      [
+        3,
+        6
+      ],
+      [
+        4,
+        6
+      ],
+      [
+        4,
+        7
+      ],
+      [
+        5,
+        8
+      ],
+      [
+        5,
+        9
+      ],
+      [
+        6,
+        10
+      ],
+      [
+        6,
+        12
+      ],
+      [
+        7,
+        12
+      ],
+      [
+        7,
+        14
+      ]
+    ],
+    "topRowFromLevel": 3,
+    "allLettersFromLevel": 5,
+    "capitalsFromLevel": 9,
+    "goldEvery": 8,
+    "goldFromLevel": 2,
+    "freezeSeconds": 2.5
+  },
+  "fingerColors": {
+    "Lp": "#FF7A9C",
+    "Lr": "#FFB13D",
+    "Lm": "#FFE04D",
+    "Li": "#7CF29A",
+    "Ri": "#5CD6FF",
+    "Rm": "#B497FF",
+    "Rr": "#FF8EDB",
+    "Rp": "#FF6B6B",
+    "T": "#C9C4B8"
+  }
+}

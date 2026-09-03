@@ -1,0 +1,242 @@
+{
+ "lessons": [
+  {
+   "id": "l01",
+   "title": "F and J",
+   "keys": [
+    "f",
+    "j"
+   ],
+   "type": "keys",
+   "intro": "Rest your index fingers on F and J. Feel the little bumps? That's home.",
+   "tip": "Thumbs tap the space bar."
+  },
+  {
+   "id": "l02",
+   "title": "D and K",
+   "keys": [
+    "d",
+    "k"
+   ],
+   "type": "keys",
+   "intro": "Middle fingers on D and K. Keep your index fingers on F and J."
+  },
+  {
+   "id": "l03",
+   "title": "S and L",
+   "keys": [
+    "s",
+    "l"
+   ],
+   "type": "keys",
+   "intro": "Ring fingers on S and L. Fingers curl a little, like holding a ball."
+  },
+  {
+   "id": "l04",
+   "title": "A and ;",
+   "keys": [
+    "a",
+    ";"
+   ],
+   "type": "keys",
+   "intro": "Pinkies on A and semicolon. Pinkies are weak at first. That's normal."
+  },
+  {
+   "id": "l05",
+   "title": "G and H",
+   "keys": [
+    "g",
+    "h"
+   ],
+   "type": "keys",
+   "intro": "Index fingers reach sideways to G and H, then come straight back home.",
+   "tip": "Reach and return. Home row is home."
+  },
+  {
+   "id": "l06",
+   "title": "Home row words",
+   "keys": [],
+   "type": "words",
+   "intro": "Real words with only home-row letters. Say each word as you type it."
+  },
+  {
+   "id": "l07",
+   "title": "R and U",
+   "keys": [
+    "r",
+    "u"
+   ],
+   "type": "keys",
+   "intro": "Index fingers reach up to R and U."
+  },
+  {
+   "id": "l08",
+   "title": "E and I",
+   "keys": [
+    "e",
+    "i"
+   ],
+   "type": "keys",
+   "intro": "Middle fingers up to E and I. These two are everywhere in English."
+  },
+  {
+   "id": "l09",
+   "title": "W and O",
+   "keys": [
+    "w",
+    "o"
+   ],
+   "type": "keys",
+   "intro": "Ring fingers up to W and O."
+  },
+  {
+   "id": "l10",
+   "title": "Q and P",
+   "keys": [
+    "q",
+    "p"
+   ],
+   "type": "keys",
+   "intro": "Pinkies up to Q and P. Slow is fine."
+  },
+  {
+   "id": "l11",
+   "title": "T and Y",
+   "keys": [
+    "t",
+    "y"
+   ],
+   "type": "keys",
+   "intro": "Index fingers stretch up and in to T and Y."
+  },
+  {
+   "id": "l12",
+   "title": "Top and home words",
+   "keys": [],
+   "type": "words",
+   "intro": "Two rows unlocked. From here the keyboard dims so your eyes stay on the screen. Tap the toggle if you need a peek.",
+   "tip": "Eyes up. Trust your fingers."
+  },
+  {
+   "id": "l13",
+   "title": "V and M",
+   "keys": [
+    "v",
+    "m"
+   ],
+   "type": "keys",
+   "intro": "Index fingers reach down to V and M."
+  },
+  {
+   "id": "l14",
+   "title": "C and comma",
+   "keys": [
+    "c",
+    ","
+   ],
+   "type": "keys",
+   "intro": "Middle fingers down to C and comma."
+  },
+  {
+   "id": "l15",
+   "title": "X and period",
+   "keys": [
+    "x",
+    "."
+   ],
+   "type": "keys",
+   "intro": "Ring fingers down to X and period."
+  },
+  {
+   "id": "l16",
+   "title": "Z and slash",
+   "keys": [
+    "z",
+    "/"
+   ],
+   "type": "keys",
+   "intro": "Pinkies down to Z and slash. The hardest reach on the keyboard."
+  },
+  {
+   "id": "l17",
+   "title": "B and N",
+   "keys": [
+    "b",
+    "n"
+   ],
+   "type": "keys",
+   "intro": "Index fingers reach down and in to B and N."
+  },
+  {
+   "id": "l18",
+   "title": "Every letter",
+   "keys": [],
+   "type": "words",
+   "intro": "All 26 letters unlocked. Words from the whole alphabet."
+  },
+  {
+   "id": "l19",
+   "title": "Shift and capitals",
+   "keys": [
+    "shift"
+   ],
+   "type": "shift",
+   "intro": "Hold Shift with the OTHER hand's pinky, then tap the letter. Capital F means right Shift plus F.",
+   "tip": "Opposite hand holds Shift."
+  },
+  {
+   "id": "l20",
+   "title": "Capital sentences",
+   "keys": [],
+   "type": "sentences",
+   "intro": "Short sentences. Capital at the start, period at the end, one space between words."
+  },
+  {
+   "id": "l21",
+   "title": "Numbers 1 to 5",
+   "keys": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5"
+   ],
+   "type": "numbers",
+   "intro": "Left hand reaches to the number row. Pinky 1, ring 2, middle 3, index 4 and 5."
+  },
+  {
+   "id": "l22",
+   "title": "Numbers 6 to 0",
+   "keys": [
+    "6",
+    "7",
+    "8",
+    "9",
+    "0"
+   ],
+   "type": "numbers",
+   "intro": "Right hand: index 6 and 7, middle 8, ring 9, pinky 0."
+  },
+  {
+   "id": "l23",
+   "title": "Punctuation",
+   "keys": [
+    "'",
+    "\"",
+    "?",
+    "!",
+    "-"
+   ],
+   "type": "punct",
+   "intro": "Apostrophe is right pinky. Question mark and exclamation need Shift."
+  },
+  {
+   "id": "l24",
+   "title": "Graduation",
+   "keys": [],
+   "type": "sentences",
+   "intro": "The quick brown fox jumps over the lazy dog. Every letter, at your own pace. You made it.",
+   "tip": "Accuracy first. Speed follows."
+  }
+ ]
+}
