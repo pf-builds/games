@@ -122,6 +122,14 @@ DF.buildSprites = function () {
     } else {
       p.rect(2, 7, 1, 4, shade(outfit)); p.rect(9, 7, 1, 4, shade(outfit));
     }
+    if (opts.armor) {
+      p.rect(2, 0, 9, 3, "#9AA0AC"); p.rect(0, 2, 11, 2, "#B0B6C0");      // wide steel helmet with a brim
+      p.px(0, 4, "#B0B6C0"); p.rect(2, 4, 7, 1, "#6E7480");               // visor shadow
+      p.rect(3, 6, 6, 4, "#B0B6C0"); p.rect(4, 7, 4, 2, "#8A909C");       // chest plate
+      p.px(5, 8, "#E0E4EA");
+      p.rect(0, 6, 3, 6, "#C8CCD4"); p.rect(0, 6, 3, 1, "#E0E4EA");       // shield on the leading arm
+      p.rect(1, 8, 1, 2, "#8A909C"); p.rect(0, 9, 3, 1, "#8A909C");       // cross boss
+    }
     // legs
     if (legs === 1) { p.rect(3, 12, 2, 5, dk); p.rect(7, 12, 2, 5, dk); }
     else { p.line(4, 12, 2, 16, 2, dk); p.line(8, 12, 9, 16, 2, dk); }
@@ -141,7 +149,87 @@ DF.buildSprites = function () {
     shooter2: make(12, 18, p => baddie(p, shooterCol, "#35516F", 2, { rifle: true })),
     netter1: make(12, 18, p => baddie(p, netterCol, "#8F5626", 1, { net: true })),
     netter2: make(12, 18, p => baddie(p, netterCol, "#8F5626", 2, { net: true })),
+    armored1: make(12, 18, p => baddie(p, "#6E7480", "#9AA0AC", 1, { armor: true })),
+    armored2: make(12, 18, p => baddie(p, "#6E7480", "#9AA0AC", 2, { armor: true })),
   };
+
+  // ---------- Swamp Jeep boss (48x28, faces LEFT) ----------
+  function jeep(p, frame) {
+    const body = "#5A6E3A", bodyDk = "#3E4C28", bodyLt = "#7A9050", tire = "#1E1E24", rim = "#8A8F99",
+          skin = "#E8B482", glass = "#8FD0E8";
+    // chassis
+    p.rect(4, 12, 40, 10, body);
+    p.rect(4, 20, 40, 2, bodyDk);
+    p.rect(4, 12, 40, 1, bodyLt);
+    p.rect(2, 14, 4, 6, bodyDk);                      // front bumper (left)
+    p.rect(1, 15, 2, 3, "#FFE066");                   // headlight
+    p.rect(44, 15, 3, 4, bodyDk);                     // rear
+    p.rect(45, 19, 3, 2, "#3A3E48");                  // exhaust
+    // hood + cab
+    p.rect(6, 9, 14, 3, body); p.rect(6, 9, 14, 1, bodyLt);
+    p.rect(20, 3, 18, 9, body); p.rect(20, 3, 18, 1, bodyLt);
+    p.rect(21, 4, 6, 6, glass); p.px(22, 5, "#FFFFFF");   // windshield
+    p.rect(19, 2, 2, 10, "#3A3E48"); p.rect(37, 2, 2, 10, "#3A3E48"); // roll bars
+    p.rect(19, 2, 20, 1, "#3A3E48");
+    // driver
+    p.rect(29, 5, 6, 5, skin); p.rect(28, 3, 8, 3, "#B0402F"); p.px(30, 7, "#22222B");
+    p.rect(27, 10, 10, 2, "#B0402F");
+    // door stripe
+    p.rect(8, 14, 30, 2, "#FFD75A"); p.rect(8, 16, 30, 1, bodyDk);
+    // wheels
+    for (const cx of [11, 37]) {
+      p.ell(cx, 22, 5.5, 5.5, tire);
+      p.ell(cx, 22, 2.5, 2.5, rim);
+      if (frame === 1) { p.px(cx, 19, "#C8CCD4"); p.px(cx, 25, "#C8CCD4"); }
+      else { p.px(cx - 3, 22, "#C8CCD4"); p.px(cx + 3, 22, "#C8CCD4"); }
+    }
+    // mud splats
+    p.px(6, 19, "#3E2614"); p.px(41, 18, "#3E2614"); p.px(15, 20, "#3E2614");
+  }
+  const jeepSprites = {
+    jeep1: make(48, 28, p => jeep(p, 1)),
+    jeep2: make(48, 28, p => jeep(p, 2)),
+  };
+
+  // ---------- Hats (drawn to sit on the compy's head, facing RIGHT) ----------
+  const hats = {
+    hat_party: make(9, 10, p => {
+      for (let y = 0; y < 9; y++) {
+        const half = (y + 1) * 0.5;
+        p.rect(Math.round(4.5 - half), y + 1, Math.max(1, Math.round(half * 2)), 1, y % 3 === 1 ? "#FFE066" : "#FF6FAE");
+      }
+      p.rect(3, 0, 3, 2, "#7BE5F2"); p.px(4, 0, "#FFFFFF");
+    }),
+    hat_miner: make(10, 7, p => {
+      p.ell(5, 5, 5, 4, "#FFD75A"); p.rect(0, 5, 10, 2, "#D8A820");
+      p.rect(0, 5, 10, 1, "#FFE88A");
+      p.rect(7, 2, 3, 3, "#FFF2B8"); p.px(9, 3, "#FFFFFF"); p.px(8, 3, "#FFFFFF");   // lamp faces forward (right)
+    }),
+    hat_crown: make(9, 7, p => {
+      p.rect(0, 3, 9, 4, "#FFD75A"); p.rect(0, 6, 9, 1, "#D8A820");
+      p.rect(0, 0, 2, 3, "#FFD75A"); p.rect(7, 0, 2, 3, "#FFD75A"); p.rect(3, 1, 3, 2, "#FFD75A");
+      p.px(0, 0, "#FFF2B8"); p.px(4, 1, "#FFF2B8"); p.px(8, 0, "#FFF2B8");
+      p.rect(3, 4, 3, 2, "#E8484F"); p.px(3, 4, "#FF9AA0");
+    }),
+    hat_racer: make(10, 8, p => {
+      p.ell(5, 5, 5, 4.6, "#E8484F");
+      p.rect(0, 6, 10, 2, "#B0402F");
+      p.rect(4, 0, 2, 8, "#FFFFFF");                    // racing stripe
+      p.rect(6, 4, 4, 3, "#7BE5F2"); p.px(9, 5, "#FFFFFF"); // visor faces forward (right)
+    }),
+  };
+
+  // ---------- Golden egg ----------
+  const gold = {
+    gold: make(9, 11, p => {
+      p.ell(4.5, 6, 4, 4.6, "#8A6A1A");
+      p.ell(4.5, 6, 3.2, 3.8, "#E8B93A");
+      p.ell(3.8, 4.6, 1.4, 1.6, "#FFF2B8");
+      p.px(6, 8, "#B8861E"); p.px(2, 8, "#B8861E");
+      p.px(8, 1, "#FFFFFF"); p.px(0, 9, "#FFFFFF");
+    }),
+  };
+
 
   // ---------- Boss (40x54, faces LEFT) — 3x walker height, horned helmet ----------
   function boss(p, pose) {
@@ -270,6 +358,47 @@ DF.buildSprites = function () {
     }),
   };
 
+  // ---------- World 2 tiles ----------
+  const tiles2 = {
+    shallow1: make(16, 16, p => {
+      p.rect(0, 0, 16, 16, "#2E4A2E");
+      p.rect(0, 0, 16, 2, "#6E9A5A"); p.rect(0, 2, 16, 1, "#4A6E3E");
+      p.px(3, 5, "#4A6E3E"); p.px(10, 8, "#3A5A36"); p.px(6, 12, "#3A5A36"); p.px(13, 4, "#6E9A5A");
+    }),
+    shallow2: make(16, 16, p => {
+      p.rect(0, 0, 16, 16, "#2E4A2E");
+      p.rect(0, 1, 16, 2, "#6E9A5A"); p.rect(0, 3, 16, 1, "#4A6E3E");
+      p.px(7, 5, "#4A6E3E"); p.px(13, 9, "#3A5A36"); p.px(3, 11, "#3A5A36"); p.px(9, 0, "#6E9A5A");
+    }),
+    mudDeep: make(16, 16, p => {
+      speckle(p, "#1E3020", ["#182818", "#243824"], 12);
+      p.px(4, 6, "#2E4A2E"); p.px(11, 12, "#2E4A2E"); p.px(8, 2, "#142014");
+    }),
+    cracked: make(16, 16, p => {
+      speckle(p, "#5A5048", ["#4E4640", "#665C52"], 12);
+      p.rect(0, 0, 16, 1, "#6E665C");
+      p.line(2, 0, 6, 7, 1, "#1E1812"); p.line(6, 7, 4, 15, 1, "#1E1812");
+      p.line(6, 7, 12, 9, 1, "#1E1812"); p.line(12, 9, 15, 3, 1, "#1E1812"); p.line(12, 9, 13, 15, 1, "#1E1812");
+      p.px(9, 4, "#1E1812"); p.px(10, 13, "#1E1812");
+    }),
+    vine: make(16, 16, p => {
+      p.rect(7, 0, 2, 16, "#2C6E34"); p.rect(7, 0, 1, 16, "#1E5228");
+      p.rect(3, 2, 4, 3, "#57BE59"); p.px(3, 2, "#2C6E34");
+      p.rect(9, 8, 4, 3, "#57BE59"); p.px(12, 10, "#2C6E34");
+      p.rect(4, 12, 3, 2, "#3E9247");
+    }),
+    rockTop: make(16, 16, p => {
+      speckle(p, "#4A4E58", ["#3E424C", "#565A64"], 12);
+      p.rect(0, 0, 16, 3, "#6A6E78"); p.rect(0, 0, 16, 1, "#7E828C");
+      for (let x = 0; x < 16; x += 3) p.px(x + ((rnd() * 2) | 0), 3, "#6A6E78");
+      p.px(5, 9, "#3A3E48"); p.px(12, 12, "#3A3E48");
+    }),
+    rockDirt: make(16, 16, p => {
+      speckle(p, "#3A3E48", ["#30343E", "#444852"], 14);
+      p.px(4, 4, "#2A2E38"); p.px(11, 10, "#2A2E38"); p.rect(2, 12, 4, 1, "#30343E");
+    }),
+  };
+
   // ---------- Flag / checkpoint / decor ----------
   const structures = {
     flagClosed: make(14, 30, p => {
@@ -315,6 +444,22 @@ DF.buildSprites = function () {
       p.line(9, 11, 9, 1, 1, "#2C6E34"); p.line(9, 11, 5, 6, 1, "#2C6E34"); p.line(9, 11, 13, 6, 1, "#2C6E34");
       p.line(9, 11, 3, 8, 1, "#173A20"); p.line(9, 11, 15, 8, 1, "#173A20");
     }),
+    stal: make(10, 16, p => {                        // stalactite, hangs from the ceiling
+      for (let y = 0; y < 16; y++) {
+        const half = (16 - y) * 0.3;
+        p.rect(Math.round(5 - half), y, Math.max(1, Math.round(half * 2)), 1, y % 4 === 0 ? "#6A6E78" : "#4A4E58");
+      }
+      p.px(6, 15, "#8FD0E8");
+    }),
+    shroom: make(12, 8, p => {
+      p.rect(5, 4, 2, 4, "#C8CCD4"); p.rect(1, 1, 8, 3, "#3FA8C0"); p.rect(2, 0, 6, 1, "#7BE5F2");
+      p.px(3, 2, "#7BE5F2"); p.px(6, 1, "#FFFFFF"); p.rect(9, 5, 2, 3, "#C8CCD4"); p.rect(8, 3, 4, 2, "#3FA8C0");
+    }),
+    reed: make(10, 14, p => {
+      p.line(2, 13, 1, 3, 1, "#5E8A4A"); p.rect(0, 0, 2, 4, "#6B4A2A");
+      p.line(5, 13, 6, 1, 1, "#4A6E3E"); p.rect(6, 0, 2, 3, "#6B4A2A");
+      p.line(8, 13, 9, 5, 1, "#5E8A4A"); p.rect(8, 2, 2, 4, "#6B4A2A");
+    }),
     rock: make(12, 8, p => {
       p.ell(6, 6, 5.5, 3.5, "#5C616B");
       p.ell(4.5, 5, 3, 2, "#6E737E");
@@ -322,7 +467,9 @@ DF.buildSprites = function () {
     }),
   };
 
-  const S = { ...misc, ...tiles, ...structures };
+  const S = { ...misc, ...tiles, ...tiles2, ...structures, ...gold };
+  for (const [k, v] of Object.entries(hats)) S[k] = { R: v, L: flip(v) };
+  for (const [k, v] of Object.entries(jeepSprites)) S[k] = { L: v, R: flip(v) };
   // facing variants: entities store .R (right-facing) and .L
   for (const [k, v] of Object.entries(compy)) S["compy_" + k] = { R: v, L: flip(v) };
   for (const [k, v] of Object.entries(baddies)) S[k] = { L: v, R: flip(v) };   // drawn facing left

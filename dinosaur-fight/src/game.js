@@ -2,7 +2,7 @@
 // Concept by Henry, age 5. Built by Click it! Studios.
 (function () {
   "use strict";
-  const V = "?v=6"; // cache-bust for JSON fetches — keep in sync with index.html
+  const V = "?v=9"; // cache-bust for JSON fetches — keep in sync with index.html
   const cv = document.getElementById("game");
   const ctx = cv.getContext("2d");
   ctx.imageSmoothingEnabled = false;
@@ -28,19 +28,28 @@
     winT: -1, loseT: -1,
     debug: /(\?|&)debug=1/.test(location.search),
     invulnCheat: false,
+    cracks: {}, roarT: 0, roarTxt: "", eggRespawn: 0, hints: [], goldGot: false, toast: null,
   };
   if (S.debug) window.DFS = S; // state handle for automated testing only
   const keys = {};
-  const input = { left: false, right: false, jumpHeld: false, jumpBuf: 0, pounce: false, grow: false, shrink: false };
+  const input = { left: false, right: false, jumpHeld: false, jumpBuf: 0, pounce: false, grow: false, shrink: false, roar: false };
 
+  // save v2: per-level stars + golden eggs, worn hat, last world tab. Migrates the World 1 "df1" save.
   const save = {
     load() {
-      try { return JSON.parse(localStorage.getItem("df1") || "null") || { stars: [0, 0, 0, 0], unlocked: 1 }; }
-      catch (e) { return { stars: [0, 0, 0, 0], unlocked: 1 }; }
+      const fresh = { stars: [], gold: [], unlocked: 1, hat: null, world: 1 };
+      try {
+        const d2 = JSON.parse(localStorage.getItem("df2") || "null");
+        if (d2) return Object.assign(fresh, d2);
+        const d1 = JSON.parse(localStorage.getItem("df1") || "null");
+        if (d1) { fresh.stars = (d1.stars || []).slice(); fresh.unlocked = d1.unlocked || 1; }
+      } catch (e) {}
+      return fresh;
     },
-    write(d) { try { localStorage.setItem("df1", JSON.stringify(d)); } catch (e) {} },
+    write(d) { try { localStorage.setItem("df2", JSON.stringify(d)); } catch (e) {} },
   };
   let progress = save.load();
+  save.write(progress);
 
   // ---------------- boot ----------------
   Promise.all([
@@ -88,6 +97,7 @@
     x: "pounce", X: "pounce", j: "pounce", J: "pounce",
     c: "grow", C: "grow", k: "grow", K: "grow",
     z: "shrink", Z: "shrink", l: "shrink", L: "shrink",
+    v: "roar", V: "roar", m: "roar", M: "roar",
   };
   window.addEventListener("keydown", e => {
     if (e.repeat) return;
@@ -104,6 +114,7 @@
     if (a === "pounceR") { if (S.pl) S.pl.facing = 1; input.pounce = true; }
     if (a === "grow") input.grow = true;
     if (a === "shrink") input.shrink = true;
+    if (a === "roar") input.roar = true;
   }
   function held(a) { return !!keys[a] || touchHeld[a]; }
 
@@ -141,7 +152,7 @@
     $("btn-sound-pause").onclick = toggleSound;
     bindTouch("t-left", "left"); bindTouch("t-right", "right");
     bindTouch("t-jump", "jump"); bindTouch("t-pounce", "pounce");
-    bindTouch("t-grow", "grow"); bindTouch("t-shrink", "shrink");
+    bindTouch("t-grow", "grow"); bindTouch("t-shrink", "shrink"); bindTouch("t-roar", "roar");
     if (S.debug) {
       const bar = document.createElement("div");
       bar.style.cssText = "position:absolute;bottom:.4rem;left:.4rem;z-index:9;display:flex;gap:.3rem";
@@ -168,22 +179,61 @@
   function syncSoundButtons() {
     document.querySelectorAll(".btn-sound").forEach(b => b.classList.toggle("off", !AU.enabled));
   }
+  const WORLD_NAMES = ["WORLD 1 · JUNGLE", "WORLD 2 · SWAMP & CAVE"];
   function showLevels() {
     S.mode = "levels";
     document.body.classList.remove("playing");
+    const worlds = [...new Set(LEVELS.map(l => l.world || 1))];
+    const firstOf = w => LEVELS.findIndex(l => (l.world || 1) === w);
+    if (firstOf(progress.world) >= progress.unlocked || firstOf(progress.world) < 0) progress.world = 1;
+    const tabs = document.getElementById("world-tabs");
+    tabs.innerHTML = "";
+    for (const w of worlds) {
+      const b = document.createElement("button");
+      const locked = firstOf(w) >= progress.unlocked;
+      b.className = "wtab" + (w === progress.world ? " on" : "") + (locked ? " locked" : "");
+      b.textContent = (locked ? "🔒 " : "") + (WORLD_NAMES[w - 1] || ("WORLD " + w));
+      if (!locked) b.onclick = () => { AU.click(); progress.world = w; save.write(progress); showLevels(); };
+      tabs.appendChild(b);
+    }
     const grid = document.getElementById("level-grid");
     grid.innerHTML = "";
     LEVELS.forEach((lv, i) => {
+      if ((lv.world || 1) !== progress.world) return;
       const locked = i >= progress.unlocked;
       const card = document.createElement("div");
-      card.className = "lvl-card" + (locked ? " locked" : "") + (i === 3 ? " boss" : "");
+      card.className = "lvl-card" + (locked ? " locked" : "") + (lv.boss ? " boss" : "");
       const stars = progress.stars[i] || 0;
-      card.innerHTML = `<span class="num">${i === 3 ? "!" : i + 1}</span><span class="nm">${lv.name}</span>` +
-        `<span class="st">${locked ? "🔒" : "★".repeat(stars) + `<span style="color:#2E4433">${"★".repeat(3 - stars)}</span>`}</span>`;
+      const gold = lv.hat && !locked ? `<span class="gold${progress.gold[i] ? " on" : ""}" title="golden egg">${progress.gold[i] ? "🐣" : "🥚"}</span>` : "";
+      card.innerHTML = `<span class="num">${lv.boss ? "!" : i + 1}</span><span class="nm">${lv.name}</span>` +
+        `<span class="st">${locked ? "🔒" : "★".repeat(stars) + `<span style="color:#2E4433">${"★".repeat(3 - stars)}</span>`}</span>` + gold;
       if (!locked) card.onclick = () => { AU.click(); startLevel(i); };
       grid.appendChild(card);
     });
+    renderHats();
     show("ov-levels");
+  }
+  // hats hatch from golden eggs; drawn as an overlay on the compy's head (18px sprite coords, facing right)
+  const HAT_POS = { party: { x: 10, y: -8 }, miner: { x: 9, y: -4 }, crown: { x: 10, y: -5 }, racer: { x: 9, y: -5 } };
+  function renderHats() {
+    const row = document.getElementById("hat-row"), box = document.getElementById("hats");
+    const owned = CFG.hats.filter(h => LEVELS.some((lv, i) => lv.hat === h.id && progress.gold[i]));
+    row.style.display = owned.length ? "" : "none";
+    box.innerHTML = "";
+    if (!owned.length) return;
+    if (progress.hat && !owned.some(h => h.id === progress.hat)) progress.hat = null;
+    for (const h of [{ id: null, name: "NO HAT" }, ...owned]) {
+      const b = document.createElement("button");
+      b.className = "hatbtn" + ((progress.hat || null) === h.id ? " on" : "");
+      const c = document.createElement("canvas"); c.width = 40; c.height = 40;
+      const cx = c.getContext("2d"); cx.imageSmoothingEnabled = false;
+      cx.drawImage(SPR.compy_idle.R, 2, 18, 36, 36);
+      if (h.id) { const hs = SPR["hat_" + h.id].R, hp = HAT_POS[h.id]; cx.drawImage(hs, 2 + hp.x * 2, 18 + hp.y * 2, hs.width * 2, hs.height * 2); }
+      b.appendChild(c);
+      const t = document.createElement("span"); t.textContent = h.name; b.appendChild(t);
+      b.onclick = () => { AU.click(); progress.hat = h.id; save.write(progress); renderHats(); };
+      box.appendChild(b);
+    }
   }
   function togglePause() {
     if (S.mode === "play") { S.mode = "pause"; show("ov-pause"); AU.stopMusic(); }
@@ -191,7 +241,7 @@
   }
 
   // ---------------- level load ----------------
-  const SOLID = "#-BM";
+  const SOLID = "#-BMc";       // c = cracked floor (solid until the T-rex stands on it)
   function cellAt(tx, ty) {
     if (tx < 0 || tx >= S.gw) return "#";
     if (ty < 0) return ".";
@@ -209,8 +259,11 @@
     S.enemies = []; S.bullets = []; S.nets = []; S.items = []; S.decor = [];
     S.checkpoints = []; S.flyoffs = []; S.boss = null;
     S.eggsGot = 0; S.t = 0; S.nameT = 3; S.winT = -1; S.loseT = -1;
-    S.shake = 0; S.bossIntroT = i === 3 ? 2.2 : 0;
-    if (i === 3) S.nameT = 0; // boss intro text is enough — no name toast on top
+    S.shake = 0; S.bossIntroT = lv.boss ? 2.2 : 0;
+    if (lv.boss) S.nameT = 0; // boss intro text is enough — no name toast on top
+    S.cracks = {}; S.collapsed = []; S.roarT = 0; S.eggRespawn = lv.eggRespawn || 0; S.goldGot = false; S.toast = null;
+    input.grow = input.shrink = input.pounce = input.roar = false; input.jumpBuf = 0;
+    progress.world = lv.world || 1;
     P.clear();
     for (let y = 0; y < S.gh; y++) for (let x = 0; x < S.gw; x++) {
       const ch = S.grid[y][x];
@@ -223,6 +276,13 @@
         case "s": S.enemies.push(makeEnemy("shooter", wx, wy)); S.grid[y][x] = "."; break;
         case "n": S.enemies.push(makeEnemy("netter", wx, wy)); S.grid[y][x] = "."; break;
         case "Z": { const b = makeEnemy("boss", wx, wy); S.enemies.push(b); S.boss = b; S.grid[y][x] = "."; break; }
+        case "J": { const b = makeEnemy("jeep", wx, wy); S.enemies.push(b); S.boss = b; S.grid[y][x] = "."; break; }
+        case "a": S.enemies.push(makeEnemy("armored", wx, wy)); S.grid[y][x] = "."; break;
+        case "E": S.items.push({ kind: "gold", x: wx, y: wy - 3, got: false }); S.grid[y][x] = "."; break;
+        case "v": S.items.push({ kind: "egg", x: wx, y: wy - 3, got: false }); S.grid[y][x] = "|"; break;
+        case "y": S.decor.push({ spr: "stal", x: wx, y: wy, hang: true }); S.grid[y][x] = "."; break;
+        case "m": S.decor.push({ spr: "shroom", x: wx, y: wy }); S.grid[y][x] = "."; break;
+        case "d": S.decor.push({ spr: "reed", x: wx, y: wy }); S.grid[y][x] = "."; break;
         case "F": S.flag = { x: wx, y: wy, open: false, sparkT: 0 }; S.grid[y][x] = "."; break;
         case "C": S.checkpoints.push({ x: wx, y: wy, on: false }); S.grid[y][x] = "."; break;
         case "t": S.decor.push({ spr: "tree", x: wx, y: wy }); S.grid[y][x] = "."; break;
@@ -255,6 +315,27 @@
         }
       }
     }
+    // mud / cracked runs → grow; vine bottoms → shrink + climb
+    for (let y = 0; y < S.gh; y++) {
+      let run = null;
+      for (let x = 0; x <= S.gw; x++) {
+        const ch = x < S.gw ? S.grid[y][x] : ".";
+        if ((ch === "_" || ch === "c") && run === null) run = { x, ch };
+        if (run && ch !== run.ch) {
+          const underBridge = run.ch === "_" && y > 0 && S.grid[y - 1][run.x] === "c";
+          if (x - run.x >= 3 && !underBridge) S.hints.push({ x: run.x * 16 - 12, y: y * 16 - 14, kind: "grow", txt: run.ch === "_" ? "WADE!" : "STOMP!" });
+          run = null;
+        }
+      }
+    }
+    for (let x = 0; x < S.gw; x++) for (let y = 0; y < S.gh - 1; y++)
+      if (S.grid[y][x] === "|" && S.grid[y + 1][x] !== "|") S.hints.push({ x: x * 16 + 8, y: y * 16 - 6, kind: "shrink", txt: "CLIMB!" });
+    for (const it of S.items) { // golden egg perched on a tall pillar: needs the T-rex double jump
+      if (it.kind !== "gold") continue;
+      const tx = Math.floor(it.x / 16); let ty = Math.floor(it.y / 16) + 1, h = 0;
+      while (ty < S.gh && S.grid[ty][tx] === "M") { ty++; h++; }
+      if (h >= 5) S.hints.push({ x: it.x - 30, y: ty * 16 - 14, kind: "grow", txt: "BIG JUMP!" });
+    }
     S.eggsTotal = S.items.filter(it => it.kind === "egg").length;
     S.baddiesTotal = S.enemies.length;
     S.pl = makePlayer(S.start.x, S.start.y);
@@ -264,7 +345,7 @@
     document.body.classList.add("playing");
     buildBackgrounds();
     AU.startMusic();
-    if (i === 3) setTimeout(() => AU.bossRoar(), 600);
+    if (lv.boss) setTimeout(() => (S.boss && S.boss.type === "jeep" ? AU.engine() : AU.bossRoar()), 600);
   }
 
   function makePlayer(x, y) {
@@ -285,15 +366,16 @@
   function makeEnemy(type, x, y) {
     const c = CFG.enemies[type];
     return {
-      type, x, y, vx: type === "walker" ? -c.speed : 0, vy: 0,
+      type, x, y, vx: (type === "walker" || type === "armored") ? -c.speed : 0, vy: 0,
       hp: c.hp, facing: -1, state: "idle", t: 0, cd: 1 + Math.random(),
       flashT: 0, hitCd: 0, dead: false, animT: Math.random() * 2,
+      fleeT: 0, scaredT: 0,
       // boss extras
-      chargeDir: -1, fanT: c.fanCooldown || 0,
+      chargeDir: -1, fanT: c.fanCooldown || 0, dir: -1, netT: (c.netCooldown || 0) * 0.6,
     };
   }
   function enemyDims(e) {
-    return e.type === "boss" ? { w: 34, h: 52 } : { w: 10, h: 17 };
+    return e.type === "boss" ? { w: 34, h: 52 } : e.type === "jeep" ? { w: 62, h: 36 } : { w: 10, h: 17 };
   }
   // pixel contact shadow, projected to the ground below — seats sprites in the world
   function pixShadow(cx, footY, w) {
@@ -319,7 +401,7 @@
       if (sol.includes(cellAt(tx, ty))) return true;
     return false;
   }
-  const BIG_SOLID = "#BM"; // the T-rex is too heavy for wooden '-' platforms — walks right past them
+  const BIG_SOLID = "#BMc_"; // the T-rex is too heavy for wooden '-' platforms — walks right past them; but wades ON mud (_)
   function moveEntity(o, w, h, dt, opts = {}) {
     const sol = opts.solids;
     // horizontal
@@ -417,6 +499,9 @@
     // transform requests
     if (input.grow) { input.grow = false; requestSize(pl.size === "big" ? "normal" : "big"); }
     if (input.shrink) { input.shrink = false; requestSize(pl.size === "small" ? "normal" : "small"); }
+    pl.roarCd = Math.max(0, (pl.roarCd || 0) - dt);
+    S.roarT = Math.max(0, S.roarT - dt);
+    if (input.roar) { input.roar = false; doRoar(); }
 
     // horizontal
     const slow = pl.slowT > 0 ? CFG.enemies.netter.slowFactor : 1;
@@ -443,16 +528,26 @@
       if (Math.abs(pl.vx) <= f) pl.vx = 0; else pl.vx -= Math.sign(pl.vx) * f;
     }
 
+    // vines: only the tiny compy can climb. Hold JUMP to climb, let go to slide, move sideways to hop off.
+    const midTile = cellAt(Math.floor(pl.x / 16), Math.floor((pl.y - d.h / 2) / 16));
+    const climbing = pl.size === "small" && midTile === "|" && pl.pounceT <= 0;
+    if (climbing) {
+      pl.vy = held("jump") ? -PC.climbSpeed : (ax !== 0 ? 0 : PC.slideSpeed);
+      pl.jumps = 0; pl.coyote = 0; input.jumpBuf = 0;
+      if (held("jump") && Math.random() < dt * 5) P.sparkle(pl.x, pl.y - d.h, "#57BE59", 1);
+    } else if (pl.wasClimb && pl.vy < 0) pl.vy = -PC.jumpVel * 0.9; // pop off the top of the vine onto the ledge
+    pl.wasClimb = climbing;
+
     // jumping
     if (pl.onGround) { pl.coyote = PC.coyoteTime; pl.jumps = 0; }
-    if (input.jumpBuf > 0) {
+    if (input.jumpBuf > 0 && !climbing) {
       if (pl.coyote > 0 || pl.jumps === 0) {
         doJump(false);
       } else if (PC.doubleJump && pl.jumps === 1) {
         doJump(true);
       }
     }
-    if (!held("jump") && pl.vy < -170) pl.vy = -170; // variable jump: a tap still clears one tile
+    if (!held("jump") && pl.vy < -170 && !climbing) pl.vy = -170; // variable jump: a tap still clears one tile
 
     // pounce trigger
     if (input.pounce) {
@@ -468,6 +563,7 @@
     moveEntity(pl, d.w, d.h, dt, {
       smash: pl.size === "big", stepUp: pl.size === "big",
       solids: pl.size === "big" ? BIG_SOLID : undefined,
+      g: climbing ? 0 : null,
     });
     if (wasAir && pl.onGround) {
       pl.squash = 1;
@@ -479,13 +575,31 @@
     }
     pl.animT += dt * (Math.abs(pl.vx) > 10 ? 1 : 0.4);
 
+    if (pl.size === "big" && pl.onGround) {
+      const ty = Math.floor((pl.y + 1) / 16);
+      // cracked floor gives way under the T-rex
+      for (let tx = Math.floor((pl.x - d.w / 2) / 16); tx <= Math.floor((pl.x + d.w / 2) / 16); tx++)
+        if (cellAt(tx, ty) === "c" && !S.cracks[tx + "," + ty]) {
+          // the whole cracked run starts giving way at once, rippling outward from the footfall
+          AU.bonk();
+          for (const dir of [-1, 1]) for (let nx = tx, i = 0; cellAt(nx, ty) === "c"; nx += dir, i++)
+            if (!S.cracks[nx + "," + ty]) S.cracks[nx + "," + ty] = { tx: nx, ty, t: CFG.tiles.crackTime + i * 0.09 };
+        }
+      // wading through mud
+      if (Math.abs(pl.vx) > 10 && cellAt(Math.floor(pl.x / 16), ty) === "_") {
+        if (Math.random() < dt * 12) P.splash(pl.x + (Math.random() - 0.5) * 30, pl.y, 3);
+        pl.wadeT = (pl.wadeT || 0) - dt;
+        if (pl.wadeT <= 0) { pl.wadeT = 0.3; AU.wade(); }
+      }
+    }
+
     // world bounds
     pl.x = Math.max(d.w / 2, Math.min(S.gw * 16 - d.w / 2, pl.x));
     if (pl.y > S.gh * 16 + 40) waterDeath(); // fell out of world
 
     // water
     const feet = cellAt(Math.floor(pl.x / 16), Math.floor((pl.y - 2) / 16));
-    if (feet === "~") waterDeath();
+    if (feet === "~" || (feet === "_" && pl.size !== "big")) waterDeath();
 
     // checkpoints
     for (const cp of S.checkpoints) {
@@ -494,13 +608,25 @@
 
     // items
     for (const it of S.items) {
-      if (it.got) continue;
+      if (it.got) {
+        // boss arenas regrow eggs so a little T-rex never runs dry
+        if (S.eggRespawn && it.kind === "egg") {
+          it.rt = (it.rt == null ? S.eggRespawn : it.rt) - dt;
+          if (it.rt <= 0) { it.got = false; it.rt = null; P.sparkle(it.x, it.y - 4); }
+        }
+        continue;
+      }
       if (Math.abs(it.x - pl.x) < d.w / 2 + 5 && Math.abs(it.y - 4 - (pl.y - d.h / 2)) < d.h / 2 + 6) {
         it.got = true;
         if (it.kind === "egg") {
           S.eggsGot++;
           pl.power = Math.min(PC.power.max, pl.power + PC.power.eggRefill);
           AU.egg(); P.sparkle(it.x, it.y - 4);
+        } else if (it.kind === "gold") {
+          S.goldGot = true;
+          pl.power = PC.power.max;
+          AU.hatch(); P.confetti(it.x, it.y - 6, 22); P.sparkle(it.x, it.y - 4, "#FFE066", 10);
+          S.toast = { txt: "GOLDEN EGG!", t: 2.2 };
         } else {
           pl.hearts = Math.min(PC.hearts, pl.hearts + 1);
           AU.heartPickup(); P.sparkle(it.x, it.y - 4, "#FF9AA0");
@@ -553,9 +679,42 @@
       pl.x = cp.x; pl.y = cp.y - 2; pl.vx = 0; pl.vy = 0;
       pl.invuln = CFG.player.invulnTime;
       setSizeSafe("normal");
+      // the mud re-crusts: collapsed bridges come back so the route from the checkpoint is walkable again
+      for (const c of S.collapsed) if (S.grid[c.ty][c.tx] === ".") S.grid[c.ty][c.tx] = "c";
+      S.collapsed = [];
     }
   }
   function setSizeSafe(t) { if (S.pl.size !== t) { S.pl.size = t; } }
+  // ROAR: pure fun button. Scares walkers into running, makes gunners flinch, provokes bosses into charging.
+  function doRoar() {
+    const pl = S.pl, R = CFG.player.roar, d = plDims();
+    if (pl.roarCd > 0 || pl.dead) return;
+    pl.roarCd = R.cooldown;
+    const small = pl.size === "small", big = pl.size === "big";
+    S.roarT = 0.75; S.roarTxt = small ? "squeak!" : big ? "RAWR!!!" : "RAWR!";
+    if (small) { AU.squeak(); P.sparkle(pl.x, pl.y - d.h, "#FFFFFF", 2); return; }
+    const radius = big ? R.radiusBig : R.radius;
+    AU.roar(big);
+    S.shake = Math.min(CFG.fx.shakeMax, S.shake + (big ? 6 : 3));
+    P.ring(pl.x + pl.facing * 6, pl.y - d.h / 2, "#FFE066", radius * 1.5);
+    P.ring(pl.x + pl.facing * 6, pl.y - d.h / 2, "#FFFFFF", radius);
+    for (const e of S.enemies) {
+      if (e.dead || Math.abs(e.x - pl.x) > radius || Math.abs(e.y - pl.y) > 80) continue;
+      if (e.type === "walker" || e.type === "armored") { e.fleeT = R.fleeTime; e.scaredT = R.fleeTime; }
+      else if (e.type === "shooter" || e.type === "netter") { e.scaredT = R.fleeTime; e.state = "idle"; e.cd = Math.max(e.cd, R.fleeTime); }
+      else if (e.type === "boss" && e.state === "patrol") { e.state = "windup"; e.t = CFG.enemies.boss.chargeWindup; e.vx = 0; AU.bossRoar(); }
+      else if (e.type === "jeep" && e.state === "drive") { e.state = "windup"; e.t = CFG.enemies.jeep.chargeWindup; e.vx = 0; e.facing = pl.x < e.x ? -1 : 1; AU.engine(); }
+    }
+  }
+  function updateCracks(dt) {
+    for (const k in S.cracks) {
+      const c = S.cracks[k]; c.t -= dt;
+      if (c.t > 0) continue;
+      if (S.grid[c.ty][c.tx] === "c") { S.grid[c.ty][c.tx] = "."; S.collapsed.push({ tx: c.tx, ty: c.ty }); P.crate(c.tx * 16 + 8, c.ty * 16 + 8); }
+      delete S.cracks[k];
+      AU.crumble(); S.shake = Math.min(CFG.fx.shakeMax, S.shake + 2);
+    }
+  }
   function hurt(srcX, dmg, skipInvulnGate) {
     const pl = S.pl;
     if (pl.dead) return;
@@ -583,14 +742,30 @@
       e.animT += dt; e.flashT = Math.max(0, e.flashT - dt); e.hitCd = Math.max(0, e.hitCd - dt);
       const dx = pl.x - e.x, adx = Math.abs(dx), ady = Math.abs(pl.y - e.y);
 
-      if (e.type === "walker") {
-        // turn at walls and ledges
-        const dir = Math.sign(e.vx) || -1;
+      e.scaredT = Math.max(0, e.scaredT - dt);
+      if (e.type === "walker" || e.type === "armored") {
+        const dir = e.dir || -1;
         const aheadX = Math.floor((e.x + dir * (ed.w / 2 + 2)) / 16);
         const footY = Math.floor((e.y + 2) / 16);
-        if (e.hitWall || !solidAt(aheadX, footY)) e.vx = -dir * c.speed;
-        e.facing = Math.sign(e.vx) || e.facing;
+        if (e.fleeT > 0) {
+          // roared at: run away, cower against walls
+          e.fleeT -= dt;
+          const away = Math.sign(e.x - pl.x) || 1;
+          e.vx = e.hitWall ? 0 : away * c.speed * CFG.player.roar.fleeSpeedMul;
+          if (!solidAt(Math.floor((e.x + away * (ed.w / 2 + 2)) / 16), footY)) e.vx = 0; // won't leap off a ledge, just shakes
+          e.facing = -away;
+          if (Math.random() < dt * 10) P.sparkle(e.x + (Math.random() - 0.5) * 8, e.y - ed.h - 2, "#FFFFFF", 1);
+          if (e.fleeT <= 0) { e.dir = -away; e.vx = e.dir * c.speed; }
+        } else {
+          if (e.hitWall || !solidAt(aheadX, footY)) e.dir = -dir; // turn at walls and ledges
+          e.vx = e.dir * c.speed;
+        }
+        if (e.fleeT <= 0) e.facing = e.dir;
         moveEntity(e, ed.w, ed.h, dt, {});
+      } else if (e.type === "shooter" && e.scaredT > 0) {
+        e.state = "idle"; moveEntity(e, ed.w, ed.h, dt, {});
+      } else if (e.type === "netter" && e.scaredT > 0) {
+        e.state = "idle"; moveEntity(e, ed.w, ed.h, dt, {});
       } else if (e.type === "shooter") {
         e.facing = dx < 0 ? -1 : 1;
         e.cd -= dt;
@@ -622,6 +797,8 @@
         moveEntity(e, ed.w, ed.h, dt, {});
       } else if (e.type === "boss") {
         updateBoss(e, dt, c, ed);
+      } else if (e.type === "jeep") {
+        updateJeep(e, dt, c, ed);
       }
 
       // ---- combat vs player ----
@@ -644,6 +821,26 @@
           pl.vy = -CFG.player.stompBounce;
           AU.ding(); P.ding(pl.x, e.y - enemyDims(e).h);
         } else hurt(e.x, c.touchDamage);
+      } else if (e.type === "jeep") {
+        if (e.state === "flipped") { if (e.hitCd <= 0) bossHit(e); } // belly up — any contact counts (after the shove's rebound)
+        else if (pl.size === "big") {
+          // a T-rex bumps the jeep over on ANY contact — rate-limited so it's a shove, not a melt
+          if (e.hitCd <= 0) { jeepFlip(e); e.hitCd = 1.2; pl.vx = -Math.sign(e.x - pl.x) * 160; }
+          else pl.vx = -Math.sign(e.x - pl.x) * 120;
+        } else if (stomping) {
+          pl.vy = -CFG.player.stompBounce; AU.ding(); P.ding(pl.x, e.y - ed.h);
+        } else hurt(e.x, c.touchDamage);
+      } else if (e.type === "armored") {
+        // steel helmet: only a T-rex flattens him. Everything else just bonks.
+        if (pl.size === "big") { killEnemy(e); if (stomping) { pl.vy = -CFG.player.stompBounce; pl.squash = 0; } }
+        else if (stomping) { pl.vy = -CFG.player.stompBounce; pl.squash = 0; AU.bonk(); P.ding(pl.x, e.y - ed.h); e.flashT = 0.2; e.fleeT = Math.max(e.fleeT, 0.6); e.scaredT = 0.6; }
+        else if (pl.pounceT > 0) {
+          // bonk: the compy bounces off, the baddie staggers back, and nobody gets hurt
+          pl.pounceT = 0; pl.vx = -pl.facing * 230; pl.vy = -150; pl.invuln = Math.max(pl.invuln, 0.8);
+          e.fleeT = Math.max(e.fleeT, 1.0); e.scaredT = 1.0;
+          AU.bonk(); P.ding(e.x, e.y - 10); e.flashT = 0.2;
+        }
+        else hurt(e.x, c.touchDamage);
       } else if (pl.pounceT > 0 || stomping || pl.size === "big") {
         killEnemy(e);
         if (stomping) { pl.vy = -CFG.player.stompBounce; pl.squash = 0; }
@@ -697,7 +894,51 @@
     AU.bossHit();
     P.poof(e.x, e.y - 20, "#FF8A7A", 8);
     if (e.hp <= 0) { killEnemy(e); }
+    else if (e.type === "jeep") { e.state = "drive"; e.t = 1.6; e.dir = S.pl.x < e.x ? 1 : -1; S.pl.invuln = Math.max(S.pl.invuln, 0.9); AU.engine(); }
     else { e.state = "patrol"; e.t = 1.6; }
+  }
+  // Swamp Jeep: drives laps, revs up, charges. Crashing into a wall OR a T-rex shove flips it belly-up.
+  function updateJeep(e, dt, c, ed) {
+    const pl = S.pl;
+    if (S.bossIntroT > 0) { S.bossIntroT -= dt; e.facing = pl.x < e.x ? -1 : 1; return; }
+    e.netT -= dt;
+    if (e.state === "idle") { e.state = "drive"; e.t = c.driveTime; e.dir = -1; }
+    if (e.state === "drive") {
+      e.vx = e.dir * c.speed; e.facing = e.dir;
+      e.t -= dt;
+      if (e.hitWall) e.dir = -e.dir;
+      if (e.netT <= 0 && !pl.dead && Math.abs(pl.x - e.x) > 50) {
+        e.netT = c.netCooldown;
+        const dx = pl.x - e.x, tof = 0.9;
+        S.nets.push({ x: e.x, y: e.y - 26, vx: Math.max(-c.netSpeed, Math.min(c.netSpeed, dx / tof)), vy: -c.netArc, t: 4, ground: 0 });
+        AU.netThrow();
+      }
+      if (e.t <= 0) { e.state = "windup"; e.t = c.chargeWindup; e.vx = 0; e.facing = pl.x < e.x ? -1 : 1; AU.engine(); }
+      moveEntity(e, ed.w, ed.h, dt, {});
+      if (Math.random() < dt * 18) P.dust(e.x - e.dir * 20, e.y, -e.dir, 1);
+    } else if (e.state === "windup") {
+      e.t -= dt; e.vx = 0;
+      if (Math.random() < dt * 40) P.dust(e.x - e.facing * 30, e.y - 6, -e.facing, 2);
+      if (Math.random() < dt * 30) P.poof(e.x - e.facing * 34, e.y - 8, "#8A8F99", 1);
+      if (e.t <= 0) { e.state = "charge"; e.dir = e.facing; AU.skid(); }
+      moveEntity(e, ed.w, ed.h, dt, {});
+    } else if (e.state === "charge") {
+      e.vx = e.dir * c.chargeSpeed; e.facing = e.dir;
+      moveEntity(e, ed.w, ed.h, dt, {});
+      if (Math.random() < dt * 45) P.dust(e.x - e.dir * 22, e.y, -e.dir, 2);
+      if (e.hitWall) jeepFlip(e);
+    } else if (e.state === "flipped") {
+      e.t -= dt; e.vx = 0;
+      if (Math.random() < dt * 14) P.sparkle(e.x + Math.cos(S.t * 5) * 18, e.y - ed.h - 6, "#FFE066", 1);
+      if (Math.random() < dt * 10) P.dust(e.x + (Math.random() - 0.5) * 30, e.y - ed.h, 0, 1);
+      if (e.t <= 0) { e.state = "drive"; e.t = c.driveTime; e.dir = pl.x < e.x ? -1 : 1; AU.engine(); }
+      moveEntity(e, ed.w, ed.h, dt, {});
+    }
+  }
+  function jeepFlip(e) {
+    if (e.state === "flipped") return;
+    e.state = "flipped"; e.t = CFG.enemies.jeep.flipTime; e.vx = 0; e.hitCd = 0.5;
+    S.shake = CFG.fx.shakeMax; AU.flip(); P.dust(e.x, e.y, 0, 10); P.poof(e.x, e.y - 14, "#FFE066", 6);
   }
   function killEnemy(e) {
     e.dead = true;
@@ -706,9 +947,10 @@
     P.poof(e.x, e.y - ed.h / 2, e.type === "boss" ? "#FF8A7A" : "#FFE066", e.type === "boss" ? 18 : 10);
     // comic spin-away
     const sprName = e.type === "boss" ? "bossDizzy" : e.type + "1";
+    if (e.type === "jeep") { S.pl.invuln = Math.max(S.pl.invuln, 1.5); }
     S.flyoffs.push({ spr: sprName, x: e.x, y: e.y - ed.h / 2, vx: (Math.random() - 0.5) * 80, vy: -260, rot: 0, vr: 9 + Math.random() * 5, facing: e.facing });
     S.shake = Math.min(CFG.fx.shakeMax, S.shake + (e.type === "boss" ? 6 : 2));
-    if (e.type === "boss") { P.confetti(e.x, e.y - 20, 30); }
+    if (e.type === "boss" || e.type === "jeep") { P.confetti(e.x, e.y - 20, 30); }
   }
 
   // ---------------- projectiles ----------------
@@ -763,18 +1005,27 @@
     document.body.classList.remove("playing");
     AU.stopMusic(); AU.win();
     P.confetti(S.pl.x, S.pl.y - 30, 30);
-    const frac = S.eggsTotal ? S.eggsGot / S.eggsTotal : 1;
+    const frac = S.eggsTotal ? Math.min(1, S.eggsGot / S.eggsTotal) : 1;
     const stars = frac >= CFG.stars.three ? 3 : frac >= CFG.stars.two ? 2 : 1;
     progress.stars[S.li] = Math.max(progress.stars[S.li] || 0, stars);
     progress.unlocked = Math.max(progress.unlocked, Math.min(LEVELS.length, S.li + 2));
+    const lv = LEVELS[S.li];
+    let hatched = null;
+    if (S.goldGot && !progress.gold[S.li]) {
+      progress.gold[S.li] = true;
+      if (lv.hat) { hatched = CFG.hats.find(h => h.id === lv.hat) || null; progress.hat = lv.hat; if (hatched) setTimeout(() => AU.hatch(), 900); }
+    }
     save.write(progress);
     const last = S.li === LEVELS.length - 1;
-    document.getElementById("win-title").textContent = last ? "YOU WIN!" : "LEVEL CLEAR!";
+    const eggsShown = Math.min(S.eggsGot, S.eggsTotal);
+    document.getElementById("win-title").textContent = last ? "YOU WIN!" : (lv.boss ? `WORLD ${lv.world || 1} CLEAR!` : "LEVEL CLEAR!");
     document.getElementById("win-stars").innerHTML =
       "★".repeat(stars) + `<span class="dim">${"★".repeat(3 - stars)}</span>`;
-    document.getElementById("win-sub").innerHTML = last
-      ? `The jungle is safe! 🦖<br><b>DINOSAUR FIGHT!</b> — designed by Henry, age 5.<br>Eggs: ${S.eggsGot}/${S.eggsTotal}`
-      : `Eggs collected: ${S.eggsGot}/${S.eggsTotal}`;
+    document.getElementById("win-sub").innerHTML = (last
+      ? `The swamp is safe! 🦖<br><b>DINOSAUR FIGHT!</b> — designed by Henry, age 5.<br>Eggs: ${eggsShown}/${S.eggsTotal}`
+      : `Eggs collected: ${eggsShown}/${S.eggsTotal}`)
+      + (S.goldGot ? `<br>🥚 <b>Golden egg found!</b>` : "")
+      + (hatched ? `<br>🐣 It hatched a <b>${hatched.name}</b> — the Compy is wearing it!` : "");
     document.getElementById("btn-next").style.display = last ? "none" : "";
     show("ov-win");
   }
@@ -785,6 +1036,10 @@
     river:  { skyTop: "#0A1C1E", skyBot: "#1F4638", far: "#122C22", mid: "#0C2018", canopy: "#1C4A38", leaf: "#2A6650", bush: "#153828", fore: "#04100C", shaft: "rgba(190,228,214,.16)", sun: null, tint: "rgba(20,90,80,.14)" },
     camp:   { skyTop: "#2A1410", skyBot: "#8A4E2A", far: "#241410", mid: "#160C08", canopy: "#3A1E10", leaf: "#523018", bush: "#2A160C", fore: "#0E0604", shaft: null, sun: "#FFB05C", tint: "rgba(150,70,20,.24)" },
     arena:  { skyTop: "#1E0A0C", skyBot: "#6E2A1A", far: "#1A0C0A", mid: "#120806", canopy: "#32120C", leaf: "#4A2014", bush: "#240E08", fore: "#0C0403", shaft: null, sun: "#FF7A4A", tint: "rgba(150,45,25,.3)" },
+    // World 2
+    swamp:  { skyTop: "#101C0E", skyBot: "#5A6A22", far: "#22341A", mid: "#142214", canopy: "#2A4E22", leaf: "#7A9A3A", bush: "#22381C", fore: "#0A1208", shaft: "rgba(220,230,140,.10)", sun: "#C8C878", tint: "rgba(110,110,20,.26)", style: "trees", mist: true, moss: true },
+    cave:   { skyTop: "#06060A", skyBot: "#12161E", far: "#1A1E28", mid: "#10141C", canopy: "#262A34", leaf: "#3FA8C0", bush: "#1C2028", fore: "#04040A", shaft: null, sun: null, tint: "rgba(40,50,80,.24)", style: "cave", rock: true },
+    bog:    { skyTop: "#141C14", skyBot: "#56663A", far: "#20301E", mid: "#121C10", canopy: "#2E4022", leaf: "#54783A", bush: "#20301A", fore: "#080C06", shaft: null, sun: "#D8D090", tint: "rgba(90,100,40,.22)", style: "dead", mist: true },
   };
   let bgSky = null, bgFar = null, bgMid = null, bgNear = null, builtTheme = null;
   let TILES = {};
@@ -851,7 +1106,36 @@
     // MID layer
     bgMid = document.createElement("canvas"); bgMid.width = 480; bgMid.height = 272;
     c = bgMid.getContext("2d");
-    if (S.theme === "camp" || S.theme === "arena") {
+    const style = th.style || ((S.theme === "camp" || S.theme === "arena") ? "dead" : "trees");
+    if (style === "cave") {
+      // rock pillars floor to ceiling, stalactite fringe, glowing fungus, stalagmite stubs at the floor
+      for (let i = 0; i < 6; i++) {
+        const x = i * 84 + r2() * 40, w = 16 + r2() * 14;
+        c.fillStyle = th.mid; c.fillRect(x, 0, w, 272);
+        c.fillStyle = "rgba(0,0,0,.3)"; c.fillRect(x, 0, 4, 272);
+        c.fillStyle = "rgba(255,255,255,.05)"; c.fillRect(x + w - 3, 0, 3, 272);
+        c.fillStyle = "rgba(0,0,0,.25)";
+        for (let n = 0; n < 6; n++) c.fillRect(x + 2 + r2() * (w - 6), 20 + r2() * 232, 3 + r2() * 5, 2);
+      }
+      c.fillStyle = th.canopy; c.fillRect(0, 0, 480, 16);
+      for (let x = 0; x < 480; x += 12) {
+        const len = 8 + r2() * 38;
+        for (let y = 0; y < len; y += 2) {
+          const hw = Math.max(1, Math.round(5 * (1 - y / len)));
+          c.fillStyle = y % 8 < 2 ? "rgba(255,255,255,.06)" : th.canopy;
+          c.fillRect(x + 6 - hw, 16 + y, hw * 2, 2);
+        }
+      }
+      for (let i = 0; i < 9; i++) {
+        const gx = r2() * 480, gy = 120 + r2() * 130;
+        c.fillStyle = "rgba(63,168,192,.10)"; c.fillRect(gx - 6, gy - 5, 13, 11);
+        c.fillStyle = "rgba(63,168,192,.22)"; c.fillRect(gx - 3, gy - 2, 7, 5);
+        c.fillStyle = th.leaf; c.fillRect(gx - 1, gy, 3, 2); c.fillRect(gx, gy - 1, 1, 1);
+      }
+      c.fillStyle = th.bush;
+      for (let x = 0; x < 480; x += 14) { const h = 6 + r2() * 22, w = 5 + r2() * 6; c.fillRect(x, 258 - h, w, h); c.fillRect(x + 1, 254 - h, w - 2, 4); }
+      c.fillRect(0, 258, 480, 14);
+    } else if (style === "dead") {
       // crooked dead trees — varied leans and branch angles, no crossbars
       for (let i = 0; i < 5; i++) {
         const x = 30 + i * 100 + r2() * 40, leanDir = r2() < 0.5 ? -1 : 1;
@@ -898,6 +1182,10 @@
         for (let n = 0; n < 7; n++) c.fillRect(x + 2 + r2() * (w - 6), 20 + r2() * 232, 3 + r2() * 4, 2);
         c.fillStyle = th.mid;
         c.fillRect(x - 10, 60 + r2() * 60, w + 20, 4);
+        if (th.moss) { // beards of moss hanging off every branch stub
+          c.fillStyle = th.leaf;
+          for (let m = 0; m < 4; m++) { const mx = x - 8 + r2() * (w + 14), my = 64 + r2() * 90; c.fillRect(mx, my, 2, 10 + r2() * 30); }
+        }
       }
       // hanging canopy fringe — now LIGHTER than the sky so it actually reads
       c.fillStyle = th.canopy;
@@ -908,7 +1196,7 @@
         c.fillRect(x, 0, 8, drop);
         c.fillStyle = th.leaf; // leaf highlights on the fringe
         c.fillRect(x + (r2() * 5 | 0), drop - 4, 3, 3);
-        if (r2() < 0.35) { c.fillStyle = th.canopy; c.fillRect(x + 2, drop, 3, 12 + r2() * 18); } // vine
+        if (r2() < (th.moss ? 0.8 : 0.35)) { c.fillStyle = th.moss ? th.leaf : th.canopy; c.fillRect(x + 2, drop, th.moss ? 2 : 3, (th.moss ? 30 : 12) + r2() * (th.moss ? 60 : 18)); } // vine / moss
       }
       // dense bush line at the ground — own, lighter value
       c.fillStyle = th.bush;
@@ -920,25 +1208,45 @@
       c.fillStyle = th.leaf;
       for (let x = 4; x < 480; x += 18 + (r2() * 14 | 0)) c.fillRect(x, 246 - r2() * 14, 2, 2);
     }
+    if (th.mist) { // low swamp mist, dithered bands
+      c.fillStyle = "rgba(200,220,170,.22)"; c.fillRect(0, 236, 480, 22);
+      c.fillStyle = "rgba(200,220,170,.12)";
+      for (let x = 0; x < 480; x += 4) c.fillRect(x + (x % 8 ? 2 : 0), 224, 2, 12);
+      c.fillStyle = "rgba(200,220,170,.08)"; c.fillRect(0, 214, 480, 10);
+    }
 
     // NEAR: taller foreground silhouette blades, in front of the action
     bgNear = document.createElement("canvas"); bgNear.width = 480; bgNear.height = 56;
     c = bgNear.getContext("2d");
     c.fillStyle = th.fore;
-    for (let x = 0; x < 480; x += 22 + ((r2() * 26) | 0)) {
-      const h = 16 + r2() * 34, w = 3;
-      for (let b = -2; b <= 2; b++) {
-        c.save();
-        c.translate(x, 56);
-        c.rotate(b * 0.2);
-        c.fillRect(-w / 2, -h + Math.abs(b) * 6, w, h - Math.abs(b) * 6);
-        c.restore();
+    if (style === "cave") {
+      for (let x = 0; x < 480; x += 30 + ((r2() * 30) | 0)) {
+        const h = 12 + r2() * 30;
+        for (let y = 0; y < h; y += 2) { const hw = Math.max(1, Math.round(6 * (1 - y / h))); c.fillRect(x - hw, 56 - y, hw * 2, 2); }
+      }
+    } else {
+      for (let x = 0; x < 480; x += 22 + ((r2() * 26) | 0)) {
+        const h = 16 + r2() * 34, w = 3;
+        for (let b = -2; b <= 2; b++) {
+          c.save();
+          c.translate(x, 56);
+          c.rotate(b * 0.2);
+          c.fillRect(-w / 2, -h + Math.abs(b) * 6, w, h - Math.abs(b) * 6);
+          c.restore();
+        }
+      }
+    }
+    if (th.mist) { // veil of ground fog in front of the action
+      for (let y = 0; y < 26; y += 2) {
+        const a = 0.16 * (1 - y / 26);
+        c.fillStyle = `rgba(210,225,180,${a.toFixed(3)})`;
+        for (let x = (y % 4 ? 2 : 0); x < 480; x += 4) c.fillRect(x, 30 + y, 2, 2);
       }
     }
 
     // theme-tinted terrain tiles so lighting touches the ground
     TILES = {};
-    for (const k of ["grass", "dirt", "platform", "water1", "water2", "stone", "crate", "tuft1", "tuft2"]) {
+    for (const k of ["grass", "dirt", "platform", "water1", "water2", "stone", "crate", "tuft1", "tuft2", "shallow1", "shallow2", "mudDeep", "cracked", "vine", "rockTop", "rockDirt"]) {
       const src = SPR[k];
       if (!th.tint) { TILES[k] = src; continue; }
       const t = document.createElement("canvas"); t.width = src.width; t.height = src.height;
@@ -976,13 +1284,21 @@
       const ch = S.grid[ty][tx];
       if (ch === ".") continue;
       let spr = null;
-      if (ch === "#") spr = solidAt(tx, ty - 1) ? "dirt" : "grass";
+      if (ch === "#") spr = th.rock ? (solidAt(tx, ty - 1) ? "rockDirt" : "rockTop") : (solidAt(tx, ty - 1) ? "dirt" : "grass");
       else if (ch === "-") spr = "platform";
       else if (ch === "B") spr = "crate";
       else if (ch === "M") spr = "stone";
-      else if (ch === "~") { if (cellAt(tx, ty - 1) !== "~") spr = waterFrame; else spr = "water2"; }
+      else if (ch === "c") spr = "cracked";
+      else if (ch === "|") spr = "vine";
+      else if (ch === "_") spr = waterFrame === "water1" ? "shallow1" : "shallow2";
+      else if (ch === "~") {
+        const above = cellAt(tx, ty - 1);
+        if (above === "_" || (above === "~" && (cellAt(tx, ty - 2) === "_" || cellAt(tx, ty - 3) === "_"))) spr = "mudDeep";
+        else if (above !== "~") spr = waterFrame; else spr = "water2";
+      }
       if (spr) {
-        ctx.drawImage(TILES[spr] || SPR[spr], tx * 16, ty * 16);
+        const jx = ch === "c" && S.cracks[tx + "," + ty] ? Math.round((Math.random() - 0.5) * 2) : 0;
+        ctx.drawImage(TILES[spr] || SPR[spr], tx * 16 + jx, ty * 16);
         if (spr === "grass") {
           const hsh = (tx * 2654435761 >>> 0) % 5;
           if (hsh < 2) ctx.drawImage(TILES[hsh === 0 ? "tuft1" : "tuft2"] || SPR.tuft1, tx * 16, ty * 16 - 7);
@@ -993,7 +1309,7 @@
     // decor (behind entities)
     for (const d of S.decor) {
       const s = SPR[d.spr];
-      ctx.drawImage(s, Math.round(d.x - s.width / 2), Math.round(d.y - s.height));
+      ctx.drawImage(s, Math.round(d.x - s.width / 2), Math.round(d.hang ? d.y - 16 : d.y - s.height));
     }
 
     // checkpoints + flag
@@ -1016,6 +1332,7 @@
       const bob = Math.sin(S.t * 4 + it.x * 0.13) * 2;
       const s = SPR[it.kind];
       pixShadow(it.x, it.y + 2, 7);
+      if (it.kind === "gold" && Math.random() < 0.08) P.sparkle(it.x + (Math.random() - 0.5) * 10, it.y - 6, "#FFE066", 1);
       ctx.drawImage(s, Math.round(it.x - s.width / 2), Math.round(it.y - s.height + bob));
     }
 
@@ -1027,9 +1344,8 @@
         if (hh.kind === "grow" && S.pl.size === "big") continue;
         if (hh.kind === "shrink" && S.pl.size === "small") continue;
         const bnc = Math.sin(S.t * 5) * 3;
-        const txt = hh.kind === "grow"
-          ? (touch ? "🦖 GROW!" : "↑ = GROW!")
-          : (touch ? "🐜 SHRINK!" : "↓ = SHRINK!");
+        const label = hh.txt ? (hh.kind === "grow" ? "GROW + " : "SHRINK + ") + hh.txt : (hh.kind === "grow" ? "GROW!" : "SHRINK!");
+        const txt = (touch ? (hh.kind === "grow" ? "🦖 " : "🐜 ") : (hh.kind === "grow" ? "↑ " : "↓ ")) + label;
         pixText(txt, hh.x, hh.y + bnc, hh.kind === "grow" ? "#C9A6FF" : "#7BE5F2", 10, "center");
       }
       ctx.textAlign = "left";
@@ -1104,6 +1420,10 @@
       name = Math.floor(e.animT * 7) % 2 ? "walker1" : "walker2";
     } else if (e.type === "shooter") {
       name = e.state === "aim" ? "shooter2" : "shooter1";
+    } else if (e.type === "armored") {
+      name = Math.floor(e.animT * 6) % 2 ? "armored1" : "armored2";
+    } else if (e.type === "jeep") {
+      name = Math.floor(e.animT * (e.state === "charge" ? 16 : e.state === "flipped" ? 10 : 8)) % 2 ? "jeep1" : "jeep2";
     } else {
       name = e.state === "throw" ? "netter2" : "netter1";
     }
@@ -1111,10 +1431,31 @@
     const wob = e.type === "boss" && e.state === "dizzy" ? Math.sin(S.t * 10) * 2 : 0;
     pixShadow(e.x, e.y, enemyDims(e).w + 4);
     if (e.flashT > 0 && Math.floor(S.t * 20) % 2 === 0) ctx.globalAlpha = 0.4;
-    ctx.drawImage(s, Math.round(e.x - s.width / 2 + wob), Math.round(e.y - s.height));
+    if (e.type === "jeep") {
+      const JS = 1.5, jw = s.width * JS, jh = s.height * JS;   // boss-sized
+      if (e.state === "flipped") {
+        // belly up, wheels spinning in the air, dizzy stars
+        ctx.save();
+        ctx.translate(Math.round(e.x), Math.round(e.y - jh / 2));
+        ctx.scale(1, -1);
+        ctx.drawImage(s, -jw / 2, -jh / 2 + 4 + Math.round(Math.sin(S.t * 14)), jw, jh);
+        ctx.restore();
+        for (let i = 0; i < 3; i++) {
+          const a = S.t * 5 + i * 2.1;
+          pixText("★", e.x + Math.cos(a) * 22, e.y - jh - 4 + Math.sin(a) * 5, i ? "#FFE066" : "#FFFFFF", 9, "center");
+        }
+      } else {
+        const shake = e.state === "windup" ? Math.round((Math.random() - 0.5) * 3) : 0;
+        ctx.drawImage(s, Math.round(e.x - jw / 2 + shake), Math.round(e.y - jh + (shake ? Math.abs(shake) : 0)), jw, jh);
+      }
+    } else ctx.drawImage(s, Math.round(e.x - s.width / 2 + wob), Math.round(e.y - s.height));
     ctx.globalAlpha = 1;
     // windup exclamation
     if (e.type === "boss" && e.state === "windup") pixText("!", e.x, e.y - ed.h - 12, "#FFE066", 10, "center");
+    if (e.type === "jeep" && e.state === "windup") pixText("!", e.x, e.y - ed.h - 14, "#FFE066", 16, "center");
+    if (e.scaredT > 0 && e.type !== "boss" && e.type !== "jeep") pixText("!!", e.x, e.y - ed.h - 8 - Math.abs(Math.sin(S.t * 12)) * 3, "#FFFFFF", 8, "center");
+    if (e.type === "armored" && S.pl && S.pl.size !== "big" && Math.abs(e.x - S.pl.x) < 110)
+      pixText(document.body.classList.contains("touch") ? "🦖 GROW!" : "↑ GROW!", e.x, e.y - ed.h - 10 + Math.sin(S.t * 5) * 2, "#C9A6FF", 8, "center");
     if ((e.type === "shooter" && e.state === "aim") || (e.type === "netter" && e.state === "throw"))
       pixText("!", e.x, e.y - ed.h - 8, "#FF8A7A", 8, "center");
   }
@@ -1138,9 +1479,31 @@
       ctx.rotate(S.t * 4);
       ctx.drawImage(s, -sw / 2, -shh / 2, sw, shh);
     } else {
-      ctx.drawImage(s, Math.round(pl.x - sw / 2), Math.round(pl.y - shh), sw, shh);
+      const fty = Math.floor((pl.y + 1) / 16);
+      const wading = pl.size === "big" && pl.onGround && cellAt(Math.floor(pl.x / 16), fty) === "_";
+      const sink = wading ? 5 : 0;
+      ctx.drawImage(s, Math.round(pl.x - sw / 2), Math.round(pl.y - shh + sink), sw, shh);
+      if (wading) { // mud surface over the legs + ripples
+        const mt = TILES[Math.floor(S.t * 2) % 2 === 0 ? "shallow1" : "shallow2"] || SPR.shallow1;
+        for (let tx = Math.floor((pl.x - sw / 2) / 16); tx <= Math.floor((pl.x + sw / 2) / 16); tx++)
+          if (cellAt(tx, fty) === "_") ctx.drawImage(mt, 0, 0, 16, 7, tx * 16, fty * 16, 16, 7);
+        ctx.fillStyle = "rgba(160,200,120,.5)";
+        const rp = (S.t * 40) % 24;
+        ctx.fillRect(Math.round(pl.x - sw / 2 - 6 - rp * 0.5), fty * 16 + 1, 4, 1);
+        ctx.fillRect(Math.round(pl.x + sw / 2 + 2 + rp * 0.5), fty * 16 + 1, 4, 1);
+      }
+      const hat = progress.hat && SPR["hat_" + progress.hat];
+      if (hat) {
+        const hp = HAT_POS[progress.hat], hs = hat[pl.facing > 0 ? "R" : "L"];
+        const hx = pl.facing > 0 ? hp.x : 18 - hp.x - hs.width;
+        const headDy = name === "jump" ? -1 : (name === "fall" || name === "pounce") ? 1 : 0;
+        ctx.drawImage(hs, Math.round(pl.x - sw / 2 + hx * (sw / 18)), Math.round(pl.y - shh + sink + (hp.y + headDy) * (shh / 18)),
+          Math.max(1, Math.round(hs.width * sw / 18)), Math.max(1, Math.round(hs.height * shh / 18)));
+      }
     }
     ctx.restore();
+    if (S.roarT > 0 && !pl.dead)
+      pixText(S.roarTxt, pl.x + pl.facing * 10, pl.y - shh - 6 - (0.75 - S.roarT) * 24, "#FFE066", pl.size === "big" ? 16 : pl.size === "small" ? 7 : 10, "center");
     // net-slow indicator
     if (pl.slowT > 0) ctx.drawImage(SPR.net, Math.round(pl.x - 4), Math.round(pl.y - d.h - 12));
   }
@@ -1177,16 +1540,17 @@
     ctx.strokeRect(6.5, 17.5, 61, 7);
     pixText("POWER", 72, 25, "#DCE6F2", 8);
     if (pl.size !== "normal") pixText(pl.size === "big" ? "HUGE!" : "tiny!", 112, 25, pl.size === "big" ? "#C9A6FF" : "#7BE5F2", 9);
-    if (!document.body.classList.contains("touch"))
-      pixText("WASD = MOVE · SPACE = JUMP · ↑ GROW · ↓ SHRINK · ← → POUNCE", 6, 35, "rgba(220,230,242,.6)", 7);
+    if (!document.body.classList.contains("touch") && S.t < 12)
+      pixText("WASD = MOVE · SPACE = JUMP · ↑ GROW · ↓ SHRINK · ← → POUNCE · V = ROAR", 6, 35, "rgba(220,230,242,.6)", 7);
     // eggs + baddies right side (clear of the DOM pause button)
     ctx.drawImage(SPR.egg, 388, 6, 7, 9);
-    pixText(`${S.eggsGot}/${S.eggsTotal}`, 398, 14, "#FFFFFF", 9);
+    pixText(`${Math.min(S.eggsGot, S.eggsTotal)}/${S.eggsTotal}`, 398, 14, "#FFFFFF", 9);
+    if (S.goldGot) ctx.drawImage(SPR.gold, 430, 6, 7, 9);
     const remaining = S.enemies.filter(e => !e.dead).length;
     pixText(`BADDIES ${remaining}`, 388, 26, remaining === 0 ? "#8FE08A" : "#FF8A7A", 9);
     // boss bar — bordered, segmented per hit
     if (S.boss && !S.boss.dead && S.bossIntroT <= 0) {
-      const hpMax = CFG.enemies.boss.hp, bw = 120, bx = 240 - bw / 2;
+      const hpMax = CFG.enemies[S.boss.type].hp, bw = 120, bx = 240 - bw / 2;
       ctx.fillStyle = "rgba(0,0,0,.6)"; ctx.fillRect(bx - 2, 7, bw + 4, 11);
       ctx.fillStyle = "#E8484F";
       ctx.fillRect(bx, 9, Math.round(bw * S.boss.hp / hpMax), 7);
@@ -1194,7 +1558,7 @@
       ctx.strokeRect(bx - 1.5, 7.5, bw + 3, 10);
       ctx.fillStyle = "rgba(0,0,0,.5)";
       for (let i = 1; i < hpMax; i++) ctx.fillRect(bx + Math.round(bw * i / hpMax), 9, 1, 7);
-      pixText("BIG BOSS BADDIE", 240, 27, "#FF8A7A", 8, "center");
+      pixText(LEVELS[S.li].bossName || "BOSS", 240, 27, "#FF8A7A", 8, "center");
     }
     // level name toast
     if (S.nameT > 0) {
@@ -1203,9 +1567,15 @@
       ctx.globalAlpha = 1;
     }
     if (S.bossIntroT > 0) {
-      pixText("BIG BOSS BADDIE!", 240, 116, "#FF8A7A", 22, "center");
-      pixText("Double-jump over his charges...", 240, 134, "#FFFFFF", 10, "center");
-      pixText("then stomp him when he's dizzy!", 240, 147, "#FFE066", 10, "center");
+      const lines = LEVELS[S.li].intro || [(LEVELS[S.li].bossName || "BOSS") + "!", "", ""];
+      pixText(lines[0], 240, 116, "#FF8A7A", 22, "center");
+      pixText(lines[1] || "", 240, 134, "#FFFFFF", 10, "center");
+      pixText(lines[2] || "", 240, 147, "#FFE066", 10, "center");
+    }
+    if (S.toast && S.toast.t > 0) {
+      ctx.globalAlpha = Math.min(1, S.toast.t);
+      pixText(S.toast.txt, 240, 74 - Math.max(0, S.toast.t - 1.8) * 30, "#FFE066", 16, "center");
+      ctx.globalAlpha = 1;
     }
     ctx.textAlign = "left";
   }
@@ -1257,17 +1627,29 @@
     if (S.mode === "title" || S.mode === "levels") { drawTitle(dt); return; }
     if (S.mode === "pause") { draw(); return; }
     if (!S.pl) return;
+    simTick(dt);
+    draw();
+  }
+  if (S.debug) {
+    // synchronous sim for automated critics: DF.step(seconds) runs the game forward without rAF
+    window.DFstep = secs => { const n = Math.ceil(secs * 60); for (let i = 0; i < n; i++) simTick(1 / 60); };
+    window.DFkeys = keys; window.DFinput = input; window.DFstart = startLevel; window.DFprogress = () => progress;
+  }
+  function simTick(dt) {
     if (S.mode === "win" || S.mode === "lose") {
       S.t += dt; S.shake = Math.max(0, S.shake - dt * 14);
       P.update(dt); updateProjectiles(dt);
-      draw(); return;
+      return;
     }
+    if (S.mode !== "play") return;
 
     S.t += dt;
     S.nameT = Math.max(0, S.nameT - dt);
+    if (S.toast) S.toast.t -= dt;
     S.shake = Math.max(0, S.shake - dt * 14);
 
     updatePlayer(dt);
+    updateCracks(dt);
     updateEnemies(dt);
     updateProjectiles(dt);
     P.update(dt);
@@ -1280,7 +1662,5 @@
       S.loseT -= dt;
       if (S.loseT <= 0) { S.mode = "lose"; document.body.classList.remove("playing"); show("ov-lose"); }
     }
-
-    draw();
   }
 })();

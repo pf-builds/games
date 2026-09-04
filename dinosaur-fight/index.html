@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>Dinosaur Fight! — a game by Henry</title>
-<meta name="description" content="You're a Compy with a super power: grow HUGE or shrink tiny. Stomp the baddies, clear the jungle. A free browser game designed by Henry, age 5.">
+<meta name="description" content="You're a Compy with a super power: grow HUGE or shrink tiny. Stomp the baddies, clear the jungle and the swamp, hatch golden eggs into hats. A free browser game designed by Henry, age 5.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@700;800&display=swap">
-<link rel="stylesheet" href="style.css?v=5">
+<link rel="stylesheet" href="style.css?v=8">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%23163A22'/><text x='50' y='68' font-size='52' text-anchor='middle'>🦖</text></svg>">
 </head>
 <body>
@@ -26,13 +26,15 @@
       <button id="btn-sound-title" class="btn-sound"></button>
     </div>
     <p class="howto">You're a Compy with a superpower: grow <b>HUGE</b> or shrink <b>tiny</b>.<br>Stomp every baddie, then race to the flag!<br>
-    <span class="keys"><b>W A S D</b> move · <b>SPACE</b> jump (press again to double-jump) · <b>↑</b> grow · <b>↓</b> shrink · <b>←</b> <b>→</b> pounce</span></p>
+    <span class="keys"><b>W A S D</b> move · <b>SPACE</b> jump (press again to double-jump) · <b>↑</b> grow · <b>↓</b> shrink · <b>←</b> <b>→</b> pounce · <b>V</b> roar</span></p>
   </div>
 
   <!-- Level select -->
   <div class="overlay" id="ov-levels">
     <h2>PICK A LEVEL</h2>
+    <div id="world-tabs"></div>
     <div id="level-grid"></div>
+    <div id="hat-row"><span class="lbl">HATS</span><div id="hats"></div></div>
     <button id="btn-back-title">◂ TITLE</button>
   </div>
 
@@ -76,6 +78,7 @@
     <div class="t-left">
       <button class="tbtn" id="t-left">◀</button>
       <button class="tbtn" id="t-right">▶</button>
+      <button class="tbtn small roar" id="t-roar">📣</button>
     </div>
     <div class="t-right">
       <div class="t-powers">
@@ -88,9 +91,9 @@
   </div>
 </div>
 
-<script src="src/sprites.js?v=3"></script>
+<script src="src/sprites.js?v=5"></script>
 <script src="src/particles.js?v=3"></script>
-<script src="src/audio.js?v=3"></script>
-<script src="src/game.js?v=9"></script>
+<script src="src/audio.js?v=4"></script>
+<script src="src/game.js?v=13"></script>
 </body>
 </html>

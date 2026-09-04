@@ -70,7 +70,20 @@ button:focus-visible { outline: 3px solid #FFE066; outline-offset: 2px; }
 
 h2 { font-family: "Baloo 2", sans-serif; color: #FFE066; text-shadow: 2px 2px 0 rgba(0,0,0,.5); font-size: 1.6rem; }
 
+#world-tabs { display: flex; gap: .5rem; flex-wrap: wrap; justify-content: center; margin-bottom: .2rem; }
+.wtab { font-size: .8rem; padding: .35rem .9rem; min-height: 38px; border-radius: 10px; background: #14301E; border-color: #2E6A3A; color: #9AB8A0; }
+.wtab.on { background: #57BE59; border-color: #8FE08A; color: #0C2410; }
+.wtab.locked { opacity: .6; filter: saturate(.3); cursor: default; }
 #level-grid { display: flex; gap: .7rem; flex-wrap: wrap; justify-content: center; }
+.lvl-card { position: relative; }
+.lvl-card .gold { position: absolute; top: -.5rem; right: -.4rem; font-size: 1rem; filter: grayscale(1) brightness(.7); }
+.lvl-card .gold.on { filter: none; text-shadow: 0 0 6px #FFE066; }
+#hat-row { display: flex; align-items: center; gap: .6rem; margin-top: .2rem; flex-wrap: wrap; justify-content: center; }
+#hat-row .lbl { font-family: "Baloo 2", sans-serif; color: #FFE066; font-size: 1rem; text-shadow: 2px 2px 0 rgba(0,0,0,.5); }
+#hats { display: flex; gap: .4rem; flex-wrap: wrap; justify-content: center; }
+.hatbtn { display: flex; flex-direction: column; align-items: center; gap: .1rem; padding: .3rem .5rem; min-width: 4.4rem; font-size: .6rem; border-radius: 10px; background: #1C3A2A; border-color: #2E6A3A; color: #D8EFC8; }
+.hatbtn canvas { image-rendering: pixelated; width: 40px; height: 40px; }
+.hatbtn.on { border-color: #FFE066; background: #2A4A1E; box-shadow: 0 4px 0 #0C1F14, 0 0 0 2px rgba(255,224,102,.35); }
 .lvl-card {
   width: 7.4rem; padding: .6rem .4rem; border-radius: 10px;
   background: linear-gradient(#4A2E1A, #3A2412); border: 3px solid #6B4A2A;
@@ -118,6 +131,8 @@ body.touch.playing #touch-ui { display: block; }
 }
 .tbtn.jump { width: 4.2rem; height: 4.2rem; background: rgba(87, 190, 89, .8); color: #0C2410; font-size: 1.8rem; }
 .tbtn.small { width: 2.8rem; height: 2.8rem; font-size: 1.1rem; }
+/* roar sits above the d-pad so the two clusters never collide on a narrow phone */
+.tbtn.roar { position: fixed; left: max(.6rem, env(safe-area-inset-left)); bottom: calc(max(.6rem, env(safe-area-inset-bottom)) + 3.9rem); }
 .tbtn:active { transform: scale(.94); box-shadow: none; }
 
 /* sound button glyph is set from JS via data-on */

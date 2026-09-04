@@ -62,3 +62,65 @@ All procedural: pixel-map sprites (sprites.js), WebAudio-synth SFX + music
 
 ## Tuning
 All dials in config.json; level layouts in levels.json.
+
+---
+
+## World 2: Swamp & Cave (v2, 2026-09-03)
+
+Levels 5–8. Each world is three stages plus a boss; the level select has a tab
+per world (World 2 unlocks when Boss Baddie falls). Save format `df2` migrates
+the World 1 `df1` save (stars + unlocked) on first load.
+
+### New tiles
+- `_` **mud** (shallow water at grade): the T-rex stands on it and wades (splashes,
+  squelch SFX). Normal and small sink like deep water (1 heart, back to checkpoint).
+- `c` **cracked floor**: solid for normal/small. When the T-rex stands on it the whole
+  run shivers for ~0.3s and collapses tile by tile. Used as a bridge over mud (the
+  T-rex crashes into the mud and strides out) and as the lid of the golden-egg chamber.
+- `|` **vine**: only the tiny compy climbs. Hold JUMP to climb, let go to slide,
+  move sideways to hop off. Reaching the top pops you onto the ledge. Vines gate
+  the shaft in Vine Hollow (crawl in small, climb up, walk off the wall top) and the
+  high route in Deep Dark.
+- `E` **golden egg**: one hidden per World 2 stage. Fills power, toasts GOLDEN EGG!,
+  and hatches on the win screen into a hat.
+
+### New baddies
+- **Armored baddie** (`a`): steel helmet and chest plate. Pounce and normal stomps
+  just bonk (safe bounce, ding). Only the T-rex flattens him. On-screen hint
+  "↑ GROW!" while he's near and you're not big.
+- **Swamp Jeep** (`J`, boss of level 8): drives laps, revs (the "!" tell), then
+  charges. Flips belly-up when it crashes into a wall OR when the T-rex bumps it.
+  Any contact while flipped scores (5 hits). Lobs a net every 5s while driving.
+  Eggs in the arena regrow every 9s so a little T-rex never runs dry.
+
+### Roar (V / M, 📣 on touch)
+Pure fun button, no cost, 3s cooldown. Normal roar: nearby walkers and armored
+baddies panic and run away (they won't leap off ledges, they just shake), gunners
+and netters flinch and stop aiming. T-rex roar: bigger radius, RAWR!!!. Tiny roar:
+"squeak!", does nothing. Roaring at a boss provokes its charge (useful: aim it at a wall).
+
+### Hats
+Golden eggs hatch into hats, one per stage: Party Hat, Miner Helmet, Crown, Race
+Helmet. Picked on the level select HATS row (thumbnails of the compy wearing them),
+drawn as an overlay on the compy's head at every size. Saved locally.
+
+### Levels
+5. **Mucky Marsh** (swamp) — mud debut. Four marshes (4, 9, 10, 4 wide); the first is
+   double-jumpable, the rest are wade-only. Golden egg on a 7-high stone pillar
+   (T-rex double-jump). Checkpoint mid.
+6. **Vine Hollow** (cave) — armored debut, cracked bridge over mud, the vine wall
+   (crawlspace → shaft → wall top → stairs), golden egg in a cracked-floor chamber.
+   Checkpoint after the wall.
+7. **Deep Dark** (cave) — everything: mud, a vine to a high platform holding the
+   golden egg and a netter, cracked bridge, 5-high crate wall, two armored, a
+   crawlspace mound. Checkpoint mid.
+8. **Jeep Jam!** (bog) — flat walled arena, Swamp Jeep, 4 regrowing eggs, 2 hearts.
+
+### Themes
+`swamp` (murky jungle + ground mist), `cave` (no sky, rock pillars, stalactite
+fringe, glowing fungus, rock-styled ground tiles, stalactite/mushroom decor),
+`bog` (dead trees + mist, pale sun) for the arena.
+
+### Tools
+`tools/levels-src.js` is the level source. Bake with `node tools/build-levels.mjs`
+or, on a Mac without node, `tools/bake.sh` (macOS JavaScriptCore).

@@ -142,5 +142,18 @@ DF.Audio = (function () {
     },
     lose() { [392, 330, 262, 196].forEach((f, i) => tone("square", f, f * 0.95, 0.3, 0.2, i * 0.22)); },
     click() { tone("square", 700, 500, 0.05, 0.12); },
+    // ---- World 2 ----
+    roar(big) {
+      tone("sawtooth", big ? 110 : 160, big ? 40 : 70, big ? 0.75 : 0.5, 0.5); noise(big ? 0.5 : 0.3, 0.3, 0.7);
+      if (big) tone("sine", 60, 28, 0.8, 0.45, 0.05);
+    },
+    squeak() { tone("square", 1400, 1900, 0.08, 0.18); tone("square", 1900, 1500, 0.1, 0.14, 0.08); },
+    bonk() { tone("triangle", 520, 300, 0.12, 0.3); noise(0.05, 0.2, 2.2, 0, 2500); },
+    crumble() { noise(0.35, 0.35, 0.55); tone("square", 130, 45, 0.28, 0.3); },
+    wade() { noise(0.1, 0.14, 1.1, 0, 600); tone("sine", 200, 120, 0.08, 0.1); },
+    hatch() { [659, 784, 1047, 1319, 1568].forEach((f, i) => tone("sine", f, f, 0.16, 0.22, i * 0.1)); tone("triangle", 2093, 2093, 0.3, 0.12, 0.5); },
+    engine() { tone("sawtooth", 55, 170, 0.6, 0.28); tone("square", 110, 340, 0.6, 0.08); },
+    skid() { noise(0.35, 0.3, 1.8, 0, 1800); tone("sawtooth", 400, 120, 0.3, 0.12); },
+    flip() { tone("square", 220, 60, 0.3, 0.4); noise(0.25, 0.4, 0.9); tone("triangle", 900, 1500, 0.15, 0.2, 0.12); },
   };
 })();
