@@ -14,3 +14,5 @@
 - Daily modifier runs (fixed seed + one forced perk)
 - CrazyGames SDK integration + portal submission pass
 - Global leaderboard (Supabase project, shared with DeJam)
+
+- Last Stand: make the Forge count for more past wave 40 (e.g. node values ×2 in the Last Stand) so a full Forge is worth 20–30 waves instead of ~10. Curve growth alone can't widen the swing without pushing runs past wave 140.

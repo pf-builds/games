@@ -61,12 +61,14 @@
   },
   "music": true,
   "endless": {
-    "hpGrowth": 1.25,
+    "hpGrowth": 1.06,
+    "hpPerWave": 0.6,
     "countCap": 110
   },
   "late": {
     "startWave": 20,
     "hpPerWave": 0.9,
-    "dmgPerWave": 0.12
+    "dmgPerWave": 0.12,
+    "dmgCap": 4.0
   }
 }

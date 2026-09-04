@@ -66,3 +66,31 @@ boss multiplier → first strike → stasis weaken → crit (cannon only, ×2) �
 
 ## Debug (`?debug=1`)
 `window.VKS` = state, `VK.step(sec)` synchronous sim, `VK.dbg.{setShards, maxForge, resetMeta, stat, givePerk, pick, openDraft, startWave, buy}`. `?debug=reset` wipes meta.
+
+
+---
+
+## v6.1 "Last Stand" (2026-09-04)
+
+Tester finding (Sonya, many runs): wave 55 was impossible with max tiers, perks and Forge.
+Cause: v6 endless multiplied the 19× wave-40 HP base by 1.25 per wave (wave 55 = 540× base,
+wave 60 = 1,650×) while player damage is bounded (tier caps, 3× gold cap, interest cap), and
+enemy damage grew 12%/wave uncapped. The bot benchmark at ship already showed the tell: empty
+Forge fell at 51, full Forge at 54.
+
+Changes:
+- Endless mode renamed **Last Stand** everywhere (button, HUD, over screen, arcade card). The
+  promise is now honest: the keep will fall, the score is how far you hold. Over screen says
+  "Held to wave N · Last Stand" with best.
+- Curve: `endless.hpGrowth` 1.25 → 1.06, plus a linear `endless.hpPerWave` 0.6 past wave 40.
+  Wave 55 ≈ 66× base instead of 540×; wave 80 ≈ 440×.
+- `late.dmgCap` 4.0: enemy damage stops growing at ~wave 45 so deep deaths come from being
+  overrun, not one-shot.
+- Counts unchanged (volume is what eventually wins).
+- Measured (bot harness, spread buyer, pick-first drafts, 1280×900): empty Forge falls at 70,
+  half Forge 78, full Forge 80. At 1.05/0.45 it was 79 / — / 91 (too kind). The Forge is worth
+  ~10 waves, up from 3 at v6. Why not the 20–30 the contract asked for: with a monotone curve the
+  Forge's wave value is ln(forge power ratio ≈ 2) / ln(per-wave growth); a 30-wave swing needs
+  ~2.4%/wave growth, which pushes an empty-Forge fall past wave 140. A wider swing needs the
+  Forge itself to matter more in the Last Stand (e.g. Forge nodes count 2× past wave 40), noted
+  in LATER.md rather than slipped in here.

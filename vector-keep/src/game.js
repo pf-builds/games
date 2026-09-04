@@ -80,7 +80,7 @@
     try {
       // ?v must match the asset version in index.html — stale tuning JSON against
       // new code caused undefined-type crashes once already (browser caching).
-      const V = "?v=16";
+      const V = "?v=18";
       [cfg, WAVES, UPG, FORGE, PERKS] = await Promise.all([
         fetch("config.json" + V).then((r) => r.json()),
         fetch("waves.json" + V).then((r) => r.json()),
@@ -255,9 +255,15 @@
     if ((n + 1) % 5 === 0) def.boss = 4 + (Math.floor((n + 1) / 5) % 4);
     return def;
   }
-  function lateMult(n) { const L = cfg.late; if (!L || n < L.startWave) return 1; return 1 + (Math.min(n, nWaves() - 1) - L.startWave + 1) * L.hpPerWave; }
-  function endlessMult(n) { return lateMult(n) * (n < nWaves() ? 1 : Math.pow((cfg.endless && cfg.endless.hpGrowth) || 1.16, n - nWaves() + 1)); }
-  function lateDmg(n) { const L = cfg.late; if (!L || n < L.startWave) return 1; return 1 + (n - L.startWave + 1) * L.dmgPerWave; }
+  // Waves 21–40: linear HP climb. Last Stand (41+): a gentler linear climb times a small compounding
+  // multiplier. v6 compounded 25%/wave on top of the 19× wave-40 base, which walled every build at ~52.
+  function lateMult(n) {
+    const L = cfg.late; if (!L || n < L.startWave) return 1;
+    const E = cfg.endless || {};
+    return 1 + (Math.min(n, nWaves() - 1) - L.startWave + 1) * L.hpPerWave + Math.max(0, n - (nWaves() - 1)) * (E.hpPerWave || 0);
+  }
+  function endlessMult(n) { return lateMult(n) * (n < nWaves() ? 1 : Math.pow((cfg.endless && cfg.endless.hpGrowth) || 1.05, n - nWaves() + 1)); }
+  function lateDmg(n) { const L = cfg.late; if (!L || n < L.startWave) return 1; return Math.min(L.dmgCap || 99, 1 + (n - L.startWave + 1) * L.dmgPerWave); }
   function goldScale(mult) { return Math.min(cfg.economy.goldScaleCap || 3, 1 + (mult - 1) * ((cfg.economy.endlessGoldScale !== undefined) ? cfg.economy.endlessGoldScale : 0.6)); }
 
   function buildQueue(w) {
@@ -491,9 +497,10 @@
       $("#over-title").textContent = won ? "THE KEEP STANDS" : "THE KEEP HAS FALLEN";
       $("#over-title").style.color = color;
       const secs = Math.round((performance.now() - S.t0) / 1000);
+      const bestLS = Math.max(prevBest, reached);
       $("#over-sub").textContent = won
-        ? "All " + nWaves() + " waves cleared"
-        : "Fell on wave " + reached + (S.wave >= nWaves() ? " · endless" : "");
+        ? "All " + nWaves() + " waves cleared. Now the Last Stand: the keep WILL fall — hold as long as you can." + (bestLS > nWaves() ? " Best: wave " + bestLS + "." : "")
+        : (S.wave >= nWaves() ? "Held to wave " + reached + " · Last Stand" + (newBest ? "" : " · best " + prevBest) : "Fell on wave " + reached);
       $("#over-newbest").style.display = newBest && !won ? "" : (newBest && won ? "" : "none");
       $("#stat-kills").textContent = S.kills;
       $("#stat-gold").textContent = S.goldEarned;
@@ -537,6 +544,7 @@
     S.over = null; S.endless = true; S.shardsRunCounted = true;
     S.phase = "shop";
     show("game");
+    showBanner("LAST STAND");
     updateHud(); renderShop();
     autoOpenShop();
   }
@@ -1091,7 +1099,7 @@
     if (S.demo) return;
     $("#hud-wave").textContent = S.wave < nWaves()
       ? "WAVE " + Math.min(S.wave + 1, nWaves()) + "/" + nWaves()
-      : "WAVE " + (S.wave + 1) + " · ENDLESS";
+      : "WAVE " + (S.wave + 1) + " · LAST STAND";
     $("#hud-gold").textContent = S.gold;
     $("#tgl-gold").textContent = S.gold;
     const f = Math.max(0, S.hp / S.maxHp);
