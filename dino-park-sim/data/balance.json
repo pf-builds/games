@@ -1,0 +1,218 @@
+{
+  "time": {
+    "days_per_quarter": 90,
+    "days_per_month": 30,
+    "quarters_per_year": 4,
+    "seasons": [
+      "Spring",
+      "Summer",
+      "Fall",
+      "Winter"
+    ],
+    "season_factor": [
+      1.0,
+      1.3,
+      0.9,
+      0.6
+    ],
+    "speeds": [
+      0,
+      1,
+      3,
+      10
+    ],
+    "_notes": "Clock speed lives in living.day_seconds (real seconds per game day at 1x); 3x and 10x divide it."
+  },
+  "attendance": {
+    "base_demand": 72,
+    "front_gate_capacity": 120,
+    "variety_bonus_per_species": 0.05,
+    "appeal_popularity_divisor": 20,
+    "appeal_min": 0.2,
+    "reference_ticket": 5,
+    "min_ticket": 1,
+    "max_ticket": 20,
+    "elasticity": 0.6,
+    "price_penalty_exponent": 2,
+    "cleanliness_weight": 0.3,
+    "cleanliness_start": 80,
+    "cleanliness_decay_per_day": 0.5,
+    "satisfaction_price_tolerance_cap": 0.3,
+    "empty_park_factor": 0.15,
+    "reputation_start": 50,
+    "reputation_weight": 0.2,
+    "reputation_drift_per_day": 0.05,
+    "cleanliness_decay_ref_attendance": 100,
+    "cleanliness_decay_min_factor": 0.2,
+    "cleanliness_decay_max_factor": 2.5,
+    "_notes": "M2.6: base_demand 60 -> 72 (+20%). Elasticity 0.35 -> 0.6 with a new price_penalty_exponent of 2 (M2.6 playtest-2 fix): at 0.35 a $20 ticket earned as much as a $5 one, so the overspend trap paid for itself. Overcharging is now penalised by the SQUARE of the overcharge, so ticket revenue peaks near $7-8 and collapses above it: a $20 ticket empties the park (0.5% of demand) instead of paying as well as $5 did. Satisfaction (restrooms, tour guides) softens the curve, so investing in visitors is what buys the right to charge more. The reference price is unaffected (priceFactor(reference) = 1), so the classic $5 opening is unchanged. empty_park_factor 0.25 -> 0.15: a park with no living dinosaurs pulls a trickle of visitors and cannot cover its own costs. Cleanliness decay per day = cleanliness_decay_per_day x clamp(attendance / cleanliness_decay_ref_attendance, min_factor, max_factor): an empty park barely gets dirty, a packed one needs more maintenance."
+  },
+  "revenue": {
+    "per_visitor_concession_spend": 2.5,
+    "tax_rate": 0.15
+  },
+  "loan": {
+    "quarterly_principal_ratio": 0.05,
+    "min_quarterly_payment": 500,
+    "borrow_increment": 1000,
+    "overdraft_apr": 0.18
+  },
+  "advertising": {
+    "campaigns": [
+      {
+        "id": "flyers",
+        "name": "Flyers",
+        "cost": 500,
+        "boost": 0.15,
+        "days": 30
+      },
+      {
+        "id": "radio",
+        "name": "Radio Spot",
+        "cost": 1500,
+        "boost": 0.3,
+        "days": 30
+      },
+      {
+        "id": "tv",
+        "name": "TV Commercial",
+        "cost": 4000,
+        "boost": 0.5,
+        "days": 30
+      }
+    ],
+    "stacking": "highest_only"
+  },
+  "auction": {
+    "opening_bid_ratio": 0.5,
+    "rounds_min": 3,
+    "rounds_max": 5,
+    "ai_bidders": 2,
+    "ai_raise_min_ratio": 0.05,
+    "ai_raise_max_ratio": 0.15,
+    "ai_walkaway_ratio": 0.85,
+    "poor_specimen_chance": 0.2,
+    "poor_specimen_health": 40,
+    "ai_raise_chance": 0.8
+  },
+  "win": {
+    "net_worth_target": 150000,
+    "species_target": 8,
+    "rating_target": 5
+  },
+  "rating": {
+    "min": 1,
+    "max": 5,
+    "weights": {
+      "appeal": 0.4,
+      "cleanliness": 0.3,
+      "satisfaction": 0.3
+    },
+    "appeal_full_pop_term": 3
+  },
+  "dinosaur": {
+    "hunger_per_day": 20,
+    "hunger_max": 100,
+    "starve_health_loss_per_day": 10,
+    "health_regen_per_day": 1,
+    "health_max": 100,
+    "sell_ratio": 0.6,
+    "sick_popularity_factor": 0.5,
+    "days_per_year": 360
+  },
+  "net_worth": {
+    "dino_value_ratio": 0.6,
+    "facility_value_ratio": 0.5,
+    "land_value_ratio": 1.0,
+    "fence_value_ratio": 0.5
+  },
+  "enclosure": {
+    "food_topup_days": 3
+  },
+  "history": {
+    "quarters_kept": 8
+  },
+  "living": {
+    "day_seconds": 6.0,
+    "tick_hz": 20,
+    "max_speed_factor": 5,
+    "max_sprites": 200,
+    "sprites_per_visitor": 0.6,
+    "fill_min_fraction": 0.8,
+    "visitor_walk_speed": 0.9,
+    "visitor_walk_speed_jitter": 0.3,
+    "dwell_ticks": 40,
+    "dwell_ticks_jitter": 40,
+    "poi_min": 2,
+    "poi_max": 4,
+    "plaza_poi_weight": 4,
+    "amenity_visit_chance": 0.7,
+    "cars_per_capacity": 12,
+    "visitors_per_car": 2,
+    "car_speed": 2.4,
+    "dino_speed": {
+      "small": 0.55,
+      "medium": 0.38,
+      "large": 0.26
+    },
+    "dino_hungry_threshold": 60,
+    "dino_hungry_speed_factor": 0.5,
+    "dino_pen_inset": {
+      "small": 0.15,
+      "medium": 0.2,
+      "large": 0.28
+    },
+    "dino_pause_ticks": 30,
+    "dino_pause_ticks_jitter": 60,
+    "dino_bob_hz": 1.4,
+    "escape_seconds": 14,
+    "escape_wander_radius": 2.0,
+    "scatter_radius": 1.5,
+    "scatter_ticks": 30,
+    "scatter_speed": 1.9,
+    "litter_max": 70,
+    "litter_regen_per_second": 0.8,
+    "staff_walk_speed": 0.85,
+    "guide_group_size": 5,
+    "guide_gather_ticks": 60,
+    "guide_dwell_ticks": 50,
+    "security_pause_ticks": 20,
+    "vet_dwell_ticks": 80,
+    "sweep_ticks": 12,
+    "lane_jitter": 0.8,
+    "dino_sprite_scale": {
+      "small": 1.5,
+      "medium": 2.0,
+      "large": 2.7
+    },
+    "dino_label_always": [
+      "large",
+      "medium",
+      "small"
+    ],
+    "_notes": "dino_label_always lists the sizes whose pens always carry a name chip (all three: an unlabelled blob is unreadable); other pens still label on hover. day_seconds is THE clock: one game day at 1x takes this many real seconds (M2.6: 6). 3x/10x run proportionally faster; agents cap at max_speed_factor."
+  },
+  "parcel": {
+    "_notes": "space_per_tile x parcel tile count = enclosure capacity in space units. area_factor scales biome plot_cost by tile count (sub-linear: big parcels are a modest per-tile discount); counts missing from the table use count ^ area_factor_exponent. Fence cost = per segment x outline edges (tile edges not shared inside the parcel).",
+    "space_per_tile": 4,
+    "area_factor": {
+      "1": 1.0,
+      "2": 1.9,
+      "3": 2.75,
+      "4": 3.5,
+      "5": 4.25,
+      "6": 5.0
+    },
+    "area_factor_exponent": 0.9
+  },
+  "events": {
+    "_notes": "pause_at_speed_max: at game speeds above this, non-critical events go to the ticker and the daily digest instead of a modal. pause_kinds: event effect kinds that always open a modal (plus foreclosure, win milestones and the Quarterly Report, which are not events). 'starving' is the daily starving-dinosaur warning: an asset about to die pauses the clock even at 10x.",
+    "pause_at_speed_max": 1,
+    "pause_kinds": [
+      "escape",
+      "starving"
+    ],
+    "digest_days_kept": 30,
+    "digest_max_entries": 40
+  }
+}

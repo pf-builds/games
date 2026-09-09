@@ -1,0 +1,266 @@
+/* Press Start 2P (SIL OFL 1.1) is loaded by the Google Fonts stylesheet linked in index.html.
+   To self-host: drop PressStart2P-Regular.woff2 into assets/fonts/, remove that <link>, and add
+   @font-face { font-family: "Press Start 2P"; src: url("assets/fonts/PressStart2P-Regular.woff2") format("woff2"); font-display: swap; } */
+
+:root {
+  --bg: #1b1f2a;
+  --panel: #2a3040;
+  --panel-2: #343b4f;
+  --text: #f1f0e6;
+  --muted: #a7acbd;
+  --accent: #6fcf6a;
+  --accent-2: #f2c94c;
+  --danger: #e05c5c;
+  --border: #4a5270;
+  /* Pixel face for headings, numbers, and nav; a readable sans for running text and tables. */
+  --font-pixel: "Press Start 2P", ui-monospace, Menlo, Consolas, monospace;
+  --font: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* UI unit: 1px at 1280x720, scaling with the viewport (1.5px at 1920x1080) so the chrome, fonts and
+     buttons grow with the window instead of leaving a small UI in an empty frame. Bound by the smaller
+     of width/height so wide-and-short windows do not overflow vertically. */
+  --u: clamp(0.85px, min(0.078125vw, 0.138889vh), 1.75px);
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); font-size: calc(14 * var(--u)); line-height: 1.45; }
+button { font-family: inherit; font-size: inherit; cursor: pointer; }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+h2 { margin: 0 0 calc(12 * var(--u)); font-family: var(--font-pixel); font-size: calc(14 * var(--u)); line-height: 1.6; color: var(--accent-2); }
+h3 { margin: calc(14 * var(--u)) 0 calc(8 * var(--u)); font-family: var(--font-pixel); font-size: calc(9 * var(--u)); line-height: 1.6; color: var(--accent); letter-spacing: 0.5px; }
+h3.first { margin-top: 0; }
+p { margin: calc(6 * var(--u)) 0; }
+.muted { color: var(--muted); }
+.small { font-size: calc(12 * var(--u)); }
+.big { font-family: var(--font-pixel); font-size: calc(12 * var(--u)); line-height: 1.6; color: var(--accent-2); }
+.good { color: var(--accent); }
+.bad { color: var(--danger); }
+.neg { color: var(--danger) !important; }
+.nowrap { white-space: nowrap; }
+.lead { font-size: calc(16 * var(--u)); font-weight: 600; margin: 0 0 calc(12 * var(--u)); }
+
+/* Fills the browser viewport; reflows on resize */
+#app {
+  width: 100vw; height: 100vh;
+  display: grid;
+  grid-template-columns: calc(150 * var(--u)) 1fr;
+  grid-template-rows: calc(64 * var(--u)) 1fr calc(32 * var(--u));
+  grid-template-areas:
+    "status status"
+    "toolbar main"
+    "ticker ticker";
+  overflow: hidden;
+}
+#status { grid-area: status; display: flex; align-items: stretch; gap: 0; padding: 0 calc(16 * var(--u)); background: var(--panel); border-bottom: calc(2 * var(--u)) solid var(--border); }
+#toolbar { grid-area: toolbar; display: flex; flex-direction: column; gap: calc(6 * var(--u)); padding: calc(10 * var(--u)) calc(8 * var(--u)); background: var(--panel); border-right: calc(2 * var(--u)) solid var(--border); }
+#main { grid-area: main; position: relative; overflow: hidden; }
+#ticker { grid-area: ticker; display: flex; align-items: center; padding: 0 calc(14 * var(--u)); background: var(--panel); border-top: calc(2 * var(--u)) solid var(--border); color: var(--muted); white-space: nowrap; overflow: hidden; }
+#ticker-text { overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; }
+#ticker .btn.digest { margin-left: calc(12 * var(--u)); padding: calc(2 * var(--u)) calc(10 * var(--u)); font-size: calc(12 * var(--u)); flex: 0 0 auto; }
+#ticker .btn.digest.unread { border-color: var(--accent-2); color: var(--accent-2); }
+.digest-day { margin-bottom: calc(10 * var(--u)); }
+.digest-item { padding: calc(4 * var(--u)) 0 calc(4 * var(--u)) calc(10 * var(--u)); border-left: calc(3 * var(--u)) solid var(--border); margin-bottom: calc(4 * var(--u)); }
+.digest-item.bad { border-left-color: var(--danger); }
+.digest-item.good { border-left-color: var(--accent); }
+
+/* Status bar: cash is the hero number; every stat is a labelled cell */
+/* Cells never shrink below their text (flex-shrink 0): a clipped money figure is worse than a tight row. */
+.stat { display: flex; flex-direction: column; justify-content: center; gap: calc(5 * var(--u)); padding: 0 calc(16 * var(--u)) 0 calc(14 * var(--u)); border-right: 1px solid var(--border); min-width: calc(100 * var(--u)); flex: 0 0 auto; }
+.stat:first-child { padding-left: 0; }
+.stat .label { color: var(--muted); font-size: calc(11 * var(--u)); text-transform: uppercase; letter-spacing: 1px; }
+.stat .value { font-family: var(--font-pixel); font-size: calc(11 * var(--u)); line-height: 1.2; color: var(--text); white-space: nowrap; }
+.stat .value .line { display: block; }
+.stat .value .line + .line { margin-top: calc(3 * var(--u)); }
+.stat-cash .value { font-size: calc(20 * var(--u)); color: var(--accent-2); }
+/* Stars use the sans face (the pixel font has no star glyph) at a size that reads next to the cash figure. */
+.stat .value#rating { display: flex; align-items: center; gap: calc(8 * var(--u)); }
+.stars { font-family: var(--font); font-size: calc(20 * var(--u)); line-height: 1; letter-spacing: calc(2 * var(--u)); white-space: nowrap; }
+.stars .star.on { color: var(--accent-2); text-shadow: 0 0 calc(6 * var(--u)) rgba(242,201,76,0.5); }
+.stars .star.off { color: #4f566b; text-shadow: none; }
+.stars-num { font-size: calc(11 * var(--u)); color: var(--muted); }
+.stars.stars-inline { font-size: calc(15 * var(--u)); letter-spacing: 1px; vertical-align: -1px; }
+.speed { margin-left: auto; display: flex; gap: calc(4 * var(--u)); align-items: center; flex: 0 0 auto; }
+.speed button, #fullscreen {
+  background: var(--panel-2); color: var(--text); border: calc(2 * var(--u)) solid var(--border); border-radius: calc(4 * var(--u));
+  min-width: calc(42 * var(--u)); height: calc(36 * var(--u)); padding: 0 calc(6 * var(--u)); font-size: calc(13 * var(--u)); font-weight: 700;
+}
+#fullscreen { margin-left: calc(8 * var(--u)); align-self: center; }
+#toolbar button {
+  font-family: var(--font-pixel); font-size: calc(9 * var(--u)); line-height: 1.4; text-align: left;
+  background: var(--panel-2); color: var(--text); border: calc(2 * var(--u)) solid var(--border); padding: calc(12 * var(--u)) calc(10 * var(--u)); border-radius: calc(4 * var(--u));
+}
+#toolbar button:hover, .speed button:hover, #fullscreen:hover { border-color: var(--accent-2); }
+.speed button.active, #toolbar button.active { background: var(--accent); color: #102010; border-color: var(--accent); }
+
+.view { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+.view.active { display: flex; }
+.view.scroll.active { display: block; overflow: auto; }
+.page { max-width: calc(1180 * var(--u)); margin: 0 auto; padding: calc(20 * var(--u)) calc(28 * var(--u)) calc(56 * var(--u)); }
+/* Always-visible scrollbars: macOS overlay bars hide until scrolled, which makes cut-off content look clipped. */
+.view.scroll::-webkit-scrollbar, .modal-body::-webkit-scrollbar { width: calc(12 * var(--u)); }
+.view.scroll::-webkit-scrollbar-track, .modal-body::-webkit-scrollbar-track { background: var(--bg); }
+.view.scroll::-webkit-scrollbar-thumb, .modal-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: calc(6 * var(--u)); border: calc(3 * var(--u)) solid var(--bg); }
+.view.scroll, .modal-body { scrollbar-width: thin; scrollbar-color: var(--border) var(--bg); }
+.page.narrow { max-width: calc(760 * var(--u)); }
+.panel { background: var(--panel); border: calc(2 * var(--u)) solid var(--border); border-radius: calc(6 * var(--u)); padding: calc(14 * var(--u)) calc(18 * var(--u)) calc(16 * var(--u)); margin-bottom: calc(16 * var(--u)); }
+.panel > h3:first-child { margin-top: 0; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: calc(18 * var(--u)); align-items: start; }
+.cols > .panel { margin-bottom: 0; }
+
+/* Stat tiles */
+/* Flex, not grid: the last row's tiles grow to fill the width, so an odd count (11 stats) never leaves one tile
+   stranded beside four tile-widths of empty panel. */
+.tiles { display: flex; flex-wrap: wrap; gap: calc(10 * var(--u)); }
+.tile { flex: 1 1 calc(150 * var(--u)); background: var(--panel-2); border: calc(2 * var(--u)) solid var(--border); border-radius: calc(4 * var(--u)); padding: calc(10 * var(--u)) calc(12 * var(--u)); }
+.tile-label { color: var(--muted); font-size: calc(12 * var(--u)); margin-bottom: calc(6 * var(--u)); }
+.tile-value { font-family: var(--font-pixel); font-size: calc(11 * var(--u)); line-height: 1.4; color: var(--accent-2); white-space: nowrap; }
+
+/* Park */
+.park-view { flex-direction: column; gap: calc(4 * var(--u)); padding: calc(4 * var(--u)); }
+/* flex: 0 0 auto on the bar and the canvas: overflow:hidden drops the bar's min-height to 0, so without it the column
+   flex squeezes the bar to its padding whenever the canvas was sized before the bar had a height (view hidden at init),
+   and fitCanvas then measures the squeezed bar and locks the sliver in. The canvas is sized by JS to fit the rest. */
+.park-bar { display: flex; align-items: center; gap: calc(12 * var(--u)); flex: 0 0 auto; flex-wrap: nowrap; white-space: nowrap; overflow: hidden; padding: calc(3 * var(--u)) calc(10 * var(--u)); background: var(--panel); border: calc(2 * var(--u)) solid var(--border); border-radius: calc(4 * var(--u)); }
+.park-bar > span { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.park-bar .btn { padding: calc(4 * var(--u)) calc(10 * var(--u)); }
+#park { flex: 0 0 auto; image-rendering: pixelated; image-rendering: crisp-edges; background: #23303a; border: calc(2 * var(--u)) solid var(--border); }
+
+/* Tooltips */
+.term, [data-tip] { text-decoration: underline dotted var(--accent-2); text-underline-offset: calc(3 * var(--u)); cursor: help; }
+#tooltip { position: fixed; z-index: 1000; max-width: calc(320 * var(--u)); padding: calc(8 * var(--u)) calc(10 * var(--u)); background: #0f1218; color: var(--text); border: calc(2 * var(--u)) solid var(--accent-2); border-radius: calc(4 * var(--u)); font-size: calc(13 * var(--u)); pointer-events: none; }
+
+/* Modals */
+/* Anchored near the top (not vertically centred) so a modal whose height changes between tabs does not jump. */
+.modal-overlay { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.55); display: flex; align-items: flex-start; justify-content: center; padding-top: 7vh; }
+.modal { background: var(--panel); border: calc(2 * var(--u)) solid var(--border); border-radius: calc(6 * var(--u)); width: min(calc(600 * var(--u)), 92vw); max-height: 86vh; display: flex; flex-direction: column; box-shadow: 0 calc(12 * var(--u)) calc(40 * var(--u)) rgba(0,0,0,0.5); }
+.modal.wide { width: min(calc(1120 * var(--u)), 94vw); }
+.modal-head { display: flex; align-items: center; justify-content: space-between; padding: calc(12 * var(--u)) calc(16 * var(--u)); border-bottom: calc(2 * var(--u)) solid var(--border); }
+.modal-head h2 { margin: 0; font-size: calc(12 * var(--u)); }
+.modal-close { background: none; border: calc(2 * var(--u)) solid var(--border); color: var(--text); border-radius: calc(3 * var(--u)); padding: calc(2 * var(--u)) calc(8 * var(--u)); font-size: calc(14 * var(--u)); }
+.modal-body { padding: calc(14 * var(--u)) calc(16 * var(--u)); overflow: auto; min-height: 0; }
+/* No trailing margin under the last row of a panel: it read as a dead band between the content and the footer. */
+.modal-body > *:last-child, .modal-body > * > *:last-child { margin-bottom: 0; }
+.modal-foot { padding: calc(10 * var(--u)) calc(16 * var(--u)); border-top: calc(2 * var(--u)) solid var(--border); background: var(--panel-2); border-radius: 0 0 calc(6 * var(--u)) calc(6 * var(--u)); }
+.foot-row { justify-content: space-between; margin: 0; }
+.modal.event-bad .modal-head { border-bottom-color: var(--danger); }
+.modal.event-bad h2 { color: var(--danger); }
+.modal.event-good .modal-head { border-bottom-color: var(--accent); }
+.modal.event-good h2 { color: var(--accent); }
+.lesson { padding: calc(8 * var(--u)) calc(10 * var(--u)); background: var(--panel-2); border-left: calc(3 * var(--u)) solid var(--accent-2); }
+.report-cols { margin-top: calc(14 * var(--u)); }
+
+/* Buttons, rows, cards */
+.btn { background: var(--panel-2); color: var(--text); border: calc(2 * var(--u)) solid var(--border); padding: calc(6 * var(--u)) calc(11 * var(--u)); border-radius: calc(3 * var(--u)); font-weight: 600; }
+.btn:hover:not(:disabled) { border-color: var(--accent-2); }
+.btn.primary { background: var(--accent); color: #102010; border-color: var(--accent); }
+.row { display: flex; align-items: center; gap: calc(8 * var(--u)); margin: calc(6 * var(--u)) 0; }
+.row.wrap { flex-wrap: wrap; }
+.row.end { justify-content: flex-end; margin-top: calc(12 * var(--u)); }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(210 * var(--u)), 1fr)); gap: calc(10 * var(--u)); }
+.cards.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.cards.grid-5 { grid-template-columns: repeat(auto-fill, minmax(calc(200 * var(--u)), 1fr)); }
+.cards.facts { grid-template-columns: repeat(auto-fill, minmax(calc(215 * var(--u)), 1fr)); }
+.card { background: var(--panel-2); border: calc(2 * var(--u)) solid var(--border); border-radius: calc(4 * var(--u)); padding: calc(12 * var(--u)); display: flex; flex-direction: column; gap: calc(4 * var(--u)); }
+.card.selected { border-color: var(--accent); }
+.card.disabled { opacity: 0.5; }
+.card.owned { border-color: var(--accent-2); }
+.card-title { font-weight: 700; color: var(--accent-2); display: flex; align-items: center; gap: calc(6 * var(--u)); }
+.card .btn { margin-top: auto; }
+.tag { font-size: calc(11 * var(--u)); color: #102010; background: var(--accent-2); padding: calc(2 * var(--u)) calc(6 * var(--u)); border-radius: calc(3 * var(--u)); align-self: flex-start; }
+.swatch { display: inline-block; width: calc(10 * var(--u)); height: calc(10 * var(--u)); border: 1px solid #000; margin-right: calc(5 * var(--u)); vertical-align: middle; }
+.dino-icon { display: inline-block; width: calc(14 * var(--u)); height: calc(14 * var(--u)); border: 1px solid #000; border-radius: 50%; }
+
+/* Filter chips and tier groups (Dino Market, Fact Book) */
+.chips { margin: 0 0 calc(10 * var(--u)); }
+.btn.chip { padding: calc(4 * var(--u)) calc(9 * var(--u)); font-weight: 600; font-size: calc(12 * var(--u)); }
+.btn.chip.active { background: var(--accent); color: #102010; border-color: var(--accent); }
+.tier-group > h3 { margin-top: calc(10 * var(--u)); }
+.tier-group:first-of-type > h3 { margin-top: 0; }
+
+/* Tabs */
+.tabs { display: flex; gap: calc(4 * var(--u)); border-bottom: calc(2 * var(--u)) solid var(--border); margin-bottom: calc(12 * var(--u)); }
+.tab { background: none; border: calc(2 * var(--u)) solid transparent; border-bottom: none; color: var(--muted); padding: calc(7 * var(--u)) calc(12 * var(--u)); font-weight: 600; }
+.tab.active { color: var(--accent-2); border-color: var(--border); background: var(--panel-2); border-radius: calc(3 * var(--u)) calc(3 * var(--u)) 0 0; }
+
+/* Tables */
+.table { border-collapse: collapse; width: 100%; }
+.table th, .table td { text-align: left; padding: calc(5 * var(--u)) calc(8 * var(--u)); border-bottom: 1px solid var(--border); vertical-align: middle; }
+.table th { color: var(--muted); font-weight: normal; font-size: calc(12 * var(--u)); }
+.table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.table.kv td:last-child { text-align: right; color: var(--accent-2); font-variant-numeric: tabular-nums; }
+.ledger tr.section td { color: var(--accent); padding-top: calc(10 * var(--u)); border-bottom: none; font-weight: 600; }
+.ledger tr.total td { font-weight: bold; border-top: 1px solid var(--muted); }
+.ledger tr.good td { color: var(--accent); }
+.ledger tr.bad td { color: var(--danger); }
+.table.seasons { margin-top: calc(10 * var(--u)); }
+.table.seasons th, .table.seasons td { text-align: center; }
+.table.seasons .now { color: var(--accent-2); background: rgba(242,201,76,0.08); }
+
+/* Charts: each canvas fills its grid cell; the backing store is set from the CSS box at device pixel ratio */
+.charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(calc(280 * var(--u)), 1fr)); gap: calc(10 * var(--u)); }
+.charts canvas { display: block; width: 100%; height: calc(200 * var(--u)); border: 1px solid var(--border); background: var(--bg); border-radius: calc(3 * var(--u)); }
+
+/* Town street */
+.town { width: 100%; height: 100%; display: flex; flex-direction: column; position: relative; overflow: hidden;
+  background: linear-gradient(#1f3350 0%, #33557c 55%, #5f8fb8 100%); }
+.town-sky { flex: 1; position: relative; display: flex; align-items: flex-start; justify-content: space-between; gap: calc(24 * var(--u)); padding: calc(20 * var(--u)) calc(32 * var(--u)); min-height: calc(120 * var(--u)); }
+.town-sign { position: relative; z-index: 1; background: rgba(15,18,24,0.72); border: calc(2 * var(--u)) solid #8a6b3a; border-radius: calc(4 * var(--u)); padding: calc(12 * var(--u)) calc(18 * var(--u)); max-width: calc(460 * var(--u)); }
+.town-sign h2 { margin-bottom: calc(6 * var(--u)); }
+.town-sign p { margin: 0; }
+.notice { position: relative; z-index: 1; background: rgba(15,18,24,0.72); border: calc(2 * var(--u)) solid #8a6b3a; border-radius: calc(4 * var(--u)); padding: calc(10 * var(--u)) calc(14 * var(--u)); min-width: calc(300 * var(--u)); }
+.notice-title { font-family: var(--font-pixel); font-size: calc(8 * var(--u)); color: var(--accent-2); margin-bottom: calc(8 * var(--u)); letter-spacing: 0.5px; }
+.notice-line { display: flex; justify-content: space-between; gap: calc(18 * var(--u)); font-size: calc(13 * var(--u)); padding: calc(2 * var(--u)) 0; border-bottom: 1px dotted rgba(167,172,189,0.35); }
+.notice-line span:first-child { color: var(--muted); }
+.notice-line span:last-child { color: var(--text); font-variant-numeric: tabular-nums; }
+.sun { position: absolute; top: calc(22 * var(--u)); left: 50%; transform: translateX(-50%); width: clamp(calc(64 * var(--u)), 7vw, calc(110 * var(--u))); aspect-ratio: 1; border-radius: 50%;
+  background: #f2c94c; box-shadow: 0 0 0 calc(12 * var(--u)) rgba(242,201,76,0.18), 0 0 calc(70 * var(--u)) calc(24 * var(--u)) rgba(242,201,76,0.35); }
+.cloud { position: absolute; background: #e6ecf4; border-radius: calc(40 * var(--u)); opacity: 0.92; }
+.cloud::before, .cloud::after { content: ''; position: absolute; background: inherit; border-radius: 50%; }
+.cloud.c1 { width: calc(120 * var(--u)); height: calc(34 * var(--u)); left: 28%; top: 30%; }
+.cloud.c1::before { width: calc(48 * var(--u)); height: calc(48 * var(--u)); left: calc(18 * var(--u)); top: calc(-24 * var(--u)); }
+.cloud.c1::after { width: calc(64 * var(--u)); height: calc(64 * var(--u)); left: calc(52 * var(--u)); top: calc(-36 * var(--u)); }
+.cloud.c2 { width: calc(90 * var(--u)); height: calc(26 * var(--u)); left: 64%; top: 52%; opacity: 0.8; }
+.cloud.c2::before { width: calc(36 * var(--u)); height: calc(36 * var(--u)); left: calc(14 * var(--u)); top: calc(-18 * var(--u)); }
+.cloud.c2::after { width: calc(48 * var(--u)); height: calc(48 * var(--u)); left: calc(38 * var(--u)); top: calc(-26 * var(--u)); }
+.cloud.c3 { width: calc(140 * var(--u)); height: calc(38 * var(--u)); left: 8%; top: 68%; opacity: 0.7; }
+.cloud.c3::before { width: calc(54 * var(--u)); height: calc(54 * var(--u)); left: calc(22 * var(--u)); top: calc(-26 * var(--u)); }
+.cloud.c3::after { width: calc(74 * var(--u)); height: calc(74 * var(--u)); left: calc(60 * var(--u)); top: calc(-42 * var(--u)); }
+.hills { height: clamp(calc(50 * var(--u)), 9vh, calc(110 * var(--u))); flex: none;
+  background:
+    radial-gradient(ellipse 34% 100% at 10% 100%, #5f8f57 60%, transparent 61%),
+    radial-gradient(ellipse 36% 110% at 40% 100%, #4d7c47 60%, transparent 61%),
+    radial-gradient(ellipse 34% 95% at 68% 100%, #5f8f57 60%, transparent 61%),
+    radial-gradient(ellipse 30% 105% at 95% 100%, #4d7c47 60%, transparent 61%); }
+/* Storefronts stand on a sidewalk strip; each one closes with its own bottom border so the door reads as a doorway. */
+.street { flex: none; display: flex; align-items: flex-end; justify-content: center; gap: clamp(calc(14 * var(--u)), 2vw, calc(34 * var(--u))); padding: 0 calc(24 * var(--u)) calc(12 * var(--u));
+  background: linear-gradient(#4a6a5a 0%, #3d5a4a 100%); box-shadow: inset 0 calc(-12 * var(--u)) 0 #8a8f96, inset 0 calc(-14 * var(--u)) 0 #5d6168; }
+.storefront { --store: #888; width: clamp(calc(190 * var(--u)), 17vw, calc(280 * var(--u))); height: clamp(calc(230 * var(--u)), 36vh, calc(330 * var(--u))); background: var(--panel); border: calc(3 * var(--u)) solid var(--store); border-radius: calc(6 * var(--u)) calc(6 * var(--u)) 0 0; color: var(--text); display: flex; flex-direction: column; align-items: center; gap: calc(6 * var(--u)); padding: 0 calc(10 * var(--u)) 0; position: relative; transition: transform 0.12s; font-family: var(--font); }
+.store-info { margin-top: calc(4 * var(--u)); width: 100%; padding: calc(6 * var(--u)) calc(8 * var(--u)); background: rgba(15,18,24,0.45); border: 1px solid var(--border); border-radius: calc(3 * var(--u)); color: var(--text); font-size: calc(12 * var(--u)); line-height: 1.5; text-align: center; font-variant-numeric: tabular-nums; }
+.store-info div:first-child { color: var(--accent-2); }
+.storefront:hover, .storefront:focus-visible { transform: translateY(calc(-8 * var(--u))); box-shadow: 0 calc(10 * var(--u)) calc(24 * var(--u)) rgba(0,0,0,0.5); outline: none; }
+.awning { width: 100%; height: calc(18 * var(--u)); background: repeating-linear-gradient(90deg, var(--store) 0 calc(14 * var(--u)), #f1f0e6 calc(14 * var(--u)) calc(28 * var(--u))); border-radius: 0 0 calc(8 * var(--u)) calc(8 * var(--u)); }
+.store-window { width: 62%; aspect-ratio: 1.5; margin-top: calc(8 * var(--u)); background: linear-gradient(#22303f, #172230); border: calc(3 * var(--u)) solid var(--store); border-radius: calc(4 * var(--u)); display: flex; align-items: center; justify-content: center; }
+.store-icon { font-size: clamp(calc(40 * var(--u)), 4.4vw, calc(68 * var(--u))); line-height: 1; }
+.store-name { font-family: var(--font-pixel); font-size: clamp(calc(8 * var(--u)), 0.62vw, calc(10 * var(--u))); line-height: 1.5; color: var(--accent-2); text-align: center; margin-top: calc(6 * var(--u)); }
+.store-blurb { color: var(--muted); font-size: calc(12 * var(--u)); text-align: center; }
+.door { margin-top: auto; width: calc(34 * var(--u)); height: calc(40 * var(--u)); background: #1a1f2b; border: calc(2 * var(--u)) solid var(--store); border-bottom: none; border-radius: calc(4 * var(--u)) calc(4 * var(--u)) 0 0; position: relative; }
+.door::after { content: ''; position: absolute; right: calc(5 * var(--u)); top: calc(18 * var(--u)); width: calc(4 * var(--u)); height: calc(4 * var(--u)); border-radius: 50%; background: var(--accent-2); }
+.road { flex: none; height: calc(44 * var(--u)); background: #2a2a2e; border-top: calc(5 * var(--u)) solid #6c6c70; background-image: linear-gradient(90deg, transparent 0 calc(34 * var(--u)), var(--accent-2) calc(34 * var(--u)) calc(70 * var(--u))); background-size: calc(104 * var(--u)) calc(4 * var(--u)); background-repeat: repeat-x; background-position: 0 calc(18 * var(--u)); }
+
+/* Marketing */
+.price-row { display: flex; align-items: baseline; gap: calc(14 * var(--u)); margin: calc(4 * var(--u)) 0 calc(8 * var(--u)); }
+.price-readout { font-family: var(--font-pixel); font-size: calc(20 * var(--u)); color: var(--accent-2); }
+.slider-row { gap: calc(12 * var(--u)); }
+.slider { flex: 1; max-width: calc(420 * var(--u)); accent-color: var(--accent); }
+.projection { margin-top: 0; }
+
+/* Auction */
+.auction-bid { font-family: var(--font-pixel); font-size: calc(12 * var(--u)); line-height: 1.6; color: var(--accent-2); margin: calc(8 * var(--u)) 0; }
+.auction-log { max-height: calc(160 * var(--u)); overflow: auto; background: var(--bg); border: 1px solid var(--border); padding: calc(6 * var(--u)) calc(8 * var(--u)); color: var(--muted); }
+
+/* Fact cards */
+.fact-card { display: flex; flex-direction: column; gap: calc(4 * var(--u)); }
+.fact-head { display: flex; align-items: center; gap: calc(8 * var(--u)); }
+
+/* Minimum size guard: below 1024x640 scale the whole app down instead of clipping */
+@media (max-width: 1023px), (max-height: 639px) {
+  #app { transform-origin: top left; }
+}

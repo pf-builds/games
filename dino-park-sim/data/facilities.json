@@ -1,0 +1,67 @@
+{
+  "_notes": "Fixed park facilities (M2.5; replaces buildings.json). Each exists at tier 0 from day one at the world position given in parcels.json. Tiers 1-3 are bought in order from the General Store -> Upgrades tab. effect_magnitude is the ABSOLUTE effect at that tier (not an increment): parking_capacity = extra visitors/day above front_gate_capacity; concession_spend = multiplier on balance.revenue.per_visitor_concession_spend (food + gift add together, still needs concessions staff); satisfaction = added visitor satisfaction (raises price tolerance, capped by balance.attendance.satisfaction_price_tolerance_cap). render_size is visual only: lot = {w, rows} in world units / car rows; building = {w, h, z, roofs} footprint scale, height, and roof sections.",
+  "facilities": [
+    {
+      "id": "parking_lot",
+      "name": "Parking Lot",
+      "position": "parking_lot",
+      "effect_key": "parking_capacity",
+      "blurb": "The front lot. Every visitor beyond the front gate limit needs a parking space, so a bigger lot raises the daily visitor cap.",
+      "tiers": [
+        { "tier": 0, "label": "Gravel Lot", "cost": 0, "upkeep_per_quarter": 0, "effect_magnitude": 0, "render_size": { "w": 1.5, "rows": 2 } },
+        { "tier": 1, "label": "Paved Lot", "cost": 10000, "upkeep_per_quarter": 100, "effect_magnitude": 150, "render_size": { "w": 2.3, "rows": 3 } },
+        { "tier": 2, "label": "Double Lot", "cost": 18000, "upkeep_per_quarter": 180, "effect_magnitude": 300, "render_size": { "w": 3.4, "rows": 3 } },
+        { "tier": 3, "label": "Grand Lot", "cost": 30000, "upkeep_per_quarter": 300, "effect_magnitude": 500, "render_size": { "w": 4.6, "rows": 3 } }
+      ]
+    },
+    {
+      "id": "restrooms",
+      "name": "Restrooms",
+      "position": "restrooms",
+      "effect_key": "satisfaction",
+      "blurb": "Near the plaza. Better restrooms keep visitors in the park longer and make them accept a higher ticket price.",
+      "tiers": [
+        { "tier": 0, "label": "Portable Toilets", "cost": 0, "upkeep_per_quarter": 0, "effect_magnitude": 0, "render_size": { "w": 0.5, "h": 0.55, "z": 0.35, "roofs": 1 } },
+        { "tier": 1, "label": "Restroom Block", "cost": 1000, "upkeep_per_quarter": 50, "effect_magnitude": 0.04, "render_size": { "w": 0.7, "h": 0.7, "z": 0.45, "roofs": 1 } },
+        { "tier": 2, "label": "Family Restrooms", "cost": 3000, "upkeep_per_quarter": 90, "effect_magnitude": 0.08, "render_size": { "w": 0.85, "h": 0.85, "z": 0.5, "roofs": 2 } },
+        { "tier": 3, "label": "Comfort Station", "cost": 6000, "upkeep_per_quarter": 150, "effect_magnitude": 0.12, "render_size": { "w": 1.0, "h": 1.0, "z": 0.6, "roofs": 3 } }
+      ]
+    },
+    {
+      "id": "food_stand",
+      "name": "Food Stand",
+      "position": "food_stand",
+      "effect_key": "concession_spend",
+      "blurb": "On the plaza edge. Sells snacks, then meals as it grows into a diner. Needs a concessions worker to open.",
+      "tiers": [
+        { "tier": 0, "label": "Empty Pad", "cost": 0, "upkeep_per_quarter": 0, "effect_magnitude": 0, "render_size": { "w": 0.45, "h": 0.45, "z": 0.2, "roofs": 0 } },
+        { "tier": 1, "label": "Snack Cart", "cost": 5000, "upkeep_per_quarter": 150, "effect_magnitude": 0.6, "render_size": { "w": 0.65, "h": 0.6, "z": 0.45, "roofs": 1 } },
+        { "tier": 2, "label": "Food Stand", "cost": 9000, "upkeep_per_quarter": 250, "effect_magnitude": 0.85, "render_size": { "w": 0.85, "h": 0.8, "z": 0.55, "roofs": 2 } },
+        { "tier": 3, "label": "Diner", "cost": 15000, "upkeep_per_quarter": 400, "effect_magnitude": 1.2, "render_size": { "w": 1.0, "h": 1.0, "z": 0.65, "roofs": 3 } }
+      ]
+    },
+    {
+      "id": "gift_shop",
+      "name": "Gift Shop",
+      "position": "gift_shop",
+      "effect_key": "concession_spend",
+      "blurb": "Near the gate, so everyone walks past it on the way out. Souvenirs earn more per visitor than snacks. Needs a concessions worker to open.",
+      "tiers": [
+        { "tier": 0, "label": "Empty Pad", "cost": 0, "upkeep_per_quarter": 0, "effect_magnitude": 0, "render_size": { "w": 0.45, "h": 0.45, "z": 0.2, "roofs": 0 } },
+        { "tier": 1, "label": "Souvenir Stand", "cost": 7500, "upkeep_per_quarter": 200, "effect_magnitude": 0.9, "render_size": { "w": 0.65, "h": 0.65, "z": 0.45, "roofs": 1 } },
+        { "tier": 2, "label": "Gift Shop", "cost": 12000, "upkeep_per_quarter": 300, "effect_magnitude": 1.2, "render_size": { "w": 0.85, "h": 0.85, "z": 0.55, "roofs": 2 } },
+        { "tier": 3, "label": "Gift Emporium", "cost": 20000, "upkeep_per_quarter": 450, "effect_magnitude": 1.6, "render_size": { "w": 1.0, "h": 1.0, "z": 0.65, "roofs": 3 } }
+      ]
+    },
+    {
+      "id": "office",
+      "name": "Park Office",
+      "position": "office",
+      "effect_key": "management_capacity",
+      "blurb": "Where your staff clock in. Base building only for now; office upgrades are planned for a later milestone.",
+      "tiers": [
+        { "tier": 0, "label": "Park Office", "cost": 0, "upkeep_per_quarter": 0, "effect_magnitude": 0, "render_size": { "w": 1.0, "h": 1.0, "z": 0.55, "roofs": 1 } }
+      ]
+    }
+  ]
+}

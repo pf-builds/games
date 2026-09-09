@@ -1,0 +1,440 @@
+{
+  "daily_chance": 0.06,
+  "min_days_between_events": 4,
+  "same_event_cooldown_days": 30,
+  "mitigation_effect_reduction": 0.5,
+  "warnings": {
+    "starving": {
+      "title": "Starving Dinosaur",
+      "message": "{species} in enclosure {enclosure} has had nothing to eat for days and is losing health. Buy {food} from the General Store, or open the enclosure in the Park view and feed it directly.",
+      "tooltip": "Food is a daily cost that never stops. Every dinosaur eats a set number of units per day; keep park stock ahead of that number."
+    }
+  },
+  "events": [
+    {
+      "id": "escape",
+      "type": "negative",
+      "weight": 3,
+      "title": "Breakout!",
+      "message": "A dinosaur pushed through a weak spot in its fence and wandered onto the visitor path. The park closed early while staff rounded it up. Fence condition dropped and visitors are nervous.",
+      "trigger": {
+        "requires_dinos": true,
+        "requires_breakout_risk": true
+      },
+      "mitigated_by": [
+        "security"
+      ],
+      "effect": {
+        "kind": "escape",
+        "fence_damage": 24,
+        "reputation_loss": 5,
+        "closed_days": 1
+      },
+      "tooltip": "A cheap fence saves money today but a breakout costs far more later. Match the fence to the dinosaur."
+    },
+    {
+      "id": "escape_weak_fence",
+      "type": "negative",
+      "weight": 4,
+      "title": "Fence Too Weak",
+      "message": "One of your dinosaurs is bigger than its fence can handle. It leaned on a segment until it snapped. Nobody was hurt, but the pen needs repairs and the crowd went home early.",
+      "trigger": {
+        "requires_dinos": true,
+        "requires_under_fenced_dino": true
+      },
+      "mitigated_by": [
+        "security",
+        "maintenance"
+      ],
+      "effect": {
+        "kind": "escape",
+        "fence_damage": 40,
+        "reputation_loss": 8,
+        "closed_days": 2
+      },
+      "tooltip": "Every species has a minimum fence tier. Going under it is a gamble that gets worse every day."
+    },
+    {
+      "id": "escape_night",
+      "type": "negative",
+      "weight": 2,
+      "title": "Midnight Wanderer",
+      "message": "Security cameras caught a dinosaur strolling through the parking lot at 2 a.m. It was back in its pen by morning, but the local paper ran the story on the front page.",
+      "trigger": {
+        "requires_dinos": true,
+        "requires_breakout_risk": true
+      },
+      "mitigated_by": [
+        "security"
+      ],
+      "effect": {
+        "kind": "escape",
+        "fence_damage": 12,
+        "reputation_loss": 10,
+        "closed_days": 0
+      },
+      "tooltip": "Security staff cost a salary every month, but they catch problems before they become news."
+    },
+    {
+      "id": "illness",
+      "type": "negative",
+      "weight": 3,
+      "title": "Sick Dinosaur",
+      "message": "One of your dinosaurs stopped eating and is looking sluggish. Without a vet on staff it will keep losing health each day until it recovers on its own, if it does.",
+      "trigger": {
+        "requires_dinos": true
+      },
+      "mitigated_by": [
+        "veterinary"
+      ],
+      "effect": {
+        "kind": "illness",
+        "health_loss": 25,
+        "sick_days": 10
+      },
+      "tooltip": "A vet is insurance. You pay a little every month so one bad week does not cost you a whole dinosaur."
+    },
+    {
+      "id": "illness_spread",
+      "type": "negative",
+      "weight": 2,
+      "title": "Bug Going Around",
+      "message": "Something is spreading between pens. Several dinosaurs are off their food and running low on energy. Vets can slow it down and keep it from spreading further.",
+      "trigger": {
+        "requires_dinos": true,
+        "min_dinos": 3
+      },
+      "mitigated_by": [
+        "veterinary"
+      ],
+      "effect": {
+        "kind": "illness",
+        "health_loss": 15,
+        "sick_days": 14,
+        "affects_all": true
+      },
+      "tooltip": "More animals means more risk. As the park grows, the staff that protects it has to grow too."
+    },
+    {
+      "id": "illness_bad_food",
+      "type": "negative",
+      "weight": 2,
+      "title": "Spoiled Feed",
+      "message": "A batch of food went bad in the heat and a dinosaur got sick eating it. The spoiled stock had to be thrown out.",
+      "trigger": {
+        "requires_dinos": true,
+        "seasons": [
+          "Summer"
+        ]
+      },
+      "mitigated_by": [
+        "veterinary",
+        "maintenance"
+      ],
+      "effect": {
+        "kind": "illness",
+        "health_loss": 20,
+        "sick_days": 7,
+        "food_loss_units": 5
+      },
+      "tooltip": "Stock costs money to buy and money to keep. Buying way more than you need is not always the safe choice."
+    },
+    {
+      "id": "staff_quit",
+      "type": "negative",
+      "weight": 1.5,
+      "title": "Staff Walkout",
+      "message": "An employee handed in their notice and left the same day. Nobody is covering their job until you hire a replacement at the Employment Office.",
+      "trigger": {
+        "requires_staff": true,
+        "requires_no_manager": true
+      },
+      "mitigated_by": [
+        "management"
+      ],
+      "effect": {
+        "kind": "staff_quit",
+        "count": 1
+      },
+      "tooltip": "People are part of your costs, but they are also part of your park. A manager keeps the team from falling apart."
+    },
+    {
+      "id": "staff_quit_overworked",
+      "type": "negative",
+      "weight": 1.5,
+      "title": "Burned Out",
+      "message": "Your crew is stretched too thin. Two staff members quit at once, saying there was too much work and nobody in charge.",
+      "trigger": {
+        "requires_staff": true,
+        "min_staff": 6,
+        "requires_no_manager": true
+      },
+      "mitigated_by": [
+        "management"
+      ],
+      "effect": {
+        "kind": "staff_quit",
+        "count": 2
+      },
+      "tooltip": "Past a certain size, a park needs a manager. Skipping that salary can cost you two other people."
+    },
+    {
+      "id": "staff_quit_poached",
+      "type": "negative",
+      "weight": 0.5,
+      "title": "Hired Away",
+      "message": "A rival attraction across town offered one of your best people a raise. They took it. Your remaining staff are wondering if they should ask for more too.",
+      "trigger": {
+        "requires_staff": true
+      },
+      "mitigated_by": [
+        "management"
+      ],
+      "effect": {
+        "kind": "staff_quit",
+        "count": 1,
+        "morale_loss": 10
+      },
+      "tooltip": "Other businesses want good workers too. Keeping people happy is cheaper than replacing them."
+    },
+    {
+      "id": "storm",
+      "type": "negative",
+      "weight": 3,
+      "title": "Thunderstorm",
+      "message": "A heavy storm rolled through overnight. Fences took a beating, a few paths flooded, and the park had to stay closed while the crew cleaned up.",
+      "trigger": {
+        "seasons": [
+          "Spring",
+          "Fall",
+          "Winter"
+        ]
+      },
+      "mitigated_by": [
+        "maintenance"
+      ],
+      "effect": {
+        "kind": "storm",
+        "fence_damage": 16,
+        "building_damage": 10,
+        "closed_days": 1,
+        "cleanliness_loss": 20
+      },
+      "tooltip": "Weather is a cost you cannot plan around exactly, so keep some cash in reserve for surprises."
+    },
+    {
+      "id": "storm_heatwave",
+      "type": "negative",
+      "weight": 2,
+      "title": "Heat Wave",
+      "message": "A week of brutal heat kept visitors at home and left the dinosaurs tired and thirsty. Attendance is down until the weather breaks.",
+      "trigger": {
+        "seasons": [
+          "Summer"
+        ]
+      },
+      "mitigated_by": [
+        "maintenance",
+        "veterinary"
+      ],
+      "effect": {
+        "kind": "storm",
+        "attendance_mult": 0.6,
+        "days": 7,
+        "health_loss": 5
+      },
+      "tooltip": "Even the best season has bad weeks. Do not spend all of a good month's money before the month is over."
+    },
+    {
+      "id": "storm_blizzard",
+      "type": "negative",
+      "weight": 2,
+      "title": "Snowed In",
+      "message": "A snowstorm shut the roads. Nobody could reach the park for days, and a section of fence collapsed under the weight of the snow.",
+      "trigger": {
+        "seasons": [
+          "Winter"
+        ]
+      },
+      "mitigated_by": [
+        "maintenance"
+      ],
+      "effect": {
+        "kind": "storm",
+        "fence_damage": 20,
+        "closed_days": 3
+      },
+      "tooltip": "Winter is slow anyway. A storm on top of that is why winter cash planning matters most."
+    },
+    {
+      "id": "media",
+      "type": "positive",
+      "weight": 2,
+      "title": "TV Crew Visits",
+      "message": "A local news station filmed a story about your park. It aired tonight and people loved it. Expect a crowd this week.",
+      "trigger": {
+        "requires_dinos": true,
+        "min_park_rating": 2
+      },
+      "mitigated_by": [],
+      "effect": {
+        "kind": "media",
+        "attendance_mult": 1.5,
+        "days": 14,
+        "reputation_gain": 5
+      },
+      "tooltip": "Free attention works like a free ad campaign. A clean, interesting park earns it more often."
+    },
+    {
+      "id": "media_viral",
+      "type": "positive",
+      "weight": 1,
+      "title": "Video Goes Viral",
+      "message": "A visitor's clip of your dinosaurs at feeding time spread everywhere online. Ticket demand is way up for a while.",
+      "trigger": {
+        "requires_dinos": true,
+        "min_dinos": 3
+      },
+      "mitigated_by": [],
+      "effect": {
+        "kind": "media",
+        "attendance_mult": 1.8,
+        "days": 10,
+        "reputation_gain": 8
+      },
+      "tooltip": "A sudden crowd is only good if you can handle it. Gate and parking capacity set the ceiling on your best days."
+    },
+    {
+      "id": "media_review",
+      "type": "positive",
+      "weight": 2,
+      "title": "Glowing Review",
+      "message": "A travel writer gave your park top marks for being clean and well run. Families are planning trips because of it.",
+      "trigger": {
+        "min_cleanliness": 70,
+        "min_park_rating": 3,
+        "requires_dinos": true
+      },
+      "mitigated_by": [],
+      "effect": {
+        "kind": "media",
+        "attendance_mult": 1.3,
+        "days": 30,
+        "reputation_gain": 10
+      },
+      "tooltip": "Reputation builds slowly and pays off for a long time. Keeping the park clean is an investment, not a chore."
+    },
+    {
+      "id": "donation",
+      "type": "positive",
+      "weight": 2,
+      "title": "Generous Gift",
+      "message": "A dinosaur lover who visited last month sent a check to support your work. No strings attached.",
+      "trigger": {
+        "requires_dinos": true
+      },
+      "mitigated_by": [],
+      "effect": {
+        "kind": "donation",
+        "cash": 3000
+      },
+      "tooltip": "Extra cash is a chance, not a plan. Use a windfall to pay down debt or build something that keeps earning."
+    },
+    {
+      "id": "donation_science",
+      "type": "positive",
+      "weight": 1,
+      "title": "Research Grant",
+      "message": "A science foundation awarded your park a grant for taking good care of rare species. The money arrives this week.",
+      "trigger": {
+        "requires_dinos": true,
+        "min_species": 4,
+        "requires_role": "veterinary"
+      },
+      "mitigated_by": [],
+      "effect": {
+        "kind": "donation",
+        "cash": 6000
+      },
+      "tooltip": "Doing things well can open doors you did not plan for. The vet you hired for safety just paid for itself."
+    },
+    {
+      "id": "donation_fossil",
+      "type": "positive",
+      "weight": 1,
+      "title": "Fossil Found",
+      "message": "While digging a new fence post, your crew uncovered a real fossil. A museum bought it for their collection.",
+      "trigger": {
+        "requires_dinos": true
+      },
+      "mitigated_by": [],
+      "effect": {
+        "kind": "donation",
+        "cash": 2000,
+        "reputation_gain": 3
+      },
+      "tooltip": "Some income is luck. Count on the steady stuff, like tickets, and treat luck as a bonus."
+    },
+    {
+      "id": "boom",
+      "type": "positive",
+      "weight": 2,
+      "title": "Holiday Weekend",
+      "message": "A long weekend brought families from all over. The gates were packed and the food stand sold out twice.",
+      "trigger": {
+        "requires_dinos": true
+      },
+      "mitigated_by": [],
+      "effect": {
+        "kind": "boom",
+        "attendance_mult": 1.6,
+        "days": 3,
+        "concession_mult": 1.3
+      },
+      "tooltip": "Big days are where concessions shine. Every extra visitor spends a little more than the ticket price."
+    },
+    {
+      "id": "boom_school_trip",
+      "type": "positive",
+      "weight": 2,
+      "title": "School Field Trips",
+      "message": "Three local schools booked field trips this week. Buses of kids are arriving every morning.",
+      "trigger": {
+        "requires_dinos": true,
+        "seasons": [
+          "Spring",
+          "Fall"
+        ]
+      },
+      "mitigated_by": [],
+      "effect": {
+        "kind": "boom",
+        "attendance_mult": 1.4,
+        "days": 5
+      },
+      "tooltip": "Attendance changes with the calendar. Spring and fall bring school groups; plan staff and food for it."
+    },
+    {
+      "id": "boom_summer_rush",
+      "type": "positive",
+      "weight": 2,
+      "title": "Summer Rush",
+      "message": "School is out and the weather is perfect. Visitors are lining up before the gates even open.",
+      "trigger": {
+        "requires_dinos": true,
+        "seasons": [
+          "Summer"
+        ]
+      },
+      "mitigated_by": [],
+      "effect": {
+        "kind": "boom",
+        "attendance_mult": 1.5,
+        "days": 7,
+        "concession_mult": 1.2
+      },
+      "tooltip": "Summer is the busy season. Money made now has to cover the quiet winter months."
+    }
+  ],
+  "_notes": "M2.6: staff_quit-type weights halved. Escape-type random events need requires_breakout_risk: an enclosure whose daily breakout chance (fences.json breakout rules) is above zero; a well-fenced small herbivore never triggers them. Every positive event now needs at least one living dinosaur (requires_dinos): a park whose animals have all starved cannot be carried by donations, media boosts or holiday crowds."
+}

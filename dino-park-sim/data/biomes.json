@@ -1,0 +1,25 @@
+{
+  "biomes": [
+    {
+      "id": "desert",
+      "name": "Desert",
+      "plot_cost": 1500,
+      "blurb": "Cheapest starter land. Dry and sandy. Good for small, hardy dinosaurs that lived in hot places.",
+      "color": "#d9b36c"
+    },
+    {
+      "id": "marsh",
+      "name": "Marsh",
+      "plot_cost": 2000,
+      "blurb": "Wet, reedy lowland. Mid-priced. Suits swamp and shoreline species and the occasional rare draw.",
+      "color": "#4f8f86"
+    },
+    {
+      "id": "plains",
+      "name": "Plains",
+      "plot_cost": 2800,
+      "blurb": "Premium open grassland. The most versatile land in the park. Most big herbivores feel at home here.",
+      "color": "#93c14f"
+    }
+  ]
+}

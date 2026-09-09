@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Economy acceptance</title>
+<style>body{background:#12161c;color:#e6e2d6;font:12px/1.4 ui-monospace,Menlo,monospace;padding:16px}
+pre{white-space:pre;margin:0}.ok{color:#6fcf6a}.bad{color:#e05c5c}</style>
+</head>
+<body>
+<h1 style="font-size:15px">Standard economy — acceptance paths</h1>
+<pre id="out">running…</pre>
+<script type="module">
+// Browser runner for tools/sim-year.mjs: same game modules, same scenarios (tools/sim-driver.js), same report.
+import * as S from '../src/state.js';
+import * as E from '../src/economy.js';
+import * as T from '../src/time.js';
+import * as A from '../src/attendance.js';
+import * as V from '../src/events.js';
+import { runAll, formatReport } from './sim-driver.js';
+
+// The game autosaves at every quarter close and this page shares its origin, so give the run its own storage
+// and leave the player's save alone.
+try {
+  const mem = new Map();
+  Object.defineProperty(window, 'localStorage', {
+    configurable: true,
+    value: { getItem: k => (mem.has(k) ? mem.get(k) : null), setItem: (k, v) => mem.set(k, String(v)), removeItem: k => mem.delete(k) }
+  });
+} catch { /* fall back to the real store: the run only writes the game's own save key */ }
+
+await S.loadData();
+const res = runAll({ S, E, T, A, V });
+const text = formatReport(res);
+const out = document.getElementById('out');
+out.textContent = text;
+out.className = res.pass ? 'ok' : 'bad';
+window.SIM = { res, text };
+console.log(text);
+</script>
+</body>
+</html>

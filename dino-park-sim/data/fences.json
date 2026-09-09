@@ -1,0 +1,67 @@
+{
+  "_notes": "M2.6: fence cost = cost_per_segment x parcel outline edges (tile edges not shared with another tile of the same parcel: a 1x1 has 4, a 2x2 has 8, an L of 4 tiles has 10). segments_per_enclosure is the reference outline (a 1x1) that upkeep_per_quarter is quoted for; bigger parcels pay upkeep in proportion. Breakout rules: with the fence at or above the species' min tier, danger_level <= low_condition_danger_min - 1 never escapes; higher danger levels only roll once condition falls below low_condition_threshold (low_condition_chance_per_day x danger_factor). Below the min tier: base_chance_per_day x danger_factor[danger_level] x tiers short. Security multiplies by (1 - its effect_magnitude). Condition decays condition_loss_per_quarter each quarter; maintenance coverage cuts that by its effect_magnitude. Playtest-2 fix: quarterly decay 6 -> 4 and storm fence_damage cut ~20% in events.json, because a maintained electrified T-rex pen was ending year 1 at condition 31 against a low_condition_threshold of 30 - one more storm and a player who had done everything right started taking escapes. Playtest-3 fix: maintenance_repair_per_quarter is what a fully staffed maintenance crew PUTS BACK each quarter (scaled by pen coverage), so storm damage no longer accumulates on a park that is properly staffed; big damage still needs the Repair button, but a maintained pen keeps a real margin above low_condition_threshold across a year.",
+  "tiers": [
+    {
+      "id": "wood",
+      "tier": 1,
+      "name": "Wood",
+      "cost_per_segment": 150,
+      "upkeep_per_quarter": 20,
+      "strength": 1,
+      "color": "#a0703c",
+      "short": "Wood"
+    },
+    {
+      "id": "steel",
+      "tier": 2,
+      "name": "Steel",
+      "cost_per_segment": 400,
+      "upkeep_per_quarter": 40,
+      "strength": 2,
+      "color": "#9aa4ad",
+      "short": "Steel"
+    },
+    {
+      "id": "concrete",
+      "tier": 3,
+      "name": "Concrete",
+      "cost_per_segment": 900,
+      "upkeep_per_quarter": 70,
+      "strength": 3,
+      "color": "#c9c4b8",
+      "short": "Concrete"
+    },
+    {
+      "id": "electrified",
+      "tier": 4,
+      "name": "Electrified",
+      "cost_per_segment": 1800,
+      "upkeep_per_quarter": 150,
+      "strength": 4,
+      "color": "#f2d64b",
+      "short": "Electric"
+    }
+  ],
+  "segments_per_enclosure": 4,
+  "breakout": {
+    "base_chance_per_day": 0.015,
+    "danger_factor": {
+      "1": 0.05,
+      "2": 0.15,
+      "3": 0.5,
+      "4": 1.0,
+      "5": 1.4,
+      "6": 1.7,
+      "7": 2.0,
+      "8": 2.3,
+      "9": 2.6,
+      "10": 3.0
+    },
+    "low_condition_threshold": 30,
+    "low_condition_danger_min": 3,
+    "low_condition_chance_per_day": 0.02,
+    "condition_loss_per_quarter": 4,
+    "maintenance_repair_per_quarter": 12,
+    "condition_repair_cost_per_point": 5
+  }
+}

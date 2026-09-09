@@ -1,0 +1,67 @@
+{
+  "roles": [
+    {
+      "id": "management",
+      "name": "Management",
+      "salary_per_month": 2400,
+      "effect_key": "efficiency",
+      "effect_magnitude": 0.1,
+      "blurb": "Runs the park day to day. Keeps morale up and makes bad events less likely. You need one once you have more than 5 staff.",
+      "needed_past_staff": 5
+    },
+    {
+      "id": "veterinary",
+      "name": "Veterinary",
+      "salary_per_month": 1800,
+      "effect_key": "illness_reduction",
+      "effect_magnitude": 0.5,
+      "blurb": "Keeps dinosaurs healthy. Cuts the chance of illness in half and helps sick dinos recover.",
+      "heal_per_day": 5
+    },
+    {
+      "id": "maintenance",
+      "name": "Maintenance",
+      "salary_per_month": 1400,
+      "effect_key": "decay_reduction",
+      "effect_magnitude": 0.5,
+      "blurb": "Fixes fences and keeps the park clean, which visitors love. Plan on about one per 3 enclosures.",
+      "pens_per_worker": 3,
+      "cleanliness_per_day": 2
+    },
+    {
+      "id": "security",
+      "name": "Security",
+      "salary_per_month": 1250,
+      "effect_key": "breakout_reduction",
+      "effect_magnitude": 0.5,
+      "blurb": "Watches the fences. Halves the chance of an escape and makes one less costly if it happens."
+    },
+    {
+      "id": "concessions",
+      "name": "Concessions",
+      "salary_per_month": 1100,
+      "effect_key": "concession_enable",
+      "effect_magnitude": 1.0,
+      "blurb": "Staffs the food stand and gift shop. Without them those buildings earn nothing. Up to 2 per store.",
+      "max_per_store": 2
+    },
+    {
+      "id": "tour_guide",
+      "name": "Tour Guide",
+      "salary_per_month": 900,
+      "effect_key": "satisfaction",
+      "effect_magnitude": 0.05,
+      "blurb": "Shows visitors around and tells dino facts. Happier visitors put up with a higher ticket price. Plan on about one per 3 dinosaurs.",
+      "dinos_per_guide": 3
+    }
+  ],
+  "morale": {
+    "start": 80,
+    "no_manager_penalty_per_month": 2.5,
+    "manager_bonus_per_month": 3,
+    "unpaid_penalty_per_month": 8,
+    "quit_threshold": 20,
+    "max": 100,
+    "_notes": "M2.6: morale bleed halved (no-manager penalty 5 -> 2.5/month, late-pay penalty 15 -> 8/month)."
+  }
+}

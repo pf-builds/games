@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Parcel validator</title>
+<style>body{background:#12161c;color:#e6e2d6;font:13px/1.45 ui-monospace,Menlo,monospace;padding:16px}
+pre{white-space:pre;margin:0}.ok{color:#6fcf6a}.bad{color:#e05c5c}</style>
+</head>
+<body>
+<h1 style="font-size:15px">data/parcels.json — validator</h1>
+<pre id="out">running…</pre>
+<script type="module">
+// Browser runner for tools/validate-parcels.mjs: same rules (src/tiles.js), same report (tools/parcel-report.js).
+import { buildReport } from './parcel-report.js';
+const D = await (await fetch('../data/parcels.json', { cache: 'no-store' })).json();
+const { lines, problems } = buildReport(D);
+const out = document.getElementById('out');
+out.textContent = lines.join('\n');
+out.className = problems.length ? 'bad' : 'ok';
+window.VALIDATE = { problems, text: lines.join('\n') };
+(problems.length ? console.error : console.log)(lines.join('\n'));
+</script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+{
+  "terms": {
+    "loan": "Money you borrow now and promise to pay back later, a little at a time.",
+    "interest": "The extra money you pay for borrowing. The longer you owe, the more it adds up.",
+    "apr": "The interest you pay in one year, shown as a percent of what you owe. 4% means $4 for every $100 you borrow, per year.",
+    "elasticity": "How much visitors change their minds when the ticket price changes. Raise the price and fewer people come; lower it and more show up.",
+    "seasonality": "Some times of year are busier than others. Summer brings crowds, winter is quiet, so plan your money around it.",
+    "cash_flow": "Money coming in versus money going out. Even a great park can run out of cash if bills arrive before ticket money does.",
+    "profit": "What is left after you subtract every cost from every dollar you earned. Above zero is good, below zero means you lost money.",
+    "tax": "A share of your profit that goes to the government. You only pay it when you actually made money.",
+    "capacity": "The most visitors your park can handle in one day. Upgrading the parking lot raises the limit.",
+    "net_worth": "Everything you own, like land, fences, dinosaurs, and cash, minus everything you owe.",
+    "upkeep": "The small regular cost of keeping things working. Fences and upgraded facilities charge it every quarter whether visitors come or not.",
+    "auction": "A sale where buyers take turns offering more money. The highest offer wins, so it can be a bargain or a trap.",
+    "debt": "The total amount you still owe the bank.",
+    "debt_cap": "The most the bank will let you owe. It grows with what your park is worth. What counts is your debt minus the cash you hold: if that stays above the cap for three quarters in a row, the bank takes the park.",
+    "overdraft": "Spending money you do not have. Bills like payroll still get paid, but the bank charges extra interest on the negative balance.",
+    "revenue": "All the money coming in from tickets and snacks, before paying any bills.",
+    "expenses": "All the money going out: salaries, food, upkeep, and interest.",
+    "salary": "What you pay each staff member every month, whether the park was busy or not.",
+    "attendance": "How many visitors came through the gate in a day.",
+    "park_rating": "A score from 1 to 5 stars for how good your park is. Cleanliness, variety, and happy visitors raise it.",
+    "cleanliness": "How tidy the park is. Visitors notice dirt, and a messy park earns fewer stars and fewer return trips.",
+    "reputation": "What people say about your park. Good news raises it, breakouts and accidents lower it.",
+    "morale": "How happy your staff are. Low morale means people quit; a manager and steady pay keep it up.",
+    "concessions": "Snacks and souvenirs. Every visitor spends a little extra once the food stand or gift shop is open, and more as they upgrade.",
+    "advertising": "Paying to tell more people about your park. It boosts visitors for a while, then wears off.",
+    "quarter": "Three months, or 90 days. Interest, taxes, and your report all come due at the end of each one.",
+    "foreclosure": "When you owe too much for too long, the bank takes the park and the game ends.",
+    "fence_tier": "How strong a fence is. Big or aggressive dinosaurs need stronger fences or they break out; small herbivores stay put behind any fence that meets their minimum.",
+    "what_if": "A preview of what would probably happen if you made this choice. It is an estimate, not a promise."
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "default_mode": "standard",
+  "modes": {
+    "standard": {
+      "name": "Standard",
+      "enabled": true,
+      "blurb": "Fair but real. You can lose, but the game tells you why, and you get three quarters of grace before foreclosure.",
+      "start_loan": 25000,
+      "apr": 0.04,
+      "debt_cap_base": 100000,
+      "debt_cap_networth_factor": 0.75,
+      "grace_quarters": 3,
+      "attendance_bonus": 1.0,
+      "event_frequency": 0.8,
+      "foreclosure_enabled": true
+    },
+    "easy": {
+      "name": "Easy",
+      "enabled": false,
+      "blurb": "Bigger loan, cheaper interest, fewer bad events, no foreclosure. Greyed out in Phase 1.",
+      "start_loan": 35000,
+      "apr": 0.04,
+      "debt_cap_base": 80000,
+      "debt_cap_networth_factor": 0.8,
+      "grace_quarters": 4,
+      "attendance_bonus": 1.2,
+      "event_frequency": 0.7,
+      "foreclosure_enabled": false
+    },
+    "classic": {
+      "name": "Classic",
+      "enabled": false,
+      "blurb": "Shoestring start and harsh interest, the way old park sims felt. Greyed out in Phase 1.",
+      "start_loan": 5000,
+      "apr": 0.12,
+      "debt_cap_base": 20000,
+      "debt_cap_networth_factor": 0.35,
+      "grace_quarters": 1,
+      "attendance_bonus": 0.8,
+      "event_frequency": 1.3,
+      "foreclosure_enabled": true
+    }
+  },
+  "_notes": "debt_cap = debt_cap_base + debt_cap_networth_factor * park assets (land, fences, dinosaurs, buildings at their resale ratios). Borrowed cash never raises the cap; overdrawn cash lowers it. M2.6 fix: the base was below start_loan, so the Bank could lend nothing on day 1 and the day-1 overspend trap was unreachable. Foreclosure now measures NET debt (debt - cash) against the cap, so borrowing to the ceiling and overdrafting feed the same number and a bigger cap does not push the trap further away. Playtest fix: base 60000 -> 88000 -> 100000 and the asset factor 0.6 -> 0.75, so the SPEC scenario (three marquee dinosaurs AND Parking III on day 1, about $148,000) is actually reachable with bank money; at 88000 the Grand Lot was still $10,000 out of reach. The bank hands a reckless owner enough rope, and the overspend run still forecloses on day 271 because net debt ends near $195,000 against a cap that collapses back toward the base once the animals die."
+}

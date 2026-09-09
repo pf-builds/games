@@ -1,0 +1,35 @@
+{
+  "_notes": "M2.6: unit costs cut 25% from the SPEC seed (meat $40 -> $30, plants $15 -> $11, fish $25 -> $19, seeds $8 -> $6). Fish added so piscivore species in dinosaurs.json have a food line. Seeds map to the seed_eater diet so the three main diets each have exactly one item.",
+  "items": [
+    {
+      "id": "meat",
+      "name": "Meat",
+      "unit_cost": 30,
+      "diet": "carnivore",
+      "color": "#c0392b"
+    },
+    {
+      "id": "plants",
+      "name": "Plants",
+      "unit_cost": 11,
+      "diet": "herbivore",
+      "color": "#27ae60"
+    },
+    {
+      "id": "fish",
+      "name": "Fish",
+      "unit_cost": 19,
+      "diet": "piscivore",
+      "color": "#2980b9"
+    },
+    {
+      "id": "seeds",
+      "name": "Seeds",
+      "unit_cost": 6,
+      "diet": "seed_eater",
+      "color": "#d4a017"
+    }
+  ],
+  "purchase_bundle_units": 10,
+  "max_stock_per_enclosure": 100
+}

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dino Park Sim</title>
+<!-- Press Start 2P (SIL OFL 1.1). Loaded from Google Fonts until a self-hosted copy lands in assets/fonts/ (see style.css). -->
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <header id="status">
+    <div class="stat stat-cash"><span class="label" data-tip="cash_flow">Capital</span><span id="cash" class="value">$0</span></div>
+    <div class="stat"><span class="label" data-tip="debt">Debt</span><span id="debt" class="value">$0</span></div>
+    <div class="stat"><span class="label" data-tip="quarter">Date</span><span id="date" class="value">Day 1 · Spring · Y1</span></div>
+    <div class="stat"><span class="label" data-tip="park_rating">Park rating</span><span id="rating" class="value stars"></span></div>
+    <div class="stat"><span class="label" data-tip="attendance">Today</span><span id="today" class="value">0 visitors</span></div>
+    <div class="speed" id="speed">
+      <button data-speed="0" title="Pause (Space)" aria-label="Pause">❚❚</button>
+      <button data-speed="1" title="Normal speed" aria-label="Normal speed">▶</button>
+      <button data-speed="3" title="Fast (3x)" aria-label="Fast">▶▶</button>
+      <button data-speed="10" title="Fastest (10x)" aria-label="Fastest">▶▶▶</button>
+      <button id="step" title="Next day" aria-label="Next day">+1</button>
+    </div>
+    <button id="fullscreen" title="Fullscreen (F)" aria-label="Fullscreen">⛶</button>
+  </header>
+
+  <nav id="toolbar">
+    <button data-view="town" class="active">Town</button>
+    <button data-view="park">Park</button>
+    <button data-view="reports">Reports</button>
+    <button data-view="marketing">Marketing</button>
+    <button data-view="factbook">Fact Book</button>
+    <button data-view="settings">Settings</button>
+  </nav>
+
+  <main id="main">
+    <section id="view-town" class="view active"></section>
+    <section id="view-park" class="view park-view">
+      <div id="park-bar" class="park-bar"></div>
+      <canvas id="park" width="960" height="540"></canvas>
+    </section>
+    <section id="view-reports" class="view scroll"></section>
+    <section id="view-marketing" class="view scroll"></section>
+    <section id="view-factbook" class="view scroll"></section>
+    <section id="view-settings" class="view scroll"></section>
+  </main>
+
+  <footer id="ticker"><span id="ticker-text">Loading…</span></footer>
+</div>
+<div id="modal-root"></div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
