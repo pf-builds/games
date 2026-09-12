@@ -1,0 +1,109 @@
+{
+  "_notes": "M4 marketing ladder, in order. kind: boost (attendance x (1 + boost) for `days`), spike (a one-day boost), floor (weekday attendance floor while active), perk (one-time permanent effect, stored in state.perks), memberships (one-time launch of the season pass; mechanics in balance.marketing.memberships). stack: true means several copies can run at once (up to balance.marketing.stack_max); otherwise only the strongest active boost counts and the same campaign cannot be bought again while it runs. unlock: min_species (living species), min_rating (park stars), requires_facility { id: tier }, requires_dinos. lesson: the one-line economics lesson shown on the card and in the ticker.",
+  "campaigns": [
+    {
+      "id": "flyers",
+      "name": "Flyers",
+      "kind": "boost",
+      "cost": 500,
+      "days": 30,
+      "boost": 0.15,
+      "stack": false,
+      "unlock": {},
+      "lesson": "Cheap and local. The first dollar of marketing is the best one you will ever spend."
+    },
+    {
+      "id": "radio",
+      "name": "Radio Spot",
+      "kind": "boost",
+      "cost": 1500,
+      "days": 30,
+      "boost": 0.3,
+      "stack": false,
+      "unlock": {
+        "min_species": 2
+      },
+      "lesson": "Reach costs money. Radio only pays back if the park has more than one thing to see."
+    },
+    {
+      "id": "tv_spot",
+      "name": "TV Spot",
+      "kind": "boost",
+      "cost": 4000,
+      "days": 30,
+      "boost": 0.5,
+      "stack": false,
+      "unlock": {
+        "min_species": 3
+      },
+      "lesson": "Big reach, big bill. Check the what-if: a boost is worth nothing above your parking cap."
+    },
+    {
+      "id": "social_campaign",
+      "name": "Social Media Campaign",
+      "kind": "boost",
+      "cost": 400,
+      "days": 14,
+      "boost": 0.08,
+      "stack": true,
+      "unlock": {
+        "min_rating": 2
+      },
+      "lesson": "Small, short and stackable. Many little pushes can beat one big one, but each one still has to pay for itself."
+    },
+    {
+      "id": "influencer_visit",
+      "name": "Influencer Visit",
+      "kind": "spike",
+      "cost": 2500,
+      "days": 1,
+      "boost": 1.5,
+      "stack": false,
+      "unlock": {
+        "min_species": 3
+      },
+      "lesson": "A one-day crowd is only worth what your gate and parking can hold. Capacity turns hype into money."
+    },
+    {
+      "id": "school_program",
+      "name": "School Field-Trip Program",
+      "kind": "floor",
+      "cost": 3000,
+      "days": 90,
+      "floor": 40,
+      "stack": false,
+      "unlock": {
+        "requires_facility": {
+          "visitor_center": 1
+        }
+      },
+      "lesson": "Schools book on weekdays and in every season. A guaranteed floor smooths the quiet days that sink a park."
+    },
+    {
+      "id": "online_ticketing",
+      "name": "Online Ticketing",
+      "kind": "perk",
+      "cost": 4000,
+      "days": 0,
+      "elasticity_cut": 0.1,
+      "stack": false,
+      "unlock": {
+        "min_species": 4
+      },
+      "lesson": "Buy once, benefit forever. Easier buying makes visitors a little less price-sensitive, every day, for good."
+    },
+    {
+      "id": "memberships",
+      "name": "Memberships / Season Pass",
+      "kind": "memberships",
+      "cost": 2500,
+      "days": 0,
+      "stack": false,
+      "unlock": {
+        "min_species": 3,
+        "min_rating": 2.5
+      },
+      "lesson": "Steady money instead of ticket-by-ticket money. Members pay every quarter, and they leave when the park slips."
+    }
+  ]
+}

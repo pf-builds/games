@@ -14,6 +14,14 @@ import { renderReports, openQuarterlyReport } from './reports.js';
 import { renderMarketing, refreshMarketing } from './marketing.js';
 import { renderFactbook } from './factbook.js';
 import { renderSettings } from './settings.js';
+import { openPrizes, prizeToast } from './prizes.js';
+import { nextPrize } from '../prizes.js';
+import { foodDayChips } from './food.js';
+import { openGeneralStore } from './stores.js';
+import { openGoals, openReportCard } from './goals.js';
+import { goalsList } from '../goals.js';
+import { initJuice, toast } from './effects.js';
+import { play as playSfx } from '../audio.js';
 
 const $ = id => document.getElementById(id);
 let current = 'town';
@@ -27,7 +35,7 @@ const VIEWS = {
   reports: { render: renderReports, live: true },
   marketing: { render: renderMarketing, live: false, refresh: refreshMarketing },
   factbook: { render: renderFactbook, live: false },
-  settings: { render: root => renderSettings(root, { startNewGame, showTutorial: tutorialHint }), live: false }
+  settings: { render: root => renderSettings(root, { startNewGame, showTutorial: () => { resetTips(); tutorialHint(); } }), live: false }
 };
 
 export function initShell({ onNewGame }) {
@@ -44,10 +52,14 @@ export function initShell({ onNewGame }) {
   $('fullscreen').addEventListener('click', toggleFullscreen);
   initTicker();
   onChange(refresh);
+  initJuice();
   bus.addEventListener('quarter', e => openQuarterlyReport(e.detail));
   bus.addEventListener('event', e => eventPopup(e.detail));
-  bus.addEventListener('win', e => winPopup(e.detail));
+  bus.addEventListener('goal', e => (e.detail.grand ? grandParkPopup(e.detail) : winPopup(e.detail)));
+  bus.addEventListener('report_card', e => reportCardPopup(e.detail));
   bus.addEventListener('lose', e => losePopup(e.detail));
+  bus.addEventListener('prize', e => prizeToast(e.detail));
+  onChange(firstQuarterTips);
   showView('town');
 }
 
@@ -92,9 +104,15 @@ function renderParkBar() {
   const bar = $('park-bar');
   bar.replaceChildren();
   if (parkMode === 'living') {
+    const n = (state.prizes || []).length;
+    const nx = nextPrize();
     append(bar, [
       button('Buy Land', () => setParkMode('grid'), { class: 'btn primary' }),
-      h('span', { class: 'muted' }, 'Click a pen to manage it, a building to upgrade it · Buy Land opens the survey map')
+      button(`🏆 Park Prizes${n ? ` (${n})` : ''}`, openPrizes, { class: 'btn', title: nx ? `Next: ${nx.prize.name} at ${fmt$(nx.threshold)}` : 'Every spend prize earned' }),
+      button(`🎯 Goals ${goalsList().filter(g => g.done).length}/${goalsList().length}`, openGoals, { class: 'btn', title: (goalsList().find(g => !g.done) || { name: 'Every goal reached' }).name }),
+      h('span', { class: 'food-status' }, h('span', { class: 'muted small', 'data-tip': 'days_of_food' }, 'Food '), foodDayChips()),
+      button('Restock', () => openGeneralStore({ tab: 'food' }), { class: 'btn', title: 'General Store → Food, quantity pre-filled' }),
+      h('span', { class: 'muted' }, 'Click a pen to manage it, a building to upgrade it')
     ]);
     return;
   }
@@ -166,6 +184,8 @@ export function refresh() {
 
 // ---- bus-driven modals ----
 function eventPopup({ event, averted, summary }) {
+  // Escapes get the siren from the 'escape' bus event; every other bad-news popup gets the alert.
+  if (event.type === 'negative' && !averted && event.effect?.kind !== 'escape') playSfx('alert');
   const m = openModal({ title: averted ? `Close call: ${event.title}` : event.title, className: event.type === 'negative' ? 'event-bad' : 'event-good', body: h('div', {},
     h('p', {}, averted ? `Your ${averted} staff caught the problem before it hit. (${event.title} was about to happen.)` : event.message),
     summary ? h('p', { class: 'muted' }, `Effect: ${summary}.`) : null,
@@ -182,7 +202,7 @@ export function openDigest() {
     h('p', { class: 'muted' }, `At 3× and 10× only escapes, the Quarterly Report, foreclosure and milestones pause the clock. Everything else lands here (last ${DATA.balance.events.digest_days_kept} days).`),
     days.length ? days.map(d => h('div', { class: 'digest-day' },
       h('h3', {}, `Day ${dayOfQuarter(d.day)} · ${season(d.day)} · Year ${year(d.day)}`),
-      d.items.map(it => h('div', { class: `digest-item ${it.type === 'negative' ? 'bad' : 'good'}` },
+      d.items.map(it => h('div', { class: `digest-item ${it.type === 'negative' ? 'bad' : it.type === 'prize' ? 'prize' : it.type === 'info' ? 'info' : 'good'}` },
         h('b', {}, it.averted ? `Close call: ${it.title}` : it.title),
         h('span', { class: 'muted' }, it.averted ? ` · ${it.averted} staff headed it off` : it.summary ? ` · ${it.summary}` : ''),
         it.tooltip ? h('div', { class: 'muted small' }, it.tooltip) : null)))) : h('p', { class: 'muted' }, 'Nothing yet.'),
@@ -192,10 +212,26 @@ export function openDigest() {
 }
 
 function winPopup({ title, text }) {
-  const m = openModal({ title: `🎉 ${title}`, className: 'event-good', body: h('div', {},
+  const next = goalsList().find(g => !g.done);
+  const m = openModal({ title: `🎉 ${title}`, className: 'event-good slide-in', body: h('div', {},
     h('p', {}, text),
-    h('p', { class: 'muted' }, 'The game keeps going. There is always a next goal: ', term('net_worth', 'net worth'), ', more species, five stars.'),
-    h('div', { class: 'row end' }, button('Keep playing', () => m.close(), { class: 'btn primary' }))) });
+    h('p', { class: 'muted' }, 'The game keeps going. ', next ? `Next on the ladder: ${next.name} (${next.detail}).` : 'Every goal on the ladder is done.', ' The ', term('goal', 'Goals'), ' panel on the Park bar shows the whole ladder.'),
+    h('div', { class: 'row end' }, button('Open Goals', () => { m.close(); openGoals(); }), button('Keep playing', () => m.close(), { class: 'btn primary' }))) });
+}
+// The Grand Park: the top of the ladder, once. A plaque goes up at the gate in the living view.
+function grandParkPopup({ title, text }) {
+  const m = openModal({ title: `🏛️ ${title}`, className: 'grand slide-in', body: h('div', {},
+    h('p', { class: 'lead' }, text),
+    h('p', { class: 'muted' }, 'Visitors will see the Grand Park plaque by the front gate. The game keeps going: the ', term('report_card', 'Year-5 Report Card'), ' still grades the whole run, and the endless sandbox is yours.'),
+    h('div', { class: 'row end' }, button('See the park', () => { m.close(); showView('park'); }), button('Keep playing', () => m.close(), { class: 'btn primary' }))) });
+}
+// The report card is issued while the year-end Quarterly Report is already open: let the player read that first.
+function reportCardPopup(card) {
+  const show = () => openReportCard(card);
+  const top = topModal();
+  if (!top) return show();
+  const prev = top.onClose;
+  top.onClose = () => { prev?.(); show(); };
 }
 
 // The final Quarterly Report is already open when foreclosure fires; let the player read it, then show this.
@@ -213,14 +249,47 @@ function losePopup({ cause }) {
 }
 
 export function tutorialHint() {
-  const m = openModal({ title: 'Welcome, park owner', body: h('div', {},
-    h('p', {}, `You start with a ${fmt$(state.cash)} `, term('loan', 'loan'), ' from the bank. Turn it into a working park:'),
-    h('ol', {},
-      h('li', {}, 'Park → Buy Land: click a FOR SALE parcel to buy it. Bigger parcels hold more dinosaurs; the biome sets the price.'),
-      h('li', {}, 'Click your new parcel to build a fence around it (', fenceByTier(1).name, ' is cheapest).'),
-      h('li', {}, 'Town → Dino Market: buy a dinosaur that fits the fence. Buy food from the General Store.'),
-      h('li', {}, 'Press ▶ to let days run. Every 90 days a report shows what you earned and spent. Upgrade parking, restrooms and shops in the General Store as the crowds grow.')),
-    h('p', { class: 'muted' }, `Space pauses. Esc closes windows. Hover any underlined term for a plain explanation. Quarters are ${T().days_per_quarter} days.`),
-    h('div', { class: 'row end' }, button('Got it', () => m.close(), { class: 'btn primary' }))) });
-  void clear;
+  // Six short cards in two columns (M5 fixer): one line each, the detail lives in the hover terms and the first-quarter tips.
+  const tut = (title, ...text) => h('div', { class: 'tut' }, h('b', {}, title), h('span', {}, ...text));
+  const m = openModal({ title: 'Welcome, park owner', className: 'wide', body: h('div', {},
+    h('p', {}, `You start with a ${fmt$(DATA.difficulty.modes[state.mode]?.start_loan ?? state.debt)} `, term('loan', 'loan'), ' from the bank. Six things turn it into a park:'),
+    h('div', { class: 'tutorial-grid' },
+      tut('1. Buy land, pick its biome', 'Park → Buy Land. Desert, Plains or Marsh: the ', term('biome', 'biome'), ' sets price, growth and which species feel at home.'),
+      tut('2. Fence it', `Click your parcel. ${fenceByTier(1).name} is cheapest; big species need stronger tiers.`),
+      tut('3. Buy a dinosaur, feed it', 'Town → Dino Market. Food is in the General Store; ', term('auto_restock', 'auto-restock'), ' buys more when stock runs low.'),
+      tut('4. Plant seeds', 'Seeds are paid once and grow ', term('vegetation', 'greenery'), ' herbivores graze first. Bought plants are a weekly bill.'),
+      tut('5. Climb the marketing ladder', 'Cheap flyers first, bigger ', term('campaign', 'campaigns'), ' as the park grows, then ', term('membership', 'memberships'), '.'),
+      tut('6. Watch the Goals', 'Park bar → 🎯 Goals: loan, net worth, ten species, five stars, the ', term('grand_park', 'Grand Park'), ', the Year-5 ', term('report_card', 'Report Card'), '.')),
+    h('p', { class: 'muted' }, `▶ runs the days; a report opens every ${T().days_per_quarter} days. Space pauses, Esc closes. Hover underlined terms for a plain explanation; short tips follow in your first quarter.`),
+    h('div', { class: 'row end' }, button('Skip the tips', () => { markTipsSeen(); m.close(); }), button('Got it', () => m.close(), { class: 'btn primary' }))) });
+}
+
+// ---- first-quarter tips (data/tooltips.json first_quarter_tips): one toast each, on its day, shown once per browser ----
+const TIPS_KEY = 'dino-park-sim.tips_seen';
+function tipsSeen() { try { return JSON.parse(localStorage.getItem(TIPS_KEY) || '[]') || []; } catch { return []; } }
+function markTipSeen(day) { try { const seen = tipsSeen(); if (!seen.includes(day)) seen.push(day); localStorage.setItem(TIPS_KEY, JSON.stringify(seen)); } catch { /* storage blocked */ } }
+export function markTipsSeen() { try { localStorage.setItem(TIPS_KEY, JSON.stringify((DATA.tooltips.first_quarter_tips || []).map(t => t.day))); } catch { /* storage blocked */ } }
+export function resetTips() { try { localStorage.removeItem(TIPS_KEY); } catch { /* storage blocked */ } }
+// Tips show one at a time: a batch advance (or 10x) that passes several tip days queues them, and the next one
+// appears once the current tip has been dismissed or has timed out, instead of three stacking over the scene.
+const tipQueue = [];
+let tipShowing = null, tipTimer = 0;
+function pumpTips() {
+  tipTimer = 0;
+  if (tipShowing && tipShowing.isConnected) { tipTimer = setTimeout(pumpTips, 800); return; }
+  const t = tipQueue.shift();
+  if (!t) { tipShowing = null; return; }
+  tipShowing = toast({ icon: '💡', title: t.title, text: t.text, cls: 'tip-toast', seconds: DATA.balance.juice?.tip_toast_seconds ?? 9 });
+  if (tipQueue.length) tipTimer = setTimeout(pumpTips, 800);
+}
+function firstQuarterTips() {
+  if (!state || state.day > T().days_per_quarter) return;
+  const tips = DATA.tooltips.first_quarter_tips || [];
+  const seen = tipsSeen();
+  for (const t of tips) {
+    if (seen.includes(t.day) || state.day < t.day) continue;
+    markTipSeen(t.day);
+    tipQueue.push(t);
+  }
+  if (tipQueue.length && !tipTimer) pumpTips();
 }

@@ -1,0 +1,180 @@
+{
+  "model": "stabilityai/stable-diffusion-xl-base-1.0 (OpenRAIL-M)",
+  "lora": "nerijs/pixel-art-xl",
+  "post": "saturation 1.35 -> LANCZOS downscale -> ADAPTIVE 32-colour Floyd-Steinberg -> NEAREST x5",
+  "no_reference_images": true,
+  "items": [
+    {
+      "id": "lesothosaurus",
+      "colour": "pale mint green",
+      "seed": 100,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon pale mint green lesothosaurus dinosaur, small slender two-legged plant-eater with a long tail, 3/4 oblique view, full body, plain light background, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "psittacosaurus",
+      "colour": "sunflower yellow",
+      "seed": 101,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon sunflower yellow psittacosaurus dinosaur, small parrot-beaked plant-eater with tail bristles, 3/4 oblique view, full body, plain light background, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "hypsilophodon",
+      "colour": "sky blue",
+      "seed": 102,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon sky blue hypsilophodon dinosaur, small nimble two-legged plant-eater, 3/4 oblique view, full body, plain light background, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "dryosaurus",
+      "colour": "peach orange",
+      "seed": 103,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon peach orange dryosaurus dinosaur, small long-legged two-legged plant-eater, 3/4 oblique view, full body, plain light background, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "coelophysis",
+      "colour": "turquoise",
+      "seed": 104,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon turquoise coelophysis dinosaur, slender long-necked small predator with a narrow snout, 3/4 oblique view, full body, plain light background, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "protoceratops",
+      "colour": "sand tan",
+      "seed": 105,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon sand tan protoceratops dinosaur, small frilled beaked four-legged plant-eater, 3/4 oblique view, full body, plain light background, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "velociraptor",
+      "colour": "crimson red",
+      "seed": 106,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon crimson red velociraptor dinosaur, small feathered sickle-clawed predator, 3/4 oblique view, full body, plain light background, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "deinonychus",
+      "colour": "dark teal",
+      "seed": 107,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon dark teal deinonychus dinosaur, feathered sickle-clawed medium predator, 3/4 oblique view, full body, plain light background, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "camptosaurus",
+      "colour": "olive green",
+      "seed": 108,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon olive green camptosaurus dinosaur, medium beaked plant-eater standing on two legs, 3/4 oblique view, full body, plain light background, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "dilophosaurus",
+      "colour": "royal purple",
+      "seed": 109,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon royal purple dilophosaurus dinosaur, medium predator with twin head crests, 3/4 oblique view, full body, plain light background, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "hadrosaurus",
+      "colour": "burnt orange",
+      "seed": 110,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon burnt orange hadrosaurus dinosaur, duck-billed medium plant-eater, 3/4 oblique view, full body, plain light background, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "pachycephalosaurus",
+      "colour": "lavender violet",
+      "seed": 111,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon lavender violet pachycephalosaurus dinosaur, thick dome-headed two-legged plant-eater, 3/4 oblique view, full body, plain light background, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "allosaurus",
+      "colour": "burgundy red",
+      "seed": 112,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon burgundy red allosaurus dinosaur, large two-legged predator with small brow horns, 3/4 oblique view, full body, plain light background, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "iguanodon",
+      "colour": "chestnut brown",
+      "seed": 113,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon chestnut brown iguanodon dinosaur, large thumb-spiked plant-eater, 3/4 oblique view, full body, plain light background, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "styracosaurus",
+      "colour": "coral pink",
+      "seed": 114,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon coral pink styracosaurus dinosaur, spiked-frill single-horned four-legged plant-eater, 3/4 oblique view, full body, plain light background, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "baryonyx",
+      "colour": "slate blue-grey",
+      "seed": 115,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon slate blue-grey baryonyx dinosaur, crocodile-snouted fish-eating predator with a big thumb claw, 3/4 oblique view, full body, plain light background, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "ankylosaurus",
+      "colour": "rust orange-brown",
+      "seed": 116,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon rust orange-brown ankylosaurus dinosaur, low armored club-tailed four-legged plant-eater, 3/4 oblique view, full body, plain light background, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "parasaurolophus",
+      "colour": "bright magenta",
+      "seed": 117,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon bright magenta parasaurolophus dinosaur, duck-billed plant-eater with a long tube crest, 3/4 oblique view, full body, plain light background, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "stegosaurus",
+      "colour": "lime green",
+      "seed": 118,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon lime green stegosaurus dinosaur, back-plated spike-tailed four-legged plant-eater, 3/4 oblique view, full body, plain light background, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "triceratops",
+      "colour": "steel grey with a cream frill",
+      "seed": 119,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon steel grey with a cream frill triceratops dinosaur, three-horned frilled four-legged plant-eater, 3/4 oblique view, full body, plain light background, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "apatosaurus",
+      "colour": "navy blue",
+      "seed": 120,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon navy blue apatosaurus dinosaur, long-necked long-tailed four-legged sauropod, 3/4 oblique view, full body, plain light background, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "spinosaurus",
+      "colour": "golden yellow",
+      "seed": 121,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon golden yellow spinosaurus dinosaur, sail-backed crocodile-snouted large predator, 3/4 oblique view, full body, plain light background, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "brachiosaurus",
+      "colour": "ivory cream",
+      "seed": 122,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon ivory cream brachiosaurus dinosaur, very tall long-necked sauropod with front legs longer than back, 3/4 oblique view, full body, plain light background, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "tyrannosaurus",
+      "colour": "emerald green",
+      "seed": 123,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon emerald green tyrannosaurus dinosaur, massive big-jawed tiny-armed predator, 3/4 oblique view, full body, plain light background, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "park-hero",
+      "seed": 500,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, overhead 3/4 oblique view of a small dinosaur theme park: fenced pens with dinosaurs, walkways, a central fountain plaza, an entrance gate, a parking lot with tiny cars, tiny visitors, early 1990s tycoon game screen, pixel",
+      "px": 256,
+      "colors": 48
+    },
+    {
+      "id": "biome-desert",
+      "seed": 501,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a desert land plot: dry sand, red rock, cactus and scrub, hot flat ground, early 1990s tycoon game terrain tile, top-down 3/4 view, pixel",
+      "px": 192,
+      "colors": 40
+    },
+    {
+      "id": "biome-swamp",
+      "seed": 502,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a swamp marsh land plot: reeds, shallow water, mossy logs, lush wet plants, early 1990s tycoon game terrain tile, top-down 3/4 view, pixel",
+      "px": 192,
+      "colors": 40
+    },
+    {
+      "id": "biome-plains",
+      "seed": 503,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a grassy plains land plot: green meadow, wildflowers, a few trees, mild fertile ground, early 1990s tycoon game terrain tile, top-down 3/4 view, pixel",
+      "px": 192,
+      "colors": 40
+    }
+  ]
+}

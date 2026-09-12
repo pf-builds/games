@@ -1,0 +1,34 @@
+{
+  "picks": {
+    "lesothosaurus": "v2",
+    "psittacosaurus": "v2",
+    "hypsilophodon": "v3-rerolls seed 3",
+    "dryosaurus": "v2",
+    "coelophysis": "v2",
+    "protoceratops": "v3-rerolls seed 2",
+    "velociraptor": "v2",
+    "deinonychus": "v2",
+    "camptosaurus": "v2",
+    "dilophosaurus": "v2",
+    "hadrosaurus": "v2",
+    "pachycephalosaurus": "v3-rerolls seed 1",
+    "allosaurus": "v2",
+    "iguanodon": "v2",
+    "styracosaurus": "v3-rerolls seed 2",
+    "baryonyx": "v2",
+    "ankylosaurus": "v2",
+    "parasaurolophus": "v2",
+    "stegosaurus": "v2",
+    "triceratops": "v2",
+    "apatosaurus": "v2",
+    "spinosaurus": "v2",
+    "brachiosaurus": "v3-rerolls seed 3",
+    "tyrannosaurus": "v2"
+  },
+  "needs_cleanup_first": [
+    "pachycephalosaurus (dome weak, reads anteater)",
+    "psittacosaurus (crest not parrot-beak)",
+    "dilophosaurus (crest faint)"
+  ],
+  "source": "v2 unless noted; all SDXL base 1.0 + pixel-art-xl, no reference images"
+}

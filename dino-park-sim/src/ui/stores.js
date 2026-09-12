@@ -1,49 +1,59 @@
 // Store modals: Real Estate, Dino Market (buy + auction), General Store, Employment Office, Bank.
-import { DATA, state, mode, fenceByTier, foodByDiet, staffCount, enclosures, parcelList, parcelDef, parcelBiome, parcelSizeLabel, facilityDefs, fmt$, pct, emitChange, onChange, rnd, rndInt } from '../state.js';
+import { DATA, state, mode, fenceByTier, foodByDiet, staffCount, enclosures, parcelList, parcelDef, parcelBiome, parcelSizeLabel, biomeDefs, biomeById, facilityDefs, fmt$, pct, emitChange, onChange, rnd, rndInt, biomeFit, speciesBiomes, speciesRequiresPreferred, FIT_MARK } from '../state.js';
 import * as eco from '../economy.js';
 import { projectDay } from '../attendance.js';
 import { h, button, tabs, term, clear, append } from './dom.js';
 import { openModal, alertModal } from './modals.js';
-import { factCard } from './factbook.js';
-import { fail, facilityCard } from './enclosure.js';
+import { factCard, biomeLine } from './factbook.js';
+import { fail, facilityCard, speciesPreferring, speciesTolerating, growthLine } from './enclosure.js';
 import { openBuyLand } from './shell.js';
 import { shortShape } from '../render/park.js';
 import { checkMilestones } from '../time.js';
+import { prizesBody } from './prizes.js';
+import { nextPrize } from '../prizes.js';
+import { autoRestockPanel, suggestedUnits } from './food.js';
+import { campaignLadder } from './marketing.js';
 
 const refresh = () => emitChange();
 
 // ---------------- Real Estate ----------------
-// Land is bought on the park map (Park → Buy Land). This office is the legend: what each biome costs and how parcel size changes the price.
+// Land is bought on the park map (Park → Buy Land); the buyer picks the land type there. This office is the biome
+// guide: what each biome costs, what grows on it, which species call it home, and every parcel's price per biome.
 export function openRealEstate() {
-  const m = openModal({ title: 'Real Estate Office', className: 'wide' });
+  const m = openModal({ title: 'Real Estate Office · Biome Guide', className: 'wide' });
   const P = DATA.balance.parcel;
   const all = parcelList();
   const forSale = all.filter(p => !p.owned);
-  const byBiome = id => all.filter(p => parcelDef(p.id).biome === id);
+  const byBiome = id => all.filter(p => p.owned && p.biome === id);
   m.setBody(h('div', {},
-    h('p', {}, 'Land is bought on the park map: open ', h('b', {}, 'Park → Buy Land'), ' and click a FOR SALE parcel. Parcels are fixed shapes of different sizes; each carries its own biome. Purchased land is for dinosaur enclosures only. Parking, restrooms, the food stand, gift shop and office are fixed buildings you upgrade in the General Store.'),
-    h('div', { class: 'cards' }, DATA.biomes.biomes.map(b => {
+    h('p', {}, 'Land is bought on the park map: open ', h('b', {}, 'Park → Buy Land'), ' and click a FOR SALE parcel. Unsold land is neutral scrub; when you buy, you choose the ', term('biome', 'biome'), ' (Desert, Plains or Marsh) and that sets the price, what grows, and which dinosaurs feel at home. Purchased land is for dinosaur enclosures only; parking, restrooms, shops and the office are fixed buildings you upgrade in the General Store.'),
+    h('div', { class: 'cards grid-3 biome-cards' }, biomeDefs().map(b => {
       const mine = byBiome(b.id);
-      return h('div', { class: 'card' },
+      const pref = speciesPreferring(b.id), tol = speciesTolerating(b.id);
+      return h('div', { class: 'card', style: `--biome:${b.color}` },
         h('div', { class: 'card-title' }, h('span', { class: 'swatch', style: `background:${b.color}` }), b.name),
         h('div', { class: 'big' }, `${fmt$(b.plot_cost)} per tile`),
         h('p', { class: 'muted' }, b.blurb),
-        h('div', { class: 'muted small' }, `${mine.length} parcel${mine.length === 1 ? '' : 's'} on the map · ${mine.filter(p => p.owned).length} owned · shapes ${[...new Set(mine.map(p => shortShape(p.id)))].join(', ')}`));
+        h('div', { class: 'small' }, h('b', {}, 'Grows: '), b.grows || '', ' ', h('span', { class: 'muted' }, `(${growthLine(b.id)}; seeds ${fmt$(eco.seedFood()?.unit_cost || 0)}/unit)`)),
+        h('div', { class: 'small' }, h('b', {}, `Home for ${pref.length}: `), pref.map(sp => sp.name + (speciesRequiresPreferred(sp) ? '*' : '')).join(', ') || 'none'),
+        h('div', { class: 'muted small' }, `Tolerated by ${tol.length}: ${tol.map(sp => sp.name).join(', ') || 'none'}`),
+        h('div', { class: 'muted small' }, `Your pens: ${mine.length}${mine.length ? ` (${mine.map(p => p.id).join(', ')})` : ''}`));
     })),
+    h('p', { class: 'muted small' }, `* must live in a preferred biome (the Dino Market refuses any other pen). A species in a tolerated biome is fine; in the wrong one its popularity drops to ${pct(DATA.balance.biome.wrong_popularity)} and its health slips. Preferred: popularity ×${DATA.balance.biome.preferred_popularity}. Re-landscaping a pen later costs ${pct(DATA.balance.biome.relandscape_ratio)} of the new land price.`),
     h('h3', {}, 'Every parcel on the survey map'),
     h('table', { class: 'table' },
-      h('tr', {}, h('th', {}, 'Parcel'), h('th', {}, 'Shape'), h('th', {}, 'Tiles'), h('th', {}, 'Price factor'), h('th', {}, term('capacity', 'Capacity')), h('th', {}, 'Fence segments'), h('th', {}, 'Price'), h('th', {}, '')),
+      h('tr', {}, h('th', {}, 'Parcel'), h('th', {}, 'Shape'), h('th', {}, 'Tiles'), h('th', {}, term('capacity', 'Capacity')), h('th', {}, 'Fence segments'), biomeDefs().map(b => h('th', {}, `${b.name} price`)), h('th', {}, 'Status')),
       all.map(p => h('tr', {},
         h('td', {}, p.id),
         h('td', {}, parcelSizeLabel(p.id)),
         h('td', {}, `${parcelDef(p.id).tiles.length}`),
-        h('td', {}, `×${eco.areaFactor(parcelDef(p.id).tiles.length).toFixed(2)}`),
         h('td', {}, `${eco.parcelCapacity(p.id)} space`),
         h('td', {}, `${eco.perimeterSegments(p.id)}`),
-        h('td', {}, fmt$(eco.parcelPrice(p.id))),
-        h('td', { class: 'muted' }, p.owned ? (p.enclosure ? 'fenced' : 'owned') : 'for sale')))),
+        biomeDefs().map(b => h('td', { class: p.owned && p.biome === b.id ? 'good' : '' }, fmt$(eco.parcelPrice(p.id, b.id)))),
+        h('td', { class: 'muted' }, p.owned ? `${biomeById(p.biome)?.name || 'owned'}${p.enclosure ? ', fenced' : ''}` : 'for sale')))),
     h('p', { class: 'muted' }, `Parcels are irregular shapes, so the fence follows the outline: an L of 4 tiles needs 10 segments where a 2×2 needs 8. Bigger parcels are a modest discount per tile and hold more dinosaurs (${P.space_per_tile} space units per tile), but the fence around them costs more. ${forSale.length} of ${all.length} parcels are still for sale. Land holds its value in your `, term('net_worth', 'net worth'), '.'),
     h('div', { class: 'row end' }, button('Open the park map', () => { m.close(); openBuyLand(); }, { class: 'btn primary' }))));
+  void shortShape;
 }
 
 // ---------------- Dino Market ----------------
@@ -93,6 +103,15 @@ function speciesGrid(onPick, verb = 'Buy') {
   return wrap;
 }
 
+// Biome fit against the player's pens: ✓ a preferred pen exists, ~ only tolerated, ✗ only wrong-biome pens (or none).
+export function fitBadge(sp) {
+  const best = eco.bestFitFor(sp);
+  const b = speciesBiomes(sp);
+  const pref = (b.preferred || []).map(id => biomeById(id)?.name || id).join('/');
+  const req = speciesRequiresPreferred(sp);
+  const text = best === 'preferred' ? `${FIT_MARK.preferred} a ${pref} pen fits` : best === 'tolerated' ? `${FIT_MARK.tolerated} tolerated pen only (prefers ${pref})` : best === 'wrong' ? `${FIT_MARK.wrong} wrong biome only (prefers ${pref})` : `${req ? FIT_MARK.wrong : FIT_MARK.none} no ${req ? pref : ''} pen yet (prefers ${pref})`;
+  return h('div', { class: `small fit fit-${best === 'none' ? (req ? 'wrong' : 'none') : best}`, 'data-tip-text': `${DATA.tooltips.terms.biome}${req ? ` ${sp.name} MUST live in ${pref}.` : ''}` }, text, req ? ' · required' : '');
+}
 function speciesCard(sp, onPick, verb) {
   const valid = eco.validEnclosuresFor(sp).length;
   return h('div', { class: 'card' },
@@ -102,7 +121,8 @@ function speciesCard(sp, onPick, verb) {
     h('div', { class: 'muted nowrap' }, 'Min ', term('fence_tier', 'fence'), `: ${fenceByTier(sp.min_fence_tier).name}`),
     h('div', { class: 'muted nowrap' }, `Popularity ${sp.popularity} · Space ${sp.space_required} unit${sp.space_required > 1 ? 's' : ''}`),
     h('div', { class: 'muted nowrap' }, `Eats ${sp.food_per_day} ${dietFoodName(sp.diet)} unit${sp.food_per_day > 1 ? 's' : ''}/day`),
-    h('div', { class: 'muted small' }, valid ? `${valid} enclosure${valid > 1 ? 's' : ''} fit` : 'No enclosure fits'),
+    fitBadge(sp),
+    h('div', { class: 'muted small' }, valid ? `${valid} enclosure${valid > 1 ? 's' : ''} fit` : (speciesRequiresPreferred(sp) && enclosures().length ? 'No pen in its preferred biome' : 'No enclosure fits')),
     button(verb, () => onPick(sp), { class: 'btn primary', disabled: !valid }));
 }
 
@@ -117,15 +137,24 @@ function whatIf(sp) {
   return h('p', { class: 'muted' }, term('what_if', 'What-if'), `: visitors/day ${before.attendance} → ${after.attendance}, revenue/day ${fmt$(before.total)} → ${fmt$(after.total)}. Food about ${fmt$(foodCost)}/day.`);
 }
 
+// Pen picker: every pen that fits, best biome fit first, each with its ✓ / ~ / ✗ mark. A required-biome species only
+// ever sees preferred pens here (economy.enclosureFits refuses the rest); the refused pens are listed underneath.
 function choosePlot(sp, onChoose) {
-  const list = eco.validEnclosuresFor(sp);
+  const rank = { preferred: 0, tolerated: 1, wrong: 2, none: 3 };
+  const list = eco.validEnclosuresFor(sp).slice().sort((a, b) => rank[biomeFit(sp, a.biome)] - rank[biomeFit(sp, b.biome)]);
+  const refused = enclosures().filter(p => !eco.biomeAllows(p, sp));
+  const BM = DATA.balance.biome;
+  const fitText = f => f === 'preferred' ? `${FIT_MARK.preferred} preferred: popularity ×${BM.preferred_popularity}, +${BM.preferred_regen} health/day` : f === 'tolerated' ? `${FIT_MARK.tolerated} tolerated: no bonus, no penalty` : `${FIT_MARK.wrong} wrong biome: popularity ×${BM.wrong_popularity}, health slips, unhappy`;
   const m = openModal({ title: `Which enclosure for the ${sp.name}?`, body: h('div', {},
     whatIf(sp),
-    h('div', { class: 'cards' }, list.map(p => h('div', { class: 'card' },
-      h('div', { class: 'card-title' }, `Parcel ${p.id} · ${parcelSizeLabel(p.id)} ${parcelBiome(p.id).name}`),
+    h('p', { class: 'muted small' }, biomeLine(sp)),
+    h('div', { class: 'cards' }, list.map(p => { const f = biomeFit(sp, p.biome); return h('div', { class: `card fit-card-${f}` },
+      h('div', { class: 'card-title' }, h('span', { class: 'swatch', style: `background:${parcelBiome(p.id)?.color || '#888'}` }), `Parcel ${p.id} · ${parcelSizeLabel(p.id)} ${parcelBiome(p.id)?.name || ''}`),
+      h('div', { class: `fit fit-${f}` }, fitText(f)),
       h('div', { class: 'muted' }, `${fenceByTier(p.enclosure.fence_tier).name} fence · ${eco.spaceCapacity(p.id) - eco.spaceUsed(p.enclosure)} of ${eco.spaceCapacity(p.id)} space free`),
       h('div', { class: 'muted' }, `${p.enclosure.dinos.length} dinosaur${p.enclosure.dinos.length === 1 ? '' : 's'} inside`),
-      button('Choose', () => { m.close(); onChoose(p.id); }, { class: 'btn primary' })))))
+      button('Choose', () => { m.close(); onChoose(p.id); }, { class: 'btn primary' })); })),
+    refused.length ? h('p', { class: 'bad small' }, `${FIT_MARK.wrong} Refused (wrong biome for a species that needs its preferred land): ${refused.map(p => `${p.id} (${parcelBiome(p.id)?.name})`).join(', ')}. Re-landscape one from its enclosure panel.`) : null)
   });
 }
 
@@ -133,7 +162,9 @@ function buyFlow(sp, market) {
   choosePlot(sp, plotIndex => {
     if (fail(eco.buyDino(sp.id, plotIndex))) return;
     refresh();
-    afterPurchase(sp, market, `Bought for ${fmt$(sp.shop_price)}.`);
+    checkMilestones(); // species-count milestone (and prize) fire at purchase time
+    const f = biomeFit(sp, state.parcels[plotIndex].biome);
+    afterPurchase(sp, market, `Bought for ${fmt$(sp.shop_price)}.${f === 'wrong' ? ` It is unhappy in ${parcelBiome(plotIndex)?.name}: re-landscape the pen or expect ×${DATA.balance.biome.wrong_popularity} popularity.` : f === 'preferred' ? ' Right at home in its preferred biome.' : ''} A delivery truck brings it to the park gate: open the Park to watch it arrive in ${plotIndex}.`);
   });
 }
 
@@ -202,18 +233,27 @@ function runAuction(sp, plotIndex, market) {
 }
 
 // ---------------- General Store ----------------
-export function openGeneralStore() {
+const STORE_TABS = ['fences', 'upgrades', 'advertising', 'food', 'prizes'];
+export function openGeneralStore({ tab = 'fences' } = {}) {
   const m = openModal({ title: 'General Store', className: 'wide' });
   m.setBody(tabs([
     { label: 'Fences', render: fencesTab },
     { label: 'Upgrades', render: () => liveTab(upgradesTab) },
     { label: term('advertising', 'Advertising'), render: () => liveTab(adsTab) },
-    { label: 'Food', render: foodTab }
-  ]));
+    { label: 'Food', render: () => liveTab(foodTab) },
+    { label: 'Park Prizes', render: prizesBody }
+  ], Math.max(0, STORE_TABS.indexOf(tab))));
+  return m;
+}
+// One-line prize progress shown at the top of every store tab.
+function prizeLine() {
+  const n = nextPrize();
+  return h('p', { class: 'muted small prize-line' }, '🏆 ', term('prize', 'Park Prizes'), `: ${fmt$(state.store_spend || 0)} spent here so far`, n ? ` · next prize (${n.prize.name}) at ${fmt$(n.threshold)}` : ' · every spend prize earned', '.');
 }
 
 function fencesTab() {
   return h('div', {},
+    prizeLine(),
     h('p', { class: 'muted' }, 'Fences are built from the Park view: click an owned empty parcel. Cost is per segment times the parcel outline — the tile edges that face out, since two tiles of the same parcel never need a fence between them: a 1×1 needs 4 segments, a 2×2 needs 8, an L of 4 tiles needs 10.'),
     h('table', { class: 'table' },
       h('tr', {}, h('th', {}, term('fence_tier', 'Tier')), h('th', {}, 'Per segment'), h('th', {}, '1×1 (4 seg)'), h('th', {}, '2×2 (8 seg)'), h('th', {}, term('upkeep', 'Upkeep'), ' per 4 seg'), h('th', {}, 'Strength')),
@@ -235,54 +275,55 @@ function liveTab(renderTab) {
 function upgradesTab() {
   const wrap = h('div', {});
   const render = () => append(clear(wrap), [
-    h('p', { class: 'muted' }, 'Parking, restrooms, the food stand, gift shop and office are fixed buildings at set spots in the park. Buy the next tier to make each one bigger and better. Parking raises the daily visitor ', term('capacity', 'cap'), '; the food stand and gift shop raise ', term('concessions', 'concession'), ' spend (they need concessions staff, one per store); restrooms raise satisfaction.'),
-    h('div', { class: 'cards grid-3' }, facilityDefs().map(f => facilityCard(f.id, render)))]);
+    h('p', { class: 'muted' }, 'Eight fixed facilities at set spots in the park, each with a ladder of tiers bought in order. Every tier changes the building on the park view. Parking and the tram raise the daily visitor ', term('capacity', 'cap'), '; the food stand and gift shop raise ', term('concessions', 'concession'), ' spend (they need concessions staff, one per store); restrooms and the tram raise satisfaction; the visitor center raises ', term('appeal', 'appeal'), '; the vet clinic fights illness; the office sets your ', term('management_capacity', 'staff capacity'), '.'),
+    prizeLine(),
+    h('div', { class: 'cards grid-3 facility-cards' }, facilityDefs().map(f => facilityCard(f.id, render)))]);
   render();
   return wrap;
 }
 
+// The same ladder as the Marketing view (ui/marketing.js), so the store and the view can never disagree.
 function adsTab() {
-  const active = state.ad && state.ad.days_left > 0 ? state.ad : null;
   return h('div', {},
-    h('p', { class: 'muted' }, 'Campaigns boost visitors for a while, then wear off. Only the strongest active campaign counts.'),
-    active ? h('p', {}, `Active: ${DATA.balance.advertising.campaigns.find(c => c.id === active.id)?.name} +${pct(active.boost)} for ${active.days_left} more days.`) : h('p', { class: 'muted' }, 'No active campaign.'),
-    h('div', { class: 'cards' }, DATA.balance.advertising.campaigns.map(c => h('div', { class: 'card' },
-      h('div', { class: 'card-title' }, c.name),
-      h('div', { class: 'big' }, fmt$(c.cost)),
-      h('div', { class: 'muted' }, `+${pct(c.boost)} visitors for ${c.days} days`),
-      campaignWhatIf(c),
-      button('Buy', () => { if (!fail(eco.buyCampaign(c.id))) refresh(); }, { class: 'btn primary', disabled: !eco.canAfford(c.cost) })))));
+    prizeLine(),
+    h('p', { class: 'muted' }, 'The marketing ladder: each rung unlocks as the park grows. Boosts wear off; the strongest non-stackable one counts, social pushes stack. The Marketing view has the same ladder plus the Members panel.'),
+    campaignLadder());
 }
 
-function campaignWhatIf(c) {
-  const before = projectDay(state.ticket_price);
-  const saved = state.ad;
-  state.ad = { id: c.id, boost: Math.max(c.boost, saved && saved.days_left > 0 ? saved.boost : 0), days_left: c.days };
-  const after = projectDay(state.ticket_price);
-  state.ad = saved;
-  const gain = (after.total - before.total) * c.days;
-  return h('div', { class: 'muted small' }, term('what_if', 'What-if'), `: about ${fmt$(gain)} extra over ${c.days} days vs ${fmt$(c.cost)} cost.`);
-}
-
+// Food tab: stock, need and days left per food, a quantity box pre-filled with balance.food.restock_fill_days of need,
+// quick bundles, then the auto-restock rules. Seeds are planted from a pen, not stocked.
 function foodTab() {
   const bundle = DATA.food.purchase_bundle_units;
-  const wrap = h('div', {});
-  const render = () => clear(wrap).append(
-    h('p', { class: 'muted' }, 'Bulk food goes into park stock and is moved into enclosures automatically every day. You can also feed a single enclosure from the Park view.'),
-    h('table', { class: 'table' },
-      h('tr', {}, h('th', {}, 'Food'), h('th', {}, 'Unit cost'), h('th', {}, 'Park stock'), h('th', {}, 'Daily need'), h('th', {}, '')),
+  const rows = eco.foodDays();
+  const warn = DATA.balance.food?.warn_days ?? 5;
+  return h('div', {},
+    prizeLine(),
+    h('p', { class: 'muted' }, 'Bulk food goes into park stock and is moved into enclosures automatically every day. The quantity box is pre-filled with about ', `${DATA.balance.food?.restock_fill_days ?? 30}`, ' days of today\'s need; edit it or use a bundle. You can also feed a single enclosure from the Park view.'),
+    h('table', { class: 'table food-table' },
+      h('tr', {}, h('th', {}, 'Food'), h('th', {}, 'Unit cost'), h('th', {}, 'Park stock'), h('th', {}, 'In pens'), h('th', {}, 'Daily need'), h('th', {}, term('days_of_food', 'Days left')), h('th', {}, 'Buy')),
       DATA.food.items.map(f => {
-        const need = enclosures().reduce((s, p) => s + (eco.dailyNeed(p.enclosure)[f.id] || 0), 0);
-        const buy = n => () => { if (!fail(eco.buyParkFood(f.id, n))) { refresh(); render(); } };
+        if (f.grows) return h('tr', {},
+          h('td', {}, h('span', { class: 'swatch', style: `background:${f.color}` }), f.name),
+          h('td', {}, fmt$(f.unit_cost)),
+          h('td', { class: 'muted', colSpan: 5 }, term('vegetation', 'Grows in a pen'), `: ${f.blurb || 'Plant seeds from an enclosure in the Park view.'}`));
+        const r = rows.find(x => x.food.id === f.id);
+        const inPens = r.stock - (state.park_food[f.id] || 0);
+        const qty = h('input', { type: 'number', min: 1, max: 5000, step: 1, value: suggestedUnits(f.id), class: 'qty wide' });
+        const cost = h('span', { class: 'muted small' }, fmt$(suggestedUnits(f.id) * f.unit_cost));
+        qty.addEventListener('input', () => { cost.textContent = fmt$((Number(qty.value) || 0) * f.unit_cost); });
+        const buy = n => () => { if (!fail(eco.buyParkFood(f.id, n))) refresh(); };
+        const days = r.need > 0 ? `${Math.floor(r.days)}` : '—';
         return h('tr', {},
           h('td', {}, h('span', { class: 'swatch', style: `background:${f.color}` }), f.name),
           h('td', {}, fmt$(f.unit_cost)),
           h('td', {}, `${state.park_food[f.id]}`),
-          h('td', {}, `${need}/day`),
-          h('td', {}, button(`${bundle} for ${fmt$(bundle * f.unit_cost)}`, buy(bundle)), ' ', button(`${bundle * 5} for ${fmt$(bundle * 5 * f.unit_cost)}`, buy(bundle * 5))));
-      })));
-  render();
-  return wrap;
+          h('td', {}, `${inPens}`),
+          h('td', {}, `${r.need}/day`),
+          h('td', { class: r.need > 0 && r.days < warn ? 'bad' : '' }, days),
+          h('td', {}, h('div', { class: 'row wrap buy-row' }, qty, button('Buy', () => buy(Number(qty.value))(), { class: 'btn primary' }), cost, button(`${bundle}`, buy(bundle), { title: `${bundle} units for ${fmt$(bundle * f.unit_cost)}` }), button(`${bundle * 5}`, buy(bundle * 5), { title: `${bundle * 5} units for ${fmt$(bundle * 5 * f.unit_cost)}` }))));
+      })),
+    h('h3', {}, term('auto_restock', 'Auto-restock')),
+    autoRestockPanel());
 }
 
 // ---------------- Employment Office ----------------

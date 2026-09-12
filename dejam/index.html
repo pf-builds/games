@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>DeJam — slide the traffic, free the taxi</title>
-<meta name="description" content="A free sliding-block traffic puzzle. 30 levels plus endless mode. Slide the cars, clear a path, drive the taxi out.">
+<meta name="description" content="A free sliding-block traffic puzzle. 60 levels across four lot sizes, side-street exits that clear cars for good, a moves budget, and an endless streak. Slide the cars, free the taxi.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@600;700;800&display=swap">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=5">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%23F6C93F'/><rect x='18' y='38' width='64' height='24' rx='8' fill='%232A2E35'/></svg>">
 </head>
 <body>
@@ -28,8 +28,9 @@
     <button class="primary" id="btn-play">Play</button>
     <button id="btn-levels">Levels</button>
     <button id="btn-endless">Endless</button>
+    <p id="title-meta"></p>
   </div>
-  <p class="howto">Drag cars out of the way — get the yellow taxi to the glowing exit.</p>
+  <p class="howto">Drag cars out of the way — get the yellow taxi to the glowing exit.<br>Push a car out through a grey side street and it's gone for good. Watch your moves.</p>
 </div>
 
 <div class="screen" id="screen-levels">
@@ -47,7 +48,7 @@
     <button id="btn-back-game" aria-label="Back">←</button>
     <div class="mid">
       <div id="hud-level">Level</div>
-      <div id="hud-moves">Moves 0 · Par 0</div>
+      <div id="hud-moves">Moves left 0 · par 0</div>
     </div>
     <button class="btn-sound" aria-label="Toggle sound">🔊</button>
   </div>
@@ -55,7 +56,6 @@
   <div class="toolbar">
     <button id="btn-undo">Undo</button>
     <button id="btn-reset">Reset</button>
-    <button id="btn-new-endless" style="display:none">New puzzle</button>
   </div>
 </div>
 
@@ -77,9 +77,18 @@
   </div>
 </div>
 
-<script src="src/rng.js"></script>
-<script src="src/audio.js"></script>
-<script src="src/generator.js"></script>
-<script src="src/game.js"></script>
+<div id="lose-overlay">
+  <div class="win-card lose-card">
+    <div id="lose-title">Out of moves!</div>
+    <div id="lose-sub"></div>
+    <button class="primary" id="btn-retry">Try again</button>
+    <button id="btn-lose-menu">Level select</button>
+  </div>
+</div>
+
+<script src="src/rng.js?v=3"></script>
+<script src="src/audio.js?v=3"></script>
+<script src="src/generator.js?v=9"></script>
+<script src="src/game.js?v=10"></script>
 </body>
 </html>

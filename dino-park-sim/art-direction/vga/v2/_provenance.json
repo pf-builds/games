@@ -1,0 +1,152 @@
+{
+  "model": "stabilityai/stable-diffusion-xl-base-1.0 (OpenRAIL-M)",
+  "lora": "nerijs/pixel-art-xl",
+  "post": "saturation 1.35 -> LANCZOS downscale -> ADAPTIVE 32-colour Floyd-Steinberg -> NEAREST x5",
+  "no_reference_images": true,
+  "items": [
+    {
+      "id": "lesothosaurus",
+      "colour": "pale mint green",
+      "seed": 100,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon pale mint green lesothosaurus dinosaur, small slender two-legged dinosaur with a long tail, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "psittacosaurus",
+      "colour": "bright yellow",
+      "seed": 101,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon bright yellow psittacosaurus dinosaur, small parrot-beaked dinosaur with tail bristles, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "hypsilophodon",
+      "colour": "sky blue",
+      "seed": 102,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon sky blue hypsilophodon dinosaur, small nimble two-legged dinosaur, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "dryosaurus",
+      "colour": "light orange",
+      "seed": 103,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon light orange dryosaurus dinosaur, small long-legged two-legged dinosaur, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "coelophysis",
+      "colour": "turquoise",
+      "seed": 104,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon turquoise coelophysis dinosaur, slender long-necked small predator with a narrow snout, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "protoceratops",
+      "colour": "light tan",
+      "seed": 105,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon light tan protoceratops dinosaur, small frilled beaked four-legged dinosaur, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "velociraptor",
+      "colour": "crimson red",
+      "seed": 106,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon crimson red velociraptor dinosaur, small feathered sickle-clawed predator, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "deinonychus",
+      "colour": "dark teal",
+      "seed": 107,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon dark teal deinonychus dinosaur, feathered sickle-clawed medium predator, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "camptosaurus",
+      "colour": "olive green",
+      "seed": 108,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon olive green camptosaurus dinosaur, medium beaked dinosaur standing on two legs, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "dilophosaurus",
+      "colour": "royal purple",
+      "seed": 109,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon royal purple dilophosaurus dinosaur, medium predator with twin head crests, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "hadrosaurus",
+      "colour": "burnt orange",
+      "seed": 110,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon burnt orange hadrosaurus dinosaur, duck-billed medium dinosaur, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "pachycephalosaurus",
+      "colour": "lavender violet",
+      "seed": 111,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon lavender violet pachycephalosaurus dinosaur, thick dome-headed two-legged dinosaur, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "allosaurus",
+      "colour": "burgundy red",
+      "seed": 112,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon burgundy red allosaurus dinosaur, large two-legged predator with small brow horns, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "iguanodon",
+      "colour": "chestnut brown",
+      "seed": 113,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon chestnut brown iguanodon dinosaur, large thumb-spiked dinosaur, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "styracosaurus",
+      "colour": "coral pink",
+      "seed": 114,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon coral pink styracosaurus dinosaur, spiked-frill single-horned four-legged dinosaur, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "baryonyx",
+      "colour": "slate blue-grey",
+      "seed": 115,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon slate blue-grey baryonyx dinosaur, crocodile-snouted fish-eating predator with a big thumb claw, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "ankylosaurus",
+      "colour": "rust orange-brown",
+      "seed": 116,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon rust orange-brown ankylosaurus dinosaur, low armored club-tailed four-legged dinosaur, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "parasaurolophus",
+      "colour": "bright magenta",
+      "seed": 117,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon bright magenta parasaurolophus dinosaur, duck-billed dinosaur with a long tube crest, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "stegosaurus",
+      "colour": "lime green",
+      "seed": 118,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon lime green stegosaurus dinosaur, back-plated spike-tailed four-legged dinosaur, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "triceratops",
+      "colour": "steel grey with a cream frill",
+      "seed": 119,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon steel grey with a cream frill triceratops dinosaur, three-horned frilled four-legged dinosaur, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "apatosaurus",
+      "colour": "navy blue",
+      "seed": 120,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon navy blue apatosaurus dinosaur, long-necked long-tailed four-legged sauropod, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "spinosaurus",
+      "colour": "golden yellow",
+      "seed": 121,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon golden yellow spinosaurus dinosaur, sail-backed crocodile-snouted large predator, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "brachiosaurus",
+      "colour": "pale cream white",
+      "seed": 122,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon pale cream white brachiosaurus dinosaur, very tall long-necked sauropod with front legs longer than back, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "tyrannosaurus",
+      "colour": "emerald green",
+      "seed": 123,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon emerald green tyrannosaurus dinosaur, massive big-jawed tiny-armed predator, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    }
+  ]
+}

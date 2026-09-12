@@ -28,6 +28,50 @@
     "quarter": "Three months, or 90 days. Interest, taxes, and your report all come due at the end of each one.",
     "foreclosure": "When you owe too much for too long, the bank takes the park and the game ends.",
     "fence_tier": "How strong a fence is. Big or aggressive dinosaurs need stronger fences or they break out; small herbivores stay put behind any fence that meets their minimum.",
-    "what_if": "A preview of what would probably happen if you made this choice. It is an estimate, not a promise."
-  }
+    "what_if": "A preview of what would probably happen if you made this choice. It is an estimate, not a promise.",
+    "prize": "A reward for investing in the park. Spend at the General Store, or hit a milestone, and the park earns a decoration that visitors like.",
+    "management_capacity": "How many staff the Park Office can run smoothly. Go over it and morale slips a little each month until you upgrade the office.",
+    "appeal": "How attractive the park is to visitors: dinosaur popularity, variety, cleanliness, plus the Visitor Center and prizes.",
+    "biome": "The kind of land in a pen: desert, plains or marsh. Every species has a home biome it prefers. In the wrong one it is unhappy: fewer visitors care about it and its health slips.",
+    "vegetation": "Plants growing inside a pen. Seeds are an investment: pay once, and the pen grows free food every day after. Buying plants is a recurring cost that never stops. Marsh grows fastest, desert slowest.",
+    "auto_restock": "A standing order with the General Store: when a food runs low it is bought and charged for you, so nobody starves while you are busy elsewhere.",
+    "days_of_food": "How many days the park can feed its animals from what is in stock, at today's appetite. Below five days is a warning; at zero they start to starve.",
+    "membership": "A season pass. Members pay once a quarter instead of per visit, keep coming even in slow seasons, and leave if the park gets worse. Steady money, but only while the park stays good.",
+    "churn": "The share of members who do not renew at the end of a quarter. A low park rating makes more of them leave.",
+    "campaign": "A marketing push: it costs money up front and brings extra visitors for a while. Bigger ones need something worth advertising first.",
+    "relandscape": "Change the land type of a pen. It costs a share of the land price and clears any vegetation, so choose the biome carefully when you buy.",
+    "goal": "A long-term target for the park. The Goals panel shows every rung of the ladder with how close you are, and each one fires once when you reach it.",
+    "grand_park": "The top of the ladder: every facility at its best tier, every spend prize earned, and five stars held for four quarters in a row. Earn it and a plaque goes up at the gate.",
+    "report_card": "At the end of year five the park is graded A to F on profit, attendance, dinosaur welfare, education and guest satisfaction. The game keeps going afterwards; the card stays in Reports.",
+    "welfare": "How well the animals are looked after: average health, and a penalty for every death and every escape.",
+    "education": "How much visitors learn: the Visitor Center tier, how often the Fact Book is opened, and whether the school program has run.",
+    "reduce_motion": "Turns off shakes, floating numbers, slides and the delivery truck. Everything still happens, it just appears in place."
+  },
+  "first_quarter_tips": [
+    {
+      "day": 4,
+      "title": "Land comes in three types",
+      "text": "When you buy a parcel you choose Desert, Plains or Marsh. The biome sets the price and which species feel at home (the Fact Book lists each one)."
+    },
+    {
+      "day": 12,
+      "title": "Seeds save money",
+      "text": "Open a pen and plant seeds: the greenery grows every day and herbivores graze it before touching bought plants. Marsh grows fastest."
+    },
+    {
+      "day": 22,
+      "title": "Never run out of food",
+      "text": "General Store -> Food (or Settings): turn on auto-restock and the store buys more when stock runs low. The Park bar shows days of food left."
+    },
+    {
+      "day": 38,
+      "title": "Climb the marketing ladder",
+      "text": "Marketing shows every campaign in order. Cheap flyers first; bigger pushes unlock as the park grows. Memberships turn visitors into steady quarterly income."
+    },
+    {
+      "day": 55,
+      "title": "Check your goals",
+      "text": "Park bar -> Goals: repay the loan, reach a net worth target, ten species, a five-star quarter, then the Grand Park. Year five brings a report card."
+    }
+  ]
 }

@@ -1,17 +1,17 @@
 // Town Street: five clickable storefronts that open store modals, under a sky with a park notice board.
 import { DATA, state, T, fmt$, allDinos, dayOfQuarter, season, year, enclosures, parcelList, facilityDefs, facilityTier, facilityNextTier } from '../state.js';
-import { monthlyPayroll, debtCap, validEnclosuresFor, parcelPrice } from '../economy.js';
+import { monthlyPayroll, debtCap, validEnclosuresFor, parcelPriceFrom, activeCampaigns } from '../economy.js';
 import { h, clear, append } from './dom.js';
 import { openRealEstate, openDinoMarket, openGeneralStore, openEmployment, openBank } from './stores.js';
 
 // info: a live one-line "window display" so the lower half of each storefront says something useful.
 const STORES = [
-  { id: 'realestate', name: 'Real Estate', icon: '🏡', blurb: 'Biome prices and the parcel map.', open: openRealEstate, color: '#8fbf5a',
-    info: () => { const all = parcelList(); const sale = all.filter(p => !p.owned); return [`${all.filter(p => p.owned).length}/${all.length} parcels owned`, sale.length ? `Cheapest for sale ${fmt$(Math.min(...sale.map(p => parcelPrice(p.id))))}` : 'All land sold', 'Buy on the park map']; } },
+  { id: 'realestate', name: 'Real Estate', icon: '🏡', blurb: 'Biome guide and the parcel map.', open: openRealEstate, color: '#8fbf5a',
+    info: () => { const all = parcelList(); const sale = all.filter(p => !p.owned); return [`${all.filter(p => p.owned).length}/${all.length} parcels owned`, sale.length ? `Cheapest for sale from ${fmt$(Math.min(...sale.map(p => parcelPriceFrom(p.id))))}` : 'All land sold', 'Pick the land type when you buy']; } },
   { id: 'dino', name: 'Dino Market', icon: '🦖', blurb: 'Buy dinosaurs, or bid at auction.', open: openDinoMarket, color: '#b5462e',
     info: () => { const sp = DATA.dinosaurs.species; const fit = sp.filter(s => validEnclosuresFor(s).length).length; return [`${sp.length} species on sale`, `from ${fmt$(Math.min(...sp.map(s => s.shop_price)))}`, fit ? `${fit} fit your enclosures` : enclosures().length ? 'No enclosure fits yet' : 'Build an enclosure first']; } },
   { id: 'general', name: 'General Store', icon: '🏪', blurb: 'Fences, upgrades, ads, food.', open: openGeneralStore, color: '#5aa0b5',
-    info: () => { const up = facilityDefs().filter(f => facilityNextTier(f.id)); return [`Park stock: ${Object.values(state.park_food).reduce((a, b) => a + b, 0)} food units`, up.length ? `${up.length} facility upgrade${up.length > 1 ? 's' : ''} available` : 'All facilities at top tier', state.ad && state.ad.days_left > 0 ? `Ad campaign: ${state.ad.days_left} days left` : 'No ad campaign running']; } },
+    info: () => { const up = facilityDefs().filter(f => facilityNextTier(f.id)); const ac = activeCampaigns(); return [`Park stock: ${Object.values(state.park_food).reduce((a, b) => a + b, 0)} food units`, up.length ? `${up.length} facility upgrade${up.length > 1 ? 's' : ''} available` : 'All facilities at top tier', ac.length ? `${ac.length} campaign${ac.length > 1 ? 's' : ''} running` : 'No campaign running']; } },
   { id: 'jobs', name: 'Employment Office', icon: '👷', blurb: 'Hire and manage staff.', open: openEmployment, color: '#f2c94c',
     info: () => [`${state.staff.length} on staff`, `${fmt$(monthlyPayroll())}/month payroll`, `${DATA.staff.roles.length} roles hiring`] },
   { id: 'bank', name: 'Bank', icon: '🏦', blurb: 'Loans, payments, and your balance.', open: openBank, color: '#c9c4b8',

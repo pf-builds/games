@@ -65,9 +65,17 @@ button:disabled { color: #A79F8E; background: #EFEAE0; border-color: #E0DACB; cu
 #screen-game { justify-content: center; gap: .7rem; padding: .6rem; }
 .hud { width: min(94vw, 34rem); display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
 .hud .mid { text-align: center; flex: 1; min-width: 0; }
-#hud-level { font-family: "Baloo 2", "Nunito", sans-serif; font-weight: 800; font-size: 1.25rem; }
-#hud-moves { color: #5C5648; font-size: 1rem; font-variant-numeric: tabular-nums; }
-#hud-moves b.gold { color: #C9861B; }
+#hud-level { font-weight: 800; font-size: .95rem; color: #5C5648; letter-spacing: .02em; }
+#hud-moves { display: flex; align-items: baseline; justify-content: center; gap: .45rem; font-variant-numeric: tabular-nums; line-height: 1; }
+#hud-moves .lbl { font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: #5C5648; }
+#hud-moves b { font-family: "Baloo 2", "Nunito", sans-serif; font-size: 2rem; font-weight: 800; color: #2A2E35; }
+#hud-moves .par { font-size: .8rem; font-weight: 700; color: #8A8172; }
+#hud-moves b.warn { color: #E0662A; }
+#hud-moves b.low { color: #D9482B; animation: lowPulse .8s ease-in-out infinite alternate; }
+body.over .toolbar { visibility: hidden; }
+@keyframes lowPulse { from { opacity: 1; } to { opacity: .55; } }
+#title-meta { color: #5C5648; font-size: .85rem; font-weight: 700; text-align: center; margin-top: -.25rem; }
+#title-meta:empty { display: none; }
 #board-wrap {
   width: min(94vw, 78dvh, 34rem);
   height: min(94vw, 78dvh, 34rem);
@@ -82,6 +90,13 @@ button:disabled { color: #A79F8E; background: #EFEAE0; border-color: #E0DACB; cu
   background: rgba(40, 32, 14, .5);
 }
 #win-overlay.active { display: flex; }
+#lose-overlay {
+  position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+  background: rgba(40, 32, 14, .5);
+}
+#lose-overlay.active { display: flex; }
+#lose-title { font-family: "Baloo 2", "Nunito", sans-serif; font-size: 2rem; font-weight: 800; color: #D9482B; }
+#lose-sub { color: #5C5648; text-align: center; font-variant-numeric: tabular-nums; line-height: 1.4; }
 .win-card {
   background: #FDFBF4; border: 2px solid #D8CFBB; border-radius: 20px;
   padding: 1.6rem 1.8rem 1.4rem; display: flex; flex-direction: column; gap: .8rem; align-items: center;
@@ -115,6 +130,6 @@ button:disabled { color: #A79F8E; background: #EFEAE0; border-color: #E0DACB; cu
 #record-list li .rn { text-transform: uppercase; letter-spacing: .06em; }
 .win-card button { width: 100%; }
 @media (prefers-reduced-motion: reduce) {
-  .win-card, #win-stars .star.lit { animation: none; }
+  .win-card, #win-stars .star.lit, #hud-moves b.low { animation: none; }
   #win-stars .star.lit { transform: scale(1); }
 }

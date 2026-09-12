@@ -1,12 +1,68 @@
 {
   "board": 6,
   "tiers": {
-    "easy":   { "label": "Easy",   "count": 20, "parMin": 4,  "parMax": 8,  "vehiclesMin": 6,  "vehiclesMax": 9,  "accent": "#5CB85C" },
-    "medium": { "label": "Medium", "count": 20, "parMin": 9,  "parMax": 13, "vehiclesMin": 8,  "vehiclesMax": 12, "accent": "#4C86E8" },
-    "hard":   { "label": "Hard",   "count": 20, "parMin": 14, "parMax": 99, "vehiclesMin": 10, "vehiclesMax": 13, "accent": "#E4573D" }
+    "easy": {
+      "label": "Easy",
+      "board": 6,
+      "count": 15,
+      "parMin": 4,
+      "parMax": 8,
+      "vehiclesMin": 6,
+      "vehiclesMax": 9,
+      "exitsMin": 1,
+      "exitsMax": 2,
+      "slack": 8,
+      "accent": "#5CB85C"
+    },
+    "medium": {
+      "label": "Medium",
+      "board": 7,
+      "count": 15,
+      "parMin": 8,
+      "parMax": 10,
+      "vehiclesMin": 9,
+      "vehiclesMax": 13,
+      "exitsMin": 1,
+      "exitsMax": 2,
+      "slack": 6,
+      "accent": "#4C86E8"
+    },
+    "hard": {
+      "label": "Hard",
+      "board": 8,
+      "count": 15,
+      "parMin": 7,
+      "parMax": 13,
+      "vehiclesMin": 14,
+      "vehiclesMax": 19,
+      "exitsMin": 1,
+      "exitsMax": 2,
+      "slack": 4,
+      "accent": "#E4573D"
+    },
+    "expert": {
+      "label": "Expert",
+      "board": 9,
+      "count": 15,
+      "parMin": 6,
+      "parMax": 99,
+      "vehiclesMin": 18,
+      "vehiclesMax": 24,
+      "exitsMin": 1,
+      "exitsMax": 2,
+      "slack": 3,
+      "accent": "#9B59D0"
+    }
   },
-  "endlessTier": "medium",
-  "generator": { "attemptsPerLevel": 200, "bfsStateCap": 50000, "seed": 20260831, "fallbackParSlack": 2, "hardenIters": 80 },
+  "generator": {
+    "attemptsPerLevel": 200,
+    "bfsStateCap": 200000,
+    "seed": 20260911,
+    "fallbackParSlack": 2,
+    "hardenIters": 80,
+    "endlessTimeBudgetMs": 2500,
+    "endlessStateCap": 60000
+  },
   "palette": {
     "page": "#EFE6D2",
     "grass": "#8CC063",
@@ -16,6 +72,37 @@
     "lane": "#F5F2E8",
     "accent": "#F6A93F",
     "ink": "#2A2E35",
-    "vehicles": ["#F6C93F", "#4C86E8", "#E4573D", "#5CB85C", "#9B59D0", "#F08A3C", "#3EC1C9"]
+    "vehicles": [
+      "#F6C93F",
+      "#4C86E8",
+      "#E4573D",
+      "#5CB85C",
+      "#9B59D0",
+      "#F08A3C",
+      "#3EC1C9"
+    ]
+  },
+  "endless": {
+    "ramp": [
+      {
+        "upTo": 3,
+        "tier": "easy"
+      },
+      {
+        "upTo": 7,
+        "tier": "medium"
+      },
+      {
+        "upTo": 12,
+        "tier": "hard"
+      },
+      {
+        "upTo": 9999,
+        "tier": "expert"
+      }
+    ]
+  },
+  "stars": {
+    "twoWithin": 2
   }
 }

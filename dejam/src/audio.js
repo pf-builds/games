@@ -34,6 +34,8 @@
     slide() { blip(520, 300, 0.07, "square", 0.08); },
     thunk() { blip(140, 90, 0.09, "triangle", 0.18); },
     tap() { blip(700, 640, 0.04, "square", 0.05); },
+    leave() { blip(420, 110, 0.2, "sawtooth", 0.1); blip(900, 1400, 0.08, "square", 0.05, 0.05); },
+    lose() { [330, 262, 196].forEach((f, i) => blip(f, f * 0.94, 0.22, "square", 0.12, i * 0.16)); },
     win() {
       [523, 659, 784, 1047].forEach((f, i) => blip(f, f, 0.16, "square", 0.12, i * 0.09));
       blip(1568, 1568, 0.25, "triangle", 0.08, 0.38);

@@ -1,11 +1,14 @@
 // Day tick, auto-advance loop, and win/lose checks. UI listens on the bus.
-import { DATA, state, mode, bus, emitChange, emptyLedger, quarterIndex, speciesOwned, log, digestAdd, AWord, T } from './state.js';
+import { DATA, state, mode, bus, emitChange, emptyLedger, quarterIndex, log, digestAdd, AWord, T, daySeconds, autosaveDays } from './state.js';
 import {
-  dailyRevenue, distributeFood, feedAndAge, dailyCleanliness, tickAd, payday, closeQuarter, quarterlyDecay, netWorth, debtCap, sum
+  dailyRevenue, distributeFood, feedAndAge, dailyCleanliness, tickAd, payday, closeQuarter, quarterlyDecay, netWorth, debtCap, sum,
+  autoRestock, foodWarnings, dailyMembers
 } from './economy.js';
 import { rollDailyEvent, checkBreakouts } from './events.js';
 import { parkRating } from './attendance.js';
 import { autosave } from './save.js';
+import { checkPrizes } from './prizes.js';
+import { checkGoals, reportCardDue, issueReportCard } from './goals.js';
 
 let timer = null;
 let lastTick = 0;
@@ -14,8 +17,9 @@ let blocked = () => false;
 export function setBlockedCheck(fn) { blocked = fn; }
 export function emit(name, detail) { bus.dispatchEvent(new CustomEvent(name, { detail })); }
 
-// Real milliseconds per game day at 1x. balance.living.day_seconds is the single clock number (M2.6: 6 s).
-export const dayMs = () => (DATA.balance.living.day_seconds || 1) * 1000;
+// Real milliseconds per game day at 1x: the player's Settings value (state.settings.day_seconds), else
+// balance.living.day_seconds. Read every loop tick, so a change in Settings applies live.
+export const dayMs = () => daySeconds() * 1000;
 
 export function setSpeed(speed) {
   if (!T().speeds.includes(speed)) return;
@@ -42,10 +46,13 @@ function loop() {
 export function advanceDay() {
   if (state.game_over) return;
   const day = state.day;
+  autoRestock();       // standing orders land before the day's top-up, so a rule set yesterday feeds today
   dailyRevenue();
   distributeFood();
   const starving = feedAndAge();
   dailyCleanliness();
+  dailyMembers();      // today's paying visitors may buy a season pass
+  foodWarnings();      // low-food nudge (balance.food.warn_days) before anything starves
   const incident = checkBreakouts() || rollDailyEvent() || starvingWarning(starving);
   tickAd();
   if (day % T().days_per_month === 0) payday();
@@ -55,10 +62,17 @@ export function advanceDay() {
   if (incident) routeIncident(incident);
   checkMilestones();
   if (report) {
+    // "First five-star quarter" prize and the five-star-quarter goal are judged on the closed quarter's rating.
+    const rating = report.rating_end ?? parkRating();
+    checkPrizes({ quarterClosed: true, rating });
+    checkGoals({ quarterClosed: true, rating });
     emit('quarter', report);
+    // M5: the close of the last quarter of year 5 (day 1800) issues the Year-5 Report Card (opens after the report).
+    if (reportCardDue(day)) issueReportCard();
     checkForeclosure();
-    if (!state.game_over) autosave(); // never snapshot a foreclosed park
   }
+  // Autosave every N days (Settings; default one quarter). Never snapshot a foreclosed park.
+  if (!state.game_over && day % autosaveDays() === 0) autosave();
   emitChange();
 }
 
@@ -128,23 +142,13 @@ function foreclosureCause() {
     for (const [k, v] of Object.entries(q.capital)) totals[k] = (totals[k] || 0) + v;
   }
   const [worstKey, worstAmt] = Object.entries(totals).sort((a, b) => b[1] - a[1])[0] || ['expenses', 0];
-  const names = { salaries: 'Payroll', food: 'Food', upkeep: 'Upkeep', interest: 'Interest', loan_payment: 'Loan payments', tax: 'Taxes', land: 'Land purchases', fences: 'Fence building', dinosaurs: 'Dinosaur purchases', facilities: 'Facility upgrades', advertising: 'Advertising', repairs: 'Repairs', debt_repaid: 'Early loan repayment' };
+  const names = { salaries: 'Payroll', food: 'Food', upkeep: 'Upkeep', interest: 'Interest', loan_payment: 'Loan payments', tax: 'Taxes', land: 'Land purchases', fences: 'Fence building', dinosaurs: 'Dinosaur purchases', facilities: 'Facility upgrades', advertising: 'Marketing', repairs: 'Repairs', debt_repaid: 'Early loan repayment' };
   return { category: names[worstKey] || worstKey, amount: worstAmt, revenue, quarters: recent.length };
 }
 
-// Also called right after an early repayment so the win fires at the Bank, not on the next day tick.
+// Win milestones are the M5 goals ladder (src/goals.js, balance.goals). Also called right after an early repayment
+// so the "loan repaid" goal fires at the Bank, not on the next day tick.
 export function checkMilestones() {
-  const W = DATA.balance.win;
-  const M = state.milestones;
-  const checks = [
-    ['loan_repaid', () => state.debt <= 0, 'Loan Repaid!', 'You paid the bank back every dollar. The park is yours, free and clear. Keep building.'],
-    ['net_worth', () => netWorth() >= W.net_worth_target, 'Net Worth Milestone!', `Your park is now worth over $${W.net_worth_target.toLocaleString('en-US')} after debt.`],
-    ['species', () => speciesOwned().size >= W.species_target, 'Species Collector!', `${W.species_target} different species live in your park.`],
-    ['rating', () => parkRating() >= W.rating_target, 'Five-Star Park!', 'Visitors rate your park the best around.']
-  ];
-  for (const [key, cond, title, text] of checks) {
-    if (M[key] || !cond()) continue;
-    M[key] = true;
-    emit('win', { key, title, text });
-  }
+  checkGoals();
+  checkPrizes(); // species-count prize
 }

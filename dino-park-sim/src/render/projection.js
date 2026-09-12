@@ -41,10 +41,15 @@ export function initProjection() {
   const gw = D.walkways.find(w => Math.abs(w.to[1] - D.gate.out_y) < 1e-6 && Math.abs(w.to[0] - D.gate.x) < 1e-6);
   L.GATE_IN = gw ? { x: gw.from[0], y: gw.from[1] } : { x: D.gate.x, y: L.PARK_H - 0.25 };
   L.ROAD_Y = L.WORLD_H - D.road_y_from_bottom;
-  L.LOT = { x0: D.facilities.parking_lot.x0, y0: D.facilities.parking_lot.y0, pitchY: D.lot.slot_pitch_y, minPitchX: D.lot.slot_min_pitch_x };
+  L.LOT = { x0: D.facilities.parking_lot.x0, y0: D.facilities.parking_lot.y0, pitchY: D.lot.slot_pitch_y, minPitchX: D.lot.slot_min_pitch_x, blockGap: D.lot.block_gap ?? 0.3 };
   const o = D.facilities.office;
-  L.OFFICE = { x0: o.x0, y0: o.y0, x1: o.x1, y1: o.y1, h: facilityTierDef('office', 0).render_size.z };
+  L.OFFICE = { x0: o.x0, y0: o.y0, x1: o.x1, y1: o.y1, h: facilityTierDef('office', 0).render.z };
   L.OFFICE_DOOR = { x: o.door_x, y: o.y1 + 0.18 };
+  // Park Tram track along the forecourt (visual only): a lane the tram shuttles on between track_x0 and track_x1.
+  const tr = D.facilities.park_tram || {};
+  // The stop shelter stands at the data's stop_x (M5: offset from the Visitor Center footprint so a tall tier-3 hall
+  // never hides it); it falls back to the depot's centre when the data gives none.
+  L.TRAM = { y: tr.track_y ?? (L.PARK_H + 0.35), x0: tr.track_x0 ?? 0.8, x1: tr.track_x1 ?? L.PARK_W - 0.7, stop_x: tr.stop_x ?? (tr.x0 != null ? (tr.x0 + tr.x1) / 2 : L.GATE.x + 2) };
   L.walkways = D.walkways;
   // Facilities: buildings are authored as tile lists (M2.6); their max footprint is the tile bbox. The lot and office keep explicit rects.
   L.facilities = {};
@@ -85,18 +90,30 @@ export function depth(x, y) { return y + x * 0.0005; }
 export function parcelAtWorld(x, y) { return parcelAtTile(x, y); }
 
 // Footprint of a fixed facility at a tier: buildings scale inside their max footprint (anchored to the front/south edge
-// so the door stays on the walkway); the lot grows east from its corner, rows deep. Returns {x0,y0,x1,y1,z,roofs}.
+// so the door stays on the walkway); the lot grows east from its corner, rows deep. Returns {x0,y0,x1,y1,z,roofs,rows,
+// storeys,style,surface,blocks,lamps} (the tier's `render` block from facilities.json rides along for the renderer).
 export function facilityRect(id, tier, out) {
   const f = L.facilities[id];
-  const rs = facilityTierDef(id, tier).render_size;
+  const rs = facilityTierDef(id, tier).render || {};
+  out.render = rs;
   if (f.kind === 'lot') {
     out.x0 = f.x0; out.y0 = f.y0; out.x1 = f.x0 + rs.w; out.y1 = f.y0 + rs.rows * L.LOT.pitchY + 0.14; out.z = 0; out.roofs = 0; out.rows = rs.rows;
+    out.storeys = 0; out.style = rs.surface || 'dirt'; out.surface = rs.surface || 'dirt'; out.blocks = rs.blocks || 1; out.lamps = rs.lamps || 0;
     return out;
   }
   const mw = f.x1 - f.x0, mh = f.y1 - f.y0;
-  const w = mw * rs.w, h = mh * rs.h, cx = (f.x0 + f.x1) / 2;
-  out.x0 = cx - w / 2; out.x1 = cx + w / 2; out.y1 = f.y1; out.y0 = f.y1 - h; out.z = rs.z; out.roofs = rs.roofs || 1;
+  const w = mw * (rs.w ?? 1), h = mh * (rs.h ?? 1), cx = (f.x0 + f.x1) / 2;
+  out.x0 = cx - w / 2; out.x1 = cx + w / 2; out.y1 = f.y1; out.y0 = f.y1 - h; out.z = rs.z ?? 0.5; out.roofs = rs.roofs || 1; out.rows = 0;
+  out.storeys = rs.storeys ?? 1; out.style = rs.style || ''; out.surface = ''; out.blocks = 1; out.lamps = 0;
   return out;
+}
+// Stall blocks of the lot at a tier: one rect, or (overflow tier) a main block and a second block separated by a kerb
+// strip of L.LOT.blockGap. Shared by the slot layout (agents) and the ground renderer so cars park where stalls are drawn.
+export function lotBlocks(rect) {
+  if ((rect.blocks || 1) < 2) return [{ x0: rect.x0, y0: rect.y0, x1: rect.x1, y1: rect.y1, overflow: false }];
+  const gap = L.LOT.blockGap, w = rect.x1 - rect.x0 - gap;
+  const split = rect.x0 + w * 0.6;
+  return [{ x0: rect.x0, y0: rect.y0, x1: split, y1: rect.y1, overflow: false }, { x0: split + gap, y0: rect.y0, x1: rect.x1, y1: rect.y1, overflow: true }];
 }
 // Facility id whose max footprint contains a world point, or null (lot uses the current tier's rect).
 export function facilityAtWorld(x, y, tiers) {
@@ -107,4 +124,4 @@ export function facilityAtWorld(x, y, tiers) {
   }
   return null;
 }
-const tmpRect = { x0: 0, y0: 0, x1: 0, y1: 0, z: 0, roofs: 0, rows: 0 };
+const tmpRect = { x0: 0, y0: 0, x1: 0, y1: 0, z: 0, roofs: 0, rows: 0, render: null };

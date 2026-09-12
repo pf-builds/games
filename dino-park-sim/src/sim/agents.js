@@ -5,10 +5,12 @@
 // M2.5: routing runs on the walkway graph from data/parcels.json (sim/walkways.js); points of interest are
 // parcels with dinosaurs (viewing spot on the nearest walkway) and the fixed facilities; cars use the front lot,
 // whose slot count follows the parking tier.
-import { DATA, state, bus, onChange, enclosures, parcelDef, parcelGeometry, tileIndex, speciesById, roleById, facilityTier, facilityById, rnd, rndInt, clamp, pick } from '../state.js';
+import { DATA, state, bus, onChange, enclosures, parcelDef, parcelGeometry, tileIndex, speciesById, roleById, facilityTier, facilityById, facilityEffect, daySeconds, rnd, rndInt, clamp, pick } from '../state.js';
 import { neighboursIn, tileKey } from '../tiles.js';
-import { L, facilityRect } from '../render/projection.js';
+import { L, facilityRect, lotBlocks } from '../render/projection.js';
 import * as G from './walkways.js';
+import { play as playSfx, roarFor } from '../audio.js';
+import { reduceMotion } from '../ui/effects.js';
 
 const Lv = () => DATA.balance.living;
 const A = () => DATA.balance.attendance;
@@ -22,8 +24,25 @@ const S_IDLE = 0, S_WALK = 1, S_WORK = 2, S_GATHER = 3;
 
 export const visitors = [], cars = [], dinos = [], staff = [], litter = [], slots = [];
 export const escape = { active: false, parcel: null, uid: null, left: 0, x: 0, y: 0 };
+// Park Tram (visual only): shuttles along the forecourt track when the facility is above tier 0.
+export const tram = { active: false, x: 0, y: 0, px: 0, dir: 1, cars: 0, pause: 0, stopped: false };
 export const counts = { visitors: 0, cars: 0, dinos: 0, staff: 0, litter: 0 };
 export let simTime = 0;
+// M5 juice (all real-time, they run even while the clock is paused): the delivery truck that brings a bought
+// dinosaur to the gate, the crate it leaves, dust puffs (prize placement, a dinosaur popping out), and the arrival
+// queue. A dinosaur agent with `arriving` set is not drawn until its crate opens; `pop` is the pop-in progress.
+export const truck = { active: false, x: 0, y: 0, px: 0, phase: 'in', t: 0, uid: null, crate: false, crateX: 0, crateY: 0 };
+export const puffs = [];
+export const arrivals = [];
+const pendingArrivals = new Set();
+let livingOn = false;
+export function setLivingActive(v) {
+  livingOn = !!v;
+  // The wait clock on queued deliveries starts when the scene is showing: a dinosaur bought in Town (the Dino Market
+  // is a Town screen) still gets its truck when the player next opens the Park, however long they shopped.
+  if (livingOn) for (const a of arrivals) a.at = performance.now();
+}
+export const arrivalStats = () => ({ queued: arrivals.length, truck: truck.active ? truck.phase : null, truck_species: truck.active ? truck.name : null, puffs: puffs.length, hidden: dinos.filter(d => d.arriving).length });
 
 export const pois = [];        // { parcel, spots: [{ x, y, ax, ay, tx, ty, hw, spread }], weight }
 export const amenities = [];   // { id, spots }
@@ -46,7 +65,75 @@ export function initAgents({ paused }) {
   for (let i = 0; i < Lv().litter_max; i++) litter.push({ active: false, x: 0, y: 0, kind: 0 });
   onChange(sync);
   bus.addEventListener('escape', e => forceEscape(e.detail.parcel, e.detail.uid));
+  bus.addEventListener('dino_arrival', e => queueArrival(e.detail));
+  bus.addEventListener('prize', e => prizePuff(e.detail.prize));
   sync();
+}
+
+// ---- arrivals (delivery truck) ----
+function queueArrival({ uid, parcel, size }) {
+  // Motion reduced: the animal simply appears, and roars now. Otherwise every purchase is queued, whether or not the
+  // living view is showing: the truck drives (and the roar plays) when the crate opens in the Park, so the player who
+  // buys in Town and then clicks Park sees the delivery instead of an animal already standing in the pen.
+  if (reduceMotion()) { playSfx(roarFor(size), { gain: Lv().arrival_roar_gain ?? 1 }); return; }
+  pendingArrivals.add(uid);
+  arrivals.push({ uid, parcel, size, at: performance.now() });
+  const a = dinos.find(d => d.uid === uid);
+  if (a) a.arriving = true;
+}
+function revealDino(uid, withPop) {
+  pendingArrivals.delete(uid);
+  const a = dinos.find(d => d.uid === uid);
+  if (!a) return null;
+  a.arriving = false;
+  if (withPop) { a.pop = Lv().pop_seconds || 0.5; a.popT = 0; puff(a.x, a.y, 7); }
+  return a;
+}
+function tickArrivals(dt) {
+  const maxWait = (Lv().arrival_max_wait_seconds ?? 45) * 1000;
+  if (!truck.active && arrivals.length) {
+    const next = arrivals.shift();
+    if (performance.now() - next.at > maxWait || !dinos.some(d => d.uid === next.uid)) { revealDino(next.uid, false); return; }
+    truck.active = true; truck.phase = 'in'; truck.t = 0; truck.uid = next.uid; truck.size = next.size; truck.crate = false;
+    truck.name = dinos.find(d => d.uid === next.uid)?.name || '';
+    truck.x = truck.px = -1.0; truck.y = L.ROAD_Y;
+  }
+  if (!truck.active) return;
+  truck.px = truck.x;
+  const sp = Lv().truck_speed || 3;
+  if (truck.phase === 'in') {
+    truck.x = Math.min(L.GATE.x, truck.x + sp * dt);
+    if (truck.x >= L.GATE.x - 1e-6) { truck.phase = 'pause'; truck.t = Lv().truck_pause_seconds || 0.7; truck.crate = true; truck.crateX = L.GATE.x - 0.28; truck.crateY = L.GATE_OUT.y - 0.12; }
+  } else if (truck.phase === 'pause') {
+    truck.t -= dt;
+    if (truck.t <= 0) { truck.phase = 'crate'; truck.t = Lv().crate_seconds || 0.45; }
+  } else if (truck.phase === 'crate') {
+    truck.t -= dt;
+    if (truck.t <= 0) {
+      truck.crate = false; truck.phase = 'out';
+      const a = revealDino(truck.uid, true);
+      playSfx(roarFor(a ? a.size : truck.size), { gain: Lv().arrival_roar_gain ?? 1 });
+    }
+  } else if (truck.phase === 'out') {
+    truck.x += sp * dt;
+    if (truck.x > L.PARK_W + 1.2) { truck.active = false; truck.uid = null; }
+  }
+}
+
+// ---- puffs ----
+export function puff(x, y, n = 6) {
+  if (reduceMotion()) return;
+  const life = Lv().puff_seconds || 0.8;
+  for (let i = 0; i < n; i++) puffs.push({ x: x + rnd(-0.18, 0.18), y: y + rnd(-0.1, 0.1), t: 0, life: life * rnd(0.7, 1.1), r: rnd(3, 6), vx: rnd(-0.25, 0.25), vz: rnd(0.15, 0.45) });
+}
+function tickPuffs(dt) {
+  for (let i = puffs.length - 1; i >= 0; i--) { const p = puffs[i]; p.t += dt; if (p.t >= p.life) puffs.splice(i, 1); }
+}
+// A prize just landed: dust where it stands (data position(s); gate and fountain prizes at those spots).
+function prizePuff(p) {
+  if (!livingOn) return;
+  const spots = p.positions ? p.positions.map(([x, y]) => [x, y]) : p.position ? [[p.position.x, p.position.y]] : p.render === 'fountain' ? [[L.CENTER.x, L.CENTER.y]] : [[L.GATE.x, L.PARK_H]];
+  for (const [x, y] of spots) puff(x, y, spots.length > 4 ? 3 : 8);
 }
 
 // ---- routing helpers ----
@@ -97,13 +184,34 @@ function step(a, dist) {
 }
 
 // ---- sync with game state (called on every change; cheap signatures skip rebuilds) ----
-const rect = { x0: 0, y0: 0, x1: 0, y1: 0, z: 0, roofs: 0, rows: 0 };
+const rect = { x0: 0, y0: 0, x1: 0, y1: 0, z: 0, roofs: 0, rows: 0, render: null };
 function sync() {
   if (state !== lastStateRef) { lastStateRef = state; resetAll(); }
   rebuildPois();
   syncDinos();
   syncStaff();
   syncSlots();
+  syncTram();
+}
+
+function syncTram() {
+  const cars = facilityRect('park_tram', facilityTier('park_tram'), rect).render?.cars || 0;
+  if (cars === tram.cars && tram.active === cars > 0) return;
+  tram.cars = cars; tram.active = cars > 0;
+  tram.x = tram.px = L.TRAM.x0; tram.y = L.TRAM.y; tram.dir = 1; tram.pause = 0; tram.stopped = false;
+}
+function tickTram(dt) {
+  if (!tram.active) return;
+  tram.px = tram.x;
+  if (tram.pause > 0) { tram.pause -= dt; return; }
+  const sp = Lv().tram_speed || 1.5;
+  const before = tram.x;
+  tram.x += tram.dir * sp * dt;
+  // pause at the stop (once per pass) and turn around at the ends of the track
+  const stop = L.TRAM.stop_x;
+  if (!tram.stopped && ((before < stop && tram.x >= stop) || (before > stop && tram.x <= stop))) { tram.x = stop; tram.pause = Lv().tram_pause_seconds || 2; tram.stopped = true; }
+  if (tram.x >= L.TRAM.x1) { tram.x = L.TRAM.x1; tram.dir = -1; tram.pause = (Lv().tram_pause_seconds || 2) * 0.6; tram.stopped = false; }
+  else if (tram.x <= L.TRAM.x0) { tram.x = L.TRAM.x0; tram.dir = 1; tram.pause = (Lv().tram_pause_seconds || 2) * 0.6; tram.stopped = false; }
 }
 
 function resetAll() {
@@ -113,13 +221,14 @@ function resetAll() {
   dinos.length = 0; staff.length = 0; slots.length = 0;
   dinoSig = staffSig = poiSig = ''; lotSig = null;
   escape.active = false;
+  truck.active = false; truck.crate = false; arrivals.length = 0; puffs.length = 0; pendingArrivals.clear();
   spawnBudget = litterBudget = 0; simTime = 0;
 }
 
 function rebuildPois() {
   let sig = '';
   for (const p of enclosures()) { let w = 0; for (const d of p.enclosure.dinos) w += speciesById(d.species).popularity; sig += `${p.id}:${w},`; }
-  sig += '|' + facilityTier('food_stand') + facilityTier('gift_shop') + facilityTier('restrooms');
+  sig += '|' + facilityTier('food_stand') + facilityTier('gift_shop') + facilityTier('restrooms') + facilityTier('visitor_center');
   if (sig === poiSig) return;
   poiSig = sig;
   pois.length = 0; amenities.length = 0;
@@ -134,7 +243,7 @@ function rebuildPois() {
     pois.push({ parcel: null, weight: Lv().plaza_poi_weight, spots: G.spotsForRect({ x0: c.x - hp, y0: c.y - hp, x1: c.x + hp, y1: c.y + hp }, 0.25) });
   }
   for (const f of DATA.facilities.facilities) {
-    const open = f.effect_key === 'satisfaction' || (f.effect_key === 'concession_spend' && facilityTier(f.id) > 0);
+    const open = f.effect_key === 'satisfaction' || ((f.effect_key === 'concession_spend' || f.effect_key === 'appeal_bonus') && facilityTier(f.id) > 0);
     if (!open || f.id === 'office') continue;
     const m = DATA.parcels.facilities[f.id];
     amenities.push({ id: f.id, spots: m && m.tiles ? G.spotsForTiles(m.tiles) : G.spotsForRect(facilityRect(f.id, facilityTier(f.id), rect), 0.3) });
@@ -167,7 +276,7 @@ function syncDinos() {
         const sp = speciesById(d.species);
         let a = keep.get(d.uid);
         if (!a) {
-          a = { uid: d.uid, x: 0, y: 0, px: 0, py: 0, tx: 0, ty: 0, moving: false, pause: rnd(0, Lv().dino_pause_ticks), dir: 1, phase: rnd(0, 6.28), escaped: false, tile: null };
+          a = { uid: d.uid, x: 0, y: 0, px: 0, py: 0, tx: 0, ty: 0, moving: false, pause: rnd(0, Lv().dino_pause_ticks), dir: 1, phase: rnd(0, 6.28), escaped: false, tile: null, arriving: pendingArrivals.has(d.uid), pop: 0, popT: 0 };
           a.size = sp.size || 'medium';
           a.tile = randomTile(g);
           pointInTile(a, a.tile, tmpT); a.x = tmpT.x; a.y = tmpT.y;
@@ -216,8 +325,10 @@ function syncStaff() {
   for (const v of visitors) if (v.active && v.st === V_FOLLOW) { v.guide = -1; v.st = V_LEAVE; planLeave(v); }
 }
 
-// Front lot: one slot per cars_per_capacity of daily capacity, laid out in the rows the parking tier renders.
-export const lotRect = { x0: 0, y0: 0, x1: 0, y1: 0, z: 0, roofs: 0, rows: 0 };
+// Front lot: one slot per cars_per_capacity of daily capacity, laid out in the rows the parking tier renders, spread
+// across the tier's stall blocks (the overflow tier has two, separated by a kerb strip: see projection.lotBlocks).
+export const lotRect = { x0: 0, y0: 0, x1: 0, y1: 0, z: 0, roofs: 0, rows: 0, render: null };
+export const lotBlockList = [];
 function syncSlots() {
   const tier = facilityTier('parking_lot');
   if (tier === lotSig) return;
@@ -225,15 +336,23 @@ function syncSlots() {
   slots.length = 0;
   facilityRect('parking_lot', tier, lotRect);
   const per = Lv().cars_per_capacity;
-  const cap = A().front_gate_capacity + (facilityById('parking_lot').tiers.find(t => t.tier === tier)?.effect_magnitude || 0);
+  const cap = A().front_gate_capacity + (facilityEffect('parking_lot', tier, 'parking_capacity') || 0);
   const n = Math.max(1, Math.floor(cap / per));
   const rows = Math.max(1, lotRect.rows);
-  const cols = Math.ceil(n / rows);
-  const pitch = Math.max(L.LOT.minPitchX, (lotRect.x1 - lotRect.x0 - 0.2) / cols);
-  for (let i = 0; i < n; i++) {
-    const r = Math.floor(i / cols), c = i % cols;
-    slots.push({ x: lotRect.x0 + 0.1 + pitch * c + pitch / 2, y: lotRect.y0 + 0.14 + L.LOT.pitchY * r, car: -1 });
-  }
+  const blocks = lotBlocks(lotRect);
+  lotBlockList.length = 0; for (const b of blocks) lotBlockList.push(b);
+  const totalW = blocks.reduce((s, b) => s + (b.x1 - b.x0), 0);
+  let left = n;
+  blocks.forEach((b, bi) => {
+    const share = bi === blocks.length - 1 ? left : Math.round(n * (b.x1 - b.x0) / totalW);
+    left -= share;
+    const cols = Math.max(1, Math.ceil(share / rows));
+    const pitch = Math.max(L.LOT.minPitchX, (b.x1 - b.x0 - 0.2) / cols);
+    for (let i = 0; i < share; i++) {
+      const r = Math.floor(i / cols), c = i % cols;
+      slots.push({ x: b.x0 + 0.1 + pitch * c + pitch / 2, y: b.y0 + 0.14 + L.LOT.pitchY * r, car: -1, block: bi });
+    }
+  });
   // Slots moved. Re-seat parked cars into the new layout so an upgrade does not empty the lot for a few seconds;
   // cars still driving in start over (their old slot is gone) and cars driving out keep going.
   const parked = cars.filter(c => c.active && c.st === C_PARKED);
@@ -254,6 +373,11 @@ export function tick() {
   for (const c of cars) if (c.active) { c.px = c.x; c.py = c.y; }
   for (const d of dinos) { d.px = d.x; d.py = d.y; }
   for (const s of staff) { s.px = s.x; s.py = s.y; }
+  // Real-time juice runs whether or not the clock does (a purchase is made with the store modal open).
+  const rdt = 1 / Lv().tick_hz;
+  tickArrivals(rdt);
+  tickPuffs(rdt);
+  for (const d of dinos) if (d.pop > 0) { d.popT = (d.popT || 0) + rdt; if (d.popT >= d.pop) d.pop = 0; }
   const speed = state.speed;
   if (speed <= 0 || blocked() || state.game_over) return;
   const f = Math.min(speed, Lv().max_speed_factor);
@@ -263,6 +387,7 @@ export function tick() {
   tickEscape(dt);
   tickVisitors(dt);
   tickCars(dt);
+  tickTram(dt);
   tickDinos(dt);
   tickStaff(dt);
   tickLitter(dt);
@@ -281,7 +406,7 @@ function recount() {
 function tickVisitors(dt) {
   const attendance = state.closed_days > 0 ? 0 : state.today.attendance;
   const target = Math.min(Lv().max_sprites, Math.ceil(attendance * Lv().sprites_per_visitor));
-  spawnBudget = Math.min(spawnBudget + attendance / Lv().day_seconds * dt, 6);
+  spawnBudget = Math.min(spawnBudget + attendance / daySeconds() * dt, 6);
   while (spawnBudget >= 1) {
     spawnBudget -= 1;
     if (counts.visitors < target) spawnVisitor();
@@ -411,6 +536,8 @@ function tickCars(dt) {
     let present = 0, incoming = 0;
     for (const c of cars) if (c.active) { if (c.st === C_OUT) continue; if (c.st === C_IN) incoming++; present++; }
     const wanted = Math.min(slots.length, Math.ceil(counts.visitors / Lv().visitors_per_car));
+    // Hard guard (M4): the lot can never hold more cars than it has slots, whatever the tier or a re-seat left behind.
+    if (present > slots.length) { for (const c of cars) { if (present <= slots.length) break; if (c.active && c.st === C_PARKED) { leaveCar(c); present--; } } }
     carCooldown -= dt;
     if (carCooldown <= 0) {
       if (present < wanted) { if (spawnCar()) carCooldown = 0.25; }
@@ -432,6 +559,9 @@ function spawnCar() {
   let s = -1;
   for (let i = 0; i < slots.length; i++) if (slots[i].car === -1) { s = i; break; }
   if (s < 0) return false;
+  let inLot = 0;
+  for (const k of cars) if (k.active && k.st !== C_OUT) inLot++;
+  if (inLot >= slots.length) return false;
   let c = null;
   for (const k of cars) if (!k.active) { c = k; break; }
   if (!c) return false;
@@ -475,6 +605,7 @@ function tickDinos(dt) {
           const tile = next.length && Math.random() < 0.7 ? pick(next) : a.tile;
           a.nextTile = tile;
           pointInTile(a, tile, tmpT); a.tx = tmpT.x; a.ty = tmpT.y;
+          idleRoar(a);
         }
         a.moving = true;
       }
@@ -485,6 +616,16 @@ function tickDinos(dt) {
     else { a.x += dx / d * mv; a.y += dy / d * mv; if (Math.abs(dx) > 0.01) a.dir = dx > 0 ? 1 : -1; }
     if (a.escaped) { escape.x = a.x; escape.y = a.y; }
   }
+}
+
+// Occasional idle roar when a wandering animal sets off (data/sfx.json idle_roar: chance per move, min gap), by size.
+let lastRoarAt = -Infinity;
+function idleRoar(a) {
+  const R = (DATA.sfx && DATA.sfx.idle_roar) || {};
+  if (a.arriving || !livingOn) return;
+  if (simTime - lastRoarAt < (R.min_gap_seconds ?? 9) || Math.random() >= (R.chance_per_move ?? 0.05)) return;
+  lastRoarAt = simTime;
+  playSfx(roarFor(a.size), { gain: R.idle_roar_gain ?? 0.55 });
 }
 
 // ---- escape (visual only) ----

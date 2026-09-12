@@ -26,7 +26,7 @@ export function buildReport(D) {
 
   // Same rule as validateParcels(): a parcel is rectangular when its bounding box is exactly its tile count.
   const irregular = s.parcels.filter(r => !/^\d+×\d+\b/.test(r.shape));
-  for (const r of s.parcels) lines.push(`  ${r.id.padEnd(3)} ${r.biome.padEnd(7)} ${String(r.tiles).padStart(2)} tiles  ${String(r.edges).padStart(2)} outline edges  ${r.shape}`);
+  for (const r of s.parcels) lines.push(`  ${r.id.padEnd(3)} ${String(r.tiles).padStart(2)} tiles  ${String(r.edges).padStart(2)} outline edges  ${r.shape}`);
   lines.push('');
   lines.push(`  non-rectangular parcels: ${irregular.length} (${irregular.map(r => r.id).join(', ')})`);
   lines.push('');
@@ -34,7 +34,7 @@ export function buildReport(D) {
     lines.push(`FAIL: ${problems.length} problem(s)`);
     for (const p of problems) lines.push(`  - ${p}`);
   } else {
-    lines.push('PASS: every parcel connected, no overlaps, zero blank interior tiles, every parcel touches a walkway, >=5 non-rectangular.');
+    lines.push('PASS: every parcel connected, no overlaps, zero blank interior tiles, every parcel touches a walkway, >=5 non-rectangular, no authored biome (M4: buyer picks it).');
   }
   return { lines, problems, summary: s };
 }

@@ -1,0 +1,304 @@
+{
+  "_notes": "M5 sound. Every effect is synthesized in code by src/audio.js from the classic sfxr parameter model (no audio files): wave = square | saw | sine | triangle | noise; attack / sustain / punch / decay = envelope (0..1, squared into sample counts like sfxr); freq = base frequency (0..1, sfxr scale), freq_limit = cutoff that stops the sound when the slide reaches it, slide / dslide = frequency ramp and its ramp; vib_strength / vib_speed = vibrato; arp_mod / arp_speed = the one-step arpeggio (positive = jump up, negative = jump down, arp_speed = when); duty / duty_ramp = square-wave duty; repeat_speed = retrigger; pha_offset / pha_ramp = phaser; lpf_freq / lpf_ramp / lpf_resonance = low-pass; hpf_freq / hpf_ramp = high-pass; volume = 0..1. An entry may instead be { sequence: [ { at: seconds, ...overrides } ], base: {...} } to play several sfxr notes in a row (fanfares, chimes). defaults = the Settings values on first run (persisted as browser prefs after that). ambient = the optional bed: a soft two-oscillator pad plus sparse bird chirps, all synthesized. idle_roar = how often a wandering dinosaur roars on its own (chance per move start, minimum gap in seconds). throttle_seconds = minimum gap between two plays of the same id (a burst of member joins or low-food warnings at 10x plays once, not thirty times); DPS.sfx() ignores it. arrival_roar_gain / idle_roar_gain scale the purchase roar and the wandering roar.",
+  "defaults": {
+    "master_volume": 0.8,
+    "sfx": true,
+    "ambient": false
+  },
+  "sample_rate": 44100,
+  "master_gain": 0.9,
+  "idle_roar": {
+    "chance_per_move": 0.05,
+    "min_gap_seconds": 9,
+    "idle_roar_gain": 0.55,
+    "arrival_roar_gain": 1.0
+  },
+  "ambient": {
+    "pad": {
+      "freqs": [
+        110,
+        164.8,
+        220.5
+      ],
+      "wave": "triangle",
+      "gain": 0.035,
+      "lowpass_hz": 420,
+      "lfo_hz": 0.07,
+      "lfo_depth": 0.4
+    },
+    "chirp_gap_seconds": [
+      3.5,
+      11
+    ],
+    "chirp": {
+      "wave": "sine",
+      "attack": 0.01,
+      "sustain": 0.04,
+      "punch": 0.1,
+      "decay": 0.16,
+      "freq": 0.82,
+      "slide": 0.18,
+      "vib_strength": 0.35,
+      "vib_speed": 0.75,
+      "repeat_speed": 0.72,
+      "hpf_freq": 0.2,
+      "volume": 0.22
+    },
+    "chirp_freq_jitter": 0.12
+  },
+  "sfx": {
+    "ui_click": {
+      "wave": "square",
+      "attack": 0,
+      "sustain": 0.015,
+      "punch": 0.05,
+      "decay": 0.07,
+      "freq": 0.5,
+      "slide": -0.22,
+      "duty": 0.3,
+      "hpf_freq": 0.12,
+      "volume": 0.32
+    },
+    "buy": {
+      "wave": "square",
+      "attack": 0,
+      "sustain": 0.05,
+      "punch": 0.45,
+      "decay": 0.22,
+      "freq": 0.58,
+      "arp_mod": 0.48,
+      "arp_speed": 0.52,
+      "duty": 0.35,
+      "volume": 0.42
+    },
+    "sell": {
+      "wave": "square",
+      "attack": 0,
+      "sustain": 0.06,
+      "punch": 0.35,
+      "decay": 0.24,
+      "freq": 0.66,
+      "arp_mod": -0.36,
+      "arp_speed": 0.5,
+      "duty": 0.3,
+      "volume": 0.4
+    },
+    "alert": {
+      "wave": "square",
+      "attack": 0,
+      "sustain": 0.14,
+      "punch": 0.1,
+      "decay": 0.14,
+      "freq": 0.36,
+      "vib_strength": 0.25,
+      "vib_speed": 0.55,
+      "repeat_speed": 0.56,
+      "duty": 0.45,
+      "lpf_freq": 0.75,
+      "volume": 0.38
+    },
+    "roar_small": {
+      "wave": "saw",
+      "attack": 0.02,
+      "sustain": 0.14,
+      "punch": 0.2,
+      "decay": 0.26,
+      "freq": 0.27,
+      "slide": -0.14,
+      "vib_strength": 0.32,
+      "vib_speed": 0.48,
+      "lpf_freq": 0.38,
+      "lpf_resonance": 0.2,
+      "volume": 0.42
+    },
+    "roar_medium": {
+      "wave": "saw",
+      "attack": 0.04,
+      "sustain": 0.24,
+      "punch": 0.25,
+      "decay": 0.42,
+      "freq": 0.17,
+      "slide": -0.09,
+      "vib_strength": 0.36,
+      "vib_speed": 0.32,
+      "lpf_freq": 0.3,
+      "lpf_resonance": 0.3,
+      "volume": 0.52
+    },
+    "roar_large": {
+      "wave": "saw",
+      "attack": 0.06,
+      "sustain": 0.4,
+      "punch": 0.3,
+      "decay": 0.6,
+      "freq": 0.1,
+      "slide": -0.05,
+      "dslide": -0.02,
+      "vib_strength": 0.5,
+      "vib_speed": 0.24,
+      "lpf_freq": 0.22,
+      "lpf_resonance": 0.35,
+      "volume": 0.62
+    },
+    "prize_fanfare": {
+      "base": {
+        "wave": "square",
+        "attack": 0,
+        "sustain": 0.12,
+        "punch": 0.3,
+        "decay": 0.2,
+        "duty": 0.3,
+        "volume": 0.36
+      },
+      "sequence": [
+        {
+          "at": 0,
+          "freq": 0.44
+        },
+        {
+          "at": 0.11,
+          "freq": 0.5
+        },
+        {
+          "at": 0.22,
+          "freq": 0.56
+        },
+        {
+          "at": 0.34,
+          "freq": 0.66,
+          "sustain": 0.28,
+          "decay": 0.45
+        }
+      ]
+    },
+    "quarter_chime": {
+      "base": {
+        "wave": "sine",
+        "attack": 0,
+        "sustain": 0.1,
+        "punch": 0.25,
+        "decay": 0.5,
+        "volume": 0.34
+      },
+      "sequence": [
+        {
+          "at": 0,
+          "freq": 0.6
+        },
+        {
+          "at": 0.18,
+          "freq": 0.72
+        }
+      ]
+    },
+    "escape_siren": {
+      "wave": "square",
+      "attack": 0.02,
+      "sustain": 0.75,
+      "punch": 0,
+      "decay": 0.28,
+      "freq": 0.3,
+      "vib_strength": 0.62,
+      "vib_speed": 0.13,
+      "duty": 0.4,
+      "lpf_freq": 0.62,
+      "volume": 0.4
+    },
+    "member_ding": {
+      "wave": "sine",
+      "attack": 0,
+      "sustain": 0.04,
+      "punch": 0.35,
+      "decay": 0.38,
+      "freq": 0.78,
+      "arp_mod": 0.3,
+      "arp_speed": 0.7,
+      "volume": 0.34
+    },
+    "milestone_fanfare": {
+      "base": {
+        "wave": "square",
+        "attack": 0,
+        "sustain": 0.14,
+        "punch": 0.35,
+        "decay": 0.22,
+        "duty": 0.25,
+        "volume": 0.4
+      },
+      "sequence": [
+        {
+          "at": 0,
+          "freq": 0.4
+        },
+        {
+          "at": 0.13,
+          "freq": 0.4
+        },
+        {
+          "at": 0.26,
+          "freq": 0.5
+        },
+        {
+          "at": 0.39,
+          "freq": 0.4
+        },
+        {
+          "at": 0.52,
+          "freq": 0.56
+        },
+        {
+          "at": 0.7,
+          "freq": 0.66,
+          "sustain": 0.35,
+          "decay": 0.6
+        }
+      ]
+    },
+    "foreclosure_sting": {
+      "base": {
+        "wave": "saw",
+        "attack": 0.01,
+        "sustain": 0.3,
+        "punch": 0.1,
+        "decay": 0.5,
+        "lpf_freq": 0.42,
+        "vib_strength": 0.18,
+        "vib_speed": 0.3,
+        "volume": 0.4
+      },
+      "sequence": [
+        {
+          "at": 0,
+          "freq": 0.3
+        },
+        {
+          "at": 0.3,
+          "freq": 0.25,
+          "slide": -0.08
+        },
+        {
+          "at": 0.65,
+          "freq": 0.18,
+          "slide": -0.14,
+          "sustain": 0.55,
+          "decay": 0.7
+        }
+      ]
+    }
+  },
+  "throttle_seconds": {
+    "ui_click": 0.04,
+    "buy": 0.08,
+    "sell": 0.08,
+    "alert": 1.2,
+    "member_ding": 1.5,
+    "roar_small": 0.6,
+    "roar_medium": 0.6,
+    "roar_large": 0.6,
+    "quarter_chime": 0.5,
+    "prize_fanfare": 0.3,
+    "milestone_fanfare": 0.5,
+    "escape_siren": 2.0,
+    "foreclosure_sting": 1.0
+  }
+}

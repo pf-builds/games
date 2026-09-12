@@ -1,0 +1,98 @@
+{
+  "model": "stabilityai/stable-diffusion-xl-base-1.0 (OpenRAIL-M)",
+  "lora": "nerijs/pixel-art-xl",
+  "post": "saturation 1.35 -> LANCZOS downscale -> ADAPTIVE 32-colour Floyd-Steinberg -> NEAREST x5",
+  "no_reference_images": true,
+  "items": [
+    {
+      "id": "hypsilophodon-s1",
+      "colour": "sky blue",
+      "seed": 1001,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon sky blue hypsilophodon dinosaur, small nimble two-legged dinosaur with a long stiff tail and slim legs, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "hypsilophodon-s2",
+      "colour": "sky blue",
+      "seed": 1009,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon sky blue hypsilophodon dinosaur, small nimble two-legged dinosaur with a long stiff tail and slim legs, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "hypsilophodon-s3",
+      "colour": "sky blue",
+      "seed": 1017,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon sky blue hypsilophodon dinosaur, small nimble two-legged dinosaur with a long stiff tail and slim legs, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "protoceratops-s1",
+      "colour": "light tan",
+      "seed": 1022,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon light tan protoceratops dinosaur, small four-legged dinosaur with a bony neck frill and a parrot beak, no shell, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "protoceratops-s2",
+      "colour": "light tan",
+      "seed": 1030,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon light tan protoceratops dinosaur, small four-legged dinosaur with a bony neck frill and a parrot beak, no shell, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "protoceratops-s3",
+      "colour": "light tan",
+      "seed": 1038,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon light tan protoceratops dinosaur, small four-legged dinosaur with a bony neck frill and a parrot beak, no shell, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "pachycephalosaurus-s1",
+      "colour": "lavender violet",
+      "seed": 1043,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon lavender violet pachycephalosaurus dinosaur, two-legged dinosaur with a thick rounded dome skull and long tail, no shell, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "pachycephalosaurus-s2",
+      "colour": "lavender violet",
+      "seed": 1051,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon lavender violet pachycephalosaurus dinosaur, two-legged dinosaur with a thick rounded dome skull and long tail, no shell, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "pachycephalosaurus-s3",
+      "colour": "lavender violet",
+      "seed": 1059,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon lavender violet pachycephalosaurus dinosaur, two-legged dinosaur with a thick rounded dome skull and long tail, no shell, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "styracosaurus-s1",
+      "colour": "coral pink",
+      "seed": 1064,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon coral pink styracosaurus dinosaur, four-legged horned dinosaur with a spiked neck frill and one nose horn, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "styracosaurus-s2",
+      "colour": "coral pink",
+      "seed": 1072,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon coral pink styracosaurus dinosaur, four-legged horned dinosaur with a spiked neck frill and one nose horn, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "styracosaurus-s3",
+      "colour": "coral pink",
+      "seed": 1080,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon coral pink styracosaurus dinosaur, four-legged horned dinosaur with a spiked neck frill and one nose horn, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "brachiosaurus-s1",
+      "colour": "pale cream white",
+      "seed": 1085,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon pale cream white brachiosaurus dinosaur, very tall long-necked four-legged sauropod dinosaur, front legs longer than back, standing alone, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "brachiosaurus-s2",
+      "colour": "pale cream white",
+      "seed": 1093,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon pale cream white brachiosaurus dinosaur, very tall long-necked four-legged sauropod dinosaur, front legs longer than back, standing alone, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    },
+    {
+      "id": "brachiosaurus-s3",
+      "colour": "pale cream white",
+      "seed": 1101,
+      "prompt": "retro DOS VGA pixel art, vibrant saturated colors, a colorful cartoon pale cream white brachiosaurus dinosaur, very tall long-necked four-legged sauropod dinosaur, front legs longer than back, standing alone, one single dinosaur, centered, isolated, full body, 3/4 oblique view, plain flat light background, no scenery, early 1990s tycoon game sprite, pixel"
+    }
+  ]
+}

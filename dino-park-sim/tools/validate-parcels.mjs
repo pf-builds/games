@@ -6,6 +6,7 @@
 //   3. EVERY interior tile that is not walkway, plaza or facility belongs to exactly one parcel (zero blank land)
 //   4. every parcel has at least one outline edge facing a walkway or plaza tile
 //   5. at least 5 parcels are non-rectangular
+//   6. no parcel carries a `biome` (M4: the land type is chosen at purchase, so there is no biome-mix rule)
 // The rules themselves live in src/tiles.js validateParcels(), which the game also runs at load, so the
 // browser and this tool can never disagree. Report formatting is shared with tools/validate.html.
 //

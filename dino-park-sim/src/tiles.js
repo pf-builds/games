@@ -1,6 +1,6 @@
 // Tile-set geometry for polyomino parcels (M2.6). Pure functions over data/parcels.json shapes: no game state,
 // no DOM, so the same code runs in the browser (state.js, renderers, agents) and under node (tools/*.mjs).
-// A parcel is { id, biome, tiles: [[x,y],...] } in whole tiles. Everything that used to be derived from a w x h
+// A parcel is { id, tiles: [[x,y],...] } in whole tiles (M4: no biome; the player picks one at purchase). Everything that used to be derived from a w x h
 // rectangle now comes from here:
 // area = tiles.length, fence segments = outline edge count, label position = centroid tile, wander bounds = per tile.
 
@@ -200,6 +200,7 @@ export function validateParcels(D) {
   for (const p of D.parcels) {
     if (!Array.isArray(p.tiles) || !p.tiles.length) { problems.push(`${p.id}: no tiles`); continue; }
     if (p.w != null || p.h != null || p.x != null || p.y != null) problems.push(`${p.id}: w/h/x/y are not part of the schema any more`);
+    if (p.biome != null) problems.push(`${p.id}: biome is not part of the schema any more (M4: the buyer picks the land type)`);
     if (!isConnected(p.tiles)) problems.push(`${p.id}: tiles are not 4-connected`);
     for (const [x, y] of p.tiles) {
       const k = tileKey(x, y);
@@ -228,6 +229,6 @@ export function validateParcels(D) {
 
 export function summarize(D) {
   const idx = buildTileIndex(D);
-  const rows = D.parcels.map(p => ({ id: p.id, biome: p.biome, tiles: p.tiles.length, edges: outlineCount(p.tiles), shape: shapeLabel(p), label: labelTile(p.tiles).join(',') }));
+  const rows = D.parcels.map(p => ({ id: p.id, tiles: p.tiles.length, edges: outlineCount(p.tiles), shape: shapeLabel(p), label: labelTile(p.tiles).join(',') }));
   return { park: `${idx.W}x${idx.H}`, walkway_tiles: idx.walk.size, plaza_tiles: idx.plaza.size, facility_tiles: idx.facility.size, parcel_tiles: idx.owner.size, parcels: rows };
 }

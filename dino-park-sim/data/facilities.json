@@ -1,66 +1,666 @@
 {
-  "_notes": "Fixed park facilities (M2.5; replaces buildings.json). Each exists at tier 0 from day one at the world position given in parcels.json. Tiers 1-3 are bought in order from the General Store -> Upgrades tab. effect_magnitude is the ABSOLUTE effect at that tier (not an increment): parking_capacity = extra visitors/day above front_gate_capacity; concession_spend = multiplier on balance.revenue.per_visitor_concession_spend (food + gift add together, still needs concessions staff); satisfaction = added visitor satisfaction (raises price tolerance, capped by balance.attendance.satisfaction_price_tolerance_cap). render_size is visual only: lot = {w, rows} in world units / car rows; building = {w, h, z, roofs} footprint scale, height, and roof sections.",
+  "_notes": "Fixed park facilities (M3 depth). Each exists at tier 0 from day one at the world position given in parcels.json; higher tiers are bought IN ORDER from the General Store -> Upgrades tab. Every tier carries `effects`: a map of effect key -> ABSOLUTE value at that tier (not an increment). `effect_key` is the facility's headline effect for cards and tooltips; extra keys in `effects` (e.g. a diner's satisfaction bump) count too. Effect keys read by the economy: parking_capacity = visitors/day above front_gate_capacity; gate_capacity = extra gate throughput (Park Tram); concession_spend = multiplier on balance.revenue.per_visitor_concession_spend (food + gift add together, still needs concessions staff); satisfaction = added visitor satisfaction (raises price tolerance, capped by balance.attendance.satisfaction_price_tolerance_cap); appeal_bonus = added to the park appeal multiplier; education = Fact Book extras level (1 field notes, 2 your-specimens notes); illness_reduction = chance to avert an illness event, stacking with vets; heal_bonus = extra health/day for every dinosaur; management_capacity = staff the office can run before the over-capacity morale penalty in staff.json; event_mitigation = chance the office heads off any negative event. `render` is visual only: lot = { surface: dirt|gravel|asphalt|lined|overflow, w (tiles), rows (car rows), blocks (1 or 2 stall blocks), lamps }; building = { w, h (fraction of the max footprint), z (height in tiles), roofs (roof sections), storeys, style }. `short` is the code used on the Reports facility-tier tile.",
   "facilities": [
     {
       "id": "parking_lot",
       "name": "Parking Lot",
+      "short": "PK",
       "position": "parking_lot",
       "effect_key": "parking_capacity",
-      "blurb": "The front lot. Every visitor beyond the front gate limit needs a parking space, so a bigger lot raises the daily visitor cap.",
+      "blurb": "The big front lot. Every visitor beyond the front gate limit needs a parking space, so a bigger lot raises the daily visitor cap. It starts as dirt and grows into a lined, lit, two-block lot.",
       "tiers": [
-        { "tier": 0, "label": "Gravel Lot", "cost": 0, "upkeep_per_quarter": 0, "effect_magnitude": 0, "render_size": { "w": 1.5, "rows": 2 } },
-        { "tier": 1, "label": "Paved Lot", "cost": 10000, "upkeep_per_quarter": 100, "effect_magnitude": 150, "render_size": { "w": 2.3, "rows": 3 } },
-        { "tier": 2, "label": "Double Lot", "cost": 18000, "upkeep_per_quarter": 180, "effect_magnitude": 300, "render_size": { "w": 3.4, "rows": 3 } },
-        { "tier": 3, "label": "Grand Lot", "cost": 30000, "upkeep_per_quarter": 300, "effect_magnitude": 500, "render_size": { "w": 4.6, "rows": 3 } }
+        {
+          "tier": 0,
+          "label": "Dirt Lot",
+          "cost": 0,
+          "upkeep_per_quarter": 0,
+          "effects": {
+            "parking_capacity": 0
+          },
+          "render": {
+            "surface": "dirt",
+            "w": 3.2,
+            "rows": 2,
+            "blocks": 1,
+            "lamps": 0
+          }
+        },
+        {
+          "tier": 1,
+          "label": "Gravel Lot",
+          "cost": 8000,
+          "upkeep_per_quarter": 80,
+          "effects": {
+            "parking_capacity": 150
+          },
+          "render": {
+            "surface": "gravel",
+            "w": 4.4,
+            "rows": 3,
+            "blocks": 1,
+            "lamps": 0
+          }
+        },
+        {
+          "tier": 2,
+          "label": "Paved Lot",
+          "cost": 15000,
+          "upkeep_per_quarter": 150,
+          "effects": {
+            "parking_capacity": 300
+          },
+          "render": {
+            "surface": "asphalt",
+            "w": 5.6,
+            "rows": 4,
+            "blocks": 1,
+            "lamps": 0
+          }
+        },
+        {
+          "tier": 3,
+          "label": "Lined & Lit Lot",
+          "cost": 26000,
+          "upkeep_per_quarter": 260,
+          "effects": {
+            "parking_capacity": 500
+          },
+          "render": {
+            "surface": "lined",
+            "w": 6.4,
+            "rows": 5,
+            "blocks": 1,
+            "lamps": 4
+          }
+        },
+        {
+          "tier": 4,
+          "label": "Overflow Lot",
+          "cost": 40000,
+          "upkeep_per_quarter": 400,
+          "effects": {
+            "parking_capacity": 800
+          },
+          "render": {
+            "surface": "overflow",
+            "w": 7.3,
+            "rows": 6,
+            "blocks": 2,
+            "lamps": 6
+          }
+        }
       ]
     },
     {
       "id": "restrooms",
       "name": "Restrooms",
+      "short": "WC",
       "position": "restrooms",
       "effect_key": "satisfaction",
       "blurb": "Near the plaza. Better restrooms keep visitors in the park longer and make them accept a higher ticket price.",
       "tiers": [
-        { "tier": 0, "label": "Portable Toilets", "cost": 0, "upkeep_per_quarter": 0, "effect_magnitude": 0, "render_size": { "w": 0.5, "h": 0.55, "z": 0.35, "roofs": 1 } },
-        { "tier": 1, "label": "Restroom Block", "cost": 1000, "upkeep_per_quarter": 50, "effect_magnitude": 0.04, "render_size": { "w": 0.7, "h": 0.7, "z": 0.45, "roofs": 1 } },
-        { "tier": 2, "label": "Family Restrooms", "cost": 3000, "upkeep_per_quarter": 90, "effect_magnitude": 0.08, "render_size": { "w": 0.85, "h": 0.85, "z": 0.5, "roofs": 2 } },
-        { "tier": 3, "label": "Comfort Station", "cost": 6000, "upkeep_per_quarter": 150, "effect_magnitude": 0.12, "render_size": { "w": 1.0, "h": 1.0, "z": 0.6, "roofs": 3 } }
+        {
+          "tier": 0,
+          "label": "Portable Toilets",
+          "cost": 0,
+          "upkeep_per_quarter": 0,
+          "effects": {
+            "satisfaction": 0
+          },
+          "render": {
+            "w": 0.5,
+            "h": 0.55,
+            "z": 0.35,
+            "roofs": 1,
+            "storeys": 1,
+            "style": "portable"
+          }
+        },
+        {
+          "tier": 1,
+          "label": "Restroom Block",
+          "cost": 1000,
+          "upkeep_per_quarter": 50,
+          "effects": {
+            "satisfaction": 0.04
+          },
+          "render": {
+            "w": 0.7,
+            "h": 0.7,
+            "z": 0.45,
+            "roofs": 1,
+            "storeys": 1
+          }
+        },
+        {
+          "tier": 2,
+          "label": "Tiled Block",
+          "cost": 3000,
+          "upkeep_per_quarter": 90,
+          "effects": {
+            "satisfaction": 0.08
+          },
+          "render": {
+            "w": 0.85,
+            "h": 0.85,
+            "z": 0.5,
+            "roofs": 2,
+            "storeys": 1,
+            "style": "tiled"
+          }
+        },
+        {
+          "tier": 3,
+          "label": "Family Pavilion",
+          "cost": 6500,
+          "upkeep_per_quarter": 150,
+          "effects": {
+            "satisfaction": 0.12
+          },
+          "render": {
+            "w": 1.0,
+            "h": 1.0,
+            "z": 0.6,
+            "roofs": 3,
+            "storeys": 1,
+            "style": "pavilion"
+          }
+        }
       ]
     },
     {
       "id": "food_stand",
       "name": "Food Stand",
+      "short": "FD",
       "position": "food_stand",
       "effect_key": "concession_spend",
-      "blurb": "On the plaza edge. Sells snacks, then meals as it grows into a diner. Needs a concessions worker to open.",
+      "blurb": "On the plaza edge. Starts as a cart, grows into a stand, a diner, then a full restaurant. From the diner up it also makes visitors happier. Needs a concessions worker to open.",
       "tiers": [
-        { "tier": 0, "label": "Empty Pad", "cost": 0, "upkeep_per_quarter": 0, "effect_magnitude": 0, "render_size": { "w": 0.45, "h": 0.45, "z": 0.2, "roofs": 0 } },
-        { "tier": 1, "label": "Snack Cart", "cost": 5000, "upkeep_per_quarter": 150, "effect_magnitude": 0.6, "render_size": { "w": 0.65, "h": 0.6, "z": 0.45, "roofs": 1 } },
-        { "tier": 2, "label": "Food Stand", "cost": 9000, "upkeep_per_quarter": 250, "effect_magnitude": 0.85, "render_size": { "w": 0.85, "h": 0.8, "z": 0.55, "roofs": 2 } },
-        { "tier": 3, "label": "Diner", "cost": 15000, "upkeep_per_quarter": 400, "effect_magnitude": 1.2, "render_size": { "w": 1.0, "h": 1.0, "z": 0.65, "roofs": 3 } }
+        {
+          "tier": 0,
+          "label": "Empty Pad",
+          "cost": 0,
+          "upkeep_per_quarter": 0,
+          "effects": {
+            "concession_spend": 0
+          },
+          "render": {
+            "w": 0.45,
+            "h": 0.45,
+            "z": 0.2,
+            "roofs": 0,
+            "storeys": 0
+          }
+        },
+        {
+          "tier": 1,
+          "label": "Snack Cart",
+          "cost": 4000,
+          "upkeep_per_quarter": 120,
+          "effects": {
+            "concession_spend": 0.5
+          },
+          "render": {
+            "w": 0.55,
+            "h": 0.5,
+            "z": 0.4,
+            "roofs": 1,
+            "storeys": 1,
+            "style": "cart"
+          }
+        },
+        {
+          "tier": 2,
+          "label": "Food Stand",
+          "cost": 8000,
+          "upkeep_per_quarter": 220,
+          "effects": {
+            "concession_spend": 0.8
+          },
+          "render": {
+            "w": 0.75,
+            "h": 0.7,
+            "z": 0.5,
+            "roofs": 1,
+            "storeys": 1
+          }
+        },
+        {
+          "tier": 3,
+          "label": "Diner",
+          "cost": 14000,
+          "upkeep_per_quarter": 360,
+          "effects": {
+            "concession_spend": 1.1,
+            "satisfaction": 0.02
+          },
+          "render": {
+            "w": 0.9,
+            "h": 0.9,
+            "z": 0.6,
+            "roofs": 2,
+            "storeys": 1,
+            "style": "diner"
+          }
+        },
+        {
+          "tier": 4,
+          "label": "Restaurant",
+          "cost": 22000,
+          "upkeep_per_quarter": 520,
+          "effects": {
+            "concession_spend": 1.5,
+            "satisfaction": 0.04
+          },
+          "render": {
+            "w": 1.0,
+            "h": 1.0,
+            "z": 0.95,
+            "roofs": 3,
+            "storeys": 2,
+            "style": "restaurant"
+          }
+        }
       ]
     },
     {
       "id": "gift_shop",
       "name": "Gift Shop",
+      "short": "GS",
       "position": "gift_shop",
       "effect_key": "concession_spend",
-      "blurb": "Near the gate, so everyone walks past it on the way out. Souvenirs earn more per visitor than snacks. Needs a concessions worker to open.",
+      "blurb": "Near the gate, so everyone walks past it on the way out. Souvenirs earn more per visitor than snacks; the museum store is the best earner in the park. Needs a concessions worker to open.",
       "tiers": [
-        { "tier": 0, "label": "Empty Pad", "cost": 0, "upkeep_per_quarter": 0, "effect_magnitude": 0, "render_size": { "w": 0.45, "h": 0.45, "z": 0.2, "roofs": 0 } },
-        { "tier": 1, "label": "Souvenir Stand", "cost": 7500, "upkeep_per_quarter": 200, "effect_magnitude": 0.9, "render_size": { "w": 0.65, "h": 0.65, "z": 0.45, "roofs": 1 } },
-        { "tier": 2, "label": "Gift Shop", "cost": 12000, "upkeep_per_quarter": 300, "effect_magnitude": 1.2, "render_size": { "w": 0.85, "h": 0.85, "z": 0.55, "roofs": 2 } },
-        { "tier": 3, "label": "Gift Emporium", "cost": 20000, "upkeep_per_quarter": 450, "effect_magnitude": 1.6, "render_size": { "w": 1.0, "h": 1.0, "z": 0.65, "roofs": 3 } }
+        {
+          "tier": 0,
+          "label": "Empty Pad",
+          "cost": 0,
+          "upkeep_per_quarter": 0,
+          "effects": {
+            "concession_spend": 0
+          },
+          "render": {
+            "w": 0.45,
+            "h": 0.45,
+            "z": 0.2,
+            "roofs": 0,
+            "storeys": 0
+          }
+        },
+        {
+          "tier": 1,
+          "label": "Souvenir Stand",
+          "cost": 6000,
+          "upkeep_per_quarter": 160,
+          "effects": {
+            "concession_spend": 0.8
+          },
+          "render": {
+            "w": 0.6,
+            "h": 0.6,
+            "z": 0.42,
+            "roofs": 1,
+            "storeys": 1,
+            "style": "cart"
+          }
+        },
+        {
+          "tier": 2,
+          "label": "Gift Shop",
+          "cost": 11000,
+          "upkeep_per_quarter": 280,
+          "effects": {
+            "concession_spend": 1.1
+          },
+          "render": {
+            "w": 0.8,
+            "h": 0.8,
+            "z": 0.52,
+            "roofs": 2,
+            "storeys": 1
+          }
+        },
+        {
+          "tier": 3,
+          "label": "Gift Emporium",
+          "cost": 18000,
+          "upkeep_per_quarter": 420,
+          "effects": {
+            "concession_spend": 1.4
+          },
+          "render": {
+            "w": 0.95,
+            "h": 0.95,
+            "z": 0.65,
+            "roofs": 3,
+            "storeys": 1,
+            "style": "emporium"
+          }
+        },
+        {
+          "tier": 4,
+          "label": "Museum Store",
+          "cost": 28000,
+          "upkeep_per_quarter": 600,
+          "effects": {
+            "concession_spend": 1.8,
+            "appeal_bonus": 0.05
+          },
+          "render": {
+            "w": 1.0,
+            "h": 1.0,
+            "z": 1.0,
+            "roofs": 3,
+            "storeys": 2,
+            "style": "museum"
+          }
+        }
       ]
     },
     {
       "id": "office",
       "name": "Park Office",
+      "short": "OF",
       "position": "office",
       "effect_key": "management_capacity",
-      "blurb": "Where your staff clock in. Base building only for now; office upgrades are planned for a later milestone.",
+      "blurb": "Where your staff clock in. A bigger office runs a bigger crew without morale slipping, and a proper headquarters heads off trouble before it hits the park.",
       "tiers": [
-        { "tier": 0, "label": "Park Office", "cost": 0, "upkeep_per_quarter": 0, "effect_magnitude": 0, "render_size": { "w": 1.0, "h": 1.0, "z": 0.55, "roofs": 1 } }
+        {
+          "tier": 0,
+          "label": "Park Office",
+          "cost": 0,
+          "upkeep_per_quarter": 0,
+          "effects": {
+            "management_capacity": 6,
+            "event_mitigation": 0
+          },
+          "render": {
+            "w": 1.0,
+            "h": 1.0,
+            "z": 0.55,
+            "roofs": 1,
+            "storeys": 1
+          }
+        },
+        {
+          "tier": 1,
+          "label": "Admin Building",
+          "cost": 9000,
+          "upkeep_per_quarter": 200,
+          "effects": {
+            "management_capacity": 10,
+            "event_mitigation": 0.1
+          },
+          "render": {
+            "w": 1.0,
+            "h": 1.0,
+            "z": 0.85,
+            "roofs": 1,
+            "storeys": 2
+          }
+        },
+        {
+          "tier": 2,
+          "label": "Park Headquarters",
+          "cost": 20000,
+          "upkeep_per_quarter": 400,
+          "effects": {
+            "management_capacity": 16,
+            "event_mitigation": 0.2
+          },
+          "render": {
+            "w": 1.0,
+            "h": 1.0,
+            "z": 0.95,
+            "roofs": 2,
+            "storeys": 3,
+            "style": "tower"
+          }
+        }
+      ]
+    },
+    {
+      "id": "visitor_center",
+      "name": "Visitor Center",
+      "short": "VC",
+      "position": "visitor_center",
+      "effect_key": "appeal_bonus",
+      "blurb": "Beside the front lot. Exhibits and a film about your animals make the whole park more appealing and unlock extra pages in the Fact Book.",
+      "tiers": [
+        {
+          "tier": 0,
+          "label": "Empty Pad",
+          "cost": 0,
+          "upkeep_per_quarter": 0,
+          "effects": {
+            "appeal_bonus": 0,
+            "education": 0
+          },
+          "render": {
+            "w": 0.5,
+            "h": 0.5,
+            "z": 0.2,
+            "roofs": 0,
+            "storeys": 0
+          }
+        },
+        {
+          "tier": 1,
+          "label": "Info Kiosk",
+          "cost": 5000,
+          "upkeep_per_quarter": 100,
+          "effects": {
+            "appeal_bonus": 0.08,
+            "education": 1
+          },
+          "render": {
+            "w": 0.55,
+            "h": 0.7,
+            "z": 0.45,
+            "roofs": 1,
+            "storeys": 1,
+            "style": "cart"
+          }
+        },
+        {
+          "tier": 2,
+          "label": "Visitor Center",
+          "cost": 12000,
+          "upkeep_per_quarter": 240,
+          "effects": {
+            "appeal_bonus": 0.16,
+            "education": 2
+          },
+          "render": {
+            "w": 0.85,
+            "h": 0.9,
+            "z": 0.6,
+            "roofs": 2,
+            "storeys": 1
+          }
+        },
+        {
+          "tier": 3,
+          "label": "Discovery Hall",
+          "cost": 22000,
+          "upkeep_per_quarter": 420,
+          "effects": {
+            "appeal_bonus": 0.28,
+            "education": 2
+          },
+          "render": {
+            "w": 1.0,
+            "h": 1.0,
+            "z": 1.0,
+            "roofs": 3,
+            "storeys": 2,
+            "style": "museum"
+          }
+        }
+      ]
+    },
+    {
+      "id": "vet_clinic",
+      "name": "Vet Clinic",
+      "short": "VT",
+      "position": "vet_clinic",
+      "effect_key": "illness_reduction",
+      "blurb": "Behind the office. A clinic heads off illness before it spreads and gets every animal back on its feet faster. Stacks with veterinary staff.",
+      "tiers": [
+        {
+          "tier": 0,
+          "label": "Empty Pad",
+          "cost": 0,
+          "upkeep_per_quarter": 0,
+          "effects": {
+            "illness_reduction": 0,
+            "heal_bonus": 0
+          },
+          "render": {
+            "w": 0.5,
+            "h": 0.5,
+            "z": 0.2,
+            "roofs": 0,
+            "storeys": 0
+          }
+        },
+        {
+          "tier": 1,
+          "label": "First-Aid Post",
+          "cost": 4000,
+          "upkeep_per_quarter": 100,
+          "effects": {
+            "illness_reduction": 0.2,
+            "heal_bonus": 1
+          },
+          "render": {
+            "w": 0.55,
+            "h": 0.65,
+            "z": 0.45,
+            "roofs": 1,
+            "storeys": 1
+          }
+        },
+        {
+          "tier": 2,
+          "label": "Vet Clinic",
+          "cost": 10000,
+          "upkeep_per_quarter": 220,
+          "effects": {
+            "illness_reduction": 0.35,
+            "heal_bonus": 2
+          },
+          "render": {
+            "w": 0.85,
+            "h": 0.9,
+            "z": 0.6,
+            "roofs": 2,
+            "storeys": 1
+          }
+        },
+        {
+          "tier": 3,
+          "label": "Animal Hospital",
+          "cost": 20000,
+          "upkeep_per_quarter": 400,
+          "effects": {
+            "illness_reduction": 0.5,
+            "heal_bonus": 4
+          },
+          "render": {
+            "w": 1.0,
+            "h": 1.0,
+            "z": 0.95,
+            "roofs": 3,
+            "storeys": 2,
+            "style": "hospital"
+          }
+        }
+      ]
+    },
+    {
+      "id": "park_tram",
+      "name": "Park Tram",
+      "short": "TR",
+      "position": "park_tram",
+      "effect_key": "gate_capacity",
+      "blurb": "A tram along the forecourt moves crowds from the lot to the gate, so more people get in on a big day and nobody minds the walk.",
+      "tiers": [
+        {
+          "tier": 0,
+          "label": "No Tram",
+          "cost": 0,
+          "upkeep_per_quarter": 0,
+          "effects": {
+            "gate_capacity": 0,
+            "satisfaction": 0
+          },
+          "render": {
+            "w": 0.6,
+            "h": 0.5,
+            "z": 0.15,
+            "roofs": 0,
+            "storeys": 0,
+            "cars": 0
+          }
+        },
+        {
+          "tier": 1,
+          "label": "Tram Stop",
+          "cost": 6000,
+          "upkeep_per_quarter": 150,
+          "effects": {
+            "gate_capacity": 60,
+            "satisfaction": 0.02
+          },
+          "render": {
+            "w": 0.7,
+            "h": 0.6,
+            "z": 0.4,
+            "roofs": 1,
+            "storeys": 1,
+            "style": "shelter",
+            "cars": 1
+          }
+        },
+        {
+          "tier": 2,
+          "label": "Park Tram",
+          "cost": 14000,
+          "upkeep_per_quarter": 300,
+          "effects": {
+            "gate_capacity": 150,
+            "satisfaction": 0.04
+          },
+          "render": {
+            "w": 0.9,
+            "h": 0.8,
+            "z": 0.5,
+            "roofs": 2,
+            "storeys": 1,
+            "style": "shelter",
+            "cars": 2
+          }
+        },
+        {
+          "tier": 3,
+          "label": "Tram Loop",
+          "cost": 25000,
+          "upkeep_per_quarter": 500,
+          "effects": {
+            "gate_capacity": 300,
+            "satisfaction": 0.06
+          },
+          "render": {
+            "w": 1.0,
+            "h": 1.0,
+            "z": 0.6,
+            "roofs": 3,
+            "storeys": 1,
+            "style": "depot",
+            "cars": 3
+          }
+        }
       ]
     }
   ]

@@ -2,8 +2,9 @@
 // sized by render/viewport.js). Parcels appear at their true footprint with biome colour, size and price;
 // click FOR SALE to buy, an owned empty parcel to fence it, an enclosure to manage it. A side panel carries the
 // biome legend and the hovered parcel's details. All layout comes from data/parcels.json.
-import { DATA, state, parcelList, parcelDef, parcelGeometry, parcelSizeLabel, parcelAtTile, biomeById, fenceByTier, speciesById, foodByDiet, facilityTier, facilityTierDef, facilityById, fmt$, aWord, onChange } from '../state.js';
-import { spaceUsed, spaceCapacity, dailyNeed, parcelPrice, fenceCost, perimeterSegments } from '../economy.js';
+import { DATA, state, parcelList, parcelDef, parcelGeometry, parcelSizeLabel, parcelAtTile, biomeById, biomeDefs, unownedBiome, parcelBiome, fenceByTier, speciesById, foodByDiet, facilityTier, facilityTierDef, facilityById, facilityDefs, fmt$, aWord, onChange, biomeFit } from '../state.js';
+import { effectText } from '../ui/effects.js';
+import { spaceUsed, spaceCapacity, dailyNeed, parcelPrice, parcelPriceFrom, parcelPrices, fenceCost, perimeterSegments, vegetationCap } from '../economy.js';
 import { breakoutChance } from '../events.js';
 import { BASE_W, BASE_H, L, facilityRect } from './projection.js';
 import { showTip, hideTip } from '../ui/tooltips.js';
@@ -31,7 +32,7 @@ function fitText(candidates, maxW, fonts) {
 let canvas, ctx, hover = null, hoverFacility = null;
 let active = false; // false while the Living Park owns the canvas
 let handlers = { onParcelClick: () => {}, onFacilityClick: () => {} };
-const rect = { x0: 0, y0: 0, x1: 0, y1: 0, z: 0, roofs: 0, rows: 0 };
+const rect = { x0: 0, y0: 0, x1: 0, y1: 0, z: 0, roofs: 0, rows: 0, render: null };
 
 export function initPark(el, h) {
   canvas = el;
@@ -84,25 +85,27 @@ function onMove(e) {
   const f = id ? null : facilityAt(e);
   if (id !== hover || f !== hoverFacility) { hover = id; hoverFacility = f; drawPark(); }
   if (id) showTip(parcelTooltip(id), e.clientX, e.clientY);
-  else if (f) showTip(`${facilityById(f).name}: ${facilityTierDef(f).label} (tier ${facilityTier(f)}). Fixed facility; upgrade it in the General Store.`, e.clientX, e.clientY);
+  else if (f) showTip(`${facilityById(f).name}: ${facilityTierDef(f).label} (tier ${facilityTier(f)}) · ${effectText(facilityById(f), facilityTierDef(f))}. Fixed facility; click or use the General Store to upgrade.`, e.clientX, e.clientY);
   else hideTip();
 }
 
 // Shared with the Living Park hover.
 export function parcelTooltip(id) {
   const p = state.parcels[id];
-  const d = parcelDef(id);
-  const biome = biomeById(d.biome);
-  const size = `${parcelSizeLabel(id)} ${biome.name}`;
-  void d;
-  if (!p.owned) return `Parcel ${id}: ${size}, for sale at ${fmt$(parcelPrice(id))}. Holds ${spaceCapacity(id)} space units; ${aWord(fenceByTier(1).name)} fence costs ${fmt$(fenceCost(1, id))} (${perimeterSegments(id)} segments). Click to buy.`;
+  const biome = parcelBiome(id);
+  const size = `${parcelSizeLabel(id)}${biome ? ` ${biome.name}` : ''}`;
+  if (!p.owned) {
+    const prices = parcelPrices(id);
+    return `Parcel ${id}: ${size} FOR SALE from ${fmt$(parcelPriceFrom(id))} (${biomeDefs().map(b => `${b.name} ${fmt$(prices[b.id])}`).join(' · ')}). Holds ${spaceCapacity(id)} space units; ${aWord(fenceByTier(1).name)} fence costs ${fmt$(fenceCost(1, id))} (${perimeterSegments(id)} segments). Click to buy and choose the land type.`;
+  }
   if (!p.enclosure) return `Parcel ${id}: ${size}, owned and empty. Click to build an enclosure (fence around ${perimeterSegments(id)} segments).`;
   const enc = p.enclosure;
   const fence = fenceByTier(enc.fence_tier);
-  const dinos = enc.dinos.map(x => `${speciesById(x.species).name} (hp ${Math.round(x.health)}${x.sick_days > 0 ? ', sick' : ''}${x.hunger >= DATA.balance.dinosaur.hunger_max ? ', starving' : ''})`).join(', ') || 'no dinosaurs';
+  const dinos = enc.dinos.map(x => { const f = biomeFit(speciesById(x.species), p.biome); return `${speciesById(x.species).name} (hp ${Math.round(x.health)}${x.sick_days > 0 ? ', sick' : ''}${x.hunger >= DATA.balance.dinosaur.hunger_max ? ', starving' : ''}${f === 'wrong' ? ', unhappy: wrong biome' : f === 'preferred' ? ', at home' : ''})`; }).join(', ') || 'no dinosaurs';
   const food = Object.entries(enc.food).filter(([, v]) => v > 0).map(([k, v]) => `${k} ${v}`).join(', ') || 'no food';
+  const veg = enc.vegetation || 0, cap = vegetationCap(id);
   const risk = breakoutChance(id);
-  return `Parcel ${id} (${size}): ${fence.name} fence ${Math.round(enc.condition)}% · space ${spaceUsed(enc)}/${spaceCapacity(id)} · ${dinos} · food: ${food} · breakout risk ${risk > 0 ? `${(risk * 100).toFixed(1)}%/day` : 'none'}`;
+  return `Parcel ${id} (${size}): ${fence.name} fence ${Math.round(enc.condition)}% · space ${spaceUsed(enc)}/${spaceCapacity(id)} · ${dinos} · food: ${food} · greenery ${Math.round(veg)}/${cap}${enc.seeded ? '' : ' (not seeded)'} · breakout risk ${risk > 0 ? `${(risk * 100).toFixed(1)}%/day` : 'none'}`;
 }
 
 // ---- drawing ----
@@ -115,7 +118,7 @@ export function drawPark() {
   ctx.fillStyle = '#f2c94c';
   text('BUY LAND · SURVEY MAP', MAP.x, 18, 'left', FONT);
   ctx.fillStyle = '#a7acbd';
-  text('north ↑ · gate at the bottom', mx(L.PARK_W), 18, 'right', FONT_S);
+  text('north ↑ · gate at the bottom', mx(L.PARK_W), 18, 'right', FONT);
   drawMap();
   drawPanel();
 }
@@ -162,15 +165,31 @@ function drawMap() {
   ctx.strokeStyle = '#22401c'; ctx.lineWidth = 3;
   ctx.strokeRect(mx(0) - 1.5, my(0) - 1.5, PARK_W * MAP.k + 3, PARK_H * MAP.k + 3);
   ctx.fillStyle = '#b8ab8c'; ctx.fillRect(mx(GATE.x - GATE.halfGap), my(PARK_H) - 3, GATE.halfGap * 2 * MAP.k, 6);
-  // front strip: gate, lot, office labels
+  // front strip: the lot at its tier footprint (surface colour by tier), then the strip buildings, each with its tier label
   const sy = my(PARK_H) + 6;
-  ctx.fillStyle = '#1b1f2a'; ctx.fillRect(mx(0), sy, PARK_W * MAP.k, 22);
+  ctx.fillStyle = '#1b1f2a'; ctx.fillRect(mx(0), sy, PARK_W * MAP.k, 40);
   const lot = facilityRect('parking_lot', facilityTier('parking_lot'), rect);
-  ctx.fillStyle = '#4a4e58'; ctx.fillRect(mx(lot.x0), sy + 3, (lot.x1 - lot.x0) * MAP.k, 16);
-  ctx.fillStyle = '#6b5c8a'; ctx.fillRect(mx(L.OFFICE.x0), sy + 3, (L.OFFICE.x1 - L.OFFICE.x0) * MAP.k, 16);
+  const LOT_COL = { dirt: '#8a6a3e', gravel: '#8d8b82', asphalt: '#4a4e58', lined: '#474b55', overflow: '#535866' };
+  ctx.fillStyle = LOT_COL[lot.surface] || '#4a4e58'; ctx.fillRect(mx(lot.x0), sy + 3, (lot.x1 - lot.x0) * MAP.k, 34);
+  ctx.strokeStyle = '#2b2e35'; ctx.strokeRect(mx(lot.x0) + 0.5, sy + 3.5, (lot.x1 - lot.x0) * MAP.k - 1, 33);
   ctx.fillStyle = '#f1f0e6';
-  text(`PARKING ${facilityTierDef('parking_lot').label.toUpperCase()}`, mx((lot.x0 + lot.x1) / 2), sy + 14, 'center', FONT_S);
-  text('OFFICE', mx((L.OFFICE.x0 + L.OFFICE.x1) / 2), sy + 14, 'center', FONT_S);
+  const lotLabel = fitText([`PARKING · ${facilityTierDef('parking_lot').label.toUpperCase()}`, facilityTierDef('parking_lot').label.toUpperCase(), 'PARKING'], (lot.x1 - lot.x0) * MAP.k - 6, [FONT_S, FONT_XS]);
+  text(lotLabel.text, mx((lot.x0 + lot.x1) / 2), sy + 17, 'center', lotLabel.font);
+  text(`${lot.rows} rows · +${facilityTierDef('parking_lot').effects.parking_capacity}/day`, mx((lot.x0 + lot.x1) / 2), sy + 30, 'center', FONT_XS);
+  // strip buildings (office, tram, visitor center, vet clinic): two rows of chips right of the lot
+  const strip = facilityDefs().filter(f => L.facilities[f.id].kind === 'building' && !L.facilities[f.id].tiles);
+  const COL = { office: '#6b5c8a', park_tram: '#3f7d90', visitor_center: '#b3842f', vet_clinic: '#a7b0bb' };
+  strip.forEach(f => {
+    const m = L.facilities[f.id];
+    const row = m.y0 < L.PARK_H + 1.2 ? 0 : 1;
+    const bx = mx(m.x0), bw = (m.x1 - m.x0) * MAP.k, by = sy + 3 + row * 17;
+    ctx.fillStyle = COL[f.id] || '#5c6270'; ctx.fillRect(bx, by, bw, 15);
+    ctx.strokeStyle = '#1e2228'; ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, 14);
+    ctx.fillStyle = '#f1f0e6';
+    const t = facilityTierDef(f.id);
+    const lab = fitText([`${f.short || f.name.toUpperCase()} · ${t.label.toUpperCase()}`, `${f.short} ${t.tier}`, f.short || 'F'], bw - 4, [FONT_XS]);
+    text(lab.text, bx + bw / 2, by + 10, 'center', lab.font);
+  });
   ctx.fillStyle = '#f2c94c'; text('▲ GATE', mx(GATE.x), sy + 14, 'center', FONT_S);
 }
 
@@ -189,11 +208,15 @@ function loopPath(g) {
 }
 function fillLoops(g, color) { loopPath(g); ctx.fillStyle = color; ctx.fill(); }
 function strokeLoops(g, color, width) { loopPath(g); ctx.strokeStyle = color; ctx.lineWidth = width; ctx.stroke(); }
-function strokeOutline(g, inset, color, width, dash = null) {
+// `skip(e)` drops an outline edge (a boundary shared with a neighbouring pen that draws it instead); `centre(e)` puts
+// the stroke exactly on the boundary line for a shared edge this pen owns.
+function strokeOutline(g, inset, color, width, dash = null, skip = null, centre = null) {
   ctx.strokeStyle = color; ctx.lineWidth = width;
   if (dash) ctx.setLineDash(dash);
   ctx.beginPath();
   for (const e of g.edges) {
+    if (skip && skip(e)) continue;
+    if (centre && centre(e)) { ctx.moveTo(mx(e.x0), my(e.y0)); ctx.lineTo(mx(e.x1), my(e.y1)); continue; }
     // inset each edge toward the tile it belongs to, and shorten it by the inset so corners meet cleanly
     const horiz = e.side === 'n' || e.side === 's';
     const ix = e.side === 'w' ? inset : e.side === 'e' ? -inset : 0, iy = e.side === 'n' ? inset : e.side === 's' ? -inset : 0;
@@ -207,7 +230,8 @@ function strokeOutline(g, inset, color, width, dash = null) {
 function drawParcel(p) {
   const d = parcelDef(p.id);
   const g = parcelGeometry(p.id);
-  const biome = biomeById(d.biome);
+  // M4: unsold land is neutral scrub; an owned parcel draws the biome the player chose for it.
+  const biome = parcelBiome(p.id) || unownedBiome();
   const small = d.tiles.length === 1;
   const f = small ? FONT_S : FONT, lh = small ? 9 : 12;
   const lt = tileRect(g.label);
@@ -216,14 +240,16 @@ function drawParcel(p) {
   const tag = `${p.id} ${shapeAbbrev(d)}`;
   if (!p.owned) {
     fillTiles('#2c3a44');
-    fillTiles(tint(biome.color, 0.42));   // enough biome colour to tell marsh from plains on the map, not only in the legend
+    fillTiles(tint(biome.color, 0.6));   // enough biome colour to tell marsh from plains on the map, not only in the legend
     strokeLoops(g, '#1b2630', 1);                 // hard seam: the boundary between two parcels, not between two tiles
     strokeOutline(g, 2.5, lighten(biome.color, 0.3), 1.5, [4, 3]);
     const tg = fitText([tag, p.id], lt.w - 4, [f, FONT_S, FONT_XS]);
     ctx.fillStyle = '#c9c4b8'; text(tg.text, cx, cy - lh, 'center', tg.font);
     const fs = fitText(['FOR SALE', 'SALE'], lt.w - 6, [f, FONT_S, FONT_XS]);
     ctx.fillStyle = '#f2c94c'; text(fs.text, cx, cy + (small ? 1 : 2), 'center', fs.font);
-    ctx.fillStyle = '#f1f0e6'; text(fmt$(parcelPrice(p.id)), cx, cy + lh + (small ? 1 : 2), 'center', fitFont(fmt$(parcelPrice(p.id)), lt.w - 4, [f, FONT_S, FONT_XS]));
+    const from = `from ${fmt$(parcelPriceFrom(p.id))}`;
+    const pf = fitText([from, fmt$(parcelPriceFrom(p.id))], lt.w - 4, [f, FONT_S, FONT_XS]);
+    ctx.fillStyle = '#f1f0e6'; text(pf.text, cx, cy + lh + (small ? 1 : 2), 'center', pf.font);
   } else {
     fillTiles(biome.color);
     strokeLoops(g, 'rgba(0,0,0,0.55)', 1);
@@ -267,7 +293,11 @@ function drawEnclosure(p, d, g, lt, small) {
   const f = small ? FONT_S : FONT;
   fillLoops(g, 'rgba(0,0,0,0.18)');
   const low = enc.condition <= DATA.fences.breakout.low_condition_threshold;
-  strokeOutline(g, 3, fence.color, low ? 2 : 3, low ? [3, 3] : null);
+  // A boundary shared with another fenced pen is drawn once, on the line, by the higher fence tier (ties: lower id).
+  const neighbour = e => { const nid = parcelAtTile(e.nx + 0.5, e.ny + 0.5); return nid && nid !== p.id ? { id: nid, enc: state.parcels[nid].enclosure } : null; };
+  const skip = e => { const n = neighbour(e); return !!(n && n.enc && (n.enc.fence_tier > enc.fence_tier || (n.enc.fence_tier === enc.fence_tier && n.id < p.id))); };
+  const centre = e => { const n = neighbour(e); return !!(n && n.enc); };
+  strokeOutline(g, 3, fence.color, low ? 2 : 3, low ? [3, 3] : null, skip, centre);
   const x = lt.x, y = lt.y, w = lt.w, hh = lt.h;
   const short = (fence.short || fence.name).toUpperCase();
   const headMax = w - 12 - (under ? 26 : 0);
@@ -287,14 +317,16 @@ function drawEnclosure(p, d, g, lt, small) {
     const rows = isLabel ? 1 : 2, y0 = isLabel ? r.y + 24 : r.y + 16;
     for (let i = 0; i < rows * 2; i++) slots.push({ x: r.x + 14 + (i % 2) * 16, y: y0 + Math.floor(i / 2) * 15 });
   }
-  enc.dinos.forEach((k, i) => { if (i < slots.length) drawDino(k, slots[i].x, slots[i].y); });
+  enc.dinos.forEach((k, i) => { if (i < slots.length) drawDino(k, slots[i].x, slots[i].y, biomeFit(speciesById(k.species), p.biome)); });
+  // greenery: a thin green bar above the food bar once the pen is seeded
+  if (enc.seeded) { const cap = vegetationCap(p.id); const vw = w - 28 - (warn ? 14 : 0); if (vw > 10) { ctx.fillStyle = '#101418'; ctx.fillRect(x + 24, y + hh - 14, vw, 4); ctx.fillStyle = '#5fbf3a'; ctx.fillRect(x + 25, y + hh - 13, Math.max(0, (vw - 2) * Math.min(1, (enc.vegetation || 0) / cap)), 2); } }
   if (enc.dinos.length > slots.length) { ctx.fillStyle = '#f1f0e6'; text(`+${enc.dinos.length - slots.length}`, x + w - 5, y + 26, 'right', FONT_XS); }
   if (warn) { ctx.fillStyle = '#e05c5c'; ctx.fillRect(x + w - 16, y + hh - 20, 12, 12); ctx.fillStyle = '#fff'; text('!', x + w - 10, y + hh - 11, 'center', FONT); }
   ctx.fillStyle = '#f1f0e6'; text(`${spaceUsed(enc)}/${spaceCapacity(p.id)}`, x + 5, y + hh - 4, 'left', FONT_XS);
   foodBar(enc, x + 24, y + hh - 9, w - 28 - (warn ? 14 : 0));
 }
 
-function drawDino(d, cx, cy) {
+function drawDino(d, cx, cy, fit = 'tolerated') {
   const sp = speciesById(d.species);
   ctx.fillStyle = sp.color;
   ctx.strokeStyle = '#101418';
@@ -305,6 +337,7 @@ function drawDino(d, cx, cy) {
   else { ctx.moveTo(cx, cy - 8); ctx.lineTo(cx + 8, cy + 7); ctx.lineTo(cx - 8, cy + 7); ctx.closePath(); }
   ctx.fill(); ctx.stroke();
   if (d.health < 50) { ctx.fillStyle = '#e05c5c'; ctx.fillRect(cx - 2, cy - 2, 4, 4); }
+  else if (fit === 'wrong') { ctx.fillStyle = '#ff9d4d'; ctx.fillRect(cx + 4, cy - 9, 5, 5); ctx.strokeStyle = '#101418'; ctx.strokeRect(cx + 4.5, cy - 8.5, 4, 4); }
 }
 
 function foodBar(enc, x, y, w) {
@@ -345,7 +378,10 @@ function drawPanel() {
   let y = PANEL.y + 8;
   ctx.fillStyle = '#1b1f2a'; ctx.fillRect(x, PANEL.y, w, BASE_H - PANEL.y - 12);
   ctx.strokeStyle = '#4a5270'; ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, PANEL.y + 0.5, w - 1, BASE_H - PANEL.y - 13);
-  ctx.fillStyle = '#f2c94c'; text('BIOMES', x + 10, y + 8, 'left', FONT); y += 20;
+  ctx.fillStyle = '#f2c94c'; text('LAND TYPES', x + 10, y + 8, 'left', FONT); y += 20;
+  const un = unownedBiome();
+  ctx.fillStyle = un.color; ctx.fillRect(x + 10, y, 12, 12); ctx.strokeStyle = '#000'; ctx.strokeRect(x + 10.5, y + 0.5, 11, 11);
+  ctx.fillStyle = '#a7acbd'; text(`${(un.name || 'SCRUB').toUpperCase()} = for sale`, x + 28, y + 10, 'left', FONT); y += 18;
   for (const b of DATA.biomes.biomes) {
     ctx.fillStyle = b.color; ctx.fillRect(x + 10, y, 12, 12); ctx.strokeStyle = '#000'; ctx.strokeRect(x + 10.5, y + 0.5, 11, 11);
     ctx.fillStyle = '#f1f0e6'; text(`${b.name.toUpperCase()} ${fmt$(b.plot_cost)}/tile`, x + 28, y + 10, 'left', FONT);
@@ -354,12 +390,13 @@ function drawPanel() {
   const P = DATA.balance.parcel;
   ctx.fillStyle = '#a7acbd';
   const body = [
+    'You pick the land type when you buy; it sets the price and which species feel at home.',
     `Bigger parcels cost less per tile (4 tiles pay ${Math.round((P.area_factor['4'] ?? 4) / 4 * 100)}%, 6 pay ${Math.round((P.area_factor['6'] ?? 6) / 6 * 100)}%).`,
     `Capacity: ${P.space_per_tile} space units per tile.`,
-    'Fence cost = per segment x outline edges.',
-    'Shapes fit together like tetris.'
+    'Fence cost = per segment x outline edges.'
   ];
-  for (const line of wrap(body, w - 20)) { text(line, x + 10, y + 8, 'left', FONT_S); y += 10; }
+  // M5 (M4 minor f): legend and help copy at the 8px face (a 12px-sans equivalent at 1280x720), never the 6px one.
+  for (const line of wrap(body, w - 20, FONT)) { text(line, x + 10, y + 8, 'left', FONT); y += 12; }
   y += 8;
   const owned = parcelList().filter(p => p.owned).length;
   ctx.fillStyle = '#f2c94c'; text('YOUR LAND', x + 10, y + 8, 'left', FONT); y += 20;
@@ -368,18 +405,20 @@ function drawPanel() {
   ctx.fillStyle = '#f2c94c'; text(hover ? `PARCEL ${hover}` : 'HOVER A PARCEL', x + 10, y + 8, 'left', FONT); y += 20;
   ctx.fillStyle = '#f1f0e6';
   const lines = hover ? parcelLines(hover) : ['Click FOR SALE to buy.', 'Owned + empty: click to fence.', 'Enclosure: click to manage.', '', 'Parking, restrooms, food and gifts are fixed. Upgrade them in the General Store.'];
-  for (const line of wrap(lines, w - 20)) { text(line, x + 10, y + 8, 'left', FONT_S); y += 10; }
+  for (const line of wrap(lines, w - 20, FONT)) { text(line, x + 10, y + 8, 'left', FONT); y += 12; }
   y += 8;
-  ctx.fillStyle = '#a7acbd'; text('Esc: back to the living park', x + 10, y + 8, 'left', FONT_S);
+  ctx.fillStyle = '#a7acbd'; text('Esc: back to the living park', x + 10, y + 8, 'left', FONT);
 }
 
 function parcelLines(id) {
   const p = state.parcels[id];
-  const d = parcelDef(id);
-  const biome = biomeById(d.biome);
-  const out = [`${parcelSizeLabel(id)} ${biome.name}`, `${perimeterSegments(id)} fence segments`, `Capacity ${spaceCapacity(id)} space units`];
+  const biome = parcelBiome(id);
+  const out = [`${parcelSizeLabel(id)} ${biome ? biome.name : 'scrub (for sale)'}`, `${perimeterSegments(id)} fence segments`, `Capacity ${spaceCapacity(id)} space units`];
   if (!p.owned) {
-    out.push(`Price ${fmt$(parcelPrice(id))}`, `Cash after: ${fmt$(state.cash - parcelPrice(id))}`, '');
+    const prices = parcelPrices(id);
+    out.push('Price by land type:');
+    for (const b of biomeDefs()) out.push(`  ${b.name} ${fmt$(prices[b.id])}`);
+    out.push(`Cash now: ${fmt$(state.cash)}`, '');
     for (const f of DATA.fences.tiers) out.push(`${f.name} fence ${fmt$(fenceCost(f.tier, id))}`);
   } else if (!p.enclosure) {
     out.push('Owned, no fence yet.', '');
@@ -388,8 +427,9 @@ function parcelLines(id) {
     const enc = p.enclosure;
     const risk = breakoutChance(id);
     out.push(`${fenceByTier(enc.fence_tier).name} fence, ${Math.round(enc.condition)}%`, `Space used ${spaceUsed(enc)}/${spaceCapacity(id)}`, `Breakout risk: ${risk > 0 ? `${(risk * 100).toFixed(1)}%/day` : 'none'}`, '');
-    for (const k of enc.dinos) out.push(`${speciesById(k.species).name} hp ${Math.round(k.health)}`);
+    for (const k of enc.dinos) { const f = biomeFit(speciesById(k.species), p.biome); out.push(`${f === 'wrong' ? 'x ' : f === 'preferred' ? '+ ' : '~ '}${speciesById(k.species).name} hp ${Math.round(k.health)}${f === 'wrong' ? ' unhappy' : ''}`); }
     if (!enc.dinos.length) out.push('No dinosaurs yet.');
+    if (enc.seeded) out.push(`Greenery ${Math.round(enc.vegetation || 0)}/${vegetationCap(id)}`);
   }
   return out;
 }

@@ -1,5 +1,5 @@
 // Random events, mitigation by staff, and fence breakout checks.
-import { DATA, state, bus, mode, enclosures, allDinos, staffCount, speciesById, roleById, season, log, pick, clamp } from './state.js';
+import { DATA, state, bus, mode, enclosures, allDinos, staffCount, speciesById, roleById, facilityById, facilityTier, facilityEffect, season, log, pick, clamp } from './state.js';
 import { parkRating } from './attendance.js';
 import { quitRandomStaff } from './economy.js';
 
@@ -63,10 +63,17 @@ export function rollDailyEvent() {
   return { event: ev, summary };
 }
 
+// Staff roll first (their effect_magnitude), then the facilities: the Vet Clinic against illness (illness_reduction,
+// stacking with vets) and the Park Office against any negative event (event_mitigation). Returns who headed it off.
 function avertedBy(ev) {
   for (const roleId of ev.mitigated_by || []) {
     if (staffCount(roleId) > 0 && Math.random() < roleById(roleId).effect_magnitude) return roleById(roleId).name;
   }
+  const kind = ev.effect?.kind;
+  const clinic = facilityEffect('vet_clinic', facilityTier('vet_clinic'), 'illness_reduction') || 0;
+  if (kind === 'illness' && clinic > 0 && Math.random() < clinic) return facilityById('vet_clinic').tiers[facilityTier('vet_clinic')].label;
+  const office = facilityEffect('office', facilityTier('office'), 'event_mitigation') || 0;
+  if (office > 0 && Math.random() < office) return facilityById('office').tiers[facilityTier('office')].label;
   return null;
 }
 
@@ -86,8 +93,9 @@ export function applyEvent(ev, targetParcel = null) {
     const targets = f.kind === 'storm' ? enclosures() : [targetParcel || pick(risky.length ? risky : underFencedPlots().length ? underFencedPlots() : enclosures().filter(p => p.enclosure.dinos.length))].filter(Boolean);
     for (const p of targets) p.enclosure.condition = clamp(p.enclosure.condition - f.fence_damage * r, 0, 100);
     if (targets.length) notes.push(`fence condition -${Math.round(f.fence_damage * r)}`);
-    // Living Park listens for this and shows the loose dinosaur; purely visual.
-    if (f.kind === 'escape' && targets.length) bus.dispatchEvent(new CustomEvent('escape', { detail: { parcel: targets[0].id } }));
+    // Living Park listens for this and shows the loose dinosaur; audio sounds the siren; effects shake the screen.
+    // The lifetime escape count feeds the Year-5 Report Card's welfare grade.
+    if (f.kind === 'escape' && targets.length) { if (state.stats) state.stats.escapes = (state.stats.escapes || 0) + 1; bus.dispatchEvent(new CustomEvent('escape', { detail: { parcel: targets[0].id } })); }
   }
   // building_damage (storm): fixed facilities carry no condition in M2.5, so the storm's facility line is cosmetic.
   if (f.health_loss) {

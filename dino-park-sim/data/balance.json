@@ -38,14 +38,14 @@
     "cleanliness_start": 80,
     "cleanliness_decay_per_day": 0.5,
     "satisfaction_price_tolerance_cap": 0.3,
-    "empty_park_factor": 0.15,
+    "empty_park_factor": 0,
     "reputation_start": 50,
     "reputation_weight": 0.2,
     "reputation_drift_per_day": 0.05,
     "cleanliness_decay_ref_attendance": 100,
     "cleanliness_decay_min_factor": 0.2,
     "cleanliness_decay_max_factor": 2.5,
-    "_notes": "M2.6: base_demand 60 -> 72 (+20%). Elasticity 0.35 -> 0.6 with a new price_penalty_exponent of 2 (M2.6 playtest-2 fix): at 0.35 a $20 ticket earned as much as a $5 one, so the overspend trap paid for itself. Overcharging is now penalised by the SQUARE of the overcharge, so ticket revenue peaks near $7-8 and collapses above it: a $20 ticket empties the park (0.5% of demand) instead of paying as well as $5 did. Satisfaction (restrooms, tour guides) softens the curve, so investing in visitors is what buys the right to charge more. The reference price is unaffected (priceFactor(reference) = 1), so the classic $5 opening is unchanged. empty_park_factor 0.25 -> 0.15: a park with no living dinosaurs pulls a trickle of visitors and cannot cover its own costs. Cleanliness decay per day = cleanliness_decay_per_day x clamp(attendance / cleanliness_decay_ref_attendance, min_factor, max_factor): an empty park barely gets dirty, a packed one needs more maintenance."
+    "_notes": "M2.6: base_demand 60 -> 72 (+20%). Elasticity 0.35 -> 0.6 with a new price_penalty_exponent of 2 (M2.6 playtest-2 fix): at 0.35 a $20 ticket earned as much as a $5 one, so the overspend trap paid for itself. Overcharging is now penalised by the SQUARE of the overcharge, so ticket revenue peaks near $7-8 and collapses above it: a $20 ticket empties the park (0.5% of demand) instead of paying as well as $5 did. Satisfaction (restrooms, tour guides) softens the curve, so investing in visitors is what buys the right to charge more. The reference price is unaffected (priceFactor(reference) = 1), so the classic $5 opening is unchanged. empty_park_factor 0.25 -> 0.15: a park with no living dinosaurs pulls a trickle of visitors and cannot cover its own costs. Cleanliness decay per day = cleanliness_decay_per_day x clamp(attendance / cleanliness_decay_ref_attendance, min_factor, max_factor): an empty park barely gets dirty, a packed one needs more maintenance. M3 carry-over: empty_park_factor 0.15 -> 0. A park with no living dinosaurs has no appeal, so demand and attendance are 0 and concessions (which scale with attendance) earn nothing: an empty park cannot profit."
   },
   "revenue": {
     "per_visitor_concession_spend": 2.5,
@@ -58,30 +58,7 @@
     "overdraft_apr": 0.18
   },
   "advertising": {
-    "campaigns": [
-      {
-        "id": "flyers",
-        "name": "Flyers",
-        "cost": 500,
-        "boost": 0.15,
-        "days": 30
-      },
-      {
-        "id": "radio",
-        "name": "Radio Spot",
-        "cost": 1500,
-        "boost": 0.3,
-        "days": 30
-      },
-      {
-        "id": "tv",
-        "name": "TV Commercial",
-        "cost": 4000,
-        "boost": 0.5,
-        "days": 30
-      }
-    ],
-    "stacking": "highest_only"
+    "_notes": "M4: the fixed campaign list moved to data/campaigns.json (a ladder with unlock conditions). Shared marketing mechanics live in balance.marketing."
   },
   "auction": {
     "opening_bid_ratio": 0.5,
@@ -95,10 +72,68 @@
     "poor_specimen_health": 40,
     "ai_raise_chance": 0.8
   },
-  "win": {
-    "net_worth_target": 150000,
-    "species_target": 8,
-    "rating_target": 5
+  "goals": {
+    "_notes": "M5 end-game ladder (src/goals.js). Goals fire once, in any order, and are listed in the Goals panel with live progress. loan_repaid: debt at zero. net_worth: cash + assets - debt at or above target. species: that many distinct species alive at once. rating_quarter: a quarter closes with the park rating at or above stars. grand_park: every facility at its top tier AND every spend-threshold prize earned AND rating_quarter stars held for consecutive_quarters quarter closes in a row; fires once with the big fanfare and the Grand Park plaque at the gate. report_card: opens at the close of year `year` (day = year x 4 quarters x 90), grades A-F per metric from the thresholds below (score >= A -> A, >= B -> B ... else F), one comment per grade, overall = mean of grade points (A=4 .. F=0). Profit = summed profit over the final year; attendance = average visitors per day over the final year; welfare = average health of living dinosaurs minus welfare.death_penalty per death and welfare.escape_penalty per escape over the whole game (floor 0); education = Visitor Center tier x education.per_tier + min(education.fact_cap, Fact Book cards opened x education.per_fact) + education.school_bonus if the school program ever ran; satisfaction = mean over the final year's quarter closes of (rating / max stars) x 100. Everything else about a report card is copy.",
+    "loan_repaid": {},
+    "net_worth": {
+      "target": 150000
+    },
+    "species": {
+      "count": 10
+    },
+    "rating_quarter": {
+      "stars": 5
+    },
+    "grand_park": {
+      "stars": 5,
+      "consecutive_quarters": 4
+    },
+    "report_card": {
+      "year": 5,
+      "grade_points": {
+        "A": 4,
+        "B": 3,
+        "C": 2,
+        "D": 1,
+        "F": 0
+      },
+      "profit": {
+        "A": 120000,
+        "B": 60000,
+        "C": 20000,
+        "D": 0
+      },
+      "attendance": {
+        "A": 500,
+        "B": 320,
+        "C": 180,
+        "D": 80
+      },
+      "welfare": {
+        "A": 88,
+        "B": 72,
+        "C": 55,
+        "D": 35,
+        "death_penalty": 6,
+        "escape_penalty": 8
+      },
+      "education": {
+        "A": 85,
+        "B": 60,
+        "C": 35,
+        "D": 15,
+        "per_tier": 20,
+        "per_fact": 2,
+        "fact_cap": 20,
+        "school_bonus": 20
+      },
+      "satisfaction": {
+        "A": 88,
+        "B": 72,
+        "C": 55,
+        "D": 38
+      }
+    }
   },
   "rating": {
     "min": 1,
@@ -190,7 +225,20 @@
       "medium",
       "small"
     ],
-    "_notes": "dino_label_always lists the sizes whose pens always carry a name chip (all three: an unlabelled blob is unreadable); other pens still label on hover. day_seconds is THE clock: one game day at 1x takes this many real seconds (M2.6: 6). 3x/10x run proportionally faster; agents cap at max_speed_factor."
+    "_notes": "dino_label_always lists the sizes whose pens always carry a name chip (all three: an unlabelled blob is unreadable); other pens still label on hover. day_seconds is THE clock: one game day at 1x takes this many real seconds (M2.6: 6). 3x/10x run proportionally faster; agents cap at max_speed_factor. M3: day_seconds is the DEFAULT; the Settings view lets the player pick any value between day_seconds_min and day_seconds_max (state.settings.day_seconds) and the clock, visitor spawn rate and autosave all read the live value. Starving dinosaurs keep a slow breathing bob (dino_starving_bob_hz / _px) so they never read as frozen. tram_speed/tram_pause_seconds drive the Park Tram along the forecourt track (visual only). M5: truck_speed / truck_pause_seconds / crate_seconds / pop_seconds drive the delivery-truck arrival (real seconds, runs even while the clock is paused); arrival_max_wait_seconds skips the truck for a purchase the living view has not shown by then; puff_seconds is the dust puff on a prize placement and a dinosaur pop. pen_label_stack_gap_px: interlocking pens whose species-chip stacks would land within this many px of each other are pushed apart (sideways inside their own pen, else lifted).",
+    "day_seconds_min": 2,
+    "day_seconds_max": 20,
+    "dino_starving_bob_hz": 0.45,
+    "dino_starving_bob_px": 1.6,
+    "tram_speed": 1.7,
+    "tram_pause_seconds": 2.5,
+    "truck_speed": 3.0,
+    "truck_pause_seconds": 0.7,
+    "crate_seconds": 0.45,
+    "arrival_max_wait_seconds": 45,
+    "pop_seconds": 0.5,
+    "puff_seconds": 0.8,
+    "pen_label_stack_gap_px": 14
   },
   "parcel": {
     "_notes": "space_per_tile x parcel tile count = enclosure capacity in space units. area_factor scales biome plot_cost by tile count (sub-linear: big parcels are a modest per-tile discount); counts missing from the table use count ^ area_factor_exponent. Fence cost = per segment x outline edges (tile edges not shared inside the parcel).",
@@ -214,5 +262,82 @@
     ],
     "digest_days_kept": 30,
     "digest_max_entries": 40
+  },
+  "save": {
+    "autosave_days": 90,
+    "autosave_days_min": 10,
+    "autosave_days_max": 90,
+    "_notes": "Autosave every N days (default = one quarter). The Settings view lets the player pick between the min and max; state.settings.autosave_days overrides the default."
+  },
+  "prizes": {
+    "toast_seconds": 6,
+    "_notes": "Prize fanfare toast lifetime. Thresholds live in data/prizes.json."
+  },
+  "facilities": {
+    "appeal_bonus_cap": 0.6,
+    "_notes": "Cap on the summed appeal_bonus from facilities (visitor center, museum store) plus park prizes, added to the appeal multiplier."
+  },
+  "biome": {
+    "preferred_popularity": 1.15,
+    "tolerated_popularity": 1.0,
+    "wrong_popularity": 0.7,
+    "preferred_regen": 1,
+    "wrong_health_drift": 1.5,
+    "wrong_health_floor": 30,
+    "relandscape_ratio": 0.5,
+    "warn_every_days": 30,
+    "_notes": "M4 biome mechanic (species biomes in dinosaurs.json). A dinosaur in a PREFERRED biome has its popularity multiplied by preferred_popularity and regains preferred_regen extra health per day. TOLERATED is neutral. The WRONG biome multiplies popularity by wrong_popularity and drifts health down by wrong_health_drift per day, but never below wrong_health_floor: the animal is unhappy, worth less and easier to lose to illness, yet the biome alone never kills a paid-for asset. The ticker/digest warns about each unhappy pen every warn_every_days. Re-landscape (enclosure panel) costs relandscape_ratio x the new biome's parcel price and wipes the pen's vegetation."
+  },
+  "vegetation": {
+    "growth_per_day": {
+      "desert": 0.08,
+      "plains": 0.15,
+      "marsh": 0.24
+    },
+    "veg_per_tile": 25,
+    "seeds_per_tile": 10,
+    "appeal_bonus_per_pen": 0.02,
+    "_notes": "M4 seeds -> vegetation. Plant seeds (enclosure panel) in a pen: every seed unit adds to enc.seeded until the pen is fully planted at seeds_per_tile x tiles. Each day the pen's vegetation grows by growth_per_day[biome] x tiles x (seeded / fully planted), capped at veg_per_tile x tiles (a 4-tile pen holds 100). Herbivores graze whole units of vegetation before touching park stock (1 vegetation = 1 plant unit), and the roots keep regrowing after grazing. Growth is per PLANTED TILE, so a 4-tile marsh pen makes about 0.96 free plant units a day (two starter herbivores eat 2/day: ~48% fewer plants bought), plains ~30%, desert ~16%. A fully planted pen also adds appeal_bonus_per_pen x (vegetation / cap) to park appeal (shared cap: facilities.appeal_bonus_cap). Seeds are an investment: paid once, saving every day after; plants are a recurring cost. M5: visible_floor is the smallest share of a pen's greenery that is drawn once the pen has any seeds in it, so a freshly planted or heavily grazed pen still reads as seeded rather than bare.",
+    "visible_floor": 0.14
+  },
+  "food": {
+    "warn_days": 5,
+    "restock_fill_days": 30,
+    "auto_restock_default": {
+      "on": false,
+      "threshold_days": 5,
+      "amount": 50
+    },
+    "_notes": "M4 food without round trips. warn_days: a low-food ticker/digest warning when a food type has fewer days of stock left than this (before the starving popup). restock_fill_days: the General Store Food tab pre-fills the quantity box with this many days of the park's daily need. auto_restock_default: the per-food auto-restock rule as it starts (off): when total stock of a food drops below threshold_days of need, buy amount units automatically and charge it (ticker + digest line)."
+  },
+  "marketing": {
+    "weekend_days": [
+      0,
+      6
+    ],
+    "stack_max": 3,
+    "memberships": {
+      "pass_price_default": 60,
+      "pass_price_min": 20,
+      "pass_price_max": 200,
+      "pass_price_step": 5,
+      "convert_base": 0.006,
+      "convert_satisfaction_floor": 0.3,
+      "fair_price_tickets": 10,
+      "price_exponent": 1.5,
+      "member_visit_rate": 0.05,
+      "churn_base_per_quarter": 0.12,
+      "churn_low_rating": 3,
+      "churn_extra_per_star": 0.2,
+      "max_members_per_capacity": 2
+    },
+    "_notes": "M4 marketing ladder (campaign entries: data/campaigns.json). weekend_days: day-of-week indexes (state.day % 7) that count as the weekend for the school program's weekday floor. stack_max: how many stackable campaigns (social media) can boost at once; non-stackable ones use only the strongest active boost. memberships: the season pass is priced PER QUARTER by the player between pass_price_min and pass_price_max. Each day, paying visitors convert to members at convert_base x satisfaction factor (convert_satisfaction_floor at zero satisfaction, 1 at the satisfaction cap) x price factor (1 while the pass costs at most fair_price_tickets tickets, then (fair / price) ^ price_exponent). Members visit member_visit_rate times a day each: that is the attendance floor, and those visits pay no ticket (they do buy concessions). At quarter close members churn at churn_base_per_quarter plus churn_extra_per_star for every star the park rating sits below churn_low_rating, then the survivors pay the pass price (Reports: Memberships line). Members never exceed max_members_per_capacity x the daily visitor cap."
+  },
+  "juice": {
+    "_notes": "M5 juice timings (src/ui/effects.js, src/sim/agents.js). floater_min_gap_ms: cash-delta floaters closer than this merge into one. shake_ms: escape screen shake. count_up_ms: Quarterly Report numbers count from 0 to their value over this long. tip_toast_seconds: first-quarter tutorial tips stay up this long (they show one at a time; the next waits for the current one to close). All of it collapses to instant/static under Reduce motion.",
+    "floater_min_gap_ms": 250,
+    "shake_ms": 300,
+    "count_up_ms": 900,
+    "tip_toast_seconds": 9
   }
 }

@@ -1,4 +1,6 @@
 // DeJam — core game: screens, input, render, progress. Vanilla JS + canvas, no deps.
+// v2 "Big Lot": side-street exits remove cars for good, four lot sizes, a moves budget
+// instead of par-to-beat, and Endless is a streak of ever-bigger lots.
 (function () {
   const G = window.DeJam;
   const $ = (sel) => document.querySelector(sel);
@@ -7,18 +9,22 @@
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* page must work without storage */ } }
   };
   const VKEY = "dejam.v1";
+  const V = "?v=5"; // cache-bust for JSON fetches — keep in sync with index.html
+  const DEBUG = /(\?|&)debug=1/.test(location.search);
 
   let cfg = null;
   let levels = [];
   let levelsVersion = "dev";
+  let endlessPool = null;
   let progress = {};
   let cur = null;
   let canvas, ctx, dpr = 1, cssSize = 0;
   let drag = null;      // {i, startPx, startCoord, min, max, pos, bumped, t0}
   let settle = null;    // {i, from, to, t0}  — eased snap on release
-  let winFx = null;
+  let winFx = null;     // taxi drive-out animation
+  let puffs = [];       // shared particle list (win confetti, side-street poofs)
+  let puffPrev = 0;
   let lastTierTab = LS.get(VKEY + ".tab", "easy");
-  let heroT = 0;
 
   // ---------- boot ----------
   async function boot() {
@@ -28,19 +34,21 @@
     syncSoundButtons();
 
     try {
-      const res = await fetch("config.json");
+      const res = await fetch("config.json" + V);
       cfg = await res.json();
     } catch (e) {
       $("#loadmsg").textContent = "Could not load config.json — serve over HTTP, not file://";
       return;
     }
+    if (!cfg.tiers[lastTierTab]) lastTierTab = Object.keys(cfg.tiers)[0];
 
     // Shipped levels are pre-baked at build time; the generator only runs for Endless.
     try {
-      const res = await fetch("levels.json");
+      const res = await fetch("levels.json" + V);
       if (!res.ok) throw new Error("no levels.json");
       const data = await res.json();
       levels = data.levels;
+      endlessPool = data.endlessPool || null;
       levelsVersion = String(data.version || data.seed || "1");
     } catch (e) {
       // Dev fallback: generate live (slow) so the game still runs before a bake.
@@ -55,8 +63,19 @@
     // let old bests masquerade as records on different boards.
     progress = LS.get(VKEY + ".progress." + levelsVersion, {});
     buildLevelSelect();
+    renderTitleMeta();
     show("title");
     requestAnimationFrame(frame);
+    if (DEBUG) {
+      window.DJ = {
+        get cur() { return cur; }, cfg: () => cfg, levels: () => levels, progress: () => progress,
+        start: (tier, n) => { const list = levels.filter((l) => l.tier === tier); startLevel(list[n], n); },
+        endless: startEndless, pool: () => endlessPool, transform: (l, k) => G.gen.transformLevel(l, k),
+        move: (i, to) => finishMove(i, coordOf(cur.vehicles[i]), to),
+        bounds: dragBounds, tick, get settle() { return settle; }, get drag() { return drag; },
+        solve: () => G.gen.solve(cur.vehicles, cur.exits, cur.N, 400000),
+      };
+    }
   }
 
   // ---------- screens ----------
@@ -65,13 +84,21 @@
       $("#screen-" + n).classList.toggle("active", n === name);
     });
     $("#win-overlay").classList.remove("active");
+    $("#lose-overlay").classList.remove("active");
+    document.body.classList.remove("over");
     if (name === "game") resizeCanvas();
+    if (name === "title") renderTitleMeta();
+  }
+
+  function renderTitleMeta() {
+    const best = LS.get(VKEY + ".streak", 0);
+    $("#title-meta").textContent = best > 0 ? "Best Endless streak: " + best + " lot" + (best === 1 ? "" : "s") : "";
   }
 
   function buildLevelSelect() {
     const tabs = $("#tier-tabs");
     tabs.innerHTML = "";
-    ["easy", "medium", "hard"].forEach((t) => {
+    Object.keys(cfg.tiers).forEach((t) => {
       const b = document.createElement("button");
       b.className = "tab";
       b.textContent = cfg.tiers[t].label;
@@ -85,14 +112,16 @@
 
   function levelId(lvl, n) { return lvl.tier + ":" + n; }
 
-  function starsFor(best, par) { return best <= par ? 3 : best <= par + 3 ? 2 : 1; }
+  function starsFor(moves, par) { return moves <= par ? 3 : moves <= par + (cfg.stars ? cfg.stars.twoWithin : 2) ? 2 : 1; }
+  function slackFor(tierName) { const t = cfg.tiers[tierName]; return t && typeof t.slack === "number" ? t.slack : 6; }
 
   function renderLevelGrid() {
     document.querySelectorAll("#tier-tabs .tab").forEach((b) => b.classList.toggle("on", b.dataset.tier === lastTierTab));
     const tier = cfg.tiers[lastTierTab];
     const list = levels.filter((l) => l.tier === lastTierTab);
-    const pars = list.map((l) => l.par);
-    $("#tier-info").textContent = tier.label + " · par " + Math.min(...pars) + "–" + Math.max(...pars) + " · " + list.length + " puzzles";
+    const cars = list.map((l) => l.vehicles.length);
+    const N = tier.board || cfg.board;
+    $("#tier-info").textContent = N + "×" + N + " · " + Math.min(...cars) + "–" + Math.max(...cars) + " cars · +" + slackFor(lastTierTab) + " slack · " + list.length + " lots";
     $("#tier-info").style.color = tier.accent;
     const grid = $("#level-grid");
     grid.innerHTML = "";
@@ -110,47 +139,53 @@
   }
 
   // ---------- play state ----------
-  function startLevel(lvl, n) {
+  function startLevel(lvl, n, streak) {
+    const exits = lvl.exits || [{ side: lvl.exit.side, index: lvl.exit.index, goal: true }];
+    const sizeTier = lvl.tier === "endless" ? (lvl.sizeTier || "medium") : lvl.tier;
     cur = {
-      exit: lvl.exit, par: lvl.par, tier: lvl.tier, num: n,
-      initial: lvl.vehicles.map((v) => ({ ...v })),
-      vehicles: lvl.vehicles.map((v) => ({ ...v })),
-      moves: 0, undo: [], won: false
+      N: lvl.board || cfg.board,
+      exits, goal: G.gen.goalExit(exits),
+      par: lvl.par, tier: lvl.tier, num: n, sizeTier,
+      budget: lvl.par + slackFor(sizeTier),
+      streak: streak || 0,
+      initial: lvl.vehicles.map((v) => ({ ...v, out: false })),
+      vehicles: lvl.vehicles.map((v) => ({ ...v, out: false })),
+      moves: 0, undo: [], won: false, lost: false
     };
-    winFx = null; drag = null; settle = null;
+    winFx = null; drag = null; settle = null; puffs = [];
+    document.body.classList.remove("over");
     $("#win-overlay").classList.remove("active");
+    $("#lose-overlay").classList.remove("active");
     updateHud();
-    $("#btn-new-endless").style.display = lvl.tier === "endless" ? "" : "none";
     show("game");
     G.audio.tap();
   }
 
-  async function startEndless() {
+  async function startEndless(streak) {
+    streak = streak || 0;
     const btn = $("#btn-endless");
     btn.disabled = true; btn.textContent = "Building…";
+    if (cur) $("#hud-level").textContent = "Building the next lot…";
     const seed = (Date.now() ^ (Math.random() * 0xffffffff)) >>> 0;
-    const lvl = await G.gen.generateEndless(cfg, seed);
+    const lvl = await G.gen.generateEndless(cfg, seed, streak, endlessPool);
     btn.disabled = false; btn.textContent = "Endless";
-    if (lvl) startLevel(lvl, seed % 1000);
-  }
-
-  async function startEndlessFromGame() {
-    $("#hud-level").textContent = "Building…";
-    const seed = (Date.now() ^ (Math.random() * 0xffffffff)) >>> 0;
-    const lvl = await G.gen.generateEndless(cfg, seed);
-    if (lvl) startLevel(lvl, seed % 1000);
+    if (lvl) startLevel(lvl, seed % 1000, streak);
   }
 
   function coordOf(v) { return v.horiz ? v.x : v.y; }
   function setCoord(v, c) { if (v.horiz) v.x = c; else v.y = c; }
+  function movesLeft() { return Math.max(0, cur.budget - cur.moves); }
 
   function updateHud() {
     if (!cur) return;
-    const name = cur.tier === "endless" ? "Endless" : cfg.tiers[cur.tier].label + " " + (cur.num + 1);
+    const name = cur.tier === "endless"
+      ? "Lot " + (cur.streak + 1) + " · " + cur.N + "×" + cur.N
+      : cfg.tiers[cur.tier].label + " " + (cur.num + 1);
     $("#hud-level").textContent = name;
-    const under = cur.moves <= cur.par;
-    $("#hud-moves").innerHTML = "Moves <b class='" + (under ? "gold" : "") + "'>" + cur.moves + "</b> · Par " + cur.par;
-    $("#btn-undo").disabled = cur.undo.length === 0 || cur.won;
+    const left = movesLeft();
+    const cls = left <= 2 ? "low" : left <= 4 ? "warn" : "";
+    $("#hud-moves").innerHTML = "<span class='lbl'>Moves left</span><b class='" + cls + "'>" + left + "</b><span class='par'>par " + cur.par + "</span>";
+    $("#btn-undo").disabled = cur.undo.length === 0 || cur.won || cur.lost;
   }
 
   // Local arcade records: top-5 fewest-moves per level, with a saved gamer name.
@@ -207,11 +242,19 @@
       if (!p || cur.moves < p.best) progress[id] = { best: cur.moves };
       LS.set(VKEY + ".progress." + levelsVersion, progress);
       rec = insertRecord(id, cur.moves);
+    } else {
+      cur.streak++;
+      const best = LS.get(VKEY + ".streak", 0);
+      if (cur.streak > best) LS.set(VKEY + ".streak", cur.streak);
     }
     const stars = starsFor(cur.moves, cur.par);
     setTimeout(() => {
-      $("#win-title").textContent = stars === 3 ? "Perfect!" : "Solved!";
-      $("#win-stats").textContent = cur.moves + " moves · par " + cur.par;
+      if (!cur || !cur.won) return;
+      const endless = cur.tier === "endless";
+      $("#win-title").textContent = endless ? "Lot cleared!" : stars === 3 ? "Perfect!" : "Solved!";
+      $("#win-stats").textContent = endless
+        ? cur.moves + " moves · par " + cur.par + " · streak " + cur.streak + (cur.streak >= LS.get(VKEY + ".streak", 0) ? " ★ best" : "")
+        : cur.moves + " moves · par " + cur.par;
       const row = $("#win-stars");
       row.innerHTML = "";
       for (let k = 0; k < 3; k++) {
@@ -222,13 +265,35 @@
         row.appendChild(s);
       }
       if (rec) renderRecords(id, rec); else $("#win-records").style.display = "none";
-      $("#btn-next").textContent = cur.tier === "endless" ? "New puzzle" : "Next level";
+      $("#btn-next").textContent = endless ? "Next lot ▸" : "Next level";
+      $("#btn-replay").style.display = endless ? "none" : "";
+      $("#btn-win-menu").textContent = endless ? "Quit run" : "Level select";
+      document.body.classList.add("over");
       $("#win-overlay").classList.add("active");
     }, 1050);
   }
 
+  function commitLose() {
+    cur.lost = true;
+    updateHud();
+    G.audio.lose();
+    setTimeout(() => {
+      if (!cur || !cur.lost) return;
+      const endless = cur.tier === "endless";
+      $("#lose-title").textContent = endless ? "Streak over!" : "Out of moves!";
+      const best = LS.get(VKEY + ".streak", 0);
+      $("#lose-sub").textContent = endless
+        ? "Cleared " + cur.streak + " lot" + (cur.streak === 1 ? "" : "s") + (cur.streak > 0 && cur.streak >= best ? " · ★ best streak" : " · best " + best)
+        : "The taxi's still stuck. Same lot, fresh budget.";
+      document.body.classList.add("over");
+      $("#btn-retry").textContent = endless ? "New run" : "Try again";
+      $("#btn-lose-menu").textContent = endless ? "Title" : "Level select";
+      $("#lose-overlay").classList.add("active");
+    }, 450);
+  }
+
   function nextLevel() {
-    if (cur.tier === "endless") { startEndlessFromGame(); $("#win-overlay").classList.remove("active"); return; }
+    if (cur.tier === "endless") { $("#win-overlay").classList.remove("active"); startEndless(cur.streak); return; }
     const list = levels.filter((l) => l.tier === cur.tier);
     if (cur.num + 1 < list.length) startLevel(list[cur.num + 1], cur.num + 1);
     else { show("levels"); renderLevelGrid(); }
@@ -236,7 +301,7 @@
 
   // ---------- input ----------
   function boardMetrics() {
-    const S = cssSize, N = cfg.board;
+    const S = cssSize, N = cur ? cur.N : cfg.board;
     const m = S * 0.075;
     const cell = (S - 2 * m) / N;
     return { S, N, m, cell };
@@ -248,10 +313,11 @@
   }
 
   function vehicleAt(px) {
-    const { N, m, cell } = boardMetrics();
+    const { m, cell } = boardMetrics();
     const gx = (px.x - m) / cell, gy = (px.y - m) / cell;
     for (let i = 0; i < cur.vehicles.length; i++) {
       const v = cur.vehicles[i];
+      if (v.out) continue;
       const c = drag && drag.i === i ? drag.pos : coordOf(v);
       const x0 = v.horiz ? c : v.x, y0 = v.horiz ? v.y : c;
       const x1 = x0 + (v.horiz ? v.len : 1), y1 = y0 + (v.horiz ? 1 : v.len);
@@ -260,22 +326,21 @@
     return -1;
   }
 
+  // Slide range, extended past the edge when the lane ends in an exit this car may use:
+  // the taxi through its glowing exit, blockers through a grey side street.
   function dragBounds(i) {
-    const v = cur.vehicles[i];
-    const grid = G.gen.occupancy(cur.vehicles, cfg.board);
-    let [mn, mx] = G.gen.slideRange(cur.vehicles, i, cfg.board, grid);
-    if (v.isGoal) {
-      const W = G.gen.winCoord(cur.exit, v.len, cfg.board);
-      const outward = cur.exit.side === "right" || cur.exit.side === "bottom";
-      if (outward && mx === W) mx = cfg.board;
-      if (!outward && mn === W) mn = -v.len;
-    }
+    const v = cur.vehicles[i], N = cur.N;
+    const grid = G.gen.occupancy(cur.vehicles, N);
+    let [mn, mx] = G.gen.slideRange(cur.vehicles, i, N, grid);
+    if (mx === N - v.len && G.gen.mayUse(v, G.gen.exitFor(cur.exits, v, true))) mx = N;
+    if (mn === 0 && G.gen.mayUse(v, G.gen.exitFor(cur.exits, v, false))) mn = -v.len;
     return [mn, mx];
   }
 
   function onDown(e) {
     G.audio.unlock();
-    if (!cur || cur.won || settle) return;
+    if (!cur || cur.won || cur.lost || settle) return;
+    if (drag) { setCoord(cur.vehicles[drag.i], drag.startCoord); drag = null; } // a stale drag never sticks to the cursor
     const p = pointerPos(e);
     const i = vehicleAt(p);
     if (i < 0) return;
@@ -285,7 +350,7 @@
   }
 
   function onMove(e) {
-    if (!drag || !cur || cur.won) return;
+    if (!drag || !cur || cur.won || cur.lost) return;
     const p = pointerPos(e);
     const { cell } = boardMetrics();
     const v = cur.vehicles[drag.i];
@@ -295,43 +360,84 @@
     if (!drag.bumped && Math.abs(raw - clamped) > 0.35) { G.audio.thunk(); drag.bumped = true; }
     if (Math.abs(raw - clamped) < 0.2) drag.bumped = false;
     drag.pos = clamped;
+    // once the car is clearly past the edge, the exit pulls it out: the drag ends by itself
+    const N = cur.N;
+    const pastHigh = drag.max > N - v.len && clamped > N - v.len + 0.5;
+    const pastLow = drag.min < 0 && clamped < -0.5;
+    if (pastHigh || pastLow) {
+      const d = drag; drag = null;
+      try { canvas.releasePointerCapture(e.pointerId); } catch (err) { /* already released */ }
+      settle = { i: d.i, from: d.pos, to: pastHigh ? d.max : d.min, t0: performance.now(), startCoord: d.startCoord };
+    }
   }
 
   function finishMove(i, from, to) {
-    const v = cur.vehicles[i];
-    const W = v.isGoal ? G.gen.winCoord(cur.exit, v.len, cfg.board) : null;
-    const outward = cur.exit.side === "right" || cur.exit.side === "bottom";
-    const winNow = v.isGoal && (outward ? to >= W : to <= W);
-    if (winNow) {
-      if (to !== from) cur.moves++;
-      setCoord(v, W);
-      cur.undo.push({ i, from });
-      startWinFx(v, outward);
+    const v = cur.vehicles[i], N = cur.N;
+    if (v.isGoal) {
+      const W = G.gen.winCoord(cur.goal, v.len, N);
+      const outward = G.gen.outward(cur.goal);
+      const winNow = outward ? to >= W : to <= W;
+      if (winNow) {
+        if (to !== from) cur.moves++;
+        setCoord(v, W);
+        cur.undo.push({ i, from });
+        startWinFx(v, outward);
+        updateHud();
+        commitWin();
+        return;
+      }
+    } else if (to > N - v.len || to < 0) {
+      // slid out through a side street: gone for good
+      const high = to > N - v.len;
+      setCoord(v, high ? N - v.len : 0);
+      v.out = true;
+      cur.undo.push({ i, from, out: true });
+      cur.moves++;
+      const e = G.gen.exitFor(cur.exits, v, high);
+      const dir = e.side === "right" ? [1, 0] : e.side === "left" ? [-1, 0] : e.side === "bottom" ? [0, 1] : [0, -1];
+      const { m, cell } = boardMetrics();
+      // spawn along the car's last cells inside the lot (anything past the 7.5% margin is clipped)
+      const c0x = m + (v.horiz ? v.x + 0.5 : v.x + 0.5) * cell, c0y = m + (v.horiz ? v.y + 0.5 : v.y + 0.5) * cell;
+      for (let k = 0; k < v.len; k++) {
+        const px = c0x + (v.horiz ? k * cell : 0), py = c0y + (v.horiz ? 0 : k * cell);
+        burst(px, py, 16, 110, v.colorIdx, dir);
+        burst(px, py, 6, 70, null, dir);
+      }
+      G.audio.leave();
       updateHud();
-      commitWin();
+      checkBudget();
       return;
     }
     if (to !== from) {
-      setCoord(v, to);
+      setCoord(v, Math.min(N - v.len, Math.max(0, to)));
       cur.undo.push({ i, from });
       cur.moves++;
       G.audio.slide();
       updateHud();
+      checkBudget();
     }
+  }
+
+  function checkBudget() {
+    if (!cur.won && !cur.lost && cur.moves >= cur.budget) commitLose();
   }
 
   function onUp(e) {
     if (!drag || !cur) return;
     const d = drag; drag = null;
-    if (cur.won) return;
+    if (cur.won || cur.lost) return;
     const v = cur.vehicles[d.i];
     const quickTap = performance.now() - d.t0 < 250 && Math.abs(d.pos - d.startCoord) < 0.15;
     let target;
     if (quickTap) {
       // Tap-to-slide: if the car is free in exactly one direction, send it all the way.
+      // A blocker stops at the wall — leaving through a side street takes a deliberate drag past
+      // the edge, so a stray tap never costs a car for good. The taxi may still tap out to win.
       const freeBack = d.min < d.startCoord, freeFwd = d.max > d.startCoord;
       if (freeBack === freeFwd) { setCoord(v, d.startCoord); return; } // both or neither: ambiguous, ignore
       target = freeFwd ? d.max : d.min;
+      if (!v.isGoal) target = Math.min(cur.N - v.len, Math.max(0, target));
+      if (target === d.startCoord) { setCoord(v, d.startCoord); return; }
     } else {
       target = Math.min(d.max, Math.max(d.min, Math.round(d.pos)));
     }
@@ -339,11 +445,13 @@
     settle = { i: d.i, from: d.pos, to: target, t0: performance.now(), startCoord: d.startCoord };
   }
 
+  // Undo restores the board but the move still counts against the budget (v2 rule).
   function undoMove() {
-    if (!cur || cur.won || cur.undo.length === 0 || settle) return;
+    if (!cur || cur.won || cur.lost || cur.undo.length === 0 || settle) return;
     const u = cur.undo.pop();
-    setCoord(cur.vehicles[u.i], u.from);
-    cur.moves = Math.max(0, cur.moves - 1);
+    const v = cur.vehicles[u.i];
+    if (u.out) v.out = false;
+    setCoord(v, u.from);
     G.audio.tap();
     updateHud();
   }
@@ -351,30 +459,38 @@
   function resetLevel() {
     if (!cur) return;
     cur.vehicles = cur.initial.map((v) => ({ ...v }));
-    cur.moves = 0; cur.undo = []; cur.won = false;
-    winFx = null; settle = null;
+    cur.moves = 0; cur.undo = []; cur.won = false; cur.lost = false;
+    winFx = null; settle = null; puffs = [];
+    document.body.classList.remove("over");
     $("#win-overlay").classList.remove("active");
+    $("#lose-overlay").classList.remove("active");
     G.audio.tap();
     updateHud();
   }
 
-  // ---------- win fx ----------
+  // ---------- fx ----------
+  function burst(x, y, n, speed, colorIdx, dir) {
+    const { cell } = boardMetrics();
+    for (let k = 0; k < n; k++) {
+      const a = Math.random() * Math.PI * 2, sp = speed * 0.3 + Math.random() * speed;
+      let vx = Math.cos(a) * sp, vy = Math.sin(a) * sp - 120;
+      if (dir) { vx = vx * 0.5 + dir[0] * speed * 0.7; vy = vy * 0.5 + dir[1] * speed * 0.7 - 40; } // drift toward the mouth, slow enough to be seen
+      puffs.push({ x, y, vx, vy, life: 0.7 + Math.random() * 0.6,
+        c: colorIdx == null ? Math.floor(Math.random() * cfg.palette.vehicles.length) : colorIdx, r: Math.max(3, cell * 0.08) + Math.random() * Math.max(4, cell * 0.12) });
+    }
+  }
+
   function startWinFx(v, outward) {
     const { N } = boardMetrics();
     const from = coordOf(v);
     const to = outward ? N + 0.8 : -(v.len + 0.8);
-    const parts = [];
-    const ex = exitCenterPx();
-    for (let k = 0; k < 70; k++) {
-      const a = Math.random() * Math.PI * 2, sp = 80 + Math.random() * 300;
-      parts.push({ x: ex.x, y: ex.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 150, life: 1 + Math.random() * 0.5, c: Math.floor(Math.random() * cfg.palette.vehicles.length), r: 3 + Math.random() * 4 });
-    }
-    winFx = { t0: performance.now(), dur: 620, from, to, particles: parts, tPrev: performance.now() };
+    const ex = exitCenterPx(cur.goal);
+    burst(ex.x, ex.y, 70, 300, null);
+    winFx = { t0: performance.now(), dur: 620, from, to };
   }
 
-  function exitCenterPx() {
-    const { m, cell } = boardMetrics();
-    const e = cur.exit, N = cfg.board;
+  function exitCenterPx(e) {
+    const { m, cell, N } = boardMetrics();
     if (e.side === "right") return { x: m + N * cell + m / 2, y: m + (e.index + 0.5) * cell };
     if (e.side === "left") return { x: m / 2, y: m + (e.index + 0.5) * cell };
     if (e.side === "bottom") return { x: m + (e.index + 0.5) * cell, y: m + N * cell + m / 2 };
@@ -416,6 +532,10 @@
   // ---------- main frame ----------
   function frame(now) {
     requestAnimationFrame(frame);
+    tick(now);
+  }
+  // one simulation+draw step; the debug API drives this by hand in hidden tabs where rAF starves
+  function tick(now) {
     drawHero(now);
     if (!cur || !$("#screen-game").classList.contains("active")) return;
     if (Math.abs(canvas.clientWidth - cssSize) > 1) resizeCanvas();
@@ -460,7 +580,13 @@
     ctx.setLineDash([]);
     ctx.globalAlpha = 1;
 
-    drawExit(now);
+    let liveExit = null;
+    if (drag) {
+      const v = cur.vehicles[drag.i];
+      if (drag.max > N - v.len) liveExit = G.gen.exitFor(cur.exits, v, true);
+      else if (drag.min < 0) liveExit = G.gen.exitFor(cur.exits, v, false);
+    }
+    for (const e of cur.exits) drawExit(e, now, e === liveExit);
 
     // corridor highlight while dragging
     if (drag) {
@@ -484,16 +610,16 @@
       let c = coordOf(v);
       if (drag && drag.i === i) c = drag.pos;
       if (settle && settle.i === i && settle.render !== undefined) c = settle.render;
+      else if (v.out) continue;
       if (v.isGoal && goalDrawCoord !== null) c = goalDrawCoord;
       drawVehicle(v, c, drag && drag.i === i);
     }
 
-    // confetti (drawn above everything on the canvas)
-    if (winFx) {
-      const dt = Math.min(0.05, (now - winFx.tPrev) / 1000);
-      winFx.tPrev = now;
+    // particles (drawn above everything on the canvas)
+    if (puffs.length) {
+      const dt = Math.min(0.05, (now - puffPrev) / 1000);
       ctx.save();
-      for (const p of winFx.particles) {
+      for (const p of puffs) {
         p.life -= dt; if (p.life <= 0) continue;
         p.vy += 500 * dt; p.x += p.vx * dt; p.y += p.vy * dt;
         ctx.globalAlpha = Math.max(0, Math.min(1, p.life));
@@ -501,41 +627,83 @@
         ctx.fillRect(p.x - p.r / 2, p.y - p.r / 2, p.r, p.r);
       }
       ctx.restore();
+      puffs = puffs.filter((p) => p.life > 0);
     }
+    puffPrev = now;
   }
 
-  function drawExit(now) {
+  // The taxi's exit glows and pulses; side streets are plain grey mouths with a lane stripe.
+  function drawExit(e, now, live) {
     const P = cfg.palette, { N, m, cell } = boardMetrics();
-    const e = cur.exit;
     const gap = cell * 0.96, off = cell * 0.02;
+    const horizMouth = e.side === "left" || e.side === "right";
     // mouth: asphalt continues through the curb+grass to the edge
     ctx.fillStyle = P.board;
     if (e.side === "right") ctx.fillRect(m + N * cell, m + e.index * cell + off, m, gap);
     if (e.side === "left") ctx.fillRect(0, m + e.index * cell + off, m, gap);
     if (e.side === "bottom") ctx.fillRect(m + e.index * cell + off, m + N * cell, gap, m);
     if (e.side === "top") ctx.fillRect(m + e.index * cell + off, 0, gap, m);
-    // glow + chevrons live in the mouth (outside the play area — nothing can cover them)
-    const pulse = 0.6 + 0.4 * Math.sin(now / 320);
-    const c = exitCenterPx();
-    ctx.save();
-    const grad = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, cell * 1.1);
-    grad.addColorStop(0, "rgba(246,169,63," + (0.4 * pulse) + ")");
-    grad.addColorStop(1, "rgba(246,169,63,0)");
-    ctx.fillStyle = grad;
-    ctx.fillRect(c.x - cell * 1.1, c.y - cell * 1.1, cell * 2.2, cell * 2.2);
-    ctx.globalAlpha = 0.55 + 0.45 * pulse;
-    ctx.strokeStyle = P.accent;
-    ctx.lineWidth = Math.max(3, cell * 0.12);
-    ctx.lineCap = "round";
+    const c = exitCenterPx(e);
     const dir = e.side === "right" ? [1, 0] : e.side === "left" ? [-1, 0] : e.side === "bottom" ? [0, 1] : [0, -1];
-    for (let k = 0; k < 2; k++) {
-      const bx = c.x + dir[0] * (m * (k * 0.42 - 0.12));
-      const by = c.y + dir[1] * (m * (k * 0.42 - 0.12));
-      const s = cell * 0.24;
+    ctx.save();
+    if (e.goal) {
+      // glow + chevrons live in the mouth (outside the play area — nothing can cover them)
+      const pulse = 0.6 + 0.4 * Math.sin(now / 320);
+      const grad = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, cell * 1.1);
+      grad.addColorStop(0, "rgba(246,169,63," + (0.4 * pulse) + ")");
+      grad.addColorStop(1, "rgba(246,169,63,0)");
+      ctx.fillStyle = grad;
+      ctx.fillRect(c.x - cell * 1.1, c.y - cell * 1.1, cell * 2.2, cell * 2.2);
+      ctx.globalAlpha = 0.55 + 0.45 * pulse;
+      ctx.strokeStyle = P.accent;
+      ctx.lineWidth = Math.max(3, cell * 0.12);
+      ctx.lineCap = "round";
+      for (let k = 0; k < 2; k++) {
+        const bx = c.x + dir[0] * (m * (k * 0.42 - 0.12));
+        const by = c.y + dir[1] * (m * (k * 0.42 - 0.12));
+        const s = cell * 0.24;
+        ctx.beginPath();
+        if (dir[0] !== 0) { ctx.moveTo(bx - dir[0] * s, by - s); ctx.lineTo(bx, by); ctx.lineTo(bx - dir[0] * s, by + s); }
+        else { ctx.moveTo(bx - s, by - dir[1] * s); ctx.lineTo(bx, by); ctx.lineTo(bx + s, by - dir[1] * s); }
+        ctx.stroke();
+      }
+    } else {
+      // side street: a solid arrow pointing out; lit up (and the lane stripe runs into the lot)
+      // while the held car can actually leave through it
+      if (live) {
+        const pulse = 0.5 + 0.5 * Math.sin(now / 160);
+        ctx.fillStyle = "rgba(255,255,255," + (0.16 + 0.12 * pulse) + ")";
+        if (e.side === "right") ctx.fillRect(m + N * cell, m + e.index * cell + off, m, gap);
+        if (e.side === "left") ctx.fillRect(0, m + e.index * cell + off, m, gap);
+        if (e.side === "bottom") ctx.fillRect(m + e.index * cell + off, m + N * cell, gap, m);
+        if (e.side === "top") ctx.fillRect(m + e.index * cell + off, 0, gap, m);
+        ctx.strokeStyle = P.lane; ctx.globalAlpha = 0.7;
+        ctx.lineWidth = Math.max(1.5, cell * 0.05);
+        ctx.setLineDash([cell * 0.14, cell * 0.14]);
+        ctx.lineDashOffset = -now / 40;
+        const hv = cur.vehicles[drag.i];
+        const near = drag.pos; // held car's current coord along its axis
+        ctx.beginPath();
+        if (horizMouth) {
+          const carEdge = m + (e.side === "right" ? (near + hv.len) : near) * cell;
+          const mouthEnd = e.side === "right" ? m + N * cell + m : 0;
+          ctx.moveTo(carEdge, c.y); ctx.lineTo(mouthEnd, c.y);
+        } else {
+          const carEdge = m + (e.side === "bottom" ? (near + hv.len) : near) * cell;
+          const mouthEnd = e.side === "bottom" ? m + N * cell + m : 0;
+          ctx.moveTo(c.x, carEdge); ctx.lineTo(c.x, mouthEnd);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]); ctx.lineDashOffset = 0;
+      }
+      const s = cell * (live ? 0.24 : 0.19);
+      const bx = c.x + dir[0] * m * 0.12, by = c.y + dir[1] * m * 0.12;
+      ctx.globalAlpha = live ? 1 : 0.9;
+      ctx.fillStyle = live ? "#FFFFFF" : "#E8E2D2";
       ctx.beginPath();
-      if (dir[0] !== 0) { ctx.moveTo(bx - dir[0] * s, by - s); ctx.lineTo(bx, by); ctx.lineTo(bx - dir[0] * s, by + s); }
-      else { ctx.moveTo(bx - s, by - dir[1] * s); ctx.lineTo(bx, by); ctx.lineTo(bx + s, by - dir[1] * s); }
-      ctx.stroke();
+      if (dir[0] !== 0) { ctx.moveTo(bx + dir[0] * s, by); ctx.lineTo(bx - dir[0] * s * 0.6, by - s); ctx.lineTo(bx - dir[0] * s * 0.6, by + s); }
+      else { ctx.moveTo(bx, by + dir[1] * s); ctx.lineTo(bx - s, by - dir[1] * s * 0.6); ctx.lineTo(bx + s, by - dir[1] * s * 0.6); }
+      ctx.closePath(); ctx.fill();
     }
     ctx.restore();
   }
@@ -640,9 +808,9 @@
       const rsH = along ? h * 0.5 : h * 0.3;
       g.fillStyle = "#23262B";
       rr(g, x0 + w / 2 - rsW / 2, y0 + h / 2 - rsH / 2, rsW, rsH, Math.min(rsW, rsH) * 0.35); g.fill();
-      if (Math.min(w, h) > 42) {
+      if (Math.min(w, h) > 26) {
         g.fillStyle = "#F6C93F";
-        g.font = "700 " + Math.min(rsH, rsW) * 0.55 + "px system-ui";
+        g.font = "700 " + Math.max(7, Math.min(rsH, rsW) * 0.55) + "px system-ui";
         g.textAlign = "center"; g.textBaseline = "middle";
         g.save();
         g.translate(x0 + w / 2, y0 + h / 2);
@@ -696,11 +864,14 @@
     document.querySelectorAll(".btn-sound").forEach((b) => { b.textContent = G.audio.isMuted() ? "\u{1F507}" : "\u{1F50A}"; });
   }
 
+  function leaveToMenu() {
+    if (cur && cur.tier === "endless") show("title"); else { show("levels"); renderLevelGrid(); }
+  }
+
   window.addEventListener("DOMContentLoaded", () => {
     boot();
     $("#btn-play").addEventListener("click", () => {
-      const order = ["easy", "medium", "hard"];
-      for (const t of order) {
+      for (const t of Object.keys(cfg.tiers)) {
         const list = levels.filter((l) => l.tier === t);
         for (let n = 0; n < list.length; n++) {
           if (!progress[levelId(list[n], n)]) { startLevel(list[n], n); return; }
@@ -709,21 +880,19 @@
       show("levels"); renderLevelGrid();
     });
     $("#btn-levels").addEventListener("click", () => { show("levels"); renderLevelGrid(); G.audio.tap(); });
-    $("#btn-endless").addEventListener("click", startEndless);
+    $("#btn-endless").addEventListener("click", () => startEndless(0));
     $("#btn-back-title").addEventListener("click", () => { show("title"); G.audio.tap(); });
-    $("#btn-back-game").addEventListener("click", () => {
-      if (cur && cur.tier === "endless") show("title"); else { show("levels"); renderLevelGrid(); }
-      G.audio.tap();
-    });
+    $("#btn-back-game").addEventListener("click", () => { leaveToMenu(); G.audio.tap(); });
     $("#btn-undo").addEventListener("click", undoMove);
     $("#btn-reset").addEventListener("click", resetLevel);
-    $("#btn-new-endless").addEventListener("click", startEndlessFromGame);
     $("#btn-next").addEventListener("click", nextLevel);
     $("#btn-replay").addEventListener("click", resetLevel);
-    $("#btn-win-menu").addEventListener("click", () => {
-      $("#win-overlay").classList.remove("active");
-      if (cur.tier === "endless") show("title"); else { show("levels"); renderLevelGrid(); }
+    $("#btn-win-menu").addEventListener("click", () => { $("#win-overlay").classList.remove("active"); leaveToMenu(); });
+    $("#btn-retry").addEventListener("click", () => {
+      $("#lose-overlay").classList.remove("active");
+      if (cur && cur.tier === "endless") startEndless(0); else resetLevel();
     });
+    $("#btn-lose-menu").addEventListener("click", () => { $("#lose-overlay").classList.remove("active"); leaveToMenu(); });
     document.querySelectorAll(".btn-sound").forEach((b) => b.addEventListener("click", () => {
       G.audio.setMuted(!G.audio.isMuted());
       LS.set(VKEY + ".muted", G.audio.isMuted());
@@ -734,6 +903,9 @@
     canvas.addEventListener("pointermove", onMove);
     canvas.addEventListener("pointerup", onUp);
     canvas.addEventListener("pointercancel", onUp);
+    canvas.addEventListener("lostpointercapture", onUp);
+    window.addEventListener("pointerup", onUp);   // released outside the canvas or the window
+    window.addEventListener("blur", () => { if (drag) { setCoord(cur.vehicles[drag.i], drag.startCoord); drag = null; } });
     window.addEventListener("resize", () => { if ($("#screen-game").classList.contains("active")) resizeCanvas(); });
   });
 })();

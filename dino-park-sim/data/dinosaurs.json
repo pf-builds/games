@@ -1,5 +1,5 @@
 {
-  "_notes": "Roster ladder in four tiers (starter / budget / mid / marquee). Starter = cheap plant-eaters, the classic opening move. Diets map 1:1 to food.json items: herbivore->plants, carnivore->meat, piscivore->fish. Entries sorted by shop_price. Existing v1 ids are preserved; some v1 prices/popularity were retuned to fit the ladder.",
+  "_notes": "Roster ladder in four tiers (starter / budget / mid / marquee). Starter = cheap plant-eaters, the classic opening move. Diets map 1:1 to food.json items: herbivore->plants, carnivore->meat, piscivore->fish. Entries sorted by shop_price. Existing v1 ids are preserved; some v1 prices/popularity were retuned to fit the ladder. M4: `biomes` is the live mechanic, derived from biome_affinity (first entry = preferred, the rest tolerated; single-affinity species were given one hand-picked tolerated biome so nothing is preferred-only unless it is a marquee `requires_preferred` species). Preferred: popularity x balance.biome.preferred_popularity and extra health regen. Tolerated: neutral. Anything else is the WRONG biome: popularity x wrong_popularity, health drifts down to wrong_health_floor, an unhappy badge and a ticker/digest warning. `requires_preferred: true` (Triceratops, Spinosaurus, Brachiosaurus, Tyrannosaurus) means the Dino Market and the enclosure picker refuse any pen that is not a preferred biome. Desert (cheapest land) is home to the small starters and the desert hunters; marsh to the duck-bills, Baryonyx and Spinosaurus; plains to most big herbivores.",
   "species": [
     {
       "id": "lesothosaurus",
@@ -8,7 +8,18 @@
       "diet": "herbivore",
       "weight_lb": 15,
       "era": "Early Jurassic",
-      "biome_affinity": ["desert", "plains"],
+      "biome_affinity": [
+        "desert",
+        "plains"
+      ],
+      "biomes": {
+        "preferred": [
+          "desert"
+        ],
+        "tolerated": [
+          "plains"
+        ]
+      },
       "shop_price": 1500,
       "food_per_day": 1,
       "space_required": 1,
@@ -27,7 +38,18 @@
       "diet": "herbivore",
       "weight_lb": 45,
       "era": "Early Cretaceous",
-      "biome_affinity": ["desert", "plains"],
+      "biome_affinity": [
+        "desert",
+        "plains"
+      ],
+      "biomes": {
+        "preferred": [
+          "desert"
+        ],
+        "tolerated": [
+          "plains"
+        ]
+      },
       "shop_price": 1800,
       "food_per_day": 1,
       "space_required": 1,
@@ -46,7 +68,18 @@
       "diet": "herbivore",
       "weight_lb": 45,
       "era": "Early Cretaceous",
-      "biome_affinity": ["plains", "marsh"],
+      "biome_affinity": [
+        "plains",
+        "marsh"
+      ],
+      "biomes": {
+        "preferred": [
+          "plains"
+        ],
+        "tolerated": [
+          "marsh"
+        ]
+      },
       "shop_price": 2000,
       "food_per_day": 1,
       "space_required": 1,
@@ -65,7 +98,18 @@
       "diet": "herbivore",
       "weight_lb": 200,
       "era": "Late Jurassic",
-      "biome_affinity": ["plains", "marsh"],
+      "biome_affinity": [
+        "plains",
+        "marsh"
+      ],
+      "biomes": {
+        "preferred": [
+          "plains"
+        ],
+        "tolerated": [
+          "marsh"
+        ]
+      },
       "shop_price": 2800,
       "food_per_day": 1,
       "space_required": 1,
@@ -84,7 +128,18 @@
       "diet": "carnivore",
       "weight_lb": 45,
       "era": "Late Triassic",
-      "biome_affinity": ["desert", "plains"],
+      "biome_affinity": [
+        "desert",
+        "plains"
+      ],
+      "biomes": {
+        "preferred": [
+          "desert"
+        ],
+        "tolerated": [
+          "plains"
+        ]
+      },
       "shop_price": 3000,
       "food_per_day": 1,
       "space_required": 1,
@@ -103,7 +158,17 @@
       "diet": "herbivore",
       "weight_lb": 400,
       "era": "Late Cretaceous",
-      "biome_affinity": ["desert"],
+      "biome_affinity": [
+        "desert"
+      ],
+      "biomes": {
+        "preferred": [
+          "desert"
+        ],
+        "tolerated": [
+          "plains"
+        ]
+      },
       "shop_price": 3500,
       "food_per_day": 1,
       "space_required": 1,
@@ -122,7 +187,18 @@
       "diet": "carnivore",
       "weight_lb": 33,
       "era": "Late Cretaceous",
-      "biome_affinity": ["desert", "plains"],
+      "biome_affinity": [
+        "desert",
+        "plains"
+      ],
+      "biomes": {
+        "preferred": [
+          "desert"
+        ],
+        "tolerated": [
+          "plains"
+        ]
+      },
       "shop_price": 4000,
       "food_per_day": 1,
       "space_required": 1,
@@ -141,7 +217,18 @@
       "diet": "carnivore",
       "weight_lb": 160,
       "era": "Early Cretaceous",
-      "biome_affinity": ["plains", "marsh"],
+      "biome_affinity": [
+        "plains",
+        "marsh"
+      ],
+      "biomes": {
+        "preferred": [
+          "plains"
+        ],
+        "tolerated": [
+          "marsh"
+        ]
+      },
       "shop_price": 4500,
       "food_per_day": 1,
       "space_required": 1,
@@ -160,7 +247,18 @@
       "diet": "herbivore",
       "weight_lb": 2000,
       "era": "Late Jurassic",
-      "biome_affinity": ["plains", "marsh"],
+      "biome_affinity": [
+        "plains",
+        "marsh"
+      ],
+      "biomes": {
+        "preferred": [
+          "plains"
+        ],
+        "tolerated": [
+          "marsh"
+        ]
+      },
       "shop_price": 5500,
       "food_per_day": 2,
       "space_required": 1,
@@ -179,7 +277,18 @@
       "diet": "carnivore",
       "weight_lb": 900,
       "era": "Early Jurassic",
-      "biome_affinity": ["desert", "plains"],
+      "biome_affinity": [
+        "desert",
+        "plains"
+      ],
+      "biomes": {
+        "preferred": [
+          "desert"
+        ],
+        "tolerated": [
+          "plains"
+        ]
+      },
       "shop_price": 6500,
       "food_per_day": 2,
       "space_required": 1,
@@ -198,7 +307,18 @@
       "diet": "herbivore",
       "weight_lb": 7000,
       "era": "Late Cretaceous",
-      "biome_affinity": ["marsh", "plains"],
+      "biome_affinity": [
+        "marsh",
+        "plains"
+      ],
+      "biomes": {
+        "preferred": [
+          "marsh"
+        ],
+        "tolerated": [
+          "plains"
+        ]
+      },
       "shop_price": 7000,
       "food_per_day": 2,
       "space_required": 1,
@@ -217,7 +337,17 @@
       "diet": "herbivore",
       "weight_lb": 900,
       "era": "Late Cretaceous",
-      "biome_affinity": ["plains"],
+      "biome_affinity": [
+        "plains"
+      ],
+      "biomes": {
+        "preferred": [
+          "plains"
+        ],
+        "tolerated": [
+          "desert"
+        ]
+      },
       "shop_price": 7500,
       "food_per_day": 2,
       "space_required": 1,
@@ -236,7 +366,18 @@
       "diet": "carnivore",
       "weight_lb": 5000,
       "era": "Late Jurassic",
-      "biome_affinity": ["plains", "desert"],
+      "biome_affinity": [
+        "plains",
+        "desert"
+      ],
+      "biomes": {
+        "preferred": [
+          "plains"
+        ],
+        "tolerated": [
+          "desert"
+        ]
+      },
       "shop_price": 8500,
       "food_per_day": 2,
       "space_required": 1,
@@ -255,7 +396,18 @@
       "diet": "herbivore",
       "weight_lb": 8000,
       "era": "Early Cretaceous",
-      "biome_affinity": ["marsh", "plains"],
+      "biome_affinity": [
+        "marsh",
+        "plains"
+      ],
+      "biomes": {
+        "preferred": [
+          "marsh"
+        ],
+        "tolerated": [
+          "plains"
+        ]
+      },
       "shop_price": 9500,
       "food_per_day": 3,
       "space_required": 2,
@@ -274,7 +426,17 @@
       "diet": "herbivore",
       "weight_lb": 6000,
       "era": "Late Cretaceous",
-      "biome_affinity": ["plains"],
+      "biome_affinity": [
+        "plains"
+      ],
+      "biomes": {
+        "preferred": [
+          "plains"
+        ],
+        "tolerated": [
+          "desert"
+        ]
+      },
       "shop_price": 10500,
       "food_per_day": 3,
       "space_required": 2,
@@ -293,7 +455,15 @@
       "diet": "piscivore",
       "weight_lb": 3300,
       "era": "Early Cretaceous",
-      "biome_affinity": ["marsh"],
+      "biome_affinity": [
+        "marsh"
+      ],
+      "biomes": {
+        "preferred": [
+          "marsh"
+        ],
+        "tolerated": []
+      },
       "shop_price": 11000,
       "food_per_day": 3,
       "space_required": 1,
@@ -312,7 +482,18 @@
       "diet": "herbivore",
       "weight_lb": 13000,
       "era": "Late Cretaceous",
-      "biome_affinity": ["plains", "marsh"],
+      "biome_affinity": [
+        "plains",
+        "marsh"
+      ],
+      "biomes": {
+        "preferred": [
+          "plains"
+        ],
+        "tolerated": [
+          "marsh"
+        ]
+      },
       "shop_price": 11500,
       "food_per_day": 3,
       "space_required": 2,
@@ -331,7 +512,18 @@
       "diet": "herbivore",
       "weight_lb": 6500,
       "era": "Late Cretaceous",
-      "biome_affinity": ["marsh", "plains"],
+      "biome_affinity": [
+        "marsh",
+        "plains"
+      ],
+      "biomes": {
+        "preferred": [
+          "marsh"
+        ],
+        "tolerated": [
+          "plains"
+        ]
+      },
       "shop_price": 12500,
       "food_per_day": 3,
       "space_required": 2,
@@ -350,7 +542,18 @@
       "diet": "herbivore",
       "weight_lb": 10000,
       "era": "Late Jurassic",
-      "biome_affinity": ["plains", "desert"],
+      "biome_affinity": [
+        "plains",
+        "desert"
+      ],
+      "biomes": {
+        "preferred": [
+          "plains"
+        ],
+        "tolerated": [
+          "desert"
+        ]
+      },
       "shop_price": 13500,
       "food_per_day": 3,
       "space_required": 2,
@@ -369,7 +572,16 @@
       "diet": "herbivore",
       "weight_lb": 13000,
       "era": "Late Cretaceous",
-      "biome_affinity": ["plains"],
+      "biome_affinity": [
+        "plains"
+      ],
+      "biomes": {
+        "preferred": [
+          "plains"
+        ],
+        "tolerated": [],
+        "requires_preferred": true
+      },
       "shop_price": 15500,
       "food_per_day": 4,
       "space_required": 2,
@@ -388,7 +600,18 @@
       "diet": "herbivore",
       "weight_lb": 40000,
       "era": "Late Jurassic",
-      "biome_affinity": ["plains", "desert"],
+      "biome_affinity": [
+        "plains",
+        "desert"
+      ],
+      "biomes": {
+        "preferred": [
+          "plains"
+        ],
+        "tolerated": [
+          "desert"
+        ]
+      },
       "shop_price": 17500,
       "food_per_day": 4,
       "space_required": 2,
@@ -407,7 +630,16 @@
       "diet": "piscivore",
       "weight_lb": 16000,
       "era": "Late Cretaceous",
-      "biome_affinity": ["marsh"],
+      "biome_affinity": [
+        "marsh"
+      ],
+      "biomes": {
+        "preferred": [
+          "marsh"
+        ],
+        "tolerated": [],
+        "requires_preferred": true
+      },
       "shop_price": 19500,
       "food_per_day": 4,
       "space_required": 2,
@@ -426,7 +658,16 @@
       "diet": "herbivore",
       "weight_lb": 70000,
       "era": "Late Jurassic",
-      "biome_affinity": ["plains"],
+      "biome_affinity": [
+        "plains"
+      ],
+      "biomes": {
+        "preferred": [
+          "plains"
+        ],
+        "tolerated": [],
+        "requires_preferred": true
+      },
       "shop_price": 21000,
       "food_per_day": 5,
       "space_required": 3,
@@ -445,7 +686,18 @@
       "diet": "carnivore",
       "weight_lb": 18000,
       "era": "Late Cretaceous",
-      "biome_affinity": ["plains", "marsh"],
+      "biome_affinity": [
+        "plains",
+        "marsh"
+      ],
+      "biomes": {
+        "preferred": [
+          "plains",
+          "marsh"
+        ],
+        "tolerated": [],
+        "requires_preferred": true
+      },
       "shop_price": 24000,
       "food_per_day": 4,
       "space_required": 2,

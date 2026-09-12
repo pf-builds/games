@@ -5,21 +5,34 @@
       "name": "Desert",
       "plot_cost": 1500,
       "blurb": "Cheapest starter land. Dry and sandy. Good for small, hardy dinosaurs that lived in hot places.",
-      "color": "#d9b36c"
+      "color": "#e2b64f",
+      "texture": "sand",
+      "grows": "Dry scrub and tough succulents. Seeds take root slowly; the cheapest land is also the slowest garden."
     },
     {
       "id": "marsh",
       "name": "Marsh",
       "plot_cost": 2000,
       "blurb": "Wet, reedy lowland. Mid-priced. Suits swamp and shoreline species and the occasional rare draw.",
-      "color": "#4f8f86"
+      "color": "#3b8a95",
+      "texture": "reeds",
+      "grows": "Reeds, ferns and water plants. The wettest land grows the most free grazing in the park."
     },
     {
       "id": "plains",
       "name": "Plains",
       "plot_cost": 2800,
       "blurb": "Premium open grassland. The most versatile land in the park. Most big herbivores feel at home here.",
-      "color": "#93c14f"
+      "color": "#7dc63c",
+      "texture": "grass",
+      "grows": "Open grassland. Steady regrowth and room to roam; the all-rounder."
     }
-  ]
+  ],
+  "_notes": "M3 carry-over: colours pushed apart so the three biomes are unmistakable in the survey map, the living view and the legend: desert = sandy yellow, marsh = blue-teal, plains = bright grass green. `texture` picks the ground marks drawn on an owned parcel (sand dots / reed clumps and puddles / grass tufts). M4: parcels no longer carry a biome. Unowned land draws as neutral `unowned` scrub; the buyer picks a biome in the buy dialog and can Re-landscape later. `grows` is the biome guide line in the Real Estate office (growth rates are in balance.vegetation).",
+  "unowned": {
+    "name": "Scrub",
+    "color": "#8b8f62",
+    "texture": "scrub",
+    "blurb": "Unsurveyed scrub. Buy it and choose Desert, Plains or Marsh."
+  }
 }
