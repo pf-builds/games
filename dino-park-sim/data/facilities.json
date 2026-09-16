@@ -15,22 +15,22 @@
           "render": { "surface": "dirt", "w": 3.2, "rows": 2, "blocks": 1, "lamps": 0 }
         },
         {
-          "tier": 1, "label": "Gravel Lot", "cost": 5000, "upkeep_per_quarter": 80,
+          "tier": 1, "label": "Gravel Lot", "cost": 8000, "upkeep_per_quarter": 80,
           "effects": { "parking_capacity": 150, "concession_spend": 0.03 },
           "render": { "surface": "gravel", "w": 4.4, "rows": 3, "blocks": 1, "lamps": 0 }
         },
         {
-          "tier": 2, "label": "Paved Lot", "cost": 3000, "upkeep_per_quarter": 150,
+          "tier": 2, "label": "Paved Lot", "cost": 3500, "upkeep_per_quarter": 150,
           "effects": { "parking_capacity": 300, "concession_spend": 0.06 },
           "render": { "surface": "asphalt", "w": 5.6, "rows": 4, "blocks": 1, "lamps": 0 }
         },
         {
-          "tier": 3, "label": "Lined & Lit Lot", "cost": 2200, "upkeep_per_quarter": 260,
+          "tier": 3, "label": "Lined & Lit Lot", "cost": 2500, "upkeep_per_quarter": 260,
           "effects": { "parking_capacity": 500, "concession_spend": 0.10 },
           "render": { "surface": "lined", "w": 6.4, "rows": 5, "blocks": 1, "lamps": 4 }
         },
         {
-          "tier": 4, "label": "Overflow Lot", "cost": 2600, "upkeep_per_quarter": 400,
+          "tier": 4, "label": "Overflow Lot", "cost": 3000, "upkeep_per_quarter": 400,
           "effects": { "parking_capacity": 800, "concession_spend": 0.15 },
           "render": { "surface": "overflow", "w": 7.3, "rows": 6, "blocks": 2, "lamps": 6 }
         }
@@ -50,17 +50,17 @@
           "render": { "w": 0.5, "h": 0.55, "z": 0.35, "roofs": 1, "storeys": 1, "style": "portable" }
         },
         {
-          "tier": 1, "label": "Restroom Block", "cost": 1000, "upkeep_per_quarter": 50,
+          "tier": 1, "label": "Restroom Block", "cost": 1500, "upkeep_per_quarter": 50,
           "effects": { "satisfaction": 0.04, "appeal_bonus": 0.02, "concession_spend": 0.03 },
           "render": { "w": 0.7, "h": 0.7, "z": 0.45, "roofs": 1, "storeys": 1 }
         },
         {
-          "tier": 2, "label": "Tiled Block", "cost": 1700, "upkeep_per_quarter": 90,
+          "tier": 2, "label": "Tiled Block", "cost": 1900, "upkeep_per_quarter": 90,
           "effects": { "satisfaction": 0.08, "appeal_bonus": 0.04, "concession_spend": 0.06 },
           "render": { "w": 0.85, "h": 0.85, "z": 0.5, "roofs": 2, "storeys": 1, "style": "tiled" }
         },
         {
-          "tier": 3, "label": "Family Pavilion", "cost": 2900, "upkeep_per_quarter": 150,
+          "tier": 3, "label": "Family Pavilion", "cost": 3300, "upkeep_per_quarter": 150,
           "effects": { "satisfaction": 0.12, "appeal_bonus": 0.09, "concession_spend": 0.12 },
           "render": { "w": 1.0, "h": 1.0, "z": 0.6, "roofs": 3, "storeys": 1, "style": "pavilion" }
         }
@@ -80,22 +80,22 @@
           "render": { "w": 0.45, "h": 0.45, "z": 0.2, "roofs": 0, "storeys": 0 }
         },
         {
-          "tier": 1, "label": "Snack Cart", "cost": 4000, "upkeep_per_quarter": 120,
+          "tier": 1, "label": "Snack Cart", "cost": 5000, "upkeep_per_quarter": 120,
           "effects": { "concession_spend": 0.5 },
           "render": { "w": 0.55, "h": 0.5, "z": 0.4, "roofs": 1, "storeys": 1, "style": "cart" }
         },
         {
-          "tier": 2, "label": "Food Stand", "cost": 8000, "upkeep_per_quarter": 220,
+          "tier": 2, "label": "Food Stand", "cost": 9000, "upkeep_per_quarter": 220,
           "effects": { "concession_spend": 0.8 },
           "render": { "w": 0.75, "h": 0.7, "z": 0.5, "roofs": 1, "storeys": 1 }
         },
         {
-          "tier": 3, "label": "Diner", "cost": 10500, "upkeep_per_quarter": 360,
+          "tier": 3, "label": "Diner", "cost": 11000, "upkeep_per_quarter": 360,
           "effects": { "concession_spend": 1.1, "satisfaction": 0.02 },
           "render": { "w": 0.9, "h": 0.9, "z": 0.6, "roofs": 2, "storeys": 1, "style": "diner" }
         },
         {
-          "tier": 4, "label": "Restaurant", "cost": 11500, "upkeep_per_quarter": 520,
+          "tier": 4, "label": "Restaurant", "cost": 12500, "upkeep_per_quarter": 520,
           "effects": { "concession_spend": 1.5, "satisfaction": 0.04 },
           "render": { "w": 1.0, "h": 1.0, "z": 0.95, "roofs": 3, "storeys": 2, "style": "restaurant" }
         }
@@ -115,22 +115,22 @@
           "render": { "w": 0.45, "h": 0.45, "z": 0.2, "roofs": 0, "storeys": 0 }
         },
         {
-          "tier": 1, "label": "Souvenir Stand", "cost": 6000, "upkeep_per_quarter": 160,
+          "tier": 1, "label": "Souvenir Stand", "cost": 7000, "upkeep_per_quarter": 160,
           "effects": { "concession_spend": 0.8 },
           "render": { "w": 0.6, "h": 0.6, "z": 0.42, "roofs": 1, "storeys": 1, "style": "cart" }
         },
         {
-          "tier": 2, "label": "Gift Shop", "cost": 11000, "upkeep_per_quarter": 280,
+          "tier": 2, "label": "Gift Shop", "cost": 12000, "upkeep_per_quarter": 280,
           "effects": { "concession_spend": 1.1 },
           "render": { "w": 0.8, "h": 0.8, "z": 0.52, "roofs": 2, "storeys": 1 }
         },
         {
-          "tier": 3, "label": "Gift Emporium", "cost": 10000, "upkeep_per_quarter": 420,
+          "tier": 3, "label": "Gift Emporium", "cost": 11000, "upkeep_per_quarter": 420,
           "effects": { "concession_spend": 1.4 },
           "render": { "w": 0.95, "h": 0.95, "z": 0.65, "roofs": 3, "storeys": 1, "style": "emporium" }
         },
         {
-          "tier": 4, "label": "Museum Store", "cost": 14000, "upkeep_per_quarter": 600,
+          "tier": 4, "label": "Museum Store", "cost": 13000, "upkeep_per_quarter": 600,
           "effects": { "concession_spend": 1.8, "appeal_bonus": 0.05 },
           "render": { "w": 1.0, "h": 1.0, "z": 1.0, "roofs": 3, "storeys": 2, "style": "museum" }
         }
@@ -150,12 +150,12 @@
           "render": { "w": 1.0, "h": 1.0, "z": 0.55, "roofs": 1, "storeys": 1 }
         },
         {
-          "tier": 1, "label": "Admin Building", "cost": 5800, "upkeep_per_quarter": 200,
+          "tier": 1, "label": "Admin Building", "cost": 6000, "upkeep_per_quarter": 200,
           "effects": { "management_capacity": 10, "event_mitigation": 0.25, "concession_spend": 0.08 },
           "render": { "w": 1.0, "h": 1.0, "z": 0.85, "roofs": 1, "storeys": 2 }
         },
         {
-          "tier": 2, "label": "Park Headquarters", "cost": 3500, "upkeep_per_quarter": 400,
+          "tier": 2, "label": "Park Headquarters", "cost": 3900, "upkeep_per_quarter": 400,
           "effects": { "management_capacity": 16, "event_mitigation": 0.5, "concession_spend": 0.14 },
           "render": { "w": 1.0, "h": 1.0, "z": 0.95, "roofs": 2, "storeys": 3, "style": "tower" }
         }
@@ -175,17 +175,17 @@
           "render": { "w": 0.5, "h": 0.5, "z": 0.2, "roofs": 0, "storeys": 0 }
         },
         {
-          "tier": 1, "label": "Info Kiosk", "cost": 2300, "upkeep_per_quarter": 100,
+          "tier": 1, "label": "Info Kiosk", "cost": 2500, "upkeep_per_quarter": 100,
           "effects": { "appeal_bonus": 0.08, "education": 1, "concession_spend": 0.05 },
           "render": { "w": 0.55, "h": 0.7, "z": 0.45, "roofs": 1, "storeys": 1, "style": "cart" }
         },
         {
-          "tier": 2, "label": "Visitor Center", "cost": 2100, "upkeep_per_quarter": 240,
+          "tier": 2, "label": "Visitor Center", "cost": 2300, "upkeep_per_quarter": 240,
           "effects": { "appeal_bonus": 0.16, "education": 2, "concession_spend": 0.10 },
           "render": { "w": 0.85, "h": 0.9, "z": 0.6, "roofs": 2, "storeys": 1 }
         },
         {
-          "tier": 3, "label": "Discovery Hall", "cost": 3300, "upkeep_per_quarter": 420,
+          "tier": 3, "label": "Discovery Hall", "cost": 3600, "upkeep_per_quarter": 420,
           "effects": { "appeal_bonus": 0.32, "education": 2, "concession_spend": 0.18 },
           "render": { "w": 1.0, "h": 1.0, "z": 1.0, "roofs": 3, "storeys": 2, "style": "museum" }
         }
@@ -205,17 +205,17 @@
           "render": { "w": 0.5, "h": 0.5, "z": 0.2, "roofs": 0, "storeys": 0 }
         },
         {
-          "tier": 1, "label": "First-Aid Post", "cost": 800, "upkeep_per_quarter": 100,
+          "tier": 1, "label": "First-Aid Post", "cost": 900, "upkeep_per_quarter": 100,
           "effects": { "illness_reduction": 0.2, "heal_bonus": 1, "appeal_bonus": 0.02, "concession_spend": 0.03 },
           "render": { "w": 0.55, "h": 0.65, "z": 0.45, "roofs": 1, "storeys": 1 }
         },
         {
-          "tier": 2, "label": "Vet Clinic", "cost": 1000, "upkeep_per_quarter": 220,
+          "tier": 2, "label": "Vet Clinic", "cost": 1100, "upkeep_per_quarter": 220,
           "effects": { "illness_reduction": 0.35, "heal_bonus": 2, "appeal_bonus": 0.05, "concession_spend": 0.06 },
           "render": { "w": 0.85, "h": 0.9, "z": 0.6, "roofs": 2, "storeys": 1 }
         },
         {
-          "tier": 3, "label": "Animal Hospital", "cost": 2600, "upkeep_per_quarter": 400,
+          "tier": 3, "label": "Animal Hospital", "cost": 3000, "upkeep_per_quarter": 400,
           "effects": { "illness_reduction": 0.5, "heal_bonus": 4, "appeal_bonus": 0.12, "concession_spend": 0.12 },
           "render": { "w": 1.0, "h": 1.0, "z": 0.95, "roofs": 3, "storeys": 2, "style": "hospital" }
         }
@@ -235,17 +235,17 @@
           "render": { "w": 0.6, "h": 0.5, "z": 0.15, "roofs": 0, "storeys": 0, "cars": 0 }
         },
         {
-          "tier": 1, "label": "Tram Stop", "cost": 4000, "upkeep_per_quarter": 150,
+          "tier": 1, "label": "Tram Stop", "cost": 5000, "upkeep_per_quarter": 150,
           "effects": { "gate_capacity": 60, "satisfaction": 0.02, "concession_spend": 0.04 },
           "render": { "w": 0.7, "h": 0.6, "z": 0.4, "roofs": 1, "storeys": 1, "style": "shelter", "cars": 1 }
         },
         {
-          "tier": 2, "label": "Park Tram", "cost": 8000, "upkeep_per_quarter": 300,
+          "tier": 2, "label": "Park Tram", "cost": 10000, "upkeep_per_quarter": 300,
           "effects": { "gate_capacity": 150, "satisfaction": 0.04, "concession_spend": 0.08 },
           "render": { "w": 0.9, "h": 0.8, "z": 0.5, "roofs": 2, "storeys": 1, "style": "shelter", "cars": 2 }
         },
         {
-          "tier": 3, "label": "Tram Loop", "cost": 4700, "upkeep_per_quarter": 500,
+          "tier": 3, "label": "Tram Loop", "cost": 5200, "upkeep_per_quarter": 500,
           "effects": { "gate_capacity": 300, "satisfaction": 0.06, "concession_spend": 0.14 },
           "render": { "w": 1.0, "h": 1.0, "z": 0.6, "roofs": 3, "storeys": 1, "style": "depot", "cars": 3 }
         }
