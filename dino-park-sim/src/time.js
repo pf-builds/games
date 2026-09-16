@@ -1,5 +1,5 @@
 // Day tick, auto-advance loop, and win/lose checks. UI listens on the bus.
-import { DATA, state, mode, bus, emitChange, emptyLedger, quarterIndex, log, digestAdd, AWord, T, daySeconds, autosaveDays } from './state.js';
+import { DATA, state, mode, bus, emitChange, emptyLedger, quarterIndex, log, digestAdd, AWord, T, daySeconds, autosaveDays, fmt$, pct } from './state.js';
 import {
   dailyRevenue, distributeFood, feedAndAge, dailyCleanliness, tickAd, payday, closeQuarter, quarterlyDecay, netWorth, debtCap, sum,
   autoRestock, foodWarnings, dailyMembers
@@ -120,15 +120,40 @@ function endQuarter() {
 // that leveraged itself into three marquee dinosaurs it cannot feed fails the test as surely as one that is
 // simply overdrawn — and raising the cap no longer pushes the trap further away.
 export const netDebt = () => state.debt - state.cash;
+// Bank standing for the status bar, the Bank and DPS.bank(): live net debt against the cap, the quarter count, and
+// whether the park is in the "Bank warning" state. On a mode with foreclosure off (Relaxed) the count still runs and
+// the warning shows; the park never closes.
+export function bankState() {
+  const m = mode();
+  const cap = debtCap(), net = netDebt();
+  const quarters = state.over_cap_quarters || 0;
+  const over = net > cap;
+  return {
+    mode: m.name, foreclosure_enabled: !!m.foreclosure_enabled, grace_quarters: m.grace_quarters,
+    net_debt: Math.round(net), cap: Math.round(cap), over_cap: over, over_cap_quarters: quarters,
+    quarters_left: m.foreclosure_enabled ? Math.max(0, m.grace_quarters - quarters) : null,
+    warning: over || quarters > 0, overdrawn: state.cash < 0
+  };
+}
 function checkForeclosure() {
-  if (!mode().foreclosure_enabled || state.game_over) return;
-  state.over_cap_quarters = netDebt() > debtCap() ? state.over_cap_quarters + 1 : 0;
-  if (state.over_cap_quarters >= mode().grace_quarters) {
+  if (state.game_over) return;
+  const m = mode();
+  state.over_cap_quarters = netDebt() > debtCap() ? (state.over_cap_quarters || 0) + 1 : 0;
+  if (state.over_cap_quarters <= 0) return;
+  if (!m.foreclosure_enabled) {
+    // Relaxed: the same test, reported as a warning. Overdraft interest was already charged at the quarter close.
+    const msg = `Bank warning: your debt less your cash (${fmt$(netDebt())}) is above the ${fmt$(debtCap())} debt cap (${state.over_cap_quarters} quarter${state.over_cap_quarters > 1 ? 's' : ''}). The bank never forecloses on ${m.name}, but an overdraft costs ${pct(DATA.balance.loan.overdraft_apr)} APR every quarter.`;
+    log(msg);
+    digestAdd({ title: 'Bank warning', type: 'negative', summary: `net debt ${fmt$(netDebt())} against a ${fmt$(debtCap())} cap`, tooltip: DATA.tooltips.terms.bank_warning });
+    emit('bank_warning', bankState());
+    return;
+  }
+  if (state.over_cap_quarters >= m.grace_quarters) {
     state.game_over = { kind: 'foreclosure', cause: foreclosureCause() };
     setSpeed(0);
     emit('lose', state.game_over);
-  } else if (state.over_cap_quarters > 0) {
-    log(`Warning: you owe more than your debt cap. ${mode().grace_quarters - state.over_cap_quarters} quarter(s) to pay it down or grow the park.`);
+  } else {
+    log(`Warning: you owe more than your debt cap. ${m.grace_quarters - state.over_cap_quarters} quarter(s) to pay it down or grow the park.`);
   }
 }
 

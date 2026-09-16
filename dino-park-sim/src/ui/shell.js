@@ -1,7 +1,8 @@
 // App shell: status bar, toolbar/view switching, speed controls, ticker, keyboard, and bus-driven modals.
-import { DATA, state, bus, onChange, fmt$, season, year, dayOfQuarter, quarterIndex, T, fenceByTier, emitChange } from '../state.js';
+import { DATA, state, bus, onChange, fmt$, season, year, dayOfQuarter, quarterIndex, T, fenceByTier, emitChange, mode } from '../state.js';
 import { parkRating } from '../attendance.js';
-import { setSpeed, advanceDay, setBlockedCheck } from '../time.js';
+import { setSpeed, advanceDay, setBlockedCheck, bankState } from '../time.js';
+import { openNewGame, modeName } from './newgame.js';
 import { h, append, button, term, starsEl, clear } from './dom.js';
 import { openModal, closeTop, modalOpen, closeAll, closeBelowTop, topModal } from './modals.js';
 import { initPark, setGridActive } from '../render/park.js';
@@ -165,8 +166,20 @@ export function refresh() {
   $('cash').textContent = fmt$(state.cash);
   $('cash').classList.toggle('neg', state.cash < 0);
   $('debt').textContent = fmt$(state.debt);
+  // Phase 2: the Bank warning state (net debt above the cap). On Relaxed this is all the bank ever does; elsewhere it
+  // is the countdown to foreclosure. The Debt cell turns red and its label says so.
+  const bank = bankState();
+  const debtStat = $('debt').parentElement, debtLabel = debtStat.querySelector('.label');
+  debtStat.classList.toggle('bank-warning', bank.warning);
+  debtLabel.textContent = bank.warning ? 'Bank warning' : 'Debt';
+  debtLabel.dataset.tipText = bank.warning ? `${DATA.tooltips.terms.bank_warning} Net debt ${fmt$(bank.net_debt)} against a ${fmt$(bank.cap)} cap, ${bank.over_cap_quarters} quarter${bank.over_cap_quarters === 1 ? '' : 's'} so far${bank.foreclosure_enabled ? `; ${bank.quarters_left} left before foreclosure` : ' (no foreclosure on ' + bank.mode + ')'}.` : DATA.tooltips.terms.debt;
   // Date and Today stack two short lines so the pixel-font cells stay narrow enough for the speed controls at 1280x720.
   $('date').replaceChildren(h('span', { class: 'line' }, `Day ${dayOfQuarter()} · ${season()}`), h('span', { class: 'line' }, `Year ${year()} · Quarter ${quarterIndex() + 1}`));
+  // Phase 2: the run's difficulty rides in the Date tooltip (label and value), as a chip line ahead of the calendar text.
+  const dateTip = `Difficulty: ${modeName()} — ${mode().feel || ''} ${DATA.tooltips.terms.quarter}`;
+  $('date').dataset.tipText = dateTip;
+  const dateLabel = $('date').parentElement.querySelector('.label');
+  dateLabel.dataset.tipText = dateTip; delete dateLabel.dataset.tip;
   $('rating').replaceChildren(starsEl(parkRating(), DATA.balance.rating.max, 'stars'), h('span', { class: 'stars-num' }, parkRating().toFixed(1)));
   $('today').replaceChildren(h('span', { class: 'line' }, `${state.today.attendance.toLocaleString('en-US')} visitors`), h('span', { class: 'line' }, fmt$(state.today.tickets + state.today.concessions)));
   document.querySelectorAll('#speed [data-speed]').forEach(b => b.classList.toggle('active', Number(b.dataset.speed) === state.speed));
@@ -240,7 +253,7 @@ function losePopup({ cause }) {
     h('p', {}, 'The bank took the park. What you owed, less the cash you held, stayed above your ', term('debt_cap', 'debt cap'), ` for ${cause.quarters} quarter${cause.quarters > 1 ? 's' : ''}.`),
     h('p', {}, `Main cause: ${cause.category} cost ${fmt$(cause.amount)} while revenue was only ${fmt$(cause.revenue)} over that period.`),
     h('p', { class: 'muted' }, 'Tip: check the Reports view every quarter. Big costs (salaries, dinosaur purchases) should be covered by ticket income before you add more.'),
-    h('div', { class: 'row end' }, button('Restart', () => { closeAll(); startNewGame(); }, { class: 'btn primary' }))) });
+    h('div', { class: 'row end' }, button('Restart', () => openNewGame({ onStart: startNewGame, cancelable: false, title: 'New Game', intro: `The ${modeName()} park is gone. Pick a difficulty for the next one.` }), { class: 'btn primary' }))) });
   closeBelowTop(); // a batch advance can leave a pile of stale event popups; they must not bury the lose screen
   const top = topModal();
   if (!top) return show();
@@ -252,7 +265,7 @@ export function tutorialHint() {
   // Six short cards in two columns (M5 fixer): one line each, the detail lives in the hover terms and the first-quarter tips.
   const tut = (title, ...text) => h('div', { class: 'tut' }, h('b', {}, title), h('span', {}, ...text));
   const m = openModal({ title: 'Welcome, park owner', className: 'wide', body: h('div', {},
-    h('p', {}, `You start with a ${fmt$(DATA.difficulty.modes[state.mode]?.start_loan ?? state.debt)} `, term('loan', 'loan'), ' from the bank. Six things turn it into a park:'),
+    h('p', {}, `You start with a ${fmt$(mode().start_loan ?? state.debt)} `, term('loan', 'loan'), ` from the bank (${modeName()} difficulty). Six things turn it into a park:`),
     h('div', { class: 'tutorial-grid' },
       tut('1. Buy land, pick its biome', 'Park → Buy Land. Desert, Plains or Marsh: the ', term('biome', 'biome'), ' sets price, growth and which species feel at home.'),
       tut('2. Fence it', `Click your parcel. ${fenceByTier(1).name} is cheapest; big species need stronger tiers.`),
@@ -265,7 +278,7 @@ export function tutorialHint() {
 }
 
 // ---- first-quarter tips (data/tooltips.json first_quarter_tips): one toast each, on its day, shown once per browser ----
-const TIPS_KEY = 'dino-park-sim.tips_seen';
+const TIPS_KEY = 'fossil-fortune.tips_seen';
 function tipsSeen() { try { return JSON.parse(localStorage.getItem(TIPS_KEY) || '[]') || []; } catch { return []; } }
 function markTipSeen(day) { try { const seen = tipsSeen(); if (!seen.includes(day)) seen.push(day); localStorage.setItem(TIPS_KEY, JSON.stringify(seen)); } catch { /* storage blocked */ } }
 export function markTipsSeen() { try { localStorage.setItem(TIPS_KEY, JSON.stringify((DATA.tooltips.first_quarter_tips || []).map(t => t.day))); } catch { /* storage blocked */ } }
@@ -273,14 +286,21 @@ export function resetTips() { try { localStorage.removeItem(TIPS_KEY); } catch {
 // Tips show one at a time: a batch advance (or 10x) that passes several tip days queues them, and the next one
 // appears once the current tip has been dismissed or has timed out, instead of three stacking over the scene.
 const tipQueue = [];
-let tipShowing = null, tipTimer = 0;
+let tipShowing = null, tipShowingDef = null, tipTimer = 0, tipWatch = 0;
 function pumpTips() {
   tipTimer = 0;
-  if (tipShowing && tipShowing.isConnected) { tipTimer = setTimeout(pumpTips, 800); return; }
+  // M5 minor (Phase 2): a tip never stacks over an open panel or modal (Goals, a store, the Quarterly Report): it waits.
+  if (modalOpen() || (tipShowing && tipShowing.isConnected)) { tipTimer = setTimeout(pumpTips, 800); return; }
   const t = tipQueue.shift();
-  if (!t) { tipShowing = null; return; }
+  if (!t) { tipShowing = null; tipShowingDef = null; return; }
+  tipShowingDef = t;
   tipShowing = toast({ icon: '💡', title: t.title, text: t.text, cls: 'tip-toast', seconds: DATA.balance.juice?.tip_toast_seconds ?? 9 });
-  if (tipQueue.length) tipTimer = setTimeout(pumpTips, 800);
+  // A panel that opens while the tip is up takes it down; the tip goes back to the front of the queue for later.
+  if (!tipWatch) tipWatch = setInterval(() => {
+    if (!(tipShowing && tipShowing.isConnected)) { if (!tipQueue.length) { clearInterval(tipWatch); tipWatch = 0; } return; }
+    if (modalOpen()) { tipShowing.remove(); if (tipShowingDef) tipQueue.unshift(tipShowingDef); tipShowing = null; tipShowingDef = null; if (!tipTimer) tipTimer = setTimeout(pumpTips, 800); }
+  }, 250);
+  if (tipQueue.length && !tipTimer) tipTimer = setTimeout(pumpTips, 800);
 }
 function firstQuarterTips() {
   if (!state || state.day > T().days_per_quarter) return;

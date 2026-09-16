@@ -38,6 +38,7 @@ const pendingArrivals = new Set();
 let livingOn = false;
 export function setLivingActive(v) {
   livingOn = !!v;
+  if (!livingOn) drainArrivals();
   // The wait clock on queued deliveries starts when the scene is showing: a dinosaur bought in Town (the Dino Market
   // is a Town screen) still gets its truck when the player next opens the Park, however long they shopped.
   if (livingOn) for (const a of arrivals) a.at = performance.now();
@@ -75,7 +76,9 @@ function queueArrival({ uid, parcel, size }) {
   // Motion reduced: the animal simply appears, and roars now. Otherwise every purchase is queued, whether or not the
   // living view is showing: the truck drives (and the roar plays) when the crate opens in the Park, so the player who
   // buys in Town and then clicks Park sees the delivery instead of an animal already standing in the pen.
-  if (reduceMotion()) { playSfx(roarFor(size), { gain: Lv().arrival_roar_gain ?? 1 }); return; }
+  // M5 minor (Phase 2): the truck only runs while the Park is showing. A purchase made in Town (or with the survey
+  // map up) appears in its pen at once and roars now; nothing is left queued for the next Park visit.
+  if (reduceMotion() || !livingOn) { playSfx(roarFor(size), { gain: Lv().arrival_roar_gain ?? 1 }); return; }
   pendingArrivals.add(uid);
   arrivals.push({ uid, parcel, size, at: performance.now() });
   const a = dinos.find(d => d.uid === uid);
@@ -89,7 +92,15 @@ function revealDino(uid, withPop) {
   if (withPop) { a.pop = Lv().pop_seconds || 0.5; a.popT = 0; puff(a.x, a.y, 7); }
   return a;
 }
+// Leaving the Park mid-delivery drains the queue at once (the animal is simply in its pen when the view returns).
+export function drainArrivals() {
+  while (arrivals.length) revealDino(arrivals.shift().uid, false);
+  if (truck.active) { revealDino(truck.uid, false); truck.active = false; truck.crate = false; truck.uid = null; }
+  for (const d of dinos) if (d.arriving) revealDino(d.uid, false);
+  pendingArrivals.clear();
+}
 function tickArrivals(dt) {
+  if (!livingOn) { if (arrivals.length || truck.active || pendingArrivals.size) drainArrivals(); return; }
   const maxWait = (Lv().arrival_max_wait_seconds ?? 45) * 1000;
   if (!truck.active && arrivals.length) {
     const next = arrivals.shift();

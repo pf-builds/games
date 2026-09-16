@@ -45,7 +45,10 @@
     "report_card": "At the end of year five the park is graded A to F on profit, attendance, dinosaur welfare, education and guest satisfaction. The game keeps going afterwards; the card stays in Reports.",
     "welfare": "How well the animals are looked after: average health, and a penalty for every death and every escape.",
     "education": "How much visitors learn: the Visitor Center tier, how often the Fact Book is opened, and whether the school program has run.",
-    "reduce_motion": "Turns off shakes, floating numbers, slides and the delivery truck. Everything still happens, it just appears in place."
+    "reduce_motion": "Turns off shakes, floating numbers, slides and the delivery truck. Everything still happens, it just appears in place.",
+    "difficulty": "The difficulty mode is chosen when a park is founded and fixed for the run. Relaxed: bigger cheap loan, more visitors, no foreclosure. Standard: the tuned game. Classic: a shoestring loan, dearer bills, one quarter of grace.",
+    "overhead": "A fixed charge every quarter for owning land. Part of the bill is a flat fee no matter how much you own, and part grows with every tile you hold. Land costs money even when it earns nothing, so buying parcels you are not ready to use drains cash.",
+    "bank_warning": "Your debt minus your cash is above the debt cap. On Relaxed the bank never forecloses, but the overdraft still costs interest every quarter and the warning stays until you are back under the cap."
   },
   "first_quarter_tips": [
     {

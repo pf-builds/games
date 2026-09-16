@@ -10,7 +10,7 @@ export const DATA = {};
 export const SAVE_VERSION = 6;
 // Player preferences that outlive a single park (day length, autosave cadence, sound). Mirrored into state.settings
 // so a save carries them too; newGame() starts from the stored copy.
-export const PREFS_KEY = 'dino-park-sim.prefs';
+export const PREFS_KEY = 'fossil-fortune.prefs';
 export const bus = new EventTarget();
 
 export let state = null;
@@ -54,7 +54,7 @@ export function emptyLedger(quarter) {
   return {
     quarter,
     revenue: { tickets: 0, concessions: 0, memberships: 0, donations: 0, sales: 0 },
-    expenses: { salaries: 0, food: 0, upkeep: 0, interest: 0, loan_payment: 0, tax: 0 },
+    expenses: { salaries: 0, food: 0, upkeep: 0, overhead: 0, interest: 0, loan_payment: 0, tax: 0 },
     capital: { land: 0, fences: 0, dinosaurs: 0, facilities: 0, advertising: 0, repairs: 0, debt_repaid: 0 },
     attendance: 0,
     days: 0
@@ -125,12 +125,18 @@ export function updateSettings(patch) {
 export const daySeconds = () => (state && state.settings && state.settings.day_seconds) || DATA.balance.living.day_seconds || 1;
 export const autosaveDays = () => (state && state.settings && state.settings.autosave_days) || (DATA.balance.save && DATA.balance.save.autosave_days) || DATA.balance.time.days_per_quarter;
 
+// Phase 2: the difficulty mode is chosen at New Game and fixed for the run (state.difficulty). An unknown or missing
+// id (an old save, a retired mode name) falls back to the default mode.
+export const modeIds = () => DATA.difficulty.order || Object.keys(DATA.difficulty.modes);
+export const modeDef = id => DATA.difficulty.modes[id] || null;
+export function normalizeModeId(id) { return modeDef(id) && modeDef(id).enabled !== false ? id : DATA.difficulty.default_mode; }
 export function newGame(modeId = DATA.difficulty.default_mode) {
+  modeId = normalizeModeId(modeId);
   const mode = DATA.difficulty.modes[modeId];
   const A = DATA.balance.attendance;
   state = {
     save_version: SAVE_VERSION,
-    mode: modeId,
+    difficulty: modeId,
     day: 1,
     cash: mode.start_loan,
     debt: mode.start_loan,
@@ -173,6 +179,10 @@ export function newGame(modeId = DATA.difficulty.default_mode) {
 
 export function replaceState(next) {
   state = next;
+  // Saves from before Phase 2 carry no mode (or the old `mode` key): they load as Standard, never as anything else.
+  state.difficulty = normalizeModeId(state.difficulty || state.mode);
+  delete state.mode;
+  state.over_cap_quarters ||= 0;
   // A loaded save carries its own settings; anything missing falls back to the stored preferences.
   state.settings = { ...defaultSettings(), ...(state.settings || {}) };
   state.store_spend ||= 0;
@@ -191,7 +201,9 @@ export function replaceState(next) {
 }
 
 // ---- lookups ----
-export const mode = () => DATA.difficulty.modes[state.mode];
+export const mode = () => DATA.difficulty.modes[normalizeModeId(state && state.difficulty)];
+export const modeId = () => normalizeModeId(state && state.difficulty);
+export const isClassic = () => modeId() === 'classic';
 export const speciesById = id => DATA.dinosaurs.species.find(s => s.id === id);
 export const fenceByTier = tier => DATA.fences.tiers.find(f => f.tier === tier);
 export const biomeById = id => DATA.biomes.biomes.find(b => b.id === id);

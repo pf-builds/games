@@ -397,3 +397,27 @@ input.qty.wide { width: calc(84 * var(--u)); }
 .reduce-motion *, .reduce-motion *::before, .reduce-motion *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
 .reduce-motion .storefront:hover, .reduce-motion .storefront:focus-visible { transform: none; }
 .reduce-motion .floater, .reduce-motion #vignette { display: none; }
+
+/* Phase 2: difficulty chips, the New Game cards, the Bank warning state, and a tighter auto-restock table */
+.mode-chip { display: inline-flex; align-items: center; gap: calc(6 * var(--u)); font-family: var(--font-pixel); font-size: calc(8 * var(--u)); line-height: 1.6; padding: calc(2 * var(--u)) calc(8 * var(--u)); border: calc(2 * var(--u)) solid var(--border); border-radius: calc(3 * var(--u)); background: var(--panel-2); color: var(--text); white-space: nowrap; vertical-align: middle; cursor: help; }
+.mode-chip.mode-relaxed { border-color: #5aa0b5; color: #8fd3e8; }
+.mode-chip.mode-standard { border-color: var(--accent); color: var(--accent); }
+.mode-chip.mode-classic { border-color: var(--accent-2); color: var(--accent-2); }
+.mode-badge { font-size: calc(7 * var(--u)); padding: calc(1 * var(--u)) calc(5 * var(--u)); background: var(--accent-2); color: #102010; border-radius: calc(2 * var(--u)); letter-spacing: 1px; }
+h2.with-chip { display: flex; align-items: center; gap: calc(12 * var(--u)); }
+.mode-cards .card, .mode-card { gap: calc(6 * var(--u)); }
+.mode-feel { font-weight: 700; }
+.mode-facts td { padding: calc(3 * var(--u)) calc(4 * var(--u)); font-size: calc(12 * var(--u)); }
+.mode-facts td:first-child { color: var(--muted); white-space: nowrap; }
+.mode-facts td:last-child { color: var(--text); }
+.modal.newgame .cards.grid-3 { align-items: stretch; }
+.stat.bank-warning .label { color: var(--danger); }
+.stat.bank-warning .value { color: var(--danger); animation: bank-blink 1.6s ease-in-out infinite; }
+@keyframes bank-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+.bank-warning-box { margin: calc(8 * var(--u)) 0; padding: calc(8 * var(--u)) calc(12 * var(--u)); border: calc(2 * var(--u)) solid var(--danger); border-radius: calc(4 * var(--u)); background: rgba(224,92,92,0.12); }
+.bank-warning-box b { color: var(--danger); }
+.goals-mode { margin: 0 0 calc(8 * var(--u)); }
+.restock-table th, .restock-table td { padding: calc(4 * var(--u)) calc(5 * var(--u)); font-size: calc(12 * var(--u)); }
+.restock-table input.qty { width: calc(56 * var(--u)); padding: calc(2 * var(--u)) calc(4 * var(--u)); }
+.restock-table td:last-child { white-space: normal; }
+.auto-restock { max-width: 100%; overflow-x: auto; }

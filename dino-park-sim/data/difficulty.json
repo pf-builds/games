@@ -1,45 +1,68 @@
 {
   "default_mode": "standard",
+  "order": [
+    "relaxed",
+    "standard",
+    "classic"
+  ],
   "modes": {
+    "relaxed": {
+      "name": "Relaxed",
+      "enabled": true,
+      "feel": "Build and enjoy. The bank warns but never forecloses.",
+      "blurb": "A bigger, cheaper loan, more visitors, fewer bad events and cheaper bills. Overdrafts still cost interest and the Bank will warn you, but the park never closes.",
+      "start_loan": 40000,
+      "apr": 0.02,
+      "debt_cap_base": 60000,
+      "debt_cap_networth_factor": 0.8,
+      "grace_quarters": 6,
+      "foreclosure_enabled": false,
+      "attendance_mult": 1.2,
+      "event_frequency": 0.56,
+      "food_cost_mult": 0.9,
+      "salary_mult": 0.9,
+      "breakout_mult": 0.5,
+      "morale_softening": true,
+      "overhead_mult": 0
+    },
     "standard": {
       "name": "Standard",
       "enabled": true,
-      "blurb": "Fair but real. You can lose, but the game tells you why, and you get three quarters of grace before foreclosure.",
+      "feel": "Fair but real. You can lose, and the game tells you why.",
+      "blurb": "The tuned game: a $25,000 loan at 4%, three quarters of grace before foreclosure, and every number as balanced.",
       "start_loan": 25000,
       "apr": 0.04,
       "debt_cap_base": 60000,
       "debt_cap_networth_factor": 0.75,
       "grace_quarters": 3,
-      "attendance_bonus": 1.0,
+      "foreclosure_enabled": true,
+      "attendance_mult": 1.0,
       "event_frequency": 0.8,
-      "foreclosure_enabled": true
-    },
-    "easy": {
-      "name": "Easy",
-      "enabled": false,
-      "blurb": "Bigger loan, cheaper interest, fewer bad events, no foreclosure. Greyed out in Phase 1.",
-      "start_loan": 35000,
-      "apr": 0.04,
-      "debt_cap_base": 80000,
-      "debt_cap_networth_factor": 0.8,
-      "grace_quarters": 4,
-      "attendance_bonus": 1.2,
-      "event_frequency": 0.7,
-      "foreclosure_enabled": false
+      "food_cost_mult": 1.0,
+      "salary_mult": 1.0,
+      "breakout_mult": 1.0,
+      "morale_softening": true,
+      "overhead_mult": 1.0
     },
     "classic": {
       "name": "Classic",
-      "enabled": false,
-      "blurb": "Shoestring start and harsh interest, the way old park sims felt. Greyed out in Phase 1.",
-      "start_loan": 5000,
-      "apr": 0.12,
+      "enabled": true,
+      "feel": "The shoestring. One quarter of grace and no room for a bare opening.",
+      "blurb": "A $10,000 loan at 10% with one quarter of grace, fewer visitors, dearer wages and feed, more bad events and easier breakouts. Play well from day one or the bank takes the park.",
+      "start_loan": 10000,
+      "apr": 0.1,
       "debt_cap_base": 20000,
-      "debt_cap_networth_factor": 0.35,
+      "debt_cap_networth_factor": 0.5,
       "grace_quarters": 1,
-      "attendance_bonus": 0.8,
-      "event_frequency": 1.3,
-      "foreclosure_enabled": true
+      "foreclosure_enabled": true,
+      "attendance_mult": 0.85,
+      "event_frequency": 0.96,
+      "food_cost_mult": 1.15,
+      "salary_mult": 1.15,
+      "breakout_mult": 1.25,
+      "morale_softening": false,
+      "overhead_mult": 20.0
     }
   },
-  "_notes": "debt_cap = debt_cap_base + debt_cap_networth_factor * park assets (land, fences, dinosaurs, buildings at their resale ratios). Borrowed cash never raises the cap; overdrawn cash lowers it. M2.6 fix: the base was below start_loan, so the Bank could lend nothing on day 1 and the day-1 overspend trap was unreachable. Foreclosure now measures NET debt (debt - cash) against the cap, so borrowing to the ceiling and overdrafting feed the same number and a bigger cap does not push the trap further away. Playtest fix: base 60000 -> 88000 -> 100000 and the asset factor 0.6 -> 0.75, so the SPEC scenario (three marquee dinosaurs AND Parking III on day 1, about $148,000) is actually reachable with bank money; at 88000 the Grand Lot was still $10,000 out of reach. The bank hands a reckless owner enough rope, and the overspend run still forecloses on day 271 because net debt ends near $195,000 against a cap that collapses back toward the base once the animals die. M3: the day-1 splurge scenario is retired (SPEC D: unreachable by design) and replaced by the slow bleed (all six staff + one marquee dinosaur, $5 ticket, no food), so debt_cap_base drops back to 60000: the $100,000 rope existed only to fund that old scenario. With 60000 the slow bleed crosses the cap in its second or third quarter (payroll into overdraft), and unpaid staff quitting can no longer stall it short of foreclosure; the classic opening never borrows and is unaffected."
+  "_notes": "Phase 2 difficulty modes. Every mode is a complete parameter set layered on balance.json / staff.json / food.json / fences.json / events.json; Standard is exactly the tuned game (all multipliers 1.0, event_frequency 0.8 as before). Keys: start_loan (opening cash = opening debt), apr (quarterly interest = debt x apr / 4), debt_cap_base + debt_cap_networth_factor (cap = base + factor x park assets; borrowed cash never raises it, overdrawn cash lowers it), grace_quarters (consecutive quarter closes with net debt above the cap before foreclosure), foreclosure_enabled (false: the count still runs and the Bank + status bar show a Bank warning, but the park never closes), attendance_mult (x base demand), event_frequency (x events.json daily_chance; Relaxed = Standard x 0.7, Classic = Standard x 1.2), food_cost_mult (x every food.json unit cost, seeds included), salary_mult (x every staff.json salary), breakout_mult (x the daily breakout chance from fences.json), morale_softening (true: the M2.6 halved morale penalties in staff.json as written; false: penalties x staff.json morale.unsoftened_penalty_mult, the pre-M2.6 bleed). Old saves carry no mode and load as Standard. History: debt_cap_base 60000 -> 88000 -> 100000 -> 60000 (see the M2.6/M3 notes in git history: the $100,000 rope only existed for the retired day-1 splurge scenario). Relaxed debt_cap_base 80000 -> 60000 (same as Standard): with foreclosure off the cap only sets borrowing room and the Bank warning, and at 80000 one slow-bleed seed never crossed it."
 }

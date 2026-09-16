@@ -276,7 +276,7 @@ export function audioState() {
   const s = settings();
   return {
     unlocked, context: ctx ? ctx.state : 'none',
-    master_volume: s.master_volume ?? null, sfx: !!s.sfx, ambient: !!s.ambient, ambient_playing: !!ambient.nodes,
+    master_volume: s.master_volume ?? null, master_gain: master ? Math.round(master.gain.value * 1000) / 1000 : null, master_gain_expected: Math.round((s.master_volume ?? 0.8) * (cfg().master_gain ?? 0.9) * 1000) / 1000, sfx: !!s.sfx, ambient: !!s.ambient, ambient_playing: !!ambient.nodes,
     ids: sfxIds(), plays: plays.slice(), blocked_before_gesture: blocked
   };
 }

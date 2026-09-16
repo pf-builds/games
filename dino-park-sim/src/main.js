@@ -1,8 +1,8 @@
 // Entry point: load data, boot the shell, expose the debug API.
-import { loadData, newGame, state, emitChange, log, parcelList, parcelDef, parcelGeometry, parcelSizeLabel, facilityTier, facilityById, updateSettings, speciesById, biomeFit, speciesBiomes, biomeById } from './state.js';
+import { loadData, newGame, state, emitChange, log, parcelList, parcelDef, parcelGeometry, parcelSizeLabel, facilityTier, facilityById, updateSettings, speciesById, biomeFit, speciesBiomes, biomeById, modeId, modeIds } from './state.js';
 import { prizeSummary, addStoreSpend } from './prizes.js';
 import { effectText } from './ui/effects.js';
-import { advanceDays, setSpeed } from './time.js';
+import { advanceDays, setSpeed, bankState } from './time.js';
 import { save, load, hasSave, discardStaleSave, STALE_MESSAGE } from './save.js';
 import { initTooltips } from './ui/tooltips.js';
 import { initShell, refresh, tutorialHint, showView } from './ui/shell.js';
@@ -11,8 +11,9 @@ import { agentCounts, spawnVisitors, forceEscape, arrivalStats } from './sim/age
 import { livingStats, livingActive, plaqueVisible, labelRects, penLabelBoxes, penLabelStacks } from './render/living.js';
 import { initAudio, play as playSfx, audioState, sfxIds } from './audio.js';
 import { goalsList, buildReportCard, forceGoal, goalDone } from './goals.js';
-import { juiceStats, reduceMotion, clearToasts, toastCount } from './ui/effects.js';
+import { juiceStats, reduceMotion, clearToasts, toastCount, shake } from './ui/effects.js';
 import { openReportCard, openGoals } from './ui/goals.js';
+import { openNewGame, modeSummary } from './ui/newgame.js';
 import { initProjection } from './render/projection.js';
 import { buyParcel, upgradeFacility, parcelPrice, parcelPrices, parcelCapacity, perimeterSegments, spaceUsed, plantSeeds, vegetationCap, vegetationGrowth, seedsToPlant, setAutoRestock, foodDays, buyCampaign, marketingLadder, memberChurnRate, membershipConversion, relandscape, relandscapeCost, setPassPrice } from './economy.js';
 import { breakoutChance } from './events.js';
@@ -25,15 +26,17 @@ function guardMinSize() {
 }
 
 // "First launch" lives outside game state so a reload, New Game, or Restart does not bring the tutorial back.
-const TUTORIAL_KEY = 'dino-park-sim.tutorial_seen';
+const TUTORIAL_KEY = 'fossil-fortune.tutorial_seen';
 function tutorialSeen() { try { return localStorage.getItem(TUTORIAL_KEY) === '1'; } catch { return false; } }
 function markTutorialSeen() { try { localStorage.setItem(TUTORIAL_KEY, '1'); } catch { /* storage blocked: show it again next time */ } }
 
-function startNewGame() {
+// Phase 2: the difficulty mode is picked in the New Game dialog (Settings, or the foreclosure screen) and is fixed
+// for the run; a plain restart keeps the current park's mode.
+function startNewGame(modeSel = modeId()) {
   closeAll();
   clearToasts();
   setSpeed(0);
-  newGame();
+  newGame(modeSel);
   if (hasSave()) log('A saved game exists. Load it from Settings.');
   showView('town');
   refresh();
@@ -57,7 +60,13 @@ async function boot() {
     get state() { return state; },
     advanceDays(n = 1) { advanceDays(n); return state.day; },
     addCash(n) { state.cash += n; emitChange(); return state.cash; },
-    newGame() { startNewGame(); return state; },
+    // Phase 2: DPS.newGame('classic') founds a park on that mode; no argument keeps the current mode. DPS.difficulty()
+    // reports the run's mode with every parameter; DPS.openNewGame() opens the dialog; DPS.bank() the bank standing.
+    newGame(modeSel) { startNewGame(modeSel); return state; },
+    difficulty() { return modeSummary(modeId()); },
+    difficulties() { return modeIds().map(modeSummary); },
+    openNewGame() { return openNewGame({ onStart: startNewGame, cancelable: true }); },
+    bank: bankState,
     save,
     load() { const err = load(); if (err) return err; setSpeed(0); refresh(); return true; },
     setSpeed,
@@ -120,7 +129,8 @@ async function boot() {
     settings(patch) { if (patch) return updateSettings(patch); return { ...state.settings }; },
     digest() { return state.digest.slice(); },
     // Living Park hooks so critics can drive the scene (visual only, economy untouched).
-    living: { agents: agentCounts, spawnVisitors, forceEscape, stats: livingStats, active: livingActive, plaque: plaqueVisible, labels: labelRects, penLabelBoxes, penLabelStacks, arrivals: arrivalStats },
+    // M5 minor (Phase 2): forceEscape also sounds the siren and shakes the screen, exactly like a real breakout.
+    living: { agents: agentCounts, spawnVisitors, forceEscape(parcelId, uid) { const ok = forceEscape(parcelId, uid); if (ok) { playSfx('escape_siren'); shake(); } return ok; }, stats: livingStats, active: livingActive, plaque: plaqueVisible, labels: labelRects, penLabelBoxes, penLabelStacks, arrivals: arrivalStats },
     // M5 sound: DPS.sfx(id) plays one effect (ignores the per-id throttle, obeys the SFX toggle, master volume and
     // the first-gesture lock); DPS.sfx() lists the ids. DPS.audioState() reports locked/unlocked + settings + recent plays.
     sfx(id) { if (!id) return sfxIds(); return playSfx(id, { force: true }); },
@@ -136,7 +146,7 @@ async function boot() {
     goalDone,
     openGoals, openReportCard: () => openReportCard()
   };
-  console.log('Dino Park Sim loaded');
+  console.log('Fossil Fortune loaded');
 }
 
 boot().catch(err => {

@@ -7,11 +7,12 @@ import { h, clear, term, button, starsEl } from './dom.js';
 import { openModal } from './modals.js';
 import { countUp } from './effects.js';
 import { goalsBody, reportCardPanel } from './goals.js';
+import { modeChip } from './newgame.js';
 
 const REV = { tickets: 'Ticket sales', concessions: 'Concessions', memberships: 'Memberships', donations: 'Donations & grants', sales: 'Dinosaur sales' };
-const EXP = { salaries: 'Salaries', food: 'Food', upkeep: 'Upkeep', interest: 'Interest', loan_payment: 'Loan payment', tax: 'Tax' };
+const EXP = { salaries: 'Salaries', food: 'Food', upkeep: 'Upkeep', overhead: 'Property tax', interest: 'Interest', loan_payment: 'Loan payment', tax: 'Tax' };
 const CAP = { land: 'Land', fences: 'Fences', dinosaurs: 'Dinosaurs', facilities: 'Facility upgrades', advertising: 'Marketing spend', repairs: 'Repairs', debt_repaid: 'Extra loan repayment' };
-const TIP = { interest: 'interest', loan_payment: 'loan', tax: 'tax', upkeep: 'upkeep', salaries: 'salary', concessions: 'concessions', advertising: 'campaign', memberships: 'membership' };
+const TIP = { interest: 'interest', loan_payment: 'loan', tax: 'tax', upkeep: 'upkeep', overhead: 'overhead', salaries: 'salary', concessions: 'concessions', advertising: 'campaign', memberships: 'membership' };
 
 // animate: money cells carry data-count so the Quarterly Report can count them up (ui/effects.js countUp).
 export function ledgerTable(L, { animate = false } = {}) {
@@ -69,7 +70,7 @@ export function parkStats() {
 export function renderReports(root) {
   const last = state.history[state.history.length - 1];
   clear(root).append(h('div', { class: 'page' },
-    h('h2', {}, 'Reports'),
+    h('h2', { class: 'with-chip' }, 'Reports', modeChip(undefined, { badge: true })),
     h('div', { class: 'panel' }, h('h3', {}, 'Park stats'), parkStats()),
     h('div', { class: 'panel' }, h('h3', {}, term('goal', 'Goals')), goalsBody({ compact: true })),
     h('div', { class: 'panel' }, h('h3', {}, term('report_card', 'Year-5 Report Card')), reportCardPanel()),
@@ -89,6 +90,7 @@ export function openQuarterlyReport(L) {
     h('div', { class: 'cols report-cols' }, ledgerTable(L, { animate: true }), h('div', {}, h('h3', {}, 'Park stats'), parkStats())),
     h('h3', {}, 'Last 8 quarters'),
     charts());
+  body.prepend(h('div', { class: 'row wrap small' }, h('span', { class: 'muted' }, 'Difficulty'), modeChip(undefined, { badge: true })));
   const m = openModal({ title: `Quarterly Report: ${quarterLabel(L.quarter - 1)}`, className: 'wide slide-in', body,
     foot: h('div', { class: 'row foot-row' }, h('span', { class: 'muted small' }, 'Scroll for the full ledger, park stats, and charts.'), button('Continue', () => m.close(), { class: 'btn primary' })) });
   countUp(body);

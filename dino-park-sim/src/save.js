@@ -1,7 +1,7 @@
 // localStorage save/load with a version stamp.
 import { state, replaceState, SAVE_VERSION, log } from './state.js';
 
-export const SAVE_KEY = 'dino-park-sim.save';
+export const SAVE_KEY = 'fossil-fortune.save';
 
 export function save() {
   try {

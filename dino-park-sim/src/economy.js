@@ -19,6 +19,12 @@ export function spend(n, group, key) { state.cash -= n; state.ledger[group][key]
 export function storeSpend(n, group, key) { spend(n, group, key); addStoreSpend(n); }
 export function earn(n, key) { state.cash += n; state.ledger.revenue[key] += n; }
 
+// ---- difficulty multipliers (data/difficulty.json, Phase 2) ----
+// Every food unit cost and every salary passes through here, so a mode's food_cost_mult / salary_mult reaches the
+// stores, the auto-restock rule, the enclosure panel and the ledger alike. Standard's multipliers are 1.0.
+export const foodUnitCost = food => Math.round((food ? food.unit_cost : 0) * (mode().food_cost_mult ?? 1));
+export const roleSalary = role => Math.round((role ? role.salary_per_month : 0) * (mode().salary_mult ?? 1));
+
 // ---- valuation ----
 export function facilityInvested(id) {
   const tier = facilityTier(id);
@@ -216,7 +222,7 @@ export function buyEnclosureFood(id, foodId, units) {
   const room = DATA.food.max_stock_per_enclosure - enc.food[foodId];
   units = Math.min(units, room);
   if (units <= 0) return 'That enclosure is full of this food.';
-  const cost = units * food.unit_cost;
+  const cost = units * foodUnitCost(food);
   if (!canAfford(cost)) return 'Not enough cash for that food.';
   storeSpend(cost, 'expenses', 'food');
   enc.food[foodId] += units;
@@ -230,7 +236,7 @@ export function buyParkFood(foodId, units, { quiet = false } = {}) {
   if (!food || food.grows) return 'Seeds are planted in a pen, not stocked: open an enclosure in the Park view.';
   units = Math.max(0, Math.round(units));
   if (units <= 0) return 'Choose how many units to buy.';
-  const cost = units * food.unit_cost;
+  const cost = units * foodUnitCost(food);
   if (!canAfford(cost)) return 'Not enough cash for that food.';
   storeSpend(cost, 'expenses', 'food');
   state.park_food[foodId] += units;
@@ -260,7 +266,7 @@ export function plantSeeds(id, units) {
   const room = seedsToPlant(id) - (enc.seeded || 0);
   units = Math.min(Math.max(0, Math.round(units)), room);
   if (units <= 0) return 'This pen is fully planted already.';
-  const cost = units * seed.unit_cost;
+  const cost = units * foodUnitCost(seed);
   if (!canAfford(cost)) return `Need ${fmt$(cost)} for ${units} seed units.`;
   storeSpend(cost, 'expenses', 'food');
   enc.seeded = (enc.seeded || 0) + units;
@@ -315,7 +321,7 @@ export function autoRestock() {
     if (!rule || !rule.on || row.need <= 0 || row.days >= rule.threshold_days) continue;
     const err = buyParkFood(row.food.id, rule.amount, { quiet: true });
     if (err) { log(`Auto-restock: could not buy ${rule.amount} ${row.food.name.toLowerCase()} (${err.toLowerCase()})`); continue; }
-    const cost = rule.amount * row.food.unit_cost;
+    const cost = rule.amount * foodUnitCost(row.food);
     const line = `Auto-restock: bought ${rule.amount} ${row.food.name.toLowerCase()} for ${fmt$(cost)} (${row.days.toFixed(1)} days left, rule: below ${rule.threshold_days} days).`;
     log(line);
     digestAdd({ title: 'Auto-restock', type: 'info', summary: `${rule.amount} ${row.food.name.toLowerCase()} for ${fmt$(cost)}`, tooltip: DATA.tooltips.terms.auto_restock });
@@ -540,7 +546,7 @@ function closeMemberships() {
 // ---- staff ----
 export function hire(roleId) {
   const role = roleById(roleId);
-  if (!canAfford(role.salary_per_month)) return 'You need at least one month of salary in cash to hire.';
+  if (!canAfford(roleSalary(role))) return 'You need at least one month of salary in cash to hire.';
   state.staff.push({ role: roleId, morale: DATA.staff.morale.start, hired_day: state.day });
   log(`Hired ${aWord(role.name)} worker.`);
   cue('buy');
@@ -553,7 +559,7 @@ export function fire(roleId) {
   log(`Let ${aWord(roleById(roleId).name)} worker go. Payroll is now ${fmt$(monthlyPayroll())}/month.`);
   return null;
 }
-export const monthlyPayroll = () => state.staff.reduce((s, w) => s + roleById(w.role).salary_per_month, 0);
+export const monthlyPayroll = () => state.staff.reduce((s, w) => s + roleSalary(roleById(w.role)), 0);
 export const needsManager = () => state.staff.length > roleById('management').needed_past_staff && staffCount('management') === 0;
 // Headcount above what the Park Office can run (facilities.json management_capacity): a monthly morale penalty.
 export const overCapacity = () => state.staff.length > managementCapacity();
@@ -566,13 +572,15 @@ export function payday() {
   const payroll = monthlyPayroll();
   spend(payroll, 'expenses', 'salaries');
   const overdrawn = state.cash < 0;
-  let delta = needsManager() ? -M.no_manager_penalty_per_month : (staffCount('management') > 0 ? M.manager_bonus_per_month : 0);
+  // Phase 2: a mode without morale softening (Classic) pays the pre-M2.6 bleed: every penalty x unsoftened_penalty_mult.
+  const pen = mode().morale_softening === false ? (M.unsoftened_penalty_mult ?? 1) : 1;
+  let delta = needsManager() ? -M.no_manager_penalty_per_month * pen : (staffCount('management') > 0 ? M.manager_bonus_per_month : 0);
   if (overCapacity()) {
-    delta -= M.over_capacity_penalty_per_month || 0;
+    delta -= (M.over_capacity_penalty_per_month || 0) * pen;
     log(`${state.staff.length} staff is more than the ${facilityTierDef('office').label} can run (${managementCapacity()}): morale slips. Upgrade the office.`);
   }
   if (overdrawn) {
-    delta -= M.unpaid_penalty_per_month;
+    delta -= M.unpaid_penalty_per_month * pen;
     log(`Payroll of ${fmt$(payroll)} put you in overdraft (${fmt$(state.cash)}). Overdraft costs ${pct(B().loan.overdraft_apr)} APR and staff paid late lose morale.`);
   }
   for (const w of state.staff) w.morale = clamp(w.morale + delta, 0, M.max);
@@ -677,6 +685,14 @@ export function quarterlyUpkeep() {
   for (const f of facilityDefs()) total += facilityTierDef(f.id).upkeep_per_quarter || 0;
   return Math.round(total / efficiency());
 }
+export function quarterlyOverhead() {
+  const OH = B().overhead;
+  if (!OH) return 0;
+  const mult = mode().overhead_mult ?? 0;
+  if (mult === 0) return 0;
+  const tiles = parcelList().filter(p => p.owned).reduce((s, p) => s + parcelArea(p.id), 0);
+  return Math.round((OH.base + OH.rate_per_tile * tiles) * mult);
+}
 export function closeQuarter() {
   const L = state.ledger;
   closeMemberships();
@@ -687,6 +703,7 @@ export function closeQuarter() {
   if (overdraft > 0) log(`Overdraft interest: ${fmt$(overdraft)} charged on your negative balance.`);
   state.cash -= principal; state.debt -= principal; L.expenses.loan_payment += principal;
   spend(quarterlyUpkeep(), 'expenses', 'upkeep');
+  spend(quarterlyOverhead(), 'expenses', 'overhead');
   const operating = sum(L.revenue) - sum(L.expenses);
   const tax = operating > 0 ? Math.round(operating * B().revenue.tax_rate) : 0;
   spend(tax, 'expenses', 'tax');

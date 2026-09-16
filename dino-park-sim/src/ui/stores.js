@@ -8,7 +8,8 @@ import { factCard, biomeLine } from './factbook.js';
 import { fail, facilityCard, speciesPreferring, speciesTolerating, growthLine } from './enclosure.js';
 import { openBuyLand } from './shell.js';
 import { shortShape } from '../render/park.js';
-import { checkMilestones } from '../time.js';
+import { checkMilestones, bankState } from '../time.js';
+import { modeChip } from './newgame.js';
 import { prizesBody } from './prizes.js';
 import { nextPrize } from '../prizes.js';
 import { autoRestockPanel, suggestedUnits } from './food.js';
@@ -34,7 +35,7 @@ export function openRealEstate() {
         h('div', { class: 'card-title' }, h('span', { class: 'swatch', style: `background:${b.color}` }), b.name),
         h('div', { class: 'big' }, `${fmt$(b.plot_cost)} per tile`),
         h('p', { class: 'muted' }, b.blurb),
-        h('div', { class: 'small' }, h('b', {}, 'Grows: '), b.grows || '', ' ', h('span', { class: 'muted' }, `(${growthLine(b.id)}; seeds ${fmt$(eco.seedFood()?.unit_cost || 0)}/unit)`)),
+        h('div', { class: 'small' }, h('b', {}, 'Grows: '), b.grows || '', ' ', h('span', { class: 'muted' }, `(${growthLine(b.id)}; seeds ${fmt$(eco.foodUnitCost(eco.seedFood()))}/unit)`)),
         h('div', { class: 'small' }, h('b', {}, `Home for ${pref.length}: `), pref.map(sp => sp.name + (speciesRequiresPreferred(sp) ? '*' : '')).join(', ') || 'none'),
         h('div', { class: 'muted small' }, `Tolerated by ${tol.length}: ${tol.map(sp => sp.name).join(', ') || 'none'}`),
         h('div', { class: 'muted small' }, `Your pens: ${mine.length}${mine.length ? ` (${mine.map(p => p.id).join(', ')})` : ''}`));
@@ -133,7 +134,7 @@ function whatIf(sp) {
   const after = projectDay(state.ticket_price);
   plot.enclosure.dinos.pop();
   void temp;
-  const foodCost = sp.food_per_day * (foodByDiet(sp.diet)?.unit_cost || 0);
+  const foodCost = sp.food_per_day * eco.foodUnitCost(foodByDiet(sp.diet));
   return h('p', { class: 'muted' }, term('what_if', 'What-if'), `: visitors/day ${before.attendance} → ${after.attendance}, revenue/day ${fmt$(before.total)} → ${fmt$(after.total)}. Food about ${fmt$(foodCost)}/day.`);
 }
 
@@ -304,23 +305,23 @@ function foodTab() {
       DATA.food.items.map(f => {
         if (f.grows) return h('tr', {},
           h('td', {}, h('span', { class: 'swatch', style: `background:${f.color}` }), f.name),
-          h('td', {}, fmt$(f.unit_cost)),
+          h('td', {}, fmt$(eco.foodUnitCost(f))),
           h('td', { class: 'muted', colSpan: 5 }, term('vegetation', 'Grows in a pen'), `: ${f.blurb || 'Plant seeds from an enclosure in the Park view.'}`));
         const r = rows.find(x => x.food.id === f.id);
         const inPens = r.stock - (state.park_food[f.id] || 0);
         const qty = h('input', { type: 'number', min: 1, max: 5000, step: 1, value: suggestedUnits(f.id), class: 'qty wide' });
-        const cost = h('span', { class: 'muted small' }, fmt$(suggestedUnits(f.id) * f.unit_cost));
-        qty.addEventListener('input', () => { cost.textContent = fmt$((Number(qty.value) || 0) * f.unit_cost); });
+        const cost = h('span', { class: 'muted small' }, fmt$(suggestedUnits(f.id) * eco.foodUnitCost(f)));
+        qty.addEventListener('input', () => { cost.textContent = fmt$((Number(qty.value) || 0) * eco.foodUnitCost(f)); });
         const buy = n => () => { if (!fail(eco.buyParkFood(f.id, n))) refresh(); };
         const days = r.need > 0 ? `${Math.floor(r.days)}` : '—';
         return h('tr', {},
           h('td', {}, h('span', { class: 'swatch', style: `background:${f.color}` }), f.name),
-          h('td', {}, fmt$(f.unit_cost)),
+          h('td', {}, fmt$(eco.foodUnitCost(f))),
           h('td', {}, `${state.park_food[f.id]}`),
           h('td', {}, `${inPens}`),
           h('td', {}, `${r.need}/day`),
           h('td', { class: r.need > 0 && r.days < warn ? 'bad' : '' }, days),
-          h('td', {}, h('div', { class: 'row wrap buy-row' }, qty, button('Buy', () => buy(Number(qty.value))(), { class: 'btn primary' }), cost, button(`${bundle}`, buy(bundle), { title: `${bundle} units for ${fmt$(bundle * f.unit_cost)}` }), button(`${bundle * 5}`, buy(bundle * 5), { title: `${bundle * 5} units for ${fmt$(bundle * 5 * f.unit_cost)}` }))));
+          h('td', {}, h('div', { class: 'row wrap buy-row' }, qty, button('Buy', () => buy(Number(qty.value))(), { class: 'btn primary' }), cost, button(`${bundle}`, buy(bundle), { title: `${bundle} units for ${fmt$(bundle * eco.foodUnitCost(f))}` }), button(`${bundle * 5}`, buy(bundle * 5), { title: `${bundle * 5} units for ${fmt$(bundle * 5 * eco.foodUnitCost(f))}` }))));
       })),
     h('h3', {}, term('auto_restock', 'Auto-restock')),
     autoRestockPanel());
@@ -338,7 +339,7 @@ export function openEmployment() {
         h('span', {}, 'Monthly ', term('salary', 'payroll'), `: ${fmt$(payroll)}`),
         h('span', {}, term('morale', 'Morale'), `: ${avg == null ? 'n/a' : avg}`),
         eco.needsManager() ? h('span', { class: 'bad' }, 'No manager with more than 5 staff: morale drops monthly.') : null),
-      h('p', { class: 'muted' }, 'Salaries are paid every 30 days, even if that puts you in ', term('overdraft', 'overdraft'), '. Overdrawn cash costs extra interest, staff paid late lose morale, and if your debt less your cash stays above the ', term('debt_cap', 'debt cap'), ' for three quarters the bank forecloses.'),
+      h('p', { class: 'muted' }, 'Salaries are paid every 30 days, even if that puts you in ', term('overdraft', 'overdraft'), '. Overdrawn cash costs extra interest, staff paid late lose morale, and if your debt less your cash stays above the ', term('debt_cap', 'debt cap'), mode().foreclosure_enabled ? ` for ${mode().grace_quarters} quarter${mode().grace_quarters === 1 ? '' : 's'} the bank forecloses.` : ' the Bank shows a warning (no foreclosure on Relaxed).'),
       h('div', { class: 'cards grid-3' }, DATA.staff.roles.map(r => roleCard(r, () => { refresh(); render(); })))));
   };
   render();
@@ -348,7 +349,7 @@ function roleCard(r, rerender) {
   const n = staffCount(r.id);
   return h('div', { class: 'card' },
     h('div', { class: 'card-title' }, r.name),
-    h('div', { class: 'big' }, `${fmt$(r.salary_per_month)}/mo`),
+    h('div', { class: 'big' }, `${fmt$(eco.roleSalary(r))}/mo`),
     h('div', {}, `Employed: ${n}`),
     h('p', { class: 'muted' }, r.blurb),
     h('div', { class: 'row' },
@@ -363,7 +364,13 @@ export function openBank() {
   const render = () => {
     const cap = eco.debtCap();
     const room = Math.max(0, Math.floor((cap - state.debt) / L.borrow_increment) * L.borrow_increment);
+    const bank = bankState();
     m.setBody(h('div', {},
+      h('div', { class: 'row wrap small' }, h('span', { class: 'muted' }, 'Difficulty'), modeChip(undefined, { badge: true }), h('span', { class: 'muted' }, bank.foreclosure_enabled ? `${bank.grace_quarters} quarter${bank.grace_quarters === 1 ? '' : 's'} of grace over the debt cap` : 'the bank warns but never forecloses')),
+      bank.warning ? h('div', { class: 'bank-warning-box', 'data-tip': 'bank_warning' },
+        h('b', {}, '⚠ Bank warning'),
+        ` Your debt less your cash (${fmt$(bank.net_debt)}) is above the ${fmt$(bank.cap)} debt cap${bank.over_cap_quarters ? ` and has been for ${bank.over_cap_quarters} quarter close${bank.over_cap_quarters === 1 ? '' : 's'}` : ''}. `,
+        bank.foreclosure_enabled ? `${bank.quarters_left} more quarter close${bank.quarters_left === 1 ? '' : 's'} like this and the bank forecloses.` : `On ${bank.mode} the bank never forecloses, but the overdraft costs ${pct(L.overdraft_apr)} APR at every quarter close until you are back under the cap.`) : null,
       h('table', { class: 'table kv' },
         row('Balance', fmt$(state.cash)),
         row(term('debt', 'Debt'), fmt$(state.debt)),

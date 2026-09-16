@@ -1,7 +1,7 @@
 // Food without round trips (M4): days-of-food chips for the park bar, the auto-restock rule editor shared by the
 // General Store Food tab and Settings, and the Food tab's quantity box pre-fill. Numbers come from balance.food.
 import { DATA, state, fmt$, emitChange } from '../state.js';
-import { foodDays, setAutoRestock } from '../economy.js';
+import { foodDays, setAutoRestock, foodUnitCost } from '../economy.js';
 import { h, button, term } from './dom.js';
 import { DIET_ICON } from './stores.js';
 
@@ -36,20 +36,21 @@ export function autoRestockPanel({ compact = false } = {}) {
   wrap.append(
     compact ? null : h('p', { class: 'muted' }, term('auto_restock', 'Auto-restock'), ': when a food drops below the threshold, the General Store buys the amount for you and charges it. A ticker line and a digest entry say what was bought. Off by default.'),
     h('table', { class: 'table restock-table' },
-      h('tr', {}, h('th', {}, 'Food'), h('th', {}, 'On'), h('th', {}, 'Buy when below'), h('th', {}, 'Buy this many'), h('th', {}, 'Cost per buy'), h('th', {}, term('days_of_food', 'Now'))),
+      h('tr', {}, h('th', {}, 'Food'), h('th', {}, 'On'), h('th', { title: 'Buy when fewer than this many days of stock are left' }, 'Below (days)'), h('th', { title: 'Units bought each time' }, 'Buy (units)'), h('th', {}, 'Per buy'), h('th', {}, term('days_of_food', 'Now'))),
       rows.map(r => {
         const rule = state.auto_restock[r.food.id];
         if (!rule) return null;
-        const cost = h('td', { class: 'num' }, fmt$(rule.amount * r.food.unit_cost));
+        const cost = h('td', { class: 'num' }, fmt$(rule.amount * foodUnitCost(r.food)));
         const on = h('input', { type: 'checkbox', checked: rule.on, on: { change: e => { setAutoRestock(r.food.id, { on: e.target.checked }); emitChange(); } } });
         const th = h('input', { type: 'number', min: 1, max: 60, step: 1, value: rule.threshold_days, class: 'qty', on: { change: e => { setAutoRestock(r.food.id, { threshold_days: e.target.value }); e.target.value = rule.threshold_days; emitChange(); } } });
-        const am = h('input', { type: 'number', min: 1, max: 1000, step: 1, value: rule.amount, class: 'qty', on: { change: e => { setAutoRestock(r.food.id, { amount: e.target.value }); e.target.value = rule.amount; cost.textContent = fmt$(rule.amount * r.food.unit_cost); emitChange(); } } });
-        const days = r.need > 0 ? `${Math.floor(r.days)} day${Math.floor(r.days) === 1 ? '' : 's'} (${r.stock} units, ${r.need}/day)` : `${r.stock} units, nothing eats it`;
+        const am = h('input', { type: 'number', min: 1, max: 1000, step: 1, value: rule.amount, class: 'qty', on: { change: e => { setAutoRestock(r.food.id, { amount: e.target.value }); e.target.value = rule.amount; cost.textContent = fmt$(rule.amount * foodUnitCost(r.food)); emitChange(); } } });
+        // M5 minor (Phase 2): short cells so the table fits the Settings column at 1280x720 and 1920x1080.
+        const days = r.need > 0 ? `${Math.floor(r.days)}d · ${r.stock} u · ${r.need}/day` : `${r.stock} u, uneaten`;
         return h('tr', {},
           h('td', {}, h('span', { class: 'swatch', style: `background:${r.food.color}` }), r.food.name),
           h('td', {}, on),
-          h('td', {}, th, ' days of stock'),
-          h('td', {}, am, ' units'),
+          h('td', {}, th),
+          h('td', {}, am),
           cost,
           h('td', { class: r.need > 0 && r.days < warnDays() ? 'bad' : 'muted' }, days));
       })));

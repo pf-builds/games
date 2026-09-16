@@ -1,5 +1,5 @@
 {
-  "_notes": "M4 marketing ladder, in order. kind: boost (attendance x (1 + boost) for `days`), spike (a one-day boost), floor (weekday attendance floor while active), perk (one-time permanent effect, stored in state.perks), memberships (one-time launch of the season pass; mechanics in balance.marketing.memberships). stack: true means several copies can run at once (up to balance.marketing.stack_max); otherwise only the strongest active boost counts and the same campaign cannot be bought again while it runs. unlock: min_species (living species), min_rating (park stars), requires_facility { id: tier }, requires_dinos. lesson: the one-line economics lesson shown on the card and in the ticker.",
+  "_notes": "M4 marketing ladder, in order. kind: boost (attendance x (1 + boost) for `days`), spike (a one-day boost), floor (weekday attendance floor while active), perk (one-time permanent effect, stored in state.perks), memberships (one-time launch of the season pass; mechanics in balance.marketing.memberships). stack: true means several copies can run at once (up to balance.marketing.stack_max); otherwise only the strongest active boost counts and the same campaign cannot be bought again while it runs. unlock: min_species (living species), min_rating (park stars), requires_facility { id: tier }, requires_dinos. lesson: the one-line economics lesson shown on the card and in the ticker. Phase 2 sweep (h), every campaign judged on the smallest park that unlocks it: TV Spot and the Influencer Visit now also need Parking I (their lesson is capacity, and without a lot the front gate ate the whole gain); Influencer Visit 2500/x2.5 -> 500/x3.0 for its one day; Social Media 400/+8% -> 300/+12% (three stacked were losing money on a two-star park); Online Ticketing 4000/0.1 -> 3000/0.2 (judged over a year at a $7 ticket; at the $5 reference an elasticity cut is worth nothing by design).",
   "campaigns": [
     {
       "id": "flyers",
@@ -34,7 +34,10 @@
       "boost": 0.5,
       "stack": false,
       "unlock": {
-        "min_species": 3
+        "min_species": 3,
+        "requires_facility": {
+          "parking_lot": 1
+        }
       },
       "lesson": "Big reach, big bill. Check the what-if: a boost is worth nothing above your parking cap."
     },
@@ -42,9 +45,9 @@
       "id": "social_campaign",
       "name": "Social Media Campaign",
       "kind": "boost",
-      "cost": 400,
+      "cost": 300,
       "days": 14,
-      "boost": 0.08,
+      "boost": 0.12,
       "stack": true,
       "unlock": {
         "min_rating": 2
@@ -55,12 +58,15 @@
       "id": "influencer_visit",
       "name": "Influencer Visit",
       "kind": "spike",
-      "cost": 2500,
+      "cost": 500,
       "days": 1,
-      "boost": 1.5,
+      "boost": 2.0,
       "stack": false,
       "unlock": {
-        "min_species": 3
+        "min_species": 3,
+        "requires_facility": {
+          "parking_lot": 1
+        }
       },
       "lesson": "A one-day crowd is only worth what your gate and parking can hold. Capacity turns hype into money."
     },
@@ -83,9 +89,9 @@
       "id": "online_ticketing",
       "name": "Online Ticketing",
       "kind": "perk",
-      "cost": 4000,
+      "cost": 2500,
       "days": 0,
-      "elasticity_cut": 0.1,
+      "elasticity_cut": 0.2,
       "stack": false,
       "unlock": {
         "min_species": 4

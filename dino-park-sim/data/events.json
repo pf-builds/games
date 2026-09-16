@@ -19,7 +19,7 @@
       "message": "A dinosaur pushed through a weak spot in its fence and wandered onto the visitor path. The park closed early while staff rounded it up. Fence condition dropped and visitors are nervous.",
       "trigger": {
         "requires_dinos": true,
-        "requires_breakout_risk": true
+        "requires_breakout_risk": 0.005
       },
       "mitigated_by": [
         "security"
@@ -40,7 +40,8 @@
       "message": "One of your dinosaurs is bigger than its fence can handle. It leaned on a segment until it snapped. Nobody was hurt, but the pen needs repairs and the crowd went home early.",
       "trigger": {
         "requires_dinos": true,
-        "requires_under_fenced_dino": true
+        "requires_under_fenced_dino": true,
+        "requires_breakout_risk": 0.005
       },
       "mitigated_by": [
         "security",
@@ -62,7 +63,7 @@
       "message": "Security cameras caught a dinosaur strolling through the parking lot at 2 a.m. It was back in its pen by morning, but the local paper ran the story on the front page.",
       "trigger": {
         "requires_dinos": true,
-        "requires_breakout_risk": true
+        "requires_breakout_risk": 0.005
       },
       "mitigated_by": [
         "security"
@@ -436,5 +437,5 @@
       "tooltip": "Summer is the busy season. Money made now has to cover the quiet winter months."
     }
   ],
-  "_notes": "M2.6: staff_quit-type weights halved. Escape-type random events need requires_breakout_risk: an enclosure whose daily breakout chance (fences.json breakout rules) is above zero; a well-fenced small herbivore never triggers them. Every positive event now needs at least one living dinosaur (requires_dinos): a park whose animals have all starved cannot be carried by donations, media boosts or holiday crowds."
+  "_notes": "M2.6: staff_quit-type weights halved. Escape-type random events need requires_breakout_risk: an enclosure whose daily breakout chance (fences.json breakout rules) is above zero; a well-fenced small herbivore never triggers them. Every positive event now needs at least one living dinosaur (requires_dinos): a park whose animals have all starved cannot be carried by donations, media boosts or holiday crowds. Phase 2 sweep (i): requires_breakout_risk is now a MINIMUM daily breakout chance (0.005) rather than 'above zero', so a low-danger species one tier short (Camptosaurus in wood, 0.00225 a day) only escapes on its own roll (about 0.8 a year) instead of also feeding three escape events into the random pool (5-6 a year); a dangerous species still qualifies."
 }

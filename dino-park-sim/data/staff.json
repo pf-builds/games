@@ -62,7 +62,8 @@
     "unpaid_penalty_per_month": 8,
     "quit_threshold": 20,
     "max": 100,
-    "_notes": "M2.6: morale bleed halved (no-manager penalty 5 -> 2.5/month, late-pay penalty 15 -> 8/month). M3: over_capacity_penalty_per_month applies when the headcount is above the Park Office's management_capacity (facilities.json): a bigger office runs a bigger crew.",
-    "over_capacity_penalty_per_month": 2
+    "_notes": "M2.6: morale bleed halved (no-manager penalty 5 -> 2.5/month, late-pay penalty 15 -> 8/month). M3: over_capacity_penalty_per_month applies when the headcount is above the Park Office's management_capacity (facilities.json): a bigger office runs a bigger crew. Phase 2: unsoftened_penalty_mult is what a difficulty mode with morale_softening: false (Classic) multiplies the no-manager, late-pay and over-capacity penalties by; 2 restores the pre-M2.6 bleed (no-manager 5/month, late pay 16/month).",
+    "over_capacity_penalty_per_month": 2,
+    "unsoftened_penalty_mult": 2
   }
 }

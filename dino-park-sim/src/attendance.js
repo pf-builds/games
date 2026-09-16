@@ -119,11 +119,23 @@ export function capacity(tiers = state.facilities) {
   return c.gate + c.parking + c.tram;
 }
 
+// Appeal saturation: below threshold, raw appeal passes through unchanged. Above threshold,
+// a diminishing-returns curve prevents the appeal->attendance->revenue->more dinos loop from
+// compounding without limit. Parameterised in balance.json (attendance.appeal_saturation).
+export function saturateAppeal(raw) {
+  const sat = A().appeal_saturation;
+  if (!sat) return raw;
+  const { threshold, cap, k } = sat;
+  if (raw <= threshold) return raw;
+  return threshold + (cap - threshold) * (raw - threshold) / (raw - threshold + k);
+}
+
 export function computeAttendance(price = state.ticket_price, tiers = state.facilities) {
   const parts = appealParts();
+  const effAppeal = saturateAppeal(parts.appeal);
   const factors = {
-    base: A().base_demand * mode().attendance_bonus,
-    appeal: parts.appeal,
+    base: A().base_demand * (mode().attendance_mult ?? mode().attendance_bonus ?? 1),
+    appeal: effAppeal,
     price: priceFactor(price, satisfaction(tiers)),
     season: seasonFactor(),
     ad: adBoost(),
@@ -151,9 +163,13 @@ export function concessionStores(tiers = state.facilities) {
 export function concessionRevenue(attendance, tiers = state.facilities) {
   const stores = concessionStores(tiers);
   if (!stores.length) return 0;
-  const factor = facilitySum('concession_spend', tiers);
+  const raw = facilitySum('concession_spend', tiers);
+  const R = DATA.balance.revenue;
+  const cap = R.concession_cap ?? Infinity;
+  const k = R.concession_k ?? 0;
+  const factor = (cap < Infinity && k > 0) ? cap * raw / (raw + k) : raw;
   const staffFactor = Math.min(1, staffCount('concessions') / stores.length);
-  return DATA.balance.revenue.per_visitor_concession_spend * attendance * factor * staffFactor * efficiency() * eventMult('concession_mult');
+  return R.per_visitor_concession_spend * attendance * factor * staffFactor * efficiency() * eventMult('concession_mult');
 }
 
 export function projectDay(price, tiers = state.facilities) {

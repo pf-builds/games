@@ -1,9 +1,10 @@
-// Settings: save / load / new game, difficulty (Standard only), sound toggle.
-import { DATA, state, emitChange, updateSettings } from '../state.js';
+// Settings: save / load / new game, difficulty (Phase 2: the New Game dialog picks Relaxed / Standard / Classic), sound.
+import { DATA, state, emitChange, updateSettings, modeIds, modeId, modeDef } from '../state.js';
+import { openNewGame, modeChip, modeFacts } from './newgame.js';
 import { save, load, hasSave } from '../save.js';
 import { setSpeed } from '../time.js';
 import { h, clear, button, term } from './dom.js';
-import { alertModal, confirmModal } from './modals.js';
+import { alertModal } from './modals.js';
 import { autoRestockPanel, autoRestockAllButton } from './food.js';
 import { play as playSfx, audioState } from '../audio.js';
 import { reduceMotion } from './effects.js';
@@ -18,13 +19,16 @@ export function renderSettings(root, { startNewGame, showTutorial }) {
     h('div', { class: 'row wrap' },
       button('Save', () => { const ok = save(); status.textContent = ok ? 'Saved.' : 'Save failed.'; alertModal('Save', ok ? 'Game saved to this browser.' : 'Save failed. Check that this browser allows local storage.'); }, { class: 'btn primary' }),
       button('Load', () => { const err = load(); if (err) { alertModal('Load', err); status.textContent = hasSave() ? 'A saved game exists in this browser.' : 'No saved game yet.'; } else { setSpeed(0); alertModal('Load', 'Saved game loaded.'); } }),
-      button('New Game', async () => { if (await confirmModal('New Game', h('p', {}, 'Start over on Standard? Unsaved progress is lost.'), 'Start over')) startNewGame(); })),
+      button('New Game…', () => openNewGame({ onStart: startNewGame, cancelable: true }), { title: 'Pick a difficulty and start a new park' })),
     status),
     h('div', { class: 'panel span' },
-    h('h3', {}, 'Difficulty'),
-    h('div', { class: 'cards grid-3' }, Object.entries(DATA.difficulty.modes).map(([id, m]) => h('div', { class: `card ${m.enabled ? '' : 'disabled'} ${state.mode === id ? 'selected' : ''}` },
-      h('div', { class: 'card-title' }, m.name, m.enabled ? '' : ' (soon)'),
-      h('p', { class: 'muted' }, m.blurb))))),
+    h('h3', {}, term('difficulty', 'Difficulty'), ' ', modeChip(modeId(), { badge: true })),
+    h('p', { class: 'muted small' }, `This park runs on ${modeDef(modeId()).name}. The mode is fixed for the run; New Game… founds a park on another one.`),
+    h('div', { class: 'cards grid-3 mode-cards' }, modeIds().map(id => { const m = modeDef(id); return h('div', { class: `card mode-card mode-card-${id} ${m.enabled === false ? 'disabled' : ''} ${modeId() === id ? 'selected' : ''}` },
+      h('div', { class: 'card-title' }, modeChip(id, { badge: true }), modeId() === id ? h('span', { class: 'muted small' }, ' (this park)') : null),
+      h('div', { class: 'mode-feel' }, m.feel || ''),
+      h('p', { class: 'muted small' }, m.blurb),
+      h('table', { class: 'table kv mode-facts' }, modeFacts(id).map(([k, v]) => h('tr', {}, h('td', {}, k), h('td', {}, v))))); }))),
     h('div', { class: 'panel' },
     h('h3', {}, 'Speed & timing'),
     settingSlider('Day length at normal speed', 'day_seconds', DATA.balance.living.day_seconds_min ?? 2, DATA.balance.living.day_seconds_max ?? 20, 0.5, v => `${v} s per day`, `3× and 10× stay proportional. Default ${DATA.balance.living.day_seconds} s.`),

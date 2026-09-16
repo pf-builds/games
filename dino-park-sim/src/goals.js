@@ -2,7 +2,7 @@
 // Card. Thresholds live in data/balance.json `goals`; this module decides when a goal fires (once, in any order),
 // reports live progress for the Goals panel, and grades the report card. Announcements go out on the bus ('goal',
 // 'report_card'); the shell turns them into modals, toasts and the fanfare.
-import { DATA, state, bus, facilityDefs, facilityTier, facilityTopTier, prizeDefs, prizeEarned, speciesOwned, allDinos, mode, T, quarterIndex, year, fmt$, log, digestAdd } from './state.js';
+import { DATA, state, bus, facilityDefs, facilityTier, facilityTopTier, prizeDefs, prizeEarned, speciesOwned, allDinos, mode, modeId, T, quarterIndex, year, fmt$, log, digestAdd } from './state.js';
 import { netWorth } from './economy.js';
 import { parkRating } from './attendance.js';
 
@@ -174,7 +174,7 @@ export function buildReportCard() {
   ];
   const points = metrics.reduce((s, m) => s + m.points, 0) / metrics.length;
   const overallGrade = points >= 3.5 ? 'A' : points >= 2.5 ? 'B' : points >= 1.5 ? 'C' : points >= 0.5 ? 'D' : 'F';
-  return { year: R.year, day: state.day, quarter: quarterIndex(Math.max(1, state.day - 1)) + 1, metrics, overall: { grade: overallGrade, points: Math.round(points * 100) / 100, comment: OVERALL[overallGrade] } };
+  return { year: R.year, day: state.day, quarter: quarterIndex(Math.max(1, state.day - 1)) + 1, difficulty: modeId(), metrics, overall: { grade: overallGrade, points: Math.round(points * 100) / 100, comment: OVERALL[overallGrade] } };
 }
 
 // Opens (stores + announces) the report card. time.js calls this when the closing quarter is the last of year 5.

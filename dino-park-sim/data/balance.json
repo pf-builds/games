@@ -45,11 +45,20 @@
     "cleanliness_decay_ref_attendance": 100,
     "cleanliness_decay_min_factor": 0.2,
     "cleanliness_decay_max_factor": 2.5,
+    "appeal_saturation": {
+      "threshold": 1.5,
+      "cap": 1.6,
+      "k": 1.5,
+      "_notes": "Phase 2b appeal-to-attendance saturation. Below threshold, appeal passes through unchanged (the early/good-run park at appeal ~1.3 is unaffected). Above threshold, a diminishing-returns curve caps effective appeal near cap: effective = threshold + (cap - threshold) x (raw - threshold) / (raw - threshold + k). At appeal 3.0 effective is ~1.55; at 5.0 it is ~1.57. The heavy compression breaks the appeal->attendance->revenue->more dinos->more appeal compounding loop that blew NW past $9M, and the reduced revenue constrains reinvestment (fewer dino purchases, fewer upgrades), creating a secondary feedback that further limits growth."
+    },
     "_notes": "M2.6: base_demand 60 -> 72 (+20%). Elasticity 0.35 -> 0.6 with a new price_penalty_exponent of 2 (M2.6 playtest-2 fix): at 0.35 a $20 ticket earned as much as a $5 one, so the overspend trap paid for itself. Overcharging is now penalised by the SQUARE of the overcharge, so ticket revenue peaks near $7-8 and collapses above it: a $20 ticket empties the park (0.5% of demand) instead of paying as well as $5 did. Satisfaction (restrooms, tour guides) softens the curve, so investing in visitors is what buys the right to charge more. The reference price is unaffected (priceFactor(reference) = 1), so the classic $5 opening is unchanged. empty_park_factor 0.25 -> 0.15: a park with no living dinosaurs pulls a trickle of visitors and cannot cover its own costs. Cleanliness decay per day = cleanliness_decay_per_day x clamp(attendance / cleanliness_decay_ref_attendance, min_factor, max_factor): an empty park barely gets dirty, a packed one needs more maintenance. M3 carry-over: empty_park_factor 0.15 -> 0. A park with no living dinosaurs has no appeal, so demand and attendance are 0 and concessions (which scale with attendance) earn nothing: an empty park cannot profit."
   },
   "revenue": {
     "per_visitor_concession_spend": 2.5,
-    "tax_rate": 0.15
+    "tax_rate": 0.15,
+    "concession_cap": 3.0,
+    "concession_k": 1.7,
+    "_concession_notes": "Concession saturation: effectiveFactor = concession_cap x rawFactor / (rawFactor + concession_k). At low tiers (factor 1.3) this is near-linear; at max tiers (factor 3.3) it caps well below the raw sum, so each upgrade tier adds less than the last."
   },
   "loan": {
     "quarterly_principal_ratio": 0.05,
@@ -274,8 +283,8 @@
     "_notes": "Prize fanfare toast lifetime. Thresholds live in data/prizes.json."
   },
   "facilities": {
-    "appeal_bonus_cap": 0.6,
-    "_notes": "Cap on the summed appeal_bonus from facilities (visitor center, museum store) plus park prizes, added to the appeal multiplier."
+    "appeal_bonus_cap": 1.0,
+    "_notes": "Cap on the summed appeal_bonus from facilities (visitor center, museum store) plus park prizes, added to the appeal multiplier. Phase 2: 0.6 -> 1.0 because restrooms and the vet clinic now carry appeal too and a full park would otherwise waste its top tiers."
   },
   "biome": {
     "preferred_popularity": 1.15,
@@ -321,17 +330,22 @@
       "pass_price_min": 20,
       "pass_price_max": 200,
       "pass_price_step": 5,
-      "convert_base": 0.006,
+      "convert_base": 0.018,
       "convert_satisfaction_floor": 0.3,
       "fair_price_tickets": 10,
       "price_exponent": 1.5,
       "member_visit_rate": 0.05,
-      "churn_base_per_quarter": 0.12,
+      "churn_base_per_quarter": 0.1,
       "churn_low_rating": 3,
-      "churn_extra_per_star": 0.2,
+      "churn_extra_per_star": 0.25,
       "max_members_per_capacity": 2
     },
-    "_notes": "M4 marketing ladder (campaign entries: data/campaigns.json). weekend_days: day-of-week indexes (state.day % 7) that count as the weekend for the school program's weekday floor. stack_max: how many stackable campaigns (social media) can boost at once; non-stackable ones use only the strongest active boost. memberships: the season pass is priced PER QUARTER by the player between pass_price_min and pass_price_max. Each day, paying visitors convert to members at convert_base x satisfaction factor (convert_satisfaction_floor at zero satisfaction, 1 at the satisfaction cap) x price factor (1 while the pass costs at most fair_price_tickets tickets, then (fair / price) ^ price_exponent). Members visit member_visit_rate times a day each: that is the attendance floor, and those visits pay no ticket (they do buy concessions). At quarter close members churn at churn_base_per_quarter plus churn_extra_per_star for every star the park rating sits below churn_low_rating, then the survivors pay the pass price (Reports: Memberships line). Members never exceed max_members_per_capacity x the daily visitor cap."
+    "_notes": "M4 marketing ladder (campaign entries: data/campaigns.json). weekend_days: day-of-week indexes (state.day % 7) that count as the weekend for the school program's weekday floor. stack_max: how many stackable campaigns (social media) can boost at once; non-stackable ones use only the strongest active boost. memberships: the season pass is priced PER QUARTER by the player between pass_price_min and pass_price_max. Each day, paying visitors convert to members at convert_base x satisfaction factor (convert_satisfaction_floor at zero satisfaction, 1 at the satisfaction cap) x price factor (1 while the pass costs at most fair_price_tickets tickets, then (fair / price) ^ price_exponent). Members visit member_visit_rate times a day each: that is the attendance floor, and those visits pay no ticket (they do buy concessions). At quarter close members churn at churn_base_per_quarter plus churn_extra_per_star for every star the park rating sits below churn_low_rating, then the survivors pay the pass price (Reports: Memberships line). Members never exceed max_members_per_capacity x the daily visitor cap. Phase 2 sweep (g): convert_base 0.006 -> 0.018 and churn_base_per_quarter 0.12 -> 0.10 so the pass reaches 15-35% of revenue averaged over its first eight quarters on a good park (it was 7-9%, still ramping; the member cap of twice the daily capacity holds the steady state under a third); churn_extra_per_star 0.2 -> 0.25 so a one-star park sheds its members to under a tenth within three quarters (0.62 a quarter, was 0.52)."
+  },
+  "overhead": {
+    "base": 500,
+    "rate_per_tile": 130,
+    "_notes": "Property tax per quarter = (base + rate_per_tile x total owned parcel tiles) x difficulty overhead_mult. Teaches fixed vs variable cost: holding land costs money whether or not it earns. Standard pays ~$700-$2500/q; Classic pays much more via a high overhead_mult. Phase 2b: 75 -> 130 to offset the secondary concession_spend revenue and cost reductions added to facilities; safe for Classic played-well (seed 4 margin ~$2k at 2 tiles, mult 20)."
   },
   "juice": {
     "_notes": "M5 juice timings (src/ui/effects.js, src/sim/agents.js). floater_min_gap_ms: cash-delta floaters closer than this merge into one. shake_ms: escape screen shake. count_up_ms: Quarterly Report numbers count from 0 to their value over this long. tip_toast_seconds: first-quarter tutorial tips stay up this long (they show one at a time; the next waits for the current one to close). All of it collapses to instant/static under Reduce motion.",

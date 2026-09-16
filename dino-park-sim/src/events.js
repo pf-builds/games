@@ -9,14 +9,16 @@ export function underFencedPlots() {
   return enclosures().filter(p => p.enclosure.dinos.some(d => speciesById(d.species).min_fence_tier > p.enclosure.fence_tier));
 }
 
-// Enclosures with a non-zero daily breakout chance (under-fenced, or a dangerous species behind a crumbling fence).
-export function riskyEnclosures() { return enclosures().filter(p => breakoutChance(p.id) > 0); }
+// Enclosures with a daily breakout chance above `min` (under-fenced, or a dangerous species behind a crumbling
+// fence). Phase 2: events.json `requires_breakout_risk` may be a number (the minimum chance that lets the escape
+// events into the random pool), so a low-danger species one tier short only escapes on its own roll.
+export function riskyEnclosures(min = 0) { return enclosures().filter(p => breakoutChance(p.id) > min); }
 
 function eligible(ev) {
   const t = ev.trigger || {};
   const dinos = allDinos();
   if (t.requires_dinos && !dinos.length) return false;
-  if (t.requires_breakout_risk && !riskyEnclosures().length) return false;
+  if (t.requires_breakout_risk && !riskyEnclosures(typeof t.requires_breakout_risk === 'number' ? t.requires_breakout_risk : 0).length) return false;
   if (t.min_dinos && dinos.length < t.min_dinos) return false;
   if (t.requires_under_fenced_dino && !underFencedPlots().length) return false;
   if (t.requires_staff && !state.staff.length) return false;
@@ -152,7 +154,8 @@ export function breakoutChance(parcelId) {
     if (c > chance) chance = c;
   }
   const secRed = staffCount('security') > 0 ? roleById('security').effect_magnitude : 0;
-  return Math.min(1, chance * (1 - secRed));
+  // Phase 2: the difficulty mode scales the daily chance (Relaxed x0.5, Classic x1.25, Standard x1).
+  return Math.min(1, chance * (1 - secRed) * (mode().breakout_mult ?? 1));
 }
 
 // Daily check per enclosure: rolls breakoutChance; an under-fenced pen reads as "Fence Too Weak", a crumbling one as "Breakout!".

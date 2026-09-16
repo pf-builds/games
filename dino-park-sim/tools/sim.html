@@ -4,13 +4,17 @@
 <meta charset="utf-8">
 <title>Economy acceptance</title>
 <style>body{background:#12161c;color:#e6e2d6;font:12px/1.4 ui-monospace,Menlo,monospace;padding:16px}
-pre{white-space:pre;margin:0}.ok{color:#6fcf6a}.bad{color:#e05c5c}</style>
+pre{white-space:pre;margin:0}.ok{color:#6fcf6a}.bad{color:#e05c5c}
+table{border-collapse:collapse;margin:8px 0 16px;font-size:12px}th,td{border:1px solid #3a4150;padding:4px 8px;text-align:left;vertical-align:top}th{color:#a7acbd;font-weight:normal}
+td.pass{color:#6fcf6a;font-weight:bold}td.fail{color:#e05c5c;font-weight:bold}#progress{color:#a7acbd;margin:6px 0 12px}</style>
 </head>
 <body>
-<h1 style="font-size:15px">Standard economy — acceptance paths</h1>
-<pre id="out">running…</pre>
+<h1 style="font-size:15px">Economy acceptance — Standard balance sweep + difficulty modes</h1>
+<div id="progress">loading…</div>
+<div id="result"></div>
+<pre id="out"></pre>
 <script type="module">
-// Browser runner for tools/sim-year.mjs: same game modules, same scenarios (tools/sim-driver.js), same report.
+// Browser runner: same game modules, same scenarios (tools/sim-driver.js), one RESULT table + the full text report.
 import * as S from '../src/state.js';
 import * as E from '../src/economy.js';
 import * as T from '../src/time.js';
@@ -29,12 +33,26 @@ try {
 } catch { /* fall back to the real store: the run only writes the game's own save key */ }
 
 await S.loadData();
-const res = runAll({ S, E, T, A, V });
+const progress = document.getElementById('progress');
+const lines = [];
+const t0 = performance.now();
+const res = await runAll({ S, E, T, A, V }, [1, 2, 3, 4, 5], label => { lines.push(label); progress.textContent = lines.slice(-3).join(' · '); });
 const text = formatReport(res);
+const table = document.createElement('table');
+table.innerHTML = '<tr><th>Scenario</th><th>Target</th><th>Result (seeds 1-5)</th><th>Verdict</th></tr>';
+for (const s of res.summary) {
+  const tr = document.createElement('tr');
+  for (const [v, cls] of [[s.name, ''], [s.target, ''], [s.result, ''], [s.pass ? 'PASS' : 'FAIL', s.pass ? 'pass' : 'fail']]) { const td = document.createElement('td'); td.textContent = v; td.className = cls; tr.append(td); }
+  table.append(tr);
+}
+const result = document.getElementById('result');
+result.append(table);
+progress.textContent = `${res.pass ? 'OVERALL PASS' : 'OVERALL FAIL'} · ${((performance.now() - t0) / 1000).toFixed(1)} s`;
+progress.className = res.pass ? 'ok' : 'bad';
 const out = document.getElementById('out');
 out.textContent = text;
 out.className = res.pass ? 'ok' : 'bad';
-window.SIM = { res, text };
+window.SIM = { res, text, summary: res.summary, pass: res.pass };
 console.log(text);
 </script>
 </body>

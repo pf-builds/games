@@ -170,8 +170,8 @@ function foodSection(enc, id, act) {
   return h('div', {}, items.map(f => { const perDay = need[f.id] || 0, days = perDay > 0 ? Math.floor(enc.food[f.id] / perDay) : null; return h('div', { class: 'row' },
     h('span', { class: 'swatch', style: `background:${f.color}` }),
     h('span', { style: 'min-width:220px' }, `${f.name}: ${enc.food[f.id]} units (eats ${perDay}/day`, days != null ? h('span', { class: days < warn ? 'bad' : 'good' }, ` = ${days} day${days === 1 ? '' : 's'} in this pen`) : null, `, park stock ${state.park_food[f.id]})`),
-    button(`Buy ${bundle} for ${fmt$(bundle * f.unit_cost)}`, () => act(() => eco.buyEnclosureFood(id, f.id, bundle))),
-    button(`Buy ${bundle * 3} for ${fmt$(bundle * 3 * f.unit_cost)}`, () => act(() => eco.buyEnclosureFood(id, f.id, bundle * 3)))); }),
+    button(`Buy ${bundle} for ${fmt$(bundle * eco.foodUnitCost(f))}`, () => act(() => eco.buyEnclosureFood(id, f.id, bundle))),
+    button(`Buy ${bundle * 3} for ${fmt$(bundle * 3 * eco.foodUnitCost(f))}`, () => act(() => eco.buyEnclosureFood(id, f.id, bundle * 3)))); }),
     h('p', { class: 'muted' }, `Max ${DATA.food.max_stock_per_enclosure} units per food per enclosure. Park stock from the General Store tops up enclosures every day; set an auto-restock rule there so it never runs dry.`));
 }
 
@@ -197,17 +197,16 @@ function vegetationSection(p, enc, id, act) {
       h('span', { class: 'muted' }, `(${biome?.name || 'scrub'}: ${perTile.toFixed(2)}/tile/day × ${parcelArea(id)} tiles × planted share)`)),
     bar,
     // M5 (M4 minor a): what the pen did today, so a grazed pen reads as regrowing rather than broken.
-    planted > 0 ? h('div', { class: 'row wrap small' },
-      h('span', { class: (enc.grazed_today || 0) > 0 ? 'good' : 'muted' }, `Grazed today: ${enc.grazed_today || 0} unit${(enc.grazed_today || 0) === 1 ? '' : 's'}`),
-      h('span', { class: 'muted' }, `· regrowing +${(enc.regrow_today ?? growth).toFixed(2)}/day`),
-      h('span', { class: 'muted' }, veg >= cap - 1e-9 ? '· full' : (enc.grazed_today || 0) > 0 ? '· regrowing after grazing' : '· growing')) : null,
+    planted > 0 ? h('div', { class: 'row wrap small veg-today' },
+      h('span', { class: (enc.grazed_today || 0) > 0 ? 'good' : 'muted' }, `Today: ${(enc.grazed_today || 0) > 0 ? `${enc.grazed_today} unit${enc.grazed_today === 1 ? '' : 's'} grazed` : 'nothing grazed'}, ${(enc.regrow_today ?? growth).toFixed(2)} regrown`),
+      h('span', { class: 'muted' }, veg >= cap - 1e-9 ? '· the pen is fully grown' : (enc.grazed_today || 0) > 0 ? '· the roots are growing back' : '· still filling in')) : null,
     h('div', { class: 'row wrap' },
-      button(`Plant ${Math.min(bundle, left)} seeds for ${fmt$(Math.min(bundle, left) * seed.unit_cost)}`, () => act(() => eco.plantSeeds(id, bundle)), { disabled: left <= 0 || !eco.canAfford(Math.min(bundle, left) * seed.unit_cost) }),
-      left > bundle ? button(`Plant the rest (${left}) for ${fmt$(left * seed.unit_cost)}`, () => act(() => eco.plantSeeds(id, left)), { class: 'btn primary', disabled: !eco.canAfford(left * seed.unit_cost) }) : null,
+      button(`Plant ${Math.min(bundle, left)} seeds for ${fmt$(Math.min(bundle, left) * eco.foodUnitCost(seed))}`, () => act(() => eco.plantSeeds(id, bundle)), { disabled: left <= 0 || !eco.canAfford(Math.min(bundle, left) * eco.foodUnitCost(seed)) }),
+      left > bundle ? button(`Plant the rest (${left}) for ${fmt$(left * eco.foodUnitCost(seed))}`, () => act(() => eco.plantSeeds(id, left)), { class: 'btn primary', disabled: !eco.canAfford(left * eco.foodUnitCost(seed)) }) : null,
       left <= 0 ? h('span', { class: 'good' }, 'Fully planted.') : null),
     h('p', { class: 'muted small', 'data-tip-text': DATA.tooltips.terms.vegetation },
-      herb.length ? `${herb.length} herbivore${herb.length > 1 ? 's' : ''} here eat ${plantNeed} plant unit${plantNeed > 1 ? 's' : ''}/day and graze the greenery first (1 unit = 1 plant unit, ${fmt$(DATA.food.items.find(f => f.diet === 'herbivore')?.unit_cost || 0)} saved each). Fully planted, this pen grows about ${(perTile * parcelArea(id)).toFixed(2)}/day: ${pct(Math.min(1, plantNeed ? perTile * parcelArea(id) / plantNeed : 0))} of their food for free. Grazed so far: ${enc.grazed || 0} units.` : 'No herbivores here yet: greenery still adds a little appeal, and it is ready to graze when one arrives.',
-      ` Seeds are an investment (paid once, at ${fmt$(seed.unit_cost)}/unit); plants are a recurring cost. Re-landscaping clears it.`));
+      herb.length ? `${herb.length} herbivore${herb.length > 1 ? 's' : ''} here eat ${plantNeed} plant unit${plantNeed > 1 ? 's' : ''}/day and graze the greenery first (1 unit = 1 plant unit, ${fmt$(eco.foodUnitCost(DATA.food.items.find(f => f.diet === 'herbivore')))} saved each). Fully planted, this pen grows about ${(perTile * parcelArea(id)).toFixed(2)}/day: ${pct(Math.min(1, plantNeed ? perTile * parcelArea(id) / plantNeed : 0))} of their food for free. Grazed so far: ${enc.grazed || 0} units.` : 'No herbivores here yet: greenery still adds a little appeal, and it is ready to graze when one arrives.',
+      ` Seeds are an investment (paid once, at ${fmt$(eco.foodUnitCost(seed))}/unit); plants are a recurring cost. Re-landscaping clears it.`));
 }
 
 // ---- fixed facilities ----
