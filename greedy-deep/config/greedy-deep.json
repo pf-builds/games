@@ -1,29 +1,32 @@
 {
-  "configVersion": 1,
+  "configVersion": 2,
   "title": "Greedy Deep",
-
   "start": {
     "gold": 0,
     "digRate": 0,
     "clickPower": 1,
-    "clickYield": 0.5
+    "clickYield": 0.12
   },
-
   "sim": {
     "dt": 0.1,
     "simulateDt": 1,
     "clicksPerSecond": 2,
     "policy": "cheapest-affordable",
-    "maxSeconds": 14400
+    "maxSeconds": 14400,
+    "sampleSeconds": 60
   },
-
   "format": {
     "sigFigs": 3,
-    "suffixes": ["", "K", "M", "B", "T"],
+    "suffixes": [
+      "",
+      "K",
+      "M",
+      "B",
+      "T"
+    ],
     "activeSuffixes": 2,
     "depthDecimals": 1
   },
-
   "ores": [
     {
       "id": "coal",
@@ -36,47 +39,340 @@
       "wallColor": "#332d3c",
       "veinColor": "#17141d",
       "glintColor": "#f2d488"
+    },
+    {
+      "id": "copper",
+      "name": "Green Copper",
+      "startDepth": 40,
+      "goldPerMeter": 5,
+      "pattern": "vein",
+      "intro": "It goes green when it's happy.",
+      "color": "#2a2b26",
+      "wallColor": "#3c3d32",
+      "veinColor": "#3f8f6a",
+      "glintColor": "#7fe0ad"
+    },
+    {
+      "id": "silver",
+      "name": "Moonsilver",
+      "startDepth": 180,
+      "goldPerMeter": 15,
+      "pattern": "vein",
+      "intro": "Cold to the touch. Warm to the ledger.",
+      "color": "#232833",
+      "wallColor": "#333b48",
+      "veinColor": "#9fb6cc",
+      "glintColor": "#e6f2ff"
+    },
+    {
+      "id": "starmetal",
+      "name": "Starmetal",
+      "startDepth": 600,
+      "goldPerMeter": 75,
+      "pattern": "crystal",
+      "intro": "Fell from somewhere. Stayed for the mortgage.",
+      "color": "#251d33",
+      "wallColor": "#372a4a",
+      "veinColor": "#a97ff0",
+      "glintColor": "#ffe6a0"
     }
   ],
-
   "tracks": [
     {
       "id": "pick",
       "name": "Sharper Pick",
       "desc": "Every strike bites deeper.",
-      "base": 10,
-      "ratio": 1.15,
-      "effects": [{ "verb": "add_click", "value": 1 }]
+      "base": 3,
+      "ratio": 1.22,
+      "effects": [
+        {
+          "verb": "add_click",
+          "value": 1
+        }
+      ]
     },
     {
       "id": "bit",
       "name": "Drill Bit",
-      "desc": "The crew digs 8% faster per bit.",
-      "base": 120,
-      "ratio": 1.15,
-      "effects": [{ "verb": "mul_rate", "value": 1.08 }]
+      "desc": "The crew digs 10% faster per bit.",
+      "base": 150,
+      "ratio": 2.1,
+      "effects": [
+        {
+          "verb": "mul_rate",
+          "value": 1.1
+        }
+      ]
+    },
+    {
+      "id": "cart",
+      "name": "Bigger Cart",
+      "desc": "Hauls 12% more per trip.",
+      "base": 500,
+      "ratio": 2.2,
+      "effects": [
+        {
+          "verb": "mul_gold",
+          "value": 1.12
+        }
+      ]
+    },
+    {
+      "id": "lantern",
+      "name": "Deep Lantern",
+      "desc": "See one more band down through the dark.",
+      "base": 1500,
+      "ratio": 1.8,
+      "effects": [
+        {
+          "verb": "reveal_bands",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "rails",
+      "name": "Cart Rails",
+      "desc": "Every dwarf on the crew digs faster.",
+      "base": 20000,
+      "ratio": 2.8,
+      "effects": [
+        {
+          "verb": "add_rate_per_dwarf",
+          "value": 0.0005
+        }
+      ]
+    },
+    {
+      "id": "smelter",
+      "name": "Smelter",
+      "desc": "Burns the slag off the take. +15% gold.",
+      "base": 40000,
+      "ratio": 2.6,
+      "effects": [
+        {
+          "verb": "mul_gold",
+          "value": 1.15
+        }
+      ]
+    },
+    {
+      "id": "braces",
+      "name": "Shaft Braces",
+      "desc": "Timber against the ceiling's opinions.",
+      "base": 60000,
+      "ratio": 1.35,
+      "effects": [
+        {
+          "verb": "mul_hazard_resist",
+          "value": 0.9
+        }
+      ]
+    },
+    {
+      "id": "elevator",
+      "name": "Elevator",
+      "desc": "The crew keeps working while you're gone.",
+      "base": 120000,
+      "ratio": 1.35,
+      "effects": [
+        {
+          "verb": "add_offline_hours",
+          "value": 1
+        },
+        {
+          "verb": "mul_offline_rate",
+          "value": 1.1
+        }
+      ]
     }
   ],
-
   "dwarves": [
     {
       "id": "dorrik",
       "name": "Dorrik Quickpick",
       "job": "Hewer",
       "base": 25,
-      "ratio": 1.15,
-      "effects": [{ "verb": "add_rate", "value": 0.05 }],
+      "ratio": 2.8,
+      "effects": [
+        {
+          "verb": "add_rate",
+          "value": 0.012
+        }
+      ],
       "flavor": "Hums. Only ever the one song.",
-      "cosmetic": { "hat": "cap", "beard": "braided", "palette": "rust" }
+      "cosmetic": {
+        "hat": "cap",
+        "beard": "braided",
+        "palette": "rust"
+      }
+    },
+    {
+      "id": "hald",
+      "name": "Hald",
+      "nameNote": "FLAVOR-TODO: surname owed from Peter's jokes page.",
+      "job": "Striker",
+      "base": 400,
+      "ratio": 2.2,
+      "effects": [
+        {
+          "verb": "add_click",
+          "value": 2
+        }
+      ],
+      "flavor": "FLAVOR-TODO: Hald's one-liner owed from the jokes page.",
+      "cosmetic": {
+        "hat": "helm",
+        "beard": "forked",
+        "palette": "iron"
+      }
+    },
+    {
+      "id": "vessa",
+      "name": "Vessa Ledgerhand",
+      "job": "Carter",
+      "base": 700,
+      "ratio": 2.2,
+      "effects": [
+        {
+          "verb": "mul_gold",
+          "value": 1.04
+        }
+      ],
+      "flavor": "Counts the cart twice. Counts you once.",
+      "cosmetic": {
+        "hat": "hood",
+        "beard": "short",
+        "palette": "green"
+      }
+    },
+    {
+      "id": "nix",
+      "name": "Nix",
+      "nameNote": "FLAVOR-TODO: surname owed from Peter's jokes page.",
+      "job": "Deep Hewer",
+      "base": 150000,
+      "ratio": 2.6,
+      "effects": [
+        {
+          "verb": "add_rate",
+          "value": 0.6
+        }
+      ],
+      "flavor": "FLAVOR-TODO: Nix's one-liner owed from the jokes page.",
+      "cosmetic": {
+        "hat": "none",
+        "beard": "long",
+        "palette": "ash"
+      }
     }
   ],
-
+  "eventRules": {
+    "intervalSeconds": 90,
+    "chance": 0.35,
+    "offline": false,
+    "logMax": 30
+  },
+  "events": [
+    {
+      "id": "gas_pocket",
+      "name": "Gas pocket",
+      "minDepth": 60,
+      "weight": 3,
+      "hazard": true,
+      "effects": [
+        {
+          "verb": "mul_rate_temp",
+          "value": 0.5,
+          "seconds": 20
+        }
+      ],
+      "text": "Gas pocket. Everyone out, nobody run."
+    },
+    {
+      "id": "cave_in",
+      "name": "Cave-in",
+      "minDepth": 150,
+      "weight": 2,
+      "hazard": true,
+      "effects": [
+        {
+          "verb": "add_depth",
+          "value": -5
+        }
+      ],
+      "text": "Ceiling votes no."
+    },
+    {
+      "id": "rich_seam",
+      "name": "Rich seam",
+      "minDepth": 0,
+      "weight": 4,
+      "hazard": false,
+      "effects": [
+        {
+          "verb": "mul_gold_temp",
+          "value": 3,
+          "seconds": 15
+        }
+      ],
+      "text": "A seam so fat the cart complains."
+    }
+  ],
+  "offline": {
+    "ratePercent": 0.5,
+    "capHours": 8,
+    "minSeconds": 60,
+    "maxClockSkewHours": 48,
+    "advanceDepth": true
+  },
+  "milestone": {
+    "id": "the_greedy_deep",
+    "depth": 1200,
+    "title": "FLAVOR-TODO: The Greedy Deep",
+    "body": "FLAVOR-TODO: the pick goes through into air. Ending copy owed from the jokes page.",
+    "scoreFormulaId": "gold_plus_depth",
+    "endlessAfter": true,
+    "buttonLabel": "KEEP DIGGING"
+  },
+  "endless": {
+    "bandLengthM": 600,
+    "multiplierPerBand": 1.5
+  },
+  "flavor": {
+    "bandIntro": {
+      "coal": "Soot and small money.",
+      "copper": "It goes green when it's happy.",
+      "silver": "Cold to the touch. Warm to the ledger.",
+      "starmetal": "Fell from somewhere. Stayed for the mortgage.",
+      "endless": "FLAVOR-TODO: deeper-than-the-ending band line owed from the jokes page."
+    },
+    "dwarfLines": {
+      "dorrik": "Hums. Only ever the one song.",
+      "hald": "FLAVOR-TODO: Hald's one-liner owed from the jokes page.",
+      "vessa": "Counts the cart twice. Counts you once.",
+      "nix": "FLAVOR-TODO: Nix's one-liner owed from the jokes page."
+    },
+    "eventTexts": {
+      "gas_pocket": "Gas pocket. Everyone out, nobody run.",
+      "cave_in": "Ceiling votes no.",
+      "rich_seam": "A seam so fat the cart complains."
+    },
+    "ending": {
+      "title": "FLAVOR-TODO: The Greedy Deep",
+      "body": "FLAVOR-TODO: ending scene copy owed from the jokes page."
+    },
+    "welcomeBack": [
+      "FLAVOR-TODO: welcome-back line owed from the jokes page.",
+      "FLAVOR-TODO: second welcome-back line owed from the jokes page."
+    ],
+    "denied": "Too deep. Not yet."
+  },
   "save": {
     "key": "gd.save.v1",
     "version": 1,
     "autosaveSeconds": 5
   },
-
   "layout": {
     "columnBu": 160,
     "columnHeightBu": 406,
@@ -89,9 +385,15 @@
     "minScale": 2,
     "maxScale": 4,
     "buPerMeter": 4,
-    "braceEveryRows": 4
+    "braceEveryRows": 4,
+    "faceYBu": 152
   },
-
+  "veil": {
+    "alpha": 0.62,
+    "color": "8,6,10",
+    "scanlineAlpha": 0.35,
+    "seamRows": 2
+  },
   "vein": {
     "xBu": 116,
     "yBu": 104,
@@ -101,9 +403,9 @@
     "strikeFlashSeconds": 0.18,
     "floaterSeconds": 0.9,
     "floaterRiseBu": 22,
-    "maxFloaters": 24
+    "maxFloaters": 24,
+    "teaseOffsetM": 6
   },
-
   "debug": {
     "fallbackClockMs": 33,
     "staleFrameMs": 60

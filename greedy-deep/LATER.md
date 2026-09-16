@@ -3,7 +3,7 @@
 Everything not in M1. Nothing here goes into the build without the PRD milestone it belongs to.
 Source: `game-research/greedy-deep-PRD.md` sections 2, 14, 16, 17.
 
-## M2 — engine and content (phase 4)
+## M2 — engine and content (phase 4) — DONE 2026-09-16
 - Full ore/band table: copper 40 m, silver 180 m, starmetal 600 m (JSON rows already shaped for it).
 - Remaining 6 upgrade tracks: Bigger Cart, Deep Lantern, Cart Rails, Smelter, Shaft Braces, Elevator.
 - Remaining 3 dwarves: Hald, Vessa Ledgerhand, Nix.
@@ -63,3 +63,26 @@ quests, backend, accounts, cloud save, leaderboards, ads, IAP, timers, real proc
   never in the hidden-tab `simOnly()` path, so this looks like the pane not pumping rAF until the
   tab is painted. Spot-check on a real phone and a real desktop tab before M3/M4 lean on the
   readout for the 50 fps quality bar.
+
+## Found during M2, parked
+- **Portrait column is taller than the viewport.** At 375x812 the column measures ~1,350 px because all
+  twelve shop rows plus the log are stacked. No horizontal scroll and every tap target is 44 px, but the
+  page scrolls vertically. The PRD §5 portrait layout (roster strip + DIG/CREW/GEAR/LOG tab bar that
+  collapses the shop to one tab) is M4 work and fixes this by construction. Do not band-aid it earlier.
+- **Ending is a DOM panel, not the scene.** M2 ships title/body/score/KEEP DIGGING in a plain overlay.
+  The ~10 s procedural scene (last tile shatters, camera pull-back, crew files in, fanfare) is M4.
+- **`ratio` policy is a diagnostic only.** It scores marginal `digRate x 1000 + goldRate` per gold, which
+  makes it skip Sharper Pick entirely and run with 800 s gaps. It exists to prove the economy is not
+  only tuned for one buying order. Do not tune against it.
+- **Offline crosses band boundaries in depth but not in income.** PRD §9 says income uses the entry
+  band's rate with no mid-offline band change; depth still advances past a boundary, so a long absence
+  can land the player two bands deeper than the gold they were paid implies. Deliberate, and cheap to
+  revisit if it reads badly in playtest.
+- **Veiled rock reads lighter than the band above it** when the next band's `wallColor` is brighter than
+  the current one (coal -> copper). The veil is doing its job; the placeholder palette is the problem.
+  M3 owns it.
+- **`hald` and `nix` ship with a `nameNote` marker rather than a `FLAVOR-TODO:` name** so the shop stays
+  readable. The markers are counted by `GD.dbg.flavorTodoCount` either way. Phase 7's replace pass has
+  to look at `nameNote` as well as `flavor`.
+- **Seam dither density is approximated.** `drawSeam` steps a 2 px checker over two rows rather than the
+  PRD's exact 25% / 50% density pair. Real dither lands with the strata tiles in M3.

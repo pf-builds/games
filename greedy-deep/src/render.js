@@ -1,15 +1,19 @@
-// Greedy Deep — shaft renderer (M1 placeholder art). Click it! Studios, 2026.
-// Banded rects, one active vein hotspot, a depth readout, dwarf blips on the ledges.
-// Real strata tiles, dither seams, veil and sprites land in M3.
+// Greedy Deep — shaft renderer (M2 placeholder art). Click it! Studios, 2026.
+// Band rects coloured from JSON, the active vein on one wall, seam dither at every
+// band boundary, and the NEXT band drawn below the seam under a dark veil — through
+// band d + 1 + revealBonus and no further (PRD 14, M2).
+// Real strata tiles, dwarf composites and the scrolling camera land in M3.
 (function () {
   "use strict";
 
   var R = (window.GDRender = {});
+  var E = window.GDEngine;
   var cv = null, ctx = null, cfg = null;
   var scale = 2, dpr = 1;
   var floaters = [];
   var strikeT = 0;
   var pulse = 0;
+  var lastPlan = { indices: [], veiledIndices: [], maxIndex: 0, cutoffIndex: 0 };
 
   // cheap deterministic hash for tile variation
   function hash2(x, y) {
@@ -31,6 +35,7 @@
   R.init = function (canvas, config) {
     cv = canvas; cfg = config; ctx = cv.getContext("2d");
   };
+  R.setConfig = function (config) { cfg = config; };
 
   R.resize = function (s) {
     scale = s;
@@ -47,7 +52,42 @@
 
   R.scale = function () { return scale; };
 
-  // vein hotspot in bu
+  // --------------------------------------------------------------- geometry
+  // The dig face sits at a fixed y. Everything above it is the dug-out bore,
+  // everything below is rock the crew has not reached yet.
+  function faceY() { return cfg.layout.faceYBu; }
+  function yOfDepth(depth, current) { return faceY() + (depth - current) * cfg.layout.buPerMeter; }
+  function depthOfY(y, current) { return current + (y - faceY()) / cfg.layout.buPerMeter; }
+
+  // --------------------------------------------------------------- band plan
+  // Which bands this frame is allowed to draw, and which of them are veiled.
+  // Pure: selfTest calls it directly rather than reading pixels.
+  R.bandPlan = function (depth, revealBonus) {
+    var current = E.bandAt(cfg, depth);
+    var cutoff = current.index + 1 + (revealBonus || 0);
+    var H = cfg.layout.shaftBu;
+    var top = depthOfY(0, depth);
+    var bottom = depthOfY(H, depth);
+    var indices = [], veiled = [], maxIndex = current.index;
+    // Walk outward from the shallowest visible band to the deepest one allowed.
+    var startIdx = Math.max(0, E.bandAt(cfg, Math.max(0, top)).index);
+    for (var i = startIdx; i <= cutoff; i++) {
+      var b = E.bandByIndex(cfg, i);
+      if (!b) break;
+      if (b.startDepth > bottom) break;      // off the bottom of the viewport
+      var next = E.bandByIndex(cfg, i + 1);
+      if (next && next.startDepth < top) continue; // entirely above the viewport
+      indices.push(i);
+      if (i > current.index) veiled.push(i);
+      if (i > maxIndex) maxIndex = i;
+    }
+    if (indices.indexOf(current.index) === -1) { indices.push(current.index); indices.sort(function (a, b2) { return a - b2; }); }
+    lastPlan = { indices: indices, veiledIndices: veiled, maxIndex: maxIndex, cutoffIndex: cutoff, currentIndex: current.index };
+    return lastPlan;
+  };
+  R.lastPlan = function () { return lastPlan; };
+
+  // --------------------------------------------------------------- vein hotspot
   R.veinRect = function () {
     var v = cfg.vein;
     return { x: v.xBu, y: v.yBu, w: v.wBu, h: v.hBu };
@@ -61,10 +101,10 @@
 
   R.strike = function () { strikeT = cfg.vein.strikeFlashSeconds; };
 
-  R.addFloater = function (text) {
+  R.addFloater = function (text, color) {
     var v = cfg.vein;
     if (floaters.length >= v.maxFloaters) floaters.shift();
-    floaters.push({ text: text, t: 0, x: v.xBu + v.wBu * 0.5 + (Math.random() * 8 - 4), y: v.yBu });
+    floaters.push({ text: text, t: 0, color: color || "#ffe89a", x: v.xBu + v.wBu * 0.5 + (Math.random() * 8 - 4), y: v.yBu });
   };
 
   R.update = function (dt) {
@@ -76,132 +116,198 @@
     }
   };
 
-  R.draw = function (state, derived) {
-    var L = cfg.layout, band = derived.band;
-    var W = L.columnBu, H = L.shaftBu, T = L.tileBu;
-    var wallW = L.wallTiles * T;              // 48
-    var boreX = wallW, boreW = L.boreTiles * T; // 48..112
-    var rightX = boreX + boreW;                // 112
-    var ribbonX = W - L.ribbonBu;
+  // --------------------------------------------------------------- rock
+  function drawRockRow(band, x0, w, y, tyBase, col, h) {
+    var T = cfg.layout.tileBu;
+    if (h === undefined) h = T;
+    if (h <= 0) return;
+    var v = hash2(col, tyBase) & 3;
+    ctx.fillStyle = shade(band.wallColor, v * 6 - 9);
+    ctx.fillRect(x0, y, w, h);
+    if (h < 4) return;
+    var g = hash2(col + 31, tyBase + 7);
+    ctx.fillStyle = shade(band.color, 10);
+    ctx.fillRect(x0 + (g % Math.max(1, w - 4)) + 2, y + ((g >> 4) % Math.max(1, h - 4)) + 2, 2, 2);
+    ctx.fillRect(x0 + ((g >> 8) % Math.max(1, w - 3)) + 1, y + ((g >> 12) % Math.max(1, h - 2)) + 1, 1, 1);
+    if (v === 3) {
+      ctx.fillStyle = shade(band.wallColor, -22);
+      ctx.fillRect(x0 + 4, y + 3, 1, Math.min(9, h - 3));
+      ctx.fillRect(x0 + 5, y + 8, 1, Math.max(0, Math.min(5, h - 8)));
+    }
+  }
 
-    // ---- bore (the dug-out void)
+  // 2 px checker dither of the next band's base at 25% then 50% density on the last
+  // two rows above the seam (PRD 6).
+  function drawSeam(nextBand, y, x0, w) {
+    var rows = cfg.veil.seamRows || 2;
+    for (var r = 0; r < rows; r++) {
+      var density = (r + 1) / (rows + 1) * 2; // 0.66 then 1.33 -> stepped checker
+      var yy = y - (rows - r) * 2;
+      ctx.fillStyle = nextBand.wallColor;
+      for (var x = x0; x < x0 + w; x += 2) {
+        if (((x >> 1) + r) % 2 === 0 || density > 1) ctx.fillRect(x, yy, 2, 2);
+      }
+    }
+  }
+
+  function drawVeil(y, h, x0, w) {
+    var v = cfg.veil;
+    ctx.fillStyle = "rgba(" + v.color + "," + v.alpha + ")";
+    ctx.fillRect(x0, y, w, h);
+    ctx.fillStyle = "rgba(" + v.color + "," + v.scanlineAlpha + ")";
+    for (var yy = Math.ceil(y); yy < y + h; yy += 2) ctx.fillRect(x0, yy, w, 1);
+  }
+
+  // --------------------------------------------------------------- draw
+  R.draw = function (state, derived) {
+    var L = cfg.layout;
+    var W = L.columnBu, H = L.shaftBu, T = L.tileBu;
+    var wallW = L.wallTiles * T;                 // 48
+    var boreX = wallW, boreW = L.boreTiles * T;  // 48..112
+    var rightX = boreX + boreW;                  // 112
+    var ribbonX = W - L.ribbonBu;
+    var fy = faceY();
+    var depth = state.depth;
+
+    var plan = R.bandPlan(depth, derived.revealBonus || 0);
+    var cutoff = plan.cutoffIndex;
+    var currentIndex = derived.band.index;
+
     ctx.fillStyle = "#0a0810";
     ctx.fillRect(0, 0, W, H);
 
-    // ---- scrolling rock walls
-    var off = (state.depth * L.buPerMeter) % T;
-    var rowTop = Math.floor((state.depth * L.buPerMeter) / T);
-    var rows = Math.ceil(H / T) + 1;
-    for (var r = 0; r < rows; r++) {
-      var y = Math.round(r * T - off);
-      var ty = rowTop + r;
+    // ---- rock rows, band-coloured, clipped to the reveal cutoff
+    var off = (depth * L.buPerMeter) % T;
+    var rowTop = Math.floor((depth * L.buPerMeter) / T);
+    var rows = Math.ceil(H / T) + 2;
+    for (var r = -1; r < rows; r++) {
+      var y = Math.round(fy + r * T - off) - T * Math.ceil(fy / T);
+      if (y > H || y + T < 0) continue;
+      var ty = rowTop + r - Math.ceil(fy / T);
+      var rowDepth = depthOfY(y + T / 2, depth);
+      var band = E.bandAt(cfg, Math.max(0, rowDepth));
+      if (band.index > cutoff) continue;              // beyond the lantern: undrawn dark
+
+      // walls both sides, always rock
       for (var side = 0; side < 2; side++) {
         var x0 = side === 0 ? 0 : rightX;
         for (var c = 0; c < L.wallTiles; c++) {
-          var tx = side === 0 ? c : c + 10;
-          var v = hash2(tx, ty) & 3;
-          var x = x0 + c * T;
-          ctx.fillStyle = shade(band.wallColor, v * 6 - 9);
-          ctx.fillRect(x, y, T, T);
-          // speckle motif
-          var h = hash2(tx + 31, ty + 7);
-          ctx.fillStyle = shade(band.color, 10);
-          ctx.fillRect(x + (h % 11) + 2, y + ((h >> 4) % 11) + 2, 2, 2);
-          ctx.fillRect(x + ((h >> 8) % 12) + 1, y + ((h >> 12) % 12) + 1, 1, 1);
-          if (v === 3) { // crack motif
-            ctx.fillStyle = shade(band.wallColor, -22);
-            ctx.fillRect(x + 4, y + 3, 1, 9);
-            ctx.fillRect(x + 5, y + 8, 1, 5);
-          }
+          drawRockRow(band, x0 + c * T, T, y, ty, side === 0 ? c : c + 10);
         }
-        // cut face bevel toward the bore
         ctx.fillStyle = shade(band.wallColor, -30);
         ctx.fillRect(side === 0 ? wallW - 2 : rightX, y, 2, T);
         ctx.fillStyle = shade(band.wallColor, 16);
         ctx.fillRect(side === 0 ? wallW - 3 : rightX + 2, y, 1, T);
       }
 
-      // timber brace across the bore every N rows
-      if (ty % L.braceEveryRows === 0) {
-        ctx.fillStyle = "#5a3f26";
-        ctx.fillRect(boreX, y + 2, boreW, 3);
-        ctx.fillStyle = "#3d2a19";
-        ctx.fillRect(boreX, y + 5, boreW, 1);
+      // the bore: void above the dig face, unmined rock below it
+      if (y + T > fy) {
+        var solidTop = Math.max(y, fy);
+        var solidH = y + T - solidTop;
+        drawRockRow(band, boreX, boreW, solidTop, ty, 5, solidH);
+        ctx.fillStyle = "rgba(0,0,0,.25)";
+        ctx.fillRect(boreX, solidTop, boreW, Math.min(2, solidH));
+      } else {
+        if (ty % L.braceEveryRows === 0) {
+          ctx.fillStyle = "#5a3f26";
+          ctx.fillRect(boreX, y + 2, boreW, 3);
+          ctx.fillStyle = "#3d2a19";
+          ctx.fillRect(boreX, y + 5, boreW, 1);
+        }
+        ctx.fillStyle = "#6b4c2c";
+        ctx.fillRect(boreX + 3, y, 2, T);
+        ctx.fillRect(boreX + 9, y, 2, T);
+        ctx.fillStyle = "#8a6438";
+        ctx.fillRect(boreX + 3, y + 6, 8, 2);
       }
 
-      // ladder on the left face of the bore
-      ctx.fillStyle = "#6b4c2c";
-      ctx.fillRect(boreX + 3, y, 2, T);
-      ctx.fillRect(boreX + 9, y, 2, T);
-      ctx.fillStyle = "#8a6438";
-      ctx.fillRect(boreX + 3, y + 6, 8, 2);
     }
 
-    // ---- bore lighting: lit near the ladder, swallowed toward the bottom
+    // ---- the veil: one overlay from the shallowest revealed-but-unreached band down
+    if (plan.veiledIndices.length) {
+      var firstVeiled = E.bandByIndex(cfg, plan.veiledIndices[0]);
+      var vy = Math.max(0, yOfDepth(firstVeiled.startDepth, depth));
+      if (vy < H) drawVeil(vy, H - vy, 0, W - L.ribbonBu);
+    }
+
+    // ---- seams and the next band's tease vein
+    for (var pi = 0; pi < plan.indices.length; pi++) {
+      var idx = plan.indices[pi];
+      if (idx === 0) continue;
+      var b = E.bandByIndex(cfg, idx);
+      var sy = yOfDepth(b.startDepth, depth);
+      if (sy < -8 || sy > H + 8) continue;
+      drawSeam(b, sy, 0, W - L.ribbonBu);
+      ctx.fillStyle = "rgba(0,0,0,.45)";
+      ctx.fillRect(0, sy, W - L.ribbonBu, 1);
+      if (idx > currentIndex) {
+        // the tease: the next band's vein, glinting through the veil at half amplitude
+        var ty2 = yOfDepth(b.startDepth + cfg.vein.teaseOffsetM, depth);
+        if (ty2 > 0 && ty2 < H - 10) {
+          ctx.fillStyle = b.veinColor;
+          ctx.globalAlpha = 0.55;
+          ctx.fillRect(8, ty2, 18, 6);
+          ctx.fillRect(rightX + 6, ty2 + 6, 16, 5);
+          ctx.fillStyle = b.glintColor;
+          ctx.globalAlpha = 0.25 + 0.3 * (0.5 + 0.5 * Math.sin(pulse * 3.2));
+          ctx.fillRect(14, ty2 + 2, 2, 2);
+          ctx.fillRect(rightX + 12, ty2 + 8, 2, 2);
+          ctx.globalAlpha = 1;
+        }
+      }
+    }
+
+    // ---- bore lighting
     var grd = ctx.createLinearGradient(boreX, 0, boreX + boreW, 0);
     grd.addColorStop(0, "rgba(120,96,60,0.10)");
     grd.addColorStop(0.55, "rgba(0,0,0,0)");
-    grd.addColorStop(1, "rgba(0,0,0,0.35)");
+    grd.addColorStop(1, "rgba(0,0,0,0.30)");
     ctx.fillStyle = grd;
-    ctx.fillRect(boreX, 0, boreW, H);
-    var vgd = ctx.createLinearGradient(0, H * 0.45, 0, H);
-    vgd.addColorStop(0, "rgba(4,3,7,0)");
-    vgd.addColorStop(1, "rgba(4,3,7,0.85)");
-    ctx.fillStyle = vgd;
-    ctx.fillRect(boreX, 0, boreW, H);
+    ctx.fillRect(boreX, 0, boreW, fy);
 
-    // ---- working ledge + dwarves (one blip per hire, capped by the space we have)
+    // ---- working ledge + dwarves at the dig face
     var n = Math.min(derived.dwarves, 8);
-    if (n > 0) {
-      ctx.fillStyle = shade(band.wallColor, -26);
-      ctx.fillRect(boreX + 12, 186, boreW - 16, 3);
-      ctx.fillStyle = shade(band.wallColor, 4);
-      ctx.fillRect(boreX + 12, 186, boreW - 16, 1);
-      if (n > 3) {
-        ctx.fillStyle = shade(band.wallColor, -26);
-        ctx.fillRect(boreX + 12, 208, boreW - 16, 3);
-        ctx.fillStyle = shade(band.wallColor, 4);
-        ctx.fillRect(boreX + 12, 208, boreW - 16, 1);
-      }
-    }
     for (var i = 0; i < n; i++) {
-      var dx = boreX + 16 + (i % 3) * 14;
-      var dy = 172 + Math.floor(i / 3) * 22 + Math.round(Math.sin(pulse * 3 + i) * 1.5);
+      var dx = boreX + 6 + (i % 3) * 16;
+      var dy = fy - 18 - Math.floor(i / 3) * 20 + Math.round(Math.sin(pulse * 3 + i) * 1.5);
+      if (dy < 2) continue;
       ctx.fillStyle = "#c9a227";
-      ctx.fillRect(dx, dy + 8, 10, 6);          // tunic
+      ctx.fillRect(dx, dy + 8, 10, 6);
       ctx.fillStyle = "#e8cfa0";
-      ctx.fillRect(dx + 2, dy + 3, 6, 5);       // face
+      ctx.fillRect(dx + 2, dy + 3, 6, 5);
       ctx.fillStyle = "#b9b2a6";
-      ctx.fillRect(dx + 1, dy + 7, 8, 3);       // beard
+      ctx.fillRect(dx + 1, dy + 7, 8, 3);
       ctx.fillStyle = "#7a4a22";
-      ctx.fillRect(dx + 1, dy, 8, 3);           // cap
+      ctx.fillRect(dx + 1, dy, 8, 3);
       ctx.fillStyle = "#9aa3ad";
-      ctx.fillRect(dx + 10, dy + 2 + (Math.sin(pulse * 6 + i) > 0 ? 0 : 3), 5, 2); // pick
+      ctx.fillRect(dx + 10, dy + 2 + (Math.sin(pulse * 6 + i) > 0 ? 0 : 3), 5, 2);
     }
+    // the cut face itself
+    ctx.fillStyle = "rgba(255,226,150,.10)";
+    ctx.fillRect(boreX, fy - 2, boreW, 2);
 
-    // ---- the active vein
+    // ---- the active vein (current band, right wall)
     var vr = R.veinRect();
+    var band0 = derived.band;
     var glow = 0.5 + 0.5 * Math.sin((pulse / cfg.vein.glintPeriodSeconds) * Math.PI * 2);
-    ctx.fillStyle = shade(band.wallColor, -18);
+    ctx.fillStyle = shade(band0.wallColor, -18);
     ctx.fillRect(vr.x - 1, vr.y - 1, vr.w + 2, vr.h + 2);
-    ctx.fillStyle = band.veinColor;
+    ctx.fillStyle = band0.veinColor;
     ctx.fillRect(vr.x + 3, vr.y + 5, 20, 7);
     ctx.fillRect(vr.x + 6, vr.y + 12, 16, 6);
     ctx.fillRect(vr.x + 2, vr.y + 16, 12, 5);
-    // facets, so the ore reads as chunks and not as a hole in the wall
-    ctx.fillStyle = shade(band.veinColor, 46);
+    ctx.fillStyle = shade(band0.veinColor, 46);
     ctx.fillRect(vr.x + 3, vr.y + 5, 20, 1);
     ctx.fillRect(vr.x + 6, vr.y + 12, 16, 1);
     ctx.fillRect(vr.x + 2, vr.y + 16, 12, 1);
-    ctx.fillStyle = shade(band.veinColor, 24);
+    ctx.fillStyle = shade(band0.veinColor, 24);
     ctx.fillRect(vr.x + 13, vr.y + 6, 3, 6);
     ctx.fillRect(vr.x + 8, vr.y + 17, 2, 4);
-    ctx.fillStyle = band.glintColor;
+    ctx.fillStyle = band0.glintColor;
     ctx.globalAlpha = 0.35 + 0.65 * glow;
     ctx.fillRect(vr.x + 9, vr.y + 8, 3, 3);
     ctx.fillRect(vr.x + 16, vr.y + 14, 2, 2);
     ctx.globalAlpha = 1;
-    // clickable ring
     ctx.strokeStyle = "rgba(255,226,150," + (0.25 + 0.35 * glow) + ")";
     ctx.lineWidth = 1;
     ctx.strokeRect(vr.x + 0.5, vr.y + 0.5, vr.w - 1, vr.h - 1);
@@ -210,23 +316,23 @@
       ctx.fillRect(vr.x, vr.y, vr.w, vr.h);
     }
 
-    // ---- depth readout in the bore
+    // ---- depth readout
     ctx.textAlign = "center";
     ctx.fillStyle = "rgba(0,0,0,.62)";
     ctx.fillRect(boreX + 2, 6, boreW - 4, 22);
     ctx.font = "bold 9px ui-monospace, Menlo, monospace";
     ctx.fillStyle = "#e9dcb6";
-    ctx.fillText(state.depth.toFixed(1) + " m", boreX + boreW / 2, 8);
+    ctx.fillText(depth.toFixed(1) + " m", boreX + boreW / 2, 8);
     ctx.font = "6px ui-monospace, Menlo, monospace";
     ctx.fillStyle = "#8d857a";
-    ctx.fillText(band.name.toUpperCase(), boreX + boreW / 2, 19);
+    ctx.fillText(band0.name.toUpperCase(), boreX + boreW / 2, 19);
 
     // ---- floaters
     for (var f = 0; f < floaters.length; f++) {
       var fl = floaters[f];
       var k = fl.t / cfg.vein.floaterSeconds;
       ctx.globalAlpha = 1 - k;
-      ctx.fillStyle = "#ffe89a";
+      ctx.fillStyle = fl.color;
       ctx.font = "bold 8px ui-monospace, Menlo, monospace";
       ctx.fillText(fl.text, fl.x, fl.y - k * cfg.vein.floaterRiseBu);
       ctx.globalAlpha = 1;
@@ -236,10 +342,15 @@
     // ---- depth ribbon
     ctx.fillStyle = "rgba(0,0,0,.45)";
     ctx.fillRect(ribbonX, 0, L.ribbonBu, H);
-    var mark = (state.depth * L.buPerMeter) % H;
+    var frac = cfg.milestone ? Math.min(1, depth / cfg.milestone.depth) : 0;
+    ctx.fillStyle = "#3a2f1a";
+    ctx.fillRect(ribbonX + 1, 0, L.ribbonBu - 2, H);
     ctx.fillStyle = "#c9a227";
-    ctx.fillRect(ribbonX + 1, H - mark - 2, L.ribbonBu - 2, 2);
-    ctx.fillStyle = "rgba(255,255,255,.12)";
-    for (var m = 0; m < H; m += 32) ctx.fillRect(ribbonX + 1, m, L.ribbonBu - 2, 1);
+    ctx.fillRect(ribbonX + 1, 0, L.ribbonBu - 2, Math.round(frac * H));
+    ctx.fillStyle = "rgba(255,255,255,.14)";
+    for (var oi = 0; oi < cfg.ores.length; oi++) {
+      var m = Math.round((cfg.ores[oi].startDepth / cfg.milestone.depth) * H);
+      if (m >= 0 && m < H) ctx.fillRect(ribbonX, m, L.ribbonBu, 1);
+    }
   };
 })();

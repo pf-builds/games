@@ -40,6 +40,17 @@
     try { return localStorage.getItem(cfg.save.key); } catch (e) { return null; }
   };
 
+  // Wall-clock stamp of the last write, for the offline resolver. 0 when absent or
+  // unparseable, which the resolver reads as "no elapsed time to pay for".
+  S.savedAt = function (cfg) {
+    var raw = S.readRaw(cfg);
+    if (!raw) return 0;
+    try {
+      var d = JSON.parse(raw);
+      return (d && typeof d.savedAt === "number" && isFinite(d.savedAt)) ? d.savedAt : 0;
+    } catch (e) { return 0; }
+  };
+
   S.migrate = function (cfg, data) {
     var guard = 0;
     while (data && data.version !== cfg.save.version && guard++ < 32) {
@@ -71,6 +82,9 @@
     }
     st.endingSeen = !!data.endingSeen;
     if (data.prefs && typeof data.prefs === "object") st.prefs = data.prefs;
+    // Re-derive the band from the restored depth, or the first tick after a reload
+    // deep in the shaft would fire a spurious band-entry flavor line.
+    st.bandId = window.GDEngine.bandAt(cfg, st.depth).id;
     return st;
   };
 

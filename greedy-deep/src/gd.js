@@ -5,22 +5,37 @@
 
   var E = window.GDEngine;
   var GD = (window.GD = {
-    version: "0.1.0-m1",
+    version: "0.2.0-m2",
     config: null,
     state: null,
     ready: false,
     debug: /(\?|&)debug=1/.test(location.search),
-    dbg: { t: 0, depth: 0, band: "-", gold: 0, goldRate: 0, digRate: 0, dwarves: 0, owned: {}, fps: 0, saveSize: 0, errors: 0, warnings: 0, lastError: "" }
+    dbg: {
+      t: 0, depth: 0, band: "-", bandIndex: 0, gold: 0, goldRate: 0, digRate: 0, dwarves: 0,
+      owned: {}, fps: 0, saveSize: 0, errors: 0, warnings: 0, lastError: "",
+      lastEvent: "", eventsFired: 0, revealBonus: 0, timed: 0, flavorTodoCount: 0,
+      maxRenderedBandIndex: 0, offlineLast: null
+    },
+    // The live loop passes these through to the engine so the UI can react to
+    // events, band changes and the ending without the engine knowing about DOM.
+    hooks: { onEvent: null, onBand: null, onEnding: null }
   });
 
+  GD.ctx = {
+    rng: null, // null = engine default rng
+    onEvent: function (e, st) { if (GD.hooks.onEvent) GD.hooks.onEvent(e, st); },
+    onBand: function (b, prev, st) { if (GD.hooks.onBand) GD.hooks.onBand(b, prev, st); },
+    onEnding: function (st, m) { if (GD.hooks.onEnding) GD.hooks.onEnding(st, m); }
+  };
+
   // -------------------------------------------------- console error counter
-  // The M1 check "zero console errors/warnings over 60 s" needs a number, not a vibe.
+  // "zero console errors/warnings" needs a number, not a vibe.
   (function hookConsole() {
     var ce = console.error.bind(console), cw = console.warn.bind(console);
     console.error = function () { GD.dbg.errors++; GD.dbg.lastError = String(arguments[0]); ce.apply(null, arguments); };
     console.warn = function () { GD.dbg.warnings++; cw.apply(null, arguments); };
     window.addEventListener("error", function (e) { GD.dbg.errors++; GD.dbg.lastError = e.message || "error"; });
-    window.addEventListener("unhandledrejection", function (e) { GD.dbg.errors++; GD.dbg.lastError = "unhandled rejection"; });
+    window.addEventListener("unhandledrejection", function () { GD.dbg.errors++; GD.dbg.lastError = "unhandled rejection"; });
   })();
 
   // -------------------------------------------------- lifecycle
@@ -31,8 +46,24 @@
     var loaded = window.GDSave.read(cfg);
     GD.state = loaded || E.newState(cfg);
     GD.loadedFromSave = !!loaded;
+    GD.savedAt = loaded ? window.GDSave.savedAt(cfg) : 0;
+    GD.dbg.flavorTodoCount = E.flavorTodoCount(cfg);
     GD.ready = true;
     return GD.state;
+  };
+
+  // Swap the whole config at runtime. This is the content-as-data escape hatch:
+  // a fifth ore or a fifth dwarf arrives as JSON and nothing in JS changes.
+  GD.setConfig = function (cfg, keepState) {
+    var v = E.validateConfig(cfg);
+    if (!v.ok) return { ok: false, errors: v.errors };
+    var prevState = keepState ? E.cloneState(GD.state) : null;
+    GD.config = cfg;
+    GD.state = prevState || E.newState(cfg);
+    GD.dbg.flavorTodoCount = E.flavorTodoCount(cfg);
+    if (window.GDRender && window.GDRender.setConfig) window.GDRender.setConfig(cfg);
+    if (window.GDUI && window.GDUI.rebuild) window.GDUI.rebuild();
+    return { ok: true };
   };
 
   GD.reset = function () {
@@ -50,7 +81,9 @@
       if (typeof s.t === "number") fresh.t = s.t;
       if (s.owned) fresh.owned = JSON.parse(JSON.stringify(s.owned));
       if (s.prefs) fresh.prefs = JSON.parse(JSON.stringify(s.prefs));
+      if (Array.isArray(s.timed)) fresh.timed = JSON.parse(JSON.stringify(s.timed));
       fresh.endingSeen = !!s.endingSeen;
+      fresh.bandId = E.bandAt(GD.config, fresh.depth).id;
     }
     GD.state = fresh;
     return E.snapshot(GD.config, GD.state);
@@ -61,20 +94,62 @@
   GD.derive = function () { return E.derive(GD.config, GD.state); };
   GD.costOf = function (id) { return E.costOf(GD.config, GD.state, id); };
   GD.format = function (n) { return E.format(GD.config, n); };
+  GD.bandAt = function (d) { return E.bandAt(GD.config, d); };
 
   // -------------------------------------------------- core API
   // Synchronous sim advance. Fixed sub-steps of sim.dt. No rAF, no DOM, no audio.
   GD.step = function (seconds) {
-    E.advance(GD.config, GD.state, seconds);
+    E.advance(GD.config, GD.state, seconds, GD.ctx);
     return E.snapshot(GD.config, GD.state);
   };
 
-  GD.tap = function (times) {
-    var g = E.tap(GD.config, GD.state, times);
-    return g;
+  GD.tap = function (times) { return E.tap(GD.config, GD.state, times); };
+  GD.buy = function (id) { return E.buy(GD.config, GD.state, id); };
+
+  // ETA for a locked row: (cost - gold) / goldRate at the current passive rate.
+  // Returns Infinity while goldRate is 0 so the UI can print the em dash.
+  GD.etaFor = function (id) {
+    var cost = GD.costOf(id);
+    var gold = GD.state.gold;
+    if (gold >= cost - 1e-9) return 0;
+    var rate = E.derive(GD.config, GD.state).goldRate;
+    if (!(rate > 0)) return Infinity;
+    return (cost - gold) / rate;
   };
 
-  GD.buy = function (id) { return E.buy(GD.config, GD.state, id); };
+  GD.simulate = function (opts) { return E.simulate(GD.config, opts); };
+
+  GD.offlinePreview = function (elapsedMs, state) {
+    return E.offlinePreview(GD.config, state || GD.state, elapsedMs);
+  };
+  GD.applyOffline = function (elapsedMs) {
+    var p = E.applyOffline(GD.config, GD.state, elapsedMs, GD.ctx);
+    GD.dbg.offlineLast = p;
+    return p;
+  };
+
+  GD.fire = function (eventId) {
+    var list = GD.config.events;
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].id === eventId) return E.applyEvent(GD.config, GD.state, list[i], GD.ctx);
+    }
+    return null;
+  };
+
+  GD.jumpTo = function (depth) {
+    GD.state.depth = Math.max(0, depth);
+    var b = E.bandAt(GD.config, GD.state.depth);
+    if (b.id !== GD.state.bandId) {
+      var prev = GD.state.bandId;
+      GD.state.bandId = b.id;
+      GD.ctx.onBand(b, prev, GD.state);
+    }
+    E.checkMilestone(GD.config, GD.state, GD.ctx);
+    if (window.GDUI && window.GDUI.refresh) window.GDUI.refresh();
+    return GD.state.depth;
+  };
+
+  GD.seed = function (n) { return E.setSeed(n); };
 
   GD.save = function () {
     var d = window.GDSave.write(GD.config, GD.state);
@@ -87,11 +162,17 @@
     GD.dbg.t = GD.state.t;
     GD.dbg.depth = GD.state.depth;
     GD.dbg.band = d.band.id;
+    GD.dbg.bandIndex = d.band.index;
     GD.dbg.gold = GD.state.gold;
     GD.dbg.goldRate = d.goldRate;
     GD.dbg.digRate = d.digRate;
     GD.dbg.dwarves = d.dwarves;
     GD.dbg.owned = GD.state.owned;
+    GD.dbg.lastEvent = GD.state.lastEvent;
+    GD.dbg.eventsFired = GD.state.eventsFired;
+    GD.dbg.revealBonus = d.revealBonus;
+    GD.dbg.timed = GD.state.timed.length;
+    if (window.GDRender && window.GDRender.lastPlan) GD.dbg.maxRenderedBandIndex = window.GDRender.lastPlan().maxIndex;
     if (fps !== undefined) GD.dbg.fps = fps;
   };
 
@@ -100,7 +181,7 @@
   GD.paused = false;
   if (GD.debug) {
     GD.setGold = function (n) { GD.state.gold = n; return n; };
-    GD.setDepth = function (n) { GD.state.depth = n; return n; };
+    GD.setDepth = function (n) { return GD.jumpTo(n); };
     GD.grant = function (id, n) {
       n = n === undefined ? 1 : n;
       GD.state.owned[id] = (GD.state.owned[id] || 0) + n;
@@ -121,113 +202,115 @@
     return ok;
   };
 
-  // -------------------------------------------------- selfTest (PRD 14, M1 block)
+  GD.grantForTest = function (id, n) {
+    GD.state.owned[id] = (GD.state.owned[id] || 0) + (n === undefined ? 1 : n);
+    return GD.state.owned[id];
+  };
+
+  // -------------------------------------------------- selfTest (PRD 14)
   function approx(a, b, eps) { return Math.abs(a - b) <= (eps === undefined ? 1e-6 : eps); }
 
-  GD.selfTest = function () {
+  GD.selfTest = function (opts) {
+    opts = opts || {};
     var cfg = GD.config;
-    var failed = [];
+    var failed = [], ran = 0;
     var liveState = E.cloneState(GD.state);
     var liveRaw = window.GDSave.readRaw(cfg);
+    var liveConfig = GD.config;
+    // selfTest drives the engine hard (jumpTo, fire, band crossings). Mute the UI
+    // hooks for the duration so a test run never leaves a panel or a log line behind.
+    var liveHooks = GD.hooks;
+    GD.hooks = { onEvent: null, onBand: null, onEnding: null };
 
     function check(name, expected, actual, ok) {
+      ran++;
       if (!ok) failed.push({ name: name, expected: expected, actual: actual });
     }
 
     try {
-      // --- 1. reset(); step(0) -> gold 0, depth 0
+      // =========================================================== M1 block
       GD.reset();
       var s0 = GD.step(0);
-      check("reset_zero_gold", cfg.start.gold, s0.gold, s0.gold === cfg.start.gold);
-      check("reset_zero_depth", 0, s0.depth, s0.depth === 0);
+      check("m1_reset_zero_gold", cfg.start.gold, s0.gold, s0.gold === cfg.start.gold);
+      check("m1_reset_zero_depth", 0, s0.depth, s0.depth === 0);
 
-      // --- 2. 10 synthetic taps = exactly 10 x goldPerTap, depth unchanged
       GD.reset();
       var gpt = GD.derive().goldPerTap;
       for (var i = 0; i < 10; i++) GD.tap(1);
-      check("taps_pay_exact_gold", 10 * gpt, GD.state.gold, approx(GD.state.gold, 10 * gpt, 1e-9));
-      check("taps_never_dig", 0, GD.state.depth, GD.state.depth === 0);
-      check("taps_count_toward_lifetime", 10 * gpt, GD.state.goldEarnedTotal, approx(GD.state.goldEarnedTotal, 10 * gpt, 1e-9));
+      check("m1_taps_pay_exact_gold", 10 * gpt, GD.state.gold, approx(GD.state.gold, 10 * gpt, 1e-9));
+      check("m1_taps_never_dig", 0, GD.state.depth, GD.state.depth === 0);
+      check("m1_taps_count_toward_lifetime", 10 * gpt, GD.state.goldEarnedTotal, approx(GD.state.goldEarnedTotal, 10 * gpt, 1e-9));
 
-      // --- 3. step(600) with no purchases changes nothing (idle path is dwarves only)
       GD.reset();
-      var beforeGold = GD.state.gold, beforeDepth = GD.state.depth;
       var s600 = GD.step(600);
-      check("idle_no_gold_without_dwarves", beforeGold, s600.gold, s600.gold === beforeGold);
-      check("idle_no_depth_without_dwarves", beforeDepth, s600.depth, s600.depth === beforeDepth);
+      check("m1_idle_no_gold_without_dwarves", 0, s600.gold, s600.gold === 0);
+      check("m1_idle_no_depth_without_dwarves", 0, s600.depth, s600.depth === 0);
 
-      // --- 4. second purchase costs base x ratio
       var track = cfg.tracks[0];
       GD.reset();
       GD.state.gold = track.base * 100;
       var b1 = GD.buy(track.id);
       var cost2 = GD.costOf(track.id);
-      check("first_purchase_cost_base", track.base, b1.cost, approx(b1.cost, track.base));
-      check("second_purchase_cost_ratio", track.base * track.ratio, cost2, approx(cost2, track.base * track.ratio));
+      check("m1_first_purchase_cost_base", track.base, b1.cost, approx(b1.cost, track.base));
+      check("m1_second_purchase_cost_ratio", track.base * track.ratio, cost2, approx(cost2, track.base * track.ratio));
 
-      // --- 5. insufficient gold refused, gold unchanged
       GD.reset();
       GD.state.gold = track.base - 0.01;
       var goldBefore = GD.state.gold;
       var refused = GD.buy(track.id);
-      check("insufficient_refused", false, refused.ok, refused.ok === false);
-      check("insufficient_gold_unchanged", goldBefore, GD.state.gold, GD.state.gold === goldBefore);
-      check("insufficient_owned_unchanged", 0, GD.state.owned[track.id] || 0, (GD.state.owned[track.id] || 0) === 0);
+      check("m1_insufficient_refused", false, refused.ok, refused.ok === false);
+      check("m1_insufficient_gold_unchanged", goldBefore, GD.state.gold, GD.state.gold === goldBefore);
+      check("m1_insufficient_owned_unchanged", 0, GD.state.owned[track.id] || 0, (GD.state.owned[track.id] || 0) === 0);
 
-      // --- 6. dwarves dig, and only dwarf-driven depth pays passive gold
       var dwarf = cfg.dwarves[0];
       GD.reset();
       GD.grantForTest(dwarf.id, 2);
       var d2 = GD.derive();
-      var expRate = (cfg.start.digRate + dwarf.effects[0].value * 2);
-      check("dwarf_digs", expRate, d2.digRate, approx(d2.digRate, expRate));
+      var expRate = cfg.start.digRate + dwarf.effects[0].value * 2;
+      check("m1_dwarf_digs", expRate, d2.digRate, approx(d2.digRate, expRate));
       GD.step(10);
-      check("depth_advances_from_digrate", expRate * 10, GD.state.depth, approx(GD.state.depth, expRate * 10, 1e-6));
+      check("m1_depth_advances_from_digrate", expRate * 10, GD.state.depth, approx(GD.state.depth, expRate * 10, 1e-6));
 
-      // --- 7. live save exists and carries the PRD shape
       var raw = window.GDSave.readRaw(cfg);
       var parsed = null;
       try { parsed = raw ? JSON.parse(raw) : null; } catch (e) { parsed = null; }
-      check("save_present", "an object at " + cfg.save.key, raw, !!parsed);
+      check("m1_save_present", "an object at " + cfg.save.key, raw, !!parsed);
       var keys = ["version", "savedAt", "depth", "gold", "goldEarnedTotal", "owned", "prefs"];
       var missing = [];
       if (parsed) for (var k = 0; k < keys.length; k++) if (!(keys[k] in parsed)) missing.push(keys[k]);
-      check("save_shape", "no missing keys", missing.join(","), parsed && missing.length === 0);
+      check("m1_save_shape", "no missing keys", missing.join(","), parsed && missing.length === 0);
 
-      // --- 8. save -> read restores depth within 1 m and gold within 1 g
       GD.reset();
-      GD.state.depth = 123.456;
-      GD.state.gold = 4567.89;
-      GD.state.goldEarnedTotal = 9999;
-      GD.grantForTest(track.id, 3);
-      GD.grantForTest(dwarf.id, 2);
+      GD.state.depth = 123.456; GD.state.gold = 4567.89; GD.state.goldEarnedTotal = 9999;
+      GD.grantForTest(track.id, 3); GD.grantForTest(dwarf.id, 2);
       window.GDSave.write(cfg, GD.state);
       var restored = window.GDSave.read(cfg);
-      check("reload_restores_depth", 123.456, restored && restored.depth, !!restored && Math.abs(restored.depth - 123.456) < 1);
-      check("reload_restores_gold", 4567.89, restored && restored.gold, !!restored && Math.abs(restored.gold - 4567.89) < 1);
-      check("reload_restores_owned", "3/2", restored && (restored.owned[track.id] + "/" + restored.owned[dwarf.id]),
+      check("m1_reload_restores_depth", 123.456, restored && restored.depth, !!restored && Math.abs(restored.depth - 123.456) < 1);
+      check("m1_reload_restores_gold", 4567.89, restored && restored.gold, !!restored && Math.abs(restored.gold - 4567.89) < 1);
+      check("m1_reload_restores_owned", "3/2", restored && (restored.owned[track.id] + "/" + restored.owned[dwarf.id]),
         !!restored && restored.owned[track.id] === 3 && restored.owned[dwarf.id] === 2);
 
-      // --- 9 + 10. step(3600) timing and additivity
       var seedOwned = {};
-      seedOwned[track.id] = 3;
-      seedOwned[dwarf.id] = 5;
+      seedOwned[track.id] = 3; seedOwned[dwarf.id] = 5;
       if (cfg.tracks[1]) seedOwned[cfg.tracks[1].id] = 2;
 
+      // Events roll off a module-level rng, so additivity is only meaningful with the
+      // same seed on both runs. Determinism-by-seed is asserted separately below.
+      GD.seed(4242);
       GD.setState({ owned: seedOwned });
-      var t0 = (performance && performance.now) ? performance.now() : Date.now();
+      var t0 = performance.now();
       var big = GD.step(3600);
-      var ms = ((performance && performance.now) ? performance.now() : Date.now()) - t0;
-      check("step_3600_under_500ms", "< 500 ms", Math.round(ms) + " ms", ms < 500);
+      var ms = performance.now() - t0;
+      check("m1_step_3600_under_500ms", "< 500 ms", Math.round(ms) + " ms", ms < 500);
 
+      GD.seed(4242);
       GD.setState({ owned: seedOwned });
       for (var j = 0; j < 3600; j++) GD.step(1);
       var many = GD.snapshot();
-      check("step_additive_gold", big.gold, many.gold, approx(big.gold, many.gold, 1e-6));
-      check("step_additive_depth", big.depth, many.depth, approx(big.depth, many.depth, 1e-6));
-      check("step_additive_total", big.goldEarnedTotal, many.goldEarnedTotal, approx(big.goldEarnedTotal, many.goldEarnedTotal, 1e-6));
+      check("m1_step_additive_gold", big.gold, many.gold, approx(big.gold, many.gold, 1e-6));
+      check("m1_step_additive_depth", big.depth, many.depth, approx(big.depth, many.depth, 1e-6));
+      check("m1_step_additive_total", big.goldEarnedTotal, many.goldEarnedTotal, approx(big.goldEarnedTotal, many.goldEarnedTotal, 1e-6));
 
-      // --- 10b. clearSave leaves nothing to resurrect (critic M1, MAJOR)
       GD.reset();
       GD.grantForTest(dwarf.id, 1);
       GD.state.gold = 777;
@@ -239,39 +322,337 @@
       try { parsedClear = afterClear ? JSON.parse(afterClear) : null; } catch (e) { parsedClear = null; }
       var freshAfterClear = !parsedClear ||
         (parsedClear.gold === 0 && parsedClear.depth === 0 && Object.keys(parsedClear.owned || {}).length === 0);
-      check("clear_save_key_absent_or_fresh", "absent or fresh state", afterClear, freshAfterClear);
-      check("clear_save_resets_live_state", "gold 0, no owned", GD.state.gold + "/" + JSON.stringify(GD.state.owned),
+      check("m1_clear_save_key_absent_or_fresh", "absent or fresh state", afterClear, freshAfterClear);
+      check("m1_clear_save_resets_live_state", "gold 0, no owned", GD.state.gold + "/" + JSON.stringify(GD.state.owned),
         GD.state.gold === 0 && Object.keys(GD.state.owned).length === 0);
 
-      // --- 11. config validates
-      var v = GD.validateConfig();
-      check("config_valid", "ok", v.errors.join(" | "), v.ok);
+      var v1 = GD.validateConfig();
+      check("m1_config_valid", "ok", v1.errors.join(" | "), v1.ok);
 
-      // --- 12. snapshot carries the PRD 13 fields
       var snapKeys = ["t", "depth", "gold", "goldEarnedTotal", "goldRate", "digRate", "band", "owned", "dwarves", "eventsFired"];
       var snapMissing = [];
       for (var q = 0; q < snapKeys.length; q++) if (!(snapKeys[q] in big)) snapMissing.push(snapKeys[q]);
-      check("snapshot_shape", "no missing keys", snapMissing.join(","), snapMissing.length === 0);
+      check("m1_snapshot_shape", "no missing keys", snapMissing.join(","), snapMissing.length === 0);
 
-      // --- 13. console clean
-      check("no_console_errors", 0, GD.dbg.errors, GD.dbg.errors === 0);
-      check("no_console_warnings", 0, GD.dbg.warnings, GD.dbg.warnings === 0);
+      // =========================================================== M2 block
+      // --- the 12-verb registry is complete and every JSON verb has a handler
+      var wantVerbs = ["add_click", "add_rate", "mul_rate", "mul_gold", "add_rate_per_dwarf",
+        "reveal_bands", "mul_hazard_resist", "add_offline_hours", "mul_offline_rate",
+        "mul_rate_temp", "mul_gold_temp", "add_depth"];
+      var verbMissing = [];
+      for (var vi = 0; vi < wantVerbs.length; vi++) if (typeof E.EFFECTS[wantVerbs[vi]] !== "function") verbMissing.push(wantVerbs[vi]);
+      check("m2_all_12_verbs_registered", "12 handlers", E.VERBS.length + " (missing " + verbMissing.join(",") + ")",
+        verbMissing.length === 0 && E.VERBS.length === 12);
+
+      // --- content: 4 ores, 8 tracks, 4 dwarves, 3 events
+      check("m2_content_counts", "4 ores / 8 tracks / 4 dwarves / 3 events",
+        cfg.ores.length + "/" + cfg.tracks.length + "/" + cfg.dwarves.length + "/" + cfg.events.length,
+        cfg.ores.length === 4 && cfg.tracks.length === 8 && cfg.dwarves.length === 4 && cfg.events.length === 3);
+
+      // --- simulate: the economy window (PRD 8 targets)
+      var simT0 = performance.now();
+      var sim = GD.simulate({ policy: "cheapest-affordable" });
+      var simMs = performance.now() - simT0;
+      check("m2_simulate_under_20s", "< 20000 ms", Math.round(simMs) + " ms", simMs < 20000);
+      check("m2_simulate_reaches_milestone", cfg.milestone.depth + " m", sim.finalDepth.toFixed(1), sim.reached === true);
+      check("m2_reached_in_window", "5400..10800 s", Math.round(sim.reachedAtSeconds),
+        sim.reachedAtSeconds >= 5400 && sim.reachedAtSeconds <= 10800);
+      check("m2_max_gap_under_300", "< 300 s", Math.round(sim.maxGapSeconds), sim.maxGapSeconds < 300);
+      check("m2_ten_purchases_in_600s", ">= 10", sim.purchasesFirst600, sim.purchasesFirst600 >= 10);
+
+      // --- bandLog boundaries equal the JSON startDepth values
+      var boundaryBad = [];
+      for (var bi = 1; bi < sim.bandLog.length; bi++) {
+        var entry = sim.bandLog[bi];
+        var ore = null;
+        for (var oi = 0; oi < cfg.ores.length; oi++) if (cfg.ores[oi].id === entry.band) ore = cfg.ores[oi];
+        if (!ore) continue; // endless repeats are synthesized, checked separately
+        if (!(entry.depth >= ore.startDepth && entry.depth < ore.startDepth + 5)) {
+          boundaryBad.push(entry.band + "@" + entry.depth.toFixed(2) + " want " + ore.startDepth);
+        }
+      }
+      check("m2_bandlog_matches_startdepths", "all within 5 m of JSON startDepth", boundaryBad.join(" | "), boundaryBad.length === 0);
+
+      // --- band income step within 10% of the goldPerMeter ratio
+      var stepBad = [];
+      for (var si = 1; si < sim.bandLog.length; si++) {
+        var e2 = sim.bandLog[si];
+        var want = e2.goldPerMeter / sim.bandLog[si - 1].goldPerMeter;
+        var got = e2.goldRateBefore > 0 ? e2.goldRateAfter / e2.goldRateBefore : want;
+        if (Math.abs(got - want) / want > 0.10) stepBad.push(e2.band + " got x" + got.toFixed(3) + " want x" + want.toFixed(3));
+      }
+      check("m2_band_income_step_within_10pct", "every step within 10% of gpm ratio", stepBad.join(" | "), stepBad.length === 0);
+
+      // --- the other two policies run and behave
+      var simNone = GD.simulate({ policy: "none", maxSeconds: 3600 });
+      check("m2_policy_none_never_digs", "depth 0, no purchases", simNone.finalDepth.toFixed(2) + "/" + simNone.purchaseCount,
+        simNone.purchaseCount === 0 && simNone.finalDepth === 0);
+      var simRatio = GD.simulate({ policy: "ratio", maxSeconds: 3600 });
+      check("m2_policy_ratio_runs", "purchases > 0", simRatio.purchaseCount, simRatio.purchaseCount > 0);
+      check("m2_unknown_policy_errors", "an error object", JSON.stringify(GD.simulate({ policy: "nope" })),
+        !!GD.simulate({ policy: "nope" }).error);
+
+      // --- simulate is deterministic for a given seed
+      var a1 = GD.simulate({ seed: 42, maxSeconds: 2400 });
+      var a2 = GD.simulate({ seed: 42, maxSeconds: 2400 });
+      check("m2_simulate_deterministic_by_seed", a1.finalDepth, a2.finalDepth, approx(a1.finalDepth, a2.finalDepth, 1e-9));
+
+      // --- offline resolver (PRD 9)
+      var off = E.newState(cfg);
+      off.owned[cfg.dwarves[0].id] = 3;
+      var od = E.derive(cfg, off);
+      var cap = cfg.offline.capHours * 3600;
+      var want8 = od.goldRate * cap * cfg.offline.ratePercent;
+      var p8 = GD.offlinePreview(8 * 3600 * 1000, off);
+      var p24 = GD.offlinePreview(24 * 3600 * 1000, off);
+      check("m2_offline_8h_equals_formula", want8, p8.gold, approx(p8.gold, want8, 1e-6));
+      check("m2_offline_24h_equals_8h", p8.gold, p24.gold, approx(p8.gold, p24.gold, 1e-6));
+      check("m2_offline_caps_seconds", cap, p24.cappedSeconds, approx(p24.cappedSeconds, cap, 1e-6));
+      var p30 = GD.offlinePreview(30000, off);
+      check("m2_offline_below_min_pays_nothing", 0, p30.gold, p30.gold === 0 && p30.cappedSeconds === 0);
+      var pNeg = GD.offlinePreview(-5000, off);
+      check("m2_offline_clock_skew_negative", 0, pNeg.gold, pNeg.gold === 0 && pNeg.reason === "skew");
+      var pFar = GD.offlinePreview((cfg.offline.maxClockSkewHours + 1) * 3600 * 1000, off);
+      check("m2_offline_clock_skew_absurd", 0, pFar.gold, pFar.gold === 0 && pFar.reason === "skew");
+      check("m2_offline_advances_depth", od.digRate * cap * cfg.offline.ratePercent, p8.depth,
+        approx(p8.depth, od.digRate * cap * cfg.offline.ratePercent, 1e-6));
+      // Elevator extends the cap and lifts the rate
+      var offE = E.cloneState(off);
+      offE.owned.elevator = 2;
+      var pE = GD.offlinePreview(24 * 3600 * 1000, offE);
+      check("m2_elevator_extends_cap", (cfg.offline.capHours + 2) * 3600, pE.cappedSeconds,
+        approx(pE.cappedSeconds, (cfg.offline.capHours + 2) * 3600, 1e-6));
+      var dE = E.derive(cfg, offE);
+      check("m2_elevator_lifts_offline_rate", 1.1 * 1.1, dE.offlineRateMul, approx(dE.offlineRateMul, 1.21, 1e-9));
+      // applyOffline mutates by exactly the preview
+      GD.setState({ owned: { dorrik: 3 } });
+      var pv = GD.offlinePreview(2 * 3600 * 1000);
+      var goldPre = GD.state.gold, depthPre = GD.state.depth;
+      var ap = GD.applyOffline(2 * 3600 * 1000);
+      check("m2_applyOffline_matches_preview", pv.gold + "/" + pv.depth.toFixed(4),
+        (GD.state.gold - goldPre).toFixed(6) + "/" + (GD.state.depth - depthPre).toFixed(4),
+        approx(GD.state.gold - goldPre, ap.gold, 1e-6) && approx(GD.state.depth - depthPre, ap.depth, 1e-6));
+
+      // --- events
+      GD.reset();
+      GD.jumpTo(300);
+      var depthBefore = GD.state.depth;
+      var fired = GD.fire("cave_in");
+      check("m2_fire_cave_in_returns_event", "cave_in", fired && fired.id, !!fired && fired.id === "cave_in");
+      check("m2_cave_in_moves_depth_minus_5", depthBefore - 5, GD.state.depth, approx(GD.state.depth, depthBefore - 5, 1e-9));
+      check("m2_cave_in_logs_its_line", cfg.flavor.eventTexts.cave_in, E.eventText(cfg, fired),
+        E.eventText(cfg, fired) === cfg.flavor.eventTexts.cave_in);
+      check("m2_event_counter_increments", 1, GD.state.eventsFired, GD.state.eventsFired === 1);
+
+      GD.reset();
+      GD.grantForTest("dorrik", 5);
+      var rateBefore = GD.derive().digRate;
+      GD.fire("gas_pocket");
+      var rateDuring = GD.derive().digRate;
+      check("m2_gas_pocket_halves_rate", rateBefore * 0.5, rateDuring, approx(rateDuring, rateBefore * 0.5, 1e-9));
+      GD.step(25);
+      check("m2_timed_effect_expires", rateBefore, GD.derive().digRate, approx(GD.derive().digRate, rateBefore, 1e-9));
+
+      GD.reset();
+      GD.grantForTest("dorrik", 5);
+      var goldRateBefore = GD.derive().goldRate;
+      GD.fire("rich_seam");
+      check("m2_rich_seam_triples_gold", goldRateBefore * 3, GD.derive().goldRate, approx(GD.derive().goldRate, goldRateBefore * 3, 1e-9));
+
+      // minDepth gating and hazard resist weighting
+      GD.reset();
+      var poolShallow = E.eligibleEvents(cfg, GD.state, GD.derive());
+      check("m2_event_mindepth_gate", "only rich_seam at 0 m", poolShallow.list.map(function (x) { return x.e.id; }).join(","),
+        poolShallow.list.length === 1 && poolShallow.list[0].e.id === "rich_seam");
+      GD.jumpTo(400);
+      GD.grantForTest("braces", 3);
+      var dB = GD.derive();
+      var poolDeep = E.eligibleEvents(cfg, GD.state, dB);
+      var gasW = 0;
+      for (var pi = 0; pi < poolDeep.list.length; pi++) if (poolDeep.list[pi].e.id === "gas_pocket") gasW = poolDeep.list[pi].w;
+      check("m2_braces_scale_hazard_weight", 3 * Math.pow(0.9, 3), gasW, approx(gasW, 3 * Math.pow(0.9, 3), 1e-9));
+      check("m2_non_hazard_weight_unscaled", 4, (function () {
+        for (var z = 0; z < poolDeep.list.length; z++) if (poolDeep.list[z].e.id === "rich_seam") return poolDeep.list[z].w;
+        return -1;
+      })(), (function () {
+        for (var z = 0; z < poolDeep.list.length; z++) if (poolDeep.list[z].e.id === "rich_seam") return poolDeep.list[z].w === 4;
+        return false;
+      })());
+      // events never fire offline
+      var offEv = E.newState(cfg);
+      offEv.owned.dorrik = 5;
+      GD.offlinePreview(8 * 3600 * 1000, offEv);
+      check("m2_offline_fires_no_events", 0, offEv.eventsFired, offEv.eventsFired === 0);
+
+      // --- milestone + ending
+      GD.reset();
+      GD.state.goldEarnedTotal = 1000;
+      GD.jumpTo(cfg.milestone.depth);
+      check("m2_milestone_sets_endingSeen", true, GD.state.endingSeen, GD.state.endingSeen === true);
+      check("m2_milestone_score_formula", 1000 + cfg.milestone.depth * 100, GD.state.endingScore,
+        approx(GD.state.endingScore, 1000 + cfg.milestone.depth * 100, 1e-6));
+      var seenCount = 0;
+      GD.hooks.onEnding = function () { seenCount++; };
+      GD.jumpTo(cfg.milestone.depth + 100);
+      GD.step(60);
+      GD.hooks.onEnding = null;
+      check("m2_milestone_fires_once", 0, seenCount, seenCount === 0);
+      check("m2_game_continues_after_ending", "depth > milestone", GD.state.depth.toFixed(1), GD.state.depth >= cfg.milestone.depth);
+
+      // --- endless bands after the ending (PRD 11)
+      var es = E.endlessStart(cfg);
+      var lastOre = cfg.ores[cfg.ores.length - 1];
+      check("m2_endless_starts_after_last_band", lastOre.startDepth + cfg.endless.bandLengthM, es, es === lastOre.startDepth + cfg.endless.bandLengthM);
+      var eb1 = E.bandAt(cfg, es + 1);
+      var eb2 = E.bandAt(cfg, es + cfg.endless.bandLengthM + 1);
+      check("m2_endless_band_multiplier", lastOre.goldPerMeter * cfg.endless.multiplierPerBand, eb1.goldPerMeter,
+        approx(eb1.goldPerMeter, lastOre.goldPerMeter * cfg.endless.multiplierPerBand, 1e-9));
+      check("m2_endless_band_compounds", lastOre.goldPerMeter * Math.pow(cfg.endless.multiplierPerBand, 2), eb2.goldPerMeter,
+        approx(eb2.goldPerMeter, lastOre.goldPerMeter * Math.pow(cfg.endless.multiplierPerBand, 2), 1e-9));
+      check("m2_endless_band_index_continues", cfg.ores.length, eb1.index, eb1.index === cfg.ores.length);
+
+      // --- reveal: at depth d, ore renders through band d+1+revealBonus and no further
+      if (window.GDRender && window.GDRender.bandPlan) {
+        var revealBad = [];
+        var probes = [0, 39, 41, 179, 181, 599, 601, 1199, 1500];
+        for (var ri = 0; ri < probes.length; ri++) {
+          for (var rb = 0; rb <= 3; rb++) {
+            var plan = window.GDRender.bandPlan(probes[ri], rb);
+            if (plan.maxIndex > plan.cutoffIndex) revealBad.push("d=" + probes[ri] + " rb=" + rb + " drew " + plan.maxIndex + " cutoff " + plan.cutoffIndex);
+          }
+        }
+        check("m2_reveal_never_past_cutoff", "maxIndex <= currentIndex + 1 + revealBonus", revealBad.join(" | "), revealBad.length === 0);
+        // and the tease IS drawn: standing just above a seam, the next band is in the plan
+        var teasePlan = window.GDRender.bandPlan(38, 0);
+        check("m2_next_band_teased_above_seam", "band index 1 in the plan", JSON.stringify(teasePlan.indices),
+          teasePlan.indices.indexOf(1) !== -1 && teasePlan.cutoffIndex === 1);
+        var veiled = window.GDRender.bandPlan(38, 0).veiledIndices;
+        check("m2_next_band_is_veiled", "[1]", JSON.stringify(veiled), veiled.length === 1 && veiled[0] === 1);
+      } else {
+        check("m2_renderer_exposes_bandPlan", "GDRender.bandPlan", "missing", false);
+      }
+
+      // --- ETA on locked rows
+      GD.reset();
+      GD.state.gold = 0;
+      check("m2_eta_is_dash_while_rate_zero", Infinity, GD.etaFor("pick"), GD.etaFor("pick") === Infinity);
+      GD.grantForTest("dorrik", 4);
+      var dEta = GD.derive();
+      var wantEta = (GD.costOf("pick") - GD.state.gold) / dEta.goldRate;
+      check("m2_eta_formula", wantEta, GD.etaFor("pick"), approx(GD.etaFor("pick"), wantEta, 1e-9));
+      GD.state.gold = GD.costOf("pick") + 1;
+      check("m2_eta_zero_when_affordable", 0, GD.etaFor("pick"), GD.etaFor("pick") === 0);
+      if (window.GDUI && window.GDUI.rowReport) {
+        var rr = window.GDUI.rowReport();
+        check("m2_shop_lists_all_tracks_and_dwarves", cfg.tracks.length + cfg.dwarves.length, rr.rows, rr.rows === cfg.tracks.length + cfg.dwarves.length);
+        check("m2_locked_rows_show_price_and_eta", "every locked row has a price and an ETA string",
+          rr.lockedWithoutEta + " locked rows missing an ETA", rr.lockedWithoutEta === 0);
+      }
+
+      // --- flavor
+      check("m2_flavor_todo_count_reported", "a number > 0", E.flavorTodoCount(cfg), E.flavorTodoCount(cfg) > 0);
+      check("m2_flavor_band_intro_for_every_ore", "4 intros", cfg.ores.map(function (o) { return E.bandIntro(cfg, o) ? 1 : 0; }).join(""),
+        cfg.ores.every(function (o) { return !!E.bandIntro(cfg, o); }));
+      check("m2_flavor_line_for_every_dwarf", "4 lines", cfg.dwarves.map(function (d) { return E.dwarfLine(cfg, d.id) ? 1 : 0; }).join(""),
+        cfg.dwarves.every(function (d) { return !!E.dwarfLine(cfg, d.id); }));
+      // no Tolkien Appendix A dwarf names anywhere in the shipped content (PRD 3)
+      var banned = ["durin", "thorin", "balin", "dwalin", "borin", "farin", "fundin", "dain", "nain",
+        "thrain", "thror", "gloin", "oin", "gimli", "frerin", "gror", "fili", "kili", "dori", "nori",
+        "ori", "bifur", "bofur", "bombur", "narvi", "telchar", "azaghal", "mim", "moria", "khazad",
+        "balrog", "mithril"];
+      var hay = JSON.stringify({ o: cfg.ores, t: cfg.tracks, d: cfg.dwarves, e: cfg.events, f: cfg.flavor, m: cfg.milestone }).toLowerCase();
+      var hits = [];
+      for (var bn = 0; bn < banned.length; bn++) if (new RegExp("\\b" + banned[bn] + "\\b").test(hay)) hits.push(banned[bn]);
+      check("m2_no_tolkien_appendix_a_names", "no hits", hits.join(","), hits.length === 0);
+
+      // --- content-as-data: a fifth ore and a fifth dwarf, JSON only, no JS edit
+      var ext = JSON.parse(JSON.stringify({
+        configVersion: cfg.configVersion, title: cfg.title, start: cfg.start, sim: cfg.sim,
+        format: cfg.format, ores: cfg.ores, tracks: cfg.tracks, dwarves: cfg.dwarves,
+        eventRules: cfg.eventRules, events: cfg.events, offline: cfg.offline,
+        milestone: cfg.milestone, endless: cfg.endless, flavor: cfg.flavor, save: cfg.save,
+        layout: cfg.layout, veil: cfg.veil, vein: cfg.vein, debug: cfg.debug
+      }));
+      ext.ores.push({
+        id: "voidglass", name: "Voidglass", startDepth: 2000, goldPerMeter: 400, pattern: "crystal",
+        intro: "Test ore added by selfTest.", color: "#101018", wallColor: "#1b1b28",
+        veinColor: "#5be0ff", glintColor: "#ffffff"
+      });
+      ext.dwarves.push({
+        id: "brann_test", name: "Test Hire", job: "Tester", base: 9999, ratio: 1.5,
+        effects: [{ verb: "add_rate", value: 0.5 }], flavor: "Added by selfTest.",
+        cosmetic: { hat: "cap", beard: "short", palette: "rust" }
+      });
+      ext.flavor = JSON.parse(JSON.stringify(cfg.flavor));
+      ext.flavor.bandIntro.voidglass = "Test ore added by selfTest.";
+      ext.flavor.dwarfLines.brann_test = "Added by selfTest.";
+      var extV = E.validateConfig(ext);
+      check("m2_extended_config_validates", "ok", extV.errors.join(" | "), extV.ok);
+      var setRes = GD.setConfig(ext, false);
+      check("m2_setConfig_accepts_extended", "ok", JSON.stringify(setRes.errors || ""), setRes.ok === true);
+      var newBand = E.bandAt(ext, 2100);
+      check("m2_fifth_ore_becomes_a_band", "voidglass", newBand.id, newBand.id === "voidglass");
+      check("m2_fifth_ore_band_index", 4, newBand.index, newBand.index === 4);
+      check("m2_fifth_dwarf_is_purchasable", 9999, E.costOf(ext, GD.state, "brann_test"), E.costOf(ext, GD.state, "brann_test") === 9999);
+      GD.state.gold = 20000;
+      var hireRes = GD.buy("brann_test");
+      check("m2_fifth_dwarf_can_be_hired", true, hireRes.ok, hireRes.ok === true);
+      check("m2_fifth_dwarf_counts_as_crew", 1, GD.derive().dwarves, GD.derive().dwarves === 1);
+      if (window.GDUI && window.GDUI.rowReport) {
+        var rr2 = window.GDUI.rowReport();
+        check("m2_fifth_dwarf_shows_in_shop", cfg.tracks.length + cfg.dwarves.length + 1, rr2.rows,
+          rr2.rows === cfg.tracks.length + cfg.dwarves.length + 1);
+        check("m2_fifth_dwarf_row_by_id", "a row for brann_test", rr2.ids.indexOf("brann_test") !== -1 ? "found" : "missing",
+          rr2.ids.indexOf("brann_test") !== -1);
+      }
+      if (window.GDRender && window.GDRender.bandPlan) {
+        var extPlan = window.GDRender.bandPlan(1999, 0);
+        check("m2_fifth_ore_renders_as_the_tease", "index 4 within cutoff", JSON.stringify(extPlan.indices) + " cutoff " + extPlan.cutoffIndex,
+          extPlan.maxIndex <= extPlan.cutoffIndex);
+      }
+      // restore the shipped config before anything else runs
+      GD.setConfig(liveConfig, false);
+      check("m2_config_restored_after_extension", cfg.ores.length, GD.config.ores.length, GD.config.ores.length === cfg.ores.length);
+
+      // --- validateConfig catches the four named failures (PRD 12)
+      function bad(mutate) {
+        var c = JSON.parse(JSON.stringify(cfg));
+        mutate(c);
+        return E.validateConfig(c);
+      }
+      var badVerb = bad(function (c) { c.tracks[0].effects[0].verb = "make_sandwich"; });
+      check("m2_validate_unknown_verb", "not ok", badVerb.ok, badVerb.ok === false && /unknown effect verb/.test(badVerb.errors.join()));
+      var badPattern = bad(function (c) { c.ores[1].pattern = "plaid"; });
+      check("m2_validate_unknown_pattern", "not ok", badPattern.ok, badPattern.ok === false && /unknown pattern/.test(badPattern.errors.join()));
+      var badDup = bad(function (c) { c.tracks[1].id = c.tracks[0].id; });
+      check("m2_validate_duplicate_id", "not ok", badDup.ok, badDup.ok === false && /duplicate id/.test(badDup.errors.join()));
+      var badOrder = bad(function (c) { c.ores[2].startDepth = 10; });
+      check("m2_validate_non_monotonic_startdepth", "not ok", badOrder.ok, badOrder.ok === false && /non-monotonic/.test(badOrder.errors.join()));
+      check("m2_validate_shipped_file_ok", "ok", E.validateConfig(cfg).errors.join(" | "), E.validateConfig(cfg).ok);
+
+      // --- no numbers left in JS: every purchasable and band number comes from cfg
+      check("m2_purchase_engine_is_config_driven", cfg.dwarves[3].base * cfg.dwarves[3].ratio,
+        (function () { var s = E.newState(cfg); s.owned[cfg.dwarves[3].id] = 1; return E.costOf(cfg, s, cfg.dwarves[3].id); })(),
+        approx((function () { var s = E.newState(cfg); s.owned[cfg.dwarves[3].id] = 1; return E.costOf(cfg, s, cfg.dwarves[3].id); })(),
+          cfg.dwarves[3].base * cfg.dwarves[3].ratio, 1e-6));
+
+      // --- console clean (last, so it counts everything above)
+      if (!opts.skipConsoleCheck) {
+        check("m2_no_console_errors", 0, GD.dbg.errors, GD.dbg.errors === 0);
+        check("m2_no_console_warnings", 0, GD.dbg.warnings, GD.dbg.warnings === 0);
+      }
     } finally {
-      // Never leave the player's game or save in test state.
+      // Never leave the player's game, config, or save in test state.
+      GD.hooks = liveHooks;
+      if (GD.config !== liveConfig) GD.setConfig(liveConfig, false);
       GD.state = liveState;
       try {
         if (liveRaw === null) window.GDSave.clear(cfg);
         else localStorage.setItem(cfg.save.key, liveRaw);
       } catch (e) { /* storage unavailable; nothing to restore */ }
-      if (window.GDUI && window.GDUI.refresh) window.GDUI.refresh();
+      if (window.GDUI && window.GDUI.rebuild) window.GDUI.rebuild();
     }
 
-    return { passed: failed.length === 0, failed: failed };
-  };
-
-  // Internal grant used by selfTest so the tests work with or without ?debug=1.
-  GD.grantForTest = function (id, n) {
-    GD.state.owned[id] = (GD.state.owned[id] || 0) + (n === undefined ? 1 : n);
-    return GD.state.owned[id];
+    return { passed: failed.length === 0, ran: ran, failedCount: failed.length, failed: failed };
   };
 })();

@@ -140,3 +140,79 @@ body.booting #col { opacity: 0; }
   body { align-items: center; min-height: 100vh; }
   #col { box-shadow: 0 0 0 2px #0a0810, 0 24px 60px rgba(0,0,0,.6); border-radius: 4px; overflow: hidden; }
 }
+
+/* ---------------------------------------------------------- M2: intro, log, panels */
+#bandintro {
+  position: absolute; left: 50%; top: calc(34px * var(--s));
+  transform: translateX(-50%);
+  text-align: center; pointer-events: none;
+  background: rgba(8,6,14,.78);
+  border: 1px solid #3a3050;
+  border-radius: 4px;
+  padding: calc(3px * var(--s)) calc(6px * var(--s));
+  animation: introfade 4.5s ease-out forwards;
+  max-width: calc(140px * var(--s));
+}
+#bandintro b { display: block; font-size: calc(7px * var(--s)); color: var(--gold); letter-spacing: .06em; }
+#bandintro span { display: block; font-size: calc(5px * var(--s)); color: #c3b9d4; margin-top: 2px; line-height: 1.35; }
+#bandintro.hidden { display: none; }
+@keyframes introfade { 0% { opacity: 0; transform: translate(-50%, -6px); } 12% { opacity: 1; transform: translate(-50%, 0); } 80% { opacity: 1; } 100% { opacity: 0; } }
+
+#log {
+  background: #100d18;
+  border-top: 2px solid #0a0810;
+  padding: calc(2px * var(--s)) calc(4px * var(--s));
+  min-height: calc(14px * var(--s));
+  font-size: calc(4.5px * var(--s));
+  line-height: 1.5;
+  color: #8d85a0;
+  max-height: calc(30px * var(--s));
+  overflow: hidden;
+}
+.logline { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.logline.hazard { color: #ec9a80; }
+.logline.boon { color: #9fe8a4; }
+.logline.band { color: var(--gold); }
+.logline.hire { color: #b9a7d8; }
+
+.overlay {
+  position: absolute; inset: 0;
+  background: rgba(6,4,10,.82);
+  display: flex; align-items: center; justify-content: center;
+  padding: calc(6px * var(--s));
+  z-index: 5;
+}
+.overlay.hidden { display: none; }
+.panel-card {
+  background: #171320; border: 2px solid #3a3050; border-radius: 6px;
+  width: 100%; padding: calc(5px * var(--s)); text-align: left;
+  box-shadow: 0 10px 30px rgba(0,0,0,.6);
+}
+.panel-card .panel-head {
+  font-size: calc(6px * var(--s)); letter-spacing: .1em; color: var(--gold);
+  padding: 0 0 calc(3px * var(--s)); border-bottom: 1px solid var(--edge); margin-bottom: calc(3px * var(--s));
+}
+.panel-card .panel-body { font-size: calc(5px * var(--s)); color: #c3b9d4; line-height: 1.5; }
+.panel-card .panel-body p { margin: 0 0 calc(3px * var(--s)); }
+.wb-row { display: flex; justify-content: space-between; gap: calc(4px * var(--s)); padding: 1px 0; }
+.wb-row b { color: var(--ink); }
+.wb-row .cap { color: #ec9a80; font-style: normal; font-size: .85em; }
+.panel-card .flavor { color: #8d85a0; margin-top: calc(3px * var(--s)); }
+.panel-card .score {
+  margin-top: calc(3px * var(--s)); text-align: center;
+  font-size: calc(8px * var(--s)); font-weight: 700; color: var(--gold); letter-spacing: .08em;
+}
+.panel-btn {
+  display: block; width: 100%; margin-top: calc(4px * var(--s));
+  min-height: 44px; font: inherit; font-weight: 700; font-size: calc(6px * var(--s));
+  color: #1a1410; background: linear-gradient(#f4cf6a, #d8a52f);
+  border: 0; border-bottom: 3px solid #8a6414; border-radius: 6px; cursor: pointer;
+}
+.panel-btn:active { transform: translateY(1px); border-bottom-width: 2px; }
+
+/* buy button gets a second line: the ETA at the current passive rate */
+.buy { display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; }
+.buy .price { white-space: nowrap; }
+.buy .unit { font-size: .75em; opacity: .7; margin-left: 2px; }
+.buy .eta { font-size: calc(4px * var(--s)); font-weight: 400; opacity: .8; margin-top: 1px; }
+.row.locked .buy .eta { color: #9a90b8; }

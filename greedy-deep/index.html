@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>Greedy Deep — Click it! Studios</title>
 <meta name="description" content="Dwarves dig down. You tap the vein. Gold buys picks, crew, and deeper reach. A free browser idle game from Click it! Studios.">
-<link rel="stylesheet" href="style.css?v=3">
+<link rel="stylesheet" href="style.css?v=5">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%23241f2b'/><text x='50' y='70' font-size='56' text-anchor='middle'>⛏️</text></svg>">
 </head>
 <body class="booting">
@@ -30,21 +30,40 @@
   <div id="shaftwrap">
     <canvas id="shaft"></canvas>
     <div id="hint">tap the vein &#9656;</div>
+    <div id="bandintro" class="hidden"></div>
     <pre id="dbg" class="hidden"></pre>
+
+    <div id="welcome" class="overlay hidden">
+      <div class="panel-card">
+        <div class="panel-head">THE CREW KEPT DIGGING</div>
+        <div class="panel-body"></div>
+        <button class="panel-btn" type="button">GOOD</button>
+      </div>
+    </div>
+
+    <div id="ending" class="overlay hidden">
+      <div class="panel-card">
+        <div class="panel-head">—</div>
+        <div class="panel-body"></div>
+        <button class="panel-btn" type="button">KEEP DIGGING</button>
+      </div>
+    </div>
   </div>
+
+  <div id="log"></div>
 
   <div id="panel">
     <div id="panel-head">THE COMPANY STORE</div>
     <div id="shop"></div>
   </div>
 
-  <div id="foot">Greedy Deep — M1 core loop. Placeholder art; the mine gets its face in M3.</div>
+  <div id="foot">Greedy Deep — M2 engine and content. Placeholder art; the mine gets its face in M3.</div>
 </div>
 
-<script src="src/engine.js?v=2"></script>
-<script src="src/save.js?v=2"></script>
-<script src="src/gd.js?v=3"></script>
-<script src="src/render.js?v=2"></script>
-<script src="src/ui.js?v=4"></script>
+<script src="src/engine.js?v=3"></script>
+<script src="src/save.js?v=3"></script>
+<script src="src/gd.js?v=6"></script>
+<script src="src/render.js?v=3"></script>
+<script src="src/ui.js?v=5"></script>
 </body>
 </html>
