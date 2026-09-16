@@ -200,6 +200,15 @@
     }
   }
 
+  // GD._clearSave() calls this: drop the pending autosave and the leftover sim
+  // accumulator so nothing from the cleared run can be written back.
+  UI.afterClearSave = function () {
+    autosaveT = 0;
+    acc = 0;
+    if (els.hint) els.hint.classList.remove("gone");
+    refresh();
+  };
+
   UI.refresh = refresh;
   UI.layout = layout;
 

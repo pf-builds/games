@@ -108,8 +108,18 @@
     };
     GD.pause = function () { GD.paused = true; };
     GD.resume = function () { GD.paused = false; };
-    GD.clearSave = function () { return window.GDSave.clear(GD.config); };
+    GD.clearSave = function () { return GD._clearSave(); };
   }
+
+  // Clearing the key alone is not enough: the live state keeps ticking and the 5 s
+  // autosave heartbeat (or visibilitychange on navigate) writes the old run straight
+  // back. Reset the live state too, and tell the UI to drop its pending autosave.
+  GD._clearSave = function () {
+    var ok = window.GDSave.clear(GD.config);
+    GD.state = E.newState(GD.config);
+    if (window.GDUI && window.GDUI.afterClearSave) window.GDUI.afterClearSave();
+    return ok;
+  };
 
   // -------------------------------------------------- selfTest (PRD 14, M1 block)
   function approx(a, b, eps) { return Math.abs(a - b) <= (eps === undefined ? 1e-6 : eps); }
@@ -216,6 +226,22 @@
       check("step_additive_gold", big.gold, many.gold, approx(big.gold, many.gold, 1e-6));
       check("step_additive_depth", big.depth, many.depth, approx(big.depth, many.depth, 1e-6));
       check("step_additive_total", big.goldEarnedTotal, many.goldEarnedTotal, approx(big.goldEarnedTotal, many.goldEarnedTotal, 1e-6));
+
+      // --- 10b. clearSave leaves nothing to resurrect (critic M1, MAJOR)
+      GD.reset();
+      GD.grantForTest(dwarf.id, 1);
+      GD.state.gold = 777;
+      window.GDSave.write(cfg, GD.state);
+      GD._clearSave();
+      GD.step(5);
+      var afterClear = window.GDSave.readRaw(cfg);
+      var parsedClear = null;
+      try { parsedClear = afterClear ? JSON.parse(afterClear) : null; } catch (e) { parsedClear = null; }
+      var freshAfterClear = !parsedClear ||
+        (parsedClear.gold === 0 && parsedClear.depth === 0 && Object.keys(parsedClear.owned || {}).length === 0);
+      check("clear_save_key_absent_or_fresh", "absent or fresh state", afterClear, freshAfterClear);
+      check("clear_save_resets_live_state", "gold 0, no owned", GD.state.gold + "/" + JSON.stringify(GD.state.owned),
+        GD.state.gold === 0 && Object.keys(GD.state.owned).length === 0);
 
       // --- 11. config validates
       var v = GD.validateConfig();

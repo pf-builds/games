@@ -57,3 +57,9 @@ quests, backend, accounts, cloud save, leaderboards, ads, IAP, timers, real proc
   Worth re-checking against real late-game numbers once M2's curve exists.
 - Autosave writes on every purchase as well as on the 5 s timer. If M2's event system adds more
   write points, move to a dirty flag.
+- **fps readout owed a real-device check (M1 critic, MINOR).** After a cold `?debug=1` load in the
+  Browser pane, `GD.dbg.fps` read 0 for a long stretch while `t` and `depth` advanced correctly;
+  it read a steady 60 from the first interaction onward. fps is only computed inside `frame()`,
+  never in the hidden-tab `simOnly()` path, so this looks like the pane not pumping rAF until the
+  tab is painted. Spot-check on a real phone and a real desktop tab before M3/M4 lean on the
+  readout for the 50 fps quality bar.
