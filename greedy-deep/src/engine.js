@@ -286,6 +286,7 @@
   // ------------------------------------------------------------ tick
   E.substep = function (cfg, state, dt, ctx) {
     var d = E.derive(cfg, state);
+    var depthBefore = state.depth;
     state.depth += d.digRate * dt;
     var g = d.goldRate * dt;
     state.gold += g;
@@ -304,7 +305,9 @@
     if (nb.id !== state.bandId) {
       var prev = state.bandId;
       state.bandId = nb.id;
-      if (ctx && ctx.onBand) ctx.onBand(nb, prev, state);
+      // prevDepth + dt let the caller interpolate the crossing back to the exact
+      // JSON startDepth instead of logging wherever the tick happened to land.
+      if (ctx && ctx.onBand) ctx.onBand(nb, prev, state, { prevDepth: depthBefore, dt: dt });
     }
 
     E.checkMilestone(cfg, state, ctx);
@@ -409,8 +412,9 @@
   // Depth is the binding constraint on the ending, so digRate is weighted heavily.
   function ratioPick(cfg, state) {
     var list = cat(cfg);
+    var W = cfg.sim.ratioDepthWeight;   // JSON, not a literal: PRD 12 content-as-data
     var base = E.derive(cfg, state);
-    var baseScore = base.digRate * 1000 + base.goldRate;
+    var baseScore = base.digRate * W + base.goldRate;
     var best = null, bestVal = 0;
     var probe = { t: state.t, depth: state.depth, gold: 0, goldEarnedTotal: 0, owned: null, timed: state.timed };
     for (var i = 0; i < list.length; i++) {
@@ -422,7 +426,7 @@
       state.owned[id] = saved + 1;
       var d = E.derive(cfg, state);
       state.owned[id] = saved;
-      var val = (d.digRate * 1000 + d.goldRate - baseScore) / c;
+      var val = (d.digRate * W + d.goldRate - baseScore) / c;
       if (val > bestVal) { bestVal = val; best = list[i]; }
     }
     return best;
@@ -449,7 +453,7 @@
     var state = opts.state ? E.cloneState(opts.state) : E.newState(cfg);
     var purchases = [], bandLog = [], samples = [], events = 0;
     var ctx = {
-      rng: E.makeRng(opts.seed === undefined ? 1337 : opts.seed),
+      rng: E.makeRng(opts.seed === undefined ? (cfg.sim.seed || 1) : opts.seed),
       onEvent: function () { events++; },
       onBand: null
     };
@@ -460,14 +464,21 @@
     var startBand = E.bandAt(cfg, state.depth);
     bandLog.push({ band: startBand.id, index: startBand.index, depth: state.depth, t: 0, goldRateBefore: 0, goldRateAfter: 0, stepRatio: 1, goldPerMeter: startBand.goldPerMeter });
 
-    ctx.onBand = function (nb, prevId, st) {
+    ctx.onBand = function (nb, prevId, st, info) {
       var prev = bandLog[bandLog.length - 1];
       var before = prev.goldPerMeter, after = nb.goldPerMeter;
       // income step is measured at the boundary: goldRate is digRate x gpm x goldMul, and
       // digRate/goldMul are continuous across a boundary, so the step IS the gpm ratio.
       var d = E.derive(cfg, st);
+      // Log the crossing at the exact JSON startDepth with the interpolated tick time,
+      // not wherever the whole-dt step happened to land (critic M2, MINOR 1).
+      var t = st.t;
+      if (info && info.dt > 0 && st.depth > info.prevDepth) {
+        var frac = (nb.startDepth - info.prevDepth) / (st.depth - info.prevDepth);
+        if (frac >= 0 && frac <= 1) t = st.t - info.dt + frac * info.dt;
+      }
       bandLog.push({
-        band: nb.id, index: nb.index, depth: st.depth, t: st.t,
+        band: nb.id, index: nb.index, depth: nb.startDepth, tickDepth: st.depth, t: t,
         goldPerMeter: after,
         goldRateBefore: d.digRate * before * d.goldMul,
         goldRateAfter: d.goldRate,
@@ -646,6 +657,16 @@
     if (!(cfg.endless.bandLengthM > 0)) errors.push("endless.bandLengthM must be > 0");
     if (!(cfg.endless.multiplierPerBand > 1)) errors.push("endless.multiplierPerBand must be > 1");
 
+    if (!(cfg.sim.ratioDepthWeight > 0)) errors.push("sim.ratioDepthWeight must be > 0");
+    if (!(cfg.sim.seed >= 0)) errors.push("sim.seed must be >= 0");
+    var lan = cfg.lantern;
+    if (!lan) errors.push("missing block: lantern");
+    else {
+      if (!(lan.forwardTilesPerLevel >= 0)) errors.push("lantern.forwardTilesPerLevel must be >= 0");
+      if (!(lan.minFaceYBu > 0 && lan.minFaceYBu <= cfg.layout.faceYBu)) errors.push("lantern.minFaceYBu must be 0..layout.faceYBu");
+      if (!(lan.veilAlphaPerLevel >= 0)) errors.push("lantern.veilAlphaPerLevel must be >= 0");
+      if (!(lan.veilAlphaFloor >= 0 && lan.veilAlphaFloor <= cfg.veil.alpha)) errors.push("lantern.veilAlphaFloor must be 0..veil.alpha");
+    }
     if (!(cfg.format.activeSuffixes >= 1)) errors.push("format.activeSuffixes must be >= 1");
     if (cfg.format.activeSuffixes > cfg.format.suffixes.length) errors.push("format.activeSuffixes exceeds suffixes list");
 

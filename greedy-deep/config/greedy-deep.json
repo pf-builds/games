@@ -1,5 +1,5 @@
 {
-  "configVersion": 2,
+  "configVersion": 3,
   "title": "Greedy Deep",
   "start": {
     "gold": 0,
@@ -13,7 +13,9 @@
     "clicksPerSecond": 2,
     "policy": "cheapest-affordable",
     "maxSeconds": 14400,
-    "sampleSeconds": 60
+    "sampleSeconds": 60,
+    "seed": 1,
+    "ratioDepthWeight": 1000
   },
   "format": {
     "sigFigs": 3,
@@ -404,10 +406,17 @@
     "floaterSeconds": 0.9,
     "floaterRiseBu": 22,
     "maxFloaters": 24,
-    "teaseOffsetM": 6
+    "teaseOffsetM": 6,
+    "aboveFaceBu": 48
   },
   "debug": {
     "fallbackClockMs": 33,
     "staleFrameMs": 60
+  },
+  "lantern": {
+    "forwardTilesPerLevel": 3,
+    "minFaceYBu": 88,
+    "veilAlphaPerLevel": 0.12,
+    "veilAlphaFloor": 0.25
   }
 }

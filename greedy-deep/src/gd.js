@@ -14,7 +14,7 @@
       t: 0, depth: 0, band: "-", bandIndex: 0, gold: 0, goldRate: 0, digRate: 0, dwarves: 0,
       owned: {}, fps: 0, saveSize: 0, errors: 0, warnings: 0, lastError: "",
       lastEvent: "", eventsFired: 0, revealBonus: 0, timed: 0, flavorTodoCount: 0,
-      maxRenderedBandIndex: 0, offlineLast: null
+      maxRenderedBandIndex: 0, forwardMeters: 0, veilAlpha: 0, nextBands: 0, offlineLast: null
     },
     // The live loop passes these through to the engine so the UI can react to
     // events, band changes and the ending without the engine knowing about DOM.
@@ -43,6 +43,7 @@
     GD.config = cfg;
     var v = E.validateConfig(cfg);
     if (!v.ok) console.error("[GD] config invalid:", v.errors.join(" | "));
+    E.setSeed(cfg.sim.seed === undefined ? 1 : cfg.sim.seed);
     var loaded = window.GDSave.read(cfg);
     GD.state = loaded || E.newState(cfg);
     GD.loadedFromSave = !!loaded;
@@ -66,7 +67,11 @@
     return { ok: true };
   };
 
+  // reset() also reseeds the shared event rng to config.sim.seed, so
+  // `reset(); step(3600)` equals `reset(); 3600 x step(1)` with no extra ceremony.
+  // GD.seed(n) overrides it until the next reset (critic M2, MINOR 2).
   GD.reset = function () {
+    E.setSeed(GD.config.sim.seed === undefined ? 1 : GD.config.sim.seed);
     GD.state = E.newState(GD.config);
     return E.snapshot(GD.config, GD.state);
   };
@@ -172,7 +177,13 @@
     GD.dbg.eventsFired = GD.state.eventsFired;
     GD.dbg.revealBonus = d.revealBonus;
     GD.dbg.timed = GD.state.timed.length;
-    if (window.GDRender && window.GDRender.lastPlan) GD.dbg.maxRenderedBandIndex = window.GDRender.lastPlan().maxIndex;
+    if (window.GDRender && window.GDRender.lastPlan) {
+      var pl = window.GDRender.lastPlan();
+      GD.dbg.maxRenderedBandIndex = pl.maxIndex;
+      GD.dbg.forwardMeters = pl.forwardMeters || 0;
+      GD.dbg.veilAlpha = pl.veilAlpha || 0;
+      GD.dbg.nextBands = (pl.nextBands || []).length;
+    }
     if (fps !== undefined) GD.dbg.fps = fps;
   };
 
@@ -294,8 +305,18 @@
       seedOwned[track.id] = 3; seedOwned[dwarf.id] = 5;
       if (cfg.tracks[1]) seedOwned[cfg.tracks[1].id] = 2;
 
-      // Events roll off a module-level rng, so additivity is only meaningful with the
-      // same seed on both runs. Determinism-by-seed is asserted separately below.
+      // reset() reseeds, so the invariant holds with no explicit GD.seed() call.
+      GD.reset(); GD.state.owned = JSON.parse(JSON.stringify(seedOwned));
+      var addA = GD.step(3600);
+      GD.reset(); GD.state.owned = JSON.parse(JSON.stringify(seedOwned));
+      for (var ja = 0; ja < 3600; ja++) GD.step(1);
+      var addB = GD.snapshot();
+      check("m1_reset_reseeds_for_additivity", addA.gold, addB.gold, approx(addA.gold, addB.gold, 1e-6) && approx(addA.depth, addB.depth, 1e-6));
+      check("m1_reset_reseeds_rng", GD.config.sim.seed, (function () { GD.reset(); var x = E.rng(); GD.reset(); return E.rng() === x ? GD.config.sim.seed : "different"; })(),
+        (function () { GD.reset(); var x = E.rng(); GD.reset(); return E.rng() === x; })());
+
+      // Determinism-by-seed is asserted separately below; seeding here keeps the timing
+      // half of this comparison independent of the reset path.
       GD.seed(4242);
       GD.setState({ owned: seedOwned });
       var t0 = performance.now();
@@ -361,17 +382,18 @@
       check("m2_ten_purchases_in_600s", ">= 10", sim.purchasesFirst600, sim.purchasesFirst600 >= 10);
 
       // --- bandLog boundaries equal the JSON startDepth values
+      // PRD 14 says the boundaries EQUAL the JSON startDepth values. The log now
+      // interpolates the crossing back to the boundary, so this is exact equality.
       var boundaryBad = [];
       for (var bi = 1; bi < sim.bandLog.length; bi++) {
         var entry = sim.bandLog[bi];
-        var ore = null;
-        for (var oi = 0; oi < cfg.ores.length; oi++) if (cfg.ores[oi].id === entry.band) ore = cfg.ores[oi];
-        if (!ore) continue; // endless repeats are synthesized, checked separately
-        if (!(entry.depth >= ore.startDepth && entry.depth < ore.startDepth + 5)) {
-          boundaryBad.push(entry.band + "@" + entry.depth.toFixed(2) + " want " + ore.startDepth);
-        }
+        var band = E.bandByIndex(cfg, entry.index);
+        if (!band) { boundaryBad.push(entry.band + ": no band at index " + entry.index); continue; }
+        if (entry.depth !== band.startDepth) boundaryBad.push(entry.band + "@" + entry.depth + " want " + band.startDepth);
+        if (!(entry.t > sim.bandLog[bi - 1].t)) boundaryBad.push(entry.band + ": crossing time not increasing");
+        if (!(entry.tickDepth >= band.startDepth)) boundaryBad.push(entry.band + ": tickDepth behind the boundary");
       }
-      check("m2_bandlog_matches_startdepths", "all within 5 m of JSON startDepth", boundaryBad.join(" | "), boundaryBad.length === 0);
+      check("m2_bandlog_equals_startdepths_exactly", "exact JSON startDepth on every crossing", boundaryBad.join(" | "), boundaryBad.length === 0);
 
       // --- band income step within 10% of the goldPerMeter ratio
       var stepBad = [];
@@ -389,6 +411,7 @@
         simNone.purchaseCount === 0 && simNone.finalDepth === 0);
       var simRatio = GD.simulate({ policy: "ratio", maxSeconds: 3600 });
       check("m2_policy_ratio_runs", "purchases > 0", simRatio.purchaseCount, simRatio.purchaseCount > 0);
+      check("m2_ratio_weight_lives_in_json", "a number in cfg.sim", cfg.sim.ratioDepthWeight, typeof cfg.sim.ratioDepthWeight === "number" && cfg.sim.ratioDepthWeight > 0);
       check("m2_unknown_policy_errors", "an error object", JSON.stringify(GD.simulate({ policy: "nope" })),
         !!GD.simulate({ policy: "nope" }).error);
 
@@ -528,6 +551,45 @@
           teasePlan.indices.indexOf(1) !== -1 && teasePlan.cutoffIndex === 1);
         var veiled = window.GDRender.bandPlan(38, 0).veiledIndices;
         check("m2_next_band_is_veiled", "[1]", JSON.stringify(veiled), veiled.length === 1 && veiled[0] === 1);
+
+        // --- Deep Lantern must be observable the moment it is bought, at EVERY depth,
+        // not only where a band boundary happens to fall inside the viewport (critic MAJOR).
+        var lanternBad = [];
+        var lanternProbes = [0, 20, 35, 120, 200, 400, 590, 800, 1199, 1600];
+        for (var li = 0; li < lanternProbes.length; li++) {
+          var d0 = lanternProbes[li];
+          var p0 = JSON.parse(JSON.stringify(window.GDRender.bandPlan(d0, 0)));
+          var p1 = JSON.parse(JSON.stringify(window.GDRender.bandPlan(d0, 1)));
+          var p2 = JSON.parse(JSON.stringify(window.GDRender.bandPlan(d0, 2)));
+          var differs01 = p1.indices.length > p0.indices.length || p1.veilAlpha < p0.veilAlpha ||
+            p1.forwardBiasBu > p0.forwardBiasBu || p1.nextBands.length > p0.nextBands.length;
+          var differs12 = p2.indices.length > p1.indices.length || p2.veilAlpha < p1.veilAlpha ||
+            p2.forwardBiasBu > p1.forwardBiasBu || p2.nextBands.length > p1.nextBands.length;
+          if (!differs01) lanternBad.push("d=" + d0 + " level 1 changes nothing");
+          if (!differs12) lanternBad.push("d=" + d0 + " level 2 changes nothing");
+          if (JSON.stringify(p0) === JSON.stringify(p1)) lanternBad.push("d=" + d0 + " plan identical at 0 vs 1");
+        }
+        check("m2_lantern_observable_at_every_depth", "plan differs for every extra reveal level", lanternBad.join(" | "), lanternBad.length === 0);
+
+        var l0 = window.GDRender.bandPlan(35, 0), lm0 = l0.forwardMeters, la0 = l0.veilAlpha, ln0 = l0.nextBands.length;
+        var l1 = window.GDRender.bandPlan(35, 1), lm1 = l1.forwardMeters, la1 = l1.veilAlpha, ln1 = l1.nextBands.length;
+        check("m2_lantern_widens_forward_view", "> " + lm0.toFixed(1) + " m", lm1.toFixed(1) + " m", lm1 > lm0);
+        check("m2_lantern_lifts_the_veil", "< " + la0, la1, la1 < la0);
+        check("m2_lantern_adds_a_next_band_line", ln0 + 1, ln1, ln1 === ln0 + 1);
+        check("m2_base_game_shows_one_next_band", 1, ln0, ln0 === 1);
+        var lFloor = window.GDRender.bandPlan(35, 20);
+        check("m2_lantern_veil_has_a_floor", cfg.lantern.veilAlphaFloor, lFloor.veilAlpha, lFloor.veilAlpha === cfg.lantern.veilAlphaFloor);
+        check("m2_lantern_face_has_a_floor", cfg.lantern.minFaceYBu, lFloor.faceYBu, lFloor.faceYBu === cfg.lantern.minFaceYBu);
+        check("m2_lantern_params_are_json_driven", "face from cfg.lantern", window.GDRender.effFaceY(1),
+          window.GDRender.effFaceY(1) === Math.max(cfg.lantern.minFaceYBu, cfg.layout.faceYBu - cfg.lantern.forwardTilesPerLevel * cfg.layout.tileBu));
+        if (window.GDUI && window.GDUI.nextBandsReport) {
+          GD.reset();
+          var nb0 = window.GDUI.nextBandsReport();
+          GD.grantForTest("lantern", 1);
+          var nb1 = window.GDUI.nextBandsReport();
+          check("m2_next_bands_readout_grows_with_lantern", nb0.lines + 1, nb1.lines, nb1.lines === nb0.lines + 1);
+          check("m2_next_bands_readout_names_the_ore", "a band name and its startDepth", nb1.text, /\d+\s*m/.test(nb1.text) && nb1.text.length > 0);
+        }
       } else {
         check("m2_renderer_exposes_bandPlan", "GDRender.bandPlan", "missing", false);
       }
@@ -571,7 +633,7 @@
         format: cfg.format, ores: cfg.ores, tracks: cfg.tracks, dwarves: cfg.dwarves,
         eventRules: cfg.eventRules, events: cfg.events, offline: cfg.offline,
         milestone: cfg.milestone, endless: cfg.endless, flavor: cfg.flavor, save: cfg.save,
-        layout: cfg.layout, veil: cfg.veil, vein: cfg.vein, debug: cfg.debug
+        layout: cfg.layout, veil: cfg.veil, vein: cfg.vein, debug: cfg.debug, lantern: cfg.lantern
       }));
       ext.ores.push({
         id: "voidglass", name: "Voidglass", startDepth: 2000, goldPerMeter: 400, pattern: "crystal",

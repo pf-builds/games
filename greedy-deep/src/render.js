@@ -55,19 +55,43 @@
   // --------------------------------------------------------------- geometry
   // The dig face sits at a fixed y. Everything above it is the dug-out bore,
   // everything below is rock the crew has not reached yet.
-  function faceY() { return cfg.layout.faceYBu; }
-  function yOfDepth(depth, current) { return faceY() + (depth - current) * cfg.layout.buPerMeter; }
-  function depthOfY(y, current) { return current + (y - faceY()) / cfg.layout.buPerMeter; }
+  //
+  // Deep Lantern (`reveal_bands`) raises the cutoff index, but on its own that was
+  // invisible: the viewport only looks ~26 m ahead and every band gap past the first
+  // is wider than that, so the extra revealed band could never enter frame (critic M2,
+  // MAJOR). Each level now buys three observable things, all JSON-tunable:
+  //   1. forward bias — the face rides higher, so more of what lies ahead is on screen
+  //   2. veil alpha   — revealed-but-unreached rock is dimmed less per level
+  //   3. next-bands   — one readout line per revealed band, independent of the viewport
+  function effFaceY(revealBonus) {
+    var L = cfg.layout, lan = cfg.lantern || {};
+    var bias = (revealBonus || 0) * (lan.forwardTilesPerLevel || 0) * L.tileBu;
+    var floorY = lan.minFaceYBu === undefined ? L.faceYBu : lan.minFaceYBu;
+    return Math.max(floorY, L.faceYBu - bias);
+  }
+  function effVeilAlpha(revealBonus) {
+    var lan = cfg.lantern || {};
+    var a = cfg.veil.alpha - (revealBonus || 0) * (lan.veilAlphaPerLevel || 0);
+    return Math.max(lan.veilAlphaFloor === undefined ? 0 : lan.veilAlphaFloor, a);
+  }
+  var curFaceY = null;   // the face the last draw() actually used, for hit-testing
+  function faceY() { return curFaceY === null ? cfg.layout.faceYBu : curFaceY; }
+  function yOfDepth(depth, current, fy) { return (fy === undefined ? faceY() : fy) + (depth - current) * cfg.layout.buPerMeter; }
+  function depthOfY(y, current, fy) { return current + (y - (fy === undefined ? faceY() : fy)) / cfg.layout.buPerMeter; }
+  R.effFaceY = effFaceY;
+  R.effVeilAlpha = effVeilAlpha;
 
   // --------------------------------------------------------------- band plan
   // Which bands this frame is allowed to draw, and which of them are veiled.
   // Pure: selfTest calls it directly rather than reading pixels.
   R.bandPlan = function (depth, revealBonus) {
+    revealBonus = revealBonus || 0;
     var current = E.bandAt(cfg, depth);
-    var cutoff = current.index + 1 + (revealBonus || 0);
+    var cutoff = current.index + 1 + revealBonus;
     var H = cfg.layout.shaftBu;
-    var top = depthOfY(0, depth);
-    var bottom = depthOfY(H, depth);
+    var fy = effFaceY(revealBonus);
+    var top = depthOfY(0, depth, fy);
+    var bottom = depthOfY(H, depth, fy);
     var indices = [], veiled = [], maxIndex = current.index;
     // Walk outward from the shallowest visible band to the deepest one allowed.
     var startIdx = Math.max(0, E.bandAt(cfg, Math.max(0, top)).index);
@@ -82,7 +106,26 @@
       if (i > maxIndex) maxIndex = i;
     }
     if (indices.indexOf(current.index) === -1) { indices.push(current.index); indices.sort(function (a, b2) { return a - b2; }); }
-    lastPlan = { indices: indices, veiledIndices: veiled, maxIndex: maxIndex, cutoffIndex: cutoff, currentIndex: current.index };
+
+    // Every band the lantern reveals, whether or not it fits in frame. This is what
+    // the readout and the ribbon draw from, so a second level always shows a second line.
+    var nextBands = [];
+    for (var k = current.index + 1; k <= cutoff; k++) {
+      var nb = E.bandByIndex(cfg, k);
+      if (!nb) break;
+      nextBands.push({ index: k, id: nb.id, name: nb.name, startDepth: nb.startDepth });
+    }
+
+    lastPlan = {
+      indices: indices, veiledIndices: veiled, maxIndex: maxIndex,
+      cutoffIndex: cutoff, currentIndex: current.index,
+      revealBonus: revealBonus,
+      faceYBu: fy,
+      forwardBiasBu: cfg.layout.faceYBu - fy,
+      forwardMeters: (H - fy) / cfg.layout.buPerMeter,
+      veilAlpha: effVeilAlpha(revealBonus),
+      nextBands: nextBands
+    };
     return lastPlan;
   };
   R.lastPlan = function () { return lastPlan; };
@@ -90,7 +133,8 @@
   // --------------------------------------------------------------- vein hotspot
   R.veinRect = function () {
     var v = cfg.vein;
-    return { x: v.xBu, y: v.yBu, w: v.wBu, h: v.hBu };
+    var y = v.aboveFaceBu === undefined ? v.yBu : (faceY() - v.aboveFaceBu);
+    return { x: v.xBu, y: Math.max(cfg.layout.tileBu * 2, y), w: v.wBu, h: v.hBu };
   };
 
   R.hitVein = function (cssX, cssY) {
@@ -102,9 +146,9 @@
   R.strike = function () { strikeT = cfg.vein.strikeFlashSeconds; };
 
   R.addFloater = function (text, color) {
-    var v = cfg.vein;
+    var v = cfg.vein, r = R.veinRect();
     if (floaters.length >= v.maxFloaters) floaters.shift();
-    floaters.push({ text: text, t: 0, color: color || "#ffe89a", x: v.xBu + v.wBu * 0.5 + (Math.random() * 8 - 4), y: v.yBu });
+    floaters.push({ text: text, t: 0, color: color || "#ffe89a", x: r.x + r.w * 0.5 + (Math.random() * 8 - 4), y: r.y });
   };
 
   R.update = function (dt) {
@@ -150,9 +194,9 @@
     }
   }
 
-  function drawVeil(y, h, x0, w) {
+  function drawVeil(y, h, x0, w, alpha) {
     var v = cfg.veil;
-    ctx.fillStyle = "rgba(" + v.color + "," + v.alpha + ")";
+    ctx.fillStyle = "rgba(" + v.color + "," + (alpha === undefined ? v.alpha : alpha) + ")";
     ctx.fillRect(x0, y, w, h);
     ctx.fillStyle = "rgba(" + v.color + "," + v.scanlineAlpha + ")";
     for (var yy = Math.ceil(y); yy < y + h; yy += 2) ctx.fillRect(x0, yy, w, 1);
@@ -166,12 +210,13 @@
     var boreX = wallW, boreW = L.boreTiles * T;  // 48..112
     var rightX = boreX + boreW;                  // 112
     var ribbonX = W - L.ribbonBu;
-    var fy = faceY();
     var depth = state.depth;
 
     var plan = R.bandPlan(depth, derived.revealBonus || 0);
     var cutoff = plan.cutoffIndex;
     var currentIndex = derived.band.index;
+    var fy = plan.faceYBu;
+    curFaceY = fy;   // hit-testing and floaters follow the face the lantern bought
 
     ctx.fillStyle = "#0a0810";
     ctx.fillRect(0, 0, W, H);
@@ -184,7 +229,7 @@
       var y = Math.round(fy + r * T - off) - T * Math.ceil(fy / T);
       if (y > H || y + T < 0) continue;
       var ty = rowTop + r - Math.ceil(fy / T);
-      var rowDepth = depthOfY(y + T / 2, depth);
+      var rowDepth = depthOfY(y + T / 2, depth, fy);
       var band = E.bandAt(cfg, Math.max(0, rowDepth));
       if (band.index > cutoff) continue;              // beyond the lantern: undrawn dark
 
@@ -226,8 +271,8 @@
     // ---- the veil: one overlay from the shallowest revealed-but-unreached band down
     if (plan.veiledIndices.length) {
       var firstVeiled = E.bandByIndex(cfg, plan.veiledIndices[0]);
-      var vy = Math.max(0, yOfDepth(firstVeiled.startDepth, depth));
-      if (vy < H) drawVeil(vy, H - vy, 0, W - L.ribbonBu);
+      var vy = Math.max(0, yOfDepth(firstVeiled.startDepth, depth, fy));
+      if (vy < H) drawVeil(vy, H - vy, 0, W - L.ribbonBu, plan.veilAlpha);
     }
 
     // ---- seams and the next band's tease vein
@@ -235,14 +280,14 @@
       var idx = plan.indices[pi];
       if (idx === 0) continue;
       var b = E.bandByIndex(cfg, idx);
-      var sy = yOfDepth(b.startDepth, depth);
+      var sy = yOfDepth(b.startDepth, depth, fy);
       if (sy < -8 || sy > H + 8) continue;
       drawSeam(b, sy, 0, W - L.ribbonBu);
       ctx.fillStyle = "rgba(0,0,0,.45)";
       ctx.fillRect(0, sy, W - L.ribbonBu, 1);
       if (idx > currentIndex) {
         // the tease: the next band's vein, glinting through the veil at half amplitude
-        var ty2 = yOfDepth(b.startDepth + cfg.vein.teaseOffsetM, depth);
+        var ty2 = yOfDepth(b.startDepth + cfg.vein.teaseOffsetM, depth, fy);
         if (ty2 > 0 && ty2 < H - 10) {
           ctx.fillStyle = b.veinColor;
           ctx.globalAlpha = 0.55;
@@ -347,8 +392,10 @@
     ctx.fillRect(ribbonX + 1, 0, L.ribbonBu - 2, H);
     ctx.fillStyle = "#c9a227";
     ctx.fillRect(ribbonX + 1, 0, L.ribbonBu - 2, Math.round(frac * H));
+    // Only bands the lantern has revealed get a tick. A second Deep Lantern level puts a
+    // second mark on the ribbon; without one, the deeper boundaries stay secret.
     ctx.fillStyle = "rgba(255,255,255,.14)";
-    for (var oi = 0; oi < cfg.ores.length; oi++) {
+    for (var oi = 0; oi <= Math.min(cutoff, cfg.ores.length - 1); oi++) {
       var m = Math.round((cfg.ores[oi].startDepth / cfg.milestone.depth) * H);
       if (m >= 0 && m < H) ctx.fillRect(ribbonX, m, L.ribbonBu, 1);
     }

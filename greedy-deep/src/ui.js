@@ -3,7 +3,7 @@
 (function () {
   "use strict";
 
-  var CONFIG_VERSION = 3; // JSON cache-bust, deliberately separate from the script tags (lesson 26)
+  var CONFIG_VERSION = 4; // JSON cache-bust, deliberately separate from the script tags (lesson 26)
 
   var UI = (window.GDUI = {});
   var E = window.GDEngine, GD = window.GD;
@@ -38,6 +38,7 @@
     els.log = $("log");
     els.welcome = $("welcome");
     els.ending = $("ending");
+    els.nextbands = $("nextbands");
 
     GD.hooks.onEvent = onEvent;
     GD.hooks.onBand = onBand;
@@ -141,11 +142,22 @@
     s = Math.max(L.minScale, Math.min(L.maxScale, s || L.minScale));
     document.documentElement.style.setProperty("--s", s);
     window.GDRender.resize(s);
-    if (els.hint) {
-      var v = window.GDRender.veinRect();
-      els.hint.style.left = ((v.x - 2) * s) + "px";
-      els.hint.style.top = ((v.y + v.h / 2) * s) + "px";
-    }
+    placeHint();
+  }
+
+  // The vein rides a fixed distance above the dig face, and the face moves when a
+  // Deep Lantern is bought, so the hint has to follow it rather than sit where boot
+  // left it.
+  var hintKey = "";
+  function placeHint() {
+    if (!els.hint) return;
+    var s = window.GDRender.scale();
+    var v = window.GDRender.veinRect();
+    var key = s + ":" + v.x + ":" + v.y;
+    if (key === hintKey) return;
+    hintKey = key;
+    els.hint.style.left = ((v.x - 2) * s) + "px";
+    els.hint.style.top = ((v.y + v.h / 2) * s) + "px";
   }
 
   // ------------------------------------------------------------ shop
@@ -290,6 +302,8 @@
         r.eta.textContent = isFinite(eta) ? E.formatEta(eta) : "—";
       }
     }
+    renderNextBands(d);
+    placeHint();
     GD.refreshDbg(fps);
     if (GD.debug && els.overlay) {
       els.overlay.textContent =
@@ -298,13 +312,45 @@
         "\ngold " + st.gold.toFixed(2) + "  +" + d.goldRate.toFixed(3) + "/s" +
         "\nm/s " + d.digRate.toFixed(4) + "  tap " + d.goldPerTap.toFixed(2) +
         "\ntotal " + st.goldEarnedTotal.toFixed(1) + "  crew " + d.dwarves +
-        "\nreveal +" + d.revealBonus + "  drawn<=" + GD.dbg.maxRenderedBandIndex + "  timed " + st.timed.length +
+        "\nreveal +" + d.revealBonus + "  drawn<=" + GD.dbg.maxRenderedBandIndex +
+          "  fwd " + GD.dbg.forwardMeters.toFixed(0) + "m  veil " + GD.dbg.veilAlpha.toFixed(2) +
+        "\ntimed " + st.timed.length +
         "\nev " + st.eventsFired + " last " + (st.lastEvent || "-") +
         "\nowned " + JSON.stringify(st.owned) +
         "\nsave " + GD.dbg.saveSize + "b  err " + GD.dbg.errors + "/" + GD.dbg.warnings +
         "\nFLAVOR-TODO " + GD.dbg.flavorTodoCount;
     }
   }
+
+  // The "next bands" readout. One line per band the lantern reveals, i.e. everything
+  // through `d + 1 + revealBonus`, drawn from the render plan rather than the viewport
+  // so a second Deep Lantern always shows a second line (critic M2, MAJOR).
+  var lastNextKey = "";
+  function renderNextBands(d) {
+    if (!els.nextbands) return;
+    var plan = window.GDRender.bandPlan(GD.state.depth, d.revealBonus || 0);
+    var key = plan.nextBands.map(function (b) { return b.id; }).join("|");
+    if (key === lastNextKey) return;   // no per-frame DOM churn
+    lastNextKey = key;
+    var html = "";
+    for (var i = 0; i < plan.nextBands.length; i++) {
+      var b = plan.nextBands[i];
+      html += '<div class="nb"><span class="nb-k">' + (i === 0 ? "NEXT" : "THEN") + '</span>' +
+        '<span class="nb-n">' + b.name + '</span>' +
+        '<span class="nb-d">' + b.startDepth + ' m</span></div>';
+    }
+    els.nextbands.innerHTML = html;
+  }
+
+  UI.nextBandsReport = function () {
+    var d = GD.derive();
+    lastNextKey = "";
+    renderNextBands(d);
+    return {
+      lines: els.nextbands ? els.nextbands.querySelectorAll(".nb").length : 0,
+      text: els.nextbands ? els.nextbands.textContent.replace(/\s+/g, " ").trim() : ""
+    };
+  };
 
   // Shape report for selfTest: how many rows, which ids, and whether every locked
   // row is actually printing a price and an ETA.
@@ -326,6 +372,7 @@
   UI.rebuild = function () {
     cfg = GD.config;
     if (!els.shop) return;
+    lastNextKey = "";
     buildShop();
     refresh();
   };

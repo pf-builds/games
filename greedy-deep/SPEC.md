@@ -56,6 +56,35 @@ list fails `GD.validateConfig()` loud.
 wall-clock, so a paused or fast-forwarded game behaves the same. `add_depth` is instantaneous: it is
 applied through the registry once and never enters a derived stat block.
 
+## Deep Lantern and the reveal rule
+`reveal_bands` raises the render cutoff to `d + 1 + revealBonus`, exactly as PRD §14 says. On its own
+that was invisible: the viewport only looks ~26 m ahead and every band gap past the first is wider
+(copper→silver 140 m, silver→starmetal 420 m), so the extra revealed band could never enter frame at
+any depth. Each Lantern level now buys three things, all driven by the JSON `lantern` block, all
+visible the moment it is bought:
+
+| knob | effect | shipped |
+|---|---|---|
+| `forwardTilesPerLevel` | the dig face rides higher, so more of what lies ahead is on screen | 3 tiles (26 m → 38 m → 42 m of look-ahead) |
+| `minFaceYBu` | floor on that bias, so the face never climbs into the depth readout | 88 bu |
+| `veilAlphaPerLevel` | the next-band veil lifts, so revealed ore glints brighter through it | 0.12 (0.62 → 0.50 → 0.38) |
+| `veilAlphaFloor` | floor on the veil, so unreached rock is never fully lit | 0.25 |
+
+Plus a **next-bands readout** under the shaft: one line per band through `d + 1 + revealBonus`
+("NEXT Green Copper 40 m", then "THEN Moonsilver 180 m" with one Lantern). It is built from the plan's
+`nextBands`, not from the viewport, so a second level always adds a second line no matter how far the
+boundary is. The depth ribbon's boundary ticks are clipped to the same cutoff, so an unrevealed
+boundary is not leaked there either.
+
+`bandPlan(depth, revealBonus)` therefore returns the render parameters as well as the band list:
+`{indices, veiledIndices, maxIndex, cutoffIndex, currentIndex, revealBonus, faceYBu, forwardBiasBu,
+forwardMeters, veilAlpha, nextBands[]}`. `selfTest` probes ten depths and requires the plan to differ
+between revealBonus 0, 1 and 2 on at least one of band count, veil alpha, forward bias or readout
+length — a list length the viewport cannot show is not enough.
+
+The vein hotspot rides `vein.aboveFaceBu` above the face rather than at a fixed y, so it stays on open
+wall as the face lifts; hit-testing, floaters and the tap hint all read the same rect.
+
 ## Bands and endless
 `ores[]` is the band table; `startDepth` of the next entry ends this one. Past the deepest ore,
 `endless {bandLengthM, multiplierPerBand}` repeats that band forever with `goldPerMeter` multiplied per
@@ -118,8 +147,14 @@ M2 adds the headless harness and the mutators the PRD §13 names:
 - `GD.offlinePreview(ms, state?)` (pure) and `GD.applyOffline(ms)` (mutating).
 - `GD.fire(eventId)`, `GD.jumpTo(depth)`, `GD.seed(n)`.
 - `GD.hooks = {onEvent, onBand, onEnding}` — how the UI hears about events, band entry and the ending
-  without the engine importing any DOM. `selfTest` mutes them for its run so a test never leaves a
-  panel or a log line behind.
+  without the engine importing any DOM. `onBand` also receives `{prevDepth, dt}` so a caller can
+  interpolate the crossing back to the exact boundary. `selfTest` mutes the hooks for its run so a
+  test never leaves a panel or a log line behind.
+- `GD.reset()` reseeds the shared event rng to `sim.seed` (JSON, default 1), so
+  `reset(); step(3600)` equals `reset(); 3600 x step(1)` with no extra ceremony. `GD.seed(n)`
+  overrides it until the next reset.
+- `simulate().bandLog` records each crossing at the **exact** JSON `startDepth` with the interpolated
+  tick time; the tick's own overshoot is kept alongside as `tickDepth`.
 
 `?debug=1` adds the overlay plus `setGold`, `setDepth`, `grant`, `pause`, `resume`, `timeScale`,
 `clearSave`, and a guarded fallback interval clock so hidden tabs keep simulating.
@@ -133,17 +168,18 @@ resurrected by autosave - snapshot shape - config validates - console clean.
 
 **M2 block:** all 12 verbs registered - 4/8/4/3 content counts - `simulate` reaches 1,200 m with
 `reachedAtSeconds` in 5,400-10,800 and the call under 20 s - `maxGapSeconds < 300` - >=10 purchases in
-the first 600 s - `bandLog` boundaries land on the JSON `startDepth` values - every band income step is
+the first 600 s - `bandLog` boundaries equal the JSON `startDepth` values exactly - every band income step is
 within 10% of the `goldPerMeter` ratio - `policy: none` never digs, `policy: ratio` buys, an unknown
-policy errors - `simulate` is deterministic for a seed - `offlinePreview(8h) === offlinePreview(24h) ===
+policy errors - `simulate` is deterministic for a seed - `reset()` reseeds so additivity holds without an explicit `seed()` - `offlinePreview(8h) === offlinePreview(24h) ===
 goldRate x capSeconds x 0.5` - `offlinePreview(30s) === 0` - negative and absurd deltas clamp -
 Elevator extends the cap and lifts the rate - `applyOffline` matches its preview - `fire('cave_in')`
 moves depth exactly -5 m and logs its line - gas pocket halves the rate and expires - rich seam triples
 gold - `minDepth` gates the shallow pool - Shaft Braces scale hazard weights by `0.9^n` and leave
 non-hazards alone - offline fires no events - the milestone sets `endingSeen`, records
 `goldEarnedTotal + depth x 100`, fires once, and the game continues - endless bands start after the last
-ore and compound the multiplier - the renderer never draws past band `d + 1 + revealBonus` and does draw
-the next band above a seam, veiled - ETA is `(cost - gold) / goldRate`, Infinity (rendered as an em dash)
+ore and compound the multiplier - the renderer never draws past band `d + 1 + revealBonus`, does draw
+the next band above a seam veiled, and **changes observably at ten probe depths for every extra reveal
+level** (forward view, veil alpha, readout lines), with both floors respected - ETA is `(cost - gold) / goldRate`, Infinity (rendered as an em dash)
 while the rate is 0, zero when affordable - every shop row carries a price and, when locked, an ETA -
 no Tolkien Appendix A name anywhere in the shipped content - **a fifth ore and a fifth dwarf injected as
 JSON with no JS edit produce a new band, a new hireable row in the shop, and a correct render plan** -
@@ -186,7 +222,7 @@ time-to-first-purchase and time-to-first-hire, then rounded to designer-friendly
 | `nix` base / ratio / value | 4,000 / 1.16 / 0.4 | **150,000 / 2.6 / 0.6** | Nix is the endgame unlock, bought once near 1,200 m, not before starmetal |
 | `goldPerMeter` | 1 / 6 / 40 / 300 | **1 / 5 / 15 / 75** | 300x of exogenous income growth over a 1,200 m run overwhelms any cost curve; 75x keeps the band steps feeling big (x5, x3, x5) without handing out 13 free levels on every track at once |
 
-Not touched: band `startDepth` (40 / 180 / 600), `milestone.depth` 1200, `sim` block, `offline` block,
+Not touched: band `startDepth` (40 / 180 / 600), `milestone.depth` 1200, the tunable `sim` values, `offline` block,
 `endless`, all event numbers, and every effect verb. `pick.base` and the `goldPerMeter` column are the
 only PRD table values changed for reasons other than curve shape.
 
@@ -194,17 +230,20 @@ only PRD table values changed for reasons other than curve shape.
 
 | policy | reaches 1,200 m | maxGap | purchases | in first 600 s | band steps |
 |---|---|---|---|---|---|
-| `cheapest-affordable` (default) | **6,740 s** (112 min) | **175 s** | 115 | **30** | x5.00, x3.00, x5.00, x1.50 endless |
+| `cheapest-affordable` (default) | **6,702 s** (112 min) | **174 s** | 115 | **30** | x5.00, x3.00, x5.00, x1.50 endless |
 | `none` | never (digRate stays 0) | — | 0 | 0 | — |
-| `ratio` | 12,394 s | 817 s | 40 | 2 | x5.00, x3.00, x5.00, x1.50 endless |
+| `ratio` | 12,518 s | 823 s | 40 | 2 | x5.00, x3.00, x5.00, x1.50 endless |
+
+(The default seed moved from a literal 1337 to `sim.seed` = 1, which shifts the event rolls and so the
+timings by well under 1%. The Lantern changes are render-only and move no economy number.)
 
 `none` proves depth comes only from hires. `ratio` is a diagnostic: it buys by marginal score per gold,
 skips Sharper Pick entirely, and lands outside the window with long gaps — which is the expected shape
 for a policy that ignores cadence. The acceptance window is measured against `cheapest-affordable`, per
 PRD §8. The 14,400 game-second call runs in **7-17 ms**, far inside the 20 s bar.
 
-Band times: coal 0-40 m in 1,112 s, copper 40-180 m in 1,494 s, silver 180-600 m in 2,396 s,
-starmetal 600-1,200 m in 1,738 s. All twelve purchasables get bought at least once.
+Band times: coal 0-40 m in 1,112 s, copper 40-180 m in 1,494 s, silver 180-600 m in 2,354 s,
+starmetal 600-1,200 m in 1,742 s. All twelve purchasables get bought at least once.
 
 ## Flavor
 `config/greedy-deep.json` carries a `flavor` block: band intros, dwarf lines, event texts, the ending

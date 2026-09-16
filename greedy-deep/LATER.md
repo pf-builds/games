@@ -86,3 +86,11 @@ quests, backend, accounts, cloud save, leaderboards, ads, IAP, timers, real proc
   to look at `nameNote` as well as `flavor`.
 - **Seam dither density is approximated.** `drawSeam` steps a 2 px checker over two rows rather than the
   PRD's exact 25% / 50% density pair. Real dither lands with the strata tiles in M3.
+- **M2 critic fixes applied 2026-09-16** (`greedy-deep-critic-m2.md`): Deep Lantern made observable
+  (forward bias + veil lift + next-bands readout, all JSON), `bandLog` crossings interpolated to the
+  exact `startDepth`, `GD.reset()` reseeds from `sim.seed`, `ratio` policy weight moved to
+  `sim.ratioDepthWeight`. The critic's M5 note stands for future critics: DOM reads must sync to two
+  `requestAnimationFrame` ticks, not `setTimeout`, because `refresh()` runs off the game's own rAF loop.
+- **Forward bias caps at two Lantern levels** (`minFaceYBu` 88). Past that the veil lift and the readout
+  carry the reveal on their own. If M3's scrolling camera makes a taller look-ahead cheap, revisit the
+  floor rather than adding a fourth mechanism.
