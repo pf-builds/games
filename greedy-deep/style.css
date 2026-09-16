@@ -1,0 +1,142 @@
+/* Greedy Deep — M1 shell. One integer scale variable (--s) drives the whole column. */
+:root { --s: 2; --ink: #e9dcb6; --dim: #9a907f; --gold: #f2c14e; --panel: #171320; --edge: #2c2437; }
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: #0b0910;
+  color: var(--ink);
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  min-height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 0 0 env(safe-area-inset-bottom);
+  -webkit-user-select: none; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  background:
+    radial-gradient(120% 60% at 50% 0%, #1b1526 0%, #0b0910 70%);
+}
+body.booting #col { opacity: 0; }
+
+#col {
+  width: calc(160px * var(--s));
+  max-width: 100vw;
+  opacity: 1;
+  transition: opacity .2s ease;
+}
+
+/* ---------------------------------------------------------- top bar */
+#topbar {
+  height: calc(28px * var(--s));
+  display: flex;
+  align-items: center;
+  gap: calc(2px * var(--s));
+  padding: 0 calc(4px * var(--s));
+  background: linear-gradient(#20192c, #17121f);
+  border-bottom: 2px solid #0a0810;
+}
+.stat { display: flex; flex-direction: column; justify-content: center; min-width: 0; flex: 1; }
+.stat.right { align-items: flex-end; }
+.stat .label { font-size: calc(4px * var(--s)); letter-spacing: .12em; color: var(--dim); }
+.stat .value { font-size: calc(9px * var(--s)); font-weight: 700; color: var(--gold); line-height: 1.15; white-space: nowrap; }
+.stat.rate .value { color: #8fd18a; font-size: calc(7px * var(--s)); }
+.stat.right .value { color: #bfd4e6; }
+
+/* ---------------------------------------------------------- shaft */
+#shaftwrap { position: relative; line-height: 0; }
+#shaft {
+  display: block;
+  image-rendering: pixelated;
+  touch-action: none;
+  cursor: pointer;
+  background: #0a0810;
+}
+#hint {
+  position: absolute;
+  transform: translate(-100%, -50%);
+  white-space: nowrap;
+  font-size: calc(5px * var(--s));
+  letter-spacing: .1em;
+  color: #d8c68f;
+  background: rgba(0,0,0,.5);
+  padding: calc(2px * var(--s)) calc(4px * var(--s));
+  border-radius: 3px;
+  line-height: 1.2;
+  pointer-events: none;
+  animation: breathe 2.2s ease-in-out infinite;
+}
+@keyframes breathe { 0%,100% { opacity: .45; } 50% { opacity: 1; } }
+#hint.gone { display: none; }
+
+#dbg {
+  position: absolute; top: 4px; left: 4px;
+  font: 10px/1.35 ui-monospace, Menlo, monospace;
+  color: #9dffb0; background: rgba(0,0,0,.72);
+  padding: 4px 6px; border-radius: 4px; white-space: pre; pointer-events: none;
+}
+#dbg.hidden { display: none; }
+
+/* ---------------------------------------------------------- shop panel */
+#panel {
+  background: var(--panel);
+  border-top: 2px solid #0a0810;
+}
+#panel-head {
+  font-size: calc(5px * var(--s));
+  letter-spacing: .18em;
+  color: var(--dim);
+  padding: calc(3px * var(--s)) calc(4px * var(--s)) calc(2px * var(--s));
+}
+#shop { display: flex; flex-direction: column; }
+
+.row {
+  display: flex; align-items: center; gap: calc(3px * var(--s));
+  padding: calc(3px * var(--s)) calc(4px * var(--s));
+  border-top: 1px solid var(--edge);
+  min-height: 48px;
+}
+.row-main { flex: 1; min-width: 0; }
+.row-name { font-size: calc(6px * var(--s)); font-weight: 700; display: flex; align-items: center; gap: calc(2px * var(--s)); }
+.row-sub { font-size: calc(4.5px * var(--s)); color: var(--dim); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.owned { color: var(--gold); font-weight: 700; }
+.tag {
+  font-size: calc(4px * var(--s)); letter-spacing: .08em; padding: 1px 4px; border-radius: 3px;
+  background: #2d2440; color: #b9a7d8;
+}
+.tag.crew { background: #2a3a2c; color: #9fd0a2; }
+
+.buy {
+  font: inherit; font-weight: 700;
+  min-width: 72px; min-height: 44px;
+  padding: 0 calc(4px * var(--s));
+  font-size: calc(6px * var(--s));
+  color: #1a1410; background: linear-gradient(#f4cf6a, #d8a52f);
+  border: 0; border-bottom: 3px solid #8a6414; border-radius: 6px;
+  cursor: pointer; touch-action: manipulation;
+}
+.buy:active { transform: translateY(1px); border-bottom-width: 2px; }
+.buy .unit { font-size: .75em; opacity: .7; margin-left: 2px; }
+.row.locked .buy { background: #2a2435; color: #6c6478; border-bottom-color: #1a1522; cursor: default; }
+.row.locked .row-name { color: #8d8598; }
+
+.row.bought { animation: flashrow .35s ease-out; }
+@keyframes flashrow { from { background: #33482f; } to { background: transparent; } }
+.row.nope { animation: shake .25s ease-out; }
+@keyframes shake { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
+
+#foot {
+  font-size: calc(4px * var(--s)); color: #5d566b; text-align: center;
+  padding: calc(4px * var(--s)) calc(4px * var(--s)) calc(8px * var(--s));
+  line-height: 1.4;
+}
+
+/* Desktop: same column, just centred. Rails land in M4. */
+@media (min-width: 1100px) {
+  body { align-items: center; min-height: 100vh; }
+  #col { box-shadow: 0 0 0 2px #0a0810, 0 24px 60px rgba(0,0,0,.6); border-radius: 4px; overflow: hidden; }
+}

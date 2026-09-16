@@ -1,0 +1,111 @@
+{
+  "configVersion": 1,
+  "title": "Greedy Deep",
+
+  "start": {
+    "gold": 0,
+    "digRate": 0,
+    "clickPower": 1,
+    "clickYield": 0.5
+  },
+
+  "sim": {
+    "dt": 0.1,
+    "simulateDt": 1,
+    "clicksPerSecond": 2,
+    "policy": "cheapest-affordable",
+    "maxSeconds": 14400
+  },
+
+  "format": {
+    "sigFigs": 3,
+    "suffixes": ["", "K", "M", "B", "T"],
+    "activeSuffixes": 2,
+    "depthDecimals": 1
+  },
+
+  "ores": [
+    {
+      "id": "coal",
+      "name": "Blackrock Coal",
+      "startDepth": 0,
+      "goldPerMeter": 1,
+      "pattern": "speckle",
+      "intro": "Soot and small money.",
+      "color": "#241f2e",
+      "wallColor": "#332d3c",
+      "veinColor": "#17141d",
+      "glintColor": "#f2d488"
+    }
+  ],
+
+  "tracks": [
+    {
+      "id": "pick",
+      "name": "Sharper Pick",
+      "desc": "Every strike bites deeper.",
+      "base": 10,
+      "ratio": 1.15,
+      "effects": [{ "verb": "add_click", "value": 1 }]
+    },
+    {
+      "id": "bit",
+      "name": "Drill Bit",
+      "desc": "The crew digs 8% faster per bit.",
+      "base": 120,
+      "ratio": 1.15,
+      "effects": [{ "verb": "mul_rate", "value": 1.08 }]
+    }
+  ],
+
+  "dwarves": [
+    {
+      "id": "dorrik",
+      "name": "Dorrik Quickpick",
+      "job": "Hewer",
+      "base": 25,
+      "ratio": 1.15,
+      "effects": [{ "verb": "add_rate", "value": 0.05 }],
+      "flavor": "Hums. Only ever the one song.",
+      "cosmetic": { "hat": "cap", "beard": "braided", "palette": "rust" }
+    }
+  ],
+
+  "save": {
+    "key": "gd.save.v1",
+    "version": 1,
+    "autosaveSeconds": 5
+  },
+
+  "layout": {
+    "columnBu": 160,
+    "columnHeightBu": 406,
+    "topBarBu": 28,
+    "shaftBu": 256,
+    "tileBu": 16,
+    "wallTiles": 3,
+    "boreTiles": 4,
+    "ribbonBu": 6,
+    "minScale": 2,
+    "maxScale": 4,
+    "buPerMeter": 4,
+    "braceEveryRows": 4
+  },
+
+  "vein": {
+    "xBu": 116,
+    "yBu": 104,
+    "wBu": 28,
+    "hBu": 28,
+    "glintPeriodSeconds": 1.4,
+    "strikeFlashSeconds": 0.18,
+    "floaterSeconds": 0.9,
+    "floaterRiseBu": 22,
+    "maxFloaters": 24
+  },
+
+  "debug": {
+    "fallbackClockMs": 33,
+    "staleFrameMs": 60
+  }
+}
