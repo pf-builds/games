@@ -65,12 +65,12 @@
   .card {
     position: relative;
     background: #141924; border: 1px solid #232C3D; border-radius: 18px;
-    overflow: hidden; text-decoration: none; color: inherit; display: flex; flex-direction: column;
+    overflow: visible; text-decoration: none; color: inherit; display: flex; flex-direction: column;
     transition: transform .16s, box-shadow .16s, border-color .16s;
   }
   a.card:hover { transform: translateY(-5px) scale(1.01); border-color: #F6C93F; box-shadow: 0 14px 40px rgba(246, 201, 63, .18); }
   a.card:focus-visible { outline: 3px solid #F6C93F; outline-offset: 3px; }
-  .thumb { aspect-ratio: 16/9; display: flex; position: relative; }
+  .thumb { aspect-ratio: 16/9; display: flex; position: relative; overflow: hidden; border-radius: 17px 17px 0 0; }
   .play {
     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
     background: rgba(10, 13, 20, 0); transition: background .16s;
@@ -84,7 +84,7 @@
   a.card:hover .play { background: rgba(10, 13, 20, .35); }
   a.card:hover .play b { opacity: 1; transform: translateY(0); }
   .badge {
-    position: absolute; top: .7rem; left: .7rem; z-index: 2;
+    position: absolute; top: -.55rem; left: 1rem; z-index: 2;
     font-size: .68rem; font-weight: 800; letter-spacing: .12em;
     background: #FF5C7A; color: #fff; border-radius: 99px; padding: .25rem .7rem;
     animation: pulseBadge 1.6s ease-in-out infinite;
