@@ -20,15 +20,17 @@ Source: `game-research/greedy-deep-PRD.md` sections 2, 14, 16, 17.
 - FlavorTable and the FLAVOR-TODO replace pass (Peter's jokes page).
 - Name clearance pass: final dwarf/ore/upgrade names against the Tolkien Appendix A list and Warcraft.
 
-## M3 — art (phase 5)
-- SpriteFactory: strata tiles with 4 cached variants per band via `hash(tx,ty) & 3`, seam dither,
-  vein blobs, the next-band veil, shaft carve, braces, ladder.
+## M3 — art (phase 5) — DONE 2026-09-16
+- SpriteFactory (`src/sprites.js`): strata tiles with 4 cached variants per band via
+  `hash(tx,ty) & 3` (variant 3 carries the crack), a shadowed back-wall set for the bore, seam
+  dither strips, vein blobs as chunked data, the next-band veil, shaft carve with jittered bevels,
+  braces, ladder.
 - Dwarf composites: 14x16, 6 frames, four layers (body, beard, hat, pick) cached by loadout string.
-  The beard is the joke; it survives every cut.
-- Cart and elevator sprites.
-- Scrolling camera following the deepest dwarf, eased, drag/wheel to look up, 3 s snap-back.
-  M1 ships a static viewport with scrolling rock as the placeholder.
-- SDXL-base title card, 416x608 WebP, 120 KB cap, splash only.
+  The beard survived, as promised.
+- Cart (3 fill frames) and elevator cage (fillRect rope) sprites.
+- Scrolling camera following the dig face / deepest dwarf, eased, drag or wheel to look up,
+  snap-back after `camera.snapBackMs`. `GD.dbg.cameraY` exposed.
+- SDXL-base title card, 416x608 WebP, 62.6 KB of a 120 KB cap, splash only.
 
 ## M4 — juice, mobile, save, ending (phase 6)
 - AudioBus, 13-cue table, depth-reactive ambient drone, mute persisted in `prefs`.
@@ -94,3 +96,39 @@ quests, backend, accounts, cloud save, leaderboards, ads, IAP, timers, real proc
 - **Forward bias caps at two Lantern levels** (`minFaceYBu` 88). Past that the veil lift and the readout
   carry the reveal on their own. If M3's scrolling camera makes a taller look-ahead cheap, revisit the
   floor rather than adding a fourth mechanism.
+
+## Found during M3, parked
+- **Negative first frame dt (fixed, worth remembering).** The first `requestAnimationFrame`
+  callback carries the timestamp of the frame that was already in flight when `boot()` ran, which
+  can predate the `performance.now()` boot recorded. The unclamped `dt` went negative, ran the
+  animation clock backwards, and indexed a cart frame at -1, which threw inside `draw()` and
+  silently killed the rAF loop (the fallback clock kept the sim running, so the numbers looked
+  fine while the canvas was frozen). `frame()` and `simOnly()` now clamp `dt` to >= 0 and
+  `R.update` refuses a non-positive dt. **Add this to the studio's reusable lessons.**
+- **The crew stack compresses instead of fitting.** Past ~20 hires the row pitch drops to
+  `sprites.dwarfRowMinBu` (9 bu) and the dwarves overlap heavily; past that the overflow is
+  reported as "+N CREW UP TOP". Two Deep Lanterns raise the dig face to its floor (88 bu), which
+  costs about a third of the visible crew. It is labelled and deliberate, but M4's roster strip is
+  the real answer — the roster should show the full crew, and then the shaft can stop apologising.
+- **`src/particles.js` is staged, not wired.** The pooled `Particles`/`Floaters` are copied
+  verbatim from peasant-swarm and loaded, but nothing spawns from them until the M4 juice pass.
+  The M3 strike feedback is still the flat flash from M2.
+- **The floaters in `render.js` are still the M1 minimal implementation**, not `GDParticles.Floaters`.
+  M4 should delete the local one and use the pooled version.
+- **Veiled rock reading lighter than the band above it is resolved.** The M2 note is closed: the
+  JSON `ores[].palette` values are tuned together, the veil dropped to 0.50 with a 0.24 scanline,
+  and `lantern.veilAlphaPerLevel` is 0.10 with a 0.22 floor.
+- **Seam dither density is now exact.** The M2 approximation note is closed: the strip is
+  pre-rendered as a 2 px checker at 25% on the upper tile row and 50% on the lower.
+- **Unmined rock below the face is a large uniform field**, especially with a lantern's forward
+  bias. The chunked veins break it up a little. If playtest calls it dull, the cheapest fix is more
+  vein density per chunk in JSON, not more art.
+- **The in-canvas depth readout became a thin band strip at the top** of the shaft, because the old
+  centred panel sat in the middle of the bore and ate the crew's and the lift's headroom. Depth is
+  also in the DOM top bar, so nothing was lost.
+- **Real-phone touch check still owed** (carried from M1). The pointer handler now does double duty
+  — a move over 6 CSS px is a camera drag, a still release is a strike — and that split has only
+  been tested with a mouse and with the Browser pane's emulation.
+- **fps readout check from M1 is closed on desktop.** A 62 s run at 1280x900 with 32 crew hired
+  produced 1,921 frames, median 60 fps, 5th percentile 57, minimum 55, and **zero** samples under
+  50. The cold-load `GD.dbg.fps` 0 reading still wants a real-device look.

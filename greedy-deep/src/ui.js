@@ -3,7 +3,7 @@
 (function () {
   "use strict";
 
-  var CONFIG_VERSION = 4; // JSON cache-bust, deliberately separate from the script tags (lesson 26)
+  var CONFIG_VERSION = 13; // JSON cache-bust, deliberately separate from the script tags (lesson 26)
 
   var UI = (window.GDUI = {});
   var E = window.GDEngine, GD = window.GD;
@@ -44,8 +44,13 @@
     GD.hooks.onBand = onBand;
     GD.hooks.onEnding = onEnding;
 
+    els.splash = $("splash");
+    els.splashLogo = $("splash-logo");
+    els.descend = $("descend");
+
     window.GDRender.init(els.canvas, cfg);
     layout();
+    measureTitleCard();
     buildShop();
     bindInput();
 
@@ -142,8 +147,44 @@
     s = Math.max(L.minScale, Math.min(L.maxScale, s || L.minScale));
     document.documentElement.style.setProperty("--s", s);
     window.GDRender.resize(s);
+    drawLogo(s);
     placeHint();
   }
+
+  // ------------------------------------------------------------ splash
+  // The SDXL-base card is the background; the logo on top of it is procedural pixels,
+  // so the painted style and the pixel style never meet at the same scale (R4 5).
+  function drawLogo(s) {
+    if (!els.splashLogo || !window.GDSprites) return;
+    var art = window.GDSprites.logo("GREEDY DEEP", "#f7dc95", "#d09a2e", "#160f06");
+    var k = Math.max(2, Math.min(4, s));
+    els.splashLogo.width = art.width * k;
+    els.splashLogo.height = art.height * k;
+    els.splashLogo.style.width = (art.width * k) + "px";
+    els.splashLogo.style.height = (art.height * k) + "px";
+    var g = els.splashLogo.getContext("2d");
+    g.imageSmoothingEnabled = false;
+    g.clearRect(0, 0, els.splashLogo.width, els.splashLogo.height);
+    g.drawImage(art, 0, 0, art.width * k, art.height * k);
+  }
+
+  // The 120 KB cap in PRD 14 is an assertion, not a hope: read the real byte count.
+  function measureTitleCard() {
+    var tc = cfg.titleCard;
+    if (!tc || !tc.src) { GD.dbg.titleCardBytes = 0; return; }
+    fetch(tc.src, { cache: "force-cache" })
+      .then(function (r) { return r.ok ? r.blob() : null; })
+      .then(function (b) { GD.dbg.titleCardBytes = b ? b.size : 0; })
+      .catch(function () { GD.dbg.titleCardBytes = 0; });
+  }
+
+  function dismissSplash() {
+    if (!els.splash || els.splash.classList.contains("gone")) return;
+    els.splash.classList.add("gone");
+    var ms = (cfg.titleCard && cfg.titleCard.fadeMs) || 450;
+    setTimeout(function () { els.splash.classList.add("off"); }, ms + 60);
+  }
+  UI.dismissSplash = dismissSplash;
 
   // The vein rides a fixed distance above the dig face, and the face moves when a
   // Deep Lantern is bought, so the hint has to follow it rather than sit where boot
@@ -210,17 +251,52 @@
 
   // ------------------------------------------------------------ input
   function bindInput() {
+    // One pointer does both jobs: a drag scrolls the camera back up the shaft, a
+    // release that never moved is a strike on the vein. Threshold in CSS px so it
+    // scales with --s.
+    var down = null, moved = false;
     els.canvas.addEventListener("pointerdown", function (e) {
       e.preventDefault();
       var rect = els.canvas.getBoundingClientRect();
-      if (!window.GDRender.hitVein(e.clientX - rect.left, e.clientY - rect.top)) return;
+      down = { x: e.clientX, y: e.clientY, lx: e.clientX - rect.left, ly: e.clientY - rect.top, py: e.clientY };
+      moved = false;
+      if (els.canvas.setPointerCapture) { try { els.canvas.setPointerCapture(e.pointerId); } catch (err) { /* no capture */ } }
+    }, { passive: false });
+
+    els.canvas.addEventListener("pointermove", function (e) {
+      if (!down) return;
+      var dy = e.clientY - down.py;
+      if (!moved && Math.abs(e.clientY - down.y) + Math.abs(e.clientX - down.x) > 6) moved = true;
+      if (moved) {
+        down.py = e.clientY;
+        window.GDRender.cameraNudge(-dy / window.GDRender.scale(), true);
+      }
+    }, { passive: true });
+
+    function endPointer(e) {
+      if (!down) return;
+      var d = down; down = null;
+      window.GDRender.cameraRelease();
+      if (moved) return;
+      if (!window.GDRender.hitVein(d.lx, d.ly)) return;
       var g = GD.tap(1);
       if (els.hint) els.hint.classList.add("gone");
       window.GDRender.strike();
       window.GDRender.addFloater("+" + GD.format(g));
       refresh();
+    }
+    els.canvas.addEventListener("pointerup", endPointer);
+    els.canvas.addEventListener("pointercancel", function () { down = null; window.GDRender.cameraRelease(); });
+
+    els.canvas.addEventListener("wheel", function (e) {
+      e.preventDefault();
+      var notch = (cfg.camera && cfg.camera.wheelBuPerNotch) || 24;
+      window.GDRender.cameraNudge(e.deltaY > 0 ? notch : -notch, false);
     }, { passive: false });
+
     els.canvas.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+
+    if (els.descend) els.descend.addEventListener("click", dismissSplash);
 
     var wb = els.welcome && els.welcome.querySelector(".panel-btn");
     if (wb) wb.addEventListener("click", function () { els.welcome.classList.add("hidden"); });
@@ -237,11 +313,15 @@
 
   function frame(now) {
     rafPending = false;
-    var dtReal = Math.min(0.25, (now - lastFrame) / 1000);
+    // The FIRST rAF callback carries the timestamp of the frame that was already in
+    // flight when boot() ran, which can predate the performance.now() boot recorded.
+    // An unclamped negative dt runs animation phases backwards; clamp at the source.
+    var dtReal = Math.max(0, Math.min(0.25, (now - lastFrame) / 1000));
     lastFrame = now;
     advance(dtReal);
-    window.GDRender.update(dtReal);
-    window.GDRender.draw(GD.state, GD.derive());
+    var dFrame = GD.derive();
+    window.GDRender.update(dtReal, GD.state, dFrame);
+    window.GDRender.draw(GD.state, dFrame);
 
     if (introT > 0) {
       introT -= dtReal;
@@ -259,7 +339,7 @@
   // Sim-only advance for the hidden-tab fallback clock. No rendering, no rAF.
   function simOnly() {
     var now = performance.now();
-    var dtReal = Math.min(0.25, (now - lastFrame) / 1000);
+    var dtReal = Math.max(0, Math.min(0.25, (now - lastFrame) / 1000));
     lastFrame = now;
     advance(dtReal);
     refresh();
@@ -312,11 +392,14 @@
         "\ngold " + st.gold.toFixed(2) + "  +" + d.goldRate.toFixed(3) + "/s" +
         "\nm/s " + d.digRate.toFixed(4) + "  tap " + d.goldPerTap.toFixed(2) +
         "\ntotal " + st.goldEarnedTotal.toFixed(1) + "  crew " + d.dwarves +
+        "\ncamY " + GD.dbg.cameraY.toFixed(0) + "  crew@ " + GD.dbg.deepestDwarfY.toFixed(0) +
+          "  d " + Math.abs(GD.dbg.cameraY - GD.dbg.deepestDwarfY).toFixed(1) + "bu" +
         "\nreveal +" + d.revealBonus + "  drawn<=" + GD.dbg.maxRenderedBandIndex +
           "  fwd " + GD.dbg.forwardMeters.toFixed(0) + "m  veil " + GD.dbg.veilAlpha.toFixed(2) +
         "\ntimed " + st.timed.length +
         "\nev " + st.eventsFired + " last " + (st.lastEvent || "-") +
         "\nowned " + JSON.stringify(st.owned) +
+        "\ncard " + GD.dbg.titleCardBytes + "b" +
         "\nsave " + GD.dbg.saveSize + "b  err " + GD.dbg.errors + "/" + GD.dbg.warnings +
         "\nFLAVOR-TODO " + GD.dbg.flavorTodoCount;
     }

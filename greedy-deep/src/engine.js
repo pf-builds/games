@@ -667,6 +667,40 @@
       if (!(lan.veilAlphaPerLevel >= 0)) errors.push("lantern.veilAlphaPerLevel must be >= 0");
       if (!(lan.veilAlphaFloor >= 0 && lan.veilAlphaFloor <= cfg.veil.alpha)) errors.push("lantern.veilAlphaFloor must be 0..veil.alpha");
     }
+    // ---- M3 render blocks. A bad palette or a missing camera block must fail loud
+    // here rather than put a flat rect on screen.
+    var cam = cfg.camera;
+    if (!cam) errors.push("missing block: camera");
+    else {
+      if (!(cam.ease > 0 && cam.ease <= 1)) errors.push("camera.ease must be 0..1");
+      if (!(cam.snapBackMs >= 0)) errors.push("camera.snapBackMs must be >= 0");
+      if (!(cam.maxUpBu > 0)) errors.push("camera.maxUpBu must be > 0");
+    }
+    if (!(cfg.veil.scanline >= 1)) errors.push("veil.scanline must be >= 1");
+    var spr = cfg.sprites;
+    if (!spr) errors.push("missing block: sprites");
+    else {
+      if (!(spr.digFps > 0)) errors.push("sprites.digFps must be > 0");
+      if (!(spr.walkFps > 0)) errors.push("sprites.walkFps must be > 0");
+      if (!(spr.pickTiers >= 1)) errors.push("sprites.pickTiers must be >= 1");
+      if (!(spr.dwarfFrames >= 1)) errors.push("sprites.dwarfFrames must be >= 1");
+      if (!spr.palettes) errors.push("sprites.palettes must be an object of cosmetic palettes");
+    }
+    for (var pk = 0; pk < cfg.ores.length; pk++) {
+      var pp = cfg.ores[pk].palette;
+      if (!pp || !pp.base || !pp.light || !pp.dark || !pp.speck) {
+        errors.push("ore " + cfg.ores[pk].id + ": palette needs base, light, dark and speck");
+      }
+    }
+    if (spr && spr.palettes) {
+      for (var dk = 0; dk < cfg.dwarves.length; dk++) {
+        var cos = cfg.dwarves[dk].cosmetic || {};
+        if (cos.palette && !spr.palettes[cos.palette]) {
+          errors.push("dwarf " + cfg.dwarves[dk].id + ": unknown cosmetic palette '" + cos.palette + "'");
+        }
+      }
+    }
+
     if (!(cfg.format.activeSuffixes >= 1)) errors.push("format.activeSuffixes must be >= 1");
     if (cfg.format.activeSuffixes > cfg.format.suffixes.length) errors.push("format.activeSuffixes exceeds suffixes list");
 

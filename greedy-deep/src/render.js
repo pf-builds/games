@@ -1,41 +1,64 @@
-// Greedy Deep — shaft renderer (M2 placeholder art). Click it! Studios, 2026.
-// Band rects coloured from JSON, the active vein on one wall, seam dither at every
-// band boundary, and the NEXT band drawn below the seam under a dark veil — through
-// band d + 1 + revealBonus and no further (PRD 14, M2).
-// Real strata tiles, dwarf composites and the scrolling camera land in M3.
+// Greedy Deep — shaft renderer (M3 art pass). Click it! Studios, 2026.
+//
+// Everything on the canvas is a pre-rendered sprite from `src/sprites.js` blitted at
+// integer coordinates. There are no placeholder rects left: if a band ever fails to
+// produce tiles the fallback fill is counted in `stats.placeholderRects`, and
+// selfTest fails on a non-zero count.
+//
+// Coordinates: world space is "bu below the surface", i.e. `depth * buPerMeter`.
+// `cam.topBu` is the world y drawn at screen y 0, so screen y = worldY - cam.topBu.
+// The camera follows the dig face (and therefore the deepest dwarf) with easing and
+// the Deep Lantern's forward bias; drag or wheel looks back up; it snaps back after
+// `camera.snapBackMs` of no input.
 (function () {
   "use strict";
 
   var R = (window.GDRender = {});
   var E = window.GDEngine;
+  var SP = window.GDSprites;
   var cv = null, ctx = null, cfg = null;
   var scale = 2, dpr = 1;
   var floaters = [];
   var strikeT = 0;
   var pulse = 0;
   var lastPlan = { indices: [], veiledIndices: [], maxIndex: 0, cutoffIndex: 0 };
+  var stats = { tileBlits: 0, placeholderRects: 0, seams: 0, veiled: 0, dwarves: 0, maxDrawnIndex: 0, maxVeiledIndex: -1, frames: 0 };
 
-  // cheap deterministic hash for tile variation
-  function hash2(x, y) {
-    var h = (x * 374761393 + y * 668265263) | 0;
-    h = (h ^ (h >> 13)) | 0;
-    h = Math.imul(h, 1274126177) | 0;
-    return (h ^ (h >> 16)) >>> 0;
-  }
+  // ------------------------------------------------------------------ camera
+  var cam = { topBu: null, userBu: 0, idleMs: 0, dragging: false, snapped: 0 };
+  var deepestDwarfY = 0;
 
+  function camCfg() { return cfg.camera || { ease: 0.12, snapBackMs: 3000, maxUpBu: 480, snapEase: 0.06, snapThresholdBu: 512 }; }
+
+  R.cameraNudge = function (dBu, dragging) {
+    var C = camCfg();
+    cam.userBu = Math.max(-(C.maxUpBu || 480), Math.min(0, cam.userBu + dBu));
+    cam.idleMs = 0;
+    cam.dragging = !!dragging;
+  };
+  R.cameraRelease = function () { cam.dragging = false; cam.idleMs = 0; };
+  R.cameraSnap = function () { cam.topBu = null; cam.userBu = 0; cam.idleMs = 0; cam.snapped++; };
+  R.cameraState = function () { return { topBu: cam.topBu, userBu: cam.userBu, idleMs: cam.idleMs, focusY: focusY(), deepestDwarfY: deepestDwarfY }; };
+  function focusY() { return (cam.topBu === null ? 0 : cam.topBu) + effFaceY(lastPlan.revealBonus || 0); }
+
+  // ------------------------------------------------------------------ colour
   function shade(hex, amt) {
     var n = parseInt(hex.slice(1), 16);
-    var r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
-    r = Math.max(0, Math.min(255, Math.round(r + amt)));
-    g = Math.max(0, Math.min(255, Math.round(g + amt)));
-    b = Math.max(0, Math.min(255, Math.round(b + amt)));
+    var r = Math.max(0, Math.min(255, Math.round(((n >> 16) & 255) + amt)));
+    var g = Math.max(0, Math.min(255, Math.round(((n >> 8) & 255) + amt)));
+    var b = Math.max(0, Math.min(255, Math.round((n & 255) + amt)));
     return "rgb(" + r + "," + g + "," + b + ")";
   }
 
   R.init = function (canvas, config) {
-    cv = canvas; cfg = config; ctx = cv.getContext("2d");
+    cv = canvas; cfg = config; ctx = cv.getContext("2d", { alpha: false });
+    SP.build(cfg);
   };
-  R.setConfig = function (config) { cfg = config; };
+  R.setConfig = function (config) {
+    cfg = config;
+    veinChunks.clear();
+    SP.build(cfg);
+  };
 
   R.resize = function (s) {
     scale = s;
@@ -51,18 +74,12 @@
   };
 
   R.scale = function () { return scale; };
+  R.stats = function () { stats.pulse = pulse; return stats; };
 
   // --------------------------------------------------------------- geometry
-  // The dig face sits at a fixed y. Everything above it is the dug-out bore,
-  // everything below is rock the crew has not reached yet.
-  //
-  // Deep Lantern (`reveal_bands`) raises the cutoff index, but on its own that was
-  // invisible: the viewport only looks ~26 m ahead and every band gap past the first
-  // is wider than that, so the extra revealed band could never enter frame (critic M2,
-  // MAJOR). Each level now buys three observable things, all JSON-tunable:
-  //   1. forward bias — the face rides higher, so more of what lies ahead is on screen
-  //   2. veil alpha   — revealed-but-unreached rock is dimmed less per level
-  //   3. next-bands   — one readout line per revealed band, independent of the viewport
+  // Deep Lantern (`reveal_bands`) raises the render cutoff, and each level also buys
+  // forward bias (the face rides higher, so more of what lies ahead is on screen),
+  // a lighter veil, and one more line in the next-bands readout. All JSON-driven.
   function effFaceY(revealBonus) {
     var L = cfg.layout, lan = cfg.lantern || {};
     var bias = (revealBonus || 0) * (lan.forwardTilesPerLevel || 0) * L.tileBu;
@@ -74,7 +91,7 @@
     var a = cfg.veil.alpha - (revealBonus || 0) * (lan.veilAlphaPerLevel || 0);
     return Math.max(lan.veilAlphaFloor === undefined ? 0 : lan.veilAlphaFloor, a);
   }
-  var curFaceY = null;   // the face the last draw() actually used, for hit-testing
+  var curFaceY = null;
   function faceY() { return curFaceY === null ? cfg.layout.faceYBu : curFaceY; }
   function yOfDepth(depth, current, fy) { return (fy === undefined ? faceY() : fy) + (depth - current) * cfg.layout.buPerMeter; }
   function depthOfY(y, current, fy) { return current + (y - (fy === undefined ? faceY() : fy)) / cfg.layout.buPerMeter; }
@@ -82,8 +99,11 @@
   R.effVeilAlpha = effVeilAlpha;
 
   // --------------------------------------------------------------- band plan
-  // Which bands this frame is allowed to draw, and which of them are veiled.
-  // Pure: selfTest calls it directly rather than reading pixels.
+  // Unchanged M2 contract: which bands this frame may draw, which of them are veiled,
+  // the cutoff, the lantern's forward bias and veil alpha, and the next-bands readout.
+  // Pure — selfTest calls it directly rather than reading pixels. The camera does not
+  // enter here: the plan describes the settled viewport, and the draw loop clips the
+  // bands it actually paints to `cutoffIndex` whatever the camera is doing.
   R.bandPlan = function (depth, revealBonus) {
     revealBonus = revealBonus || 0;
     var current = E.bandAt(cfg, depth);
@@ -93,22 +113,19 @@
     var top = depthOfY(0, depth, fy);
     var bottom = depthOfY(H, depth, fy);
     var indices = [], veiled = [], maxIndex = current.index;
-    // Walk outward from the shallowest visible band to the deepest one allowed.
     var startIdx = Math.max(0, E.bandAt(cfg, Math.max(0, top)).index);
     for (var i = startIdx; i <= cutoff; i++) {
       var b = E.bandByIndex(cfg, i);
       if (!b) break;
-      if (b.startDepth > bottom) break;      // off the bottom of the viewport
+      if (b.startDepth > bottom) break;
       var next = E.bandByIndex(cfg, i + 1);
-      if (next && next.startDepth < top) continue; // entirely above the viewport
+      if (next && next.startDepth < top) continue;
       indices.push(i);
       if (i > current.index) veiled.push(i);
       if (i > maxIndex) maxIndex = i;
     }
     if (indices.indexOf(current.index) === -1) { indices.push(current.index); indices.sort(function (a, b2) { return a - b2; }); }
 
-    // Every band the lantern reveals, whether or not it fits in frame. This is what
-    // the readout and the ribbon draw from, so a second level always shows a second line.
     var nextBands = [];
     for (var k = current.index + 1; k <= cutoff; k++) {
       var nb = E.bandByIndex(cfg, k);
@@ -129,6 +146,36 @@
     return lastPlan;
   };
   R.lastPlan = function () { return lastPlan; };
+
+  // --------------------------------------------------------------- veins as data
+  // A vein is data, never baked into a tile, so depletion or a palette change is a
+  // redraw of one blob. Generated per 64 bu chunk of world depth from a hash, cached,
+  // so an endless run never grows an array and a frame allocates nothing.
+  var CHUNK = 64;
+  var veinChunks = new Map();
+  function chunkVeins(ci) {
+    var a = veinChunks.get(ci);
+    if (a) return a;
+    a = [];
+    var h = SP.hash2(ci, 9173);
+    var n = h % 3;
+    for (var i = 0; i < n; i++) {
+      var h2 = SP.hash2(ci * 7 + i, 4421);
+      a.push({
+        side: h2 & 1,
+        x: (h2 >>> 1) % 34,
+        y: ci * CHUNK + ((h2 >>> 8) % CHUNK),
+        w: 3 + ((h2 >>> 14) % 5),
+        h: 2 + ((h2 >>> 18) % 3),
+        gx: (h2 >>> 22) % 3,
+        gy: (h2 >>> 24) % 2,
+        ph: ((h2 >>> 26) % 32) / 32
+      });
+    }
+    if (veinChunks.size > 512) veinChunks.clear();
+    veinChunks.set(ci, a);
+    return a;
+  }
 
   // --------------------------------------------------------------- vein hotspot
   R.veinRect = function () {
@@ -151,55 +198,41 @@
     floaters.push({ text: text, t: 0, color: color || "#ffe89a", x: r.x + r.w * 0.5 + (Math.random() * 8 - 4), y: r.y });
   };
 
-  R.update = function (dt) {
+  // --------------------------------------------------------------- update
+  R.update = function (dt, state, derived) {
+    if (!(dt > 0)) dt = 0;          // never run the animation clock backwards
     pulse += dt;
     if (strikeT > 0) strikeT -= dt;
     for (var i = floaters.length - 1; i >= 0; i--) {
       floaters[i].t += dt;
       if (floaters[i].t >= cfg.vein.floaterSeconds) floaters.splice(i, 1);
     }
+    if (state) stepCamera(dt, state, derived);
   };
 
-  // --------------------------------------------------------------- rock
-  function drawRockRow(band, x0, w, y, tyBase, col, h) {
-    var T = cfg.layout.tileBu;
-    if (h === undefined) h = T;
-    if (h <= 0) return;
-    var v = hash2(col, tyBase) & 3;
-    ctx.fillStyle = shade(band.wallColor, v * 6 - 9);
-    ctx.fillRect(x0, y, w, h);
-    if (h < 4) return;
-    var g = hash2(col + 31, tyBase + 7);
-    ctx.fillStyle = shade(band.color, 10);
-    ctx.fillRect(x0 + (g % Math.max(1, w - 4)) + 2, y + ((g >> 4) % Math.max(1, h - 4)) + 2, 2, 2);
-    ctx.fillRect(x0 + ((g >> 8) % Math.max(1, w - 3)) + 1, y + ((g >> 12) % Math.max(1, h - 2)) + 1, 1, 1);
-    if (v === 3) {
-      ctx.fillStyle = shade(band.wallColor, -22);
-      ctx.fillRect(x0 + 4, y + 3, 1, Math.min(9, h - 3));
-      ctx.fillRect(x0 + 5, y + 8, 1, Math.max(0, Math.min(5, h - 8)));
-    }
-  }
+  function stepCamera(dt, state, derived) {
+    var C = camCfg();
+    var L = cfg.layout;
+    var fy = effFaceY((derived && derived.revealBonus) || 0);
+    var faceWorld = state.depth * L.buPerMeter;
+    var want = faceWorld - fy;
 
-  // 2 px checker dither of the next band's base at 25% then 50% density on the last
-  // two rows above the seam (PRD 6).
-  function drawSeam(nextBand, y, x0, w) {
-    var rows = cfg.veil.seamRows || 2;
-    for (var r = 0; r < rows; r++) {
-      var density = (r + 1) / (rows + 1) * 2; // 0.66 then 1.33 -> stepped checker
-      var yy = y - (rows - r) * 2;
-      ctx.fillStyle = nextBand.wallColor;
-      for (var x = x0; x < x0 + w; x += 2) {
-        if (((x >> 1) + r) % 2 === 0 || density > 1) ctx.fillRect(x, yy, 2, 2);
+    if (!cam.dragging) {
+      cam.idleMs += dt * 1000;
+      if (cam.idleMs >= (C.snapBackMs === undefined ? 3000 : C.snapBackMs) && cam.userBu !== 0) {
+        var sk = 1 - Math.pow(1 - (C.snapEase || 0.06), Math.min(4, dt * 60));
+        cam.userBu += (0 - cam.userBu) * sk;
+        if (Math.abs(cam.userBu) < 0.5) cam.userBu = 0;
       }
     }
-  }
 
-  function drawVeil(y, h, x0, w, alpha) {
-    var v = cfg.veil;
-    ctx.fillStyle = "rgba(" + v.color + "," + (alpha === undefined ? v.alpha : alpha) + ")";
-    ctx.fillRect(x0, y, w, h);
-    ctx.fillStyle = "rgba(" + v.color + "," + v.scanlineAlpha + ")";
-    for (var yy = Math.ceil(y); yy < y + h; yy += 2) ctx.fillRect(x0, yy, w, 1);
+    var target = want + cam.userBu;
+    if (cam.topBu === null || Math.abs(target - cam.topBu) > (C.snapThresholdBu || 512)) {
+      cam.topBu = target;                      // first frame, or a debug teleport
+      return;
+    }
+    var k = 1 - Math.pow(1 - (C.ease || 0.12), Math.min(4, dt * 60));
+    cam.topBu += (target - cam.topBu) * k;
   }
 
   // --------------------------------------------------------------- draw
@@ -210,194 +243,470 @@
     var boreX = wallW, boreW = L.boreTiles * T;  // 48..112
     var rightX = boreX + boreW;                  // 112
     var ribbonX = W - L.ribbonBu;
+    var contentW = W - L.ribbonBu;
     var depth = state.depth;
+    var owned = state.owned || {};
 
     var plan = R.bandPlan(depth, derived.revealBonus || 0);
     var cutoff = plan.cutoffIndex;
-    var currentIndex = derived.band.index;
     var fy = plan.faceYBu;
-    curFaceY = fy;   // hit-testing and floaters follow the face the lantern bought
+    curFaceY = fy;
+
+    if (cam.topBu === null) cam.topBu = depth * L.buPerMeter - fy;
+    var top = Math.round(cam.topBu);
+    var faceWorld = depth * L.buPerMeter;
+    var faceScreenY = Math.round(faceWorld - top);
+
+    stats.frames++;
+    stats.tileBlits = 0; stats.placeholderRects = 0; stats.seams = 0; stats.veiled = 0;
+    stats.dwarves = 0; stats.maxDrawnIndex = 0; stats.maxVeiledIndex = -1;
 
     ctx.fillStyle = "#0a0810";
     ctx.fillRect(0, 0, W, H);
 
-    // ---- rock rows, band-coloured, clipped to the reveal cutoff
-    var off = (depth * L.buPerMeter) % T;
-    var rowTop = Math.floor((depth * L.buPerMeter) / T);
-    var rows = Math.ceil(H / T) + 2;
-    for (var r = -1; r < rows; r++) {
-      var y = Math.round(fy + r * T - off) - T * Math.ceil(fy / T);
-      if (y > H || y + T < 0) continue;
-      var ty = rowTop + r - Math.ceil(fy / T);
-      var rowDepth = depthOfY(y + T / 2, depth, fy);
-      var band = E.bandAt(cfg, Math.max(0, rowDepth));
-      if (band.index > cutoff) continue;              // beyond the lantern: undrawn dark
-
-      // walls both sides, always rock
-      for (var side = 0; side < 2; side++) {
-        var x0 = side === 0 ? 0 : rightX;
-        for (var c = 0; c < L.wallTiles; c++) {
-          drawRockRow(band, x0 + c * T, T, y, ty, side === 0 ? c : c + 10);
-        }
-        ctx.fillStyle = shade(band.wallColor, -30);
-        ctx.fillRect(side === 0 ? wallW - 2 : rightX, y, 2, T);
-        ctx.fillStyle = shade(band.wallColor, 16);
-        ctx.fillRect(side === 0 ? wallW - 3 : rightX + 2, y, 1, T);
+    // ---------------------------------------------------------- strata tiles
+    // Zero allocation below: integer arithmetic and cached canvases only.
+    var row0 = Math.floor(top / T);
+    var rowN = Math.ceil((top + H) / T);
+    var band, tset, y, ty, tx, rowDepth, i, c;
+    for (ty = row0; ty <= rowN; ty++) {
+      y = ty * T - top;
+      rowDepth = (ty * T + (T >> 1)) / L.buPerMeter;
+      band = E.bandAt(cfg, rowDepth < 0 ? 0 : rowDepth);
+      if (band.index > cutoff) continue;
+      if (band.index > stats.maxDrawnIndex) stats.maxDrawnIndex = band.index;
+      tset = SP.tilesFor(band);
+      if (!tset || !tset.length) {
+        ctx.fillStyle = band.wallColor || "#332d3c";
+        ctx.fillRect(0, y, contentW, T);
+        stats.placeholderRects++;
+        continue;
       }
-
-      // the bore: void above the dig face, unmined rock below it
-      if (y + T > fy) {
-        var solidTop = Math.max(y, fy);
+      // left wall (3 tiles), right wall (3 tiles)
+      for (tx = 0; tx < L.wallTiles; tx++) {
+        ctx.drawImage(tset[SP.hash2(tx, ty) & 3], tx * T, y);
+        ctx.drawImage(tset[SP.hash2(tx + 100, ty) & 3], rightX + tx * T, y);
+        stats.tileBlits += 2;
+      }
+      // the bore: solid rock below the dig face, dug-out air above it. The air is not
+      // empty — it shows the far wall of the cutaway, the same tiles in shadow.
+      if (y + T > faceScreenY) {
+        var solidTop = y > faceScreenY ? y : faceScreenY;
         var solidH = y + T - solidTop;
-        drawRockRow(band, boreX, boreW, solidTop, ty, 5, solidH);
-        ctx.fillStyle = "rgba(0,0,0,.25)";
-        ctx.fillRect(boreX, solidTop, boreW, Math.min(2, solidH));
-      } else {
-        if (ty % L.braceEveryRows === 0) {
-          ctx.fillStyle = "#5a3f26";
-          ctx.fillRect(boreX, y + 2, boreW, 3);
-          ctx.fillStyle = "#3d2a19";
-          ctx.fillRect(boreX, y + 5, boreW, 1);
+        if (solidH > 0) {
+          ctx.save();
+          ctx.beginPath(); ctx.rect(boreX, solidTop, boreW, solidH); ctx.clip();
+          for (tx = 0; tx < L.boreTiles; tx++) {
+            ctx.drawImage(tset[SP.hash2(tx + 200, ty) & 3], boreX + tx * T, y);
+            stats.tileBlits++;
+          }
+          ctx.restore();
         }
-        ctx.fillStyle = "#6b4c2c";
-        ctx.fillRect(boreX + 3, y, 2, T);
-        ctx.fillRect(boreX + 9, y, 2, T);
-        ctx.fillStyle = "#8a6438";
-        ctx.fillRect(boreX + 3, y + 6, 8, 2);
       }
-
+      if (y < faceScreenY) {
+        var airH = (y + T < faceScreenY ? y + T : faceScreenY) - y;
+        if (airH > 0) {
+          var backs = SP.backTilesFor(band);
+          ctx.save();
+          ctx.beginPath(); ctx.rect(boreX, y, boreW, airH); ctx.clip();
+          for (tx = 0; tx < L.boreTiles; tx++) {
+            ctx.drawImage(backs[SP.hash2(tx + 300, ty) & 3], boreX + tx * T, y);
+            stats.tileBlits++;
+          }
+          ctx.restore();
+        }
+      }
     }
 
-    // ---- the veil: one overlay from the shallowest revealed-but-unreached band down
+    // ---------------------------------------------------------- shaft carve
+    // 2 bu bevel on each cut face: light on the left face, shadow on the right, so
+    // the bore reads as carved rock rather than a hole punched in a texture.
+    var curBand = derived.band;
+    var bev = SP.paletteFor(curBand);
+    var bevLit = SP.shade(bev.base, 1.4), bevDark = SP.shade(bev.base, 0.45);
+    var cutBottom = Math.max(0, Math.min(H, faceScreenY));
+    for (ty = row0; ty <= rowN; ty++) {
+      y = ty * T - top;
+      if (y >= cutBottom) break;
+      var eh = (y + T > cutBottom ? cutBottom : y + T) - y;
+      if (eh <= 0 || y + T < 0) continue;
+      var hj = SP.hash2(ty, 7717);
+      var jl = hj & 1, jr = (hj >>> 4) & 1;
+      ctx.fillStyle = bevLit;
+      ctx.fillRect(boreX - 2 - jl, y, 2 + jl, eh);
+      ctx.fillStyle = bevDark;
+      ctx.fillRect(rightX, y, 2 + jr, eh);
+      if ((hj >>> 8) & 1) { ctx.fillStyle = bevDark; ctx.fillRect(boreX - 1, y + (hj % 10), 1, 2); }
+    }
+
+    // ladder down the left face + timber braces every `braceEveryRows` rows
+    var ladderC = SP.ladder(), braceC = SP.brace();
+    var lad4 = T * 4;
+    var lTop = Math.floor(top / lad4) * lad4;
+    for (var ly = lTop; ly < top + H; ly += lad4) {
+      var lsy = ly - top;
+      if (lsy > faceScreenY) break;
+      ctx.save();
+      ctx.beginPath(); ctx.rect(boreX, 0, boreW, Math.max(0, Math.min(H, faceScreenY))); ctx.clip();
+      ctx.drawImage(ladderC, boreX + 1, lsy);
+      ctx.restore();
+    }
+    var braceStep = L.braceEveryRows * T;
+    var bTop = Math.floor(top / braceStep) * braceStep;
+    var bracesOwned = owned.braces || 0;
+    for (var by = bTop; by < top + H; by += braceStep) {
+      var bsy = by - top;
+      if (bsy > faceScreenY - 4) break;
+      if (bsy < -T) continue;
+      ctx.drawImage(braceC, boreX, bsy);
+      if (bracesOwned > 0) {           // purchase visibility: bought braces are doubled up
+        ctx.fillStyle = "#9C7A46";
+        ctx.fillRect(boreX, bsy + 6, boreW, 1);
+        ctx.fillStyle = "#3d2a19";
+        ctx.fillRect(boreX, bsy + 7, boreW, 1);
+      }
+    }
+
+    // ---------------------------------------------------------- veins (data)
+    var c0 = Math.floor(top / CHUNK) - 1, c1 = Math.floor((top + H) / CHUNK) + 1;
+    var glow = 0.5 + 0.5 * Math.sin((pulse / cfg.vein.glintPeriodSeconds) * Math.PI * 2);
+    var ci, vlist, vi, v, vy, vx, vband;
+    for (ci = c0; ci <= c1; ci++) {
+      vlist = chunkVeins(ci);
+      for (vi = 0; vi < vlist.length; vi++) {
+        v = vlist[vi];
+        vy = v.y - top;
+        if (vy < -8 || vy > H) continue;
+        vband = E.bandAt(cfg, v.y / L.buPerMeter);
+        if (vband.index > cutoff) continue;
+        vx = v.side ? rightX + 4 + v.x * 0.3 : 4 + v.x;
+        vx = vx | 0;
+        if (vx + v.w > contentW) continue;
+        ctx.fillStyle = vband.veinColor;
+        ctx.fillRect(vx, vy, v.w, v.h);
+        ctx.fillRect(vx + 1, vy + v.h, (v.w - 2) > 1 ? v.w - 2 : 1, 1);
+        ctx.fillStyle = SP.shade(vband.veinColor, 0.6);
+        ctx.fillRect(vx, vy + v.h - 1, v.w, 1);
+      }
+    }
+
+    // ---------------------------------------------------------- seam dither
+    // Two tile rows of 2 px checker in the NEXT band's base, 25% then 50%, at every
+    // boundary in view. dinosaur-fight's bgSky seam trick, vertical.
+    var sTop = (top - T * 2) / L.buPerMeter, sBot = (top + H) / L.buPerMeter;
+    var bIdx = Math.max(0, E.bandAt(cfg, sTop < 0 ? 0 : sTop).index);
+    for (i = bIdx; i <= cutoff + 1; i++) {
+      var nb = E.bandByIndex(cfg, i + 1);
+      if (!nb) break;
+      if (nb.startDepth > sBot) break;
+      if (i + 1 > cutoff) break;
+      var pb = E.bandByIndex(cfg, i);
+      var sy = Math.round(nb.startDepth * L.buPerMeter - top);
+      if (sy < -T * 2 || sy > H) continue;
+      c = SP.seamFor(pb, nb, contentW);
+      ctx.drawImage(c, 0, sy - T * 2);
+      ctx.fillStyle = "rgba(0,0,0,.42)";
+      ctx.fillRect(0, sy, contentW, 1);
+      stats.seams++;
+    }
+
+    // ---------------------------------------------------------- the veil
+    // Revealed-but-unreached rock: a flat wash plus 1-in-N scanlines. Ore glints
+    // animate back through it at half amplitude (below).
+    var veilTopWorld = Infinity;
     if (plan.veiledIndices.length) {
       var firstVeiled = E.bandByIndex(cfg, plan.veiledIndices[0]);
-      var vy = Math.max(0, yOfDepth(firstVeiled.startDepth, depth, fy));
-      if (vy < H) drawVeil(vy, H - vy, 0, W - L.ribbonBu, plan.veilAlpha);
+      veilTopWorld = firstVeiled.startDepth * L.buPerMeter;
+      stats.maxVeiledIndex = plan.veiledIndices[plan.veiledIndices.length - 1];
+      var vsy = Math.round(veilTopWorld - top);
+      if (vsy < H) {
+        if (vsy < 0) vsy = 0;
+        var vh = H - vsy;
+        ctx.fillStyle = "rgba(" + cfg.veil.color + "," + plan.veilAlpha + ")";
+        ctx.fillRect(0, vsy, contentW, vh);
+        ctx.fillStyle = "rgba(0,0,0," + cfg.veil.scanlineAlpha + ")";
+        var stepY = cfg.veil.scanline || 2;
+        for (var syy = vsy; syy < vsy + vh; syy += stepY) ctx.fillRect(0, syy, contentW, 1);
+        stats.veiled++;
+      }
     }
 
-    // ---- seams and the next band's tease vein
-    for (var pi = 0; pi < plan.indices.length; pi++) {
-      var idx = plan.indices[pi];
-      if (idx === 0) continue;
-      var b = E.bandByIndex(cfg, idx);
-      var sy = yOfDepth(b.startDepth, depth, fy);
-      if (sy < -8 || sy > H + 8) continue;
-      drawSeam(b, sy, 0, W - L.ribbonBu);
-      ctx.fillStyle = "rgba(0,0,0,.45)";
-      ctx.fillRect(0, sy, W - L.ribbonBu, 1);
-      if (idx > currentIndex) {
-        // the tease: the next band's vein, glinting through the veil at half amplitude
-        var ty2 = yOfDepth(b.startDepth + cfg.vein.teaseOffsetM, depth, fy);
-        if (ty2 > 0 && ty2 < H - 10) {
-          ctx.fillStyle = b.veinColor;
-          ctx.globalAlpha = 0.55;
-          ctx.fillRect(8, ty2, 18, 6);
-          ctx.fillRect(rightX + 6, ty2 + 6, 16, 5);
-          ctx.fillStyle = b.glintColor;
-          ctx.globalAlpha = 0.25 + 0.3 * (0.5 + 0.5 * Math.sin(pulse * 3.2));
-          ctx.fillRect(14, ty2 + 2, 2, 2);
-          ctx.fillRect(rightX + 12, ty2 + 8, 2, 2);
-          ctx.globalAlpha = 1;
+    // ---------------------------------------------------------- glints
+    // One pulsing pixel per vein, drawn last so veiled ore still winks through.
+    for (ci = c0; ci <= c1; ci++) {
+      vlist = chunkVeins(ci);
+      for (vi = 0; vi < vlist.length; vi++) {
+        v = vlist[vi];
+        vy = v.y - top;
+        if (vy < -8 || vy > H) continue;
+        vband = E.bandAt(cfg, v.y / L.buPerMeter);
+        if (vband.index > cutoff) continue;
+        vx = (v.side ? rightX + 4 + v.x * 0.3 : 4 + v.x) | 0;
+        if (vx + v.w > contentW) continue;
+        var amp = v.y >= veilTopWorld ? 0.5 : 1;
+        var g2 = 0.5 + 0.5 * Math.sin((pulse / cfg.vein.glintPeriodSeconds + v.ph) * Math.PI * 2);
+        ctx.globalAlpha = (0.2 + 0.7 * g2) * amp;
+        ctx.fillStyle = vband.glintColor;
+        ctx.fillRect(vx + v.gx, vy + v.gy, 1, 1);
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    // ---------------------------------------------------------- lantern light
+    var lanternN = owned.lantern || 0;
+    var lamp = 0.10 + 0.05 * Math.min(4, lanternN) + (owned.smelter ? 0.05 : 0);
+    var grd = ctx.createLinearGradient(boreX, 0, rightX, 0);
+    grd.addColorStop(0, "rgba(150,116,64," + lamp.toFixed(3) + ")");
+    grd.addColorStop(0.55, "rgba(0,0,0,0)");
+    grd.addColorStop(1, "rgba(0,0,0,0.32)");
+    ctx.fillStyle = grd;
+    ctx.fillRect(boreX, 0, boreW, Math.max(0, Math.min(H, faceScreenY)));
+    if (lanternN > 0 && faceScreenY > 40) {
+      // a hung lamp on the left face — the Deep Lantern you bought, on screen
+      var lampY = faceScreenY - 54;
+      if (lampY > 4) {
+        ctx.fillStyle = "#3d2a19"; ctx.fillRect(boreX + 4, lampY - 4, 1, 4);
+        ctx.fillStyle = "#6b5a33"; ctx.fillRect(boreX + 2, lampY, 5, 7);
+        ctx.fillStyle = "#ffd98a"; ctx.fillRect(boreX + 3, lampY + 1, 3, 5);
+        ctx.globalAlpha = 0.16 + 0.05 * glow;
+        ctx.fillStyle = "#ffcf7a";
+        ctx.fillRect(boreX, lampY - 8, 24, 24);
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    // ---------------------------------------------------------- elevator
+    // Bought Elevator = a cage on a rope in the bore. The rope is one fillRect column,
+    // so the cage can travel any distance for free.
+    if (owned.elevator > 0) {
+      var headroom = Math.min(faceScreenY, H) - 46;
+      if (headroom > 8) {
+        var cage = SP.elevator();
+        var cy = Math.round(12 + (0.5 - 0.5 * Math.cos(pulse * 0.6)) * Math.min(headroom, 60));
+        ctx.fillStyle = SP.ropeColor();
+        ctx.fillRect(boreX + 31, 0, 1, cy);
+        ctx.drawImage(cage, boreX + 20, cy);
+      }
+    }
+
+    var sp = cfg.sprites;
+    var perRow = sp.dwarvesPerRow || 4;
+    var cap = sp.maxDwarves || 32;
+    // The lift shares the upper bore with the crew rather than evicting it: the cage is
+    // drawn before the dwarves, so it reads as running behind them on the far wall.
+    var crewTop = (sp.crewTopBu || 24) + (owned.elevator > 0 ? (sp.elevatorClearBu || 0) : 0);
+    var pickTier = Math.min((sp.pickTiers || 4) - 1, Math.floor((owned.pick || 0) / (sp.pickLevelsPerTier || 6)));
+    var digFps = sp.digFps || 6, walkFps = sp.walkFps || 8;
+    var digSeq = Math.floor(pulse * digFps);
+    var walkSeq = Math.floor(pulse * walkFps);
+
+    // The working ledge holds one fewer dwarf than the rows behind it, because the
+    // cart parks in the last slot — which is where a cart belongs, next to the face.
+    var frontSlots = perRow - 1;
+    var crewTotal = Math.min(cap, derived.dwarves);
+    var rowsNeeded = 1 + Math.ceil(Math.max(0, crewTotal - frontSlots) / perRow);
+    // The crew stack compresses rather than disappearing off the top: buying a Deep
+    // Lantern raises the face, and the crew you paid for must stay on screen.
+    var rowH = sp.dwarfRowBu || 18;
+    if (rowsNeeded > 1) {
+      var avail = faceScreenY - 16 - crewTop;
+      rowH = Math.max(sp.dwarfRowMinBu || 10, Math.min(rowH, Math.floor(avail / (rowsNeeded - 1))));
+    }
+
+    // ---------------------------------------------------------- cart
+    var carts = SP.cartsFor(curBand);
+    var cartFrame = owned.cart > 0 ? (1 + (Math.floor(pulse / (sp.cartFrameSeconds || 1.6)) % 2)) : (Math.floor(pulse / 2.2) % 2);
+    cartFrame = cartFrame < 0 ? 0 : (cartFrame > 2 ? 2 : cartFrame);
+    var cartX = Math.min(boreX + 2 + frontSlots * 15, rightX - 21);
+    var cartY = faceScreenY - 14;
+    if (cartY > -14 && cartY < H) {
+      if (owned.rails > 0) {                       // purchase visibility: Cart Rails
+        ctx.fillStyle = "#4a4e57";
+        ctx.fillRect(cartX - 1, cartY + 13, 22, 1);
+        ctx.fillStyle = "#2a2d33";
+        for (var rx = cartX; rx < cartX + 20; rx += 4) ctx.fillRect(rx, cartY + 12, 2, 1);
+      }
+      ctx.drawImage(carts[cartFrame], cartX, cartY);
+    }
+
+    // ---------------------------------------------------------- the crew
+    // Every hired dwarf stands on a ledge with its JSON cosmetic loadout and works the
+    // face. The front ledge digs; the rows behind walk ore back and haul.
+    var slot = 0;
+    deepestDwarfY = faceWorld;
+    for (i = 0; i < cfg.dwarves.length && slot < cap; i++) {
+      var dw = cfg.dwarves[i];
+      var n = owned[dw.id] || 0;
+      if (!n) continue;
+      var cos = dw.cosmetic || {};
+      for (var k2 = 0; k2 < n && slot < cap; k2++, slot++) {
+        var rowi, col;
+        if (slot < frontSlots) { rowi = 0; col = slot; }
+        else { rowi = 1 + (((slot - frontSlots) / perRow) | 0); col = (slot - frontSlots) % perRow; }
+        var dxp = boreX + 2 + col * 15;
+        var dyp = faceScreenY - 16 - rowi * rowH;
+        if (dyp < crewTop || dyp > H) continue;
+        var frame;
+        if (rowi === 0) {
+          frame = (digSeq + slot) % 4 === 1 ? 4 : 3;      // 3 -> 4 -> 3 dig cycle
+        } else if ((slot % 3) === 0) {
+          frame = 5;                                      // haul
+        } else {
+          frame = ((walkSeq + slot) & 1) ? 1 : 2;         // walk
+        }
+        ctx.drawImage(SP.dwarf(cos.beard || "braided", cos.hat || "cap", pickTier, cos.palette || "rust", frame), dxp, dyp);
+        stats.dwarves++;
+        if (rowi === 0) {
+          var wy = top + dyp + 16;
+          if (wy > deepestDwarfY) deepestDwarfY = wy;
         }
       }
     }
 
-    // ---- bore lighting
-    var grd = ctx.createLinearGradient(boreX, 0, boreX + boreW, 0);
-    grd.addColorStop(0, "rgba(120,96,60,0.10)");
-    grd.addColorStop(0.55, "rgba(0,0,0,0)");
-    grd.addColorStop(1, "rgba(0,0,0,0.30)");
-    ctx.fillStyle = grd;
-    ctx.fillRect(boreX, 0, boreW, fy);
-
-    // ---- working ledge + dwarves at the dig face
-    var n = Math.min(derived.dwarves, 8);
-    for (var i = 0; i < n; i++) {
-      var dx = boreX + 6 + (i % 3) * 16;
-      var dy = fy - 18 - Math.floor(i / 3) * 20 + Math.round(Math.sin(pulse * 3 + i) * 1.5);
-      if (dy < 2) continue;
-      ctx.fillStyle = "#c9a227";
-      ctx.fillRect(dx, dy + 8, 10, 6);
-      ctx.fillStyle = "#e8cfa0";
-      ctx.fillRect(dx + 2, dy + 3, 6, 5);
-      ctx.fillStyle = "#b9b2a6";
-      ctx.fillRect(dx + 1, dy + 7, 8, 3);
-      ctx.fillStyle = "#7a4a22";
-      ctx.fillRect(dx + 1, dy, 8, 3);
-      ctx.fillStyle = "#9aa3ad";
-      ctx.fillRect(dx + 10, dy + 2 + (Math.sin(pulse * 6 + i) > 0 ? 0 : 3), 5, 2);
+    // A deep crew out-grows the ledges that fit on screen. Say so rather than
+    // silently swallowing hires: every purchase has to change the screen (PRD 16).
+    if (derived.dwarves > stats.dwarves) {
+      ctx.textAlign = "center";
+      ctx.font = "6px ui-monospace, Menlo, monospace";
+      ctx.fillStyle = "rgba(0,0,0,.66)";
+      ctx.fillRect(boreX + 4, 13, boreW - 8, 9);
+      ctx.fillStyle = "#cbbd97";
+      ctx.fillText("+" + (derived.dwarves - stats.dwarves) + " CREW UP TOP", boreX + boreW / 2, 15);
+      ctx.textAlign = "left";
     }
-    // the cut face itself
-    ctx.fillStyle = "rgba(255,226,150,.10)";
-    ctx.fillRect(boreX, fy - 2, boreW, 2);
 
-    // ---- the active vein (current band, right wall)
+    // the working ledge the front row stands on
+    ctx.fillStyle = "rgba(255,226,150,.12)";
+    if (faceScreenY > -2 && faceScreenY < H) ctx.fillRect(boreX, faceScreenY - 2, boreW, 2);
+
+    // ---------------------------------------------------------- the active vein
     var vr = R.veinRect();
     var band0 = derived.band;
-    var glow = 0.5 + 0.5 * Math.sin((pulse / cfg.vein.glintPeriodSeconds) * Math.PI * 2);
-    ctx.fillStyle = shade(band0.wallColor, -18);
-    ctx.fillRect(vr.x - 1, vr.y - 1, vr.w + 2, vr.h + 2);
+    // pocket shadow, then the ore body, then a lit rim in the band's GLINT colour —
+    // coal's vein colour is nearly black, so the highlight has to come from the glint
+    // or the richest seam in the game reads as a grey box.
+    // a shadowed pocket so the blob has a silhouette, the ore body, a lit top edge in
+    // the ore's own colour, and only DOTS in the glint colour — a full-width glint
+    // line turns the richest seam in the game into a picture frame.
+    ctx.fillStyle = "rgba(0,0,0,.5)";
+    ctx.fillRect(vr.x + 1, vr.y + 3, vr.w - 2, vr.h - 5);
+    var veinLit = SP.shade(band0.veinColor, 1.5), veinDark = SP.shade(band0.veinColor, 0.6);
     ctx.fillStyle = band0.veinColor;
     ctx.fillRect(vr.x + 3, vr.y + 5, 20, 7);
     ctx.fillRect(vr.x + 6, vr.y + 12, 16, 6);
     ctx.fillRect(vr.x + 2, vr.y + 16, 12, 5);
-    ctx.fillStyle = shade(band0.veinColor, 46);
-    ctx.fillRect(vr.x + 3, vr.y + 5, 20, 1);
-    ctx.fillRect(vr.x + 6, vr.y + 12, 16, 1);
-    ctx.fillRect(vr.x + 2, vr.y + 16, 12, 1);
-    ctx.fillStyle = shade(band0.veinColor, 24);
-    ctx.fillRect(vr.x + 13, vr.y + 6, 3, 6);
-    ctx.fillRect(vr.x + 8, vr.y + 17, 2, 4);
+    ctx.fillStyle = veinLit;
+    ctx.fillRect(vr.x + 3, vr.y + 5, 18, 1);
+    ctx.fillRect(vr.x + 6, vr.y + 12, 13, 1);
+    ctx.fillRect(vr.x + 2, vr.y + 16, 10, 1);
+    ctx.fillRect(vr.x + 4, vr.y + 7, 3, 2);
+    ctx.fillRect(vr.x + 9, vr.y + 14, 3, 2);
+    ctx.fillStyle = veinDark;
+    ctx.fillRect(vr.x + 3, vr.y + 11, 20, 1);
+    ctx.fillRect(vr.x + 6, vr.y + 17, 16, 1);
+    ctx.fillRect(vr.x + 2, vr.y + 20, 12, 1);
+    ctx.fillStyle = band0.veinColor;
+    ctx.fillRect(vr.x + 21, vr.y + 8, 3, 3);
+    ctx.fillRect(vr.x + 4, vr.y + 13, 2, 2);
+    ctx.fillRect(vr.x + 14, vr.y + 19, 3, 2);
     ctx.fillStyle = band0.glintColor;
     ctx.globalAlpha = 0.35 + 0.65 * glow;
     ctx.fillRect(vr.x + 9, vr.y + 8, 3, 3);
     ctx.fillRect(vr.x + 16, vr.y + 14, 2, 2);
     ctx.globalAlpha = 1;
-    ctx.strokeStyle = "rgba(255,226,150," + (0.25 + 0.35 * glow) + ")";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(vr.x + 0.5, vr.y + 0.5, vr.w - 1, vr.h - 1);
+    // corner brackets, not a full box: this is a target on the rock, not a UI window
+    ctx.fillStyle = "rgba(255,226,150," + (0.25 + 0.35 * glow).toFixed(3) + ")";
+    var bl = 5;
+    ctx.fillRect(vr.x, vr.y, bl, 1); ctx.fillRect(vr.x, vr.y, 1, bl);
+    ctx.fillRect(vr.x + vr.w - bl, vr.y, bl, 1); ctx.fillRect(vr.x + vr.w - 1, vr.y, 1, bl);
+    ctx.fillRect(vr.x, vr.y + vr.h - 1, bl, 1); ctx.fillRect(vr.x, vr.y + vr.h - bl, 1, bl);
+    ctx.fillRect(vr.x + vr.w - bl, vr.y + vr.h - 1, bl, 1); ctx.fillRect(vr.x + vr.w - 1, vr.y + vr.h - bl, 1, bl);
     if (strikeT > 0) {
       ctx.fillStyle = "rgba(255,240,200," + (strikeT / cfg.vein.strikeFlashSeconds) * 0.8 + ")";
       ctx.fillRect(vr.x, vr.y, vr.w, vr.h);
     }
 
-    // ---- depth readout
-    ctx.textAlign = "center";
-    ctx.fillStyle = "rgba(0,0,0,.62)";
-    ctx.fillRect(boreX + 2, 6, boreW - 4, 22);
-    ctx.font = "bold 9px ui-monospace, Menlo, monospace";
-    ctx.fillStyle = "#e9dcb6";
-    ctx.fillText(depth.toFixed(1) + " m", boreX + boreW / 2, 8);
+    // ---------------------------------------------------------- depth readout
+    ctx.fillStyle = "rgba(8,6,12,.72)";
+    ctx.fillRect(0, 0, contentW, 11);
+    ctx.fillStyle = "rgba(233,220,182,.14)";
+    ctx.fillRect(0, 11, contentW, 1);
     ctx.font = "6px ui-monospace, Menlo, monospace";
-    ctx.fillStyle = "#8d857a";
-    ctx.fillText(band0.name.toUpperCase(), boreX + boreW / 2, 19);
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#cbbd97";
+    ctx.fillText(band0.name.toUpperCase(), 4, 3);
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#e9dcb6";
+    ctx.fillText(depth.toFixed(1) + " m", contentW - 4, 3);
+    ctx.textAlign = "center";
 
-    // ---- floaters
+    // looking back up: tell the player the camera is off the face
+    if (cam.userBu < -8) {
+      ctx.fillStyle = "rgba(0,0,0,.6)";
+      ctx.fillRect(boreX - 6, H - 16, boreW + 12, 12);
+      ctx.font = "6px ui-monospace, Menlo, monospace";
+      ctx.fillStyle = "#d8c68f";
+      ctx.fillText("▼  RELEASE TO FOLLOW THE CREW", W / 2 - 3, H - 13);
+    }
+
+    // ---------------------------------------------------------- floaters
     for (var f = 0; f < floaters.length; f++) {
       var fl = floaters[f];
-      var k = fl.t / cfg.vein.floaterSeconds;
-      ctx.globalAlpha = 1 - k;
+      var kf = fl.t / cfg.vein.floaterSeconds;
+      ctx.globalAlpha = 1 - kf;
       ctx.fillStyle = fl.color;
       ctx.font = "bold 8px ui-monospace, Menlo, monospace";
-      ctx.fillText(fl.text, fl.x, fl.y - k * cfg.vein.floaterRiseBu);
+      ctx.fillText(fl.text, fl.x, fl.y - kf * cfg.vein.floaterRiseBu);
       ctx.globalAlpha = 1;
     }
     ctx.textAlign = "left";
 
-    // ---- depth ribbon
-    ctx.fillStyle = "rgba(0,0,0,.45)";
-    ctx.fillRect(ribbonX, 0, L.ribbonBu, H);
-    var frac = cfg.milestone ? Math.min(1, depth / cfg.milestone.depth) : 0;
-    ctx.fillStyle = "#3a2f1a";
-    ctx.fillRect(ribbonX + 1, 0, L.ribbonBu - 2, H);
-    ctx.fillStyle = "#c9a227";
-    ctx.fillRect(ribbonX + 1, 0, L.ribbonBu - 2, Math.round(frac * H));
-    // Only bands the lantern has revealed get a tick. A second Deep Lantern level puts a
-    // second mark on the ribbon; without one, the deeper boundaries stay secret.
-    ctx.fillStyle = "rgba(255,255,255,.14)";
-    for (var oi = 0; oi <= Math.min(cutoff, cfg.ores.length - 1); oi++) {
-      var m = Math.round((cfg.ores[oi].startDepth / cfg.milestone.depth) * H);
-      if (m >= 0 && m < H) ctx.fillRect(ribbonX, m, L.ribbonBu, 1);
-    }
+    // ---------------------------------------------------------- depth ribbon
+    drawRibbon(ribbonX, L, depth, cutoff);
   };
+
+  // Band ticks are clipped to the reveal cutoff — an unrevealed boundary must not
+  // leak here either — plus the ending marker and the current-depth caret.
+  function drawRibbon(x, L, depth, cutoff) {
+    var H = L.shaftBu, w = L.ribbonBu;
+    var end = cfg.milestone ? cfg.milestone.depth : 1200;
+    ctx.fillStyle = "#120e18";
+    ctx.fillRect(x, 0, w, H);
+    ctx.fillStyle = "#1c1726";
+    ctx.fillRect(x + 1, 0, w - 2, H);
+    var frac = Math.min(1, depth / end);
+    var fh = Math.round(frac * H);
+    ctx.fillStyle = "#8a6a1e";
+    ctx.fillRect(x + 1, 0, w - 2, fh);
+    ctx.fillStyle = "#f2c14e";
+    ctx.fillRect(x + 1, fh - 1 < 0 ? 0 : fh - 1, w - 2, 2);
+    // band ticks, revealed only
+    ctx.fillStyle = "rgba(233,220,182,.5)";
+    for (var oi = 0; oi <= Math.min(cutoff, cfg.ores.length - 1); oi++) {
+      var m = Math.round((cfg.ores[oi].startDepth / end) * H);
+      if (m >= 0 && m < H) ctx.fillRect(x, m, w, 1);
+    }
+    // the ending marker
+    ctx.fillStyle = "#ffe89a";
+    ctx.fillRect(x, H - 3, w, 3);
+    ctx.fillStyle = "rgba(255,232,154,.35)";
+    ctx.fillRect(x - 1, H - 6, 1, 6);
+  }
+
+  // --------------------------------------------------------------- test hooks
+  // selfTest drives these instead of reading pixels.
+  R.renderProbe = function (state, derived, ticks, dt) {
+    ticks = ticks || 1; dt = dt || 1 / 60;
+    for (var i = 0; i < ticks; i++) { R.update(dt, state, derived); R.draw(state, derived); }
+    return {
+      placeholderRects: stats.placeholderRects, tileBlits: stats.tileBlits,
+      seams: stats.seams, veiled: stats.veiled, dwarves: stats.dwarves,
+      maxDrawnIndex: stats.maxDrawnIndex, maxVeiledIndex: stats.maxVeiledIndex,
+      cutoffIndex: lastPlan.cutoffIndex,
+      cameraY: focusY(), deepestDwarfY: deepestDwarfY,
+      sprites: SP.stats()
+    };
+  };
+  R.focusY = focusY;
+  R.deepestDwarfY = function () { return deepestDwarfY; };
 })();

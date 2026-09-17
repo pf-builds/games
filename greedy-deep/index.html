@@ -4,11 +4,25 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>Greedy Deep — Click it! Studios</title>
+<meta property="og:image" content="assets/title.webp">
 <meta name="description" content="Dwarves dig down. You tap the vein. Gold buys picks, crew, and deeper reach. A free browser idle game from Click it! Studios.">
-<link rel="stylesheet" href="style.css?v=6">
+<link rel="stylesheet" href="style.css?v=8">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%23241f2b'/><text x='50' y='70' font-size='56' text-anchor='middle'>⛏️</text></svg>">
 </head>
 <body class="booting">
+
+<div id="splash">
+  <div id="splash-card">
+  <div id="splash-art"></div>
+  <div id="splash-scrim"></div>
+  <div id="splash-inner">
+    <canvas id="splash-logo"></canvas>
+    <div id="splash-sub">Dwarves dig. You tap the vein. The dark keeps score.</div>
+    <button id="descend" type="button">DESCEND</button>
+  </div>
+  </div>
+</div>
+
 
 <div id="col">
 
@@ -58,13 +72,15 @@
     <div id="shop"></div>
   </div>
 
-  <div id="foot">Greedy Deep — M2 engine and content. Placeholder art; the mine gets its face in M3.</div>
+  <div id="foot">Greedy Deep — M3 art pass. Procedural strata, crew, and a shaft that scrolls.</div>
 </div>
 
-<script src="src/engine.js?v=4"></script>
+<script src="src/engine.js?v=5"></script>
 <script src="src/save.js?v=3"></script>
-<script src="src/gd.js?v=7"></script>
-<script src="src/render.js?v=4"></script>
-<script src="src/ui.js?v=7"></script>
+<script src="src/sprites.js?v=4"></script>
+<script src="src/particles.js?v=1"></script>
+<script src="src/gd.js?v=8"></script>
+<script src="src/render.js?v=15"></script>
+<script src="src/ui.js?v=17"></script>
 </body>
 </html>

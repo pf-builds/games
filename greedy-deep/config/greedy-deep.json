@@ -1,5 +1,5 @@
 {
-  "configVersion": 3,
+  "configVersion": 12,
   "title": "Greedy Deep",
   "start": {
     "gold": 0,
@@ -39,8 +39,14 @@
       "intro": "Soot and small money.",
       "color": "#241f2e",
       "wallColor": "#332d3c",
-      "veinColor": "#17141d",
-      "glintColor": "#f2d488"
+      "veinColor": "#3a3442",
+      "glintColor": "#f2d488",
+      "palette": {
+        "base": "#2b2632",
+        "light": "#383244",
+        "dark": "#1d1926",
+        "speck": "#15111c"
+      }
     },
     {
       "id": "copper",
@@ -52,7 +58,13 @@
       "color": "#2a2b26",
       "wallColor": "#3c3d32",
       "veinColor": "#3f8f6a",
-      "glintColor": "#7fe0ad"
+      "glintColor": "#7fe0ad",
+      "palette": {
+        "base": "#34352d",
+        "light": "#414334",
+        "dark": "#24251e",
+        "speck": "#2f6b4d"
+      }
     },
     {
       "id": "silver",
@@ -64,7 +76,13 @@
       "color": "#232833",
       "wallColor": "#333b48",
       "veinColor": "#9fb6cc",
-      "glintColor": "#e6f2ff"
+      "glintColor": "#e6f2ff",
+      "palette": {
+        "base": "#2e3540",
+        "light": "#3a4351",
+        "dark": "#21262f",
+        "speck": "#6e8298"
+      }
     },
     {
       "id": "starmetal",
@@ -76,7 +94,13 @@
       "color": "#251d33",
       "wallColor": "#372a4a",
       "veinColor": "#a97ff0",
-      "glintColor": "#ffe6a0"
+      "glintColor": "#ffe6a0",
+      "palette": {
+        "base": "#2f2540",
+        "light": "#3c2f52",
+        "dark": "#20192e",
+        "speck": "#7250ab"
+      }
     }
   ],
   "tracks": [
@@ -391,9 +415,10 @@
     "faceYBu": 152
   },
   "veil": {
-    "alpha": 0.62,
+    "alpha": 0.5,
+    "scanline": 2,
+    "scanlineAlpha": 0.24,
     "color": "8,6,10",
-    "scanlineAlpha": 0.35,
     "seamRows": 2
   },
   "vein": {
@@ -416,7 +441,75 @@
   "lantern": {
     "forwardTilesPerLevel": 3,
     "minFaceYBu": 88,
-    "veilAlphaPerLevel": 0.12,
-    "veilAlphaFloor": 0.25
+    "veilAlphaPerLevel": 0.1,
+    "veilAlphaFloor": 0.22
+  },
+  "camera": {
+    "ease": 0.12,
+    "snapBackMs": 3000,
+    "snapEase": 0.05,
+    "maxUpBu": 480,
+    "snapThresholdBu": 512,
+    "wheelBuPerNotch": 24
+  },
+  "sprites": {
+    "digFps": 6,
+    "walkFps": 8,
+    "cartFrameSeconds": 1.6,
+    "tileVariants": 4,
+    "tileSpecks": 34,
+    "tileClusters": 4,
+    "dwarfWBu": 14,
+    "dwarfHBu": 16,
+    "dwarfFrames": 6,
+    "dwarvesPerRow": 4,
+    "dwarfRowBu": 18,
+    "maxDwarves": 32,
+    "pickTiers": 4,
+    "pickLevelsPerTier": 6,
+    "palettes": {
+      "rust": {
+        "tunic": "#8a4b2a",
+        "beard": "#c98a4a",
+        "hat": "#6d4a2a",
+        "skin": "#e3ab7c"
+      },
+      "iron": {
+        "tunic": "#48505e",
+        "beard": "#b9bfc8",
+        "hat": "#7c848f",
+        "skin": "#dba982"
+      },
+      "green": {
+        "tunic": "#3f6b46",
+        "beard": "#8f7a4a",
+        "hat": "#2f4f36",
+        "skin": "#e0a878"
+      },
+      "ash": {
+        "tunic": "#5a5350",
+        "beard": "#d8d2c6",
+        "hat": "#3c3733",
+        "skin": "#d9a67e"
+      }
+    },
+    "timber": {
+      "post": "#6E4E2C",
+      "lit": "#9C7A46",
+      "dark": "#3d2a19"
+    },
+    "metal": {
+      "body": "#6b6f78",
+      "lit": "#9aa3ad",
+      "dark": "#3a3d45"
+    },
+    "crewTopBu": 24,
+    "dwarfRowMinBu": 9,
+    "elevatorClearBu": 0
+  },
+  "titleCard": {
+    "src": "assets/title.webp",
+    "maxBytes": 122880,
+    "fadeMs": 450
   }
 }

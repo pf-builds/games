@@ -5,7 +5,7 @@
 
   var E = window.GDEngine;
   var GD = (window.GD = {
-    version: "0.2.0-m2",
+    version: "0.3.0-m3",
     config: null,
     state: null,
     ready: false,
@@ -14,7 +14,9 @@
       t: 0, depth: 0, band: "-", bandIndex: 0, gold: 0, goldRate: 0, digRate: 0, dwarves: 0,
       owned: {}, fps: 0, saveSize: 0, errors: 0, warnings: 0, lastError: "",
       lastEvent: "", eventsFired: 0, revealBonus: 0, timed: 0, flavorTodoCount: 0,
-      maxRenderedBandIndex: 0, forwardMeters: 0, veilAlpha: 0, nextBands: 0, offlineLast: null
+      maxRenderedBandIndex: 0, forwardMeters: 0, veilAlpha: 0, nextBands: 0, offlineLast: null,
+      cameraY: 0, deepestDwarfY: 0, cameraUserBu: 0, titleCardBytes: 0,
+      dwarfCache: 0, dwarfLoadouts: 0, placeholderRects: 0
     },
     // The live loop passes these through to the engine so the UI can react to
     // events, band changes and the ending without the engine knowing about DOM.
@@ -184,6 +186,19 @@
       GD.dbg.veilAlpha = pl.veilAlpha || 0;
       GD.dbg.nextBands = (pl.nextBands || []).length;
     }
+    if (window.GDRender && window.GDRender.cameraState) {
+      var cs = window.GDRender.cameraState();
+      GD.dbg.cameraY = cs.focusY;
+      GD.dbg.deepestDwarfY = cs.deepestDwarfY;
+      GD.dbg.cameraUserBu = cs.userBu;
+      var rs = window.GDRender.stats();
+      GD.dbg.placeholderRects = rs.placeholderRects;
+    }
+    if (window.GDSprites && window.GDSprites.stats) {
+      var ss = window.GDSprites.stats();
+      GD.dbg.dwarfCache = ss.dwarfCache;
+      GD.dbg.dwarfLoadouts = ss.dwarfLoadouts;
+    }
     if (fps !== undefined) GD.dbg.fps = fps;
   };
 
@@ -232,6 +247,12 @@
     // hooks for the duration so a test run never leaves a panel or a log line behind.
     var liveHooks = GD.hooks;
     GD.hooks = { onEvent: null, onBand: null, onEnding: null };
+
+    function bad3(mutate) {
+      var c = JSON.parse(JSON.stringify(GD.config));
+      mutate(c);
+      return E.validateConfig(c);
+    }
 
     function check(name, expected, actual, ok) {
       ran++;
@@ -633,12 +654,14 @@
         format: cfg.format, ores: cfg.ores, tracks: cfg.tracks, dwarves: cfg.dwarves,
         eventRules: cfg.eventRules, events: cfg.events, offline: cfg.offline,
         milestone: cfg.milestone, endless: cfg.endless, flavor: cfg.flavor, save: cfg.save,
-        layout: cfg.layout, veil: cfg.veil, vein: cfg.vein, debug: cfg.debug, lantern: cfg.lantern
+        layout: cfg.layout, veil: cfg.veil, vein: cfg.vein, debug: cfg.debug, lantern: cfg.lantern,
+        camera: cfg.camera, sprites: cfg.sprites, titleCard: cfg.titleCard
       }));
       ext.ores.push({
         id: "voidglass", name: "Voidglass", startDepth: 2000, goldPerMeter: 400, pattern: "crystal",
         intro: "Test ore added by selfTest.", color: "#101018", wallColor: "#1b1b28",
-        veinColor: "#5be0ff", glintColor: "#ffffff"
+        veinColor: "#5be0ff", glintColor: "#ffffff",
+        palette: { base: "#1b1b28", light: "#2b2b3e", speck: "#5be0ff", dark: "#0e0e16" }
       });
       ext.dwarves.push({
         id: "brann_test", name: "Test Hire", job: "Tester", base: 9999, ratio: 1.5,
@@ -698,6 +721,145 @@
         approx((function () { var s = E.newState(cfg); s.owned[cfg.dwarves[3].id] = 1; return E.costOf(cfg, s, cfg.dwarves[3].id); })(),
           cfg.dwarves[3].base * cfg.dwarves[3].ratio, 1e-6));
 
+
+      // =========================================================== M3 block
+      // Art-pass assertions (PRD 14, M3). These drive the real renderer through
+      // GDRender.renderProbe (GD.step + manual render ticks) and read its counters
+      // rather than sampling pixels.
+      var SPR = window.GDSprites, RND = window.GDRender;
+      if (!SPR || !RND || !RND.renderProbe) {
+        check("m3_sprite_factory_present", "GDSprites + GDRender.renderProbe", "missing", false);
+      } else {
+        var ss0 = SPR.stats();
+        check("m3_sprite_factory_ready", "tiles for every ore, shaft parts built",
+          ss0.tilePalettes + " palettes, ready=" + ss0.ready,
+          ss0.ready === true && ss0.tilePalettes >= cfg.ores.length);
+        check("m3_four_variants_per_band", cfg.sprites.tileVariants + " per band",
+          SPR.tilesFor(cfg.ores[0]).length, SPR.tilesFor(cfg.ores[0]).length === cfg.sprites.tileVariants);
+
+        // --- no placeholder rects at any depth: the wall is blitted tiles, and the
+        // fallback fill path (the only rect left in the tile loop) never runs.
+        GD.reset();
+        GD.grantForTest(cfg.dwarves[0].id, 2);
+        var depthProbes = [0, 12, 39, 41, 120, 179, 181, 400, 599, 601, 700, 1199, 1400, 2100];
+        var phBad = [], noTiles = [];
+        for (var m3i = 0; m3i < depthProbes.length; m3i++) {
+          GD.jumpTo(depthProbes[m3i]);
+          RND.cameraSnap();
+          var pr = RND.renderProbe(GD.state, GD.derive(), 2, 1 / 60);
+          if (pr.placeholderRects > 0) phBad.push("d=" + depthProbes[m3i] + " rects=" + pr.placeholderRects);
+          if (!(pr.tileBlits > 0)) noTiles.push("d=" + depthProbes[m3i]);
+          if (pr.maxDrawnIndex > pr.cutoffIndex) phBad.push("d=" + depthProbes[m3i] + " drew band " + pr.maxDrawnIndex + " past cutoff " + pr.cutoffIndex);
+        }
+        check("m3_no_placeholder_rects_at_any_depth", "0 at every probe depth", phBad.join(" | "), phBad.length === 0);
+        check("m3_walls_are_blitted_tiles", "tileBlits > 0 at every probe depth", noTiles.join(" | "), noTiles.length === 0);
+
+        // --- seam dither at every band boundary
+        var seamBad = [];
+        for (var bi3 = 1; bi3 < cfg.ores.length; bi3++) {
+          var sd = cfg.ores[bi3].startDepth;
+          GD.jumpTo(Math.max(0, sd - 2));
+          RND.cameraSnap();
+          var prS = RND.renderProbe(GD.state, GD.derive(), 2, 1 / 60);
+          if (!(prS.seams >= 1)) seamBad.push(cfg.ores[bi3].id + " @" + sd + ": no seam drawn");
+        }
+        // and the first endless boundary, which is synthesized rather than authored
+        GD.jumpTo(E.endlessStart(cfg) - 2);
+        RND.cameraSnap();
+        var prE = RND.renderProbe(GD.state, GD.derive(), 2, 1 / 60);
+        if (!(prE.seams >= 1)) seamBad.push("endless boundary: no seam drawn");
+        check("m3_seam_dither_at_every_boundary", "a seam strip at every boundary", seamBad.join(" | "), seamBad.length === 0);
+
+        // --- the veil is painted on d+1+revealBonus and on nothing beyond it
+        var veilBad = [];
+        for (var rb3 = 0; rb3 <= 2; rb3++) {
+          GD.reset();
+          if (rb3) GD.grantForTest("lantern", rb3);
+          GD.jumpTo(cfg.ores[1].startDepth - 3);
+          RND.cameraSnap();
+          var prV = RND.renderProbe(GD.state, GD.derive(), 2, 1 / 60);
+          if (!(prV.veiled >= 1)) veilBad.push("rb=" + rb3 + ": nothing veiled above the seam");
+          if (prV.maxVeiledIndex > prV.cutoffIndex) veilBad.push("rb=" + rb3 + ": veiled band " + prV.maxVeiledIndex + " past cutoff " + prV.cutoffIndex);
+          if (prV.maxDrawnIndex > prV.cutoffIndex) veilBad.push("rb=" + rb3 + ": drew band " + prV.maxDrawnIndex + " past cutoff " + prV.cutoffIndex);
+        }
+        check("m3_veil_through_cutoff_and_no_further", "veiled, and never past d+1+revealBonus", veilBad.join(" | "), veilBad.length === 0);
+
+        // --- every hired dwarf is on a ledge, with its own loadout
+        GD.reset();
+        var wantCrew = 0;
+        for (var dz = 0; dz < cfg.dwarves.length; dz++) { GD.grantForTest(cfg.dwarves[dz].id, 2); wantCrew += 2; }
+        GD.jumpTo(300);
+        RND.cameraSnap();
+        var prC = RND.renderProbe(GD.state, GD.derive(), 2, 1 / 60);
+        check("m3_every_hired_dwarf_is_drawn", wantCrew, prC.dwarves, prC.dwarves === wantCrew);
+
+        // --- the dwarf cache is bounded by loadouts x frames: no per-frame builds
+        var before = SPR.dwarfCacheSize();
+        RND.renderProbe(GD.state, GD.derive(), 120, 1 / 60);
+        var after = SPR.dwarfCacheSize();
+        var loCount = SPR.dwarfLoadoutCount(), frames = cfg.sprites.dwarfFrames;
+        check("m3_dwarf_cache_within_loadouts_x_frames", "<= " + (loCount * frames), after,
+          after <= loCount * frames);
+        check("m3_dwarf_cache_stable_across_frames", before, after, after === before);
+
+        // --- the scrolling camera. GD.step moves the crew down; manual render ticks
+        // stand in for one second of rAF. PRD 14 M3: within 16 bu of the deepest dwarf.
+        GD.reset();
+        GD.grantForTest("dorrik", 2);
+        GD.grantForTest("nix", 1);
+        var brk = cfg.ores[1].startDepth;
+        GD.jumpTo(brk - 8);
+        RND.cameraSnap();
+        RND.renderProbe(GD.state, GD.derive(), 30, 1 / 60);       // let it settle above the seam
+        var bandBefore = GD.derive().band.index;
+        GD.step(20);                                              // dig through the boundary
+        var bandAfter = GD.derive().band.index;
+        var prCam = RND.renderProbe(GD.state, GD.derive(), 60, 1 / 60);   // one second of frames
+        check("m3_camera_test_actually_crossed_a_band", bandBefore + " -> " + (bandBefore + 1),
+          bandBefore + " -> " + bandAfter, bandAfter === bandBefore + 1);
+        check("m3_camera_within_16bu_of_deepest_dwarf", "<= 16 bu",
+          Math.abs(prCam.cameraY - prCam.deepestDwarfY).toFixed(2) + " bu",
+          Math.abs(prCam.cameraY - prCam.deepestDwarfY) <= 16);
+        check("m3_camera_exposed_on_dbg", "a number", typeof GD.dbg.cameraY, typeof GD.dbg.cameraY === "number");
+
+        // --- drag scrolls back up, and the camera snaps back after snapBackMs
+        RND.cameraNudge(-200, true);
+        RND.cameraRelease();
+        var prUp = RND.renderProbe(GD.state, GD.derive(), 30, 1 / 60);
+        check("m3_camera_scrolls_back_up", "> 100 bu off the face",
+          Math.abs(prUp.cameraY - prUp.deepestDwarfY).toFixed(1) + " bu",
+          Math.abs(prUp.cameraY - prUp.deepestDwarfY) > 100);
+        RND.renderProbe(GD.state, GD.derive(), 4, cfg.camera.snapBackMs / 4000);   // idle past the snap-back delay
+        var prBack = RND.renderProbe(GD.state, GD.derive(), 300, 1 / 60);
+        check("m3_camera_snaps_back_to_the_face", "<= 16 bu",
+          Math.abs(prBack.cameraY - prBack.deepestDwarfY).toFixed(2) + " bu",
+          Math.abs(prBack.cameraY - prBack.deepestDwarfY) <= 16);
+
+        // --- the one generated asset stays inside its budget
+        var capBytes = (cfg.titleCard && cfg.titleCard.maxBytes) || 122880;
+        check("m3_title_card_within_120kb", "1.." + capBytes + " bytes", GD.dbg.titleCardBytes,
+          GD.dbg.titleCardBytes > 0 && GD.dbg.titleCardBytes <= capBytes);
+        check("m3_title_card_is_splash_only", "splash element present and not in the shaft",
+          document.getElementById("splash") ? "found" : "missing",
+          !!document.getElementById("splash"));
+      }
+      // --- M3 JSON knobs exist and are used
+      check("m3_json_band_palettes", cfg.ores.length + " palettes",
+        cfg.ores.filter(function (o) { return o.palette && o.palette.base; }).length,
+        cfg.ores.every(function (o) { return o.palette && o.palette.base && o.palette.light && o.palette.dark && o.palette.speck; }));
+      check("m3_json_camera_block", "ease + snapBackMs", JSON.stringify(cfg.camera || null),
+        !!cfg.camera && cfg.camera.ease > 0 && cfg.camera.snapBackMs >= 0);
+      check("m3_json_veil_block", "alpha + scanline", (cfg.veil || {}).alpha + "/" + (cfg.veil || {}).scanline,
+        cfg.veil.alpha > 0 && cfg.veil.scanline >= 1);
+      check("m3_json_sprites_block", "frame rates", (cfg.sprites || {}).digFps + "/" + (cfg.sprites || {}).walkFps,
+        !!cfg.sprites && cfg.sprites.digFps > 0 && cfg.sprites.walkFps > 0);
+      var badPal = bad3(function (c) { delete c.ores[1].palette; });
+      check("m3_validate_missing_palette", "not ok", badPal.ok, badPal.ok === false && /palette needs/.test(badPal.errors.join()));
+      var badCam = bad3(function (c) { c.camera.ease = 0; });
+      check("m3_validate_bad_camera_ease", "not ok", badCam.ok, badCam.ok === false && /camera.ease/.test(badCam.errors.join()));
+      var badCos = bad3(function (c) { c.dwarves[0].cosmetic.palette = "chartreuse"; });
+      check("m3_validate_unknown_cosmetic_palette", "not ok", badCos.ok, badCos.ok === false && /unknown cosmetic palette/.test(badCos.errors.join()));
+
       // --- console clean (last, so it counts everything above)
       if (!opts.skipConsoleCheck) {
         check("m2_no_console_errors", 0, GD.dbg.errors, GD.dbg.errors === 0);
@@ -706,6 +868,7 @@
     } finally {
       // Never leave the player's game, config, or save in test state.
       GD.hooks = liveHooks;
+      if (window.GDRender && window.GDRender.cameraSnap) window.GDRender.cameraSnap();
       if (GD.config !== liveConfig) GD.setConfig(liveConfig, false);
       GD.state = liveState;
       try {

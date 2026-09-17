@@ -1,8 +1,10 @@
-# Greedy Deep — Build Spec (M2: engine and content)
+# Greedy Deep — Build Spec (M3: art pass)
 
 Cabinet #7. Incremental mining game, side-view cutaway of one vertical shaft. Full contract:
-`business/D-click-it-studios/game-research/greedy-deep-PRD.md`. This file covers M1 (core loop)
-and M2 (engine + content). M3 (art) and M4 (juice/mobile/save/ending) are listed in `LATER.md`.
+`business/D-click-it-studios/game-research/greedy-deep-PRD.md`, with the sprite and audio
+recipes in `greedy-deep-research-art.md` (R4). This file covers M1 (core loop), M2 (engine +
+content) and M3 (art). M4 (audio, juice, portrait/desktop rails, ending scene, settings,
+save export) is listed in `LATER.md`.
 
 ## Mechanic
 Two income paths, deliberately separate:
@@ -32,6 +34,8 @@ M1: Game (fixed-dt accumulator) - Shaft - Vein - Wallet - UpgradeTrack x2 - Dwar
 M2 adds: Ore/Band table (4 bands + endless repeats) - EffectRegistry (all 12 verbs) - 8 upgrade tracks -
 4 dwarves on the same hire engine - EventScheduler - OfflineResolver - Milestone/ending - FlavorTable -
 `simulate` / `validateConfig` / `selfTest`.
+
+M3 adds: SpriteFactory (`src/sprites.js`) - Camera - TitleCard/splash. Every placeholder rect is gone.
 
 ## Verb vocabulary (the full v1 registry, `src/engine.js`)
 Every handler is pure and folds one effect into an accumulator. A JSON row that names a verb not on this
@@ -125,15 +129,118 @@ Desktop (>=1100 px) centres the same column with a drop shadow. Side rails are M
 | `config/greedy-deep.json` | every tunable number; own `?v=` cache-bust, separate from the script tags |
 | `src/engine.js` | pure sim: fixed-dt tick, purchase engine, effects registry, bands, validation, format |
 | `src/gd.js` | `window.GD` facade, debug mutators, `selfTest()` |
-| `src/render.js` | shaft canvas |
+| `src/sprites.js` | procedural sprite factory: strata tiles, seam dither, shaft parts, dwarf composites, cart, elevator, pixel logo. Builds once at boot |
+| `src/particles.js` | pooled particles + floaters, copied verbatim from peasant-swarm. Staged for M4 |
+| `src/render.js` | shaft canvas, camera, depth ribbon |
+| `assets/title.webp` | the one generated asset: SDXL-base splash card, 416x608, 62.6 KB |
 | `src/ui.js` | DOM, input, clocks, autosave |
 | `src/save.js` | versioned localStorage save, migration walker |
 
-`src/audio.js`, `src/sprites.js`, `src/particles.js` are M3/M4 and deliberately absent.
+`src/audio.js` is M4 and deliberately absent. `src/particles.js` ships now — the pooled
+`Particles`/`Floaters` copied verbatim from peasant-swarm — but nothing spawns from it until the
+M4 juice pass; it is staged, not wired.
 
 `src/render.js` also exposes `bandPlan(depth, revealBonus)` — a pure function returning the band
 indices this frame may draw, which of them are veiled, and the cutoff. `selfTest` asserts the reveal
 rule against it rather than reading pixels.
+
+
+## M3 — the art pass
+
+### Sprite factory (`src/sprites.js`)
+Everything is pre-rendered to offscreen canvases in `GDSprites.build(cfg)` at boot (and again on
+a config swap) and blitted with `imageSmoothingEnabled = false`. **No frame allocates anything in
+the tile blit path** — it is integer arithmetic and cached canvases only.
+
+Copied verbatim from `peasant-swarm/src/sprites.js`, with the source named at the copy site:
+the LCG `seed`/`rnd` pair, `make(w,h,draw)` with its `px`/`rect`/`ell` helpers, `flip(c)`,
+`shade(hex,k)`, `outline(c)` and `silhouette(c)`. From `peasant-swarm/src/particles.js`: `Pool`,
+`Particles` (burst/smoke/ring/update/draw) and `Floaters`, into `src/particles.js`.
+
+| Sprite | Size (bu) | Frames / variants | Cache key |
+|---|---|---|---|
+| Strata tile | 16x16 | 4 per band, picked by `hash(tx,ty) & 3`; variant 3 carries the crack motif | `ores[].id` (endless bands reuse `baseId`) |
+| Back-wall tile | 16x16 | the same 4, pushed into shadow — the far wall of the cutaway, so the bore is a carved space rather than a black hole | same |
+| Seam dither strip | 154x32 | one per band pair: 2 px checker of the NEXT band's `palette.base`, 25% density on the upper tile row, 50% on the lower | `from>to@width` |
+| Timber brace | 64x16 | 1, drawn every `layout.braceEveryRows` rows | — |
+| Ladder | 6x64 | 1, tiled down the left face of the bore | — |
+| Dwarf | 14x16 (12x14 of body + 1 bu outline margin) | **6**: 0 idle, 1 walkA, 2 walkB, 3 digWindup, 4 digImpact, 5 haul. Four layers composited at cache time: body, **beard**, hat, pick | `` `${beard}\|${hat}\|${pick}\|${tunic}\|${frame}` `` in a `Map` |
+| Cart | 20x14 | 3 fill frames: empty / half / heaped, in the band's ore colour | band palette key |
+| Elevator cage | 24x28 | 1. The rope is **not** a sprite: one 1 bu `fillRect` column redrawn each frame, so the cage travels any distance for free | — |
+| "GREEDY DEEP" logo | 4x6 glyphs | 1, splash only | — |
+
+Frame rates, layout spacing, cosmetic palettes, timber and metal colours all live in JSON under
+`sprites`. Four dwarf loadouts x four pick tiers x six frames = **96 cached canvases**, built once;
+`selfTest` asserts `dwarfCache <= loadouts x frames` and that the count does not move across 120
+rendered frames.
+
+**Purchase visibility (PRD 16, never cut).** Every track changes the shaft:
+
+| Bought | What appears |
+|---|---|
+| Sharper Pick | the pick layer swaps tier every `sprites.pickLevelsPerTier` levels, on every dwarf |
+| Drill Bit / dwarves | another dwarf on a ledge, in its own JSON `cosmetic` loadout |
+| Bigger Cart | the cart runs half/heaped instead of empty/half |
+| Deep Lantern | a hung lamp on the left face, a warmer bore, more forward view, a lighter veil, another readout line |
+| Cart Rails | rail ties appear under the cart |
+| Smelter | the bore light warms further |
+| Shaft Braces | every timber brace doubles up |
+| Elevator | a cage on a rope starts working the upper bore |
+
+### Strata, veins, seams, veil
+- Band palettes are JSON: `ores[].palette = {base, light, dark, speck}`. `validateConfig` rejects a
+  band without one, so a missing palette fails loud instead of drawing a flat rect.
+- **Veins are data, never baked into a tile.** They are generated per 64 bu chunk of world depth
+  from a hash and cached in a `Map`, so an endless run never grows an array. Each is a 3-7 px blob
+  of the band's `veinColor` plus one glint pixel pulsing on its own phase.
+- **Seam dither** is drawn at every band boundary in view, clipped to the reveal cutoff — including
+  the synthesized endless boundaries.
+- **The veil** covers everything from the first revealed-but-unreached band down: a flat wash at
+  `veil.alpha` (lifted per Deep Lantern level, floored at `lantern.veilAlphaFloor`) plus a
+  1-in-`veil.scanline` scanline. Vein glints are re-drawn **after** the veil at half amplitude, so
+  the next band's ore still winks through the dark.
+- **Shaft carve:** a 2 bu bevel on each cut face, lit on the left and shadowed on the right, with a
+  per-tile-row jitter from `hash(ty)` so the bore reads as hewn rather than cut by a laser.
+
+### Camera (PRD 5, a v1 must)
+World space is bu below the surface: `worldY = depth * layout.buPerMeter`. `cam.topBu` is the world
+y drawn at screen y 0, so `screenY = worldY - cam.topBu`.
+
+- The camera follows the **dig face**, which is where the deepest dwarf stands, and lands it at
+  `effFaceY(revealBonus)` — the Deep Lantern's forward bias raises that line, so a lantern buys
+  look-ahead without a second camera mode.
+- Easing is `1 - (1 - camera.ease)^(dt*60)`, frame-rate independent and clamped so a long stall
+  cannot overshoot.
+- **Drag or wheel** scrolls back up the shaft, clamped to `camera.maxUpBu`. A pointer that moves more
+  than 6 CSS px is a drag; a pointer that does not move is a strike on the vein, so one finger does
+  both jobs. A banner says the camera is off the face.
+- After `camera.snapBackMs` of no input the offset decays back to zero at `camera.snapEase`.
+- A jump larger than `camera.snapThresholdBu` (a debug `jumpTo`, or a band-skip) snaps rather than
+  scrolling for a minute.
+- `GD.dbg.cameraY` is the world bu of the camera's focus line; `GD.dbg.deepestDwarfY` is the deepest
+  dwarf's feet. `selfTest` steps the sim across a band break and requires them within **16 bu** after
+  one second of render ticks.
+
+### Crew layout
+The working ledge holds `dwarvesPerRow - 1` dwarves and the cart parks in the last slot. Rows behind
+hold a full `dwarvesPerRow`. When the crew outgrows the bore the **row pitch compresses** from
+`sprites.dwarfRowBu` down to `sprites.dwarfRowMinBu` rather than dropping hires off the top; anything
+that still does not fit is reported on screen as "+N CREW UP TOP", because a purchase that changes
+nothing visible is a bug. `sprites.crewTopBu` keeps the stack clear of the band strip, plus
+`sprites.elevatorClearBu` once a lift is working the upper bore.
+
+### Depth ribbon
+A 6 bu canvas overlay on the right edge: progress to the ending as a gold fill, a band tick per
+revealed boundary (clipped to `d + 1 + revealBonus`, so an unrevealed boundary is not leaked here
+either), and the ending marker at `milestone.depth`.
+
+### Title card
+One SDXL-base image, the only generated asset in the game. Portrait 832x1216 -> 416x608 WebP,
+**62.6 KB** against a 120 KB cap, at `assets/title.webp`. It is the background of the splash only,
+under a procedurally-drawn pixel logo and a DESCEND button, so the painted style and the pixel style
+never meet at the same scale. It fades out on DESCEND and is never shown in play. The card is sized
+to the same 160 bu column the game uses — covering the whole viewport crops a portrait poster to a
+detail. Model, licence, prompt, seed and date are in `LICENSES.md`.
 
 ## `window.GD`
 Always present. `step(seconds)`, `tap`, `buy`, `reset`, `getState/setState`, `setConfig`, `costOf`,
@@ -159,7 +266,7 @@ M2 adds the headless harness and the mutators the PRD §13 names:
 `?debug=1` adds the overlay plus `setGold`, `setDepth`, `grant`, `pause`, `resume`, `timeScale`,
 `clearSave`, and a guarded fallback interval clock so hidden tabs keep simulating.
 
-## Acceptance — all run by `GD.selfTest()` (100 assertions, zero failures)
+## Acceptance — all run by `GD.selfTest()` (136 assertions, zero failures)
 **M1 block:** reset/step(0) zeroes - 10 taps pay exactly `10 x goldPerTap` and never dig - `step(600)`
 with no crew changes nothing - second purchase costs `base x ratio` - insufficient gold refused -
 a hired dwarf digs at its `add_rate` - save shape and restore - `step(3600)` under 500 ms -
@@ -185,6 +292,18 @@ no Tolkien Appendix A name anywhere in the shipped content - **a fifth ore and a
 JSON with no JS edit produce a new band, a new hireable row in the shop, and a correct render plan** -
 `validateConfig` rejects an unknown verb, an unknown pattern, a duplicate id and a non-monotonic
 `startDepth`, and accepts the shipped file - console clean.
+
+**M3 block:** the sprite factory is ready and every band has four tile variants - **no placeholder
+rects at fourteen probe depths** (0 m through the endless bands), and the walls are blitted tiles at
+every one of them - seam dither present at every authored boundary **and** at the first synthesized
+endless boundary - the veil is painted above the seam and never past `d + 1 + revealBonus`, at
+reveal levels 0, 1 and 2 - every hired dwarf is drawn - the dwarf cache stays within
+`loadouts x frames` and does not grow across 120 frames - the camera crosses a real band break and
+lands within 16 bu of the deepest dwarf inside one second of render ticks - a drag scrolls more than
+100 bu off the face and the camera snaps back inside the snap-back window - `GD.dbg.cameraY` is a
+number - the title card is between 1 byte and 120 KB and lives on the splash - `bands[].palette`,
+`camera`, `veil.scanline` and `sprites` are all present in JSON - `validateConfig` rejects a missing
+band palette, a zero `camera.ease` and an unknown cosmetic palette.
 
 ## Tuning log (M2)
 The PRD's §8 starting values reached 1,200 m in **249 s** against a 5,400-10,800 s window: 20-40x too
