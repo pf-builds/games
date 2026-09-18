@@ -16,7 +16,8 @@
   // COPIED VERBATIM from peasant-swarm/src/sprites.js — the LCG seed/rnd pair at the
   // top of PS.buildSprites plus make(w,h,draw) with its px/rect/ell helpers, flip(c),
   // shade(hex,k), outline(c) and silhouette(c). R4 asks for a copy, not a re-derivation,
-  // and for the source named at the copy site.
+  // and for the source named at the copy site. outlineVerbatim() is that copy; the
+  // outline() the factory actually calls is a composite-based equivalent (see below).
   let seed = 20260901;
   const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
 
@@ -54,7 +55,7 @@
     const b = Math.max(0, Math.min(255, (n & 255) * k)) | 0;
     return "#" + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1);
   }
-  function outline(c) {
+  function outlineVerbatim(c) {
     const g = c.getContext("2d"), w = c.width, h = c.height;
     const img = g.getImageData(0, 0, w, h), d = img.data;
     const solid = (x, y) => x >= 0 && y >= 0 && x < w && y < h && d[(y * w + x) * 4 + 3] > 0;
@@ -67,6 +68,71 @@
     g.putImageData(out, 0, 0);
     return c;
   }
+  // The copied outline() reads the canvas back with getImageData and writes the result
+  // straight over the original with putImageData. Two problems, both real:
+  //
+  //   1. If the read-back comes back empty — which is exactly what a 2D backing store
+  //      the browser has hibernated or lost returns — the putImageData WIPES a sprite
+  //      that drew correctly, and the cache serves that blank canvas forever. This is
+  //      the mechanism behind BLOCKER 1 for every sprite that goes through outline.
+  //   2. Chrome logs a Canvas2D readback warning per context. 108 outlined sprites,
+  //      rebuilt by selfTest's two config swaps, buried the console in 500 of them.
+  //
+  // This version composites the same result and never reads a pixel back: dilate the
+  // silhouette by drawing the sprite at four 1 px offsets, tint the dilation with the
+  // rim colour via source-in, then draw the original on top. The rim survives only
+  // where the dilation is not covered by the original — identical to the copied
+  // algorithm's 4-neighbour test. selfTest asserts the two agree pixel for pixel.
+  const RIM = "rgba(26,18,16,0.686)";   // the copied code's 26,18,16 at alpha 175/255
+  function outline(c) {
+    const w = c.width, h = c.height;
+    const t = document.createElement("canvas");
+    t.width = w; t.height = h;
+    const g = t.getContext("2d");
+    g.drawImage(c, -1, 0); g.drawImage(c, 1, 0);
+    g.drawImage(c, 0, -1); g.drawImage(c, 0, 1);
+    g.globalCompositeOperation = "source-in";
+    g.fillStyle = RIM;
+    g.fillRect(0, 0, w, h);
+    g.globalCompositeOperation = "source-over";
+    g.drawImage(c, 0, 0);
+    const cg = c.getContext("2d");
+    cg.clearRect(0, 0, w, h);
+    cg.drawImage(t, 0, 0);
+    return c;
+  }
+  S.outlineVerbatim = outlineVerbatim;
+  S.outlineComposite = outline;
+
+  // How many pixels in this canvas are not fully transparent. The one primitive the
+  // whole blank-cache guard is built on.
+  //
+  // Every readback goes through ONE scratch context created with willReadFrequently,
+  // never the sprite's own context. Reading a sprite canvas twice makes Chrome log
+  // "Canvas2D: Multiple readback operations using getImageData are faster with the
+  // willReadFrequently attribute set to true" once per context, and verifying a
+  // 146-entry cache more than once buried the console in them.
+  var scratch = null, scratchCtx = null;
+  function opaqueCount(c) {
+    if (!c || !c.width || !c.height) return 0;
+    if (!scratch) {
+      scratch = document.createElement("canvas");
+      scratchCtx = scratch.getContext("2d", { willReadFrequently: true });
+    }
+    let d;
+    try {
+      if (scratch.width < c.width) scratch.width = c.width;
+      if (scratch.height < c.height) scratch.height = c.height;
+      scratchCtx.clearRect(0, 0, c.width, c.height);
+      scratchCtx.drawImage(c, 0, 0);
+      d = scratchCtx.getImageData(0, 0, c.width, c.height).data;
+    } catch (e) { return -1; }          // read blocked: treat as unknown, not as blank
+    let n = 0;
+    for (let i = 3; i < d.length; i += 4) if (d[i] > 0) n++;
+    return n;
+  }
+  S.opaqueCount = opaqueCount;
+
   function silhouette(c) {
     const f = document.createElement("canvas"); f.width = c.width; f.height = c.height;
     const g = f.getContext("2d"); g.drawImage(c, 0, 0); g.globalCompositeOperation = "source-in"; g.fillStyle = "#FFFFFF"; g.fillRect(0, 0, f.width, f.height);
@@ -101,7 +167,7 @@
   var dwarves = new Map();
   var loadouts = new Set();
   var brace = null, ladder = null, elevator = null, ropeColor = "#5a4630";
-  var stats = { tileBuilds: 0, dwarfBuilds: 0, seamBuilds: 0 };
+  var stats = { tileBuilds: 0, dwarfBuilds: 0, seamBuilds: 0, outlineFailures: 0, rebuilds: 0, blankKeys: [], opaque: 0, total: 0 };
 
   S.stats = function () {
     return {
@@ -111,6 +177,11 @@
       dwarfCache: dwarves.size,
       dwarfLoadouts: loadouts.size,
       dwarfBuilds: stats.dwarfBuilds,
+      outlineFailures: stats.outlineFailures,
+      rebuilds: stats.rebuilds,
+      opaque: stats.opaque,
+      total: stats.total,
+      blank: stats.blankKeys.slice(0, 8),
       ready: !!brace
     };
   };
@@ -263,7 +334,9 @@
     // elevator cage 24x28. The rope is NOT a sprite: one 1 bu fillRect column redrawn
     // each frame, so the cage can travel any distance for free (R4 2).
     var M = (cfg.sprites && cfg.sprites.metal) || { body: "#6b6f78", lit: "#9aa3ad", dark: "#3a3d45" };
-    elevator = make(24, 28, function (p) {
+    var EW = (cfg.sprites && cfg.sprites.elevatorWBu) || 24;
+    var EH = (cfg.sprites && cfg.sprites.elevatorHBu) || 28;
+    elevator = make(EW, EH, function (p) {
       p.rect(2, 3, 20, 3, M.body); p.rect(2, 3, 20, 1, M.lit);
       p.rect(10, 0, 4, 3, M.dark);
       p.rect(2, 6, 2, 19, M.body); p.rect(20, 6, 2, 19, M.body);
@@ -286,11 +359,13 @@
     var key = paletteKey(band);
     if (carts[key]) return carts[key];
     var M = (cfg.sprites && cfg.sprites.metal) || { body: "#6b6f78", lit: "#9aa3ad", dark: "#3a3d45" };
+    var CW = (cfg.sprites && cfg.sprites.cartWBu) || 20;
+    var CH = (cfg.sprites && cfg.sprites.cartHBu) || 14;
     var ore = band.veinColor || "#c9a227";
     var oreL = shade(ore, 1.35), oreD = shade(ore, 0.7);
     var out = [];
     for (let f = 0; f < 3; f++) {
-      out.push(outline(make(20, 14, function (p) {
+      out.push(outline(make(CW, CH, function (p) {
         p.rect(1, 3, 18, 7, M.body);
         p.rect(1, 3, 18, 1, M.lit);
         p.rect(1, 9, 18, 1, M.dark);
@@ -401,6 +476,8 @@
   }
 
   function buildDwarf(beardId, hatId, pickTier, palId, frame) {
+    var DW = (cfg.sprites && cfg.sprites.dwarfWBu) || 14;
+    var DH = (cfg.sprites && cfg.sprites.dwarfHBu) || 16;
     var P = palOf(palId);
     var T = P.tunic, TD = shade(T, 0.72), TL = shade(T, 1.18);
     var SKIN = P.skin || "#e0a878", SKIND = shade(SKIN, 0.78);
@@ -409,7 +486,7 @@
     var LEG = "#3d2c1c", BOOT = "#241810", EYE = "#140f12";
     var bob = (frame === 2 || frame === 5) ? 1 : 0;
 
-    return outline(make(14, 16, function (p0) {
+    return outline(make(DW, DH, function (p0) {
       // 1 bu margin all round so outline() has somewhere to put the dark rim
       var p = {
         px: function (x, y, c) { p0.px(x + 1, y + 1, c); },
@@ -498,12 +575,74 @@
     });
   };
 
+  // ------------------------------------------------------------------ blank-cache guard
+  // BLOCKER 1 (M3 visual critic): the whole sprite cache was observed fully transparent
+  // on a page that loaded while its tab was hidden — every tile, dwarf frame, cart frame,
+  // brace, ladder and cage at 0 of N opaque pixels — while a freshly-keyed rebuild drew
+  // correctly. Nothing in the draw code can produce that; a 2D backing store the browser
+  // hibernated or lost can, and once it happens the cache serves blanks forever because
+  // nothing ever re-checks it. Two defences: outline() can no longer wipe a sprite
+  // (above), and the cache is verified after every build and again whenever the page
+  // becomes visible, rebuilding itself if any entry has gone blank.
+  function eachEntry(fn) {
+    var k, i;
+    for (k in tiles) for (i = 0; i < tiles[k].length; i++) fn("tile:" + k + ":" + i, tiles[k][i]);
+    for (k in backTiles) for (i = 0; i < backTiles[k].length; i++) fn("back:" + k + ":" + i, backTiles[k][i]);
+    for (k in seams) fn("seam:" + k, seams[k]);
+    for (k in carts) for (i = 0; i < carts[k].length; i++) fn("cart:" + k + ":" + i, carts[k][i]);
+    dwarves.forEach(function (c, key) { fn("dwarf:" + key, c); });
+    fn("brace", brace); fn("ladder", ladder); fn("elevator", elevator);
+  }
+
+  // {total, opaque, blank:[keys]}. A canvas that cannot be read back (-1) counts as
+  // unknown, not as blank, so a tainted-canvas edge case never triggers a rebuild loop.
+  S.verify = function () {
+    var total = 0, opaque = 0, blank = [];
+    eachEntry(function (key, c) {
+      if (!c) { blank.push(key); total++; return; }
+      total++;
+      var n = opaqueCount(c);
+      if (n > 0 || n === -1) opaque++;
+      else blank.push(key);
+    });
+    stats.total = total; stats.opaque = opaque; stats.blankKeys = blank;
+    return { total: total, opaque: opaque, blank: blank };
+  };
+
+  // Verify, and rebuild once if anything came back blank. Returns the final report.
+  // `strict` (debug builds) throws if a full rebuild still cannot produce pixels, which
+  // is a genuinely unrecoverable state and should fail loud rather than ship blank art.
+  S.ensure = function (strict) {
+    var v = S.verify();
+    if (v.blank.length === 0) return v;
+    stats.rebuilds++;
+    S.build(cfg, true);
+    v = S.verify();
+    if (v.blank.length && strict) {
+      throw new Error("[GDSprites] " + v.blank.length + " of " + v.total +
+        " cached sprites are blank after a rebuild: " + v.blank.slice(0, 5).join(", "));
+    }
+    return v;
+  };
+
+  // The page coming back into view is exactly when a hibernated backing store shows up
+  // as blank, so that is when the cache is re-checked.
+  if (typeof document !== "undefined" && document.addEventListener) {
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden && cfg) S.ensure(false);
+    });
+    window.addEventListener("pageshow", function () { if (cfg) S.ensure(false); });
+  }
+
   // ------------------------------------------------------------------ build
-  S.build = function (config) {
+  S.build = function (config, rebuilding) {
     cfg = config;
     tiles = {}; backTiles = {}; seams = {}; carts = {};
     dwarves = new Map(); loadouts = new Set();
-    stats = { tileBuilds: 0, dwarfBuilds: 0, seamBuilds: 0 };
+    // Reset the per-build counters only. rebuilds / outlineFailures are incident history
+    // and must survive a rebuild, or the guard loses the evidence it exists to collect.
+    stats.tileBuilds = 0; stats.dwarfBuilds = 0; stats.seamBuilds = 0;
+    stats.blankKeys = []; stats.opaque = 0; stats.total = 0;
     buildShaftParts();
     // Pre-build every band's tiles and cart up front so the first frame in a new band
     // is not the frame that pays for them.
@@ -515,12 +654,16 @@
     }
     // Every dwarf's declared loadout, all six frames, all four pick tiers.
     var tierMax = (cfg.sprites && cfg.sprites.pickTiers ? cfg.sprites.pickTiers : 4) - 1;
+    var frames = (cfg.sprites && cfg.sprites.dwarfFrames) || 6;
     for (var d = 0; d < cfg.dwarves.length; d++) {
       var cos = cfg.dwarves[d].cosmetic || {};
       for (var t = 0; t <= tierMax; t++) {
-        for (var f = 0; f < 6; f++) S.dwarf(cos.beard || "braided", cos.hat || "cap", t, cos.palette || "rust", f);
+        for (var f = 0; f < frames; f++) S.dwarf(cos.beard || "braided", cos.hat || "cap", t, cos.palette || "rust", f);
       }
     }
+    // The build is synchronous, runs the moment the config is in hand, and never waits
+    // on rAF, a layout measurement or a paint — so it is identical in a hidden tab.
+    if (!rebuilding) S.verify();
     return S.stats();
   };
 })();

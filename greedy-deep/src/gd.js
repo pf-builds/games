@@ -16,7 +16,9 @@
       lastEvent: "", eventsFired: 0, revealBonus: 0, timed: 0, flavorTodoCount: 0,
       maxRenderedBandIndex: 0, forwardMeters: 0, veilAlpha: 0, nextBands: 0, offlineLast: null,
       cameraY: 0, deepestDwarfY: 0, cameraUserBu: 0, titleCardBytes: 0,
-      dwarfCache: 0, dwarfLoadouts: 0, placeholderRects: 0
+      dwarfCache: 0, dwarfLoadouts: 0, placeholderRects: 0,
+      spriteCacheOpaque: 0, spriteCacheTotal: 0, spriteCacheRebuilds: 0, spriteCacheBlank: [],
+      outlineFailures: 0, logoRedraws: 0
     },
     // The live loop passes these through to the engine so the UI can react to
     // events, band changes and the ending without the engine knowing about DOM.
@@ -198,6 +200,11 @@
       var ss = window.GDSprites.stats();
       GD.dbg.dwarfCache = ss.dwarfCache;
       GD.dbg.dwarfLoadouts = ss.dwarfLoadouts;
+      GD.dbg.spriteCacheOpaque = ss.opaque;
+      GD.dbg.spriteCacheTotal = ss.total;
+      GD.dbg.spriteCacheRebuilds = ss.rebuilds;
+      GD.dbg.spriteCacheBlank = ss.blank;
+      GD.dbg.outlineFailures = ss.outlineFailures;
     }
     if (fps !== undefined) GD.dbg.fps = fps;
   };
@@ -730,6 +737,64 @@
       if (!SPR || !RND || !RND.renderProbe) {
         check("m3_sprite_factory_present", "GDSprites + GDRender.renderProbe", "missing", false);
       } else {
+        // --- BLOCKER 1 guard: every cached canvas must actually have pixels in it.
+        // A cache that builds blank (a hibernated or lost 2D backing store) passed every
+        // other M3 check while the shaft rendered as an empty black rectangle.
+        var vrep = SPR.verify();
+        check("m3_sprite_cache_every_entry_opaque", "0 blank of " + vrep.total,
+          vrep.blank.length + " blank" + (vrep.blank.length ? ": " + vrep.blank.slice(0, 5).join(", ") : ""),
+          vrep.blank.length === 0);
+        check("m3_sprite_cache_is_populated", "> 100 cached canvases", vrep.total, vrep.total > 100);
+        check("m3_sprite_cache_opaque_equals_total", vrep.total, vrep.opaque, vrep.opaque === vrep.total);
+        GD.refreshDbg();
+        check("m3_dbg_exposes_sprite_cache_opaque", "a number equal to the verified count",
+          GD.dbg.spriteCacheOpaque, GD.dbg.spriteCacheOpaque === vrep.total && GD.dbg.spriteCacheTotal === vrep.total);
+        // ensure() must be idempotent on a healthy cache: no rebuild, nothing blank
+        var rbBefore = SPR.stats().rebuilds;
+        var vrep2 = SPR.ensure(false);
+        check("m3_sprite_cache_ensure_is_a_noop_when_healthy", rbBefore + " rebuilds",
+          SPR.stats().rebuilds, SPR.stats().rebuilds === rbBefore && vrep2.blank.length === 0);
+        var logoEl = document.getElementById("splash-logo");
+        check("m3_splash_logo_has_pixels", "> 0 opaque pixels",
+          logoEl ? SPR.opaqueCount(logoEl) : "no canvas",
+          !!logoEl && SPR.opaqueCount(logoEl) > 0);
+        check("m3_splash_logo_is_dpr_scaled", "backing store >= CSS box",
+          logoEl ? logoEl.width + "x" + logoEl.height + " for " + logoEl.style.width : "no canvas",
+          !!logoEl && logoEl.width >= parseInt(logoEl.style.width, 10));
+
+        // --- ETA formatting never carries a 60 into the seconds slot (M3 critic)
+        var etaBad = [];
+        for (var ei = 0; ei < 400; ei++) {
+          var probe = 1 + ei * 11.37;
+          var txt = E.formatEta(probe);
+          if (/\b60s\b/.test(txt) || /\b60m\b/.test(txt) || /\b24h\b/.test(txt)) etaBad.push(probe.toFixed(1) + " -> " + txt);
+        }
+        check("m3_eta_never_prints_60s", "no 60s / 60m / 24h", etaBad.slice(0, 4).join(" | "), etaBad.length === 0);
+        check("m3_eta_rounds_before_splitting", "38m 0s", E.formatEta(2279.6), E.formatEta(2279.6) === "38m 0s");
+
+        // The composite outline replaced a getImageData round-trip; prove it draws the
+        // same rim the copied peasant-swarm algorithm does, rather than trusting it.
+        (function () {
+          function sample(fn) {
+            var c = document.createElement("canvas");
+            c.width = 14; c.height = 16;
+            var g = c.getContext("2d");
+            g.fillStyle = "#c0392b"; g.fillRect(4, 4, 6, 8); g.fillRect(6, 2, 2, 2);
+            fn(c);
+            var o = document.createElement("canvas"); o.width = 14; o.height = 16;
+            var og = o.getContext("2d", { willReadFrequently: true });
+            og.drawImage(c, 0, 0);
+            return og.getImageData(0, 0, 14, 16).data;
+          }
+          var a = sample(SPR.outlineComposite), b = sample(SPR.outlineVerbatim);
+          var diff = 0;
+          for (var i = 0; i < a.length; i += 4) {
+            if ((a[i + 3] > 0) !== (b[i + 3] > 0)) diff++;
+            else if (a[i + 3] > 0 && (Math.abs(a[i] - b[i]) > 2 || Math.abs(a[i + 1] - b[i + 1]) > 2 || Math.abs(a[i + 2] - b[i + 2]) > 2)) diff++;
+          }
+          check("m3_composite_outline_matches_peasant_swarm", "0 differing pixels of 224", diff, diff === 0);
+        })();
+
         var ss0 = SPR.stats();
         check("m3_sprite_factory_ready", "tiles for every ore, shaft parts built",
           ss0.tilePalettes + " palettes, ready=" + ss0.ready,

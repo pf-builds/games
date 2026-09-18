@@ -3,7 +3,7 @@
 (function () {
   "use strict";
 
-  var CONFIG_VERSION = 13; // JSON cache-bust, deliberately separate from the script tags (lesson 26)
+  var CONFIG_VERSION = 14; // JSON cache-bust, deliberately separate from the script tags (lesson 26)
 
   var UI = (window.GDUI = {});
   var E = window.GDEngine, GD = window.GD;
@@ -49,6 +49,10 @@
     els.descend = $("descend");
 
     window.GDRender.init(els.canvas, cfg);
+    // The factory built synchronously inside init(); verify it before the first frame.
+    // In ?debug=1 a cache that is still blank after a rebuild throws, because shipping
+    // invisible art silently is exactly the failure this guard exists to catch.
+    window.GDSprites.ensure(GD.debug);
     layout();
     measureTitleCard();
     buildShop();
@@ -154,19 +158,31 @@
   // ------------------------------------------------------------ splash
   // The SDXL-base card is the background; the logo on top of it is procedural pixels,
   // so the painted style and the pixel style never meet at the same scale (R4 5).
+  // The logo is the one thing on the splash that has to be crisp pixel art, so it gets
+  // the same DPR treatment as the shaft canvas: backing store at CSS size x DPR, context
+  // scaled to match, smoothing off (M3 critic).
   function drawLogo(s) {
     if (!els.splashLogo || !window.GDSprites) return;
     var art = window.GDSprites.logo("GREEDY DEEP", "#f7dc95", "#d09a2e", "#160f06");
     var k = Math.max(2, Math.min(4, s));
-    els.splashLogo.width = art.width * k;
-    els.splashLogo.height = art.height * k;
-    els.splashLogo.style.width = (art.width * k) + "px";
-    els.splashLogo.style.height = (art.height * k) + "px";
+    var dpr = Math.min(2, window.devicePixelRatio || 1);
+    var cssW = art.width * k, cssH = art.height * k;
+    els.splashLogo.style.width = cssW + "px";
+    els.splashLogo.style.height = cssH + "px";
+    els.splashLogo.width = Math.round(cssW * dpr);
+    els.splashLogo.height = Math.round(cssH * dpr);
     var g = els.splashLogo.getContext("2d");
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.imageSmoothingEnabled = false;
-    g.clearRect(0, 0, els.splashLogo.width, els.splashLogo.height);
-    g.drawImage(art, 0, 0, art.width * k, art.height * k);
+    g.clearRect(0, 0, cssW, cssH);
+    g.drawImage(art, 0, 0, cssW, cssH);
+    // same blank-canvas guard as the sprite cache: redraw once if nothing landed
+    if (window.GDSprites.opaqueCount(els.splashLogo) === 0) {
+      GD.dbg.logoRedraws = (GD.dbg.logoRedraws || 0) + 1;
+      g.drawImage(window.GDSprites.logo("GREEDY DEEP", "#f7dc95", "#d09a2e", "#160f06"), 0, 0, cssW, cssH);
+    }
   }
+  UI.drawLogo = drawLogo;
 
   // The 120 KB cap in PRD 14 is an assertion, not a hope: read the real byte count.
   function measureTitleCard() {
@@ -399,7 +415,9 @@
         "\ntimed " + st.timed.length +
         "\nev " + st.eventsFired + " last " + (st.lastEvent || "-") +
         "\nowned " + JSON.stringify(st.owned) +
-        "\ncard " + GD.dbg.titleCardBytes + "b" +
+        "\ncard " + GD.dbg.titleCardBytes + "b  sprites " +
+          GD.dbg.spriteCacheOpaque + "/" + GD.dbg.spriteCacheTotal +
+          " rb" + GD.dbg.spriteCacheRebuilds +
         "\nsave " + GD.dbg.saveSize + "b  err " + GD.dbg.errors + "/" + GD.dbg.warnings +
         "\nFLAVOR-TODO " + GD.dbg.flavorTodoCount;
     }

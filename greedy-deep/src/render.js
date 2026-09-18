@@ -403,10 +403,11 @@
       var pb = E.bandByIndex(cfg, i);
       var sy = Math.round(nb.startDepth * L.buPerMeter - top);
       if (sy < -T * 2 || sy > H) continue;
+      // R4: the last two tile rows of band N, 2 px checker of band N+1's base, 25% then
+      // 50%. Nothing else — the hard boundary rule that used to sit under it read as a
+      // drawn line rather than geology (M3 critic).
       c = SP.seamFor(pb, nb, contentW);
       ctx.drawImage(c, 0, sy - T * 2);
-      ctx.fillStyle = "rgba(0,0,0,.42)";
-      ctx.fillRect(0, sy, contentW, 1);
       stats.seams++;
     }
 

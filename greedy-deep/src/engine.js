@@ -685,6 +685,13 @@
       if (!(spr.pickTiers >= 1)) errors.push("sprites.pickTiers must be >= 1");
       if (!(spr.dwarfFrames >= 1)) errors.push("sprites.dwarfFrames must be >= 1");
       if (!spr.palettes) errors.push("sprites.palettes must be an object of cosmetic palettes");
+      // Sprite canvas sizes come from JSON, never from a layout measurement (which reads
+      // 0 while the tab is hidden). The pixel art is hand-placed for these exact sizes,
+      // so JSON that disagrees with the art fails loud rather than drawing a clipped sprite.
+      var sizes = { dwarfWBu: 14, dwarfHBu: 16, cartWBu: 20, cartHBu: 14, elevatorWBu: 24, elevatorHBu: 28 };
+      for (var sk in sizes) {
+        if (spr[sk] !== sizes[sk]) errors.push("sprites." + sk + " must be " + sizes[sk] + " (the art is drawn for it)");
+      }
     }
     for (var pk = 0; pk < cfg.ores.length; pk++) {
       var pp = cfg.ores[pk].palette;
@@ -725,12 +732,17 @@
   };
 
   // hh:mm:ss-ish ETA string for the shop rows.
+  // Round to whole seconds BEFORE splitting into units. Rounding each unit separately
+  // is what produced "37m 60s" (M3 critic): floor(2279.6/60)=37 and round(59.6)=60.
   E.formatEta = function (seconds) {
     if (!isFinite(seconds) || seconds <= 0) return "now";
-    if (seconds < 60) return Math.ceil(seconds) + "s";
-    if (seconds < 3600) return Math.floor(seconds / 60) + "m " + Math.round(seconds % 60) + "s";
-    if (seconds < 86400) return Math.floor(seconds / 3600) + "h " + Math.round((seconds % 3600) / 60) + "m";
-    return Math.floor(seconds / 86400) + "d";
+    var s = Math.ceil(seconds - 1e-9);
+    if (s < 60) return s + "s";
+    if (s < 3600) return Math.floor(s / 60) + "m " + (s % 60) + "s";
+    var h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60);
+    if (m === 60) { h++; m = 0; }
+    if (h < 24) return h + "h " + m + "m";
+    return Math.floor(h / 24) + "d " + (h % 24) + "h";
   };
 
   if (typeof module !== "undefined" && module.exports) module.exports = E;

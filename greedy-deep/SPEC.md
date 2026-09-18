@@ -202,6 +202,57 @@ rendered frames.
 - **Shaft carve:** a 2 bu bevel on each cut face, lit on the left and shadowed on the right, with a
   per-tile-row jitter from `hash(ty)` so the bore reads as hewn rather than cut by a laser.
 
+
+### The blank sprite cache, and why nothing reads a canvas back any more
+
+The M3 visual critic loaded the game in a tab that was hidden for its whole life and
+measured **every** cached canvas at 0 opaque pixels — all four strata variants per band,
+all six dwarf frames for every loadout, all three cart frames, the brace, the ladder and
+the cage — while a freshly-keyed rebuild drew correctly. The shaft rendered as a flat
+black rectangle at every depth and `stats.placeholderRects` stayed at 0 the whole time,
+because the renderer *was* blitting; it was blitting empty canvases.
+
+**Root cause.** The copied `outline()` from peasant-swarm reads each sprite back with
+`getImageData` and writes the result straight over the original with `putImageData`. If
+the read-back returns empty — which is what a 2D backing store the browser has hibernated
+or lost returns — that write **wipes a sprite that had drawn correctly**, and nothing ever
+re-checks the cache, so the blank is served for the life of the page. That accounts for
+every sprite that goes through `outline` (dwarves and carts). For the tiles, brace, ladder
+and cage, which never call `outline`, the blanking has to come from the backing store
+itself or from a script-version mismatch — and there was a real one available: the `?v=`
+query on every script lives *inside* `index.html`, which was itself served with no
+cache directive, so a browser could pin an old document and keep loading old script
+versions indefinitely while `config/greedy-deep.json` (fetched `cache: "no-cache"`) stayed
+fresh. That mismatch was reproduced during the fix pass: a tab kept running
+`sprites.js?v=6` for three version bumps.
+
+**Fixes, all at the source:**
+1. `outline()` no longer reads a pixel back. It composites the same 1 px rim by drawing
+   the sprite at four offsets, tinting the dilation with `source-in`, and drawing the
+   original on top. `outlineVerbatim()` — the copied algorithm — stays in the file, and
+   `selfTest` asserts the two produce identical output pixel for pixel.
+2. `GDSprites.verify()` walks every cache entry and counts opaque pixels;
+   `GDSprites.ensure(strict)` rebuilds once if anything is blank, and throws in `?debug=1`
+   if a rebuild still cannot produce pixels. `ensure()` runs after the build, on
+   `visibilitychange` into view, and on `pageshow` — the moments a hibernated backing
+   store surfaces as blank.
+3. `selfTest` asserts every cache entry is opaque, that the count is what `GD.dbg` reports,
+   and that `ensure()` is a no-op on a healthy cache. `GD.dbg.spriteCacheOpaque`,
+   `spriteCacheTotal`, `spriteCacheRebuilds` and `spriteCacheBlank` are on the debug overlay.
+4. The splash logo canvas gets the same guard, and is now DPR-scaled like the shaft canvas.
+5. `index.html` carries `Cache-Control: no-cache, must-revalidate`, so the document that
+   carries every `?v=` always revalidates.
+6. Sprite canvas sizes come from JSON (`sprites.dwarfWBu/dwarfHBu/cartWBu/cartHBu/
+   elevatorWBu/elevatorHBu`), never from a layout measurement, which reads 0 while hidden.
+   `validateConfig` rejects a size the hand-placed pixel art was not drawn for.
+
+The build itself was already correct on this point and stays that way: it is synchronous,
+runs the moment the config fetch resolves, and never waits on rAF, a paint or a layout
+measurement — so it behaves identically in a hidden tab. Verified by loading in a
+background tab and measuring before fronting: 146 of 146 entries opaque, console clean.
+The guard was then exercised by wiping ten backing stores by hand — detected, one rebuild,
+back to 146 of 146.
+
 ### Camera (PRD 5, a v1 must)
 World space is bu below the surface: `worldY = depth * layout.buPerMeter`. `cam.topBu` is the world
 y drawn at screen y 0, so `screenY = worldY - cam.topBu`.
@@ -233,6 +284,14 @@ nothing visible is a bug. `sprites.crewTopBu` keeps the stack clear of the band 
 A 6 bu canvas overlay on the right edge: progress to the ending as a gold fill, a band tick per
 revealed boundary (clipped to `d + 1 + revealBonus`, so an unrevealed boundary is not leaked here
 either), and the ending marker at `milestone.depth`.
+
+### Splash
+The card is a portrait poster, so it sits inside a centred frame at its own scale with a
+blurred, darkened copy of itself filling the rest of the viewport. At 1280x900 a bare
+centred card left ~90% of the screen as empty void, which reads as an unstyled page rather
+than a title screen (M3 critic). The logo is procedural pixels drawn at integer scale x DPR
+with smoothing off, and the tagline sits in the same monospace register as the rest of the
+chrome rather than adding a third typeface.
 
 ### Title card
 One SDXL-base image, the only generated asset in the game. Portrait 832x1216 -> 416x608 WebP,
@@ -266,7 +325,7 @@ M2 adds the headless harness and the mutators the PRD §13 names:
 `?debug=1` adds the overlay plus `setGold`, `setDepth`, `grant`, `pause`, `resume`, `timeScale`,
 `clearSave`, and a guarded fallback interval clock so hidden tabs keep simulating.
 
-## Acceptance — all run by `GD.selfTest()` (136 assertions, zero failures)
+## Acceptance — all run by `GD.selfTest()` (146 assertions, zero failures)
 **M1 block:** reset/step(0) zeroes - 10 taps pay exactly `10 x goldPerTap` and never dig - `step(600)`
 with no crew changes nothing - second purchase costs `base x ratio` - insufficient gold refused -
 a hired dwarf digs at its `add_rate` - save shape and restore - `step(3600)` under 500 ms -
@@ -303,7 +362,12 @@ lands within 16 bu of the deepest dwarf inside one second of render ticks - a dr
 100 bu off the face and the camera snaps back inside the snap-back window - `GD.dbg.cameraY` is a
 number - the title card is between 1 byte and 120 KB and lives on the splash - `bands[].palette`,
 `camera`, `veil.scanline` and `sprites` are all present in JSON - `validateConfig` rejects a missing
-band palette, a zero `camera.ease` and an unknown cosmetic palette.
+band palette, a zero `camera.ease`, an unknown cosmetic palette and a sprite canvas size
+the art was not drawn for - **every one of the 146 cached canvases has opaque pixels**,
+`GD.dbg.spriteCacheOpaque` agrees with the verified count, and `ensure()` is a no-op on a
+healthy cache - the composite `outline()` matches the copied peasant-swarm algorithm pixel
+for pixel - the splash logo has pixels and is DPR-scaled - `formatEta` never prints "60s",
+"60m" or "24h" across 400 probes, and 2279.6 s formats as "38m 0s".
 
 ## Tuning log (M2)
 The PRD's §8 starting values reached 1,200 m in **249 s** against a 5,400-10,800 s window: 20-40x too

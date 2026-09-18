@@ -1,5 +1,5 @@
 {
-  "configVersion": 12,
+  "configVersion": 13,
   "title": "Greedy Deep",
   "start": {
     "gold": 0,
@@ -505,7 +505,11 @@
     },
     "crewTopBu": 24,
     "dwarfRowMinBu": 9,
-    "elevatorClearBu": 0
+    "elevatorClearBu": 0,
+    "cartWBu": 20,
+    "cartHBu": 14,
+    "elevatorWBu": 24,
+    "elevatorHBu": 28
   },
   "titleCard": {
     "src": "assets/title.webp",

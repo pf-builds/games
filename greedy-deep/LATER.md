@@ -97,6 +97,21 @@ quests, backend, accounts, cloud save, leaderboards, ads, IAP, timers, real proc
   carry the reveal on their own. If M3's scrolling camera makes a taller look-ahead cheap, revisit the
   floor rather than adding a fourth mechanism.
 
+## M3 critic fixes applied 2026-09-17
+Visual critic report: `game-research/greedy-deep-critic-m3-visual.md` (12 blocking).
+1. **Blank sprite cache on a hidden load** — root cause and fixes in SPEC.md
+   ("The blank sprite cache"). `outline()` no longer reads pixels back, the cache is
+   verified and self-heals, `index.html` revalidates.
+2. Splash is full-bleed: blurred darkened backdrop, no void at wide aspect ratios.
+3. Splash logo DPR-scaled like the shaft canvas.
+4. Locked shop-row text lifted from ~2.7:1 to ~5.2:1 contrast; the greyed affordance is
+   carried by the row fill and chevron.
+5. Seam dither is the 2 px checker and nothing else — the hard boundary rule under it is gone.
+6. `formatEta` rounds before splitting units, so "37m 60s" cannot happen.
+Out of scope and deliberately not built: **the desktop 3-rail layout is M4** (PRD 14),
+listed above under "M4 — juice, mobile, save, ending". The critic flagged the missing rails
+as blocking; they are M4 scope, not an M3 regression.
+
 ## Found during M3, parked
 - **Negative first frame dt (fixed, worth remembering).** The first `requestAnimationFrame`
   callback carries the timestamp of the frame that was already in flight when `boot()` ran, which
@@ -132,3 +147,28 @@ quests, backend, accounts, cloud save, leaderboards, ads, IAP, timers, real proc
 - **fps readout check from M1 is closed on desktop.** A 62 s run at 1280x900 with 32 crew hired
   produced 1,921 frames, median 60 fps, 5th percentile 57, minimum 55, and **zero** samples under
   50. The cold-load `GD.dbg.fps` 0 reading still wants a real-device look.
+
+## Reusable studio lessons from M3
+
+- **Never let a canvas read-back write straight back over its source.** The copied
+  `outline()` did `getImageData` -> transform -> `putImageData` on the same canvas. A
+  hibernated or lost 2D backing store returns an empty read, so the write silently wipes
+  art that drew correctly, and a cache keeps serving the blank forever. Composite the
+  effect instead (draw at offsets, `source-in` tint, original on top) — same result, no
+  read-back, and it cannot destroy its own input.
+- **A sprite cache needs a liveness check, not just a build.** Count opaque pixels per
+  entry after the build and again whenever the page becomes visible, and rebuild if
+  anything is blank. Telemetry that only counts *draw calls* (`placeholderRects`) passes
+  happily while the screen is empty.
+- **Cache-bust the document, not just its assets.** `?v=` on every script is worthless if
+  `index.html` is itself cacheable: the browser pins an old document and keeps loading old
+  script versions. Cost three version bumps of confusion during this pass. Every arcade
+  cabinet's `index.html` should carry `Cache-Control: no-cache, must-revalidate`.
+- **Route all `getImageData` through one context created with `willReadFrequently: true`.**
+  One read per sprite context across a 146-entry cache produced 500 Chrome console
+  warnings and buried the console-clean check.
+- **Clamp `dt` at the source.** The first `requestAnimationFrame` timestamp can predate the
+  `performance.now()` recorded during boot, so an unclamped `dt` goes negative, runs
+  animation phases backwards, and can index a frame array at -1.
+- **Verify in a tab that was hidden when the page loaded.** Several of these only appear
+  there, and a fronted tab will not show them.
