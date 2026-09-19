@@ -92,8 +92,15 @@ export const dietFoodName = diet => (foodByDiet(diet)?.name || 'food').toLowerCa
 function speciesGrid(onPick, verb = 'Buy') {
   const wrap = h('div', {});
   const all = DATA.dinosaurs.species;
-  const filters = [['all', `All (${all.length})`], ...speciesByTier().map(([t, list]) => [t, `${TIER_LABEL[t] || t} (${list.length})`]), ['carnivore', 'Carnivores'], ['herbivore', 'Herbivores'], ['fits', 'Fits my pens']];
-  const pass = sp => marketFilter === 'all' || marketFilter === speciesTier(sp) || marketFilter === sp.diet || (marketFilter === 'fits' && eco.validEnclosuresFor(sp).length);
+  const biomes = (DATA.biomes.biomes || []);
+  const filters = [['all', `All (${all.length})`], ...speciesByTier().map(([t, list]) => [t, `${TIER_LABEL[t] || t} (${list.length})`]), ['carnivore', 'Carnivores'], ['herbivore', 'Herbivores'], ...biomes.map(b => [`biome:${b.id}`, b.name]), ['fits', 'Fits my pens']];
+  const pass = sp => {
+    if (marketFilter === 'all') return true;
+    if (marketFilter === speciesTier(sp) || marketFilter === sp.diet) return true;
+    if (marketFilter === 'fits') return eco.validEnclosuresFor(sp).length;
+    if (marketFilter.startsWith('biome:')) { const bid = marketFilter.slice(6); const b = speciesBiomes(sp); return (b.preferred || []).includes(bid) || (b.tolerated || []).includes(bid); }
+    return false;
+  };
   const render = () => append(clear(wrap), [
     h('div', { class: 'row wrap chips' }, filters.map(([id, label]) => button(label, () => { marketFilter = id; render(); }, { class: `btn chip ${marketFilter === id ? 'active' : ''}` }))),
     speciesByTier(all.filter(pass)).map(([t, list]) => h('div', { class: 'tier-group' },

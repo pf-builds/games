@@ -652,9 +652,18 @@ export function tickAd() {
   const ended = (state.campaigns || []).filter(c => c.days_left <= 0);
   for (const c of ended) log(`${campaignById(c.id)?.name || c.id} campaign ended.`);
   state.campaigns = (state.campaigns || []).filter(c => c.days_left > 0);
+  for (const c of ended) {
+    if (!(state.auto_renew || {})[c.id]) continue;
+    const def = campaignById(c.id);
+    if (!def || campaignLock(def)) continue;
+    if (!canAfford(def.cost)) { log(`Auto-renew ${def.name}: not enough cash (${fmt$(def.cost)}).`); continue; }
+    buyCampaign(c.id);
+    log(`Auto-renewed ${def.name}.`);
+  }
   state.modifiers = state.modifiers.map(m => ({ ...m, days_left: m.days_left - 1 })).filter(m => m.days_left > 0);
   if (state.closed_days > 0) state.closed_days -= 1;
 }
+export function toggleAutoRenew(id) { if (!state.auto_renew) state.auto_renew = {}; state.auto_renew[id] = !state.auto_renew[id]; }
 export const marketingLadder = () => campaignDefs().map(c => ({ def: c, lock: campaignLock(c), active: campaignActive(c.id), owned: campaignOwned(c.id) }));
 
 // ---- bank ----

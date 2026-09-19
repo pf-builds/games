@@ -105,8 +105,12 @@ export function campaignLadder() {
       (c.kind === 'boost' || c.kind === 'spike') && !lock ? campaignWhatIf(c) : null,
       h('div', { class: 'lesson small' }, 'Lesson: ', c.lesson),
       lock ? h('div', { class: owned ? 'good small' : 'bad small' }, owned ? '✓ ' : '🔒 ', lock) : null,
-      // M5 (M4 minor c): a locked or already-owned rung gets a plain grey disabled button, never a green one.
-      button(owned ? 'Owned' : lock ? 'Locked' : c.kind === 'perk' || c.kind === 'memberships' ? 'Buy once' : 'Buy', () => { if (!fail(eco.buyCampaign(c.id))) emitChange(); }, { class: lock ? 'btn locked' : 'btn primary', disabled: !!lock || !eco.canAfford(c.cost) })))));
+      button(owned ? 'Owned' : lock ? 'Locked' : c.kind === 'perk' || c.kind === 'memberships' ? 'Buy once' : 'Buy', () => { if (!fail(eco.buyCampaign(c.id))) emitChange(); }, { class: lock ? 'btn locked' : 'btn primary', disabled: !!lock || !eco.canAfford(c.cost) }),
+      c.kind !== 'perk' && c.kind !== 'memberships' && !lock ? autoRenewToggle(c) : null))));
+}
+function autoRenewToggle(c) {
+  const on = !!(state.auto_renew || {})[c.id];
+  return button(on ? '🔄 Auto-renew ON' : '🔄 Auto-renew', () => { eco.toggleAutoRenew(c.id); emitChange(); }, { class: `btn small ${on ? 'active' : ''}`, style: on ? 'background:#2a5a2a;color:#8f8' : '' });
 }
 
 // What-if: project a day with the campaign added to the active list (economy untouched), scaled by its length.

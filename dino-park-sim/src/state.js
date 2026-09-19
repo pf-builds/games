@@ -152,6 +152,7 @@ export function newGame(modeId = DATA.difficulty.default_mode) {
     auto_restock: defaultAutoRestock(),
     food_warned: {},
     campaigns: [],
+    auto_renew: {},
     perks: {},
     members: defaultMembers(),
     modifiers: [],
