@@ -131,7 +131,7 @@
     if (!(preview.gold > 0)) return;
     var applied = GD.applyOffline(elapsed);
     showWelcome(applied);
-    if (window.GDAudio && !GD.state.prefs.muted) window.GDAudio.play("welcomeBack");
+    try { if (window.GDAudio && !GD.state.prefs.muted) window.GDAudio.play("welcomeBack"); } catch (e) {}
   }
 
   function showWelcome(p) {
@@ -381,8 +381,8 @@
     els.splash.classList.add("gone");
     var ms = (cfg.titleCard && cfg.titleCard.fadeMs) || 450;
     setTimeout(function () { els.splash.classList.add("off"); }, ms + 60);
-    // First user gesture: unlock audio
-    unlockAudio();
+    // First user gesture: unlock audio. Wrapped so an audio failure never blocks start.
+    try { unlockAudio(); } catch (e) { if (GD.debug) console.warn("[GD] audio unlock failed:", e); }
   }
   UI.dismissSplash = dismissSplash;
 

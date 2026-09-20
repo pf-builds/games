@@ -72,7 +72,11 @@
       }
     }
     st.endingSeen = !!data.endingSeen;
-    if (data.prefs && typeof data.prefs === "object") st.prefs = data.prefs;
+    if (data.prefs && typeof data.prefs === "object") {
+      st.prefs = data.prefs;
+    }
+    // Ensure prefs.muted is always a boolean (old saves may lack it)
+    if (typeof st.prefs.muted !== "boolean") st.prefs.muted = false;
     st.bandId = window.GDEngine.bandAt(cfg, st.depth).id;
     return st;
   };
