@@ -108,6 +108,43 @@
   E.ownedOf = function (state, id) { return state.owned[id] || 0; };
 
   // cost = base x ratio^owned — one formula for tracks and dwarves alike (PRD 8).
+  // Is a purchasable depth-locked? Returns the minDepth or 0.
+  E.lockDepth = function (cfg, id) {
+    var p = E.byId(cfg, id);
+    return (p && typeof p.minDepth === "number") ? p.minDepth : 0;
+  };
+  E.isLocked = function (cfg, state, id) {
+    var md = E.lockDepth(cfg, id);
+    return md > 0 && state.depth < md;
+  };
+
+  // Bulk cost: sum of N successive purchases = base * ratio^owned * (ratio^N - 1) / (ratio - 1)
+  E.bulkCost = function (cfg, state, id, n) {
+    var p = E.byId(cfg, id);
+    if (!p || n <= 0) return 0;
+    var owned = E.ownedOf(state, id);
+    var total = 0;
+    for (var i = 0; i < n; i++) total += p.base * Math.pow(p.ratio, owned + i);
+    return total;
+  };
+
+  // How many can be bought with current gold
+  E.maxBuyable = function (cfg, state, id) {
+    var p = E.byId(cfg, id);
+    if (!p) return 0;
+    var owned = E.ownedOf(state, id);
+    var gold = state.gold;
+    var n = 0;
+    var cost = 0;
+    while (n < 9999) {
+      var next = p.base * Math.pow(p.ratio, owned + n);
+      if (cost + next > gold + 1e-9) break;
+      cost += next;
+      n++;
+    }
+    return n;
+  };
+
   E.costOf = function (cfg, state, id) {
     var p = E.byId(cfg, id);
     if (!p) return Infinity;
@@ -341,6 +378,7 @@
   E.buy = function (cfg, state, id) {
     var p = E.byId(cfg, id);
     if (!p) return { ok: false, reason: "unknown-id", id: id };
+    if (E.isLocked(cfg, state, id)) return { ok: false, reason: "locked", minDepth: E.lockDepth(cfg, id), id: id };
     var cost = E.costOf(cfg, state, id);
     if (state.gold < cost - 1e-9) return { ok: false, reason: "insufficient", cost: cost };
     state.gold -= cost;
@@ -402,6 +440,7 @@
   function cheapestAffordable(cfg, state) {
     var list = cat(cfg), best = null, bestCost = Infinity;
     for (var i = 0; i < list.length; i++) {
+      if (E.isLocked(cfg, state, list[i].id)) continue;
       var c = E.costOf(cfg, state, list[i].id);
       if (c <= state.gold + 1e-9 && c < bestCost) { best = list[i]; bestCost = c; }
     }
@@ -531,6 +570,33 @@
     var first600 = 0;
     for (var i = 0; i < purchases.length; i++) if (purchases[i].t <= 600) first600++;
 
+    // richButLockedMax: longest stretch where gold >= cheapest locked but no unlocked is affordable
+    // Recompute from samples (cheaper than tracking per-tick)
+    var richButLockedMax = 0, rblStart = -1;
+    for (var si2 = 0; si2 < samples.length; si2++) {
+      var ss = samples[si2];
+      // Reconstruct: can we buy any unlocked row?
+      var canBuyUnlocked = false, canAffordLocked = false;
+      var tmpState = { depth: ss.depth, gold: ss.gold, owned: {}, t: ss.t, timed: [], eventT: 0, eventsFired: 0, bandId: "", lastEvent: "", goldEarnedTotal: 0, prefs: {}, endingSeen: false, endingScore: 0, endingAtSeconds: 0 };
+      var cl = cat(cfg);
+      for (var ci2 = 0; ci2 < cl.length; ci2++) {
+        var cid = cl[ci2].id;
+        var locked = E.isLocked(cfg, tmpState, cid);
+        var cost2 = cl[ci2].base; // approx (ignoring owned)
+        if (!locked && cost2 <= ss.gold + 1e-9) canBuyUnlocked = true;
+        if (locked && cost2 <= ss.gold + 1e-9) canAffordLocked = true;
+      }
+      if (!canBuyUnlocked && canAffordLocked) {
+        if (rblStart < 0) rblStart = ss.t;
+      } else {
+        if (rblStart >= 0) {
+          var dur2 = ss.t - rblStart;
+          if (dur2 > richButLockedMax) richButLockedMax = dur2;
+          rblStart = -1;
+        }
+      }
+    }
+
     return {
       reached: reached,
       reachedAtSeconds: reachedAtSeconds,
@@ -546,7 +612,8 @@
       samples: samples,
       policy: policyName,
       dt: dt,
-      owned: JSON.parse(JSON.stringify(state.owned))
+      owned: JSON.parse(JSON.stringify(state.owned)),
+      richButLockedMax: richButLockedMax
     };
   };
 

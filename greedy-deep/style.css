@@ -58,10 +58,11 @@ body.booting #col { opacity: 0; }
 .stat.right .value { color: #bfd4e6; }
 
 #mute-btn {
-  position: absolute; right: calc(2px * var(--s)); top: 50%; transform: translateY(-50%);
-  min-width: 44px; min-height: 44px; border: 0; border-radius: 4px;
+  flex-shrink: 0;
+  min-width: 36px; min-height: 44px; border: 0; border-radius: 4px;
   background: rgba(255,255,255,.06); color: var(--dim);
   font-size: calc(6px * var(--s)); cursor: pointer; line-height: 1;
+  margin-left: calc(2px * var(--s));
 }
 #mute-btn.muted { color: #5a3030; }
 
@@ -92,7 +93,7 @@ body.booting #col { opacity: 0; }
 #hint.gone { display: none; }
 
 #dbg {
-  position: absolute; top: 4px; left: 4px;
+  position: absolute; bottom: 4px; left: 4px;
   font: 10px/1.35 ui-monospace, Menlo, monospace;
   color: #9dffb0; background: rgba(0,0,0,.82);
   padding: 4px 6px; border-radius: 4px; white-space: pre;
@@ -187,6 +188,34 @@ body.booting #col { opacity: 0; }
 .tab-section.active { display: block; }
 .tab-head { display: none; }
 
+
+/* ---------------------------------------------------------- buy quantity toggle */
+#qty-bar {
+  display: flex;
+  background: #0f0c17;
+  border-bottom: 1px solid #0a0810;
+  padding: 2px;
+  gap: 2px;
+}
+.qty-btn {
+  flex: 1;
+  min-height: 44px;
+  border: 0;
+  background: #1a1528;
+  color: var(--dim);
+  font: inherit;
+  font-size: calc(4.5px * var(--s));
+  font-weight: 700;
+  letter-spacing: .05em;
+  cursor: pointer;
+  border-radius: 3px;
+}
+.qty-btn.active {
+  background: #2d2440;
+  color: var(--gold);
+  box-shadow: inset 0 -2px 0 var(--gold);
+}
+
 /* ---------------------------------------------------------- shop rows */
 .shop-rows { display: flex; flex-direction: column; }
 .row {
@@ -219,9 +248,20 @@ body.booting #col { opacity: 0; }
 .buy .price { white-space: nowrap; }
 .buy .unit { font-size: .75em; opacity: .7; margin-left: 2px; }
 .buy .eta { font-size: calc(4px * var(--s)); font-weight: 400; opacity: .8; margin-top: 1px; }
-.row.locked .buy { background: #2a2435; color: #a49eb4; border-bottom-color: #1a1522; cursor: default; }
-.row.locked .buy .eta { color: #b0a7cc; opacity: 1; }
-.row.locked .row-name { color: #a8a1b6; }
+/* Three mutually exclusive row states: LOCKED, UNAFFORDABLE, BUYABLE */
+/* LOCKED: depth-gated, grey, shows unlock requirement */
+.row.locked { opacity: 0.5; }
+.row.locked .buy { background: #1e1a28; color: #6d6580; border-bottom-color: #131020; cursor: default; }
+.row.locked .buy .eta { color: #7a7290; opacity: 1; font-size: calc(3.5px * var(--s)); }
+.row.locked .row-name { color: #7a7290; }
+.row.locked .row-sub { color: #5a5470; }
+/* UNAFFORDABLE: unlocked but too expensive, muted price, ETA shown */
+.row.unaffordable .buy { background: #2a2435; color: #a49eb4; border-bottom-color: #1a1522; cursor: default; }
+.row.unaffordable .buy .eta { color: #b0a7cc; opacity: 1; }
+.row.unaffordable .row-name { color: #a8a1b6; }
+/* BUYABLE: the ONLY state with the gold highlight */
+.row.buyable .buy { background: linear-gradient(#f4cf6a, #d8a52f); color: #1a1410; border-bottom-color: #8a6414; cursor: pointer; }
+.row.buyable .buy:active { transform: translateY(1px); border-bottom-width: 2px; }
 
 .row.bought { animation: flashrow .35s ease-out; }
 @keyframes flashrow { from { background: #33482f; } to { background: transparent; } }

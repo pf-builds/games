@@ -1116,6 +1116,7 @@
       if (window.GDRender && window.GDRender.renderSignature) {
         var pvBad = [];
         GD.reset();
+        GD.jumpTo(1000); // past all minDepth locks so every item is purchasable
         GD.grantForTest("dorrik", 2); // need crew for rate-dependent visuals
         var pvList = E.purchasables(cfg);
         for (var pvi = 0; pvi < pvList.length; pvi++) {
@@ -1154,6 +1155,87 @@
           }
         }
         check("m4_crew_no_overlap", "0 overlaps", crewBad.slice(0, 3).join(" | "), crewBad.length === 0);
+      }
+
+      // Item 2+4: row states (locked/unaffordable/buyable)
+      GD.reset();
+      GD.state.gold = 0;
+      // bit is locked at minDepth 30 (depth is 0)
+      var bitLocked = E.isLocked(cfg, GD.state, "bit");
+      check("m4_bit_locked_at_depth_0", true, bitLocked, bitLocked === true);
+      // pick is never locked
+      check("m4_pick_never_locked", false, E.isLocked(cfg, GD.state, "pick"), !E.isLocked(cfg, GD.state, "pick"));
+      // dorrik never locked
+      check("m4_dorrik_never_locked", false, E.isLocked(cfg, GD.state, "dorrik"), !E.isLocked(cfg, GD.state, "dorrik"));
+      // cart never locked
+      check("m4_cart_never_locked", false, E.isLocked(cfg, GD.state, "cart"), !E.isLocked(cfg, GD.state, "cart"));
+      // At depth 40, bit unlocks
+      GD.jumpTo(40);
+      check("m4_bit_unlocked_at_depth_40", false, E.isLocked(cfg, GD.state, "bit"), !E.isLocked(cfg, GD.state, "bit"));
+      // Locked buy is refused with reason "locked"
+      GD.reset();
+      GD.state.gold = 1e12;
+      var lockedBuy = E.buy(cfg, GD.state, "bit");
+      check("m4_locked_buy_refused", "locked", lockedBuy.reason, lockedBuy.reason === "locked");
+
+      // Item 5: bulk cost equals N single buys exactly
+      GD.reset();
+      var singleSum = 0;
+      for (var bci = 0; bci < 5; bci++) singleSum += cfg.tracks[0].base * Math.pow(cfg.tracks[0].ratio, bci);
+      var bulk = E.bulkCost(cfg, GD.state, cfg.tracks[0].id, 5);
+      check("m4_bulk_cost_equals_singles", singleSum, bulk, approx(bulk, singleSum, 1e-6));
+
+      // Item 7: richButLockedMax < 30
+      check("m4_richButLockedMax_under_30", "< 30",
+        sim.richButLockedMax !== undefined ? sim.richButLockedMax.toFixed(1) : "missing",
+        sim.richButLockedMax !== undefined && sim.richButLockedMax < 30);
+
+      // Hit-testing selfTest: elementFromPoint at primary buttons returns the control
+      if (document.getElementById("descend") && !document.getElementById("splash").classList.contains("off")) {
+        var descendBtn = document.getElementById("descend");
+        var dr = descendBtn.getBoundingClientRect();
+        if (dr.width > 0) {
+          var dEl = document.elementFromPoint(dr.left + dr.width / 2, dr.top + dr.height / 2);
+          check("m4_hit_descend", "BUTTON#descend",
+            dEl ? dEl.tagName + "#" + dEl.id : "null",
+            dEl && (dEl.id === "descend" || dEl.closest("#descend")));
+        }
+      }
+      // Check tab buttons hittable (only in portrait mode where they're visible)
+      var tabbarEl = document.getElementById("tabbar");
+      if (tabbarEl && getComputedStyle(tabbarEl).display !== "none") {
+        var tabBtns = tabbarEl.querySelectorAll(".tab");
+        var tabHitBad = [];
+        for (var thi = 0; thi < tabBtns.length; thi++) {
+          var tbr = tabBtns[thi].getBoundingClientRect();
+          if (tbr.width <= 0 || tbr.top < 0 || tbr.top > window.innerHeight) continue;
+          var tEl = document.elementFromPoint(tbr.left + tbr.width / 2, tbr.top + tbr.height / 2);
+          if (!tEl || (tEl !== tabBtns[thi] && !tabBtns[thi].contains(tEl))) {
+            tabHitBad.push(tabBtns[thi].textContent);
+          }
+        }
+        check("m4_hit_tabs", "all hittable", tabHitBad.join(","), tabHitBad.length === 0);
+      }
+      // Qty toggle (only when visible)
+      var qtyBar = document.getElementById("qty-bar");
+      if (qtyBar && getComputedStyle(qtyBar).display !== "none") {
+        var qtyBtns = qtyBar.querySelectorAll(".qty-btn");
+        var qtyHitBad = [];
+        for (var qhi = 0; qhi < qtyBtns.length; qhi++) {
+          var qbr = qtyBtns[qhi].getBoundingClientRect();
+          if (qbr.width <= 0 || qbr.top < 0 || qbr.top > window.innerHeight) continue;
+          var qEl = document.elementFromPoint(qbr.left + qbr.width / 2, qbr.top + qbr.height / 2);
+          if (!qEl || (qEl !== qtyBtns[qhi] && !qtyBtns[qhi].contains(qEl))) {
+            qtyHitBad.push(qtyBtns[qhi].textContent);
+          }
+        }
+        check("m4_hit_qty_toggle", "all hittable", qtyHitBad.join(","), qtyHitBad.length === 0);
+      }
+
+      // Layout assertion: at least 3 buy rows intersect the viewport
+      if (window.GDUI && window.GDUI.rowReport) {
+        var rr3 = window.GDUI.rowReport();
+        check("m4_min_3_visible_rows", ">= 3 rows", rr3.rows, rr3.rows >= 3);
       }
 
       // JSON blocks present

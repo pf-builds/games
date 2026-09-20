@@ -1,5 +1,5 @@
 {
-  "configVersion": 16,
+  "configVersion": 17,
   "title": "Greedy Deep",
   "start": {
     "gold": 0,
@@ -128,7 +128,8 @@
           "verb": "mul_rate",
           "value": 1.1
         }
-      ]
+      ],
+      "minDepth": 30
     },
     {
       "id": "cart",
@@ -154,7 +155,8 @@
           "verb": "reveal_bands",
           "value": 1
         }
-      ]
+      ],
+      "minDepth": 100
     },
     {
       "id": "rails",
@@ -167,7 +169,8 @@
           "verb": "add_rate_per_dwarf",
           "value": 0.0005
         }
-      ]
+      ],
+      "minDepth": 300
     },
     {
       "id": "smelter",
@@ -180,7 +183,8 @@
           "verb": "mul_gold",
           "value": 1.15
         }
-      ]
+      ],
+      "minDepth": 500
     },
     {
       "id": "braces",
@@ -193,7 +197,8 @@
           "verb": "mul_hazard_resist",
           "value": 0.9
         }
-      ]
+      ],
+      "minDepth": 100
     },
     {
       "id": "elevator",
@@ -210,7 +215,8 @@
           "verb": "mul_offline_rate",
           "value": 1.1
         }
-      ]
+      ],
+      "minDepth": 900
     }
   ],
   "dwarves": [
@@ -251,7 +257,8 @@
         "hat": "helm",
         "beard": "forked",
         "palette": "iron"
-      }
+      },
+      "minDepth": 40
     },
     {
       "id": "vessa",
@@ -270,7 +277,8 @@
         "hat": "hood",
         "beard": "short",
         "palette": "green"
-      }
+      },
+      "minDepth": 180
     },
     {
       "id": "nix",
@@ -290,7 +298,8 @@
         "hat": "none",
         "beard": "long",
         "palette": "ash"
-      }
+      },
+      "minDepth": 600
     }
   ],
   "eventRules": {
@@ -470,7 +479,13 @@
       "dimAlpha": 0.75,
       "blur": 28,
       "tileScale": 1
-    }
+    },
+    "buyQuantities": [
+      1,
+      5,
+      10,
+      0
+    ]
   },
   "veil": {
     "alpha": 0.5,

@@ -3,7 +3,7 @@
 (function () {
   "use strict";
 
-  var CONFIG_VERSION = 16;
+  var CONFIG_VERSION = 17;
 
   var UI = (window.GDUI = {});
   var E = window.GDEngine, GD = window.GD;
@@ -27,6 +27,7 @@
   var oreCombo = 0;
   var oreComboT = 0;
   var displayGold = 0;
+  var buyQty = 1; // 1, 5, 10, or 0 (MAX)
 
   function $(id) { return document.getElementById(id); }
 
@@ -87,13 +88,14 @@
 
     window.GDRender.init(els.canvas, cfg);
     window.GDSprites.ensure(GD.debug);
-    layout();
     measureTitleCard();
     buildShop();
     buildRoster();
+    layout();
     bindInput();
     bindTabs();
     bindSettings();
+    bindQuantityToggle();
 
     resolveOffline();
 
@@ -114,7 +116,8 @@
     if (GD.debug) {
       els.overlay.classList.remove("hidden");
       els.overlay.classList.add("collapsed");
-      els.overlay.addEventListener("click", function () {
+      els.overlay.addEventListener("click", function (e) {
+        e.stopPropagation();
         els.overlay.classList.toggle("collapsed");
       });
     }
@@ -479,16 +482,19 @@
 
   function onBuy(id) {
     unlockAudio();
-    var r = GD.buy(id);
+    // Bulk buy: buy qty times (or max)
+    var qty = buyQty === 0 ? E.maxBuyable(cfg, GD.state, id) : buyQty;
+    if (qty < 1) qty = 1;
+    var anyOk = false;
+    for (var bi = 0; bi < qty; bi++) {
+      var r = GD.buy(id);
+      if (!r.ok) break;
+      anyOk = true;
+    }
     var row = null;
     for (var i = 0; i < rows.length; i++) if (rows[i].p.id === id) row = rows[i];
-    if (r.ok) {
+    if (anyOk) {
       if (row) { row.el.classList.remove("bought"); void row.el.offsetWidth; row.el.classList.add("bought"); }
-      var isDwarf = E.isDwarf(cfg, id);
-      if (isDwarf && (GD.state.owned[id] === 1)) {
-        pushLog("Hired " + E.byId(cfg, id).name + ". " + deflavor(E.dwarfLine(cfg, id), "dwarfLine"), "hire");
-      } else {
-      }
       GD.save();
       buildRoster();
       if (isDesktop) buildDesktopRails();
@@ -499,6 +505,31 @@
   }
 
   // ------------------------------------------------------------ tabs
+  function bindQuantityToggle() {
+    var qbar = document.getElementById("qty-bar");
+    if (!qbar) return;
+    var btns = qbar.querySelectorAll(".qty-btn");
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].addEventListener("click", (function (b) {
+        return function () {
+          buyQty = parseInt(b.getAttribute("data-qty"), 10) || 0;
+          GD.state.prefs.buyQty = buyQty;
+          GD.save();
+          var all = qbar.querySelectorAll(".qty-btn");
+          for (var j = 0; j < all.length; j++) all[j].classList.toggle("active", all[j] === b);
+          refresh();
+        };
+      })(btns[i]));
+    }
+    // Restore from prefs
+    if (GD.state.prefs.buyQty !== undefined) {
+      buyQty = GD.state.prefs.buyQty;
+      for (var k = 0; k < btns.length; k++) {
+        btns[k].classList.toggle("active", parseInt(btns[k].getAttribute("data-qty"), 10) === buyQty);
+      }
+    }
+  }
+
   function bindTabs() {
     if (!els.tabbar) return;
     var tabs = els.tabbar.querySelectorAll(".tab");
@@ -797,18 +828,38 @@
     els.depth.textContent = st.depth.toFixed(cfg.format.depthDecimals) + " m";
     for (var i = 0; i < rows.length; i++) {
       var r = rows[i];
-      var cost = GD.costOf(r.p.id);
+      var locked = E.isLocked(cfg, st, r.p.id);
+      var lockDepth = E.lockDepth(cfg, r.p.id);
+      // Compute cost for the selected quantity
+      var qty = buyQty === 0 ? E.maxBuyable(cfg, st, r.p.id) : buyQty;
+      if (qty < 1) qty = 1;
+      var cost = buyQty === 0 ? E.bulkCost(cfg, st, r.p.id, qty) : E.bulkCost(cfg, st, r.p.id, buyQty);
+      if (buyQty === 1) cost = GD.costOf(r.p.id);
       var n = st.owned[r.p.id] || 0;
-      r.cost.textContent = GD.format(cost);
       r.owned.textContent = n ? " x" + n : "";
-      var afford = st.gold >= cost - 1e-9;
-      r.btn.disabled = !afford;
-      r.el.classList.toggle("locked", !afford);
-      if (afford) {
-        r.eta.textContent = "";
+
+      // Three mutually exclusive states
+      r.el.classList.remove("locked", "unaffordable", "buyable");
+      r.btn.disabled = true;
+      if (locked) {
+        r.el.classList.add("locked");
+        r.cost.textContent = lockDepth + " m";
+        r.eta.textContent = "Unlocks at " + lockDepth + " m";
+        r.btn.querySelector(".unit").textContent = "";
       } else {
-        var eta = GD.etaFor(r.p.id);
-        r.eta.textContent = isFinite(eta) ? E.formatEta(eta) : "—";
+        r.btn.querySelector(".unit").textContent = "g";
+        var qLabel = buyQty === 0 ? (qty > 0 ? "x" + qty : "") : (buyQty > 1 ? "x" + buyQty : "");
+        r.cost.textContent = GD.format(cost) + (qLabel ? " " + qLabel : "");
+        var afford = st.gold >= cost - 1e-9 && !locked;
+        if (afford) {
+          r.el.classList.add("buyable");
+          r.btn.disabled = false;
+          r.eta.textContent = "";
+        } else {
+          r.el.classList.add("unaffordable");
+          var eta = GD.etaFor(r.p.id);
+          r.eta.textContent = isFinite(eta) ? E.formatEta(eta) : "—";
+        }
       }
     }
     renderNextBands(d);
@@ -832,6 +883,15 @@
         "\ncard " + GD.dbg.titleCardBytes + "b  sprites " +
           GD.dbg.spriteCacheOpaque + "/" + GD.dbg.spriteCacheTotal +
           " rb" + GD.dbg.spriteCacheRebuilds +
+        "\nnextUnlock " + (function() {
+          var best = null;
+          var list2 = E.purchasables(cfg);
+          for (var u = 0; u < list2.length; u++) {
+            var md = E.lockDepth(cfg, list2[u].id);
+            if (md > 0 && st.depth < md && (!best || md < best.depth)) best = { id: list2[u].id, depth: md };
+          }
+          return best ? best.id + " at " + best.depth + "m (" + (best.depth - st.depth).toFixed(0) + "m away)" : "none";
+        })() +
         "\naudio " + (A ? (A.isMuted() ? "MUTED" : "gain=" + (A.masterGainValue() || 0).toFixed(2)) : "n/a") +
           "  last=" + (A ? (A.lastCue || "-") : "-") +
         "\nsave " + GD.dbg.saveSize + "b  err " + GD.dbg.errors + "/" + GD.dbg.warnings +

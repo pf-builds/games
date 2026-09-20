@@ -80,7 +80,7 @@ in JSON. Slots: welcomeBack, dwarfLine, bandIntro, event, ending, endingTitle.
 | `style.css` | portrait tabs, desktop rails, all sizes from `--s` |
 | `config/greedy-deep.json` | every tunable number; own `?v=` cache-bust |
 | `src/engine.js` | pure sim: tick, purchase, effects, bands, validation |
-| `src/gd.js` | `window.GD` facade, debug, selfTest (184 assertions) |
+| `src/gd.js` | `window.GD` facade, debug, selfTest (195 assertions) |
 | `src/sprites.js` | procedural sprite factory |
 | `src/particles.js` | pooled particles + floaters (from peasant-swarm) |
 | `src/audio.js` | WebAudio synth, 13 cues, ambient drone (M4) |
@@ -96,7 +96,7 @@ in JSON. Slots: welcomeBack, dwarfLine, bandIntro, event, ending, endingTitle.
 All M1-M3 API plus: `GD.export()`, `GD.import(str)`, `GD.audio.muted` via `GDAudio.isMuted()`,
 `GD.dbg.audioMasterGain`, `GD.dbg.lastCue`.
 
-## Acceptance — `GD.selfTest()` (184 assertions, zero failures)
+## Acceptance — `GD.selfTest()` (195 assertions, zero failures)
 M1 block: reset, taps, idle, purchase, save, restore, additivity, clearSave.
 M2 block: verbs, content, simulate, bandLog, offline, events, milestone, endless, reveal, ETA, flavor, content-as-data, validation.
 M3 block: sprite cache, tiles, seams, veil, dwarves, camera, title card, outline, ETA formatting.
@@ -139,3 +139,11 @@ Computed scales per viewport:
 | 1728x1000 | 3 | yes | 240 | 300 |
 | 1800x1100 | 3 | yes | 240 | 300 |
 | 1920x1080 | 3 | yes | 240 | 300 |
+
+## Tuning log (playtest batch)
+Added `minDepth` depth-locking to 9 of 12 purchasables (bit 30, hald 40, braces 100,
+lantern 100, vessa 180, rails 300, smelter 500, nix 600, elevator 900). Core tracks
+(pick, dorrik, cart) are never locked. Economy result: ending 6,688 s (was 6,702),
+maxGap 175 (was 174), richButLockedMax 0 (target < 30 s). No retune needed.
+
+Added buy-quantity toggle (1x/5x/10x/MAX) with bulk cost = N single buys exactly.
