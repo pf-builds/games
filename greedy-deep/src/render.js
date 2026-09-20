@@ -413,7 +413,8 @@
     var crewTotal = Math.min(cap2, derived.dwarves);
     var positions = [];
     var slot2 = 0;
-    var digSeq2 = Math.floor(pulse * (sp2.digFps || 6));
+    var bitBoost2 = Math.min(4, (window.GD && window.GD.state ? window.GD.state.owned.bit : 0) || 0);
+    var digSeq2 = Math.floor(pulse * ((sp2.digFps || 6) + bitBoost2));
     var walkSeq2 = Math.floor(pulse * (sp2.walkFps || 8));
 
     for (var di = 0; di < cfg2.dwarves.length && slot2 < crewTotal; di++) {
@@ -736,7 +737,8 @@
     var sp = cfg.sprites;
     var cap = sp.maxDwarves || 32;
     var pickTier = Math.min((sp.pickTiers || 4) - 1, Math.floor((owned.pick || 0) / (sp.pickLevelsPerTier || 6)));
-    var digFps = sp.digFps || 6, walkFps = sp.walkFps || 8;
+    var bitBoost = Math.min(4, owned.bit || 0);
+    var digFps = (sp.digFps || 6) + bitBoost, walkFps = sp.walkFps || 8;
     var digSeq = Math.floor(pulse * digFps);
     var walkSeq = Math.floor(pulse * walkFps);
 
@@ -923,6 +925,29 @@
     ctx.fillStyle = "rgba(255,232,154,.35)";
     ctx.fillRect(x - 1, H - 6, 1, 6);
   }
+
+  // --------------------------------------------------------------- render signature
+  // Returns render-visible state for selfTest item 6 (purchase visibility)
+  R.renderSignature = function (state, derived) {
+    var owned = state.owned || {};
+    var sp = cfg.sprites;
+    return {
+      pickLevel: owned.pick || 0,
+      pickTier: Math.min((sp.pickTiers || 4) - 1, Math.floor((owned.pick || 0) / (sp.pickLevelsPerTier || 6))),
+      bitLevel: owned.bit || 0,
+      digFpsBoost: Math.min(4, owned.bit || 0),
+      cartTier: owned.cart > 0 ? 1 : 0,
+      lanternLevel: owned.lantern || 0,
+      railsPresent: (owned.rails || 0) > 0 ? 1 : 0,
+      smelterGlow: (owned.smelter || 0) > 0 ? 1 : 0,
+      bracesCount: owned.braces || 0,
+      elevatorPresent: (owned.elevator || 0) > 0 ? 1 : 0,
+      dwarves: derived.dwarves,
+      lampGlow: 0.10 + 0.05 * Math.min(4, owned.lantern || 0) + ((owned.smelter || 0) > 0 ? 0.05 : 0),
+      veilAlpha: effVeilAlpha(derived.revealBonus || 0),
+      faceYBu: effFaceY(derived.revealBonus || 0)
+    };
+  };
 
   // --------------------------------------------------------------- test hooks
   // selfTest drives these instead of reading pixels.

@@ -487,16 +487,13 @@
       var isDwarf = E.isDwarf(cfg, id);
       if (isDwarf && (GD.state.owned[id] === 1)) {
         pushLog("Hired " + E.byId(cfg, id).name + ". " + deflavor(E.dwarfLine(cfg, id), "dwarfLine"), "hire");
-        if (window.GDAudio) window.GDAudio.play("hire");
       } else {
-        if (window.GDAudio) window.GDAudio.play("buy");
       }
       GD.save();
       buildRoster();
       if (isDesktop) buildDesktopRails();
     } else if (row) {
       row.el.classList.remove("nope"); void row.el.offsetWidth; row.el.classList.add("nope");
-      if (window.GDAudio) window.GDAudio.play("denied");
     }
     refresh();
   }
@@ -667,7 +664,7 @@
       if (els.hint) els.hint.classList.add("gone");
 
       window.GDRender.strike();
-      if (window.GDAudio) window.GDAudio.play("strike");
+      // audio played by GD.tap() above
       // Ore pop arc to the cart
       var bandColor = (GD.derive().band.veinColor) || "#f2c14e";
       window.GDRender.addOreArc(bandColor);

@@ -117,8 +117,25 @@
     return E.snapshot(GD.config, GD.state);
   };
 
-  GD.tap = function (times) { return E.tap(GD.config, GD.state, times); };
-  GD.buy = function (id) { return E.buy(GD.config, GD.state, id); };
+  GD.tap = function (times) {
+    var g = E.tap(GD.config, GD.state, times);
+    // Record the cue request (item 1): tap always requests "strike"
+    if (!GD.state.prefs.muted && window.GDAudio) window.GDAudio.play("strike");
+    else if (!GD.state.prefs.muted) { GD.dbg.lastCue = "strike"; }
+    return g;
+  };
+  GD.buy = function (id) {
+    var r = E.buy(GD.config, GD.state, id);
+    if (r.ok && !GD.state.prefs.muted) {
+      var cue = E.isDwarf(GD.config, id) ? "hire" : "buy";
+      if (window.GDAudio) window.GDAudio.play(cue);
+      else GD.dbg.lastCue = cue;
+    } else if (!r.ok && !GD.state.prefs.muted) {
+      if (window.GDAudio) window.GDAudio.play("denied");
+      else GD.dbg.lastCue = "denied";
+    }
+    return r;
+  };
 
   // ETA for a locked row: (cost - gold) / goldRate at the current passive rate.
   // Returns Infinity while goldRate is 0 so the UI can print the em dash.
@@ -231,6 +248,11 @@
       GD.dbg.outlineFailures = ss.outlineFailures;
     }
     if (fps !== undefined) GD.dbg.fps = fps;
+    if (window.GDRender && window.GDRender.renderSignature) {
+      GD.dbg.renderSignature = function () {
+        return window.GDRender.renderSignature(GD.state, GD.derive());
+      };
+    }
     if (window.GDAudio) {
       GD.dbg.audioMasterGain = window.GDAudio.masterGainValue();
       GD.dbg.lastCue = window.GDAudio.lastCue;
@@ -956,7 +978,12 @@
 
       // =========================================================== M4 block
       // Audio: mute state, master gain, no cue when muted
-      if (window.GDAudio) {
+      if (window.GDRender && window.GDRender.renderSignature) {
+      GD.dbg.renderSignature = function () {
+        return window.GDRender.renderSignature(GD.state, GD.derive());
+      };
+    }
+    if (window.GDAudio) {
         var A = window.GDAudio;
         var prevMuted = A.isMuted();
         A.setMuted(true);
@@ -1085,35 +1112,22 @@
           document.documentElement.scrollWidth <= window.innerWidth + 2);
       }
 
-      // Item 6: purchase visibility - every track changes a visible metric
-      if (window.GDRender && window.GDRender.renderProbe) {
+      // Item 6: purchase visibility - every track changes what is DRAWN
+      if (window.GDRender && window.GDRender.renderSignature) {
         var pvBad = [];
         GD.reset();
-        GD.state.gold = 1e12; // enough to buy everything
-        GD.grantForTest("dorrik", 2); // need crew for rate
+        GD.grantForTest("dorrik", 2); // need crew for rate-dependent visuals
         var pvList = E.purchasables(cfg);
         for (var pvi = 0; pvi < pvList.length; pvi++) {
           var pvItem = pvList[pvi];
           var pvId = pvItem.id;
           GD.state.gold = 1e12;
-          var pvD1 = GD.derive();
-          var pvBefore = JSON.stringify({
-            dwarves: pvD1.dwarves, clickPower: pvD1.clickPower,
-            digRate: pvD1.digRate, goldMul: pvD1.goldMul,
-            revealBonus: pvD1.revealBonus, hazardMul: pvD1.hazardMul,
-            offlineHours: pvD1.offlineHours, offlineRateMul: pvD1.offlineRateMul
-          });
-          GD.buy(pvId);
-          var pvD2 = GD.derive();
-          var pvAfter = JSON.stringify({
-            dwarves: pvD2.dwarves, clickPower: pvD2.clickPower,
-            digRate: pvD2.digRate, goldMul: pvD2.goldMul,
-            revealBonus: pvD2.revealBonus, hazardMul: pvD2.hazardMul,
-            offlineHours: pvD2.offlineHours, offlineRateMul: pvD2.offlineRateMul
-          });
+          var pvBefore = JSON.stringify(window.GDRender.renderSignature(GD.state, GD.derive()));
+          E.buy(cfg, GD.state, pvId); // use engine buy to avoid audio side effects in selfTest
+          var pvAfter = JSON.stringify(window.GDRender.renderSignature(GD.state, GD.derive()));
           if (pvBefore === pvAfter) pvBad.push(pvId);
         }
-        check("m4_every_purchase_changes_derived", "all 12 change", pvBad.join(","), pvBad.length === 0);
+        check("m4_every_purchase_changes_render_signature", "all 12 change", pvBad.join(","), pvBad.length === 0);
       }
 
       // Item 8: crew positions no overlap

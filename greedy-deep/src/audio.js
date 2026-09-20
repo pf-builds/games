@@ -79,10 +79,10 @@
 
   A.play = function (cue, opts) {
     if (muted) return;
-    if (!ac()) return;
+    // Record the REQUESTED cue before any gate/context check (requirement item 1)
     A.lastCue = cue;
-    // Sync update so selfTest can read it immediately after tap/buy
     if (window.GD && window.GD.dbg) window.GD.dbg.lastCue = cue;
+    if (!ac()) return;
     var fn = CUES[cue];
     if (fn) fn(cg(cue), opts || {});
   };
