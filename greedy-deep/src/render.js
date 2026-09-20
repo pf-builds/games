@@ -60,14 +60,15 @@
     SP.build(cfg);
   };
 
-  R.resize = function (s) {
+  R.resize = function (s, shaftBuOverride) {
     scale = s;
     dpr = Math.min(2, window.devicePixelRatio || 1);
     var L = cfg.layout;
+    var shaftBu = shaftBuOverride || L.shaftBu;
     cv.style.width = (L.columnBu * s) + "px";
-    cv.style.height = (L.shaftBu * s) + "px";
+    cv.style.height = (shaftBu * s) + "px";
     cv.width = Math.round(L.columnBu * s * dpr);
-    cv.height = Math.round(L.shaftBu * s * dpr);
+    cv.height = Math.round(shaftBu * s * dpr);
     ctx.setTransform(s * dpr, 0, 0, s * dpr, 0, 0);
     ctx.imageSmoothingEnabled = false;
     ctx.textBaseline = "top";
@@ -75,6 +76,11 @@
 
   R.scale = function () { return scale; };
   R.stats = function () { stats.pulse = pulse; return stats; };
+  R.ctx = function () { return ctx; };
+
+  // Crit shake: applied as a canvas translate, decays over time
+  var shakeT = 0, shakeAmt = 0;
+  R.shake = function (amount, dur) { shakeAmt = amount || 3; shakeT = dur || 0.18; };
 
   // --------------------------------------------------------------- geometry
   // Deep Lantern (`reveal_bands`) raises the render cutoff, and each level also buys
@@ -108,7 +114,7 @@
     revealBonus = revealBonus || 0;
     var current = E.bandAt(cfg, depth);
     var cutoff = current.index + 1 + revealBonus;
-    var H = cfg.layout.shaftBu;
+    var H = cfg.layout._liveShaftBu || cfg.layout.shaftBu;
     var fy = effFaceY(revealBonus);
     var top = depthOfY(0, depth, fy);
     var bottom = depthOfY(H, depth, fy);
@@ -207,6 +213,7 @@
       floaters[i].t += dt;
       if (floaters[i].t >= cfg.vein.floaterSeconds) floaters.splice(i, 1);
     }
+    if (shakeT > 0) shakeT -= dt;
     if (state) stepCamera(dt, state, derived);
   };
 
@@ -238,7 +245,7 @@
   // --------------------------------------------------------------- draw
   R.draw = function (state, derived) {
     var L = cfg.layout;
-    var W = L.columnBu, H = L.shaftBu, T = L.tileBu;
+    var W = L.columnBu, H = L._liveShaftBu || L.shaftBu, T = L.tileBu;
     var wallW = L.wallTiles * T;                 // 48
     var boreX = wallW, boreW = L.boreTiles * T;  // 48..112
     var rightX = boreX + boreW;                  // 112
@@ -263,6 +270,15 @@
 
     ctx.fillStyle = "#0a0810";
     ctx.fillRect(0, 0, W, H);
+
+    // Crit shake: offset the entire scene
+    if (shakeT > 0) {
+      var sf = shakeT / (cfg.particles ? cfg.particles.shakeDurationS : 0.18);
+      var sx = (Math.random() - 0.5) * 2 * shakeAmt * sf;
+      var sy = (Math.random() - 0.5) * 2 * shakeAmt * sf;
+      ctx.save();
+      ctx.translate(sx, sy);
+    }
 
     // ---------------------------------------------------------- strata tiles
     // Zero allocation below: integer arithmetic and cached canvases only.
@@ -661,6 +677,9 @@
       ctx.globalAlpha = 1;
     }
     ctx.textAlign = "left";
+
+    // Restore shake transform before ribbon (ribbon is fixed overlay)
+    if (shakeT > 0) ctx.restore();
 
     // ---------------------------------------------------------- depth ribbon
     drawRibbon(ribbonX, L, depth, cutoff);

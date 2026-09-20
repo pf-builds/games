@@ -2,18 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<!-- The ?v= query on every script and on the JSON is useless if the DOCUMENT that
-     carries those queries is itself cached: the browser then pins an old index.html
-     and keeps loading the old script versions forever, while config/greedy-deep.json
-     (fetched with cache: "no-cache") stays fresh. That mismatch is how a build can run
-     with one file from an older revision, which is exactly the class of failure behind
-     the M3 blank-sprite-cache report. The document must always revalidate. -->
 <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>Greedy Deep — Click it! Studios</title>
 <meta property="og:image" content="assets/title.webp">
 <meta name="description" content="Dwarves dig down. You tap the vein. Gold buys picks, crew, and deeper reach. A free browser idle game from Click it! Studios.">
-<link rel="stylesheet" href="style.css?v=9">
+<link rel="stylesheet" href="style.css?v=14">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%23241f2b'/><text x='50' y='70' font-size='56' text-anchor='middle'>⛏️</text></svg>">
 </head>
 <body class="booting">
@@ -30,64 +24,124 @@
   </div>
 </div>
 
+<div id="game">
 
-<div id="col">
+  <div id="left-rail"></div>
 
-  <div id="topbar">
-    <div class="stat">
-      <span class="label">GOLD</span>
-      <span class="value" id="stat-gold">0</span>
+  <div id="col">
+    <div id="topbar">
+      <div class="stat">
+        <span class="label">GOLD</span>
+        <span class="value" id="stat-gold">0</span>
+      </div>
+      <div class="stat rate">
+        <span class="label">INCOME</span>
+        <span class="value" id="stat-rate">+0/s</span>
+      </div>
+      <div class="stat right">
+        <span class="label">DEPTH</span>
+        <span class="value" id="stat-depth">0.0 m</span>
+      </div>
+      <button id="mute-btn" type="button" title="Toggle sound">&#9834;</button>
     </div>
-    <div class="stat rate">
-      <span class="label">INCOME</span>
-      <span class="value" id="stat-rate">+0/s</span>
-    </div>
-    <div class="stat right">
-      <span class="label">DEPTH</span>
-      <span class="value" id="stat-depth">0.0 m</span>
-    </div>
-  </div>
 
-  <div id="shaftwrap">
-    <canvas id="shaft"></canvas>
-    <div id="hint">tap the vein &#9656;</div>
-    <div id="bandintro" class="hidden"></div>
-    <pre id="dbg" class="hidden"></pre>
+    <div id="shaftwrap">
+      <canvas id="shaft"></canvas>
+      <div id="hint">tap the vein &#9656;</div>
+      <div id="bandintro" class="hidden"></div>
+      <pre id="dbg" class="hidden"></pre>
 
-    <div id="welcome" class="overlay hidden">
-      <div class="panel-card">
-        <div class="panel-head">THE CREW KEPT DIGGING</div>
-        <div class="panel-body"></div>
-        <button class="panel-btn" type="button">GOOD</button>
+      <div id="welcome" class="overlay hidden">
+        <div class="panel-card">
+          <div class="panel-head">THE CREW KEPT DIGGING</div>
+          <div class="panel-body"></div>
+          <button class="panel-btn" type="button">GOOD</button>
+        </div>
+      </div>
+
+      <div id="ending" class="overlay hidden">
+        <div class="panel-card ending-card">
+          <div class="panel-head">—</div>
+          <div class="panel-body"></div>
+          <div class="score"></div>
+          <button class="panel-btn" type="button">KEEP DIGGING</button>
+        </div>
+      </div>
+
+      <div id="settings" class="overlay hidden">
+        <div class="panel-card">
+          <div class="panel-head">SETTINGS</div>
+          <div class="panel-body settings-body">
+            <div class="settings-row">
+              <span>Sound</span>
+              <button id="set-mute" type="button">ON</button>
+            </div>
+            <div class="settings-row">
+              <span>Export save</span>
+              <button id="set-export" type="button">COPY</button>
+            </div>
+            <textarea id="export-area" class="hidden" readonly rows="3"></textarea>
+            <div class="settings-row">
+              <span>Import save</span>
+              <button id="set-import" type="button">PASTE</button>
+            </div>
+            <textarea id="import-area" class="hidden" rows="3" placeholder="Paste save data here"></textarea>
+            <button id="import-confirm" class="panel-btn hidden" type="button">CONFIRM IMPORT</button>
+            <div class="settings-row danger">
+              <span>Reset game</span>
+              <button id="set-reset" type="button">RESET</button>
+            </div>
+            <div id="reset-confirm" class="hidden">
+              <p>Erase all progress?</p>
+              <button id="reset-yes" class="panel-btn danger-btn" type="button">YES, ERASE</button>
+            </div>
+          </div>
+          <button class="panel-btn" id="settings-close" type="button">CLOSE</button>
+        </div>
       </div>
     </div>
 
-    <div id="ending" class="overlay hidden">
-      <div class="panel-card">
-        <div class="panel-head">—</div>
-        <div class="panel-body"></div>
-        <button class="panel-btn" type="button">KEEP DIGGING</button>
+    <div id="roster"></div>
+
+    <div id="tabbar">
+      <button class="tab active" data-tab="dig" type="button">DIG</button>
+      <button class="tab" data-tab="crew" type="button">CREW</button>
+      <button class="tab" data-tab="gear" type="button">GEAR</button>
+      <button class="tab" data-tab="log" type="button">LOG</button>
+    </div>
+
+    <div id="tabpanel">
+      <div class="tab-section active" id="tab-dig">
+        <div class="tab-head desktop-only">DIG</div>
+        <div class="shop-rows" id="shop-dig"></div>
+      </div>
+      <div class="tab-section" id="tab-crew">
+        <div class="tab-head desktop-only">CREW</div>
+        <div class="shop-rows" id="shop-crew"></div>
+      </div>
+      <div class="tab-section" id="tab-gear">
+        <div class="tab-head desktop-only">GEAR</div>
+        <div class="shop-rows" id="shop-gear"></div>
+      </div>
+      <div class="tab-section" id="tab-log">
+        <div class="tab-head desktop-only">LOG</div>
+        <div id="nextbands"></div>
+        <div id="log"></div>
       </div>
     </div>
   </div>
 
-  <div id="nextbands"></div>
-  <div id="log"></div>
+  <div id="right-rail"></div>
 
-  <div id="panel">
-    <div id="panel-head">THE COMPANY STORE</div>
-    <div id="shop"></div>
-  </div>
-
-  <div id="foot">Greedy Deep — M3 art pass. Procedural strata, crew, and a shaft that scrolls.</div>
 </div>
 
-<script src="src/engine.js?v=6"></script>
-<script src="src/save.js?v=3"></script>
-<script src="src/sprites.js?v=9"></script>
-<script src="src/particles.js?v=1"></script>
-<script src="src/gd.js?v=11"></script>
-<script src="src/render.js?v=16"></script>
-<script src="src/ui.js?v=18"></script>
+<script src="src/engine.js?v=7"></script>
+<script src="src/save.js?v=5"></script>
+<script src="src/sprites.js?v=10"></script>
+<script src="src/particles.js?v=2"></script>
+<script src="src/audio.js?v=1"></script>
+<script src="src/gd.js?v=14"></script>
+<script src="src/render.js?v=20"></script>
+<script src="src/ui.js?v=22"></script>
 </body>
 </html>

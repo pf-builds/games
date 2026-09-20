@@ -590,7 +590,8 @@
   E.validateConfig = function (cfg) {
     var errors = [];
     var need = ["start", "sim", "format", "ores", "tracks", "dwarves", "save", "layout",
-                "events", "eventRules", "offline", "milestone", "endless", "flavor"];
+                "events", "eventRules", "offline", "milestone", "endless", "flavor",
+                "audio", "particles", "ending"];
     for (var i = 0; i < need.length; i++) if (!cfg[need[i]]) errors.push("missing block: " + need[i]);
     if (errors.length) return { ok: false, errors: errors };
 

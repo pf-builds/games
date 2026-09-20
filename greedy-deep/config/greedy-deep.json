@@ -1,5 +1,5 @@
 {
-  "configVersion": 13,
+  "configVersion": 14,
   "title": "Greedy Deep",
   "start": {
     "gold": 0,
@@ -392,7 +392,15 @@
       "FLAVOR-TODO: welcome-back line owed from the jokes page.",
       "FLAVOR-TODO: second welcome-back line owed from the jokes page."
     ],
-    "denied": "Too deep. Not yet."
+    "denied": "Too deep. Not yet.",
+    "fallbacks": {
+      "welcomeBack": "The crew kept digging.",
+      "dwarfLine": "Ready to work.",
+      "bandIntro": "New ground.",
+      "event": "Something happened.",
+      "ending": "The pick goes through into air.",
+      "endingTitle": "THE GREEDY DEEP"
+    }
   },
   "save": {
     "key": "gd.save.v1",
@@ -412,7 +420,47 @@
     "maxScale": 4,
     "buPerMeter": 4,
     "braceEveryRows": 4,
-    "faceYBu": 152
+    "faceYBu": 152,
+    "desktopBreakpoint": 1100,
+    "leftRailPx": 240,
+    "rightRailPx": 300,
+    "rosterHeightBu": 22,
+    "tabBarHeightBu": 18,
+    "panelHeightBu": 80,
+    "tapMinPx": 44,
+    "tabs": {
+      "dig": {
+        "label": "DIG",
+        "ids": [
+          "pick",
+          "bit"
+        ]
+      },
+      "crew": {
+        "label": "CREW",
+        "ids": [
+          "dorrik",
+          "hald",
+          "vessa",
+          "nix"
+        ]
+      },
+      "gear": {
+        "label": "GEAR",
+        "ids": [
+          "cart",
+          "lantern",
+          "rails",
+          "smelter",
+          "braces",
+          "elevator"
+        ]
+      },
+      "log": {
+        "label": "LOG",
+        "ids": []
+      }
+    }
   },
   "veil": {
     "alpha": 0.5,
@@ -515,5 +563,79 @@
     "src": "assets/title.webp",
     "maxBytes": 122880,
     "fadeMs": 450
+  },
+  "audio": {
+    "masterGain": 0.5,
+    "cueGains": {
+      "strike": 1.0,
+      "strikeCrit": 1.0,
+      "oreCrack": 1.0,
+      "orePop": 1.0,
+      "cartDump": 1.0,
+      "lift": 1.0,
+      "hire": 1.0,
+      "buy": 1.0,
+      "denied": 1.0,
+      "bandBreak": 1.0,
+      "hazard": 1.0,
+      "milestone": 1.0,
+      "welcomeBack": 1.0,
+      "ui": 1.0
+    },
+    "gates": {
+      "strike": 40,
+      "strikeCrit": 60,
+      "oreCrack": 50,
+      "orePop": 40,
+      "denied": 120,
+      "ui": 30
+    },
+    "ambient": {
+      "stepMs": 2200,
+      "droneHz": 55,
+      "beatRatio": 1.006,
+      "gainMin": 0.02,
+      "gainMax": 0.06,
+      "lpfHigh": 600,
+      "lpfLow": 250,
+      "tinkChance": 0.3,
+      "dripChance": 0.2
+    }
+  },
+  "particles": {
+    "max": 256,
+    "strikeChunks": 4,
+    "strikeSpeed": 100,
+    "strikeLife": 0.4,
+    "strikeSize": 2,
+    "strikeGravity": 300,
+    "orePopChunks": 6,
+    "orePopSpeed": 80,
+    "orePopLife": 0.5,
+    "orePopGravity": 180,
+    "critRingR0": 4,
+    "critRingR1": 24,
+    "critRingLife": 0.3,
+    "bandRingR0": 8,
+    "bandRingR1": 60,
+    "bandRingLife": 0.5,
+    "shakeAmountBu": 3,
+    "shakeDurationS": 0.18,
+    "floaterLife": 1.0,
+    "floaterSize": 8,
+    "cartDumpChunks": 8,
+    "endingChunks": 20,
+    "oreArcDurationS": 0.4
+  },
+  "ending": {
+    "pullBackScale": 0.55,
+    "pullBackDurationS": 2.0,
+    "crewFileInDelayS": 0.2,
+    "cavernHeightBu": 200,
+    "goldPilePixels": 200,
+    "columns": 3,
+    "totalDurationS": 10,
+    "shatterDurationS": 1.0,
+    "titleHoldS": 3.0
   }
 }

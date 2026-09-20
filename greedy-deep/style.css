@@ -1,4 +1,4 @@
-/* Greedy Deep — M1 shell. One integer scale variable (--s) drives the whole column. */
+/* Greedy Deep — M4 shell. Portrait tabs, desktop rails, settings. */
 :root { --s: 2; --ink: #e9dcb6; --dim: #9a907f; --gold: #f2c14e; --panel: #171320; --edge: #2c2437; }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -18,10 +18,17 @@ body {
   padding: 0 0 env(safe-area-inset-bottom);
   -webkit-user-select: none; user-select: none;
   -webkit-tap-highlight-color: transparent;
-  background:
-    radial-gradient(120% 60% at 50% 0%, #1b1526 0%, #0b0910 70%);
+  background: radial-gradient(120% 60% at 50% 0%, #1b1526 0%, #0b0910 70%);
 }
 body.booting #col { opacity: 0; }
+
+#game {
+  width: 100%;
+  max-width: 100vw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
 
 #col {
   width: calc(160px * var(--s));
@@ -29,6 +36,8 @@ body.booting #col { opacity: 0; }
   opacity: 1;
   transition: opacity .2s ease;
 }
+
+#left-rail, #right-rail { display: none; }
 
 /* ---------------------------------------------------------- top bar */
 #topbar {
@@ -39,6 +48,7 @@ body.booting #col { opacity: 0; }
   padding: 0 calc(4px * var(--s));
   background: linear-gradient(#20192c, #17121f);
   border-bottom: 2px solid #0a0810;
+  position: relative;
 }
 .stat { display: flex; flex-direction: column; justify-content: center; min-width: 0; flex: 1; }
 .stat.right { align-items: flex-end; }
@@ -46,6 +56,14 @@ body.booting #col { opacity: 0; }
 .stat .value { font-size: calc(9px * var(--s)); font-weight: 700; color: var(--gold); line-height: 1.15; white-space: nowrap; }
 .stat.rate .value { color: #8fd18a; font-size: calc(7px * var(--s)); }
 .stat.right .value { color: #bfd4e6; }
+
+#mute-btn {
+  position: absolute; right: calc(2px * var(--s)); top: 50%; transform: translateY(-50%);
+  min-width: 44px; min-height: 44px; border: 0; border-radius: 4px;
+  background: rgba(255,255,255,.06); color: var(--dim);
+  font-size: calc(6px * var(--s)); cursor: pointer; line-height: 1;
+}
+#mute-btn.muted { color: #5a3030; }
 
 /* ---------------------------------------------------------- shaft */
 #shaftwrap { position: relative; line-height: 0; }
@@ -81,19 +99,84 @@ body.booting #col { opacity: 0; }
 }
 #dbg.hidden { display: none; }
 
-/* ---------------------------------------------------------- shop panel */
-#panel {
-  background: var(--panel);
-  border-top: 2px solid #0a0810;
+/* ---------------------------------------------------------- roster strip */
+#roster {
+  display: flex;
+  align-items: center;
+  gap: calc(2px * var(--s));
+  padding: calc(2px * var(--s)) calc(3px * var(--s));
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: #13101c;
+  border-top: 1px solid #0a0810;
+  min-height: calc(22px * var(--s));
+  scrollbar-width: none;
 }
-#panel-head {
-  font-size: calc(5px * var(--s));
-  letter-spacing: .18em;
-  color: var(--dim);
-  padding: calc(3px * var(--s)) calc(4px * var(--s)) calc(2px * var(--s));
+#roster::-webkit-scrollbar { display: none; }
+.roster-chip {
+  display: flex;
+  align-items: center;
+  gap: calc(2px * var(--s));
+  padding: calc(1px * var(--s)) calc(3px * var(--s));
+  background: rgba(255,255,255,.04);
+  border-radius: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-height: 44px;
 }
-#shop { display: flex; flex-direction: column; }
+.chip-icon {
+  width: calc(10px * var(--s)); height: calc(10px * var(--s));
+  display: flex; align-items: center; justify-content: center;
+  font-size: calc(5px * var(--s)); font-weight: 700;
+  border-radius: 2px; color: #0a0810;
+}
+.chip-name { font-size: calc(4px * var(--s)); color: var(--ink); }
+.chip-count { font-size: calc(4px * var(--s)); color: var(--gold); font-weight: 700; }
+.chip-job { font-size: calc(3.5px * var(--s)); color: var(--dim); }
+.roster-add {
+  font-size: calc(4px * var(--s)); color: var(--dim);
+  padding: calc(1px * var(--s)) calc(3px * var(--s));
+  white-space: nowrap; flex-shrink: 0;
+}
 
+/* ---------------------------------------------------------- tab bar */
+#tabbar {
+  display: flex;
+  background: #0f0c17;
+  border-top: 1px solid #0a0810;
+}
+.tab {
+  flex: 1;
+  min-height: 44px;
+  border: 0;
+  background: #17131f;
+  color: var(--dim);
+  font: inherit;
+  font-size: calc(5px * var(--s));
+  font-weight: 700;
+  letter-spacing: .1em;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+.tab.active {
+  color: var(--gold);
+  background: var(--panel);
+  border-bottom-color: var(--gold);
+}
+
+/* ---------------------------------------------------------- tab panels */
+#tabpanel {
+  background: var(--panel);
+  border-top: 1px solid #0a0810;
+  max-height: calc(80px * var(--s));
+  overflow-y: auto;
+}
+.tab-section { display: none; }
+.tab-section.active { display: block; }
+.tab-head { display: none; }
+
+/* ---------------------------------------------------------- shop rows */
+.shop-rows { display: flex; flex-direction: column; }
 .row {
   display: flex; align-items: center; gap: calc(3px * var(--s));
   padding: calc(3px * var(--s)) calc(4px * var(--s));
@@ -118,13 +201,14 @@ body.booting #col { opacity: 0; }
   color: #1a1410; background: linear-gradient(#f4cf6a, #d8a52f);
   border: 0; border-bottom: 3px solid #8a6414; border-radius: 6px;
   cursor: pointer; touch-action: manipulation;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1;
 }
 .buy:active { transform: translateY(1px); border-bottom-width: 2px; }
+.buy .price { white-space: nowrap; }
 .buy .unit { font-size: .75em; opacity: .7; margin-left: 2px; }
-/* Locked rows read as unaffordable through the flat slate fill and the dim chevron,
-   NOT through unreadable text: #a49eb4 on #2a2435 is ~5.2:1, past the 4.5:1 AA floor.
-   The old #6c6478 measured 2.7:1 (M3 critic). */
+.buy .eta { font-size: calc(4px * var(--s)); font-weight: 400; opacity: .8; margin-top: 1px; }
 .row.locked .buy { background: #2a2435; color: #a49eb4; border-bottom-color: #1a1522; cursor: default; }
+.row.locked .buy .eta { color: #b0a7cc; opacity: 1; }
 .row.locked .row-name { color: #a8a1b6; }
 
 .row.bought { animation: flashrow .35s ease-out; }
@@ -132,21 +216,9 @@ body.booting #col { opacity: 0; }
 .row.nope { animation: shake .25s ease-out; }
 @keyframes shake { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
 
-#foot {
-  font-size: calc(4px * var(--s)); color: #5d566b; text-align: center;
-  padding: calc(4px * var(--s)) calc(4px * var(--s)) calc(8px * var(--s));
-  line-height: 1.4;
-}
-
-/* Desktop: same column, just centred. Rails land in M4. */
-@media (min-width: 1100px) {
-  body { align-items: center; min-height: 100vh; }
-  #col { box-shadow: 0 0 0 2px #0a0810, 0 24px 60px rgba(0,0,0,.6); border-radius: 4px; overflow: hidden; }
-}
-
 /* ---------------------------------------------------------- M2: intro, log, panels */
 #bandintro {
-  position: absolute; left: 50%; top: calc(34px * var(--s));
+  position: absolute; left: 50%; top: calc(16px * var(--s));
   transform: translateX(-50%);
   text-align: center; pointer-events: none;
   background: rgba(8,6,14,.78);
@@ -155,6 +227,7 @@ body.booting #col { opacity: 0; }
   padding: calc(3px * var(--s)) calc(6px * var(--s));
   animation: introfade 4.5s ease-out forwards;
   max-width: calc(140px * var(--s));
+  z-index: 3;
 }
 #bandintro b { display: block; font-size: calc(7px * var(--s)); color: var(--gold); letter-spacing: .06em; }
 #bandintro span { display: block; font-size: calc(5px * var(--s)); color: #c3b9d4; margin-top: 2px; line-height: 1.35; }
@@ -163,13 +236,12 @@ body.booting #col { opacity: 0; }
 
 #log {
   background: #100d18;
-  border-top: 2px solid #0a0810;
   padding: calc(2px * var(--s)) calc(4px * var(--s));
   min-height: calc(14px * var(--s));
   font-size: calc(4.5px * var(--s));
   line-height: 1.5;
   color: #8d85a0;
-  max-height: calc(30px * var(--s));
+  max-height: calc(40px * var(--s));
   overflow: hidden;
 }
 .logline { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -190,6 +262,7 @@ body.booting #col { opacity: 0; }
   background: #171320; border: 2px solid #3a3050; border-radius: 6px;
   width: 100%; padding: calc(5px * var(--s)); text-align: left;
   box-shadow: 0 10px 30px rgba(0,0,0,.6);
+  max-height: 90%; overflow-y: auto;
 }
 .panel-card .panel-head {
   font-size: calc(6px * var(--s)); letter-spacing: .1em; color: var(--gold);
@@ -213,17 +286,30 @@ body.booting #col { opacity: 0; }
 }
 .panel-btn:active { transform: translateY(1px); border-bottom-width: 2px; }
 
-/* buy button gets a second line: the ETA at the current passive rate */
-.buy { display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; }
-.buy .price { white-space: nowrap; }
-.buy .unit { font-size: .75em; opacity: .7; margin-left: 2px; }
-.buy .eta { font-size: calc(4px * var(--s)); font-weight: 400; opacity: .8; margin-top: 1px; }
-.row.locked .buy .eta { color: #b0a7cc; opacity: 1; }
+/* ---------------------------------------------------------- settings panel */
+.settings-body { display: flex; flex-direction: column; gap: calc(3px * var(--s)); }
+.settings-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: calc(2px * var(--s)) 0;
+  font-size: calc(5px * var(--s));
+}
+.settings-row button {
+  min-height: 36px; min-width: 60px; padding: 4px 12px;
+  font: inherit; font-weight: 700; font-size: calc(5px * var(--s));
+  border: 1px solid #3a3050; border-radius: 4px;
+  background: #1e1930; color: var(--ink); cursor: pointer;
+}
+.settings-row.danger button { color: #ec9a80; border-color: #5a3030; }
+.danger-btn { background: #3a1818 !important; color: #ec9a80 !important; border-color: #5a3030 !important; }
+#export-area, #import-area {
+  width: 100%; font: inherit; font-size: calc(4px * var(--s));
+  background: #0f0c17; color: var(--ink); border: 1px solid #3a3050;
+  border-radius: 4px; padding: calc(2px * var(--s)); resize: none;
+}
 
-/* "next bands" readout — one line per band the Deep Lantern has revealed */
+/* "next bands" readout */
 #nextbands {
   background: #120f1c;
-  border-top: 2px solid #0a0810;
   padding: calc(2px * var(--s)) calc(4px * var(--s));
   font-size: calc(4.5px * var(--s));
   line-height: 1.6;
@@ -235,39 +321,91 @@ body.booting #col { opacity: 0; }
 .nb-n { flex: 1; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nb-d { color: var(--gold); font-weight: 700; }
 
-/* ---------------------------------------------------------- M3 splash
-   The one generated asset in the build: an SDXL-base painted poster behind a
-   procedurally-drawn pixel logo, so the two styles never touch at the same scale.
-   The card is a portrait 416x608, so it lives inside the same 160 bu column the game
-   uses rather than covering the whole viewport (which would crop it to a detail).
-   Shown on load only, faded out on DESCEND, never seen again in play. */
-#splash {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  background: #16111f;          /* deep-rock fallback, from the coal palette */
-  opacity: 1;
-  transition: opacity .45s ease;
+/* ---------------------------------------------------------- desktop rails */
+@media (min-width: 1100px) {
+  body { align-items: center; min-height: 100vh; }
+  #game {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0;
+  }
+  #left-rail {
+    display: block;
+    width: 240px;
+    max-height: 100vh;
+    overflow-y: auto;
+    background: var(--panel);
+    border-right: 2px solid #0a0810;
+    scrollbar-width: thin;
+  }
+  #right-rail {
+    display: block;
+    width: 300px;
+    max-height: 100vh;
+    overflow-y: auto;
+    background: var(--panel);
+    border-left: 2px solid #0a0810;
+    scrollbar-width: thin;
+  }
+  #col {
+    box-shadow: 0 0 0 2px #0a0810, 0 24px 60px rgba(0,0,0,.6);
+    border-radius: 0;
+    overflow: hidden;
+  }
+  /* On desktop: hide portrait roster, tab bar, tab panel */
+  #roster, #tabbar, #tabpanel { display: none !important; }
+  /* Rail roster cards */
+  .rail-card {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 12px; border-bottom: 1px solid var(--edge);
+  }
+  .rail-card-icon {
+    width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 700; border-radius: 4px; color: #0a0810; flex-shrink: 0;
+  }
+  .rail-card-info { flex: 1; min-width: 0; }
+  .rail-card-name { font-size: 13px; font-weight: 700; color: var(--ink); }
+  .rail-card-sub { font-size: 11px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* Right rail: show all tab sections + headings */
+  .tab-head.desktop-only { display: none; }
+  .rail-head {
+    font-size: 11px; letter-spacing: .18em; color: var(--dim);
+    padding: 10px 12px 6px; border-bottom: 1px solid var(--edge);
+  }
+  .rail-section { border-bottom: 2px solid #0a0810; }
+  .rail-section .row {
+    min-height: 44px;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+  .rail-section .row-name { font-size: 13px; }
+  .rail-section .row-sub { font-size: 11px; }
+  .rail-section .buy { font-size: 13px; min-height: 38px; }
+  .rail-section .buy .eta { font-size: 10px; }
+  .rail-log {
+    padding: 8px 12px;
+    font-size: 11px;
+    color: #8d85a0;
+    line-height: 1.5;
+  }
+  .rail-log .logline { font-size: 11px; }
 }
-/* Full-bleed backdrop: the same painted card, blown up, blurred and pushed down into
-   the dark, so a 1280x900 viewport is never 90% empty void around a small poster
-   (M3 critic, BLOCKING). Purely decorative; the readable card sits on top. */
+
+/* ---------------------------------------------------------- M3 splash */
+#splash {
+  position: fixed; inset: 0; z-index: 40;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden; background: #16111f;
+  opacity: 1; transition: opacity .45s ease;
+}
 #splash::before {
-  content: "";
-  position: absolute;
-  inset: -6%;
+  content: ""; position: absolute; inset: -6%;
   background: #16111f url("assets/title.webp") center center / cover no-repeat;
-  filter: blur(28px) brightness(.34) saturate(.75);
-  transform: scale(1.06);
+  filter: blur(28px) brightness(.34) saturate(.75); transform: scale(1.06);
 }
 #splash::after {
-  content: "";
-  position: absolute;
-  inset: 0;
+  content: ""; position: absolute; inset: 0;
   background: radial-gradient(90% 70% at 50% 45%, rgba(0,0,0,0) 0%, rgba(8,6,12,.72) 100%);
 }
 #splash.gone { opacity: 0; pointer-events: none; }
@@ -276,54 +414,30 @@ body.booting #col { opacity: 0; }
   position: relative;
   width: min(calc(160px * var(--s) * 1.6), 92vw, calc(100vh * 0.47));
   height: min(96vh, calc(234px * var(--s) * 1.6));
-  overflow: hidden;
-  display: flex;
-  align-items: flex-end;
+  overflow: hidden; display: flex; align-items: flex-end;
   box-shadow: 0 0 0 2px #0a0810, 0 calc(2px * var(--s)) calc(8px * var(--s)) rgba(0,0,0,.6);
 }
-#splash-art {
-  position: absolute; inset: 0;
-  background: #07060c url("assets/title.webp") center center / cover no-repeat;
-}
+#splash-art { position: absolute; inset: 0; background: #07060c url("assets/title.webp") center center / cover no-repeat; }
 #splash-scrim {
   position: absolute; inset: 0;
-  background:
-    linear-gradient(180deg, rgba(7,6,12,.55) 0%, rgba(7,6,12,0) 24%, rgba(7,6,12,.12) 46%, rgba(7,6,12,.86) 68%, #07060c 100%);
+  background: linear-gradient(180deg, rgba(7,6,12,.55) 0%, rgba(7,6,12,0) 24%, rgba(7,6,12,.12) 46%, rgba(7,6,12,.86) 68%, #07060c 100%);
 }
 #splash-inner {
-  position: relative;
-  width: 100%;
-  padding: 0 calc(6px * var(--s)) calc(10px * var(--s));
-  text-align: center;
+  position: relative; width: 100%;
+  padding: 0 calc(6px * var(--s)) calc(10px * var(--s)); text-align: center;
 }
-#splash-logo {
-  display: block;
-  margin: 0 auto calc(4px * var(--s));
-  image-rendering: pixelated;
-}
+#splash-logo { display: block; margin: 0 auto calc(4px * var(--s)); image-rendering: pixelated; }
 #splash-sub {
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  letter-spacing: .08em;
-  font-size: calc(5px * var(--s));
-  line-height: 1.5;
-  color: #cbbd97;
-  letter-spacing: .04em;
-  margin-bottom: calc(7px * var(--s));
-  text-shadow: 0 1px 2px #000;
+  font-size: calc(5px * var(--s)); line-height: 1.5; color: #cbbd97;
+  letter-spacing: .04em; margin-bottom: calc(7px * var(--s)); text-shadow: 0 1px 2px #000;
 }
 #descend {
-  appearance: none;
-  display: block;
-  width: 100%;
-  min-height: 48px;
-  border: 2px solid #f2c14e;
-  border-radius: 2px;
-  background: linear-gradient(#3a2d16, #20180c);
-  color: #f7dc95;
+  appearance: none; display: block; width: 100%; min-height: 48px;
+  border: 2px solid #f2c14e; border-radius: 2px;
+  background: linear-gradient(#3a2d16, #20180c); color: #f7dc95;
   font: 700 calc(8px * var(--s))/1 ui-monospace, Menlo, Consolas, monospace;
-  letter-spacing: .28em;
-  text-indent: .28em;
-  cursor: pointer;
+  letter-spacing: .28em; text-indent: .28em; cursor: pointer;
   box-shadow: 0 0 calc(4px * var(--s)) rgba(242,193,78,.25);
 }
 #descend:hover { background: linear-gradient(#4a3a1d, #2a2010); }

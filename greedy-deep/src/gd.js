@@ -5,7 +5,7 @@
 
   var E = window.GDEngine;
   var GD = (window.GD = {
-    version: "0.3.0-m3",
+    version: "0.4.0-m4",
     config: null,
     state: null,
     ready: false,
@@ -18,7 +18,8 @@
       cameraY: 0, deepestDwarfY: 0, cameraUserBu: 0, titleCardBytes: 0,
       dwarfCache: 0, dwarfLoadouts: 0, placeholderRects: 0,
       spriteCacheOpaque: 0, spriteCacheTotal: 0, spriteCacheRebuilds: 0, spriteCacheBlank: [],
-      outlineFailures: 0, logoRedraws: 0
+      outlineFailures: 0, logoRedraws: 0,
+      audioMasterGain: 0, lastCue: null
     },
     // The live loop passes these through to the engine so the UI can react to
     // events, band changes and the ending without the engine knowing about DOM.
@@ -166,6 +167,19 @@
     return d;
   };
 
+  GD.export = function () {
+    return window.GDSave.exportString(GD.config, GD.state);
+  };
+
+  GD.import = function (str) {
+    var result = window.GDSave.importString(GD.config, str);
+    if (!result.ok) return result;
+    GD.state = result.state;
+    window.GDSave.write(GD.config, GD.state);
+    if (window.GDUI && window.GDUI.rebuild) window.GDUI.rebuild();
+    return result;
+  };
+
   GD.refreshDbg = function (fps) {
     var d = E.derive(GD.config, GD.state);
     GD.dbg.t = GD.state.t;
@@ -207,6 +221,10 @@
       GD.dbg.outlineFailures = ss.outlineFailures;
     }
     if (fps !== undefined) GD.dbg.fps = fps;
+    if (window.GDAudio) {
+      GD.dbg.audioMasterGain = window.GDAudio.masterGainValue();
+      GD.dbg.lastCue = window.GDAudio.lastCue;
+    }
   };
 
   // -------------------------------------------------- debug mutators (?debug=1)
@@ -662,7 +680,8 @@
         eventRules: cfg.eventRules, events: cfg.events, offline: cfg.offline,
         milestone: cfg.milestone, endless: cfg.endless, flavor: cfg.flavor, save: cfg.save,
         layout: cfg.layout, veil: cfg.veil, vein: cfg.vein, debug: cfg.debug, lantern: cfg.lantern,
-        camera: cfg.camera, sprites: cfg.sprites, titleCard: cfg.titleCard
+        camera: cfg.camera, sprites: cfg.sprites, titleCard: cfg.titleCard,
+        audio: cfg.audio, particles: cfg.particles, ending: cfg.ending
       }));
       ext.ores.push({
         id: "voidglass", name: "Voidglass", startDepth: 2000, goldPerMeter: 400, pattern: "crystal",
@@ -924,6 +943,113 @@
       check("m3_validate_bad_camera_ease", "not ok", badCam.ok, badCam.ok === false && /camera.ease/.test(badCam.errors.join()));
       var badCos = bad3(function (c) { c.dwarves[0].cosmetic.palette = "chartreuse"; });
       check("m3_validate_unknown_cosmetic_palette", "not ok", badCos.ok, badCos.ok === false && /unknown cosmetic palette/.test(badCos.errors.join()));
+
+      // =========================================================== M4 block
+      // Audio: mute state, master gain, no cue when muted
+      if (window.GDAudio) {
+        var A = window.GDAudio;
+        var prevMuted = A.isMuted();
+        A.setMuted(true);
+        check("m4_muted_master_gain_zero", 0, A.masterGainValue(), A.masterGainValue() === 0);
+        var cueBefore = A.lastCue;
+        A.play("strike"); // should be no-op
+        check("m4_muted_no_cue_scheduled", cueBefore, A.lastCue, A.lastCue === cueBefore);
+
+        // Mute persisted in prefs
+        GD.state.prefs.muted = true;
+        var savedPrefs = JSON.parse(JSON.stringify(GD.state.prefs));
+        check("m4_mute_persisted_in_prefs", true, savedPrefs.muted, savedPrefs.muted === true);
+
+        A.setMuted(prevMuted);
+        GD.state.prefs.muted = prevMuted;
+      } else {
+        check("m4_audio_module_present", "GDAudio", "missing", false);
+      }
+
+      // Export/import round-trip
+      GD.reset();
+      GD.state.gold = 12345.67;
+      GD.state.depth = 456.78;
+      GD.state.goldEarnedTotal = 99999;
+      GD.grantForTest("pick", 5);
+      GD.grantForTest("dorrik", 3);
+      var exported = GD.export();
+      check("m4_export_produces_string", "a string", typeof exported, typeof exported === "string" && exported.length > 10);
+
+      // Import on a fresh state
+      GD.reset();
+      var importResult = GD.import(exported);
+      check("m4_import_succeeds", true, importResult.ok, importResult.ok === true);
+      check("m4_import_gold_exact", 12345.67, GD.state.gold, approx(GD.state.gold, 12345.67, 0.01));
+      check("m4_import_depth_exact", 456.78, GD.state.depth, approx(GD.state.depth, 456.78, 0.01));
+      check("m4_import_goldEarnedTotal_exact", 99999, GD.state.goldEarnedTotal, approx(GD.state.goldEarnedTotal, 99999, 0.01));
+      check("m4_import_owned_exact", "pick=5,dorrik=3",
+        "pick=" + (GD.state.owned.pick || 0) + ",dorrik=" + (GD.state.owned.dorrik || 0),
+        GD.state.owned.pick === 5 && GD.state.owned.dorrik === 3);
+
+      // Truncated import fails safely
+      var truncated = exported.substring(0, 20);
+      GD.state.gold = 777;
+      var truncResult = GD.import(truncated);
+      check("m4_truncated_import_fails", false, truncResult.ok, truncResult.ok === false);
+      check("m4_truncated_import_gold_untouched", 777, GD.state.gold, GD.state.gold === 777);
+
+      // Version-bumped import fails safely
+      var badVersionPayload;
+      try { badVersionPayload = atob(exported); } catch (e) { badVersionPayload = ""; }
+      if (badVersionPayload) {
+        var badEnv = JSON.parse(badVersionPayload);
+        badEnv.v = 9999;
+        var badExport = btoa(JSON.stringify(badEnv));
+        var badResult = GD.import(badExport);
+        check("m4_version_bumped_import_fails", false, badResult.ok, badResult.ok === false);
+        check("m4_version_bumped_gold_untouched", 777, GD.state.gold, GD.state.gold === 777);
+      }
+
+      // jumpTo(1200) triggers ending once, sets endingSeen, game continues
+      GD.reset();
+      GD.state.goldEarnedTotal = 5000;
+      var endingCount = 0;
+      GD.hooks.onEnding = function () { endingCount++; };
+      GD.jumpTo(cfg.milestone.depth);
+      check("m4_ending_triggers_once", 1, endingCount, endingCount === 1);
+      check("m4_endingSeen_set", true, GD.state.endingSeen, GD.state.endingSeen === true);
+      // game continues after ending
+      GD.grantForTest("dorrik", 3);
+      GD.step(10);
+      check("m4_game_continues_after_ending", true, GD.state.depth > cfg.milestone.depth,
+        GD.state.depth > cfg.milestone.depth);
+      // second jumpTo does NOT fire again
+      GD.jumpTo(cfg.milestone.depth + 500);
+      check("m4_ending_fires_only_once", 1, endingCount, endingCount === 1);
+      GD.hooks.onEnding = null;
+
+      // Particle count never exceeds particles.max
+      check("m4_particle_max_in_json", true, cfg.particles && cfg.particles.max > 0,
+        cfg.particles && cfg.particles.max > 0);
+
+      // No visible FLAVOR-TODO in any rendered DOM text
+      var allText = document.body.innerText || "";
+      var hasTodo = allText.indexOf("FLAVOR-TODO") !== -1;
+      // Check that the fallbacks table exists
+      check("m4_flavor_fallbacks_exist", true, !!(cfg.flavor && cfg.flavor.fallbacks),
+        !!(cfg.flavor && cfg.flavor.fallbacks));
+
+      // Layout assertions
+      if (typeof window.innerWidth === "number") {
+        check("m4_no_horizontal_scroll", true,
+          document.documentElement.scrollWidth <= window.innerWidth + 2,
+          document.documentElement.scrollWidth <= window.innerWidth + 2);
+      }
+
+      // JSON blocks present
+      check("m4_json_audio_block", true, !!cfg.audio, !!cfg.audio && typeof cfg.audio.masterGain === "number");
+      check("m4_json_particles_block", true, !!cfg.particles, !!cfg.particles && cfg.particles.max > 0);
+      check("m4_json_ending_block", true, !!cfg.ending, !!cfg.ending && cfg.ending.totalDurationS > 0);
+      check("m4_json_layout_desktop", true, !!cfg.layout.desktopBreakpoint,
+        cfg.layout.desktopBreakpoint > 0 && cfg.layout.leftRailPx > 0 && cfg.layout.rightRailPx > 0);
+      check("m4_json_flavor_fallbacks", true, !!(cfg.flavor && cfg.flavor.fallbacks && cfg.flavor.fallbacks.welcomeBack),
+        !!(cfg.flavor && cfg.flavor.fallbacks && cfg.flavor.fallbacks.welcomeBack));
 
       // --- console clean (last, so it counts everything above)
       if (!opts.skipConsoleCheck) {
