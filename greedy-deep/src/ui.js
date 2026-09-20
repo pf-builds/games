@@ -3,7 +3,7 @@
 (function () {
   "use strict";
 
-  var CONFIG_VERSION = 15;
+  var CONFIG_VERSION = 16;
 
   var UI = (window.GDUI = {});
   var E = window.GDEngine, GD = window.GD;
@@ -26,6 +26,7 @@
   var floaterSystem = null;
   var oreCombo = 0;
   var oreComboT = 0;
+  var displayGold = 0;
 
   function $(id) { return document.getElementById(id); }
 
@@ -110,7 +111,13 @@
     });
     window.addEventListener("resize", layout);
     if (GD.state.goldEarnedTotal > 0 && els.hint) els.hint.classList.add("gone");
-    if (GD.debug) els.overlay.classList.remove("hidden");
+    if (GD.debug) {
+      els.overlay.classList.remove("hidden");
+      els.overlay.classList.add("collapsed");
+      els.overlay.addEventListener("click", function () {
+        els.overlay.classList.toggle("collapsed");
+      });
+    }
     document.body.classList.remove("booting");
     refresh();
     updateMuteUI();
@@ -171,6 +178,35 @@
   function var_gold() { return "#f2c14e"; }
 
   function onEnding(st, m) {
+    // Start the canvas-drawn ending scene (item 4)
+    if (window.GDRender && window.GDRender.startEnding) {
+      window.GDRender.startEnding(st, GD.derive());
+    }
+    if (window.GDAudio) window.GDAudio.play("milestone");
+    pushLog("The pick goes through into air. " + GD.format(st.endingScore) + " points.", "band");
+
+    // Show the DOM panel after the scene duration for the KEEP DIGGING button
+    var dur = (cfg.ending && cfg.ending.totalDurationS) || 10;
+    var showPanelAfter = dur * 1000 - 2000; // show panel 2s before scene ends
+    // Use a juice-clock driven check rather than setTimeout for the timing
+    endingPanelT = showPanelAfter / 1000;
+    endingPanelData = { st: st, m: m };
+  }
+
+  var endingPanelT = -1;
+  var endingPanelData = null;
+
+  function checkEndingPanel(dt) {
+    if (endingPanelT < 0) return;
+    endingPanelT -= dt;
+    if (endingPanelT <= 0) {
+      endingPanelT = -1;
+      showEndingPanel(endingPanelData.st, endingPanelData.m);
+      endingPanelData = null;
+    }
+  }
+
+  function showEndingPanel(st, m) {
     if (!els.ending) return;
     var f = cfg.flavor.ending || {};
     var title = deflavor(f.title || m.title, "endingTitle");
@@ -184,8 +220,6 @@
     els.ending.querySelector(".score").textContent = "SCORE " + GD.format(st.endingScore);
     els.ending.querySelector(".panel-btn").textContent = m.buttonLabel || "KEEP DIGGING";
     els.ending.classList.remove("hidden");
-    pushLog("The pick goes through into air. " + GD.format(st.endingScore) + " points.", "band");
-    if (window.GDAudio) window.GDAudio.play("milestone");
   }
 
   function pushLog(text, kind) {
@@ -216,12 +250,16 @@
     var vw = window.innerWidth, vh = window.innerHeight;
     isDesktop = vw >= L.desktopBreakpoint;
 
+    var leftW = 0, rightW = 0;
     var s;
     if (isDesktop) {
-      // Desktop: scale = clamp(2, floor(min((vw-540)/160, vh/300)), 4)
-      s = Math.floor(Math.min((vw - (L.leftRailPx + L.rightRailPx)) / L.columnBu, vh / 300));
+      // Fluid rails: clamp between min and max based on viewport
+      leftW = Math.max(L.leftRailMinPx || 180, Math.min(L.leftRailMaxPx || 240, Math.round(vw * 0.14)));
+      rightW = Math.max(L.rightRailMinPx || 240, Math.min(L.rightRailMaxPx || 300, Math.round(vw * 0.18)));
+      // Desktop scale: clamp(2, floor(min((vw - rails)/160, vh/300)), 4)
+      s = Math.floor(Math.min((vw - leftW - rightW) / L.columnBu, vh / 300));
     } else {
-      // Portrait: scale = clamp(2, floor(min(vw/160, vh/columnHeightBu)), 4)
+      // Portrait: scale up to fill available height, integer scale
       s = Math.floor(Math.min(vw / L.columnBu, vh / L.columnHeightBu));
     }
     s = Math.max(L.minScale, Math.min(L.maxScale, s || L.minScale));
@@ -242,6 +280,8 @@
 
     // Desktop: rebuild rails
     if (isDesktop) {
+      if (els.leftRail) els.leftRail.style.width = leftW + "px";
+      if (els.rightRail) els.rightRail.style.width = rightW + "px";
       buildDesktopRails();
     }
   }
@@ -621,38 +661,36 @@
       var d = down; down = null;
       window.GDRender.cameraRelease();
       if (moved) return;
-      if (!window.GDRender.hitVein(d.lx, d.ly)) {
-        // Check if tapping veiled area
-        if (window.GDAudio) window.GDAudio.play("denied");
-        return;
-      }
+
+      // Item 7: click ANYWHERE on the shaft = strike, with chunks at the tap point
       var g = GD.tap(1);
       if (els.hint) els.hint.classList.add("gone");
 
-      // Juice: strike
       window.GDRender.strike();
       if (window.GDAudio) window.GDAudio.play("strike");
+      // Ore pop arc to the cart
+      var bandColor = (GD.derive().band.veinColor) || "#f2c14e";
+      window.GDRender.addOreArc(bandColor);
 
-      // Particles: rock chunks
+      // Particles at tap point
       if (particleSystem) {
-        var vr = window.GDRender.veinRect();
-        var cx = vr.x + vr.w / 2, cy = vr.y + vr.h / 2;
+        var s2 = window.GDRender.scale();
+        var tapBuX = d.lx / s2, tapBuY = d.ly / s2;
         var band = GD.derive().band;
-        particleSystem.burst(cx, cy, band.palette ? band.palette.dark : "#332d3c",
+        particleSystem.burst(tapBuX, tapBuY, band.palette ? band.palette.dark : "#332d3c",
           cfg.particles.strikeChunks, cfg.particles.strikeSpeed,
           cfg.particles.strikeLife, cfg.particles.strikeSize, cfg.particles.strikeGravity);
       }
 
-      // Floater
+      // Floater at tap point
       if (floaterSystem) {
-        var vr2 = window.GDRender.veinRect();
-        floaterSystem.add(vr2.x + vr2.w / 2 + (Math.random() * 8 - 4), vr2.y, "+" + GD.format(g), "#ffe89a", cfg.particles.floaterSize, cfg.particles.floaterLife);
+        var s3 = window.GDRender.scale();
+        var fX = d.lx / s3, fY = d.ly / s3;
+        floaterSystem.add(fX + (Math.random() * 8 - 4), fY, "+" + GD.format(g), "#ffe89a", cfg.particles.floaterSize, cfg.particles.floaterLife);
       }
 
-      // Ore combo tracking
       oreCombo++;
       oreComboT = 0.6;
-
       refresh();
     }
     els.canvas.addEventListener("pointerup", endPointer);
@@ -711,6 +749,7 @@
       introT -= dtReal;
       if (introT <= 0 && els.intro) els.intro.classList.add("hidden");
     }
+    checkEndingPanel(dtReal);
 
     fpsFrames++; fpsT += dtReal;
     if (fpsT >= 0.5) { fps = Math.round(fpsFrames / fpsT); fpsFrames = 0; fpsT = 0; }
@@ -749,7 +788,14 @@
   function refresh() {
     if (!GD.ready || !els.gold) return;
     var st = GD.state, d = GD.derive();
-    els.gold.textContent = GD.format(st.gold);
+    // Odometer roll: displayGold catches up to real gold over ~0.6s
+    var rollSpeed = (cfg.particles && cfg.particles.cartDumpRollS) || 0.6;
+    if (Math.abs(displayGold - st.gold) > 0.5) {
+      displayGold += (st.gold - displayGold) * Math.min(1, 0.1 / rollSpeed * 6);
+    } else {
+      displayGold = st.gold;
+    }
+    els.gold.textContent = GD.format(displayGold);
     els.rate.textContent = (d.goldRate > 0 ? "+" + GD.format(d.goldRate) : "+0") + "/s";
     els.depth.textContent = st.depth.toFixed(cfg.format.depthDecimals) + " m";
     for (var i = 0; i < rows.length; i++) {

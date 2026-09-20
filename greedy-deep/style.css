@@ -94,10 +94,22 @@ body.booting #col { opacity: 0; }
 #dbg {
   position: absolute; top: 4px; left: 4px;
   font: 10px/1.35 ui-monospace, Menlo, monospace;
-  color: #9dffb0; background: rgba(0,0,0,.72);
-  padding: 4px 6px; border-radius: 4px; white-space: pre; pointer-events: none;
+  color: #9dffb0; background: rgba(0,0,0,.82);
+  padding: 4px 6px; border-radius: 4px; white-space: pre;
+  pointer-events: auto; cursor: pointer; z-index: 8;
+  transition: max-height .2s ease, opacity .2s ease;
+  max-height: 400px; overflow: hidden;
 }
 #dbg.hidden { display: none; }
+#dbg.collapsed {
+  max-height: 16px; overflow: hidden;
+  opacity: 0.6;
+  padding: 2px 6px;
+}
+#dbg.collapsed::after {
+  content: " [+]";
+  color: #6dff80;
+}
 
 /* ---------------------------------------------------------- roster strip */
 #roster {
@@ -322,8 +334,14 @@ body.booting #col { opacity: 0; }
 .nb-d { color: var(--gold); font-weight: 700; }
 
 /* ---------------------------------------------------------- desktop rails */
-@media (min-width: 1100px) {
-  body { align-items: center; min-height: 100vh; }
+@media (min-width: 900px) {
+  body {
+    align-items: center; min-height: 100vh;
+    background:
+      radial-gradient(120% 60% at 50% 0%, rgba(27,21,38,.85) 0%, rgba(11,9,16,.92) 70%),
+      url("assets/title.webp") center center / cover no-repeat;
+    background-attachment: fixed;
+  }
   #game {
     flex-direction: row;
     align-items: flex-start;
@@ -332,7 +350,7 @@ body.booting #col { opacity: 0; }
   }
   #left-rail {
     display: block;
-    width: 240px;
+    width: 240px; /* JS overrides with fluid width */
     max-height: 100vh;
     overflow-y: auto;
     background: var(--panel);
@@ -341,7 +359,7 @@ body.booting #col { opacity: 0; }
   }
   #right-rail {
     display: block;
-    width: 300px;
+    width: 300px; /* JS overrides with fluid width */
     max-height: 100vh;
     overflow-y: auto;
     background: var(--panel);
@@ -390,6 +408,16 @@ body.booting #col { opacity: 0; }
     line-height: 1.5;
   }
   .rail-log .logline { font-size: 11px; }
+}
+
+/* Between phone and rails: scale column, show side art */
+@media (min-width: 600px) and (max-width: 899px) {
+  body {
+    background:
+      radial-gradient(120% 60% at 50% 0%, rgba(27,21,38,.85) 0%, rgba(11,9,16,.92) 70%),
+      url("assets/title.webp") center center / cover no-repeat;
+    background-attachment: fixed;
+  }
 }
 
 /* ---------------------------------------------------------- M3 splash */

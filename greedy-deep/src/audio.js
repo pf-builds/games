@@ -81,6 +81,8 @@
     if (muted) return;
     if (!ac()) return;
     A.lastCue = cue;
+    // Sync update so selfTest can read it immediately after tap/buy
+    if (window.GD && window.GD.dbg) window.GD.dbg.lastCue = cue;
     var fn = CUES[cue];
     if (fn) fn(cg(cue), opts || {});
   };

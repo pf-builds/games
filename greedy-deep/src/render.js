@@ -20,6 +20,7 @@
   var scale = 2, dpr = 1;
   var floaters = [];
   var strikeT = 0;
+  var oreArcs = [];
   var pulse = 0;
   var lastPlan = { indices: [], veiledIndices: [], maxIndex: 0, cutoffIndex: 0 };
   var stats = { tileBlits: 0, placeholderRects: 0, seams: 0, veiled: 0, dwarves: 0, maxDrawnIndex: 0, maxVeiledIndex: -1, frames: 0 };
@@ -81,6 +82,145 @@
   // Crit shake: applied as a canvas translate, decays over time
   var shakeT = 0, shakeAmt = 0;
   R.shake = function (amount, dur) { shakeAmt = amount || 3; shakeT = dur || 0.18; };
+
+  // --------------------------------------------------------------- ending scene state
+  var endScene = { active: false, t: 0, cavern: null, totalT: 10 };
+
+  R.startEnding = function (state, derived) {
+    endScene.active = true;
+    endScene.t = 0;
+    endScene.totalT = (cfg.ending && cfg.ending.totalDurationS) || 10;
+    endScene.cavern = buildCavern();
+  };
+
+  R.endingActive = function () { return endScene.active; };
+
+  function buildCavern() {
+    // Draw the cavern once to an offscreen canvas: vaulted ceiling, gold pile, columns
+    var w = 160, h = (cfg.ending && cfg.ending.cavernHeightBu) || 200;
+    var c = document.createElement("canvas");
+    c.width = w; c.height = h;
+    var g = c.getContext("2d");
+    // Dark cavern background
+    g.fillStyle = "#0d0a14";
+    g.fillRect(0, 0, w, h);
+    // Vaulted ceiling arc
+    g.fillStyle = "#1a1528";
+    g.beginPath();
+    g.moveTo(0, 0); g.lineTo(w, 0); g.lineTo(w, 40);
+    g.quadraticCurveTo(w / 2, 80, 0, 40);
+    g.fill();
+    // Ceiling detail
+    g.fillStyle = "#251f35";
+    for (var ci = 0; ci < 30; ci++) {
+      var cx = (SP.hash2(ci, 8822) % w);
+      var cy = (SP.hash2(ci, 3311) % 50);
+      g.fillRect(cx, cy, 2 + (ci % 3), 1 + (ci % 2));
+    }
+    // Three columns
+    var cols = (cfg.ending && cfg.ending.columns) || 3;
+    var colSpacing = w / (cols + 1);
+    g.fillStyle = "#2a2240";
+    for (var co = 0; co < cols; co++) {
+      var cx2 = Math.round(colSpacing * (co + 1));
+      g.fillRect(cx2 - 3, 30, 6, h - 50);
+      // Column base
+      g.fillStyle = "#352a4a";
+      g.fillRect(cx2 - 5, h - 22, 10, 4);
+      g.fillStyle = "#2a2240";
+      // Column capital
+      g.fillRect(cx2 - 4, 28, 8, 4);
+    }
+    // Gold pile: ~200 seeded px calls
+    var pileN = (cfg.ending && cfg.ending.goldPilePixels) || 200;
+    var goldColors = ["#f2c14e", "#d8a52f", "#ffe89a", "#c4922a", "#aa7a1e"];
+    for (var pi = 0; pi < pileN; pi++) {
+      var px2 = 20 + (SP.hash2(pi, 5599) % (w - 40));
+      var pyMax = h - 8;
+      var pyMin = h - 14 - Math.round(20 * Math.pow(1 - Math.abs(px2 - w / 2) / (w / 2), 1.5));
+      var py2 = pyMin + (SP.hash2(pi, 7733) % Math.max(1, pyMax - pyMin));
+      g.fillStyle = goldColors[pi % goldColors.length];
+      g.fillRect(px2, py2, 1 + (pi % 2), 1);
+    }
+    return c;
+  }
+
+  function drawEndingOverlay(ctx2, W, H, depth, derived) {
+    var e = cfg.ending;
+    var t = endScene.t;
+    // Phase 1: shatter + cavern reveal (0 to pullBackDuration)
+    var pullEnd = (e.pullBackDurationS || 2);
+    var crewStart = pullEnd;
+    var crewEnd = crewStart + derived.dwarves * (e.crewFileInDelayS || 0.2);
+    var titleStart = crewEnd + 0.5;
+
+    // Draw the cavern below the face
+    if (endScene.cavern) {
+      var cy = Math.min(H, Math.round((depth * cfg.layout.buPerMeter - (cam.topBu || 0)) + 4));
+      // Scale tween: pull back from 1.0 to pullBackScale over pullBackDuration
+      if (t < pullEnd) {
+        var f2 = Math.min(1, t / pullEnd);
+        var sc = 1 - (1 - (e.pullBackScale || 0.55)) * f2;
+        ctx2.save();
+        ctx2.translate(W / 2, H / 2);
+        ctx2.scale(sc, sc);
+        ctx2.translate(-W / 2, -H / 2);
+        ctx2.drawImage(endScene.cavern, 0, cy);
+        ctx2.restore();
+      } else {
+        ctx2.save();
+        ctx2.translate(W / 2, H / 2);
+        ctx2.scale(e.pullBackScale || 0.55, e.pullBackScale || 0.55);
+        ctx2.translate(-W / 2, -H / 2);
+        ctx2.drawImage(endScene.cavern, 0, cy);
+        ctx2.restore();
+      }
+    }
+
+    // Phase 2: crew files in
+    if (t > crewStart) {
+      var crewDone = Math.min(derived.dwarves, Math.floor((t - crewStart) / (e.crewFileInDelayS || 0.2)));
+      for (var di = 0; di < crewDone && di < 12; di++) {
+        var dx = 20 + di * 12;
+        var dy = H - 30;
+        ctx2.fillStyle = "#c98a4a";
+        ctx2.fillRect(dx, dy, 4, 8);
+        ctx2.fillStyle = "#8a4b2a";
+        ctx2.fillRect(dx, dy + 8, 4, 6);
+      }
+    }
+
+    // Phase 3: title text
+    if (t > titleStart) {
+      var alpha = Math.min(1, (t - titleStart) / 0.5);
+      ctx2.globalAlpha = alpha;
+      // Scrim
+      ctx2.fillStyle = "rgba(6,4,10,.7)";
+      ctx2.fillRect(0, 0, W, H);
+      // Title
+      ctx2.textAlign = "center";
+      ctx2.font = "bold 12px ui-monospace, Menlo, monospace";
+      ctx2.fillStyle = "#f2c14e";
+      var state2 = window.GD ? window.GD.state : {};
+      var endTitle = "THE GREEDY DEEP";
+      if (cfg.flavor && cfg.flavor.fallbacks && cfg.flavor.fallbacks.endingTitle) {
+        endTitle = cfg.flavor.fallbacks.endingTitle;
+      }
+      ctx2.fillText(endTitle, W / 2, H / 2 - 30);
+      ctx2.font = "8px ui-monospace, Menlo, monospace";
+      ctx2.fillStyle = "#c3b9d4";
+      ctx2.fillText(Math.floor(state2.depth || 0) + " m deep", W / 2, H / 2 - 12);
+      if (window.GD) {
+        ctx2.fillText(window.GD.format(state2.goldEarnedTotal || 0) + " gold earned", W / 2, H / 2 + 2);
+        ctx2.fillText(window.GDEngine.formatEta(state2.endingAtSeconds || 0) + " run time", W / 2, H / 2 + 16);
+        ctx2.font = "bold 10px ui-monospace, Menlo, monospace";
+        ctx2.fillStyle = "#f2c14e";
+        ctx2.fillText("SCORE " + window.GD.format(state2.endingScore || 0), W / 2, H / 2 + 36);
+      }
+      ctx2.textAlign = "left";
+      ctx2.globalAlpha = 1;
+    }
+  }
 
   // --------------------------------------------------------------- geometry
   // Deep Lantern (`reveal_bands`) raises the render cutoff, and each level also buys
@@ -184,6 +324,20 @@
   }
 
   // --------------------------------------------------------------- vein hotspot
+  R.addOreArc = function (color) {
+    var v = R.veinRect();
+    var dur = (cfg.particles && cfg.particles.oreArcDurationS) || 0.4;
+    // Arc from vein center to cart position
+    var L = cfg.layout;
+    var boreX2 = L.wallTiles * L.tileBu;
+    var boreW2 = L.boreTiles * L.tileBu;
+    oreArcs.push({
+      x0: v.x + v.w / 2, y0: v.y + v.h / 2,
+      x1: boreX2 + boreW2 - 10, y1: faceY() - 8,
+      t: 0, life: dur, color: color || "#f2c14e"
+    });
+  };
+
   R.veinRect = function () {
     var v = cfg.vein;
     var y = v.aboveFaceBu === undefined ? v.yBu : (faceY() - v.aboveFaceBu);
@@ -214,6 +368,15 @@
       if (floaters[i].t >= cfg.vein.floaterSeconds) floaters.splice(i, 1);
     }
     if (shakeT > 0) shakeT -= dt;
+    // Ore arc tweens
+    for (var ai = oreArcs.length - 1; ai >= 0; ai--) {
+      oreArcs[ai].t += dt;
+      if (oreArcs[ai].t >= oreArcs[ai].life) oreArcs.splice(ai, 1);
+    }
+    if (endScene.active) {
+      endScene.t += dt;
+      if (endScene.t > endScene.totalT + 2) endScene.active = false;
+    }
     if (state) stepCamera(dt, state, derived);
   };
 
@@ -241,6 +404,70 @@
     var k = 1 - Math.pow(1 - (C.ease || 0.12), Math.min(4, dt * 60));
     cam.topBu += (target - cam.topBu) * k;
   }
+
+  // --------------------------------------------------------------- crew positions (M4 item 8)
+  function computeCrewPositions(cfg2, derived, faceScreenY, boreX, boreW, rightX, top) {
+    var sp2 = cfg2.sprites;
+    var cr = cfg2.crew || { faceSlots: 3, pocketSpacingBu: 28, pocketOffsetBu: 24, transitSlots: 2 };
+    var cap2 = sp2.maxDwarves || 32;
+    var crewTotal = Math.min(cap2, derived.dwarves);
+    var positions = [];
+    var slot2 = 0;
+    var digSeq2 = Math.floor(pulse * (sp2.digFps || 6));
+    var walkSeq2 = Math.floor(pulse * (sp2.walkFps || 8));
+
+    for (var di = 0; di < cfg2.dwarves.length && slot2 < crewTotal; di++) {
+      var dw2 = cfg2.dwarves[di];
+      var n2 = (window.GD && window.GD.state ? window.GD.state.owned[dw2.id] : 0) || 0;
+      if (!n2) continue;
+      var cos2 = dw2.cosmetic || {};
+      for (var k3 = 0; k3 < n2 && slot2 < crewTotal; k3++, slot2++) {
+        var px, py, frame2, kind, side2;
+        if (slot2 < cr.faceSlots) {
+          // Face slots: dig at the bottom of the bore
+          kind = "face";
+          side2 = -1;
+          px = boreX + 6 + slot2 * 20;
+          py = faceScreenY - 16;
+          frame2 = (digSeq2 + slot2) % 4 === 1 ? 4 : 3;
+        } else if (slot2 < crewTotal - (cr.transitSlots || 0)) {
+          // Wall pockets: alternating left/right at staggered heights
+          kind = "pocket";
+          var pIdx = slot2 - cr.faceSlots;
+          side2 = pIdx % 2; // 0=left, 1=right
+          var row2 = Math.floor(pIdx / 2);
+          px = side2 === 0 ? (boreX - 10) : (rightX + 2);
+          py = faceScreenY - (cr.pocketOffsetBu || 24) - row2 * (cr.pocketSpacingBu || 28);
+          frame2 = (digSeq2 + slot2) % 4 === 1 ? 4 : 3;
+        } else {
+          // Transit: climbing the ladder
+          kind = "transit";
+          side2 = -1;
+          var tIdx = slot2 - (crewTotal - (cr.transitSlots || 0));
+          px = boreX + 3;
+          py = faceScreenY - (cr.pocketOffsetBu || 42) - 
+               Math.ceil((crewTotal - cr.faceSlots - (cr.transitSlots || 0)) / 2) * (cr.pocketSpacingBu || 32) - 
+               20 - tIdx * (cr.transitSpacingBu || 48);
+          frame2 = ((walkSeq2 + slot2) & 1) ? 1 : 2;
+        }
+        positions.push({
+          x: px, y: py, frame: frame2, kind: kind, side: side2,
+          beard: cos2.beard || "braided", hat: cos2.hat || "cap",
+          palette: cos2.palette || "rust"
+        });
+      }
+    }
+    return positions;
+  }
+
+  R.crewPositions = function (state, derived) {
+    var L = cfg.layout;
+    var boreX2 = L.wallTiles * L.tileBu;
+    var boreW2 = L.boreTiles * L.tileBu;
+    var rightX2 = boreX2 + boreW2;
+    var faceScreenY2 = Math.round(state.depth * L.buPerMeter - (cam.topBu || 0));
+    return computeCrewPositions(cfg, derived, faceScreenY2, boreX2, boreW2, rightX2, cam.topBu || 0);
+  };
 
   // --------------------------------------------------------------- draw
   R.draw = function (state, derived) {
@@ -507,37 +734,20 @@
     }
 
     var sp = cfg.sprites;
-    var perRow = sp.dwarvesPerRow || 4;
     var cap = sp.maxDwarves || 32;
-    // The lift shares the upper bore with the crew rather than evicting it: the cage is
-    // drawn before the dwarves, so it reads as running behind them on the far wall.
-    var crewTop = (sp.crewTopBu || 24) + (owned.elevator > 0 ? (sp.elevatorClearBu || 0) : 0);
     var pickTier = Math.min((sp.pickTiers || 4) - 1, Math.floor((owned.pick || 0) / (sp.pickLevelsPerTier || 6)));
     var digFps = sp.digFps || 6, walkFps = sp.walkFps || 8;
     var digSeq = Math.floor(pulse * digFps);
     var walkSeq = Math.floor(pulse * walkFps);
 
-    // The working ledge holds one fewer dwarf than the rows behind it, because the
-    // cart parks in the last slot — which is where a cart belongs, next to the face.
-    var frontSlots = perRow - 1;
-    var crewTotal = Math.min(cap, derived.dwarves);
-    var rowsNeeded = 1 + Math.ceil(Math.max(0, crewTotal - frontSlots) / perRow);
-    // The crew stack compresses rather than disappearing off the top: buying a Deep
-    // Lantern raises the face, and the crew you paid for must stay on screen.
-    var rowH = sp.dwarfRowBu || 18;
-    if (rowsNeeded > 1) {
-      var avail = faceScreenY - 16 - crewTop;
-      rowH = Math.max(sp.dwarfRowMinBu || 10, Math.min(rowH, Math.floor(avail / (rowsNeeded - 1))));
-    }
-
     // ---------------------------------------------------------- cart
     var carts = SP.cartsFor(curBand);
     var cartFrame = owned.cart > 0 ? (1 + (Math.floor(pulse / (sp.cartFrameSeconds || 1.6)) % 2)) : (Math.floor(pulse / 2.2) % 2);
     cartFrame = cartFrame < 0 ? 0 : (cartFrame > 2 ? 2 : cartFrame);
-    var cartX = Math.min(boreX + 2 + frontSlots * 15, rightX - 21);
+    var cartX = boreX + boreW - 22;
     var cartY = faceScreenY - 14;
     if (cartY > -14 && cartY < H) {
-      if (owned.rails > 0) {                       // purchase visibility: Cart Rails
+      if (owned.rails > 0) {
         ctx.fillStyle = "#4a4e57";
         ctx.fillRect(cartX - 1, cartY + 13, 22, 1);
         ctx.fillStyle = "#2a2d33";
@@ -546,50 +756,34 @@
       ctx.drawImage(carts[cartFrame], cartX, cartY);
     }
 
-    // ---------------------------------------------------------- the crew
-    // Every hired dwarf stands on a ledge with its JSON cosmetic loadout and works the
-    // face. The front ledge digs; the rows behind walk ore back and haul.
-    var slot = 0;
+    // ---------------------------------------------------------- crew slot system (M4 item 8)
+    // Face slots dig at the bottom; the rest sit in wall pockets at staggered heights,
+    // alternating left/right. Transit dwarves climb the ladder. No two overlap.
+    var crewCfg = cfg.crew || { faceSlots: 3, pocketSpacingBu: 28, pocketOffsetBu: 24, transitSlots: 2 };
+    var positions = computeCrewPositions(cfg, derived, faceScreenY, boreX, boreW, rightX, top);
     deepestDwarfY = faceWorld;
-    for (i = 0; i < cfg.dwarves.length && slot < cap; i++) {
-      var dw = cfg.dwarves[i];
-      var n = owned[dw.id] || 0;
-      if (!n) continue;
-      var cos = dw.cosmetic || {};
-      for (var k2 = 0; k2 < n && slot < cap; k2++, slot++) {
-        var rowi, col;
-        if (slot < frontSlots) { rowi = 0; col = slot; }
-        else { rowi = 1 + (((slot - frontSlots) / perRow) | 0); col = (slot - frontSlots) % perRow; }
-        var dxp = boreX + 2 + col * 15;
-        var dyp = faceScreenY - 16 - rowi * rowH;
-        if (dyp < crewTop || dyp > H) continue;
-        var frame;
-        if (rowi === 0) {
-          frame = (digSeq + slot) % 4 === 1 ? 4 : 3;      // 3 -> 4 -> 3 dig cycle
-        } else if ((slot % 3) === 0) {
-          frame = 5;                                      // haul
-        } else {
-          frame = ((walkSeq + slot) & 1) ? 1 : 2;         // walk
-        }
-        ctx.drawImage(SP.dwarf(cos.beard || "braided", cos.hat || "cap", pickTier, cos.palette || "rust", frame), dxp, dyp);
-        stats.dwarves++;
-        if (rowi === 0) {
-          var wy = top + dyp + 16;
-          if (wy > deepestDwarfY) deepestDwarfY = wy;
-        }
+
+    // Draw wall pocket recesses before dwarves
+    for (i = 0; i < positions.length; i++) {
+      var pos = positions[i];
+      if (pos.kind === "pocket" && pos.y > 0 && pos.y < H) {
+        // Small alcove in the wall
+        ctx.fillStyle = "rgba(0,0,0,.3)";
+        if (pos.side === 0) ctx.fillRect(boreX - 4, pos.y - 2, 8, 18);
+        else ctx.fillRect(rightX - 4, pos.y - 2, 8, 18);
       }
     }
 
-    // A deep crew out-grows the ledges that fit on screen. Say so rather than
-    // silently swallowing hires: every purchase has to change the screen (PRD 16).
-    if (derived.dwarves > stats.dwarves) {
-      ctx.textAlign = "center";
-      ctx.font = "6px ui-monospace, Menlo, monospace";
-      ctx.fillStyle = "rgba(0,0,0,.66)";
-      ctx.fillRect(boreX + 4, 13, boreW - 8, 9);
-      ctx.fillStyle = "#cbbd97";
-      ctx.fillText("+" + (derived.dwarves - stats.dwarves) + " CREW UP TOP", boreX + boreW / 2, 15);
-      ctx.textAlign = "left";
+    var slot = 0;
+    for (i = 0; i < positions.length && slot < cap; i++, slot++) {
+      var pos2 = positions[i];
+      stats.dwarves++;
+      if (pos2.kind === "face") {
+        var wy = top + pos2.y + 16;
+        if (wy > deepestDwarfY) deepestDwarfY = wy;
+      }
+      if (pos2.y < -16 || pos2.y > H) continue; // skip draw but still count
+      ctx.drawImage(SP.dwarf(pos2.beard, pos2.hat, pickTier, pos2.palette, pos2.frame), pos2.x, pos2.y);
     }
 
     // the working ledge the front row stands on
@@ -643,6 +837,18 @@
       ctx.fillRect(vr.x, vr.y, vr.w, vr.h);
     }
 
+    // ---------------------------------------------------------- ore arcs
+    for (var oai = 0; oai < oreArcs.length; oai++) {
+      var oa = oreArcs[oai];
+      var oaF = oa.t / oa.life;
+      var oaX = oa.x0 + (oa.x1 - oa.x0) * oaF;
+      var oaY = oa.y0 + (oa.y1 - oa.y0) * oaF - 30 * Math.sin(oaF * Math.PI);
+      ctx.fillStyle = oa.color;
+      ctx.fillRect(oaX - 2, oaY - 2, 4, 4);
+      ctx.fillStyle = SP.shade(oa.color, 1.4);
+      ctx.fillRect(oaX - 1, oaY - 1, 2, 2);
+    }
+
     // ---------------------------------------------------------- depth readout
     ctx.fillStyle = "rgba(8,6,12,.72)";
     ctx.fillRect(0, 0, contentW, 11);
@@ -664,6 +870,11 @@
       ctx.font = "6px ui-monospace, Menlo, monospace";
       ctx.fillStyle = "#d8c68f";
       ctx.fillText("▼  RELEASE TO FOLLOW THE CREW", W / 2 - 3, H - 13);
+    }
+
+    // ---------------------------------------------------------- ending scene (M4 item 4)
+    if (endScene.active && endScene.t > 0) {
+      drawEndingOverlay(ctx, W, H, depth, derived);
     }
 
     // ---------------------------------------------------------- floaters

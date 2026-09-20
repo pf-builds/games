@@ -8,7 +8,7 @@ Everything shipped through M4. Items below are deferred to playtest/v1.1/v2.
 - Real-phone touch check (carried from M1). Pointer handler does double duty
   (6 px threshold splits drag from strike); only tested with mouse and browser-pane emulation.
 - Overnight save test before deploy.
-- Ending scene upgrade: the M4 ending is a DOM panel with stats. The PRD describes a ~10 s
+- Ending scene: the canvas cavern scene is built. The camera pull-back tween is in. The PRD describes a ~10 s
   procedural canvas scene (last tile shatters, camera pull-back via ctx.scale tween, drawn cavern
   with gold pile and columns, crew files in). The `ending` JSON block has timing params ready.
   If playtest time allows, build the canvas scene; otherwise ship the panel.

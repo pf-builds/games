@@ -1,5 +1,5 @@
 {
-  "configVersion": 14,
+  "configVersion": 16,
   "title": "Greedy Deep",
   "start": {
     "gold": 0,
@@ -421,7 +421,7 @@
     "buPerMeter": 4,
     "braceEveryRows": 4,
     "faceYBu": 152,
-    "desktopBreakpoint": 1100,
+    "desktopBreakpoint": 900,
     "leftRailPx": 240,
     "rightRailPx": 300,
     "rosterHeightBu": 22,
@@ -460,6 +460,16 @@
         "label": "LOG",
         "ids": []
       }
+    },
+    "leftRailMinPx": 180,
+    "leftRailMaxPx": 240,
+    "rightRailMinPx": 240,
+    "rightRailMaxPx": 300,
+    "clickThresholdPx": 6,
+    "sideArt": {
+      "dimAlpha": 0.75,
+      "blur": 28,
+      "tileScale": 1
     }
   },
   "veil": {
@@ -484,7 +494,8 @@
   },
   "debug": {
     "fallbackClockMs": 33,
-    "staleFrameMs": 60
+    "staleFrameMs": 60,
+    "chipCollapsed": true
   },
   "lantern": {
     "forwardTilesPerLevel": 3,
@@ -625,7 +636,8 @@
     "floaterSize": 8,
     "cartDumpChunks": 8,
     "endingChunks": 20,
-    "oreArcDurationS": 0.4
+    "oreArcDurationS": 0.4,
+    "cartDumpRollS": 0.6
   },
   "ending": {
     "pullBackScale": 0.55,
@@ -635,7 +647,15 @@
     "goldPilePixels": 200,
     "columns": 3,
     "totalDurationS": 10,
-    "shatterDurationS": 1.0,
+    "shatterDurationS": 0.8,
     "titleHoldS": 3.0
+  },
+  "crew": {
+    "faceSlots": 3,
+    "pocketSpacingBu": 32,
+    "pocketOffsetBu": 42,
+    "transitSlots": 2,
+    "transitSpacingBu": 48,
+    "hireWalkInSeconds": 1.5
   }
 }

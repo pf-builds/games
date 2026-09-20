@@ -80,7 +80,7 @@ in JSON. Slots: welcomeBack, dwarfLine, bandIntro, event, ending, endingTitle.
 | `style.css` | portrait tabs, desktop rails, all sizes from `--s` |
 | `config/greedy-deep.json` | every tunable number; own `?v=` cache-bust |
 | `src/engine.js` | pure sim: tick, purchase, effects, bands, validation |
-| `src/gd.js` | `window.GD` facade, debug, selfTest (171 assertions) |
+| `src/gd.js` | `window.GD` facade, debug, selfTest (184 assertions) |
 | `src/sprites.js` | procedural sprite factory |
 | `src/particles.js` | pooled particles + floaters (from peasant-swarm) |
 | `src/audio.js` | WebAudio synth, 13 cues, ambient drone (M4) |
@@ -96,8 +96,46 @@ in JSON. Slots: welcomeBack, dwarfLine, bandIntro, event, ending, endingTitle.
 All M1-M3 API plus: `GD.export()`, `GD.import(str)`, `GD.audio.muted` via `GDAudio.isMuted()`,
 `GD.dbg.audioMasterGain`, `GD.dbg.lastCue`.
 
-## Acceptance — `GD.selfTest()` (171 assertions, zero failures)
+## Acceptance — `GD.selfTest()` (184 assertions, zero failures)
 M1 block: reset, taps, idle, purchase, save, restore, additivity, clearSave.
 M2 block: verbs, content, simulate, bandLog, offline, events, milestone, endless, reveal, ETA, flavor, content-as-data, validation.
 M3 block: sprite cache, tiles, seams, veil, dwarves, camera, title card, outline, ETA formatting.
 M4 block: mute + master gain + no cue when muted, mute persisted in prefs, export/import round-trip, truncated import fails safely, version-bumped import fails safely, jumpTo(1200) triggers ending once with endingSeen and game continues, particle max in JSON, flavor fallbacks exist, no horizontal scroll, JSON blocks present (audio, particles, ending, layout desktop, flavor fallbacks).
+
+## M4 fix pass (items 1-10 + addenda)
+1. **BLOCKER fixed**: `lastCue` now syncs to `GD.dbg.lastCue` immediately on `GDAudio.play()`.
+2. **MAJOR fixed**: `GD.simulate()` saves/restores the engine RNG; selfTest verifies live state and
+   save are byte-identical after a simulate call.
+3. **MINOR fixed**: `GD.dbg.spriteCacheBlank` is a number (was array). `GD.audio.muted` facade exposed.
+4. **Ending scene**: canvas-drawn cavern (vaulted ceiling, gold pile, columns), camera pull-back tween,
+   crew files in, title/stats/score text. DOM panel shows KEEP DIGGING button after the scene.
+5. **Ore pop arc**: ore-colored 4px square arcs from the vein to the cart on every strike (0.4s tween).
+   **Gold odometer**: displayed gold catches up to real gold with smooth interpolation.
+6. **Purchase visibility**: selfTest asserts every one of 12 purchasables changes a derived stat.
+7. **Click-anywhere**: the whole shaft canvas is a strike target. Chunks and floaters spawn at the
+   click point. Drag/wheel look-back still works (6px movement threshold in JSON `layout.clickThresholdPx`).
+8. **Crew slots**: face slots (3 dwarves dig at the face), wall pockets (alternating left/right at
+   staggered heights), transit slots (climbing the ladder). No two positions overlap within a sprite
+   width/height. selfTest checks N=1,4,10,18,30. Config in JSON `crew` block.
+9. **Desktop breakpoint**: lowered to 900px. Fluid rails (left 180-240px, right 240-300px).
+   Peter's "no rails" was stale CSS cache (the meta http-equiv is not always respected by browsers;
+   HTTP headers from the server are the reliable path). Verified at all 11 viewports.
+9b. **Side artwork**: blurred darkened title card as body background on desktop (reuses splash
+    treatment). Rails have semi-transparent backdrop-filter for legibility. Art fills gutters at
+    wide viewports; never flat blank.
+10. **Debug chip**: collapsed by default (16px tall, click to expand). State not persisted (prefs).
+
+Computed scales per viewport:
+| Viewport | Scale | Desktop | Left rail | Right rail |
+|---|---|---|---|---|
+| 375x812 | 2 | no | - | - |
+| 390x844 | 2 | no | - | - |
+| 768x1024 | 2 | no | - | - |
+| 1000x800 | 2 | yes | 180 | 240 |
+| 1100x700 | 2 | yes | 180 | 240 |
+| 1200x1000 | 3 | yes | 180 | 240 |
+| 1440x900 | 3 | yes | 202 | 259 |
+| 1512x982 | 3 | yes | 212 | 272 |
+| 1728x1000 | 3 | yes | 240 | 300 |
+| 1800x1100 | 3 | yes | 240 | 300 |
+| 1920x1080 | 3 | yes | 240 | 300 |

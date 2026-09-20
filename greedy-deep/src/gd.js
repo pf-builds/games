@@ -23,7 +23,11 @@
     },
     // The live loop passes these through to the engine so the UI can react to
     // events, band changes and the ending without the engine knowing about DOM.
-    hooks: { onEvent: null, onBand: null, onEnding: null }
+    hooks: { onEvent: null, onBand: null, onEnding: null },
+    audio: {
+      get muted() { return window.GDAudio ? window.GDAudio.isMuted() : false; },
+      set muted(v) { if (window.GDAudio) window.GDAudio.setMuted(v); }
+    }
   });
 
   GD.ctx = {
@@ -127,7 +131,13 @@
     return (cost - gold) / rate;
   };
 
-  GD.simulate = function (opts) { return E.simulate(GD.config, opts); };
+  GD.simulate = function (opts) {
+    // Save and restore the engine RNG so simulate never affects the live game
+    var savedRng = E.rng;
+    var result = E.simulate(GD.config, opts);
+    E.rng = savedRng;
+    return result;
+  };
 
   GD.offlinePreview = function (elapsedMs, state) {
     return E.offlinePreview(GD.config, state || GD.state, elapsedMs);
@@ -217,7 +227,7 @@
       GD.dbg.spriteCacheOpaque = ss.opaque;
       GD.dbg.spriteCacheTotal = ss.total;
       GD.dbg.spriteCacheRebuilds = ss.rebuilds;
-      GD.dbg.spriteCacheBlank = ss.blank;
+      GD.dbg.spriteCacheBlank = ss.blank.length;
       GD.dbg.outlineFailures = ss.outlineFailures;
     }
     if (fps !== undefined) GD.dbg.fps = fps;
@@ -960,11 +970,44 @@
         var savedPrefs = JSON.parse(JSON.stringify(GD.state.prefs));
         check("m4_mute_persisted_in_prefs", true, savedPrefs.muted, savedPrefs.muted === true);
 
+        // Item 1: lastCue tracks after play
+        A.lastCue = null;
+        A.setMuted(false);
+        A.play("strike");
+        check("m4_lastcue_tracks_strike", "strike", A.lastCue, A.lastCue === "strike");
+        check("m4_dbg_lastcue_synced", "strike", GD.dbg.lastCue, GD.dbg.lastCue === "strike");
+        A.play("buy");
+        check("m4_lastcue_tracks_buy", "buy", A.lastCue, A.lastCue === "buy");
+        A.play("hire");
+        check("m4_lastcue_tracks_hire", "hire", A.lastCue, A.lastCue === "hire");
+        A.play("denied");
+        check("m4_lastcue_tracks_denied", "denied", A.lastCue, A.lastCue === "denied");
+
         A.setMuted(prevMuted);
         GD.state.prefs.muted = prevMuted;
+
+        // Item 3: GD.audio.muted facade
+        check("m4_audio_facade_exists", true, typeof GD.audio === "object", typeof GD.audio === "object");
+        check("m4_audio_muted_matches", A.isMuted(), GD.audio.muted, GD.audio.muted === A.isMuted());
       } else {
         check("m4_audio_module_present", "GDAudio", "missing", false);
       }
+
+      // Item 2: simulate is non-destructive
+      GD.reset();
+      GD.grantForTest("dorrik", 3);
+      GD.state.gold = 500;
+      var preSimState = E.cloneState(GD.state);
+      var preSimSave = window.GDSave.readRaw(cfg);
+      window.GDSave.write(cfg, GD.state); // ensure a save exists
+      var preSimSave2 = window.GDSave.readRaw(cfg);
+      GD.simulate({ maxSeconds: 3600 });
+      check("m4_simulate_gold_unchanged", preSimState.gold, GD.state.gold,
+        approx(GD.state.gold, preSimState.gold, 1e-9));
+      check("m4_simulate_depth_unchanged", preSimState.depth, GD.state.depth,
+        approx(GD.state.depth, preSimState.depth, 1e-9));
+      var postSimSave = window.GDSave.readRaw(cfg);
+      check("m4_simulate_save_unchanged", preSimSave2, postSimSave, postSimSave === preSimSave2);
 
       // Export/import round-trip
       GD.reset();
@@ -1042,12 +1085,73 @@
           document.documentElement.scrollWidth <= window.innerWidth + 2);
       }
 
+      // Item 6: purchase visibility - every track changes a visible metric
+      if (window.GDRender && window.GDRender.renderProbe) {
+        var pvBad = [];
+        GD.reset();
+        GD.state.gold = 1e12; // enough to buy everything
+        GD.grantForTest("dorrik", 2); // need crew for rate
+        var pvList = E.purchasables(cfg);
+        for (var pvi = 0; pvi < pvList.length; pvi++) {
+          var pvItem = pvList[pvi];
+          var pvId = pvItem.id;
+          GD.state.gold = 1e12;
+          var pvD1 = GD.derive();
+          var pvBefore = JSON.stringify({
+            dwarves: pvD1.dwarves, clickPower: pvD1.clickPower,
+            digRate: pvD1.digRate, goldMul: pvD1.goldMul,
+            revealBonus: pvD1.revealBonus, hazardMul: pvD1.hazardMul,
+            offlineHours: pvD1.offlineHours, offlineRateMul: pvD1.offlineRateMul
+          });
+          GD.buy(pvId);
+          var pvD2 = GD.derive();
+          var pvAfter = JSON.stringify({
+            dwarves: pvD2.dwarves, clickPower: pvD2.clickPower,
+            digRate: pvD2.digRate, goldMul: pvD2.goldMul,
+            revealBonus: pvD2.revealBonus, hazardMul: pvD2.hazardMul,
+            offlineHours: pvD2.offlineHours, offlineRateMul: pvD2.offlineRateMul
+          });
+          if (pvBefore === pvAfter) pvBad.push(pvId);
+        }
+        check("m4_every_purchase_changes_derived", "all 12 change", pvBad.join(","), pvBad.length === 0);
+      }
+
+      // Item 8: crew positions no overlap
+      if (window.GDRender && window.GDRender.crewPositions) {
+        var crewBad = [];
+        var crewCounts = [1, 4, 10, 18, 30];
+        for (var cci = 0; cci < crewCounts.length; cci++) {
+          GD.reset();
+          GD.grantForTest("dorrik", Math.ceil(crewCounts[cci] / 4));
+          GD.grantForTest("hald", Math.ceil(crewCounts[cci] / 4));
+          GD.grantForTest("vessa", Math.ceil(crewCounts[cci] / 4));
+          GD.grantForTest("nix", Math.ceil(crewCounts[cci] / 4));
+          GD.jumpTo(300);
+          window.GDRender.cameraSnap();
+          var cp = window.GDRender.crewPositions(GD.state, GD.derive());
+          var dw2 = cfg.sprites.dwarfWBu, dh2 = cfg.sprites.dwarfHBu;
+          for (var ca = 0; ca < cp.length; ca++) {
+            for (var cb = ca + 1; cb < cp.length; cb++) {
+              if (Math.abs(cp[ca].x - cp[cb].x) < dw2 && Math.abs(cp[ca].y - cp[cb].y) < dh2) {
+                crewBad.push("N=" + crewCounts[cci] + " slots " + ca + "/" + cb + " overlap at (" +
+                  cp[ca].x + "," + cp[ca].y + ") vs (" + cp[cb].x + "," + cp[cb].y + ")");
+              }
+            }
+          }
+        }
+        check("m4_crew_no_overlap", "0 overlaps", crewBad.slice(0, 3).join(" | "), crewBad.length === 0);
+      }
+
       // JSON blocks present
       check("m4_json_audio_block", true, !!cfg.audio, !!cfg.audio && typeof cfg.audio.masterGain === "number");
       check("m4_json_particles_block", true, !!cfg.particles, !!cfg.particles && cfg.particles.max > 0);
       check("m4_json_ending_block", true, !!cfg.ending, !!cfg.ending && cfg.ending.totalDurationS > 0);
       check("m4_json_layout_desktop", true, !!cfg.layout.desktopBreakpoint,
         cfg.layout.desktopBreakpoint > 0 && cfg.layout.leftRailPx > 0 && cfg.layout.rightRailPx > 0);
+      // Item 3: spriteCacheBlank is a number
+      check("m4_sprite_cache_blank_is_number", "number", typeof GD.dbg.spriteCacheBlank,
+        typeof GD.dbg.spriteCacheBlank === "number");
+
       check("m4_json_flavor_fallbacks", true, !!(cfg.flavor && cfg.flavor.fallbacks && cfg.flavor.fallbacks.welcomeBack),
         !!(cfg.flavor && cfg.flavor.fallbacks && cfg.flavor.fallbacks.welcomeBack));
 
