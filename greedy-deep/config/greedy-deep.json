@@ -1,5 +1,5 @@
 {
-  "configVersion": 18,
+  "configVersion": 19,
   "title": "Greedy Deep",
   "start": {
     "gold": 0,
@@ -235,8 +235,8 @@
     },
     {
       "id": "hald",
-      "name": "Hald",
-      "nameNote": "FLAVOR-TODO: surname owed from Peter's jokes page.",
+      "name": "Hald Ironthumb",
+      "nameNote": "",
       "job": "Striker",
       "base": 400,
       "ratio": 2.2,
@@ -246,7 +246,7 @@
           "value": 2
         }
       ],
-      "flavor": "FLAVOR-TODO: Hald's one-liner owed from the jokes page.",
+      "flavor": "Hits it once. Properly.",
       "cosmetic": {
         "hat": "helm",
         "beard": "forked",
@@ -274,8 +274,8 @@
     },
     {
       "id": "nix",
-      "name": "Nix",
-      "nameNote": "FLAVOR-TODO: surname owed from Peter's jokes page.",
+      "name": "Nix Blackcandle",
+      "nameNote": "",
       "job": "Deep Hewer",
       "base": 150000,
       "ratio": 2.6,
@@ -285,7 +285,7 @@
           "value": 0.6
         }
       ],
-      "flavor": "FLAVOR-TODO: Nix's one-liner owed from the jokes page.",
+      "flavor": "Never seen the sky. Unimpressed by reports.",
       "cosmetic": {
         "hat": "none",
         "beard": "long",
@@ -355,8 +355,8 @@
   "milestone": {
     "id": "the_greedy_deep",
     "depth": 1200,
-    "title": "FLAVOR-TODO: The Greedy Deep",
-    "body": "FLAVOR-TODO: the pick goes through into air. Ending copy owed from the jokes page.",
+    "title": "The Greedy Deep",
+    "body": "The pick goes through into air. A cavern nobody cut, gold from floor to ceiling. The crew stands still for a moment. Then somebody starts checking the walls for more.",
     "scoreFormulaId": "gold_plus_depth",
     "endlessAfter": true,
     "buttonLabel": "KEEP DIGGING"
@@ -371,13 +371,13 @@
       "copper": "It goes green when it's happy.",
       "silver": "Cold to the touch. Warm to the ledger.",
       "starmetal": "Fell from somewhere. Stayed for the mortgage.",
-      "endless": "FLAVOR-TODO: deeper-than-the-ending band line owed from the jokes page."
+      "endless": "The map ended. The shaft did not."
     },
     "dwarfLines": {
       "dorrik": "Hums. Only ever the one song.",
-      "hald": "FLAVOR-TODO: Hald's one-liner owed from the jokes page.",
+      "hald": "Hits it once. Properly.",
       "vessa": "Counts the cart twice. Counts you once.",
-      "nix": "FLAVOR-TODO: Nix's one-liner owed from the jokes page."
+      "nix": "Never seen the sky. Unimpressed by reports."
     },
     "eventTexts": {
       "gas_pocket": "Gas pocket. Everyone out, nobody run.",
@@ -385,12 +385,12 @@
       "rich_seam": "A seam so fat the cart complains."
     },
     "ending": {
-      "title": "FLAVOR-TODO: The Greedy Deep",
-      "body": "FLAVOR-TODO: ending scene copy owed from the jokes page."
+      "title": "The Greedy Deep",
+      "body": "The pick goes through into air. A cavern nobody cut, gold from floor to ceiling. The crew stands still for a moment. Then somebody starts checking the walls for more."
     },
     "welcomeBack": [
-      "FLAVOR-TODO: welcome-back line owed from the jokes page.",
-      "FLAVOR-TODO: second welcome-back line owed from the jokes page."
+      "You were gone. The crew dug anyway, and kept receipts.",
+      "Nobody noticed you left. The ledger noticed. The ledger always notices."
     ],
     "denied": "Too deep. Not yet.",
     "fallbacks": {

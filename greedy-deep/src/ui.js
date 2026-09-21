@@ -3,7 +3,7 @@
 (function () {
   "use strict";
 
-  var CONFIG_VERSION = 18;
+  var CONFIG_VERSION = 19;
 
   var UI = (window.GDUI = {});
   var E = window.GDEngine, GD = window.GD;
@@ -292,6 +292,12 @@
   }
 
   function restorePortraitRows() {
+    // Move the qty-bar back to the tabpanel for portrait
+    var qbar = document.getElementById("qty-bar");
+    var tp = document.getElementById("tabpanel");
+    if (qbar && tp && qbar.parentNode !== tp) {
+      tp.insertBefore(qbar, tp.firstChild);
+    }
     // Move row elements back to their portrait tab containers
     var tabDefs2 = cfg.layout.tabs;
     var containers2 = {
@@ -327,6 +333,10 @@
     els.leftRail.innerHTML = html;
 
     // Right rail: all shop sections expanded + log
+    // Detach the qty-bar before innerHTML wipes the rail contents
+    var qbar = document.getElementById("qty-bar");
+    if (qbar && qbar.parentNode) qbar.parentNode.removeChild(qbar);
+
     var rhtml = '';
     var tabDefs = cfg.layout.tabs;
     var tabOrder = ["dig", "crew", "gear", "log"];
@@ -343,6 +353,12 @@
       rhtml += '</div>';
     }
     els.rightRail.innerHTML = rhtml;
+
+    // Re-insert the qty-bar at the top of the right rail
+    if (qbar) {
+      var firstSection = els.rightRail.querySelector(".rail-section");
+      if (firstSection) els.rightRail.insertBefore(qbar, firstSection);
+    }
 
     // MOVE actual row elements into the rail sections (not clones).
     // This way refresh() always updates the real elements visible on screen.

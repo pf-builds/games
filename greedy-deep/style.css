@@ -318,10 +318,12 @@ body.booting #col { opacity: 0; }
   width: 100%; padding: calc(5px * var(--s)); text-align: left;
   box-shadow: 0 10px 30px rgba(0,0,0,.6);
   max-height: 90%; overflow-y: auto;
+  display: flex; flex-direction: column;
 }
 .panel-card .panel-head {
   font-size: calc(6px * var(--s)); letter-spacing: .1em; color: var(--gold);
   padding: 0 0 calc(3px * var(--s)); border-bottom: 1px solid var(--edge); margin-bottom: calc(3px * var(--s));
+  flex-shrink: 0;
 }
 .panel-card .panel-body { font-size: calc(5px * var(--s)); color: #c3b9d4; line-height: 1.5; }
 .panel-card .panel-body p { margin: 0 0 calc(3px * var(--s)); }
@@ -338,11 +340,12 @@ body.booting #col { opacity: 0; }
   min-height: 44px; font: inherit; font-weight: 700; font-size: calc(6px * var(--s));
   color: #1a1410; background: linear-gradient(#f4cf6a, #d8a52f);
   border: 0; border-bottom: 3px solid #8a6414; border-radius: 6px; cursor: pointer;
+  flex-shrink: 0;
 }
 .panel-btn:active { transform: translateY(1px); border-bottom-width: 2px; }
 
 /* ---------------------------------------------------------- settings panel */
-.settings-body { display: flex; flex-direction: column; gap: calc(3px * var(--s)); }
+.settings-body { display: flex; flex-direction: column; gap: calc(3px * var(--s)); overflow-y: auto; flex-shrink: 1; min-height: 0; }
 .settings-row {
   display: flex; justify-content: space-between; align-items: center;
   padding: calc(2px * var(--s)) 0;
@@ -451,6 +454,18 @@ body.booting #col { opacity: 0; }
     line-height: 1.5;
   }
   .rail-log .logline { font-size: 11px; }
+  /* Qty-bar inside the right rail */
+  #right-rail #qty-bar {
+    display: flex;
+    padding: 4px 8px;
+    gap: 4px;
+    background: #0f0c17;
+    border-bottom: 2px solid #0a0810;
+  }
+  #right-rail .qty-btn {
+    min-height: 36px;
+    font-size: 12px;
+  }
 }
 
 /* Between phone and rails: scale column, show side art */

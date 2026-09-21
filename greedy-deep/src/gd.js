@@ -690,7 +690,7 @@
       }
 
       // --- flavor
-      check("m2_flavor_todo_count_reported", "a number > 0", E.flavorTodoCount(cfg), E.flavorTodoCount(cfg) > 0);
+      check("m2_flavor_todo_count_reported", 0, E.flavorTodoCount(cfg), E.flavorTodoCount(cfg) === 0);
       check("m2_flavor_band_intro_for_every_ore", "4 intros", cfg.ores.map(function (o) { return E.bandIntro(cfg, o) ? 1 : 0; }).join(""),
         cfg.ores.every(function (o) { return !!E.bandIntro(cfg, o); }));
       check("m2_flavor_line_for_every_dwarf", "4 lines", cfg.dwarves.map(function (d) { return E.dwarfLine(cfg, d.id) ? 1 : 0; }).join(""),
@@ -1178,18 +1178,44 @@
         sim.richButLockedMax !== undefined ? sim.richButLockedMax.toFixed(1) : "missing",
         sim.richButLockedMax !== undefined && sim.richButLockedMax < 30);
 
-      // Hit-testing selfTest: elementFromPoint at primary buttons returns the control
-      if (document.getElementById("descend") && !document.getElementById("splash").classList.contains("off")) {
-        var descendBtn = document.getElementById("descend");
-        var dr = descendBtn.getBoundingClientRect();
-        if (dr.width > 0) {
-          var dEl = document.elementFromPoint(dr.left + dr.width / 2, dr.top + dr.height / 2);
-          check("m4_hit_descend", "BUTTON#descend",
-            dEl ? dEl.tagName + "#" + dEl.id : "null",
-            dEl && (dEl.id === "descend" || dEl.closest("#descend")));
+      // =========================================================== P7 block
+      // Phase 7: FLAVOR-TODO zero in DOM (excluding the debug overlay which shows the count)
+      var dbgEl7 = document.getElementById("dbg");
+      var dbgText7 = dbgEl7 ? dbgEl7.innerText : "";
+      var allText7 = (document.body.innerText || "").replace(dbgText7, "");
+      check("p7_no_flavor_todo_in_dom", false, allText7.indexOf("FLAVOR-TODO") !== -1,
+        allText7.indexOf("FLAVOR-TODO") === -1);
+      check("p7_flavor_todo_count_zero", 0, GD.dbg.flavorTodoCount, GD.dbg.flavorTodoCount === 0);
+
+      // Phase 7: elementFromPoint hit-testing for EVERY primary control.
+      // Helper: test that elementFromPoint at center of `el` returns it or a descendant.
+      function hitTest(label, el) {
+        if (!el) { check(label, "element present", "null", false); return; }
+        var r = el.getBoundingClientRect();
+        if (r.width <= 0 || r.height <= 0) { check(label, "visible", "0x0", false); return; }
+        var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        if (cx < 0 || cy < 0 || cx > window.innerWidth || cy > window.innerHeight) {
+          check(label, "in viewport", cx.toFixed(0) + "," + cy.toFixed(0) + " out", false);
+          return;
         }
+        var hit = document.elementFromPoint(cx, cy);
+        var ok = hit && (hit === el || el.contains(hit));
+        check(label, "el or descendant", hit ? hit.tagName + (hit.id ? "#" + hit.id : "") : "null", ok);
       }
-      // Check tab buttons hittable (only in portrait mode where they're visible)
+
+      // 1. DESCEND (splash must be visible)
+      if (document.getElementById("descend") && !document.getElementById("splash").classList.contains("off")) {
+        hitTest("p7_hit_descend", document.getElementById("descend"));
+      }
+
+      // 2. Shaft canvas (dig/strike target)
+      var shaftEl = document.getElementById("shaft");
+      if (shaftEl) hitTest("p7_hit_shaft_canvas", shaftEl);
+
+      // 3. Mute button
+      hitTest("p7_hit_mute_btn", document.getElementById("mute-btn"));
+
+      // 4. Tab buttons (portrait only — hidden on desktop)
       var tabbarEl = document.getElementById("tabbar");
       if (tabbarEl && getComputedStyle(tabbarEl).display !== "none") {
         var tabBtns = tabbarEl.querySelectorAll(".tab");
@@ -1202,9 +1228,10 @@
             tabHitBad.push(tabBtns[thi].textContent);
           }
         }
-        check("m4_hit_tabs", "all hittable", tabHitBad.join(","), tabHitBad.length === 0);
+        check("p7_hit_tabs", "all 4 hittable", tabHitBad.join(","), tabHitBad.length === 0);
       }
-      // Qty toggle (only when visible)
+
+      // 5. Qty toggle buttons (wherever currently visible — portrait tabpanel or desktop rail)
       var qtyBar = document.getElementById("qty-bar");
       if (qtyBar && getComputedStyle(qtyBar).display !== "none") {
         var qtyBtns = qtyBar.querySelectorAll(".qty-btn");
@@ -1217,7 +1244,58 @@
             qtyHitBad.push(qtyBtns[qhi].textContent);
           }
         }
-        check("m4_hit_qty_toggle", "all hittable", qtyHitBad.join(","), qtyHitBad.length === 0);
+        check("p7_hit_qty_toggle", "all 4 hittable", qtyHitBad.join(","), qtyHitBad.length === 0);
+      }
+
+      // 6. Shop buy row — first visible .buy button in the current layout
+      var buyBtns = document.querySelectorAll(".buy");
+      var foundBuyPortrait = false, foundBuyRail = false;
+      for (var bbi = 0; bbi < buyBtns.length; bbi++) {
+        var bbr = buyBtns[bbi].getBoundingClientRect();
+        if (bbr.width <= 0 || bbr.top < 0 || bbr.top > window.innerHeight) continue;
+        var bEl = document.elementFromPoint(bbr.left + bbr.width / 2, bbr.top + bbr.height / 2);
+        var bOk = bEl && (bEl === buyBtns[bbi] || buyBtns[bbi].contains(bEl));
+        var inRail = !!buyBtns[bbi].closest("#right-rail");
+        if (inRail && !foundBuyRail) {
+          check("p7_hit_buy_row_desktop_rail", "buy btn hittable in rail", bEl ? bEl.tagName : "null", bOk);
+          foundBuyRail = true;
+        } else if (!inRail && !foundBuyPortrait) {
+          check("p7_hit_buy_row_portrait", "buy btn hittable in portrait", bEl ? bEl.tagName : "null", bOk);
+          foundBuyPortrait = true;
+        }
+        if (foundBuyPortrait || foundBuyRail) break; // one per layout is enough
+      }
+
+      // 7. Settings panel buttons: open settings, test each button, close
+      if (window.GDUI && window.GDUI.openSettings) {
+        window.GDUI.openSettings();
+        var settingsEl = document.getElementById("settings");
+        if (settingsEl && !settingsEl.classList.contains("hidden")) {
+          hitTest("p7_hit_settings_mute", document.getElementById("set-mute"));
+          hitTest("p7_hit_settings_export", document.getElementById("set-export"));
+          hitTest("p7_hit_settings_import", document.getElementById("set-import"));
+          hitTest("p7_hit_settings_reset", document.getElementById("set-reset"));
+          hitTest("p7_hit_settings_close", document.getElementById("settings-close"));
+        }
+        // Close settings
+        settingsEl.classList.add("hidden");
+      }
+
+      // 8. KEEP DIGGING on ending overlay: trigger ending, test the button, close
+      GD.reset();
+      GD.state.goldEarnedTotal = 5000;
+      // Show ending panel directly (bypassing the timing delay)
+      var endingEl = document.getElementById("ending");
+      if (endingEl) {
+        var endingHead = endingEl.querySelector(".panel-head");
+        var endingBody = endingEl.querySelector(".panel-body");
+        var endingBtn = endingEl.querySelector(".panel-btn");
+        if (endingHead) endingHead.textContent = "TEST";
+        if (endingBody) endingBody.innerHTML = "<p>test</p>";
+        if (endingBtn) endingBtn.textContent = "KEEP DIGGING";
+        endingEl.classList.remove("hidden");
+        hitTest("p7_hit_keep_digging", endingBtn);
+        endingEl.classList.add("hidden");
       }
 
       // Layout assertion: at least 3 buy rows intersect the viewport
