@@ -24,9 +24,16 @@ const FONT_S = '7px "Press Start 2P", monospace';
 const FENCE_H = 0.34, HEDGE_H = 0.2, SEG = 0.25;
 // How far inside its own outline a parcel's fence stands, in tiles (only on edges that are NOT shared with another pen).
 const WALL_INSET = 0.045;
+// Cute & colourful buildings: light saturated WALLS [top, front, side] + a bright distinct ROOF
+// [slope, gable-side]. Walls read clean and friendly; the bright gabled roof makes each one a little
+// storybook house. Roofs are colour-coded so a facility is recognisable at a glance.
 const FACILITY_COLORS = {
-  restrooms: ['#7fb8a8', '#5e9484', '#4a7a6c'], food_stand: ['#e0685a', '#b84c40', '#8f3a30'], gift_shop: ['#a97ad6', '#8258ad', '#654288'],
-  office: ['#8a7d9c', '#6b5c8a', '#54486e'], visitor_center: ['#d9a441', '#b3842f', '#8c6624'], vet_clinic: ['#eef1f4', '#c9d0d8', '#a7b0bb'], park_tram: ['#5aa0b5', '#3f7d90', '#2f5f6e']
+  restrooms:      ['#bfe6dd', '#9fcfc4', '#84b3a8'], food_stand:  ['#f4dcae', '#e6c88e', '#cdac6e'], gift_shop: ['#e0cbf4', '#c8ace4', '#ac8fce'],
+  office:         ['#cdd6e6', '#adb9ce', '#8f9cb4'], visitor_center: ['#f4e2b6', '#e2c98e', '#c8ac6e'], vet_clinic: ['#f6f8fb', '#e2e7ee', '#c6cede'], park_tram: ['#c2e4f0', '#9fcede', '#82b4ca']
+};
+const FACILITY_ROOF = {
+  restrooms: ['#33a08c', '#277d6e'], food_stand: ['#e85440', '#c23e30'], gift_shop: ['#9b4fc4', '#7c3ba0'],
+  office: ['#4f74ac', '#3c5a8a'], visitor_center: ['#f0922e', '#c67322'], vet_clinic: ['#e85440', '#c23e30'], park_tram: ['#3f95b0', '#2f7288']
 };
 const VISITOR_SHIRTS = ['#e05c5c', '#6fcf6a', '#5aa0e0', '#f2c94c', '#e08fd0', '#f0f0e8', '#ff9d4d', '#66d6c8'];
 const CAR_COLORS = ['#d84a4a', '#3b6fd6', '#f2f2f2', '#2c2f36', '#6fcf6a', '#f2c94c', '#9b6fd6', '#c0c6d0'];
@@ -541,6 +548,36 @@ function box(x0, y0, x1, y1, h, top, front, side, stroke, z0 = 0) {
   vquad(x0, y1, x1, y1, z0, z0 + h, front, stroke);  // front face
   quad(x0, y0, x1, y1, z0 + h, top, stroke);         // roof
 }
+// Fill an arbitrary 3D polygon (world points [[x,y,z],...]) — used for gabled roofs.
+function poly3(pts, fill, stroke) {
+  ctx.beginPath();
+  for (let i = 0; i < pts.length; i++) { project(pts[i][0], pts[i][1], pts[i][2], P); if (i) ctx.lineTo(P.x, P.y); else ctx.moveTo(P.x, P.y); }
+  ctx.closePath();
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke(); }
+}
+// A cute bright gabled roof sitting on top of a box (eaves at z, ridge along X at z+rh): the front
+// slope (bright), the visible east gable, a dimmer back slope for depth, and a ridge line.
+function gableRoof(x0, y0, x1, y1, z, rh, top, side) {
+  const ym = (y0 + y1) / 2, eave = 0.04;
+  const x0e = x0 - eave, x1e = x1 + eave, y1e = y1 + eave, y0e = y0 - eave;
+  poly3([[x0e, y0e, z], [x1e, y0e, z], [x1e, ym, z + rh], [x0e, ym, z + rh]], shade(top), OUT);       // back slope (dimmer)
+  poly3([[x1e, y0e, z], [x1e, y1e, z], [x1e, ym, z + rh]], side, OUT);                                 // east gable triangle
+  poly3([[x0e, y1e, z], [x1e, y1e, z], [x1e, ym, z + rh], [x0e, ym, z + rh]], top, OUT);               // front slope (bright)
+  line3(x0e, ym, z + rh, x1e, ym, z + rh, OUT, 1);                                                     // ridge
+}
+// A striped shop awning across the front face, just above the door.
+function stripedAwning(x0, x1, y, zt) {
+  const zb = zt - 0.13, n = 5;
+  for (let i = 0; i < n; i++) vquad(x0 + (x1 - x0) * i / n, y, x0 + (x1 - x0) * (i + 1) / n, y, zb, zt, i % 2 ? '#f4f0e2' : '#e85440', OUT);
+}
+// A cheerful little pennant flag on a pole at a roof point.
+function pennant(x, y, z, color) {
+  line3(x, y, z, x, y, z + 0.22, OUT, 1.5);
+  project(x, y, z + 0.22, P);
+  ctx.fillStyle = color; ctx.strokeStyle = OUT; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(P.x, P.y); ctx.lineTo(P.x + 10, P.y + 3); ctx.lineTo(P.x, P.y + 6); ctx.closePath(); ctx.fill(); ctx.stroke();
+}
 function line3(xa, ya, za, xb, yb, zb, color, w) {
   project(xa, ya, za, P); project(xb, yb, zb, Q);
   ctx.strokeStyle = color; ctx.lineWidth = w;
@@ -949,49 +986,39 @@ function drawFacility(e) {
     for (const wx of [x0 + 0.08, x1 - 0.08]) ellipse3(wx, y1 + 0.02, 0, 0.035, 0.05, '#2b2e35', OUT);
     vquad(x0 + 0.06, y1, x1 - 0.06, y1, z * 0.45, z * 0.85, '#1c2230', OUT); // serving hatch
   } else {
+    // Cute storybook building: light coloured walls + a bright gabled roof + friendly windows + a door.
+    const rc = FACILITY_ROOF[e.id] || ['#c85a48', '#a3453a'];
+    const rh = Math.min(0.55, z * 0.42 + 0.14);
     box(x0, y0, x1, y1, z, c[0], c[1], c[2], OUT);
-    // roof sections: a ridge per section, and a raised second roof / clerestory from 2 sections up
-    const n = Math.max(1, roofs);
-    for (let i = 1; i < n; i++) { const yy = y0 + (y1 - y0) * i / n; line3(x0, yy, z, x1, yy, z, 'rgba(0,0,0,0.3)', 1.5); }
-    line3(x0, (y0 + y1) / 2, z, x1, (y0 + y1) / 2, z, 'rgba(0,0,0,0.25)', 1.5);
-    if (n >= 2 && style !== 'tower') box(x0 + 0.12, y0 + 0.08, x1 - 0.12, y0 + (y1 - y0) * 0.45, 0.16, c[0], c[1], c[2], OUT, z);
-    if (n >= 3 && style !== 'tower' && style !== 'museum') box(cx - 0.1, y0 + 0.1, cx + 0.1, y0 + 0.3, 0.14, '#f2c94c', '#c9a63b', '#a8892f', OUT, z + 0.16);
-    // storey bands + a window row per storey on the front face
-    for (let s = 1; s < storeys; s++) line3(x0, y1, z * s / storeys, x1, y1, z * s / storeys, 'rgba(0,0,0,0.35)', 1);
-    const cols = Math.max(2, Math.round((x1 - x0) / 0.32));
+    gableRoof(x0, y0, x1, y1, z, rh, rc[0], rc[1]);
+    // a window per column, per storey, on the front face (leave the middle of the ground floor for the door)
+    const cols = Math.max(2, Math.round((x1 - x0) / 0.34));
     for (let s = 0; s < storeys; s++) {
-      const zb = z * (s + 0.35) / storeys, zt = z * (s + 0.7) / storeys;
+      const zb = z * (s + 0.4) / storeys, zt = z * (s + 0.72) / storeys;
       for (let i = 0; i < cols; i++) {
         const wx = x0 + (x1 - x0) * (i + 0.5) / cols;
-        if (s === 0 && Math.abs(wx - cx) < 0.12) continue; // door goes here
-        vquad(wx - 0.05, y1, wx + 0.05, y1, zb, zt, style === 'tiled' ? '#dff3ff' : '#cfe3f5', OUT);
+        if (s === 0 && Math.abs(wx - cx) < 0.14) continue; // door column
+        vquad(wx - 0.055, y1, wx + 0.055, y1, zb, zt, '#bfe6fb', OUT);
       }
     }
-    // styles
-    if (style === 'tiled') for (let i = 0; i < 6; i++) vquad(x0 + (x1 - x0) * i / 6, y1, x0 + (x1 - x0) * (i + 0.5) / 6, y1, 0.02, z * 0.28, i % 2 ? '#e9f4f7' : '#7fb8d8', null);
-    if (style === 'pavilion') { quad(x0 - 0.1, y0 - 0.1, x1 + 0.1, y1 + 0.12, z + 0.02, c[1], OUT); for (const wx of [x0 - 0.06, x1 + 0.06]) line3(wx, y1 + 0.08, 0, wx, y1 + 0.08, z, '#c9c4b8', 2); }
-    if (style === 'diner') { vquad(x0, y1, x1, y1, z * 0.72, z * 0.9, '#f2c94c', OUT); vquad(x0 + 0.05, y1, x1 - 0.05, y1, z * 0.76, z * 0.86, '#e05c5c', null); }
-    if (style === 'restaurant') { quad(x0 - 0.06, y1 - 0.02, x1 + 0.06, y1 + 0.1, z * 0.5, '#e05c5c', OUT); box(x1 - 0.18, y0 + 0.06, x1 - 0.08, y0 + 0.16, 0.16, '#5a4a48', '#463a38', '#3a302e', OUT, z); }
-    if (style === 'emporium') { vquad(x0, y1, x1, y1, z * 0.8, z, '#f2c94c', OUT); for (let i = 0; i < 3; i++) vquad(x0 + 0.06 + i * 0.18, y1, x0 + 0.16 + i * 0.18, y1, z * 0.84, z * 0.96, '#e05c5c', null); }
-    if (style === 'museum') { // columns and a pediment on the front
-      const nc = 4;
-      for (let i = 0; i < nc; i++) { const wx = x0 + 0.06 + (x1 - x0 - 0.12) * i / (nc - 1); line3(wx, y1 + 0.03, 0, wx, y1 + 0.03, z, '#f1f0e6', 3); }
-      project(x0 - 0.02, y1 + 0.03, z, P); project(x1 + 0.02, y1 + 0.03, z, Q); project(cx, y1 + 0.03, z + 0.2, R);
-      ctx.fillStyle = c[0]; ctx.strokeStyle = OUT; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(P.x, P.y); ctx.lineTo(Q.x, Q.y); ctx.lineTo(R.x, R.y); ctx.closePath(); ctx.fill(); ctx.stroke();
-    }
-    if (style === 'tower') { // headquarters: clock tower with a flag
-      box(x1 - 0.55, y0 + 0.08, x1 - 0.15, y0 + 0.48, 0.4, c[0], c[1], c[2], OUT, z);
-      project(x1 - 0.35, y0 + 0.48, z + 0.28, P); ctx.fillStyle = '#f1f0e6'; ctx.beginPath(); ctx.arc(P.x, P.y, 4, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = OUT; ctx.stroke(); ctx.beginPath(); ctx.moveTo(P.x, P.y); ctx.lineTo(P.x, P.y - 3); ctx.moveTo(P.x, P.y); ctx.lineTo(P.x + 2, P.y); ctx.stroke();
-      line3(x1 - 0.35, y0 + 0.28, z + 0.4, x1 - 0.35, y0 + 0.28, z + 0.68, '#2b2e35', 1.5);
-      project(x1 - 0.35, y0 + 0.28, z + 0.68, P); ctx.fillStyle = '#e05c5c'; ctx.fillRect(P.x, P.y, 9, 5);
-    }
-    if (style === 'hospital') { vquad(cx - 0.12, y1, cx + 0.12, y1, z * 0.55, z * 0.95, '#f4f4f4', OUT); vquad(cx - 0.03, y1, cx + 0.03, y1, z * 0.6, z * 0.9, '#e05c5c', null); vquad(cx - 0.09, y1, cx + 0.09, y1, z * 0.71, z * 0.79, '#e05c5c', null); }
-    if (style === 'shelter' || style === 'depot') { // tram shed: wide door and a tram-coloured stripe
-      vquad(x0, y1, x1, y1, z * 0.62, z * 0.78, '#f2c94c', null);
-      vquad(cx - 0.22, y1, cx + 0.22, y1, 0, z * 0.6, '#1c2230', OUT);
-    }
     // door
-    if (style !== 'shelter' && style !== 'depot') vquad(cx - 0.07, y1, cx + 0.07, y1, 0, z * 0.5 / Math.max(1, storeys), OUT);
+    vquad(cx - 0.085, y1, cx + 0.085, y1, 0, Math.min(z * 0.6, z * 0.5 / Math.max(1, storeys) + 0.14), '#7a5330', OUT);
+    // bright, recognisable accents per facility
+    if (e.id === 'food_stand') stripedAwning(x0, x1, y1, z * 0.66);
+    if (e.id === 'gift_shop' || e.id === 'visitor_center') vquad(x0 + 0.06, y1, x1 - 0.06, y1, z * 0.74, z * 0.92, '#f2c94c', OUT); // sign band
+    if (e.id === 'vet_clinic') { // red cross on a white panel
+      vquad(cx - 0.12, y1, cx + 0.12, y1, z * 0.5, z * 0.9, '#ffffff', OUT);
+      vquad(cx - 0.035, y1, cx + 0.035, y1, z * 0.56, z * 0.84, '#e85440', null);
+      vquad(cx - 0.1, y1, cx + 0.1, y1, z * 0.67, z * 0.73, '#e85440', null);
+    }
+    if (style === 'tower') { // office HQ: a little clock face high on the gable
+      project(cx, (y0 + y1) / 2, z + rh, P);
+      ctx.fillStyle = '#f4f0e2'; ctx.strokeStyle = OUT; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(P.x, P.y - 5, 4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(P.x, P.y - 5); ctx.lineTo(P.x, P.y - 7); ctx.moveTo(P.x, P.y - 5); ctx.lineTo(P.x + 2, P.y - 5); ctx.stroke();
+    }
+    // a cheerful pennant on the roof ridge for the shops and welcome buildings
+    if (e.id === 'food_stand' || e.id === 'gift_shop' || e.id === 'visitor_center') pennant(cx + (x1 - x0) * 0.28, (y0 + y1) / 2, z + rh, rc[0]);
   }
   // Forecourt strip buildings sit in two rows; the row nearer the viewer (larger y0) hangs its label at the door
   // on the ground, the back row on the roof, so at max tier neither row's label can cover the other's.
