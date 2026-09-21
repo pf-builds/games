@@ -85,7 +85,12 @@ const buildingSprites = new Map();
 // Each facility maps to three isometric stage sprites (small/mid/large) and a per-tier index into
 // them (null tiers keep the procedural drawing, e.g. an empty pad or "no tram"). `scale` fine-tunes
 // the footprint fit per building on top of balance.living.building_scale.
-const BUILDING_ART = {
+// DISABLED (2026-09-20): AI-generated building sprites use a generic 45deg isometric that does not
+// match the game's sheared oblique projection, so they read tilted / out of place next to the pens
+// and ground. Reverted to the procedural buildings (drawn through the same project() as the world,
+// so they always fit). Sprites + loader kept for a possible face-textured/hybrid approach later.
+const BUILDING_ART = {};
+const _BUILDING_ART_SPRITES = {
   food_stand:     { stages: ['food_stand-t1', 'food_stand-t2', 'food_stand-t3'], tierStage: [null, 0, 1, 1, 2], scale: 1.0 },
   gift_shop:      { stages: ['gift_shop-t1', 'gift_shop-t2', 'gift_shop-t3'], tierStage: [null, 0, 1, 1, 2], scale: 1.0 },
   restrooms:      { stages: ['restrooms-t1', 'restrooms-t2', 'restrooms-t3'], tierStage: [0, 1, 1, 2], scale: 1.0 },
@@ -94,6 +99,7 @@ const BUILDING_ART = {
   vet_clinic:     { stages: ['vet_clinic-t1', 'vet_clinic-t2', 'vet_clinic-t3'], tierStage: [null, 0, 1, 2], scale: 0.82 },
   park_tram:      { stages: ['park_tram-t1', 'park_tram-t2', 'park_tram-t3'], tierStage: [null, 0, 1, 2], scale: 1.0 }
 };
+void _BUILDING_ART_SPRITES;
 function loadBuildingSprites() {
   let base;
   try { base = new URL('../../buildings/', import.meta.url); } catch { return; }
