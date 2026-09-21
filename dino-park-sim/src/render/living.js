@@ -41,6 +41,14 @@ const K_WALL = 1, K_FACILITY = 2, K_SIGN = 3, K_GATE = 4, K_FOUNTAIN = 6, K_HEDG
 let canvas, ctx, handlers = { onParcelClick: () => {}, onFacilityClick: () => {} };
 let active = false, raf = 0, lastT = 0, acc = 0, watchdog = 0, lastFrameAt = 0;
 let hover = null, hoverFacility = null;
+// Camera (playtest request): zoom into the park and pan around while zoomed. zoom 1 = whole park,
+// x/y are the pan offset in logical BASE px. Wheel zooms toward the cursor, drag pans, the on-canvas
+// +/-/R buttons and a double-click also work. At zoom 1 the pan is pinned to 0 (identical to before).
+const cam = { zoom: 1, x: 0, y: 0 };
+const ZOOM_MIN = 1, ZOOM_MAX = 3;
+const zoomBtns = { in: null, out: null, reset: null }; // logical-space rects, filled by drawHud
+let ptrDown = false, ptrDrag = false, ptrX = 0, ptrY = 0;
+const M = { x: 0, y: 0 }; // scratch point for pointer math (kept off the render temps)
 const staticEntries = [];
 let sceneSig = '';
 const drawList = [];
@@ -79,8 +87,41 @@ export function initLiving(el, h) {
   loadDinoSprites();
   canvas.addEventListener('mousemove', onMove);
   canvas.addEventListener('mouseleave', () => { if (!active) return; hover = null; hoverFacility = null; hideTip(); });
+  canvas.addEventListener('wheel', e => {
+    if (!active) return;
+    e.preventDefault();
+    rawLogical(e, M);
+    zoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, M.x, M.y);
+  }, { passive: false });
+  canvas.addEventListener('dblclick', e => { if (!active) return; rawLogical(e, M); zoomAt(cam.zoom < ZOOM_MAX ? 1.6 : ZOOM_MIN / cam.zoom, M.x, M.y); });
+  canvas.addEventListener('mousedown', e => { if (!active || e.button !== 0) return; ptrDown = true; ptrDrag = false; ptrX = e.clientX; ptrY = e.clientY; });
+  window.addEventListener('mousemove', e => {
+    if (!ptrDown) return;
+    if (!ptrDrag && Math.hypot(e.clientX - ptrX, e.clientY - ptrY) < 4) return;
+    ptrDrag = true;
+    if (cam.zoom > 1) {
+      const r = canvas.getBoundingClientRect();
+      cam.x += (e.clientX - ptrX) * (BASE_W / r.width);
+      cam.y += (e.clientY - ptrY) * (BASE_H / r.height);
+      clampCam();
+    }
+    ptrX = e.clientX; ptrY = e.clientY;
+    if (canvas.style.cursor !== 'grabbing') canvas.style.cursor = 'grabbing';
+  });
+  window.addEventListener('mouseup', () => { ptrDown = false; canvas.style.cursor = ''; });
   canvas.addEventListener('click', e => {
     if (!active) return;
+    if (ptrDrag) { ptrDrag = false; return; } // finished a pan, not a click
+    rawLogical(e, M); // zoom buttons live in fixed screen space (pre-camera)
+    for (const key of ['in', 'out', 'reset']) {
+      const r = zoomBtns[key];
+      if (r && M.x >= r.x0 && M.x <= r.x1 && M.y >= r.y0 && M.y <= r.y1) {
+        if (key === 'in') zoomAt(1.4, BASE_W / 2, BASE_H / 2);
+        else if (key === 'out') zoomAt(1 / 1.4, BASE_W / 2, BASE_H / 2);
+        else { cam.zoom = 1; clampCam(); }
+        return;
+      }
+    }
     const id = parcelAt(e);
     if (id) { hover = null; hideTip(); handlers.onParcelClick(id); return; }
     const f = facilityAt(e);
@@ -131,10 +172,34 @@ function step(now, maxDt) {
   stats.stepMs = performance.now() - t0; stats.renderMs = performance.now() - t1;
 }
 
+// ---- camera ----
+function clampCam() {
+  cam.zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, cam.zoom));
+  // Keep the park covering the viewport: at zoom Z the scene [0,BASE] maps to [pan, Z*BASE+pan].
+  cam.x = Math.min(0, Math.max(BASE_W * (1 - cam.zoom), cam.x));
+  cam.y = Math.min(0, Math.max(BASE_H * (1 - cam.zoom), cam.y));
+  if (cam.zoom <= ZOOM_MIN + 1e-6) { cam.zoom = ZOOM_MIN; cam.x = 0; cam.y = 0; }
+}
+// Zoom by `factor`, keeping the logical (pre-camera) point (cx,cy) fixed on screen.
+function zoomAt(factor, cx, cy) {
+  const z0 = cam.zoom;
+  const nz = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z0 * factor));
+  const sx = (cx - cam.x) / z0, sy = (cy - cam.y) / z0;
+  cam.zoom = nz; cam.x = cx - nz * sx; cam.y = cy - nz * sy;
+  clampCam();
+}
+// Client px -> logical BASE px, before the camera transform.
+function rawLogical(e, out) {
+  const r = canvas.getBoundingClientRect();
+  out.x = (e.clientX - r.left) * (BASE_W / r.width);
+  out.y = (e.clientY - r.top) * (BASE_H / r.height);
+  return out;
+}
+
 // ---- hit testing ----
 function logicalPoint(e) {
-  const r = canvas.getBoundingClientRect();
-  P.x = (e.clientX - r.left) * (BASE_W / r.width); P.y = (e.clientY - r.top) * (BASE_H / r.height);
+  rawLogical(e, P);
+  P.x = (P.x - cam.x) / cam.zoom; P.y = (P.y - cam.y) / cam.zoom; // undo the camera to reach scene space
   return P;
 }
 function parcelAt(e) {
@@ -156,6 +221,7 @@ function facilityAt(e) {
 }
 function onMove(e) {
   if (!active) return;
+  if (ptrDown && ptrDrag) { hideTip(); return; } // mid-pan: no hover/tooltip churn
   hover = parcelAt(e);
   hoverFacility = hover ? null : facilityAt(e);
   if (hover) showTip(parcelTooltip(hover), e.clientX, e.clientY);
@@ -291,7 +357,8 @@ export const wallSegments = () => staticEntries.filter(e => e.kind === K_WALL).m
 // ---- frame ----
 function render(alpha) {
   const k = canvas.width / BASE_W;
-  ctx.setTransform(k, 0, 0, k, 0, 0);
+  // Scene (ground, depth-sorted world, pen labels) draws under the camera; the HUD resets to base below.
+  ctx.setTransform(k * cam.zoom, 0, 0, k * cam.zoom, k * cam.x, k * cam.y);
   ctx.lineJoin = 'round';
   drawGround();
   // gather + sort
@@ -338,6 +405,7 @@ function render(alpha) {
   // Labels last, and never inside the depth sort: signs, facility tags and pen chips are UI over the scene.
   drawPenLabels();
   flushLabels();
+  ctx.setTransform(k, 0, 0, k, 0, 0); // HUD is fixed screen UI, not part of the zoom/pan
   drawHud();
 }
 const crateEntry = { kind: K_CRATE, depth: 0 };
@@ -1280,5 +1348,19 @@ function drawHud() {
     const t = `DELIVERY: ${(AG.truck.name || 'DINOSAUR').toUpperCase()} AT THE GATE`;
     ctx.fillStyle = 'rgba(16,20,28,0.7)'; ctx.fillRect(BASE_W / 2 - t.length * 4 - 6, 6, t.length * 8 + 12, 16);
     label(t, BASE_W / 2, 18, '#f2c94c', 'center');
+  }
+  drawZoomControls();
+}
+// Zoom controls, bottom-right: [-] [R] [+]. Rects saved (fixed screen space) for click hit-testing.
+function drawZoomControls() {
+  const bw = 22, bh = 20, gap = 5, ry = BASE_H - 8 - bh;
+  const specs = [['out', '-', BASE_W - 8 - bw * 3 - gap * 2], ['reset', 'R', BASE_W - 8 - bw * 2 - gap], ['in', '+', BASE_W - 8 - bw]];
+  for (const [key, glyph, rx] of specs) {
+    const dim = key === 'in' ? cam.zoom >= ZOOM_MAX - 1e-6 : cam.zoom <= ZOOM_MIN + 1e-6;
+    ctx.fillStyle = dim ? 'rgba(16,20,28,0.4)' : 'rgba(16,20,28,0.72)';
+    ctx.fillRect(rx, ry, bw, bh);
+    ctx.strokeStyle = 'rgba(241,240,230,0.35)'; ctx.lineWidth = 1; ctx.strokeRect(rx + 0.5, ry + 0.5, bw - 1, bh - 1);
+    label(glyph, rx + bw / 2, ry + bh / 2 + 3, dim ? 'rgba(241,240,230,0.5)' : '#f1f0e6', 'center', FONT_S);
+    zoomBtns[key] = { x0: rx, y0: ry, x1: rx + bw, y1: ry + bh };
   }
 }
