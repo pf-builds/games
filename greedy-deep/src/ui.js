@@ -870,7 +870,12 @@
     }
     els.gold.textContent = GD.format(displayGold);
     els.rate.textContent = (d.goldRate > 0 ? "+" + GD.format(d.goldRate) : "+0") + "/s";
-    els.depth.textContent = st.depth.toFixed(cfg.format.depthDecimals) + " m";
+    // Compact depth: use km for large depths, formatted number for very large
+    if (st.depth >= 10000) {
+      els.depth.textContent = GD.format(st.depth / 1000) + " km";
+    } else {
+      els.depth.textContent = st.depth.toFixed(cfg.format.depthDecimals) + " m";
+    }
     for (var i = 0; i < rows.length; i++) {
       var r = rows[i];
       var locked = E.isLocked(cfg, st, r.p.id);

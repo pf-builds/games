@@ -796,7 +796,8 @@
     if (v >= 1000) {
       var totalExp = tier * 3 + Math.floor(Math.log10(v));
       var man = v / Math.pow(10, Math.floor(Math.log10(v)));
-      var s = man.toFixed(Math.max(0, f.sigFigs - 1));
+      // Keep scientific notation short: round mantissa to integer for compact output
+      var s = man < 9.95 ? man.toFixed(1) : String(Math.round(man));
       if (s.indexOf(".") !== -1) s = s.replace(/\.?0+$/, "");
       return (neg ? "-" : "") + s + "e" + totalExp;
     }

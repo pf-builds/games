@@ -1335,6 +1335,24 @@
       }
       check("p7fix_format_compact_to_1e30", "all <= " + fmtMax + " chars, no malformed", fmtBad.join(" | "), fmtBad.length === 0);
 
+      // Format assertions for INCOME and DEPTH HUD strings
+      var incMax = 12; // "+999Dc/s" = 10 chars max, 12 generous
+      var depMax = 10; // "999Dc km" or "9999.9 m" = 10 chars max
+      var hudFmtBad = [];
+      var rateProbes = [0, 1, 999, 1e6, 1e9, 1e15, 1e21, 1e30, 1e36];
+      for (var ri7 = 0; ri7 < rateProbes.length; ri7++) {
+        var rStr = "+" + GD.format(rateProbes[ri7]) + "/s";
+        if (rStr.length > incMax) hudFmtBad.push("income " + rateProbes[ri7] + " -> \"" + rStr + "\" (" + rStr.length + ")");
+        if (/[A-Za-z]\d/.test(rStr) && !/e\d/.test(rStr)) hudFmtBad.push("income malformed: " + rStr);
+      }
+      var depthProbes7 = [0, 100, 9999, 10000, 125000, 1e6, 1e7];
+      for (var di7 = 0; di7 < depthProbes7.length; di7++) {
+        var dv = depthProbes7[di7];
+        var dStr = dv >= 10000 ? GD.format(dv / 1000) + " km" : dv.toFixed(1) + " m";
+        if (dStr.length > depMax) hudFmtBad.push("depth " + dv + " -> \"" + dStr + "\" (" + dStr.length + ")");
+      }
+      check("p7fix_income_depth_compact", "all fit", hudFmtBad.join(" | "), hudFmtBad.length === 0);
+
       // HUD layout: topbar stat boxes must not overlap at current viewport
       var statEls = document.querySelectorAll("#topbar .stat");
       var hudOverlap = [];
