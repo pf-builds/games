@@ -50,10 +50,11 @@ body.booting #col { opacity: 0; }
   border-bottom: 2px solid #0a0810;
   position: relative;
 }
-.stat { display: flex; flex-direction: column; justify-content: center; min-width: 0; flex: 1; }
-.stat.right { align-items: flex-end; }
+.stat { display: flex; flex-direction: column; justify-content: center; min-width: 0; flex: 2; overflow: hidden; }
+.stat.rate { flex: 1.5; }
+.stat.right { align-items: flex-end; flex: 1.5; }
 .stat .label { font-size: calc(4px * var(--s)); letter-spacing: .12em; color: var(--dim); }
-.stat .value { font-size: calc(9px * var(--s)); font-weight: 700; color: var(--gold); line-height: 1.15; white-space: nowrap; }
+.stat .value { font-size: calc(9px * var(--s)); font-weight: 700; color: var(--gold); line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .stat.rate .value { color: #8fd18a; font-size: calc(7px * var(--s)); }
 .stat.right .value { color: #bfd4e6; }
 

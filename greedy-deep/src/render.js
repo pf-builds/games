@@ -598,16 +598,32 @@
     var braceStep = L.braceEveryRows * T;
     var bTop = Math.floor(top / braceStep) * braceStep;
     var bracesOwned = owned.braces || 0;
+    // With purchased braces, draw extra crossbeams between the base braces.
+    // Each brace level adds one intermediate crossbeam (up to 4 visible sub-braces).
+    var subBraces = Math.min(4, bracesOwned);
+    var subStep = subBraces > 0 ? braceStep / (subBraces + 1) : 0;
     for (var by = bTop; by < top + H; by += braceStep) {
       var bsy = by - top;
       if (bsy > faceScreenY - 4) break;
       if (bsy < -T) continue;
       ctx.drawImage(braceC, boreX, bsy);
-      if (bracesOwned > 0) {           // purchase visibility: bought braces are doubled up
-        ctx.fillStyle = "#9C7A46";
+      if (bracesOwned > 0) {
+        // Reinforcement stripe on the base brace
+        var tmb = cfg.sprites.timber;
+        ctx.fillStyle = tmb.lit;
         ctx.fillRect(boreX, bsy + 6, boreW, 1);
-        ctx.fillStyle = "#3d2a19";
+        ctx.fillStyle = tmb.dark;
         ctx.fillRect(boreX, bsy + 7, boreW, 1);
+      }
+      // Sub-braces: smaller timber crossbeams between main braces
+      for (var si = 1; si <= subBraces; si++) {
+        var sby = bsy + si * subStep;
+        if (sby > faceScreenY - 4 || sby < -T) continue;
+        var tmb2 = cfg.sprites.timber;
+        ctx.fillStyle = tmb2.post;
+        ctx.fillRect(boreX + 1, sby, boreW - 2, 2);
+        ctx.fillStyle = tmb2.lit;
+        ctx.fillRect(boreX + 1, sby, boreW - 2, 1);
       }
     }
 

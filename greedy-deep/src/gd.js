@@ -1204,9 +1204,14 @@
       }
 
       // 1. DESCEND (splash must be visible)
-      if (document.getElementById("descend") && !document.getElementById("splash").classList.contains("off")) {
+      var splashEl7 = document.getElementById("splash");
+      var splashWasGone = splashEl7 && splashEl7.classList.contains("gone");
+      var splashWasOff = splashEl7 && splashEl7.classList.contains("off");
+      if (document.getElementById("descend") && splashEl7 && !splashWasOff) {
         hitTest("p7_hit_descend", document.getElementById("descend"));
       }
+      // Dismiss splash for remaining game-area hit tests
+      if (splashEl7) { splashEl7.classList.add("gone"); splashEl7.classList.add("off"); }
 
       // 2. Shaft canvas (dig/strike target)
       var shaftEl = document.getElementById("shaft");
@@ -1317,6 +1322,33 @@
       check("m4_json_flavor_fallbacks", true, !!(cfg.flavor && cfg.flavor.fallbacks && cfg.flavor.fallbacks.welcomeBack),
         !!(cfg.flavor && cfg.flavor.fallbacks && cfg.flavor.fallbacks.welcomeBack));
 
+      // =========================================================== P7-fix block
+      // Format assertion: formatted strings stay compact for values up to 1e30
+      var fmtMax = cfg.format.maxChars || 7;
+      var fmtBad = [];
+      var fmtProbes = [0, 1, 999, 1000, 999999, 1e6, 1e9, 1e12, 1e15, 1e18, 1e21, 1e24, 1e27, 1e30];
+      for (var fi = 0; fi < fmtProbes.length; fi++) {
+        var fs = GD.format(fmtProbes[fi]);
+        if (fs.length > fmtMax) fmtBad.push(fmtProbes[fi] + " -> \"" + fs + "\" (" + fs.length + " chars)");
+        // No stray digits after a suffix letter (malformed like "1.78M9")
+        if (/[A-Za-z]\d/.test(fs) && !/e\d/.test(fs)) fmtBad.push(fmtProbes[fi] + " -> \"" + fs + "\" (malformed)");
+      }
+      check("p7fix_format_compact_to_1e30", "all <= " + fmtMax + " chars, no malformed", fmtBad.join(" | "), fmtBad.length === 0);
+
+      // HUD layout: topbar stat boxes must not overlap at current viewport
+      var statEls = document.querySelectorAll("#topbar .stat");
+      var hudOverlap = [];
+      for (var ha = 0; ha < statEls.length; ha++) {
+        var ra = statEls[ha].getBoundingClientRect();
+        for (var hb = ha + 1; hb < statEls.length; hb++) {
+          var rb = statEls[hb].getBoundingClientRect();
+          if (ra.right > rb.left + 1 && ra.left < rb.right - 1 && ra.bottom > rb.top + 1 && ra.top < rb.bottom - 1) {
+            hudOverlap.push("stat[" + ha + "] overlaps stat[" + hb + "]");
+          }
+        }
+      }
+      check("p7fix_hud_no_overlap", "0 overlapping stat boxes", hudOverlap.join(", "), hudOverlap.length === 0);
+
       // --- console clean (last, so it counts everything above)
       if (!opts.skipConsoleCheck) {
         check("m2_no_console_errors", 0, GD.dbg.errors, GD.dbg.errors === 0);
@@ -1325,6 +1357,12 @@
     } finally {
       // Never leave the player's game, config, or save in test state.
       GD.hooks = liveHooks;
+      // Restore splash state
+      var splashRestore = document.getElementById("splash");
+      if (splashRestore) {
+        if (!splashWasGone) splashRestore.classList.remove("gone");
+        if (!splashWasOff) splashRestore.classList.remove("off");
+      }
       if (window.GDRender && window.GDRender.cameraSnap) window.GDRender.cameraSnap();
       if (GD.config !== liveConfig) GD.setConfig(liveConfig, false);
       GD.state = liveState;

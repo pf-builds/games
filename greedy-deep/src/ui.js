@@ -3,7 +3,7 @@
 (function () {
   "use strict";
 
-  var CONFIG_VERSION = 19;
+  var CONFIG_VERSION = 20;
 
   var UI = (window.GDUI = {});
   var E = window.GDEngine, GD = window.GD;
@@ -262,17 +262,31 @@
       // Desktop scale: clamp(2, floor(min((vw - rails)/160, vh/300)), 4)
       s = Math.floor(Math.min((vw - leftW - rightW) / L.columnBu, vh / 300));
     } else {
-      // Portrait: scale up to fill available height, integer scale
-      s = Math.floor(Math.min(vw / L.columnBu, vh / L.columnHeightBu));
+      // Portrait: scale up to fill available width as much as possible.
+      // For tablet widths (600–899), use width-first scaling with a shorter
+      // height target so the column fills the viewport width. Roster/tabs
+      // scroll below the fold if they don't fit at that scale.
+      if (vw >= 600) {
+        // Width-first: scale to fill width, capped by a shorter height floor
+        // (topbar + a minimum shaft of 160 bu)
+        var hMin = L.topBarBu + 160;
+        s = Math.floor(Math.min(vw / L.columnBu, vh / hMin));
+      } else {
+        s = Math.floor(Math.min(vw / L.columnBu, vh / L.columnHeightBu));
+      }
     }
     s = Math.max(L.minScale, Math.min(L.maxScale, s || L.minScale));
     document.documentElement.style.setProperty("--s", s);
 
-    // On desktop, shaft gets taller: vh/scale - topBar bu
+    // On desktop or wide tablets, shaft gets taller: use remaining height after topbar
     if (isDesktop) {
       var shaftH = Math.floor(vh / s) - L.topBarBu;
       if (shaftH < 200) shaftH = 200;
       cfg.layout._liveShaftBu = shaftH;
+    } else if (vw >= 600 && s >= 3) {
+      // Tablet: shaft fills available height above the fold; roster/tabs below
+      var tabletShaft = Math.floor(vh / s) - L.topBarBu - L.rosterHeightBu - L.tabBarHeightBu;
+      cfg.layout._liveShaftBu = Math.max(180, Math.min(L.shaftBu, tabletShaft));
     } else {
       cfg.layout._liveShaftBu = L.shaftBu;
     }

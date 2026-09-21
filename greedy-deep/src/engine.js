@@ -791,11 +791,29 @@
     var tier = 0;
     var maxTier = Math.min(f.activeSuffixes, f.suffixes.length - 1);
     while (v >= 1000 && tier < maxTier) { v /= 1000; tier++; }
+    // If we exhausted the suffix ladder and the value is still >= 1000, fall back to
+    // scientific notation so the string stays compact and never malforms.
+    if (v >= 1000) {
+      var totalExp = tier * 3 + Math.floor(Math.log10(v));
+      var man = v / Math.pow(10, Math.floor(Math.log10(v)));
+      var s = man.toFixed(Math.max(0, f.sigFigs - 1));
+      if (s.indexOf(".") !== -1) s = s.replace(/\.?0+$/, "");
+      return (neg ? "-" : "") + s + "e" + totalExp;
+    }
     var out;
     if (v >= 100) out = String(Math.round(v));
     else if (v >= 10) out = v.toFixed(Math.max(0, f.sigFigs - 2));
     else out = v.toFixed(Math.max(0, f.sigFigs - 1));
     if (out.indexOf(".") !== -1) out = out.replace(/\.?0+$/, "");
+    // Rounding can push v to 1000 (e.g. 999.6 rounds to 1000): bump tier if possible
+    if (parseFloat(out) >= 1000 && tier < maxTier) {
+      tier++;
+      v = parseFloat(out) / 1000;
+      if (v >= 100) out = String(Math.round(v));
+      else if (v >= 10) out = v.toFixed(Math.max(0, f.sigFigs - 2));
+      else out = v.toFixed(Math.max(0, f.sigFigs - 1));
+      if (out.indexOf(".") !== -1) out = out.replace(/\.?0+$/, "");
+    }
     return (neg ? "-" : "") + out + f.suffixes[tier];
   };
 
