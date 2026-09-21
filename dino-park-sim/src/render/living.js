@@ -45,7 +45,7 @@ let hover = null, hoverFacility = null;
 // x/y are the pan offset in logical BASE px. Wheel zooms toward the cursor, drag pans, the on-canvas
 // +/-/R buttons and a double-click also work. At zoom 1 the pan is pinned to 0 (identical to before).
 const cam = { zoom: 1, x: 0, y: 0 };
-const ZOOM_MIN = 1, ZOOM_MAX = 3;
+const ZOOM_MIN = 1, ZOOM_MAX = 4;
 const zoomBtns = { in: null, out: null, reset: null }; // logical-space rects, filled by drawHud
 let ptrDown = false, ptrDrag = false, ptrX = 0, ptrY = 0;
 const M = { x: 0, y: 0 }; // scratch point for pointer math (kept off the render temps)
