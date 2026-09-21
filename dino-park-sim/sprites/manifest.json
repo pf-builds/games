@@ -1,0 +1,154 @@
+{
+  "_notes": "Phase 3 dino sprites. Cropped from art-direction/vga/picked, background + baked ground shadow removed, NEAREST-scaled to a per-size target height (small 32 / medium 48 / large 64 px at the 960x540 logical canvas). `face` = which way the source art's head points; the renderer mirrors the sprite to face the dino's travel direction.",
+  "target_h": {
+    "small": 32,
+    "medium": 48,
+    "large": 64
+  },
+  "sprites": {
+    "allosaurus": {
+      "size": "medium",
+      "w": 30,
+      "h": 48,
+      "face": "right"
+    },
+    "ankylosaurus": {
+      "size": "large",
+      "w": 112,
+      "h": 64,
+      "face": "right"
+    },
+    "apatosaurus": {
+      "size": "large",
+      "w": 28,
+      "h": 64,
+      "face": "right"
+    },
+    "baryonyx": {
+      "size": "medium",
+      "w": 37,
+      "h": 48,
+      "face": "left"
+    },
+    "brachiosaurus": {
+      "size": "large",
+      "w": 62,
+      "h": 64,
+      "face": "right"
+    },
+    "camptosaurus": {
+      "size": "medium",
+      "w": 29,
+      "h": 48,
+      "face": "right"
+    },
+    "coelophysis": {
+      "size": "small",
+      "w": 36,
+      "h": 32,
+      "face": "left"
+    },
+    "deinonychus": {
+      "size": "small",
+      "w": 18,
+      "h": 32,
+      "face": "right"
+    },
+    "dilophosaurus": {
+      "size": "medium",
+      "w": 45,
+      "h": 48,
+      "face": "right"
+    },
+    "dryosaurus": {
+      "size": "small",
+      "w": 30,
+      "h": 32,
+      "face": "left"
+    },
+    "hadrosaurus": {
+      "size": "medium",
+      "w": 68,
+      "h": 48,
+      "face": "right"
+    },
+    "hypsilophodon": {
+      "size": "small",
+      "w": 25,
+      "h": 32,
+      "face": "right"
+    },
+    "iguanodon": {
+      "size": "large",
+      "w": 51,
+      "h": 64,
+      "face": "left"
+    },
+    "lesothosaurus": {
+      "size": "small",
+      "w": 58,
+      "h": 32,
+      "face": "left"
+    },
+    "pachycephalosaurus": {
+      "size": "medium",
+      "w": 91,
+      "h": 48,
+      "face": "right"
+    },
+    "parasaurolophus": {
+      "size": "large",
+      "w": 63,
+      "h": 64,
+      "face": "left"
+    },
+    "protoceratops": {
+      "size": "small",
+      "w": 44,
+      "h": 32,
+      "face": "left"
+    },
+    "psittacosaurus": {
+      "size": "small",
+      "w": 22,
+      "h": 32,
+      "face": "left"
+    },
+    "spinosaurus": {
+      "size": "large",
+      "w": 61,
+      "h": 64,
+      "face": "left"
+    },
+    "stegosaurus": {
+      "size": "large",
+      "w": 90,
+      "h": 64,
+      "face": "left"
+    },
+    "styracosaurus": {
+      "size": "large",
+      "w": 67,
+      "h": 64,
+      "face": "left"
+    },
+    "triceratops": {
+      "size": "large",
+      "w": 97,
+      "h": 64,
+      "face": "right"
+    },
+    "tyrannosaurus": {
+      "size": "large",
+      "w": 47,
+      "h": 64,
+      "face": "left"
+    },
+    "velociraptor": {
+      "size": "small",
+      "w": 32,
+      "h": 32,
+      "face": "right"
+    }
+  }
+}

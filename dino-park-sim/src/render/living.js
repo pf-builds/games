@@ -50,10 +50,33 @@ const hud = { v: -1, c: -1, a: -1, text: '' };
 const stats = { stepMs: 0, renderMs: 0, sprites: 0, entries: 0 };
 export const livingStats = () => stats;
 
+// Phase 3: real VGA pixel-art sprites replace the placeholder shapes for the dinosaurs.
+// Loaded once at boot from sprites/manifest.json (species id -> { w, h, size, face }).
+// drawDino falls back to the drawn shape until an image is ready, so a missing or slow
+// file never blanks a pen. `face` is the art's own facing; the sprite is mirrored so each
+// animal faces its travel direction.
+const dinoSprites = new Map();
+function loadDinoSprites() {
+  let base;
+  try { base = new URL('../../sprites/', import.meta.url); }
+  catch { base = null; }
+  if (!base) return;
+  fetch(new URL('manifest.json', base)).then(r => (r.ok ? r.json() : null)).then(m => {
+    if (!m || !m.sprites) return;
+    for (const [id, meta] of Object.entries(m.sprites)) {
+      const rec = { img: new Image(), w: meta.w, h: meta.h, face: meta.face || 'right', ready: false };
+      rec.img.onload = () => { rec.ready = true; };
+      rec.img.src = new URL(`${id}.png`, base).href;
+      dinoSprites.set(id, rec);
+    }
+  }).catch(() => {});
+}
+
 export function initLiving(el, h) {
   canvas = el;
   ctx = canvas.getContext('2d');
   handlers = h;
+  loadDinoSprites();
   canvas.addEventListener('mousemove', onMove);
   canvas.addEventListener('mouseleave', () => { if (!active) return; hover = null; hoverFacility = null; hideTip(); });
   canvas.addEventListener('click', e => {
@@ -1075,9 +1098,39 @@ function shade(hex) {
   shadeCache.set(hex, s);
   return s;
 }
+// Phase 3: draw the species' pixel-art sprite, feet on the ground point, mirrored to face the
+// travel direction. Preserves the shadow, wander/idle/starving bob, the crate pop-in scale, and
+// every status badge. Falls back to drawDinoShape until the image has loaded.
+function drawDino(d) {
+  if (d.arriving) return; // still in the delivery truck (M5)
+  const spr = dinoSprites.get(d.sp.id);
+  if (!spr || !spr.ready) { drawDinoShape(d); return; }
+  project(d.rx, d.ry, 0, P);
+  const Lv = DATA.balance.living;
+  const popK = d.pop > 0 ? Math.min(1, (d.popT || 0) / d.pop) : 1;
+  const popScale = d.pop > 0 ? (popK < 0.7 ? 0.2 + 1.15 * (popK / 0.7) : 1.35 - 0.35 * ((popK - 0.7) / 0.3)) : 1;
+  const scale = (Lv.sprite_scale ?? 1) * popScale;
+  const w = spr.w * scale, h = spr.h * scale;
+  const starving = d.d.hunger >= DATA.balance.dinosaur.hunger_max;
+  const bob = d.moving ? Math.abs(Math.sin(d.phase)) * 1.5 : starving ? Math.sin(d.phase * ((Lv.dino_starving_bob_hz || 0.45) / (Lv.dino_bob_hz || 1.4))) * (Lv.dino_starving_bob_px || 1.6) : Math.sin(d.phase * 0.5) * 0.6;
+  const sx = P.x, sy = P.y - bob;
+  shadow(P.x, P.y, w * 0.42);
+  const flip = (d.dir >= 0) !== (spr.face === 'right'); // mirror when art facing != travel facing
+  ctx.imageSmoothingEnabled = false;
+  ctx.save();
+  ctx.translate(sx, sy);
+  if (flip) ctx.scale(-1, 1);
+  ctx.drawImage(spr.img, -w / 2, -h, w, h); // centred, feet on the ground point
+  ctx.restore();
+  d.labelY = sy - h - 8 - (d.size === 'large' ? 4 : 0);
+  const wrongBiome = !d.escaped && biomeFit(d.sp, state.parcels[d.parcel]?.biome) === 'wrong';
+  if (d.d.sick_days > 0 || d.d.health < 50) { badge(sx, d.labelY + 2); if (wrongBiome) unhappyBadge(sx + 11, d.labelY + 2); }
+  else if (wrongBiome) unhappyBadge(sx, d.labelY + 2);
+  if (d.d.hunger >= Lv.dino_hungry_threshold && !(d.d.sick_days > 0 || d.d.health < 50)) { label('z', sx + w * 0.4, sy - h - 2, '#f2c94c', 'center', FONT_S); }
+}
 // Bigger placeholder dinosaurs with a dark outline pass so they read against any pen colour. A starving animal
 // keeps a slow, deep breathing bob and a drooped head (balance.living.dino_starving_bob_*): never a frozen sprite.
-function drawDino(d) {
+function drawDinoShape(d) {
   if (d.arriving) return; // still in the delivery truck (M5)
   project(d.rx, d.ry, 0, P);
   const Lv = DATA.balance.living;
