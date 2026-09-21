@@ -1,0 +1,111 @@
+{
+  "model": "sdxl-base-1.0 + pixel-art-xl",
+  "view": "isometric 3/4",
+  "items": [
+    {
+      "id": "food_stand-t1",
+      "seed": 400,
+      "prompt": "isometric pixel art, 3/4 top-down isometric view, a small food snack kiosk cart building with a red and white striped awning, seen from above at a 45 degree angle so the roof and two side walls are visible, one single building, centered, isolated on a plain light grey background, no ground, 1990s isometric tycoon game building sprite, vibrant VGA colors, pixel"
+    },
+    {
+      "id": "food_stand-t2",
+      "seed": 401,
+      "prompt": "isometric pixel art, 3/4 top-down isometric view, a snack bar building with a striped awning and a service counter, seen from above at a 45 degree angle so the roof and two side walls are visible, one single building, centered, isolated on a plain light grey background, no ground, 1990s isometric tycoon game building sprite, vibrant VGA colors, pixel"
+    },
+    {
+      "id": "food_stand-t3",
+      "seed": 402,
+      "prompt": "isometric pixel art, 3/4 top-down isometric view, a two-storey burger diner building with a striped awning and a rooftop food sign, seen from above at a 45 degree angle so the roof and two side walls are visible, one single building, centered, isolated on a plain light grey background, no ground, 1990s isometric tycoon game building sprite, vibrant VGA colors, pixel"
+    },
+    {
+      "id": "gift_shop-t1",
+      "seed": 403,
+      "prompt": "isometric pixel art, 3/4 top-down isometric view, a small souvenir stall building with a canopy and a small sign, seen from above at a 45 degree angle so the roof and two side walls are visible, one single building, centered, isolated on a plain light grey background, no ground, 1990s isometric tycoon game building sprite, vibrant VGA colors, pixel"
+    },
+    {
+      "id": "gift_shop-t2",
+      "seed": 404,
+      "prompt": "isometric pixel art, 3/4 top-down isometric view, a gift shop building with big display windows and a hanging sign, seen from above at a 45 degree angle so the roof and two side walls are visible, one single building, centered, isolated on a plain light grey background, no ground, 1990s isometric tycoon game building sprite, vibrant VGA colors, pixel"
+    },
+    {
+      "id": "gift_shop-t3",
+      "seed": 405,
+      "prompt": "isometric pixel art, 3/4 top-down isometric view, a large souvenir emporium building with big windows and a decorative roof, seen from above at a 45 degree angle so the roof and two side walls are visible, one single building, centered, isolated on a plain light grey background, no ground, 1990s isometric tycoon game building sprite, vibrant VGA colors, pixel"
+    },
+    {
+      "id": "restrooms-t1",
+      "seed": 406,
+      "prompt": "isometric pixel art, 3/4 top-down isometric view, a small portable restroom cabin building, seen from above at a 45 degree angle so the roof and two side walls are visible, one single building, centered, isolated on a plain light grey background, no ground, 1990s isometric tycoon game building sprite, vibrant VGA colors, pixel"
+    },
+    {
+      "id": "restrooms-t2",
+      "seed": 407,
+      "prompt": "isometric pixel art, 3/4 top-down isometric view, a public restroom block building with restroom door signs, seen from above at a 45 degree angle so the roof and two side walls are visible, one single building, centered, isolated on a plain light grey background, no ground, 1990s isometric tycoon game building sprite, vibrant VGA colors, pixel"
+    },
+    {
+      "id": "restrooms-t3",
+      "seed": 408,
+      "prompt": "isometric pixel art, 3/4 top-down isometric view, a restroom pavilion building with a wide tiled hip roof, seen from above at a 45 degree angle so the roof and two side walls are visible, one single building, centered, isolated on a plain light grey background, no ground, 1990s isometric tycoon game building sprite, vibrant VGA colors, pixel"
+    },
+    {
+      "id": "office-t1",
+      "seed": 409,
+      "prompt": "isometric pixel art, 3/4 top-down isometric view, a small one-storey park office building with a flat roof and a sign, seen from above at a 45 degree angle so the roof and two side walls are visible, one single building, centered, isolated on a plain light grey background, no ground, 1990s isometric tycoon game building sprite, vibrant VGA colors, pixel"
+    },
+    {
+      "id": "office-t2",
+      "seed": 410,
+      "prompt": "isometric pixel art, 3/4 top-down isometric view, a two-storey park administration office building with a flat roof, seen from above at a 45 degree angle so the roof and two side walls are visible, one single building, centered, isolated on a plain light grey background, no ground, 1990s isometric tycoon game building sprite, vibrant VGA colors, pixel"
+    },
+    {
+      "id": "office-t3",
+      "seed": 411,
+      "prompt": "isometric pixel art, 3/4 top-down isometric view, a three-storey park headquarters office building with a small clock and a flag, seen from above at a 45 degree angle so the roof and two side walls are visible, one single building, centered, isolated on a plain light grey background, no ground, 1990s isometric tycoon game building sprite, vibrant VGA colors, pixel"
+    },
+    {
+      "id": "visitor_center-t1",
+      "seed": 412,
+      "prompt": "isometric pixel art, 3/4 top-down isometric view, a small information kiosk booth building, seen from above at a 45 degree angle so the roof and two side walls are visible, one single building, centered, isolated on a plain light grey background, no ground, 1990s isometric tycoon game building sprite, vibrant VGA colors, pixel"
+    },
+    {
+      "id": "visitor_center-t2",
+      "seed": 413,
+      "prompt": "isometric pixel art, 3/4 top-down isometric view, a visitor center building with a wide glass entrance and flag banners, seen from above at a 45 degree angle so the roof and two side walls are visible, one single building, centered, isolated on a plain light grey background, no ground, 1990s isometric tycoon game building sprite, vibrant VGA colors, pixel"
+    },
+    {
+      "id": "visitor_center-t3",
+      "seed": 414,
+      "prompt": "isometric pixel art, 3/4 top-down isometric view, a grand visitor center hall building with columns and a gable roof, seen from above at a 45 degree angle so the roof and two side walls are visible, one single building, centered, isolated on a plain light grey background, no ground, 1990s isometric tycoon game building sprite, vibrant VGA colors, pixel"
+    },
+    {
+      "id": "vet_clinic-t1",
+      "seed": 415,
+      "prompt": "isometric pixel art, 3/4 top-down isometric view, a small first-aid post cabin building with a red cross sign, seen from above at a 45 degree angle so the roof and two side walls are visible, one single building, centered, isolated on a plain light grey background, no ground, 1990s isometric tycoon game building sprite, vibrant VGA colors, pixel"
+    },
+    {
+      "id": "vet_clinic-t2",
+      "seed": 416,
+      "prompt": "isometric pixel art, 3/4 top-down isometric view, a veterinary clinic building with a red cross sign and white walls, seen from above at a 45 degree angle so the roof and two side walls are visible, one single building, centered, isolated on a plain light grey background, no ground, 1990s isometric tycoon game building sprite, vibrant VGA colors, pixel"
+    },
+    {
+      "id": "vet_clinic-t3",
+      "seed": 417,
+      "prompt": "isometric pixel art, 3/4 top-down isometric view, a large animal hospital building with a red cross sign and white walls, seen from above at a 45 degree angle so the roof and two side walls are visible, one single building, centered, isolated on a plain light grey background, no ground, 1990s isometric tycoon game building sprite, vibrant VGA colors, pixel"
+    },
+    {
+      "id": "park_tram-t1",
+      "seed": 418,
+      "prompt": "isometric pixel art, 3/4 top-down isometric view, a small tram stop shelter building with a flat canopy roof on posts, seen from above at a 45 degree angle so the roof and two side walls are visible, one single building, centered, isolated on a plain light grey background, no ground, 1990s isometric tycoon game building sprite, vibrant VGA colors, pixel"
+    },
+    {
+      "id": "park_tram-t2",
+      "seed": 419,
+      "prompt": "isometric pixel art, 3/4 top-down isometric view, a tram station building with a boarding platform and a canopy, seen from above at a 45 degree angle so the roof and two side walls are visible, one single building, centered, isolated on a plain light grey background, no ground, 1990s isometric tycoon game building sprite, vibrant VGA colors, pixel"
+    },
+    {
+      "id": "park_tram-t3",
+      "seed": 420,
+      "prompt": "isometric pixel art, 3/4 top-down isometric view, a large tram depot building with a wide canopy and a boarding platform, seen from above at a 45 degree angle so the roof and two side walls are visible, one single building, centered, isolated on a plain light grey background, no ground, 1990s isometric tycoon game building sprite, vibrant VGA colors, pixel"
+    }
+  ]
+}

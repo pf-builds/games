@@ -78,6 +78,44 @@ function loadBiomeTextures() {
     img.src = new URL(`biome-${id}.png`, base).href;
   }
 }
+// Phase 4: facility BUILDING sprites (buildings/<id>.png), oblique 3/4 pixel art blitted onto each
+// facility's footprint. Each facility maps to a small (early tiers) and/or large (top tiers) stage so
+// the upgrade still reads; tier 0 empty pads and any unmapped tier keep the procedural drawing.
+const buildingSprites = new Map();
+// Each facility maps to three isometric stage sprites (small/mid/large) and a per-tier index into
+// them (null tiers keep the procedural drawing, e.g. an empty pad or "no tram"). `scale` fine-tunes
+// the footprint fit per building on top of balance.living.building_scale.
+const BUILDING_ART = {
+  food_stand:     { stages: ['food_stand-t1', 'food_stand-t2', 'food_stand-t3'], tierStage: [null, 0, 1, 1, 2], scale: 1.0 },
+  gift_shop:      { stages: ['gift_shop-t1', 'gift_shop-t2', 'gift_shop-t3'], tierStage: [null, 0, 1, 1, 2], scale: 1.0 },
+  restrooms:      { stages: ['restrooms-t1', 'restrooms-t2', 'restrooms-t3'], tierStage: [0, 1, 1, 2], scale: 1.0 },
+  office:         { stages: ['office-t1', 'office-t2', 'office-t3'], tierStage: [0, 1, 2], scale: 0.9 },
+  visitor_center: { stages: ['visitor_center-t1', 'visitor_center-t2', 'visitor_center-t3'], tierStage: [null, 0, 1, 2], scale: 1.0 },
+  vet_clinic:     { stages: ['vet_clinic-t1', 'vet_clinic-t2', 'vet_clinic-t3'], tierStage: [null, 0, 1, 2], scale: 0.82 },
+  park_tram:      { stages: ['park_tram-t1', 'park_tram-t2', 'park_tram-t3'], tierStage: [null, 0, 1, 2], scale: 1.0 }
+};
+function loadBuildingSprites() {
+  let base;
+  try { base = new URL('../../buildings/', import.meta.url); } catch { return; }
+  fetch(new URL('manifest.json', base)).then(r => (r.ok ? r.json() : null)).then(m => {
+    if (!m || !m.buildings) return;
+    for (const [id, meta] of Object.entries(m.buildings)) {
+      const rec = { img: new Image(), w: meta.w, h: meta.h, ready: false };
+      rec.img.onload = () => { rec.ready = true; };
+      rec.img.src = new URL(`${id}.png`, base).href;
+      buildingSprites.set(id, rec);
+    }
+  }).catch(() => {});
+}
+// The building sprite + per-building scale for a facility at a tier, or null to keep the procedural drawing.
+function buildingArt(id, tier) {
+  const map = BUILDING_ART[id];
+  if (!map) return null;
+  const si = map.tierStage[tier];
+  if (si == null) return null; // empty pad / no-tram: procedural
+  const rec = buildingSprites.get(map.stages[si]);
+  return rec && rec.ready ? { rec, scale: map.scale ?? 1 } : null;
+}
 function loadDinoSprites() {
   let base;
   try { base = new URL('../../sprites/', import.meta.url); }
@@ -100,6 +138,7 @@ export function initLiving(el, h) {
   handlers = h;
   loadDinoSprites();
   loadBiomeTextures();
+  loadBuildingSprites();
   canvas.addEventListener('mousemove', onMove);
   canvas.addEventListener('mouseleave', () => { if (!active) return; hover = null; hoverFacility = null; hideTip(); });
   canvas.addEventListener('wheel', e => {
@@ -862,6 +901,20 @@ function drawLamp(e) {
 
 // Fixed facility at its tier: bigger box per tier, extra roof sections, storeys and a style per tier from
 // facilities.json `render`, plus a tag with the tier label. Every tier looks different from the one before.
+// Phase 4: draw a building sprite anchored to its footprint's front-centre, scaled to the footprint
+// width (building_scale gives a little overhang for eaves/roof). A soft shadow grounds it; depth-sort
+// is handled by the facility entry's front-edge depth, so visitors in front still overlap correctly.
+function blitBuilding(art, rect, scale = 1) {
+  const cx = (rect.x0 + rect.x1) / 2;
+  project(rect.x0, rect.y1, 0, P); project(rect.x1, rect.y1, 0, Q);
+  const footW = Math.abs(Q.x - P.x);
+  const drawW = footW * (DATA.balance.living.building_scale ?? 1.18) * scale;
+  const drawH = drawW * (art.h / art.w);
+  project(cx, rect.y1, 0, P);
+  shadow(P.x, P.y, drawW * 0.42);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(art.img, Math.round(P.x - drawW / 2), Math.round(P.y - drawH), Math.round(drawW), Math.round(drawH));
+}
 function drawFacility(e) {
   facilityRect(e.id, e.tier, rect);
   const c = FACILITY_COLORS[e.id] || ['#8a8a8a', '#666', '#555'];
@@ -876,6 +929,9 @@ function drawFacility(e) {
     queueTag(f.name.toUpperCase(), P.x, P.y - 2, OUT, '#f2c94c', 2);
     return;
   }
+  // Phase 4: blit the pixel-art building sprite, footprint-anchored, instead of the procedural block.
+  const art = buildingArt(e.id, e.tier);
+  if (art) { blitBuilding(art.rec, rect, art.scale); return; }
   if (style === 'portable') { // a row of three portable cabins
     const n = 3, w = (x1 - x0) / n;
     for (let i = 0; i < n; i++) box(x0 + i * w + 0.02, y0, x0 + (i + 1) * w - 0.02, y1, z, '#8fb7ad', c[1], c[2], OUT);
