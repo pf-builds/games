@@ -1303,6 +1303,49 @@
         endingEl.classList.add("hidden");
       }
 
+      // 9. Spacebar to mine: synthetic keydown Space raises gold and sets lastCue
+      GD.reset();
+      GD.grantForTest("dorrik", 1);
+      var goldBeforeSpace = GD.state.gold;
+      if (window.GDAudio) window.GDAudio.lastCue = null;
+      GD.dbg.lastCue = null;
+      // Dispatch Space keydown through the real document handler
+      var spaceEvt = new KeyboardEvent("keydown", { code: "Space", key: " ", bubbles: true });
+      document.dispatchEvent(spaceEvt);
+      var goldAfterSpace = GD.state.gold;
+      check("p7_space_mines_gold", true, goldAfterSpace > goldBeforeSpace,
+        goldAfterSpace > goldBeforeSpace);
+      var cueName = window.GDAudio ? window.GDAudio.lastCue : GD.dbg.lastCue;
+      check("p7_space_sets_lastcue", "strike", cueName, cueName === "strike");
+
+      // Space during textarea focus must NOT strike
+      var ta = document.getElementById("import-area");
+      if (ta) {
+        ta.classList.remove("hidden");
+        ta.focus();
+        var goldBeforeFocused = GD.state.gold;
+        var spaceEvt2 = new KeyboardEvent("keydown", { code: "Space", key: " ", bubbles: true });
+        document.dispatchEvent(spaceEvt2);
+        check("p7_space_ignored_in_textarea", goldBeforeFocused, GD.state.gold,
+          GD.state.gold === goldBeforeFocused);
+        ta.blur();
+        ta.classList.add("hidden");
+      }
+
+      // spaceMinesPerSec lives in JSON
+      check("p7_space_rate_in_json", true,
+        !!(cfg.input && cfg.input.spaceMinesPerSec > 0),
+        !!(cfg.input && cfg.input.spaceMinesPerSec > 0));
+
+      // Effect description function produces non-empty strings
+      var edBad = [];
+      var allPurch = E.purchasables(cfg);
+      for (var edi = 0; edi < allPurch.length; edi++) {
+        var ed = E.effectDesc(allPurch[edi].effects);
+        if (!ed) edBad.push(allPurch[edi].id);
+      }
+      check("p7_effect_desc_for_all", "all have descriptions", edBad.join(","), edBad.length === 0);
+
       // Layout assertion: at least 3 buy rows intersect the viewport
       if (window.GDUI && window.GDUI.rowReport) {
         var rr3 = window.GDUI.rowReport();

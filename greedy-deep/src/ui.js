@@ -3,7 +3,7 @@
 (function () {
   "use strict";
 
-  var CONFIG_VERSION = 20;
+  var CONFIG_VERSION = 21;
 
   var UI = (window.GDUI = {});
   var E = window.GDEngine, GD = window.GD;
@@ -499,25 +499,72 @@
       for (var tid in tabDefs) {
         if (tabDefs[tid].ids && tabDefs[tid].ids.indexOf(p.id) !== -1) { tab = tid; break; }
       }
-      var sub = isDwarf ? (p.job + " — " + deflavor(E.dwarfLine(cfg, p.id), "dwarfLine")) : (p.desc || "");
+      var effectLine = E.effectDesc(p.effects);
+      var flavorLine = isDwarf ? deflavor(E.dwarfLine(cfg, p.id), "dwarfLine") : "";
+      var sub = isDwarf
+        ? (p.job + " — " + effectLine)
+        : ((p.desc || "") + (effectLine ? " [" + effectLine + "]" : ""));
+      // Full tooltip text for hover
+      var tipParts = [p.name];
+      if (isDwarf) tipParts.push(p.job + ": " + effectLine);
+      else tipParts.push(effectLine);
+      if (isDwarf && flavorLine) tipParts.push('"' + flavorLine + '"');
+      else if (p.desc) tipParts.push(p.desc);
+      var tipText = tipParts.join("\n");
+
       var row = document.createElement("div");
       row.className = "row";
+      row.setAttribute("title", tipText);
+      // Build tooltip HTML (newlines become <br>)
+      var tipHtml = tipText.replace(/\n/g, "<br>");
       row.innerHTML =
+        '<div class="row-tip">' + tipHtml + '</div>' +
         '<div class="row-main">' +
           '<div class="row-name"><span class="tag ' + (isDwarf ? "crew" : "gear") + '">' + (isDwarf ? "CREW" : "GEAR") + "</span>" +
             '<span class="nm"></span><span class="owned"></span></div>' +
           '<div class="row-sub"></div>' +
+          '<div class="row-effect"></div>' +
         "</div>" +
         '<button class="buy" type="button"><span class="price"><span class="cost"></span>' +
           '<span class="unit">g</span></span><span class="eta"></span></button>';
       row.querySelector(".nm").textContent = p.name;
       row.querySelector(".row-sub").textContent = sub;
+      var effEl = row.querySelector(".row-effect");
+      if (isDwarf && flavorLine) effEl.textContent = flavorLine;
+      else effEl.textContent = "";
       var container = containers[tab];
       if (container) container.appendChild(row);
       var btn = row.querySelector(".buy");
       btn.addEventListener("click", (function (id) {
         return function () { onBuy(id); };
       })(p.id));
+      // Position the styled tooltip on hover (fixed to escape rail overflow)
+      var tip = row.querySelector(".row-tip");
+      if (tip) {
+        row.addEventListener("mouseenter", (function (rowEl, tipEl) {
+          return function () {
+            // Briefly show to measure height, then position
+            tipEl.style.display = "block";
+            tipEl.style.visibility = "hidden";
+            var th = tipEl.offsetHeight;
+            var r = rowEl.getBoundingClientRect();
+            var tipTop = r.top - th - 4;
+            if (tipTop < 0) tipTop = r.bottom + 4; // flip below if above viewport
+            tipEl.style.left = Math.max(0, r.left) + "px";
+            tipEl.style.top = tipTop + "px";
+            tipEl.style.visibility = "";
+            // Suppress the native title tooltip while styled one is shown
+            rowEl._savedTitle = rowEl.getAttribute("title");
+            rowEl.removeAttribute("title");
+          };
+        })(row, tip));
+        row.addEventListener("mouseleave", (function (rowEl, tipEl) {
+          return function () {
+            tipEl.style.display = "";
+            if (rowEl._savedTitle) rowEl.setAttribute("title", rowEl._savedTitle);
+          };
+        })(row, tip));
+      }
       rows.push({
         p: p, el: row, btn: btn, tab: tab,
         cost: row.querySelector(".cost"), owned: row.querySelector(".owned"), eta: row.querySelector(".eta")
@@ -707,6 +754,47 @@
     closeSettings();
   }
 
+  // ------------------------------------------------------------ strike (shared by tap + spacebar)
+  // Performs a single strike: gold, audio, particles, floaters.
+  // `lx`/`ly` are optional local canvas coords for particle spawn; defaults to vein center.
+  function doStrike(lx, ly) {
+    unlockAudio();
+    var g = GD.tap(1);
+    if (els.hint) els.hint.classList.add("gone");
+
+    window.GDRender.strike();
+    var bandColor = (GD.derive().band.veinColor) || "#f2c14e";
+    window.GDRender.addOreArc(bandColor);
+
+    // Default spawn point: vein center in canvas coords
+    var s2 = window.GDRender.scale();
+    if (lx === undefined || ly === undefined) {
+      var vr = window.GDRender.veinRect();
+      lx = (vr.x + vr.w / 2) * s2;
+      ly = (vr.y + vr.h / 2) * s2;
+    }
+
+    if (particleSystem) {
+      var tapBuX = lx / s2, tapBuY = ly / s2;
+      var band = GD.derive().band;
+      particleSystem.burst(tapBuX, tapBuY, band.palette ? band.palette.dark : "#332d3c",
+        cfg.particles.strikeChunks, cfg.particles.strikeSpeed,
+        cfg.particles.strikeLife, cfg.particles.strikeSize, cfg.particles.strikeGravity);
+    }
+
+    if (floaterSystem) {
+      var s3 = window.GDRender.scale();
+      var fX = lx / s3, fY = ly / s3;
+      floaterSystem.add(fX + (Math.random() * 8 - 4), fY, "+" + GD.format(g), "#ffe89a", cfg.particles.floaterSize, cfg.particles.floaterLife);
+    }
+
+    oreCombo++;
+    oreComboT = 0.6;
+    refresh();
+    return g;
+  }
+  UI.doStrike = doStrike;
+
   // ------------------------------------------------------------ input
   function bindInput() {
     var down = null, moved = false;
@@ -734,37 +822,7 @@
       var d = down; down = null;
       window.GDRender.cameraRelease();
       if (moved) return;
-
-      // Item 7: click ANYWHERE on the shaft = strike, with chunks at the tap point
-      var g = GD.tap(1);
-      if (els.hint) els.hint.classList.add("gone");
-
-      window.GDRender.strike();
-      // audio played by GD.tap() above
-      // Ore pop arc to the cart
-      var bandColor = (GD.derive().band.veinColor) || "#f2c14e";
-      window.GDRender.addOreArc(bandColor);
-
-      // Particles at tap point
-      if (particleSystem) {
-        var s2 = window.GDRender.scale();
-        var tapBuX = d.lx / s2, tapBuY = d.ly / s2;
-        var band = GD.derive().band;
-        particleSystem.burst(tapBuX, tapBuY, band.palette ? band.palette.dark : "#332d3c",
-          cfg.particles.strikeChunks, cfg.particles.strikeSpeed,
-          cfg.particles.strikeLife, cfg.particles.strikeSize, cfg.particles.strikeGravity);
-      }
-
-      // Floater at tap point
-      if (floaterSystem) {
-        var s3 = window.GDRender.scale();
-        var fX = d.lx / s3, fY = d.ly / s3;
-        floaterSystem.add(fX + (Math.random() * 8 - 4), fY, "+" + GD.format(g), "#ffe89a", cfg.particles.floaterSize, cfg.particles.floaterLife);
-      }
-
-      oreCombo++;
-      oreComboT = 0.6;
-      refresh();
+      doStrike(d.lx, d.ly);
     }
     els.canvas.addEventListener("pointerup", endPointer);
     els.canvas.addEventListener("pointercancel", function () { down = null; window.GDRender.cameraRelease(); });
@@ -783,6 +841,24 @@
     if (wb) wb.addEventListener("click", function () { els.welcome.classList.add("hidden"); });
     var eb = els.ending && els.ending.querySelector(".panel-btn");
     if (eb) eb.addEventListener("click", function () { els.ending.classList.add("hidden"); });
+
+    // Spacebar to mine: rate-capped, ignores focus in input/textarea
+    var spaceMinInterval = 1000 / ((cfg.input && cfg.input.spaceMinesPerSec) || 8);
+    var lastSpaceT = 0;
+    document.addEventListener("keydown", function (e) {
+      if (e.code !== "Space" && e.key !== " ") return;
+      // Don't strike while typing in a text field
+      var tag = document.activeElement && document.activeElement.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      e.preventDefault();
+      // Rate cap: ignore if too soon after the last strike
+      var now = performance.now();
+      if (now - lastSpaceT < spaceMinInterval) return;
+      lastSpaceT = now;
+      // Dismiss splash on first Space if it's up
+      if (els.splash && !els.splash.classList.contains("off")) { dismissSplash(); return; }
+      doStrike();
+    });
   }
 
   // ------------------------------------------------------------ clocks

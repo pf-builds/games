@@ -617,6 +617,28 @@
     };
   };
 
+  // ------------------------------------------------------------ effect description
+  // Plain-language per-unit effect string for a purchasable's effects array.
+  E.effectDesc = function (effects) {
+    if (!effects || !effects.length) return "";
+    var parts = [];
+    for (var i = 0; i < effects.length; i++) {
+      var ef = effects[i];
+      var v = ef.verb, val = ef.value;
+      if (v === "add_click") parts.push("+" + val + " tap power");
+      else if (v === "add_rate") parts.push("+" + val + " m/s dig");
+      else if (v === "mul_rate") parts.push("+" + Math.round((val - 1) * 100) + "% dig speed");
+      else if (v === "mul_gold") parts.push("+" + Math.round((val - 1) * 100) + "% gold");
+      else if (v === "add_rate_per_dwarf") parts.push("+" + val + " m/s per dwarf");
+      else if (v === "reveal_bands") parts.push("+" + val + " band revealed");
+      else if (v === "mul_hazard_resist") parts.push("-" + Math.round((1 - val) * 100) + "% hazard");
+      else if (v === "add_offline_hours") parts.push("+" + val + " hr offline");
+      else if (v === "mul_offline_rate") parts.push("+" + Math.round((val - 1) * 100) + "% offline rate");
+      else parts.push(v + " " + val);
+    }
+    return parts.join(", ");
+  };
+
   // ------------------------------------------------------------ flavor
   E.flavorTodoCount = function (cfg) {
     var n = 0;

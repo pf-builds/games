@@ -1,5 +1,5 @@
 {
-  "configVersion": 20,
+  "configVersion": 21,
   "title": "Greedy Deep",
   "start": {
     "gold": 0,
@@ -485,6 +485,9 @@
       10,
       0
     ]
+  },
+  "input": {
+    "spaceMinesPerSec": 8
   },
   "veil": {
     "alpha": 0.5,

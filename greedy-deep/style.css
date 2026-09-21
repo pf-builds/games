@@ -227,6 +227,8 @@ body.booting #col { opacity: 0; }
 .row-main { flex: 1; min-width: 0; }
 .row-name { font-size: calc(6px * var(--s)); font-weight: 700; display: flex; align-items: center; gap: calc(2px * var(--s)); }
 .row-sub { font-size: calc(4.5px * var(--s)); color: var(--dim); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row-effect { font-size: calc(3.5px * var(--s)); color: #8d85a0; font-style: italic; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row-effect:empty { display: none; }
 .owned { color: var(--gold); font-weight: 700; }
 .tag {
   font-size: calc(4px * var(--s)); letter-spacing: .08em; padding: 1px 4px; border-radius: 3px;
@@ -445,6 +447,16 @@ body.booting #col { opacity: 0; }
   }
   .rail-section .row-name { font-size: 13px; }
   .rail-section .row-sub { font-size: 11px; }
+  .rail-section .row-effect { font-size: 10px; }
+  /* Styled hover tooltip for desktop rail rows — JS-positioned fixed to escape rail overflow */
+  .row-tip {
+    display: none; position: fixed; z-index: 30;
+    background: #1e1930; border: 1px solid #3a3050; border-radius: 4px;
+    padding: 8px 10px; min-width: 200px; max-width: 280px;
+    font-size: 12px; line-height: 1.5; color: var(--ink);
+    white-space: normal; box-shadow: 0 4px 16px rgba(0,0,0,.5);
+    pointer-events: none;
+  }
   .rail-section .buy { font-size: 13px; min-height: 38px; }
   .rail-section .buy .eta { font-size: 10px; }
   .rail-log {
