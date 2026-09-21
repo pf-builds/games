@@ -12,7 +12,7 @@ import { initAgents } from '../sim/agents.js';
 import { onParcelClick, facilityPanel } from './enclosure.js';
 import { renderTown, refreshTown } from './town.js';
 import { renderReports, openQuarterlyReport } from './reports.js';
-import { renderMarketing, refreshMarketing } from './marketing.js';
+import { renderMarketing, refreshMarketing, renderParkRail } from './marketing.js';
 import { renderFactbook } from './factbook.js';
 import { renderSettings } from './settings.js';
 import { openPrizes, prizeToast } from './prizes.js';
@@ -104,7 +104,9 @@ function renderCurrent() {
 function renderParkBar() {
   const bar = $('park-bar');
   bar.replaceChildren();
+  const rail = $('park-rail');
   if (parkMode === 'living') {
+    if (rail) { rail.hidden = false; renderParkRail(rail, { openMarketing: () => showView('marketing') }); }
     const n = (state.prizes || []).length;
     const nx = nextPrize();
     append(bar, [
@@ -117,6 +119,7 @@ function renderParkBar() {
     ]);
     return;
   }
+  if (rail) rail.hidden = true; // Buy Land survey map uses the full canvas width
   const owned = Object.values(state.parcels).filter(p => p.owned).length;
   append(bar, [
     button('Back to park', () => setParkMode('living'), { title: 'Esc' }),
