@@ -14,6 +14,7 @@ import { goalsList, buildReportCard, forceGoal, goalDone } from './goals.js';
 import { juiceStats, reduceMotion, clearToasts, toastCount, shake } from './ui/effects.js';
 import { openReportCard, openGoals } from './ui/goals.js';
 import { openNewGame, modeSummary } from './ui/newgame.js';
+import { buildDemoPark, showTitle, hideTitle } from './ui/title.js';
 import { initProjection } from './render/projection.js';
 import { buyParcel, upgradeFacility, parcelPrice, parcelPrices, parcelCapacity, perimeterSegments, spaceUsed, plantSeeds, vegetationCap, vegetationGrowth, seedsToPlant, setAutoRestock, foodDays, buyCampaign, marketingLadder, memberChurnRate, membershipConversion, relandscape, relandscapeCost, setPassPrice } from './economy.js';
 import { breakoutChance } from './events.js';
@@ -53,8 +54,17 @@ async function boot() {
   initAudio({ livingActive });
   initShell({ onNewGame: startNewGame });
   const stale = discardStaleSave();
-  startNewGame();
-  if (stale) { log('The park was re-surveyed: starting a new park (old save discarded).'); refresh(); alertModal('New park layout', STALE_MESSAGE); }
+  // Landing title: an animated, fully built demo park runs as the hero backdrop while the player
+  // picks a difficulty (or continues a saved park). Selecting one founds the real game.
+  const finishStale = () => { if (stale) { log('The park was re-surveyed: starting a new park (old save discarded).'); refresh(); alertModal('New park layout', STALE_MESSAGE); } };
+  buildDemoPark();
+  showView('park');
+  setSpeed(0);
+  showTitle({
+    hasSave: hasSave(),
+    onStart: modeSel => { hideTitle(); startNewGame(modeSel); finishStale(); },
+    onContinue: () => { hideTitle(); const err = load(); if (err) { startNewGame(); log(err); finishStale(); } else { setSpeed(0); showView('town'); refresh(); } }
+  });
 
   window.DPS = {
     get state() { return state; },

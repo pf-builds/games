@@ -29,7 +29,6 @@ export function renderTown(root) {
       h('div', { class: 'sun' }),
       h('div', { class: 'cloud c1' }), h('div', { class: 'cloud c2' }), h('div', { class: 'cloud c3' }),
       h('div', { class: 'town-sign' }, h('h2', {}, 'Town Street'), h('p', { class: 'muted' }, 'Click a storefront to go inside. The clock pauses while you shop.')),
-      h('img', { class: 'town-hero', src: 'scenes/hero.png', alt: 'An aerial view of your dinosaur park', decoding: 'async' }),
       board),
     h('div', { class: 'hills' }),
     h('div', { class: 'street' }, STORES.map(s => h('button', { class: 'storefront', style: `--store:${s.color}`, 'aria-label': `${s.name}: ${s.blurb}`, on: { click: () => s.open() } },

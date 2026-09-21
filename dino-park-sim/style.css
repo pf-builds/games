@@ -49,6 +49,36 @@ p { margin: calc(6 * var(--u)) 0; }
     "ticker ticker";
   overflow: hidden;
 }
+/* Title mode: collapse the shell so the Living Park canvas fills the screen as the hero backdrop. */
+#app.title-mode { grid-template-columns: 1fr; grid-template-rows: 1fr; grid-template-areas: "main"; }
+#app.title-mode > #status, #app.title-mode > #toolbar, #app.title-mode > #ticker, #app.title-mode #park-bar { display: none; }
+#app.title-mode .park-view { padding: 0; gap: 0; }
+#app.title-mode #park { border: none; background: #0c0f14; }
+
+/* Title / landing overlay over the animated park. */
+#title-screen { position: absolute; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center; justify-content: space-between; pointer-events: none; }
+#title-screen .title-vignette { position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(120% 92% at 50% 40%, rgba(8,10,14,0) 42%, rgba(8,10,14,0.7) 100%),
+    linear-gradient(180deg, rgba(8,10,14,0.6), rgba(8,10,14,0) 24%, rgba(8,10,14,0) 52%, rgba(8,10,14,0.9)); }
+.title-head { position: relative; z-index: 1; text-align: center; margin-top: clamp(calc(26 * var(--u)), 6vh, calc(84 * var(--u))); padding: 0 calc(16 * var(--u)); }
+.title-logo { display: flex; flex-direction: column; gap: calc(4 * var(--u)); font-family: var(--font-pixel); line-height: 1.05;
+  font-size: clamp(calc(30 * var(--u)), 6.4vw, calc(92 * var(--u))); text-shadow: 0 calc(4 * var(--u)) 0 rgba(0,0,0,0.55), 0 0 calc(26 * var(--u)) rgba(242,201,76,0.28); }
+.title-word-1 { color: #f2c94c; }
+.title-word-2 { color: #ece7d8; letter-spacing: calc(2 * var(--u)); }
+.title-tag { margin-top: calc(12 * var(--u)); color: #dcd7c8; font-size: clamp(calc(12 * var(--u)), 1.5vw, calc(18 * var(--u))); text-shadow: 0 calc(2 * var(--u)) calc(6 * var(--u)) rgba(0,0,0,0.85); }
+.title-panel { position: relative; z-index: 1; pointer-events: none; width: min(94vw, calc(840 * var(--u))); margin-bottom: clamp(calc(22 * var(--u)), 6vh, calc(66 * var(--u))); text-align: center; }
+.title-panel-label { color: #cfe8b8; font-family: var(--font-pixel); font-size: calc(10 * var(--u)); letter-spacing: calc(1 * var(--u)); margin-bottom: calc(12 * var(--u)); text-shadow: 0 calc(2 * var(--u)) calc(6 * var(--u)) rgba(0,0,0,0.85); }
+.title-modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: calc(12 * var(--u)); }
+.title-diff { pointer-events: auto; cursor: pointer; text-align: left; display: flex; flex-direction: column; gap: calc(5 * var(--u)); padding: calc(14 * var(--u)) calc(16 * var(--u));
+  background: rgba(16,20,28,0.88); border: calc(2 * var(--u)) solid var(--border); border-radius: calc(6 * var(--u)); transition: transform .08s ease, border-color .12s ease, background .12s ease; }
+.title-diff:hover:not(.disabled) { transform: translateY(calc(-2 * var(--u))); border-color: var(--accent-2); background: rgba(24,30,40,0.96); }
+.title-diff.disabled { opacity: 0.5; cursor: not-allowed; }
+.title-diff-name { font-family: var(--font-pixel); font-size: calc(12 * var(--u)); color: var(--accent-2); }
+.title-diff-feel { color: var(--text); font-size: calc(13 * var(--u)); }
+.title-diff-blurb { color: var(--muted); font-size: calc(12 * var(--u)); line-height: 1.35; }
+.title-continue { pointer-events: auto; margin-top: calc(14 * var(--u)); cursor: pointer; background: rgba(16,20,28,0.88); border: calc(2 * var(--u)) solid var(--border); border-radius: calc(6 * var(--u)); color: var(--text); padding: calc(10 * var(--u)) calc(18 * var(--u)); font-size: calc(13 * var(--u)); }
+.title-continue:hover { border-color: var(--accent-2); }
+@media (max-width: 720px) { .title-modes { grid-template-columns: 1fr; } }
 #status { grid-area: status; display: flex; align-items: stretch; gap: 0; padding: 0 calc(16 * var(--u)); background: var(--panel); border-bottom: calc(2 * var(--u)) solid var(--border); }
 #toolbar { grid-area: toolbar; display: flex; flex-direction: column; gap: calc(6 * var(--u)); padding: calc(10 * var(--u)) calc(8 * var(--u)); background: var(--panel); border-right: calc(2 * var(--u)) solid var(--border); }
 #main { grid-area: main; position: relative; overflow: hidden; }
@@ -206,9 +236,6 @@ p { margin: calc(6 * var(--u)) 0; }
 .town-sign h2 { margin-bottom: calc(6 * var(--u)); }
 .town-sign p { margin: 0; }
 .notice { position: relative; z-index: 1; background: rgba(15,18,24,0.72); border: calc(2 * var(--u)) solid #8a6b3a; border-radius: calc(4 * var(--u)); padding: calc(10 * var(--u)) calc(14 * var(--u)); min-width: calc(300 * var(--u)); }
-/* Hero park illustration as a framed billboard, centred between the sign and the notice board. */
-.town-hero { position: relative; z-index: 1; align-self: center; width: clamp(calc(120 * var(--u)), 15vw, calc(210 * var(--u))); height: auto; aspect-ratio: 1; object-fit: cover; image-rendering: pixelated; border: calc(3 * var(--u)) solid #8a6b3a; border-radius: calc(4 * var(--u)); box-shadow: 0 calc(4 * var(--u)) calc(12 * var(--u)) rgba(0,0,0,0.45); }
-@media (max-width: 720px) { .town-hero { display: none; } }
 .notice-title { font-family: var(--font-pixel); font-size: calc(8 * var(--u)); color: var(--accent-2); margin-bottom: calc(8 * var(--u)); letter-spacing: 0.5px; }
 .notice-line { display: flex; justify-content: space-between; gap: calc(18 * var(--u)); font-size: calc(13 * var(--u)); padding: calc(2 * var(--u)) 0; border-bottom: 1px dotted rgba(167,172,189,0.35); }
 .notice-line span:first-child { color: var(--muted); }

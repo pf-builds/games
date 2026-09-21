@@ -103,13 +103,13 @@ export function initLiving(el, h) {
   canvas.addEventListener('mousemove', onMove);
   canvas.addEventListener('mouseleave', () => { if (!active) return; hover = null; hoverFacility = null; hideTip(); });
   canvas.addEventListener('wheel', e => {
-    if (!active) return;
+    if (!active || titleMode) return;
     e.preventDefault();
     rawLogical(e, M);
     zoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, M.x, M.y);
   }, { passive: false });
-  canvas.addEventListener('dblclick', e => { if (!active) return; rawLogical(e, M); zoomAt(cam.zoom < ZOOM_MAX ? 1.6 : ZOOM_MIN / cam.zoom, M.x, M.y); });
-  canvas.addEventListener('mousedown', e => { if (!active || e.button !== 0) return; ptrDown = true; ptrDrag = false; ptrX = e.clientX; ptrY = e.clientY; });
+  canvas.addEventListener('dblclick', e => { if (!active || titleMode) return; rawLogical(e, M); zoomAt(cam.zoom < ZOOM_MAX ? 1.6 : ZOOM_MIN / cam.zoom, M.x, M.y); });
+  canvas.addEventListener('mousedown', e => { if (!active || titleMode || e.button !== 0) return; ptrDown = true; ptrDrag = false; ptrX = e.clientX; ptrY = e.clientY; });
   window.addEventListener('mousemove', e => {
     if (!ptrDown) return;
     if (!ptrDrag && Math.hypot(e.clientX - ptrX, e.clientY - ptrY) < 4) return;
@@ -125,7 +125,7 @@ export function initLiving(el, h) {
   });
   window.addEventListener('mouseup', () => { ptrDown = false; canvas.style.cursor = ''; });
   canvas.addEventListener('click', e => {
-    if (!active) return;
+    if (!active || titleMode) return;
     if (ptrDrag) { ptrDrag = false; return; } // finished a pan, not a click
     rawLogical(e, M); // zoom buttons live in fixed screen space (pre-camera)
     for (const key of ['in', 'out', 'reset']) {
@@ -203,6 +203,27 @@ function zoomAt(factor, cx, cy) {
   cam.zoom = nz; cam.x = cx - nz * sx; cam.y = cy - nz * sy;
   clampCam();
 }
+// Title screen: the living park runs as an animated hero backdrop — zoomed in, slowly panning,
+// with no HUD/labels and input disabled. setTitleMode(true) frames it; the render loop drives the pan.
+let titleMode = false, titlePanDir = -1;
+const TITLE_ZOOM = 2.0, TITLE_PAN_PX = 0.28;
+export function setTitleMode(on) {
+  titleMode = !!on;
+  if (titleMode) {
+    cam.zoom = TITLE_ZOOM;
+    cam.x = BASE_W * (1 - cam.zoom) / 2; // start centred, then drift
+    cam.y = BASE_H * (1 - cam.zoom) * 0.42; // a touch above centre so the pens fill the frame
+    clampCam();
+  } else {
+    cam.zoom = 1; cam.x = 0; cam.y = 0;
+  }
+}
+function titlePan() {
+  const minX = BASE_W * (1 - cam.zoom);
+  cam.x += titlePanDir * TITLE_PAN_PX;
+  if (cam.x <= minX) { cam.x = minX; titlePanDir = 1; }
+  else if (cam.x >= 0) { cam.x = 0; titlePanDir = -1; }
+}
 // Client px -> logical BASE px, before the camera transform.
 function rawLogical(e, out) {
   const r = canvas.getBoundingClientRect();
@@ -235,7 +256,7 @@ function facilityAt(e) {
   return facilityAtWorld(Q.x, Q.y, state.facilities);
 }
 function onMove(e) {
-  if (!active) return;
+  if (!active || titleMode) return;
   if (ptrDown && ptrDrag) { hideTip(); return; } // mid-pan: no hover/tooltip churn
   hover = parcelAt(e);
   hoverFacility = hover ? null : facilityAt(e);
@@ -372,6 +393,7 @@ export const wallSegments = () => staticEntries.filter(e => e.kind === K_WALL).m
 // ---- frame ----
 function render(alpha) {
   const k = canvas.width / BASE_W;
+  if (titleMode) titlePan();
   // Scene (ground, depth-sorted world, pen labels) draws under the camera; the HUD resets to base below.
   ctx.setTransform(k * cam.zoom, 0, 0, k * cam.zoom, k * cam.x, k * cam.y);
   ctx.lineJoin = 'round';
@@ -418,10 +440,9 @@ function render(alpha) {
   }
   drawPuffs();
   // Labels last, and never inside the depth sort: signs, facility tags and pen chips are UI over the scene.
-  drawPenLabels();
-  flushLabels();
+  if (!titleMode) { drawPenLabels(); flushLabels(); } // no chips/tooltips over the title backdrop
   ctx.setTransform(k, 0, 0, k, 0, 0); // HUD is fixed screen UI, not part of the zoom/pan
-  drawHud();
+  if (!titleMode) drawHud();
 }
 const crateEntry = { kind: K_CRATE, depth: 0 };
 const byDepth = (a, b) => a.depth - b.depth;
