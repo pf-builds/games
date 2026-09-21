@@ -31,7 +31,13 @@
     <button data-view="town" class="active">Town</button>
     <button data-view="park">Park</button>
     <button data-view="reports">Reports</button>
-    <button data-view="marketing">Marketing</button>
+    <div class="tb-item">
+      <div class="tb-row">
+        <button data-view="marketing">Marketing</button>
+        <button id="mkt-caret" class="tb-caret" aria-label="Marketing quick menu" aria-expanded="false" title="Campaigns &amp; auto-renew">▾</button>
+      </div>
+      <div id="mkt-drop" class="tb-drop" hidden></div>
+    </div>
     <button data-view="factbook">Fact Book</button>
     <button data-view="settings">Settings</button>
   </nav>
@@ -40,10 +46,7 @@
     <section id="view-town" class="view active"></section>
     <section id="view-park" class="view park-view">
       <div id="park-bar" class="park-bar"></div>
-      <div id="park-stage" class="park-stage">
-        <aside id="park-rail" class="park-rail"></aside>
-        <canvas id="park" width="960" height="540"></canvas>
-      </div>
+      <canvas id="park" width="960" height="540"></canvas>
     </section>
     <section id="view-reports" class="view scroll"></section>
     <section id="view-marketing" class="view scroll"></section>

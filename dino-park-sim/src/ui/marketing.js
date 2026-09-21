@@ -115,56 +115,35 @@ function autoRenewToggle(c) {
   return button(on ? '🔄 Auto-renew ON' : '🔄 Auto-renew', () => { eco.toggleAutoRenew(c.id); emitChange(); }, { class: `btn small ${on ? 'active' : ''}`, style: on ? 'background:#2a5a2a;color:#8f8' : '' });
 }
 
-// ---- Park-view left rail: marketing at a glance (active campaigns + quick buy + auto-renew) ----
-// Rendered by the shell into #park-rail on the living Park view. Re-renders every state tick (the Park view is
-// live), so no local slider state lives here — just buttons. Anything deeper (price slider, memberships) is a
-// click away in the full Marketing view via the footer button.
-function railAuto(c) {
+// ---- Marketing quick menu: a compact dropdown off the Marketing tab (shell renders it into #mkt-drop) ----
+// One line per campaign: name · status/buy · auto-renew. The whole ladder is shown (locked rungs greyed) so the
+// player sees the full marketing picture and can flip auto-renew at a glance. Re-renders live while open; anything
+// deeper (price slider, members panel, what-ifs) is one click away via the Full Marketing button / the tab itself.
+function mktAuto(c) {
   const on = !!(state.auto_renew || {})[c.id];
-  return button(`🔄 ${on ? 'ON' : 'OFF'}`, () => { eco.toggleAutoRenew(c.id); emitChange(); },
-    { class: `rail-auto${on ? ' on' : ''}`, title: on ? 'Auto-renew is ON — renews when it ends. Click to stop.' : 'Auto-renew is OFF. Click to keep it running automatically.' });
+  return button('🔄', () => { eco.toggleAutoRenew(c.id); emitChange(); },
+    { class: `mkt-auto${on ? ' on' : ''}`, title: on ? `Auto-renew ON — ${c.name} renews when it ends. Click to stop.` : `Auto-renew OFF for ${c.name}. Click to keep it running.` });
 }
-export function renderParkRail(root, { openMarketing } = {}) {
-  const ladder = eco.marketingLadder();
-  const active = eco.activeCampaigns();
-  // Running now: paid campaigns with days left, plus the permanent perk / memberships lines.
-  const runningRows = active.map(a => {
-    const d = campaignById(a.id);
-    return h('div', { class: 'rail-item running' },
-      h('div', { class: 'rail-line' },
-        h('span', { class: 'rail-name' }, d?.name || a.id),
-        h('span', { class: 'rail-days' }, `${a.days_left}d`)),
-      h('div', { class: 'rail-line' },
-        h('span', { class: 'rail-eff muted' }, a.boost ? `+${pct(a.boost)}` : a.floor ? `floor ${a.floor}` : ''),
-        d && d.kind !== 'perk' && d.kind !== 'memberships' ? railAuto(d) : null));
-  });
-  if (state.perks?.online_ticketing) runningRows.push(h('div', { class: 'rail-item running' }, h('div', { class: 'rail-line' }, h('span', { class: 'rail-name' }, 'Online Ticketing'), h('span', { class: 'rail-days perm' }, '∞'))));
-  if (state.members?.active) runningRows.push(h('div', { class: 'rail-item running' }, h('div', { class: 'rail-line' }, h('span', { class: 'rail-name' }, 'Memberships'), h('span', { class: 'rail-days perm' }, `${state.members.count}`))));
-
-  // Quick-buy: unlocked, buyable rungs (boosts/spikes/floors) not already running. Perks & memberships are
-  // one-time and live in the full view; the "already running" ones are shown above with their toggle.
-  const buyRows = ladder
-    .filter(({ def, lock, owned }) => def.kind !== 'perk' && def.kind !== 'memberships' && !owned && (!lock || /already running/.test(lock)))
-    .filter(({ lock }) => !/already running/.test(lock || '')) // running ones are in the section above
-    .map(({ def: c }) => h('div', { class: 'rail-item' },
-      h('div', { class: 'rail-line' },
-        h('span', { class: 'rail-name' }, c.name),
-        h('span', { class: 'rail-cost' }, fmt$(c.cost))),
-      h('div', { class: 'rail-line' },
-        button('Buy', () => { if (!fail(eco.buyCampaign(c.id))) emitChange(); }, { class: 'rail-buy', disabled: !eco.canAfford(c.cost) }),
-        railAuto(c))));
-
-  const lockedCount = ladder.filter(({ def, lock, owned }) => def.kind !== 'perk' && def.kind !== 'memberships' && !owned && lock && !/already running/.test(lock)).length;
-
-  const children = [
-    h('div', { class: 'rail-head' }, '📣 Marketing'),
-    h('div', { class: 'rail-price' }, h('span', { class: 'muted' }, 'Ticket'), h('span', {}, fmt$(state.ticket_price))),
-    runningRows.length ? h('div', { class: 'rail-sec' }, h('div', { class: 'rail-sub' }, 'Running now'), runningRows) : h('div', { class: 'rail-sec muted small' }, 'No campaigns running.'),
-    buyRows.length ? h('div', { class: 'rail-sec' }, h('div', { class: 'rail-sub' }, 'Quick buy'), buyRows) : null,
-    lockedCount ? h('div', { class: 'rail-sec muted small' }, `🔒 ${lockedCount} more unlock as the park grows.`) : null,
-    button('Full Marketing ▸', () => openMarketing?.(), { class: 'rail-full' })
-  ].filter(Boolean); // native .append() would stringify a null child into a literal "null"
-  clear(root).append(...children);
+function mktRow({ def: c, lock, owned }) {
+  const active = eco.campaignActive(c.id); // array of running instances
+  const renewable = c.kind !== 'perk' && c.kind !== 'memberships';
+  const isLocked = !!lock && !owned && !active.length;
+  let meta;
+  if (active.length) meta = h('span', { class: 'mkt-days', title: `${c.name} running` }, `${active[0].days_left}d${active.length > 1 ? `×${active.length}` : ''}`);
+  else if (owned) meta = h('span', { class: 'mkt-owned', title: `${c.name} active` }, '✓');
+  else if (isLocked) meta = h('span', { class: 'mkt-lock', title: `Locked: ${lock}` }, '🔒');
+  else meta = button(fmt$(c.cost), () => { if (!fail(eco.buyCampaign(c.id))) emitChange(); }, { class: 'mkt-buy', disabled: !eco.canAfford(c.cost), title: `Buy ${c.name} (${fmt$(c.cost)})` });
+  return h('div', { class: `mkt-row${isLocked ? ' locked' : ''}${active.length ? ' running' : ''}` },
+    h('span', { class: 'mkt-name', title: c.name }, c.name),
+    meta,
+    renewable ? mktAuto(c) : h('span', { class: 'mkt-auto ghost' }));
+}
+export function renderMarketingMenu(root, { openFull } = {}) {
+  const rows = eco.marketingLadder().map(mktRow);
+  clear(root).append(
+    h('div', { class: 'mkt-head' }, h('span', {}, 'Campaigns'), h('span', { class: 'mkt-ticket', title: 'Ticket price' }, `🎟 ${fmt$(state.ticket_price)}`)),
+    h('div', { class: 'mkt-list' }, rows),
+    button('Full Marketing ▸', () => openFull?.(), { class: 'mkt-full' }));
 }
 
 // What-if: project a day with the campaign added to the active list (economy untouched), scaled by its length.

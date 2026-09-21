@@ -29,15 +29,10 @@ export function fitCanvas() {
   if (!canvas) return;
   const main = document.getElementById('main');
   const bar = document.getElementById('park-bar');
-  const rail = document.getElementById('park-rail');
-  const stage = document.getElementById('park-stage');
   const pad = Math.ceil(2 * parseFloat(getComputedStyle(main.querySelector('.park-view')).paddingTop) || 8);
   const gap = Math.ceil(parseFloat(getComputedStyle(main.querySelector('.park-view')).rowGap) || 4);
-  // The Park view has a fixed-width left marketing rail (hidden in Buy Land / title mode); the canvas fills what is left.
-  const railW = rail && !rail.hidden ? rail.offsetWidth : 0;
-  const stageGap = railW && stage ? (Math.ceil(parseFloat(getComputedStyle(stage).columnGap)) || 0) : 0;
   if (bar) bar.style.width = ''; // measure the bar at full width so a previous (narrower) fit cannot wrap it taller
-  const availW = Math.max(1, main.clientWidth - pad - railW - stageGap);
+  const availW = Math.max(1, main.clientWidth - pad);
   const availH = Math.max(1, main.clientHeight - (bar ? bar.offsetHeight : 0) - pad - gap);
   const exact = Math.min(availW / BASE_W, availH / BASE_H);
   const snapped = Math.max(0.5, Math.floor(exact * 2) / 2);
@@ -51,6 +46,6 @@ export function fitCanvas() {
   canvas.style.height = `${cssH}px`;
   canvas.width = Math.round(cssW * dpr);
   canvas.height = Math.round(cssH * dpr);
-  if (bar) bar.style.width = `${(railW ? railW + stageGap : 0) + cssW}px`; // the top strip spans the rail + canvas stage
+  if (bar) bar.style.width = canvas.style.width; // toolbar strip lines up with the canvas
   for (const fn of listeners) fn();
 }

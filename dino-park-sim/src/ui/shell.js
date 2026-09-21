@@ -12,7 +12,7 @@ import { initAgents } from '../sim/agents.js';
 import { onParcelClick, facilityPanel } from './enclosure.js';
 import { renderTown, refreshTown } from './town.js';
 import { renderReports, openQuarterlyReport } from './reports.js';
-import { renderMarketing, refreshMarketing, renderParkRail } from './marketing.js';
+import { renderMarketing, refreshMarketing, renderMarketingMenu } from './marketing.js';
 import { renderFactbook } from './factbook.js';
 import { renderSettings } from './settings.js';
 import { openPrizes, prizeToast } from './prizes.js';
@@ -65,7 +65,38 @@ export function initShell({ onNewGame }) {
 }
 
 function initToolbar() {
-  document.querySelectorAll('#toolbar button').forEach(btn => btn.addEventListener('click', () => showView(btn.dataset.view)));
+  document.querySelectorAll('#toolbar button[data-view]').forEach(btn => btn.addEventListener('click', () => { closeMktMenu(); showView(btn.dataset.view); }));
+  const caret = $('mkt-caret');
+  if (caret) caret.addEventListener('click', e => { e.stopPropagation(); toggleMktMenu(); });
+  // Clicks inside the dropdown must not reach the click-away handler below. A toggle/buy re-renders the menu, which
+  // detaches the clicked node, so a document-level closest('.tb-item') check would then see it as "outside" and close
+  // the menu. Stopping propagation on the persistent #mkt-drop container (still in the pre-computed event path) avoids that.
+  const drop = $('mkt-drop');
+  if (drop) drop.addEventListener('click', e => e.stopPropagation());
+  // Click anywhere outside the Marketing tab group closes the quick menu.
+  document.addEventListener('click', e => { if (mktMenuOpen && !e.target.closest?.('.tb-item')) closeMktMenu(); });
+}
+
+// ---- Marketing quick menu: a dropdown off the Marketing tab (campaigns + auto-renew, one compact line each) ----
+let mktMenuOpen = false;
+function toggleMktMenu() { mktMenuOpen ? closeMktMenu() : openMktMenu(); }
+function openMktMenu() {
+  mktMenuOpen = true;
+  const drop = $('mkt-drop'), caret = $('mkt-caret');
+  if (drop) drop.hidden = false;
+  if (caret) { caret.setAttribute('aria-expanded', 'true'); caret.classList.add('open'); }
+  renderMktMenu();
+}
+function closeMktMenu() {
+  if (!mktMenuOpen) return;
+  mktMenuOpen = false;
+  const drop = $('mkt-drop'), caret = $('mkt-caret');
+  if (drop) drop.hidden = true;
+  if (caret) { caret.setAttribute('aria-expanded', 'false'); caret.classList.remove('open'); }
+}
+function renderMktMenu() {
+  if (!mktMenuOpen) return;
+  renderMarketingMenu($('mkt-drop'), { openFull: () => { closeMktMenu(); showView('marketing'); } });
 }
 
 export function showView(name) {
@@ -104,9 +135,7 @@ function renderCurrent() {
 function renderParkBar() {
   const bar = $('park-bar');
   bar.replaceChildren();
-  const rail = $('park-rail');
   if (parkMode === 'living') {
-    if (rail) { rail.hidden = false; renderParkRail(rail, { openMarketing: () => showView('marketing') }); }
     const n = (state.prizes || []).length;
     const nx = nextPrize();
     append(bar, [
@@ -119,7 +148,6 @@ function renderParkBar() {
     ]);
     return;
   }
-  if (rail) rail.hidden = true; // Buy Land survey map uses the full canvas width
   const owned = Object.values(state.parcels).filter(p => p.owned).length;
   append(bar, [
     button('Back to park', () => setParkMode('living'), { title: 'Esc' }),
@@ -144,7 +172,8 @@ function initKeys() {
       if (!modalOpen()) setSpeed(state.speed > 0 ? 0 : 1);
     }
     else if (e.key === 'Escape') {
-      if (modalOpen()) closeTop();
+      if (mktMenuOpen) closeMktMenu();
+      else if (modalOpen()) closeTop();
       else if (current === 'park' && parkMode === 'grid') setParkMode('living');
     }
     else if (e.key === 'f' || e.key === 'F') toggleFullscreen();
@@ -196,6 +225,7 @@ export function refresh() {
   const v = VIEWS[current];
   if (v.live) renderCurrent();
   else v.refresh?.();
+  if (mktMenuOpen) renderMktMenu(); // the quick menu shows live cash/days, so track state changes while open
 }
 
 // ---- bus-driven modals ----
