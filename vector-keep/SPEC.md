@@ -94,3 +94,10 @@ Changes:
   ~2.4%/wave growth, which pushes an empty-Forge fall past wave 140. A wider swing needs the
   Forge itself to matter more in the Last Stand (e.g. Forge nodes count 2× past wave 40), noted
   in LATER.md rather than slipped in here.
+
+
+---
+
+## v7 visual refresh (2026-09-20)
+
+Synthwave reskin: FLUX.1-schnell backdrop images (menu.jpg, game-bg.jpg), CSS grid arena plate with neon magenta rim, deep indigo/purple chrome replacing the original navy, desktop side-column card layout for landscape screens, "tower" renamed to "keep" in user-facing copy. Dart recolored to chartreuse for readability against the new palette. No gameplay or balance changes.

@@ -80,7 +80,7 @@
     try {
       // ?v must match the asset version in index.html — stale tuning JSON against
       // new code caused undefined-type crashes once already (browser caching).
-      const V = "?v=18";
+      const V = "?v=19";
       [cfg, WAVES, UPG, FORGE, PERKS] = await Promise.all([
         fetch("config.json" + V).then((r) => r.json()),
         fetch("waves.json" + V).then((r) => r.json()),
@@ -111,7 +111,7 @@
     if (s <= 0) return;
     dpr = window.devicePixelRatio || 1;
     W = H = s;
-    canvas.style.width = s + "px"; canvas.style.height = s + "px";
+    canvas.style.width = s + "px"; canvas.style.height = s + "px"; wrap.style.setProperty("--s", s + "px");
     canvas.width = Math.round(s * dpr); canvas.height = Math.round(s * dpr);
     cx = W / 2; cy = H / 2;
     arenaR = W * 0.47;
@@ -1054,8 +1054,8 @@
     } else {
       // crater
       ctx.beginPath(); ctx.arc(cx, cy, towerR * 1.1, 0, 7);
-      ctx.fillStyle = "#0A0D13"; ctx.fill();
-      ctx.strokeStyle = "#232B3B"; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = "#080414"; ctx.fill();
+      ctx.strokeStyle = "#2A1A40"; ctx.lineWidth = 2; ctx.stroke();
       if (Math.random() < 0.15) particles.burst(cx + (Math.random() - 0.5) * towerR, cy + (Math.random() - 0.5) * towerR, P.bomb, 1, 40, 0.8, 3);
     }
 
@@ -1257,7 +1257,7 @@
   }
   function showPerkInfo(p) {
     const pop = $("#info-pop");
-    pop.querySelector(".ip-card").style.setProperty("--accent", p.rarity === "epic" ? "#FFD75A" : p.rarity === "rare" ? "#4FD8EB" : "#9AACC4");
+    pop.querySelector(".ip-card").style.setProperty("--accent", p.rarity === "epic" ? "#FFD75A" : p.rarity === "rare" ? "#3DF2FF" : "#B8A8D2");
     pop.querySelector(".ip-title").textContent = p.glyph + " " + p.name;
     pop.querySelector(".ip-desc").textContent = p.desc;
     pop.querySelector(".ip-tier").textContent = p.rarity.toUpperCase() + " PERK · lasts this run";
