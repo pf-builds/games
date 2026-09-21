@@ -1157,26 +1157,14 @@
         check("m4_crew_no_overlap", "0 overlaps", crewBad.slice(0, 3).join(" | "), crewBad.length === 0);
       }
 
-      // Item 2+4: row states (locked/unaffordable/buyable)
+      // Item 2+4: row states -- no depth locks in v1 (B2-1: all minDepth stripped)
       GD.reset();
-      GD.state.gold = 0;
-      // bit is locked at minDepth 30 (depth is 0)
-      var bitLocked = E.isLocked(cfg, GD.state, "bit");
-      check("m4_bit_locked_at_depth_0", true, bitLocked, bitLocked === true);
-      // pick is never locked
-      check("m4_pick_never_locked", false, E.isLocked(cfg, GD.state, "pick"), !E.isLocked(cfg, GD.state, "pick"));
-      // dorrik never locked
-      check("m4_dorrik_never_locked", false, E.isLocked(cfg, GD.state, "dorrik"), !E.isLocked(cfg, GD.state, "dorrik"));
-      // cart never locked
-      check("m4_cart_never_locked", false, E.isLocked(cfg, GD.state, "cart"), !E.isLocked(cfg, GD.state, "cart"));
-      // At depth 40, bit unlocks
-      GD.jumpTo(40);
-      check("m4_bit_unlocked_at_depth_40", false, E.isLocked(cfg, GD.state, "bit"), !E.isLocked(cfg, GD.state, "bit"));
-      // Locked buy is refused with reason "locked"
-      GD.reset();
-      GD.state.gold = 1e12;
-      var lockedBuy = E.buy(cfg, GD.state, "bit");
-      check("m4_locked_buy_refused", "locked", lockedBuy.reason, lockedBuy.reason === "locked");
+      var anyLocked2 = false;
+      var allItems2 = E.purchasables(cfg);
+      for (var ali2 = 0; ali2 < allItems2.length; ali2++) {
+        if (E.isLocked(cfg, GD.state, allItems2[ali2].id)) anyLocked2 = true;
+      }
+      check("m4_no_depth_locks_in_v1", false, anyLocked2, !anyLocked2);
 
       // Item 5: bulk cost equals N single buys exactly
       GD.reset();

@@ -80,7 +80,7 @@ in JSON. Slots: welcomeBack, dwarfLine, bandIntro, event, ending, endingTitle.
 | `style.css` | portrait tabs, desktop rails, all sizes from `--s` |
 | `config/greedy-deep.json` | every tunable number; own `?v=` cache-bust |
 | `src/engine.js` | pure sim: tick, purchase, effects, bands, validation |
-| `src/gd.js` | `window.GD` facade, debug, selfTest (195 assertions) |
+| `src/gd.js` | `window.GD` facade, debug, selfTest (190 assertions) |
 | `src/sprites.js` | procedural sprite factory |
 | `src/particles.js` | pooled particles + floaters (from peasant-swarm) |
 | `src/audio.js` | WebAudio synth, 13 cues, ambient drone (M4) |
@@ -96,7 +96,7 @@ in JSON. Slots: welcomeBack, dwarfLine, bandIntro, event, ending, endingTitle.
 All M1-M3 API plus: `GD.export()`, `GD.import(str)`, `GD.audio.muted` via `GDAudio.isMuted()`,
 `GD.dbg.audioMasterGain`, `GD.dbg.lastCue`.
 
-## Acceptance — `GD.selfTest()` (195 assertions, zero failures)
+## Acceptance — `GD.selfTest()` (190 assertions, zero failures)
 M1 block: reset, taps, idle, purchase, save, restore, additivity, clearSave.
 M2 block: verbs, content, simulate, bandLog, offline, events, milestone, endless, reveal, ETA, flavor, content-as-data, validation.
 M3 block: sprite cache, tiles, seams, veil, dwarves, camera, title card, outline, ETA formatting.
@@ -141,9 +141,28 @@ Computed scales per viewport:
 | 1920x1080 | 3 | yes | 240 | 300 |
 
 ## Tuning log (playtest batch)
-Added `minDepth` depth-locking to 9 of 12 purchasables (bit 30, hald 40, braces 100,
+B2-1: Stripped all `minDepth` depth locks (Peter's decision). No row is depth-locked
+in v1. Sim returned to baseline: 6,702 s / maxGap 174 / first600 30.
+
+Tap-vs-crew gold rate at band starts (B2-3):
+| Band | Tap g/s | Crew g/s | Tap/Crew |
+|---|---|---|---|
+| coal (0 m) | 0.2 | 0.0 | inf (bootstrap) |
+| copper (40 m) | 34.8 | 0.4 | 9,353% |
+| silver (180 m) | 144.0 | 3.4 | 4,252% |
+| starmetal (600 m) | 882.0 | 48.9 | 1,802% |
+Tapping is massively productive at every band start. No JSON change needed.
+
+Previously added `minDepth` depth-locking to 9 of 12 purchasables (bit 30, hald 40, braces 100,
 lantern 100, vessa 180, rails 300, smelter 500, nix 600, elevator 900). Core tracks
 (pick, dorrik, cart) are never locked. Economy result: ending 6,688 s (was 6,702),
 maxGap 175 (was 174), richButLockedMax 0 (target < 30 s). No retune needed.
 
 Added buy-quantity toggle (1x/5x/10x/MAX) with bulk cost = N single buys exactly.
+
+## B2-2: desktop rails stale rows (root cause)
+`buildDesktopRails()` cloned portrait rows via `cloneNode(true)`. The `refresh()` function
+updated only the originals in the `rows` array; the clones showed stale prices/states forever.
+A row displaying an old lower price looked buyable but the real buy checked the current higher
+price and failed. Fix: move the actual DOM nodes into the rails instead of cloning. On portrait
+resize, move them back to their tab containers.

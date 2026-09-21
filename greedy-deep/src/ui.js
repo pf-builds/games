@@ -3,7 +3,7 @@
 (function () {
   "use strict";
 
-  var CONFIG_VERSION = 17;
+  var CONFIG_VERSION = 18;
 
   var UI = (window.GDUI = {});
   var E = window.GDEngine, GD = window.GD;
@@ -286,6 +286,25 @@
       if (els.leftRail) els.leftRail.style.width = leftW + "px";
       if (els.rightRail) els.rightRail.style.width = rightW + "px";
       buildDesktopRails();
+    } else {
+      restorePortraitRows();
+    }
+  }
+
+  function restorePortraitRows() {
+    // Move row elements back to their portrait tab containers
+    var tabDefs2 = cfg.layout.tabs;
+    var containers2 = {
+      dig: document.getElementById("shop-dig"),
+      crew: document.getElementById("shop-crew"),
+      gear: document.getElementById("shop-gear")
+    };
+    for (var ri2 = 0; ri2 < rows.length; ri2++) {
+      var tab2 = rows[ri2].tab;
+      var c2 = containers2[tab2];
+      if (c2 && rows[ri2].el.parentNode !== c2) {
+        c2.appendChild(rows[ri2].el);
+      }
     }
   }
 
@@ -325,7 +344,9 @@
     }
     els.rightRail.innerHTML = rhtml;
 
-    // Move shop rows into the rail sections
+    // MOVE actual row elements into the rail sections (not clones).
+    // This way refresh() always updates the real elements visible on screen.
+    // The rows move back to their portrait containers on resize to portrait.
     for (var t2 = 0; t2 < tabOrder.length; t2++) {
       if (tabOrder[t2] === "log") continue;
       var railShop = els.rightRail.querySelector("#rail-" + tabOrder[t2]);
@@ -334,13 +355,7 @@
       if (!td2 || !td2.ids) continue;
       for (var ri = 0; ri < rows.length; ri++) {
         if (td2.ids.indexOf(rows[ri].p.id) !== -1) {
-          var clone = rows[ri].el.cloneNode(true);
-          // Re-bind click on the clone
-          (function (id, cl) {
-            var btn = cl.querySelector(".buy");
-            if (btn) btn.addEventListener("click", function () { onBuy(id); });
-          })(rows[ri].p.id, clone);
-          railShop.appendChild(clone);
+          railShop.appendChild(rows[ri].el); // moves the actual DOM node
         }
       }
     }
@@ -838,10 +853,19 @@
       var n = st.owned[r.p.id] || 0;
       r.owned.textContent = n ? " x" + n : "";
 
+      // MAXED state: row at level cap
+      var maxLevel = r.p.maxLevel || Infinity;
+      var atCap = n >= maxLevel;
+
       // Three mutually exclusive states
-      r.el.classList.remove("locked", "unaffordable", "buyable");
+      r.el.classList.remove("locked", "unaffordable", "buyable", "maxed");
       r.btn.disabled = true;
-      if (locked) {
+      if (atCap) {
+        r.el.classList.add("maxed");
+        r.cost.textContent = "MAXED";
+        r.btn.querySelector(".unit").textContent = "";
+        r.eta.textContent = "";
+      } else if (locked) {
         r.el.classList.add("locked");
         r.cost.textContent = lockDepth + " m";
         r.eta.textContent = "Unlocks at " + lockDepth + " m";

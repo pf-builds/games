@@ -262,6 +262,9 @@ body.booting #col { opacity: 0; }
 /* BUYABLE: the ONLY state with the gold highlight */
 .row.buyable .buy { background: linear-gradient(#f4cf6a, #d8a52f); color: #1a1410; border-bottom-color: #8a6414; cursor: pointer; }
 .row.buyable .buy:active { transform: translateY(1px); border-bottom-width: 2px; }
+/* MAXED: at level cap, no further purchases */
+.row.maxed .buy { background: #1a1828; color: #5a5470; border-bottom-color: #131020; cursor: default; }
+.row.maxed .row-name { color: #7a7290; }
 
 .row.bought { animation: flashrow .35s ease-out; }
 @keyframes flashrow { from { background: #33482f; } to { background: transparent; } }
