@@ -206,6 +206,9 @@ p { margin: calc(6 * var(--u)) 0; }
 .town-sign h2 { margin-bottom: calc(6 * var(--u)); }
 .town-sign p { margin: 0; }
 .notice { position: relative; z-index: 1; background: rgba(15,18,24,0.72); border: calc(2 * var(--u)) solid #8a6b3a; border-radius: calc(4 * var(--u)); padding: calc(10 * var(--u)) calc(14 * var(--u)); min-width: calc(300 * var(--u)); }
+/* Hero park illustration as a framed billboard, centred between the sign and the notice board. */
+.town-hero { position: relative; z-index: 1; align-self: center; width: clamp(calc(120 * var(--u)), 15vw, calc(210 * var(--u))); height: auto; aspect-ratio: 1; object-fit: cover; image-rendering: pixelated; border: calc(3 * var(--u)) solid #8a6b3a; border-radius: calc(4 * var(--u)); box-shadow: 0 calc(4 * var(--u)) calc(12 * var(--u)) rgba(0,0,0,0.45); }
+@media (max-width: 720px) { .town-hero { display: none; } }
 .notice-title { font-family: var(--font-pixel); font-size: calc(8 * var(--u)); color: var(--accent-2); margin-bottom: calc(8 * var(--u)); letter-spacing: 0.5px; }
 .notice-line { display: flex; justify-content: space-between; gap: calc(18 * var(--u)); font-size: calc(13 * var(--u)); padding: calc(2 * var(--u)) 0; border-bottom: 1px dotted rgba(167,172,189,0.35); }
 .notice-line span:first-child { color: var(--muted); }

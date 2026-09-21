@@ -64,6 +64,20 @@ export const livingStats = () => stats;
 // file never blanks a pen. `face` is the art's own facing; the sprite is mirrored so each
 // animal faces its travel direction.
 const dinoSprites = new Map();
+// Phase 3: per-biome ground textures (scenes/biome-<id>.png), painted as a scaled repeat
+// pattern over the flat biome colour inside each owned pen. Keyed by biome id (marsh uses the
+// swamp scene). Falls back to the flat colour + procedural marks until the images load.
+const biomePatterns = {};
+const BIOME_TEX_SCALE = 0.34, BIOME_TEX_ALPHA = 0.6;
+function loadBiomeTextures() {
+  let base;
+  try { base = new URL('../../scenes/', import.meta.url); } catch { return; }
+  for (const id of ['desert', 'plains', 'marsh']) {
+    const img = new Image();
+    img.onload = () => { try { biomePatterns[id] = ctx.createPattern(img, 'repeat'); } catch { /* ctx not ready */ } };
+    img.src = new URL(`biome-${id}.png`, base).href;
+  }
+}
 function loadDinoSprites() {
   let base;
   try { base = new URL('../../sprites/', import.meta.url); }
@@ -85,6 +99,7 @@ export function initLiving(el, h) {
   ctx = canvas.getContext('2d');
   handlers = h;
   loadDinoSprites();
+  loadBiomeTextures();
   canvas.addEventListener('mousemove', onMove);
   canvas.addEventListener('mouseleave', () => { if (!active) return; hover = null; hoverFacility = null; hideTip(); });
   canvas.addEventListener('wheel', e => {
@@ -428,6 +443,26 @@ function loopShape(g, z, fill, stroke) {
   if (fill) { ctx.fillStyle = fill; ctx.fill(); }
   if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke(); }
 }
+// Paint a biome ground texture inside a parcel's shape: build the same polyomino path, then fill it
+// with the biome's repeat pattern (scaled down so its cacti/reeds/trees read as ground detail) over
+// the flat biome colour. No-op until the pattern has loaded.
+function fillBiomeTexture(g, id) {
+  const pat = biomePatterns[id];
+  if (!pat) return;
+  ctx.beginPath();
+  for (const lp of g.loops) {
+    for (let i = 0; i < lp.length; i++) { project(lp[i][0], lp[i][1], 0, P); if (i === 0) ctx.moveTo(P.x, P.y); else ctx.lineTo(P.x, P.y); }
+    ctx.closePath();
+  }
+  try { pat.setTransform(new DOMMatrix([BIOME_TEX_SCALE, 0, 0, BIOME_TEX_SCALE, 0, 0])); } catch { /* older Safari: pattern draws at native scale */ }
+  const smooth = ctx.imageSmoothingEnabled;
+  ctx.imageSmoothingEnabled = false;
+  ctx.globalAlpha = BIOME_TEX_ALPHA;
+  ctx.fillStyle = pat;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.imageSmoothingEnabled = smooth;
+}
 // vertical quad between two ground points, from z0 to z1
 function vquad(xa, ya, xb, yb, z0, z1, fill, stroke) {
   project(xa, ya, z0, P); project(xb, yb, z0, Q); project(xb, yb, z1, R); project(xa, ya, z1, S);
@@ -520,7 +555,8 @@ function drawGround() {
     } else {
       const biome = parcelBiome(p.id) || unownedBiome();
       loopShape(g, 0, biome.color, '#2b3a2b');
-      drawBiomeMarks(p.id, g, biome, 1);
+      if (biomePatterns[biome.id]) fillBiomeTexture(g, biome.id); // texture supersedes the procedural marks
+      else drawBiomeMarks(p.id, g, biome, 1);
       if (p.enclosure) drawPenFloor(p, g);
     }
     if (hover === p.id) loopShape(g, 0, 'rgba(255,255,255,0.12)', '#ffffff');
