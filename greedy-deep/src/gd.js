@@ -1303,20 +1303,29 @@
         endingEl.classList.add("hidden");
       }
 
-      // 9. Spacebar to mine: synthetic keydown Space raises gold and sets lastCue
+      // 9. Spacebar to mine: dispatch through the LIVE document keydown listener
+      // and assert gold, lastCue AND juice counter (strikeCount) all change.
+      // This tests the real keyboard path, not a private function.
       GD.reset();
       GD.grantForTest("dorrik", 1);
+      // Ensure splash is dismissed so Space reaches doStrike
+      var sp9 = document.getElementById("splash");
+      if (sp9) { sp9.classList.add("gone"); sp9.classList.add("off"); }
       var goldBeforeSpace = GD.state.gold;
       if (window.GDAudio) window.GDAudio.lastCue = null;
       GD.dbg.lastCue = null;
-      // Dispatch Space keydown through the real document handler
+      var strikesBefore = (window.GDUI && window.GDUI.strikeCount) || 0;
+      // Dispatch through document — the same target the live listener is on
       var spaceEvt = new KeyboardEvent("keydown", { code: "Space", key: " ", bubbles: true });
       document.dispatchEvent(spaceEvt);
       var goldAfterSpace = GD.state.gold;
+      var strikesAfter = (window.GDUI && window.GDUI.strikeCount) || 0;
       check("p7_space_mines_gold", true, goldAfterSpace > goldBeforeSpace,
         goldAfterSpace > goldBeforeSpace);
       var cueName = window.GDAudio ? window.GDAudio.lastCue : GD.dbg.lastCue;
       check("p7_space_sets_lastcue", "strike", cueName, cueName === "strike");
+      check("p7_space_fires_juice", strikesBefore + 1, strikesAfter,
+        strikesAfter === strikesBefore + 1);
 
       // Space during textarea focus must NOT strike
       var ta = document.getElementById("import-area");
@@ -1324,10 +1333,13 @@
         ta.classList.remove("hidden");
         ta.focus();
         var goldBeforeFocused = GD.state.gold;
+        var strikesBeforeFocused = window.GDUI.strikeCount;
         var spaceEvt2 = new KeyboardEvent("keydown", { code: "Space", key: " ", bubbles: true });
         document.dispatchEvent(spaceEvt2);
         check("p7_space_ignored_in_textarea", goldBeforeFocused, GD.state.gold,
           GD.state.gold === goldBeforeFocused);
+        check("p7_space_no_juice_in_textarea", strikesBeforeFocused, window.GDUI.strikeCount,
+          window.GDUI.strikeCount === strikesBeforeFocused);
         ta.blur();
         ta.classList.add("hidden");
       }

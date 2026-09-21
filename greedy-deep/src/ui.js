@@ -790,10 +790,12 @@
 
     oreCombo++;
     oreComboT = 0.6;
+    UI.strikeCount = (UI.strikeCount || 0) + 1;
     refresh();
     return g;
   }
   UI.doStrike = doStrike;
+  UI.strikeCount = 0;
 
   // ------------------------------------------------------------ input
   function bindInput() {
@@ -855,8 +857,8 @@
       var now = performance.now();
       if (now - lastSpaceT < spaceMinInterval) return;
       lastSpaceT = now;
-      // Dismiss splash on first Space if it's up
-      if (els.splash && !els.splash.classList.contains("off")) { dismissSplash(); return; }
+      // Dismiss splash on first Space if it's up (check "gone", not "off" — "off" is delayed)
+      if (els.splash && !els.splash.classList.contains("gone")) { dismissSplash(); return; }
       doStrike();
     });
   }
