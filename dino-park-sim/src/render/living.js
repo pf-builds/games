@@ -9,10 +9,10 @@
 // buildings grow in footprint, roof sections and storeys with a style per tier), the strip holds the tram, visitor
 // center, office and vet clinic, earned park prizes are drawn at their data positions, a boundary shared by two pens
 // draws ONE wall (higher tier wins), and biome ground marks tell desert / marsh / plains apart without the legend.
-import { DATA, state, parcelList, parcelDef, parcelGeometry, parcelAtTile, biomeById, parcelBiome, unownedBiome, fenceByTier, facilityTier, facilityById, facilityTierDef, facilityNextTier, prizeEarned, earnedPrizes, fmt$, onChange, biomeFit } from '../state.js';
+import { DATA, state, parcelList, parcelDef, parcelGeometry, parcelAtTile, biomeById, parcelBiome, unownedBiome, fenceByTier, facilityTier, facilityById, facilityTierDef, facilityNextTier, prizeEarned, earnedPrizes, fmt$, onChange, biomeFit, speciesById } from '../state.js';
 import { BASE_W, BASE_H, L, project, unproject, depth, parcelAtWorld, facilityRect, facilityAtWorld } from './projection.js';
 import * as AG from '../sim/agents.js';
-import { parcelTooltip, shortShape } from './park.js';
+import { shortShape } from './park.js';
 import { parcelPriceFrom, vegetationCap, plantedFraction, seedsToPlant } from '../economy.js';
 import { fountainLevel } from '../prizes.js';
 import { goalDone } from '../goals.js';
@@ -312,9 +312,25 @@ function onMove(e) {
   if (ptrDown && ptrDrag) { hideTip(); return; } // mid-pan: no hover/tooltip churn
   hover = parcelAt(e);
   hoverFacility = hover ? null : facilityAt(e);
-  if (hover) showTip(parcelTooltip(hover), e.clientX, e.clientY);
+  const tip = hover ? livingParcelTip(hover) : null;
+  if (tip) showTip(tip, e.clientX, e.clientY);
   else if (hoverFacility) showTip(facilityTooltip(hoverFacility), e.clientX, e.clientY);
   else hideTip();
+}
+// The Living Park hover keeps it light: a pen just lists the dinosaurs living in it (the full management detail is a
+// click away in the pen panel, and the Buy Land survey map keeps the verbose parcelTooltip). Names in the tooltip
+// replace the old on-hover name chips that drew below the pen.
+function livingParcelTip(id) {
+  const p = state.parcels[id];
+  if (!p) return null;
+  if (!p.owned) return `Parcel ${id}: for sale from ${fmt$(parcelPriceFrom(id))} — click to buy`;
+  const enc = p.enclosure;
+  if (!enc) return `Parcel ${id}: empty — click to build an enclosure`;
+  const dinos = enc.dinos || [];
+  if (!dinos.length) return `Parcel ${id}: no dinosaurs yet — click to manage`;
+  const counts = new Map();
+  for (const x of dinos) { const n = speciesById(x.species)?.name || x.species; counts.set(n, (counts.get(n) || 0) + 1); }
+  return [...counts].map(([n, c]) => c > 1 ? `${n} ×${c}` : n).join(', ');
 }
 export function facilityTooltip(id) {
   const f = facilityById(id), t = facilityTierDef(id), next = facilityNextTier(id);
@@ -1395,7 +1411,7 @@ function drawPenLabels() {
   for (const d of AG.dinos) {
     if (d.escaped) { project(d.rx, d.ry, 0, P); queueTag(d.sp.name.toUpperCase(), P.x, d.labelY ?? P.y - 30, '#f2c94c', 'rgba(16,20,28,0.85)', 0); continue; }
     if (d.arriving) continue; // still in the delivery truck: the chip would spoil the arrival
-    if (!(always.includes(d.size) || hover === d.parcel)) continue;
+    if (!always.includes(d.size)) continue; // hover no longer draws a chip — the pen's dinosaurs are listed in the tooltip instead
     let m = penLabels.get(d.parcel);
     if (!m) { m = new Map(); penLabels.set(d.parcel, m); }
     m.set(d.name, (m.get(d.name) || 0) + 1);
