@@ -521,7 +521,7 @@ body.booting #col { opacity: 0; }
 #splash-art { position: absolute; inset: 0; background: #07060c url("assets/title.webp") center center / cover no-repeat; }
 #splash-scrim {
   position: absolute; inset: 0;
-  background: linear-gradient(180deg, rgba(7,6,12,.55) 0%, rgba(7,6,12,0) 24%, rgba(7,6,12,.12) 46%, rgba(7,6,12,.86) 68%, #07060c 100%);
+  background: linear-gradient(180deg, rgba(7,6,12,.45) 0%, rgba(7,6,12,0) 22%, rgba(7,6,12,0) 50%, rgba(7,6,12,.32) 74%, rgba(7,6,12,.9) 100%);
 }
 #splash-inner {
   position: relative; width: 100%;
@@ -535,16 +535,17 @@ body.booting #col { opacity: 0; }
   font-size: min(14vw, calc(28px * var(--s)));
   color: #f7dc95;
   text-shadow:
-    0 0 12px rgba(242,193,78,.4),
+    0 0 2px rgba(0,0,0,.95),
+    0 0 10px rgba(0,0,0,.85),
+    0 0 22px rgba(0,0,0,.6),
     0 2px 0 #d09a2e,
     0 4px 0 #6b4e1a,
-    0 6px 12px rgba(0,0,0,.7);
-  background: rgba(7,6,12,.72);
-  border-radius: 6px;
-  padding: calc(3px * var(--s)) calc(6px * var(--s));
+    0 5px 14px rgba(0,0,0,.85);
+  background: none;
+  padding: 0;
   margin: 0 auto calc(6px * var(--s));
-  max-width: 90%;
-  -webkit-text-stroke: 1px rgba(160,120,40,.35);
+  max-width: 96%;
+  -webkit-text-stroke: 1px rgba(18,11,3,.9);
 }
 #splash-sub {
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
