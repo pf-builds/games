@@ -394,24 +394,8 @@
 
   // ------------------------------------------------------------ splash
   function drawLogo(s) {
-    if (!els.splashLogo || !window.GDSprites) return;
-    var art = window.GDSprites.logo("GREEDY DEEP", "#f7dc95", "#d09a2e", "#160f06");
-    var k = Math.max(2, Math.min(4, s));
-    var dpr = Math.min(2, window.devicePixelRatio || 1);
-    var cssW = art.width * k, cssH = art.height * k;
-    els.splashLogo.style.width = cssW + "px";
-    els.splashLogo.style.height = cssH + "px";
-    els.splashLogo.width = Math.round(cssW * dpr);
-    els.splashLogo.height = Math.round(cssH * dpr);
-    var g = els.splashLogo.getContext("2d");
-    g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    g.imageSmoothingEnabled = false;
-    g.clearRect(0, 0, cssW, cssH);
-    g.drawImage(art, 0, 0, cssW, cssH);
-    if (window.GDSprites.opaqueCount(els.splashLogo) === 0) {
-      GD.dbg.logoRedraws = (GD.dbg.logoRedraws || 0) + 1;
-      g.drawImage(window.GDSprites.logo("GREEDY DEEP", "#f7dc95", "#d09a2e", "#160f06"), 0, 0, cssW, cssH);
-    }
+    // Splash title is now DOM text (#splash-title), not the pixel canvas.
+    // Nothing to draw; the CSS handles sizing via --s and vw units.
   }
   UI.drawLogo = drawLogo;
 

@@ -528,6 +528,24 @@ body.booting #col { opacity: 0; }
   padding: 0 calc(6px * var(--s)) calc(10px * var(--s)); text-align: center;
 }
 #splash-logo { display: block; margin: 0 auto calc(4px * var(--s)); image-rendering: pixelated; }
+#splash-title {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-weight: 900; letter-spacing: .14em; text-indent: .14em;
+  line-height: 0.95; text-align: center; text-transform: uppercase;
+  font-size: min(14vw, calc(28px * var(--s)));
+  color: #f7dc95;
+  text-shadow:
+    0 0 12px rgba(242,193,78,.4),
+    0 2px 0 #d09a2e,
+    0 4px 0 #6b4e1a,
+    0 6px 12px rgba(0,0,0,.7);
+  background: rgba(7,6,12,.72);
+  border-radius: 6px;
+  padding: calc(3px * var(--s)) calc(6px * var(--s));
+  margin: 0 auto calc(6px * var(--s));
+  max-width: 90%;
+  -webkit-text-stroke: 1px rgba(160,120,40,.35);
+}
 #splash-sub {
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   font-size: calc(5px * var(--s)); line-height: 1.5; color: #cbbd97;

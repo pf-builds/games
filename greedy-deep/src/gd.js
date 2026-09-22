@@ -805,13 +805,18 @@
         var vrep2 = SPR.ensure(false);
         check("m3_sprite_cache_ensure_is_a_noop_when_healthy", rbBefore + " rebuilds",
           SPR.stats().rebuilds, SPR.stats().rebuilds === rbBefore && vrep2.blank.length === 0);
-        var logoEl = document.getElementById("splash-logo");
-        check("m3_splash_logo_has_pixels", "> 0 opaque pixels",
-          logoEl ? SPR.opaqueCount(logoEl) : "no canvas",
-          !!logoEl && SPR.opaqueCount(logoEl) > 0);
-        check("m3_splash_logo_is_dpr_scaled", "backing store >= CSS box",
-          logoEl ? logoEl.width + "x" + logoEl.height + " for " + logoEl.style.width : "no canvas",
-          !!logoEl && logoEl.width >= parseInt(logoEl.style.width, 10));
+        // Splash title: DOM-based title element (replaced the pixel canvas in phase 7)
+        var titleEl = document.getElementById("splash-title");
+        check("m3_splash_title_present", "DOM title element",
+          titleEl ? titleEl.textContent.trim().substring(0, 10) : "missing",
+          !!titleEl && titleEl.textContent.indexOf("GREEDY") !== -1);
+        // Size check only when splash is visible (it's display:none after dismiss)
+        var splashVis = document.getElementById("splash");
+        if (splashVis && !splashVis.classList.contains("off")) {
+          check("m3_splash_title_has_size", "width > 0",
+            titleEl ? titleEl.getBoundingClientRect().width : 0,
+            !!titleEl && titleEl.getBoundingClientRect().width > 0);
+        }
 
         // --- ETA formatting never carries a 60 into the seconds slot (M3 critic)
         var etaBad = [];
