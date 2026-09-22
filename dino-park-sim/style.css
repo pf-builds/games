@@ -41,7 +41,7 @@ p { margin: calc(6 * var(--u)) 0; }
 #app {
   width: 100vw; height: 100vh;
   display: grid;
-  grid-template-columns: calc(176 * var(--u)) 1fr;
+  grid-template-columns: calc(268 * var(--u)) 1fr;
   grid-template-rows: calc(64 * var(--u)) 1fr calc(32 * var(--u));
   grid-template-areas:
     "status status"

@@ -124,9 +124,6 @@ function mktAuto(c) {
   return button('🔄', () => { eco.toggleAutoRenew(c.id); emitChange(); },
     { class: `mkt-auto${on ? ' on' : ''}`, title: on ? `Auto-renew ON — ${c.name} renews when it ends. Click to stop.` : `Auto-renew OFF for ${c.name}. Click to keep it running.` });
 }
-// A few campaign names are too long for the slim toolbar column; the menu shows a short label and keeps the full
-// name in the hover tooltip. Everything else uses its real name (which fits at the current column width).
-const MENU_SHORT_NAME = { social_campaign: 'Social Media', school_program: 'Schools', memberships: 'Season Pass' };
 function mktRow({ def: c, lock, owned }) {
   const active = eco.campaignActive(c.id); // array of running instances
   const renewable = c.kind !== 'perk' && c.kind !== 'memberships';
@@ -137,7 +134,7 @@ function mktRow({ def: c, lock, owned }) {
   else if (isLocked) meta = h('span', { class: 'mkt-lock', title: `Locked: ${lock}` }, '🔒');
   else meta = button(fmt$(c.cost), () => { if (!fail(eco.buyCampaign(c.id))) emitChange(); }, { class: 'mkt-buy', disabled: !eco.canAfford(c.cost), title: `Buy ${c.name} (${fmt$(c.cost)})` });
   return h('div', { class: `mkt-row${isLocked ? ' locked' : ''}${active.length ? ' running' : ''}` },
-    h('span', { class: 'mkt-name', title: c.name }, MENU_SHORT_NAME[c.id] || c.name),
+    h('span', { class: 'mkt-name', title: c.name }, c.name),
     meta,
     renewable ? mktAuto(c) : h('span', { class: 'mkt-auto ghost' }));
 }
