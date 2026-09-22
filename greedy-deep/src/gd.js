@@ -1363,6 +1363,51 @@
       }
       check("p7_effect_desc_for_all", "all have descriptions", edBad.join(","), edBad.length === 0);
 
+      // 10. Overflow safety: MAX-buy with huge gold never produces Infinity/NaN
+      var overflowBad = [];
+      var goldProbes = [1e9, 1e15, 1e24];
+      for (var oi = 0; oi < goldProbes.length; oi++) {
+        GD.reset();
+        GD.state.gold = goldProbes[oi];
+        GD.state.goldEarnedTotal = goldProbes[oi];
+        GD.jumpTo(1000);
+        // MAX-buy every track and dwarf
+        var allP2 = E.purchasables(cfg);
+        for (var oj = 0; oj < allP2.length; oj++) {
+          var maxN2 = E.maxBuyable(cfg, GD.state, allP2[oj].id);
+          for (var ok = 0; ok < maxN2; ok++) E.buy(cfg, GD.state, allP2[oj].id);
+        }
+        // Check everything is finite
+        var d3 = GD.derive();
+        if (!isFinite(GD.state.gold)) overflowBad.push("gold@" + goldProbes[oi]);
+        if (!isFinite(d3.goldRate)) overflowBad.push("goldRate@" + goldProbes[oi]);
+        if (!isFinite(d3.digRate)) overflowBad.push("digRate@" + goldProbes[oi]);
+        if (!isFinite(d3.goldMul)) overflowBad.push("goldMul@" + goldProbes[oi]);
+        if (!isFinite(d3.rateMul)) overflowBad.push("rateMul@" + goldProbes[oi]);
+        if (!isFinite(d3.goldPerTap)) overflowBad.push("goldPerTap@" + goldProbes[oi]);
+        for (var om = 0; om < allP2.length; om++) {
+          var owned3 = GD.state.owned[allP2[om].id] || 0;
+          if (!isFinite(owned3)) overflowBad.push("owned:" + allP2[om].id + "@" + goldProbes[oi]);
+        }
+        // MAX bulk cost must equal geometric sum of the capped count
+        for (var on = 0; on < allP2.length; on++) {
+          var maxN3 = E.maxBuyable(cfg, GD.state, allP2[on].id);
+          if (maxN3 > 0) {
+            var bulk3 = E.bulkCost(cfg, GD.state, allP2[on].id, maxN3);
+            if (!isFinite(bulk3)) overflowBad.push("bulkCost:" + allP2[on].id + "@" + goldProbes[oi]);
+          }
+        }
+      }
+      check("p7_overflow_safe", "all finite", overflowBad.join(" | "), overflowBad.length === 0);
+
+      // max-buy policy exists and runs
+      var simMB = GD.simulate({ policy: "max-buy", maxSeconds: 600 });
+      check("p7_maxbuy_policy_runs", true, !simMB.error, !simMB.error);
+      check("p7_maxbuy_has_peakgold", true, simMB.peakGold > 0, simMB.peakGold > 0);
+      check("p7_maxbuy_peakgold_finite", true, isFinite(simMB.peakGold), isFinite(simMB.peakGold));
+      // balance block in JSON
+      check("p7_balance_block", true, !!(cfg.balance && cfg.balance.softCaps), !!(cfg.balance && cfg.balance.softCaps));
+
       // Layout assertion: at least 3 buy rows intersect the viewport
       if (window.GDUI && window.GDUI.rowReport) {
         var rr3 = window.GDUI.rowReport();

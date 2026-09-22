@@ -160,6 +160,33 @@ maxGap 175 (was 174), richButLockedMax 0 (target < 30 s). No retune needed.
 
 Added buy-quantity toggle (1x/5x/10x/MAX) with bulk cost = N single buys exactly.
 
+## Economy rebalance (phase 7, post-ship)
+Diagnosis: uncapped multiplicative stacking (mul_rate, mul_gold, add_rate_per_dwarf)
+caused positive-feedback runaway under MAX-buy. With aggressive tapping at 8/s,
+gold/income exceeded JS Number.MAX_VALUE (Infinity) within minutes of the starmetal band.
+
+Fixes applied:
+- Soft caps on mul_rate and mul_gold: full strength for first 8 levels, diminishing
+  returns (sqrt scaling) past that. Config: `balance.softCaps.mulRate: 8, .mulGold: 8`.
+- Cart Rails per-dwarf contribution: sqrt scaling past 20 dwarves. Config:
+  `balance.ratePerDwarfCap: 20`.
+- Cost ratios steepened: bit 2.1->2.8, cart 2.2->3.0, smelter 2.6->3.2, rails 2.8->3.2,
+  vessa 2.2->2.8, hald 2.2->2.6, nix 2.6->3.0.
+- Early game cheaper: pick base 3->2, dorrik base 25->15, hald base 400->300,
+  bit base 150->100, cart base 500->400, vessa base 700->500.
+- Dorrik dig rate 0.012->0.01 m/s (slight slow-down to match curve).
+- clickYield 0.12->0.06 (halved tap gold to prevent aggressive tapping runaway).
+- Endless: multiplierPerBand 1.5->1.3, lengthGrowth 0.5 (bands grow 50% longer each repeat).
+- Hard overflow clamp: all gold/rates/multipliers clamped to 1e100; maxBuyable capped at 500.
+- Added `max-buy` simulate policy that buys max of everything + taps at 8/s.
+
+Results (cheapest-affordable / max-buy):
+- Ending: 9,837 s (164 min) / 5,623 s (94 min). Both in 5,400-10,800 window.
+- maxGap: 296 / 193 s. Both < 300.
+- peakGold: ~135K / ~198K. Well under 1e10.
+- first600: 24 / 38 purchases. Both lively starts.
+- Band cadence (max-buy): min 881s, median 1454s, max 2402s — crossings slow with depth.
+
 ## B2-2: desktop rails stale rows (root cause)
 `buildDesktopRails()` cloned portrait rows via `cloneNode(true)`. The `refresh()` function
 updated only the originals in the `rows` array; the clones showed stale prices/states forever.

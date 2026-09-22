@@ -1,11 +1,11 @@
 {
-  "configVersion": 21,
+  "configVersion": 22,
   "title": "Greedy Deep",
   "start": {
     "gold": 0,
     "digRate": 0,
     "clickPower": 1,
-    "clickYield": 0.12
+    "clickYield": 0.06
   },
   "sim": {
     "dt": 0.1,
@@ -116,8 +116,8 @@
       "id": "pick",
       "name": "Sharper Pick",
       "desc": "Every strike bites deeper.",
-      "base": 3,
-      "ratio": 1.22,
+      "base": 2,
+      "ratio": 1.25,
       "effects": [
         {
           "verb": "add_click",
@@ -129,8 +129,8 @@
       "id": "bit",
       "name": "Drill Bit",
       "desc": "The crew digs 10% faster per bit.",
-      "base": 150,
-      "ratio": 2.1,
+      "base": 100,
+      "ratio": 2.8,
       "effects": [
         {
           "verb": "mul_rate",
@@ -142,8 +142,8 @@
       "id": "cart",
       "name": "Bigger Cart",
       "desc": "Hauls 12% more per trip.",
-      "base": 500,
-      "ratio": 2.2,
+      "base": 400,
+      "ratio": 3.0,
       "effects": [
         {
           "verb": "mul_gold",
@@ -169,7 +169,7 @@
       "name": "Cart Rails",
       "desc": "Every dwarf on the crew digs faster.",
       "base": 20000,
-      "ratio": 2.8,
+      "ratio": 3.2,
       "effects": [
         {
           "verb": "add_rate_per_dwarf",
@@ -182,7 +182,7 @@
       "name": "Smelter",
       "desc": "Burns the slag off the take. +15% gold.",
       "base": 40000,
-      "ratio": 2.6,
+      "ratio": 3.2,
       "effects": [
         {
           "verb": "mul_gold",
@@ -226,12 +226,12 @@
       "id": "dorrik",
       "name": "Dorrik Quickpick",
       "job": "Hewer",
-      "base": 25,
+      "base": 15,
       "ratio": 2.8,
       "effects": [
         {
           "verb": "add_rate",
-          "value": 0.012
+          "value": 0.01
         }
       ],
       "flavor": "Hums. Only ever the one song.",
@@ -246,8 +246,8 @@
       "name": "Hald Ironthumb",
       "nameNote": "",
       "job": "Striker",
-      "base": 400,
-      "ratio": 2.2,
+      "base": 300,
+      "ratio": 2.6,
       "effects": [
         {
           "verb": "add_click",
@@ -265,8 +265,8 @@
       "id": "vessa",
       "name": "Vessa Ledgerhand",
       "job": "Carter",
-      "base": 700,
-      "ratio": 2.2,
+      "base": 500,
+      "ratio": 2.8,
       "effects": [
         {
           "verb": "mul_gold",
@@ -286,7 +286,7 @@
       "nameNote": "",
       "job": "Deep Hewer",
       "base": 150000,
-      "ratio": 2.6,
+      "ratio": 3.0,
       "effects": [
         {
           "verb": "add_rate",
@@ -371,7 +371,15 @@
   },
   "endless": {
     "bandLengthM": 600,
-    "multiplierPerBand": 1.5
+    "multiplierPerBand": 1.3,
+    "lengthGrowth": 0.5
+  },
+  "balance": {
+    "softCaps": {
+      "mulRate": 8,
+      "mulGold": 8
+    },
+    "ratePerDwarfCap": 20
   },
   "flavor": {
     "bandIntro": {

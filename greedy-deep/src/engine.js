@@ -11,11 +11,26 @@
   // The full v1 verb vocabulary (PRD 8). Every handler is pure: it folds one
   // purchasable's (or event's) effect into the accumulator. `n` is the owned count.
   // Nothing in here reads or writes game state directly.
+  // Soft cap: diminishing returns on multiplicative stacking.
+  // Instead of v^n (uncapped exponential), use v^(n * softCapFn(n, cap)).
+  // softCapFn returns an effective exponent fraction: 1 for n<=cap, diminishing past it.
+  // This keeps early levels full-strength and bends the curve past the cap.
+  function softMul(v, n, cap) {
+    if (!cap || cap <= 0 || n <= 0) return Math.pow(v, n);
+    // Effective exponent: min(n, cap + sqrt(max(0, n-cap)))
+    var effN = n <= cap ? n : cap + Math.sqrt(n - cap);
+    return Math.pow(v, effN);
+  }
+  // Hard clamp: never let any value exceed this to prevent Infinity
+  var VALUE_CAP = 1e100;
+  function clamp(x) { return Math.min(VALUE_CAP, Math.max(-VALUE_CAP, x || 0)); }
+  E.clamp = clamp;
+
   var EFFECTS = {
     add_click:          function (acc, v, n) { acc.clickAdd += v * n; },
     add_rate:           function (acc, v, n) { acc.rateAdd += v * n; },
-    mul_rate:           function (acc, v, n) { acc.rateMul *= Math.pow(v, n); },
-    mul_gold:           function (acc, v, n) { acc.goldMul *= Math.pow(v, n); },
+    mul_rate:           function (acc, v, n, cap) { acc.rateMul *= softMul(v, n, cap); },
+    mul_gold:           function (acc, v, n, cap) { acc.goldMul *= softMul(v, n, cap); },
     add_rate_per_dwarf: function (acc, v, n) { acc.ratePerDwarf += v * n; },
     reveal_bands:       function (acc, v, n) { acc.revealBonus += v * n; },
     mul_hazard_resist:  function (acc, v, n) { acc.hazardMul *= Math.pow(v, n); },
@@ -128,16 +143,19 @@
     return total;
   };
 
-  // How many can be bought with current gold
+  // How many can be bought with current gold (overflow-safe, capped)
+  var MAX_BUY_CAP = 500; // hard cap on single MAX-buy batch
   E.maxBuyable = function (cfg, state, id) {
     var p = E.byId(cfg, id);
     if (!p) return 0;
     var owned = E.ownedOf(state, id);
     var gold = state.gold;
+    if (!isFinite(gold) || gold <= 0) return 0;
     var n = 0;
     var cost = 0;
-    while (n < 9999) {
+    while (n < MAX_BUY_CAP) {
       var next = p.base * Math.pow(p.ratio, owned + n);
+      if (!isFinite(next) || next <= 0) break; // overflow safety
       if (cost + next > gold + 1e-9) break;
       cost += next;
       n++;
@@ -162,11 +180,28 @@
   }
   E.endlessStart = endlessStart;
 
+  // Compute the start depth of endless band `rep` (1-indexed).
+  // Band length grows with `lengthGrowth` per repeat: base + base*(growth*(rep-1)).
+  function endlessBandStart(cfg, rep) {
+    var en = cfg.endless;
+    var base = en.bandLengthM;
+    var growth = en.lengthGrowth || 0;
+    // Sum of lengths for bands 1..rep-1: base*(1+growth*0) + base*(1+growth*1) + ...
+    var sum = 0;
+    for (var i = 0; i < rep - 1; i++) sum += base * (1 + growth * i);
+    return endlessStart(cfg) + sum;
+  }
+
+  function endlessBandLength(cfg, rep) {
+    var en = cfg.endless;
+    return en.bandLengthM * (1 + (en.lengthGrowth || 0) * (rep - 1));
+  }
+
   function endlessBand(cfg, rep) {
     if (!cfg.__endless) hide(cfg, "__endless", {});
     if (cfg.__endless[rep]) return cfg.__endless[rep];
     var ores = cfg.ores, last = ores[ores.length - 1], en = cfg.endless;
-    var start = endlessStart(cfg) + (rep - 1) * en.bandLengthM;
+    var start = endlessBandStart(cfg, rep);
     var b = {
       id: last.id + "+" + rep,
       baseId: last.id,
@@ -186,7 +221,16 @@
   E.bandAt = function (cfg, depth) {
     var ores = cfg.ores;
     var es = endlessStart(cfg);
-    if (depth >= es) return endlessBand(cfg, Math.floor((depth - es) / cfg.endless.bandLengthM) + 1);
+    if (depth >= es) {
+      // Walk endless bands with variable lengths
+      var rep = 1;
+      while (rep < 9999) {
+        var nextStart = endlessBandStart(cfg, rep + 1);
+        if (depth < nextStart) break;
+        rep++;
+      }
+      return endlessBand(cfg, rep);
+    }
     var bi = 0;
     for (var i = 0; i < ores.length; i++) if (depth >= ores[i].startDepth) bi = i;
     var b = ores[bi];
@@ -207,6 +251,9 @@
     var acc = newAcc();
     var list = cat(cfg);
     var i, j, n, efs, h;
+    var caps = (cfg.balance && cfg.balance.softCaps) || {};
+    var mulRateCap = caps.mulRate || 0;
+    var mulGoldCap = caps.mulGold || 0;
 
     // Dwarf headcount first: add_rate_per_dwarf needs it after the fold.
     var dwarves = 0;
@@ -218,7 +265,13 @@
       efs = list[i].effects;
       for (j = 0; j < efs.length; j++) {
         h = EFFECTS[efs[j].verb];
-        if (h && !INSTANT_VERBS[efs[j].verb]) h(acc, efs[j].value, n);
+        if (h && !INSTANT_VERBS[efs[j].verb]) {
+          // Pass soft-cap threshold for multiplicative verbs
+          var sc = 0;
+          if (efs[j].verb === "mul_rate") sc = mulRateCap;
+          else if (efs[j].verb === "mul_gold") sc = mulGoldCap;
+          h(acc, efs[j].value, n, sc);
+        }
       }
     }
 
@@ -228,18 +281,28 @@
       for (i = 0; i < tl.length; i++) {
         if (tl[i].until <= state.t) continue;
         h = EFFECTS[tl[i].verb];
-        if (h && !INSTANT_VERBS[tl[i].verb]) h(acc, tl[i].value, 1);
+        if (h && !INSTANT_VERBS[tl[i].verb]) h(acc, tl[i].value, 1, 0);
       }
     }
 
-    acc.rateAdd += acc.ratePerDwarf * dwarves;
+    // Cart Rails add_rate_per_dwarf: cap per-dwarf contribution with sqrt scaling past threshold
+    var rdpCap = (cfg.balance && cfg.balance.ratePerDwarfCap) || 0;
+    var effDwarves = dwarves;
+    if (rdpCap > 0 && dwarves > rdpCap) {
+      effDwarves = rdpCap + Math.sqrt(dwarves - rdpCap);
+    }
+    acc.rateAdd += acc.ratePerDwarf * effDwarves;
+
+    // Clamp multipliers to prevent overflow
+    acc.rateMul = clamp(acc.rateMul);
+    acc.goldMul = clamp(acc.goldMul);
 
     var band = E.bandAt(cfg, state.depth);
     var clickPower = cfg.start.clickPower + acc.clickAdd;
     // Depth comes only from digRate. Taps never dig (PRD 8).
-    var digRate = (cfg.start.digRate + acc.rateAdd) * acc.rateMul;
-    var goldRate = digRate * band.goldPerMeter * acc.goldMul;
-    var goldPerTap = clickPower * band.goldPerMeter * cfg.start.clickYield;
+    var digRate = clamp((cfg.start.digRate + acc.rateAdd) * acc.rateMul);
+    var goldRate = clamp(digRate * band.goldPerMeter * acc.goldMul);
+    var goldPerTap = clamp(clickPower * band.goldPerMeter * cfg.start.clickYield);
 
     return {
       clickPower: clickPower, digRate: digRate, goldRate: goldRate, goldPerTap: goldPerTap,
@@ -326,8 +389,8 @@
     var depthBefore = state.depth;
     state.depth += d.digRate * dt;
     var g = d.goldRate * dt;
-    state.gold += g;
-    state.goldEarnedTotal += g;
+    state.gold = clamp(state.gold + g);
+    state.goldEarnedTotal = clamp(state.goldEarnedTotal + g);
     state.t += dt;
 
     // prune expired timed effects (derive already ignores them; this keeps the array small)
@@ -370,8 +433,8 @@
   E.tap = function (cfg, state, times) {
     var d = E.derive(cfg, state);
     var g = d.goldPerTap * (times === undefined ? 1 : times);
-    state.gold += g;
-    state.goldEarnedTotal += g;
+    state.gold = clamp(state.gold + g);
+    state.goldEarnedTotal = clamp(state.goldEarnedTotal + g);
     return g;
   };
 
@@ -471,10 +534,17 @@
     return best;
   }
 
+  // max-buy policy: buy the max affordable of every track and dwarf each tick
+  function maxBuyAll(cfg, state) {
+    // Returns a sentinel — simulate handles this specially
+    return "__max_buy__";
+  }
+
   E.POLICIES = {
     "cheapest-affordable": cheapestAffordable,
     "none": function () { return null; },
-    "ratio": ratioPick
+    "ratio": ratioPick,
+    "max-buy": maxBuyAll
   };
 
   // ------------------------------------------------------------ simulate (PRD 13)
@@ -525,6 +595,13 @@
       });
     };
 
+    var isMaxBuy = policyName === "max-buy";
+    // For max-buy, use the aggressive tapping rate from config
+    if (isMaxBuy) {
+      cps = (cfg.input && cfg.input.spaceMinesPerSec) || 8;
+    }
+    var peakGold = 0;
+
     var guard = 0;
     for (var t = 0; t < maxSeconds; t += dt) {
       if (guard++ > 10000000) break;
@@ -532,19 +609,38 @@
       if (cps > 0) E.tap(cfg, state, cps * dt);
 
       var bought = 0;
-      while (bought < 400) {
-        var p = pick(cfg, state);
-        if (!p) break;
-        var r = E.buy(cfg, state, p.id);
-        if (!r.ok) break;
-        purchases.push({ t: state.t, id: r.id, cost: r.cost, owned: r.owned });
-        var gap = state.t - lastPurchaseT;
-        if (gap > maxGap) maxGap = gap;
-        lastPurchaseT = state.t;
-        bought++;
+      if (isMaxBuy) {
+        // Buy max affordable of every purchasable
+        var allP = cat(cfg);
+        for (var mi = 0; mi < allP.length; mi++) {
+          if (E.isLocked(cfg, state, allP[mi].id)) continue;
+          var maxN = E.maxBuyable(cfg, state, allP[mi].id);
+          for (var mj = 0; mj < maxN; mj++) {
+            var mr = E.buy(cfg, state, allP[mi].id);
+            if (!mr.ok) break;
+            purchases.push({ t: state.t, id: mr.id, cost: mr.cost, owned: mr.owned });
+            var mgap = state.t - lastPurchaseT;
+            if (mgap > maxGap) maxGap = mgap;
+            lastPurchaseT = state.t;
+            bought++;
+          }
+        }
+      } else {
+        while (bought < 400) {
+          var p = pick(cfg, state);
+          if (!p) break;
+          var r = E.buy(cfg, state, p.id);
+          if (!r.ok) break;
+          purchases.push({ t: state.t, id: r.id, cost: r.cost, owned: r.owned });
+          var gap = state.t - lastPurchaseT;
+          if (gap > maxGap) maxGap = gap;
+          lastPurchaseT = state.t;
+          bought++;
+        }
       }
 
       E.substep(cfg, state, dt, ctx);
+      if (state.gold > peakGold) peakGold = state.gold;
 
       if (state.t >= nextSample) {
         var d2 = E.derive(cfg, state);
@@ -597,16 +693,31 @@
       }
     }
 
+    // Band crossing cadence: time between successive crossings
+    var bandGaps = [];
+    for (var bg = 1; bg < bandLog.length; bg++) {
+      bandGaps.push(bandLog[bg].t - bandLog[bg - 1].t);
+    }
+    bandGaps.sort(function (a, b) { return a - b; });
+    var bandCadence = {
+      count: bandGaps.length,
+      min: bandGaps.length ? bandGaps[0] : 0,
+      median: bandGaps.length ? bandGaps[Math.floor(bandGaps.length / 2)] : 0,
+      max: bandGaps.length ? bandGaps[bandGaps.length - 1] : 0
+    };
+
     return {
       reached: reached,
       reachedAtSeconds: reachedAtSeconds,
       finalDepth: state.depth,
       finalGold: state.gold,
       goldEarnedTotal: state.goldEarnedTotal,
+      peakGold: peakGold,
       purchases: purchases,
       purchaseCount: purchases.length,
       purchasesFirst600: first600,
       bandLog: bandLog,
+      bandCadence: bandCadence,
       maxGapSeconds: maxGap,
       eventsFired: events,
       samples: samples,
