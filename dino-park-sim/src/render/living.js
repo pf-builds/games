@@ -408,7 +408,7 @@ function buildStatic() {
   // ---- park prizes at their data positions ----
   const carousel = earnedPrizes().find(p => p.render === 'carousel');
   for (const p of earnedPrizes()) {
-    if (p.render === 'banner') { const e = entry(K_BANNER, depth(p.position.x, p.position.y)); e.x0 = p.position.x; e.y0 = p.position.y; e.x1 = p.position.half_w; }
+    if (p.render === 'banner') { const e = entry(K_BANNER, depth(p.position.x, p.position.y)); e.x0 = p.position.x; e.y0 = p.position.y; e.x1 = p.position.half_w; e.y1 = p.position.h; }
     else if (p.render === 'flower_beds') for (const [x, y] of p.positions) { const e = entry(K_FLOWER, depth(x, y + 0.001)); e.x0 = x; e.y0 = y; }
     else if (p.render === 'statues') p.positions.forEach(([x, y], i) => { const e = entry(K_STATUE, depth(x, y)); e.x0 = x; e.y0 = y; e.tier = i; });
     else if (p.render === 'lamp_posts') for (const [x, y] of p.positions) { const e = entry(K_LAMP, depth(x, y)); e.x0 = x; e.y0 = y; e.tier = 1; }
@@ -1283,7 +1283,9 @@ function queueSign(e) {
 
 // Front gate by prize: 0 two sandstone pillars and a purple ENTRANCE lintel; 1 the Fancy Gate Arch, carved wooden posts
 // with gold finials and pennants, a curved arch and a string of bunting; 2 the Grand Entrance, twin towers with pointed
-// roofs, waving flags, lit lanterns and a gold fascia. Each look is a clear step up from the one before.
+// roofs, waving flags, lit lanterns and a gold fascia. Each look is a clear step up from the one before. The plain gate
+// and the arch both name themselves ENTRANCE (fix pass: the arch said WELCOME, which doubled the Welcome Banner that
+// always hangs above it, since the banner is earned first).
 export const gateKind = () => prizeEarned('grand_entrance') ? 2 : prizeEarned('gate_arch') ? 1 : 0;
 const BUNTING = ['#e0503f', '#f2c94c', '#3f7fe0', '#5fbf5a', '#ec7fb4', '#f08a3c', '#35b3a4'];
 function drawGate(kind = gateKind()) {
@@ -1336,7 +1338,7 @@ function drawGate(kind = gateKind()) {
       tri3(xl + (xr - xl) * u0, yf, s0, xl + (xr - xl) * u1, yf, s1, xl + (xr - xl) * um, yf, sm, BUNTING[k], OUT);
     }
     project(g.x, yf, zb + rise + th * 0.2, P);
-    queueTag('WELCOME', P.x, P.y + 10, '#f2c94c', 'rgba(138,107,58,0.9)', 2, FONT);
+    queueTag('ENTRANCE', P.x, P.y + 10, '#f2c94c', 'rgba(138,107,58,0.9)', 2, FONT);
   } else {
     const H = 0.72;
     for (let i = 0; i < 2; i++) {
@@ -1454,8 +1456,11 @@ function fountainSculpture(sx, sy, k, t, spoutZ) {
 
 // ---- park prizes ----
 // Welcome Banner prize: candy-striped poles with gold finials and a red cloth with a gently waving pennant hem.
+// It stands across the spine just inside the gate (position and pole height in prizes.json), deep and tall enough that
+// its cloth hangs clear above every gate look: over the ENTRANCE lintel, over the arch, between the Grand Entrance towers.
+const BANNER_TEXT = 'WELCOME';
 function drawBanner(e) {
-  const hw = e.x1, h = 0.74, y = e.y0, t = animT;
+  const hw = e.x1, h = e.y1, y = e.y0, t = animT;
   for (let i = 0; i < 2; i++) {
     const px = i ? e.x0 + hw : e.x0 - hw;
     for (let k = 0; k < 6; k++) line3(px, y, h * k / 6, px, y, h * (k + 1) / 6, k % 2 ? '#f4f0e2' : '#e0503f', 2.5);
@@ -1468,7 +1473,7 @@ function drawBanner(e) {
   ctx.closePath(); fillStroke('#e0503f', OUT);
   vquad(x0 + 0.02, y, x1 - 0.02, y, zt - 0.035, zt - 0.02, '#f2c94c', null);
   project(e.x0, y, h * 0.76, P);
-  label('WELCOME', P.x, P.y + 3, '#fff1b8', 'center', FONT_S);
+  label(BANNER_TEXT, P.x, P.y + 3, '#fff1b8', 'center', FONT_S);
 }
 // Flower Beds prize: a round stone-edged bed of soil with clumps of leaves and bright blooms (colours vary by bed).
 function drawFlowerBed(e) {
@@ -2021,6 +2026,7 @@ const PROP_TIERS = [
 export function propTierTest(c2d, px = 4) {
   const saved = ctx, savedT = animT, W = c2d.canvas.width, H = c2d.canvas.height, out = [];
   const C = L.CENTER, e = { kind: 0, depth: 0, id: null, x0: C.x + 1.3, y0: C.y + 1.3, x1: 0.62, y1: 0, tier: 0, cond: 100, seg: 0, text: '', ref: null };
+  const BN = DATA.prizes.prizes.find(p => p.render === 'banner').position;
   const q0 = labelQueue.length;
   ctx = c2d; animT = 12.345; ctx.lineJoin = 'round';
   try {
@@ -2029,7 +2035,7 @@ export function propTierTest(c2d, px = 4) {
       for (let tier = 0; tier < spec.tiers; tier++) {
         const r = { prop: spec.prop, tier, ok: true, err: '', diff: null, ladder: !!spec.ladder };
         try {
-          e.tier = tier; e.x1 = spec.prop === 'carousel' ? 0.32 : 0.62;
+          e.tier = tier; e.x1 = spec.prop === 'carousel' ? 0.32 : spec.prop === 'banner' ? BN.half_w : 0.62; e.y1 = spec.prop === 'banner' ? BN.h : 0;
           const ax = spec.prop === 'fountain' ? C.x : spec.prop === 'gate' ? L.GATE.x : e.x0;
           const ay = spec.prop === 'fountain' ? C.y : spec.prop === 'gate' ? L.PARK_H : e.y0;
           ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, W, H);
@@ -2053,6 +2059,40 @@ export function propTierTest(c2d, px = 4) {
     }
   } finally {
     ctx = saved; animT = savedT; labelQueue.length = q0; // drop the gate labels the test queued
+  }
+  return out;
+}
+// Welcome Banner against every gate look (phase 4 fix pass): the banner alone at its data position, then each gate
+// alone with its name tag, same scratch camera. Per gate kind: `cloth` = banner pixels between the poles that the gate
+// paints over, `letters` = the same in the lettering's columns, `gap` = the fewest clear rows between the banner's
+// lowest pixel and the gate's highest one in those cloth columns (negative = they overlap). Returns [{ kind, cloth, letters, gap }].
+export function bannerGateTest(c2d, px = 4) {
+  const saved = ctx, savedT = animT, W = c2d.canvas.width, H = c2d.canvas.height, out = [];
+  const bn = DATA.prizes.prizes.find(p => p.render === 'banner').position, e = { x0: bn.x, y0: bn.y, x1: bn.half_w, y1: bn.h };
+  const q0 = labelQueue.length;
+  ctx = c2d; animT = 12.345; ctx.lineJoin = 'round';
+  const frame = () => { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, W, H); project(L.GATE.x, L.PARK_H, 0.3, P); ctx.setTransform(px, 0, 0, px, W / 2 - P.x * px, H * 0.62 - P.y * px); };
+  const mask = () => { const d = ctx.getImageData(0, 0, W, H).data, m = new Uint8Array(W * H); for (let i = 0; i < m.length; i++) m[i] = d[i * 4 + 3] > 8 ? 1 : 0; return m; };
+  const col = (x, y) => { project(x, y, 0, P); return Math.round(W / 2 + (P.x - Q.x) * px); };
+  try {
+    frame(); drawBanner(e); const B = mask();
+    ctx.font = FONT_S; const tw = ctx.measureText(BANNER_TEXT).width / 2 + 1;
+    project(L.GATE.x, L.PARK_H, 0.3, Q);
+    const c0 = col(e.x0 - e.x1, e.y0) + 2 * px, c1 = col(e.x0 + e.x1, e.y0) - 2 * px, cm = col(e.x0, e.y0), t0 = cm - Math.ceil(tw * px), t1 = cm + Math.ceil(tw * px);
+    for (let kind = 0; kind < 3; kind++) {
+      frame(); drawGate(kind);
+      for (let i = q0; i < labelQueue.length; i++) labelQueue[i].draw(labelQueue[i].x, labelQueue[i].y);
+      labelQueue.length = q0;
+      const G = mask(), r = { kind, cloth: 0, letters: 0, gap: Infinity };
+      for (let x = Math.max(0, c0); x <= Math.min(W - 1, c1); x++) {
+        let low = -1, top = -1;
+        for (let y = 0; y < H; y++) { const i = y * W + x; if (B[i]) { low = y; if (G[i]) { r.cloth++; if (x >= t0 && x <= t1) r.letters++; } } if (G[i] && top < 0) top = y; }
+        if (low >= 0 && top >= 0) r.gap = Math.min(r.gap, top - low - 1);
+      }
+      out.push(r);
+    }
+  } finally {
+    ctx = saved; animT = savedT; labelQueue.length = q0;
   }
   return out;
 }

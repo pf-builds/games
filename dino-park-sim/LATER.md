@@ -143,3 +143,9 @@ Scope discipline: the SPEC is the ceiling. Anything discovered mid-build lands h
 - Parked cars overlap the row behind by a few px (rows are 0.22 tiles apart, a car is ~12 px tall). Deeper stalls would need `lot.slot_pitch_y` and the lot footprint to grow together.
 - Cars take a single-lane aisle west of their bay in and out; a car arriving and one leaving in the same aisle pass through each other. A per-column aisle reservation (like `slot.car`) would make them wait.
 - The people still animate on the tick clock (`AG.simTime`, 20 Hz steps); the renderer's eased `animT` (B2) would make their walk cycle as smooth as the dinosaurs'.
+
+## Phase 4 critic minors (2026-09-23)
+- Fountain tier 1 to tier 2 (Stone Basin to Twin Jets) is the weakest prize step: tier 2 keeps tier 1's basin and bowl and adds thin rim jets, a blue tile band and a glow. Distinct at 3x, subtle at 1x (selfTest diff 20,098 px at 4x, well over the bar). Visibly taller jets or a tinted, lit pool would make the "earned something" moment read at normal zoom.
+- Visitors are drawn over parked cars in the lot while walking to and from their car (and over car roofs as they pass between rows). The plaza half of this critic note (walkers over benches, planters and the carousel platform) is already parked under Phase 4 B1 above. A walk-in lane along the lot's aisles, or sorting walkers behind cars they are not getting into, would fix the lot.
+- Idle dinosaur breathing (`dino_anim.breath` 0.018) is about 1 px at 1x, so an idle pen looks static between head-dips (every 6 to 14 s) and tail flicks (every 4 to 10 s). A breath near 0.03 or shorter event intervals would make idle pens read as alive at a glance.
+- Moving cars (tail view up the aisle, nose view leaving) were only verified at 3x in the Phase 4 critic pass; no 1x frame caught one. Same draw path at both zooms, so low risk, but it is an evidence gap to close in the next visual pass.

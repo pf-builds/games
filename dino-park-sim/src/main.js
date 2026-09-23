@@ -8,7 +8,7 @@ import { initTooltips } from './ui/tooltips.js';
 import { initShell, refresh, tutorialHint, showView } from './ui/shell.js';
 import { closeAll, alertModal, modalDepth, closeAbove } from './ui/modals.js';
 import { agentCounts, spawnVisitors, forceEscape, arrivalStats, crowdStats, tick as agentTick, visitors, cars, dinos, staff, litter, slots, C_PARKED } from './sim/agents.js';
-import { livingStats, livingActive, plaqueVisible, labelRects, penLabelBoxes, penLabelStacks, spriteStatus, carLook, carPalette, propTierTest, dinoPose, spriteCleanCheck } from './render/living.js';
+import { livingStats, livingActive, plaqueVisible, labelRects, penLabelBoxes, penLabelStacks, spriteStatus, carLook, carPalette, propTierTest, bannerGateTest, dinoPose, spriteCleanCheck } from './render/living.js';
 import { campaignLadder, renderMarketingMenu } from './ui/marketing.js';
 import { initAudio, play as playSfx, audioState, sfxIds } from './audio.js';
 import { goalsList, buildReportCard, forceGoal, goalDone } from './goals.js';
@@ -152,6 +152,9 @@ function selfTest() {
       const threw = res.filter(r => !r.ok), steps = res.filter(r => r.ladder && r.tier > 0), flat = steps.filter(r => !(r.diff >= ST.prop_tier_min_diff_px));
       check(`props: every plaza / prize prop draws at every tier (${res.length} draws)`, !threw.length, threw.map(r => `${r.prop} tier ${r.tier}: ${r.err}`).join('; ') || res.map(r => `${r.prop}#${r.tier}`).join(' '));
       check(`props: each tier differs from the one before (>= ${ST.prop_tier_min_diff_px} px at ${ST.prop_px}x)`, steps.length && !flat.length, steps.map(r => `${r.prop} ${r.tier - 1}->${r.tier}: ${r.diff}`).join(', '));
+      // Fix pass: the Welcome Banner hangs clear above the plain gate and the arch, and no gate look hides its lettering.
+      const bg = bannerGateTest(cv.getContext('2d', { willReadFrequently: true }), ST.prop_px);
+      check(`props: Welcome Banner clears every gate look (cloth uncovered, >= ${ST.banner_gate_min_gap_px} px clear at ${ST.prop_px}x over gates 0-1)`, bg.every(r => !r.letters && (r.kind === 2 || (!r.cloth && r.gap >= ST.banner_gate_min_gap_px))), bg.map(r => `gate ${r.kind}: cloth covered ${r.cloth}, letters covered ${r.letters}, gap ${r.gap}`).join('; '));
     });
     run('dino-motion', () => {
       // Every species, walking / idle / blending, fed and starving: every pose number finite and positive scale; the
