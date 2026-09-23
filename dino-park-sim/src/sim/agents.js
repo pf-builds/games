@@ -61,7 +61,7 @@ export function initAgents({ paused }) {
   blocked = paused;
   G.buildGraph(DATA.parcels.walkways, tileIndex);
   const n = Lv().max_sprites;
-  for (let i = 0; i < n; i++) visitors.push(Object.assign(makeWalker(), { color: 0, pois: 0, guide: -1, offx: 0, offy: 0, panic: 0, car: -1, amenityDone: false, poi: null }));
+  for (let i = 0; i < n; i++) visitors.push(Object.assign(makeWalker(), { color: 0, pois: 0, guide: -1, offx: 0, offy: 0, panic: 0, car: -1, amenityDone: false, poi: null, seed: Math.random() }));
   for (let i = 0; i < 80; i++) cars.push(Object.assign(makeWalker(), { slot: -1, color: 0 }));
   for (let i = 0; i < Lv().litter_max; i++) litter.push({ active: false, x: 0, y: 0, kind: 0 });
   onChange(sync);
@@ -319,7 +319,7 @@ function syncStaff() {
   const stores = DATA.facilities.facilities.filter(f => f.effect_key === 'concession_spend' && facilityTier(f.id) > 0);
   let storeSlot = 0;
   for (const w of state.staff) {
-    const a = Object.assign(makeWalker(), { role: w.role, active: true, x: L.OFFICE_DOOR.x + rnd(-0.4, 0.4), y: L.OFFICE_DOOR.y, target: null, loop: 0, followers: 0, home: false });
+    const a = Object.assign(makeWalker(), { role: w.role, active: true, x: L.OFFICE_DOOR.x + rnd(-0.4, 0.4), y: L.OFFICE_DOOR.y, target: null, loop: 0, followers: 0, home: false, seed: Math.random() });
     a.px = a.x; a.py = a.y; a.speed = Lv().staff_walk_speed * rnd(0.9, 1.1);
     if (w.role === 'concessions') {
       const perStore = roleById('concessions').max_per_store || 2;

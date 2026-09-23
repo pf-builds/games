@@ -38,6 +38,16 @@ const FACILITY_ROOF = {
 const VISITOR_SHIRTS = ['#e05c5c', '#6fcf6a', '#5aa0e0', '#f2c94c', '#e08fd0', '#f0f0e8', '#ff9d4d', '#66d6c8'];
 const CAR_COLORS = ['#d84a4a', '#3b6fd6', '#f2f2f2', '#2c2f36', '#6fcf6a', '#f2c94c', '#9b6fd6', '#c0c6d0'];
 const STAFF_COLORS = { maintenance: '#f08a24', tour_guide: '#3fbf5f', security: '#3b5fd6', veterinary: '#f4f4f4', concessions: '#b56fd6', management: '#7d8494' };
+// Crowd variety: hair, skin and trouser palettes plus visitor caps, all picked deterministically from an agent's
+// stable `seed` so the crowd reads as a mix of people (not clones) without flickering as they walk.
+const HAIR = ['#2f2117', '#5a3a1e', '#141414', '#8a6a3a', '#caa63b', '#7a4a2a', '#d8d2c2', '#9a3a2a', '#5a5a66'];
+const SKIN = ['#f1c9a5', '#e6b489', '#cf9a68', '#b07a48', '#8a5a34', '#6a4326'];
+const PANTS = ['#2b2f3a', '#3a4250', '#4a3a2a', '#555a66', '#333844', '#6a4a30'];
+const VISITOR_CAPS = ['#e05c5c', '#3b5fd6', '#2b2f3a', '#f2c94c', '#6fcf6a', '#e08fd0'];
+// Per-role staff cap so a worker reads as uniformed at a glance, on top of the role shirt colour + prop.
+const STAFF_CAPS = { maintenance: '#f2c94c', tour_guide: '#2f7d3f', security: '#20287a', veterinary: '#e05c5c', concessions: '#7c3ba0', management: '#3c4250' };
+const frac = x => x - Math.floor(x);
+const pick = (arr, sd, m) => arr[Math.floor(frac(sd * m) * arr.length)];
 const OUT = '#1e2228';
 
 // Draw-list entry kinds
@@ -1290,23 +1300,59 @@ function unhappyBadge(sx, sy) {
 function shadow(sx, sy, w) {
   ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(sx, sy, w, w * 0.45, 0, 0, Math.PI * 2); ctx.fill();
 }
-function person(sx, sy, shirt, hat) {
-  shadow(sx, sy, 3.5);
-  ctx.fillStyle = '#2b2f3a'; ctx.fillRect(sx - 2.5, sy - 4, 2, 4); ctx.fillRect(sx + 0.5, sy - 4, 2, 4);
-  ctx.fillStyle = shirt; ctx.fillRect(sx - 3, sy - 10, 6, 7);
-  ctx.strokeStyle = OUT; ctx.lineWidth = 1; ctx.strokeRect(sx - 3 + 0.5, sy - 10 + 0.5, 5, 6);
-  ctx.fillStyle = '#f1c9a5'; ctx.beginPath(); ctx.arc(sx, sy - 12.5, 3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-  if (hat) { ctx.fillStyle = hat; ctx.fillRect(sx - 3.5, sy - 16, 7, 2.5); }
+// A small person, animated: legs stride and the body bobs while walking (o.phase set), still when idle (o.phase null).
+// o = { shirt, pants, skin, hair, hat, dir, phase, scale }. Kept at ~16px tall so it reads at the park's scale.
+function person(sx, sy, o) {
+  const s = o.scale || 1;
+  const stride = o.phase != null ? Math.sin(o.phase) : 0;
+  const bob = o.phase != null ? Math.abs(Math.sin(o.phase)) * 0.9 * s : 0;
+  const yy = sy - bob;
+  shadow(sx, sy, 3.4 * s);
+  ctx.lineWidth = 1; ctx.strokeStyle = OUT;
+  // legs (stride swings them fore/aft)
+  ctx.fillStyle = o.pants || '#2b2f3a';
+  const lh = 4 * s;
+  ctx.fillRect(sx - 2.4 * s + stride * 1.1 * s, yy - lh, 1.9 * s, lh);
+  ctx.fillRect(sx + 0.5 * s - stride * 1.1 * s, yy - lh, 1.9 * s, lh);
+  // torso with a shaded trailing edge for a hint of form
+  const tw = 6 * s, th = 7 * s, tx = sx - 3 * s, ty = yy - 10 * s;
+  ctx.fillStyle = o.shirt; ctx.fillRect(tx, ty, tw, th);
+  ctx.fillStyle = shade(o.shirt); ctx.fillRect(tx + tw - 1.6 * s, ty, 1.6 * s, th);
+  ctx.strokeRect(tx + 0.5, ty + 0.5, tw - 1, th - 1);
+  // head
+  const hy = yy - 12.6 * s, hr = 3 * s;
+  ctx.fillStyle = o.skin || '#f1c9a5'; ctx.beginPath(); ctx.arc(sx, hy, hr, 0, 6.283); ctx.fill(); ctx.stroke();
+  if (o.hair && !o.hat) { ctx.fillStyle = o.hair; ctx.beginPath(); ctx.arc(sx, hy, hr, Math.PI * 1.02, Math.PI * 1.98); ctx.fill(); }
+  // facing cue: a dark eye pixel toward travel direction
+  ctx.fillStyle = '#2b2430'; ctx.fillRect(sx + (o.dir >= 0 ? 0.5 : -1.5) * s, hy - 0.4 * s, 1 * s, 1 * s);
+  if (o.hat) { // cap: crown band + a short brim in the facing direction
+    ctx.fillStyle = o.hat; ctx.fillRect(sx - 3.4 * s, hy - hr - 1.2 * s, 6.8 * s, 2.3 * s);
+    ctx.strokeRect(sx - 3.4 * s + 0.5, hy - hr - 1.2 * s + 0.5, 6.8 * s - 1, 2.3 * s - 1);
+    ctx.fillStyle = shade(o.hat); ctx.fillRect(o.dir >= 0 ? sx + 3.2 * s : sx - 5.6 * s, hy - hr + 0.5 * s, 2.4 * s, 1 * s);
+  }
 }
+function visitorLook(v) {
+  const sd = v.seed || 0;
+  return { shirt: VISITOR_SHIRTS[v.color], pants: pick(PANTS, sd, 3), skin: pick(SKIN, sd, 5), hair: pick(HAIR, sd, 11),
+    hat: frac(sd * 13) > 0.74 ? pick(VISITOR_CAPS, sd, 17) : null, scale: frac(sd * 31) < 0.15 ? 0.78 : 1 };
+}
+// Moving this tick? (per-tick displacement) — drives the walk cycle for visitors and staff alike, and stays still when
+// the clock is paused or the agent is dwelling at a pen.
+const isMoving = a => (Math.abs(a.x - a.px) + Math.abs(a.y - a.py)) > 0.0015;
+const WALK_HZ = 9;
 function drawVisitor(v) {
   project(v.rx, v.ry, 0, P);
-  person(P.x, P.y, VISITOR_SHIRTS[v.color], null);
-  if (v.st === AG.V_PANIC) label('!', P.x, P.y - 18, '#f2c94c', 'center', FONT_S);
+  const o = visitorLook(v);
+  o.dir = v.dir || 1;
+  o.phase = isMoving(v) ? AG.simTime * WALK_HZ + (v.seed || 0) * 6.283 : null;
+  person(P.x, P.y, o);
+  if (v.st === AG.V_PANIC) label('!', P.x, P.y - 18 * (o.scale || 1), '#f2c94c', 'center', FONT_S);
 }
 function drawStaff(s) {
   project(s.rx, s.ry, 0, P);
-  const col = STAFF_COLORS[s.role] || '#888';
-  person(P.x, P.y, col, s.role === 'security' ? '#2b3a8a' : s.role === 'maintenance' ? '#f2c94c' : s.role === 'veterinary' ? '#e05c5c' : null);
+  const sd = s.seed || 0;
+  person(P.x, P.y, { shirt: STAFF_COLORS[s.role] || '#888', pants: '#333844', skin: pick(SKIN, sd, 5), hair: pick(HAIR, sd, 11),
+    hat: STAFF_CAPS[s.role] || '#3c4250', dir: s.dir || 1, phase: isMoving(s) ? AG.simTime * WALK_HZ + sd * 6.283 : null });
   if (s.role === 'maintenance') { ctx.strokeStyle = '#8a5a2b'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(P.x + 4, P.y - 9); ctx.lineTo(P.x + 7 + (s.st === 2 ? Math.sin(AG.simTime * 12) * 3 : 0), P.y + 1); ctx.stroke(); }
   else if (s.role === 'tour_guide') { ctx.strokeStyle = '#3a3a3a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(P.x + 4, P.y - 8); ctx.lineTo(P.x + 4, P.y - 22); ctx.stroke(); ctx.fillStyle = '#f2c94c'; ctx.fillRect(P.x + 4, P.y - 22, 6, 4); }
   else if (s.role === 'veterinary') { ctx.fillStyle = '#e05c5c'; ctx.fillRect(P.x - 1, P.y - 9, 2, 5); ctx.fillRect(P.x - 2.5, P.y - 7.5, 5, 2); }
