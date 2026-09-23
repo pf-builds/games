@@ -36,7 +36,20 @@ const FACILITY_ROOF = {
   office: ['#4f74ac', '#3c5a8a'], visitor_center: ['#f0922e', '#c67322'], vet_clinic: ['#e85440', '#c23e30'], park_tram: ['#3f95b0', '#2f7288']
 };
 const VISITOR_SHIRTS = ['#e05c5c', '#6fcf6a', '#5aa0e0', '#f2c94c', '#e08fd0', '#f0f0e8', '#ff9d4d', '#66d6c8'];
-const CAR_COLORS = ['#d84a4a', '#3b6fd6', '#f2f2f2', '#2c2f36', '#6fcf6a', '#f2c94c', '#9b6fd6', '#c0c6d0'];
+// Phase 4 B2 cars: bright friendly body colours and five body styles, both picked per trip from the car's seed
+// (carLook). Style geometry in tiles: len x wid footprint, cl ground clearance, bh body height, cab = the cabin's
+// [rear base, rear roof, front roof, windshield base] as fractions from tail (0) to nose (1), ch cabin height, bed =
+// pickup load bed length (fraction), wh = wheel positions (fractions), spare = a spare wheel on the tail.
+const CAR_COLORS = ['#e0503f', '#3f7fe0', '#f2c94c', '#5fbf5a', '#f08a3c', '#35b3a4', '#9b6fd6', '#ec7fb4', '#f4f4ef', '#c3c9d2', '#2f4f8f', '#8a5a3c'];
+const CAR_STYLES = [
+  { id: 'sedan', len: 0.23, wid: 0.105, cl: 0.022, bh: 0.064, cab: [0.24, 0.34, 0.6, 0.74], ch: 0.056, bed: 0, wh: [0.19, 0.8], spare: false },
+  { id: 'hatch', len: 0.19, wid: 0.1, cl: 0.022, bh: 0.064, cab: [0.05, 0.12, 0.54, 0.72], ch: 0.062, bed: 0, wh: [0.2, 0.8], spare: false },
+  { id: 'van', len: 0.24, wid: 0.11, cl: 0.024, bh: 0.066, cab: [0.02, 0.04, 0.78, 0.9], ch: 0.08, bed: 0, wh: [0.18, 0.82], spare: false },
+  { id: 'pickup', len: 0.25, wid: 0.11, cl: 0.028, bh: 0.066, cab: [0.44, 0.47, 0.7, 0.8], ch: 0.06, bed: 0.41, wh: [0.19, 0.8], spare: false },
+  { id: 'jeep', len: 0.2, wid: 0.11, cl: 0.036, bh: 0.068, cab: [0.1, 0.12, 0.62, 0.68], ch: 0.066, bed: 0, wh: [0.2, 0.8], spare: true }
+];
+const CAR_GLASS = '#4f7fa8', CAR_GLASS_LIT = '#9fd4f5', CAR_GLASS_DIM = '#3f6488', TIRE = '#23262d', HUB = '#b8bec8';
+const LAMP_HEAD = '#fff6c8', LAMP_TAIL = '#e8402e', ROOF_WHITE = '#f7f7f2';
 const STAFF_COLORS = { maintenance: '#f08a24', tour_guide: '#3fbf5f', security: '#3b5fd6', veterinary: '#f4f4f4', concessions: '#b56fd6', management: '#7d8494' };
 // Crowd variety: hair, skin and trouser palettes plus visitor caps, all picked deterministically from an agent's
 // stable `seed` so the crowd reads as a mix of people (not clones) without flickering as they walk.
@@ -73,6 +86,9 @@ const P = { x: 0, y: 0 }, Q = { x: 0, y: 0 }, R = { x: 0, y: 0 }, S = { x: 0, y:
 const rect = { x0: 0, y0: 0, x1: 0, y1: 0, z: 0, roofs: 0, rows: 0, render: null };
 const hud = { v: -1, c: -1, a: -1, text: '' };
 const stats = { stepMs: 0, renderMs: 0, sprites: 0, entries: 0 };
+// Animation clock (sim seconds): the sim time eased between ticks like positions are (render sets it each frame), so
+// procedural motion is smooth at 60 fps and freezes with the clock. DPS.selfTest pins it to draw props deterministically.
+let animT = 0;
 export const livingStats = () => stats;
 
 // Phase 3: real VGA pixel-art sprites replace the placeholder shapes for the dinosaurs.
@@ -82,6 +98,7 @@ export const livingStats = () => stats;
 // animal faces its travel direction.
 const dinoSprites = new Map();
 let spritesSettled = false; // the manifest fetch has finished (ok or not)
+let castShadowCheck = null; // manifest.cast_shadow: the phase 4 B2 sprite-cleanup check (DPS.selfTest)
 // DPS.selfTest: per-species sprite state. 'loaded' = pixel-art image ready; 'fallback' = no manifest entry or the image
 // failed, so drawDino draws the shape (a flagged fallback); 'loading' = still in flight.
 export function spriteStatus() {
@@ -155,8 +172,9 @@ function loadDinoSprites() {
   fetch(new URL('manifest.json', base)).then(r => (r.ok ? r.json() : null)).then(m => {
     spritesSettled = true;
     if (!m || !m.sprites) return;
+    castShadowCheck = m.cast_shadow || null;
     for (const [id, meta] of Object.entries(m.sprites)) {
-      const rec = { img: new Image(), w: meta.w, h: meta.h, face: meta.face || 'right', ready: false };
+      const rec = { img: new Image(), w: meta.w, h: meta.h, face: meta.face || 'right', ready: false, shadowBg: meta.shadow_bg || null };
       rec.img.onload = () => { rec.ready = true; };
       rec.img.onerror = () => { rec.failed = true; };
       rec.img.src = new URL(`${id}.png`, base).href;
@@ -401,7 +419,8 @@ function buildStatic() {
     if (carousel && near(CENTER.x + dx, CENTER.y + dy, carousel.position.x, carousel.position.y, carousel.position.r + 0.15)) continue;
     const e = entry(K_BUSH, depth(CENTER.x + dx, CENTER.y + dy)); e.x0 = CENTER.x + dx; e.y0 = CENTER.y + dy;
   }
-  for (const [dx, dy] of [[0, -0.9], [0, 0.9], [-0.9, 0], [0.9, 0]]) { const e = entry(K_BENCH, depth(CENTER.x + dx, CENTER.y + dy)); e.x0 = CENTER.x + dx; e.y0 = CENTER.y + dy; e.tier = dx === 0 ? 0 : 1; }
+  // benches face the fountain: tier = the side the backrest is on (0 north, 1 west, 2 south, 3 east)
+  for (const [dx, dy] of [[0, -0.9], [0, 0.9], [-0.9, 0], [0.9, 0]]) { const e = entry(K_BENCH, depth(CENTER.x + dx, CENTER.y + dy)); e.x0 = CENTER.x + dx; e.y0 = CENTER.y + dy; e.tier = dy < 0 ? 0 : dy > 0 ? 2 : dx < 0 ? 1 : 3; }
   for (const [dx, dy] of [[-1.15, -1.15], [1.15, 1.15]]) { const e = entry(K_LAMP, depth(CENTER.x + dx, CENTER.y + dy)); e.x0 = CENTER.x + dx; e.y0 = CENTER.y + dy; }
   // fixed facilities: every building (plaza ones and the strip cluster, office included) at its tier
   for (const f of DATA.facilities.facilities) {
@@ -482,6 +501,7 @@ export const wallSegments = () => staticEntries.filter(e => e.kind === K_WALL).m
 function render(alpha) {
   const k = canvas.width / BASE_W;
   if (titleMode) titlePan();
+  animT = AG.simTime - (1 - alpha) * AG.tickDt;
   // Scene (ground, depth-sorted world, pen labels) draws under the camera; the HUD resets to base below.
   ctx.setTransform(k * cam.zoom, 0, 0, k * cam.zoom, k * cam.x, k * cam.y);
   ctx.lineJoin = 'round';
@@ -491,7 +511,14 @@ function render(alpha) {
   for (let i = 0; i < staticEntries.length; i++) drawList.push(staticEntries[i]);
   for (const d of AG.dinos) { d.rx = d.px + (d.x - d.px) * alpha; d.ry = d.py + (d.y - d.py) * alpha; d.depth = depth(d.rx, d.ry); d.kind = K_DINO; drawList.push(d); }
   for (const v of AG.visitors) { if (!v.active) continue; v.rx = v.px + (v.x - v.px) * alpha + v.lx; v.ry = v.py + (v.y - v.py) * alpha + v.ly; v.depth = depth(v.rx, v.ry); v.kind = K_VISITOR; drawList.push(v); }
-  for (const c of AG.cars) { if (!c.active) continue; c.rx = c.px + (c.x - c.px) * alpha; c.ry = c.py + (c.y - c.py) * alpha; c.depth = depth(c.rx, c.ry + 0.08); c.kind = K_CAR; drawList.push(c); }
+  // Cars sort on their front edge, which depends on facing (side-on: half the width; end-on: half the length).
+  for (const c of AG.cars) {
+    if (!c.active) continue;
+    c.rx = c.px + (c.x - c.px) * alpha; c.ry = c.py + (c.y - c.py) * alpha;
+    carLook(c); c.dh = alpha < 0.5 ? c.phead : c.head;
+    const st = CAR_STYLES[c.style];
+    c.depth = depth(c.rx, c.ry + ((c.dh & 1) ? st.len : st.wid) * 0.5); c.kind = K_CAR; drawList.push(c);
+  }
   for (const s of AG.staff) { s.rx = s.px + (s.x - s.px) * alpha; s.ry = s.py + (s.y - s.py) * alpha; s.depth = depth(s.rx, s.ry); s.kind = K_STAFF; drawList.push(s); }
   if (AG.tram.active) { const t = AG.tram; t.rx = t.px + (t.x - t.px) * alpha; t.ry = t.y; t.depth = depth(t.rx, t.y + 0.12); t.kind = K_TRAM; drawList.push(t); }
   // M5: the delivery truck on the road and the crate it leaves at the gate.
@@ -619,6 +646,49 @@ function line3(xa, ya, za, xb, yb, zb, color, w) {
   ctx.strokeStyle = color; ctx.lineWidth = w;
   ctx.beginPath(); ctx.moveTo(P.x, P.y); ctx.lineTo(Q.x, Q.y); ctx.stroke();
 }
+// Phase 4 B2 prop primitives. In this oblique view the WEST face of a box is the visible side (the view leans a touch
+// west), so box3 draws west + south + top; face4 / tri3 fill any world points without allocating; drum is an upright
+// cylinder (lower rim arc, sides, full top); pyramid is a four-sided roof (west + south faces); glow a soft light.
+function fillStroke(fill, stroke, lw = 1) {
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); }
+}
+function face4(ax, ay, az, bx, by, bz, cx, cy, cz, dx, dy, dz, fill, stroke) {
+  ctx.beginPath();
+  project(ax, ay, az, P); ctx.moveTo(P.x, P.y);
+  project(bx, by, bz, P); ctx.lineTo(P.x, P.y);
+  project(cx, cy, cz, P); ctx.lineTo(P.x, P.y);
+  project(dx, dy, dz, P); ctx.lineTo(P.x, P.y);
+  ctx.closePath(); fillStroke(fill, stroke);
+}
+function tri3(ax, ay, az, bx, by, bz, cx, cy, cz, fill, stroke) {
+  ctx.beginPath();
+  project(ax, ay, az, P); ctx.moveTo(P.x, P.y);
+  project(bx, by, bz, P); ctx.lineTo(P.x, P.y);
+  project(cx, cy, cz, P); ctx.lineTo(P.x, P.y);
+  ctx.closePath(); fillStroke(fill, stroke);
+}
+function box3(x0, y0, x1, y1, h, top, front, west, stroke, z0 = 0) {
+  vquad(x0, y0, x0, y1, z0, z0 + h, west, stroke);
+  vquad(x0, y1, x1, y1, z0, z0 + h, front, stroke);
+  quad(x0, y0, x1, y1, z0 + h, top, stroke);
+}
+function drum(x, y, z0, z1, r, side, top, stroke) {
+  project(x, y, z0, P); project(x, y, z1, Q);
+  const rx = r * L.TW, ry = r * L.TH;
+  ctx.beginPath(); ctx.moveTo(P.x + rx, P.y); ctx.ellipse(P.x, P.y, rx, ry, 0, 0, Math.PI); ctx.lineTo(Q.x - rx, Q.y); ctx.ellipse(Q.x, Q.y, rx, ry, 0, Math.PI, 0, true); ctx.closePath();
+  fillStroke(side, stroke);
+  if (top) { ctx.beginPath(); ctx.ellipse(Q.x, Q.y, rx, ry, 0, 0, 6.283); fillStroke(top, stroke); }
+}
+function pyramid(x0, y0, x1, y1, z, h, front, west, stroke) {
+  const ax = (x0 + x1) / 2, ay = (y0 + y1) / 2;
+  tri3(x0, y0, z, x0, y1, z, ax, ay, z + h, west, stroke);
+  tri3(x0, y1, z, x1, y1, z, ax, ay, z + h, front, stroke);
+}
+function glow(sx, sy, r, color, a) {
+  ctx.globalAlpha = a; ctx.fillStyle = color; ctx.beginPath(); ctx.arc(sx, sy, r, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1;
+}
+function ball(sx, sy, r, fill) { ctx.fillStyle = fill; ctx.strokeStyle = OUT; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(sx, sy, r, 0, 6.283); ctx.fill(); ctx.stroke(); }
 function ellipse3(x, y, z, rx, ry, fill, stroke) {
   project(x, y, z, P);
   ctx.beginPath(); ctx.ellipse(P.x, P.y, L.TW * rx, L.TH * ry, 0, 0, Math.PI * 2);
@@ -956,26 +1026,88 @@ function drawSaleStake(e) {
   label('SALE', P.x, P.y + 0.5, OUT, 'center', '5px "Press Start 2P", monospace');
   if (hover === e.id) queueTag(`${shortShape(e.id)} from ${fmt$(parcelPriceFrom(e.id))}`, P.x, P.y - bh - 2, OUT, '#f2c94c', 2);
 }
+// Palettes for the plaza set: warm sandstone, painted wood, garden iron, gold trim, foliage.
+const STONE = ['#f1e8d4', '#dccfb2', '#c2b393'], STONE_DK = ['#d6cab0', '#bfb193', '#a69877'];
+const WOOD = ['#d59a5a', '#b87a3e', '#9a6231'], IRON = '#2f5a4c', IRON_DK = '#262a36';
+const GOLD = ['#f8dc6c', '#dcb03a', '#b98f27'], LEAF = ['#3f8a2a', '#5cb83a', '#8fdc5a'];
+const BLOOMS = ['#ff6b6b', '#ffd23f', '#ff8fd0', '#ffffff', '#ff9d4d', '#b58cff'];
+const DASH = [2, 2], NODASH = [];
+// Plaza planter: a terracotta tub with a rim and a round flowering shrub.
 function drawPlanter(e) {
-  box(e.x0 - 0.13, e.y0 - 0.13, e.x0 + 0.13, e.y0 + 0.13, 0.1, '#b9ad8e', '#9a8f74', '#867c64', OUT);
-  box(e.x0 - 0.1, e.y0 - 0.1, e.x0 + 0.1, e.y0 + 0.1, 0.18, '#5c9a45', '#457a33', '#3a672b', '#22401c', 0.1);
+  const x = e.x0, y = e.y0;
+  box3(x - 0.13, y - 0.13, x + 0.13, y + 0.13, 0.1, '#e58f5a', '#d0703f', '#b35c33', OUT);
+  box3(x - 0.145, y - 0.145, x + 0.145, y + 0.145, 0.025, '#f0a574', '#d97c48', '#bf6639', OUT, 0.1);
+  quad(x - 0.11, y - 0.11, x + 0.11, y + 0.11, 0.125, '#6a4a2e', null);
+  project(x, y, 0.13, P);
+  const sx = P.x, sy = P.y;
+  ctx.strokeStyle = OUT; ctx.lineWidth = 1;
+  ctx.fillStyle = LEAF[0]; ctx.beginPath(); ctx.ellipse(sx, sy - 5, 9, 7, 0, 0, 6.283); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = LEAF[1]; ctx.beginPath(); ctx.ellipse(sx - 1.5, sy - 7, 7, 5, 0, 0, 6.283); ctx.fill();
+  ctx.fillStyle = LEAF[2]; ctx.beginPath(); ctx.ellipse(sx - 3, sy - 9, 3.5, 2.5, 0, 0, 6.283); ctx.fill();
+  const k = Math.floor(frac(x * 3.7 + y * 1.3) * BLOOMS.length);
+  for (let i = 0; i < 4; i++) { ctx.fillStyle = BLOOMS[(k + i) % BLOOMS.length]; ctx.fillRect(sx - 6 + i * 3.6, sy - 9 + (i % 2) * 4, 2, 2); }
 }
+// Park bench: slatted wooden seat and backrest on iron legs, facing the fountain. e.tier = the side its backrest is on
+// (0 north, 1 west, 2 south, 3 east); the parts are drawn back to front for that facing.
 function drawBench(e) {
-  const w = e.tier === 0 ? 0.22 : 0.07, d = e.tier === 0 ? 0.07 : 0.22;
-  box(e.x0 - w, e.y0 - d, e.x0 + w, e.y0 + d, 0.09, '#a97b4a', '#8a6238', '#74522f', '#2b1a0b');
-  box(e.x0 - w, e.y0 - d, e.x0 + w, e.y0 - d + 0.03, 0.2, '#a97b4a', '#8a6238', '#74522f', '#2b1a0b', 0.09);
+  const x = e.x0, y = e.y0, along = e.tier === 0 || e.tier === 2, L2 = 0.21, D2 = 0.065;
+  const x0 = along ? x - L2 : x - D2, x1 = along ? x + L2 : x + D2, y0 = along ? y - D2 : y - L2, y1 = along ? y + D2 : y + L2;
+  const backFirst = e.tier === 0 || e.tier === 3;
+  if (backFirst) benchBack(e.tier, x0, y0, x1, y1);
+  // legs (front pair shows), seat with two slat lines
+  if (along) { vquad(x0 + 0.02, y1 - 0.01, x0 + 0.04, y1 - 0.01, 0, 0.06, IRON_DK, null); vquad(x1 - 0.04, y1 - 0.01, x1 - 0.02, y1 - 0.01, 0, 0.06, IRON_DK, null); }
+  else { vquad(x0 + 0.01, y1 - 0.02, x1 - 0.01, y1 - 0.02, 0, 0.06, IRON_DK, null); vquad(x0 + 0.01, y0 + 0.02, x0 + 0.03, y0 + 0.02, 0, 0.06, IRON_DK, null); }
+  box3(x0, y0, x1, y1, 0.028, WOOD[0], WOOD[1], WOOD[2], OUT, 0.06);
+  for (let i = 1; i < 3; i++) {
+    if (along) line3(x0 + 0.01, y0 + (y1 - y0) * i / 3, 0.088, x1 - 0.01, y0 + (y1 - y0) * i / 3, 0.088, WOOD[2], 1);
+    else line3(x0 + (x1 - x0) * i / 3, y0 + 0.01, 0.088, x0 + (x1 - x0) * i / 3, y1 - 0.01, 0.088, WOOD[2], 1);
+  }
+  if (!backFirst) benchBack(e.tier, x0, y0, x1, y1);
 }
-// tier 0: plaza lamp; 1: prize lamp post (taller, ornate double head); 2: lot lamp (tall, cool light)
+function benchBack(tier, x0, y0, x1, y1) {
+  const t = 0.022;
+  if (tier === 0 || tier === 2) {
+    const yb = tier === 0 ? y0 : y1 - t;
+    line3(x0 + 0.03, yb + t / 2, 0.06, x0 + 0.03, yb + t / 2, 0.21, IRON_DK, 1.5); line3(x1 - 0.03, yb + t / 2, 0.06, x1 - 0.03, yb + t / 2, 0.21, IRON_DK, 1.5);
+    box3(x0, yb, x1, yb + t, 0.1, WOOD[0], WOOD[1], WOOD[2], OUT, 0.11);
+    line3(x0 + 0.01, yb + t, 0.16, x1 - 0.01, yb + t, 0.16, WOOD[2], 1);
+  } else {
+    const xb = tier === 1 ? x0 : x1 - t;
+    line3(xb + t / 2, y0 + 0.03, 0.06, xb + t / 2, y0 + 0.03, 0.21, IRON_DK, 1.5); line3(xb + t / 2, y1 - 0.03, 0.06, xb + t / 2, y1 - 0.03, 0.21, IRON_DK, 1.5);
+    box3(xb, y0, xb + t, y1, 0.1, WOOD[0], WOOD[1], WOOD[2], OUT, 0.11);
+    line3(xb, y0 + 0.01, 0.16, xb, y1 - 0.01, 0.16, WOOD[2], 1);
+  }
+}
+// tier 0: plaza lantern on a green iron post; 1: the Lamp Posts prize, a taller black post with a crossbar, two hanging
+// lanterns and a gold finial; 2: lot lamp, a tall galvanised pole with an arm and a flat cool luminaire.
 function drawLamp(e) {
-  const h = e.tier === 1 ? 0.72 : e.tier === 2 ? 0.8 : 0.62;
-  line3(e.x0, e.y0, 0, e.x0, e.y0, h, e.tier === 1 ? '#2f3340' : '#4a4e58', 2);
-  if (e.tier === 1) {
-    box(e.x0 - 0.06, e.y0 - 0.06, e.x0 + 0.06, e.y0 + 0.06, 0.06, '#2f3340', '#23262f', '#1c1f27', OUT, 0);
-    for (const dx of [-0.07, 0.07]) { line3(e.x0, e.y0, h - 0.06, e.x0 + dx, e.y0, h, '#2f3340', 1.5); box(e.x0 + dx - 0.045, e.y0 - 0.045, e.x0 + dx + 0.045, e.y0 + 0.045, 0.09, '#fff1b8', '#e0d089', '#c9b978', OUT, h); }
-  } else if (e.tier === 2) {
-    line3(e.x0, e.y0, h, e.x0 + 0.12, e.y0, h, '#4a4e58', 2);
-    box(e.x0 + 0.06, e.y0 - 0.04, e.x0 + 0.18, e.y0 + 0.04, 0.05, '#e8f4ff', '#bcd4ea', '#9fbbd6', OUT, h - 0.02);
-  } else box(e.x0 - 0.05, e.y0 - 0.05, e.x0 + 0.05, e.y0 + 0.05, 0.1, '#f6e9a8', '#e0d089', '#c9b978', OUT, 0.62);
+  const x = e.x0, y = e.y0;
+  if (e.tier === 2) {
+    box3(x - 0.035, y - 0.035, x + 0.035, y + 0.035, 0.05, '#aab2bc', '#8d95a0', '#737a86', OUT);
+    line3(x, y, 0.05, x, y, 0.8, '#6d7480', 2);
+    line3(x, y, 0.79, x + 0.12, y, 0.79, '#6d7480', 2);
+    box3(x + 0.06, y - 0.04, x + 0.18, y + 0.04, 0.03, '#8d95a0', '#eef8ff', '#b9c9d8', OUT, 0.76);
+    project(x + 0.12, y + 0.04, 0.76, P); glow(P.x, P.y + 2, 6, '#e6f6ff', 0.28);
+    return;
+  }
+  const prize = e.tier === 1, h = prize ? 0.72 : 0.56, post = prize ? IRON_DK : IRON;
+  box3(x - 0.045, y - 0.045, x + 0.045, y + 0.045, 0.05, prize ? '#4a5064' : '#4f8a74', post, post, OUT);
+  line3(x, y, 0.05, x, y, h, post, prize ? 2.5 : 2);
+  if (prize) {
+    project(x, y, 0.3, P); ctx.fillStyle = GOLD[1]; ctx.fillRect(P.x - 2, P.y - 1, 4, 2); // collar
+    line3(x - 0.09, y, h - 0.04, x + 0.09, y, h - 0.04, post, 1.5);
+    for (let i = 0; i < 2; i++) {
+      const lx = x + (i ? 0.09 : -0.09);
+      box3(lx - 0.035, y - 0.035, lx + 0.035, y + 0.035, 0.08, '#fff4c0', '#ffe28a', '#e8c86a', OUT, h - 0.14);
+      pyramid(lx - 0.045, y - 0.045, lx + 0.045, y + 0.045, h - 0.06, 0.04, post, post, OUT);
+      project(lx, y + 0.035, h - 0.1, P); glow(P.x, P.y, 6, '#ffe9a0', 0.28);
+    }
+    project(x, y, h, P); ball(P.x, P.y - 2, 2, GOLD[0]);
+  } else {
+    box3(x - 0.05, y - 0.05, x + 0.05, y + 0.05, 0.1, '#fff4c0', '#ffe28a', '#e8c86a', OUT, h);
+    pyramid(x - 0.06, y - 0.06, x + 0.06, y + 0.06, h + 0.1, 0.05, post, post, OUT);
+    project(x, y + 0.05, h + 0.05, P); glow(P.x, P.y, 7, '#ffe9a0', 0.25);
+  }
 }
 
 // Fixed facility at its tier: bigger box per tier, extra roof sections, storeys and a style per tier from
@@ -1149,40 +1281,75 @@ function queueSign(e) {
   });
 }
 
-// Front gate: plain posts and lintel, the Fancy Gate Arch prize, or the Grand Entrance (twin towers, flags, gold fascia).
-function drawGate() {
-  const g = L.GATE, t = 0.14, PARK_H = L.PARK_H;
-  const grand = prizeEarned('grand_entrance'), arch = !grand && prizeEarned('gate_arch');
-  const h = grand ? 1.15 : arch ? 0.85 : 0.75;
-  const pw = grand ? 0.28 : t;
-  const stone = grand ? ['#e9dfc4', '#c9bea0', '#a89e84'] : ['#d8d2c2', '#b8b2a2', '#9a9486'];
-  box(g.x - g.halfGap - pw, PARK_H - pw / 2, g.x - g.halfGap, PARK_H + pw / 2, h, stone[0], stone[1], stone[2], OUT);
-  box(g.x + g.halfGap, PARK_H - pw / 2, g.x + g.halfGap + pw, PARK_H + pw / 2, h, stone[0], stone[1], stone[2], OUT);
-  if (grand) {
-    // gold fascia across the towers, flags on both, lit lanterns
-    vquad(g.x - g.halfGap - pw, PARK_H, g.x + g.halfGap + pw, PARK_H, h * 0.66, h * 0.86, '#c9a63b', OUT);
-    vquad(g.x - g.halfGap - pw + 0.04, PARK_H, g.x + g.halfGap + pw - 0.04, PARK_H, h * 0.7, h * 0.82, '#6b5c8a', null);
-    for (const px of [g.x - g.halfGap - pw / 2, g.x + g.halfGap + pw / 2]) {
-      line3(px, PARK_H, h, px, PARK_H, h + 0.35, '#2b2e35', 1.5);
-      project(px, PARK_H, h + 0.35, P); ctx.fillStyle = '#e05c5c'; ctx.fillRect(P.x, P.y, 9, 5);
-      box(px - 0.05, PARK_H - 0.05, px + 0.05, PARK_H + 0.05, 0.08, '#fff1b8', '#e0d089', '#c9b978', OUT, h * 0.5);
+// Front gate by prize: 0 two sandstone pillars and a purple ENTRANCE lintel; 1 the Fancy Gate Arch, carved wooden posts
+// with gold finials and pennants, a curved arch and a string of bunting; 2 the Grand Entrance, twin towers with pointed
+// roofs, waving flags, lit lanterns and a gold fascia. Each look is a clear step up from the one before.
+export const gateKind = () => prizeEarned('grand_entrance') ? 2 : prizeEarned('gate_arch') ? 1 : 0;
+const BUNTING = ['#e0503f', '#f2c94c', '#3f7fe0', '#5fbf5a', '#ec7fb4', '#f08a3c', '#35b3a4'];
+function drawGate(kind = gateKind()) {
+  const g = L.GATE, Y = L.PARK_H, xl = g.x - g.halfGap, xr = g.x + g.halfGap;
+  const pw = kind === 2 ? 0.28 : 0.14, t = animT;
+  if (kind === 2) {
+    for (let i = 0; i < 2; i++) {
+      const x0 = i ? xr : xl - pw, x1 = x0 + pw, cx = (x0 + x1) / 2, H = 1.1;
+      box3(x0 - 0.02, Y - pw / 2 - 0.02, x1 + 0.02, Y + pw / 2 + 0.02, 0.08, STONE_DK[0], STONE_DK[1], STONE_DK[2], OUT);
+      box3(x0, Y - pw / 2, x1, Y + pw / 2, H - 0.08, STONE[0], STONE[1], STONE[2], OUT, 0.08);
+      box3(x0 - 0.02, Y - pw / 2 - 0.02, x1 + 0.02, Y + pw / 2 + 0.02, 0.05, GOLD[0], GOLD[1], GOLD[2], OUT, H);
+      vquad(cx - 0.04, Y + pw / 2, cx + 0.04, Y + pw / 2, H * 0.62, H * 0.84, '#3a3350', OUT);           // window slit
+      pyramid(x0 - 0.03, Y - pw / 2 - 0.03, x1 + 0.03, Y + pw / 2 + 0.03, H + 0.05, 0.38, '#9b5fd6', '#7a45b0', OUT);
+      line3(cx, Y, H + 0.43, cx, Y, H + 0.7, OUT, 1.5);
+      project(cx, Y, H + 0.7, P);
+      const wv = Math.sin(t * 5 + i * 2) * 1.5;
+      ctx.fillStyle = i ? '#f2c94c' : '#e0503f'; ctx.strokeStyle = OUT; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(P.x, P.y); ctx.lineTo(P.x + 12, P.y + 2.5 + wv); ctx.lineTo(P.x, P.y + 6); ctx.closePath(); ctx.fill(); ctx.stroke();
+      box3(cx - 0.05, Y + pw / 2, cx + 0.05, Y + pw / 2 + 0.06, 0.08, '#fff1b8', '#ffe28a', '#e0c070', OUT, H * 0.34);  // lantern
+      project(cx, Y + pw / 2 + 0.06, H * 0.38, P); glow(P.x, P.y, 7, '#ffe9a0', 0.3);
     }
-    project(g.x, PARK_H, h * 0.72 + 0.03, P);
+    box3(xl, Y - 0.03, xr, Y + 0.03, 0.2, GOLD[0], GOLD[1], GOLD[2], OUT, 0.74);
+    vquad(xl + 0.04, Y + 0.03, xr - 0.04, Y + 0.03, 0.77, 0.91, '#6b5c8a', null);
+    project(g.x, Y, 0.8, P);
     queueTag('GRAND ENTRANCE', P.x, P.y, '#fff1b8', 'rgba(107,92,138,0.9)', 2, FONT);
-  } else if (arch) {
-    // carved arch: a curved lintel with finials and a painted sign
-    project(g.x - g.halfGap - t / 2, PARK_H, h * 0.7, P); project(g.x + g.halfGap + t / 2, PARK_H, h * 0.7, Q); project(g.x, PARK_H, h + 0.22, R);
-    ctx.fillStyle = '#8a6b3a'; ctx.strokeStyle = OUT; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(P.x, P.y); ctx.quadraticCurveTo(R.x, R.y - 14, Q.x, Q.y); ctx.lineTo(Q.x, Q.y + 7); ctx.quadraticCurveTo(R.x, R.y - 6, P.x, P.y + 7); ctx.closePath(); ctx.fill(); ctx.stroke();
-    for (const px of [g.x - g.halfGap - t / 2, g.x + g.halfGap + t / 2]) { project(px, PARK_H, h + 0.06, P); ctx.fillStyle = '#f2c94c'; ctx.beginPath(); ctx.arc(P.x, P.y, 3, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
-    project(g.x, PARK_H, h * 0.78, P);
-    queueTag('WELCOME', P.x, P.y, '#f2c94c', 'rgba(138,107,58,0.9)', 2, FONT);
+  } else if (kind === 1) {
+    const H = 0.78;
+    for (let i = 0; i < 2; i++) {
+      const x0 = i ? xr : xl - pw, x1 = x0 + pw, cx = (x0 + x1) / 2;
+      box3(x0 - 0.015, Y - pw / 2 - 0.015, x1 + 0.015, Y + pw / 2 + 0.015, 0.07, WOOD[1], WOOD[2], '#7d4f28', OUT);
+      box3(x0, Y - pw / 2, x1, Y + pw / 2, H - 0.07, WOOD[0], WOOD[1], WOOD[2], OUT, 0.07);
+      for (let b = 0; b < 2; b++) vquad(x0, Y + pw / 2, x1, Y + pw / 2, 0.3 + b * 0.28, 0.34 + b * 0.28, '#7d4f28', null); // carved bands
+      project(cx, Y, H, P); ball(P.x, P.y - 3, 3.5, GOLD[0]);
+      pennant(cx, Y, H + 0.1, i ? '#3f7fe0' : '#e0503f');
+    }
+    // the arch: a thick curved band in the gate's front plane, rising from post to post
+    const ax0 = xl - pw / 2, ax1 = xr + pw / 2, zb = H * 0.78, rise = 0.3, th = 0.1, N = 14, yf = Y + pw / 2;
+    ctx.beginPath();
+    for (let k = 0; k <= N; k++) { const u = k / N; project(ax0 + (ax1 - ax0) * u, yf, zb + rise * Math.sin(Math.PI * u) + th, P); if (k) ctx.lineTo(P.x, P.y); else ctx.moveTo(P.x, P.y); }
+    for (let k = N; k >= 0; k--) { const u = k / N; project(ax0 + (ax1 - ax0) * u, yf, zb + rise * Math.sin(Math.PI * u), P); ctx.lineTo(P.x, P.y); }
+    ctx.closePath(); fillStroke('#b87a3e', OUT);
+    ctx.beginPath();
+    for (let k = 0; k <= N; k++) { const u = k / N; project(ax0 + (ax1 - ax0) * u, yf, zb + rise * Math.sin(Math.PI * u) + th * 0.5, P); if (k) ctx.lineTo(P.x, P.y); else ctx.moveTo(P.x, P.y); }
+    ctx.strokeStyle = GOLD[1]; ctx.lineWidth = 1; ctx.stroke();
+    // bunting on a sagging string between the posts
+    const bz = H * 0.6, n = BUNTING.length;
+    for (let k = 0; k < n; k++) {
+      const u0 = (k + 0.15) / n, u1 = (k + 0.85) / n, um = (u0 + u1) / 2;
+      const s0 = bz - 0.06 * Math.sin(Math.PI * u0), s1 = bz - 0.06 * Math.sin(Math.PI * u1), sm = bz - 0.06 * Math.sin(Math.PI * um) - 0.07;
+      tri3(xl + (xr - xl) * u0, yf, s0, xl + (xr - xl) * u1, yf, s1, xl + (xr - xl) * um, yf, sm, BUNTING[k], OUT);
+    }
+    project(g.x, yf, zb + rise + th * 0.2, P);
+    queueTag('WELCOME', P.x, P.y + 10, '#f2c94c', 'rgba(138,107,58,0.9)', 2, FONT);
   } else {
-    vquad(g.x - g.halfGap - t, PARK_H, g.x + g.halfGap + t, PARK_H, h * 0.72, h + 0.12, '#6b5c8a', OUT);
-    project(g.x, PARK_H, h * 0.72 + 0.03, P);
+    const H = 0.72;
+    for (let i = 0; i < 2; i++) {
+      const x0 = i ? xr : xl - pw, x1 = x0 + pw;
+      box3(x0 - 0.02, Y - pw / 2 - 0.02, x1 + 0.02, Y + pw / 2 + 0.02, 0.06, STONE_DK[0], STONE_DK[1], STONE_DK[2], OUT);
+      box3(x0, Y - pw / 2, x1, Y + pw / 2, H - 0.06, STONE[0], STONE[1], STONE[2], OUT, 0.06);
+      box3(x0 - 0.02, Y - pw / 2 - 0.02, x1 + 0.02, Y + pw / 2 + 0.02, 0.04, STONE_DK[0], STONE_DK[1], STONE_DK[2], OUT, H);
+    }
+    box3(xl - pw, Y - 0.025, xr + pw, Y + 0.025, 0.17, '#8f7fb4', '#6b5c8a', '#574a72', OUT, H - 0.2);
+    project(g.x, Y, H - 0.12, P);
     queueTag('ENTRANCE', P.x, P.y, '#f2c94c', 'rgba(107,92,138,0.9)', 2, FONT);
   }
-  if (goalDone('grand_park')) drawPlaque(g.x + g.halfGap + pw + 0.34, PARK_H + 0.02);
+  if (goalDone('grand_park')) drawPlaque(g.x + g.halfGap + pw + 0.34, Y + 0.02);
 }
 // M5 Grand Park plaque: a stone plinth with a gold board beside the gate, lit by two small lanterns.
 function drawPlaque(x, y) {
@@ -1197,79 +1364,186 @@ function drawPlaque(x, y) {
 }
 export const plaqueVisible = () => goalDone('grand_park');
 
-// Our own centrepiece: a round fountain with a stone long-neck dinosaur sculpture. Prize levels: 1 wider basin and
-// a raised second bowl, 2 eight jets and lit water, 3 a tall central cascade with gold trim on a proper plinth.
-function drawFountain() {
-  const c = L.CENTER, lvl = fountainLevel();
-  const r = L.FOUNTAIN_R * (lvl >= 1 ? 1.22 : 1);
-  const t = AG.simTime;
-  ellipse3(c.x, c.y, 0, r, r, lvl >= 3 ? '#a89a6a' : '#8d8368', OUT);
-  if (lvl >= 3) ellipse3(c.x, c.y, 0, r * 0.94, r * 0.94, null, '#f2c94c');
-  ellipse3(c.x, c.y - 0.04, 0, r * 0.8, r * 0.8, lvl >= 2 ? '#62a8ec' : '#4f8fd6', null);
-  ctx.fillStyle = 'rgba(255,255,255,0.55)';
-  project(c.x, c.y - 0.04, 0, P);
-  const jets = lvl >= 2 ? 8 : 4;
-  for (let k = 0; k < jets; k++) { const a = t * 1.5 + k * (6.283 / jets); ctx.fillRect(P.x + Math.cos(a) * L.TW * r * 0.55 - 1, P.y + Math.sin(a) * L.TH * r * 0.55, 3, 2); }
-  if (lvl >= 2) for (let k = 0; k < jets; k++) { const a = k * (6.283 / jets); const jx = c.x + Math.cos(a) * r * 0.62, jy = c.y + Math.sin(a) * r * 0.62; line3(jx, jy, 0, jx, jy, 0.16 + 0.05 * Math.sin(t * 5 + k), 'rgba(220,240,255,0.85)', 2); }
-  if (lvl >= 1) { // raised second bowl
-    box(c.x - 0.06, c.y - 0.06, c.x + 0.06, c.y + 0.06, 0.16, '#b5b0a4', '#a9a498', '#8d8880', OUT);
-    ellipse3(c.x, c.y, 0.16, r * 0.42, r * 0.42, lvl >= 3 ? '#c9b25c' : '#a9a498', OUT);
-    ellipse3(c.x, c.y - 0.02, 0.16, r * 0.34, r * 0.34, '#7cbcf2', null);
+// Our own centrepiece, by prize level (fountainLevel): 0 a round sandstone basin with a long-neck dinosaur sculpture
+// spouting into it; 1 Stone Basin: a wider, taller basin and a raised second bowl spilling into the pool; 2 Twin Jets:
+// eight jets arcing in from the rim, lit water and a blue tile band; 3 Grand Cascade: gold trim and finials, the
+// sculpture on a tall plinth and a tall central plume. Each level adds something the one before does not have.
+function drawFountain(lvl = fountainLevel()) {
+  const c = L.CENTER, t = animT;
+  const r = L.FOUNTAIN_R * (lvl >= 1 ? 1.22 : 1), rimH = lvl >= 1 ? 0.12 : 0.085, wz = rimH - 0.02;
+  drum(c.x, c.y, 0, rimH, r, STONE[1], STONE[0], OUT);
+  if (lvl >= 2) { project(c.x, c.y, rimH * 0.45, P); ctx.strokeStyle = '#3f7fe0'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(P.x, P.y, r * L.TW, r * L.TH, 0, 0.15, Math.PI - 0.15); ctx.stroke(); }
+  if (lvl >= 3) { project(c.x, c.y, rimH, P); ctx.strokeStyle = GOLD[1]; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(P.x, P.y, r * L.TW * 0.97, r * L.TH * 0.97, 0, 0, 6.283); ctx.stroke(); }
+  ellipse3(c.x, c.y, wz, r * 0.84, r * 0.84, lvl >= 2 ? '#62c2ff' : '#4d9fe6', '#2f6fb0');
+  if (lvl >= 2) { project(c.x, c.y, wz, P); glow(P.x, P.y, r * L.TH * 0.9, '#c8f0ff', 0.45); }
+  // ripples spreading from the centre
+  project(c.x, c.y, wz, P);
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1;
+  for (let k = 0; k < 2; k++) {
+    const p = frac(t * 0.45 + k * 0.5);
+    ctx.globalAlpha = (1 - p) * 0.55; ctx.beginPath(); ctx.ellipse(P.x, P.y, r * L.TW * (0.2 + 0.6 * p), r * L.TH * (0.2 + 0.6 * p), 0, 0, 6.283); ctx.stroke();
   }
-  const pz = lvl >= 1 ? 0.16 : 0;
-  const plinth = lvl >= 3 ? 0.32 : 0.22;
-  box(c.x - 0.08, c.y - 0.08, c.x + 0.08, c.y + 0.08, plinth, lvl >= 3 ? '#e6cf7a' : '#c9c4b8', lvl >= 3 ? '#c9a63b' : '#a9a498', lvl >= 3 ? '#a8892f' : '#8d8880', OUT, pz);
-  if (lvl >= 3) { // tall central cascade
-    const hz = pz + plinth + 0.55 + 0.05 * Math.sin(t * 4);
-    line3(c.x, c.y, pz + plinth, c.x, c.y, hz, 'rgba(220,240,255,0.9)', 3);
-    project(c.x, c.y, hz, P); ctx.fillStyle = 'rgba(255,255,255,0.8)'; for (let k = 0; k < 5; k++) ctx.fillRect(P.x - 8 + k * 4, P.y + 2 + (k % 2) * 3, 2, 2);
+  ctx.globalAlpha = 1;
+  if (lvl >= 2) fountainJets(c, r, rimH, wz, t, -1);
+  // centre: pedestal (0), column + raised spilling bowl (1-2), bowl + tall gold plinth (3)
+  let top;
+  if (lvl === 0) { drum(c.x, c.y, wz, 0.2, 0.07, STONE[1], STONE[0], OUT); top = 0.2; }
+  else {
+    drum(c.x, c.y, wz, 0.25, 0.055, STONE[1], STONE[0], OUT);
+    drum(c.x, c.y, 0.24, 0.3, r * 0.42, STONE[1], STONE[0], OUT);
+    ellipse3(c.x, c.y, 0.3, r * 0.34, r * 0.34, '#7cc8f6', null);
+    ctx.setLineDash(DASH); ctx.lineDashOffset = -t * 14;
+    for (let k = 0; k < 5; k++) { const a = 0.35 + k * 0.6; const bx = c.x + Math.cos(a) * r * 0.43, by = c.y + Math.sin(a) * r * 0.43; line3(bx, by, 0.26, bx, by, wz, 'rgba(210,238,255,0.9)', 1.5); }
+    ctx.setLineDash(NODASH); ctx.lineDashOffset = 0;
+    top = 0.3;
+    if (lvl >= 3) {
+      box3(c.x - 0.075, c.y - 0.075, c.x + 0.075, c.y + 0.075, 0.2, GOLD[0], GOLD[1], GOLD[2], OUT, top);
+      vquad(c.x - 0.055, c.y + 0.075, c.x + 0.055, c.y + 0.075, top + 0.04, top + 0.16, STONE[0], null);
+      top += 0.2;
+    }
   }
-  // sculpture: body, neck, head, tail in stone grey
-  project(c.x, c.y, pz + plinth, Q);
-  ctx.fillStyle = lvl >= 3 ? '#c9c2b0' : '#b5b0a4'; ctx.strokeStyle = OUT; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.ellipse(Q.x, Q.y - 6, 10, 5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(Q.x + 6, Q.y - 8); ctx.quadraticCurveTo(Q.x + 14, Q.y - 14, Q.x + 12, Q.y - 26); ctx.lineTo(Q.x + 9, Q.y - 26); ctx.quadraticCurveTo(Q.x + 9, Q.y - 12, Q.x + 3, Q.y - 6); ctx.closePath(); ctx.fill(); ctx.stroke();
-  ctx.beginPath(); ctx.ellipse(Q.x + 11, Q.y - 27, 4, 2.5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(Q.x - 8, Q.y - 8); ctx.lineTo(Q.x - 20, Q.y - 12); ctx.lineTo(Q.x - 8, Q.y - 4); ctx.closePath(); ctx.fill(); ctx.stroke();
-  for (const lx of [-5, 4]) { ctx.fillRect(Q.x + lx, Q.y - 3, 3, 4); }
+  project(c.x, c.y, top, Q);
+  fountainSculpture(Q.x, Q.y, lvl >= 3 ? 1.15 : 1, t, lvl >= 3 ? 0 : wz);
+  if (lvl >= 3) { // tall central plume behind a crown of spray
+    const hz = top + 0.62 + 0.05 * Math.sin(t * 4);
+    line3(c.x - 0.02, c.y, top + 0.05, c.x - 0.02, c.y, hz, 'rgba(220,242,255,0.95)', 3);
+    project(c.x - 0.02, c.y, hz, P);
+    ctx.fillStyle = '#ffffff';
+    for (let k = 0; k < 6; k++) { const a = k * 1.047 + t * 2, p = frac(t * 0.9 + k / 6); ctx.fillRect(P.x + Math.cos(a) * 8 * p - 1, P.y + p * p * 16 - 4 * p, 2, 2); }
+    for (let k = 0; k < 4; k++) { const a = 0.785 + k * 1.571; project(c.x + Math.cos(a) * r * 0.92, c.y + Math.sin(a) * r * 0.92, rimH, P); ball(P.x, P.y - 2, 2.2, GOLD[0]); }
+  }
+  if (lvl >= 2) fountainJets(c, r, rimH, wz, t, 1);
+}
+// Eight jets arcing from nozzles on the rim into the pool, with a droplet riding each arc. half = -1 draws the far
+// (north) half, +1 the near half, so the centrepiece sits between them.
+function fountainJets(c, r, rimH, wz, t, half) {
+  ctx.lineWidth = 1.5;
+  for (let k = 0; k < 8; k++) {
+    const a = k * 0.7854 + 0.39;
+    if ((Math.sin(a) < 0 ? -1 : 1) !== half) continue;
+    project(c.x + Math.cos(a) * r * 0.86, c.y + Math.sin(a) * r * 0.86, rimH, P);
+    project(c.x + Math.cos(a) * r * 0.3, c.y + Math.sin(a) * r * 0.3, wz, R);
+    const mx = (P.x + R.x) / 2, my = Math.min(P.y, R.y) - 14 - 2 * Math.sin(t * 5 + k);
+    ctx.strokeStyle = 'rgba(215,240,255,0.9)'; ctx.beginPath(); ctx.moveTo(P.x, P.y); ctx.quadraticCurveTo(mx, my, R.x, R.y); ctx.stroke();
+    const u = frac(t * 1.3 + k / 8), v = 1 - u;
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(v * v * P.x + 2 * u * v * mx + u * u * R.x - 1, v * v * P.y + 2 * u * v * my + u * u * R.y - 1, 2, 2);
+  }
+}
+// The sculpture: a chunky pale-stone long-neck dinosaur on the pedestal top (sx, sy), spouting a water arc from its
+// mouth into the pool when `spoutZ` > 0 (the Grand Cascade's plume replaces the spout).
+function fountainSculpture(sx, sy, k, t, spoutZ) {
+  ctx.strokeStyle = OUT; ctx.lineWidth = 1;
+  ctx.fillStyle = STONE[2];
+  ctx.fillRect(sx - 6 * k, sy - 4 * k, 3 * k, 4 * k); ctx.fillRect(sx + 3 * k, sy - 4 * k, 3 * k, 4 * k);
+  ctx.fillStyle = STONE[1];
+  ctx.beginPath(); ctx.moveTo(sx - 7 * k, sy - 8 * k); ctx.quadraticCurveTo(sx - 16 * k, sy - 9 * k, sx - 21 * k, sy - 4 * k); ctx.quadraticCurveTo(sx - 14 * k, sy - 5 * k, sx - 7 * k, sy - 3 * k); ctx.closePath(); ctx.fill(); ctx.stroke(); // tail
+  ctx.fillStyle = STONE[0];
+  ctx.beginPath(); ctx.ellipse(sx, sy - 7 * k, 10 * k, 6 * k, 0, 0, 6.283); ctx.fill(); ctx.stroke();                        // body
+  ctx.beginPath(); ctx.moveTo(sx + 5 * k, sy - 11 * k); ctx.quadraticCurveTo(sx + 12 * k, sy - 16 * k, sx + 11 * k, sy - 27 * k); ctx.lineTo(sx + 6 * k, sy - 27 * k); ctx.quadraticCurveTo(sx + 7 * k, sy - 17 * k, sx + 1 * k, sy - 10 * k); ctx.closePath(); ctx.fill(); ctx.stroke(); // neck
+  ctx.beginPath(); ctx.ellipse(sx + 10 * k, sy - 28 * k, 5 * k, 3.4 * k, -0.15, 0, 6.283); ctx.fill(); ctx.stroke();       // head
+  ctx.fillStyle = STONE[1]; ctx.beginPath(); ctx.ellipse(sx - 1 * k, sy - 4.5 * k, 7 * k, 2.2 * k, 0, 0, Math.PI); ctx.fill(); // belly shade
+  ctx.fillStyle = OUT; ctx.fillRect(sx + 11 * k, sy - 29.5 * k, 1.5, 1.5);                                                 // eye
+  if (spoutZ > 0) {
+    const hx = sx + 15 * k, hy = sy - 27 * k, ex = sx + 18 * k, ey = sy + 1;
+    ctx.strokeStyle = 'rgba(200,236,255,0.95)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(hx, hy); ctx.quadraticCurveTo(hx + 12 * k, hy - 6 * k, ex, ey); ctx.stroke();
+    const u = frac(t * 1.6), v = 1 - u;
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(v * v * hx + 2 * u * v * (hx + 12 * k) + u * u * ex - 1, v * v * hy + 2 * u * v * (hy - 6 * k) + u * u * ey - 1, 2, 2);
+  }
 }
 
 // ---- park prizes ----
+// Welcome Banner prize: candy-striped poles with gold finials and a red cloth with a gently waving pennant hem.
 function drawBanner(e) {
-  const hw = e.x1, h = 0.72;
-  for (const px of [e.x0 - hw, e.x0 + hw]) line3(px, e.y0, 0, px, e.y0, h, '#5a3d1e', 2);
-  vquad(e.x0 - hw, e.y0, e.x0 + hw, e.y0, h * 0.62, h * 0.92, '#e05c5c', OUT);
-  project(e.x0, e.y0, h * 0.78, P);
+  const hw = e.x1, h = 0.74, y = e.y0, t = animT;
+  for (let i = 0; i < 2; i++) {
+    const px = i ? e.x0 + hw : e.x0 - hw;
+    for (let k = 0; k < 6; k++) line3(px, y, h * k / 6, px, y, h * (k + 1) / 6, k % 2 ? '#f4f0e2' : '#e0503f', 2.5);
+    project(px, y, h, P); ball(P.x, P.y - 2, 2.5, GOLD[0]);
+  }
+  const x0 = e.x0 - hw + 0.03, x1 = e.x0 + hw - 0.03, zt = h * 0.92, zb = h * 0.6, N = 8;
+  ctx.beginPath();
+  project(x0, y, zt, P); ctx.moveTo(P.x, P.y); project(x1, y, zt, P); ctx.lineTo(P.x, P.y);
+  for (let k = N; k >= 0; k--) { const u = k / N, drop = k % 2 ? 0.05 : 0; project(x0 + (x1 - x0) * u, y, zb - drop + 0.012 * Math.sin(t * 3 + k), P); ctx.lineTo(P.x, P.y); }
+  ctx.closePath(); fillStroke('#e0503f', OUT);
+  vquad(x0 + 0.02, y, x1 - 0.02, y, zt - 0.035, zt - 0.02, '#f2c94c', null);
+  project(e.x0, y, h * 0.76, P);
   label('WELCOME', P.x, P.y + 3, '#fff1b8', 'center', FONT_S);
 }
+// Flower Beds prize: a round stone-edged bed of soil with clumps of leaves and bright blooms (colours vary by bed).
 function drawFlowerBed(e) {
-  ellipse3(e.x0, e.y0, 0, 0.13, 0.11, '#4a3320', OUT);
-  ellipse3(e.x0, e.y0, 0, 0.11, 0.09, '#3f7a2e', null);
-  const cols = ['#e05c5c', '#f2c94c', '#e08fd0', '#f0f0e8', '#ff9d4d'];
-  for (let i = 0; i < 6; i++) { const a = i * 1.047; project(e.x0 + Math.cos(a) * 0.07, e.y0 + Math.sin(a) * 0.055, 0.02, P); ctx.fillStyle = cols[i % cols.length]; ctx.fillRect(P.x - 1.5, P.y - 1.5, 3, 3); }
+  drum(e.x0, e.y0, 0, 0.035, 0.14, STONE[1], STONE[0], OUT);
+  ellipse3(e.x0, e.y0, 0.035, 0.115, 0.115, '#6a4a2e', null);
+  const k0 = Math.floor(frac(e.x0 * 2.3 + e.y0 * 5.1) * BLOOMS.length);
+  for (let i = 0; i < 7; i++) {
+    const a = i * 0.8976 + 0.3, rr = i === 6 ? 0 : 0.07;
+    project(e.x0 + Math.cos(a) * rr, e.y0 + Math.sin(a) * rr * 0.9, 0.04, P);
+    ctx.fillStyle = i % 2 ? LEAF[1] : LEAF[0]; ctx.beginPath(); ctx.ellipse(P.x, P.y - 1.5, 3, 2, 0, 0, 6.283); ctx.fill();
+    ctx.fillStyle = BLOOMS[(k0 + i) % BLOOMS.length]; ctx.fillRect(P.x - 1.5, P.y - 5, 3, 3);
+    ctx.fillStyle = '#ffe36b'; ctx.fillRect(P.x - 0.5, P.y - 4, 1, 1);
+  }
 }
+// Dinosaur Statues prize: a stepped sandstone plinth with a gold plaque, topped by a chunky stone T-rex (tier 0 faces
+// east, tier 1 west).
 function drawStatue(e) {
-  box(e.x0 - 0.12, e.y0 - 0.1, e.x0 + 0.12, e.y0 + 0.1, 0.16, '#b9ad8e', '#9a8f74', '#867c64', OUT);
-  project(e.x0, e.y0, 0.16, Q);
-  const dir = e.tier === 0 ? 1 : -1;
-  ctx.fillStyle = '#a8a39a'; ctx.strokeStyle = OUT; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.ellipse(Q.x, Q.y - 5, 7, 3.5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(Q.x + dir * 4, Q.y - 6); ctx.lineTo(Q.x + dir * 9, Q.y - 16); ctx.lineTo(Q.x + dir * 6, Q.y - 16); ctx.lineTo(Q.x + dir * 2, Q.y - 5); ctx.closePath(); ctx.fill(); ctx.stroke();
-  ctx.beginPath(); ctx.ellipse(Q.x + dir * 8, Q.y - 17, 3, 2, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(Q.x - dir * 5, Q.y - 6); ctx.lineTo(Q.x - dir * 13, Q.y - 9); ctx.lineTo(Q.x - dir * 5, Q.y - 3); ctx.closePath(); ctx.fill(); ctx.stroke();
-  for (const lx of [-4, 2]) ctx.fillRect(Q.x + lx, Q.y - 3, 2.5, 3);
+  const x = e.x0, y = e.y0;
+  box3(x - 0.13, y - 0.11, x + 0.13, y + 0.11, 0.06, STONE_DK[0], STONE_DK[1], STONE_DK[2], OUT);
+  box3(x - 0.1, y - 0.08, x + 0.1, y + 0.08, 0.13, STONE[0], STONE[1], STONE[2], OUT, 0.06);
+  vquad(x - 0.045, y + 0.08, x + 0.045, y + 0.08, 0.1, 0.15, GOLD[1], OUT);
+  project(x, y, 0.19, Q);
+  const d = e.tier === 0 ? 1 : -1, sx = Q.x, sy = Q.y;
+  ctx.strokeStyle = OUT; ctx.lineWidth = 1;
+  ctx.fillStyle = '#a9a295';
+  ctx.fillRect(sx - 4, sy - 6, 3, 6); ctx.fillRect(sx + 1, sy - 6, 3, 6);                                                    // legs
+  ctx.fillStyle = '#c9c2b2';
+  ctx.beginPath(); ctx.moveTo(sx - d * 4, sy - 11); ctx.quadraticCurveTo(sx - d * 13, sy - 12, sx - d * 17, sy - 5); ctx.lineTo(sx - d * 5, sy - 6); ctx.closePath(); ctx.fill(); ctx.stroke(); // tail
+  ctx.beginPath(); ctx.ellipse(sx, sy - 10, 7, 5, -d * 0.35, 0, 6.283); ctx.fill(); ctx.stroke();                        // body
+  ctx.beginPath(); ctx.moveTo(sx + d * 2, sy - 16); ctx.lineTo(sx + d * 11, sy - 19); ctx.lineTo(sx + d * 11, sy - 14); ctx.lineTo(sx + d * 4, sy - 12); ctx.closePath(); ctx.fill(); ctx.stroke(); // head
+  ctx.fillStyle = '#a9a295'; ctx.fillRect(sx + d * 5 - (d < 0 ? 2 : 0), sy - 11, 2, 1.5);                                 // tiny arm
+  ctx.fillStyle = OUT; ctx.fillRect(sx + d * 7 - 0.5, sy - 17.5, 1.5, 1.5);                                             // eye
 }
+// Carousel prize: a red-and-gold platform, a striped centre column, six little dinosaurs to ride bobbing on poles as it
+// turns (far half drawn behind the column, near half in front), a striped canopy with a scalloped valance and a flag.
+const RIDE_COLS = ['#e0503f', '#5fbf5a', '#3f7fe0', '#f2c94c', '#ec7fb4', '#f08a3c'];
 function drawCarousel(e) {
-  const r = e.x1, t = AG.simTime;
-  ellipse3(e.x0, e.y0, 0, r, r, '#c9a63b', OUT);
-  ellipse3(e.x0, e.y0, 0.06, r * 0.92, r * 0.92, '#e8d9a0', OUT);
-  line3(e.x0, e.y0, 0.06, e.x0, e.y0, 0.62, '#8a6b3a', 3);
-  const n = 6;
-  for (let i = 0; i < n; i++) { const a = t * 0.9 + i * 6.283 / n; const px = e.x0 + Math.cos(a) * r * 0.62, py = e.y0 + Math.sin(a) * r * 0.62; line3(px, py, 0.06, px, py, 0.5, '#c9c4b8', 1); const zz = 0.2 + 0.05 * Math.sin(t * 3 + i); box(px - 0.05, py - 0.03, px + 0.05, py + 0.03, 0.07, ['#e05c5c', '#6fcf6a', '#5aa0e0', '#f2c94c', '#e08fd0', '#ff9d4d'][i], '#7a5a30', '#5a4020', OUT, zz); }
-  // canopy: striped cone
-  project(e.x0, e.y0, 0.5, P); project(e.x0, e.y0, 0.8, R);
-  for (let i = 0; i < 12; i++) { const a0 = i * 6.283 / 12, a1 = (i + 1) * 6.283 / 12; ctx.fillStyle = i % 2 ? '#e05c5c' : '#f1f0e6'; ctx.strokeStyle = OUT; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(R.x, R.y); ctx.lineTo(P.x + Math.cos(a0) * L.TW * r, P.y + Math.sin(a0) * L.TH * r); ctx.lineTo(P.x + Math.cos(a1) * L.TW * r, P.y + Math.sin(a1) * L.TH * r); ctx.closePath(); ctx.fill(); ctx.stroke(); }
-  ctx.fillStyle = '#f2c94c'; ctx.beginPath(); ctx.arc(R.x, R.y - 2, 3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  const r = e.x1, t = animT, x = e.x0, y = e.y0;
+  drum(x, y, 0, 0.06, r, '#c23e30', GOLD[0], OUT);
+  ellipse3(x, y, 0.06, r * 0.86, r * 0.86, '#f4e6b8', OUT);
+  carouselRiders(x, y, r, t, -1);
+  drum(x, y, 0.06, 0.5, 0.05, '#f4f0e2', null, OUT);
+  line3(x, y + 0.05, 0.1, x, y + 0.05, 0.46, '#e0503f', 2);
+  carouselRiders(x, y, r, t, 1);
+  // canopy: striped cone, scalloped valance, flag
+  project(x, y, 0.52, P); project(x, y, 0.84, R);
+  const rx = r * L.TW * 1.04, ry = r * L.TH * 1.04;
+  for (let i = 0; i < 12; i++) {
+    const a0 = i * 0.5236, a1 = (i + 1) * 0.5236;
+    ctx.fillStyle = i % 2 ? '#e0503f' : '#f4f0e2'; ctx.strokeStyle = OUT; ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.moveTo(R.x, R.y); ctx.lineTo(P.x + Math.cos(a0) * rx, P.y + Math.sin(a0) * ry); ctx.lineTo(P.x + Math.cos(a1) * rx, P.y + Math.sin(a1) * ry); ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+  for (let i = 0; i < 12; i++) {
+    const a = (i + 0.5) * 0.5236;
+    if (Math.sin(a) < -0.2) continue; // only the near half of the valance shows
+    ctx.fillStyle = i % 2 ? '#f4f0e2' : '#e0503f';
+    ctx.beginPath(); ctx.arc(P.x + Math.cos(a) * rx, P.y + Math.sin(a) * ry + 1, 3, 0, Math.PI); ctx.fill(); ctx.stroke();
+  }
+  ball(R.x, R.y - 2, 3, GOLD[0]);
+  line3(x, y, 0.86, x, y, 1.02, OUT, 1);
+  project(x, y, 1.02, P); ctx.fillStyle = '#3f7fe0'; ctx.beginPath(); ctx.moveTo(P.x, P.y); ctx.lineTo(P.x + 8, P.y + 2 + Math.sin(t * 5)); ctx.lineTo(P.x, P.y + 4); ctx.closePath(); ctx.fill(); ctx.stroke();
+}
+function carouselRiders(x, y, r, t, half) {
+  for (let i = 0; i < 6; i++) {
+    const a = t * 0.9 + i * 1.0472, sa = Math.sin(a);
+    if ((sa < 0 ? -1 : 1) !== half) continue;
+    const px = x + Math.cos(a) * r * 0.62, py = y + sa * r * 0.62, zz = 0.2 + 0.05 * Math.sin(t * 3 + i);
+    line3(px, py, 0.06, px, py, 0.5, GOLD[1], 1);
+    project(px, py, zz, P);
+    const d = Math.cos(a + 1.5708) >= 0 ? 1 : -1; // riders face along the direction of travel
+    ctx.fillStyle = RIDE_COLS[i]; ctx.strokeStyle = OUT; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(P.x, P.y - 2, 5, 3, 0, 0, 6.283); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(P.x + d * 3, P.y - 3); ctx.lineTo(P.x + d * 6, P.y - 9); ctx.lineTo(P.x + d * 8.5, P.y - 8); ctx.lineTo(P.x + d * 5, P.y - 1.5); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillRect(P.x - 3, P.y, 1.5, 2); ctx.fillRect(P.x + 1.5, P.y, 1.5, 2);
+  }
 }
 // Tram stop shelter beside the track (posts + roof + a bench), with a "TRAM" sign.
 function drawTramStop(e) {
@@ -1367,12 +1641,95 @@ function drawStaff(s) {
   else if (s.role === 'tour_guide') { ctx.strokeStyle = '#3a3a3a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(P.x + 4, P.y - 8); ctx.lineTo(P.x + 4, P.y - 22); ctx.stroke(); ctx.fillStyle = '#f2c94c'; ctx.fillRect(P.x + 4, P.y - 22, 6, 4); }
   else if (s.role === 'veterinary') { ctx.fillStyle = '#e05c5c'; ctx.fillRect(P.x - 1, P.y - 9, 2, 5); ctx.fillRect(P.x - 2.5, P.y - 7.5, 5, 2); }
 }
+// ---- cars (phase 4 B2) ----
+// Style and colour indices for a car's current trip, derived once from its seed (balance.living.car_style_weights sets
+// the style mix, car_two_tone_share the share with a white roof). Exported for DPS.selfTest.
+export function carLook(c) {
+  const sd = c.seed || 0;
+  if (c.lookSeed === sd) return c;
+  const Lv = DATA.balance.living, W = Lv.car_style_weights || {};
+  let tot = 0;
+  for (let i = 0; i < CAR_STYLES.length; i++) tot += Math.max(0, W[CAR_STYLES[i].id] ?? 1);
+  let r = frac(sd * 7.77) * tot, s = 0;
+  while (s < CAR_STYLES.length - 1 && r >= Math.max(0, W[CAR_STYLES[s].id] ?? 1)) { r -= Math.max(0, W[CAR_STYLES[s].id] ?? 1); s++; }
+  c.style = s; c.color = Math.floor(frac(sd * 3.331) * CAR_COLORS.length);
+  c.roof2 = frac(sd * 23.17) < (Lv.car_two_tone_share ?? 0);
+  c.lookSeed = sd;
+  return c;
+}
+export const carPalette = () => ({ colors: CAR_COLORS.length, styles: CAR_STYLES.length, ids: CAR_STYLES.map(st => st.id) });
+// [roof (sunlit), side, shaded end, hood and deck] per body colour, built once.
+let carTones = null;
+function carTone(i) {
+  if (!carTones) carTones = CAR_COLORS.map(col => [lighten(col, 0.3), col, shade(col), lighten(col, 0.12)]);
+  return carTones[i] || carTones[0];
+}
+// A car facing its heading (c.dh: 0 E, 1 N, 2 W, 3 S). Side-on shows the classic profile: body, a cabin with a raked
+// windshield toward the nose, wheels, a head lamp at the nose and a tail lamp at the back. Driving up the aisle shows
+// the tail (rear window, tail lamps, white reversing lamps when backing out); leaving shows the nose (windshield,
+// head lamps, grille). Everything goes through project(), so it sits on the grid like the buildings.
 function drawCar(c) {
-  const w = 0.11, hh = 0.065;
-  const x0 = c.rx - w, x1 = c.rx + w, y0 = c.ry - hh, y1 = c.ry + hh;
-  const col = CAR_COLORS[c.color];
-  box(x0, y0, x1, y1, 0.09, col, shade(col), shade(col), OUT);
-  box(x0 + 0.05, y0 + 0.01, x1 - 0.05, y1 - 0.01, 0.15, '#bfdcf0', shade(col), shade(col), OUT);
+  const st = CAR_STYLES[c.style] || CAR_STYLES[0], T = carTone(c.color), roof = c.roof2 ? ROOF_WHITE : T[0];
+  const side = (c.dh & 1) === 0;
+  project(c.rx, c.ry, 0, P);
+  ctx.fillStyle = 'rgba(0,0,0,0.26)';
+  ctx.beginPath(); ctx.ellipse(P.x - 1, P.y + 0.5, (side ? st.len : st.wid) * 0.5 * L.TW + 1.5, (side ? st.wid : st.len) * 0.5 * L.TH + 1, 0, 0, 6.283); ctx.fill();
+  if (side) carSide(c, st, T, roof, c.dh === 0 ? 1 : -1);
+  else carEnd(c, st, T, roof, c.dh === 3);
+}
+function carSide(c, st, T, roof, f) {
+  const cy = c.ry, y0 = cy - st.wid / 2, y1 = cy + st.wid / 2;
+  const z0 = st.cl, z1 = st.cl + st.bh, z2 = z1 + st.ch;
+  const xr = c.rx - f * st.len / 2, fl = f * st.len; // tail x, and signed length toward the nose
+  const xw = Math.min(xr, xr + fl), xe = Math.max(xr, xr + fl);
+  if (st.spare) { project(xr - f * 0.012, y1 - 0.02, z0 + st.bh * 0.55, P); ctx.fillStyle = TIRE; ctx.beginPath(); ctx.arc(P.x, P.y, 2.2, 0, 6.283); ctx.fill(); }
+  vquad(xw, y0, xw, y1, z0, z1, T[2], OUT);   // west end (a sliver in this view)
+  vquad(xw, y1, xe, y1, z0, z1, T[1], OUT);   // flank
+  quad(xw, y0, xe, y1, z1, T[3], OUT);        // hood and deck from above
+  if (st.bed) quad(xr + fl * 0.04, y0 + 0.018, xr + fl * st.bed, y1 - 0.018, z1, T[2], OUT); // pickup load bed
+  const K = st.cab, yc0 = y0 + 0.014, yc1 = y1 - 0.014;
+  const ra = xr + fl * K[0], rb = xr + fl * K[1], fb = xr + fl * K[2], fa = xr + fl * K[3];
+  face4(ra, yc0, z1, ra, yc1, z1, rb, yc1, z2, rb, yc0, z2, CAR_GLASS_DIM, OUT); // rear window
+  face4(fa, yc0, z1, fa, yc1, z1, fb, yc1, z2, fb, yc0, z2, CAR_GLASS_LIT, OUT); // windshield
+  quad(rb, yc0, fb, yc1, z2, roof, OUT);
+  face4(ra, yc1, z1, fa, yc1, z1, fb, yc1, z2, rb, yc1, z2, T[1], OUT);         // cabin side
+  const wz0 = z1 + st.ch * 0.2, wz1 = z2 - st.ch * 0.14, sl0 = (wz0 - z1) / st.ch, sl1 = (wz1 - z1) / st.ch;
+  face4(ra + (rb - ra) * sl0 + fl * 0.03, yc1, wz0, fa + (fb - fa) * sl0 - fl * 0.03, yc1, wz0, fa + (fb - fa) * sl1 - fl * 0.03, yc1, wz1, ra + (rb - ra) * sl1 + fl * 0.03, yc1, wz1, CAR_GLASS, null); // side windows
+  for (let i = 0; i < st.wh.length; i++) { project(xr + fl * st.wh[i], y1, 0.03, P); carWheel(P.x, P.y); }
+  project(xr + fl, y1, z0 + st.bh * 0.62, P); ctx.fillStyle = LAMP_HEAD; ctx.fillRect(P.x - (f > 0 ? 2 : 0), P.y - 1, 2, 1.6);
+  project(xr, y1, z0 + st.bh * 0.62, P); ctx.fillStyle = c.rev ? LAMP_HEAD : LAMP_TAIL; ctx.fillRect(P.x - (f > 0 ? 0 : 1.6), P.y - 1, 1.6, 1.6);
+}
+function carWheel(sx, sy) {
+  const r = Math.max(1.5, 0.03 * L.ZH);
+  ctx.fillStyle = TIRE; ctx.beginPath(); ctx.arc(sx, sy, r, 0, 6.283); ctx.fill();
+  ctx.fillStyle = HUB; ctx.fillRect(sx - 0.5, sy - 0.5, 1, 1);
+}
+function carEnd(c, st, T, roof, front) {
+  const x0 = c.rx - st.wid / 2, x1 = c.rx + st.wid / 2;
+  const z0 = st.cl, z1 = st.cl + st.bh, z2 = z1 + st.ch;
+  const s = front ? 1 : -1, yr = c.ry - s * st.len / 2, fl = s * st.len; // tail y, signed length toward the nose
+  const yn = Math.min(yr, yr + fl), ys = Math.max(yr, yr + fl);
+  vquad(x0 + 0.004, ys - 0.03, x0 + 0.03, ys - 0.03, 0, z0 + 0.02, TIRE, null);   // tyres peeking under the near end
+  vquad(x1 - 0.03, ys - 0.03, x1 - 0.004, ys - 0.03, 0, z0 + 0.02, TIRE, null);
+  vquad(x0, yn, x0, ys, z0, z1, T[2], OUT);   // west flank (a sliver)
+  vquad(x0, ys, x1, ys, z0, z1, T[1], OUT);   // near end: nose or tail
+  quad(x0, yn, x1, ys, z1, T[3], OUT);
+  if (st.bed) quad(x0 + 0.018, yr + fl * 0.04, x1 - 0.018, yr + fl * st.bed, z1, T[2], OUT);
+  const K = st.cab, xc0 = x0 + 0.014, xc1 = x1 - 0.014;
+  const ra = yr + fl * K[0], rb = yr + fl * K[1], fb = yr + fl * K[2], fa = yr + fl * K[3];
+  face4(xc0, ra, z1, xc0, fa, z1, xc0, fb, z2, xc0, rb, z2, CAR_GLASS, OUT);      // west side windows (a sliver)
+  if (front) face4(xc0, ra, z1, xc1, ra, z1, xc1, rb, z2, xc0, rb, z2, CAR_GLASS_DIM, OUT); // far: rear window
+  else face4(xc0, fa, z1, xc1, fa, z1, xc1, fb, z2, xc0, fb, z2, CAR_GLASS_DIM, OUT);       // far: windshield
+  quad(xc0, rb, xc1, fb, z2, roof, OUT);
+  if (front) face4(xc0, fa, z1, xc1, fa, z1, xc1, fb, z2, xc0, fb, z2, CAR_GLASS_LIT, OUT); // near: windshield
+  else face4(xc0, ra, z1, xc1, ra, z1, xc1, rb, z2, xc0, rb, z2, CAR_GLASS, OUT);           // near: rear window
+  if (st.spare && !front) { project(c.rx, ys, z0 + st.bh * 0.5, P); ctx.fillStyle = TIRE; ctx.beginPath(); ctx.arc(P.x, P.y, 2.2, 0, 6.283); ctx.fill(); }
+  // lamps on the near end, plus a grille (nose) or a number plate (tail)
+  project(x0, ys, z0 + st.bh * 0.62, P); project(x1, ys, z0 + st.bh * 0.62, Q);
+  ctx.fillStyle = front ? LAMP_HEAD : LAMP_TAIL;
+  ctx.fillRect(P.x + 0.8, P.y - 1, 1.8, 1.6); ctx.fillRect(Q.x - 2.6, Q.y - 1, 1.8, 1.6);
+  if (!front && c.rev) { ctx.fillStyle = LAMP_HEAD; ctx.fillRect(P.x + 2.6, P.y - 1, 1, 1.6); ctx.fillRect(Q.x - 3.6, Q.y - 1, 1, 1.6); }
+  ctx.fillStyle = front ? OUT : '#f2f2e6'; ctx.fillRect((P.x + Q.x) / 2 - 1.5, P.y - (front ? 1 : 0.2), 3, front ? 1 : 1.2);
 }
 const shadeCache = new Map();
 function shade(hex) {
@@ -1384,35 +1741,104 @@ function shade(hex) {
   shadeCache.set(hex, s);
   return s;
 }
+// ---- dinosaur motion (phase 4 B2): procedural walk + idle on the existing sprites, no new art ----
+// A feet-anchored pose per animal: sx / sy scale about the feet, kx leans the top toward the head (a skew, as a
+// fraction of height), tail lifts the tail end of the sprite (a shear about a seam at tail_split of the width), lift is
+// the starving breathing bob in px (kept from before, the only motion that moves the feet). Walking: two footfalls per
+// stride, squash on landing and stretch mid-stride, a forward lean, a side-to-side rock and a tail sway, the stride
+// advancing with the distance actually drawn so the feet do not skate. Idle: slow breathing, and now and then a
+// head-dip (lean + squash) or a tail flick. Rates and phases come from the animal's seed, so pen-mates never move in
+// lockstep. Every amplitude and rate is balance.living.dino_anim.
+const POSE = { sx: 1, sy: 1, kx: 0, tail: 0, lift: 0 };
+// Progress 0..1 through an occasional per-animal event (one per window of `every` = [min, max] seconds, placed at a
+// hashed offset inside the window, lasting `dur` seconds), or -1 when none is running.
+function eventAt(t, sd, every, dur, salt) {
+  const period = every[0] + (every[1] - every[0]) * frac(sd * (13.7 + salt));
+  const k = Math.floor(t / period);
+  const start = frac(Math.sin((k + 1) * 12.9898 + sd * 78.233 + salt * 4.1) * 43758.5453) * Math.max(0, period - dur);
+  const x = t - k * period - start;
+  return x >= 0 && x < dur ? x / dur : -1;
+}
+export function dinoPose(d, out = POSE) {
+  const Lv = DATA.balance.living, A = Lv.dino_anim, sd = d.seed || 0;
+  out.sx = 1; out.sy = 1; out.kx = 0; out.tail = 0; out.lift = 0;
+  const starving = d.d.hunger >= DATA.balance.dinosaur.hunger_max;
+  const w = Math.min(1, Math.max(0, d.walkK || 0)), i = 1 - w;
+  if (w > 0) {
+    const phi = (d.stride || 0) * (A.walk_steps_per_tile[d.size] ?? A.walk_steps_per_tile.medium) * Math.PI + frac(sd * 5.3) * 6.283;
+    const s = Math.abs(Math.sin(phi)) * 2 - 1, k = w * (starving ? A.starving_walk : 1);
+    out.sy += k * A.walk_stretch * s; out.sx -= k * A.walk_stretch * A.walk_squash * s;
+    out.kx += k * (A.walk_lean + A.walk_rock * Math.sin(phi));
+    out.tail += k * A.walk_tail * (0.5 + 0.5 * Math.cos(phi));
+  }
+  if (i > 0) {
+    if (starving) out.lift = i * Math.sin(d.phase * ((Lv.dino_starving_bob_hz || 0.45) / (Lv.dino_bob_hz || 1.4))) * (Lv.dino_starving_bob_px || 1.6);
+    else {
+      const t = animT * (1 + A.rate_jitter * (2 * frac(sd * 7.31) - 1)) + frac(sd * 3.17) * 60;
+      const br = Math.sin(t * A.breath_hz * 6.283);
+      out.sy += i * A.breath * br; out.sx -= i * A.breath * A.walk_squash * br;
+      const dp = eventAt(t, sd, A.dip_every_s, A.dip_s, 1);
+      if (dp >= 0) { const b = Math.sin(Math.PI * dp) ** 2; out.kx += i * A.dip_lean * b; out.sy -= i * A.dip_squash * b; }
+      const fl = eventAt(t, sd, A.flick_every_s, A.flick_s, 2);
+      if (fl >= 0) out.tail += i * A.flick * Math.sin(Math.PI * fl) * Math.abs(Math.sin(Math.PI * A.flick_waves * fl));
+    }
+  }
+  if (d.pop > 0) { out.sx = 1; out.sy = 1; out.kx = 0; out.tail = 0; } // the crate pop-in owns the scale
+  return out;
+}
 // Phase 3: draw the species' pixel-art sprite, feet on the ground point, mirrored to face the
-// travel direction. Preserves the shadow, wander/idle/starving bob, the crate pop-in scale, and
+// travel direction. Preserves the shadow, the starving bob, the crate pop-in scale, and
 // every status badge. Falls back to drawDinoShape until the image has loaded.
+// Phase 4 B2: posed through dinoPose (walk cycle / idle life), feet anchored on the ground point.
 function drawDino(d) {
   if (d.arriving) return; // still in the delivery truck (M5)
   const spr = dinoSprites.get(d.sp.id);
   if (!spr || !spr.ready) { drawDinoShape(d); return; }
+  const Lv = DATA.balance.living, A = Lv.dino_anim;
+  // Renderer-side motion state: the stride follows the distance actually drawn (a jump, e.g. an escapee snapped home,
+  // is ignored); walkK eases between standing and walking on sim time, so it freezes with the clock.
+  if (d.lrx === d.lrx) { const m = Math.hypot(d.rx - d.lrx, d.ry - d.lry); if (m < 0.3) d.stride += m; }
+  d.lrx = d.rx; d.lry = d.ry;
+  const dt = d.animAt === d.animAt ? animT - d.animAt : 0;
+  d.animAt = animT;
+  if (dt > 0) d.walkK += ((d.moving ? 1 : 0) - d.walkK) * Math.min(1, dt * A.blend_rate);
   project(d.rx, d.ry, 0, P);
-  const Lv = DATA.balance.living;
   const popK = d.pop > 0 ? Math.min(1, (d.popT || 0) / d.pop) : 1;
   const popScale = d.pop > 0 ? (popK < 0.7 ? 0.2 + 1.15 * (popK / 0.7) : 1.35 - 0.35 * ((popK - 0.7) / 0.3)) : 1;
   const scale = (Lv.sprite_scale ?? 1) * popScale;
   const w = spr.w * scale, h = spr.h * scale;
-  const starving = d.d.hunger >= DATA.balance.dinosaur.hunger_max;
-  const bob = d.moving ? Math.abs(Math.sin(d.phase)) * 1.5 : starving ? Math.sin(d.phase * ((Lv.dino_starving_bob_hz || 0.45) / (Lv.dino_bob_hz || 1.4))) * (Lv.dino_starving_bob_px || 1.6) : Math.sin(d.phase * 0.5) * 0.6;
-  const sx = P.x, sy = P.y - bob;
+  const pose = dinoPose(d);
+  const sx = P.x, sy = P.y - pose.lift;
   shadow(P.x, P.y, w * 0.42);
   const flip = (d.dir >= 0) !== (spr.face === 'right'); // mirror when art facing != travel facing
+  const fwd = spr.face === 'right' ? 1 : -1;             // the head's side in the art's own frame
   ctx.imageSmoothingEnabled = false;
   ctx.save();
   ctx.translate(sx, sy);
   if (flip) ctx.scale(-1, 1);
-  ctx.drawImage(spr.img, -w / 2, -h, w, h); // centred, feet on the ground point
+  ctx.transform(pose.sx, 0, -fwd * pose.kx, pose.sy, 0, 0); // scale about the feet, lean the top toward the head
+  blitDino(spr, w, h, fwd, pose.tail, A.tail_split);
   ctx.restore();
-  d.labelY = sy - h - 8 - (d.size === 'large' ? 4 : 0);
+  d.labelY = sy - h * pose.sy - 8 - (d.size === 'large' ? 4 : 0);
   const wrongBiome = !d.escaped && biomeFit(d.sp, state.parcels[d.parcel]?.biome) === 'wrong';
   if (d.d.sick_days > 0 || d.d.health < 50) { badge(sx, d.labelY + 2); if (wrongBiome) unhappyBadge(sx + 11, d.labelY + 2); }
   else if (wrongBiome) unhappyBadge(sx, d.labelY + 2);
   if (d.d.hunger >= Lv.dino_hungry_threshold && !(d.d.sick_days > 0 || d.d.health < 50)) { label('z', sx + w * 0.4, sy - h - 2, '#f2c94c', 'center', FONT_S); }
+}
+// The sprite, feet on the origin, in the art's own facing. With a tail lift the tail end (`split` of the width) is its
+// own slice, sheared up about the seam; the slices overlap by one source column so no seam line shows.
+function blitDino(spr, w, h, fwd, tail, split) {
+  const img = spr.img, iw = img.naturalWidth || spr.w, ih = img.naturalHeight || spr.h;
+  const n = Math.round(iw * split);
+  if (Math.abs(tail) < 1e-4 || n < 2 || n > iw - 3) { ctx.drawImage(img, -w / 2, -h, w, h); return; }
+  const k = w / iw, seam = fwd > 0 ? -w / 2 + n * k : w / 2 - n * k, b = fwd * tail;
+  ctx.save();
+  ctx.transform(1, b, 0, 1, 0, -b * seam); // shear about x = seam: the tail end rises, the seam stays put
+  if (fwd > 0) ctx.drawImage(img, 0, 0, n + 1, ih, -w / 2, -h, (n + 1) * k, h);
+  else ctx.drawImage(img, iw - n - 1, 0, n + 1, ih, seam - k, -h, (n + 1) * k, h);
+  ctx.restore();
+  if (fwd > 0) ctx.drawImage(img, n, 0, iw - n, ih, seam, -h, w / 2 - seam, h);
+  else ctx.drawImage(img, 0, 0, iw - n, ih, -w / 2, -h, seam + w / 2, h);
 }
 // Bigger placeholder dinosaurs with a dark outline pass so they read against any pen colour. A starving animal
 // keeps a slow, deep breathing bob and a drooped head (balance.living.dino_starving_bob_*): never a frozen sprite.
@@ -1581,4 +2007,78 @@ function drawZoomControls() {
     label(glyph, rx + bw / 2, ry + bh / 2 + 3, dim ? 'rgba(241,240,230,0.5)' : '#f1f0e6', 'center', FONT_S);
     zoomBtns[key] = { x0: rx, y0: ry, x1: rx + bw, y1: ry + bh };
   }
+}
+
+// ---- DPS.selfTest hooks (phase 4 B2) ----
+// Every plaza / prize prop at every tier, drawn into a scratch 2D context `c2d` (px scale, prop centred, animation
+// clock pinned so the jets and riders hold still), each tier compared with the tier before it: `diff` = pixels whose
+// colour moved by more than 24 in any channel. Returns [{ prop, tier, ok, err, diff }]. The live frame is untouched.
+const PROP_TIERS = [
+  { prop: 'fountain', tiers: 4, ladder: true }, { prop: 'gate', tiers: 3, ladder: true }, { prop: 'lamp', tiers: 3, ladder: true },
+  { prop: 'bench', tiers: 4 }, { prop: 'statue', tiers: 2 }, { prop: 'planter', tiers: 1 }, { prop: 'flower_bed', tiers: 1 },
+  { prop: 'banner', tiers: 1 }, { prop: 'carousel', tiers: 1 }
+];
+export function propTierTest(c2d, px = 4) {
+  const saved = ctx, savedT = animT, W = c2d.canvas.width, H = c2d.canvas.height, out = [];
+  const C = L.CENTER, e = { kind: 0, depth: 0, id: null, x0: C.x + 1.3, y0: C.y + 1.3, x1: 0.62, y1: 0, tier: 0, cond: 100, seg: 0, text: '', ref: null };
+  const q0 = labelQueue.length;
+  ctx = c2d; animT = 12.345; ctx.lineJoin = 'round';
+  try {
+    for (const spec of PROP_TIERS) {
+      let prev = null;
+      for (let tier = 0; tier < spec.tiers; tier++) {
+        const r = { prop: spec.prop, tier, ok: true, err: '', diff: null, ladder: !!spec.ladder };
+        try {
+          e.tier = tier; e.x1 = spec.prop === 'carousel' ? 0.32 : 0.62;
+          const ax = spec.prop === 'fountain' ? C.x : spec.prop === 'gate' ? L.GATE.x : e.x0;
+          const ay = spec.prop === 'fountain' ? C.y : spec.prop === 'gate' ? L.PARK_H : e.y0;
+          ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, W, H);
+          project(ax, ay, 0.3, P);
+          ctx.setTransform(px, 0, 0, px, W / 2 - P.x * px, H * 0.62 - P.y * px);
+          if (spec.prop === 'fountain') drawFountain(tier);
+          else if (spec.prop === 'gate') drawGate(tier);
+          else if (spec.prop === 'lamp') drawLamp(e);
+          else if (spec.prop === 'bench') drawBench(e);
+          else if (spec.prop === 'statue') drawStatue(e);
+          else if (spec.prop === 'planter') drawPlanter(e);
+          else if (spec.prop === 'flower_bed') drawFlowerBed(e);
+          else if (spec.prop === 'banner') drawBanner(e);
+          else drawCarousel(e);
+          const img = ctx.getImageData(0, 0, W, H).data;
+          if (prev) { let n = 0; for (let i = 0; i < img.length; i += 4) if (Math.abs(img[i] - prev[i]) > 24 || Math.abs(img[i + 1] - prev[i + 1]) > 24 || Math.abs(img[i + 2] - prev[i + 2]) > 24 || Math.abs(img[i + 3] - prev[i + 3]) > 24) n++; r.diff = n; }
+          prev = img;
+        } catch (err) { r.ok = false; r.err = err.message; }
+        out.push(r);
+      }
+    }
+  } finally {
+    ctx = saved; animT = savedT; labelQueue.length = q0; // drop the gate labels the test queued
+  }
+  return out;
+}
+// The cleaned sprites (manifest shadow_bg) against manifest.cast_shadow: in the bottom `band` of rows, count opaque
+// pixels that are shadow-tone (on the ray from black through the sampled backdrop colour) or near-black (luma below
+// near_black_luma). Returns { cfg, sprites: [{ id, ready, rows, opaque, shadow_tone, near_black }] }.
+export function spriteCleanCheck(c2d) {
+  const cfg = castShadowCheck, out = { cfg, sprites: [] };
+  if (!cfg) return out;
+  for (const [id, rec] of dinoSprites) {
+    if (!rec.shadowBg) continue;
+    const r = { id, ready: rec.ready, rows: 0, opaque: 0, shadow_tone: 0, near_black: 0 };
+    out.sprites.push(r);
+    if (!rec.ready) continue;
+    const w = rec.img.naturalWidth, h = rec.img.naturalHeight, y0 = Math.floor(h * (1 - cfg.band));
+    c2d.setTransform(1, 0, 0, 1, 0, 0); c2d.clearRect(0, 0, c2d.canvas.width, c2d.canvas.height);
+    c2d.drawImage(rec.img, 0, 0);
+    const px = c2d.getImageData(0, y0, w, h - y0).data, [br, bg, bb] = rec.shadowBg, bl = br * br + bg * bg + bb * bb;
+    r.rows = h - y0;
+    for (let i = 0; i < px.length; i += 4) {
+      if (px[i + 3] <= 8) continue;
+      r.opaque++;
+      const R2 = px[i], G2 = px[i + 1], B2 = px[i + 2], t = (R2 * br + G2 * bg + B2 * bb) / bl;
+      if (Math.hypot(R2 - t * br, G2 - t * bg, B2 - t * bb) < cfg.ray_tol && t > cfg.ray_t[0] && t < cfg.ray_t[1]) r.shadow_tone++;
+      if (0.299 * R2 + 0.587 * G2 + 0.114 * B2 < cfg.near_black_luma) r.near_black++;
+    }
+  }
+  return out;
 }

@@ -120,6 +120,58 @@ def remove_shadow(im):
     out[shadow, 3] = 0
     return Image.fromarray(out, "RGBA")
 
+# Phase 4 B2: a few sprites keep a faint baked CAST shadow (a darkened copy of the backdrop under the feet) and
+# backdrop pockets between the legs / under the tail, because the generic passes stop at the shadow's soft edge.
+# Opt-in per species so every other sprite stays byte-identical. A cast shadow is the backdrop colour scaled
+# darker, so a pixel is "shadow-tone" when it sits within RAY_TOL of the ray from black through the sampled backdrop
+# colour (projection factor t in RAY_T). Shadow-tone pixels in the lower figure are removed when they connect to
+# the transparent outside, and unconditionally in the leg band (enclosed pockets between the legs).
+CAST_SHADOW = {"pachycephalosaurus", "parasaurolophus"}
+RAY_TOL = 24          # max RGB distance from the backdrop ray
+RAY_T = (0.3, 1.15)   # darkest .. lightest multiple of the backdrop colour that counts as shadow / backdrop
+CAST_CAP = 0.45       # only below this fraction of the figure height (keeps pale body highlights up top)
+POCKET_ROW = 0.7      # below this fraction every shadow-tone pixel goes (pockets enclosed by the legs)
+CHECK_BAND = 0.2      # the selfTest's bottom band: no shadow-tone pixel may remain in the bottom 20% of rows
+
+def backdrop(im):
+    rgb = np.array(im.convert("RGB")).astype(np.int16)
+    border = np.concatenate([rgb[0, :], rgb[-1, :], rgb[:, 0], rgb[:, -1]], axis=0)
+    return np.median(border, axis=0)
+
+def shadow_tone(rgb, bg):
+    bgv = np.asarray(bg, float)
+    t = (rgb * bgv).sum(2) / (bgv ** 2).sum()
+    d = np.sqrt(((rgb - t[..., None] * bgv) ** 2).sum(2))
+    return (d < RAY_TOL) & (t > RAY_T[0]) & (t < RAY_T[1])
+
+def remove_cast_shadow(im, bg):
+    arr = np.array(im)
+    h, w = arr.shape[:2]
+    alpha = arr[:, :, 3]
+    ys, _ = np.where(alpha > 8)
+    y0, y1 = ys.min(), ys.max()
+    rows = np.arange(h)[:, None].repeat(w, 1)
+    cand = (alpha > 8) & shadow_tone(arr[:, :, :3].astype(float), bg) & (rows >= y0 + (y1 - y0) * CAST_CAP)
+    gone = cand & (rows >= y0 + (y1 - y0) * POCKET_ROW)
+    dq = deque()
+    for y, x in zip(*np.where(cand)):
+        for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            ny, nx = y + dy, x + dx
+            if not (0 <= ny < h and 0 <= nx < w) or alpha[ny, nx] <= 8:
+                gone[y, x] = True
+                break
+    dq.extend(zip(*np.where(gone)))
+    while dq:
+        y, x = dq.popleft()
+        for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            ny, nx = y + dy, x + dx
+            if 0 <= ny < h and 0 <= nx < w and cand[ny, nx] and not gone[ny, nx]:
+                gone[ny, nx] = True
+                dq.append((ny, nx))
+    out = arr.copy()
+    out[gone, 3] = 0
+    return Image.fromarray(out, "RGBA")
+
 def autocrop(im):
     a = np.array(im)[:, :, 3]
     ys, xs = np.where(a > 8)
@@ -131,17 +183,27 @@ results = {}
 for f in sorted(glob.glob(f"{SRC}/dino-*.png")):
     sid = os.path.basename(f)[5:-4]
     im = Image.open(f)
+    bg = backdrop(im)
     im = remove_bg(im)
     im = remove_shadow(im)
+    if sid in CAST_SHADOW:
+        im = remove_cast_shadow(im, bg)
     im = autocrop(im)
     size = species.get(sid, {}).get("size", "medium")
     th = TARGET_H[size]
     scale = th / im.height
+    if sid in CAST_SHADOW and scale > 1:
+        # The old crop's height included the smudge. Never upscale pixel art: the cleaned animal keeps the
+        # pixel density (and on-screen body size) it had before, instead of doubling every few rows.
+        scale = 1.0
+        th = im.height
     tw = max(1, round(im.width * scale))
     im2 = im.resize((tw, th), Image.NEAREST)
     im2.save(f"{OUT}/{sid}.png")
     results[sid] = {"size": size, "w": tw, "h": th,
                     "face": "left" if sid in LEFT_FACING else "right"}
+    if sid in CAST_SHADOW:
+        results[sid]["shadow_bg"] = [int(round(v)) for v in bg]
 
 # manifest the game loads at boot
 with open(f"{OUT}/manifest.json", "w") as fh:
@@ -150,7 +212,14 @@ with open(f"{OUT}/manifest.json", "w") as fh:
                "target height (small 32 / medium 48 / large 64 px at the 960x540 logical "
                "canvas). `face` = which way the source art's head points; the renderer "
                "mirrors the sprite to face the dino's travel direction.",
-               "target_h": TARGET_H, "sprites": results}, fh, indent=2)
+               "target_h": TARGET_H,
+               "cast_shadow": {"_notes": "Phase 4 B2 cleanup (species with shadow_bg). A pixel is "
+                               "shadow-tone when it is within ray_tol RGB of the ray from black through "
+                               "shadow_bg, at a multiple t of it in ray_t. DPS.selfTest requires zero "
+                               "shadow-tone and zero near-black (luma < near_black_luma) opaque pixels in the "
+                               "bottom `band` fraction of rows of every cleaned sprite.",
+                               "ray_tol": RAY_TOL, "ray_t": list(RAY_T), "band": CHECK_BAND, "near_black_luma": 40},
+               "sprites": results}, fh, indent=2)
 
 # contact sheet: all sprites on a checker bg, labelled, native target size
 n = len(results)

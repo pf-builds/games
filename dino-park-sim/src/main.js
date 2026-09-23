@@ -7,8 +7,8 @@ import { save, load, hasSave, discardStaleSave, STALE_MESSAGE, SAVE_KEY } from '
 import { initTooltips } from './ui/tooltips.js';
 import { initShell, refresh, tutorialHint, showView } from './ui/shell.js';
 import { closeAll, alertModal, modalDepth, closeAbove } from './ui/modals.js';
-import { agentCounts, spawnVisitors, forceEscape, arrivalStats, crowdStats, tick as agentTick, visitors, cars, dinos, staff, litter, slots } from './sim/agents.js';
-import { livingStats, livingActive, plaqueVisible, labelRects, penLabelBoxes, penLabelStacks, spriteStatus } from './render/living.js';
+import { agentCounts, spawnVisitors, forceEscape, arrivalStats, crowdStats, tick as agentTick, visitors, cars, dinos, staff, litter, slots, C_PARKED } from './sim/agents.js';
+import { livingStats, livingActive, plaqueVisible, labelRects, penLabelBoxes, penLabelStacks, spriteStatus, carLook, carPalette, propTierTest, dinoPose, spriteCleanCheck } from './render/living.js';
 import { campaignLadder, renderMarketingMenu } from './ui/marketing.js';
 import { initAudio, play as playSfx, audioState, sfxIds } from './audio.js';
 import { goalsList, buildReportCard, forceGoal, goalDone } from './goals.js';
@@ -129,6 +129,58 @@ function selfTest() {
       cs /= ST.crowd_frames; sp /= ST.crowd_frames; vis /= ST.crowd_frames;
       check(`crowd: centre-line share <= ${Lv.crowd_centre_share_max}`, cs <= Lv.crowd_centre_share_max, `centre_share ${cs.toFixed(3)} (spine ${sp.toFixed(3)}), ~${Math.round(vis)} visitors, ${ST.crowd_frames} frames (pre-fix baseline ~0.49)`);
       check('crowd: nobody off the paving', off === 0, `${off} off-path samples${offAt ? `, e.g. ${JSON.stringify(offAt)} (state ids: agents.js V_*)` : ''}`);
+    });
+    // ---- phase 4 B2: cars, plaza props, dinosaur motion, cleaned sprites ----
+    run('cars', () => {
+      // Continues on the busy park: every car on the lot and road, plus a sweep of synthetic trip seeds, maps to a real
+      // style and colour (and the sweep reaches every one); every parked car sits on its own bay, side-on facing east.
+      const pal = carPalette(), seenS = new Set(), seenC = new Set();
+      let n = 0, bad = 0;
+      const look = c => { carLook(c); n++; seenS.add(c.style); seenC.add(c.color); if (!(Number.isInteger(c.style) && c.style >= 0 && c.style < pal.styles && Number.isInteger(c.color) && c.color >= 0 && c.color < pal.colors)) bad++; };
+      let live = 0;
+      for (const c of cars) if (c.active) { look(c); live++; }
+      const probe = { seed: 0, lookSeed: -1, style: -1, color: -1 };
+      for (let i = 0; i <= ST.car_seed_samples; i++) { probe.seed = i === ST.car_seed_samples ? 1 - 1e-12 : i / ST.car_seed_samples; probe.lookSeed = -1; look(probe); }
+      check('cars: every colour and style index in range', !bad && seenS.size === pal.styles && seenC.size === pal.colors, `${n} looks (${live} live cars + ${ST.car_seed_samples + 1} seeds), ${bad} out of range, styles seen ${seenS.size}/${pal.styles} (${pal.ids.join(', ')}), colours seen ${seenC.size}/${pal.colors}`);
+      let parked = 0, untidy = 0;
+      for (const c of cars) if (c.active && c.st === C_PARKED) { parked++; const sl = slots[c.slot]; if (!sl || sl.car !== c || Math.abs(c.x - sl.x) > 1e-6 || Math.abs(c.y - sl.y) > 1e-6 || c.head !== 0) untidy++; }
+      check('cars: parked cars sit on their own bay, side-on facing east', parked > 0 && !untidy, `${parked} parked, ${untidy} off their bay or facing another way`);
+    });
+    run('props', () => {
+      const cv = document.createElement('canvas'); cv.width = 480; cv.height = 520;
+      const res = propTierTest(cv.getContext('2d', { willReadFrequently: true }), ST.prop_px);
+      const threw = res.filter(r => !r.ok), steps = res.filter(r => r.ladder && r.tier > 0), flat = steps.filter(r => !(r.diff >= ST.prop_tier_min_diff_px));
+      check(`props: every plaza / prize prop draws at every tier (${res.length} draws)`, !threw.length, threw.map(r => `${r.prop} tier ${r.tier}: ${r.err}`).join('; ') || res.map(r => `${r.prop}#${r.tier}`).join(' '));
+      check(`props: each tier differs from the one before (>= ${ST.prop_tier_min_diff_px} px at ${ST.prop_px}x)`, steps.length && !flat.length, steps.map(r => `${r.prop} ${r.tier - 1}->${r.tier}: ${r.diff}`).join(', '));
+    });
+    run('dino-motion', () => {
+      // Every species, walking / idle / blending, fed and starving: every pose number finite and positive scale; the
+      // feet stay anchored (no lift unless starving, as before); and no two pen-mates in the busy park share a pose.
+      const A = Lv.dino_anim, hmax = DATA.balance.dinosaur.hunger_max, pose = { sx: 1, sy: 1, kx: 0, tail: 0, lift: 0 };
+      const fr = x => x - Math.floor(x), d = { seed: 0, size: 'medium', walkK: 0, stride: 0, phase: 0, pop: 0, d: { hunger: 0 } };
+      let n = 0, bad = 0, lifted = 0, noSteps = [];
+      for (const sp of DATA.dinosaurs.species) {
+        if (!Number.isFinite(A.walk_steps_per_tile[sp.size || 'medium'])) noSteps.push(sp.id);
+        for (let k = 0; k < ST.pose_samples; k++) {
+          d.size = sp.size || 'medium'; d.seed = fr(k * 0.618034 + sp.id.length * 0.137); d.walkK = (k % 4) / 3; d.stride = k * 0.37; d.phase = k * 0.9; d.d.hunger = k % 5 === 0 ? hmax : 0;
+          dinoPose(d, pose); n++;
+          if (!finite(pose.sx, pose.sy, pose.kx, pose.tail, pose.lift) || pose.sx <= 0 || pose.sy <= 0) bad++;
+          if (d.d.hunger < hmax && pose.lift !== 0) lifted++;
+        }
+      }
+      check(`dino-motion: pose finite for every species (${DATA.dinosaurs.species.length} species x ${ST.pose_samples})`, !bad && !noSteps.length, `${n} poses, ${bad} bad${noSteps.length ? `, no walk_steps_per_tile for ${noSteps.join(', ')}` : ''}`);
+      check('dino-motion: feet stay on the ground (only a starving animal bobs)', !lifted, `${lifted} lifted poses`);
+      const byPen = new Map();
+      for (const a of dinos) { const k = `${a.parcel}|${a.sp.id}`; if (!byPen.has(k)) byPen.set(k, []); byPen.get(k).push(dinoPose(a, { sx: 1, sy: 1, kx: 0, tail: 0, lift: 0 })); }
+      let pairs = 0, same = 0;
+      for (const ps of byPen.values()) for (let i = 0; i < ps.length; i++) for (let j = i + 1; j < ps.length; j++) { pairs++; if (Math.abs(ps[i].sy - ps[j].sy) < 1e-6 && Math.abs(ps[i].kx - ps[j].kx) < 1e-6 && Math.abs(ps[i].tail - ps[j].tail) < 1e-6) same++; }
+      check('dino-motion: pen-mates never move in lockstep', pairs > 0 && !same, `${pairs} same-species pen-mate pairs, ${same} with an identical pose`);
+    });
+    run('sprites', () => {
+      const cv = document.createElement('canvas'); cv.width = 128; cv.height = 128;
+      const r = spriteCleanCheck(cv.getContext('2d', { willReadFrequently: true }));
+      check('sprites: cleaned sprites listed in the manifest', r.cfg && r.sprites.length >= 2, `${r.sprites.map(x => x.id).join(', ') || 'none'}`);
+      for (const x of r.sprites) check(`sprites: ${x.id} bottom ${Math.round(r.cfg.band * 100)}% has no shadow-tone or near-black pixels`, x.ready && x.shadow_tone === 0 && x.near_black === 0, `${x.rows} rows, ${x.opaque} opaque, shadow-tone ${x.shadow_tone}, near-black ${x.near_black}${x.ready ? '' : ' (image not loaded)'}`);
     });
   } finally {
     closeAbove(depth0);

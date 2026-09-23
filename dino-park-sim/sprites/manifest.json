@@ -5,6 +5,16 @@
     "medium": 48,
     "large": 64
   },
+  "cast_shadow": {
+    "_notes": "Phase 4 B2 cleanup (species with shadow_bg). A pixel is shadow-tone when it is within ray_tol RGB of the ray from black through shadow_bg, at a multiple t of it in ray_t. DPS.selfTest requires zero shadow-tone and zero near-black (luma < near_black_luma) opaque pixels in the bottom `band` fraction of rows of every cleaned sprite.",
+    "ray_tol": 24,
+    "ray_t": [
+      0.3,
+      1.15
+    ],
+    "band": 0.2,
+    "near_black_luma": 40
+  },
   "sprites": {
     "allosaurus": {
       "size": "medium",
@@ -92,15 +102,25 @@
     },
     "pachycephalosaurus": {
       "size": "medium",
-      "w": 91,
-      "h": 48,
-      "face": "right"
+      "w": 73,
+      "h": 39,
+      "face": "right",
+      "shadow_bg": [
+        178,
+        151,
+        200
+      ]
     },
     "parasaurolophus": {
       "size": "large",
-      "w": 63,
-      "h": 64,
-      "face": "left"
+      "w": 56,
+      "h": 56,
+      "face": "left",
+      "shadow_bg": [
+        160,
+        153,
+        168
+      ]
     },
     "protoceratops": {
       "size": "small",

@@ -28,6 +28,9 @@ export const escape = { active: false, parcel: null, uid: null, left: 0, x: 0, y
 export const tram = { active: false, x: 0, y: 0, px: 0, dir: 1, cars: 0, pause: 0, stopped: false };
 export const counts = { visitors: 0, cars: 0, dinos: 0, staff: 0, litter: 0 };
 export let simTime = 0;
+// Sim seconds covered by the last tick (0 while the clock is paused): the renderer eases animation time between ticks
+// exactly like it interpolates positions, so procedural motion runs smooth at 60 fps and freezes with the clock.
+export let tickDt = 0;
 // M5 juice (all real-time, they run even while the clock is paused): the delivery truck that brings a bought
 // dinosaur to the gate, the crate it leaves, dust puffs (prize placement, a dinosaur popping out), and the arrival
 // queue. A dinosaur agent with `arriving` set is not drawn until its crate opens; `pop` is the pop-in progress.
@@ -62,7 +65,9 @@ export function initAgents({ paused }) {
   G.buildGraph(DATA.parcels.walkways, tileIndex);
   const n = Lv().max_sprites;
   for (let i = 0; i < n; i++) visitors.push(Object.assign(makeWalker(), { color: 0, pois: 0, guide: -1, offx: 0, offy: 0, panic: 0, car: -1, amenityDone: false, poi: null, seed: Math.random() }));
-  for (let i = 0; i < 80; i++) cars.push(Object.assign(makeWalker(), { slot: -1, color: 0 }));
+  // Cars: `seed` (set per trip) picks style and colour in the renderer; `head` is the facing (0 E, 1 N, 2 W, 3 S),
+  // `phead` last tick's, `rev` true while backing out of a bay (the car keeps facing into it).
+  for (let i = 0; i < 80; i++) cars.push(Object.assign(makeWalker(), { slot: -1, seed: 0, head: 0, phead: 0, rev: false, style: 0, color: 0, lookSeed: -1 }));
   for (let i = 0; i < Lv().litter_max; i++) litter.push({ active: false, x: 0, y: 0, kind: 0 });
   onChange(sync);
   bus.addEventListener('escape', e => forceEscape(e.detail.parcel, e.detail.uid));
@@ -311,7 +316,9 @@ function syncDinos() {
         const sp = speciesById(d.species);
         let a = keep.get(d.uid);
         if (!a) {
-          a = { uid: d.uid, x: 0, y: 0, px: 0, py: 0, tx: 0, ty: 0, moving: false, pause: rnd(0, Lv().dino_pause_ticks), dir: 1, phase: rnd(0, 6.28), escaped: false, tile: null, arriving: pendingArrivals.has(d.uid), pop: 0, popT: 0 };
+          // seed: per-animal variety for the procedural walk / idle motion (render/living.js dinoPose), so a herd never
+          // moves in lockstep; walkK / stride / lrx / lry are the renderer's own motion state.
+          a = { uid: d.uid, x: 0, y: 0, px: 0, py: 0, tx: 0, ty: 0, moving: false, pause: rnd(0, Lv().dino_pause_ticks), dir: 1, phase: rnd(0, 6.28), escaped: false, tile: null, arriving: pendingArrivals.has(d.uid), pop: 0, popT: 0, seed: Math.random(), walkK: 0, stride: 0, lrx: NaN, lry: NaN, animAt: NaN };
           a.size = sp.size || 'medium';
           a.tile = randomTile(g);
           pointInTile(a, a.tile, tmpT); a.x = tmpT.x; a.y = tmpT.y;
@@ -394,7 +401,7 @@ function syncSlots() {
   for (const c of cars) { if (c.active && c.st === C_IN) c.active = false; c.slot = -1; }
   parked.forEach((c, i) => {
     if (i >= slots.length) { c.active = false; return; }
-    const s = slots[i]; s.car = c; c.slot = i; c.x = c.px = s.x; c.y = c.py = s.y;
+    const s = slots[i]; s.car = c; c.slot = i; c.x = c.px = s.x; c.y = c.py = s.y; c.head = c.phead = 0; c.rev = false;
   });
 }
 
@@ -406,7 +413,7 @@ let TS = 1;
 // `force` (DPS.selfTest) runs the tick even while a modal is open; the render loop never passes it.
 export function tick(force = false) {
   for (const v of visitors) if (v.active) { v.px = v.x; v.py = v.y; }
-  for (const c of cars) if (c.active) { c.px = c.x; c.py = c.y; }
+  for (const c of cars) if (c.active) { c.px = c.x; c.py = c.y; c.phead = c.head; }
   for (const d of dinos) { d.px = d.x; d.py = d.y; }
   for (const s of staff) { s.px = s.x; s.py = s.y; }
   // Real-time juice runs whether or not the clock does (a purchase is made with the store modal open).
@@ -415,11 +422,12 @@ export function tick(force = false) {
   tickPuffs(rdt);
   for (const d of dinos) if (d.pop > 0) { d.popT = (d.popT || 0) + rdt; if (d.popT >= d.pop) d.pop = 0; }
   const speed = state.speed;
+  tickDt = 0;
   if (speed <= 0 || (!force && blocked()) || state.game_over) return;
   const f = Math.min(speed, Lv().max_speed_factor);
   TS = f;
   const dt = f / Lv().tick_hz;
-  simTime += dt;
+  simTime += dt; tickDt = dt;
   tickEscape(dt);
   tickVisitors(dt);
   tickCars(dt);
@@ -591,7 +599,9 @@ function tickCars(dt) {
   }
   for (const c of cars) {
     if (!c.active || c.st === C_PARKED) continue;
-    if (step(c, Lv().car_speed * dt)) {
+    const done = step(c, Lv().car_speed * (c.rev ? Lv().car_reverse_factor : 1) * dt); // backing out is slow
+    carHeading(c);
+    if (done) {
       if (c.st === C_IN) c.st = C_PARKED;
       else { c.active = false; if (c.slot >= 0 && slots[c.slot] && slots[c.slot].car === c) slots[c.slot].car = -1; c.slot = -1; }
     }
@@ -610,18 +620,32 @@ function spawnCar() {
   if (!c) return false;
   const slot = slots[s];
   c.active = true; c.st = C_IN; c.slot = s; slot.car = c;
-  c.color = rndInt(0, 7);
+  c.seed = Math.random(); c.head = c.phead = 0; c.rev = false;
   c.wn = 0; c.wi = 0;
-  c.x = -0.7; c.y = L.ROAD_Y; pushWp(c, slot.x, L.ROAD_Y); pushWp(c, slot.x, slot.y);
+  // Phase 4 B2: in along the road, up the aisle beside the bay (car_aisle_offset west of it), then forward into the
+  // bay, so every parked car sits side-on in its stall facing east.
+  const ax = slot.x - Lv().car_aisle_offset;
+  c.x = -0.7; c.y = L.ROAD_Y; pushWp(c, ax, L.ROAD_Y); pushWp(c, ax, slot.y); pushWp(c, slot.x, slot.y);
   c.px = c.x; c.py = c.y;
   return true;
 }
 
+// Leaving: back out of the bay into the aisle (still facing into it), drive down the aisle to the road, then away east.
 function leaveCar(c) {
   const slot = slots[c.slot];
-  c.st = C_OUT; c.wn = 0; c.wi = 0;
+  c.st = C_OUT; c.wn = 0; c.wi = 0; c.rev = true;
   if (slot) slot.car = -1;
-  pushWp(c, c.x, L.ROAD_Y); pushWp(c, L.PARK_W + 0.8, L.ROAD_Y);
+  const ax = c.x - Lv().car_aisle_offset;
+  pushWp(c, ax, c.y); pushWp(c, ax, L.ROAD_Y); pushWp(c, L.PARK_W + 0.8, L.ROAD_Y);
+}
+// Facing follows the leg being driven (not the tick's displacement, which cuts corners); a car backing out keeps its
+// facing until it reaches the aisle, and an arrived car keeps the facing it parked with.
+function carHeading(c) {
+  if (c.wi >= c.wn) return;
+  if (c.rev) { if (c.wi === 0) return; c.rev = false; }
+  const dx = c.wx[c.wi] - c.x, dy = c.wy[c.wi] - c.y;
+  if (Math.abs(dx) + Math.abs(dy) < 1e-6) return;
+  c.head = Math.abs(dx) >= Math.abs(dy) ? (dx > 0 ? 0 : 2) : (dy < 0 ? 1 : 3);
 }
 
 // ---- dinosaurs ----
