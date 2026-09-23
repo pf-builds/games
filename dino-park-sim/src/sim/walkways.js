@@ -137,12 +137,14 @@ export function spotsForTiles(tiles, tol = 0.25) {
 export const isWalkableTile = (x, y) => walkable.has(tileKey(Math.floor(x), Math.floor(y)));
 
 // ---- shortest path ----
-const dist = [], prev = [], prevEdge = [], done = [];
+const dist = [], prev = [], prevEdge = [], done = [], cost = [];
 const startP = { edge: -1, t: 0, x: 0, y: 0, d: 0 }, endP = { edge: -1, t: 0, x: 0, y: 0, d: 0 };
 
 // Route from (x0,y0) to (x1,y1). Calls step(x, y, edge) for each waypoint in order: the entry point on the graph,
 // every node along the path, and the exit point. `edge` is the edge being walked to reach that point (-1 for the first).
-export function route(x0, y0, x1, y1, step) {
+// `jitter` (phase 4 B1, balance.living.route_jitter) scales each edge's cost by a fresh random 1..1+jitter for this
+// route, so walkers spread over near-equal alternatives instead of all taking the one the tie-break favours.
+export function route(x0, y0, x1, y1, step, jitter = 0) {
   nearestOnGraph(x0, y0, startP);
   nearestOnGraph(x1, y1, endP);
   if (startP.edge < 0) { step(x1, y1, -1); return; }
@@ -150,12 +152,13 @@ export function route(x0, y0, x1, y1, step) {
   if (startP.edge === endP.edge) { step(endP.x, endP.y, endP.edge); return; }
   const n = nodes.length;
   for (let i = 0; i < n; i++) { dist[i] = Infinity; prev[i] = -1; prevEdge[i] = -1; done[i] = false; }
-  const se = edges[startP.edge];
-  dist[se.a] = Math.hypot(startP.x - nodes[se.a].x, startP.y - nodes[se.a].y);
-  dist[se.b] = Math.hypot(startP.x - nodes[se.b].x, startP.y - nodes[se.b].y);
-  const ee = edges[endP.edge];
+  for (let i = 0; i < edges.length; i++) cost[i] = 1 + jitter * Math.random();
+  const se = edges[startP.edge], cs = cost[startP.edge];
+  dist[se.a] = Math.hypot(startP.x - nodes[se.a].x, startP.y - nodes[se.a].y) * cs;
+  dist[se.b] = Math.hypot(startP.x - nodes[se.b].x, startP.y - nodes[se.b].y) * cs;
+  const ee = edges[endP.edge], ce = cost[endP.edge];
   const goalA = ee.a, goalB = ee.b;
-  const tailA = Math.hypot(endP.x - nodes[goalA].x, endP.y - nodes[goalA].y), tailB = Math.hypot(endP.x - nodes[goalB].x, endP.y - nodes[goalB].y);
+  const tailA = Math.hypot(endP.x - nodes[goalA].x, endP.y - nodes[goalA].y) * ce, tailB = Math.hypot(endP.x - nodes[goalB].x, endP.y - nodes[goalB].y) * ce;
   let goal = -1;
   for (;;) {
     let u = -1, best = Infinity;
@@ -172,7 +175,7 @@ export function route(x0, y0, x1, y1, step) {
     for (const ei of adj[u]) {
       const e = edges[ei];
       const v = e.a === u ? e.b : e.a;
-      const nd = dist[u] + e.len;
+      const nd = dist[u] + e.len * cost[ei];
       if (nd < dist[v]) { dist[v] = nd; prev[v] = u; prevEdge[v] = ei; }
     }
   }

@@ -81,6 +81,14 @@ export const livingStats = () => stats;
 // file never blanks a pen. `face` is the art's own facing; the sprite is mirrored so each
 // animal faces its travel direction.
 const dinoSprites = new Map();
+let spritesSettled = false; // the manifest fetch has finished (ok or not)
+// DPS.selfTest: per-species sprite state. 'loaded' = pixel-art image ready; 'fallback' = no manifest entry or the image
+// failed, so drawDino draws the shape (a flagged fallback); 'loading' = still in flight.
+export function spriteStatus() {
+  const out = {};
+  for (const s of DATA.dinosaurs.species) { const r = dinoSprites.get(s.id); out[s.id] = r ? (r.ready ? 'loaded' : r.failed ? 'fallback' : 'loading') : spritesSettled ? 'fallback' : 'loading'; }
+  return out;
+}
 // Phase 3: per-biome ground textures (scenes/biome-<id>.png), painted as a scaled repeat
 // pattern over the flat biome colour inside each owned pen. Keyed by biome id (marsh uses the
 // swamp scene). Falls back to the flat colour + procedural marks until the images load.
@@ -145,14 +153,16 @@ function loadDinoSprites() {
   catch { base = null; }
   if (!base) return;
   fetch(new URL('manifest.json', base)).then(r => (r.ok ? r.json() : null)).then(m => {
+    spritesSettled = true;
     if (!m || !m.sprites) return;
     for (const [id, meta] of Object.entries(m.sprites)) {
       const rec = { img: new Image(), w: meta.w, h: meta.h, face: meta.face || 'right', ready: false };
       rec.img.onload = () => { rec.ready = true; };
+      rec.img.onerror = () => { rec.failed = true; };
       rec.img.src = new URL(`${id}.png`, base).href;
       dinoSprites.set(id, rec);
     }
-  }).catch(() => {});
+  }).catch(() => { spritesSettled = true; });
 }
 
 export function initLiving(el, h) {

@@ -21,8 +21,10 @@ const SHOWCASE = [
 
 // Build a full, lively demo park into the global state (transient: a real New Game overwrites it).
 // No day-ticks are run, so no quarter/event popups fire; the crowd fills from state.today.attendance.
-export function buildDemoPark() {
+// opts.settings patches the new park's settings before anything is bought (DPS.selfTest: no sound, motion or autosave).
+export function buildDemoPark(opts = {}) {
   newGame('standard');
+  if (opts.settings) Object.assign(state.settings, opts.settings);
   state.cash = 50000000;
   const spc = DATA.balance.parcel.space_per_tile;
   const defs = [...parcelDefs()].sort((a, b) => a.tiles.length - b.tiles.length);

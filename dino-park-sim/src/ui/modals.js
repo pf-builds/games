@@ -45,6 +45,9 @@ export function closeBelowTop() {
   for (const m of [...stack]) if (m !== top && m.closable) m.close();
 }
 export const modalOpen = () => stack.length > 0;
+// DPS.selfTest: close only the modals opened since the stack was `n` deep (a close can chain another, so bounded).
+export const modalDepth = () => stack.length;
+export function closeAbove(n) { for (let guard = 0; stack.length > n && guard < 200; guard++) { const m = stack[stack.length - 1]; m.closable = true; m.close(); } }
 export const topModal = () => stack[stack.length - 1] || null;
 
 // Simple message box with OK.

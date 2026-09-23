@@ -1,14 +1,15 @@
 // Entry point: load data, boot the shell, expose the debug API.
-import { loadData, newGame, state, emitChange, log, parcelList, parcelDef, parcelGeometry, parcelSizeLabel, facilityTier, facilityById, updateSettings, speciesById, biomeFit, speciesBiomes, biomeById, modeId, modeIds } from './state.js';
+import { loadData, newGame, state, emitChange, log, parcelList, parcelDef, parcelGeometry, parcelSizeLabel, facilityTier, facilityById, updateSettings, speciesById, biomeFit, speciesBiomes, biomeById, modeId, modeIds, DATA, bus, replaceState, dataFiles, parcelDefs, campaignById, enclosures } from './state.js';
 import { prizeSummary, addStoreSpend } from './prizes.js';
 import { effectText } from './ui/effects.js';
 import { advanceDays, setSpeed, bankState } from './time.js';
-import { save, load, hasSave, discardStaleSave, STALE_MESSAGE } from './save.js';
+import { save, load, hasSave, discardStaleSave, STALE_MESSAGE, SAVE_KEY } from './save.js';
 import { initTooltips } from './ui/tooltips.js';
 import { initShell, refresh, tutorialHint, showView } from './ui/shell.js';
-import { closeAll, alertModal } from './ui/modals.js';
-import { agentCounts, spawnVisitors, forceEscape, arrivalStats } from './sim/agents.js';
-import { livingStats, livingActive, plaqueVisible, labelRects, penLabelBoxes, penLabelStacks } from './render/living.js';
+import { closeAll, alertModal, modalDepth, closeAbove } from './ui/modals.js';
+import { agentCounts, spawnVisitors, forceEscape, arrivalStats, crowdStats, tick as agentTick, visitors, cars, dinos, staff, litter, slots } from './sim/agents.js';
+import { livingStats, livingActive, plaqueVisible, labelRects, penLabelBoxes, penLabelStacks, spriteStatus } from './render/living.js';
+import { campaignLadder, renderMarketingMenu } from './ui/marketing.js';
 import { initAudio, play as playSfx, audioState, sfxIds } from './audio.js';
 import { goalsList, buildReportCard, forceGoal, goalDone } from './goals.js';
 import { juiceStats, reduceMotion, clearToasts, toastCount, shake } from './ui/effects.js';
@@ -16,7 +17,7 @@ import { openReportCard, openGoals } from './ui/goals.js';
 import { openNewGame, modeSummary } from './ui/newgame.js';
 import { buildDemoPark, showTitle, hideTitle } from './ui/title.js';
 import { initProjection } from './render/projection.js';
-import { buyParcel, upgradeFacility, parcelPrice, parcelPrices, parcelCapacity, perimeterSegments, spaceUsed, plantSeeds, vegetationCap, vegetationGrowth, seedsToPlant, setAutoRestock, foodDays, buyCampaign, marketingLadder, memberChurnRate, membershipConversion, relandscape, relandscapeCost, setPassPrice } from './economy.js';
+import { buyParcel, upgradeFacility, parcelPrice, parcelPrices, parcelCapacity, perimeterSegments, spaceUsed, plantSeeds, vegetationCap, vegetationGrowth, seedsToPlant, setAutoRestock, foodDays, buyCampaign, marketingLadder, memberChurnRate, membershipConversion, relandscape, relandscapeCost, setPassPrice, buildFence, buyDino, fenceCost, toggleAutoRenew } from './economy.js';
 import { breakoutChance } from './events.js';
 
 function guardMinSize() {
@@ -42,6 +43,104 @@ function startNewGame(modeSel = modeId()) {
   showView('town');
   refresh();
   if (!tutorialSeen()) { markTutorialSeen(); tutorialHint(); }
+}
+
+// ---- DPS.selfTest() (phase 4 B1): a fast regression pass a critic or the player can run from the console ----
+// Every test runs on a THROWAWAY park (quiet: no sound, no motion, no autosave) and the player's game is put back
+// exactly: the live state object, clock speed, save slot, and any modals/toasts the tests opened. The last check
+// compares the state JSON before and after. The Living Park crowd is rebuilt from state afterwards (agents are visual
+// only, so it refills in a few seconds). Returns { pass, fail, ms, results: [{ name, ok, detail }] }.
+const QUIET = { sfx: false, ambient: false, reduce_motion: true, autosave_days: 1e9 };
+const finite = (...xs) => xs.every(Number.isFinite);
+function selfTest() {
+  const t0 = performance.now(), results = [];
+  const check = (name, ok, detail = '') => { results.push({ name, ok: !!ok, detail: String(detail) }); return !!ok; };
+  const run = (name, fn) => { try { fn(); } catch (e) { check(name, false, `threw: ${e.message}`); } };
+  const quietGame = () => { newGame('standard'); Object.assign(state.settings, QUIET); };
+  const live = state, liveJson = JSON.stringify(live), liveSpeed = live.speed, depth0 = modalDepth(), hadToasts = toastCount() > 0;
+  let slot = null; try { slot = localStorage.getItem(SAVE_KEY); } catch { /* storage blocked */ }
+  const Lv = DATA.balance.living, ST = Lv.selftest;
+  setSpeed(0);
+  try {
+    run('boot', () => {
+      const missing = dataFiles().filter(f => !DATA[f] || typeof DATA[f] !== 'object');
+      check('boot: data files loaded', !missing.length, missing.length ? `missing ${missing.join(', ')}` : `${dataFiles().length} files`);
+      const sp = spriteStatus(), ids = Object.keys(sp), by = k => ids.filter(id => sp[id] === k);
+      check('boot: every species has a sprite or a flagged fallback', !by('loading').length, `${by('loaded').length}/${ids.length} loaded, fallback: ${by('fallback').join(', ') || 'none'}${by('loading').length ? `, still loading: ${by('loading').join(', ')}` : ''}`);
+      check('boot: cash and debt are numbers', finite(live.cash, live.debt), `cash ${live.cash}, debt ${live.debt}`);
+    });
+    run('economy', () => {
+      quietGame();
+      const pd = [...parcelDefs()].sort((a, b) => a.tiles.length - b.tiles.length)[0];
+      const cap = parcelCapacity(pd.id);
+      const sp = [...DATA.dinosaurs.species].filter(s => s.space_required <= cap).sort((a, b) => a.shop_price - b.shop_price)[0];
+      const biome = (speciesBiomes(sp).preferred || [])[0], tier = Math.max(1, sp.min_fence_tier || 0);
+      const buy = (label, price, fn) => { const c0 = state.cash, err = fn(); check(`economy: ${label} costs its listed price`, !err && Math.abs(c0 - state.cash - price) < 1e-6, err || `${label} ${price}, cash moved ${c0 - state.cash}`); };
+      buy(`parcel ${pd.id} (${biome})`, parcelPrice(pd.id, biome), () => buyParcel(pd.id, biome));
+      buy(`fence tier ${tier}`, fenceCost(tier, pd.id), () => buildFence(pd.id, tier));
+      buy(sp.name, sp.shop_price, () => buyDino(sp.id, pd.id));
+      let report = null; const onQ = e => { report = e.detail; };
+      bus.addEventListener('quarter', onQ);
+      try { advanceDays(DATA.balance.time.days_per_quarter); } finally { bus.removeEventListener('quarter', onQ); }
+      check('economy: advanceDays(90) closes a quarter report', !!report, report ? `day ${state.day}, ${state.history.length} quarter(s) in history` : 'no quarter event');
+      check('economy: cash and debt stay numbers after a quarter', finite(state.cash, state.debt), `cash ${Math.round(state.cash)}, debt ${Math.round(state.debt)}`);
+    });
+    closeAbove(depth0);
+    run('marketing', () => {
+      // Regression for the 2026-09-21 bug: a running campaign hid its auto-renew toggle, so it could never be switched off.
+      quietGame();
+      const c = DATA.campaigns.campaigns.find(k => k.kind === 'boost' && !Object.keys(k.unlock || {}).length), id = c.id;
+      const err = buyCampaign(id);
+      check(`marketing: ${c.name} starts`, !err, err || `${c.days} days`);
+      const card = [...campaignLadder().querySelectorAll('.card')].find(el => el.querySelector('.card-title')?.textContent.includes(c.name));
+      const cardBtn = card && [...card.querySelectorAll('button')].find(b => b.textContent.startsWith('🔄'));
+      if (check('marketing: running campaign shows its auto-renew toggle (Full Marketing)', cardBtn)) cardBtn.click();
+      check('marketing: toggle turns auto-renew on', state.auto_renew[id] === true, `auto_renew.${id} = ${state.auto_renew[id]}`);
+      const menuBtn = () => { const m = document.createElement('div'); renderMarketingMenu(m); return [...m.querySelectorAll('.mkt-row')].find(r => r.querySelector('.mkt-name')?.textContent === c.name)?.querySelector('button.mkt-auto'); };
+      const off = menuBtn();
+      if (check('marketing: running campaign shows its auto-renew toggle (dropdown)', off)) off.click();
+      check('marketing: toggle turns auto-renew off', state.auto_renew[id] === false, `auto_renew.${id} = ${state.auto_renew[id]}`);
+      advanceDays(c.days + 1);
+      check('marketing: campaign does not renew once switched off', !state.campaigns.some(k => k.id === id), `${state.campaigns.filter(k => k.id === id).length} running`);
+      buyCampaign(id); toggleAutoRenew(id); advanceDays(c.days + 1); // control: left on, it does renew
+      check('marketing: control run with auto-renew on does renew', state.campaigns.some(k => k.id === id), `${state.campaigns.filter(k => k.id === id).length} running`);
+    });
+    closeAbove(depth0);
+    run('living', () => {
+      buildDemoPark({ settings: QUIET });
+      state.today.attendance = Math.ceil(ST.crowd_visitors / Lv.sprites_per_visitor); state.speed = 1;
+      spawnVisitors(ST.crowd_visitors - agentCounts().visitors);
+      for (let i = 0; i < ST.living_ticks; i++) agentTick(true);
+      const n = agentCounts(), penDinos = enclosures().reduce((k, p) => k + p.enclosure.dinos.length, 0);
+      check('living: agent counts within balance.living caps', n.visitors <= Lv.max_sprites && n.litter <= Lv.litter_max && n.cars <= slots.length && n.staff === state.staff.length && n.dinos === penDinos,
+        `visitors ${n.visitors}/${Lv.max_sprites}, cars ${n.cars}/${slots.length} slots, litter ${n.litter}/${Lv.litter_max}, staff ${n.staff}, dinos ${n.dinos}/${penDinos}`);
+      let bad = 0;
+      for (const list of [visitors, cars, dinos, staff]) for (const a of list) if ((a.active ?? true) && !finite(a.x, a.y, a.px, a.py)) bad++;
+      check(`living: no NaN agent position after ${ST.living_ticks} ticks`, !bad, `${bad} bad of ${n.visitors + n.cars + n.dinos + n.staff}`);
+    });
+    run('crowd', () => {
+      // Continues on the busy park above: warm up, then average the crowd metric over many frames.
+      for (let i = 0; i < ST.crowd_warm_ticks; i++) agentTick(true);
+      let cs = 0, sp = 0, off = 0, vis = 0, offAt = null;
+      for (let f = 0; f < ST.crowd_frames; f++) {
+        for (let i = 0; i < ST.crowd_every_ticks; i++) agentTick(true);
+        const m = crowdStats(); cs += m.centre_share; sp += m.spine_centre_share; off += m.off_path; vis += m.visitors; if (m.off_path && !offAt) offAt = m.off_at;
+      }
+      cs /= ST.crowd_frames; sp /= ST.crowd_frames; vis /= ST.crowd_frames;
+      check(`crowd: centre-line share <= ${Lv.crowd_centre_share_max}`, cs <= Lv.crowd_centre_share_max, `centre_share ${cs.toFixed(3)} (spine ${sp.toFixed(3)}), ~${Math.round(vis)} visitors, ${ST.crowd_frames} frames (pre-fix baseline ~0.49)`);
+      check('crowd: nobody off the paving', off === 0, `${off} off-path samples${offAt ? `, e.g. ${JSON.stringify(offAt)} (state ids: agents.js V_*)` : ''}`);
+    });
+  } finally {
+    closeAbove(depth0);
+    if (!hadToasts) clearToasts();
+    replaceState(live);
+    try { if (slot == null) localStorage.removeItem(SAVE_KEY); else localStorage.setItem(SAVE_KEY, slot); } catch { /* storage blocked */ }
+    setSpeed(liveSpeed);
+    refresh();
+  }
+  check('restore: live game unchanged', state === live && JSON.stringify(state) === liveJson, state === live ? 'same state, identical JSON' : 'state object replaced');
+  const fail = results.filter(r => !r.ok).length;
+  return { pass: results.length - fail, fail, ms: Math.round(performance.now() - t0), results };
 }
 
 async function boot() {
@@ -140,7 +239,7 @@ async function boot() {
     digest() { return state.digest.slice(); },
     // Living Park hooks so critics can drive the scene (visual only, economy untouched).
     // M5 minor (Phase 2): forceEscape also sounds the siren and shakes the screen, exactly like a real breakout.
-    living: { agents: agentCounts, spawnVisitors, forceEscape(parcelId, uid) { const ok = forceEscape(parcelId, uid); if (ok) { playSfx('escape_siren'); shake(); } return ok; }, stats: livingStats, active: livingActive, plaque: plaqueVisible, labels: labelRects, penLabelBoxes, penLabelStacks, arrivals: arrivalStats },
+    living: { agents: agentCounts, spawnVisitors, forceEscape(parcelId, uid) { const ok = forceEscape(parcelId, uid); if (ok) { playSfx('escape_siren'); shake(); } return ok; }, stats: livingStats, active: livingActive, plaque: plaqueVisible, labels: labelRects, penLabelBoxes, penLabelStacks, arrivals: arrivalStats, crowd: crowdStats },
     // M5 sound: DPS.sfx(id) plays one effect (ignores the per-id throttle, obeys the SFX toggle, master volume and
     // the first-gesture lock); DPS.sfx() lists the ids. DPS.audioState() reports locked/unlocked + settings + recent plays.
     sfx(id) { if (!id) return sfxIds(); return playSfx(id, { force: true }); },
@@ -154,7 +253,9 @@ async function boot() {
     reportCard() { return state.report_card ? { ...state.report_card, preview: false } : { ...buildReportCard(), preview: true }; },
     forceGoal(id) { const r = forceGoal(id); emitChange(); return r; },
     goalDone,
-    openGoals, openReportCard: () => openReportCard()
+    openGoals, openReportCard: () => openReportCard(),
+    // Phase 4 B1: regression pass on throwaway parks; the player's game is restored afterwards.
+    selfTest
   };
   console.log('Fossil Fortune loaded');
 }

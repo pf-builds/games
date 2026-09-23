@@ -150,37 +150,61 @@ function prizePuff(p) {
 // ---- routing helpers ----
 function pushWp(a, x, y) { if (a.wn < WP) { a.wx[a.wn] = x; a.wy[a.wn] = y; a.wn++; } }
 
-// Plan a route along the walkway graph from the walker's position to (tx,ty). Each waypoint is offset sideways
-// within the walkway (lane jitter, re-rolled per edge) so a crowd spreads across the path instead of forming one column.
-let planA = null, planLastEdge = -1;
-function planStep(x, y, edge) {
-  const a = planA;
-  if (edge >= 0) {
-    const e = G.edges[edge];
-    if (edge !== planLastEdge) { a.lane = (Math.random() * 2 - 1) * Lv().lane_jitter; planLastEdge = edge; }
-    const off = a.lane * Math.max(0, e.hw - 0.07);
-    if (e.vertical) x += off; else y += off;
-  }
-  pushWp(a, x, y);
-}
+// Plan a route along the walkway graph from the walker's position to (tx,ty), then offset every waypoint sideways
+// onto the walker's own lane so a crowd spreads across the path instead of forming one column.
+// Phase 4 B1 (crowd flow): the old per-edge offset was applied on the INCOMING edge's axis only, so the route's
+// entry point sat on the centreline and every corner zeroed the offset on the new edge; walkers then cut diagonally
+// back toward the middle and ~half of them walked within 0.05 tiles of the centreline (a queue). Now each walker keeps
+// a persistent lane (a fraction of the usable half-width, lane_jitter) with a small per-edge drift (lane_drift); the
+// entry point takes the first edge's lane, and a corner takes BOTH edges' lanes (x from the vertical edge, y from the
+// horizontal one), so a walker holds its line round a turn. route_jitter varies edge costs per route so near-equal
+// routes (either side of the fountain, spine vs ring) share the load instead of everyone taking the same one.
+const rawX = new Float64Array(WP), rawY = new Float64Array(WP), rawE = new Int32Array(WP), rawL = new Float64Array(WP);
+let rawN = 0;
+function planStep(x, y, edge) { if (rawN < WP) { rawX[rawN] = x; rawY[rawN] = y; rawE[rawN] = edge; rawN++; } }
+const laneOff = (e, lane) => lane * Math.max(0, e.hw - Lv().lane_margin);
 function planTo(a, tx, ty) {
-  a.wn = 0; a.wi = 0;
-  planA = a; planLastEdge = -1;
-  G.route(a.x, a.y, tx, ty, planStep);
+  a.wn = 0; a.wi = 0; rawN = 0;
+  G.route(a.x, a.y, tx, ty, planStep, Lv().route_jitter);
+  const drift = Lv().lane_drift;
+  for (let k = 0; k < rawN; k++) rawL[k] = clamp(a.lane + rnd(-drift, drift), -1, 1); // lane on the edge walked to reach k
+  for (let k = 0; k < rawN; k++) {
+    let x = rawX[k], y = rawY[k];
+    const ein = rawE[k], eout = k + 1 < rawN ? rawE[k + 1] : -1;
+    if (ein >= 0) { const e = G.edges[ein]; if (e.vertical) x += laneOff(e, rawL[k]); else y += laneOff(e, rawL[k]); }
+    if (eout >= 0 && (ein < 0 || G.edges[eout].vertical !== G.edges[ein].vertical)) { const e = G.edges[eout]; if (e.vertical) x += laneOff(e, rawL[k + 1]); else y += laneOff(e, rawL[k + 1]); }
+    pushWp(a, x, y);
+  }
   if (Math.abs(a.wx[a.wn - 1] - tx) > 1e-6 || Math.abs(a.wy[a.wn - 1] - ty) > 1e-6) pushWp(a, tx, ty);
-  planA = null;
+}
+const newLane = () => rnd(-1, 1) * Lv().lane_jitter;
+// Pull a point inside the fence onto the usable width of its nearest walkway (writes out.x/out.y; the forecourt
+// outside the fence is open paving and is left alone).
+const tmpF = { x: 0, y: 0 };
+function onPath(x, y, out) {
+  out.x = x; out.y = y;
+  if (y >= L.PARK_H) return out;
+  G.nearestOnGraph(x, y, nearP);
+  if (nearP.edge < 0) return out;
+  const e = G.edges[nearP.edge], lim = Math.max(0, e.hw - Lv().lane_margin);
+  // across the path, and along it too: past a segment's end the paving runs on only by its half-width
+  if (e.vertical) { out.x = nearP.x + clamp(x - nearP.x, -lim, lim); out.y = clamp(y, e.y0 - lim, e.y1 + lim); }
+  else { out.y = nearP.y + clamp(y - nearP.y, -lim, lim); out.x = clamp(x, e.x0 - lim, e.x1 + lim); }
+  return out;
 }
 // Off-walkway dwell point beside a point of interest: a random adjacent walkway, spread along that side,
 // pushed toward the thing being looked at. Big parcels have several sides, so crowds spread around them.
+// B1: the push toward the pen stops lane_margin short of the paving edge, so a drawn figure never stands on the verge.
 function dwellPoint(p, out, alongF = null, towardF = null) {
   const s = p.spots[rndInt(0, p.spots.length - 1)];
   const along = alongF == null ? rnd(-s.spread, s.spread) : alongF * s.spread;
-  const toward = towardF == null ? s.hw * rnd(0.15, 0.85) : s.hw * towardF;
+  const T = Lv().dwell_toward;
+  const toward = towardF == null ? Math.min(s.hw * rnd(T[0], T[1]), s.hw - Lv().lane_margin) : s.hw * towardF;
   out.x = s.x + s.ax * along + s.tx * toward;
   out.y = s.y + s.ay * along + s.ty * toward;
   return out;
 }
-const tmpP = { x: 0, y: 0 };
+const tmpP = { x: 0, y: 0 }, nearP = { edge: -1, t: 0, x: 0, y: 0, d: 0 };
 
 // Advance along the waypoint list. Returns true when the last waypoint is reached.
 function step(a, dist) {
@@ -319,7 +343,7 @@ function syncStaff() {
   const stores = DATA.facilities.facilities.filter(f => f.effect_key === 'concession_spend' && facilityTier(f.id) > 0);
   let storeSlot = 0;
   for (const w of state.staff) {
-    const a = Object.assign(makeWalker(), { role: w.role, active: true, x: L.OFFICE_DOOR.x + rnd(-0.4, 0.4), y: L.OFFICE_DOOR.y, target: null, loop: 0, followers: 0, home: false, seed: Math.random() });
+    const a = Object.assign(makeWalker(), { role: w.role, active: true, x: L.OFFICE_DOOR.x + rnd(-0.4, 0.4), y: L.OFFICE_DOOR.y, target: null, loop: 0, followers: 0, home: false, seed: Math.random(), lane: newLane() });
     a.px = a.x; a.py = a.y; a.speed = Lv().staff_walk_speed * rnd(0.9, 1.1);
     if (w.role === 'concessions') {
       const perStore = roleById('concessions').max_per_store || 2;
@@ -379,7 +403,8 @@ function syncSlots() {
 // sim time at speed f. `TS` is that factor, so every countdown below runs on sim time: at 10x a dinosaur's pause
 // is 5x shorter, not the same wall-clock wait that made a hungry animal look like a frozen sprite.
 let TS = 1;
-export function tick() {
+// `force` (DPS.selfTest) runs the tick even while a modal is open; the render loop never passes it.
+export function tick(force = false) {
   for (const v of visitors) if (v.active) { v.px = v.x; v.py = v.y; }
   for (const c of cars) if (c.active) { c.px = c.x; c.py = c.y; }
   for (const d of dinos) { d.px = d.x; d.py = d.y; }
@@ -390,7 +415,7 @@ export function tick() {
   tickPuffs(rdt);
   for (const d of dinos) if (d.pop > 0) { d.popT = (d.popT || 0) + rdt; if (d.popT >= d.pop) d.pop = 0; }
   const speed = state.speed;
-  if (speed <= 0 || blocked() || state.game_over) return;
+  if (speed <= 0 || (!force && blocked()) || state.game_over) return;
   const f = Math.min(speed, Lv().max_speed_factor);
   TS = f;
   const dt = f / Lv().tick_hz;
@@ -446,9 +471,13 @@ function tickVisitors(dt) {
       case V_FOLLOW: {
         const g = staff[v.guide];
         if (!g || g.role !== 'tour_guide') { v.guide = -1; planLeave(v); break; }
-        const tx = g.x + v.offx, ty = g.y + v.offy, dx = tx - v.x, dy = ty - v.y, d = Math.hypot(dx, dy);
+        // B1: the group's world-space offset beside a guide walking its own lane could land on the verge, and a
+        // follower catching up round a corner cut across the grass; both the spot and the follower stay on the path.
+        onPath(g.x + v.offx, g.y + v.offy, tmpF);
+        const tx = tmpF.x, ty = tmpF.y, dx = tx - v.x, dy = ty - v.y, d = Math.hypot(dx, dy);
         const mv = v.speed * 1.1 * dt;
         if (d > mv) { v.x += dx / d * mv; v.y += dy / d * mv; if (Math.abs(dx) > 0.01) v.dir = dx > 0 ? 1 : -1; } else { v.x = tx; v.y = ty; }
+        onPath(v.x, v.y, v);
         break;
       }
     }
@@ -470,6 +499,7 @@ export function spawnVisitor() {
   v.pois = rndInt(Lv().poi_min, Lv().poi_max);
   v.amenityDone = false; v.panic = 0; v.guide = -1; v.poi = null;
   v.lx = rnd(-0.06, 0.06); v.ly = rnd(-0.06, 0.06);
+  v.lane = newLane();
   const car = randomParkedCar();
   if (car) { v.x = car.x + rnd(-0.1, 0.1); v.y = car.y + 0.12; } else { v.x = rnd(0.3, 1.2); v.y = L.ROAD_Y - 0.28; }
   v.px = v.x; v.py = v.y;
@@ -483,7 +513,9 @@ export function spawnVisitor() {
     }
   }
   v.st = V_ENTER;
-  planTo(v, L.GATE_IN.x + rnd(-0.15, 0.15), L.GATE_IN.y + rnd(-0.1, 0.1));
+  // B1: arrive on the walker's own lane through the gate (was a fixed +-0.15 funnel on the gate centreline).
+  G.nearestOnGraph(L.GATE_IN.x, (L.GATE_IN.y + L.GATE_OUT.y) / 2, nearP);
+  planTo(v, L.GATE_IN.x + (nearP.edge >= 0 ? laneOff(G.edges[nearP.edge], v.lane) : 0), L.GATE_IN.y + rnd(-0.1, 0.1));
   return true;
 }
 
@@ -769,3 +801,62 @@ function tickLitter(dt) {
 
 export function agentCounts() { recount(); return { ...counts, escape: escape.active ? escape.parcel : null }; }
 export function spawnVisitors(n) { let k = 0; for (let i = 0; i < n; i++) if (spawnVisitor()) k++; recount(); return k; }
+
+// ---- crowd metric (phase 4 B1): does the walking crowd use the width of the paths, or walk in single file? ----
+// Samples every visitor walking inside the fence on a straight stretch (farther than crowd_junction_skip from any
+// junction, where two centrelines meet and "offset" is ambiguous) at its DRAWN position (sim + render offset).
+//   centre_share        share within crowd_centre_band of the walkway centreline (single file ~1, an even crowd ~0.2)
+//   spine_centre_share  the same on the spine (the vertical walkways through the gate)
+//   lateral_rms         RMS offset as a fraction of the paving half-width
+//   overlap_share       walkers with another walker within crowd_overlap tiles (sprites drawn on top of each other)
+//   dwell_overlap_share the same for visitors standing at a pen or amenity (viewing spots bunching)
+//   off_path            visitors (any state but panic) off the paving inside the fence, in the fountain, or inside a
+//                       forecourt building; must be 0. `off_by_state` splits it by visitor state.
+const WALKING = s => s === V_ENTER || s === V_WALK || s === V_AMENITY || s === V_LEAVE;
+export function onPaving(x, y) {
+  if (y >= L.PARK_H) { // forecourt / strip: anywhere but inside a building
+    for (const id in L.facilities) {
+      const f = L.facilities[id];
+      if (f.kind !== 'building' || f.y0 < L.PARK_H) continue;
+      facilityRect(id, facilityTier(id), rect);
+      if (x > rect.x0 && x < rect.x1 && y > rect.y0 && y < rect.y1) return false;
+    }
+    return true;
+  }
+  const P = L.PLAZA;
+  if (x >= P.x0 && x <= P.x1 && y >= P.y0 && y <= P.y1) return Math.hypot(x - L.CENTER.x, y - L.CENTER.y) > L.FOUNTAIN_R * 1.22;
+  for (const w of L.walkways) {
+    const hw = w.w / 2;
+    if (x >= Math.min(w.from[0], w.to[0]) - hw && x <= Math.max(w.from[0], w.to[0]) + hw && y >= Math.min(w.from[1], w.to[1]) - hw && y <= Math.max(w.from[1], w.to[1]) + hw) return true;
+  }
+  return false;
+}
+export function crowdStats() {
+  const band = Lv().crowd_centre_band, skip = Lv().crowd_junction_skip, ov = Lv().crowd_overlap;
+  let n = 0, centre = 0, sn = 0, scentre = 0, sq = 0, walkers = 0, overlap = 0, off = 0, dwellers = 0, dwellOverlap = 0;
+  const offBy = {}, offAt = []; // offAt: the first few offenders, for diagnosis
+  for (const v of visitors) {
+    if (!v.active) continue;
+    const x = v.x + v.lx, y = v.y + v.ly;
+    if (v.st !== V_PANIC && !onPaving(x, y)) { off++; offBy[v.st] = (offBy[v.st] || 0) + 1; if (offAt.length < 3) offAt.push({ st: v.st, x: Math.round(x * 100) / 100, y: Math.round(y * 100) / 100 }); }
+    if (v.st === V_DWELL) {
+      dwellers++;
+      for (const o of visitors) if (o !== v && o.active && o.st === V_DWELL && Math.abs(o.x + o.lx - x) < ov && Math.abs(o.y + o.ly - y) < ov) { dwellOverlap++; break; }
+    }
+    if (!WALKING(v.st) || y >= L.PARK_H) continue;
+    walkers++;
+    for (const o of visitors) if (o !== v && o.active && WALKING(o.st) && Math.abs(o.x + o.lx - x) < ov && Math.abs(o.y + o.ly - y) < ov) { overlap++; break; }
+    let atJunction = false;
+    for (const nd of G.nodes) if (Math.abs(nd.x - x) < skip && Math.abs(nd.y - y) < skip) { atJunction = true; break; }
+    if (atJunction) continue;
+    G.nearestOnGraph(x, y, nearP);
+    const e = G.edges[nearP.edge];
+    n++; sq += (nearP.d / e.hw) ** 2;
+    if (nearP.d < band) centre++;
+    if (e.vertical && Math.abs(e.x0 - L.GATE.x) < 1e-6) { sn++; if (nearP.d < band) scentre++; }
+  }
+  const r = x => Math.round(x * 1000) / 1000;
+  return { visitors: counts.visitors, walkers, sampled: n, centre_share: n ? r(centre / n) : null, spine_sampled: sn, spine_centre_share: sn ? r(scentre / sn) : null,
+    lateral_rms: n ? r(Math.sqrt(sq / n)) : null, overlap_share: walkers ? r(overlap / walkers) : null, dwellers, dwell_overlap_share: dwellers ? r(dwellOverlap / dwellers) : null,
+    off_path: off, off_by_state: offBy, off_at: offAt };
+}

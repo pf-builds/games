@@ -4,6 +4,7 @@ import * as TL from './tiles.js';
 const FILES = ['balance', 'biomes', 'campaigns', 'difficulty', 'dinosaurs', 'events', 'facilities', 'fences', 'food', 'parcels', 'prizes', 'sfx', 'staff', 'tooltips'];
 
 export const DATA = {};
+export const dataFiles = () => FILES.slice();
 // 6 = M5 (goals ladder + report card, lifetime stats, sound/motion settings). 5 = M4 (player-chosen parcel biome,
 // vegetation, auto-restock, campaign ladder, memberships). 4 = M3 (facility ladders, prizes, settings). 3 = M2.6
 // tile-set parcels. Older saves are discarded with the "re-surveyed" notice.
