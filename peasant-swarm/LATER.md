@@ -86,7 +86,7 @@ Parked ideas and open follow-ups from v1 and the v2 build (M1-M8), grouped by th
 - The painted title replaced the attract match (the title no longer runs a sim behind it). If portals want the live valley as the menu, draw the attract world at a low tick rate behind the painted sky instead
 - Win and lose staging draw over the frozen world in screen space; the lose screen's grey frame is one canvas at the main canvas size (zeroed when you leave it). A dedicated surrender frame and a proper planted-banner animation (pole driven into the hill) are polish for later
 - Poster mode stages seed 1000's first ford at a fixed moment; if the arcade card wants a tighter crop or a mid-clash moment, add polish.posterStep (seconds of sim before the freeze)
-- Crowd murmur and the other new sounds are untested by ear (headless is silent): Peter's phone with the ringer on and off is the check (the session is "ambient" where the browser offers navigator.audioSession)
+- Crowd murmur and the other new sounds are untested by ear (headless is silent): Peter's phone with the ringer on and off is the check (the session is "ambient" where the browser offers navigator.audioSession). P1: Peter heard "static" on desktop; see the P1 section
 - Hints are one-shot per match; a first-ever flag could stop them repeating in match two
 
 ## Parked during v2 M8 Tune and hand-off (2026-09-24)
@@ -99,6 +99,14 @@ Parked ideas and open follow-ups from v1 and the v2 build (M1-M8), grouped by th
 - The heavy chest ring grew 80 → 100 px so a 100-weight chest can hold 100 peasants (an 80 px ring never opened in the heavy-chest check). A ring that scales with the weight would be tidier than one radius for both
 - A routed leader still drops every tier, so a few bot matches end on 0-1 tiers after one late loss (range 0-6 on Normal). Fine by the rules; watch whether it reads as harsh
 - The M8 sweep runner (`game-research/peasant-swarm-v2/M8-sweep/`) could move into `tools/` next to the harness (a `--patch` flag on the harness would do the same for its matches)
+
+## Parked during v2 P1 Playtest fixes (2026-09-24)
+- The slowdown (agent.speed 170 -> 155) moved where a small force holds a pass. Over 20 fresh seeds, 20 holding at the 64 px exit against a 60 column went from 15/20 to 0/20, holding inside the pass from 3/20 to 10/20, and the column's head breaking at an exit ambush from 20/20 to 13/20. Combat runs on fixed time (1 s swings, the break and brace timers) and the enemy hard push is a per-tick distance, so slower walkers give ground faster relative to the fight. P1 turned both fixtures into rates over 8 seeds and did not retune combat (the brief). If the exit hold should come back, scale the fight clock or the hard push with speed
+- Stragglers under fog take the known-ground rejoin field (unexplored cells block). The team field stays optimistic about the dark (unknown costs as grass) by SPEC §3, so the main body can still route into unexplored rock and learn it the hard way; the re-plan now covers every agent's route
+- The brief's "no same-team neighbour within ~60 px" straggler test is not used: the neighbour scan stops at 34 px for cost (M2), and inside that radius the path tests (band past the median, detour past the straight line) already decide. A lone agent in open ground steers the same either way
+- Mix levels are set by measurement, not by ear: the murmur sits about 15 dB under a melee at 400 peasants (it was 8 dB), and hits and deaths fire at most 11 and 6 a second (were 25 and 16). Peter's ear on a real speaker is the check; every number is in config.audio
+- Safari was not tested: the container has Chromium only. Chromium collected every finished node on GC even before P1; WebKit is the engine where un-disconnected nodes are known to linger, and P1 disconnects every cue voice on end and never makes nodes for the crowd sounds, so the graph stays at 19 fixed nodes plus the live cues either way
+- encampments.banditSpeed went 150 -> 137 with the slowdown so bandits stay 0.88x your pace (at 150 they would run 0.97x). One number to put back if bandit camps feel too easy
 
 ## Closed in v2 (kept for the record)
 

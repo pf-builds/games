@@ -53,6 +53,11 @@
 // or chest it can use, a village at >= half its garrison, a heavy chest it can lift, a bandit camp at >= 2x its bandits), fog-honest like
 // the rest of its policy; every bot and scripted match reports the bot's relic tiers at 1:00 / 3:00 / 5:00 and at the end, and the objectives
 // it took (assert botTiersMedian: the median bot match ends with 3-6 tiers, when >= 3 bot matches run); --art-shots adds the spoils props.
+//
+// P1 additions (Peter's first playtest): selfTest part "audio" (a 120 s clash-heavy soak through an OfflineAudioContext: cue voices all
+// disconnect, live nodes under audio.nodeCap, the level bound, the gates under 600+ agents); --fixtures runs the ambush and hold fixtures
+// over fixtures.comboSeeds seeds and asserts their rates (fixtures.ambushRate, fixtures.holdRate: single seeds were knife edges), runs the
+// straggler fixture in every control mode and under the fog's knowledge (assert fixtureStraggler), and screenshots ?fixture=straggler live.
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -309,7 +314,7 @@ async function main() {
       // selfTest on the title screen before any match, then the fight matrix (each call is its own evaluate, well under 15 s)
       // one evaluate per part so each stays well under ~15 s of wall time (lesson 20); the merged verdict is the selfTest verdict
       const s0 = Date.now(), st = { pass: true, fails: [], results: {}, partMs: {}, wallMs: 0 };
-      for (const part of ["config", "sprites", "terrain", "caches", "art", "flow", "fight", "fixtures", "flipflop", "ai", "rivals", "fog", "spoils", "parity", "replay", "match"]) {
+      for (const part of ["config", "sprites", "terrain", "caches", "art", "flow", "fight", "fixtures", "flipflop", "ai", "rivals", "fog", "spoils", "parity", "replay", "match", "audio"]) {
         const p0 = Date.now(), r = await page.evaluate((part) => window.PS.selfTest({ parts: part }), part);
         st.partMs[part] = Date.now() - p0; Object.assign(st.results, r.results); for (const f of r.fails) if (st.fails.indexOf(f) < 0) st.fails.push(f);
       }
@@ -331,6 +336,13 @@ async function main() {
           fx[k] = await page.evaluate(([n, o]) => window.PS.fixture(n, o || {}), [name, o]);
         }
         fx.desktopMode = await page.evaluate(() => window.PSS.cfg.input.desktopMode);
+        // P1: the ambush and hold bars are rates over fixtures.comboSeeds seeds (seed 1 above is one of them); the straggler fixture in every
+        // control mode, and with the fog's knowledge (the pass you walked through known, the rest of the ridge not)
+        fx.rates = await page.evaluate(() => { const FX = window.PSS.cfg.fixtures, sd = []; for (let k = 1; k <= FX.comboSeeds; k++) sd.push(k); const ok = (l) => l.filter((r) => r.pass && !r.terrainBad && !r.truncated).length;
+          const am = sd.map((s) => window.PS.fixture("ambush", { seed: s })), ex = sd.map((s) => window.PS.fixture("hold", { seed: s })), ins = sd.map((s) => window.PS.fixture("hold", { seed: s, at: -40 }));
+          return { n: sd.length, ambush: ok(am), exit: ok(ex), inside: ok(ins), ambushRate: FX.ambushRate, holdRate: FX.holdRate, bySeed: { ambush: am.map((r) => +r.pass).join(""), exit: ex.map((r) => +r.pass).join(""), inside: ins.map((r) => +r.pass).join("") } }; });
+        fx.straggler = await page.evaluate(() => [{ mode: "route" }, { mode: "hold" }, { mode: "steer" }, { mode: "huddle" }, { mode: "route", fog: "walked" }, { mode: "hold", fog: "walked" }].map((o) => { const r = window.PS.fixture("straggler", o);
+          return { ...o, pass: r.pass, lastReached: r.lastReached, straightPx: r.straightPx, pathPx: r.pathPx, rockMaxSeconds: r.rockMaxSeconds, pressMaxSeconds: r.pressMaxSeconds, terrainBad: r.terrainBad, truncated: r.truncated }; }));
         report.fixtures = fx;
       }
       for (const pair of A.fights === "none" ? [] : A.fights.split(",")) {
@@ -542,7 +554,7 @@ async function main() {
   if (A.fixtures) {
     // each fixture live (?fixture=name): a screenshot mid-scene, and zero errors on those pages too
     report.fixtureShots = {};
-    for (const [name, t] of [["pass64", 4], ["pass128", 3], ["ambush", 5], ["flipflop", 3]]) {
+    for (const [name, t] of [["pass64", 4], ["pass128", 3], ["ambush", 5], ["flipflop", 3], ["straggler", 3]]) {
       const ctx = await browser.newContext(ctxOpts), page = await ctx.newPage();
       page.on("pageerror", (e) => report.errors.page.push({ run: "fixture " + name, text: String(e.message || e) }));
       page.on("console", (m) => { if (m.type() === "error" && !FONT_HOST.test(m.text() + ((m.location() && m.location().url) || ""))) report.errors.console.push({ run: "fixture " + name, text: m.text() }); });
@@ -659,10 +671,11 @@ async function main() {
     const F = report.fixtures || {};
     as.fixturePass64 = !!(F.pass64 && F.pass64.through != null && F.pass64.through <= 8 && F.pass64.regroup >= 0.9 && !F.pass64.terrainBad);
     as.fixturePass128 = !!(F.pass128 && F.pass128.through != null && F.pass128.through <= 6 && F.pass128.regroup >= 0.9 && !F.pass128.terrainBad);
-    as.fixtureAmbushHeadOnly = !!(F.ambush && F.ambush.pass && !F.ambush.terrainBad);
+    const RT = F.rates; as.fixtureAmbushHeadOnly = !!(RT && RT.ambush >= RT.ambushRate * RT.n && F.ambush && !F.ambush.terrainBad); // P1: a rate over seeds
     as.fixtureFlipflop = !!(F.flipflop && (F.desktopMode !== "route" || (F.flipflop.reversals <= 2 && F.flipflop.split <= 0.1)) && !F.flipflop.terrainBad);
-    as.fixtureShots = !!(report.fixtureShots && Object.keys(report.fixtureShots).length === 4);
-    as.fixtureHold = !!(F.hold && F.hold.pass && F.holdInside && F.holdInside.pass); // M2 critic MAJOR-1
+    as.fixtureShots = !!(report.fixtureShots && Object.keys(report.fixtureShots).length === 5);
+    as.fixtureHold = !!(RT && Math.max(RT.exit, RT.inside) >= RT.holdRate * RT.n); // M2 critic MAJOR-1 (P1: a rate over seeds, the better of exit and inside)
+    as.fixtureStraggler = !!(F.straggler && F.straggler.every((r) => r.pass && !r.terrainBad && !r.truncated)); // P1: Peter's stragglers beyond a ridge
     as.fixtureRemnantEscape = !!(F.remnant && F.remnant.pass); // M2 critic MAJOR-2: the winner AI-driven
   }
   if (report.bench && report.bench.ratio) { const q = report.bench.ratio; if (A.refGate) as.benchTickP90VsRef = q.updateP90 <= A.refGate; else as.benchGate = q.updateP50 <= 1.1 && q.updateP90 <= 1.1 && q.drawP50 <= 1.1 && q.drawP90 <= 1.1; if (A.refDrawGate) as.benchDrawP90VsRef = q.drawP90 <= A.refDrawGate; }
@@ -753,12 +766,13 @@ function markdown(R) {
     L.push("", "## Fixtures (PS.fixture, sandboxed; M2 section 13)", "", "| fixture | result | bar |", "|---|---|---|");
     for (const k of ["pass64", "pass128"]) { const f = F[k]; row(k, `first in ${f.firstIn} s, 95% out ${f.out95} s: **${f.through} s**; within 1.3 x 7 sqrt(n) 3 s later: **${Math.round(100 * f.regroup)}%**; terrainBad ${f.terrainBad}`, `<= ${f.bar} s, >= 90%`); }
     const am = (f) => f.rout ? `${f.loser} broke at ${f.rout.t} s: group ${f.rout.group}, flipped ${f.headFlipped}, fled ${f.fled}, outside the group ${f.outsideGroup}, farthest flip ${f.farFlip} px, tail west of the pass kept ${f.tailKeptColour}/${f.tailWestOfPass}, column after ${f.columnAfter}` : "no rout";
-    row("ambush (" + F.ambush.variant + ", 150 v " + F.ambush.waiting + ")", am(F.ambush), "only the head flips");
+    row("ambush (" + F.ambush.variant + ", 150 v " + F.ambush.waiting + ")", am(F.ambush) + (F.rates ? `; head only in **${F.rates.ambush}/${F.rates.n}** seeds (${F.rates.bySeed.ambush})` : ""), "only the head flips, in >= " + (F.rates ? F.rates.ambushRate : "?") + " of the seeds");
     row("ambush, spec 150 v 30 strung (report only)", am(F.ambushSpec), "-"); row("ambush, spec 150 v 30 dense blob (report only)", am(F.ambushSpecBlob), "-");
     row("flipflop (" + F.desktopMode + ")", `route reversals **${F.flipflop.reversals}**, split ${F.flipflop.split}, centroid U-turns ${F.flipflop.uturns}, decisions ${JSON.stringify(F.flipflop.decisions)}`, "<= 2");
     row("flipflop without hysteresis (report only)", `route reversals ${F.flipflopNoHyst.reversals} (${F.flipflopNoHyst.at}), reached ${F.flipflopNoHyst.reached}`, "-");
     const hd = (f) => `lasted ${f.lasted} s from contact, kills before breaking ${f.killsBeforeBreak}, first to break: ${f.firstBreak}, holders ${f.holdersLeft} / column ${f.columnLeft} at ${f.seconds} s`;
-    row("hold (20 at the 64 px exit v a 60 column, " + F.hold.mode + ")", hd(F.hold), ">= 8 s, >= 8 kills (or the column breaks)"); row("hold, inside the pass", hd(F.holdInside), "same");
+    row("hold (20 at the 64 px exit v a 60 column, " + F.hold.mode + ")", hd(F.hold) + (F.rates ? `; held in **${F.rates.exit}/${F.rates.n}** seeds (${F.rates.bySeed.exit})` : ""), ">= 8 s, >= 8 kills (or the column breaks)"); row("hold, inside the pass", hd(F.holdInside) + (F.rates ? `; held in **${F.rates.inside}/${F.rates.n}** seeds (${F.rates.bySeed.inside})` : ""), "the better position holds in >= " + (F.rates ? F.rates.holdRate : "?") + " of the seeds");
+    if (F.straggler) row("straggler (P1: 8 left beyond a 2-cell ridge)", F.straggler.map((r) => `${r.mode}${r.fog ? "+fog" : ""}: ${r.lastReached != null ? r.lastReached + " s" : "never"}, pressed ${r.pressMaxSeconds} s`).join("; ") + ` (straight ${F.straggler[0].straightPx} px, path ${F.straggler[0].pathPx} px)`, "all within 120 px of the centroid <= 15 s, none pressed or in rock > 0.5 s");
     const rd = (f) => `remnant-to-winner px each s: ${f.dist.join(", ")} (winner ${f.winner}${f.winnerStates.length ? ": " + [...new Set(f.winnerStates)].join("/") : ""})`;
     row("remnant 60 v 40, your remnant, AI winner", rd(F.remnant), ">= 350 px"); row("remnant, winner chasing it (report)", rd(F.remnantChased), "-"); row("remnant, AI remnant chased by you (report)", rd(F.remnantAiLoser), "-");
     row("cliff press (M1 critic MINOR-2)", `reversals per agent-second: snapped ${F.cliffSnapped.reversalsPerAgentSec}, raw in-rock target ${F.cliffRaw.reversalsPerAgentSec}, idle on grass ${F.cliffIdle.reversalsPerAgentSec}`, "M1: 5.25 pressed, 0.97 idle");
