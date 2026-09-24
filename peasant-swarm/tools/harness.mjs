@@ -29,6 +29,15 @@
 // flip-flop as report-only baselines) and screenshots each fixture live; the AI matches assert every swarm leaves its home meadow within
 // 40 s; mobile adds tap-to-route and hold-to-stop; run 1 asserts the visible-tab stall cap (a 2 s main-thread stall, then no frame
 // advances more than 2 ticks: M1 critic MAJOR-1) and a cache rebuild with no browser event (M1 critic MAJOR-2).
+//
+// M3 additions (fog of war): the scripted player is fog-honest: it reads PS.vis only (rivals it sees, camps it knows, ground it has
+// explored), never PSS.teams positions or PSS.camps. Every chunk draws a frame after each policy step and runs the leak check on it
+// (PS.vis.leakCheck); each run reports first sighting, ghosts, danger cues, pings, leak totals and the AI knowledge counters. Run 1 adds the
+// fog structure test (fog canvas <= 1/4 CSS, one full-screen alpha draw per frame, mask uploads <= fog.maskHz over a live window). A fog
+// perf page measures fog JS per frame at 1x and at --throttle (default 4x) CPU throttle (CDP Emulation.setCPUThrottlingRate), in a live
+// match and in the cap-clash bench, gated at 1.5 ms p90. A ?nofog=1 page plays start -> end -> restart. --ref-draw-gate X gates bench draw
+// p90 at X times the reference; --bench-flush benches both builds with the per-frame canvas flush (see M3-build-notes.md). Console
+// warnings are failures now (M2 critic BLOCKER-1), except the font host's TLS lines.
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -43,16 +52,19 @@ const FONT_HOST = /fonts\.(googleapis|gstatic)\.com/;
 
 function parseArgs(argv) {
   const o = { url: "http://127.0.0.1:8471/peasant-swarm/", out: "harness-out", mobile: false, sim: 240, seeds: 3, difficulty: "normal",
-    viewport: "1280x720", fights: "20x20,25x20,30x20,40x20,60x40", fightRuns: 5, fightMax: 40, renderSecs: 3, seed: null, cap: null, v1Url: null, benchReps: 3, aiMatches: 0, fixtures: false, refGate: null };
+    viewport: "1280x720", fights: "20x20,25x20,30x20,40x20,60x40", fightRuns: 5, fightMax: 40, renderSecs: 3, seed: null, cap: null, v1Url: null, benchReps: 3, aiMatches: 0, fixtures: false, refGate: null,
+    refDrawGate: null, benchFlush: false, throttle: 4, fogPerf: true };
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i], v = argv[i + 1];
     if (k === "--mobile") { o.mobile = true; continue; }
     if (k === "--fixtures") { o.fixtures = true; continue; }
+    if (k === "--bench-flush") { o.benchFlush = true; continue; }
+    if (k === "--no-fog-perf") { o.fogPerf = false; continue; }
     const key = { "--url": "url", "--out": "out", "--sim": "sim", "--seeds": "seeds", "--difficulty": "difficulty", "--viewport": "viewport",
       "--fights": "fights", "--fight-runs": "fightRuns", "--fight-max": "fightMax", "--render-secs": "renderSecs", "--seed": "seed", "--cap": "cap",
-      "--v1-url": "v1Url", "--bench-reps": "benchReps", "--ai-matches": "aiMatches", "--ref-gate": "refGate" }[k];
+      "--v1-url": "v1Url", "--bench-reps": "benchReps", "--ai-matches": "aiMatches", "--ref-gate": "refGate", "--ref-draw-gate": "refDrawGate", "--throttle": "throttle" }[k];
     if (!key) { console.error("unknown arg " + k); process.exit(2); }
-    o[key] = typeof o[key] === "number" || key === "seed" || key === "refGate" ? +v : v; i++;
+    o[key] = typeof o[key] === "number" || key === "seed" || key === "refGate" || key === "refDrawGate" ? +v : v; i++;
   }
   if (o.cap && o.cap !== "touch" && o.cap !== "desktop") { console.error("--cap must be touch or desktop"); process.exit(2); }
   return o;
@@ -69,25 +81,28 @@ const median = (a) => { const s = [...a].sort((x, y) => x - y); return s.length 
 // ---------------------------------------------------------------- in-page helpers (harness-owned global, installed before the game boots)
 function installHelpers() {
   window.__psh = {
-    // scripted player: flee a rival > flee x our size within sight, else hunt a rival < hunt x our size within sight, else the camp nearest
-    // by path (one BFS over PS.terrain ranks the camps). The goal goes to PS.aim, so the game's own flow field routes the swarm (M2).
+    // scripted player, fog-honest (M3): it reads PS.vis only. Flee a rival it sees at > flee x our size, else hunt one it sees at < hunt x,
+    // else the camp it knows nearest by path (one BFS over PS.terrain ranks them: the land is public), else ground it has not explored on
+    // a ring toward the map centre. The goal goes to PS.aim, so the game's own flow field routes the swarm.
     policy(o) {
       const S = window.PSS, p = S && S.teams[1]; if (!p || p.count === 0) return "idle";
-      const T = window.PS.terrain, W = S.cfg.world.w, H = S.cfg.world.h, cl = (v, a, b) => (v < a ? a : v > b ? b : v);
+      const V = window.PS.vis, T = window.PS.terrain, W = S.cfg.world.w, H = S.cfg.world.h, cl = (v, a, b) => (v < a ? a : v > b ? b : v);
       let fl = null, fd = Infinity, hu = null, hd = Infinity;
-      for (let i = 2; i < S.teams.length; i++) {
-        const r = S.teams[i]; if (!r.alive || r.count === 0) continue;
-        const d = Math.hypot(r.cx - p.cx, r.cy - p.cy); if (d > o.sight) continue;
+      for (const r of V.rivals()) {
+        const d = Math.hypot(r.x - p.cx, r.y - p.cy);
         if (r.count > o.flee * p.count) { if (d < fd) { fl = r; fd = d; } } else if (r.count < o.hunt * p.count && d < hd) { hu = r; hd = d; }
       }
-      this.bfs(p.cx, p.cy);
       let gx, gy, act;
-      if (fl) { const dx = p.cx - fl.cx, dy = p.cy - fl.cy, d = Math.hypot(dx, dy) || 1; gx = cl(p.cx + (dx / d) * o.fleeDist, 40, W - 40); gy = cl(p.cy + (dy / d) * o.fleeDist, 40, H - 40); act = "flee"; }
-      else if (hu) { gx = hu.cx; gy = hu.cy; act = "hunt"; }
+      if (fl) { const dx = p.cx - fl.x, dy = p.cy - fl.y, d = Math.hypot(dx, dy) || 1; gx = cl(p.cx + (dx / d) * o.fleeDist, 40, W - 40); gy = cl(p.cy + (dy / d) * o.fleeDist, 40, H - 40); act = "flee"; }
+      else if (hu) { gx = hu.x; gy = hu.y; act = "hunt"; }
       else {
-        let best = null, bd = Infinity;
-        for (const c of S.camps) { if (!c.n) continue; const k = T.cellOf(c.x, c.y), d = k >= 0 ? this.D[k] : -1; if (d >= 0 && d < bd) { bd = d; best = c; } }
-        if (best) { gx = best.x; gy = best.y; act = "camp"; } else { gx = W / 2; gy = H / 2; act = "idle"; }
+        this.bfs(p.cx, p.cy); let best = null, bd = Infinity;
+        for (const c of V.camps()) { const k = T.cellOf(c.x, c.y), d = k >= 0 ? this.D[k] : -1; if (d >= 0 && d < bd) { bd = d; best = c; } }
+        if (best) { gx = best.x; gy = best.y; act = "camp"; }
+        else {
+          act = "explore"; gx = W / 2; gy = H / 2; const a0 = Math.atan2(H / 2 - p.cy, W / 2 - p.cx);
+          for (let k = 0; k < 12; k++) { const a = a0 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.5, x = p.cx + Math.cos(a) * 600, y = p.cy + Math.sin(a) * 600; if (T.walkable(x, y) && !V.explored(1, x, y)) { gx = x; gy = y; break; } }
+        }
       }
       window.PS.aim(gx, gy);
       return act;
@@ -121,21 +136,22 @@ function installHelpers() {
 
 // one chunk: policy every POLICY_TICK, PS.step between decisions, stop at `until`, at maxSim sim-seconds, or at the wall guard
 function runChunk(o) {
-  const S = window.PSS, w0 = performance.now(), t0 = S.t, acts = { camp: 0, hunt: 0, flee: 0, idle: 0 };
-  let stepMs = 0, steps = 0, peak = S.agents.length;
+  const S = window.PSS, w0 = performance.now(), t0 = S.t, acts = { camp: 0, hunt: 0, flee: 0, idle: 0, explore: 0 };
+  let stepMs = 0, steps = 0, peak = S.agents.length, drawn = 0;
   while (S.mode === "play" && S.t < o.until - 1e-6 && S.t - t0 < o.maxSim - 1e-6 && performance.now() - w0 < o.wallMs) {
     acts[window.__psh.policy(o.policy)]++;
     const sec = Math.max(1 / 60, Math.min(o.tick, o.until - S.t, o.maxSim - (S.t - t0)));
     const a = performance.now(); window.PS.step(sec); stepMs += performance.now() - a; steps++;
+    if (S.mode === "play" && o.leak) { window.PS.vis.leakCheck(); drawn++; } // a frame drawn and leak-checked after every policy step (M3)
     if (S.agents.length > peak) peak = S.agents.length;
   }
-  return { t: S.t, simSec: S.t - t0, stepMs, steps, peak, acts, mode: S.mode, wallMs: performance.now() - w0 };
+  return { t: S.t, simSec: S.t - t0, stepMs, steps, peak, acts, drawn, mode: S.mode, wallMs: performance.now() - w0 };
 }
 
 // live rAF timing for `ms` of wall time; the scripted player keeps steering every ~0.5 s so the swarm isn't parked
 function renderWindow(o) {
   return new Promise((res) => {
-    const S = window.PSS, t0 = performance.now(), st0 = S.t, gaps = [], acts = { camp: 0, hunt: 0, flee: 0, idle: 0 };
+    const S = window.PSS, t0 = performance.now(), st0 = S.t, gaps = [], acts = { camp: 0, hunt: 0, flee: 0, idle: 0, explore: 0 }, up0 = window.PS.vis.cost();
     let last = 0, n = 0, nextPolicy = 0;
     const f = (ts) => {
       if (last) gaps.push(ts - last); last = ts; n++;
@@ -144,8 +160,9 @@ function renderWindow(o) {
       if (now - t0 < o.ms) { requestAnimationFrame(f); return; }
       gaps.sort((a, b) => a - b);
       const avg = gaps.reduce((s, g) => s + g, 0) / Math.max(1, gaps.length);
+      const up1 = window.PS.vis.cost();
       res({ frames: n, wallMs: now - t0, avgMs: avg, fps: 1000 / avg, p95Ms: gaps[Math.floor(gaps.length * 0.95)] || 0, maxMs: gaps[gaps.length - 1] || 0,
-        gameFps: S.fps, simAdvance: S.t - st0, visibility: document.visibilityState, acts });
+        gameFps: S.fps, simAdvance: S.t - st0, visibility: document.visibilityState, acts, maskUploads: up1.uploads - up0.uploads, maskUploadRate: (up1.uploads - up0.uploads) / ((now - t0) / 1000), fogP90: up1.p90 });
     };
     requestAnimationFrame(f);
   });
@@ -157,6 +174,7 @@ async function benchPage(browser, ctxOpts, href, reps) {
   page.on("pageerror", (e) => errs.push(String(e.message || e)));
   await page.goto(href); await page.waitForFunction(() => !!(window.PS && window.PS.bench && window.PSS && window.PSS.teams && window.PSS.teams.length > 1), null, { timeout: 20000 });
   await page.waitForTimeout(800);
+  if (A.benchFlush) await page.evaluate(() => { window.__benchFlush = true; }); // both builds: the per-frame canvas flush (M3 notes)
   await page.evaluate(() => window.PS.bench("capclash", { ticks: 60 }));
   const runs = []; for (let i = 0; i < reps; i++) runs.push(await page.evaluate(() => window.PS.bench("capclash")));
   await ctx.close();
@@ -186,6 +204,7 @@ async function main() {
     errors: { console: [], page: [], filteredFontErrors: 0, warnings: [] },
     selfTest: null, fights: [], title: null, touch: null, huddle: null, runs: [], asserts: {}, notes: [], pass: false,
     bench: null, caches: null, aiMatches: [], outcomes: [], restart: null, fixtures: null, stall: null, tap: null, hold: null,
+    fogStructure: null, fogPerf: null, nofog: null,
   };
   const warnSeen = new Set();
   const shot = async (page, name) => { const f = path.join(out, `${tag}-${name}.png`); await page.screenshot({ path: f }); return path.basename(f); };
@@ -212,12 +231,12 @@ async function main() {
     page.on("console", (m) => {
       const where = (m.location() && m.location().url) || "";
       if (m.type() === "error") { if (FONT_HOST.test(where) || FONT_HOST.test(m.text())) report.errors.filteredFontErrors++; else report.errors.console.push({ run: ri + 1, text: m.text(), where }); }
-      else if (m.type() === "warning" && !warnSeen.has(m.text())) { warnSeen.add(m.text()); report.errors.warnings.push(m.text().slice(0, 300)); }
+      else if (m.type() === "warning" && !warnSeen.has(m.text())) { if (FONT_HOST.test(where) || FONT_HOST.test(m.text())) report.errors.filteredFontErrors++; else { warnSeen.add(m.text()); report.errors.warnings.push(m.text().slice(0, 300)); } }
       else if (m.type() === "log" && m.text().startsWith("[PS.selfTest]")) report.notes.push("run " + (ri + 1) + " console: " + m.text());
     });
     page.on("pageerror", (e) => report.errors.page.push({ run: ri + 1, text: String(e.message || e) }));
     const bootReady = () => !!(window.PS && window.PS.selfTest && window.PS.step && window.PSS && window.PSS.teams && window.PSS.teams.length > 1);
-    const run = { index: ri + 1, timeline: [], chunks: [], render: [], screenshots: {}, policy: { camp: 0, hunt: 0, flee: 0, idle: 0 } };
+    const run = { index: ri + 1, timeline: [], chunks: [], render: [], screenshots: {}, policy: { camp: 0, hunt: 0, flee: 0, idle: 0, explore: 0 } };
     report.runs.push(run);
 
     let b0 = Date.now();
@@ -229,7 +248,7 @@ async function main() {
       // selfTest on the title screen before any match, then the fight matrix (each call is its own evaluate, well under 15 s)
       // one evaluate per part so each stays well under ~15 s of wall time (lesson 20); the merged verdict is the selfTest verdict
       const s0 = Date.now(), st = { pass: true, fails: [], results: {}, partMs: {}, wallMs: 0 };
-      for (const part of ["config", "sprites", "terrain", "caches", "flow", "fight", "fixtures", "flipflop", "ai", "replay", "match"]) {
+      for (const part of ["config", "sprites", "terrain", "caches", "flow", "fight", "fixtures", "flipflop", "ai", "fog", "replay", "match"]) {
         const p0 = Date.now(), r = await page.evaluate((part) => window.PS.selfTest({ parts: part }), part);
         st.partMs[part] = Date.now() - p0; Object.assign(st.results, r.results); for (const f of r.fails) if (st.fails.indexOf(f) < 0) st.fails.push(f);
       }
@@ -246,7 +265,8 @@ async function main() {
       if (A.fixtures) {
         const fx = {};
         for (const [k, name, o] of [["pass64", "pass64"], ["pass128", "pass128"], ["ambush", "ambush"], ["ambushSpec", "ambush", { wait: 30 }], ["ambushSpecBlob", "ambush", { wait: 30, blob: true }],
-          ["flipflop", "flipflop"], ["flipflopNoHyst", "flipflop", { noHyst: true }], ["cliffSnapped", "cliff", { variant: "snapped" }], ["cliffRaw", "cliff", { variant: "raw" }], ["cliffIdle", "cliff", { variant: "idle" }]]) {
+          ["flipflop", "flipflop"], ["flipflopNoHyst", "flipflop", { noHyst: true }], ["cliffSnapped", "cliff", { variant: "snapped" }], ["cliffRaw", "cliff", { variant: "raw" }], ["cliffIdle", "cliff", { variant: "idle" }],
+          ["hold", "hold"], ["holdInside", "hold", { at: -40 }], ["remnant", "remnant"], ["remnantChased", "remnant", { chase: true }], ["remnantAiLoser", "remnant", { loser: "ai" }]]) {
           fx[k] = await page.evaluate(([n, o]) => window.PS.fixture(n, o || {}), [name, o]);
         }
         fx.desktopMode = await page.evaluate(() => window.PSS.cfg.input.desktopMode);
@@ -335,6 +355,9 @@ async function main() {
       report.stall = await page.evaluate(() => new Promise((res) => { const S = window.PSS, t0 = performance.now(); while (performance.now() - t0 < 2000) { /* stall */ }
         const d = []; let last = S.tick, n = 0; const f = () => { d.push(S.tick - last); last = S.tick; if (++n < 40) requestAnimationFrame(f); else res({ deltas: d, max: Math.max(...d), pace: S.pace, hidden: document.hidden }); }; requestAnimationFrame(f); }));
       report.stall.ok = report.stall.max <= 2 * report.stall.pace;
+      // fog structure (M3): fog canvas <= 1/4 CSS size, exactly one full-screen alpha draw per frame (wrapped drawImage / fillRect, 10 frames)
+      report.fogStructure = await page.evaluate(() => window.PS.vis.structure());
+      report.fogStructure.ok = report.fogStructure.quarter && report.fogStructure.layers === 1;
     }
     if (A.mobile && ri === 0 && run.started) {
       report.huddle = await page.evaluate(() => {
@@ -356,7 +379,7 @@ async function main() {
       while (guard++ < 20) {
         const now = await page.evaluate(() => ({ t: window.PSS.t, mode: window.PSS.mode }));
         if (now.mode !== "play" || now.t >= stop - 1e-6) break;
-        const c = await page.evaluate(runChunk, { until: stop, maxSim: CHUNK_SIM, tick: POLICY_TICK, wallMs: EVAL_WALL_MS, policy: POLICY });
+        const c = await page.evaluate(runChunk, { until: stop, maxSim: CHUNK_SIM, tick: POLICY_TICK, wallMs: EVAL_WALL_MS, policy: POLICY, leak: true });
         if (c.simSec > 0) run.chunks.push({ t0: r2(c.t - c.simSec), t1: r2(c.t), simSec: r2(c.simSec), stepMs: Math.round(c.stepMs), msPerSimSec: r2(c.stepMs / c.simSec), peakAgents: c.peak, wallMs: Math.round(c.wallMs) });
         for (const k in c.acts) run.policy[k] += c.acts[k];
         if (c.peak > maxAgents) maxAgents = c.peak;
@@ -373,9 +396,13 @@ async function main() {
         for (const k in rw.acts) run.policy[k] += rw.acts[k];
         const busyMs = ((m1.TaskDuration - m0.TaskDuration) * 1000) / Math.max(1, rw.frames), scriptMs = ((m1.ScriptDuration - m0.ScriptDuration) * 1000) / Math.max(1, rw.frames);
         run.render.push({ t: snap.t, total: snap.total, onScreen: snap.onScreen, fps: r2(rw.fps), avgMs: r2(rw.avgMs), p95Ms: r2(rw.p95Ms), maxMs: r2(rw.maxMs),
-          mainThreadMsPerFrame: r2(busyMs), scriptMsPerFrame: r2(scriptMs), gameFps: rw.gameFps, simAdvance: r2(rw.simAdvance), wallMs: Math.round(rw.wallMs), visibility: rw.visibility });
+          mainThreadMsPerFrame: r2(busyMs), scriptMsPerFrame: r2(scriptMs), gameFps: rw.gameFps, simAdvance: r2(rw.simAdvance), wallMs: Math.round(rw.wallMs), visibility: rw.visibility,
+          maskUploads: rw.maskUploads, maskUploadRate: r2(rw.maskUploadRate), fogP90: rw.fogP90 });
       }
     }
+    // fog (M3): what the fog-honest player saw, the leak totals over every drawn frame, the AI knowledge counters, fog JS per frame
+    run.fog = await page.evaluate(() => ({ stats: window.PS.vis.stats, leak: window.PS.vis.leakTotals(), ai: window.PS.ai.assertKnowledge(), cost: window.PS.vis.cost(), stamps: window.PS.vis.stamps, explored: window.PSS.fogW ? window.PSS.fogW.nExp[1] : null }));
+    if (run.fog.leak) { const L = run.fog.leak; run.fog.leakDiff = L.hidden + L.missed + L.neutralsHidden + L.tagHidden + L.ringHidden + L.arrowHidden + L.miniHidden; }
     // ------------------------------------------------ the end screen: finish naturally, or ring the bell early when --sim is shorter than the match
     let st = await page.evaluate(() => ({ mode: window.PSS.mode, t: window.PSS.t, timeLeft: window.PSS.timeLeft, result: window.PSS.result }));
     run.endForced = false;
@@ -429,7 +456,7 @@ async function main() {
         const mres = await page.evaluate(([seed, cap]) => window.PS.simMatch(240, { seed, cap, wallMs: 12000 }), [seed, cap]);
         report.aiMatches.push({ seed, cap, agentCap: mres.agentCap, seconds: mres.seconds, end: mres.end, truncated: mres.truncated, wallMs: mres.wallMs, msPerTick: mres.msPerTick,
           maxTotal: mres.maxTotal, capOver: mres.capOver, terrainBad: mres.terrainBad, firstBad: mres.firstBad, exceptions: mres.exceptions, winner: mres.winner, map: mres.map,
-          leftHome: mres.leftHome, atCentre: mres.atCentre, ev: mres.ev, alive: [60, 120, 180].map((t) => { const s = mres.timeline.find((x) => x.t === t); return s ? s.counts.filter((c) => c > 0).length : null; }),
+          leftHome: mres.leftHome, atCentre: mres.atCentre, ev: mres.ev, ai: mres.ai, fog: mres.fog, alive: [60, 120, 180].map((t) => { const s = mres.timeline.find((x) => x.t === t); return s ? s.counts.filter((c) => c > 0).length : null; }),
           timeline: mres.timeline.map((x) => x.t + "s " + x.counts.join("/") + " n" + x.neutrals) });
       }
     }
@@ -451,6 +478,52 @@ async function main() {
       await page.waitForFunction((t) => window.PSS && window.PSS.fixture && window.PSS.t >= t, t, { timeout: 30000 }).catch(() => {});
       report.fixtureShots[name] = await shot(page, "fixture-" + name); await ctx.close();
     }
+  }
+  if (A.fogPerf) {
+    // fog JS per frame (M3 gate 1.5 ms at 4x): a live scripted match to 90 s at 1x, then 120 frames (one tick + one drawn, leak-checked frame
+    // each) at 1x and at --throttle x; the cap-clash bench's fog JS at both. Fog JS = the render-side fog work plus the stamps of the ticks.
+    const ctx = await browser.newContext(ctxOpts); await ctx.addInitScript(installHelpers); const page = await ctx.newPage();
+    page.on("pageerror", (e) => report.errors.page.push({ run: "fog perf", text: String(e.message || e) }));
+    page.on("console", (m) => { if (m.type() === "error" && !FONT_HOST.test(m.text() + ((m.location() && m.location().url) || ""))) report.errors.console.push({ run: "fog perf", text: m.text() }); });
+    await page.goto(runUrl(7)); await page.waitForFunction(() => !!(window.PS && window.PS.vis && window.PSS && window.PSS.teams && window.PSS.teams.length > 1), null, { timeout: 20000 });
+    const b = await page.evaluate(() => { const b = document.getElementById("btn-play").getBoundingClientRect(); return { x: b.left + b.width / 2, y: b.top + b.height / 2 }; });
+    if (A.mobile) await page.touchscreen.tap(b.x, b.y); else await page.mouse.click(b.x, b.y);
+    await page.waitForFunction(() => window.PSS.mode === "play", null, { timeout: 5000 }).catch(() => {});
+    for (let k = 0; k < 3; k++) await page.evaluate(runChunk, { until: 90, maxSim: CHUNK_SIM, tick: POLICY_TICK, wallMs: EVAL_WALL_MS, policy: POLICY, leak: false });
+    const frames = () => page.evaluate(() => { window.PS.vis.resetCost(); const S = window.PSS; let n = 0; for (let i = 0; i < 120 && S.mode === "play"; i++) { if (i % 30 === 0) window.__psh.policy({ sight: 400, hunt: 0.7, flee: 1.4, fleeDist: 300 }); window.PS.step(1 / 60); window.PS.vis.leakCheck(); n++; }
+      const c = window.PS.vis.cost(); return { frames: n, p50: c.p50, p90: c.p90, p99: c.p99, mean: c.mean, max: c.max, stampMsPerTick: c.stampMsPerTick, t: +S.t.toFixed(1), count: S.teams[1].count, agents: S.agents.length, holes: window.PS.fog.RS.holes }; });
+    const cdp = await ctx.newCDPSession(page); const fp = { throttle: A.throttle };
+    fp.match1x = await frames();
+    fp.bench1x = await page.evaluate(() => { const b = window.PS.bench("capclash", { ticks: 90 }); return { fog: b.fog, draw: b.draw, update: b.update }; });
+    await cdp.send("Emulation.setCPUThrottlingRate", { rate: A.throttle });
+    fp.matchThrottled = await frames();
+    fp.benchThrottled = await page.evaluate(() => { const b = window.PS.bench("capclash", { ticks: 45 }); return { fog: b.fog, draw: b.draw, update: b.update }; });
+    await cdp.send("Emulation.setCPUThrottlingRate", { rate: 1 });
+    // the gate reads the per-frame MEAN at the throttle: CDP throttling runs the page in ~0.2 ms bursts between ~0.5 ms pauses, so any
+    // timed segment that straddles a pause reads 0.5 ms more (a 0.03 ms stamp segment reads ~0.7 ms at p90 under 4x). p90 is reported.
+    fp.ok = fp.matchThrottled.mean <= 1.5 && fp.benchThrottled.fog.mean <= 1.5; fp.p90ok = fp.matchThrottled.p90 <= 1.5 && fp.benchThrottled.fog.p90 <= 1.5;
+    report.fogPerf = fp; await ctx.close();
+  }
+  {
+    // ?nofog=1 (M3 brief acceptance): renders everything; start with a real click or tap, play, reach the end screen, restart
+    const ctx = await browser.newContext(ctxOpts); await ctx.addInitScript(installHelpers); const page = await ctx.newPage(), errs = [];
+    page.on("pageerror", (e) => errs.push(String(e.message || e)));
+    page.on("console", (m) => { if ((m.type() === "error" || m.type() === "warning") && !FONT_HOST.test(m.text() + ((m.location() && m.location().url) || ""))) errs.push(m.type() + ": " + m.text()); });
+    const u = new URL(runUrl(8)); u.searchParams.set("nofog", "1"); await page.goto(u.href);
+    await page.waitForFunction(() => !!(window.PS && window.PS.vis && window.PSS && window.PSS.teams && window.PSS.teams.length > 1), null, { timeout: 20000 });
+    const hit = async (id) => { const h = await page.evaluate((id) => { const b = document.getElementById(id), r = b.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2, e = document.elementFromPoint(x, y); return { x, y, hit: !!e && (e === b || b.contains(e)) }; }, id);
+      if (A.mobile) await page.touchscreen.tap(h.x, h.y); else await page.mouse.click(h.x, h.y); await page.waitForFunction(() => window.PSS.mode === "play", null, { timeout: 5000 }).catch(() => {}); return h.hit; };
+    const n = { startHit: await hit("btn-play") };
+    n.started = await page.evaluate(() => window.PSS.mode === "play" && window.PS.vis.nofog);
+    await page.evaluate(runChunk, { until: 20, maxSim: CHUNK_SIM, tick: POLICY_TICK, wallMs: EVAL_WALL_MS, policy: POLICY, leak: false });
+    n.drawnAll = await page.evaluate(() => { window.PS.vis.leakCheck(); const S = window.PSS; let rivals = 0; for (const a of S.agents) if (a.team > 1 && a.seenA > 0) rivals++; return { rivalsShown: rivals, gate: window.PS.vis.on }; });
+    await page.evaluate(() => { window.PSS.timeLeft = 0.05; }); for (let i = 0; i < 10; i++) { const m = await page.evaluate(() => { window.PS.step(0.5); return window.PSS.mode; }); if (m !== "play") break; }
+    await page.waitForFunction(() => document.querySelector("#ov-win.active, #ov-lose.active"), null, { timeout: 5000 }).catch(() => {});
+    n.end = await page.evaluate(() => { const ov = document.querySelector("#ov-win.active, #ov-lose.active"); return ov ? ov.id : null; });
+    n.restartHit = n.end ? await hit(n.end === "ov-win" ? "btn-again" : "btn-retry") : false;
+    n.restarted = await page.evaluate(() => window.PSS.mode === "play" && window.PSS.t < 2);
+    n.shot = await shot(page, "nofog"); n.errors = errs; n.ok = n.startHit && n.started && !!n.end && n.restartHit && n.restarted && errs.length === 0 && n.drawnAll.gate === false;
+    report.nofog = n; await ctx.close();
   }
   await browser.close();
 
@@ -483,8 +556,18 @@ async function main() {
     as.fixtureAmbushHeadOnly = !!(F.ambush && F.ambush.pass && !F.ambush.terrainBad);
     as.fixtureFlipflop = !!(F.flipflop && (F.desktopMode !== "route" || (F.flipflop.reversals <= 2 && F.flipflop.split <= 0.1)) && !F.flipflop.terrainBad);
     as.fixtureShots = !!(report.fixtureShots && Object.keys(report.fixtureShots).length === 4);
+    as.fixtureHold = !!(F.hold && F.hold.pass && F.holdInside && F.holdInside.pass); // M2 critic MAJOR-1
+    as.fixtureRemnantEscape = !!(F.remnant && F.remnant.pass); // M2 critic MAJOR-2: the winner AI-driven
   }
-  if (report.bench && report.bench.ratio) { const q = report.bench.ratio; if (A.refGate) as.benchTickP90VsRef = q.updateP90 <= A.refGate; else as.benchGate = q.updateP50 <= 1.1 && q.updateP90 <= 1.1 && q.drawP50 <= 1.1 && q.drawP90 <= 1.1; }
+  if (report.bench && report.bench.ratio) { const q = report.bench.ratio; if (A.refGate) as.benchTickP90VsRef = q.updateP90 <= A.refGate; else as.benchGate = q.updateP50 <= 1.1 && q.updateP90 <= 1.1 && q.drawP50 <= 1.1 && q.drawP90 <= 1.1; if (A.refDrawGate) as.benchDrawP90VsRef = q.drawP90 <= A.refDrawGate; }
+  // M3 gates: fog leaks, AI knowledge, structure, mask upload rate, fog JS at the throttle, ?nofog=1, console warnings
+  as.noConsoleWarnings = report.errors.warnings.length === 0;
+  as.fogLeakClean = report.runs.every((r) => r.fog && r.fog.leak && r.fog.leak.frames > 0 && r.fog.leakDiff === 0);
+  as.aiKnowledgeClean = report.runs.every((r) => r.fog && r.fog.ai && r.fog.ai.violations === 0) && report.aiMatches.every((m) => m.ai && m.ai.violations === 0);
+  if (report.fogStructure) as.fogStructure = !!report.fogStructure.ok;
+  as.maskUploadsUnder5Hz = report.runs.every((r) => r.render.every((x) => x.maskUploadRate == null || x.maskUploadRate <= 5.05));
+  if (report.fogPerf) as.fogJsThrottled = !!report.fogPerf.ok;
+  as.nofogPlayable = !!(report.nofog && report.nofog.ok);
   if (report.bench) as.benchClean = report.bench.errors.length === 0 && [...report.bench.v2runs, ...report.bench.v1runs].every((b) => !b.terrainBad);
   if (A.mobile) {
     const t = report.touch || {}, h = report.huddle || {};
@@ -540,6 +623,11 @@ function markdown(R) {
     if (b.ratio) L.push("", `this build / reference: update p50 ${b.ratio.updateP50}, p90 ${b.ratio.updateP90}; draw p50 ${b.ratio.drawP50}, p90 ${b.ratio.drawP90} (gate: ${R.meta.refGate ? "tick p90 <= " + R.meta.refGate : "all four <= 1.1"})`);
     const fl = b.v2runs.length && b.v2runs[b.v2runs.length - 1].flow; if (fl) L.push(`Flow fields during the timed ticks (last run): ${fl.rebuilds} rebuilds, ${fl.ms} ms total, ${fl.msPerTick} ms per tick, max ${fl.maxMs} ms.`);
   }
+  L.push("", "## Fog (M3)", "", "| run | first sighting (s) | sightings | ghosts | danger cues | pings / rumbles | dust | leak frames | rivals drawn / visible / fading | leak diff | AI decisions / violations | fog JS p50 / p90 ms |", "|---|---|---|---|---|---|---|---|---|---|---|---|");
+  for (const r of R.runs) if (r.fog && r.fog.stats) { const f = r.fog, s = f.stats, l = f.leak; L.push(`| ${r.index} | ${s.firstSight} | ${s.sightings} | ${s.ghosts} | ${s.dangerCues} | ${s.pings} / ${s.rumbles} | ${s.dust} | ${l.frames} | ${l.rivalsDrawn} / ${l.rivalsVisible} / ${l.fading} | ${f.leakDiff} | ${f.ai.decisions} / ${f.ai.violations} | ${f.cost.p50} / ${f.cost.p90} |`); }
+  if (R.fogStructure) L.push("", `Structure: fog canvas ${R.fogStructure.fogW}x${R.fogStructure.fogH} for ${R.fogStructure.cssW}x${R.fogStructure.cssH} CSS (<= 1/4: ${R.fogStructure.quarter}), full-screen alpha draws per frame ${R.fogStructure.layers}, drawImage per frame ${R.fogStructure.drawImage}. Mask uploads per second over the render windows: ${R.runs.map((r) => r.render.map((x) => x.maskUploadRate).join("/")).join(" · ")}.`);
+  if (R.fogPerf) { const f = R.fogPerf; L.push("", `Fog JS per frame (ms, p50 / p90): live match at 1x ${f.match1x.p50} / ${f.match1x.p90}, at ${f.throttle}x ${f.matchThrottled.p50} / ${f.matchThrottled.p90} (t ${f.matchThrottled.t} s, ${f.matchThrottled.count} yours, ${f.matchThrottled.agents} agents); cap-clash bench at 1x ${f.bench1x.fog.p50} / ${f.bench1x.fog.p90}, at ${f.throttle}x ${f.benchThrottled.fog.p50} / ${f.benchThrottled.fog.p90}. Mean at ${f.throttle}x: match ${f.matchThrottled.mean}, bench ${f.benchThrottled.fog.mean}. Gate mean <= 1.5 at ${f.throttle}x: ${f.ok ? "pass" : "FAIL"}; p90 <= 1.5 at ${f.throttle}x: ${f.p90ok ? "pass" : "over (throttle pause quantisation, see notes)"}.`); }
+  if (R.nofog) L.push("", `?nofog=1: start ${R.nofog.startHit && R.nofog.started}, end screen ${R.nofog.end}, restart ${R.nofog.restartHit && R.nofog.restarted}, errors ${R.nofog.errors.length}: ${R.nofog.ok ? "pass" : "FAIL"}.`);
   if (R.caches) L.push("", "## Cache drop and recovery", "", `PS.debugDropCaches blanked ${R.caches.dropped} canvases (${R.caches.blankAfterDrop} read blank), visibilitychange fired; after: ${R.caches.after.chunksOpaque}/${R.caches.after.chunks} chunks opaque, ${R.caches.after.pending} pending, minimap ${R.caches.after.minimap}, blank sprites ${R.caches.after.spritesBlank.length}. Recovered: ${R.caches.recovered}.`);
   if (R.caches && R.caches.noEvent) { const c = R.caches.noEvent; L.push(`No event (M1 critic MAJOR-2): ${c.dropped} blanked, ${c.blankAfterDrop} read blank; recovered ${c.recovered} after ${c.waitedMs} ms of frames (${c.after ? c.after.chunksOpaque + "/" + c.after.chunks + " chunks opaque" : "-"}).`); }
   if (R.stall) L.push("", "## Visible-tab stall (M1 critic MAJOR-1)", "", `2 s busy loop, then 40 frames: ticks per frame max ${R.stall.max} (pace ${R.stall.pace}, cap ${2 * R.stall.pace}); deltas ${R.stall.deltas.join(",")}. ${R.stall.ok ? "pass" : "FAIL"}.`);
@@ -552,6 +640,10 @@ function markdown(R) {
     row("ambush, spec 150 v 30 strung (report only)", am(F.ambushSpec), "-"); row("ambush, spec 150 v 30 dense blob (report only)", am(F.ambushSpecBlob), "-");
     row("flipflop (" + F.desktopMode + ")", `route reversals **${F.flipflop.reversals}**, split ${F.flipflop.split}, centroid U-turns ${F.flipflop.uturns}, decisions ${JSON.stringify(F.flipflop.decisions)}`, "<= 2");
     row("flipflop without hysteresis (report only)", `route reversals ${F.flipflopNoHyst.reversals} (${F.flipflopNoHyst.at}), reached ${F.flipflopNoHyst.reached}`, "-");
+    const hd = (f) => `lasted ${f.lasted} s from contact, kills before breaking ${f.killsBeforeBreak}, first to break: ${f.firstBreak}, holders ${f.holdersLeft} / column ${f.columnLeft} at ${f.seconds} s`;
+    row("hold (20 at the 64 px exit v a 60 column, " + F.hold.mode + ")", hd(F.hold), ">= 8 s, >= 8 kills (or the column breaks)"); row("hold, inside the pass", hd(F.holdInside), "same");
+    const rd = (f) => `remnant-to-winner px each s: ${f.dist.join(", ")} (winner ${f.winner}${f.winnerStates.length ? ": " + [...new Set(f.winnerStates)].join("/") : ""})`;
+    row("remnant 60 v 40, your remnant, AI winner", rd(F.remnant), ">= 350 px"); row("remnant, winner chasing it (report)", rd(F.remnantChased), "-"); row("remnant, AI remnant chased by you (report)", rd(F.remnantAiLoser), "-");
     row("cliff press (M1 critic MINOR-2)", `reversals per agent-second: snapped ${F.cliffSnapped.reversalsPerAgentSec}, raw in-rock target ${F.cliffRaw.reversalsPerAgentSec}, idle on grass ${F.cliffIdle.reversalsPerAgentSec}`, "M1: 5.25 pressed, 0.97 idle");
     if (R.fixtureShots) L.push("", `Live fixture screenshots: ${Object.values(R.fixtureShots).join(", ")}`);
   }

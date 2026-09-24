@@ -1,9 +1,12 @@
-// Peasant Swarm audio — all synthesized, owned. SFX + battle drum while engaged.
+// Peasant Swarm audio — all synthesized, owned. SFX + battle drum while engaged, plus the fog tells (SPEC-v2 §12): the distant panned
+// clash rumble (the one deliberate off-screen sound), the danger horn (a low war horn) and the ping tone.
 (function () {
   const PS = (window.PS = window.PS || {});
-  let ctx = null, master = null, muted = false, silent = false, drumOn = false, drumTimer = null, drumStep = 0;
+  let ctx = null, master = null, muted = false, silent = false, drumOn = false, drumTimer = null, drumStep = 0, unlocked = false;
 
+  // no AudioContext exists until a user gesture unlocks it: creating or resuming one earlier only logs browser warnings (M2 critic BLOCKER-1)
   function ac() {
+    if (!unlocked) return null;
     if (!ctx) {
       try {
         ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -47,8 +50,13 @@
   const last = {};
   function gate(k, ms) { const n = performance.now(); if (n - (last[k] || 0) < ms) return false; last[k] = n; return true; }
 
+  let flatNoise = null; // a looping noise buffer without the one-shot decay (the rumble)
+  function getFlat(c) { if (flatNoise) return flatNoise; const len = c.sampleRate; flatNoise = c.createBuffer(1, len, c.sampleRate); const d = flatNoise.getChannelData(0); for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1; return flatNoise; }
+  // a stereo panner when the browser has one, else straight through
+  function panNode(c, pan) { if (!c.createStereoPanner) return null; const p = c.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan)); p.connect(master); return p; }
+
   PS.audio = {
-    unlock() { ac(); },
+    unlock() { unlocked = true; ac(); },
     setMuted(m) { muted = m; if (m) PS.audio.stopDrum(); },
     setSilent(v) { silent = !!v; if (silent) PS.audio.stopDrum(); },
     isMuted() { return muted; },
@@ -71,6 +79,21 @@
     win() { [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, f, 0.18, "square", 0.1, i * 0.1)); noise(0.6, 0.1, 0.5, 4000); },
     lose() { [392, 330, 262, 196].forEach((f, i) => tone(f, f * 0.97, 0.3, "sawtooth", 0.12, i * 0.22)); },
     click() { tone(700, 500, 0.04, "square", 0.05); },
+    // distant clash through the dark: 3 s of low filtered noise and a few muffled thumps, panned toward it, quieter with distance
+    rumble(pan, vol) {
+      if (silent || !gate("rb", 600)) return; const c = ac(); if (!c || muted) return;
+      const t0 = c.currentTime, dur = 3, peak = 0.16 * Math.max(0.2, Math.min(1, vol || 1)), out = panNode(c, pan || 0) || master;
+      const src = c.createBufferSource(); src.buffer = getFlat(c); src.loop = true; src.playbackRate.value = 0.6;
+      const f = c.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 220; f.Q.value = 0.8;
+      const g = c.createGain(); g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(peak, t0 + 0.5); g.gain.setValueAtTime(peak, t0 + dur - 1); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      src.connect(f).connect(g).connect(out); src.start(t0); src.stop(t0 + dur + 0.05);
+      for (let i = 0; i < 5; i++) { const o = c.createOscillator(), h = c.createGain(), t = t0 + 0.3 + i * 0.5 + Math.random() * 0.2; o.type = "sine"; o.frequency.setValueAtTime(70 + Math.random() * 20, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.2);
+        h.gain.setValueAtTime(0.0001, t); h.gain.exponentialRampToValueAtTime(peak * 1.2, t + 0.01); h.gain.exponentialRampToValueAtTime(0.0001, t + 0.22); o.connect(h).connect(out); o.start(t); o.stop(t + 0.25); }
+    },
+    // danger: an unseen rival is hunting you. A low war horn (the finale horn, lower)
+    dangerHorn() { if (!gate("dh", 2000)) return; [[98, 0], [147, 0.02]].forEach(([f, w]) => { tone(f * 0.94, f, 0.25, "sawtooth", 0.1, w, true); tone(f, f * 0.985, 1.0, "sawtooth", 0.12, w + 0.22, true); }); noise(0.9, 0.05, 0.2, 400); },
+    // ping: a rout you did not see folded into its clash's ping
+    ping() { if (!gate("pg", 500)) return; tone(740, 760, 0.22, "triangle", 0.07); tone(1110, 1120, 0.18, "sine", 0.03, 0.05); },
 
     startDrum() {
       if (muted || silent || drumOn || !ac()) return;

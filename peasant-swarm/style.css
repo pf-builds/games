@@ -22,6 +22,7 @@ body {
   transition: transform .15s;
 }
 .chip.dead { opacity: .4; text-decoration: line-through; }
+.chip.unseen { opacity: .55; border-style: dashed; } /* a rival you have not sighted yet: "?" until first sight (SPEC-v2 §5) */
 .chip.you { border-color: rgba(255,255,255,.35); }
 .chip .sw { width: 12px; height: 12px; border-radius: 3px; box-shadow: 0 0 0 2px rgba(0,0,0,.35) inset; }
 .chip .n { font-variant-numeric: tabular-nums; min-width: 2ch; text-align: right; }
@@ -56,8 +57,8 @@ body {
   width: 150px; height: 150px; border-radius: 8px; border: 2px solid rgba(255,255,255,.18);
   background: #0e170c; image-rendering: pixelated; pointer-events: auto; touch-action: none; cursor: pointer;
 }
-#hint {
-  position: absolute; left: 50%; top: 4.2rem; transform: translateX(-50%);
+#hint { /* below the clash panel (desktop panel ends ~120 px, phone ~174 px): M2 critic MAJOR-3 */
+  position: absolute; left: 50%; top: 8.2rem; transform: translateX(-50%);
   background: rgba(10,18,8,.82); padding: .45rem .9rem; border-radius: 99px; font-weight: 800; font-size: .9rem;
   white-space: nowrap; opacity: 0; transition: opacity .3s; border: 1px solid rgba(255,255,255,.12);
 }
@@ -109,7 +110,7 @@ body.touch #minimap { width: 110px; height: 110px; }
   #teams { order: 3; flex-basis: 100%; gap: .3rem; }
   .chip { font-size: .72rem; padding: .2rem .45rem .2rem .35rem; gap: .3rem; }
   .chip .sw { width: 10px; height: 10px; }
-  #hint { top: 6.4rem; font-size: .78rem; white-space: normal; max-width: 90vw; text-align: center; }
+  #hint { top: 11.6rem; font-size: .78rem; white-space: normal; max-width: 90vw; text-align: center; }
   .diffrow { flex-wrap: wrap; justify-content: center; font-size: .78rem; }
   .diffrow button { padding: .35rem .6rem; font-size: .72rem; min-height: 36px; }
 }

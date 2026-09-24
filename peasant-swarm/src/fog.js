@@ -39,7 +39,7 @@
   // minimap), src: the player's last stamp sources (x, y, r) with the centroid it was taken at, so the render can follow the swarm smoothly
   function world() {
     const w = { id: ++worldId, gen: 0, map: null, learn: false, vis: [], ver: new Int32Array(9), explored: [], nExp: new Int32Array(9), stamps: new Int32Array(9),
-      disp: new Uint8Array(DNN), dx0: 0, dy0: 0, dx1: -1, dy1: -1, mx0: 0, my0: 0, mx1: -1, my1: -1,
+      disp: new Uint8Array(DNN), dx0: 0, dy0: 0, dx1: -1, dy1: -1, rx0: new Int16Array(DN).fill(DN), rx1: new Int16Array(DN).fill(-1), mx0: 0, my0: 0, mx1: -1, my1: -1,
       src: new Float32Array(3 * MAXSRC), srcN: 0, srcCx: 0, srcCy: 0, costMs: 0, lastCostMs: 0, maxCostMs: 0, stampN: 0 };
     for (let i = 0; i < 9; i++) { w.vis.push(new Uint16Array(NN)); w.explored.push(new Uint8Array(NN)); }
     return w;
@@ -48,7 +48,7 @@
   function reset(w, map, opts) {
     w.map = map; w.learn = !!(opts && opts.learn); w.gen++; w.ver.fill(0); w.nExp.fill(0); w.stamps.fill(0); w.srcN = 0;
     for (let i = 0; i < 9; i++) { w.vis[i].fill(0); w.explored[i].fill(0); }
-    w.disp.fill(0); w.dx0 = 0; w.dy0 = 0; w.dx1 = DN - 1; w.dy1 = DN - 1; w.mx0 = 0; w.my0 = 0; w.mx1 = N - 1; w.my1 = N - 1;
+    w.disp.fill(0); w.dx0 = 0; w.dy0 = 0; w.dx1 = DN - 1; w.dy1 = DN - 1; w.rx0.fill(DN); w.rx1.fill(-1); w.mx0 = 0; w.my0 = 0; w.mx1 = N - 1; w.my1 = N - 1;
     w.costMs = 0; w.lastCostMs = 0; w.maxCostMs = 0; w.stampN = 0;
     return w;
   }
@@ -74,7 +74,7 @@
     for (let dy = -h2; dy <= h2; dy++) {
       const j = cj2 + dy; if (j < lo || j > hi) continue;
       const hx = s2[dy + h2], i0 = ci2 - hx < lo ? lo : ci2 - hx, i1 = ci2 + hx > hi ? hi : ci2 + hx, row = j * DN;
-      for (let i = i0; i <= i1; i++) { if (D[row + i]) continue; D[row + i] = 1; if (i < w.dx0) w.dx0 = i; if (i > w.dx1) w.dx1 = i; if (j < w.dy0) w.dy0 = j; if (j > w.dy1) w.dy1 = j; }
+      for (let i = i0; i <= i1; i++) { if (D[row + i]) continue; D[row + i] = 1; if (i < w.dx0) w.dx0 = i; if (i > w.dx1) w.dx1 = i; if (j < w.dy0) w.dy0 = j; if (j > w.dy1) w.dy1 = j; if (i < w.rx0[j]) w.rx0[j] = i; if (i > w.rx1[j]) w.rx1[j] = i; }
     }
   }
   // stamp(team, cx, cy, R, list, off, nb, br, kn): the centroid disc plus each occupied bucket (list[off..off+nb), bucket index by * BN + bx)
@@ -124,16 +124,25 @@
     const w = W; if (!w) return false; maskInit();
     const key = w.id + ":" + w.gen, full = force || key !== maskKey, t = now();
     if (!full && (w.dx1 < 0 || t - lastUp < 1000 / CFG.maskHz)) return false;
-    let x0 = 0, y0 = 0, x1 = DN - 1, y1 = DN - 1;
-    if (!full) { x0 = Math.max(0, w.dx0 - 1); y0 = Math.max(0, w.dy0 - 1); x1 = Math.min(DN - 1, w.dx1 + 1); y1 = Math.min(DN - 1, w.dy1 + 1); }
-    blurRect(w.disp, x0, y0, x1, y1);
+    let x0 = 0, y0 = 0, x1 = DN - 1, y1 = DN - 1, cells = 0;
+    if (full) { blurRect(w.disp, x0, y0, x1, y1); cells = DNN; }
+    else {
+      // the blur runs over each dirty row's span (+1 each way, and the rows either side): the explored arc, not its whole bounding box
+      x0 = Math.max(0, w.dx0 - 1); y0 = Math.max(0, w.dy0 - 1); x1 = Math.min(DN - 1, w.dx1 + 1); y1 = Math.min(DN - 1, w.dy1 + 1);
+      for (let j = y0; j <= y1; j++) {
+        let a = DN, b = -1; for (let v = j - 1; v <= j + 1; v++) { if (v < 0 || v >= DN) continue; if (w.rx0[v] < a) a = w.rx0[v]; if (w.rx1[v] > b) b = w.rx1[v]; }
+        if (b < 0) continue; a = Math.max(0, a - 1); b = Math.min(DN - 1, b + 1); blurRect(w.disp, a, j, b, j); cells += b - a + 1;
+      }
+    }
     maskCtx.putImageData(maskImg, 0, 0, x0, y0, x1 - x0 + 1, y1 - y0 + 1);
+    for (let j = Math.max(0, w.dy0); j <= Math.min(DN - 1, w.dy1); j++) { w.rx0[j] = DN; w.rx1[j] = -1; }
     w.dx0 = 0; w.dy0 = 0; w.dx1 = -1; w.dy1 = -1; maskKey = key; lastUp = t;
-    if (full) ST.forced++; else ST.uploads++; const ms = now() - t; ST.upMs += ms; ST.lastUpMs = ms; ST.cells += (x1 - x0 + 1) * (y1 - y0 + 1);
+    if (full) { ST.forced++; w.rx0.fill(DN); w.rx1.fill(-1); } else ST.uploads++; const ms = now() - t; ST.upMs += ms; ST.lastUpMs = ms; ST.cells += cells;
     return true;
   }
-  // cloud texture: a tileable value-noise canvas (fog.cloudTexel world px per texel), kept as a typed array and re-put on recovery
-  const CT = 32; let cloudCv = null, cloudImg = null, cloudPat = null;
+  // cloud texture: a tileable value-noise field (a typed array, the truth) upscaled once into a tile canvas at fog-canvas resolution
+  // (fog.cloudTile CSS px), so the per-frame cloud pass is an unscaled pattern fill at integer offsets (no per-pixel filtering)
+  const CT = 32; let cloudCv = null, cloudImg = null, tileCv = null, tileN = 0;
   function cloudInit() {
     if (!cloudCv) { cloudCv = document.createElement("canvas"); cloudCv.width = CT; cloudCv.height = CT; }
     const g = cloudCv.getContext("2d");
@@ -145,70 +154,109 @@
         d[q] = 92; d[q + 1] = 106; d[q + 2] = 132; d[q + 3] = Math.round(255 * a * CFG.cloudAlpha); }
     }
     g.putImageData(cloudImg, 0, 0);
+    tileN = Math.max(8, Math.round(CFG.cloudTile * CFG.canvasScale));
+    if (!tileCv) tileCv = document.createElement("canvas"); if (tileCv.width !== tileN) { tileCv.width = tileN; tileCv.height = tileN; }
+    const tg = tileCv.getContext("2d"); tg.setTransform(1, 0, 0, 1, 0, 0); tg.clearRect(0, 0, tileN, tileN); tg.imageSmoothingEnabled = true;
+    for (let v = -1; v <= 1; v++) for (let u = -1; u <= 1; u++) tg.drawImage(cloudCv, u * tileN, v * tileN, tileN, tileN); // wrapped, so the bilinear edge tiles
+    if (fw) tilesPaint();
+  }
+  // the tile repeated over the fog canvas plus one tile each way, so the per-frame cloud pass is ONE unscaled drawImage at an offset
+  let tilesCv = null;
+  function tilesPaint() {
+    if (!tilesCv) tilesCv = document.createElement("canvas"); const w = fw + tileN, h = fh + tileN; if (tilesCv.width !== w || tilesCv.height !== h) { tilesCv.width = w; tilesCv.height = h; }
+    const g = tilesCv.getContext("2d"); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, w, h); for (let y = 0; y < h; y += tileN) for (let x = 0; x < w; x += tileN) g.drawImage(tileCv, x, y);
+  }
+  // the vignette (and nothing else) at fog-canvas resolution: a cache, re-painted on resize and on recovery, blitted each frame (an image
+  // blend rasterises cheaper than a per-frame radial gradient)
+  let vigCv = null;
+  function vigPaint() {
+    if (!vigCv) vigCv = document.createElement("canvas"); if (vigCv.width !== fw || vigCv.height !== fh) { vigCv.width = fw; vigCv.height = fh; }
+    const g = vigCv.getContext("2d"), cx = fw / 2, cy = fh / 2, v = g.createRadialGradient(cx, cy, Math.min(fw, fh) * CFG.vignetteInner, cx, cy, Math.max(fw, fh) * CFG.vignetteOuter);
+    v.addColorStop(0, "rgba(10,20,8,0)"); v.addColorStop(1, "rgba(10,20,8," + CFG.vignetteAlpha + ")"); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, fw, fh); g.fillStyle = v; g.fillRect(0, 0, fw, fh);
   }
 
   // ---------------------------------------------------------------- the fog canvas: composed every frame, one full-screen blit
-  let fogCv = null, fc = null, fw = 0, fh = 0, cssW = 0, cssH = 0, vgGrad = null, glowGrad = null; const holeGrads = new Map();
+  // fog.canvasScale fog px per CSS px (<= 1/4, SPEC-v2 §13 structure test), capped at fog.maxPixels in all: every op below rasterises on the
+  // main thread in a software canvas, so the pixel count is the cost (see M3-build-notes.md)
+  let fogCv = null, fc = null, fw = 0, fh = 0, cssW = 0, cssH = 0, glowGrad = null; const holeGrads = new Map(), holeSprites = new Map();
   function resize(vw, vh) {
-    maskInit(); cloudInit();
-    if (!fogCv) { fogCv = document.createElement("canvas"); fc = fogCv.getContext("2d"); cloudPat = fc.createPattern(cloudCv, "repeat"); }
-    const w = Math.max(1, Math.ceil(vw * CFG.canvasScale)), h = Math.max(1, Math.ceil(vh * CFG.canvasScale)); cssW = vw; cssH = vh;
+    maskInit();
+    if (!fogCv) { fogCv = document.createElement("canvas"); fc = fogCv.getContext("2d"); }
+    if (!tileCv) cloudInit();
+    const sc = Math.min(CFG.canvasScale, Math.sqrt(CFG.maxPixels / Math.max(1, vw * vh))), w = Math.max(1, Math.ceil(vw * sc)), h = Math.max(1, Math.ceil(vh * sc)); cssW = vw; cssH = vh;
     if (fogCv.width !== w || fogCv.height !== h) { fogCv.width = w; fogCv.height = h; } fw = w; fh = h; // the same canvas, reused (SPEC-v2 §10 iOS rule)
-    const cx = fw / 2, cy = fh / 2;
-    vgGrad = fc.createRadialGradient(cx, cy, Math.min(fw, fh) * CFG.vignetteInner, cx, cy, Math.max(fw, fh) * CFG.vignetteOuter);
-    vgGrad.addColorStop(0, "rgba(10,20,8,0)"); vgGrad.addColorStop(1, "rgba(10,20,8," + CFG.vignetteAlpha + ")");
+    const cx = fw / 2, cy = fh / 2; vigPaint(); tilesPaint();
     glowGrad = fc.createRadialGradient(cx, cy, fh * CFG.glowInner, cx, cy, fh * CFG.glowOuter); glowGrad.addColorStop(0, "rgba(200,30,30,0)"); glowGrad.addColorStop(1, "rgba(200,30,30,1)");
   }
-  // one unit-space radial gradient per soft-band fraction (quantised to 0.02): clear inside 1 - band, smoothstep out to the rim
+  // one unit-space radial gradient per soft-band fraction (quantised to 0.02): clear inside 1 - band, smoothstep out to the rim. Under fog
+  // it also carries the vignette (one pass fewer): from fog.holeVigStart of the radius the hole clears a little less, down to 1 -
+  // fog.holeVignette where the soft band begins, so the lit ground darkens toward the edge of sight the way the vignette darkened toward
+  // the screen edge (the swarm sits near the screen centre)
   function holeGrad(band) {
     const q = Math.round(Math.min(0.9, Math.max(0.02, band)) * 50) / 50; let g = holeGrads.get(q); if (g) return g;
-    g = fc.createRadialGradient(0, 0, 0, 0, 0, 1); const a = 1 - q; g.addColorStop(0, "rgba(0,0,0,1)"); g.addColorStop(a, "rgba(0,0,0,1)");
-    for (let k = 1; k < 5; k++) { const t = k / 5; g.addColorStop(a + q * t, "rgba(0,0,0," + (1 - t * t * (3 - 2 * t)).toFixed(3) + ")"); }
+    g = fc.createRadialGradient(0, 0, 0, 0, 0, 1); const a = 1 - q, vs = Math.min(a, CFG.holeVigStart), v = 1 - CFG.holeVignette; g.addColorStop(0, "rgba(0,0,0,1)"); g.addColorStop(vs, "rgba(0,0,0,1)");
+    for (let k = 1; k <= 3; k++) { const t = k / 3; g.addColorStop(vs + (a - vs) * t, "rgba(0,0,0," + (1 - (1 - v) * t * t).toFixed(3) + ")"); }
+    for (let k = 1; k < 5; k++) { const t = k / 5; g.addColorStop(a + q * t, "rgba(0,0,0," + (v * (1 - t * t * (3 - 2 * t))).toFixed(3) + ")"); }
     g.addColorStop(1, "rgba(0,0,0,0)"); holeGrads.set(q, g); return g;
+  }
+  // that gradient painted once into a fog.holeSprite px sprite per band: a hole is one scaled drawImage (the rasteriser samples an image
+  // cheaper than it evaluates a ten-stop gradient per pixel). A cache: re-painted on recovery.
+  const HSN = 128;
+  function holeSprite(band) {
+    const q = Math.round(Math.min(0.9, Math.max(0.02, band)) * 50) / 50; let c = holeSprites.get(q); if (c && c.width) return c;
+    if (!c) { c = document.createElement("canvas"); holeSprites.set(q, c); } c.width = HSN; c.height = HSN;
+    const g = c.getContext("2d"); g.setTransform(HSN / 2, 0, 0, HSN / 2, HSN / 2, HSN / 2); g.fillStyle = holeGrad(q); g.fillRect(-1, -1, 2, 2); return c;
   }
   // render(ctx, o): o = { vw, vh, dpr, camX, camY, zoom, t, fog, px, py, R, band, dawn, glow }. With o.fog false only the vignette and glow
   // are composed (title, fixtures, ?nofog=1). Holes: the centroid disc at the swarm's current centroid (px, py, R) and the stamp's bucket
   // sources moved by the same offset since the stamp, so the lit circle follows the swarm every frame between 20 Hz stamps.
-  const RS = { holes: 0, maskDrawn: 0, margins: 0 };
+  const RS = { holes: 0, maskDrawn: 0, margins: 0, ms: new Float32Array(4) }; // ms: mask (with any upload), clouds + holes, vignette + glow, blit (raster lands here)
   function render(ctx, o) {
     if (!fogCv || cssW !== o.vw || cssH !== o.vh) resize(o.vw, o.vh);
-    const s = fw / o.vw, FS = o.zoom * s, FX0 = fw / 2 - o.camX * FS, FY0 = fh / 2 - o.camY * FS;
-    fc.setTransform(1, 0, 0, 1, 0, 0); fc.globalAlpha = 1; fc.globalCompositeOperation = "source-over"; fc.imageSmoothingEnabled = true; fc.clearRect(0, 0, fw, fh);
-    RS.holes = 0; RS.maskDrawn = 0; RS.margins = 0;
+    const s = fw / o.vw, FS = o.zoom * s, FX0 = fw / 2 - o.camX * FS, FY0 = fh / 2 - o.camY * FS, M = RS.ms; let tq = now(), t1 = 0;
+    fc.setTransform(1, 0, 0, 1, 0, 0); fc.globalAlpha = 1; fc.imageSmoothingEnabled = true;
+    RS.holes = 0; RS.maskDrawn = 0; RS.margins = 0; M[0] = M[1] = 0;
     if (o.fog && W) {
       flushMask(false);
       const fa = 1 - o.dawn, k = FS * DC, u0 = FX0 - DP * k, v0 = FY0 - DP * k;
       const ix0 = Math.max(0, Math.ceil(u0)), iy0 = Math.max(0, Math.ceil(v0)), ix1 = Math.min(fw, Math.floor(u0 + DN * k)), iy1 = Math.min(fh, Math.floor(v0 + DN * k));
+      const whole = ix0 === 0 && iy0 === 0 && ix1 === fw && iy1 === fh && fa >= 1;
       fc.globalAlpha = fa;
+      if (whole) fc.globalCompositeOperation = "copy"; else { fc.globalCompositeOperation = "source-over"; fc.clearRect(0, 0, fw, fh); }
       if (ix1 > ix0 && iy1 > iy0) { fc.drawImage(maskCv, (ix0 - u0) / k, (iy0 - v0) / k, (ix1 - ix0) / k, (iy1 - iy0) / k, ix0, iy0, ix1 - ix0, iy1 - iy0); RS.maskDrawn = 1; }
-      // past the padded mask (far outside the world): unexplored
-      fc.fillStyle = UNEX;
-      if (iy0 > 0) { fc.fillRect(0, 0, fw, iy0); RS.margins++; } if (iy1 < fh) { fc.fillRect(0, iy1, fw, fh - iy1); RS.margins++; }
-      if (ix0 > 0 && iy1 > iy0) { fc.fillRect(0, iy0, ix0, iy1 - iy0); RS.margins++; } if (ix1 < fw && iy1 > iy0) { fc.fillRect(ix1, iy0, fw - ix1, iy1 - iy0); RS.margins++; }
-      // slow cloud drift, world-anchored, only where the fog already is (source-atop keeps the fog's alpha)
-      const ts = CFG.cloudTexel, tile = CT * ts, dx = (o.t * CFG.cloudSpeed) % tile, dy = (o.t * CFG.cloudSpeed * 0.37) % tile, ck = ts * FS, ox = FX0 + dx * FS, oy = FY0 + dy * FS;
-      fc.globalCompositeOperation = "source-atop"; fc.globalAlpha = fa; fc.setTransform(ck, 0, 0, ck, ox, oy); fc.fillStyle = cloudPat; fc.fillRect(-ox / ck, -oy / ck, fw / ck, fh / ck);
+      fc.globalCompositeOperation = "source-over";
+      if (!whole) { // past the padded mask (far outside the world): unexplored
+        fc.fillStyle = UNEX;
+        if (iy0 > 0) { fc.fillRect(0, 0, fw, iy0); RS.margins++; } if (iy1 < fh) { fc.fillRect(0, iy1, fw, fh - iy1); RS.margins++; }
+        if (ix0 > 0 && iy1 > iy0) { fc.fillRect(0, iy0, ix0, iy1 - iy0); RS.margins++; } if (ix1 < fw && iy1 > iy0) { fc.fillRect(ix1, iy0, fw - ix1, iy1 - iy0); RS.margins++; }
+      }
+      t1 = now(); M[0] = t1 - tq; tq = t1;
+      // slow cloud drift, world-anchored at whole fog px (the texture is far softer than one px), only where the fog is (source-atop)
+      const tile = tileN, cx = FX0 + o.t * CFG.cloudSpeed * FS, cy = FY0 + o.t * CFG.cloudSpeed * 0.37 * FS, ox = Math.round(((cx % tile) + tile) % tile) - tile, oy = Math.round(((cy % tile) + tile) % tile) - tile;
+      fc.globalCompositeOperation = "source-atop"; fc.drawImage(tilesCv, ox, oy);
       // holes
       if (o.R > 0) {
-        fc.globalCompositeOperation = "destination-out"; fc.globalAlpha = 1; fc.fillStyle = holeGrad(o.band);
+        fc.globalCompositeOperation = "destination-out"; fc.globalAlpha = 1; const hs = holeSprite(o.band);
         const ddx = o.px - W.srcCx, ddy = o.py - W.srcCy;
         for (let q = -1; q < W.srcN; q++) {
           const x = q < 0 ? o.px : W.src[3 * q] + ddx, y = q < 0 ? o.py : W.src[3 * q + 1] + ddy, r = (q < 0 ? o.R : W.src[3 * q + 2]) * FS, hx = x * FS + FX0, hy = y * FS + FY0;
           if (hx + r < 0 || hy + r < 0 || hx - r > fw || hy - r > fh) continue;
-          fc.setTransform(r, 0, 0, r, hx, hy); fc.fillRect(-1, -1, 2, 2); RS.holes++;
+          fc.drawImage(hs, hx - r, hy - r, 2 * r, 2 * r); RS.holes++;
         }
       }
-      fc.setTransform(1, 0, 0, 1, 0, 0);
-    }
-    fc.globalCompositeOperation = "source-over"; fc.globalAlpha = 1; fc.fillStyle = vgGrad; fc.fillRect(0, 0, fw, fh);
+      fc.setTransform(1, 0, 0, 1, 0, 0); fc.globalCompositeOperation = "source-over"; fc.globalAlpha = 1;
+      t1 = now(); M[1] = t1 - tq; tq = t1;
+    } else { fc.clearRect(0, 0, fw, fh); fc.drawImage(vigCv, 0, 0); } // the fog's holes carry the vignette; without fog it is its own pass
     if (o.glow > 0) { fc.globalAlpha = Math.min(1, o.glow); fc.fillStyle = glowGrad; fc.fillRect(0, 0, fw, fh); fc.globalAlpha = 1; }
-    // the one full-screen alpha draw of the frame
+    t1 = now(); M[2] = t1 - tq; tq = t1;
+    // the one full-screen alpha draw of the frame (the fog canvas's own raster happens inside this call)
     ctx.setTransform(o.dpr, 0, 0, o.dpr, 0, 0); ctx.imageSmoothingEnabled = true; ctx.drawImage(fogCv, 0, 0, fw, fh, 0, 0, o.vw, o.vh); ctx.imageSmoothingEnabled = false;
+    M[3] = now() - tq;
   }
 
   // ---------------------------------------------------------------- cache recovery (studio lessons 27-29)
-  function recover() { maskInit(); cloudInit(); if (W) flushMask(true); }
-  function drop() { for (const c of [maskCv, cloudCv]) if (c) { const g = c.getContext("2d"); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, c.width, c.height); } return (maskCv ? 1 : 0) + (cloudCv ? 1 : 0); }
+  function recover() { maskInit(); cloudInit(); if (fogCv) vigPaint(); for (const q of holeSprites.keys()) { holeSprites.get(q).width = 0; holeSprite(q); } if (W) flushMask(true); }
+  function drop() { for (const c of [maskCv, cloudCv, tileCv, vigCv, tilesCv, ...holeSprites.values()]) if (c) { const g = c.getContext("2d"); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, c.width, c.height); } return (maskCv ? 1 : 0) + (cloudCv ? 1 : 0) + (tileCv ? 1 : 0) + (vigCv ? 1 : 0) + (tilesCv ? 1 : 0) + holeSprites.size; }
   // a 4x4 downscale through one scratch canvas (never read the cache itself): min alpha and summed alpha over the 16 samples
   let sc4 = null, sc4c = null;
   function read4(c) {
@@ -224,7 +272,8 @@
     scMc.clearRect(0, 0, DN, DN); scMc.drawImage(maskCv, 0, 0); const d = scMc.getImageData(0, 0, DN, DN).data;
     return list.map(([x, y]) => { const i = ((x / DC) | 0) + DP, j = ((y / DC) | 0) + DP; return i >= 0 && j >= 0 && i < DN && j < DN ? d[(j * DN + i) * 4 + 3] : -1; });
   }
-  function report() { return { mask: minAlpha4(maskCv), cloud: sumAlpha4(cloudCv) > 0, maskKey, fogW: fw, fogH: fh, cssW, cssH }; }
+  function report() { let holes = true; for (const c of holeSprites.values()) if (!(sumAlpha4(c) > 0)) holes = false;
+    return { mask: minAlpha4(maskCv), cloud: sumAlpha4(cloudCv) > 0 && sumAlpha4(tileCv) > 0 && sumAlpha4(tilesCv) > 0 && sumAlpha4(vigCv) > 0 && holes, maskKey, fogW: fw, fogH: fh, cssW, cssH }; }
   // the expected mask alpha of a display cell from the typed arrays (QA): unexplored / explored after the blur
   function dispAt(x, y) { const w = W, i = ((x / DC) | 0) + DP, j = ((y / DC) | 0) + DP; if (!w || i < 1 || j < 1 || i >= DN - 1 || j >= DN - 1) return -1; let s = 0; for (let v = -1; v <= 1; v++) for (let u = -1; u <= 1; u++) if (w.disp[(j + v) * DN + i + u]) s += (v ? 1 : 2) * (u ? 1 : 2); return LA[s]; }
 

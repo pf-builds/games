@@ -4,7 +4,8 @@
 // with a wall bias, and agents take a bilinear blend of the 4 surrounding vectors. Scheduling counts ticks: at most one team rebuild per
 // tick, player first and capped at flow.playerHz; route hysteresis keeps the player's old field unless the new route is flow.hysteresis
 // shorter at the anchor. The player's field runs on PS.knowledge (unknown cells cost as grass; M3 drives it from fog); AI fields use true
-// terrain. AI "from me" fields (capped) and threat fields give aiThink path distances (Brogue's Dijkstra-map flee).
+// terrain. AI "from me" fields (capped) and threat fields give aiThink path distances (Brogue's Dijkstra-map flee); escape fields route a
+// routed swarm's remnant to its flee target (M3, M2 critic MAJOR-2).
 // Deterministic: no Math.random, and the wall clock only feeds the cost counters, never a decision. Every loop is bounded.
 (function () {
   const G = typeof window !== "undefined" ? window : globalThis;
@@ -128,13 +129,13 @@
 
   // ---------------------------------------------------------------- world state (one per sim world; the game swaps it with S)
   function world() {
-    return { fields: [], fromMe: [], spare: null, threat: null, know: new Uint8Array(NN), map: null, rebuilds: 0, costMs: 0, lastCostMs: 0, maxCostMs: 0,
+    return { fields: [], fromMe: [], escape: [], spare: null, threat: null, know: new Uint8Array(NN), map: null, rebuilds: 0, costMs: 0, lastCostMs: 0, maxCostMs: 0,
       rr: 0, playerTick: -1e9, replan: false, pend: new Int32Array(256), pendN: 0, decisions: { kept: 0, switched: 0, same: 0, fresh: 0 }, perTeam: new Int32Array(9) };
   }
   function reset(w, map) {
     w.map = map; w.know.fill(1); w.rebuilds = 0; w.costMs = 0; w.lastCostMs = 0; w.maxCostMs = 0; w.rr = 0; w.playerTick = -1e9; w.replan = false; w.pendN = 0;
     w.decisions.kept = w.decisions.switched = w.decisions.same = w.decisions.fresh = 0; w.perTeam.fill(0);
-    for (const f of w.fields.concat(w.fromMe, [w.spare, w.threat])) if (f) { f.ok = false; f.src = -1; f.miss = 0; f.tick = -1e9; f.builds = 0; }
+    for (const f of w.fields.concat(w.fromMe, w.escape, [w.spare, w.threat])) if (f) { f.ok = false; f.src = -1; f.miss = 0; f.tick = -1e9; f.builds = 0; }
     return w;
   }
   function use(w) { W = w; return w; }
@@ -227,6 +228,15 @@
   // threat field for the flee pick: from the threat's anchor, early stop once every needed candidate (needBegin/needAdd first) is settled
   function buildThreat(x, y, capPx) { const f = W.threat || (W.threat = mkField(0, false)); return march(f, cellFor(x, y), W.map.cost, null, capPx / PX, needN > 0, 0); }
 
+  // escape field for a remnant (M2 critic MAJOR-2): marches from its flee target until every cell a remnant agent stands on (escapeT > 0) is
+  // settled plus the early-stop margin; the player's remnant reads its knowledge grid (kn), AI remnants true terrain
+  function buildEscape(id, goal, kn, agents) {
+    const w = W; needBegin();
+    for (let i = 0; i < agents.length; i++) { const q = agents[i]; if (q.team !== id || q.dead || !(q.escapeT > 0)) continue; const c = cellFor(q.x, q.y); if (passView(c, w.map.cost, kn)) needAdd(c); }
+    const f = getField(w.escape, id, !!kn); march(f, goal, w.map.cost, kn, INF, needN > 0, K.earlyStopCells * (BASE + WALL1)); f.miss = 0; return f;
+  }
+  const sampleEscape = (team, x, y, out) => sampleField(W && W.escape[team], x, y, out);
+
   // ---------------------------------------------------------------- target snapping (ray casts on the field's view of the land)
   const passXY = (x, y, kn) => { if (!(x >= 0 && y >= 0 && x < N * CELL && y < N * CELL)) return false; const c = ((y / CELL) | 0) * N + ((x / CELL) | 0), m = W.map; return (kn && !kn[c]) || (walkT(m.terr[c]) && m.region[c] === 1); };
   const RP = { x: 0, y: 0 };
@@ -288,7 +298,7 @@
     return { team, src: f.src, cells, ok, fails: cells - ok, why, bad, meanSteps: +(steps / Math.max(1, cells)).toFixed(1), maxSteps, truncated, ms: Math.round(now() - t0) };
   }
 
-  const F = (PS.flow = { init, world, reset, use, sample, sampleField, pathPx, pathCell, trace, tick, buildFromMe, buildThreat, needBegin, needAdd, learn, rayBack, rayOut,
+  const F = (PS.flow = { init, world, reset, use, sample, sampleField, pathPx, pathCell, trace, tick, buildFromMe, buildThreat, buildEscape, sampleEscape, needBegin, needAdd, learn, rayBack, rayOut,
     cellFor, walkFromEveryCell, fieldFor: (team) => (W ? W.fields[team] || null : null), fromMeFor: (team) => (W ? W.fromMe[team] || null : null), INF });
   Object.defineProperty(F, "rebuilds", { get: () => (W ? W.rebuilds : 0) });
   Object.defineProperty(F, "lastCostMs", { get: () => (W ? W.lastCostMs : 0) });

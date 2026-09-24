@@ -102,6 +102,7 @@
   },
   "combat": {
     "breakRatio": 0.42,
+    "localMode": "fighting",
     "minRoutSize": 3,
     "engageDelay": 1.5,
     "engageDecay": 0.6,
@@ -125,7 +126,9 @@
       "scatterDist": [
         140,
         240
-      ]
+      ],
+      "escapeReplan": 1.0,
+      "escapeDistance": 900
     }
   },
   "powerups": {
@@ -350,7 +353,67 @@
   "fog": {
     "sight0": 340,
     "sightK": 10,
-    "bucketSight": 200
+    "bucketSight": 200,
+    "bucket": 64,
+    "playerStampTicks": 3,
+    "displayCell": 16,
+    "displayPad": 8,
+    "exploreMargin": 16,
+    "unexploredAlpha": 0.92,
+    "exploredAlpha": 0.55,
+    "unexploredColor": "#141C2A",
+    "exploredColor": "#2B313C",
+    "softBand": 0.28,
+    "phoneBand": 120,
+    "holeVignette": 0.25,
+    "holeVigStart": 0.4,
+    "maskHz": 5,
+    "canvasScale": 0.125,
+    "maxPixels": 7000,
+    "fadeSeconds": 0.12,
+    "obsSmooth": 0.3,
+    "cloudTile": 1024,
+    "cloudSpeed": 9,
+    "cloudAlpha": 0.5,
+    "vignetteAlpha": 0.42,
+    "vignetteInner": 0.35,
+    "vignetteOuter": 0.75,
+    "glowAlpha": 0.22,
+    "glowPulse": 0.1,
+    "glowRate": 10,
+    "glowInner": 0.35,
+    "glowOuter": 0.85,
+    "smoke": 700,
+    "beacon": 650,
+    "clashNoise": 1600,
+    "pingSeconds": 3,
+    "pingMerge": 300,
+    "dust": 1100,
+    "dustMin": 40,
+    "dustOffset": 120,
+    "dustEvery": 2,
+    "ghostSeconds": 12,
+    "miniGhostSeconds": 10,
+    "danger": 750,
+    "dangerEvery": 10,
+    "dangerJitter": 30,
+    "dangerShow": 3,
+    "crows": 10,
+    "edgeMax": 4,
+    "verdictSeconds": 2,
+    "verdictStronger": 1.15,
+    "verdictWeaker": 0.87,
+    "dawnSeconds": 1,
+    "minimapHz": 15,
+    "aiMemory": 6,
+    "aiFleeMemory": 3,
+    "aiLeadMax": 2,
+    "exploreRing": [
+      400,
+      1000
+    ],
+    "exploreSamples": 12,
+    "exploreCommit": 3
   },
   "finale": {
     "crownAbsorbs": false
@@ -361,7 +424,8 @@
     "tapPx": 12,
     "keyLead": 170,
     "routeBreakPx": 40,
-    "pickPx": 28
+    "pickPx": 28,
+    "hintAfterRouteMs": 1500
   },
   "fixtures": {
     "passLen": 6,
@@ -390,7 +454,16 @@
     "cliffN": 40,
     "cliffDepth": 2.5,
     "cliffPress": 4,
-    "cliffMeasure": 1
+    "cliffMeasure": 1,
+    "holdN": 20,
+    "holdColumn": 60,
+    "holdStart": 250,
+    "holdTarget": 600,
+    "holdAt": 24,
+    "holdSeconds": 20,
+    "remnantWin": 60,
+    "remnantLose": 40,
+    "remnantSeconds": 6
   },
   "_units": {
     "terrain.cell": [
@@ -1252,6 +1325,351 @@
       "x 7 sqrt(n)",
       0,
       4
+    ],
+    "fog.bucket": [
+      "px (sight source bucket)",
+      32,
+      256
+    ],
+    "fog.playerStampTicks": [
+      "ticks between player stamps",
+      1,
+      12
+    ],
+    "fog.displayCell": [
+      "px per display-mask cell",
+      8,
+      32
+    ],
+    "fog.displayPad": [
+      "display cells of dark padding",
+      2,
+      32
+    ],
+    "fog.exploreMargin": [
+      "px explored beyond the sight radius",
+      0,
+      64
+    ],
+    "fog.unexploredAlpha": [
+      "alpha",
+      0.5,
+      1
+    ],
+    "fog.exploredAlpha": [
+      "alpha",
+      0.2,
+      0.9
+    ],
+    "fog.softBand": [
+      "fraction of a sight circle",
+      0.05,
+      0.6
+    ],
+    "fog.phoneBand": [
+      "px soft band on touch",
+      0,
+      300
+    ],
+    "fog.maskHz": [
+      "mask uploads per second (max)",
+      1,
+      30
+    ],
+    "fog.canvasScale": [
+      "fog canvas px per CSS px",
+      0.05,
+      0.25
+    ],
+    "fog.fadeSeconds": [
+      "s",
+      0.02,
+      0.5
+    ],
+    "fog.obsSmooth": [
+      "s (observed velocity smoothing)",
+      0.05,
+      2
+    ],
+    "fog.cloudTile": [
+      "CSS px per cloud tile",
+      128,
+      4096
+    ],
+    "fog.cloudSpeed": [
+      "px/s",
+      0,
+      60
+    ],
+    "fog.cloudAlpha": [
+      "alpha",
+      0,
+      1
+    ],
+    "fog.vignetteAlpha": [
+      "alpha",
+      0,
+      1
+    ],
+    "fog.vignetteInner": [
+      "fraction of min(w, h)",
+      0,
+      1
+    ],
+    "fog.vignetteOuter": [
+      "fraction of max(w, h)",
+      0.2,
+      2
+    ],
+    "fog.glowAlpha": [
+      "alpha",
+      0,
+      1
+    ],
+    "fog.glowPulse": [
+      "alpha",
+      0,
+      0.5
+    ],
+    "fog.glowRate": [
+      "rad/s",
+      0,
+      40
+    ],
+    "fog.glowInner": [
+      "fraction of height",
+      0,
+      1
+    ],
+    "fog.glowOuter": [
+      "fraction of height",
+      0.2,
+      2
+    ],
+    "fog.smoke": [
+      "px",
+      0,
+      3000
+    ],
+    "fog.beacon": [
+      "px",
+      0,
+      3000
+    ],
+    "fog.clashNoise": [
+      "px",
+      0,
+      5000
+    ],
+    "fog.pingSeconds": [
+      "s",
+      0.5,
+      20
+    ],
+    "fog.pingMerge": [
+      "px",
+      0,
+      1000
+    ],
+    "fog.dust": [
+      "px",
+      0,
+      5000
+    ],
+    "fog.dustMin": [
+      "agents",
+      1,
+      1000
+    ],
+    "fog.dustOffset": [
+      "px",
+      0,
+      400
+    ],
+    "fog.dustEvery": [
+      "s",
+      0.2,
+      10
+    ],
+    "fog.ghostSeconds": [
+      "s",
+      0,
+      60
+    ],
+    "fog.miniGhostSeconds": [
+      "s",
+      0,
+      60
+    ],
+    "fog.danger": [
+      "px",
+      0,
+      3000
+    ],
+    "fog.dangerEvery": [
+      "s",
+      0,
+      60
+    ],
+    "fog.dangerJitter": [
+      "degrees",
+      0,
+      90
+    ],
+    "fog.dangerShow": [
+      "s",
+      0.2,
+      10
+    ],
+    "fog.crows": [
+      "particles",
+      1,
+      40
+    ],
+    "fog.edgeMax": [
+      "markers",
+      1,
+      12
+    ],
+    "fog.verdictSeconds": [
+      "s",
+      0.2,
+      10
+    ],
+    "fog.verdictStronger": [
+      "count x power ratio",
+      1,
+      3
+    ],
+    "fog.verdictWeaker": [
+      "count x power ratio",
+      0.2,
+      1
+    ],
+    "fog.dawnSeconds": [
+      "s",
+      0,
+      5
+    ],
+    "fog.minimapHz": [
+      "minimap redraws per second (max)",
+      1,
+      60
+    ],
+    "fog.aiMemory": [
+      "s",
+      0,
+      60
+    ],
+    "fog.aiFleeMemory": [
+      "s",
+      0,
+      60
+    ],
+    "fog.aiLeadMax": [
+      "s",
+      0,
+      10
+    ],
+    "fog.exploreRing": [
+      "px",
+      100,
+      3000
+    ],
+    "fog.exploreSamples": [
+      "samples",
+      1,
+      64
+    ],
+    "fog.exploreCommit": [
+      "s",
+      0,
+      30
+    ],
+    "combat.engageDecay": [
+      "engaged-seconds lost per second apart",
+      0,
+      10
+    ],
+    "combat.fightPull": [
+      "fraction of a fighter's velocity toward its target",
+      0,
+      1
+    ],
+    "combat.remnant.escapeReplan": [
+      "s",
+      0.2,
+      6
+    ],
+    "input.hintAfterRouteMs": [
+      "ms",
+      0,
+      5000
+    ],
+    "fixtures.holdN": [
+      "agents",
+      3,
+      200
+    ],
+    "fixtures.holdColumn": [
+      "agents",
+      3,
+      400
+    ],
+    "fixtures.holdStart": [
+      "px west of the pass entrance",
+      0,
+      1500
+    ],
+    "fixtures.holdTarget": [
+      "px past the exit",
+      0,
+      2000
+    ],
+    "fixtures.holdAt": [
+      "px past the exit (negative: inside the pass)",
+      -200,
+      400
+    ],
+    "fixtures.holdSeconds": [
+      "s",
+      5,
+      60
+    ],
+    "fixtures.remnantWin": [
+      "agents",
+      3,
+      400
+    ],
+    "fixtures.remnantLose": [
+      "agents",
+      3,
+      400
+    ],
+    "fixtures.remnantSeconds": [
+      "s",
+      1,
+      20
+    ],
+    "combat.remnant.escapeDistance": [
+      "px (straight-away run when no camp or pass gains distance)",
+      100,
+      3000
+    ],
+    "fog.maxPixels": [
+      "fog canvas px in all (cap)",
+      2000,
+      200000
+    ],
+    "fog.holeVignette": [
+      "fraction of the fog left at the soft band's inner edge (the vignette under fog)",
+      0,
+      0.8
+    ],
+    "fog.holeVigStart": [
+      "fraction of the sight radius",
+      0,
+      1
     ]
   }
 }
