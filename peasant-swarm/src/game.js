@@ -1957,7 +1957,7 @@
         parts: { stamps: part(0), visibility: part(1), fogPass: part(2), tells: part(3) },
         stampMsPerTick: FS ? +(FS.simTotal / Math.max(1, FS.simTicks)).toFixed(4) : 0, stampMax: FS ? +FS.simMax.toFixed(3) : 0, uploads: U.uploads, forced: U.forced, uploadMs: +U.upMs.toFixed(2) };
     },
-    resetCost() { fcostN = 0; FCOST.fill(0); FPART.fill(0); const FS = S.fogS; if (FS) { FS.simTotal = 0; FS.simTicks = 0; FS.simMax = 0; } const U = PS.fog.ST; U.uploads = 0; U.forced = 0; U.upMs = 0; U.cells = 0; return true; },
+    resetCost() { fcostN = 0; FCOST.fill(0); FPART.fill(0); const FS = S.fogS; if (FS) { FS.simMs = 0; FS.simTotal = 0; FS.simTicks = 0; FS.simMax = 0; } const U = PS.fog.ST; U.uploads = 0; U.forced = 0; U.upMs = 0; U.cells = 0; return true; },
     crows: (x, y) => crows(x, y),
   };
   const AIQ = { assertKnowledge: () => (S.fogS ? { ...S.fogS.ai } : null) };
