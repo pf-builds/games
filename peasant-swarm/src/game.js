@@ -31,7 +31,7 @@
 
   const canvas = $("game"), ctx = canvas.getContext("2d");
   const mini = $("minimap"), mctx = mini.getContext("2d");
-  let particles, floaters;
+  let particles, floaters, sandbox = false; // sandbox: PS.fight / PS.simMatch are running a throwaway world, so DOM side effects are skipped
 
   // ---------------------------------------------------------------- setup
   async function boot() {
@@ -40,6 +40,7 @@
     S.spr = PS.buildSprites(S.cfg);
     particles = PS.Particles(1400);
     floaters = PS.Floaters();
+    PS.selfTest = selfTest; PS.fight = fight; PS.simMatch = simMatch; // QA hooks, always on and side-effect free (see QA section)
     S.CELL = 48;
     resize();
     window.addEventListener("resize", resize);
@@ -583,8 +584,8 @@
   function screenToWorld(sx, sy) { const z = S.cam.zoom; return { x: (sx - S.vw / 2) / z + S.cam.x, y: (sy - S.vh / 2) / z + S.cam.y }; }
   function onScreen(x, y) { const z = S.cam.zoom, hw = S.vw / 2 / z + 40, hh = S.vh / 2 / z + 40; return Math.abs(x - S.cam.x) < hw && Math.abs(y - S.cam.y) < hh; }
   function banner(text, color, life) { if (S.attract) return; S.banners.push({ text, color, life, life0: life }); }
-  function showHint(text, secs) { if (S.attract || S.result) return; const h = $("hint"); h.textContent = text; h.classList.add("show"); S.hintT = secs; }
-  function bumpChip(teamId) { const el = $("chip-" + teamId); if (!el) return; el.classList.add("bump"); clearTimeout(el._bt); el._bt = setTimeout(() => el.classList.remove("bump"), 140); }
+  function showHint(text, secs) { if (sandbox || S.attract || S.result) return; const h = $("hint"); h.textContent = text; h.classList.add("show"); S.hintT = secs; }
+  function bumpChip(teamId) { if (sandbox) return; const el = $("chip-" + teamId); if (!el) return; el.classList.add("bump"); clearTimeout(el._bt); el._bt = setTimeout(() => el.classList.remove("bump"), 140); }
 
   function endGame(won, why) {
     if (S.attract || S.result) return;
@@ -593,6 +594,7 @@
     S.pendingEnd = { won, why, at: S.t + (won ? 0.9 : 1.2) }; // sim-time delay: pausing defers it, newGame clears it
   }
   function finishEnd() {
+    if (sandbox) return;
     const { won, why } = S.pendingEnd; S.pendingEnd = null;
     {
       S.mode = won ? "win" : "lose";
@@ -823,6 +825,7 @@
 
   // ---------------------------------------------------------------- HUD
   function buildTeamChips() {
+    if (sandbox) return;
     const el = $("teams"); el.innerHTML = "";
     for (let i = 1; i < S.teams.length; i++) {
       const t = S.teams[i];
@@ -915,6 +918,194 @@
   function toggleSound() { PS.audio.setMuted(!PS.audio.isMuted()); syncSound(); }
   function syncDifficulty() { for (const b of $("difficulty").children) b.classList.toggle("sel", b.dataset.k === S.difficulty); }
   function syncSound() { const m = PS.audio.isMuted(); for (const id of ["btn-sound", "btn-sound-title", "btn-sound-pause"]) $(id).classList.toggle("off", m); }
+
+  // ---------------------------------------------------------------- QA: selfTest, fight + match harnesses
+  // PS.fight / PS.simMatch swap a throwaway world into S and swap the live one back in a finally block, so a player can
+  // call PS.selfTest() mid-match from the console. No localStorage, no DOM (sandbox guards), no sound, no live particles.
+  const SANDBOX_KEYS = ["mode", "t", "timeLeft", "agents", "teams", "obstacles", "powerups", "camps", "cam", "input", "rng", "seed", "trickleT", "shake",
+    "banners", "hintT", "stats", "engagedNow", "result", "grid", "cols", "rows", "decals", "trails", "attract", "difficulty", "spr",
+    "finalCalled", "pendingEnd", "_routedBy", "_hintRecruit", "_hintFight", "_hintHud"];
+  let sbParticles = null, sbGrid = null; const sbSets = {};
+  function withSandbox(fn) {
+    if (sandbox) return fn(); // nested call shares the outer throwaway world
+    const saved = {}; for (const k of SANDBOX_KEYS) saved[k] = k in S ? [S[k]] : null;
+    const liveP = particles, liveF = floaters, liveSpr = S.spr;
+    particles = sbParticles || (sbParticles = PS.Particles(200)); floaters = PS.Floaters(); sandbox = true;
+    const spr = Object.create(liveSpr); spr.peasantSet = (c) => sbSets[c] || (sbSets[c] = liveSpr.peasantSet(c)); // one sprite build per colour, ever
+    S.spr = spr; S.cam = { x: -1e5, y: -1e5, zoom: 1 };
+    S.input = { px: 0, py: 0, active: false, huddle: false, keys: {}, touch: false, joy: { active: false, id: -1, ox: 0, oy: 0, cx: 0, cy: 0, mag: 0, dx: 0, dy: 0 } };
+    PS.audio.setSilent(true);
+    try { return fn(); }
+    finally {
+      for (const k of SANDBOX_KEYS) { if (saved[k]) S[k] = saved[k][0]; else delete S[k]; }
+      particles = liveP; floaters = liveF; sandbox = false;
+      PS.audio.setSilent(S.attract); // newGame/startGame keep silent === attract; the battle drum re-arms itself next frame if still engaged
+      // lastFrame is left alone on purpose: the next rAF can carry a timestamp from before the test, and resetting it here made raw dt negative
+    }
+  }
+  function sandboxField() {
+    const W = S.cfg.world.w, H = S.cfg.world.h;
+    S.agents = []; S.obstacles = []; S.powerups = []; S.camps = []; S.banners = []; S.decals = []; S.trails = []; S.teams = [];
+    S.cols = Math.ceil(W / S.CELL); S.rows = Math.ceil(H / S.CELL);
+    if (!sbGrid || sbGrid.length !== S.cols * S.rows) { sbGrid = new Array(S.cols * S.rows); for (let i = 0; i < sbGrid.length; i++) sbGrid[i] = []; }
+    S.grid = sbGrid; S.mode = "sandbox"; S.hintT = 0; S.stats = { recruited: 0, kills: 0, routs: 0, lost: 0, peak: 1, powerups: 0 };
+  }
+  // sunflower blob, ~12 px between neighbours
+  const blobR = (n) => 7 * Math.sqrt(n);
+  function blob(x, y, n, team) { for (let i = 0; i < n; i++) { const a = i * 2.39996, d = 7 * Math.sqrt(i + 0.5); S.agents.push(mkAgent(x + Math.cos(a) * d, y + Math.sin(a) * d, team)); } }
+
+  // One clash on an empty field: n player peasants vs m Greedy (team 2) peasants, facing edges 60 px apart, both sides
+  // charging the other's centroid every tick. No AI think, neutrals, trickle or power-ups; Normal difficulty.
+  function fightOnce(n, m, maxSeconds) {
+    const cfg = S.cfg, W = cfg.world.w, H = cfg.world.h;
+    sandboxField(); S.attract = false; S.difficulty = "normal";
+    S.t = 0; S.timeLeft = 1e9; S.trickleT = -1e9; S.shake = 0; S.result = null; S.engagedNow = false; S.finalCalled = true; S.pendingEnd = null; S._routedBy = null;
+    S._hintRecruit = S._hintFight = S._hintHud = true; S.seed = 20260924; S.rng = mulberry32(S.seed);
+    S.teams = [null, mkTeam(1, cfg.player.name, cfg.player.color, true, null)];
+    cfg.ai.personalities.forEach((p, i) => S.teams.push(mkTeam(2 + i, p.name, p.color, false, p)));
+    for (let i = 1; i < S.teams.length; i++) { S.teams[i].thinkT = 1e9; if (i > 2) S.teams[i].alive = false; }
+    blob(W / 2 - 30 - blobR(n), H / 2, n, 1); blob(W / 2 + 30 + blobR(m), H / 2, m, 2);
+    recount();
+    const p = S.teams[1], r = S.teams[2], max = Math.round(maxSeconds * 60), w0 = performance.now();
+    let p0 = p.count, r0 = r.count, k0 = 0, l0 = 0, truncated = false;
+    for (let i = 0; i < max; i++) {
+      p0 = p.count; r0 = r.count; k0 = S.stats.kills; l0 = S.stats.lost;
+      p.tx = r.cx; p.ty = r.cy; r.tx = p.cx; r.ty = p.cy;
+      update(1 / 60);
+      if (!p.alive || !r.alive || S.result) break;
+      if ((i & 63) === 63 && performance.now() - w0 > 4000) { truncated = true; break; } // lesson 20: wall-clock cap on every sim loop
+    }
+    const out = { seconds: +S.t.toFixed(2), winner: "none", how: "timeout", playerLeft: p.count, rivalLeft: r.count, playerAfter: p.count, truncated };
+    // survivors are counted BEFORE a rout flips the losers: flipped = loser's count last tick minus what died this tick
+    if (!r.alive && p.alive) { const flipped = S.stats.routs ? r0 - (S.stats.kills - k0) : 0; out.winner = "player"; out.how = S.stats.routs ? "rout" : "wipe"; out.rivalLeft = flipped; out.playerLeft = p.count - flipped; }
+    else if (!p.alive && r.alive) { const flipped = S._routedBy ? p0 - (S.stats.lost - l0) : 0; out.winner = "rival"; out.how = S._routedBy ? "rout" : "wipe"; out.playerLeft = flipped; out.rivalLeft = r.count - flipped; out.playerAfter = 0; }
+    return out;
+  }
+  // PS.fight(30, 20, 25): Math.random (attack jitter) can't be seeded, so it runs `runs` times (default 3) and reports medians
+  function fight(n, m, maxSeconds, runs) {
+    n = Math.max(1, n | 0 || 30); m = Math.max(1, m | 0 || 20); maxSeconds = clamp(+maxSeconds || 25, 1, 120); runs = clamp(runs | 0 || 3, 1, 9);
+    return withSandbox(() => {
+      const all = []; for (let i = 0; i < runs; i++) all.push(fightOnce(n, m, maxSeconds));
+      const med = (k) => { const v = all.map((x) => x[k]).sort((a, b) => a - b); return v[v.length >> 1]; };
+      const wins = all.filter((x) => x.winner === "player").length, losses = all.filter((x) => x.winner === "rival").length;
+      return { n, m, maxSeconds, seconds: med("seconds"), playerLeft: med("playerLeft"), rivalLeft: med("rivalLeft"), playerAfter: med("playerAfter"),
+        winner: wins * 2 > runs ? "player" : losses * 2 > runs ? "rival" : "split", playerWins: wins, rivalWins: losses, runs: all };
+    });
+  }
+
+  // PS.simMatch(240): attract-rules match on a fresh world, all four swarms AI-driven (team 1 plays as Bully). Counts every 30 s.
+  function simMatch(seconds) {
+    const lim = clamp(+seconds || S.cfg.world.matchSeconds, 1, 600);
+    return withSandbox(() => {
+      sandboxField(); S.attract = true; newGame(true); S.mode = "sandbox";
+      const dt = 1 / 60, tl = [], errors = [], w0 = performance.now(); let maxTotal = S.agents.length, next = 30, end = "limit", truncated = false;
+      const snap = () => { const c = []; let nn = 0; for (let i = 1; i < S.teams.length; i++) c.push(S.teams[i].count); for (const a of S.agents) if (a.team === 0) nn++; tl.push({ t: Math.round(S.t), counts: c, neutrals: nn, total: S.agents.length }); };
+      snap();
+      for (let i = 0; i < lim * 60; i++) {
+        let alive = 0; for (let j = 1; j < S.teams.length; j++) if (S.teams[j].alive) alive++;
+        if (alive <= 1) { end = "last-standing"; break; }
+        if (S.timeLeft - dt <= 0) { end = "bell"; break; } // attract update() would start a new world here
+        try { update(dt); } catch (e) { errors.push(String((e && e.message) || e)); break; }
+        if (S.agents.length > maxTotal) maxTotal = S.agents.length;
+        if (S.t >= next - 1e-9) { snap(); next += 30; }
+        if ((i & 63) === 63 && performance.now() - w0 > 10000) { truncated = true; break; } // lesson 20
+      }
+      if (tl[tl.length - 1].t !== Math.round(S.t)) snap();
+      let win = null; for (let i = 1; i < S.teams.length; i++) { const t = S.teams[i]; if (t.alive && (!win || t.count > win.count)) win = t; }
+      return { seconds: +S.t.toFixed(2), end, truncated, wallMs: Math.round(performance.now() - w0), names: S.teams.slice(1).map((t) => t.name),
+        winner: win ? { id: win.id, name: win.name, count: win.count } : null, maxTotal, agentCap: S.cfg.spawn.agentCap, timeline: tl, exceptions: errors };
+    });
+  }
+
+  // every config path game.js + sprites.js read. n number, s string, a array, o object
+  const CFG_KEYS = ("world.w:n world.h:n world.tile:n world.trees:n world.rocks:n world.matchSeconds:n world.finalSeconds:n world.decals:n world.trailDist:n world.campLabelDist:n " +
+    "spawn.neutralCamps:n spawn.campMin:n spawn.campMax:n spawn.campSpread:n spawn.starterCamps:n spawn.starterDist.0:n spawn.starterDist.1:n spawn.trickleEvery:n " +
+    "spawn.trickleCap:n spawn.agentCap:n spawn.minTrickleDistFromTeams:n spawn.underdogBias:n spawn.trickleCamps:n " +
+    "agent.hp:n agent.speed:n agent.damage:n agent.attackInterval:n agent.engageRadius:n agent.attackRange:n agent.recruitRadius:n agent.fightSpeedMult:n " +
+    "flock.arrive:n flock.separation:n flock.sepRadius:n flock.cohesion:n flock.cohesionStart:n flock.cohesionFull:n flock.huddleCohesion:n flock.huddleSepRadius:n " +
+    "flock.huddleSpeedMult:n flock.steerLerp:n flock.neutralWander:n flock.neutralWanderRadius:n flock.enemySepMult:n flock.enemyHardRadius:n " +
+    "combat.breakRatio:n combat.minRoutSize:n combat.engageDelay:n combat.engageDecay:n combat.fightPull:n combat.moraleBreak:n " +
+    "powerups.count:n powerups.respawn:n powerups.pickupRadius:n powerups.minDistFromStart:n powerups.duration:o powerups.speedMult:n powerups.armorMult:n " +
+    "powerups.frenzyMult:n powerups.rallyRadius:n powerups.weights:o powerups.duration.speed:n powerups.duration.armor:n powerups.duration.frenzy:n powerups.duration.rally:n " +
+    "ai.think:n ai.sight:n ai.fleeDistance:n ai.personalities:a ai.finalHuntRatio:n ai.finalFleeRatio:n ai.huntSpeed:n ai.fleeSpeed:n ai.corneredDist:n ai.gracePeriod:n " +
+    "ai.aiVsAiHuntMult:n ai.powerupSight:n ai.powerScore:n ai.neutralScore:n ai.huntTimeout:n ai.huntCooldown:n " +
+    "player.name:s player.color:s neutral.color:s camera.lerp:n camera.zoomDesktop:n camera.zoomMobile:n camera.mobileBreak:n pace:a difficulty.normal:o " +
+    "touch.joyRadius:n touch.joyDead:n touch.joyLead:n").split(" ");
+  const cfgGet = (path) => { let o = S.cfg; for (const k of path.split(".")) { if (o == null) return undefined; o = o[k]; } return o; };
+  const typeOk = (v, t) => (t === "n" ? typeof v === "number" && isFinite(v) : t === "s" ? typeof v === "string" && v.length > 0 : t === "a" ? Array.isArray(v) && v.length > 0 : !!v && typeof v === "object");
+  function configReport() {
+    const cfg = S.cfg, missing = [], used = {};
+    for (const e of CFG_KEYS) { const [path, t] = e.split(":"); used[path] = 1; if (!typeOk(cfgGet(path), t)) missing.push(path); }
+    (cfg.ai && cfg.ai.personalities || []).forEach((p, i) => { for (const k of ["name:s", "color:s", "huntRatio:n", "fleeRatio:n", "neutralBias:n", "powerBias:n", "hatesPlayer:n"]) { const [f, t] = k.split(":"); if (!typeOk(p[f], t)) missing.push("ai.personalities." + i + "." + f); } });
+    if (!cfg.ai || !cfg.ai.personalities || cfg.ai.personalities.length < 2) missing.push("ai.personalities.1 (attract mode plays team 1 as personality 1)");
+    for (const d in cfg.difficulty || {}) for (const k of ["label:s", "aiSpeed:n", "think:n", "huntMult:n", "startBonus:n"]) { const [f, t] = k.split(":"); if (!typeOk(cfg.difficulty[d][f], t)) missing.push("difficulty." + d + "." + f); }
+    (cfg.pace || []).forEach((v, i) => { if (!typeOk(v, "n")) missing.push("pace." + i); });
+    for (const k in (cfg.powerups && cfg.powerups.weights) || {}) { if (!S.spr.PU[k] || !typeOk(cfg.powerups.duration[k], "n")) missing.push("powerups.weights." + k + " (needs a PU icon + duration)"); }
+    // tunables in config.json that no code reads (informational: a retune there does nothing)
+    const unused = [];
+    for (const sec of ["world", "spawn", "agent", "flock", "combat", "powerups", "ai", "camera", "touch"]) for (const k in cfg[sec] || {}) {
+      const path = sec + "." + k; if (used[path] || ["powerups.duration", "powerups.weights", "ai.personalities", "spawn.starterDist"].includes(path)) continue; unused.push(path);
+    }
+    return { checked: CFG_KEYS.length, missing, unused };
+  }
+
+  // lesson 28: every cached sprite canvas must have opaque pixels. Read back through ONE scratch canvas, never the cache itself (lesson 27).
+  let scratch = null, scratchCtx = null;
+  function opaqueCount(c) {
+    if (!c || !c.width || !c.height) return 0;
+    if (!scratch) { scratch = document.createElement("canvas"); scratchCtx = scratch.getContext("2d", { willReadFrequently: true }); }
+    if (scratch.width < c.width || scratch.height < c.height) { scratch.width = Math.max(scratch.width, c.width); scratch.height = Math.max(scratch.height, c.height); }
+    let d; try { scratchCtx.clearRect(0, 0, c.width, c.height); scratchCtx.drawImage(c, 0, 0); d = scratchCtx.getImageData(0, 0, c.width, c.height).data; } catch (e) { return -1; }
+    let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) n++;
+    return n;
+  }
+  function spriteReport() {
+    const spr = S.spr, list = [];
+    const addSet = (k, set) => { for (const f of ["R", "L", "RW", "LW"]) set[f].forEach((c, i) => list.push([k + "." + f + i, c])); };
+    for (let i = 1; i < S.teams.length; i++) addSet("team" + i, S.teams[i].spr);
+    addSet("neutral", spr._neutral || spr.peasantSet(S.cfg.neutral.color)); // draw() caches it on first frame; if none yet, check a fresh build, don't store it
+    spr.tiles.forEach((c, i) => list.push(["tile" + i, c])); spr.trees.forEach((c, i) => list.push(["tree" + i, c])); spr.decals.forEach((c, i) => list.push(["decal" + i, c]));
+    for (const k in spr.PU) list.push(["pu." + k, spr.PU[k].icon]);
+    list.push(["dirt", spr.dirt], ["rock", spr.rock], ["marker", spr.marker], ["shadow", spr.shadow], ["smoke", spr.smoke]);
+    const blank = []; let unreadable = 0;
+    for (const [k, c] of list) { const n = opaqueCount(c); if (n === 0) blank.push(k); else if (n < 0) unreadable++; }
+    return { total: list.length, blank, unreadable };
+  }
+
+  function stateSig() {
+    let h = 0; for (const a of S.agents) h += a.x * 1.3 + a.y * 0.7 + a.vx * 0.11 + a.vy * 0.13 + a.hp * 3 + a.team * 11 + (a.tgt ? 5 : 0);
+    const tm = S.teams.slice(1).map((t) => [t.count, t.alive, t.tx, t.ty, t.cx, t.cy, t.thinkT, t.kills, t.state]);
+    return JSON.stringify([S.mode, S.t, S.timeLeft, S.seed, S.agents.length, h, tm, S.cam, S.stats, S.banners.length, S.result, S.pendingEnd, S.difficulty, S.attract,
+      S.camps.length, S.powerups.map((p) => [p.x, p.y, p.alive, p.kind]), S.trickleT, S.shake, S.engagedNow, S.input.huddle, S.input.joy.active, S.hintT]);
+  }
+  function lsSnapshot() { try { const o = []; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); o.push(k + "=" + localStorage.getItem(k)); } return o.sort().join("\n"); } catch (e) { return "unavailable"; } }
+
+  // PS.selfTest({ matchSeconds }) -> { pass, fails: [names], results: { name: { pass, detail } }, ms }. One console line.
+  // The attract match runs the full clock by default (the agent-cap overshoot only shows up after ~150 s): 7-10 s of wall time in
+  // headless Chromium, bounded by simMatch's 10 s guard. PS.selfTest({ matchSeconds: 60 }) is the quick version.
+  function selfTest(opts) {
+    const horizon = clamp(+(opts && opts.matchSeconds) || (S.cfg ? S.cfg.world.matchSeconds : 240), 10, 600);
+    const w0 = performance.now(), results = {}, fails = [];
+    const check = (name, ok, detail) => { results[name] = { pass: !!ok, detail }; if (!ok) fails.push(name); };
+    const ls0 = lsSnapshot(), sig0 = stateSig(), refs0 = [S.agents, S.teams, S.grid, S.cam, S.input, S.spr, S.stats, particles, floaters];
+    check("config_loaded", !!S.cfg && typeof S.cfg === "object", { sections: S.cfg ? Object.keys(S.cfg) : [] });
+    let cr = null; try { cr = configReport(); } catch (e) { cr = { missing: ["threw: " + e.message] }; }
+    check("config_keys", cr.missing.length === 0, cr);
+    let sp = null; try { sp = spriteReport(); } catch (e) { sp = { total: 0, blank: ["threw: " + e.message] }; }
+    check("sprites_opaque", sp.total > 0 && sp.blank.length === 0, sp);
+    let f = null; try { f = fight(30, 20, 25, 3); } catch (e) { f = { error: String(e && e.message || e) }; }
+    check("fight_30v20", !f.error && f.playerWins >= 2 && f.seconds <= 25, f);
+    let mt = null; try { mt = simMatch(horizon); } catch (e) { mt = { exceptions: ["threw: " + (e && e.message || e)], maxTotal: Infinity }; }
+    check("simMatch_no_exceptions", mt.exceptions.length === 0, mt); // a wall-guard truncation is reported (detail.truncated), not failed: a slow machine isn't a bug
+    check("simMatch_agent_cap", mt.maxTotal <= S.cfg.spawn.agentCap, { maxTotal: mt.maxTotal, agentCap: S.cfg.spawn.agentCap });
+    const refs1 = [S.agents, S.teams, S.grid, S.cam, S.input, S.spr, S.stats, particles, floaters];
+    check("state_restored", stateSig() === sig0 && refs0.every((r, i) => r === refs1[i]), { mode: S.mode, t: S.t, agents: S.agents.length });
+    check("localStorage_unchanged", lsSnapshot() === ls0, {});
+    const n = Object.keys(results).length, ms = Math.round(performance.now() - w0), pass = fails.length === 0;
+    (pass ? console.log : console.warn)("[PS.selfTest] " + (pass ? "PASS " : "FAIL ") + (n - fails.length) + "/" + n + (pass ? "" : " fails: " + fails.join(", ")) +
+      " | 30v20 " + (f.winner || "?") + " in " + f.seconds + "s | simMatch " + mt.seconds + "s " + (mt.truncated ? "TRUNCATED by wall guard" : mt.end) + ", peak " + mt.maxTotal + "/" + S.cfg.spawn.agentCap + " | " + ms + " ms");
+    return { pass, fails, results, ms };
+  }
 
   boot();
 })();
