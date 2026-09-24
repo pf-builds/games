@@ -360,11 +360,14 @@ async function main() {
       const btnId = run.end.overlay === "ov-win" ? "btn-again" : "btn-retry";
       const hitBtn = (id) => page.evaluate((id) => { const b = document.getElementById(id), r = b.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2, e = document.elementFromPoint(x, y); return { x, y, hit: !!e && (e === b || b.contains(e)) }; }, id);
       const press = async (id) => { const h = await hitBtn(id); if (A.mobile) await page.touchscreen.tap(h.x, h.y); else await page.mouse.click(h.x, h.y); await page.waitForFunction(() => window.PSS.mode === "play", null, { timeout: 5000 }).catch(() => {}); return h; };
+      // the restarted match runs on Hard (startBonus 0, as if the player picked HARD) for the idle-player loss check below
+      await page.evaluate(() => { window.PSS.difficulty = "hard"; });
       const h = await press(btnId);
       const after = await page.evaluate(() => ({ mode: window.PSS.mode, t: window.PSS.t, seed: window.PSS.seed, agents: window.PSS.agents.length, map: window.PS.terrain.report().used }));
       report.restart = { button: btnId, hit: h.hit, ...after, ok: h.hit && after.mode === "play" && after.t < 2 };
       if (report.restart.ok) {
-        // idle-player loss: nobody steers the player for 40 s (AIs recruit their starter camps), then the bell rings: the player must lose
+        // idle-player loss: nobody steers the Hard match's single peasant for 40 s while the AIs recruit their starter camps, then the
+        // bell rings: the player must lose. Difficulty goes back to the run's setting before the second restart.
         await page.evaluate(() => window.PS.step(30)); await page.evaluate(() => window.PS.step(10));
         const pre = await page.evaluate(() => ({ counts: window.PSS.teams.slice(1).map((t) => t.count), dbg: { ...window.PSS.dbg } }));
         await page.evaluate(() => { window.PSS.timeLeft = 0.05; });
@@ -372,7 +375,8 @@ async function main() {
         await page.waitForFunction(() => document.querySelector("#ov-win.active, #ov-lose.active"), null, { timeout: 5000 }).catch(() => {});
         const idle = await page.evaluate(() => { const ov = document.querySelector("#ov-win.active, #ov-lose.active"); return { result: window.PSS.result, overlay: ov ? ov.id : null, reason: ov ? ov.querySelector("p").textContent : null }; });
         run.screenshots.idleEnd = await shot(page, `run${ri + 1}-idle-end`);
-        report.outcomes.push({ run: "idle", result: idle.result, forced: true, how: idle.reason, countsBeforeBell: pre.counts, terrainBad: pre.dbg.terrainBad });
+        report.outcomes.push({ run: "idle", difficulty: "hard", result: idle.result, forced: true, how: idle.reason, countsBeforeBell: pre.counts, terrainBad: pre.dbg.terrainBad });
+        await page.evaluate((d) => { window.PSS.difficulty = d; }, A.difficulty);
         const h2 = idle.overlay ? await press(idle.overlay === "ov-win" ? "btn-again" : "btn-retry") : { hit: false };
         report.restart.second = { hit: h2.hit, mode: await page.evaluate(() => window.PSS.mode) };
       }
