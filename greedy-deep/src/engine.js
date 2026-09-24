@@ -38,6 +38,9 @@
     mul_offline_rate:   function (acc, v, n) { acc.offlineRateMul *= Math.pow(v, n); },
     mul_rate_temp:      function (acc, v, n) { acc.rateMul *= Math.pow(v, n); },
     mul_gold_temp:      function (acc, v, n) { acc.goldMul *= Math.pow(v, n); },
+    // M5: the chest's gold buff. Unlike mul_gold_temp (crew income only, the rich-seam
+    // event) this one multiplies EVERY gold source: crew, taps, spacebar and pickups.
+    mul_gold_all_temp:  function (acc, v, n) { acc.goldAllMul *= Math.pow(v, n); },
     add_depth:          function (acc, v, n) { acc.depthAdd += v * n; }
   };
   // Verbs whose only meaning is instantaneous: they never survive into a derived
@@ -57,7 +60,7 @@
   function newAcc() {
     return {
       clickAdd: 0, rateAdd: 0, rateMul: 1, goldMul: 1, ratePerDwarf: 0,
-      revealBonus: 0, hazardMul: 1, offlineHours: 0, offlineRateMul: 1, depthAdd: 0
+      revealBonus: 0, hazardMul: 1, offlineHours: 0, offlineRateMul: 1, depthAdd: 0, goldAllMul: 1
     };
   }
   E.newAcc = newAcc;
@@ -92,6 +95,10 @@
       eventsFired: 0,
       bandId: cfg.ores[0].id,
       lastEvent: "",
+      // M5: real earnings per second (taps + crew, before the all-gold buff), a rolling
+      // average over ~pickups.earnWindowS. Gems pay seconds of this. Never saved.
+      earnRate: 0,
+      earnAcc: 0,
       prefs: { muted: false }
     };
   };
@@ -296,16 +303,21 @@
     // Clamp multipliers to prevent overflow
     acc.rateMul = clamp(acc.rateMul);
     acc.goldMul = clamp(acc.goldMul);
+    acc.goldAllMul = clamp(acc.goldAllMul);
 
     var band = E.bandAt(cfg, state.depth);
     var clickPower = cfg.start.clickPower + acc.clickAdd;
     // Depth comes only from digRate. Taps never dig (PRD 8).
     var digRate = clamp((cfg.start.digRate + acc.rateAdd) * acc.rateMul);
-    var goldRate = clamp(digRate * band.goldPerMeter * acc.goldMul);
-    var goldPerTap = clamp(clickPower * band.goldPerMeter * cfg.start.clickYield);
+    // Every gold source passes through goldAllMul once; the *Base values are before it.
+    var goldRateBase = clamp(digRate * band.goldPerMeter * acc.goldMul);
+    var goldPerTapBase = clamp(clickPower * band.goldPerMeter * cfg.start.clickYield);
+    var goldRate = clamp(goldRateBase * acc.goldAllMul);
+    var goldPerTap = clamp(goldPerTapBase * acc.goldAllMul);
 
     return {
       clickPower: clickPower, digRate: digRate, goldRate: goldRate, goldPerTap: goldPerTap,
+      goldRateBase: goldRateBase, goldPerTapBase: goldPerTapBase, goldAllMul: acc.goldAllMul,
       goldMul: acc.goldMul, rateMul: acc.rateMul, band: band, dwarves: dwarves,
       revealBonus: acc.revealBonus, hazardMul: acc.hazardMul,
       offlineHours: acc.offlineHours, offlineRateMul: acc.offlineRateMul
@@ -392,6 +404,12 @@
     state.gold = clamp(state.gold + g);
     state.goldEarnedTotal = clamp(state.goldEarnedTotal + g);
     state.t += dt;
+    // rolling real earnings: crew this step plus any taps since the last one
+    state.earnAcc = (state.earnAcc || 0) + d.goldRateBase * dt;
+    var tau = (cfg.pickups && cfg.pickups.earnWindowS) || 30;
+    var ek = 1 - Math.exp(-dt / tau);
+    state.earnRate = clamp((state.earnRate || 0) + (state.earnAcc / dt - (state.earnRate || 0)) * ek);
+    state.earnAcc = 0;
 
     // prune expired timed effects (derive already ignores them; this keeps the array small)
     var tl = state.timed;
@@ -434,9 +452,11 @@
   // ------------------------------------------------------------ actions
   E.tap = function (cfg, state, times) {
     var d = E.derive(cfg, state);
-    var g = d.goldPerTap * (times === undefined ? 1 : times);
+    var n = times === undefined ? 1 : times;
+    var g = d.goldPerTap * n;
     state.gold = clamp(state.gold + g);
     state.goldEarnedTotal = clamp(state.goldEarnedTotal + g);
+    state.earnAcc = clamp((state.earnAcc || 0) + d.goldPerTapBase * n);
     return g;
   };
 
@@ -467,7 +487,7 @@
     if (out.cappedSeconds < seconds) out.reason = "capped";
     var rate = o.ratePercent * d.offlineRateMul;
     // Entry band's rate, flat: no mid-offline band change (PRD 9, 16).
-    out.gold = d.goldRate * out.cappedSeconds * rate;
+    out.gold = d.goldRateBase * out.cappedSeconds * rate;
     out.depth = o.advanceDepth ? d.digRate * out.cappedSeconds * rate : 0;
     return out;
   };
@@ -645,14 +665,23 @@
     }
   };
 
-  // Gold for one gem: N seconds of passive income, floored at N taps (so a gem is worth
-  // something before the crew earns), both scaled up by band.
-  E.gemGold = function (cfg, derived, bandIndex) {
+  // The earnings a gold pickup pays seconds of: the rolling real-earnings rate, capped at
+  // crew income plus `earnCapTapsPerSec` taps a second so an autoclicker cannot inflate it.
+  E.earnBasis = function (cfg, state, derived) {
+    var cap = derived.goldRateBase + cfg.pickups.earnCapTapsPerSec * derived.goldPerTapBase;
+    var r = state.earnRate > 0 ? state.earnRate : 0;
+    return clamp(r < cap ? r : cap);
+  };
+  // Gold for one gold reward: `earnSeconds` of real earnings, floored at `floorTaps` taps
+  // (so an idle player still gets something), scaled by band, then through the all-gold
+  // buff like every other gold source.
+  E.pickupGold = function (cfg, state, derived, r, bandIndex) {
+    var g = Math.max(E.earnBasis(cfg, state, derived) * r.earnSeconds, derived.goldPerTapBase * r.floorTaps);
+    return clamp(g * bandPow(r.payoutMulPerBand, bandIndex, cfg) * derived.goldAllMul);
+  };
+  E.gemGold = function (cfg, state, derived, bandIndex) {
     var gem = pickupType(cfg, "gem");
-    var r = gem ? gem.reward : null;
-    if (!r) return 0;
-    var g = Math.max(derived.goldRate * r.incomeSeconds, derived.goldPerTap * r.floorTaps);
-    return clamp(g * bandPow(r.payoutMulPerBand, bandIndex, cfg));
+    return gem ? E.pickupGold(cfg, state, derived, gem.reward, bandIndex) : 0;
   };
 
   function rollWeighted(list, rng) {
@@ -689,11 +718,10 @@
     var r = ty.reward;
     if (r.kind === "table") r = rollWeighted(pk.geodeTable, rng);
     if (r.kind === "gold") {
-      var g = Math.max(d.goldRate * r.incomeSeconds, d.goldPerTap * r.floorTaps);
-      res.gold = clamp(g * bandPow(r.payoutMulPerBand, s.bandIndex, cfg));
+      res.gold = E.pickupGold(cfg, state, d, r, s.bandIndex);
     } else if (r.kind === "gems") {
       res.gems = r.count;
-      res.gold = clamp(E.gemGold(cfg, d, s.bandIndex) * r.count);
+      res.gold = clamp(E.gemGold(cfg, state, d, s.bandIndex) * r.count);
     } else if (r.kind === "buff") {
       res.buff = rollWeighted(pk.buffs, rng);
       res.buffSeconds = E.applyPickupBuff(cfg, state, res.buff, s.bandIndex);
@@ -817,7 +845,7 @@
       bandLog.push({
         band: nb.id, index: nb.index, depth: nb.startDepth, tickDepth: st.depth, t: t,
         goldPerMeter: after,
-        goldRateBefore: d.digRate * before * d.goldMul,
+        goldRateBefore: d.digRate * before * d.goldMul * d.goldAllMul,
         goldRateAfter: d.goldRate,
         stepRatio: after / before
       });
@@ -1179,6 +1207,8 @@
       if (!(pk.lanternLifetimeS >= 0)) errors.push("pickups.lanternLifetimeS must be >= 0");
       if (!(pk.hitMinCssPx >= 40)) errors.push("pickups.hitMinCssPx must be >= 40 (phone tap target)");
       if (!(pk.hitPadBu >= 0)) errors.push("pickups.hitPadBu must be >= 0");
+      if (!(pk.earnWindowS > 0)) errors.push("pickups.earnWindowS must be > 0");
+      if (!(pk.earnCapTapsPerSec > 0)) errors.push("pickups.earnCapTapsPerSec must be > 0");
       var ps = pk.spawn || {};
       if (!Array.isArray(ps.leftXBu) || !Array.isArray(ps.rightXBu) || !(ps.leftXBu[1] >= ps.leftXBu[0]) || !(ps.rightXBu[1] >= ps.rightXBu[0])) {
         errors.push("pickups.spawn.leftXBu/rightXBu must be [min, max]");
@@ -1188,7 +1218,7 @@
       }
       function checkReward(label, r, allowTable) {
         if (!r || !(PICKUP_REWARDS[r.kind] || (allowTable && r.kind === "table"))) { errors.push(label + ": unknown reward kind '" + (r && r.kind) + "'"); return; }
-        if (r.kind === "gold" && !(r.incomeSeconds > 0 && r.floorTaps >= 0 && r.payoutMulPerBand > 0)) errors.push(label + ": gold reward needs incomeSeconds > 0, floorTaps >= 0, payoutMulPerBand > 0");
+        if (r.kind === "gold" && !(r.earnSeconds > 0 && r.floorTaps >= 0 && r.payoutMulPerBand > 0)) errors.push(label + ": gold reward needs earnSeconds > 0, floorTaps >= 0, payoutMulPerBand > 0");
         if (r.kind === "gems" && !(r.count >= 1)) errors.push(label + ": gems reward needs count >= 1");
       }
       if (!Array.isArray(pk.types) || !pk.types.length) errors.push("pickups.types must be a non-empty array");
@@ -1216,7 +1246,7 @@
       if (!Array.isArray(pk.buffs) || !pk.buffs.length) errors.push("pickups.buffs must be a non-empty array");
       else for (var pb = 0; pb < pk.buffs.length; pb++) {
         var bf = pk.buffs[pb];
-        if (bf.verb !== "mul_gold_temp" && bf.verb !== "mul_rate_temp") errors.push("pickup buff " + bf.id + ": verb must be a timed verb (mul_gold_temp, mul_rate_temp)");
+        if (bf.verb !== "mul_gold_all_temp" && bf.verb !== "mul_gold_temp" && bf.verb !== "mul_rate_temp") errors.push("pickup buff " + bf.id + ": verb must be a timed verb (mul_gold_all_temp, mul_gold_temp, mul_rate_temp)");
         if (!(bf.value > 0) || !(bf.seconds > 0) || !(bf.secondsPerBand >= 0) || !(bf.weight > 0)) errors.push("pickup buff " + bf.id + ": needs value > 0, seconds > 0, secondsPerBand >= 0, weight > 0");
         if (!bf.label) errors.push("pickup buff " + bf.id + ": needs a label");
       }

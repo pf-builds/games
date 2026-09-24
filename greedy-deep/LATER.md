@@ -7,9 +7,9 @@ Everything shipped through M5. Items below are deferred to playtest/v1.1/v2.
   (6 px threshold splits drag from strike, and a hit on a pickup collects instead of
   striking); only tested with mouse, dispatched events and browser-pane emulation.
 - Overnight save test before deploy.
-- Pickup feel. The window leaves ~220 s of headroom under max-buy, so a gem is only 25
-  taps' worth. If that reads as thin, move the max-buy baseline later rather than
-  squeezing pickups (see SPEC, Tuning log M5).
+- Pickup feel after the economy pass: a gem is ~20 s of real earnings and a chest
+  triples all gold for 25 s. Check both read as worth a click, and whether the Nix price
+  (now 500K) lands late enough to feel earned rather than walled.
 
 ## Found during M5, parked
 - No spawn cue or edge indicator: a pickup that spawns while the player watches the shop

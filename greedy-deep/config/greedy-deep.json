@@ -1,5 +1,5 @@
 {
-  "configVersion": 24,
+  "configVersion": 25,
   "title": "Greedy Deep",
   "start": {
     "gold": 0,
@@ -128,13 +128,13 @@
     {
       "id": "bit",
       "name": "Drill Bit",
-      "desc": "The crew digs 10% faster per bit.",
+      "desc": "The crew digs 12% faster per bit.",
       "base": 100,
       "ratio": 2.8,
       "effects": [
         {
           "verb": "mul_rate",
-          "value": 1.1
+          "value": 1.12
         }
       ]
     },
@@ -285,7 +285,7 @@
       "name": "Nix Blackcandle",
       "nameNote": "",
       "job": "Deep Hewer",
-      "base": 150000,
+      "base": 500000,
       "ratio": 3.0,
       "effects": [
         {
@@ -388,6 +388,8 @@
     "lanternLifetimeS": 2,
     "hitMinCssPx": 44,
     "hitPadBu": 6,
+    "earnWindowS": 30,
+    "earnCapTapsPerSec": 16,
     "expireBlinkS": 2,
     "spawn": {
       "leftXBu": [
@@ -410,7 +412,7 @@
         "id": "gem",
         "kind": "gem",
         "label": "Gem",
-        "ratePerMinute": 1.2,
+        "ratePerMinute": 0.8,
         "rateMulPerBand": 0.92,
         "minDepth": 0,
         "maxLive": 2,
@@ -422,7 +424,7 @@
         "sizeBu": 10,
         "reward": {
           "kind": "gold",
-          "incomeSeconds": 40,
+          "earnSeconds": 20,
           "floorTaps": 25,
           "payoutMulPerBand": 1.03
         }
@@ -467,11 +469,11 @@
     "buffs": [
       {
         "id": "income",
-        "label": "income ×3",
-        "verb": "mul_gold_temp",
+        "label": "all gold ×3",
+        "verb": "mul_gold_all_temp",
         "value": 3,
-        "seconds": 30,
-        "secondsPerBand": 3,
+        "seconds": 25,
+        "secondsPerBand": 2,
         "weight": 1
       },
       {
@@ -488,7 +490,7 @@
       {
         "kind": "gold",
         "weight": 5,
-        "incomeSeconds": 90,
+        "earnSeconds": 40,
         "floorTaps": 40,
         "payoutMulPerBand": 1.03
       },

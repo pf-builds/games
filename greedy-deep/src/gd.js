@@ -546,11 +546,11 @@
       // --- the 12-verb registry is complete and every JSON verb has a handler
       var wantVerbs = ["add_click", "add_rate", "mul_rate", "mul_gold", "add_rate_per_dwarf",
         "reveal_bands", "mul_hazard_resist", "add_offline_hours", "mul_offline_rate",
-        "mul_rate_temp", "mul_gold_temp", "add_depth"];
+        "mul_rate_temp", "mul_gold_temp", "add_depth", "mul_gold_all_temp"];
       var verbMissing = [];
       for (var vi = 0; vi < wantVerbs.length; vi++) if (typeof E.EFFECTS[wantVerbs[vi]] !== "function") verbMissing.push(wantVerbs[vi]);
-      check("m2_all_12_verbs_registered", "12 handlers", E.VERBS.length + " (missing " + verbMissing.join(",") + ")",
-        verbMissing.length === 0 && E.VERBS.length === 12);
+      check("m2_all_13_verbs_registered", "13 handlers (12 + M5 all-gold buff)", E.VERBS.length + " (missing " + verbMissing.join(",") + ")",
+        verbMissing.length === 0 && E.VERBS.length === 13);
 
       // --- content: 4 ores, 8 tracks, 4 dwarves, 3 events
       check("m2_content_counts", "4 ores / 8 tracks / 4 dwarves / 3 events",
@@ -1625,7 +1625,8 @@
         !!sp1 && GD.pickups.live === 1 && !!dp1 && dp1.id === sp1.id && dp1.type === "gem" && isFinite(dp1.x) && isFinite(dp1.y) && dp1.ttl > 0);
 
       // --- gem pays its formula once, cues, and is gone
-      var gd0 = GD.derive(), gemWant = E.gemGold(cfg, gd0, gd0.band.index);
+      GD.state.earnRate = 50;   // a known rolling-earnings figure for the formula check
+      var gd0 = GD.derive(), gemWant = E.gemGold(cfg, GD.state, gd0, gd0.band.index);
       var goldG = GD.state.gold;
       if (window.GDAudio) window.GDAudio.lastCue = null;
       var rg = GD.collectPickup(sp1.id);
@@ -1633,9 +1634,10 @@
         rg.done && gemWant > 0 && approx(GD.state.gold - goldG, gemWant, 1e-6) && approx(rg.gold, gemWant, 1e-6));
       check("m5_gem_gone_after_collect", 0, GD.pickups.live, GD.pickups.live === 0 && !E.pickupById(GD.pickups, sp1.id));
       check("m5_gem_cue", "gem", GD.dbg.lastCue, GD.dbg.lastCue === "gem");
-      check("m5_gem_value_band_scaled", "floorTaps x goldPerTap x payoutMulPerBand^band",
-        Math.round(gemWant), approx(gemWant, Math.max(gd0.goldRate * PK.types[0].reward.incomeSeconds, gd0.goldPerTap * PK.types[0].reward.floorTaps) *
-          Math.pow(PK.types[0].reward.payoutMulPerBand, Math.min(gd0.band.index, PK.bandScaleCap)), 1e-6));
+      var gR = PK.types[0].reward, gBand = Math.pow(gR.payoutMulPerBand, Math.min(gd0.band.index, PK.bandScaleCap));
+      check("m5_gem_value_formula", "max(earnSeconds x rolling earnings, floorTaps x goldPerTap) x band",
+        Math.round(gemWant), approx(gemWant, Math.max(Math.min(50, gd0.goldRateBase + PK.earnCapTapsPerSec * gd0.goldPerTapBase) * gR.earnSeconds,
+          gd0.goldPerTapBase * gR.floorTaps) * gBand, 1e-6));
 
       // --- geode: N clicks, cracks per click, pays once, never twice
       m5Setup();
@@ -1669,7 +1671,7 @@
         var dB0 = GD.derive();
         var secs = E.applyPickupBuff(cfg, GD.state, bf, dB0.band.index);
         var dB1 = GD.derive();
-        var got = bf.verb === "mul_gold_temp" ? dB1.goldRate / dB0.goldRate : dB1.digRate / dB0.digRate;
+        var got = bf.verb === "mul_rate_temp" ? dB1.digRate / dB0.digRate : dB1.goldRate / dB0.goldRate;
         if (!approx(got, bf.value, 1e-9)) buffBad.push(bf.id + " x" + got.toFixed(3));
         E.applyPickupBuff(cfg, GD.state, bf, dB0.band.index);
         if (GD.activeBuffs().length !== 1) buffBad.push(bf.id + " stacked " + GD.activeBuffs().length);
@@ -1681,6 +1683,68 @@
         if (!approx(dB2.goldRate / dB2.digRate, dB0.goldRate / dB0.digRate, 1e-9) || !approx(dB2.digRate, dB0.digRate, 1e-9)) buffBad.push(bf.id + " rate not restored");
       }
       check("m5_chest_buffs_start_and_end", "each buff hits its multiplier, refreshes, ends", buffBad.join(" | "), buffBad.length === 0);
+      // --- the chest's gold buff multiplies EVERY gold source, taps included
+      var allBuff = null;
+      for (var ab = 0; ab < PK.buffs.length; ab++) if (PK.buffs[ab].verb === "mul_gold_all_temp") allBuff = PK.buffs[ab];
+      if (allBuff) {
+        m5Setup();
+        var tap0 = GD.tap(1);
+        E.applyPickupBuff(cfg, GD.state, allBuff, GD.derive().band.index);
+        var tap1 = GD.tap(1);
+        var dAB = GD.derive();
+        GD.state.earnRate = 40;
+        var gemAB = E.gemGold(cfg, GD.state, dAB, dAB.band.index);
+        var dNo = JSON.parse(JSON.stringify(dAB)); dNo.goldAllMul = 1;
+        var gemNo = E.gemGold(cfg, GD.state, dNo, dAB.band.index);
+        check("m5_all_gold_buff_multiplies_taps", "tap x" + allBuff.value, (tap1 / tap0).toFixed(3), tap0 > 0 && approx(tap1, tap0 * allBuff.value, 1e-9));
+        check("m5_all_gold_buff_multiplies_crew_and_pickups", "crew and gem x" + allBuff.value,
+          (dAB.goldRate / dAB.goldRateBase).toFixed(3) + " / " + (gemAB / gemNo).toFixed(3),
+          approx(dAB.goldRate, dAB.goldRateBase * allBuff.value, 1e-9) && approx(gemAB, gemNo * allBuff.value, 1e-9));
+        check("m5_all_gold_buff_is_one_timed_effect", "1 timed entry on mul_gold_all_temp",
+          JSON.stringify(GD.state.timed.map(function (x) { return x.verb; })),
+          GD.state.timed.length === 1 && GD.state.timed[0].verb === "mul_gold_all_temp");
+      } else {
+        check("m5_all_gold_buff_present", "a buff on mul_gold_all_temp", "none", false);
+      }
+
+      // --- a gem tracks real recent earnings, never below the band floor
+      m5Setup();
+      var dG = GD.derive(), floorG = dG.goldPerTapBase * PK.types[0].reward.floorTaps * Math.pow(PK.types[0].reward.payoutMulPerBand, Math.min(dG.band.index, PK.bandScaleCap));
+      GD.state.earnRate = 0;
+      var gIdle = E.gemGold(cfg, GD.state, dG, dG.band.index);
+      for (var tt = 0; tt < 300; tt++) { GD.tap(1); GD.step(0.1); }   // ~30 s of tapping at 10/s
+      var dG2 = GD.derive(), gBusy = E.gemGold(cfg, GD.state, dG2, dG2.band.index);
+      GD.state.earnRate = 1e300;
+      var gCap = E.gemGold(cfg, GD.state, dG2, dG2.band.index);
+      check("m5_gem_tracks_real_earnings", "idle = floor, tapping > floor, capped",
+        Math.round(gIdle) + " / " + Math.round(gBusy) + " / " + Math.round(gCap) + " (floor " + Math.round(floorG) + ")",
+        approx(gIdle, floorG, 1e-6) && gBusy > gIdle * 1.5 && gBusy >= floorG && isFinite(gCap) &&
+        approx(gCap, (dG2.goldRateBase + PK.earnCapTapsPerSec * dG2.goldPerTapBase) * PK.types[0].reward.earnSeconds *
+          Math.pow(PK.types[0].reward.payoutMulPerBand, Math.min(dG2.band.index, PK.bandScaleCap)), 1e-6));
+
+      // --- everything stays finite: collect-all + MAX-buy at a huge setGold
+      var finBad = [];
+      var hugeP = [1e15, 1e40, 1e90];
+      for (var hp = 0; hp < hugeP.length; hp++) {
+        m5Setup(1000);
+        GD.state.gold = hugeP[hp]; GD.state.goldEarnedTotal = hugeP[hp];
+        var allHp = E.purchasables(cfg);
+        for (var hq = 0; hq < allHp.length; hq++) { var mxh = E.maxBuyable(cfg, GD.state, allHp[hq].id); for (var hr = 0; hr < mxh; hr++) E.buy(cfg, GD.state, allHp[hq].id); }
+        for (var hb = 0; hb < PK.buffs.length; hb++) E.applyPickupBuff(cfg, GD.state, PK.buffs[hb], 3);
+        for (var hs = 0; hs < 40; hs++) {
+          GD.tap(8);
+          var sH = GD.spawnPickup(PK.types[hs % PK.types.length].id);
+          if (sH) GD.collectPickup(sH.id);
+          GD.step(1);
+        }
+        var dH = GD.derive();
+        var vals = [GD.state.gold, GD.state.goldEarnedTotal, GD.state.depth, GD.state.earnRate, dH.goldRate, dH.goldPerTap, dH.digRate, dH.goldAllMul, GD.pickups.goldPaid];
+        for (var hv = 0; hv < vals.length; hv++) if (!isFinite(vals[hv])) finBad.push("value " + hv + " @" + hugeP[hp]);
+      }
+      var simHuge = GD.simulate({ policy: "max-buy", pickups: "collect-all", maxSeconds: 1800, state: (function () { var st = E.newState(cfg); st.gold = 1e90; return st; })() });
+      if (!simHuge.allFinite) finBad.push("simulate from 1e90");
+      check("m5_finite_under_collect_all_max_buy", "all finite", finBad.join(" | "), finBad.length === 0);
+
       m5Setup();
       var sc = GD.spawnPickup("chest");
       var rch = GD.collectPickup(sc.id);

@@ -3,7 +3,7 @@
 (function () {
   "use strict";
 
-  var CONFIG_VERSION = 24;
+  var CONFIG_VERSION = 25;
 
   var UI = (window.GDUI = {});
   var E = window.GDEngine, GD = window.GD;

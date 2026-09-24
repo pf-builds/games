@@ -202,9 +202,25 @@ non-timed verb, or a hit target under 40 CSS px all fail loud).
 
 | Pickup | Rate | Clicks | Life | Reward |
 |---|---|---|---|---|
-| Gem (common) | 1.2/min, x0.92 per band (rarer deeper) | 1 | 9 s | max(40 s of passive income, 25 taps) x 1.03^band |
-| Geode (uncommon) | 0.25/min, x1.1 per band, from 5 m | 3-5 (rolled) | 14 s | table: gold 5 (max(90 s passive, 40 taps) x 1.03^band), buff 3, gem burst 2 (3 gems' worth) |
-| Chest (rare) | 0.1/min, x1.1 per band, from 10 m | 1 | 10 s | a buff: income x3 for 30 s (+3 s/band) or dig x1.5 for 10 s (+0.5 s/band) |
+| Gem (common) | 0.8/min, x0.92 per band (rarer deeper) | 1 | 9 s | max(20 s of real earnings, 25 taps) x 1.03^band |
+| Geode (uncommon) | 0.25/min, x1.1 per band, from 5 m | 3-5 (rolled) | 14 s | table: gold 5 (max(40 s of real earnings, 40 taps) x 1.03^band), buff 3, gem burst 2 (3 gems' worth) |
+| Chest (rare) | 0.1/min, x1.1 per band, from 10 m | 1 | 10 s | a buff: all gold x3 for 25 s (+2 s/band) or dig x1.5 for 10 s (+0.5 s/band) |
+
+**Real earnings (economy pass, 2026-09-23).** `state.earnRate` is a rolling average of
+gold actually earned per second (taps and crew, before the all-gold buff), an exponential
+average with a `pickups.earnWindowS` 30 s time constant, updated every sim sub-step in
+`E.substep` and fed by `E.tap`. Gem and geode gold pay `earnSeconds` of it, floored at
+`floorTaps` taps (an idle player still gets something) and capped at crew income plus
+`earnCapTapsPerSec` 16 taps a second, so an autoclicker cannot inflate it. It is not
+saved; after a reload gems pay the floor until the average warms up. `GD.simulate` runs
+the same sub-step, so the sim values gems exactly as the game does.
+
+**All-gold buff.** The chest's gold buff is a 13th verb, `mul_gold_all_temp`, on the same
+timed-effect path as events. `derive()` folds it into one `goldAllMul` that multiplies
+crew income, every tap and spacebar strike, and pickup gold collected while it runs
+(`goldRateBase` / `goldPerTapBase` are the values before it). The rich-seam event keeps
+`mul_gold_temp`, crew income only, so the pre-pickup economy is unchanged by the verb.
+Offline pay uses the pre-buff crew rate.
 
 - **Spawning.** Rolled once per `checkSeconds` of sim time on the same clock as events
   (`E.tickPickups`, wired through `GD.ctx.onStep` in `E.substep`, so the live loop and
@@ -228,7 +244,7 @@ non-timed verb, or a hit target under 40 CSS px all fail loud).
   `mul_rate_temp` verbs and id `pickup:<buff>`, so they end on sim time like events do. A
   second chest of the same buff refreshes the timer rather than stacking. Timed effects are
   not saved (never were), so a buff does not survive a reload. The active buff shows as a
-  chip under the depth readout ("INCOME x3 27s"). No free-crits buff: there is no crit
+  chip under the depth readout ("ALL GOLD x3 27s"). No free-crits buff: there is no crit
   mechanic in the engine to hang it on.
 - **Input.** A click or tap on a pickup collects it (a geode loses a click and cracks) and
   is NOT a vein strike. The drag threshold still wins: a drag pans and never collects.
@@ -254,17 +270,18 @@ hitRadiusPx}` with x/y the CLIENT-space centre, ready for `pointerdown`/`pointer
 spawn the moment it appears and cracks geodes through. Results carry `pickupStats` and
 `allFinite`.
 
-### M5 economy (seed 1, `GD.simulate`)
+### M5 economy (seed 1, `GD.simulate`, after the 2026-09-23 economy pass)
 | Run | Ending | maxGap | First 600 s | Peak gold | Band cadence min/median/max |
 |---|---|---|---|---|---|
-| cheapest, pickups off | 9,837 s (164 min) | 296 | 24 | 134,913 | 1348 / 3077 / 3463 s |
-| cheapest, collect-all | 9,013 s (150 min) | 261 | 26 | 147,318 | 1241 / 2716 / 3203 s |
-| max-buy, pickups off | 5,623 s (94 min) | 193 | 38 | 197,889 | 881 / 1454 / 2402 s |
-| max-buy, collect-all | 5,451 s (91 min) | 186 | 38 | 197,101 | 834 / 1428 / 2339 s |
+| cheapest, pickups off | 9,146 s (152 min) | 288 | 24 | 128,006 | 1328 / 2779 / 3186 s |
+| cheapest, collect-all | 8,194 s (137 min) | 265 | 28 | 161,803 | 1189 / 2468 / 2807 s |
+| max-buy, pickups off | 6,477 s (108 min) | 180 | 38 | 341,431 | 857 / 2064 / 2202 s |
+| max-buy, collect-all | 5,953 s (99 min) | 145 | 41 | 409,650 | 806 / 1860 / 1968 s |
 
-All values finite. Across seeds 1-12, collect-all holds: max-buy 5,421-5,573 s, cheapest
-maxGap 254-297 s. Collect-all paid 141 gems / 44 geodes / 15 chests (581K gold) in the
-cheapest run and 89 / 23 / 13 (359K) under max-buy.
+All values finite. Across seeds 1-12: cheapest off 8,978-9,218 s (maxGap <= 289),
+cheapest collect-all 8,111-8,424 s (<= 287), max-buy off 6,417-6,564 s (<= 181), max-buy
+collect-all 5,658-6,116 s (<= 194). Collect-all paid 99 gems / 40 geodes / 12 chests
+(860K gold) in the cheapest run and 70 / 28 / 12 (2.30M) under max-buy.
 
 ## Tuning log (M5)
 Pickups only, JSON only. The core curve is untouched.
@@ -280,10 +297,33 @@ Pickups only, JSON only. The core curve is untouched.
 - The cheapest-affordable maxGap already sits at 296-298 s without pickups (a silver-band
   price-ladder cluster around 30K). Pickups perturb it both ways; a grid over 12 seeds
   picked the settings that keep every seed under 300.
-- Final: gem 1.2/min x0.92/band, 25-tap floor, 40 s passive, x1.03/band payout; geode
+- First ship (superseded by the economy pass below): gem 1.2/min x0.92/band, 25-tap floor, 40 s passive, x1.03/band payout; geode
   0.25/min, gold 40 taps / 90 s; chest 0.1/min; frenzy dig x1.5 for 10 s (+0.5 s/band);
   income x3 for 30 s (+3 s/band). Passive-only, so income x3 costs the window nothing and
   makes the INCOME stat jump visibly.
 - Peak gold stays ~150K-200K (open question for Peter, not chased).
 - If pickups feel thin in playtest, the lever is the max-buy baseline, not the pickups:
   the window only has ~220 s of headroom to give.
+
+### Economy pass (2026-09-23, Peter: chests multiply all gold, gems scale with real income)
+Converged with the simulate harness over 12 seeds. Before -> after:
+- Chest gold buff: `mul_gold_temp` "income x3 for 30 s (+3 s/band)", crew only ->
+  new verb `mul_gold_all_temp` "all gold x3 for 25 s (+2 s/band)", every gold source.
+- Gem: 1.2/min, max(40 s of PASSIVE income, 25 taps) -> 0.8/min, max(20 s of REAL
+  earnings, 25 taps). Measured in the live game at silver: a gem = 21.2 s of real earnings
+  (20 s x 1.03^2 band).
+- Geode gold: max(90 s passive, 40 taps) -> max(40 s of real earnings, 40 taps).
+- New JSON: `pickups.earnWindowS` 30, `pickups.earnCapTapsPerSec` 16.
+- Core curve (the nudge Peter accepted): Nix Blackcandle base 150,000 -> 500,000; Drill
+  Bit mul_rate 1.10 -> 1.12 (row text "10%" -> "12%").
+- Why those two: on the real-earnings basis the first cut put max-buy + collect-all at
+  4,416 s. The binding pair is cheapest-off (ceiling 10,800) against max-buy + collect-all
+  (floor 5,400), and their ratio was already 1.80, so slowing everything could not hold
+  both. Nix's cost slows max-buy only (the cheapest policy never reaches Nix before the
+  ending), and a stronger Drill Bit speeds the slow player more and shortens the
+  cheapest run's silver-band gaps (maxGap 296-298 -> 288-289, the first real margin under
+  300 since the rebalance).
+- Result: max-buy + collect-all 99 min at seed 1 (94-102 min across seeds), cheapest off
+  164 -> 152 min, max-buy off 94 -> 108 min. Peak gold rises under max-buy (~198K ->
+  341K off, 410K collect-all) and falls slightly for cheapest-off (135K -> 128K). Not
+  chased; still Peter's open ceiling question.
