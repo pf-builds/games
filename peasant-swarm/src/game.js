@@ -67,7 +67,7 @@
 
   // ---------------------------------------------------------------- setup
   async function boot() {
-    const res = await fetch("config.json?v=23");
+    const res = await fetch("config.json?v=24");
     S.cfg = await res.json();
     S.spr = PS.buildSprites(S.cfg);
     PS.terrain.init(S.cfg); PS.flow.init(S.cfg); PS.fog.init(S.cfg);

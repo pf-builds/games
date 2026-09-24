@@ -496,7 +496,7 @@
     "underdogRatio": 0.3,
     "closeTo": 500,
     "pairRadius": 500,
-    "fullFlip": true
+    "fullFlip": false
   },
   "input": {
     "desktopMode": "route",
