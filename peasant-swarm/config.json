@@ -783,7 +783,7 @@
     "melee": { "max": 0.1, "full": 400, "k0": 8, "hz": 450, "q": 0.7, "tau": 0.6, "every": 0.1 },
     "recruit": { "gapMs": 90, "peak": 0.12 },
     "drum": { "step": 0.17, "ahead": 0.1, "kickPeak": 0.22, "kickDur": 0.3, "kickFloor": 0.03, "tickPeak": [0.04, 0.07], "tickHz": [1500, 1000], "tickDur": [0.03, 0.06], "tickLp": 3000 },
-    "murmur": { "hz": [92, 104, 123, 139, 166], "detune": 0.015, "drift": 0.01, "lp": 520, "max": 0.34, "full": 400, "k0": 2, "tau": 0.4, "am": [0.3, 1], "amSec": [0.6, 1.8] },
+    "murmur": { "hz": [92, 104, 123, 139, 166], "detune": 0.015, "drift": 0.01, "lp": 520, "max": 0, "full": 400, "k0": 2, "tau": 0.4, "am": [0.3, 1], "amSec": [0.6, 1.8] },
     "qa": { "sceneN": 700, "sceneSeconds": 20, "sampleRate": 44100, "flatHz": [50, 10000], "highHz": 2000, "flatMax": 0.35, "highMax": 0.25, "noiseMax": 0.25 }
   },
   "_units": {

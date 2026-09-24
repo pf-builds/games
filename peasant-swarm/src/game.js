@@ -75,7 +75,7 @@
   const portal = (ev) => (PS.portal ? PS.portal.call(ev) : Promise.resolve()); // src/portal.js: a no-op unless ?portal=crazygames|poki
   async function boot() {
     try { await portal("init"); } catch (e) {} portal("loadingStart");
-    const res = await fetch("config.json?v=31");
+    const res = await fetch("config.json?v=32");
     S.cfg = await res.json(); PS.audio.configure(S.cfg.audio);
     S.spr = PS.buildSprites(S.cfg);
     SPL = PS.Spoils(spoilsHooks()); SCR = PS.Screens(S.cfg);
