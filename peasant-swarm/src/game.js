@@ -1925,6 +1925,7 @@
   // leakTotals() sums every checked frame (every live frame under ?debug=1); structure() counts full-screen alpha draws over 10 frames;
   // cost() is the per-frame fog JS (render side plus the stamps of the ticks each frame ran) over the last 720 frames.
   const pctA = (a, p) => (a.length ? pct(a, p) : 0);
+  const trimMean = (a, stallMs) => { const ok = stallMs > 0 ? a.filter((v) => v <= stallMs) : a; return { meanTrim: ok.length ? +(ok.reduce((x, y) => x + y, 0) / ok.length).toFixed(3) : 0, stalls: a.length - ok.length }; }; // see PS.vis.cost
   const VIS = {
     sees: (team, x, y) => PS.fog.sees(team, x, y),
     seesAgent: (team, a) => !!a && !a.dead && (a.team === team || PS.fog.sees(team, a.x, a.y)),
@@ -1950,11 +1951,14 @@
       const fs = PS.fog.fogSize, c = countFrame(10), U = PS.fog.ST;
       return { fogW: fs[0], fogH: fs[1], cssW: fs[2], cssH: fs[3], quarter: fs[0] <= Math.ceil(fs[2] / 4) && fs[1] <= Math.ceil(fs[3] / 4), layers: c.layers, drawImage: c.drawImage, uploads: U.uploads, forced: U.forced, uploadMs: +U.upMs.toFixed(2), uploadCells: U.cells, holes: PS.fog.RS.holes };
     },
-    cost() {
+    // stallMs (QA, optional): frames above it are counted as stalls and left out of meanTrim. Under CDP throttling in a synchronous loop the
+    // renderer sometimes waits 250+ ms on the GPU process inside whatever canvas call is next (measured: the same stalls hit frames whose
+    // fog JS was 2 ms), so one stall landing in a fog segment would otherwise decide the mean
+    cost(stallMs) {
       const n = Math.min(fcostN, FCOST.length), a = Array.from(FCOST.subarray(0, n)), FS = S.fogS, U = PS.fog.ST;
       const part = (k) => { const v = []; for (let i = 0; i < n; i++) v.push(FPART[i * 4 + k]); return { p50: pctA(v, 0.5), p90: pctA(v, 0.9), mean: n ? +(v.reduce((x, y) => x + y, 0) / n).toFixed(3) : 0 }; };
       return { frames: n, p50: pctA(a, 0.5), p90: pctA(a, 0.9), p99: pctA(a, 0.99), max: n ? +Math.max(...a).toFixed(3) : 0, last: +fogLastMs.toFixed(3), mean: n ? +(a.reduce((x, y) => x + y, 0) / n).toFixed(3) : 0,
-        parts: { stamps: part(0), visibility: part(1), fogPass: part(2), tells: part(3) },
+        ...trimMean(a, stallMs), parts: { stamps: part(0), visibility: part(1), fogPass: part(2), tells: part(3) },
         stampMsPerTick: FS ? +(FS.simTotal / Math.max(1, FS.simTicks)).toFixed(4) : 0, stampMax: FS ? +FS.simMax.toFixed(3) : 0, uploads: U.uploads, forced: U.forced, uploadMs: +U.upMs.toFixed(2) };
     },
     resetCost() { fcostN = 0; FCOST.fill(0); FPART.fill(0); const FS = S.fogS; if (FS) { FS.simMs = 0; FS.simTotal = 0; FS.simTicks = 0; FS.simMax = 0; } const U = PS.fog.ST; U.uploads = 0; U.forced = 0; U.upMs = 0; U.cells = 0; return true; },
@@ -2412,7 +2416,7 @@
         const cnt = countFrame(10);
         let onScreen = 0; const z = S.cam.zoom, hw = S.vw / 2 / z, hh = S.vh / 2 / z; for (const a of S.agents) if (Math.abs(a.x - S.cam.x) < hw && Math.abs(a.y - S.cam.y) < hh) onScreen++;
         const mean = (a) => +(a.reduce((s, v) => s + v, 0) / a.length).toFixed(3);
-        const fog = { mode: fogMode, p50: pct(fg, 0.5), p90: pct(fg, 0.9), p99: pct(fg, 0.99), mean: fg.length ? +(fg.reduce((x, y) => x + y, 0) / fg.length).toFixed(3) : 0, stampMsPerTick: +((S.fogS.simTotal - st0) / Math.max(1, S.fogS.simTicks - stN0)).toFixed(4), holes: PS.fog.RS.holes, drawnPerFrame: Math.round(drawnSum / Math.max(1, fg.length)) };
+        const fog = { mode: fogMode, p50: pct(fg, 0.5), p90: pct(fg, 0.9), p99: pct(fg, 0.99), mean: fg.length ? +(fg.reduce((x, y) => x + y, 0) / fg.length).toFixed(3) : 0, ...trimMean(fg, opts.stallMs), stampMsPerTick: +((S.fogS.simTotal - st0) / Math.max(1, S.fogS.simTicks - stN0)).toFixed(4), holes: PS.fog.RS.holes, drawnPerFrame: Math.round(drawnSum / Math.max(1, fg.length)) };
         return { scene, build: "v2", fog, flush, ticks: up.length, agents: S.agents.length, onScreen, counts: S.teams.slice(1).map((t) => t.count), camps: L.camps.length + "/" + L.want, viewport: [S.vw, S.vh, S.dpr], zoom,
           spot: [Math.round(cx), Math.round(cy), c.blockedInClash, +c.open.toFixed(2)], terrainBad: S.dbg.terrainBad,
           update: { p50: pct(up, 0.5), p90: pct(up, 0.9), p99: pct(up, 0.99), mean: mean(up) }, draw: { p50: pct(dr, 0.5), p90: pct(dr, 0.9), p99: pct(dr, 0.99), mean: mean(dr) },
