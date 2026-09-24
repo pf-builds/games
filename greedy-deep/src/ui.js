@@ -3,10 +3,13 @@
 (function () {
   "use strict";
 
-  var CONFIG_VERSION = 22;
+  var CONFIG_VERSION = 25;
 
   var UI = (window.GDUI = {});
   var E = window.GDEngine, GD = window.GD;
+  // The gated hooks the game itself needs (welcome-back, settings reset, the debug overlay,
+  // the frame loop's speed/pause), claimed once at load; window.GD never exposes them.
+  var GI = GD.__claimInternal();
   var cfg = null;
   var els = {};
   var rafPending = false;
@@ -71,6 +74,7 @@
     els.rightRail = $("right-rail");
     els.muteBtn = $("mute-btn");
     els.settings = $("settings");
+    els.buffs = $("buffs");
 
     els.splash = $("splash");
     els.splashLogo = $("splash-logo");
@@ -79,6 +83,7 @@
     GD.hooks.onEvent = onEvent;
     GD.hooks.onBand = onBand;
     GD.hooks.onEnding = onEnding;
+    GD.hooks.onPickupClick = onPickupClick;
 
     // Particles (from staged GDParticles)
     if (window.GDParticles) {
@@ -87,7 +92,7 @@
     }
 
     window.GDRender.init(els.canvas, cfg);
-    window.GDSprites.ensure(GD.debug);
+    window.GDSprites.ensure(GI.debug);
     measureTitleCard();
     buildShop();
     buildRoster();
@@ -113,7 +118,7 @@
     });
     window.addEventListener("resize", layout);
     if (GD.state.goldEarnedTotal > 0 && els.hint) els.hint.classList.add("gone");
-    if (GD.debug) {
+    if (GI.debug) {
       els.overlay.classList.remove("hidden");
       els.overlay.classList.add("collapsed");
       els.overlay.addEventListener("click", function (e) {
@@ -130,9 +135,9 @@
   function resolveOffline() {
     if (!GD.loadedFromSave || !GD.savedAt) return;
     var elapsed = Date.now() - GD.savedAt;
-    var preview = GD.offlinePreview(elapsed);
+    var preview = GI.offlinePreview(elapsed);
     if (!(preview.gold > 0)) return;
-    var applied = GD.applyOffline(elapsed);
+    var applied = GI.applyOffline(elapsed);
     showWelcome(applied);
     try { if (window.GDAudio && !GD.state.prefs.muted) window.GDAudio.play("welcomeBack"); } catch (e) {}
   }
@@ -179,6 +184,75 @@
   }
 
   function var_gold() { return "#f2c14e"; }
+
+  // ------------------------------------------------------------ pickups (M5)
+  // Any overlay up (splash, settings, welcome-back, ending) blocks pickups: nothing is
+  // collected through it, and GD stops the spawn clock while it is showing.
+  function overlayOpen() {
+    if (els.splash && !els.splash.classList.contains("gone")) return true;
+    if (els.settings && !els.settings.classList.contains("hidden")) return true;
+    if (els.welcome && !els.welcome.classList.contains("hidden")) return true;
+    if (els.ending && !els.ending.classList.contains("hidden")) return true;
+    return false;
+  }
+  UI.overlayOpen = overlayOpen;
+
+  // Floaters from pickups collected close together would print on top of each other at
+  // the wall (they clamp to the same edge strip). Remember the last few, allocated once,
+  // and lift a new one above any still rising near the same spot.
+  var recentFloat = [{ x: 0, y: 0, t: -1e9 }, { x: 0, y: 0, t: -1e9 }, { x: 0, y: 0, t: -1e9 }, { x: 0, y: 0, t: -1e9 }];
+  var recentFloatI = 0;
+  function staggerFloaterY(fx, fy, J) {
+    var now = performance.now() / 1000, step = J.floaterSize * 1.4, guard = 0, moved = true;
+    while (moved && guard++ < recentFloat.length) {
+      moved = false;
+      for (var i = 0; i < recentFloat.length; i++) {
+        var r = recentFloat[i];
+        if (now - r.t > J.floaterLife) continue;
+        // a floater rises ~22 bu/s, so compare against where the older one is now
+        var ry = r.y - 22 * (now - r.t);
+        if (Math.abs(r.x - fx) < 48 && Math.abs(ry - fy) < step) { fy = ry - step; moved = true; }
+      }
+    }
+    fy = Math.max(J.floaterSize + 12, fy);   // never up under the depth readout
+    var slot = recentFloat[recentFloatI];
+    recentFloatI = (recentFloatI + 1) % recentFloat.length;
+    slot.x = fx; slot.y = fy; slot.t = now;
+    return fy;
+  }
+
+  // Pop + floater at the pickup, a log line for chests and geodes. Event-driven, so the
+  // few objects made here are per click, never per frame.
+  function onPickupClick(res) {
+    var pk = cfg.pickups, J = pk.juice, P = pk.palette;
+    var bx = res.xBu, by = window.GDRender.screenYBu(res.yBu);
+    var ty = E.pickupType(cfg, res.type), label = ty ? ty.label : res.type;
+    var col = res.kind === "gem" ? P.gem.light : (res.kind === "chest" ? P.chest.band : P.geode.crystalLit);
+    if (!res.done) {
+      window.GDRender.flashPickup(res.id);
+      if (particleSystem) particleSystem.burst(bx, by, P.geode.rockDark, J.crackChunks, J.crackSpeed, J.popLife, J.popSize, J.popGravity);
+      refresh();
+      return;
+    }
+    if (particleSystem) {
+      particleSystem.burst(bx, by, col, J.popChunks, J.popSpeed, J.popLife, J.popSize, J.popGravity);
+      particleSystem.ring(bx, by, col, J.ringR0, J.ringR1, J.ringLife);
+      if (res.gems) for (var r = 1; r < J.gemBurstRings; r++) particleSystem.ring(bx, by, P.gem.light, J.ringR0 + r * 4, J.ringR1 + r * 6, J.ringLife + r * 0.1);
+    }
+    var text;
+    if (res.buff) text = label + ": " + res.buff.label + " for " + Math.round(res.buffSeconds) + " s";
+    else if (res.gems) text = label + ": " + res.gems + " gems +" + GD.format(res.gold);
+    else text = label + " +" + GD.format(res.gold);
+    var short = res.buff ? res.buff.label + " " + Math.round(res.buffSeconds) + "s" : (res.gems ? res.gems + " gems +" : label + " +") + GD.format(res.gold);
+    if (floaterSystem) {
+      // keep the floater on the canvas: the walls sit at the edges of a 160 bu column
+      var half = short.length * J.floaterSize * 0.42;   // bold glyph ~0.6 em at the 1.3x pop-in scale
+      var fx = Math.max(half + 2, Math.min(cfg.layout.columnBu - cfg.layout.ribbonBu - half - 2, bx));
+      floaterSystem.add(fx, staggerFloaterY(fx, by - 6, J), short, col, J.floaterSize, J.floaterLife);
+    }
+    if (res.kind !== "gem") pushLog(text, "boon");
+    refresh();
+  }
 
   function onEnding(st, m) {
     // Start the canvas-drawn ending scene (item 4)
@@ -401,11 +475,11 @@
 
   function measureTitleCard() {
     var tc = cfg.titleCard;
-    if (!tc || !tc.src) { GD.dbg.titleCardBytes = 0; return; }
+    if (!tc || !tc.src) { GI.dbg.titleCardBytes = 0; return; }
     fetch(tc.src, { cache: "force-cache" })
       .then(function (r) { return r.ok ? r.blob() : null; })
-      .then(function (b) { GD.dbg.titleCardBytes = b ? b.size : 0; })
-      .catch(function () { GD.dbg.titleCardBytes = 0; });
+      .then(function (b) { GI.dbg.titleCardBytes = b ? b.size : 0; })
+      .catch(function () { GI.dbg.titleCardBytes = 0; });
   }
 
   function dismissSplash() {
@@ -414,7 +488,7 @@
     var ms = (cfg.titleCard && cfg.titleCard.fadeMs) || 450;
     setTimeout(function () { els.splash.classList.add("off"); }, ms + 60);
     // First user gesture: unlock audio. Wrapped so an audio failure never blocks start.
-    try { unlockAudio(); } catch (e) { if (GD.debug) console.warn("[GD] audio unlock failed:", e); }
+    try { unlockAudio(); } catch (e) { if (GI.debug) console.warn("[GD] audio unlock failed:", e); }
   }
   UI.dismissSplash = dismissSplash;
 
@@ -664,7 +738,7 @@
 
     var resetYes = $("reset-yes");
     if (resetYes) resetYes.addEventListener("click", function () {
-      GD._clearSave();
+      GI.clearSave();
       closeSettings();
       buildRoster();
       if (isDesktop) buildDesktopRails();
@@ -716,7 +790,9 @@
     if (!str) return;
     var area = $("export-area");
     if (area) { area.classList.remove("hidden"); area.value = str; area.select(); }
-    try { navigator.clipboard.writeText(str); } catch (e) { /* fallback: textarea is visible */ }
+    // writeText rejects asynchronously (unfocused document, no permission), which a try
+    // never sees; the textarea above is the fallback either way.
+    try { navigator.clipboard.writeText(str).catch(function () {}); } catch (e) { /* no clipboard API */ }
   }
 
   function doImport() {
@@ -808,6 +884,10 @@
       var d = down; down = null;
       window.GDRender.cameraRelease();
       if (moved) return;
+      if (overlayOpen()) return;
+      // M5: a click on a pickup collects it and is NOT also a strike on the vein.
+      var pid = window.GDRender.pickupAt(d.lx, d.ly);
+      if (pid) { GD.clickPickup(pid); return; }
       doStrike(d.lx, d.ly);
     }
     els.canvas.addEventListener("pointerup", endPointer);
@@ -908,8 +988,8 @@
   }
 
   function advance(dtReal) {
-    if (GD.paused) return;
-    acc += dtReal * (GD.timeScale || 1);
+    if (GI.sim.paused) return;
+    acc += dtReal * (GI.sim.timeScale || 1);
     var dt = cfg.sim.dt;
     var guard = 0;
     while (acc >= dt && guard++ < 600) { E.substep(cfg, GD.state, dt, GD.ctx); acc -= dt; }
@@ -984,9 +1064,10 @@
       }
     }
     renderNextBands(d);
+    renderBuffs();
     placeHint();
-    GD.refreshDbg(fps);
-    if (GD.debug && els.overlay) {
+    if (GI.debug) GI.refreshDbg(fps);
+    if (GI.debug && els.overlay) {
       var A = window.GDAudio;
       els.overlay.textContent =
         "t " + st.t.toFixed(1) + "  fps " + fps +
@@ -994,16 +1075,16 @@
         "\ngold " + st.gold.toFixed(2) + "  +" + d.goldRate.toFixed(3) + "/s" +
         "\nm/s " + d.digRate.toFixed(4) + "  tap " + d.goldPerTap.toFixed(2) +
         "\ntotal " + st.goldEarnedTotal.toFixed(1) + "  crew " + d.dwarves +
-        "\ncamY " + GD.dbg.cameraY.toFixed(0) + "  crew@ " + GD.dbg.deepestDwarfY.toFixed(0) +
-          "  d " + Math.abs(GD.dbg.cameraY - GD.dbg.deepestDwarfY).toFixed(1) + "bu" +
-        "\nreveal +" + d.revealBonus + "  drawn<=" + GD.dbg.maxRenderedBandIndex +
-          "  fwd " + GD.dbg.forwardMeters.toFixed(0) + "m  veil " + GD.dbg.veilAlpha.toFixed(2) +
-        "\ntimed " + st.timed.length +
+        "\ncamY " + GI.dbg.cameraY.toFixed(0) + "  crew@ " + GI.dbg.deepestDwarfY.toFixed(0) +
+          "  d " + Math.abs(GI.dbg.cameraY - GI.dbg.deepestDwarfY).toFixed(1) + "bu" +
+        "\nreveal +" + d.revealBonus + "  drawn<=" + GI.dbg.maxRenderedBandIndex +
+          "  fwd " + GI.dbg.forwardMeters.toFixed(0) + "m  veil " + GI.dbg.veilAlpha.toFixed(2) +
+        "\ntimed " + st.timed.length + "  pickups " + (GD.pickups ? GD.pickups.live + " live, " + GD.pickups.collected + " got" : "-") +
         "\nev " + st.eventsFired + " last " + (st.lastEvent || "-") +
         "\nowned " + JSON.stringify(st.owned) +
-        "\ncard " + GD.dbg.titleCardBytes + "b  sprites " +
-          GD.dbg.spriteCacheOpaque + "/" + GD.dbg.spriteCacheTotal +
-          " rb" + GD.dbg.spriteCacheRebuilds +
+        "\ncard " + GI.dbg.titleCardBytes + "b  sprites " +
+          GI.dbg.spriteCacheOpaque + "/" + GI.dbg.spriteCacheTotal +
+          " rb" + GI.dbg.spriteCacheRebuilds +
         "\nnextUnlock " + (function() {
           var best = null;
           var list2 = E.purchasables(cfg);
@@ -1015,9 +1096,25 @@
         })() +
         "\naudio " + (A ? (A.isMuted() ? "MUTED" : "gain=" + (A.masterGainValue() || 0).toFixed(2)) : "n/a") +
           "  last=" + (A ? (A.lastCue || "-") : "-") +
-        "\nsave " + GD.dbg.saveSize + "b  err " + GD.dbg.errors + "/" + GD.dbg.warnings +
-        "\nFLAVOR-TODO " + GD.dbg.flavorTodoCount;
+        "\nsave " + GI.dbg.saveSize + "b  err " + GI.dbg.errors + "/" + GI.dbg.warnings +
+        "\nFLAVOR-TODO " + GI.dbg.flavorTodoCount;
     }
+  }
+
+  // Active pickup buffs with a whole-second countdown. Rewritten only when the text changes.
+  var lastBuffKey = "";
+  function renderBuffs() {
+    if (!els.buffs) return;
+    var list = GD.activeBuffs(), key = "";
+    for (var i = 0; i < list.length; i++) key += (i ? "|" : "") + list[i].label + " " + list[i].secondsLeft;
+    if (key === lastBuffKey) return;
+    lastBuffKey = key;
+    var html = "";
+    for (var j = 0; j < list.length; j++) {
+      html += '<div class="buff buff-' + list[j].id + '"><b>' + list[j].label.toUpperCase() + "</b><span>" + list[j].secondsLeft + "s</span></div>";
+    }
+    els.buffs.innerHTML = html;
+    els.buffs.classList.toggle("hidden", !list.length);
   }
 
   var lastNextKey = "";

@@ -291,6 +291,23 @@ body.booting #col { opacity: 0; }
 #bandintro.hidden { display: none; }
 @keyframes introfade { 0% { opacity: 0; transform: translate(-50%, -6px); } 12% { opacity: 1; transform: translate(-50%, 0); } 80% { opacity: 1; } 100% { opacity: 0; } }
 
+/* M5: active pickup buffs, top-right of the shaft under the depth readout */
+#buffs {
+  position: absolute; right: calc(9px * var(--s)); top: calc(14px * var(--s));
+  display: flex; flex-direction: column; align-items: flex-end; gap: calc(1px * var(--s));
+  pointer-events: none; z-index: 3; line-height: 1.2;
+}
+#buffs.hidden { display: none; }
+.buff {
+  display: flex; align-items: baseline; gap: calc(2px * var(--s));
+  background: rgba(8,6,14,.82); border: 1px solid #6b5420; border-radius: 3px;
+  padding: calc(1px * var(--s)) calc(3px * var(--s));
+  font-size: calc(4.5px * var(--s)); letter-spacing: .06em; color: var(--gold);
+}
+.buff b { font-weight: 700; }
+.buff span { color: #e9dcb6; font-variant-numeric: tabular-nums; }
+.buff-frenzy { border-color: #3c6a86; color: #9fdcff; }
+
 #log {
   background: #100d18;
   padding: calc(2px * var(--s)) calc(4px * var(--s));

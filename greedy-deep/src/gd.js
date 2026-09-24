@@ -5,7 +5,7 @@
 
   var E = window.GDEngine;
   var GD = (window.GD = {
-    version: "0.4.0-m4",
+    version: "0.5.0-m5",
     config: null,
     state: null,
     ready: false,
@@ -19,32 +19,58 @@
       dwarfCache: 0, dwarfLoadouts: 0, placeholderRects: 0,
       spriteCacheOpaque: 0, spriteCacheTotal: 0, spriteCacheRebuilds: 0, spriteCacheBlank: [],
       outlineFailures: 0, logoRedraws: 0,
-      audioMasterGain: 0, lastCue: null
+      audioMasterGain: 0, lastCue: null,
+      pickups: [], pickupStats: null, buffs: []
     },
     // The live loop passes these through to the engine so the UI can react to
     // events, band changes and the ending without the engine knowing about DOM.
-    hooks: { onEvent: null, onBand: null, onEnding: null },
+    hooks: { onEvent: null, onBand: null, onEnding: null, onPickupSpawn: null, onPickupExpire: null, onPickupClick: null },
+    // M5: the transient pickup field. Never saved; rebuilt on reset, config swap, clear.
+    pickups: null,
     audio: {
       get muted() { return window.GDAudio ? window.GDAudio.isMuted() : false; },
       set muted(v) { if (window.GDAudio) window.GDAudio.setMuted(v); }
     }
   });
 
+  // -------------------------------------------------- the debug gate (see the end of file)
+  // Cheat and QA hooks live on `D`, the debug snapshot in the module-local `dbg`, and the
+  // sim-speed and tab-visibility overrides in locals. `attachDebug()` at the bottom puts
+  // them on window.GD only when ?debug=1 was on at boot; the plain URL never sees them.
+  var dbg = GD.dbg;
+  delete GD.dbg;
+  var D = {};
+  var sim = { timeScale: 1, paused: false };
+  var visOverride = null;
+  Object.defineProperty(GD, "debug", { value: GD.debug, writable: false, enumerable: true });
+
   GD.ctx = {
     rng: null, // null = engine default rng
     onEvent: function (e, st) { if (GD.hooks.onEvent) GD.hooks.onEvent(e, st); },
     onBand: function (b, prev, st) { if (GD.hooks.onBand) GD.hooks.onBand(b, prev, st); },
-    onEnding: function (st, m) { if (GD.hooks.onEnding) GD.hooks.onEnding(st, m); }
+    onEnding: function (st, m) { if (GD.hooks.onEnding) GD.hooks.onEnding(st, m); },
+    // M5: pickups tick on the same sim clock as everything else (live loop and D.step).
+    onStep: function (dt, d) {
+      if (GD.pickups) E.tickPickups(GD.config, GD.pickups, GD.state, dt, d, pickupRng, !GD.pickupsBlocked(), GD.hooks);
+    }
   };
+
+  // Pickups roll on their own rng so they never shift the event rng's sequence.
+  var pickupRng = E.makeRng(1);
+  function resetPickups() {
+    var seed = GD.config.sim.seed === undefined ? 1 : GD.config.sim.seed;
+    pickupRng = E.makeRng((seed ^ 0x51CC) >>> 0);
+    GD.pickups = E.newPickupField(GD.config);
+  }
 
   // -------------------------------------------------- console error counter
   // "zero console errors/warnings" needs a number, not a vibe.
   (function hookConsole() {
     var ce = console.error.bind(console), cw = console.warn.bind(console);
-    console.error = function () { GD.dbg.errors++; GD.dbg.lastError = String(arguments[0]); ce.apply(null, arguments); };
-    console.warn = function () { GD.dbg.warnings++; cw.apply(null, arguments); };
-    window.addEventListener("error", function (e) { GD.dbg.errors++; GD.dbg.lastError = e.message || "error"; });
-    window.addEventListener("unhandledrejection", function () { GD.dbg.errors++; GD.dbg.lastError = "unhandled rejection"; });
+    console.error = function () { dbg.errors++; dbg.lastError = String(arguments[0]); ce.apply(null, arguments); };
+    console.warn = function () { dbg.warnings++; cw.apply(null, arguments); };
+    window.addEventListener("error", function (e) { dbg.errors++; dbg.lastError = e.message || "error"; });
+    window.addEventListener("unhandledrejection", function () { dbg.errors++; dbg.lastError = "unhandled rejection"; });
   })();
 
   // -------------------------------------------------- lifecycle
@@ -57,20 +83,22 @@
     GD.state = loaded || E.newState(cfg);
     GD.loadedFromSave = !!loaded;
     GD.savedAt = loaded ? window.GDSave.savedAt(cfg) : 0;
-    GD.dbg.flavorTodoCount = E.flavorTodoCount(cfg);
+    dbg.flavorTodoCount = E.flavorTodoCount(cfg);
+    resetPickups();
     GD.ready = true;
     return GD.state;
   };
 
   // Swap the whole config at runtime. This is the content-as-data escape hatch:
   // a fifth ore or a fifth dwarf arrives as JSON and nothing in JS changes.
-  GD.setConfig = function (cfg, keepState) {
+  D.setConfig = function (cfg, keepState) {
     var v = E.validateConfig(cfg);
     if (!v.ok) return { ok: false, errors: v.errors };
     var prevState = keepState ? E.cloneState(GD.state) : null;
     GD.config = cfg;
     GD.state = prevState || E.newState(cfg);
-    GD.dbg.flavorTodoCount = E.flavorTodoCount(cfg);
+    dbg.flavorTodoCount = E.flavorTodoCount(cfg);
+    resetPickups();
     if (window.GDRender && window.GDRender.setConfig) window.GDRender.setConfig(cfg);
     if (window.GDUI && window.GDUI.rebuild) window.GDUI.rebuild();
     return { ok: true };
@@ -78,15 +106,16 @@
 
   // reset() also reseeds the shared event rng to config.sim.seed, so
   // `reset(); step(3600)` equals `reset(); 3600 x step(1)` with no extra ceremony.
-  // GD.seed(n) overrides it until the next reset (critic M2, MINOR 2).
-  GD.reset = function () {
+  // D.seed(n) overrides it until the next reset (critic M2, MINOR 2).
+  D.reset = function () {
     E.setSeed(GD.config.sim.seed === undefined ? 1 : GD.config.sim.seed);
     GD.state = E.newState(GD.config);
+    resetPickups();
     return E.snapshot(GD.config, GD.state);
   };
 
   GD.getState = function () { return E.cloneState(GD.state); };
-  GD.setState = function (s) {
+  D.setState = function (s) {
     var fresh = E.newState(GD.config);
     if (s && typeof s === "object") {
       if (typeof s.depth === "number") fresh.depth = s.depth;
@@ -112,7 +141,7 @@
 
   // -------------------------------------------------- core API
   // Synchronous sim advance. Fixed sub-steps of sim.dt. No rAF, no DOM, no audio.
-  GD.step = function (seconds) {
+  D.step = function (seconds) {
     E.advance(GD.config, GD.state, seconds, GD.ctx);
     return E.snapshot(GD.config, GD.state);
   };
@@ -121,7 +150,7 @@
     var g = E.tap(GD.config, GD.state, times);
     // Record the cue request (item 1): tap always requests "strike"
     if (!GD.state.prefs.muted && window.GDAudio) window.GDAudio.play("strike");
-    else if (!GD.state.prefs.muted) { GD.dbg.lastCue = "strike"; }
+    else if (!GD.state.prefs.muted) { dbg.lastCue = "strike"; }
     return g;
   };
   GD.buy = function (id) {
@@ -129,10 +158,10 @@
     if (r.ok && !GD.state.prefs.muted) {
       var cue = E.isDwarf(GD.config, id) ? "hire" : "buy";
       if (window.GDAudio) window.GDAudio.play(cue);
-      else GD.dbg.lastCue = cue;
+      else dbg.lastCue = cue;
     } else if (!r.ok && !GD.state.prefs.muted) {
       if (window.GDAudio) window.GDAudio.play("denied");
-      else GD.dbg.lastCue = "denied";
+      else dbg.lastCue = "denied";
     }
     return r;
   };
@@ -148,7 +177,7 @@
     return (cost - gold) / rate;
   };
 
-  GD.simulate = function (opts) {
+  D.simulate = function (opts) {
     // Save and restore the engine RNG so simulate never affects the live game
     var savedRng = E.rng;
     var result = E.simulate(GD.config, opts);
@@ -156,16 +185,16 @@
     return result;
   };
 
-  GD.offlinePreview = function (elapsedMs, state) {
+  D.offlinePreview = function (elapsedMs, state) {
     return E.offlinePreview(GD.config, state || GD.state, elapsedMs);
   };
-  GD.applyOffline = function (elapsedMs) {
+  D.applyOffline = function (elapsedMs) {
     var p = E.applyOffline(GD.config, GD.state, elapsedMs, GD.ctx);
-    GD.dbg.offlineLast = p;
+    dbg.offlineLast = p;
     return p;
   };
 
-  GD.fire = function (eventId) {
+  D.fire = function (eventId) {
     var list = GD.config.events;
     for (var i = 0; i < list.length; i++) {
       if (list[i].id === eventId) return E.applyEvent(GD.config, GD.state, list[i], GD.ctx);
@@ -173,7 +202,7 @@
     return null;
   };
 
-  GD.jumpTo = function (depth) {
+  D.jumpTo = function (depth) {
     GD.state.depth = Math.max(0, depth);
     var b = E.bandAt(GD.config, GD.state.depth);
     if (b.id !== GD.state.bandId) {
@@ -186,11 +215,11 @@
     return GD.state.depth;
   };
 
-  GD.seed = function (n) { return E.setSeed(n); };
+  D.seed = function (n) { return E.setSeed(n); };
 
   GD.save = function () {
     var d = window.GDSave.write(GD.config, GD.state);
-    if (d) GD.dbg.saveSize = JSON.stringify(d).length;
+    if (d) dbg.saveSize = JSON.stringify(d).length;
     return d;
   };
 
@@ -207,85 +236,168 @@
     return result;
   };
 
-  GD.refreshDbg = function (fps) {
+  // -------------------------------------------------- pickups (M5)
+  // Nothing spawns or pays while the tab is hidden or an overlay (splash, settings,
+  // welcome-back, ending) is up. `_visibility` ("hidden" / "visible", null = the real
+  // document) lets selfTest, or a critic in a hidden browser pane, pin the tab state.
+  GD.isHidden = function () {
+    if (visOverride) return visOverride === "hidden";
+    return typeof document !== "undefined" && !!document.hidden;
+  };
+  GD.pickupsBlocked = function () {
+    if (GD.isHidden()) return "hidden";
+    if (window.GDUI && window.GDUI.overlayOpen && window.GDUI.overlayOpen()) return "overlay";
+    return "";
+  };
+
+  // Debug/test spawn: always places one (pool permitting), whatever the spawn gates say.
+  // opts: {x, y} in viewport bu, side (0 left, 1 right), ttl seconds, clicks.
+  D.spawnPickup = function (type, opts) {
+    var s = E.spawnPickup(GD.config, GD.pickups, GD.state, E.derive(GD.config, GD.state), type, pickupRng, opts);
+    if (!s) return null;
+    if (GD.hooks.onPickupSpawn) GD.hooks.onPickupSpawn(s);
+    D.refreshDbg();
+    return { id: s.id, type: s.type, ttl: s.ttl, clicks: s.clicks };
+  };
+
+  function pickupCue(res) {
+    var cue = res.kind === "geode" ? (res.done ? "geodeBurst" : "geodeCrack") : (res.kind === "chest" ? "chestOpen" : "gem");
+    if (GD.state.prefs.muted) return;
+    if (window.GDAudio) window.GDAudio.play(cue);
+    else dbg.lastCue = cue;
+  }
+
+  // One click on a pickup: the pointer path and the API share it, so both get the gate,
+  // the cue and the juice hook. A geode needs `clicks` of these; the rest need one.
+  GD.clickPickup = function (id) {
+    var blocked = GD.pickupsBlocked();
+    if (blocked) return { ok: false, reason: blocked, id: id };
+    var res = E.clickPickup(GD.config, GD.pickups, GD.state, id, pickupRng);
+    if (!res.ok) return res;
+    pickupCue(res);
+    if (GD.hooks.onPickupClick) GD.hooks.onPickupClick(res);
+    return res;
+  };
+  // Collect outright: clicks until it pays (geodes crack through). Bounded.
+  D.collectPickup = function (id, opts) {
+    var res = GD.clickPickup(id), guard = 0;
+    if (opts && opts.single) return res;
+    while (res.ok && !res.done && guard++ < 16) res = GD.clickPickup(id);
+    return res;
+  };
+
+  // Live pickups with their CLIENT-space centres, so a test can dispatch pointer events
+  // at them. Rebuilt on refreshDbg; the objects are reused, not reallocated.
+  var dbgPickups = [];
+  function refreshPickupDbg() {
+    var f = GD.pickups, out = dbg.pickups = dbgPickups, n = 0;
+    if (!f) { out.length = 0; return; }
+    var cv = document.getElementById("shaft");
+    var rect = cv ? cv.getBoundingClientRect() : { left: 0, top: 0 };
+    var R = window.GDRender;
+    for (var i = 0; i < f.slots.length; i++) {
+      var s = f.slots[i];
+      if (!s.active) continue;
+      var o = out[n] || (out[n] = {});
+      var c = R && R.pickupCss ? R.pickupCss(s) : { x: 0, y: 0, r: 0 };
+      o.id = s.id; o.type = s.type; o.ttl = +s.ttl.toFixed(2); o.clicksLeft = s.clicks; o.clicksMax = s.clicksMax;
+      o.x = Math.round(rect.left + c.x); o.y = Math.round(rect.top + c.y); o.hitRadiusPx = c.r;
+      n++;
+    }
+    out.length = n;
+    dbg.pickupStats = { live: f.live, spawned: f.spawned, collected: f.collected, expired: f.expired, goldPaid: f.goldPaid };
+  }
+
+  // Active pickup buffs with whole seconds left, for the buff chip and the critic.
+  GD.activeBuffs = function () {
+    var out = [], tl = GD.state.timed, bl = GD.config.pickups ? GD.config.pickups.buffs : [];
+    for (var i = 0; i < tl.length; i++) {
+      if (tl[i].until <= GD.state.t || String(tl[i].id).indexOf("pickup:") !== 0) continue;
+      for (var j = 0; j < bl.length; j++) {
+        if ("pickup:" + bl[j].id === tl[i].id) out.push({ id: bl[j].id, label: bl[j].label, verb: tl[i].verb, value: tl[i].value, secondsLeft: Math.ceil(tl[i].until - GD.state.t) });
+      }
+    }
+    return out;
+  };
+
+  D.refreshDbg = function (fps) {
     var d = E.derive(GD.config, GD.state);
-    GD.dbg.t = GD.state.t;
-    GD.dbg.depth = GD.state.depth;
-    GD.dbg.band = d.band.id;
-    GD.dbg.bandIndex = d.band.index;
-    GD.dbg.gold = GD.state.gold;
-    GD.dbg.goldRate = d.goldRate;
-    GD.dbg.digRate = d.digRate;
-    GD.dbg.dwarves = d.dwarves;
-    GD.dbg.owned = GD.state.owned;
-    GD.dbg.lastEvent = GD.state.lastEvent;
-    GD.dbg.eventsFired = GD.state.eventsFired;
-    GD.dbg.revealBonus = d.revealBonus;
-    GD.dbg.timed = GD.state.timed.length;
+    dbg.t = GD.state.t;
+    dbg.depth = GD.state.depth;
+    dbg.band = d.band.id;
+    dbg.bandIndex = d.band.index;
+    dbg.gold = GD.state.gold;
+    dbg.goldRate = d.goldRate;
+    dbg.digRate = d.digRate;
+    dbg.dwarves = d.dwarves;
+    dbg.owned = GD.state.owned;
+    dbg.lastEvent = GD.state.lastEvent;
+    dbg.eventsFired = GD.state.eventsFired;
+    dbg.revealBonus = d.revealBonus;
+    dbg.timed = GD.state.timed.length;
     if (window.GDRender && window.GDRender.lastPlan) {
       var pl = window.GDRender.lastPlan();
-      GD.dbg.maxRenderedBandIndex = pl.maxIndex;
-      GD.dbg.forwardMeters = pl.forwardMeters || 0;
-      GD.dbg.veilAlpha = pl.veilAlpha || 0;
-      GD.dbg.nextBands = (pl.nextBands || []).length;
+      dbg.maxRenderedBandIndex = pl.maxIndex;
+      dbg.forwardMeters = pl.forwardMeters || 0;
+      dbg.veilAlpha = pl.veilAlpha || 0;
+      dbg.nextBands = (pl.nextBands || []).length;
     }
     if (window.GDRender && window.GDRender.cameraState) {
       var cs = window.GDRender.cameraState();
-      GD.dbg.cameraY = cs.focusY;
-      GD.dbg.deepestDwarfY = cs.deepestDwarfY;
-      GD.dbg.cameraUserBu = cs.userBu;
+      dbg.cameraY = cs.focusY;
+      dbg.deepestDwarfY = cs.deepestDwarfY;
+      dbg.cameraUserBu = cs.userBu;
       var rs = window.GDRender.stats();
-      GD.dbg.placeholderRects = rs.placeholderRects;
+      dbg.placeholderRects = rs.placeholderRects;
     }
     if (window.GDSprites && window.GDSprites.stats) {
       var ss = window.GDSprites.stats();
-      GD.dbg.dwarfCache = ss.dwarfCache;
-      GD.dbg.dwarfLoadouts = ss.dwarfLoadouts;
-      GD.dbg.spriteCacheOpaque = ss.opaque;
-      GD.dbg.spriteCacheTotal = ss.total;
-      GD.dbg.spriteCacheRebuilds = ss.rebuilds;
-      GD.dbg.spriteCacheBlank = ss.blank.length;
-      GD.dbg.outlineFailures = ss.outlineFailures;
+      dbg.dwarfCache = ss.dwarfCache;
+      dbg.dwarfLoadouts = ss.dwarfLoadouts;
+      dbg.spriteCacheOpaque = ss.opaque;
+      dbg.spriteCacheTotal = ss.total;
+      dbg.spriteCacheRebuilds = ss.rebuilds;
+      dbg.spriteCacheBlank = ss.blank.length;
+      dbg.outlineFailures = ss.outlineFailures;
     }
-    if (fps !== undefined) GD.dbg.fps = fps;
+    if (fps !== undefined) dbg.fps = fps;
     if (window.GDRender && window.GDRender.renderSignature) {
-      GD.dbg.renderSignature = function () {
+      dbg.renderSignature = function () {
         return window.GDRender.renderSignature(GD.state, GD.derive());
       };
     }
     if (window.GDAudio) {
-      GD.dbg.audioMasterGain = window.GDAudio.masterGainValue();
-      GD.dbg.lastCue = window.GDAudio.lastCue;
+      dbg.audioMasterGain = window.GDAudio.masterGainValue();
+      dbg.lastCue = window.GDAudio.lastCue;
     }
+    refreshPickupDbg();
+    dbg.buffs = GD.activeBuffs();
   };
 
   // -------------------------------------------------- debug mutators (?debug=1)
-  GD.timeScale = 1;
-  GD.paused = false;
-  if (GD.debug) {
-    GD.setGold = function (n) { GD.state.gold = n; return n; };
-    GD.setDepth = function (n) { return GD.jumpTo(n); };
-    GD.grant = function (id, n) {
-      n = n === undefined ? 1 : n;
-      GD.state.owned[id] = (GD.state.owned[id] || 0) + n;
-      return GD.state.owned[id];
-    };
-    GD.pause = function () { GD.paused = true; };
-    GD.resume = function () { GD.paused = false; };
-    GD.clearSave = function () { return GD._clearSave(); };
-  }
+  D.setGold = function (n) { GD.state.gold = n; return n; };
+  D.setDepth = function (n) { return D.jumpTo(n); };
+  D.grant = function (id, n) {
+    n = n === undefined ? 1 : n;
+    GD.state.owned[id] = (GD.state.owned[id] || 0) + n;
+    return GD.state.owned[id];
+  };
+  D.pause = function () { sim.paused = true; };
+  D.resume = function () { sim.paused = false; };
+  D.clearSave = function () { return D._clearSave(); };
 
   // Clearing the key alone is not enough: the live state keeps ticking and the 5 s
   // autosave heartbeat (or visibilitychange on navigate) writes the old run straight
   // back. Reset the live state too, and tell the UI to drop its pending autosave.
-  GD._clearSave = function () {
+  D._clearSave = function () {
     var ok = window.GDSave.clear(GD.config);
     GD.state = E.newState(GD.config);
+    resetPickups();
     if (window.GDUI && window.GDUI.afterClearSave) window.GDUI.afterClearSave();
     return ok;
   };
 
-  GD.grantForTest = function (id, n) {
+  D.grantForTest = function (id, n) {
     GD.state.owned[id] = (GD.state.owned[id] || 0) + (n === undefined ? 1 : n);
     return GD.state.owned[id];
   };
@@ -293,7 +405,7 @@
   // -------------------------------------------------- selfTest (PRD 14)
   function approx(a, b, eps) { return Math.abs(a - b) <= (eps === undefined ? 1e-6 : eps); }
 
-  GD.selfTest = function (opts) {
+  D.selfTest = function (opts) {
     opts = opts || {};
     var cfg = GD.config;
     var failed = [], ran = 0;
@@ -303,7 +415,10 @@
     // selfTest drives the engine hard (jumpTo, fire, band crossings). Mute the UI
     // hooks for the duration so a test run never leaves a panel or a log line behind.
     var liveHooks = GD.hooks;
-    GD.hooks = { onEvent: null, onBand: null, onEnding: null };
+    GD.hooks = { onEvent: null, onBand: null, onEnding: null, onPickupSpawn: null, onPickupExpire: null, onPickupClick: null };
+    var livePickups = GD.pickups, liveVisibility = visOverride;
+    var liveMuted = window.GDAudio ? window.GDAudio.isMuted() : false;
+    var overlayIds = ["settings", "welcome", "ending"], overlayWasHidden = {};
 
     function bad3(mutate) {
       var c = JSON.parse(JSON.stringify(GD.config));
@@ -318,32 +433,32 @@
 
     try {
       // =========================================================== M1 block
-      GD.reset();
-      var s0 = GD.step(0);
+      D.reset();
+      var s0 = D.step(0);
       check("m1_reset_zero_gold", cfg.start.gold, s0.gold, s0.gold === cfg.start.gold);
       check("m1_reset_zero_depth", 0, s0.depth, s0.depth === 0);
 
-      GD.reset();
+      D.reset();
       var gpt = GD.derive().goldPerTap;
       for (var i = 0; i < 10; i++) GD.tap(1);
       check("m1_taps_pay_exact_gold", 10 * gpt, GD.state.gold, approx(GD.state.gold, 10 * gpt, 1e-9));
       check("m1_taps_never_dig", 0, GD.state.depth, GD.state.depth === 0);
       check("m1_taps_count_toward_lifetime", 10 * gpt, GD.state.goldEarnedTotal, approx(GD.state.goldEarnedTotal, 10 * gpt, 1e-9));
 
-      GD.reset();
-      var s600 = GD.step(600);
+      D.reset();
+      var s600 = D.step(600);
       check("m1_idle_no_gold_without_dwarves", 0, s600.gold, s600.gold === 0);
       check("m1_idle_no_depth_without_dwarves", 0, s600.depth, s600.depth === 0);
 
       var track = cfg.tracks[0];
-      GD.reset();
+      D.reset();
       GD.state.gold = track.base * 100;
       var b1 = GD.buy(track.id);
       var cost2 = GD.costOf(track.id);
       check("m1_first_purchase_cost_base", track.base, b1.cost, approx(b1.cost, track.base));
       check("m1_second_purchase_cost_ratio", track.base * track.ratio, cost2, approx(cost2, track.base * track.ratio));
 
-      GD.reset();
+      D.reset();
       GD.state.gold = track.base - 0.01;
       var goldBefore = GD.state.gold;
       var refused = GD.buy(track.id);
@@ -352,12 +467,12 @@
       check("m1_insufficient_owned_unchanged", 0, GD.state.owned[track.id] || 0, (GD.state.owned[track.id] || 0) === 0);
 
       var dwarf = cfg.dwarves[0];
-      GD.reset();
-      GD.grantForTest(dwarf.id, 2);
+      D.reset();
+      D.grantForTest(dwarf.id, 2);
       var d2 = GD.derive();
       var expRate = cfg.start.digRate + dwarf.effects[0].value * 2;
       check("m1_dwarf_digs", expRate, d2.digRate, approx(d2.digRate, expRate));
-      GD.step(10);
+      D.step(10);
       check("m1_depth_advances_from_digrate", expRate * 10, GD.state.depth, approx(GD.state.depth, expRate * 10, 1e-6));
 
       var raw = window.GDSave.readRaw(cfg);
@@ -369,9 +484,9 @@
       if (parsed) for (var k = 0; k < keys.length; k++) if (!(keys[k] in parsed)) missing.push(keys[k]);
       check("m1_save_shape", "no missing keys", missing.join(","), parsed && missing.length === 0);
 
-      GD.reset();
+      D.reset();
       GD.state.depth = 123.456; GD.state.gold = 4567.89; GD.state.goldEarnedTotal = 9999;
-      GD.grantForTest(track.id, 3); GD.grantForTest(dwarf.id, 2);
+      D.grantForTest(track.id, 3); D.grantForTest(dwarf.id, 2);
       window.GDSave.write(cfg, GD.state);
       var restored = window.GDSave.read(cfg);
       check("m1_reload_restores_depth", 123.456, restored && restored.depth, !!restored && Math.abs(restored.depth - 123.456) < 1);
@@ -383,39 +498,39 @@
       seedOwned[track.id] = 3; seedOwned[dwarf.id] = 5;
       if (cfg.tracks[1]) seedOwned[cfg.tracks[1].id] = 2;
 
-      // reset() reseeds, so the invariant holds with no explicit GD.seed() call.
-      GD.reset(); GD.state.owned = JSON.parse(JSON.stringify(seedOwned));
-      var addA = GD.step(3600);
-      GD.reset(); GD.state.owned = JSON.parse(JSON.stringify(seedOwned));
-      for (var ja = 0; ja < 3600; ja++) GD.step(1);
+      // reset() reseeds, so the invariant holds with no explicit D.seed() call.
+      D.reset(); GD.state.owned = JSON.parse(JSON.stringify(seedOwned));
+      var addA = D.step(3600);
+      D.reset(); GD.state.owned = JSON.parse(JSON.stringify(seedOwned));
+      for (var ja = 0; ja < 3600; ja++) D.step(1);
       var addB = GD.snapshot();
       check("m1_reset_reseeds_for_additivity", addA.gold, addB.gold, approx(addA.gold, addB.gold, 1e-6) && approx(addA.depth, addB.depth, 1e-6));
-      check("m1_reset_reseeds_rng", GD.config.sim.seed, (function () { GD.reset(); var x = E.rng(); GD.reset(); return E.rng() === x ? GD.config.sim.seed : "different"; })(),
-        (function () { GD.reset(); var x = E.rng(); GD.reset(); return E.rng() === x; })());
+      check("m1_reset_reseeds_rng", GD.config.sim.seed, (function () { D.reset(); var x = E.rng(); D.reset(); return E.rng() === x ? GD.config.sim.seed : "different"; })(),
+        (function () { D.reset(); var x = E.rng(); D.reset(); return E.rng() === x; })());
 
       // Determinism-by-seed is asserted separately below; seeding here keeps the timing
       // half of this comparison independent of the reset path.
-      GD.seed(4242);
-      GD.setState({ owned: seedOwned });
+      D.seed(4242);
+      D.setState({ owned: seedOwned });
       var t0 = performance.now();
-      var big = GD.step(3600);
+      var big = D.step(3600);
       var ms = performance.now() - t0;
       check("m1_step_3600_under_500ms", "< 500 ms", Math.round(ms) + " ms", ms < 500);
 
-      GD.seed(4242);
-      GD.setState({ owned: seedOwned });
-      for (var j = 0; j < 3600; j++) GD.step(1);
+      D.seed(4242);
+      D.setState({ owned: seedOwned });
+      for (var j = 0; j < 3600; j++) D.step(1);
       var many = GD.snapshot();
       check("m1_step_additive_gold", big.gold, many.gold, approx(big.gold, many.gold, 1e-6));
       check("m1_step_additive_depth", big.depth, many.depth, approx(big.depth, many.depth, 1e-6));
       check("m1_step_additive_total", big.goldEarnedTotal, many.goldEarnedTotal, approx(big.goldEarnedTotal, many.goldEarnedTotal, 1e-6));
 
-      GD.reset();
-      GD.grantForTest(dwarf.id, 1);
+      D.reset();
+      D.grantForTest(dwarf.id, 1);
       GD.state.gold = 777;
       window.GDSave.write(cfg, GD.state);
-      GD._clearSave();
-      GD.step(5);
+      D._clearSave();
+      D.step(5);
       var afterClear = window.GDSave.readRaw(cfg);
       var parsedClear = null;
       try { parsedClear = afterClear ? JSON.parse(afterClear) : null; } catch (e) { parsedClear = null; }
@@ -437,11 +552,11 @@
       // --- the 12-verb registry is complete and every JSON verb has a handler
       var wantVerbs = ["add_click", "add_rate", "mul_rate", "mul_gold", "add_rate_per_dwarf",
         "reveal_bands", "mul_hazard_resist", "add_offline_hours", "mul_offline_rate",
-        "mul_rate_temp", "mul_gold_temp", "add_depth"];
+        "mul_rate_temp", "mul_gold_temp", "add_depth", "mul_gold_all_temp"];
       var verbMissing = [];
       for (var vi = 0; vi < wantVerbs.length; vi++) if (typeof E.EFFECTS[wantVerbs[vi]] !== "function") verbMissing.push(wantVerbs[vi]);
-      check("m2_all_12_verbs_registered", "12 handlers", E.VERBS.length + " (missing " + verbMissing.join(",") + ")",
-        verbMissing.length === 0 && E.VERBS.length === 12);
+      check("m2_all_13_verbs_registered", "13 handlers (12 + M5 all-gold buff)", E.VERBS.length + " (missing " + verbMissing.join(",") + ")",
+        verbMissing.length === 0 && E.VERBS.length === 13);
 
       // --- content: 4 ores, 8 tracks, 4 dwarves, 3 events
       check("m2_content_counts", "4 ores / 8 tracks / 4 dwarves / 3 events",
@@ -450,7 +565,7 @@
 
       // --- simulate: the economy window (PRD 8 targets)
       var simT0 = performance.now();
-      var sim = GD.simulate({ policy: "cheapest-affordable" });
+      var sim = D.simulate({ policy: "cheapest-affordable" });
       var simMs = performance.now() - simT0;
       check("m2_simulate_under_20s", "< 20000 ms", Math.round(simMs) + " ms", simMs < 20000);
       check("m2_simulate_reaches_milestone", cfg.milestone.depth + " m", sim.finalDepth.toFixed(1), sim.reached === true);
@@ -484,18 +599,18 @@
       check("m2_band_income_step_within_10pct", "every step within 10% of gpm ratio", stepBad.join(" | "), stepBad.length === 0);
 
       // --- the other two policies run and behave
-      var simNone = GD.simulate({ policy: "none", maxSeconds: 3600 });
+      var simNone = D.simulate({ policy: "none", maxSeconds: 3600 });
       check("m2_policy_none_never_digs", "depth 0, no purchases", simNone.finalDepth.toFixed(2) + "/" + simNone.purchaseCount,
         simNone.purchaseCount === 0 && simNone.finalDepth === 0);
-      var simRatio = GD.simulate({ policy: "ratio", maxSeconds: 3600 });
+      var simRatio = D.simulate({ policy: "ratio", maxSeconds: 3600 });
       check("m2_policy_ratio_runs", "purchases > 0", simRatio.purchaseCount, simRatio.purchaseCount > 0);
       check("m2_ratio_weight_lives_in_json", "a number in cfg.sim", cfg.sim.ratioDepthWeight, typeof cfg.sim.ratioDepthWeight === "number" && cfg.sim.ratioDepthWeight > 0);
-      check("m2_unknown_policy_errors", "an error object", JSON.stringify(GD.simulate({ policy: "nope" })),
-        !!GD.simulate({ policy: "nope" }).error);
+      check("m2_unknown_policy_errors", "an error object", JSON.stringify(D.simulate({ policy: "nope" })),
+        !!D.simulate({ policy: "nope" }).error);
 
       // --- simulate is deterministic for a given seed
-      var a1 = GD.simulate({ seed: 42, maxSeconds: 2400 });
-      var a2 = GD.simulate({ seed: 42, maxSeconds: 2400 });
+      var a1 = D.simulate({ seed: 42, maxSeconds: 2400 });
+      var a2 = D.simulate({ seed: 42, maxSeconds: 2400 });
       check("m2_simulate_deterministic_by_seed", a1.finalDepth, a2.finalDepth, approx(a1.finalDepth, a2.finalDepth, 1e-9));
 
       // --- offline resolver (PRD 9)
@@ -504,69 +619,69 @@
       var od = E.derive(cfg, off);
       var cap = cfg.offline.capHours * 3600;
       var want8 = od.goldRate * cap * cfg.offline.ratePercent;
-      var p8 = GD.offlinePreview(8 * 3600 * 1000, off);
-      var p24 = GD.offlinePreview(24 * 3600 * 1000, off);
+      var p8 = D.offlinePreview(8 * 3600 * 1000, off);
+      var p24 = D.offlinePreview(24 * 3600 * 1000, off);
       check("m2_offline_8h_equals_formula", want8, p8.gold, approx(p8.gold, want8, 1e-6));
       check("m2_offline_24h_equals_8h", p8.gold, p24.gold, approx(p8.gold, p24.gold, 1e-6));
       check("m2_offline_caps_seconds", cap, p24.cappedSeconds, approx(p24.cappedSeconds, cap, 1e-6));
-      var p30 = GD.offlinePreview(30000, off);
+      var p30 = D.offlinePreview(30000, off);
       check("m2_offline_below_min_pays_nothing", 0, p30.gold, p30.gold === 0 && p30.cappedSeconds === 0);
-      var pNeg = GD.offlinePreview(-5000, off);
+      var pNeg = D.offlinePreview(-5000, off);
       check("m2_offline_clock_skew_negative", 0, pNeg.gold, pNeg.gold === 0 && pNeg.reason === "skew");
-      var pFar = GD.offlinePreview((cfg.offline.maxClockSkewHours + 1) * 3600 * 1000, off);
+      var pFar = D.offlinePreview((cfg.offline.maxClockSkewHours + 1) * 3600 * 1000, off);
       check("m2_offline_clock_skew_absurd", 0, pFar.gold, pFar.gold === 0 && pFar.reason === "skew");
       check("m2_offline_advances_depth", od.digRate * cap * cfg.offline.ratePercent, p8.depth,
         approx(p8.depth, od.digRate * cap * cfg.offline.ratePercent, 1e-6));
       // Elevator extends the cap and lifts the rate
       var offE = E.cloneState(off);
       offE.owned.elevator = 2;
-      var pE = GD.offlinePreview(24 * 3600 * 1000, offE);
+      var pE = D.offlinePreview(24 * 3600 * 1000, offE);
       check("m2_elevator_extends_cap", (cfg.offline.capHours + 2) * 3600, pE.cappedSeconds,
         approx(pE.cappedSeconds, (cfg.offline.capHours + 2) * 3600, 1e-6));
       var dE = E.derive(cfg, offE);
       check("m2_elevator_lifts_offline_rate", 1.1 * 1.1, dE.offlineRateMul, approx(dE.offlineRateMul, 1.21, 1e-9));
       // applyOffline mutates by exactly the preview
-      GD.setState({ owned: { dorrik: 3 } });
-      var pv = GD.offlinePreview(2 * 3600 * 1000);
+      D.setState({ owned: { dorrik: 3 } });
+      var pv = D.offlinePreview(2 * 3600 * 1000);
       var goldPre = GD.state.gold, depthPre = GD.state.depth;
-      var ap = GD.applyOffline(2 * 3600 * 1000);
+      var ap = D.applyOffline(2 * 3600 * 1000);
       check("m2_applyOffline_matches_preview", pv.gold + "/" + pv.depth.toFixed(4),
         (GD.state.gold - goldPre).toFixed(6) + "/" + (GD.state.depth - depthPre).toFixed(4),
         approx(GD.state.gold - goldPre, ap.gold, 1e-6) && approx(GD.state.depth - depthPre, ap.depth, 1e-6));
 
       // --- events
-      GD.reset();
-      GD.jumpTo(300);
+      D.reset();
+      D.jumpTo(300);
       var depthBefore = GD.state.depth;
-      var fired = GD.fire("cave_in");
+      var fired = D.fire("cave_in");
       check("m2_fire_cave_in_returns_event", "cave_in", fired && fired.id, !!fired && fired.id === "cave_in");
       check("m2_cave_in_moves_depth_minus_5", depthBefore - 5, GD.state.depth, approx(GD.state.depth, depthBefore - 5, 1e-9));
       check("m2_cave_in_logs_its_line", cfg.flavor.eventTexts.cave_in, E.eventText(cfg, fired),
         E.eventText(cfg, fired) === cfg.flavor.eventTexts.cave_in);
       check("m2_event_counter_increments", 1, GD.state.eventsFired, GD.state.eventsFired === 1);
 
-      GD.reset();
-      GD.grantForTest("dorrik", 5);
+      D.reset();
+      D.grantForTest("dorrik", 5);
       var rateBefore = GD.derive().digRate;
-      GD.fire("gas_pocket");
+      D.fire("gas_pocket");
       var rateDuring = GD.derive().digRate;
       check("m2_gas_pocket_halves_rate", rateBefore * 0.5, rateDuring, approx(rateDuring, rateBefore * 0.5, 1e-9));
-      GD.step(25);
+      D.step(25);
       check("m2_timed_effect_expires", rateBefore, GD.derive().digRate, approx(GD.derive().digRate, rateBefore, 1e-9));
 
-      GD.reset();
-      GD.grantForTest("dorrik", 5);
+      D.reset();
+      D.grantForTest("dorrik", 5);
       var goldRateBefore = GD.derive().goldRate;
-      GD.fire("rich_seam");
+      D.fire("rich_seam");
       check("m2_rich_seam_triples_gold", goldRateBefore * 3, GD.derive().goldRate, approx(GD.derive().goldRate, goldRateBefore * 3, 1e-9));
 
       // minDepth gating and hazard resist weighting
-      GD.reset();
+      D.reset();
       var poolShallow = E.eligibleEvents(cfg, GD.state, GD.derive());
       check("m2_event_mindepth_gate", "only rich_seam at 0 m", poolShallow.list.map(function (x) { return x.e.id; }).join(","),
         poolShallow.list.length === 1 && poolShallow.list[0].e.id === "rich_seam");
-      GD.jumpTo(400);
-      GD.grantForTest("braces", 3);
+      D.jumpTo(400);
+      D.grantForTest("braces", 3);
       var dB = GD.derive();
       var poolDeep = E.eligibleEvents(cfg, GD.state, dB);
       var gasW = 0;
@@ -582,20 +697,20 @@
       // events never fire offline
       var offEv = E.newState(cfg);
       offEv.owned.dorrik = 5;
-      GD.offlinePreview(8 * 3600 * 1000, offEv);
+      D.offlinePreview(8 * 3600 * 1000, offEv);
       check("m2_offline_fires_no_events", 0, offEv.eventsFired, offEv.eventsFired === 0);
 
       // --- milestone + ending
-      GD.reset();
+      D.reset();
       GD.state.goldEarnedTotal = 1000;
-      GD.jumpTo(cfg.milestone.depth);
+      D.jumpTo(cfg.milestone.depth);
       check("m2_milestone_sets_endingSeen", true, GD.state.endingSeen, GD.state.endingSeen === true);
       check("m2_milestone_score_formula", 1000 + cfg.milestone.depth * 100, GD.state.endingScore,
         approx(GD.state.endingScore, 1000 + cfg.milestone.depth * 100, 1e-6));
       var seenCount = 0;
       GD.hooks.onEnding = function () { seenCount++; };
-      GD.jumpTo(cfg.milestone.depth + 100);
-      GD.step(60);
+      D.jumpTo(cfg.milestone.depth + 100);
+      D.step(60);
       GD.hooks.onEnding = null;
       check("m2_milestone_fires_once", 0, seenCount, seenCount === 0);
       check("m2_game_continues_after_ending", "depth > milestone", GD.state.depth.toFixed(1), GD.state.depth >= cfg.milestone.depth);
@@ -661,9 +776,9 @@
         check("m2_lantern_params_are_json_driven", "face from cfg.lantern", window.GDRender.effFaceY(1),
           window.GDRender.effFaceY(1) === Math.max(cfg.lantern.minFaceYBu, cfg.layout.faceYBu - cfg.lantern.forwardTilesPerLevel * cfg.layout.tileBu));
         if (window.GDUI && window.GDUI.nextBandsReport) {
-          GD.reset();
+          D.reset();
           var nb0 = window.GDUI.nextBandsReport();
-          GD.grantForTest("lantern", 1);
+          D.grantForTest("lantern", 1);
           var nb1 = window.GDUI.nextBandsReport();
           check("m2_next_bands_readout_grows_with_lantern", nb0.lines + 1, nb1.lines, nb1.lines === nb0.lines + 1);
           check("m2_next_bands_readout_names_the_ore", "a band name and its startDepth", nb1.text, /\d+\s*m/.test(nb1.text) && nb1.text.length > 0);
@@ -673,10 +788,10 @@
       }
 
       // --- ETA on locked rows
-      GD.reset();
+      D.reset();
       GD.state.gold = 0;
       check("m2_eta_is_dash_while_rate_zero", Infinity, GD.etaFor("pick"), GD.etaFor("pick") === Infinity);
-      GD.grantForTest("dorrik", 4);
+      D.grantForTest("dorrik", 4);
       var dEta = GD.derive();
       var wantEta = (GD.costOf("pick") - GD.state.gold) / dEta.goldRate;
       check("m2_eta_formula", wantEta, GD.etaFor("pick"), approx(GD.etaFor("pick"), wantEta, 1e-9));
@@ -713,7 +828,7 @@
         milestone: cfg.milestone, endless: cfg.endless, flavor: cfg.flavor, save: cfg.save,
         layout: cfg.layout, veil: cfg.veil, vein: cfg.vein, debug: cfg.debug, lantern: cfg.lantern,
         camera: cfg.camera, sprites: cfg.sprites, titleCard: cfg.titleCard,
-        audio: cfg.audio, particles: cfg.particles, ending: cfg.ending
+        audio: cfg.audio, particles: cfg.particles, ending: cfg.ending, pickups: cfg.pickups
       }));
       ext.ores.push({
         id: "voidglass", name: "Voidglass", startDepth: 2000, goldPerMeter: 400, pattern: "crystal",
@@ -731,7 +846,7 @@
       ext.flavor.dwarfLines.brann_test = "Added by selfTest.";
       var extV = E.validateConfig(ext);
       check("m2_extended_config_validates", "ok", extV.errors.join(" | "), extV.ok);
-      var setRes = GD.setConfig(ext, false);
+      var setRes = D.setConfig(ext, false);
       check("m2_setConfig_accepts_extended", "ok", JSON.stringify(setRes.errors || ""), setRes.ok === true);
       var newBand = E.bandAt(ext, 2100);
       check("m2_fifth_ore_becomes_a_band", "voidglass", newBand.id, newBand.id === "voidglass");
@@ -754,7 +869,7 @@
           extPlan.maxIndex <= extPlan.cutoffIndex);
       }
       // restore the shipped config before anything else runs
-      GD.setConfig(liveConfig, false);
+      D.setConfig(liveConfig, false);
       check("m2_config_restored_after_extension", cfg.ores.length, GD.config.ores.length, GD.config.ores.length === cfg.ores.length);
 
       // --- validateConfig catches the four named failures (PRD 12)
@@ -782,7 +897,7 @@
 
       // =========================================================== M3 block
       // Art-pass assertions (PRD 14, M3). These drive the real renderer through
-      // GDRender.renderProbe (GD.step + manual render ticks) and read its counters
+      // GDRender.renderProbe (D.step + manual render ticks) and read its counters
       // rather than sampling pixels.
       var SPR = window.GDSprites, RND = window.GDRender;
       if (!SPR || !RND || !RND.renderProbe) {
@@ -797,9 +912,9 @@
           vrep.blank.length === 0);
         check("m3_sprite_cache_is_populated", "> 100 cached canvases", vrep.total, vrep.total > 100);
         check("m3_sprite_cache_opaque_equals_total", vrep.total, vrep.opaque, vrep.opaque === vrep.total);
-        GD.refreshDbg();
+        D.refreshDbg();
         check("m3_dbg_exposes_sprite_cache_opaque", "a number equal to the verified count",
-          GD.dbg.spriteCacheOpaque, GD.dbg.spriteCacheOpaque === vrep.total && GD.dbg.spriteCacheTotal === vrep.total);
+          dbg.spriteCacheOpaque, dbg.spriteCacheOpaque === vrep.total && dbg.spriteCacheTotal === vrep.total);
         // ensure() must be idempotent on a healthy cache: no rebuild, nothing blank
         var rbBefore = SPR.stats().rebuilds;
         var vrep2 = SPR.ensure(false);
@@ -860,12 +975,12 @@
 
         // --- no placeholder rects at any depth: the wall is blitted tiles, and the
         // fallback fill path (the only rect left in the tile loop) never runs.
-        GD.reset();
-        GD.grantForTest(cfg.dwarves[0].id, 2);
+        D.reset();
+        D.grantForTest(cfg.dwarves[0].id, 2);
         var depthProbes = [0, 12, 39, 41, 120, 179, 181, 400, 599, 601, 700, 1199, 1400, 2100];
         var phBad = [], noTiles = [];
         for (var m3i = 0; m3i < depthProbes.length; m3i++) {
-          GD.jumpTo(depthProbes[m3i]);
+          D.jumpTo(depthProbes[m3i]);
           RND.cameraSnap();
           var pr = RND.renderProbe(GD.state, GD.derive(), 2, 1 / 60);
           if (pr.placeholderRects > 0) phBad.push("d=" + depthProbes[m3i] + " rects=" + pr.placeholderRects);
@@ -879,13 +994,13 @@
         var seamBad = [];
         for (var bi3 = 1; bi3 < cfg.ores.length; bi3++) {
           var sd = cfg.ores[bi3].startDepth;
-          GD.jumpTo(Math.max(0, sd - 2));
+          D.jumpTo(Math.max(0, sd - 2));
           RND.cameraSnap();
           var prS = RND.renderProbe(GD.state, GD.derive(), 2, 1 / 60);
           if (!(prS.seams >= 1)) seamBad.push(cfg.ores[bi3].id + " @" + sd + ": no seam drawn");
         }
         // and the first endless boundary, which is synthesized rather than authored
-        GD.jumpTo(E.endlessStart(cfg) - 2);
+        D.jumpTo(E.endlessStart(cfg) - 2);
         RND.cameraSnap();
         var prE = RND.renderProbe(GD.state, GD.derive(), 2, 1 / 60);
         if (!(prE.seams >= 1)) seamBad.push("endless boundary: no seam drawn");
@@ -894,9 +1009,9 @@
         // --- the veil is painted on d+1+revealBonus and on nothing beyond it
         var veilBad = [];
         for (var rb3 = 0; rb3 <= 2; rb3++) {
-          GD.reset();
-          if (rb3) GD.grantForTest("lantern", rb3);
-          GD.jumpTo(cfg.ores[1].startDepth - 3);
+          D.reset();
+          if (rb3) D.grantForTest("lantern", rb3);
+          D.jumpTo(cfg.ores[1].startDepth - 3);
           RND.cameraSnap();
           var prV = RND.renderProbe(GD.state, GD.derive(), 2, 1 / 60);
           if (!(prV.veiled >= 1)) veilBad.push("rb=" + rb3 + ": nothing veiled above the seam");
@@ -906,10 +1021,10 @@
         check("m3_veil_through_cutoff_and_no_further", "veiled, and never past d+1+revealBonus", veilBad.join(" | "), veilBad.length === 0);
 
         // --- every hired dwarf is on a ledge, with its own loadout
-        GD.reset();
+        D.reset();
         var wantCrew = 0;
-        for (var dz = 0; dz < cfg.dwarves.length; dz++) { GD.grantForTest(cfg.dwarves[dz].id, 2); wantCrew += 2; }
-        GD.jumpTo(300);
+        for (var dz = 0; dz < cfg.dwarves.length; dz++) { D.grantForTest(cfg.dwarves[dz].id, 2); wantCrew += 2; }
+        D.jumpTo(300);
         RND.cameraSnap();
         var prC = RND.renderProbe(GD.state, GD.derive(), 2, 1 / 60);
         check("m3_every_hired_dwarf_is_drawn", wantCrew, prC.dwarves, prC.dwarves === wantCrew);
@@ -923,17 +1038,17 @@
           after <= loCount * frames);
         check("m3_dwarf_cache_stable_across_frames", before, after, after === before);
 
-        // --- the scrolling camera. GD.step moves the crew down; manual render ticks
+        // --- the scrolling camera. D.step moves the crew down; manual render ticks
         // stand in for one second of rAF. PRD 14 M3: within 16 bu of the deepest dwarf.
-        GD.reset();
-        GD.grantForTest("dorrik", 2);
-        GD.grantForTest("nix", 1);
+        D.reset();
+        D.grantForTest("dorrik", 2);
+        D.grantForTest("nix", 1);
         var brk = cfg.ores[1].startDepth;
-        GD.jumpTo(brk - 8);
+        D.jumpTo(brk - 8);
         RND.cameraSnap();
         RND.renderProbe(GD.state, GD.derive(), 30, 1 / 60);       // let it settle above the seam
         var bandBefore = GD.derive().band.index;
-        GD.step(20);                                              // dig through the boundary
+        D.step(20);                                              // dig through the boundary
         var bandAfter = GD.derive().band.index;
         var prCam = RND.renderProbe(GD.state, GD.derive(), 60, 1 / 60);   // one second of frames
         check("m3_camera_test_actually_crossed_a_band", bandBefore + " -> " + (bandBefore + 1),
@@ -941,7 +1056,7 @@
         check("m3_camera_within_16bu_of_deepest_dwarf", "<= 16 bu",
           Math.abs(prCam.cameraY - prCam.deepestDwarfY).toFixed(2) + " bu",
           Math.abs(prCam.cameraY - prCam.deepestDwarfY) <= 16);
-        check("m3_camera_exposed_on_dbg", "a number", typeof GD.dbg.cameraY, typeof GD.dbg.cameraY === "number");
+        check("m3_camera_exposed_on_dbg", "a number", typeof dbg.cameraY, typeof dbg.cameraY === "number");
 
         // --- drag scrolls back up, and the camera snaps back after snapBackMs
         RND.cameraNudge(-200, true);
@@ -958,8 +1073,8 @@
 
         // --- the one generated asset stays inside its budget
         var capBytes = (cfg.titleCard && cfg.titleCard.maxBytes) || 122880;
-        check("m3_title_card_within_120kb", "1.." + capBytes + " bytes", GD.dbg.titleCardBytes,
-          GD.dbg.titleCardBytes > 0 && GD.dbg.titleCardBytes <= capBytes);
+        check("m3_title_card_within_120kb", "1.." + capBytes + " bytes", dbg.titleCardBytes,
+          dbg.titleCardBytes > 0 && dbg.titleCardBytes <= capBytes);
         check("m3_title_card_is_splash_only", "splash element present and not in the shaft",
           document.getElementById("splash") ? "found" : "missing",
           !!document.getElementById("splash"));
@@ -984,7 +1099,7 @@
       // =========================================================== M4 block
       // Audio: mute state, master gain, no cue when muted
       if (window.GDRender && window.GDRender.renderSignature) {
-      GD.dbg.renderSignature = function () {
+      dbg.renderSignature = function () {
         return window.GDRender.renderSignature(GD.state, GD.derive());
       };
     }
@@ -1007,7 +1122,7 @@
         A.setMuted(false);
         A.play("strike");
         check("m4_lastcue_tracks_strike", "strike", A.lastCue, A.lastCue === "strike");
-        check("m4_dbg_lastcue_synced", "strike", GD.dbg.lastCue, GD.dbg.lastCue === "strike");
+        check("m4_dbg_lastcue_synced", "strike", dbg.lastCue, dbg.lastCue === "strike");
         A.play("buy");
         check("m4_lastcue_tracks_buy", "buy", A.lastCue, A.lastCue === "buy");
         A.play("hire");
@@ -1026,14 +1141,14 @@
       }
 
       // Item 2: simulate is non-destructive
-      GD.reset();
-      GD.grantForTest("dorrik", 3);
+      D.reset();
+      D.grantForTest("dorrik", 3);
       GD.state.gold = 500;
       var preSimState = E.cloneState(GD.state);
       var preSimSave = window.GDSave.readRaw(cfg);
       window.GDSave.write(cfg, GD.state); // ensure a save exists
       var preSimSave2 = window.GDSave.readRaw(cfg);
-      GD.simulate({ maxSeconds: 3600 });
+      D.simulate({ maxSeconds: 3600 });
       check("m4_simulate_gold_unchanged", preSimState.gold, GD.state.gold,
         approx(GD.state.gold, preSimState.gold, 1e-9));
       check("m4_simulate_depth_unchanged", preSimState.depth, GD.state.depth,
@@ -1042,17 +1157,17 @@
       check("m4_simulate_save_unchanged", preSimSave2, postSimSave, postSimSave === preSimSave2);
 
       // Export/import round-trip
-      GD.reset();
+      D.reset();
       GD.state.gold = 12345.67;
       GD.state.depth = 456.78;
       GD.state.goldEarnedTotal = 99999;
-      GD.grantForTest("pick", 5);
-      GD.grantForTest("dorrik", 3);
+      D.grantForTest("pick", 5);
+      D.grantForTest("dorrik", 3);
       var exported = GD.export();
       check("m4_export_produces_string", "a string", typeof exported, typeof exported === "string" && exported.length > 10);
 
       // Import on a fresh state
-      GD.reset();
+      D.reset();
       var importResult = GD.import(exported);
       check("m4_import_succeeds", true, importResult.ok, importResult.ok === true);
       check("m4_import_gold_exact", 12345.67, GD.state.gold, approx(GD.state.gold, 12345.67, 0.01));
@@ -1082,20 +1197,20 @@
       }
 
       // jumpTo(1200) triggers ending once, sets endingSeen, game continues
-      GD.reset();
+      D.reset();
       GD.state.goldEarnedTotal = 5000;
       var endingCount = 0;
       GD.hooks.onEnding = function () { endingCount++; };
-      GD.jumpTo(cfg.milestone.depth);
+      D.jumpTo(cfg.milestone.depth);
       check("m4_ending_triggers_once", 1, endingCount, endingCount === 1);
       check("m4_endingSeen_set", true, GD.state.endingSeen, GD.state.endingSeen === true);
       // game continues after ending
-      GD.grantForTest("dorrik", 3);
-      GD.step(10);
+      D.grantForTest("dorrik", 3);
+      D.step(10);
       check("m4_game_continues_after_ending", true, GD.state.depth > cfg.milestone.depth,
         GD.state.depth > cfg.milestone.depth);
       // second jumpTo does NOT fire again
-      GD.jumpTo(cfg.milestone.depth + 500);
+      D.jumpTo(cfg.milestone.depth + 500);
       check("m4_ending_fires_only_once", 1, endingCount, endingCount === 1);
       GD.hooks.onEnding = null;
 
@@ -1120,9 +1235,9 @@
       // Item 6: purchase visibility - every track changes what is DRAWN
       if (window.GDRender && window.GDRender.renderSignature) {
         var pvBad = [];
-        GD.reset();
-        GD.jumpTo(1000); // past all minDepth locks so every item is purchasable
-        GD.grantForTest("dorrik", 2); // need crew for rate-dependent visuals
+        D.reset();
+        D.jumpTo(1000); // past all minDepth locks so every item is purchasable
+        D.grantForTest("dorrik", 2); // need crew for rate-dependent visuals
         var pvList = E.purchasables(cfg);
         for (var pvi = 0; pvi < pvList.length; pvi++) {
           var pvItem = pvList[pvi];
@@ -1141,12 +1256,12 @@
         var crewBad = [];
         var crewCounts = [1, 4, 10, 18, 30];
         for (var cci = 0; cci < crewCounts.length; cci++) {
-          GD.reset();
-          GD.grantForTest("dorrik", Math.ceil(crewCounts[cci] / 4));
-          GD.grantForTest("hald", Math.ceil(crewCounts[cci] / 4));
-          GD.grantForTest("vessa", Math.ceil(crewCounts[cci] / 4));
-          GD.grantForTest("nix", Math.ceil(crewCounts[cci] / 4));
-          GD.jumpTo(300);
+          D.reset();
+          D.grantForTest("dorrik", Math.ceil(crewCounts[cci] / 4));
+          D.grantForTest("hald", Math.ceil(crewCounts[cci] / 4));
+          D.grantForTest("vessa", Math.ceil(crewCounts[cci] / 4));
+          D.grantForTest("nix", Math.ceil(crewCounts[cci] / 4));
+          D.jumpTo(300);
           window.GDRender.cameraSnap();
           var cp = window.GDRender.crewPositions(GD.state, GD.derive());
           var dw2 = cfg.sprites.dwarfWBu, dh2 = cfg.sprites.dwarfHBu;
@@ -1163,7 +1278,7 @@
       }
 
       // Item 2+4: row states -- no depth locks in v1 (B2-1: all minDepth stripped)
-      GD.reset();
+      D.reset();
       var anyLocked2 = false;
       var allItems2 = E.purchasables(cfg);
       for (var ali2 = 0; ali2 < allItems2.length; ali2++) {
@@ -1172,7 +1287,7 @@
       check("m4_no_depth_locks_in_v1", false, anyLocked2, !anyLocked2);
 
       // Item 5: bulk cost equals N single buys exactly
-      GD.reset();
+      D.reset();
       var singleSum = 0;
       for (var bci = 0; bci < 5; bci++) singleSum += cfg.tracks[0].base * Math.pow(cfg.tracks[0].ratio, bci);
       var bulk = E.bulkCost(cfg, GD.state, cfg.tracks[0].id, 5);
@@ -1190,7 +1305,7 @@
       var allText7 = (document.body.innerText || "").replace(dbgText7, "");
       check("p7_no_flavor_todo_in_dom", false, allText7.indexOf("FLAVOR-TODO") !== -1,
         allText7.indexOf("FLAVOR-TODO") === -1);
-      check("p7_flavor_todo_count_zero", 0, GD.dbg.flavorTodoCount, GD.dbg.flavorTodoCount === 0);
+      check("p7_flavor_todo_count_zero", 0, dbg.flavorTodoCount, dbg.flavorTodoCount === 0);
 
       // Phase 7: elementFromPoint hit-testing for EVERY primary control.
       // Helper: test that elementFromPoint at center of `el` returns it or a descendant.
@@ -1292,7 +1407,7 @@
       }
 
       // 8. KEEP DIGGING on ending overlay: trigger ending, test the button, close
-      GD.reset();
+      D.reset();
       GD.state.goldEarnedTotal = 5000;
       // Show ending panel directly (bypassing the timing delay)
       var endingEl = document.getElementById("ending");
@@ -1311,14 +1426,14 @@
       // 9. Spacebar to mine: dispatch through the LIVE document keydown listener
       // and assert gold, lastCue AND juice counter (strikeCount) all change.
       // This tests the real keyboard path, not a private function.
-      GD.reset();
-      GD.grantForTest("dorrik", 1);
+      D.reset();
+      D.grantForTest("dorrik", 1);
       // Ensure splash is dismissed so Space reaches doStrike
       var sp9 = document.getElementById("splash");
       if (sp9) { sp9.classList.add("gone"); sp9.classList.add("off"); }
       var goldBeforeSpace = GD.state.gold;
       if (window.GDAudio) window.GDAudio.lastCue = null;
-      GD.dbg.lastCue = null;
+      dbg.lastCue = null;
       var strikesBefore = (window.GDUI && window.GDUI.strikeCount) || 0;
       // Dispatch through document — the same target the live listener is on
       var spaceEvt = new KeyboardEvent("keydown", { code: "Space", key: " ", bubbles: true });
@@ -1327,7 +1442,7 @@
       var strikesAfter = (window.GDUI && window.GDUI.strikeCount) || 0;
       check("p7_space_mines_gold", true, goldAfterSpace > goldBeforeSpace,
         goldAfterSpace > goldBeforeSpace);
-      var cueName = window.GDAudio ? window.GDAudio.lastCue : GD.dbg.lastCue;
+      var cueName = window.GDAudio ? window.GDAudio.lastCue : dbg.lastCue;
       check("p7_space_sets_lastcue", "strike", cueName, cueName === "strike");
       check("p7_space_fires_juice", strikesBefore + 1, strikesAfter,
         strikesAfter === strikesBefore + 1);
@@ -1367,10 +1482,10 @@
       var overflowBad = [];
       var goldProbes = [1e9, 1e15, 1e24];
       for (var oi = 0; oi < goldProbes.length; oi++) {
-        GD.reset();
+        D.reset();
         GD.state.gold = goldProbes[oi];
         GD.state.goldEarnedTotal = goldProbes[oi];
-        GD.jumpTo(1000);
+        D.jumpTo(1000);
         // MAX-buy every track and dwarf
         var allP2 = E.purchasables(cfg);
         for (var oj = 0; oj < allP2.length; oj++) {
@@ -1401,7 +1516,7 @@
       check("p7_overflow_safe", "all finite", overflowBad.join(" | "), overflowBad.length === 0);
 
       // max-buy policy exists and runs
-      var simMB = GD.simulate({ policy: "max-buy", maxSeconds: 600 });
+      var simMB = D.simulate({ policy: "max-buy", maxSeconds: 600 });
       check("p7_maxbuy_policy_runs", true, !simMB.error, !simMB.error);
       check("p7_maxbuy_has_peakgold", true, simMB.peakGold > 0, simMB.peakGold > 0);
       check("p7_maxbuy_peakgold_finite", true, isFinite(simMB.peakGold), isFinite(simMB.peakGold));
@@ -1421,8 +1536,8 @@
       check("m4_json_layout_desktop", true, !!cfg.layout.desktopBreakpoint,
         cfg.layout.desktopBreakpoint > 0 && cfg.layout.leftRailPx > 0 && cfg.layout.rightRailPx > 0);
       // Item 3: spriteCacheBlank is a number
-      check("m4_sprite_cache_blank_is_number", "number", typeof GD.dbg.spriteCacheBlank,
-        typeof GD.dbg.spriteCacheBlank === "number");
+      check("m4_sprite_cache_blank_is_number", "number", typeof dbg.spriteCacheBlank,
+        typeof dbg.spriteCacheBlank === "number");
 
       check("m4_json_flavor_fallbacks", true, !!(cfg.flavor && cfg.flavor.fallbacks && cfg.flavor.fallbacks.welcomeBack),
         !!(cfg.flavor && cfg.flavor.fallbacks && cfg.flavor.fallbacks.welcomeBack));
@@ -1472,10 +1587,365 @@
       }
       check("p7fix_hud_no_overlap", "0 overlapping stat boxes", hudOverlap.join(", "), hudOverlap.length === 0);
 
+      // =========================================================== M5 block
+      // Clickable pickups. Tests pin the tab visible (a hidden browser pane reports
+      // document.hidden) and clear every overlay, then restore both in `finally`.
+      for (var oi5 = 0; oi5 < overlayIds.length; oi5++) {
+        var oel = document.getElementById(overlayIds[oi5]);
+        overlayWasHidden[overlayIds[oi5]] = !oel || oel.classList.contains("hidden");
+        if (oel) oel.classList.add("hidden");
+      }
+      visOverride = "visible";
+      if (window.GDAudio) window.GDAudio.setMuted(false);
+      var PK = cfg.pickups;
+      function m5Setup(depth) {
+        D.reset();
+        GD.state.prefs.muted = false;
+        D.jumpTo(depth === undefined ? 250 : depth);
+        D.grantForTest("dorrik", 5);
+        D.grantForTest("pick", 10);
+        GD.state.eventT = -1e9;   // no random event may move a rate mid-assertion
+      }
+
+      // --- JSON block validated
+      check("m5_json_pickups_block", "types, buffs, geodeTable, palette", !!PK,
+        !!PK && PK.types.length >= 3 && PK.buffs.length >= 1 && PK.geodeTable.length >= 1 && !!PK.palette);
+      var bk = bad3(function (c) { c.pickups.types[0].kind = "ruby"; });
+      check("m5_validate_unknown_kind", "not ok", bk.ok, !bk.ok && /unknown kind/.test(bk.errors.join()));
+      var bc5 = bad3(function (c) { c.pickups.types[1].clicks = [0, 2]; });
+      check("m5_validate_bad_clicks", "not ok", bc5.ok, !bc5.ok && /clicks/.test(bc5.errors.join()));
+      var bv5 = bad3(function (c) { c.pickups.buffs[0].verb = "add_rate"; });
+      check("m5_validate_buff_needs_timed_verb", "not ok", bv5.ok, !bv5.ok && /timed verb/.test(bv5.errors.join()));
+      var bh5 = bad3(function (c) { c.pickups.hitMinCssPx = 30; });
+      check("m5_validate_hit_target_floor", "not ok", bh5.ok, !bh5.ok && /hitMinCssPx/.test(bh5.errors.join()));
+      var geodeT = E.pickupType(cfg, "geode");
+      check("m5_geode_clicks_3_to_5", "[3,5]", JSON.stringify(geodeT && geodeT.clicks),
+        !!geodeT && geodeT.clicks[0] >= 3 && geodeT.clicks[1] <= 5);
+
+      // --- spawn: listed on dbg with a finite client-space centre
+      m5Setup();
+      var sp1 = D.spawnPickup("gem");
+      D.refreshDbg();
+      var dp1 = dbg.pickups[0];
+      check("m5_spawn_gem", "1 live gem on dbg", JSON.stringify(dp1),
+        !!sp1 && GD.pickups.live === 1 && !!dp1 && dp1.id === sp1.id && dp1.type === "gem" && isFinite(dp1.x) && isFinite(dp1.y) && dp1.ttl > 0);
+
+      // --- gem pays its formula once, cues, and is gone
+      GD.state.earnRate = 50;   // a known rolling-earnings figure for the formula check
+      var gd0 = GD.derive(), gemWant = E.gemGold(cfg, GD.state, gd0, gd0.band.index);
+      var goldG = GD.state.gold;
+      if (window.GDAudio) window.GDAudio.lastCue = null;
+      var rg = D.collectPickup(sp1.id);
+      check("m5_gem_pays_formula", Math.round(gemWant), Math.round(GD.state.gold - goldG),
+        rg.done && gemWant > 0 && approx(GD.state.gold - goldG, gemWant, 1e-6) && approx(rg.gold, gemWant, 1e-6));
+      check("m5_gem_gone_after_collect", 0, GD.pickups.live, GD.pickups.live === 0 && !E.pickupById(GD.pickups, sp1.id));
+      check("m5_gem_cue", "gem", dbg.lastCue, dbg.lastCue === "gem");
+      var gR = PK.types[0].reward, gBand = Math.pow(gR.payoutMulPerBand, Math.min(gd0.band.index, PK.bandScaleCap));
+      check("m5_gem_value_formula", "max(earnSeconds x rolling earnings, floorTaps x goldPerTap) x band",
+        Math.round(gemWant), approx(gemWant, Math.max(Math.min(50, gd0.goldRateBase + PK.earnCapTapsPerSec * gd0.goldPerTapBase) * gR.earnSeconds,
+          gd0.goldPerTapBase * gR.floorTaps) * gBand, 1e-6));
+
+      // --- geode: N clicks, cracks per click, pays once, never twice
+      m5Setup();
+      var sg = D.spawnPickup("geode", { clicks: 4 });
+      var goldGe = GD.state.gold, crackBad = [];
+      for (var gc = 1; gc <= 3; gc++) {
+        var rc = D.collectPickup(sg.id, { single: true });
+        if (!rc.ok || rc.done || rc.clicksLeft !== 4 - gc) crackBad.push("click " + gc + ": " + JSON.stringify({ ok: rc.ok, done: rc.done, left: rc.clicksLeft }));
+        if (dbg.lastCue !== "geodeCrack") crackBad.push("click " + gc + " cue " + dbg.lastCue);
+      }
+      check("m5_geode_needs_all_clicks", "3 cracks, no pay", crackBad.join(" | ") + " gold+" + (GD.state.gold - goldGe),
+        crackBad.length === 0 && GD.state.gold === goldGe && GD.pickups.live === 1);
+      var rgd = D.collectPickup(sg.id, { single: true });
+      check("m5_geode_pays_on_last_click", "done with a reward", JSON.stringify({ done: rgd.done, gold: rgd.gold, buff: rgd.buff && rgd.buff.id, gems: rgd.gems }),
+        rgd.done && (rgd.gold > 0 || !!rgd.buff) && dbg.lastCue === "geodeBurst");
+      var rgd2 = D.collectPickup(sg.id);
+      check("m5_geode_no_double_collect", "gone", rgd2.reason, rgd2.ok === false && rgd2.reason === "gone" && GD.pickups.collected === 1);
+      var stageSeq = [];
+      for (var cm = 3; cm <= 5; cm++) {
+        var seen = {};
+        for (var cd = 0; cd < cm; cd++) seen[Math.ceil((window.GDSprites.GEODE_STAGES - 1) * cd / cm)] = 1;
+        stageSeq.push(Object.keys(seen).length === cm ? "ok" : cm + " clicks repeat a stage");
+      }
+      check("m5_geode_new_crack_every_click", "ok,ok,ok", stageSeq.join(","), stageSeq.join(",") === "ok,ok,ok");
+
+      // --- chest: every buff starts on its verb, shows, ends on sim time, and refreshes rather than stacks
+      var buffBad = [];
+      for (var bb = 0; bb < PK.buffs.length; bb++) {
+        var bf = PK.buffs[bb];
+        m5Setup();
+        var dB0 = GD.derive();
+        var secs = E.applyPickupBuff(cfg, GD.state, bf, dB0.band.index);
+        var dB1 = GD.derive();
+        var got = bf.verb === "mul_rate_temp" ? dB1.digRate / dB0.digRate : dB1.goldRate / dB0.goldRate;
+        if (!approx(got, bf.value, 1e-9)) buffBad.push(bf.id + " x" + got.toFixed(3));
+        E.applyPickupBuff(cfg, GD.state, bf, dB0.band.index);
+        if (GD.activeBuffs().length !== 1) buffBad.push(bf.id + " stacked " + GD.activeBuffs().length);
+        D.step(secs - 1);
+        if (GD.activeBuffs().length !== 1) buffBad.push(bf.id + " ended early");
+        D.step(2);
+        var dB2 = GD.derive();
+        if (GD.activeBuffs().length !== 0) buffBad.push(bf.id + " still active");
+        if (!approx(dB2.goldRate / dB2.digRate, dB0.goldRate / dB0.digRate, 1e-9) || !approx(dB2.digRate, dB0.digRate, 1e-9)) buffBad.push(bf.id + " rate not restored");
+      }
+      check("m5_chest_buffs_start_and_end", "each buff hits its multiplier, refreshes, ends", buffBad.join(" | "), buffBad.length === 0);
+      // --- the chest's gold buff multiplies EVERY gold source, taps included
+      var allBuff = null;
+      for (var ab = 0; ab < PK.buffs.length; ab++) if (PK.buffs[ab].verb === "mul_gold_all_temp") allBuff = PK.buffs[ab];
+      if (allBuff) {
+        m5Setup();
+        var tap0 = GD.tap(1);
+        E.applyPickupBuff(cfg, GD.state, allBuff, GD.derive().band.index);
+        var tap1 = GD.tap(1);
+        var dAB = GD.derive();
+        GD.state.earnRate = 40;
+        var gemAB = E.gemGold(cfg, GD.state, dAB, dAB.band.index);
+        var dNo = JSON.parse(JSON.stringify(dAB)); dNo.goldAllMul = 1;
+        var gemNo = E.gemGold(cfg, GD.state, dNo, dAB.band.index);
+        check("m5_all_gold_buff_multiplies_taps", "tap x" + allBuff.value, (tap1 / tap0).toFixed(3), tap0 > 0 && approx(tap1, tap0 * allBuff.value, 1e-9));
+        check("m5_all_gold_buff_multiplies_crew_and_pickups", "crew and gem x" + allBuff.value,
+          (dAB.goldRate / dAB.goldRateBase).toFixed(3) + " / " + (gemAB / gemNo).toFixed(3),
+          approx(dAB.goldRate, dAB.goldRateBase * allBuff.value, 1e-9) && approx(gemAB, gemNo * allBuff.value, 1e-9));
+        check("m5_all_gold_buff_is_one_timed_effect", "1 timed entry on mul_gold_all_temp",
+          JSON.stringify(GD.state.timed.map(function (x) { return x.verb; })),
+          GD.state.timed.length === 1 && GD.state.timed[0].verb === "mul_gold_all_temp");
+      } else {
+        check("m5_all_gold_buff_present", "a buff on mul_gold_all_temp", "none", false);
+      }
+
+      // --- a gem tracks real recent earnings, never below the band floor
+      m5Setup();
+      var dG = GD.derive(), floorG = dG.goldPerTapBase * PK.types[0].reward.floorTaps * Math.pow(PK.types[0].reward.payoutMulPerBand, Math.min(dG.band.index, PK.bandScaleCap));
+      GD.state.earnRate = 0;
+      var gIdle = E.gemGold(cfg, GD.state, dG, dG.band.index);
+      for (var tt = 0; tt < 300; tt++) { GD.tap(1); D.step(0.1); }   // ~30 s of tapping at 10/s
+      var dG2 = GD.derive(), gBusy = E.gemGold(cfg, GD.state, dG2, dG2.band.index);
+      GD.state.earnRate = 1e300;
+      var gCap = E.gemGold(cfg, GD.state, dG2, dG2.band.index);
+      check("m5_gem_tracks_real_earnings", "idle = floor, tapping > floor, capped",
+        Math.round(gIdle) + " / " + Math.round(gBusy) + " / " + Math.round(gCap) + " (floor " + Math.round(floorG) + ")",
+        approx(gIdle, floorG, 1e-6) && gBusy > gIdle * 1.5 && gBusy >= floorG && isFinite(gCap) &&
+        approx(gCap, (dG2.goldRateBase + PK.earnCapTapsPerSec * dG2.goldPerTapBase) * PK.types[0].reward.earnSeconds *
+          Math.pow(PK.types[0].reward.payoutMulPerBand, Math.min(dG2.band.index, PK.bandScaleCap)), 1e-6));
+
+      // --- everything stays finite: collect-all + MAX-buy at a huge setGold
+      var finBad = [];
+      var hugeP = [1e15, 1e40, 1e90];
+      for (var hp = 0; hp < hugeP.length; hp++) {
+        m5Setup(1000);
+        GD.state.gold = hugeP[hp]; GD.state.goldEarnedTotal = hugeP[hp];
+        var allHp = E.purchasables(cfg);
+        for (var hq = 0; hq < allHp.length; hq++) { var mxh = E.maxBuyable(cfg, GD.state, allHp[hq].id); for (var hr = 0; hr < mxh; hr++) E.buy(cfg, GD.state, allHp[hq].id); }
+        for (var hb = 0; hb < PK.buffs.length; hb++) E.applyPickupBuff(cfg, GD.state, PK.buffs[hb], 3);
+        for (var hs = 0; hs < 40; hs++) {
+          GD.tap(8);
+          var sH = D.spawnPickup(PK.types[hs % PK.types.length].id);
+          if (sH) D.collectPickup(sH.id);
+          D.step(1);
+        }
+        var dH = GD.derive();
+        var vals = [GD.state.gold, GD.state.goldEarnedTotal, GD.state.depth, GD.state.earnRate, dH.goldRate, dH.goldPerTap, dH.digRate, dH.goldAllMul, GD.pickups.goldPaid];
+        for (var hv = 0; hv < vals.length; hv++) if (!isFinite(vals[hv])) finBad.push("value " + hv + " @" + hugeP[hp]);
+      }
+      var simHuge = D.simulate({ policy: "max-buy", pickups: "collect-all", maxSeconds: 1800, state: (function () { var st = E.newState(cfg); st.gold = 1e90; return st; })() });
+      if (!simHuge.allFinite) finBad.push("simulate from 1e90");
+      check("m5_finite_under_collect_all_max_buy", "all finite", finBad.join(" | "), finBad.length === 0);
+
+      m5Setup();
+      var sc = D.spawnPickup("chest");
+      var rch = D.collectPickup(sc.id);
+      if (window.GDUI && window.GDUI.refresh) window.GDUI.refresh();
+      var chip = document.getElementById("buffs");
+      check("m5_chest_grants_buff_and_chip", "buff live, chip shows it",
+        (rch.buff && rch.buff.id) + " / " + (chip ? chip.textContent : "no chip"),
+        rch.done && !!rch.buff && GD.activeBuffs().length === 1 && dbg.lastCue === "chestOpen" &&
+        !!chip && !chip.classList.contains("hidden") && chip.textContent.indexOf(rch.buff.label.toUpperCase()) !== -1);
+      D.step(rch.buffSeconds + 1);
+      if (window.GDUI && window.GDUI.refresh) window.GDUI.refresh();
+      check("m5_chest_chip_clears_at_end", "hidden", chip ? chip.className : "no chip", !!chip && chip.classList.contains("hidden"));
+
+      // --- expiry by lifetime and by scrolling off the top
+      m5Setup();
+      var se = D.spawnPickup("gem", { ttl: 1 });
+      D.step(1.5);
+      check("m5_expires_after_lifetime", "gone, expired 1", GD.pickups.live + "/" + GD.pickups.expired,
+        !E.pickupById(GD.pickups, se.id) && GD.pickups.expired === 1);
+      var ss5 = D.spawnPickup("gem", { y: PK.spawn.padTopBu });
+      GD.state.depth += 60;
+      D.step(0.1);
+      check("m5_expires_when_scrolled_off", "gone", !!E.pickupById(GD.pickups, ss5.id), !E.pickupById(GD.pickups, ss5.id));
+      m5Setup();
+      D.grantForTest("lantern", 2);
+      var sl = D.spawnPickup("gem");
+      check("m5_lantern_extends_lifetime", PK.types[0].lifetimeS + 2 * PK.lanternLifetimeS, sl.ttl,
+        approx(sl.ttl, PK.types[0].lifetimeS + 2 * PK.lanternLifetimeS, 1e-9));
+
+      // --- natural spawning: nothing while hidden or behind an overlay, some while visible
+      m5Setup();
+      visOverride = "hidden";
+      D.step(600);
+      var hidSpawn = GD.pickups.spawned;
+      visOverride = "visible";
+      D.step(600);
+      check("m5_no_spawn_while_hidden", "0 hidden, > 0 visible", hidSpawn + " / " + GD.pickups.spawned, hidSpawn === 0 && GD.pickups.spawned > 0);
+      m5Setup();
+      if (window.GDUI && window.GDUI.openSettings) window.GDUI.openSettings();
+      D.step(600);
+      var ovSpawn = GD.pickups.spawned;
+      var so = D.spawnPickup("gem"), goldO = GD.state.gold;
+      var ro = GD.clickPickup(so.id);
+      check("m5_overlay_blocks_spawn_and_collect", "0 spawned, click refused", ovSpawn + " / " + ro.reason,
+        ovSpawn === 0 && ro.ok === false && ro.reason === "overlay" && GD.state.gold === goldO && !!E.pickupById(GD.pickups, so.id));
+      var setEl = document.getElementById("settings");
+      if (setEl) setEl.classList.add("hidden");
+      visOverride = "hidden";
+      var rh = GD.clickPickup(so.id);
+      check("m5_hidden_tab_pays_nothing", "refused", rh.reason, rh.ok === false && rh.reason === "hidden" && GD.state.gold === goldO);
+      visOverride = "visible";
+
+      // --- offline resolution grants nothing from pickups
+      m5Setup();
+      var spo = D.spawnPickup("gem");
+      var fieldBefore = JSON.stringify({ l: GD.pickups.live, s: GD.pickups.spawned, c: GD.pickups.collected, g: GD.pickups.goldPaid });
+      var dOff = GD.derive();
+      var goldOff0 = GD.state.gold;
+      var apo = D.applyOffline(8 * 3600 * 1000);
+      var wantOff = dOff.goldRate * apo.cappedSeconds * cfg.offline.ratePercent * dOff.offlineRateMul;
+      check("m5_applyOffline_grants_no_pickups", "gold = crew formula, field untouched",
+        (GD.state.gold - goldOff0).toFixed(2) + " vs " + wantOff.toFixed(2),
+        approx(GD.state.gold - goldOff0, wantOff, 1e-6) && JSON.stringify({ l: GD.pickups.live, s: GD.pickups.spawned, c: GD.pickups.collected, g: GD.pickups.goldPaid }) === fieldBefore);
+      var serKeys = Object.keys(window.GDSave.serialize(cfg, GD.state));
+      check("m5_pickups_never_saved", "no pickups or timed in the save", serKeys.join(","),
+        serKeys.indexOf("pickups") === -1 && serKeys.indexOf("timed") === -1);
+      void spo;
+
+      // --- spacebar strikes and never collects
+      m5Setup();
+      var sps = D.spawnPickup("gem");
+      document.dispatchEvent(new KeyboardEvent("keydown", { code: "Space", key: " ", bubbles: true }));
+      check("m5_space_never_collects", "gem still live", !!E.pickupById(GD.pickups, sps.id),
+        !!E.pickupById(GD.pickups, sps.id) && GD.pickups.collected === 0);
+
+      // --- the real pointer path: hit test, click-through to #shaft, forgiving hit box,
+      // no strike on a collect, drag never collects
+      var cvs = document.getElementById("shaft");
+      if (cvs && window.GDRender && window.GDUI) {
+        m5Setup();
+        RND.cameraSnap();
+        RND.renderProbe(GD.state, GD.derive(), 2, 1 / 60);
+        var rect5 = cvs.getBoundingClientRect();
+        function ptr(type, x, y) {
+          cvs.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: y, bubbles: true, cancelable: true, pointerId: 1, pointerType: "mouse", isPrimary: true }));
+        }
+        function dbgOf(id) {
+          D.refreshDbg();
+          for (var q5 = 0; q5 < dbg.pickups.length; q5++) if (dbg.pickups[q5].id === id) return dbg.pickups[q5];
+          return null;
+        }
+        var typesBad = [];
+        for (var tk = 0; tk < PK.types.length; tk++) {
+          var sT = D.spawnPickup(PK.types[tk].id, { clicks: 1 });
+          var dT = dbgOf(sT.id);
+          var inView = dT && dT.x >= 0 && dT.y >= 0 && dT.x <= window.innerWidth && dT.y <= window.innerHeight;
+          var hitEl = inView ? document.elementFromPoint(dT.x, dT.y) : null;
+          if (!inView) typesBad.push(PK.types[tk].id + " centre off-screen " + (dT && dT.x) + "," + (dT && dT.y));
+          else if (hitEl !== cvs) typesBad.push(PK.types[tk].id + " hits " + (hitEl ? hitEl.tagName + "#" + hitEl.id : "null"));
+          if (dT && dT.hitRadiusPx * 2 < 40) typesBad.push(PK.types[tk].id + " hit box " + dT.hitRadiusPx * 2 + " px");
+          var strikes0 = window.GDUI.strikeCount, gold0 = GD.state.gold;
+          if (dT) { ptr("pointerdown", dT.x + 15, dT.y); ptr("pointerup", dT.x + 15, dT.y); }
+          if (E.pickupById(GD.pickups, sT.id)) typesBad.push(PK.types[tk].id + " not collected 15 px off-centre");
+          if (window.GDUI.strikeCount !== strikes0) typesBad.push(PK.types[tk].id + " click also struck the vein");
+          if (PK.types[tk].id === "gem" && !(GD.state.gold > gold0)) typesBad.push("gem click paid nothing");
+        }
+        check("m5_pointer_collects_every_type", "centre hits #shaft, 15 px off collects, no strike", typesBad.join(" | "), typesBad.length === 0);
+        // drag pans, never collects
+        var sd = D.spawnPickup("gem"), dd = dbgOf(sd.id);
+        ptr("pointerdown", dd.x, dd.y); ptr("pointermove", dd.x, dd.y + 40); ptr("pointerup", dd.x, dd.y + 40);
+        check("m5_drag_never_collects", "gem still live", !!E.pickupById(GD.pickups, sd.id), !!E.pickupById(GD.pickups, sd.id));
+        RND.cameraSnap();
+        // a click on bare rock still strikes
+        var strikesB = window.GDUI.strikeCount, vr5 = RND.veinRect(), sc5 = RND.scale();
+        var vx5 = rect5.left + (vr5.x + vr5.w / 2) * sc5, vy5 = rect5.top + (vr5.y + vr5.h / 2) * sc5;
+        GD.pickups = E.newPickupField(cfg);
+        ptr("pointerdown", vx5, vy5); ptr("pointerup", vx5, vy5);
+        check("m5_click_off_pickup_still_strikes", strikesB + 1, window.GDUI.strikeCount, window.GDUI.strikeCount === strikesB + 1);
+        // overlay open: the pointer path refuses outright
+        var sov = D.spawnPickup("gem"), dov = dbgOf(sov.id);
+        window.GDUI.openSettings();
+        ptr("pointerdown", dov.x, dov.y); ptr("pointerup", dov.x, dov.y);
+        check("m5_overlay_blocks_pointer_collect", "gem still live", !!E.pickupById(GD.pickups, sov.id), !!E.pickupById(GD.pickups, sov.id));
+        if (setEl) setEl.classList.add("hidden");
+      }
+
+      // --- side option (string or number) is honoured for every type, and nothing ever
+      // lands on (or drifts into) the active vein's bracket
+      m5Setup(700);
+      var sideBad = [];
+      for (var sd5 = 0; sd5 < PK.types.length; sd5++) {
+        var tyS = PK.types[sd5].id;
+        GD.pickups = E.newPickupField(cfg);
+        var lS = E.pickupById(GD.pickups, D.spawnPickup(tyS, { side: "left" }).id);
+        if (!(lS.xBu >= PK.spawn.leftXBu[0] && lS.xBu <= PK.spawn.leftXBu[1])) sideBad.push(tyS + " left -> x " + Math.round(lS.xBu));
+        GD.pickups = E.newPickupField(cfg);
+        var rS = E.pickupById(GD.pickups, D.spawnPickup(tyS, { side: 0 }).id);
+        if (!(rS.xBu <= PK.spawn.leftXBu[1])) sideBad.push(tyS + " side 0 -> x " + Math.round(rS.xBu));
+      }
+      check("m5_spawn_side_option_honoured", "left wall for 'left' and 0", sideBad.join(" | "), sideBad.length === 0);
+      var veinBad = 0, dV = GD.derive(), fyV = E.faceYBu(cfg, dV.revealBonus), vtV = Math.max(cfg.layout.tileBu * 2, fyV - cfg.vein.aboveFaceBu);
+      var topV = GD.state.depth * cfg.layout.buPerMeter - fyV;
+      for (var vv = 0; vv < 300; vv++) {
+        GD.pickups = E.newPickupField(cfg);
+        var tyV = PK.types[vv % PK.types.length];
+        var pV = E.pickupById(GD.pickups, D.spawnPickup(tyV.id, vv % 2 ? { side: "right" } : undefined).id);
+        var syV = pV.yBu - topV, hh = tyV.sizeBu / 2;
+        if (pV.xBu + hh > cfg.vein.xBu && syV + hh > vtV && syV - hh < vtV + cfg.vein.hBu) veinBad++;
+      }
+      check("m5_pickups_clear_the_vein_bracket", "0 of 300 overlap", veinBad, veinBad === 0);
+
+      // --- rarer and better deeper; scaling capped
+      var rb0 = E.pickupBandPow(PK.types[2].rateMulPerBand, 0, cfg), rb3 = E.pickupBandPow(PK.types[2].rateMulPerBand, 3, cfg);
+      var pb3 = E.pickupBandPow(PK.types[0].reward.payoutMulPerBand, 3, cfg), pbHuge = E.pickupBandPow(PK.types[0].reward.payoutMulPerBand, 400, cfg);
+      check("m5_depth_scales_rates_and_payouts", "chest rate and gem payout up by band, capped",
+        rb3.toFixed(3) + " / " + pb3.toFixed(3) + " / cap " + pbHuge.toFixed(3),
+        rb3 > rb0 && pb3 > 1 && approx(pbHuge, Math.pow(PK.types[0].reward.payoutMulPerBand, PK.bandScaleCap), 1e-12));
+      var sprSt = window.GDSprites.stats();
+      check("m5_pickup_sprites_cached", "gem 1 + chest 1 + geode " + window.GDSprites.GEODE_STAGES, sprSt.pickupSprites,
+        sprSt.pickupSprites === 2 + window.GDSprites.GEODE_STAGES);
+
+      // --- economy: both policies, collect-all, hold the window; simulate never touches the live field
+      GD.pickups = E.newPickupField(cfg);
+      var liveSpawned = GD.pickups.spawned;
+      var ecoBad = [];
+      var pols = ["cheapest-affordable", "max-buy"];
+      for (var pp = 0; pp < pols.length; pp++) {
+        var sm = D.simulate({ policy: pols[pp], pickups: "collect-all" });
+        if (!(sm.reachedAtSeconds >= 5400 && sm.reachedAtSeconds <= 10800)) ecoBad.push(pols[pp] + " ends " + Math.round(sm.reachedAtSeconds));
+        if (!(sm.maxGapSeconds < 300)) ecoBad.push(pols[pp] + " maxGap " + Math.round(sm.maxGapSeconds));
+        if (!sm.allFinite) ecoBad.push(pols[pp] + " non-finite");
+        if (!(sm.pickupStats.collected > 0)) ecoBad.push(pols[pp] + " collected nothing");
+      }
+      check("m5_simulate_collect_all_in_window", "5400..10800 s, maxGap < 300, finite", ecoBad.join(" | "), ecoBad.length === 0);
+      check("m5_simulate_leaves_live_field", liveSpawned, GD.pickups.spawned, GD.pickups.spawned === liveSpawned);
+      check("m5_simulate_unknown_pickups_mode", "an error", JSON.stringify(D.simulate({ pickups: "grab" }).error || ""),
+        !!D.simulate({ pickups: "grab" }).error);
+
+      // =========================================================== gate block
+      // The plain URL must not carry any cheat or QA hook. Prove the attach logic both ways,
+      // and that the UI's handle was claimed at load (so no console can claim it later).
+      var gr = D._gateReport();
+      var wantGated = ["setGold", "setDepth", "grant", "grantForTest", "jumpTo", "spawnPickup", "collectPickup",
+        "_visibility", "fire", "seed", "setState", "setConfig", "pause", "resume", "_clearSave", "simulate",
+        "offlinePreview", "applyOffline", "step", "reset", "selfTest", "refreshDbg", "dbg", "timeScale", "paused"];
+      var notListed = wantGated.filter(function (n) { return gr.names.indexOf(n) === -1; });
+      check("gate_every_cheat_hook_is_debug_only", "all listed hooks behind the gate", notListed.join(","), notListed.length === 0);
+      check("gate_off_attaches_nothing", "none of " + gr.names.length, gr.leakedWhenOff.join(","), gr.leakedWhenOff.length === 0);
+      check("gate_on_attaches_everything", "all of " + gr.names.length, gr.missingWhenOn.join(","), gr.missingWhenOn.length === 0);
+      check("gate_ui_handle_already_claimed", "no __claimInternal left", typeof GD.__claimInternal, typeof GD.__claimInternal === "undefined");
+
       // --- console clean (last, so it counts everything above)
       if (!opts.skipConsoleCheck) {
-        check("m2_no_console_errors", 0, GD.dbg.errors, GD.dbg.errors === 0);
-        check("m2_no_console_warnings", 0, GD.dbg.warnings, GD.dbg.warnings === 0);
+        check("m2_no_console_errors", 0, dbg.errors, dbg.errors === 0);
+        check("m2_no_console_warnings", 0, dbg.warnings, dbg.warnings === 0);
       }
     } finally {
       // Never leave the player's game, config, or save in test state.
@@ -1487,8 +1957,15 @@
         if (!splashWasOff) splashRestore.classList.remove("off");
       }
       if (window.GDRender && window.GDRender.cameraSnap) window.GDRender.cameraSnap();
-      if (GD.config !== liveConfig) GD.setConfig(liveConfig, false);
+      if (GD.config !== liveConfig) D.setConfig(liveConfig, false);
       GD.state = liveState;
+      GD.pickups = livePickups;
+      visOverride = liveVisibility;
+      if (window.GDAudio) window.GDAudio.setMuted(liveMuted);
+      for (var ok5 in overlayWasHidden) {
+        var oe5 = document.getElementById(ok5);
+        if (oe5) oe5.classList.toggle("hidden", overlayWasHidden[ok5]);
+      }
       try {
         if (liveRaw === null) window.GDSave.clear(cfg);
         else localStorage.setItem(cfg.save.key, liveRaw);
@@ -1498,4 +1975,43 @@
 
     return { passed: failed.length === 0, ran: ran, failedCount: failed.length, failed: failed };
   };
+
+  // -------------------------------------------------- the one debug gate
+  // Accessors so debug code keeps writing `GD.timeScale = 20` / `GD._visibility = "visible"`
+  // while the frame loop and the pickup gate read the locals.
+  var DEBUG_ACCESSORS = {
+    timeScale: { get: function () { return sim.timeScale; }, set: function (v) { sim.timeScale = v > 0 ? v : 1; } },
+    paused: { get: function () { return sim.paused; }, set: function (v) { sim.paused = !!v; } },
+    _visibility: { get: function () { return visOverride; }, set: function (v) { visOverride = v === "hidden" || v === "visible" ? v : null; } }
+  };
+  function debugNames() { return Object.keys(D).concat(["dbg"], Object.keys(DEBUG_ACCESSORS)); }
+  function attachDebug(target, on) {
+    if (!on) return target;
+    for (var k in D) target[k] = D[k];
+    target.dbg = dbg;
+    for (var a in DEBUG_ACCESSORS) {
+      Object.defineProperty(target, a, { get: DEBUG_ACCESSORS[a].get, set: DEBUG_ACCESSORS[a].set, enumerable: true, configurable: true });
+    }
+    return target;
+  }
+  // selfTest proves the gate from both sides without reloading the page.
+  D._gateReport = function () {
+    var names = debugNames(), off = attachDebug({}, false), on = attachDebug({}, true), leaked = [], missing = [];
+    for (var i = 0; i < names.length; i++) {
+      if (names[i] in off) leaked.push(names[i]);
+      if (!(names[i] in on)) missing.push(names[i]);
+    }
+    return { names: names, leakedWhenOff: leaked, missingWhenOn: missing };
+  };
+  attachDebug(GD, GD.debug);
+
+  // What the game's own UI needs from the gated set (welcome-back, settings reset, the
+  // debug overlay, the frame loop's speed and pause), handed to ui.js exactly once at load.
+  // ui.js claims it before any console can, and the claim deletes itself.
+  var internal = {
+    debug: GD.debug, dbg: dbg, sim: sim,
+    offlinePreview: D.offlinePreview, applyOffline: D.applyOffline,
+    clearSave: D._clearSave, refreshDbg: D.refreshDbg
+  };
+  GD.__claimInternal = function () { delete GD.__claimInternal; return internal; };
 })();

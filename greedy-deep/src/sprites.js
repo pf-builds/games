@@ -6,7 +6,8 @@
 //
 // Contents: strata tiles (4 variants per band, picked by hash(tx,ty)&3), the band
 // seam dither strip, the timber brace, the ladder, dwarf composites (body/beard/
-// hat/pick, 6 frames, cached by loadout string), the cart and the elevator cage.
+// hat/pick, 6 frames, cached by loadout string), the cart and the elevator cage, and
+// (M5) the clickable pickups: a cut gem, a banded chest and a geode in five crack stages.
 (function () {
   "use strict";
 
@@ -101,6 +102,26 @@
     cg.drawImage(t, 0, 0);
     return c;
   }
+  // A second, outer rim in a light colour: the same dilate-and-tint composite as
+  // outline(), one bu further out. On mid-grey strata a dark rim alone vanishes (the
+  // geode on moonsilver, M5 critic); dark-then-light reads on every band.
+  function rimLight(c, col) {
+    const w = c.width, h = c.height;
+    const t = document.createElement("canvas");
+    t.width = w; t.height = h;
+    const g = t.getContext("2d");
+    g.drawImage(c, -1, 0); g.drawImage(c, 1, 0);
+    g.drawImage(c, 0, -1); g.drawImage(c, 0, 1);
+    g.globalCompositeOperation = "source-in";
+    g.fillStyle = col;
+    g.fillRect(0, 0, w, h);
+    g.globalCompositeOperation = "source-over";
+    g.drawImage(c, 0, 0);
+    const cg = c.getContext("2d");
+    cg.clearRect(0, 0, w, h);
+    cg.drawImage(t, 0, 0);
+    return c;
+  }
   S.outlineVerbatim = outlineVerbatim;
   S.outlineComposite = outline;
 
@@ -167,6 +188,7 @@
   var dwarves = new Map();
   var loadouts = new Set();
   var brace = null, ladder = null, elevator = null, ropeColor = "#5a4630";
+  var pickups = {};      // kind -> [canvases]; geode has one per crack stage
   var stats = { tileBuilds: 0, dwarfBuilds: 0, seamBuilds: 0, outlineFailures: 0, rebuilds: 0, blankKeys: [], opaque: 0, total: 0 };
 
   S.stats = function () {
@@ -182,6 +204,7 @@
       opaque: stats.opaque,
       total: stats.total,
       blank: stats.blankKeys.slice(0, 8),
+      pickupSprites: Object.keys(pickups).reduce(function (n, k) { return n + pickups[k].length; }, 0),
       ready: !!brace
     };
   };
@@ -386,6 +409,78 @@
     return out;
   }
   S.cartsFor = function (band) { return carts[paletteKey(band)] || buildCarts(band); };
+
+  // ------------------------------------------------------------------ pickups (M5)
+  // Drawn inside a 1 bu margin so outline() has room for the dark rim, which is what
+  // lifts a small bright shape off every band's strata. Colours from JSON pickups.palette.
+  var GEODE_STAGES = 5;
+  S.GEODE_STAGES = GEODE_STAGES;
+  function buildPickups() {
+    var P = cfg.pickups.palette;
+    var G = P.gem, C = P.chest, R = P.geode;
+    function framed(w, h, draw, m) {
+      m = m || 1;
+      return outline(make(w + m * 2, h + m * 2, function (p0) {
+        draw({
+          px: function (x, y, c) { p0.px(x + m, y + m, c); },
+          rect: function (x, y, ww, hh, c) { p0.rect(x + m, y + m, ww, hh, c); }
+        });
+      }));
+    }
+    // gem: a brilliant cut, 10x9 — table, crown, girdle, pavilion to a point
+    pickups.gem = [framed(10, 9, function (p) {
+      p.rect(3, 0, 4, 1, G.light);
+      p.rect(2, 1, 6, 1, G.base); p.rect(2, 1, 2, 1, G.light);
+      p.rect(1, 2, 8, 1, G.base); p.rect(1, 2, 2, 1, G.light); p.rect(7, 2, 2, 1, G.dark);
+      p.rect(0, 3, 10, 1, G.light);
+      p.rect(1, 4, 8, 1, G.base); p.rect(6, 4, 3, 1, G.dark);
+      p.rect(2, 5, 6, 1, G.base); p.rect(5, 5, 3, 1, G.dark);
+      p.rect(3, 6, 4, 1, G.base); p.rect(5, 6, 2, 1, G.dark);
+      p.rect(4, 7, 2, 1, G.dark);
+      p.px(4, 8, G.dark);
+      p.px(3, 1, G.glint); p.px(2, 2, G.glint); p.px(4, 4, G.light); p.px(3, 5, G.light);
+    })];
+    // chest: 14x11, domed lid, two gold bands, a lock plate
+    pickups.chest = [framed(14, 11, function (p) {
+      p.rect(2, 0, 10, 1, C.wood); p.rect(1, 1, 12, 3, C.wood);
+      p.rect(2, 0, 10, 1, C.woodLit); p.rect(1, 1, 12, 1, C.woodLit);
+      p.rect(0, 4, 14, 1, C.bandDark);
+      p.rect(0, 5, 14, 6, C.wood); p.rect(0, 5, 14, 1, C.woodLit); p.rect(0, 10, 14, 1, C.woodDark);
+      p.rect(0, 5, 1, 6, C.woodDark); p.rect(13, 5, 1, 6, C.woodDark);
+      p.rect(3, 0, 2, 11, C.band); p.rect(9, 0, 2, 11, C.band);
+      p.rect(4, 0, 1, 11, C.bandDark); p.rect(10, 0, 1, 11, C.bandDark);
+      p.rect(6, 4, 2, 3, C.band); p.px(6, 6, C.bandDark); p.px(7, 5, C.woodDark);
+    })];
+    // geode: 14x11 rounded rock; each stage adds a crack, the last splits it open on crystal.
+    // Two bu of margin: a dark rim from outline(), then a light outer rim, so it reads on
+    // grey strata as clearly as the gem and chest do. Cracks are near-black at 1:1.
+    pickups.geode = [];
+    var K = R.crack || R.rockDark;
+    for (let st = 0; st < GEODE_STAGES; st++) {
+      pickups.geode.push(rimLight(framed(14, 11, function (p) {
+        p.rect(3, 0, 8, 1, R.rock); p.rect(1, 1, 12, 1, R.rock); p.rect(0, 2, 14, 7, R.rock);
+        p.rect(1, 9, 12, 1, R.rock); p.rect(3, 10, 8, 1, R.rockDark);
+        p.rect(3, 0, 7, 1, R.rockLit); p.rect(1, 1, 5, 1, R.rockLit); p.rect(0, 2, 2, 5, R.rockLit);
+        p.rect(12, 3, 2, 6, R.rockDark); p.rect(8, 9, 5, 1, R.rockDark);
+        p.px(5, 3, R.rockDark); p.px(9, 5, R.rockLit); p.px(4, 7, R.rockDark); p.px(10, 2, R.rockLit);
+        // a band of crystal already showing through the rind, so it reads as a geode, not a rock
+        p.px(9, 7, R.crystal); p.px(10, 7, R.crystalLit); p.px(11, 6, R.crystal); p.px(3, 4, R.crystal);
+        if (st >= 1) { p.px(7, 0, K); p.px(7, 1, K); p.px(6, 2, K); p.px(6, 3, K); p.px(7, 4, R.crystalLit); }
+        if (st >= 2) { p.px(8, 4, K); p.px(9, 5, K); p.px(10, 6, K); p.px(11, 6, K); p.px(12, 7, K); p.px(7, 5, R.crystal); }
+        if (st >= 3) { p.px(6, 5, K); p.px(5, 6, K); p.px(4, 7, K); p.px(3, 8, K); p.px(2, 9, K); p.px(6, 6, R.crystal); p.px(8, 5, R.crystalLit); }
+        if (st >= 4) {
+          p.rect(5, 3, 4, 5, R.crystal); p.rect(6, 2, 2, 7, R.crystal);
+          p.px(6, 3, R.crystalLit); p.px(7, 5, R.crystalLit); p.px(5, 6, R.crystalLit); p.px(8, 4, R.crystalLit);
+          p.rect(4, 2, 1, 6, K); p.rect(9, 3, 1, 6, K);
+        }
+      }, 2), R.rim || R.crystalLit));
+    }
+  }
+  S.pickupSprite = function (kind, stage) {
+    var list = pickups[kind];
+    if (!list) return null;
+    return list[stage > 0 ? (stage < list.length ? stage : list.length - 1) : 0];
+  };
 
   // ------------------------------------------------------------------ dwarves
   // 14x16 (12x14 of body plus a 1 bu margin so outline() has room), faces RIGHT.
@@ -592,6 +687,7 @@
     for (k in carts) for (i = 0; i < carts[k].length; i++) fn("cart:" + k + ":" + i, carts[k][i]);
     dwarves.forEach(function (c, key) { fn("dwarf:" + key, c); });
     fn("brace", brace); fn("ladder", ladder); fn("elevator", elevator);
+    for (k in pickups) for (i = 0; i < pickups[k].length; i++) fn("pickup:" + k + ":" + i, pickups[k][i]);
   }
 
   // {total, opaque, blank:[keys]}. A canvas that cannot be read back (-1) counts as
@@ -637,13 +733,14 @@
   // ------------------------------------------------------------------ build
   S.build = function (config, rebuilding) {
     cfg = config;
-    tiles = {}; backTiles = {}; seams = {}; carts = {};
+    tiles = {}; backTiles = {}; seams = {}; carts = {}; pickups = {};
     dwarves = new Map(); loadouts = new Set();
     // Reset the per-build counters only. rebuilds / outlineFailures are incident history
     // and must survive a rebuild, or the guard loses the evidence it exists to collect.
     stats.tileBuilds = 0; stats.dwarfBuilds = 0; stats.seamBuilds = 0;
     stats.blankKeys = []; stats.opaque = 0; stats.total = 0;
     buildShaftParts();
+    if (cfg.pickups && cfg.pickups.palette) buildPickups();
     // Pre-build every band's tiles and cart up front so the first frame in a new band
     // is not the frame that pays for them.
     for (var i = 0; i < cfg.ores.length; i++) {
