@@ -16,6 +16,11 @@
 // bus and a render bus run the same code; every sound feeds one of six category gains (hit, die, melee, murmur, drum, other) under the
 // master; PS.audio.log records every public call with its sim time; PS.audio.renderOffline(log, seconds) replays one into an
 // OfflineAudioContext through SND and PS.audio.analyse(buffer) reads it (RMS, crest, spectral flatness, the share above 2 kHz, clipping).
+// The analysis found the static: the murmur was band-passed noise growing with your count (half the noise-like energy at 700 agents, all
+// of it on a march). So no crowd sound uses noise now: a hit is a square blip and a two-sine click, a death a sawtooth cry with a short
+// low-passed tail, both held to a per-second voice and energy budget; one low melee bed (low-passed noise) follows the fighters you see;
+// the murmur is a tonal bed (detuned triangles, each drifting on its own); the drum's snare is a low-passed triangle tick. The level bound
+// counts audio.lanePeak (the lanes' and beds' clash RMS) instead of the lanes' ceilings, and the limiter sits at the -6 dBFS ceiling.
 (function () {
   const PS = (window.PS = window.PS || {});
   let ctx = null, live = null, qa = null, C = null, muted = false, silent = false, unlocked = false, resumeSoon = false, drumWant = false, vol = 1;
@@ -76,7 +81,7 @@
     b.me = nl("lowpass", E.hz, E.q, "melee"); b.me.g.value = 0.0001; b.meLvl = 0; b.meT = -1e9;
     const ml = lpf(M.lp), mg = c.createGain(); mg.gain.value = 0.0001; ml.connect(mg).connect(b.cat.murmur); b.fixed++; b.mu = { g: mg.gain, v: [] }; b.muLvl = 0;
     for (const hz of M.hz) { const o = c.createOscillator(), g = c.createGain(), f = hz * (1 + M.detune * rnd(-1, 1)); o.type = "triangle"; o.frequency.value = f; g.gain.value = 0; o.connect(g).connect(ml); o.start(); b.fixed += 2; b.mu.v.push({ o, g: g.gain, hz: f, next: 0 }); }
-    b.lanes = C.lanePeak; // the level bound's allowance for the lanes and the beds: their measured peak in the 700-agent clash (P2)
+    b.lanes = C.lanePeak; // the level bound's allowance for the lanes and the beds: their RMS in a 700-agent clash (P2; rarer peaks: the limiter)
     b.bud = { hit: mkBud(), die: mkBud() };
     for (let i = 0; i < A.cueVoices; i++) b.V.push({ on: false, gen: 0, peak: 0, end: 0, n: 0, srcs: 0, done: 0, out: null, nodes: [], pn: 0, P: new Float64Array(96) });
     return b;
