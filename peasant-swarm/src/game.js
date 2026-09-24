@@ -75,7 +75,7 @@
   const portal = (ev) => (PS.portal ? PS.portal.call(ev) : Promise.resolve()); // src/portal.js: a no-op unless ?portal=crazygames|poki
   async function boot() {
     try { await portal("init"); } catch (e) {} portal("loadingStart");
-    const res = await fetch("config.json?v=30");
+    const res = await fetch("config.json?v=31");
     S.cfg = await res.json(); PS.audio.configure(S.cfg.audio);
     S.spr = PS.buildSprites(S.cfg);
     SPL = PS.Spoils(spoilsHooks()); SCR = PS.Screens(S.cfg);
@@ -88,7 +88,7 @@
     PS.vis = VIS; PS.ai = AIQ;
     PS.selfTest = selfTest; PS.fight = fight; PS.simMatch = simMatch; PS.bench = bench; PS.replay = replay; // QA hooks, always on and side-effect free (see QA section)
     PS.debugDropCaches = debugDropCaches; PS.cacheReport = cacheReport; PS.recheckCaches = recheckCaches; PS.cacheProbe = cacheProbe;
-    PS.fixture = fixture; PS.clashRead = clashRead; PS.fogMatch = fogMatch;
+    PS.fixture = fixture; PS.clashRead = clashRead; PS.fogMatch = fogMatch; PS.audioScene = audioScene;
     resize();
     window.addEventListener("resize", resizeSoon);
     if (S.debug) document.body.classList.add("debug");
@@ -873,7 +873,7 @@
     // is L against its peak. A side breaks after the engageDelay brace when L stays under breakRatio x the other's for breakHold, or its
     // morale falls under moraleBreak and 0.02 under the other's. Whole-team totals never enter the test. (The hash is still this tick's.)
     // The group is measured every tick for both sides by groupCells() (the rout's flood at hash-cell resolution).
-    S.engagedNow = false;
+    S.engagedNow = false; S.meleeN = 0; // meleeN: agents fighting in clashes you see (P2: the melee bed follows it)
     const ks = 1 - Math.exp(-dt / CB.moraleSmoothing), nT = S.teams.length, fightMode = CB.localMode !== "radius";
     for (let i = 1; i < nT; i++) {
       const ta = S.teams[i]; if (!ta.alive) continue;
@@ -891,6 +891,7 @@
           if (fightMode) { const gA = groupCells(ta.id, cx, cy), gB = groupCells(tb.id, cx, cy); ta.engG[j] = gA; tb.engG[i] = gB; if (gA > ta.engGPk[j]) ta.engGPk[j] = gA; if (gB > tb.engGPk[i]) tb.engGPk[i] = gB; }
           ta.engT[j] += dt; tb.engT[i] = ta.engT[j]; ta.engCx[j] = tb.engCx[i] = cx; ta.engCy[j] = tb.engCy[i] = cy;
           ta.lastFight = tb.lastFight = S.t; noiseAt(i, j, cx, cy); // every AI within its hearing radius hears this clash (SPEC-v2 §7)
+          if (fxOk(cx, cy)) S.meleeN += nf;
           if (!ta.isPlayer && !tb.isPlayer && S.fogOn && !PS.fog.sees(1, cx, cy)) clashPing(cx, cy, false); // clash noise through the dark
           const La = ta.engL[j], Lb = tb.engL[i]; if (La > ta.engPk[j]) ta.engPk[j] = La; if (Lb > tb.engPk[i]) tb.engPk[i] = Lb;
           if (ta.isPlayer || tb.isPlayer) S.engagedNow = true;
@@ -944,8 +945,9 @@
     // debug assert (always counted): total under the cap (the rock / water assert runs in the steering pass)
     if (S.agents.length > S.cap) S.dbg.capOver++;
 
-    // drum
+    // drum, and the melee bed (P2) by the fighting agents you see
     if (S.engagedNow && !PS.audio.drumOn()) PS.audio.startDrum(); else if (!S.engagedNow && PS.audio.drumOn()) PS.audio.stopDrum();
+    PS.audio.melee(S.meleeN);
     PS.audio.pump(); // the drum's lookahead and the cue reap, on the audio clock (P1)
 
     // camera (SPEC-v2 §3): zoom by the swarm-size rule; follow with camera.lerp plus a velocity look-ahead (none under lookAheadMinSpeed of the
@@ -1548,7 +1550,7 @@
   function endGame(won, why) {
     if (S.attract || S.result) return;
     S.result = won ? "win" : "lose";
-    PS.audio.stopDrum(); PS.audio.murmur(0);
+    PS.audio.stopDrum(); PS.audio.murmur(0); PS.audio.melee(0);
     if (S.fogS && S.fogS.dawnT0 < 0 && !sandbox) S.fogS.dawnT0 = S.t; // any end lifts the fog (M7: the lose screen's grey frame shows the valley, not the dark)
     const dawn = S.fogS && S.fogS.dawnT0 >= 0 ? S.cfg.fog.dawnSeconds : 0;
     S.pendingEnd = { won, why, at: S.t + Math.max(won ? 0.9 : 1.2, dawn) }; // sim-time delay: pausing defers it, newGame clears it
@@ -1627,7 +1629,9 @@
     dbgT = performance.now(); const el = $("dbg"); if (!el) return;
     if (!el.firstChild) { el.innerHTML = "<span></span><br><button id='dbg-nofog'></button>"; $("dbg-nofog").onclick = (e) => { e.stopPropagation(); NOFOG = !NOFOG; debugLine(); }; }
     const fs = PS.flow.stats, tier = S.cfg.polish.dprTiers.indexOf(S.dprCap);
-    el.firstChild.textContent = "fps " + S.fps + "  p90 " + S.scriptP90.toFixed(1) + " ms  DPR " + S.dpr + (tier > 0 ? " (tier " + (tier + 1) + ")" : "") + "\nagents " + S.agents.length + "/" + S.cap + "  zoom " + S.cam.zoom.toFixed(2) + "  fog " + fogLastMs.toFixed(2) + " ms\nseed " + S.seed + "  fields " + (fs ? fs.rebuilds : "-") + (S.fixture ? "  " + S.fixture.name : "");
+    const au = PS.audio.meter(); // P2: the limiter's gain reduction now and the voices sounding (lanes mid-envelope, live cues, the two beds)
+    el.firstChild.textContent = "fps " + S.fps + "  p90 " + S.scriptP90.toFixed(1) + " ms  DPR " + S.dpr + (tier > 0 ? " (tier " + (tier + 1) + ")" : "") + "\nagents " + S.agents.length + "/" + S.cap + "  zoom " + S.cam.zoom.toFixed(2) + "  fog " + fogLastMs.toFixed(2) + " ms\nseed " + S.seed + "  fields " + (fs ? fs.rebuilds : "-") + (S.fixture ? "  " + S.fixture.name : "") +
+      "\naudio " + (au ? "lim " + au.red.toFixed(1) + " dB  voices " + au.voices + " (cues " + au.cues + ")" : "off (no gesture yet)");
     $("dbg-nofog").textContent = NOFOG ? "fog: OFF (tap for on)" : "fog: on (tap for off)";
   }
 
@@ -2442,12 +2446,20 @@
     $("btn-pace").onclick = $("btn-pace-pause").onclick = () => setPace((S.cfg.pace.indexOf(S.pace) + 1) % S.cfg.pace.length);
     for (const id of ["btn-sound", "btn-sound-title", "btn-sound-pause"]) $(id).onclick = () => toggleSound();
     syncSound();
+    if (S.debug) { // P2 listening aid (?debug=1): the pause menu's mixer, a mute per sound category and the master volume; nothing persisted
+      const mx = document.createElement("div"); mx.className = "mixer"; mx.id = "mixer";
+      for (const k of PS.audio.categories) { const b = document.createElement("button"); b.textContent = k; b.dataset.k = k; b.onclick = () => { PS.audio.mix(k, !PS.audio.mixState()[k]); syncMixer(); }; mx.appendChild(b); }
+      const lb = document.createElement("label"), v = document.createElement("input"); v.type = "range"; v.min = "0"; v.max = "100"; v.value = "100"; v.id = "mix-vol";
+      v.oninput = () => { PS.audio.volume(v.value / 100); syncMixer(); }; lb.appendChild(document.createTextNode("volume")); lb.appendChild(v); lb.appendChild(document.createElement("span")); mx.appendChild(lb);
+      $("ov-pause").appendChild(mx); syncMixer();
+    }
   }
+  function syncMixer() { const m = PS.audio.mixState(), el = $("mixer"); if (!el) return; for (const b of el.querySelectorAll("button")) b.classList.toggle("off", !m[b.dataset.k]); el.querySelector("span").textContent = Math.round(m.volume * 100) + "%"; }
   function showOverlay(id) { document.querySelectorAll(".overlay").forEach((o) => o.classList.toggle("active", o.id === id)); }
   // the first-ever match (no stored difficulty, no records, nothing picked this visit) runs Easy silently; the end screens carry the picker
   function startGame() { if (SCR) SCR.drop(); $("teams").classList.add("rumour"); if (S.firstEver) { S.firstEver = false; S.difficulty = "easy"; syncDifficulty(); } PS.audio.setSilent(false); PS.audio.unlock(); PS.audio.click(); portal("gameplayStop"); newGame(false); S.mode = "play"; S._hintFight = S._hintHud = S._hintRecruit = S._hintFog = false; S._hintRelic = S._hintRem = 0; S.fly = null; S.gained = false; S._routedBy = null; showOverlay(null); $("hud").classList.remove("hidden"); layoutHUD(); updateHUD(true); }
-  function toTitle() { portal("gameplayStop"); if (SCR) SCR.drop(); PS.audio.stopDrum(); PS.audio.murmur(0); S.mode = "title"; showOverlay("ov-title"); $("hud").classList.add("hidden"); setHuddle(false); newGame(true); }
-  function pause() { portal("gameplayStop"); S.mode = "pause"; PS.audio.stopDrum(); PS.audio.murmur(0); showOverlay("ov-pause"); setHuddle(false); S.input.joy.active = false; S.input.joy.id = -1; S.input.tp.active = false; S.input.hud2 = -1; }
+  function toTitle() { portal("gameplayStop"); if (SCR) SCR.drop(); PS.audio.stopDrum(); PS.audio.murmur(0); PS.audio.melee(0); S.mode = "title"; showOverlay("ov-title"); $("hud").classList.add("hidden"); setHuddle(false); newGame(true); }
+  function pause() { portal("gameplayStop"); S.mode = "pause"; PS.audio.stopDrum(); PS.audio.murmur(0); PS.audio.melee(0); showOverlay("ov-pause"); setHuddle(false); S.input.joy.active = false; S.input.joy.id = -1; S.input.tp.active = false; S.input.hud2 = -1; }
   function resume() { S.mode = "play"; showOverlay(null); lastFrame = performance.now(); }
   function setPace(i) { S.pace = S.cfg.pace[i]; $("btn-pace").textContent = S.pace + "×"; $("btn-pace-pause").textContent = "SPEED " + S.pace + "×"; } // the top-bar button (desktop) and the pause menu's (phones)
   function toggleSound() { PS.audio.setMuted(!PS.audio.isMuted()); syncSound(); }
@@ -2508,7 +2520,7 @@
   const SANDBOX_KEYS = ["mode", "t", "timeLeft", "agents", "teams", "obstacles", "powerups", "camps", "cam", "input", "rng", "seed", "trickleT", "shake",
     "banners", "hintT", "stats", "engagedNow", "result", "decals", "trails", "attract", "difficulty", "spr", "tick", "acc", "map", "obs", "cap", "dbg",
     "finalCalled", "pendingEnd", "_routedBy", "_hintRecruit", "_hintFight", "_hintHud", "camS", "ev", "lastRout", "thinkRR", "flowW", "fixture",
-    "fogW", "fogS", "fogOn", "frameId", "lastDrawT", "lastDrawSim", "noise", "crown", "pile", "scent", "relaxUntil", "torches", "aiPlayer", "aiCost", "objs", "bandits", "spT"];
+    "fogW", "fogS", "fogOn", "frameId", "lastDrawT", "lastDrawSim", "noise", "crown", "pile", "scent", "relaxUntil", "torches", "aiPlayer", "aiCost", "objs", "bandits", "spT", "meleeN"];
   let sbParticles = null, sbSmoke = null, sbFloaters = null, sbSpr = null, sbSprOf = null, flatMap = null;
   function withSandbox(fn) {
     if (sandbox) return fn(); // nested call shares the outer throwaway world
@@ -3344,12 +3356,14 @@
     "fixtures.ambushWait:n fixtures.ambushSpecWait:n fixtures.ambushLanes:n fixtures.ambushSpacing:n fixtures.ambushDist:n fixtures.ambushSeconds:n fixtures.flipflopN:n fixtures.flipflopRidge.0:n fixtures.flipflopRidge.1:n fixtures.flipflopOffset:n " +
     "fixtures.flipflopAmp:n fixtures.flipflopPeriod:n fixtures.flipflopSeconds:n fixtures.cliffN:n fixtures.cliffDepth:n fixtures.cliffPress:n fixtures.cliffMeasure:n " +
     "flow.stragglerBand:n flow.stragglerDetour:n flow.stragglerRejoin:n flow.rejoinTicks:n flow.blockHold:n fixtures.stragglerMain:n fixtures.stragglerN:n fixtures.stragglerRidge:n fixtures.stragglerPass:n fixtures.stragglerRise:n fixtures.stragglerMainGap:n fixtures.stragglerGap:n fixtures.stragglerNear:n " +
-    "fixtures.stragglerSeconds:n fixtures.stragglerRockSeconds:n fixtures.comboSeeds:n fixtures.ambushRate:n fixtures.holdRate:n fixtures.hiddenGap:n fixtures.audioSoakN:n fixtures.audioSoakRival:n fixtures.audioSoakSeconds:n fixtures.audioDrain:n audio.nodeCap:n audio.master:n audio.ceiling:n audio.limiter.threshold:n audio.limiter.knee:n audio.limiter.ratio:n audio.limiter.attack:n " +
-    "audio.limiter.release:n audio.cueVoices:n audio.reapPad:n audio.minDuck:n audio.hit.gapMs:n audio.hit.jitter:n audio.hit.noisePeak:n audio.hit.noiseDur:n audio.hit.noiseHz:n " +
-    "audio.hit.tonePeak:n audio.die.gapMs:n audio.die.jitter:n audio.die.tonePeak:n audio.die.toneDur:n audio.die.noisePeak:n audio.die.noiseHz:n audio.recruit.gapMs:n audio.recruit.peak:n " +
-    "audio.drum.step:n audio.drum.ahead:n audio.drum.kickPeak:n audio.drum.snarePeak.0:n audio.drum.snarePeak.1:n audio.drum.snareHz.0:n audio.drum.snareHz.1:n audio.drum.snareQ.0:n " +
-    "audio.drum.snareQ.1:n audio.murmur.max:n audio.murmur.k:n audio.murmur.hz.0:n audio.murmur.hz.1:n audio.murmur.hzK:n audio.murmur.q:n audio.limiter:o audio.hit:o audio.die:o " +
-    "audio.recruit:o audio.drum:o audio.murmur:o " +
+    "fixtures.stragglerSeconds:n fixtures.stragglerRockSeconds:n fixtures.comboSeeds:n fixtures.ambushRate:n fixtures.holdRate:n fixtures.hiddenGap:n fixtures.audioSoakN:n fixtures.audioSoakRival:n fixtures.audioSoakSeconds:n fixtures.audioDrain:n audio.nodeCap:n audio.master:n audio.ceiling:n audio.lanePeak:n audio.cueGain:n audio.limiter.threshold:n audio.limiter.knee:n audio.limiter.ratio:n audio.limiter.attack:n " +
+    "audio.limiter.release:n audio.cueVoices:n audio.reapPad:n audio.minDuck:n audio.hit.perSec:n audio.hit.energy:n audio.hit.minLevel:n audio.hit.jitter:n audio.hit.tonePeak:n audio.hit.toneDur:n " +
+    "audio.hit.clickPeak:n audio.hit.clickHz.0:n audio.hit.clickHz.1:n audio.hit.clickDur:n audio.hit.clickLp:n audio.die.perSec:n audio.die.energy:n audio.die.minLevel:n audio.die.jitter:n audio.die.tonePeak:n " +
+    "audio.die.toneDur:n audio.die.tailDb:n audio.die.tailDur:n audio.die.tailHz:n audio.melee.max:n audio.melee.full:n audio.melee.k0:n audio.melee.hz:n audio.melee.q:n audio.melee.tau:n audio.melee.every:n " +
+    "audio.recruit.gapMs:n audio.recruit.peak:n audio.drum.step:n audio.drum.ahead:n audio.drum.kickPeak:n audio.drum.kickDur:n audio.drum.kickFloor:n audio.drum.tickPeak.0:n audio.drum.tickPeak.1:n audio.drum.tickHz.0:n " +
+    "audio.drum.tickHz.1:n audio.drum.tickDur.0:n audio.drum.tickDur.1:n audio.drum.tickLp:n audio.murmur.hz:a audio.murmur.detune:n audio.murmur.drift:n audio.murmur.lp:n audio.murmur.max:n audio.murmur.full:n " +
+    "audio.murmur.k0:n audio.murmur.tau:n audio.murmur.am.0:n audio.murmur.am.1:n audio.murmur.amSec.0:n audio.murmur.amSec.1:n audio.qa.sceneN:n audio.qa.sceneSeconds:n audio.qa.sampleRate:n " +
+    "audio.qa.flatHz.0:n audio.qa.flatHz.1:n audio.qa.highHz:n audio.qa.flatMax:n audio.qa.highMax:n audio.qa.noiseMax:n audio.limiter:o audio.hit:o audio.die:o audio.melee:o audio.recruit:o audio.drum:o audio.murmur:o audio.qa:o " +
     "powerups.count:n powerups.respawn:n powerups.pickupRadius:n powerups.minDistFromStart:n powerups.duration:o powerups.speedMult:n powerups.armorMult:n powerups.contestTol:n " +
     "powerups.frenzyMult:n powerups.rallyRadius:n powerups.weights:o powerups.duration.speed:n powerups.duration.armor:n powerups.duration.frenzy:n powerups.duration.rally:n " +
     "ai.think:n ai.sight:n ai.leadTime:n ai.leadSmooth:n ai.fleeDistance:n ai.personalities:a ai.finalFleeRatio:n ai.huntSpeed:n ai.fleeSpeed:n ai.corneredDist:n ai.grace:n " +
@@ -3609,12 +3623,72 @@
           if (i % 600 === 0) { const st = PS.audio.state(); trace.push([+S.t.toFixed(0), S.agents.length, st.nodes.live, st.cues.live, st.level.now]); }
           if ((i & 63) === 63 && performance.now() - w0 > wallMs) { truncated = true; break; }
         }
-        const during = PS.audio.state(); clock = S.t + FX.audioDrain; PS.audio.stopDrum(); PS.audio.murmur(0); PS.audio.pump(); const after = PS.audio.state();
+        const during = PS.audio.state(); clock = S.t + FX.audioDrain; PS.audio.stopDrum(); PS.audio.murmur(0); PS.audio.melee(0); PS.audio.pump(); const after = PS.audio.state();
         return { seconds: +S.t.toFixed(1), truncated, clashes, fights: S.ev.fights, routs: S.ev.routs, peakAgents, nodesMax: during.nodes.max, nodesFixed: during.nodes.fixed, nodesAfter: after.nodes.live, cuesAfter: after.cues.live,
           cues: after.cues, level: during.level, calls: during.calls, plays: during.plays, trace, wallMs: Math.round(performance.now() - w0),
-          lanes: +((AU.hit.noisePeak + AU.hit.tonePeak + AU.die.tonePeak + AU.die.noisePeak + AU.recruit.peak + AU.drum.kickPeak + Math.max(...AU.drum.snarePeak) + AU.murmur.max) * AU.master).toFixed(3) };
+          lanes: +(AU.lanePeak * AU.master).toFixed(3) };
       } finally { PS.audio.qa(false); }
     });
+  }
+  // P2: the audio scene, two clashes on screen on the flat fixture map for o.seconds with about o.n agents in all (the deaths bring the
+  // 1.1 n it spawns back to about n): yours (0.46 n) against a rival (0.24 n) above or below you, and two rivals (0.22 n, 0.18 n) fighting
+  // 0.62 of a half screen to your right (on a portrait screen the axes swap). Staged, not played: a pair out of a fight
+  // for 0.5 s is replaced (its remnants retired silently, a fresh rival on the other side of you from teams 2, 5, 6 in turn, a fresh second
+  // pair beside you), and you are trimmed or topped up to 0.46 n before each new rival, so the scene holds still at n agents. The camera follows
+  // you as in play, so the calls (hits, deaths, routs, the melee bed, the drum) are the ones a player hears; the murmur follows your count
+  // every 6 ticks, as updateHUD drives it. Every PS.audio call is logged on sim time. Returns { log, trace: per second [t, agents, yours,
+  // clashes, clashes on screen, fighting agents on screen, zoom] }; sandboxed and silent: the log is what PS.audio.renderOffline plays.
+  function audioScene(o) {
+    o = o || {}; const n = clamp(o.n | 0 || 700, 20, 900), secs = clamp(+o.seconds || 45, 1, 60), wallMs = clamp(+o.wallMs || 12000, 500, 13000);
+    return withSandbox(() => {
+      const w0 = performance.now(), W = S.cfg.world.w; fixtureBase(flatMap || (flatMap = PS.terrain.flat()), o.seed || 91); S.mode = "sandbox";
+      const p = S.teams[1], [nP, nA, nB, nC] = [0.46, 0.24, 0.22, 0.18].map((k) => Math.max(4, Math.round(k * n))), B = S.teams[3], Cc = S.teams[4];
+      blob(W / 2, W / 2, nP, 1); settle(p); S.cam.x = p.cx; S.cam.y = p.cy; zoomRule(p.count, 0, true);
+      let foe = null, fi = 0, side = 1, calm1 = 9, calm2 = 9, truncated = false; const trace = [], wide = S.vw >= S.vh; // the lower pair sits along the screen's long axis
+      const retire = (t, keep) => { let k = t.count - (keep || 0); for (let i = S.agents.length - 1; i >= 0 && k > 0; i--) { const a = S.agents[i]; if (a.team === t.id && !a.dead) { a.dead = true; k--; } } if (!keep) t.alive = false; recount(); };
+      const drop = (t, x, y, k) => { t.alive = true; t.thinkT = 1e9; blob(clamp(x, 200, W - 200), clamp(y, 200, W - 200), k, t.id); settle(t); };
+      S.fixture = { name: "audioScene", drive(dt) {
+        calm1 = S.engagedNow ? 0 : calm1 + dt; calm2 = B.engT[4] > 0 ? 0 : calm2 + dt;
+        if (calm1 >= 0.5) { calm1 = 0; if (foe) retire(foe); if (p.count > nP) retire(p, nP); else if (p.count < nP) { blob(p.cx, p.cy, nP - p.count, 1); settle(p); } foe = S.teams[[2, 5, 6][fi++ % 3]]; side = -side; const d = side * (blobR(p.count) + blobR(nA) + 40); drop(foe, p.cx + (wide ? 0 : d), p.cy + (wide ? d : 0), nA); }
+        if (calm2 >= 0.5) { calm2 = 0; retire(B); retire(Cc); const h = 0.62 * (wide ? S.vw : S.vh) / 2 / S.cam.zoom, x = p.cx + (wide ? h : 0), y = p.cy + (wide ? 0 : h), gb = blobR(nB) + 15, gc = blobR(nC) + 15;
+          drop(B, x - (wide ? gb : 0), y - (wide ? 0 : gb), nB); drop(Cc, x + (wide ? gc : 0), y + (wide ? 0 : gc), nC); }
+        if (foe.count > 0) { p.tx = foe.cx; p.ty = foe.cy; foe.tx = p.cx; foe.ty = p.cy; foe.route = true; } else { p.tx = p.cx; p.ty = p.cy; }
+        if (B.count > 0 && Cc.count > 0) { B.tx = Cc.cx; B.ty = Cc.cy; Cc.tx = B.cx; Cc.ty = B.cy; B.route = Cc.route = true; }
+        p.route = true; p.mode = "route";
+      }, done: () => false, result: () => null };
+      PS.audio.log(true, () => S.t, o.cap);
+      try {
+        const nT = Math.round(secs * 60);
+        for (let i = 0; i < nT; i++) {
+          update(DT); if (i % 6 === 0) PS.audio.murmur(p.count);
+          if (i % 60 === 59) { let pr = 0, on = 0; for (let a = 1; a < S.teams.length; a++) for (let c = a + 1; c < S.teams.length; c++) if (S.teams[a].engT[c] > 0 && S.teams[a].eng[c] > 0) { pr++; if (onScreen(S.teams[a].engCx[c], S.teams[a].engCy[c])) on++; }
+            trace.push([Math.round(S.t), S.agents.length, p.count, pr, on, S.meleeN, +S.cam.zoom.toFixed(2)]); }
+          if ((i & 63) === 63 && performance.now() - w0 > wallMs) { truncated = true; break; }
+        }
+        PS.audio.stopDrum(); PS.audio.murmur(0); PS.audio.melee(0);
+        return { n, seconds: +S.t.toFixed(2), truncated, log: PS.audio.log(), trace, fights: S.ev.fights, routs: S.ev.routs, wallMs: Math.round(performance.now() - w0) };
+      } finally { PS.audio.log(false); }
+    });
+  }
+  // P2: the audio render check. A qa.sceneSeconds, qa.sceneN-agent two-clash scene (audioScene) rendered offline at qa.sampleRate twice,
+  // as heard and with every noise source silent (its tonal part), each analysed per second (PS.audio.analyse). Resolves to both analyses.
+  function audioMix(o) {
+    o = o || {}; const Q = S.cfg.audio.qa, secs = o.seconds || Q.sceneSeconds, w0 = performance.now(), sc = audioScene({ n: o.n || Q.sceneN, seconds: secs, seed: o.seed || 91, wallMs: 6000 }), simMs = Math.round(performance.now() - w0);
+    const an = (r) => (r ? PS.audio.analyse(r.data, r.sr, { flatHz: Q.flatHz, highHz: Q.highHz }) : null), ro = { sr: Q.sampleRate };
+    return PS.audio.renderOffline(sc.log, secs, ro).then((full) => PS.audio.renderOffline(sc.log, secs, { ...ro, noise: false }).then((tonal) => ({ scene: { n: sc.n, seconds: sc.seconds, truncated: sc.truncated, events: sc.log.n, trace: sc.trace, simMs },
+      full: an(full), tonal: an(tonal), red: full ? Array.from(full.red) : null, stats: full ? full.stats : null })));
+  }
+  // the render's bars (P2, config audio.qa): median flatness <= flatMax, median share above highHz <= highMax, no clipped sample, and the
+  // noise-like share of the A-weighted power (the render as heard minus its tonal part, per second, median) <= noiseMax
+  function mixChecks(r, check) {
+    const Q = S.cfg.audio.qa, med = (a) => { const v = a.filter((x) => isFinite(x)).sort((x, y) => x - y); return v.length ? v[v.length >> 1] : null; };
+    if (!r.full) { check("audio_render_mix", true, { skipped: "no OfflineAudioContext" }); return; }
+    const P = r.full.per, T = r.tonal.per, flat = med(P.map((x) => x.flat)), high = med(P.map((x) => x.high)), rms = med(P.map((x) => x.rms));
+    const share = med(P.map((x, i) => { const a = Math.pow(10, x.aw / 10), t = T[i] ? Math.pow(10, T[i].aw / 10) : 0; return a > 0 ? Math.max(0, (a - t) / a) : 0; }));
+    const red = (r.red || []).slice(Math.round(2 / 0.05)).sort((a, b) => a - b), redMed = red.length ? red[red.length >> 1] : 0; // (the reduction meter settles over its first 2 s)
+    const d = { agents: r.scene.n, seconds: r.scene.seconds, truncated: r.scene.truncated, flat: +flat.toFixed(4), high: +high.toFixed(4), noiseShare: +share.toFixed(3), rms, peak: r.full.peak, clipped: r.full.clipped, limiterRedMed: +redMed.toFixed(2),
+      bars: { flatMax: Q.flatMax, highMax: Q.highMax, noiseMax: Q.noiseMax }, simMs: r.scene.simMs };
+    check("audio_render_mix", !r.scene.truncated && r.full.clipped === 0 && flat <= Q.flatMax && high <= Q.highMax && share <= Q.noiseMax, d);
   }
   function selfTest(opts) {
     opts = opts || {};
@@ -3625,7 +3699,7 @@
     const check = (name, ok, detail) => { results[name] = { pass: !!ok, detail }; if (!ok) fails.push(name); };
     const timed = (p, fn) => { const t = performance.now(); try { fn(); } catch (e) { check(p + "_threw", false, { error: String(e && e.stack || e) }); } ms[p] = Math.round(performance.now() - t); };
     const ls0 = lsSnapshot(), sig0 = stateSig(), refs0 = [S.agents, S.teams, S.map, S.cam, S.input, S.spr, S.stats, particles, floaters];
-    let f = null, mt = null;
+    let f = null, mt = null, mixP = null;
     if (has("config")) timed("config", () => {
       check("config_loaded", !!S.cfg && typeof S.cfg === "object", { sections: S.cfg ? Object.keys(S.cfg) : [] });
       const cr = configReport(); check("config_keys", cr.missing.length === 0, cr);
@@ -3740,15 +3814,16 @@
     if (has("replay")) timed("replay", () => { const r = replay(424242, 60); check("replay_60s", r.same, r); });
     if (has("audio")) timed("audio", () => {
       // P1: after a 120 s clash-heavy match the cue voices have all disconnected (only the bus's fixed nodes are left), the live node count
-      // never passed audio.nodeCap, the level bound held (master x (lanes + murmur + live cues) <= audio.ceiling, master never raised), the
-      // lanes and the murmur leave half the ceiling to the cues, and the hit / death gates held under a 600+ agent melee
+      // never passed audio.nodeCap, the level bound held (master x (lanePeak + live cues) <= audio.ceiling, master never raised), the
+      // lanes and beds leave half the ceiling to the cues, and the hit / death budgets (P2) held under a 600+ agent melee
       const r = audioSoak(), AU = S.cfg.audio;
       if (r.error) { check("audio_soak_nodes", true, r); return; } // a browser without OfflineAudioContext: reported, not failed
       check("audio_soak_nodes", !r.truncated && r.seconds >= S.cfg.fixtures.audioSoakSeconds - 0.5 && r.nodesAfter === r.nodesFixed && r.cuesAfter === 0 && r.nodesMax <= AU.nodeCap && r.cues.closed === r.cues.made - r.cuesAfter, r);
-      check("audio_level_bound", r.level.max <= AU.ceiling + 1e-9 && r.level.master === AU.master && r.lanes <= AU.ceiling / 2, { level: r.level, lanes: r.lanes, ceiling: AU.ceiling });
-      const cap = (k, g) => Math.floor((r.seconds * 1000) / (g.gapMs * (1 - (g.jitter || 0)))) + 1, pl = r.plays || {}, ca = r.calls || {};
-      check("audio_gates_hold", r.peakAgents >= 600 && (ca.hit || 0) > 3 * (pl.hit || 0) && (pl.hit || 0) > 0 && (pl.hit || 0) <= cap("hit", AU.hit) && (pl.die || 0) <= cap("die", AU.die) && (pl.recruit || 0) <= cap("recruit", AU.recruit),
-        { peakAgents: r.peakAgents, calls: ca, plays: pl, capHit: cap("hit", AU.hit), capDie: cap("die", AU.die) });
+      check("audio_level_bound", r.level.max <= AU.ceiling + 1e-6 && Math.abs(r.level.master - AU.master) < 1e-6 && r.lanes <= AU.ceiling / 2, { level: r.level, lanes: r.lanes, ceiling: AU.ceiling });
+      const cap = (g) => Math.ceil(r.seconds * g.perSec) + g.perSec, capMs = (g) => Math.floor((r.seconds * 1000) / g.gapMs) + 1, pl = r.plays || {}, ca = r.calls || {}; // hits and deaths: perSec in any second (P2)
+      check("audio_gates_hold", r.peakAgents >= 600 && (ca.hit || 0) > 3 * (pl.hit || 0) && (pl.hit || 0) > 0 && (pl.hit || 0) <= cap(AU.hit) && (pl.die || 0) <= cap(AU.die) && (pl.recruit || 0) <= capMs(AU.recruit),
+        { peakAgents: r.peakAgents, calls: ca, plays: pl, capHit: cap(AU.hit), capDie: cap(AU.die) });
+      mixP = audioMix(); // P2: the render check (asynchronous; its checks land in mixChecks)
     });
     if (has("match")) timed("match", () => {
       mt = simMatch(horizon, { wallMs: opts.wallMs || 9000 });
@@ -3759,10 +3834,18 @@
     const refs1 = [S.agents, S.teams, S.map, S.cam, S.input, S.spr, S.stats, particles, floaters];
     check("state_restored", stateSig() === sig0 && refs0.every((r, i) => r === refs1[i]) && PS.terrain.map === S.map, { mode: S.mode, t: S.t, agents: S.agents.length });
     check("localStorage_unchanged", lsSnapshot() === ls0, {});
-    const n = Object.keys(results).length, total = Math.round(performance.now() - w0), pass = fails.length === 0;
-    (pass ? console.log : console.warn)("[PS.selfTest] " + (pass ? "PASS " : "FAIL ") + (n - fails.length) + "/" + n + (pass ? "" : " fails: " + fails.join(", ")) + " | parts " + parts.join(",") +
-      (f ? " | 30v20 " + (f.winner || "?") + " in " + f.seconds + "s" : "") + (mt ? " | simMatch " + mt.seconds + "s " + (mt.truncated ? "TRUNCATED by wall guard" : mt.end) + ", peak " + mt.maxTotal + "/" + mt.agentCap : "") + " | " + total + " ms");
-    return { pass, fails, results, ms: total, partMs: ms };
+    const finish = () => {
+      const n = Object.keys(results).length, total = Math.round(performance.now() - w0), pass = fails.length === 0;
+      (pass ? console.log : console.warn)("[PS.selfTest] " + (pass ? "PASS " : "FAIL ") + (n - fails.length) + "/" + n + (pass ? "" : " fails: " + fails.join(", ")) + " | parts " + parts.join(",") +
+        (f ? " | 30v20 " + (f.winner || "?") + " in " + f.seconds + "s" : "") + (mt ? " | simMatch " + mt.seconds + "s " + (mt.truncated ? "TRUNCATED by wall guard" : mt.end) + ", peak " + mt.maxTotal + "/" + mt.agentCap : "") + " | " + total + " ms");
+      return { pass, fails, results, ms: total, partMs: ms };
+    };
+    // P2: the audio part's offline render finishes asynchronously (an OfflineAudioContext), after the sim state is checked restored: then
+    // PS.selfTest returns a Promise (page.evaluate awaits it); without the audio part it returns its result as before
+    if (!mixP) return finish();
+    const r0 = performance.now();
+    return mixP.then((r) => { ms.audioRender = Math.round(performance.now() - r0); mixChecks(r, check); return finish(); },
+      (e) => { check("audio_render_threw", false, { error: String((e && e.stack) || e) }); return finish(); });
   }
 
   boot();

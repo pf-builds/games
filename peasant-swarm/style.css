@@ -113,6 +113,12 @@ body.debug #dbg { display: block; }
 .diffrow .diffpick { display: flex; gap: .3rem; }
 .diffrow button { padding: .4rem .8rem; font-size: .8rem; min-height: 38px; letter-spacing: .06em; }
 .diffrow button.sel { background: #FFE49A; color: #08140b; border-color: #FFF0C2; }
+/* P2 ?debug=1 mixer in the pause menu: a mute per sound category and the master volume (nothing persisted) */
+.mixer { display: flex; flex-wrap: wrap; gap: .35rem; justify-content: center; align-items: center; max-width: 28rem; font: 700 .78rem/1.2 monospace; color: #E4E0CE; background: rgba(8,14,6,.55); padding: .5rem .7rem; border-radius: 10px; }
+.overlay .mixer button { padding: .3rem .6rem; font: 700 .78rem monospace; min-height: 36px; min-width: 0; }
+.overlay .mixer button.off { opacity: .45; text-decoration: line-through; }
+.mixer label { display: flex; align-items: center; gap: .4rem; width: 100%; justify-content: center; }
+.mixer input { width: 12rem; }
 .howto { display: grid; gap: .35rem; max-width: 30rem; color: #E4E0CE; font-size: .92rem; margin-top: .3rem; text-shadow: 0 2px 4px rgba(0,0,0,.85); background: rgba(8,14,6,.45); padding: .7rem 1rem; border-radius: 12px; }
 .howto b { color: #FFE49A; }
 .bigtitle { font-family: "Baloo 2", sans-serif; font-weight: 800; font-size: clamp(2.4rem, 9vw, 4.4rem); line-height: 1; text-shadow: 0 6px 0 rgba(0,0,0,.35); }
