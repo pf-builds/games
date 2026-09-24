@@ -739,6 +739,8 @@
     "confetti": 70,
     "bannerFall": 1.2,
     "posterSeed": 1000,
+    "hintFightGain": 8,
+    "hintFightAfter": 8,
     "posterMint": 70,
     "posterOrange": 48,
     "posterStep": 0.45
@@ -2899,6 +2901,8 @@
       0,
       4294967295
     ],
+    "polish.hintFightGain": ["peasants recruited beyond the start count before the fight hint", 1, 60],
+    "polish.hintFightAfter": ["s of match time before the fight hint may replace the control hint", 0, 60],
     "polish.posterMint": [
       "mint peasants in the poster scene",
       1,

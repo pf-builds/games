@@ -75,7 +75,7 @@
   const portal = (ev) => (PS.portal ? PS.portal.call(ev) : Promise.resolve()); // src/portal.js: a no-op unless ?portal=crazygames|poki
   async function boot() {
     try { await portal("init"); } catch (e) {} portal("loadingStart");
-    const res = await fetch("config.json?v=28");
+    const res = await fetch("config.json?v=29");
     S.cfg = await res.json();
     S.spr = PS.buildSprites(S.cfg);
     SPL = PS.Spoils(spoilsHooks()); SCR = PS.Screens(S.cfg);
@@ -954,7 +954,7 @@
     // stats + hints
     if (player.count > S.stats.peak) S.stats.peak = player.count;
     if (S.stats.recruited === 0 && S.t > 25 && !S._hintRecruit) S._hintRecruit = showHint("Grey peasants are free recruits. Go touch them.", 3);
-    if (player.count >= 8 && !S._hintFight) S._hintFight = showHint("Only fight rivals when you're bigger. Winners absorb the losers.", 5);
+    if (player.count >= 1 + diff().startBonus + S.cfg.polish.hintFightGain && S.t >= S.cfg.polish.hintFightAfter && !S._hintFight) S._hintFight = showHint("Only fight rivals when you're bigger. Winners absorb the losers.", 5); // relative to the start count, after the control hint (final critic MAJOR-1)
     if (player.count >= 20 && !S._hintHud) S._hintHud = showHint(S.input.touch ? "Hold HUDDLE to tighten the swarm before a clash" : "Hold SPACE to huddle up before a clash", 5);
     // v2 hints (M7): the fog, relics, the remnant. Each waits (showHint returns false) while a clash, a banner or a fresh route marker is up
     if (!S._hintFog && S.t > 22 && S.fogS.stats.firstSight < 0) S._hintFog = showHint("Rival mobs hide in the dark. Explore to find them", 4);
