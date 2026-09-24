@@ -4,12 +4,12 @@
 - Multiple maps / biomes (winter village, marsh)
 - Unit types (archers, knights) and buildings (mill = passive recruits)
 - Meta progression between matches
-- Title-screen attract mode (AI-only sim as background)
+- ~~Title-screen attract mode (AI-only sim as background)~~ superseded in M7: a code-painted valley title (src/title.js)
 - Global leaderboard (biggest swarm / fastest sweep)
-- CrazyGames SDK integration + portal submission pass
-- Per-team secondary colour cue (hat colour or pennant) for colour-vision deficiency, on top of the Okabe-Ito-ish palette
-- Pixel-art sound icon instead of the emoji speaker
-- Rout animation: stagger the flip further and add a horn-blast screen flash
+- ~~CrazyGames SDK integration + portal submission pass~~ adapter in M7 (src/portal.js, no-op unless ?portal=crazygames|poki); the submission pass stays open
+- ~~Per-team secondary colour cue (hat colour or pennant) for colour-vision deficiency, on top of the Okabe-Ito-ish palette~~ done in M5 (hat silhouettes, banner emblems)
+- ~~Pixel-art sound icon instead of the emoji speaker~~ done in M7 (pixel SVG icons for sound, muted and pause)
+- ~~Rout animation: stagger the flip further and add a horn-blast screen flash~~ done in M7 (the rout wave: hands up, then the colour turns outward from the contact over 0.6 s)
 - Smarter AI flee (kite along camps) and AI-vs-AI alliances against the leader
 
 ## QA follow-ups from the v2 B0 harness pass (2026-09-24)
@@ -22,7 +22,7 @@
 - Match-start hitch: the visible ground chunks bake in the first frame of a new map (about 10-20 ms desktop). Could pre-bake them while the title iris or the PLAY press plays
 - Terrain gen is 80-120 ms on the very first call in a cold page (JIT warm-up), 11-25 ms after. A throwaway gen during boot, or baking the first map in idle time, would hide it
 - Minimap walks every agent once per team per frame (five passes); one pass with a colour switch would do
-- The debug overlay text runs under the desktop minimap
+- ~~The debug overlay text runs under the desktop minimap~~ done in M7 (a DOM readout with the nofog toggle)
 - Rock plateau "lit" cells are a placeholder speckle; M5 replaces the whole terrain paint (dual-grid cliffs, strata, foam)
 - ~~The harness bot routes with its own BFS on PS.terrain~~ done in M2: the bot sets goals with PS.aim and the game's field routes them (BFS only ranks camps)
 - PS.bench("capclash") runs 4 teams with no fog on the first fallback map's most open spot; M3/M4 should extend it to 6 teams with fog on, as SPEC-v2 §13 names the scene
@@ -58,7 +58,7 @@
 - The finale is a massacre. All-AI matches (Normal rivals) keep 6 / 5 / 5 swarms at 1:00 / 2:00 / 3:00 and 5 at the horn, then every swarm but one dies inside 20-35 s: 0 of 4 reached the bell in a seed sweep (finale.underdogRatio 0.75: 1 of 4). Cause: every rival converges on the crown, contact fights between attackers are full-flip (SPEC-v2 §6), and a converging brawl eliminates groups one by one. Levers for M8: keep the remnant rule in non-crown finale fights, a higher finale.underdogRatio (more attackers wait for a partner), attackers that avoid each other on the way in, or a later horn. Measured on the ten harness seeds (all-AI, Normal): spec settings 2/10 bells; finale.underdogRatio 0.75: 1/10; ai.finalFleeRatio 1.3: 1/10; world.finalSeconds 45: 1/10; finale.fullFlip false (keep the remnant rule after the horn): 7/10 bells, leader wins 4/10, fights 21 -> 34. The bell target (>= 60%) needs the remnant rule in the finale or an equivalent; that reverses SPEC-v2 decision 1, so it is the orchestrator's call (the switch is in config, default true = spec)
 - A player who hangs back in the finale can win by being the last one standing while the valley brawls over the crown. Watch for it in Peter's playtest
 - Scattered survivors of a crowned rout are recruitable by anyone once their 6 s escape window ends, the crowned team included (spec reading: "scatter as neutrals"). Rally orbs no longer absorb them inside the window (M4 fix). If the crown still feeds on them, give scattered neutrals a longer no-recruit window for the crowned team only
-- Six pips wrap to two rows on a 375 px phone (four and two). The clash panel, edge markers and hint moved down to clear them. M7's portrait layout (five 60x24 pips under the top bar) replaces this
+- ~~Six pips wrap to two rows on a 375 px phone (four and two). The clash panel, edge markers and hint moved down to clear them. M7's portrait layout (five 60x24 pips under the top bar) replaces this~~ done in M7
 - AI noise: clashes are heard (difficulty hearing radius). Dust from big swarms is not a separate AI input: explore steers away from bigger swarms the AI remembers (ai.ghostKeep 20 s) instead
 - Sly's lurk objective is the nearest power-up beacon within ai.objectiveSight, else the busiest camp it knows; Stubborn claims a camp cluster outside its home meadow. M6's villages, chests and bandit camps become their real objectives
 - Bully tracks a scent only while it is at least ai.personalities.bully.trackRatio x the hunt threshold (0.8); a much bigger player gets the pings but no visit. Check in playtest whether Bully ever arrives
@@ -76,7 +76,7 @@
 - Bridge decks are the crossing's 2 cells, so bridges are short and square. A longer deck needs terrain.bridgeWidth, which moves fairness and routing: M8
 - Decal mushrooms and flowers are the only saturated pixels in the ground (0.01% of a terrain crop over 45%). Keep them rare
 - Hit flash is one baked frame (white wash at art.flashWhite) shown while the flash timer is above art.flashMin, not a fade: it keeps one draw per agent. M7's clash cues may want two flash levels (a second atlas row)
-- Remnant "hands up" is still two cream rects over the plain frame; M7's surrender frame belongs in the atlas
+- Remnant "hands up" is still two cream rects over the plain frame; M7's surrender frame belongs in the atlas (M7: the rout wave draws the same hands-up pixels plus a dropped fork; an atlas row is still the better frame)
 - Relic overlays (helmet, tines, shield) are hooks in sprites.js (RELIC, the relics argument of peasantSet): M6 fills them, and each combination becomes its own cached atlas (done in M6: Arms I-III set the hat band, crest and tines; one atlas per team per Arms tier, the old one zeroed)
 
 ## Parked during v2 M6 Spoils (2026-09-24)
@@ -88,5 +88,15 @@
 - A team at its cap on an axis walks over a relic or chest of that axis without opening it (it stays for others). Muster grants +1 on its axis, so Horn I from a chest plus the 15 milestone makes Horn II
 - A routed leader drops only when the rout group is at least progression.dropMinShare (0.3) of it: a 20-peasant skirmish at the edge of a 300 swarm is not "routed". The drops land where the winner's flipped peasants stand (C1 E); the winner usually takes them
 - The heavy chest counter shows the ring's leading count (a rival's, if it leads the ring); the pick-of-two relics can be taken by anyone
-- Relic onboarding (the first muster relic flying into the strip) and the portrait HUD layout for the relic strip are M7's (SPEC-v2 §10)
+- ~~Relic onboarding (the first muster relic flying into the strip) and the portrait HUD layout for the relic strip are M7's (SPEC-v2 §10)~~ done in M7
 - Arms parity is measured with PS.fight at 40 and 60 per side: break-even ~1.2x (I), ~1.36x (II), ~1.55x (III) at 7% per tier (8% put Arms II at ~1.40x, on the gate). Fights sit on the rout rule's knife edge, so single points need 9+ seeded runs
+
+## Parked during v2 M7 Polish and mobile (2026-09-24)
+- Phone sim cost: the packed hash, the idle-neutral skip and the folded passes cut PS.bench("capclash") update p90 at 4x from about 4.8 to about 4.0 ms at the old 700 touch cap; spawn.touchAgentCap went 700 -> 640 (the brief's last lever) for margin (about 3.3-3.6 ms). A 24 px hash would scan a third fewer candidates but changes the neighbour order, and with it which enemy each fighter picks: 60 v 40 went from 4.9 s to 6.2 s. It needs an order-independent target pick (nearest, ties by id) and an M8 re-tune of combat before it can land
+- Draw at 4x in headless SwiftShader is 35-45 ms p90 on the phone scene: that is software raster, not JS. Adaptive DPR (2 -> 1.5 -> 1 on a p90 over 20 ms for 3 s) is the real-phone answer; Peter's iPhone with ?debug=1 is the true reading
+- The first rival is not seeded smaller within ~900 px (SPEC-v2 §10 onboarding): the six spawns sit on a ring about 1550 px apart and every swarm starts as one peasant (you get the Easy / Normal start bonus). A seeded weak neighbour needs a spawn-slot or start-count rule: M8
+- The painted title replaced the attract match (the title no longer runs a sim behind it). If portals want the live valley as the menu, draw the attract world at a low tick rate behind the painted sky instead
+- Win and lose staging draw over the frozen world in screen space; the lose screen's grey frame is one canvas at the main canvas size (zeroed when you leave it). A dedicated surrender frame and a proper planted-banner animation (pole driven into the hill) are polish for later
+- Poster mode stages seed 1000's first ford at a fixed moment; if the arcade card wants a tighter crop or a mid-clash moment, add polish.posterStep (seconds of sim before the freeze)
+- Crowd murmur and the other new sounds are untested by ear (headless is silent): Peter's phone with the ringer on and off is the check (the session is "ambient" where the browser offers navigator.audioSession)
+- Hints are one-shot per match; a first-ever flag could stop them repeating in match two

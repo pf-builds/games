@@ -36,6 +36,11 @@
         p.x = x; p.y = y; p.color = "rgba(220,215,205,.55)"; p.kind = 0; p.vx = 8 + Math.random() * 6; p.vy = -14 - Math.random() * 8;
         p.life = p.life0 = 1.6 + Math.random() * 0.6; p.size = 3.5; p.g = -6;
       },
+      // hit spark (M7 clash cue, SPEC-v2 §11): a 2-frame pixel star, 5 art px across then 3, over 0.14 s
+      spark(x, y, color) {
+        const p = pool.spawn();
+        p.x = x; p.y = y; p.color = color; p.kind = 2; p.life = p.life0 = 0.14; p.vx = p.vy = 0; p.g = 0; p.size = 2;
+      },
       // expanding ring (rally, rout shock)
       ring(x, y, color, r0, r1, life) {
         const p = pool.spawn();
@@ -61,6 +66,9 @@
             ctx.fillStyle = p.color;
             const s = Math.max(1, p.size * (0.5 + t * 0.5));
             ctx.fillRect((p.x - s / 2) | 0, (p.y - s / 2) | 0, s | 0 || 1, s | 0 || 1);
+          } else if (p.kind === 2) {
+            ctx.globalAlpha = 1; ctx.fillStyle = p.color; const u = 2, big = t > 0.5, x = Math.round(p.x / 2) * 2, y = Math.round(p.y / 2) * 2; // on the 2 world px art grid
+            ctx.fillRect(x - u / 2, y - (big ? 2.5 : 1.5) * u, u, (big ? 5 : 3) * u); ctx.fillRect(x - (big ? 2.5 : 1.5) * u, y - u / 2, (big ? 5 : 3) * u, u);
           } else {
             const r = p.r0 + (p.r1 - p.r0) * (1 - t);
             ctx.globalAlpha = t * 0.8; ctx.strokeStyle = p.color; ctx.lineWidth = 3 * t + 1;
@@ -76,6 +84,7 @@
     const list = [];
     return {
       add(x, y, text, color, size, life) { list.push({ x, y, text, color, size: size || 14, life: life || 0.9, life0: life || 0.9 }); },
+      clear() { list.length = 0; }, // one sandbox set reused by every QA sandbox (a fresh object each time churned the sim's call sites)
       update(dt) {
         for (let i = list.length - 1; i >= 0; i--) { const f = list[i]; f.life -= dt; f.y -= 22 * dt; if (f.life <= 0) list.splice(i, 1); }
       },

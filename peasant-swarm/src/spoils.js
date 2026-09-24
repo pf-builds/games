@@ -47,6 +47,7 @@
       if (t.isPlayer && !S.aiPlayer) {
         G.banner((why === "muster" ? "MUSTER " + cfgOf().progression.muster[t.musterK] + ": " : "") + name, col, 2.4, 0, 2);
         G.floater(t.cx, t.cy - 34, "+" + name, col, 16, 1.4); if (why === "muster") PS.audio.fanfare(); else PS.audio.relic();
+        if (G.gained) G.gained(t, axis); // M7 onboarding: the first gain's icon flies into the relic strip
       } else if (G.fxOk(t.ax, t.ay) && G.seenSwarm(t.id)) G.floater(t.ax, t.ay - 40, "+" + name, t.color, 13, 1.2);
       return true;
     }

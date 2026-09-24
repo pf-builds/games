@@ -72,6 +72,8 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i], v = argv[i + 1];
     if (k === "--mobile") { o.mobile = true; continue; }
+    if (k === "--landscape") { o.landscape = true; o.mobile = true; continue; } // M7: the touch pass at 812x375 (landscape layout)
+    if (k === "--poster") { o.poster = true; continue; } // M7: capture ?poster=1 at 1920x1080, 800x450 and 800x800
     if (k === "--fixtures") { o.fixtures = true; continue; }
     if (k === "--bench-flush") { o.benchFlush = true; continue; }
     if (k === "--no-fog-perf") { o.fogPerf = false; continue; }
@@ -247,9 +249,9 @@ async function main() {
   fs.mkdirSync(out, { recursive: true });
   const { chromium } = await loadPlaywright();
   const [vw, vh] = A.viewport.split("x").map(Number);
-  const tag = A.mobile ? "mobile" : "desktop";
+  const tag = A.landscape ? "landscape" : A.mobile ? "mobile" : "desktop";
   const ctxOpts = A.mobile
-    ? { viewport: { width: 375, height: 812 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, ignoreHTTPSErrors: true }
+    ? { viewport: A.landscape ? { width: 812, height: 375 } : { width: 375, height: 812 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, ignoreHTTPSErrors: true }
     : { viewport: { width: vw, height: vh }, deviceScaleFactor: 1, ignoreHTTPSErrors: true };
   // --ignore-certificate-errors lets the real Google Fonts load through the container's TLS proxy; font-host errors are filtered either way
   const browser = await chromium.launch({ args: ["--ignore-certificate-errors"] });
@@ -371,12 +373,12 @@ async function main() {
     await cdp.send("Performance.enable");
 
     if (A.mobile && ri === 0 && run.started) {
-      // real touch drag on the canvas: start (187,600), 6 moves up to (187,450), hold 1 s live, lift
-      const tp = (x, y) => [{ x, y, id: 1, radiusX: 4, radiusY: 4, force: 1 }];
-      const under = await page.evaluate(() => { const e = document.elementFromPoint(187, 600); return e ? e.tagName + (e.id ? "#" + e.id : "") : null; });
+      // real touch drag on the canvas: start at (vw / 2, 0.72 vh) (187, 585 on the phone), 6 moves up by min(25, 0.06 vh) px, hold 1 s live, lift
+      const tp = (x, y) => [{ x, y, id: 1, radiusX: 4, radiusY: 4, force: 1 }], dvw = ctxOpts.viewport.width, dvh = ctxOpts.viewport.height, dx0 = Math.round(dvw / 2), dy0 = Math.round(dvh * 0.72), dstep = Math.min(25, Math.round(dvh * 0.06));
+      const under = await page.evaluate(([x, y]) => { const e = document.elementFromPoint(x, y); return e ? e.tagName + (e.id ? "#" + e.id : "") : null; }, [dx0, dy0]);
       const before = await page.evaluate(() => ({ ty: window.PSS.teams[1].ty, cy: window.PSS.teams[1].cy }));
-      await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: tp(187, 600) });
-      for (let i = 1; i <= 6; i++) await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: tp(187, 600 - 25 * i) });
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: tp(dx0, dy0) });
+      for (let i = 1; i <= 6; i++) await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: tp(dx0, dy0 - dstep * i) });
       const hold = [];
       for (let i = 0; i < 5; i++) {
         await page.waitForTimeout(200);
@@ -395,7 +397,7 @@ async function main() {
       const tp = (x, y) => [{ x, y, id: 2, radiusX: 4, radiusY: 4, force: 1 }];
       const pick = await page.evaluate(() => { const S = window.PSS, p = S.teams[1], z = S.cam.zoom, T = window.PS.terrain;
         for (let k = 0; k < 16; k++) { const a = (k / 16) * Math.PI * 2, wx = p.ax + Math.cos(a) * 300, wy = p.ay + Math.sin(a) * 300, sx = (wx - S.cam.x) * z + S.vw / 2, sy = (wy - S.cam.y) * z + S.vh / 2;
-          if (sx > 40 && sx < S.vw - 40 && sy > 160 && sy < S.vh - 160 && T.walkable(wx, wy) && T.sdfAt(wx, wy) > 40) return { wx, wy, sx, sy, under: (document.elementFromPoint(sx, sy) || {}).id || null }; } return null; });
+          const m = Math.min(160, S.vh * 0.28); const mx = S.vw > S.vh ? 140 : 40; if (sx > mx && sx < S.vw - mx && sy > m && sy < S.vh - m && T.walkable(wx, wy) && T.sdfAt(wx, wy) > 40 && document.elementFromPoint(sx, sy) === document.getElementById("game")) return { wx, wy, sx, sy, under: (document.elementFromPoint(sx, sy) || {}).id || null }; } return null; });
       if (pick) {
         const t0 = Date.now(); await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: tp(pick.sx, pick.sy) }); await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] }); const liftMs = Date.now() - t0;
         await page.waitForTimeout(250);
@@ -596,7 +598,22 @@ async function main() {
     n.restarted = await page.evaluate(() => window.PSS.mode === "play" && window.PSS.t < 2);
     n.shot = await shot(page, "nofog"); n.errors = errs; n.ok = n.startHit && n.started && !!n.end && n.restartHit && n.restarted && errs.length === 0 && n.drawnAll.gate === false;
     report.nofog = n; await ctx.close();
+  }  if (A.poster) {
+    // M7: ?poster=1 (SPEC-v2 §11): the arcade card / portal cover scene at 1920x1080, 800x450 and 800x800, DPR 1, zero console errors
+    report.poster = [];
+    for (const [w, h] of [[1920, 1080], [800, 450], [800, 800]]) {
+      const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1, ignoreHTTPSErrors: true }), page = await ctx.newPage(), errs = [];
+      page.on("pageerror", (e) => errs.push(String(e.message || e))); page.on("console", (m) => { if ((m.type() === "error" || m.type() === "warning") && !FONT_HOST.test(m.text() + ((m.location() && m.location().url) || ""))) errs.push(m.type() + ": " + m.text()); });
+      const u = new URL(A.url); u.searchParams.set("poster", "1");
+      await page.goto(u.href); await page.waitForFunction(() => !!(window.PSS && window.PSS.mode === "poster"), null, { timeout: 20000 }).catch(() => {});
+      await page.waitForTimeout(700);
+      const st = await page.evaluate(() => ({ mode: window.PSS.mode, mint: window.PSS.teams[1].count, orange: window.PSS.teams[2].count, zoom: window.PSS.cam.zoom }));
+      const f = path.join(out, `poster-${w}x${h}.png`); await page.screenshot({ path: f });
+      report.poster.push({ w, h, file: path.basename(f), errs, ...st }); errs.forEach((e) => report.errors.console.push({ run: "poster", text: e }));
+      await ctx.close();
+    }
   }
+
   if (A.artShots) {
     // M5 art screenshots (--art-shots): the title, then PS.artScene stages on the live map with the camera on your swarm: the home valley at
     // match start, a ridge pass, a river crossing (ford and bridge), a clash, a rout banner, and all six teams (at zoom 0.5 on the phone)
@@ -659,6 +676,7 @@ async function main() {
   as.maskUploadsUnder5Hz = report.runs.every((r) => r.render.every((x) => x.maskUploadRate == null || x.maskUploadRate <= 5.05));
   if (report.fogPerf) as.fogJsThrottled = !!report.fogPerf.ok;
   as.nofogPlayable = !!(report.nofog && report.nofog.ok);
+  if (report.poster) as.posterShots = report.poster.length === 3 && report.poster.every((p) => p.mode === "poster" && p.mint > 20 && p.orange > 20 && !p.errs.length);
   if (report.bench) as.benchClean = report.bench.errors.length === 0 && [...report.bench.v2runs, ...report.bench.v1runs].every((b) => !b.terrainBad);
   // M5: one drawImage per agent in the bench scene, and the art screenshots staged cleanly
   if (report.bench && report.bench.v2) as.benchOneDrawPerAgent = report.bench.v2runs.every((r) => r.drawPerAgentOk !== false);

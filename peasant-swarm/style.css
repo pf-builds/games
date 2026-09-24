@@ -1,5 +1,5 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; background: #1B2A18; overflow: hidden; }
+html, body { height: 100%; background: #1B2A18; overflow: hidden; overscroll-behavior: none; } /* iOS/Safari rules (SPEC-v2 §10): no rubber-band, Safari reads html and Chrome body */
 body {
   font-family: "Nunito", system-ui, sans-serif; color: #F1EEDF;
   -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
@@ -36,13 +36,16 @@ body {
 @keyframes pulse { to { transform: scale(1.06); } }
 #ctrls { display: flex; gap: .35rem; pointer-events: auto; }
 #ctrls button, .tbtn, .overlay button {
-  font: inherit; font-weight: 800; color: #F1EEDF; cursor: pointer;
+  font: inherit; font-weight: 800; color: #F1EEDF; cursor: pointer; touch-action: manipulation;
   background: rgba(10,18,8,.78); border: 1px solid rgba(255,255,255,.14); border-radius: 10px;
 }
 #ctrls button { min-width: 44px; height: 40px; padding: 0 .6rem; font-size: 1rem; }
 #ctrls button:active { transform: translateY(1px); }
-.btn-sound::before { content: "🔊"; }
-.btn-sound.off::before { content: "🔇"; }
+/* pixel HUD icons (SPEC-v2 §11: no emoji): 10 x 10 art-pixel SVGs drawn crisp, one per state */
+.ico { display: inline-block; width: 20px; height: 20px; vertical-align: -4px; background: center / 20px 20px no-repeat; image-rendering: pixelated; pointer-events: none; }
+.ico-pause { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' shape-rendering='crispEdges' fill='%23F1EEDF'%3E%3Crect x='2' y='1' width='2' height='8'/%3E%3Crect x='6' y='1' width='2' height='8'/%3E%3C/svg%3E"); }
+.ico-snd { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' shape-rendering='crispEdges' fill='%23F1EEDF'%3E%3Crect x='0' y='4' width='2' height='3'/%3E%3Crect x='2' y='3' width='1' height='5'/%3E%3Crect x='3' y='2' width='1' height='7'/%3E%3Crect x='5' y='4' width='1' height='3'/%3E%3Crect x='7' y='2' width='1' height='2'/%3E%3Crect x='8' y='4' width='1' height='3'/%3E%3Crect x='7' y='7' width='1' height='2'/%3E%3C/svg%3E"); }
+.btn-sound.off .ico-snd { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' shape-rendering='crispEdges' fill='%23F1EEDF'%3E%3Crect x='0' y='4' width='2' height='3'/%3E%3Crect x='2' y='3' width='1' height='5'/%3E%3Crect x='3' y='2' width='1' height='7'/%3E%3Crect x='5' y='3' width='1' height='1'/%3E%3Crect x='8' y='3' width='1' height='1'/%3E%3Crect x='6' y='4' width='2' height='1'/%3E%3Crect x='6' y='5' width='2' height='1'/%3E%3Crect x='6' y='6' width='2' height='1'/%3E%3Crect x='5' y='7' width='1' height='1'/%3E%3Crect x='8' y='7' width='1' height='1'/%3E%3C/svg%3E"); opacity: .75; }
 
 /* bottom-left: the relic strip (M6: one icon per axis with tier pips, dimmed at 0) above the timed buffs */
 #bl { position: absolute; left: .6rem; bottom: max(.6rem, env(safe-area-inset-bottom)); display: flex; flex-direction: column; align-items: flex-start; gap: .3rem; }
@@ -61,16 +64,16 @@ body {
 .records th { color: #FFE49A; font-weight: 800; padding: 0 .5rem; font-size: .72rem; letter-spacing: .06em; }
 .records td { padding: 0 .5rem; text-align: center; font-variant-numeric: tabular-nums; font-weight: 800; }
 .records td:first-child { text-align: left; color: #B9B5A3; }
-.buff {
-  display: flex; align-items: center; gap: .45rem; padding: .3rem .6rem; border-radius: 8px;
-  background: rgba(10,18,8,.8); border-left: 4px solid; font-weight: 800; font-size: .8rem; min-width: 8.5rem;
-}
-.buff .bar { flex: 1; height: 5px; background: rgba(255,255,255,.12); border-radius: 3px; overflow: hidden; }
-.buff .bar i { display: block; height: 100%; background: currentColor; }
+/* timed buffs: one 28 px icon each with a ring timer (a conic fill behind the icon), one row (M7: fits the 96 px phone strip) */
+#buffs { flex-direction: row; }
+.buff { position: relative; width: 28px; height: 28px; border-radius: 8px; background: rgba(10,18,8,.85); display: none; }
+.buff.on { display: block; }
+.buff .ring { position: absolute; inset: 0; border-radius: 8px; }
+.buff canvas { position: absolute; left: 3px; top: 3px; width: 22px; height: 22px; image-rendering: pixelated; }
 
 #minimap {
-  position: absolute; right: .6rem; bottom: max(.6rem, env(safe-area-inset-bottom));
-  width: 150px; height: 150px; border-radius: 8px; border: 2px solid rgba(255,255,255,.18);
+  position: absolute; right: max(.6rem, env(safe-area-inset-right)); bottom: max(.6rem, env(safe-area-inset-bottom));
+  width: 160px; height: 160px; border-radius: 8px; border: 2px solid rgba(255,255,255,.18);
   background: #0e170c; image-rendering: pixelated; pointer-events: auto; touch-action: none; cursor: pointer;
 }
 #hint { /* below the clash panel (desktop panel ends ~120 px, phone ~174 px): M2 critic MAJOR-3 */
@@ -79,14 +82,22 @@ body {
   white-space: nowrap; opacity: 0; transition: opacity .3s; border: 1px solid rgba(255,255,255,.12);
 }
 #hint.show { opacity: 1; }
+/* HUDDLE: a 76 px round visual inside an 88 px hit area (the button box; the span draws, taps land on the button either way) */
 #t-huddle {
-  position: absolute; left: 50%; bottom: max(.8rem, env(safe-area-inset-bottom)); transform: translateX(-50%);
-  width: 118px; height: 56px; font-size: 1rem; letter-spacing: .08em; pointer-events: auto; display: none;
-  border-radius: 99px; touch-action: none;
+  position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 10px); transform: translateX(-50%);
+  width: 88px; height: 88px; padding: 0; pointer-events: auto; display: none; background: none; border: none; border-radius: 50%; touch-action: none;
 }
-#t-huddle.on { background: #1FD1A3; color: #08140b; }
+#t-huddle span { position: absolute; left: 6px; top: 6px; width: 76px; height: 76px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: rgba(10,18,8,.82); border: 2px solid rgba(255,255,255,.22); font-size: .82rem; letter-spacing: .08em; pointer-events: none; }
+#t-huddle.on span { background: #1FD1A3; color: #08140b; }
 body.touch #t-huddle { display: block; }
-body.touch #minimap { width: 110px; height: 110px; }
+#safe { position: fixed; left: 0; top: 0; width: 0; height: 0; visibility: hidden; pointer-events: none;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+/* ?debug=1 readout (SPEC-v2 §13): fps, p90 script ms, DPR tier, live nofog toggle */
+#dbg { display: none; position: absolute; left: max(.6rem, env(safe-area-inset-left)); bottom: calc(max(.6rem, env(safe-area-inset-bottom)) + 68px); font: 11px/1.3 monospace; color: #fff;
+  background: rgba(0,0,0,.55); padding: 3px 6px; border-radius: 6px; pointer-events: none; white-space: pre; }
+body.debug #dbg { display: block; }
+#dbg button { pointer-events: auto; font: 11px monospace; margin-top: 3px; padding: 2px 8px; min-height: 28px; color: #fff; background: #333; border: 1px solid #777; border-radius: 4px; touch-action: manipulation; }
 
 /* ---------- overlays ---------- */
 .overlay {
@@ -99,7 +110,7 @@ body.touch #minimap { width: 110px; height: 110px; }
 .logo .l2 { font-size: clamp(3.4rem, 13vw, 6.8rem); color: #1FD1A3; letter-spacing: .04em; }
 .tag { max-width: 30rem; color: #F1EEDF; font-weight: 700; font-size: 1.05rem; text-shadow: 0 2px 6px rgba(0,0,0,.8); }
 .diffrow { display: flex; align-items: center; gap: .5rem; font-weight: 800; color: #E4E0CE; font-size: .85rem; text-shadow: 0 2px 4px rgba(0,0,0,.85); }
-.diffrow #difficulty { display: flex; gap: .3rem; }
+.diffrow .diffpick { display: flex; gap: .3rem; }
 .diffrow button { padding: .4rem .8rem; font-size: .8rem; min-height: 38px; letter-spacing: .06em; }
 .diffrow button.sel { background: #FFE49A; color: #08140b; border-color: #FFF0C2; }
 .howto { display: grid; gap: .35rem; max-width: 30rem; color: #E4E0CE; font-size: .92rem; margin-top: .3rem; text-shadow: 0 2px 4px rgba(0,0,0,.85); background: rgba(8,14,6,.45); padding: .7rem 1rem; border-radius: 12px; }
@@ -118,15 +129,83 @@ body.touch #minimap { width: 110px; height: 110px; }
 .stat b { display: block; font-family: "Baloo 2", sans-serif; font-size: 1.5rem; color: #FFE49A; line-height: 1.1; }
 .stat span { font-size: .75rem; color: #B9B5A3; text-transform: uppercase; letter-spacing: .08em; font-weight: 800; }
 
+/* ---------- layouts (SPEC-v2 §10, R6): lay-d desktop top bar; lay-p touch portrait; lay-l touch landscape. One set of HUD nodes, restyled
+   per layout (never cloned: lesson 35); game.js sets the class on resize and measures the top HUD for the canvas overlays. ---------- */
+@media (max-width: 900px) { body.lay-d .chip { font-size: .78rem; padding: .22rem .5rem .22rem .4rem; gap: .3rem; } body.lay-d #topbar { gap: .4rem; } }
+@media (max-height: 560px) { body.lay-d #minimap { width: 120px; height: 120px; } }
+.chip .rk { display: none; }
+
+/* touch portrait: YOU chip top-left, timer centred, pause top-right (sound and pace live in the pause menu), five 60 x 24 rival pips under
+   the top bar, relic strip + buffs bottom-left <= 96 px, HUDDLE bottom-centre, minimap 116 px bottom-right */
+body.lay-p #topbar { padding: 0; height: 0; }
+body.lay-p #timer { position: absolute; top: calc(env(safe-area-inset-top) + 6px); left: 50%; transform: translateX(-50%); height: 36px; display: flex; align-items: center; font-size: 1.2rem; padding: 0 .7rem; }
+body.lay-p #ctrls { position: absolute; top: calc(env(safe-area-inset-top) + 4px); right: calc(env(safe-area-inset-right) + 12px); }
+body.lay-p #ctrls button, body.lay-l #ctrls button { min-width: 44px; width: 44px; height: 44px; padding: 0; }
+body.lay-p #btn-pace, body.lay-p #btn-sound, body.lay-l #btn-pace, body.lay-l #btn-sound { display: none; }
+body.lay-p #teams { position: absolute; top: calc(env(safe-area-inset-top) + 50px); left: 0; right: 0; display: flex; flex-wrap: nowrap; justify-content: center; gap: 6px; }
+body.lay-p .chip { width: 60px; height: 24px; padding: 0 6px; gap: 4px; font-size: .78rem; justify-content: space-between; border-radius: 8px; }
+body.lay-p .chip .nm, body.lay-p .chip .pw { display: none; }
+body.lay-p .chip .sw { width: 10px; height: 10px; flex: none; }
+body.lay-p #chip-1 { position: absolute; top: -44px; left: calc(env(safe-area-inset-left) + 12px); width: auto; height: 36px; padding: 0 .7rem 0 .55rem; font-size: .9rem; gap: 6px; }
+body.lay-p #chip-1 .nm { display: inline; }
+body.lay-p #bl { left: calc(env(safe-area-inset-left) + 12px); bottom: calc(env(safe-area-inset-bottom) + 12px); max-width: 96px; flex-direction: column-reverse; }
+body.lay-p #minimap { width: 116px; height: 116px; right: calc(env(safe-area-inset-right) + 12px); bottom: calc(env(safe-area-inset-bottom) + 12px); }
+body.lay-p #hint { top: calc(env(safe-area-inset-top) + 138px); font-size: .8rem; white-space: normal; max-width: 90vw; text-align: center; }
+body.lay-p #dbg { bottom: calc(env(safe-area-inset-bottom) + 132px); }
+
+/* touch landscape: leaderboard top-left (YOU + 5 sorted, 20 px rows), timer top-centre, pause top-right, minimap 96 px under it, HUDDLE
+   72 px bottom-right, buffs bottom-left in one row; nothing else in the right column */
+body.lay-l #topbar { padding: 0; height: 0; }
+body.lay-l #timer { position: absolute; top: calc(env(safe-area-inset-top) + 6px); left: 50%; transform: translateX(-50%); font-size: 1.1rem; }
+body.lay-l #ctrls { position: absolute; top: calc(env(safe-area-inset-top) + 6px); right: calc(env(safe-area-inset-right) + 8px); }
+body.lay-l #teams { position: absolute; top: calc(env(safe-area-inset-top) + 8px); left: calc(env(safe-area-inset-left) + 8px); width: 112px; display: flex; flex-direction: column; gap: 0;
+  background: rgba(10,18,8,.72); border: 1px solid rgba(255,255,255,.12); border-radius: 8px; padding: 2px 0; }
+body.lay-l .chip { height: 20px; padding: 0 6px; gap: 5px; font-size: .72rem; background: none; border: none; border-radius: 0; }
+body.lay-l .chip .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.lay-l .chip .sw { width: 9px; height: 9px; flex: none; }
+body.lay-l .chip.you { background: rgba(31,209,163,.16); }
+body.lay-l .chip .pw { display: none; }
+body.lay-l #minimap { width: 96px; height: 96px; top: calc(env(safe-area-inset-top) + 58px); bottom: auto; right: calc(env(safe-area-inset-right) + 8px); }
+body.lay-l #t-huddle { width: 84px; height: 84px; left: auto; transform: none; right: calc(env(safe-area-inset-right) + 18px); bottom: calc(env(safe-area-inset-bottom) + 14px); }
+body.lay-l #t-huddle span { width: 72px; height: 72px; font-size: .74rem; }
+body.lay-l #bl { left: calc(env(safe-area-inset-left) + 8px); bottom: calc(env(safe-area-inset-bottom) + 8px); flex-direction: row; align-items: flex-end; }
+body.lay-l #hint { top: calc(env(safe-area-inset-top) + 104px); font-size: .8rem; }
+body.lay-l #dbg { left: calc(env(safe-area-inset-left) + 8px); top: calc(env(safe-area-inset-top) + 136px); bottom: auto; }
+
+/* small screens (title and end cards) */
 @media (max-width: 700px) {
-  #topbar { flex-wrap: wrap; gap: .4rem; }
-  #timer { order: 1; font-size: 1.1rem; margin-right: auto; }
-  #ctrls { order: 2; }
-  #ctrls button { min-width: 48px; height: 48px; }
-  #teams { order: 3; flex-basis: 100%; gap: .3rem; }
-  .chip { font-size: .72rem; padding: .2rem .45rem .2rem .35rem; gap: .3rem; }
-  .chip .sw { width: 10px; height: 10px; }
-  #hint { top: 12.2rem; font-size: .78rem; white-space: normal; max-width: 90vw; text-align: center; }
   .diffrow { flex-wrap: wrap; justify-content: center; font-size: .78rem; }
-  .diffrow button { padding: .35rem .6rem; font-size: .72rem; min-height: 36px; }
+  .diffrow button { padding: .35rem .6rem; font-size: .76rem; min-height: 40px; }
+}
+.relic.pop { animation: relicpop .45s ease-out; }
+@keyframes relicpop { 0% { transform: scale(1.7); } 100% { transform: scale(1); } }
+
+/* ---------- screens (M7, SPEC-v2 §11) ---------- */
+/* the logo: a stepped pixel shadow (hard offsets, no blur) */
+.logo { text-shadow: 3px 3px 0 #0B120A, 6px 6px 0 #0B120A, 9px 9px 0 rgba(11,18,10,.55); }
+#ov-title { background: none; } /* the painted valley is the backdrop (no darkening needed: the sky is dark above the ridges) */
+#ov-title .tag, #ov-title .howto, #ov-title .records { background: rgba(8,14,6,.72); }
+.tag { padding: .35rem .8rem; border-radius: 10px; }
+/* win / lose: the text and stats on a solid card near the top, the staged scene (hill and banner, or the grey frame) below */
+#ov-win, #ov-lose { justify-content: flex-start; padding-top: max(7vh, calc(env(safe-area-inset-top) + 1rem)); background: linear-gradient(rgba(8,14,6,.55), rgba(8,14,6,0) 70%); }
+.card { background: #0E1710; border: 1px solid rgba(255,255,255,.14); border-radius: 14px; padding: .8rem 1rem; display: flex; flex-direction: column; align-items: center; gap: .6rem; max-width: 32rem; width: 100%; }
+.card p { margin: 0; }
+/* the match start: the five rival pips arrive as rumours, one after another, with the iris */
+#teams.rumour .chip.unseen { animation: rumour .5s ease-out both; }
+#teams.rumour .chip.unseen:nth-child(3) { animation-delay: .15s; } #teams.rumour .chip.unseen:nth-child(4) { animation-delay: .3s; }
+#teams.rumour .chip.unseen:nth-child(5) { animation-delay: .45s; } #teams.rumour .chip.unseen:nth-child(6) { animation-delay: .6s; }
+@keyframes rumour { 0% { opacity: 0; transform: translateY(-6px) scale(.8); } 60% { opacity: .9; } 100% { opacity: .55; transform: none; } }
+/* ?poster=1: the logo, alone, over the staged scene */
+#poster { position: absolute; left: 0; right: 0; top: 5%; display: flex; justify-content: center; pointer-events: none; }
+#poster.hidden { display: none; }
+#poster .logo .l1 { font-size: clamp(2rem, 7vmin, 5.4rem); } #poster .logo .l2 { font-size: clamp(2.8rem, 10.5vmin, 8rem); }
+/* short screens (a landscape phone, a 450 px portal iframe): the end card in one row of six, the title without the how-to wall */
+@media (max-height: 500px) {
+  .statgrid { grid-template-columns: repeat(6, 1fr); gap: .3rem; }
+  .stat { min-height: 2.8rem; padding: .25rem; } .stat b { font-size: 1.05rem; } .stat span { font-size: .6rem; }
+  .bigtitle { font-size: 2rem; }
+  #ov-win, #ov-lose { padding-top: .5rem; gap: .45rem; }
+  .card { padding: .45rem .8rem; gap: .35rem; } .overlay p { font-size: .82rem; }
+  .overlay button { min-height: 44px; padding: .5rem 1rem; } .overlay button.big { font-size: 1.1rem; padding: .55rem 1.6rem; }
+  #ov-title { gap: .5rem; } #ov-title .howto { display: none; } .logo .l1 { font-size: 2rem; } .logo .l2 { font-size: 3rem; }
 }

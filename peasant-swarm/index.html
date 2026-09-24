@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@700;800&display=swap">
-<link rel="stylesheet" href="style.css?v=10">
+<link rel="stylesheet" href="style.css?v=11">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%231FD1A3'/><text x='50' y='68' font-size='52' text-anchor='middle'>🔱</text></svg>">
 </head>
 <body>
@@ -23,15 +23,18 @@
       <div id="timer">5:00</div>
       <div id="ctrls">
         <button id="btn-pace" title="Game speed">1×</button>
-        <button id="btn-pause" title="Pause (P)">⏸</button>
-        <button id="btn-sound" class="btn-sound" title="Sound (M)"></button>
+        <button id="btn-pause" title="Pause (P)" aria-label="Pause"><i class="ico ico-pause"></i></button>
+        <button id="btn-sound" class="btn-sound" title="Sound (M)" aria-label="Sound"><i class="ico ico-snd"></i></button>
       </div>
     </div>
     <div id="bl"><div id="relics"></div><div id="buffs"></div></div>
     <canvas id="minimap" width="150" height="150"></canvas>
     <div id="hint"></div>
-    <button id="t-huddle" class="tbtn">HUDDLE</button>
+    <button id="t-huddle" class="tbtn"><span>HUDDLE</span></button>
+    <div id="dbg"></div>
   </div>
+  <div id="safe"></div>
+  <div id="poster" class="hidden"><div class="logo"><span class="l1">PEASANT</span><span class="l2">SWARM</span></div></div>
 
   <!-- Title -->
   <div class="overlay active" id="ov-title">
@@ -39,9 +42,9 @@
     <p class="tag">One peasant. A whole village to recruit. Five rival mobs who want your people, somewhere in the dark.</p>
     <div class="menu">
       <button class="primary big" id="btn-play">PLAY</button>
-      <button id="btn-sound-title" class="btn-sound"></button>
+      <button id="btn-sound-title" class="btn-sound" aria-label="Sound"><i class="ico ico-snd"></i></button>
     </div>
-    <div class="diffrow"><span>Rivals:</span><div id="difficulty"></div></div>
+    <div class="diffrow"><span>Rivals:</span><div id="difficulty" class="diffpick"></div></div>
     <div id="records" class="records empty"></div>
     <div class="howto">
       <div><b>Move</b>: the swarm follows your cursor and finds its way around cliffs. On a phone, tap to march there, drag to steer, hold to stop</div>
@@ -56,23 +59,25 @@
   <!-- Win -->
   <div class="overlay" id="ov-win">
     <div class="bigtitle win">THE SWARM RULES</div>
-    <p id="win-sub"></p>
-    <div class="statgrid" id="win-stats"></div>
+    <div class="card"><p id="win-sub"></p>
+    <div class="statgrid" id="win-stats"></div></div>
     <div class="menu">
       <button class="primary big" id="btn-again">PLAY AGAIN</button>
       <button id="btn-title-w">TITLE</button>
     </div>
+    <div class="diffrow"><span>Next match:</span><div class="diffpick"></div></div>
   </div>
 
   <!-- Lose -->
   <div class="overlay" id="ov-lose">
     <div class="bigtitle lose">SCATTERED</div>
-    <p id="lose-sub"></p>
-    <div class="statgrid" id="lose-stats"></div>
+    <div class="card"><p id="lose-sub"></p>
+    <div class="statgrid" id="lose-stats"></div></div>
     <div class="menu">
       <button class="primary big" id="btn-retry">TRY AGAIN</button>
       <button id="btn-title-l">TITLE</button>
     </div>
+    <div class="diffrow"><span>Next match:</span><div class="diffpick"></div></div>
   </div>
 
   <!-- Pause -->
@@ -80,7 +85,8 @@
     <div class="bigtitle">PAUSED</div>
     <div class="menu">
       <button class="primary big" id="btn-resume">KEEP PLAYING</button>
-      <button id="btn-sound-pause" class="btn-sound"></button>
+      <button id="btn-sound-pause" class="btn-sound" aria-label="Sound"><i class="ico ico-snd"></i> SOUND</button>
+      <button id="btn-pace-pause" title="Game speed">SPEED 1×</button>
       <button id="btn-quit">QUIT TO TITLE</button>
     </div>
   </div>
@@ -88,13 +94,15 @@
 
 <script src="src/palette.js?v=1"></script>
 <script src="src/sprites.js?v=6"></script>
-<script src="src/particles.js?v=2"></script>
-<script src="src/audio.js?v=5"></script>
+<script src="src/particles.js?v=3"></script>
+<script src="src/audio.js?v=6"></script>
 <script src="src/terrain.js?v=2"></script>
 <script src="src/flow.js?v=2"></script>
 <script src="src/fog.js?v=3"></script>
 <script src="src/ground.js?v=1"></script>
-<script src="src/spoils.js?v=1"></script>
-<script src="src/game.js?v=26"></script>
+<script src="src/spoils.js?v=2"></script>
+<script src="src/title.js?v=1"></script>
+<script src="src/portal.js?v=1"></script>
+<script src="src/game.js?v=27"></script>
 </body>
 </html>

@@ -4,18 +4,30 @@
   const PS = (window.PS = window.PS || {});
   let ctx = null, master = null, muted = false, silent = false, drumOn = false, drumTimer = null, drumStep = 0, unlocked = false;
 
-  // no AudioContext exists until a user gesture unlocks it: creating or resuming one earlier only logs browser warnings (M2 critic BLOCKER-1)
+  // no AudioContext exists until a user gesture unlocks it: creating or resuming one earlier only logs browser warnings (M2 critic BLOCKER-1).
+  // iOS/Safari (SPEC-v2 §10, M7): the session is "ambient" where the browser offers it (the ringer switch mutes the game), the context is
+  // resumed on every pointerup / touchend (iOS only lets a gesture's END start audio), on return to a visible tab and after an
+  // "interrupted" state (a call, Siri), whichever comes first.
   function ac() {
     if (!unlocked) return null;
     if (!ctx) {
       try {
+        try { if (navigator.audioSession) navigator.audioSession.type = "ambient"; } catch (e) {}
         ctx = new (window.AudioContext || window.webkitAudioContext)();
         master = ctx.createGain(); master.gain.value = 0.5; master.connect(ctx.destination);
+        ctx.onstatechange = () => { if (ctx.state === "interrupted" || ctx.state === "suspended") resumeSoon = true; };
       } catch (e) { return null; }
     }
-    if (ctx.state === "suspended") ctx.resume();
+    if (ctx.state === "suspended" || ctx.state === "interrupted") { try { ctx.resume(); } catch (e) {} }
     return ctx;
   }
+  let resumeSoon = false;
+  const resumeNow = () => { if (unlocked && ctx && ctx.state !== "running" && ctx.state !== "closed") { try { ctx.resume(); } catch (e) {} } resumeSoon = false; };
+  window.addEventListener("pointerup", () => { if (!unlocked) { unlocked = true; ac(); } else resumeNow(); }, true);
+  window.addEventListener("touchend", () => { if (unlocked) resumeNow(); }, true);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) resumeNow(); else if (murmur) murmur.g.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.05); });
+  // crowd murmur (SPEC-v2 §12): one looping band-passed noise whose level follows your count (log scale), started with a match
+  let murmur = null;
   function tone(f0, f1, dur, type, peak, when, lin) {
     if (silent) return; const c = ac(); if (!c || muted) return;
     const t0 = c.currentTime + (when || 0);
@@ -57,8 +69,9 @@
 
   PS.audio = {
     unlock() { unlocked = true; ac(); },
-    setMuted(m) { muted = m; if (m) PS.audio.stopDrum(); },
-    setSilent(v) { silent = !!v; if (silent) PS.audio.stopDrum(); },
+    setMuted(m) { muted = m; if (m) { PS.audio.stopDrum(); PS.audio.murmur(0); } },
+    setSilent(v) { silent = !!v; if (silent) { PS.audio.stopDrum(); if (murmur) murmur.g.gain.setTargetAtTime(0.0001, murmur.c.currentTime, 0.05); } },
+    state() { return { unlocked, ctx: ctx ? ctx.state : "none", murmur: !!murmur, resumeSoon }; },
     isMuted() { return muted; },
     recruit() { if (!gate("r", 45)) return; tone(rnd(520, 640), rnd(900, 1100), 0.08, "square", 0.05); },
     hit() { if (!gate("h", 40)) return; noise(0.05, 0.09, 0, 1800); tone(rnd(180, 240), 90, 0.06, "square", 0.05); },
@@ -105,6 +118,18 @@
     fanfare() { if (!gate("ff", 800)) return; [[392, 0], [523, 0.12], [659, 0.24], [784, 0.36], [659, 0.52], [784, 0.62]].forEach(([f, w], i) => tone(f, f * 1.003, i === 5 ? 0.5 : 0.14, "sawtooth", 0.09, w, true)); },
     // ping: a rout you did not see folded into its clash's ping
     ping() { if (!gate("pg", 500)) return; tone(740, 760, 0.22, "triangle", 0.07); tone(1110, 1120, 0.18, "sine", 0.03, 0.05); },
+    // M7 (SPEC-v2 §12): a remnant scattering (a rush of footsteps and a falling cry), the crown pulse (each broadcast while it is on you or
+    // in the finale), the dawn chime at the bell, a bandit growl when bandits you can see go for your peasants, the crowd murmur by count
+    scatter() { if (!gate("sc", 700)) return; for (let i = 0; i < 6; i++) noise(0.05, 0.07, i * 0.06 + Math.random() * 0.02, 1400 + Math.random() * 600, 1.5); tone(520, 260, 0.45, "sawtooth", 0.05, 0.05, true); },
+    crownPulse(mine) { if (!gate("cp", 1500)) return; tone(mine ? 392 : 330, mine ? 392 : 330, 0.5, "triangle", 0.07); tone(mine ? 784 : 660, mine ? 790 : 664, 0.4, "sine", 0.03, 0.04); },
+    dawn() { if (!gate("dw", 2000)) return; [659, 784, 988, 1319].forEach((f, i) => { tone(f, f, 1.2, "sine", 0.06, i * 0.18); tone(f * 2, f * 2, 0.6, "triangle", 0.015, i * 0.18); }); },
+    growl() { if (!gate("gr", 2500)) return; tone(92, 70, 0.6, "sawtooth", 0.09, 0, true); tone(98, 74, 0.6, "square", 0.04, 0.02, true); noise(0.5, 0.05, 0, 300, 2); },
+    murmur(n) {
+      if (silent || muted || n <= 0) { if (murmur) murmur.g.gain.setTargetAtTime(0.0001, murmur.c.currentTime, 0.2); return; }
+      const c = ac(); if (!c) return;
+      if (!murmur) { const src = c.createBufferSource(); src.buffer = getFlat(c); src.loop = true; src.playbackRate.value = 0.5; const f = c.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 420; f.Q.value = 0.9; const g = c.createGain(); g.gain.value = 0.0001; src.connect(f).connect(g).connect(master); src.start(); murmur = { c, src, f, g }; }
+      const v = Math.min(0.09, 0.012 * Math.log2(1 + n / 4)); murmur.g.gain.setTargetAtTime(v, c.currentTime, 0.4); murmur.f.frequency.setTargetAtTime(360 + Math.min(300, n), c.currentTime, 0.5);
+    },
 
     startDrum() {
       if (muted || silent || drumOn || !ac()) return;
