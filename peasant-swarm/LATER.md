@@ -65,3 +65,16 @@
 - Pile-on uses public live counts. With six swarms after grace it triggers about 1-6 times a match (banner at most every 30 s). The banner may nag when the lead flips back and forth across 1.6x
 - The hold fixture (M2 critic MAJOR-1) is a knife edge: the 20 holders beat the 60-column at a column pace of exactly 0.92, and break first at 0.88, 0.90 and 0.95. The fixture now pins its column to fixtures.holdPace 0.92 so the difficulty's rival pace (Normal 0.88 in M4) does not move it. M8 should look at pass holding as a range, not one pace
 - The crowned chip has no crown mark in the pip strip yet (the minimap, edge marker and world crown carry it)
+
+## Parked during v2 M5 Valley art (2026-09-24)
+- Chunk bake cost: a full re-bake of the 64 chunks plus water pairs is about 300 ms in headless Chromium (4.5 ms per chunk). A new match bakes the visible chunks in its first frame (4-9 chunks, 20-40 ms here, maybe 4x that on a phone), then one per frame. If Peter's phone shows a hitch at match start: bake the visible chunks on the title screen for the next map, or split a chunk's paint across two frames
+- Zoom steps on DPR 1 (0.75, 1.25) put an art pixel on 1.5 or 2.5 device pixels, so pixels are uneven on 1x desktop screens. DPR 2 phones and Macs land on whole pixels at every step. Snapping DPR-1 zoom to 0.5 / 1.0 / 1.5 changes how far a big swarm sees on desktop, so it waits for Peter's desktop read (R7 item 1)
+- Three of the six fixed team hexes sit under 70% HSL saturation (blue 68%, violet 67%, crimson 60%); in HSV violet is 56%. The brief fixed the hexes, so they stay; the hat ramps are built from them. If a playtest mixes crimson and orange, darken crimson's hat shade rather than change the brand colours
+- Banner tier 1 (10-49 peasants) uses the same small cross emblem for every team; the team emblems (pitchfork, sun, diamond, star, sword, moon) show from tier 2 (50+). Colour carries the small tiers
+- Pass floors use the pass mask (dilated one cell), so the dirt around crossings and home exits is broad. Narrow it to the un-dilated pass cells if it reads as mud
+- The plateau top is a khaki stone ramp so it never matches walkable highland grass. If playtests read the plateaus as walkable, add a grass-tuft rim or darken the top one step
+- Bridge decks are the crossing's 2 cells, so bridges are short and square. A longer deck needs terrain.bridgeWidth, which moves fairness and routing: M8
+- Decal mushrooms and flowers are the only saturated pixels in the ground (0.01% of a terrain crop over 45%). Keep them rare
+- Hit flash is one baked frame (white wash at art.flashWhite) shown while the flash timer is above art.flashMin, not a fade: it keeps one draw per agent. M7's clash cues may want two flash levels (a second atlas row)
+- Remnant "hands up" is still two cream rects over the plain frame; M7's surrender frame belongs in the atlas
+- Relic overlays (helmet, tines, shield) are hooks in sprites.js (RELIC, the relics argument of peasantSet): M6 fills them, and each combination becomes its own cached atlas

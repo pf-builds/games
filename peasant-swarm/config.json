@@ -487,6 +487,69 @@
     "labelDist": 900,
     "labelDim": 0.6
   },
+  "art": {
+    "flashWhite": 0.72,
+    "bannerPole": [
+      24,
+      28,
+      32,
+      36
+    ],
+    "bannerFlagW": [
+      8,
+      11,
+      14,
+      18
+    ],
+    "bannerFlagH": [
+      6,
+      8,
+      10,
+      12
+    ],
+    "bannerEmblem": [
+      0,
+      3,
+      5,
+      5
+    ],
+    "bannerTiers": [
+      10,
+      50,
+      150
+    ],
+    "bannerMin": 1,
+    "bannerFrameMs": 170,
+    "bannerLift": 6,
+    "highCells": 3,
+    "cornerR": 8,
+    "shadow": [
+      6,
+      7
+    ],
+    "shallow": 7,
+    "deep": 20,
+    "foam": 2.5,
+    "sparkle": 9,
+    "bridgeShadow": 6,
+    "stoneStep": 16,
+    "stoneR": 5.5,
+    "fordEdge": 8,
+    "biomePeriod": 900,
+    "tonePeriod": 260,
+    "rockyBelow": 0.3,
+    "highAbove": 0.7,
+    "decalCluster": 4,
+    "decalSpread": 28,
+    "pineShare": 35,
+    "drawOverhead": 90,
+    "drawPerAgent": 1.2,
+    "canvasBudgetMB": 60,
+    "hatShareMin": 0.25,
+    "terrainSatMax": 0.45,
+    "flashMin": 0.06,
+    "ditherBand": 0.3
+  },
   "finale": {
     "crownAbsorbs": false,
     "crownEvery": 8,
@@ -2171,6 +2234,176 @@
       "speed multiplier (the hold fixture's column pace, independent of difficulty)",
       0.3,
       2
+    ],
+    "art.flashWhite": [
+      "alpha of the hit-flash frame's white wash",
+      0,
+      1
+    ],
+    "art.bannerPole": [
+      "art px (banner pole height per size tier)",
+      8,
+      40
+    ],
+    "art.bannerFlagW": [
+      "art px (pennant width per size tier)",
+      4,
+      20
+    ],
+    "art.bannerFlagH": [
+      "art px (pennant height per size tier)",
+      3,
+      14
+    ],
+    "art.bannerEmblem": [
+      "art px (emblem size per tier: 0 none, 3 or 5)",
+      0,
+      5
+    ],
+    "art.bannerTiers": [
+      "peasants (swarm size where the banner grows a tier)",
+      1,
+      1000
+    ],
+    "art.bannerMin": [
+      "peasants (smallest swarm that carries a banner)",
+      1,
+      100
+    ],
+    "art.bannerFrameMs": [
+      "ms per pennant frame (3 frames)",
+      50,
+      1000
+    ],
+    "art.bannerLift": [
+      "world px (pole base below the centroid)",
+      -40,
+      40
+    ],
+    "art.highCells": [
+      "cells (rock at least this deep is the high plateau)",
+      2,
+      10
+    ],
+    "art.cornerR": [
+      "art px (rounding radius of convex rock corners)",
+      0,
+      12
+    ],
+    "art.shadow": [
+      "art px (cast shadow offset, east and south)",
+      0,
+      16
+    ],
+    "art.shallow": [
+      "world px from the shore (shallow water tone)",
+      0,
+      64
+    ],
+    "art.deep": [
+      "world px from the shore (deep water tone)",
+      0,
+      96
+    ],
+    "art.foam": [
+      "world px from the shore (foam line)",
+      0,
+      16
+    ],
+    "art.sparkle": [
+      "1 in N (8x4 art px water blocks with a sparkle dash per frame)",
+      2,
+      100
+    ],
+    "art.bridgeShadow": [
+      "art px (shadow strip under a bridge)",
+      0,
+      16
+    ],
+    "art.stoneStep": [
+      "world px (stepping stone spacing across a ford)",
+      8,
+      48
+    ],
+    "art.stoneR": [
+      "world px (stepping stone half size)",
+      2,
+      12
+    ],
+    "art.fordEdge": [
+      "world px (shallow edge of the ford's sand bar)",
+      0,
+      32
+    ],
+    "art.biomePeriod": [
+      "world px (macro colour patch size)",
+      100,
+      4000
+    ],
+    "art.tonePeriod": [
+      "world px (tone variation within a patch)",
+      32,
+      2000
+    ],
+    "art.rockyBelow": [
+      "noise value (rocky olive-grey patches below)",
+      0,
+      1
+    ],
+    "art.highAbove": [
+      "noise value (highland patches above)",
+      0,
+      1
+    ],
+    "art.decalCluster": [
+      "decals (largest cluster around a decal seed)",
+      1,
+      12
+    ],
+    "art.decalSpread": [
+      "world px (cluster spread)",
+      0,
+      120
+    ],
+    "art.pineShare": [
+      "percent (high-plateau cells with a pine)",
+      0,
+      100
+    ],
+    "art.drawOverhead": [
+      "drawImage calls (fixed per-frame overhead in the one-draw-per-agent check)",
+      0,
+      400
+    ],
+    "art.drawPerAgent": [
+      "drawImage calls per visible agent (gate)",
+      1,
+      3
+    ],
+    "art.canvasBudgetMB": [
+      "MB (every cache canvas's backing store, gate)",
+      10,
+      200
+    ],
+    "art.hatShareMin": [
+      "share (hat pixels of a 60-peasant crowd crop, gate)",
+      0,
+      1
+    ],
+    "art.terrainSatMax": [
+      "HSL saturation (mean of a terrain crop, gate)",
+      0,
+      1
+    ],
+    "art.flashMin": [
+      "s (hit flash remaining above which the baked flash frame shows)",
+      0,
+      0.5
+    ],
+    "art.ditherBand": [
+      "share of a tone step dithered at its border (0 hard edge, 1 dither everywhere)",
+      0,
+      1
     ]
   }
 }

@@ -150,8 +150,9 @@
       cloudImg = g.createImageData(CT, CT); const d = cloudImg.data, hs = (i, j, s) => { let h = (Math.imul(i & (s - 1), 374761393) + Math.imul(j & (s - 1), 668265263) + s * 1442695041) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
       const noise = (x, y, s) => { const fx = x * s / CT, fy = y * s / CT, i = Math.floor(fx), j = Math.floor(fy), tx = fx - i, ty = fy - j, u = tx * tx * (3 - 2 * tx), v = ty * ty * (3 - 2 * ty);
         return (hs(i, j, s) * (1 - u) + hs(i + 1, j, s) * u) * (1 - v) + (hs(i, j + 1, s) * (1 - u) + hs(i + 1, j + 1, s) * u) * v; };
+      const cc = PS.PAL.rgb(PS.PAL.fog.cloud); // the cloud drift tint (src/palette.js)
       for (let y = 0; y < CT; y++) for (let x = 0; x < CT; x++) { const n = 0.55 * noise(x, y, 4) + 0.3 * noise(x, y, 8) + 0.15 * noise(x, y, 16), a = Math.max(0, Math.min(1, (n - 0.42) * 2.6)), q = (y * CT + x) * 4;
-        d[q] = 92; d[q + 1] = 106; d[q + 2] = 132; d[q + 3] = Math.round(255 * a * CFG.cloudAlpha); }
+        d[q] = cc[0]; d[q + 1] = cc[1]; d[q + 2] = cc[2]; d[q + 3] = Math.round(255 * a * CFG.cloudAlpha); }
     }
     g.putImageData(cloudImg, 0, 0);
     tileN = Math.max(8, Math.round(CFG.cloudTile * CFG.canvasScale));
@@ -281,7 +282,8 @@
   function dispAt(x, y) { const w = W, i = ((x / DC) | 0) + DP, j = ((y / DC) | 0) + DP; if (!w || i < 1 || j < 1 || i >= DN - 1 || j >= DN - 1) return -1; let s = 0; for (let v = -1; v <= 1; v++) for (let u = -1; u <= 1; u++) if (w.disp[(j + v) * DN + i + u]) s += (v ? 1 : 2) * (u ? 1 : 2); return LA[s]; }
 
   function sig() { const w = W; if (!w) return null; return [Array.from(w.nExp), Array.from(w.stamps), Array.from(w.ver)].join("|"); }
-  const F = (PS.fog = { init, world, reset, use, stamp, sees, seesCell, explored, cellOf, resize, render, flushMask, recover, drop, report, maskAlphaAt, dispAt, minAlpha4, sumAlpha4, sig, holeGrad,
+  const canvases = () => [maskCv, cloudCv, tileCv, tilesCv, vigCv, fogCv, ...holeSprites.values()].filter(Boolean); // for the memory report
+  const F = (PS.fog = { init, canvases, world, reset, use, stamp, sees, seesCell, explored, cellOf, resize, render, flushMask, recover, drop, report, maskAlphaAt, dispAt, minAlpha4, sumAlpha4, sig, holeGrad,
     vis: (team) => (W ? W.vis[team] : null), verOf: (team) => (W ? W.ver[team] : 0), exploredArr: (team) => (W ? W.explored[team] : null), world0: () => W, RS, ST,
     get N() { return N; }, get BN() { return BN; }, get BK() { return BK; }, get fogSize() { return [fw, fh, cssW, cssH]; }, get maskCanvas() { return maskCv; }, get cloudCanvas() { return cloudCv; } });
 })();

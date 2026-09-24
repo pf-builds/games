@@ -18,7 +18,7 @@ body {
 .chip {
   display: inline-flex; align-items: center; gap: .4rem; padding: .28rem .6rem .28rem .45rem;
   background: rgba(10,18,8,.78); border: 1px solid rgba(255,255,255,.12); border-radius: 99px;
-  font-weight: 800; font-size: .85rem; letter-spacing: .02em; backdrop-filter: blur(4px);
+  font-weight: 800; font-size: .85rem; letter-spacing: .02em;
   transition: transform .15s;
 }
 .chip.dead { opacity: .4; text-decoration: line-through; }
@@ -75,7 +75,7 @@ body.touch #minimap { width: 110px; height: 110px; }
 /* ---------- overlays ---------- */
 .overlay {
   position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center;
-  text-align: center; padding: 1.5rem; gap: .9rem; background: rgba(8,14,6,.5); backdrop-filter: blur(1.5px);
+  text-align: center; padding: 1.5rem; gap: .9rem; background: radial-gradient(ellipse at 50% 45%, rgba(8,14,6,.62) 0%, rgba(8,14,6,.5) 45%, rgba(8,14,6,.28) 100%); /* no backdrop-filter over the live canvas (SPEC-v2 §11): the attract valley shows through */
 }
 .overlay.active { display: flex; }
 .logo { font-family: "Baloo 2", sans-serif; font-weight: 800; line-height: .9; display: flex; flex-direction: column; text-shadow: 0 6px 0 rgba(0,0,0,.45), 0 0 24px rgba(0,0,0,.6); }

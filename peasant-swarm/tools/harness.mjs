@@ -39,6 +39,10 @@
 // p90 at X times the reference; --bench-flush benches both builds with the per-frame canvas flush (see M3-build-notes.md). Console
 // warnings are failures now (M2 critic BLOCKER-1), except the font host's TLS lines.
 //
+// M5 additions (valley art): selfTest part "art" (terrain saturation, hat share, one draw per agent, cache memory and opacity after a drop);
+// the bench reports agents drawn, drawImage per agent and cache canvas MB (assert benchOneDrawPerAgent); --art-shots stages PS.artScene
+// scenes (title, home valley, ridge pass, ford, bridge, clash, rout banner, six teams at zoom 0.5 on the phone) and screenshots them.
+//
 // M4 additions (rivals and match): six teams and the 5:00 match. --ai-matches K now plays K all-AI matches under the real rules in the live
 // page (PS.debugStart({ aiPlayer: true }): team 1 as ai.proxy, rivals on Normal), stepped in 30 s chunks to the bell, and reads PS.pacing().
 // --bot-matches K plays K matches of the fog-honest scripted bot on each of --bot-diffs (default easy,normal) for the win rate. The report
@@ -59,13 +63,14 @@ const FONT_HOST = /fonts\.(googleapis|gstatic)\.com/;
 function parseArgs(argv) {
   const o = { url: "http://127.0.0.1:8471/peasant-swarm/", out: "harness-out", mobile: false, sim: 240, seeds: 3, difficulty: "normal",
     viewport: "1280x720", fights: "20x20,25x20,30x20,40x20,60x40", fightRuns: 5, fightMax: 40, renderSecs: 3, seed: null, cap: null, v1Url: null, benchReps: 3, aiMatches: 0, fixtures: false, refGate: null,
-    refDrawGate: null, benchFlush: false, throttle: 4, fogPerf: true, botMatches: 0, botDiffs: "easy,normal", aiSecs: 300 };
+    refDrawGate: null, benchFlush: false, throttle: 4, fogPerf: true, botMatches: 0, botDiffs: "easy,normal", aiSecs: 300, artShots: false };
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i], v = argv[i + 1];
     if (k === "--mobile") { o.mobile = true; continue; }
     if (k === "--fixtures") { o.fixtures = true; continue; }
     if (k === "--bench-flush") { o.benchFlush = true; continue; }
     if (k === "--no-fog-perf") { o.fogPerf = false; continue; }
+    if (k === "--art-shots") { o.artShots = true; continue; }
     const key = { "--url": "url", "--out": "out", "--sim": "sim", "--seeds": "seeds", "--difficulty": "difficulty", "--viewport": "viewport",
       "--fights": "fights", "--fight-runs": "fightRuns", "--fight-max": "fightMax", "--render-secs": "renderSecs", "--seed": "seed", "--cap": "cap",
       "--v1-url": "v1Url", "--bench-reps": "benchReps", "--ai-matches": "aiMatches", "--ref-gate": "refGate", "--ref-draw-gate": "refDrawGate", "--throttle": "throttle",
@@ -257,7 +262,8 @@ async function main() {
     }
     const sum = (runs) => runs.length ? { update: { p50: benchMed(runs, "update", "p50"), p90: benchMed(runs, "update", "p90"), p99: benchMed(runs, "update", "p99") },
       draw: { p50: benchMed(runs, "draw", "p50"), p90: benchMed(runs, "draw", "p90"), p99: benchMed(runs, "draw", "p99") }, drawImage: median(runs.map((r) => r.drawImage)),
-      layers: median(runs.map((r) => r.layers)), agents: median(runs.map((r) => r.agents)), onScreen: median(runs.map((r) => r.onScreen)) } : null;
+      layers: median(runs.map((r) => r.layers)), agents: median(runs.map((r) => r.agents)), onScreen: median(runs.map((r) => r.onScreen)),
+      agentsDrawn: median(runs.map((r) => r.agentsDrawn || 0)), drawPerAgentOk: runs.every((r) => r.drawPerAgentOk !== false), canvasMB: median(runs.map((r) => (r.canvas ? r.canvas.mb : 0))) } : null;
     report.bench = { v2: sum(v2), v1: sum(v1), v2runs: v2, v1runs: v1, errors: errs, ratio: null };
     if (v1.length) { const a = report.bench.v2, b = report.bench.v1; report.bench.ratio = { updateP50: r2(a.update.p50 / b.update.p50), updateP90: r2(a.update.p90 / b.update.p90), drawP50: r2(a.draw.p50 / b.draw.p50), drawP90: r2(a.draw.p90 / b.draw.p90) }; }
   }
@@ -286,7 +292,7 @@ async function main() {
       // selfTest on the title screen before any match, then the fight matrix (each call is its own evaluate, well under 15 s)
       // one evaluate per part so each stays well under ~15 s of wall time (lesson 20); the merged verdict is the selfTest verdict
       const s0 = Date.now(), st = { pass: true, fails: [], results: {}, partMs: {}, wallMs: 0 };
-      for (const part of ["config", "sprites", "terrain", "caches", "flow", "fight", "fixtures", "flipflop", "ai", "rivals", "fog", "replay", "match"]) {
+      for (const part of ["config", "sprites", "terrain", "caches", "art", "flow", "fight", "fixtures", "flipflop", "ai", "rivals", "fog", "replay", "match"]) {
         const p0 = Date.now(), r = await page.evaluate((part) => window.PS.selfTest({ parts: part }), part);
         st.partMs[part] = Date.now() - p0; Object.assign(st.results, r.results); for (const f of r.fails) if (st.fails.indexOf(f) < 0) st.fails.push(f);
       }
@@ -575,6 +581,22 @@ async function main() {
     n.shot = await shot(page, "nofog"); n.errors = errs; n.ok = n.startHit && n.started && !!n.end && n.restartHit && n.restarted && errs.length === 0 && n.drawnAll.gate === false;
     report.nofog = n; await ctx.close();
   }
+  if (A.artShots) {
+    // M5 art screenshots (--art-shots): the title, then PS.artScene stages on the live map with the camera on your swarm: the home valley at
+    // match start, a ridge pass, a river crossing (ford and bridge), a clash, a rout banner, and all six teams (at zoom 0.5 on the phone)
+    const ctx = await browser.newContext(ctxOpts); await ctx.addInitScript(installHelpers); const page = await ctx.newPage(), errs = [];
+    page.on("pageerror", (e) => errs.push(String(e.message || e)));
+    page.on("console", (m) => { if ((m.type() === "error" || m.type() === "warning") && !FONT_HOST.test(m.text() + ((m.location() && m.location().url) || ""))) errs.push(m.type() + ": " + m.text()); });
+    const seed = A.seed != null && isFinite(A.seed) ? A.seed : 1000; const u = new URL(url.href); u.searchParams.set("seed", String(seed)); await page.goto(u.href);
+    await page.waitForFunction(() => !!(window.PS && window.PS.artScene && window.PSS && window.PSS.map), null, { timeout: 20000 }); await page.waitForTimeout(900);
+    const art = { seed, shots: {}, scenes: {} }; art.shots.title = await shot(page, "art-title");
+    for (const [sc, zoom] of [["home", 0], ["pass", 0], ["ford", 0], ["bridge", 0], ["clash", 0], ["rout", 0], ["teams", A.mobile ? 0.5 : 0]]) {
+      art.scenes[sc] = await page.evaluate(([sc, seed, zoom]) => { window.PS.debugStart({ seed }); return window.PS.artScene(sc, { zoom }); }, [sc, seed, zoom]);
+      await page.waitForTimeout(sc === "rout" ? 120 : 600); art.shots[sc] = await shot(page, "art-" + sc);
+    }
+    art.errors = errs; art.ok = errs.length === 0 && Object.values(art.scenes).every((r) => r && !r.error) && /JOIN/.test((art.scenes.rout.banners || []).join(" "));
+    report.artShots = art; await ctx.close();
+  }
   await browser.close();
 
   // ---------------------------------------------------------------- verdict
@@ -622,6 +644,9 @@ async function main() {
   if (report.fogPerf) as.fogJsThrottled = !!report.fogPerf.ok;
   as.nofogPlayable = !!(report.nofog && report.nofog.ok);
   if (report.bench) as.benchClean = report.bench.errors.length === 0 && [...report.bench.v2runs, ...report.bench.v1runs].every((b) => !b.terrainBad);
+  // M5: one drawImage per agent in the bench scene, and the art screenshots staged cleanly
+  if (report.bench && report.bench.v2) as.benchOneDrawPerAgent = report.bench.v2runs.every((r) => r.drawPerAgentOk !== false);
+  if (A.artShots) as.artShots = !!(report.artShots && report.artShots.ok);
   if (A.mobile) {
     const t = report.touch || {}, h = report.huddle || {};
     as.touchLandsOnCanvas = t.target === "CANVAS#game";
@@ -674,12 +699,14 @@ function markdown(R) {
     L.push("", "## PS.bench(\"capclash\") (median of runs; ms of script per tick / per frame)", "", "| build | update p50 / p90 / p99 | draw p50 / p90 / p99 | drawImage | full-screen alpha layers | agents |", "|---|---|---|---|---|---|");
     if (b.v1) L.push(row("v1 reference (" + b.v1runs.length + " runs)", b.v1)); L.push(row("v2 (" + b.v2runs.length + " runs)", b.v2));
     if (b.ratio) L.push("", `this build / reference: update p50 ${b.ratio.updateP50}, p90 ${b.ratio.updateP90}; draw p50 ${b.ratio.drawP50}, p90 ${b.ratio.drawP90} (gate: ${R.meta.refGate ? "tick p90 <= " + R.meta.refGate : "all four <= 1.1"})`);
+    if (b.v2 && b.v2.agentsDrawn) L.push("", `M5: ${b.v2.agentsDrawn} agents drawn per frame, ${r2(b.v2.drawImage)} drawImage (${r2(b.v2.drawImage / b.v2.agentsDrawn)} per agent, one-draw check ${b.v2.drawPerAgentOk ? "pass" : "FAIL"}); cache canvases ${b.v2.canvasMB} MB in the bench scene.`);
     const fl = b.v2runs.length && b.v2runs[b.v2runs.length - 1].flow; if (fl) L.push(`Flow fields during the timed ticks (last run): ${fl.rebuilds} rebuilds, ${fl.ms} ms total, ${fl.msPerTick} ms per tick, max ${fl.maxMs} ms.`);
   }
   L.push("", "## Fog (M3)", "", "| run | first sighting (s) | sightings | ghosts | danger cues | pings / rumbles | dust | leak frames | rivals drawn / visible / fading | leak diff | AI decisions / violations | fog JS p50 / p90 ms |", "|---|---|---|---|---|---|---|---|---|---|---|---|");
   for (const r of R.runs) if (r.fog && r.fog.stats) { const f = r.fog, s = f.stats, l = f.leak; L.push(`| ${r.index} | ${s.firstSight} | ${s.sightings} | ${s.ghosts} | ${s.dangerCues} | ${s.pings} / ${s.rumbles} | ${s.dust} | ${l.frames} | ${l.rivalsDrawn} / ${l.rivalsVisible} / ${l.fading} | ${f.leakDiff} | ${f.ai.decisions} / ${f.ai.violations} | ${f.cost.p50} / ${f.cost.p90} |`); }
   if (R.fogStructure) L.push("", `Structure: fog canvas ${R.fogStructure.fogW}x${R.fogStructure.fogH} for ${R.fogStructure.cssW}x${R.fogStructure.cssH} CSS (<= 1/4: ${R.fogStructure.quarter}), full-screen alpha draws per frame ${R.fogStructure.layers}, drawImage per frame ${R.fogStructure.drawImage}. Mask uploads per second over the render windows: ${R.runs.map((r) => r.render.map((x) => x.maskUploadRate).join("/")).join(" · ")}.`);
   if (R.fogPerf) { const f = R.fogPerf; L.push("", `Fog JS per frame (ms, p50 / p90): live match at 1x ${f.match1x.p50} / ${f.match1x.p90}, at ${f.throttle}x ${f.matchThrottled.p50} / ${f.matchThrottled.p90} (t ${f.matchThrottled.t} s, ${f.matchThrottled.count} yours, ${f.matchThrottled.agents} agents); cap-clash bench at 1x ${f.bench1x.fog.p50} / ${f.bench1x.fog.p90}, at ${f.throttle}x ${f.benchThrottled.fog.p50} / ${f.benchThrottled.fog.p90}. Mean at ${f.throttle}x: match ${f.matchThrottled.meanTrim} (raw ${f.matchThrottled.mean}, ${f.matchThrottled.stalls} stall frames over 50 ms, max ${f.matchThrottled.max}), bench ${f.benchThrottled.fog.meanTrim} (raw ${f.benchThrottled.fog.mean}, ${f.benchThrottled.fog.stalls} stalls). Gate mean <= 1.5 at ${f.throttle}x: ${f.ok ? "pass" : "FAIL"}; p90 <= 1.5 at ${f.throttle}x: ${f.p90ok ? "pass" : "over (throttle pause quantisation, see notes)"}.`); }
+  if (R.artShots) L.push("", `## Art screenshots (M5, seed ${R.artShots.seed}): ${R.artShots.ok ? "pass" : "FAIL"}`, "", Object.entries(R.artShots.shots).map(([k, f]) => `${k}: ${f}`).join(" · "), `Errors: ${R.artShots.errors.length}.`);
   if (R.nofog) L.push("", `?nofog=1: start ${R.nofog.startHit && R.nofog.started}, end screen ${R.nofog.end}, restart ${R.nofog.restartHit && R.nofog.restarted}, errors ${R.nofog.errors.length}: ${R.nofog.ok ? "pass" : "FAIL"}.`);
   if (R.caches) L.push("", "## Cache drop and recovery", "", `PS.debugDropCaches blanked ${R.caches.dropped} canvases (${R.caches.blankAfterDrop} read blank), visibilitychange fired; after: ${R.caches.after.chunksOpaque}/${R.caches.after.chunks} chunks opaque, ${R.caches.after.pending} pending, minimap ${R.caches.after.minimap}, blank sprites ${R.caches.after.spritesBlank.length}. Recovered: ${R.caches.recovered}.`);
   if (R.caches && R.caches.noEvent) { const c = R.caches.noEvent; L.push(`No event (M1 critic MAJOR-2): ${c.dropped} blanked, ${c.blankAfterDrop} read blank; recovered ${c.recovered} after ${c.waitedMs} ms of frames (${c.after ? c.after.chunksOpaque + "/" + c.after.chunks + " chunks opaque" : "-"}).`); }

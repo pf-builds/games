@@ -67,7 +67,7 @@
 
   // ---------------------------------------------------------------- setup
   async function boot() {
-    const res = await fetch("config.json?v=24");
+    const res = await fetch("config.json?v=25");
     S.cfg = await res.json();
     S.spr = PS.buildSprites(S.cfg);
     PS.terrain.init(S.cfg); PS.flow.init(S.cfg); PS.fog.init(S.cfg);
@@ -98,6 +98,7 @@
       // QA: start a live match without the title click. { seed, difficulty, aiPlayer } (aiPlayer: all six swarms AI, the harness's pacing matches)
       PS.debugStart = (o) => { o = o || {}; if (o.difficulty && S.cfg.difficulty[o.difficulty]) S.difficulty = o.difficulty; PS.audio.setSilent(true); newGame(false, { seed: o.seed, aiPlayer: !!o.aiPlayer }); S.mode = "play"; S._hintFight = S._hintHud = S._hintRecruit = true; S._routedBy = null; showOverlay(null); $("hud").classList.remove("hidden"); updateHUD(true); return { seed: S.seed, difficulty: S.difficulty, slots: S.teams.slice(1).map((t) => t.slot) }; };
       PS.pacing = pacing;
+      PS.artScene = artScene;
     }
   }
 
@@ -132,7 +133,7 @@
       route: true, mode: "route", hyst: false, tMed: 0,
       buffs: { speed: 0, armor: 0, frenzy: 0, rally: 0 }, eng: z9(), engT: z9(), engStart: z9(), engL: z9(), engPk: z9(), engHold: z9(), engCx: z9(), engCy: z9(), fX: z9(), fY: z9(),
       engG: z9(), engGPk: z9(),
-      spr: S.spr.peasantSet(color), kills: 0, peak: 1, state: "roam", speedMod: 1, thinkT: S.rng() * 0.5, lastHint: 0, minY: 0, huntStart: 0, huntCooldown: 0,
+      spr: S.spr.peasantSet(color, id), ban: S.spr.banner(color, id), kills: 0, peak: 1, state: "roam", speedMod: 1, thinkT: S.rng() * 0.5, lastHint: 0, minY: 0, huntStart: 0, huntCooldown: 0,
       regroupUntil: 0, fleeFrom: 0, leftHome: -1, atCentre: -1, preyId: 0, exX: 0, exY: 0, exUntil: -1, escUntil: -1, escFrom: 0, escReplanAt: 0, escGX: 0, escGY: 0,
       kind: ai ? ai.kind || "" : "", sense: 1, mem: S.cfg.fog.aiMemory, hear: S.cfg.fog.clashNoise, lastFight: -1e9, scentX: 0, scentY: 0, scentT: -1e9, leaveUntil: -1e9,
       lurkX: 0, lurkY: 0, lurkUntil: -1e9, lurkCool: 0, crowsT: -1e9, claimX: 0, claimY: 0, claimOn: false, claimEmpty: 0 };
@@ -222,6 +223,7 @@
     S.stats = { recruited: 0, kills: 0, routs: 0, lost: 0, peak: 1, powerups: 0, fights: 0 };
     S.dbg = { terrainBad: 0, firstBad: null, capOver: 0 }; S.ev = mkEv(); S.lastRout = null; S.thinkRR = 0; S.fixture = null;
     S.noise = mkNoise(); S.crown = mkCrown(); S.pile = mkPile(); S.scent = mkScent(); S.scent.next = cfg.ai.grace; S.relaxUntil = -1e9; S.torches = false; S.aiCost = { ms: 0, thinks: 0, ticks: 0, max: 0 };
+    S.zoomLock = 0; // PS.artScene's pinned zoom ends with the match
     S.aiPlayer = !attract && !!opts.aiPlayer; // QA: an all-AI match under real rules (team 1 plays as ai.proxy; nobody wins or loses, the harness reads PS.pacing)
     const inp = S.input; inp.route.on = false; inp.route.chase = 0; inp.hold = false; inp.preview = 0;
 
@@ -231,7 +233,7 @@
     for (let i = 0; i < cfg.world.trees + cfg.world.rocks; i++) {
       const p = randPos(P.open3), tree = i < cfg.world.trees, big = tree && S.rng() < 0.4;
       if (!spaced(p.x, p.y, 40) || nearSpawn(p.x, p.y, clearStart) || !T.placementOk(p.x, p.y, 3)) continue;
-      S.obstacles.push({ x: p.x, y: p.y, r: tree ? (big ? 17 : 12) : 13, kind: tree ? (big ? 1 : 0) : 2 });
+      S.obstacles.push({ x: p.x, y: p.y, r: tree ? (big ? 17 : 12) : 13, kind: tree ? (big ? 1 : 0) : 2, v: -1 }); // v: render variant (pine, rock shape), set on first draw
       const c = T.cellOf(p.x, p.y); m.cost[c] = Math.min(254, m.cost[c] + cfg.terrain.costs.prop);
     }
     bucketObstacles();
@@ -1007,9 +1009,9 @@
     if (fled && loser.ai) { loser.regroupUntil = S.t + RM.escapeSeconds + RM.regroupSeconds; loser.fleeFrom = winner.id; loser.thinkT = 0; }
     S.lastRout = { t: +S.t.toFixed(3), loser: loser.id, winner: winner.id, group: n, flipped, fled, scattered, outside: loserBefore - n, got: got.slice(), loserBefore, winnerBefore,
       cx: Math.round(cx), cy: Math.round(cy), farFlip: +farFlip.toFixed(1), minFlipX: minFlipX === Infinity ? null : Math.round(minFlipX) };
-    if (winner.isPlayer) { S.stats.routs++; PS.audio.rout(true); banner(scattered && !got[1] ? "ROUTED: " + scattered + " SCATTER" : "+" + got[1] + " JOIN YOU" + (fled ? " · " + fled + " FLED" : ""), winner.color, 2.6); S.shake = 0.35; }
+    if (winner.isPlayer) { S.stats.routs++; PS.audio.rout(true); banner(scattered && !got[1] ? "ROUTED: " + scattered + " SCATTER" : "+" + got[1] + " JOIN YOU" + (fled ? " · " + fled + " FLED" : ""), winner.color, 2.6, winner.id); S.shake = 0.35; }
     else if (loser.isPlayer) { S._routedBy = winner.name; S.relaxUntil = S.t + cfg.ai.relaxSeconds; /* relax window: no rival starts a hunt on you (SPEC-v2 §7) */ PS.audio.rout(false); S.shake = 0.5; if (flipped + scattered < loserBefore) banner(fled ? "SCATTERED: " + fled + " escaped" : "-" + (flipped + scattered) + " JOINED " + winner.name.toUpperCase(), "#FF7A6E", 2.4); }
-    else if (playerSees(cx, cy)) { banner(loser.name.toUpperCase() + " routed by " + winner.name, winner.color, 2); if (fxOk(cx, cy)) PS.audio.rout(false); }
+    else if (playerSees(cx, cy)) { banner(loser.name.toUpperCase() + " routed by " + winner.name, winner.color, 2, winner.id); if (fxOk(cx, cy)) PS.audio.rout(false); }
     else clashPing(cx, cy, true); // a rout you cannot see: no banner, it folds into the clash ping (SPEC-v2 §5)
     if (fxOk(cx, cy)) particles.ring(cx, cy, winner.color, 10, 120, 0.7);
     recount();
@@ -1343,6 +1345,7 @@
   }
   function zoomRule(n, dt, now) {
     if (!S.cfg) return;
+    if (S.zoomLock) { S.cam.zoom = S.zoomLock; return; } // debug: PS.artScene pins a zoom for screenshots
     const C = S.cfg.camera, Z = S.camS, st = zoomSteps(), raw = Math.min(S.vw, S.vh) / (C.span0 + C.spanK * Math.sqrt(Math.max(1, n)));
     let i = Z.i;
     if (now || i < 0 || Z.steps !== st) { i = 0; for (let k = 1; k < st.length; k++) if (Math.abs(st[k] - raw) < Math.abs(st[i] - raw)) i = k; }
@@ -1377,7 +1380,7 @@
   // ---------------------------------------------------------------- helpers
   function screenToWorld(sx, sy) { const z = S.cam.zoom; return { x: (sx - S.vw / 2) / z + S.cam.x, y: (sy - S.vh / 2) / z + S.cam.y }; }
   function onScreen(x, y) { const z = S.cam.zoom, hw = S.vw / 2 / z + 40, hh = S.vh / 2 / z + 40; return Math.abs(x - S.cam.x) < hw && Math.abs(y - S.cam.y) < hh; }
-  function banner(text, color, life) { if (S.attract) return; S.banners.push({ text, color, life, life0: life }); }
+  function banner(text, color, life, at) { if (S.attract) return; S.banners.push({ text, color, life, life0: life, at: at || 0 }); } // at: a team id whose banner bearer it anchors to
   // hints wait while the clash panel or a banner is up and for input.hintAfterRouteMs after a tap / click route (the marker and its
   // preview), so the pill never covers either (M2 critic MAJOR-3); returns whether it showed, and the caller retries until it does
   const clashShowing = () => { const p = S.teams[1]; if (!p || !p.count) return false; for (let i = 2; i < S.teams.length; i++) if (S.teams[i].alive && p.engT[i] > 0.1) return true; return false; };
@@ -1435,10 +1438,9 @@
   }
 
   // ---------------------------------------------------------------- ground chunk cache (SPEC-v2 §2): 512 world px chunks at 256 art px, drawn at 2x
-  // Static ground (grass tiles, trails, decals, terrain) is baked per chunk; chunks with water get a second baked frame, swapped every
-  // waterFrameMs. Visible dirty chunks bake at once, the rest one per frame. Camp dirt, props and power-ups stay sprites.
-  const TPAL = { top: "#8E8A7A", topLit: "#9A9686", face: "#615C50", base: "#2E2B25", water: ["#4A8CCB", "#3A74B2", "#2C5C93"], glint: "#A8D2F2",
-    sand: "#C9B27C", sandD: "#B39A63", stone: "#7B776C", plank: "#8E6738", plankD: "#5E4222", beyond: "#8E8A7A" };
+  // Static ground is painted per chunk by src/ground.js at art resolution (macro patches, pass floors, trails, decal clusters, autotiled
+  // cliffs, water, fords, bridges, pines, cast shadows); chunks with water get a second frame, swapped every terrain.waterFrameMs. Visible
+  // dirty chunks bake at once, the rest one per frame. Camp dirt, props, trees and power-ups stay sprites.
   function ground(m) {
     if (m.chunks) return m.chunks;
     const cfg = S.cfg.terrain, n = Math.ceil(S.cfg.world.w / cfg.chunk), N = m.N, per = cfg.chunk / m.cell, water = new Uint8Array(n * n);
@@ -1448,54 +1450,14 @@
   function groundInvalidate(m) { const G = ground(m); G.dirty.fill(1); G.left = G.n * G.n; }
   function releaseGround(m) { const G = m.chunks; if (!G) return; for (const cv of G.cvA.concat(G.cvB)) if (cv) { cv.width = 0; cv.height = 0; } m.chunks = null; }
   function mkCanvas(w, h) { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; }
+  const GP = { n: 0, CH: 0, AP: 0, A: null, trails: null, decals: null, spr: null }; // reused paint options
   function bakeChunk(m, G, ci) {
     const AP = S.cfg.terrain.chunkArt;
     if (!G.cvA[ci]) G.cvA[ci] = mkCanvas(AP, AP);
-    paintChunk(G.cvA[ci], m, G, ci, 0);
-    if (G.water[ci]) { if (!G.cvB[ci]) G.cvB[ci] = mkCanvas(AP, AP); paintChunk(G.cvB[ci], m, G, ci, 1); }
+    if (G.water[ci] && !G.cvB[ci]) G.cvB[ci] = mkCanvas(AP, AP);
+    GP.n = G.n; GP.CH = S.cfg.terrain.chunk; GP.AP = AP; GP.A = S.cfg.art; GP.trails = S.trails; GP.decals = S.decals; GP.spr = S.spr;
+    PS.ground.paint(G.cvA[ci], G.water[ci] ? G.cvB[ci] : null, m, ci, GP);
     if (G.dirty[ci]) { G.dirty[ci] = 0; G.left--; }
-  }
-  function sdfM(m, x, y) { const N = m.N, cell = m.cell, s = m.sdf; let fx = x / cell - 0.5, fy = y / cell - 0.5; fx = fx < 0 ? 0 : fx > N - 1.001 ? N - 1.001 : fx; fy = fy < 0 ? 0 : fy > N - 1.001 ? N - 1.001 : fy;
-    const i = fx | 0, j = fy | 0, tx = fx - i, ty = fy - j, c = j * N + i, a = s[c], b = s[c + 1], d = s[c + N], e = s[c + N + 1]; return a + (b - a) * tx + (d - a) * ty + (a - b - d + e) * tx * ty; }
-  const hash2 = (i, j, s) => { let h = (Math.imul(i, 374761393) + Math.imul(j, 668265263) + Math.imul(s, 1442695041)) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return (h ^ (h >>> 16)) >>> 0; };
-  function paintChunk(cv, m, G, ci, frame) {
-    const cfg = S.cfg, spr = S.spr, CH = cfg.terrain.chunk, sc = cfg.terrain.chunkArt / CH, n = G.n, wx = (ci % n) * CH, wy = ((ci / n) | 0) * CH;
-    const g = cv.getContext("2d"), N = m.N, cell = m.cell, terr = m.terr;
-    g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height);
-    g.setTransform(sc, 0, 0, sc, -wx * sc, -wy * sc); g.imageSmoothingEnabled = false;
-    // grass: v1's three tile variants, same per-tile hash as v1's per-frame tiles
-    const T = cfg.world.tile;
-    for (let j = Math.floor(wy / T); j < Math.ceil((wy + CH) / T); j++) for (let i = Math.floor(wx / T); i < Math.ceil((wx + CH) / T); i++) {
-      let h = (i * 374761393 + j * 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); h = (h ^ (h >>> 16)) >>> 0; const v = h % 11;
-      g.drawImage(spr.tiles[v < 6 ? 0 : v < 10 ? 1 : 2], i * T, j * T, T, T);
-    }
-    // dirt trails between the opening camps, then decals
-    g.strokeStyle = "rgba(125,106,68,.42)"; g.lineWidth = 9; g.lineCap = "round";
-    for (const tr of S.trails) { if (tr.maxX < wx || tr.minX > wx + CH || tr.maxY < wy || tr.minY > wy + CH) continue; g.beginPath(); g.moveTo(tr.x0, tr.y0); g.quadraticCurveTo(tr.cx, tr.cy, tr.x1, tr.y1); g.stroke(); }
-    for (const d of S.decals) { if (d.x < wx - 20 || d.x > wx + CH + 20 || d.y < wy - 20 || d.y > wy + CH + 20) continue; const im = spr.decals[d.k]; g.drawImage(im, d.x - im.width / 2, d.y - im.height / 2); }
-    // terrain cells, with a one-cell apron (neighbours outside the chunk are read and painted; the canvas clips them)
-    const i0 = Math.max(0, Math.floor(wx / cell) - 1), i1 = Math.min(N - 1, Math.floor((wx + CH) / cell)), j0 = Math.max(0, Math.floor(wy / cell) - 1), j1 = Math.min(N - 1, Math.floor((wy + CH) / cell));
-    const px = 1 / sc; // one art pixel in world px
-    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
-      const c = j * N + i, t = terr[c], x = i * cell, y = j * cell;
-      if (t === 1) {
-        const south = j + 1 < N ? terr[c + N] : 1;
-        if (south !== 1) { g.fillStyle = TPAL.face; g.fillRect(x, y, cell, cell); g.fillStyle = TPAL.top; g.fillRect(x, y, cell, px * 2); g.fillStyle = TPAL.base; g.fillRect(x, y + cell - px, cell, px); }
-        else { g.fillStyle = (hash2(i, j, 3) & 7) === 0 ? TPAL.topLit : TPAL.top; g.fillRect(x, y, cell, cell); }
-      } else if (t === 2) {
-        // three tones by shore distance, sampled per 8 px block from the bilinear SDF (a 2-3 cell river has no deep cell centres)
-        for (let v = 0; v < 4; v++) for (let u = 0; u < 4; u++) { const d = -sdfM(m, x + u * 8 + 4, y + v * 8 + 4); g.fillStyle = TPAL.water[d < 9 ? 0 : d < 20 ? 1 : 2]; g.fillRect(x + u * 8, y + v * 8, 8, 8); }
-        const h = hash2(i, j, 11 + frame); if ((h & 3) === 0) { g.fillStyle = TPAL.glint; g.fillRect(x + ((h >>> 4) % 24), y + ((h >>> 9) % 26), px * 3, px); }
-      } else if (t === 3) {
-        g.fillStyle = TPAL.sand; g.fillRect(x, y, cell, cell);
-        const h = hash2(i, j, 5); if (h % 100 < 45) { g.fillStyle = TPAL.stone; g.fillRect(x + 6 + ((h >>> 8) % 16), y + 6 + ((h >>> 13) % 16), px * 3, px * 2); }
-        if (frame && (h & 7) === 1) { g.fillStyle = TPAL.glint; g.fillRect(x + ((h >>> 5) % 24), y + ((h >>> 11) % 26), px * 2, px); }
-      } else if (t === 4) {
-        g.fillStyle = TPAL.plank; g.fillRect(x, y, cell, cell); g.fillStyle = TPAL.plankD;
-        const along = m.river && Math.abs(m.river.dy) > Math.abs(m.river.dx); // planks lie along the river, across the way people walk
-        for (let k = 0; k < cell; k += px * 4) { if (along) g.fillRect(x + k, y, px, cell); else g.fillRect(x, y + k, cell, px); }
-      }
-    }
   }
   function drawGround(x0, y0, x1, y1) {
     const m = S.map, G = ground(m), CH = S.cfg.terrain.chunk, n = G.n, k = S.cam.zoom * S.dpr;
@@ -1512,16 +1474,18 @@
   // minimap terrain (SPEC-v2 §5): one pixel per cell in a parchment palette (the map metaphor lives on the minimap only, R7); under fog only
   // the cells you have explored, the rest dark slate. An ImageData re-put from the typed arrays: the rect you explored since the last
   // redraw, or all of it for a new map or world, a dawn reveal, and on cache recovery (full = true)
-  const MPAL = [[214, 196, 150], [120, 104, 82], [120, 150, 166], [198, 178, 120], [142, 104, 60]], MUNEX = [24, 30, 42], MOBST = [160, 138, 96];
+  // parchment colours from PS.PAL.parch: grass, rock, water, ford, bridge by terrain code, the high rock, unexplored, props
+  let MPAL = null, MHIGH = null, MUNEX = null, MOBST = null;
   let miniTerr = null, miniImg = null, miniKey = "", miniT = -1e9, miniFrame = 0;
   function minimapBake(full) {
-    const m = S.map; if (!m) return; const N = m.N, w = S.fogW, all = !fogGate(), key = m.id + ":" + (w ? w.id + "." + w.gen : "-") + ":" + all;
+    const m = S.map; if (!m) return; const N = m.N, w = S.fogW, all = !fogGate(), lvl = PS.ground.mapArt(m, S.cfg.art).lvl, key = m.id + ":" + (w ? w.id + "." + w.gen : "-") + ":" + all;
+    if (!MPAL) { const P = PS.PAL.parch, r = PS.PAL.rgb; MPAL = [P.grass, P.rock, P.water, P.ford, P.bridge].map(r); MHIGH = r(P.high); MUNEX = r(P.unex); MOBST = r(P.prop); }
     if (!miniTerr || miniTerr.width !== N) { if (miniTerr) { miniTerr.width = 0; miniTerr.height = 0; } miniTerr = mkCanvas(N, N); miniImg = null; }
     const g = miniTerr.getContext("2d"); if (!miniImg) { miniImg = g.createImageData(N, N); full = true; }
     let x0 = 0, y0 = 0, x1 = N - 1, y1 = N - 1;
     if (!full && key === miniKey) { if (!w || w.mx1 < 0) return; x0 = w.mx0; y0 = w.my0; x1 = w.mx1; y1 = w.my1; }
     const d = miniImg.data, ex = w ? w.explored[1] : null;
-    for (let j = y0; j <= y1; j++) for (let i = x0; i <= x1; i++) { const c = j * N + i, q = c * 4, k = all || (ex && ex[c]) ? MPAL[m.terr[c]] || MPAL[0] : MUNEX; d[q] = k[0]; d[q + 1] = k[1]; d[q + 2] = k[2]; d[q + 3] = 255; }
+    for (let j = y0; j <= y1; j++) for (let i = x0; i <= x1; i++) { const c = j * N + i, q = c * 4, k = all || (ex && ex[c]) ? (lvl[c] === 2 ? MHIGH : MPAL[m.terr[c]] || MPAL[0]) : MUNEX; d[q] = k[0]; d[q + 1] = k[1]; d[q + 2] = k[2]; d[q + 3] = 255; }
     for (const o of S.obstacles) { const c = PS.terrain.cellOf(o.x, o.y), i = c % N, j = (c / N) | 0; if (c < 0 || m.terr[c] || !(all || (ex && ex[c])) || i < x0 || i > x1 || j < y0 || j > y1) continue; const q = c * 4; d[q] = MOBST[0]; d[q + 1] = MOBST[1]; d[q + 2] = MOBST[2]; }
     g.putImageData(miniImg, 0, 0, x0, y0, x1 - x0 + 1, y1 - y0 + 1);
     if (w) { w.mx0 = 0; w.my0 = 0; w.mx1 = -1; w.my1 = -1; } miniKey = key;
@@ -1537,11 +1501,34 @@
   const FCOST = new Float32Array(720), FPART = new Float32Array(720 * 4); let fcostN = 0, fogLastMs = 0; // FPART: per frame stamps, visibility pass, fog pass, tells
   const LW = { x0: 0, y0: 0, x1: 0, y1: 0 }; let tagMask = 0, ringMask = 0, arrowMask = 0, miniMask = 0;
   const PVN = new Int32Array(9), PVX = new Float64Array(9), PVY = new Float64Array(9), PVMY = new Float64Array(9);
+  const snap2 = (v) => ((v * 0.5) | 0) * 2; // the 2 world px art grid (one art pixel)
+  let agentsDrawn = 0; // agents drawn in the last frame (the one-draw-per-agent check)
+  // banner bearers (SPEC-v2 §11): one per swarm at its centroid (a rival's: the centroid of what you see of it, and only where you see
+  // that point), four size tiers at art.bannerTiers. Per team this frame: pole base BX/BY, pennant top BTOP, tier, drawn (BON). Name tags,
+  // verdict marks, the crown and anchored banners ("+N JOIN YOU") sit above it.
+  const BX = new Float64Array(9), BY = new Float64Array(9), BTOP = new Float64Array(9), BON = new Uint8Array(9), BTIER = new Uint8Array(9);
+  const BNE = []; for (let i = 0; i < 9; i++) BNE.push({ bn: true, tm: i, x: 0, y: 0 });
+  function bannerPrep(gate, x0, y0, x1, y1, DL) {
+    const A = S.cfg.art, T = A.bannerTiers; BON.fill(0);
+    for (let i = 1; i < S.teams.length; i++) {
+      const t = S.teams[i]; if (!t.alive || t.count < A.bannerMin || !t.ban) continue;
+      let x = t.cx, y = t.cy;
+      if (gate && i > 1) { if (!PVN[i]) continue; x = PVX[i] / PVN[i]; y = PVY[i] / PVN[i]; if (!playerSees(x, y)) continue; }
+      const tier = t.count >= T[2] ? 3 : t.count >= T[1] ? 2 : t.count >= T[0] ? 1 : 0, by = y + A.bannerLift;
+      BX[i] = x; BY[i] = by; BTIER[i] = tier; BTOP[i] = by - (t.ban.py - t.ban.top[tier]) * 2; BON[i] = 1;
+      if (x < x0 - 60 || x > x1 + 60 || by < y0 - 20 || BTOP[i] > y1 + 20) continue;
+      const e = BNE[i]; e.x = x; e.y = by; DL.push(e); if (i > 1) tagMask |= 1 << i; // a rival's banner is a tag for the leak check
+    }
+  }
+  function drawBanner(e) {
+    const i = e.tm, b = S.teams[i].ban, fr = ((((performance.now() / S.cfg.art.bannerFrameMs) | 0) + i) % 3);
+    ctx.drawImage(b.cv, fr * b.bw, BTIER[i] * b.bh, b.bw, b.bh, snap2(e.x) - b.px * 2, snap2(e.y) - b.py * 2, b.bw * 2, b.bh * 2);
+  }
   function draw() {
     const cfg = S.cfg, spr = S.spr, z = S.cam.zoom, dpr = S.dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.imageSmoothingEnabled = false;
-    ctx.fillStyle = TPAL.beyond; ctx.fillRect(0, 0, S.vw, S.vh); // past the world edge: more plateau
+    ctx.fillStyle = PS.PAL.stone[3]; ctx.fillRect(0, 0, S.vw, S.vh); // past the world edge: more high rim
     if (!S.map) return;
     const FS = S.fogS, FG = cfg.fog, gate = fogGate(), fogView = S.fogOn && !NOFOG, tells = tellsOn() && S.mode === "play", pl = S.teams[1];
     const nowMs = performance.now(), dtF = Math.min(0.1, Math.max(0, (nowMs - S.lastDrawT) / 1000)), dtS = S.t >= S.lastDrawSim ? S.t - S.lastDrawSim : DT; S.lastDrawT = nowMs; S.lastDrawSim = S.t; S.frameId++;
@@ -1556,7 +1543,7 @@
     drawGround(x0, y0, x1, y1);
     cacheProbe(x0, y0, x1, y1, false);
     // camps: under fog, dirt only where you have seen a camp (camp dirt is a sprite, never baked)
-    for (const c of S.camps) if ((!gate || c.kn[1] >= 0) && c.x > x0 - 40 && c.x < x1 + 40 && c.y > y0 - 30 && c.y < y1 + 30) ctx.drawImage(spr.dirt, c.x - 32, c.y - 20);
+    for (const c of S.camps) if ((!gate || c.kn[1] >= 0) && c.x > x0 - 40 && c.x < x1 + 40 && c.y > y0 - 30 && c.y < y1 + 30) { const im = spr.camps[(((c.x | 0) * 31 + (c.y | 0) * 17) >>> 2) & 3]; ctx.drawImage(im, snap2(c.x) - im.width, snap2(c.y) - im.height, im.width * 2, im.height * 2); }
 
     // visibility and the fog.fadeSeconds fade (seenA) of every agent that is not yours, the per-frame view of each rival (PV*), and the draw
     // list. Agents outside the view snap to their state so none enters mid-fade; the fade steps by frame time or sim time, whichever is
@@ -1596,7 +1583,7 @@
     // always in cursor-follow when the route runs over flow.routeDrawRatio x the straight line
     if (pl && pl.count > 0 && S.mode === "play") {
       const d = Math.hypot(pl.tx - pl.cx, pl.ty - pl.cy);
-      if (d > 30) { ctx.globalAlpha = 0.85; ctx.drawImage(spr.marker, pl.tx - 2, pl.ty - 12); ctx.globalAlpha = 0.5; ctx.strokeStyle = pl.color; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(pl.tx, pl.ty, 6 + 2 * Math.sin(S.t * 6), 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; }
+      if (d > 30) { ctx.globalAlpha = 0.85; ctx.drawImage(spr.marker, snap2(pl.tx) - 6, snap2(pl.ty) - 20, spr.marker.width * 2, spr.marker.height * 2); ctx.globalAlpha = 0.5; ctx.strokeStyle = pl.color; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(pl.tx, pl.ty, 6 + 2 * Math.sin(S.t * 6), 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; }
       const f = pl.route && PS.flow.fieldFor(1);
       if (f && f.ok) {
         const c0 = PS.flow.cellFor(pl.ax, pl.ay), len = PS.flow.pathCell(f, c0), straight = Math.hypot(pl.tx - pl.ax, pl.ty - pl.ay), pv = S.input.preview;
@@ -1622,37 +1609,40 @@
       ctx.globalAlpha = 0.4; ctx.fillStyle = pu.color; ctx.beginPath(); ctx.arc(p.x, p.y, 15, 0, Math.PI * 2); ctx.fill();
       ctx.globalAlpha = 0.7 * (1 - pulse); ctx.strokeStyle = pu.color; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(p.x, p.y, 10 + pulse * 26, 0, Math.PI * 2); ctx.stroke();
       ctx.globalAlpha = 1;
-      ctx.drawImage(spr.shadow, p.x - 6, p.y + 4);
+      ctx.drawImage(spr.shadow, snap2(p.x) - 8, snap2(p.y) + 4, 16, 6);
       ctx.drawImage(pu.icon, p.x - 12, p.y - 16 + bob, 24, 24);
     }
 
-    // shadows + sort list (agents at their seenA; trees and rocks are terrain, drawn as ever)
+    // the sort list: agents (at their seenA), trees and rocks, and one banner bearer per swarm you see (SPEC-v2 §11). Shadows are baked into
+    // every peasant frame and every tree and rock, so each thing is ONE drawImage (the hit flash is a baked frame too). Sprites sit on the
+    // 2 world px art grid.
     for (const o of S.obstacles) { if (o.x < x0 - 40 || o.x > x1 + 40 || o.y < y0 - 60 || o.y > y1 + 30) continue; DL.push(o); }
-    let curA = 1; for (const a of DL) if (a.team !== undefined) { if (a.seenA !== curA) { curA = a.seenA; ctx.globalAlpha = curA; } ctx.drawImage(spr.shadow, a.x - 6, a.y - 1); }
-    ctx.globalAlpha = 1;
+    bannerPrep(gate, x0, y0, x1, y1, DL);
     DL.sort(byY);
-    const neutralSet = spr._neutral || (spr._neutral = spr.peasantSet(cfg.neutral.color)), fid = S.frameId;
+    const A = cfg.art, neutralSet = spr._neutral || (spr._neutral = spr.peasantSet(cfg.neutral.color, "straw")), fid = S.frameId, FWp = spr.FW, FHp = spr.FH, flashMin = A.flashMin;
+    let nAg = 0;
     for (const e of DL) {
       if (e.team === undefined) {
-        if (e.kind === 2) ctx.drawImage(spr.rock, e.x - 14, e.y - 14);
-        else { const tr = spr.trees[e.kind]; ctx.drawImage(tr, e.x - tr.width / 2, e.y - tr.height + 6); }
+        if (e.bn) { drawBanner(e); continue; }
+        if (e.v < 0) e.v = e.kind === 2 ? ((((e.x | 0) * 13 + (e.y | 0) * 7) >>> 3) & 1) : PS.ground.biome(S.map, e.x, e.y, A) > A.highAbove ? 2 : e.kind; // render variant: pines on highland
+        const im = e.kind === 2 ? spr.rocks[e.v] : spr.trees[e.v], cv = im.cv;
+        ctx.drawImage(cv, snap2(e.x) - im.ax * 2, snap2(e.y) + 6 - im.ay * 2, cv.width * 2, cv.height * 2);
         continue;
       }
-      const set = e.team ? S.teams[e.team].spr : neutralSet, al = e.seenA;
+      const set = e.team ? S.teams[e.team].spr : neutralSet, al = e.seenA, left = e.face < 0;
       const moving = e.vx * e.vx + e.vy * e.vy > 120;
-      let f = e.lunge > 0.08 ? 2 : moving ? ((e.ph | 0) % 2) : 3;
-      const img = (e.face < 0 ? set.L : set.R)[f];
-      const bob = moving ? (((e.ph * 0.5) | 0) % 2) : 0;
+      const fi = (e.lunge > 0.08 ? 2 : moving ? ((e.ph | 0) % 2) : 3) + (left ? 4 : 0) + (e.fl > flashMin ? 8 : 0);
       let sc = 1; if (e.pop > 0 && e.pop < 0.3) sc = 1 + 0.55 * (1 - e.pop / 0.3);
-      const w = 24 * sc, h = 28 * sc, dx = e.x - w / 2, dy = e.y - 24 - bob - (h - 28);
+      const k2 = 2 * sc, gx = sc === 1 ? snap2(e.x) : e.x, gy = sc === 1 ? snap2(e.y) : e.y, dx = gx - (left ? set.axL : set.axR) * k2, dy = gy + 2 - set.ay * k2;
       if (e.team !== 1) e.drawnF = fid;
-      if (e.escapeT > 0) { ctx.globalAlpha = al * (0.6 + 0.25 * ((e.ph | 0) & 1)); ctx.drawImage(img, dx, dy, w, h); ctx.globalAlpha = al; ctx.fillStyle = "#F1EEDF"; ctx.fillRect(e.x - 6, dy - 3, 2, 4); ctx.fillRect(e.x + 4, dy - 3, 2, 4); ctx.globalAlpha = 1; continue; } // remnant: hands up, run
+      nAg++;
+      if (e.escapeT > 0) { ctx.globalAlpha = al * (0.6 + 0.25 * ((e.ph | 0) & 1)); ctx.drawImage(set.atlas, set.sx[fi], set.sy[fi], FWp, FHp, dx, dy, FWp * k2, FHp * k2); ctx.globalAlpha = al; ctx.fillStyle = PS.PAL.cream; ctx.fillRect(gx - 8, dy + 8, 2, 4); ctx.fillRect(gx + 6, dy + 8, 2, 4); ctx.globalAlpha = 1; continue; } // remnant: hands up, run
       if (al < 1) ctx.globalAlpha = al;
-      ctx.drawImage(img, dx, dy, w, h);
-      if (e.fl > 0) { ctx.globalAlpha = Math.min(1, e.fl * 7) * al; ctx.drawImage((e.face < 0 ? set.LW : set.RW)[f], dx, dy, w, h); ctx.globalAlpha = al; } // hit flash and HP bar respect seenA
-      if (e.hp < cfg.agent.hp && e.team) { ctx.fillStyle = "rgba(0,0,0,.5)"; ctx.fillRect(e.x - 6, dy - 3, 12, 2); ctx.fillStyle = e.hp <= 1 ? "#FF5C5C" : "#FFD23F"; ctx.fillRect(e.x - 6, dy - 3, 12 * (e.hp / cfg.agent.hp), 2); }
+      ctx.drawImage(set.atlas, set.sx[fi], set.sy[fi], FWp, FHp, dx, dy, FWp * k2, FHp * k2);
+      if (e.hp < cfg.agent.hp && e.team) { ctx.fillStyle = "rgba(0,0,0,.5)"; ctx.fillRect(gx - 6, dy + 2, 12, 2); ctx.fillStyle = e.hp <= 1 ? "#FF5C5C" : "#FFD23F"; ctx.fillRect(gx - 6, dy + 2, 12 * (e.hp / cfg.agent.hp), 2); } // HP bar respects seenA
       if (al < 1) ctx.globalAlpha = 1;
     }
+    agentsDrawn = nAg;
 
     particles.draw(ctx);
     floaters.draw(ctx);
@@ -1698,7 +1688,7 @@
       const t = S.teams[i]; if (!t.alive || t.count === 0 || i === clashRi || (t.isPlayer && (t.count < 2 || S.attract || S.engagedNow))) continue;
       let cx = t.cx, cy = t.cy, top = t.minY; if (gate && i > 1) { if (!PVN[i]) continue; cx = PVX[i] / PVN[i]; cy = PVY[i] / PVN[i]; top = PVMY[i]; }
       if (cx < x0 - 60 || cx > x1 + 60 || cy < y0 - 60 || cy > y1 + 60) continue;
-      const ly = Math.max(Math.min(top - 30, cy - 40), safeT + (vOn(i) ? 26 : 0));
+      const ly = Math.max(Math.min(top - 30, BON[i] ? BTOP[i] - 8 : cy - 40), safeT + (vOn(i) ? 26 : 0)); // above the banner bearer
       ctx.font = "800 12px 'Nunito', system-ui"; ctx.textAlign = "center";
       const label = (S.attract && t.isPlayer ? "Mint" : t.name) + " · " + t.count; const w = ctx.measureText(label).width + 12; cx = clamp(cx, safeL + w / 2, Math.max(safeL + w / 2, safeR - w / 2));
       ctx.fillStyle = "rgba(8,14,6,.75)"; ctx.fillRect(cx - w / 2, ly - 13, w, 18);
@@ -1712,8 +1702,8 @@
       const C = S.crown, ct = S.teams[C.team];
       if (ct && ct.alive && ct.count > 0) {
         let vx = 0, vy = 0, on = false;
-        if (ct.isPlayer || !gate) { vx = ct.cx; vy = Math.min(ct.minY - 30, ct.cy - 40) - 24; on = true; }
-        else if (PVN[C.team]) { vx = PVX[C.team] / PVN[C.team]; vy = Math.min(PVMY[C.team] - 30, PVY[C.team] / PVN[C.team] - 40) - 24; on = true; }
+        if (ct.isPlayer || !gate) { vx = ct.cx; vy = Math.min(ct.minY - 30, BON[C.team] ? BTOP[C.team] - 8 : ct.cy - 40) - 24; on = true; }
+        else if (PVN[C.team]) { vx = PVX[C.team] / PVN[C.team]; vy = Math.min(PVMY[C.team] - 30, BON[C.team] ? BTOP[C.team] - 8 : PVY[C.team] / PVN[C.team] - 40) - 24; on = true; }
         if (on && vx > x0 - 40 && vx < x1 + 40 && vy > y0 - 40 && vy < y1 + 40) crownGlyph(vx, vy + Math.sin(S.t * 3) * 2, 11, 1);
         if ((ct.isPlayer || !on) && C.x > x0 - 40 && C.x < x1 + 40 && C.y > y0 - 40 && C.y < y1 + 40) crownGlyph(C.x, C.y, 14, 0.4 + 0.15 * Math.sin(S.t * 4));
       }
@@ -1722,10 +1712,10 @@
     f0 = performance.now();
     let fp4 = 0; if (tells) for (let i = 2; i < S.teams.length; i++) {
       const v = FS.verdict[i], age = S.t - v.t0; if (age < 0 || age >= FG.verdictSeconds || !PVN[i] || i === clashRi) continue;
-      const ly = Math.max(Math.min(PVMY[i] - 30, PVY[i] / PVN[i] - 40), safeT + 26);
+      const ly = Math.max(Math.min(PVMY[i] - 30, BON[i] ? BTOP[i] - 8 : PVY[i] / PVN[i] - 40), safeT + 26); // on the banner bearer
       ctx.font = "800 12px 'Nunito', system-ui"; ctx.textAlign = "center";
       const txt = v.kind > 0 ? "STRONGER" : v.kind < 0 ? "WEAKER" : "EVEN", col = v.kind > 0 ? "#FF7A6E" : v.kind < 0 ? "#7CF2C4" : "#FFE49A", vy = ly - 26, vw = ctx.measureText(txt).width + 26;
-      const cx = clamp(PVX[i] / PVN[i], safeL + vw / 2, Math.max(safeL + vw / 2, safeR - vw / 2));
+      const cx = clamp(BON[i] ? BX[i] : PVX[i] / PVN[i], safeL + vw / 2, Math.max(safeL + vw / 2, safeR - vw / 2));
       ctx.globalAlpha = Math.min(1, (FG.verdictSeconds - age) * 3, age * 8 + 0.2); ctx.fillStyle = "rgba(8,14,6,.85)"; ctx.beginPath(); ctx.roundRect(cx - vw / 2, vy - 13, vw, 18, 6); ctx.fill();
       ctx.fillStyle = col; ctx.fillText(txt, cx + 7, vy); ctx.beginPath();
       const mx = cx - vw / 2 + 9, my = vy - 4; if (v.kind > 0) { ctx.moveTo(mx - 4, my + 3); ctx.lineTo(mx, my - 3); ctx.lineTo(mx + 4, my + 3); } else if (v.kind < 0) { ctx.moveTo(mx - 4, my - 3); ctx.lineTo(mx, my + 3); ctx.lineTo(mx + 4, my - 3); } else { ctx.moveTo(mx - 4, my - 2); ctx.lineTo(mx + 4, my - 2); ctx.moveTo(mx - 4, my + 2); ctx.lineTo(mx + 4, my + 2); }
@@ -1739,11 +1729,13 @@
     // banner (one at a time, pinned high)
     for (let i = 0; i < Math.min(1, S.banners.length); i++) {
       const b = S.banners[i], age = 1 - b.life / b.life0;
-      const a = Math.min(1, b.life * 2, age * 6); const y = S.input.touch ? 215 : Math.max(150, S.vh * 0.22);
+      const a = Math.min(1, b.life * 2, age * 6); let y = S.input.touch ? 215 : Math.max(150, S.vh * 0.22), bx = S.vw / 2;
+      if (b.at && BON[b.at]) { const sx = (BX[b.at] * k + ox) / dpr, sy = (BTOP[b.at] * k + oy) / dpr - 30; if (sx > 40 && sx < S.vw - 40 && sy > (S.input.touch ? 150 : 90) && sy < S.vh - 60) { y = sy; bx = clamp(sx, S.vw / 2 - 40, S.vw / 2 + 40); } } // over the bearer
       let fs = S.vw < 700 ? 22 : 30; ctx.font = "800 " + fs + "px 'Baloo 2', system-ui"; const tw = ctx.measureText(b.text).width; if (tw > S.vw - 28) { fs = Math.max(12, Math.floor((fs * (S.vw - 28)) / tw)); ctx.font = "800 " + fs + "px 'Baloo 2', system-ui"; } // long banners fit a 375 px phone
+      { const tw2 = Math.min(tw, S.vw - 28); bx = clamp(bx, tw2 / 2 + 14, S.vw - tw2 / 2 - 14); }
       ctx.globalAlpha = a; ctx.textAlign = "center";
-      ctx.lineWidth = 6; ctx.strokeStyle = "rgba(0,0,0,.85)"; ctx.strokeText(b.text, S.vw / 2, y);
-      ctx.fillStyle = b.color; ctx.fillText(b.text, S.vw / 2, y); ctx.globalAlpha = 1;
+      ctx.lineWidth = 6; ctx.strokeStyle = "rgba(0,0,0,.85)"; ctx.strokeText(b.text, bx, y);
+      ctx.fillStyle = b.color; ctx.fillText(b.text, bx, y); ctx.globalAlpha = 1;
     }
     // bottom-centre status line: the opening truce countdown (combat.truceSeconds > 0), or "YOU ARE MARKED" while you wear the crown
     if (S.mode === "play" && !S.attract) {
@@ -1874,7 +1866,7 @@
     minimapBake(false);
     mctx.setTransform(1, 0, 0, 1, 0, 0); mctx.imageSmoothingEnabled = false; mctx.globalAlpha = 1;
     if (miniTerr) mctx.drawImage(miniTerr, 0, 0, 150, 150); else { mctx.fillStyle = "#1f3a1a"; mctx.fillRect(0, 0, 150, 150); }
-    mctx.fillStyle = "#6E4F30"; for (const c of S.camps) { const n = gate && !PS.fog.sees(1, c.x, c.y) ? c.kn[1] : c.n; if (n > 0) mctx.fillRect((c.x * k - 1) | 0, (c.y * k - 1) | 0, 3, 2); }
+    mctx.fillStyle = PS.PAL.parch.camp; for (const c of S.camps) { const n = gate && !PS.fog.sees(1, c.x, c.y) ? c.kn[1] : c.n; if (n > 0) mctx.fillRect((c.x * k - 1) | 0, (c.y * k - 1) | 0, 3, 2); }
     for (const p of S.powerups) {
       let x = p.x, y = p.y, col = null;
       if (p.alive && (!gate || PS.fog.sees(1, p.x, p.y) || (p.x - pl.cx) * (p.x - pl.cx) + (p.y - pl.cy) * (p.y - pl.cy) <= bc2)) col = S.spr.PU[p.kind].color;
@@ -1928,23 +1920,36 @@
   // ---------------------------------------------------------------- cache recovery (studio lessons 27-29): chunks, minimap, sprites
   // On visibilitychange / pageshow / contextrestored every chunk is re-baked (visible first, then one per frame), the minimap re-baked, and
   // any blank sprite canvas repainted in place from a fresh build (same canvas objects, so every reference stays valid).
+  // every sprite cache: the team atlases and banner atlases (built lazily, cached per colour and style for the page's life), trees, rocks,
+  // camp dirt, decals, power-up icons, the flag and the loose shadow. teams is unused (atlases live in spr.sets), kept for callers.
   function spriteCanvases(spr, teams) {
     const list = [];
-    const addSet = (k, set) => { for (const f of ["R", "L", "RW", "LW"]) set[f].forEach((c, i) => list.push([k + "." + f + i, c, set, f, i])); };
-    for (let i = 1; i < teams.length; i++) if (teams[i]) addSet("team" + i, teams[i].spr);
-    if (spr._neutral) addSet("neutral", spr._neutral);
-    spr.tiles.forEach((c, i) => list.push(["tile" + i, c])); spr.trees.forEach((c, i) => list.push(["tree" + i, c])); spr.decals.forEach((c, i) => list.push(["decal" + i, c]));
+    for (const [k, v] of spr.sets) list.push(["atlas." + k, v.atlas]);
+    for (const [k, v] of spr.banners) list.push(["banner." + k, v.cv]);
+    spr.trees.forEach((t, i) => list.push(["tree" + i, t.cv])); spr.rocks.forEach((t, i) => list.push(["rock" + i, t.cv])); spr.camps.forEach((c, i) => list.push(["camp" + i, c]));
+    spr.decals.forEach((c, i) => list.push(["decal" + i, c]));
     for (const k in spr.PU) list.push(["pu." + k, spr.PU[k].icon]);
-    list.push(["dirt", spr.dirt], ["rock", spr.rock], ["marker", spr.marker], ["shadow", spr.shadow], ["smoke", spr.smoke]);
+    list.push(["marker", spr.marker], ["shadow", spr.shadow]);
     return list;
   }
+  // repaint every sprite cache in place (same canvas objects, so every reference stays valid): atlases and banners from their recipe,
+  // the rest copied from a fresh build (the build is seeded, so it paints the same art)
   function restoreSprites() {
-    const fresh = PS.buildSprites(S.cfg), spr = S.spr, copy = (dst, src) => { const g = dst.getContext("2d"); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = "source-over"; g.globalAlpha = 1; g.clearRect(0, 0, dst.width, dst.height); g.drawImage(src, 0, 0); }; // silhouettes were built in source-in mode
-    const pairs = [["tiles"], ["trees"], ["decals"]]; for (const [k] of pairs) spr[k].forEach((c, i) => copy(c, fresh[k][i]));
+    const fresh = PS.buildSprites(S.cfg), spr = S.spr, copy = (dst, src) => { const g = dst.getContext("2d"); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = "source-over"; g.globalAlpha = 1; g.clearRect(0, 0, dst.width, dst.height); g.drawImage(src, 0, 0); };
+    spr.trees.forEach((t, i) => copy(t.cv, fresh.trees[i].cv)); spr.rocks.forEach((t, i) => copy(t.cv, fresh.rocks[i].cv)); spr.camps.forEach((c, i) => copy(c, fresh.camps[i])); spr.decals.forEach((c, i) => copy(c, fresh.decals[i]));
     for (const k in spr.PU) copy(spr.PU[k].icon, fresh.PU[k].icon);
-    for (const k of ["dirt", "rock", "marker", "shadow", "smoke"]) copy(spr[k], fresh[k]);
-    const sets = []; for (let i = 1; i < S.teams.length; i++) if (S.teams[i]) sets.push([S.teams[i].spr, S.teams[i].color]); if (spr._neutral) sets.push([spr._neutral, S.cfg.neutral.color]);
-    for (const [set, color] of sets) { const f = fresh.peasantSet(color); for (const k of ["R", "L", "RW", "LW"]) set[k].forEach((c, i) => copy(c, f[k][i])); }
+    copy(spr.marker, fresh.marker); copy(spr.shadow, fresh.shadow);
+    for (const v of spr.sets.values()) spr.paintAtlas(v.atlas, v.color, v.style, v.relics);
+    for (const v of spr.banners.values()) spr.paintBanner(v.cv, v.color, v.style);
+  }
+  // canvas backing stores held as caches (SPEC-v2 §13, M5 brief: <= art.canvasBudgetMB): chunks and water pairs, sprites and atlases,
+  // the minimap terrain, the fog canvases. The main canvas is reported apart.
+  function canvasMemory() {
+    const out = { count: 0, bytes: 0, chunks: 0, waterPairs: 0, atlases: 0, banners: 0, sprites: 0, fog: 0 }, add = (c, k) => { if (!c || !c.width) return; out.count++; out.bytes += c.width * c.height * 4; if (k) out[k]++; };
+    if (S.map && S.map.chunks) { const G = S.map.chunks; for (let i = 0; i < G.n * G.n; i++) { add(G.cvA[i], "chunks"); add(G.cvB[i], "waterPairs"); } }
+    for (const e of spriteCanvases(S.spr)) add(e[1], e[0].startsWith("atlas.") ? "atlases" : e[0].startsWith("banner.") ? "banners" : "sprites");
+    add(miniTerr); for (const c of PS.fog.canvases()) add(c, "fog");
+    return { count: out.count, mb: +(out.bytes / 1048576).toFixed(2), chunks: out.chunks, waterPairs: out.waterPairs, atlases: out.atlases, banners: out.banners, sprites: out.sprites, fog: out.fog, mainMB: +((canvas.width * canvas.height * 4) / 1048576).toFixed(2) };
   }
   function recheckCaches(sync) {
     if (!S.cfg || !S.spr) return;
@@ -1998,6 +2003,7 @@
     if (S.map && S.map.chunks) { const G = S.map.chunks; out.pending = G.left; for (let i = 0; i < G.n * G.n; i++) for (const cv of [G.cvA[i], G.cvB[i]]) { if (!cv) continue; out.chunks++; if (opaque4(cv)) out.chunksOpaque++; else out.chunksBlank.push(i); } }
     for (const e of spriteCanvases(S.spr, S.teams)) { out.sprites++; if (opaqueCount(e[1]) === 0) out.spritesBlank.push(e[0]); }
     out.ok = out.chunks > 0 && out.chunksOpaque === out.chunks && out.pending === 0 && out.minimap && out.spritesBlank.length === 0 && out.fogMask && out.fogCloud;
+    out.memory = canvasMemory();
     return out;
   }
 
@@ -2182,13 +2188,13 @@
     "banners", "hintT", "stats", "engagedNow", "result", "decals", "trails", "attract", "difficulty", "spr", "tick", "acc", "map", "obs", "cap", "dbg",
     "finalCalled", "pendingEnd", "_routedBy", "_hintRecruit", "_hintFight", "_hintHud", "camS", "ev", "lastRout", "thinkRR", "flowW", "fixture",
     "fogW", "fogS", "fogOn", "frameId", "lastDrawT", "lastDrawSim", "noise", "crown", "pile", "scent", "relaxUntil", "torches", "aiPlayer", "aiCost"];
-  let sbParticles = null, sbSmoke = null, flatMap = null; const sbSets = {};
+  let sbParticles = null, sbSmoke = null, flatMap = null;
   function withSandbox(fn) {
     if (sandbox) return fn(); // nested call shares the outer throwaway world
     const saved = {}; for (const k of SANDBOX_KEYS) saved[k] = k in S ? [S[k]] : null;
     const liveP = particles, liveF = floaters, liveSm = smokeP, liveSpr = S.spr;
     particles = sbParticles || (sbParticles = PS.Particles(200)); smokeP = sbSmoke || (sbSmoke = PS.Particles(120)); floaters = PS.Floaters(); sandbox = true;
-    const spr = Object.create(liveSpr); spr.peasantSet = (c) => sbSets[c] || (sbSets[c] = liveSpr.peasantSet(c)); // one sprite build per colour, ever
+    const spr = Object.create(liveSpr); // atlases are cached per colour and style in the live sprite set (one build per team, ever)
     S.spr = spr; S.cam = { x: -1e5, y: -1e5, zoom: 1 }; S.camS = mkCamS(); S.fixture = null;
     S.input = mkInput();
     PS.audio.setSilent(true);
@@ -2432,6 +2438,53 @@
     const p = S.teams[1]; S.cam.x = p.cx; S.cam.y = p.cy; zoomRule(p.count, 0, true); showOverlay(null); $("hud").classList.add("hidden");
   }
 
+  // PS.artScene(name, { zoom, n }) (debug, live page, after PS.debugStart): stages a scene for the M5 art screenshots on the live map, with
+  // the camera on your swarm. "home" (as started), "pass" (a narrow pass between rock), "ford" / "bridge" (your swarm on a bank, marching
+  // across), "clash" (you 70 v Greedy 50), "rout" (you 90 v Greedy 36, stepped to the rout banner), "teams" (six swarms of 30 around you,
+  // fog lifted, rivals frozen). Rivals in the staged scenes do not think. Returns where it staged.
+  function artScene(name, opts) {
+    opts = opts || {}; const m = S.map, N = m.N, cell = m.cell, W = m.W, pl = S.teams[1], T = PS.terrain, walk = (x, y) => T.walkable(x, y) && T.sdfAt(x, y) >= cell * 0.6;
+    S.zoomLock = opts.zoom || 0;
+    const clear = (teams) => { S.agents = S.agents.filter((a) => teams.indexOf(a.team) < 0); }, // only the teams the scene stages (a rival with no agents is eliminated)
+      freeze = () => { for (let i = 2; i < S.teams.length; i++) S.teams[i].thinkT = 1e9; },
+      put = (x, y, n, team) => { blob(x, y, n, team); },
+      done = (x, y) => { recount(); for (let i = 1; i < S.teams.length; i++) { const t = S.teams[i]; t.pcx = t.cx; t.pcy = t.cy; t.tx = t.cx; t.ty = t.cy; } fogStampAll(); S.cam.x = x; S.cam.y = y; zoomRule(pl.count, 0, true); if (S.map.chunks) flushGround(S.map); return { name, x: Math.round(x), y: Math.round(y), zoom: S.cam.zoom }; },
+      near = (x, y, r) => { for (let k = 0; k < 60; k++) { const a = k * 2.39996, d = (k / 60) * r, px = x + Math.cos(a) * d, py = y + Math.sin(a) * d; if (walk(px, py)) return [px, py]; } return [x, y]; };
+    if (name === "home") return done(pl.cx, pl.cy);
+    if (name === "ford" || name === "bridge") {
+      const want = name === "ford" ? 3 : 4; let sx = 0, sy = 0, sn = 0, best = null;
+      for (let c = 0; c < N * N; c++) if (m.terr[c] === want) { const x = ((c % N) + 0.5) * cell, y = (((c / N) | 0) + 0.5) * cell; if (!best) best = [x, y]; if (Math.hypot(x - best[0], y - best[1]) < 200) { sx += x; sy += y; sn++; } }
+      if (!sn) return { name, error: "no " + name };
+      const cx = sx / sn, cy = sy / sn, R = m.river, nx = -R.dy, ny = R.dx, side = opts.side || 1, [bx, by] = near(cx + nx * 150 * side, cy + ny * 150 * side, 80);
+      clear([1]); freeze(); put(bx, by, opts.n || 40, 1); const r = done(cx, cy); PS.aim(cx - nx * 170 * side, cy - ny * 170 * side); PS.step(opts.walk == null ? 1.1 : opts.walk); return r;
+    }
+    if (name === "pass") {
+      let best = -1, bc = -1;
+      for (let c = 0; c < N * N; c++) {
+        if (!m.passMask[c] || m.terr[c] !== 0) continue; const i = c % N, j = (c / N) | 0; let rock = 0, wet = 0;
+        for (let v = -3; v <= 3; v++) for (let u = -3; u <= 3; u++) { const q = (j + v) * N + i + u; if (q < 0 || q >= N * N) continue; if (m.terr[q] === 1) rock++; else if (m.terr[q] >= 2) wet++; }
+        const d = Math.hypot(i - N / 2, j - N / 2) / N; if (wet || d < 0.12 || d > 0.35) continue; if (rock > best) { best = rock; bc = c; }
+      }
+      const x = ((bc % N) + 0.5) * cell, y = (((bc / N) | 0) + 0.5) * cell, [bx, by] = near(x, y + 90, 60);
+      clear([1]); freeze(); put(bx, by, opts.n || 60, 1); return done(x, y);
+    }
+    if (name === "clash" || name === "rout") {
+      const s0 = m.spawns[pl.slot], [x, y] = near(s0.x, s0.y, 60), n = name === "rout" ? 90 : 70, e = name === "rout" ? 36 : 50;
+      clear([1, 2]); freeze(); put(x - 60, y, n, 1); put(x + 60, y, e, 2); const r = done(x, y);
+      const g = S.teams[2]; g.tx = x - 60; g.ty = y; PS.aim(x + 70, y);
+      if (name === "clash") { PS.step(1.4); return r; }
+      for (let k = 0; k < 24; k++) { PS.step(0.5); g.tx = pl.cx; g.ty = pl.cy; PS.aim(g.count ? g.cx : pl.cx, g.count ? g.cy : pl.cy); if (S.banners.some((b) => /JOIN/.test(b.text))) break; }
+      return Object.assign(r, { banners: S.banners.map((b) => b.text), t: +S.t.toFixed(1) });
+    }
+    if (name === "teams") {
+      const s0 = m.spawns[pl.slot], [x, y] = near(s0.x, s0.y, 80), R0 = opts.r || 150;
+      clear([1, 2, 3, 4, 5, 6]); freeze(); S.fogS.reveal = true;
+      for (let i = 1; i <= 6; i++) { const a = (i - 1) * 1.0472 - 1.5708, [bx, by] = near(x + Math.cos(a) * (i === 1 ? 0 : R0), y + Math.sin(a) * (i === 1 ? 0 : R0), 60); put(bx, by, opts.n || 30, i); }
+      return done(x, y);
+    }
+    return { name, error: "unknown scene" };
+  }
+
   // PS.simMatch(300, { seed, cap, wallMs, difficulty }): an all-AI match under the real rules (grace, scent, pile-on, horn and crown) on a fresh
   // seeded world: all six swarms AI-driven, team 1 as ai.proxy at the player's pace, the rivals at the difficulty's senses and pace.
   // Counts every 30 s. Asserts per tick: agent cap and no agent centre in rock or deep water.
@@ -2656,13 +2709,13 @@
     return { blobs, camps, want };
   }
   function countFrame(n) {
-    const oDI = ctx.drawImage, oFR = ctx.fillRect, cw = canvas.width, ch = canvas.height; let di = 0, layers = 0;
+    const oDI = ctx.drawImage, oFR = ctx.fillRect, cw = canvas.width, ch = canvas.height; let di = 0, layers = 0, ag = 0;
     const full = (x, y, w, h) => { const m = ctx.getTransform(); const ax = m.a * x + m.e, ay = m.d * y + m.f, bx = m.a * (x + w) + m.e, by = m.d * (y + h) + m.f; return Math.min(ax, bx) <= 1 && Math.min(ay, by) <= 1 && Math.max(ax, bx) >= cw - 1 && Math.max(ay, by) >= ch - 1; };
     ctx.drawImage = function (img, a, b, c, d) { di++; const w = arguments.length >= 5 ? (arguments.length >= 9 ? arguments[7] : c) : img.width, h = arguments.length >= 5 ? (arguments.length >= 9 ? arguments[8] : d) : img.height;
       const x = arguments.length >= 9 ? arguments[5] : a, y = arguments.length >= 9 ? arguments[6] : b; if (full(x, y, w, h)) layers++; return oDI.apply(this, arguments); };
     ctx.fillRect = function (x, y, w, h) { if (full(x, y, w, h) && (ctx.globalAlpha < 1 || typeof ctx.fillStyle !== "string" || ctx.fillStyle.length > 7)) layers++; return oFR.apply(this, arguments); };
-    try { for (let i = 0; i < n; i++) { benchTick(); draw(); } } finally { delete ctx.drawImage; delete ctx.fillRect; }
-    return { drawImage: di / n, layers: layers / n };
+    try { for (let i = 0; i < n; i++) { benchTick(); draw(); ag += agentsDrawn; } } finally { delete ctx.drawImage; delete ctx.fillRect; }
+    return { drawImage: di / n, layers: layers / n, agentsDrawn: ag / n };
   }
   // opts.fog: "on" (default: the player's fog as in a match), "reveal" (the fog layer composed but every agent drawn), "off" (no fog layer)
   function bench(scene, opts) {
@@ -2707,9 +2760,10 @@
         return { scene, build: "v2", fog, flush, ticks: up.length, agents: S.agents.length, onScreen, counts: S.teams.slice(1).map((t) => t.count), camps: L.camps.length + "/" + L.want, viewport: [S.vw, S.vh, S.dpr], zoom,
           spot: [Math.round(cx), Math.round(cy), c.blockedInClash, +c.open.toFixed(2)], terrainBad: S.dbg.terrainBad,
           update: { p50: pct(up, 0.5), p90: pct(up, 0.9), p99: pct(up, 0.99), mean: mean(up) }, draw: { p50: pct(dr, 0.5), p90: pct(dr, 0.9), p99: pct(dr, 0.99), mean: mean(dr) },
-          drawImage: cnt.drawImage, layers: cnt.layers, flow, wallMs: Math.round(performance.now() - w0), shot: opts.shot ? canvas.toDataURL() : undefined };
+          drawImage: cnt.drawImage, layers: cnt.layers, agentsDrawn: cnt.agentsDrawn, drawPerAgentOk: cnt.drawImage <= cfg.art.drawPerAgent * cnt.agentsDrawn + cfg.art.drawOverhead, // M5: one draw per agent
+          canvas: canvasMemory(), flow, wallMs: Math.round(performance.now() - w0), shot: opts.shot ? canvas.toDataURL() : undefined };
       });
-    } finally { cfg.combat.engageDelay = delay0; benchTick = () => {}; }
+    } finally { cfg.combat.engageDelay = delay0; benchTick = () => {}; if (benchMap) releaseGround(benchMap); } // the bench map's chunks are zeroed, not kept (memory)
   }
   // the bench spot: both clash footprints (rects relative to the centre) fully walkable, then the most open w x h view (ties: nearest the centre)
   function benchSpot(m, w, h, rects) {
@@ -2771,7 +2825,8 @@
     "terrain.riverWidth:a terrain.riverWobble:n terrain.riverPeriod:n terrain.crossings:a terrain.crossingMaxGap:n terrain.bridgeWidth:n terrain.fordWidth:a terrain.fordSpeed:n " +
     "terrain.passWidth:a terrain.pocketFill:n terrain.maxRerolls:n terrain.fairness:o terrain.fairness.rivalRatio:n terrain.fairness.centreRatio:n terrain.fairness.detour:a " +
     "terrain.fairness.minExits:n terrain.costs:o terrain.costs.base:n terrain.costs.wall1:n terrain.costs.wall2:n terrain.costs.ford:n terrain.costs.prop:n " +
-    "terrain.fallbackSeeds:a terrain.chunk:n terrain.chunkArt:n terrain.waterFrameMs:n").split(" ");
+    "terrain.fallbackSeeds:a terrain.chunk:n terrain.chunkArt:n terrain.waterFrameMs:n " +
+    "art.flashWhite:n art.bannerPole:a art.bannerFlagW:a art.bannerFlagH:a art.bannerEmblem:a art.bannerTiers:a art.bannerMin:n art.bannerFrameMs:n art.bannerLift:n art.highCells:n art.cornerR:n art.shadow:a art.shallow:n art.deep:n art.foam:n art.sparkle:n art.bridgeShadow:n art.stoneStep:n art.stoneR:n art.fordEdge:n art.biomePeriod:n art.tonePeriod:n art.rockyBelow:n art.highAbove:n art.decalCluster:n art.decalSpread:n art.pineShare:n art.drawOverhead:n art.drawPerAgent:n art.canvasBudgetMB:n art.hatShareMin:n art.terrainSatMax:n art.flashMin:n art.ditherBand:n").split(" ");
   const cfgGet = (path) => { let o = S.cfg; for (const k of path.split(".")) { if (o == null) return undefined; o = o[k]; } return o; };
   const typeOk = (v, t) => (t === "n" ? typeof v === "number" && isFinite(v) : t === "s" ? typeof v === "string" && v.length > 0 : t === "a" ? Array.isArray(v) && v.length > 0 : t === "b" ? typeof v === "boolean" : !!v && typeof v === "object");
   function configReport() {
@@ -2789,7 +2844,7 @@
     for (const k in (cfg.powerups && cfg.powerups.weights) || {}) { if (!S.spr.PU[k] || !typeOk(cfg.powerups.duration[k], "n")) missing.push("powerups.weights." + k + " (needs a PU icon + duration)"); }
     // tunables in config.json that no code reads (informational: a retune there does nothing)
     const unused = [];
-    for (const sec of ["world", "spawn", "agent", "flock", "flow", "combat", "powerups", "ai", "camera", "touch", "fog", "terrain", "input", "finale", "fixtures"]) for (const k in cfg[sec] || {}) {
+    for (const sec of ["world", "spawn", "agent", "flock", "flow", "combat", "powerups", "ai", "camera", "touch", "fog", "terrain", "input", "finale", "fixtures", "art"]) for (const k in cfg[sec] || {}) {
       const path = sec + "." + k; if (used[path]) continue; unused.push(path);
     }
     return { checked: CFG_KEYS.length, missing, unused };
@@ -2818,7 +2873,7 @@
   }
   function spriteReport() {
     const spr = S.spr, list = spriteCanvases(spr, S.teams);
-    if (!spr._neutral) { const set = spr.peasantSet(S.cfg.neutral.color); for (const f of ["R", "L", "RW", "LW"]) set[f].forEach((c, i) => list.push(["neutral." + f + i, c])); } // draw() caches it on first frame; if none yet, check a fresh build, don't store it
+    if (!spr._neutral) spr._neutral = spr.peasantSet(S.cfg.neutral.color, "straw"); // the neutral atlas (cached per colour and style, as draw() does)
     const blank = []; let unreadable = 0;
     for (const [k, c] of list) { const n = opaqueCount(c); if (n === 0) blank.push(k); else if (n < 0) unreadable++; }
     return { total: list.length, blank, unreadable };
@@ -2916,9 +2971,44 @@
   // PS.selfTest({ matchSeconds, parts }) -> { pass, fails: [names], results: { name: { pass, detail } }, ms }. One console line.
   // parts (array or "a,b"): config sprites terrain caches fight replay match (default: all). The harness calls them in separate evaluates
   // so each stays under ~15 s of wall time; a console call runs everything.
+  // ---------------------------------------------------------------- M5 art QA (SPEC-v2 §11, M5 brief 7). Every read goes through a scratch
+  // canvas (lesson 27), never a cache. hslS: HSL saturation of one pixel.
+  const hslS = (r, g, b) => { const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn; if (!d) return 0; const l = (mx + mn) / 510; return d / 255 / (1 - Math.abs(2 * l - 1)); };
+  let artScratch = null;
+  function artCanvas(w, h) { if (!artScratch) artScratch = mkCanvas(w, h); if (artScratch.width !== w || artScratch.height !== h) { artScratch.width = w; artScratch.height = h; } const g = artScratch.getContext("2d", { willReadFrequently: true }); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = "source-over"; g.imageSmoothingEnabled = false; g.clearRect(0, 0, w, h); return g; }
+  // terrain saturation: the chunks around your spawn and every chunk holding a crossing, frame A, every pixel (a crop of the real ground)
+  function terrainSaturation() {
+    const m = S.map, G = ground(m), CH = S.cfg.terrain.chunk, n = G.n, pick = new Set(), s0 = m.spawns[S.teams[1].slot] || { x: m.W / 2, y: m.W / 2 };
+    for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) { const i = clamp(Math.floor(s0.x / CH) + di, 0, n - 1), j = clamp(Math.floor(s0.y / CH) + dj, 0, n - 1); pick.add(j * n + i); }
+    for (let c = 0; c < m.N * m.N; c++) if (m.terr[c] >= 3) { const x = ((c % m.N) + 0.5) * m.cell, y = (((c / m.N) | 0) + 0.5) * m.cell; pick.add(Math.floor(y / CH) * n + Math.floor(x / CH)); }
+    let sum = 0, cnt = 0, over = 0, max = 0; const hist = new Uint32Array(21);
+    for (const ci of pick) {
+      if (G.dirty[ci] || !G.cvA[ci]) bakeChunk(m, G, ci); const cv = G.cvA[ci], g = artCanvas(cv.width, cv.height); g.drawImage(cv, 0, 0);
+      const d = g.getImageData(0, 0, cv.width, cv.height).data;
+      for (let q = 0; q < d.length; q += 4) { const v = hslS(d[q], d[q + 1], d[q + 2]); sum += v; cnt++; if (v > S.cfg.art.terrainSatMax) over++; if (v > max) max = v; hist[Math.min(20, (v * 20) | 0)]++; }
+    }
+    const teams = PS.PAL.teams.map((c) => +PS.PAL.sat(c).toFixed(3));
+    return { chunks: pick.size, pixels: cnt, mean: +(sum / cnt).toFixed(3), max: +max.toFixed(3), overShare: +(over / cnt).toFixed(4), p90: (() => { let k = 0, t = cnt * 0.9; for (let b = 0; b <= 20; b++) { k += hist[b]; if (k >= t) return +(b / 20 + 0.05).toFixed(2); } return 1; })(), teamSat: teams };
+  }
+  // hat share: 60 peasants of one team in a sunflower crowd (the blob spacing the fixtures use), drawn as draw() draws them (one atlas frame
+  // at 2x, feet on the art grid, y-sorted, mixed poses and facings) over meadow grass; hat pixels (the team's hat ramp, exact) over (a) the
+  // crowd's own pixels and (b) a square crop inside the crowd, ground included (what a screenshot crop sees). Gated on (b).
+  function hatShare(team, n) {
+    const t = S.teams[team], set = t ? t.spr : S.spr.peasantSet(PS.PAL.teams[team - 1], team), W0 = 240, H0 = 240, cx = 120, cy = 132, pts = [];
+    for (let i = 0; i < n; i++) { const a = i * 2.39996, d = 7 * Math.sqrt(i + 0.5), h = (Math.imul(i + 1, 2654435761) >>> 0); pts.push({ x: cx + Math.cos(a) * d, y: cy + Math.sin(a) * d, f: (h & 1 ? 0 : 1) + (h & 2 ? 4 : 0) + ((h >>> 5) % 5 === 0 ? 3 : 0) }); }
+    pts.sort((p, q) => p.y - q.y);
+    const hat = set.hat.map((c) => PS.PAL.rgb(c)), isHat = (d, q) => { for (const h of hat) if (d[q] === h[0] && d[q + 1] === h[1] && d[q + 2] === h[2]) return true; return false; };
+    const paint = (bg) => { const g = artCanvas(W0, H0); if (bg) { g.fillStyle = bg; g.fillRect(0, 0, W0, H0); } for (const p of pts) { const f = p.f % 8, ax = f & 4 ? set.axL : set.axR; g.drawImage(set.atlas, set.sx[f], set.sy[f], set.fw, set.fh, snap2(p.x) - ax * 2, snap2(p.y) + 2 - set.ay * 2, set.fw * 2, set.fh * 2); } return g.getImageData(0, 0, W0, H0).data; };
+    let d = paint(null), crowd = 0, hatN = 0, x0 = W0, y0 = H0, x1 = 0, y1 = 0;
+    for (let y = 0; y < H0; y++) for (let x = 0; x < W0; x++) { const q = (y * W0 + x) * 4; if (d[q + 3] < 200) continue; crowd++; if (isHat(d, q)) hatN++; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    d = paint(PS.PAL.grass[2]); const side = Math.round(Math.min(x1 - x0, y1 - y0) * 0.6), sx = Math.round((x0 + x1 - side) / 2), sy = Math.round((y0 + y1 - side) / 2); let cropHat = 0;
+    for (let y = sy; y < sy + side; y++) for (let x = sx; x < sx + side; x++) if (isHat(d, (y * W0 + x) * 4)) cropHat++;
+    return { team: t ? t.name : team, style: set.style, crowdShare: +(hatN / crowd).toFixed(3), cropShare: +(cropHat / (side * side)).toFixed(3), crop: side + "x" + side, bbox: [x1 - x0, y1 - y0] };
+  }
+
   function selfTest(opts) {
     opts = opts || {};
-    const all = ["config", "sprites", "terrain", "caches", "flow", "fight", "fixtures", "flipflop", "ai", "rivals", "fog", "replay", "match"];
+    const all = ["config", "sprites", "terrain", "caches", "art", "flow", "fight", "fixtures", "flipflop", "ai", "rivals", "fog", "replay", "match"];
     const parts = opts.parts ? (Array.isArray(opts.parts) ? opts.parts : String(opts.parts).split(",")) : all, has = (p) => parts.indexOf(p) >= 0;
     const horizon = clamp(+opts.matchSeconds || (S.cfg ? S.cfg.world.matchSeconds : 240), 10, 600);
     const w0 = performance.now(), results = {}, fails = [], ms = {};
@@ -2941,6 +3031,19 @@
       // the no-event path (M1 critic MAJOR-2): after the drop only the draw loop's probe runs; it must find a blank and re-arm the caches
       flushGround(S.map); const before = cacheReport(); const dropped = debugDropCaches(); const mid = cacheReport(); const probed = cacheProbe(0, 0, 0, 0, true); flushGround(S.map); const after = cacheReport();
       check("caches_drop_rebuild", before.ok && !mid.ok && probed && after.ok, { dropped, before: { chunks: before.chunks, ok: before.ok }, droppedBlank: mid.chunksBlank.length + mid.spritesBlank.length, probed, after });
+    });
+    if (has("art") && S.map && !S.map.flat) timed("art", () => {
+      const A = S.cfg.art, ts = terrainSaturation(); check("art_terrain_saturation", ts.mean <= A.terrainSatMax, ts);
+      const hs = []; for (let i = 1; i <= 6; i++) hs.push(hatShare(i, 60));
+      check("art_hat_share_60", hs.every((h) => h.cropShare >= A.hatShareMin), hs);
+      const b = bench("capclash", { ticks: 30 }); check("art_one_draw_per_agent", b.drawPerAgentOk && b.agentsDrawn > 100, { drawImage: b.drawImage, agentsDrawn: b.agentsDrawn, limit: +(A.drawPerAgent * b.agentsDrawn + A.drawOverhead).toFixed(1), perAgent: +(b.drawImage / Math.max(1, b.agentsDrawn)).toFixed(3), draw: b.draw });
+      flushGround(S.map); const mem = canvasMemory(); check("art_cache_memory", mem.mb <= A.canvasBudgetMB && mem.atlases >= 7 && mem.banners >= 6, mem);
+      // every cache after a drop: chunks and water pairs opaque on a 4x4 downscale, every atlas / banner / sprite non-blank (4x4 alpha sum), minimap opaque
+      const dropped = debugDropCaches(); const probed = cacheProbe(0, 0, 0, 0, true); flushGround(S.map);
+      const G = S.map.chunks, blank = []; let pairs = 0; for (let i = 0; i < G.n * G.n; i++) { if (!opaque4(G.cvA[i])) blank.push("chunk" + i); if (G.cvB[i]) { pairs++; if (!opaque4(G.cvB[i])) blank.push("water" + i); } }
+      for (const e of spriteCanvases(S.spr)) if (!(PS.fog.sumAlpha4(e[1]) > 0)) blank.push(e[0]);
+      if (!opaque4(miniTerr)) blank.push("minimap");
+      check("art_caches_after_drop", probed && blank.length === 0, { dropped, probed, chunks: G.n * G.n, waterPairs: pairs, caches: spriteCanvases(S.spr).length, blank });
     });
     if (has("flow")) timed("flow", () => {
       const w = flowWalkSuite(5); check("flow_walk_5_seeds", w.every((r) => !r.error && r.fails === 0 && !r.truncated), w);
