@@ -1,6 +1,6 @@
 // Peasant Swarm — core simulation + render. Click it! Studios, 2026.
 // Boids swarm routed by per-team flow fields (src/flow.js) on seeded terrain (src/terrain.js), local combat with a local rout and a
-// fleeing remnant, AI rivals, power-ups. All tuning in config.json.
+// fleeing remnant, AI rivals that play under the same fog of war as you (src/fog.js), power-ups. All tuning in config.json.
 (function () {
   const PS = (window.PS = window.PS || {});
   const $ = (id) => document.getElementById(id);
@@ -11,6 +11,7 @@
   const urlSeed = QS.has("seed") && QS.get("seed") !== "" && isFinite(+QS.get("seed")) ? +QS.get("seed") >>> 0 : null; // ?seed=N replays a match
   const capParam = QS.get("cap"); // ?cap=touch|desktop forces an agent cap (the harness runs both)
   const fixtureParam = QS.get("fixture"); // ?fixture=pass64|pass128|ambush|flipflop|cliff runs a QA fixture live instead of the title
+  const NOFOG = QS.get("nofog") === "1"; // ?nofog=1 renders everything (v1-style gating) while the fog data model keeps running
 
   function mulberry32(a) {
     return function () {
@@ -40,26 +41,30 @@
     stats: { recruited: 0, kills: 0, routs: 0, lost: 0, peak: 1, powerups: 0, fights: 0 },
     fps: 60, fpsT0: 0, frameN: 0, engagedNow: false, result: null,
     map: null, obs: null, cap: 1000, dbg: { terrainBad: 0, firstBad: null, capOver: 0 },
-    drawList: [], decals: [], trails: [], attract: false, vignette: null, difficulty: "normal",
+    drawList: [], decals: [], trails: [], attract: false, difficulty: "normal",
     ev: mkEv(), lastRout: null, thinkRR: 0, flowW: null, fixture: null,
+    fogW: null, fogS: null, fogOn: false, frameId: 0, lastDrawT: 0, lastDrawSim: 0, // fog world (src/fog.js), per-world fog presentation state, fog render flag
   };
   if (S.debug) window.PSS = S;
 
   const canvas = $("game"), ctx = canvas.getContext("2d");
   const mini = $("minimap"), mctx = mini.getContext("2d");
-  let particles, floaters, sandbox = false; // sandbox: PS.fight / PS.simMatch are running a throwaway world, so DOM side effects are skipped
+  let particles, floaters, smokeP, sandbox = false; // sandbox: PS.fight / PS.simMatch are running a throwaway world, so DOM side effects are skipped
   let liveFlow = null, sbFlow = null; // flow-field worlds (src/flow.js): one for the live game, one reused by every sandbox
+  let liveFog = null, sbFog = null; // fog worlds (src/fog.js), same split
 
   // ---------------------------------------------------------------- setup
   async function boot() {
-    const res = await fetch("config.json?v=21");
+    const res = await fetch("config.json?v=22");
     S.cfg = await res.json();
     S.spr = PS.buildSprites(S.cfg);
-    PS.terrain.init(S.cfg); PS.flow.init(S.cfg);
-    liveFlow = PS.flow.world(); sbFlow = PS.flow.world();
+    PS.terrain.init(S.cfg); PS.flow.init(S.cfg); PS.fog.init(S.cfg);
+    liveFlow = PS.flow.world(); sbFlow = PS.flow.world(); liveFog = PS.fog.world(); sbFog = PS.fog.world();
     hashAlloc();
     particles = PS.Particles(1400);
+    smokeP = PS.Particles(320); // drawn above the fog: campfire smoke and crows (SPEC-v2 §5 tells)
     floaters = PS.Floaters();
+    PS.vis = VIS; PS.ai = AIQ;
     PS.selfTest = selfTest; PS.fight = fight; PS.simMatch = simMatch; PS.bench = bench; PS.replay = replay; // QA hooks, always on and side-effect free (see QA section)
     PS.debugDropCaches = debugDropCaches; PS.cacheReport = cacheReport; PS.recheckCaches = recheckCaches; PS.cacheProbe = cacheProbe;
     PS.fixture = fixture; PS.clashRead = clashRead;
@@ -86,10 +91,7 @@
     S.vw = window.innerWidth; S.vh = window.innerHeight;
     canvas.width = Math.round(S.vw * S.dpr); canvas.height = Math.round(S.vh * S.dpr);
     zoomRule(S.teams[1] ? S.teams[1].count : 1, 0, true); // the zoom step for this viewport, at once
-    // cached screen-space vignette
-    const v = document.createElement("canvas"); v.width = Math.max(1, S.vw >> 1); v.height = Math.max(1, S.vh >> 1);
-    const g = v.getContext("2d"); const rg = g.createRadialGradient(v.width / 2, v.height / 2, Math.min(v.width, v.height) * 0.35, v.width / 2, v.height / 2, Math.max(v.width, v.height) * 0.75);
-    rg.addColorStop(0, "rgba(10,20,8,0)"); rg.addColorStop(1, "rgba(10,20,8,.42)"); g.fillStyle = rg; g.fillRect(0, 0, v.width, v.height); S.vignette = v;
+    PS.fog.resize(S.vw, S.vh); // one quarter-CSS fog canvas, reused: it also carries the vignette and the losing-clash glow (SPEC-v2 §5)
   }
 
   // ---------------------------------------------------------------- world gen
@@ -99,11 +101,12 @@
     // the neighbour loop reads x, y, team, dead and escapeT of hundreds of agents per agent: keep them first (one cache line)
     return { x, y, team, dead: false, escapeT: 0, vx: 0, vy: 0, hp: S.cfg.agent.hp, atk: R() * 0.5, tgt: null,
       ph: R() * 10, face: R() < 0.5 ? 1 : -1, fl: 0, lunge: 0, wx: x, wy: y, hx: x, hy: y, fight: false, r: S.cfg.agent.radius, pop: 9, camp: null,
-      rec: 0, seenA: 1, ex: 0, ey: 0, groupId: 0, rd: 0, fieldT: 0, fdx: 0, fdy: 0, fok: 0 };
+      rec: 0, seenA: 1, seenT: -1e9, drawnF: 0, ex: 0, ey: 0, groupId: 0, rd: 0, fieldT: 0, fdx: 0, fdy: 0, fok: 0 };
   }
   const z9 = () => [0, 0, 0, 0, 0, 0, 0, 0, 0]; // team-indexed arrays: neutral 0, player 1, rivals 2-6, spare 7, bandits 8 (SPEC-v2 §6)
   // route: the team steers by its flow field (else direct seek); mode (player): "route" | "steer" | "hold"; hyst: route hysteresis applies;
   // ax/ay: the anchor (centroid snapped to walkable, for AI and labels); tMed: last tick's median path distance (path cohesion).
+  // AI under fog: preyId (the team it hunts, 0 none), exX/exY/exUntil (an explore target and its commit time).
   // Per enemy slot j: eng (agents fighting j this tick) with fX/fY (their position sums), engT (engaged time), engL (smoothed local
   // strength), engPk (its peak this engagement), engHold (time under breakRatio), engCx/engCy (contact centroid), engStart (count at start)
   function mkTeam(id, name, color, isPlayer, ai) {
@@ -111,7 +114,7 @@
       route: true, mode: "route", hyst: false, tMed: 0,
       buffs: { speed: 0, armor: 0, frenzy: 0, rally: 0 }, eng: z9(), engT: z9(), engStart: z9(), engL: z9(), engPk: z9(), engHold: z9(), engCx: z9(), engCy: z9(), fX: z9(), fY: z9(),
       spr: S.spr.peasantSet(color), kills: 0, peak: 1, state: "roam", speedMod: 1, thinkT: S.rng() * 0.5, lastHint: 0, minY: 0, huntStart: 0, huntCooldown: 0,
-      regroupUntil: 0, fleeFrom: 0, leftHome: -1, atCentre: -1 };
+      regroupUntil: 0, fleeFrom: 0, leftHome: -1, atCentre: -1, preyId: 0, exX: 0, exY: 0, exUntil: -1 };
   }
   // speed by swarm size: small swarms get a boost that fades by `full`, big ones slow a little per peasant above it (SPEC-v2 §3)
   function sizeSpeed(n) { const k = S.cfg.agent.sizeSpeed, v = 1 + k.boost * Math.max(0, 1 - n / k.full) - k.drop * Math.max(0, n - k.full); return v < k.floor ? k.floor : v; }
@@ -164,7 +167,7 @@
 
   function spawnCamp(x, y, n) {
     const sp = S.cfg.spawn.campSpread;
-    const camp = { x, y, n: 0, smokeT: S.rng() * 0.8 };
+    const camp = { x, y, n: 0, smokeT: S.rng() * 0.8, kn: new Int16Array(9).fill(-1) }; // kn[team]: the head-count that team last saw here (-1 never)
     S.camps.push(camp);
     for (let i = 0; i < n; i++) {
       const a = S.rng() * Math.PI * 2, d = 6 + S.rng() * sp;
@@ -189,7 +192,9 @@
     T.use(S.map);
     const m = S.map, P = placeTables(m), N = m.N, cell = m.cell;
     m.cost.set(P.cost0);
-    S.flowW = PS.flow.use(PS.flow.reset(sandbox ? sbFlow : liveFlow, m)); // fields are per world; every cell is known in M2
+    S.flowW = PS.flow.use(PS.flow.reset(sandbox ? sbFlow : liveFlow, m)); // fields are per world
+    S.flowW.know.fill(0); // the player starts knowing nothing: explored cells teach its field (fog stamps call PS.flow.learn)
+    S.fogW = PS.fog.use(PS.fog.reset(sandbox ? sbFog : liveFog, m, { learn: true })); S.fogS = mkFogS(); S.fogOn = !attract;
     S.cap = opts.cap || capFor();
     S.agents.length = 0; S.obstacles.length = 0; S.powerups.length = 0; S.camps.length = 0; S.banners.length = 0; S.decals.length = 0; S.trails.length = 0;
     S.t = 0; S.tick = 0; S.acc = 0; S.timeLeft = cfg.world.matchSeconds; S.trickleT = 0; S.shake = 0; S.result = null; S.engagedNow = false; S.finalCalled = false; S.pendingEnd = null; S._routedBy = null;
@@ -259,6 +264,7 @@
 
     recount();
     for (let i = 1; i < S.teams.length; i++) { const t = S.teams[i]; t.pcx = t.cx; t.pcy = t.cy; }
+    fogStampAll(); // every team sees its start before the first frame
     S.cam.x = S.teams[1].cx; S.cam.y = S.teams[1].cy; S.camS = mkCamS(); zoomRule(S.teams[1].count, 0, true);
     S.teams[1].tx = S.teams[1].cx; S.teams[1].ty = S.teams[1].cy;
     if (!sandbox) { groundInvalidate(m); minimapBake(); }

@@ -77,9 +77,9 @@
       for (let i = i0; i <= i1; i++) { if (D[row + i]) continue; D[row + i] = 1; if (i < w.dx0) w.dx0 = i; if (i > w.dx1) w.dx1 = i; if (j < w.dy0) w.dy0 = j; if (j > w.dy1) w.dy1 = j; }
     }
   }
-  // stamp(team, cx, cy, R, list, nb, br, kn): the centroid disc plus each occupied bucket (list[0..nb), bucket index by * BN + bx) whose
-  // disc is not inside the centroid disc. kn: the player's knowledge grid (PS.knowledge) when this world learns, else null.
-  function stamp(team, cx, cy, R, list, nb, br, kn) {
+  // stamp(team, cx, cy, R, list, off, nb, br, kn): the centroid disc plus each occupied bucket (list[off..off+nb), bucket index by * BN + bx)
+  // whose disc is not inside the centroid disc. kn: the player's knowledge grid (PS.knowledge) when this world learns, else null.
+  function stamp(team, cx, cy, R, list, off, nb, br, kn) {
     const w = W, t0 = now(), isP = team === 1, em = CFG.exploreMargin;
     let v = w.ver[team] + 1; if (v > 65535) { w.vis[team].fill(0); v = 1; } w.ver[team] = v;
     if (w.dx1 < 0) { w.dx0 = DN; w.dy0 = DN; } if (w.mx1 < 0) { w.mx0 = N; w.my0 = N; } // empty dirty rects start inverted
@@ -87,7 +87,7 @@
     disc(w, team, v, cx, cy, R, isP ? R + em : 0, isP && w.learn ? kn : null);
     const in2 = R - br;
     for (let k = 0; k < nb; k++) {
-      const b = list[k], bx = ((b % BN) + 0.5) * BK, by = (((b / BN) | 0) + 0.5) * BK, dx = bx - cx, dy = by - cy;
+      const b = list[off + k], bx = ((b % BN) + 0.5) * BK, by = (((b / BN) | 0) + 0.5) * BK, dx = bx - cx, dy = by - cy;
       if (in2 >= 0 && dx * dx + dy * dy <= in2 * in2) continue; // inside the centroid disc: adds nothing to sight
       disc(w, team, v, bx, by, br, isP ? br + em : 0, isP && w.learn ? kn : null);
       if (isP && w.srcN < MAXSRC) { const q = 3 * w.srcN++; w.src[q] = bx; w.src[q + 1] = by; w.src[q + 2] = br; }
@@ -209,12 +209,14 @@
   // ---------------------------------------------------------------- cache recovery (studio lessons 27-29)
   function recover() { maskInit(); cloudInit(); if (W) flushMask(true); }
   function drop() { for (const c of [maskCv, cloudCv]) if (c) { const g = c.getContext("2d"); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, c.width, c.height); } return (maskCv ? 1 : 0) + (cloudCv ? 1 : 0); }
-  // alpha of a 4x4 downscale through one scratch canvas (never read the cache itself): min alpha over the 16 samples
+  // a 4x4 downscale through one scratch canvas (never read the cache itself): min alpha and summed alpha over the 16 samples
   let sc4 = null, sc4c = null;
-  function minAlpha4(c) {
-    if (!c) return 0; if (!sc4) { sc4 = document.createElement("canvas"); sc4.width = 4; sc4.height = 4; sc4c = sc4.getContext("2d", { willReadFrequently: true }); }
-    sc4c.imageSmoothingEnabled = true; sc4c.clearRect(0, 0, 4, 4); sc4c.drawImage(c, 0, 0, 4, 4); const d = sc4c.getImageData(0, 0, 4, 4).data; let m = 255; for (let i = 3; i < 64; i += 4) if (d[i] < m) m = d[i]; return m;
+  function read4(c) {
+    if (!sc4) { sc4 = document.createElement("canvas"); sc4.width = 4; sc4.height = 4; sc4c = sc4.getContext("2d", { willReadFrequently: true }); }
+    sc4c.imageSmoothingEnabled = true; sc4c.clearRect(0, 0, 4, 4); if (c) sc4c.drawImage(c, 0, 0, 4, 4); return sc4c.getImageData(0, 0, 4, 4).data;
   }
+  function minAlpha4(c) { if (!c) return 0; const d = read4(c); let m = 255; for (let i = 3; i < 64; i += 4) if (d[i] < m) m = d[i]; return m; }
+  function sumAlpha4(c) { if (!c) return 0; const d = read4(c); let s = 0; for (let i = 3; i < 64; i += 4) s += d[i]; return s; }
   // the mask re-read at 1:1 through a scratch copy: the alpha of display cell (i, j) in world cells (QA only)
   let scM = null, scMc = null;
   function maskAlphaAt(list) {
@@ -222,13 +224,12 @@
     scMc.clearRect(0, 0, DN, DN); scMc.drawImage(maskCv, 0, 0); const d = scMc.getImageData(0, 0, DN, DN).data;
     return list.map(([x, y]) => { const i = ((x / DC) | 0) + DP, j = ((y / DC) | 0) + DP; return i >= 0 && j >= 0 && i < DN && j < DN ? d[(j * DN + i) * 4 + 3] : -1; });
   }
-  function report() { return { mask: maskCv ? minAlpha4(maskCv) : 0, cloud: cloudCv ? minAlpha4(cloudCv) >= 0 && cloudNonBlank() : false, maskKey, fogW: fw, fogH: fh, cssW, cssH, mask: maskCv ? minAlpha4(maskCv) : 0 }; }
-  function cloudNonBlank() { if (!cloudCv) return false; if (!sc4) minAlpha4(cloudCv); sc4c.clearRect(0, 0, 4, 4); sc4c.drawImage(cloudCv, 0, 0, 4, 4); const d = sc4c.getImageData(0, 0, 4, 4).data; let s = 0; for (let i = 3; i < 64; i += 4) s += d[i]; return s > 0; }
+  function report() { return { mask: minAlpha4(maskCv), cloud: sumAlpha4(cloudCv) > 0, maskKey, fogW: fw, fogH: fh, cssW, cssH }; }
   // the expected mask alpha of a display cell from the typed arrays (QA): unexplored / explored after the blur
   function dispAt(x, y) { const w = W, i = ((x / DC) | 0) + DP, j = ((y / DC) | 0) + DP; if (!w || i < 1 || j < 1 || i >= DN - 1 || j >= DN - 1) return -1; let s = 0; for (let v = -1; v <= 1; v++) for (let u = -1; u <= 1; u++) if (w.disp[(j + v) * DN + i + u]) s += (v ? 1 : 2) * (u ? 1 : 2); return LA[s]; }
 
   function sig() { const w = W; if (!w) return null; return [Array.from(w.nExp), Array.from(w.stamps), Array.from(w.ver)].join("|"); }
-  const F = (PS.fog = { init, world, reset, use, stamp, sees, seesCell, explored, cellOf, resize, render, flushMask, recover, drop, report, maskAlphaAt, dispAt, minAlpha4, sig, holeGrad,
+  const F = (PS.fog = { init, world, reset, use, stamp, sees, seesCell, explored, cellOf, resize, render, flushMask, recover, drop, report, maskAlphaAt, dispAt, minAlpha4, sumAlpha4, sig, holeGrad,
     vis: (team) => (W ? W.vis[team] : null), verOf: (team) => (W ? W.ver[team] : 0), exploredArr: (team) => (W ? W.explored[team] : null), world0: () => W, RS, ST,
     get N() { return N; }, get BN() { return BN; }, get BK() { return BK; }, get fogSize() { return [fw, fh, cssW, cssH]; }, get maskCanvas() { return maskCv; }, get cloudCanvas() { return cloudCv; } });
 })();
