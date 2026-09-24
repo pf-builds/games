@@ -3,7 +3,7 @@
 (function () {
   "use strict";
 
-  var CONFIG_VERSION = 23;
+  var CONFIG_VERSION = 24;
 
   var UI = (window.GDUI = {});
   var E = window.GDEngine, GD = window.GD;
@@ -194,6 +194,30 @@
   }
   UI.overlayOpen = overlayOpen;
 
+  // Floaters from pickups collected close together would print on top of each other at
+  // the wall (they clamp to the same edge strip). Remember the last few, allocated once,
+  // and lift a new one above any still rising near the same spot.
+  var recentFloat = [{ x: 0, y: 0, t: -1e9 }, { x: 0, y: 0, t: -1e9 }, { x: 0, y: 0, t: -1e9 }, { x: 0, y: 0, t: -1e9 }];
+  var recentFloatI = 0;
+  function staggerFloaterY(fx, fy, J) {
+    var now = performance.now() / 1000, step = J.floaterSize * 1.4, guard = 0, moved = true;
+    while (moved && guard++ < recentFloat.length) {
+      moved = false;
+      for (var i = 0; i < recentFloat.length; i++) {
+        var r = recentFloat[i];
+        if (now - r.t > J.floaterLife) continue;
+        // a floater rises ~22 bu/s, so compare against where the older one is now
+        var ry = r.y - 22 * (now - r.t);
+        if (Math.abs(r.x - fx) < 48 && Math.abs(ry - fy) < step) { fy = ry - step; moved = true; }
+      }
+    }
+    fy = Math.max(J.floaterSize + 12, fy);   // never up under the depth readout
+    var slot = recentFloat[recentFloatI];
+    recentFloatI = (recentFloatI + 1) % recentFloat.length;
+    slot.x = fx; slot.y = fy; slot.t = now;
+    return fy;
+  }
+
   // Pop + floater at the pickup, a log line for chests and geodes. Event-driven, so the
   // few objects made here are per click, never per frame.
   function onPickupClick(res) {
@@ -221,7 +245,7 @@
       // keep the floater on the canvas: the walls sit at the edges of a 160 bu column
       var half = short.length * J.floaterSize * 0.42;   // bold glyph ~0.6 em at the 1.3x pop-in scale
       var fx = Math.max(half + 2, Math.min(cfg.layout.columnBu - cfg.layout.ribbonBu - half - 2, bx));
-      floaterSystem.add(fx, by - 6, short, col, J.floaterSize, J.floaterLife);
+      floaterSystem.add(fx, staggerFloaterY(fx, by - 6, J), short, col, J.floaterSize, J.floaterLife);
     }
     if (res.kind !== "gem") pushLog(text, "boon");
     refresh();

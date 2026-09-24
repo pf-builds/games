@@ -1,5 +1,5 @@
 {
-  "configVersion": 23,
+  "configVersion": 24,
   "title": "Greedy Deep",
   "start": {
     "gold": 0,
@@ -391,12 +391,12 @@
     "expireBlinkS": 2,
     "spawn": {
       "leftXBu": [
-        8,
+        10,
         34
       ],
       "rightXBu": [
         122,
-        146
+        144
       ],
       "aboveFaceBu": 96,
       "belowFaceBu": 44,
@@ -524,7 +524,9 @@
         "rockDark": "#553c2a",
         "crystal": "#c58bff",
         "crystalLit": "#f0dcff",
-        "halo": "#e0b8ff"
+        "halo": "#e0b8ff",
+        "crack": "#24160c",
+        "rim": "rgba(246,226,255,0.9)"
       }
     },
     "juice": {

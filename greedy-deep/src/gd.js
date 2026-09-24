@@ -1807,6 +1807,31 @@
         if (setEl) setEl.classList.add("hidden");
       }
 
+      // --- side option (string or number) is honoured for every type, and nothing ever
+      // lands on (or drifts into) the active vein's bracket
+      m5Setup(700);
+      var sideBad = [];
+      for (var sd5 = 0; sd5 < PK.types.length; sd5++) {
+        var tyS = PK.types[sd5].id;
+        GD.pickups = E.newPickupField(cfg);
+        var lS = E.pickupById(GD.pickups, GD.spawnPickup(tyS, { side: "left" }).id);
+        if (!(lS.xBu >= PK.spawn.leftXBu[0] && lS.xBu <= PK.spawn.leftXBu[1])) sideBad.push(tyS + " left -> x " + Math.round(lS.xBu));
+        GD.pickups = E.newPickupField(cfg);
+        var rS = E.pickupById(GD.pickups, GD.spawnPickup(tyS, { side: 0 }).id);
+        if (!(rS.xBu <= PK.spawn.leftXBu[1])) sideBad.push(tyS + " side 0 -> x " + Math.round(rS.xBu));
+      }
+      check("m5_spawn_side_option_honoured", "left wall for 'left' and 0", sideBad.join(" | "), sideBad.length === 0);
+      var veinBad = 0, dV = GD.derive(), fyV = E.faceYBu(cfg, dV.revealBonus), vtV = Math.max(cfg.layout.tileBu * 2, fyV - cfg.vein.aboveFaceBu);
+      var topV = GD.state.depth * cfg.layout.buPerMeter - fyV;
+      for (var vv = 0; vv < 300; vv++) {
+        GD.pickups = E.newPickupField(cfg);
+        var tyV = PK.types[vv % PK.types.length];
+        var pV = E.pickupById(GD.pickups, GD.spawnPickup(tyV.id, vv % 2 ? { side: "right" } : undefined).id);
+        var syV = pV.yBu - topV, hh = tyV.sizeBu / 2;
+        if (pV.xBu + hh > cfg.vein.xBu && syV + hh > vtV && syV - hh < vtV + cfg.vein.hBu) veinBad++;
+      }
+      check("m5_pickups_clear_the_vein_bracket", "0 of 300 overlap", veinBad, veinBad === 0);
+
       // --- rarer and better deeper; scaling capped
       var rb0 = E.pickupBandPow(PK.types[2].rateMulPerBand, 0, cfg), rb3 = E.pickupBandPow(PK.types[2].rateMulPerBand, 3, cfg);
       var pb3 = E.pickupBandPow(PK.types[0].reward.payoutMulPerBand, 3, cfg), pbHuge = E.pickupBandPow(PK.types[0].reward.payoutMulPerBand, 400, cfg);

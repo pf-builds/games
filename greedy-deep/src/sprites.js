@@ -102,6 +102,26 @@
     cg.drawImage(t, 0, 0);
     return c;
   }
+  // A second, outer rim in a light colour: the same dilate-and-tint composite as
+  // outline(), one bu further out. On mid-grey strata a dark rim alone vanishes (the
+  // geode on moonsilver, M5 critic); dark-then-light reads on every band.
+  function rimLight(c, col) {
+    const w = c.width, h = c.height;
+    const t = document.createElement("canvas");
+    t.width = w; t.height = h;
+    const g = t.getContext("2d");
+    g.drawImage(c, -1, 0); g.drawImage(c, 1, 0);
+    g.drawImage(c, 0, -1); g.drawImage(c, 0, 1);
+    g.globalCompositeOperation = "source-in";
+    g.fillStyle = col;
+    g.fillRect(0, 0, w, h);
+    g.globalCompositeOperation = "source-over";
+    g.drawImage(c, 0, 0);
+    const cg = c.getContext("2d");
+    cg.clearRect(0, 0, w, h);
+    cg.drawImage(t, 0, 0);
+    return c;
+  }
   S.outlineVerbatim = outlineVerbatim;
   S.outlineComposite = outline;
 
@@ -398,11 +418,12 @@
   function buildPickups() {
     var P = cfg.pickups.palette;
     var G = P.gem, C = P.chest, R = P.geode;
-    function framed(w, h, draw) {
-      return outline(make(w + 2, h + 2, function (p0) {
+    function framed(w, h, draw, m) {
+      m = m || 1;
+      return outline(make(w + m * 2, h + m * 2, function (p0) {
         draw({
-          px: function (x, y, c) { p0.px(x + 1, y + 1, c); },
-          rect: function (x, y, ww, hh, c) { p0.rect(x + 1, y + 1, ww, hh, c); }
+          px: function (x, y, c) { p0.px(x + m, y + m, c); },
+          rect: function (x, y, ww, hh, c) { p0.rect(x + m, y + m, ww, hh, c); }
         });
       }));
     }
@@ -430,10 +451,13 @@
       p.rect(4, 0, 1, 11, C.bandDark); p.rect(10, 0, 1, 11, C.bandDark);
       p.rect(6, 4, 2, 3, C.band); p.px(6, 6, C.bandDark); p.px(7, 5, C.woodDark);
     })];
-    // geode: 14x11 rounded rock; each stage adds a crack, the last splits it open on crystal
+    // geode: 14x11 rounded rock; each stage adds a crack, the last splits it open on crystal.
+    // Two bu of margin: a dark rim from outline(), then a light outer rim, so it reads on
+    // grey strata as clearly as the gem and chest do. Cracks are near-black at 1:1.
     pickups.geode = [];
+    var K = R.crack || R.rockDark;
     for (let st = 0; st < GEODE_STAGES; st++) {
-      pickups.geode.push(framed(14, 11, function (p) {
+      pickups.geode.push(rimLight(framed(14, 11, function (p) {
         p.rect(3, 0, 8, 1, R.rock); p.rect(1, 1, 12, 1, R.rock); p.rect(0, 2, 14, 7, R.rock);
         p.rect(1, 9, 12, 1, R.rock); p.rect(3, 10, 8, 1, R.rockDark);
         p.rect(3, 0, 7, 1, R.rockLit); p.rect(1, 1, 5, 1, R.rockLit); p.rect(0, 2, 2, 5, R.rockLit);
@@ -441,15 +465,15 @@
         p.px(5, 3, R.rockDark); p.px(9, 5, R.rockLit); p.px(4, 7, R.rockDark); p.px(10, 2, R.rockLit);
         // a band of crystal already showing through the rind, so it reads as a geode, not a rock
         p.px(9, 7, R.crystal); p.px(10, 7, R.crystalLit); p.px(11, 6, R.crystal); p.px(3, 4, R.crystal);
-        if (st >= 1) { p.px(7, 0, R.rockDark); p.px(7, 1, R.rockDark); p.px(6, 2, R.rockDark); p.px(6, 3, R.rockDark); p.px(7, 4, R.crystal); }
-        if (st >= 2) { p.px(8, 4, R.rockDark); p.px(9, 5, R.rockDark); p.px(10, 6, R.rockDark); p.px(11, 6, R.rockDark); p.px(7, 5, R.crystal); }
-        if (st >= 3) { p.px(6, 5, R.rockDark); p.px(5, 6, R.rockDark); p.px(4, 7, R.rockDark); p.px(3, 8, R.rockDark); p.px(6, 6, R.crystal); p.px(8, 5, R.crystalLit); }
+        if (st >= 1) { p.px(7, 0, K); p.px(7, 1, K); p.px(6, 2, K); p.px(6, 3, K); p.px(7, 4, R.crystalLit); }
+        if (st >= 2) { p.px(8, 4, K); p.px(9, 5, K); p.px(10, 6, K); p.px(11, 6, K); p.px(12, 7, K); p.px(7, 5, R.crystal); }
+        if (st >= 3) { p.px(6, 5, K); p.px(5, 6, K); p.px(4, 7, K); p.px(3, 8, K); p.px(2, 9, K); p.px(6, 6, R.crystal); p.px(8, 5, R.crystalLit); }
         if (st >= 4) {
           p.rect(5, 3, 4, 5, R.crystal); p.rect(6, 2, 2, 7, R.crystal);
           p.px(6, 3, R.crystalLit); p.px(7, 5, R.crystalLit); p.px(5, 6, R.crystalLit); p.px(8, 4, R.crystalLit);
-          p.rect(4, 2, 1, 6, R.rockDark); p.rect(9, 3, 1, 6, R.rockDark);
+          p.rect(4, 2, 1, 6, K); p.rect(9, 3, 1, 6, K);
         }
-      }));
+      }, 2), R.rim || R.crystalLit));
     }
   }
   S.pickupSprite = function (kind, stage) {

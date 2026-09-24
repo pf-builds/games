@@ -562,11 +562,18 @@
     var H = L._liveShaftBu || L.shaftBu;
     var fy = E.faceYBu(cfg, derived.revealBonus);
     var y0 = Math.max(sp.padTopBu, fy - sp.aboveFaceBu), y1 = Math.min(H - sp.padBottomBu, fy + sp.belowFaceBu);
-    var veinTop = fy - cfg.vein.aboveFaceBu - sp.veinClearBu, veinBot = fy - cfg.vein.aboveFaceBu + cfg.vein.hBu + sp.veinClearBu;
+    // The active vein's bracket owns that stretch of the right wall. Clear it by half the
+    // sprite plus a margin, and further below it by the distance the face will carry the
+    // pickup up the screen over its lifetime, so it never drifts into the bracket either.
+    var half = ty.sizeBu * 0.5 + sp.veinClearBu;
+    var drift = derived.digRate * L.buPerMeter * (ty.lifetimeS + pk.lanternLifetimeS * (derived.revealBonus || 0));
+    var vTop = Math.max(L.tileBu * 2, fy - cfg.vein.aboveFaceBu);
+    var veinTop = vTop - half, veinBot = vTop + cfg.vein.hBu + half + drift;
+    var pinSide = opts.side === 0 || opts.side === "left" ? 0 : (opts.side === 1 || opts.side === "right" ? 1 : -1);
     var sx = 0, sy = 0, side = 0, tries = 0, clear = false;
     while (!clear && tries++ < 6) {
       sy = opts.y !== undefined ? opts.y : y0 + rng() * Math.max(0, y1 - y0);
-      side = opts.side !== undefined ? opts.side : (rng() < 0.5 ? 0 : 1);
+      side = pinSide >= 0 ? pinSide : (rng() < 0.5 ? 0 : 1);
       if (side === 1 && sy > veinTop && sy < veinBot) side = 0;
       var xr = side ? sp.rightXBu : sp.leftXBu;
       sx = opts.x !== undefined ? opts.x : xr[0] + rng() * (xr[1] - xr[0]);
