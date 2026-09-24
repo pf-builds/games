@@ -1,10 +1,14 @@
 // Peasant Swarm — core simulation + render. Click it! Studios, 2026.
-// Boids swarm, local combat, rout-and-absorb, AI rivals, power-ups. All tuning in config.json.
+// Boids swarm, local combat, rout-and-absorb, AI rivals, power-ups, on seeded terrain (src/terrain.js). All tuning in config.json.
 (function () {
   const PS = (window.PS = window.PS || {});
   const $ = (id) => document.getElementById(id);
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
   const lerp = (a, b, t) => a + (b - a) * t;
+  const DT = 1 / 60; // the sim only ever advances in fixed 1/60 s ticks (SPEC-v2 §3)
+  const QS = new URLSearchParams(location.search);
+  const urlSeed = QS.has("seed") && QS.get("seed") !== "" && isFinite(+QS.get("seed")) ? +QS.get("seed") >>> 0 : null; // ?seed=N replays a match
+  const capParam = QS.get("cap"); // ?cap=touch|desktop forces an agent cap (the harness runs both)
 
   function mulberry32(a) {
     return function () {
@@ -18,14 +22,15 @@
   // ---------------------------------------------------------------- state
   const S = {
     cfg: null, spr: null, debug: /(\?|&)debug=1/.test(location.search),
-    mode: "title", t: 0, timeLeft: 0, pace: 1,
+    mode: "title", t: 0, timeLeft: 0, pace: 1, tick: 0, acc: 0,
     agents: [], teams: [], obstacles: [], powerups: [], camps: [],
     cam: { x: 0, y: 0, zoom: 1 }, vw: 0, vh: 0, dpr: 1,
     input: { px: 0, py: 0, active: false, huddle: false, keys: {}, touch: false, joy: { active: false, id: -1, ox: 0, oy: 0, cx: 0, cy: 0, mag: 0, dx: 0, dy: 0 } },
     rng: null, seed: 0, trickleT: 0, shake: 0, banners: [], hintT: 0,
     stats: { recruited: 0, kills: 0, routs: 0, lost: 0, peak: 1, powerups: 0 },
     fps: 60, fpsT0: 0, frameN: 0, engagedNow: false, result: null,
-    grid: null, cols: 0, rows: 0, CELL: 48, drawList: [], decals: [], trails: [], attract: false, vignette: null, difficulty: "normal",
+    map: null, obs: null, cap: 1000, dbg: { terrainBad: 0, firstBad: null, capOver: 0 },
+    drawList: [], decals: [], trails: [], attract: false, vignette: null, difficulty: "normal",
   };
   if (S.debug) window.PSS = S;
 
@@ -35,13 +40,15 @@
 
   // ---------------------------------------------------------------- setup
   async function boot() {
-    const res = await fetch("config.json?v=19");
+    const res = await fetch("config.json?v=20");
     S.cfg = await res.json();
     S.spr = PS.buildSprites(S.cfg);
+    PS.terrain.init(S.cfg);
+    hashAlloc();
     particles = PS.Particles(1400);
     floaters = PS.Floaters();
-    PS.selfTest = selfTest; PS.fight = fight; PS.simMatch = simMatch; // QA hooks, always on and side-effect free (see QA section)
-    S.CELL = 48;
+    PS.selfTest = selfTest; PS.fight = fight; PS.simMatch = simMatch; PS.bench = bench; PS.replay = replay; // QA hooks, always on and side-effect free (see QA section)
+    PS.debugDropCaches = debugDropCaches; PS.cacheReport = cacheReport; PS.recheckCaches = recheckCaches;
     resize();
     window.addEventListener("resize", resize);
     bindInput();
@@ -52,7 +59,7 @@
       // hidden-tab fallback clock: rAF starves there. Never registers a second rAF (see schedule()).
       setInterval(() => { if (performance.now() - lastFrame > 60) frame(performance.now(), true); }, 33);
       // synchronous sim advance for automated critics: PS.step(5) = 5 sim-seconds, no rendering
-      PS.step = (sec) => { const n = Math.round(sec * 60); for (let i = 0; i < n; i++) { if (S.mode !== "play") break; update(1 / 60); if (S.mode !== "play") break; particles.update(1 / 60); floaters.update(1 / 60); } updateHUD(true); return S.result || S.mode; };
+      PS.step = (sec) => { const n = Math.round(sec * 60); for (let i = 0; i < n; i++) { if (S.mode !== "play") break; update(DT); if (S.mode !== "play") break; particles.update(DT); floaters.update(DT); } updateHUD(true); return S.result || S.mode; };
       PS.timeStep = (sec) => { const t0 = performance.now(); PS.step(sec); return (performance.now() - t0) / (sec * 60); };
     }
   }
@@ -70,25 +77,67 @@
   }
 
   // ---------------------------------------------------------------- world gen
+  // every field an agent will ever carry is set here, v2 placeholders included (C2: agents that grow fields later ran 6x slower)
   function mkAgent(x, y, team) {
-    return { x, y, vx: 0, vy: 0, team, hp: S.cfg.agent.hp, atk: Math.random() * 0.5, tgt: null,
-      ph: Math.random() * 10, face: Math.random() < 0.5 ? 1 : -1, fl: 0, lunge: 0, wx: x, wy: y, hx: x, hy: y, dead: false, fight: false, r: 6, pop: 9, camp: null };
+    const R = S.rng;
+    return { x, y, vx: 0, vy: 0, team, hp: S.cfg.agent.hp, atk: R() * 0.5, tgt: null,
+      ph: R() * 10, face: R() < 0.5 ? 1 : -1, fl: 0, lunge: 0, wx: x, wy: y, hx: x, hy: y, dead: false, fight: false, r: S.cfg.agent.radius, pop: 9, camp: null,
+      rec: 0, seenA: 1, escapeT: 0, groupId: 0, fieldT: 0 };
   }
+  const z9 = () => [0, 0, 0, 0, 0, 0, 0, 0, 0]; // team-indexed arrays: neutral 0, player 1, rivals 2-6, spare 7, bandits 8 (SPEC-v2 §6)
   function mkTeam(id, name, color, isPlayer, ai) {
-    return { id, name, color, isPlayer, ai, count: 0, cx: 0, cy: 0, tx: 0, ty: 0, alive: true,
-      buffs: { speed: 0, armor: 0, frenzy: 0, rally: 0 }, eng: [0, 0, 0, 0, 0], engT: [0, 0, 0, 0, 0], engStart: [0, 0, 0, 0, 0],
-      spr: S.spr.peasantSet(color), kills: 0, peak: 1, state: "roam", speedMod: 1, thinkT: Math.random() * 0.5, lastHint: 0, minY: 0 };
+    return { id, name, color, isPlayer, ai, count: 0, cx: 0, cy: 0, tx: 0, ty: 0, vx: 0, vy: 0, pcx: 0, pcy: 0, spd: 0, slot: -1, alive: true,
+      buffs: { speed: 0, armor: 0, frenzy: 0, rally: 0 }, eng: z9(), engT: z9(), engStart: z9(),
+      spr: S.spr.peasantSet(color), kills: 0, peak: 1, state: "roam", speedMod: 1, thinkT: S.rng() * 0.5, lastHint: 0, minY: 0, huntStart: 0, huntCooldown: 0 };
   }
+  // speed by swarm size: small swarms get a boost that fades by `full`, big ones slow a little per peasant above it (SPEC-v2 §3)
+  function sizeSpeed(n) { const k = S.cfg.agent.sizeSpeed, v = 1 + k.boost * Math.max(0, 1 - n / k.full) - k.drop * Math.max(0, n - k.full); return v < k.floor ? k.floor : v; }
 
+  // trees and rocks: circular colliders bucketed per terrain cell (CSR lists) plus a "one within a cell" flag, so an agent checks a 3x3 block at most
+  function bucketObstacles() {
+    const T = PS.terrain, N = T.N, NN = N * N, st = new Int32Array(NN + 1), near = new Uint8Array(NN), list = new Int32Array(S.obstacles.length);
+    for (const o of S.obstacles) st[T.cellOf(o.x, o.y) + 1]++;
+    for (let c = 0; c < NN; c++) st[c + 1] += st[c];
+    const fill = st.slice(0, NN);
+    S.obstacles.forEach((o, i) => {
+      const c = T.cellOf(o.x, o.y); list[fill[c]++] = i; const x = c % N, y = (c / N) | 0;
+      for (let j = y - 1; j <= y + 1; j++) for (let k = x - 1; k <= x + 1; k++) if (j >= 0 && k >= 0 && j < N && k < N) near[j * N + k] = 1;
+    });
+    S.obs = { st, list, near };
+  }
   function farFromObstacles(x, y, pad) {
-    for (const o of S.obstacles) { const dx = o.x - x, dy = o.y - y; if (dx * dx + dy * dy < (o.r + pad) * (o.r + pad)) return false; }
+    const O = S.obs, T = PS.terrain, N = T.N, cell = T.cell, R = Math.ceil((pad + 18) / cell), ci = (x / cell) | 0, cj = (y / cell) | 0;
+    for (let j = Math.max(0, cj - R); j <= Math.min(N - 1, cj + R); j++) for (let i = Math.max(0, ci - R); i <= Math.min(N - 1, ci + R); i++) {
+      const c = j * N + i; for (let k = O.st[c]; k < O.st[c + 1]; k++) { const o = S.obstacles[O.list[k]], dx = o.x - x, dy = o.y - y; if (dx * dx + dy * dy < (o.r + pad) * (o.r + pad)) return false; }
+    }
     return true;
   }
   function farFromTeams(x, y, d) {
     for (let i = 1; i < S.teams.length; i++) { const t = S.teams[i]; if (!t.alive) continue; const dx = t.cx - x, dy = t.cy - y; if (dx * dx + dy * dy < d * d) return false; }
     return true;
   }
-  function randPos(margin) { return { x: margin + S.rng() * (S.cfg.world.w - margin * 2), y: margin + S.rng() * (S.cfg.world.h - margin * 2) }; }
+  const placeOk = (x, y, minSdfCells, pad) => PS.terrain.placementOk(x, y, minSdfCells) && farFromObstacles(x, y, pad);
+  // a random point inside a random cell of `list` (defaults to open ground: walkable, main region, sdf >= 2 cells, not in a pass)
+  const RP = { x: 0, y: 0 };
+  function randPos(list) {
+    const P = S.map.place, L = list || P.open2, N = S.map.N, cell = S.map.cell, c = L[(S.rng() * L.length) | 0];
+    RP.x = ((c % N) + 0.2 + 0.6 * S.rng()) * cell; RP.y = (((c / N) | 0) + 0.2 + 0.6 * S.rng()) * cell; return RP;
+  }
+  // per-map placement tables (built once per map, reused by attract restarts and the trickle)
+  function placeTables(m) {
+    if (m.place) return m.place;
+    const cfg = S.cfg, N = m.N, cell = m.cell, NN = N * N, tol = cfg.powerups.contestTol, walk = PS.terrain.walkT;
+    const open2 = [], open3 = [], owned = [[], [], [], [], [], []], contest = [], walkable = [];
+    for (let c = 0; c < NN; c++) {
+      if (!walk(m.terr[c])) continue; if (m.sdf[c] >= cell / 2) walkable.push(c);
+      if (m.region[c] !== 1 || m.passMask[c] || m.sdf[c] < 2 * cell) continue;
+      open2.push(c); if (m.sdf[c] >= 3 * cell) open3.push(c);
+      if (m.owner[c] < 6) owned[m.owner[c]].push(c);
+      if (m.dist.length === 6) { let d1 = 65535, d2 = 65535; for (let i = 0; i < 6; i++) { const d = m.dist[i][c]; if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) d2 = d; } if (d2 < 65535 && d2 - d1 <= tol * d1) contest.push(c); }
+    }
+    const I = (a) => Int32Array.from(a);
+    return (m.place = { open2: I(open2), open3: I(open3), owned: owned.map((a) => I(a.length ? a : open2)), contest: I(contest.length ? contest : open2), walkable: I(walkable), cost0: m.cost.slice() });
+  }
 
   function spawnCamp(x, y, n) {
     const sp = S.cfg.spawn.campSpread;
@@ -101,59 +150,76 @@
       S.agents.push(ag);
     }
   }
+  const capFor = () => (capParam === "touch" || (capParam !== "desktop" && S.input.touch) ? S.cfg.spawn.touchAgentCap : S.cfg.spawn.agentCap);
 
-  function newGame(attract) {
-    const cfg = S.cfg, W = cfg.world.w, H = cfg.world.h;
-    S.attract = !!attract; PS.audio.setSilent(S.attract);
-    S.seed = (Date.now() ^ (Math.random() * 1e9)) >>> 0;
+  // newGame(attract, { seed, keepMap, map }): seed from opts, else ?seed=, else the clock. The map is seeded by S.rng's first draw.
+  function newGame(attract, opts) {
+    opts = opts || {};
+    const cfg = S.cfg, SP = cfg.spawn, T = PS.terrain;
+    S.attract = !!attract; if (!sandbox) PS.audio.setSilent(S.attract);
+    S.seed = opts.seed != null ? opts.seed >>> 0 : urlSeed != null ? urlSeed : (Date.now() ^ (Math.random() * 1e9)) >>> 0;
     S.rng = mulberry32(S.seed);
+    const genSeed = (S.rng() * 4294967296) >>> 0;
+    const old = S.map;
+    if (opts.map) S.map = opts.map; else if (!(opts.keepMap && S.map && !S.map.flat)) S.map = T.gen(genSeed);
+    if (!sandbox && old && old !== S.map) releaseGround(old); // a replaced map's chunk canvases are zeroed at once, not left for GC
+    T.use(S.map);
+    const m = S.map, P = placeTables(m), N = m.N, cell = m.cell;
+    m.cost.set(P.cost0);
+    S.cap = opts.cap || capFor();
     S.agents.length = 0; S.obstacles.length = 0; S.powerups.length = 0; S.camps.length = 0; S.banners.length = 0; S.decals.length = 0; S.trails.length = 0;
-    S.t = 0; S.timeLeft = cfg.world.matchSeconds; S.trickleT = 0; S.shake = 0; S.result = null; S.engagedNow = false; S.finalCalled = false; S.pendingEnd = null; S._routedBy = null;
+    S.t = 0; S.tick = 0; S.acc = 0; S.timeLeft = cfg.world.matchSeconds; S.trickleT = 0; S.shake = 0; S.result = null; S.engagedNow = false; S.finalCalled = false; S.pendingEnd = null; S._routedBy = null;
     S.stats = { recruited: 0, kills: 0, routs: 0, lost: 0, peak: 1, powerups: 0 };
-    S.cols = Math.ceil(W / S.CELL); S.rows = Math.ceil(H / S.CELL);
-    S.grid = new Array(S.cols * S.rows); for (let i = 0; i < S.grid.length; i++) S.grid[i] = [];
+    S.dbg = { terrainBad: 0, firstBad: null, capOver: 0 };
 
-    // obstacles
-    for (let i = 0; i < cfg.world.trees; i++) {
-      const p = randPos(80); const big = S.rng() < 0.4;
-      if (farFromObstacles(p.x, p.y, 40)) S.obstacles.push({ x: p.x, y: p.y, r: big ? 17 : 12, kind: big ? 1 : 0 });
+    // obstacles: open ground at least 3 cells from any wall, spaced, clear of every spawn slot; +prop cost on their cell
+    const clearStart = SP.obstacleClearOfStarts, nearSpawn = (x, y, d) => { for (const s of m.spawns) if ((s.x - x) * (s.x - x) + (s.y - y) * (s.y - y) < d * d) return true; return false; };
+    const spaced = (x, y, pad) => { for (const o of S.obstacles) { const dx = o.x - x, dy = o.y - y; if (dx * dx + dy * dy < (o.r + pad) * (o.r + pad)) return false; } return true; };
+    for (let i = 0; i < cfg.world.trees + cfg.world.rocks; i++) {
+      const p = randPos(P.open3), tree = i < cfg.world.trees, big = tree && S.rng() < 0.4;
+      if (!spaced(p.x, p.y, 40) || nearSpawn(p.x, p.y, clearStart)) continue;
+      S.obstacles.push({ x: p.x, y: p.y, r: tree ? (big ? 17 : 12) : 13, kind: tree ? (big ? 1 : 0) : 2 });
+      const c = T.cellOf(p.x, p.y); m.cost[c] = Math.min(254, m.cost[c] + cfg.terrain.costs.prop);
     }
-    for (let i = 0; i < cfg.world.rocks; i++) {
-      const p = randPos(80);
-      if (farFromObstacles(p.x, p.y, 40)) S.obstacles.push({ x: p.x, y: p.y, r: 13, kind: 2 });
-    }
+    bucketObstacles();
 
-    // teams: player + 3 AI in shuffled quadrants
+    // teams: player + 3 AI at four of the six spawn slots, shuffled (Fisher-Yates); the map holds six so M4 adds rivals without new bookkeeping
     S.teams = [null];
     S.teams.push(mkTeam(1, cfg.player.name, cfg.player.color, true, S.attract ? cfg.ai.personalities[1] : null));
     cfg.ai.personalities.forEach((p, i) => S.teams.push(mkTeam(2 + i, p.name, p.color, false, p)));
-    const quads = [[0.18, 0.18], [0.82, 0.18], [0.18, 0.82], [0.82, 0.82]].sort(() => S.rng() - 0.5);
-    for (let i = 1; i <= 4; i++) {
-      const t = S.teams[i];
-      let x = quads[i - 1][0] * W, y = quads[i - 1][1] * H;
-      while (!farFromObstacles(x, y, 60)) { x += 40; }
-      t.cx = t.tx = x; t.cy = t.ty = y;
-      S.agents.push(mkAgent(x, y, i));
-      if (i === 1 && !S.attract) for (let b = 0; b < diff().startBonus; b++) S.agents.push(mkAgent(x + (S.rng() - 0.5) * 30, y + (S.rng() - 0.5) * 30, 1));
-      // starter camps within reach so the first minute isn't a walk
-      for (let k = 0; k < cfg.spawn.starterCamps; k++) {
-        const a = S.rng() * Math.PI * 2, d = cfg.spawn.starterDist[0] + S.rng() * (cfg.spawn.starterDist[1] - cfg.spawn.starterDist[0]);
-        const cx = clamp(x + Math.cos(a) * d, 60, W - 60), cy = clamp(y + Math.sin(a) * d, 60, H - 60);
-        spawnCamp(cx, cy, 2 + ((S.rng() * 2) | 0));
+    const slots = [0, 1, 2, 3, 4, 5]; for (let i = slots.length - 1; i > 0; i--) { const j = (S.rng() * (i + 1)) | 0, t = slots[i]; slots[i] = slots[j]; slots[j] = t; }
+    for (let i = 1; i < S.teams.length; i++) {
+      const t = S.teams[i], s = m.spawns[slots[(i - 1) % 6]] || { x: cfg.world.w / 2 + (i - 2.5) * 300, y: cfg.world.h / 2, c: 0 };
+      t.slot = slots[(i - 1) % 6]; t.cx = t.tx = t.pcx = s.x; t.cy = t.ty = t.pcy = s.y;
+      S.agents.push(mkAgent(s.x, s.y, i));
+      if (i === 1 && !S.attract) for (let b = 0; b < diff().startBonus; b++) S.agents.push(mkAgent(s.x + (S.rng() - 0.5) * 30, s.y + (S.rng() - 0.5) * 30, 1));
+      // starter camps inside the home meadow so the first minute isn't a walk (path distance close to straight = same meadow)
+      for (let k = 0, placed = 0; k < 30 && placed < SP.starterCamps; k++) {
+        const a = S.rng() * Math.PI * 2, d = SP.starterDist[0] + S.rng() * (SP.starterDist[1] - SP.starterDist[0]);
+        const x = s.x + Math.cos(a) * d, y = s.y + Math.sin(a) * d, c = T.cellOf(x, y);
+        if (!placeOk(x, y, 2, 44) || (m.dist.length && m.dist[t.slot][c] / 3 * cell > d * 1.35)) continue;
+        let ok = true; for (const cp of S.camps) if ((cp.x - x) * (cp.x - x) + (cp.y - y) * (cp.y - y) < SP.campGap * SP.campGap) { ok = false; break; }
+        if (!ok) continue;
+        spawnCamp(x, y, 2 + ((S.rng() * 2) | 0)); placed++;
       }
     }
-    // neutral camps
-    let tries = 0;
-    for (let i = 0; i < cfg.spawn.neutralCamps && tries < 400; tries++) {
-      const p = randPos(70);
-      if (!farFromObstacles(p.x, p.y, 44) || !farFromTeams(p.x, p.y, 220)) continue;
-      spawnCamp(p.x, p.y, cfg.spawn.campMin + ((S.rng() * (cfg.spawn.campMax - cfg.spawn.campMin + 1)) | 0));
-      i++;
+    // neutral camps split evenly across the six path-Voronoi regions (the remainder goes to regions in shuffled order)
+    const per = Math.floor(SP.neutralCamps / 6), extra = SP.neutralCamps - per * 6, order = [0, 1, 2, 3, 4, 5];
+    for (let i = 5; i > 0; i--) { const j = (S.rng() * (i + 1)) | 0, t = order[i]; order[i] = order[j]; order[j] = t; }
+    for (let r = 0; r < 6; r++) {
+      const want = per + (order.indexOf(r) < extra ? 1 : 0);
+      for (let placed = 0, tries = 0; placed < want && tries < 80; tries++) {
+        const p = randPos(P.owned[r]), x = p.x, y = p.y;
+        if (!farFromObstacles(x, y, 44) || !farFromTeams(x, y, SP.campClearOfStarts)) continue;
+        let ok = true; for (const cp of S.camps) if ((cp.x - x) * (cp.x - x) + (cp.y - y) * (cp.y - y) < SP.campGap * SP.campGap) { ok = false; break; }
+        if (!ok) continue;
+        spawnCamp(x, y, SP.campMin + ((S.rng() * (SP.campMax - SP.campMin + 1)) | 0)); placed++;
+      }
     }
-    // power-ups
+    // power-ups on contested ground (two spawns about equally far by path)
     for (let i = 0; i < cfg.powerups.count; i++) S.powerups.push(newPowerup(true));
-    // decals (dressing only) and dirt trails between neighbouring camps
-    for (let i = 0; i < cfg.world.decals; i++) { const p = randPos(20); S.decals.push({ x: p.x, y: p.y, k: (S.rng() * S.spr.decals.length) | 0 }); }
+    // decals (dressing only) and dirt trails between neighbouring camps: both are baked into the ground chunks
+    for (let i = 0; i < cfg.world.decals; i++) { const c = P.walkable[(S.rng() * P.walkable.length) | 0]; S.decals.push({ x: ((c % N) + S.rng()) * cell, y: (((c / N) | 0) + S.rng()) * cell, k: (S.rng() * S.spr.decals.length) | 0 }); }
     for (let i = 0; i < S.camps.length; i++) {
       const a = S.camps[i]; const near = [];
       for (let j = 0; j < S.camps.length; j++) { if (i === j) continue; const b = S.camps[j]; const d = Math.hypot(a.x - b.x, a.y - b.y); if (d < cfg.world.trailDist) near.push([d, j]); }
@@ -161,13 +227,16 @@
       for (let k = 0; k < Math.min(2, near.length); k++) {
         const j = near[k][1]; if (j < i) continue; const b = S.camps[j];
         const mx = (a.x + b.x) / 2 + (S.rng() - 0.5) * 120, my = (a.y + b.y) / 2 + (S.rng() - 0.5) * 120;
-        S.trails.push({ x0: a.x, y0: a.y, cx: mx, cy: my, x1: b.x, y1: b.y, minX: Math.min(a.x, b.x, mx) - 12, maxX: Math.max(a.x, b.x, mx) + 12, minY: Math.min(a.y, b.y, my) - 12, maxY: Math.max(a.y, b.y, my) + 12 });
+        let clear = true; for (let q = 1; q < 12 && clear; q++) { const t = q / 12, u = 1 - t; if (!T.walkable(u * u * a.x + 2 * u * t * mx + t * t * b.x, u * u * a.y + 2 * u * t * my + t * t * b.y)) clear = false; }
+        if (clear) S.trails.push({ x0: a.x, y0: a.y, cx: mx, cy: my, x1: b.x, y1: b.y, minX: Math.min(a.x, b.x, mx) - 12, maxX: Math.max(a.x, b.x, mx) + 12, minY: Math.min(a.y, b.y, my) - 12, maxY: Math.max(a.y, b.y, my) + 12 });
       }
     }
 
     recount();
+    for (let i = 1; i < S.teams.length; i++) { const t = S.teams[i]; t.pcx = t.cx; t.pcy = t.cy; }
     S.cam.x = S.teams[1].cx; S.cam.y = S.teams[1].cy;
     S.teams[1].tx = S.teams[1].cx; S.teams[1].ty = S.teams[1].cy;
+    if (!sandbox) { groundInvalidate(m); minimapBake(); }
     buildTeamChips();
     if (!S.attract) showHint(S.input.touch ? "Touch and drag anywhere: the swarm walks the way you drag" : "Walk into grey peasants to recruit them", 4);
   }
@@ -178,9 +247,9 @@
     let r = S.rng() * tot; for (const k of keys) { r -= w[k]; if (r <= 0) return k; } return keys[0];
   }
   function newPowerup(initial) {
-    let p, n = 0;
-    do { p = randPos(90); n++; } while (n < 60 && (!farFromObstacles(p.x, p.y, 30) || (initial && !farFromTeams(p.x, p.y, S.cfg.powerups.minDistFromStart))));
-    return { x: p.x, y: p.y, kind: pickKind(), alive: true, t: 0 };
+    let x = 0, y = 0;
+    for (let n = 0; n < 60; n++) { const p = randPos(S.map.place.contest); x = p.x; y = p.y; if (farFromObstacles(x, y, 30) && (!initial || farFromTeams(x, y, S.cfg.powerups.minDistFromStart))) break; }
+    return { x, y, kind: pickKind(), alive: true, t: 0 };
   }
 
   function recount() {
@@ -192,55 +261,75 @@
     }
   }
 
-  // ---------------------------------------------------------------- spatial hash
+  // ---------------------------------------------------------------- spatial hash: typed head/next lists, cells stamped per rebuild (no per-tick clears)
+  const HC = 48; let hCols = 0, hRows = 0, hHead = null, hStamp = null, hNext = new Int32Array(0), hTick = 0;
+  function hashAlloc() { hCols = Math.ceil(S.cfg.world.w / HC); hRows = Math.ceil(S.cfg.world.h / HC); hHead = new Int32Array(hCols * hRows); hStamp = new Int32Array(hCols * hRows); }
   const NEAR = new Array(6000); let nearN = 0;
+  const REC = new Array(4096); let recN = 0; // neutrals recruited this tick (converted after the steering pass)
   function rebuildGrid() {
-    const g = S.grid; for (let i = 0; i < g.length; i++) g[i].length = 0;
-    const C = S.CELL, cols = S.cols, rows = S.rows;
-    for (const a of S.agents) {
-      const cx = clamp((a.x / C) | 0, 0, cols - 1), cy = clamp((a.y / C) | 0, 0, rows - 1);
-      g[cy * cols + cx].push(a);
+    const ag = S.agents, n = ag.length;
+    if (hNext.length < n) hNext = new Int32Array(Math.max(n, S.cap) + 256); // grows once per session at most, never per frame
+    hTick++;
+    for (let i = 0; i < n; i++) {
+      const a = ag[i]; let cx = (a.x / HC) | 0, cy = (a.y / HC) | 0;
+      if (cx < 0) cx = 0; else if (cx >= hCols) cx = hCols - 1; if (cy < 0) cy = 0; else if (cy >= hRows) cy = hRows - 1;
+      const c = cy * hCols + cx; if (hStamp[c] !== hTick) { hStamp[c] = hTick; hHead[c] = -1; }
+      hNext[i] = hHead[c]; hHead[c] = i;
     }
   }
-  function gather(x, y) {
-    nearN = 0;
-    const C = S.CELL, cols = S.cols, rows = S.rows, g = S.grid;
-    const cx = (x / C) | 0, cy = (y / C) | 0;
-    for (let j = cy - 1; j <= cy + 1; j++) {
-      if (j < 0 || j >= rows) continue;
-      for (let i = cx - 1; i <= cx + 1; i++) {
-        if (i < 0 || i >= cols) continue;
-        const cell = g[j * cols + i];
-        for (let k = 0; k < cell.length && nearN < 6000; k++) NEAR[nearN++] = cell[k];
-      }
+  // every agent in the hash cells overlapping the square of half-size r around (x, y)
+  function gather(x, y, r) {
+    nearN = 0; const ag = S.agents;
+    let i0 = ((x - r) / HC) | 0, i1 = ((x + r) / HC) | 0, j0 = ((y - r) / HC) | 0, j1 = ((y + r) / HC) | 0;
+    if (i0 < 0) i0 = 0; if (j0 < 0) j0 = 0; if (i1 >= hCols) i1 = hCols - 1; if (j1 >= hRows) j1 = hRows - 1;
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      const c = j * hCols + i; if (hStamp[c] !== hTick) continue;
+      for (let k = hHead[c]; k >= 0 && nearN < 6000; k = hNext[k]) NEAR[nearN++] = ag[k];
     }
   }
   function countNear(x, y, r, team) {
-    // wide query (up to 3 cell rings) for AI/rally decisions — not per-agent
-    const C = S.CELL, cols = S.cols, rows = S.rows, g = S.grid, R = Math.ceil(r / C);
-    const cx = (x / C) | 0, cy = (y / C) | 0; let n = 0; const r2 = r * r;
-    for (let j = cy - R; j <= cy + R; j++) { if (j < 0 || j >= rows) continue;
-      for (let i = cx - R; i <= cx + R; i++) { if (i < 0 || i >= cols) continue;
-        const cell = g[j * cols + i];
-        for (let k = 0; k < cell.length; k++) { const b = cell[k]; if (b.team !== team || b.dead) continue; const dx = b.x - x, dy = b.y - y; if (dx * dx + dy * dy < r2) n++; }
-      } }
+    // wide query for AI/rally decisions — not per-agent
+    gather(x, y, r); let n = 0; const r2 = r * r;
+    for (let k = 0; k < nearN; k++) { const b = NEAR[k]; if (b.team !== team || b.dead) continue; const dx = b.x - x, dy = b.y - y; if (dx * dx + dy * dy < r2) n++; }
     return n;
+  }
+
+  // ---------------------------------------------------------------- terrain collision (SPEC-v2 §3): bilinear SDF, one push-out, wall slide
+  let GX = 0, GY = 0; // unit gradient of the last sdfGrad() sample (points away from the wall), 0,0 on a flat spot
+  function sdfGrad(x, y) {
+    const T = PS.terrain, N = T.N, cell = T.cell, s = S.map.sdf; let fx = x / cell - 0.5, fy = y / cell - 0.5;
+    if (!(fx >= 0)) fx = 0; else if (fx > N - 1.001) fx = N - 1.001; if (!(fy >= 0)) fy = 0; else if (fy > N - 1.001) fy = N - 1.001;
+    const i = fx | 0, j = fy | 0, tx = fx - i, ty = fy - j, c = j * N + i, a = s[c], b = s[c + 1], d = s[c + N], e = s[c + N + 1];
+    const gx = (1 - ty) * (b - a) + ty * (e - d), gy = (1 - tx) * (d - a) + tx * (e - b), gl = Math.sqrt(gx * gx + gy * gy);
+    if (gl > 1e-6) { GX = gx / gl; GY = gy / gl; } else { GX = 0; GY = 0; }
+    return a + (b - a) * tx + (d - a) * ty + (a - b - d + e) * tx * ty;
+  }
+  // the centre must end in a walkable cell: bilinear rounds convex corners and flattens deep in rock, so finish cell-exact
+  function resolveBlocked(a, c) {
+    const T = PS.terrain, N = T.N, cell = T.cell, terr = S.map.terr, w = T.walkT, i = c % N, j = (c / N) | 0, x0 = i * cell, y0 = j * cell;
+    let best = Infinity, nx = a.x, ny = a.y;
+    if (i > 0 && w(terr[c - 1])) { const d = a.x - x0; if (d < best) { best = d; nx = x0 - 0.5; ny = a.y; } }
+    if (i < N - 1 && w(terr[c + 1])) { const d = x0 + cell - a.x; if (d < best) { best = d; nx = x0 + cell + 0.5; ny = a.y; } }
+    if (j > 0 && w(terr[c - N])) { const d = a.y - y0; if (d < best) { best = d; nx = a.x; ny = y0 - 0.5; } }
+    if (j < N - 1 && w(terr[c + N])) { const d = y0 + cell - a.y; if (d < best) { best = d; nx = a.x; ny = y0 + cell + 0.5; } }
+    if (best === Infinity) { const s = S.map.snap[c]; if (s >= 0) { nx = ((s % N) + 0.5) * cell; ny = (((s / N) | 0) + 0.5) * cell; } }
+    a.x = nx; a.y = ny;
   }
 
   // ---------------------------------------------------------------- simulation
   function update(dt) {
     const cfg = S.cfg, A = cfg.agent, F = cfg.flock, CB = cfg.combat, W = cfg.world.w, H = cfg.world.h, D = diff();
-    S.t += dt; S.timeLeft -= dt;
+    S.t += dt; S.timeLeft -= dt; S.tick++;
     const player = S.teams[1];
     if (S.pendingEnd && S.t >= S.pendingEnd.at) { finishEnd(); return; }
     const finalPhase = S.timeLeft <= cfg.world.finalSeconds;
     if (S.attract) {
       let alive = 0; for (let i = 1; i < S.teams.length; i++) if (S.teams[i].alive) alive++;
-      if (alive <= 1 || S.timeLeft <= 0) { newGame(true); return; }
+      if (alive <= 1 || S.timeLeft <= 0) { newGame(true, { keepMap: true }); return; } // attract mode keeps one map per title visit
     }
     if (finalPhase && !S.finalCalled) { S.finalCalled = true; banner("LAST MINUTE: every mob turns on the biggest", "#FFE49A", 3.5); PS.audio.bell(); showHint("Be the biggest swarm when the bell rings", 4); for (let i = 2; i < S.teams.length; i++) S.teams[i].thinkT = 0; }
 
-    // player target
+    // player target (direct seek in M1: a target over rock just leans the swarm on the wall; routing is M2)
     const inp = S.input;
     let kx = 0, ky = 0;
     if (inp.keys.w || inp.keys.ArrowUp) ky -= 1; if (inp.keys.s || inp.keys.ArrowDown) ky += 1;
@@ -256,34 +345,44 @@
     else if (kx || ky) { const l = Math.hypot(kx, ky); player.tx = clamp(player.cx + (kx / l) * 170, 10, W - 10); player.ty = clamp(player.cy + (ky / l) * 170, 10, H - 10); }
     else if (inp.active) { const w = screenToWorld(inp.px, inp.py); player.tx = clamp(w.x, 40, W - 40); player.ty = clamp(w.y, 40, H - 40); }
 
-    // AI think
+    // AI think (thinkT counts sim seconds of fixed 1/60 ticks, so it is tick-exact)
     for (let i = S.attract ? 1 : 2; i < S.teams.length; i++) { const t = S.teams[i]; if (!t.alive) continue; t.thinkT -= dt; if (t.thinkT <= 0) { t.thinkT = S.attract ? cfg.ai.think : D.think; aiThink(t); } }
 
-    // buffs tick, engagement reset
-    for (let i = 1; i < S.teams.length; i++) { const t = S.teams[i]; for (const k in t.buffs) if (t.buffs[k] > 0) t.buffs[k] -= dt; for (let j = 0; j < 5; j++) t.eng[j] = 0; }
+    // buffs tick, engagement reset, this tick's team speed (size curve, AI pace, speed buff)
+    for (let i = 1; i < S.teams.length; i++) {
+      const t = S.teams[i]; for (const k in t.buffs) if (t.buffs[k] > 0) t.buffs[k] -= dt; for (let j = 0; j < 9; j++) t.eng[j] = 0;
+      let s = A.speed * sizeSpeed(t.count) * t.speedMod; if (t.ai && !S.attract) s *= D.aiSpeed; if (t.buffs.speed > 0) s *= cfg.powerups.speedMult; t.spd = s;
+    }
 
     rebuildGrid();
 
-    // per-agent steering + combat
-    const sepR = F.sepRadius, sepR2 = sepR * sepR, engR2 = A.engageRadius * A.engageRadius, atkR2 = A.attackRange * A.attackRange;
-    const huddleP = inp.huddle;
-    for (let idx = 0; idx < S.agents.length; idx++) {
+    // per-agent steering + combat + terrain
+    const sepR = F.sepRadius, engR2 = A.engageRadius * A.engageRadius, atkR2 = A.attackRange * A.attackRange, rr2 = A.recruitRadius * A.recruitRadius;
+    const eSep = sepR * F.enemySepMult, eSep2 = eSep * eSep, hard = F.enemyHardRadius, hard2 = hard * hard;
+    const qTeam = Math.max(A.engageRadius, eSep, sepR), qNeutral = Math.max(sepR, A.recruitRadius); // radius-limited neighbour scans
+    const huddleP = inp.huddle, kLerp = 1 - Math.exp(-F.steerLerp * dt);
+    const T = PS.terrain, TN = T.N, TC = T.cell, W1 = W - 0.001, terr = S.map.terr, sdfA = S.map.sdf, far = 2 * TC, slideM = cfg.flow.slideMargin, fordK = cfg.terrain.fordSpeed;
+    const O = S.obs, OB = S.obstacles;
+    recN = 0;
+    const nAg = S.agents.length;
+    for (let idx = 0; idx < nAg; idx++) {
       const a = S.agents[idx];
       if (a.dead) continue;
       a.ph += dt * 9; if (a.fl > 0) a.fl -= dt; if (a.lunge > 0) a.lunge -= dt;
       if (a.pop < 0.35) { const was = a.pop; a.pop += dt; if (was < 0 && a.pop >= 0 && onScreen(a.x, a.y)) { const tc = S.teams[a.team]; if (tc) { particles.burst(a.x, a.y - 8, tc.color, 6, 80, 0.45, 3, 200); particles.ring(a.x, a.y - 8, tc.color, 4, 18, 0.3); } } }
-      gather(a.x, a.y);
+      const team = a.team ? S.teams[a.team] : null;
+      gather(a.x, a.y, team ? qTeam : qNeutral);
       let sx = 0, sy = 0; // separation accumulator
       let dvx = 0, dvy = 0; // desired velocity
-      const team = a.team ? S.teams[a.team] : null;
       const hud = team && team.isPlayer && huddleP && !S.attract;
       const mySep = hud ? F.huddleSepRadius : sepR, mySep2 = mySep * mySep;
-      const eSep = sepR * F.enemySepMult, eSep2 = eSep * eSep, hard = F.enemyHardRadius, hard2 = hard * hard;
-      let speed = A.speed;
-      if (team) { speed *= team.speedMod; if (team.ai && !S.attract) speed *= D.aiSpeed; if (team.buffs.speed > 0) speed *= cfg.powerups.speedMult; if (hud) speed *= F.huddleSpeedMult; }
+      const c0 = ((a.y < 0 ? 0 : a.y > W1 ? W1 : a.y) / TC | 0) * TN + ((a.x < 0 ? 0 : a.x > W1 ? W1 : a.x) / TC | 0);
+      let speed = team ? team.spd : A.speed;
+      if (hud) speed *= F.huddleSpeedMult;
+      if (terr[c0] === 3) speed *= fordK;
 
-      // find/keep combat target + separation in one pass
-      let best = null, bestD2 = engR2;
+      // find/keep combat target + separation (+ a neutral's nearest recruiter) in one pass
+      let best = null, bestD2 = engR2, recT = 0, recD2 = rr2;
       if (a.tgt && (a.tgt.dead || a.tgt.team === a.team || a.tgt.team === 0)) a.tgt = null;
       if (a.tgt) { const dx = a.tgt.x - a.x, dy = a.tgt.y - a.y; const d2 = dx * dx + dy * dy; if (d2 < engR2 * 4) { best = a.tgt; bestD2 = d2; } else a.tgt = null; }
       for (let k = 0; k < nearN; k++) {
@@ -295,15 +394,17 @@
           const d = Math.sqrt(d2); const f = (1 - d / sR) / d; sx += dx * f; sy += dy * f;
           if (enemy && d2 < hard2) { const push = (hard - d) * 0.5; a.x += (dx / d) * push; a.y += (dy / d) * push; }
         }
-        if (team && b.team !== 0 && b.team !== a.team && d2 < bestD2 && !best) { best = b; bestD2 = d2; }
-        else if (team && b.team !== 0 && b.team !== a.team && d2 < bestD2 && best && d2 < bestD2 * 0.5) { best = b; bestD2 = d2; }
+        if (!team) { if (b.team !== 0 && d2 < recD2) { recD2 = d2; recT = b.team; } continue; }
+        if (b.team !== 0 && b.team !== a.team && d2 < bestD2 && !best) { best = b; bestD2 = d2; }
+        else if (b.team !== 0 && b.team !== a.team && d2 < bestD2 && best && d2 < bestD2 * 0.5) { best = b; bestD2 = d2; }
       }
+      if (recT && recN < REC.length) { a.rec = recT; REC[recN++] = a; }
 
       if (team) {
         // seek team target with arrive
         let dx = team.tx - a.x, dy = team.ty - a.y, d = Math.sqrt(dx * dx + dy * dy);
         let seekX = 0, seekY = 0;
-        if (d > 2) { let sp = speed; if (d < F.arrive) sp *= d / F.arrive; seekX = (dx / d) * sp; seekY = (dy / d) * sp; }
+        if (d > 2) { let sp = speed * F.seek; if (d < F.arrive) sp *= d / F.arrive; seekX = (dx / d) * sp; seekY = (dy / d) * sp; }
         // cohesion toward centroid
         let cohX = 0, cohY = 0;
         const cdx = team.cx - a.x, cdy = team.cy - a.y, cd = Math.sqrt(cdx * cdx + cdy * cdy);
@@ -321,7 +422,7 @@
           if (bestD2 < atkR2) {
             a.atk -= dt;
             if (a.atk <= 0) {
-              a.atk = A.attackInterval * (0.8 + Math.random() * 0.4); a.lunge = 0.18;
+              a.atk = A.attackInterval * (0.8 + S.rng() * 0.4); a.lunge = 0.18;
               const tt = S.teams[best.team];
               let dmg = A.damage; if (team.buffs.frenzy > 0) dmg *= cfg.powerups.frenzyMult; if (tt.buffs.armor > 0) dmg *= cfg.powerups.armorMult;
               best.hp -= dmg; best.fl = 0.16;
@@ -336,44 +437,51 @@
       } else {
         // neutral: idle wander around home camp
         let dx = a.wx - a.x, dy = a.wy - a.y, d = Math.sqrt(dx * dx + dy * dy);
-        if (d < 3) { if (Math.random() < 0.02) { const ang = Math.random() * Math.PI * 2, r = Math.random() * F.neutralWanderRadius; a.wx = a.hx + Math.cos(ang) * r; a.wy = a.hy + Math.sin(ang) * r; } }
+        if (d < 3) { if (S.rng() < 0.02) { const ang = S.rng() * Math.PI * 2, r = S.rng() * F.neutralWanderRadius; a.wx = a.hx + Math.cos(ang) * r; a.wy = a.hy + Math.sin(ang) * r; } }
         else { dvx = (dx / d) * speed * F.neutralWander; dvy = (dy / d) * speed * F.neutralWander; }
       }
       // separation (velocity-space)
       const sl = Math.sqrt(sx * sx + sy * sy);
       if (sl > 0) { const sw = speed * F.separation; dvx += (sx / sl) * Math.min(sl * 40, 1) * sw; dvy += (sy / sl) * Math.min(sl * 40, 1) * sw; }
-      // limit + integrate
+      // limit + steer
       const dl = Math.sqrt(dvx * dvx + dvy * dvy); const maxV = speed * (team ? 1.15 : 0.5);
       if (dl > maxV) { dvx *= maxV / dl; dvy *= maxV / dl; }
-      const k = 1 - Math.exp(-F.steerLerp * dt);
-      a.vx += (dvx - a.vx) * k; a.vy += (dvy - a.vy) * k;
+      a.vx += (dvx - a.vx) * kLerp; a.vy += (dvy - a.vy) * kLerp;
+      // wall slide: within r + slideMargin of a wall, drop the velocity component pointing into it (skipped when the cell is > 2 cells clear)
+      if (sdfA[c0] <= far && sdfGrad(a.x, a.y) < a.r + slideM) { const vn = a.vx * GX + a.vy * GY; if (vn < 0) { a.vx -= vn * GX; a.vy -= vn * GY; } }
       a.x += a.vx * dt; a.y += a.vy * dt;
       if (Math.abs(a.vx) > 8) a.face = a.vx > 0 ? 1 : -1;
-      // obstacles
-      for (let o = 0; o < S.obstacles.length; o++) {
-        const ob = S.obstacles[o]; const ox = a.x - ob.x, oy = a.y - ob.y; const rr = ob.r + a.r; const d2 = ox * ox + oy * oy;
-        if (d2 < rr * rr && d2 > 0.001) { const d = Math.sqrt(d2); a.x = ob.x + (ox / d) * rr; a.y = ob.y + (oy / d) * rr; }
+      let c1 = ((a.y < 0 ? 0 : a.y > W1 ? W1 : a.y) / TC | 0) * TN + ((a.x < 0 ? 0 : a.x > W1 ? W1 : a.x) / TC | 0);
+      // trees and rocks, bucketed: only agents whose cell has one within a cell check the 3x3 block
+      if (O.near[c1]) {
+        const ci = c1 % TN, cj = (c1 / TN) | 0;
+        for (let j = cj - 1; j <= cj + 1; j++) for (let i = ci - 1; i <= ci + 1; i++) {
+          if (i < 0 || j < 0 || i >= TN || j >= TN) continue; const cc = j * TN + i;
+          for (let k = O.st[cc]; k < O.st[cc + 1]; k++) {
+            const ob = OB[O.list[k]]; const ox = a.x - ob.x, oy = a.y - ob.y; const rr = ob.r + a.r; const d2 = ox * ox + oy * oy;
+            if (d2 < rr * rr && d2 > 0.001) { const d = Math.sqrt(d2); a.x = ob.x + (ox / d) * rr; a.y = ob.y + (oy / d) * rr; }
+          }
+        }
+        c1 = ((a.y < 0 ? 0 : a.y > W1 ? W1 : a.y) / TC | 0) * TN + ((a.x < 0 ? 0 : a.x > W1 ? W1 : a.x) / TC | 0);
       }
-      if (a.x < 8) a.x = 8; else if (a.x > W - 8) a.x = W - 8;
-      if (a.y < 8) a.y = 8; else if (a.y > H - 8) a.y = H - 8;
+      // terrain push-out last, after every other position push: one push along the SDF gradient, then the cell-exact guarantee
+      if (sdfA[c1] <= far) {
+        const s = sdfGrad(a.x, a.y);
+        if (s < a.r && (GX || GY)) { a.x += GX * (a.r - s); a.y += GY * (a.r - s); c1 = ((a.y < 0 ? 0 : a.y > W1 ? W1 : a.y) / TC | 0) * TN + ((a.x < 0 ? 0 : a.x > W1 ? W1 : a.x) / TC | 0); }
+        const tv = terr[c1]; if (tv === 1 || tv === 2) resolveBlocked(a, c1);
+      }
     }
 
-    // recruitment: neutrals look for the nearest team agent within recruitRadius
-    const rr2 = A.recruitRadius * A.recruitRadius;
-    for (let idx = 0; idx < S.agents.length; idx++) {
-      const a = S.agents[idx]; if (a.dead || a.team !== 0) continue;
-      gather(a.x, a.y);
-      let bt = 0, bd = rr2;
-      for (let k = 0; k < nearN; k++) { const b = NEAR[k]; if (b.team === 0 || b.dead) continue; const dx = a.x - b.x, dy = a.y - b.y; const d2 = dx * dx + dy * dy; if (d2 < bd) { bd = d2; bt = b.team; } }
-      if (bt) convert(a, bt, false);
-    }
+    // recruitment: each neutral found its nearest team agent within recruitRadius during its own neighbour pass
+    for (let i = 0; i < recN; i++) { const a = REC[i]; REC[i] = null; if (!a.dead && a.team === 0 && a.rec) convert(a, a.rec, false); a.rec = 0; }
+    recN = 0;
 
     // power-up pickup
-    const pr2 = cfg.powerups.pickupRadius * cfg.powerups.pickupRadius;
+    const pr = cfg.powerups.pickupRadius, pr2 = pr * pr;
     for (const p of S.powerups) {
       if (!p.alive) { p.t -= dt; if (p.t <= 0) { const np = newPowerup(false); p.x = np.x; p.y = np.y; p.kind = np.kind; p.alive = true; } continue; }
       p.t += dt;
-      gather(p.x, p.y);
+      gather(p.x, p.y, pr);
       for (let k = 0; k < nearN; k++) { const b = NEAR[k]; if (b.team === 0 || b.dead) continue; const dx = b.x - p.x, dy = b.y - p.y; if (dx * dx + dy * dy < pr2) { pickup(p, b.team); break; } }
     }
 
@@ -382,11 +490,17 @@
     for (const a of S.agents) if (a.team === 0 && !a.dead && a.camp) a.camp.n++;
     for (const c of S.camps) { if (c.n === 0 || !onScreen(c.x, c.y)) continue; c.smokeT -= dt; if (c.smokeT <= 0) { c.smokeT = 0.5 + Math.random() * 0.5; particles.smoke(c.x + (Math.random() - 0.5) * 3, c.y - 6); } }
 
-    // remove dead
-    let any = false; for (const a of S.agents) if (a.dead) { any = true; break; }
-    if (any) S.agents = S.agents.filter((a) => !a.dead);
+    // remove dead: swap-remove, no new array
+    const ag = S.agents; for (let i = 0; i < ag.length;) { if (ag[i].dead) { ag[i] = ag[ag.length - 1]; ag.pop(); } else i++; }
 
     recount();
+    // centroid velocity, smoothed (the AI hunt lead reads this, never the prey's target)
+    const vk = 1 - Math.exp(-dt / cfg.ai.leadSmooth), vmax = 2 * A.speed;
+    for (let i = 1; i < S.teams.length; i++) {
+      const t = S.teams[i];
+      if (t.count > 0) { let vx = (t.cx - t.pcx) / dt, vy = (t.cy - t.pcy) / dt; const l = Math.sqrt(vx * vx + vy * vy); if (l > vmax) { vx *= vmax / l; vy *= vmax / l; } t.vx += (vx - t.vx) * vk; t.vy += (vy - t.vy) * vk; }
+      t.pcx = t.cx; t.pcy = t.cy;
+    }
 
     // engagement timers + rout resolution
     S.engagedNow = false;
@@ -406,25 +520,36 @@
     // eliminations
     for (let i = 1; i < S.teams.length; i++) { const t = S.teams[i]; if (t.alive && t.count === 0) eliminate(t); }
 
-    // trickle spawns
+    // trickle: every trickleEvery, trickleCamps camps; each is biased (underdogBias) to one of the two smallest living swarms and lands
+    // trickleBeyond past that swarm's sight radius, never within minTrickleDistFromTeams of another swarm; off in the finale
     S.trickleT += dt;
     if (!finalPhase && S.trickleT >= cfg.spawn.trickleEvery) {
       S.trickleT = 0;
+      const SP = cfg.spawn, FG = cfg.fog, md2 = SP.minTrickleDistFromTeams * SP.minTrickleDistFromTeams;
       let neutrals = 0; for (const a of S.agents) if (a.team === 0) neutrals++;
-      for (let rep = 0; rep < (cfg.spawn.trickleCamps || 1); rep++) if (neutrals < cfg.spawn.trickleCap && S.agents.length < cfg.spawn.agentCap) {
-        let under = null; for (let i = 1; i < S.teams.length; i++) { const t = S.teams[i]; if (t.alive && (!under || t.count < under.count)) under = t; }
-        const favour = under && S.rng() < cfg.spawn.underdogBias;
+      let s1 = null, s2 = null;
+      for (let i = 1; i < S.teams.length; i++) { const t = S.teams[i]; if (!t.alive) continue; if (!s1 || t.count < s1.count) { s2 = s1; s1 = t; } else if (!s2 || t.count < s2.count) s2 = t; }
+      for (let rep = 0; rep < SP.trickleCamps; rep++) {
+        const nn = SP.campMin + ((S.rng() * (SP.campMax - SP.campMin + 1)) | 0); // size first: the cap check needs it (B0 bug 1)
+        if (neutrals + nn > SP.trickleCap || S.agents.length + nn > S.cap) break;
+        const pool = rep % 2 === 0 ? s1 : s2 || s1, fav = pool && S.rng() < SP.underdogBias ? pool : null;
         for (let n = 0; n < 40; n++) {
-          let p;
-          if (favour) { const ang = S.rng() * Math.PI * 2, d = 340 + S.rng() * 320; p = { x: clamp(under.cx + Math.cos(ang) * d, 70, W - 70), y: clamp(under.cy + Math.sin(ang) * d, 70, H - 70) }; }
-          else p = randPos(70);
-          if (!farFromObstacles(p.x, p.y, 44)) continue;
-          let ok = true; for (let i = 1; i < S.teams.length; i++) { const t = S.teams[i]; if (!t.alive || t === under && favour) continue; const dx = t.cx - p.x, dy = t.cy - p.y; if (dx * dx + dy * dy < cfg.spawn.minTrickleDistFromTeams * cfg.spawn.minTrickleDistFromTeams) { ok = false; break; } }
+          let x, y;
+          if (fav) { const R = FG.sight0 + FG.sightK * Math.sqrt(fav.count), ang = S.rng() * Math.PI * 2, d = R + SP.trickleBeyond[0] + S.rng() * (SP.trickleBeyond[1] - SP.trickleBeyond[0]); x = fav.cx + Math.cos(ang) * d; y = fav.cy + Math.sin(ang) * d; }
+          else { const p = randPos(); x = p.x; y = p.y; }
+          if (!placeOk(x, y, 2, 44)) continue;
+          let ok = true; for (let i = 1; i < S.teams.length; i++) { const t = S.teams[i]; if (!t.alive || t === fav) continue; const dx = t.cx - x, dy = t.cy - y; if (dx * dx + dy * dy < md2) { ok = false; break; } }
           if (!ok) continue;
-          const nn = cfg.spawn.campMin + ((S.rng() * (cfg.spawn.campMax - cfg.spawn.campMin + 1)) | 0); spawnCamp(p.x, p.y, nn); neutrals += nn; break;
+          spawnCamp(x, y, nn); neutrals += nn; break;
         }
       }
     }
+    // debug asserts (always counted, cheap): no agent centre in rock or deep water, total under the cap
+    for (let i = 0; i < S.agents.length; i++) {
+      const a = S.agents[i]; const c = ((a.y < 0 ? 0 : a.y > W1 ? W1 : a.y) / TC | 0) * TN + ((a.x < 0 ? 0 : a.x > W1 ? W1 : a.x) / TC | 0), tv = terr[c];
+      if (tv === 1 || tv === 2 || a.x < 0 || a.y < 0 || a.x > W || a.y > H) { S.dbg.terrainBad++; if (!S.dbg.firstBad) S.dbg.firstBad = { t: +S.t.toFixed(2), x: +a.x.toFixed(1), y: +a.y.toFixed(1), team: a.team, terr: tv }; }
+    }
+    if (S.agents.length > S.cap) S.dbg.capOver++;
 
     // drum
     if (S.engagedNow && !PS.audio.drumOn()) PS.audio.startDrum(); else if (!S.engagedNow && PS.audio.drumOn()) PS.audio.stopDrum();
@@ -438,7 +563,7 @@
 
     // banners: one at a time, queued
     if (S.banners.length) { S.banners[0].life -= dt; if (S.banners[0].life <= 0) S.banners.shift(); }
-    if (S.hintT > 0) { S.hintT -= dt; if (S.hintT <= 0 || S.engagedNow) { S.hintT = 0; $("hint").classList.remove("show"); } }
+    if (S.hintT > 0) { S.hintT -= dt; if (S.hintT <= 0 || S.engagedNow) { S.hintT = 0; if (!sandbox) $("hint").classList.remove("show"); } }
 
     if (S.attract) return;
     // stats + hints
@@ -462,7 +587,7 @@
 
   function convert(a, team, absorbed) {
     const from = a.team; a.team = team; a.hp = S.cfg.agent.hp; a.tgt = null; a.fight = false; a.fl = absorbed ? 0 : 0.2;
-    a.pop = absorbed ? -Math.random() * 0.45 : 0;
+    a.pop = absorbed ? -S.rng() * 0.45 : 0;
     const t = S.teams[team];
     if (onScreen(a.x, a.y)) {
       if (!absorbed) particles.burst(a.x, a.y - 6, t.color, 5, 80, 0.45, 3, 220);
@@ -480,7 +605,7 @@
   function rout(loser, winner) {
     const n = loser.count; let flipped = 0;
     for (const a of S.agents) if (a.team === loser.id && !a.dead) { convert(a, winner.id, true); flipped++; }
-    for (let j = 0; j < 5; j++) { loser.engT[j] = 0; winner.engT[j] = 0; loser.engStart[j] = 0; winner.engStart[j] = 0; }
+    for (let j = 0; j < 9; j++) { loser.engT[j] = 0; winner.engT[j] = 0; loser.engStart[j] = 0; winner.engStart[j] = 0; }
     if (winner.isPlayer) { S.stats.routs++; PS.audio.rout(true); banner(loser.name.toUpperCase() + " ROUTED!  +" + flipped + " join you", winner.color, 2.6); S.shake = 0.35; }
     else if (loser.isPlayer) { S._routedBy = winner.name; PS.audio.rout(false); S.shake = 0.5; }
     else { banner(loser.name.toUpperCase() + " routed by " + winner.name, winner.color, 2); if (onScreen(loser.cx, loser.cy)) PS.audio.rout(false); }
@@ -509,6 +634,8 @@
   }
 
   // ---------------------------------------------------------------- AI
+  // every target an AI picks is snapped to walkable ground (nearest walkable cell; the ray-cast rule is M2)
+  function aim(t, x, y) { const p = PS.terrain.snapXY(x, y); t.tx = p.x; t.ty = p.y; }
   function aiThink(t) {
     const cfg = S.cfg, P = t.ai, W = cfg.world.w, H = cfg.world.h;
     const final = S.timeLeft <= cfg.world.finalSeconds;
@@ -531,7 +658,7 @@
     }
     if (threat && threatD2 < cfg.ai.corneredDist * cfg.ai.corneredDist && t.count >= 3) {
       // caught: turn and fight rather than drag a hopeless chase across the map
-      t.tx = threat.cx; t.ty = threat.cy; t.state = "hunt"; t.speedMod = cfg.ai.huntSpeed; return;
+      aim(t, threat.cx, threat.cy); t.state = "hunt"; t.speedMod = cfg.ai.huntSpeed; return;
     }
     if (threat) {
       t.speedMod = cfg.ai.fleeSpeed;
@@ -546,19 +673,19 @@
         const sc = (0.5 + dot) / (nd + 150); if (sc > bs) { bs = sc; bx = a.hx; by = a.hy; }
       }
       if (bs > 0) { tx = bx; ty = by; }
-      // if fleeing into a wall, slide along it
+      // if fleeing into the map edge, slide along it (kept from v1; M2 replaces flight with a Dijkstra flee map)
       if (tx < 60 || tx > W - 60) { tx = clamp(tx, 60, W - 60); ty += (dy >= 0 ? 1 : -1) * 200; }
       if (ty < 60 || ty > H - 60) { ty = clamp(ty, 60, H - 60); tx += (dx >= 0 ? 1 : -1) * 200; }
-      t.tx = clamp(tx, 40, W - 40); t.ty = clamp(ty, 40, H - 40); t.state = "flee"; return;
+      aim(t, clamp(tx, 40, W - 40), clamp(ty, 40, H - 40)); t.state = "flee"; return;
     }
     if (prey) {
       if (t.state !== "hunt") t.huntStart = S.t;
-      let engagedAny = 0; for (let j = 1; j < 5; j++) engagedAny += t.eng[j];
+      let engagedAny = 0; for (let j = 1; j < 9; j++) engagedAny += t.eng[j];
       if (!final && S.t - t.huntStart > cfg.ai.huntTimeout && engagedAny === 0) { t.huntCooldown = S.t + cfg.ai.huntCooldown; prey = null; }
     }
     if (prey) {
-      // lead the target a bit
-      t.tx = clamp(prey.cx + (prey.tx - prey.cx) * 0.3, 20, W - 20); t.ty = clamp(prey.cy + (prey.ty - prey.cy) * 0.3, 20, H - 20); t.state = "hunt"; t.speedMod = cfg.ai.huntSpeed; return;
+      // lead the prey by its centroid velocity (never its target: for the player that is the cursor)
+      aim(t, clamp(prey.cx + prey.vx * cfg.ai.leadTime, 20, W - 20), clamp(prey.cy + prey.vy * cfg.ai.leadTime, 20, H - 20)); t.state = "hunt"; t.speedMod = cfg.ai.huntSpeed; return;
     }
     // roam: best neutral cluster or power-up by value/distance
     let best = null, bestS = 0;
@@ -576,8 +703,8 @@
       const sc = P.powerBias * cfg.ai.powerScore / (d + 120);
       if (sc > bestS) { bestS = sc; tx = p.x; ty = p.y; }
     }
-    if (!best && bestS === 0) { const p = randPos(200); tx = p.x; ty = p.y; }
-    t.tx = tx; t.ty = ty; t.state = "roam"; t.speedMod = 1;
+    if (!best && bestS === 0) { const p = randPos(); tx = p.x; ty = p.y; }
+    aim(t, tx, ty); t.state = "roam"; t.speedMod = 1;
   }
 
   // ---------------------------------------------------------------- helpers
@@ -608,58 +735,132 @@
     }
   }
 
-  // ---------------------------------------------------------------- render
+  // ---------------------------------------------------------------- frame loop: fixed 1/60 s ticks through an accumulator
   let lastFrame = 0, rafPending = false;
   function schedule() { if (rafPending) return; rafPending = true; requestAnimationFrame((t) => { rafPending = false; frame(t, false); }); }
   function frame(now, fromFallback) {
     if (!fromFallback || !rafPending) schedule();
     let raw = (now - lastFrame) / 1000 || 0; lastFrame = now;
+    if (raw < 0) raw = 0; // resume() and the fallback clock can hand in an earlier stamp (B0 bug 2)
     const wall = performance.now(); S.frameN++;
     if (wall - S.fpsT0 >= 500) { S.fps = Math.round((S.frameN * 1000) / (wall - S.fpsT0)); S.fpsT0 = wall; S.frameN = 0; }
-    // sub-step big gaps (hidden tab fallback clock) so sim time tracks wall time up to ~130ms/tick
-    const sub = Math.min(8, Math.max(1, Math.ceil(raw / (1 / 60))));
-    let dt = Math.min(1 / 60, raw / sub);
     if (S.mode === "play" || (S.mode === "title" && S.attract)) {
-      for (let k = 0; k < sub; k++) { for (let i = 0; i < (S.attract ? 1 : S.pace); i++) update(dt); particles.update(dt); floaters.update(dt); }
+      // live play catches up at most 2 ticks per frame and drops the rest; the hidden-tab fallback clock may run 8
+      S.acc += raw; let n = Math.floor(S.acc / DT + 1e-6); const cap = fromFallback ? 8 : 2;
+      if (n > cap) { n = cap; S.acc = 0; } else S.acc = Math.max(0, S.acc - n * DT);
+      const reps = S.attract ? 1 : S.pace;
+      for (let k = 0; k < n; k++) for (let i = 0; i < reps; i++) { if (S.mode === "play" || (S.mode === "title" && S.attract)) update(DT); }
+      const jt = Math.min(raw, 0.1); particles.update(jt); floaters.update(jt); // juice runs on frame time (studio lesson 2)
       if (S.mode === "play") updateHUD();
-    }
+    } else S.acc = 0;
     draw();
   }
 
+  // ---------------------------------------------------------------- ground chunk cache (SPEC-v2 §2): 512 world px chunks at 256 art px, drawn at 2x
+  // Static ground (grass tiles, trails, decals, terrain) is baked per chunk; chunks with water get a second baked frame, swapped every
+  // waterFrameMs. Visible dirty chunks bake at once, the rest one per frame. Camp dirt, props and power-ups stay sprites.
+  const TPAL = { top: "#8E8A7A", topLit: "#9A9686", face: "#615C50", base: "#2E2B25", water: ["#4A8CCB", "#3A74B2", "#2C5C93"], glint: "#A8D2F2",
+    sand: "#C9B27C", sandD: "#B39A63", stone: "#7B776C", plank: "#8E6738", plankD: "#5E4222", beyond: "#8E8A7A" };
+  function ground(m) {
+    if (m.chunks) return m.chunks;
+    const cfg = S.cfg.terrain, n = Math.ceil(S.cfg.world.w / cfg.chunk), N = m.N, per = cfg.chunk / m.cell, water = new Uint8Array(n * n);
+    for (let c = 0; c < N * N; c++) if (m.terr[c] === 2 || m.terr[c] === 3) { const i = ((c % N) / per) | 0, j = (((c / N) | 0) / per) | 0; water[j * n + i] = 1; }
+    return (m.chunks = { n, cvA: new Array(n * n).fill(null), cvB: new Array(n * n).fill(null), water, dirty: new Uint8Array(n * n).fill(1), left: n * n, scan: 0 });
+  }
+  function groundInvalidate(m) { const G = ground(m); G.dirty.fill(1); G.left = G.n * G.n; }
+  function releaseGround(m) { const G = m.chunks; if (!G) return; for (const cv of G.cvA.concat(G.cvB)) if (cv) { cv.width = 0; cv.height = 0; } m.chunks = null; }
+  function mkCanvas(w, h) { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; }
+  function bakeChunk(m, G, ci) {
+    const AP = S.cfg.terrain.chunkArt;
+    if (!G.cvA[ci]) G.cvA[ci] = mkCanvas(AP, AP);
+    paintChunk(G.cvA[ci], m, G, ci, 0);
+    if (G.water[ci]) { if (!G.cvB[ci]) G.cvB[ci] = mkCanvas(AP, AP); paintChunk(G.cvB[ci], m, G, ci, 1); }
+    if (G.dirty[ci]) { G.dirty[ci] = 0; G.left--; }
+  }
+  function sdfM(m, x, y) { const N = m.N, cell = m.cell, s = m.sdf; let fx = x / cell - 0.5, fy = y / cell - 0.5; fx = fx < 0 ? 0 : fx > N - 1.001 ? N - 1.001 : fx; fy = fy < 0 ? 0 : fy > N - 1.001 ? N - 1.001 : fy;
+    const i = fx | 0, j = fy | 0, tx = fx - i, ty = fy - j, c = j * N + i, a = s[c], b = s[c + 1], d = s[c + N], e = s[c + N + 1]; return a + (b - a) * tx + (d - a) * ty + (a - b - d + e) * tx * ty; }
+  const hash2 = (i, j, s) => { let h = (Math.imul(i, 374761393) + Math.imul(j, 668265263) + Math.imul(s, 1442695041)) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return (h ^ (h >>> 16)) >>> 0; };
+  function paintChunk(cv, m, G, ci, frame) {
+    const cfg = S.cfg, spr = S.spr, CH = cfg.terrain.chunk, sc = cfg.terrain.chunkArt / CH, n = G.n, wx = (ci % n) * CH, wy = ((ci / n) | 0) * CH;
+    const g = cv.getContext("2d"), N = m.N, cell = m.cell, terr = m.terr;
+    g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height);
+    g.setTransform(sc, 0, 0, sc, -wx * sc, -wy * sc); g.imageSmoothingEnabled = false;
+    // grass: v1's three tile variants, same per-tile hash as v1's per-frame tiles
+    const T = cfg.world.tile;
+    for (let j = Math.floor(wy / T); j < Math.ceil((wy + CH) / T); j++) for (let i = Math.floor(wx / T); i < Math.ceil((wx + CH) / T); i++) {
+      let h = (i * 374761393 + j * 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); h = (h ^ (h >>> 16)) >>> 0; const v = h % 11;
+      g.drawImage(spr.tiles[v < 6 ? 0 : v < 10 ? 1 : 2], i * T, j * T, T, T);
+    }
+    // dirt trails between the opening camps, then decals
+    g.strokeStyle = "rgba(125,106,68,.42)"; g.lineWidth = 9; g.lineCap = "round";
+    for (const tr of S.trails) { if (tr.maxX < wx || tr.minX > wx + CH || tr.maxY < wy || tr.minY > wy + CH) continue; g.beginPath(); g.moveTo(tr.x0, tr.y0); g.quadraticCurveTo(tr.cx, tr.cy, tr.x1, tr.y1); g.stroke(); }
+    for (const d of S.decals) { if (d.x < wx - 20 || d.x > wx + CH + 20 || d.y < wy - 20 || d.y > wy + CH + 20) continue; const im = spr.decals[d.k]; g.drawImage(im, d.x - im.width / 2, d.y - im.height / 2); }
+    // terrain cells, with a one-cell apron (neighbours outside the chunk are read and painted; the canvas clips them)
+    const i0 = Math.max(0, Math.floor(wx / cell) - 1), i1 = Math.min(N - 1, Math.floor((wx + CH) / cell)), j0 = Math.max(0, Math.floor(wy / cell) - 1), j1 = Math.min(N - 1, Math.floor((wy + CH) / cell));
+    const px = 1 / sc; // one art pixel in world px
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      const c = j * N + i, t = terr[c], x = i * cell, y = j * cell;
+      if (t === 1) {
+        const south = j + 1 < N ? terr[c + N] : 1;
+        if (south !== 1) { g.fillStyle = TPAL.face; g.fillRect(x, y, cell, cell); g.fillStyle = TPAL.top; g.fillRect(x, y, cell, px * 2); g.fillStyle = TPAL.base; g.fillRect(x, y + cell - px, cell, px); }
+        else { g.fillStyle = (hash2(i, j, 3) & 7) === 0 ? TPAL.topLit : TPAL.top; g.fillRect(x, y, cell, cell); }
+      } else if (t === 2) {
+        // three tones by shore distance, sampled per 8 px block from the bilinear SDF (a 2-3 cell river has no deep cell centres)
+        for (let v = 0; v < 4; v++) for (let u = 0; u < 4; u++) { const d = -sdfM(m, x + u * 8 + 4, y + v * 8 + 4); g.fillStyle = TPAL.water[d < 9 ? 0 : d < 20 ? 1 : 2]; g.fillRect(x + u * 8, y + v * 8, 8, 8); }
+        const h = hash2(i, j, 11 + frame); if ((h & 3) === 0) { g.fillStyle = TPAL.glint; g.fillRect(x + ((h >>> 4) % 24), y + ((h >>> 9) % 26), px * 3, px); }
+      } else if (t === 3) {
+        g.fillStyle = TPAL.sand; g.fillRect(x, y, cell, cell);
+        const h = hash2(i, j, 5); if (h % 100 < 45) { g.fillStyle = TPAL.stone; g.fillRect(x + 6 + ((h >>> 8) % 16), y + 6 + ((h >>> 13) % 16), px * 3, px * 2); }
+        if (frame && (h & 7) === 1) { g.fillStyle = TPAL.glint; g.fillRect(x + ((h >>> 5) % 24), y + ((h >>> 11) % 26), px * 2, px); }
+      } else if (t === 4) {
+        g.fillStyle = TPAL.plank; g.fillRect(x, y, cell, cell); g.fillStyle = TPAL.plankD;
+        const along = m.river && Math.abs(m.river.dy) > Math.abs(m.river.dx); // planks lie along the river, across the way people walk
+        for (let k = 0; k < cell; k += px * 4) { if (along) g.fillRect(x + k, y, px, cell); else g.fillRect(x, y + k, cell, px); }
+      }
+    }
+  }
+  function drawGround(x0, y0, x1, y1) {
+    const m = S.map, G = ground(m), CH = S.cfg.terrain.chunk, n = G.n, k = S.cam.zoom * S.dpr;
+    const i0 = Math.max(0, Math.floor(x0 / CH)), i1 = Math.min(n - 1, Math.floor(x1 / CH)), j0 = Math.max(0, Math.floor(y0 / CH)), j1 = Math.min(n - 1, Math.floor(y1 / CH));
+    const wf = ((performance.now() / S.cfg.terrain.waterFrameMs) | 0) & 1, ov = 1 / k; // one device pixel of overlap hides seams
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      const ci = j * n + i; if (G.dirty[ci] || !G.cvA[ci]) bakeChunk(m, G, ci);
+      ctx.drawImage(wf && G.water[ci] ? G.cvB[ci] : G.cvA[ci], i * CH, j * CH, CH + ov, CH + ov);
+    }
+    if (G.left > 0) { for (let q = 0; q < n * n; q++) { const ci = (G.scan + q) % (n * n); if (G.dirty[ci]) { bakeChunk(m, G, ci); G.scan = ci + 1; break; } } }
+  }
+  function flushGround(m) { const G = ground(m); for (let ci = 0; ci < G.n * G.n; ci++) if (G.dirty[ci] || !G.cvA[ci]) bakeChunk(m, G, ci); }
+
+  // minimap terrain: one pixel per cell, rebuilt per map and on cache recovery
+  let miniTerr = null;
+  function minimapBake() {
+    const m = S.map; if (!m) return; const N = m.N;
+    if (!miniTerr || miniTerr.width !== N) miniTerr = mkCanvas(N, N);
+    const g = miniTerr.getContext("2d"), im = g.createImageData(N, N), d = im.data;
+    const col = [[31, 58, 26], [22, 24, 20], [52, 104, 176], [176, 156, 104], [120, 88, 52]];
+    for (let c = 0; c < N * N; c++) { const k = col[m.terr[c]] || col[0]; d[c * 4] = k[0]; d[c * 4 + 1] = k[1]; d[c * 4 + 2] = k[2]; d[c * 4 + 3] = 255; }
+    for (const o of S.obstacles) { const c = PS.terrain.cellOf(o.x, o.y); if (c >= 0 && !m.terr[c]) { d[c * 4] = 22; d[c * 4 + 1] = 48; d[c * 4 + 2] = 27; } }
+    g.putImageData(im, 0, 0);
+  }
+
   const teamRingCache = {};
+  const byY = (p, q) => p.y - q.y;
   function draw() {
     const cfg = S.cfg, spr = S.spr, z = S.cam.zoom, dpr = S.dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.imageSmoothingEnabled = false;
-    ctx.fillStyle = "#2E4E27"; ctx.fillRect(0, 0, S.vw, S.vh);
-    if (!S.grid) return;
+    ctx.fillStyle = TPAL.beyond; ctx.fillRect(0, 0, S.vw, S.vh); // past the world edge: more plateau
+    if (!S.map) return;
     let shx = 0, shy = 0; if (S.shake > 0) { shx = (Math.random() - 0.5) * 10 * S.shake; shy = (Math.random() - 0.5) * 10 * S.shake; }
-    ctx.translate(S.vw / 2 + shx, S.vh / 2 + shy); ctx.scale(z, z); ctx.translate(-Math.round(S.cam.x), -Math.round(S.cam.y));
-    const x0 = S.cam.x - S.vw / 2 / z, y0 = S.cam.y - S.vh / 2 / z, x1 = S.cam.x + S.vw / 2 / z, y1 = S.cam.y + S.vh / 2 / z;
+    // camera and shake rounded to device pixels
+    const k = z * dpr, ox = Math.round((S.vw / 2 + shx) * dpr - S.cam.x * k), oy = Math.round((S.vh / 2 + shy) * dpr - S.cam.y * k);
+    ctx.setTransform(k, 0, 0, k, ox, oy);
+    const x0 = -ox / k, y0 = -oy / k, x1 = x0 + (S.vw * dpr) / k, y1 = y0 + (S.vh * dpr) / k;
 
-    // ground
-    const T = cfg.world.tile;
-    const i0 = Math.max(0, Math.floor(x0 / T)), i1 = Math.min(Math.ceil(cfg.world.w / T) - 1, Math.floor(x1 / T));
-    const j0 = Math.max(0, Math.floor(y0 / T)), j1 = Math.min(Math.ceil(cfg.world.h / T) - 1, Math.floor(y1 / T));
-    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { let h = (i * 374761393 + j * 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); h = (h ^ (h >>> 16)) >>> 0; const v = h % 11; ctx.drawImage(spr.tiles[v < 6 ? 0 : v < 10 ? 1 : 2], i * T, j * T, T + 0.6, T + 0.6); } // slight overlap hides sub-pixel seams at fractional zoom
-    // world edge: dark line + a hedge of trees just outside the map
-    ctx.strokeStyle = "rgba(20,36,16,.55)"; ctx.lineWidth = 10; ctx.strokeRect(0, 0, cfg.world.w, cfg.world.h);
-    const W = cfg.world.w, H = cfg.world.h, tr = spr.trees[1], step = 34;
-    const hedge = (x, y, k) => { const j = ((k * 7919) % 13) - 6; ctx.drawImage(tr, x - tr.width / 2 + j, y - tr.height + 8 + ((k * 104729) % 9)); };
-    if (x0 < 0) for (let y = Math.max(-60, Math.floor(y0 / step) * step); y < Math.min(H + 60, y1 + 40); y += step) hedge(-16, y, y / step | 0);
-    if (x1 > W) for (let y = Math.max(-60, Math.floor(y0 / step) * step); y < Math.min(H + 60, y1 + 40); y += step) hedge(W + 16, y, (y / step | 0) + 977);
-    if (y0 < 0) for (let x = Math.max(-60, Math.floor(x0 / step) * step); x < Math.min(W + 60, x1 + 40); x += step) hedge(x, -8, (x / step | 0) + 1531);
-    if (y1 > H) for (let x = Math.max(-60, Math.floor(x0 / step) * step); x < Math.min(W + 60, x1 + 40); x += step) hedge(x, H + 40, (x / step | 0) + 2467);
-    // dirt trails between camps
-    ctx.strokeStyle = "rgba(125,106,68,.42)"; ctx.lineWidth = 9; ctx.lineCap = "round";
-    for (const tr of S.trails) {
-      if (tr.maxX < x0 || tr.minX > x1 || tr.maxY < y0 || tr.minY > y1) continue;
-      ctx.beginPath(); ctx.moveTo(tr.x0, tr.y0); ctx.quadraticCurveTo(tr.cx, tr.cy, tr.x1, tr.y1); ctx.stroke();
-    }
+    // ground (baked chunks)
+    drawGround(x0, y0, x1, y1);
     // camps
     for (const c of S.camps) if (c.x > x0 - 40 && c.x < x1 + 40 && c.y > y0 - 30 && c.y < y1 + 30) ctx.drawImage(spr.dirt, c.x - 32, c.y - 20);
-    // decals
-    for (const d of S.decals) { if (d.x < x0 - 20 || d.x > x1 + 20 || d.y < y0 - 20 || d.y > y1 + 20) continue; const im = spr.decals[d.k]; ctx.drawImage(im, d.x - im.width / 2, d.y - im.height / 2); }
 
     // team rings (buff / huddle indicator) under everything
     for (let i = 1; i < S.teams.length; i++) {
@@ -696,7 +897,7 @@
     for (const a of S.agents) { if (a.x < x0 - 20 || a.x > x1 + 20 || a.y < y0 - 30 || a.y > y1 + 20) continue; DL.push(a); }
     for (const o of S.obstacles) { if (o.x < x0 - 40 || o.x > x1 + 40 || o.y < y0 - 60 || o.y > y1 + 30) continue; DL.push(o); }
     for (const a of DL) if (a.team !== undefined) ctx.drawImage(spr.shadow, a.x - 6, a.y - 1);
-    DL.sort((p, q) => p.y - q.y);
+    DL.sort(byY);
     const neutralSet = spr._neutral || (spr._neutral = spr.peasantSet(cfg.neutral.color));
     for (const e of DL) {
       if (e.team === undefined) {
@@ -806,7 +1007,7 @@
       ctx.globalAlpha = 0.85; ctx.fillStyle = pl.color; ctx.beginPath(); ctx.arc(joy.ox + kx, joy.oy + ky, 22, 0, Math.PI * 2); ctx.fill();
       ctx.globalAlpha = 1;
     }
-    if (S.debug) { ctx.font = "12px monospace"; ctx.fillStyle = "#fff"; ctx.textAlign = "left"; ctx.fillText("fps " + S.fps + "  agents " + S.agents.length + "  seed " + S.seed, 8, S.vh - 8); }
+    if (S.debug) { ctx.font = "12px monospace"; ctx.fillStyle = "#fff"; ctx.textAlign = "left"; ctx.fillText("fps " + S.fps + "  agents " + S.agents.length + "/" + S.cap + "  seed " + S.seed + "  map " + S.map.used + (S.map.fallback ? " (fallback)" : "") + " r" + S.map.rerolls, 8, S.vh - 8); }
 
     drawMinimap();
   }
@@ -814,13 +1015,66 @@
   function drawMinimap() {
     if (S.mode === "title" || S.attract) return;
     const cfg = S.cfg, W = cfg.world.w, H = cfg.world.h, k = 150 / Math.max(W, H);
-    mctx.fillStyle = "#1f3a1a"; mctx.fillRect(0, 0, 150, 150);
-    mctx.fillStyle = "#16301b"; for (const o of S.obstacles) mctx.fillRect((o.x * k) | 0, (o.y * k) | 0, 2, 2);
+    mctx.imageSmoothingEnabled = false;
+    if (miniTerr) mctx.drawImage(miniTerr, 0, 0, 150, 150); else { mctx.fillStyle = "#1f3a1a"; mctx.fillRect(0, 0, 150, 150); }
     mctx.fillStyle = "#c9bd9c"; for (const a of S.agents) if (a.team === 0) mctx.fillRect((a.x * k) | 0, (a.y * k) | 0, 1, 1);
     for (const p of S.powerups) if (p.alive) { mctx.fillStyle = S.spr.PU[p.kind].color; mctx.fillRect((p.x * k - 1) | 0, (p.y * k - 1) | 0, 3, 3); }
     for (let i = S.teams.length - 1; i >= 1; i--) { const t = S.teams[i]; mctx.fillStyle = t.color; for (const a of S.agents) if (a.team === i) mctx.fillRect((a.x * k) | 0, (a.y * k) | 0, 2, 2); }
     const z = S.cam.zoom; mctx.strokeStyle = "rgba(255,255,255,.9)"; mctx.lineWidth = 1.5;
     mctx.strokeRect((S.cam.x - S.vw / 2 / z) * k, (S.cam.y - S.vh / 2 / z) * k, (S.vw / z) * k, (S.vh / z) * k);
+  }
+
+  // ---------------------------------------------------------------- cache recovery (studio lessons 27-29): chunks, minimap, sprites
+  // On visibilitychange / pageshow / contextrestored every chunk is re-baked (visible first, then one per frame), the minimap re-baked, and
+  // any blank sprite canvas repainted in place from a fresh build (same canvas objects, so every reference stays valid).
+  function spriteCanvases(spr, teams) {
+    const list = [];
+    const addSet = (k, set) => { for (const f of ["R", "L", "RW", "LW"]) set[f].forEach((c, i) => list.push([k + "." + f + i, c, set, f, i])); };
+    for (let i = 1; i < teams.length; i++) if (teams[i]) addSet("team" + i, teams[i].spr);
+    if (spr._neutral) addSet("neutral", spr._neutral);
+    spr.tiles.forEach((c, i) => list.push(["tile" + i, c])); spr.trees.forEach((c, i) => list.push(["tree" + i, c])); spr.decals.forEach((c, i) => list.push(["decal" + i, c]));
+    for (const k in spr.PU) list.push(["pu." + k, spr.PU[k].icon]);
+    list.push(["dirt", spr.dirt], ["rock", spr.rock], ["marker", spr.marker], ["shadow", spr.shadow], ["smoke", spr.smoke]);
+    return list;
+  }
+  function restoreSprites() {
+    const fresh = PS.buildSprites(S.cfg), spr = S.spr, copy = (dst, src) => { const g = dst.getContext("2d"); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = "source-over"; g.globalAlpha = 1; g.clearRect(0, 0, dst.width, dst.height); g.drawImage(src, 0, 0); }; // silhouettes were built in source-in mode
+    const pairs = [["tiles"], ["trees"], ["decals"]]; for (const [k] of pairs) spr[k].forEach((c, i) => copy(c, fresh[k][i]));
+    for (const k in spr.PU) copy(spr.PU[k].icon, fresh.PU[k].icon);
+    for (const k of ["dirt", "rock", "marker", "shadow", "smoke"]) copy(spr[k], fresh[k]);
+    const sets = []; for (let i = 1; i < S.teams.length; i++) if (S.teams[i]) sets.push([S.teams[i].spr, S.teams[i].color]); if (spr._neutral) sets.push([spr._neutral, S.cfg.neutral.color]);
+    for (const [set, color] of sets) { const f = fresh.peasantSet(color); for (const k of ["R", "L", "RW", "LW"]) set[k].forEach((c, i) => copy(c, f[k][i])); }
+  }
+  function recheckCaches(sync) {
+    if (!S.cfg || !S.spr) return;
+    let blank = 0; for (const e of spriteCanvases(S.spr, S.teams)) if (opaqueCount(e[1]) === 0) blank++;
+    if (blank) restoreSprites();
+    if (S.map) { groundInvalidate(S.map); minimapBake(); if (sync) flushGround(S.map); }
+    return blank;
+  }
+  // debug: blank every cache without telling the game (what a discarded backing store looks like) so the harness can assert the recovery
+  function debugDropCaches() {
+    const wipe = (c) => { if (!c) return; const g = c.getContext("2d"); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, c.width, c.height); };
+    let n = 0;
+    if (S.map && S.map.chunks) { const G = S.map.chunks; for (let i = 0; i < G.n * G.n; i++) { wipe(G.cvA[i]); wipe(G.cvB[i]); n += (G.cvA[i] ? 1 : 0) + (G.cvB[i] ? 1 : 0); } }
+    wipe(miniTerr); n++;
+    for (const e of spriteCanvases(S.spr, S.teams)) { wipe(e[1]); n++; }
+    return n;
+  }
+  // chunk opacity on a 4x4 downscale into one scratch canvas (lesson 27: never read the cache itself); sprites by full opaque count
+  let scratch4 = null, scratch4Ctx = null;
+  function opaque4(c) {
+    if (!c) return false;
+    if (!scratch4) { scratch4 = mkCanvas(4, 4); scratch4Ctx = scratch4.getContext("2d", { willReadFrequently: true }); }
+    scratch4Ctx.imageSmoothingEnabled = true; scratch4Ctx.clearRect(0, 0, 4, 4); scratch4Ctx.drawImage(c, 0, 0, 4, 4);
+    const d = scratch4Ctx.getImageData(0, 0, 4, 4).data; for (let i = 3; i < 64; i += 4) if (d[i] < 250) return false; return true;
+  }
+  function cacheReport() {
+    const out = { chunks: 0, chunksOpaque: 0, chunksBlank: [], pending: 0, minimap: miniTerr ? opaqueCount(miniTerr) > 0 : false, sprites: 0, spritesBlank: [] };
+    if (S.map && S.map.chunks) { const G = S.map.chunks; out.pending = G.left; for (let i = 0; i < G.n * G.n; i++) for (const cv of [G.cvA[i], G.cvB[i]]) { if (!cv) continue; out.chunks++; if (opaque4(cv)) out.chunksOpaque++; else out.chunksBlank.push(i); } }
+    for (const e of spriteCanvases(S.spr, S.teams)) { out.sprites++; if (opaqueCount(e[1]) === 0) out.spritesBlank.push(e[0]); }
+    out.ok = out.chunks > 0 && out.chunksOpaque === out.chunks && out.pending === 0 && out.minimap && out.spritesBlank.length === 0;
+    return out;
   }
 
   // ---------------------------------------------------------------- HUD
@@ -884,7 +1138,9 @@
     hb.addEventListener("pointercancel", () => setHuddle(false));
     hb.addEventListener("pointerleave", () => setHuddle(false));
     if ("ontouchstart" in window && !window.matchMedia("(pointer:fine)").matches) { inp.touch = true; document.body.classList.add("touch"); }
-    document.addEventListener("visibilitychange", () => { if (document.hidden && S.mode === "play") pause(); });
+    document.addEventListener("visibilitychange", () => { if (document.hidden) { if (S.mode === "play") pause(); } else recheckCaches(); });
+    window.addEventListener("pageshow", () => recheckCaches());
+    canvas.addEventListener("contextrestored", () => recheckCaches());
   }
   function setHuddle(on) { if (S.input.huddle === on) return; S.input.huddle = on; $("t-huddle").classList.toggle("on", on); if (S.mode === "play") PS.audio.huddle(on); }
 
@@ -919,13 +1175,13 @@
   function syncDifficulty() { for (const b of $("difficulty").children) b.classList.toggle("sel", b.dataset.k === S.difficulty); }
   function syncSound() { const m = PS.audio.isMuted(); for (const id of ["btn-sound", "btn-sound-title", "btn-sound-pause"]) $(id).classList.toggle("off", m); }
 
-  // ---------------------------------------------------------------- QA: selfTest, fight + match harnesses
-  // PS.fight / PS.simMatch swap a throwaway world into S and swap the live one back in a finally block, so a player can
-  // call PS.selfTest() mid-match from the console. No localStorage, no DOM (sandbox guards), no sound, no live particles.
+  // ---------------------------------------------------------------- QA: selfTest, fight + match harnesses, replay, bench
+  // PS.fight / PS.simMatch / PS.replay / PS.bench swap a throwaway world into S and swap the live one back in a finally block, so a player
+  // can call PS.selfTest() mid-match from the console. No localStorage, no DOM (sandbox guards), no sound, no live particles.
   const SANDBOX_KEYS = ["mode", "t", "timeLeft", "agents", "teams", "obstacles", "powerups", "camps", "cam", "input", "rng", "seed", "trickleT", "shake",
-    "banners", "hintT", "stats", "engagedNow", "result", "grid", "cols", "rows", "decals", "trails", "attract", "difficulty", "spr",
+    "banners", "hintT", "stats", "engagedNow", "result", "decals", "trails", "attract", "difficulty", "spr", "tick", "acc", "map", "obs", "cap", "dbg",
     "finalCalled", "pendingEnd", "_routedBy", "_hintRecruit", "_hintFight", "_hintHud"];
-  let sbParticles = null, sbGrid = null; const sbSets = {};
+  let sbParticles = null, flatMap = null; const sbSets = {};
   function withSandbox(fn) {
     if (sandbox) return fn(); // nested call shares the outer throwaway world
     const saved = {}; for (const k of SANDBOX_KEYS) saved[k] = k in S ? [S[k]] : null;
@@ -938,29 +1194,29 @@
     try { return fn(); }
     finally {
       for (const k of SANDBOX_KEYS) { if (saved[k]) S[k] = saved[k][0]; else delete S[k]; }
+      if (S.map) PS.terrain.use(S.map);
       particles = liveP; floaters = liveF; sandbox = false;
       PS.audio.setSilent(S.attract); // newGame/startGame keep silent === attract; the battle drum re-arms itself next frame if still engaged
-      // lastFrame is left alone on purpose: the next rAF can carry a timestamp from before the test, and resetting it here made raw dt negative
+      // lastFrame is left alone on purpose: the next rAF can carry a timestamp from before the test, and frame() clamps raw >= 0 anyway
     }
   }
-  function sandboxField() {
-    const W = S.cfg.world.w, H = S.cfg.world.h;
+  function sandboxField(map) {
     S.agents = []; S.obstacles = []; S.powerups = []; S.camps = []; S.banners = []; S.decals = []; S.trails = []; S.teams = [];
-    S.cols = Math.ceil(W / S.CELL); S.rows = Math.ceil(H / S.CELL);
-    if (!sbGrid || sbGrid.length !== S.cols * S.rows) { sbGrid = new Array(S.cols * S.rows); for (let i = 0; i < sbGrid.length; i++) sbGrid[i] = []; }
-    S.grid = sbGrid; S.mode = "sandbox"; S.hintT = 0; S.stats = { recruited: 0, kills: 0, routs: 0, lost: 0, peak: 1, powerups: 0 };
+    S.map = map || flatMap || (flatMap = PS.terrain.flat()); PS.terrain.use(S.map); placeTables(S.map); bucketObstacles();
+    S.cap = S.cfg.spawn.agentCap; S.dbg = { terrainBad: 0, firstBad: null, capOver: 0 }; S.tick = 0; S.acc = 0;
+    S.mode = "sandbox"; S.hintT = 0; S.stats = { recruited: 0, kills: 0, routs: 0, lost: 0, peak: 1, powerups: 0 };
   }
-  // sunflower blob, ~12 px between neighbours
+  // sunflower blob, ~12 px between neighbours; positions on blocked ground are skipped so the blob keeps its headcount
   const blobR = (n) => 7 * Math.sqrt(n);
-  function blob(x, y, n, team) { for (let i = 0; i < n; i++) { const a = i * 2.39996, d = 7 * Math.sqrt(i + 0.5); S.agents.push(mkAgent(x + Math.cos(a) * d, y + Math.sin(a) * d, team)); } }
+  function blob(x, y, n, team) { for (let i = 0, k = 0; k < n && i < n * 4; i++) { const a = i * 2.39996, d = 7 * Math.sqrt(i + 0.5), px = x + Math.cos(a) * d, py = y + Math.sin(a) * d; if (!PS.terrain.walkable(px, py)) continue; S.agents.push(mkAgent(px, py, team)); k++; } }
 
-  // One clash on an empty field: n player peasants vs m Greedy (team 2) peasants, facing edges 60 px apart, both sides
-  // charging the other's centroid every tick. No AI think, neutrals, trickle or power-ups; Normal difficulty.
-  function fightOnce(n, m, maxSeconds) {
+  // One clash on an empty field (the flat fixture map): n player peasants vs m Greedy (team 2) peasants, facing edges 60 px apart, both
+  // sides charging the other's centroid every tick. No AI think, neutrals, trickle or power-ups; Normal difficulty. Seeded per run.
+  function fightOnce(n, m, maxSeconds, seed) {
     const cfg = S.cfg, W = cfg.world.w, H = cfg.world.h;
     sandboxField(); S.attract = false; S.difficulty = "normal";
     S.t = 0; S.timeLeft = 1e9; S.trickleT = -1e9; S.shake = 0; S.result = null; S.engagedNow = false; S.finalCalled = true; S.pendingEnd = null; S._routedBy = null;
-    S._hintRecruit = S._hintFight = S._hintHud = true; S.seed = 20260924; S.rng = mulberry32(S.seed);
+    S._hintRecruit = S._hintFight = S._hintHud = true; S.seed = seed >>> 0; S.rng = mulberry32(S.seed);
     S.teams = [null, mkTeam(1, cfg.player.name, cfg.player.color, true, null)];
     cfg.ai.personalities.forEach((p, i) => S.teams.push(mkTeam(2 + i, p.name, p.color, false, p)));
     for (let i = 1; i < S.teams.length; i++) { S.teams[i].thinkT = 1e9; if (i > 2) S.teams[i].alive = false; }
@@ -971,21 +1227,21 @@
     for (let i = 0; i < max; i++) {
       p0 = p.count; r0 = r.count; k0 = S.stats.kills; l0 = S.stats.lost;
       p.tx = r.cx; p.ty = r.cy; r.tx = p.cx; r.ty = p.cy;
-      update(1 / 60);
+      update(DT);
       if (!p.alive || !r.alive || S.result) break;
       if ((i & 63) === 63 && performance.now() - w0 > 4000) { truncated = true; break; } // lesson 20: wall-clock cap on every sim loop
     }
-    const out = { seconds: +S.t.toFixed(2), winner: "none", how: "timeout", playerLeft: p.count, rivalLeft: r.count, playerAfter: p.count, truncated };
+    const out = { seed: S.seed, seconds: +S.t.toFixed(2), winner: "none", how: "timeout", playerLeft: p.count, rivalLeft: r.count, playerAfter: p.count, truncated };
     // survivors are counted BEFORE a rout flips the losers: flipped = loser's count last tick minus what died this tick
     if (!r.alive && p.alive) { const flipped = S.stats.routs ? r0 - (S.stats.kills - k0) : 0; out.winner = "player"; out.how = S.stats.routs ? "rout" : "wipe"; out.rivalLeft = flipped; out.playerLeft = p.count - flipped; }
     else if (!p.alive && r.alive) { const flipped = S._routedBy ? p0 - (S.stats.lost - l0) : 0; out.winner = "rival"; out.how = S._routedBy ? "rout" : "wipe"; out.playerLeft = flipped; out.rivalLeft = r.count - flipped; out.playerAfter = 0; }
     return out;
   }
-  // PS.fight(30, 20, 25): Math.random (attack jitter) can't be seeded, so it runs `runs` times (default 3) and reports medians
-  function fight(n, m, maxSeconds, runs) {
-    n = Math.max(1, n | 0 || 30); m = Math.max(1, m | 0 || 20); maxSeconds = clamp(+maxSeconds || 25, 1, 120); runs = clamp(runs | 0 || 3, 1, 9);
+  // PS.fight(30, 20, 25, runs, seed): run i is seeded seed + i, so the runs differ and each one replays; reports medians
+  function fight(n, m, maxSeconds, runs, seed) {
+    n = Math.max(1, n | 0 || 30); m = Math.max(1, m | 0 || 20); maxSeconds = clamp(+maxSeconds || 25, 1, 120); runs = clamp(runs | 0 || 3, 1, 9); seed = seed == null ? 20260924 : seed >>> 0;
     return withSandbox(() => {
-      const all = []; for (let i = 0; i < runs; i++) all.push(fightOnce(n, m, maxSeconds));
+      const all = []; for (let i = 0; i < runs; i++) all.push(fightOnce(n, m, maxSeconds, seed + i));
       const med = (k) => { const v = all.map((x) => x[k]).sort((a, b) => a - b); return v[v.length >> 1]; };
       const wins = all.filter((x) => x.winner === "player").length, losses = all.filter((x) => x.winner === "rival").length;
       return { n, m, maxSeconds, seconds: med("seconds"), playerLeft: med("playerLeft"), rivalLeft: med("rivalLeft"), playerAfter: med("playerAfter"),
@@ -993,49 +1249,160 @@
     });
   }
 
-  // PS.simMatch(240): attract-rules match on a fresh world, all four swarms AI-driven (team 1 plays as Bully). Counts every 30 s.
-  function simMatch(seconds) {
-    const lim = clamp(+seconds || S.cfg.world.matchSeconds, 1, 600);
+  // PS.simMatch(240, { seed, cap, wallMs }): attract-rules match on a fresh seeded world, all four swarms AI-driven (team 1 plays as Bully).
+  // Counts every 30 s. Asserts per tick: agent cap and no agent centre in rock or deep water.
+  function simMatch(seconds, opts) {
+    opts = opts || {};
+    const lim = clamp(+seconds || S.cfg.world.matchSeconds, 1, 600), wallMs = clamp(+opts.wallMs || 10000, 500, 14000);
     return withSandbox(() => {
-      sandboxField(); S.attract = true; newGame(true); S.mode = "sandbox";
-      const dt = 1 / 60, tl = [], errors = [], w0 = performance.now(); let maxTotal = S.agents.length, next = 30, end = "limit", truncated = false;
+      sandboxField(); S.attract = true; newGame(true, { seed: opts.seed != null ? opts.seed : (Math.random() * 4294967296) >>> 0, cap: opts.cap === "touch" ? S.cfg.spawn.touchAgentCap : opts.cap === "desktop" ? S.cfg.spawn.agentCap : +opts.cap || S.cfg.spawn.agentCap });
+      S.mode = "sandbox";
+      const tl = [], errors = [], w0 = performance.now(); let maxTotal = S.agents.length, next = 30, end = "limit", truncated = false;
       const snap = () => { const c = []; let nn = 0; for (let i = 1; i < S.teams.length; i++) c.push(S.teams[i].count); for (const a of S.agents) if (a.team === 0) nn++; tl.push({ t: Math.round(S.t), counts: c, neutrals: nn, total: S.agents.length }); };
       snap();
       for (let i = 0; i < lim * 60; i++) {
         let alive = 0; for (let j = 1; j < S.teams.length; j++) if (S.teams[j].alive) alive++;
         if (alive <= 1) { end = "last-standing"; break; }
-        if (S.timeLeft - dt <= 0) { end = "bell"; break; } // attract update() would start a new world here
-        try { update(dt); } catch (e) { errors.push(String((e && e.message) || e)); break; }
+        if (S.timeLeft - DT <= 0) { end = "bell"; break; } // attract update() would start a new world here
+        try { update(DT); } catch (e) { errors.push(String((e && e.message) || e)); break; }
         if (S.agents.length > maxTotal) maxTotal = S.agents.length;
         if (S.t >= next - 1e-9) { snap(); next += 30; }
-        if ((i & 63) === 63 && performance.now() - w0 > 10000) { truncated = true; break; } // lesson 20
+        if ((i & 63) === 63 && performance.now() - w0 > wallMs) { truncated = true; break; } // lesson 20
       }
       if (tl[tl.length - 1].t !== Math.round(S.t)) snap();
       let win = null; for (let i = 1; i < S.teams.length; i++) { const t = S.teams[i]; if (t.alive && (!win || t.count > win.count)) win = t; }
-      return { seconds: +S.t.toFixed(2), end, truncated, wallMs: Math.round(performance.now() - w0), names: S.teams.slice(1).map((t) => t.name),
-        winner: win ? { id: win.id, name: win.name, count: win.count } : null, maxTotal, agentCap: S.cfg.spawn.agentCap, timeline: tl, exceptions: errors };
+      return { seed: S.seed, map: PS.terrain.report(S.map), seconds: +S.t.toFixed(2), end, truncated, wallMs: Math.round(performance.now() - w0), msPerTick: +((performance.now() - w0) / Math.max(1, S.tick)).toFixed(3),
+        names: S.teams.slice(1).map((t) => t.name), winner: win ? { id: win.id, name: win.name, count: win.count } : null, maxTotal, agentCap: S.cap,
+        capOver: S.dbg.capOver, terrainBad: S.dbg.terrainBad, firstBad: S.dbg.firstBad, timeline: tl, exceptions: errors };
     });
   }
 
-  // every config path game.js + sprites.js read. n number, s string, a array, o object
+  // PS.replay(seed, seconds): the real newGame path (not attract) with a zero-input player, run twice; both stateSigs must match
+  function replayOnce(seed, seconds) {
+    return withSandbox(() => {
+      sandboxField(); S.difficulty = "normal"; newGame(false, { seed }); S.mode = "play";
+      const w0 = performance.now(); let truncated = false;
+      for (let i = 0; i < seconds * 60; i++) { update(DT); if ((i & 63) === 63 && performance.now() - w0 > 6000) { truncated = true; break; } }
+      return { sig: stateSig(), t: +S.t.toFixed(3), agents: S.agents.length, truncated, ms: Math.round(performance.now() - w0), map: S.map.used };
+    });
+  }
+  function replay(seed, seconds) {
+    seed = seed == null ? 424242 : seed >>> 0; seconds = clamp(+seconds || 60, 1, 120);
+    const a = replayOnce(seed, seconds), b = replayOnce(seed, seconds);
+    return { seed, seconds, same: a.sig === b.sig && !a.truncated && !b.truncated, a: { t: a.t, agents: a.agents, ms: a.ms, truncated: a.truncated, map: a.map }, b: { t: b.t, agents: b.agents, ms: b.ms, truncated: b.truncated } };
+  }
+
+  // PS.bench("capclash", { ticks, cap }): 4 teams x (cap-200)/4 in two clashes on screen + 200 neutrals in camps of 5, built through mkAgent,
+  // on the first fallback map at its most open spot. No rout (engageDelay parked), no AI think, camera pinned on the scene. Times update()
+  // and draw() per tick with performance.now; drawImage + full-screen alpha layers are counted on 10 extra frames through a wrapped context.
+  // Same scene shape as the v1 reference copy measured before M1 (see M1-build-notes.md), so v2 can be gated at <= 1.1x v1.
+  let benchMap = null, benchTick = () => {};
+  function pct(a, p) { const s = [...a].sort((x, y) => x - y); return +s[Math.min(s.length - 1, Math.floor(p * s.length))].toFixed(3); }
+  function benchLayout(cx, cy, per, zoom, okAt) {
+    const vwW = S.vw / zoom, vhW = S.vh / zoom, land = vwW >= vhW, off = Math.min(0.25 * (land ? vwW : vhW), 300), br = blobR(per);
+    const clashes = land ? [[cx - off, cy], [cx + off, cy]] : [[cx, cy - off], [cx, cy + off]];
+    const blobs = []; clashes.forEach(([x, y], k) => { blobs.push([x - 30 - br, y, 1 + 2 * k]); blobs.push([x + 30 + br, y, 2 + 2 * k]); });
+    const grid = (step, ox, want, test) => { const out = []; const x0 = cx - vwW / 2 + 40 + ox, y0 = cy - vhW / 2 + 40 + ox, keep = br + 90;
+      for (let y = y0; y <= cy + vhW / 2 - 40 && out.length < want; y += step) for (let x = x0; x <= cx + vwW / 2 - 40 && out.length < want; x += step) {
+        let ok = true; for (const b of blobs) if ((b[0] - x) * (b[0] - x) + (b[1] - y) * (b[1] - y) < keep * keep) { ok = false; break; }
+        if (ok && test(x, y)) out.push([x, y]);
+      } return out; };
+    const want = grid(110, 0, 40, () => true).length; // the v1 layout's camp count on open ground
+    let camps = grid(110, 0, want, okAt); if (camps.length < want) camps = camps.concat(grid(55, 27, want - camps.length, (x, y) => okAt(x, y) && camps.every((c) => (c[0] - x) * (c[0] - x) + (c[1] - y) * (c[1] - y) > 50 * 50)));
+    return { blobs, camps, want };
+  }
+  function countFrame(n) {
+    const oDI = ctx.drawImage, oFR = ctx.fillRect, cw = canvas.width, ch = canvas.height; let di = 0, layers = 0;
+    const full = (x, y, w, h) => { const m = ctx.getTransform(); const ax = m.a * x + m.e, ay = m.d * y + m.f, bx = m.a * (x + w) + m.e, by = m.d * (y + h) + m.f; return Math.min(ax, bx) <= 1 && Math.min(ay, by) <= 1 && Math.max(ax, bx) >= cw - 1 && Math.max(ay, by) >= ch - 1; };
+    ctx.drawImage = function (img, a, b, c, d) { di++; const w = arguments.length >= 5 ? (arguments.length >= 9 ? arguments[7] : c) : img.width, h = arguments.length >= 5 ? (arguments.length >= 9 ? arguments[8] : d) : img.height;
+      const x = arguments.length >= 9 ? arguments[5] : a, y = arguments.length >= 9 ? arguments[6] : b; if (full(x, y, w, h)) layers++; return oDI.apply(this, arguments); };
+    ctx.fillRect = function (x, y, w, h) { if (full(x, y, w, h) && (ctx.globalAlpha < 1 || typeof ctx.fillStyle !== "string" || ctx.fillStyle.length > 7)) layers++; return oFR.apply(this, arguments); };
+    try { for (let i = 0; i < n; i++) { benchTick(); draw(); } } finally { delete ctx.drawImage; delete ctx.fillRect; }
+    return { drawImage: di / n, layers: layers / n };
+  }
+  function bench(scene, opts) {
+    opts = opts || {}; scene = scene || "capclash";
+    const ticks = clamp(opts.ticks | 0 || 300, 30, 1200), warm = 20, cap = opts.cap || 1000, nNeutral = 200, per = Math.floor((cap - nNeutral) / 4);
+    const cfg = S.cfg, delay0 = cfg.combat.engageDelay, w0 = performance.now();
+    if (!benchMap) benchMap = PS.terrain.gen(cfg.terrain.fallbackSeeds[0]);
+    try {
+      cfg.combat.engageDelay = 1e9; // no rout: both clashes stay alive for the whole window
+      return withSandbox(() => {
+        sandboxField(benchMap); S.attract = false; S.difficulty = "normal"; S.mode = "play"; S.t = 0; S.timeLeft = 1e9; S.trickleT = -1e9; S.shake = 0;
+        S.result = null; S.pendingEnd = null; S.finalCalled = true; S._routedBy = null; S._hintRecruit = S._hintFight = S._hintHud = true; S.seed = 777; S.rng = mulberry32(777); S.cap = cap + 64;
+        S.teams = [null, mkTeam(1, cfg.player.name, cfg.player.color, true, null)];
+        cfg.ai.personalities.forEach((p, i) => S.teams.push(mkTeam(2 + i, p.name, p.color, false, p)));
+        for (let i = 1; i < S.teams.length; i++) S.teams[i].thinkT = 1e9;
+        const zoom = S.vw < cfg.camera.mobileBreak ? cfg.camera.zoomMobile : cfg.camera.zoomDesktop, L0 = benchLayout(0, 0, per, zoom, () => true), pad = blobR(per) + 24;
+        const c = benchSpot(benchMap, S.vw / zoom, S.vh / zoom, L0.blobs.map((b) => [b[0] - pad, b[1] - pad, b[0] + pad, b[1] + pad])), cx = c.x, cy = c.y;
+        const L = benchLayout(cx, cy, per, zoom, (x, y) => PS.terrain.placementOk(x, y, 1));
+        for (const b of L.blobs) blob(b[0], b[1], per, b[2]);
+        for (const q of L.camps) spawnCamp(q[0], q[1], 5);
+        recount(); for (let i = 1; i < S.teams.length; i++) { const t = S.teams[i]; t.pcx = t.cx; t.pcy = t.cy; }
+        const T = S.teams, pin = () => { S.cam.x = cx; S.cam.y = cy; S.cam.zoom = zoom; S.shake = 0; };
+        benchTick = () => { T[1].tx = T[2].cx; T[1].ty = T[2].cy; T[2].tx = T[1].cx; T[2].ty = T[1].cy; T[3].tx = T[4].cx; T[3].ty = T[4].cy; T[4].tx = T[3].cx; T[4].ty = T[3].cy; update(DT); pin(); };
+        pin(); flushGround(benchMap);
+        const up = [], dr = [];
+        for (let i = 0; i < warm + ticks; i++) {
+          const a = performance.now(); benchTick(); const b = performance.now(); draw(); const e = performance.now();
+          if (i >= warm) { up.push(b - a); dr.push(e - b); }
+          if (e - w0 > 12000) break; // lesson 20
+        }
+        const cnt = countFrame(10);
+        let onScreen = 0; const z = S.cam.zoom, hw = S.vw / 2 / z, hh = S.vh / 2 / z; for (const a of S.agents) if (Math.abs(a.x - S.cam.x) < hw && Math.abs(a.y - S.cam.y) < hh) onScreen++;
+        const mean = (a) => +(a.reduce((s, v) => s + v, 0) / a.length).toFixed(3);
+        return { scene, build: "v2", ticks: up.length, agents: S.agents.length, onScreen, counts: S.teams.slice(1).map((t) => t.count), camps: L.camps.length + "/" + L.want, viewport: [S.vw, S.vh, S.dpr], zoom,
+          spot: [Math.round(cx), Math.round(cy), c.blockedInClash, +c.open.toFixed(2)], terrainBad: S.dbg.terrainBad,
+          update: { p50: pct(up, 0.5), p90: pct(up, 0.9), p99: pct(up, 0.99), mean: mean(up) }, draw: { p50: pct(dr, 0.5), p90: pct(dr, 0.9), p99: pct(dr, 0.99), mean: mean(dr) },
+          drawImage: cnt.drawImage, layers: cnt.layers, wallMs: Math.round(performance.now() - w0), shot: opts.shot ? canvas.toDataURL() : undefined };
+      });
+    } finally { cfg.combat.engageDelay = delay0; benchTick = () => {}; }
+  }
+  // the bench spot: both clash footprints (rects relative to the centre) fully walkable, then the most open w x h view (ties: nearest the centre)
+  function benchSpot(m, w, h, rects) {
+    const N = m.N, cell = m.cell, N1 = N + 1, open = new Int32Array(N1 * N1), blocked = new Int32Array(N1 * N1), walk = PS.terrain.walkT;
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+      const c = j * N + i, k = (j + 1) * N1 + i + 1, wk = walk(m.terr[c]);
+      open[k] = (wk && m.sdf[c] >= cell ? 1 : 0) + open[k - N1] + open[k - 1] - open[k - N1 - 1];
+      blocked[k] = (wk ? 0 : 1) + blocked[k - N1] + blocked[k - 1] - blocked[k - N1 - 1];
+    }
+    const box = (A, i0, j0, i1, j1) => { i0 = clamp(i0, 0, N); j0 = clamp(j0, 0, N); i1 = clamp(i1, 0, N); j1 = clamp(j1, 0, N); return A[j1 * N1 + i1] - A[j0 * N1 + i1] - A[j1 * N1 + i0] + A[j0 * N1 + i0]; };
+    const hw = Math.ceil(w / 2 / cell), hh = Math.ceil(h / 2 / cell); let best = null;
+    for (let j = hh; j <= N - hh; j++) for (let i = hw; i <= N - hw; i++) {
+      let bad = 0; for (const r of rects) bad += box(blocked, i + Math.floor(r[0] / cell), j + Math.floor(r[1] / cell), i + Math.ceil(r[2] / cell), j + Math.ceil(r[3] / cell));
+      const v = box(open, i - hw, j - hh, i + hw, j + hh), d = (i - N / 2) * (i - N / 2) + (j - N / 2) * (j - N / 2);
+      if (!best || bad < best.bad || (bad === best.bad && (v > best.v || (v === best.v && d < best.d)))) best = { bad, v, d, i, j };
+    }
+    return { x: best.i * cell, y: best.j * cell, open: best.v / (4 * hw * hh), blockedInClash: best.bad };
+  }
+
+  // every config path game.js, terrain.js + sprites.js read. n number, s string, a array, o object
   const CFG_KEYS = ("world.w:n world.h:n world.tile:n world.trees:n world.rocks:n world.matchSeconds:n world.finalSeconds:n world.decals:n world.trailDist:n world.campLabelDist:n " +
     "spawn.neutralCamps:n spawn.campMin:n spawn.campMax:n spawn.campSpread:n spawn.starterCamps:n spawn.starterDist.0:n spawn.starterDist.1:n spawn.trickleEvery:n " +
-    "spawn.trickleCap:n spawn.agentCap:n spawn.minTrickleDistFromTeams:n spawn.underdogBias:n spawn.trickleCamps:n " +
-    "agent.hp:n agent.speed:n agent.damage:n agent.attackInterval:n agent.engageRadius:n agent.attackRange:n agent.recruitRadius:n agent.fightSpeedMult:n " +
-    "flock.arrive:n flock.separation:n flock.sepRadius:n flock.cohesion:n flock.cohesionStart:n flock.cohesionFull:n flock.huddleCohesion:n flock.huddleSepRadius:n " +
-    "flock.huddleSpeedMult:n flock.steerLerp:n flock.neutralWander:n flock.neutralWanderRadius:n flock.enemySepMult:n flock.enemyHardRadius:n " +
+    "spawn.trickleCap:n spawn.agentCap:n spawn.touchAgentCap:n spawn.minTrickleDistFromTeams:n spawn.underdogBias:n spawn.trickleCamps:n spawn.trickleBeyond.0:n spawn.trickleBeyond.1:n " +
+    "spawn.campGap:n spawn.campClearOfStarts:n spawn.obstacleClearOfStarts:n " +
+    "agent.radius:n agent.hp:n agent.speed:n agent.damage:n agent.attackInterval:n agent.engageRadius:n agent.attackRange:n agent.recruitRadius:n agent.fightSpeedMult:n " +
+    "agent.sizeSpeed:o agent.sizeSpeed.boost:n agent.sizeSpeed.full:n agent.sizeSpeed.drop:n agent.sizeSpeed.floor:n " +
+    "flock.seek:n flock.arrive:n flock.separation:n flock.sepRadius:n flock.cohesion:n flock.cohesionStart:n flock.cohesionFull:n flock.huddleCohesion:n flock.huddleSepRadius:n " +
+    "flock.huddleSpeedMult:n flock.steerLerp:n flock.neutralWander:n flock.neutralWanderRadius:n flock.enemySepMult:n flock.enemyHardRadius:n flow.slideMargin:n " +
     "combat.breakRatio:n combat.minRoutSize:n combat.engageDelay:n combat.engageDecay:n combat.fightPull:n combat.moraleBreak:n " +
-    "powerups.count:n powerups.respawn:n powerups.pickupRadius:n powerups.minDistFromStart:n powerups.duration:o powerups.speedMult:n powerups.armorMult:n " +
+    "powerups.count:n powerups.respawn:n powerups.pickupRadius:n powerups.minDistFromStart:n powerups.duration:o powerups.speedMult:n powerups.armorMult:n powerups.contestTol:n " +
     "powerups.frenzyMult:n powerups.rallyRadius:n powerups.weights:o powerups.duration.speed:n powerups.duration.armor:n powerups.duration.frenzy:n powerups.duration.rally:n " +
-    "ai.think:n ai.sight:n ai.fleeDistance:n ai.personalities:a ai.finalHuntRatio:n ai.finalFleeRatio:n ai.huntSpeed:n ai.fleeSpeed:n ai.corneredDist:n ai.gracePeriod:n " +
+    "ai.think:n ai.sight:n ai.leadTime:n ai.leadSmooth:n ai.fleeDistance:n ai.personalities:a ai.finalHuntRatio:n ai.finalFleeRatio:n ai.huntSpeed:n ai.fleeSpeed:n ai.corneredDist:n ai.gracePeriod:n " +
     "ai.aiVsAiHuntMult:n ai.powerupSight:n ai.powerScore:n ai.neutralScore:n ai.huntTimeout:n ai.huntCooldown:n " +
     "player.name:s player.color:s neutral.color:s camera.lerp:n camera.zoomDesktop:n camera.zoomMobile:n camera.mobileBreak:n pace:a difficulty.normal:o " +
-    "touch.joyRadius:n touch.joyDead:n touch.joyLead:n").split(" ");
+    "touch.joyRadius:n touch.joyDead:n touch.joyLead:n fog.sight0:n fog.sightK:n fog.bucketSight:n " +
+    "terrain.cell:n terrain.blockedFraction:n terrain.noisePeriod:n terrain.caPasses:n terrain.disc:n terrain.spawnRing:n terrain.centerRadius:n terrain.homeRadius:n " +
+    "terrain.homeWall:n terrain.exitWidth:n terrain.hubWall:n terrain.ridgeWidth:n terrain.ridgeWobble:n terrain.ridgeSpine:n terrain.rimRamp:n terrain.corridorHalf:n " +
+    "terrain.riverWidth:a terrain.riverWobble:n terrain.riverPeriod:n terrain.crossings:a terrain.crossingMaxGap:n terrain.bridgeWidth:n terrain.fordWidth:a terrain.fordSpeed:n " +
+    "terrain.passWidth:a terrain.pocketFill:n terrain.maxRerolls:n terrain.fairness:o terrain.fairness.rivalRatio:n terrain.fairness.centreRatio:n terrain.fairness.detour:a " +
+    "terrain.fairness.minExits:n terrain.costs:o terrain.costs.base:n terrain.costs.wall1:n terrain.costs.wall2:n terrain.costs.ford:n terrain.costs.prop:n " +
+    "terrain.fallbackSeeds:a terrain.chunk:n terrain.chunkArt:n terrain.waterFrameMs:n").split(" ");
   const cfgGet = (path) => { let o = S.cfg; for (const k of path.split(".")) { if (o == null) return undefined; o = o[k]; } return o; };
   const typeOk = (v, t) => (t === "n" ? typeof v === "number" && isFinite(v) : t === "s" ? typeof v === "string" && v.length > 0 : t === "a" ? Array.isArray(v) && v.length > 0 : !!v && typeof v === "object");
   function configReport() {
     const cfg = S.cfg, missing = [], used = {};
-    for (const e of CFG_KEYS) { const [path, t] = e.split(":"); used[path] = 1; if (!typeOk(cfgGet(path), t)) missing.push(path); }
+    for (const e of CFG_KEYS) { const [path, t] = e.split(":"); used[path.replace(/\.\d+$/, "")] = 1; used[path] = 1; if (!typeOk(cfgGet(path), t)) missing.push(path); }
     (cfg.ai && cfg.ai.personalities || []).forEach((p, i) => { for (const k of ["name:s", "color:s", "huntRatio:n", "fleeRatio:n", "neutralBias:n", "powerBias:n", "hatesPlayer:n"]) { const [f, t] = k.split(":"); if (!typeOk(p[f], t)) missing.push("ai.personalities." + i + "." + f); } });
     if (!cfg.ai || !cfg.ai.personalities || cfg.ai.personalities.length < 2) missing.push("ai.personalities.1 (attract mode plays team 1 as personality 1)");
     for (const d in cfg.difficulty || {}) for (const k of ["label:s", "aiSpeed:n", "think:n", "huntMult:n", "startBonus:n"]) { const [f, t] = k.split(":"); if (!typeOk(cfg.difficulty[d][f], t)) missing.push("difficulty." + d + "." + f); }
@@ -1043,10 +1410,21 @@
     for (const k in (cfg.powerups && cfg.powerups.weights) || {}) { if (!S.spr.PU[k] || !typeOk(cfg.powerups.duration[k], "n")) missing.push("powerups.weights." + k + " (needs a PU icon + duration)"); }
     // tunables in config.json that no code reads (informational: a retune there does nothing)
     const unused = [];
-    for (const sec of ["world", "spawn", "agent", "flock", "combat", "powerups", "ai", "camera", "touch"]) for (const k in cfg[sec] || {}) {
-      const path = sec + "." + k; if (used[path] || ["powerups.duration", "powerups.weights", "ai.personalities", "spawn.starterDist"].includes(path)) continue; unused.push(path);
+    for (const sec of ["world", "spawn", "agent", "flock", "flow", "combat", "powerups", "ai", "camera", "touch", "fog", "terrain"]) for (const k in cfg[sec] || {}) {
+      const path = sec + "." + k; if (used[path]) continue; unused.push(path);
     }
     return { checked: CFG_KEYS.length, missing, unused };
+  }
+  // SPEC-v2: every new key carries units and a range in config._units; numbers (and every element of a numeric array) must sit in range
+  function unitsReport() {
+    const U = S.cfg._units || {}, bad = [], keys = Object.keys(U);
+    for (const k of keys) {
+      const u = U[k], v = cfgGet(k); if (!Array.isArray(u) || u.length !== 3 || typeof u[0] !== "string") { bad.push(k + ": malformed _units entry"); continue; }
+      const vals = Array.isArray(v) ? v : [v];
+      if (!vals.length || vals.some((x) => typeof x !== "number" || !isFinite(x))) { bad.push(k + ": missing or not numeric"); continue; }
+      for (const x of vals) if (x < u[1] || x > u[2]) bad.push(k + " = " + x + " outside [" + u[1] + ", " + u[2] + "] " + u[0]);
+    }
+    return { checked: keys.length, bad };
   }
 
   // lesson 28: every cached sprite canvas must have opaque pixels. Read back through ONE scratch canvas, never the cache itself (lesson 27).
@@ -1060,51 +1438,98 @@
     return n;
   }
   function spriteReport() {
-    const spr = S.spr, list = [];
-    const addSet = (k, set) => { for (const f of ["R", "L", "RW", "LW"]) set[f].forEach((c, i) => list.push([k + "." + f + i, c])); };
-    for (let i = 1; i < S.teams.length; i++) addSet("team" + i, S.teams[i].spr);
-    addSet("neutral", spr._neutral || spr.peasantSet(S.cfg.neutral.color)); // draw() caches it on first frame; if none yet, check a fresh build, don't store it
-    spr.tiles.forEach((c, i) => list.push(["tile" + i, c])); spr.trees.forEach((c, i) => list.push(["tree" + i, c])); spr.decals.forEach((c, i) => list.push(["decal" + i, c]));
-    for (const k in spr.PU) list.push(["pu." + k, spr.PU[k].icon]);
-    list.push(["dirt", spr.dirt], ["rock", spr.rock], ["marker", spr.marker], ["shadow", spr.shadow], ["smoke", spr.smoke]);
+    const spr = S.spr, list = spriteCanvases(spr, S.teams);
+    if (!spr._neutral) { const set = spr.peasantSet(S.cfg.neutral.color); for (const f of ["R", "L", "RW", "LW"]) set[f].forEach((c, i) => list.push(["neutral." + f + i, c])); } // draw() caches it on first frame; if none yet, check a fresh build, don't store it
     const blank = []; let unreadable = 0;
     for (const [k, c] of list) { const n = opaqueCount(c); if (n === 0) blank.push(k); else if (n < 0) unreadable++; }
     return { total: list.length, blank, unreadable };
   }
 
   function stateSig() {
-    let h = 0; for (const a of S.agents) h += a.x * 1.3 + a.y * 0.7 + a.vx * 0.11 + a.vy * 0.13 + a.hp * 3 + a.team * 11 + (a.tgt ? 5 : 0);
-    const tm = S.teams.slice(1).map((t) => [t.count, t.alive, t.tx, t.ty, t.cx, t.cy, t.thinkT, t.kills, t.state]);
-    return JSON.stringify([S.mode, S.t, S.timeLeft, S.seed, S.agents.length, h, tm, S.cam, S.stats, S.banners.length, S.result, S.pendingEnd, S.difficulty, S.attract,
+    let h = 0; for (const a of S.agents) h += a.x * 1.3 + a.y * 0.7 + a.vx * 0.11 + a.vy * 0.13 + a.hp * 3 + a.team * 11 + (a.tgt ? 5 : 0) + a.atk * 0.17 + a.ph * 0.01;
+    const tm = S.teams.slice(1).map((t) => [t.count, t.alive, t.tx, t.ty, t.cx, t.cy, t.vx, t.vy, t.thinkT, t.kills, t.state, t.slot]);
+    return JSON.stringify([S.mode, S.t, S.tick, S.timeLeft, S.seed, S.map ? S.map.used : null, S.agents.length, h, tm, S.cam, S.stats, S.banners.length, S.result, S.pendingEnd, S.difficulty, S.attract,
       S.camps.length, S.powerups.map((p) => [p.x, p.y, p.alive, p.kind]), S.trickleT, S.shake, S.engagedNow, S.input.huddle, S.input.joy.active, S.hintT]);
   }
   function lsSnapshot() { try { const o = []; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); o.push(k + "=" + localStorage.getItem(k)); } return o.sort().join("\n"); } catch (e) { return "unavailable"; } }
 
-  // PS.selfTest({ matchSeconds }) -> { pass, fails: [names], results: { name: { pass, detail } }, ms }. One console line.
-  // The attract match runs the full clock by default (the agent-cap overshoot only shows up after ~150 s): 7-10 s of wall time in
-  // headless Chromium, bounded by simMatch's 10 s guard. PS.selfTest({ matchSeconds: 60 }) is the quick version.
+  // terrain on 20 seeds: each generates within maxRerolls, is fair and one region, and placement puts every spawn and object on open ground;
+  // then one forced failure must land on a vetted fallback seed
+  function terrainSuite(n) {
+    const T = PS.terrain, cfg = S.cfg, out = { seeds: [], genMs: [], rerolls: [0, 0, 0, 0, 0], fallbacks: 0, bad: [] };
+    for (let i = 0; i < n; i++) {
+      const seed = 1000 + i * 7919, m = T.gen(seed), r = T.report(m); out.genMs.push(m.genMs); if (m.fallback) out.fallbacks++; else out.rerolls[Math.min(4, m.rerolls)]++;
+      const why = [];
+      if (m.rerolls > cfg.terrain.maxRerolls || m.fallback) why.push("rerolls " + m.rerolls + (m.fallback ? " fallback" : ""));
+      if (!m.fair.pass) why.push("unfair " + m.fair.why.join(","));
+      if (!m.fair.oneRegion) why.push("regions");
+      const xs = m.river.crossings.map((x) => x.s).sort((a, b) => a - b); for (let k = 1; k < xs.length; k++) if (xs[k] - xs[k - 1] > cfg.terrain.crossingMaxGap) why.push("crossing gap " + Math.round(xs[k] - xs[k - 1]));
+      // placement on this map through the real newGame path (sandboxed), then every object checked on the map's own arrays
+      const pl = withSandbox(() => {
+        sandboxField(m); newGame(false, { map: m, seed: seed ^ 0x5bd1e995 });
+        const ok2 = (x, y, k) => T.placementOk(x, y, k), fails = [];
+        for (const s of m.spawns) if (!ok2(s.x, s.y, 2)) fails.push("spawn");
+        for (const c of S.camps) if (!ok2(c.x, c.y, 2)) fails.push("camp");
+        for (const p of S.powerups) if (!ok2(p.x, p.y, 2)) fails.push("powerup");
+        for (const o of S.obstacles) if (!ok2(o.x, o.y, 3)) fails.push("obstacle");
+        for (const a of S.agents) if (!T.walkable(a.x, a.y)) fails.push("agent");
+        const regions = [0, 0, 0, 0, 0, 0]; for (const c of S.camps) { const o = m.owner[T.cellOf(c.x, c.y)]; if (o < 6) regions[o]++; }
+        return { fails, camps: S.camps.length, powerups: S.powerups.length, obstacles: S.obstacles.length, regions };
+      });
+      if (pl.fails.length) why.push("placement " + pl.fails.slice(0, 5).join(","));
+      if (pl.regions.some((v) => v === 0)) why.push("empty region " + pl.regions.join("/"));
+      out.seeds.push({ seed, used: m.used, rerolls: m.rerolls, genMs: m.genMs, blocked: m.blocked, rival: r.fair.rival, centre: r.fair.centre, detour: r.fair.detour, camps: pl.regions.join("/"), ok: !why.length });
+      if (why.length) out.bad.push(seed + ": " + why.join("; "));
+    }
+    const fm = T.gen(1000, { forceFail: true });
+    out.forcedFallback = { fallback: fm.fallback, used: fm.used, inList: cfg.terrain.fallbackSeeds.indexOf(fm.used) >= 0, pass: fm.fair.pass, attempts: fm.attempts, genMs: fm.genMs };
+    const s = [...out.genMs].sort((a, b) => a - b); out.genP50 = s[s.length >> 1]; out.genMax = s[s.length - 1];
+    return out;
+  }
+
+  // PS.selfTest({ matchSeconds, parts }) -> { pass, fails: [names], results: { name: { pass, detail } }, ms }. One console line.
+  // parts (array or "a,b"): config sprites terrain caches fight replay match (default: all). The harness calls them in separate evaluates
+  // so each stays under ~15 s of wall time; a console call runs everything.
   function selfTest(opts) {
-    const horizon = clamp(+(opts && opts.matchSeconds) || (S.cfg ? S.cfg.world.matchSeconds : 240), 10, 600);
-    const w0 = performance.now(), results = {}, fails = [];
+    opts = opts || {};
+    const all = ["config", "sprites", "terrain", "caches", "fight", "replay", "match"];
+    const parts = opts.parts ? (Array.isArray(opts.parts) ? opts.parts : String(opts.parts).split(",")) : all, has = (p) => parts.indexOf(p) >= 0;
+    const horizon = clamp(+opts.matchSeconds || (S.cfg ? S.cfg.world.matchSeconds : 240), 10, 600);
+    const w0 = performance.now(), results = {}, fails = [], ms = {};
     const check = (name, ok, detail) => { results[name] = { pass: !!ok, detail }; if (!ok) fails.push(name); };
-    const ls0 = lsSnapshot(), sig0 = stateSig(), refs0 = [S.agents, S.teams, S.grid, S.cam, S.input, S.spr, S.stats, particles, floaters];
-    check("config_loaded", !!S.cfg && typeof S.cfg === "object", { sections: S.cfg ? Object.keys(S.cfg) : [] });
-    let cr = null; try { cr = configReport(); } catch (e) { cr = { missing: ["threw: " + e.message] }; }
-    check("config_keys", cr.missing.length === 0, cr);
-    let sp = null; try { sp = spriteReport(); } catch (e) { sp = { total: 0, blank: ["threw: " + e.message] }; }
-    check("sprites_opaque", sp.total > 0 && sp.blank.length === 0, sp);
-    let f = null; try { f = fight(30, 20, 25, 3); } catch (e) { f = { error: String(e && e.message || e) }; }
-    check("fight_30v20", !f.error && f.playerWins >= 2 && f.seconds <= 25, f);
-    let mt = null; try { mt = simMatch(horizon); } catch (e) { mt = { exceptions: ["threw: " + (e && e.message || e)], maxTotal: Infinity }; }
-    check("simMatch_no_exceptions", mt.exceptions.length === 0, mt); // a wall-guard truncation is reported (detail.truncated), not failed: a slow machine isn't a bug
-    check("simMatch_agent_cap", mt.maxTotal <= S.cfg.spawn.agentCap, { maxTotal: mt.maxTotal, agentCap: S.cfg.spawn.agentCap });
-    const refs1 = [S.agents, S.teams, S.grid, S.cam, S.input, S.spr, S.stats, particles, floaters];
-    check("state_restored", stateSig() === sig0 && refs0.every((r, i) => r === refs1[i]), { mode: S.mode, t: S.t, agents: S.agents.length });
+    const timed = (p, fn) => { const t = performance.now(); try { fn(); } catch (e) { check(p + "_threw", false, { error: String(e && e.stack || e) }); } ms[p] = Math.round(performance.now() - t); };
+    const ls0 = lsSnapshot(), sig0 = stateSig(), refs0 = [S.agents, S.teams, S.map, S.cam, S.input, S.spr, S.stats, particles, floaters];
+    let f = null, mt = null;
+    if (has("config")) timed("config", () => {
+      check("config_loaded", !!S.cfg && typeof S.cfg === "object", { sections: S.cfg ? Object.keys(S.cfg) : [] });
+      const cr = configReport(); check("config_keys", cr.missing.length === 0, cr);
+      const ur = unitsReport(); check("config_units", ur.bad.length === 0 && ur.checked > 0, ur);
+    });
+    if (has("sprites")) timed("sprites", () => { const sp = spriteReport(); check("sprites_opaque", sp.total > 0 && sp.blank.length === 0, sp); });
+    if (has("terrain")) timed("terrain", () => {
+      const ts = terrainSuite(20);
+      check("terrain_20_seeds", ts.bad.length === 0 && ts.fallbacks === 0 && ts.seeds.every((s) => s.rerolls <= S.cfg.terrain.maxRerolls), ts);
+      check("terrain_fallback_forced", ts.forcedFallback.fallback && ts.forcedFallback.inList && ts.forcedFallback.pass, ts.forcedFallback);
+    });
+    if (has("caches") && S.map && !S.map.flat) timed("caches", () => {
+      flushGround(S.map); const before = cacheReport(); const dropped = debugDropCaches(); const mid = cacheReport(); recheckCaches(true); const after = cacheReport();
+      check("caches_drop_rebuild", before.ok && !mid.ok && after.ok, { dropped, before: { chunks: before.chunks, ok: before.ok }, droppedBlank: mid.chunksBlank.length + mid.spritesBlank.length, after });
+    });
+    if (has("fight")) timed("fight", () => { f = fight(30, 20, 25, 3); check("fight_30v20", !f.error && f.playerWins >= 2 && f.seconds <= 25 && new Set(f.runs.map((r) => r.seconds + ":" + r.playerLeft)).size > 1, f); });
+    if (has("replay")) timed("replay", () => { const r = replay(424242, 60); check("replay_60s", r.same, r); });
+    if (has("match")) timed("match", () => {
+      mt = simMatch(horizon, { wallMs: opts.wallMs || 9000 });
+      check("simMatch_no_exceptions", mt.exceptions.length === 0, mt); // a wall-guard truncation is reported (detail.truncated), not failed: a slow machine isn't a bug
+      check("simMatch_agent_cap", mt.capOver === 0 && mt.maxTotal <= mt.agentCap, { maxTotal: mt.maxTotal, agentCap: mt.agentCap, capOver: mt.capOver });
+      check("no_agent_in_rock", mt.terrainBad === 0 && mt.seconds >= Math.min(60, horizon) - 0.5, { terrainBad: mt.terrainBad, firstBad: mt.firstBad, seconds: mt.seconds });
+    });
+    const refs1 = [S.agents, S.teams, S.map, S.cam, S.input, S.spr, S.stats, particles, floaters];
+    check("state_restored", stateSig() === sig0 && refs0.every((r, i) => r === refs1[i]) && PS.terrain.map === S.map, { mode: S.mode, t: S.t, agents: S.agents.length });
     check("localStorage_unchanged", lsSnapshot() === ls0, {});
-    const n = Object.keys(results).length, ms = Math.round(performance.now() - w0), pass = fails.length === 0;
-    (pass ? console.log : console.warn)("[PS.selfTest] " + (pass ? "PASS " : "FAIL ") + (n - fails.length) + "/" + n + (pass ? "" : " fails: " + fails.join(", ")) +
-      " | 30v20 " + (f.winner || "?") + " in " + f.seconds + "s | simMatch " + mt.seconds + "s " + (mt.truncated ? "TRUNCATED by wall guard" : mt.end) + ", peak " + mt.maxTotal + "/" + S.cfg.spawn.agentCap + " | " + ms + " ms");
-    return { pass, fails, results, ms };
+    const n = Object.keys(results).length, total = Math.round(performance.now() - w0), pass = fails.length === 0;
+    (pass ? console.log : console.warn)("[PS.selfTest] " + (pass ? "PASS " : "FAIL ") + (n - fails.length) + "/" + n + (pass ? "" : " fails: " + fails.join(", ")) + " | parts " + parts.join(",") +
+      (f ? " | 30v20 " + (f.winner || "?") + " in " + f.seconds + "s" : "") + (mt ? " | simMatch " + mt.seconds + "s " + (mt.truncated ? "TRUNCATED by wall guard" : mt.end) + ", peak " + mt.maxTotal + "/" + mt.agentCap : "") + " | " + total + " ms");
+    return { pass, fails, results, ms: total, partMs: ms };
   }
 
   boot();
