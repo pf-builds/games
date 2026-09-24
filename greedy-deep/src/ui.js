@@ -7,6 +7,9 @@
 
   var UI = (window.GDUI = {});
   var E = window.GDEngine, GD = window.GD;
+  // The gated hooks the game itself needs (welcome-back, settings reset, the debug overlay,
+  // the frame loop's speed/pause), claimed once at load; window.GD never exposes them.
+  var GI = GD.__claimInternal();
   var cfg = null;
   var els = {};
   var rafPending = false;
@@ -89,7 +92,7 @@
     }
 
     window.GDRender.init(els.canvas, cfg);
-    window.GDSprites.ensure(GD.debug);
+    window.GDSprites.ensure(GI.debug);
     measureTitleCard();
     buildShop();
     buildRoster();
@@ -115,7 +118,7 @@
     });
     window.addEventListener("resize", layout);
     if (GD.state.goldEarnedTotal > 0 && els.hint) els.hint.classList.add("gone");
-    if (GD.debug) {
+    if (GI.debug) {
       els.overlay.classList.remove("hidden");
       els.overlay.classList.add("collapsed");
       els.overlay.addEventListener("click", function (e) {
@@ -132,9 +135,9 @@
   function resolveOffline() {
     if (!GD.loadedFromSave || !GD.savedAt) return;
     var elapsed = Date.now() - GD.savedAt;
-    var preview = GD.offlinePreview(elapsed);
+    var preview = GI.offlinePreview(elapsed);
     if (!(preview.gold > 0)) return;
-    var applied = GD.applyOffline(elapsed);
+    var applied = GI.applyOffline(elapsed);
     showWelcome(applied);
     try { if (window.GDAudio && !GD.state.prefs.muted) window.GDAudio.play("welcomeBack"); } catch (e) {}
   }
@@ -472,11 +475,11 @@
 
   function measureTitleCard() {
     var tc = cfg.titleCard;
-    if (!tc || !tc.src) { GD.dbg.titleCardBytes = 0; return; }
+    if (!tc || !tc.src) { GI.dbg.titleCardBytes = 0; return; }
     fetch(tc.src, { cache: "force-cache" })
       .then(function (r) { return r.ok ? r.blob() : null; })
-      .then(function (b) { GD.dbg.titleCardBytes = b ? b.size : 0; })
-      .catch(function () { GD.dbg.titleCardBytes = 0; });
+      .then(function (b) { GI.dbg.titleCardBytes = b ? b.size : 0; })
+      .catch(function () { GI.dbg.titleCardBytes = 0; });
   }
 
   function dismissSplash() {
@@ -485,7 +488,7 @@
     var ms = (cfg.titleCard && cfg.titleCard.fadeMs) || 450;
     setTimeout(function () { els.splash.classList.add("off"); }, ms + 60);
     // First user gesture: unlock audio. Wrapped so an audio failure never blocks start.
-    try { unlockAudio(); } catch (e) { if (GD.debug) console.warn("[GD] audio unlock failed:", e); }
+    try { unlockAudio(); } catch (e) { if (GI.debug) console.warn("[GD] audio unlock failed:", e); }
   }
   UI.dismissSplash = dismissSplash;
 
@@ -735,7 +738,7 @@
 
     var resetYes = $("reset-yes");
     if (resetYes) resetYes.addEventListener("click", function () {
-      GD._clearSave();
+      GI.clearSave();
       closeSettings();
       buildRoster();
       if (isDesktop) buildDesktopRails();
@@ -787,7 +790,9 @@
     if (!str) return;
     var area = $("export-area");
     if (area) { area.classList.remove("hidden"); area.value = str; area.select(); }
-    try { navigator.clipboard.writeText(str); } catch (e) { /* fallback: textarea is visible */ }
+    // writeText rejects asynchronously (unfocused document, no permission), which a try
+    // never sees; the textarea above is the fallback either way.
+    try { navigator.clipboard.writeText(str).catch(function () {}); } catch (e) { /* no clipboard API */ }
   }
 
   function doImport() {
@@ -983,8 +988,8 @@
   }
 
   function advance(dtReal) {
-    if (GD.paused) return;
-    acc += dtReal * (GD.timeScale || 1);
+    if (GI.sim.paused) return;
+    acc += dtReal * (GI.sim.timeScale || 1);
     var dt = cfg.sim.dt;
     var guard = 0;
     while (acc >= dt && guard++ < 600) { E.substep(cfg, GD.state, dt, GD.ctx); acc -= dt; }
@@ -1061,8 +1066,8 @@
     renderNextBands(d);
     renderBuffs();
     placeHint();
-    GD.refreshDbg(fps);
-    if (GD.debug && els.overlay) {
+    if (GI.debug) GI.refreshDbg(fps);
+    if (GI.debug && els.overlay) {
       var A = window.GDAudio;
       els.overlay.textContent =
         "t " + st.t.toFixed(1) + "  fps " + fps +
@@ -1070,16 +1075,16 @@
         "\ngold " + st.gold.toFixed(2) + "  +" + d.goldRate.toFixed(3) + "/s" +
         "\nm/s " + d.digRate.toFixed(4) + "  tap " + d.goldPerTap.toFixed(2) +
         "\ntotal " + st.goldEarnedTotal.toFixed(1) + "  crew " + d.dwarves +
-        "\ncamY " + GD.dbg.cameraY.toFixed(0) + "  crew@ " + GD.dbg.deepestDwarfY.toFixed(0) +
-          "  d " + Math.abs(GD.dbg.cameraY - GD.dbg.deepestDwarfY).toFixed(1) + "bu" +
-        "\nreveal +" + d.revealBonus + "  drawn<=" + GD.dbg.maxRenderedBandIndex +
-          "  fwd " + GD.dbg.forwardMeters.toFixed(0) + "m  veil " + GD.dbg.veilAlpha.toFixed(2) +
+        "\ncamY " + GI.dbg.cameraY.toFixed(0) + "  crew@ " + GI.dbg.deepestDwarfY.toFixed(0) +
+          "  d " + Math.abs(GI.dbg.cameraY - GI.dbg.deepestDwarfY).toFixed(1) + "bu" +
+        "\nreveal +" + d.revealBonus + "  drawn<=" + GI.dbg.maxRenderedBandIndex +
+          "  fwd " + GI.dbg.forwardMeters.toFixed(0) + "m  veil " + GI.dbg.veilAlpha.toFixed(2) +
         "\ntimed " + st.timed.length + "  pickups " + (GD.pickups ? GD.pickups.live + " live, " + GD.pickups.collected + " got" : "-") +
         "\nev " + st.eventsFired + " last " + (st.lastEvent || "-") +
         "\nowned " + JSON.stringify(st.owned) +
-        "\ncard " + GD.dbg.titleCardBytes + "b  sprites " +
-          GD.dbg.spriteCacheOpaque + "/" + GD.dbg.spriteCacheTotal +
-          " rb" + GD.dbg.spriteCacheRebuilds +
+        "\ncard " + GI.dbg.titleCardBytes + "b  sprites " +
+          GI.dbg.spriteCacheOpaque + "/" + GI.dbg.spriteCacheTotal +
+          " rb" + GI.dbg.spriteCacheRebuilds +
         "\nnextUnlock " + (function() {
           var best = null;
           var list2 = E.purchasables(cfg);
@@ -1091,8 +1096,8 @@
         })() +
         "\naudio " + (A ? (A.isMuted() ? "MUTED" : "gain=" + (A.masterGainValue() || 0).toFixed(2)) : "n/a") +
           "  last=" + (A ? (A.lastCue || "-") : "-") +
-        "\nsave " + GD.dbg.saveSize + "b  err " + GD.dbg.errors + "/" + GD.dbg.warnings +
-        "\nFLAVOR-TODO " + GD.dbg.flavorTodoCount;
+        "\nsave " + GI.dbg.saveSize + "b  err " + GI.dbg.errors + "/" + GI.dbg.warnings +
+        "\nFLAVOR-TODO " + GI.dbg.flavorTodoCount;
     }
   }
 

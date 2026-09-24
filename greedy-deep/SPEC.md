@@ -327,3 +327,22 @@ Converged with the simulate harness over 12 seeds. Before -> after:
   164 -> 152 min, max-buy off 94 -> 108 min. Peak gold rises under max-buy (~198K ->
   341K off, 410K collect-all) and falls slightly for cheapest-off (135K -> 128K). Not
   chased; still Peter's open ceiling question.
+
+## Debug gate (2026-09-23, Peter: lock cheat hooks behind ?debug=1)
+`gd.js` reads `?debug=1` once at boot (`GD.debug`, now read-only). Every cheat and QA hook
+is defined on a module-local table and `attachDebug(GD, GD.debug)` copies it onto
+`window.GD` only when debug is on: `setGold`, `setDepth`, `grant`, `grantForTest`,
+`jumpTo`, `spawnPickup`, `collectPickup`, `fire`, `seed`, `step`, `reset`, `setState`,
+`setConfig`, `pause`, `resume`, `clearSave`, `_clearSave`, `simulate`, `offlinePreview`,
+`applyOffline`, `selfTest`, `refreshDbg`, `_gateReport`, the `dbg` snapshot, and the
+`timeScale` / `paused` / `_visibility` overrides (accessors over locals, so assigning them
+on the plain URL does nothing). Public: `tap`, `buy`, `save`, `export`, `import`,
+`clickPickup` (the pointer path), `activeBuffs`, `pickupsBlocked`, `isHidden`, `init`,
+read-only helpers (`derive`, `snapshot`, `getState`, `costOf`, `format`, `bandAt`,
+`etaFor`, `validateConfig`), `hooks`, `ctx`, `audio`, and the `state` / `config` /
+`pickups` objects the UI and renderer read. What the UI itself needs from the gated set
+(welcome-back's `offlinePreview` / `applyOffline`, settings reset's `_clearSave`, the
+overlay's `refreshDbg` / `dbg`, the frame loop's speed and pause) is handed to `ui.js`
+once at load through `GD.__claimInternal()`, which deletes itself. selfTest asserts the
+gate both ways (`gate_*`). Not closed: a console user can still edit `GD.state` or call
+`window.GDEngine` directly; the gate removes the ready-made hooks, not the engine.
