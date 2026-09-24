@@ -354,15 +354,28 @@
     m.seed = seed; m.attempts = tries; m.genMs = +(now() - t0).toFixed(2);
     return m;
   }
-  // a flat fixture (grass inside a 2-cell rock border) for PS.fight: combat numbers stay comparable with v1's empty field
+  // a map built from a hand-made terr array (QA fixtures): sdf, cost with the wall bands, snap, the largest 4-connected region as main.
+  // opts: { name, flatCost (no wall bands: PS.fight keeps v1's empty-field numbers), passMask }
+  function fromTerr(terr, opts) {
+    opts = opts || {}; PROT.fill(0);
+    const sdf = new Float32Array(NN), cost = new Uint8Array(NN), snap = new Int32Array(NN), region = new Int16Array(NN), K = P.costs;
+    chamfer(terr, true, D1); chamfer(terr, false, D2);
+    for (let c = 0; c < NN; c++) {
+      if (walkT(terr[c])) { sdf[c] = (D1[c] / 3) * P.cell - P.cell / 2; const d = D1[c]; cost[c] = opts.flatCost ? K.base : K.base + (d <= 4 ? K.wall1 : d <= 8 ? K.wall2 : 0) + (terr[c] === 3 ? K.ford : 0); }
+      else { sdf[c] = -((D2[c] / 3) * P.cell - P.cell / 2); cost[c] = 255; }
+    }
+    snapTable(terr, snap);
+    const nReg = label4(terr), size = new Int32Array(Math.max(1, nReg)); let main = 0, walk = 0;
+    for (let c = 0; c < NN; c++) if (LAB[c] >= 0) size[LAB[c]]++;
+    for (let l = 1; l < nReg; l++) if (size[l] > size[main]) main = l;
+    for (let c = 0; c < NN; c++) if (LAB[c] === main && nReg > 0) { region[c] = 1; walk++; }
+    return { id: ++mapId, N, cell: P.cell, W: P.W, seed: 0, used: 0, rerolls: 0, fallback: false, attempts: 0, terr, cost, sdf, region, snap, owner: new Uint8Array(NN), dist: [],
+      passMask: opts.passMask || new Uint8Array(NN), spawns: [], river: null, fair: { pass: true, why: [] }, blocked: 0, walkCells: walk, regions: nReg, chunks: null, flat: true, fixture: opts.name || "flat", genMs: 0 };
+  }
+  // a flat fixture (grass inside a 2-cell rock border) for PS.fight: flat cost so combat numbers stay comparable with v1's empty field
   function flat() {
     const terr = new Uint8Array(NN); for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) if (i < 2 || j < 2 || i >= N - 2 || j >= N - 2) terr[j * N + i] = 1;
-    PROT.fill(0); const sdf = new Float32Array(NN), cost = new Uint8Array(NN), snap = new Int32Array(NN), region = new Int16Array(NN);
-    chamfer(terr, true, D1); chamfer(terr, false, D2);
-    for (let c = 0; c < NN; c++) { if (!terr[c]) { sdf[c] = (D1[c] / 3) * P.cell - P.cell / 2; cost[c] = P.costs.base; region[c] = 1; } else { sdf[c] = -((D2[c] / 3) * P.cell - P.cell / 2); cost[c] = 255; } }
-    snapTable(terr, snap);
-    return { id: ++mapId, N, cell: P.cell, W: P.W, seed: 0, used: 0, rerolls: 0, fallback: false, attempts: 0, terr, cost, sdf, region, snap, owner: new Uint8Array(NN), dist: [],
-      passMask: new Uint8Array(NN), spawns: [], river: null, fair: { pass: true, why: [] }, blocked: 0, walkCells: 0, regions: 1, chunks: null, flat: true, genMs: 0 };
+    return fromTerr(terr, { name: "flat", flatCost: true });
   }
   function use(m) { T.map = m; T.terr = m.terr; T.cost = m.cost; T.sdf = m.sdf; T.region = m.region; T.snap = m.snap; T.seed = m.seed; T.rerolls = m.rerolls; return m; }
 
@@ -376,9 +389,10 @@
     const a = s[c], b = s[c + 1], d = s[c + N], e = s[c + N + 1];
     return a + (b - a) * tx + (d - a) * ty + (a - b - d + e) * tx * ty;
   }
+  // open ground for placement: walkable, main region, not in a pass, and the bilinear SDF at the object's own point (not its cell centre) >= k cells
   function placementOk(x, y, minSdfCells) {
     const c = cellOf(x, y); const m = T.map;
-    return c >= 0 && walkT(m.terr[c]) && m.region[c] === 1 && !m.passMask[c] && m.sdf[c] >= (minSdfCells == null ? 2 : minSdfCells) * P.cell;
+    return c >= 0 && walkT(m.terr[c]) && m.region[c] === 1 && !m.passMask[c] && sdfAt(x, y) >= (minSdfCells == null ? 2 : minSdfCells) * P.cell;
   }
   const SNAP = { x: 0, y: 0 };
   // nearest walkable point: unchanged if walkable, else the centre of the nearest walkable cell (writes and returns one shared object)
@@ -397,5 +411,5 @@
   }
 
   const T = (PS.terrain = { N: 0, cell: 0, W: 0, map: null, terr: null, cost: null, sdf: null, region: null, snap: null, seed: 0, rerolls: 0,
-    init, gen, use, flat, walkable, sdfAt, placementOk, snapXY, cellOf, report, walkT, mulberry32, hash, DIR });
+    init, gen, use, flat, fromTerr, walkable, sdfAt, placementOk, snapXY, cellOf, report, walkT, mulberry32, hash, DIR });
 })();
