@@ -77,4 +77,16 @@
 - Decal mushrooms and flowers are the only saturated pixels in the ground (0.01% of a terrain crop over 45%). Keep them rare
 - Hit flash is one baked frame (white wash at art.flashWhite) shown while the flash timer is above art.flashMin, not a fade: it keeps one draw per agent. M7's clash cues may want two flash levels (a second atlas row)
 - Remnant "hands up" is still two cream rects over the plain frame; M7's surrender frame belongs in the atlas
-- Relic overlays (helmet, tines, shield) are hooks in sprites.js (RELIC, the relics argument of peasantSet): M6 fills them, and each combination becomes its own cached atlas
+- Relic overlays (helmet, tines, shield) are hooks in sprites.js (RELIC, the relics argument of peasantSet): M6 fills them, and each combination becomes its own cached atlas (done in M6: Arms I-III set the hat band, crest and tines; one atlas per team per Arms tier, the old one zeroed)
+
+## Parked during v2 M6 Spoils (2026-09-24)
+- Spoils come fast. With villages (80 garrison peasants), six fixed chests, heavy chests, six bandit camps and the trickle chest, the fog-honest bot had 4-6 relic tiers at 1:00 and 5-6 at the bell in the first 5-match pass (acceptance 3-6); AI rivals end at 2-7. Heavy chests went 4 -> 2 and fixed chests moved to 600-1600 px from their spawn after that pass. M8 levers: fewer heavy chests, later trickle chests (progression.trickleChestAfter), higher muster milestones, bandit camps that cost more (encampments.banditHp / banditDamage: a 45-swarm clears an orange camp with no losses today)
+- AI rivals know every landmark site from the start (SPEC-v2 §7) and beeline for their region's chest and village (chests taken at 3-7 s in a live probe). If the rivals out-grow a new player in the first minute, give sites a knowledge radius like camps (ai.campKnowStart) instead of the whole map
+- Stubborn still claims a camp cluster and Sly still lurks near a power-up or camp (M4's stand-ins). Point them at villages and bandit camps (claimSite / lurkSpot) once spoils pacing is tuned
+- AI swarms do not route around bandit camps they cannot take: a forage target past a camp can walk them into its reach. Add bandit reach to the camp-avoidance list when it shows in playtests
+- Villages sort by their gate: peasants inside the palisade are drawn behind the huts. If swarms walking through a village read as vanishing, draw the palisade as ground and the huts in the y-sort
+- A team at its cap on an axis walks over a relic or chest of that axis without opening it (it stays for others). Muster grants +1 on its axis, so Horn I from a chest plus the 15 milestone makes Horn II
+- A routed leader drops only when the rout group is at least progression.dropMinShare (0.3) of it: a 20-peasant skirmish at the edge of a 300 swarm is not "routed". The drops land where the winner's flipped peasants stand (C1 E); the winner usually takes them
+- The heavy chest counter shows the ring's leading count (a rival's, if it leads the ring); the pick-of-two relics can be taken by anyone
+- Relic onboarding (the first muster relic flying into the strip) and the portrait HUD layout for the relic strip are M7's (SPEC-v2 §10)
+- Arms parity is measured with PS.fight at 40 and 60 per side: break-even ~1.2x (I), ~1.36x (II), ~1.55x (III) at 7% per tier (8% put Arms II at ~1.40x, on the gate). Fights sit on the rout rule's knife edge, so single points need 9+ seeded runs

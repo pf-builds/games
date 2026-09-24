@@ -48,6 +48,11 @@
 // --bot-matches K plays K matches of the fog-honest scripted bot on each of --bot-diffs (default easy,normal) for the win rate. The report
 // carries the §9 pacing table: first sighting, first fight, fights per match, swarms alive at 1:00 / 2:00 / 3:00, bell reached, the 3:45
 // leader's win share, eliminations inside the first minute, the bot's win rate; the AI think cost per tick. Targets are M8 gates: reported.
+//
+// M6 additions (spoils): selfTest parts "spoils" and "parity"; the bot also goes for the spoils it knows through PS.vis.objectives() (a relic
+// or chest it can use, a village at >= half its garrison, a heavy chest it can lift, a bandit camp at >= 2x its bandits), fog-honest like
+// the rest of its policy; every bot and scripted match reports the bot's relic tiers at 1:00 / 3:00 / 5:00 and at the end, and the objectives
+// it took (assert botTiersMedian: the median bot match ends with 3-6 tiers, when >= 3 bot matches run); --art-shots adds the spoils props.
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -110,7 +115,16 @@ function installHelpers() {
       else {
         this.bfs(p.cx, p.cy); let best = null, bd = Infinity;
         for (const c of V.camps()) { const k = T.cellOf(c.x, c.y), d = k >= 0 ? this.D[k] : -1; if (d >= 0 && d < bd) { bd = d; best = c; } }
-        if (best) { gx = best.x; gy = best.y; act = "camp"; }
+        // M6: spoils it knows (live where it sees them, last-seen elsewhere), their path distance weighted down so they beat a nearer camp
+        const PG = S.cfg.progression, tier = p.tier || { arms: 0, boots: 0, horn: 0 }, cap = (ax, t3) => (ax === "arms" ? (t3 ? PG.armsMax : PG.armsCap) : ax === "boots" ? PG.bootsMax : PG.hornMax);
+        let ob = null, od = Infinity;
+        for (const o of V.objectives ? V.objectives() : []) {
+          if (!o.live) continue;
+          const use = o.type === "relic" || o.type === "chest" ? tier[o.axis] < cap(o.axis, o.t3) : o.type === "village" ? p.count >= 0.5 * o.need : o.type === "heavy" ? p.count >= o.need : o.type === "bandit" ? p.count >= 2 * o.need : false;
+          if (!use) continue; const k = T.cellOf(o.x, o.y), d = k >= 0 ? this.D[k] : -1; if (d >= 0 && d * 0.5 < od) { od = d * 0.5; ob = o; }
+        }
+        if (ob && od < bd) { best = ob; bd = od; }
+        if (best) { gx = best.x; gy = best.y; act = best === ob ? "spoils" : "camp"; }
         else {
           act = "explore"; gx = W / 2; gy = H / 2; const a0 = Math.atan2(H / 2 - p.cy, W / 2 - p.cx);
           for (let k = 0; k < 12; k++) { const a = a0 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.5, x = p.cx + Math.cos(a) * 600, y = p.cy + Math.sin(a) * 600; if (T.walkable(x, y) && !V.explored(1, x, y)) { gx = x; gy = y; break; } }
@@ -141,14 +155,15 @@ function installHelpers() {
       for (const a of S.agents) { if (a.team === 0) neutrals++; if (Math.abs(a.x - S.cam.x) < hw && Math.abs(a.y - S.cam.y) < hh) onScreen++; }
       const counts = {}; for (const t of S.teams.slice(1)) counts[t.name] = t.count;
       return { t: Math.round(S.t * 100) / 100, mode: S.mode, result: S.result, counts, alive: S.teams.slice(1).map((t) => t.alive), neutrals, total: S.agents.length, onScreen,
-        ev: S.ev ? { ...S.ev } : null, playerFights: S.stats.fights || 0, flow: window.PS.flow ? window.PS.flow.stats.rebuilds : 0 };
+        ev: S.ev ? { ...S.ev, gains: undefined, taken: undefined } : null, playerFights: S.stats.fights || 0, flow: window.PS.flow ? window.PS.flow.stats.rebuilds : 0,
+        tiers: S.teams.slice(1).map((t) => t.tierN || 0), taken: S.ev && S.ev.taken ? S.ev.taken.filter((x) => x[1] === 1).length : 0 };
     },
   };
 }
 
 // one chunk: policy every POLICY_TICK, PS.step between decisions, stop at `until`, at maxSim sim-seconds, or at the wall guard
 function runChunk(o) {
-  const S = window.PSS, w0 = performance.now(), t0 = S.t, acts = { camp: 0, hunt: 0, flee: 0, idle: 0, explore: 0 };
+  const S = window.PSS, w0 = performance.now(), t0 = S.t, acts = { camp: 0, hunt: 0, flee: 0, idle: 0, explore: 0, spoils: 0 };
   let stepMs = 0, steps = 0, peak = S.agents.length, drawn = 0;
   while (S.mode === "play" && S.t < o.until - 1e-6 && S.t - t0 < o.maxSim - 1e-6 && performance.now() - w0 < o.wallMs) {
     acts[window.__psh.policy(o.policy)]++;
@@ -163,7 +178,7 @@ function runChunk(o) {
 // live rAF timing for `ms` of wall time; the scripted player keeps steering every ~0.5 s so the swarm isn't parked
 function renderWindow(o) {
   return new Promise((res) => {
-    const S = window.PSS, t0 = performance.now(), st0 = S.t, gaps = [], acts = { camp: 0, hunt: 0, flee: 0, idle: 0, explore: 0 }, up0 = window.PS.vis.cost();
+    const S = window.PSS, t0 = performance.now(), st0 = S.t, gaps = [], acts = { camp: 0, hunt: 0, flee: 0, idle: 0, explore: 0, spoils: 0 }, up0 = window.PS.vis.cost();
     let last = 0, n = 0, nextPolicy = 0;
     const f = (ts) => {
       if (last) gaps.push(ts - last); last = ts; n++;
@@ -280,7 +295,7 @@ async function main() {
     });
     page.on("pageerror", (e) => report.errors.page.push({ run: ri + 1, text: String(e.message || e) }));
     const bootReady = () => !!(window.PS && window.PS.selfTest && window.PS.step && window.PSS && window.PSS.teams && window.PSS.teams.length > 1);
-    const run = { index: ri + 1, timeline: [], chunks: [], render: [], screenshots: {}, policy: { camp: 0, hunt: 0, flee: 0, idle: 0, explore: 0 } };
+    const run = { index: ri + 1, timeline: [], chunks: [], render: [], screenshots: {}, policy: { camp: 0, hunt: 0, flee: 0, idle: 0, explore: 0, spoils: 0 } };
     report.runs.push(run);
 
     let b0 = Date.now();
@@ -292,7 +307,7 @@ async function main() {
       // selfTest on the title screen before any match, then the fight matrix (each call is its own evaluate, well under 15 s)
       // one evaluate per part so each stays well under ~15 s of wall time (lesson 20); the merged verdict is the selfTest verdict
       const s0 = Date.now(), st = { pass: true, fails: [], results: {}, partMs: {}, wallMs: 0 };
-      for (const part of ["config", "sprites", "terrain", "caches", "art", "flow", "fight", "fixtures", "flipflop", "ai", "rivals", "fog", "replay", "match"]) {
+      for (const part of ["config", "sprites", "terrain", "caches", "art", "flow", "fight", "fixtures", "flipflop", "ai", "rivals", "fog", "spoils", "parity", "replay", "match"]) {
         const p0 = Date.now(), r = await page.evaluate((part) => window.PS.selfTest({ parts: part }), part);
         st.partMs[part] = Date.now() - p0; Object.assign(st.results, r.results); for (const f of r.fails) if (st.fails.indexOf(f) < 0) st.fails.push(f);
       }
@@ -463,6 +478,7 @@ async function main() {
     });
     run.screenshots.end = await shot(page, `run${ri + 1}-end`);
     const aliveAt = (t) => { const s = run.timeline.find((x) => Math.round(x.t) === t); return s ? s.alive.filter(Boolean).length : null; };
+    run.spoils = await page.evaluate(() => { const S = window.PSS, E = S.ev; return { tiers60: E.tiers60, tiers180: E.tiers180, tiers300: E.tiers300, tiersEnd: S.teams.slice(1).map((t) => t.tierN), taken: E.taken.filter((x) => x[1] === 1).map((x) => x[2]), gains: E.gains.filter((g) => g[1] === 1).map((g) => g[0] + "s " + g[2] + g[3] + ":" + g[4]), drops: E.drops }; });
     run.summary = { playerFights: run.end.stats.fights, fights: run.end.ev && run.end.ev.fights, routs: run.end.ev && run.end.ev.routs, remnants: run.end.ev && run.end.ev.remnants,
       aliveAt60: aliveAt(60), aliveAt120: aliveAt(120), aliveAt180: aliveAt(180), bell: run.end.bell && !run.endForced, bellForced: run.endForced, leftHome: run.end.leftHome, atCentre: run.end.atCentre };
     run.maxAgents = maxAgents;
@@ -590,8 +606,8 @@ async function main() {
     const seed = A.seed != null && isFinite(A.seed) ? A.seed : 1000; const u = new URL(url.href); u.searchParams.set("seed", String(seed)); await page.goto(u.href);
     await page.waitForFunction(() => !!(window.PS && window.PS.artScene && window.PSS && window.PSS.map), null, { timeout: 20000 }); await page.waitForTimeout(900);
     const art = { seed, shots: {}, scenes: {} }; art.shots.title = await shot(page, "art-title");
-    for (const [sc, zoom] of [["home", 0], ["pass", 0], ["ford", 0], ["bridge", 0], ["clash", 0], ["rout", 0], ["teams", A.mobile ? 0.5 : 0]]) {
-      art.scenes[sc] = await page.evaluate(([sc, seed, zoom]) => { window.PS.debugStart({ seed }); return window.PS.artScene(sc, { zoom }); }, [sc, seed, zoom]);
+    for (const [sc, zoom, o] of [["home", 0], ["pass", 0], ["ford", 0], ["bridge", 0], ["clash", 0], ["rout", 0], ["teams", A.mobile ? 0.5 : 0], ["village", 0], ["bandit", 0, { kind: 2 }], ["heavy", 0], ["relic", 0], ["chest", 0]]) {
+      art.scenes[sc] = await page.evaluate(([sc, seed, zoom, o]) => { window.PS.debugStart({ seed }); return window.PS.artScene(sc, Object.assign({ zoom }, o || {})); }, [sc, seed, zoom, o || null]);
       await page.waitForTimeout(sc === "rout" ? 120 : 600); art.shots[sc] = await shot(page, "art-" + sc);
     }
     art.errors = errs; art.ok = errs.length === 0 && Object.values(art.scenes).every((r) => r && !r.error) && /JOIN/.test((art.scenes.rout.banners || []).join(" "));
@@ -647,6 +663,9 @@ async function main() {
   // M5: one drawImage per agent in the bench scene, and the art screenshots staged cleanly
   if (report.bench && report.bench.v2) as.benchOneDrawPerAgent = report.bench.v2runs.every((r) => r.drawPerAgentOk !== false);
   if (A.artShots) as.artShots = !!(report.artShots && report.artShots.ok);
+  // M6: the median bot match ends with 3-6 relic tiers (SPEC-v2 §8 acceptance), when there are enough bot matches to have a median
+  const botT = (report.botMatches || []).map((m) => (m.tiers ? m.tiers[0] : 0)); report.botTiers = { end: botT, median: botT.length ? median(botT) : null };
+  if (botT.length >= 3) as.botTiersMedian = report.botTiers.median >= 3 && report.botTiers.median <= 6;
   if (A.mobile) {
     const t = report.touch || {}, h = report.huddle || {};
     as.touchLandsOnCanvas = t.target === "CANVAS#game";
@@ -736,6 +755,15 @@ function markdown(R) {
     L.push("", "## Pacing (SPEC-v2 §9; targets are M8 gates, reported here)", "", "| matches | n | first sighting: team 1 / any (s, median) | first fight: any / team 1 (s, median) | fights / team 1's (mean) | alive 1:00 / 2:00 / 3:00 / horn | bell reached | 3:45 leader wins | elims in 1st min | bot wins | pile-ons / scent pings | AI ms per tick (max think) |", "|---|---|---|---|---|---|---|---|---|---|---|---|");
     for (const p of R.pacing) L.push(`| ${p.label} | ${p.n} | ${p.firstSight} / ${p.firstSightAny} | ${p.firstFight} / ${p.firstPlayerFight} | ${p.fights} / ${p.playerFights} | ${p.alive60} / ${p.alive120} / ${p.alive180} / ${p.hornAlive} | ${p.bellPct}% | ${p.leaderWinsPct}% of ${p.hornN} | ${p.elimFirstMinPct}% of ${p.elims} | ${p.winPct == null ? "-" : p.winPct + "%"} | ${p.pileOns} / ${p.scentPings} | ${p.aiMsPerTick} (${p.aiMaxMs}) |`);
     L.push("", "Targets (M8): first sighting 30-90 s; first fight 60-150 s; >= 3 fights for the bot; >= 3.5 alive at 3:00; bell >= 60%; 3:45 leader wins <= 60% of all-AI matches; bot wins Easy >= 60%, Normal 35-45%; <= 20% of eliminations inside the first minute.");
+  }
+  // M6 spoils: the bot's (team 1's) relic tiers over time and the objectives it took; every team's tiers at the end
+  const SPM = (R.botMatches || []).concat(R.aiMatches || []);
+  if (SPM.length || R.runs.some((r) => r.spoils)) {
+    L.push("", "## Spoils (M6): team 1's relic tiers at 1:00 / 3:00 / 5:00 / end, objectives it took", "", "| match | seed | result | tiers 1:00 / 3:00 / 5:00 / end | taken by team 1 | all teams' tiers at the end | drops |", "|---|---|---|---|---|---|---|");
+    const cnt = (a) => { const o = {}; for (const x of a) o[x] = (o[x] || 0) + 1; return Object.entries(o).map(([k, v]) => k + " " + v).join(", ") || "-"; };
+    for (const m of SPM) L.push(`| ${m.aiPlayer ? "all-AI" : "bot " + m.difficulty} | ${m.seed} | ${m.aiPlayer ? m.result : m.won ? "win" : m.result} | ${(m.tiers60 || [])[0] ?? "-"} / ${(m.tiers180 || [])[0] ?? "-"} / ${(m.tiers300 || [])[0] ?? "-"} / ${(m.tiers || [])[0]} | ${cnt((m.taken || []).filter((x) => x[1] === 1).map((x) => x[2]))} | ${(m.tiers || []).join("/")} | ${m.drops || 0} |`);
+    for (const r of R.runs) if (r.spoils) L.push(`| scripted run ${r.index} | ${r.seed} | ${r.end.result} | ${(r.spoils.tiers60 || [])[0] ?? "-"} / ${(r.spoils.tiers180 || [])[0] ?? "-"} / ${(r.spoils.tiers300 || [])[0] ?? "-"} / ${r.spoils.tiersEnd[0]} | ${cnt(r.spoils.taken)} | ${r.spoils.tiersEnd.join("/")} | ${r.spoils.drops} |`);
+    if (R.botTiers && R.botTiers.end.length) L.push("", `Bot tiers at the end: ${R.botTiers.end.join(", ")} (median ${R.botTiers.median}; acceptance 3-6).`);
   }
   const LV = R.aiMatches.concat(R.botMatches || []);
   if (LV.length) {

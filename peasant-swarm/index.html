@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@700;800&display=swap">
-<link rel="stylesheet" href="style.css?v=9">
+<link rel="stylesheet" href="style.css?v=10">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%231FD1A3'/><text x='50' y='68' font-size='52' text-anchor='middle'>🔱</text></svg>">
 </head>
 <body>
@@ -27,7 +27,7 @@
         <button id="btn-sound" class="btn-sound" title="Sound (M)"></button>
       </div>
     </div>
-    <div id="buffs"></div>
+    <div id="bl"><div id="relics"></div><div id="buffs"></div></div>
     <canvas id="minimap" width="150" height="150"></canvas>
     <div id="hint"></div>
     <button id="t-huddle" class="tbtn">HUDDLE</button>
@@ -42,11 +42,13 @@
       <button id="btn-sound-title" class="btn-sound"></button>
     </div>
     <div class="diffrow"><span>Rivals:</span><div id="difficulty"></div></div>
+    <div id="records" class="records empty"></div>
     <div class="howto">
       <div><b>Move</b>: the swarm follows your cursor and finds its way around cliffs. On a phone, tap to march there, drag to steer, hold to stop</div>
       <div><b>Touch</b> grey peasants to recruit them</div>
       <div><b>Fight</b> only when you're bigger. Win a clash and the losers join you</div>
       <div><b>Huddle</b> (hold Space) to tighten up before contact</div>
+      <div><b>Spoils</b>: relics in chests and bandit camps upgrade your whole swarm for the match; walk enough peasants to a village gate and it joins you</div>
       <div><b>5-minute matches.</b> The horn at 3:45 crowns the biggest swarm and every mob turns on it. Wipe out the rivals, or be the biggest when the bell rings</div>
     </div>
   </div>
@@ -85,13 +87,14 @@
 </div>
 
 <script src="src/palette.js?v=1"></script>
-<script src="src/sprites.js?v=5"></script>
+<script src="src/sprites.js?v=6"></script>
 <script src="src/particles.js?v=2"></script>
-<script src="src/audio.js?v=4"></script>
+<script src="src/audio.js?v=5"></script>
 <script src="src/terrain.js?v=2"></script>
 <script src="src/flow.js?v=2"></script>
 <script src="src/fog.js?v=3"></script>
 <script src="src/ground.js?v=1"></script>
-<script src="src/game.js?v=25"></script>
+<script src="src/spoils.js?v=1"></script>
+<script src="src/game.js?v=26"></script>
 </body>
 </html>

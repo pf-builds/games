@@ -1,6 +1,6 @@
 // Peasant Swarm — core simulation + render. Click it! Studios, 2026.
 // Boids swarm routed by per-team flow fields (src/flow.js) on seeded terrain (src/terrain.js), local combat with a local rout and a
-// fleeing remnant, AI rivals that play under the same fog of war as you (src/fog.js), power-ups. All tuning in config.json.
+// fleeing remnant, AI rivals that play under the same fog of war as you (src/fog.js), power-ups, spoils (src/spoils.js: relics, chests, villages, bandit camps). All tuning in config.json.
 (function () {
   const PS = (window.PS = window.PS || {});
   const $ = (id) => document.getElementById(id);
@@ -34,7 +34,8 @@
   // swarm, eliminations [t, team], the horn's leader and swarms alive then, swarms alive at 1:00 / 2:00 / 3:00, pile-ons, scent pings, crown
   // moves, trickle camps (and how many went to one of the two smallest swarms)
   const mkEv = () => ({ fights: 0, routs: 0, remnants: 0, scattered: 0, firstFight: -1, firstPlayerFight: -1, firstSightAny: -1, elims: [], hornLeader: 0, hornAlive: 0,
-    alive60: 0, alive120: 0, alive180: 0, pileOns: 0, scentPings: 0, crownMoves: 0, trickle: 0, trickleFav: 0 });
+    alive60: 0, alive120: 0, alive180: 0, pileOns: 0, scentPings: 0, crownMoves: 0, trickle: 0, trickleFav: 0,
+    gains: [], taken: [], drops: 0, trickleChests: 0, tiers60: null, tiers180: null, tiers300: null }); // M6: tier gains [t, team, axis, tier, source], objectives taken [t, team, type], tiers at 1:00 / 3:00 / 5:00
   // heard noise (SPEC-v2 §7): the clashes going on now, a fixed pool; each AI hears one within its difficulty's hearing radius
   const mkNoise = () => { const a = []; for (let i = 0; i < 16; i++) a.push({ on: false, a: 0, b: 0, x: 0, y: 0, t0: -1e9, t1: -1e9 }); return a; };
   // the finale crown (the biggest swarm, position broadcast every finale.crownEvery s), the pile-on flag, Bully's scent pings
@@ -56,6 +57,7 @@
     fogW: null, fogS: null, fogOn: false, frameId: 0, lastDrawT: 0, lastDrawSim: 0, // fog world (src/fog.js), per-world fog presentation state, fog render flag
     noise: mkNoise(), crown: mkCrown(), pile: mkPile(), scent: mkScent(), relaxUntil: -1e9, torches: false, aiPlayer: false, // M4: rivals and match (SPEC-v2 §7, §9)
     aiCost: { ms: 0, thinks: 0, ticks: 0, max: 0 }, // AI think script time (the < 0.1 ms per tick gate)
+    objs: [], bandits: [], spT: 0, // M6 spoils (src/spoils.js): every objective, the bandit camps among them (never in S.teams), the trickle-chest timer
   };
   if (S.debug) window.PSS = S;
 
@@ -64,12 +66,14 @@
   let particles, floaters, smokeP, sandbox = false; // sandbox: PS.fight / PS.simMatch are running a throwaway world, so DOM side effects are skipped
   let liveFlow = null, sbFlow = null; // flow-field worlds (src/flow.js): one for the live game, one reused by every sandbox
   let liveFog = null, sbFog = null; // fog worlds (src/fog.js), same split
+  let SPL = null; // spoils (src/spoils.js), bound once in boot() with the hooks it needs (spoilsHooks)
 
   // ---------------------------------------------------------------- setup
   async function boot() {
-    const res = await fetch("config.json?v=25");
+    const res = await fetch("config.json?v=26");
     S.cfg = await res.json();
     S.spr = PS.buildSprites(S.cfg);
+    SPL = PS.Spoils(spoilsHooks());
     PS.terrain.init(S.cfg); PS.flow.init(S.cfg); PS.fog.init(S.cfg);
     liveFlow = PS.flow.world(); sbFlow = PS.flow.world(); liveFog = PS.fog.world(); sbFog = PS.fog.world();
     hashAlloc();
@@ -99,6 +103,7 @@
       PS.debugStart = (o) => { o = o || {}; if (o.difficulty && S.cfg.difficulty[o.difficulty]) S.difficulty = o.difficulty; PS.audio.setSilent(true); newGame(false, { seed: o.seed, aiPlayer: !!o.aiPlayer }); S.mode = "play"; S._hintFight = S._hintHud = S._hintRecruit = true; S._routedBy = null; showOverlay(null); $("hud").classList.remove("hidden"); updateHUD(true); return { seed: S.seed, difficulty: S.difficulty, slots: S.teams.slice(1).map((t) => t.slot) }; };
       PS.pacing = pacing;
       PS.artScene = artScene;
+      PS.spoilsQA = { villageTest, banditTest, heavyTest, musterTest, dropTest, aiSpoilsTest, parityTest, placement: spoilsPlacement, SP: () => SPL }; // debug: the M6 checks one by one
     }
   }
 
@@ -117,7 +122,7 @@
     // the neighbour loop reads x, y, team, dead and escapeT of hundreds of agents per agent: keep them first (one cache line)
     return { x, y, team, dead: false, escapeT: 0, vx: 0, vy: 0, hp: S.cfg.agent.hp, atk: R() * 0.5, tgt: null,
       ph: R() * 10, face: R() < 0.5 ? 1 : -1, fl: 0, lunge: 0, wx: x, wy: y, hx: x, hy: y, fight: false, r: S.cfg.agent.radius, pop: 9, camp: null,
-      rec: 0, seenA: 0, seenT: -1e9, drawnF: 0, ex: 0, ey: 0, groupId: 0, rd: 0, fieldT: 0, fdx: 0, fdy: 0, fok: 0 };
+      rec: 0, seenA: 0, seenT: -1e9, drawnF: 0, ex: 0, ey: 0, groupId: 0, rd: 0, fieldT: 0, fdx: 0, fdy: 0, fok: 0, gar: false, exr: false }; // gar: a village garrison inside its palisade (M6); exr: a scattered ex-rival (no muster credit)
   }
   const z9 = () => [0, 0, 0, 0, 0, 0, 0, 0, 0]; // team-indexed arrays: neutral 0, player 1, rivals 2-6, spare 7, bandits 8 (SPEC-v2 §6)
   // route: the team steers by its flow field (else direct seek); mode (player): "route" | "steer" | "hold"; hyst: route hysteresis applies;
@@ -128,8 +133,10 @@
   // Per enemy slot j: eng (agents fighting j this tick) with fX/fY (their position sums), engT (engaged time), engL (smoothed local
   // strength), engPk (its peak this engagement), engHold (time under breakRatio), engCx/engCy (contact centroid), engStart (count at start),
   // engG / engGPk (fighting mode: the rout group's survivors and their peak this engagement)
+  // M6 (src/spoils.js): tier {arms, boots, horn}, mustered (neutrals recruited) and musterK (milestones passed), and the stats the tiers set:
+  // hpMax, atkMul, power (count x power in every ratio), spdMul, fordMul, recR (recruit radius)
   function mkTeam(id, name, color, isPlayer, ai) {
-    return { id, name, color, isPlayer, ai, count: 0, cx: 0, cy: 0, ax: 0, ay: 0, tx: 0, ty: 0, vx: 0, vy: 0, pcx: 0, pcy: 0, spd: 0, slot: -1, alive: true,
+    const t = { id, name, color, isPlayer, ai, tier: null, mustered: 0, musterK: 0, tierN: 0, hpMax: 0, atkMul: 1, power: 1, spdMul: 1, fordMul: 1, recR: 0, count: 0, cx: 0, cy: 0, ax: 0, ay: 0, tx: 0, ty: 0, vx: 0, vy: 0, pcx: 0, pcy: 0, spd: 0, slot: -1, alive: true,
       route: true, mode: "route", hyst: false, tMed: 0,
       buffs: { speed: 0, armor: 0, frenzy: 0, rally: 0 }, eng: z9(), engT: z9(), engStart: z9(), engL: z9(), engPk: z9(), engHold: z9(), engCx: z9(), engCy: z9(), fX: z9(), fY: z9(),
       engG: z9(), engGPk: z9(),
@@ -137,6 +144,7 @@
       regroupUntil: 0, fleeFrom: 0, leftHome: -1, atCentre: -1, preyId: 0, exX: 0, exY: 0, exUntil: -1, escUntil: -1, escFrom: 0, escReplanAt: 0, escGX: 0, escGY: 0,
       kind: ai ? ai.kind || "" : "", sense: 1, mem: S.cfg.fog.aiMemory, hear: S.cfg.fog.clashNoise, lastFight: -1e9, scentX: 0, scentY: 0, scentT: -1e9, leaveUntil: -1e9,
       lurkX: 0, lurkY: 0, lurkUntil: -1e9, lurkCool: 0, crowsT: -1e9, claimX: 0, claimY: 0, claimOn: false, claimEmpty: 0 };
+    SPL.initTeam(t); return t;
   }
   // speed by swarm size: small swarms get a boost that fades by `full`, big ones slow a little per peasant above it (SPEC-v2 §3)
   function sizeSpeed(n) { const k = S.cfg.agent.sizeSpeed, v = 1 + k.boost * Math.max(0, 1 - n / k.full) - k.drop * Math.max(0, n - k.full); return v < k.floor ? k.floor : v; }
@@ -164,7 +172,7 @@
     for (let i = 1; i < S.teams.length; i++) { const t = S.teams[i]; if (!t.alive) continue; const dx = t.cx - x, dy = t.cy - y; if (dx * dx + dy * dy < d * d) return false; }
     return true;
   }
-  const placeOk = (x, y, minSdfCells, pad) => PS.terrain.placementOk(x, y, minSdfCells) && farFromObstacles(x, y, pad);
+  const placeOk = (x, y, minSdfCells, pad) => PS.terrain.placementOk(x, y, minSdfCells) && farFromObstacles(x, y, pad) && !SPL.blocks(x, y); // M6: never in a bandit camp's reach or a village ring
   // a random point inside a random cell of `list` (defaults to open ground: walkable, main region, sdf >= 2 cells, not in a pass)
   const RP = { x: 0, y: 0 };
   function randPos(list) {
@@ -218,7 +226,8 @@
     S.flowW.know.fill(0); // the player starts knowing nothing: explored cells teach its field (fog stamps call PS.flow.learn)
     S.fogW = PS.fog.use(PS.fog.reset(sandbox ? sbFog : liveFog, m, { learn: true })); S.fogS = mkFogS(); S.fogOn = !attract;
     S.cap = opts.cap || capFor();
-    S.agents.length = 0; S.obstacles.length = 0; S.powerups.length = 0; S.camps.length = 0; S.banners.length = 0; S.decals.length = 0; S.trails.length = 0;
+    S.agents.length = 0; S.obstacles.length = 0; S.powerups.length = 0; S.camps.length = 0; S.banners.length = 0; S.decals.length = 0; S.trails.length = 0; SPL.reset();
+    if (!sandbox) for (const st of [...S.spr.sets.values()]) if (st.relics) S.spr.dropSet(st); // last match's relic atlases: zeroed (every team starts at tier 0)
     S.t = 0; S.tick = 0; S.acc = 0; S.timeLeft = cfg.world.matchSeconds; S.trickleT = 0; S.shake = 0; S.result = null; S.engagedNow = false; S.finalCalled = false; S.pendingEnd = null; S._routedBy = null; S.lastDrawSim = 0;
     S.stats = { recruited: 0, kills: 0, routs: 0, lost: 0, peak: 1, powerups: 0, fights: 0 };
     S.dbg = { terrainBad: 0, firstBad: null, capOver: 0 }; S.ev = mkEv(); S.lastRout = null; S.thinkRR = 0; S.fixture = null;
@@ -260,6 +269,9 @@
         spawnCamp(x, y, 2 + ((S.rng() * 2) | 0)); placed++;
       }
     }
+    // spoils (SPEC-v2 §8, src/spoils.js): villages and fixed chests per spawn region, bandit camps (their agents, team id 8), heavy chests.
+    // Placed before the neutral camps, which then keep out of every bandit camp's reach and off every objective (placeOk)
+    SPL.place(P);
     // neutral camps split evenly across the six path-Voronoi regions (the remainder goes to regions in shuffled order)
     const per = Math.floor(SP.neutralCamps / 6), extra = SP.neutralCamps - per * 6, order = [0, 1, 2, 3, 4, 5];
     for (let i = 5; i > 0; i--) { const j = (S.rng() * (i + 1)) | 0, t = order[i]; order[i] = order[j]; order[j] = t; }
@@ -315,7 +327,7 @@
 
   function recount() {
     for (let i = 1; i < S.teams.length; i++) { const t = S.teams[i]; t.count = 0; t._sx = 0; t._sy = 0; t.minY = Infinity; }
-    for (const a of S.agents) { if (a.team === 0 || a.dead) continue; const t = S.teams[a.team]; t.count++; t._sx += a.x; t._sy += a.y; if (a.y < t.minY) t.minY = a.y; }
+    for (const a of S.agents) { if (a.team === 0 || a.team === 8 || a.dead) continue; const t = S.teams[a.team]; t.count++; t._sx += a.x; t._sy += a.y; if (a.y < t.minY) t.minY = a.y; }
     for (let i = 1; i < S.teams.length; i++) {
       const t = S.teams[i];
       if (t.count > 0) { t.cx = t._sx / t.count; t.cy = t._sy / t.count; if (t.count > t.peak) t.peak = t.count; const p = PS.terrain.snapXY(t.cx, t.cy); t.ax = p.x; t.ay = p.y; }
@@ -330,6 +342,22 @@
       if (t.leftHome < 0 && (t.ax - s.x) * (t.ax - s.x) + (t.ay - s.y) * (t.ay - s.y) > hr * hr) t.leftHome = +S.t.toFixed(2);
       if (t.atCentre < 0 && (t.ax - c0) * (t.ax - c0) + (t.ay - c0) * (t.ay - c0) < cr * cr) t.atCentre = +S.t.toFixed(2);
     }
+  }
+
+  // the one way AI and HUD code walks teams (SPEC-v2 §6, C2 F): swarms() = the six swarm teams 1..6, rivals() = the player's five rivals 2..6.
+  // Bandits (team id 8 in agent records) live in S.bandits and never appear here. Lists cached per S.teams array (no allocation per call).
+  const SWL = { src: null, n: -1, all: [], riv: [] };
+  function swarmLists() { const T = S.teams; if (SWL.src !== T || SWL.n !== T.length) { SWL.src = T; SWL.n = T.length; SWL.all.length = 0; SWL.riv.length = 0; for (let i = 1; i < T.length; i++) { SWL.all.push(T[i]); if (i > 1) SWL.riv.push(T[i]); } } return SWL; }
+  const swarms = () => swarmLists().all, rivals = () => swarmLists().riv;
+  // what src/spoils.js may touch (SPEC-v2 §8): state, agent creation and conversion, the neighbour gather, presentation (every one of them
+  // gated as the rest of the game gates it), noise and pings, placement, and the knowledge assert
+  function spoilsHooks() {
+    return { S, $, NEAR, mkAgent: (x, y, t) => mkAgent(x, y, t), convert: (a, t, ab) => convert(a, t, ab), gather: (x, y, r) => { gather(x, y, r); return nearN; },
+      banner: (text, color, life, at, pri) => banner(text, color, life, at, pri), floater: (x, y, s, c, sz, l) => { if (!sandbox && fxOk(x, y)) floaters.add(x, y, s, c, sz, l); },
+      burst: (x, y, c, n, sp, l, sz, g) => particles.burst(x, y, c, n, sp, l, sz, g), puff: (x, y) => particles.burst(x, y - 2, "#C8B08A", 2, 30, 0.35, 2, -20),
+      playerSees: (x, y) => playerSees(x, y), fxOk: (x, y) => fxOk(x, y), fogGate: () => fogGate(), sightR: (t) => sightR(t), randPos: (l) => randPos(l), placeOk: (x, y, k, pad) => placeOk(x, y, k, pad),
+      noiseAt: (a, b, x, y) => noiseAt(a, b, x, y), clashPing: (x, y, r) => clashPing(x, y, r), sandbox: () => sandbox, swarms, seenSwarm: (id) => !fogGate() || S.fogS.obs[1][id].seen,
+      knowFail: (t, what) => knowFail(t, what) };
   }
 
   // ---------------------------------------------------------------- spatial hash: typed head/next lists, cells stamped per rebuild (no per-tick clears)
@@ -348,11 +376,12 @@
     if (hNext.length < n) hNext = new Int32Array(Math.max(n, S.cap) + 256); // grows once per session at most, never per frame
     hTick++; FBN.fill(0);
     for (let i = 0; i < n; i++) {
-      const a = ag[i]; let cx = (a.x / HC) | 0, cy = (a.y / HC) | 0;
+      const a = ag[i]; if (a.gar) continue; // a garrison inside its palisade is nobody's neighbour until its village joins (M6)
+      let cx = (a.x / HC) | 0, cy = (a.y / HC) | 0;
       if (cx < 0) cx = 0; else if (cx >= hCols) cx = hCols - 1; if (cy < 0) cy = 0; else if (cy >= hRows) cy = hRows - 1;
       const c = cy * hCols + cx; if (hStamp[c] !== hTick) { hStamp[c] = hTick; hHead[c] = -1; }
       hNext[i] = hHead[c]; hHead[c] = i;
-      const tm = a.team; if (tm === 0) continue;
+      const tm = a.team; if (tm === 0 || tm === 8) continue;
       let bx = (a.x / BKs) | 0, by = (a.y / BKs) | 0; if (bx < 0) bx = 0; else if (bx > bn1) bx = bn1; if (by < 0) by = 0; else if (by > bn1) by = bn1;
       const b = by * BNs + bx, k = tm * BB + b; if (FBS[k] !== hTick) { FBS[k] = hTick; FBL[tm * BB + FBN[tm]++] = b; }
     }
@@ -381,7 +410,7 @@
   // a velocity smoothed from successive sightings, the public live count) and, when a swarm leaves its sight, writes mem (the ghost AI
   // hunts read and the player's "~N" marker). Camps keep the head-count each team last saw (kn), power-ups the player's last-seen state.
   // AI decisions read obs, mem, kn and campfire smoke only (aiThink); PS.ai.assertKnowledge counts every targeted swarm and camp.
-  const mkRec = () => ({ seen: false, ever: false, n: 0, nEsc: 0, x: 0, y: 0, vx: 0, vy: 0, minY: 0, count: 0, t: -1e9 }); // nEsc: seen agents in their escape window
+  const mkRec = () => ({ seen: false, ever: false, n: 0, nEsc: 0, x: 0, y: 0, vx: 0, vy: 0, minY: 0, count: 0, pw: 1, t: -1e9 }); // nEsc: seen agents in their escape window; pw: their power when last seen (M6)
   function mkFogS() {
     const obs = [], mem = [], ghosts = [], dust = [], verdict = [], pings = [];
     for (let o = 0; o < 9; o++) { obs.push([]); mem.push([]); for (let r = 0; r < 9; r++) { obs[o].push(mkRec()); mem[o].push(mkRec()); } ghosts.push({ on: false, x: 0, y: 0, n: 0, t0: -1e9 }); dust.push({ on: false, x: 0, y: 0, t: -1e9 }); verdict.push({ t0: -1e9, kind: 0 }); }
@@ -390,7 +419,7 @@
       danger: { on: false, ang: 0, t0: -1e9, last: -1e9, team: 0 },
       stats: { firstSight: -1, sightings: 0, ghosts: 0, dangerCues: 0, pings: 0, routPings: 0, rumbles: 0, dust: 0, verdicts: 0, crows: 0 },
       leak: { frames: 0, rivalsDrawn: 0, rivalsVisible: 0, fading: 0, hidden: 0, missed: 0, neutralsHidden: 0, tagHidden: 0, ringHidden: 0, arrowHidden: 0, miniHidden: 0, last: null },
-      ai: { decisions: 0, swarm: 0, camps: 0, explore: 0, violations: 0, first: null, crown: 0, noise: 0, scent: 0 } };
+      ai: { decisions: 0, swarm: 0, camps: 0, explore: 0, violations: 0, first: null, crown: 0, noise: 0, scent: 0, objectives: 0 } };
   }
   // the player's presentation is fogged: a real match (or a fog test scene), not ?nofog=1, not a bench "reveal", before dawn
   const fogGate = () => S.fogOn && !NOFOG && !!S.fogS && !S.fogS.reveal && S.fogS.dawnT0 < 0;
@@ -418,15 +447,16 @@
         const x = OX[r] / OC[r], y = OY[r] / OC[r];
         if (ob.seen) { const dt = S.t - ob.t; if (dt > 1e-6) { let vx = (x - ob.x) / dt, vy = (y - ob.y) / dt; const l = Math.sqrt(vx * vx + vy * vy), k = 1 - Math.exp(-dt / ks); if (l > vmax) { vx *= vmax / l; vy *= vmax / l; } ob.vx += (vx - ob.vx) * k; ob.vy += (vy - ob.vy) * k; } }
         else { ob.vx = 0; ob.vy = 0; if (o === 1) FS.ghosts[r].on = false; } // back in sight: the player's ghost goes
-        ob.x = x; ob.y = y; ob.minY = OMY[r]; ob.n = OC[r]; ob.nEsc = OE[r]; ob.count = S.teams[r].count; ob.t = S.t; ob.seen = true;
+        ob.x = x; ob.y = y; ob.minY = OMY[r]; ob.n = OC[r]; ob.nEsc = OE[r]; ob.count = S.teams[r].count; ob.pw = S.teams[r].power; ob.t = S.t; ob.seen = true;
         if (!ob.ever) { ob.ever = true; if (o === 1) firstSight(r); if (S.ev.firstSightAny < 0) S.ev.firstSightAny = +S.t.toFixed(2); }
       } else if (ob.seen) {
         const m = FS.mem[o][r]; ob.seen = false; m.ever = true; m.x = ob.x; m.y = ob.y; m.vx = ob.vx; m.vy = ob.vy; m.n = ob.n; m.nEsc = ob.nEsc; m.count = ob.count; m.minY = ob.minY; m.t = S.t; ob.n = 0; ob.nEsc = 0;
         if (o === 1) { const g = FS.ghosts[r]; g.on = true; g.x = m.x; g.y = m.y; g.n = m.n; g.t0 = S.t; FS.stats.ghosts++; }
       }
     }
-    // camps: the head-count this team last saw at each camp in its sight (a camp seen empty is known empty)
+    // camps: the head-count this team last saw at each camp in its sight (a camp seen empty is known empty); objectives: what it last saw there
     for (const c of S.camps) if (PS.fog.seesCell(o, PS.fog.cellOf(c.x, c.y))) c.kn[o] = c.n;
+    SPL.observe(o);
     // the player's last-seen power-ups: a ghost stays where one was seen until that spot is seen again
     if (o === 1) for (const p of S.powerups) {
       if (PS.fog.sees(1, p.x, p.y)) { p.sx = p.x; p.sy = p.y; p.skind = p.kind; p.salive = p.alive; p.sseen = true; }
@@ -521,11 +551,12 @@
   // ---------------------------------------------------------------- simulation
   const SMP = { x: 0, y: 0, t: 0, ok: false }; // flow sample scratch
   let MED = null; const MEDN = new Int32Array(9); // per-team path distances this tick (path cohesion median)
+  const RR2 = new Float64Array(9); // per-team recruit radius squared this tick (Horn, M6)
   function update(dt) {
     const cfg = S.cfg, A = cfg.agent, F = cfg.flock, FW = cfg.flow, CB = cfg.combat, W = cfg.world.w, H = cfg.world.h, D = diff();
     S.t += dt; S.timeLeft -= dt; S.tick++;
     const player = S.teams[1];
-    if (S.pendingEnd && S.t >= S.pendingEnd.at) { finishEnd(); return; }
+    if (S.pendingEnd) { if (S.t >= S.pendingEnd.at) finishEnd(); return; } // the result is set: the sim freezes (no recruits, hits or crown moves after the bell; M5 critic MINOR-7), particles and dawn run on
     const finalPhase = S.timeLeft <= cfg.world.finalSeconds;
     if (S.fixture) S.fixture.drive(dt);
     else if (S.attract) {
@@ -535,7 +566,7 @@
     // the horn (SPEC-v2 §9): the crown goes on the biggest swarm, torches light every sight x finale.torches, every rival re-thinks now
     if (finalPhase && !S.finalCalled) {
       S.finalCalled = true; S.torches = true; crownUpdate(true); S.ev.hornLeader = S.crown.team; let al = 0; for (let i = 1; i < S.teams.length; i++) if (S.teams[i].alive) al++; S.ev.hornAlive = al;
-      const ct = S.teams[S.crown.team]; banner(!ct ? "THE HORN" : ct.isPlayer ? "THE HORN: YOU WEAR THE CROWN" : "THE HORN: " + ct.name.toUpperCase() + " WEARS THE CROWN", "#FFE49A", 3.5); PS.audio.warHorn(); showHint("Be the biggest swarm when the bell rings", 4); for (let i = 1; i < S.teams.length; i++) if (S.teams[i].ai) S.teams[i].thinkT = 0;
+      const ct = S.teams[S.crown.team]; banner(!ct ? "THE HORN" : ct.isPlayer ? "THE HORN: YOU WEAR THE CROWN" : "THE HORN: " + ct.name.toUpperCase() + " WEARS THE CROWN", "#FFE49A", 3.5, 0, 2); PS.audio.warHorn(); showHint("Be the biggest swarm when the bell rings", 4); for (let i = 1; i < S.teams.length; i++) if (S.teams[i].ai) S.teams[i].thinkT = 0;
     } else if (finalPhase && S.crown.team && S.t >= S.crown.next) crownUpdate();
     if (S.tick % 3600 === 0 && S.tick <= 10800) { let al = 0; for (let i = 1; i < S.teams.length; i++) if (S.teams[i].alive) al++; S.ev["alive" + S.tick / 60] = al; } // swarms alive at 1:00 / 2:00 / 3:00
     if (S.tick % 30 === 0 && !S.fixture) pileTick();
@@ -548,10 +579,12 @@
     // AI think: one rival per tick
     aiTick(dt, D);
 
-    // buffs tick, engagement reset, this tick's team speed (size curve, AI pace, speed buff)
+    // buffs tick, engagement reset, this tick's team speed (size curve, AI pace, speed buff, Boots) and recruit radius (Horn)
+    let rrMax = A.recruitRadius;
     for (let i = 1; i < S.teams.length; i++) {
       const t = S.teams[i]; for (const k in t.buffs) if (t.buffs[k] > 0) t.buffs[k] -= dt; for (let j = 0; j < 9; j++) { t.eng[j] = 0; t.fX[j] = 0; t.fY[j] = 0; }
-      let s = A.speed * sizeSpeed(t.count) * t.speedMod; if (t.ai && !t.isPlayer && !S.attract) s *= D.aiSpeed; if (t.buffs.speed > 0) s *= cfg.powerups.speedMult; t.spd = s; MEDN[i] = 0;
+      let s = A.speed * sizeSpeed(t.count) * t.speedMod * t.spdMul; if (t.ai && !t.isPlayer && !S.attract) s *= D.aiSpeed; if (t.buffs.speed > 0) s *= cfg.powerups.speedMult; t.spd = s; MEDN[i] = 0; // spdMul: Boots (M6)
+      const rr = t.recR || A.recruitRadius; RR2[i] = rr * rr; if (rr > rrMax) rrMax = rr; // recruit radius: Horn (M6)
     }
 
     // flow fields: at most one team rebuild per tick, player first (SPEC-v2 §3); sim-tick scheduling keeps replays exact
@@ -564,9 +597,10 @@
     // per-agent steering + combat + terrain. Travel follows the team's field (or direct seek for drag, keys, hold and fighting pulls) with
     // arrive by path distance; path cohesion is a speed multiplier 1 + k (T - T_median) clamped, plus local cohesion toward same-team
     // neighbours from this same neighbour pass. A remnant (escapeT > 0) neither attacks nor is attacked and passes through enemies.
-    const sepR = F.sepRadius, engR2 = A.engageRadius * A.engageRadius, atkR2 = A.attackRange * A.attackRange, rr2 = A.recruitRadius * A.recruitRadius;
+    const sepR = F.sepRadius, engR2 = A.engageRadius * A.engageRadius, atkR2 = A.attackRange * A.attackRange, EN = cfg.encampments;
     const eSep = sepR * F.enemySepMult, eSep2 = eSep * eSep, hard = F.enemyHardRadius, hard2 = hard * hard, lcR = FW.localCohesionRadius, lcR2 = lcR * lcR;
-    const qTeam = Math.max(A.engageRadius, eSep, sepR, lcR), qNeutral = Math.max(sepR, A.recruitRadius), qTeam2 = qTeam * qTeam, qNeutral2 = qNeutral * qNeutral; // radius-limited neighbour scans
+    const qTeam = Math.max(A.engageRadius, eSep, sepR, lcR), qNeutral = Math.max(sepR, rrMax), qTeam2 = qTeam * qTeam, qNeutral2 = qNeutral * qNeutral; // radius-limited neighbour scans
+    const qBandit = Math.max(qTeam, EN.banditAggro), qBandit2 = qBandit * qBandit, leash2 = EN.banditLeash * EN.banditLeash; // bandits: aggro radius, leash from their camp
     const huddleP = inp.huddle, kLerp = 1 - Math.exp(-F.steerLerp * dt), pk = FW.pathCohesionK, pLo = FW.pathCohesionClamp[0], pHi = FW.pathCohesionClamp[1];
     const T = PS.terrain, TN = T.N, TC = T.cell, W1 = W - 0.001, terr = S.map.terr, sdfA = S.map.sdf, far = 2 * TC, slideM = FW.slideMargin, fordK = cfg.terrain.fordSpeed;
     const O = S.obs, OB = S.obstacles, FL = PS.flow, esc = CB.remnant.escapeSpeed, truce = S.t < CB.truceSeconds; // truce: no attacks land, enemies only repel
@@ -574,34 +608,34 @@
     const nAg = S.agents.length;
     for (let idx = 0; idx < nAg; idx++) {
       const a = S.agents[idx];
-      if (a.dead) continue;
+      if (a.dead || a.gar) continue; // a village garrison waits inside its palisade (M6)
       a.ph += dt * 9; if (a.fl > 0) a.fl -= dt; if (a.lunge > 0) a.lunge -= dt;
       if (a.pop < 0.35) { const was = a.pop; a.pop += dt; if (was < 0 && a.pop >= 0 && fxOk(a.x, a.y)) { const tc = S.teams[a.team]; if (tc) { particles.burst(a.x, a.y - 8, tc.color, 6, 80, 0.45, 3, 200); particles.ring(a.x, a.y - 8, tc.color, 4, 18, 0.3); } } }
-      const team = a.team ? S.teams[a.team] : null, escaping = a.escapeT > 0;
+      const bandit = a.team === 8, team = a.team && !bandit ? S.teams[a.team] : null, escaping = a.escapeT > 0; // bandits (team id 8) have no team record
       if (escaping) a.escapeT -= dt;
-      gather(a.x, a.y, team ? qTeam : qNeutral);
+      gather(a.x, a.y, team ? qTeam : bandit ? qBandit : qNeutral);
       let sx = 0, sy = 0; // separation accumulator
       let dvx = 0, dvy = 0; // desired velocity
       let lcx = 0, lcy = 0, lcn = 0; // same-team neighbours (local cohesion)
       const hud = team && team.isPlayer && huddleP && !S.attract;
       const mySep = hud ? F.huddleSepRadius : sepR, mySep2 = mySep * mySep;
       const c0 = ((a.y < 0 ? 0 : a.y > W1 ? W1 : a.y) / TC | 0) * TN + ((a.x < 0 ? 0 : a.x > W1 ? W1 : a.x) / TC | 0);
-      let speed = team ? team.spd : A.speed;
+      let speed = team ? team.spd : bandit ? EN.banditSpeed : A.speed;
       if (hud) speed *= F.huddleSpeedMult;
-      if (terr[c0] === 3) speed *= fordK;
+      if (terr[c0] === 3) speed *= team ? team.fordMul : fordK; // Boots: fords slow less (M6)
 
       // find/keep combat target + separation + local cohesion (+ a neutral's nearest recruiter) in one pass
-      let best = null, bestD2 = engR2, recT = 0, recD2 = rr2;
+      let best = null, bestD2 = engR2, recT = 0, recD2 = 1e12, chase = null, chD2 = EN.banditAggro * EN.banditAggro; // chase: a bandit's nearest swarm peasant within aggro
       if (a.tgt && (truce || escaping || a.tgt.dead || a.tgt.team === a.team || a.tgt.team === 0 || a.tgt.escapeT > 0)) a.tgt = null;
       if (a.tgt) { const dx = a.tgt.x - a.x, dy = a.tgt.y - a.y; const d2 = dx * dx + dy * dy; if (d2 < engR2 * 4) { best = a.tgt; bestD2 = d2; } else a.tgt = null; }
-      const at = a.team, q2 = team ? qTeam2 : qNeutral2; let ax = a.x, ay = a.y; // the enemy hard push moves this agent inside the loop: kept in locals, written back after
+      const at = a.team, q2 = team ? qTeam2 : bandit ? qBandit2 : qNeutral2; let ax = a.x, ay = a.y; // the enemy hard push moves this agent inside the loop: kept in locals, written back after
       for (let k = 0; k < nearN; k++) {
         const b = NEAR[k]; if (b === a || b.dead) continue;
         const bx = b.x, by = b.y, dx = ax - bx, dy = ay - by, d2 = dx * dx + dy * dy; if (d2 >= q2) continue; // the gather is a square of hash cells
         const bt = b.team;
-        if (bt === at || team === null || bt === 0) { // same side, or a neutral either way: plain separation
+        if (bt === at || (team === null && !bandit) || bt === 0) { // same side, or a neutral either way: plain separation (a bandit treats swarm peasants as enemies)
           if (d2 < mySep2 && d2 > 0.0001) { const d = Math.sqrt(d2), f = (1 - d / mySep) / d; sx += dx * f; sy += dy * f; }
-          if (team === null) { if (!escaping && bt !== 0 && d2 < recD2) { recD2 = d2; recT = bt; } }
+          if (team === null) { if (!bandit && !escaping && bt !== 0 && bt !== 8 && d2 < RR2[bt] && d2 < recD2) { recD2 = d2; recT = bt; } } // the nearest recruiter within its own team's radius
           else if (bt === at && d2 < lcR2) { lcx += bx; lcy += by; lcn++; }
           continue;
         }
@@ -611,6 +645,7 @@
           if (d2 < hard2) { const push = (hard - d) * 0.5; ax += (dx / d) * push; ay += (dy / d) * push; }
         }
         if (truce) continue;
+        if (bandit && d2 < chD2 && bt !== 8) { chD2 = d2; chase = b; }
         if (d2 < bestD2 && !best) { best = b; bestD2 = d2; }
         else if (d2 < bestD2 && best && d2 < bestD2 * 0.5) { best = b; bestD2 = d2; }
       }
@@ -662,17 +697,42 @@
           if (bestD2 < atkR2) {
             a.atk -= dt;
             if (a.atk <= 0) {
-              a.atk = A.attackInterval * (0.8 + S.rng() * 0.4); a.lunge = 0.18;
-              const tt = S.teams[best.team];
-              let dmg = A.damage * (1 + A.damageJitter * (2 * S.rng() - 1)); if (team.buffs.frenzy > 0) dmg *= cfg.powerups.frenzyMult; if (tt.buffs.armor > 0) dmg *= cfg.powerups.armorMult;
+              a.atk = A.attackInterval * (0.8 + S.rng() * 0.4) / team.atkMul; a.lunge = 0.18; // atkMul: Arms (M6)
+              const tt = best.team === 8 ? null : S.teams[best.team]; // a bandit has no team record
+              let dmg = A.damage * (1 + A.damageJitter * (2 * S.rng() - 1)); if (team.buffs.frenzy > 0) dmg *= cfg.powerups.frenzyMult; if (tt && tt.buffs.armor > 0) dmg *= cfg.powerups.armorMult;
               best.hp -= dmg; best.fl = 0.16;
               if (fxOk(best.x, best.y)) { particles.burst(best.x, best.y - 6, "#FFFFFF", 2, 60, 0.25, 2, 200); PS.audio.hit(); }
               if (best.hp <= 0) killAgent(best, a.team);
             }
-          } else a.atk = Math.min(a.atk, A.attackInterval * 0.5);
+          } else a.atk = Math.min(a.atk, A.attackInterval * 0.5 / team.atkMul);
         } else {
           a.fight = false; dvx = seekX + cohX; dvy = seekY + cohY;
         }
+      } else if (bandit) {
+        // bandits (SPEC-v2 §6, §8): hold a post in their camp; go for any swarm peasant within encampments.banditAggro px, never farther than
+        // encampments.banditLeash px from the camp (past it they walk home and drop their target). No rout, no join, no spoils: team id 8 is
+        // outside S.teams and every team loop. Their fights feed the camp's clash noise (src/spoils.js tick).
+        const cp = a.camp, lx = a.x - cp.x, ly = a.y - cp.y;
+        if (lx * lx + ly * ly > leash2) { best = null; chase = null; }
+        if (best) {
+          a.tgt = best; a.fight = true; cp.fn++; cp.fx += a.x; cp.fy += a.y; cp.vs = best.team;
+          const d = Math.sqrt(bestD2) || 1; if (bestD2 >= atkR2 * 0.85) { dvx = ((best.x - a.x) / d) * speed; dvy = ((best.y - a.y) / d) * speed; }
+          if (bestD2 < atkR2) {
+            a.atk -= dt;
+            if (a.atk <= 0) {
+              a.atk = A.attackInterval * (0.8 + S.rng() * 0.4); a.lunge = 0.18; const tt = S.teams[best.team];
+              let dmg = EN.banditDamage * (1 + A.damageJitter * (2 * S.rng() - 1)); if (tt && tt.buffs.armor > 0) dmg *= cfg.powerups.armorMult;
+              best.hp -= dmg; best.fl = 0.16;
+              if (fxOk(best.x, best.y)) { particles.burst(best.x, best.y - 6, "#FFFFFF", 2, 60, 0.25, 2, 200); PS.audio.hit(); }
+              if (best.hp <= 0) killAgent(best, 8);
+            }
+          } else a.atk = Math.min(a.atk, A.attackInterval * 0.5);
+        } else {
+          a.fight = false; a.tgt = null; let gx = a.hx, gy = a.hy;
+          if (chase) { const qx = chase.x - cp.x, qy = chase.y - cp.y; if (qx * qx + qy * qy < leash2) { gx = chase.x; gy = chase.y; } }
+          const dx = gx - a.x, dy = gy - a.y, d = Math.sqrt(dx * dx + dy * dy); if (d > 3) { const s = speed * (d < 30 ? d / 30 : 1); dvx = (dx / d) * s; dvy = (dy / d) * s; }
+        }
+        vcap = speed;
       } else {
         // neutral: idle wander around home camp; a neutral scattered by a finale rout runs to its scatter point first
         let dx = a.wx - a.x, dy = a.wy - a.y, d = Math.sqrt(dx * dx + dy * dy);
@@ -683,7 +743,7 @@
       const sl = Math.sqrt(sx * sx + sy * sy);
       if (sl > 0) { const sw = speed * F.separation; dvx += (sx / sl) * Math.min(sl * 40, 1) * sw; dvy += (sy / sl) * Math.min(sl * 40, 1) * sw; }
       // limit + steer
-      const dl = Math.sqrt(dvx * dvx + dvy * dvy); const maxV = vcap * (team || escaping ? 1.15 : 0.5);
+      const dl = Math.sqrt(dvx * dvx + dvy * dvy); const maxV = vcap * (team || bandit || escaping ? 1.15 : 0.5);
       if (dl > maxV) { dvx *= maxV / dl; dvy *= maxV / dl; }
       a.vx += (dvx - a.vx) * kLerp; a.vy += (dvy - a.vy) * kLerp;
       // wall slide: within r + slideMargin of a wall, drop the velocity component pointing into it (skipped when the cell is > 2 cells clear)
@@ -721,8 +781,10 @@
       if (!p.alive) { p.t -= dt; if (p.t <= 0) { const np = newPowerup(false); p.x = np.x; p.y = np.y; p.kind = np.kind; p.alive = true; } continue; }
       p.t += dt;
       gather(p.x, p.y, pr);
-      for (let k = 0; k < nearN; k++) { const b = NEAR[k]; if (b.team === 0 || b.dead) continue; const dx = b.x - p.x, dy = b.y - p.y; if (dx * dx + dy * dy < pr2) { pickup(p, b.team); break; } }
+      for (let k = 0; k < nearN; k++) { const b = NEAR[k]; if (b.team === 0 || b.team === 8 || b.dead) continue; const dx = b.x - p.x, dy = b.y - p.y; if (dx * dx + dy * dy < pr2) { pickup(p, b.team); break; } }
     }
+    // spoils (SPEC-v2 §8, src/spoils.js): relic and chest pickups, village and heavy-chest rings, bandit camps cleared, the trickle chest
+    SPL.tick(dt, finalPhase);
 
     // camp head-counts (for "+N" labels) and campfire smoke, which rises above the fog (smokeP is drawn after it) from camps within
     // fog.smoke px of your swarm: a tell of recruits in the dark (SPEC-v2 §5); with the fog off, v1's on-screen smoke
@@ -803,7 +865,7 @@
     if (!finalPhase && S.trickleT >= cfg.spawn.trickleEvery) {
       S.trickleT = 0;
       const SP = cfg.spawn, FG = cfg.fog, md2 = SP.minTrickleDistFromTeams * SP.minTrickleDistFromTeams;
-      let neutrals = 0; for (const a of S.agents) if (a.team === 0) neutrals++;
+      let neutrals = 0; for (const a of S.agents) if (a.team === 0 && !a.gar) neutrals++;
       let s1 = null, s2 = null;
       for (let i = 1; i < S.teams.length; i++) { const t = S.teams[i]; if (!t.alive) continue; if (!s1 || t.count < s1.count) { s2 = s1; s1 = t; } else if (!s2 || t.count < s2.count) s2 = t; }
       for (let rep = 0; rep < SP.trickleCamps; rep++) {
@@ -848,8 +910,9 @@
     }
     if (S.shake > 0) S.shake -= dt;
 
-    // banners: one at a time, queued
-    if (S.banners.length) { S.banners[0].life -= dt; if (S.banners[0].life <= 0) S.banners.shift(); }
+    // banners: one at a time, by priority (banner()); shorter while others wait; stale rival news expires in the queue
+    if (S.banners.length) { const b = S.banners[0], BQ = cfg.banner; b.life -= dt; if (b.life <= 0 || (S.banners.length > 1 && b.life0 - b.life >= BQ.queuedSeconds)) S.banners.shift();
+      for (let i = S.banners.length - 1; i >= 1; i--) if (S.banners[i].pri === 0 && S.t - S.banners[i].t0 > BQ.staleSeconds) S.banners.splice(i, 1); }
     if (S.hintT > 0) { S.hintT -= dt; if (S.hintT <= 0 || S.engagedNow || S.banners.length > 0) { S.hintT = 0; if (!sandbox) $("hint").classList.remove("show"); } }
 
     if (S.attract || S.fixture) return;
@@ -875,9 +938,9 @@
   }
 
   function convert(a, team, absorbed) {
-    const from = a.team; a.team = team; a.hp = S.cfg.agent.hp; a.tgt = null; a.fight = false; a.fl = absorbed ? 0 : 0.2; a.fok = 0;
+    const from = a.team, t = S.teams[team]; a.team = team; a.hp = t.hpMax; a.tgt = null; a.fight = false; a.fl = absorbed ? 0 : 0.2; a.fok = 0; // hpMax: Arms (M6), every recruit takes the team's tiers
     a.pop = absorbed ? -S.rng() * 0.45 : 0;
-    const t = S.teams[team];
+    SPL.onConvert(a, t, from, absorbed); // muster milestones (M6): neutrals recruited, absorbed rivals excluded
     if (fxOk(a.x, a.y)) {
       if (!absorbed) particles.burst(a.x, a.y - 6, t.color, 5, 80, 0.45, 3, 220);
       if (t.isPlayer && !absorbed) { PS.audio.recruit(); if (Math.random() < 0.35) floaters.add(a.x, a.y - 14, "+1", t.color, 13, 0.7); }
@@ -887,9 +950,10 @@
   }
   function killAgent(a, byTeam) {
     if (a.dead) return; a.dead = true;
-    const t = S.teams[a.team]; if (t) { if (t.isPlayer) S.stats.lost++; }
+    const t = a.team === 8 ? null : S.teams[a.team]; if (t) { if (t.isPlayer) S.stats.lost++; }
+    if (a.team === 8 && a.camp) { a.camp.n--; if (byTeam > 0 && byTeam < 7) a.camp.lastHit = byTeam; } // a bandit down: its camp clears at 0 (src/spoils.js)
     if (byTeam === 1) { S.stats.kills++; S.teams[1].kills++; }
-    if (fxOk(a.x, a.y)) { particles.burst(a.x, a.y - 6, t ? t.color : "#B8A88A", 10, 120, 0.6, 4, 260); particles.burst(a.x, a.y - 6, "#F1C27D", 4, 90, 0.5, 3, 260); particles.ring(a.x, a.y - 6, "#FFFFFF", 3, 14, 0.22); PS.audio.die(a.team === 1); }
+    if (fxOk(a.x, a.y)) { particles.burst(a.x, a.y - 6, t ? t.color : a.team === 8 ? "#56565E" : "#B8A88A", 10, 120, 0.6, 4, 260); particles.burst(a.x, a.y - 6, "#F1C27D", 4, 90, 0.5, 3, 260); particles.ring(a.x, a.y - 6, "#FFFFFF", 3, 14, 0.22); PS.audio.die(a.team === 1); }
   }
   // local strength around a contact point: each side's agents within r (remnants excluded) into LCA / LCB
   let LCA = 0, LCB = 0;
@@ -922,7 +986,7 @@
   function scatter(a, cx, cy) {
     const RM = S.cfg.combat.remnant, dx = a.x - cx, dy = a.y - cy, l = Math.sqrt(dx * dx + dy * dy) || 1, d = RM.scatterDist[0] + S.rng() * (RM.scatterDist[1] - RM.scatterDist[0]);
     const p = PS.flow.rayOut(a.x, a.y, dx / l, dy / l, d, null);
-    a.team = 0; a.hp = S.cfg.agent.hp; a.tgt = null; a.fight = false; a.camp = null; a.hx = a.wx = p.x; a.hy = a.wy = p.y; a.escapeT = RM.escapeSeconds; a.ex = cx; a.ey = cy; a.fl = 0.2;
+    a.team = 0; a.hp = S.cfg.agent.hp; a.tgt = null; a.fight = false; a.camp = null; a.hx = a.wx = p.x; a.hy = a.wy = p.y; a.escapeT = RM.escapeSeconds; a.ex = cx; a.ey = cy; a.fl = 0.2; a.exr = true; // exr: no muster credit for whoever takes it
   }
   // a remnant's escape (M2 critic MAJOR-2): its fled agents route to the Dijkstra flee target away from the winner (camps and pass cells
   // maximising the winner's path distance minus the remnant's, fleeTarget), re-planned every remnant.escapeReplan s of the window from
@@ -986,7 +1050,7 @@
   }
   function rout(loser, winner, cx, cy, finalPhase) {
     const cfg = S.cfg, CB = cfg.combat, RM = CB.remnant;
-    const loserBefore = loser.count, winnerBefore = winner.count, n = floodGroup(loser.id, cx, cy);
+    const loserBefore = loser.count, winnerBefore = winner.count, lead = biggestTeam() === loser, n = floodGroup(loser.id, cx, cy); // lead: the biggest swarm at rout time (M6 drops)
     for (let k = 0; k < n; k++) { const a = RQ[k], dx = a.x - cx, dy = a.y - cy; a.rd = Math.sqrt(dx * dx + dy * dy); }
     const group = RQ.slice(0, n).sort((p, q) => p.rd - q.rd); for (let k = 0; k < n; k++) RQ[k] = null; // a rare event: one small allocation is fine; stable sort keeps replays exact
     const full = (finalPhase && cfg.finale.fullFlip) || n < RM.minLoser; // finale.fullFlip (SPEC-v2 §6: true) is an M8 lever: false keeps the remnant rule after the horn
@@ -1009,11 +1073,12 @@
     if (fled && loser.ai) { loser.regroupUntil = S.t + RM.escapeSeconds + RM.regroupSeconds; loser.fleeFrom = winner.id; loser.thinkT = 0; }
     S.lastRout = { t: +S.t.toFixed(3), loser: loser.id, winner: winner.id, group: n, flipped, fled, scattered, outside: loserBefore - n, got: got.slice(), loserBefore, winnerBefore,
       cx: Math.round(cx), cy: Math.round(cy), farFlip: +farFlip.toFixed(1), minFlipX: minFlipX === Infinity ? null : Math.round(minFlipX) };
-    if (winner.isPlayer) { S.stats.routs++; PS.audio.rout(true); banner(scattered && !got[1] ? "ROUTED: " + scattered + " SCATTER" : "+" + got[1] + " JOIN YOU" + (fled ? " · " + fled + " FLED" : ""), winner.color, 2.6, winner.id); S.shake = 0.35; }
-    else if (loser.isPlayer) { S._routedBy = winner.name; S.relaxUntil = S.t + cfg.ai.relaxSeconds; /* relax window: no rival starts a hunt on you (SPEC-v2 §7) */ PS.audio.rout(false); S.shake = 0.5; if (flipped + scattered < loserBefore) banner(fled ? "SCATTERED: " + fled + " escaped" : "-" + (flipped + scattered) + " JOINED " + winner.name.toUpperCase(), "#FF7A6E", 2.4); }
-    else if (playerSees(cx, cy)) { banner(loser.name.toUpperCase() + " routed by " + winner.name, winner.color, 2, winner.id); if (fxOk(cx, cy)) PS.audio.rout(false); }
+    if (winner.isPlayer) { S.stats.routs++; PS.audio.rout(true); banner(scattered && !got[1] ? "ROUTED: " + scattered + " SCATTER" : "+" + got[1] + " JOIN YOU" + (fled ? " · " + fled + " FLED" : ""), winner.color, 2.6, winner.id, 2); S.shake = 0.35; }
+    else if (loser.isPlayer) { S._routedBy = winner.name; S.relaxUntil = S.t + cfg.ai.relaxSeconds; /* relax window: no rival starts a hunt on you (SPEC-v2 §7) */ PS.audio.rout(false); S.shake = 0.5; if (flipped + scattered < loserBefore) banner(fled ? "SCATTERED: " + fled + " escaped" : "-" + (flipped + scattered) + " JOINED " + winner.name.toUpperCase(), "#FF7A6E", 2.4, 0, 2); }
+    else if (playerSees(cx, cy)) { banner(loser.name.toUpperCase() + " routed by " + winner.name, winner.color, 2, winner.id, 0); if (fxOk(cx, cy)) PS.audio.rout(false); }
     else clashPing(cx, cy, true); // a rout you cannot see: no banner, it folds into the clash ping (SPEC-v2 §5)
     if (fxOk(cx, cy)) particles.ring(cx, cy, winner.color, 10, 120, 0.7);
+    if (lead && n >= cfg.progression.dropMinShare * loserBefore) SPL.leaderDrop(loser, cx, cy); // a routed leader drops its tiers as relics (SPEC-v2 §8)
     recount();
   }
   function eliminate(t) {
@@ -1026,7 +1091,7 @@
     p.alive = false; p.t = cfg.respawn;
     if (p.kind === "rally") {
       let n = 0;
-      for (const a of S.agents) { if (a.team !== 0 || a.dead || a.escapeT > 0) continue; const dx = a.x - p.x, dy = a.y - p.y; if (dx * dx + dy * dy < cfg.rallyRadius * cfg.rallyRadius) { convert(a, teamId, false); n++; } } // scattering survivors are in their escape window: no rally (M4: the crown absorbed a whole scatter through a Rally orb)
+      for (const a of S.agents) { if (a.team !== 0 || a.dead || a.escapeT > 0 || a.gar) continue; const dx = a.x - p.x, dy = a.y - p.y; if (dx * dx + dy * dy < cfg.rallyRadius * cfg.rallyRadius) { convert(a, teamId, false); n++; } } // scattering survivors are in their escape window: no rally (M4: the crown absorbed a whole scatter through a Rally orb)
       t.buffs.rally = cfg.duration.rally;
       if (fxOk(p.x, p.y)) particles.ring(p.x, p.y, S.spr.PU.rally.color, 10, cfg.rallyRadius, 0.6);
       if (t.isPlayer) { floaters.add(p.x, p.y - 20, "RALLY! +" + n, S.spr.PU.rally.color, 18, 1.3); PS.audio.power("rally"); S.stats.powerups++; }
@@ -1072,7 +1137,7 @@
   function tapAt(sx, sy, src) {
     if (S.mode !== "play") return;
     const w = screenToWorld(sx, sy), pick = S.cfg.input.pickPx / S.cam.zoom; let chase = 0, bd = pick * pick, gx = w.x, gy = w.y;
-    for (const a of S.agents) { if (a.dead || a.team < 2 || a.escapeT > 0 || !onScreen(a.x, a.y) || (fogGate() && a.seenA < 0.5)) continue; const dx = a.x - w.x, dy = a.y - w.y, d2 = dx * dx + dy * dy; if (d2 < bd) { bd = d2; chase = a.team; } }
+    for (const a of S.agents) { if (a.dead || a.team < 2 || a.team === 8 || a.escapeT > 0 || !onScreen(a.x, a.y) || (fogGate() && a.seenA < 0.5)) continue; const dx = a.x - w.x, dy = a.y - w.y, d2 = dx * dx + dy * dy; if (d2 < bd) { bd = d2; chase = a.team; } }
     if (!chase) { let cd = 2.6 * pick * pick; const g = fogGate(); for (const c of S.camps) { if (!(g && !PS.fog.sees(1, c.x, c.y) ? c.kn[1] > 0 : c.n > 0)) continue; const dx = c.x - w.x, dy = c.y - w.y, d2 = dx * dx + dy * dy; if (d2 < cd) { cd = d2; gx = c.x; gy = c.y; } } } // snaps only to camps you know (M4: a hidden camp no longer pulls the tap)
     setRoute(gx, gy, chase, src || "tap", sx, sy);
   }
@@ -1120,7 +1185,7 @@
   // finale.crownLate s). Every swarm knows where the crown was at the last broadcast: the finale's announced exception to the fog.
   function crownUpdate(quiet) {
     const F = S.cfg.finale, C = S.crown, b = biggestTeam(); if (!b) { C.team = 0; return; }
-    if (b.id !== C.team) { S.ev.crownMoves++; if (!quiet && !S.aiPlayer) banner(b.isPlayer ? "YOU WEAR THE CROWN: YOU ARE MARKED" : b.name.toUpperCase() + " TAKES THE CROWN", b.isPlayer ? "#FFD23F" : b.color, 2.6); }
+    if (b.id !== C.team) { S.ev.crownMoves++; if (!quiet && !S.aiPlayer) banner(b.isPlayer ? "YOU WEAR THE CROWN: YOU ARE MARKED" : b.name.toUpperCase() + " TAKES THE CROWN", b.isPlayer ? "#FFD23F" : b.color, 2.6, 0, b.isPlayer ? 2 : 1); }
     C.team = b.id; C.x = b.ax; C.y = b.ay; C.t = S.t; C.next = S.t + (S.timeLeft <= F.crownLate ? F.crownEveryLate : F.crownEvery);
   }
   // pile-on (SPEC-v2 §7, C1 E): once the biggest swarm passes ai.pileOnRatio x the second (public counts), every rival that hears it fighting
@@ -1129,7 +1194,7 @@
     const AI = S.cfg.ai, P = S.pile; let a = null, b = null;
     for (let i = 1; i < S.teams.length; i++) { const t = S.teams[i]; if (!t.alive || !t.count) continue; if (!a || t.count > a.count) { b = a; a = t; } else if (!b || t.count > b.count) b = t; }
     const on = S.t >= AI.grace && !!a && !!b && a.count > AI.pileOnRatio * b.count, prev = P.id; P.id = on ? a.id : 0;
-    if (on && prev !== a.id) { S.ev.pileOns++; if (S.t - P.bannerT >= AI.pileOnBannerCooldown) { P.bannerT = S.t; banner(a.isPlayer ? "THE VALLEY TURNS ON YOU" : "THE VALLEY TURNS ON " + a.name.toUpperCase(), "#FFE49A", 3); } }
+    if (on && prev !== a.id) { S.ev.pileOns++; if (S.t - P.bannerT >= AI.pileOnBannerCooldown) { P.bannerT = S.t; banner(a.isPlayer ? "THE VALLEY TURNS ON YOU" : "THE VALLEY TURNS ON " + a.name.toUpperCase(), "#FFE49A", 3, 0, a.isPlayer ? 2 : 1); } }
   }
   // Bully's scent (SPEC-v2 §7, announced): from ai.grace, every difficulty scentEvery s, Bully learns your position within ai.scentJitter px.
   // The first ping plays the war horn with "BULLY HAS YOUR SCENT"; later ones only pulse the minimap with a short low note.
@@ -1141,7 +1206,7 @@
     const a = S.rng() * Math.PI * 2, r = Math.sqrt(S.rng()) * AI.scentJitter; sc.x = p.ax + Math.cos(a) * r; sc.y = p.ay + Math.sin(a) * r; sc.t = S.t; sc.n++; S.ev.scentPings++;
     b.scentX = sc.x; b.scentY = sc.y; b.scentT = S.t;
     if (S.aiPlayer) return;
-    if (sc.n === 1) { banner("BULLY HAS YOUR SCENT", b.color, 2.6); PS.audio.warHorn(0.75); } else PS.audio.scentNote();
+    if (sc.n === 1) { banner("BULLY HAS YOUR SCENT", b.color, 2.6, 0, 2); PS.audio.warHorn(0.75); } else PS.audio.scentNote();
   }
   const edgeness = (x, y, W) => 1 - Math.min(x, y, W - x, W - y) / (W / 2); // 1 at the map edge, 0 at the centre (Wary)
   // Sly's lurk spot: the pass cell nearest an open objective (a power-up beacon within ai.objectiveSight, else the busiest camp it knows),
@@ -1281,12 +1346,14 @@
       let sc = P.neutralBias * AI.neutralScore / (dist(c.x, c.y) + 120); if (K === "wary") sc *= 1 + P.edgeBias * edgeness(c.x, c.y, W);
       if (sc > bestS) { bestS = sc; bestC = c; }
     }
-    let tx = bestC ? bestC.x : t.cx, ty = bestC ? bestC.y : t.cy;
+    let tx = bestC ? bestC.x : t.cx, ty = bestC ? bestC.y : t.cy, po = null;
     for (const p of S.powerups) {
       if (!p.alive) continue; const dx = p.x - t.ax, dy = p.y - t.ay; if (dx * dx + dy * dy > os2) continue;
       const sc = P.powerBias * AI.powerScore / (dist(p.x, p.y) + 120); if (sc > bestS) { bestS = sc; tx = p.x; ty = p.y; pu = true; }
     }
-    if (bestS > 0) { if (!pu) knowCamp(t, bestC); aim(t, tx, ty); t.state = "forage"; t.speedMod = AI.roamSpeed; return; }
+    // spoils (SPEC-v2 §7, §8): the same roam score over the objectives it believes live, feasible on count x power (src/spoils.js aiPick)
+    const op = SPL.aiPick(t, dist, pw, P.powerBias, nVB, VBX, VBY); if (op && op.score > bestS) { bestS = op.score; tx = op.x; ty = op.y; pu = true; po = op.obj; }
+    if (bestS > 0) { if (po) SPL.knowObj(t, po); else if (!pu) knowCamp(t, bestC); aim(t, tx, ty); t.state = po ? "spoils" : "forage"; t.speedMod = AI.roamSpeed; return; }
     // EXPLORE: fog.exploreSamples points fog.exploreRing px away on walkable ground it has not explored, the nearest that does not lead toward
     // a bigger swarm it remembers (ai.ghostKeep); kept fog.exploreCommit s or until reached. Wary weighs edges.
     if (S.t >= t.exUntil || (t.exX - t.ax) * (t.exX - t.ax) + (t.exY - t.ay) * (t.exY - t.ay) < 60 * 60) {
@@ -1355,16 +1422,18 @@
     S.cam.zoom = Z.from + (st[i] - Z.from) * e;
   }
 
-  // the clash panel's read of the player's fight with rival ri: counts x power (the hook M6 fills; 1.0 in M2) and a verdict from the local
-  // strength ratio and morale (fighting mode: the rout group against its peak; radius mode: L / peak), blended with the headcount ratio by a
-  // geometric mean so a 427 v 227 clash opens as WINNING
-  const teamPower = (t) => 1;
-  const CR = { f: 0.5, verdict: "EVEN", a: 0, b: 0 };
+  // the clash panel's read of the player's fight with rival ri (M5 critic MAJOR-1): the two engaged GROUPS (fighting mode: the rout group each
+  // side would lose, the flood fill; radius mode: whole counts) x power (M6: the Arms equivalence) x morale (the group's survivors over its
+  // peak this clash). It opens on the group ratio and morale moves it: WINNING at >= combat.verdictRatio, LOSING at <= 1 / it, else EVEN,
+  // so a 1.4x group is never read EVEN at contact. f (the bar) = q / (1 + q).
+  const teamPower = (t) => t.power || 1; // M6: the Arms headcount equivalence (progression.armsPower, measured with PS.fight)
+  const CR = { f: 0.5, verdict: "EVEN", a: 0, b: 0, q: 1 };
   function clashRead(pl, t) {
-    const ri = t.id, pa = teamPower(pl), pb = teamPower(t), La = pl.engL[ri] * pa, Lb = t.engL[pl.id] * pb, fm = S.cfg.combat.localMode !== "radius";
+    const ri = t.id, pa = teamPower(pl), pb = teamPower(t), fm = S.cfg.combat.localMode !== "radius", vr = S.cfg.combat.verdictRatio;
     const mA = fm ? pl.engG[ri] / Math.max(1, pl.engGPk[ri]) : pl.engL[ri] / Math.max(1, pl.engPk[ri]), mB = fm ? t.engG[pl.id] / Math.max(1, t.engGPk[pl.id]) : t.engL[pl.id] / Math.max(1, t.engPk[pl.id]);
-    const sa = Math.sqrt(Math.max(0, La) * pl.count * pa) * mA, sb = Math.sqrt(Math.max(0, Lb) * t.count * pb) * mB;
-    CR.a = Math.round(pl.count * pa); CR.b = Math.round(t.count * pb); CR.f = sa + sb > 0 ? sa / (sa + sb) : 0.5; CR.verdict = CR.f > 0.56 ? "WINNING" : CR.f < 0.44 ? "LOSING" : "EVEN";
+    const gA = fm && pl.engGPk[ri] > 0 ? pl.engGPk[ri] : pl.count, gB = fm && t.engGPk[pl.id] > 0 ? t.engGPk[pl.id] : t.count; // each group at its peak; morale carries the losses
+    const q = (gA * pa * Math.max(0.05, mA)) / Math.max(1e-6, gB * pb * Math.max(0.05, mB));
+    CR.a = Math.round(pl.count * pa); CR.b = Math.round(t.count * pb); CR.q = q; CR.f = q / (1 + q); CR.verdict = q >= vr ? "WINNING" : q <= 1 / vr ? "LOSING" : "EVEN";
     return CR;
   }
   // a third swarm you can see within 400 px of the player's contact while it fights (fog: its visible agents only; fog off: on screen)
@@ -1380,7 +1449,17 @@
   // ---------------------------------------------------------------- helpers
   function screenToWorld(sx, sy) { const z = S.cam.zoom; return { x: (sx - S.vw / 2) / z + S.cam.x, y: (sy - S.vh / 2) / z + S.cam.y }; }
   function onScreen(x, y) { const z = S.cam.zoom, hw = S.vw / 2 / z + 40, hh = S.vh / 2 / z + 40; return Math.abs(x - S.cam.x) < hw && Math.abs(y - S.cam.y) < hh; }
-  function banner(text, color, life, at) { if (S.attract) return; S.banners.push({ text, color, life, life0: life, at: at || 0 }); } // at: a team id whose banner bearer it anchors to
+  // banners (M5 critic MAJOR-2): a priority queue, one shown at a time. pri 2 = news about you (your routs, the crown on you, the scent, your
+  // spoils), 1 = the match (the horn, eliminations, pile-ons), 0 = rival-vs-rival news. A higher one preempts: the banner showing keeps
+  // banner.minSeconds, then goes; while more wait, each shows banner.queuedSeconds; rival news is dropped when banner.dropDepth already
+  // wait and expires after banner.staleSeconds in the queue. at: a team id whose banner bearer it anchors to.
+  function banner(text, color, life, at, pri) {
+    if (S.attract) return; const Q = S.banners, B = S.cfg.banner; pri = pri == null ? 1 : pri;
+    if (pri === 0 && Q.length > B.dropDepth) return;
+    if (Q.length && pri > Q[0].pri) { const c = Q[0], shown = c.life0 - c.life; if (shown > 0) c.life = Math.min(c.life, Math.max(0.001, B.minSeconds - shown)); }
+    let i = Q.length; while (i > 0 && Q[i - 1].pri < pri && !(i === 1 && Q[0].life0 - Q[0].life > 0)) i--; // never ahead of the one already showing
+    Q.splice(i, 0, { text, color, life, life0: life, at: at || 0, pri, t0: S.t });
+  }
   // hints wait while the clash panel or a banner is up and for input.hintAfterRouteMs after a tap / click route (the marker and its
   // preview), so the pill never covers either (M2 critic MAJOR-3); returns whether it showed, and the caller retries until it does
   const clashShowing = () => { const p = S.teams[1]; if (!p || !p.count) return false; for (let i = 2; i < S.teams.length; i++) if (S.teams[i].alive && p.engT[i] > 0.1) return true; return false; };
@@ -1407,10 +1486,26 @@
       $(won ? "win-sub" : "lose-sub").textContent = why;
       const st = S.stats, el = $(won ? "win-stats" : "lose-stats");
       const mm = Math.floor((S.cfg.world.matchSeconds - Math.max(0, S.timeLeft)) / 60), ss = Math.floor((S.cfg.world.matchSeconds - Math.max(0, S.timeLeft)) % 60);
-      el.innerHTML = [["Peak swarm", st.peak], ["Recruited", st.recruited], ["Routs", st.routs], ["Kills", st.kills], ["Power-ups", st.powerups], ["Time", mm + ":" + (ss < 10 ? "0" : "") + ss]]
+      el.innerHTML = [["Peak swarm", st.peak], ["Recruited", st.recruited], ["Routs", st.routs], ["Kills", st.kills], ["Relic tiers", S.teams[1].tierN], ["Time", mm + ":" + (ss < 10 ? "0" : "") + ss]]
         .map(([k, v]) => "<div class='stat'><b>" + v + "</b><span>" + k + "</span></div>").join("");
+      saveRecord(won, st.peak, S.cfg.world.matchSeconds - Math.max(0, S.timeLeft));
       showOverlay(won ? "ov-win" : "ov-lose");
     }
+  }
+  // the records panel on the title (SPEC-v2 §8): best peak, wins and fastest win per difficulty in one localStorage key, every access in
+  // try/catch (a private window or blocked storage just shows dashes). Sandboxes and all-AI QA matches never write it.
+  const REC_KEY = "ps.records";
+  function readRecords() { try { const o = JSON.parse(localStorage.getItem(REC_KEY) || "{}"); return o && typeof o === "object" ? o : {}; } catch (e) { return {}; } }
+  function saveRecord(won, peak, secs) {
+    if (sandbox || S.aiPlayer || S.attract) return; const R = readRecords(), d = R[S.difficulty] || (R[S.difficulty] = { peak: 0, wins: 0, fastest: 0 });
+    if (peak > d.peak) d.peak = peak; if (won) { d.wins++; if (!d.fastest || secs < d.fastest) d.fastest = Math.round(secs); }
+    try { localStorage.setItem(REC_KEY, JSON.stringify(R)); } catch (e) {} renderRecords();
+  }
+  function renderRecords() {
+    const el = $("records"); if (!el || !S.cfg) return; const R = readRecords(), ks = Object.keys(S.cfg.difficulty), f = (s) => (s ? Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0") : "-");
+    const any = ks.some((k) => R[k] && (R[k].peak || R[k].wins)); el.classList.toggle("empty", !any); if (!any) { el.innerHTML = ""; return; }
+    el.innerHTML = "<table><tr><th></th>" + ks.map((k) => "<th>" + S.cfg.difficulty[k].label + "</th>").join("") + "</tr>" +
+      [["Best peak", (d) => d.peak || "-"], ["Wins", (d) => d.wins || 0], ["Fastest win", (d) => f(d.fastest)]].map(([l, g]) => "<tr><td>" + l + "</td>" + ks.map((k) => "<td>" + g(R[k] || {}) + "</td>").join("") + "</tr>").join("") + "</table>";
   }
 
   // ---------------------------------------------------------------- frame loop: fixed 1/60 s ticks through an accumulator
@@ -1508,6 +1603,7 @@
   // verdict marks, the crown and anchored banners ("+N JOIN YOU") sit above it.
   const BX = new Float64Array(9), BY = new Float64Array(9), BTOP = new Float64Array(9), BON = new Uint8Array(9), BTIER = new Uint8Array(9);
   const BNE = []; for (let i = 0; i < 9; i++) BNE.push({ bn: true, tm: i, x: 0, y: 0 });
+  const TAGS = []; for (let i = 0; i < 9; i++) TAGS.push({ i: 0, x: 0, y: 0, w: 0, label: "" }); // name tags this frame (layout pass)
   function bannerPrep(gate, x0, y0, x1, y1, DL) {
     const A = S.cfg.art, T = A.bannerTiers; BON.fill(0);
     for (let i = 1; i < S.teams.length; i++) {
@@ -1523,6 +1619,7 @@
   function drawBanner(e) {
     const i = e.tm, b = S.teams[i].ban, fr = ((((performance.now() / S.cfg.art.bannerFrameMs) | 0) + i) % 3);
     ctx.drawImage(b.cv, fr * b.bw, BTIER[i] * b.bh, b.bw, b.bh, snap2(e.x) - b.px * 2, snap2(e.y) - b.py * 2, b.bw * 2, b.bh * 2);
+    SPL.drawHorn(ctx, S.teams[i], e.x, BTOP[i]); // Horn I-II: a horn on the banner bearer (M6)
   }
   function draw() {
     const cfg = S.cfg, spr = S.spr, z = S.cam.zoom, dpr = S.dpr;
@@ -1544,6 +1641,7 @@
     cacheProbe(x0, y0, x1, y1, false);
     // camps: under fog, dirt only where you have seen a camp (camp dirt is a sprite, never baked)
     for (const c of S.camps) if ((!gate || c.kn[1] >= 0) && c.x > x0 - 40 && c.x < x1 + 40 && c.y > y0 - 30 && c.y < y1 + 30) { const im = spr.camps[(((c.x | 0) * 31 + (c.y | 0) * 17) >>> 2) & 3]; ctx.drawImage(im, snap2(c.x) - im.width, snap2(c.y) - im.height, im.width * 2, im.height * 2); }
+    SPL.drawGround(ctx, gate, x0, y0, x1, y1); // M6: bandit camp dirt and the have/need rings of villages and heavy chests (last-seen under fog)
 
     // visibility and the fog.fadeSeconds fade (seenA) of every agent that is not yours, the per-frame view of each rival (PV*), and the draw
     // list. Agents outside the view snap to their state so none enters mid-fade; the fade steps by frame time or sim time, whichever is
@@ -1553,6 +1651,7 @@
     for (let i = 0; i < 9; i++) { PVN[i] = 0; PVX[i] = 0; PVY[i] = 0; PVMY[i] = 1e9; }
     const DL = S.drawList; DL.length = 0;
     for (const a of S.agents) {
+      if (a.gar) continue; // a village garrison is inside its palisade (the number on the gate stands for it)
       const tm = a.team, out = a.x < x0 - 20 || a.x > x1 + 20 || a.y < y0 - 30 || a.y > y1 + 20; let vis = true;
       if (gate && tm === 0 && out) { a.seenA = 0; continue; } // a neutral out of view needs no lookup: it fades in if it enters the view in sight
       if (gate && tm !== 1) { const x = a.x, y = a.y; vis = v1 !== 0 && x >= 0 && y >= 0 && x < lim && y < lim && V1[((y / cell) | 0) * NC + ((x / cell) | 0)] === v1; }
@@ -1617,19 +1716,21 @@
     // every peasant frame and every tree and rock, so each thing is ONE drawImage (the hit flash is a baked frame too). Sprites sit on the
     // 2 world px art grid.
     for (const o of S.obstacles) { if (o.x < x0 - 40 || o.x > x1 + 40 || o.y < y0 - 60 || o.y > y1 + 30) continue; DL.push(o); }
+    SPL.pushProps(DL, gate, x0, y0, x1, y1); // M6 props in the y-sort: villages, chests, heavy chests, bandit tents, ground relics (seen ones only under fog)
     bannerPrep(gate, x0, y0, x1, y1, DL);
     DL.sort(byY);
-    const A = cfg.art, neutralSet = spr._neutral || (spr._neutral = spr.peasantSet(cfg.neutral.color, "straw")), fid = S.frameId, FWp = spr.FW, FHp = spr.FH, flashMin = A.flashMin;
+    const A = cfg.art, neutralSet = spr._neutral || (spr._neutral = spr.peasantSet(cfg.neutral.color, "straw")), banditSet = spr._bandit || (spr._bandit = spr.peasantSet(PS.PAL.bandit[1], "kerchief")), fid = S.frameId, FWp = spr.FW, FHp = spr.FH, flashMin = A.flashMin, bHp = cfg.encampments.banditHp;
     let nAg = 0;
     for (const e of DL) {
       if (e.team === undefined) {
         if (e.bn) { drawBanner(e); continue; }
+        if (e.pr) { SPL.drawProp(ctx, e, gate); continue; }
         if (e.v < 0) e.v = e.kind === 2 ? ((((e.x | 0) * 13 + (e.y | 0) * 7) >>> 3) & 1) : PS.ground.biome(S.map, e.x, e.y, A) > A.highAbove ? 2 : e.kind; // render variant: pines on highland
         const im = e.kind === 2 ? spr.rocks[e.v] : spr.trees[e.v], cv = im.cv;
         ctx.drawImage(cv, snap2(e.x) - im.ax * 2, snap2(e.y) + 6 - im.ay * 2, cv.width * 2, cv.height * 2);
         continue;
       }
-      const set = e.team ? S.teams[e.team].spr : neutralSet, al = e.seenA, left = e.face < 0;
+      const set = e.team === 8 ? banditSet : e.team ? S.teams[e.team].spr : neutralSet, al = e.seenA, left = e.face < 0;
       const moving = e.vx * e.vx + e.vy * e.vy > 120;
       const fi = (e.lunge > 0.08 ? 2 : moving ? ((e.ph | 0) % 2) : 3) + (left ? 4 : 0) + (e.fl > flashMin ? 8 : 0);
       let sc = 1; if (e.pop > 0 && e.pop < 0.3) sc = 1 + 0.55 * (1 - e.pop / 0.3);
@@ -1639,13 +1740,16 @@
       if (e.escapeT > 0) { ctx.globalAlpha = al * (0.6 + 0.25 * ((e.ph | 0) & 1)); ctx.drawImage(set.atlas, set.sx[fi], set.sy[fi], FWp, FHp, dx, dy, FWp * k2, FHp * k2); ctx.globalAlpha = al; ctx.fillStyle = PS.PAL.cream; ctx.fillRect(gx - 8, dy + 8, 2, 4); ctx.fillRect(gx + 6, dy + 8, 2, 4); ctx.globalAlpha = 1; continue; } // remnant: hands up, run
       if (al < 1) ctx.globalAlpha = al;
       ctx.drawImage(set.atlas, set.sx[fi], set.sy[fi], FWp, FHp, dx, dy, FWp * k2, FHp * k2);
-      if (e.hp < cfg.agent.hp && e.team) { ctx.fillStyle = "rgba(0,0,0,.5)"; ctx.fillRect(gx - 6, dy + 2, 12, 2); ctx.fillStyle = e.hp <= 1 ? "#FF5C5C" : "#FFD23F"; ctx.fillRect(gx - 6, dy + 2, 12 * (e.hp / cfg.agent.hp), 2); } // HP bar respects seenA
+      const hm = e.team === 8 ? bHp : e.team ? S.teams[e.team].hpMax : cfg.agent.hp; // Arms raise a team's max hp (M6)
+      if (e.hp < hm && e.team) { ctx.fillStyle = "rgba(0,0,0,.5)"; ctx.fillRect(gx - 6, dy + 2, 12, 2); ctx.fillStyle = e.hp <= 1 ? "#FF5C5C" : "#FFD23F"; ctx.fillRect(gx - 6, dy + 2, 12 * (e.hp / hm), 2); } // HP bar respects seenA
       if (al < 1) ctx.globalAlpha = 1;
     }
     agentsDrawn = nAg;
 
     particles.draw(ctx);
     floaters.draw(ctx);
+    SPL.drawOver(ctx, gate, x0, y0, x1, y1); // M6: garrison numbers, have/need counters, bandits left, progress arcs (last-seen under fog)
+    if (S.mode === "play") SPL.dust(dtF); // Boots: dust puffs at the feet of a moving swarm you see (render only)
 
     // camp head-count labels near the player: the live count where you see the camp, the last-seen one on explored ground (never live)
     if (S.mode === "play" && pl.count > 0) {
@@ -1684,17 +1788,26 @@
     // name tags above every swarm you see (yours too), over what you see of it; the swarm clashing with you is labelled by the clash panel.
     // Tags and verdict marks stay inside the safe play area: below the top HUD, off the screen edges (M3 critic MINOR-5)
     const safeT = y0 + (S.input.touch ? 124 : 52) / z + 14, safeL = x0 + 6 / z, safeR = x1 - 6 / z, vOn = (i) => tells && i > 1 && S.t - FS.verdict[i].t0 >= 0 && S.t - FS.verdict[i].t0 < FG.verdictSeconds;
+    // one layout pass (M5 critic MINOR-1): tags placed top to bottom, each pushed down past any it would overlap, then drawn
+    let vNew = 0; if (tells) for (let i = 2; i < S.teams.length; i++) { const v = FS.verdict[i], age = S.t - v.t0; if (age >= 0 && age < FG.verdictSeconds && PVN[i] && i !== clashRi && (!vNew || v.t0 > FS.verdict[vNew].t0)) vNew = i; } // one verdict mark at a time: the newest
+    ctx.font = "800 12px 'Nunito', system-ui"; ctx.textAlign = "center"; let nTag = 0;
     for (let i = 1; i < S.teams.length; i++) {
       const t = S.teams[i]; if (!t.alive || t.count === 0 || i === clashRi || (t.isPlayer && (t.count < 2 || S.attract || S.engagedNow))) continue;
       let cx = t.cx, cy = t.cy, top = t.minY; if (gate && i > 1) { if (!PVN[i]) continue; cx = PVX[i] / PVN[i]; cy = PVY[i] / PVN[i]; top = PVMY[i]; }
       if (cx < x0 - 60 || cx > x1 + 60 || cy < y0 - 60 || cy > y1 + 60) continue;
-      const ly = Math.max(Math.min(top - 30, BON[i] ? BTOP[i] - 8 : cy - 40), safeT + (vOn(i) ? 26 : 0)); // above the banner bearer
-      ctx.font = "800 12px 'Nunito', system-ui"; ctx.textAlign = "center";
+      const ly = Math.max(Math.min(top - 30, BON[i] ? BTOP[i] - 8 : cy - 40), safeT + (vNew === i ? 26 : 0)); // above the banner bearer
       const label = (S.attract && t.isPlayer ? "Mint" : t.name) + " · " + t.count; const w = ctx.measureText(label).width + 12; cx = clamp(cx, safeL + w / 2, Math.max(safeL + w / 2, safeR - w / 2));
-      ctx.fillStyle = "rgba(8,14,6,.75)"; ctx.fillRect(cx - w / 2, ly - 13, w, 18);
-      ctx.fillStyle = t.color; ctx.fillRect(cx - w / 2, ly - 13, 3, 18);
-      ctx.fillStyle = "#F1EEDF"; ctx.fillText(label, cx + 1, ly);
-      if (i > 1) tagMask |= 1 << i;
+      const e = TAGS[nTag++]; e.i = i; e.x = cx; e.y = ly; e.w = w; e.label = label;
+    }
+    for (let a = 1; a < nTag; a++) { const e = TAGS[a]; let b = a - 1; while (b >= 0 && TAGS[b].y > e.y) { TAGS[b + 1] = TAGS[b]; b--; } TAGS[b + 1] = e; } // by y (insertion sort, no allocation)
+    const th = 20; // a pill (18) and a gap, world px (tags draw in the world transform)
+    for (let a = 0; a < nTag; a++) { const e = TAGS[a]; for (let g = 0; g < nTag; g++) { let moved = false; for (let b = 0; b < a; b++) { const o = TAGS[b]; if (Math.abs(o.x - e.x) < (o.w + e.w) / 2 && Math.abs(o.y - e.y) < th) { e.y = o.y + th; moved = true; } } if (!moved) break; } }
+    for (let a = 0; a < nTag; a++) {
+      const e = TAGS[a], t = S.teams[e.i];
+      ctx.fillStyle = "rgba(8,14,6,.75)"; ctx.fillRect(e.x - e.w / 2, e.y - 13, e.w, 18);
+      ctx.fillStyle = t.color; ctx.fillRect(e.x - e.w / 2, e.y - 13, 3, 18);
+      ctx.fillStyle = "#F1EEDF"; ctx.fillText(e.label, e.x + 1, e.y);
+      if (e.i > 1) tagMask |= 1 << e.i;
     }
     // the crown (SPEC-v2 §9): over the crowned swarm where you see it (yours too), and a ghost crown at its last broadcast position, which is
     // where every hunter thinks it is ("YOU ARE MARKED" when it is yours). The broadcast is public: it is the finale's announced exception.
@@ -1705,14 +1818,15 @@
         if (ct.isPlayer || !gate) { vx = ct.cx; vy = Math.min(ct.minY - 30, BON[C.team] ? BTOP[C.team] - 8 : ct.cy - 40) - 24; on = true; }
         else if (PVN[C.team]) { vx = PVX[C.team] / PVN[C.team]; vy = Math.min(PVMY[C.team] - 30, BON[C.team] ? BTOP[C.team] - 8 : PVY[C.team] / PVN[C.team] - 40) - 24; on = true; }
         if (on && vx > x0 - 40 && vx < x1 + 40 && vy > y0 - 40 && vy < y1 + 40) crownGlyph(vx, vy + Math.sin(S.t * 3) * 2, 11, 1);
-        if ((ct.isPlayer || !on) && C.x > x0 - 40 && C.x < x1 + 40 && C.y > y0 - 40 && C.y < y1 + 40) crownGlyph(C.x, C.y, 14, 0.4 + 0.15 * Math.sin(S.t * 4));
+        if ((ct.isPlayer || !on) && !(on && Math.hypot(C.x - vx, C.y - vy) < 160) && C.x > x0 - 40 && C.x < x1 + 40 && C.y > y0 - 40 && C.y < y1 + 40) crownGlyph(C.x, C.y, 14, 0.4 + 0.15 * Math.sin(S.t * 4)); // the ghost only apart from the real one (M5 critic MINOR-2)
       }
     }
     // first sight: a verdict mark on that rival's banner position for fog.verdictSeconds (stronger / even / weaker, count x power)
     f0 = performance.now();
-    let fp4 = 0; if (tells) for (let i = 2; i < S.teams.length; i++) {
-      const v = FS.verdict[i], age = S.t - v.t0; if (age < 0 || age >= FG.verdictSeconds || !PVN[i] || i === clashRi) continue;
-      const ly = Math.max(Math.min(PVMY[i] - 30, BON[i] ? BTOP[i] - 8 : PVY[i] / PVN[i] - 40), safeT + 26); // on the banner bearer
+    let fp4 = 0; if (tells && vNew) for (let i = vNew; i === vNew; i++) {
+      const v = FS.verdict[i], age = S.t - v.t0;
+      let ly = Math.max(Math.min(PVMY[i] - 30, BON[i] ? BTOP[i] - 8 : PVY[i] / PVN[i] - 40), safeT + 26); // on the banner bearer, above its tag
+      for (let a = 0; a < nTag; a++) if (TAGS[a].i === i) ly = Math.min(ly, TAGS[a].y);
       ctx.font = "800 12px 'Nunito', system-ui"; ctx.textAlign = "center";
       const txt = v.kind > 0 ? "STRONGER" : v.kind < 0 ? "WEAKER" : "EVEN", col = v.kind > 0 ? "#FF7A6E" : v.kind < 0 ? "#7CF2C4" : "#FFE49A", vy = ly - 26, vw = ctx.measureText(txt).width + 26;
       const cx = clamp(BON[i] ? BX[i] : PVX[i] / PVN[i], safeL + vw / 2, Math.max(safeL + vw / 2, safeR - vw / 2));
@@ -1733,6 +1847,7 @@
       if (b.at && BON[b.at]) { const sx = (BX[b.at] * k + ox) / dpr, sy = (BTOP[b.at] * k + oy) / dpr - 30; if (sx > 40 && sx < S.vw - 40 && sy > (S.input.touch ? 150 : 90) && sy < S.vh - 60) { y = sy; bx = clamp(sx, S.vw / 2 - 40, S.vw / 2 + 40); } } // over the bearer
       let fs = S.vw < 700 ? 22 : 30; ctx.font = "800 " + fs + "px 'Baloo 2', system-ui"; const tw = ctx.measureText(b.text).width; if (tw > S.vw - 28) { fs = Math.max(12, Math.floor((fs * (S.vw - 28)) / tw)); ctx.font = "800 " + fs + "px 'Baloo 2', system-ui"; } // long banners fit a 375 px phone
       { const tw2 = Math.min(tw, S.vw - 28); bx = clamp(bx, tw2 / 2 + 14, S.vw - tw2 / 2 - 14); }
+      ctx.globalAlpha = a * 0.72; ctx.fillStyle = "#08100A"; { const tw2 = Math.min(tw * (fs / (S.vw < 700 ? 22 : 30)), S.vw - 20); ctx.beginPath(); ctx.roundRect(bx - tw2 / 2 - 12, y - fs * 0.95, tw2 + 24, fs * 1.3, 10); ctx.fill(); } // M5 critic MINOR-4: a dark plate
       ctx.globalAlpha = a; ctx.textAlign = "center";
       ctx.lineWidth = 6; ctx.strokeStyle = "rgba(0,0,0,.85)"; ctx.strokeText(b.text, bx, y);
       ctx.fillStyle = b.color; ctx.fillText(b.text, bx, y); ctx.globalAlpha = 1;
@@ -1750,7 +1865,7 @@
       ctx.font = "800 15px 'Nunito', system-ui"; ctx.textAlign = "left"; ctx.fillStyle = pl.color; ctx.fillText("YOU " + cr.a, px + 12, py + 20);
       ctx.textAlign = "right"; ctx.fillStyle = t.color; ctx.fillText(t.name.toUpperCase() + " " + cr.b, px + pw - 12, py + 20);
       ctx.textAlign = "center"; ctx.font = "800 12px 'Nunito', system-ui";
-      ctx.fillStyle = cr.f > 0.56 ? "#7CF2C4" : cr.f < 0.44 ? "#FF7A6E" : "#FFE49A"; ctx.fillText(cr.verdict, px + pw / 2, py + 20);
+      ctx.fillStyle = cr.verdict === "WINNING" ? "#7CF2C4" : cr.verdict === "LOSING" ? "#FF7A6E" : "#FFE49A"; ctx.fillText(cr.verdict, px + pw / 2, py + 20);
       if (inc) { ctx.fillStyle = inc.color; ctx.fillText(inc.name.toUpperCase() + " INCOMING", px + pw / 2, py + 56); }
       const bx = px + 12, bw = pw - 24, by = py + 30;
       ctx.fillStyle = "rgba(255,255,255,.12)"; ctx.fillRect(bx, by, bw, 8);
@@ -1835,7 +1950,7 @@
       const d = FS.dust[i]; if (d.on) { const sx = (d.x - S.cam.x) * z + cx, sy = (d.y - S.cam.y) * z + cy; if (offScreen(sx, sy)) emAdd(0, sx, sy, i, 0, 0.8); }
     }
     if (gate) for (const p of FS.pings) if (p.on) { const sx = (p.x - S.cam.x) * z + cx, sy = (p.y - S.cam.y) * z + cy; if (offScreen(sx, sy)) emAdd(2, sx, sy, 0, p.rout ? 1 : 0, 1); }
-    { const C = S.crown, ct = C.team > 1 ? S.teams[C.team] : null; if (ct && ct.alive && ct.count > 0 && !(gate && PVN[C.team])) { const sx = (C.x - S.cam.x) * z + cx, sy = (C.y - S.cam.y) * z + cy; if (offScreen(sx, sy)) emAdd(3, sx, sy, C.team, 0, 1); } } // the crown's last broadcast
+    { const C = S.crown, ct = C.team > 1 ? S.teams[C.team] : null; if (ct && ct.alive && ct.count > 0 && !(gate && PVN[C.team]) && !(!gate && !offScreen((ct.cx - S.cam.x) * z + cx, (ct.cy - S.cam.y) * z + cy))) { const sx = (C.x - S.cam.x) * z + cx, sy = (C.y - S.cam.y) * z + cy; if (offScreen(sx, sy)) emAdd(3, sx, sy, C.team, 0, 1); } } // the crown's last broadcast
     for (let i = 1; i < emN; i++) { const e = EM[i]; let j = i - 1; while (j >= 0 && EM[j].pri < e.pri) { EM[j + 1] = EM[j]; j--; } EM[j + 1] = e; } // stable, by priority
     const top = S.input.touch ? 132 : 70, bot = S.vh - (S.input.touch ? 46 : 26), mm = S.input.touch ? 120 : 160;
     for (let q = 0; q < Math.min(emN, FG.edgeMax); q++) {
@@ -1867,6 +1982,7 @@
     mctx.setTransform(1, 0, 0, 1, 0, 0); mctx.imageSmoothingEnabled = false; mctx.globalAlpha = 1;
     if (miniTerr) mctx.drawImage(miniTerr, 0, 0, 150, 150); else { mctx.fillStyle = "#1f3a1a"; mctx.fillRect(0, 0, 150, 150); }
     mctx.fillStyle = PS.PAL.parch.camp; for (const c of S.camps) { const n = gate && !PS.fog.sees(1, c.x, c.y) ? c.kn[1] : c.n; if (n > 0) mctx.fillRect((c.x * k - 1) | 0, (c.y * k - 1) | 0, 3, 2); }
+    SPL.minimap(mctx, k, gate); // M6: villages, chests, heavy chests, bandit camps and relics you have seen, as you last saw them
     for (const p of S.powerups) {
       let x = p.x, y = p.y, col = null;
       if (p.alive && (!gate || PS.fog.sees(1, p.x, p.y) || (p.x - pl.cx) * (p.x - pl.cx) + (p.y - pl.cy) * (p.y - pl.cy) <= bc2)) col = S.spr.PU[p.kind].color;
@@ -1875,11 +1991,11 @@
     }
     let cur = ""; miniMask = 0;
     for (const a of S.agents) {
-      const tm = a.team; if (a.dead || (gate && tm !== 1 && !PS.fog.sees(1, a.x, a.y))) continue;
+      const tm = a.team; if (a.dead || a.gar || (gate && tm !== 1 && !PS.fog.sees(1, a.x, a.y))) continue;
       const x = (a.x * k) | 0, y = (a.y * k) | 0;
       if (tm === 0) { if (cur !== "n") { mctx.fillStyle = "#5A4630"; cur = "n"; } mctx.fillRect(x, y, 1, 1); continue; }
-      if (tm > 1) { if (cur !== "d") { mctx.fillStyle = "#15110C"; cur = "d"; } mctx.fillRect(x - 1, y - 1, 4, 4); miniMask |= 1 << tm; } // dark backing: yellow reads on parchment
-      const col = S.teams[tm].color; if (cur !== col) { mctx.fillStyle = col; cur = col; } mctx.fillRect(x, y, 2, 2);
+      if (tm > 1) { if (cur !== "d") { mctx.fillStyle = "#15110C"; cur = "d"; } mctx.fillRect(x - 1, y - 1, 4, 4); if (tm < 8) miniMask |= 1 << tm; } // dark backing: yellow reads on parchment
+      const col = tm === 8 ? "#8A8A94" : S.teams[tm].color; if (cur !== col) { mctx.fillStyle = col; cur = col; } mctx.fillRect(x, y, 2, 2);
     }
     if (gate) {
       for (let r = 2; r < S.teams.length; r++) {
@@ -1904,7 +2020,7 @@
     const FS = S.fogS, L = FS.leak, fade = S.cfg.fog.fadeSeconds + 2 * DT, f = S.frameId, w = LW;
     let drawn = 0, vis = 0, fading = 0, hidden = 0, missed = 0, nh = 0, seenM = 0, drawnM = 0;
     for (const a of S.agents) {
-      const tm = a.team; if (tm === 1 || a.dead) continue;
+      const tm = a.team; if (tm === 1 || a.dead || a.gar) continue;
       const seen = PS.fog.sees(1, a.x, a.y), was = a.drawnF === f, inWin = !(a.x < w.x0 - 20 || a.x > w.x1 + 20 || a.y < w.y0 - 30 || a.y > w.y1 + 20);
       if (tm > 1) { if (seen) seenM |= 1 << tm; if (was) { drawnM |= 1 << tm; drawn++; } if (seen && inWin) vis++; }
       if (was && !seen) { if (inWin && S.t - a.seenT <= fade) { if (tm > 1) fading++; } else { if (tm > 1) hidden++; else nh++; if (!L.samples) L.samples = []; if (L.samples.length < 5) L.samples.push({ t: +S.t.toFixed(2), team: tm, x: Math.round(a.x), y: Math.round(a.y), seenA: +a.seenA.toFixed(2), seenT: +a.seenT.toFixed(2), inWin }); } }
@@ -1930,6 +2046,8 @@
     spr.decals.forEach((c, i) => list.push(["decal" + i, c]));
     for (const k in spr.PU) list.push(["pu." + k, spr.PU[k].icon]);
     list.push(["marker", spr.marker], ["shadow", spr.shadow]);
+    const sp = spr.spoils; for (const k in sp.relics) list.push(["relic." + k, sp.relics[k].icon]); // M6 props
+    list.push(["scroll", sp.scroll], ["chest0", sp.chest[0]], ["chest1", sp.chest[1]], ["heavy0", sp.heavy[0]], ["heavy1", sp.heavy[1]], ["village0", sp.village[0]], ["village1", sp.village[1]], ["tent", sp.tent], ["bannerHorn", sp.bannerHorn]);
     return list;
   }
   // repaint every sprite cache in place (same canvas objects, so every reference stays valid): atlases and banners from their recipe,
@@ -1939,6 +2057,8 @@
     spr.trees.forEach((t, i) => copy(t.cv, fresh.trees[i].cv)); spr.rocks.forEach((t, i) => copy(t.cv, fresh.rocks[i].cv)); spr.camps.forEach((c, i) => copy(c, fresh.camps[i])); spr.decals.forEach((c, i) => copy(c, fresh.decals[i]));
     for (const k in spr.PU) copy(spr.PU[k].icon, fresh.PU[k].icon);
     copy(spr.marker, fresh.marker); copy(spr.shadow, fresh.shadow);
+    { const a = spr.spoils, b = fresh.spoils; for (const k in a.relics) copy(a.relics[k].icon, b.relics[k].icon); copy(a.scroll, b.scroll); copy(a.tent, b.tent); copy(a.bannerHorn, b.bannerHorn); for (let i = 0; i < 2; i++) { copy(a.chest[i], b.chest[i]); copy(a.heavy[i], b.heavy[i]); copy(a.village[i], b.village[i]); } }
+    SPL.hud(true); // the relic strip's icon canvases are painted from these
     for (const v of spr.sets.values()) spr.paintAtlas(v.atlas, v.color, v.style, v.relics);
     for (const v of spr.banners.values()) spr.paintBanner(v.cv, v.color, v.style);
   }
@@ -2015,7 +2135,7 @@
       const t = S.teams[i];
       const c = document.createElement("div"); c.className = "chip" + (t.isPlayer ? " you" : "") + (t.alive ? "" : " dead"); c.id = "chip-" + i;
       const unseen = chipUnseen(i); if (unseen) c.classList.add("unseen");
-      c.innerHTML = "<span class='sw' style='background:" + t.color + "'></span><span>" + t.name + "</span><span class='n'>" + (unseen ? "?" : t.count) + "</span>";
+      c.innerHTML = "<span class='sw' style='background:" + t.color + "'></span><span>" + t.name + "</span><span class='n'>" + (unseen ? "?" : t.count) + "</span><span class='pw'></span>";
       el.appendChild(c);
     }
   }
@@ -2024,7 +2144,12 @@
   let hudT = 0;
   function updateHUD(force) {
     const now = performance.now(); if (!force && now - hudT < 100) return; hudT = now;
-    for (let i = 1; i < S.teams.length; i++) { const el = $("chip-" + i); if (!el) continue; const u = chipUnseen(i); el.lastElementChild.textContent = u ? "?" : S.teams[i].count; el.classList.toggle("unseen", u); }
+    for (const t of swarms()) {
+      const i = t.id, el = $("chip-" + i); if (!el) continue; const u = chipUnseen(i), n = el.children[2], pe = el.children[3]; n.textContent = u ? "?" : t.count; el.classList.toggle("unseen", u);
+      // a power figure once that rival has been sighted (the power you last saw on it; yours live), SPEC-v2 §10 / M6
+      const pw = i === 1 || !fogGate() || S.attract ? t.power : S.fogS.obs[1][i].seen ? t.power : S.fogS.obs[1][i].pw, txt = u || !t.alive || !(pw > 1.001) ? "" : "×" + pw.toFixed(2); if (pe && pe.textContent !== txt) pe.textContent = txt;
+    }
+    SPL.hud(false);
     const tl = Math.max(0, S.timeLeft), m = Math.floor(tl / 60), s = Math.floor(tl % 60);
     const tm = $("timer"); tm.textContent = m + ":" + (s < 10 ? "0" : "") + s; tm.classList.toggle("urgent", tl < 30);
     const b = $("buffs"), t = S.teams[1], cfg = S.cfg.powerups; let h = "";
@@ -2112,7 +2237,7 @@
       b.onclick = () => { S.difficulty = k; try { localStorage.setItem("ps.difficulty", k); } catch (e) {} syncDifficulty(); PS.audio.click(); };
       row.appendChild(b);
     }
-    syncDifficulty();
+    syncDifficulty(); renderRecords();
     $("btn-play").onclick = () => startGame();
     $("btn-again").onclick = () => startGame();
     $("btn-retry").onclick = () => startGame();
@@ -2178,6 +2303,8 @@
     },
     resetCost() { fcostN = 0; FCOST.fill(0); FPART.fill(0); const FS = S.fogS; if (FS) { FS.simMs = 0; FS.simTotal = 0; FS.simTicks = 0; FS.simMax = 0; } const U = PS.fog.ST; U.uploads = 0; U.forced = 0; U.upMs = 0; U.cells = 0; return true; },
     crows: (x, y) => crows(x, y),
+    // M6: the objectives you know (the live state where you see them, the last-seen one elsewhere): the harness bot's only view of spoils
+    objectives: () => SPL.playerView(),
   };
   const AIQ = { assertKnowledge: () => (S.fogS ? { ...S.fogS.ai } : null) };
 
@@ -2187,7 +2314,7 @@
   const SANDBOX_KEYS = ["mode", "t", "timeLeft", "agents", "teams", "obstacles", "powerups", "camps", "cam", "input", "rng", "seed", "trickleT", "shake",
     "banners", "hintT", "stats", "engagedNow", "result", "decals", "trails", "attract", "difficulty", "spr", "tick", "acc", "map", "obs", "cap", "dbg",
     "finalCalled", "pendingEnd", "_routedBy", "_hintRecruit", "_hintFight", "_hintHud", "camS", "ev", "lastRout", "thinkRR", "flowW", "fixture",
-    "fogW", "fogS", "fogOn", "frameId", "lastDrawT", "lastDrawSim", "noise", "crown", "pile", "scent", "relaxUntil", "torches", "aiPlayer", "aiCost"];
+    "fogW", "fogS", "fogOn", "frameId", "lastDrawT", "lastDrawSim", "noise", "crown", "pile", "scent", "relaxUntil", "torches", "aiPlayer", "aiCost", "objs", "bandits", "spT"];
   let sbParticles = null, sbSmoke = null, flatMap = null;
   function withSandbox(fn) {
     if (sandbox) return fn(); // nested call shares the outer throwaway world
@@ -2209,7 +2336,7 @@
     }
   }
   function sandboxField(map) {
-    S.agents = []; S.obstacles = []; S.powerups = []; S.camps = []; S.banners = []; S.decals = []; S.trails = []; S.teams = [];
+    S.agents = []; S.obstacles = []; S.powerups = []; S.camps = []; S.banners = []; S.decals = []; S.trails = []; S.teams = []; SPL.reset();
     S.map = map || flatMap || (flatMap = PS.terrain.flat()); PS.terrain.use(S.map); placeTables(S.map); bucketObstacles();
     S.flowW = PS.flow.use(PS.flow.reset(sbFlow, S.map));
     S.fogW = PS.fog.use(PS.fog.reset(sbFog, S.map, { learn: false })); S.fogS = mkFogS(); S.fogOn = false; // fog data runs; the view is unfogged unless a test sets fogOn
@@ -2226,7 +2353,8 @@
   // One clash on an empty field (the flat fixture map): n player peasants vs m Greedy (team 2) peasants, facing edges 60 px apart, both
   // sides charging the other's centroid every tick. No AI think, neutrals, trickle or power-ups; Normal difficulty. Seeded per run.
   // The fight ends at its first rout (or a wipe): survivors are counted at the rout, before the flip; flipped and fled come from it.
-  function fightOnce(n, m, maxSeconds, seed) {
+  // opts.armsA / opts.armsB: that side's Arms tier (M6 parity matrix)
+  function fightOnce(n, m, maxSeconds, seed, opts) {
     const cfg = S.cfg, W = cfg.world.w, H = cfg.world.h;
     sandboxField(); S.attract = false; S.difficulty = "normal";
     S.t = 0; S.timeLeft = 1e9; S.trickleT = -1e9; S.shake = 0; S.result = null; S.engagedNow = false; S.finalCalled = true; S.pendingEnd = null; S._routedBy = null;
@@ -2237,6 +2365,7 @@
     blob(W / 2 - 30 - blobR(n), H / 2, n, 1); blob(W / 2 + 30 + blobR(m), H / 2, m, 2);
     recount();
     const p = S.teams[1], r = S.teams[2], max = Math.round(maxSeconds * 60), w0 = performance.now();
+    if (opts && opts.armsA) { p.tier.arms = opts.armsA; SPL.applyTiers(p, true); } if (opts && opts.armsB) { r.tier.arms = opts.armsB; SPL.applyTiers(r, true); }
     let truncated = false;
     for (let i = 0; i < max; i++) {
       p.tx = r.cx; p.ty = r.cy; r.tx = p.cx; r.ty = p.cy;
@@ -2250,11 +2379,11 @@
     else if (!p.alive && r.alive) { out.winner = "rival"; out.how = "wipe"; out.playerAfter = 0; }
     return out;
   }
-  // PS.fight(30, 20, 25, runs, seed): run i is seeded seed + i, so the runs differ and each one replays; reports medians
-  function fight(n, m, maxSeconds, runs, seed) {
+  // PS.fight(30, 20, 25, runs, seed, { armsA, armsB }): run i is seeded seed + i, so the runs differ and each one replays; reports medians
+  function fight(n, m, maxSeconds, runs, seed, opts) {
     n = Math.max(1, n | 0 || 30); m = Math.max(1, m | 0 || 20); maxSeconds = clamp(+maxSeconds || 25, 1, 120); runs = clamp(runs | 0 || 3, 1, 9); seed = seed == null ? 20260924 : seed >>> 0;
     return withSandbox(() => {
-      const all = []; for (let i = 0; i < runs; i++) all.push(fightOnce(n, m, maxSeconds, seed + i));
+      const all = []; for (let i = 0; i < runs; i++) all.push(fightOnce(n, m, maxSeconds, seed + i, opts));
       const med = (k) => { const v = all.map((x) => x[k]).sort((a, b) => a - b); return v[v.length >> 1]; };
       const wins = all.filter((x) => x.winner === "player").length, losses = all.filter((x) => x.winner === "rival").length;
       return { n, m, maxSeconds, seconds: med("seconds"), playerLeft: med("playerLeft"), rivalLeft: med("rivalLeft"), playerAfter: med("playerAfter"), flipped: med("flipped"), fled: med("fled"),
@@ -2282,7 +2411,7 @@
   // a fresh scene on map m in the current world: player + the three rivals (dormant), no AI think, no trickle, no power-ups, seeded
   function fixtureBase(m, seed) {
     const cfg = S.cfg, old = S.map;
-    S.agents = []; S.obstacles = []; S.powerups = []; S.camps = []; S.banners = []; S.decals = []; S.trails = [];
+    S.agents = []; S.obstacles = []; S.powerups = []; S.camps = []; S.banners = []; S.decals = []; S.trails = []; SPL.reset();
     S.map = m; PS.terrain.use(m); placeTables(m); bucketObstacles(); if (!sandbox && old && old !== m) releaseGround(old);
     S.flowW = PS.flow.use(PS.flow.reset(sandbox ? sbFlow : liveFlow, m));
     S.fogW = PS.fog.use(PS.fog.reset(sandbox ? sbFog : liveFog, m, { learn: false })); S.fogS = mkFogS(); S.fogOn = false; // fixtures keep full knowledge and an unfogged view
@@ -2472,9 +2601,17 @@
       const s0 = m.spawns[pl.slot], [x, y] = near(s0.x, s0.y, 60), n = name === "rout" ? 90 : 70, e = name === "rout" ? 36 : 50;
       clear([1, 2]); freeze(); put(x - 60, y, n, 1); put(x + 60, y, e, 2); const r = done(x, y);
       const g = S.teams[2]; g.tx = x - 60; g.ty = y; PS.aim(x + 70, y);
-      if (name === "clash") { PS.step(1.4); return r; }
+      if (name === "clash") { PS.step(2.0); return r; } // M5 critic MAJOR-1: 2 s into the clash
       for (let k = 0; k < 24; k++) { PS.step(0.5); g.tx = pl.cx; g.ty = pl.cy; PS.aim(g.count ? g.cx : pl.cx, g.count ? g.cy : pl.cy); if (S.banners.some((b) => /JOIN/.test(b.text))) break; }
       return Object.assign(r, { banners: S.banners.map((b) => b.text), t: +S.t.toFixed(1) });
+    }
+    // M6: your swarm (opts.n, default 24) opts.gap px from the first objective of that type toward the map centre (a bandit camp of opts.kind), camera on it
+    if (name === "village" || name === "chest" || name === "heavy" || name === "bandit" || name === "relic") {
+      let o = null; for (const q of S.objs) if (q.type === (name === "relic" ? "chest" : name) && q.live && (name !== "bandit" || q.kind === (opts.kind || 0))) { o = q; break; }
+      if (!o) return { name, error: "no " + name };
+      if (name === "relic") { o.live = false; o = SPL.relicAt(o.x + 40, o.y, o.axis, false, "chest", Infinity); }
+      const g = opts.gap || (name === "bandit" ? 230 : 130), cdx = W / 2 - o.x, cdy = W / 2 - o.y, cl = Math.hypot(cdx, cdy) || 1, [x, y] = near(o.x + (cdx / cl) * g, o.y + (cdy / cl) * g + 40, 60); clear([1]); freeze(); put(x, y, opts.n || 24, 1); // g px toward the map centre
+      const r = done(o.x, o.y + 20); PS.aim(x, y); return Object.assign(r, { obj: { type: o.type, x: Math.round(o.x), y: Math.round(o.y), gar: o.gar, weight: o.weight, n: o.n, axis: o.axis } });
     }
     if (name === "teams") {
       const s0 = m.spawns[pl.slot], [x, y] = near(s0.x, s0.y, 80), R0 = opts.r || 150;
@@ -2527,7 +2664,8 @@
       firstFight: E.firstFight, firstPlayerFight: E.firstPlayerFight, fights: E.fights, playerFights: S.stats.fights, routs: E.routs, remnants: E.remnants, scattered: E.scattered,
       alive60: E.alive60, alive120: E.alive120, alive180: E.alive180, aliveNow: al, elims: E.elims.slice(), hornLeader: E.hornLeader, hornAlive: E.hornAlive, biggest: b ? b.id : 0,
       counts: S.teams.slice(1).map((t) => t.count), names: S.teams.slice(1).map((t) => t.name), pileOns: E.pileOns, scentPings: E.scentPings, crownMoves: E.crownMoves,
-      trickle: E.trickle, trickleFav: E.trickleFav, leftHome: S.teams.slice(1).map((t) => t.leftHome), ai: FS ? { ...FS.ai } : null, aiCost: aiCostReport(), dbg: { ...S.dbg } };
+      trickle: E.trickle, trickleFav: E.trickleFav, leftHome: S.teams.slice(1).map((t) => t.leftHome), ai: FS ? { ...FS.ai } : null, aiCost: aiCostReport(), dbg: { ...S.dbg },
+      tiers: S.teams.slice(1).map((t) => t.tierN), tiers60: E.tiers60, tiers180: E.tiers180, tiers300: E.tiers300, taken: E.taken.slice(), gains: E.gains.slice(), drops: E.drops, trickleChests: E.trickleChests, mustered: S.teams.slice(1).map((t) => t.mustered) };
   }
 
   // ---------------------------------------------------------------- QA: fog (SPEC-v2 §5, §13; M3 brief 10)
@@ -2655,6 +2793,139 @@
     });
   }
 
+  // ---------------------------------------------------------------- QA: spoils (SPEC-v2 §8, §13; M6 brief 10)
+  // placement on n seeds through the real newGame path: six villages (the configured garrisons), six fixed chests, the bandit camps by kind,
+  // the heavy chests; every objective reachable (finite path distance from every spawn); every bandit camp >= encampments.banditMinPath by
+  // path from every spawn; garrisons and bandits are agents (cap accounting) standing on walkable ground
+  function spoilsPlacement(n) {
+    const out = [], EN = S.cfg.encampments;
+    for (let i = 0; i < n; i++) out.push(withSandbox(() => {
+      sandboxField(); newGame(false, { seed: 1000 + i * 7919 }); const m = S.map, U = m.cell / 3, bad = [], cnt = { village: 0, chest: 0, heavy: 0, bandit: [0, 0, 0] }; let minB = 1e9;
+      for (const o of S.objs) {
+        const c = PS.terrain.cellOf(o.x, o.y); let far = 1e9; for (let k = 0; k < 6; k++) { const d = m.dist[k][c]; if (d >= 65535) bad.push(o.type + " unreachable from spawn " + k); if (d * U < far) far = d * U; }
+        if (o.type === "bandit") { cnt.bandit[o.kind]++; if (far < minB) minB = far; if (far < EN.banditMinPath) bad.push("bandit camp " + Math.round(far) + " px from a spawn"); } else cnt[o.type]++;
+        if (!PS.terrain.walkable(o.x, o.y)) bad.push(o.type + " on blocked ground");
+      }
+      const gars = S.objs.filter((o) => o.type === "village").map((o) => o.gar).sort((a, b) => a - b).join(","), want = EN.villages.slice().sort((a, b) => a - b).join(",");
+      const garN = S.agents.filter((a) => a.gar).length, banN = S.agents.filter((a) => a.team === 8).length, sumG = S.objs.filter((o) => o.type === "village").reduce((s, o) => s + o.gar, 0), sumB = S.bandits.reduce((s, b) => s + b.n0, 0);
+      if (cnt.village !== 6 || gars !== want) bad.push("villages " + gars); if (cnt.chest !== 6) bad.push("chests " + cnt.chest); if (cnt.bandit.join() !== EN.banditCounts.join()) bad.push("bandit camps " + cnt.bandit.join("/"));
+      if (cnt.heavy !== EN.heavy.length) bad.push("heavy " + cnt.heavy); if (garN !== sumG || banN !== sumB) bad.push("agents gar " + garN + "/" + sumG + " bandits " + banN + "/" + sumB);
+      if (S.agents.some((a) => !PS.terrain.walkable(a.x, a.y))) bad.push("agent on blocked ground");
+      return { seed: S.seed, counts: cnt, garrisons: gars, bandits: S.bandits.map((b) => b.n0).join(","), minBanditPath: Math.round(minB), agents: S.agents.length, bad };
+    }));
+    return out;
+  }
+  // a small scene on the flat field for the spoils checks: the player (and rival 2 when asked) as blobs, fog data on, no AI think
+  // (a scene fixture, so no win check ends it and no player input steers it: the checks set every target themselves)
+  function spoilsScene(seed) { fixtureBase(flatMap || (flatMap = PS.terrain.flat()), seed); S.t = S.cfg.ai.grace + 1; S.fixture = { name: "spoils", drive() {}, done: () => false, result: () => null }; return { W: S.cfg.world.w, p: S.teams[1], r: S.teams[2] }; }
+  const holdAt = (t, x, y) => { t.tx = x; t.ty = y; t.mode = "hold"; t.route = false; };
+  // village join timing (SPEC-v2 §8): with >= garrison in the gate ring it joins at once; with fewer it joins after villageStep x (garrison -
+  // nearby), villageMin minimum; a rival in the ring pauses the timer. The garrison joins through convert() (muster counts)
+  function villageTest() {
+    const EN = S.cfg.encampments, run = (have, rival) => withSandbox(() => {
+      const { W, p, r } = spoilsScene(21); const x = W / 2, y = W / 2, v = SPL.stage("village", x, y, { gar: 12 });
+      blob(x - (rival ? 40 : 0), y, have, 1); settle(p); if (rival) { r.alive = true; blob(x + 45, y, rival, 2); settle(r); }
+      const rec0 = S.stats.recruited, must0 = p.mustered; let at = -1;
+      for (let i = 0; i < 60 * 12 && at < 0; i++) { holdAt(p, x - (rival ? 40 : 0), y); if (rival) holdAt(r, x + 45, y); update(DT); if (!v.live) at = S.t - S.cfg.ai.grace - 1; }
+      return { have, rival: rival || 0, joinedAfter: at < 0 ? null : +at.toFixed(2), prog: +v.prog.toFixed(3), owner: v.owner, count: p.count, recruited: S.stats.recruited - rec0, mustered: p.mustered - must0 };
+    });
+    const a = run(12, 0), b = run(6, 0), c = run(6, 3), want = Math.max(EN.villageMin, EN.villageStep * 6), tick = DT * EN.scanTicks;
+    return { atOnce: a, fewer: b, paused: c, want, pass: a.joinedAfter != null && a.joinedAfter <= tick + 1e-6 && a.count === 24 && a.recruited === 12 && a.mustered === 12 &&
+      b.joinedAfter != null && Math.abs(b.joinedAfter - want) <= 2 * tick + 1e-6 && b.count === 18 && c.joinedAfter == null && c.prog === 0 }; // one scan of slack either side
+  }
+  // bandits (SPEC-v2 §6, §8): three tough peasants (hp x100, a bait moved by hand) stand 100 px from a camp, then walk out past the leash; no bandit
+  // chases farther than the leash (+ 16 px of separation); a 45 swarm then clears the camp: bandits never rout, never join, never take spoils
+  // (every bandit stays team 8 until it dies), and clearing opens the chest (a relic). The swarm's shove on the camp is reported, not gated.
+  function banditTest() {
+    return withSandbox(() => {
+      const EN = S.cfg.encampments, { W, p } = spoilsScene(23), x = W / 2, y = W / 2, b = SPL.stage("bandit", x, y, { kind: 1, n: 10, axis: "arms" });
+      blob(x + 100, y, 3, 1); settle(p); for (const a of S.agents) if (a.team === 1) a.hp = 1000; let maxD = 0, turned = 0, chased = 0;
+      const bait = S.agents.filter((a) => a.team === 1);
+      for (let i = 0; i < 60 * 8; i++) {
+        holdAt(p, p.cx, p.cy); update(DT); const bx = x + 100 + Math.max(0, S.t - S.cfg.ai.grace - 3) * 40; bait.forEach((a, k) => { a.x = bx; a.y = y + (k - 1) * 14; a.vx = a.vy = 0; });
+        for (const a of b.agents) if (!a.dead) { const d = Math.hypot(a.x - x, a.y - y); if (d > maxD) maxD = d; if (a.team !== 8) turned++; if (a.fight) chased++; }
+      }
+      const lure = { maxFromCamp: Math.round(maxD), leash: EN.banditLeash, baitAt: Math.round(p.cx - x), banditFightTicks: chased };
+      for (const a of S.agents) if (a.team === 1) a.dead = true; recount(); maxD = 0;
+      blob(x - 260, y, 45, 1); settle(p); p.alive = true; const t0 = S.t, rout0 = S.ev.routs, tier0 = p.tierN; let cleared = -1, relic = false, took = -1;
+      for (let i = 0; i < 60 * 30 && took < 0; i++) {
+        p.tx = x; p.ty = y; p.route = true; p.mode = "route"; update(DT);
+        for (const a of b.agents) { if (!a.dead && a.team !== 8) turned++; const d = Math.hypot(a.x - x, a.y - y); if (!a.dead && d > maxD) maxD = d; }
+        if (cleared < 0 && !b.live) { cleared = +(S.t - t0).toFixed(2); relic = S.objs.some((o) => o.type === "relic" && o.src === "bandit"); }
+        if (cleared >= 0 && p.tierN > tier0) took = +(S.t - t0).toFixed(2);
+      }
+      return { lure, fight: { cleared, relic, took, playerLeft: p.count, banditsLeft: b.n, maxFromCamp: Math.round(maxD), routs: S.ev.routs - rout0, turned, tier: p.tier.arms },
+        pass: lure.maxFromCamp <= EN.banditLeash + 16 && lure.maxFromCamp > 70 && lure.banditFightTicks > 0 && cleared > 0 && relic && took > 0 && turned === 0 && S.ev.routs === rout0 };
+    });
+  }
+  // heavy chest (SPEC-v2 §8): 10 in the ring of a 15 for 4 s: shut, the counter reads 10/15; 16: it opens after heavyHold s; a 30 lays two
+  // relics and the first one walked onto takes the pair
+  function heavyTest() {
+    return withSandbox(() => {
+      const EN = S.cfg.encampments, { W, p } = spoilsScene(25), x = W / 2, y = W / 2, h = SPL.stage("heavy", x, y, { weight: 15, axis: "boots" });
+      blob(x, y, 10, 1); settle(p);
+      for (let i = 0; i < 240; i++) { holdAt(p, x, y); update(DT); }
+      const shut = { live: h.live, have: h.have, label: h.have + "/" + h.weight };
+      blob(x + 10, y + 10, 6, 1); settle(p); const t0 = S.t; let at = -1;
+      for (let i = 0; i < 300 && at < 0; i++) { holdAt(p, x, y); update(DT); if (!h.live) at = +(S.t - t0).toFixed(2); }
+      const got = p.tier.boots;
+      const h2 = SPL.stage("heavy", x + 900, y, { weight: 30, axis: "horn" }); for (const a of S.agents) if (a.team === 1) { a.x += 900; } settle(p); for (let i = 0; i < 20 && p.count < 30; i++) { blob(x + 900, y, 2, 1); settle(p); }
+      let pair = 0; for (let i = 0; i < 300 && h2.live; i++) { holdAt(p, x + 900, y); update(DT); } pair = S.objs.filter((o) => o.type === "relic" && o.src === "heavy").length;
+      const r = S.objs.find((o) => o.type === "relic" && o.src === "heavy"), tiers0 = p.tierN; let left = -1;
+      if (r) { for (let i = 0; i < 400; i++) { p.tx = r.x; p.ty = r.y; p.route = true; p.mode = "route"; update(DT); if (p.tierN > tiers0) { left = S.objs.filter((o) => o.type === "relic" && o.src === "heavy").length; break; } } }
+      return { shut, openedAfter: at, hold: EN.heavyHold, boots: got, pick2: { relicsLaid: pair, leftAfterPick: left, tiers: p.tierN }, pass: shut.live && shut.have === 10 && at >= EN.heavyHold - 2 * DT * EN.scanTicks && at <= EN.heavyHold + 0.2 && got === 1 && pair === 2 && left === 0 };
+    });
+  }
+  // muster milestones (SPEC-v2 §8): 15 / 40 / 90 neutrals recruited grant Horn I, Boots I, Arms I in that order; absorbed rivals do not count
+  function musterTest() {
+    return withSandbox(() => {
+      const { W, p } = spoilsScene(27), PG = S.cfg.progression; blob(W / 2, W / 2, 1, 1); settle(p); const log = [];
+      const recruit = (k, absorbed) => { for (let i = 0; i < k; i++) { const a = mkAgent(W / 2 + 60, W / 2, 0); S.agents.push(a); convert(a, 1, absorbed); } };
+      recruit(14, false); log.push(p.tier.horn); recruit(30, true); log.push(p.tier.horn); recruit(1, false); log.push(p.tier.horn);
+      recruit(PG.muster[1] - 15, false); log.push(p.tier.boots); recruit(PG.muster[2] - PG.muster[1] - 1, false); log.push(p.tier.arms); recruit(1, false); log.push(p.tier.arms);
+      const gains = S.ev.gains.map((g) => g[2] + g[3] + ":" + g[4]);
+      return { log, mustered: p.mustered, gains, hpMax: p.hpMax, pass: log.join() === "0,0,1,1,0,1" && p.mustered === PG.muster[2] && gains.join() === "horn1:muster,boots1:muster,arms1:muster" && Math.abs(p.hpMax - S.cfg.agent.hp * (1 + PG.armsHp)) < 1e-9 };
+    });
+  }
+  // a routed leader (SPEC-v2 §8): the biggest swarm loses a rout group: every tier drops as a relic within progression.dropScatter of the contact,
+  // each living progression.relicLife s (Arms may reach III); its tiers and stats go back to base; unclaimed drops expire
+  function dropTest() {
+    return withSandbox(() => {
+      const PG = S.cfg.progression, { W, p, r } = spoilsScene(29), q = S.teams[3], x = W / 2, y = W / 2; r.alive = q.alive = true;
+      blob(300, 300, 5, 1); blob(x - 50, y, 80, 2); blob(x + 60, y, 40, 3); settle(p); settle(r); settle(q);
+      r.tier.arms = 2; r.tier.boots = 1; r.tier.horn = 1; SPL.applyTiers(r, true); const hp0 = r.hpMax;
+      for (const a of S.agents) if (a.team === 2 && a.x > x - 90) a.fight = true; // its front is fighting at the contact
+      rebuildGrid(); rout(r, q, x, y, false);
+      const drops = S.objs.filter((o) => o.type === "relic" && o.src === "drop"), far = drops.length ? Math.max(...drops.map((o) => Math.hypot(o.x - x, o.y - y))) : 0;
+      const after = { tiers: r.tierN, hpMax: r.hpMax, power: r.power }, life = drops.length ? drops[0].life : 0;
+      const lone = SPL.stage("relic", 300, W - 300, { axis: "horn", life: 0.5 }); for (let i = 0; i < 45; i++) { holdAt(p, 300, 300); update(DT); } const expired = S.objs.indexOf(lone) < 0; // an unclaimed drop expires
+      return { dropped: drops.length, axes: drops.map((o) => o.axis + (o.t3 ? "*" : "")).join(","), farthest: Math.round(far), life, hpBefore: hp0, after, expired,
+        pass: drops.length === 4 && far <= PG.dropScatter + 24 && after.tiers === 0 && after.hpMax === S.cfg.agent.hp && after.power === 1 && drops.filter((o) => o.axis === "arms").every((o) => o.t3) && life === PG.relicLife && expired };
+    });
+  }
+  // an AI values objectives (SPEC-v2 §7, §8): Greedy (20, past the grace) with a village of 12 (a landmark) 500 px off goes for it and takes it;
+  // a relic it has never seen, 1500 px off, is never targeted; the knowledge assert stays clean
+  function aiSpoilsTest() {
+    return withSandbox(() => {
+      const { W, r } = spoilsScene(31), x = W / 2, y = W / 2; r.alive = true; blob(300, 300, 3, 1); settle(S.teams[1]);
+      blob(x - 500, y, 20, 2); settle(r); const v = SPL.stage("village", x, y, { gar: 12 }), far = SPL.stage("relic", x - 500, y + 1500, { axis: "horn" }); fogStampAll(); r.thinkT = 0;
+      let st = {}, joined = -1, farT = 0;
+      for (let i = 0; i < 60 * 20 && joined < 0; i++) { holdAt(S.teams[1], 300, 300); update(DT); st[r.state] = (st[r.state] || 0) + 1; if (!v.live && v.owner === 2) joined = +(S.t - S.cfg.ai.grace - 1).toFixed(2); if (Math.hypot(r.tx - far.x, r.ty - far.y) < 60) farT++; }
+      return { states: st, joined, count: r.count, farTargeted: farT, ai: { ...S.fogS.ai }, pass: joined > 0 && r.count >= 32 && farT === 0 && S.fogS.ai.violations === 0 && S.fogS.ai.objectives > 0 };
+    });
+  }
+  // Arms parity matrix (SPEC-v2 §8, R8): 40 and 60 Arms I-III peasants against 1.0x, their configured power (progression.armsPower) and the
+  // gate x base peasants (PS.fight, 5 seeded runs per size and point, pooled: 10 per point). Gates: Arms I beats an even number (>= 70%);
+  // Arms II does not beat 1.4x base, Arms III not 1.75x (< 50%: else cut the per-tier percent); at its configured power each tier is a
+  // contested fight (10-90%). The single-point shares are noisy (fights sit on the rout rule's knife edge); the power table itself comes
+  // from the 9-run scans in M6-build-notes.md.
+  function parityTest() {
+    const PG = S.cfg.progression, share = (k, ratio) => { let w = 0, r = 0; for (const n of [40, 60]) { const f = fight(n, Math.round(n * ratio), 30, 5, 8800 + k * 31 + n + Math.round(ratio * 100), { armsA: k }); w += f.playerWins; r += f.runs.length; } return +(w / r).toFixed(2); };
+    const gates = [1.4, 1.4, 1.75], tiers = [1, 2, 3].map((k) => { const p = PG.armsPower[k]; return { tier: k, power: p, gate: gates[k - 1], atEven: share(k, 1), atPower: share(k, p), atGate: share(k, gates[k - 1]) }; });
+    return { tiers, perTier: { hp: PG.armsHp, atk: PG.armsAtk }, power: PG.armsPower,
+      pass: tiers[0].atEven >= 0.7 && tiers[1].atGate < 0.5 && tiers[2].atGate < 0.5 && tiers.every((t) => t.atPower >= 0.1 && t.atPower <= 0.9) };
+  }
+
   // dawn: at the bell the fog lifts over fog.dawnSeconds before the result screen, and everything is drawn
   function dawnTest() {
     return withSandbox(() => {
@@ -2748,7 +3019,7 @@
         const up = [], dr = [], fg = []; let fl0 = null, st0 = 0, stN0 = 0, drawnSum = 0;
         for (let i = 0; i < warm + ticks; i++) {
           if (i === warm) { fl0 = PS.flow.stats; st0 = S.fogS.simTotal; stN0 = S.fogS.simTicks; }
-          const a = performance.now(); benchTick(); const b = performance.now(); draw(); if (flush) ctx.getImageData(0, 0, 1, 1); const e = performance.now();
+          const a = performance.now(); benchTick(); const b = performance.now(); draw(); if (flush) benchFlush(); const e = performance.now();
           if (i >= warm) { up.push(b - a); dr.push(e - b); fg.push(fogLastMs); drawnSum += S.drawList.length; }
           if (e - w0 > 12000) break; // lesson 20
         }
@@ -2765,6 +3036,10 @@
       });
     } finally { cfg.combat.engageDelay = delay0; benchTick = () => {}; if (benchMap) releaseGround(benchMap); } // the bench map's chunks are zeroed, not kept (memory)
   }
+  // the per-frame flush: one main-canvas pixel drawn into a willReadFrequently scratch and read there (the same forced raster, no readback
+  // warning on the main canvas; M5 critic MINOR-6)
+  let flushCv = null, flushCtx = null;
+  function benchFlush() { if (!flushCv) { flushCv = mkCanvas(1, 1); flushCtx = flushCv.getContext("2d", { willReadFrequently: true }); } flushCtx.drawImage(canvas, 0, 0, 1, 1, 0, 0, 1, 1); return flushCtx.getImageData(0, 0, 1, 1).data[3]; }
   // the bench spot: both clash footprints (rects relative to the centre) fully walkable, then the most open w x h view (ties: nearest the centre)
   function benchSpot(m, w, h, rects) {
     const N = m.N, cell = m.cell, N1 = N + 1, open = new Int32Array(N1 * N1), blocked = new Int32Array(N1 * N1), walk = PS.terrain.walkT;
@@ -2826,7 +3101,16 @@
     "terrain.passWidth:a terrain.pocketFill:n terrain.maxRerolls:n terrain.fairness:o terrain.fairness.rivalRatio:n terrain.fairness.centreRatio:n terrain.fairness.detour:a " +
     "terrain.fairness.minExits:n terrain.costs:o terrain.costs.base:n terrain.costs.wall1:n terrain.costs.wall2:n terrain.costs.ford:n terrain.costs.prop:n " +
     "terrain.fallbackSeeds:a terrain.chunk:n terrain.chunkArt:n terrain.waterFrameMs:n " +
-    "art.flashWhite:n art.bannerPole:a art.bannerFlagW:a art.bannerFlagH:a art.bannerEmblem:a art.bannerTiers:a art.bannerMin:n art.bannerFrameMs:n art.bannerLift:n art.highCells:n art.cornerR:n art.shadow:a art.shallow:n art.deep:n art.foam:n art.sparkle:n art.bridgeShadow:n art.stoneStep:n art.stoneR:n art.fordEdge:n art.biomePeriod:n art.tonePeriod:n art.rockyBelow:n art.highAbove:n art.decalCluster:n art.decalSpread:n art.pineShare:n art.drawOverhead:n art.drawPerAgent:n art.canvasBudgetMB:n art.hatShareMin:n art.terrainSatMax:n art.flashMin:n art.ditherBand:n").split(" ");
+    "art.flashWhite:n art.bannerPole:a art.bannerFlagW:a art.bannerFlagH:a art.bannerEmblem:a art.bannerTiers:a art.bannerMin:n art.bannerFrameMs:n art.bannerLift:n art.highCells:n art.cornerR:n art.shadow:a art.shallow:n art.deep:n art.foam:n art.sparkle:n art.bridgeShadow:n art.stoneStep:n art.stoneR:n art.fordEdge:n art.biomePeriod:n art.tonePeriod:n art.rockyBelow:n art.highAbove:n art.decalCluster:n art.decalSpread:n art.pineShare:n art.drawOverhead:n art.drawPerAgent:n art.canvasBudgetMB:n art.hatShareMin:n art.terrainSatMax:n art.flashMin:n art.ditherBand:n " +
+    // M6 spoils (src/spoils.js reads them through S.cfg)
+    "progression.armsHp:n progression.armsAtk:n progression.armsCap:n progression.armsMax:n progression.armsPower:a progression.bootsSpeed:n progression.bootsFord:n progression.bootsMax:n " +
+    "progression.hornRadius:a progression.hornMax:n progression.muster:a progression.musterAxes:a progression.chestAxes:o progression.chestAxes.arms:n progression.chestAxes.boots:n progression.chestAxes.horn:n " +
+    "progression.pickupRadius:n progression.relicLife:n progression.dropScatter:n progression.dropMinShare:n progression.trickleChestEvery:n progression.trickleChestAfter:n progression.trickleChestMax:n progression.trickleChestBias:n " +
+    "encampments.villages:a encampments.villageRing:n encampments.villageStep:n encampments.villageMin:n encampments.villageDist.0:n encampments.villageDist.1:n encampments.chestDist.0:n encampments.chestDist.1:n " +
+    "encampments.heavy:a encampments.heavyPick2:n encampments.heavyRing:n encampments.heavyHold:n encampments.heavyDist.0:n encampments.heavyDist.1:n encampments.banditSizes:a encampments.banditCounts:a " +
+    "encampments.banditMinPath:n encampments.banditLeash:n encampments.banditAggro:n encampments.banditHp:n encampments.banditDamage:n encampments.banditSpeed:n encampments.banditGap:n " +
+    "encampments.objectGap:n encampments.campGap:n encampments.cheer:n encampments.scanTicks:n ai.objRelic:n ai.objVillage:n ai.objHeavy:n ai.objBandit:n ai.banditFeasible:n " +
+    "banner.minSeconds:n banner.queuedSeconds:n banner.staleSeconds:n banner.dropDepth:n combat.verdictRatio:n").split(" ");
   const cfgGet = (path) => { let o = S.cfg; for (const k of path.split(".")) { if (o == null) return undefined; o = o[k]; } return o; };
   const typeOk = (v, t) => (t === "n" ? typeof v === "number" && isFinite(v) : t === "s" ? typeof v === "string" && v.length > 0 : t === "a" ? Array.isArray(v) && v.length > 0 : t === "b" ? typeof v === "boolean" : !!v && typeof v === "object");
   function configReport() {
@@ -2841,10 +3125,15 @@
     (cfg.pace || []).forEach((v, i) => { if (!typeOk(v, "n")) missing.push("pace." + i); });
     if (cfg.input && ["route", "steer"].indexOf(cfg.input.desktopMode) < 0) missing.push("input.desktopMode (route | steer)");
     if (cfg.combat && ["fighting", "radius"].indexOf(cfg.combat.localMode) < 0) missing.push("combat.localMode (fighting | radius)");
+    { const PG = cfg.progression || {}, EN = cfg.encampments || {}, ax = ["arms", "boots", "horn"]; // M6 shapes the rules rely on
+      if (!(PG.muster && PG.musterAxes && PG.muster.length === PG.musterAxes.length && PG.musterAxes.every((a) => ax.indexOf(a) >= 0))) missing.push("progression.muster / musterAxes (same length, axes arms | boots | horn)");
+      if (!(PG.armsPower && PG.armsPower.length === PG.armsMax + 1)) missing.push("progression.armsPower (one per Arms tier 0..armsMax)");
+      if (!(PG.hornRadius && PG.hornRadius.length === PG.hornMax + 1)) missing.push("progression.hornRadius (one per Horn tier 0..hornMax)");
+      if (!(EN.banditSizes && EN.banditCounts && EN.banditSizes.length === 3 && EN.banditCounts.length === 3)) missing.push("encampments.banditSizes / banditCounts (green, orange, red)"); }
     for (const k in (cfg.powerups && cfg.powerups.weights) || {}) { if (!S.spr.PU[k] || !typeOk(cfg.powerups.duration[k], "n")) missing.push("powerups.weights." + k + " (needs a PU icon + duration)"); }
     // tunables in config.json that no code reads (informational: a retune there does nothing)
     const unused = [];
-    for (const sec of ["world", "spawn", "agent", "flock", "flow", "combat", "powerups", "ai", "camera", "touch", "fog", "terrain", "input", "finale", "fixtures", "art"]) for (const k in cfg[sec] || {}) {
+    for (const sec of ["world", "spawn", "agent", "flock", "flow", "combat", "powerups", "ai", "camera", "touch", "fog", "terrain", "input", "finale", "fixtures", "art", "progression", "encampments", "banner"]) for (const k in cfg[sec] || {}) {
       const path = sec + "." + k; if (used[path]) continue; unused.push(path);
     }
     return { checked: CFG_KEYS.length, missing, unused };
@@ -2881,10 +3170,10 @@
 
   function stateSig() {
     let h = 0; for (const a of S.agents) h += a.x * 1.3 + a.y * 0.7 + a.vx * 0.11 + a.vy * 0.13 + a.hp * 3 + a.team * 11 + (a.tgt ? 5 : 0) + a.atk * 0.17 + a.ph * 0.01;
-    const tm = S.teams.slice(1).map((t) => [t.count, t.alive, t.tx, t.ty, t.cx, t.cy, t.vx, t.vy, t.thinkT, t.kills, t.state, t.slot, t.mode, t.route, t.tMed, t.regroupUntil, t.engL.join(",")]);
+    const tm = S.teams.slice(1).map((t) => [t.count, t.alive, t.tx, t.ty, t.cx, t.cy, t.vx, t.vy, t.thinkT, t.kills, t.state, t.slot, t.mode, t.route, t.tMed, t.regroupUntil, t.engL.join(","), t.tierN, t.mustered]);
     return JSON.stringify([S.mode, S.t, S.tick, S.timeLeft, S.seed, S.map ? S.map.used : null, S.agents.length, h, tm, S.cam, S.stats, S.banners.length, S.result, S.pendingEnd, S.difficulty, S.attract,
       S.camps.length, S.powerups.map((p) => [p.x, p.y, p.alive, p.kind]), S.trickleT, S.shake, S.engagedNow, S.input.huddle, S.input.joy.active, S.hintT, S.ev, S.thinkRR, PS.flow.stats && PS.flow.stats.rebuilds,
-      PS.fog.sig(), S.fogS ? [S.fogS.stats.sightings, S.fogS.stats.ghosts, S.fogS.ai.decisions, S.fogS.ai.violations] : null]);
+      PS.fog.sig(), S.fogS ? [S.fogS.stats.sightings, S.fogS.stats.ghosts, S.fogS.ai.decisions, S.fogS.ai.violations] : null, (S.objs || []).map((o) => [o.type, o.live, o.x, o.y, o.prog, o.hold, o.n, o.owner])]);
   }
   function lsSnapshot() { try { const o = []; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); o.push(k + "=" + localStorage.getItem(k)); } return o.sort().join("\n"); } catch (e) { return "unavailable"; } }
 
@@ -3008,7 +3297,7 @@
 
   function selfTest(opts) {
     opts = opts || {};
-    const all = ["config", "sprites", "terrain", "caches", "art", "flow", "fight", "fixtures", "flipflop", "ai", "rivals", "fog", "replay", "match"];
+    const all = ["config", "sprites", "terrain", "caches", "art", "flow", "fight", "fixtures", "flipflop", "ai", "rivals", "fog", "spoils", "parity", "replay", "match"];
     const parts = opts.parts ? (Array.isArray(opts.parts) ? opts.parts : String(opts.parts).split(",")) : all, has = (p) => parts.indexOf(p) >= 0;
     const horizon = clamp(+opts.matchSeconds || (S.cfg ? S.cfg.world.matchSeconds : 240), 10, 600);
     const w0 = performance.now(), results = {}, fails = [], ms = {};
@@ -3054,6 +3343,8 @@
       check("fight_30v20", !f.error && f.playerWins >= 2 && f.seconds <= 25 && new Set(f.runs.map((r) => r.seconds + ":" + r.playerLeft)).size > 1, f);
       check("fight_matrix", mx.every((r) => !r.error && r.runs.every((x) => !x.truncated)), mx.map((r) => ({ nm: r.n + "v" + r.m, winner: r.winner, wins: r.playerWins + "/" + r.runs.length, seconds: r.seconds, left: r.playerLeft + " v " + r.rivalLeft, flipped: r.flipped, fled: r.fled, runs: r.runs })));
       const cv = clashVerdictTest(427, 227); check("clash_427v227_opens_winning", cv.verdict === "WINNING" && cv.later && cv.later.verdict === "WINNING", cv);
+      const cvs = [[56, 40], [66, 47], [145, 87]].map(([a, b]) => clashVerdictTest(a, b)); // M5 critic MAJOR-1: fights the player always wins never open EVEN
+      check("clash_1_4x_opens_winning", cvs.every((c) => c.verdict === "WINNING" && c.later && c.later.verdict === "WINNING"), cvs.map((c) => ({ nm: c.n + "v" + c.m, first: c.first && [c.first.verdict, +c.first.q.toFixed(2)], later: c.later && [c.later.verdict, +c.later.q.toFixed(2)] })));
       const r64 = mx[4]; check("fight_60v40_remnant", r64.playerWins >= 2 && r64.fled > 0, { wins: r64.playerWins, fled: r64.fled, seconds: r64.seconds }); // M2 critic MAJOR-1: the break rule keeps a remnant
       check("fight_30v20_4to7s", f.seconds >= 4 && f.seconds <= 7, { seconds: f.seconds, mode: S.cfg.combat.localMode });
     });
@@ -3100,6 +3391,19 @@
       const md = maskDropTest(); check("fog_mask_reput_after_drop", md.pass, md);
       const dw = dawnTest(); check("fog_dawn", dw.pass, dw);
     });
+    if (has("spoils")) timed("spoils", () => {
+      const pl = spoilsPlacement(5); check("spoils_reachable_5_seeds", pl.every((r) => r.bad.length === 0), pl);
+      const v = villageTest(); check("spoils_village_timing", v.pass, v);
+      const b = banditTest(); check("spoils_bandit_leash_never_rout", b.pass, b);
+      const h = heavyTest(); check("spoils_heavy_gate_counter", h.pass, h);
+      const m = musterTest(); check("spoils_muster_grants", m.pass, m);
+      const d = dropTest(); check("spoils_leader_drops", d.pass, d);
+      const a = aiSpoilsTest(); check("spoils_ai_values_objectives", a.pass, a);
+      const at = withSandbox(() => { const { p } = spoilsScene(33), base = p.spr; p.tier.arms = 0; SPL.grant(p, "arms", false, "qa", 0, 0); const up = p.spr; const probe = S.spr.peasantSet("#123456", "hood", { helmet: 1, tines: 1 }), dropped = S.spr.dropSet(probe);
+        return { base: base.key, up: up.key, rebuilt: up !== base && !!up.relics && opaqueCount(up.atlas) > 0, dropped, zeroed: probe.atlas.width === 0 && !S.spr.sets.has(probe.key) }; });
+      check("spoils_atlas_rebuild", at.rebuilt && at.dropped && at.zeroed, at);
+    });
+    if (has("parity")) timed("parity", () => { const p = parityTest(); check("spoils_arms_parity", p.pass, p); });
     if (has("replay")) timed("replay", () => { const r = replay(424242, 60); check("replay_60s", r.same, r); });
     if (has("match")) timed("match", () => {
       mt = simMatch(horizon, { wallMs: opts.wallMs || 9000 });

@@ -130,7 +130,8 @@
       "escapeReplan": 1.0,
       "escapeDistance": 900
     },
-    "truceSeconds": 0
+    "truceSeconds": 0,
+    "verdictRatio": 1.25
   },
   "powerups": {
     "count": 9,
@@ -259,7 +260,12 @@
     "graceAvoid": 520,
     "ghostKeep": 20,
     "heardSeconds": 3,
-    "scentJitter": 250
+    "scentJitter": 250,
+    "objRelic": 360,
+    "objVillage": 30,
+    "objHeavy": 380,
+    "objBandit": 340,
+    "banditFeasible": 1.8
   },
   "player": {
     "name": "You",
@@ -608,6 +614,109 @@
     "remnantLose": 40,
     "remnantSeconds": 6,
     "holdPace": 0.92
+  },
+  "progression": {
+    "armsHp": 0.07,
+    "armsAtk": 0.07,
+    "armsCap": 2,
+    "armsMax": 3,
+    "armsPower": [
+      1,
+      1.2,
+      1.36,
+      1.55
+    ],
+    "bootsSpeed": 0.05,
+    "bootsFord": 0.4,
+    "bootsMax": 2,
+    "hornRadius": [
+      22,
+      30,
+      40
+    ],
+    "hornMax": 2,
+    "muster": [
+      15,
+      40,
+      90
+    ],
+    "musterAxes": [
+      "horn",
+      "boots",
+      "arms"
+    ],
+    "chestAxes": {
+      "arms": 1,
+      "boots": 1,
+      "horn": 1
+    },
+    "pickupRadius": 22,
+    "relicLife": 45,
+    "dropScatter": 120,
+    "dropMinShare": 0.3,
+    "trickleChestEvery": 45,
+    "trickleChestAfter": 60,
+    "trickleChestMax": 3,
+    "trickleChestBias": 0.8
+  },
+  "encampments": {
+    "villages": [
+      8,
+      10,
+      12,
+      14,
+      16,
+      20
+    ],
+    "villageRing": 80,
+    "villageStep": 1.2,
+    "villageMin": 2,
+    "villageDist": [
+      420,
+      1100
+    ],
+    "chestDist": [
+      600,
+      1600
+    ],
+    "heavy": [
+      15,
+      30
+    ],
+    "heavyPick2": 30,
+    "heavyRing": 80,
+    "heavyHold": 2,
+    "heavyDist": [
+      650,
+      1700
+    ],
+    "banditSizes": [
+      5,
+      10,
+      20
+    ],
+    "banditCounts": [
+      3,
+      2,
+      1
+    ],
+    "banditMinPath": 900,
+    "banditLeash": 120,
+    "banditAggro": 90,
+    "banditHp": 12,
+    "banditDamage": 2,
+    "banditSpeed": 150,
+    "banditGap": 450,
+    "objectGap": 260,
+    "campGap": 130,
+    "cheer": 700,
+    "scanTicks": 3
+  },
+  "banner": {
+    "minSeconds": 1.2,
+    "queuedSeconds": 1.4,
+    "staleSeconds": 3,
+    "dropDepth": 2
   },
   "_units": {
     "terrain.cell": [
@@ -2404,6 +2513,286 @@
       "share of a tone step dithered at its border (0 hard edge, 1 dither everywhere)",
       0,
       1
+    ],
+    "progression.armsHp": [
+      "fraction of max hp per Arms tier",
+      0,
+      0.3
+    ],
+    "progression.armsAtk": [
+      "fraction of attack speed per Arms tier",
+      0,
+      0.3
+    ],
+    "progression.armsCap": [
+      "Arms tier cap from ordinary relics",
+      1,
+      3
+    ],
+    "progression.armsMax": [
+      "Arms tier cap with a tier-III relic (red camp, leader drop)",
+      1,
+      3
+    ],
+    "progression.armsPower": [
+      "headcount equivalence per Arms tier 0..III (measured with PS.fight)",
+      1,
+      2.5
+    ],
+    "progression.bootsSpeed": [
+      "fraction of speed per Boots tier",
+      0,
+      0.2
+    ],
+    "progression.bootsFord": [
+      "share of the ford slowdown Boots remove",
+      0,
+      1
+    ],
+    "progression.bootsMax": [
+      "Boots tier cap",
+      1,
+      3
+    ],
+    "progression.hornRadius": [
+      "px recruit radius at Horn 0 / I / II",
+      10,
+      80
+    ],
+    "progression.hornMax": [
+      "Horn tier cap",
+      1,
+      3
+    ],
+    "progression.muster": [
+      "neutrals recruited for each muster milestone",
+      1,
+      500
+    ],
+    "progression.chestAxes.arms": [
+      "weight of Arms in chest rolls",
+      0,
+      10
+    ],
+    "progression.chestAxes.boots": [
+      "weight of Boots in chest rolls",
+      0,
+      10
+    ],
+    "progression.chestAxes.horn": [
+      "weight of Horn in chest rolls",
+      0,
+      10
+    ],
+    "progression.pickupRadius": [
+      "px touch radius for relics and chests",
+      8,
+      60
+    ],
+    "progression.relicLife": [
+      "s a leader-drop relic lies on the ground",
+      5,
+      300
+    ],
+    "progression.dropScatter": [
+      "px scatter of a routed leader's relics",
+      20,
+      400
+    ],
+    "progression.dropMinShare": [
+      "share of the leader a rout group must be for a drop",
+      0,
+      1
+    ],
+    "progression.trickleChestEvery": [
+      "s between trickle chests",
+      5,
+      600
+    ],
+    "progression.trickleChestAfter": [
+      "s before the first trickle chest",
+      0,
+      600
+    ],
+    "progression.trickleChestMax": [
+      "trickle chests alive at once",
+      0,
+      20
+    ],
+    "progression.trickleChestBias": [
+      "chance a trickle chest goes to the smallest swarm",
+      0,
+      1
+    ],
+    "encampments.villages": [
+      "garrison per village (one per spawn region)",
+      1,
+      60
+    ],
+    "encampments.villageRing": [
+      "px gate ring radius",
+      20,
+      200
+    ],
+    "encampments.villageStep": [
+      "s per missing peasant while holding the ring",
+      0,
+      10
+    ],
+    "encampments.villageMin": [
+      "s minimum hold",
+      0,
+      30
+    ],
+    "encampments.villageDist": [
+      "px path distance from its spawn",
+      100,
+      3000
+    ],
+    "encampments.chestDist": [
+      "px path distance from its spawn (fixed chests)",
+      100,
+      3000
+    ],
+    "encampments.heavy": [
+      "weight of each heavy chest",
+      1,
+      200
+    ],
+    "encampments.heavyPick2": [
+      "weight from which a heavy chest offers a pick of two",
+      1,
+      200
+    ],
+    "encampments.heavyRing": [
+      "px heavy chest ring radius",
+      20,
+      200
+    ],
+    "encampments.heavyHold": [
+      "s to hold the weight in the ring",
+      0,
+      20
+    ],
+    "encampments.heavyDist": [
+      "px path distance to the nearest spawn",
+      100,
+      3000
+    ],
+    "encampments.banditSizes": [
+      "bandits per camp: green / orange / red",
+      1,
+      60
+    ],
+    "encampments.banditCounts": [
+      "camps of each kind: green / orange / red",
+      0,
+      6
+    ],
+    "encampments.banditMinPath": [
+      "px path distance from every spawn",
+      0,
+      3000
+    ],
+    "encampments.banditLeash": [
+      "px a bandit may stray from its camp",
+      20,
+      400
+    ],
+    "encampments.banditAggro": [
+      "px within which a bandit goes for a peasant",
+      10,
+      300
+    ],
+    "encampments.banditHp": [
+      "bandit hp",
+      1,
+      100
+    ],
+    "encampments.banditDamage": [
+      "bandit damage per hit",
+      0.1,
+      20
+    ],
+    "encampments.banditSpeed": [
+      "px/s bandit speed",
+      20,
+      400
+    ],
+    "encampments.banditGap": [
+      "px between bandit camps and other objectives",
+      50,
+      2000
+    ],
+    "encampments.objectGap": [
+      "px between placed objectives",
+      50,
+      2000
+    ],
+    "encampments.campGap": [
+      "px from an objective to a neutral camp",
+      0,
+      1000
+    ],
+    "encampments.cheer": [
+      "px within which a village joining is heard",
+      0,
+      3000
+    ],
+    "encampments.scanTicks": [
+      "ticks between ring scans",
+      1,
+      30
+    ],
+    "ai.objRelic": [
+      "neutral units: a relic or chest the AI can use",
+      0,
+      5000
+    ],
+    "ai.objVillage": [
+      "neutral units per garrison peasant",
+      0,
+      500
+    ],
+    "ai.objHeavy": [
+      "neutral units: a heavy chest it can lift",
+      0,
+      5000
+    ],
+    "ai.objBandit": [
+      "neutral units: a bandit camp it can clear",
+      0,
+      5000
+    ],
+    "ai.banditFeasible": [
+      "count x power over bandits before an AI attacks a camp",
+      0.5,
+      5
+    ],
+    "banner.minSeconds": [
+      "s a banner shows before a higher-priority one replaces it",
+      0.2,
+      5
+    ],
+    "banner.queuedSeconds": [
+      "s each banner shows while others wait",
+      0.2,
+      5
+    ],
+    "banner.staleSeconds": [
+      "s rival-vs-rival news may wait in the queue",
+      0.5,
+      20
+    ],
+    "banner.dropDepth": [
+      "queued banners past which rival-vs-rival news is dropped",
+      0,
+      10
+    ],
+    "combat.verdictRatio": [
+      "group strength ratio (count x power x morale) for a WINNING / LOSING read",
+      1,
+      3
     ]
   }
 }

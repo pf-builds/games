@@ -2,7 +2,7 @@
 // One art pixel = 2 world px for everything: every canvas here is drawn at art resolution and scaled 2x at render time (imageSmoothing
 // off). Colours come from PS.PAL (src/palette.js). Outlines are composited (a dark silhouette at the 4 orthogonal offsets under the
 // sprite): nothing here reads a canvas back (studio lesson 27). Peasants: one atlas canvas per team and hat style (4 poses x 2 facings x
-// plain / hit-flash, shadow baked in), so an agent is ONE drawImage. Relic overlays (helmet, tines, shield) are hooks for M6.
+// plain / hit-flash, shadow baked in), so an agent is ONE drawImage. Arms relic overlays (hat band, crest, tines) are part of the atlas key (M6).
 window.PS = window.PS || {};
 
 PS.buildSprites = function (cfg) {
@@ -57,8 +57,14 @@ PS.buildSprites = function (cfg) {
     else if (style === "straw") { p.rect(2, -1, 4, 1, H); p.px(3, -1, L); p.rect(2, 0, 4, 1, D); p.rect(-1, 1, 10, 1, H); p.px(1, 1, L); p.px(6, 1, L); p.px(-1, 1, D); p.px(8, 1, D); }
     else if (style === "kerchief") { p.rect(1, -1, 6, 3, H); p.rect(1, 1, 6, 1, D); p.px(0, 1, D); p.px(-1, 2, D); p.rect(2, 3, 4, 1, D); }
   }
-  // relic overlays (SPEC-v2 §11, M6): each gets the art painter, the pose and the tier, and draws over the finished body. No-ops until M6.
-  const RELIC = { helmet: (p, pose, tier) => {}, tines: (p, pose, tier) => {}, shield: (p, pose, tier) => {} };
+  // relic overlays (SPEC-v2 §8, §11, M6): each gets the art painter, the pose and the tier, and draws over the finished body. Arms I-III: the hat
+  // band leather -> iron -> iron with a crest, the tines iron -> steel -> gold. Boots and Horn read elsewhere (dust puffs, the banner horn).
+  const BAND = [null, "#8A5A34", "#9AA4B0", "#9AA4B0"], TINE = [null, ["#6E7480", "#A8B0BC"], ["#B8CCE0", "#EEF6FF"], ["#C8962C", "#F6D56A"]];
+  const RELIC = {
+    helmet: (p, pose, tier) => { const t = Math.min(3, tier); p.rect(2, 1, 4, 1, BAND[t]); if (t >= 3) { p.px(3, -3, "#D8403A"); p.px(4, -3, "#D8403A"); p.px(4, -4, "#F6CF6A"); p.px(3, -2, "#A8302C"); } },
+    tines: (p, pose, tier) => { const c = TINE[Math.min(3, tier)]; if (pose === 2) { p.rect(10, 5, 1, 3, c[0]); p.px(11, 5, c[1]); p.px(11, 7, c[1]); p.px(10, 6, c[1]); } else { p.rect(7, 0, 3, 1, c[0]); p.px(7, -1, c[1]); p.px(9, -1, c[1]); p.px(8, 0, c[1]); } },
+    shield: (p, pose, tier) => {},
+  };
   function body(style, C, pose, relics) {
     const src = mk(FW, FH), g = src.getContext("2d");
     const P0 = { px: (x, y, c) => { g.fillStyle = c; g.fillRect(x + OX, y + OY, 1, 1); }, rect: (x, y, w, h, c) => { g.fillStyle = c; g.fillRect(x + OX, y + OY, w, h); } };
@@ -227,9 +233,49 @@ PS.buildSprites = function (cfg) {
     }) },
   };
 
+  // ---------- M6 spoils (SPEC-v2 §8, §11): relic icons per axis on a parchment tag (arms helmet, boots, horn), the ground relic scroll, chest
+  // and heavy chest (closed, open), the village (48 x 40: palisade, gate, two huts; closed and joined), the bandit tent, the banner's horn.
+  // Numbers (garrison, weight, have/need) and team / kind colours are drawn at runtime over these. Every one is drawn at 2x.
+  const INK = PAL.ink, W8 = PAL.wood, ST = PAL.stone, PARCH = ["#B89A62", "#E6D3A0", "#F4E6BC"];
+  const tag = (p) => { p.rect(1, 1, 10, 10, PARCH[1]); p.rect(1, 1, 10, 1, PARCH[2]); p.rect(1, 10, 10, 1, PARCH[0]); p.rect(10, 1, 1, 10, PARCH[0]); };
+  const RELICS = {
+    arms: { color: "#C9D6E2", icon: outlined(make(12, 12, (p) => { tag(p); p.rect(3, 4, 6, 4, "#8C98A6"); p.rect(4, 3, 4, 1, "#8C98A6"); p.rect(4, 4, 3, 1, "#DCE6F0"); p.rect(3, 7, 6, 1, "#5E6874"); p.px(5, 6, INK); p.px(6, 6, INK); p.rect(5, 1, 2, 2, "#D8403A"); p.px(5, 2, "#A8302C"); p.rect(3, 8, 1, 2, "#5E6874"); p.rect(8, 8, 1, 2, "#5E6874"); })) },
+    boots: { color: "#E0A870", icon: outlined(make(12, 12, (p) => { tag(p); p.rect(2, 3, 3, 5, "#7A4A26"); p.rect(2, 7, 4, 2, "#7A4A26"); p.px(3, 4, "#A86A3A"); p.rect(6, 3, 3, 5, "#6A3E20"); p.rect(6, 7, 4, 2, "#6A3E20"); p.px(7, 4, "#A86A3A"); p.rect(2, 9, 4, 1, INK); p.rect(6, 9, 4, 1, INK); p.px(3, 5, "#F4E6BC"); p.px(7, 5, "#F4E6BC"); })) },
+    horn: { color: "#F0D890", icon: outlined(make(12, 12, (p) => { tag(p); p.rect(2, 7, 2, 2, "#E8DCC0"); p.rect(3, 6, 2, 2, "#E8DCC0"); p.rect(4, 5, 2, 2, "#D8C8A0"); p.rect(6, 4, 2, 3, "#C8B488"); p.rect(8, 2, 2, 5, "#B89A62"); p.rect(8, 2, 2, 1, "#F6CF6A"); p.px(2, 8, "#8A6A3A"); p.rect(4, 8, 4, 1, "#7A4A26"); })) },
+  };
+  const scroll = outlined(make(10, 8, (p) => { p.rect(1, 2, 8, 4, PARCH[1]); p.rect(1, 2, 8, 1, PARCH[2]); p.rect(0, 1, 2, 6, PARCH[0]); p.rect(8, 1, 2, 6, PARCH[0]); p.px(0, 1, PARCH[2]); p.px(8, 1, PARCH[2]); p.rect(4, 6, 2, 1, "#A8302C"); }));
+  const chestArt = (open) => outlined(make(12, 10, (p) => {
+    if (open) { p.rect(1, 0, 10, 3, W8[1]); p.rect(1, 0, 10, 1, W8[2]); p.rect(1, 4, 10, 5, W8[2]); p.rect(2, 4, 8, 2, "#2A1C10"); p.px(4, 4, "#F6CF6A"); p.px(7, 5, "#F6CF6A"); p.rect(1, 8, 10, 1, W8[1]); p.rect(3, 4, 1, 5, ST[1]); p.rect(8, 4, 1, 5, ST[1]); }
+    else { p.rect(1, 2, 10, 7, W8[2]); p.rect(1, 2, 10, 2, W8[3]); p.rect(1, 8, 10, 1, W8[1]); p.rect(3, 2, 1, 7, ST[1]); p.rect(8, 2, 1, 7, ST[1]); p.rect(1, 4, 10, 1, W8[1]); p.rect(5, 4, 2, 2, "#F6CF6A"); p.px(5, 5, "#C8962C"); }
+  }));
+  const heavyArt = (open) => outlined(make(18, 14, (p) => {
+    if (open) { p.rect(1, 0, 16, 4, ST[2]); p.rect(1, 0, 16, 1, ST[3]); p.rect(1, 6, 16, 7, ST[2]); p.rect(2, 6, 14, 3, "#1E1A22"); p.px(6, 6, "#F6CF6A"); p.px(11, 7, "#F6CF6A"); p.rect(1, 12, 16, 1, ST[1]); }
+    else { p.rect(1, 3, 16, 10, ST[2]); p.rect(1, 3, 16, 2, ST[3]); p.rect(1, 12, 16, 1, ST[1]); for (let x = 3; x < 16; x += 5) p.rect(x, 3, 2, 10, ST[1]); p.rect(1, 7, 16, 1, ST[1]); p.rect(7, 6, 4, 3, "#C8962C"); p.rect(8, 7, 2, 1, INK); p.rect(2, 1, 3, 2, ST[1]); p.rect(13, 1, 3, 2, ST[1]); }
+  }));
+  // the village: palisade stakes round the back and sides, two thatched huts, the gate front and centre (shut, or open once it joins)
+  const villageArt = (joined) => withShadow(outlined(make(48, 40, (p) => {
+    const TH = ["#8A6A34", "#B08A48", "#CFAE66"], WL = ["#8E7456", "#B09874"];
+    for (let x = 2; x < 46; x += 3) { const h = 9 + ((x * 7) % 3); p.rect(x, 8 - h + 9, 2, h, W8[2]); p.px(x, 8 - h + 9, W8[3]); }
+    for (let y = 9; y < 34; y += 3) { p.rect(1, y, 2, 3, W8[1]); p.rect(45, y, 2, 3, W8[1]); }
+    p.rect(3, 11, 42, 22, PAL.earth[2]); for (let i = 0; i < 18; i++) p.px(5 + ((i * 13) % 38), 13 + ((i * 7) % 18), PAL.earth[1]);
+    for (const [hx, hy] of [[7, 14], [26, 12]]) { p.rect(hx, hy + 6, 14, 8, WL[1]); p.rect(hx, hy + 13, 14, 1, WL[0]); p.rect(hx + 5, hy + 9, 3, 5, "#3A2A1C"); p.px(hx + 11, hy + 9, "#F6CF6A");
+      for (let r = 0; r < 7; r++) { const w = 4 + r * 2; p.rect(hx + 7 - w / 2, hy + r, w, 1, r < 2 ? TH[2] : r < 5 ? TH[1] : TH[0]); } }
+    for (let x = 2; x < 46; x += 3) if (x < 18 || x > 28) { p.rect(x, 31, 2, 7, W8[2]); p.px(x, 31, W8[3]); }
+    if (joined) { p.rect(18, 36, 12, 2, PAL.earth[1]); p.rect(17, 29, 2, 9, W8[1]); p.rect(29, 29, 2, 9, W8[1]); p.rect(19, 31, 2, 6, W8[2]); p.rect(27, 31, 2, 6, W8[2]); }
+    else { p.rect(18, 30, 12, 8, W8[1]); for (let x = 18; x < 30; x += 2) p.rect(x, 30, 1, 8, W8[2]); p.rect(18, 33, 12, 1, W8[0]); p.rect(17, 28, 2, 10, W8[0]); p.rect(29, 28, 2, 10, W8[0]); }
+  })), 24, 38, 22, 2.4);
+  const tent = withShadow(outlined(make(20, 16, (p) => {
+    const C = PAL.bandit; for (let r = 0; r < 10; r++) { const w = 2 + r * 2; p.rect(10 - w / 2, 3 + r, w, 1, r < 3 ? C[2] : C[1]); } p.rect(9, 7, 2, 6, "#1E1A22"); p.rect(0, 13, 20, 1, C[0]);
+    p.rect(9, 0, 1, 4, W8[1]); p.rect(15, 11, 4, 3, W8[2]); p.rect(15, 11, 4, 1, W8[3]);
+  })), 10, 14, 9, 1.6);
+  const bannerHorn = outlined(make(7, 5, (p) => { p.rect(0, 2, 2, 2, "#E8DCC0"); p.rect(2, 1, 2, 3, "#D8C8A0"); p.rect(4, 0, 2, 4, "#C8B488"); p.rect(4, 0, 2, 1, "#F6CF6A"); p.px(6, 1, "#B89A62"); }));
+  const spoils = { relics: RELICS, scroll, chest: [chestArt(false), chestArt(true)], heavy: [heavyArt(false), heavyArt(true)], village: [villageArt(false), villageArt(true)], tent, bannerHorn };
+
   // ---------- the player's target flag and a loose shadow (power-ups), both 2x ----------
   const marker = outlined(make(8, 10, (p) => { const T = PAL.ramp(PAL.teams[0]); p.rect(1, 1, 1, 9, PAL.cream); p.rect(2, 1, 5, 3, T.hat); p.rect(2, 3, 5, 1, T.hatD); p.px(3, 1, T.hatL); }));
   const shadow = make(8, 3, (p) => p.ell(4, 1.5, 3.6, 1.2, PAL.shadow));
 
-  return { peasantSet, banner, sets: SETS, banners: BANNERS, paintAtlas, paintBanner, STYLES, shadow, camps, trees, rocks, PU, marker, decals, FW, FH };
+  // dropSet(set): zero a relic atlas no team uses any more and forget it (SPEC-v2 §8: the atlas rebuilds on gain, old canvases zeroed)
+  function dropSet(s) { if (!s || !s.relics || SETS.get(s.key) !== s) return false; SETS.delete(s.key); s.atlas.width = 0; s.atlas.height = 0; return true; }
+  return { peasantSet, dropSet, banner, sets: SETS, banners: BANNERS, paintAtlas, paintBanner, STYLES, shadow, camps, trees, rocks, PU, marker, decals, spoils, FW, FH };
 };

@@ -44,7 +44,23 @@ body {
 .btn-sound::before { content: "🔊"; }
 .btn-sound.off::before { content: "🔇"; }
 
-#buffs { position: absolute; left: .6rem; bottom: max(.6rem, env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: .3rem; }
+/* bottom-left: the relic strip (M6: one icon per axis with tier pips, dimmed at 0) above the timed buffs */
+#bl { position: absolute; left: .6rem; bottom: max(.6rem, env(safe-area-inset-bottom)); display: flex; flex-direction: column; align-items: flex-start; gap: .3rem; }
+#buffs { display: flex; flex-direction: column; gap: .3rem; }
+#relics { display: flex; gap: 4px; padding: 4px; background: rgba(10,18,8,.78); border: 1px solid rgba(255,255,255,.12); border-radius: 8px; }
+.relic { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 24px; opacity: .38; }
+.relic.on { opacity: 1; }
+.relic canvas { width: 24px; height: 24px; image-rendering: pixelated; }
+.relic .pips { display: flex; gap: 2px; height: 4px; }
+.relic .pips i { width: 6px; height: 4px; border-radius: 1px; background: rgba(255,255,255,.18); }
+.chip .pw { font-size: .72em; color: #FFE49A; font-variant-numeric: tabular-nums; }
+.chip .pw:empty { display: none; }
+.records { font-size: .78rem; color: #E4E0CE; text-shadow: 0 2px 4px rgba(0,0,0,.85); background: rgba(8,14,6,.45); padding: .35rem .7rem; border-radius: 10px; }
+.records.empty { display: none; }
+.records table { border-collapse: collapse; }
+.records th { color: #FFE49A; font-weight: 800; padding: 0 .5rem; font-size: .72rem; letter-spacing: .06em; }
+.records td { padding: 0 .5rem; text-align: center; font-variant-numeric: tabular-nums; font-weight: 800; }
+.records td:first-child { text-align: left; color: #B9B5A3; }
 .buff {
   display: flex; align-items: center; gap: .45rem; padding: .3rem .6rem; border-radius: 8px;
   background: rgba(10,18,8,.8); border-left: 4px solid; font-weight: 800; font-size: .8rem; min-width: 8.5rem;

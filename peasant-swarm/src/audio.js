@@ -96,6 +96,13 @@
     warHorn(v) { if (!gate("wh", 1500)) return; const k = v || 1; [[147, 0], [220, 0.03]].forEach(([f, w]) => { tone(f * 0.94, f, 0.3, "sawtooth", 0.12 * k, w, true); tone(f, f * 0.99, 1.4, "sawtooth", 0.14 * k, w + 0.28, true); }); noise(1.2, 0.05 * k, 0.25, 500); },
     // a later scent ping: one short low note (C1: the horn every 25 s would nag)
     scentNote() { if (!gate("sn", 1000)) return; tone(110, 104, 0.35, "triangle", 0.1); },
+    // M6 spoils (SPEC-v2 §12): a relic taken (a bright rising chime), a chest opening (a wooden knock and a coin shimmer), a village joining
+    // (a crowd cheer: bursts of bright noise over a rising shout; heard within encampments.cheer px through the dark), a muster milestone
+    // (a short brass fanfare)
+    relic() { if (!gate("rl", 150)) return; [784, 988, 1175, 1568].forEach((f, i) => tone(f, f * 1.005, 0.14, "triangle", 0.09, i * 0.06)); tone(392, 784, 0.25, "sine", 0.05, 0, true); },
+    chest() { if (!gate("ch", 200)) return; tone(160, 110, 0.08, "square", 0.08); noise(0.06, 0.08, 0, 900); [1319, 1568, 1976].forEach((f, i) => tone(f, f, 0.1, "sine", 0.05, 0.08 + i * 0.05)); },
+    cheer() { if (!gate("cr", 1200)) return; for (let i = 0; i < 5; i++) noise(0.35, 0.07, i * 0.12, 2600 + Math.random() * 1400, 1.4); tone(330, 520, 0.6, "sawtooth", 0.05, 0.05, true); tone(415, 660, 0.55, "sawtooth", 0.04, 0.15, true); },
+    fanfare() { if (!gate("ff", 800)) return; [[392, 0], [523, 0.12], [659, 0.24], [784, 0.36], [659, 0.52], [784, 0.62]].forEach(([f, w], i) => tone(f, f * 1.003, i === 5 ? 0.5 : 0.14, "sawtooth", 0.09, w, true)); },
     // ping: a rout you did not see folded into its clash's ping
     ping() { if (!gate("pg", 500)) return; tone(740, 760, 0.22, "triangle", 0.07); tone(1110, 1120, 0.18, "sine", 0.03, 0.05); },
 
