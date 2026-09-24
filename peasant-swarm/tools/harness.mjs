@@ -3,8 +3,10 @@
 // matches advanced with PS.step, sim cost per chunk, live rAF render timing, screenshots, and (--mobile) a real CDP touch drag.
 //
 //   node tools/harness.mjs --url http://127.0.0.1:8471/peasant-swarm/ --out <dir> [--mobile] [--sim 240] [--seeds 3]
-//                          [--difficulty normal] [--viewport 1280x720] [--fights 30x20,40x20,20x20,25x20] [--fight-runs 5] [--render-secs 3]
-//                          [--seed N] [--cap touch|desktop] [--v1-url <v1 reference build>] [--bench-reps 3] [--ai-matches 3]
+//                          [--difficulty normal] [--viewport 1280x720] [--fights 20x20,25x20,30x20,40x20,60x40] [--fight-runs 5] [--render-secs 3]
+//                          [--seed N] [--cap touch|desktop] [--v1-url <reference build>] [--ref-gate 1.25] [--bench-reps 3] [--ai-matches 3] [--fixtures]
+// --ref-gate X: with --v1-url pointing at the previous milestone's build, gate only tick p90 at X times it (M2: 1.25 vs M1); without it the
+// M1 gate holds (tick and draw p50/p90 all <= 1.1x the v1 reference).
 //
 // M1 additions: --seed N passes ?seed=N+run (replayable matches); --cap forces an agent cap (?cap=); selfTest runs part by part (one
 // evaluate each, all under ~15 s); PS.bench("capclash") is recorded and, with --v1-url, gated at v2 <= 1.1x v1 on tick and draw script ms
@@ -20,6 +22,13 @@
 // Studio lessons it keeps: (14) PS.step is the sim clock; (20) every page.evaluate stays under ~15 s wall and carries its own wall guard,
 // every PS.step call is at most 30 sim-seconds; (34) the PLAY button is checked with elementFromPoint, and pressed with a real mouse or touch.
 // "--seeds N" means N independent matches; without --seed each run takes a clock seed, and every run records the seed it played (PSS.seed).
+//
+// M2 additions: the scripted player now sets its goal with PS.aim and the game's own flow field routes it (the harness BFS only ranks
+// camps by path); every run reports fights, routs, remnants formed, swarms alive at 1:00/2:00/3:00 and whether the bell rang; --fixtures
+// runs PS.fixture pass64, pass128, ambush and flipflop and asserts their bars (plus the spec's 150 v 30 ambush and the no-hysteresis
+// flip-flop as report-only baselines) and screenshots each fixture live; the AI matches assert every swarm leaves its home meadow within
+// 40 s; mobile adds tap-to-route and hold-to-stop; run 1 asserts the visible-tab stall cap (a 2 s main-thread stall, then no frame
+// advances more than 2 ticks: M1 critic MAJOR-1) and a cache rebuild with no browser event (M1 critic MAJOR-2).
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -34,15 +43,16 @@ const FONT_HOST = /fonts\.(googleapis|gstatic)\.com/;
 
 function parseArgs(argv) {
   const o = { url: "http://127.0.0.1:8471/peasant-swarm/", out: "harness-out", mobile: false, sim: 240, seeds: 3, difficulty: "normal",
-    viewport: "1280x720", fights: "30x20,40x20,20x20,25x20", fightRuns: 5, fightMax: 40, renderSecs: 3, seed: null, cap: null, v1Url: null, benchReps: 3, aiMatches: 0 };
+    viewport: "1280x720", fights: "20x20,25x20,30x20,40x20,60x40", fightRuns: 5, fightMax: 40, renderSecs: 3, seed: null, cap: null, v1Url: null, benchReps: 3, aiMatches: 0, fixtures: false, refGate: null };
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i], v = argv[i + 1];
     if (k === "--mobile") { o.mobile = true; continue; }
+    if (k === "--fixtures") { o.fixtures = true; continue; }
     const key = { "--url": "url", "--out": "out", "--sim": "sim", "--seeds": "seeds", "--difficulty": "difficulty", "--viewport": "viewport",
       "--fights": "fights", "--fight-runs": "fightRuns", "--fight-max": "fightMax", "--render-secs": "renderSecs", "--seed": "seed", "--cap": "cap",
-      "--v1-url": "v1Url", "--bench-reps": "benchReps", "--ai-matches": "aiMatches" }[k];
+      "--v1-url": "v1Url", "--bench-reps": "benchReps", "--ai-matches": "aiMatches", "--ref-gate": "refGate" }[k];
     if (!key) { console.error("unknown arg " + k); process.exit(2); }
-    o[key] = typeof o[key] === "number" || key === "seed" ? +v : v; i++;
+    o[key] = typeof o[key] === "number" || key === "seed" || key === "refGate" ? +v : v; i++;
   }
   if (o.cap && o.cap !== "touch" && o.cap !== "desktop") { console.error("--cap must be touch or desktop"); process.exit(2); }
   return o;
@@ -60,8 +70,7 @@ const median = (a) => { const s = [...a].sort((x, y) => x - y); return s.length 
 function installHelpers() {
   window.__psh = {
     // scripted player: flee a rival > flee x our size within sight, else hunt a rival < hunt x our size within sight, else the camp nearest
-    // by path. It routes itself: one BFS over PS.terrain from its centroid cell, then the furthest cell (<= 16 steps) along the path it can
-    // see in a straight line becomes the swarm's target. Harness-only: the game's own swarms seek directly until M2 brings flow fields.
+    // by path (one BFS over PS.terrain ranks the camps). The goal goes to PS.aim, so the game's own flow field routes the swarm (M2).
     policy(o) {
       const S = window.PSS, p = S && S.teams[1]; if (!p || p.count === 0) return "idle";
       const T = window.PS.terrain, W = S.cfg.world.w, H = S.cfg.world.h, cl = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -80,7 +89,7 @@ function installHelpers() {
         for (const c of S.camps) { if (!c.n) continue; const k = T.cellOf(c.x, c.y), d = k >= 0 ? this.D[k] : -1; if (d >= 0 && d < bd) { bd = d; best = c; } }
         if (best) { gx = best.x; gy = best.y; act = "camp"; } else { gx = W / 2; gy = H / 2; act = "idle"; }
       }
-      const g = T.snapXY(gx, gy), w = this.waypoint(p.cx, p.cy, g.x, g.y); p.tx = w[0]; p.ty = w[1];
+      window.PS.aim(gx, gy);
       return act;
     },
     bfs(x, y) {
@@ -99,22 +108,13 @@ function installHelpers() {
         }
       }
     },
-    see(x0, y0, x1, y1) { const T = window.PS.terrain, l = Math.hypot(x1 - x0, y1 - y0), n = Math.ceil(l / 8); for (let i = 1; i <= n; i++) { const t = i / n, x = x0 + (x1 - x0) * t, y = y0 + (y1 - y0) * t; if (!T.walkable(x, y) || T.sdfAt(x, y) < 10) return false; } return true; },
-    waypoint(x, y, gx, gy) {
-      const T = window.PS.terrain, m = T.map, N = m.N, cell = m.cell, g = T.cellOf(gx, gy);
-      if (this.see(x, y, gx, gy) || g < 0 || this.D[g] < 0) return [gx, gy];
-      const path = []; for (let c = g, k = 0; c >= 0 && k < N * N; c = this.Pa[c], k++) path.push(c);
-      path.reverse(); // root ... goal
-      let best = path[Math.min(2, path.length - 1)];
-      for (let i = Math.min(16, path.length - 1); i >= 2; i--) { const c = path[i], cx = ((c % N) + 0.5) * cell, cy = (((c / N) | 0) + 0.5) * cell; if (this.see(x, y, cx, cy)) { best = c; break; } }
-      return [((best % N) + 0.5) * cell, (((best / N) | 0) + 0.5) * cell];
-    },
     snapshot() {
       const S = window.PSS, z = S.cam.zoom, hw = S.vw / 2 / z, hh = S.vh / 2 / z;
       let neutrals = 0, onScreen = 0;
       for (const a of S.agents) { if (a.team === 0) neutrals++; if (Math.abs(a.x - S.cam.x) < hw && Math.abs(a.y - S.cam.y) < hh) onScreen++; }
       const counts = {}; for (const t of S.teams.slice(1)) counts[t.name] = t.count;
-      return { t: Math.round(S.t * 100) / 100, mode: S.mode, result: S.result, counts, alive: S.teams.slice(1).map((t) => t.alive), neutrals, total: S.agents.length, onScreen };
+      return { t: Math.round(S.t * 100) / 100, mode: S.mode, result: S.result, counts, alive: S.teams.slice(1).map((t) => t.alive), neutrals, total: S.agents.length, onScreen,
+        ev: S.ev ? { ...S.ev } : null, playerFights: S.stats.fights || 0, flow: window.PS.flow ? window.PS.flow.stats.rebuilds : 0 };
     },
   };
 }
@@ -180,12 +180,12 @@ async function main() {
   const url = new URL(A.url); url.searchParams.set("debug", "1"); if (A.cap) url.searchParams.set("cap", A.cap);
   const runUrl = (ri) => { const u = new URL(url.href); if (A.seed != null && isFinite(A.seed)) u.searchParams.set("seed", String((A.seed + ri) >>> 0)); return u.href; };
   const report = {
-    meta: { url: url.href, mode: tag, viewport: ctxOpts.viewport, deviceScaleFactor: ctxOpts.deviceScaleFactor, sim: A.sim, seeds: A.seeds, difficulty: A.difficulty, seed: A.seed, cap: A.cap, v1Url: A.v1Url,
+    meta: { url: url.href, mode: tag, viewport: ctxOpts.viewport, deviceScaleFactor: ctxOpts.deviceScaleFactor, sim: A.sim, seeds: A.seeds, difficulty: A.difficulty, seed: A.seed, cap: A.cap, v1Url: A.v1Url, refGate: A.refGate,
       chromium: browser.version(), node: process.version, startedAt: new Date().toISOString(), policy: POLICY, chunkSim: CHUNK_SIM, policyTick: POLICY_TICK,
       cpus: os.cpus().length, loadAvgStart: os.loadavg().map(r2) }, // timings are only comparable at similar load: other sessions may share this machine
     errors: { console: [], page: [], filteredFontErrors: 0, warnings: [] },
     selfTest: null, fights: [], title: null, touch: null, huddle: null, runs: [], asserts: {}, notes: [], pass: false,
-    bench: null, caches: null, aiMatches: [], outcomes: [], restart: null,
+    bench: null, caches: null, aiMatches: [], outcomes: [], restart: null, fixtures: null, stall: null, tap: null, hold: null,
   };
   const warnSeen = new Set();
   const shot = async (page, name) => { const f = path.join(out, `${tag}-${name}.png`); await page.screenshot({ path: f }); return path.basename(f); };
@@ -229,7 +229,7 @@ async function main() {
       // selfTest on the title screen before any match, then the fight matrix (each call is its own evaluate, well under 15 s)
       // one evaluate per part so each stays well under ~15 s of wall time (lesson 20); the merged verdict is the selfTest verdict
       const s0 = Date.now(), st = { pass: true, fails: [], results: {}, partMs: {}, wallMs: 0 };
-      for (const part of ["config", "sprites", "terrain", "caches", "fight", "replay", "match"]) {
+      for (const part of ["config", "sprites", "terrain", "caches", "flow", "fight", "fixtures", "flipflop", "ai", "replay", "match"]) {
         const p0 = Date.now(), r = await page.evaluate((part) => window.PS.selfTest({ parts: part }), part);
         st.partMs[part] = Date.now() - p0; Object.assign(st.results, r.results); for (const f of r.fails) if (st.fails.indexOf(f) < 0) st.fails.push(f);
       }
@@ -238,7 +238,20 @@ async function main() {
       const drop = await page.evaluate(() => { const n = window.PS.debugDropCaches(); const mid = window.PS.cacheReport(); document.dispatchEvent(new Event("visibilitychange")); return { dropped: n, blankAfterDrop: mid.chunksBlank.length + mid.spritesBlank.length }; });
       let cr = null; for (let i = 0; i < 30; i++) { await page.waitForTimeout(200); cr = await page.evaluate(() => window.PS.cacheReport()); if (cr.ok) break; }
       report.caches = { ...drop, after: cr, recovered: !!(cr && cr.ok) };
+      // the same drop with NO browser event (M1 critic MAJOR-2): the draw loop's probe alone must find the blank caches and rebuild them
+      const drop2 = await page.evaluate(() => { const n = window.PS.debugDropCaches(); const mid = window.PS.cacheReport(); return { dropped: n, blankAfterDrop: mid.chunksBlank.length + mid.spritesBlank.length }; });
+      let cr2 = null, waited = 0; for (let i = 0; i < 40; i++) { await page.waitForTimeout(200); waited += 200; cr2 = await page.evaluate(() => window.PS.cacheReport()); if (cr2.ok) break; }
+      report.caches.noEvent = { ...drop2, after: cr2, recovered: !!(cr2 && cr2.ok), waitedMs: waited };
       report.terrainTitle = await page.evaluate(() => window.PS.terrain.report());
+      if (A.fixtures) {
+        const fx = {};
+        for (const [k, name, o] of [["pass64", "pass64"], ["pass128", "pass128"], ["ambush", "ambush"], ["ambushSpec", "ambush", { wait: 30 }], ["ambushSpecBlob", "ambush", { wait: 30, blob: true }],
+          ["flipflop", "flipflop"], ["flipflopNoHyst", "flipflop", { noHyst: true }], ["cliffSnapped", "cliff", { variant: "snapped" }], ["cliffRaw", "cliff", { variant: "raw" }], ["cliffIdle", "cliff", { variant: "idle" }]]) {
+          fx[k] = await page.evaluate(([n, o]) => window.PS.fixture(n, o || {}), [name, o]);
+        }
+        fx.desktopMode = await page.evaluate(() => window.PSS.cfg.input.desktopMode);
+        report.fixtures = fx;
+      }
       for (const pair of A.fights === "none" ? [] : A.fights.split(",")) {
         const [n, m] = pair.split("x").map(Number);
         const f = await page.evaluate(([n, m, mx, runs]) => window.PS.fight(n, m, mx, runs), [n, m, A.fightMax, A.fightRuns]);
@@ -298,6 +311,32 @@ async function main() {
         swarmMovedUp: hold[hold.length - 1].cy < before.cy };
     }
     if (A.mobile && ri === 0 && run.started) {
+      // tap-to-route: touchStart + touchEnd inside 200 ms at a walkable point 300 world px from the swarm; the player's target moves there
+      // and a route (the player's field, sourced at that target) exists. Then hold-to-stop: a still finger past input.tapMs stops the swarm.
+      const tp = (x, y) => [{ x, y, id: 2, radiusX: 4, radiusY: 4, force: 1 }];
+      const pick = await page.evaluate(() => { const S = window.PSS, p = S.teams[1], z = S.cam.zoom, T = window.PS.terrain;
+        for (let k = 0; k < 16; k++) { const a = (k / 16) * Math.PI * 2, wx = p.ax + Math.cos(a) * 300, wy = p.ay + Math.sin(a) * 300, sx = (wx - S.cam.x) * z + S.vw / 2, sy = (wy - S.cam.y) * z + S.vh / 2;
+          if (sx > 40 && sx < S.vw - 40 && sy > 160 && sy < S.vh - 160 && T.walkable(wx, wy) && T.sdfAt(wx, wy) > 40) return { wx, wy, sx, sy, under: (document.elementFromPoint(sx, sy) || {}).id || null }; } return null; });
+      if (pick) {
+        const t0 = Date.now(); await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: tp(pick.sx, pick.sy) }); await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] }); const liftMs = Date.now() - t0;
+        await page.waitForTimeout(250);
+        const a = await page.evaluate(() => { const S = window.PSS, p = S.teams[1], f = window.PS.flow.fieldFor(1), FL = window.PS.flow; return { mode: p.mode, route: S.input.route.on, src: S.input.route.src, tx: p.tx, ty: p.ty, field: !!(f && f.ok), fieldAtTarget: !!(f && f.ok && f.src === FL.cellFor(p.tx, p.ty)), pathPx: f && f.ok ? Math.round(FL.pathCell(f, FL.cellFor(p.ax, p.ay))) : -1 }; });
+        report.tap = { pick, liftMs, ...a, dist: Math.round(Math.hypot(a.tx - pick.wx, a.ty - pick.wy)), ok: liftMs < 200 && a.mode === "route" && a.route && a.src === "tap" && Math.hypot(a.tx - pick.wx, a.ty - pick.wy) < 48 && a.fieldAtTarget && a.pathPx > 0 };
+        const h0 = await page.evaluate(() => { const S = window.PSS; return { sx: S.vw / 2, sy: S.vh * 0.6 }; });
+        await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: tp(h0.sx, h0.sy) }); await page.waitForTimeout(450);
+        const during = await page.evaluate(() => { const S = window.PSS, p = S.teams[1]; return { mode: p.mode, hold: S.input.hold, dist: Math.round(Math.hypot(p.tx - p.ax, p.ty - p.ay)), route: S.input.route.on, joy: S.input.joy.active }; });
+        await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] }); await page.waitForTimeout(600);
+        const after = await page.evaluate(() => { const S = window.PSS, p = S.teams[1]; return { mode: p.mode, hold: S.input.hold, speed: Math.round(Math.hypot(p.vx, p.vy)), route: S.input.route.on }; });
+        report.hold = { during, after, ok: during.mode === "hold" && during.hold && !during.route && !during.joy && during.dist < 60 && after.mode === "hold" && !after.route };
+      } else report.tap = { pick: null, ok: false };
+    }
+    if (ri === 0 && run.started) {
+      // visible-tab stall (M1 critic MAJOR-1): a 2 s busy loop on the main thread, then 40 frames: no frame may advance more than 2 ticks x pace
+      report.stall = await page.evaluate(() => new Promise((res) => { const S = window.PSS, t0 = performance.now(); while (performance.now() - t0 < 2000) { /* stall */ }
+        const d = []; let last = S.tick, n = 0; const f = () => { d.push(S.tick - last); last = S.tick; if (++n < 40) requestAnimationFrame(f); else res({ deltas: d, max: Math.max(...d), pace: S.pace, hidden: document.hidden }); }; requestAnimationFrame(f); }));
+      report.stall.ok = report.stall.max <= 2 * report.stall.pace;
+    }
+    if (A.mobile && ri === 0 && run.started) {
       report.huddle = await page.evaluate(() => {
         const b = document.getElementById("t-huddle"), r = b.getBoundingClientRect(), cs = getComputedStyle(b);
         const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
@@ -347,9 +386,13 @@ async function main() {
     run.end = await page.evaluate(() => {
       const S = window.PSS, ov = document.querySelector("#ov-win.active, #ov-lose.active");
       const counts = {}; for (const t of S.teams.slice(1)) counts[t.name] = t.count;
-      return { mode: S.mode, result: S.result, t: Math.round(S.t * 100) / 100, overlay: ov ? ov.id : null, reason: ov ? ov.querySelector("p").textContent : null, counts, stats: { ...S.stats } };
+      return { mode: S.mode, result: S.result, t: Math.round(S.t * 100) / 100, overlay: ov ? ov.id : null, reason: ov ? ov.querySelector("p").textContent : null, counts, stats: { ...S.stats },
+        ev: S.ev ? { ...S.ev } : null, bell: S.timeLeft <= 0.001, leftHome: S.teams.slice(1).map((t) => t.leftHome), atCentre: S.teams.slice(1).map((t) => t.atCentre) };
     });
     run.screenshots.end = await shot(page, `run${ri + 1}-end`);
+    const aliveAt = (t) => { const s = run.timeline.find((x) => Math.round(x.t) === t); return s ? s.alive.filter(Boolean).length : null; };
+    run.summary = { playerFights: run.end.stats.fights, fights: run.end.ev && run.end.ev.fights, routs: run.end.ev && run.end.ev.routs, remnants: run.end.ev && run.end.ev.remnants,
+      aliveAt60: aliveAt(60), aliveAt120: aliveAt(120), aliveAt180: aliveAt(180), bell: run.end.bell && !run.endForced, bellForced: run.endForced, leftHome: run.end.leftHome, atCentre: run.end.atCentre };
     run.maxAgents = maxAgents;
     run.agentCap = await page.evaluate(() => window.PSS.cap);
     run.dbg = await page.evaluate(() => ({ ...window.PSS.dbg }));
@@ -386,6 +429,7 @@ async function main() {
         const mres = await page.evaluate(([seed, cap]) => window.PS.simMatch(240, { seed, cap, wallMs: 12000 }), [seed, cap]);
         report.aiMatches.push({ seed, cap, agentCap: mres.agentCap, seconds: mres.seconds, end: mres.end, truncated: mres.truncated, wallMs: mres.wallMs, msPerTick: mres.msPerTick,
           maxTotal: mres.maxTotal, capOver: mres.capOver, terrainBad: mres.terrainBad, firstBad: mres.firstBad, exceptions: mres.exceptions, winner: mres.winner, map: mres.map,
+          leftHome: mres.leftHome, atCentre: mres.atCentre, ev: mres.ev, alive: [60, 120, 180].map((t) => { const s = mres.timeline.find((x) => x.t === t); return s ? s.counts.filter((c) => c > 0).length : null; }),
           timeline: mres.timeline.map((x) => x.t + "s " + x.counts.join("/") + " n" + x.neutrals) });
       }
     }
@@ -395,6 +439,18 @@ async function main() {
     const top = run.render.reduce((b, x) => (!b || x.total > b.total ? x : b), null);
     run.renderAtBusiest = top; run.worstRender = run.render.reduce((b, x) => (!b || x.fps < b.fps ? x : b), null);
     await ctx.close();
+  }
+  if (A.fixtures) {
+    // each fixture live (?fixture=name): a screenshot mid-scene, and zero errors on those pages too
+    report.fixtureShots = {};
+    for (const [name, t] of [["pass64", 4], ["pass128", 3], ["ambush", 5], ["flipflop", 3]]) {
+      const ctx = await browser.newContext(ctxOpts), page = await ctx.newPage();
+      page.on("pageerror", (e) => report.errors.page.push({ run: "fixture " + name, text: String(e.message || e) }));
+      page.on("console", (m) => { if (m.type() === "error" && !FONT_HOST.test(m.text() + ((m.location() && m.location().url) || ""))) report.errors.console.push({ run: "fixture " + name, text: m.text() }); });
+      const u = new URL(url.href); u.searchParams.set("fixture", name); await page.goto(u.href);
+      await page.waitForFunction((t) => window.PSS && window.PSS.fixture && window.PSS.t >= t, t, { timeout: 30000 }).catch(() => {});
+      report.fixtureShots[name] = await shot(page, "fixture-" + name); await ctx.close();
+    }
   }
   await browser.close();
 
@@ -416,13 +472,26 @@ async function main() {
   as.restartWorks = !!(report.restart && report.restart.ok && report.restart.second && report.restart.second.hit && report.restart.second.mode === "play");
   as.idlePlayerLoses = report.outcomes.some((o) => o.run === "idle" && o.result === "lose");
   if (A.aiMatches > 0) as.aiMatchesClean = report.aiMatches.length === A.aiMatches && report.aiMatches.every((m) => m.exceptions.length === 0);
-  if (report.bench && report.bench.ratio) { const q = report.bench.ratio; as.benchGate = q.updateP50 <= 1.1 && q.updateP90 <= 1.1 && q.drawP50 <= 1.1 && q.drawP90 <= 1.1; }
+  // M2 gates
+  if (A.aiMatches > 0) as.aiLeaveHome40s = report.aiMatches.every((m) => m.leftHome && m.leftHome.every((t) => t >= 0 && t <= 40));
+  as.cachesRecoveredNoEvent = !!(report.caches && report.caches.noEvent && report.caches.noEvent.recovered && report.caches.noEvent.blankAfterDrop > 0);
+  as.visibleStallCap = !!(report.stall && report.stall.ok && !report.stall.hidden);
+  if (A.fixtures) {
+    const F = report.fixtures || {};
+    as.fixturePass64 = !!(F.pass64 && F.pass64.through != null && F.pass64.through <= 8 && F.pass64.regroup >= 0.9 && !F.pass64.terrainBad);
+    as.fixturePass128 = !!(F.pass128 && F.pass128.through != null && F.pass128.through <= 6 && F.pass128.regroup >= 0.9 && !F.pass128.terrainBad);
+    as.fixtureAmbushHeadOnly = !!(F.ambush && F.ambush.pass && !F.ambush.terrainBad);
+    as.fixtureFlipflop = !!(F.flipflop && (F.desktopMode !== "route" || (F.flipflop.reversals <= 2 && F.flipflop.split <= 0.1)) && !F.flipflop.terrainBad);
+    as.fixtureShots = !!(report.fixtureShots && Object.keys(report.fixtureShots).length === 4);
+  }
+  if (report.bench && report.bench.ratio) { const q = report.bench.ratio; if (A.refGate) as.benchTickP90VsRef = q.updateP90 <= A.refGate; else as.benchGate = q.updateP50 <= 1.1 && q.updateP90 <= 1.1 && q.drawP50 <= 1.1 && q.drawP90 <= 1.1; }
   if (report.bench) as.benchClean = report.bench.errors.length === 0 && [...report.bench.v2runs, ...report.bench.v1runs].every((b) => !b.terrainBad);
   if (A.mobile) {
     const t = report.touch || {}, h = report.huddle || {};
     as.touchLandsOnCanvas = t.target === "CANVAS#game";
     as.joyActive = !!t.joyActive; as.joyTargetMovedUp = !!t.movedUp; as.joyReleased = !!t.released;
     as.huddleVisible = !!(h.bodyTouch && h.visible); as.huddleReachable = !!h.reachable;
+    as.tapToRoute = !!(report.tap && report.tap.ok); as.holdToStop = !!(report.hold && report.hold.ok);
   }
   report.pass = Object.values(as).every(Boolean);
   for (const r of report.runs) {
@@ -468,16 +537,32 @@ function markdown(R) {
     const b = R.bench, row = (k, x) => x ? `| ${k} | ${x.update.p50} / ${x.update.p90} / ${x.update.p99} | ${x.draw.p50} / ${x.draw.p90} / ${x.draw.p99} | ${r2(x.drawImage)} | ${x.layers} | ${x.agents} (${x.onScreen} on screen) |` : null;
     L.push("", "## PS.bench(\"capclash\") (median of runs; ms of script per tick / per frame)", "", "| build | update p50 / p90 / p99 | draw p50 / p90 / p99 | drawImage | full-screen alpha layers | agents |", "|---|---|---|---|---|---|");
     if (b.v1) L.push(row("v1 reference (" + b.v1runs.length + " runs)", b.v1)); L.push(row("v2 (" + b.v2runs.length + " runs)", b.v2));
-    if (b.ratio) L.push("", `v2 / v1: update p50 ${b.ratio.updateP50}, p90 ${b.ratio.updateP90}; draw p50 ${b.ratio.drawP50}, p90 ${b.ratio.drawP90} (gate <= 1.1)`);
+    if (b.ratio) L.push("", `this build / reference: update p50 ${b.ratio.updateP50}, p90 ${b.ratio.updateP90}; draw p50 ${b.ratio.drawP50}, p90 ${b.ratio.drawP90} (gate: ${R.meta.refGate ? "tick p90 <= " + R.meta.refGate : "all four <= 1.1"})`);
+    const fl = b.v2runs.length && b.v2runs[b.v2runs.length - 1].flow; if (fl) L.push(`Flow fields during the timed ticks (last run): ${fl.rebuilds} rebuilds, ${fl.ms} ms total, ${fl.msPerTick} ms per tick, max ${fl.maxMs} ms.`);
   }
   if (R.caches) L.push("", "## Cache drop and recovery", "", `PS.debugDropCaches blanked ${R.caches.dropped} canvases (${R.caches.blankAfterDrop} read blank), visibilitychange fired; after: ${R.caches.after.chunksOpaque}/${R.caches.after.chunks} chunks opaque, ${R.caches.after.pending} pending, minimap ${R.caches.after.minimap}, blank sprites ${R.caches.after.spritesBlank.length}. Recovered: ${R.caches.recovered}.`);
+  if (R.caches && R.caches.noEvent) { const c = R.caches.noEvent; L.push(`No event (M1 critic MAJOR-2): ${c.dropped} blanked, ${c.blankAfterDrop} read blank; recovered ${c.recovered} after ${c.waitedMs} ms of frames (${c.after ? c.after.chunksOpaque + "/" + c.after.chunks + " chunks opaque" : "-"}).`); }
+  if (R.stall) L.push("", "## Visible-tab stall (M1 critic MAJOR-1)", "", `2 s busy loop, then 40 frames: ticks per frame max ${R.stall.max} (pace ${R.stall.pace}, cap ${2 * R.stall.pace}); deltas ${R.stall.deltas.join(",")}. ${R.stall.ok ? "pass" : "FAIL"}.`);
+  if (R.fixtures) {
+    const F = R.fixtures, row = (k, v, bar) => L.push(`| ${k} | ${v} | ${bar} |`);
+    L.push("", "## Fixtures (PS.fixture, sandboxed; M2 section 13)", "", "| fixture | result | bar |", "|---|---|---|");
+    for (const k of ["pass64", "pass128"]) { const f = F[k]; row(k, `first in ${f.firstIn} s, 95% out ${f.out95} s: **${f.through} s**; within 1.3 x 7 sqrt(n) 3 s later: **${Math.round(100 * f.regroup)}%**; terrainBad ${f.terrainBad}`, `<= ${f.bar} s, >= 90%`); }
+    const am = (f) => f.rout ? `${f.loser} broke at ${f.rout.t} s: group ${f.rout.group}, flipped ${f.headFlipped}, fled ${f.fled}, outside the group ${f.outsideGroup}, farthest flip ${f.farFlip} px, tail west of the pass kept ${f.tailKeptColour}/${f.tailWestOfPass}, column after ${f.columnAfter}` : "no rout";
+    row("ambush (" + F.ambush.variant + ", 150 v " + F.ambush.waiting + ")", am(F.ambush), "only the head flips");
+    row("ambush, spec 150 v 30 strung (report only)", am(F.ambushSpec), "-"); row("ambush, spec 150 v 30 dense blob (report only)", am(F.ambushSpecBlob), "-");
+    row("flipflop (" + F.desktopMode + ")", `route reversals **${F.flipflop.reversals}**, split ${F.flipflop.split}, centroid U-turns ${F.flipflop.uturns}, decisions ${JSON.stringify(F.flipflop.decisions)}`, "<= 2");
+    row("flipflop without hysteresis (report only)", `route reversals ${F.flipflopNoHyst.reversals} (${F.flipflopNoHyst.at}), reached ${F.flipflopNoHyst.reached}`, "-");
+    row("cliff press (M1 critic MINOR-2)", `reversals per agent-second: snapped ${F.cliffSnapped.reversalsPerAgentSec}, raw in-rock target ${F.cliffRaw.reversalsPerAgentSec}, idle on grass ${F.cliffIdle.reversalsPerAgentSec}`, "M1: 5.25 pressed, 0.97 idle");
+    if (R.fixtureShots) L.push("", `Live fixture screenshots: ${Object.values(R.fixtureShots).join(", ")}`);
+  }
+  if (R.tap) L.push("", "## Tap and hold (touch)", "", `Tap: lift ${R.tap.liftMs} ms, mode ${R.tap.mode}, route ${R.tap.route} (${R.tap.src}), target ${R.tap.dist} px from the tapped point, field sourced there ${R.tap.fieldAtTarget}, path ${R.tap.pathPx} px: ${R.tap.ok ? "pass" : "FAIL"}.` + (R.hold ? ` Hold: during ${JSON.stringify(R.hold.during)}, after lift ${JSON.stringify(R.hold.after)}: ${R.hold.ok ? "pass" : "FAIL"}.` : ""));
   if (R.terrainTitle) L.push("", "## Terrain", "", `Title map: ${JSON.stringify(R.terrainTitle)}`);
   for (const r of R.runs) if (r.terrain) L.push(`Run ${r.index} map: seed ${r.terrain.seed}, used ${r.terrain.used}, rerolls ${r.terrain.rerolls}${r.terrain.fallback ? " (fallback)" : ""}, gen ${r.terrain.genMs} ms, blocked ${r.terrain.blocked}, rival ${r.terrain.fair.rival}, centre ${r.terrain.fair.centre}, detour ${r.terrain.fair.detour}, crossings ${r.terrain.crossings.join(" ")}; per-tick asserts: ${JSON.stringify(r.dbg)}`);
   if (R.restart) L.push("", "## Restart and outcomes", "", `Restart via ${R.restart.button}: hit ${R.restart.hit}, mode ${R.restart.mode}, t ${r2(R.restart.t)}, new map ${R.restart.map}. Second restart: ${JSON.stringify(R.restart.second)}.`);
   for (const o of R.outcomes) L.push(`- ${o.run === "idle" ? "idle player" : "run " + o.run}: **${o.result}**${o.forced ? " (bell rung early)" : ""} — ${o.how || ""}${o.countsBeforeBell ? " (counts before the bell " + o.countsBeforeBell.join("/") + ")" : ""}`);
   if (R.aiMatches.length) {
-    L.push("", "## All-AI matches (PS.simMatch 240 s, per-tick asserts)", "", "| seed | cap | end | s | peak / cap | capOver | terrainBad | ms/tick | winner |", "|---|---|---|---|---|---|---|---|---|");
-    for (const m of R.aiMatches) L.push(`| ${m.seed} | ${m.cap} | ${m.end}${m.truncated ? " (truncated)" : ""} | ${m.seconds} | ${m.maxTotal} / ${m.agentCap} | ${m.capOver} | ${m.terrainBad} | ${m.msPerTick} | ${m.winner ? m.winner.name + " " + m.winner.count : "-"} |`);
+    L.push("", "## All-AI matches (PS.simMatch 240 s, per-tick asserts)", "", "| seed | cap | end | s | peak / cap | capOver | terrainBad | ms/tick | winner | left home (s) | central meadow (s) | alive 1:00/2:00/3:00 | fights/routs/remnants |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|");
+    for (const m of R.aiMatches) L.push(`| ${m.seed} | ${m.cap} | ${m.end}${m.truncated ? " (truncated)" : ""} | ${m.seconds} | ${m.maxTotal} / ${m.agentCap} | ${m.capOver} | ${m.terrainBad} | ${m.msPerTick} | ${m.winner ? m.winner.name + " " + m.winner.count : "-"} | ${(m.leftHome || []).join(" / ")} | ${(m.atCentre || []).join(" / ")} | ${(m.alive || []).join("/")} | ${m.ev ? m.ev.fights + "/" + m.ev.routs + "/" + m.ev.remnants : "-"} |`);
   }
   if (R.touch) L.push("", "## Touch", "", `Drag on ${R.touch.target}: joy active ${R.touch.joyActive}, target ty ${R.touch.before.ty} → ${Math.min(...R.touch.hold.map((h) => h.ty))}, released ${R.touch.released}. HUDDLE visible ${R.huddle && R.huddle.visible}, reachable ${R.huddle && R.huddle.reachable}.`);
   for (const r of R.runs) {
@@ -488,6 +573,7 @@ function markdown(R) {
     if (r.simCost) L.push("", `Sim cost: ${r.simCost.msPerSimSec} ms per sim-second at the busiest chunk (${r.simCost.atPeakAgents} agents, t ${r.simCost.window[0]}–${r.simCost.window[1]}); match average ${r.simCost.avgMsPerSimSec}.`);
     if (r.renderAtBusiest) L.push(`Render at busiest (t ${r.renderAtBusiest.t}, ${r.renderAtBusiest.total} agents, ${r.renderAtBusiest.onScreen} on screen): ${r.renderAtBusiest.fps} fps, ${r.renderAtBusiest.avgMs} ms/frame avg, p95 ${r.renderAtBusiest.p95Ms} ms, main thread ${r.renderAtBusiest.mainThreadMsPerFrame} ms/frame. Worst sample ${r.worstRender.fps} fps at t ${r.worstRender.t}.`);
     L.push(`Peak agents ${r.maxAgents} / cap ${r.agentCap}. Player stats: ${JSON.stringify(r.end.stats)}. Policy ticks: ${JSON.stringify(r.policy)}.`);
+    if (r.summary) L.push(`Match: player fights ${r.summary.playerFights}; all swarms: fights ${r.summary.fights}, routs ${r.summary.routs}, remnants formed ${r.summary.remnants}; swarms alive at 1:00/2:00/3:00: ${r.summary.aliveAt60}/${r.summary.aliveAt120}/${r.summary.aliveAt180}; bell reached ${r.summary.bell}${r.summary.bellForced ? " (rung early at the --sim cap)" : ""}; left home (s) ${(r.summary.leftHome || []).join(" / ")}; central meadow (s) ${(r.summary.atCentre || []).join(" / ")}.`);
     L.push(`Screenshots: ${Object.values(r.screenshots).join(", ")}`);
   }
   if (R.notes.length) { L.push("", "## Notes"); for (const n of R.notes) L.push(`- ${n}`); }

@@ -16,6 +16,7 @@
   let NEED = null, needV = 0, needN = 0;        // early-stop set: cells stamped needV
   let MARK = null, markV = 0;                   // dilated route marks for the same-way test, exact marks for the re-plan test
   let TR = null, TR2 = null;                    // route trace buffers
+  let CC = null;                                // corridor cost view (the second march of a team field)
   let W = null;                                 // the installed flow world (one per sim world: live, sandbox)
   const walkT = (v) => v === 0 || v === 3 || v === 4;
 
@@ -24,7 +25,7 @@
     const n = Math.round(cfg.world.w / CELL);
     if (n !== N) {
       N = n; NN = N * N; hcap = NN * 4 + 64;
-      HK = new Float64Array(hcap); HV = new Int32Array(hcap); NEED = new Uint32Array(NN); MARK = new Uint32Array(NN); TR = new Int32Array(NN); TR2 = new Int32Array(NN);
+      HK = new Float64Array(hcap); HV = new Int32Array(hcap); NEED = new Uint32Array(NN); MARK = new Uint32Array(NN); TR = new Int32Array(NN); TR2 = new Int32Array(NN); CC = new Float32Array(NN);
     }
     return F;
   }
@@ -41,7 +42,7 @@
   // T: integration value (cost units); ts: T valid this version (tentative or final); fin: settled; dx/dy + ds: lazy unit directions
   function mkField(team, know) {
     return { team, know, T: new Float32Array(NN), ts: new Uint32Array(NN), fin: new Uint32Array(NN), dx: new Float32Array(NN), dy: new Float32Array(NN), ds: new Uint32Array(NN),
-      ver: 0, ok: false, src: -1, cost: null, kn: null, settled: 0, frontT: 0, tick: -1e9, miss: 0, builds: 0, tx: 0, ty: 0 };
+      ver: 0, ok: false, src: -1, cost: null, kn: null, baseCost: null, baseKn: null, corridor: 0, settled: 0, frontT: 0, tick: -1e9, miss: 0, builds: 0, tx: 0, ty: 0 };
   }
   const getField = (list, id, know) => list[id] || (list[id] = mkField(id, know));
   function needBegin() { needV++; needN = 0; }
@@ -88,17 +89,19 @@
   }
   // bilinear blend of the 4 surrounding cells' vectors (cells without a value drop out and the weights renormalise).
   // out: { x, y } unit direction (0,0 at the source), t path distance in px, ok. A miss (no value near) counts on the field.
-  let SX = 0, SY = 0, ST = 0, SWt = 0;
-  function acc(f, c, w) { if (w <= 0 || f.ts[c] !== f.ver) return; if (f.ds[c] !== f.ver) dirAt(f, c); SX += w * f.dx[c]; SY += w * f.dy[c]; ST += w * f.T[c]; SWt += w; }
   function sampleField(f, x, y, out) {
     out.ok = false; if (!f || !f.ok) return false;
     let fx = x / CELL - 0.5, fy = y / CELL - 0.5;
     if (!(fx >= 0)) fx = 0; else if (fx > N - 1.001) fx = N - 1.001; if (!(fy >= 0)) fy = 0; else if (fy > N - 1.001) fy = N - 1.001;
-    const i = fx | 0, j = fy | 0, tx = fx - i, ty = fy - j, c = j * N + i;
-    SX = 0; SY = 0; ST = 0; SWt = 0;
-    acc(f, c, (1 - tx) * (1 - ty)); acc(f, c + 1, tx * (1 - ty)); acc(f, c + N, (1 - tx) * ty); acc(f, c + N + 1, tx * ty);
-    if (SWt < 1e-6) { f.miss++; return false; }
-    const l = Math.sqrt(SX * SX + SY * SY); out.x = l > 1e-9 ? SX / l : 0; out.y = l > 1e-9 ? SY / l : 0; out.t = (ST / SWt) * PX; out.ok = true;
+    const i = fx | 0, j = fy | 0, tx = fx - i, ty = fy - j, c = j * N + i, v = f.ver, ts = f.ts, ds = f.ds, DX = f.dx, DY = f.dy, T = f.T;
+    let sx = 0, sy = 0, st = 0, sw = 0;
+    for (let q = 0; q < 4; q++) {
+      const cc = c + (q & 1) + (q & 2 ? N : 0), w = (q & 1 ? tx : 1 - tx) * (q & 2 ? ty : 1 - ty);
+      if (w <= 0 || ts[cc] !== v) continue; if (ds[cc] !== v) dirAt(f, cc);
+      sx += w * DX[cc]; sy += w * DY[cc]; st += w * T[cc]; sw += w;
+    }
+    if (sw < 1e-6) { f.miss++; return false; }
+    const l = Math.sqrt(sx * sx + sy * sy); out.x = l > 1e-9 ? sx / l : 0; out.y = l > 1e-9 ? sy / l : 0; out.t = (st / sw) * PX; out.ok = true;
     return true;
   }
   const sample = (team, x, y, out) => sampleField(W && W.fields[team], x, y, out);
@@ -162,16 +165,33 @@
     return 0;
   }
   function buildTeam(t, agents, goal, simTick, hyst) {
-    const w = W, kn = t.id === 1 ? w.know : null, cost = w.map.cost, margin = K.earlyStopCells * (BASE + WALL1);
+    const w = W, kn = t.id === 1 ? w.know : null, cost = w.map.cost, margin = K.earlyStopCells * (BASE + WALL1), a = cellFor(t.ax, t.ay);
     needBegin();
-    for (let i = 0; i < agents.length; i++) { const a = agents[i]; if (a.team !== t.id || a.dead) continue; const c = cellFor(a.x, a.y); if (passView(c, cost, kn)) needAdd(c); }
+    for (let i = 0; i < agents.length; i++) { const q = agents[i]; if (q.team !== t.id || q.dead) continue; const c = cellFor(q.x, q.y); if (passView(c, cost, kn)) needAdd(c); }
     const f = teamField(t.id); w.perTeam[t.id]++;
-    if (!hyst) { march(f, goal, cost, kn, INF, true, margin); f.tick = simTick; f.miss = 0; f.tx = t.tx; f.ty = t.ty; w.decisions.fresh++; return f; }
+    if (!hyst) { teamMarch(f, goal, cost, kn, margin, a, t.count); f.tick = simTick; f.miss = 0; f.tx = t.tx; f.ty = t.ty; w.decisions.fresh++; return f; }
     const nf = w.spare || (w.spare = mkField(t.id, true));
-    march(nf, goal, cost, kn, INF, true, margin);
-    const keep = keepOld(f, nf, cellFor(t.ax, t.ay));
+    teamMarch(nf, goal, cost, kn, margin, a, t.count);
+    const keep = keepOld(f, nf, a);
     if (keep) { f.tick = simTick; w.decisions.kept++; return f; }
     w.fields[t.id] = nf; w.spare = f; nf.tick = simTick; nf.miss = 0; nf.tx = t.tx; nf.ty = t.ty; return nf;
+  }
+  // a team field in two marches: the plain one, then (flow.corridorDiscount > 0) one where every cell within a blob radius of the route
+  // traced from the team's anchor costs corridorDiscount less, so a swarm straddling an equal-cost watershed (a ridge dead ahead, two home
+  // exits) takes its anchor's route as one body instead of splitting round both sides. Inside the corridor the gradient is unchanged.
+  function teamMarch(f, goal, cost, kn, margin, a, count) {
+    march(f, goal, cost, kn, INF, true, margin); f.baseCost = cost; f.baseKn = kn; f.corridor = 0;
+    const disc = K.corridorDiscount; if (!(disc > 0) || a < 0) return f;
+    const len = trace(f, a, TR, NN); if (len < K.corridorMinCells) return f;
+    const D = Math.max(K.corridorCells, Math.ceil((K.corridorBlobK * 7 * Math.sqrt(Math.max(1, count))) / CELL)), k = 1 - disc;
+    for (let c = 0; c < NN; c++) CC[c] = kn && !kn[c] ? BASE : cost[c];
+    markV++; let n = 0;
+    for (let q = 0; q < len; q++) {
+      const c = TR[q], x = c % N, y = (c / N) | 0;
+      for (let j = Math.max(0, y - D); j <= Math.min(N - 1, y + D); j++) for (let i = Math.max(0, x - D); i <= Math.min(N - 1, x + D); i++) { const m = j * N + i; if (MARK[m] !== markV) { MARK[m] = markV; if (CC[m] < 255) { CC[m] *= k; n++; } } }
+    }
+    march(f, goal, CC, null, INF, true, margin); f.baseCost = cost; f.baseKn = kn; f.corridor = n;
+    return f;
   }
   // route hysteresis: the new field wins when its route runs the same way as the old one (its first flow.sameShare stays within
   // flow.sameCells of the old route), or when it is flow.hysteresis shorter than following the old route and walking on from its goal
@@ -194,7 +214,7 @@
 
   // ---------------------------------------------------------------- knowledge (M3 drives it from fog; in M2 every cell is known)
   // learn(c): the player now knows cell c; a known-blocked cell on the player's current route triggers a re-plan on the next tick
-  function learn(c) { const w = W; if (!w || c < 0 || c >= NN) return; w.know[c] = 1; if (!walkT(w.map.terr[c]) && w.pendN < w.pend.length) w.pend[w.pendN++] = c; }
+  function learn(c) { const w = W; if (!w || c < 0 || c >= NN) return; w.know[c] = 1; if (walkT(w.map.terr[c])) return; if (w.pendN < w.pend.length) w.pend[w.pendN++] = c; else w.replan = true; } // too many at once: re-plan
   function checkReplan(p) {
     const w = W, f = w.fields[1]; const n0 = w.pendN; w.pendN = 0; if (!p || !f || !f.ok) return;
     const len = trace(f, cellFor(p.ax, p.ay), TR, NN); markV++; for (let k = 0; k < len; k++) MARK[TR[k]] = markV;
@@ -242,7 +262,7 @@
   function walkFromEveryCell(team, opts) {
     opts = opts || {}; const t0 = now(), f = W && W.fields[team];
     if (!f || !f.ok) return { error: "team " + team + " has no field" };
-    march(f, f.src, W.map.cost, f.kn, INF, false, 0);
+    march(f, f.src, f.baseCost || W.map.cost, f.baseKn, INF, false, 0); // the plain field in full: every walkable cell must reach the source
     const m = W.map, terr = m.terr, r = opts.radius || 6, step = K.walkStep, goalPx = K.walkGoalPx, wallMs = opts.wallMs || 8000;
     const cellOf = (x, y) => ((y / CELL) | 0) * N + ((x / CELL) | 0);
     let cells = 0, ok = 0, steps = 0, maxSteps = 0, truncated = false; const why = { miss: 0, zero: 0, stuck: 0, blocked: 0, budget: 0 }, bad = [];

@@ -54,7 +54,7 @@ body {
 #minimap {
   position: absolute; right: .6rem; bottom: max(.6rem, env(safe-area-inset-bottom));
   width: 150px; height: 150px; border-radius: 8px; border: 2px solid rgba(255,255,255,.18);
-  background: #0e170c; image-rendering: pixelated;
+  background: #0e170c; image-rendering: pixelated; pointer-events: auto; touch-action: none; cursor: pointer;
 }
 #hint {
   position: absolute; left: 50%; top: 4.2rem; transform: translateX(-50%);

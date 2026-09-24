@@ -80,16 +80,20 @@
     "hysteresis": 0.15,
     "sameShare": 0.75,
     "sameCells": 3,
+    "corridorDiscount": 0.3,
+    "corridorMinCells": 4,
+    "corridorCells": 3,
+    "corridorBlobK": 1.3,
     "pathCohesionK": 0.004,
     "pathCohesionClamp": [
       0.5,
       1.3
     ],
     "localCohesion": 0.15,
-    "localCohesionRadius": 40,
+    "localCohesionRadius": 34,
     "fromMeCap": 1.3,
     "farDetour": 1.35,
-    "fleeCampBonus": 30,
+    "fleeCampBonus": 96,
     "fleeCandidates": 256,
     "routeDrawRatio": 2.0,
     "previewSeconds": 1.5,
@@ -102,6 +106,9 @@
     "engageDelay": 1.5,
     "engageDecay": 0.6,
     "fightPull": 0.65,
+    "contactPull": 0.6,
+    "contactPullStart": 60,
+    "contactPullRamp": 120,
     "moraleBreak": 0.6,
     "localRadius": 150,
     "moraleSmoothing": 0.3,
@@ -337,7 +344,8 @@
     ],
     "chunk": 512,
     "chunkArt": 256,
-    "waterFrameMs": 500
+    "waterFrameMs": 500,
+    "probeFrames": 20
   },
   "fog": {
     "sight0": 340,
@@ -364,8 +372,11 @@
     "regroupK": 1.3,
     "maxSeconds": 30,
     "ambushColumn": 150,
-    "ambushWait": 30,
-    "ambushDist": 220,
+    "ambushWait": 60,
+    "ambushSpecWait": 30,
+    "ambushLanes": 2,
+    "ambushSpacing": 27,
+    "ambushDist": 250,
     "ambushSeconds": 25,
     "flipflopN": 40,
     "flipflopRidge": [
@@ -908,9 +919,9 @@
       3
     ],
     "flow.fleeCampBonus": [
-      "cost units",
+      "px",
       0,
-      500
+      1000
     ],
     "flow.fleeCandidates": [
       "cells",
@@ -1186,6 +1197,61 @@
       "s",
       0.1,
       10
+    ],
+    "terrain.probeFrames": [
+      "frames",
+      1,
+      600
+    ],
+    "combat.contactPull": [
+      "weight (x speed)",
+      0,
+      3
+    ],
+    "combat.contactPullStart": [
+      "px",
+      0,
+      400
+    ],
+    "combat.contactPullRamp": [
+      "px",
+      1,
+      600
+    ],
+    "fixtures.ambushLanes": [
+      "files",
+      1,
+      4
+    ],
+    "fixtures.ambushSpacing": [
+      "px",
+      8,
+      60
+    ],
+    "fixtures.ambushSpecWait": [
+      "agents",
+      5,
+      200
+    ],
+    "flow.corridorDiscount": [
+      "fraction of cell cost",
+      0,
+      0.9
+    ],
+    "flow.corridorMinCells": [
+      "cells",
+      0,
+      64
+    ],
+    "flow.corridorCells": [
+      "cells",
+      0,
+      12
+    ],
+    "flow.corridorBlobK": [
+      "x 7 sqrt(n)",
+      0,
+      4
     ]
   }
 }
