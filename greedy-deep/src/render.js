@@ -373,6 +373,10 @@
       oreArcs[ai].t += dt;
       if (oreArcs[ai].t >= oreArcs[ai].life) oreArcs.splice(ai, 1);
     }
+    var pf = field();
+    if (pf && pf.live) {
+      for (var pi = 0; pi < pf.slots.length; pi++) if (pf.slots[pi].flash > 0) pf.slots[pi].flash -= dt;
+    }
     if (endScene.active) {
       endScene.t += dt;
       if (endScene.t > endScene.totalT + 2) endScene.active = false;
@@ -867,6 +871,9 @@
       ctx.fillRect(oaX - 1, oaY - 1, 2, 2);
     }
 
+    // ---------------------------------------------------------- pickups (M5)
+    drawPickups(H, glow);
+
     // ---------------------------------------------------------- depth readout
     ctx.fillStyle = "rgba(8,6,12,.72)";
     ctx.fillRect(0, 0, contentW, 11);
@@ -912,6 +919,97 @@
 
     // ---------------------------------------------------------- depth ribbon
     drawRibbon(ribbonX, L, depth, cutoff);
+  };
+
+  // --------------------------------------------------------------- pickups (M5)
+  // World-anchored in a side wall: a pulsing plus-shaped halo in the pickup's colour so
+  // it reads against any band, the cached sprite popping in over its first 0.2 s, a
+  // four-point sparkle that sweeps round, a jolt on each geode crack, and a blink over
+  // the last `expireBlinkS`. Integer blits and fillRects only: nothing allocates here.
+  function field() { return window.GD ? window.GD.pickups : null; }
+  function camTop() {
+    if (cam.topBu !== null) return cam.topBu;
+    var st = window.GD && window.GD.state;
+    return st ? st.depth * cfg.layout.buPerMeter - faceY() : 0;
+  }
+  function drawPickups(H, glow) {
+    var f = field();
+    if (!f || !f.live) return;
+    var pk = cfg.pickups, P = pk.palette, top = camTop();
+    for (var i = 0; i < f.slots.length; i++) {
+      var s = f.slots[i];
+      if (!s.active) continue;
+      var sy = s.yBu - top;
+      if (sy < -s.sizeBu || sy > H + s.sizeBu) continue;
+      if (s.ttl < pk.expireBlinkS && (Math.floor(s.ttl * 8) & 1)) continue;
+      var stage = s.kind === "geode" ? Math.ceil((SP.GEODE_STAGES - 1) * (s.clicksMax - s.clicks) / s.clicksMax) : 0;
+      var c = SP.pickupSprite(s.kind, stage);
+      if (!c) continue;
+      var cx = s.xBu, cy = sy;
+      if (s.flash > 0) { cx += (Math.floor(s.flash * 60) & 1) ? 1 : -1; }
+      var ph = 0.5 + 0.5 * Math.sin(pulse * 4 + s.id);
+      var halo = (P[s.kind] && P[s.kind].halo) || "#ffffff";
+      var hr = (s.sizeBu >> 1) + 3;
+      ctx.fillStyle = halo;
+      ctx.globalAlpha = 0.16 + 0.18 * ph;
+      ctx.fillRect((cx - hr) | 0, (cy - 3) | 0, hr * 2, 6);
+      ctx.fillRect((cx - 3) | 0, (cy - hr) | 0, 6, hr * 2);
+      ctx.globalAlpha = 0.10 + 0.10 * ph;
+      ctx.fillRect((cx - hr + 2) | 0, (cy - hr + 2) | 0, (hr - 2) * 2, (hr - 2) * 2);
+      ctx.globalAlpha = 1;
+      var k = s.age < 0.2 ? 0.4 + 3 * s.age : 1;
+      var w = Math.round(c.width * k), h = Math.round(c.height * k);
+      ctx.drawImage(c, Math.round(cx - w / 2), Math.round(cy - h / 2), w, h);
+      // sparkle: a 4-point star that travels round the top edge
+      var sp = (pulse * 1.3 + s.id * 0.37) % 1;
+      if (sp < 0.45) {
+        var gx = Math.round(cx - w / 2 + sp / 0.45 * w), gy = Math.round(cy - h / 2 + 1);
+        var a = Math.sin(sp / 0.45 * Math.PI);
+        ctx.globalAlpha = a;
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(gx, gy - 2, 1, 5); ctx.fillRect(gx - 2, gy, 5, 1);
+        ctx.globalAlpha = 1;
+      }
+      if (s.flash > 0) {
+        ctx.globalAlpha = Math.min(0.7, s.flash * 3);
+        ctx.fillStyle = "#fff4d0";
+        ctx.fillRect(Math.round(cx - w / 2), Math.round(cy - h / 2), w, h);
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+
+  function hitRadiusPx(s) {
+    var pk = cfg.pickups;
+    return Math.max(pk.hitMinCssPx / 2, (s.sizeBu / 2 + pk.hitPadBu) * scale);
+  }
+  // Canvas-local CSS px centre and hit radius for one live pickup (debug + tests).
+  R.pickupCss = function (s) {
+    var top = camTop();
+    return { x: s.xBu * scale, y: (s.yBu - top) * scale, r: hitRadiusPx(s) };
+  };
+  // The pickup under a canvas-local CSS point, or 0. A square hit box at least
+  // hitMinCssPx across, padded hitPadBu past the sprite; the nearest wins on overlap.
+  R.pickupAt = function (cssX, cssY) {
+    var f = field();
+    if (!f || !f.live || !cfg.pickups) return 0;
+    var top = camTop(), best = 0, bestD = Infinity;
+    for (var i = 0; i < f.slots.length; i++) {
+      var s = f.slots[i];
+      if (!s.active) continue;
+      var dx = Math.abs(cssX - s.xBu * scale), dy = Math.abs(cssY - (s.yBu - top) * scale);
+      var r = hitRadiusPx(s);
+      if (dx > r || dy > r) continue;
+      var dd = dx > dy ? dx : dy;
+      if (dd < bestD) { bestD = dd; best = s.id; }
+    }
+    return best;
+  };
+  R.screenYBu = function (worldYBu) { return worldYBu - camTop(); };
+  R.flashPickup = function (id) {
+    var f = field();
+    if (!f) return;
+    for (var i = 0; i < f.slots.length; i++) if (f.slots[i].active && f.slots[i].id === id) f.slots[i].flash = 0.2;
   };
 
   // Band ticks are clipped to the reveal cutoff — an unrevealed boundary must not

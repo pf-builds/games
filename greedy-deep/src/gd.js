@@ -5,7 +5,7 @@
 
   var E = window.GDEngine;
   var GD = (window.GD = {
-    version: "0.4.0-m4",
+    version: "0.5.0-m5",
     config: null,
     state: null,
     ready: false,
@@ -19,11 +19,14 @@
       dwarfCache: 0, dwarfLoadouts: 0, placeholderRects: 0,
       spriteCacheOpaque: 0, spriteCacheTotal: 0, spriteCacheRebuilds: 0, spriteCacheBlank: [],
       outlineFailures: 0, logoRedraws: 0,
-      audioMasterGain: 0, lastCue: null
+      audioMasterGain: 0, lastCue: null,
+      pickups: [], pickupStats: null, buffs: []
     },
     // The live loop passes these through to the engine so the UI can react to
     // events, band changes and the ending without the engine knowing about DOM.
-    hooks: { onEvent: null, onBand: null, onEnding: null },
+    hooks: { onEvent: null, onBand: null, onEnding: null, onPickupSpawn: null, onPickupExpire: null, onPickupClick: null },
+    // M5: the transient pickup field. Never saved; rebuilt on reset, config swap, clear.
+    pickups: null,
     audio: {
       get muted() { return window.GDAudio ? window.GDAudio.isMuted() : false; },
       set muted(v) { if (window.GDAudio) window.GDAudio.setMuted(v); }
@@ -34,8 +37,20 @@
     rng: null, // null = engine default rng
     onEvent: function (e, st) { if (GD.hooks.onEvent) GD.hooks.onEvent(e, st); },
     onBand: function (b, prev, st) { if (GD.hooks.onBand) GD.hooks.onBand(b, prev, st); },
-    onEnding: function (st, m) { if (GD.hooks.onEnding) GD.hooks.onEnding(st, m); }
+    onEnding: function (st, m) { if (GD.hooks.onEnding) GD.hooks.onEnding(st, m); },
+    // M5: pickups tick on the same sim clock as everything else (live loop and GD.step).
+    onStep: function (dt, d) {
+      if (GD.pickups) E.tickPickups(GD.config, GD.pickups, GD.state, dt, d, pickupRng, !GD.pickupsBlocked(), GD.hooks);
+    }
   };
+
+  // Pickups roll on their own rng so they never shift the event rng's sequence.
+  var pickupRng = E.makeRng(1);
+  function resetPickups() {
+    var seed = GD.config.sim.seed === undefined ? 1 : GD.config.sim.seed;
+    pickupRng = E.makeRng((seed ^ 0x51CC) >>> 0);
+    GD.pickups = E.newPickupField(GD.config);
+  }
 
   // -------------------------------------------------- console error counter
   // "zero console errors/warnings" needs a number, not a vibe.
@@ -58,6 +73,7 @@
     GD.loadedFromSave = !!loaded;
     GD.savedAt = loaded ? window.GDSave.savedAt(cfg) : 0;
     GD.dbg.flavorTodoCount = E.flavorTodoCount(cfg);
+    resetPickups();
     GD.ready = true;
     return GD.state;
   };
@@ -71,6 +87,7 @@
     GD.config = cfg;
     GD.state = prevState || E.newState(cfg);
     GD.dbg.flavorTodoCount = E.flavorTodoCount(cfg);
+    resetPickups();
     if (window.GDRender && window.GDRender.setConfig) window.GDRender.setConfig(cfg);
     if (window.GDUI && window.GDUI.rebuild) window.GDUI.rebuild();
     return { ok: true };
@@ -82,6 +99,7 @@
   GD.reset = function () {
     E.setSeed(GD.config.sim.seed === undefined ? 1 : GD.config.sim.seed);
     GD.state = E.newState(GD.config);
+    resetPickups();
     return E.snapshot(GD.config, GD.state);
   };
 
@@ -207,6 +225,91 @@
     return result;
   };
 
+  // -------------------------------------------------- pickups (M5)
+  // Nothing spawns or pays while the tab is hidden or an overlay (splash, settings,
+  // welcome-back, ending) is up. `_visibility` ("hidden" / "visible", null = the real
+  // document) lets selfTest, or a critic in a hidden browser pane, pin the tab state.
+  GD._visibility = null;
+  GD.isHidden = function () {
+    if (GD._visibility) return GD._visibility === "hidden";
+    return typeof document !== "undefined" && !!document.hidden;
+  };
+  GD.pickupsBlocked = function () {
+    if (GD.isHidden()) return "hidden";
+    if (window.GDUI && window.GDUI.overlayOpen && window.GDUI.overlayOpen()) return "overlay";
+    return "";
+  };
+
+  // Debug/test spawn: always places one (pool permitting), whatever the spawn gates say.
+  // opts: {x, y} in viewport bu, side (0 left, 1 right), ttl seconds, clicks.
+  GD.spawnPickup = function (type, opts) {
+    var s = E.spawnPickup(GD.config, GD.pickups, GD.state, E.derive(GD.config, GD.state), type, pickupRng, opts);
+    if (!s) return null;
+    if (GD.hooks.onPickupSpawn) GD.hooks.onPickupSpawn(s);
+    GD.refreshDbg();
+    return { id: s.id, type: s.type, ttl: s.ttl, clicks: s.clicks };
+  };
+
+  function pickupCue(res) {
+    var cue = res.kind === "geode" ? (res.done ? "geodeBurst" : "geodeCrack") : (res.kind === "chest" ? "chestOpen" : "gem");
+    if (GD.state.prefs.muted) return;
+    if (window.GDAudio) window.GDAudio.play(cue);
+    else GD.dbg.lastCue = cue;
+  }
+
+  // One click on a pickup: the pointer path and the API share it, so both get the gate,
+  // the cue and the juice hook. A geode needs `clicks` of these; the rest need one.
+  GD.clickPickup = function (id) {
+    var blocked = GD.pickupsBlocked();
+    if (blocked) return { ok: false, reason: blocked, id: id };
+    var res = E.clickPickup(GD.config, GD.pickups, GD.state, id, pickupRng);
+    if (!res.ok) return res;
+    pickupCue(res);
+    if (GD.hooks.onPickupClick) GD.hooks.onPickupClick(res);
+    return res;
+  };
+  // Collect outright: clicks until it pays (geodes crack through). Bounded.
+  GD.collectPickup = function (id, opts) {
+    var res = GD.clickPickup(id), guard = 0;
+    if (opts && opts.single) return res;
+    while (res.ok && !res.done && guard++ < 16) res = GD.clickPickup(id);
+    return res;
+  };
+
+  // Live pickups with their CLIENT-space centres, so a test can dispatch pointer events
+  // at them. Rebuilt on refreshDbg; the objects are reused, not reallocated.
+  var dbgPickups = [];
+  function refreshPickupDbg() {
+    var f = GD.pickups, out = GD.dbg.pickups = dbgPickups, n = 0;
+    if (!f) { out.length = 0; return; }
+    var cv = document.getElementById("shaft");
+    var rect = cv ? cv.getBoundingClientRect() : { left: 0, top: 0 };
+    var R = window.GDRender;
+    for (var i = 0; i < f.slots.length; i++) {
+      var s = f.slots[i];
+      if (!s.active) continue;
+      var o = out[n] || (out[n] = {});
+      var c = R && R.pickupCss ? R.pickupCss(s) : { x: 0, y: 0, r: 0 };
+      o.id = s.id; o.type = s.type; o.ttl = +s.ttl.toFixed(2); o.clicksLeft = s.clicks; o.clicksMax = s.clicksMax;
+      o.x = Math.round(rect.left + c.x); o.y = Math.round(rect.top + c.y); o.hitRadiusPx = c.r;
+      n++;
+    }
+    out.length = n;
+    GD.dbg.pickupStats = { live: f.live, spawned: f.spawned, collected: f.collected, expired: f.expired, goldPaid: f.goldPaid };
+  }
+
+  // Active pickup buffs with whole seconds left, for the buff chip and the critic.
+  GD.activeBuffs = function () {
+    var out = [], tl = GD.state.timed, bl = GD.config.pickups ? GD.config.pickups.buffs : [];
+    for (var i = 0; i < tl.length; i++) {
+      if (tl[i].until <= GD.state.t || String(tl[i].id).indexOf("pickup:") !== 0) continue;
+      for (var j = 0; j < bl.length; j++) {
+        if ("pickup:" + bl[j].id === tl[i].id) out.push({ id: bl[j].id, label: bl[j].label, verb: tl[i].verb, value: tl[i].value, secondsLeft: Math.ceil(tl[i].until - GD.state.t) });
+      }
+    }
+    return out;
+  };
+
   GD.refreshDbg = function (fps) {
     var d = E.derive(GD.config, GD.state);
     GD.dbg.t = GD.state.t;
@@ -257,6 +360,8 @@
       GD.dbg.audioMasterGain = window.GDAudio.masterGainValue();
       GD.dbg.lastCue = window.GDAudio.lastCue;
     }
+    refreshPickupDbg();
+    GD.dbg.buffs = GD.activeBuffs();
   };
 
   // -------------------------------------------------- debug mutators (?debug=1)
@@ -281,6 +386,7 @@
   GD._clearSave = function () {
     var ok = window.GDSave.clear(GD.config);
     GD.state = E.newState(GD.config);
+    resetPickups();
     if (window.GDUI && window.GDUI.afterClearSave) window.GDUI.afterClearSave();
     return ok;
   };
@@ -303,7 +409,10 @@
     // selfTest drives the engine hard (jumpTo, fire, band crossings). Mute the UI
     // hooks for the duration so a test run never leaves a panel or a log line behind.
     var liveHooks = GD.hooks;
-    GD.hooks = { onEvent: null, onBand: null, onEnding: null };
+    GD.hooks = { onEvent: null, onBand: null, onEnding: null, onPickupSpawn: null, onPickupExpire: null, onPickupClick: null };
+    var livePickups = GD.pickups, liveVisibility = GD._visibility;
+    var liveMuted = window.GDAudio ? window.GDAudio.isMuted() : false;
+    var overlayIds = ["settings", "welcome", "ending"], overlayWasHidden = {};
 
     function bad3(mutate) {
       var c = JSON.parse(JSON.stringify(GD.config));
@@ -713,7 +822,7 @@
         milestone: cfg.milestone, endless: cfg.endless, flavor: cfg.flavor, save: cfg.save,
         layout: cfg.layout, veil: cfg.veil, vein: cfg.vein, debug: cfg.debug, lantern: cfg.lantern,
         camera: cfg.camera, sprites: cfg.sprites, titleCard: cfg.titleCard,
-        audio: cfg.audio, particles: cfg.particles, ending: cfg.ending
+        audio: cfg.audio, particles: cfg.particles, ending: cfg.ending, pickups: cfg.pickups
       }));
       ext.ores.push({
         id: "voidglass", name: "Voidglass", startDepth: 2000, goldPerMeter: 400, pattern: "crystal",
@@ -1472,6 +1581,259 @@
       }
       check("p7fix_hud_no_overlap", "0 overlapping stat boxes", hudOverlap.join(", "), hudOverlap.length === 0);
 
+      // =========================================================== M5 block
+      // Clickable pickups. Tests pin the tab visible (a hidden browser pane reports
+      // document.hidden) and clear every overlay, then restore both in `finally`.
+      for (var oi5 = 0; oi5 < overlayIds.length; oi5++) {
+        var oel = document.getElementById(overlayIds[oi5]);
+        overlayWasHidden[overlayIds[oi5]] = !oel || oel.classList.contains("hidden");
+        if (oel) oel.classList.add("hidden");
+      }
+      GD._visibility = "visible";
+      if (window.GDAudio) window.GDAudio.setMuted(false);
+      var PK = cfg.pickups;
+      function m5Setup(depth) {
+        GD.reset();
+        GD.state.prefs.muted = false;
+        GD.jumpTo(depth === undefined ? 250 : depth);
+        GD.grantForTest("dorrik", 5);
+        GD.grantForTest("pick", 10);
+        GD.state.eventT = -1e9;   // no random event may move a rate mid-assertion
+      }
+
+      // --- JSON block validated
+      check("m5_json_pickups_block", "types, buffs, geodeTable, palette", !!PK,
+        !!PK && PK.types.length >= 3 && PK.buffs.length >= 1 && PK.geodeTable.length >= 1 && !!PK.palette);
+      var bk = bad3(function (c) { c.pickups.types[0].kind = "ruby"; });
+      check("m5_validate_unknown_kind", "not ok", bk.ok, !bk.ok && /unknown kind/.test(bk.errors.join()));
+      var bc5 = bad3(function (c) { c.pickups.types[1].clicks = [0, 2]; });
+      check("m5_validate_bad_clicks", "not ok", bc5.ok, !bc5.ok && /clicks/.test(bc5.errors.join()));
+      var bv5 = bad3(function (c) { c.pickups.buffs[0].verb = "add_rate"; });
+      check("m5_validate_buff_needs_timed_verb", "not ok", bv5.ok, !bv5.ok && /timed verb/.test(bv5.errors.join()));
+      var bh5 = bad3(function (c) { c.pickups.hitMinCssPx = 30; });
+      check("m5_validate_hit_target_floor", "not ok", bh5.ok, !bh5.ok && /hitMinCssPx/.test(bh5.errors.join()));
+      var geodeT = E.pickupType(cfg, "geode");
+      check("m5_geode_clicks_3_to_5", "[3,5]", JSON.stringify(geodeT && geodeT.clicks),
+        !!geodeT && geodeT.clicks[0] >= 3 && geodeT.clicks[1] <= 5);
+
+      // --- spawn: listed on dbg with a finite client-space centre
+      m5Setup();
+      var sp1 = GD.spawnPickup("gem");
+      GD.refreshDbg();
+      var dp1 = GD.dbg.pickups[0];
+      check("m5_spawn_gem", "1 live gem on dbg", JSON.stringify(dp1),
+        !!sp1 && GD.pickups.live === 1 && !!dp1 && dp1.id === sp1.id && dp1.type === "gem" && isFinite(dp1.x) && isFinite(dp1.y) && dp1.ttl > 0);
+
+      // --- gem pays its formula once, cues, and is gone
+      var gd0 = GD.derive(), gemWant = E.gemGold(cfg, gd0, gd0.band.index);
+      var goldG = GD.state.gold;
+      if (window.GDAudio) window.GDAudio.lastCue = null;
+      var rg = GD.collectPickup(sp1.id);
+      check("m5_gem_pays_formula", Math.round(gemWant), Math.round(GD.state.gold - goldG),
+        rg.done && gemWant > 0 && approx(GD.state.gold - goldG, gemWant, 1e-6) && approx(rg.gold, gemWant, 1e-6));
+      check("m5_gem_gone_after_collect", 0, GD.pickups.live, GD.pickups.live === 0 && !E.pickupById(GD.pickups, sp1.id));
+      check("m5_gem_cue", "gem", GD.dbg.lastCue, GD.dbg.lastCue === "gem");
+      check("m5_gem_value_band_scaled", "floorTaps x goldPerTap x payoutMulPerBand^band",
+        Math.round(gemWant), approx(gemWant, Math.max(gd0.goldRate * PK.types[0].reward.incomeSeconds, gd0.goldPerTap * PK.types[0].reward.floorTaps) *
+          Math.pow(PK.types[0].reward.payoutMulPerBand, Math.min(gd0.band.index, PK.bandScaleCap)), 1e-6));
+
+      // --- geode: N clicks, cracks per click, pays once, never twice
+      m5Setup();
+      var sg = GD.spawnPickup("geode", { clicks: 4 });
+      var goldGe = GD.state.gold, crackBad = [];
+      for (var gc = 1; gc <= 3; gc++) {
+        var rc = GD.collectPickup(sg.id, { single: true });
+        if (!rc.ok || rc.done || rc.clicksLeft !== 4 - gc) crackBad.push("click " + gc + ": " + JSON.stringify({ ok: rc.ok, done: rc.done, left: rc.clicksLeft }));
+        if (GD.dbg.lastCue !== "geodeCrack") crackBad.push("click " + gc + " cue " + GD.dbg.lastCue);
+      }
+      check("m5_geode_needs_all_clicks", "3 cracks, no pay", crackBad.join(" | ") + " gold+" + (GD.state.gold - goldGe),
+        crackBad.length === 0 && GD.state.gold === goldGe && GD.pickups.live === 1);
+      var rgd = GD.collectPickup(sg.id, { single: true });
+      check("m5_geode_pays_on_last_click", "done with a reward", JSON.stringify({ done: rgd.done, gold: rgd.gold, buff: rgd.buff && rgd.buff.id, gems: rgd.gems }),
+        rgd.done && (rgd.gold > 0 || !!rgd.buff) && GD.dbg.lastCue === "geodeBurst");
+      var rgd2 = GD.collectPickup(sg.id);
+      check("m5_geode_no_double_collect", "gone", rgd2.reason, rgd2.ok === false && rgd2.reason === "gone" && GD.pickups.collected === 1);
+      var stageSeq = [];
+      for (var cm = 3; cm <= 5; cm++) {
+        var seen = {};
+        for (var cd = 0; cd < cm; cd++) seen[Math.ceil((window.GDSprites.GEODE_STAGES - 1) * cd / cm)] = 1;
+        stageSeq.push(Object.keys(seen).length === cm ? "ok" : cm + " clicks repeat a stage");
+      }
+      check("m5_geode_new_crack_every_click", "ok,ok,ok", stageSeq.join(","), stageSeq.join(",") === "ok,ok,ok");
+
+      // --- chest: every buff starts on its verb, shows, ends on sim time, and refreshes rather than stacks
+      var buffBad = [];
+      for (var bb = 0; bb < PK.buffs.length; bb++) {
+        var bf = PK.buffs[bb];
+        m5Setup();
+        var dB0 = GD.derive();
+        var secs = E.applyPickupBuff(cfg, GD.state, bf, dB0.band.index);
+        var dB1 = GD.derive();
+        var got = bf.verb === "mul_gold_temp" ? dB1.goldRate / dB0.goldRate : dB1.digRate / dB0.digRate;
+        if (!approx(got, bf.value, 1e-9)) buffBad.push(bf.id + " x" + got.toFixed(3));
+        E.applyPickupBuff(cfg, GD.state, bf, dB0.band.index);
+        if (GD.activeBuffs().length !== 1) buffBad.push(bf.id + " stacked " + GD.activeBuffs().length);
+        GD.step(secs - 1);
+        if (GD.activeBuffs().length !== 1) buffBad.push(bf.id + " ended early");
+        GD.step(2);
+        var dB2 = GD.derive();
+        if (GD.activeBuffs().length !== 0) buffBad.push(bf.id + " still active");
+        if (!approx(dB2.goldRate / dB2.digRate, dB0.goldRate / dB0.digRate, 1e-9) || !approx(dB2.digRate, dB0.digRate, 1e-9)) buffBad.push(bf.id + " rate not restored");
+      }
+      check("m5_chest_buffs_start_and_end", "each buff hits its multiplier, refreshes, ends", buffBad.join(" | "), buffBad.length === 0);
+      m5Setup();
+      var sc = GD.spawnPickup("chest");
+      var rch = GD.collectPickup(sc.id);
+      if (window.GDUI && window.GDUI.refresh) window.GDUI.refresh();
+      var chip = document.getElementById("buffs");
+      check("m5_chest_grants_buff_and_chip", "buff live, chip shows it",
+        (rch.buff && rch.buff.id) + " / " + (chip ? chip.textContent : "no chip"),
+        rch.done && !!rch.buff && GD.activeBuffs().length === 1 && GD.dbg.lastCue === "chestOpen" &&
+        !!chip && !chip.classList.contains("hidden") && chip.textContent.indexOf(rch.buff.label.toUpperCase()) !== -1);
+      GD.step(rch.buffSeconds + 1);
+      if (window.GDUI && window.GDUI.refresh) window.GDUI.refresh();
+      check("m5_chest_chip_clears_at_end", "hidden", chip ? chip.className : "no chip", !!chip && chip.classList.contains("hidden"));
+
+      // --- expiry by lifetime and by scrolling off the top
+      m5Setup();
+      var se = GD.spawnPickup("gem", { ttl: 1 });
+      GD.step(1.5);
+      check("m5_expires_after_lifetime", "gone, expired 1", GD.pickups.live + "/" + GD.pickups.expired,
+        !E.pickupById(GD.pickups, se.id) && GD.pickups.expired === 1);
+      var ss5 = GD.spawnPickup("gem", { y: PK.spawn.padTopBu });
+      GD.state.depth += 60;
+      GD.step(0.1);
+      check("m5_expires_when_scrolled_off", "gone", !!E.pickupById(GD.pickups, ss5.id), !E.pickupById(GD.pickups, ss5.id));
+      m5Setup();
+      GD.grantForTest("lantern", 2);
+      var sl = GD.spawnPickup("gem");
+      check("m5_lantern_extends_lifetime", PK.types[0].lifetimeS + 2 * PK.lanternLifetimeS, sl.ttl,
+        approx(sl.ttl, PK.types[0].lifetimeS + 2 * PK.lanternLifetimeS, 1e-9));
+
+      // --- natural spawning: nothing while hidden or behind an overlay, some while visible
+      m5Setup();
+      GD._visibility = "hidden";
+      GD.step(600);
+      var hidSpawn = GD.pickups.spawned;
+      GD._visibility = "visible";
+      GD.step(600);
+      check("m5_no_spawn_while_hidden", "0 hidden, > 0 visible", hidSpawn + " / " + GD.pickups.spawned, hidSpawn === 0 && GD.pickups.spawned > 0);
+      m5Setup();
+      if (window.GDUI && window.GDUI.openSettings) window.GDUI.openSettings();
+      GD.step(600);
+      var ovSpawn = GD.pickups.spawned;
+      var so = GD.spawnPickup("gem"), goldO = GD.state.gold;
+      var ro = GD.clickPickup(so.id);
+      check("m5_overlay_blocks_spawn_and_collect", "0 spawned, click refused", ovSpawn + " / " + ro.reason,
+        ovSpawn === 0 && ro.ok === false && ro.reason === "overlay" && GD.state.gold === goldO && !!E.pickupById(GD.pickups, so.id));
+      var setEl = document.getElementById("settings");
+      if (setEl) setEl.classList.add("hidden");
+      GD._visibility = "hidden";
+      var rh = GD.clickPickup(so.id);
+      check("m5_hidden_tab_pays_nothing", "refused", rh.reason, rh.ok === false && rh.reason === "hidden" && GD.state.gold === goldO);
+      GD._visibility = "visible";
+
+      // --- offline resolution grants nothing from pickups
+      m5Setup();
+      var spo = GD.spawnPickup("gem");
+      var fieldBefore = JSON.stringify({ l: GD.pickups.live, s: GD.pickups.spawned, c: GD.pickups.collected, g: GD.pickups.goldPaid });
+      var dOff = GD.derive();
+      var goldOff0 = GD.state.gold;
+      var apo = GD.applyOffline(8 * 3600 * 1000);
+      var wantOff = dOff.goldRate * apo.cappedSeconds * cfg.offline.ratePercent * dOff.offlineRateMul;
+      check("m5_applyOffline_grants_no_pickups", "gold = crew formula, field untouched",
+        (GD.state.gold - goldOff0).toFixed(2) + " vs " + wantOff.toFixed(2),
+        approx(GD.state.gold - goldOff0, wantOff, 1e-6) && JSON.stringify({ l: GD.pickups.live, s: GD.pickups.spawned, c: GD.pickups.collected, g: GD.pickups.goldPaid }) === fieldBefore);
+      var serKeys = Object.keys(window.GDSave.serialize(cfg, GD.state));
+      check("m5_pickups_never_saved", "no pickups or timed in the save", serKeys.join(","),
+        serKeys.indexOf("pickups") === -1 && serKeys.indexOf("timed") === -1);
+      void spo;
+
+      // --- spacebar strikes and never collects
+      m5Setup();
+      var sps = GD.spawnPickup("gem");
+      document.dispatchEvent(new KeyboardEvent("keydown", { code: "Space", key: " ", bubbles: true }));
+      check("m5_space_never_collects", "gem still live", !!E.pickupById(GD.pickups, sps.id),
+        !!E.pickupById(GD.pickups, sps.id) && GD.pickups.collected === 0);
+
+      // --- the real pointer path: hit test, click-through to #shaft, forgiving hit box,
+      // no strike on a collect, drag never collects
+      var cvs = document.getElementById("shaft");
+      if (cvs && window.GDRender && window.GDUI) {
+        m5Setup();
+        RND.cameraSnap();
+        RND.renderProbe(GD.state, GD.derive(), 2, 1 / 60);
+        var rect5 = cvs.getBoundingClientRect();
+        function ptr(type, x, y) {
+          cvs.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: y, bubbles: true, cancelable: true, pointerId: 1, pointerType: "mouse", isPrimary: true }));
+        }
+        function dbgOf(id) {
+          GD.refreshDbg();
+          for (var q5 = 0; q5 < GD.dbg.pickups.length; q5++) if (GD.dbg.pickups[q5].id === id) return GD.dbg.pickups[q5];
+          return null;
+        }
+        var typesBad = [];
+        for (var tk = 0; tk < PK.types.length; tk++) {
+          var sT = GD.spawnPickup(PK.types[tk].id, { clicks: 1 });
+          var dT = dbgOf(sT.id);
+          var inView = dT && dT.x >= 0 && dT.y >= 0 && dT.x <= window.innerWidth && dT.y <= window.innerHeight;
+          var hitEl = inView ? document.elementFromPoint(dT.x, dT.y) : null;
+          if (!inView) typesBad.push(PK.types[tk].id + " centre off-screen " + (dT && dT.x) + "," + (dT && dT.y));
+          else if (hitEl !== cvs) typesBad.push(PK.types[tk].id + " hits " + (hitEl ? hitEl.tagName + "#" + hitEl.id : "null"));
+          if (dT && dT.hitRadiusPx * 2 < 40) typesBad.push(PK.types[tk].id + " hit box " + dT.hitRadiusPx * 2 + " px");
+          var strikes0 = window.GDUI.strikeCount, gold0 = GD.state.gold;
+          if (dT) { ptr("pointerdown", dT.x + 15, dT.y); ptr("pointerup", dT.x + 15, dT.y); }
+          if (E.pickupById(GD.pickups, sT.id)) typesBad.push(PK.types[tk].id + " not collected 15 px off-centre");
+          if (window.GDUI.strikeCount !== strikes0) typesBad.push(PK.types[tk].id + " click also struck the vein");
+          if (PK.types[tk].id === "gem" && !(GD.state.gold > gold0)) typesBad.push("gem click paid nothing");
+        }
+        check("m5_pointer_collects_every_type", "centre hits #shaft, 15 px off collects, no strike", typesBad.join(" | "), typesBad.length === 0);
+        // drag pans, never collects
+        var sd = GD.spawnPickup("gem"), dd = dbgOf(sd.id);
+        ptr("pointerdown", dd.x, dd.y); ptr("pointermove", dd.x, dd.y + 40); ptr("pointerup", dd.x, dd.y + 40);
+        check("m5_drag_never_collects", "gem still live", !!E.pickupById(GD.pickups, sd.id), !!E.pickupById(GD.pickups, sd.id));
+        RND.cameraSnap();
+        // a click on bare rock still strikes
+        var strikesB = window.GDUI.strikeCount, vr5 = RND.veinRect(), sc5 = RND.scale();
+        var vx5 = rect5.left + (vr5.x + vr5.w / 2) * sc5, vy5 = rect5.top + (vr5.y + vr5.h / 2) * sc5;
+        GD.pickups = E.newPickupField(cfg);
+        ptr("pointerdown", vx5, vy5); ptr("pointerup", vx5, vy5);
+        check("m5_click_off_pickup_still_strikes", strikesB + 1, window.GDUI.strikeCount, window.GDUI.strikeCount === strikesB + 1);
+        // overlay open: the pointer path refuses outright
+        var sov = GD.spawnPickup("gem"), dov = dbgOf(sov.id);
+        window.GDUI.openSettings();
+        ptr("pointerdown", dov.x, dov.y); ptr("pointerup", dov.x, dov.y);
+        check("m5_overlay_blocks_pointer_collect", "gem still live", !!E.pickupById(GD.pickups, sov.id), !!E.pickupById(GD.pickups, sov.id));
+        if (setEl) setEl.classList.add("hidden");
+      }
+
+      // --- rarer and better deeper; scaling capped
+      var rb0 = E.pickupBandPow(PK.types[2].rateMulPerBand, 0, cfg), rb3 = E.pickupBandPow(PK.types[2].rateMulPerBand, 3, cfg);
+      var pb3 = E.pickupBandPow(PK.types[0].reward.payoutMulPerBand, 3, cfg), pbHuge = E.pickupBandPow(PK.types[0].reward.payoutMulPerBand, 400, cfg);
+      check("m5_depth_scales_rates_and_payouts", "chest rate and gem payout up by band, capped",
+        rb3.toFixed(3) + " / " + pb3.toFixed(3) + " / cap " + pbHuge.toFixed(3),
+        rb3 > rb0 && pb3 > 1 && approx(pbHuge, Math.pow(PK.types[0].reward.payoutMulPerBand, PK.bandScaleCap), 1e-12));
+      var sprSt = window.GDSprites.stats();
+      check("m5_pickup_sprites_cached", "gem 1 + chest 1 + geode " + window.GDSprites.GEODE_STAGES, sprSt.pickupSprites,
+        sprSt.pickupSprites === 2 + window.GDSprites.GEODE_STAGES);
+
+      // --- economy: both policies, collect-all, hold the window; simulate never touches the live field
+      GD.pickups = E.newPickupField(cfg);
+      var liveSpawned = GD.pickups.spawned;
+      var ecoBad = [];
+      var pols = ["cheapest-affordable", "max-buy"];
+      for (var pp = 0; pp < pols.length; pp++) {
+        var sm = GD.simulate({ policy: pols[pp], pickups: "collect-all" });
+        if (!(sm.reachedAtSeconds >= 5400 && sm.reachedAtSeconds <= 10800)) ecoBad.push(pols[pp] + " ends " + Math.round(sm.reachedAtSeconds));
+        if (!(sm.maxGapSeconds < 300)) ecoBad.push(pols[pp] + " maxGap " + Math.round(sm.maxGapSeconds));
+        if (!sm.allFinite) ecoBad.push(pols[pp] + " non-finite");
+        if (!(sm.pickupStats.collected > 0)) ecoBad.push(pols[pp] + " collected nothing");
+      }
+      check("m5_simulate_collect_all_in_window", "5400..10800 s, maxGap < 300, finite", ecoBad.join(" | "), ecoBad.length === 0);
+      check("m5_simulate_leaves_live_field", liveSpawned, GD.pickups.spawned, GD.pickups.spawned === liveSpawned);
+      check("m5_simulate_unknown_pickups_mode", "an error", JSON.stringify(GD.simulate({ pickups: "grab" }).error || ""),
+        !!GD.simulate({ pickups: "grab" }).error);
+
       // --- console clean (last, so it counts everything above)
       if (!opts.skipConsoleCheck) {
         check("m2_no_console_errors", 0, GD.dbg.errors, GD.dbg.errors === 0);
@@ -1489,6 +1851,13 @@
       if (window.GDRender && window.GDRender.cameraSnap) window.GDRender.cameraSnap();
       if (GD.config !== liveConfig) GD.setConfig(liveConfig, false);
       GD.state = liveState;
+      GD.pickups = livePickups;
+      GD._visibility = liveVisibility;
+      if (window.GDAudio) window.GDAudio.setMuted(liveMuted);
+      for (var ok5 in overlayWasHidden) {
+        var oe5 = document.getElementById(ok5);
+        if (oe5) oe5.classList.toggle("hidden", overlayWasHidden[ok5]);
+      }
       try {
         if (liveRaw === null) window.GDSave.clear(cfg);
         else localStorage.setItem(cfg.save.key, liveRaw);

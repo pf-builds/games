@@ -400,6 +400,8 @@
     }
 
     E.tickEvents(cfg, state, dt, d, ctx);
+    // M5: the pickup field ticks on the same sim clock (GD wires it; simulate runs its own).
+    if (ctx && ctx.onStep) ctx.onStep(dt, d);
 
     var nb = E.bandAt(cfg, state.depth);
     if (nb.id !== state.bandId) {
@@ -480,6 +482,225 @@
       E.checkMilestone(cfg, state, ctx);
     }
     return p;
+  };
+
+  // ------------------------------------------------------------ pickups (M5)
+  // Clicked pickups on the shaft walls: gems pay instant gold, chests start a timed buff
+  // through the existing *_temp verbs, geodes take several clicks and then roll a weighted
+  // table. The field lives BESIDE the state, never inside it: it is never saved, and
+  // applyOffline() cannot see it, so offline time grants nothing from pickups.
+  // Pooled: `maxLive` slots are allocated once and reused, so ticking allocates nothing.
+  // Rolls take their own rng, so pickups never shift the event rng's sequence.
+  var PICKUP_KINDS = { gem: true, chest: true, geode: true };
+  var PICKUP_REWARDS = { gold: true, buff: true, gems: true };
+  E.PICKUP_KINDS = PICKUP_KINDS;
+
+  function pickupType(cfg, id) {
+    var pk = cfg.pickups;
+    if (!pk) return null;
+    if (!pk.__types) {
+      var m = {};
+      for (var i = 0; i < pk.types.length; i++) m[pk.types[i].id] = pk.types[i];
+      hide(pk, "__types", m);
+    }
+    return pk.__types[id] || null;
+  }
+  E.pickupType = pickupType;
+
+  // Band scaling, capped so an endless band 40 deep never compounds a payout to nonsense.
+  function bandPow(v, bi, cfg) {
+    if (!(v > 0)) return 1;
+    var cap = cfg.pickups.bandScaleCap;
+    return Math.pow(v, Math.max(0, Math.min(bi, cap)));
+  }
+  E.pickupBandPow = bandPow;
+
+  // Same formula as GDRender.effFaceY (render keeps its own copy for the band plan): where
+  // the dig face sits on a settled camera, in bu from the top of the shaft viewport.
+  E.faceYBu = function (cfg, revealBonus) {
+    var L = cfg.layout, lan = cfg.lantern || {};
+    var bias = (revealBonus || 0) * (lan.forwardTilesPerLevel || 0) * L.tileBu;
+    var floorY = lan.minFaceYBu === undefined ? L.faceYBu : lan.minFaceYBu;
+    return Math.max(floorY, L.faceYBu - bias);
+  };
+  // World y (bu) drawn at the top of the viewport when the camera is settled on the face.
+  function settledTopBu(cfg, state, derived) {
+    return state.depth * cfg.layout.buPerMeter - E.faceYBu(cfg, derived.revealBonus);
+  }
+
+  E.newPickupField = function (cfg) {
+    var n = (cfg.pickups && cfg.pickups.maxLive) || 0, slots = [];
+    for (var i = 0; i < n; i++) {
+      slots.push({ active: false, id: 0, type: "", kind: "", ttl: 0, life: 0, age: 0,
+        clicks: 0, clicksMax: 0, bandIndex: 0, xBu: 0, yBu: 0, sizeBu: 0, flash: 0 });
+    }
+    return { checkT: 0, nextId: 1, slots: slots, live: 0, spawned: 0, collected: 0, expired: 0, goldPaid: 0 };
+  };
+
+  E.pickupLiveOf = function (field, typeId) {
+    var n = 0;
+    for (var i = 0; i < field.slots.length; i++) if (field.slots[i].active && field.slots[i].type === typeId) n++;
+    return n;
+  };
+  E.pickupById = function (field, id) {
+    for (var i = 0; i < field.slots.length; i++) if (field.slots[i].active && field.slots[i].id === id) return field.slots[i];
+    return null;
+  };
+
+  // Place a pickup in a side wall inside the settled viewport near the face. The right
+  // wall keeps clear of the active vein (the strike target) and pickups keep clear of
+  // each other; both are bounded rerolls. `opts` (debug/tests) can pin x, y (viewport bu),
+  // side, ttl and clicks. Returns the slot, or null when the pool is full.
+  E.spawnPickup = function (cfg, field, state, derived, typeId, rng, opts) {
+    var ty = pickupType(cfg, typeId);
+    if (!ty || !field) return null;
+    var slot = null, i;
+    for (i = 0; i < field.slots.length; i++) if (!field.slots[i].active) { slot = field.slots[i]; break; }
+    if (!slot) return null;
+    opts = opts || {};
+    var pk = cfg.pickups, sp = pk.spawn, L = cfg.layout;
+    var H = L._liveShaftBu || L.shaftBu;
+    var fy = E.faceYBu(cfg, derived.revealBonus);
+    var y0 = Math.max(sp.padTopBu, fy - sp.aboveFaceBu), y1 = Math.min(H - sp.padBottomBu, fy + sp.belowFaceBu);
+    var veinTop = fy - cfg.vein.aboveFaceBu - sp.veinClearBu, veinBot = fy - cfg.vein.aboveFaceBu + cfg.vein.hBu + sp.veinClearBu;
+    var sx = 0, sy = 0, side = 0, tries = 0, clear = false;
+    while (!clear && tries++ < 6) {
+      sy = opts.y !== undefined ? opts.y : y0 + rng() * Math.max(0, y1 - y0);
+      side = opts.side !== undefined ? opts.side : (rng() < 0.5 ? 0 : 1);
+      if (side === 1 && sy > veinTop && sy < veinBot) side = 0;
+      var xr = side ? sp.rightXBu : sp.leftXBu;
+      sx = opts.x !== undefined ? opts.x : xr[0] + rng() * (xr[1] - xr[0]);
+      clear = true;
+      if (opts.x !== undefined || opts.y !== undefined) break;
+      var topNow = settledTopBu(cfg, state, derived);
+      for (i = 0; i < field.slots.length; i++) {
+        var o = field.slots[i];
+        if (!o.active) continue;
+        if (Math.abs(o.xBu - sx) < sp.minGapBu && Math.abs((o.yBu - topNow) - sy) < sp.minGapBu) { clear = false; break; }
+      }
+    }
+    var bi = derived.band.index;
+    slot.active = true;
+    slot.id = field.nextId++;
+    slot.type = ty.id;
+    slot.kind = ty.kind;
+    slot.life = opts.ttl !== undefined ? opts.ttl : ty.lifetimeS + pk.lanternLifetimeS * (derived.revealBonus || 0);
+    slot.ttl = slot.life;
+    slot.age = 0;
+    slot.flash = 0;
+    var cmin = ty.clicks[0], cmax = ty.clicks[1];
+    slot.clicksMax = opts.clicks !== undefined ? opts.clicks : cmin + Math.floor(rng() * (cmax - cmin + 1));
+    if (slot.clicksMax > cmax) slot.clicksMax = cmax;
+    slot.clicks = slot.clicksMax;
+    slot.bandIndex = bi;
+    slot.xBu = sx;
+    slot.yBu = settledTopBu(cfg, state, derived) + sy;
+    slot.sizeBu = ty.sizeBu;
+    field.live++;
+    field.spawned++;
+    return slot;
+  };
+
+  function freePickup(field, slot) { slot.active = false; field.live--; }
+
+  // Age, expire (lifetime or scrolled off the top of a settled camera), then roll spawns
+  // once per `checkSeconds`. `canSpawn` false (hidden tab, overlay up) stops the spawn
+  // clock outright, so nothing banks while nobody can see the shaft.
+  E.tickPickups = function (cfg, field, state, dt, derived, rng, canSpawn, hooks) {
+    var pk = cfg.pickups;
+    if (!pk || !field) return;
+    var topBu = settledTopBu(cfg, state, derived);
+    var i, s;
+    for (i = 0; i < field.slots.length; i++) {
+      s = field.slots[i];
+      if (!s.active) continue;
+      s.ttl -= dt; s.age += dt;
+      if (s.ttl <= 0 || s.yBu - topBu + s.sizeBu * 0.5 < 0) {
+        freePickup(field, s);
+        field.expired++;
+        if (hooks && hooks.onPickupExpire) hooks.onPickupExpire(s);
+      }
+    }
+    if (!canSpawn) return;
+    field.checkT += dt;
+    var guard = 0, bi = derived.band.index;
+    while (field.checkT >= pk.checkSeconds && guard++ < 64) {
+      field.checkT -= pk.checkSeconds;
+      for (var t = 0; t < pk.types.length; t++) {
+        var ty = pk.types[t];
+        if (state.depth < ty.minDepth) continue;
+        if (field.live >= field.slots.length || E.pickupLiveOf(field, ty.id) >= ty.maxLive) continue;
+        var p = ty.ratePerMinute * bandPow(ty.rateMulPerBand, bi, cfg) * pk.checkSeconds / 60;
+        if (rng() >= p) continue;
+        s = E.spawnPickup(cfg, field, state, derived, ty.id, rng);
+        if (s && hooks && hooks.onPickupSpawn) hooks.onPickupSpawn(s);
+      }
+    }
+  };
+
+  // Gold for one gem: N seconds of passive income, floored at N taps (so a gem is worth
+  // something before the crew earns), both scaled up by band.
+  E.gemGold = function (cfg, derived, bandIndex) {
+    var gem = pickupType(cfg, "gem");
+    var r = gem ? gem.reward : null;
+    if (!r) return 0;
+    var g = Math.max(derived.goldRate * r.incomeSeconds, derived.goldPerTap * r.floorTaps);
+    return clamp(g * bandPow(r.payoutMulPerBand, bandIndex, cfg));
+  };
+
+  function rollWeighted(list, rng) {
+    var total = 0, i;
+    for (i = 0; i < list.length; i++) total += list[i].weight;
+    var roll = rng() * total, acc = 0;
+    for (i = 0; i < list.length; i++) { acc += list[i].weight; if (roll < acc) return list[i]; }
+    return list[list.length - 1];
+  }
+
+  // A buff is one timed effect on the existing verbs. A second chest of the same buff
+  // refreshes the timer instead of stacking another multiplier on top.
+  E.applyPickupBuff = function (cfg, state, b, bandIndex) {
+    var secs = b.seconds + b.secondsPerBand * Math.max(0, Math.min(bandIndex, cfg.pickups.bandScaleCap));
+    var until = state.t + secs, tl = state.timed;
+    var tid = b.timedId || hide(b, "timedId", "pickup:" + b.id);
+    for (var i = 0; i < tl.length; i++) {
+      if (tl[i].id === tid && tl[i].until > state.t) { if (until > tl[i].until) tl[i].until = until; return secs; }
+    }
+    tl.push({ verb: b.verb, value: b.value, until: until, id: tid });
+    return secs;
+  };
+
+  // One click on pickup `id`. A geode loses a click and cracks; the last click (or the
+  // only click on a gem or chest) pays and frees the slot. Returns what happened.
+  E.clickPickup = function (cfg, field, state, id, rng) {
+    var s = E.pickupById(field, id);
+    if (!s) return { ok: false, reason: "gone", id: id };
+    s.clicks--;
+    var res = { ok: true, id: id, type: s.type, kind: s.kind, done: false, clicksLeft: s.clicks,
+      clicksMax: s.clicksMax, gold: 0, buff: null, buffSeconds: 0, gems: 0, xBu: s.xBu, yBu: s.yBu, bandIndex: s.bandIndex };
+    if (s.clicks > 0) return res;
+    var ty = pickupType(cfg, s.type), d = E.derive(cfg, state), pk = cfg.pickups;
+    var r = ty.reward;
+    if (r.kind === "table") r = rollWeighted(pk.geodeTable, rng);
+    if (r.kind === "gold") {
+      var g = Math.max(d.goldRate * r.incomeSeconds, d.goldPerTap * r.floorTaps);
+      res.gold = clamp(g * bandPow(r.payoutMulPerBand, s.bandIndex, cfg));
+    } else if (r.kind === "gems") {
+      res.gems = r.count;
+      res.gold = clamp(E.gemGold(cfg, d, s.bandIndex) * r.count);
+    } else if (r.kind === "buff") {
+      res.buff = rollWeighted(pk.buffs, rng);
+      res.buffSeconds = E.applyPickupBuff(cfg, state, res.buff, s.bandIndex);
+    }
+    if (res.gold > 0) {
+      state.gold = clamp(state.gold + res.gold);
+      state.goldEarnedTotal = clamp(state.goldEarnedTotal + res.gold);
+    }
+    res.done = true;
+    res.clicksLeft = 0;
+    freePickup(field, s);
+    field.collected++;
+    field.goldPaid = clamp(field.goldPaid + res.gold);
+    return res;
   };
 
   // ------------------------------------------------------------ snapshot
@@ -602,6 +823,16 @@
     }
     var peakGold = 0;
 
+    // M5: `pickups: "collect-all"` spawns on the same schedule as the live game and
+    // collects every spawn the moment it appears (geodes cracked through). "off" (the
+    // default) leaves the pre-M5 numbers untouched. Pickups roll on their own rng.
+    var pickupMode = opts.pickups === undefined ? "off" : opts.pickups;
+    if (pickupMode !== "off" && pickupMode !== "collect-all") return { error: "unknown pickups mode: " + pickupMode };
+    var pField = pickupMode === "collect-all" && cfg.pickups ? E.newPickupField(cfg) : null;
+    var pRng = E.makeRng(((opts.seed === undefined ? (cfg.sim.seed || 1) : opts.seed) ^ 0x51CC) >>> 0);
+    var pStats = { spawned: 0, collected: 0, gold: 0, buffs: 0, byType: {} };
+    var allFinite = true;
+
     var guard = 0;
     for (var t = 0; t < maxSeconds; t += dt) {
       if (guard++ > 10000000) break;
@@ -641,9 +872,29 @@
 
       E.substep(cfg, state, dt, ctx);
       if (state.gold > peakGold) peakGold = state.gold;
+      if (!isFinite(state.gold) || !isFinite(state.depth) || !isFinite(state.goldEarnedTotal)) allFinite = false;
+
+      if (pField) {
+        var pd = E.derive(cfg, state);
+        var sp0 = pField.spawned;
+        E.tickPickups(cfg, pField, state, dt, pd, pRng, true, null);
+        pStats.spawned += pField.spawned - sp0;
+        for (var ps = 0; ps < pField.slots.length; ps++) {
+          var slot = pField.slots[ps];
+          if (!slot.active) continue;
+          var ptype = slot.type, pres = null, pg = 0;
+          while (pg++ < 16 && slot.active) pres = E.clickPickup(cfg, pField, state, slot.id, pRng);
+          if (!pres || !pres.done) continue;
+          pStats.collected++;
+          pStats.gold += pres.gold;
+          if (pres.buff) pStats.buffs++;
+          pStats.byType[ptype] = (pStats.byType[ptype] || 0) + 1;
+        }
+      }
 
       if (state.t >= nextSample) {
         var d2 = E.derive(cfg, state);
+        if (!isFinite(d2.goldRate) || !isFinite(d2.digRate) || !isFinite(d2.goldPerTap)) allFinite = false;
         samples.push({
           t: Math.round(state.t), depth: +state.depth.toFixed(2), gold: state.gold,
           goldRate: d2.goldRate, digRate: d2.digRate, band: d2.band.id,
@@ -724,7 +975,10 @@
       policy: policyName,
       dt: dt,
       owned: JSON.parse(JSON.stringify(state.owned)),
-      richButLockedMax: richButLockedMax
+      richButLockedMax: richButLockedMax,
+      pickups: pickupMode,
+      pickupStats: pStats,
+      allFinite: allFinite && isFinite(peakGold) && isFinite(maxGap)
     };
   };
 
@@ -791,7 +1045,7 @@
     var errors = [];
     var need = ["start", "sim", "format", "ores", "tracks", "dwarves", "save", "layout",
                 "events", "eventRules", "offline", "milestone", "endless", "flavor",
-                "audio", "particles", "ending"];
+                "audio", "particles", "ending", "pickups"];
     for (var i = 0; i < need.length; i++) if (!cfg[need[i]]) errors.push("missing block: " + need[i]);
     if (errors.length) return { ok: false, errors: errors };
 
@@ -907,6 +1161,65 @@
           errors.push("dwarf " + cfg.dwarves[dk].id + ": unknown cosmetic palette '" + cos.palette + "'");
         }
       }
+    }
+
+    // ---- M5 pickups. Every number the spawner, the payouts and the hit test read.
+    var pk = cfg.pickups;
+    if (pk) {
+      if (!(pk.checkSeconds > 0)) errors.push("pickups.checkSeconds must be > 0");
+      if (!(pk.maxLive >= 1 && pk.maxLive <= 16)) errors.push("pickups.maxLive must be 1..16");
+      if (!(pk.bandScaleCap >= 0)) errors.push("pickups.bandScaleCap must be >= 0");
+      if (!(pk.lanternLifetimeS >= 0)) errors.push("pickups.lanternLifetimeS must be >= 0");
+      if (!(pk.hitMinCssPx >= 40)) errors.push("pickups.hitMinCssPx must be >= 40 (phone tap target)");
+      if (!(pk.hitPadBu >= 0)) errors.push("pickups.hitPadBu must be >= 0");
+      var ps = pk.spawn || {};
+      if (!Array.isArray(ps.leftXBu) || !Array.isArray(ps.rightXBu) || !(ps.leftXBu[1] >= ps.leftXBu[0]) || !(ps.rightXBu[1] >= ps.rightXBu[0])) {
+        errors.push("pickups.spawn.leftXBu/rightXBu must be [min, max]");
+      }
+      if (!(ps.aboveFaceBu >= 0 && ps.belowFaceBu >= 0 && ps.padTopBu >= 0 && ps.padBottomBu >= 0 && ps.minGapBu >= 0 && ps.veinClearBu >= 0)) {
+        errors.push("pickups.spawn needs aboveFaceBu, belowFaceBu, padTopBu, padBottomBu, minGapBu, veinClearBu >= 0");
+      }
+      function checkReward(label, r, allowTable) {
+        if (!r || !(PICKUP_REWARDS[r.kind] || (allowTable && r.kind === "table"))) { errors.push(label + ": unknown reward kind '" + (r && r.kind) + "'"); return; }
+        if (r.kind === "gold" && !(r.incomeSeconds > 0 && r.floorTaps >= 0 && r.payoutMulPerBand > 0)) errors.push(label + ": gold reward needs incomeSeconds > 0, floorTaps >= 0, payoutMulPerBand > 0");
+        if (r.kind === "gems" && !(r.count >= 1)) errors.push(label + ": gems reward needs count >= 1");
+      }
+      if (!Array.isArray(pk.types) || !pk.types.length) errors.push("pickups.types must be a non-empty array");
+      else {
+        var pseen = {};
+        for (var pt = 0; pt < pk.types.length; pt++) {
+          var ty = pk.types[pt], tl = "pickup " + ty.id;
+          if (!ty.id || pseen[ty.id]) errors.push("pickups.types: missing or duplicate id '" + ty.id + "'");
+          pseen[ty.id] = true;
+          if (!PICKUP_KINDS[ty.kind]) errors.push(tl + ": unknown kind '" + ty.kind + "' (sprites exist for gem, chest, geode)");
+          if (!(ty.ratePerMinute >= 0)) errors.push(tl + ": ratePerMinute must be >= 0");
+          if (!(ty.rateMulPerBand > 0)) errors.push(tl + ": rateMulPerBand must be > 0");
+          if (!(ty.minDepth >= 0)) errors.push(tl + ": minDepth must be >= 0");
+          if (!(ty.maxLive >= 1)) errors.push(tl + ": maxLive must be >= 1");
+          if (!(ty.lifetimeS > 0)) errors.push(tl + ": lifetimeS must be > 0");
+          if (!(ty.sizeBu > 0)) errors.push(tl + ": sizeBu must be > 0");
+          if (!Array.isArray(ty.clicks) || !(ty.clicks[0] >= 1) || !(ty.clicks[1] >= ty.clicks[0]) || ty.clicks[1] > 8 ||
+              Math.floor(ty.clicks[0]) !== ty.clicks[0] || Math.floor(ty.clicks[1]) !== ty.clicks[1]) {
+            errors.push(tl + ": clicks must be integers [min, max], 1 <= min <= max <= 8");
+          }
+          checkReward(tl, ty.reward, true);
+        }
+        if (!pseen.gem) errors.push("pickups.types needs a 'gem' (gem bursts pay in gems)");
+      }
+      if (!Array.isArray(pk.buffs) || !pk.buffs.length) errors.push("pickups.buffs must be a non-empty array");
+      else for (var pb = 0; pb < pk.buffs.length; pb++) {
+        var bf = pk.buffs[pb];
+        if (bf.verb !== "mul_gold_temp" && bf.verb !== "mul_rate_temp") errors.push("pickup buff " + bf.id + ": verb must be a timed verb (mul_gold_temp, mul_rate_temp)");
+        if (!(bf.value > 0) || !(bf.seconds > 0) || !(bf.secondsPerBand >= 0) || !(bf.weight > 0)) errors.push("pickup buff " + bf.id + ": needs value > 0, seconds > 0, secondsPerBand >= 0, weight > 0");
+        if (!bf.label) errors.push("pickup buff " + bf.id + ": needs a label");
+      }
+      if (!Array.isArray(pk.geodeTable) || !pk.geodeTable.length) errors.push("pickups.geodeTable must be a non-empty array");
+      else for (var pg = 0; pg < pk.geodeTable.length; pg++) {
+        checkReward("geodeTable[" + pg + "]", pk.geodeTable[pg], false);
+        if (!(pk.geodeTable[pg].weight > 0)) errors.push("geodeTable[" + pg + "]: weight must be > 0");
+      }
+      if (!pk.palette || !pk.palette.gem || !pk.palette.chest || !pk.palette.geode) errors.push("pickups.palette needs gem, chest and geode");
+      if (!pk.juice) errors.push("pickups.juice is missing");
     }
 
     if (!(cfg.format.activeSuffixes >= 1)) errors.push("format.activeSuffixes must be >= 1");

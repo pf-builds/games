@@ -1,6 +1,7 @@
 // Greedy Deep — WebAudio synth + ambient drone. Click it! Studios, 2026.
 //
-// The 13-cue table from R4 §4 plus the depth-reactive ambient drone ("the Deep").
+// The 13-cue table from R4 §4, four M5 pickup cues, and the depth-reactive ambient
+// drone ("the Deep").
 // All synthesized through tone()/noise(). Audio context created only on first user
 // gesture. Master gain and per-cue gain in config `audio` block.
 //
@@ -142,6 +143,26 @@
   CUES.ui = function (g) {
     if (!gate("ui", gt2("ui", 30))) return;
     tone(700, 500, 0.035, "square", 0.045 * g);
+  };
+
+  // ---- M5 pickup cues: a bright ping for a gem, a creak and a chord for a chest,
+  // a dull knock per geode crack, and a crunch plus a sparkle run when it bursts.
+  CUES.gem = function (g) {
+    if (!gate("gem", gt2("gem", 40))) return;
+    tone(1320, 1320, 0.07, "triangle", 0.09 * g);
+    tone(1760, 1980, 0.12, "sine", 0.07 * g, 0.05);
+  };
+  CUES.chestOpen = function (g) {
+    noise(0.12, 0.08 * g, 0, 900, 1.6); tone(160, 110, 0.12, "sawtooth", 0.05 * g);
+    [523, 659, 784, 1047].forEach(function (f, i) { tone(f, f, 0.12, "triangle", 0.08 * g, 0.1 + i * 0.07); });
+  };
+  CUES.geodeCrack = function (g) {
+    if (!gate("geodeCrack", gt2("geodeCrack", 50))) return;
+    noise(0.06, 0.12 * g, 0, 1400); tone(rnd(150, 180), 70, 0.08, "square", 0.06 * g);
+  };
+  CUES.geodeBurst = function (g) {
+    noise(0.18, 0.14 * g, 0, 2400); tone(210, 60, 0.16, "sawtooth", 0.07 * g);
+    [1047, 1319, 1568, 2093].forEach(function (f, i) { tone(f, f * 1.02, 0.08, "sine", 0.06 * g, 0.08 + i * 0.05); });
   };
 
   // ---- ambient drone: "the Deep" (R4 §4) ----

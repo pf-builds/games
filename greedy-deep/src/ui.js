@@ -3,7 +3,7 @@
 (function () {
   "use strict";
 
-  var CONFIG_VERSION = 22;
+  var CONFIG_VERSION = 23;
 
   var UI = (window.GDUI = {});
   var E = window.GDEngine, GD = window.GD;
@@ -71,6 +71,7 @@
     els.rightRail = $("right-rail");
     els.muteBtn = $("mute-btn");
     els.settings = $("settings");
+    els.buffs = $("buffs");
 
     els.splash = $("splash");
     els.splashLogo = $("splash-logo");
@@ -79,6 +80,7 @@
     GD.hooks.onEvent = onEvent;
     GD.hooks.onBand = onBand;
     GD.hooks.onEnding = onEnding;
+    GD.hooks.onPickupClick = onPickupClick;
 
     // Particles (from staged GDParticles)
     if (window.GDParticles) {
@@ -179,6 +181,51 @@
   }
 
   function var_gold() { return "#f2c14e"; }
+
+  // ------------------------------------------------------------ pickups (M5)
+  // Any overlay up (splash, settings, welcome-back, ending) blocks pickups: nothing is
+  // collected through it, and GD stops the spawn clock while it is showing.
+  function overlayOpen() {
+    if (els.splash && !els.splash.classList.contains("gone")) return true;
+    if (els.settings && !els.settings.classList.contains("hidden")) return true;
+    if (els.welcome && !els.welcome.classList.contains("hidden")) return true;
+    if (els.ending && !els.ending.classList.contains("hidden")) return true;
+    return false;
+  }
+  UI.overlayOpen = overlayOpen;
+
+  // Pop + floater at the pickup, a log line for chests and geodes. Event-driven, so the
+  // few objects made here are per click, never per frame.
+  function onPickupClick(res) {
+    var pk = cfg.pickups, J = pk.juice, P = pk.palette;
+    var bx = res.xBu, by = window.GDRender.screenYBu(res.yBu);
+    var ty = E.pickupType(cfg, res.type), label = ty ? ty.label : res.type;
+    var col = res.kind === "gem" ? P.gem.light : (res.kind === "chest" ? P.chest.band : P.geode.crystalLit);
+    if (!res.done) {
+      window.GDRender.flashPickup(res.id);
+      if (particleSystem) particleSystem.burst(bx, by, P.geode.rockDark, J.crackChunks, J.crackSpeed, J.popLife, J.popSize, J.popGravity);
+      refresh();
+      return;
+    }
+    if (particleSystem) {
+      particleSystem.burst(bx, by, col, J.popChunks, J.popSpeed, J.popLife, J.popSize, J.popGravity);
+      particleSystem.ring(bx, by, col, J.ringR0, J.ringR1, J.ringLife);
+      if (res.gems) for (var r = 1; r < J.gemBurstRings; r++) particleSystem.ring(bx, by, P.gem.light, J.ringR0 + r * 4, J.ringR1 + r * 6, J.ringLife + r * 0.1);
+    }
+    var text;
+    if (res.buff) text = label + ": " + res.buff.label + " for " + Math.round(res.buffSeconds) + " s";
+    else if (res.gems) text = label + ": " + res.gems + " gems +" + GD.format(res.gold);
+    else text = label + " +" + GD.format(res.gold);
+    var short = res.buff ? res.buff.label + " " + Math.round(res.buffSeconds) + "s" : (res.gems ? res.gems + " gems +" : label + " +") + GD.format(res.gold);
+    if (floaterSystem) {
+      // keep the floater on the canvas: the walls sit at the edges of a 160 bu column
+      var half = short.length * J.floaterSize * 0.42;   // bold glyph ~0.6 em at the 1.3x pop-in scale
+      var fx = Math.max(half + 2, Math.min(cfg.layout.columnBu - cfg.layout.ribbonBu - half - 2, bx));
+      floaterSystem.add(fx, by - 6, short, col, J.floaterSize, J.floaterLife);
+    }
+    if (res.kind !== "gem") pushLog(text, "boon");
+    refresh();
+  }
 
   function onEnding(st, m) {
     // Start the canvas-drawn ending scene (item 4)
@@ -808,6 +855,10 @@
       var d = down; down = null;
       window.GDRender.cameraRelease();
       if (moved) return;
+      if (overlayOpen()) return;
+      // M5: a click on a pickup collects it and is NOT also a strike on the vein.
+      var pid = window.GDRender.pickupAt(d.lx, d.ly);
+      if (pid) { GD.clickPickup(pid); return; }
       doStrike(d.lx, d.ly);
     }
     els.canvas.addEventListener("pointerup", endPointer);
@@ -984,6 +1035,7 @@
       }
     }
     renderNextBands(d);
+    renderBuffs();
     placeHint();
     GD.refreshDbg(fps);
     if (GD.debug && els.overlay) {
@@ -998,7 +1050,7 @@
           "  d " + Math.abs(GD.dbg.cameraY - GD.dbg.deepestDwarfY).toFixed(1) + "bu" +
         "\nreveal +" + d.revealBonus + "  drawn<=" + GD.dbg.maxRenderedBandIndex +
           "  fwd " + GD.dbg.forwardMeters.toFixed(0) + "m  veil " + GD.dbg.veilAlpha.toFixed(2) +
-        "\ntimed " + st.timed.length +
+        "\ntimed " + st.timed.length + "  pickups " + (GD.pickups ? GD.pickups.live + " live, " + GD.pickups.collected + " got" : "-") +
         "\nev " + st.eventsFired + " last " + (st.lastEvent || "-") +
         "\nowned " + JSON.stringify(st.owned) +
         "\ncard " + GD.dbg.titleCardBytes + "b  sprites " +
@@ -1018,6 +1070,22 @@
         "\nsave " + GD.dbg.saveSize + "b  err " + GD.dbg.errors + "/" + GD.dbg.warnings +
         "\nFLAVOR-TODO " + GD.dbg.flavorTodoCount;
     }
+  }
+
+  // Active pickup buffs with a whole-second countdown. Rewritten only when the text changes.
+  var lastBuffKey = "";
+  function renderBuffs() {
+    if (!els.buffs) return;
+    var list = GD.activeBuffs(), key = "";
+    for (var i = 0; i < list.length; i++) key += (i ? "|" : "") + list[i].label + " " + list[i].secondsLeft;
+    if (key === lastBuffKey) return;
+    lastBuffKey = key;
+    var html = "";
+    for (var j = 0; j < list.length; j++) {
+      html += '<div class="buff buff-' + list[j].id + '"><b>' + list[j].label.toUpperCase() + "</b><span>" + list[j].secondsLeft + "s</span></div>";
+    }
+    els.buffs.innerHTML = html;
+    els.buffs.classList.toggle("hidden", !list.length);
   }
 
   var lastNextKey = "";

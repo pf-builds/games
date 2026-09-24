@@ -1,8 +1,8 @@
-# Greedy Deep — Build Spec (M4: juice, mobile, save, ending)
+# Greedy Deep — Build Spec (M5: clickable pickups)
 
 Cabinet #7. Incremental mining game, side-view cutaway of one vertical shaft. Full contract:
 `business/D-click-it-studios/game-research/greedy-deep-PRD.md`, with the sprite and audio
-recipes in `greedy-deep-research-art.md` (R4). This file covers M1 through M4.
+recipes in `greedy-deep-research-art.md` (R4). This file covers M1 through M5.
 
 ## Mechanic
 Two income paths, deliberately separate:
@@ -80,10 +80,10 @@ in JSON. Slots: welcomeBack, dwarfLine, bandIntro, event, ending, endingTitle.
 | `style.css` | portrait tabs, desktop rails, all sizes from `--s` |
 | `config/greedy-deep.json` | every tunable number; own `?v=` cache-bust |
 | `src/engine.js` | pure sim: tick, purchase, effects, bands, validation |
-| `src/gd.js` | `window.GD` facade, debug, selfTest (190 assertions) |
+| `src/gd.js` | `window.GD` facade, debug, selfTest (252 assertions at 1280x900) |
 | `src/sprites.js` | procedural sprite factory |
 | `src/particles.js` | pooled particles + floaters (from peasant-swarm) |
-| `src/audio.js` | WebAudio synth, 13 cues, ambient drone (M4) |
+| `src/audio.js` | WebAudio synth, 13 cues + 4 pickup cues (M5), ambient drone |
 | `src/render.js` | shaft canvas, camera, depth ribbon, crit shake |
 | `assets/title.webp` | SDXL-base splash card, 62.6 KB |
 | `src/ui.js` | DOM, tabs, roster, settings, input, clocks |
@@ -193,3 +193,97 @@ updated only the originals in the `rows` array; the clones showed stale prices/s
 A row displaying an old lower price looked buyable but the real buy checked the current higher
 price and failed. Fix: move the actual DOM nodes into the rails instead of cloning. On portrait
 resize, move them back to their tab containers.
+
+## M5: clickable pickups (2026-09-23)
+
+Golden-cookie style pickups in the side walls near the dig face. Everything tunable is in
+JSON `pickups`, validated by `validateConfig()` (unknown kind, bad click range, a buff on a
+non-timed verb, or a hit target under 40 CSS px all fail loud).
+
+| Pickup | Rate | Clicks | Life | Reward |
+|---|---|---|---|---|
+| Gem (common) | 1.2/min, x0.92 per band (rarer deeper) | 1 | 9 s | max(40 s of passive income, 25 taps) x 1.03^band |
+| Geode (uncommon) | 0.25/min, x1.1 per band, from 5 m | 3-5 (rolled) | 14 s | table: gold 5 (max(90 s passive, 40 taps) x 1.03^band), buff 3, gem burst 2 (3 gems' worth) |
+| Chest (rare) | 0.1/min, x1.1 per band, from 10 m | 1 | 10 s | a buff: income x3 for 30 s (+3 s/band) or dig x1.5 for 10 s (+0.5 s/band) |
+
+- **Spawning.** Rolled once per `checkSeconds` of sim time on the same clock as events
+  (`E.tickPickups`, wired through `GD.ctx.onStep` in `E.substep`, so the live loop and
+  `GD.step` share it). Own rng, so pickups never shift the event rng. Pool of `maxLive` 4
+  slots, allocated once. Placement: a random side wall (left 8-34 bu, right 122-146 bu),
+  within 96 bu above / 44 bu below the face on a settled camera, kept clear of the active
+  vein and 20 bu from other pickups. World-anchored: they scroll with the shaft.
+- **Never while hidden or behind an overlay.** The spawn clock stops (does not bank) when
+  the tab is hidden or the splash, settings, welcome-back or ending overlay is up, and a
+  click is refused in either state. `applyOffline()` never sees the field, so offline time
+  grants nothing from pickups. `GD._visibility = "visible" | "hidden"` pins the tab state
+  (null = the real `document.hidden`); selfTest uses it, and a critic in a hidden browser
+  pane needs it to collect.
+- **Despawn.** On lifetime, or when it scrolls above the settled viewport. Blinks for the
+  last 2 s.
+- **Depth (the Lantern choice).** Rates and payouts scale by band index (capped at
+  `bandScaleCap` 6 so endless bands never compound). The Deep Lantern adds
+  `lanternLifetimeS` 2 s of lifetime per level. The alternative (a reveal glint through the
+  veil) was not built.
+- **Buffs** are pushed onto `state.timed` with the existing `mul_gold_temp` /
+  `mul_rate_temp` verbs and id `pickup:<buff>`, so they end on sim time like events do. A
+  second chest of the same buff refreshes the timer rather than stacking. Timed effects are
+  not saved (never were), so a buff does not survive a reload. The active buff shows as a
+  chip under the depth readout ("INCOME x3 27s"). No free-crits buff: there is no crit
+  mechanic in the engine to hang it on.
+- **Input.** A click or tap on a pickup collects it (a geode loses a click and cracks) and
+  is NOT a vein strike. The drag threshold still wins: a drag pans and never collects.
+  Spacebar only strikes. The hit box is square, at least `hitMinCssPx` 44 CSS px across and
+  `hitPadBu` 6 bu past the sprite (gem 44 px, chest/geode 52 px at phone scale 2; 66/78 px
+  at scale 3). Overlapping hits go to the nearest centre.
+- **Juice.** Procedural sprites in `sprites.js` (gem, chest, geode in 5 crack stages, so
+  every click of a 3-, 4- or 5-click geode shows a new crack), all inside the opaque-pixel
+  verified cache and rebuilt with it. Pulsing halo, pop-in scale, a travelling sparkle, a
+  jolt + flash per crack. On collect: pooled particle burst + ring, a floater clamped on
+  the canvas ("Gem +1.27K", "income x3 33s"), and a log line for chests and geodes
+  ("Chest: income x3 for 36 s"). Cues `gem`, `chestOpen`, `geodeCrack`, `geodeBurst` go
+  through `GDAudio.play`, so `GD.dbg.lastCue` records them.
+
+### `window.GD` additions
+`GD.spawnPickup(type, {x, y, side, ttl, clicks})` places one whatever the gates say (x/y
+in viewport bu) and returns `{id, type, ttl, clicks}`. `GD.clickPickup(id)` is one click
+(gated, cued, juiced). `GD.collectPickup(id, {single})` clicks until it pays.
+`GD.dbg.pickups` (after `GD.refreshDbg()`): `{id, type, ttl, clicksLeft, clicksMax, x, y,
+hitRadiusPx}` with x/y the CLIENT-space centre, ready for `pointerdown`/`pointerup` on
+`#shaft`. `GD.dbg.pickupStats`, `GD.dbg.buffs`, `GD.activeBuffs()`, `GD.pickupsBlocked()`.
+`GD.simulate({pickups: "off" | "collect-all"})` (default off). Collect-all collects every
+spawn the moment it appears and cracks geodes through. Results carry `pickupStats` and
+`allFinite`.
+
+### M5 economy (seed 1, `GD.simulate`)
+| Run | Ending | maxGap | First 600 s | Peak gold | Band cadence min/median/max |
+|---|---|---|---|---|---|
+| cheapest, pickups off | 9,837 s (164 min) | 296 | 24 | 134,913 | 1348 / 3077 / 3463 s |
+| cheapest, collect-all | 9,013 s (150 min) | 261 | 26 | 147,318 | 1241 / 2716 / 3203 s |
+| max-buy, pickups off | 5,623 s (94 min) | 193 | 38 | 197,889 | 881 / 1454 / 2402 s |
+| max-buy, collect-all | 5,451 s (91 min) | 186 | 38 | 197,101 | 834 / 1428 / 2339 s |
+
+All values finite. Across seeds 1-12, collect-all holds: max-buy 5,421-5,573 s, cheapest
+maxGap 254-297 s. Collect-all paid 141 gems / 44 geodes / 15 chests (581K gold) in the
+cheapest run and 89 / 23 / 13 (359K) under max-buy.
+
+## Tuning log (M5)
+Pickups only, JSON only. The core curve is untouched.
+- Start point (gem 40 s of passive income, 30-tap floor, 1.2/min; dig x2 chests) put
+  max-buy + collect-all at 5,294 s, under the 5,400 floor. Frenzy was worth ~150 s of that,
+  pickup gold ~200 s, against 223 s of headroom (max-buy without pickups is 5,623 s).
+- This economy is tap-dominated: passive income (the HUD INCOME) is 3-5% of a tapper's
+  income until late Starmetal, so the gem's tap floor, not its income seconds, sets its
+  value. Measured at 600 s samples of the cheapest run, a gem is 150-950 s of HUD passive
+  income but about 13 s of a 2-taps/s player's total income (3 s at 8 taps/s). A 60-tap
+  floor (about 30 s of casual total income) breaks max-buy (5,329 s). The shipped 25-tap
+  floor is the largest that holds the window with margin.
+- The cheapest-affordable maxGap already sits at 296-298 s without pickups (a silver-band
+  price-ladder cluster around 30K). Pickups perturb it both ways; a grid over 12 seeds
+  picked the settings that keep every seed under 300.
+- Final: gem 1.2/min x0.92/band, 25-tap floor, 40 s passive, x1.03/band payout; geode
+  0.25/min, gold 40 taps / 90 s; chest 0.1/min; frenzy dig x1.5 for 10 s (+0.5 s/band);
+  income x3 for 30 s (+3 s/band). Passive-only, so income x3 costs the window nothing and
+  makes the INCOME stat jump visibly.
+- Peak gold stays ~150K-200K (open question for Peter, not chased).
+- If pickups feel thin in playtest, the lever is the max-buy baseline, not the pickups:
+  the window only has ~220 s of headroom to give.
