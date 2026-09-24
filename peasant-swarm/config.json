@@ -5,8 +5,8 @@
     "tile": 64,
     "trees": 72,
     "rocks": 32,
-    "matchSeconds": 240,
-    "finalSeconds": 60,
+    "matchSeconds": 300,
+    "finalSeconds": 75,
     "decals": 340,
     "trailDist": 560,
     "campLabelDist": 340
@@ -129,7 +129,8 @@
       ],
       "escapeReplan": 1.0,
       "escapeDistance": 900
-    }
+    },
+    "truceSeconds": 0
   },
   "powerups": {
     "count": 9,
@@ -162,46 +163,103 @@
     "personalities": [
       {
         "name": "Greedy",
+        "kind": "greedy",
         "color": "#E8701A",
         "huntRatio": 1.35,
         "fleeRatio": 1.25,
         "neutralBias": 1.6,
-        "powerBias": 1.0,
+        "powerBias": 1.5,
         "hatesPlayer": 1.0
       },
       {
         "name": "Bully",
+        "kind": "bully",
         "color": "#2F7BD8",
         "huntRatio": 1.1,
         "fleeRatio": 1.6,
         "neutralBias": 0.9,
         "powerBias": 1.0,
-        "hatesPlayer": 1.6
+        "hatesPlayer": 1.6,
+        "scentSearch": 15,
+        "trackRatio": 0.8
       },
       {
         "name": "Wary",
+        "kind": "wary",
         "color": "#F2D23C",
         "huntRatio": 1.7,
         "fleeRatio": 1.05,
         "neutralBias": 1.2,
         "powerBias": 1.1,
-        "hatesPlayer": 1.0
+        "hatesPlayer": 1.0,
+        "clashLeave": 800,
+        "leaveSeconds": 8,
+        "edgeBias": 0.8
+      },
+      {
+        "name": "Sly",
+        "kind": "sly",
+        "color": "#C8323C",
+        "huntRatio": 1.5,
+        "fleeRatio": 1.3,
+        "neutralBias": 1.0,
+        "powerBias": 1.2,
+        "hatesPlayer": 1.0,
+        "clashGo": 1600,
+        "foughtSeconds": 8,
+        "foughtHuntRatio": 0.9,
+        "lurkSeconds": 20,
+        "lurkCooldown": 20,
+        "lurkPassMax": 700
+      },
+      {
+        "name": "Stubborn",
+        "kind": "stubborn",
+        "color": "#9A62E0",
+        "huntRatio": 0.8,
+        "fleeRatio": 1.3,
+        "homeFleeRatio": 2.0,
+        "neutralBias": 1.0,
+        "powerBias": 0.8,
+        "hatesPlayer": 1.0,
+        "holdRadius": 350,
+        "clusterRadius": 300,
+        "reclaimEmpty": 20
       }
     ],
-    "finalHuntRatio": 0.0,
     "finalFleeRatio": 2.5,
     "huntSpeed": 1.07,
     "fleeSpeed": 0.88,
     "corneredDist": 200,
-    "gracePeriod": 60,
-    "aiVsAiHuntMult": 1.6,
-    "powerupSight": 650,
+    "grace": 60,
+    "aiVsAiHuntMult": 2.2,
+    "objectiveSight": 900,
     "powerScore": 170,
     "neutralScore": 100,
     "huntTimeout": 10,
     "huntCooldown": 12,
     "leadSmooth": 0.3,
-    "roamSpeed": 1.0
+    "roamSpeed": 1.0,
+    "proxy": {
+      "name": "Mint",
+      "kind": "proxy",
+      "color": "#1FD1A3",
+      "huntRatio": 1.3,
+      "fleeRatio": 1.3,
+      "neutralBias": 1.3,
+      "powerBias": 1.2,
+      "hatesPlayer": 1.0
+    },
+    "campKnowStart": 700,
+    "campAvoidRadius": 260,
+    "campAvoidRatio": 0.7,
+    "relaxSeconds": 25,
+    "pileOnRatio": 1.6,
+    "pileOnBannerCooldown": 30,
+    "graceAvoid": 520,
+    "ghostKeep": 20,
+    "heardSeconds": 3,
+    "scentJitter": 250
   },
   "player": {
     "name": "You",
@@ -249,24 +307,36 @@
   "difficulty": {
     "easy": {
       "label": "EASY",
-      "aiSpeed": 0.85,
+      "aiSpeed": 0.82,
       "think": 1.1,
       "huntMult": 1.6,
-      "startBonus": 5
+      "startBonus": 5,
+      "sight": 0.9,
+      "memory": 4,
+      "hearing": 1200,
+      "scentEvery": 40
     },
     "normal": {
       "label": "NORMAL",
-      "aiSpeed": 0.92,
+      "aiSpeed": 0.88,
       "think": 0.9,
       "huntMult": 1.3,
-      "startBonus": 3
+      "startBonus": 3,
+      "sight": 1.0,
+      "memory": 6,
+      "hearing": 1600,
+      "scentEvery": 25
     },
     "hard": {
       "label": "HARD",
-      "aiSpeed": 1.06,
+      "aiSpeed": 0.95,
       "think": 0.5,
       "huntMult": 0.9,
-      "startBonus": 0
+      "startBonus": 0,
+      "sight": 1.15,
+      "memory": 10,
+      "hearing": 2000,
+      "scentEvery": 15
     }
   },
   "touch": {
@@ -413,10 +483,20 @@
       1000
     ],
     "exploreSamples": 12,
-    "exploreCommit": 3
+    "exploreCommit": 3,
+    "labelDist": 900,
+    "labelDim": 0.6
   },
   "finale": {
-    "crownAbsorbs": false
+    "crownAbsorbs": false,
+    "crownEvery": 8,
+    "crownEveryLate": 4,
+    "crownLate": 20,
+    "torches": 1.25,
+    "underdogRatio": 0.3,
+    "closeTo": 500,
+    "pairRadius": 500,
+    "fullFlip": true
   },
   "input": {
     "desktopMode": "route",
@@ -463,7 +543,8 @@
     "holdSeconds": 20,
     "remnantWin": 60,
     "remnantLose": 40,
-    "remnantSeconds": 6
+    "remnantSeconds": 6,
+    "holdPace": 0.92
   },
   "_units": {
     "terrain.cell": [
@@ -1670,6 +1751,426 @@
       "fraction of the sight radius",
       0,
       1
+    ],
+    "world.matchSeconds": [
+      "s",
+      60,
+      900
+    ],
+    "world.finalSeconds": [
+      "s",
+      0,
+      300
+    ],
+    "ai.grace": [
+      "s (no AI hunts; AIs steer away from swarms they see)",
+      0,
+      300
+    ],
+    "ai.objectiveSight": [
+      "px (power-up beacons an AI can target)",
+      100,
+      3000
+    ],
+    "ai.aiVsAiHuntMult": [
+      "ratio multiplier on AI-vs-AI hunts",
+      0.5,
+      5
+    ],
+    "ai.campKnowStart": [
+      "px (camps an AI knows around its spawn)",
+      0,
+      3000
+    ],
+    "ai.campAvoidRadius": [
+      "px",
+      0,
+      1500
+    ],
+    "ai.campAvoidRatio": [
+      "fraction of own count",
+      0,
+      5
+    ],
+    "ai.relaxSeconds": [
+      "s (no new hunts on the player after it loses a fight)",
+      0,
+      120
+    ],
+    "ai.pileOnRatio": [
+      "leader / second count",
+      1,
+      5
+    ],
+    "ai.pileOnBannerCooldown": [
+      "s",
+      0,
+      300
+    ],
+    "ai.graceAvoid": [
+      "px",
+      0,
+      2000
+    ],
+    "ai.ghostKeep": [
+      "s",
+      0,
+      120
+    ],
+    "ai.heardSeconds": [
+      "s",
+      0.2,
+      20
+    ],
+    "ai.scentJitter": [
+      "px",
+      0,
+      1000
+    ],
+    "difficulty.easy.aiSpeed": [
+      "speed multiplier",
+      0.3,
+      2
+    ],
+    "difficulty.normal.aiSpeed": [
+      "speed multiplier",
+      0.3,
+      2
+    ],
+    "difficulty.hard.aiSpeed": [
+      "speed multiplier",
+      0.3,
+      2
+    ],
+    "difficulty.easy.sight": [
+      "sight multiplier",
+      0.3,
+      3
+    ],
+    "difficulty.normal.sight": [
+      "sight multiplier",
+      0.3,
+      3
+    ],
+    "difficulty.hard.sight": [
+      "sight multiplier",
+      0.3,
+      3
+    ],
+    "difficulty.easy.memory": [
+      "s",
+      0,
+      60
+    ],
+    "difficulty.normal.memory": [
+      "s",
+      0,
+      60
+    ],
+    "difficulty.hard.memory": [
+      "s",
+      0,
+      60
+    ],
+    "difficulty.easy.hearing": [
+      "px",
+      0,
+      5000
+    ],
+    "difficulty.normal.hearing": [
+      "px",
+      0,
+      5000
+    ],
+    "difficulty.hard.hearing": [
+      "px",
+      0,
+      5000
+    ],
+    "difficulty.easy.scentEvery": [
+      "s",
+      1,
+      300
+    ],
+    "difficulty.normal.scentEvery": [
+      "s",
+      1,
+      300
+    ],
+    "difficulty.hard.scentEvery": [
+      "s",
+      1,
+      300
+    ],
+    "difficulty.easy.think": [
+      "s",
+      0.1,
+      5
+    ],
+    "difficulty.normal.think": [
+      "s",
+      0.1,
+      5
+    ],
+    "difficulty.hard.think": [
+      "s",
+      0.1,
+      5
+    ],
+    "finale.crownEvery": [
+      "s",
+      0.5,
+      60
+    ],
+    "finale.crownEveryLate": [
+      "s",
+      0.5,
+      60
+    ],
+    "finale.crownLate": [
+      "s",
+      0,
+      300
+    ],
+    "finale.torches": [
+      "sight multiplier",
+      0.5,
+      3
+    ],
+    "finale.underdogRatio": [
+      "fraction of the leader's count",
+      0,
+      1
+    ],
+    "finale.closeTo": [
+      "px",
+      50,
+      3000
+    ],
+    "finale.pairRadius": [
+      "px",
+      50,
+      3000
+    ],
+    "combat.truceSeconds": [
+      "s (0 = off)",
+      0,
+      300
+    ],
+    "ai.personalities.0.huntRatio": [
+      "ratio",
+      0,
+      5
+    ],
+    "ai.personalities.0.fleeRatio": [
+      "ratio",
+      0,
+      5
+    ],
+    "ai.personalities.0.neutralBias": [
+      "score multiplier",
+      0,
+      5
+    ],
+    "ai.personalities.0.powerBias": [
+      "score multiplier",
+      0,
+      5
+    ],
+    "ai.personalities.0.hatesPlayer": [
+      "score multiplier",
+      0,
+      5
+    ],
+    "ai.personalities.1.huntRatio": [
+      "ratio",
+      0,
+      5
+    ],
+    "ai.personalities.1.fleeRatio": [
+      "ratio",
+      0,
+      5
+    ],
+    "ai.personalities.1.neutralBias": [
+      "score multiplier",
+      0,
+      5
+    ],
+    "ai.personalities.1.powerBias": [
+      "score multiplier",
+      0,
+      5
+    ],
+    "ai.personalities.1.hatesPlayer": [
+      "score multiplier",
+      0,
+      5
+    ],
+    "ai.personalities.1.scentSearch": [
+      "s",
+      0,
+      300
+    ],
+    "ai.personalities.2.huntRatio": [
+      "ratio",
+      0,
+      5
+    ],
+    "ai.personalities.2.fleeRatio": [
+      "ratio",
+      0,
+      5
+    ],
+    "ai.personalities.2.neutralBias": [
+      "score multiplier",
+      0,
+      5
+    ],
+    "ai.personalities.2.powerBias": [
+      "score multiplier",
+      0,
+      5
+    ],
+    "ai.personalities.2.hatesPlayer": [
+      "score multiplier",
+      0,
+      5
+    ],
+    "ai.personalities.2.clashLeave": [
+      "px",
+      0,
+      5000
+    ],
+    "ai.personalities.2.leaveSeconds": [
+      "s",
+      0,
+      300
+    ],
+    "ai.personalities.2.edgeBias": [
+      "weight",
+      0,
+      5
+    ],
+    "ai.personalities.3.huntRatio": [
+      "ratio",
+      0,
+      5
+    ],
+    "ai.personalities.3.fleeRatio": [
+      "ratio",
+      0,
+      5
+    ],
+    "ai.personalities.3.neutralBias": [
+      "score multiplier",
+      0,
+      5
+    ],
+    "ai.personalities.3.powerBias": [
+      "score multiplier",
+      0,
+      5
+    ],
+    "ai.personalities.3.hatesPlayer": [
+      "score multiplier",
+      0,
+      5
+    ],
+    "ai.personalities.3.clashGo": [
+      "px",
+      0,
+      5000
+    ],
+    "ai.personalities.3.foughtSeconds": [
+      "s",
+      0,
+      300
+    ],
+    "ai.personalities.3.foughtHuntRatio": [
+      "ratio",
+      0,
+      5
+    ],
+    "ai.personalities.3.lurkSeconds": [
+      "s",
+      0,
+      300
+    ],
+    "ai.personalities.3.lurkCooldown": [
+      "s",
+      0,
+      300
+    ],
+    "ai.personalities.3.lurkPassMax": [
+      "px",
+      0,
+      5000
+    ],
+    "ai.personalities.4.huntRatio": [
+      "ratio",
+      0,
+      5
+    ],
+    "ai.personalities.4.fleeRatio": [
+      "ratio",
+      0,
+      5
+    ],
+    "ai.personalities.4.homeFleeRatio": [
+      "ratio",
+      0,
+      5
+    ],
+    "ai.personalities.4.neutralBias": [
+      "score multiplier",
+      0,
+      5
+    ],
+    "ai.personalities.4.powerBias": [
+      "score multiplier",
+      0,
+      5
+    ],
+    "ai.personalities.4.hatesPlayer": [
+      "score multiplier",
+      0,
+      5
+    ],
+    "ai.personalities.4.holdRadius": [
+      "px",
+      0,
+      5000
+    ],
+    "ai.personalities.4.clusterRadius": [
+      "px",
+      0,
+      5000
+    ],
+    "ai.personalities.4.reclaimEmpty": [
+      "s",
+      0,
+      300
+    ],
+    "ai.personalities.1.trackRatio": [
+      "fraction of the hunt threshold (Bully tracks a scent only this close to it)",
+      0,
+      5
+    ],
+    "fog.labelDist": [
+      "px (last-seen camp labels on explored ground)",
+      0,
+      4000
+    ],
+    "fog.labelDim": [
+      "alpha multiplier for last-seen labels",
+      0,
+      1
+    ],
+    "fixtures.holdPace": [
+      "speed multiplier (the hold fixture's column pace, independent of difficulty)",
+      0.3,
+      2
     ]
   }
 }

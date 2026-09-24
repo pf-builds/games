@@ -110,7 +110,7 @@ body.touch #minimap { width: 110px; height: 110px; }
   #teams { order: 3; flex-basis: 100%; gap: .3rem; }
   .chip { font-size: .72rem; padding: .2rem .45rem .2rem .35rem; gap: .3rem; }
   .chip .sw { width: 10px; height: 10px; }
-  #hint { top: 11.6rem; font-size: .78rem; white-space: normal; max-width: 90vw; text-align: center; }
+  #hint { top: 12.2rem; font-size: .78rem; white-space: normal; max-width: 90vw; text-align: center; }
   .diffrow { flex-wrap: wrap; justify-content: center; font-size: .78rem; }
   .diffrow button { padding: .35rem .6rem; font-size: .72rem; min-height: 36px; }
 }

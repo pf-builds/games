@@ -38,6 +38,12 @@
 // match and in the cap-clash bench, gated at 1.5 ms p90. A ?nofog=1 page plays start -> end -> restart. --ref-draw-gate X gates bench draw
 // p90 at X times the reference; --bench-flush benches both builds with the per-frame canvas flush (see M3-build-notes.md). Console
 // warnings are failures now (M2 critic BLOCKER-1), except the font host's TLS lines.
+//
+// M4 additions (rivals and match): six teams and the 5:00 match. --ai-matches K now plays K all-AI matches under the real rules in the live
+// page (PS.debugStart({ aiPlayer: true }): team 1 as ai.proxy, rivals on Normal), stepped in 30 s chunks to the bell, and reads PS.pacing().
+// --bot-matches K plays K matches of the fog-honest scripted bot on each of --bot-diffs (default easy,normal) for the win rate. The report
+// carries the §9 pacing table: first sighting, first fight, fights per match, swarms alive at 1:00 / 2:00 / 3:00, bell reached, the 3:45
+// leader's win share, eliminations inside the first minute, the bot's win rate; the AI think cost per tick. Targets are M8 gates: reported.
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -53,7 +59,7 @@ const FONT_HOST = /fonts\.(googleapis|gstatic)\.com/;
 function parseArgs(argv) {
   const o = { url: "http://127.0.0.1:8471/peasant-swarm/", out: "harness-out", mobile: false, sim: 240, seeds: 3, difficulty: "normal",
     viewport: "1280x720", fights: "20x20,25x20,30x20,40x20,60x40", fightRuns: 5, fightMax: 40, renderSecs: 3, seed: null, cap: null, v1Url: null, benchReps: 3, aiMatches: 0, fixtures: false, refGate: null,
-    refDrawGate: null, benchFlush: false, throttle: 4, fogPerf: true };
+    refDrawGate: null, benchFlush: false, throttle: 4, fogPerf: true, botMatches: 0, botDiffs: "easy,normal", aiSecs: 300 };
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i], v = argv[i + 1];
     if (k === "--mobile") { o.mobile = true; continue; }
@@ -62,7 +68,8 @@ function parseArgs(argv) {
     if (k === "--no-fog-perf") { o.fogPerf = false; continue; }
     const key = { "--url": "url", "--out": "out", "--sim": "sim", "--seeds": "seeds", "--difficulty": "difficulty", "--viewport": "viewport",
       "--fights": "fights", "--fight-runs": "fightRuns", "--fight-max": "fightMax", "--render-secs": "renderSecs", "--seed": "seed", "--cap": "cap",
-      "--v1-url": "v1Url", "--bench-reps": "benchReps", "--ai-matches": "aiMatches", "--ref-gate": "refGate", "--ref-draw-gate": "refDrawGate", "--throttle": "throttle" }[k];
+      "--v1-url": "v1Url", "--bench-reps": "benchReps", "--ai-matches": "aiMatches", "--ref-gate": "refGate", "--ref-draw-gate": "refDrawGate", "--throttle": "throttle",
+      "--bot-matches": "botMatches", "--bot-diffs": "botDiffs", "--ai-secs": "aiSecs" }[k];
     if (!key) { console.error("unknown arg " + k); process.exit(2); }
     o[key] = typeof o[key] === "number" || key === "seed" || key === "refGate" || key === "refDrawGate" ? +v : v; i++;
   }
@@ -182,6 +189,37 @@ async function benchPage(browser, ctxOpts, href, reps) {
 }
 const benchMed = (runs, k, q) => median(runs.map((r) => r[k][q]));
 
+// one live match to its end (M4): PS.debugStart, then 30 sim-second chunks. aiPlayer: all six swarms AI (the pacing matches); else the
+// fog-honest bot plays team 1 through runChunk (no frames drawn). Returns PS.pacing() plus the peak agent count and the win / lose result.
+async function liveMatch(page, o, secs) {
+  const w0 = Date.now(), st = await page.evaluate((o) => window.PS.debugStart(o), o); let peak = 0, chunks = 0;
+  for (let g = 0; g < Math.ceil(secs / CHUNK_SIM) + 8; g++) {
+    const c = o.aiPlayer
+      ? await page.evaluate((maxSim) => { const S = window.PSS, w0 = performance.now(); let pk = 0, n = 0; while (S.mode === "play" && n < maxSim && performance.now() - w0 < 12000) { window.PS.step(1); n++; if (S.agents.length > pk) pk = S.agents.length; } return { mode: S.mode, t: S.t, peak: pk }; }, CHUNK_SIM)
+      : await page.evaluate(runChunk, { until: 1e9, maxSim: CHUNK_SIM, tick: POLICY_TICK, wallMs: EVAL_WALL_MS, policy: POLICY, leak: false });
+    chunks++; if (c.peak > peak) peak = c.peak; if (c.mode !== "play") break;
+  }
+  await page.waitForFunction(() => window.PSS.mode !== "play" || window.PSS.pendingEnd, null, { timeout: 5000 }).catch(() => {});
+  const p = await page.evaluate(() => ({ ...window.PS.pacing(), cap: window.PSS.cap, won: window.PSS.result === "win", bell: window.PSS.timeLeft <= 0.001 }));
+  return { ...o, ...p, slots: st.slots, peak, chunks, wallMs: Date.now() - w0 };
+}
+// the SPEC-v2 §9 pacing table (M4 reports it; the targets are M8 gates): one row for the all-AI matches, one per bot difficulty
+function pacingTable(R) {
+  const ok = (v) => v != null && v >= 0, med = (a) => { const s = a.filter(ok).sort((x, y) => x - y); return s.length ? s[s.length >> 1] : null; };
+  const mean = (a) => { const s = a.filter((v) => v != null); return s.length ? r2(s.reduce((x, y) => x + y, 0) / s.length) : null; }, pct = (n, d) => (d ? Math.round((100 * n) / d) : null);
+  const row = (ms, label, bot) => {
+    const elims = ms.flatMap((m) => m.elims), horn = ms.filter((m) => m.hornLeader);
+    return { label, n: ms.length, firstSight: med(ms.map((m) => m.firstSight)), firstSightAny: med(ms.map((m) => m.firstSightAny)), firstFight: med(ms.map((m) => m.firstFight)),
+      firstPlayerFight: med(ms.map((m) => m.firstPlayerFight)), fights: mean(ms.map((m) => m.fights)), playerFights: mean(ms.map((m) => m.playerFights)),
+      alive60: mean(ms.map((m) => m.alive60)), alive120: mean(ms.map((m) => m.alive120)), alive180: mean(ms.map((m) => m.alive180)), hornAlive: mean(horn.map((m) => m.hornAlive)),
+      bellPct: pct(ms.filter((m) => (bot ? m.bell : m.result === "bell")).length, ms.length), leaderWinsPct: pct(horn.filter((m) => m.hornLeader === m.biggest).length, horn.length), hornN: horn.length,
+      elimFirstMinPct: pct(elims.filter((e) => e[0] <= 60).length, elims.length), elims: elims.length, winPct: bot ? pct(ms.filter((m) => m.won).length, ms.length) : null,
+      pileOns: mean(ms.map((m) => m.pileOns)), scentPings: mean(ms.map((m) => m.scentPings)), aiMsPerTick: mean(ms.map((m) => m.aiCost.msPerTick)), aiMaxMs: ms.length ? Math.max(...ms.map((m) => m.aiCost.maxMs)) : null };
+  };
+  const rows = []; if (R.aiMatches.length) rows.push(row(R.aiMatches, "all-AI (Normal rivals, team 1 as proxy)", false));
+  for (const d of [...new Set((R.botMatches || []).map((m) => m.difficulty))]) rows.push(row(R.botMatches.filter((m) => m.difficulty === d), "fog-honest bot, " + d, true));
+  return rows;
+}
 async function cdpMetrics(cdp) { const m = await cdp.send("Performance.getMetrics"); return Object.fromEntries(m.metrics.map((x) => [x.name, x.value])); }
 
 async function main() {
@@ -248,7 +286,7 @@ async function main() {
       // selfTest on the title screen before any match, then the fight matrix (each call is its own evaluate, well under 15 s)
       // one evaluate per part so each stays well under ~15 s of wall time (lesson 20); the merged verdict is the selfTest verdict
       const s0 = Date.now(), st = { pass: true, fails: [], results: {}, partMs: {}, wallMs: 0 };
-      for (const part of ["config", "sprites", "terrain", "caches", "flow", "fight", "fixtures", "flipflop", "ai", "fog", "replay", "match"]) {
+      for (const part of ["config", "sprites", "terrain", "caches", "flow", "fight", "fixtures", "flipflop", "ai", "rivals", "fog", "replay", "match"]) {
         const p0 = Date.now(), r = await page.evaluate((part) => window.PS.selfTest({ parts: part }), part);
         st.partMs[part] = Date.now() - p0; Object.assign(st.results, r.results); for (const f of r.fails) if (st.fails.indexOf(f) < 0) st.fails.push(f);
       }
@@ -340,8 +378,9 @@ async function main() {
       if (pick) {
         const t0 = Date.now(); await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: tp(pick.sx, pick.sy) }); await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] }); const liftMs = Date.now() - t0;
         await page.waitForTimeout(250);
-        const a = await page.evaluate(() => { const S = window.PSS, p = S.teams[1], f = window.PS.flow.fieldFor(1), FL = window.PS.flow; return { mode: p.mode, route: S.input.route.on, src: S.input.route.src, tx: p.tx, ty: p.ty, field: !!(f && f.ok), fieldAtTarget: !!(f && f.ok && f.src === FL.cellFor(p.tx, p.ty)), pathPx: f && f.ok ? Math.round(FL.pathCell(f, FL.cellFor(p.ax, p.ay))) : -1 }; });
-        report.tap = { pick, liftMs, ...a, dist: Math.round(Math.hypot(a.tx - pick.wx, a.ty - pick.wy)), ok: liftMs < 200 && a.mode === "route" && a.route && a.src === "tap" && Math.hypot(a.tx - pick.wx, a.ty - pick.wy) < 48 && a.fieldAtTarget && a.pathPx > 0 };
+        const a = await page.evaluate(() => { const S = window.PSS, p = S.teams[1], f = window.PS.flow.fieldFor(1), FL = window.PS.flow; return { mode: p.mode, route: S.input.route.on, src: S.input.route.src, tx: p.tx, ty: p.ty, field: !!(f && f.ok), fieldAtTarget: !!(f && f.ok && f.src === FL.cellFor(p.tx, p.ty)), pathPx: f && f.ok ? Math.round(FL.pathCell(f, FL.cellFor(p.ax, p.ay))) : -1,
+          snappedToCamp: window.PS.vis.camps().some((c) => Math.hypot(c.x - p.tx, c.y - p.ty) < 1) }; }); // a tap near a known camp routes to the camp (SPEC-v2 §10), a legal target
+        report.tap = { pick, liftMs, ...a, dist: Math.round(Math.hypot(a.tx - pick.wx, a.ty - pick.wy)), ok: liftMs < 200 && a.mode === "route" && a.route && a.src === "tap" && (Math.hypot(a.tx - pick.wx, a.ty - pick.wy) < 48 || a.snappedToCamp) && a.fieldAtTarget && a.pathPx > 0 };
         const h0 = await page.evaluate(() => { const S = window.PSS; return { sx: S.vw / 2, sy: S.vh * 0.6 }; });
         await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: tp(h0.sx, h0.sy) }); await page.waitForTimeout(450);
         const during = await page.evaluate(() => { const S = window.PSS, p = S.teams[1]; return { mode: p.mode, hold: S.input.hold, dist: Math.round(Math.hypot(p.tx - p.ax, p.ty - p.ay)), route: S.input.route.on, joy: S.input.joy.active }; });
@@ -450,14 +489,10 @@ async function main() {
         const h2 = idle.overlay ? await press(idle.overlay === "ov-win" ? "btn-again" : "btn-retry") : { hit: false };
         report.restart.second = { hit: h2.hit, mode: await page.evaluate(() => window.PSS.mode) };
       }
-      // all-AI matches at the harness cap: per-tick no-agent-in-rock and cap counters over full 240 s matches
+      // all-AI matches under the real rules (M4): six swarms, the live page, stepped to the bell in 30 s chunks; per-tick cap and rock counters
       for (let k = 0; k < A.aiMatches; k++) {
-        const seed = ((A.seed != null && isFinite(A.seed) ? A.seed : 97) * 31 + k * 7919) >>> 0, cap = A.cap || (A.mobile ? "touch" : "desktop");
-        const mres = await page.evaluate(([seed, cap]) => window.PS.simMatch(240, { seed, cap, wallMs: 12000 }), [seed, cap]);
-        report.aiMatches.push({ seed, cap, agentCap: mres.agentCap, seconds: mres.seconds, end: mres.end, truncated: mres.truncated, wallMs: mres.wallMs, msPerTick: mres.msPerTick,
-          maxTotal: mres.maxTotal, capOver: mres.capOver, terrainBad: mres.terrainBad, firstBad: mres.firstBad, exceptions: mres.exceptions, winner: mres.winner, map: mres.map,
-          leftHome: mres.leftHome, atCentre: mres.atCentre, ev: mres.ev, ai: mres.ai, fog: mres.fog, alive: [60, 120, 180].map((t) => { const s = mres.timeline.find((x) => x.t === t); return s ? s.counts.filter((c) => c > 0).length : null; }),
-          timeline: mres.timeline.map((x) => x.t + "s " + x.counts.join("/") + " n" + x.neutrals) });
+        const seed = ((A.seed != null && isFinite(A.seed) ? A.seed : 97) * 31 + k * 7919) >>> 0;
+        report.aiMatches.push(await liveMatch(page, { seed, difficulty: "normal", aiPlayer: true }, A.aiSecs));
       }
     }
     const costly = run.chunks.reduce((b, c) => (!b || c.peakAgents > b.peakAgents ? c : b), null);
@@ -465,6 +500,19 @@ async function main() {
       avgMsPerSimSec: r2(run.chunks.reduce((s, c) => s + c.stepMs, 0) / Math.max(1e-9, run.chunks.reduce((s, c) => s + c.simSec, 0))) } : null;
     const top = run.render.reduce((b, x) => (!b || x.total > b.total ? x : b), null);
     run.renderAtBusiest = top; run.worstRender = run.render.reduce((b, x) => (!b || x.fps < b.fps ? x : b), null);
+    await ctx.close();
+  }
+  if (A.botMatches > 0) {
+    // the fog-honest scripted bot's win rate per difficulty (M4, SPEC-v2 §9: Easy >= 60%, Normal 35-45% are M8 gates): full matches, no draws
+    const ctx = await browser.newContext(ctxOpts); await ctx.addInitScript(installHelpers); const page = await ctx.newPage();
+    page.on("pageerror", (e) => report.errors.page.push({ run: "bot matches", text: String(e.message || e) }));
+    page.on("console", (m) => { if (m.type() === "error" && !FONT_HOST.test(m.text() + ((m.location() && m.location().url) || ""))) report.errors.console.push({ run: "bot matches", text: m.text() }); });
+    await page.goto(url.href); await page.waitForFunction(() => !!(window.PS && window.PS.debugStart && window.PSS && window.PSS.teams && window.PSS.teams.length > 1), null, { timeout: 20000 });
+    report.botMatches = [];
+    for (const diff of A.botDiffs.split(",")) for (let k = 0; k < A.botMatches; k++) {
+      const seed = ((A.seed != null && isFinite(A.seed) ? A.seed : 97) * 17 + 104729 + k * 7919) >>> 0;
+      report.botMatches.push(await liveMatch(page, { seed, difficulty: diff, aiPlayer: false }, A.aiSecs));
+    }
     await ctx.close();
   }
   if (A.fixtures) {
@@ -539,14 +587,15 @@ async function main() {
   as.matchStarted = report.runs.every((r) => r.started);
   as.scriptedPlayerInControl = report.runs.every((r) => !r.mouseFollowActive);
   as.endScreenReached = report.runs.every((r) => !!(r.end && r.end.overlay));
-  as.agentCapRespected = report.runs.every((r) => r.maxAgents <= r.agentCap && r.dbg && r.dbg.capOver === 0) && report.aiMatches.every((m) => m.capOver === 0 && m.maxTotal <= m.agentCap);
+  const lives = report.aiMatches.concat(report.botMatches || []);
+  as.agentCapRespected = report.runs.every((r) => r.maxAgents <= r.agentCap && r.dbg && r.dbg.capOver === 0) && lives.every((m) => m.dbg.capOver === 0 && m.peak <= m.cap);
   // M1 gates
-  as.noAgentInRock = report.runs.every((r) => r.dbg && r.dbg.terrainBad === 0) && report.aiMatches.every((m) => m.terrainBad === 0) && report.outcomes.every((o) => !o.terrainBad);
+  as.noAgentInRock = report.runs.every((r) => r.dbg && r.dbg.terrainBad === 0) && lives.every((m) => m.dbg.terrainBad === 0) && report.outcomes.every((o) => !o.terrainBad);
   as.terrainWithinRerolls = report.runs.every((r) => r.terrain && r.terrain.rerolls <= 4) && !!(report.terrainTitle && report.terrainTitle.rerolls <= 4);
   as.cachesRecovered = !!(report.caches && report.caches.recovered && report.caches.blankAfterDrop > 0);
   as.restartWorks = !!(report.restart && report.restart.ok && report.restart.second && report.restart.second.hit && report.restart.second.mode === "play");
   as.idlePlayerLoses = report.outcomes.some((o) => o.run === "idle" && o.result === "lose");
-  if (A.aiMatches > 0) as.aiMatchesClean = report.aiMatches.length === A.aiMatches && report.aiMatches.every((m) => m.exceptions.length === 0);
+  if (A.aiMatches > 0) as.aiMatchesClean = report.aiMatches.length === A.aiMatches && report.aiMatches.every((m) => m.mode === "aidone" && m.names.length === 6); // ran to the bell or last standing
   // M2 gates
   if (A.aiMatches > 0) as.aiLeaveHome40s = report.aiMatches.every((m) => m.leftHome && m.leftHome.every((t) => t >= 0 && t <= 40));
   as.cachesRecoveredNoEvent = !!(report.caches && report.caches.noEvent && report.caches.noEvent.recovered && report.caches.noEvent.blankAfterDrop > 0);
@@ -565,7 +614,9 @@ async function main() {
   // M3 gates: fog leaks, AI knowledge, structure, mask upload rate, fog JS at the throttle, ?nofog=1, console warnings
   as.noConsoleWarnings = report.errors.warnings.length === 0;
   as.fogLeakClean = report.runs.every((r) => r.fog && r.fog.leak && r.fog.leak.frames > 0 && r.fog.leakDiff === 0);
-  as.aiKnowledgeClean = report.runs.every((r) => r.fog && r.fog.ai && r.fog.ai.violations === 0) && report.aiMatches.every((m) => m.ai && m.ai.violations === 0);
+  as.aiKnowledgeClean = report.runs.every((r) => r.fog && r.fog.ai && r.fog.ai.violations === 0) && lives.every((m) => m.ai && m.ai.violations === 0);
+  if (lives.length) as.aiThinkCost = lives.every((m) => m.aiCost.msPerTick < 0.1);
+  report.pacing = pacingTable(report);
   if (report.fogStructure) as.fogStructure = !!report.fogStructure.ok;
   as.maskUploadsUnder5Hz = report.runs.every((r) => r.render.every((x) => x.maskUploadRate == null || x.maskUploadRate <= 5.05));
   if (report.fogPerf) as.fogJsThrottled = !!report.fogPerf.ok;
@@ -587,7 +638,7 @@ async function main() {
   if (report.selfTest && report.selfTest.wallMs > 12000) W.push(`selfTest took ${report.selfTest.wallMs} ms`);
   const smd = report.selfTest && report.selfTest.results.simMatch_no_exceptions && report.selfTest.results.simMatch_no_exceptions.detail;
   if (smd && smd.truncated) W.push(`selfTest simMatch hit its wall guard at ${smd.seconds} sim-s: the agent-cap check covered only that span`);
-  for (const m of report.aiMatches) if (m.truncated) W.push(`AI match seed ${m.seed} hit its 12 s wall guard at ${m.seconds} sim-s`);
+  for (const m of lives) if (m.t < A.aiSecs - 1 && m.mode === "play") W.push(`live match seed ${m.seed} stopped at ${m.t} sim-s`);
   if (!report.outcomes.some((o) => o.result === "win")) W.push("no win observed in this pass (runs + idle check); a win is verified in another pass or by hand");
   report.meta.durationMs = Date.now() - t0; report.meta.loadAvgEnd = os.loadavg().map(r2);
   if (report.meta.loadAvgStart[0] > report.meta.cpus * 0.75) W.push(`machine was busy at start (load ${report.meta.loadAvgStart[0]} on ${report.meta.cpus} CPUs): sim-cost and selfTest timings are inflated`);
@@ -654,9 +705,15 @@ function markdown(R) {
   for (const r of R.runs) if (r.terrain) L.push(`Run ${r.index} map: seed ${r.terrain.seed}, used ${r.terrain.used}, rerolls ${r.terrain.rerolls}${r.terrain.fallback ? " (fallback)" : ""}, gen ${r.terrain.genMs} ms, blocked ${r.terrain.blocked}, rival ${r.terrain.fair.rival}, centre ${r.terrain.fair.centre}, detour ${r.terrain.fair.detour}, crossings ${r.terrain.crossings.join(" ")}; per-tick asserts: ${JSON.stringify(r.dbg)}`);
   if (R.restart) L.push("", "## Restart and outcomes", "", `Restart via ${R.restart.button}: hit ${R.restart.hit}, mode ${R.restart.mode}, t ${r2(R.restart.t)}, new map ${R.restart.map}. Second restart: ${JSON.stringify(R.restart.second)}.`);
   for (const o of R.outcomes) L.push(`- ${o.run === "idle" ? "idle player" : "run " + o.run}: **${o.result}**${o.forced ? " (bell rung early)" : ""} — ${o.how || ""}${o.countsBeforeBell ? " (counts before the bell " + o.countsBeforeBell.join("/") + ")" : ""}`);
-  if (R.aiMatches.length) {
-    L.push("", "## All-AI matches (PS.simMatch 240 s, per-tick asserts)", "", "| seed | cap | end | s | peak / cap | capOver | terrainBad | ms/tick | winner | left home (s) | central meadow (s) | alive 1:00/2:00/3:00 | fights/routs/remnants |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|");
-    for (const m of R.aiMatches) L.push(`| ${m.seed} | ${m.cap} | ${m.end}${m.truncated ? " (truncated)" : ""} | ${m.seconds} | ${m.maxTotal} / ${m.agentCap} | ${m.capOver} | ${m.terrainBad} | ${m.msPerTick} | ${m.winner ? m.winner.name + " " + m.winner.count : "-"} | ${(m.leftHome || []).join(" / ")} | ${(m.atCentre || []).join(" / ")} | ${(m.alive || []).join("/")} | ${m.ev ? m.ev.fights + "/" + m.ev.routs + "/" + m.ev.remnants : "-"} |`);
+  if (R.pacing && R.pacing.length) {
+    L.push("", "## Pacing (SPEC-v2 §9; targets are M8 gates, reported here)", "", "| matches | n | first sighting: team 1 / any (s, median) | first fight: any / team 1 (s, median) | fights / team 1's (mean) | alive 1:00 / 2:00 / 3:00 / horn | bell reached | 3:45 leader wins | elims in 1st min | bot wins | pile-ons / scent pings | AI ms per tick (max think) |", "|---|---|---|---|---|---|---|---|---|---|---|---|");
+    for (const p of R.pacing) L.push(`| ${p.label} | ${p.n} | ${p.firstSight} / ${p.firstSightAny} | ${p.firstFight} / ${p.firstPlayerFight} | ${p.fights} / ${p.playerFights} | ${p.alive60} / ${p.alive120} / ${p.alive180} / ${p.hornAlive} | ${p.bellPct}% | ${p.leaderWinsPct}% of ${p.hornN} | ${p.elimFirstMinPct}% of ${p.elims} | ${p.winPct == null ? "-" : p.winPct + "%"} | ${p.pileOns} / ${p.scentPings} | ${p.aiMsPerTick} (${p.aiMaxMs}) |`);
+    L.push("", "Targets (M8): first sighting 30-90 s; first fight 60-150 s; >= 3 fights for the bot; >= 3.5 alive at 3:00; bell >= 60%; 3:45 leader wins <= 60% of all-AI matches; bot wins Easy >= 60%, Normal 35-45%; <= 20% of eliminations inside the first minute.");
+  }
+  const LV = R.aiMatches.concat(R.botMatches || []);
+  if (LV.length) {
+    L.push("", "## Live matches (M4: all-AI under the real rules, and the bot)", "", "| kind | seed | end | t | peak / cap | counts at the end | alive 1:00/2:00/3:00 | horn leader / biggest | elims [t, team] | first fight | fights | left home (s) | AI ms/tick |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|");
+    for (const m of LV) L.push(`| ${m.aiPlayer ? "all-AI" : "bot " + m.difficulty} | ${m.seed} | ${m.aiPlayer ? m.result : m.won ? "win" : m.result}${m.bell ? " (bell)" : ""} | ${m.t} | ${m.peak} / ${m.cap} | ${m.counts.join("/")} | ${m.alive60}/${m.alive120}/${m.alive180} | ${m.hornLeader} / ${m.biggest} | ${m.elims.map((e) => e.join(":")).join(" ")} | ${m.firstFight} | ${m.fights} | ${m.leftHome.join(" / ")} | ${m.aiCost.msPerTick} |`);
   }
   if (R.touch) L.push("", "## Touch", "", `Drag on ${R.touch.target}: joy active ${R.touch.joyActive}, target ty ${R.touch.before.ty} → ${Math.min(...R.touch.hold.map((h) => h.ty))}, released ${R.touch.released}. HUDDLE visible ${R.huddle && R.huddle.visible}, reachable ${R.huddle && R.huddle.reachable}.`);
   for (const r of R.runs) {

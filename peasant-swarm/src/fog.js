@@ -234,7 +234,9 @@
       // slow cloud drift, world-anchored at whole fog px (the texture is far softer than one px), only where the fog is (source-atop)
       const tile = tileN, cx = FX0 + o.t * CFG.cloudSpeed * FS, cy = FY0 + o.t * CFG.cloudSpeed * 0.37 * FS, ox = Math.round(((cx % tile) + tile) % tile) - tile, oy = Math.round(((cy % tile) + tile) % tile) - tile;
       fc.globalCompositeOperation = "source-atop"; fc.drawImage(tilesCv, ox, oy);
-      // holes
+      // holes, clipped to the world so ground past the edge stays dark near your swarm (M3 critic MINOR-4)
+      const wx0 = FX0, wy0 = FY0, wx1 = FX0 + W.map.W * FS, wy1 = FY0 + W.map.W * FS, clipW = wx0 > 0 || wy0 > 0 || wx1 < fw || wy1 < fh;
+      if (clipW && o.R > 0) { fc.save(); fc.beginPath(); fc.rect(wx0, wy0, wx1 - wx0, wy1 - wy0); fc.clip(); }
       if (o.R > 0) {
         fc.globalCompositeOperation = "destination-out"; fc.globalAlpha = 1; const hs = holeSprite(o.band);
         const ddx = o.px - W.srcCx, ddy = o.py - W.srcCy;
@@ -244,6 +246,7 @@
           fc.drawImage(hs, hx - r, hy - r, 2 * r, 2 * r); RS.holes++;
         }
       }
+      if (clipW && o.R > 0) fc.restore();
       fc.setTransform(1, 0, 0, 1, 0, 0); fc.globalCompositeOperation = "source-over"; fc.globalAlpha = 1;
       t1 = now(); M[1] = t1 - tq; tq = t1;
     } else { fc.clearRect(0, 0, fw, fh); fc.drawImage(vigCv, 0, 0); } // the fog's holes carry the vignette; without fog it is its own pass

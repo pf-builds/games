@@ -92,6 +92,10 @@
     },
     // danger: an unseen rival is hunting you. A low war horn (the finale horn, lower)
     dangerHorn() { if (!gate("dh", 2000)) return; [[98, 0], [147, 0.02]].forEach(([f, w]) => { tone(f * 0.94, f, 0.25, "sawtooth", 0.1, w, true); tone(f, f * 0.985, 1.0, "sawtooth", 0.12, w + 0.22, true); }); noise(0.9, 0.05, 0.2, 400); },
+    // the finale war horn (and Bully's first scent ping, a little quieter): the danger horn's voice a fifth higher, held longer
+    warHorn(v) { if (!gate("wh", 1500)) return; const k = v || 1; [[147, 0], [220, 0.03]].forEach(([f, w]) => { tone(f * 0.94, f, 0.3, "sawtooth", 0.12 * k, w, true); tone(f, f * 0.99, 1.4, "sawtooth", 0.14 * k, w + 0.28, true); }); noise(1.2, 0.05 * k, 0.25, 500); },
+    // a later scent ping: one short low note (C1: the horn every 25 s would nag)
+    scentNote() { if (!gate("sn", 1000)) return; tone(110, 104, 0.35, "triangle", 0.1); },
     // ping: a rout you did not see folded into its clash's ping
     ping() { if (!gate("pg", 500)) return; tone(740, 760, 0.22, "triangle", 0.07); tone(1110, 1120, 0.18, "sine", 0.03, 0.05); },
 

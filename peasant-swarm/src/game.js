@@ -30,7 +30,17 @@
     tp: { active: false, id: -1, sx: 0, sy: 0, t0: 0, drag: false, hold: false },
     route: { on: false, x: 0, y: 0, chase: 0, src: "", sx: 0, sy: 0 }, routeT: -1e9 }); // routeT: wall time of the last tap / click / minimap route (hint spacing)
   const mkCamS = () => ({ i: -1, steps: null, from: 1, t: 0, lx: 0, ly: 0 }); // zoom step index + ease, smoothed look-ahead
-  const mkEv = () => ({ fights: 0, routs: 0, remnants: 0, scattered: 0 }); // every team's engagements, routs, remnants formed, finale scatters
+  // every team's engagements, routs, remnants formed, finale scatters; M4 pacing: first fight (any pair / the player), first sighting by any
+  // swarm, eliminations [t, team], the horn's leader and swarms alive then, swarms alive at 1:00 / 2:00 / 3:00, pile-ons, scent pings, crown
+  // moves, trickle camps (and how many went to one of the two smallest swarms)
+  const mkEv = () => ({ fights: 0, routs: 0, remnants: 0, scattered: 0, firstFight: -1, firstPlayerFight: -1, firstSightAny: -1, elims: [], hornLeader: 0, hornAlive: 0,
+    alive60: 0, alive120: 0, alive180: 0, pileOns: 0, scentPings: 0, crownMoves: 0, trickle: 0, trickleFav: 0 });
+  // heard noise (SPEC-v2 §7): the clashes going on now, a fixed pool; each AI hears one within its difficulty's hearing radius
+  const mkNoise = () => { const a = []; for (let i = 0; i < 16; i++) a.push({ on: false, a: 0, b: 0, x: 0, y: 0, t0: -1e9, t1: -1e9 }); return a; };
+  // the finale crown (the biggest swarm, position broadcast every finale.crownEvery s), the pile-on flag, Bully's scent pings
+  const mkCrown = () => ({ team: 0, x: 0, y: 0, t: -1e9, next: 0, marked: false });
+  const mkPile = () => ({ id: 0, bannerT: -1e9 });
+  const mkScent = () => ({ next: 0, n: 0, x: 0, y: 0, t: -1e9 });
   const S = {
     cfg: null, spr: null, debug: /(\?|&)debug=1/.test(location.search),
     mode: "title", t: 0, timeLeft: 0, pace: 1, tick: 0, acc: 0,
@@ -44,6 +54,8 @@
     drawList: [], decals: [], trails: [], attract: false, difficulty: "normal",
     ev: mkEv(), lastRout: null, thinkRR: 0, flowW: null, fixture: null,
     fogW: null, fogS: null, fogOn: false, frameId: 0, lastDrawT: 0, lastDrawSim: 0, // fog world (src/fog.js), per-world fog presentation state, fog render flag
+    noise: mkNoise(), crown: mkCrown(), pile: mkPile(), scent: mkScent(), relaxUntil: -1e9, torches: false, aiPlayer: false, // M4: rivals and match (SPEC-v2 §7, §9)
+    aiCost: { ms: 0, thinks: 0, ticks: 0, max: 0 }, // AI think script time (the < 0.1 ms per tick gate)
   };
   if (S.debug) window.PSS = S;
 
@@ -55,7 +67,7 @@
 
   // ---------------------------------------------------------------- setup
   async function boot() {
-    const res = await fetch("config.json?v=22");
+    const res = await fetch("config.json?v=23");
     S.cfg = await res.json();
     S.spr = PS.buildSprites(S.cfg);
     PS.terrain.init(S.cfg); PS.flow.init(S.cfg); PS.fog.init(S.cfg);
@@ -83,6 +95,9 @@
       PS.timeStep = (sec) => { const t0 = performance.now(); PS.step(sec); return (performance.now() - t0) / (sec * 60); };
       // scripted control for critics and the harness bot: route the player to (x, y) through its field, as a cursor-follow target
       PS.aim = (x, y) => { const inp = S.input, p = S.teams[1]; inp.route.on = false; inp.hold = false; inp.active = false; inp.joy.active = false; if (!p) return null; p.tx = x; p.ty = y; p.mode = "route"; return p.mode; };
+      // QA: start a live match without the title click. { seed, difficulty, aiPlayer } (aiPlayer: all six swarms AI, the harness's pacing matches)
+      PS.debugStart = (o) => { o = o || {}; if (o.difficulty && S.cfg.difficulty[o.difficulty]) S.difficulty = o.difficulty; PS.audio.setSilent(true); newGame(false, { seed: o.seed, aiPlayer: !!o.aiPlayer }); S.mode = "play"; S._hintFight = S._hintHud = S._hintRecruit = true; S._routedBy = null; showOverlay(null); $("hud").classList.remove("hidden"); updateHUD(true); return { seed: S.seed, difficulty: S.difficulty, slots: S.teams.slice(1).map((t) => t.slot) }; };
+      PS.pacing = pacing;
     }
   }
 
@@ -107,6 +122,8 @@
   // route: the team steers by its flow field (else direct seek); mode (player): "route" | "steer" | "hold"; hyst: route hysteresis applies;
   // ax/ay: the anchor (centroid snapped to walkable, for AI and labels); tMed: last tick's median path distance (path cohesion).
   // AI under fog: preyId (the team it hunts, 0 none), exX/exY/exUntil (an explore target and its commit time).
+  // M4: kind (personality), senses (sense: sight multiplier, mem: hunt memory s, hear: hearing px), lastFight (sim time it last fought),
+  // scentX/Y/T (Bully's last scent ping), leaveUntil (Wary leaving a clash), lurkX/Y/lurkUntil/lurkCool/crowsT (Sly), claimX/Y/claimOn/claimEmpty (Stubborn).
   // Per enemy slot j: eng (agents fighting j this tick) with fX/fY (their position sums), engT (engaged time), engL (smoothed local
   // strength), engPk (its peak this engagement), engHold (time under breakRatio), engCx/engCy (contact centroid), engStart (count at start),
   // engG / engGPk (fighting mode: the rout group's survivors and their peak this engagement)
@@ -116,7 +133,9 @@
       buffs: { speed: 0, armor: 0, frenzy: 0, rally: 0 }, eng: z9(), engT: z9(), engStart: z9(), engL: z9(), engPk: z9(), engHold: z9(), engCx: z9(), engCy: z9(), fX: z9(), fY: z9(),
       engG: z9(), engGPk: z9(),
       spr: S.spr.peasantSet(color), kills: 0, peak: 1, state: "roam", speedMod: 1, thinkT: S.rng() * 0.5, lastHint: 0, minY: 0, huntStart: 0, huntCooldown: 0,
-      regroupUntil: 0, fleeFrom: 0, leftHome: -1, atCentre: -1, preyId: 0, exX: 0, exY: 0, exUntil: -1, escUntil: -1, escFrom: 0, escReplanAt: 0, escGX: 0, escGY: 0 };
+      regroupUntil: 0, fleeFrom: 0, leftHome: -1, atCentre: -1, preyId: 0, exX: 0, exY: 0, exUntil: -1, escUntil: -1, escFrom: 0, escReplanAt: 0, escGX: 0, escGY: 0,
+      kind: ai ? ai.kind || "" : "", sense: 1, mem: S.cfg.fog.aiMemory, hear: S.cfg.fog.clashNoise, lastFight: -1e9, scentX: 0, scentY: 0, scentT: -1e9, leaveUntil: -1e9,
+      lurkX: 0, lurkY: 0, lurkUntil: -1e9, lurkCool: 0, crowsT: -1e9, claimX: 0, claimY: 0, claimOn: false, claimEmpty: 0 };
   }
   // speed by swarm size: small swarms get a boost that fades by `full`, big ones slow a little per peasant above it (SPEC-v2 §3)
   function sizeSpeed(n) { const k = S.cfg.agent.sizeSpeed, v = 1 + k.boost * Math.max(0, 1 - n / k.full) - k.drop * Math.max(0, n - k.full); return v < k.floor ? k.floor : v; }
@@ -169,7 +188,7 @@
 
   function spawnCamp(x, y, n) {
     const sp = S.cfg.spawn.campSpread;
-    const camp = { x, y, n: 0, smokeT: S.rng() * 0.8, kn: new Int16Array(9).fill(-1) }; // kn[team]: the head-count that team last saw here (-1 never)
+    const camp = { x, y, n, smokeT: S.rng() * 0.8, kn: new Int16Array(9).fill(-1) }; // kn[team]: the head-count that team last saw here (-1 never); n: recounted per tick
     S.camps.push(camp);
     for (let i = 0; i < n; i++) {
       const a = S.rng() * Math.PI * 2, d = 6 + S.rng() * sp;
@@ -202,6 +221,8 @@
     S.t = 0; S.tick = 0; S.acc = 0; S.timeLeft = cfg.world.matchSeconds; S.trickleT = 0; S.shake = 0; S.result = null; S.engagedNow = false; S.finalCalled = false; S.pendingEnd = null; S._routedBy = null; S.lastDrawSim = 0;
     S.stats = { recruited: 0, kills: 0, routs: 0, lost: 0, peak: 1, powerups: 0, fights: 0 };
     S.dbg = { terrainBad: 0, firstBad: null, capOver: 0 }; S.ev = mkEv(); S.lastRout = null; S.thinkRR = 0; S.fixture = null;
+    S.noise = mkNoise(); S.crown = mkCrown(); S.pile = mkPile(); S.scent = mkScent(); S.scent.next = cfg.ai.grace; S.relaxUntil = -1e9; S.torches = false; S.aiCost = { ms: 0, thinks: 0, ticks: 0, max: 0 };
+    S.aiPlayer = !attract && !!opts.aiPlayer; // QA: an all-AI match under real rules (team 1 plays as ai.proxy; nobody wins or loses, the harness reads PS.pacing)
     const inp = S.input; inp.route.on = false; inp.route.chase = 0; inp.hold = false; inp.preview = 0;
 
     // obstacles: open ground at least 3 cells from any wall, spaced, clear of every spawn slot; +prop cost on their cell
@@ -215,10 +236,12 @@
     }
     bucketObstacles();
 
-    // teams: player + 3 AI at four of the six spawn slots, shuffled (Fisher-Yates); the map holds six so M4 adds rivals without new bookkeeping
+    // teams: the player + the five rivals of ai.personalities, one per spawn slot, slots shuffled per match (Fisher-Yates on S.rng, so a seed
+    // replays the same shuffle). Title attract and all-AI QA matches play team 1 as ai.proxy. Rival senses scale with the difficulty (SPEC-v2 §7).
     S.teams = [null];
-    S.teams.push(mkTeam(1, cfg.player.name, cfg.player.color, true, S.attract ? cfg.ai.personalities[1] : null));
+    S.teams.push(mkTeam(1, cfg.player.name, cfg.player.color, true, S.attract || S.aiPlayer ? cfg.ai.proxy : null));
     cfg.ai.personalities.forEach((p, i) => S.teams.push(mkTeam(2 + i, p.name, p.color, false, p)));
+    { const D = diff(); for (let i = 2; i < S.teams.length; i++) { const t = S.teams[i]; if (S.attract) continue; t.sense = D.sight; t.mem = D.memory; t.hear = D.hearing; } }
     const slots = [0, 1, 2, 3, 4, 5]; for (let i = slots.length - 1; i > 0; i--) { const j = (S.rng() * (i + 1)) | 0, t = slots[i]; slots[i] = slots[j]; slots[j] = t; }
     for (let i = 1; i < S.teams.length; i++) {
       const t = S.teams[i], s = m.spawns[slots[(i - 1) % 6]] || { x: cfg.world.w / 2 + (i - 2.5) * 300, y: cfg.world.h / 2, c: 0 };
@@ -248,6 +271,9 @@
         spawnCamp(x, y, SP.campMin + ((S.rng() * (SP.campMax - SP.campMin + 1)) | 0)); placed++;
       }
     }
+    // AI knowledge at the start (SPEC-v2 §7): every camp within ai.campKnowStart px of its spawn; the rest as explored or smelled
+    { const ck2 = cfg.ai.campKnowStart * cfg.ai.campKnowStart;
+      for (let i = 1; i < S.teams.length; i++) { const t = S.teams[i], s = m.spawns[t.slot]; if (!t.ai || !s) continue; for (const c of S.camps) if ((c.x - s.x) * (c.x - s.x) + (c.y - s.y) * (c.y - s.y) <= ck2) c.kn[i] = c.n; } }
     // power-ups on contested ground (two spawns about equally far by path)
     for (let i = 0; i < cfg.powerups.count; i++) S.powerups.push(newPowerup(true));
     // decals (dressing only) and dirt trails between neighbouring camps: both are baked into the ground chunks
@@ -362,7 +388,7 @@
       danger: { on: false, ang: 0, t0: -1e9, last: -1e9, team: 0 },
       stats: { firstSight: -1, sightings: 0, ghosts: 0, dangerCues: 0, pings: 0, routPings: 0, rumbles: 0, dust: 0, verdicts: 0, crows: 0 },
       leak: { frames: 0, rivalsDrawn: 0, rivalsVisible: 0, fading: 0, hidden: 0, missed: 0, neutralsHidden: 0, tagHidden: 0, ringHidden: 0, arrowHidden: 0, miniHidden: 0, last: null },
-      ai: { decisions: 0, swarm: 0, camps: 0, explore: 0, violations: 0, first: null } };
+      ai: { decisions: 0, swarm: 0, camps: 0, explore: 0, violations: 0, first: null, crown: 0, noise: 0, scent: 0 } };
   }
   // the player's presentation is fogged: a real match (or a fog test scene), not ?nofog=1, not a bench "reveal", before dawn
   const fogGate = () => S.fogOn && !NOFOG && !!S.fogS && !S.fogS.reveal && S.fogS.dawnT0 < 0;
@@ -371,7 +397,8 @@
   // screen test v1 used for particles and sounds. With the fog off (title, fixtures, ?nofog=1, dawn) it falls back to v1's behaviour.
   function playerSees(x, y) { return !fogGate() || PS.fog.sees(1, x, y); }
   function fxOk(x, y) { return onScreen(x, y) && playerSees(x, y); }
-  const sightR = (t) => S.cfg.fog.sight0 + S.cfg.fog.sightK * Math.sqrt(Math.max(1, t.count));
+  // sight: 340 + 10 sqrt(n), x the team's difficulty sense (rivals: 0.9 / 1.0 / 1.15), x finale.torches after the horn (SPEC-v2 §5, §7, §9)
+  const sightR = (t) => (S.cfg.fog.sight0 + S.cfg.fog.sightK * Math.sqrt(Math.max(1, t.count))) * t.sense * (S.torches ? S.cfg.finale.torches : 1);
 
   const OC = new Int32Array(9), OE = new Int32Array(9), OX = new Float64Array(9), OY = new Float64Array(9), OMY = new Float64Array(9);
   function observe(o) {
@@ -390,7 +417,7 @@
         if (ob.seen) { const dt = S.t - ob.t; if (dt > 1e-6) { let vx = (x - ob.x) / dt, vy = (y - ob.y) / dt; const l = Math.sqrt(vx * vx + vy * vy), k = 1 - Math.exp(-dt / ks); if (l > vmax) { vx *= vmax / l; vy *= vmax / l; } ob.vx += (vx - ob.vx) * k; ob.vy += (vy - ob.vy) * k; } }
         else { ob.vx = 0; ob.vy = 0; if (o === 1) FS.ghosts[r].on = false; } // back in sight: the player's ghost goes
         ob.x = x; ob.y = y; ob.minY = OMY[r]; ob.n = OC[r]; ob.nEsc = OE[r]; ob.count = S.teams[r].count; ob.t = S.t; ob.seen = true;
-        if (!ob.ever) { ob.ever = true; if (o === 1) firstSight(r); }
+        if (!ob.ever) { ob.ever = true; if (o === 1) firstSight(r); if (S.ev.firstSightAny < 0) S.ev.firstSightAny = +S.t.toFixed(2); }
       } else if (ob.seen) {
         const m = FS.mem[o][r]; ob.seen = false; m.ever = true; m.x = ob.x; m.y = ob.y; m.vx = ob.vx; m.vy = ob.vy; m.n = ob.n; m.nEsc = ob.nEsc; m.count = ob.count; m.minY = ob.minY; m.t = S.t; ob.n = 0; ob.nEsc = 0;
         if (o === 1) { const g = FS.ghosts[r]; g.on = true; g.x = m.x; g.y = m.y; g.n = m.n; g.t0 = S.t; FS.stats.ghosts++; }
@@ -447,8 +474,13 @@
     for (let r = 2; r < 9; r++) { const g = FS.ghosts[r]; if (g.on && S.t - g.t0 > FG.ghostSeconds) g.on = false; }
     const D = FS.danger; if (D.on && S.t - D.t0 > FG.dangerShow) D.on = false;
     if (!tellsOn() || !pl || pl.count === 0) return;
+    // crows (SPEC-v2 §5, §7): a lurking Sly you cannot see flushes birds above the fog when you come within 1.3x its sight, every 5 s at most
+    for (let r = 2; r < S.teams.length; r++) {
+      const t = S.teams[r]; if (!t.alive || t.state !== "lurk" || FS.obs[1][r].seen || S.t < t.crowsT) continue;
+      const dx = t.ax - pl.ax, dy = t.ay - pl.ay, R = 1.3 * sightR(t); if (dx * dx + dy * dy <= R * R) { t.crowsT = S.t + 5; crows(t.ax, t.ay); }
+    }
     if (S.t - D.last >= FG.dangerEvery) for (let r = 2; r < S.teams.length; r++) {
-      const t = S.teams[r]; if (!t.alive || t.count === 0 || t.state !== "hunt" || t.preyId !== 1 || FS.obs[1][r].seen) continue;
+      const t = S.teams[r]; if (!t.alive || t.count === 0 || (t.state !== "hunt" && t.state !== "crown") || t.preyId !== 1 || FS.obs[1][r].seen) continue;
       const dx = t.ax - pl.ax, dy = t.ay - pl.ay; if (dx * dx + dy * dy > FG.danger * FG.danger) continue;
       D.on = true; D.t0 = D.last = S.t; D.team = r; D.ang = Math.atan2(dy, dx) + (Math.random() * 2 - 1) * FG.dangerJitter * Math.PI / 180; FS.stats.dangerCues++; PS.audio.dangerHorn(); break;
     }
@@ -498,11 +530,18 @@
       let alive = 0; for (let i = 1; i < S.teams.length; i++) if (S.teams[i].alive) alive++;
       if (alive <= 1 || S.timeLeft <= 0) { newGame(true, { keepMap: true }); return; } // attract mode keeps one map per title visit
     }
-    if (finalPhase && !S.finalCalled) { S.finalCalled = true; banner("LAST MINUTE: every mob turns on the biggest", "#FFE49A", 3.5); PS.audio.bell(); showHint("Be the biggest swarm when the bell rings", 4); for (let i = 2; i < S.teams.length; i++) S.teams[i].thinkT = 0; }
+    // the horn (SPEC-v2 §9): the crown goes on the biggest swarm, torches light every sight x finale.torches, every rival re-thinks now
+    if (finalPhase && !S.finalCalled) {
+      S.finalCalled = true; S.torches = true; crownUpdate(true); S.ev.hornLeader = S.crown.team; let al = 0; for (let i = 1; i < S.teams.length; i++) if (S.teams[i].alive) al++; S.ev.hornAlive = al;
+      const ct = S.teams[S.crown.team]; banner(!ct ? "THE HORN" : ct.isPlayer ? "THE HORN: YOU WEAR THE CROWN" : "THE HORN: " + ct.name.toUpperCase() + " WEARS THE CROWN", "#FFE49A", 3.5); PS.audio.warHorn(); showHint("Be the biggest swarm when the bell rings", 4); for (let i = 1; i < S.teams.length; i++) if (S.teams[i].ai) S.teams[i].thinkT = 0;
+    } else if (finalPhase && S.crown.team && S.t >= S.crown.next) crownUpdate();
+    if (S.tick % 3600 === 0 && S.tick <= 10800) { let al = 0; for (let i = 1; i < S.teams.length; i++) if (S.teams[i].alive) al++; S.ev["alive" + S.tick / 60] = al; } // swarms alive at 1:00 / 2:00 / 3:00
+    if (S.tick % 30 === 0 && !S.fixture) pileTick();
+    if (!S.fixture) scentTick();
 
     // player target and steering mode (SPEC-v2 §10)
     const inp = S.input;
-    if (!S.attract && !S.fixture) playerControl(player);
+    if (!S.attract && !S.fixture && !player.ai) playerControl(player);
 
     // AI think: one rival per tick
     aiTick(dt, D);
@@ -510,7 +549,7 @@
     // buffs tick, engagement reset, this tick's team speed (size curve, AI pace, speed buff)
     for (let i = 1; i < S.teams.length; i++) {
       const t = S.teams[i]; for (const k in t.buffs) if (t.buffs[k] > 0) t.buffs[k] -= dt; for (let j = 0; j < 9; j++) { t.eng[j] = 0; t.fX[j] = 0; t.fY[j] = 0; }
-      let s = A.speed * sizeSpeed(t.count) * t.speedMod; if (t.ai && !S.attract) s *= D.aiSpeed; if (t.buffs.speed > 0) s *= cfg.powerups.speedMult; t.spd = s; MEDN[i] = 0;
+      let s = A.speed * sizeSpeed(t.count) * t.speedMod; if (t.ai && !t.isPlayer && !S.attract) s *= D.aiSpeed; if (t.buffs.speed > 0) s *= cfg.powerups.speedMult; t.spd = s; MEDN[i] = 0;
     }
 
     // flow fields: at most one team rebuild per tick, player first (SPEC-v2 §3); sim-tick scheduling keeps replays exact
@@ -528,7 +567,7 @@
     const qTeam = Math.max(A.engageRadius, eSep, sepR, lcR), qNeutral = Math.max(sepR, A.recruitRadius), qTeam2 = qTeam * qTeam, qNeutral2 = qNeutral * qNeutral; // radius-limited neighbour scans
     const huddleP = inp.huddle, kLerp = 1 - Math.exp(-F.steerLerp * dt), pk = FW.pathCohesionK, pLo = FW.pathCohesionClamp[0], pHi = FW.pathCohesionClamp[1];
     const T = PS.terrain, TN = T.N, TC = T.cell, W1 = W - 0.001, terr = S.map.terr, sdfA = S.map.sdf, far = 2 * TC, slideM = FW.slideMargin, fordK = cfg.terrain.fordSpeed;
-    const O = S.obs, OB = S.obstacles, FL = PS.flow, esc = CB.remnant.escapeSpeed;
+    const O = S.obs, OB = S.obstacles, FL = PS.flow, esc = CB.remnant.escapeSpeed, truce = S.t < CB.truceSeconds; // truce: no attacks land, enemies only repel
     recN = 0;
     const nAg = S.agents.length;
     for (let idx = 0; idx < nAg; idx++) {
@@ -551,7 +590,7 @@
 
       // find/keep combat target + separation + local cohesion (+ a neutral's nearest recruiter) in one pass
       let best = null, bestD2 = engR2, recT = 0, recD2 = rr2;
-      if (a.tgt && (escaping || a.tgt.dead || a.tgt.team === a.team || a.tgt.team === 0 || a.tgt.escapeT > 0)) a.tgt = null;
+      if (a.tgt && (truce || escaping || a.tgt.dead || a.tgt.team === a.team || a.tgt.team === 0 || a.tgt.escapeT > 0)) a.tgt = null;
       if (a.tgt) { const dx = a.tgt.x - a.x, dy = a.tgt.y - a.y; const d2 = dx * dx + dy * dy; if (d2 < engR2 * 4) { best = a.tgt; bestD2 = d2; } else a.tgt = null; }
       const at = a.team, q2 = team ? qTeam2 : qNeutral2; let ax = a.x, ay = a.y; // the enemy hard push moves this agent inside the loop: kept in locals, written back after
       for (let k = 0; k < nearN; k++) {
@@ -569,6 +608,7 @@
           const d = Math.sqrt(d2), f = (1 - d / eSep) / d; sx += dx * f; sy += dy * f;
           if (d2 < hard2) { const push = (hard - d) * 0.5; ax += (dx / d) * push; ay += (dy / d) * push; }
         }
+        if (truce) continue;
         if (d2 < bestD2 && !best) { best = b; bestD2 = d2; }
         else if (d2 < bestD2 && best && d2 < bestD2 * 0.5) { best = b; bestD2 = d2; }
       }
@@ -723,10 +763,12 @@
           if (ta.engT[j] === 0) {
             ta.engStart[j] = ta.count; tb.engStart[i] = tb.count; ta.engL[j] = LCA; tb.engL[i] = LCB; ta.engPk[j] = tb.engPk[i] = 0; ta.engHold[j] = tb.engHold[i] = 0; S.ev.fights++; if (ta.isPlayer || tb.isPlayer) S.stats.fights++;
             ta.engGPk[j] = tb.engGPk[i] = 0;
+            if (S.ev.firstFight < 0) S.ev.firstFight = +S.t.toFixed(2); if ((ta.isPlayer || tb.isPlayer) && S.ev.firstPlayerFight < 0) S.ev.firstPlayerFight = +S.t.toFixed(2);
           }
           else { ta.engL[j] += (LCA - ta.engL[j]) * ks; tb.engL[i] += (LCB - tb.engL[i]) * ks; }
           if (fightMode) { const gA = groupCells(ta.id, cx, cy), gB = groupCells(tb.id, cx, cy); ta.engG[j] = gA; tb.engG[i] = gB; if (gA > ta.engGPk[j]) ta.engGPk[j] = gA; if (gB > tb.engGPk[i]) tb.engGPk[i] = gB; }
           ta.engT[j] += dt; tb.engT[i] = ta.engT[j]; ta.engCx[j] = tb.engCx[i] = cx; ta.engCy[j] = tb.engCy[i] = cy;
+          ta.lastFight = tb.lastFight = S.t; noiseAt(i, j, cx, cy); // every AI within its hearing radius hears this clash (SPEC-v2 §7)
           if (!ta.isPlayer && !tb.isPlayer && S.fogOn && !PS.fog.sees(1, cx, cy)) clashPing(cx, cy, false); // clash noise through the dark
           const La = ta.engL[j], Lb = tb.engL[i]; if (La > ta.engPk[j]) ta.engPk[j] = La; if (Lb > tb.engPk[i]) tb.engPk[i] = Lb;
           if (ta.isPlayer || tb.isPlayer) S.engagedNow = true;
@@ -765,7 +807,7 @@
       for (let rep = 0; rep < SP.trickleCamps; rep++) {
         const nn = SP.campMin + ((S.rng() * (SP.campMax - SP.campMin + 1)) | 0); // size first: the cap check needs it (B0 bug 1)
         if (neutrals + nn > SP.trickleCap || S.agents.length + nn > S.cap) break;
-        const pool = rep % 2 === 0 ? s1 : s2 || s1, fav = pool && S.rng() < SP.underdogBias ? pool : null;
+        const pool = rep % 2 === 0 ? s1 : s2 || s1, fav = pool && S.rng() < SP.underdogBias ? pool : null; S.ev.trickle++; if (fav) S.ev.trickleFav++; // fav: one of the two smallest living swarms (of six)
         for (let n = 0; n < 40; n++) {
           let x, y;
           if (fav) { const R = FG.sight0 + FG.sightK * Math.sqrt(fav.count), ang = S.rng() * Math.PI * 2, d = R + SP.trickleBeyond[0] + S.rng() * (SP.trickleBeyond[1] - SP.trickleBeyond[0]); x = fav.cx + Math.cos(ang) * d; y = fav.cy + Math.sin(ang) * d; }
@@ -809,6 +851,7 @@
     if (S.hintT > 0) { S.hintT -= dt; if (S.hintT <= 0 || S.engagedNow || S.banners.length > 0) { S.hintT = 0; if (!sandbox) $("hint").classList.remove("show"); } }
 
     if (S.attract || S.fixture) return;
+    if (S.aiPlayer) { let al = 0; for (let i = 1; i < S.teams.length; i++) if (S.teams[i].alive) al++; if (S.timeLeft <= 0 || al <= 1) { S.result = S.timeLeft <= 0 ? "bell" : "last"; S.mode = "aidone"; } return; } // all-AI QA match: no win screen
     // stats + hints
     if (player.count > S.stats.peak) S.stats.peak = player.count;
     if (S.stats.recruited === 0 && S.t > 25 && !S._hintRecruit) S._hintRecruit = showHint("Grey peasants are free recruits. Go touch them.", 3);
@@ -944,10 +987,10 @@
     const loserBefore = loser.count, winnerBefore = winner.count, n = floodGroup(loser.id, cx, cy);
     for (let k = 0; k < n; k++) { const a = RQ[k], dx = a.x - cx, dy = a.y - cy; a.rd = Math.sqrt(dx * dx + dy * dy); }
     const group = RQ.slice(0, n).sort((p, q) => p.rd - q.rd); for (let k = 0; k < n; k++) RQ[k] = null; // a rare event: one small allocation is fine; stable sort keeps replays exact
-    const full = finalPhase || n < RM.minLoser;
+    const full = (finalPhase && cfg.finale.fullFlip) || n < RM.minLoser; // finale.fullFlip (SPEC-v2 §6: true) is an M8 lever: false keeps the remnant rule after the horn
     let nFlip = full ? n : Math.round(RM.flipShare * n);
     if (!full) { let within = 0; for (const a of group) if (a.rd <= RM.flipRadius) within++; if (within < nFlip) nFlip = within; }
-    const crown = finalPhase && !cfg.finale.crownAbsorbs ? biggestTeam() : null, got = z9();
+    const crown = finalPhase && !cfg.finale.crownAbsorbs && S.crown.team ? S.teams[S.crown.team] : null, got = z9(); // the crowned team absorbs nothing (SPEC-v2 §6)
     let flipped = 0, scattered = 0, fled = 0, farFlip = 0, minFlipX = Infinity;
     for (let k = 0; k < n; k++) {
       const a = group[k];
@@ -965,14 +1008,14 @@
     S.lastRout = { t: +S.t.toFixed(3), loser: loser.id, winner: winner.id, group: n, flipped, fled, scattered, outside: loserBefore - n, got: got.slice(), loserBefore, winnerBefore,
       cx: Math.round(cx), cy: Math.round(cy), farFlip: +farFlip.toFixed(1), minFlipX: minFlipX === Infinity ? null : Math.round(minFlipX) };
     if (winner.isPlayer) { S.stats.routs++; PS.audio.rout(true); banner(scattered && !got[1] ? "ROUTED: " + scattered + " SCATTER" : "+" + got[1] + " JOIN YOU" + (fled ? " · " + fled + " FLED" : ""), winner.color, 2.6); S.shake = 0.35; }
-    else if (loser.isPlayer) { S._routedBy = winner.name; PS.audio.rout(false); S.shake = 0.5; if (flipped + scattered < loserBefore) banner(fled ? "SCATTERED: " + fled + " escaped" : "-" + (flipped + scattered) + " JOINED " + winner.name.toUpperCase(), "#FF7A6E", 2.4); }
+    else if (loser.isPlayer) { S._routedBy = winner.name; S.relaxUntil = S.t + cfg.ai.relaxSeconds; /* relax window: no rival starts a hunt on you (SPEC-v2 §7) */ PS.audio.rout(false); S.shake = 0.5; if (flipped + scattered < loserBefore) banner(fled ? "SCATTERED: " + fled + " escaped" : "-" + (flipped + scattered) + " JOINED " + winner.name.toUpperCase(), "#FF7A6E", 2.4); }
     else if (playerSees(cx, cy)) { banner(loser.name.toUpperCase() + " routed by " + winner.name, winner.color, 2); if (fxOk(cx, cy)) PS.audio.rout(false); }
     else clashPing(cx, cy, true); // a rout you cannot see: no banner, it folds into the clash ping (SPEC-v2 §5)
     if (fxOk(cx, cy)) particles.ring(cx, cy, winner.color, 10, 120, 0.7);
     recount();
   }
   function eliminate(t) {
-    t.alive = false; t.count = 0;
+    t.alive = false; t.count = 0; S.ev.elims.push([+S.t.toFixed(1), t.id]); if (S.crown.team === t.id) crownUpdate(); // the crown moves on at once
     buildTeamChips();
     if (!t.isPlayer && !S.attract) { banner(t.name.toUpperCase() + " ELIMINATED", t.color, 2.4); PS.audio.eliminated(); }
   }
@@ -981,7 +1024,7 @@
     p.alive = false; p.t = cfg.respawn;
     if (p.kind === "rally") {
       let n = 0;
-      for (const a of S.agents) { if (a.team !== 0 || a.dead) continue; const dx = a.x - p.x, dy = a.y - p.y; if (dx * dx + dy * dy < cfg.rallyRadius * cfg.rallyRadius) { convert(a, teamId, false); n++; } }
+      for (const a of S.agents) { if (a.team !== 0 || a.dead || a.escapeT > 0) continue; const dx = a.x - p.x, dy = a.y - p.y; if (dx * dx + dy * dy < cfg.rallyRadius * cfg.rallyRadius) { convert(a, teamId, false); n++; } } // scattering survivors are in their escape window: no rally (M4: the crown absorbed a whole scatter through a Rally orb)
       t.buffs.rally = cfg.duration.rally;
       if (fxOk(p.x, p.y)) particles.ring(p.x, p.y, S.spr.PU.rally.color, 10, cfg.rallyRadius, 0.6);
       if (t.isPlayer) { floaters.add(p.x, p.y - 20, "RALLY! +" + n, S.spr.PU.rally.color, 18, 1.3); PS.audio.power("rally"); S.stats.powerups++; }
@@ -1028,111 +1071,243 @@
     if (S.mode !== "play") return;
     const w = screenToWorld(sx, sy), pick = S.cfg.input.pickPx / S.cam.zoom; let chase = 0, bd = pick * pick, gx = w.x, gy = w.y;
     for (const a of S.agents) { if (a.dead || a.team < 2 || a.escapeT > 0 || !onScreen(a.x, a.y) || (fogGate() && a.seenA < 0.5)) continue; const dx = a.x - w.x, dy = a.y - w.y, d2 = dx * dx + dy * dy; if (d2 < bd) { bd = d2; chase = a.team; } }
-    if (!chase) { let cd = 2.6 * pick * pick; for (const c of S.camps) { if (!c.n) continue; const dx = c.x - w.x, dy = c.y - w.y, d2 = dx * dx + dy * dy; if (d2 < cd) { cd = d2; gx = c.x; gy = c.y; } } }
+    if (!chase) { let cd = 2.6 * pick * pick; const g = fogGate(); for (const c of S.camps) { if (!(g && !PS.fog.sees(1, c.x, c.y) ? c.kn[1] > 0 : c.n > 0)) continue; const dx = c.x - w.x, dy = c.y - w.y, d2 = dx * dx + dy * dy; if (d2 < cd) { cd = d2; gx = c.x; gy = c.y; } } } // snaps only to camps you know (M4: a hidden camp no longer pulls the tap)
     setRoute(gx, gy, chase, src || "tap", sx, sy);
   }
   function setRoute(x, y, chase, src, sx, sy) { const inp = S.input, r = inp.route; r.on = true; r.x = x; r.y = y; r.chase = chase; r.src = src; r.sx = sx; r.sy = sy; inp.hold = false; inp.preview = S.cfg.flow.previewSeconds; inp.routeT = performance.now(); }
 
-  // ---------------------------------------------------------------- AI
+  // ---------------------------------------------------------------- AI (SPEC-v2 §7)
   // AI think, one rival per tick: every due team waits its turn in round-robin order, so a tick carries at most one think (and one
-  // "from me" field). thinkT counts sim seconds of fixed ticks, so it is tick-exact.
+  // "from me" field). thinkT counts sim seconds of fixed ticks, so it is tick-exact. aiCost times every think (the < 0.1 ms per tick gate).
   function aiTick(dt, D) {
-    const n = S.teams.length, i0 = S.attract ? 1 : 2; let pick = 0;
+    const n = S.teams.length, i0 = S.teams[1] && S.teams[1].ai ? 1 : 2; let pick = 0; S.aiCost.ticks++;
     for (let i = i0; i < n; i++) { const t = S.teams[i]; if (t.alive && t.ai) t.thinkT -= dt; }
     for (let k = 0; k < n; k++) { const i = (S.thinkRR + k) % n; if (i < i0) continue; const t = S.teams[i]; if (t.alive && t.ai && t.thinkT <= 0) { pick = i; break; } }
-    if (pick) { const t = S.teams[pick]; t.thinkT = S.attract ? S.cfg.ai.think : D.think; S.thinkRR = pick + 1; aiThink(t); }
+    if (pick) { const t = S.teams[pick], t0 = performance.now(); t.thinkT = S.attract ? S.cfg.ai.think : D.think; S.thinkRR = pick + 1; aiThink(t); const ms = performance.now() - t0, C = S.aiCost; C.ms += ms; C.thinks++; if (ms > C.max) C.max = ms; }
   }
   // every AI target is snapped along a ray back toward (fx, fy) (default: the team's own anchor): the edge of any rock facing it
   function aim(t, x, y, fx, fy) { const W = S.cfg.world.w, p = PS.flow.rayBack(fx == null ? t.ax : fx, fy == null ? t.ay : fy, clamp(x, 20, W - 20), clamp(y, 20, S.cfg.world.h - 20), null); t.tx = p.x; t.ty = p.y; }
+  // heard noise: every engaged pair refreshes its slot each tick at the contact centroid; a slot lives ai.heardSeconds past its last refresh
+  function noiseAt(a, b, x, y) {
+    let s = null, free = null, old = null;
+    for (const q of S.noise) { if (q.on && q.a === a && q.b === b) { s = q; break; } if (!q.on) { if (!free) free = q; } else if (!old || q.t1 < old.t1) old = q; }
+    if (!s) { s = free || old; s.on = true; s.a = a; s.b = b; s.t0 = S.t; }
+    s.x = x; s.y = y; s.t1 = S.t;
+  }
+  // the nearest clash team t hears (within min(maxD, its hearing radius), refreshed within ai.heardSeconds, not its own fight);
+  // who > 0: only a clash that team is in
+  function heardFight(t, maxD, who) {
+    const hs = S.cfg.ai.heardSeconds, r = Math.min(maxD, t.hear); let best = null, bd = r * r;
+    for (const q of S.noise) {
+      if (!q.on) continue; if (S.t - q.t1 > hs) { q.on = false; continue; }
+      if (q.a === t.id || q.b === t.id || (who && q.a !== who && q.b !== who)) continue;
+      const dx = q.x - t.ax, dy = q.y - t.ay, d2 = dx * dx + dy * dy; if (d2 < bd) { bd = d2; best = q; }
+    }
+    return best;
+  }
+  // what team t knows of swarm o: its own sight (obs), else a ghost younger than win s, projected up to fog.aiLeadMax s ahead. Sets KP
+  // (x, y, vx, vy, age, fresh: some of what it saw is outside an escape window). Counts are public (the pips).
+  const KP = { x: 0, y: 0, vx: 0, vy: 0, age: 0, fresh: false };
+  function knowOf(t, o, win) {
+    const FS = S.fogS, ob = FS.obs[t.id][o.id];
+    if (ob.seen) { KP.x = ob.x; KP.y = ob.y; KP.vx = ob.vx; KP.vy = ob.vy; KP.age = 0; KP.fresh = ob.n > ob.nEsc; return true; }
+    const mm = FS.mem[t.id][o.id]; if (!mm.ever || S.t - mm.t > win) return false;
+    const age = S.t - mm.t, la = Math.min(age, S.cfg.fog.aiLeadMax); KP.x = mm.x + mm.vx * la; KP.y = mm.y + mm.vy * la; KP.vx = mm.vx; KP.vy = mm.vy; KP.age = age; KP.fresh = mm.n > mm.nEsc; return true;
+  }
+  // the crown (SPEC-v2 §9): on the biggest living swarm, its position broadcast every finale.crownEvery s (crownEveryLate in the last
+  // finale.crownLate s). Every swarm knows where the crown was at the last broadcast: the finale's announced exception to the fog.
+  function crownUpdate(quiet) {
+    const F = S.cfg.finale, C = S.crown, b = biggestTeam(); if (!b) { C.team = 0; return; }
+    if (b.id !== C.team) { S.ev.crownMoves++; if (!quiet && !S.aiPlayer) banner(b.isPlayer ? "YOU WEAR THE CROWN: YOU ARE MARKED" : b.name.toUpperCase() + " TAKES THE CROWN", b.isPlayer ? "#FFD23F" : b.color, 2.6); }
+    C.team = b.id; C.x = b.ax; C.y = b.ay; C.t = S.t; C.next = S.t + (S.timeLeft <= F.crownLate ? F.crownEveryLate : F.crownEvery);
+  }
+  // pile-on (SPEC-v2 §7, C1 E): once the biggest swarm passes ai.pileOnRatio x the second (public counts), every rival that hears it fighting
+  // joins that fight. The banner fires when the flag lands on a new leader, at most every ai.pileOnBannerCooldown s. Checked every 30 ticks.
+  function pileTick() {
+    const AI = S.cfg.ai, P = S.pile; let a = null, b = null;
+    for (let i = 1; i < S.teams.length; i++) { const t = S.teams[i]; if (!t.alive || !t.count) continue; if (!a || t.count > a.count) { b = a; a = t; } else if (!b || t.count > b.count) b = t; }
+    const on = S.t >= AI.grace && !!a && !!b && a.count > AI.pileOnRatio * b.count, prev = P.id; P.id = on ? a.id : 0;
+    if (on && prev !== a.id) { S.ev.pileOns++; if (S.t - P.bannerT >= AI.pileOnBannerCooldown) { P.bannerT = S.t; banner(a.isPlayer ? "THE VALLEY TURNS ON YOU" : "THE VALLEY TURNS ON " + a.name.toUpperCase(), "#FFE49A", 3); } }
+  }
+  // Bully's scent (SPEC-v2 §7, announced): from ai.grace, every difficulty scentEvery s, Bully learns your position within ai.scentJitter px.
+  // The first ping plays the war horn with "BULLY HAS YOUR SCENT"; later ones only pulse the minimap with a short low note.
+  function scentTick() {
+    const AI = S.cfg.ai, sc = S.scent; if (S.t < sc.next || S.t < AI.grace) return;
+    sc.next = S.t + (S.attract ? S.cfg.difficulty.normal.scentEvery : diff().scentEvery);
+    let b = null; for (let i = 2; i < S.teams.length; i++) { const t = S.teams[i]; if (t.alive && t.count > 0 && t.kind === "bully") { b = t; break; } }
+    const p = S.teams[1]; if (!b || !p || !p.alive || !p.count) return;
+    const a = S.rng() * Math.PI * 2, r = Math.sqrt(S.rng()) * AI.scentJitter; sc.x = p.ax + Math.cos(a) * r; sc.y = p.ay + Math.sin(a) * r; sc.t = S.t; sc.n++; S.ev.scentPings++;
+    b.scentX = sc.x; b.scentY = sc.y; b.scentT = S.t;
+    if (S.aiPlayer) return;
+    if (sc.n === 1) { banner("BULLY HAS YOUR SCENT", b.color, 2.6); PS.audio.warHorn(0.75); } else PS.audio.scentNote();
+  }
+  const edgeness = (x, y, W) => 1 - Math.min(x, y, W - x, W - y) / (W / 2); // 1 at the map edge, 0 at the centre (Wary)
+  // Sly's lurk spot: the pass cell nearest an open objective (a power-up beacon within ai.objectiveSight, else the busiest camp it knows),
+  // within lurkPassMax px of it
+  function lurkSpot(t, P) {
+    const AI = S.cfg.ai, os2 = AI.objectiveSight * AI.objectiveSight; let ox = 0, oy = 0, bd = Infinity, on = false;
+    for (const p of S.powerups) { if (!p.alive) continue; const d = (p.x - t.ax) * (p.x - t.ax) + (p.y - t.ay) * (p.y - t.ay); if (d <= os2 && d < bd) { bd = d; ox = p.x; oy = p.y; on = true; } }
+    if (!on) { let bn = 0; for (const c of S.camps) if (c.kn[t.id] > bn) { bn = c.kn[t.id]; ox = c.x; oy = c.y; on = true; } }
+    if (!on) return false;
+    const pc = S.map.place.passCells, N = S.map.N, cell = S.map.cell, lim = P.lurkPassMax * P.lurkPassMax; let bc = -1; bd = lim;
+    for (let i = 0; i < pc.length; i++) { const c = pc[i], x = ((c % N) + 0.5) * cell, y = (((c / N) | 0) + 0.5) * cell, d = (x - ox) * (x - ox) + (y - oy) * (y - oy); if (d < bd) { bd = d; bc = c; } }
+    if (bc < 0) return false;
+    t.lurkX = ((bc % N) + 0.5) * cell; t.lurkY = (((bc / N) | 0) + 0.5) * cell; return true;
+  }
+  // Stubborn's claim: the camp cluster it knows (kn > 0, outside its own home meadow) with the most people within clusterRadius per path px
+  function claimSite(t, P, dist) {
+    const m = S.map, s = m.spawns[t.slot], TC = S.cfg.terrain, hr = (TC.homeRadius + TC.homeWall + 1) * m.cell + 60, cr2 = P.clusterRadius * P.clusterRadius; let best = null, bs = 0;
+    for (const c of S.camps) {
+      if (!(c.kn[t.id] > 0) || (s && (c.x - s.x) * (c.x - s.x) + (c.y - s.y) * (c.y - s.y) < hr * hr)) continue;
+      let n = 0; for (const q of S.camps) if (q.kn[t.id] > 0 && (q.x - c.x) * (q.x - c.x) + (q.y - c.y) * (q.y - c.y) <= cr2) n += q.kn[t.id];
+      const sc = n / (dist(c.x, c.y) + 300); if (sc > bs) { bs = sc; best = c; }
+    }
+    if (!best) return;
+    t.claimX = best.x; t.claimY = best.y; t.claimOn = true; t.claimEmpty = S.t; S.fogS.ai.decisions++; S.fogS.ai.camps++;
+  }
   // AI decisions on path distance (M2): a "from me" field out to ai.sight x flow.fromMeCap gives every distance aiThink uses, so a camp
   // behind a ridge scores as far as it really is; past the field's edge a distance is max(cap, straight x flow.farDetour). Sight stays a
   // straight line (terrain blocks movement, not sight). The team field then routes to whatever target is picked.
-  // Under fog (M3, SPEC-v2 §7 minimal; M4 adds the personalities): a swarm is a threat or prey only while this AI sees it (obs, its own
-  // stamps) or remembers it (mem, fog.aiMemory s for hunting, projected at most fog.aiLeadMax s ahead; fog.aiFleeMemory s for fleeing).
-  // Counts are the public live counts (the pips). Camps: ones it has seen with people, or whose smoke is within fog.smoke. Power-ups:
-  // beacons within ai.powerupSight. With nothing known it explores: fog.exploreSamples points fog.exploreRing px away, the nearest cell it
-  // has not explored, kept fog.exploreCommit s. Every targeted swarm and camp passes the knowledge assert (PS.ai.assertKnowledge).
-  const TH = { ax: 0, ay: 0 }, PR = { x: 0, y: 0, vx: 0, vy: 0 };
+  // Knowledge (SPEC-v2 §7): a swarm is a threat or prey only while this AI sees it or remembers it: hunts t.mem s (difficulty 4 / 6 / 10)
+  // projected at most fog.aiLeadMax s ahead, flight fog.aiFleeMemory s, routing ai.ghostKeep s. Camps: seen with people, within
+  // ai.campKnowStart of its spawn, or smoke within fog.smoke. Objectives: power-up beacons within ai.objectiveSight. Noise: clashes within its
+  // hearing. The two announced exceptions: Bully's scent and the finale crown. State machine, first match wins: FLEE (cornered: fight) >
+  // CROWN (finale) > HUNT (huntTimeout, then huntCooldown) > PILE-ON > personality (Bully TRACK, Wary LEAVE, Sly INVESTIGATE / LURK,
+  // Stubborn HOLD) > REGROUP > FORAGE > EXPLORE. Before ai.grace nobody hunts and every AI steers away from any swarm it sees.
+  const TH = { ax: 0, ay: 0 }, PR = { x: 0, y: 0, vx: 0, vy: 0 }, VBX = new Float64Array(9), VBY = new Float64Array(9);
   function aiThink(t) {
-    const cfg = S.cfg, P = t.ai, AI = cfg.ai, FW = cfg.flow, FG = cfg.fog, FL = PS.flow, FS = S.fogS;
-    const final = S.timeLeft <= cfg.world.finalSeconds, cap = AI.sight * FW.fromMeCap, me = FL.buildFromMe(t.id, t.ax, t.ay, cap);
+    const cfg = S.cfg, P = t.ai, K = t.kind, AI = cfg.ai, FW = cfg.flow, FG = cfg.fog, FN = cfg.finale, FL = PS.flow, FS = S.fogS;
+    const final = S.timeLeft <= cfg.world.finalSeconds, grace = !final && S.t < AI.grace, cap = AI.sight * FW.fromMeCap, me = FL.buildFromMe(t.id, t.ax, t.ay, cap);
     const dist = (x, y) => { const d = FL.pathPx(me, x, y); if (d >= 0) return d; const dx = x - t.ax, dy = y - t.ay; return Math.max(cap, Math.sqrt(dx * dx + dy * dy) * FW.farDetour); };
-    const regroup = !final && S.t < t.regroupUntil;
-    let biggest = null; for (let i = 1; i < S.teams.length; i++) { const o = S.teams[i]; if (o.alive && (!biggest || o.count > biggest.count)) biggest = o; } // live counts are public (the pips)
-    const fleeRatio = final ? AI.finalFleeRatio : P.fleeRatio;
-    let threat = null, threatD = Infinity, prey = null, preyScore = 0;
+    const regroup = !final && S.t < t.regroupUntil, escaping = S.t < t.escUntil, hm = S.attract ? 1 : diff().huntMult, pw = t.count * teamPower(t);
+    const crown = final && S.crown.team && S.crown.team !== t.id && S.teams[S.crown.team].alive ? S.teams[S.crown.team] : null;
+    const R2 = K === "stubborn" ? P.holdRadius * P.holdRadius : 0, inRing = (x, y) => (x - t.claimX) * (x - t.claimX) + (y - t.claimY) * (y - t.claimY) <= R2;
+    const holding = K === "stubborn" && t.claimOn && !final, fleeRatio = final ? AI.finalFleeRatio : holding && inRing(t.ax, t.ay) ? P.homeFleeRatio : P.fleeRatio;
+    let threat = null, threatD = Infinity, prey = null, preyScore = 0, avoid = null, avoidD = AI.graceAvoid, nVB = 0;
     for (let i = 1; i < S.teams.length; i++) {
-      const o = S.teams[i]; if (o === t || !o.alive) continue;
-      const ob = FS.obs[t.id][i], mm = FS.mem[t.id][i]; let ox, oy, vx, vy, age, fresh;
-      if (ob.seen) { ox = ob.x; oy = ob.y; vx = ob.vx; vy = ob.vy; age = 0; fresh = ob.n > ob.nEsc; }
-      else if (mm.ever && S.t - mm.t <= FG.aiMemory) { age = S.t - mm.t; const la = Math.min(age, FG.aiLeadMax); ox = mm.x + mm.vx * la; oy = mm.y + mm.vy * la; vx = mm.vx; vy = mm.vy; fresh = mm.n > mm.nEsc; }
-      else continue; // never target a swarm it has not seen (SPEC-v2 §7)
-      const sp = PS.terrain.snapXY(ox, oy); ox = sp.x; oy = sp.y;
+      const o = S.teams[i]; if (o === t || !o.alive || o.count === 0) continue;
+      if (!knowOf(t, o, Math.max(t.mem, FG.aiFleeMemory))) continue; // never a swarm it has not seen (SPEC-v2 §7)
+      const sp = PS.terrain.snapXY(KP.x, KP.y), ox = sp.x, oy = sp.y, age = KP.age, opw = o.count * teamPower(o);
+      if (age === 0 && opw >= AI.campAvoidRatio * pw && nVB < 9) { VBX[nVB] = ox; VBY[nVB++] = oy; } // camp avoidance reads these
       const d = dist(ox, oy);
-      let huntRatio = final && o === biggest ? AI.finalHuntRatio : P.huntRatio * (S.attract ? 1 : diff().huntMult);
-      if (!final && !o.isPlayer) huntRatio *= AI.aiVsAiHuntMult;
-      if (!final && S.t < AI.gracePeriod) huntRatio = 1e9; // nobody hunts before the grace period ends
-      if (!(final && o === biggest) && age <= FG.aiFleeMemory && o.count >= t.count * fleeRatio && d < threatD) { threat = o; threatD = d; TH.ax = ox; TH.ay = oy; }
-      // never hunt a swarm whose seen agents are all inside their escape window: they cannot be targeted (M2 critic MAJOR-2)
-      if (!regroup && fresh && t.count >= o.count * huntRatio && t.count >= 3 && S.t >= (t.huntCooldown || 0)) {
-        const sc = (o.count + 2) / (d + 60) * (o.isPlayer ? P.hatesPlayer : 1);
-        if (sc > preyScore) { preyScore = sc; prey = o; PR.x = ox; PR.y = oy; PR.vx = vx; PR.vy = vy; }
-      }
+      if (grace) { if (age === 0 && d < avoidD) { avoid = o; avoidD = d; TH.ax = ox; TH.ay = oy; } continue; } // steer away, never hunt
+      if (o !== crown && age <= FG.aiFleeMemory && opw >= pw * fleeRatio && d < threatD) { threat = o; threatD = d; TH.ax = ox; TH.ay = oy; }
+      if (o === crown || regroup || escaping || !KP.fresh || age > t.mem || t.count < 3 || S.t < t.huntCooldown) continue;
+      if (o.isPlayer && S.t < S.relaxUntil && t.preyId !== o.id) continue; // relax window: no new hunt on the player after it loses a fight
+      let hr = P.huntRatio * hm * (o.isPlayer ? 1 : AI.aiVsAiHuntMult);
+      if (K === "sly" && S.t - o.lastFight <= P.foughtSeconds) hr = P.foughtHuntRatio * (o.isPlayer ? hm : 1); // jump a swarm that just fought
+      if (K === "stubborn") { if (!holding || !inRing(ox, oy)) continue; hr = P.huntRatio * (o.isPlayer ? hm : 1); } // only inside its ring
+      if (pw < opw * hr) continue;
+      const sc = (o.count + 2) / (d + 60) * (o.isPlayer ? P.hatesPlayer : 1);
+      if (sc > preyScore) { preyScore = sc; prey = o; PR.x = ox; PR.y = oy; PR.vx = KP.vx; PR.vy = KP.vy; }
     }
-    const escaping = S.t < t.escUntil;
-    if (threat && threatD < AI.corneredDist && t.count >= 3 && !regroup && !escaping) {
-      // caught: turn and fight rather than drag a hopeless chase across the map (never while regrouping or escaping: M2 critic MAJOR-2)
-      knowSwarm(t, threat); aim(t, TH.ax, TH.ay); t.state = "hunt"; t.preyId = threat.id; t.speedMod = AI.huntSpeed; return;
+    // grace: steer straight away from the nearest swarm it sees
+    if (avoid) { knowSwarm(t, avoid, 0); const dx = t.ax - TH.ax, dy = t.ay - TH.ay, l = Math.sqrt(dx * dx + dy * dy) || 1, q = FL.rayOut(t.ax, t.ay, dx / l, dy / l, AI.fleeDistance, null); aim(t, q.x, q.y); t.state = "avoid"; t.preyId = 0; t.speedMod = AI.roamSpeed; return; }
+    // FLEE, or turn and fight when caught (never while regrouping or escaping: M2 critic MAJOR-2)
+    if (threat && threatD < AI.corneredDist && t.count >= 3 && !regroup && !escaping) { knowSwarm(t, threat, FG.aiFleeMemory); aim(t, TH.ax, TH.ay); t.state = "hunt"; t.preyId = threat.id; t.speedMod = AI.huntSpeed; return; }
+    if (threat) { knowSwarm(t, threat, FG.aiFleeMemory); t.speedMod = AI.fleeSpeed; const q = fleeTarget(t, TH, me, false); aim(t, q.x, q.y); t.state = "flee"; t.preyId = 0; return; }
+    // CROWN: every rival goes for the crowned leader; one under finale.underdogRatio x the leader closes to finale.closeTo px and commits only
+    // once a second attacker it sees stands within finale.pairRadius of the crown, or it hears the leader fighting
+    if (crown && !regroup && !escaping && t.count >= 3) {
+      const L = crown, sees = knowOf(t, L, t.mem) && KP.age <= 1; let cx = S.crown.x, cy = S.crown.y; if (sees) { cx = KP.x; cy = KP.y; }
+      let commit = pw >= FN.underdogRatio * L.count * teamPower(L);
+      if (!commit && heardFight(t, 1e9, L.id)) commit = true;
+      if (!commit) { const pr2 = FN.pairRadius * FN.pairRadius; for (let i = 1; i < S.teams.length && !commit; i++) { const o = S.teams[i], ob = FS.obs[t.id][i]; if (o !== t && o !== L && o.alive && o.count >= 3 && ob.seen && (ob.x - cx) * (ob.x - cx) + (ob.y - cy) * (ob.y - cy) <= pr2) commit = true; } }
+      FS.ai.decisions++; FS.ai.crown++;
+      if (commit) { if (sees) { knowSwarm(t, L, t.mem); aim(t, cx + KP.vx * AI.leadTime, cy + KP.vy * AI.leadTime, cx, cy); } else aim(t, cx, cy); t.state = "crown"; t.preyId = L.id; t.speedMod = AI.huntSpeed; return; }
+      const dx = t.ax - cx, dy = t.ay - cy, d = Math.sqrt(dx * dx + dy * dy) || 1;
+      if (d > FN.closeTo) aim(t, cx + (dx / d) * FN.closeTo, cy + (dy / d) * FN.closeTo); else aim(t, t.ax, t.ay);
+      t.state = "crownwait"; t.preyId = 0; t.speedMod = AI.roamSpeed; return;
     }
-    if (threat) { knowSwarm(t, threat); t.speedMod = AI.fleeSpeed; const q = fleeTarget(t, TH, me, false); aim(t, q.x, q.y); t.state = "flee"; t.preyId = 0; return; }
+    // HUNT a swarm it sees or remembers (ai.huntTimeout s without contact starts ai.huntCooldown)
     if (prey) {
-      if (t.state !== "hunt") t.huntStart = S.t;
+      if (t.state !== "hunt" || t.preyId !== prey.id) t.huntStart = S.t;
       let engagedAny = 0; for (let j = 1; j < 9; j++) engagedAny += t.eng[j];
       if (!final && S.t - t.huntStart > AI.huntTimeout && engagedAny === 0) { t.huntCooldown = S.t + AI.huntCooldown; prey = null; }
     }
-    if (prey) {
-      // lead the prey by the velocity this AI observed (never the prey's target: for the player that is the cursor), snapped back toward it
-      knowSwarm(t, prey); aim(t, PR.x + PR.vx * AI.leadTime, PR.y + PR.vy * AI.leadTime, PR.x, PR.y); t.state = "hunt"; t.preyId = prey.id; t.speedMod = AI.huntSpeed; return;
-    }
+    if (prey) { knowSwarm(t, prey, t.mem); aim(t, PR.x + PR.vx * AI.leadTime, PR.y + PR.vy * AI.leadTime, PR.x, PR.y); t.state = "hunt"; t.preyId = prey.id; t.speedMod = AI.huntSpeed; return; }
     t.preyId = 0;
-    if (regroup) {
-      const fo = S.teams[t.fleeFrom], ob = FS.obs[t.id][t.fleeFrom], mm = FS.mem[t.id][t.fleeFrom];
-      if (fo && fo.alive && fo.count > 0 && (ob.seen || (mm.ever && S.t - mm.t <= FG.aiMemory))) {
-        knowSwarm(t, fo); TH.ax = ob.seen ? ob.x : mm.x; TH.ay = ob.seen ? ob.y : mm.y; const q = fleeTarget(t, TH, me, true); aim(t, q.x, q.y); t.state = "regroup"; t.speedMod = AI.roamSpeed; return;
+    // PILE-ON: the valley turns on a runaway leader; a rival that hears it fighting joins that fight (hunts it on sight, whatever the ratio)
+    if (!grace && S.pile.id && S.pile.id !== t.id && !regroup && !escaping && t.count >= 3 && !(S.pile.id === 1 && S.t < S.relaxUntil)) {
+      const L = S.teams[S.pile.id], nz = L && L.alive ? heardFight(t, 1e9, L.id) : null;
+      if (nz) {
+        FS.ai.decisions++; FS.ai.noise++; t.speedMod = AI.huntSpeed;
+        if (knowOf(t, L, t.mem) && KP.age === 0) { knowSwarm(t, L, t.mem); aim(t, KP.x, KP.y); if (t.state !== "hunt") t.huntStart = S.t; t.state = "hunt"; t.preyId = L.id; return; }
+        aim(t, nz.x, nz.y); t.state = "pileon"; return;
       }
     }
-    // roam: the best camp this AI knows, or a power-up beacon it sees, by value / path distance
-    let bestC = null, bestS = 0, pu = false; const sm2 = FG.smoke * FG.smoke;
+    // personality moves (SPEC-v2 §7)
+    if (!grace && !regroup && !escaping) {
+      if (K === "bully" && S.t - t.scentT <= P.scentSearch) { // TRACK the last scent ping while big enough to take you on
+        const pl = S.teams[1];
+        if ((t.scentX - t.ax) * (t.scentX - t.ax) + (t.scentY - t.ay) * (t.scentY - t.ay) < 90 * 90) t.scentT = -1e9; // searched: nothing here
+        else if (pl.alive && pl.count > 0 && S.t >= S.relaxUntil && pw >= pl.count * teamPower(pl) * P.huntRatio * hm * P.trackRatio) { FS.ai.decisions++; FS.ai.scent++; aim(t, t.scentX, t.scentY); t.state = "track"; t.speedMod = AI.roamSpeed; return; }
+      } else if (K === "wary") { // LEAVE any area with a clash heard within clashLeave px
+        let nz = null;
+        if (S.t >= t.leaveUntil && (nz = heardFight(t, P.clashLeave, 0))) { FS.ai.decisions++; FS.ai.noise++; TH.ax = nz.x; TH.ay = nz.y; const q = fleeTarget(t, TH, me, false); t.lurkX = q.x; t.lurkY = q.y; t.leaveUntil = S.t + P.leaveSeconds; }
+        if (S.t < t.leaveUntil) { aim(t, t.lurkX, t.lurkY); t.state = "leave"; t.speedMod = AI.roamSpeed; return; }
+      } else if (K === "sly") { // INVESTIGATE a clash heard within clashGo px; else LURK at the pass nearest an open objective
+        const nz = heardFight(t, P.clashGo, 0);
+        if (nz) { FS.ai.decisions++; FS.ai.noise++; t.lurkUntil = -1e9; aim(t, nz.x, nz.y); t.state = "investigate"; t.speedMod = AI.huntSpeed; return; }
+        if (S.t < t.lurkUntil) { aim(t, t.lurkX, t.lurkY); t.state = "lurk"; t.speedMod = AI.roamSpeed; return; }
+        if (S.t >= t.lurkCool && lurkSpot(t, P)) { FS.ai.decisions++; t.lurkUntil = S.t + P.lurkSeconds + dist(t.lurkX, t.lurkY) / Math.max(60, t.spd); t.lurkCool = t.lurkUntil + P.lurkCooldown; aim(t, t.lurkX, t.lurkY); t.state = "lurk"; t.speedMod = AI.roamSpeed; return; }
+      } else if (K === "stubborn" && !final) { // HOLD holdRadius px around a claimed camp cluster, foraging only inside it; leaves at the horn
+        if (!t.claimOn) claimSite(t, P, dist);
+        if (t.claimOn) {
+          let bc = null, bs = 0;
+          for (const c of S.camps) {
+            if (!(c.kn[t.id] > 0) || !inRing(c.x, c.y)) continue; let skip = false; for (let k = 0; k < nVB; k++) if ((VBX[k] - c.x) * (VBX[k] - c.x) + (VBY[k] - c.y) * (VBY[k] - c.y) < AI.campAvoidRadius * AI.campAvoidRadius) { skip = true; break; }
+            if (skip) continue; const sc = 1 / (dist(c.x, c.y) + 120); if (sc > bs) { bs = sc; bc = c; }
+          }
+          if (bc) { t.claimEmpty = S.t; knowCamp(t, bc); aim(t, bc.x, bc.y); } else { if (S.t - t.claimEmpty > P.reclaimEmpty) t.claimOn = false; aim(t, t.claimX, t.claimY); }
+          t.state = "hold"; t.speedMod = AI.roamSpeed; return;
+        }
+      }
+    }
+    // REGROUP: a fresh remnant heads for camps away from the winner (it remembers the winner ai.ghostKeep s for routing)
+    if (regroup) {
+      const fo = S.teams[t.fleeFrom];
+      if (fo && fo.alive && fo.count > 0 && knowOf(t, fo, AI.ghostKeep)) { knowSwarm(t, fo, AI.ghostKeep); TH.ax = KP.x; TH.ay = KP.y; const q = fleeTarget(t, TH, me, true); aim(t, q.x, q.y); t.state = "regroup"; t.speedMod = AI.roamSpeed; return; }
+    }
+    // FORAGE: value / (path distance + 120) over the camps it knows and the power-up beacons within ai.objectiveSight, skipping any camp
+    // within ai.campAvoidRadius of a swarm it sees at >= ai.campAvoidRatio x its own count (R8: the biggest survival lever); Wary likes edges
+    let bestC = null, bestS = 0, pu = false; const sm2 = FG.smoke * FG.smoke, av2 = AI.campAvoidRadius * AI.campAvoidRadius, os2 = AI.objectiveSight * AI.objectiveSight, W = cfg.world.w;
     for (const c of S.camps) {
       const dx = c.x - t.ax, dy = c.y - t.ay, smoke = c.n > 0 && dx * dx + dy * dy <= sm2; if (!(c.kn[t.id] > 0) && !smoke) continue;
-      const sc = P.neutralBias * AI.neutralScore / (dist(c.x, c.y) + 120);
+      let skip = false; for (let k = 0; k < nVB; k++) if ((VBX[k] - c.x) * (VBX[k] - c.x) + (VBY[k] - c.y) * (VBY[k] - c.y) < av2) { skip = true; break; }
+      if (skip) continue;
+      let sc = P.neutralBias * AI.neutralScore / (dist(c.x, c.y) + 120); if (K === "wary") sc *= 1 + P.edgeBias * edgeness(c.x, c.y, W);
       if (sc > bestS) { bestS = sc; bestC = c; }
     }
     let tx = bestC ? bestC.x : t.cx, ty = bestC ? bestC.y : t.cy;
     for (const p of S.powerups) {
-      if (!p.alive) continue;
-      const dx = p.x - t.cx, dy = p.y - t.cy; if (dx * dx + dy * dy > AI.powerupSight * AI.powerupSight) continue;
-      const sc = P.powerBias * AI.powerScore / (dist(p.x, p.y) + 120);
-      if (sc > bestS) { bestS = sc; tx = p.x; ty = p.y; pu = true; }
+      if (!p.alive) continue; const dx = p.x - t.ax, dy = p.y - t.ay; if (dx * dx + dy * dy > os2) continue;
+      const sc = P.powerBias * AI.powerScore / (dist(p.x, p.y) + 120); if (sc > bestS) { bestS = sc; tx = p.x; ty = p.y; pu = true; }
     }
-    if (bestS > 0) { if (!pu) knowCamp(t, bestC); aim(t, tx, ty); t.state = "roam"; t.speedMod = AI.roamSpeed; return; }
-    // explore: nothing known, so head for ground this AI has not seen (kept fog.exploreCommit s, or until reached)
+    if (bestS > 0) { if (!pu) knowCamp(t, bestC); aim(t, tx, ty); t.state = "forage"; t.speedMod = AI.roamSpeed; return; }
+    // EXPLORE: fog.exploreSamples points fog.exploreRing px away on walkable ground it has not explored, the nearest that does not lead toward
+    // a bigger swarm it remembers (ai.ghostKeep); kept fog.exploreCommit s or until reached. Wary weighs edges.
     if (S.t >= t.exUntil || (t.exX - t.ax) * (t.exX - t.ax) + (t.exY - t.ay) * (t.exY - t.ay) < 60 * 60) {
+      let nT = 0; for (let i = 1; i < S.teams.length && nT < 9; i++) { const o = S.teams[i]; if (o === t || !o.alive || o.count * teamPower(o) < pw) continue; if (knowOf(t, o, AI.ghostKeep)) { VBX[nT] = KP.x; VBY[nT++] = KP.y; } }
       const E = FG.exploreRing, ex = PS.fog.exploredArr(t.id), T = PS.terrain, m = S.map; let bx = 0, by = 0, bd = Infinity;
       for (let k = 0; k < FG.exploreSamples; k++) {
         const a = S.rng() * Math.PI * 2, d = E[0] + S.rng() * (E[1] - E[0]), x = t.ax + Math.cos(a) * d, y = t.ay + Math.sin(a) * d, c = T.cellOf(x, y);
-        if (c < 0 || !T.walkT(m.terr[c]) || m.region[c] !== 1 || (ex && ex[c])) continue; if (d < bd) { bd = d; bx = x; by = y; }
+        if (c < 0 || !T.walkT(m.terr[c]) || m.region[c] !== 1 || (ex && ex[c])) continue;
+        let toward = false; for (let q = 0; q < nT; q++) if ((VBX[q] - x) * (VBX[q] - x) + (VBY[q] - y) * (VBY[q] - y) < (VBX[q] - t.ax) * (VBX[q] - t.ax) + (VBY[q] - t.ay) * (VBY[q] - t.ay)) { toward = true; break; }
+        if (toward) continue;
+        const s = K === "wary" ? d * (1 - 0.5 * P.edgeBias * edgeness(x, y, W)) : d; if (s < bd) { bd = s; bx = x; by = y; }
       }
       if (bd === Infinity) { const p = randPos(); bx = p.x; by = p.y; }
       t.exX = bx; t.exY = by; t.exUntil = S.t + FG.exploreCommit; FS.ai.explore++;
     }
     aim(t, t.exX, t.exY); t.state = "explore"; t.speedMod = AI.roamSpeed;
   }
-  // PS.ai.assertKnowledge (SPEC-v2 §7, M3 brief 9): a swarm an AI targets must be in its sight (obs) or memory window (mem); a camp must be
-  // one it has seen with people or whose smoke is in range. Counted always (sandboxes too); the first violation logs a console error.
-  function knowSwarm(t, o) {
+  // PS.ai.assertKnowledge (SPEC-v2 §7): a swarm an AI targets must be in its sight (obs) or inside the memory window that decision uses (win);
+  // a camp must be one it has seen with people, knew from its spawn, or whose smoke is in range. Counted always (sandboxes too); the first
+  // violation logs a console error. Crown, scent and noise targets are places, announced or heard, and are counted separately.
+  function knowSwarm(t, o, win) {
     const FS = S.fogS, K = FS.ai, ob = FS.obs[t.id][o.id], mm = FS.mem[t.id][o.id]; K.decisions++; K.swarm++;
-    if (!ob.seen && !(mm.ever && S.t - mm.t <= S.cfg.fog.aiMemory + 1e-9)) knowFail(t, "swarm " + o.name);
+    if (!ob.seen && !(mm.ever && S.t - mm.t <= win + 1e-9)) knowFail(t, "swarm " + o.name);
   }
   function knowCamp(t, c) {
     const K = S.fogS.ai, sm = S.cfg.fog.smoke, dx = c.x - t.ax, dy = c.y - t.ay; K.decisions++; K.camps++;
@@ -1487,9 +1662,9 @@
       ctx.font = "800 11px 'Nunito', system-ui"; ctx.textAlign = "center";
       for (const c of S.camps) {
         if (c.x < x0 - 40 || c.x > x1 + 40 || c.y < y0 - 40 || c.y > y1 + 40) continue;
-        const n = !gate || PS.fog.sees(1, c.x, c.y) ? c.n : c.kn[1]; if (!(n > 0)) continue;
-        const d = Math.hypot(c.x - pl.cx, c.y - pl.cy); if (d > cfg.world.campLabelDist) continue;
-        const a = clamp((cfg.world.campLabelDist - d) / 120, 0, 1); ctx.globalAlpha = a * 0.9;
+        const live = !gate || PS.fog.sees(1, c.x, c.y), n = live ? c.n : c.kn[1]; if (!(n > 0)) continue;
+        const d = Math.hypot(c.x - pl.cx, c.y - pl.cy), R = live ? cfg.world.campLabelDist : FG.labelDist; if (d > R) continue; // M3 critic MAJOR-1: last-seen labels reach fog.labelDist
+        const a = clamp((R - d) / 120, 0, 1); ctx.globalAlpha = a * 0.9 * (live ? 1 : FG.labelDim);
         ctx.fillStyle = "rgba(8,14,6,.7)"; ctx.fillRect(c.x - 15, c.y - 44, 30, 15); ctx.fillStyle = "#F1EEDF"; ctx.fillText("+" + n, c.x, c.y - 33);
       }
       ctx.globalAlpha = 1;
@@ -1516,26 +1691,41 @@
     f0 = performance.now();
     if (tells) drawTellsWorld(x0, y0, x1, y1, pl);
     fp3 = performance.now() - f0; fogMs += fp3;
-    // name tags above every swarm you see (yours too), over what you see of it; the swarm clashing with you is labelled by the clash panel
+    // name tags above every swarm you see (yours too), over what you see of it; the swarm clashing with you is labelled by the clash panel.
+    // Tags and verdict marks stay inside the safe play area: below the top HUD, off the screen edges (M3 critic MINOR-5)
+    const safeT = y0 + (S.input.touch ? 124 : 52) / z + 14, safeL = x0 + 6 / z, safeR = x1 - 6 / z, vOn = (i) => tells && i > 1 && S.t - FS.verdict[i].t0 >= 0 && S.t - FS.verdict[i].t0 < FG.verdictSeconds;
     for (let i = 1; i < S.teams.length; i++) {
       const t = S.teams[i]; if (!t.alive || t.count === 0 || i === clashRi || (t.isPlayer && (t.count < 2 || S.attract || S.engagedNow))) continue;
       let cx = t.cx, cy = t.cy, top = t.minY; if (gate && i > 1) { if (!PVN[i]) continue; cx = PVX[i] / PVN[i]; cy = PVY[i] / PVN[i]; top = PVMY[i]; }
       if (cx < x0 - 60 || cx > x1 + 60 || cy < y0 - 60 || cy > y1 + 60) continue;
-      const ly = Math.min(top - 30, cy - 40);
+      const ly = Math.max(Math.min(top - 30, cy - 40), safeT + (vOn(i) ? 26 : 0));
       ctx.font = "800 12px 'Nunito', system-ui"; ctx.textAlign = "center";
-      const label = (S.attract && t.isPlayer ? "Mint" : t.name) + " · " + t.count; const w = ctx.measureText(label).width + 12;
+      const label = (S.attract && t.isPlayer ? "Mint" : t.name) + " · " + t.count; const w = ctx.measureText(label).width + 12; cx = clamp(cx, safeL + w / 2, Math.max(safeL + w / 2, safeR - w / 2));
       ctx.fillStyle = "rgba(8,14,6,.75)"; ctx.fillRect(cx - w / 2, ly - 13, w, 18);
       ctx.fillStyle = t.color; ctx.fillRect(cx - w / 2, ly - 13, 3, 18);
       ctx.fillStyle = "#F1EEDF"; ctx.fillText(label, cx + 1, ly);
       if (i > 1) tagMask |= 1 << i;
     }
+    // the crown (SPEC-v2 §9): over the crowned swarm where you see it (yours too), and a ghost crown at its last broadcast position, which is
+    // where every hunter thinks it is ("YOU ARE MARKED" when it is yours). The broadcast is public: it is the finale's announced exception.
+    if (S.crown.team && S.mode === "play" && !S.attract) {
+      const C = S.crown, ct = S.teams[C.team];
+      if (ct && ct.alive && ct.count > 0) {
+        let vx = 0, vy = 0, on = false;
+        if (ct.isPlayer || !gate) { vx = ct.cx; vy = Math.min(ct.minY - 30, ct.cy - 40) - 24; on = true; }
+        else if (PVN[C.team]) { vx = PVX[C.team] / PVN[C.team]; vy = Math.min(PVMY[C.team] - 30, PVY[C.team] / PVN[C.team] - 40) - 24; on = true; }
+        if (on && vx > x0 - 40 && vx < x1 + 40 && vy > y0 - 40 && vy < y1 + 40) crownGlyph(vx, vy + Math.sin(S.t * 3) * 2, 11, 1);
+        if ((ct.isPlayer || !on) && C.x > x0 - 40 && C.x < x1 + 40 && C.y > y0 - 40 && C.y < y1 + 40) crownGlyph(C.x, C.y, 14, 0.4 + 0.15 * Math.sin(S.t * 4));
+      }
+    }
     // first sight: a verdict mark on that rival's banner position for fog.verdictSeconds (stronger / even / weaker, count x power)
     f0 = performance.now();
     let fp4 = 0; if (tells) for (let i = 2; i < S.teams.length; i++) {
       const v = FS.verdict[i], age = S.t - v.t0; if (age < 0 || age >= FG.verdictSeconds || !PVN[i] || i === clashRi) continue;
-      const cx = PVX[i] / PVN[i], ly = Math.min(PVMY[i] - 30, PVY[i] / PVN[i] - 40);
+      const ly = Math.max(Math.min(PVMY[i] - 30, PVY[i] / PVN[i] - 40), safeT + 26);
       ctx.font = "800 12px 'Nunito', system-ui"; ctx.textAlign = "center";
       const txt = v.kind > 0 ? "STRONGER" : v.kind < 0 ? "WEAKER" : "EVEN", col = v.kind > 0 ? "#FF7A6E" : v.kind < 0 ? "#7CF2C4" : "#FFE49A", vy = ly - 26, vw = ctx.measureText(txt).width + 26;
+      const cx = clamp(PVX[i] / PVN[i], safeL + vw / 2, Math.max(safeL + vw / 2, safeR - vw / 2));
       ctx.globalAlpha = Math.min(1, (FG.verdictSeconds - age) * 3, age * 8 + 0.2); ctx.fillStyle = "rgba(8,14,6,.85)"; ctx.beginPath(); ctx.roundRect(cx - vw / 2, vy - 13, vw, 18, 6); ctx.fill();
       ctx.fillStyle = col; ctx.fillText(txt, cx + 7, vy); ctx.beginPath();
       const mx = cx - vw / 2 + 9, my = vy - 4; if (v.kind > 0) { ctx.moveTo(mx - 4, my + 3); ctx.lineTo(mx, my - 3); ctx.lineTo(mx + 4, my + 3); } else if (v.kind < 0) { ctx.moveTo(mx - 4, my - 3); ctx.lineTo(mx, my + 3); ctx.lineTo(mx + 4, my - 3); } else { ctx.moveTo(mx - 4, my - 2); ctx.lineTo(mx + 4, my - 2); ctx.moveTo(mx - 4, my + 2); ctx.lineTo(mx + 4, my + 2); }
@@ -1550,14 +1740,20 @@
     for (let i = 0; i < Math.min(1, S.banners.length); i++) {
       const b = S.banners[i], age = 1 - b.life / b.life0;
       const a = Math.min(1, b.life * 2, age * 6); const y = S.input.touch ? 215 : Math.max(150, S.vh * 0.22);
-      ctx.globalAlpha = a; ctx.font = "800 " + (S.vw < 700 ? 22 : 30) + "px 'Baloo 2', system-ui"; ctx.textAlign = "center";
+      let fs = S.vw < 700 ? 22 : 30; ctx.font = "800 " + fs + "px 'Baloo 2', system-ui"; const tw = ctx.measureText(b.text).width; if (tw > S.vw - 28) { fs = Math.max(12, Math.floor((fs * (S.vw - 28)) / tw)); ctx.font = "800 " + fs + "px 'Baloo 2', system-ui"; } // long banners fit a 375 px phone
+      ctx.globalAlpha = a; ctx.textAlign = "center";
       ctx.lineWidth = 6; ctx.strokeStyle = "rgba(0,0,0,.85)"; ctx.strokeText(b.text, S.vw / 2, y);
       ctx.fillStyle = b.color; ctx.fillText(b.text, S.vw / 2, y); ctx.globalAlpha = 1;
+    }
+    // bottom-centre status line: the opening truce countdown (combat.truceSeconds > 0), or "YOU ARE MARKED" while you wear the crown
+    if (S.mode === "play" && !S.attract) {
+      const tr = cfg.combat.truceSeconds - S.t, mk = S.crown.team === 1 && pl.count > 0, txt = tr > 0 ? "TRUCE " + Math.floor(tr / 60) + ":" + String(Math.floor(tr % 60)).padStart(2, "0") : mk ? "YOU ARE MARKED" : "";
+      if (txt) { const y = S.input.touch ? S.vh - 150 : S.vh - 40; ctx.font = "800 " + (S.vw < 700 ? 16 : 18) + "px 'Baloo 2', system-ui"; ctx.textAlign = "center"; ctx.lineWidth = 5; ctx.strokeStyle = "rgba(0,0,0,.85)"; ctx.globalAlpha = mk ? 0.75 + 0.25 * Math.sin(S.t * 5) : 1; ctx.strokeText(txt, S.vw / 2, y); ctx.fillStyle = mk ? "#FFD23F" : "#F1EEDF"; ctx.fillText(txt, S.vw / 2, y); ctx.globalAlpha = 1; }
     }
     // clash panel: who is fighting whom and who is winning, unmissable, screen space
     if (clashRi) {
       const t = S.teams[clashRi], cr = clashRead(pl, t), inc = clashIncoming(pl, clashRi);
-      const pw = Math.min(380, S.vw - 32), px = S.vw / 2 - pw / 2, py = S.input.touch ? 112 : 58, ph = inc ? 62 : 46;
+      const pw = Math.min(380, S.vw - 32), px = S.vw / 2 - pw / 2, py = S.input.touch ? 124 : 58, ph = inc ? 62 : 46; // phones: under the two rows of six pips
       ctx.fillStyle = "rgba(8,14,6,.82)"; ctx.beginPath(); ctx.roundRect(px, py, pw, ph, 10); ctx.fill();
       ctx.font = "800 15px 'Nunito', system-ui"; ctx.textAlign = "left"; ctx.fillStyle = pl.color; ctx.fillText("YOU " + cr.a, px + 12, py + 20);
       ctx.textAlign = "right"; ctx.fillStyle = t.color; ctx.fillText(t.name.toUpperCase() + " " + cr.b, px + pw - 12, py + 20);
@@ -1615,6 +1811,12 @@
     }
     ctx.globalAlpha = 1;
   }
+  // a crown: gold, dark outline, s = half width, in the current transform
+  function crownGlyph(x, y, s, a) {
+    ctx.globalAlpha = a; ctx.fillStyle = "#FFD23F"; ctx.strokeStyle = "rgba(20,12,4,.9)"; ctx.lineWidth = 2; ctx.beginPath();
+    ctx.moveTo(x - s, y + s * 0.6); ctx.lineTo(x - s, y - s * 0.45); ctx.lineTo(x - s * 0.5, y + s * 0.05); ctx.lineTo(x, y - s * 0.75); ctx.lineTo(x + s * 0.5, y + s * 0.05); ctx.lineTo(x + s, y - s * 0.45); ctx.lineTo(x + s, y + s * 0.6); ctx.closePath();
+    ctx.stroke(); ctx.fill(); ctx.globalAlpha = 1;
+  }
   function pitchfork(x, y, s, col) {
     ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y + s); ctx.lineTo(x, y - s * 0.25); ctx.moveTo(x - s * 0.55, y - s * 0.25); ctx.lineTo(x + s * 0.55, y - s * 0.25);
     for (let q = -1; q <= 1; q++) { ctx.moveTo(x + q * s * 0.55, y - s * 0.25); ctx.lineTo(x + q * s * 0.55, y - s); } ctx.stroke();
@@ -1628,8 +1830,10 @@
   function drawEdges() {
     const FS = S.fogS, FG = S.cfg.fog, z = S.cam.zoom, gate = fogGate(), cx = S.vw / 2, cy = S.vh / 2; emN = 0;
     if (gate && FS.danger.on) { const a = FS.danger.ang; emAdd(5, cx + Math.cos(a) * 4000, cy + Math.sin(a) * 4000, FS.danger.team, 0, 0.65 + 0.35 * Math.sin(S.t * 12)); }
+    const sightOnly = NOFOG && S.fogOn && FS.dawnT0 < 0; // ?nofog=1 renders everything but arrows still respect sight (M3 critic MINOR-2)
     for (let i = 2; i < S.teams.length; i++) {
       const t = S.teams[i]; if (!t.alive || t.count === 0) continue;
+      if (sightOnly && !FS.obs[1][i].seen) continue;
       if (!gate || PVN[i]) {
         const wx = gate ? PVX[i] / PVN[i] : t.cx, wy = gate ? PVY[i] / PVN[i] : t.cy, sx = (wx - S.cam.x) * z + cx, sy = (wy - S.cam.y) * z + cy;
         if (offScreen(sx, sy)) { emAdd(4, sx, sy, i, t.count, 0.9); if (gate) arrowMask |= 1 << i; }
@@ -1639,8 +1843,9 @@
       const d = FS.dust[i]; if (d.on) { const sx = (d.x - S.cam.x) * z + cx, sy = (d.y - S.cam.y) * z + cy; if (offScreen(sx, sy)) emAdd(0, sx, sy, i, 0, 0.8); }
     }
     if (gate) for (const p of FS.pings) if (p.on) { const sx = (p.x - S.cam.x) * z + cx, sy = (p.y - S.cam.y) * z + cy; if (offScreen(sx, sy)) emAdd(2, sx, sy, 0, p.rout ? 1 : 0, 1); }
+    { const C = S.crown, ct = C.team > 1 ? S.teams[C.team] : null; if (ct && ct.alive && ct.count > 0 && !(gate && PVN[C.team])) { const sx = (C.x - S.cam.x) * z + cx, sy = (C.y - S.cam.y) * z + cy; if (offScreen(sx, sy)) emAdd(3, sx, sy, C.team, 0, 1); } } // the crown's last broadcast
     for (let i = 1; i < emN; i++) { const e = EM[i]; let j = i - 1; while (j >= 0 && EM[j].pri < e.pri) { EM[j + 1] = EM[j]; j--; } EM[j + 1] = e; } // stable, by priority
-    const top = S.input.touch ? 120 : 70, bot = S.vh - (S.input.touch ? 46 : 26), mm = S.input.touch ? 120 : 160;
+    const top = S.input.touch ? 132 : 70, bot = S.vh - (S.input.touch ? 46 : 26), mm = S.input.touch ? 120 : 160;
     for (let q = 0; q < Math.min(emN, FG.edgeMax); q++) {
       const e = EM[q], dx = e.x - cx, dy = e.y - cy; let s = 1;
       if (dx > 0) s = Math.min(s, (S.vw - 26 - cx) / dx); else if (dx < 0) s = Math.min(s, (26 - cx) / dx); if (dy > 0) s = Math.min(s, (bot - cy) / dy); else if (dy < 0) s = Math.min(s, (top - cy) / dy);
@@ -1653,6 +1858,7 @@
       else if (e.pri === 0) { ctx.fillStyle = col; for (let k = 0; k < 3; k++) { ctx.globalAlpha = 0.35 * e.a; ctx.beginPath(); ctx.arc(-4 + k * 5, (k - 1) * 4, 7, 0, Math.PI * 2); ctx.fill(); } }
       ctx.setTransform(S.dpr, 0, 0, S.dpr, 0, 0);
       if (e.pri === 2) { ctx.globalAlpha = 0.85; ctx.fillStyle = "rgba(8,14,6,.8)"; ctx.beginPath(); ctx.arc(ex, ey, 14, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; pitchfork(ex, ey, 9, e.n ? "#FFE49A" : "#F1EEDF"); }
+      if (e.pri === 3) { ctx.globalAlpha = 0.85; ctx.fillStyle = "rgba(8,14,6,.8)"; ctx.beginPath(); ctx.arc(ex, ey, 15, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.stroke(); crownGlyph(ex, ey + 1, 9, 1); }
       ctx.globalAlpha = 1;
       if (e.pri === 4 || e.pri === 1) { const txt = e.pri === 1 ? "~" + e.n : String(e.n); ctx.font = "800 11px 'Nunito', system-ui"; ctx.textAlign = "center"; ctx.fillStyle = "rgba(0,0,0,.6)"; ctx.fillRect(ex - 13, ey + 12, 26, 14); ctx.fillStyle = e.pri === 1 ? col : "#F1EEDF"; ctx.fillText(txt, ex, ey + 23); }
     }
@@ -1692,6 +1898,9 @@
       for (const p of FS.pings) if (p.on) { const age = (S.t - p.t0) % 1; mctx.globalAlpha = 1 - age; mctx.strokeStyle = p.rout ? "#FFE49A" : "#F1EEDF"; mctx.lineWidth = 1.5; mctx.beginPath(); mctx.arc(p.x * k, p.y * k, 2 + age * 7, 0, Math.PI * 2); mctx.stroke(); }
       mctx.globalAlpha = 1;
     }
+    // the crown's last broadcast (every minimap, SPEC-v2 §9) and Bully's scent ping (a pulse where it thinks you are, 2 s)
+    if (S.crown.team) { const C = S.crown, x = C.x * k, y = C.y * k; mctx.globalAlpha = 1; mctx.fillStyle = "#FFD23F"; mctx.strokeStyle = "#15110C"; mctx.lineWidth = 1; mctx.beginPath(); mctx.moveTo(x - 5, y + 3); mctx.lineTo(x - 5, y - 3); mctx.lineTo(x - 2, y); mctx.lineTo(x, y - 5); mctx.lineTo(x + 2, y); mctx.lineTo(x + 5, y - 3); mctx.lineTo(x + 5, y + 3); mctx.closePath(); mctx.fill(); mctx.stroke(); }
+    { const sc = S.scent, age = S.t - sc.t; if (sc.n > 0 && age >= 0 && age < 2) { let col = "#2F7BD8"; for (let i = 2; i < S.teams.length; i++) if (S.teams[i].kind === "bully") col = S.teams[i].color; mctx.globalAlpha = 1 - age / 2; mctx.strokeStyle = col; mctx.lineWidth = 2; mctx.beginPath(); mctx.arc(sc.x * k, sc.y * k, 3 + age * 9, 0, Math.PI * 2); mctx.stroke(); mctx.globalAlpha = 1; } }
     const z = S.cam.zoom; mctx.strokeStyle = "rgba(255,255,255,.9)"; mctx.lineWidth = 1.5;
     mctx.strokeRect((S.cam.x - S.vw / 2 / z) * k, (S.cam.y - S.vh / 2 / z) * k, (S.vw / z) * k, (S.vh / z) * k);
   }
@@ -1972,7 +2181,7 @@
   const SANDBOX_KEYS = ["mode", "t", "timeLeft", "agents", "teams", "obstacles", "powerups", "camps", "cam", "input", "rng", "seed", "trickleT", "shake",
     "banners", "hintT", "stats", "engagedNow", "result", "decals", "trails", "attract", "difficulty", "spr", "tick", "acc", "map", "obs", "cap", "dbg",
     "finalCalled", "pendingEnd", "_routedBy", "_hintRecruit", "_hintFight", "_hintHud", "camS", "ev", "lastRout", "thinkRR", "flowW", "fixture",
-    "fogW", "fogS", "fogOn", "frameId", "lastDrawT", "lastDrawSim"];
+    "fogW", "fogS", "fogOn", "frameId", "lastDrawT", "lastDrawSim", "noise", "crown", "pile", "scent", "relaxUntil", "torches", "aiPlayer", "aiCost"];
   let sbParticles = null, sbSmoke = null, flatMap = null; const sbSets = {};
   function withSandbox(fn) {
     if (sandbox) return fn(); // nested call shares the outer throwaway world
@@ -2000,7 +2209,10 @@
     S.fogW = PS.fog.use(PS.fog.reset(sbFog, S.map, { learn: false })); S.fogS = mkFogS(); S.fogOn = false; // fog data runs; the view is unfogged unless a test sets fogOn
     S.cap = S.cfg.spawn.agentCap; S.dbg = { terrainBad: 0, firstBad: null, capOver: 0 }; S.tick = 0; S.acc = 0; S.ev = mkEv(); S.lastRout = null; S.thinkRR = 0; S.camS = mkCamS(); S.lastDrawSim = 0;
     S.mode = "sandbox"; S.hintT = 0; S.stats = { recruited: 0, kills: 0, routs: 0, lost: 0, peak: 1, powerups: 0, fights: 0 };
+    resetM4();
   }
+  // the M4 match state a sandbox or fixture starts from (newGame sets the same)
+  function resetM4() { S.noise = mkNoise(); S.crown = mkCrown(); S.pile = mkPile(); S.scent = mkScent(); S.scent.next = S.cfg.ai.grace; S.relaxUntil = -1e9; S.torches = false; S.aiPlayer = false; S.aiCost = { ms: 0, thinks: 0, ticks: 0, max: 0 }; }
   // sunflower blob, ~12 px between neighbours; positions on blocked ground are skipped so the blob keeps its headcount
   const blobR = (n) => 7 * Math.sqrt(n);
   function blob(x, y, n, team) { for (let i = 0, k = 0; k < n && i < n * 4; i++) { const a = i * 2.39996, d = 7 * Math.sqrt(i + 0.5), px = x + Math.cos(a) * d, py = y + Math.sin(a) * d; if (!PS.terrain.walkable(px, py)) continue; S.agents.push(mkAgent(px, py, team)); k++; } }
@@ -2071,6 +2283,7 @@
     S.cap = cfg.spawn.agentCap; S.dbg = { terrainBad: 0, firstBad: null, capOver: 0 }; S.tick = 0; S.acc = 0; S.ev = mkEv(); S.lastRout = null; S.thinkRR = 0; S.camS = mkCamS();
     S.attract = false; S.difficulty = "normal"; S.t = 0; S.timeLeft = 1e9; S.trickleT = -1e9; S.shake = 0; S.result = null; S.engagedNow = false; S.finalCalled = true; S.pendingEnd = null; S._routedBy = null; S.lastDrawSim = 0;
     S._hintRecruit = S._hintFight = S._hintHud = true; S.seed = seed >>> 0; S.rng = mulberry32(S.seed); S.stats = { recruited: 0, kills: 0, routs: 0, lost: 0, peak: 1, powerups: 0, fights: 0 };
+    resetM4();
     S.teams = [null, mkTeam(1, cfg.player.name, cfg.player.color, true, null)];
     cfg.ai.personalities.forEach((p, i) => S.teams.push(mkTeam(2 + i, p.name, p.color, false, p)));
     for (let i = 1; i < S.teams.length; i++) { S.teams[i].thinkT = 1e9; if (i > 1) S.teams[i].alive = false; }
@@ -2172,6 +2385,7 @@
       if (S.lastRout && !firstRout) { firstRout = S.lastRout; first = S.lastRout.loser === 1 ? "holders" : "column"; }
       if (broke < 0 && S.lastRout && S.lastRout.loser === 1) { broke = S.t; killsAtBreak = S.stats.kills; }
       hold.tx = hx; hold.ty = g.cy; hold.mode = "hold"; hold.route = false; col.tx = tx; col.ty = g.cy; col.route = true;
+      col.speedMod = FX.holdPace / diff().aiSpeed; // the column marches at fixtures.holdPace whatever the difficulty's rival pace (M4 moved Normal 0.92 -> 0.88; see M4 notes)
     }, done: () => broke >= 0 || S.t >= FX.holdSeconds || !hold.alive, result: () => {
       const lasted = contact < 0 ? 0 : (broke >= 0 ? broke : S.t) - contact, kills = broke >= 0 ? killsAtBreak : S.stats.kills;
       return { fixture: "hold", at: opts.at != null ? opts.at : FX.holdAt, holders: FX.holdN, column: FX.holdColumn, mode: S.cfg.combat.localMode, contact: +contact.toFixed(2), lasted: +lasted.toFixed(2), killsBeforeBreak: kills,
@@ -2184,7 +2398,7 @@
   // remnant's centroid to the winner's, each second of fixtures.remnantSeconds. Bar: it reaches 350 px within the window.
   function fxRemnant(seed, opts) {
     const FX = S.cfg.fixtures, W = S.cfg.world.w, H = S.cfg.world.h; fixtureBase(flatMap || (flatMap = PS.terrain.flat()), seed);
-    const lp = opts.loser !== "ai", L = S.teams[lp ? 1 : 2], Wn = S.teams[lp ? 2 : 1]; S.teams[2].alive = true; S.t = S.cfg.ai.gracePeriod;
+    const lp = opts.loser !== "ai", L = S.teams[lp ? 1 : 2], Wn = S.teams[lp ? 2 : 1]; S.teams[2].alive = true; S.t = S.cfg.ai.grace;
     blob(W / 2 - 30 - blobR(FX.remnantLose), H / 2, FX.remnantLose, L.id); blob(W / 2 + 30 + blobR(FX.remnantWin), H / 2, FX.remnantWin, Wn.id); settle(L); settle(Wn);
     let R = null, t0 = -1, next = 1, rx = 0, ry = 0, rn = 0; const dist = [], states = [];
     const rem = () => { rn = 0; rx = 0; ry = 0; for (const a of S.agents) if (a.team === L.id && !a.dead && a.escapeT > 0) { rn++; rx += a.x; ry += a.y; } if (rn) { rx /= rn; ry /= rn; } };
@@ -2194,8 +2408,8 @@
       if (R && rn && S.t - t0 >= next - 1e-9) { dist.push(Math.round(Math.hypot(rx - Wn.cx, ry - Wn.cy))); states.push(Wn.ai ? Wn.state + (Wn.preyId ? ":" + Wn.preyId : "") : "chase"); next++; }
       L.tx = Wn.cx; L.ty = Wn.cy; L.route = true;
       if (!R) { Wn.tx = L.cx; Wn.ty = L.cy; Wn.route = true; } else if (!Wn.ai || opts.chase) { if (rn) { Wn.tx = rx; Wn.ty = ry; } Wn.route = true; }
-    }, done: () => (R && S.t - t0 >= FX.remnantSeconds) || S.t - S.cfg.ai.gracePeriod > 40, result: () => ({ fixture: "remnant", loser: lp ? "player" : "ai", winner: Wn.ai && !opts.chase ? "ai" : "chasing",
-      rout: R ? { t: +(R.t - S.cfg.ai.gracePeriod).toFixed(2), group: R.group, flipped: R.flipped, fled: R.fled } : null, dist, maxDist: dist.length ? Math.max(...dist) : 0, winnerStates: states,
+    }, done: () => (R && S.t - t0 >= FX.remnantSeconds) || S.t - S.cfg.ai.grace > 40, result: () => ({ fixture: "remnant", loser: lp ? "player" : "ai", winner: Wn.ai && !opts.chase ? "ai" : "chasing",
+      rout: R ? { t: +(R.t - S.cfg.ai.grace).toFixed(2), group: R.group, flipped: R.flipped, fled: R.fled } : null, dist, maxDist: dist.length ? Math.max(...dist) : 0, winnerStates: states,
       escape: [Math.round(L.escGX), Math.round(L.escGY)], pass: dist.length > 0 && Math.max(...dist) >= 350 }) };
   }
   const FIXTURES = { pass64: (sd) => fxPass("pass64", sd), pass128: (sd) => fxPass("pass128", sd), ambush: (sd, o) => fxAmbush(sd, o || {}), flipflop: (sd, o) => fxFlipflop(sd, o || {}), cliff: (sd, o) => fxCliff(sd, o || {}),
@@ -2218,22 +2432,25 @@
     const p = S.teams[1]; S.cam.x = p.cx; S.cam.y = p.cy; zoomRule(p.count, 0, true); showOverlay(null); $("hud").classList.add("hidden");
   }
 
-  // PS.simMatch(240, { seed, cap, wallMs }): attract-rules match on a fresh seeded world, all four swarms AI-driven (team 1 plays as Bully).
+  // PS.simMatch(300, { seed, cap, wallMs, difficulty }): an all-AI match under the real rules (grace, scent, pile-on, horn and crown) on a fresh
+  // seeded world: all six swarms AI-driven, team 1 as ai.proxy at the player's pace, the rivals at the difficulty's senses and pace.
   // Counts every 30 s. Asserts per tick: agent cap and no agent centre in rock or deep water.
   function simMatch(seconds, opts) {
     opts = opts || {};
     const lim = clamp(+seconds || S.cfg.world.matchSeconds, 1, 600), wallMs = clamp(+opts.wallMs || 10000, 500, 14000);
     return withSandbox(() => {
-      sandboxField(); S.attract = true; newGame(true, { seed: opts.seed != null ? opts.seed : (Math.random() * 4294967296) >>> 0, cap: opts.cap === "touch" ? S.cfg.spawn.touchAgentCap : opts.cap === "desktop" ? S.cfg.spawn.agentCap : +opts.cap || S.cfg.spawn.agentCap });
-      S.mode = "sandbox";
+      sandboxField(); S.difficulty = opts.difficulty || "normal";
+      newGame(false, { aiPlayer: true, seed: opts.seed != null ? opts.seed : (Math.random() * 4294967296) >>> 0, cap: opts.cap === "touch" ? S.cfg.spawn.touchAgentCap : opts.cap === "desktop" ? S.cfg.spawn.agentCap : +opts.cap || S.cfg.spawn.agentCap });
+      S.mode = "play";
       const tl = [], errors = [], w0 = performance.now(); let maxTotal = S.agents.length, next = 30, end = "limit", truncated = false;
       const snap = () => { const c = []; let nn = 0; for (let i = 1; i < S.teams.length; i++) c.push(S.teams[i].count); for (const a of S.agents) if (a.team === 0) nn++; tl.push({ t: Math.round(S.t), counts: c, neutrals: nn, total: S.agents.length }); };
       snap();
       for (let i = 0; i < lim * 60; i++) {
         let alive = 0; for (let j = 1; j < S.teams.length; j++) if (S.teams[j].alive) alive++;
         if (alive <= 1) { end = "last-standing"; break; }
-        if (S.timeLeft - DT <= 0) { end = "bell"; break; } // attract update() would start a new world here
+        if (S.timeLeft - DT <= 0) { end = "bell"; break; }
         try { update(DT); } catch (e) { errors.push(String((e && e.message) || e)); break; }
+        if (S.mode !== "play") { end = S.result === "bell" ? "bell" : "last-standing"; break; }
         if (S.agents.length > maxTotal) maxTotal = S.agents.length;
         if (S.t >= next - 1e-9) { snap(); next += 30; }
         if ((i & 63) === 63 && performance.now() - w0 > wallMs) { truncated = true; break; } // lesson 20
@@ -2243,8 +2460,21 @@
       return { seed: S.seed, map: PS.terrain.report(S.map), seconds: +S.t.toFixed(2), end, truncated, wallMs: Math.round(performance.now() - w0), msPerTick: +((performance.now() - w0) / Math.max(1, S.tick)).toFixed(3),
         names: S.teams.slice(1).map((t) => t.name), winner: win ? { id: win.id, name: win.name, count: win.count } : null, maxTotal, agentCap: S.cap,
         capOver: S.dbg.capOver, terrainBad: S.dbg.terrainBad, firstBad: S.dbg.firstBad, timeline: tl, exceptions: errors, ev: { ...S.ev }, flow: PS.flow.stats,
-        leftHome: S.teams.slice(1).map((t) => t.leftHome), atCentre: S.teams.slice(1).map((t) => t.atCentre), ai: { ...S.fogS.ai }, fog: { ...S.fogS.stats } };
+        leftHome: S.teams.slice(1).map((t) => t.leftHome), atCentre: S.teams.slice(1).map((t) => t.atCentre), ai: { ...S.fogS.ai }, fog: { ...S.fogS.stats }, slots: S.teams.slice(1).map((t) => t.slot),
+        aiCost: aiCostReport(), pacing: pacing() };
     });
+  }
+  const aiCostReport = () => { const C = S.aiCost; return { msPerTick: +(C.ms / Math.max(1, C.ticks)).toFixed(4), msPerThink: +(C.ms / Math.max(1, C.thinks)).toFixed(4), maxMs: +C.max.toFixed(3), thinks: C.thinks, ticks: C.ticks }; };
+  // PS.pacing(): this match's pacing record (SPEC-v2 §9 harness targets): first sighting (by team 1 and by any swarm), first fight (any pair and
+  // team 1's), fights, swarms alive at 1:00 / 2:00 / 3:00 and now, eliminations [t, team], the horn's leader and swarms alive then, the
+  // biggest swarm now (the winner once the bell has rung), pile-ons, scent pings, crown moves, trickle bias and the AI think cost
+  function pacing() {
+    const E = S.ev, FS = S.fogS; let al = 0; for (let i = 1; i < S.teams.length; i++) if (S.teams[i].alive) al++; const b = biggestTeam();
+    return { t: +S.t.toFixed(2), timeLeft: +S.timeLeft.toFixed(2), result: S.result, mode: S.mode, difficulty: S.difficulty, aiPlayer: S.aiPlayer, firstSight: FS ? FS.stats.firstSight : -1, firstSightAny: E.firstSightAny,
+      firstFight: E.firstFight, firstPlayerFight: E.firstPlayerFight, fights: E.fights, playerFights: S.stats.fights, routs: E.routs, remnants: E.remnants, scattered: E.scattered,
+      alive60: E.alive60, alive120: E.alive120, alive180: E.alive180, aliveNow: al, elims: E.elims.slice(), hornLeader: E.hornLeader, hornAlive: E.hornAlive, biggest: b ? b.id : 0,
+      counts: S.teams.slice(1).map((t) => t.count), names: S.teams.slice(1).map((t) => t.name), pileOns: E.pileOns, scentPings: E.scentPings, crownMoves: E.crownMoves,
+      trickle: E.trickle, trickleFav: E.trickleFav, leftHome: S.teams.slice(1).map((t) => t.leftHome), ai: FS ? { ...FS.ai } : null, aiCost: aiCostReport(), dbg: { ...S.dbg } };
   }
 
   // ---------------------------------------------------------------- QA: fog (SPEC-v2 §5, §13; M3 brief 10)
@@ -2306,7 +2536,7 @@
   // AI knowledge (M3 brief 9): a big AI and a small one beyond each other's sight never hunt each other; walked into sight, the big one hunts
   function aiBlindTest() {
     return withSandbox(() => {
-      fixtureBase(flatMap || (flatMap = PS.terrain.flat()), 9); S.t = S.cfg.ai.gracePeriod + 1; const W = S.cfg.world.w, big = S.teams[2], small = S.teams[3]; big.alive = small.alive = true;
+      fixtureBase(flatMap || (flatMap = PS.terrain.flat()), 9); S.t = S.cfg.ai.grace + 1; const W = S.cfg.world.w, big = S.teams[2], small = S.teams[3]; big.alive = small.alive = true;
       blob(W / 2, W / 2 + 1500, 3, 1); blob(W / 2 - 1300, W / 2, 60, 2); blob(W / 2 + 1300, W / 2, 12, 3); settle(S.teams[1]); settle(big); settle(small); big.thinkT = 0; small.thinkT = 1e9; fogStampAll(); // your 3 far off, out of everyone's sight
       let huntBlind = 0, huntSeen = -1, gapBlind = 1e9;
       for (let i = 0; i < 240; i++) { small.tx = W / 2 + 1300; small.ty = W / 2; small.route = true; update(DT); if (big.state === "hunt" && big.preyId === 3) huntBlind++; gapBlind = Math.min(gapBlind, Math.hypot(big.cx - small.cx, big.cy - small.cy)); }
@@ -2315,6 +2545,63 @@
       return { huntBlindTicks: huntBlind, closestWhileBlind: Math.round(gapBlind), huntAfterSighting: huntSeen, ai: { ...S.fogS.ai }, pass: huntBlind === 0 && huntSeen >= 0 && S.fogS.ai.violations === 0 };
     });
   }
+  // ---------------------------------------------------------------- QA: rivals and match (SPEC-v2 §7, §9; M4 brief 8)
+  // slots: the same seed shuffles the six spawns the same way, other seeds differently; the five rivals are the five kinds in their colours
+  function slotTest() {
+    return withSandbox(() => {
+      const run = (seed) => { sandboxField(); newGame(false, { seed }); return { slots: S.teams.slice(1).map((t) => t.slot), kinds: S.teams.slice(2).map((t) => t.kind), colors: S.teams.slice(2).map((t) => t.color), n: S.teams.length - 1, map: S.map }; };
+      const a = run(4242), b = run(4242), others = [4243, 4244, 4245].map((s) => run(s).slots.join("")), key = a.slots.join("");
+      return { a: a.slots, b: b.slots, others, kinds: a.kinds, colors: a.colors, pass: a.n === 6 && key === b.slots.join("") && new Set(a.slots).size === 6 && others.some((o) => o !== key) &&
+        a.kinds.join() === "greedy,bully,wary,sly,stubborn" && a.colors[3] === "#C8323C" && a.colors[4] === "#9A62E0" };
+    });
+  }
+  // Bully's scent (Normal): pings at ai.grace, then every scentEvery s, within ai.scentJitter px of you; the first one bannered; Bully tracks it
+  function scentTest() {
+    return withSandbox(() => {
+      fixtureBase(flatMap || (flatMap = PS.terrain.flat()), 11); const W = S.cfg.world.w, AI = S.cfg.ai, every = S.cfg.difficulty.normal.scentEvery, p = S.teams[1], b = S.teams[3]; b.alive = true;
+      blob(W / 2 - 900, W / 2, 10, 1); blob(W / 2 + 900, W / 2, 30, 3); settle(p); settle(b); fogStampAll(); S.t = AI.grace - 1;
+      const pings = [], err = [], states = {}; let last = 0, banners = [], thought = false; // Bully stays put (no fight can end the test); it thinks once, just after the first ping
+      for (let i = 0; i < Math.round((2.2 * every + 1) * 60); i++) {
+        p.tx = W / 2 - 900; p.ty = W / 2; p.mode = "hold"; if (!thought && S.scent.n > 0 && b.thinkT > 1e8) b.thinkT = 0;
+        update(DT); if (!thought && b.thinkT < 1e8) { thought = true; states[b.state] = 1; b.thinkT = 1e9; } b.tx = b.cx; b.ty = b.cy;
+        if (S.scent.n !== last) { last = S.scent.n; pings.push(+S.scent.t.toFixed(2)); err.push(Math.round(Math.hypot(S.scent.x - p.ax, S.scent.y - p.ay))); for (const q of S.banners) banners.push(q.text); }
+      }
+      const gaps = pings.slice(1).map((t, i) => +(t - pings[i]).toFixed(2));
+      return { pings, gaps, err, banners, states, pass: pings.length === 3 && Math.abs(pings[0] - AI.grace) < 0.05 && gaps.every((g) => Math.abs(g - every) < 0.05) && err.every((e) => e <= AI.scentJitter + 1) && banners[0] === "BULLY HAS YOUR SCENT" && (states.track || 0) > 0 };
+    });
+  }
+  // pile-on: Greedy (120) fighting Bully (40) passes 1.6x the second; Sly 1000 px off hears it and joins, Stubborn 2600 px off (past its
+  // hearing) does not; the banner reads "THE VALLEY TURNS ON GREEDY"
+  function pileTest() {
+    return withSandbox(() => {
+      fixtureBase(flatMap || (flatMap = PS.terrain.flat()), 13); const W = S.cfg.world.w, c = W / 2, T = S.teams; for (let i = 2; i <= 6; i++) if (i !== 4) T[i].alive = true;
+      blob(300, 300, 8, 1); blob(c - 40 - blobR(120), c, 120, 2); blob(c + 40 + blobR(40), c, 40, 3); blob(c, c + 1000, 30, 5); blob(c, c - 2600, 30, 6);
+      for (let i = 1; i <= 6; i++) settle(T[i]); fogStampAll(); S.t = S.cfg.ai.grace + 5; T[5].thinkT = 0.2; T[6].thinkT = 0.3; const st5 = {}, st6 = {}; let tgt = null;
+      for (let i = 0; i < 240; i++) {
+        T[1].tx = 300; T[1].ty = 300; T[1].mode = "hold"; T[2].tx = T[3].cx; T[2].ty = T[3].cy; T[3].tx = T[2].cx; T[3].ty = T[2].cy; update(DT);
+        st5[T[5].state] = (st5[T[5].state] || 0) + 1; st6[T[6].state] = (st6[T[6].state] || 0) + 1; if (T[5].state === "pileon" && !tgt) tgt = [Math.round(T[5].tx), Math.round(T[5].ty)];
+      }
+      const banners = S.banners.map((b) => b.text), clash = [Math.round(T[2].engCx[3]), Math.round(T[2].engCy[3])];
+      return { pileOns: S.ev.pileOns, pile: S.pile.id, banners, sly: st5, stubborn: st6, slyTarget: tgt, clash, ai: { ...S.fogS.ai },
+        pass: S.ev.pileOns >= 1 && banners.indexOf("THE VALLEY TURNS ON GREEDY") >= 0 && (st5.pileon || 0) + (st5.hunt || 0) > 0 && !st6.pileon && !!tgt && Math.abs(tgt[1] - c) < 300 && S.fogS.ai.violations === 0 };
+    });
+  }
+  // the horn and the crown: at 3:45 the biggest swarm is crowned and torches light (sight x finale.torches); in the finale the crowned team
+  // routing a swarm absorbs nothing (its survivors scatter as neutrals, finale.crownAbsorbs false); any other finale rout is a full flip
+  function crownTest() {
+    return withSandbox(() => {
+      fixtureBase(flatMap || (flatMap = PS.terrain.flat()), 17); const W = S.cfg.world.w, c = W / 2, T = S.teams, FN = S.cfg.world.finalSeconds; for (let i = 2; i <= 5; i++) T[i].alive = true;
+      blob(300, 300, 6, 1); blob(c - 40 - blobR(100), c - 600, 100, 2); blob(c + 40 + blobR(30), c - 600, 30, 3); blob(c - 40 - blobR(45), c + 600, 45, 4); blob(c + 40 + blobR(15), c + 600, 15, 5);
+      for (let i = 1; i <= 5; i++) settle(T[i]); fogStampAll(); S.finalCalled = false; S.timeLeft = FN + 0.5; const s0 = sightR(T[2]); let crownAt = 0, torch = 0; const routs = [];
+      for (let i = 0; i < 1500 && routs.length < 2; i++) {
+        T[1].tx = 300; T[1].ty = 300; T[1].mode = "hold"; T[2].tx = T[3].cx; T[2].ty = T[3].cy; T[3].tx = T[2].cx; T[3].ty = T[2].cy; T[4].tx = T[5].cx; T[4].ty = T[5].cy; T[5].tx = T[4].cx; T[5].ty = T[4].cy;
+        const lr = S.lastRout; update(DT); if (!crownAt && S.crown.team) { crownAt = S.crown.team; torch = +(sightR(T[2]) / s0).toFixed(3); } if (S.lastRout && S.lastRout !== lr) routs.push({ ...S.lastRout, got: S.lastRout.got.join(",") });
+      }
+      const r23 = routs.find((r) => r.winner === 2), r45 = routs.find((r) => r.winner === 4);
+      return { crownAt, torch, routs, pass: crownAt === 2 && Math.abs(torch - S.cfg.finale.torches) < 0.02 && !!r23 && r23.scattered > 0 && r23.flipped === 0 && r23.fled === 0 && !!r45 && r45.fled === 0 && r45.scattered === 0 && r45.flipped === r45.group };
+    });
+  }
+
   // dawn: at the bell the fog lifts over fog.dawnSeconds before the result screen, and everything is drawn
   function dawnTest() {
     return withSandbox(() => {
@@ -2456,8 +2743,8 @@
     "flow.previewSeconds:n flow.walkStep:n flow.walkGoalPx:n flow.corridorDiscount:n flow.corridorMinCells:n flow.corridorCells:n flow.corridorBlobK:n agent.damageJitter:n " +
     "combat.breakRatio:n combat.minRoutSize:n combat.engageDelay:n combat.engageDecay:n combat.fightPull:n combat.moraleBreak:n combat.localRadius:n combat.moraleSmoothing:n " +
     "combat.contactPull:n combat.contactPullStart:n combat.contactPullRamp:n combat.breakHold:n combat.routLink:n combat.spoilsRadius:n combat.remnant:o combat.remnant.minLoser:n combat.remnant.flipShare:n combat.remnant.flipRadius:n " +
-    "combat.remnant.escapeSeconds:n combat.remnant.escapeSpeed:n combat.remnant.regroupSeconds:n combat.remnant.scatterDist.0:n combat.remnant.scatterDist.1:n finale.crownAbsorbs:b " +
-    "combat.localMode:s combat.remnant.escapeReplan:n combat.remnant.escapeDistance:n input.hintAfterRouteMs:n fixtures.holdN:n fixtures.holdColumn:n fixtures.holdStart:n fixtures.holdTarget:n fixtures.holdAt:n fixtures.holdSeconds:n " +
+    "combat.remnant.escapeSeconds:n combat.remnant.escapeSpeed:n combat.remnant.regroupSeconds:n combat.remnant.scatterDist.0:n combat.remnant.scatterDist.1:n finale.crownAbsorbs:b finale.fullFlip:b " +
+    "combat.localMode:s combat.remnant.escapeReplan:n combat.remnant.escapeDistance:n input.hintAfterRouteMs:n fixtures.holdN:n fixtures.holdPace:n fixtures.holdColumn:n fixtures.holdStart:n fixtures.holdTarget:n fixtures.holdAt:n fixtures.holdSeconds:n " +
     "fixtures.remnantWin:n fixtures.remnantLose:n fixtures.remnantSeconds:n " +
     "camera.span0:n camera.spanK:n camera.zoomMin:n camera.zoomMinTouch:n camera.zoomMax:n camera.steps:o camera.steps.dpr1:a camera.steps.dpr2:a camera.hysteresis:n camera.ease:n " +
     "camera.lookAhead:n camera.lookAheadCap:n camera.lookAheadMinSpeed:n camera.clashOffsetCap:n touch.joyEdge:n input.desktopMode:s input.tapMs:n input.tapPx:n input.keyLead:n " +
@@ -2467,13 +2754,15 @@
     "fixtures.flipflopAmp:n fixtures.flipflopPeriod:n fixtures.flipflopSeconds:n fixtures.cliffN:n fixtures.cliffDepth:n fixtures.cliffPress:n fixtures.cliffMeasure:n " +
     "powerups.count:n powerups.respawn:n powerups.pickupRadius:n powerups.minDistFromStart:n powerups.duration:o powerups.speedMult:n powerups.armorMult:n powerups.contestTol:n " +
     "powerups.frenzyMult:n powerups.rallyRadius:n powerups.weights:o powerups.duration.speed:n powerups.duration.armor:n powerups.duration.frenzy:n powerups.duration.rally:n " +
-    "ai.think:n ai.sight:n ai.leadTime:n ai.leadSmooth:n ai.fleeDistance:n ai.personalities:a ai.finalHuntRatio:n ai.finalFleeRatio:n ai.huntSpeed:n ai.fleeSpeed:n ai.corneredDist:n ai.gracePeriod:n " +
-    "ai.aiVsAiHuntMult:n ai.powerupSight:n ai.powerScore:n ai.neutralScore:n ai.huntTimeout:n ai.huntCooldown:n " +
+    "ai.think:n ai.sight:n ai.leadTime:n ai.leadSmooth:n ai.fleeDistance:n ai.personalities:a ai.finalFleeRatio:n ai.huntSpeed:n ai.fleeSpeed:n ai.corneredDist:n ai.grace:n " +
+    "ai.aiVsAiHuntMult:n ai.objectiveSight:n ai.powerScore:n ai.neutralScore:n ai.huntTimeout:n ai.huntCooldown:n ai.proxy:o ai.campKnowStart:n ai.campAvoidRadius:n ai.campAvoidRatio:n " +
+    "ai.relaxSeconds:n ai.pileOnRatio:n ai.pileOnBannerCooldown:n ai.graceAvoid:n ai.ghostKeep:n ai.heardSeconds:n ai.scentJitter:n " +
+    "finale.crownEvery:n finale.crownEveryLate:n finale.crownLate:n finale.torches:n finale.underdogRatio:n finale.closeTo:n finale.pairRadius:n combat.truceSeconds:n " +
     "player.name:s player.color:s neutral.color:s camera.lerp:n camera.zoomDesktop:n camera.zoomMobile:n camera.mobileBreak:n pace:a difficulty.normal:o " +
     "touch.joyRadius:n touch.joyDead:n touch.joyLead:n fog.sight0:n fog.sightK:n fog.bucketSight:n " +
     "fog.bucket:n fog.playerStampTicks:n fog.displayCell:n fog.displayPad:n fog.exploreMargin:n fog.unexploredAlpha:n fog.exploredAlpha:n fog.unexploredColor:s fog.exploredColor:s " +
     "fog.softBand:n fog.phoneBand:n fog.holeVignette:n fog.holeVigStart:n fog.maskHz:n fog.canvasScale:n fog.maxPixels:n fog.fadeSeconds:n fog.obsSmooth:n fog.cloudTile:n fog.cloudSpeed:n fog.cloudAlpha:n fog.vignetteAlpha:n " +
-    "fog.vignetteInner:n fog.vignetteOuter:n fog.glowAlpha:n fog.glowPulse:n fog.glowRate:n fog.glowInner:n fog.glowOuter:n fog.smoke:n fog.beacon:n fog.clashNoise:n fog.pingSeconds:n " +
+    "fog.vignetteInner:n fog.vignetteOuter:n fog.glowAlpha:n fog.glowPulse:n fog.glowRate:n fog.glowInner:n fog.glowOuter:n fog.smoke:n fog.beacon:n fog.clashNoise:n fog.pingSeconds:n fog.labelDist:n fog.labelDim:n " +
     "fog.pingMerge:n fog.dust:n fog.dustMin:n fog.dustOffset:n fog.dustEvery:n fog.ghostSeconds:n fog.miniGhostSeconds:n fog.danger:n fog.dangerEvery:n fog.dangerJitter:n fog.dangerShow:n " +
     "fog.crows:n fog.edgeMax:n fog.verdictSeconds:n fog.verdictStronger:n fog.verdictWeaker:n fog.dawnSeconds:n fog.minimapHz:n fog.aiMemory:n fog.aiFleeMemory:n fog.aiLeadMax:n " +
     "fog.exploreRing.0:n fog.exploreRing.1:n fog.exploreSamples:n fog.exploreCommit:n " +
@@ -2488,9 +2777,12 @@
   function configReport() {
     const cfg = S.cfg, missing = [], used = {};
     for (const e of CFG_KEYS) { const [path, t] = e.split(":"); used[path.replace(/\.\d+$/, "")] = 1; used[path] = 1; if (!typeOk(cfgGet(path), t)) missing.push(path); }
-    (cfg.ai && cfg.ai.personalities || []).forEach((p, i) => { for (const k of ["name:s", "color:s", "huntRatio:n", "fleeRatio:n", "neutralBias:n", "powerBias:n", "hatesPlayer:n"]) { const [f, t] = k.split(":"); if (!typeOk(p[f], t)) missing.push("ai.personalities." + i + "." + f); } });
-    if (!cfg.ai || !cfg.ai.personalities || cfg.ai.personalities.length < 2) missing.push("ai.personalities.1 (attract mode plays team 1 as personality 1)");
-    for (const d in cfg.difficulty || {}) for (const k of ["label:s", "aiSpeed:n", "think:n", "huntMult:n", "startBonus:n"]) { const [f, t] = k.split(":"); if (!typeOk(cfg.difficulty[d][f], t)) missing.push("difficulty." + d + "." + f); }
+    // the five rivals (SPEC-v2 §7): the shared fields, and each kind's specials
+    const SPECIAL = { greedy: [], bully: ["scentSearch:n", "trackRatio:n"], wary: ["clashLeave:n", "leaveSeconds:n", "edgeBias:n"], sly: ["clashGo:n", "foughtSeconds:n", "foughtHuntRatio:n", "lurkSeconds:n", "lurkCooldown:n", "lurkPassMax:n"],
+      stubborn: ["homeFleeRatio:n", "holdRadius:n", "clusterRadius:n", "reclaimEmpty:n"], proxy: [] };
+    (cfg.ai && cfg.ai.personalities || []).concat(cfg.ai && cfg.ai.proxy ? [cfg.ai.proxy] : []).forEach((p, i) => { for (const k of ["name:s", "kind:s", "color:s", "huntRatio:n", "fleeRatio:n", "neutralBias:n", "powerBias:n", "hatesPlayer:n"].concat(SPECIAL[p.kind] || ["kind (greedy | bully | wary | sly | stubborn)"])) { const [f, t] = k.split(":"); if (!typeOk(p[f], t)) missing.push("ai.personalities." + i + "." + f); } });
+    if (!cfg.ai || !cfg.ai.personalities || cfg.ai.personalities.length !== 5) missing.push("ai.personalities (five rivals, SPEC-v2 §7)");
+    for (const d in cfg.difficulty || {}) for (const k of ["label:s", "aiSpeed:n", "think:n", "huntMult:n", "startBonus:n", "sight:n", "memory:n", "hearing:n", "scentEvery:n"]) { const [f, t] = k.split(":"); if (!typeOk(cfg.difficulty[d][f], t)) missing.push("difficulty." + d + "." + f); }
     (cfg.pace || []).forEach((v, i) => { if (!typeOk(v, "n")) missing.push("pace." + i); });
     if (cfg.input && ["route", "steer"].indexOf(cfg.input.desktopMode) < 0) missing.push("input.desktopMode (route | steer)");
     if (cfg.combat && ["fighting", "radius"].indexOf(cfg.combat.localMode) < 0) missing.push("combat.localMode (fighting | radius)");
@@ -2626,7 +2918,7 @@
   // so each stays under ~15 s of wall time; a console call runs everything.
   function selfTest(opts) {
     opts = opts || {};
-    const all = ["config", "sprites", "terrain", "caches", "flow", "fight", "fixtures", "flipflop", "ai", "fog", "replay", "match"];
+    const all = ["config", "sprites", "terrain", "caches", "flow", "fight", "fixtures", "flipflop", "ai", "rivals", "fog", "replay", "match"];
     const parts = opts.parts ? (Array.isArray(opts.parts) ? opts.parts : String(opts.parts).split(",")) : all, has = (p) => parts.indexOf(p) >= 0;
     const horizon = clamp(+opts.matchSeconds || (S.cfg ? S.cfg.world.matchSeconds : 240), 10, 600);
     const w0 = performance.now(), results = {}, fails = [], ms = {};
@@ -2678,10 +2970,19 @@
       check("fixture_flipflop", S.cfg.input.desktopMode !== "route" || (r.pass && !r.terrainBad), { route: r, noHysteresis: base, desktopMode: S.cfg.input.desktopMode });
     });
     if (has("ai")) timed("ai", () => {
-      const runs = [0, 1, 2].map((k) => simMatch(60, { seed: 5150 + k * 7919, wallMs: 4000 }));
-      check("ai_leave_home_40s", runs.every((r) => !r.truncated && r.leftHome.every((t) => t >= 0 && t <= 40)), runs.map((r) => ({ seed: r.seed, names: r.names, leftHome: r.leftHome, atCentre: r.atCentre, counts: r.timeline[r.timeline.length - 1].counts, ev: r.ev, ai: r.ai, truncated: r.truncated, wallMs: r.wallMs })));
-      check("ai_knowledge_assert", runs.every((r) => r.ai.violations === 0 && r.ai.decisions > 0), runs.map((r) => r.ai)); // no AI targeted a swarm or camp it had not seen (M3 brief 9)
+      // two 90 s all-AI matches, six swarms under fog (M4 brief 8): everyone leaves home by 40 s, no knowledge violation, think cost
+      const runs = [0, 1].map((k) => simMatch(90, { seed: 5150 + k * 7919, wallMs: 6000 }));
+      check("ai_leave_home_40s", runs.every((r) => !r.truncated && r.names.length === 6 && r.leftHome.every((t) => t >= 0 && t <= 40)), runs.map((r) => ({ seed: r.seed, names: r.names, slots: r.slots, leftHome: r.leftHome, atCentre: r.atCentre, counts: r.timeline[r.timeline.length - 1].counts, ev: r.ev, truncated: r.truncated, wallMs: r.wallMs })));
+      check("ai_knowledge_assert_90s_six", runs.every((r) => !r.truncated && r.seconds >= 89.9 && r.ai.violations === 0 && r.ai.decisions > 0), runs.map((r) => ({ seconds: r.seconds, ...r.ai }))); // no AI targeted a swarm or camp it had not seen
+      check("ai_think_cost", runs.every((r) => r.aiCost.msPerTick < 0.1), runs.map((r) => r.aiCost));
+      check("trickle_underdog_six", runs.every((r) => r.pacing.trickle > 0 && r.pacing.trickleFav / r.pacing.trickle >= 0.6 && r.pacing.trickleFav / r.pacing.trickle <= 0.95), runs.map((r) => ({ trickle: r.pacing.trickle, fav: r.pacing.trickleFav })));
       const bl = aiBlindTest(); check("ai_blind_to_hidden", bl.pass, bl);
+    });
+    if (has("rivals")) timed("rivals", () => {
+      const sl = slotTest(); check("rivals_slot_shuffle_seeded", sl.pass, sl);
+      const sc = scentTest(); check("rivals_scent_cadence", sc.pass, sc);
+      const pl = pileTest(); check("rivals_pile_on", pl.pass, pl);
+      const cr = crownTest(); check("finale_crown_scatter", cr.pass, cr);
     });
     if (has("fog")) timed("fog", () => {
       const sr = withSandbox(() => { fixtureBase(flatMap || (flatMap = PS.terrain.flat()), 3); S.fogOn = true; const W = S.cfg.world.w; blob(W / 2 + 16, W / 2 + 16, 1, 1); settle(S.teams[1]); fogStampAll(); const x = S.teams[1].cx, y = S.teams[1].cy, R = sightR(S.teams[1]);
