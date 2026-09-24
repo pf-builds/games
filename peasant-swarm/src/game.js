@@ -75,7 +75,7 @@
   const portal = (ev) => (PS.portal ? PS.portal.call(ev) : Promise.resolve()); // src/portal.js: a no-op unless ?portal=crazygames|poki
   async function boot() {
     try { await portal("init"); } catch (e) {} portal("loadingStart");
-    const res = await fetch("config.json?v=27");
+    const res = await fetch("config.json?v=28");
     S.cfg = await res.json();
     S.spr = PS.buildSprites(S.cfg);
     SPL = PS.Spoils(spoilsHooks()); SCR = PS.Screens(S.cfg);
@@ -108,8 +108,9 @@
       // QA: start a live match without the title click. { seed, difficulty, aiPlayer } (aiPlayer: all six swarms AI, the harness's pacing matches)
       PS.debugStart = (o) => { o = o || {}; if (o.difficulty && S.cfg.difficulty[o.difficulty]) S.difficulty = o.difficulty; PS.audio.setSilent(true); newGame(false, { seed: o.seed, aiPlayer: !!o.aiPlayer }); S.mode = "play"; S._hintFight = S._hintHud = S._hintRecruit = S._hintFog = true; S._hintRelic = S._hintRem = 2; S._routedBy = null; showOverlay(null); $("hud").classList.remove("hidden"); layoutHUD(); updateHUD(true); return { seed: S.seed, difficulty: S.difficulty, slots: S.teams.slice(1).map((t) => t.slot) }; };
       PS.pacing = pacing;
+      PS.cfgOverride = cfgOverride; // M8 sweeps (SPEC-v2 §13)
       PS.artScene = artScene;
-      PS.spoilsQA = { villageTest, banditTest, heavyTest, musterTest, dropTest, aiSpoilsTest, parityTest, placement: spoilsPlacement, SP: () => SPL }; // debug: the M6 checks one by one
+      PS.spoilsQA = { villageTest, banditTest, banditCost, heavyTest, musterTest, dropTest, aiSpoilsTest, parityTest, placement: spoilsPlacement, SP: () => SPL }; // debug: the M6 checks one by one
     }
     if (POSTER) posterStage(); // after the sim hooks it stages with (PS.step, PS.aim)
   }
@@ -2909,7 +2910,8 @@
   function aiBlindTest() {
     return withSandbox(() => {
       fixtureBase(flatMap || (flatMap = PS.terrain.flat()), 9); S.t = S.cfg.ai.grace + 1; const W = S.cfg.world.w, big = S.teams[2], small = S.teams[3]; big.alive = small.alive = true;
-      blob(W / 2, W / 2 + 1500, 3, 1); blob(W / 2 - 1300, W / 2, 60, 2); blob(W / 2 + 1300, W / 2, 12, 3); settle(S.teams[1]); settle(big); settle(small); big.thinkT = 0; small.thinkT = 1e9; fogStampAll(); // your 3 far off, out of everyone's sight
+      const nBig = Math.max(60, Math.ceil(12 * big.ai.huntRatio * diff().huntMult * S.cfg.ai.aiVsAiHuntMult * 1.2)); // M8: 1.2x over the AI-vs-AI hunt threshold, so the check reads blindness, not the ratio
+      blob(W / 2, W / 2 + 1500, 3, 1); blob(W / 2 - 1300, W / 2, nBig, 2); blob(W / 2 + 1300, W / 2, 12, 3); settle(S.teams[1]); settle(big); settle(small); big.thinkT = 0; small.thinkT = 1e9; fogStampAll(); // your 3 far off, out of everyone's sight
       let huntBlind = 0, huntSeen = -1, gapBlind = 1e9;
       for (let i = 0; i < 240; i++) { small.tx = W / 2 + 1300; small.ty = W / 2; small.route = true; update(DT); if (big.state === "hunt" && big.preyId === 3) huntBlind++; gapBlind = Math.min(gapBlind, Math.hypot(big.cx - small.cx, big.cy - small.cy)); }
       const dx = big.cx + 330 - small.cx, dy = big.cy - small.cy; for (const a of S.agents) if (a.team === 3) { a.x += dx; a.y += dy; } recount(); // carried into sight
@@ -2959,7 +2961,8 @@
     });
   }
   // the horn and the crown: at 3:45 the biggest swarm is crowned and torches light (sight x finale.torches); in the finale the crowned team
-  // routing a swarm absorbs nothing (its survivors scatter as neutrals, finale.crownAbsorbs false); any other finale rout is a full flip
+  // routing a swarm absorbs nothing (its flipping survivors scatter as neutrals, finale.crownAbsorbs false; a group of combat.remnant.minLoser or
+  // more keeps its remnant, finale.fullFlip false); any other finale rout of a small group is a full flip
   function crownTest() {
     return withSandbox(() => {
       fixtureBase(flatMap || (flatMap = PS.terrain.flat()), 17); const W = S.cfg.world.w, c = W / 2, T = S.teams, FN = S.cfg.world.finalSeconds; for (let i = 2; i <= 5; i++) T[i].alive = true;
@@ -2970,7 +2973,7 @@
         const lr = S.lastRout; update(DT); if (!crownAt && S.crown.team) { crownAt = S.crown.team; torch = +(sightR(T[2]) / s0).toFixed(3); } if (S.lastRout && S.lastRout !== lr) routs.push({ ...S.lastRout, got: S.lastRout.got.join(",") });
       }
       const r23 = routs.find((r) => r.winner === 2), r45 = routs.find((r) => r.winner === 4);
-      return { crownAt, torch, routs, pass: crownAt === 2 && Math.abs(torch - S.cfg.finale.torches) < 0.02 && !!r23 && r23.scattered > 0 && r23.flipped === 0 && r23.fled === 0 && !!r45 && r45.fled === 0 && r45.scattered === 0 && r45.flipped === r45.group };
+      return { crownAt, torch, routs, pass: crownAt === 2 && Math.abs(torch - S.cfg.finale.torches) < 0.02 && !!r23 && r23.scattered > 0 && r23.flipped === 0 && (r23.group < S.cfg.combat.remnant.minLoser ? r23.fled === 0 : r23.fled > 0) && !!r45 && r45.fled === 0 && r45.scattered === 0 && r45.flipped === r45.group };
     });
   }
 
@@ -3039,8 +3042,21 @@
         pass: lure.maxFromCamp <= EN.banditLeash + 16 && lure.maxFromCamp > 70 && lure.banditFightTicks > 0 && cleared > 0 && relic && took > 0 && turned === 0 && S.ev.routs === rout0 };
     });
   }
-  // heavy chest (SPEC-v2 §8): 10 in the ring of a 15 for 4 s: shut, the counter reads 10/15; 16: it opens after heavyHold s; a 30 lays two
-  // relics and the first one walked onto takes the pair
+  // M8 bandit cost (SPEC-v2 §8 pacing): a plain swarm of n (tier 0) routed from 260 px into a camp of kind (0 green, 1 orange, 2 red, the
+  // configured size); per run: cleared or not, seconds from first contact to the last bandit down, peasants lost. PS.spoilsQA.banditCost({ kind, n, runs, seed })
+  function banditCost(o) {
+    o = o || {}; const kind = o.kind || 0, n = o.n || 12, runs = o.runs || 5, out = [];
+    for (let r = 0; r < runs; r++) out.push(withSandbox(() => {
+      const { W, p } = spoilsScene((o.seed || 500) + r), x = W / 2, y = W / 2, b = SPL.stage("bandit", x, y, { kind, axis: "boots" });
+      blob(x - 260, y, n, 1); settle(p); const t0 = S.t; let hit = -1, done = -1;
+      for (let i = 0; i < 60 * 40 && done < 0 && p.count > 0; i++) { p.tx = x; p.ty = y; p.route = true; p.mode = "route"; update(DT); if (hit < 0 && p.eng[8] > 0) hit = S.t; if (!b.live) done = S.t; }
+      return { cleared: done >= 0, secs: done >= 0 && hit >= 0 ? +(done - hit).toFixed(1) : null, lost: n - p.count, left: b.n, walk: hit >= 0 ? +(hit - t0).toFixed(1) : null };
+    }));
+    const ok = out.filter((q) => q.cleared), med = (a) => { const v = a.slice().sort((u, w) => u - w); return v.length ? v[v.length >> 1] : null; };
+    return { kind, n, bandits: S.cfg.encampments.banditSizes[kind], cleared: ok.length, runs, secs: med(ok.map((q) => q.secs)), lost: med(out.map((q) => q.lost)), per: out };
+  }
+  // heavy chest (SPEC-v2 §8): 10 in the ring of a 15 for 4 s: shut, the counter reads 10/15; 16: it opens after heavyHold s; one of
+  // encampments.heavyPick2 lays two relics and the first one walked onto takes the pair
   function heavyTest() {
     return withSandbox(() => {
       const EN = S.cfg.encampments, { W, p } = spoilsScene(25), x = W / 2, y = W / 2, h = SPL.stage("heavy", x, y, { weight: 15, axis: "boots" });
@@ -3050,20 +3066,20 @@
       blob(x + 10, y + 10, 6, 1); settle(p); const t0 = S.t; let at = -1;
       for (let i = 0; i < 300 && at < 0; i++) { holdAt(p, x, y); update(DT); if (!h.live) at = +(S.t - t0).toFixed(2); }
       const got = p.tier.boots;
-      const h2 = SPL.stage("heavy", x + 900, y, { weight: 30, axis: "horn" }); for (const a of S.agents) if (a.team === 1) { a.x += 900; } settle(p); for (let i = 0; i < 20 && p.count < 30; i++) { blob(x + 900, y, 2, 1); settle(p); }
+      const w2 = EN.heavyPick2, h2 = SPL.stage("heavy", x + 900, y, { weight: w2, axis: "horn" }); for (const a of S.agents) if (a.team === 1) { a.x += 900; } settle(p); if (p.count < w2) { blob(x + 900, y, w2 - p.count, 1); settle(p); } // M8: the pick-of-two weight comes from config
       let pair = 0; for (let i = 0; i < 300 && h2.live; i++) { holdAt(p, x + 900, y); update(DT); } pair = S.objs.filter((o) => o.type === "relic" && o.src === "heavy").length;
       const r = S.objs.find((o) => o.type === "relic" && o.src === "heavy"), tiers0 = p.tierN; let left = -1;
       if (r) { for (let i = 0; i < 400; i++) { p.tx = r.x; p.ty = r.y; p.route = true; p.mode = "route"; update(DT); if (p.tierN > tiers0) { left = S.objs.filter((o) => o.type === "relic" && o.src === "heavy").length; break; } } }
       return { shut, openedAfter: at, hold: EN.heavyHold, boots: got, pick2: { relicsLaid: pair, leftAfterPick: left, tiers: p.tierN }, pass: shut.live && shut.have === 10 && at >= EN.heavyHold - 2 * DT * EN.scanTicks && at <= EN.heavyHold + 0.2 && got === 1 && pair === 2 && left === 0 };
     });
   }
-  // muster milestones (SPEC-v2 §8): 15 / 40 / 90 neutrals recruited grant Horn I, Boots I, Arms I in that order; absorbed rivals do not count
+  // muster milestones (SPEC-v2 §8): progression.muster neutrals recruited grant Horn I, Boots I, Arms I in that order; absorbed rivals do not count
   function musterTest() {
     return withSandbox(() => {
       const { W, p } = spoilsScene(27), PG = S.cfg.progression; blob(W / 2, W / 2, 1, 1); settle(p); const log = [];
       const recruit = (k, absorbed) => { for (let i = 0; i < k; i++) { const a = mkAgent(W / 2 + 60, W / 2, 0); S.agents.push(a); convert(a, 1, absorbed); } };
-      recruit(14, false); log.push(p.tier.horn); recruit(30, true); log.push(p.tier.horn); recruit(1, false); log.push(p.tier.horn);
-      recruit(PG.muster[1] - 15, false); log.push(p.tier.boots); recruit(PG.muster[2] - PG.muster[1] - 1, false); log.push(p.tier.arms); recruit(1, false); log.push(p.tier.arms);
+      recruit(PG.muster[0] - 1, false); log.push(p.tier.horn); recruit(30, true); log.push(p.tier.horn); recruit(1, false); log.push(p.tier.horn);
+      recruit(PG.muster[1] - PG.muster[0], false); log.push(p.tier.boots); recruit(PG.muster[2] - PG.muster[1] - 1, false); log.push(p.tier.arms); recruit(1, false); log.push(p.tier.arms);
       const gains = S.ev.gains.map((g) => g[2] + g[3] + ":" + g[4]);
       return { log, mustered: p.mustered, gains, hpMax: p.hpMax, pass: log.join() === "0,0,1,1,0,1" && p.mustered === PG.muster[2] && gains.join() === "horn1:muster,boots1:muster,arms1:muster" && Math.abs(p.hpMax - S.cfg.agent.hp * (1 + PG.armsHp)) < 1e-9 };
     });
@@ -3294,6 +3310,20 @@
     "banner.minSeconds:n banner.queuedSeconds:n banner.staleSeconds:n banner.dropDepth:n combat.verdictRatio:n polish.dprTiers.0:n polish.dprTiers.1:n polish.dprTiers.2:n polish.dprP90Ms:n polish.dprHoldSeconds:n polish.dprWindow:n polish.ghostSeconds:n polish.flySeconds:n polish.surrenderSeconds:n polish.routWaveSeconds:n polish.hpBarMax:n polish.dustEvery:n polish.dustSpan:n polish.dustN:n polish.irisSeconds:n polish.confetti:n polish.bannerFall:n polish.posterSeed:n polish.posterMint:n polish.posterOrange:n polish.posterStep:n").split(" ");
   const cfgGet = (path) => { let o = S.cfg; for (const k of path.split(".")) { if (o == null) return undefined; o = o[k]; } return o; };
   const typeOk = (v, t) => (t === "n" ? typeof v === "number" && isFinite(v) : t === "s" ? typeof v === "string" && v.length > 0 : t === "a" ? Array.isArray(v) && v.length > 0 : t === "b" ? typeof v === "boolean" : !!v && typeof v === "object");
+  // PS.cfgOverride(patch) (SPEC-v2 §13, M8 sweeps): deep-merges patch into the live config in place, so every module holding a section sees
+  // it; arrays and leaves are replaced, an object patch on an array patches by index ({ ai: { personalities: { 0: { huntRatio: 1.4 } } } }).
+  // An unknown key throws (a typo must not read as "no effect"). PS.cfgOverride(null) restores the loaded config. Takes effect at once; start
+  // a new match (PS.debugStart) for a clean read. Returns the paths it changed.
+  let cfgBase = null;
+  function cfgOverride(patch) {
+    if (!cfgBase) cfgBase = JSON.parse(JSON.stringify(S.cfg));
+    const out = [], put = (dst, src, pre) => { for (const k of Object.keys(src)) {
+      if (!(k in dst)) throw new Error("PS.cfgOverride: unknown key " + pre + k);
+      const v = src[k]; if (v && typeof v === "object" && !Array.isArray(v) && dst[k] && typeof dst[k] === "object") put(dst[k], v, pre + k + "."); else { dst[k] = Array.isArray(v) ? JSON.parse(JSON.stringify(v)) : v; out.push(pre + k); } } };
+    put(S.cfg, patch == null ? JSON.parse(JSON.stringify(cfgBase)) : patch, "");
+    if (patch == null || patch.terrain) PS.terrain.init(S.cfg); // terrain.js copies its section at init: the next generated map uses the patch
+    return patch == null ? ["(restored)"] : out;
+  }
   function configReport() {
     const cfg = S.cfg, missing = [], used = {};
     for (const e of CFG_KEYS) { const [path, t] = e.split(":"); used[path.replace(/\.\d+$/, "")] = 1; used[path] = 1; if (!typeOk(cfgGet(path), t)) missing.push(path); }

@@ -11,3 +11,8 @@
 | Pixel HUD icons (pause, sound, muted), onboarding finger and cursor, hit sparks, contact dust, rout wave (M7) | Original, code-defined pixel maps in `style.css` (inline SVG data URIs), `src/game.js`, `src/particles.js` | Owned — Click it! Studios | 2026-09-24 |
 | M7 sounds: crowd murmur, remnant scatter, crown pulse, dawn chime, bandit growl | Original WebAudio synthesis in `src/audio.js` | Owned — Click it! Studios | 2026-09-24 |
 | Portal adapter (`src/portal.js`) | Original code; calls the CrazyGames / Poki SDK globals only when a portal page injects them (no SDK is bundled or fetched) | Owned — Click it! Studios | 2026-09-24 |
+| Arcade card thumbnail `thumb.jpg` (M7) | Captured from the game's own `?poster=1` scene (seed 1000's first ford) by `tools/harness.mjs --poster` | Owned — Click it! Studios | 2026-09-24 |
+| QA harness `tools/harness.mjs`, `PS.selfTest`, `PS.cfgOverride` and the other `PS.*` QA hooks (M1-M8) | Original code. The harness runs under Node with Playwright (Apache-2.0) and headless Chromium at development time only; neither is bundled or loaded by the game | Owned — Click it! Studios | 2026-09-24 |
+| Tuning numbers in `config.json` (M8 retune) | Measured with the harness and seeded sweeps (M8 build notes); no third-party data | Owned — Click it! Studios | 2026-09-24 |
+
+Nothing in the shipped game is fetched at run time except the two Google Fonts above (menus and HUD text; the page falls back to the system sans-serif if they fail). No third-party code, images or sounds are bundled.

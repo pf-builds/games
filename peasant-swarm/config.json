@@ -117,10 +117,10 @@
     "routLink": 40,
     "spoilsRadius": 160,
     "remnant": {
-      "minLoser": 20,
+      "minLoser": 12,
       "flipShare": 0.65,
       "flipRadius": 200,
-      "escapeSeconds": 6,
+      "escapeSeconds": 9,
       "escapeSpeed": 1.3,
       "regroupSeconds": 20,
       "scatterDist": [
@@ -265,7 +265,7 @@
     "objVillage": 30,
     "objHeavy": 380,
     "objBandit": 340,
-    "banditFeasible": 1.8
+    "banditFeasible": 2.4
   },
   "player": {
     "name": "You",
@@ -313,11 +313,11 @@
   "difficulty": {
     "easy": {
       "label": "EASY",
-      "aiSpeed": 0.82,
-      "think": 1.1,
-      "huntMult": 1.6,
-      "startBonus": 5,
-      "sight": 0.9,
+      "aiSpeed": 0.7,
+      "think": 1.4,
+      "huntMult": 2.8,
+      "startBonus": 8,
+      "sight": 0.8,
       "memory": 4,
       "hearing": 1200,
       "scentEvery": 40
@@ -326,7 +326,7 @@
       "label": "NORMAL",
       "aiSpeed": 0.88,
       "think": 0.9,
-      "huntMult": 1.3,
+      "huntMult": 1.7,
       "startBonus": 3,
       "sight": 1.0,
       "memory": 6,
@@ -335,9 +335,9 @@
     },
     "hard": {
       "label": "HARD",
-      "aiSpeed": 0.95,
+      "aiSpeed": 0.92,
       "think": 0.5,
-      "huntMult": 0.9,
+      "huntMult": 1.3,
       "startBonus": 0,
       "sight": 1.15,
       "memory": 10,
@@ -562,7 +562,7 @@
     "crownEveryLate": 4,
     "crownLate": 20,
     "torches": 1.25,
-    "underdogRatio": 0.3,
+    "underdogRatio": 0.8,
     "closeTo": 500,
     "pairRadius": 500,
     "fullFlip": false
@@ -636,9 +636,9 @@
     ],
     "hornMax": 2,
     "muster": [
-      15,
-      40,
-      90
+      50,
+      200,
+      400
     ],
     "musterAxes": [
       "horn",
@@ -654,9 +654,9 @@
     "relicLife": 45,
     "dropScatter": 120,
     "dropMinShare": 0.3,
-    "trickleChestEvery": 45,
-    "trickleChestAfter": 60,
-    "trickleChestMax": 3,
+    "trickleChestEvery": 60,
+    "trickleChestAfter": 150,
+    "trickleChestMax": 2,
     "trickleChestBias": 0.8
   },
   "encampments": {
@@ -680,11 +680,11 @@
       1600
     ],
     "heavy": [
-      15,
-      30
+      50,
+      100
     ],
-    "heavyPick2": 30,
-    "heavyRing": 80,
+    "heavyPick2": 100,
+    "heavyRing": 100,
     "heavyHold": 2,
     "heavyDist": [
       650,
@@ -703,8 +703,8 @@
     "banditMinPath": 900,
     "banditLeash": 120,
     "banditAggro": 90,
-    "banditHp": 12,
-    "banditDamage": 2,
+    "banditHp": 20,
+    "banditDamage": 3,
     "banditSpeed": 150,
     "banditGap": 450,
     "objectGap": 260,
