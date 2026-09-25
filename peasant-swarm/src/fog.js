@@ -25,8 +25,9 @@
   }
   const hexRGB = (h) => { const n = parseInt(String(h).slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
 
+  let CFGA = null; // the whole live config (v3: fog.los* and forest.* are read at stamp time, so PS.cfgOverride applies at once)
   function init(cfg) {
-    CFG = cfg.fog; CELL = cfg.terrain.cell; N = Math.round(cfg.world.w / CELL); NN = N * N; DC = CFG.displayCell; DP = CFG.displayPad; DW = Math.round(cfg.world.w / DC);
+    CFG = cfg.fog; CFGA = cfg; CELL = cfg.terrain.cell; N = Math.round(cfg.world.w / CELL); NN = N * N; DC = CFG.displayCell; DP = CFG.displayPad; DW = Math.round(cfg.world.w / DC);
     DN = DW + 2 * DP; DNN = DN * DN; BK = CFG.bucket; BN = Math.ceil(cfg.world.w / BK);
     const u = hexRGB(CFG.unexploredColor), e = hexRGB(CFG.exploredColor), aU = CFG.unexploredAlpha * 255, aE = CFG.exploredAlpha * 255;
     for (let s = 0; s <= 16; s++) { const k = s / 16; LA[s] = Math.round(aU + (aE - aU) * k); LR[s] = Math.round(u[0] + (e[0] - u[0]) * k); LG[s] = Math.round(u[1] + (e[1] - u[1]) * k); LB[s] = Math.round(u[2] + (e[2] - u[2]) * k); }
@@ -49,17 +50,98 @@
     w.map = map; w.learn = !!(opts && opts.learn); w.gen++; w.ver.fill(0); w.nExp.fill(0); w.stamps.fill(0); w.srcN = 0;
     for (let i = 0; i < 9; i++) { w.vis[i].fill(0); w.explored[i].fill(0); }
     w.disp.fill(0); w.dx0 = 0; w.dy0 = 0; w.dx1 = DN - 1; w.dy1 = DN - 1; w.rx0.fill(DN); w.rx1.fill(-1); w.mx0 = 0; w.my0 = 0; w.mx1 = N - 1; w.my1 = N - 1;
-    w.costMs = 0; w.lastCostMs = 0; w.maxCostMs = 0; w.stampN = 0;
+    w.costMs = 0; w.lastCostMs = 0; w.maxCostMs = 0; w.stampN = 0; losClear(); // v3: viewshed caches are per map
     return w;
   }
   function use(w) { W = w; return w; }
 
+  // ---------------------------------------------------------------- v3 M2: line of sight (SPEC-v3 §2)
+  // A viewshed per source cell: symmetric shadowcasting (Albert Ford's variant) on the 32 px grid, slopes as integer fractions, no trig.
+  // Cast A blocks on opaque cells and on forest cells farther than forest.seeInto from the source (forest.blocksSight): a revealed forest
+  // cell there reads concealed (the tree line), a near one clear (you see into the trees next to you, and a swarm inside a grove sees out).
+  // Cast B (opaque only) then marks every other forest cell it reaches concealed (in sight, contents hidden). 2 bits per cell of a
+  // (2R+1)^2 box: 0 hidden, 1 concealed, 2 clear. Two caches keyed by source cell (centroid box fog.losMaxCells, bucket box fog.losBucketCells),
+  // slabs of bytes with a slot table, cleared per map and when full (fog.losCacheCells centroid entries). A hit and a miss give identical bits:
+  // the viewshed is a pure function of the static layers and the source cell, so replays never depend on cache history.
+  const LOS = { hits: 0, misses: 0, casts: 0, castMs: 0, castMax: 0, lastCastMs: 0, plain: 0, clears: 0, mapId: -1 };
+  let losMap = null, OPQ = null, COV = null, SD = null;
+  const LC = [{ R: 0, S: 0, B: 0, cap: 0, slab: null, slot: null, n: 0 }, { R: 0, S: 0, B: 0, cap: 0, slab: null, slot: null, n: 0 }]; // 0: centroid, 1: bucket
+  let CODE = null, RS_ = null; // one unpacked code box (the largest) for a cast; the row stack
+  function losInit() {
+    const R0 = CFGA.fog.losMaxCells, R1 = CFGA.fog.losBucketCells, caps = [CFGA.fog.losCacheCells, Math.max(64, BN * BN)];
+    [R0, R1].forEach((R, k) => { const L = LC[k], S = 2 * R + 1, B = (S * S + 3) >> 2; if (L.R !== R || L.cap !== caps[k]) { L.R = R; L.S = S; L.B = B; L.cap = caps[k]; L.slab = new Uint8Array(B * caps[k]); } if (!L.slot || L.slot.length !== NN) L.slot = new Int32Array(NN); L.slot.fill(-1); L.n = 0; });
+    const S = 2 * Math.max(R0, R1) + 1; if (!CODE || CODE.length < S * S) CODE = new Uint8Array(S * S); if (!RS_) RS_ = new Int32Array(5 * 8192);
+  }
+  function losUse(map) {
+    if (losMap === map && LOS.mapId === map.id) return;
+    losMap = map; LOS.mapId = map.id; OPQ = map.opaque && map.losOn ? map.opaque : null; COV = map.forest && map.forest.cells > 0 ? map.cover : null; SD = map.sightD || null; losInit(); LOS.clears++;
+  }
+  function losClear() { losMap = null; LOS.mapId = -1; } // the next stamp re-arms both caches (a fixture repainted its layers, or a test asks)
+  // Ford's rows: depth d, start slope sn/sd, end slope en/ed (all slopes (2c - 1) / 2d or +-1). Tiles in a row: round-ties-up(d * s) to
+  // round-ties-down(d * e); symmetric when d * s <= col <= d * e. Quadrant q maps (depth, col) to cells. blk(c): does this cell stop sight.
+  function cast(ci, cj, R, mode, siR2) {
+    const S = 2 * R + 1, st = RS_, cap = st.length - 5, fb = CFGA.forest.blocksSight;
+    for (let q = 0; q < 4; q++) {
+      let sp = 0; st[0] = 1; st[1] = -1; st[2] = 1; st[3] = 1; st[4] = 1; sp = 5;
+      for (let guard = 0; sp > 0 && guard < 100000; guard++) {
+        sp -= 5; const d = st[sp], sn0 = st[sp + 1], sd0 = st[sp + 2], en = st[sp + 3], ed = st[sp + 4]; if (d > R) continue;
+        let sn = sn0, sd = sd0, prev = -1; // prev: 0 floor, 1 wall, -1 none yet
+        const c0 = Math.floor((2 * d * sn + sd) / (2 * sd)), c1 = Math.ceil((2 * d * en - ed) / (2 * ed));
+        for (let col = c0; col <= c1; col++) {
+          const dx = q === 0 || q === 1 ? col : q === 2 ? d : -d, dy = q === 0 ? -d : q === 1 ? d : col, x = ci + dx, y = cj + dy;
+          const inG = x >= 0 && y >= 0 && x < N && y < N, c = inG ? y * N + x : -1, r2 = dx * dx + dy * dy;
+          const fo = inG && COV !== null && COV[c] === 1, far = r2 > siR2;
+          const wall = !inG || (OPQ !== null && OPQ[c] === 1) || (mode === 0 && fo && fb && far);
+          const sym = col * sd >= d * sn && col * ed <= d * en;
+          if (inG && (wall || sym)) { const k = (dy + R) * S + dx + R;
+            if (mode === 0) CODE[k] = fo && far ? 1 : 2; else if (fo && CODE[k] === 0) CODE[k] = 1; }
+          if (prev === 1 && !wall) { sn = 2 * col - 1; sd = 2 * d; } // start slope moves to this floor tile's left edge
+          if (prev === 0 && wall && sp < cap) { st[sp] = d + 1; st[sp + 1] = sn; st[sp + 2] = sd; st[sp + 3] = 2 * col - 1; st[sp + 4] = 2 * d; sp += 5; } // the row so far, one deeper
+          prev = wall ? 1 : 0;
+        }
+        if (prev === 0 && sp < cap) { st[sp] = d + 1; st[sp + 1] = sn; st[sp + 2] = sd; st[sp + 3] = en; st[sp + 4] = ed; sp += 5; }
+      }
+    }
+  }
+  // the unpacked code box of source cell (ci, cj) at cache k's radius, into CODE (a fresh cast: no cache involved)
+  function compute(k, ci, cj) {
+    const L = LC[k], R = L.R, S = L.S, si = CFGA.forest.seeInto / CELL, t0 = now();
+    CODE.fill(0, 0, S * S); CODE[R * S + R] = 2; // the source cell itself
+    cast(ci, cj, R, 0, si * si); if (COV !== null && CFGA.forest.blocksSight) cast(ci, cj, R, 1, si * si);
+    const ms = now() - t0; LOS.casts++; LOS.castMs += ms; if (ms > LOS.castMax) LOS.castMax = ms; LOS.lastCastMs = ms;
+  }
+  // the viewshed box of source cell (ci, cj) from cache k (0 centroid, 1 bucket): returns the slab offset (bytes), computing on a miss
+  function viewshed(k, ci, cj) {
+    const L = LC[k], c = cj * N + ci; let s = L.slot[c];
+    if (s >= 0) { LOS.hits++; return s * L.B; }
+    if (L.n >= L.cap) { L.slot.fill(-1); L.n = 0; LOS.clears++; }
+    compute(k, ci, cj); LOS.misses++;
+    s = L.n++; L.slot[c] = s; const off = s * L.B, sl = L.slab, SS = L.S * L.S; sl.fill(0, off, off + L.B);
+    for (let i = 0; i < SS; i++) { const v = CODE[i]; if (v) sl[off + (i >> 2)] |= v << ((i & 3) << 1); }
+    return off;
+  }
+  const codeAt = (k, off, dx, dy) => { const L = LC[k], R = L.R; if (dx < -R || dx > R || dy < -R || dy > R) return 0; const i = (dy + R) * L.S + dx + R; return (L.slab[off + (i >> 2)] >> ((i & 3) << 1)) & 3; };
+  // QA (needs a stamped world on the map): the code of cell c2 seen from cell c1 (cache k, 0 centroid by default); and cacheEqual(c1, k):
+  // the cached box (a hit if already cached) against a fresh cast of the same cell, bit for bit -> the number of differing cells
+  function losCode(c1, c2, k) { k = k || 0; const ci = c1 % N, cj = (c1 / N) | 0; return codeAt(k, viewshed(k, ci, cj), (c2 % N) - ci, ((c2 / N) | 0) - cj); }
+  function cacheEqual(c1, k) {
+    k = k || 0; const L = LC[k], ci = c1 % N, cj = (c1 / N) | 0, off = viewshed(k, ci, cj), SS = L.S * L.S; compute(k, ci, cj); let bad = 0;
+    for (let i = 0; i < SS; i++) if (((L.slab[off + (i >> 2)] >> ((i & 3) << 1)) & 3) !== CODE[i]) bad++;
+    return bad;
+  }
+  // does a source at cell c with a radius of rc cells need a viewshed (a blocker or forest cell within its reach)?
+  const needLos = (c, rc) => SD !== null && SD[c] <= 3 * (rc + 1.5);
+  const losOn = () => CFGA.fog.losWalls !== "off" || CFGA.forest.on;
+
   // ---------------------------------------------------------------- stamping
   // one disc of radius r at (x, y) into team's vis (version v) and explored; the player also marks the display grid at radius rd and
-  // (w.learn) tells the flow field about every newly explored cell it did not know
+  // (w.learn) tells the flow field about every newly explored cell it did not know. v3: a source near rock or forest reads its viewshed:
+  // clear cells get v, concealed cells v + 1 (never over a v this stamp), hidden cells nothing (and no display mark)
   function disc(w, team, v, x, y, r, rd, kn) {
     const vis = w.vis[team], ex = w.explored[team], isP = team === 1, sp = spans(sp32, CELL, r), h = (sp.length - 1) >> 1;
     let ci = (x / CELL) | 0, cj = (y / CELL) | 0; if (ci < 0) ci = 0; else if (ci >= N) ci = N - 1; if (cj < 0) cj = 0; else if (cj >= N) cj = N - 1;
+    if (losMap !== null && w.map.losOn && needLos(cj * N + ci, r / CELL)) { discLos(w, team, v, x, y, r, rd, kn, ci, cj); return; }
+    if (losMap !== null) LOS.plain++;
     for (let dy = -h; dy <= h; dy++) {
       const j = cj + dy; if (j < 0 || j >= N) continue;
       const hx = sp[dy + h], i0 = ci - hx < 0 ? 0 : ci - hx, i1 = ci + hx >= N ? N - 1 : ci + hx, row = j * N;
@@ -77,11 +159,55 @@
       for (let i = i0; i <= i1; i++) { if (D[row + i]) continue; D[row + i] = 1; if (i < w.dx0) w.dx0 = i; if (i > w.dx1) w.dx1 = i; if (j < w.dy0) w.dy0 = j; if (j > w.dy1) w.dy1 = j; if (i < w.rx0[j]) w.rx0[j] = i; if (i > w.rx1[j]) w.rx1[j] = i; }
     }
   }
+  function discLos(w, team, v, x, y, r, rd, kn, ci, cj) {
+    const vis = w.vis[team], ex = w.explored[team], isP = team === 1, sp = spans(sp32, CELL, r), rc = r / CELL, k = rc <= LC[1].R ? 1 : 0, L = LC[k], off = viewshed(k, ci, cj), R = L.R, S = L.S, sl = L.slab;
+    const h0 = (sp.length - 1) >> 1, h = h0 > R ? R : h0, v1 = v + 1;
+    for (let dy = -h; dy <= h; dy++) {
+      const j = cj + dy; if (j < 0 || j >= N) continue;
+      let hx = sp[dy + h0]; if (hx > R) hx = R; const i0 = ci - hx < 0 ? 0 : ci - hx, i1 = ci + hx >= N ? N - 1 : ci + hx, row = j * N, base = (dy + R) * S + R - ci;
+      for (let i = i0; i <= i1; i++) {
+        const q = base + i, code = (sl[off + (q >> 2)] >> ((q & 3) << 1)) & 3; if (code === 0) continue;
+        const c = row + i; if (code === 1) { if (vis[c] !== v) vis[c] = v1; continue; }
+        vis[c] = v; if (ex[c]) continue;
+        ex[c] = 1; w.nExp[team]++;
+        if (isP) { if (kn && kn[c] === 0) PS.flow.learn(c); if (i < w.mx0) w.mx0 = i; if (i > w.mx1) w.mx1 = i; if (j < w.my0) w.my0 = j; if (j > w.my1) w.my1 = j; }
+      }
+    }
+    if (!(rd > 0)) return;
+    // the display grid: a 16 px cell is marked when its 32 px cell is in sight (clear or concealed) from this source
+    const s2 = spans(sp16, DC, rd), h2 = (s2.length - 1) >> 1, D = w.disp, ci2 = ((x / DC) | 0) + DP, cj2 = ((y / DC) | 0) + DP, lo = DP, hi = DP + DW - 1, f = CELL / DC;
+    for (let dy = -h2; dy <= h2; dy++) {
+      const j = cj2 + dy; if (j < lo || j > hi) continue;
+      const hx = s2[dy + h2], i0 = ci2 - hx < lo ? lo : ci2 - hx, i1 = ci2 + hx > hi ? hi : ci2 + hx, row = j * DN, gy = (((j - DP) / f) | 0) - cj;
+      if (gy < -R || gy > R) continue;
+      for (let i = i0; i <= i1; i++) {
+        if (D[row + i]) continue; const gx = (((i - DP) / f) | 0) - ci; if (gx < -R || gx > R) continue;
+        const q = (gy + R) * S + gx + R; if (((sl[off + (q >> 2)] >> ((q & 3) << 1)) & 3) === 0) continue;
+        D[row + i] = 1; if (i < w.dx0) w.dx0 = i; if (i > w.dx1) w.dx1 = i; if (j < w.dy0) w.dy0 = j; if (j > w.dy1) w.dy1 = j; if (i < w.rx0[j]) w.rx0[j] = i; if (i > w.rx1[j]) w.rx1[j] = i;
+      }
+    }
+  }
+  // fight reveal (SPEC-v3 §2): concealed cells within r px of (x, y) turn visible for this stamp (the game re-applies it after every stamp
+  // while the reveal lasts). Only cells already in sight and LOS (vis === ver + 1) change; explored as seen.
+  function reveal(team, x, y, r) {
+    const w = W; if (!w || !w.ver[team]) return 0; const v = w.ver[team], v1 = v + 1, vis = w.vis[team], ex = w.explored[team], sp = spans(sp32, CELL, r), h = (sp.length - 1) >> 1;
+    const ci = (x / CELL) | 0, cj = (y / CELL) | 0; let n = 0;
+    for (let dy = -h; dy <= h; dy++) { const j = cj + dy; if (j < 0 || j >= N) continue; const hx = sp[dy + h];
+      for (let i = ci - hx < 0 ? 0 : ci - hx, i1 = ci + hx >= N ? N - 1 : ci + hx; i <= i1; i++) { const c = j * N + i; if (vis[c] !== v1) continue; vis[c] = v; n++; if (!ex[c]) { ex[c] = 1; w.nExp[team]++; } } }
+    return n;
+  }
+  // warm the centroid cache for a list of cells (fog.losWarmIris: spawn and pass cells during the iris)
+  function warm(cells, k) { if (!W || !losMap || !W.map.losOn) return 0; let n = 0; for (let q = 0; q < cells.length; q++) { const c = cells[q]; if (!needLos(c, LC[k || 0].R)) continue; viewshed(k || 0, c % N, (c / N) | 0); n++; } return n; }
+  // concealed (in sight and LOS but inside forest) for team: vis === ver + 1
+  function concealedCell(team, c) { const w = W; return !!w && w.ver[team] !== 0 && c >= 0 && w.vis[team][c] === w.ver[team] + 1; }
+
   // stamp(team, cx, cy, R, list, off, nb, br, kn): the centroid disc plus each occupied bucket (list[off..off+nb), bucket index by * BN + bx)
   // whose disc is not inside the centroid disc. kn: the player's knowledge grid (PS.knowledge) when this world learns, else null.
+  // v3: with sight layers on, versions step by 2 (v + 1 is "concealed"), so sees() keeps its single compare; off, they step by 1 as v2 did
   function stamp(team, cx, cy, R, list, off, nb, br, kn) {
-    const w = W, t0 = now(), isP = team === 1, em = CFG.exploreMargin;
-    let v = w.ver[team] + 1; if (v > 65535) { w.vis[team].fill(0); v = 1; } w.ver[team] = v;
+    const w = W, t0 = now(), isP = team === 1, em = CFG.exploreMargin, on = losOn(), step = on ? 2 : 1;
+    if (on && w.map) losUse(w.map); else losMap = null;
+    let v = w.ver[team] + step; if (v + step - 1 > 65535) { w.vis[team].fill(0); v = step; } w.ver[team] = v;
     if (w.dx1 < 0) { w.dx0 = DN; w.dy0 = DN; } if (w.mx1 < 0) { w.mx0 = N; w.my0 = N; } // empty dirty rects start inverted
     if (isP) { w.srcN = 0; w.srcCx = cx; w.srcCy = cy; }
     disc(w, team, v, cx, cy, R, isP ? R + em : 0, isP && w.learn ? kn : null);
@@ -283,7 +409,7 @@
 
   function sig() { const w = W; if (!w) return null; return [Array.from(w.nExp), Array.from(w.stamps), Array.from(w.ver)].join("|"); }
   const canvases = () => [maskCv, cloudCv, tileCv, tilesCv, vigCv, fogCv, ...holeSprites.values()].filter(Boolean); // for the memory report
-  const F = (PS.fog = { init, canvases, world, reset, use, stamp, sees, seesCell, explored, cellOf, resize, render, flushMask, recover, drop, report, maskAlphaAt, dispAt, minAlpha4, sumAlpha4, sig, holeGrad,
+  const F = (PS.fog = { init, canvases, world, reset, use, stamp, sees, seesCell, explored, cellOf, reveal, warm, concealedCell, losCode, cacheEqual, losClear, losOn, LOS, resize, render, flushMask, recover, drop, report, maskAlphaAt, dispAt, minAlpha4, sumAlpha4, sig, holeGrad,
     vis: (team) => (W ? W.vis[team] : null), verOf: (team) => (W ? W.ver[team] : 0), exploredArr: (team) => (W ? W.explored[team] : null), world0: () => W, RS, ST,
     get N() { return N; }, get BN() { return BN; }, get BK() { return BK; }, get fogSize() { return [fw, fh, cssW, cssH]; }, get maskCanvas() { return maskCv; }, get cloudCanvas() { return cloudCv; } });
 })();

@@ -159,7 +159,8 @@
       "frenzy": 2,
       "rally": 2
     },
-    "contestTol": 0.12
+    "contestTol": 0.12,
+    "firstDelay": 0
   },
   "ai": {
     "think": 0.7,
@@ -216,7 +217,8 @@
         "foughtHuntRatio": 0.9,
         "lurkSeconds": 20,
         "lurkCooldown": 20,
-        "lurkPassMax": 700
+        "lurkPassMax": 700,
+        "lurkForest": true
       },
       {
         "name": "Stubborn",
@@ -270,7 +272,10 @@
     "objVillage": 30,
     "objHeavy": 380,
     "objBandit": 340,
-    "banditFeasible": 2.4
+    "banditFeasible": 2.4,
+    "forestFleeBonus": 150,
+    "rustleMemory": 3,
+    "siteKnowRadius": 0
   },
   "player": {
     "name": "You",
@@ -429,7 +434,21 @@
     "chunk": 512,
     "chunkArt": 256,
     "waterFrameMs": 500,
-    "probeFrames": 20
+    "probeFrames": 20,
+    "forest": {
+      "bankWidth": 2,
+      "bankCover": 0.7,
+      "bankClear": 3,
+      "bankPeriod": 6,
+      "grovesPerRegion": 2,
+      "groveCells": [25, 45],
+      "groveMinFromHome": 6,
+      "groveClear": 4,
+      "grovePeriod": 4,
+      "groveFlank": [2, 6],
+      "fairRatio": 1.3,
+      "tries": 8
+    }
   },
   "fog": {
     "sight0": 340,
@@ -496,7 +515,28 @@
     "exploreSamples": 12,
     "exploreCommit": 3,
     "labelDist": 900,
-    "labelDim": 0.6
+    "labelDim": 0.6,
+    "losWalls": "all",
+    "losMaxCells": 30,
+    "losBucketCells": 8,
+    "losCacheCells": 2048,
+    "losWarmIris": true,
+    "shadowAlpha": 0.55,
+    "shadowHz": 15
+  },
+  "forest": {
+    "on": true,
+    "seeInto": 96,
+    "blocksSight": true,
+    "speed": 0.9,
+    "cost": 4,
+    "fightReveal": 96,
+    "fightRevealSeconds": 2,
+    "rustleEvery": 2,
+    "rustleJitter": 64,
+    "shadeAlpha": 0.25,
+    "hideShare": 0.5,
+    "dustHush": false
   },
   "art": {
     "flashWhite": 0.72,
@@ -638,7 +678,11 @@
     "audioSoakN": 320,
     "audioSoakRival": 300,
     "audioSoakSeconds": 120,
-    "audioDrain": 2
+    "audioDrain": 2,
+    "concealN": 50,
+    "concealDist": 250,
+    "groveN": 60,
+    "groveColumn": 150
   },
   "progression": {
     "armsHp": 0.07,
@@ -797,6 +841,176 @@
     "qa": { "sceneN": 700, "sceneSeconds": 20, "sampleRate": 44100, "flatHz": [50, 10000], "highHz": 2000, "flatMax": 0.35, "highMax": 0.25, "noiseMax": 0.25 }
   },
   "_units": {
+    "fog.losMaxCells": [
+      "cells; centroid viewshed radius (>= the largest sight / terrain.cell)",
+      8,
+      40
+    ],
+    "fog.losBucketCells": [
+      "cells; bucket viewshed radius (>= fog.bucketSight / terrain.cell)",
+      4,
+      16
+    ],
+    "fog.losCacheCells": [
+      "centroid viewshed entries before a full clear",
+      64,
+      8192
+    ],
+    "fog.shadowAlpha": [
+      "alpha of in-range cells hidden by rock (stage B render)",
+      0,
+      1
+    ],
+    "fog.shadowHz": [
+      "Hz; shadow texel re-put rate (stage B render)",
+      1,
+      60
+    ],
+    "forest.seeInto": [
+      "px; forest cells this close to a sight source are seen into",
+      0,
+      320
+    ],
+    "forest.speed": [
+      "speed multiplier for an agent on a forest cell",
+      0.3,
+      1
+    ],
+    "forest.cost": [
+      "flow cost added per forest cell (base 10)",
+      0,
+      40
+    ],
+    "forest.fightReveal": [
+      "px; radius lit around a fight contact in concealed forest",
+      0,
+      320
+    ],
+    "forest.fightRevealSeconds": [
+      "s a fight reveal lasts past its last refresh",
+      0,
+      10
+    ],
+    "forest.rustleEvery": [
+      "s between rustles per observer per rival",
+      0.5,
+      10
+    ],
+    "forest.rustleJitter": [
+      "px; render offset of a rustle (pixels only)",
+      0,
+      160
+    ],
+    "forest.shadeAlpha": [
+      "tint on concealed forest cells in sight (stage B render)",
+      0,
+      1
+    ],
+    "forest.hideShare": [
+      "share of your agents in forest for the YOU chip leaf mark",
+      0,
+      1
+    ],
+    "terrain.forest.bankWidth": [
+      "cells of reeds per river bank",
+      0,
+      4
+    ],
+    "terrain.forest.bankCover": [
+      "share of reed-eligible bank covered (1D noise quantile)",
+      0,
+      1
+    ],
+    "terrain.forest.bankClear": [
+      "cells kept clear of reeds around a crossing",
+      0,
+      8
+    ],
+    "terrain.forest.bankPeriod": [
+      "cells; period of the reed mask noise along the bank",
+      2,
+      32
+    ],
+    "terrain.forest.grovesPerRegion": [
+      "groves per spawn region",
+      0,
+      4
+    ],
+    "terrain.forest.groveCells": [
+      "cells per grove [min, max]",
+      4,
+      120
+    ],
+    "terrain.forest.groveMinFromHome": [
+      "cells outside the home meadow wall",
+      0,
+      20
+    ],
+    "terrain.forest.groveClear": [
+      "cells from any grove to a chest, village, bandit camp, power-up, camp or prop (placementOk)",
+      0,
+      10
+    ],
+    "terrain.forest.grovePeriod": [
+      "cells; period of the grove growth noise",
+      2,
+      32
+    ],
+    "terrain.forest.groveFlank": [
+      "cells from a spawn-to-neighbour route where grove seeds are preferred [min, max]",
+      0,
+      16
+    ],
+    "terrain.forest.fairRatio": [
+      "max / min grove area per spawn region",
+      1,
+      2
+    ],
+    "terrain.forest.tries": [
+      "grove seed reshuffles per region",
+      1,
+      32
+    ],
+    "ai.forestFleeBonus": [
+      "px-equivalent bonus for forest spots in the flee score",
+      0,
+      600
+    ],
+    "ai.rustleMemory": [
+      "s an AI treats a rustle it saw as an unknown threat (camp avoidance)",
+      0,
+      15
+    ],
+    "ai.siteKnowRadius": [
+      "px; landmark sites an AI knows from its spawn (0 = v2, all known); the rest once explored",
+      0,
+      4000
+    ],
+    "powerups.firstDelay": [
+      "s before the initial power-ups appear (0 = v2)",
+      0,
+      120
+    ],
+    "fixtures.concealN": [
+      "agents in the forest_conceal hider",
+      1,
+      200
+    ],
+    "fixtures.concealDist": [
+      "px from the hider to the forest_conceal viewer",
+      100,
+      600
+    ],
+    "fixtures.groveN": [
+      "agents in the fixture_grove_ambush grove",
+      1,
+      200
+    ],
+    "fixtures.groveColumn": [
+      "agents in the fixture_grove_ambush column",
+      10,
+      400
+    ],
     "terrain.cell": [
       "px",
       16,

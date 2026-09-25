@@ -173,7 +173,7 @@
       spr: S.spr.peasantSet(color, id), ban: S.spr.banner(color, id), kills: 0, peak: 1, state: "roam", speedMod: 1, thinkT: S.rng() * 0.5, lastHint: 0, minY: 0, huntStart: 0, huntCooldown: 0,
       regroupUntil: 0, fleeFrom: 0, leftHome: -1, atCentre: -1, preyId: 0, exX: 0, exY: 0, exUntil: -1, escUntil: -1, escFrom: 0, escReplanAt: 0, escGX: 0, escGY: 0,
       kind: ai ? ai.kind || "" : "", sense: 1, mem: S.cfg.fog.aiMemory, hear: S.cfg.fog.clashNoise, lastFight: -1e9, scentX: 0, scentY: 0, scentT: -1e9, leaveUntil: -1e9,
-      lurkX: 0, lurkY: 0, lurkUntil: -1e9, lurkCool: 0, crowsT: -1e9, claimX: 0, claimY: 0, claimOn: false, claimEmpty: 0 };
+      lurkX: 0, lurkY: 0, lurkUntil: -1e9, lurkCool: 0, crowsT: -1e9, claimX: 0, claimY: 0, claimOn: false, claimEmpty: 0, rustleX: 0, rustleY: 0, rustleT: -1e9 }; // rustle*: the last rustle this team saw (v3, ai.rustleMemory)
     SPL.initTeam(t); return t;
   }
   // speed by swarm size: small swarms get a boost that fades by `full`, big ones slow a little per peasant above it (SPEC-v2 §3)
@@ -216,7 +216,7 @@
     const open2 = [], open3 = [], owned = [[], [], [], [], [], []], contest = [], walkable = [], passCells = [];
     for (let c = 0; c < NN; c++) {
       if (!walk(m.terr[c])) continue; if (m.sdf[c] >= cell / 2) walkable.push(c); if (m.passMask[c] && m.region[c] === 1) passCells.push(c);
-      if (m.region[c] !== 1 || m.passMask[c] || m.sdf[c] < 2 * cell) continue;
+      if (m.region[c] !== 1 || m.passMask[c] || m.sdf[c] < 2 * cell || (m.coverNear && m.coverNear[c])) continue; // v3: nothing placed in or near forest
       open2.push(c); if (m.sdf[c] >= 3 * cell) open3.push(c);
       if (m.owner[c] < 6) owned[m.owner[c]].push(c);
       if (m.dist.length === 6) { let d1 = 65535, d2 = 65535; for (let i = 0; i < 6; i++) { const d = m.dist[i][c]; if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) d2 = d; } if (d2 < 65535 && d2 - d1 <= tol * d1) contest.push(c); }
@@ -320,6 +320,7 @@
       for (let i = 1; i < S.teams.length; i++) { const t = S.teams[i], s = m.spawns[t.slot]; if (!t.ai || !s) continue; for (const c of S.camps) if ((c.x - s.x) * (c.x - s.x) + (c.y - s.y) * (c.y - s.y) <= ck2) c.kn[i] = c.n; } }
     // power-ups on contested ground (two spawns about equally far by path)
     for (let i = 0; i < cfg.powerups.count; i++) S.powerups.push(newPowerup(true));
+    if (cfg.powerups.firstDelay > 0) for (const p of S.powerups) { p.alive = false; p.t = cfg.powerups.firstDelay; p.first = true; } // v3 probe lever: they appear later, where placed
     // decals (dressing only) and dirt trails between neighbouring camps: both are baked into the ground chunks
     for (let i = 0; i < cfg.world.decals; i++) { const c = P.walkable[(S.rng() * P.walkable.length) | 0]; S.decals.push({ x: ((c % N) + S.rng()) * cell, y: (((c / N) | 0) + S.rng()) * cell, k: (S.rng() * S.spr.decals.length) | 0 }); }
     for (let i = 0; i < S.camps.length; i++) {
@@ -337,6 +338,7 @@
     recount();
     for (let i = 1; i < S.teams.length; i++) { const t = S.teams[i]; t.pcx = t.cx; t.pcy = t.cy; }
     fogStampAll(); // every team sees its start before the first frame
+    if (cfg.fog.losWarmIris && PS.fog.losOn()) warmLos(m); // v3: spawn and pass viewsheds cached during the iris, not on the first ticks
     if (!sandbox) { S.zDpr = S.dpr; S.dprGrace = performance.now() + S.cfg.polish.dprGraceSeconds * 1000; } // the zoom steps are re-quantised for the DPR tier at match start only (SPEC-v2 §13); M1: no perf step in the chunk-bake grace
     S.cam.x = S.teams[1].cx; S.cam.y = S.teams[1].cy; S.camS = mkCamS(); zoomRule(S.teams[1].count, 0, true);
     S.teams[1].tx = S.teams[1].cx; S.teams[1].ty = S.teams[1].cy;
@@ -353,7 +355,7 @@
   function newPowerup(initial) {
     let x = 0, y = 0;
     for (let n = 0; n < 60; n++) { const p = randPos(S.map.place.contest); x = p.x; y = p.y; if (placeOk(x, y, 2, 30) && (!initial || farFromTeams(x, y, S.cfg.powerups.minDistFromStart))) break; }
-    return { x, y, kind: pickKind(), alive: true, t: 0, sx: 0, sy: 0, skind: "", salive: false, sseen: false }; // s*: the player's last-seen state
+    return { x, y, kind: pickKind(), alive: true, t: 0, first: false, sx: 0, sy: 0, skind: "", salive: false, sseen: false }; // s*: the player's last-seen state; first: waiting out powerups.firstDelay
   }
 
   // camps: also the neutral head-count of every camp (update(), once per tick)
@@ -461,10 +463,16 @@
     for (let i = 0; i < 8; i++) pings.push({ on: false, x: 0, y: 0, t0: -1e9, t1: -1e9, rumbleT: -1e9, rout: false });
     return { obs, mem, ghosts, dust, verdict, pings, rr: 0, dustT: 0, dawnT0: -1, reveal: false, leakOn: false, simMs: 0, simTotal: 0, simTicks: 0, simMax: 0,
       danger: { on: false, ang: 0, t0: -1e9, last: -1e9, team: 0 },
-      stats: { firstSight: -1, sightings: 0, ghosts: 0, dangerCues: 0, pings: 0, routPings: 0, rumbles: 0, dust: 0, verdicts: 0, crows: 0 },
+      stats: { firstSight: -1, sightings: 0, ghosts: 0, dangerCues: 0, pings: 0, routPings: 0, rumbles: 0, dust: 0, verdicts: 0, crows: 0, rustles: 0, reveals: 0 },
       leak: { frames: 0, rivalsDrawn: 0, rivalsVisible: 0, fading: 0, hidden: 0, missed: 0, neutralsHidden: 0, tagHidden: 0, ringHidden: 0, arrowHidden: 0, miniHidden: 0, last: null },
-      ai: { decisions: 0, swarm: 0, camps: 0, explore: 0, violations: 0, first: null, crown: 0, noise: 0, scent: 0, objectives: 0 } };
+      ai: { decisions: 0, swarm: 0, camps: 0, explore: 0, violations: 0, first: null, crown: 0, noise: 0, scent: 0, objectives: 0 },
+      // v3 M2 (SPEC-v3 §2), sim state: rustleT[o * 9 + r] the tick observer o last saw rival r rustle; rustles: a ring of the last RUSTLES events
+      // (o, r, tick, x, y at a concealed agent of r; stage B draws the player's with a Math.random jitter), rustleN events so far; rev: per team
+      // up to 4 fight reveals (x, y, until); hideN / hideShare: the player's agents on forest cells at its last stamp (the YOU chip leaf mark)
+      rustleT: new Int32Array(81).fill(-1e9), rustles: Array.from({ length: RUSTLES }, () => ({ o: 0, r: 0, tick: -1, x: 0, y: 0 })), rustleN: 0, rev: new Float64Array(9 * 4 * 3), hideN: 0, hideShare: 0,
+      rustleStats: new Int32Array(9) };
   }
+  const RUSTLES = 64;
   // the player's presentation is fogged: a real match (or a fog test scene), not ?nofog=1, not a bench "reveal", before dawn
   const fogGate = () => S.fogOn && !NOFOG && !!S.fogS && !S.fogS.reveal && S.fogS.dawnT0 < 0;
   const tellsOn = () => fogGate() && !S.attract;
@@ -475,15 +483,19 @@
   // sight: 340 + 10 sqrt(n), x the team's difficulty sense (rivals: 0.9 / 1.0 / 1.15), x finale.torches after the horn (SPEC-v2 §5, §7, §9)
   const sightR = (t) => (S.cfg.fog.sight0 + S.cfg.fog.sightK * Math.sqrt(Math.max(1, t.count))) * t.sense * (S.torches ? S.cfg.finale.torches : 1);
 
-  const OC = new Int32Array(9), OE = new Int32Array(9), OX = new Float64Array(9), OY = new Float64Array(9), OMY = new Float64Array(9);
+  const OC = new Int32Array(9), OE = new Int32Array(9), OX = new Float64Array(9), OY = new Float64Array(9), OMY = new Float64Array(9), OR = new Int32Array(9), ORX = new Float64Array(9), ORY = new Float64Array(9);
   function observe(o) {
     const FS = S.fogS, V = PS.fog.vis(o), v = PS.fog.verOf(o), nT = S.teams.length, NC = PS.fog.N, cell = S.map.cell, lim = NC * cell;
-    for (let r = 0; r < 9; r++) { OC[r] = 0; OE[r] = 0; OX[r] = 0; OY[r] = 0; OMY[r] = 1e9; }
+    const los = PS.fog.losOn(), v1 = v + 1, cov = los && S.map.cover ? S.map.cover : null; let hide = 0; // v3: concealed cells read v + 1
+    for (let r = 0; r < 9; r++) { OC[r] = 0; OE[r] = 0; OX[r] = 0; OY[r] = 0; OMY[r] = 1e9; OR[r] = 0; }
     for (let k = 0; k < pN; k++) { // the packed hash (M7): every agent's position, team and escape flag as of this tick's rebuild, in one contiguous run
-      const tm = PT[k]; if (tm === 0 || tm === o) continue;
-      const x = PX[k], y = PY[k]; if (!(x >= 0 && y >= 0 && x < lim && y < lim) || V[((y / cell) | 0) * NC + ((x / cell) | 0)] !== v) continue;
+      const tm = PT[k]; if (tm === 0) continue;
+      const x = PX[k], y = PY[k]; if (!(x >= 0 && y >= 0 && x < lim && y < lim)) continue; const c = ((y / cell) | 0) * NC + ((x / cell) | 0);
+      if (tm === o) { if (cov !== null && cov[c] === 1) hide++; continue; }
+      const vc = V[c]; if (vc !== v) { if (los && vc === v1 && tm < 8 && OR[tm]++ === 0) { ORX[tm] = x; ORY[tm] = y; } continue; } // a rival in concealed forest: the rustle's anchor (first in hash order)
       OC[tm]++; OX[tm] += x; OY[tm] += y; if (y < OMY[tm]) OMY[tm] = y; if (PF[k] & 1) OE[tm]++;
     }
+    if (los) { if (o === 1) { FS.hideN = hide; FS.hideShare = hide / Math.max(1, S.teams[1].count); } rustles(o); }
     const ks = S.cfg.fog.obsSmooth, vmax = 2 * S.cfg.agent.speed;
     for (let r = 1; r < nT; r++) {
       if (r === o) continue; const ob = FS.obs[o][r];
@@ -507,6 +519,28 @@
       else if (p.sseen && PS.fog.sees(1, p.sx, p.sy)) p.salive = false;
     }
   }
+  // v3 rustle (SPEC-v3 §2): a rival standing in forest you otherwise see (a concealed cell, never behind rock) shakes the leaves at most every
+  // forest.rustleEvery s per observer and rival, on the tick counter (sim state). No count. An AI treats the one it saw as an unknown threat
+  // for camp avoidance for ai.rustleMemory s; the player's are counted and drawn by stage B at a Math.random jitter <= forest.rustleJitter.
+  function rustles(o) {
+    const FS = S.fogS, every = Math.max(1, Math.round(S.cfg.forest.rustleEvery / DT)), me = S.teams[o];
+    for (let r = 1; r < 8; r++) {
+      if (r === o || OR[r] === 0 || OC[r] > 0) continue; // a swarm you already see needs no rustle
+      const k = o * 9 + r; if (S.tick - FS.rustleT[k] < every) continue; FS.rustleT[k] = S.tick;
+      const e = FS.rustles[FS.rustleN % RUSTLES]; e.o = o; e.r = r; e.tick = S.tick; e.x = ORX[r]; e.y = ORY[r]; FS.rustleN++; FS.rustleStats[o]++;
+      if (o === 1) FS.stats.rustles++; else if (me) { me.rustleX = ORX[r]; me.rustleY = ORY[r]; me.rustleT = S.t; }
+    }
+  }
+  // v3 fight reveal (SPEC-v3 §2): a clash whose contact point is in team o's sight and LOS but in concealed forest lights the forest cells
+  // within forest.fightReveal px of it for forest.fightRevealSeconds (re-applied after each of o's stamps). 4 slots per team, refreshed in place.
+  function forestReveal(cx, cy) {
+    const FS = S.fogS, FO = S.cfg.forest, c = PS.fog.cellOf(cx, cy), R = FS.rev, m2 = (FO.fightReveal * 0.5) * (FO.fightReveal * 0.5);
+    for (let o = 1; o < S.teams.length; o++) {
+      if (!S.teams[o].alive || !PS.fog.concealedCell(o, c)) continue;
+      let q = -1, old = -1; for (let s = 0; s < 4; s++) { const b = (o * 4 + s) * 3; if (R[b + 2] > S.t && (R[b] - cx) * (R[b] - cx) + (R[b + 1] - cy) * (R[b + 1] - cy) < m2) { q = b; break; } if (old < 0 || R[b + 2] < R[old + 2]) old = b; }
+      if (q < 0) { q = old; if (o === 1) FS.stats.reveals++; } R[q] = cx; R[q + 1] = cy; R[q + 2] = S.t + FO.fightRevealSeconds;
+    }
+  }
   // first sight of rival r: the pip flips from "?" to a count and a verdict mark (count x power, stronger / even / weaker) shows on it
   function firstSight(r) {
     const FS = S.fogS, FG = S.cfg.fog, pl = S.teams[1], t = S.teams[r], ratio = (t.count * teamPower(t)) / Math.max(1, pl.count * teamPower(pl));
@@ -516,6 +550,7 @@
   function fogStamp(i) {
     const t = S.teams[i]; if (!t || !t.alive || t.count === 0) return;
     PS.fog.stamp(i, t.cx, t.cy, sightR(t), FBL, i * BB, FBN[i], S.cfg.fog.bucketSight, PS.knowledge);
+    const R = S.fogS.rev; for (let s = 0; s < 4; s++) { const b = (i * 4 + s) * 3; if (R[b + 2] > S.t) PS.fog.reveal(i, R[b], R[b + 1], S.cfg.forest.fightReveal); } // v3 fight reveals
     observe(i);
   }
   // one update() step: the player every fog.playerStampTicks ticks, one AI team per tick in turn (SPEC-v2 §5); counts sim-side fog ms
@@ -526,6 +561,15 @@
     const ms = performance.now() - t0; FS.simMs += ms; FS.simTotal += ms; FS.simTicks++; if (ms > FS.simMax) FS.simMax = ms;
   }
   function fogStampAll() { rebuildGrid(); for (let i = 1; i < S.teams.length; i++) fogStamp(i); }
+  // fog.losWarmIris: the six spawn cells and up to 250 pass cells (evenly strided) into the centroid viewshed cache. A pure cache fill: the
+  // bits are the same whether warmed or not (los_cache_equal), so it changes cost, never the sim.
+  const WARM = new Int32Array(256);
+  function warmLos(m) {
+    const t0 = performance.now(), pc = m.place ? m.place.passCells : null; let n = 0;
+    for (const s of m.spawns) if (n < 6) WARM[n++] = s.c;
+    if (pc && pc.length) { const st = Math.max(1, Math.ceil(pc.length / 250)); for (let i = 0; i < pc.length && n < WARM.length; i += st) WARM[n++] = pc[i]; }
+    S.losWarm = { cells: PS.fog.warm(WARM.subarray(0, n), 0), ms: +(performance.now() - t0).toFixed(2) };
+  }
 
   // Tells through the dark (SPEC-v2 §5). A clash you cannot see within fog.clashNoise px: a ping (edge pitchfork, minimap ring) that lives
   // fog.pingSeconds past its last refresh, and a panned distant rumble every fog.pingSeconds while it lasts (the one deliberate off-screen
@@ -654,6 +698,7 @@
     const huddleP = inp.huddle, kLerp = 1 - Math.exp(-F.steerLerp * dt), pk = FW.pathCohesionK, pLo = FW.pathCohesionClamp[0], pHi = FW.pathCohesionClamp[1];
     const sBand = FW.stragglerBand, sDet = FW.stragglerDetour, sRejoin = FW.stragglerRejoin;
     const T = PS.terrain, TN = T.N, TC = T.cell, W1 = W - 0.001, terr = S.map.terr, sdfA = S.map.sdf, far = 2 * TC, slideM = FW.slideMargin, fordK = cfg.terrain.fordSpeed;
+    const cov = cfg.forest.on && S.map.forest && S.map.forest.cells > 0 ? S.map.cover : null, covK = cfg.forest.speed; // v3: forest.speed on forest cells (SPEC-v3 §2)
     const O = S.obs, OB = S.obstacles, FL = PS.flow, esc = CB.remnant.escapeSpeed, truce = S.t < CB.truceSeconds; // truce: no attacks land, enemies only repel
     recN = 0;
     const nAg = S.agents.length;
@@ -676,6 +721,7 @@
       let speed = team ? team.spd : bandit ? EN.banditSpeed : A.speed;
       if (hud) speed *= F.huddleSpeedMult;
       if (terr[c0] === 3) speed *= team ? team.fordMul : fordK; // Boots: fords slow less (M6)
+      else if (cov !== null && cov[c0] === 1) speed *= covK;
 
       // find/keep combat target + separation + local cohesion (+ a neutral's nearest recruiter) in one pass
       let best = null, bestD2 = engR2, recT = 0, recD2 = 1e12, chase = null, chD2 = EN.banditAggro * EN.banditAggro; // chase: a bandit's nearest swarm peasant within aggro
@@ -853,7 +899,7 @@
     // power-up pickup
     const pr = cfg.powerups.pickupRadius, pr2 = pr * pr;
     for (const p of S.powerups) {
-      if (!p.alive) { p.t -= dt; if (p.t <= 0) { const np = newPowerup(false); p.x = np.x; p.y = np.y; p.kind = np.kind; p.alive = true; } continue; }
+      if (!p.alive) { p.t -= dt; if (p.t <= 0) { if (p.first) { p.first = false; p.alive = true; p.t = 0; continue; } const np = newPowerup(false); p.x = np.x; p.y = np.y; p.kind = np.kind; p.alive = true; } continue; }
       p.t += dt;
       gather(p.x, p.y, pr);
       for (let k = 0; k < nearN; k++) { const b = NEAR[k]; if (b.team === 0 || b.team === 8 || b.dead) continue; const dx = b.x - p.x, dy = b.y - p.y; if (dx * dx + dy * dy < pr2) { pickup(p, b.team); break; } }
@@ -889,6 +935,7 @@
     // morale falls under moraleBreak and 0.02 under the other's. Whole-team totals never enter the test. (The hash is still this tick's.)
     // The group is measured every tick for both sides by groupCells() (the rout's flood at hash-cell resolution).
     S.engagedNow = false; S.meleeN = 0; // meleeN: agents fighting in clashes you see (P2: the melee bed follows it)
+    const revOn = S.cfg.forest.on && !!S.map.forest && S.map.forest.cells > 0 && PS.fog.losOn(); // v3: fights in concealed forest light it
     const ks = 1 - Math.exp(-dt / CB.moraleSmoothing), nT = S.teams.length, fightMode = CB.localMode !== "radius";
     for (let i = 1; i < nT; i++) {
       const ta = S.teams[i]; if (!ta.alive) continue;
@@ -906,6 +953,7 @@
           if (fightMode) { const gA = groupCells(ta.id, cx, cy), gB = groupCells(tb.id, cx, cy); ta.engG[j] = gA; tb.engG[i] = gB; if (gA > ta.engGPk[j]) ta.engGPk[j] = gA; if (gB > tb.engGPk[i]) tb.engGPk[i] = gB; }
           ta.engT[j] += dt; tb.engT[i] = ta.engT[j]; ta.engCx[j] = tb.engCx[i] = cx; ta.engCy[j] = tb.engCy[i] = cy;
           ta.lastFight = tb.lastFight = S.t; noiseAt(i, j, cx, cy); // every AI within its hearing radius hears this clash (SPEC-v2 §7)
+          if (revOn) forestReveal(cx, cy);
           if (fxOk(cx, cy)) S.meleeN += nf;
           if (!ta.isPlayer && !tb.isPlayer && S.fogOn && !PS.fog.sees(1, cx, cy)) clashPing(cx, cy, false); // clash noise through the dark
           const La = ta.engL[j], Lb = tb.engL[i]; if (La > ta.engPk[j]) ta.engPk[j] = La; if (Lb > tb.engPk[i]) tb.engPk[i] = Lb;
@@ -1311,7 +1359,12 @@
     const pc = S.map.place.passCells, N = S.map.N, cell = S.map.cell, lim = P.lurkPassMax * P.lurkPassMax; let bc = -1; bd = lim;
     for (let i = 0; i < pc.length; i++) { const c = pc[i], x = ((c % N) + 0.5) * cell, y = (((c / N) | 0) + 0.5) * cell, d = (x - ox) * (x - ox) + (y - oy) * (y - oy); if (d < bd) { bd = d; bc = c; } }
     if (bc < 0) return false;
-    t.lurkX = ((bc % N) + 0.5) * cell; t.lurkY = (((bc / N) | 0) + 0.5) * cell; return true;
+    t.lurkX = ((bc % N) + 0.5) * cell; t.lurkY = (((bc / N) | 0) + 0.5) * cell;
+    // v3 (SPEC-v3 §2): lurkForest waits in the nearest forest cell >= 2 deep within lurkPassMax of that pass, else at the pass
+    const dp = P.lurkForest && S.cfg.forest.on ? S.map.deep : null;
+    if (dp && dp.length) { let bf = -1; bd = lim; for (let i = 0; i < dp.length; i++) { const c = dp[i], x = ((c % N) + 0.5) * cell, y = (((c / N) | 0) + 0.5) * cell, d = (x - t.lurkX) * (x - t.lurkX) + (y - t.lurkY) * (y - t.lurkY); if (d < bd) { bd = d; bf = c; } }
+      if (bf >= 0) { t.lurkX = ((bf % N) + 0.5) * cell; t.lurkY = (((bf / N) | 0) + 0.5) * cell; } }
+    return true;
   }
   // Stubborn's claim: the camp cluster it knows (kn > 0, outside its own home meadow) with the most people within clusterRadius per path px
   function claimSite(t, P, dist) {
@@ -1360,6 +1413,7 @@
       const sc = (o.count + 2) / (d + 60) * (o.isPlayer ? P.hatesPlayer : 1);
       if (sc > preyScore) { preyScore = sc; prey = o; PR.x = ox; PR.y = oy; PR.vx = KP.vx; PR.vy = KP.vy; }
     }
+    if (S.t - t.rustleT <= AI.rustleMemory && nVB < 9) { VBX[nVB] = t.rustleX; VBY[nVB++] = t.rustleY; } // v3: a rustle it saw is an unknown threat (camp avoidance only)
     // grace: steer straight away from the nearest swarm it sees
     if (avoid) { knowSwarm(t, avoid, 0); const dx = t.ax - TH.ax, dy = t.ay - TH.ay, l = Math.sqrt(dx * dx + dy * dy) || 1, q = FL.rayOut(t.ax, t.ay, dx / l, dy / l, AI.fleeDistance, null); aim(t, q.x, q.y); t.state = "avoid"; t.preyId = 0; t.speedMod = AI.roamSpeed; return; }
     // FLEE, or turn and fight when caught (never while regrouping or escaping: M2 critic MAJOR-2)
@@ -1484,10 +1538,12 @@
     FL.needBegin();
     for (const c of S.camps) { if (!c.n || n >= max) continue; const k = FL.cellFor(c.x, c.y); if (FL.pathCell(me, k) < 0) continue; FC[n] = k; FCK[n++] = 1; FL.needAdd(k); }
     if (!campsOnly) { const pc = S.map.place.passCells; for (let i = 0; i < pc.length && n < max; i++) { if (FL.pathCell(me, pc[i]) < 0) continue; FC[n] = pc[i]; FCK[n++] = 0; FL.needAdd(pc[i]); } }
+    const FB = S.cfg.ai.forestFleeBonus, sp = !campsOnly && FB > 0 && S.cfg.forest.on ? S.map.spots : null; // v3: remnants run for the trees (ai.forestFleeBonus)
+    if (sp) for (let i = 0; i < sp.length && n < max; i++) { if (FL.pathCell(me, sp[i]) < 0) continue; FC[n] = sp[i]; FCK[n++] = 2; FL.needAdd(sp[i]); }
     if (n) {
       const dx = threat.ax - t.ax, dy = threat.ay - t.ay, capPx = 2 * S.cfg.ai.sight * FW.fromMeCap + Math.sqrt(dx * dx + dy * dy) * FW.farDetour, th = FL.buildThreat(threat.ax, threat.ay, capPx);
       let bi = -1, bs = 0;
-      for (let i = 0; i < n; i++) { const dT = FL.pathCell(th, FC[i]), s = (dT < 0 ? capPx : dT) - FL.pathCell(me, FC[i]) + (FCK[i] ? FW.fleeCampBonus : 0); if (s > bs) { bs = s; bi = i; } }
+      for (let i = 0; i < n; i++) { const dT = FL.pathCell(th, FC[i]), s = (dT < 0 ? capPx : dT) - FL.pathCell(me, FC[i]) + (FCK[i] === 1 ? FW.fleeCampBonus : FCK[i] === 2 ? FB : 0); if (s > bs) { bs = s; bi = i; } }
       if (bi >= 0) { const c = FC[bi], N = S.map.N; FP.x = ((c % N) + 0.5) * cell; FP.y = (((c / N) | 0) + 0.5) * cell; return FP; }
     }
     const dx = t.ax - threat.ax, dy = t.ay - threat.ay, d = Math.sqrt(dx * dx + dy * dy) || 1;
@@ -2983,7 +3039,8 @@
       alive60: E.alive60, alive120: E.alive120, alive180: E.alive180, aliveNow: al, elims: E.elims.slice(), hornLeader: E.hornLeader, hornAlive: E.hornAlive, biggest: b ? b.id : 0,
       counts: S.teams.slice(1).map((t) => t.count), names: S.teams.slice(1).map((t) => t.name), pileOns: E.pileOns, scentPings: E.scentPings, crownMoves: E.crownMoves,
       trickle: E.trickle, trickleFav: E.trickleFav, leftHome: S.teams.slice(1).map((t) => t.leftHome), ai: FS ? { ...FS.ai } : null, aiCost: aiCostReport(), dbg: { ...S.dbg },
-      tiers: S.teams.slice(1).map((t) => t.tierN), tiers60: E.tiers60, tiers180: E.tiers180, tiers300: E.tiers300, taken: E.taken.slice(), gains: E.gains.slice(), drops: E.drops, trickleChests: E.trickleChests, mustered: S.teams.slice(1).map((t) => t.mustered) };
+      tiers: S.teams.slice(1).map((t) => t.tierN), tiers60: E.tiers60, tiers180: E.tiers180, tiers300: E.tiers300, taken: E.taken.slice(), gains: E.gains.slice(), drops: E.drops, trickleChests: E.trickleChests, mustered: S.teams.slice(1).map((t) => t.mustered),
+      ...(FS && PS.fog.losOn() ? { los: { rustles: FS.rustleN, playerRustles: FS.stats.rustles, reveals: FS.stats.reveals, forestCells: S.map.forest ? S.map.forest.cells : 0, cache: { hits: PS.fog.LOS.hits, misses: PS.fog.LOS.misses } } } : {}) }; // v3: only with sight layers on, so the kill-switch records match v2's
   }
 
   // ---------------------------------------------------------------- QA: fog (SPEC-v2 §5, §13; M3 brief 10)
@@ -3452,7 +3509,13 @@
     "encampments.heavy:a encampments.heavyPick2:n encampments.heavyRing:n encampments.heavyHold:n encampments.heavyDist.0:n encampments.heavyDist.1:n encampments.banditSizes:a encampments.banditCounts:a " +
     "encampments.banditMinPath:n encampments.banditLeash:n encampments.banditAggro:n encampments.banditHp:n encampments.banditDamage:n encampments.banditSpeed:n encampments.banditGap:n " +
     "encampments.objectGap:n encampments.campGap:n encampments.cheer:n encampments.scanTicks:n ai.objRelic:n ai.objVillage:n ai.objHeavy:n ai.objBandit:n ai.banditFeasible:n " +
-    "banner.minSeconds:n banner.queuedSeconds:n banner.staleSeconds:n banner.dropDepth:n combat.verdictRatio:n polish.dprTiers.0:n polish.dprTiers.1:n polish.dprTiers.2:n polish.dprP90Ms:n polish.dprHoldSeconds:n polish.dprWindow:n polish.rafP90Ms:n polish.dprGraceSeconds:n polish.dprRememberDays:n polish.fontWaitMs:n audio.duckMs:n audio.watchdogMs:n audio.rebuildAfter:n audio.rebuildGapMs:n polish.ghostSeconds:n polish.flySeconds:n polish.surrenderSeconds:n polish.routWaveSeconds:n polish.hpBarMax:n polish.dustEvery:n polish.dustSpan:n polish.dustN:n polish.irisSeconds:n polish.confetti:n polish.bannerFall:n polish.posterSeed:n polish.posterMint:n polish.posterOrange:n polish.posterStep:n").split(" ");
+    "banner.minSeconds:n banner.queuedSeconds:n banner.staleSeconds:n banner.dropDepth:n combat.verdictRatio:n polish.dprTiers.0:n polish.dprTiers.1:n polish.dprTiers.2:n polish.dprP90Ms:n polish.dprHoldSeconds:n polish.dprWindow:n polish.rafP90Ms:n polish.dprGraceSeconds:n polish.dprRememberDays:n polish.fontWaitMs:n audio.duckMs:n audio.watchdogMs:n audio.rebuildAfter:n audio.rebuildGapMs:n polish.ghostSeconds:n polish.flySeconds:n polish.surrenderSeconds:n polish.routWaveSeconds:n polish.hpBarMax:n polish.dustEvery:n polish.dustSpan:n polish.dustN:n polish.irisSeconds:n polish.confetti:n polish.bannerFall:n polish.posterSeed:n polish.posterMint:n polish.posterOrange:n polish.posterStep:n " +
+    // v3 M2 (SPEC-v3 §2, §7): terrain that hides
+    "fog.losWalls:s fog.losMaxCells:n fog.losBucketCells:n fog.losCacheCells:n fog.losWarmIris:b fog.shadowAlpha:n fog.shadowHz:n forest.on:b forest.seeInto:n forest.blocksSight:b " +
+    "forest.speed:n forest.cost:n forest.fightReveal:n forest.fightRevealSeconds:n forest.rustleEvery:n forest.rustleJitter:n forest.shadeAlpha:n forest.hideShare:n forest.dustHush:b " +
+    "terrain.forest:o terrain.forest.bankWidth:n terrain.forest.bankCover:n terrain.forest.bankClear:n terrain.forest.bankPeriod:n terrain.forest.grovesPerRegion:n terrain.forest.groveCells:a " +
+    "terrain.forest.groveMinFromHome:n terrain.forest.groveClear:n terrain.forest.grovePeriod:n terrain.forest.groveFlank:a terrain.forest.fairRatio:n terrain.forest.tries:n " +
+    "ai.forestFleeBonus:n ai.rustleMemory:n ai.siteKnowRadius:n powerups.firstDelay:n fixtures.concealN:n fixtures.concealDist:n fixtures.groveN:n fixtures.groveColumn:n").split(" ");
   const cfgGet = (path) => { let o = S.cfg; for (const k of path.split(".")) { if (o == null) return undefined; o = o[k]; } return o; };
   const typeOk = (v, t) => (t === "n" ? typeof v === "number" && isFinite(v) : t === "s" ? typeof v === "string" && v.length > 0 : t === "a" ? Array.isArray(v) && v.length > 0 : t === "b" ? typeof v === "boolean" : !!v && typeof v === "object");
   // PS.cfgOverride(patch) (SPEC-v2 §13, M8 sweeps): deep-merges patch into the live config in place, so every module holding a section sees
@@ -3473,7 +3536,7 @@
     const cfg = S.cfg, missing = [], used = {};
     for (const e of CFG_KEYS) { const [path, t] = e.split(":"); used[path.replace(/\.\d+$/, "")] = 1; used[path] = 1; if (!typeOk(cfgGet(path), t)) missing.push(path); }
     // the five rivals (SPEC-v2 §7): the shared fields, and each kind's specials
-    const SPECIAL = { greedy: [], bully: ["scentSearch:n", "trackRatio:n"], wary: ["clashLeave:n", "leaveSeconds:n", "edgeBias:n"], sly: ["clashGo:n", "foughtSeconds:n", "foughtHuntRatio:n", "lurkSeconds:n", "lurkCooldown:n", "lurkPassMax:n"],
+    const SPECIAL = { greedy: [], bully: ["scentSearch:n", "trackRatio:n"], wary: ["clashLeave:n", "leaveSeconds:n", "edgeBias:n"], sly: ["clashGo:n", "foughtSeconds:n", "foughtHuntRatio:n", "lurkSeconds:n", "lurkCooldown:n", "lurkPassMax:n", "lurkForest:b"],
       stubborn: ["homeFleeRatio:n", "holdRadius:n", "clusterRadius:n", "reclaimEmpty:n"], proxy: [] };
     (cfg.ai && cfg.ai.personalities || []).concat(cfg.ai && cfg.ai.proxy ? [cfg.ai.proxy] : []).forEach((p, i) => { for (const k of ["name:s", "kind:s", "color:s", "huntRatio:n", "fleeRatio:n", "neutralBias:n", "powerBias:n", "hatesPlayer:n"].concat(SPECIAL[p.kind] || ["kind (greedy | bully | wary | sly | stubborn)"])) { const [f, t] = k.split(":"); if (!typeOk(p[f], t)) missing.push("ai.personalities." + i + "." + f); } });
     if (!cfg.ai || !cfg.ai.personalities || cfg.ai.personalities.length !== 5) missing.push("ai.personalities (five rivals, SPEC-v2 §7)");
@@ -3481,6 +3544,12 @@
     (cfg.pace || []).forEach((v, i) => { if (!typeOk(v, "n")) missing.push("pace." + i); });
     if (cfg.input && ["route", "steer"].indexOf(cfg.input.desktopMode) < 0) missing.push("input.desktopMode (route | steer)");
     if (cfg.combat && ["fighting", "radius"].indexOf(cfg.combat.localMode) < 0) missing.push("combat.localMode (fighting | radius)");
+    if (cfg.fog && ["all", "template", "off"].indexOf(cfg.fog.losWalls) < 0) missing.push("fog.losWalls (all | template | off)");
+    { const F = cfg.fog || {}, D = cfg.difficulty || {}; let sense = 1; for (const d in D) if (D[d].sight > sense) sense = D[d].sight; // v3: the viewshed boxes must cover the largest sight
+      const maxR = (F.sight0 + F.sightK * Math.sqrt(Math.max(cfg.spawn.agentCap, cfg.spawn.touchAgentCap))) * sense * (cfg.finale ? cfg.finale.torches : 1);
+      if (!(F.losMaxCells * cfg.terrain.cell >= maxR)) missing.push("fog.losMaxCells (" + F.losMaxCells + " cells < the largest sight " + Math.round(maxR) + " px)");
+      if (!(F.losBucketCells * cfg.terrain.cell >= F.bucketSight)) missing.push("fog.losBucketCells (< fog.bucketSight)");
+      const gc = cfg.terrain.forest && cfg.terrain.forest.groveCells; if (!(gc && gc.length === 2 && gc[0] <= gc[1])) missing.push("terrain.forest.groveCells [min, max]"); }
     { const PG = cfg.progression || {}, EN = cfg.encampments || {}, ax = ["arms", "boots", "horn"]; // M6 shapes the rules rely on
       if (!(PG.muster && PG.musterAxes && PG.muster.length === PG.musterAxes.length && PG.musterAxes.every((a) => ax.indexOf(a) >= 0))) missing.push("progression.muster / musterAxes (same length, axes arms | boots | horn)");
       if (!(PG.armsPower && PG.armsPower.length === PG.armsMax + 1)) missing.push("progression.armsPower (one per Arms tier 0..armsMax)");
@@ -3489,7 +3558,7 @@
     for (const k in (cfg.powerups && cfg.powerups.weights) || {}) { if (!S.spr.PU[k] || !typeOk(cfg.powerups.duration[k], "n")) missing.push("powerups.weights." + k + " (needs a PU icon + duration)"); }
     // tunables in config.json that no code reads (informational: a retune there does nothing)
     const unused = [];
-    for (const sec of ["world", "spawn", "agent", "flock", "flow", "combat", "powerups", "ai", "camera", "touch", "fog", "terrain", "input", "finale", "fixtures", "art", "progression", "encampments", "banner", "polish", "audio"]) for (const k in cfg[sec] || {}) {
+    for (const sec of ["world", "spawn", "agent", "flock", "flow", "combat", "powerups", "ai", "camera", "touch", "fog", "forest", "terrain", "input", "finale", "fixtures", "art", "progression", "encampments", "banner", "polish", "audio"]) for (const k in cfg[sec] || {}) {
       const path = sec + "." + k; if (used[path]) continue; unused.push(path);
     }
     return { checked: CFG_KEYS.length, missing, unused };

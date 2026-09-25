@@ -23,12 +23,12 @@
   const noise3 = (x, y, P, salt) => (vnoise(x, y, P.noisePeriod, salt) + 0.5 * vnoise(x, y, P.noisePeriod / 2, salt + 1) + 0.25 * vnoise(x, y, P.noisePeriod / 4, salt + 2)) / 1.75;
 
   // ---------------------------------------------------------------- params + scratch (allocated once per grid size)
-  let P = null, N = 0, NN = 0;
+  let P = null, N = 0, NN = 0, CF = null;
   let E, F, PROT, PASS, T2, LAB, Q, D1, D2, BH, BN, BC;
   const F_FREE = 0, F_ROCK = 1, F_CLEAR = 2, F_WATER = 3, F_FORD = 4, F_BRIDGE = 5;
   function init(cfg) {
     const t = cfg.terrain;
-    P = Object.assign({}, t, { W: cfg.world.w, N: Math.round(cfg.world.w / t.cell) });
+    P = Object.assign({}, t, { W: cfg.world.w, N: Math.round(cfg.world.w / t.cell) }); CF = cfg; // CF: the live config (v3 sight layers read fog / forest at gen)
     if (P.N !== N) {
       N = P.N; NN = N * N;
       E = new Float32Array(NN); F = new Uint8Array(NN); PROT = new Uint8Array(NN); PASS = new Uint8Array(NN); T2 = new Uint8Array(NN);
@@ -354,8 +354,142 @@
       m.fallback = true; m.rerolls = P.maxRerolls; m.failedWhy = why;
       if (typeof console !== "undefined") console.log("[PS.terrain] seed " + seed + " failed " + (P.maxRerolls + 1) + " attempts (" + why + "), fallback seed " + m.used);
     }
+    const t1 = now(); sightLayers(m, true); m.forestMs = +(now() - t1).toFixed(2);
     m.seed = seed; m.attempts = tries; m.genMs = +(now() - t0).toFixed(2);
     return m;
+  }
+
+  // ---------------------------------------------------------------- v3 M2: terrain that hides (SPEC-v3 §2)
+  // Two Uint8 layers placed after the fairness pass, so path distances, fairness ratios and rerolls stay exactly v2's (no new terr code:
+  // forests never change walkability): opaque (1 blocks sight: every rock cell with fog.losWalls "all", the template walls with "template",
+  // none with "off"; water never) and cover (1 = forest: river reeds and valley groves, none with forest.on false). Derived per map:
+  // coverNear (reeds plus groves dilated by terrain.forest.groveClear: placementOk keeps every camp, prop and objective off it), sightD
+  // (chamfer 3-4 distance to the nearest opaque or forest cell: fog.js skips the shadowcast when a source is farther than its radius),
+  // deep (forest cells >= 2 deep: Sly's lurk), spots (one per grove plus sampled reeds: the flee candidates), and forest.cost on the flow
+  // cost of every forest cell. Reads PROT/F from the last attempt (gen's own map), so it runs right after that attempt. Seeded from m.used.
+  function sightLayers(m, full) {
+    const cfg = CF, FO = cfg.forest, TF = cfg.terrain.forest, mode = cfg.fog.losWalls, cell = P.cell, C = N / 2, terr = m.terr;
+    const opaque = new Uint8Array(NN), cover = new Uint8Array(NN), grove = new Int16Array(NN), info = { reeds: 0, groves: [], area: [0, 0, 0, 0, 0, 0], fair: 1, fallback: 0 };
+    for (let c = 0; c < NN; c++) if (terr[c] === 1 && (mode === "all" || (mode === "template" && full && PROT[c] === 2))) opaque[c] = 1;
+    if (FO.on && full && m.spawns.length === 6 && m.dist.length === 6) {
+      const rng = mulberry32((m.used ^ 0x6A09E667) >>> 0), salt = (rng() * 1e9) | 0, Rw = P.homeRadius + P.homeWall, hub = P.centerRadius * N + P.hubWall, hub2 = hub * hub;
+      const homeD2 = new Float32Array(NN); // squared cell distance to the nearest spawn centre
+      for (let c = 0; c < NN; c++) { const u = (c % N) + 0.5, v = ((c / N) | 0) + 0.5; let b = 1e9; for (const s of m.spawns) { const dx = u - s.x / cell, dy = v - s.y / cell, d = dx * dx + dy * dy; if (d < b) b = d; } homeD2[c] = b; }
+      const central = (c) => { const dx = (c % N) + 0.5 - C, dy = ((c / N) | 0) + 0.5 - C; return dx * dx + dy * dy < hub2; };
+      // ---- river reeds: bankWidth cells from water (8-neighbour steps), bankClear cells from any crossing, masked along the bank by 1D noise
+      // to bankCover of the eligible bank (a quantile, per side of the river, side = which side of its nearest water cell it lies on)
+      const wd = D1, xd = D2, src = LAB; wd.fill(1 << 20); xd.fill(1 << 20); let h = 0, t = 0;
+      for (let c = 0; c < NN; c++) if (terr[c] === 2) { wd[c] = 0; src[c] = c; Q[t++] = c; }
+      bfs8(wd, h, t, TF.bankWidth, src);
+      h = 0; t = 0; for (let c = 0; c < NN; c++) if (terr[c] === 3 || terr[c] === 4) { xd[c] = 0; Q[t++] = c; }
+      bfs8(xd, h, t, TF.bankClear, null);
+      const rv = m.river, bank = [], vals = [];
+      if (rv && TF.bankWidth > 0 && TF.bankCover > 0) {
+        for (let c = 0; c < NN; c++) {
+          if (terr[c] !== 0 || wd[c] < 1 || wd[c] > TF.bankWidth || xd[c] <= TF.bankClear || m.passMask[c] || m.region[c] !== 1 || central(c) || homeD2[c] < Rw * Rw) continue;
+          const u = (c % N) + 0.5 - C, v = ((c / N) | 0) + 0.5 - C, w = src[c], wu = (w % N) + 0.5 - C, wv = ((w / N) | 0) + 0.5 - C, side = (u - wu) * -rv.dy + (v - wv) * rv.dx > 0 ? 1 : 0;
+          bank.push(c); vals.push(vnoise1(u * rv.dx + v * rv.dy, TF.bankPeriod, salt + 31 * side));
+        }
+        const sv = Float32Array.from(vals).sort(), thr = sv.length ? sv[Math.min(sv.length - 1, Math.floor((1 - TF.bankCover) * sv.length))] : 2;
+        for (let k = 0; k < bank.length; k++) if (vals[k] >= thr) { cover[bank[k]] = 1; info.reeds++; }
+      }
+      // ---- valley groves: grovesPerRegion per spawn region, seeded flood fill on noise (best-first), sizes drawn per map so every region
+      // gets the same count and target area. Seeds prefer cells groveFlank cells off a spawn-to-neighbour route (a cell on a near-shortest
+      // path between a spawn and one of its two nearest neighbours), so groves flank the routes rather than dead ends
+      const fl = D1; fl.fill(1 << 20); h = 0; t = 0;
+      for (let i = 0; i < 6; i++) {
+        const di = m.dist[i], nb = [0, 1, 2, 3, 4, 5].filter((j) => j !== i).sort((a, b) => di[m.spawns[a].c] - di[m.spawns[b].c] || a - b).slice(0, 2);
+        for (const j of nb) { const dj = m.dist[j], L = di[m.spawns[j].c] * 1.04; for (let c = 0; c < NN; c++) if (di[c] + dj[c] <= L && fl[c] !== 0) { fl[c] = 0; Q[t++] = c; } }
+      }
+      bfs8(fl, h, t, TF.groveFlank[1], null);
+      const minH = Rw + TF.groveMinFromHome, gpr = TF.grovesPerRegion, sizes = [];
+      for (let k = 0; k < gpr; k++) sizes.push(TF.groveCells[0] + ((rng() * (TF.groveCells[1] - TF.groveCells[0] + 1)) | 0));
+      const target = sizes.reduce((a, b) => a + b, 0), gid = { n: 0 };
+      const baseOk = (c) => terr[c] === 0 && m.region[c] === 1 && !m.passMask[c] && !cover[c] && m.sdf[c] >= cell && !central(c) && homeD2[c] >= minH * minH;
+      const base = [[], [], [], [], [], []]; for (let c = 0; c < NN; c++) if (m.owner[c] < 6 && baseOk(c)) base[m.owner[c]].push(c);
+      const okCell = (c, r, g) => {
+        if (m.owner[c] !== r || grove[c] || !baseOk(c)) return false;
+        const i = c % N, j = (c / N) | 0; // never touching another grove (8-neighbours), so groves stay apart
+        for (let y = j - 1; y <= j + 1; y++) for (let x = i - 1; x <= i + 1; x++) { if (x < 0 || y < 0 || x >= N || y >= N) continue; const q = grove[y * N + x]; if (q && q !== g) return false; }
+        return true;
+      };
+      const noiseAt = (c) => vnoise((c % N) + 0.5, ((c / N) | 0) + 0.5, TF.grovePeriod, salt + 77);
+      const regions = [];
+      for (let r = 0; r < 6; r++) {
+        let best = null; const mark = (l, on) => { for (const q of l) for (const c of q.cells) grove[c] = on ? q.id : 0; };
+        for (let tr = 0; tr < TF.tries; tr++) {
+          if (best) mark(best.got, false); // each try grows from scratch; the best one so far is re-marked if this one loses
+          const got = [];
+          for (let k = 0; k < gpr; k++) {
+            const g = ++gid.n, cand = [], pref = [];
+            for (const c of base[r]) if (okCell(c, r, g)) { cand.push(c); if (fl[c] >= TF.groveFlank[0] && fl[c] <= TF.groveFlank[1]) pref.push(c); }
+            const L = pref.length ? pref : cand; if (!L.length) continue;
+            const order = [L[(rng() * L.length) | 0]], fr = []; grove[order[0]] = g;
+            for (let guard = 0; order.length < sizes[k] && guard < 4 * sizes[k] + 64; guard++) {
+              const last = order[order.length - 1], li = last % N, lj = (last / N) | 0;
+              for (const [x, y] of [[li - 1, lj], [li + 1, lj], [li, lj - 1], [li, lj + 1]]) { if (x < 0 || y < 0 || x >= N || y >= N) continue; const q = y * N + x; if (fr.indexOf(q) < 0 && okCell(q, r, g)) fr.push(q); }
+              let bi = -1, bv = -1; for (let q = 0; q < fr.length; q++) { if (grove[fr[q]] || !okCell(fr[q], r, g)) continue; const v = noiseAt(fr[q]); if (v > bv) { bv = v; bi = q; } }
+              if (bi < 0) break; const c = fr[bi]; fr.splice(bi, 1); grove[c] = g; order.push(c);
+            }
+            got.push({ id: g, r, cells: order });
+          }
+          const area = got.reduce((s, q) => s + q.cells.length, 0);
+          if (!best || area > best.area) best = { area, got }; else { mark(got, false); mark(best.got, true); }
+          if (best.area >= 0.9 * target) break;
+        }
+        regions.push(best);
+      }
+      // fairness: grove area per region max / min <= fairRatio; a region over the bar drops its latest-grown cells (a suffix of a best-first
+      // growth order stays connected) until it fits. Never a map reroll.
+      let lo = Infinity; for (const b of regions) if (b.area < lo) lo = b.area;
+      const cap = Math.floor(lo * TF.fairRatio);
+      for (const b of regions) { for (let g = 0; b.area > cap && g < 1000; g++) { let big = null; for (const q of b.got) if (!big || q.cells.length > big.cells.length) big = q; if (!big || !big.cells.length) break; grove[big.cells.pop()] = 0; b.area--; } }
+      for (let r = 0; r < 6; r++) { const b = regions[r]; info.area[r] = b.area; for (const q of b.got) { if (!q.cells.length) continue; info.groves.push(q.cells.length); for (const c of q.cells) cover[c] = 1; } }
+      let hi = 0; lo = Infinity; for (const a of info.area) { if (a > hi) hi = a; if (a < lo) lo = a; } info.fair = lo > 0 ? +(hi / lo).toFixed(3) : Infinity;
+    }
+    return installLayers(m, opaque, cover, grove, info);
+  }
+  // 8-neighbour BFS from the queued cells Q[h..t) over d (steps; d already 0 at the sources), up to maxD steps; src (optional) carries the source cell
+  function bfs8(d, h, t, maxD, src) {
+    while (h < t) {
+      const c = Q[h++], x = c % N, y = (c / N) | 0, nd = d[c] + 1; if (nd > maxD) continue;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const nx = x + dx, ny = y + dy; if ((!dx && !dy) || nx < 0 || ny < 0 || nx >= N || ny >= N) continue; const n = ny * N + nx; if (d[n] <= nd) continue; d[n] = nd; if (src) src[n] = src[c]; if (t < Q.length) Q[t++] = n; }
+    }
+  }
+  // two-pass chamfer (3 / 4) from every cell to the nearest cell with mask[c] === want (outside the grid never counts), into out
+  function chamferMask(mask, want, out) {
+    const BIG = 1 << 28;
+    for (let c = 0; c < NN; c++) out[c] = mask[c] === want ? 0 : BIG;
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const c = j * N + i; let v = out[c]; if (!v) continue;
+      if (i > 0 && out[c - 1] + 3 < v) v = out[c - 1] + 3; if (j > 0 && out[c - N] + 3 < v) v = out[c - N] + 3; if (i > 0 && j > 0 && out[c - N - 1] + 4 < v) v = out[c - N - 1] + 4; if (i < N - 1 && j > 0 && out[c - N + 1] + 4 < v) v = out[c - N + 1] + 4; out[c] = v; }
+    for (let j = N - 1; j >= 0; j--) for (let i = N - 1; i >= 0; i--) { const c = j * N + i; let v = out[c]; if (!v) continue;
+      if (i < N - 1 && out[c + 1] + 3 < v) v = out[c + 1] + 3; if (j < N - 1 && out[c + N] + 3 < v) v = out[c + N] + 3; if (i < N - 1 && j < N - 1 && out[c + N + 1] + 4 < v) v = out[c + N + 1] + 4; if (i > 0 && j < N - 1 && out[c + N - 1] + 4 < v) v = out[c + N - 1] + 4; out[c] = v; }
+  }
+  // the derived layers from opaque + cover (+ the grove ids): coverNear, sightD, deep, spots, the forest cost. Also used by the QA fixtures
+  // that paint their own forest (setCover).
+  function installLayers(m, opaque, cover, grove, info) {
+    const TF = CF.terrain.forest, FO = CF.forest, gc = TF.groveClear, near = new Uint8Array(NN), sightD = new Uint16Array(NN), both = new Uint8Array(NN), spots = [], deep = [];
+    let nCover = 0;
+    for (let c = 0; c < NN; c++) { if (opaque[c] || cover[c]) both[c] = 1; if (!cover[c]) continue; nCover++; near[c] = 1;
+      if (grove && grove[c]) { const i = c % N, j = (c / N) | 0; for (let y = Math.max(0, j - gc); y <= Math.min(N - 1, j + gc); y++) for (let x = Math.max(0, i - gc); x <= Math.min(N - 1, i + gc); x++) near[y * N + x] = 1; } }
+    chamferMask(both, 1, D1); for (let c = 0; c < NN; c++) sightD[c] = Math.min(65535, D1[c]);
+    if (nCover) {
+      chamferMask(cover, 0, D2); // depth inside the forest (3 per cell to the nearest open cell)
+      const best = new Map();
+      for (let c = 0; c < NN; c++) { if (!cover[c]) continue; if (D2[c] >= 6) deep.push(c); const g = grove ? grove[c] : 0; if (g) { const b = best.get(g); if (b == null || D2[c] > D2[b]) best.set(g, c); } }
+      for (const c of best.values()) spots.push(c); let k = 0; for (let c = 0; c < NN; c++) if (cover[c] && !(grove && grove[c]) && (k++ % 8) === 0) spots.push(c);
+      if (FO.on && FO.cost > 0) for (let c = 0; c < NN; c++) if (cover[c] && m.cost[c] < 255) m.cost[c] = Math.min(254, m.cost[c] + FO.cost);
+    }
+    m.opaque = opaque; m.cover = cover; m.coverNear = near; m.sightD = sightD; m.deep = Int32Array.from(deep); m.spots = Int32Array.from(spots.slice(0, 64));
+    m.losOn = nCover > 0 || opaque.some((v) => v === 1); info.cells = nCover; m.forest = info; m.place = null;
+    return m;
+  }
+  // QA: paint forest cells (a list of cells) onto a fixture map, then rebuild the derived layers (each painted run counts as one grove)
+  function setCover(m, cells) {
+    const cover = m.cover ? m.cover.slice() : new Uint8Array(NN), grove = new Int16Array(NN);
+    if (m.cost0) m.cost.set(m.cost0); else m.cost0 = m.cost.slice();
+    for (const c of cells) { cover[c] = 1; grove[c] = 1; }
+    return installLayers(m, m.opaque || new Uint8Array(NN), cover, grove, { reeds: 0, groves: [cells.length], area: [0, 0, 0, 0, 0, 0], fair: 1, fallback: 0 });
   }
   // a map built from a hand-made terr array (QA fixtures): sdf, cost with the wall bands, snap, the largest 4-connected region as main.
   // opts: { name, flatCost (no wall bands: PS.fight keeps v1's empty-field numbers), passMask }
@@ -372,15 +506,15 @@
     for (let c = 0; c < NN; c++) if (LAB[c] >= 0) size[LAB[c]]++;
     for (let l = 1; l < nReg; l++) if (size[l] > size[main]) main = l;
     for (let c = 0; c < NN; c++) if (LAB[c] === main && nReg > 0) { region[c] = 1; walk++; }
-    return { id: ++mapId, N, cell: P.cell, W: P.W, seed: 0, used: 0, rerolls: 0, fallback: false, attempts: 0, terr, cost, sdf, region, snap, owner: new Uint8Array(NN), dist: [],
-      passMask: opts.passMask || new Uint8Array(NN), spawns: [], river: null, fair: { pass: true, why: [] }, blocked: 0, walkCells: walk, regions: nReg, chunks: null, flat: true, fixture: opts.name || "flat", genMs: 0 };
+    return sightLayers({ id: ++mapId, N, cell: P.cell, W: P.W, seed: 0, used: 0, rerolls: 0, fallback: false, attempts: 0, terr, cost, sdf, region, snap, owner: new Uint8Array(NN), dist: [],
+      passMask: opts.passMask || new Uint8Array(NN), spawns: [], river: null, fair: { pass: true, why: [] }, blocked: 0, walkCells: walk, regions: nReg, chunks: null, flat: true, fixture: opts.name || "flat", genMs: 0 }, false);
   }
   // a flat fixture (grass inside a 2-cell rock border) for PS.fight: flat cost so combat numbers stay comparable with v1's empty field
   function flat() {
     const terr = new Uint8Array(NN); for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) if (i < 2 || j < 2 || i >= N - 2 || j >= N - 2) terr[j * N + i] = 1;
     return fromTerr(terr, { name: "flat", flatCost: true });
   }
-  function use(m) { T.map = m; T.terr = m.terr; T.cost = m.cost; T.sdf = m.sdf; T.region = m.region; T.snap = m.snap; T.seed = m.seed; T.rerolls = m.rerolls; return m; }
+  function use(m) { T.map = m; T.terr = m.terr; T.cost = m.cost; T.sdf = m.sdf; T.region = m.region; T.snap = m.snap; T.seed = m.seed; T.rerolls = m.rerolls; T.opaque = m.opaque; T.cover = m.cover; return m; }
 
   // world-space queries on the installed map (cell centres; outside the world counts as rock)
   const cellOf = (x, y) => { if (!(x >= 0 && y >= 0 && x < P.W && y < P.W)) return -1; return ((y / P.cell) | 0) * N + ((x / P.cell) | 0); };
@@ -395,7 +529,7 @@
   // open ground for placement: walkable, main region, not in a pass, and the bilinear SDF at the object's own point (not its cell centre) >= k cells
   function placementOk(x, y, minSdfCells) {
     const c = cellOf(x, y); const m = T.map;
-    return c >= 0 && walkT(m.terr[c]) && m.region[c] === 1 && !m.passMask[c] && sdfAt(x, y) >= (minSdfCells == null ? 2 : minSdfCells) * P.cell;
+    return c >= 0 && walkT(m.terr[c]) && m.region[c] === 1 && !m.passMask[c] && !m.coverNear[c] && sdfAt(x, y) >= (minSdfCells == null ? 2 : minSdfCells) * P.cell; // v3: never in or near forest
   }
   const SNAP = { x: 0, y: 0 };
   // nearest walkable point: unchanged if walkable, else the centre of the nearest walkable cell (writes and returns one shared object)
@@ -410,9 +544,9 @@
     m = m || T.map; if (!m) return null;
     return { seed: m.seed, used: m.used, rerolls: m.rerolls, fallback: m.fallback, attempts: m.attempts, genMs: m.genMs, blocked: m.blocked, walkCells: m.walkCells,
       fair: { pass: m.fair.pass, why: m.fair.why, rival: +(+m.fair.rival).toFixed(3), centre: +(+m.fair.centre).toFixed(3), detour: +(+m.fair.detour).toFixed(3), exits: m.fair.exits },
-      crossings: m.river ? m.river.crossings.map((x) => (x.ford ? "ford" : "bridge") + x.w) : [] };
+      crossings: m.river ? m.river.crossings.map((x) => (x.ford ? "ford" : "bridge") + x.w) : [], forest: m.forest ? { cells: m.forest.cells, reeds: m.forest.reeds, groves: m.forest.groves, area: m.forest.area, fair: m.forest.fair, ms: m.forestMs } : null };
   }
 
   const T = (PS.terrain = { N: 0, cell: 0, W: 0, map: null, terr: null, cost: null, sdf: null, region: null, snap: null, seed: 0, rerolls: 0,
-    init, gen, use, flat, fromTerr, walkable, sdfAt, placementOk, snapXY, cellOf, report, walkT, mulberry32, hash, DIR });
+    opaque: null, cover: null, init, gen, use, flat, fromTerr, setCover, sightLayers, walkable, sdfAt, placementOk, snapXY, cellOf, report, walkT, mulberry32, hash, DIR });
 })();

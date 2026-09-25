@@ -279,10 +279,16 @@
     // camp when count x power >= ai.banditFeasible x its bandits, heavy chest when count >= weight, a relic or chest it can use always.
     // Skips any within ai.campAvoidRadius of a swarm it sees at >= ai.campAvoidRatio x its own (VB list). Writes AP (score, x, y, obj).
     const AP = { score: 0, x: 0, y: 0, obj: null };
+    // v3 probe lever ai.siteKnowRadius (0 = v2: every landmark known from the start): a landmark is known within that many px of the team's
+    // spawn, else once the team has explored its cell
+    function landKnown(t, o) {
+      const R = cfgOf().ai.siteKnowRadius; if (!(R > 0)) return true; const sp = S.map.spawns[t.slot];
+      if (sp && (sp.x - o.x) * (sp.x - o.x) + (sp.y - o.y) * (sp.y - o.y) <= R * R) return true; return PS.fog.explored(t.id, o.x, o.y);
+    }
     function aiPick(t, dist, pw, bias, nVB, VBX, VBY) {
       const AI = cfgOf().ai, os2 = AI.objectiveSight * AI.objectiveSight, av2 = AI.campAvoidRadius * AI.campAvoidRadius; AP.score = 0; AP.obj = null;
       for (const o of S.objs) {
-        const k = o.kn[t.id]; if (k === 0 || (k < 0 && !o.landmark)) continue;
+        const k = o.kn[t.id]; if (k === 0 || (k < 0 && !(o.landmark && landKnown(t, o)))) continue;
         const dx = o.x - t.ax, dy = o.y - t.ay; if (dx * dx + dy * dy > os2) continue;
         let v = 0;
         if (o.type === "relic" || o.type === "chest") { if (!canTake(t, o.axis, o.t3)) continue; v = AI.objRelic; }
@@ -296,7 +302,7 @@
       return AP.obj ? AP : null;
     }
     // knowledge assert (SPEC-v2 §7): an objective an AI targets must be a landmark or one it has seen live
-    function knowObj(t, o) { const K = S.fogS.ai; K.decisions++; K.objectives++; if (!o.landmark && o.kn[t.id] !== 1) G.knowFail(t, o.type + " at " + Math.round(o.x) + "," + Math.round(o.y)); }
+    function knowObj(t, o) { const K = S.fogS.ai; K.decisions++; K.objectives++; if (!(o.landmark && landKnown(t, o)) && o.kn[t.id] !== 1) G.knowFail(t, o.type + " at " + Math.round(o.x) + "," + Math.round(o.y)); }
 
     // ---------------------------------------------------------------- render: ring and camp dirt under everything, props in the y-sort,
     // numbers over the agents. Under fog each objective shows only once you have seen it, in the state you last saw (sk).
