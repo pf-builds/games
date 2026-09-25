@@ -8,8 +8,10 @@
 //   cliffs:   quarter-cell (dual-grid) autotiling from the 32 px grid: convex corners rounded, inner corners square, so the art never leaves
 //             the blocked footprint. Two levels (rock at least art.highCells deep is the high plateau). A top (highland or stone), a
 //             one-cell south face in 3 strata with a lit lip and a dark base line, darker east / west rims, a drop shadow baked south-east.
-//   water:    three tones by shore distance (bilinear SDF), a broken foam line, sparkle dashes; fords as a sand bar with stepping stones;
-//             bridges with a plank deck, rails and posts, and a shadow strip on the water below.
+//   water:    three tones by shore distance (bilinear SDF, bridges counted as water), a broken foam line, sparkle dashes; fords as a sand
+//             bar with stepping stones; bridges as a plank deck with rails, posts and end beams, and a shadow strip on the water below.
+//             Crossings are drawn as straight rotated rectangles along the river (not per 32 px cell), so a diagonal river's bridge is a
+//             clean deck instead of a staircase of squares; the deck overhangs onto both landings.
 // Render-side only: no S.rng, no Math.random. Deterministic from the map (m.used) so the same seed paints the same valley.
 (function () {
   const PS = (window.PS = window.PS || {});
@@ -47,17 +49,41 @@
 
   // per-map art data (once): rock level per cell (1 plateau, 2 high: at least art.highCells deep) and, for ford and bridge cells, the
   // crossing they belong to (its position along the river, its half width) for stones, planks and rails
+  // Crossings (X): one rotated rectangle each, square to the river where it crosses (the generator's local tangent dx, dy): al along the
+  // river, ac across it, both from the rectangle's centre (ox, oy); half width hw (the crossing's width), half length hl (its cells'
+  // extent across the river, plus art.deckOverhang for a bridge).
+  // wsd: a signed field like m.sdf (px, + on dry ground) but with bridge cells counted as water, so the river runs under the deck.
   function mapArt(m, A) {
     if (m.art) return m.art;
-    const N = m.N, NN = N * N, cell = m.cell, lvl = new Uint8Array(NN), xs = new Float32Array(NN), xh = new Float32Array(NN), hi = (A.highCells - 0.5) * cell, W2 = m.W / 2;
+    const N = m.N, NN = N * N, cell = m.cell, lvl = new Uint8Array(NN), hi = (A.highCells - 0.5) * cell, W2 = m.W / 2;
     for (let c = 0; c < NN; c++) if (m.terr[c] === 1) lvl[c] = -m.sdf[c] >= hi ? 2 : 1;
-    const R = m.river;
-    if (R) for (let c = 0; c < NN; c++) {
-      const t = m.terr[c]; if (t !== 3 && t !== 4) continue;
-      const x = ((c % N) + 0.5) * cell - W2, y = (((c / N) | 0) + 0.5) * cell - W2, a = x * R.dx + y * R.dy; let best = 1e9;
-      for (const q of R.crossings) { const d = Math.abs(a - q.s); if (d < best) { best = d; xs[c] = q.s; xh[c] = (q.w * cell) / 2; } }
+    const R = m.river, X = [];
+    if (R) {
+      const Q = R.crossings.map((q) => ({ q, tx: q.dx == null ? R.dx : q.dx, ty: q.dy == null ? R.dy : q.dy, px: W2 + q.s * R.dx - (q.c || 0) * R.dy, py: W2 + q.s * R.dy + (q.c || 0) * R.dx, lo: 1e9, hi: -1e9 }));
+      for (let c = 0; c < NN; c++) {
+        const t = m.terr[c]; if (t !== 3 && t !== 4) continue;
+        const x = ((c % N) + 0.5) * cell, y = (((c / N) | 0) + 0.5) * cell; let best = 1e9, k = null;
+        for (const e of Q) { const d = Math.abs((x - e.px) * e.tx + (y - e.py) * e.ty); if (d < best) { best = d; k = e; } }
+        const b = (x - k.px) * -k.ty + (y - k.py) * k.tx; if (b < k.lo) k.lo = b; if (b > k.hi) k.hi = b;
+      }
+      for (const e of Q) {
+        if (e.lo > e.hi) continue;
+        const q = e.q, ext = 0.5 * cell * (Math.abs(e.tx) + Math.abs(e.ty)), hw = (q.w * cell) / 2, hl = (e.hi - e.lo) / 2 + ext + (q.ford ? 0 : A.deckOverhang), cc = (e.lo + e.hi) / 2;
+        X.push({ ford: q.ford, hw, hl, tx: e.tx, ty: e.ty, x: e.px - cc * e.ty, y: e.py + cc * e.tx, r: Math.hypot(hw, hl) + 24 });
+      }
     }
-    return (m.art = { lvl, xs, xh, salt: (m.used | 0) ^ 0x5a17 });
+    // chamfer 3-4 (two passes) to the nearest dry cell (grass, ford) and to the nearest wet-or-rock cell, as m.sdf's px convention
+    const dry = (c) => m.terr[c] === 0 || m.terr[c] === 3, wsd = new Float32Array(NN), Da = new Int32Array(NN), Db = new Int32Array(NN), BIG = 1 << 28;
+    const chamfer = (D, isSeed) => {
+      for (let c = 0; c < NN; c++) D[c] = isSeed(c) ? 0 : BIG;
+      for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const c = j * N + i; let d = D[c]; if (!d) continue;
+        if (i > 0 && D[c - 1] + 3 < d) d = D[c - 1] + 3; if (j > 0) { if (D[c - N] + 3 < d) d = D[c - N] + 3; if (i > 0 && D[c - N - 1] + 4 < d) d = D[c - N - 1] + 4; if (i < N - 1 && D[c - N + 1] + 4 < d) d = D[c - N + 1] + 4; } D[c] = d; }
+      for (let j = N - 1; j >= 0; j--) for (let i = N - 1; i >= 0; i--) { const c = j * N + i; let d = D[c]; if (!d) continue;
+        if (i < N - 1 && D[c + 1] + 3 < d) d = D[c + 1] + 3; if (j < N - 1) { if (D[c + N] + 3 < d) d = D[c + N] + 3; if (i < N - 1 && D[c + N + 1] + 4 < d) d = D[c + N + 1] + 4; if (i > 0 && D[c + N - 1] + 4 < d) d = D[c + N - 1] + 4; } D[c] = d; }
+    };
+    chamfer(Da, dry); chamfer(Db, (c) => !dry(c));
+    for (let c = 0; c < NN; c++) wsd[c] = dry(c) ? (Db[c] / 3) * cell - cell / 2 : -((Da[c] / 3) * cell - cell / 2);
+    return (m.art = { lvl, X, wsd, salt: (m.used | 0) ^ 0x5a17 });
   }
   // biome and tone at a world point (render-only): the obstacles pick pines on highland with the same field the ground uses
   function biome(m, x, y, A) { const s = mapArt(m, A).salt; return vnoise(x, y, A.biomePeriod, s); }
@@ -65,12 +91,19 @@
   // paint(cvA, cvB, m, ci, o): o = { n: chunks per side, CH: chunk world px, AP: art px, A: cfg.art, trails, decals, spr }
   function paint(cvA, cvB, m, ci, o) {
     table(); buffers(o.AP);
-    const A = o.A, ART = mapArt(m, A), N = m.N, cell = m.cell, terr = m.terr, sdf = m.sdf, lvl = ART.lvl, pm = m.passMask, W = m.W, W2 = W / 2, R = m.river;
+    const A = o.A, ART = mapArt(m, A), N = m.N, cell = m.cell, terr = m.terr, lvl = ART.lvl, pm = m.passMask, W = m.W, W2 = W / 2, R = m.river;
     const CH = o.CH, n = o.n, wx = (ci % n) * CH, wy = ((ci / n) | 0) * CH, ap = o.AP, salt = ART.salt, water = !!cvB;
     const G = K.grass, RK = K.rocky, HG = K.high, PL = K.plateau, ST = K.stone, E = K.earth, WA = K.water, FOAM = K.foam[0], SA = K.sand, WD = K.wood;
     const LV = (i, j) => (i < 0 || j < 0 || i >= N || j >= N ? 2 : lvl[j * N + i]);
     const TR = (i, j) => (i < 0 || j < 0 || i >= N || j >= N ? 1 : terr[j * N + i]);
-    const SD = (i, j) => sdf[(j < 0 ? 0 : j >= N ? N - 1 : j) * N + (i < 0 ? 0 : i >= N ? N - 1 : i)];
+    const wsd = ART.wsd, SD = (i, j) => wsd[(j < 0 ? 0 : j >= N ? N - 1 : j) * N + (i < 0 ? 0 : i >= N ? N - 1 : i)];
+    // the crossings near this chunk, and the one a world point is on (its rectangle), for the ford bar, the deck and the deck's shadow
+    const XS = ART.X.filter((q) => q.x + q.r > wx && q.x - q.r < wx + CH && q.y + q.r > wy && q.y - q.r < wy + CH);
+    let xal = 0, xac = 0; // the last crossingAt hit, in the crossing's own coordinates
+    const crossingAt = (X, Y) => {
+      for (const q of XS) { const x = X - q.x, y = Y - q.y, al = x * q.tx + y * q.ty; if (al >= q.hw || al <= -q.hw) continue; const ac = y * q.tx - x * q.ty; if (ac >= q.hl || ac <= -q.hl) continue; xal = al; xac = ac; return q; }
+      return null;
+    };
     const PM = (i, j) => (i < 0 || j < 0 || i >= N || j >= N ? 0 : pm[j * N + i]);
     const cr = A.cornerR, cr2 = cr * cr, shx = A.shadow[0] * 2, shy = A.shadow[1] * 2, sparkleK = A.sparkle;
     // the level a world point shows (cell level, rounded convex corners): for cast shadows
@@ -102,7 +135,6 @@
       // bilinear corner values (cell centres) for the pass floor and the water depth
       const p00 = PM(i - 1, j - 1), p10 = PM(i, j - 1), p20 = PM(i + 1, j - 1), p01 = PM(i - 1, j), p11 = pm[c], p21 = PM(i + 1, j), p02 = PM(i - 1, j + 1), p12 = PM(i, j + 1), p22 = PM(i + 1, j + 1);
       const anyPass = p00 | p10 | p20 | p01 | p11 | p21 | p02 | p12 | p22;
-      const xsC = ART.xs[c], xhC = ART.xh[c];
       for (let ly = 0; ly < apc; ly++) {
         const v = cj * apc + ly, Y = wy + v * 2 + 1, row = v * ap;
         for (let lx = 0; lx < apc; lx++) {
@@ -129,31 +161,28 @@
               if (!idx) idx = Rm[Math.max(0, Math.min(Rm.length - 1, s))];
               if (Lp === 1 && LV(i, j) === 1) { const sx = X - shx, sy = Y - shy, s2 = levelAt(sx, sy), s3 = levelAt(X - shx / 2, Y - shy / 2); if (s2 > 1 || s3 > 1) shade = 1; }
             }
-          } else if (t === 2 && inWater(i, j, lx, ly)) { // deep water
-            kind = 4; const fx = X / cell - 0.5, fy = Y / cell - 0.5, i0 = Math.floor(fx), j0 = Math.floor(fy), tx = fx - i0, ty = fy - j0; // bilinear SDF from cell centres
-            const a = SD(i0, j0), b = SD(i0 + 1, j0), cc = SD(i0, j0 + 1), dd = SD(i0 + 1, j0 + 1);
-            const d = -(a + (b - a) * tx + (cc - a) * ty + (a - b - cc + dd) * tx * ty);
-            idx = d < A.shallow ? WA[2] : d < A.deep ? WA[1] : WA[0]; idxB = idx;
-            if (d < A.foam) { if ((hash(u >> 1, v >> 1, salt + 11) % 5) !== 0) idx = FOAM; if ((hash((u + 1) >> 1, v >> 1, salt + 13) % 5) !== 0) idxB = FOAM; }
-            else if (d >= A.shallow) { // sparkle dashes: one 3-px dash in some 8x4 blocks, a different set on each frame
-              const bx = u >> 3, by = v >> 2, ha = hash(bx, by, salt + 17), hb = hash(bx, by, salt + 19), ox = u & 7, oy = v & 3;
-              if (ha % sparkleK === 0 && oy === 1 && ox >= (ha >>> 8) % 5 && ox < ((ha >>> 8) % 5) + 3) idx = WA[2];
-              if (hb % sparkleK === 0 && oy === 2 && ox >= (hb >>> 8) % 5 && ox < ((hb >>> 8) % 5) + 3) idxB = WA[2];
-            }
-            if (TR((X / cell) | 0, ((Y - A.bridgeShadow * 2) / cell) | 0) === 4) { shade = 1; } // the bridge's shadow strip
-          } else if (t === 3 || t === 4) { // ford (sand bar, stepping stones) or bridge (planks, rails, posts)
-            const x = X - W2, y = Y - W2, al = R ? x * R.dx + y * R.dy - xsC : 0, ac = R ? x * -R.dy + y * R.dx : 0, da = al < 0 ? -al : al;
-            if (t === 3) {
-              kind = 5; const qq = (((ac % A.stoneStep) + A.stoneStep) % A.stoneStep) - A.stoneStep / 2, stone = (q2, a2) => Math.abs(q2) < A.stoneR && Math.abs(a2) < A.stoneR - 1;
-              if (stone(qq, al)) idx = !stone(qq - 2 * R.dx, al - 2 * R.dy) ? ST[4] : !stone(qq + 2 * R.dx, al + 2 * R.dy) ? ST[1] : ST[3]; // screen rows above / below: highlight, underside
-              else if (da > xhC - A.fordEdge) { idx = WA[2]; idxB = idx; if ((hash(u, v, salt + 23) & 7) === 0) idx = FOAM; if ((hash(u, v, salt + 29) & 7) === 0) idxB = FOAM; }
+          } else if ((t === 2 || t === 3 || t === 4) && inWater(i, j, lx, ly)) { // the river: a ford's sand bar inside its rectangle, else water
+            const xq = XS.length ? crossingAt(X, Y) : null;
+            if (xq && xq.ford) { // ford: sand bar with stepping stones, shallow foamy edges
+              kind = 5; const al = xal, ac = xac, da = al < 0 ? -al : al, qq = (((ac % A.stoneStep) + A.stoneStep) % A.stoneStep) - A.stoneStep / 2, stone = (q2, a2) => Math.abs(q2) < A.stoneR && Math.abs(a2) < A.stoneR - 1;
+              if (stone(qq, al)) idx = !stone(qq - 2 * xq.tx, al - 2 * xq.ty) ? ST[4] : !stone(qq + 2 * xq.tx, al + 2 * xq.ty) ? ST[1] : ST[3]; // screen rows above / below: highlight, underside
+              else if (da > xq.hw - A.fordEdge) { idx = WA[2]; idxB = idx; if ((hash(u, v, salt + 23) & 7) === 0) idx = FOAM; if ((hash(u, v, salt + 29) & 7) === 0) idxB = FOAM; }
               else idx = (hash(u, v, salt + 31) & 7) === 0 ? SA[0] : SA[1];
               if (idxB < 0) idxB = idx;
-            } else {
-              kind = 6; const qm = ((ac % 8) + 8) % 8, plank = Math.floor(ac / 8);
-              if (da > xhC - 2) idx = WD[0]; // the deck's outer edge, then the rail (light) with dark posts, then planks across the way you walk
-              else if (da > xhC - 6) idx = (((ac % 16) + 16) % 16) < 3 ? WD[0] : WD[3];
-              else idx = qm < 2 ? WD[0] : (hash(plank, 0, salt + 37) % 3) ? WD[2] : WD[1];
+            } else if (t === 3) { // a ford cell's corner outside the bar: shallow water
+              kind = 4; idx = WA[2]; idxB = idx; if ((hash(u, v, salt + 23) & 7) === 0) idx = FOAM; if ((hash(u, v, salt + 29) & 7) === 0) idxB = FOAM;
+            } else { // water, three tones by depth (bridge cells count as water; the deck is drawn over it below)
+              kind = 4; const fx = X / cell - 0.5, fy = Y / cell - 0.5, i0 = Math.floor(fx), j0 = Math.floor(fy), tx = fx - i0, ty = fy - j0; // bilinear SDF from cell centres
+              const a = SD(i0, j0), b = SD(i0 + 1, j0), cc = SD(i0, j0 + 1), dd = SD(i0 + 1, j0 + 1);
+              const d = -(a + (b - a) * tx + (cc - a) * ty + (a - b - cc + dd) * tx * ty);
+              idx = d < A.shallow ? WA[2] : d < A.deep ? WA[1] : WA[0]; idxB = idx;
+              if (d < A.foam) { if ((hash(u >> 1, v >> 1, salt + 11) % 5) !== 0) idx = FOAM; if ((hash((u + 1) >> 1, v >> 1, salt + 13) % 5) !== 0) idxB = FOAM; }
+              else if (d >= A.shallow) { // sparkle dashes: one 3-px dash in some 8x4 blocks, a different set on each frame
+                const bx = u >> 3, by = v >> 2, ha = hash(bx, by, salt + 17), hb = hash(bx, by, salt + 19), ox = u & 7, oy = v & 3;
+                if (ha % sparkleK === 0 && oy === 1 && ox >= (ha >>> 8) % 5 && ox < ((ha >>> 8) % 5) + 3) idx = WA[2];
+                if (hb % sparkleK === 0 && oy === 2 && ox >= (hb >>> 8) % 5 && ox < ((hb >>> 8) % 5) + 3) idxB = WA[2];
+              }
+              if (XS.length && !xq) { const sq = crossingAt(X, Y - A.bridgeShadow * 2); if (sq && !sq.ford) shade = 1; } // the deck's shadow strip
             }
           } else { // walkable ground (or a rock cell's rounded-off corner): pass floor or grass
             const fx = (lx + 0.5) / apc, fy = (ly + 0.5) / apc;
@@ -182,6 +211,17 @@
               idx = Rm[si];
             }
             const s2 = levelAt(X - shx, Y - shy), s3 = levelAt(X - shx / 2, Y - shy / 2); if (s2 > 0 || s3 > 0) shade = 1;
+          }
+          if (XS.length && kind !== 2 && kind !== 3) { // bridge deck over water and both landings: outer beam, rail with posts, planks across the way you walk, end beams
+            const xq = crossingAt(X, Y);
+            if (xq && !xq.ford) {
+              const da = xal < 0 ? -xal : xal, de = xq.hl - (xac < 0 ? -xac : xac), ac = xac, qm = ((ac % 8) + 8) % 8, plank = Math.floor(ac / 8);
+              kind = 6; shade = 0; idxB = -1;
+              if (da > xq.hw - 2) idx = WD[0];
+              else if (da > xq.hw - 6) idx = (((ac % 16) + 16) % 16) < 3 || de < 3 ? WD[0] : WD[3];
+              else if (de < 3) idx = WD[0];
+              else idx = qm < 2 ? WD[0] : (hash(plank, 0, salt + 37) % 3) ? WD[2] : WD[1];
+            }
           }
           IA[q] = idx; IB[q] = idxB < 0 ? idx : idxB; SH[q] = shade; KB[q] = kind;
         }

@@ -61,6 +61,9 @@
     jA.s = Hub + 1 + jA.w / 2; jB.s = -(Hub + 1 + jB.w / 2); xs.push(jA, jB);
     let fords = 0; for (const x of xs) fords += x.ford ? 1 : 0;
     if (fords === 0 || fords === xs.length) { xs[0].ford = !xs[0].ford; xs[0].w = xs[0].ford ? pick(P.fordWidth) : P.bridgeWidth; }
+    // each crossing runs square to the river where it actually is (its wobble's local slope), not to the river's overall line: its centre
+    // (s, c = wob(s)) and its unit tangent (tx, tn) in river coordinates; a cell is on it when its offset along that tangent is under w / 2
+    for (const x of xs) { const sl = wob(x.s + 0.5) - wob(x.s - 0.5), L = Math.sqrt(1 + sl * sl); x.c = wob(x.s); x.tx = 1 / L; x.tn = sl / L; }
     for (let k = 0; k < 6; k++) {
       const d = DIR[(rot + 4 * k + 2) % 24], river = k === rv || k === rv + 3;
       const s = { dx: d[0], dy: d[1], nx: -d[1], ny: d[0], river, pw: pick(P.passWidth), cw: pick(P.passWidth), salt: salt + 17 * (k + 1), rJ: 0 };
@@ -88,9 +91,9 @@
       if (d2 >= rd2) { F[c] = F_ROCK; continue; }
       nDisc++;
       // river band first: it cuts the hub wall and the central meadow; crossings and their landings are protected
-      const rs = dx * R.dx + dy * R.dy, rq = dx * R.nx + dy * R.ny - wob(rs), arq = rq < 0 ? -rq : rq;
+      const rs = dx * R.dx + dy * R.dy, rn = dx * R.nx + dy * R.ny, rq = rn - wob(rs), arq = rq < 0 ? -rq : rq;
       if (arq < R.hw + 3) {
-        let x = null; for (const xx of xs) { const ds = rs - xx.s; if (ds < xx.w / 2 + (arq < R.hw ? 0 : 1) && ds > -(xx.w / 2 + (arq < R.hw ? 0 : 1))) { x = xx; break; } }
+        let x = null; for (const xx of xs) { const ds = (rs - xx.s) * xx.tx + (rn - xx.c) * xx.tn; if (ds < xx.w / 2 + (arq < R.hw ? 0 : 1) && ds > -(xx.w / 2 + (arq < R.hw ? 0 : 1))) { x = xx; break; } }
         if (arq < R.hw) { if (x) { F[c] = x.ford ? F_FORD : F_BRIDGE; PROT[c] = 1; PASS[c] = 1; } else { F[c] = F_WATER; nForcedBlocked++; } continue; }
         if (x && d2 >= hub2) { F[c] = F_CLEAR; PROT[c] = 1; PASS[c] = 1; continue; }
       }
@@ -206,7 +209,7 @@
     const passMask = new Uint8Array(NN);
     for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) if (PASS[j * N + i]) for (let y = Math.max(0, j - 1); y <= Math.min(N - 1, j + 1); y++) for (let x = Math.max(0, i - 1); x <= Math.min(N - 1, i + 1); x++) passMask[y * N + x] = 1;
     return { id: ++mapId, N, cell, W: P.W, seed, used: seed, rerolls: 0, fallback: false, attempts: 1, terr, cost, sdf, region, snap, owner, dist, passMask,
-      spawns: sp.map((h, i) => ({ x: (h.x) * cell, y: (h.y) * cell, c: spc[i] })), river: { dx: R.dx, dy: R.dy, crossings: xs.map((x) => ({ s: x.s * cell, w: x.w, ford: x.ford })) },
+      spawns: sp.map((h, i) => ({ x: (h.x) * cell, y: (h.y) * cell, c: spc[i] })), river: { dx: R.dx, dy: R.dy, crossings: xs.map((x) => ({ s: x.s * cell, c: x.c * cell, w: x.w, ford: x.ford, dx: x.tx * R.dx + x.tn * R.nx, dy: x.tx * R.dy + x.tn * R.ny })) },
       fair: Object.assign(fair, { nearest: nearest.map(Math.round), toCentre: toC.map(Math.round), detours: det.map((v) => +v.toFixed(3)) }),
       blocked: +(nBlockedDisc / nDisc).toFixed(4), walkCells: nWalk, regions: nReg, rot, riverSep: rv, chunks: null };
   }

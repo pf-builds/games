@@ -24,9 +24,9 @@
   }
 
   // ---------------------------------------------------------------- state
-  // input: mouse cursor (px, py, active), keys, the touch pointer (tp: tap / drag / hold), the floating joystick, a second finger (hud2),
+  // input: mouse cursor (px, py, active), keys (kbd: the keys have the swarm; the cursor sleeps until it moves input.mouseWakePx from kx0/ky0), the touch pointer (tp: tap / drag / hold), the floating joystick, a second finger (hud2),
   // the tapped/clicked/minimap route (route; chase = a rival team id), the hold flag and the route preview timer (frame time)
-  const mkInput = () => ({ px: 0, py: 0, active: false, huddle: false, keys: {}, touch: false, hold: false, preview: 0, hud2: -1,
+  const mkInput = () => ({ px: 0, py: 0, active: false, huddle: false, keys: {}, kbd: false, kx0: 0, ky0: 0, touch: false, hold: false, preview: 0, hud2: -1,
     joy: { active: false, id: -1, ox: 0, oy: 0, cx: 0, cy: 0, mag: 0, dx: 0, dy: 0 },
     tp: { active: false, id: -1, sx: 0, sy: 0, t0: 0, drag: false, hold: false },
     route: { on: false, x: 0, y: 0, chase: 0, src: "", sx: 0, sy: 0 }, routeT: -1e9 }); // routeT: wall time of the last tap / click / minimap route (hint spacing)
@@ -75,7 +75,7 @@
   const portal = (ev) => (PS.portal ? PS.portal.call(ev) : Promise.resolve()); // src/portal.js: a no-op unless ?portal=crazygames|poki
   async function boot() {
     try { await portal("init"); } catch (e) {} portal("loadingStart");
-    const res = await fetch("config.json?v=32");
+    const res = await fetch("config.json?v=33");
     S.cfg = await res.json(); PS.audio.configure(S.cfg.audio);
     S.spr = PS.buildSprites(S.cfg);
     SPL = PS.Spoils(spoilsHooks()); SCR = PS.Screens(S.cfg);
@@ -2356,6 +2356,9 @@
   // clamped touch.joyEdge from the edges, cancelling any route; hold (still past tapMs) stops; lifting after a drag stops; a second finger
   // is HUDDLE only. Mouse: the cursor follows (route or steer by input.desktopMode), left click routes until the cursor moves
   // input.routeBreakPx; a minimap click routes until the mouse moves on the canvas. pointercancel ends a touch without a tap.
+  // Keys over mouse: a movement key puts the cursor to sleep (it no longer pulls the swarm), lifting the last key stops the swarm where it
+  // stands, and the cursor wakes on a click or once it moves input.mouseWakePx from where it was when the keys took over.
+  const MOVE_KEYS = ["w", "a", "s", "d", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"];
   function bindInput() {
     const inp = S.input, joy = inp.joy, tp = inp.tp;
     const startDrag = (e) => {
@@ -2365,7 +2368,9 @@
     };
     canvas.addEventListener("pointermove", (e) => {
       if (e.pointerType === "mouse") {
-        inp.px = e.clientX; inp.py = e.clientY; inp.active = true; const r = inp.route;
+        inp.px = e.clientX; inp.py = e.clientY;
+        if (inp.kbd) { if (Math.hypot(inp.px - inp.kx0, inp.py - inp.ky0) < S.cfg.input.mouseWakePx) return; inp.kbd = false; inp.hold = false; } // the cursor wakes and takes the swarm back
+        inp.active = true; const r = inp.route;
         if (r.on && (r.src === "minimap" || (r.src === "click" && Math.hypot(e.clientX - r.sx, e.clientY - r.sy) > S.cfg.input.routeBreakPx))) r.on = false;
         return;
       }
@@ -2374,7 +2379,7 @@
     });
     canvas.addEventListener("pointerdown", (e) => {
       PS.audio.unlock(); if (S.mode === "play") portal("gameplayStart"); // the first input of a match, not the load (R6)
-      if (e.pointerType === "mouse") { inp.px = e.clientX; inp.py = e.clientY; inp.active = true; if (e.button === 0) tapAt(e.clientX, e.clientY, "click"); return; }
+      if (e.pointerType === "mouse") { inp.px = e.clientX; inp.py = e.clientY; inp.active = true; inp.kbd = false; if (e.button === 0) tapAt(e.clientX, e.clientY, "click"); return; }
       if (!inp.touch) { inp.touch = true; document.body.classList.add("touch"); layoutHUD(); } inp.active = false;
       if (tp.active) { if (inp.hud2 < 0) { inp.hud2 = e.pointerId; setHuddle(true); } return; } // a second finger is HUDDLE only
       tp.active = true; tp.id = e.pointerId; tp.sx = e.clientX; tp.sy = e.clientY; tp.t0 = performance.now(); tp.drag = false; tp.hold = false;
@@ -2403,13 +2408,17 @@
       if (e.repeat) return;
       const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
       inp.keys[k] = true; if (S.mode === "play") portal("gameplayStart");
+      if (MOVE_KEYS.includes(k)) { if (!inp.kbd) { inp.kx0 = inp.px; inp.ky0 = inp.py; } inp.kbd = true; inp.active = false; }
       if (k === " ") { e.preventDefault(); if (S.mode === "play") setHuddle(true); }
       if (k === "p" || k === "Escape") { if (S.mode === "play") pause(); else if (S.mode === "pause") resume(); }
       if (k === "m") toggleSound();
       if (k === "1") setPace(0); if (k === "2") setPace(1);
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(k)) e.preventDefault();
     });
-    window.addEventListener("keyup", (e) => { const k = e.key.length === 1 ? e.key.toLowerCase() : e.key; inp.keys[k] = false; if (k === " ") setHuddle(false); });
+    window.addEventListener("keyup", (e) => {
+      const k = e.key.length === 1 ? e.key.toLowerCase() : e.key; inp.keys[k] = false; if (k === " ") setHuddle(false);
+      if (inp.kbd && MOVE_KEYS.includes(k) && !MOVE_KEYS.some((q) => inp.keys[q]) && S.mode === "play" && S.teams[1] && !inp.route.on) holdHere(S.teams[1]); // lifting the last key stops the swarm
+    });
     window.addEventListener("blur", () => { inp.keys = {}; setHuddle(false); joy.active = false; joy.id = -1; tp.active = false; inp.hud2 = -1; });
     const hb = $("t-huddle");
     hb.addEventListener("pointerdown", (e) => { e.preventDefault(); setHuddle(true); });
@@ -3350,7 +3359,7 @@
     "combat.localMode:s combat.remnant.escapeReplan:n combat.remnant.escapeDistance:n input.hintAfterRouteMs:n fixtures.holdN:n fixtures.holdPace:n fixtures.holdColumn:n fixtures.holdStart:n fixtures.holdTarget:n fixtures.holdAt:n fixtures.holdSeconds:n " +
     "fixtures.remnantWin:n fixtures.remnantLose:n fixtures.remnantSeconds:n " +
     "camera.span0:n camera.spanK:n camera.zoomMin:n camera.zoomMinTouch:n camera.zoomMax:n camera.steps:o camera.steps.dpr1:a camera.steps.dpr2:a camera.hysteresis:n camera.ease:n " +
-    "camera.lookAhead:n camera.lookAheadCap:n camera.lookAheadMinSpeed:n camera.clashOffsetCap:n touch.joyEdge:n input.desktopMode:s input.tapMs:n input.tapPx:n input.keyLead:n " +
+    "camera.lookAhead:n camera.lookAheadCap:n camera.lookAheadMinSpeed:n camera.clashOffsetCap:n touch.joyEdge:n input.desktopMode:s input.tapMs:n input.tapPx:n input.keyLead:n input.mouseWakePx:n " +
     "input.routeBreakPx:n input.pickPx:n ai.roamSpeed:n terrain.probeFrames:n " +
     "fixtures.passLen:n fixtures.passN:n fixtures.startGap:n fixtures.targetGap:n fixtures.regroupAfter:n fixtures.regroupK:n fixtures.maxSeconds:n fixtures.ambushColumn:n " +
     "fixtures.ambushWait:n fixtures.ambushSpecWait:n fixtures.ambushLanes:n fixtures.ambushSpacing:n fixtures.ambushDist:n fixtures.ambushSeconds:n fixtures.flipflopN:n fixtures.flipflopRidge.0:n fixtures.flipflopRidge.1:n fixtures.flipflopOffset:n " +
@@ -3384,7 +3393,7 @@
     "terrain.passWidth:a terrain.pocketFill:n terrain.maxRerolls:n terrain.fairness:o terrain.fairness.rivalRatio:n terrain.fairness.centreRatio:n terrain.fairness.detour:a " +
     "terrain.fairness.minExits:n terrain.costs:o terrain.costs.base:n terrain.costs.wall1:n terrain.costs.wall2:n terrain.costs.ford:n terrain.costs.prop:n " +
     "terrain.fallbackSeeds:a terrain.chunk:n terrain.chunkArt:n terrain.waterFrameMs:n " +
-    "art.flashWhite:n art.bannerPole:a art.bannerFlagW:a art.bannerFlagH:a art.bannerEmblem:a art.bannerTiers:a art.bannerMin:n art.bannerFrameMs:n art.bannerLift:n art.highCells:n art.cornerR:n art.shadow:a art.shallow:n art.deep:n art.foam:n art.sparkle:n art.bridgeShadow:n art.stoneStep:n art.stoneR:n art.fordEdge:n art.biomePeriod:n art.tonePeriod:n art.rockyBelow:n art.highAbove:n art.decalCluster:n art.decalSpread:n art.pineShare:n art.drawOverhead:n art.drawPerAgent:n art.canvasBudgetMB:n art.hatShareMin:n art.terrainSatMax:n art.flashMin:n art.ditherBand:n " +
+    "art.flashWhite:n art.bannerPole:a art.bannerFlagW:a art.bannerFlagH:a art.bannerEmblem:a art.bannerTiers:a art.bannerMin:n art.bannerFrameMs:n art.bannerLift:n art.highCells:n art.cornerR:n art.shadow:a art.shallow:n art.deep:n art.foam:n art.sparkle:n art.bridgeShadow:n art.deckOverhang:n art.stoneStep:n art.stoneR:n art.fordEdge:n art.biomePeriod:n art.tonePeriod:n art.rockyBelow:n art.highAbove:n art.decalCluster:n art.decalSpread:n art.pineShare:n art.drawOverhead:n art.drawPerAgent:n art.canvasBudgetMB:n art.hatShareMin:n art.terrainSatMax:n art.flashMin:n art.ditherBand:n " +
     // M6 spoils (src/spoils.js reads them through S.cfg)
     "progression.armsHp:n progression.armsAtk:n progression.armsCap:n progression.armsMax:n progression.armsPower:a progression.bootsSpeed:n progression.bootsFord:n progression.bootsMax:n " +
     "progression.hornRadius:a progression.hornMax:n progression.muster:a progression.musterAxes:a progression.chestAxes:o progression.chestAxes.arms:n progression.chestAxes.boots:n progression.chestAxes.horn:n " +

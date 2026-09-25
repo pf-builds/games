@@ -384,7 +384,7 @@
       5
     ],
     "crossingMaxGap": 1000,
-    "bridgeWidth": 2,
+    "bridgeWidth": 3,
     "fordWidth": [
       4,
       5
@@ -543,6 +543,7 @@
     "foam": 2.5,
     "sparkle": 9,
     "bridgeShadow": 6,
+    "deckOverhang": 10,
     "stoneStep": 16,
     "stoneR": 5.5,
     "fordEdge": 8,
@@ -578,6 +579,7 @@
     "tapPx": 12,
     "keyLead": 170,
     "routeBreakPx": 40,
+    "mouseWakePx": 24,
     "pickPx": 28,
     "hintAfterRouteMs": 1500
   },
@@ -895,7 +897,7 @@
     "terrain.bridgeWidth": [
       "cells",
       2,
-      2
+      4
     ],
     "terrain.fordWidth": [
       "cells",
@@ -1461,6 +1463,11 @@
       "CSS px",
       2,
       400
+    ],
+    "input.mouseWakePx": [
+      "CSS px (after a movement key, the mouse must move this far before the cursor pulls the swarm again)",
+      2,
+      200
     ],
     "input.pickPx": [
       "CSS px",
@@ -2491,6 +2498,11 @@
       "1 in N (8x4 art px water blocks with a sparkle dash per frame)",
       2,
       100
+    ],
+    "art.deckOverhang": [
+      "world px (a bridge deck runs this far onto each landing past the river's cells)",
+      0,
+      40
     ],
     "art.bridgeShadow": [
       "art px (shadow strip under a bridge)",
