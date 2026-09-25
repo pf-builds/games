@@ -46,7 +46,7 @@
     if (!ctx) {
       try {
         const k = create(); ctx = k.c; live = k.b; const c = ctx; HD.wdT = 0; HD.wdCt = -1; if (live) masterTo(live, true);
-        c.onstatechange = () => { if (c.state === "interrupted" || c.state === "suspended") resumeSoon = true; };
+        c.onstatechange = () => { if (c.state === "interrupted" || c.state === "suspended") resumeSoon = true; else if (c.state === "running" && c === ctx) HD.fails = 0; }; // running again: the failed-gesture count starts over
       } catch (e) { return null; }
     }
     if (ctx.state === "suspended" || ctx.state === "interrupted") resumeSafe(ctx);

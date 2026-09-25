@@ -1572,7 +1572,7 @@
   }
   function finishEnd() {
     if (sandbox) return;
-    const { won, why } = S.pendingEnd; S.pendingEnd = null; portal("gameplayStop"); if (won) portal("happytime", "win");
+    const { won, why } = S.pendingEnd; S.pendingEnd = null; if (won) portal("happytime", "win"); portal("gameplayStop"); // (the happy moment inside gameplay; then stop, break, start: M1)
     S.endT0 = performance.now(); if (!won && SCR) { draw(); SCR.loseSnap(canvas); } // the lose screen's one cached desaturation pass of this frame (drawn now: the dawn has lifted the fog)
     {
       S.mode = won ? "win" : "lose";

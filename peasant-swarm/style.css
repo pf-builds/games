@@ -209,8 +209,9 @@ body.lay-l #dbg { left: calc(env(safe-area-inset-left) + 8px); top: calc(env(saf
 #poster { position: absolute; left: 0; right: 0; top: 5%; display: flex; justify-content: center; pointer-events: none; }
 #poster.hidden { display: none; }
 #poster .logo .l1 { font-size: clamp(2rem, 7vmin, 5.4rem); } #poster .logo .l2 { font-size: clamp(2.8rem, 10.5vmin, 8rem); }
-/* short screens (a landscape phone, a 450 px portal iframe): the end card in one row of six, the title without the how-to wall */
-@media (max-height: 500px) {
+/* short screens (a landscape phone, a 450 px portal iframe, CrazyGames' 907 x 510 desktop iframe: M1 found the title's logo and how-to
+   clipped at 510): the end card in one row of six, the title without the how-to wall */
+@media (max-height: 560px) {
   .statgrid { grid-template-columns: repeat(6, 1fr); gap: .3rem; }
   .stat { min-height: 2.8rem; padding: .25rem; } .stat b { font-size: 1.05rem; } .stat span { font-size: .6rem; }
   .bigtitle { font-size: 2rem; }

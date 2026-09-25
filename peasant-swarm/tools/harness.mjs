@@ -68,7 +68,7 @@ const POLICY_TICK = 0.5;     // sim-seconds between scripted-player decisions
 const EVAL_WALL_MS = 12000;  // in-page wall guard for one chunk (lesson 20)
 const LOG_EVERY = 30;        // sim-seconds between timeline rows / render samples
 const POLICY = { sight: 400, hunt: 0.7, flee: 1.4, fleeDist: 300 };
-const FONT_HOST = /fonts\.(googleapis|gstatic)\.com/;
+const FONT_HOST = /$^/; // v3 M1: the fonts are self-hosted, so no host's errors are filtered any more (kept as a name for the call sites)
 
 function parseArgs(argv) {
   const o = { url: "http://127.0.0.1:8471/peasant-swarm/", out: "harness-out", mobile: false, sim: 240, seeds: 3, difficulty: "normal",
@@ -266,7 +266,7 @@ async function main() {
     meta: { url: url.href, mode: tag, viewport: ctxOpts.viewport, deviceScaleFactor: ctxOpts.deviceScaleFactor, sim: A.sim, seeds: A.seeds, difficulty: A.difficulty, seed: A.seed, cap: A.cap, v1Url: A.v1Url, refGate: A.refGate,
       chromium: browser.version(), node: process.version, startedAt: new Date().toISOString(), policy: POLICY, chunkSim: CHUNK_SIM, policyTick: POLICY_TICK,
       cpus: os.cpus().length, loadAvgStart: os.loadavg().map(r2) }, // timings are only comparable at similar load: other sessions may share this machine
-    errors: { console: [], page: [], filteredFontErrors: 0, warnings: [] },
+    errors: { console: [], page: [], filteredFontErrors: 0, warnings: [], offOrigin: [] }, // offOrigin (v3 M1): requests the runs' pages made to another origin
     selfTest: null, fights: [], title: null, touch: null, huddle: null, runs: [], asserts: {}, notes: [], pass: false,
     bench: null, caches: null, aiMatches: [], outcomes: [], restart: null, fixtures: null, stall: null, tap: null, hold: null,
     fogStructure: null, fogPerf: null, nofog: null,
@@ -294,6 +294,7 @@ async function main() {
     const ctx = await browser.newContext(ctxOpts);
     await ctx.addInitScript(installHelpers);
     const page = await ctx.newPage();
+    page.on("request", (q) => { const u = q.url(); if (!u.startsWith("data:") && !u.startsWith("blob:") && new URL(u).origin !== url.origin && report.errors.offOrigin.length < 50) report.errors.offOrigin.push(u); });
     page.on("console", (m) => {
       const where = (m.location() && m.location().url) || "";
       if (m.type() === "error") { if (FONT_HOST.test(where) || FONT_HOST.test(m.text())) report.errors.filteredFontErrors++; else report.errors.console.push({ run: ri + 1, text: m.text(), where }); }
@@ -314,7 +315,7 @@ async function main() {
       // selfTest on the title screen before any match, then the fight matrix (each call is its own evaluate, well under 15 s)
       // one evaluate per part so each stays well under ~15 s of wall time (lesson 20); the merged verdict is the selfTest verdict
       const s0 = Date.now(), st = { pass: true, fails: [], results: {}, partMs: {}, wallMs: 0 };
-      for (const part of ["config", "sprites", "terrain", "caches", "art", "flow", "fight", "fixtures", "flipflop", "ai", "rivals", "fog", "spoils", "parity", "replay", "match", "audio"]) {
+      for (const part of ["config", "sprites", "terrain", "caches", "art", "flow", "fight", "fixtures", "flipflop", "ai", "rivals", "fog", "spoils", "parity", "replay", "match", "audio", "portal"]) { // v3 M1: "portal"
         const p0 = Date.now(), r = await page.evaluate((part) => window.PS.selfTest({ parts: part }), part);
         st.partMs[part] = Date.now() - p0; Object.assign(st.results, r.results); for (const f of r.fails) if (st.fails.indexOf(f) < 0) st.fails.push(f);
       }
@@ -647,6 +648,7 @@ async function main() {
   // ---------------------------------------------------------------- verdict
   const as = report.asserts, W = report.notes;
   as.noConsoleErrors = report.errors.console.length === 0;
+  as.noOffOriginRequests = report.errors.offOrigin.length === 0 || !!new URL(A.url).searchParams.get("portal"); // v3 M1 (SPEC-v3 §9): the Pages build fetches nothing off-origin
   as.noPageErrors = report.errors.page.length === 0;
   as.selfTestPass = !!(report.selfTest && report.selfTest.pass);
   as.btnPlayHit = report.runs.every((r) => r.titleHit);
