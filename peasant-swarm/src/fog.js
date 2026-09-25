@@ -50,7 +50,7 @@
     w.map = map; w.learn = !!(opts && opts.learn); w.gen++; w.ver.fill(0); w.nExp.fill(0); w.stamps.fill(0); w.srcN = 0;
     for (let i = 0; i < 9; i++) { w.vis[i].fill(0); w.explored[i].fill(0); }
     w.disp.fill(0); w.dx0 = 0; w.dy0 = 0; w.dx1 = DN - 1; w.dy1 = DN - 1; w.rx0.fill(DN); w.rx1.fill(-1); w.mx0 = 0; w.my0 = 0; w.mx1 = N - 1; w.my1 = N - 1;
-    w.costMs = 0; w.lastCostMs = 0; w.maxCostMs = 0; w.stampN = 0; losClear(); // v3: viewshed caches are per map
+    w.costMs = 0; w.lastCostMs = 0; w.maxCostMs = 0; w.stampN = 0; if (!keep) losClear(); // v3: viewshed caches are per map
     return w;
   }
   function use(w) { W = w; return w; }
@@ -77,6 +77,8 @@
     losMap = map; LOS.mapId = map.id; OPQ = map.opaque && map.losOn ? map.opaque : null; COV = map.forest && map.forest.cells > 0 ? map.cover : null; SD = map.sightD || null; losInit(); LOS.clears++;
   }
   function losClear() { losMap = null; LOS.mapId = -1; } // the next stamp re-arms both caches (a fixture repainted its layers, or a test asks)
+  let keep = false; // QA (los_cache_equal): keep the caches across world resets on the same map, so a replay runs on a warm cache
+  function losArm(map) { losClear(); losUse(map); return LOS; } // QA: arm (and clear) the caches for a map without a stamp
   // Ford's rows: depth d, start slope sn/sd, end slope en/ed (all slopes (2c - 1) / 2d or +-1). Tiles in a row: round-ties-up(d * s) to
   // round-ties-down(d * e); symmetric when d * s <= col <= d * e. Quadrant q maps (depth, col) to cells. blk(c): does this cell stop sight.
   function cast(ci, cj, R, mode, siR2) {
@@ -409,7 +411,7 @@
 
   function sig() { const w = W; if (!w) return null; return [Array.from(w.nExp), Array.from(w.stamps), Array.from(w.ver)].join("|"); }
   const canvases = () => [maskCv, cloudCv, tileCv, tilesCv, vigCv, fogCv, ...holeSprites.values()].filter(Boolean); // for the memory report
-  const F = (PS.fog = { init, canvases, world, reset, use, stamp, sees, seesCell, explored, cellOf, reveal, warm, concealedCell, losCode, cacheEqual, losClear, losOn, LOS, resize, render, flushMask, recover, drop, report, maskAlphaAt, dispAt, minAlpha4, sumAlpha4, sig, holeGrad,
+  const F = (PS.fog = { init, canvases, world, reset, use, stamp, sees, seesCell, explored, cellOf, reveal, warm, concealedCell, losCode, cacheEqual, losClear, losArm, losOn, LOS, losKeep: (on) => { keep = !!on; }, resize, render, flushMask, recover, drop, report, maskAlphaAt, dispAt, minAlpha4, sumAlpha4, sig, holeGrad,
     vis: (team) => (W ? W.vis[team] : null), verOf: (team) => (W ? W.ver[team] : 0), exploredArr: (team) => (W ? W.explored[team] : null), world0: () => W, RS, ST,
     get N() { return N; }, get BN() { return BN; }, get BK() { return BK; }, get fogSize() { return [fw, fh, cssW, cssH]; }, get maskCanvas() { return maskCv; }, get cloudCanvas() { return cloudCv; } });
 })();

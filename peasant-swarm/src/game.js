@@ -3060,7 +3060,7 @@
   function fogMatch(seconds, opts) {
     opts = opts || {};
     return withSandbox(() => {
-      sandboxField(); S.difficulty = "normal"; newGame(false, { seed: opts.seed == null ? 31337 : opts.seed }); S.mode = "play"; S.fogS.leakOn = true;
+      sandboxField(); S.difficulty = "normal"; newGame(false, { seed: opts.seed == null ? 31337 : opts.seed, map: opts.map }); S.mode = "play"; S.fogS.leakOn = true; // opts.map: a fixture map (v3 ridge leak run)
       const every = opts.drawEvery || 8, w0 = performance.now(); let truncated = false, frames = 0, rivalFrames = 0;
       for (let i = 0; i < seconds * 60; i++) {
         if (i % 30 === 0) fogPolicy();
@@ -3682,6 +3682,207 @@
     });
   }
 
+  // ---------------------------------------------------------------- QA: terrain that hides (SPEC-v3 §2, §9 M2; the M2a sim-side checks)
+  // losgrove fixture: grass inside the border, a vertical ridge 2 cells thick at mid-width with a 3-cell pass (rows pj..pj+2), a 9 x 9 grove
+  // in the open west of it (gi, gj) and a 6 x 7 grove against the ridge's west face (for "never behind rock")
+  function losGeom() { const T = PS.terrain, N = T.N, cell = T.cell, g = { N, cell, ri: N >> 1, pj: 40, pw: 3, gi: 26, gj: 78, gs: 9, hj: 90 }; g.gx = (g.gi + g.gs / 2) * cell; g.gy = (g.gj + g.gs / 2) * cell; return g; }
+  function losMap() {
+    if (fixtureMaps.losgrove) return fixtureMaps.losgrove;
+    const g = losGeom(), N = g.N, terr = new Uint8Array(N * N), pm = new Uint8Array(N * N), cells = [];
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) if (i < 2 || j < 2 || i >= N - 2 || j >= N - 2) terr[j * N + i] = 1;
+    for (let j = 2; j < N - 2; j++) for (let i = g.ri; i < g.ri + 2; i++) { if (j >= g.pj && j < g.pj + g.pw) pm[j * N + i] = 1; else terr[j * N + i] = 1; }
+    for (let j = g.gj; j < g.gj + g.gs; j++) for (let i = g.gi; i < g.gi + g.gs; i++) cells.push(j * N + i);
+    for (let j = g.hj; j < g.hj + 7; j++) for (let i = g.ri - 6; i < g.ri; i++) cells.push(j * N + i);
+    const m = PS.terrain.fromTerr(terr, { name: "losgrove", passMask: pm }); PS.terrain.setCover(m, cells); return (fixtureMaps.losgrove = m);
+  }
+  const hold = (t) => { t.tx = t.cx; t.ty = t.cy; t.mode = "hold"; t.route = false; };
+  // los_ridge: 12 v 12, each 150 px off the ridge's faces (inside sight): hidden both ways; the same pair level with the pass: seen both ways
+  function losRidgeTest() {
+    return withSandbox(() => {
+      const m = losMap(), g = losGeom(), cell = g.cell, xw = g.ri * cell, xe = (g.ri + 2) * cell;
+      const run = (y) => { fixtureBase(m, 17); S.fogOn = true; const p = S.teams[1], r = S.teams[2]; r.alive = true; blob(xw - 150, y, 12, 1); blob(xe + 150, y, 12, 2); settle(p); settle(r); fogStampAll();
+        return { fwd: PS.fog.sees(1, r.cx, r.cy), rev: PS.fog.sees(2, p.cx, p.cy), seen: S.fogS.obs[1][2].seen, seenRev: S.fogS.obs[2][1].seen, d: Math.round(r.cx - p.cx), R: Math.round(sightR(p)) }; };
+      const ridge = run(20 * cell), pass = run((g.pj + 1.5) * cell);
+      return { ridge, pass, pass: ridge.d < ridge.R && !ridge.fwd && !ridge.rev && !ridge.seen && !ridge.seenRev && pass.fwd && pass.rev && pass.seen && pass.seenRev };
+    });
+  }
+  // los_symmetry: 2,000 seeded walkable cell pairs within 20 cells per map on 3 seeds. The gate is rock line of sight (forest.blocksSight off
+  // for the test): A sees B iff B sees A. The forest layer is asymmetric by design (seeInto: you see into the trees next to you, and a swarm
+  // inside a grove sees out while the open ground cannot see in); its asymmetric share is reported
+  function losSymmetryTest() {
+    const FO = S.cfg.forest, bs = FO.blocksSight, out = [];
+    try {
+      for (const seed of [1000, 8919, 16838]) {
+        const m = PS.terrain.gen(seed), N = m.N, rng = PS.terrain.mulberry32(seed ^ 0x2545F491), walk = PS.terrain.walkT, A = [], B = [];
+        for (let g = 0; A.length < 2000 && g < 40000; g++) {
+          const a = (rng() * N * N) | 0, dx = ((rng() * 41) | 0) - 20, dy = ((rng() * 41) | 0) - 20, bx = (a % N) + dx, by = ((a / N) | 0) + dy;
+          if (dx * dx + dy * dy > 400 || (!dx && !dy) || bx < 0 || by < 0 || bx >= N || by >= N || !walk(m.terr[a]) || !walk(m.terr[by * N + bx])) continue; A.push(a); B.push(by * N + bx);
+        }
+        const asym = () => { let n = 0; for (let k = 0; k < A.length; k++) if ((PS.fog.losCode(A[k], B[k]) > 0) !== (PS.fog.losCode(B[k], A[k]) > 0)) n++; return n; };
+        FO.blocksSight = false; PS.fog.losArm(m); const rock = asym(); let hidden = 0; for (let k = 0; k < A.length; k++) if (PS.fog.losCode(A[k], B[k]) === 0) hidden++;
+        FO.blocksSight = bs; PS.fog.losArm(m); const forest = asym();
+        out.push({ seed, pairs: A.length, rockAsym: rock, rockHiddenPairs: hidden, forestAsym: forest, forestAsymShare: +(forest / Math.max(1, A.length)).toFixed(4) });
+      }
+    } finally { FO.blocksSight = bs; PS.fog.losClear(); }
+    return { seeds: out, pass: out.every((r) => r.pairs === 2000 && r.rockAsym === 0 && r.rockHiddenPairs > 0) };
+  }
+  // los_cache_equal: 200 walkable cells, both caches, the cached box (on the miss and again on a hit) against a fresh cast, bit for bit; then
+  // the same seed twice, the second on the first's map with the caches kept warm from the first run: stateSig at 60 s identical
+  function losCacheTest() {
+    const m = PS.terrain.gen(1000), N = m.N, rng = PS.terrain.mulberry32(77), cells = [];
+    for (let g = 0; cells.length < 200 && g < 20000; g++) { const c = (rng() * N * N) | 0; if (PS.terrain.walkT(m.terr[c])) cells.push(c); }
+    PS.fog.losArm(m); let miss = 0, hit = 0; for (const c of cells) miss += PS.fog.cacheEqual(c, 0) + PS.fog.cacheEqual(c, 1); for (const c of cells) hit += PS.fog.cacheEqual(c, 0) + PS.fog.cacheEqual(c, 1); PS.fog.losClear();
+    const rp = withSandbox(() => {
+      const L = PS.fog.LOS, run = (map) => { sandboxField(); S.difficulty = "normal"; newGame(false, { seed: 424243, map }); S.mode = "play"; const h0 = L.hits, m0 = L.misses, w0 = performance.now(); let tr = false;
+        for (let i = 0; i < 3600; i++) { update(DT); if ((i & 63) === 63 && performance.now() - w0 > 6000) { tr = true; break; } } return { sig: stateSig(), hits: L.hits - h0, misses: L.misses - m0, truncated: tr, map: S.map }; };
+      PS.fog.losKeep(true);
+      try { const a = run(null), b = run(a.map); return { same: a.sig === b.sig && !a.truncated && !b.truncated, cold: { hits: a.hits, misses: a.misses }, warm: { hits: b.hits, misses: b.misses } }; }
+      finally { PS.fog.losKeep(false); PS.fog.losClear(); }
+    });
+    return { cells: cells.length, diffOnMiss: miss, diffOnHit: hit, replay: rp, pass: cells.length === 200 && miss === 0 && hit === 0 && rp.same && rp.warm.misses < rp.cold.misses };
+  }
+  // one losgrove scene: rivals (team 2, n) parked in the open grove, the player (np) east of it at `gap` px centre to centre, both holding
+  function concealScene(n, np, gap, seed) {
+    const m = losMap(), g = losGeom(); fixtureBase(m, seed); S.fogOn = true; S.mode = "play"; S.t = S.cfg.ai.grace + 1;
+    const p = S.teams[1], r = S.teams[2]; r.alive = true; blob(g.gx, g.gy, n, 2); blob(g.gx + gap, g.gy, np, 1); settle(p); settle(r); hold(p); fogStampAll(); return { p, r, g };
+  }
+  const seenAgents = (o, team) => { let n = 0; for (const a of S.agents) if (a.team === team && !a.dead && PS.fog.sees(o, a.x, a.y)) n++; return n; };
+  // forest_conceal (sim parts; drawn / tags / arrows / minimap / particles / sounds are stage B): a concealN in the grove concealDist px from
+  // a 100: no rival agent on a visible cell, the pip stays "?", PS.vis lists nothing; walk the 100's front to 90 px of theirs: visible
+  function forestConcealTest() {
+    return withSandbox(() => {
+      const FX = S.cfg.fixtures, far = (() => { const { p, r } = concealScene(FX.concealN, 100, FX.concealDist, 23);
+        for (let i = 0; i < 60; i++) { hold(p); r.tx = r.cx; r.ty = r.cy; update(DT); }
+        return { visibleAgents: seenAgents(1, 2), seen: S.fogS.obs[1][2].seen, pip: S.fogS.obs[1][2].ever ? "count" : "?", visList: VIS.rivals().length, concealedCells: (() => { let n = 0; const N = S.map.N; for (let c = 0; c < N * N; c++) if (PS.fog.concealedCell(1, c)) n++; return n; })(), R: Math.round(sightR(p)) }; })();
+      // the walk-in: the 100 marches on the grove; the front gap (nearest agents) when the first rival turns visible. Sight into the trees is
+      // measured from the sight sources (centroid, 64 px bucket centres), so the gap lands near seeInto give or take half a bucket
+      const near = (() => { const { p, r, g } = concealScene(FX.concealN, 100, FX.concealDist, 23); let gapAt = -1, vis = 0, t = -1;
+        for (let i = 0; i < 600 && gapAt < 0; i++) { p.tx = g.gx; p.ty = g.gy; p.mode = "route"; p.route = true; r.tx = r.cx; r.ty = r.cy; update(DT); vis = seenAgents(1, 2);
+          if (vis > 0) { let d = 1e9; for (const a of S.agents) if (a.team === 1) for (const b of S.agents) if (b.team === 2) { const q = Math.hypot(a.x - b.x, a.y - b.y); if (q < d) d = q; } gapAt = Math.round(d); t = +S.t.toFixed(2); } }
+        return { frontGapAtSight: gapAt, t, visibleAgents: vis, seen: S.fogS.obs[1][2].seen, fights: S.ev.fights }; })();
+      return { far, near, pass: far.visibleAgents === 0 && !far.seen && far.pip === "?" && far.visList === 0 && far.concealedCells > 0 && near.seen && near.frontGapAtSight > S.cfg.agent.engageRadius && near.frontGapAtSight <= S.cfg.forest.seeInto + S.cfg.fog.bucket };
+    });
+  }
+  // forest_fight_reveal (sim part): two AI swarms fight inside the grove in the player's sight: the concealed contact is lit (a reveal) and
+  // the player sees the fighters by its next stamp; the same fight outside the player's sight: no reveal, never seen, a clash ping
+  function forestFightTest() {
+    const run = (gap) => withSandbox(() => {
+      const m = losMap(), g = losGeom(); fixtureBase(m, 29); S.fogOn = true; S.mode = "play"; S.t = S.cfg.ai.grace + 1; const p = S.teams[1], a = S.teams[2], b = S.teams[3]; a.alive = b.alive = true;
+      blob(g.gx - 60, g.gy, 25, 2); blob(g.gx + 60, g.gy, 25, 3); blob(g.gx + gap, g.gy, 100, 1); settle(p); settle(a); settle(b); hold(p); fogStampAll();
+      let before = false, fightT = -1, seenT = -1;
+      for (let i = 0; i < 480; i++) {
+        hold(p); a.tx = b.cx; a.ty = b.cy; b.tx = a.cx; b.ty = a.cy; update(DT);
+        const sn = S.fogS.obs[1][2].seen || S.fogS.obs[1][3].seen; if (S.ev.firstFight < 0 && sn) before = true;
+        if (fightT < 0 && S.ev.firstFight >= 0) fightT = S.ev.firstFight; if (seenT < 0 && sn) seenT = +S.t.toFixed(2); if (seenT >= 0 && fightT >= 0 && i > 60) break;
+      }
+      return { gap, seenBeforeFight: before, fight: fightT, seen: seenT, reveals: S.fogS.stats.reveals, pings: S.fogS.stats.pings };
+    });
+    const inSight = run(S.cfg.fixtures.concealDist + 80), outSight = run(1500); // +80: the two 25s sit 60 px either side of the grove's centre
+    return { inSight, outSight, pass: !inSight.seenBeforeFight && inSight.fight >= 0 && inSight.reveals > 0 && inSight.seen >= inSight.fight && inSight.seen - inSight.fight <= 0.2 &&
+      outSight.fight >= 0 && outSight.reveals === 0 && outSight.seen < 0 && outSight.pings > 0 };
+  }
+  // forest_rustle_no_leak: a 20 in the open grove concealDist px from a 100 rustles for the player every forest.rustleEvery s with no count;
+  // a 20 in the grove against the ridge's far face, 100 px beyond the ridge (in range, behind rock), never does; and a 60 s all-AI match run
+  // twice from one seed gives the same rustle event list
+  function forestRustleTest() {
+    const FO = S.cfg.forest, every = Math.round(FO.rustleEvery / DT);
+    const open = withSandbox(() => { const { p, r } = concealScene(20, 100, S.cfg.fixtures.concealDist, 31);
+      let seenT = -1, d0 = Math.round(Math.hypot(p.cx - r.cx, p.cy - r.cy));
+      for (let i = 0; i < 420; i++) { hold(p); r.tx = r.cx; r.ty = r.cy; update(DT); if (seenT < 0 && S.fogS.obs[1][2].seen) seenT = S.tick; }
+      const ev = []; for (let k = 0; k < Math.min(S.fogS.rustleN, RUSTLES); k++) { const e = S.fogS.rustles[k]; if (e.o === 1 && (seenT < 0 || e.tick < seenT)) ev.push({ keys: Object.keys(e).join(","), r: e.r, tick: e.tick }); }
+      const gaps = ev.slice(1).map((e, k) => e.tick - ev[k].tick); return { events: ev.length, keys: ev.length ? ev[0].keys : "", gaps, seenAtTick: seenT, dist0: d0, dist: Math.round(Math.hypot(p.cx - r.cx, p.cy - r.cy)), stats: S.fogS.stats.rustles }; });
+    const rock = withSandbox(() => {
+      const m = losMap(), g = losGeom(), cell = g.cell; fixtureBase(m, 37); S.fogOn = true; S.mode = "play"; const p = S.teams[1], r = S.teams[2]; r.alive = true;
+      const y = (g.hj + 3.5) * cell; blob((g.ri - 3) * cell, y, 20, 2); blob((g.ri + 2) * cell + 100, y, 100, 1); settle(p); settle(r); hold(p); fogStampAll();
+      let inRange = 0; for (const a of S.agents) if (a.team === 2 && Math.hypot(a.x - p.cx, a.y - p.cy) < sightR(p)) inRange++;
+      for (let i = 0; i < 420; i++) { hold(p); r.tx = r.cx; r.ty = r.cy; update(DT); }
+      return { playerEvents: S.fogS.stats.rustles, inRange, seen: S.fogS.obs[1][2].seen };
+    });
+    const match = (seed) => withSandbox(() => { sandboxField(); S.difficulty = "normal"; newGame(false, { seed, aiPlayer: true }); S.mode = "play"; const w0 = performance.now(); let tr = false;
+      for (let i = 0; i < 7200; i++) { update(DT); if (S.mode !== "play") break; if ((i & 63) === 63 && performance.now() - w0 > 8000) { tr = true; break; } }
+      return { n: S.fogS.rustleN, list: JSON.stringify(S.fogS.rustles.slice(0, Math.min(S.fogS.rustleN, RUSTLES))), truncated: tr }; });
+    const m1 = match(7006), m2 = match(7006); // 120 s all-AI (a seed whose P2 probe match had 109 rustles in 300 s)
+    return { open, rock, match: { events: m1.n, same: m1.list === m2.list && m1.n === m2.n, truncated: m1.truncated || m2.truncated },
+      pass: open.events >= 2 && open.keys === "o,r,tick,x,y" && open.gaps.every((d) => d >= every) && rock.inRange > 0 && m1.n > 0 && rock.playerEvents === 0 && !rock.seen && m1.list === m2.list && m1.n === m2.n && !m1.truncated };
+  }
+  // ai_blind_in_grove: a big AI 250 px from a small AI hidden in the grove never hunts it; carried out into the open next to it, it hunts
+  function aiBlindGroveTest() {
+    return withSandbox(() => {
+      const g = losGeom(); fixtureBase(losMap(), 41); S.t = S.cfg.ai.grace + 1; const big = S.teams[2], small = S.teams[3]; big.alive = small.alive = true;
+      const nBig = Math.max(60, Math.ceil(12 * big.ai.huntRatio * diff().huntMult * S.cfg.ai.aiVsAiHuntMult * 1.2));
+      blob(600, 600, 3, 1); blob(g.gx + S.cfg.fixtures.concealDist, g.gy, nBig, 2); blob(g.gx, g.gy, 12, 3); settle(S.teams[1]); settle(big); settle(small); big.thinkT = 0; small.thinkT = 1e9; fogStampAll();
+      let huntBlind = 0, huntSeen = -1, minGap = 1e9;
+      for (let i = 0; i < 300; i++) { small.tx = g.gx; small.ty = g.gy; small.route = true; update(DT); if (big.state === "hunt" && big.preyId === 3) huntBlind++; minGap = Math.min(minGap, Math.hypot(big.cx - small.cx, big.cy - small.cy)); }
+      const blind = !S.fogS.obs[2][3].ever;
+      const dx = big.cx - 330 - small.cx, dy = big.cy + 200 - small.cy; for (const a of S.agents) if (a.team === 3) { a.x += dx; a.y += dy; } recount();
+      for (let i = 0; i < 180 && huntSeen < 0; i++) { small.tx = small.cx; small.ty = small.cy; small.route = true; update(DT); if (big.state === "hunt" && big.preyId === 3) huntSeen = +(i / 60).toFixed(2); }
+      return { nBig, huntBlindTicks: huntBlind, neverSawWhileHidden: blind, closestWhileHidden: Math.round(minGap), huntAfterReveal: huntSeen, violations: S.fogS.ai.violations,
+        pass: huntBlind === 0 && blind && huntSeen >= 0 && S.fogS.ai.violations === 0 };
+    });
+  }
+  // fixture_grove_ambush (reported, no bar: SPEC-v3 §2 "Ambush"): fixtures.groveN waiting in the open grove charge the middle of a
+  // fixtures.groveColumn column (3 files, 16 px apart) marching north past the grove's east edge; the first rout, who lost, and how much of
+  // the column was left, flipped or fled
+  function groveAmbush(seed) {
+    return withSandbox(() => {
+      const FX = S.cfg.fixtures, g = losGeom(), cell = g.cell, m = losMap(); fixtureBase(m, seed); S.fogOn = true; S.mode = "play"; S.t = S.cfg.ai.grace + 1;
+      const col = S.teams[1], amb = S.teams[2]; amb.alive = true; const x = (g.gi + g.gs) * cell + 70;
+      blob(g.gx, g.gy, FX.groveN, 2); for (let k = 0; k < FX.groveColumn; k++) S.agents.push(mkAgent(x + ((k % 3) - 1) * 16, g.gy + 700 - Math.floor(k / 3) * 16 + Math.floor(FX.groveColumn / 3) * 16 - 600, 1));
+      settle(col); settle(amb); fogStampAll(); let go = false, t0 = -1, R = null; const n0 = FX.groveColumn;
+      for (let i = 0; i < 30 * 60 && !R; i++) {
+        col.tx = x; col.ty = 300; col.mode = "route"; col.route = true;
+        if (!go && Math.abs(col.cy - g.gy) < 60) { go = true; t0 = S.t; } if (go) { amb.tx = col.cx; amb.ty = col.cy; } else { amb.tx = g.gx; amb.ty = g.gy; }
+        update(DT); if (S.lastRout) R = S.lastRout;
+      }
+      return { seed, charged: t0 >= 0 ? +t0.toFixed(1) : -1, rout: R ? +S.t.toFixed(1) : -1, loser: R ? (R.loser === 1 ? "column" : "grove") : "none", columnAfter: col.count, columnLost: n0 - col.count, flipped: R ? R.flipped : 0, fled: R ? R.fled : 0, groveAfter: amb.count };
+    });
+  }
+  // the grove-heavy seed for the leak / knowledge / cost runs: of six match seeds, the one whose map has the most forest cells
+  function groveSeed() {
+    let best = 0, bn = -1; for (let k = 0; k < 6; k++) { const seed = 31337 + k * 101, gs = (mulberry32(seed)() * 4294967296) >>> 0, m = PS.terrain.gen(gs); if (m.forest.cells > bn) { bn = m.forest.cells; best = seed; } }
+    return { seed: best, cells: bn };
+  }
+  // the terrain part's v3 checks (PS.selfTest({ parts: "terrain" }))
+  function terrainM2(check) {
+    const ts = terrainForestSuite(20); check("terrain_forest_20_seeds", ts.bad.length === 0 && ts.forestP50 <= 5, ts);
+    const rg = losRidgeTest(); check("los_ridge", rg.pass, rg);
+    const sy = losSymmetryTest(); check("los_symmetry", sy.pass, sy);
+    const ce = losCacheTest(); check("los_cache_equal", ce.pass, ce);
+    const fc = forestConcealTest(); check("forest_conceal", fc.pass, fc);
+    const ff = forestFightTest(); check("forest_fight_reveal", ff.pass, ff);
+    const fr = forestRustleTest(); check("forest_rustle_no_leak", fr.pass, fr);
+    const gs = groveSeed(), fm = fogMatch(60, { seed: gs.seed }), rm = fogMatch(60, { seed: 31337, map: fixtureMap("pass64") });
+    check("fog_leak_60s_los", fm.diff === 0 && fm.frames >= 100 && !fm.truncated && fm.ai.violations === 0 && rm.diff === 0 && rm.frames >= 100 && !rm.truncated && rm.ai.violations === 0,
+      { groveSeed: gs, grove: { diff: fm.diff, frames: fm.frames, rivalFrames: fm.rivalFrames, stats: fm.stats, truncated: fm.truncated }, ridge: { diff: rm.diff, frames: rm.frames, rivalFrames: rm.rivalFrames, truncated: rm.truncated } });
+    const am = simMatch(90, { seed: gs.seed, wallMs: 6000 }); check("terrain_ai_knowledge_90s_six", !am.truncated && am.seconds >= 89.9 && am.ai.violations === 0 && am.ai.decisions > 0, { seed: gs.seed, seconds: am.seconds, ...am.ai });
+    const bl = aiBlindGroveTest(); check("ai_blind_in_grove", bl.pass, bl);
+    // los_stamp_cost: mean fog sim per tick over the grove-heavy fogMatch (1x) and the cold centroid viewshed (both casts) over 100 cells
+    const m = PS.terrain.gen((mulberry32(gs.seed)() * 4294967296) >>> 0), N = m.N, rng = PS.terrain.mulberry32(99), L = PS.fog.LOS; PS.fog.losArm(m); const c0 = L.casts, ms0 = L.castMs, mx0 = L.castMax; L.castMax = 0; let n = 0;
+    for (let g = 0; n < 100 && g < 20000; g++) { const c = (rng() * N * N) | 0; if (!PS.terrain.walkT(m.terr[c]) || !(m.sightD[c] <= 3 * 31.5)) continue; PS.fog.losCode(c, c, 0); n++; }
+    const cold = { casts: L.casts - c0, meanMs: +((L.castMs - ms0) / Math.max(1, L.casts - c0)).toFixed(4), maxMs: +L.castMax.toFixed(3) }; L.castMax = Math.max(mx0, L.castMax); PS.fog.losClear();
+    check("los_stamp_cost", fm.stampMsPerTick <= 0.1 && cold.meanMs <= 0.15, { stampMsPerTick: fm.stampMsPerTick, stampMax: fm.stampMax, coldCentroid: cold });
+    const ga = []; for (let sd = 1; sd <= 8; sd++) ga.push(groveAmbush(sd));
+    check("fixture_grove_ambush", ga.every((r) => r.charged >= 0), { reportOnly: true, columnLoses: ga.filter((r) => r.loser === "column").length + "/8", runs: ga });
+  }
+  // terrain gen on n seeds, forest side: fairness <= terrain.forest.fairRatio, no forest in the pass mask or in a home meadow + wall, no placed
+  // object (camps, power-ups, props, spoils) on or near forest (coverNear), the forest pass's own gen time (median gated at 5 ms)
+  function terrainForestSuite(n) {
+    const T = PS.terrain, cfg = S.cfg, TF = cfg.terrain.forest, out = { seeds: [], bad: [] }, ms = [];
+    for (let i = 0; i < n; i++) {
+      const seed = 1000 + i * 7919, m = T.gen(seed), N = m.N, cell = m.cell, why = [], Rw = cfg.terrain.homeRadius + cfg.terrain.homeWall; let inPass = 0, inHome = 0;
+      for (let c = 0; c < N * N; c++) { if (!m.cover[c]) continue; if (m.passMask[c]) inPass++; const u = (c % N) + 0.5, v = ((c / N) | 0) + 0.5; for (const s of m.spawns) { const dx = u - s.x / cell, dy = v - s.y / cell; if (dx * dx + dy * dy < Rw * Rw) { inHome++; break; } } }
+      if (!(m.forest.fair <= TF.fairRatio)) why.push("fair " + m.forest.fair); if (inPass) why.push("pass " + inPass); if (inHome) why.push("home " + inHome);
+      if (m.forest.groves.length !== 6 * TF.grovesPerRegion) why.push("groves " + m.forest.groves.length);
+      const near = withSandbox(() => { sandboxField(m); newGame(false, { map: m, seed: seed ^ 0x5bd1e995 }); const bad = []; const at = (x, y) => m.coverNear[T.cellOf(x, y)] === 1;
+        for (const c of S.camps) if (at(c.x, c.y)) bad.push("camp"); for (const p of S.powerups) if (at(p.x, p.y)) bad.push("powerup"); for (const o of S.obstacles) if (at(o.x, o.y)) bad.push("prop"); for (const o of S.objs || []) if (at(o.x, o.y)) bad.push(o.type); return bad; });
+      if (near.length) why.push("near forest " + near.slice(0, 4).join(","));
+      ms.push(m.forestMs); out.seeds.push({ seed, cells: m.forest.cells, reeds: m.forest.reeds, groves: m.forest.groves.length, fair: m.forest.fair, forestMs: m.forestMs, genMs: m.genMs });
+      if (why.length) out.bad.push(seed + ": " + why.join("; "));
+    }
+    const s = ms.slice().sort((a, b) => a - b); out.forestP50 = s[s.length >> 1]; out.forestMax = s[s.length - 1]; out.cellsMean = Math.round(out.seeds.reduce((a, r) => a + r.cells, 0) / n);
+    return out;
+  }
+
   // PS.selfTest({ matchSeconds, parts }) -> { pass, fails: [names], results: { name: { pass, detail } }, ms }. One console line.
   // parts (array or "a,b"): config sprites terrain caches fight replay match (default: all). The harness calls them in separate evaluates
   // so each stays under ~15 s of wall time; a console call runs everything.
@@ -3877,6 +4078,7 @@
       const ts = terrainSuite(20);
       check("terrain_20_seeds", ts.bad.length === 0 && ts.fallbacks === 0 && ts.seeds.every((s) => s.rerolls <= S.cfg.terrain.maxRerolls), ts);
       check("terrain_fallback_forced", ts.forcedFallback.fallback && ts.forcedFallback.inList && ts.forcedFallback.pass, ts.forcedFallback);
+      if (PS.fog.losOn()) terrainM2(check); // v3 M2: terrain that hides (skipped with both kill switches off: nothing to check)
     });
     if (has("caches") && S.map && !S.map.flat) timed("caches", () => {
       // the no-event path (M1 critic MAJOR-2): after the drop only the draw loop's probe runs; it must find a blank and re-arm the caches
