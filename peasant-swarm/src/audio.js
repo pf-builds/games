@@ -21,9 +21,19 @@
 // low-passed tail, both held to a per-second voice and energy budget; one low melee bed (low-passed noise) follows the fighters you see;
 // the murmur is a tonal bed (detuned triangles, each drifting on its own); the drum's snare is a low-passed triangle tick. The level bound
 // counts audio.lanePeak (the lanes' and beds' clash RMS) instead of the lanes' ceilings, and the limiter sits at the -6 dBFS ceiling.
+// M1 (SPEC-v3 §5.6, R4 §4) hardening for iOS Safari and portal iframes: every resume() promise is caught; pageshow (a back-forward
+// restore) resumes too; a watchdog (audio.watchdogMs, while visible) kicks a context that reads "running" but whose clock has stopped (iOS 17)
+// with suspend() then resume(); a context that audio.rebuildAfter gestures in a row (at least audio.rebuildGapMs apart) could not resume
+// (stuck "interrupted" after a call or Siri) is closed and rebuilt on the next gesture (the bus is fixed nodes and no decoded buffers, so a
+// rebuild is cheap). Silence that must not need a fresh gesture (an ad, a hidden tab) ramps the master gain to 0 over audio.duckMs: duck(),
+// never ctx.suspend(). A platform mute (CrazyGames settings) acts like the M key and overrides it: platformMute().
 (function () {
   const PS = (window.PS = window.PS || {});
-  let ctx = null, live = null, qa = null, C = null, muted = false, silent = false, unlocked = false, resumeSoon = false, drumWant = false, vol = 1;
+  let ctx = null, live = null, qa = null, C = null, muted = false, silent = false, unlocked = false, resumeSoon = false, drumWant = false, vol = 1, plat = false;
+  const DUCK = { ad: 0, hidden: 0 }, HD = { fails: 0, failT: -1e9, rebuilds: 0, kicks: 0, wdT: 0, wdCt: -1 }; // duck reasons; hardening state
+  // the context factory (PS.selfTest swaps in a stub to drive the hardening without a real context or a gesture)
+  let create = () => { try { if (navigator.audioSession) navigator.audioSession.type = "ambient"; } catch (e) {} const c = new (window.AudioContext || window.webkitAudioContext)(); return { c, b: mkBus(c, MUTE) }; };
+  const resumeSafe = (c) => { try { const p = c.resume(); if (p && p.catch) p.catch(() => {}); } catch (e) {} };
   const LAST = {};
   const CATS = ["hit", "die", "melee", "murmur", "drum", "other"], MUTE = { hit: 0, die: 0, melee: 0, murmur: 0, drum: 0, other: 0 }; // the ?debug=1 mixer (never persisted)
 
@@ -35,21 +45,41 @@
     if (!unlocked || !C) return null;
     if (!ctx) {
       try {
-        try { if (navigator.audioSession) navigator.audioSession.type = "ambient"; } catch (e) {}
-        ctx = new (window.AudioContext || window.webkitAudioContext)(); live = mkBus(ctx, MUTE);
-        ctx.onstatechange = () => { if (ctx.state === "interrupted" || ctx.state === "suspended") resumeSoon = true; };
+        const k = create(); ctx = k.c; live = k.b; const c = ctx; HD.wdT = 0; HD.wdCt = -1; if (live) masterTo(live, true);
+        c.onstatechange = () => { if (c.state === "interrupted" || c.state === "suspended") resumeSoon = true; };
       } catch (e) { return null; }
     }
-    if (ctx.state === "suspended" || ctx.state === "interrupted") { try { ctx.resume(); } catch (e) {} }
+    if (ctx.state === "suspended" || ctx.state === "interrupted") resumeSafe(ctx);
     return ctx;
   }
-  const resumeNow = () => { if (unlocked && ctx && ctx.state !== "running" && ctx.state !== "closed") { try { ctx.resume(); } catch (e) {} } resumeSoon = false; };
-  window.addEventListener("pointerup", () => { if (!unlocked) { unlocked = true; ac(); } else resumeNow(); }, true);
-  window.addEventListener("touchend", () => { if (unlocked) resumeNow(); }, true);
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) resumeNow(); else if (live) { SND.murmur(live, 0); SND.melee(live, 0); } });
+  const resumeNow = () => { if (unlocked && ctx && ctx.state !== "running" && ctx.state !== "closed") resumeSafe(ctx); resumeSoon = false; };
+  // a gesture's end (the only moment iOS lets audio start): unlock, resume, or after audio.rebuildAfter failed gestures close and rebuild
+  function gesture(nowMs) {
+    if (!unlocked) { unlocked = true; ac(); return; }
+    if (!ctx || !C) { ac(); return; }
+    if (ctx.state === "running") { HD.fails = 0; return; }
+    if (HD.fails >= C.rebuildAfter) { const old = ctx; ctx = null; live = null; HD.fails = 0; HD.rebuilds++; try { old.onstatechange = null; const p = old.close(); if (p && p.catch) p.catch(() => {}); } catch (e) {} ac(); return; }
+    if (nowMs - HD.failT >= C.rebuildGapMs) { HD.fails++; HD.failT = nowMs; } // a quick double tap is one try, not two
+    resumeNow();
+  }
+  // the master gain: 0 while any duck reason holds, else audio.master x volume; ramped over audio.duckMs (now: set at once, a new bus)
+  const masterGoal = () => (DUCK.ad || DUCK.hidden ? 0 : C.master * vol);
+  function masterTo(b, now) { const g = b.master.gain, v = masterGoal(); if (now) { g.value = v; return; } const t = b.c.currentTime; try { g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(v, t + C.duckMs / 1000); } catch (e) { g.value = v; } }
+  function duck(k, on) { DUCK[k] = on ? 1 : 0; if (live && C) masterTo(live, false); }
+  // the frozen-clock watchdog (iOS 17: "running" but currentTime has stopped): every audio.watchdogMs of visible wall time, from pump()
+  function watchdog(nowMs) {
+    if (!ctx || ctx.state !== "running" || document.hidden) { HD.wdT = nowMs; HD.wdCt = -1; return; }
+    if (nowMs - HD.wdT < C.watchdogMs) return;
+    const ct = ctx.currentTime; if (HD.wdCt >= 0 && ct === HD.wdCt) { HD.kicks++; const c = ctx; try { const p = c.suspend(); (p && p.then ? p : Promise.resolve()).then(() => resumeSafe(c), () => resumeSafe(c)); } catch (e) { resumeSafe(c); } }
+    HD.wdT = nowMs; HD.wdCt = ct;
+  }
+  window.addEventListener("pointerup", () => gesture(performance.now()), true);
+  window.addEventListener("touchend", () => { if (unlocked) gesture(performance.now()); }, true);
+  window.addEventListener("pageshow", () => { duck("hidden", false); resumeNow(); }); // a back-forward restore does not always fire visibilitychange
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) { duck("hidden", false); resumeNow(); HD.wdT = performance.now(); HD.wdCt = -1; } else { duck("hidden", true); if (live) { SND.murmur(live, 0); SND.melee(live, 0); } } });
 
   // the active bus: the QA one, else the live one (created on the first gesture); null while muted or silent (QA ignores both)
-  function bus() { if (qa) return qa.b; if (silent || muted || !ac()) return null; return live; }
+  function bus() { if (qa) return qa.b; if (silent || muted || plat || !ac()) return null; return live; }
   const T = (b) => (b.clock ? b.clock() : b.c.currentTime);              // audio clock: scheduling (a QA or render bus runs on sim time)
   const W = (b) => (b.clock ? b.clock() : performance.now() / 1000);     // gate clock
   // throttles: crowds fire the same sound hundreds of times a second
@@ -293,22 +323,35 @@
   PS.audio = {
     configure(a) { C = a; },
     unlock() { unlocked = true; ac(); },
-    setMuted(m) { muted = m; if (m) { PS.audio.stopDrum(); PS.audio.murmur(0); PS.audio.melee(0); } },
+    setMuted(m) { muted = m; if (m || plat) { PS.audio.stopDrum(); PS.audio.murmur(0); PS.audio.melee(0); } },
+    // M1: the portal's own mute (CrazyGames settings) overrides the M key and the sound button while it is on; an ad or a hidden tab ducks
+    platformMute(m) { plat = !!m; if (plat) { PS.audio.stopDrum(); PS.audio.murmur(0); PS.audio.melee(0); } },
+    isPlatformMuted() { return plat; },
+    duck(k, on) { if (k in DUCK) duck(k, on); },
+    ctx() { return ctx; }, // QA: the live context (a console suspend(), a stubbed resume())
+    hardening() { return { fails: HD.fails, rebuilds: HD.rebuilds, kicks: HD.kicks, duck: { ...DUCK }, master: live ? +live.master.gain.value.toFixed(4) : null, goal: C ? masterGoal() : null, platform: plat, ctx: ctx ? ctx.state : "none" }; },
+    // QA (PS.selfTest "audio"): run the hardening against a stub context. f() builds one; returns the hooks the test drives. restore()
+    // puts the live context, bus, factory and counters back exactly.
+    hardenQA(f) {
+      const save = { ctx, live, unlocked, create, HD: { ...HD }, DUCK: { ...DUCK } }; ctx = null; live = null; unlocked = true; create = () => ({ c: f(), b: null });
+      return { gesture, watchdog, ctx: () => ctx, hd: () => ({ ...HD }), goal: () => masterGoal(), duck: (k, on) => { DUCK[k] = on ? 1 : 0; },
+        restore() { ctx = save.ctx; live = save.live; unlocked = save.unlocked; create = save.create; Object.assign(HD, save.HD); Object.assign(DUCK, save.DUCK); } };
+    },
     setSilent(v) { silent = !!v; if (silent) { PS.audio.stopDrum(); if (live) { SND.murmur(live, 0); SND.melee(live, 0); } } },
     // nodes.live = the bus's fixed nodes (master, limiter, category gains, shared noise, lanes) + the live cue voices' nodes (the P1 leak check)
     state() { const b = qa ? qa.b : live; return { unlocked, ctx: ctx ? ctx.state : "none", murmur: !!b, resumeSoon, drum: b ? b.drum.on : false,
       nodes: b ? { live: b.fixed + b.nodes, fixed: b.fixed, cues: b.nodes, max: b.st.maxNodes } : null, cues: b ? { live: b.cues, max: b.st.maxCues, made: b.st.cues, closed: b.st.closed, reaped: b.st.reaped, dropped: b.st.dropped, ducked: b.st.ducked } : null,
       level: b ? { now: +(level(b) * C.master).toFixed(3), max: +b.st.maxLevel.toFixed(3), ceiling: C.ceiling, master: b.master.gain.value } : null, calls: b ? { ...b.st.calls } : null, plays: b ? { ...b.st.plays } : null }; },
-    isMuted() { return muted; },
+    isMuted() { return muted; }, // the player's own mute (the M key, the sound button); isPlatformMuted() is the portal's
     // the crowd murmur: the live bus fades out while muted or silent (QA ignores both)
-    murmur(n) { if (LOG.on && n !== LOG.mu) { LOG.mu = n; rec(24, n, 0); } const b = qa ? qa.b : live; if (!b || !C) return; if (!qa && (silent || muted || !ac())) n = 0; SND.murmur(b, n); },
-    melee(n) { if (LOG.on && n !== LOG.me) { LOG.me = n; rec(25, n, 0); } const b = qa ? qa.b : live; if (!b || !C) return; if (!qa && (silent || muted || !ac())) n = 0; SND.melee(b, n); },
+    murmur(n) { if (LOG.on && n !== LOG.mu) { LOG.mu = n; rec(24, n, 0); } const b = qa ? qa.b : live; if (!b || !C) return; if (!qa && (silent || muted || plat || !ac())) n = 0; SND.murmur(b, n); },
+    melee(n) { if (LOG.on && n !== LOG.me) { LOG.me = n; rec(25, n, 0); } const b = qa ? qa.b : live; if (!b || !C) return; if (!qa && (silent || muted || plat || !ac())) n = 0; SND.melee(b, n); },
     // the drum: wanted while you are engaged; pump() starts it on the bus once there is one (after a mute, the silent sandbox, the first gesture)
     startDrum() { if (drumWant) return; drumWant = true; if (LOG.on) rec(26, 0, 0); const b = bus(); if (b) SND.startDrum(b); },
     stopDrum() { if (LOG.on && drumWant) rec(27, 0, 0); drumWant = false; for (const b of [live, qa && qa.b]) if (b) SND.stopDrum(b); },
     drumOn() { return drumWant; },
     // once per sim tick and per frame: the drum's lookahead and the cue reap (both on the audio clock)
-    pump() { const b = qa ? qa.b : live; if (!b) return; const now = T(b); reap(b, now); murmurAM(b, now); if (drumWant && !b.drum.on && bus() === b) SND.startDrum(b); if (b.drum.on && (qa || (!silent && !muted))) pumpDrum(b, now); },
+    pump() { if (ctx && !qa && C) watchdog(performance.now()); const b = qa ? qa.b : live; if (!b) return; const now = T(b); reap(b, now); murmurAM(b, now); if (drumWant && !b.drum.on && bus() === b) SND.startDrum(b); if (b.drum.on && (qa || (!silent && !muted && !plat))) pumpDrum(b, now); },
     // QA (PS.selfTest "audio"): on = true swaps in an OfflineAudioContext bus and the clock nowFn() (sim seconds) for gates and scheduling;
     // on = false disconnects that bus and restores the live one. Returns false when the browser has no OfflineAudioContext.
     qa(on, nowFn) {
@@ -377,7 +420,7 @@
     // P2 ?debug=1 mixer: mute a category (on = false) or not; the master volume (0..1). Neither is persisted.
     mix(cat, on) { if (!(cat in MUTE)) return false; MUTE[cat] = on ? 0 : 1; if (live) live.cat[cat].gain.setTargetAtTime(on ? 1 : 0, live.c.currentTime, 0.02); return true; },
     mixState() { const o = {}; for (const k of CATS) o[k] = !MUTE[k]; o.volume = vol; return o; },
-    volume(v) { vol = Math.max(0, Math.min(1, +v || 0)); if (live) live.master.gain.setTargetAtTime(C.master * vol, live.c.currentTime, 0.02); return vol; },
+    volume(v) { vol = Math.max(0, Math.min(1, +v || 0)); if (live) masterTo(live, false); return vol; },
     // the ?debug=1 readout: the limiter's gain reduction now (dB) and the voices sounding (lanes mid-envelope, live cues, the drum)
     meter() { const b = live; if (!b) return null; const t = T(b); let n = b.cues + (b.muLvl > 0 ? 1 : 0) + (b.meLvl > 0 ? 1 : 0); for (const L of [b.hitT, b.hitC, b.dieT, b.dieN, b.rec, b.kick, b.tick]) if (L.free > t) n++;
       return { red: b.lim ? +b.lim.reduction.toFixed(2) : 0, voices: n, cues: b.cues, murmur: +b.muLvl.toFixed(3), melee: +b.meLvl.toFixed(3) }; },

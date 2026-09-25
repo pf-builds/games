@@ -752,6 +752,10 @@
     "dprP90Ms": 20,
     "dprHoldSeconds": 3,
     "dprWindow": 60,
+    "rafP90Ms": 45,
+    "dprGraceSeconds": 2,
+    "dprRememberDays": 7,
+    "fontWaitMs": 1500,
     "ghostSeconds": 8,
     "flySeconds": 0.9,
     "surrenderSeconds": 0.25,
@@ -780,6 +784,10 @@
     "nodeCap": 64,
     "reapPad": 0.25,
     "minDuck": 0.2,
+    "duckMs": 50,
+    "watchdogMs": 1000,
+    "rebuildAfter": 2,
+    "rebuildGapMs": 300,
     "hit": { "perSec": 8, "energy": 6, "minLevel": 0.3, "jitter": 0.35, "tonePeak": 0.16, "toneDur": 0.1, "clickPeak": 0.07, "clickHz": [1250, 1850], "clickDur": 0.012, "clickLp": 2600 },
     "die": { "perSec": 4, "energy": 3, "minLevel": 0.3, "jitter": 0.35, "tonePeak": 0.18, "toneDur": 0.2, "tailDb": -18, "tailDur": 0.03, "tailHz": 900 },
     "melee": { "max": 0.1, "full": 400, "k0": 8, "hz": 450, "q": 0.7, "tau": 0.6, "every": 0.1 },
@@ -2894,6 +2902,26 @@
       15,
       240
     ],
+    "polish.rafP90Ms": [
+      "ms between frames (p90) for the second DPR trigger, after the first input only (M1)",
+      34,
+      200
+    ],
+    "polish.dprGraceSeconds": [
+      "s after a match start or a visible-tab return with no perf step (M1)",
+      0,
+      10
+    ],
+    "polish.dprRememberDays": [
+      "days a stepped-down tier is remembered in ps.perf (M1)",
+      0,
+      60
+    ],
+    "polish.fontWaitMs": [
+      "ms boot waits for the self-hosted fonts before the first frame (M1)",
+      0,
+      5000
+    ],
     "polish.ghostSeconds": [
       "s of the onboarding finger / cursor pulse",
       0,
@@ -3007,6 +3035,10 @@
     "audio.cueVoices": ["cue voices alive at once (a full pool drops the cue)", 4, 64],
     "audio.reapPad": ["s past a cue's stop time before the reap disconnects it (if onended never came)", 0.05, 2],
     "audio.minDuck": ["smallest gain a cue plays at under the ceiling (quieter: dropped)", 0, 1],
+    "audio.duckMs": ["ms of the master-gain ramp for an ad or a hidden tab (M1)", 5, 500],
+    "audio.watchdogMs": ["ms of visible wall time between frozen-clock checks (M1)", 250, 5000],
+    "audio.rebuildAfter": ["failed gestures before the context is closed and rebuilt (M1)", 1, 5],
+    "audio.rebuildGapMs": ["ms between gestures for each to count as a failed try (M1)", 0, 2000],
     "audio.hit.perSec": ["hit sounds per second at most (any agent, any team; the spacing is 1 / perSec +- jitter)", 1, 16],
     "audio.hit.energy": ["full-level hits' worth of energy (level squared) per second at most", 0.5, 16],
     "audio.hit.minLevel": ["quietest level a hit plays at under its energy budget (quieter: skipped)", 0, 1],

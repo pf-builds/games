@@ -12,6 +12,7 @@
   const capParam = QS.get("cap"); // ?cap=touch|desktop forces an agent cap (the harness runs both)
   const POSTER = QS.get("poster") === "1"; // ?poster=1 stages the arcade card / portal cover scene (M7): no HUD, no fog, the logo only
   const fixtureParam = QS.get("fixture"); // ?fixture=pass64|pass128|ambush|flipflop|cliff runs a QA fixture live instead of the title
+  const dprParam = QS.has("dpr") && isFinite(+QS.get("dpr")) && +QS.get("dpr") >= 1 ? +QS.get("dpr") : 0; // ?dpr=1.5|1 pins the DPR tier (M1 QA: no stepping, nothing remembered)
   let NOFOG = QS.get("nofog") === "1"; // ?nofog=1 renders everything (v1-style gating) while the fog data model keeps running; ?debug=1 toggles it live (M7)
 
   function mulberry32(a) {
@@ -59,6 +60,7 @@
     noise: mkNoise(), crown: mkCrown(), pile: mkPile(), scent: mkScent(), relaxUntil: -1e9, torches: false, aiPlayer: false, // M4: rivals and match (SPEC-v2 §7, §9)
     aiCost: { ms: 0, thinks: 0, ticks: 0, max: 0 }, // AI think script time (the < 0.1 ms per tick gate)
     dprCap: 2, zDpr: 1, dprHot: 0, scriptP90: 0, // M7: adaptive DPR tier, the zoom table's DPR, seconds over the p90 line, the live p90 script ms
+    rafHot: 0, rafP90: 0, dprGrace: 0, dprPin: false, capLow: false, hadInput: false, perfSteps: [], sessionMatches: 0, fontsOk: null, // M1 (SPEC-v3 §5.5): the rAF-interval trigger, the grace window (wall ms), ?dpr=, the agent-cap lever, first input seen, matches started this session
     objs: [], bandits: [], spT: 0, // M6 spoils (src/spoils.js): every objective, the bandit camps among them (never in S.teams), the trickle-chest timer
   };
   if (S.debug || POSTER) window.PSS = S; // (the harness reads the staged poster scene through it too)
@@ -72,10 +74,19 @@
   let SCR = null; // screens (src/title.js): the painted title, win and lose staging (M7)
 
   // ---------------------------------------------------------------- setup
-  const portal = (ev) => (PS.portal ? PS.portal.call(ev) : Promise.resolve()); // src/portal.js: a no-op unless ?portal=crazygames|poki
+  const portal = (ev, arg) => (PS.portal ? PS.portal.call(ev, arg) : Promise.resolve()); // src/portal.js: a no-op without a portal SDK
+  const store = () => PS.portal.store; // M1: localStorage behind try/catch, or the portal's own storage (src/portal.js)
+  // the UI fonts are self-hosted (SPEC-v3 §5.1): wait for both faces, at most polish.fontWaitMs, so the first canvas labels never draw in the
+  // fallback face (a boot wait, not game state; S.fontsOk records whether both loaded in time)
+  function fontsReady(ms) {
+    const F = document.fonts; if (!F || !F.load) return Promise.resolve();
+    const both = Promise.all([F.load('800 22px "Baloo 2"'), F.load("800 12px Nunito")]).then(() => { S.fontsOk = F.check('800 22px "Baloo 2"') && F.check("800 12px Nunito"); }, () => { S.fontsOk = false; });
+    return Promise.race([both, new Promise((r) => setTimeout(r, ms))]);
+  }
   async function boot() {
+    if (PS.portal) PS.portal.onMute = (m) => { PS.audio.platformMute(m); syncSound(); }; // a platform mute overrides the M key and the sound button
     try { await portal("init"); } catch (e) {} portal("loadingStart");
-    const res = await fetch("config.json?v=33");
+    const res = await fetch("config.json?v=34");
     S.cfg = await res.json(); PS.audio.configure(S.cfg.audio);
     S.spr = PS.buildSprites(S.cfg);
     SPL = PS.Spoils(spoilsHooks()); SCR = PS.Screens(S.cfg);
@@ -89,12 +100,16 @@
     PS.selfTest = selfTest; PS.fight = fight; PS.simMatch = simMatch; PS.bench = bench; PS.replay = replay; // QA hooks, always on and side-effect free (see QA section)
     PS.debugDropCaches = debugDropCaches; PS.cacheReport = cacheReport; PS.recheckCaches = recheckCaches; PS.cacheProbe = cacheProbe;
     PS.fixture = fixture; PS.clashRead = clashRead; PS.fogMatch = fogMatch; PS.audioScene = audioScene;
+    perfLoad();
     resize();
     window.addEventListener("resize", resizeSoon);
     if (S.debug) document.body.classList.add("debug");
     bindInput();
     bindUI();
     if (fixtureParam && FIXTURES[fixtureParam]) startFixtureLive(fixtureParam); else newGame(true);
+    PS.fog.recover(); // M1: the fog mask is put before the first frame. v2 relied on the load's pageshow landing after bindInput (a slow Google
+    // Fonts request made sure of it); with local fonts the title's cache probe found the mask blank and re-baked every chunk 1.3 s in
+    await fontsReady(S.cfg.polish.fontWaitMs);
     schedule(); portal("loadingStop");
     if (S.debug || POSTER) { // (poster mode stages its scene with the same sim hooks)
       // hidden-tab fallback clock: rAF starves there, and only there (M1 critic MAJOR-1: a visible tab's stall must drop time, never
@@ -221,7 +236,7 @@
       S.agents.push(ag);
     }
   }
-  const capFor = () => (capParam === "touch" || (capParam !== "desktop" && S.input.touch) ? S.cfg.spawn.touchAgentCap : S.cfg.spawn.agentCap);
+  const capFor = () => (capParam === "touch" || (capParam !== "desktop" && (S.input.touch || S.capLow)) ? S.cfg.spawn.touchAgentCap : S.cfg.spawn.agentCap); // S.capLow: the last perf lever (M1)
 
   // newGame(attract, { seed, keepMap, map }): seed from opts, else ?seed=, else the clock. The map is seeded by S.rng's first draw.
   function newGame(attract, opts) {
@@ -322,7 +337,7 @@
     recount();
     for (let i = 1; i < S.teams.length; i++) { const t = S.teams[i]; t.pcx = t.cx; t.pcy = t.cy; }
     fogStampAll(); // every team sees its start before the first frame
-    if (!sandbox) S.zDpr = S.dpr; // the zoom steps are re-quantised for the DPR tier at match start only (SPEC-v2 §13)
+    if (!sandbox) { S.zDpr = S.dpr; S.dprGrace = performance.now() + S.cfg.polish.dprGraceSeconds * 1000; } // the zoom steps are re-quantised for the DPR tier at match start only (SPEC-v2 §13); M1: no perf step in the chunk-bake grace
     S.cam.x = S.teams[1].cx; S.cam.y = S.teams[1].cy; S.camS = mkCamS(); zoomRule(S.teams[1].count, 0, true);
     S.teams[1].tx = S.teams[1].cx; S.teams[1].ty = S.teams[1].cy;
     if (!sandbox) { groundInvalidate(m); minimapBake(true); }
@@ -1149,7 +1164,7 @@
     if (fled && loser.ai) { loser.regroupUntil = S.t + RM.escapeSeconds + RM.regroupSeconds; loser.fleeFrom = winner.id; loser.thinkT = 0; }
     S.lastRout = { t: +S.t.toFixed(3), loser: loser.id, winner: winner.id, group: n, flipped, fled, scattered, outside: loserBefore - n, got: got.slice(), loserBefore, winnerBefore,
       cx: Math.round(cx), cy: Math.round(cy), farFlip: +farFlip.toFixed(1), minFlipX: minFlipX === Infinity ? null : Math.round(minFlipX) };
-    if (winner.isPlayer) { if (!S.stats.routs && !sandbox) portal("happytime"); S.stats.routs++; PS.audio.rout(true); banner(scattered && !got[1] ? "ROUTED: " + scattered + " SCATTER" : "+" + got[1] + " JOIN YOU" + (fled ? " · " + fled + " FLED" : ""), winner.color, 2.6, winner.id, 2, "join"); S.shake = 0.35; }
+    if (winner.isPlayer) { if (!S.stats.routs && !sandbox) portal("happytime", "rout"); S.stats.routs++; PS.audio.rout(true); banner(scattered && !got[1] ? "ROUTED: " + scattered + " SCATTER" : "+" + got[1] + " JOIN YOU" + (fled ? " · " + fled + " FLED" : ""), winner.color, 2.6, winner.id, 2, "join"); S.shake = 0.35; }
     else if (loser.isPlayer) { S._routedBy = winner.name; S.relaxUntil = S.t + cfg.ai.relaxSeconds; /* relax window: no rival starts a hunt on you (SPEC-v2 §7) */ PS.audio.rout(false); S.shake = 0.5; if (flipped + scattered < loserBefore) banner(fled ? "SCATTERED: " + fled + " escaped" : "-" + (flipped + scattered) + " JOINED " + winner.name.toUpperCase(), "#FF7A6E", 2.4, 0, 2); }
     else if (playerSees(cx, cy)) { banner(loser.name.toUpperCase() + " routed by " + winner.name, winner.color, 2, winner.id, 0); if (fxOk(cx, cy)) PS.audio.rout(false); }
     else clashPing(cx, cy, true); // a rout you cannot see: no banner, it folds into the clash ping (SPEC-v2 §5)
@@ -1484,7 +1499,7 @@
   // changes only when the raw zoom passes a midpoint by camera.hysteresis, and eases over camera.ease seconds. now: jump to the step.
   const stepCache = {};
   function zoomSteps() {
-    const C = S.cfg.camera, hi = S.zDpr >= 2, lo = S.input.touch ? C.zoomMinTouch : C.zoomMin, key = (hi ? "2:" : "1:") + lo;
+    const C = S.cfg.camera, hi = S.zDpr >= 2 || S.input.touch, lo = S.input.touch ? C.zoomMinTouch : C.zoomMin, key = (hi ? "2:" : "1:") + lo; // M1: a touch device keeps the DPR-2 table at every tier (a perf tier never changes vision)
     return stepCache[key] || (stepCache[key] = (() => { const a = (hi ? C.steps.dpr2 : C.steps.dpr1).filter((z) => z >= lo - 1e-9 && z <= C.zoomMax + 1e-9); return a.length ? a : [1]; })());
   }
   function zoomRule(n, dt, now) {
@@ -1557,7 +1572,7 @@
   }
   function finishEnd() {
     if (sandbox) return;
-    const { won, why } = S.pendingEnd; S.pendingEnd = null; portal("gameplayStop"); if (won) portal("happytime");
+    const { won, why } = S.pendingEnd; S.pendingEnd = null; portal("gameplayStop"); if (won) portal("happytime", "win");
     S.endT0 = performance.now(); if (!won && SCR) { draw(); SCR.loseSnap(canvas); } // the lose screen's one cached desaturation pass of this frame (drawn now: the dawn has lifted the fog)
     {
       S.mode = won ? "win" : "lose";
@@ -1574,11 +1589,11 @@
   // the records panel on the title (SPEC-v2 §8): best peak, wins and fastest win per difficulty in one localStorage key, every access in
   // try/catch (a private window or blocked storage just shows dashes). Sandboxes and all-AI QA matches never write it.
   const REC_KEY = "ps.records";
-  function readRecords() { try { const o = JSON.parse(localStorage.getItem(REC_KEY) || "{}"); return o && typeof o === "object" ? o : {}; } catch (e) { return {}; } }
+  function readRecords() { try { const o = JSON.parse(store().getItem(REC_KEY) || "{}"); return o && typeof o === "object" ? o : {}; } catch (e) { return {}; } }
   function saveRecord(won, peak, secs) {
     if (sandbox || S.aiPlayer || S.attract) return; const R = readRecords(), d = R[S.difficulty] || (R[S.difficulty] = { peak: 0, wins: 0, fastest: 0 });
     if (peak > d.peak) d.peak = peak; if (won) { d.wins++; if (!d.fastest || secs < d.fastest) d.fastest = Math.round(secs); }
-    try { localStorage.setItem(REC_KEY, JSON.stringify(R)); } catch (e) {} renderRecords();
+    try { store().setItem(REC_KEY, JSON.stringify(R)); } catch (e) {} renderRecords();
   }
   function renderRecords() {
     const el = $("records"); if (!el || !S.cfg) return; const R = readRecords(), ks = Object.keys(S.cfg.difficulty), f = (s) => (s ? Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0") : "-");
@@ -1609,19 +1624,45 @@
       if (S.mode === "play") updateHUD();
     } else S.acc = 0;
     draw(); PS.audio.pump(); // cues on the end screens and the title are reaped too
-    if (!fromFallback) frameCost(performance.now() - wall, Math.min(raw, 0.1));
+    if (!fromFallback) frameCost(performance.now() - wall, Math.min(raw, 0.1), raw * 1000);
   }
   // adaptive DPR (SPEC-v2 §13): the p90 of the last polish.dprWindow frames' script ms (sim ticks + draw); over polish.dprP90Ms for
   // polish.dprHoldSeconds of frames steps the canvas down one tier of polish.dprTiers (2 -> 1.5 -> 1), never up. ?debug=1 shows all three.
-  const FCS = new Float32Array(240); let FCT = null, fcsN = 0, dbgT = 0;
-  function frameCost(ms, dt) {
-    const P = S.cfg.polish, n = Math.min(P.dprWindow, FCS.length); FCS[fcsN % n] = ms; fcsN++;
-    if (fcsN >= n && fcsN % 15 === 0) { if (!FCT || FCT.length !== n) FCT = new Float32Array(n); for (let i = 0; i < n; i++) FCT[i] = FCS[i]; FCT.sort(); S.scriptP90 = FCT[Math.floor(0.9 * (n - 1))]; }
-    if ((S.mode === "play" || S.mode === "title") && fcsN >= n) {
+  // M1 (SPEC-v3 §5.5, R4 §5): a second trigger, the p90 rAF interval over polish.rafP90Ms (GPU and compositor cost script ms misses on an
+  // iPhone), counted only after the first input (a cross-origin iframe runs at 30 fps until then) and never within polish.dprGraceSeconds
+  // of a match start or a return to a visible tab (chunk re-bakes). Levers in order: the DPR tier, then the agent cap (S.capLow: the next
+  // match runs at spawn.touchAgentCap; never mid-match). polish.effectsTier, the first lever in the spec, is in LATER. The tier is remembered
+  // for polish.dprRememberDays (key ps.perf); ?dpr= pins it and neither steps nor remembers.
+  const FCS = new Float32Array(240), RIS = new Float32Array(240); let FCT = null, RIT = null, fcsN = 0, dbgT = 0;
+  function frameCost(ms, dt, iv) {
+    const P = S.cfg.polish, n = Math.min(P.dprWindow, FCS.length); FCS[fcsN % n] = ms; RIS[fcsN % n] = iv; fcsN++;
+    if (fcsN >= n && fcsN % 15 === 0) {
+      if (!FCT || FCT.length !== n) { FCT = new Float32Array(n); RIT = new Float32Array(n); }
+      for (let i = 0; i < n; i++) { FCT[i] = FCS[i]; RIT[i] = RIS[i]; } FCT.sort(); RIT.sort(); S.scriptP90 = FCT[Math.floor(0.9 * (n - 1))]; S.rafP90 = RIT[Math.floor(0.9 * (n - 1))];
+    }
+    if ((S.mode === "play" || S.mode === "title") && fcsN >= n && !S.dprPin && performance.now() >= S.dprGrace) {
       S.dprHot = S.scriptP90 > P.dprP90Ms ? S.dprHot + dt : 0;
-      if (S.dprHot >= P.dprHoldSeconds) { let next = 0; for (const d of P.dprTiers) if (d < S.dpr - 1e-6 && d > next) next = d; if (next > 0) { S.dprCap = next; resize(); } S.dprHot = 0; fcsN = 0; }
-    } else S.dprHot = 0;
+      S.rafHot = S.hadInput && S.rafP90 > P.rafP90Ms ? S.rafHot + dt : 0;
+      if (S.dprHot >= P.dprHoldSeconds || S.rafHot >= P.dprHoldSeconds) { perfStep(S.dprHot >= P.dprHoldSeconds ? "script" : "raf"); S.dprHot = S.rafHot = 0; fcsN = 0; }
+    } else S.dprHot = S.rafHot = 0;
     if (S.debug && performance.now() - dbgT > 500) debugLine();
+  }
+  function perfStep(why) {
+    let next = 0; for (const d of S.cfg.polish.dprTiers) if (d < S.dpr - 1e-6 && d > next) next = d;
+    if (next > 0) { S.dprCap = next; resize(); } else if (!S.capLow) S.capLow = true; else return;
+    if (S.perfSteps.length < 8) S.perfSteps.push({ why, dpr: S.dprCap, capLow: S.capLow, at: Math.round(performance.now()) });
+    try { store().setItem("ps.perf", JSON.stringify({ dpr: S.dprCap, cap: S.capLow ? 1 : 0, t: Date.now() })); } catch (e) {}
+  }
+  // the remembered tier: { dpr, cap } if the stored record is a known tier and younger than polish.dprRememberDays, else null (pure: selfTest)
+  function perfParse(str, now) {
+    let o = null; try { o = JSON.parse(str || "null"); } catch (e) { return null; }
+    if (!o || typeof o !== "object" || !(now - o.t >= 0 && now - o.t < S.cfg.polish.dprRememberDays * 86400000) || S.cfg.polish.dprTiers.indexOf(o.dpr) < 0) return null;
+    return { dpr: o.dpr, cap: !!o.cap };
+  }
+  function perfLoad() {
+    if (dprParam) { S.dprCap = dprParam; S.dprPin = true; return; }
+    const raw = store().getItem("ps.perf"); if (raw == null) return; const o = perfParse(raw, Date.now());
+    if (o) { S.dprCap = o.dpr; S.capLow = o.cap; } else store().removeItem("ps.perf"); // expired or unreadable: start fresh
   }
   // ?debug=1 readout (SPEC-v2 §13): fps, p90 script ms per frame, DPR tier, agents, zoom, seed, fog ms, and a live nofog toggle (one sitting on
   // a phone gives the fog A/B)
@@ -1630,7 +1671,7 @@
     if (!el.firstChild) { el.innerHTML = "<span></span><br><button id='dbg-nofog'></button>"; $("dbg-nofog").onclick = (e) => { e.stopPropagation(); NOFOG = !NOFOG; debugLine(); }; }
     const fs = PS.flow.stats, tier = S.cfg.polish.dprTiers.indexOf(S.dprCap);
     const au = PS.audio.meter(); // P2: the limiter's gain reduction now and the voices sounding (lanes mid-envelope, live cues, the two beds)
-    el.firstChild.textContent = "fps " + S.fps + "  p90 " + S.scriptP90.toFixed(1) + " ms  DPR " + S.dpr + (tier > 0 ? " (tier " + (tier + 1) + ")" : "") + "\nagents " + S.agents.length + "/" + S.cap + "  zoom " + S.cam.zoom.toFixed(2) + "  fog " + fogLastMs.toFixed(2) + " ms\nseed " + S.seed + "  fields " + (fs ? fs.rebuilds : "-") + (S.fixture ? "  " + S.fixture.name : "") +
+    el.firstChild.textContent = "fps " + S.fps + "  p90 " + S.scriptP90.toFixed(1) + " ms  raf " + S.rafP90.toFixed(0) + " ms  DPR " + S.dpr + (tier > 0 ? " (tier " + (tier + 1) + ")" : "") + (S.dprPin ? " pinned" : "") + (S.capLow ? " capLow" : "") + "\nagents " + S.agents.length + "/" + S.cap + "  zoom " + S.cam.zoom.toFixed(2) + "  fog " + fogLastMs.toFixed(2) + " ms\nseed " + S.seed + "  fields " + (fs ? fs.rebuilds : "-") + (S.fixture ? "  " + S.fixture.name : "") +
       "\naudio " + (au ? "lim " + au.red.toFixed(1) + " dB  voices " + au.voices + " (cues " + au.cues + ")" : "off (no gesture yet)");
     $("dbg-nofog").textContent = NOFOG ? "fog: OFF (tap for on)" : "fog: on (tap for off)";
   }
@@ -1707,6 +1748,10 @@
   const LW = { x0: 0, y0: 0, x1: 0, y1: 0 }; let tagMask = 0, ringMask = 0, arrowMask = 0, miniMask = 0;
   const PVN = new Int32Array(9), PVX = new Float64Array(9), PVY = new Float64Array(9), PVMY = new Float64Array(9);
   const snap2 = (v) => ((v * 0.5) | 0) * 2; // the 2 world px art grid (one art pixel)
+  // M1 (SPEC-v3 §5.5): world sprites snap to the art grid, then to the device pixel grid at the live DPR (SNK device px per world px this
+  // frame). Where the art grid already lands on whole device px (2 x SNK an integer: DPR 2 at every zoom step) snapD is exactly snap2.
+  let SNK = 2, SNX = true;
+  const snapD = (v) => (SNX ? snap2(v) : Math.round(snap2(v) * SNK) / SNK);
   let agentsDrawn = 0; // agents drawn in the last frame (the one-draw-per-agent check)
   // banner bearers (SPEC-v2 §11): one per swarm at its centroid (a rival's: the centroid of what you see of it, and only where you see
   // that point), four size tiers at art.bannerTiers. Per team this frame: pole base BX/BY, pennant top BTOP, tier, drawn (BON). Name tags,
@@ -1728,7 +1773,7 @@
   }
   function drawBanner(e) {
     const i = e.tm, b = S.teams[i].ban, fr = ((((performance.now() / S.cfg.art.bannerFrameMs) | 0) + i) % 3);
-    ctx.drawImage(b.cv, fr * b.bw, BTIER[i] * b.bh, b.bw, b.bh, snap2(e.x) - b.px * 2, snap2(e.y) - b.py * 2, b.bw * 2, b.bh * 2);
+    ctx.drawImage(b.cv, fr * b.bw, BTIER[i] * b.bh, b.bw, b.bh, snapD(e.x) - b.px * 2, snapD(e.y) - b.py * 2, b.bw * 2, b.bh * 2);
     SPL.drawHorn(ctx, S.teams[i], e.x, BTOP[i]); // Horn I-II: a horn on the banner bearer (M6)
   }
   function draw() {
@@ -1746,13 +1791,14 @@
     // camera and shake rounded to device pixels
     const k = z * dpr, ox = Math.round((S.vw / 2 + shx) * dpr - S.cam.x * k), oy = Math.round((S.vh / 2 + shy) * dpr - S.cam.y * k);
     ctx.setTransform(k, 0, 0, k, ox, oy);
+    SNK = k; SNX = Number.isInteger(2 * k); ctx.imageSmoothingEnabled = k < 1; // M1: under 1 device px per world px, a stable soft look instead of sparkle (SPEC-v3 §5.5)
     const x0 = -ox / k, y0 = -oy / k, x1 = x0 + (S.vw * dpr) / k, y1 = y0 + (S.vh * dpr) / k; LW.x0 = x0; LW.y0 = y0; LW.x1 = x1; LW.y1 = y1;
 
     // ground (baked chunks), plus the cache probe that heals a lost backing store without any browser event
     drawGround(x0, y0, x1, y1);
     cacheProbe(x0, y0, x1, y1, false);
     // camps: under fog, dirt only where you have seen a camp (camp dirt is a sprite, never baked)
-    for (const c of S.camps) if ((!gate || c.kn[1] >= 0) && c.x > x0 - 40 && c.x < x1 + 40 && c.y > y0 - 30 && c.y < y1 + 30) { const im = spr.camps[(((c.x | 0) * 31 + (c.y | 0) * 17) >>> 2) & 3]; ctx.drawImage(im, snap2(c.x) - im.width, snap2(c.y) - im.height, im.width * 2, im.height * 2); }
+    for (const c of S.camps) if ((!gate || c.kn[1] >= 0) && c.x > x0 - 40 && c.x < x1 + 40 && c.y > y0 - 30 && c.y < y1 + 30) { const im = spr.camps[(((c.x | 0) * 31 + (c.y | 0) * 17) >>> 2) & 3]; ctx.drawImage(im, snapD(c.x) - im.width, snapD(c.y) - im.height, im.width * 2, im.height * 2); }
     SPL.drawGround(ctx, gate, x0, y0, x1, y1); // M6: bandit camp dirt and the have/need rings of villages and heavy chests (last-seen under fog)
 
     // visibility and the fog.fadeSeconds fade (seenA) of every agent that is not yours, the per-frame view of each rival (PV*), and the draw
@@ -1794,7 +1840,7 @@
     // always in cursor-follow when the route runs over flow.routeDrawRatio x the straight line
     if (pl && pl.count > 0 && S.mode === "play") {
       const d = Math.hypot(pl.tx - pl.cx, pl.ty - pl.cy);
-      if (d > 30) { ctx.globalAlpha = 0.85; ctx.drawImage(spr.marker, snap2(pl.tx) - 6, snap2(pl.ty) - 20, spr.marker.width * 2, spr.marker.height * 2); ctx.globalAlpha = 0.5; ctx.strokeStyle = pl.color; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(pl.tx, pl.ty, 6 + 2 * Math.sin(S.t * 6), 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; }
+      if (d > 30) { ctx.globalAlpha = 0.85; ctx.drawImage(spr.marker, snapD(pl.tx) - 6, snapD(pl.ty) - 20, spr.marker.width * 2, spr.marker.height * 2); ctx.globalAlpha = 0.5; ctx.strokeStyle = pl.color; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(pl.tx, pl.ty, 6 + 2 * Math.sin(S.t * 6), 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; }
       const f = pl.route && PS.flow.fieldFor(1);
       if (f && f.ok) {
         const c0 = PS.flow.cellFor(pl.ax, pl.ay), len = PS.flow.pathCell(f, c0), straight = Math.hypot(pl.tx - pl.ax, pl.ty - pl.ay), pv = S.input.preview;
@@ -1820,7 +1866,7 @@
       ctx.globalAlpha = 0.4; ctx.fillStyle = pu.color; ctx.beginPath(); ctx.arc(p.x, p.y, 15, 0, Math.PI * 2); ctx.fill();
       ctx.globalAlpha = 0.7 * (1 - pulse); ctx.strokeStyle = pu.color; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(p.x, p.y, 10 + pulse * 26, 0, Math.PI * 2); ctx.stroke();
       ctx.globalAlpha = 1;
-      ctx.drawImage(spr.shadow, snap2(p.x) - 8, snap2(p.y) + 4, 16, 6);
+      ctx.drawImage(spr.shadow, snapD(p.x) - 8, snapD(p.y) + 4, 16, 6);
       ctx.drawImage(pu.icon, p.x - 12, p.y - 16 + bob, 24, 24);
     }
 
@@ -1839,7 +1885,7 @@
         if (e.pr) { SPL.drawProp(ctx, e, gate); continue; }
         if (e.v < 0) e.v = e.kind === 2 ? ((((e.x | 0) * 13 + (e.y | 0) * 7) >>> 3) & 1) : PS.ground.biome(S.map, e.x, e.y, A) > A.highAbove ? 2 : e.kind; // render variant: pines on highland
         const im = e.kind === 2 ? spr.rocks[e.v] : spr.trees[e.v], cv = im.cv;
-        ctx.drawImage(cv, snap2(e.x) - im.ax * 2, snap2(e.y) + 6 - im.ay * 2, cv.width * 2, cv.height * 2);
+        ctx.drawImage(cv, snapD(e.x) - im.ax * 2, snapD(e.y) + 6 - im.ay * 2, cv.width * 2, cv.height * 2);
         continue;
       }
       const wave = e.wT > S.t, wt = wave ? e.wTeam : e.team; // the rout wave: still the loser's colour, hands up, until its turn (M7, render only)
@@ -1847,7 +1893,7 @@
       const moving = e.vx * e.vx + e.vy * e.vy > 120;
       const fi = wave ? 3 + (left ? 4 : 0) : (e.lunge > 0.08 ? 2 : moving ? ((e.ph | 0) % 2) : 3) + (left ? 4 : 0) + (e.fl > flashMin ? 8 : 0);
       let sc = 1; if (e.pop > 0 && e.pop < 0.3) sc = 1 + 0.55 * (1 - e.pop / 0.3);
-      const k2 = 2 * sc, gx = sc === 1 ? snap2(e.x) : e.x, gy = sc === 1 ? snap2(e.y) : e.y, dx = gx - (left ? set.axL : set.axR) * k2, dy = gy + 2 - set.ay * k2;
+      const k2 = 2 * sc, gx = sc === 1 ? snapD(e.x) : e.x, gy = sc === 1 ? snapD(e.y) : e.y, dx = gx - (left ? set.axL : set.axR) * k2, dy = gy + 2 - set.ay * k2;
       if (e.team !== 1) e.drawnF = fid;
       nAg++;
       if (e.escapeT > 0) { ctx.globalAlpha = al * (0.6 + 0.25 * ((e.ph | 0) & 1)); ctx.drawImage(set.atlas, set.sx[fi], set.sy[fi], FWp, FHp, dx, dy, FWp * k2, FHp * k2); ctx.globalAlpha = al; ctx.fillStyle = PS.PAL.cream; ctx.fillRect(gx - 8, dy + 8, 2, 4); ctx.fillRect(gx + 6, dy + 8, 2, 4); ctx.globalAlpha = 1; continue; } // remnant: hands up, run
@@ -1955,7 +2001,7 @@
     }
 
     // screen-space overlays: edge markers (fog tells and off-screen rivals), banner, clash panel, joystick, debug line
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.imageSmoothingEnabled = false;
     if (S.mode === "play" && !S.attract && !S.result) drawEdges(); // (none once the match is decided: the dawn and the end screens)
     fp4 = performance.now() - f0; fogMs += fp4; fp3 += fp4; // fog JS: the stamps, the visibility pass, the fog pass, the tells, verdict marks and edge markers
     // banner (one at a time, pinned high)
@@ -2410,7 +2456,7 @@
       inp.keys[k] = true; if (S.mode === "play") portal("gameplayStart");
       if (MOVE_KEYS.includes(k)) { if (!inp.kbd) { inp.kx0 = inp.px; inp.ky0 = inp.py; } inp.kbd = true; inp.active = false; }
       if (k === " ") { e.preventDefault(); if (S.mode === "play") setHuddle(true); }
-      if (k === "p" || k === "Escape") { if (S.mode === "play") pause(); else if (S.mode === "pause") resume(); }
+      if (k === "p" || k === "Escape") { if (S.mode === "play") pause("user"); else if (S.mode === "pause") resume(); }
       if (k === "m") toggleSound();
       if (k === "1") setPace(0); if (k === "2") setPace(1);
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(k)) e.preventDefault();
@@ -2419,7 +2465,8 @@
       const k = e.key.length === 1 ? e.key.toLowerCase() : e.key; inp.keys[k] = false; if (k === " ") setHuddle(false);
       if (inp.kbd && MOVE_KEYS.includes(k) && !MOVE_KEYS.some((q) => inp.keys[q]) && S.mode === "play" && S.teams[1] && !inp.route.on) holdHere(S.teams[1]); // lifting the last key stops the swarm
     });
-    window.addEventListener("blur", () => { inp.keys = {}; setHuddle(false); joy.active = false; joy.id = -1; tp.active = false; inp.hud2 = -1; });
+    window.addEventListener("blur", () => { inp.keys = {}; setHuddle(false); joy.active = false; joy.id = -1; tp.active = false; inp.hud2 = -1; if (S.mode === "play" && !POSTER) pause("blur"); }); // M1: a click outside the portal iframe pauses (the swarm must not run on unseen)
+    window.addEventListener("pointerdown", () => { S.hadInput = true; }, true); window.addEventListener("keydown", () => { S.hadInput = true; }, true); // the rAF trigger waits for the first input (M1)
     const hb = $("t-huddle");
     hb.addEventListener("pointerdown", (e) => { e.preventDefault(); setHuddle(true); });
     hb.addEventListener("pointerup", () => setHuddle(false));
@@ -2427,7 +2474,7 @@
     hb.addEventListener("pointerleave", () => setHuddle(false));
     if ("ontouchstart" in window && !window.matchMedia("(pointer:fine)").matches) { inp.touch = true; document.body.classList.add("touch"); }
     layoutHUD();
-    document.addEventListener("visibilitychange", () => { if (document.hidden) { if (S.mode === "play") pause(); } else recheckCaches(); });
+    document.addEventListener("visibilitychange", () => { if (document.hidden) { if (S.mode === "play") pause("hidden"); } else { S.dprGrace = performance.now() + S.cfg.polish.dprGraceSeconds * 1000; recheckCaches(); } });
     for (const ev of ["gesturestart", "gesturechange", "dblclick"]) document.addEventListener(ev, (e) => e.preventDefault(), { passive: false }); // iOS: no pinch or double-tap zoom (user-scalable=no alone does not stop it)
     window.addEventListener("pageshow", () => recheckCaches());
     canvas.addEventListener("contextrestored", () => recheckCaches());
@@ -2435,23 +2482,25 @@
   function setHuddle(on) { if (S.input.huddle === on) return; S.input.huddle = on; $("t-huddle").classList.toggle("on", on); if (S.mode === "play") PS.audio.huddle(on); }
 
   function bindUI() {
-    let stored = null; try { stored = localStorage.getItem("ps.difficulty"); if (stored && S.cfg.difficulty[stored]) S.difficulty = stored; } catch (e) {}
+    let stored = null; try { stored = store().getItem("ps.difficulty"); if (stored && S.cfg.difficulty[stored]) S.difficulty = stored; } catch (e) {}
     { const R = readRecords(); S.firstEver = !stored && !Object.keys(R).length; }
     for (const row of document.querySelectorAll(".diffpick")) for (const k of Object.keys(S.cfg.difficulty)) {
       const b = document.createElement("button"); b.textContent = S.cfg.difficulty[k].label; b.dataset.k = k;
-      b.onclick = () => { S.difficulty = k; S.firstEver = false; try { localStorage.setItem("ps.difficulty", k); } catch (e) {} syncDifficulty(); PS.audio.click(); };
+      b.onclick = () => { S.difficulty = k; S.firstEver = false; try { store().setItem("ps.difficulty", k); } catch (e) {} syncDifficulty(); PS.audio.click(); };
       row.appendChild(b);
     }
     syncDifficulty(); renderRecords();
-    $("btn-play").onclick = () => startGame();
-    // PLAY AGAIN / TRY AGAIN await the portal's commercial break (a no-op without a portal), silent while it runs
-    const again = () => { if (S.adBusy) return; S.adBusy = true; PS.audio.setSilent(true); portal("commercialBreak").then(() => { S.adBusy = false; startGame(); }); };
+    // PLAY AGAIN / TRY AGAIN, and the title's PLAY once a match has been played this session, await the portal's commercial break (a no-op
+    // without a portal; SPEC-v3 §5.3). Never at the horn, on unpause, or before the first match. Sound ducks only while the ad really plays:
+    // onStart ramps the master gain to 0 (never ctx.suspend(), so iOS needs no new gesture), the promise's end ramps it back.
+    const again = () => { if (S.adBusy) return; S.adBusy = true; portal("commercialBreak", () => PS.audio.duck("ad", true)).then(() => { PS.audio.duck("ad", false); S.adBusy = false; startGame(); }); };
+    $("btn-play").onclick = () => { if (S.sessionMatches > 0) again(); else startGame(); };
     $("btn-again").onclick = again; $("btn-retry").onclick = again;
     $("btn-title-w").onclick = () => toTitle();
     $("btn-title-l").onclick = () => toTitle();
     $("btn-quit").onclick = () => toTitle();
     $("btn-resume").onclick = () => resume();
-    $("btn-pause").onclick = () => { if (S.mode === "play") pause(); };
+    $("btn-pause").onclick = () => { if (S.mode === "play") pause("user"); };
     $("btn-pace").onclick = $("btn-pace-pause").onclick = () => setPace((S.cfg.pace.indexOf(S.pace) + 1) % S.cfg.pace.length);
     for (const id of ["btn-sound", "btn-sound-title", "btn-sound-pause"]) $(id).onclick = () => toggleSound();
     syncSound();
@@ -2466,14 +2515,15 @@
   function syncMixer() { const m = PS.audio.mixState(), el = $("mixer"); if (!el) return; for (const b of el.querySelectorAll("button")) b.classList.toggle("off", !m[b.dataset.k]); el.querySelector("span").textContent = Math.round(m.volume * 100) + "%"; }
   function showOverlay(id) { document.querySelectorAll(".overlay").forEach((o) => o.classList.toggle("active", o.id === id)); }
   // the first-ever match (no stored difficulty, no records, nothing picked this visit) runs Easy silently; the end screens carry the picker
-  function startGame() { if (SCR) SCR.drop(); $("teams").classList.add("rumour"); if (S.firstEver) { S.firstEver = false; S.difficulty = "easy"; syncDifficulty(); } PS.audio.setSilent(false); PS.audio.unlock(); PS.audio.click(); portal("gameplayStop"); newGame(false); S.mode = "play"; S._hintFight = S._hintHud = S._hintRecruit = S._hintFog = false; S._hintRelic = S._hintRem = 0; S.fly = null; S.gained = false; S._routedBy = null; showOverlay(null); $("hud").classList.remove("hidden"); layoutHUD(); updateHUD(true); }
+  function startGame() { S.sessionMatches++; if (SCR) SCR.drop(); $("teams").classList.add("rumour"); if (S.firstEver) { S.firstEver = false; S.difficulty = "easy"; syncDifficulty(); } PS.audio.setSilent(false); PS.audio.unlock(); PS.audio.click(); portal("gameplayStop"); newGame(false); S.mode = "play"; S._hintFight = S._hintHud = S._hintRecruit = S._hintFog = false; S._hintRelic = S._hintRem = 0; S.fly = null; S.gained = false; S._routedBy = null; showOverlay(null); $("hud").classList.remove("hidden"); layoutHUD(); updateHUD(true); }
   function toTitle() { portal("gameplayStop"); if (SCR) SCR.drop(); PS.audio.stopDrum(); PS.audio.murmur(0); PS.audio.melee(0); S.mode = "title"; showOverlay("ov-title"); $("hud").classList.add("hidden"); setHuddle(false); newGame(true); }
-  function pause() { portal("gameplayStop"); S.mode = "pause"; PS.audio.stopDrum(); PS.audio.murmur(0); PS.audio.melee(0); showOverlay("ov-pause"); setHuddle(false); S.input.joy.active = false; S.input.joy.id = -1; S.input.tp.active = false; S.input.hud2 = -1; }
+  // reason "hidden" | "blur" | "user": CrazyGames gets no gameplayStop for focus loss (its platform handles that; src/portal.js)
+  function pause(reason) { portal("gameplayStop", reason || "user"); S.mode = "pause"; PS.audio.stopDrum(); PS.audio.murmur(0); PS.audio.melee(0); showOverlay("ov-pause"); setHuddle(false); S.input.joy.active = false; S.input.joy.id = -1; S.input.tp.active = false; S.input.hud2 = -1; }
   function resume() { S.mode = "play"; showOverlay(null); lastFrame = performance.now(); }
   function setPace(i) { S.pace = S.cfg.pace[i]; $("btn-pace").textContent = S.pace + "×"; $("btn-pace-pause").textContent = "SPEED " + S.pace + "×"; } // the top-bar button (desktop) and the pause menu's (phones)
-  function toggleSound() { PS.audio.setMuted(!PS.audio.isMuted()); syncSound(); }
+  function toggleSound() { if (!PS.audio.isPlatformMuted()) PS.audio.setMuted(!PS.audio.isMuted()); syncSound(); } // a platform mute wins (M1)
   function syncDifficulty() { for (const b of document.querySelectorAll(".diffpick button")) b.classList.toggle("sel", b.dataset.k === S.difficulty); }
-  function syncSound() { const m = PS.audio.isMuted(); for (const id of ["btn-sound", "btn-sound-title", "btn-sound-pause"]) $(id).classList.toggle("off", m); }
+  function syncSound() { const m = PS.audio.isMuted() || PS.audio.isPlatformMuted(); for (const id of ["btn-sound", "btn-sound-title", "btn-sound-pause"]) $(id).classList.toggle("off", m); }
 
   // ---------------------------------------------------------------- PS.vis / PS.ai: the fog's critic hooks (SPEC-v2 §5, §7, §13)
   // The harness bot plays fog-honest through rivals() and camps() (never PSS.teams positions); leakCheck() draws one frame and checks it;
@@ -3402,7 +3452,7 @@
     "encampments.heavy:a encampments.heavyPick2:n encampments.heavyRing:n encampments.heavyHold:n encampments.heavyDist.0:n encampments.heavyDist.1:n encampments.banditSizes:a encampments.banditCounts:a " +
     "encampments.banditMinPath:n encampments.banditLeash:n encampments.banditAggro:n encampments.banditHp:n encampments.banditDamage:n encampments.banditSpeed:n encampments.banditGap:n " +
     "encampments.objectGap:n encampments.campGap:n encampments.cheer:n encampments.scanTicks:n ai.objRelic:n ai.objVillage:n ai.objHeavy:n ai.objBandit:n ai.banditFeasible:n " +
-    "banner.minSeconds:n banner.queuedSeconds:n banner.staleSeconds:n banner.dropDepth:n combat.verdictRatio:n polish.dprTiers.0:n polish.dprTiers.1:n polish.dprTiers.2:n polish.dprP90Ms:n polish.dprHoldSeconds:n polish.dprWindow:n polish.ghostSeconds:n polish.flySeconds:n polish.surrenderSeconds:n polish.routWaveSeconds:n polish.hpBarMax:n polish.dustEvery:n polish.dustSpan:n polish.dustN:n polish.irisSeconds:n polish.confetti:n polish.bannerFall:n polish.posterSeed:n polish.posterMint:n polish.posterOrange:n polish.posterStep:n").split(" ");
+    "banner.minSeconds:n banner.queuedSeconds:n banner.staleSeconds:n banner.dropDepth:n combat.verdictRatio:n polish.dprTiers.0:n polish.dprTiers.1:n polish.dprTiers.2:n polish.dprP90Ms:n polish.dprHoldSeconds:n polish.dprWindow:n polish.rafP90Ms:n polish.dprGraceSeconds:n polish.dprRememberDays:n polish.fontWaitMs:n audio.duckMs:n audio.watchdogMs:n audio.rebuildAfter:n audio.rebuildGapMs:n polish.ghostSeconds:n polish.flySeconds:n polish.surrenderSeconds:n polish.routWaveSeconds:n polish.hpBarMax:n polish.dustEvery:n polish.dustSpan:n polish.dustN:n polish.irisSeconds:n polish.confetti:n polish.bannerFall:n polish.posterSeed:n polish.posterMint:n polish.posterOrange:n polish.posterStep:n").split(" ");
   const cfgGet = (path) => { let o = S.cfg; for (const k of path.split(".")) { if (o == null) return undefined; o = o[k]; } return o; };
   const typeOk = (v, t) => (t === "n" ? typeof v === "number" && isFinite(v) : t === "s" ? typeof v === "string" && v.length > 0 : t === "a" ? Array.isArray(v) && v.length > 0 : t === "b" ? typeof v === "boolean" : !!v && typeof v === "object");
   // PS.cfgOverride(patch) (SPEC-v2 §13, M8 sweeps): deep-merges patch into the live config in place, so every module holding a section sees
@@ -3699,9 +3749,48 @@
       bars: { flatMax: Q.flatMax, highMax: Q.highMax, noiseMax: Q.noiseMax }, simMs: r.scene.simMs };
     check("audio_render_mix", !r.scene.truncated && r.full.clipped === 0 && flat <= Q.flatMax && high <= Q.highMax && share <= Q.noiseMax, d);
   }
+  // M1 checks (SPEC-v3 §9). portal_log_shape: the log opens init, loadingStart, loadingStop; never the same event twice in a row; no
+  // gameplayStart before the first input. audio_hardening: a stub context driven through the gesture and watchdog code (a suspend recovers
+  // on the next gesture; two failed gestures at least audio.rebuildGapMs apart close and rebuild the context on the third; a quick double
+  // tap counts once; a frozen clock is kicked; the ad and hidden ducks take the master goal to 0 and back). dpr_touch_floor: a touch device
+  // keeps zoom 0.5 at DPR tiers 2, 1.5 and 1. dpr_tiers_pin_and_memory: ?dpr= pins the tier; the remembered tier parses, and expires after
+  // polish.dprRememberDays. fonts_self_hosted: both faces loaded and no stylesheet or font comes from another origin.
+  function portalTest(check) {
+    const L = PS.portal.log, dup = L.findIndex((e, i) => i > 0 && e === L[i - 1]);
+    check("portal_log_shape", L[0] === "init" && L[1] === "loadingStart" && L[2] === "loadingStop" && dup < 0 && (S.hadInput || L.indexOf("gameplayStart") < 0), { log: L.slice(0, 40), name: PS.portal.name, hadInput: S.hadInput, firstDouble: dup });
+    const AU = S.cfg.audio, mk = () => ({ state: "running", currentTime: 0, stuck: false, closed: false, resumes: 0, suspends: 0,
+      resume() { this.resumes++; if (!this.stuck && !this.closed) this.state = "running"; return Promise.resolve(); },
+      suspend() { this.suspends++; if (!this.closed) this.state = "suspended"; return Promise.resolve(); },
+      close() { this.closed = true; this.state = "closed"; return Promise.resolve(); } });
+    const H = PS.audio.hardenQA(mk), d = {};
+    try {
+      H.gesture(0); const c1 = H.ctx(); d.created = !!c1 && c1.state === "running";
+      c1.suspend(); H.gesture(1000); d.suspendRecovers = H.ctx() === c1 && c1.state === "running" && H.hd().rebuilds === 0;
+      H.gesture(1100); d.failsReset = H.hd().fails === 0;
+      c1.stuck = true; c1.state = "interrupted"; const g = AU.rebuildGapMs, t0 = 2000;
+      H.gesture(t0); H.gesture(t0 + g / 3); d.doubleTapOnce = H.hd().fails === 1; // the quick second tap is the same try
+      for (let i = 1; i < AU.rebuildAfter; i++) H.gesture(t0 + i * (g + 1)); d.stuckAfterTries = H.ctx() === c1 && H.hd().fails === AU.rebuildAfter;
+      H.gesture(t0 + AU.rebuildAfter * (g + 1) + g); const c2 = H.ctx(); d.rebuilt = c1.closed && c2 && c2 !== c1 && c2.state === "running" && H.hd().rebuilds === 1;
+      if (!document.hidden) { const w = AU.watchdogMs, t1 = 1e6; c2.currentTime = 5; H.watchdog(t1); H.watchdog(t1 + w / 2); const k0 = H.hd().kicks; H.watchdog(t1 + w); d.frozenKicked = H.hd().kicks === k0 + 1 && c2.suspends === 1; c2.currentTime = 6; H.watchdog(t1 + 2 * w); d.runningNotKicked = H.hd().kicks === k0 + 1; }
+      else d.frozenKicked = d.runningNotKicked = "skipped (hidden tab)";
+      const full = H.goal(); H.duck("ad", true); const g1 = H.goal(); H.duck("ad", false); H.duck("hidden", true); const g2 = H.goal(); H.duck("hidden", false);
+      d.ducks = g1 === 0 && g2 === 0 && H.goal() === full && full > 0;
+    } catch (e) { d.error = String((e && e.stack) || e); } finally { H.restore(); }
+    check("audio_hardening", !d.error && Object.keys(d).every((k) => d[k] === true || String(d[k]).startsWith("skipped")), { ...d, live: PS.audio.hardening() });
+    const sv = { touch: S.input.touch, zDpr: S.zDpr }, floor = {};
+    for (const z of S.cfg.polish.dprTiers) { S.input.touch = true; S.zDpr = z; floor[z] = zoomSteps()[0]; }
+    S.input.touch = sv.touch; S.zDpr = sv.zDpr;
+    check("dpr_touch_floor", Object.keys(floor).every((z) => floor[z] === S.cfg.camera.zoomMinTouch), { floorByTier: floor, zoomMinTouch: S.cfg.camera.zoomMinTouch });
+    const now = Date.now(), day = 86400000, D = S.cfg.polish.dprRememberDays, fresh = perfParse(JSON.stringify({ dpr: 1.5, cap: 0, t: now - day }), now), old = perfParse(JSON.stringify({ dpr: 1.5, cap: 1, t: now - (D + 1) * day }), now), junk = perfParse("{nope", now), odd = perfParse(JSON.stringify({ dpr: 1.3, t: now }), now);
+    check("dpr_tiers_pin_and_memory", (!dprParam || (S.dprPin && S.dprCap === dprParam && S.dpr === Math.min(dprParam, window.devicePixelRatio || 1))) && fresh && fresh.dpr === 1.5 && !old && !junk && !odd,
+      { dprParam, pinned: S.dprPin, dprCap: S.dprCap, dpr: S.dpr, capLow: S.capLow, steps: S.perfSteps, fresh, expired: old, junk, unknownTier: odd });
+    const off = [...document.querySelectorAll("link[href],script[src]")].map((e) => e.href || e.src).filter((u) => { if (u.startsWith("data:")) return false; try { return new URL(u, location.href).origin !== location.origin; } catch (e) { return true; } });
+    const sdkOk = (u) => /sdk\.crazygames\.com|game-cdn\.poki\.com/.test(u) && PS.portal.name !== "none"; // a portal build's SDK tag is the one allowed off-origin script
+    check("fonts_self_hosted", S.fontsOk === true && off.every(sdkOk), { fontsOk: S.fontsOk, offOrigin: off, baloo: document.fonts.check('800 22px "Baloo 2"'), nunito: document.fonts.check("800 12px Nunito") });
+  }
   function selfTest(opts) {
     opts = opts || {};
-    const all = ["config", "sprites", "terrain", "caches", "art", "flow", "fight", "fixtures", "flipflop", "ai", "rivals", "fog", "spoils", "parity", "replay", "match", "audio"];
+    const all = ["config", "sprites", "terrain", "caches", "art", "flow", "fight", "fixtures", "flipflop", "ai", "rivals", "fog", "spoils", "parity", "replay", "match", "audio", "portal"];
     const parts = opts.parts ? (Array.isArray(opts.parts) ? opts.parts : String(opts.parts).split(",")) : all, has = (p) => parts.indexOf(p) >= 0;
     const horizon = clamp(+opts.matchSeconds || (S.cfg ? S.cfg.world.matchSeconds : 240), 10, 600);
     const w0 = performance.now(), results = {}, fails = [], ms = {};
@@ -3834,6 +3923,7 @@
         { peakAgents: r.peakAgents, calls: ca, plays: pl, capHit: cap(AU.hit), capDie: cap(AU.die) });
       mixP = audioMix(); // P2: the render check (asynchronous; its checks land in mixChecks)
     });
+    if (has("portal")) timed("portal", () => portalTest(check)); // M1 (SPEC-v3 §5, §9): portal log shape, audio hardening, DPR tiers, fonts
     if (has("match")) timed("match", () => {
       mt = simMatch(horizon, { wallMs: opts.wallMs || 9000 });
       check("simMatch_no_exceptions", mt.exceptions.length === 0, mt); // a wall-guard truncation is reported (detail.truncated), not failed: a slow machine isn't a bug

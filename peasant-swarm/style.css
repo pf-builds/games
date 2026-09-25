@@ -1,4 +1,8 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
+/* self-hosted UI fonts (SPEC-v3 §5.1): Google's latin variable woff2, one file per family covering 700-800, SIL OFL 1.1 (fonts/OFL-*.txt).
+   Nothing is fetched off-origin, so a portal's CSP and an offline zip both hold. */
+@font-face { font-family: "Baloo 2"; src: url(fonts/baloo2-latin.woff2) format("woff2"); font-weight: 400 800; font-style: normal; font-display: swap; }
+@font-face { font-family: "Nunito"; src: url(fonts/nunito-latin.woff2) format("woff2"); font-weight: 200 1000; font-style: normal; font-display: swap; }
 html, body { height: 100%; background: #1B2A18; overflow: hidden; overscroll-behavior: none; } /* iOS/Safari rules (SPEC-v2 §10): no rubber-band, Safari reads html and Chrome body */
 body {
   font-family: "Nunito", system-ui, sans-serif; color: #F1EEDF;
