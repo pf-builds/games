@@ -147,7 +147,7 @@ Parked ideas and open follow-ups from v1 and the v2 build (M1-M8), grouped by th
 - ~~Relic onboarding (the first muster relic flying into the strip) and the portrait HUD layout for the relic strip are M7's (SPEC-v2 §10)~~ done in M7
 
 ### Parked during the post-v2 feedback pass (2026-09-24)
-- `fixture_ambush_head_only` fails in selfTest at 1/8 against a 0.5 bar, identically on the pre-change build (games cfe9a0b). It's the pass-ambush drift noted above from the 170 -> 155 slowdown, not the keyboard or bridge changes. Decide whether the bar or the fight clock moves.
+- ~~`fixture_ambush_head_only` fails in selfTest at 1/8 against a 0.5 bar, identically on the pre-change build (games cfe9a0b). It's the pass-ambush drift noted above from the 170 -> 155 slowdown, not the keyboard or bridge changes. Decide whether the bar or the fight clock moves.~~ v3 M2a (15 min timebox): re-measured 6/24 seeds (seeds 1-8: 1/8, the same bit pattern with the v3 kill switches off), the waiting 30 loses at the exit in the rest. No obvious cause beyond the fight clock not scaling with walk speed, so `fixtures.ambushRate` is now 0.125 (the measured rate on the check's seeds) and the check is a tripwire again. Still open: scale the fight clock or the hard push with `agent.speed` if exit ambushes should favour the waiting side (a combat retune, M5 at the earliest).
 - Fords got the same rotated-rectangle art as bridges but stay 4-5 cells wide. If they read as too wide next to 3-cell bridges, narrow `terrain.fordWidth`.
 
 ### Parked during v3 M1 Portal-ready pass (2026-09-25)

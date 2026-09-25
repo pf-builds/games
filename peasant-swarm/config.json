@@ -672,7 +672,7 @@
     "stragglerSeconds": 15,
     "stragglerRockSeconds": 0.5,
     "comboSeeds": 8,
-    "ambushRate": 0.5,
+    "ambushRate": 0.125,
     "holdRate": 0.375,
     "hiddenGap": 650,
     "audioSoakN": 320,

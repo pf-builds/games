@@ -121,6 +121,14 @@
           let sc; if (kind === 2) sc = -((x - W2) * (x - W2) + (y - W2) * (y - W2)); else { sc = 1e12; for (const o of S.objs) { const d = (o.x - x) * (o.x - x) + (o.y - y) * (o.y - y); if (d < sc) sc = d; } }
           if (sc > bs || best < 0) { bs = sc; best = c; }
         }
+        // v3: forest (and its groveClear margin) shrinks the open ground, so a sampled pick that found nothing falls back to a full scan of the
+        // candidates by the same score (no S.rng draws; only on maps with forest, so the kill switches keep v2's placement exactly)
+        if (best < 0 && m.forest && m.forest.cells > 0) for (let s = 0; s < cand.length; s++) {
+          const c = cand[s], x = ((c % N) + 0.5) * cell, y = (((c / N) | 0) + 0.5) * cell;
+          if (!T.placementOk(x, y, 3) || !clearAt(x, y, EN.banditGap, EN.banditLeash + EN.banditAggro + EN.campGap)) continue;
+          let sc = 1e12; for (const o of S.objs) { const d = (o.x - x) * (o.x - x) + (o.y - y) * (o.y - y); if (d < sc) sc = d; }
+          if (sc > bs || best < 0) { bs = sc; best = c; }
+        }
         if (best < 0) continue;
         mkCamp(((best % N) + 0.5) * cell, (((best / N) | 0) + 0.5) * cell, kind, EN.banditSizes[kind], kind === 0 ? (R() < 0.5 ? "boots" : "horn") : "arms");
       }
