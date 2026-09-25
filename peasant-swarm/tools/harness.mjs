@@ -58,6 +58,12 @@
 // disconnect, live nodes under audio.nodeCap, the level bound, the gates under 600+ agents); --fixtures runs the ambush and hold fixtures
 // over fixtures.comboSeeds seeds and asserts their rates (fixtures.ambushRate, fixtures.holdRate: single seeds were knife edges), runs the
 // straggler fixture in every control mode and under the fog's knowledge (assert fixtureStraggler), and screenshots ?fixture=straggler live.
+//
+// v3 M1 additions (portal-ready pass): selfTest part "portal" (portal log shape, audio hardening on a stub context, the touch zoom floor at
+// every DPR tier, the ?dpr= pin and the remembered tier, self-hosted fonts); the Google Fonts filter is gone (fonts are local); every run page
+// logs its requests and asserts noOffOriginRequests (only a portal SDK's own hosts may appear, in a portal build or ?portal= QA). The M1
+// gates the harness does not drive (ad paths, CrazyGames demo midgame, busy-loop DPR step, idle 4x title, audio recovery, iframe sizes)
+// are in tools/m1-check.mjs.
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -648,7 +654,8 @@ async function main() {
   // ---------------------------------------------------------------- verdict
   const as = report.asserts, W = report.notes;
   as.noConsoleErrors = report.errors.console.length === 0;
-  as.noOffOriginRequests = report.errors.offOrigin.length === 0 || !!new URL(A.url).searchParams.get("portal"); // v3 M1 (SPEC-v3 §9): the Pages build fetches nothing off-origin
+  // v3 M1 (SPEC-v3 §9): the Pages build fetches nothing off-origin; a portal build (or ?portal= QA) only its portal's SDK
+  as.noOffOriginRequests = report.errors.offOrigin.every((q) => /(^|\.)(crazygames\.com|poki\.com|poki\.io|poki-cdn\.com)$/.test(new URL(q).hostname));
   as.noPageErrors = report.errors.page.length === 0;
   as.selfTestPass = !!(report.selfTest && report.selfTest.pass);
   as.btnPlayHit = report.runs.every((r) => r.titleHit);

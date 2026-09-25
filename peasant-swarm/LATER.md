@@ -149,3 +149,10 @@ Parked ideas and open follow-ups from v1 and the v2 build (M1-M8), grouped by th
 ### Parked during the post-v2 feedback pass (2026-09-24)
 - `fixture_ambush_head_only` fails in selfTest at 1/8 against a 0.5 bar, identically on the pre-change build (games cfe9a0b). It's the pass-ambush drift noted above from the 170 -> 155 slowdown, not the keyboard or bridge changes. Decide whether the bar or the fight clock moves.
 - Fords got the same rotated-rectangle art as bridges but stay 4-5 cells wide. If they read as too wide next to 3-cell bridges, narrow `terrain.fordWidth`.
+
+### Parked during v3 M1 Portal-ready pass (2026-09-25)
+- `polish.effectsTier` (SPEC-v3 §5.5's first perf lever: cut dust, particles and murmur analysis before the DPR drops). Not built: the M1 gate times the busy-loop step 2 -> 1.5 at 3-4 s, which only holds while DPR is the first lever. Adding it means one more 3 s hold before the DPR step (about 7 s) and a re-worded gate. Particles are a small share of the frame next to 640-1000 agent draws, so measure its saving at 4x before building it.
+- Portal zip size margin is thin: 249,925 B against the 256,000 B (250 KB) gate, and only with comments stripped from the zip's JS. M2-M4 add code, so the next lever is font subsetting (`pyftsubset` to the game's glyphs, roughly 40 KB off the 72 KB of fonts; needs `pip install fonttools brotli`), then a real minifier if that is not enough.
+- Poki build: loads, logs init, loadingStart, loadingStop (gameLoadingFinished), gameplayStart, happytime, gameplayStop, commercialBreak, gameplayStart on localhost. The Poki SDK itself logs console warnings and one COOP error on 127.0.0.1 (third-party, not ours). Not tested further (out of M1): Poki Inspector, a real P4D upload.
+- The harness's default run still does not start matches through the real PLAY path with ads; `tools/m1-check.mjs` covers the ad paths. Fold its checks into the harness if the critic wants one tool.
+- The debug line's "raf" figure reads 0 until the 60-frame window first fills (same as "p90").

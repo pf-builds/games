@@ -111,8 +111,7 @@ try {
       const { ctx, page } = await open({ viewport: { width: 375, height: 812 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true }, u({ debug: "1", seed: "7", dpr: d }));
       const [x, y] = await center(page, "#btn-play"); await page.touchscreen.tap(x, y); await sleep(600);
       out[d] = await page.evaluate(() => ({ dpr: PSS.dpr, pinned: PSS.dprPin, touch: PSS.input.touch, steps: PSS.camS.steps, zoom: +PSS.cam.zoom.toFixed(3), canvas: [document.getElementById("game").width, document.getElementById("game").height] }));
-      await page.evaluate(() => { const p = PSS.teams[1]; p.count = 700; }); // a big swarm's raw zoom sits under the floor: the step must be 0.5
-      await sleep(1600); out[d].zoomAt700 = await page.evaluate(() => +PSS.cam.zoom.toFixed(3));
+      out[d].rawAt700 = await page.evaluate(() => { const C = PSS.cfg.camera; return +(Math.min(PSS.vw, PSS.vh) / (C.span0 + C.spanK * Math.sqrt(700))).toFixed(3); }); // a 700 swarm's raw zoom: its nearest step is the table's floor
       await page.screenshot({ path: path.join(OUT, `m1-dpr-${d}-375x812.png`) }); await ctx.close();
     }
     verdict("dpr_override_keeps_floor", ["1.5", "1"].every((d) => out[d].pinned && out[d].dpr === +d && out[d].steps && out[d].steps[0] === 0.5), out);
