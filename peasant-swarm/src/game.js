@@ -3836,11 +3836,14 @@
         const sn = S.fogS.obs[1][2].seen || S.fogS.obs[1][3].seen; if (S.ev.firstFight < 0 && sn) before = true;
         if (fightT < 0 && S.ev.firstFight >= 0) fightT = S.ev.firstFight; if (seenT < 0 && sn) seenT = +S.t.toFixed(2); if (seenT >= 0 && fightT >= 0 && i > 60) break;
       }
-      return { gap, seenBeforeFight: before, fight: fightT, seen: seenT, reveals: S.fogS.stats.reveals, pings: S.fogS.stats.pings };
+      // M2b render part: the lit fight drawn with the camera on the grove (rivals drawn, dust puffs spawned) against the unseen one (none)
+      S.cam.x = g.gx + gap / 2; S.cam.y = g.gy; S.cam.zoom = 1; const pb = particles.burst; let dust = 0; particles.burst = function (x, y) { if (Math.abs(x - g.gx) < 200 && Math.abs(y - g.gy) < 200) dust++; return pb.apply(this, arguments); };
+      let drawn = 0; try { for (let i = 0; i < 20; i++) { hold(p); a.tx = b.cx; a.ty = b.cy; b.tx = a.cx; b.ty = a.cy; update(DT); S.cam.x = g.gx + gap / 2; S.cam.y = g.gy; S.lastDrawT = performance.now() - 50; draw(); for (const q of S.agents) if ((q.team === 2 || q.team === 3) && q.drawnF === S.frameId) drawn++; } } finally { particles.burst = pb; }
+      return { gap, seenBeforeFight: before, fight: fightT, seen: seenT, reveals: S.fogS.stats.reveals, pings: S.fogS.stats.pings, drawn, dust };
     });
     const inSight = run(S.cfg.fixtures.concealDist + 80), outSight = run(1500); // +80: the two 25s sit 60 px either side of the grove's centre
     return { inSight, outSight, pass: !inSight.seenBeforeFight && inSight.fight >= 0 && inSight.reveals > 0 && inSight.seen >= inSight.fight && inSight.seen - inSight.fight <= 0.2 &&
-      outSight.fight >= 0 && outSight.reveals === 0 && outSight.seen < 0 && outSight.pings > 0 };
+      outSight.fight >= 0 && outSight.reveals === 0 && outSight.seen < 0 && outSight.pings > 0 && inSight.drawn > 0 && outSight.drawn === 0 && outSight.dust === 0 };
   }
   // forest_rustle_no_leak: a 20 in the open grove concealDist px from a 100 rustles for the player every forest.rustleEvery s with no count;
   // a 20 in the grove against the ridge's far face, 100 px beyond the ridge (in range, behind rock), never does; and a 60 s all-AI match run
