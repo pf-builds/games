@@ -160,7 +160,7 @@
       "rally": 2
     },
     "contestTol": 0.12,
-    "firstDelay": 0
+    "firstDelay": 30
   },
   "ai": {
     "think": 0.7,
@@ -275,7 +275,7 @@
     "banditFeasible": 2.4,
     "forestFleeBonus": 150,
     "rustleMemory": 3,
-    "siteKnowRadius": 0
+    "siteKnowRadius": 1000
   },
   "player": {
     "name": "You",
@@ -982,12 +982,12 @@
       15
     ],
     "ai.siteKnowRadius": [
-      "px; landmark sites an AI knows from its spawn (0 = v2, all known); the rest once explored",
+      "px; landmark sites an AI knows from its spawn (0 = v2, all known; M2 default 1000, the P5 probe lever); the rest once explored",
       0,
       4000
     ],
     "powerups.firstDelay": [
-      "s before the initial power-ups appear (0 = v2)",
+      "s before the initial power-ups appear (0 = v2; M2 default 30, the P5 probe lever)",
       0,
       120
     ],
