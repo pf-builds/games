@@ -9,6 +9,9 @@
 // ImageData with a 3x3 tent blur; one quarter-CSS fog canvas recomposed every frame (mask subrect for the view, cloud drift, holes punched
 // with destination-out from the player's stamp sources through one cached unit-space radial gradient, vignette, losing-clash glow) and
 // blitted once, full screen, with smoothing on. Canvases are caches: recover() re-puts them from the typed arrays. No Math.random here.
+// v3 M2 (SPEC-v3 §2 "Render", R1 §3.4): a shadow texel canvas (one texel per 32 px cell) drawn with smoothing into the fog canvas after
+// the holes: fog.shadowAlpha on cells inside the player's stamp discs but hidden by rock (the stamp marks them in `ind`, version-stamped),
+// forest.shadeAlpha on concealed forest (vis === ver + 1). Re-put for the view rect at most fog.shadowHz; still one full-screen alpha draw.
 (function () {
   const PS = (window.PS = window.PS || {});
   const now = () => performance.now();
@@ -41,7 +44,7 @@
   function world() {
     const w = { id: ++worldId, gen: 0, map: null, learn: false, vis: [], ver: new Int32Array(9), explored: [], nExp: new Int32Array(9), stamps: new Int32Array(9),
       disp: new Uint8Array(DNN), dx0: 0, dy0: 0, dx1: -1, dy1: -1, rx0: new Int16Array(DN).fill(DN), rx1: new Int16Array(DN).fill(-1), mx0: 0, my0: 0, mx1: -1, my1: -1,
-      src: new Float32Array(3 * MAXSRC), srcN: 0, srcCx: 0, srcCy: 0, costMs: 0, lastCostMs: 0, maxCostMs: 0, stampN: 0 };
+      src: new Float32Array(3 * MAXSRC), srcN: 0, srcCx: 0, srcCy: 0, costMs: 0, lastCostMs: 0, maxCostMs: 0, stampN: 0, ind: new Uint16Array(NN) }; // ind: the player's rock-hidden cells inside its discs (= its version)
     for (let i = 0; i < 9; i++) { w.vis.push(new Uint16Array(NN)); w.explored.push(new Uint8Array(NN)); }
     return w;
   }
@@ -49,7 +52,7 @@
   function reset(w, map, opts) {
     w.map = map; w.learn = !!(opts && opts.learn); w.gen++; w.ver.fill(0); w.nExp.fill(0); w.stamps.fill(0); w.srcN = 0;
     for (let i = 0; i < 9; i++) { w.vis[i].fill(0); w.explored[i].fill(0); }
-    w.disp.fill(0); w.dx0 = 0; w.dy0 = 0; w.dx1 = DN - 1; w.dy1 = DN - 1; w.rx0.fill(DN); w.rx1.fill(-1); w.mx0 = 0; w.my0 = 0; w.mx1 = N - 1; w.my1 = N - 1;
+    w.ind.fill(0); w.disp.fill(0); w.dx0 = 0; w.dy0 = 0; w.dx1 = DN - 1; w.dy1 = DN - 1; w.rx0.fill(DN); w.rx1.fill(-1); w.mx0 = 0; w.my0 = 0; w.mx1 = N - 1; w.my1 = N - 1;
     w.costMs = 0; w.lastCostMs = 0; w.maxCostMs = 0; w.stampN = 0; if (!keep) losClear(); // v3: viewshed caches are per map
     return w;
   }
@@ -163,12 +166,12 @@
   }
   function discLos(w, team, v, x, y, r, rd, kn, ci, cj) {
     const vis = w.vis[team], ex = w.explored[team], isP = team === 1, sp = spans(sp32, CELL, r), rc = r / CELL, k = rc <= LC[1].R ? 1 : 0, L = LC[k], off = viewshed(k, ci, cj), R = L.R, S = L.S, sl = L.slab;
-    const h0 = (sp.length - 1) >> 1, h = h0 > R ? R : h0, v1 = v + 1;
+    const h0 = (sp.length - 1) >> 1, h = h0 > R ? R : h0, v1 = v + 1, ind = isP ? w.ind : null;
     for (let dy = -h; dy <= h; dy++) {
       const j = cj + dy; if (j < 0 || j >= N) continue;
       let hx = sp[dy + h0]; if (hx > R) hx = R; const i0 = ci - hx < 0 ? 0 : ci - hx, i1 = ci + hx >= N ? N - 1 : ci + hx, row = j * N, base = (dy + R) * S + R - ci;
       for (let i = i0; i <= i1; i++) {
-        const q = base + i, code = (sl[off + (q >> 2)] >> ((q & 3) << 1)) & 3; if (code === 0) continue;
+        const q = base + i, code = (sl[off + (q >> 2)] >> ((q & 3) << 1)) & 3; if (code === 0) { if (ind !== null) ind[row + i] = v; continue; } // the shadow canvas's rock shadow
         const c = row + i; if (code === 1) { if (vis[c] !== v) vis[c] = v1; continue; }
         vis[c] = v; if (ex[c]) continue;
         ex[c] = 1; w.nExp[team]++;
@@ -186,6 +189,7 @@
         if (D[row + i]) continue; const gx = (((i - DP) / f) | 0) - ci; if (gx < -R || gx > R) continue;
         const q = (gy + R) * S + gx + R; if (((sl[off + (q >> 2)] >> ((q & 3) << 1)) & 3) === 0) continue;
         D[row + i] = 1; if (i < w.dx0) w.dx0 = i; if (i > w.dx1) w.dx1 = i; if (j < w.dy0) w.dy0 = j; if (j > w.dy1) w.dy1 = j; if (i < w.rx0[j]) w.rx0[j] = i; if (i > w.rx1[j]) w.rx1[j] = i;
+        if (isP) { const mi = gx + ci, mj = gy + cj; if (mi < w.mx0) w.mx0 = mi; if (mi > w.mx1) w.mx1 = mi; if (mj < w.my0) w.my0 = mj; if (mj > w.my1) w.my1 = mj; } // the minimap shows the tree line you see
       }
     }
   }
@@ -209,7 +213,7 @@
   function stamp(team, cx, cy, R, list, off, nb, br, kn) {
     const w = W, t0 = now(), isP = team === 1, em = CFG.exploreMargin, on = losOn(), step = on ? 2 : 1;
     if (on && w.map) losUse(w.map); else losMap = null;
-    let v = w.ver[team] + step; if (v + step - 1 > 65535) { w.vis[team].fill(0); v = step; } w.ver[team] = v;
+    let v = w.ver[team] + step; if (v + step - 1 > 65535) { w.vis[team].fill(0); if (isP) w.ind.fill(0); v = step; } w.ver[team] = v;
     if (w.dx1 < 0) { w.dx0 = DN; w.dy0 = DN; } if (w.mx1 < 0) { w.mx0 = N; w.my0 = N; } // empty dirty rects start inverted
     if (isP) { w.srcN = 0; w.srcCx = cx; w.srcCy = cy; }
     disc(w, team, v, cx, cy, R, isP ? R + em : 0, isP && w.learn ? kn : null);
@@ -342,7 +346,7 @@
   const RS = { holes: 0, maskDrawn: 0, margins: 0, ms: new Float32Array(4) }; // ms: mask (with any upload), clouds + holes, vignette + glow, blit (raster lands here)
   function render(ctx, o) {
     if (!fogCv || cssW !== o.vw || cssH !== o.vh) resize(o.vw, o.vh);
-    const s = fw / o.vw, FS = o.zoom * s, FX0 = fw / 2 - o.camX * FS, FY0 = fh / 2 - o.camY * FS, M = RS.ms; let tq = now(), t1 = 0;
+    const s = fw / o.vw, FS = o.zoom * s, FX0 = fw / 2 - o.camX * FS, FY0 = fh / 2 - o.camY * FS, M = RS.ms; let tq = now(), t1 = 0; LR_[0] = FX0; LR_[1] = FY0; LR_[2] = FS;
     fc.setTransform(1, 0, 0, 1, 0, 0); fc.globalAlpha = 1; fc.imageSmoothingEnabled = true;
     RS.holes = 0; RS.maskDrawn = 0; RS.margins = 0; M[0] = M[1] = 0;
     if (o.fog && W) {
@@ -376,6 +380,8 @@
         }
       }
       if (clipW && o.R > 0) fc.restore();
+      fc.globalCompositeOperation = "source-over"; fc.globalAlpha = 1; SHS.drawn = 0;
+      if (o.R > 0 && W.map.losOn && losOn()) shadowDraw(FX0, FY0, FS, fa); // v3: rock shadow and forest shade over the lit ground, inside this canvas
       fc.setTransform(1, 0, 0, 1, 0, 0); fc.globalCompositeOperation = "source-over"; fc.globalAlpha = 1;
       t1 = now(); M[1] = t1 - tq; tq = t1;
     } else { fc.clearRect(0, 0, fw, fh); fc.drawImage(vigCv, 0, 0); } // the fog's holes carry the vignette; without fog it is its own pass
@@ -386,9 +392,41 @@
     M[3] = now() - tq;
   }
 
+  // ---------------------------------------------------------------- v3 M2: the shadow texel canvas (SPEC-v3 §2 "Render", R1 §3.4)
+  // One texel per 32 px cell (an N x N canvas; only the view rect plus fog.shadowMargin cells is re-put, at most fog.shadowHz, from the
+  // typed arrays through one reused ImageData): clear cells 0, concealed forest forest.shadeAlpha, rock-hidden cells inside the player's
+  // discs fog.shadowAlpha, all in the explored tint. Drawn with smoothing into the fog canvas (the part of the view that was put), so the
+  // 32 px steps blur. A cache: recover() re-puts it, drop() blanks it.
+  let shCv = null, shCtx = null, shImg = null, shU = null, shT = -1e9, shKey = "", shX0 = 0, shY0 = 0, shX1 = -1, shY1 = -1;
+  const SHS = { puts: 0, cells: 0, ms: 0, lastMs: 0, drawn: 0, hidden: 0, shade: 0 }, LR_ = new Float64Array(3); // LR_: the last render's FX0, FY0, FS
+  function shadowPut(i0, j0, i1, j1) {
+    const w = W; if (!w || i1 < i0 || j1 < j0) return;
+    if (!shCv) { shCv = document.createElement("canvas"); shCv.width = N; shCv.height = N; shCtx = shCv.getContext("2d"); shImg = new ImageData(N, N); shU = new Uint32Array(shImg.data.buffer); }
+    const t = now(), e = hexRGB(CFG.exploredColor), pk = (a) => ((Math.round(Math.max(0, Math.min(1, a)) * 255) << 24) | (e[2] << 16) | (e[1] << 8) | e[0]) >>> 0, cs = pk(CFG.shadowAlpha), cf = pk(CFGA.forest.shadeAlpha);
+    const v = w.ver[1], v1 = v + 1, vis = w.vis[1], ind = w.ind, U = shU; let nh = 0, nf = 0;
+    for (let j = j0; j <= j1; j++) { const row = j * N; for (let i = i0; i <= i1; i++) { const c = row + i, q = vis[c]; if (v === 0 || q === v) U[c] = 0; else if (q === v1) { U[c] = cf; nf++; } else if (ind[c] === v) { U[c] = cs; nh++; } else U[c] = 0; } }
+    shCtx.putImageData(shImg, 0, 0, i0, j0, i1 - i0 + 1, j1 - j0 + 1);
+    shX0 = i0; shY0 = j0; shX1 = i1; shY1 = j1; shKey = w.id + ":" + w.gen; shT = t; SHS.hidden = nh; SHS.shade = nf;
+    const ms = now() - t; SHS.puts++; SHS.cells += (i1 - i0 + 1) * (j1 - j0 + 1); SHS.ms += ms; SHS.lastMs = ms;
+  }
+  function shadowDraw(FX0, FY0, FS, fa) {
+    const k = CELL * FS, m = CFG.shadowMargin, cl = (v) => (v < 0 ? 0 : v > N - 1 ? N - 1 : v);
+    const i0 = cl(Math.floor(-FX0 / k)), j0 = cl(Math.floor(-FY0 / k)), i1 = cl(Math.floor((fw - FX0) / k)), j1 = cl(Math.floor((fh - FY0) / k));
+    if (shKey !== W.id + ":" + W.gen || now() - shT >= 1000 / CFG.shadowHz) shadowPut(cl(i0 - m), cl(j0 - m), cl(i1 + m), cl(j1 + m));
+    const a = Math.max(i0, shX0), b = Math.max(j0, shY0), c = Math.min(i1, shX1), d = Math.min(j1, shY1); if (c < a || d < b) return;
+    fc.globalAlpha = fa; fc.imageSmoothingEnabled = true; fc.drawImage(shCv, a, b, c - a + 1, d - b + 1, FX0 + a * k, FY0 + b * k, (c - a + 1) * k, (d - b + 1) * k); fc.globalAlpha = 1; SHS.drawn = 1;
+  }
+  // QA: the composed fog canvas's alpha at world points (the last render's transform), read through one scratch copy (never the cache)
+  let scF = null, scFc = null;
+  function fogAlphaAt(list) {
+    if (!fogCv) return []; if (!scF) { scF = document.createElement("canvas"); scFc = scF.getContext("2d", { willReadFrequently: true }); }
+    if (scF.width !== fw || scF.height !== fh) { scF.width = fw; scF.height = fh; } scFc.clearRect(0, 0, fw, fh); scFc.drawImage(fogCv, 0, 0); const dd = scFc.getImageData(0, 0, fw, fh).data;
+    return list.map(([x, y]) => { const u = Math.round(LR_[0] + x * LR_[2]), v = Math.round(LR_[1] + y * LR_[2]); return u >= 0 && v >= 0 && u < fw && v < fh ? dd[(v * fw + u) * 4 + 3] : -1; });
+  }
+
   // ---------------------------------------------------------------- cache recovery (studio lessons 27-29)
-  function recover() { maskInit(); cloudInit(); if (fogCv) vigPaint(); for (const q of holeSprites.keys()) { holeSprites.get(q).width = 0; holeSprite(q); } if (W) flushMask(true); }
-  function drop() { for (const c of [maskCv, cloudCv, tileCv, vigCv, tilesCv, ...holeSprites.values()]) if (c) { const g = c.getContext("2d"); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, c.width, c.height); } return (maskCv ? 1 : 0) + (cloudCv ? 1 : 0) + (tileCv ? 1 : 0) + (vigCv ? 1 : 0) + (tilesCv ? 1 : 0) + holeSprites.size; }
+  function recover() { maskInit(); cloudInit(); if (fogCv) vigPaint(); for (const q of holeSprites.keys()) { holeSprites.get(q).width = 0; holeSprite(q); } if (W) flushMask(true); if (W && shCv && shX1 >= shX0) shadowPut(shX0, shY0, shX1, shY1); }
+  function drop() { for (const c of [maskCv, cloudCv, tileCv, vigCv, tilesCv, shCv, ...holeSprites.values()]) if (c) { const g = c.getContext("2d"); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, c.width, c.height); } return (maskCv ? 1 : 0) + (cloudCv ? 1 : 0) + (tileCv ? 1 : 0) + (vigCv ? 1 : 0) + (tilesCv ? 1 : 0) + (shCv ? 1 : 0) + holeSprites.size; }
   // a 4x4 downscale through one scratch canvas (never read the cache itself): min alpha and summed alpha over the 16 samples
   let sc4 = null, sc4c = null;
   function read4(c) {
@@ -410,8 +448,8 @@
   function dispAt(x, y) { const w = W, i = ((x / DC) | 0) + DP, j = ((y / DC) | 0) + DP; if (!w || i < 1 || j < 1 || i >= DN - 1 || j >= DN - 1) return -1; let s = 0; for (let v = -1; v <= 1; v++) for (let u = -1; u <= 1; u++) if (w.disp[(j + v) * DN + i + u]) s += (v ? 1 : 2) * (u ? 1 : 2); return LA[s]; }
 
   function sig() { const w = W; if (!w) return null; return [Array.from(w.nExp), Array.from(w.stamps), Array.from(w.ver)].join("|"); }
-  const canvases = () => [maskCv, cloudCv, tileCv, tilesCv, vigCv, fogCv, ...holeSprites.values()].filter(Boolean); // for the memory report
-  const F = (PS.fog = { init, canvases, world, reset, use, stamp, sees, seesCell, explored, cellOf, reveal, warm, concealedCell, losCode, cacheEqual, losClear, losArm, losOn, LOS, losKeep: (on) => { keep = !!on; }, resize, render, flushMask, recover, drop, report, maskAlphaAt, dispAt, minAlpha4, sumAlpha4, sig, holeGrad,
+  const canvases = () => [maskCv, cloudCv, tileCv, tilesCv, vigCv, fogCv, shCv, ...holeSprites.values()].filter(Boolean); // for the memory report
+  const F = (PS.fog = { init, canvases, world, reset, use, stamp, sees, seesCell, explored, cellOf, reveal, warm, concealedCell, losCode, cacheEqual, losClear, losArm, losOn, LOS, losKeep: (on) => { keep = !!on; }, resize, render, flushMask, recover, drop, report, maskAlphaAt, dispAt, fogAlphaAt, SHS, shadowRect: () => [shX0, shY0, shX1, shY1], shadowForce: () => { shT = -1e9; }, minAlpha4, sumAlpha4, sig, holeGrad,
     vis: (team) => (W ? W.vis[team] : null), verOf: (team) => (W ? W.ver[team] : 0), exploredArr: (team) => (W ? W.explored[team] : null), world0: () => W, RS, ST,
     get N() { return N; }, get BN() { return BN; }, get BK() { return BK; }, get fogSize() { return [fw, fh, cssW, cssH]; }, get maskCanvas() { return maskCv; }, get cloudCanvas() { return cloudCv; } });
 })();

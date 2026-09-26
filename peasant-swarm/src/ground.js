@@ -12,6 +12,10 @@
 //             bar with stepping stones; bridges as a plank deck with rails, posts and end beams, and a shadow strip on the water below.
 //             Crossings are drawn as straight rotated rectangles along the river (not per 32 px cell), so a diagonal river's bridge is a
 //             clean deck instead of a staircase of squares; the deck overhangs onto both landings.
+//   forest:   (v3 M2, SPEC-v3 §2 "Render") grove canopy baked from m.cover / m.grove: a bilinear field over cell centres with a noise wobble,
+//             so the tree line is organic but stays within a few px of the cells that hide; clumped leaf tones lit from the north-west, a
+//             dark rim, and a drop shadow cast south-east like the cliffs. River reeds (cover cells outside any grove) as stalks and heads
+//             on a dark bank. The edge trees are sprites (forestTrees(): a ring on each grove's edge, drawn in the y-sort, no collider).
 // Render-side only: no S.rng, no Math.random. Deterministic from the map (m.used) so the same seed paints the same valley.
 (function () {
   const PS = (window.PS = window.PS || {});
@@ -32,7 +36,7 @@
     PAL = PS.PAL; const cols = [], shadowOf = [], K0 = {};
     const add = (name, ramp) => { K0[name] = []; ramp.forEach((c) => { K0[name].push(cols.length); cols.push(c); }); };
     add("grass", PAL.grass); add("rocky", PAL.rocky); add("high", PAL.high); add("plateau", PAL.plateau); add("stone", PAL.stone); add("earth", PAL.earth);
-    add("water", PAL.water); add("foam", [PAL.foam]); add("sand", PAL.sand); add("wood", PAL.wood);
+    add("water", PAL.water); add("foam", [PAL.foam]); add("sand", PAL.sand); add("wood", PAL.wood); add("leaf", PAL.leaf); add("pine", PAL.pine);
     const deep = {}; for (const k in K0) { const r = K0[k]; deep[k] = cols.length; cols.push(PAL.shade(cols[r[0]], 0.7)); }
     for (const k in K0) { const r = K0[k]; r.forEach((idx, s) => { shadowOf[idx] = s >= 2 ? r[s - 2] : deep[k]; }); shadowOf[deep[k]] = deep[k]; }
     shadowOf[K0.foam[0]] = K0.water[1];
@@ -85,6 +89,28 @@
     for (let c = 0; c < NN; c++) wsd[c] = dry(c) ? (Db[c] / 3) * cell - cell / 2 : -((Da[c] / 3) * cell - cell / 2);
     return (m.art = { lvl, X, wsd, salt: (m.used | 0) ^ 0x5a17 });
   }
+  // v3 M2 forest fields at a world point (bilinear over cell centres, grid edge clamped): groves (m.grove > 0) and reeds (other cover cells)
+  const cvAt = (m, i, j, reed) => { const N = m.N; if (i < 0) i = 0; else if (i >= N) i = N - 1; if (j < 0) j = 0; else if (j >= N) j = N - 1; const c = j * N + i; return m.cover[c] === 1 && (m.grove && m.grove[c] > 0 ? !reed : reed) ? 1 : 0; };
+  function field(m, X, Y, reed) {
+    const fx = X / m.cell - 0.5, fy = Y / m.cell - 0.5, i = Math.floor(fx), j = Math.floor(fy), tx = fx - i, ty = fy - j;
+    const a = cvAt(m, i, j, reed), b = cvAt(m, i + 1, j, reed), c = cvAt(m, i, j + 1, reed), d = cvAt(m, i + 1, j + 1, reed); return a + (b - a) * tx + (c - a) * ty + (a - b - c + d) * tx * ty;
+  }
+  // canopy weight at a world point (> 0.5 is canopy): the grove field plus a noise wobble of art.canopyWobble
+  function canopy(m, X, Y, A, salt) { return field(m, X, Y, false) + (vnoise(X, Y, A.canopyPeriod * 2.3, salt + 83) - 0.5) * A.canopyWobble; }
+  // the edge-tree ring (once per map): grove cells with an open 4-neighbour, one in art.forestTreeEvery (by a render hash), pushed
+  // art.forestTreePush px out along the open side; objects in the obstacle shape the y-sort draws as trees (kind 0 / 1 = small / big)
+  function forestTrees(m, A) {
+    const ART = mapArt(m, A); if (ART.trees) return ART.trees;
+    const N = m.N, cell = m.cell, G = m.grove, out = [];
+    if (G && m.cover) for (let c = 0; c < N * N; c++) {
+      if (!(G[c] > 0) || m.cover[c] !== 1) continue; const i = c % N, j = (c / N) | 0, op = (x, y) => x < 0 || y < 0 || x >= N || y >= N || !(G[y * N + x] > 0);
+      let nx = 0, ny = 0; if (op(i - 1, j)) nx--; if (op(i + 1, j)) nx++; if (op(i, j - 1)) ny--; if (op(i, j + 1)) ny++; if (!nx && !ny && !(op(i - 1, j) || op(i + 1, j) || op(i, j - 1) || op(i, j + 1))) continue;
+      const h = hash(i, j, ART.salt + 101); if (h % A.forestTreeEvery !== 0) continue;
+      const l = Math.hypot(nx, ny) || 1, x = (i + 0.5) * cell + (nx / l) * A.forestTreePush + (((h >>> 8) & 7) - 3.5) * 2, y = (j + 0.5) * cell + (ny / l) * A.forestTreePush + (((h >>> 12) & 7) - 3.5) * 2;
+      out.push({ x: Math.round(x / 2) * 2, y: Math.round(y / 2) * 2, kind: (h >>> 16) % 3 === 0 ? 1 : 0, v: (h >>> 16) % 3 === 0 ? 1 : 0, ft: 1 });
+    }
+    return (ART.trees = out);
+  }
   // biome and tone at a world point (render-only): the obstacles pick pines on highland with the same field the ground uses
   function biome(m, x, y, A) { const s = mapArt(m, A).salt; return vnoise(x, y, A.biomePeriod, s); }
 
@@ -93,7 +119,8 @@
     table(); buffers(o.AP);
     const A = o.A, ART = mapArt(m, A), N = m.N, cell = m.cell, terr = m.terr, lvl = ART.lvl, pm = m.passMask, W = m.W, W2 = W / 2, R = m.river;
     const CH = o.CH, n = o.n, wx = (ci % n) * CH, wy = ((ci / n) | 0) * CH, ap = o.AP, salt = ART.salt, water = !!cvB;
-    const G = K.grass, RK = K.rocky, HG = K.high, PL = K.plateau, ST = K.stone, E = K.earth, WA = K.water, FOAM = K.foam[0], SA = K.sand, WD = K.wood;
+    const G = K.grass, RK = K.rocky, HG = K.high, PL = K.plateau, ST = K.stone, E = K.earth, WA = K.water, FOAM = K.foam[0], SA = K.sand, WD = K.wood, LF = K.leaf, PN = K.pine;
+    const COV = m.cover && m.forest && m.forest.cells > 0 ? m.cover : null, CT = [PN[0], PN[1], LF[1], LF[2], LF[3]]; // canopy tones dark to light
     const LV = (i, j) => (i < 0 || j < 0 || i >= N || j >= N ? 2 : lvl[j * N + i]);
     const TR = (i, j) => (i < 0 || j < 0 || i >= N || j >= N ? 1 : terr[j * N + i]);
     const wsd = ART.wsd, SD = (i, j) => wsd[(j < 0 ? 0 : j >= N ? N - 1 : j) * N + (i < 0 ? 0 : i >= N ? N - 1 : i)];
@@ -135,6 +162,7 @@
       // bilinear corner values (cell centres) for the pass floor and the water depth
       const p00 = PM(i - 1, j - 1), p10 = PM(i, j - 1), p20 = PM(i + 1, j - 1), p01 = PM(i - 1, j), p11 = pm[c], p21 = PM(i + 1, j), p02 = PM(i - 1, j + 1), p12 = PM(i, j + 1), p22 = PM(i + 1, j + 1);
       const anyPass = p00 | p10 | p20 | p01 | p11 | p21 | p02 | p12 | p22;
+      let anyF = false; if (COV !== null) for (let y = j - 1; y <= j + 1 && !anyF; y++) for (let x = i - 1; x <= i + 1; x++) if (x >= 0 && y >= 0 && x < N && y < N && COV[y * N + x]) { anyF = true; break; } // forest within a cell (canopy, reeds, the canopy's shadow)
       for (let ly = 0; ly < apc; ly++) {
         const v = cj * apc + ly, Y = wy + v * 2 + 1, row = v * ap;
         for (let lx = 0; lx < apc; lx++) {
@@ -194,7 +222,16 @@
               pv = a + (b - a) * qx + (cc - a) * qy + (a - b - cc + dd) * qx * qy;
             }
             const bay = BAYER[(v & 3) * 4 + (u & 3)];
-            if (pv > 0.42 + 0.16 * bay) { // pass / canyon floor: earth, with cracks and pebbles
+            const cw = anyF ? canopy(m, X, Y, A, salt) : 0, rw = anyF && cw <= 0.5 ? field(m, X, Y, true) : 0;
+            if (cw > 0.5) { // v3 grove canopy: clumps lit from the north-west (the tone steps where the clump field falls toward the light), a dark rim
+              kind = 7; const n0 = vnoise(X, Y, A.canopyPeriod, salt + 89), nl = vnoise(X - 4, Y - 4, A.canopyPeriod, salt + 89), st = 0.4 + n0 * 3.2 + (n0 - nl) * A.canopyLight + (bay - 0.5) * 0.9;
+              idx = cw < 0.5 + A.canopyRim ? PN[0] : CT[st < 0 ? 0 : st > 4 ? 4 : st | 0];
+            } else if (rw > 0.42 + 0.16 * bay) { // v3 river reeds: a dark wet bank, pale stalks in broken columns, a few brown heads
+              kind = 7; const hc = hash(u, v >> 3, salt + 97), hs = hash(u, (v + 4) >> 3, salt + 99);
+              idx = (hash(u, v, salt + 95) & 7) === 0 ? LF[0] : G[1];
+              if ((hc & 3) === 0 && (v & 7) !== 7) idx = (v & 7) < 2 && (hc >>> 6) % 5 === 0 ? E[1] : (hc >>> 3) & 1 ? HG[2] : G[4];
+              else if ((hs & 7) === 1 && ((v + 4) & 7) > 1) idx = HG[1];
+            } else if (pv > 0.42 + 0.16 * bay) { // pass / canyon floor: earth, with cracks and pebbles
               kind = 1; const hv = hash(u, v, salt + 41);
               idx = E[(hv & 15) === 0 ? 1 : (hv & 15) === 1 ? 3 : 2];
               if (hash(u >> 2, v, salt + 43) % 23 === 0 && (u & 3) !== 3) idx = E[0];
@@ -211,6 +248,7 @@
               idx = Rm[si];
             }
             const s2 = levelAt(X - shx, Y - shy), s3 = levelAt(X - shx / 2, Y - shy / 2); if (s2 > 0 || s3 > 0) shade = 1;
+            if (anyF && kind !== 7 && canopy(m, X - shx, Y - shy, A, salt) > 0.5) shade = 1; // the canopy's drop shadow
           }
           if (XS.length && kind !== 2 && kind !== 3) { // bridge deck over water and both landings: outer beam, rail with posts, planks across the way you walk, end beams
             const xq = crossingAt(X, Y);
@@ -246,7 +284,7 @@
     let gB = null; if (water) { gB = cvB.getContext("2d"); gB.setTransform(1, 0, 0, 1, 0, 0); gB.globalAlpha = 1; gB.globalCompositeOperation = "source-over"; gB.putImageData(imgB, 0, 0); }
     // dressing at 1:1 art px: decal clusters on grass (from the placed decal seeds; offsets from a render hash), pines on the high rim
     const spr = o.spr, dk = spr.decals, both = (im, ax, ay) => { gA.drawImage(im, ax, ay); if (gB) gB.drawImage(im, ax, ay); };
-    const grassAt = (X, Y) => { if (X < 0 || Y < 0 || X >= W || Y >= W) return false; const c = ((Y / cell) | 0) * N + ((X / cell) | 0); return terr[c] === 0 && !pm[c]; };
+    const grassAt = (X, Y) => { if (X < 0 || Y < 0 || X >= W || Y >= W) return false; const c = ((Y / cell) | 0) * N + ((X / cell) | 0); return terr[c] === 0 && !pm[c] && !(COV !== null && COV[c]); };
     for (const d of o.decals) {
       if (d.x < wx - 40 || d.x > wx + CH + 40 || d.y < wy - 40 || d.y > wy + CH + 40) continue;
       const hd = hash(d.x | 0, d.y | 0, salt + 61), nC = 1 + (hd % A.decalCluster);
@@ -264,5 +302,5 @@
       both(pine.cv, px - pine.ax, py - pine.ay);
     }
   }
-  PS.ground = { paint, biome, mapArt, table: () => { table(); return K; } };
+  PS.ground = { paint, biome, mapArt, forestTrees, canopy, table: () => { table(); return K; } };
 })();

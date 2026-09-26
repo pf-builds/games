@@ -413,7 +413,9 @@
         for (let y = j - 1; y <= j + 1; y++) for (let x = i - 1; x <= i + 1; x++) { if (x < 0 || y < 0 || x >= N || y >= N) continue; const q = grove[y * N + x]; if (q && q !== g) return false; }
         return true;
       };
-      const noiseAt = (c) => vnoise((c % N) + 0.5, ((c / N) | 0) + 0.5, TF.grovePeriod, salt + 77);
+      // the growth noise once per candidate cell, and frontier membership as a per-grove stamp (M2b: the linear frontier scan and the
+      // per-step noise were the slow tail of the gen time; same values, same order, so the same groves)
+      const GN = D2, inFr = LAB; inFr.fill(0); for (let r = 0; r < 6; r++) for (const c of base[r]) GN[c] = Math.round(vnoise((c % N) + 0.5, ((c / N) | 0) + 0.5, TF.grovePeriod, salt + 77) * 1e9);
       const regions = [];
       for (let r = 0; r < 6; r++) {
         let best = null; const mark = (l, on) => { for (const q of l) for (const c of q.cells) grove[c] = on ? q.id : 0; };
@@ -427,9 +429,9 @@
             const order = [L[(rng() * L.length) | 0]], fr = []; grove[order[0]] = g;
             for (let guard = 0; order.length < sizes[k] && guard < 4 * sizes[k] + 64; guard++) {
               const last = order[order.length - 1], li = last % N, lj = (last / N) | 0;
-              for (const [x, y] of [[li - 1, lj], [li + 1, lj], [li, lj - 1], [li, lj + 1]]) { if (x < 0 || y < 0 || x >= N || y >= N) continue; const q = y * N + x; if (fr.indexOf(q) < 0 && okCell(q, r, g)) fr.push(q); }
-              let bi = -1, bv = -1; for (let q = 0; q < fr.length; q++) { if (grove[fr[q]] || !okCell(fr[q], r, g)) continue; const v = noiseAt(fr[q]); if (v > bv) { bv = v; bi = q; } }
-              if (bi < 0) break; const c = fr[bi]; fr.splice(bi, 1); grove[c] = g; order.push(c);
+              for (let d = 0; d < 4; d++) { const x = d === 0 ? li - 1 : d === 1 ? li + 1 : li, y = d === 2 ? lj - 1 : d === 3 ? lj + 1 : lj; if (x < 0 || y < 0 || x >= N || y >= N) continue; const q = y * N + x; if (inFr[q] !== g && okCell(q, r, g)) { fr.push(q); inFr[q] = g; } }
+              let bi = -1, bv = -1; for (let q = 0; q < fr.length; q++) { const f = fr[q]; if (grove[f] || !okCell(f, r, g)) continue; const v = GN[f]; if (v > bv) { bv = v; bi = q; } }
+              if (bi < 0) break; const c = fr[bi]; fr.splice(bi, 1); inFr[c] = 0; grove[c] = g; order.push(c);
             }
             got.push({ id: g, r, cells: order });
           }
@@ -480,7 +482,8 @@
       for (const c of best.values()) spots.push(c); let k = 0; for (let c = 0; c < NN; c++) if (cover[c] && !(grove && grove[c]) && (k++ % 8) === 0) spots.push(c);
       if (FO.on && FO.cost > 0) for (let c = 0; c < NN; c++) if (cover[c] && m.cost[c] < 255) m.cost[c] = Math.min(254, m.cost[c] + FO.cost);
     }
-    m.opaque = opaque; m.cover = cover; m.coverNear = near; m.sightD = sightD; m.deep = Int32Array.from(deep); m.spots = Int32Array.from(spots.slice(0, 64));
+    // grove: per-cell grove id (0 = reeds or open; the forest art reads it)
+    m.opaque = opaque; m.cover = cover; m.grove = grove || null; m.coverNear = near; m.sightD = sightD; m.deep = Int32Array.from(deep); m.spots = Int32Array.from(spots.slice(0, 64));
     m.losOn = nCover > 0 || opaque.some((v) => v === 1); info.cells = nCover; m.forest = info; m.place = null;
     return m;
   }

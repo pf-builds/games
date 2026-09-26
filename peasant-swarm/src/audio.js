@@ -283,6 +283,8 @@
     scatter(b) { cue(b, "scatter", 700, (b, v) => { bursts(b, v, 6, 0.06, 0.05, 0.07, 1400, 2000, 1.5, 0); tone(b, v, 520, 260, 0.45, "sawtooth", 0.05, 0.05, true); }); },
     crownPulse(b, mine) { cue(b, "crownPulse", 1500, (b, v) => { tone(b, v, mine ? 392 : 330, mine ? 392 : 330, 0.5, "triangle", 0.07); tone(b, v, mine ? 784 : 660, mine ? 790 : 664, 0.4, "sine", 0.03, 0.04); }); },
     dawn(b) { cue(b, "dawn", 2000, (b, v) => [659, 784, 988, 1319].forEach((f, i) => { tone(b, v, f, f, 1.2, "sine", 0.06, i * 0.18); tone(b, v, f * 2, f * 2, 0.6, "triangle", 0.015, i * 0.18); })); },
+    // v3 M2 (SPEC-v3 §2): the rustle's leaf hiss, a few soft high bursts. Low priority: it skips unless audio.leaf.reserve cue voices stay free
+    leaf(b, pan) { const L = C.leaf; if (b.cues > C.cueVoices - L.reserve) return; cue(b, "leaf", L.gapMs, (b, v) => bursts(b, v, L.n, L.gap, L.dur, L.peak, L.hz[0], L.hz[1], 1.2, 0), panTo(pan || 0)); },
     growl(b) { cue(b, "growl", 2500, (b, v) => { tone(b, v, 92, 70, 0.6, "sawtooth", 0.09, 0, true); tone(b, v, 98, 74, 0.6, "square", 0.04, 0.02, true); noise(b, v, 0.5, 0.05, 0, 300, 2); }); },
     // crowd murmur (SPEC-v2 §12; P2: tonal, no noise): murmur.hz triangles, each detuned, drifting and swelling on its own (murmurAM), through
     // one low-pass; the bed's level follows your count on a log scale, reaching murmur.max at murmur.full peasants and never more
@@ -297,8 +299,8 @@
 
   // ---------------------------------------------------------------- the event log (P2): every public call, its sim time and two numeric args
   // (a ring of cap entries; the murmur and the melee bed log only when their count changes, the drum only when it turns on or off)
-  const KEYS = ["recruit", "hit", "die", "rout", "power", "eliminated", "huddle", "bell", "win", "lose", "click", "rumble", "dangerHorn", "warHorn", "scentNote", "relic", "chest", "cheer", "fanfare", "ping", "scatter", "crownPulse", "dawn", "growl", "murmur", "melee", "startDrum", "stopDrum"];
-  const POW = ["speed", "armor", "frenzy", "rally"], KSTATE = 24; // keys from KSTATE on are state (murmur, melee, the drum on / off)
+  const KEYS = ["recruit", "hit", "die", "rout", "power", "eliminated", "huddle", "bell", "win", "lose", "click", "rumble", "dangerHorn", "warHorn", "scentNote", "relic", "chest", "cheer", "fanfare", "ping", "scatter", "crownPulse", "dawn", "growl", "leaf", "murmur", "melee", "startDrum", "stopDrum"];
+  const POW = ["speed", "armor", "frenzy", "rally"], KSTATE = 25; // keys from KSTATE on are state (murmur, melee, the drum on / off)
   const LOG = { on: false, clock: null, cap: 0, n: 0, t: null, k: null, a: null, b: null, mu: -1, me: -1 };
   function rec(k, x, y) { const L = LOG, i = L.n % L.cap; L.t[i] = L.clock(); L.k[i] = k; L.a[i] = typeof x === "string" ? POW.indexOf(x) : +x || 0; L.b[i] = +y || 0; L.n++; }
   // replay one logged call on bus b (a render)
@@ -344,11 +346,11 @@
       level: b ? { now: +(level(b) * C.master).toFixed(3), max: +b.st.maxLevel.toFixed(3), ceiling: C.ceiling, master: b.master.gain.value } : null, calls: b ? { ...b.st.calls } : null, plays: b ? { ...b.st.plays } : null }; },
     isMuted() { return muted; }, // the player's own mute (the M key, the sound button); isPlatformMuted() is the portal's
     // the crowd murmur: the live bus fades out while muted or silent (QA ignores both)
-    murmur(n) { if (LOG.on && n !== LOG.mu) { LOG.mu = n; rec(24, n, 0); } const b = qa ? qa.b : live; if (!b || !C) return; if (!qa && (silent || muted || plat || !ac())) n = 0; SND.murmur(b, n); },
-    melee(n) { if (LOG.on && n !== LOG.me) { LOG.me = n; rec(25, n, 0); } const b = qa ? qa.b : live; if (!b || !C) return; if (!qa && (silent || muted || plat || !ac())) n = 0; SND.melee(b, n); },
+    murmur(n) { if (LOG.on && n !== LOG.mu) { LOG.mu = n; rec(25, n, 0); } const b = qa ? qa.b : live; if (!b || !C) return; if (!qa && (silent || muted || plat || !ac())) n = 0; SND.murmur(b, n); },
+    melee(n) { if (LOG.on && n !== LOG.me) { LOG.me = n; rec(26, n, 0); } const b = qa ? qa.b : live; if (!b || !C) return; if (!qa && (silent || muted || plat || !ac())) n = 0; SND.melee(b, n); },
     // the drum: wanted while you are engaged; pump() starts it on the bus once there is one (after a mute, the silent sandbox, the first gesture)
-    startDrum() { if (drumWant) return; drumWant = true; if (LOG.on) rec(26, 0, 0); const b = bus(); if (b) SND.startDrum(b); },
-    stopDrum() { if (LOG.on && drumWant) rec(27, 0, 0); drumWant = false; for (const b of [live, qa && qa.b]) if (b) SND.stopDrum(b); },
+    startDrum() { if (drumWant) return; drumWant = true; if (LOG.on) rec(27, 0, 0); const b = bus(); if (b) SND.startDrum(b); },
+    stopDrum() { if (LOG.on && drumWant) rec(28, 0, 0); drumWant = false; for (const b of [live, qa && qa.b]) if (b) SND.stopDrum(b); },
     drumOn() { return drumWant; },
     // once per sim tick and per frame: the drum's lookahead and the cue reap (both on the audio clock)
     pump() { if (ctx && !qa && C) watchdog(performance.now()); const b = qa ? qa.b : live; if (!b) return; const now = T(b); reap(b, now); murmurAM(b, now); if (drumWant && !b.drum.on && bus() === b) SND.startDrum(b); if (b.drum.on && (qa || (!silent && !muted && !plat))) pumpDrum(b, now); },

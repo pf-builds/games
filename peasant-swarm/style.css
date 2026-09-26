@@ -29,6 +29,9 @@ body {
 .chip.unseen { opacity: .55; border-style: dashed; } /* a rival you have not sighted yet: "?" until first sight (SPEC-v2 §5) */
 .chip.you { border-color: rgba(255,255,255,.35); }
 .chip .sw { width: 12px; height: 12px; border-radius: 3px; box-shadow: 0 0 0 2px rgba(0,0,0,.35) inset; }
+/* v3 M2 (SPEC-v3 §2, §6): a leaf on the YOU chip while forest.hideShare of your swarm stands in the trees (drawn in CSS, no glyph) */
+.chip .sw { position: relative; }
+.chip.leaf .sw::after { content: ""; position: absolute; right: -8px; top: -7px; width: 10px; height: 10px; background: #7FC75A; border: 1.5px solid #10200F; border-radius: 0 80% 0 80%; transform: rotate(-12deg); }
 .chip .n { font-variant-numeric: tabular-nums; min-width: 2ch; text-align: right; }
 .chip.bump { transform: scale(1.12); }
 #timer {

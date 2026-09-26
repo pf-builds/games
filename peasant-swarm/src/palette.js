@@ -44,7 +44,7 @@
     // fog (SPEC-v2 §5): unexplored blue-slate, explored desaturated grey, the cloud drift tint. config.fog colours repeat the first two.
     fog: { unex: "#141C2A", exp: "#2B313C", cloud: "#5C6A84" },
     // the minimap's parchment (the map metaphor lives there only, R7): grass, low rock, high rock, water, ford, bridge, props, unexplored
-    parch: { grass: "#D6C496", rock: "#9A8468", high: "#786450", water: "#7896A6", ford: "#C6B278", bridge: "#8E683C", prop: "#A08A60", unex: "#18202C", camp: "#6E4F30" },
+    parch: { grass: "#D6C496", rock: "#9A8468", high: "#786450", water: "#7896A6", ford: "#C6B278", bridge: "#8E683C", prop: "#A08A60", unex: "#18202C", camp: "#6E4F30", grove: "#6E8450", reed: "#A8B078" }, // v3: groves, reeds
     // people: skin, hair, legs, boots, the pitchfork; six team colours (player mint first, then the rivals in config order); undyed
     // neutrals with a straw hat; bandits (M6) grey with a kerchief
     skin: ["#C99A5B", "#F1C27D"], hair: "#3E2A20", leg: "#4A3728", boot: "#2B1D12", shaft: "#9C7A46", tine: ["#8C8C96", "#D8D8D8"],

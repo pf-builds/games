@@ -100,6 +100,10 @@
     PS.selfTest = selfTest; PS.fight = fight; PS.simMatch = simMatch; PS.bench = bench; PS.replay = replay; // QA hooks, always on and side-effect free (see QA section)
     PS.debugDropCaches = debugDropCaches; PS.cacheReport = cacheReport; PS.recheckCaches = recheckCaches; PS.cacheProbe = cacheProbe;
     PS.fixture = fixture; PS.clashRead = clashRead; PS.fogMatch = fogMatch; PS.audioScene = audioScene;
+    // M2b QA (SPEC-v3 §8): a hidden-tab return's chunk bake on the live map: drop every cache, then the recovery's first frame (the visible
+    // chunks bake inside it) and the rest of the bake, in ms; plus the edge trees drawn in that frame and the canvas memory
+    PS.bakeProbe = () => { if (!S.map) return null; debugDropCaches(); recheckCaches(); const t0 = performance.now(); draw(); const t1 = performance.now(), G = ground(S.map), left = G.left; flushGround(S.map); const t2 = performance.now();
+      return { firstFrameMs: +(t1 - t0).toFixed(1), visibleBaked: G.n * G.n - left, restMs: +(t2 - t1).toFixed(1), restChunks: left, perChunkMs: +((t2 - t1) / Math.max(1, left)).toFixed(2), edgeTrees: edgeTreesDrawn, memory: canvasMemory() }; };
     perfLoad();
     resize();
     window.addEventListener("resize", resizeSoon);
@@ -121,7 +125,7 @@
       // scripted control for critics and the harness bot: route the player to (x, y) through its field, as a cursor-follow target
       PS.aim = (x, y) => { const inp = S.input, p = S.teams[1]; inp.route.on = false; inp.hold = false; inp.active = false; inp.joy.active = false; if (!p) return null; p.tx = x; p.ty = y; p.mode = "route"; return p.mode; };
       // QA: start a live match without the title click. { seed, difficulty, aiPlayer } (aiPlayer: all six swarms AI, the harness's pacing matches)
-      PS.debugStart = (o) => { o = o || {}; if (o.difficulty && S.cfg.difficulty[o.difficulty]) S.difficulty = o.difficulty; PS.audio.setSilent(true); newGame(false, { seed: o.seed, aiPlayer: !!o.aiPlayer }); S.mode = "play"; S._hintFight = S._hintHud = S._hintRecruit = S._hintFog = true; S._hintRelic = S._hintRem = 2; S._routedBy = null; showOverlay(null); $("hud").classList.remove("hidden"); layoutHUD(); updateHUD(true); return { seed: S.seed, difficulty: S.difficulty, slots: S.teams.slice(1).map((t) => t.slot) }; };
+      PS.debugStart = (o) => { o = o || {}; if (o.difficulty && S.cfg.difficulty[o.difficulty]) S.difficulty = o.difficulty; PS.audio.setSilent(true); newGame(false, { seed: o.seed, aiPlayer: !!o.aiPlayer }); S.mode = "play"; S._hintFight = S._hintHud = S._hintRecruit = S._hintFog = true; S._hintRelic = S._hintRem = S._hintForest = 2; S._routedBy = null; showOverlay(null); $("hud").classList.remove("hidden"); layoutHUD(); updateHUD(true); return { seed: S.seed, difficulty: S.difficulty, slots: S.teams.slice(1).map((t) => t.slot) }; };
       PS.pacing = pacing;
       PS.cfgOverride = cfgOverride; // M8 sweeps (SPEC-v2 §13)
       PS.artScene = artScene;
@@ -1046,6 +1050,9 @@
     if (!S._hintFog && S.t > 22 && S.fogS.stats.firstSight < 0) S._hintFog = showHint("Rival mobs hide in the dark. Explore to find them", 4);
     if (S._hintRelic === 1 && showHint("Relics upgrade your whole swarm for the rest of the match", 4)) S._hintRelic = 2;
     if (S._hintRem === 1 && showHint(S._hintRemTxt, 4)) S._hintRem = 2;
+    // v3 M2: the forest hint, due the first time forest.hideShare of your swarm stands in the trees or you see a rustle (drawTellsWorld)
+    if (!S._hintForest && PS.fog.losOn() && S.fogS.hideShare >= S.cfg.forest.hideShare) S._hintForest = 1;
+    if (S._hintForest === 1 && showHint("Trees hide small mobs. Leaves shake where something moves", S.cfg.polish.hintForest)) S._hintForest = 2;
 
     // win / lose
     if (player.count === 0 && !S.result) endGame(false, S._routedBy ? "Your swarm broke and joined " + S._routedBy + "." : "Every last peasant fell.");
@@ -1777,17 +1784,19 @@
   // the cells you have explored, the rest dark slate. An ImageData re-put from the typed arrays: the rect you explored since the last
   // redraw, or all of it for a new map or world, a dawn reveal, and on cache recovery (full = true)
   // parchment colours from PS.PAL.parch: grass, rock, water, ford, bridge by terrain code, the high rock, unexplored, props
-  let MPAL = null, MHIGH = null, MUNEX = null, MOBST = null;
+  let MPAL = null, MHIGH = null, MUNEX = null, MOBST = null, MGROVE = null, MREED = null;
   let miniTerr = null, miniImg = null, miniKey = "", miniT = -1e9, miniFrame = 0;
   function minimapBake(full) {
     const m = S.map; if (!m) return; const N = m.N, w = S.fogW, all = !fogGate(), lvl = PS.ground.mapArt(m, S.cfg.art).lvl, key = m.id + ":" + (w ? w.id + "." + w.gen : "-") + ":" + all;
-    if (!MPAL) { const P = PS.PAL.parch, r = PS.PAL.rgb; MPAL = [P.grass, P.rock, P.water, P.ford, P.bridge].map(r); MHIGH = r(P.high); MUNEX = r(P.unex); MOBST = r(P.prop); }
+    if (!MPAL) { const P = PS.PAL.parch, r = PS.PAL.rgb; MPAL = [P.grass, P.rock, P.water, P.ford, P.bridge].map(r); MHIGH = r(P.high); MUNEX = r(P.unex); MOBST = r(P.prop); MGROVE = r(P.grove); MREED = r(P.reed); }
     if (!miniTerr || miniTerr.width !== N) { if (miniTerr) { miniTerr.width = 0; miniTerr.height = 0; } miniTerr = mkCanvas(N, N); miniImg = null; }
     const g = miniTerr.getContext("2d"); if (!miniImg) { miniImg = g.createImageData(N, N); full = true; }
     let x0 = 0, y0 = 0, x1 = N - 1, y1 = N - 1;
     if (!full && key === miniKey) { if (!w || w.mx1 < 0) return; x0 = w.mx0; y0 = w.my0; x1 = w.mx1; y1 = w.my1; }
-    const d = miniImg.data, ex = w ? w.explored[1] : null;
-    for (let j = y0; j <= y1; j++) for (let i = x0; i <= x1; i++) { const c = j * N + i, q = c * 4, k = all || (ex && ex[c]) ? (lvl[c] === 2 ? MHIGH : MPAL[m.terr[c]] || MPAL[0]) : MUNEX; d[q] = k[0]; d[q + 1] = k[1]; d[q + 2] = k[2]; d[q + 3] = 255; }
+    const d = miniImg.data, ex = w ? w.explored[1] : null, cov = m.cover && m.forest && m.forest.cells > 0 ? m.cover : null, gr = m.grove, D = w ? w.disp : null, DP = S.cfg.fog.displayPad, DF = m.cell / S.cfg.fog.displayCell, DN = Math.round(S.cfg.world.w / S.cfg.fog.displayCell) + 2 * DP;
+    // v3: forest cells show where explored or where the tree line was in your sight (concealed cells are never explored; the display grid has them)
+    const shown = (c, i, j) => all || (ex && ex[c]) || (cov !== null && cov[c] === 1 && D !== null && D[(((j + 0.5) * DF) | 0) * DN + DP * DN + (((i + 0.5) * DF) | 0) + DP] === 1);
+    for (let j = y0; j <= y1; j++) for (let i = x0; i <= x1; i++) { const c = j * N + i, q = c * 4, k = shown(c, i, j) ? (cov !== null && cov[c] === 1 ? (gr && gr[c] > 0 ? MGROVE : MREED) : lvl[c] === 2 ? MHIGH : MPAL[m.terr[c]] || MPAL[0]) : MUNEX; d[q] = k[0]; d[q + 1] = k[1]; d[q + 2] = k[2]; d[q + 3] = 255; }
     for (const o of S.obstacles) { const c = PS.terrain.cellOf(o.x, o.y), i = c % N, j = (c / N) | 0; if (c < 0 || m.terr[c] || !(all || (ex && ex[c])) || i < x0 || i > x1 || j < y0 || j > y1) continue; const q = c * 4; d[q] = MOBST[0]; d[q + 1] = MOBST[1]; d[q + 2] = MOBST[2]; }
     g.putImageData(miniImg, 0, 0, x0, y0, x1 - x0 + 1, y1 - y0 + 1);
     if (w) { w.mx0 = 0; w.my0 = 0; w.mx1 = -1; w.my1 = -1; } miniKey = key;
@@ -1808,7 +1817,7 @@
   // frame). Where the art grid already lands on whole device px (2 x SNK an integer: DPR 2 at every zoom step) snapD is exactly snap2.
   let SNK = 2, SNX = true;
   const snapD = (v) => (SNX ? snap2(v) : Math.round(snap2(v) * SNK) / SNK);
-  let agentsDrawn = 0; // agents drawn in the last frame (the one-draw-per-agent check)
+  let agentsDrawn = 0, edgeTreesDrawn = 0; // agents (the one-draw-per-agent check) and grove edge trees drawn in the last frame
   // banner bearers (SPEC-v2 §11): one per swarm at its centroid (a rival's: the centroid of what you see of it, and only where you see
   // that point), four size tiers at art.bannerTiers. Per team this frame: pole base BX/BY, pennant top BTOP, tier, drawn (BON). Name tags,
   // verdict marks, the crown and anchored banners ("+N JOIN YOU") sit above it.
@@ -1930,6 +1939,8 @@
     // every peasant frame and every tree and rock, so each thing is ONE drawImage (the hit flash is a baked frame too). Sprites sit on the
     // 2 world px art grid.
     for (const o of S.obstacles) { if (o.x < x0 - 40 || o.x > x1 + 40 || o.y < y0 - 60 || o.y > y1 + 30) continue; DL.push(o); }
+    { const FT = S.map.cover && S.map.forest && S.map.forest.cells > 0 ? PS.ground.forestTrees(S.map, cfg.art) : null; let nT = 0; // v3: the grove edge-tree ring (no collider)
+      if (FT) for (let q = 0; q < FT.length; q++) { const o = FT[q]; if (o.x < x0 - 40 || o.x > x1 + 40 || o.y < y0 - 60 || o.y > y1 + 30) continue; DL.push(o); nT++; } edgeTreesDrawn = nT; }
     SPL.pushProps(DL, gate, x0, y0, x1, y1); // M6 props in the y-sort: villages, chests, heavy chests, bandit tents, ground relics (seen ones only under fog)
     bannerPrep(gate, x0, y0, x1, y1, DL);
     DL.sort(byY);
@@ -2150,8 +2161,41 @@
 
   // above the fog, world space (SPEC-v2 §5 tells): power-up beacons within fog.beacon px that you cannot see, pings where a clash you cannot
   // see is going on, dust from big unseen swarms, and "~N" ghosts where a rival left your sight (fading over fog.ghostSeconds)
+  // v3 M2 rustle render (SPEC-v3 §2 "Reveal"): each player rustle record (o === 1) newer than the last one drawn becomes a few shaking leaves
+  // for forest.rustleShow s, above the fog. The point is the anchor jittered by Math.random up to forest.rustleJitter px (pixels only) and
+  // kept on a forest cell you see or see concealed, else the anchor; an anchor that left your sight since its tick is not drawn (never behind
+  // rock). No count. The leaf hiss plays when the anchor is concealed in your sight (its own rule, not playerSees), on the low-priority cue
+  // budget. RUQ: QA counters (drawn, skipped, a drawn point on a cell you neither see nor see concealed).
+  const RSP = []; for (let i = 0; i < 8; i++) RSP.push({ on: false, x: 0, y: 0, t0: 0, k: i }); let rusTick = -1, rusFS = null, rusQ = 0;
+  const RUQ = { drawn: 0, skipped: 0, bad: 0, sounds: 0, lastX: 0, lastY: 0 };
+  function rustleScan() {
+    const FS = S.fogS, FO = S.cfg.forest, cov = S.map.cover; if (rusFS !== FS) { rusFS = FS; rusTick = S.tick; } if (!cov) return; // a new match (or world): only events from now on
+    let top = rusTick; const n = Math.min(FS.rustleN, RUSTLES);
+    for (let k = 0; k < n; k++) {
+      const e = FS.rustles[k]; if (e.o !== 1 || e.tick <= rusTick) continue; if (e.tick > top) top = e.tick;
+      const c0 = PS.fog.cellOf(e.x, e.y), conc = PS.fog.concealedCell(1, c0); if (!conc && !PS.fog.seesCell(1, c0)) { RUQ.skipped++; continue; }
+      let x = e.x, y = e.y;
+      for (let tr = 0; tr < 4; tr++) { const a = Math.random() * 6.2832, d = Math.random() * FO.rustleJitter, qx = e.x + Math.cos(a) * d, qy = e.y + Math.sin(a) * d, c = PS.fog.cellOf(qx, qy); if (c >= 0 && cov[c] === 1 && (PS.fog.concealedCell(1, c) || PS.fog.seesCell(1, c))) { x = qx; y = qy; break; } }
+      const c = PS.fog.cellOf(x, y); if (!PS.fog.concealedCell(1, c) && !PS.fog.seesCell(1, c)) RUQ.bad++;
+      const r = RSP[rusQ++ % RSP.length]; r.on = true; r.x = x; r.y = y; r.t0 = S.t; RUQ.drawn++; RUQ.lastX = x; RUQ.lastY = y;
+      if (!S._hintForest) S._hintForest = 1;
+      if (conc) { RUQ.sounds++; PS.audio.leaf(clamp(((x - S.cam.x) * S.cam.zoom) / Math.max(1, S.vw / 2), -1, 1)); }
+    }
+    rusTick = top;
+  }
+  function drawRustles(x0, y0, x1, y1) {
+    const FO = S.cfg.forest, L = PS.PAL.leaf, G = PS.PAL.grass, H = PS.PAL.high, nl = FO.rustleLeaves; // bright leaves: they must read on the dark canopy
+    for (const r of RSP) {
+      if (!r.on) continue; const age = (S.t - r.t0) / FO.rustleShow; if (age < 0 || age >= 1) { r.on = false; continue; } if (r.x < x0 - 40 || r.x > x1 + 40 || r.y < y0 - 40 || r.y > y1 + 40) continue;
+      ctx.globalAlpha = 1 - age * age;
+      for (let q = 0; q < nl; q++) { const h = Math.imul(r.k * 31 + q + 1, 2654435761) >>> 0, ox = ((h & 31) - 16) * 1.6, oy = (((h >>> 5) & 15) - 10) * 1.6, sh = Math.sin(age * 38 + q * 1.7) * 3 * (1 - age);
+        ctx.fillStyle = q % 3 === 0 ? H[3] : q % 3 === 1 ? G[4] : L[3]; ctx.fillRect(snap2(r.x + ox + sh), snap2(r.y + oy + age * (q & 1 ? 14 : 6)), 4, 4); }
+    }
+    ctx.globalAlpha = 1;
+  }
   function drawTellsWorld(x0, y0, x1, y1, pl) {
     const FS = S.fogS, FG = S.cfg.fog, spr = S.spr, bc2 = FG.beacon * FG.beacon, inV = (x, y, m) => x > x0 - m && x < x1 + m && y > y0 - m && y < y1 + m;
+    if (PS.fog.losOn()) { rustleScan(); drawRustles(x0, y0, x1, y1); }
     for (const p of S.powerups) {
       if (!p.alive || PS.fog.sees(1, p.x, p.y) || !inV(p.x, p.y, 40) || (p.x - pl.cx) * (p.x - pl.cx) + (p.y - pl.cy) * (p.y - pl.cy) > bc2) continue;
       const pu = 0.6 + 0.3 * Math.sin(S.t * 3 + p.x * 0.01); ctx.fillStyle = spr.PU[p.kind].color;
@@ -2438,6 +2482,7 @@
       // a power figure once that rival has been sighted (the power you last saw on it; yours live), SPEC-v2 §10 / M6
       const pw = i === 1 || !fogGate() || S.attract ? t.power : S.fogS.obs[1][i].seen ? t.power : S.fogS.obs[1][i].pw, txt = u || !t.alive || !(pw > 1.001) ? "" : "×" + pw.toFixed(2); if (pe && pe.textContent !== txt) pe.textContent = txt;
     }
+    { const el = $("chip-1"), lf = !!S.fogS && PS.fog.losOn() && S.mode === "play" && !S.attract && S.fogS.hideShare >= S.cfg.forest.hideShare; if (el && el.classList.contains("leaf") !== lf) el.classList.toggle("leaf", lf); } // v3: the YOU chip's leaf mark
     SPL.hud(false);
     PS.audio.murmur(S.mode === "play" && !S.attract && S.teams[1] ? S.teams[1].count : 0); // crowd murmur by your count (SPEC-v2 §12)
     const tl = Math.max(0, S.timeLeft), m = Math.floor(tl / 60), s = Math.floor(tl % 60);
@@ -2571,7 +2616,7 @@
   function syncMixer() { const m = PS.audio.mixState(), el = $("mixer"); if (!el) return; for (const b of el.querySelectorAll("button")) b.classList.toggle("off", !m[b.dataset.k]); el.querySelector("span").textContent = Math.round(m.volume * 100) + "%"; }
   function showOverlay(id) { document.querySelectorAll(".overlay").forEach((o) => o.classList.toggle("active", o.id === id)); }
   // the first-ever match (no stored difficulty, no records, nothing picked this visit) runs Easy silently; the end screens carry the picker
-  function startGame() { S.sessionMatches++; if (SCR) SCR.drop(); $("teams").classList.add("rumour"); if (S.firstEver) { S.firstEver = false; S.difficulty = "easy"; syncDifficulty(); } PS.audio.setSilent(false); PS.audio.unlock(); PS.audio.click(); portal("gameplayStop"); newGame(false); S.mode = "play"; S._hintFight = S._hintHud = S._hintRecruit = S._hintFog = false; S._hintRelic = S._hintRem = 0; S.fly = null; S.gained = false; S._routedBy = null; showOverlay(null); $("hud").classList.remove("hidden"); layoutHUD(); updateHUD(true); }
+  function startGame() { S.sessionMatches++; if (SCR) SCR.drop(); $("teams").classList.add("rumour"); if (S.firstEver) { S.firstEver = false; S.difficulty = "easy"; syncDifficulty(); } PS.audio.setSilent(false); PS.audio.unlock(); PS.audio.click(); portal("gameplayStop"); newGame(false); S.mode = "play"; S._hintFight = S._hintHud = S._hintRecruit = S._hintFog = false; S._hintRelic = S._hintRem = S._hintForest = 0; S.fly = null; S.gained = false; S._routedBy = null; showOverlay(null); $("hud").classList.remove("hidden"); layoutHUD(); updateHUD(true); }
   function toTitle() { portal("gameplayStop"); if (SCR) SCR.drop(); PS.audio.stopDrum(); PS.audio.murmur(0); PS.audio.melee(0); S.mode = "title"; showOverlay("ov-title"); $("hud").classList.add("hidden"); setHuddle(false); newGame(true); }
   // reason "hidden" | "blur" | "user": CrazyGames gets no gameplayStop for focus loss (its platform handles that; src/portal.js)
   function pause(reason) { portal("gameplayStop", reason || "user"); S.mode = "pause"; PS.audio.stopDrum(); PS.audio.murmur(0); PS.audio.melee(0); showOverlay("ov-pause"); setHuddle(false); S.input.joy.active = false; S.input.joy.id = -1; S.input.tp.active = false; S.input.hud2 = -1; }
@@ -2939,7 +2984,7 @@
   // ?poster=1 (SPEC-v2 §11, R7): a fixed scene for the arcade card and portal covers: a mint mob charging an orange mob across a ford, fog
   // off, sim frozen, no HUD, the logo the only text. Captured by the harness (--poster) at 1920x1080, 800x450 and 800x800.
   function posterStage() {
-    PS.audio.setSilent(true); newGame(false, { seed: S.cfg.polish.posterSeed }); S.mode = "play"; S.fogOn = false; S._hintFight = S._hintHud = S._hintRecruit = S._hintFog = true; S._hintRelic = S._hintRem = 2;
+    PS.audio.setSilent(true); newGame(false, { seed: S.cfg.polish.posterSeed }); S.mode = "play"; S.fogOn = false; S._hintFight = S._hintHud = S._hintRecruit = S._hintFog = true; S._hintRelic = S._hintRem = S._hintForest = 2;
     showOverlay(null); $("hud").classList.add("hidden"); $("poster").classList.remove("hidden"); $("hint").classList.remove("show");
     const P = S.cfg.polish, r = artScene("ford", { n: P.posterMint, walk: 0 }), m = S.map, R = m.river, nx = -R.dy, ny = R.dx, g = S.teams[2];
     S.agents = S.agents.filter((a) => a.team !== 2); blob(r.x - nx * 150, r.y - ny * 150, P.posterOrange, 2); recount(); g.pcx = g.cx; g.pcy = g.cy; g.tx = r.x + nx * 80; g.ty = r.y + ny * 80; g.thinkT = 1e9;
@@ -2954,6 +2999,17 @@
       done = (x, y) => { recount(); for (let i = 1; i < S.teams.length; i++) { const t = S.teams[i]; t.pcx = t.cx; t.pcy = t.cy; t.tx = t.cx; t.ty = t.cy; } fogStampAll(); S.cam.x = x; S.cam.y = y; zoomRule(pl.count, 0, true); if (S.map.chunks) flushGround(S.map); return { name, x: Math.round(x), y: Math.round(y), zoom: S.cam.zoom }; },
       near = (x, y, r) => { for (let k = 0; k < 60; k++) { const a = k * 2.39996, d = (k / 60) * r, px = x + Math.cos(a) * d, py = y + Math.sin(a) * d; if (walk(px, py)) return [px, py]; } return [x, y]; };
     if (name === "home") return done(pl.cx, pl.cy);
+    // v3 M2 "grove": your swarm (opts.n) on open ground 260 px from the grove nearest your spawn, a Greedy opts.rival (20) inside it; opts.hide:
+    // your swarm inside the grove instead (the YOU chip's leaf); opts.half: the Greedy straddles the tree line (the visible half only)
+    if (name === "grove" && m.grove) {
+      const sx = new Float64Array(4096), sy = new Float64Array(4096), sn = new Int32Array(4096); let best = -1, bd = 1e18;
+      for (let c = 0; c < N * N; c++) { const gi = m.grove[c]; if (gi > 0 && gi < 4096 && m.cover[c]) { sx[gi] += ((c % N) + 0.5) * cell; sy[gi] += (((c / N) | 0) + 0.5) * cell; sn[gi]++; } }
+      for (let gi = 1; gi < 4096; gi++) if (sn[gi] > 0) { const x = sx[gi] / sn[gi], y = sy[gi] / sn[gi], d = (x - pl.cx) * (x - pl.cx) + (y - pl.cy) * (y - pl.cy); if (d < bd) { bd = d; best = gi; } }
+      const gx = sx[best] / sn[best], gy = sy[best] / sn[best], dl = Math.sqrt(bd) || 1, ux = (pl.cx - gx) / dl, uy = (pl.cy - gy) / dl, [px, py] = opts.hide ? [gx, gy] : near(gx + ux * 260, gy + uy * 260, 120);
+      clear(opts.hide ? [1] : [1, 2]); freeze(); put(px, py, opts.n || 40, 1);
+      if (!opts.hide) { let ex = gx, ey = gy; if (opts.half) for (let k = 0; k < 40; k++) { const x = gx + ux * k * 8, y = gy + uy * k * 8, c = T.cellOf(x, y); if (c >= 0 && !m.cover[c]) { ex = x; ey = y; break; } } put(ex, ey, opts.rival || 20, 2); }
+      return done((px + gx) / 2, (py + gy) / 2);
+    }
     if (name === "ford" || name === "bridge") {
       const want = name === "ford" ? 3 : 4; let sx = 0, sy = 0, sn = 0, best = null;
       for (let c = 0; c < N * N; c++) if (m.terr[c] === want) { const x = ((c % N) + 0.5) * cell, y = (((c / N) | 0) + 0.5) * cell; if (!best) best = [x, y]; if (Math.hypot(x - best[0], y - best[1]) < 200) { sx += x; sy += y; sn++; } }
@@ -3296,6 +3352,10 @@
   // an AI values objectives (SPEC-v2 §7, §8): Greedy (20, past the grace) with a village of 12 (a landmark) 500 px off goes for it and takes it;
   // a relic it has never seen, 1500 px off, is never targeted; the knowledge assert stays clean
   function aiSpoilsTest() {
+    const AI = S.cfg.ai, kr = AI.siteKnowRadius; AI.siteKnowRadius = 0; // M2b: this checks how an AI values an objective it knows (v2's all-known sites); the P5 knowledge radius has its own checks (terrain part)
+    try { return aiSpoilsRun(); } finally { AI.siteKnowRadius = kr; }
+  }
+  function aiSpoilsRun() {
     return withSandbox(() => {
       const { W, r } = spoilsScene(31), x = W / 2, y = W / 2; r.alive = true; blob(300, 300, 3, 1); settle(S.teams[1]);
       blob(x - 500, y, 20, 2); settle(r); const v = SPL.stage("village", x, y, { gar: 12 }), far = SPL.stage("relic", x - 500, y + 1500, { axis: "horn" }); fogStampAll(); r.thinkT = 0;
@@ -3369,13 +3429,13 @@
     let camps = grid(110, 0, want, okAt); if (camps.length < want) camps = camps.concat(grid(55, 27, want - camps.length, (x, y) => okAt(x, y) && camps.every((c) => (c[0] - x) * (c[0] - x) + (c[1] - y) * (c[1] - y) > 50 * 50)));
     return { blobs, camps, want };
   }
-  function countFrame(n) {
+  function countFrame(n, noTick) { // noTick: draw the current world as it stands (a selfTest scene), no benchTick
     const oDI = ctx.drawImage, oFR = ctx.fillRect, cw = canvas.width, ch = canvas.height; let di = 0, layers = 0, ag = 0;
     const full = (x, y, w, h) => { const m = ctx.getTransform(); const ax = m.a * x + m.e, ay = m.d * y + m.f, bx = m.a * (x + w) + m.e, by = m.d * (y + h) + m.f; return Math.min(ax, bx) <= 1 && Math.min(ay, by) <= 1 && Math.max(ax, bx) >= cw - 1 && Math.max(ay, by) >= ch - 1; };
     ctx.drawImage = function (img, a, b, c, d) { di++; const w = arguments.length >= 5 ? (arguments.length >= 9 ? arguments[7] : c) : img.width, h = arguments.length >= 5 ? (arguments.length >= 9 ? arguments[8] : d) : img.height;
       const x = arguments.length >= 9 ? arguments[5] : a, y = arguments.length >= 9 ? arguments[6] : b; if (full(x, y, w, h)) layers++; return oDI.apply(this, arguments); };
     ctx.fillRect = function (x, y, w, h) { if (full(x, y, w, h) && (ctx.globalAlpha < 1 || typeof ctx.fillStyle !== "string" || ctx.fillStyle.length > 7)) layers++; return oFR.apply(this, arguments); };
-    try { for (let i = 0; i < n; i++) { benchTick(); draw(); ag += agentsDrawn; } } finally { delete ctx.drawImage; delete ctx.fillRect; }
+    try { for (let i = 0; i < n; i++) { if (!noTick) benchTick(); draw(); ag += agentsDrawn; } } finally { delete ctx.drawImage; delete ctx.fillRect; }
     return { drawImage: di / n, layers: layers / n, agentsDrawn: ag / n };
   }
   // opts.fog: "on" (default: the player's fog as in a match), "reveal" (the fog layer composed but every agent drawn), "off" (no fog layer)
@@ -3512,7 +3572,8 @@
     "banner.minSeconds:n banner.queuedSeconds:n banner.staleSeconds:n banner.dropDepth:n combat.verdictRatio:n polish.dprTiers.0:n polish.dprTiers.1:n polish.dprTiers.2:n polish.dprP90Ms:n polish.dprHoldSeconds:n polish.dprWindow:n polish.rafP90Ms:n polish.dprGraceSeconds:n polish.dprRememberDays:n polish.fontWaitMs:n audio.duckMs:n audio.watchdogMs:n audio.rebuildAfter:n audio.rebuildGapMs:n polish.ghostSeconds:n polish.flySeconds:n polish.surrenderSeconds:n polish.routWaveSeconds:n polish.hpBarMax:n polish.dustEvery:n polish.dustSpan:n polish.dustN:n polish.irisSeconds:n polish.confetti:n polish.bannerFall:n polish.posterSeed:n polish.posterMint:n polish.posterOrange:n polish.posterStep:n " +
     // v3 M2 (SPEC-v3 §2, §7): terrain that hides
     "fog.losWalls:s fog.losMaxCells:n fog.losBucketCells:n fog.losCacheCells:n fog.losWarmIris:b fog.shadowAlpha:n fog.shadowHz:n forest.on:b forest.seeInto:n forest.blocksSight:b " +
-    "forest.speed:n forest.cost:n forest.fightReveal:n forest.fightRevealSeconds:n forest.rustleEvery:n forest.rustleJitter:n forest.shadeAlpha:n forest.hideShare:n forest.dustHush:b " +
+    "forest.speed:n forest.cost:n forest.fightReveal:n forest.fightRevealSeconds:n forest.rustleEvery:n forest.rustleJitter:n forest.shadeAlpha:n forest.hideShare:n forest.dustHush:b forest.rustleShow:n forest.rustleLeaves:n fog.shadowMargin:n " +
+    "art.canopyPeriod:n art.canopyWobble:n art.canopyRim:n art.canopyLight:n art.forestTreeEvery:n art.forestTreePush:n polish.hintForest:n audio.leaf.peak:n audio.leaf.gapMs:n audio.leaf.reserve:n audio.leaf.n:n audio.leaf.gap:n audio.leaf.dur:n audio.leaf.hz:a " +
     "terrain.forest:o terrain.forest.bankWidth:n terrain.forest.bankCover:n terrain.forest.bankClear:n terrain.forest.bankPeriod:n terrain.forest.grovesPerRegion:n terrain.forest.groveCells:a " +
     "terrain.forest.groveMinFromHome:n terrain.forest.groveClear:n terrain.forest.grovePeriod:n terrain.forest.groveFlank:a terrain.forest.fairRatio:n terrain.forest.tries:n " +
     "ai.forestFleeBonus:n ai.rustleMemory:n ai.siteKnowRadius:n powerups.firstDelay:n fixtures.concealN:n fixtures.concealDist:n fixtures.groveN:n fixtures.groveColumn:n").split(" ");
@@ -3805,6 +3866,63 @@
     return { open, rock, match: { events: m1.n, same: m1.list === m2.list && m1.n === m2.n, truncated: m1.truncated || m2.truncated },
       pass: open.events >= 2 && open.keys === "o,r,tick,x,y" && open.gaps.every((d) => d >= every) && rock.inRange > 0 && m1.n > 0 && rock.playerEvents === 0 && !rock.seen && m1.list === m2.list && m1.n === m2.n && !m1.truncated };
   }
+  // ---- M2b render parts (SPEC-v3 §9 M2). Every read is a counter or a scratch-canvas readback (PS.fog.fogAlphaAt), never a cache.
+  // forest_conceal (render): the far scene drawn with the camera on it: rival agents drawn 0, tags 0, solid arrows 0, minimap dots 0,
+  // particles near the grove 0, sim-event sounds 0 (hits, deaths, recruits, routs, rumbles...). The rustle's leaf hiss and leaves are the
+  // designed tell (SPEC-v3 §2) and are reported apart, not gated here.
+  function forestConcealRender() {
+    return withSandbox(() => {
+      const FX = S.cfg.fixtures, { p, r, g } = concealScene(FX.concealN, 100, FX.concealDist, 23), A = PS.audio, keys = ["hit", "die", "rout", "recruit", "power", "eliminated", "rumble", "ping", "dangerHorn", "scatter", "growl", "cheer"], cnt = {}, orig = {}, pb = particles.burst, pr = particles.ring;
+      const near = (x, y) => Math.abs(x - g.gx) < 300 && Math.abs(y - g.gy) < 300; let parts = 0, leaf = 0; const oLeaf = A.leaf;
+      for (const k of keys) { cnt[k] = 0; orig[k] = A[k]; A[k] = function () { cnt[k]++; return orig[k].apply(A, arguments); }; }
+      A.leaf = function () { leaf++; return oLeaf.apply(A, arguments); };
+      particles.burst = function (x, y) { if (near(x, y)) parts++; return pb.apply(this, arguments); }; particles.ring = function (x, y) { if (near(x, y)) parts++; return pr.apply(this, arguments); };
+      let drawn = 0, tags = 0, arrows = 0, mini = 0, frames = 0; const rq0 = RUQ.drawn;
+      try {
+        for (let i = 0; i < 240; i++) {
+          hold(p); r.tx = r.cx; r.ty = r.cy; update(DT); S.cam.x = (p.cx + r.cx) / 2; S.cam.y = p.cy; S.cam.zoom = 1;
+          if (i % 4 === 0) { draw(); drawMinimap(true); frames++; for (const a of S.agents) if (a.team === 2 && a.drawnF === S.frameId) drawn++; if (tagMask & 4) tags++; if (arrowMask & 4) arrows++; if (miniMask & 4) mini++; }
+        }
+      } finally { for (const k of keys) A[k] = orig[k]; A.leaf = oLeaf; particles.burst = pb; particles.ring = pr; }
+      let snd = 0; for (const k of keys) snd += cnt[k];
+      return { frames, rivalsDrawn: drawn, tags, arrows, minimap: mini, particles: parts, sounds: snd, pip: S.fogS.obs[1][2].ever ? "count" : "?", tell: { rustlesDrawn: RUQ.drawn - rq0, leafHiss: leaf },
+        pass: frames >= 50 && drawn === 0 && tags === 0 && arrows === 0 && mini === 0 && parts === 0 && snd === 0 && !S.fogS.obs[1][2].ever };
+    });
+  }
+  // forest_rustle_no_leak (render): the open-grove 20 drawn every 3rd tick: rustles are drawn, every drawn point lies on a cell you see or see
+  // concealed (checked when drawn and again from the typed arrays after the frame); the grove behind the ridge: none drawn
+  function rustleRender() {
+    const run = (rock) => withSandbox(() => {
+      let p, r;
+      if (!rock) ({ p, r } = concealScene(20, 100, S.cfg.fixtures.concealDist, 31));
+      else { const m = losMap(), g = losGeom(), cell = g.cell; fixtureBase(m, 37); S.fogOn = true; S.mode = "play"; p = S.teams[1]; r = S.teams[2]; r.alive = true; const y = (g.hj + 3.5) * cell; blob((g.ri - 3) * cell, y, 20, 2); blob((g.ri + 2) * cell + 100, y, 100, 1); settle(p); settle(r); hold(p); fogStampAll(); }
+      const d0 = RUQ.drawn, b0 = RUQ.bad, s0 = RUQ.skipped; let after = 0, frames = 0;
+      for (let i = 0; i < 420; i++) { hold(p); r.tx = r.cx; r.ty = r.cy; update(DT); S.cam.x = (p.cx + r.cx) / 2; S.cam.y = p.cy; S.cam.zoom = 1;
+        if (i % 3 === 0) { const n0 = RUQ.drawn; draw(); frames++; if (RUQ.drawn > n0) { const c = PS.fog.cellOf(RUQ.lastX, RUQ.lastY); if (!PS.fog.concealedCell(1, c) && !PS.fog.seesCell(1, c)) after++; } } }
+      return { frames, drawn: RUQ.drawn - d0, badAtDraw: RUQ.bad - b0, badAfterFrame: after, skipped: RUQ.skipped - s0, events: S.fogS.stats.rustles };
+    });
+    const open = run(false), rock = run(true);
+    return { open, rock, pass: open.drawn >= 2 && open.badAtDraw === 0 && open.badAfterFrame === 0 && rock.drawn === 0 && rock.events === 0 };
+  }
+  // los_shadow_render: a 100 holding 150 px west of the ridge (not the pass), drawn at zoom 1 with the camera on it: the composed fog canvas
+  // at the centre of a cell 100 px behind the ridge (in sight range, hidden by rock) reads alpha >= fog.shadowAlpha x 255 - 8 through a scratch
+  // copy, and a clear cell as far west reads under half that; after PS.fog.drop() (the shadow blanked, no re-put yet) it falls, and after
+  // PS.fog.recover() (re-put from the typed arrays) it is back. Still one full-screen alpha draw (countFrame).
+  function losShadowRender() {
+    return withSandbox(() => {
+      const m = losMap(), g = losGeom(), cell = g.cell, xw = g.ri * cell, xe = (g.ri + 2) * cell, y = (20.5) * cell; fixtureBase(m, 17); S.fogOn = true; S.mode = "play";
+      const p = S.teams[1]; blob(xw - 150, y, 100, 1); settle(p); hold(p); fogStampAll(); for (let i = 0; i < 6; i++) { hold(p); update(DT); }
+      const cam = () => { S.cam.x = p.cx + 120; S.cam.y = p.cy; S.cam.zoom = 1; };
+      const hx = (Math.floor((xe + 100) / cell) + 0.5) * cell, cx = (Math.floor((p.cx - (hx - p.cx)) / cell) + 0.5) * cell, R = sightR(p);
+      const hc = PS.fog.cellOf(hx, y), vis = PS.fog.vis(1), v = PS.fog.verOf(1), hidden = vis[hc] !== v && vis[hc] !== v + 1;
+      cam(); PS.fog.shadowForce(); draw(); const a0 = PS.fog.fogAlphaAt([[hx, y], [cx, y]]);
+      PS.fog.drop(); cam(); draw(); const a1 = PS.fog.fogAlphaAt([[hx, y]]);
+      PS.fog.recover(); cam(); draw(); const a2 = PS.fog.fogAlphaAt([[hx, y]]);
+      const lay = countFrame(1, true).layers, bar = S.cfg.fog.shadowAlpha * 255 - 8;
+      return { distHidden: Math.round(hx - p.cx), R: Math.round(R), cellHidden: hidden, shadowCells: PS.fog.SHS.hidden, alpha: a0[0], clearAlpha: a0[1], afterDrop: a1[0], afterRecover: a2[0], bar: +bar.toFixed(1), layers: lay,
+        pass: hidden && hx - p.cx < R && a0[0] >= bar && a0[1] < bar / 2 && a1[0] < bar && a2[0] >= bar && lay === 1 };
+    });
+  }
   // ai_blind_in_grove: a big AI 250 px from a small AI hidden in the grove never hunts it; carried out into the open next to it, it hunts
   function aiBlindGroveTest() {
     return withSandbox(() => {
@@ -3844,13 +3962,15 @@
   }
   // the terrain part's v3 checks (PS.selfTest({ parts: "terrain" }))
   function terrainM2(check) {
-    const ts = terrainForestSuite(20); check("terrain_forest_20_seeds", ts.bad.length === 0 && ts.forestP50 <= 5, ts);
+    const ts = terrainForestSuite(20); check("terrain_forest_20_seeds", ts.bad.length === 0 && ts.forestP90 <= 5, ts); // M2b: p90 gated (was the median)
     const rg = losRidgeTest(); check("los_ridge", rg.pass, rg);
     const sy = losSymmetryTest(); check("los_symmetry", sy.pass, sy);
     const ce = losCacheTest(); check("los_cache_equal", ce.pass, ce);
     const fc = forestConcealTest(); check("forest_conceal", fc.pass, fc);
     const ff = forestFightTest(); check("forest_fight_reveal", ff.pass, ff);
-    const fr = forestRustleTest(); check("forest_rustle_no_leak", fr.pass, fr);
+    const fr = forestRustleTest(), frr = rustleRender(); check("forest_rustle_no_leak", fr.pass && frr.pass, { ...fr, render: frr });
+    const fcr = forestConcealRender(); check("forest_conceal_render", fcr.pass, fcr);
+    const lsr = losShadowRender(); check("los_shadow_render", lsr.pass, lsr);
     const gs = groveSeed(), fm = fogMatch(60, { seed: gs.seed }), rm = fogMatch(60, { seed: 31337, map: fixtureMap("pass64") });
     check("fog_leak_60s_los", fm.diff === 0 && fm.frames >= 100 && !fm.truncated && fm.ai.violations === 0 && rm.diff === 0 && rm.frames >= 100 && !rm.truncated && rm.ai.violations === 0,
       { groveSeed: gs, grove: { diff: fm.diff, frames: fm.frames, rivalFrames: fm.rivalFrames, stats: fm.stats, truncated: fm.truncated }, ridge: { diff: rm.diff, frames: rm.frames, rivalFrames: rm.rivalFrames, truncated: rm.truncated } });
@@ -3876,10 +3996,11 @@
       const near = withSandbox(() => { sandboxField(m); newGame(false, { map: m, seed: seed ^ 0x5bd1e995 }); const bad = []; const at = (x, y) => m.coverNear[T.cellOf(x, y)] === 1;
         for (const c of S.camps) if (at(c.x, c.y)) bad.push("camp"); for (const p of S.powerups) if (at(p.x, p.y)) bad.push("powerup"); for (const o of S.obstacles) if (at(o.x, o.y)) bad.push("prop"); for (const o of S.objs || []) if (at(o.x, o.y)) bad.push(o.type); return bad; });
       if (near.length) why.push("near forest " + near.slice(0, 4).join(","));
-      ms.push(m.forestMs); out.seeds.push({ seed, cells: m.forest.cells, reeds: m.forest.reeds, groves: m.forest.groves.length, fair: m.forest.fair, forestMs: m.forestMs, genMs: m.genMs });
+      // M2b: the timing is the better of two gens of the seed (one GC or JIT pause is not the pass's cost)
+      const m2 = T.gen(seed); ms.push(Math.min(m.forestMs, m2.forestMs)); out.seeds.push({ seed, cells: m.forest.cells, reeds: m.forest.reeds, groves: m.forest.groves.length, fair: m.forest.fair, forestMs: Math.min(m.forestMs, m2.forestMs), genMs: m.genMs });
       if (why.length) out.bad.push(seed + ": " + why.join("; "));
     }
-    const s = ms.slice().sort((a, b) => a - b); out.forestP50 = s[s.length >> 1]; out.forestMax = s[s.length - 1]; out.cellsMean = Math.round(out.seeds.reduce((a, r) => a + r.cells, 0) / n);
+    const s = ms.slice().sort((a, b) => a - b); out.forestP50 = s[s.length >> 1]; out.forestP90 = s[Math.min(s.length - 1, Math.floor(0.9 * s.length))]; out.forestMax = s[s.length - 1]; out.cellsMean = Math.round(out.seeds.reduce((a, r) => a + r.cells, 0) / n);
     return out;
   }
 

@@ -522,7 +522,8 @@
     "losCacheCells": 2048,
     "losWarmIris": true,
     "shadowAlpha": 0.55,
-    "shadowHz": 15
+    "shadowHz": 15,
+    "shadowMargin": 4
   },
   "forest": {
     "on": true,
@@ -536,7 +537,9 @@
     "rustleJitter": 64,
     "shadeAlpha": 0.25,
     "hideShare": 0.5,
-    "dustHush": false
+    "dustHush": false,
+    "rustleShow": 0.9,
+    "rustleLeaves": 10
   },
   "art": {
     "flashWhite": 0.72,
@@ -600,6 +603,12 @@
     "hatShareMin": 0.25,
     "terrainSatMax": 0.45,
     "flashMin": 0.06,
+    "canopyPeriod": 14,
+    "canopyWobble": 0.3,
+    "canopyRim": 0.07,
+    "canopyLight": 5,
+    "forestTreeEvery": 4,
+    "forestTreePush": 8,
     "ditherBand": 0.3
   },
   "finale": {
@@ -814,6 +823,7 @@
     "posterSeed": 1000,
     "hintFightGain": 8,
     "hintFightAfter": 8,
+    "hintForest": 5,
     "posterMint": 70,
     "posterOrange": 48,
     "posterStep": 0.45
@@ -836,11 +846,97 @@
     "die": { "perSec": 4, "energy": 3, "minLevel": 0.3, "jitter": 0.35, "tonePeak": 0.18, "toneDur": 0.2, "tailDb": -18, "tailDur": 0.03, "tailHz": 900 },
     "melee": { "max": 0.1, "full": 400, "k0": 8, "hz": 450, "q": 0.7, "tau": 0.6, "every": 0.1 },
     "recruit": { "gapMs": 90, "peak": 0.12 },
+    "leaf": { "peak": 0.035, "gapMs": 700, "reserve": 4, "n": 3, "gap": 0.07, "dur": 0.09, "hz": [3200, 5200] },
     "drum": { "step": 0.17, "ahead": 0.1, "kickPeak": 0.22, "kickDur": 0.3, "kickFloor": 0.03, "tickPeak": [0.04, 0.07], "tickHz": [1500, 1000], "tickDur": [0.03, 0.06], "tickLp": 3000 },
     "murmur": { "hz": [92, 104, 123, 139, 166], "detune": 0.015, "drift": 0.01, "lp": 520, "max": 0, "full": 400, "k0": 2, "tau": 0.4, "am": [0.3, 1], "amSec": [0.6, 1.8] },
     "qa": { "sceneN": 700, "sceneSeconds": 20, "sampleRate": 44100, "flatHz": [50, 10000], "highHz": 2000, "flatMax": 0.35, "highMax": 0.25, "noiseMax": 0.25 }
   },
   "_units": {
+    "fog.shadowMargin": [
+      "cells re-put past each side of the view in the shadow canvas (covers a pan between re-puts)",
+      0,
+      16
+    ],
+    "forest.rustleShow": [
+      "s a drawn rustle (leaves shaking) lasts",
+      0.2,
+      3
+    ],
+    "forest.rustleLeaves": [
+      "leaf pixels in a drawn rustle",
+      3,
+      16
+    ],
+    "art.canopyPeriod": [
+      "world px; the canopy clump noise period",
+      6,
+      48
+    ],
+    "art.canopyWobble": [
+      "the tree line's noise wobble around the cell field (0 = cell-bilinear edge)",
+      0,
+      0.6
+    ],
+    "art.canopyRim": [
+      "canopy field band inside the edge painted as the dark rim",
+      0,
+      0.2
+    ],
+    "art.canopyLight": [
+      "strength of the north-west light on the canopy clumps",
+      0,
+      12
+    ],
+    "art.forestTreeEvery": [
+      "one grove edge cell in N gets an edge tree sprite",
+      1,
+      12
+    ],
+    "art.forestTreePush": [
+      "world px an edge tree sits out from its cell centre along the open side",
+      0,
+      16
+    ],
+    "polish.hintForest": [
+      "s the one-shot forest hint shows (fired at the first hide or the first rustle you see)",
+      1,
+      10
+    ],
+    "audio.leaf.peak": [
+      "peak of the rustle's leaf hiss",
+      0,
+      0.2
+    ],
+    "audio.leaf.gapMs": [
+      "ms minimum between two leaf hisses",
+      100,
+      5000
+    ],
+    "audio.leaf.reserve": [
+      "cue voices kept free for other cues (the hiss is low priority: it skips when fewer are free)",
+      0,
+      12
+    ],
+    "audio.leaf.n": [
+      "leaf hiss bursts",
+      1,
+      6
+    ],
+    "audio.leaf.gap": [
+      "s between leaf hiss bursts",
+      0.02,
+      0.3
+    ],
+    "audio.leaf.dur": [
+      "s each leaf hiss burst decays over",
+      0.02,
+      0.3
+    ],
+    "audio.leaf.hz": [
+      "Hz range of the leaf hiss filter per burst [lo, hi]",
+      500,
+      10000
+    ],
     "fog.losMaxCells": [
       "cells; centroid viewshed radius (>= the largest sight / terrain.cell)",
       8,
