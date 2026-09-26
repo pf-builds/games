@@ -3907,16 +3907,16 @@
     const open = run(false), rock = run(true);
     return { open, rock, pass: open.drawn >= 2 && open.badAtDraw === 0 && open.badAfterFrame === 0 && rock.drawn === 0 && rock.events === 0 };
   }
-  // los_shadow_render: a 100 holding 150 px west of the ridge (not the pass), drawn at zoom 1 with the camera on it: the composed fog canvas
+  // los_shadow_render: a 100 holding 150 px west of the ridge (not the pass), drawn at zoom 0.5 with the camera between it and the ridge: the composed fog canvas
   // at the centre of a cell 100 px behind the ridge (in sight range, hidden by rock) reads alpha >= fog.shadowAlpha x 255 - 8 through a scratch
-  // copy, and a clear cell as far west reads under half that; after PS.fog.drop() (the shadow blanked, no re-put yet) it falls, and after
+  // copy, and a clear cell 150 px west reads under half that (zoom 0.5, so both are on screen on a phone); after PS.fog.drop() (the shadow blanked, no re-put yet) it falls, and after
   // PS.fog.recover() (re-put from the typed arrays) it is back. Still one full-screen alpha draw (countFrame).
   function losShadowRender() {
     return withSandbox(() => {
       const m = losMap(), g = losGeom(), cell = g.cell, xw = g.ri * cell, xe = (g.ri + 2) * cell, y = (20.5) * cell; fixtureBase(m, 17); S.fogOn = true; S.mode = "play";
       const p = S.teams[1]; blob(xw - 150, y, 100, 1); settle(p); hold(p); fogStampAll(); for (let i = 0; i < 6; i++) { hold(p); update(DT); }
-      const cam = () => { S.cam.x = p.cx + 120; S.cam.y = p.cy; S.cam.zoom = 1; };
-      const hx = (Math.floor((xe + 100) / cell) + 0.5) * cell, cx = (Math.floor((p.cx - (hx - p.cx)) / cell) + 0.5) * cell, R = sightR(p);
+      const hx = (Math.floor((xe + 100) / cell) + 0.5) * cell, cx = (Math.floor((p.cx - 150) / cell) + 0.5) * cell, R = sightR(p);
+      const cam = () => { S.cam.x = (p.cx + hx) / 2; S.cam.y = p.cy; S.cam.zoom = 0.5; }; // both points on screen on a 375 px phone too
       const hc = PS.fog.cellOf(hx, y), vis = PS.fog.vis(1), v = PS.fog.verOf(1), hidden = vis[hc] !== v && vis[hc] !== v + 1;
       cam(); PS.fog.shadowForce(); draw(); const a0 = PS.fog.fogAlphaAt([[hx, y], [cx, y]]);
       PS.fog.drop(); cam(); draw(); const a1 = PS.fog.fogAlphaAt([[hx, y]]);
@@ -3999,10 +3999,12 @@
       const near = withSandbox(() => { sandboxField(m); newGame(false, { map: m, seed: seed ^ 0x5bd1e995 }); const bad = []; const at = (x, y) => m.coverNear[T.cellOf(x, y)] === 1;
         for (const c of S.camps) if (at(c.x, c.y)) bad.push("camp"); for (const p of S.powerups) if (at(p.x, p.y)) bad.push("powerup"); for (const o of S.obstacles) if (at(o.x, o.y)) bad.push("prop"); for (const o of S.objs || []) if (at(o.x, o.y)) bad.push(o.type); return bad; });
       if (near.length) why.push("near forest " + near.slice(0, 4).join(","));
-      // M2b: the timing is the better of two gens of the seed (one GC or JIT pause is not the pass's cost)
-      const m2 = T.gen(seed); ms.push(Math.min(m.forestMs, m2.forestMs)); out.seeds.push({ seed, cells: m.forest.cells, reeds: m.forest.reeds, groves: m.forest.groves.length, fair: m.forest.fair, forestMs: Math.min(m.forestMs, m2.forestMs), genMs: m.genMs });
+      ms.push(m.forestMs); out.seeds.push({ seed, cells: m.forest.cells, reeds: m.forest.reeds, groves: m.forest.groves.length, fair: m.forest.fair, forestMs: m.forestMs, genMs: m.genMs });
       if (why.length) out.bad.push(seed + ": " + why.join("; "));
     }
+    // M2b: each seed's timing is the better of this pass and a second pass over all n seeds (the first seeds of a cold page carry JIT warm-up,
+    // and one GC pause on a seed is not the forest pass's cost)
+    for (let i = 0; i < n; i++) { const m2 = T.gen(1000 + i * 7919); if (m2.forestMs < ms[i]) { ms[i] = m2.forestMs; out.seeds[i].forestMs = m2.forestMs; } }
     const s = ms.slice().sort((a, b) => a - b); out.forestP50 = s[s.length >> 1]; out.forestP90 = s[Math.min(s.length - 1, Math.floor(0.9 * s.length))]; out.forestMax = s[s.length - 1]; out.cellsMean = Math.round(out.seeds.reduce((a, r) => a + r.cells, 0) / n);
     return out;
   }
