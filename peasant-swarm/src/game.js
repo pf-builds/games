@@ -2098,7 +2098,7 @@
       const tch = S.input.touch, pw = Math.min(HUDL.lay === "lay-d" ? 380 : 343, S.vw - (HUDL.lay === "lay-l" ? 264 : 32)), px = S.vw / 2 - pw / 2, py = HUDL.top + 4, r1 = tch ? 17 : 20, bh = tch ? 7 : 8, ph = tch ? (inc ? 52 : 40) : inc ? 62 : 46;
       ctx.fillStyle = "rgba(8,14,6,.82)"; ctx.beginPath(); ctx.roundRect(px, py, pw, ph, 10); ctx.fill();
       ctx.font = "800 " + (tch ? 14 : 15) + "px 'Nunito', system-ui"; ctx.textAlign = "left"; ctx.fillStyle = pl.color; ctx.fillText("YOU " + cr.a, px + 12, py + r1);
-      ctx.textAlign = "right"; ctx.fillStyle = t.color; ctx.fillText(t.name.toUpperCase() + " " + cr.b, px + pw - 12, py + r1);
+      ctx.textAlign = "right"; ctx.fillStyle = t.color; ctx.fillText(t.name.toUpperCase() + " " + (fogGate() && PVN[clashRi] > 0 ? Math.round(PVN[clashRi] * teamPower(t)) : cr.b), px + pw - 12, py + r1); // v3: the part you see (SPEC-v3 §2)
       ctx.textAlign = "center"; ctx.font = "800 12px 'Nunito', system-ui";
       ctx.fillStyle = cr.verdict === "WINNING" ? "#7CF2C4" : cr.verdict === "LOSING" ? "#FF7A6E" : "#FFE49A"; ctx.fillText(cr.verdict, px + pw / 2, py + r1);
       if (inc) { ctx.fillStyle = inc.color; ctx.fillText(inc.name.toUpperCase() + " INCOMING", px + pw / 2, py + ph - (tch ? 6 : 6)); }
@@ -2244,7 +2244,7 @@
       if (sightOnly && !FS.obs[1][i].seen) continue;
       if (!gate || PVN[i]) {
         const wx = gate ? PVX[i] / PVN[i] : t.cx, wy = gate ? PVY[i] / PVN[i] : t.cy, sx = (wx - S.cam.x) * z + cx, sy = (wy - S.cam.y) * z + cy;
-        if (offScreen(sx, sy)) { emAdd(4, sx, sy, i, t.count, 0.9); if (gate) arrowMask |= 1 << i; }
+        if (offScreen(sx, sy)) { emAdd(4, sx, sy, i, gate ? PVN[i] : t.count, 0.9); if (gate) arrowMask |= 1 << i; } // v3: under fog the arrow counts what you see (a half-hidden swarm, SPEC-v3 §2)
         continue;
       }
       const g = FS.ghosts[i]; if (g.on) { const sx = (g.x - S.cam.x) * z + cx, sy = (g.y - S.cam.y) * z + cy; if (offScreen(sx, sy)) emAdd(1, sx, sy, i, g.n, clamp(1 - (0.7 * (S.t - g.t0)) / FG.ghostSeconds, 0.3, 1)); }
