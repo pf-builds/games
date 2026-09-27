@@ -717,7 +717,20 @@
     "towerN": 20,
     "towerSeconds": 20,
     "forgeN": 60,
-    "stockadeShare": 0.25
+    "stockadeShare": 0.25,
+    "fordVolleyN": 40,
+    "fordVolleyShare": 0.25,
+    "fordVolleyCrossing": 60,
+    "kiteN": 60,
+    "kiteShare": 0.2,
+    "kiteHover": 120,
+    "kiteHolder": 60,
+    "kiteDwell": 8,
+    "fordCells": 3,
+    "riverCells": 4,
+    "fordHoldGap": 24,
+    "fordStart": 300,
+    "unitsSeconds": 30
   },
   "progression": {
     "armsHp": 0.07,
@@ -843,7 +856,10 @@
   },
   "units": {
     "enabled": true,
-    "maxShare": 0.3
+    "maxShare": 0.3,
+    "flipKeepsKind": true,
+    "scatterResets": true,
+    "archer": { "hp": 0.8, "melee": 0.5, "range": 180, "interval": 1.2, "damage": 2.5, "flight": 0.45, "fireTeamSpeed": 0.35, "maxArrows": 192, "drawArrows": [32, 64], "power": 1.6, "retry": 0.25, "engage": 22, "fightSeek": 0 }
   },
   "banner": {
     "minSeconds": 1.2,
@@ -882,6 +898,7 @@
     "hintMill": 5,
     "hintForge": 5,
     "hintStockade": 5,
+    "hintArcher": 5,
     "posterMint": 70,
     "posterOrange": 48,
     "posterStep": 0.45
@@ -3621,6 +3638,141 @@
       "peasants in the forge fixtures",
       1,
       400
+    ],
+    "units.archer.hp": [
+      "hp multiplier of an archer on its team's max hp (SPEC-v3 §4)",
+      0.1,
+      2
+    ],
+    "units.archer.melee": [
+      "damage multiplier of an archer's melee blow",
+      0,
+      2
+    ],
+    "units.archer.range": [
+      "px; an archer's volley gather radius",
+      40,
+      400
+    ],
+    "units.archer.interval": [
+      "s between an archer's shots (x 0.8-1.2 jitter on S.rng, / Arms atkMul)",
+      0.2,
+      10
+    ],
+    "units.archer.damage": [
+      "hp one arrow takes when it lands",
+      0,
+      10
+    ],
+    "units.archer.flight": [
+      "s from loose to landing (homing, no misses)",
+      0.05,
+      3
+    ],
+    "units.archer.fireTeamSpeed": [
+      "archers loose only while the team fights or moves under this share of its pace",
+      0,
+      2
+    ],
+    "units.archer.maxArrows": [
+      "pending hits in the fixed arrow pool (a full pool: nobody looses)",
+      8,
+      2048
+    ],
+    "units.archer.drawArrows": [
+      "arrows in flight drawn per frame [touch, desktop]",
+      0,
+      512
+    ],
+    "units.archer.power": [
+      "headcount power of one archer in peasants (PS.fight opts.kinds parity)",
+      0.5,
+      4
+    ],
+    "units.archer.engage": [
+      "px; an archer takes a melee target only this close (peasants: agent.engageRadius)",
+      0,
+      80
+    ],
+    "units.archer.fightSeek": [
+      "share of its seek an archer out of melee keeps while its team fights (0 = it stands and shoots)",
+      0,
+      1
+    ],
+    "units.archer.retry": [
+      "s an archer waits after a gather found no target (or a full pool) before it gathers again",
+      0.05,
+      5
+    ],
+    "polish.hintArcher": [
+      "s the one-shot archer hint shows (your first archer)",
+      1,
+      10
+    ],
+    "fixtures.fordVolleyN": [
+      "holders on the far bank in the fordVolley fixture",
+      1,
+      400
+    ],
+    "fixtures.fordVolleyShare": [
+      "archer share of the fordVolley holders",
+      0,
+      1
+    ],
+    "fixtures.fordVolleyCrossing": [
+      "peasants crossing the ford in the fordVolley fixture",
+      1,
+      400
+    ],
+    "fixtures.kiteN": [
+      "swarm hovering off a holder in the kite fixture",
+      1,
+      400
+    ],
+    "fixtures.kiteShare": [
+      "archer share of the kite swarm",
+      0,
+      1
+    ],
+    "fixtures.kiteHover": [
+      "px the kite swarm hovers from the holder's edge",
+      20,
+      600
+    ],
+    "fixtures.kiteHolder": [
+      "holders in the kite fixture",
+      1,
+      400
+    ],
+    "fixtures.kiteDwell": [
+      "s the kite fixture's holder stands under the arrows before it charges",
+      0,
+      60
+    ],
+    "fixtures.fordCells": [
+      "cells of ford across the fixture river (the rest is deep water)",
+      1,
+      20
+    ],
+    "fixtures.riverCells": [
+      "cells wide the fixture river runs, full height",
+      1,
+      20
+    ],
+    "fixtures.fordHoldGap": [
+      "px past the ford's far edge the holders stand",
+      0,
+      400
+    ],
+    "fixtures.fordStart": [
+      "px before the ford the crossing column starts",
+      60,
+      1200
+    ],
+    "fixtures.unitsSeconds": [
+      "s cap on the fordVolley and kite fixtures",
+      5,
+      120
     ],
     "fixtures.stockadeShare": [
       "share tagged in the trains fixture (the stockade's share for it)",

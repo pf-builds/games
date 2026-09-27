@@ -2,7 +2,8 @@
 // One art pixel = 2 world px for everything: every canvas here is drawn at art resolution and scaled 2x at render time (imageSmoothing
 // off). Colours come from PS.PAL (src/palette.js). Outlines are composited (a dark silhouette at the 4 orthogonal offsets under the
 // sprite): nothing here reads a canvas back (studio lesson 27). Peasants: one atlas canvas per team and hat style (4 poses x 2 facings x
-// plain / hit-flash, shadow baked in), so an agent is ONE drawImage. Arms relic overlays (hat band, crest, tines) are part of the atlas key (M6).
+// plain / hit-flash x 2 kinds, shadow baked in), so an agent is ONE drawImage. Arms relic overlays (hat band, crest, tines) are part of the atlas key (M6).
+// v3 M4 (SPEC-v3 §4): the archer rows carry the type on the body and the weapon, never the hat: a bow for the pitchfork, a quiver and a strap.
 window.PS = window.PS || {};
 
 PS.buildSprites = function (cfg) {
@@ -42,7 +43,8 @@ PS.buildSprites = function (cfg) {
 
   // ---------- peasants: one atlas per (colour, hat style, relics) ----------
   // Frame cell FW x FH art px; the body's local origin sits at (OX, OY) so hats reach 4 rows up and a brim or tines 2-3 columns out.
-  // Frames: poses 0 walkA, 1 walkB (body a pixel up), 2 lunge (pitchfork thrust), 3 idle; + 4 facing left (mirrored); + 8 hit flash.
+  // Frames: poses 0 walkA, 1 walkB (body a pixel up), 2 lunge (pitchfork thrust; an archer's bow drawn), 3 idle; + 4 facing left (mirrored);
+  // + 8 hit flash; + 16 archer (v3 M4, SPEC-v3 §4: kind selects the atlas rows).
   const FW = 16, FH = 20, OX = 3, OY = 5, AXR = 7, AY = 17; // anchor: the feet centre (facing right; left mirrors to FW - AXR)
   const STYLES = ["hood", "flatcap", "brim", "feather", "headband", "pointed", "straw", "kerchief"];
   // hats, local coords (the face is rows 2-3, x 2..5). H base, D shade, L light, F the feather. Pixels in the team ramp count as hat.
@@ -62,43 +64,52 @@ PS.buildSprites = function (cfg) {
   const BAND = [null, "#8A5A34", "#9AA4B0", "#9AA4B0"], TINE = [null, ["#6E7480", "#A8B0BC"], ["#B8CCE0", "#EEF6FF"], ["#C8962C", "#F6D56A"]];
   const RELIC = {
     helmet: (p, pose, tier) => { const t = Math.min(3, tier); p.rect(2, 1, 4, 1, BAND[t]); if (t >= 3) { p.px(3, -3, "#D8403A"); p.px(4, -3, "#D8403A"); p.px(4, -4, "#F6CF6A"); p.px(3, -2, "#A8302C"); } },
-    tines: (p, pose, tier) => { const c = TINE[Math.min(3, tier)]; if (pose === 2) { p.rect(10, 5, 1, 3, c[0]); p.px(11, 5, c[1]); p.px(11, 7, c[1]); p.px(10, 6, c[1]); } else { p.rect(7, 0, 3, 1, c[0]); p.px(7, -1, c[1]); p.px(9, -1, c[1]); p.px(8, 0, c[1]); } },
+    tines: (p, pose, tier, kind) => { const c = TINE[Math.min(3, tier)]; if (kind) { if (pose === 2) { p.px(11, 4, c[0]); p.px(12, 4, c[1]); } else { p.px(8, -1, c[1]); p.px(8, 9, c[1]); } return; } if (pose === 2) { p.rect(10, 5, 1, 3, c[0]); p.px(11, 5, c[1]); p.px(11, 7, c[1]); p.px(10, 6, c[1]); } else { p.rect(7, 0, 3, 1, c[0]); p.px(7, -1, c[1]); p.px(9, -1, c[1]); p.px(8, 0, c[1]); } },
     shield: (p, pose, tier) => {},
   };
-  function body(style, C, pose, relics) {
+  function body(style, C, pose, relics, kind) {
     const src = mk(FW, FH), g = src.getContext("2d");
     const P0 = { px: (x, y, c) => { g.fillStyle = c; g.fillRect(x + OX, y + OY, 1, 1); }, rect: (x, y, w, h, c) => { g.fillStyle = c; g.fillRect(x + OX, y + OY, w, h); } };
     const up = pose === 1 ? -1 : 0; // walkB carries the upper body one art pixel higher (the bob, baked: sprites never move off the art grid)
     const p = { px: (x, y, c) => P0.px(x, y + up, c), rect: (x, y, w, h, c) => P0.rect(x, y + up, w, h, c) };
     const SH = PAL.shaft, T0 = PAL.tine[1], T1 = PAL.tine[0], SK = PAL.skin[1], SKD = PAL.skin[0];
-    // pitchfork: upright at rest, thrust forward on the lunge
-    if (pose === 2) { p.rect(4, 6, 6, 1, SH); p.rect(10, 5, 1, 3, T0); p.px(11, 5, T0); p.px(11, 7, T0); p.px(10, 6, T1); }
+    // pitchfork: upright at rest, thrust forward on the lunge. An archer (v3 M4): a quiver on the back (fletching over the shoulder) and a bow
+    // held upright, drawn on the lunge (the shot) with an arrow on the string
+    const BW = PAL.wood[2], BD = PAL.wood[0], QV = PAL.wood[1];
+    if (kind) {
+      p.rect(-1, 3, 2, 5, QV); p.px(-1, 3, BD); p.px(-1, 2, PAL.cream); p.px(0, 1, PAL.cream); p.px(0, 2, "#D8403A");
+      if (pose === 2) { p.px(9, 1, BW); p.rect(10, 2, 1, 7, BW); p.px(9, 9, BW); p.px(8, 2, PAL.cream); p.px(7, 3, PAL.cream); p.px(7, 7, PAL.cream); p.px(8, 8, PAL.cream); }
+      else { p.px(8, -1, BW); p.px(9, 0, BW); p.rect(10, 1, 1, 7, BW); p.px(9, 8, BW); p.px(8, 9, BW); p.rect(8, 0, 1, 9, PAL.cream); p.px(10, 4, BD); }
+    }
+    else if (pose === 2) { p.rect(4, 6, 6, 1, SH); p.rect(10, 5, 1, 3, T0); p.px(11, 5, T0); p.px(11, 7, T0); p.px(10, 6, T1); }
     else { p.rect(8, 1, 1, 10, SH); p.rect(7, 0, 3, 1, T0); p.px(7, -1, T0); p.px(9, -1, T0); p.px(8, 0, T1); }
     // face and hair (hats cover the top), tunic in the muted team shade, arms, belt
     p.rect(2, 1, 4, 1, PAL.hair); p.rect(2, 2, 4, 2, SK); p.px(5, 2, PAL.ink); p.px(2, 3, SKD);
     p.rect(1, 4, 6, 4, C.tun); p.rect(1, 4, 1, 4, C.tunD); p.px(4, 5, shade(C.tun, -0.6));
     p.rect(1, 8, 6, 1, C.tunD);
-    if (pose === 2) { p.rect(6, 5, 2, 1, SK); p.px(0, 6, SK); } else { p.rect(0, 5, 1, 2, SK); p.rect(7, 5, 1, 2, SK); }
+    if (kind) { p.px(6, 4, QV); p.px(5, 5, QV); p.px(4, 6, QV); p.px(3, 7, QV); } // the quiver strap across the tunic
+    if (pose === 2) { p.rect(6, 5, 2, 1, SK); p.px(0, 6, SK); if (kind) { p.rect(8, 5, 2, 1, SK); p.px(5, 4, SK); } } else { p.rect(0, 5, 1, 2, SK); p.rect(7, 5, 1, 2, SK); if (kind) p.px(9, 5, SK); }
     hat(p, style, C);
+    if (kind && pose === 2) { p.px(7, 4, PAL.cream); p.rect(8, 4, 3, 1, SH); p.px(11, 4, T0); } // the nocked arrow (fletching, shaft, head), over the drawing arm
     // legs (rows 9-10) and boots (row 11); walkB fills the gap the raised body leaves
     const L = PAL.leg, B = PAL.boot;
     if (pose === 0) { P0.rect(2, 9, 2, 2, L); P0.rect(4, 9, 2, 2, L); P0.rect(1, 11, 2, 1, B); P0.rect(5, 11, 2, 1, B); }
     else if (pose === 1) { P0.rect(2, 8, 2, 3, L); P0.rect(5, 8, 2, 3, L); P0.rect(2, 11, 2, 1, B); P0.rect(5, 11, 2, 1, B); }
     else if (pose === 2) { P0.rect(1, 9, 2, 2, L); P0.rect(5, 9, 2, 2, L); P0.rect(0, 11, 2, 1, B); P0.rect(5, 11, 3, 1, B); }
     else { P0.rect(2, 9, 2, 2, L); P0.rect(4, 9, 2, 2, L); P0.rect(2, 11, 2, 1, B); P0.rect(4, 11, 2, 1, B); }
-    if (relics) for (const k in RELIC) if (relics[k] > 0) RELIC[k](p, pose, relics[k]);
+    if (relics) for (const k in RELIC) if (relics[k] > 0) RELIC[k](p, pose, relics[k], kind);
     return src;
   }
-  // the atlas: 4 columns (poses) x 4 rows (right, left, right flash, left flash)
+  // the atlas: 4 columns (poses) x 8 rows (right, left, right flash, left flash; then the same four for the archer, v3 M4)
   function paintAtlas(atlas, color, style, relics) {
     const C = style === "straw" ? { hat: PAL.straw[1], hatD: PAL.straw[0], hatL: PAL.straw[2], tun: PAL.neutral[2], tunD: PAL.neutral[1] }
       : style === "kerchief" ? { hat: PAL.bandit[2], hatD: PAL.bandit[1], hatL: PAL.cream, tun: PAL.bandit[1], tunD: PAL.bandit[0] } : PAL.ramp(color);
     const g = atlas.getContext("2d"); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = "source-over"; g.globalAlpha = 1; g.clearRect(0, 0, atlas.width, atlas.height);
-    for (let pose = 0; pose < 4; pose++) {
-      const o = outlined(body(style, C, pose, relics));
+    for (let kind = 0; kind < 2; kind++) for (let pose = 0; pose < 4; pose++) {
+      const o = outlined(body(style, C, pose, relics, kind));
       const fl = make(FW, FH, (p) => { p.ctx.drawImage(o, 0, 0); p.ctx.globalCompositeOperation = "source-atop"; p.ctx.globalAlpha = A.flashWhite; p.rect(0, 0, FW, FH, PAL.cream); });
       for (let row = 0; row < 4; row++) {
-        const x = pose * FW, y = row * FH, left = row & 1, im = row >= 2 ? fl : o;
+        const x = pose * FW, y = (row + kind * 4) * FH, left = row & 1, im = row >= 2 ? fl : o;
         g.save(); if (left) { g.translate(x + FW, y); g.scale(-1, 1); } else g.translate(x, y);
         g.fillStyle = PAL.shadow; for (let yy = 16; yy <= 18; yy++) { const hw = yy === 17 ? 5 : 3; g.fillRect(AXR - hw, yy, hw * 2, 1); } // the baked shadow under the feet
         g.drawImage(im, 0, 0); g.restore();
@@ -111,8 +122,8 @@ PS.buildSprites = function (cfg) {
   function peasantSet(color, style, relics) {
     const st = typeof style === "string" ? style : STYLES[((style || 1) - 1) % 6] || "hood", key = color + "|" + st + "|" + (relics ? JSON.stringify(relics) : "");
     let s = SETS.get(key); if (s) return s;
-    const atlas = mk(FW * 4, FH * 4), C = paintAtlas(atlas, color, st, relics), sx = new Int16Array(16), sy = new Int16Array(16);
-    for (let f = 0; f < 16; f++) { sx[f] = (f & 3) * FW; sy[f] = (f >> 2) * FH; }
+    const atlas = mk(FW * 4, FH * 8), C = paintAtlas(atlas, color, st, relics), sx = new Int16Array(32), sy = new Int16Array(32); // frames 16-31: the archer (v3 M4)
+    for (let f = 0; f < 32; f++) { sx[f] = (f & 3) * FW; sy[f] = (f >> 2) * FH; }
     s = { atlas, key, color, style: st, relics: relics || null, sx, sy, fw: FW, fh: FH, axR: AXR, axL: FW - AXR, ay: AY, hat: [C.hatD, C.hat, C.hatL] };
     SETS.set(key, s); return s;
   }

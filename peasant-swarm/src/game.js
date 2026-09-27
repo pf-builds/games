@@ -39,7 +39,8 @@
     alive60: 0, alive120: 0, alive180: 0, pileOns: 0, scentPings: 0, crownMoves: 0, trickle: 0, trickleFav: 0,
     gains: [], taken: [], drops: 0, trickleChests: 0, tiers60: null, tiers180: null, tiers300: null, // M6: tier gains [t, team, axis, tier, source], objectives taken [t, team, type], tiers at 1:00 / 3:00 / 5:00
     millPaid: [0, 0, 0, 0, 0, 0, 0, 0, 0], millCollects: 0, sites: [], // v3 M3a (SPEC-v3 §3): peasants each team collected from mills, collections, sites changing hands [t, team, from, why, paid, kind]
-    forge: [], stockKills: 0, stockShots: 0, trained: [0, 0, 0, 0, 0, 0, 0, 0, 0], kind180: null }); // v3 M3b: forge sales [t, team, axis, tier, price], stockade kills and shots, recruits tagged by a trains hook per team, archer share per team at 3:00
+    forge: [], stockKills: 0, stockShots: 0, trained: [0, 0, 0, 0, 0, 0, 0, 0, 0], kind180: null, // v3 M3b
+    arrows: 0, arrowHits: 0, arrowKills: 0, arrowSkips: 0, arrowPeak: 0 }); // v3 M4 (SPEC-v3 §4): archer arrows loosed, landed, killing, skipped at landing (dead, escaping or flipped target), most in flight at once: forge sales [t, team, axis, tier, price], stockade kills and shots, recruits tagged by a trains hook per team, archer share per team at 3:00
   // heard noise (SPEC-v2 §7): the clashes going on now, a fixed pool; each AI hears one within its difficulty's hearing radius
   const mkNoise = () => { const a = []; for (let i = 0; i < 16; i++) a.push({ on: false, a: 0, b: 0, x: 0, y: 0, t0: -1e9, t1: -1e9 }); return a; };
   // the finale crown (the biggest swarm, position broadcast every finale.crownEvery s), the pile-on flag, Bully's scent pings
@@ -63,6 +64,7 @@
     aiCost: { ms: 0, thinks: 0, ticks: 0, max: 0 }, // AI think script time (the < 0.1 ms per tick gate)
     dprCap: 2, zDpr: 1, dprHot: 0, scriptP90: 0, // M7: adaptive DPR tier, the zoom table's DPR, seconds over the p90 line, the live p90 script ms
     rafHot: 0, rafP90: 0, dprGrace: 0, dprPin: false, capLow: false, hadInput: false, perfSteps: [], sessionMatches: 0, fontsOk: null, // M1 (SPEC-v3 §5.5): the rAF-interval trigger, the grace window (wall ms), ?dpr=, the agent-cap lever, first input seen, matches started this session
+    arw: null, // v3 M4 (SPEC-v3 §4): the archers' pending hits (mkArw), one pool per world (a sandbox brings its own)
     aid: 0, // v3 M3b: the last agent id handed out (mkAgent; reset per world): the tie-break wherever one agent must win (SPEC-v3 §0)
     objs: [], bandits: [], spT: 0, // M6 spoils (src/spoils.js): every objective, the bandit camps among them (never in S.teams), the trickle-chest timer
   };
@@ -89,7 +91,7 @@
   async function boot() {
     if (PS.portal) PS.portal.onMute = (m) => { PS.audio.platformMute(m); syncSound(); }; // a platform mute overrides the M key and the sound button
     try { await portal("init"); } catch (e) {} portal("loadingStart");
-    const res = await fetch("config.json?v=34");
+    const res = await fetch("config.json?v=35");
     S.cfg = await res.json(); PS.audio.configure(S.cfg.audio);
     S.spr = PS.buildSprites(S.cfg);
     SPL = PS.Spoils(spoilsHooks()); SCR = PS.Screens(S.cfg);
@@ -128,7 +130,7 @@
       // scripted control for critics and the harness bot: route the player to (x, y) through its field, as a cursor-follow target
       PS.aim = (x, y) => { const inp = S.input, p = S.teams[1]; inp.route.on = false; inp.hold = false; inp.active = false; inp.joy.active = false; if (!p) return null; p.tx = x; p.ty = y; p.mode = "route"; return p.mode; };
       // QA: start a live match without the title click. { seed, difficulty, aiPlayer } (aiPlayer: all six swarms AI, the harness's pacing matches)
-      PS.debugStart = (o) => { o = o || {}; if (o.difficulty && S.cfg.difficulty[o.difficulty]) S.difficulty = o.difficulty; PS.audio.setSilent(true); newGame(false, { seed: o.seed, aiPlayer: !!o.aiPlayer }); S.mode = "play"; S._hintFight = S._hintHud = S._hintRecruit = S._hintFog = true; S._hintRelic = S._hintRem = S._hintForest = S._hintMill = S._hintForge = S._hintStockade = 2; S._routedBy = null; showOverlay(null); $("hud").classList.remove("hidden"); layoutHUD(); updateHUD(true); return { seed: S.seed, difficulty: S.difficulty, slots: S.teams.slice(1).map((t) => t.slot) }; };
+      PS.debugStart = (o) => { o = o || {}; if (o.difficulty && S.cfg.difficulty[o.difficulty]) S.difficulty = o.difficulty; PS.audio.setSilent(true); newGame(false, { seed: o.seed, aiPlayer: !!o.aiPlayer }); S.mode = "play"; S._hintFight = S._hintHud = S._hintRecruit = S._hintFog = true; S._hintRelic = S._hintRem = S._hintForest = S._hintMill = S._hintForge = S._hintStockade = S._hintArcher = 2; S._routedBy = null; showOverlay(null); $("hud").classList.remove("hidden"); layoutHUD(); updateHUD(true); return { seed: S.seed, difficulty: S.difficulty, slots: S.teams.slice(1).map((t) => t.slot) }; };
       PS.pacing = pacing;
       PS.cfgOverride = cfgOverride; // M8 sweeps (SPEC-v2 §13)
       PS.artScene = artScene;
@@ -157,7 +159,7 @@
     // the neighbour loop reads x, y, team, dead and escapeT of hundreds of agents per agent: keep them first (one cache line)
     return { x, y, team, dead: false, escapeT: 0, vx: 0, vy: 0, hp: S.cfg.agent.hp, atk: R() * 0.5, tgt: null,
       ph: R() * 10, face: R() < 0.5 ? 1 : -1, fl: 0, lunge: 0, wx: x, wy: y, hx: x, hy: y, fight: false, r: S.cfg.agent.radius, pop: 9, camp: null,
-      rec: 0, seenA: 0, seenT: -1e9, drawnF: 0, ex: 0, ey: 0, groupId: 0, rd: 0, fieldT: 0, fdx: 0, fdy: 0, fok: 0, strag: 0, gar: false, exr: false, pk: -1, wT: -1, wTeam: 0, id: ++S.aid, kind: 0 }; // id: per-world serial (the SPEC-v3 §0 tie-break); kind: 0 peasant, 1 archer (SPEC-v3 §3 trains tag, M4 reads it); strag: left behind terrain, it follows the field (P1); wT / wTeam: the rout wave (M7, render only: until sim time wT it is drawn hands up in team wTeam); pk: its slot in the packed hash this tick (M7); gar: a village garrison inside its palisade (M6); exr: a scattered ex-rival (no muster credit)
+      rec: 0, seenA: 0, seenT: -1e9, drawnF: 0, ex: 0, ey: 0, groupId: 0, rd: 0, fieldT: 0, fdx: 0, fdy: 0, fok: 0, strag: 0, gar: false, exr: false, pk: -1, wT: -1, wTeam: 0, id: ++S.aid, kind: 0, shotT: 0 }; // id: per-world serial (the SPEC-v3 §0 tie-break); kind: 0 peasant, 1 archer (SPEC-v3 §3 trains tag, §4); shotT: an archer's shot clock (s, counts down; loosed at <= 0); strag: left behind terrain, it follows the field (P1); wT / wTeam: the rout wave (M7, render only: until sim time wT it is drawn hands up in team wTeam); pk: its slot in the packed hash this tick (M7); gar: a village garrison inside its palisade (M6); exr: a scattered ex-rival (no muster credit)
   }
   const z9 = () => [0, 0, 0, 0, 0, 0, 0, 0, 0]; // team-indexed arrays: neutral 0, player 1, rivals 2-6, spare 7, bandits 8 (SPEC-v2 §6)
   // route: the team steers by its flow field (else direct seek); mode (player): "route" | "steer" | "hold"; hyst: route hysteresis applies;
@@ -180,7 +182,7 @@
       spr: S.spr.peasantSet(color, id), ban: S.spr.banner(color, id), kills: 0, peak: 1, state: "roam", speedMod: 1, thinkT: S.rng() * 0.5, lastHint: 0, minY: 0, huntStart: 0, huntCooldown: 0,
       regroupUntil: 0, fleeFrom: 0, leftHome: -1, atCentre: -1, preyId: 0, exX: 0, exY: 0, exUntil: -1, escUntil: -1, escFrom: 0, escReplanAt: 0, escGX: 0, escGY: 0,
       kind: ai ? ai.kind || "" : "", sense: 1, mem: S.cfg.fog.aiMemory, hear: S.cfg.fog.clashNoise, lastFight: -1e9, scentX: 0, scentY: 0, scentT: -1e9, leaveUntil: -1e9,
-      lurkX: 0, lurkY: 0, lurkUntil: -1e9, lurkCool: 0, crowsT: -1e9, claimX: 0, claimY: 0, claimOn: false, claimEmpty: 0, rustleX: 0, rustleY: 0, rustleT: -1e9, kindN: 0, trainAcc: 0 }; // kindN / trainAcc: trained agents now and the trains hook's share accumulator (v3 M3b); rustle*: the last rustle this team saw (v3, ai.rustleMemory)
+      lurkX: 0, lurkY: 0, lurkUntil: -1e9, lurkCool: 0, crowsT: -1e9, claimX: 0, claimY: 0, claimOn: false, claimEmpty: 0, rustleX: 0, rustleY: 0, rustleT: -1e9, kindN: 0, trainAcc: 0, fought: false }; // fought: any of its agents fought last tick (v3 M4: archers loose while it fights); kindN / trainAcc: trained agents now and the trains hook's share accumulator (v3 M3b); rustle*: the last rustle this team saw (v3, ai.rustleMemory)
     SPL.initTeam(t); return t;
   }
   // speed by swarm size: small swarms get a boost that fades by `full`, big ones slow a little per peasant above it (SPEC-v2 §3)
@@ -263,7 +265,7 @@
     S.flowW.know.fill(0); // the player starts knowing nothing: explored cells teach its field (fog stamps call PS.flow.learn)
     S.fogW = PS.fog.use(PS.fog.reset(sandbox ? sbFog : liveFog, m, { learn: true })); S.fogS = mkFogS(); S.fogOn = !attract;
     S.cap = opts.cap || capFor();
-    S.agents.length = 0; S.obstacles.length = 0; S.powerups.length = 0; S.camps.length = 0; S.banners.length = 0; S.decals.length = 0; S.trails.length = 0; SPL.reset(); S.aid = 0;
+    S.agents.length = 0; S.obstacles.length = 0; S.powerups.length = 0; S.camps.length = 0; S.banners.length = 0; S.decals.length = 0; S.trails.length = 0; SPL.reset(); S.aid = 0; S.arw = mkArw();
     if (!sandbox) for (const st of [...S.spr.sets.values()]) if (st.relics) S.spr.dropSet(st); // last match's relic atlases: zeroed (every team starts at tier 0)
     S.t = 0; S.tick = 0; S.acc = 0; S.timeLeft = cfg.world.matchSeconds; S.trickleT = 0; S.shake = 0; S.result = null; S.engagedNow = false; S.finalCalled = false; S.pendingEnd = null; S._routedBy = null; S.lastDrawSim = 0;
     S.stats = { recruited: 0, kills: 0, routs: 0, lost: 0, peak: 1, powerups: 0, fights: 0 };
@@ -373,6 +375,8 @@
     for (let i = 1; i < S.teams.length; i++) {
       const t = S.teams[i];
       if (t.count > 0) { t.cx = t._sx / t.count; t.cy = t._sy / t.count; if (t.count > t.peak) t.peak = t.count; const p = PS.terrain.snapXY(t.cx, t.cy); t.ax = p.x; t.ay = p.y; }
+      // v3 M4 (SPEC-v3 §4): power = armsPower[tier] x (1 + archer share x (units.archer.power - 1)), so AI hunt / flee and the clash verdict see archers
+      const PG = S.cfg.progression, ap = PG.armsPower[Math.min(t.tier.arms, PG.armsPower.length - 1)]; t.power = t.kindN > 0 && t.count > 0 ? ap * (1 + (t.kindN / t.count) * (S.cfg.units.archer.power - 1)) : ap;
     }
   }
   // QA: when each team's anchor first left its walled home meadow, and first stood in the central meadow (real maps only)
@@ -649,8 +653,60 @@
   const STRN = new Int32Array(9); // per-team stragglers this tick (P1)
   let MED = null; const MEDN = new Int32Array(9); // per-team path distances this tick (path cohesion median)
   const RR2 = new Float64Array(9); // per-team recruit radius squared this tick (Horn, M6)
+  const FIRE = new Uint8Array(9); // v3 M4: 1 where the team's archers may loose this tick (it fought last tick or moves under units.archer.fireTeamSpeed x its pace)
+
+  // ---------------------------------------------------------------- archers (v3 M4, SPEC-v3 §4)
+  // Pending hits: a fixed pool of units.archer.maxArrows in typed arrays (land and loose time, source team, origin, drawn flag) plus the
+  // target refs, swap-removed as they land. Sim state: the landing is what hurts; the drawn flag is decided at the loose (render only).
+  const mkArw = () => { const n = S.cfg.units.archer.maxArrows; return { t: new Float64Array(n), t0: new Float64Array(n), src: new Int8Array(n), x0: new Float32Array(n), y0: new Float32Array(n), vis: new Uint8Array(n), tg: new Array(n).fill(null), n: 0 }; };
+  // one archer's volley: ONE gather at units.archer.range over the packed hash, the nearest enemy (a team agent or a bandit; never a
+  // neutral, a remnant in its window, a garrison or a payer, the last two being out of the hash), ties by agent id (SPEC-v3 §0). A full pool
+  // or no target: false (the archer waits units.archer.retry and gathers again).
+  function loose(a, at) {
+    const UA = S.cfg.units.archer, P = S.arw, r = UA.range; if (P.n >= P.t.length) return false;
+    let i0 = ((a.x - r) / HC) | 0, i1 = ((a.x + r) / HC) | 0, j0 = ((a.y - r) / HC) | 0, j1 = ((a.y + r) / HC) | 0;
+    if (i0 < 0) i0 = 0; if (j0 < 0) j0 = 0; if (i1 >= hCols) i1 = hCols - 1; if (j1 >= hRows) j1 = hRows - 1;
+    let best = null, bd = r * r;
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      const c = j * hCols + i; if (hStamp[c] !== hTick) continue;
+      for (let k = HS[c], e = HE[c]; k < e; k++) {
+        const bt = PT[k]; if (bt === at || bt === 0 || (PF[k] & 1)) continue; // (a dead agent sits at -1e9, out of range)
+        const dx = PX[k] - a.x, dy = PY[k] - a.y, d2 = dx * dx + dy * dy; if (d2 < bd || (d2 === bd && best && PA[k].id < best.id)) { best = PA[k]; bd = d2; }
+      }
+    }
+    if (!best) return false;
+    const q = P.n++; P.t[q] = S.t + UA.flight; P.t0[q] = S.t; P.src[q] = at; P.x0[q] = a.x; P.y0[q] = a.y - 14; P.tg[q] = best;
+    P.vis[q] = !sandbox && playerSees(a.x, a.y) && playerSees(best.x, best.y) && (onScreen(a.x, a.y) || onScreen(best.x, best.y)) ? 1 : 0; // fog honesty: drawn only when you see both ends
+    S.ev.arrows++; if (P.n > S.ev.arrowPeak) S.ev.arrowPeak = P.n; a.lunge = 0.18; a.face = best.x >= a.x ? 1 : -1; // (face and lunge: render only, the bow drawn)
+    return true;
+  }
+  // arrows land after units.archer.flight (homing, no misses): skipped when the target is dead, a remnant in its window, a payer or garrison,
+  // a neutral, or now on the archer's own team (it flipped); else units.archer.damage, the kill credited to the archer's team. Arrows enter
+  // no engagement pair, so they never start a fight or rout anyone on their own: they thin the rout group melee measures.
+  function arrowsLand() {
+    const P = S.arw; if (!P || !P.n) return; const dmg = S.cfg.units.archer.damage;
+    for (let q = 0; q < P.n;) {
+      if (P.t[q] > S.t) { q++; continue; }
+      const b = P.tg[q], src = P.src[q];
+      if (b.dead || b.gar || b.escapeT > 0 || b.team === src || b.team === 0) S.ev.arrowSkips++;
+      else { b.hp -= dmg; b.fl = 0.16; S.ev.arrowHits++; if (b.hp <= 0) { killAgent(b, src); S.ev.arrowKills++; } }
+      const e = --P.n; if (q !== e) { P.t[q] = P.t[e]; P.t0[q] = P.t0[e]; P.src[q] = P.src[e]; P.x0[q] = P.x0[e]; P.y0[q] = P.y0[e]; P.vis[q] = P.vis[e]; P.tg[q] = P.tg[e]; } P.tg[e] = null;
+    }
+  }
+  // the arrows in flight you were shown at the loose, at most units.archer.drawArrows [touch, desktop], as one stroked path (no drawImage,
+  // inside art.drawOverhead); each homes on its target's live position with a small arc
+  function drawArcherArrows() {
+    const P = S.arw; if (!P || !P.n) return 0; const cap = S.cfg.units.archer.drawArrows[S.input.touch || capParam === "touch" ? 0 : 1]; let n = 0;
+    for (let q = 0; q < P.n && n < cap; q++) {
+      if (!P.vis[q]) continue; const b = P.tg[q], f = (S.t - P.t0[q]) / Math.max(1e-6, P.t[q] - P.t0[q]); if (f < 0 || f > 1 || !playerSees(b.x, b.y)) continue;
+      if (!n) { ctx.strokeStyle = "#2A1C10"; ctx.lineWidth = 2; ctx.beginPath(); }
+      const x0 = P.x0[q], y0 = P.y0[q], dx = b.x - x0, dy = b.y - 8 - y0, l = Math.sqrt(dx * dx + dy * dy) || 1, x = x0 + dx * f, y = y0 + dy * f - Math.sin(f * 3.1416) * l * 0.18;
+      ctx.moveTo(x - (dx / l) * 7, y - (dy / l) * 7); ctx.lineTo(x, y); n++;
+    }
+    if (n) ctx.stroke(); return n;
+  }
   function update(dt) {
-    const cfg = S.cfg, A = cfg.agent, F = cfg.flock, FW = cfg.flow, CB = cfg.combat, W = cfg.world.w, H = cfg.world.h, D = diff();
+    const cfg = S.cfg, A = cfg.agent, F = cfg.flock, FW = cfg.flow, CB = cfg.combat, W = cfg.world.w, H = cfg.world.h, D = diff(), UA = cfg.units.archer, uOn = cfg.units.enabled;
     S.t += dt; S.timeLeft -= dt; S.tick++;
     const player = S.teams[1];
     if (S.pendingEnd) { if (S.t >= S.pendingEnd.at) finishEnd(); return; } // the result is set: the sim freezes (no recruits, hits or crown moves after the bell; M5 critic MINOR-7), particles and dawn run on
@@ -679,8 +735,9 @@
     // buffs tick, engagement reset, this tick's team speed (size curve, AI pace, speed buff, Boots) and recruit radius (Horn)
     let rrMax = A.recruitRadius;
     for (let i = 1; i < S.teams.length; i++) {
-      const t = S.teams[i], bf = t.buffs; if (bf.speed > 0) bf.speed -= dt; if (bf.armor > 0) bf.armor -= dt; if (bf.frenzy > 0) bf.frenzy -= dt; if (bf.rally > 0) bf.rally -= dt; for (let j = 0; j < 9; j++) { t.eng[j] = 0; t.fX[j] = 0; t.fY[j] = 0; }
+      const t = S.teams[i], bf = t.buffs; if (bf.speed > 0) bf.speed -= dt; if (bf.armor > 0) bf.armor -= dt; if (bf.frenzy > 0) bf.frenzy -= dt; if (bf.rally > 0) bf.rally -= dt; let fe = 0; for (let j = 0; j < 9; j++) { fe += t.eng[j]; t.eng[j] = 0; t.fX[j] = 0; t.fY[j] = 0; } t.fought = fe > 0;
       let s = A.speed * sizeSpeed(t.count) * t.speedMod * t.spdMul; if (t.ai && !t.isPlayer && !S.attract) s *= D.aiSpeed; if (t.buffs.speed > 0) s *= cfg.powerups.speedMult; t.spd = s; MEDN[i] = 0; // spdMul: Boots (M6)
+      const fs = UA.fireTeamSpeed * s; FIRE[i] = uOn && t.kindN > 0 && S.t >= cfg.combat.truceSeconds && (t.fought || t.vx * t.vx + t.vy * t.vy < fs * fs) ? 1 : 0; // v3 M4 (SPEC-v3 §4): archers loose while the team fights or stands
       const rr = t.recR || A.recruitRadius; RR2[i] = rr * rr; if (rr > rrMax) rrMax = rr; // recruit radius: Horn (M6)
     }
 
@@ -699,7 +756,7 @@
     // an agent whose path distance is flow.stragglerBand past the team median, or whose straight line to the target is flow.stragglerDetour
     // shorter than its path (a wall between), follows the field at its path-cohesion pace (1.3x that far back) with local cohesion and the
     // huddle pull off, in any mode, until both fall under flow.stragglerRejoin of those numbers.
-    const sepR = F.sepRadius, engR2 = A.engageRadius * A.engageRadius, atkR2 = A.attackRange * A.attackRange, EN = cfg.encampments;
+    const sepR = F.sepRadius, engR2 = A.engageRadius * A.engageRadius, engA2 = UA.engage * UA.engage, atkR2 = A.attackRange * A.attackRange, EN = cfg.encampments;
     const eSep = sepR * F.enemySepMult, eSep2 = eSep * eSep, hard = F.enemyHardRadius, hard2 = hard * hard, lcR = FW.localCohesionRadius, lcR2 = lcR * lcR;
     const qTeam = Math.max(A.engageRadius, eSep, sepR, lcR), qNeutral = Math.max(sepR, rrMax), qTeam2 = qTeam * qTeam, qNeutral2 = qNeutral * qNeutral; // radius-limited neighbour scans
     const qBandit = Math.max(qTeam, EN.banditAggro), qBandit2 = qBandit * qBandit, leash2 = EN.banditLeash * EN.banditLeash; // bandits: aggro radius, leash from their camp
@@ -732,9 +789,10 @@
       else if (cov !== null && cov[c0] === 1) speed *= covK;
 
       // find/keep combat target + separation + local cohesion (+ a neutral's nearest recruiter) in one pass
-      let best = null, bestD2 = engR2, recT = 0, recD2 = 1e12, chase = null, chD2 = EN.banditAggro * EN.banditAggro; // chase: a bandit's nearest swarm peasant within aggro
+      const eR2 = a.kind === 1 ? engA2 : engR2; // v3 M4: an archer takes a melee target only within units.archer.engage (it is attacked, it does not seek the melee)
+      let best = null, bestD2 = eR2, recT = 0, recD2 = 1e12, chase = null, chD2 = EN.banditAggro * EN.banditAggro; // chase: a bandit's nearest swarm peasant within aggro
       if (a.tgt && (truce || escaping || a.tgt.dead || a.tgt.team === a.team || a.tgt.team === 0 || a.tgt.escapeT > 0)) a.tgt = null;
-      if (a.tgt) { const dx = a.tgt.x - a.x, dy = a.tgt.y - a.y; const d2 = dx * dx + dy * dy; if (d2 < engR2 * 4) { best = a.tgt; bestD2 = d2; } else a.tgt = null; }
+      if (a.tgt) { const dx = a.tgt.x - a.x, dy = a.tgt.y - a.y; const d2 = dx * dx + dy * dy; if (d2 < eR2 * 4) { best = a.tgt; bestD2 = d2; } else a.tgt = null; }
       const at = a.team, q2 = team ? qTeam2 : bandit ? qBandit2 : qNeutral2; let ax = a.x, ay = a.y; // the enemy hard push moves this agent inside the loop: kept in locals, written back after
       // an idle neutral (standing at its wander point, not escaping) with nobody but neutrals in its cells skips the scan: nothing can recruit
       // it, and neutral-on-neutral separation at rest only jostles a camp (M7 brief item 7: skip separation for idle neutrals)
@@ -823,15 +881,19 @@
             if (a.atk <= 0) {
               a.atk = A.attackInterval * (0.8 + S.rng() * 0.4) / team.atkMul; a.lunge = 0.18; // atkMul: Arms (M6)
               const tt = best.team === 8 ? null : S.teams[best.team]; // a bandit has no team record
-              let dmg = A.damage * (1 + A.damageJitter * (2 * S.rng() - 1)); if (team.buffs.frenzy > 0) dmg *= cfg.powerups.frenzyMult; if (tt && tt.buffs.armor > 0) dmg *= cfg.powerups.armorMult;
+              let dmg = A.damage * (1 + A.damageJitter * (2 * S.rng() - 1)); if (team.buffs.frenzy > 0) dmg *= cfg.powerups.frenzyMult; if (tt && tt.buffs.armor > 0) dmg *= cfg.powerups.armorMult; if (a.kind === 1) dmg *= UA.melee; // v3 M4: an archer in melee is a weak peasant
               best.hp -= dmg; best.fl = 0.16;
               if (fxOk(best.x, best.y)) { particles.spark((a.x + best.x) / 2, (a.y + best.y) / 2 - 8, "#FFF6D0"); PS.audio.hit(); } // hit spark at the fork tips (M7)
               if (best.hp <= 0) killAgent(best, a.team);
             }
           } else a.atk = Math.min(a.atk, A.attackInterval * 0.5 / team.atkMul);
-        } else {
+        } else if (a.kind === 1 && team.fought) { a.fight = false; dvx = seekX * UA.fightSeek + cohX; dvy = seekY * UA.fightSeek + cohY; } // v3 M4: an archer out of melee while its team fights walks at fightSeek of its seek (it stands and shoots)
+        else {
           a.fight = false; dvx = seekX + cohX; dvy = seekY + cohY;
         }
+        // v3 M4 (SPEC-v3 §4): the archer's shot clock (units.archer.interval x 0.8-1.2 on S.rng, faster with Arms like a blow); on expiry it looses
+        // when out of melee, out of its escape window and its team fights or stands (FIRE); no target or a full pool: gather again in retry s
+        if (a.kind === 1) { if (a.shotT > 0) a.shotT -= dt; if (a.shotT <= 0 && !best && !escaping && FIRE[at]) a.shotT = loose(a, at) ? UA.interval * (0.8 + S.rng() * 0.4) / team.atkMul : UA.retry; }
       } else if (bandit) {
         // bandits (SPEC-v2 §6, §8): hold a post in their camp; go for any swarm peasant within encampments.banditAggro px, never farther than
         // encampments.banditLeash px from the camp (past it they walk home and drop their target). No rout, no join, no spoils: team id 8 is
@@ -903,6 +965,7 @@
     // recruitment: each neutral found its nearest team agent within recruitRadius during its own neighbour pass
     for (let i = 0; i < recN; i++) { const a = REC[i]; REC[i] = null; if (!a.dead && a.team === 0 && a.rec) convert(a, a.rec, false); a.rec = 0; }
     recN = 0;
+    arrowsLand(); // v3 M4: the archers' hits due this tick
 
     // power-up pickup
     const pr = cfg.powerups.pickupRadius, pr2 = pr * pr;
@@ -1062,6 +1125,9 @@
     // v3 M3b: the forge hint (the first forge you see) and the stockade hint (your first stockade)
     if (S._hintForge === 1 && showHint("A forge sells a tier for peasants. Send your swarm into its ring and stand", S.cfg.polish.hintForge)) S._hintForge = 2;
     if (S._hintStockade === 1 && showHint("Your stockade shoots rivals near it and watches the ground round it", S.cfg.polish.hintStockade)) S._hintStockade = 2;
+    // v3 M4 (SPEC-v3 §4): the archer hint, due with your first archer (a recruit trained by a stockade you hold)
+    if (!S._hintArcher && player.kindN > 0) S._hintArcher = 1;
+    if (S._hintArcher === 1 && showHint("Your stockade trains archers. They shoot when your swarm fights or stands still", S.cfg.polish.hintArcher)) S._hintArcher = 2;
 
     // win / lose
     if (player.count === 0 && !S.result) endGame(false, S._routedBy ? "Your swarm broke and joined " + S._routedBy + "." : "Every last peasant fell.");
@@ -1080,7 +1146,9 @@
   function convert(a, team, absorbed) {
     const from = a.team, t = S.teams[team]; a.team = team; a.hp = t.hpMax; a.tgt = null; a.fight = false; a.fl = absorbed ? 0 : 0.2; a.fok = 0; a.strag = 0; // hpMax: Arms (M6), every recruit takes the team's tiers
     a.pop = absorbed ? -S.rng() * 0.45 : 0;
-    SPL.onConvert(a, t, from, absorbed); // muster milestones (M6): neutrals recruited, absorbed rivals excluded
+    if (absorbed && !S.cfg.units.flipKeepsKind) a.kind = 0; // v3 M4 (SPEC-v3 §4): a flipped archer keeps its bow (units.flipKeepsKind)
+    SPL.onConvert(a, t, from, absorbed); // muster milestones (M6): neutrals recruited, absorbed rivals excluded (and the trains hook, SPEC-v3 §3)
+    if (a.kind === 1) a.hp = t.hpMax * S.cfg.units.archer.hp; // hp resets to the new team's max x the kind's hp
     if (fxOk(a.x, a.y)) {
       if (!absorbed) particles.burst(a.x, a.y - 6, t.color, 5, 80, 0.45, 3, 220);
       if (t.isPlayer && !absorbed) { PS.audio.recruit(); if (Math.random() < 0.35) floaters.add(a.x, a.y - 14, "+1", t.color, 13, 0.7); }
@@ -1126,7 +1194,8 @@
   function scatter(a, cx, cy) {
     const RM = S.cfg.combat.remnant, dx = a.x - cx, dy = a.y - cy, l = Math.sqrt(dx * dx + dy * dy) || 1, d = RM.scatterDist[0] + S.rng() * (RM.scatterDist[1] - RM.scatterDist[0]);
     const p = PS.flow.rayOut(a.x, a.y, dx / l, dy / l, d, null);
-    a.team = 0; a.hp = S.cfg.agent.hp; a.tgt = null; a.fight = false; a.camp = null; a.hx = a.wx = p.x; a.hy = a.wy = p.y; a.escapeT = RM.escapeSeconds; a.ex = cx; a.ey = cy; a.fl = 0.2; a.exr = true; // exr: no muster credit for whoever takes it
+    if (S.cfg.units.scatterResets) { a.kind = 0; a.shotT = 0; } // v3 M4 (SPEC-v3 §4): a finale scatter to neutral puts the bow down
+    a.team = 0; a.hp = S.cfg.agent.hp * (a.kind === 1 ? S.cfg.units.archer.hp : 1); a.tgt = null; a.fight = false; a.camp = null; a.hx = a.wx = p.x; a.hy = a.wy = p.y; a.escapeT = RM.escapeSeconds; a.ex = cx; a.ey = cy; a.fl = 0.2; a.exr = true; // exr: no muster credit for whoever takes it
   }
   // a remnant's escape (M2 critic MAJOR-2): its fled agents route to the Dijkstra flee target away from the winner (camps and pass cells
   // maximising the winner's path distance minus the remnant's, fleeTarget), re-planned every remnant.escapeReplan s of the window from
@@ -1832,7 +1901,7 @@
   // frame). Where the art grid already lands on whole device px (2 x SNK an integer: DPR 2 at every zoom step) snapD is exactly snap2.
   let SNK = 2, SNX = true;
   const snapD = (v) => (SNX ? snap2(v) : Math.round(snap2(v) * SNK) / SNK);
-  let agentsDrawn = 0, edgeTreesDrawn = 0; // agents (the one-draw-per-agent check) and grove edge trees drawn in the last frame
+  let agentsDrawn = 0, edgeTreesDrawn = 0, arrowsDrawn = 0; // agents (the one-draw-per-agent check) and grove edge trees drawn in the last frame
   // banner bearers (SPEC-v2 §11): one per swarm at its centroid (a rival's: the centroid of what you see of it, and only where you see
   // that point), four size tiers at art.bannerTiers. Per team this frame: pole base BX/BY, pennant top BTOP, tier, drawn (BON). Name tags,
   // verdict marks, the crown and anchored banners ("+N JOIN YOU") sit above it.
@@ -1973,7 +2042,7 @@
       const wave = e.wT > S.t, wt = wave ? e.wTeam : e.team; // the rout wave: still the loser's colour, hands up, until its turn (M7, render only)
       const set = wt === 8 ? banditSet : wt ? S.teams[wt].spr : neutralSet, al = e.seenA, left = e.face < 0;
       const moving = e.vx * e.vx + e.vy * e.vy > 120;
-      const fi = wave ? 3 + (left ? 4 : 0) : (e.lunge > 0.08 ? 2 : moving ? ((e.ph | 0) % 2) : 3) + (left ? 4 : 0) + (e.fl > flashMin ? 8 : 0);
+      const fi = (wave ? 3 + (left ? 4 : 0) : (e.lunge > 0.08 ? 2 : moving ? ((e.ph | 0) % 2) : 3) + (left ? 4 : 0) + (e.fl > flashMin ? 8 : 0)) + (e.kind === 1 ? 16 : 0); // v3 M4: an archer's rows (SPEC-v3 §4)
       let sc = 1; if (e.pop > 0 && e.pop < 0.3) sc = 1 + 0.55 * (1 - e.pop / 0.3);
       const k2 = 2 * sc, gx = sc === 1 ? snapD(e.x) : e.x, gy = sc === 1 ? snapD(e.y) : e.y, dx = gx - (left ? set.axL : set.axR) * k2, dy = gy + 2 - set.ay * k2;
       if (e.team !== 1) e.drawnF = fid;
@@ -1982,11 +2051,12 @@
       if (al < 1) ctx.globalAlpha = al;
       ctx.drawImage(set.atlas, set.sx[fi], set.sy[fi], FWp, FHp, dx, dy, FWp * k2, FHp * k2);
       if (wave) { ctx.fillStyle = PS.PAL.cream; ctx.fillRect(gx - 8, dy + 6, 2, 4); ctx.fillRect(gx + 6, dy + 6, 2, 4); ctx.fillStyle = "#6B4A2E"; ctx.fillRect(gx + (left ? -12 : 4), gy + 2, 8, 2); if (al < 1) ctx.globalAlpha = 1; continue; } // hands up, the fork dropped at its feet
-      const hm = e.team === 8 ? bHp : e.team ? S.teams[e.team].hpMax : cfg.agent.hp; // Arms raise a team's max hp (M6)
+      const hm = (e.team === 8 ? bHp : e.team ? S.teams[e.team].hpMax : cfg.agent.hp) * (e.kind === 1 ? cfg.units.archer.hp : 1); // Arms raise a team's max hp (M6); an archer's is lower (v3 M4)
       if (e.hp < hm && e.team && (e.team === 8 || S.teams[e.team].count <= hpMax)) { /* HP bars hide in swarms over polish.hpBarMax (SPEC-v2 §11) */ ctx.fillStyle = "rgba(0,0,0,.5)"; ctx.fillRect(gx - 6, dy + 2, 12, 2); ctx.fillStyle = e.hp <= 1 ? "#FF5C5C" : "#FFD23F"; ctx.fillRect(gx - 6, dy + 2, 12 * (e.hp / hm), 2); } // HP bar respects seenA
       if (al < 1) ctx.globalAlpha = 1;
     }
     agentsDrawn = nAg;
+    arrowsDrawn = drawArcherArrows(); // v3 M4: archers' arrows in flight (one stroked path)
 
     // contact-line dust (SPEC-v2 §11, render only): puffs along the line where two swarms you can see are fighting, across the axis between them
     if (S.mode === "play" && !S.attract) { const P = cfg.polish; for (let i = 1; i < S.teams.length; i++) { const ta = S.teams[i]; if (!ta.alive) continue; for (let j = i + 1; j < S.teams.length; j++) {
@@ -2631,7 +2701,7 @@
   function syncMixer() { const m = PS.audio.mixState(), el = $("mixer"); if (!el) return; for (const b of el.querySelectorAll("button")) b.classList.toggle("off", !m[b.dataset.k]); el.querySelector("span").textContent = Math.round(m.volume * 100) + "%"; }
   function showOverlay(id) { document.querySelectorAll(".overlay").forEach((o) => o.classList.toggle("active", o.id === id)); }
   // the first-ever match (no stored difficulty, no records, nothing picked this visit) runs Easy silently; the end screens carry the picker
-  function startGame() { S.sessionMatches++; if (SCR) SCR.drop(); $("teams").classList.add("rumour"); if (S.firstEver) { S.firstEver = false; S.difficulty = "easy"; syncDifficulty(); } PS.audio.setSilent(false); PS.audio.unlock(); PS.audio.click(); portal("gameplayStop"); newGame(false); S.mode = "play"; S._hintFight = S._hintHud = S._hintRecruit = S._hintFog = false; S._hintRelic = S._hintRem = S._hintForest = S._hintMill = S._hintForge = S._hintStockade = 0; S.fly = null; S.gained = false; S._routedBy = null; showOverlay(null); $("hud").classList.remove("hidden"); layoutHUD(); updateHUD(true); }
+  function startGame() { S.sessionMatches++; if (SCR) SCR.drop(); $("teams").classList.add("rumour"); if (S.firstEver) { S.firstEver = false; S.difficulty = "easy"; syncDifficulty(); } PS.audio.setSilent(false); PS.audio.unlock(); PS.audio.click(); portal("gameplayStop"); newGame(false); S.mode = "play"; S._hintFight = S._hintHud = S._hintRecruit = S._hintFog = false; S._hintRelic = S._hintRem = S._hintForest = S._hintMill = S._hintForge = S._hintStockade = S._hintArcher = 0; S.fly = null; S.gained = false; S._routedBy = null; showOverlay(null); $("hud").classList.remove("hidden"); layoutHUD(); updateHUD(true); }
   function toTitle() { portal("gameplayStop"); if (SCR) SCR.drop(); PS.audio.stopDrum(); PS.audio.murmur(0); PS.audio.melee(0); S.mode = "title"; showOverlay("ov-title"); $("hud").classList.add("hidden"); setHuddle(false); newGame(true); }
   // reason "hidden" | "blur" | "user": CrazyGames gets no gameplayStop for focus loss (its platform handles that; src/portal.js)
   function pause(reason) { portal("gameplayStop", reason || "user"); S.mode = "pause"; PS.audio.stopDrum(); PS.audio.murmur(0); PS.audio.melee(0); showOverlay("ov-pause"); setHuddle(false); S.input.joy.active = false; S.input.joy.id = -1; S.input.tp.active = false; S.input.hud2 = -1; }
@@ -2695,7 +2765,7 @@
   const SANDBOX_KEYS = ["mode", "t", "timeLeft", "agents", "teams", "obstacles", "powerups", "camps", "cam", "input", "rng", "seed", "trickleT", "shake",
     "banners", "hintT", "stats", "engagedNow", "result", "decals", "trails", "attract", "difficulty", "spr", "tick", "acc", "map", "obs", "cap", "dbg",
     "finalCalled", "pendingEnd", "_routedBy", "_hintRecruit", "_hintFight", "_hintHud", "camS", "ev", "lastRout", "thinkRR", "flowW", "fixture",
-    "fogW", "fogS", "fogOn", "frameId", "lastDrawT", "lastDrawSim", "noise", "crown", "pile", "scent", "relaxUntil", "torches", "aiPlayer", "aiCost", "objs", "bandits", "spT", "meleeN", "aid", "_hintForge", "_hintStockade"];
+    "fogW", "fogS", "fogOn", "frameId", "lastDrawT", "lastDrawSim", "noise", "crown", "pile", "scent", "relaxUntil", "torches", "aiPlayer", "aiCost", "objs", "bandits", "spT", "meleeN", "aid", "_hintForge", "_hintStockade", "arw", "_hintArcher"];
   let sbParticles = null, sbSmoke = null, sbFloaters = null, sbSpr = null, sbSprOf = null, flatMap = null;
   function withSandbox(fn) {
     if (sandbox) return fn(); // nested call shares the outer throwaway world
@@ -2717,7 +2787,7 @@
     }
   }
   function sandboxField(map) {
-    S.agents = []; S.obstacles = []; S.powerups = []; S.camps = []; S.banners = []; S.decals = []; S.trails = []; S.teams = []; SPL.reset(); S.aid = 0;
+    S.agents = []; S.obstacles = []; S.powerups = []; S.camps = []; S.banners = []; S.decals = []; S.trails = []; S.teams = []; SPL.reset(); S.aid = 0; S.arw = mkArw();
     S.map = map || flatMap || (flatMap = PS.terrain.flat()); PS.terrain.use(S.map); placeTables(S.map); bucketObstacles();
     S.flowW = PS.flow.use(PS.flow.reset(sbFlow, S.map));
     S.fogW = PS.fog.use(PS.fog.reset(sbFog, S.map, { learn: false })); S.fogS = mkFogS(); S.fogOn = false; // fog data runs; the view is unfogged unless a test sets fogOn
@@ -2734,27 +2804,31 @@
   // One clash on an empty field (the flat fixture map): n player peasants vs m Greedy (team 2) peasants, facing edges 60 px apart, both
   // sides charging the other's centroid every tick. No AI think, neutrals, trickle or power-ups; Normal difficulty. Seeded per run.
   // The fight ends at its first rout (or a wipe): survivors are counted at the rout, before the flip; flipped and fled come from it.
-  // opts.armsA / opts.armsB: that side's Arms tier (M6 parity matrix)
+  // opts.armsA / opts.armsB: that side's Arms tier (M6 parity matrix). v3 M4 (SPEC-v3 §4, §9): opts.kinds / opts.kindsB ({ archer: share }):
+  // that share of the side carries bows (setKinds); opts.ford: the ford scene instead (fordVolley's geometry): your n hold the far bank,
+  // the m Greedy cross the ford at you, and the fight still ends at its first rout
   function fightOnce(n, m, maxSeconds, seed, opts) {
-    const cfg = S.cfg, W = cfg.world.w, H = cfg.world.h;
-    sandboxField(); S.attract = false; S.difficulty = "normal";
+    const cfg = S.cfg, W = cfg.world.w, H = cfg.world.h, ford = !!(opts && opts.ford), FX = cfg.fixtures;
+    sandboxField(ford ? fixtureMap("ford") : null); S.attract = false; S.difficulty = "normal";
     S.t = 0; S.timeLeft = 1e9; S.trickleT = -1e9; S.shake = 0; S.result = null; S.engagedNow = false; S.finalCalled = true; S.pendingEnd = null; S._routedBy = null;
     S._hintRecruit = S._hintFight = S._hintHud = true; S.seed = seed >>> 0; S.rng = mulberry32(S.seed);
     S.teams = [null, mkTeam(1, cfg.player.name, cfg.player.color, true, null)];
     cfg.ai.personalities.forEach((p, i) => S.teams.push(mkTeam(2 + i, p.name, p.color, false, p)));
     for (let i = 1; i < S.teams.length; i++) { S.teams[i].thinkT = 1e9; if (i > 2) S.teams[i].alive = false; }
-    blob(W / 2 - 30 - blobR(n), H / 2, n, 1); blob(W / 2 + 30 + blobR(m), H / 2, m, 2);
+    const g = ford ? fordGeom() : null, hx = ford ? g.xe + FX.fordHoldGap + blobR(n) : 0;
+    if (ford) { blob(hx, g.cy, n, 1); blob(g.xw - FX.fordStart - blobR(m), g.cy, m, 2); } else { blob(W / 2 - 30 - blobR(n), H / 2, n, 1); blob(W / 2 + 30 + blobR(m), H / 2, m, 2); }
     recount();
     const p = S.teams[1], r = S.teams[2], max = Math.round(maxSeconds * 60), w0 = performance.now();
     if (opts && opts.armsA) { p.tier.arms = opts.armsA; SPL.applyTiers(p, true); } if (opts && opts.armsB) { r.tier.arms = opts.armsB; SPL.applyTiers(r, true); }
+    if (opts && opts.kinds) setKinds(1, opts.kinds.archer || 0); if (opts && opts.kindsB) setKinds(2, opts.kindsB.archer || 0);
     let truncated = false;
     for (let i = 0; i < max; i++) {
-      p.tx = r.cx; p.ty = r.cy; r.tx = p.cx; r.ty = p.cy;
+      if (ford) { p.tx = hx; p.ty = g.cy; p.mode = "hold"; p.route = false; r.tx = p.cx; r.ty = p.cy; r.route = true; } else { p.tx = r.cx; p.ty = r.cy; r.tx = p.cx; r.ty = p.cy; }
       update(DT);
       if (S.lastRout || !p.alive || !r.alive || S.result) break;
       if ((i & 63) === 63 && performance.now() - w0 > 4000) { truncated = true; break; } // lesson 20: wall-clock cap on every sim loop
     }
-    const R = S.lastRout, out = { seed: S.seed, seconds: +S.t.toFixed(2), winner: "none", how: "timeout", playerLeft: p.count, rivalLeft: r.count, playerAfter: p.count, flipped: 0, fled: 0, truncated };
+    const R = S.lastRout, out = { seed: S.seed, seconds: +S.t.toFixed(2), winner: "none", how: "timeout", playerLeft: p.count, rivalLeft: r.count, playerAfter: p.count, flipped: 0, fled: 0, truncated, arrows: S.ev.arrows, arrowKills: S.ev.arrowKills  };
     if (R) { const pw = R.winner === 1; out.winner = pw ? "player" : "rival"; out.how = "rout"; out.flipped = R.flipped; out.fled = R.fled; out.playerLeft = pw ? R.winnerBefore : R.loserBefore; out.rivalLeft = pw ? R.loserBefore : R.winnerBefore; }
     else if (!r.alive && p.alive) { out.winner = "player"; out.how = "wipe"; }
     else if (!p.alive && r.alive) { out.winner = "rival"; out.how = "wipe"; out.playerAfter = 0; }
@@ -2783,11 +2857,14 @@
   }
   // straggler: a full-height ridge fixtures.stragglerRidge cells thick with one fixtures.stragglerPass-cell pass at mid-height
   function stragGeom() { const T = PS.terrain, N = T.N, cell = T.cell, FX = S.cfg.fixtures, i0 = (N >> 1) - (FX.stragglerRidge >> 1), j0 = (N >> 1) - (FX.stragglerPass >> 1); return { i0, j0, xw: i0 * cell, xe: (i0 + FX.stragglerRidge) * cell, cy: (j0 + FX.stragglerPass / 2) * cell }; }
+  // v3 M4 ford: a fixtures.riverCells-wide river of deep water down the middle with one fixtures.fordCells-cell ford at mid-height
+  function fordGeom() { const T = PS.terrain, N = T.N, cell = T.cell, FX = S.cfg.fixtures, i0 = (N >> 1) - (FX.riverCells >> 1), j0 = (N >> 1) - (FX.fordCells >> 1); return { i0, j0, xw: i0 * cell, xe: (i0 + FX.riverCells) * cell, cy: (j0 + FX.fordCells / 2) * cell }; }
   function fixtureMap(kind) {
     if (fixtureMaps[kind]) return fixtureMaps[kind];
     const T = PS.terrain, N = T.N, FX = S.cfg.fixtures, terr = new Uint8Array(N * N), pm = new Uint8Array(N * N);
     for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) if (i < 2 || j < 2 || i >= N - 2 || j >= N - 2) terr[j * N + i] = 1;
     if (kind === "flipflop") { const [rw, rh] = FX.flipflopRidge, i0 = (N - rw) >> 1, j0 = (N >> 1) - (rh >> 1); for (let j = j0; j < j0 + rh; j++) for (let i = i0; i < i0 + rw; i++) terr[j * N + i] = 1; }
+    else if (kind === "ford") { const g = fordGeom(); for (let j = 2; j < N - 2; j++) for (let i = g.i0; i < g.i0 + FX.riverCells; i++) { if (j >= g.j0 && j < g.j0 + FX.fordCells) { terr[j * N + i] = 3; pm[j * N + i] = 1; } else terr[j * N + i] = 2; } } // v3 M4: a full-height river, one ford
     else if (kind === "straggler") { const g = stragGeom(); for (let j = 2; j < N - 2; j++) for (let i = g.i0; i < g.i0 + FX.stragglerRidge; i++) { if (j < g.j0 || j >= g.j0 + FX.stragglerPass) terr[j * N + i] = 1; else pm[j * N + i] = 1; } }
     else { const g = passGeom(kind); for (let j = 2; j < N - 2; j++) for (let i = g.i0; i < g.i0 + FX.passLen; i++) { if (j < g.j0 || j >= g.j0 + g.w) terr[j * N + i] = 1; else pm[j * N + i] = 1; } }
     return (fixtureMaps[kind] = T.fromTerr(terr, { name: kind, passMask: pm }));
@@ -2795,7 +2872,7 @@
   // a fresh scene on map m in the current world: player + the three rivals (dormant), no AI think, no trickle, no power-ups, seeded
   function fixtureBase(m, seed) {
     const cfg = S.cfg, old = S.map;
-    S.agents = []; S.obstacles = []; S.powerups = []; S.camps = []; S.banners = []; S.decals = []; S.trails = []; SPL.reset(); S.aid = 0;
+    S.agents = []; S.obstacles = []; S.powerups = []; S.camps = []; S.banners = []; S.decals = []; S.trails = []; SPL.reset(); S.aid = 0; S.arw = mkArw();
     S.map = m; PS.terrain.use(m); placeTables(m); bucketObstacles(); if (!sandbox && old && old !== m) releaseGround(old);
     S.flowW = PS.flow.use(PS.flow.reset(sandbox ? sbFlow : liveFlow, m));
     S.fogW = PS.fog.use(PS.fog.reset(sandbox ? sbFog : liveFog, m, { learn: false })); S.fogS = mkFogS(); S.fogOn = false; // fixtures keep full knowledge and an unfogged view
@@ -2974,7 +3051,45 @@
         pass: last != null && last <= FX.stragglerSeconds && rockMax <= FX.stragglerRockSeconds && pressMax <= FX.stragglerRockSeconds };
     } };
   }
-  const FIXTURES = { pass64: (sd) => fxPass("pass64", sd), pass128: (sd) => fxPass("pass128", sd), ambush: (sd, o) => fxAmbush(sd, o || {}), flipflop: (sd, o) => fxFlipflop(sd, o || {}), cliff: (sd, o) => fxCliff(sd, o || {}),
+  // v3 M4 (SPEC-v3 §4, §9) fordVolley: fixtures.fordVolleyN of yours (fordVolleyShare archers) hold fixtures.fordHoldGap px past the far
+  // edge of the ford against fixtures.fordVolleyCrossing Greedy peasants starting fixtures.fordStart px before it and bound for your
+  // centroid; to the first rout or fixtures.unitsSeconds. opts.n / opts.share / opts.crossing override. Reported over 8 seeds (holder wins
+  // >= 5 of 8 is an M5 target, not a gate)
+  function fxFordVolley(seed, opts) {
+    const FX = S.cfg.fixtures, m = fixtureMap("ford"), g = fordGeom(); fixtureBase(m, seed);
+    const n = opts.n || FX.fordVolleyN, share = opts.share != null ? opts.share : FX.fordVolleyShare, cr = opts.crossing || FX.fordVolleyCrossing, hold = S.teams[1], col = S.teams[2], hx = g.xe + FX.fordHoldGap + blobR(n); col.alive = true;
+    blob(hx, g.cy, n, 1); blob(g.xw - FX.fordStart - blobR(cr), g.cy, cr, 2); const na = setKinds(1, share); settle(hold); settle(col);
+    let contact = -1, colC = cr, holdC = n, R = null, peak = 0;
+    return { name: "fordVolley", drive() {
+      if (contact < 0 && hold.engT[2] > 0) { contact = S.t; colC = col.count; holdC = hold.count; }
+      if (S.lastRout && !R) R = S.lastRout; if (S.arw.n > peak) peak = S.arw.n;
+      hold.tx = hx; hold.ty = g.cy; hold.mode = "hold"; hold.route = false; col.tx = hold.cx; col.ty = hold.cy; col.route = true;
+    }, done: () => !!R || S.t >= FX.unitsSeconds || !hold.alive || !col.alive, result: () => {
+      const win = R ? (R.winner === 1 ? "holders" : "crossers") : !col.alive ? "holders" : !hold.alive ? "crossers" : "none";
+      return { fixture: "fordVolley", holders: n, archers: na, crossing: cr, contact: +contact.toFixed(2), crossersLostBeforeContact: contact < 0 ? cr - col.count : cr - colC, holdersLostBeforeContact: contact < 0 ? n - hold.count : n - holdC,
+        winner: win, holdersLeft: hold.count, crossersLeft: col.count, arrows: S.ev.arrows, arrowKills: S.ev.arrowKills, arrowSkips: S.ev.arrowSkips, peakInFlight: peak, seconds: +S.t.toFixed(2), pass: win === "holders" };
+    } };
+  }
+  // kite: your fixtures.kiteN (kiteShare archers) hover fixtures.kiteHover px off the edge of a holding fixtures.kiteHolder Greedy on the
+  // flat field; the holder stands under the arrows fixtures.kiteDwell s, then charges. Reports the holder's losses before contact (under 25%
+  // is the M5 target), the winner, arrows. opts.share overrides
+  function fxKite(seed, opts) {
+    const FX = S.cfg.fixtures, W = S.cfg.world.w, H = S.cfg.world.h; fixtureBase(flatMap || (flatMap = PS.terrain.flat()), seed);
+    const n = FX.kiteN, hn = FX.kiteHolder, share = opts.share != null ? opts.share : FX.kiteShare, kite = S.teams[1], hold = S.teams[2], hx = W / 2 + blobR(hn), kx = W / 2 - FX.kiteHover - blobR(n); hold.alive = true;
+    blob(hx, H / 2, hn, 2); blob(kx, H / 2, n, 1); const na = setKinds(1, share); settle(kite); settle(hold);
+    let contact = -1, holdC = hn, R = null, charge = -1;
+    return { name: "kite", drive() {
+      if (contact < 0 && kite.engT[2] > 0) { contact = S.t; holdC = hold.count; }
+      if (S.lastRout && !R) R = S.lastRout;
+      kite.tx = kx; kite.ty = H / 2; kite.mode = "hold"; kite.route = false;
+      if (S.t < FX.kiteDwell) { hold.tx = hx; hold.ty = H / 2; hold.route = false; } else { if (charge < 0) charge = S.t; hold.tx = kite.cx; hold.ty = kite.cy; hold.route = true; }
+    }, done: () => !!R || S.t >= FX.unitsSeconds || !hold.alive || !kite.alive, result: () => {
+      const lost = (contact < 0 ? hn - hold.count : hn - holdC) / hn, win = R ? (R.winner === 1 ? "kiter" : "holder") : !hold.alive ? "kiter" : !kite.alive ? "holder" : "none";
+      return { fixture: "kite", kiter: n, archers: na, holder: hn, charge: +charge.toFixed(2), contact: +contact.toFixed(2), holderLostBeforeContact: +lost.toFixed(3), winner: win, kiterLeft: kite.count, holderLeft: hold.count,
+        arrows: S.ev.arrows, arrowKills: S.ev.arrowKills, seconds: +S.t.toFixed(2), pass: lost < 0.25 };
+    } };
+  }
+  const FIXTURES = { fordVolley: (sd, o) => fxFordVolley(sd, o || {}), kite: (sd, o) => fxKite(sd, o || {}), pass64: (sd) => fxPass("pass64", sd), pass128: (sd) => fxPass("pass128", sd), ambush: (sd, o) => fxAmbush(sd, o || {}), flipflop: (sd, o) => fxFlipflop(sd, o || {}), cliff: (sd, o) => fxCliff(sd, o || {}),
     hold: (sd, o) => fxHold(sd, o || {}), remnant: (sd, o) => fxRemnant(sd, o || {}), straggler: (sd, o) => fxStraggler(sd, o || {}) };
   // PS.fixture(name, { seed, noHyst, steer, variant, wallMs }): one sandboxed run to its end, with the per-tick terrain assert and flow stats
   function fixture(name, opts) {
@@ -3089,8 +3204,18 @@
       const cdx = W / 2 - o.x, cdy = W / 2 - o.y, cl = Math.hypot(cdx, cdy) || 1, [x, y] = near(o.x + (cdx / cl) * 200, o.y + (cdy / cl) * 200, 60);
       const s2 = m.spawns[S.teams[2].slot], [gx, gy] = near(s2.x, s2.y, 80); clear([1, 2]); freeze(); put(x, y, opts.n || 24, 1); put(gx, gy, 20, 2); done(o.x, o.y); const saw = { team: o.sk.team, n: o.sk.n }; // Greedy lives on at home (an eliminated owner's mill goes neutral)
       const aw = opts.away || 700, [x2, y2] = near(o.x + (cdx / cl) * aw, o.y + (cdy / cl) * aw, 80); for (const a of S.agents) if (a.team === 1) { a.x += x2 - x; a.y += y2 - y; a.hx = a.wx = a.x; a.hy = a.wy = a.y; }
-      const r = done((o.x + x2) / 2, (o.y + y2) / 2); o.bank = 2; PS.aim(x2, y2);
+      const r = done(o.x + (x2 - o.x) * 0.3, o.y + (y2 - o.y) * 0.3); o.bank = 2; PS.aim(x2, y2); // M4: framed 30% of the way from the mill, so its label never sits on the viewport edge (M3b critic minor 2)
       return Object.assign(r, { obj: { type: "mill", owner: 2, x: Math.round(o.x), y: Math.round(o.y), saw, seesNow: PS.fog.sees(1, o.x, o.y), realBank: o.bank } });
+    }
+    // v3 M4 (SPEC-v3 §4, §9) "types": opts.n agents (640) split between your swarm and a Greedy one, opts.gap (110) px edge to edge (inside bow range) near your spawn,
+    // opts.share (0.2) of each carrying bows, both holding, stepped opts.step (1.2) s so volleys are in the air; pin opts.zoom (0.5) for the
+    // phone read (375 x 812). Returns the archers staged and the arrows in flight
+    if (name === "types") {
+      const s0 = m.spawns[pl.slot], [x, y] = near(s0.x, s0.y, 80), n = opts.n || 640, sh = opts.share != null ? opts.share : 0.2, half = n >> 1, gap = opts.gap || 110;
+      clear([1, 2]); S.agents = S.agents.filter((a) => a.team !== 0 || Math.hypot(a.x - x, a.y - y) > 700); freeze(); S.fogS.reveal = true;
+      const dx = blobR(half) + gap / 2; put(x - dx, y, half, 1); put(x + dx, y, n - half, 2); const na = setKinds(1, sh) + setKinds(2, sh); const r = done(x, y);
+      const g = S.teams[2]; g.tx = x + dx; g.ty = y; g.route = false; PS.aim(x - dx, y); pl.mode = "hold"; S.input.hold = true; PS.step(opts.step == null ? 1.2 : opts.step);
+      return Object.assign(r, { agents: S.agents.filter((a) => a.team === 1 || a.team === 2).length, archers: na, inFlight: S.arw.n, arrows: S.ev.arrows });
     }
     if (name === "teams") {
       const s0 = m.spawns[pl.slot], [x, y] = near(s0.x, s0.y, 80), R0 = opts.r || 150;
@@ -3147,6 +3272,7 @@
       tiers: S.teams.slice(1).map((t) => t.tierN), tiers60: E.tiers60, tiers180: E.tiers180, tiers300: E.tiers300, taken: E.taken.slice(), gains: E.gains.slice(), drops: E.drops, trickleChests: E.trickleChests, mustered: S.teams.slice(1).map((t) => t.mustered),
       millPaid: E.millPaid.slice(1, 7), millCollects: E.millCollects, sites: E.sites.slice(),
       ...(S.cfg.structures.enabled ? { forge: E.forge.slice(), stockKills: E.stockKills, stockShots: E.stockShots, trained: E.trained.slice(1, 7), kind180: E.kind180 } : {}), // v3 M3b: forge sales, stockade shots and kills, trains tags, trained share at 3:00
+      ...(S.cfg.structures.enabled && S.cfg.units.enabled ? { arrows: E.arrows, arrowHits: E.arrowHits, arrowKills: E.arrowKills, arrowPeak: E.arrowPeak } : {}), // v3 M4: archer arrows (absent with the switch off, so kill-switch records match M3b's)
       ...(FS && PS.fog.losOn() ? { los: { rustles: FS.rustleN, playerRustles: FS.stats.rustles, reveals: FS.stats.reveals, forestCells: S.map.forest ? S.map.forest.cells : 0, cache: { hits: PS.fog.LOS.hits, misses: PS.fog.LOS.misses } } } : {}) }; // v3: only with sight layers on, so the kill-switch records match v2's
   }
 
@@ -3734,6 +3860,104 @@
       pass: tiers[0].atEven >= 0.7 && tiers[1].atGate < 0.5 && tiers[2].atGate < 0.5 && tiers.every((t) => t.atPower >= 0.1 && t.atPower <= 0.9) };
   }
 
+  // ---------------------------------------------------------------- v3 M4 QA (SPEC-v3 §4, §9): archers
+  // setKinds(team, share): that share of the team's agents carry bows, evenly through its spawn order (floor((i + 1) x share) > floor(i x
+  // share)), hp at the team's max x units.archer.hp; returns how many (a QA and art staging helper: in a match only the trains hook tags)
+  function setKinds(tid, share) {
+    if (!(share > 0)) return 0; const t = S.teams[tid], UA = S.cfg.units.archer; let i = 0, n = 0;
+    for (const a of S.agents) { if (a.team !== tid || a.dead) continue; if (Math.floor((i + 1) * share) > Math.floor(i * share)) { a.kind = 1; a.hp = t.hpMax * UA.hp; n++; } i++; }
+    recount(); return n;
+  }
+  // flip keeps kind (units.flipKeepsKind; hp = the new team's max x kind hp; off: a peasant), a real rout hands the winner bows, scatter resets
+  // (units.scatterResets; off: it keeps the bow), the power recount (armsPower x (1 + share x (power - 1)))
+  function unitsFlipTest() {
+    const U = S.cfg.units, UA = U.archer;
+    return withSandbox(() => {
+      const { W, p } = spoilsScene(71), x = W / 2, y = W / 2; blob(x, y, 20, 1); settle(p);
+      const one = (keep) => { const k0 = U.flipKeepsKind; U.flipKeepsKind = keep; try { const a = mkAgent(x + 30, y, 2); S.agents.push(a); a.kind = 1; convert(a, 1, true); return { kind: a.kind, hp: +a.hp.toFixed(3) }; } finally { U.flipKeepsKind = k0; } };
+      const on = one(true), off = one(false);
+      const sc = (reset) => { const k0 = U.scatterResets; U.scatterResets = reset; try { const a = mkAgent(x - 30, y, 2); S.agents.push(a); a.kind = 1; scatter(a, x, y); return { team: a.team, kind: a.kind }; } finally { U.scatterResets = k0; } };
+      const sOn = sc(true), sOff = sc(false);
+      settle(p); const ap = S.cfg.progression.armsPower[0], want = ap * (1 + (p.kindN / p.count) * (UA.power - 1));
+      const f = fightOnce(60, 30, 30, 505, { kindsB: { archer: 0.5 } }); let won = 0; for (const a of S.agents) if (a.team === 1 && !a.dead && a.kind === 1) won++;
+      return { flip: on, flipOff: off, hpWant: +(p.hpMax * UA.hp).toFixed(3), scatter: sOn, scatterOff: sOff, power: { kindN: p.kindN, count: p.count, got: +p.power.toFixed(4), want: +want.toFixed(4) }, rout: { winner: f.winner, flipped: f.flipped, archersJoined: won },
+        pass: on.kind === 1 && Math.abs(on.hp - p.hpMax * UA.hp) < 1e-6 && off.kind === 0 && sOn.team === 0 && sOn.kind === 0 && sOff.kind === 1 && Math.abs(p.power - want) < 1e-9 && p.kindN > 0 && f.winner === "player" && won > 0 };
+    });
+  }
+  // a remnant archer in its escape window never looses, and a remnant is never a target; once its window closes it shoots at once (teeth)
+  function unitsRemnantTest() {
+    return withSandbox(() => {
+      const { W, p, r } = spoilsScene(72), x = W / 2, y = W / 2; r.alive = true; blob(x, y, 12, 1); blob(x + 110, y, 12, 2); setKinds(1, 1); setKinds(2, 1); settle(p); settle(r);
+      const pin = S.agents.map((a) => [a, a.x, a.y]), hold = () => { for (const [a, px, py] of pin) { a.x = px; a.y = py; a.vx = a.vy = 0; } };
+      for (const a of S.agents) if (a.team === 1) { a.escapeT = 2; a.ex = a.x; a.ey = a.y; }
+      let during = 0; steps(90, [[1, x, y], [2, x + 110, y]], () => { hold(); during = S.ev.arrows; return false; }); // 1.5 s: team 1 remnants, team 2 all archers
+      for (const a of S.agents) if (a.team === 1) a.escapeT = 0;
+      steps(60, [[1, x, y], [2, x + 110, y]], () => { hold(); return false; });
+      let src1 = 0; for (let q = 0; q < S.arw.n; q++) if (S.arw.src[q] === 1) src1++;
+      return { arrowsWhileRemnant: during, arrowsAfter: S.ev.arrows, hits: S.ev.arrowHits, pass: during === 0 && S.ev.arrows > 0 && S.ev.arrowHits > 0 };
+    });
+  }
+  // an arrow in flight whose target flips to the archer's team is skipped (no hp lost); the same shot without the flip lands for
+  // units.archer.damage (teeth); and a small pool (maxArrows 8) under 30 v 30 archers never holds more than 8 while many more are loosed
+  function unitsArrowTest() {
+    const UA = S.cfg.units.archer, m0 = UA.maxArrows;
+    const shot = (flip) => withSandbox(() => {
+      const { W, p, r } = spoilsScene(73), x = W / 2, y = W / 2; r.alive = true; blob(x, y, 1, 1); blob(x + 100, y, 1, 2); setKinds(1, 1); settle(p); settle(r); rebuildGrid();
+      const a = S.agents.find((q) => q.team === 1), b = S.agents.find((q) => q.team === 2), ok = loose(a, 1), hp0 = b.hp; if (flip) convert(b, 1, true); const hp1 = b.hp;
+      for (let i = 0; i < Math.ceil(UA.flight * 60) + 2; i++) { a.shotT = 99; holdAt(p, x, y); holdAt(r, x + 100, y); update(DT); }
+      return { loosed: ok, hpBefore: +hp1.toFixed(3), hpAfter: +b.hp.toFixed(3), team: b.team, hp0: +hp0.toFixed(3), skips: S.ev.arrowSkips, hits: S.ev.arrowHits, inFlight: S.arw.n };
+    });
+    const flipped = shot(true), straight = shot(false);
+    let pool = null; UA.maxArrows = 8;
+    try { pool = withSandbox(() => { const { W, p, r } = spoilsScene(74), x = W / 2, y = W / 2; r.alive = true; blob(x, y, 30, 1); blob(x + 120, y, 30, 2); setKinds(1, 1); setKinds(2, 1); settle(p); settle(r); let over = 0, max = 0;
+      steps(180, [[1, x, y], [2, x + 120, y]], () => { if (S.arw.n > 8) over++; if (S.arw.n > max) max = S.arw.n; return false; }); return { size: S.arw.t.length, maxInFlight: max, over, loosed: S.ev.arrows, peak: S.ev.arrowPeak }; }); } finally { UA.maxArrows = m0; }
+    return { flipped, straight, pool, pass: flipped.loosed && flipped.team === 1 && flipped.hpAfter === flipped.hpBefore && flipped.skips === 1 && flipped.hits === 0 && straight.loosed && Math.abs(straight.hp0 - straight.hpAfter - UA.damage) < 1e-9 && straight.hits === 1 &&
+      pool.size === 8 && pool.over === 0 && pool.maxInFlight === 8 && pool.loosed > 16 };
+  }
+  // the kill switch (SPEC-v3 §0): units.enabled false, the same archers stage loose nothing; on they do
+  function unitsOffTest() {
+    const U = S.cfg.units, run = (on) => { const k0 = U.enabled; U.enabled = on; try { return withSandbox(() => { const { W, p, r } = spoilsScene(75), x = W / 2, y = W / 2; r.alive = true; blob(x, y, 20, 1); blob(x + 120, y, 20, 2); setKinds(1, 0.5); settle(p); settle(r); steps(120, [[1, x, y], [2, x + 120, y]]); return S.ev.arrows; }); } finally { U.enabled = k0; } };
+    const off = run(false), on = run(true); return { off, on, pass: off === 0 && on > 0 };
+  }
+  // replay determinism with arrows in flight: fordVolley seed 3 run twice, the state signature compared on every tick that has arrows in flight
+  function unitsReplayTest() {
+    const once = () => withSandbox(() => { const fx = FIXTURES.fordVolley(3, {}); S.fixture = fx; S.mode = "sandbox"; const sig = []; let inFlight = 0;
+      for (let i = 0; i < 1500 && !fx.done(); i++) { update(DT); if (S.arw.n > 0 && (i % 15) === 0) { inFlight = Math.max(inFlight, S.arw.n); sig.push(stateSig()); } } return { sig: sig.join("|"), n: sig.length, inFlight, arrows: S.ev.arrows, t: +S.t.toFixed(2) }; });
+    const a = once(), b = once(); return { samples: a.n, maxInFlight: a.inFlight, arrows: a.arrows, t: a.t, same: a.sig === b.sig, pass: a.sig === b.sig && a.n > 3 && a.inFlight > 0 };
+  }
+  // readability (SPEC-v3 §4, §9): each pose's archer frame against its peasant frame, both drawn into ONE scratch canvas and read there (never
+  // the cached atlas): differing art px (>= 18), and the hat untouched (no pixel in the team's hat ramp changes between the two frames)
+  function spriteKindReport() {
+    const out = [];
+    for (let i = 1; i <= 6; i++) {
+      const set = S.teams[i] ? S.teams[i].spr : S.spr.peasantSet(S.cfg.ai.personalities[0].color, i), g = artCanvas(set.fw * 2, set.fh), rgb = set.hat.map((h) => parseInt(h.slice(1), 16)); let minDiff = 1e9, hatDiff = 0;
+      for (let pose = 0; pose < 4; pose++) {
+        g.clearRect(0, 0, set.fw * 2, set.fh); g.drawImage(set.atlas, set.sx[pose], set.sy[pose], set.fw, set.fh, 0, 0, set.fw, set.fh); g.drawImage(set.atlas, set.sx[pose + 16], set.sy[pose + 16], set.fw, set.fh, set.fw, 0, set.fw, set.fh);
+        const d = g.getImageData(0, 0, set.fw * 2, set.fh).data, W2 = set.fw * 2; let diff = 0;
+        for (let y = 0; y < set.fh; y++) for (let x = 0; x < set.fw; x++) { const k = (y * W2 + x) * 4, q = k + set.fw * 4; const same = d[k] === d[q] && d[k + 1] === d[q + 1] && d[k + 2] === d[q + 2] && d[k + 3] === d[q + 3]; if (!same) { diff++; const c1 = (d[k] << 16) | (d[k + 1] << 8) | d[k + 2], c2 = (d[q] << 16) | (d[q + 1] << 8) | d[q + 2]; if ((d[k + 3] && rgb.indexOf(c1) >= 0) || (d[q + 3] && rgb.indexOf(c2) >= 0)) hatDiff++; } }
+        if (diff < minDiff) minDiff = diff;
+      }
+      out.push({ team: i, style: set.style, minDiffArtPx: minDiff, hatPxChanged: hatDiff });
+    }
+    return { teams: out, pass: out.every((r) => r.minDiffArtPx >= 18 && r.hatPxChanged === 0) };
+  }
+  // archer parity at the configured units.archer.power (SPEC-v3 §4, §9): 40 and 60 with 25% archers against their power-equivalent peasants
+  // (count x (1 + 0.25 x (power - 1)), rounded) and against an even count; 5 seeded runs a size, pooled. Gates: the even fight is won (>= 70%),
+  // the power-equivalent one is contested (10-90%). The power itself comes from the 9-run scans in M4-build-notes.md
+  function archerParityTest() {
+    const UA = S.cfg.units.archer, sh = 0.25, share = (ratio, k) => { let w = 0, r = 0; for (const n of [40, 60]) { const f = fight(n, Math.round(n * ratio), 30, 5, 9100 + k * 37 + n, { kinds: { archer: sh } }); w += f.playerWins; r += f.runs.length; } return +(w / r).toFixed(2); };
+    const eq = 1 + sh * (UA.power - 1), atEven = share(1, 0), atPower = share(eq, 1);
+    return { share: sh, power: UA.power, ratio: +eq.toFixed(3), atEven, atPower, pass: atEven >= 0.7 && atPower >= 0.1 && atPower <= 0.9 };
+  }
+  // fordVolley and kite over 8 seeds each, reported as ranges (SPEC-v3 §9: the single-point targets are M5's)
+  function unitsFixtures() {
+    const sds = [1, 2, 3, 4, 5, 6, 7, 8], fv = sds.map((sd) => fixture("fordVolley", { seed: sd })), kt = sds.map((sd) => fixture("kite", { seed: sd }));
+    const rng = (l, k) => { const v = l.map((r) => r[k]); return [Math.min(...v), Math.max(...v)]; };
+    return { fordVolley: { holderWins: fv.filter((r) => r.winner === "holders").length + "/8", crossersLostBeforeContact: rng(fv, "crossersLostBeforeContact"), holdersLeft: rng(fv, "holdersLeft"), arrows: rng(fv, "arrows"), arrowKills: rng(fv, "arrowKills"), peakInFlight: rng(fv, "peakInFlight"), seconds: rng(fv, "seconds"), bySeed: fv.map((r) => r.winner[0]).join("") },
+      kite: { holderLostBeforeContact: rng(kt, "holderLostBeforeContact"), under25: kt.filter((r) => r.pass).length + "/8", kiterWins: kt.filter((r) => r.winner === "kiter").length + "/8", arrows: rng(kt, "arrows"), arrowKills: rng(kt, "arrowKills"), contact: rng(kt, "contact"), bySeed: kt.map((r) => r.winner[0]).join("") },
+      ok: fv.concat(kt).every((r) => !r.truncated && !r.terrainBad) && fv.every((r) => r.arrows > 0) && kt.every((r) => r.arrows > 0) };
+  }
+
   // dawn: at the bell the fog lifts over fog.dawnSeconds before the result screen, and everything is drawn
   function dawnTest() {
     return withSandbox(() => {
@@ -3825,6 +4049,7 @@
         if (nSt) { S.t = SK.activeAfter; const land = (S.vw / zoom) >= (S.vh / zoom), D = blobR(per) + 150, br = blobR(per);
           for (let k = 0; k < nSt; k++) { const c = k % 2, b0 = L.blobs[2 * c], mx = (b0[0] + L.blobs[2 * c + 1][0]) / 2, my = (b0[1] + L.blobs[2 * c + 1][1]) / 2, j = (k >> 1) % 3, a = j === 0 ? -1 : j === 1 ? 1 : 0, sg = j === 2 ? -1 : 1;
             stocks.push(SPL.stage("stockade", land ? mx + a * br : mx + sg * D, land ? my + sg * D : my + a * br, { owner: c === 0 ? 3 + (k & 1) : 1 + (k & 1) })); } }
+        if (opts.archers) for (let i = 1; i <= 4; i++) setKinds(i, opts.archers); // v3 M4 (SPEC-v3 §9): opts.archers, that share of each clash team carries bows
         recount(); for (let i = 1; i < S.teams.length; i++) { const t = S.teams[i]; t.pcx = t.cx; t.pcy = t.cy; }
         fogStampAll();
         const T = S.teams, pin = () => { S.cam.x = cx; S.cam.y = cy; S.cam.zoom = zoom; S.shake = 0; };
@@ -3847,7 +4072,8 @@
           update: { p50: pct(up, 0.5), p90: pct(up, 0.9), p99: pct(up, 0.99), mean: mean(up) }, draw: { p50: pct(dr, 0.5), p90: pct(dr, 0.9), p99: pct(dr, 0.99), mean: mean(dr) },
           drawImage: cnt.drawImage, layers: cnt.layers, agentsDrawn: cnt.agentsDrawn, drawPerAgentOk: cnt.drawImage <= cfg.art.drawPerAgent * cnt.agentsDrawn + cfg.art.drawOverhead, // M5: one draw per agent
           canvas: canvasMemory(), flow, wallMs: Math.round(performance.now() - w0), shot: opts.shot ? canvas.toDataURL() : undefined,
-          stockades: nSt ? { n: nSt, shots: S.ev.stockShots, kills: S.ev.stockKills, owners: stocks.map((o) => o.owner).join(""), arrowsDrawn: SPL.arrowCount() } : undefined };
+          stockades: nSt ? { n: nSt, shots: S.ev.stockShots, kills: S.ev.stockKills, owners: stocks.map((o) => o.owner).join(""), arrowsDrawn: SPL.arrowCount() } : undefined,
+          archers: opts.archers ? { share: opts.archers, loosed: S.ev.arrows, hits: S.ev.arrowHits, kills: S.ev.arrowKills, peak: S.ev.arrowPeak, drawn: arrowsDrawn } : undefined };
       });
     } finally { cfg.combat.engageDelay = delay0; benchTick = () => {}; if (benchMap) releaseGround(benchMap); } // the bench map's chunks are zeroed, not kept (memory)
   }
@@ -3950,6 +4176,10 @@
     "structures.forge.minShare:n structures.forge.shareFloor:n structures.forge.payWalk:n structures.stockade:o structures.stockade.range:n structures.stockade.every:n " +
     "structures.stockade.damage:n structures.stockade.sight:n structures.stockade.captureMin:n structures.stockade.ring:n structures.stockade.activeAfter:n structures.stockade.arrowSpeed:n " +
     "structures.stockade.arrowPool:n structures.stockade.trains:o structures.stockade.trains.type:s structures.stockade.trains.share:n units:o units.enabled:b units.maxShare:n " +
+    // v3 M4 (SPEC-v3 §4, §7): archers
+    "units.flipKeepsKind:b units.scatterResets:b units.archer:o units.archer.hp:n units.archer.melee:n units.archer.range:n units.archer.interval:n units.archer.damage:n units.archer.flight:n " +
+    "units.archer.fireTeamSpeed:n units.archer.maxArrows:n units.archer.drawArrows:a units.archer.power:n units.archer.retry:n units.archer.engage:n units.archer.fightSeek:n polish.hintArcher:n fixtures.fordVolleyN:n fixtures.fordVolleyShare:n " +
+    "fixtures.fordVolleyCrossing:n fixtures.kiteN:n fixtures.kiteShare:n fixtures.kiteHover:n fixtures.kiteHolder:n fixtures.kiteDwell:n fixtures.fordCells:n fixtures.riverCells:n fixtures.fordHoldGap:n fixtures.fordStart:n fixtures.unitsSeconds:n " +
     "ai.objForge:n ai.objStockade:n ai.forgeReserve:n ai.forgeRankStep:n polish.hintForge:n polish.hintStockade:n fixtures.towerN:n fixtures.towerSeconds:n fixtures.forgeN:n fixtures.stockadeShare:n").split(" ");
   const cfgGet = (path) => { let o = S.cfg; for (const k of path.split(".")) { if (o == null) return undefined; o = o[k]; } return o; };
   const typeOk = (v, t) => (t === "n" ? typeof v === "number" && isFinite(v) : t === "s" ? typeof v === "string" && v.length > 0 : t === "a" ? Array.isArray(v) && v.length > 0 : t === "b" ? typeof v === "boolean" : !!v && typeof v === "object");
@@ -4034,11 +4264,12 @@
   }
 
   function stateSig() {
-    let h = 0; for (const a of S.agents) h += a.x * 1.3 + a.y * 0.7 + a.vx * 0.11 + a.vy * 0.13 + a.hp * 3 + a.team * 11 + (a.tgt ? 5 : 0) + a.atk * 0.17 + a.ph * 0.01;
+    let h = 0; for (const a of S.agents) h += a.x * 1.3 + a.y * 0.7 + a.vx * 0.11 + a.vy * 0.13 + a.hp * 3 + a.team * 11 + (a.tgt ? 5 : 0) + a.atk * 0.17 + a.ph * 0.01 + a.kind * 7 + a.shotT * 0.19;
+    const P = S.arw; let ah = 0; if (P) for (let q = 0; q < P.n; q++) ah += P.t[q] * 1.7 + P.src[q] * 3 + P.tg[q].id * 0.01; // v3 M4: the arrows in flight
     const tm = S.teams.slice(1).map((t) => [t.count, t.alive, t.tx, t.ty, t.cx, t.cy, t.vx, t.vy, t.thinkT, t.kills, t.state, t.slot, t.mode, t.route, t.tMed, t.regroupUntil, t.engL.join(","), t.tierN, t.mustered]);
     return JSON.stringify([S.mode, S.t, S.tick, S.timeLeft, S.seed, S.map ? S.map.used : null, S.agents.length, h, tm, S.cam, S.stats, S.banners.length, S.result, S.pendingEnd, S.difficulty, S.attract,
       S.camps.length, S.powerups.map((p) => [p.x, p.y, p.alive, p.kind]), S.trickleT, S.shake, S.engagedNow, S.input.huddle, S.input.joy.active, S.hintT, S.ev, S.thinkRR, PS.flow.stats && PS.flow.stats.rebuilds,
-      PS.fog.sig(), S.fogS ? [S.fogS.stats.sightings, S.fogS.stats.ghosts, S.fogS.ai.decisions, S.fogS.ai.violations] : null, (S.objs || []).map((o) => [o.type, o.live, o.x, o.y, o.prog, o.hold, o.n, o.owner])]);
+      PS.fog.sig(), S.fogS ? [S.fogS.stats.sightings, S.fogS.stats.ghosts, S.fogS.ai.decisions, S.fogS.ai.violations] : null, (S.objs || []).map((o) => [o.type, o.live, o.x, o.y, o.prog, o.hold, o.n, o.owner]), P ? [P.n, ah] : null]);
   }
   function lsSnapshot() { try { const o = []; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); o.push(k + "=" + localStorage.getItem(k)); } return o.sort().join("\n"); } catch (e) { return "unavailable"; } }
 
@@ -4565,7 +4796,7 @@
   }
   function selfTest(opts) {
     opts = opts || {};
-    const all = ["config", "sprites", "terrain", "caches", "art", "flow", "fight", "fixtures", "flipflop", "ai", "rivals", "fog", "spoils", "structures", "sites", "parity", "replay", "match", "audio", "portal"];
+    const all = ["config", "sprites", "terrain", "caches", "art", "flow", "fight", "fixtures", "flipflop", "ai", "rivals", "fog", "spoils", "structures", "sites", "units", "parity", "replay", "match", "audio", "portal"];
     const parts = opts.parts ? (Array.isArray(opts.parts) ? opts.parts : String(opts.parts).split(",")) : all, has = (p) => parts.indexOf(p) >= 0;
     const horizon = clamp(+opts.matchSeconds || (S.cfg ? S.cfg.world.matchSeconds : 240), 10, 600);
     const w0 = performance.now(), results = {}, fails = [], ms = {};
@@ -4599,7 +4830,7 @@
       // every cache after a drop: chunks and water pairs opaque on a 4x4 downscale, every atlas / banner / sprite non-blank (4x4 alpha sum), minimap opaque
       const dropped = debugDropCaches(); const probed = cacheProbe(0, 0, 0, 0, true); flushGround(S.map);
       const G = S.map.chunks, blank = []; let pairs = 0; for (let i = 0; i < G.n * G.n; i++) { if (!opaque4(G.cvA[i])) blank.push("chunk" + i); if (G.cvB[i]) { pairs++; if (!opaque4(G.cvB[i])) blank.push("water" + i); } }
-      for (const e of spriteCanvases(S.spr)) if (!(PS.fog.sumAlpha4(e[1]) > 0)) blank.push(e[0]);
+      for (const e of spriteCanvases(S.spr)) if (!(e[0].startsWith("atlas.") ? opaqueCount(e[1]) > 0 : PS.fog.sumAlpha4(e[1]) > 0)) blank.push(e[0]); // v3 M4: atlases by full opaque count through the scratch (at 64 x 160 a 4 x 4 downscale samples the gaps between frame rows)
       if (!opaque4(miniTerr)) blank.push("minimap");
       check("art_caches_after_drop", probed && blank.length === 0, { dropped, probed, chunks: G.n * G.n, waterPairs: pairs, caches: spriteCanvases(S.spr).length, blank });
     });
@@ -4706,6 +4937,16 @@
       const off = m3bOffTest(); check("m3b_kill_switch", off.pass, off);
       const fx = stockFixtures(); check("m3b_hold_ambush_stockade_report", Object.keys(fx).every((k) => fx[k].every((r) => r.pass !== undefined)), fx);
       const rp = replay(9191, 120); check("m3b_replay_120s_stockades", rp.same, rp);
+    });
+    if (has("units")) timed("units", () => { // v3 M4 (SPEC-v3 §4, §9): archers
+      const fl = unitsFlipTest(); check("m4_flip_keeps_kind_scatter_resets", fl.pass, fl);
+      const rm = unitsRemnantTest(); check("m4_remnant_archers_silent", rm.pass, rm);
+      const ar = unitsArrowTest(); check("m4_arrow_flipped_skipped_pool_bounded", ar.pass, ar);
+      const off = unitsOffTest(); check("m4_kill_switch", off.pass, off);
+      const rp = unitsReplayTest(); check("m4_replay_arrows_in_flight", rp.pass, rp);
+      const sk = spriteKindReport(); check("m4_sprite_kind_diff", sk.pass, sk);
+      const pa = archerParityTest(); check("m4_archer_parity", pa.pass, pa);
+      const fx = unitsFixtures(); check("m4_fordvolley_kite_report", fx.ok, fx);
     });
     if (has("parity")) timed("parity", () => { const p = parityTest(); check("spoils_arms_parity", p.pass, p); });
     if (has("replay")) timed("replay", () => { const r = replay(424242, 60); check("replay_60s", r.same, r); });
