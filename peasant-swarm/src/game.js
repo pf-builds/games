@@ -3203,8 +3203,11 @@
       SPL.joinVillage(o, S.teams[2]); o.bank = opts.bank != null ? opts.bank : 9;
       const cdx = W / 2 - o.x, cdy = W / 2 - o.y, cl = Math.hypot(cdx, cdy) || 1, [x, y] = near(o.x + (cdx / cl) * 200, o.y + (cdy / cl) * 200, 60);
       const s2 = m.spawns[S.teams[2].slot], [gx, gy] = near(s2.x, s2.y, 80); clear([1, 2]); freeze(); put(x, y, opts.n || 24, 1); put(gx, gy, 20, 2); done(o.x, o.y); const saw = { team: o.sk.team, n: o.sk.n }; // Greedy lives on at home (an eliminated owner's mill goes neutral)
-      const aw = opts.away || 700, [x2, y2] = near(o.x + (cdx / cl) * aw, o.y + (cdy / cl) * aw, 80); for (const a of S.agents) if (a.team === 1) { a.x += x2 - x; a.y += y2 - y; a.hx = a.wx = a.x; a.hy = a.wy = a.y; }
-      const r = done(o.x + (x2 - o.x) * 0.3, o.y + (y2 - o.y) * 0.3); o.bank = 2; PS.aim(x2, y2); // M4: framed 30% of the way from the mill, so its label never sits on the viewport edge (M3b critic minor 2)
+      // M4 (M3b critic minor 2): the live camera follows your swarm, so it stands off along the viewport's long axis (sideways on a landscape
+      // screen; on a portrait phone above it where the map allows, so the mill sits low, clear of the HUD), opts.away px (sight + 60: out of sight of the mill, inside a 1.25-zoom view) toward the map centre: the mill stays in view
+      const land = S.vw >= S.vh, aw = opts.away || sightR(pl) + 60, ax = land ? (cdx >= 0 ? 1 : -1) : 0, ay = land ? 0 : o.y - aw > 300 ? -1 : 1, [x2, y2] = near(o.x + ax * aw, o.y + ay * aw, 80);
+      for (const a of S.agents) if (a.team === 1) { a.x += x2 - x; a.y += y2 - y; a.hx = a.wx = a.x; a.hy = a.wy = a.y; }
+      const r = done(x2, y2); o.bank = 2; PS.aim(x2, y2);
       return Object.assign(r, { obj: { type: "mill", owner: 2, x: Math.round(o.x), y: Math.round(o.y), saw, seesNow: PS.fog.sees(1, o.x, o.y), realBank: o.bank } });
     }
     // v3 M4 (SPEC-v3 §4, §9) "types": opts.n agents (640) split between your swarm and a Greedy one, opts.gap (110) px edge to edge (inside bow range) near your spawn,
