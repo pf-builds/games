@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "input": { "twoTap": true },
+  "stars": { "threeAtMinPlus": 0, "twoAtMinPlus": 1 }
+}
