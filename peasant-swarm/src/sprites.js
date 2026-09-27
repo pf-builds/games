@@ -75,7 +75,7 @@ PS.buildSprites = function (cfg) {
     const SH = PAL.shaft, T0 = PAL.tine[1], T1 = PAL.tine[0], SK = PAL.skin[1], SKD = PAL.skin[0];
     // pitchfork: upright at rest, thrust forward on the lunge. An archer (v3 M4): a quiver on the back (fletching over the shoulder) and a bow
     // held upright, drawn on the lunge (the shot) with an arrow on the string
-    const BW = PAL.wood[2], BD = PAL.wood[0], QV = PAL.wood[1];
+    const BW = "#D89A3C", BD = PAL.wood[0], QV = "#A8302C"; // the archer's tells: a light yew bow and a red quiver and strap (never the hat colours)
     if (kind) {
       p.rect(-1, 3, 2, 5, QV); p.px(-1, 3, BD); p.px(-1, 2, PAL.cream); p.px(0, 1, PAL.cream); p.px(0, 2, "#D8403A");
       if (pose === 2) { p.px(9, 1, BW); p.rect(10, 2, 1, 7, BW); p.px(9, 9, BW); p.px(8, 2, PAL.cream); p.px(7, 3, PAL.cream); p.px(7, 7, PAL.cream); p.px(8, 8, PAL.cream); }

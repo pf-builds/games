@@ -3213,8 +3213,9 @@
     if (name === "types") {
       const s0 = m.spawns[pl.slot], [x, y] = near(s0.x, s0.y, 80), n = opts.n || 640, sh = opts.share != null ? opts.share : 0.2, half = n >> 1, gap = opts.gap || 110;
       clear([1, 2]); S.agents = S.agents.filter((a) => a.team !== 0 || Math.hypot(a.x - x, a.y - y) > 700); freeze(); S.fogS.reveal = true;
-      const dx = blobR(half) + gap / 2; put(x - dx, y, half, 1); put(x + dx, y, n - half, 2); const na = setKinds(1, sh) + setKinds(2, sh); const r = done(x, y);
-      const g = S.teams[2]; g.tx = x + dx; g.ty = y; g.route = false; PS.aim(x - dx, y); pl.mode = "hold"; S.input.hold = true; PS.step(opts.step == null ? 1.2 : opts.step);
+      const d = blobR(half) + gap / 2, v = S.vh > S.vw, dx = v ? 0 : d, dy = v ? d : 0; // side by side, or one above the other on a portrait phone
+      put(x - dx, y + dy, half, 1); put(x + dx, y - dy, n - half, 2); const na = setKinds(1, sh) + setKinds(2, sh); const r = done(x, y);
+      const g = S.teams[2]; g.tx = x + dx; g.ty = y - dy; g.route = false; PS.aim(x - dx, y + dy); pl.mode = "hold"; S.input.hold = true; PS.step(opts.step == null ? 1.2 : opts.step);
       return Object.assign(r, { agents: S.agents.filter((a) => a.team === 1 || a.team === 2).length, archers: na, inFlight: S.arw.n, arrows: S.ev.arrows });
     }
     if (name === "teams") {
