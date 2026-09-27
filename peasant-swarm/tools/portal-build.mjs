@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 // Peasant Swarm portal build (SPEC-v3 §5.4, R4 §2). node tools/portal-build.mjs crazygames|poki [--sdk-data]
 // Copies the runtime files (index.html, style.css, config.json, src/*.js, fonts/*.woff2 and their OFL texts) to dist/<portal>/ (the JS
-// with its comments and indentation stripped, config.json without whitespace: the size gate, below; the Pages copy keeps both), writes
+// with its comments, indentation and the spaces next to punctuation stripped, config.json without whitespace and without the _units
+// descriptions (the ranges stay: PS.selfTest checks them), style.css without comments and indentation, index.html without comments: the
+// size gate, below; the Pages copy keeps all of it), writes
 // <meta name="ps-portal" content="<portal>"> and the portal's SDK <script> into that copy's index.html (src/portal.js reads the meta
 // first), and zips it to dist/peasant-swarm-<portal>.zip with index.html at the root. Never copied: tools/, *.md, thumb.jpg, dist/ itself.
 // --sdk-data also writes <meta name="ps-portal-data" content="sdk"> (CrazyGames Full Launch: PS.portal.store moves to SDK.data).
 // The source folder (the GitHub Pages copy) is only read, never written: the build prints a hash of every source file before and after
-// and fails if any changed. Checks: every path in index.html and style.css is relative and exists in the copy, the zip is under 250 KB and
-// 30 files. Uses the system zip (macOS and Linux ship it). Exit 0 on success, 1 on a failed check.
+// and fails if any changed. Checks: every path in index.html and style.css is relative and exists in the copy, the zip is under 250 KB (decimal
+// since v3 M3b: 250,000 B, SPEC-v3 §9) and 30 files. Uses the system zip (macOS and Linux ship it). Exit 0 on success, 1 on a failed check.
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -18,7 +20,7 @@ const PORTALS = {
   crazygames: '<script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>',
   poki: '<script src="https://game-cdn.poki.com/scripts/v2/poki-sdk.js"></script>',
 };
-const MAX_BYTES = 250 * 1024, MAX_FILES = 30;
+const MAX_BYTES = 250 * 1000, MAX_FILES = 30;
 const portal = process.argv[2], sdkData = process.argv.includes("--sdk-data");
 if (!PORTALS[portal]) { console.error("usage: node tools/portal-build.mjs crazygames|poki [--sdk-data]"); process.exit(1); }
 
@@ -33,8 +35,11 @@ function runtimeFiles() {
 }
 // strip(js): drops // and /* */ comments, leading indentation and blank lines. A small scanner that knows strings ('" and multi-line `),
 // regex literals (a / where an operand cannot end: after ( , = : [ ! & | ? { } ; + - * % < > ~ ^ or return/typeof, at line start) with
-// their escapes and [classes], so a // inside a string or a regex survives. Every stripped file is checked with node --check; the zip's
+// their escapes and [classes], so a // inside a string or a regex survives. v3 M3b: a space outside strings next to punctuation
+// (= , ; : ? ! & | * % ^ ~ < > ( ) [ ] { }) goes, unless it separates two of + and - (a - -b, i++ + 1 keep theirs); a space next to / stays.
+// Every stripped file is checked with node --check; the zip's
 // real acceptance is PS.selfTest on the unzipped copy.
+const TIGHT = "=,;:?!&|*%^~<>()[]{}";
 function strip(src) {
   let out = "", i = 0, q = "", lineStart = true, last = "";
   const n = src.length, regexOk = () => last === "" || "(,=:[!&|?{};+-*%<>~^".includes(last) || /(?:^|[^\w$.])(?:return|typeof|case|in|of|void)$/.test(out.trimEnd());
@@ -42,6 +47,7 @@ function strip(src) {
     const c = src[i], d = src[i + 1];
     if (q) { out += c; if (c === "\\") { out += d; i += 2; continue; } if (c === q) q = ""; i++; if (c !== " " && c !== "\n") last = c; continue; }
     if (lineStart && (c === " " || c === "\t")) { i++; continue; }
+    if (c === " " || c === "\t") { const p = out[out.length - 1], e = src[i + 1]; if ((TIGHT.includes(p) || TIGHT.includes(e)) && !("+-".includes(p) && "+-".includes(e))) { i++; continue; } }
     if (c === "/" && d === "/") { while (i < n && src[i] !== "\n") i++; continue; }
     if (c === "/" && d === "*") { i = src.indexOf("*/", i + 2); i = i < 0 ? n : i + 2; continue; }
     if (c === "\n") { out = out.replace(/[ \t]+$/, ""); if (!out.endsWith("\n") && out.length) out += "\n"; lineStart = true; i++; continue; }
@@ -64,7 +70,9 @@ const files = runtimeFiles();
 for (const f of files) {
   const dst = path.join(out, f); fs.mkdirSync(path.dirname(dst), { recursive: true });
   if (f.endsWith(".js")) { fs.writeFileSync(dst, strip(fs.readFileSync(path.join(root, f), "utf8"))); try { execFileSync(process.execPath, ["--check", dst], { stdio: "pipe" }); } catch (e) { fails.push("strip broke " + f + ": " + String(e.stderr || e).slice(0, 300)); } }
-  else if (f === "config.json") fs.writeFileSync(dst, JSON.stringify(JSON.parse(fs.readFileSync(path.join(root, f), "utf8"))));
+  else if (f === "config.json") { const c = JSON.parse(fs.readFileSync(path.join(root, f), "utf8")); for (const k in c._units || {}) c._units[k][0] = ""; fs.writeFileSync(dst, JSON.stringify(c)); }
+  else if (f === "style.css") fs.writeFileSync(dst, fs.readFileSync(path.join(root, f), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").split("\n").map((l) => l.trim()).filter(Boolean).join("\n") + "\n");
+  else if (f === "index.html") fs.writeFileSync(dst, fs.readFileSync(path.join(root, f), "utf8").replace(/<!--[\s\S]*?-->\n?/g, ""));
   else fs.copyFileSync(path.join(root, f), dst);
 }
 // inject the portal meta and SDK tag right after <meta charset>, ahead of every game script (the SDK global exists when portal.js runs)
