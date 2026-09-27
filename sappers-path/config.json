@@ -1,5 +1,32 @@
 {
   "version": 1,
-  "input": { "twoTap": true },
-  "stars": { "threeAtMinPlus": 0, "twoAtMinPlus": 1 }
+  "input": { "twoTap": true, "keepPick": false },
+  "stars": { "threeAtMinPlus": 0, "twoAtMinPlus": 1 },
+  "save": { "key": "sappers-path.v1", "maxCrews": 99 },
+  "layout": {
+    "wideMinPx": 700, "wideAspect": 1.15, "railPx": 210, "gapPx": 28,
+    "marginCells": 0.4, "minCellPx": 14, "maxCellPx": 84, "maxDpr": 3
+  },
+  "fx": {
+    "maxDtMs": 100, "pulseMs": 520, "shakeMs": 380, "shakeCells": 0.11, "shakeHz": 22,
+    "flashMs": 900, "flashBlinks": 3, "cardFlashMs": 750, "crumbleMs": 420,
+    "dustPerTile": 5, "dustPool": 700, "dustMs": 650, "dustSpeed": 1.6, "dustGravity": 5,
+    "glowHz": 1.4, "dimAlpha": 0.55, "winPanelMs": 900, "stuckPanelMs": 450, "keepBurstMs": 1400
+  },
+  "art": {
+    "outside": "#8fb45e", "ground": "#d8c496", "groundShade": "#b8a47c", "speck": "#a88f60",
+    "stone": ["#9a9ca6", "#6d6f7a", "#b9bbc4"],
+    "timber": ["#a36d38", "#6e4520", "#c28b50"],
+    "hedge": ["#3f7a33", "#24521d", "#63a24b"],
+    "ice": ["#d4f0f8", "#8cc6dc", "#ffffff"],
+    "iron": ["#3c434f", "#1f242c", "#8a93a3"],
+    "moat": ["#3b73b0", "#8fbde6"],
+    "keep": ["#5b5460", "#3a343f", "#c0392b", "#f2c230"],
+    "chest": ["#8a5a2b", "#f2c230", "#4a2f14"],
+    "lever": ["#6d6f7a", "#c9a227", "#2b2b2b"],
+    "outline": "rgba(20,16,24,0.78)",
+    "badge": ["#fbf5e6", "#2a2430"],
+    "glow": "#fff3a8", "flash": "#ff5a3c", "pulse": "#ffffff", "burst": "#ffe27a"
+  },
+  "selfTest": { "minLevels": 20, "maxLevels": 60, "stuckTries": 400, "stuckSeed": 7 }
 }
