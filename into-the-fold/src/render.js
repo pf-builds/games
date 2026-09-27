@@ -1,5 +1,5 @@
 // Into the Fold canvas renderer (SPEC §6). Everything is drawn in code: a cached static layer (field, grass, flowers,
-// outer fence, rocks, mud, pond, pen floors and fences) plus, per frame, the pens' gates and ghost sheep, splash
+// outer fence, rocks, mud, pond, pen doorsteps, floors and fences) plus, per frame, the pens' gates and ghost sheep, splash
 // ripples, the sheep and a small particle pool. Sheep are cached sprites per colour (standing + two trot frames) with
 // a separate ground shadow, so a hop lifts the sheep and leaves the shadow on the grass. Per-frame work allocates
 // nothing. check() samples the caches after the page comes back (a backgrounded tab can lose canvas memory) and
@@ -13,10 +13,11 @@
     petal: "#fffaf0", petalPink: "#f7d6e0", eye: "#f2c94c",
     rail: "#9a6538", railHi: "#c9925e", post: "#6d4526",
     rock: "#a3a198", rockHi: "#cfcdc3", rockLo: "#74726b", moss: "#8fb86a",
-    mud: "#8d6b44", mudLo: "#6c4f31", mudHi: "#a88760",
+    mud: "#8f6c46", mudDamp: "rgba(96,110,52,0.45)", mudWet: "#5c432b", mudLo: "#6a4d30", mudSheen: "rgba(220,240,250,0.55)",
     pond: "#62ade0", pondLo: "#3f88bb", pondHi: "#c2e8f9", ripple: "rgba(255,255,255,0.9)", pad: "#6fae57", padLo: "#4f8f3d",
     floor: { w: "#f3e2ab", b: "#8a7c97" }, floorLo: { w: "#dcc68a", b: "#6d6079" }, straw: "#e6c874",
-    wool: { w: "#fdfbf4", b: "#46424e" }, woolHi: { w: "#ffffff", b: "#5d5867" }, woolLine: { w: "#d6cebc", b: "#26232b" },
+    mat: { w: "#efdc9e", b: "#b4aac3" }, matLo: { w: "#cdb574", b: "#81759a" },
+    wool: { w: "#fdfbf4", b: "#46424e" }, woolHi: { w: "#ffffff", b: "#6a6474" }, woolLine: { w: "#d6cebc", b: "#f4efe4" },
     face: { w: "#3d332c", b: "#1d1a21" }, ear: { w: "#51443a", b: "#28242d" }, blush: "rgba(240,140,150,0.45)",
     leg: "#3a302a", hoof: "#1f1a17", shadow: "rgba(25,45,15,0.24)",
     drop: "#d9f1fc", dropLo: "#7cc3ea", spark: "#fff4c2", dust: "#8fae62",
@@ -100,6 +101,7 @@
       }
       if (B.type[cy * B.w + cx] === R.GRASS && hash(cx, cy, 11) < 0.22) flower(x, px + (0.2 + 0.6 * hash(cx, cy, 12)) * s, py + (0.2 + 0.6 * hash(cy, cx, 13)) * s, s * 0.045, hash(cx, cy, 14) < 0.35);
     }
+    for (const p of B.pens) drawDoorstep(x, ox + p.x * s, oy + p.y * s, s, R.DIRS.indexOf(p.open), p.c);
     for (let cy = 0; cy < B.h; cy++) for (let cx = 0; cx < B.w; cx++) {
       const t = B.type[cy * B.w + cx], px = ox + cx * s, py = oy + cy * s;
       if (t === R.ROCK) drawRock(x, px, py, s, cx, cy);
@@ -140,12 +142,25 @@
     if (hash(cx, cy, 5) < 0.5) { x.fillStyle = PAL.moss; blob(x, px + s * 0.62, py + s * 0.3, s * 0.1, s * 0.05); }
   }
 
+  // Mud: a flat, wet patch flush with the ground (no raised rim, highlight or cast shadow, so it never reads as a rock):
+  // a damp halo into the grass, a wide low spread of brown, one long puddle with a sky sheen, and a trail of hoof prints.
   function drawMud(x, px, py, s, cx, cy) {
-    x.fillStyle = PAL.mudLo; blob(x, px + s * 0.5, py + s * 0.53, s * 0.46, s * 0.42);
-    x.fillStyle = PAL.mud; blob(x, px + s * 0.5, py + s * 0.5, s * 0.44, s * 0.4);
+    const u = hash(cx, cy, 21) - 0.5, v = hash(cx, cy, 22) - 0.5;
+    for (let pass = 0; pass < 2; pass++) {
+      x.fillStyle = pass ? PAL.mud : PAL.mudDamp;
+      const g = pass ? 0 : s * 0.035;
+      blob(x, px + s * 0.5, py + s * 0.54, s * 0.4 + g, s * 0.25 + g);
+      blob(x, px + s * (0.3 + 0.06 * u), py + s * (0.42 + 0.05 * v), s * 0.19 + g, s * 0.13 + g);
+      blob(x, px + s * (0.68 - 0.05 * v), py + s * (0.62 + 0.05 * u), s * 0.21 + g, s * 0.14 + g);
+    }
+    x.fillStyle = PAL.mudWet; blob(x, px + s * (0.54 + 0.08 * u), py + s * 0.6, s * 0.2, s * 0.07);
+    x.strokeStyle = PAL.mudSheen; x.lineWidth = Math.max(1, s * 0.022); x.lineCap = "round";
+    x.beginPath(); x.moveTo(px + s * (0.43 + 0.08 * u), py + s * 0.58); x.lineTo(px + s * (0.56 + 0.08 * u), py + s * 0.565); x.stroke();
     x.fillStyle = PAL.mudLo;
-    for (let k = 0; k < 4; k++) blob(x, px + s * (0.25 + 0.5 * hash(cx, cy, k)), py + s * (0.28 + 0.45 * hash(cy, cx, k + 3)), s * 0.06, s * 0.035);
-    x.fillStyle = PAL.mudHi; blob(x, px + s * 0.36, py + s * 0.34, s * 0.08, s * 0.03); blob(x, px + s * 0.62, py + s * 0.66, s * 0.05, s * 0.02);
+    for (let k = 0; k < 4; k++) {
+      const hx = px + s * (0.22 + 0.13 * k), hy = py + s * (0.45 - 0.035 * k + (k & 1 ? 0.035 : 0));
+      blob(x, hx - s * 0.013, hy, s * 0.011, s * 0.02); blob(x, hx + s * 0.013, hy, s * 0.011, s * 0.02);
+    }
   }
 
   function drawPond(x, px, py, s, cx, cy) {
@@ -160,19 +175,45 @@
     x.fillStyle = PAL.pad; x.beginPath(); x.moveTo(lx, ly); x.ellipse(lx, ly, lr, lr * 0.68, 0, 0.35, Math.PI * 2 - 0.1); x.closePath(); x.fill();
   }
 
-  // Pen floor in its colour (straw for white, slate for black), fenced on the three closed sides.
+  // The doorstep (px, py = the pen's cell): a flat mat on the ground in front of the open side (straw for white, pale
+  // slate for black) with a chevron pointing in, so the doorway reads as a way in. Drawn under the terrain.
+  function drawDoorstep(x, px, py, s, open, c) {
+    const dx = R.DX[open], dy = R.DY[open], d = s * 0.26, w = s * 0.7, r = s * 0.08;
+    const ex = px + s / 2 + (dx * s) / 2, ey = py + s / 2 + (dy * s) / 2; // the open edge's midpoint
+    const rx = dx ? (dx > 0 ? ex - r : ex - d) : ex - w / 2, ry = dy ? (dy > 0 ? ey - r : ey - d) : ey - w / 2;
+    const rw = dx ? d + r : w, rh = dy ? d + r : w; // tucked r under the pen's floor so only the outer corners round
+    x.fillStyle = PAL.matLo[c]; x.beginPath(); x.roundRect ? x.roundRect(rx, ry + s * 0.02, rw, rh, r) : x.rect(rx, ry + s * 0.02, rw, rh); x.fill();
+    x.fillStyle = PAL.mat[c]; x.beginPath(); x.roundRect ? x.roundRect(rx, ry, rw, rh, r) : x.rect(rx, ry, rw, rh); x.fill();
+    // Chevron: its point toward the pen, centred on the mat's outer part.
+    const cx = ex + dx * d * 0.5, cy = ey + dy * d * 0.5, k = s * 0.09, ux = -dy, uy = dx; // ux,uy runs along the doorway
+    x.strokeStyle = PAL.matLo[c]; x.lineWidth = Math.max(1, s * 0.035); x.lineCap = "round"; x.lineJoin = "round";
+    x.beginPath(); x.moveTo(cx + dx * k * 0.5 + ux * k, cy + dy * k * 0.5 + uy * k); x.lineTo(cx - dx * k * 0.5, cy - dy * k * 0.5); x.lineTo(cx + dx * k * 0.5 - ux * k, cy + dy * k * 0.5 - uy * k); x.stroke();
+  }
+
+  // Pen floor in its colour (straw for white, slate flagstones for black), fenced on the three closed sides. The open
+  // side has no rail: the floor runs out to the cell edge between two gate posts (the gate itself is per frame).
   function drawPen(x, px, py, s, open, c, cx, cy) {
-    const i = s * 0.07;
-    x.fillStyle = PAL.floorLo[c]; x.fillRect(px + i, py + i, s - 2 * i, s - 2 * i);
-    x.fillStyle = PAL.floor[c]; x.fillRect(px + i * 1.6, py + i * 1.6, s - 3.2 * i, s - 3.2 * i);
+    const i = s * 0.07, j = i * 1.6;
+    const l = open === 3 ? 0 : 1, t = open === 0 ? 0 : 1, r = open === 1 ? 0 : 1, b = open === 2 ? 0 : 1; // 0 on the open side
+    x.fillStyle = PAL.floorLo[c]; x.fillRect(px + l * i, py + t * i, s - (l + r) * i, s - (t + b) * i);
+    x.fillStyle = PAL.floor[c]; x.fillRect(px + l * j, py + t * j, s - (l + r) * j, s - (t + b) * j);
+    x.lineCap = "round";
     if (c === "w") {
-      x.strokeStyle = PAL.straw; x.lineWidth = Math.max(1, s * 0.02); x.lineCap = "round";
+      x.strokeStyle = PAL.straw; x.lineWidth = Math.max(1, s * 0.02);
       for (let k = 0; k < 7; k++) {
         const sx = px + s * (0.2 + 0.6 * hash(cx, cy, k + 20)), sy = py + s * (0.2 + 0.6 * hash(cy, cx, k + 30)), a = hash(cx, cy, k + 40) * Math.PI;
         x.beginPath(); x.moveTo(sx, sy); x.lineTo(sx + Math.cos(a) * s * 0.1, sy + Math.sin(a) * s * 0.1); x.stroke();
       }
+    } else {
+      // Flagstone joints: one course line, offset joints above and below it.
+      x.strokeStyle = PAL.floorLo.b; x.lineWidth = Math.max(1, s * 0.025);
+      const q = hash(cx, cy, 50) * 0.14;
+      x.beginPath();
+      x.moveTo(px + j, py + s * 0.5); x.lineTo(px + s - j, py + s * 0.5);
+      x.moveTo(px + s * (0.36 + q), py + j); x.lineTo(px + s * (0.36 + q), py + s * 0.5);
+      x.moveTo(px + s * (0.58 + q), py + s * 0.5); x.lineTo(px + s * (0.58 + q), py + s - j);
+      x.stroke();
     }
-    x.lineCap = "round";
     for (let side = 0; side < 4; side++) {
       if (side === open) continue;
       const e = EDGE[side];
@@ -201,7 +242,8 @@
     }
     const puffs = [[-0.2, 0.02, 0.17], [0.2, 0.02, 0.17], [-0.1, -0.13, 0.17], [0.1, -0.13, 0.17], [-0.1, 0.12, 0.16], [0.1, 0.12, 0.16], [0, -0.01, 0.22]];
     x.fillStyle = PAL.woolLine[c];
-    for (const p of puffs) blob(x, m + p[0] * s, m + p[1] * s, p[2] * s + s * 0.025, p[2] * s + s * 0.025);
+    const rim = s * (c === "b" ? 0.045 : 0.025); // the black sheep's rim is light, so it reads on slate, mud and shadow
+    for (const p of puffs) blob(x, m + p[0] * s, m + p[1] * s, p[2] * s + rim, p[2] * s + rim);
     x.fillStyle = PAL.wool[c];
     for (const p of puffs) blob(x, m + p[0] * s, m + p[1] * s, p[2] * s, p[2] * s);
     x.fillStyle = PAL.woolHi[c];
@@ -245,6 +287,9 @@
 
   function busy(V, now) { return now < V.pt.until; }
 
+  // Empty the particle pool (selfTest's live-path check spawns on a virtual clock).
+  function clearFx(V) { V.pt.kind.fill(0); V.pt.until = 0; }
+
   function drawParticles(V, ctx, now, bx, by) {
     const pt = V.pt, s = V.cell, cap = pt.kind.length;
     if (now >= pt.until) return;
@@ -277,11 +322,12 @@
     filled.fill(0);
     for (let i = 0; i < sheep.length; i++) if (sheep[i].penned) filled[sheep[i].y * B.w + sheep[i].x] = i + 1;
     // Pens: a ghost sheep in each empty one (its colour says who belongs there), a gate that swings shut on penning.
+    const openRad = (cfg.board.gateOpenDeg * Math.PI) / 180;
     for (let k = 0; k < B.pens.length; k++) {
       const p = B.pens[k], cell = p.y * B.w + p.x, px = V.ox + p.x * s + bx, py = V.oy + p.y * s + by;
       const who = filled[cell], shut = who ? Game.gateShut(g, who - 1) : 0;
       if (!who) drawSprite(ctx, V.sprite[p.c][0], px + s / 2, py + s / 2, 0.72, 0.72, cfg.board.ghostAlpha);
-      drawGate(ctx, px, py, s, R.DIRS.indexOf(p.open), shut);
+      drawGate(ctx, px, py, s, R.DIRS.indexOf(p.open), shut, openRad);
     }
     const shadow = V.shadow;
     for (let i = 0; i < sheep.length; i++) {
@@ -299,19 +345,24 @@
     drawParticles(V, ctx, now, bx, by);
   }
 
-  // A gate hinged on the open side's first corner: pointing outward when open (shut 0), across the gap when shut (1).
-  function drawGate(ctx, px, py, s, open, shut) {
-    const e = EDGE[open], a = (1 - shut) * Math.PI / 2, ca = Math.cos(a), sa = Math.sin(a);
-    const i = s * 0.07, len = s - 2 * i;
-    const hx = px + e[0] * s + inset(e[0], i), hy = py + e[1] * s + inset(e[1], i), ex = (e[2] - e[0]) * len, ey = (e[3] - e[1]) * len;
-    const ox = R.DX[open] * len, oy = R.DY[open] * len;
-    const gx = hx + ca * ex + sa * ox, gy = hy + ca * ey + sa * oy;
+  // The pen's double gate, hinged on the two doorway posts. Open (shut 0) both leaves stand swung INTO the pen by
+  // `openRad`, so nothing lies on the ground outside; they swing shut to meet across the doorway (shut 1).
+  function drawGate(ctx, px, py, s, open, shut, openRad) {
+    const e = EDGE[open], i = s * 0.07, half = (s - 2 * i) / 2, a = (1 - shut) * openRad, ca = Math.cos(a), sa = Math.sin(a);
+    const ux = e[2] - e[0], uy = e[3] - e[1], vx = -R.DX[open], vy = -R.DY[open]; // along the doorway; into the pen
+    const h0x = px + e[0] * s + inset(e[0], i), h0y = py + e[1] * s + inset(e[1], i);
+    const h1x = px + e[2] * s + inset(e[2], i), h1y = py + e[3] * s + inset(e[3], i);
+    leaf(ctx, h0x, h0y, h0x + half * (ca * ux + sa * vx), h0y + half * (ca * uy + sa * vy), s);
+    leaf(ctx, h1x, h1y, h1x + half * (sa * vx - ca * ux), h1y + half * (sa * vy - ca * uy), s);
+    ctx.fillStyle = PAL.post; post(ctx, h0x, h0y, s * 0.085); post(ctx, h1x, h1y, s * 0.085);
+  }
+
+  function leaf(ctx, x0, y0, x1, y1, s) {
     ctx.lineCap = "round";
-    ctx.strokeStyle = PAL.post; ctx.lineWidth = s * 0.1;
-    ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(gx, gy); ctx.stroke();
-    ctx.strokeStyle = PAL.railHi; ctx.lineWidth = s * 0.035;
-    ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(gx, gy); ctx.stroke();
-    ctx.fillStyle = PAL.post; post(ctx, hx, hy, s * 0.06);
+    ctx.strokeStyle = PAL.post; ctx.lineWidth = s * 0.085;
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+    ctx.strokeStyle = PAL.railHi; ctx.lineWidth = s * 0.03;
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
   }
 
   function drawRipple(ctx, cx, cy, s, u) {
@@ -322,5 +373,5 @@
     ctx.globalAlpha = 1;
   }
 
-  NS.render = { create, resize, draw, spawn, busy, check, dropCaches };
+  NS.render = { create, resize, draw, spawn, busy, clearFx, check, dropCaches };
 })();

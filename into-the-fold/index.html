@@ -8,7 +8,7 @@
 <title>Into the Fold: a daily sheep puzzle</title>
 <meta name="description" content="A daily sliding puzzle. Swipe and every loose sheep runs that way until something stops it. Pen the flock in as few swipes as you can.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2386c066'/><circle cx='38' cy='50' r='18' fill='%23fcfaf2'/><circle cx='62' cy='50' r='18' fill='%23fcfaf2'/><circle cx='50' cy='38' r='18' fill='%23fcfaf2'/><ellipse cx='50' cy='58' rx='10' ry='13' fill='%233d332c'/></svg>">
-<link rel="stylesheet" href="style.css?v=3">
+<link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 <div id="app">
@@ -23,25 +23,6 @@
   <div id="hint" class="off"><span id="hint-text"></span> <button id="btn-skip" class="link">Skip</button></div>
   <div id="stage">
     <canvas id="board" aria-label="The pasture"></canvas>
-    <div id="result" class="overlay full" hidden>
-      <div class="card">
-        <div id="res-medal" class="medal"></div>
-        <div id="res-title" class="res-title"></div>
-        <div id="res-line" class="res-line"></div>
-        <button id="res-share" class="primary wide" hidden>Share</button>
-        <div id="res-stats" class="stats" hidden></div>
-        <div id="res-extra" class="res-extra"></div>
-        <div class="row"><button id="res-primary" class="primary"></button><button id="res-secondary"></button></div>
-      </div>
-    </div>
-    <div id="stats" class="overlay full" hidden>
-      <div class="card">
-        <div class="res-title">Stats</div>
-        <div id="stats-body" class="stats"></div>
-        <p id="stats-note" class="res-extra"></p>
-        <div class="row"><button id="stats-close" class="primary">Close</button></div>
-      </div>
-    </div>
     <div id="confirm" class="overlay" hidden>
       <div class="card">
         <p>Restart this flock? Your swipe count stays.</p>
@@ -50,6 +31,25 @@
     </div>
   </div>
   <div id="toolbar"><button id="btn-undo">Undo</button><button id="btn-restart">Restart</button></div>
+  <div id="result" class="overlay full" hidden>
+    <div class="card">
+      <div id="res-medal" class="medal"></div>
+      <div id="res-title" class="res-title"></div>
+      <div id="res-line" class="res-line"></div>
+      <button id="res-share" class="primary wide" hidden>Share</button>
+      <div id="res-stats" class="stats" hidden></div>
+      <div id="res-extra" class="res-extra"></div>
+      <div class="row"><button id="res-primary" class="primary"></button><button id="res-secondary"></button></div>
+    </div>
+  </div>
+  <div id="stats" class="overlay full" hidden>
+    <div class="card">
+      <div class="res-title">Stats</div>
+      <div id="stats-body" class="stats"></div>
+      <p id="stats-note" class="res-extra"></p>
+      <div class="row"><button id="stats-close" class="primary">Close</button></div>
+    </div>
+  </div>
   <div id="menu" hidden>
     <div class="menu-card" role="menu">
       <button id="menu-stats" role="menuitem">Stats</button>
@@ -67,8 +67,8 @@
 <script src="src/daily.js?v=3"></script>
 <script src="src/save.js?v=3"></script>
 <script src="src/game.js?v=3"></script>
-<script src="src/render.js?v=3"></script>
+<script src="src/render.js?v=4"></script>
 <script src="src/audio.js?v=3"></script>
-<script src="src/main.js?v=3"></script>
+<script src="src/main.js?v=4"></script>
 </body>
 </html>

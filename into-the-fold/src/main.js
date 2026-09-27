@@ -5,7 +5,7 @@
 (function () {
   "use strict";
   const NS = window.IntoTheFold, R = NS.rules, Solver = NS.solver, Daily = NS.daily, Save = NS.save, Game = NS.game, Render = NS.render, Audio = NS.audio;
-  const CONFIG_V = 3; // config.json's own ?v=; the levels carry config.dataVersion
+  const CONFIG_V = 4; // config.json's own ?v=; the levels carry config.dataVersion
   const DEBUG = /[?&]debug=1(&|$)/.test(location.search);
   const $ = (id) => document.getElementById(id);
   const KEYS = { ArrowUp: "N", ArrowRight: "E", ArrowDown: "S", ArrowLeft: "W", w: "N", d: "E", s: "S", a: "W", z: "undo", Backspace: "undo", r: "restart" };
@@ -140,10 +140,7 @@
     p.hidden = false; s.hidden = false;
     if (m.mode === "daily") {
       fillStats($("res-stats"), Save.bucket(g.swipes - g.par, app.cfg.stats.buckets));
-      countdown(true);
-      p.textContent = "Practice"; p.className = "";
-      p.hidden = !practiceUnlocked();
-      app.res.primary = openPractice;
+      dailyFooter();
       s.hidden = true; app.res.secondary = null;
     } else if (m.mode === "practice") {
       $("res-extra").textContent = "Practice never touches your streak.";
@@ -168,9 +165,26 @@
     app.dirty = true;
   }
 
-  // "Next flock in 4:12:09", refreshed once a second from the frame loop while a daily result is up.
+  // The daily result's footer: the countdown and Practice, or, once the date has rolled over under a finished daily,
+  // "A new flock is ready." and a Today's flock button (the result and its Share stay up until the player leaves).
+  function dailyFooter() {
+    const p = $("res-primary");
+    if (app.pendingRollover) {
+      $("res-extra").textContent = "A new flock is ready.";
+      p.textContent = "Today's flock"; p.className = "primary"; p.hidden = false;
+      app.res.primary = () => openDaily(today());
+      return;
+    }
+    countdown(true);
+    p.textContent = "Practice"; p.className = ""; p.hidden = !practiceUnlocked();
+    app.res.primary = openPractice;
+  }
+
+  // "Next flock in 4:12:09", refreshed once a second from the frame loop while a daily result is up. At midnight it
+  // hands over to the date check at once, so it never shows a fresh 24 hours for the day that just ended.
   function countdown(force) {
     if (!force && app.now < app.countdownAt) return;
+    if (today() !== app.daily.meta.asked) { dateCheck(); if (app.pendingRollover) return; }
     app.countdownAt = app.now + 1000;
     const t = Math.max(0, Math.floor(Daily.msToMidnight(new Date()) / 1000)), p2 = (v) => (v < 10 ? "0" : "") + v;
     $("res-extra").textContent = "Next flock in " + Math.floor(t / 3600) + ":" + p2(Math.floor(t / 60) % 60) + ":" + p2(t % 60);
@@ -237,7 +251,9 @@
     const inPractice = app.game && app.game.meta.mode !== "daily";
     $("menu-sound").textContent = "Sound: " + (app.save.data.sound ? "on" : "off");
     $("menu-practice").hidden = !practiceUnlocked() || (app.game && app.game.meta.mode === "practice");
-    $("menu-today").hidden = !inPractice;
+    $("menu-today").hidden = !inPractice && !app.pendingRollover;
+    const b = $("btn-menu").getBoundingClientRect(), a = $("app").getBoundingClientRect();
+    $("menu").firstElementChild.style.top = Math.round(b.bottom - a.top + 6) + "px"; // just under the button
     app.menuOpen = true; $("menu").hidden = false; $("btn-menu").setAttribute("aria-expanded", "true");
   }
 
@@ -376,16 +392,22 @@
     document.addEventListener("visibilitychange", () => { if (!document.hidden) wake(); });
     window.addEventListener("pageshow", wake);
     window.addEventListener("focus", wake);
-    if (window.ResizeObserver) new ResizeObserver(layout).observe(st); else window.addEventListener("resize", layout);
+    if (window.ResizeObserver) { const ro = new ResizeObserver(layout); ro.observe($("app")); ro.observe($("hint")); } else window.addEventListener("resize", layout);
   }
 
   // ---- layout, frame loop, date rollover ---------------------------------------------------------------------------
 
+  // The stage is exactly the board's height and the column is centred, so the free height frames the column instead
+  // of opening bands between the hint, the board and the buttons. The board gets the stage's width and whatever
+  // height the column leaves (the app's inner height minus everything but the stage).
   function layout() {
     if (!app.V || !app.cfg) return;
-    const st = $("stage"), css = Math.max(120, Math.floor(Math.min(st.clientWidth, st.clientHeight, app.cfg.board.maxCssPx)));
+    const st = $("stage"), el = $("app"), cs = getComputedStyle(el);
+    const inner = el.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    const used = $("toolbar").getBoundingClientRect().bottom - $("top").getBoundingClientRect().top;
+    const css = Math.max(120, Math.floor(Math.min(st.clientWidth, st.clientHeight + inner - used, app.cfg.board.maxCssPx)));
     Render.resize(app.V, css, Math.min(3, window.devicePixelRatio || 1));
-    st.style.setProperty("--bs", css + "px"); // the result/confirm overlays cover the board, not the whole stage
+    st.style.setProperty("--bs", css + "px"); // the stage's height and the restart confirm's size
     app.dirty = true;
   }
 
@@ -403,21 +425,28 @@
     persist();
     if (was || app.dirty) { Render.draw(app.V, g); app.dirty = Game.animating(g) || Render.busy(app.V, g.now); if (hudKey(g) !== app.hudKey) ui(); }
     if (!app.resultShown && Game.resultDue(g)) showResult();
-    if (app.resultShown && g === app.daily) countdown(false);
+    if (app.resultShown && g === app.daily && !app.pendingRollover) countdown(false);
     if (app.toastUntil && now >= app.toastUntil) { app.toastUntil = 0; $("toast").hidden = true; }
     if (now - app.lastDateCheck >= app.cfg.dateCheckMs) { app.lastDateCheck = now; dateCheck(); }
   }
 
-  // A new local date loads the new daily at once if today's is finished or untouched; a daily in progress keeps
-  // going until the page is hidden and shown again (never swapped under a live swipe).
+  // A new local date loads the new daily at once only if today's is untouched. A daily in progress keeps going, and a
+  // finished one keeps its result (and its Share) up, until the page is hidden and shown again or the player leaves
+  // the result. Never swapped under a live swipe, and never between a win and its result.
   function dateCheck() {
     if (app.testing || !app.daily || app.game !== app.daily) return;
     const d = today();
     if (d === app.daily.meta.asked) return;
     const p = Daily.puzzleFor(d, app.cfg.launchDate, app.levels.daily.pools);
     if (p.n === app.daily.meta.n) { app.daily.meta.asked = d; return; }
-    if (app.daily.won || app.daily.swipes === 0) openDaily(d); else app.pendingRollover = true;
+    if (app.daily.swipes === 0) { openDaily(d); return; }
+    if (app.pendingRollover) return;
+    app.pendingRollover = true;
+    if (app.resultShown) dailyFooter();
   }
+
+  // A finished daily whose result hasn't shown yet (the win's flock jump is still playing).
+  function resultPending() { return app.game === app.daily && app.daily.won && !app.resultShown; }
 
   // Back from the background (visibilitychange, pageshow, focus): re-check the sprite caches, then the date.
   function wake() {
@@ -425,7 +454,7 @@
     app.dirty = true;
     if (Render.check(app.V)) app.cacheRebuilds = (app.cacheRebuilds || 0) + 1;
     dateCheck();
-    if (app.pendingRollover && app.game === app.daily) openDaily(today());
+    if (app.pendingRollover && app.game === app.daily && !resultPending()) openDaily(today());
   }
 
   // ---- debug handle (?debug=1) -----------------------------------------------------------------------------------
@@ -487,7 +516,8 @@
   // game and checks their save is byte-identical.
   function selfTest() {
     const t0 = performance.now(), cfg = app.cfg, pools = app.levels.daily.pools, failures = [];
-    const keep = { game: app.game, save: app.save, practice: app.practice, resultShown: app.resultShown, confirmOpen: app.confirmOpen, silent: app.A.silent };
+    const keep = { game: app.game, save: app.save, practice: app.practice, resultShown: app.resultShown, confirmOpen: app.confirmOpen, silent: app.A.silent,
+      daily: app.daily, dateOverride: app.dateOverride, pendingRollover: app.pendingRollover, lastDateCheck: app.lastDateCheck, now: app.now };
     const rawSave = () => { try { return keep.save.store.getItem(cfg.save.key); } catch (e) { return "(unreadable)"; } };
     const saveBefore = rawSave(), days = {};
     const fail = (m) => { failures.push(m); };
@@ -637,12 +667,45 @@
 
       // 11. The sprite caches read non-blank.
       if (app.V.B && Render.check(app.V)) fail("render caches read blank");
+
+      // 12. A daily won just after local midnight (the M2 critic's repro). The live page path runs here (testing
+      //     off, still on the memory save, silent): play #6 to one swipe short, roll the date to #7, then win. The
+      //     frame loop's date check and a page show must not swap #6 out before or under its result; the result
+      //     shows with its Share, the stats count #6, and leaving the result is what opens #7.
+      {
+        const d6 = Daily.dateString(L + 5), d7 = Daily.dateString(L + 6);
+        app.testing = false; app.daily = null; app.pendingRollover = false; app.resultShown = false; app.lastDateCheck = -1e9;
+        app.dateOverride = d6; openDaily(today());
+        const g = app.game, sol = ITF.solve().solution;
+        run(sol.slice(0, -1));
+        app.dateOverride = d7; clock += 1500; ITF.tick(clock);
+        if (app.game !== g || !app.pendingRollover) fail("rollover: an unfinished daily should keep going past midnight");
+        ITF.swipe(sol[sol.length - 1]);
+        let swapped = false, shownAt = -1;
+        for (let k = 0; k < 20 && shownAt < 0; k++) {
+          clock += 200; ITF.tick(clock);
+          if (k === 1) wake(); // the page shown again while the result is still pending
+          if (app.game !== g) swapped = true;
+          if (app.resultShown) shownAt = k;
+        }
+        const share = ITF.shareText() || "";
+        if (swapped || shownAt < 0 || app.game !== g) fail("rollover: the #6 win was swapped out before its result (shown " + shownAt + ")");
+        if (share.indexOf(cfg.share.title + " #6 ") !== 0 || $("res-share").hidden) fail("rollover: #6's Share should be up on its result: " + JSON.stringify(share));
+        if (app.save.data.stats.lastN !== 6 || $("res-primary").hidden || $("res-primary").textContent !== "Today's flock") fail("rollover: stats lastN " + app.save.data.stats.lastN + ", result button '" + $("res-primary").textContent + "'");
+        clock += 3000; ITF.tick(clock);
+        if (app.game !== g || !app.resultShown) fail("rollover: the result should stay up until the player leaves it");
+        $("res-primary").click();
+        if (app.game.meta.n !== 7 || app.resultShown || app.pendingRollover) fail("rollover: leaving the result should open #7, got #" + app.game.meta.n);
+        app.testing = true;
+      }
     } catch (e) {
       fail("threw: " + (e && e.message));
     } finally {
-      app.game = keep.game; app.save = keep.save; app.resultShown = keep.resultShown; app.confirmOpen = keep.confirmOpen; app.A.silent = keep.silent;
-      app.practice = keep.practice; app.testing = false; app.dirty = true; app.hudKey = -1;
-      if (app.game) ui();
+      app.save = keep.save; app.confirmOpen = false; app.A.silent = keep.silent;
+      app.practice = keep.practice; app.daily = keep.daily; app.dateOverride = keep.dateOverride; app.pendingRollover = keep.pendingRollover;
+      app.lastDateCheck = keep.lastDateCheck; app.countdownAt = 0; app.now = keep.now; app.testing = false;
+      Render.clearFx(app.V);
+      if (keep.game) { setGame(keep.game); if (keep.resultShown) showResult(); if (keep.confirmOpen) { app.confirmOpen = true; $("confirm").hidden = false; } }
     }
     if (rawSave() !== saveBefore) fail("the player's save changed during selfTest");
     return { pass: failures.length === 0, failures, boards, symmetric: syms, weekdays: days, ms: Math.round(performance.now() - t0) };

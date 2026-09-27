@@ -27,7 +27,7 @@
     "winJumpCells": 0.3
   },
   "input": {"swipePx": 24},
-  "board": {"maxCssPx": 560, "fenceCells": 0.42, "sheepScale": 0.9, "pennedScale": 0.8, "ghostAlpha": 0.28},
+  "board": {"maxCssPx": 560, "fenceCells": 0.42, "sheepScale": 0.9, "pennedScale": 0.8, "ghostAlpha": 0.28, "gateOpenDeg": 80},
   "dateCheckMs": 1000,
   "save": {"key": "intothefold.save.v1", "limits": {"maxCount": 10000000, "maxLog": 20000, "maxId": 40}},
   "selfTest": {"boards": 20, "stepDays": 41},
