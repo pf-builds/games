@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "note": "Hand-authored world-1 teaching boards (SPEC §2). The bake solver-verifies each and copies it to the front of world 1.",
+  "levels": [
+    { "id": "w1-t1", "name": "One Wall", "teaches": "Tap the mason, tap the wall. One break reaches the keep.",
+      "w": 7, "h": 7, "muster": { "stone": 1 }, "chests": [],
+      "grid": [".......", ".......", "..SSS..", "..SKS..", "..SSS..", ".......", "......."] },
+    { "id": "w1-t2", "name": "Outside In", "teaches": "The timber is sealed inside the stone. Break the outer wall first, then the inner one opens to you.",
+      "w": 7, "h": 7, "muster": { "stone": 1, "timber": 1 }, "chests": [],
+      "grid": ["SSSSSSS", "S.....S", "S.TTT.S", "S.TKT.S", "S.TTT.S", "S.....S", "SSSSSSS"] },
+    { "id": "w1-t3", "name": "The Wrong Wall", "teaches": "One mason. Spend it on the outer stone and the inner stone is out of reach forever. The axemen go first.",
+      "w": 7, "h": 7, "muster": { "stone": 1, "timber": 1 }, "chests": [],
+      "grid": ["TTTTSSS", "T.....S", "T.SSS.S", "T.SKS.S", "T.SSS.S", "T.....S", "TTTTSSS"] }
+  ]
+}

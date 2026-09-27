@@ -75,6 +75,9 @@ Approved 2026-09-27 (Phase 0). Design source: `claude-workspace/business/D-click
 - **Measure before banding (DeJam lesson a):** M0 runs a few hundred boards per world and reports the distributions *before* any band is written here.
 - **Bake:** deterministic seed, versioned `levels/levels.json`, candidate pools in `levels/pool-w{n}.json`. The baker never throws: it logs, falls back and says so in the report (DeJam lesson b).
 - Level format (builder may extend, and documents it here): `{ id, name, w, h, grid: [row strings using the codes above], muster: {stone, timber, hedge, ice}, chests: [{x, y, crew}], min, metrics: {...} }`.
+  - M0 extensions: `world` (1–4); `source` (`teaching`, `baked`, `pool`, or `near-miss:<reason>` when the baker had to fall back); `line` (the solver's optimal line as `[x, y]` of the first tile of each section, in break order, so selfTest can tap it through `tapCell`); `teaches` (teaching boards only: one-line lesson text); `seed`/`idx` (baked boards: the generator chunk and position, for reproduction).
+  - `metrics`: `{ sections, randWin, greedyWin, greedyUsed, states, deadRatio, lostRatio, chestRequired, leversMatter }`.
+  - `levels/levels.json`: `{ version, draft, note, seed, worlds: [{ world, name, band, levels: [...] }] }`. `levels/pool-w{n}.json`: `{ version, world, count, levels: [...] }`. `levels/teaching.json` holds the hand-authored world-1 boards.
 
 ## 4. Look, feel, layout
 
@@ -126,3 +129,10 @@ Approved 2026-09-27 (Phase 0). Design source: `claude-workspace/business/D-click
 ## 7. Decisions log (builders append here)
 
 - 2026-09-27 (Phase 0): name Sapper's Path. Food Hunt is the complexity reference. 24–40 levels. Two-tap commit with a `twoTap` dial. Undo refunds the crew (unlike Into the Fold, because stars are about the final line, not the attempts).
+- 2026-09-27 (M0): engine (`src/engine.js`) and solver (`src/solver.js`) are UMD (`window.SappersPath.engine` / `.solver`). A level compiles once (`parse`). The state is the broken-section set; `derive` recomputes everything from it (a unique fixed point, because every step only opens ground). Undo = re-derive from the move list minus its last move, so it is exact by construction.
+- 2026-09-27 (M0): iron sections are sections too, but never crew targets. A lever or door opens only through the cascade. A lever is permanent and impassable. An opened door is open ground.
+- 2026-09-27 (M0): the keep does not count as passable. A keep on the board edge only wins if open ground touches it (the generator always centres the keep).
+- 2026-09-27 (M0): solver = memoised DFS over the broken set (key = 16 section flags per char). Each state stores three distances to a win: any win, a win with at least one chest claimed, a win with none claimed. So "chest on an optimal line" and "chest required for 3 stars" are exact. A dead end = stuck (not won, no legal break). A lost state = no win reachable. The optimal line prefers a chest-claiming line when one is optimal.
+- 2026-09-27 (M0): the generator sets the muster from the unlimited-crew optimal line (A* with a 0-1 BFS bound, which is exact without levers). So min crews is known before the real solve. The chest crew is one that a later step on that line uses, and the muster drops by one of it.
+- 2026-09-27 (M0): random playouts are uniform over legal breaks (not crew first, then section). Greedy = the reachable section with a crew whose nearest tile is closest to the keep (Manhattan); ties go to the lowest section id.
+- 2026-09-27 (M0): stars count crews used = sections broken. A chest's bonus crew doesn't change that. Min crews = the solver's min with the level's muster.
