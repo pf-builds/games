@@ -155,8 +155,8 @@
     "rallyRadius": 240,
     "weights": {
       "speed": 3,
-      "armor": 3,
-      "frenzy": 2,
+      "armor": 0,
+      "frenzy": 0,
       "rally": 2
     },
     "contestTol": 0.12,
@@ -270,12 +270,13 @@
     "scentJitter": 250,
     "objRelic": 360,
     "objVillage": 30,
-    "objHeavy": 380,
     "objBandit": 340,
     "banditFeasible": 2.4,
     "forestFleeBonus": 150,
     "rustleMemory": 3,
-    "siteKnowRadius": 1000
+    "siteKnowRadius": 1000,
+    "objMill": 40,
+    "millCollectAt": 10
   },
   "player": {
     "name": "You",
@@ -715,13 +716,11 @@
     "hornMax": 2,
     "muster": [
       50,
-      200,
-      400
+      200
     ],
     "musterAxes": [
       "horn",
-      "boots",
-      "arms"
+      "boots"
     ],
     "chestAxes": {
       "arms": 1,
@@ -757,17 +756,6 @@
       600,
       1600
     ],
-    "heavy": [
-      50,
-      100
-    ],
-    "heavyPick2": 100,
-    "heavyRing": 100,
-    "heavyHold": 2,
-    "heavyDist": [
-      650,
-      1700
-    ],
     "banditSizes": [
       5,
       10,
@@ -789,6 +777,20 @@
     "campGap": 130,
     "cheer": 700,
     "scanTicks": 3
+  },
+  "structures": {
+    "enabled": true,
+    "guardMin": 6,
+    "routFlipRadius": 300,
+    "neutralOnElim": true,
+    "mill": {
+      "every": 6,
+      "cap": 12,
+      "collectMin": 3,
+      "collectHold": 0.5,
+      "ring": 100,
+      "trains": null
+    }
   },
   "banner": {
     "minSeconds": 1.2,
@@ -824,6 +826,7 @@
     "hintFightGain": 8,
     "hintFightAfter": 8,
     "hintForest": 5,
+    "hintMill": 5,
     "posterMint": 70,
     "posterOrange": 48,
     "posterStep": 0.45
@@ -3052,31 +3055,6 @@
       100,
       3000
     ],
-    "encampments.heavy": [
-      "weight of each heavy chest",
-      1,
-      200
-    ],
-    "encampments.heavyPick2": [
-      "weight from which a heavy chest offers a pick of two",
-      1,
-      200
-    ],
-    "encampments.heavyRing": [
-      "px heavy chest ring radius",
-      20,
-      200
-    ],
-    "encampments.heavyHold": [
-      "s to hold the weight in the ring",
-      0,
-      20
-    ],
-    "encampments.heavyDist": [
-      "px path distance to the nearest spawn",
-      100,
-      3000
-    ],
     "encampments.banditSizes": [
       "bandits per camp: green / orange / red",
       1,
@@ -3152,10 +3130,55 @@
       0,
       500
     ],
-    "ai.objHeavy": [
-      "neutral units: a heavy chest it can lift",
+    "ai.objMill": [
+      "neutral units per banked recruit (SPEC-v3 §3): its own mill once the bank reaches ai.millCollectAt, a mill it has seen owned by a rival or neutral",
       0,
-      5000
+      500
+    ],
+    "ai.millCollectAt": [
+      "banked recruits before an AI walks back to collect its own mill (SPEC-v3 §3)",
+      1,
+      50
+    ],
+    "structures.guardMin": [
+      "peasants a rival needs in the ring to take an owned mill: max(guardMin, banked) (SPEC-v3 §3)",
+      1,
+      100
+    ],
+    "structures.routFlipRadius": [
+      "px; a rout whose contact centroid is this close to a site the loser owns hands it to the winner (SPEC-v3 §3)",
+      0,
+      2000
+    ],
+    "structures.mill.every": [
+      "s per banked recruit while a mill has a living owner (SPEC-v3 §3)",
+      0.5,
+      120
+    ],
+    "structures.mill.cap": [
+      "recruits a mill banks at most (a counter, not agents)",
+      1,
+      100
+    ],
+    "structures.mill.collectMin": [
+      "owner agents in the ring to collect the bank",
+      1,
+      50
+    ],
+    "structures.mill.collectHold": [
+      "s those owner agents stay in the ring before the bank walks out",
+      0,
+      10
+    ],
+    "structures.mill.ring": [
+      "px ring radius of a mill (capture and collect; the unjoined village keeps encampments.villageRing)",
+      20,
+      300
+    ],
+    "polish.hintMill": [
+      "s the one-shot mill hint shows (fired when your first village becomes a mill)",
+      1,
+      10
     ],
     "ai.objBandit": [
       "neutral units: a bandit camp it can clear",

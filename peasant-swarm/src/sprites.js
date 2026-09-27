@@ -234,8 +234,8 @@ PS.buildSprites = function (cfg) {
   };
 
   // ---------- M6 spoils (SPEC-v2 §8, §11): relic icons per axis on a parchment tag (arms helmet, boots, horn), the ground relic scroll, chest
-  // and heavy chest (closed, open), the village (48 x 40: palisade, gate, two huts; closed and joined), the bandit tent, the banner's horn.
-  // Numbers (garrison, weight, have/need) and team / kind colours are drawn at runtime over these. Every one is drawn at 2x.
+  // (closed, open), the village (48 x 40: palisade, gate, two huts; closed and joined; v3 mill sails are drawn at runtime), the bandit tent,
+  // the banner's horn. Numbers (garrison, bank, need) and team / kind colours are drawn at runtime over these. Every one is drawn at 2x.
   const INK = PAL.ink, W8 = PAL.wood, ST = PAL.stone, PARCH = ["#B89A62", "#E6D3A0", "#F4E6BC"];
   const tag = (p) => { p.rect(1, 1, 10, 10, PARCH[1]); p.rect(1, 1, 10, 1, PARCH[2]); p.rect(1, 10, 10, 1, PARCH[0]); p.rect(10, 1, 1, 10, PARCH[0]); };
   const RELICS = {
@@ -247,10 +247,6 @@ PS.buildSprites = function (cfg) {
   const chestArt = (open) => outlined(make(12, 10, (p) => {
     if (open) { p.rect(1, 0, 10, 3, W8[1]); p.rect(1, 0, 10, 1, W8[2]); p.rect(1, 4, 10, 5, W8[2]); p.rect(2, 4, 8, 2, "#2A1C10"); p.px(4, 4, "#F6CF6A"); p.px(7, 5, "#F6CF6A"); p.rect(1, 8, 10, 1, W8[1]); p.rect(3, 4, 1, 5, ST[1]); p.rect(8, 4, 1, 5, ST[1]); }
     else { p.rect(1, 2, 10, 7, W8[2]); p.rect(1, 2, 10, 2, W8[3]); p.rect(1, 8, 10, 1, W8[1]); p.rect(3, 2, 1, 7, ST[1]); p.rect(8, 2, 1, 7, ST[1]); p.rect(1, 4, 10, 1, W8[1]); p.rect(5, 4, 2, 2, "#F6CF6A"); p.px(5, 5, "#C8962C"); }
-  }));
-  const heavyArt = (open) => outlined(make(18, 14, (p) => {
-    if (open) { p.rect(1, 0, 16, 4, ST[2]); p.rect(1, 0, 16, 1, ST[3]); p.rect(1, 6, 16, 7, ST[2]); p.rect(2, 6, 14, 3, "#1E1A22"); p.px(6, 6, "#F6CF6A"); p.px(11, 7, "#F6CF6A"); p.rect(1, 12, 16, 1, ST[1]); }
-    else { p.rect(1, 3, 16, 10, ST[2]); p.rect(1, 3, 16, 2, ST[3]); p.rect(1, 12, 16, 1, ST[1]); for (let x = 3; x < 16; x += 5) p.rect(x, 3, 2, 10, ST[1]); p.rect(1, 7, 16, 1, ST[1]); p.rect(7, 6, 4, 3, "#C8962C"); p.rect(8, 7, 2, 1, INK); p.rect(2, 1, 3, 2, ST[1]); p.rect(13, 1, 3, 2, ST[1]); }
   }));
   // the village: palisade stakes round the back and sides, two thatched huts, the gate front and centre (shut, or open once it joins)
   const villageArt = (joined) => withShadow(outlined(make(48, 40, (p) => {
@@ -269,7 +265,7 @@ PS.buildSprites = function (cfg) {
     p.rect(9, 0, 1, 4, W8[1]); p.rect(15, 11, 4, 3, W8[2]); p.rect(15, 11, 4, 1, W8[3]);
   })), 10, 14, 9, 1.6);
   const bannerHorn = outlined(make(7, 5, (p) => { p.rect(0, 2, 2, 2, "#E8DCC0"); p.rect(2, 1, 2, 3, "#D8C8A0"); p.rect(4, 0, 2, 4, "#C8B488"); p.rect(4, 0, 2, 1, "#F6CF6A"); p.px(6, 1, "#B89A62"); }));
-  const spoils = { relics: RELICS, scroll, chest: [chestArt(false), chestArt(true)], heavy: [heavyArt(false), heavyArt(true)], village: [villageArt(false), villageArt(true)], tent, bannerHorn };
+  const spoils = { relics: RELICS, scroll, chest: [chestArt(false), chestArt(true)], village: [villageArt(false), villageArt(true)], tent, bannerHorn };
 
   // ---------- the player's target flag and a loose shadow (power-ups), both 2x ----------
   const marker = outlined(make(8, 10, (p) => { const T = PAL.ramp(PAL.teams[0]); p.rect(1, 1, 1, 9, PAL.cream); p.rect(2, 1, 5, 3, T.hat); p.rect(2, 3, 5, 1, T.hatD); p.px(3, 1, T.hatL); }));

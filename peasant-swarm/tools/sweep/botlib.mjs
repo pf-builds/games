@@ -22,8 +22,8 @@ function installHelpers() {
         const PG = S.cfg.progression, tier = p.tier || { arms: 0, boots: 0, horn: 0 }, cap = (ax, t3) => (ax === "arms" ? (t3 ? PG.armsMax : PG.armsCap) : ax === "boots" ? PG.bootsMax : PG.hornMax);
         let ob = null, od = Infinity;
         for (const o of V.objectives ? V.objectives() : []) {
-          if (!o.live) continue;
-          const use = o.type === "relic" || o.type === "chest" ? tier[o.axis] < cap(o.axis, o.t3) : o.type === "village" ? p.count >= 0.5 * o.need : o.type === "heavy" ? p.count >= o.need : o.type === "bandit" ? p.count >= 2 * o.need : false;
+          if (!o.live && !o.mill) continue; // v3 M3a: its own mill once 6 are banked (SPEC-v3 §3; the bot collects by walking in)
+          const use = o.type === "relic" || o.type === "chest" ? tier[o.axis] < cap(o.axis, o.t3) : o.type === "village" ? (o.mill ? o.owner === 1 && o.bank >= 6 : p.count >= 0.5 * o.need) : o.type === "bandit" ? p.count >= 2 * o.need : false;
           if (!use) continue; const k = T.cellOf(o.x, o.y), d = k >= 0 ? this.D[k] : -1; if (d >= 0 && d * 0.5 < od) { od = d * 0.5; ob = o; }
         }
         if (ob && od < bd) { best = ob; bd = od; }

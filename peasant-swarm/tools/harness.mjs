@@ -50,9 +50,11 @@
 // leader's win share, eliminations inside the first minute, the bot's win rate; the AI think cost per tick. Targets are M8 gates: reported.
 //
 // M6 additions (spoils): selfTest parts "spoils" and "parity"; the bot also goes for the spoils it knows through PS.vis.objectives() (a relic
-// or chest it can use, a village at >= half its garrison, a heavy chest it can lift, a bandit camp at >= 2x its bandits), fog-honest like
+// or chest it can use, a village at >= half its garrison, a bandit camp at >= 2x its bandits), fog-honest like
 // the rest of its policy; every bot and scripted match reports the bot's relic tiers at 1:00 / 3:00 / 5:00 and at the end, and the objectives
 // it took (assert botTiersMedian: the median bot match ends with 3-6 tiers, when >= 3 bot matches run); --art-shots adds the spoils props.
+// v3 M3a (SPEC-v3 §3): the heavy chests are gone; the bot also walks back to its own mill once 6 are banked (as last seen); --art-shots
+// adds a mill scene (your village joined, 7 banked).
 //
 // P1 additions (Peter's first playtest): selfTest part "audio" (a 120 s clash-heavy soak through an OfflineAudioContext: cue voices all
 // disconnect, live nodes under audio.nodeCap, the level bound, the gates under 600+ agents); --fixtures runs the ambush and hold fixtures
@@ -132,8 +134,8 @@ function installHelpers() {
         const PG = S.cfg.progression, tier = p.tier || { arms: 0, boots: 0, horn: 0 }, cap = (ax, t3) => (ax === "arms" ? (t3 ? PG.armsMax : PG.armsCap) : ax === "boots" ? PG.bootsMax : PG.hornMax);
         let ob = null, od = Infinity;
         for (const o of V.objectives ? V.objectives() : []) {
-          if (!o.live) continue;
-          const use = o.type === "relic" || o.type === "chest" ? tier[o.axis] < cap(o.axis, o.t3) : o.type === "village" ? p.count >= 0.5 * o.need : o.type === "heavy" ? p.count >= o.need : o.type === "bandit" ? p.count >= 2 * o.need : false;
+          if (!o.live && !o.mill) continue; // v3 M3a: its own mill once 6 are banked (SPEC-v3 §3; the bot collects by walking in)
+          const use = o.type === "relic" || o.type === "chest" ? tier[o.axis] < cap(o.axis, o.t3) : o.type === "village" ? (o.mill ? o.owner === 1 && o.bank >= 6 : p.count >= 0.5 * o.need) : o.type === "bandit" ? p.count >= 2 * o.need : false;
           if (!use) continue; const k = T.cellOf(o.x, o.y), d = k >= 0 ? this.D[k] : -1; if (d >= 0 && d * 0.5 < od) { od = d * 0.5; ob = o; }
         }
         if (ob && od < bd) { best = ob; bd = od; }
@@ -321,7 +323,7 @@ async function main() {
       // selfTest on the title screen before any match, then the fight matrix (each call is its own evaluate, well under 15 s)
       // one evaluate per part so each stays well under ~15 s of wall time (lesson 20); the merged verdict is the selfTest verdict
       const s0 = Date.now(), st = { pass: true, fails: [], results: {}, partMs: {}, wallMs: 0 };
-      for (const part of ["config", "sprites", "terrain", "caches", "art", "flow", "fight", "fixtures", "flipflop", "ai", "rivals", "fog", "spoils", "parity", "replay", "match", "audio", "portal"]) { // v3 M1: "portal"
+      for (const part of ["config", "sprites", "terrain", "caches", "art", "flow", "fight", "fixtures", "flipflop", "ai", "rivals", "fog", "spoils", "structures", "parity", "replay", "match", "audio", "portal"]) { // v3 M1: "portal"; v3 M3a: "structures"
         const p0 = Date.now(), r = await page.evaluate((part) => window.PS.selfTest({ parts: part }), part);
         st.partMs[part] = Date.now() - p0; Object.assign(st.results, r.results); for (const f of r.fails) if (st.fails.indexOf(f) < 0) st.fails.push(f);
       }
@@ -642,7 +644,7 @@ async function main() {
     const seed = A.seed != null && isFinite(A.seed) ? A.seed : 1000; const u = new URL(url.href); u.searchParams.set("seed", String(seed)); await page.goto(u.href);
     await page.waitForFunction(() => !!(window.PS && window.PS.artScene && window.PSS && window.PSS.map), null, { timeout: 20000 }); await page.waitForTimeout(900);
     const art = { seed, shots: {}, scenes: {} }; art.shots.title = await shot(page, "art-title");
-    for (const [sc, zoom, o] of [["home", 0], ["pass", 0], ["ford", 0], ["bridge", 0], ["clash", 0], ["rout", 0], ["teams", A.mobile ? 0.5 : 0], ["village", 0], ["bandit", 0, { kind: 2 }], ["heavy", 0], ["relic", 0], ["chest", 0]]) {
+    for (const [sc, zoom, o] of [["home", 0], ["pass", 0], ["ford", 0], ["bridge", 0], ["clash", 0], ["rout", 0], ["teams", A.mobile ? 0.5 : 0], ["village", 0], ["bandit", 0, { kind: 2 }], ["mill", 0], ["relic", 0], ["chest", 0]]) {
       art.scenes[sc] = await page.evaluate(([sc, seed, zoom, o]) => { window.PS.debugStart({ seed }); return window.PS.artScene(sc, Object.assign({ zoom }, o || {})); }, [sc, seed, zoom, o || null]);
       await page.waitForTimeout(sc === "rout" ? 120 : 600); art.shots[sc] = await shot(page, "art-" + sc);
     }

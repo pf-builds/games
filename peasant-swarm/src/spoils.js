@@ -1,10 +1,13 @@
 // Peasant Swarm — spoils (SPEC-v2 §8). Click it! Studios, 2026.
 // Three permanent team-wide axes (Arms I-III, Boots I-II, Horn I-II) and where they come from: muster milestones, six fixed chests at dead
-// ends, a trickle chest every progression.trickleChestEvery s after 1:00, heavy chests behind a size gate, bandit camps, and a routed
-// leader's drops. Villages whose garrison joins you. Bandits are agents with team id 8 that live in S.bandits (never in S.teams); game.js
-// steers them in its agent loop. Every objective (chest, heavy chest, village, bandit camp, ground relic) is one record in S.objs with the
-// same shape: x, y, live, landmark (a site every AI knows from the start, state unknown until seen), kn[team] (what each team last saw there:
-// -1 never, 0 gone, 1 live) and sk (the player's last-seen state, drawn under fog). All tuning in config.progression and config.encampments.
+// ends, a trickle chest every progression.trickleChestEvery s after 1:00, bandit camps, and a routed leader's drops. Villages whose
+// garrison joins you. Bandits are agents with team id 8 that live in S.bandits (never in S.teams); game.js steers them in its agent loop.
+// Every objective (chest, village, bandit camp, ground relic) is one record in S.objs with the same shape: x, y, live, landmark (a site every
+// AI knows from the start, state unknown until seen), kn[team] (what each team last saw there: -1 never, 0 gone, 1 live) and sk (the
+// player's last-seen state, drawn under fog). All tuning in config.progression, config.encampments and config.structures.
+// v3 structures (SPEC-v3 §3, M3a): a joined village stays on the map as a site ("mill") with an owner and a bank. One capture rule for every
+// site (holdStep: the v2 village ring rule), rout flips and elimination to neutral. Owner and bank are last-seen state (sk.team, sk.n for
+// the player; kt[team] / kb[team] for each AI). The stockade (a bandit-camp state) and the forges plug into holdStep / takeSite in M3b.
 // game.js binds this module once with its hooks (PS.Spoils(G)) and calls place / tick / observe / draw from newGame, update, observe, draw.
 (function () {
   const PS = (window.PS = window.PS || {});
@@ -16,7 +19,9 @@
     let nextId = 1;
     const mkObj = (type, x, y, landmark) => ({ type, id: nextId++, x, y, live: true, landmark: !!landmark, kn: new Int8Array(9).fill(-1), pr: true,
       axis: "", t3: false, src: "", life: Infinity, pair: null, gar: 0, prog: 0, holdTeam: 0, have: 0, agents: null, owner: 0, weight: 0, hold: 0,
-      kind: 0, n0: 0, n: 0, lastHit: 0, fn: 0, fx: 0, fy: 0, vs: 0, opened: -1, sk: { seen: false, live: true, n: 0, team: 0 } });
+      kind: 0, n0: 0, n: 0, lastHit: 0, fn: 0, fx: 0, fy: 0, vs: 0, opened: -1, sk: { seen: false, live: true, n: 0, team: 0 },
+      site: "", bank: 0, bankT: 0, colT: 0, kt: new Int8Array(9).fill(-1), kb: new Int8Array(9) }); // v3 sites (SPEC-v3 §3): kind ("mill"), bank, bank / collect clocks; kt / kb: the owner and bank each team last saw (-1 never)
+    const ST = () => cfgOf().structures, SON = () => cfgOf().structures.enabled; // SPEC-v3 §0 kill switch: false keeps v2's villages
     function reset() { S.objs = []; S.bandits = []; S.spT = 0; nextId = 1; }
 
     // ---------------------------------------------------------------- team tiers and their stats
@@ -78,7 +83,7 @@
       for (const c of S.camps) { const dx = c.x - x, dy = c.y - y; if (dx * dx + dy * dy < cg * cg) return false; }
       return true;
     }
-    // for placeOk (trickle camps and power-ups): not inside a bandit camp's reach nor on a village or heavy chest
+    // for placeOk (trickle camps and power-ups): not inside a bandit camp's reach nor on a village (joined or not)
     function blocks(x, y) {
       const EN = cfgOf().encampments;
       for (const o of S.objs) { if (o.type === "relic" || (!o.live && o.type !== "village")) continue; const r = o.type === "bandit" ? EN.banditLeash + EN.banditAggro + EN.campGap * 0.5 : o.type === "chest" ? EN.campGap * 0.5 : EN.villageRing + 40; const dx = o.x - x, dy = o.y - y; if (dx * dx + dy * dy < r * r) return true; }
@@ -132,18 +137,7 @@
         if (best < 0) continue;
         mkCamp(((best % N) + 0.5) * cell, (((best / N) | 0) + 0.5) * cell, kind, EN.banditSizes[kind], kind === 0 ? (R() < 0.5 ? "boots" : "horn") : "arms");
       }
-      // heavy chests (encampments.heavy weights): path distance to the nearest spawn in encampments.heavyDist, spread out
-      for (const w of EN.heavy) {
-        let best = null, bs = -1;
-        for (let s = 0; s < 60; s++) {
-          const c = P.open3[(R() * P.open3.length) | 0], x = ((c % N) + 0.5) * cell, y = (((c / N) | 0) + 0.5) * cell;
-          if (TB.dmin[c] < EN.heavyDist[0] || TB.dmin[c] > EN.heavyDist[1] || !T.placementOk(x, y, 3) || !clearAt(x, y, EN.objectGap)) continue;
-          let sc = 1e12; for (const o of S.objs) { const d = (o.x - x) * (o.x - x) + (o.y - y) * (o.y - y); if (d < sc) sc = d; }
-          if (sc > bs) { bs = sc; best = [x, y]; }
-        }
-        if (!best) continue;
-        const h = mkObj("heavy", best[0], best[1], true); h.weight = w; h.axis = pickAxis(); S.objs.push(h);
-      }
+      // (v3: the heavy chests are gone, SPEC-v3 §3; the three forge sites are placed here in M3b)
     }
     // a village of gar with its garrison inside the palisade (hidden agents: they count toward the cap and join through convert())
     function mkVillage(x, y, gar) {
@@ -160,13 +154,15 @@
       }
       b.n = b.n0 = b.agents.length; return b;
     }
-    // QA and art scenes: one objective of type at (x, y) in the current world (fixture maps have no placement). o: { gar, weight, kind, n, axis, t3 }
+    // QA and art scenes: one objective of type at (x, y) in the current world (fixture maps have no placement). o: { gar, kind, n, axis, t3,
+    // owner, bank }. "mill": a village that has already joined (no garrison), owned by o.owner (0 neutral) with o.bank banked
     function stage(type, x, y, o) {
       o = o || {};
       if (type === "village") return mkVillage(x, y, o.gar || 12);
+      if (type === "mill") { const v = mkVillage(x, y, 0); v.live = false; v.opened = S.t; v.site = "mill"; v.owner = o.owner || 0; v.bank = o.bank || 0; if (v.owner) v.kt[v.owner] = v.owner; return v; }
       if (type === "bandit") return mkCamp(x, y, o.kind || 0, o.n || cfgOf().encampments.banditSizes[o.kind || 0], o.axis || "arms");
       if (type === "relic") return relicAt(x, y, o.axis || "arms", !!o.t3, "qa", o.life || Infinity);
-      const b = mkObj(type, x, y, o.landmark !== false); b.axis = o.axis || "arms"; b.src = "qa"; if (type === "heavy") b.weight = o.weight || 15; S.objs.push(b); return b;
+      const b = mkObj(type, x, y, o.landmark !== false); b.axis = o.axis || "arms"; b.src = "qa"; S.objs.push(b); return b;
     }
     // a ground relic (a scroll with its axis icon): life s (Infinity: until taken)
     function relicAt(x, y, axis, t3, src, life) { const p = PS.terrain.snapXY(x, y), o = mkObj("relic", p.x, p.y, false); o.axis = axis; o.t3 = !!t3; o.src = src; o.life = life; S.objs.push(o); return o; }
@@ -192,6 +188,7 @@
       if (S.tick === 3600 || S.tick === 10800 || S.tick === 18000) S.ev["tiers" + S.tick / 60] = G.swarms().map((t) => t.tierN); // tiers at 1:00 / 3:00 / 5:00 (three times a match)
       for (let i = S.objs.length - 1; i >= 0; i--) {
         const o = S.objs[i];
+        if (o.site) { if (scan) siteTick(o, sdt); continue; } // v3 structures (SPEC-v3 §3): mills (M3a); stockades and forges join here in M3b
         if (o.type === "relic") {
           if (o.life !== Infinity && (o.life -= dt) <= 0) { S.objs.splice(i, 1); continue; } // rare: one splice when a drop expires
           const t = toucher(o.x, o.y, pr, o.axis, o.t3); if (!t) continue;
@@ -205,15 +202,8 @@
           o.live = false; o.opened = S.t; grant(t, o.axis, false, o.src, o.x, o.y); taken(o, t);
           if (G.fxOk(o.x, o.y)) { G.burst(o.x, o.y - 8, "#F6CF6A", 14, 120, 0.6, 3, 160); PS.audio.chest(); }
         } else if (o.type === "village" && scan) {
-          const rc = ringCount(o.x, o.y, EN.villageRing), lead = rc & 0xffff, rival = rc >> 16, have = lead ? TC[lead] : 0; o.have = have;
-          if (!lead) { o.holdTeam = 0; o.prog = 0; continue; }
-          if (lead !== o.holdTeam) { o.holdTeam = lead; o.prog = 0; }
-          if (have >= o.gar) o.prog = 1; else if (!rival) o.prog += sdt / Math.max(EN.villageMin, EN.villageStep * (o.gar - have)); // a rival in the ring pauses the timer
-          if (o.prog >= 1) joinVillage(o, S.teams[lead]);
-        } else if (o.type === "heavy" && scan) {
-          const rc = ringCount(o.x, o.y, EN.heavyRing), lead = rc & 0xffff, have = lead ? TC[lead] : 0; o.have = have;
-          if (have >= o.weight && lead === o.holdTeam) o.hold += sdt; else { o.holdTeam = have >= o.weight ? lead : 0; o.hold = 0; }
-          if (o.hold >= EN.heavyHold) openHeavy(o, S.teams[lead]);
+          const lead = holdStep(o, EN.villageRing, o.gar, 0, sdt); if (lead) joinVillage(o, S.teams[lead]);
+        } else if (o.type === "forge") { // M3b placeholder (SPEC-v3 §3: the heavy-chest branch became the forge branch): intent rule, price, floor, pay walk
         } else if (o.type === "bandit") {
           if (o.fn > 0) { const x = o.fx / o.fn, y = o.fy / o.fn; G.noiseAt(8, o.vs, x, y); if (S.fogOn && o.vs !== 1 && !PS.fog.sees(1, x, y)) G.clashPing(x, y, false); } // bandit fights make clash noise (SPEC-v2 §5, §7)
           o.fn = 0; o.fx = 0; o.fy = 0;
@@ -240,28 +230,72 @@
         }
       }
     }
+    // capture by ring hold (SPEC-v2 §8 village rule, SPEC-v3 §3 for every site): the lead team in the ring (most agents; remnants in their
+    // escape window never count; a tie goes to the lower team id) takes it at once with >= need, else after max(villageMin, villageStep x
+    // (need - have)); any other team's agent in the ring pauses the timer; a new lead restarts it. exclude: a team that never captures here
+    // (the owner of an owned site: its agents in the ring only pause a rival). Returns the captor's id, else 0. Leaves the counts in TC.
+    function holdStep(o, ring, need, exclude, sdt) {
+      const EN = cfgOf().encampments, rc = ringCount(o.x, o.y, ring), lead = rc & 0xffff, rival = rc >> 16, have = lead ? TC[lead] : 0; o.have = have;
+      if (!lead || lead === exclude) { o.holdTeam = 0; o.prog = 0; return 0; }
+      if (lead !== o.holdTeam) { o.holdTeam = lead; o.prog = 0; }
+      if (have >= need) o.prog = 1; else if (!rival) o.prog += sdt / Math.max(EN.villageMin, EN.villageStep * (need - have)); // a rival in the ring pauses the timer
+      return o.prog >= 1 ? lead : 0;
+    }
+    // the need a rival sees on a site (SPEC-v3 §3): a mill max(structures.guardMin, banked) (a neutral mill: guardMin)
+    const needOf = (o, bank) => Math.max(ST().guardMin, bank);
+    // one site per scan tick (SPEC-v3 §3). Mill: +1 banked every mill.every s while its owner lives, up to mill.cap; captured by ring hold at
+    // needOf (the owner never captures its own); collected by >= mill.collectMin owner agents in the ring for mill.collectHold s (walking
+    // through collects; a rival in the ring does not stop the owner collecting)
+    function siteTick(o, sdt) {
+      const M = ST().mill, t = o.owner ? S.teams[o.owner] : null;
+      if (t && t.alive && o.bank < M.cap) { o.bankT += sdt; if (o.bankT >= M.every) { o.bankT -= M.every; o.bank++; } } else o.bankT = 0;
+      const cap = holdStep(o, M.ring, needOf(o, o.bank), o.owner, sdt); if (cap) { takeSite(o, S.teams[cap], "ring"); return; }
+      if (t && o.bank > 0 && TC[o.owner] >= M.collectMin) { o.colT += sdt; if (o.colT >= M.collectHold) { o.colT = 0; payOut(o, t, false); } } else o.colT = 0;
+    }
+    // the bank walks out of the gate through convert() (muster counts, SPEC-v3 §3): one agent per banked recruit while the world is under the
+    // agent cap; the excess stays banked. Logged in S.ev.millPaid[team]. Returns how many walked out.
+    function payOut(o, t, raid) {
+      const R = S.rng; let n = 0;
+      while (o.bank > 0 && S.agents.length < S.cap && n < 200) {
+        const a = G.mkAgent(o.x + (R() - 0.5) * 50, o.y - 6 + (R() - 0.5) * 16, 0); a.hx = a.wx = a.x; a.hy = a.wy = a.y; S.agents.push(a); G.convert(a, t.id, false); o.bank--; n++;
+      }
+      if (!n) return 0;
+      S.ev.millPaid[t.id] += n; S.ev.millCollects++;
+      if (t.isPlayer && !S.aiPlayer && !raid) G.banner("MILL · +" + n, t.color, 1.6, t.id, 1);
+      return n;
+    }
+    // a site changes hands (SPEC-v3 §3). why "ring": a captor takes the bank (raid); "rout": a rout next to it hands it over, bank and all.
+    // The captor knows its own site live (kt); nobody else learns of it until they see it. Logged in S.ev.sites [t, team, from, why, paid].
+    function takeSite(o, t, why) {
+      const from = o.owner; o.owner = t.id; o.kt[t.id] = t.id; o.holdTeam = 0; o.prog = 0; o.colT = 0; o.bankT = 0;
+      const paid = why === "ring" ? payOut(o, t, true) : 0; o.kb[t.id] = o.bank;
+      S.ev.sites.push([+S.t.toFixed(1), t.id, from, why, paid]);
+      if (t.isPlayer && !S.aiPlayer) G.banner("MILL TAKEN" + (paid ? " · +" + paid : ""), t.color, 2.2, t.id, 2);
+      else if (from === 1 && G.playerSees(o.x, o.y)) G.banner("MILL LOST", "#FF7A6E", 2.2, 0, 2);
+      else if (G.playerSees(o.x, o.y)) G.banner(t.name.toUpperCase() + " TAKES A MILL", t.color, 1.8, 0, 0);
+    }
+    // SPEC-v3 §3 rout flip: a rout whose contact centroid lies within structures.routFlipRadius of a site the loser owns hands it to the winner
+    function routFlip(loser, winner, cx, cy) {
+      if (!SON()) return 0; const r2 = ST().routFlipRadius * ST().routFlipRadius; let n = 0;
+      for (const o of S.objs) if (o.site && o.owner === loser.id && (o.x - cx) * (o.x - cx) + (o.y - cy) * (o.y - cy) <= r2) { takeSite(o, winner, "rout"); n++; }
+      return n;
+    }
+    // SPEC-v3 §3 elimination (structures.neutralOnElim): the team's sites go neutral with nothing banked
+    function onElim(t) {
+      if (!SON() || !ST().neutralOnElim) return;
+      for (const o of S.objs) if (o.site && o.owner === t.id) { o.owner = 0; o.bank = 0; o.bankT = 0; o.colT = 0; S.ev.sites.push([+S.t.toFixed(1), 0, t.id, "elim", 0]); }
+    }
     // a village joins: its garrison walks out of the gate and converts through convert() (muster counts, rout rules), a cheer within
-    // encampments.cheer px of your swarm whether you see it or not (a tell through the dark)
+    // encampments.cheer px of your swarm whether you see it or not (a tell through the dark). v3: it stays as the joiner's mill (SPEC-v3 §3)
     function joinVillage(v, t) {
       v.live = false; v.owner = t.id; v.opened = S.t; taken(v, t);
+      if (SON()) { v.site = "mill"; v.bank = 0; v.bankT = 0; v.colT = 0; v.holdTeam = 0; v.prog = 0; v.kt[t.id] = t.id; v.kb[t.id] = 0; if (t.isPlayer && !S.aiPlayer && !S._hintMill) S._hintMill = 1; }
       for (const a of v.agents) { if (a.dead || a.team !== 0) continue; a.gar = false; a.x = v.x + (S.rng() - 0.5) * 50; a.y = v.y - 6 + (S.rng() - 0.5) * 16; a.hx = a.wx = a.x; a.hy = a.wy = a.y; G.convert(a, t.id, false); }
       v.agents.length = 0;
       const pl = S.teams[1], ch = cfgOf().encampments.cheer;
       if (pl && pl.count > 0 && (v.x - pl.cx) * (v.x - pl.cx) + (v.y - pl.cy) * (v.y - pl.cy) <= ch * ch) PS.audio.cheer();
       if (t.isPlayer && !S.aiPlayer) G.banner("+" + v.gar + " VILLAGE JOINS YOU", t.color, 2.4, t.id, 2);
       else if (G.playerSees(v.x, v.y)) G.banner("A VILLAGE JOINS " + t.name.toUpperCase(), t.color, 1.8, 0, 0);
-    }
-    // a heavy chest opens for the team that held weight peasants in its ring for heavyHold s: weight < encampments.heavyPick2 grants its relic;
-    // heavier ones lay two relics of different axes on the ground, and the first one walked onto takes the pair
-    function openHeavy(h, t) {
-      const EN = cfgOf().encampments; h.live = false; h.opened = S.t; h.owner = t.id; taken(h, t);
-      if (h.weight < EN.heavyPick2) grant(t, h.axis, false, "heavy", h.x, h.y);
-      else {
-        const k = AXES.indexOf(h.axis), b = AXES[(k + 1 + ((S.rng() * 2) | 0)) % 3], r1 = relicAt(h.x - 34, h.y + 26, h.axis, false, "heavy", Infinity), r2 = relicAt(h.x + 34, h.y + 26, b, false, "heavy", Infinity);
-        r1.pair = r2; r2.pair = r1; r1.kn[t.id] = r2.kn[t.id] = 1;
-        if (t.isPlayer && !S.aiPlayer) G.banner("PICK ONE", "#F6CF6A", 2, 0, 2);
-      }
-      if (G.fxOk(h.x, h.y)) { G.burst(h.x, h.y - 10, "#F6CF6A", 18, 140, 0.7, 3, 160); PS.audio.chest(); }
     }
     // a routed leader (the biggest swarm when it lost a rout group of at least progression.dropMinShare of itself) drops every tier as a relic
     // scattered progression.dropScatter px round the contact, each living progression.relicLife s; Arms drops may reach III
@@ -278,13 +312,15 @@
     function observe(o) {
       for (const b of S.objs) {
         if (!PS.fog.seesCell(o, PS.fog.cellOf(b.x, b.y))) continue;
-        b.kn[o] = b.live ? 1 : 0;
-        if (o === 1) { const k = b.sk; k.seen = true; k.live = b.live; k.team = b.owner; k.n = b.type === "bandit" ? b.n : b.type === "village" ? b.gar : b.type === "heavy" ? b.have : 0; }
+        b.kn[o] = b.live ? 1 : 0; if (b.site) { b.kt[o] = b.owner; b.kb[o] = b.bank; } // v3: owner and bank as last seen (SPEC-v3 §3)
+        if (o === 1) { const k = b.sk; k.seen = true; k.live = b.live; k.team = b.owner; k.n = b.type === "bandit" ? b.n : b.site ? b.bank : b.type === "village" ? b.gar : 0; }
       }
     }
     // AI forage (SPEC-v2 §7, §8): value / (path distance + 120) x the personality's treasure bias over the objectives within ai.objectiveSight it
     // believes are live (seen live, or a landmark it has not seen taken), feasible on count x power: village when count >= garrison, bandit
-    // camp when count x power >= ai.banditFeasible x its bandits, heavy chest when count >= weight, a relic or chest it can use always.
+    // camp when count x power >= ai.banditFeasible x its bandits, a relic or chest it can use always. v3 mills (SPEC-v3 §3, the minimal M3a
+    // objective; per-personality structBias is M3b): its own mill once the bank it knows reaches ai.millCollectAt (ai.objMill per banked
+    // recruit), and a mill it has seen owned by someone else (or neutral) when count >= the need it saw (ai.objMill x that need).
     // Skips any within ai.campAvoidRadius of a swarm it sees at >= ai.campAvoidRatio x its own (VB list). Writes AP (score, x, y, obj).
     const AP = { score: 0, x: 0, y: 0, obj: null };
     // v3 probe lever ai.siteKnowRadius (0 = v2: every landmark known from the start): a landmark is known within that many px of the team's
@@ -296,12 +332,15 @@
     function aiPick(t, dist, pw, bias, nVB, VBX, VBY) {
       const AI = cfgOf().ai, os2 = AI.objectiveSight * AI.objectiveSight, av2 = AI.campAvoidRadius * AI.campAvoidRadius; AP.score = 0; AP.obj = null;
       for (const o of S.objs) {
-        const k = o.kn[t.id]; if (k === 0 || (k < 0 && !(o.landmark && landKnown(t, o)))) continue;
+        const k = o.kn[t.id], kt = o.kt[t.id]; if (kt < 0 && (k === 0 || (k < 0 && !(o.landmark && landKnown(t, o))))) continue;
         const dx = o.x - t.ax, dy = o.y - t.ay; if (dx * dx + dy * dy > os2) continue;
         let v = 0;
-        if (o.type === "relic" || o.type === "chest") { if (!canTake(t, o.axis, o.t3)) continue; v = AI.objRelic; }
+        if (kt >= 0) { // a site it has seen as one (or took): its own live, any other as last seen
+          if (!SON()) continue; const bank = o.owner === t.id ? o.bank : o.kb[t.id];
+          if (kt === t.id) { if (bank < AI.millCollectAt) continue; v = AI.objMill * bank; } else { const need = needOf(o, bank); if (t.count < need) continue; v = AI.objMill * need; }
+        }
+        else if (o.type === "relic" || o.type === "chest") { if (!canTake(t, o.axis, o.t3)) continue; v = AI.objRelic; }
         else if (o.type === "village") { if (t.count < o.gar) continue; v = AI.objVillage * o.gar; }
-        else if (o.type === "heavy") { if (t.count < o.weight || !canTake(t, o.axis, false)) continue; v = AI.objHeavy; }
         else if (o.type === "bandit") { if (pw < AI.banditFeasible * o.n0 || !canTake(t, o.axis, o.t3)) continue; v = AI.objBandit; }
         let skip = false; for (let q = 0; q < nVB; q++) if ((VBX[q] - o.x) * (VBX[q] - o.x) + (VBY[q] - o.y) * (VBY[q] - o.y) < av2) { skip = true; break; }
         if (skip) continue;
@@ -310,7 +349,8 @@
       return AP.obj ? AP : null;
     }
     // knowledge assert (SPEC-v2 §7): an objective an AI targets must be a landmark or one it has seen live
-    function knowObj(t, o) { const K = S.fogS.ai; K.decisions++; K.objectives++; if (!(o.landmark && landKnown(t, o)) && o.kn[t.id] !== 1) G.knowFail(t, o.type + " at " + Math.round(o.x) + "," + Math.round(o.y)); }
+    // v3 (SPEC-v3 §3): a site it targets as a mill (kt >= 0) is one it has seen as a mill or took itself (aiPick reads nothing else there)
+    function knowObj(t, o) { const K = S.fogS.ai; K.decisions++; K.objectives++; if (o.kt[t.id] < 0 && !(o.landmark && landKnown(t, o)) && o.kn[t.id] !== 1) G.knowFail(t, o.type + " at " + Math.round(o.x) + "," + Math.round(o.y)); }
 
     // ---------------------------------------------------------------- render: ring and camp dirt under everything, props in the y-sort,
     // numbers over the agents. Under fog each objective shows only once you have seen it, in the state you last saw (sk).
@@ -322,9 +362,9 @@
         if (!inView(o, x0, y0, x1, y1, 120) || (gate && !o.sk.seen && !vis(o, gate))) continue;
         const live = vis(o, gate) ? o.live : o.sk.live;
         if (o.type === "bandit") { const im = spr.camps[1]; ctx.drawImage(im, snapA(o.x) - im.width * 1.5, snapA(o.y) - im.height * 1.5, im.width * 3, im.height * 3); }
-        if (!live || (o.type !== "village" && o.type !== "heavy")) continue;
-        const r = o.type === "village" ? EN.villageRing : EN.heavyRing;
-        ctx.globalAlpha = 0.35; ctx.strokeStyle = "#F1EEDF"; ctx.lineWidth = 2; ctx.setLineDash(RDASH); ctx.beginPath(); ctx.arc(o.x, o.y, r, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash(NODASH); ctx.globalAlpha = 1;
+        if (o.type !== "village" || !(live || SON())) continue; // v3: a mill keeps its ring (SPEC-v3 §6), in its owner's colour as last seen
+        const r = live ? EN.villageRing : ST().mill.ring, tm = live ? 0 : vis(o, gate) ? o.owner : o.sk.team;
+        ctx.globalAlpha = 0.35; ctx.strokeStyle = tm && S.teams[tm] ? S.teams[tm].color : "#F1EEDF"; ctx.lineWidth = 2; ctx.setLineDash(RDASH); ctx.beginPath(); ctx.arc(o.x, o.y, r, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash(NODASH); ctx.globalAlpha = 1;
       }
     }
     const RDASH = [6, 6], NODASH = [], snapA = (v) => ((v * 0.5) | 0) * 2;
@@ -332,23 +372,39 @@
     function drawProp(ctx, o, gate) {
       const sp = S.spr.spoils, seen = vis(o, gate), live = seen ? o.live : o.sk.live, x = snapA(o.x), y = snapA(o.y), T = S.t;
       if (!seen) ctx.globalAlpha = 0.85;
-      if (o.type === "village") { const im = sp.village[live ? 0 : 1]; ctx.drawImage(im, x - 48, y - 80, 96, 80); const tm = seen ? o.owner : o.sk.team; if (!live && tm && S.teams[tm]) { ctx.fillStyle = "#3E2A1C"; ctx.fillRect(x + 12, y - 58, 2, 28); ctx.fillStyle = S.teams[tm].color; ctx.fillRect(x + 14, y - 58, 12, 8); } }
+      if (o.type === "village") { const im = sp.village[live ? 0 : 1]; ctx.drawImage(im, x - 48, y - 80, 96, 80); const tm = seen ? o.owner : o.sk.team; if (!live && tm && S.teams[tm]) { ctx.fillStyle = "#3E2A1C"; ctx.fillRect(x + 12, y - 58, 2, 28); ctx.fillStyle = S.teams[tm].color; ctx.fillRect(x + 14, y - 58, 12, 8); }
+        if (!live && SON()) sails(ctx, x - 20, y - 56, seen && tm ? T * 1.6 + o.id : 0.4); } // v3 mill (SPEC-v3 §3, §6): sails turn while it works for an owner you see
       else if (o.type === "chest") { const im = sp.chest[live ? 0 : 1]; ctx.drawImage(im, x - 12, y - 18, 24, 20); if (live) { const ic = sp.relics[o.axis].icon; ctx.drawImage(ic, x - 8, y - 38 + (seen ? Math.round(Math.sin(T * 3 + o.id) * 2) : 0), 16, 16); if (seen && ((T * 1.3 + o.id) % 2) < 0.25) { ctx.fillStyle = "#FFF6D0"; ctx.fillRect(x + 4, y - 16, 2, 2); } } }
-      else if (o.type === "heavy") { const im = sp.heavy[live ? 0 : 1]; ctx.drawImage(im, x - 18, y - 26, 36, 28); if (live) { const ic = sp.relics[o.axis].icon; ctx.drawImage(ic, x - 8, y - 46, 16, 16); } }
       else if (o.type === "relic") { ctx.drawImage(sp.scroll, x - 10, y - 14, 20, 16); const ic = sp.relics[o.axis].icon, bob = seen ? Math.round(Math.sin(T * 4 + o.id) * 3) : 0; if (seen) { ctx.globalAlpha = 0.25 + 0.15 * Math.sin(T * 5); ctx.fillStyle = sp.relics[o.axis].color; ctx.beginPath(); ctx.arc(x, y - 26 + bob, 14, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; } ctx.drawImage(ic, x - 12, y - 38 + bob, 24, 24); }
       else if (o.type === "bandit") { const im = sp.tent; ctx.drawImage(im, x - 20, y - 30, 40, 32); if (live) { ctx.fillStyle = KCOL[o.kind]; ctx.fillRect(x - 1, y - 40, 8, 6); ctx.fillRect(x - 1, y - 34, 4, 2); } }
       ctx.globalAlpha = 1;
     }
-    // numbers over the agents: the garrison on a village gate, "have/need" on a heavy chest ring (your count once you stand in it), bandits
-    // left in a camp; all last-seen under fog. Your village and heavy-chest progress arcs while you hold the ring.
+    // the mill's four sails on the left hut's roof (render only, no allocation): a dark stroke under a light one
+    function sails(ctx, hx, hy, a) {
+      ctx.lineCap = "butt";
+      for (let pass = 0; pass < 2; pass++) {
+        ctx.strokeStyle = pass ? "#E8DCC0" : "#2A1C10"; ctx.lineWidth = pass ? 3 : 5; ctx.beginPath();
+        for (let k = 0; k < 4; k++) { const b = a + k * 1.5708, c = Math.cos(b), s2 = Math.sin(b); ctx.moveTo(hx + c * 3, hy + s2 * 3); ctx.lineTo(hx + c * 17, hy + s2 * 17); }
+        ctx.stroke();
+      }
+      ctx.fillStyle = "#3E2A1C"; ctx.fillRect(hx - 2, hy - 2, 4, 4);
+    }
+    // numbers over the agents: the garrison on a village gate, bandits left in a camp; all last-seen under fog. Your village progress arcs
+    // while you hold the ring. v3 mill (SPEC-v3 §3): your own shows its bank in your colour (your collect arc while you stand in it); anyone
+    // else's shows the need a rival faces, max(guardMin, bank), with your capture arc.
     function drawOver(ctx, gate, x0, y0, x1, y1) {
       const EN = cfgOf().encampments; ctx.font = "800 12px 'Nunito', system-ui"; ctx.textAlign = "center";
       for (const o of S.objs) {
         if (o.type === "relic" || o.type === "chest" || !inView(o, x0, y0, x1, y1, 60)) continue;
-        const seen = vis(o, gate); if (gate && !seen && !o.sk.seen) continue; const live = seen ? o.live : o.sk.live; if (!live) continue;
+        const seen = vis(o, gate); if (gate && !seen && !o.sk.seen) continue; const live = seen ? o.live : o.sk.live;
         let txt = "", col = "#F1EEDF", ly = o.y - 8;
-        if (o.type === "village") { txt = String(o.gar); ly = o.y - 14; if (seen && o.holdTeam === 1 && o.prog > 0) arc(ctx, o.x, o.y, EN.villageRing, o.prog, S.teams[1].color); }
-        else if (o.type === "heavy") { const have = seen ? o.have : o.sk.n; txt = have + "/" + o.weight; col = have >= o.weight ? "#7CF2C4" : "#F1EEDF"; ly = o.y + 22; if (seen && o.holdTeam === 1 && o.hold > 0) arc(ctx, o.x, o.y, EN.heavyRing, o.hold / EN.heavyHold, S.teams[1].color); }
+        if (!live) {
+          if (o.type !== "village" || !SON()) continue;
+          const M = ST().mill, tm = seen ? o.owner : o.sk.team, bank = seen ? o.bank : o.sk.n; ly = o.y + 22;
+          if (tm === 1) { txt = String(bank); col = S.teams[1].color; if (seen && o.colT > 0) arc(ctx, o.x, o.y, M.ring, o.colT / M.collectHold, S.teams[1].color); }
+          else { txt = String(needOf(o, bank)); if (seen && o.holdTeam === 1 && o.prog > 0) arc(ctx, o.x, o.y, M.ring, o.prog, S.teams[1].color); }
+        }
+        else if (o.type === "village") { txt = String(o.gar); ly = o.y - 14; if (seen && o.holdTeam === 1 && o.prog > 0) arc(ctx, o.x, o.y, EN.villageRing, o.prog, S.teams[1].color); }
         else if (o.type === "bandit") { txt = String(seen ? o.n : o.sk.n); col = KCOL[o.kind]; ly = o.y + 16; }
         const w = ctx.measureText(txt).width + 10; ctx.globalAlpha = seen ? 0.95 : 0.6; ctx.fillStyle = "rgba(8,14,6,.8)"; ctx.fillRect(o.x - w / 2, ly - 12, w, 16); ctx.fillStyle = col; ctx.fillText(txt, o.x, ly); ctx.globalAlpha = 1;
       }
@@ -361,7 +417,7 @@
         if (o.type === "village") { const tm = vis(o, gate) ? o.owner : o.sk.team; mctx.fillStyle = "#15110C"; mctx.fillRect(x - 3, y - 3, 6, 6); mctx.fillStyle = !live && tm && S.teams[tm] ? S.teams[tm].color : "#B08A48"; mctx.fillRect(x - 2, y - 2, 4, 4); }
         else if (!live) continue;
         else if (o.type === "bandit") { mctx.fillStyle = "#15110C"; mctx.fillRect(x - 3, y - 3, 6, 6); mctx.fillStyle = KCOL[o.kind]; mctx.fillRect(x - 2, y - 2, 4, 4); }
-        else { mctx.fillStyle = "#15110C"; mctx.fillRect(x - 2, y - 2, 5, 5); mctx.fillStyle = o.type === "heavy" ? "#C9D6E2" : S.spr.spoils.relics[o.axis].color; mctx.fillRect(x - 1, y - 1, 3, 3); }
+        else { mctx.fillStyle = "#15110C"; mctx.fillRect(x - 2, y - 2, 5, 5); mctx.fillStyle = S.spr.spoils.relics[o.axis].color; mctx.fillRect(x - 1, y - 1, 3, 3); }
       }
     }
     // the banner bearer's horn (Horn I-II) and dust puffs from Boots (a few per second at the feet of a moving swarm you can see)
@@ -399,12 +455,13 @@
       const out = [], gate = G.fogGate();
       for (const o of S.objs) {
         const v = vis(o, gate); if (gate && !v && !o.sk.seen) continue; const live = v ? o.live : o.sk.live;
-        out.push({ type: o.type, x: Math.round(o.x), y: Math.round(o.y), live, visible: v, axis: o.axis, t3: o.t3, need: o.type === "village" ? o.gar : o.type === "heavy" ? o.weight : o.type === "bandit" ? (v ? o.n : o.sk.n) : 0, kind: o.kind });
+        const mill = !live && o.type === "village" && SON(), owner = mill ? (v ? o.owner : o.sk.team) : 0, bank = mill ? (v ? o.bank : o.sk.n) : 0; // v3: a mill as last seen (SPEC-v3 §3)
+        out.push({ type: o.type, x: Math.round(o.x), y: Math.round(o.y), live, visible: v, axis: o.axis, t3: o.t3, need: mill ? (owner === 1 ? 0 : needOf(o, bank)) : o.type === "village" ? o.gar : o.type === "bandit" ? (v ? o.n : o.sk.n) : 0, kind: o.kind, mill, owner, bank });
       }
       return out;
     }
     const tierSum = (t) => (t && t.tier ? t.tier.arms + t.tier.boots + t.tier.horn : 0);
     return { stage, reset, initTeam, applyTiers, grant, canTake, onConvert, place, blocks, relicAt, tick, leaderDrop, observe, aiPick, knowObj, drawGround, pushProps, drawProp, drawOver,
-      minimap, drawHorn, dust, hud, playerView, tierSum, tables, restyle, joinVillage, openHeavy, AXES, KCOL };
+      minimap, drawHorn, dust, hud, playerView, tierSum, tables, restyle, joinVillage, holdStep, takeSite, routFlip, onElim, needOf, AXES, KCOL };
   };
 })();
