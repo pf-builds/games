@@ -117,7 +117,7 @@ into-the-fold/
   src/rules.js       PURE rules engine, no DOM; UMD so Node and browser share it
   src/solver.js      PURE BFS solver (uses rules.js)
   src/sym.js         8 board symmetries (pure)
-  src/save.js        versioned save (key "intothefold.save.v1"), sanitize/clamp every field on load
+  src/save.js        versioned save (key "intothefold.save.v1"), sanitize/clamp every field on load (M1: tutorialSeen only)
   src/daily.js       date → puzzle #N → board (pure given a date)
   src/render.js      canvas drawing + sprite caches
   src/audio.js       WebAudio synth
@@ -126,7 +126,7 @@ into-the-fold/
   tools/gen.js       random board generator + accept filter
   tools/report.js    par-distribution report → tools/par-report.md
   tools/bake.js      deterministic seeded bake → levels/*.json (a below-band fallback never throws)
-  tools/test.js      node unit checks for rules + solver
+  tools/test.js      node unit checks for rules, solver, daily picker, save and the game state machine
 ```
 
 - Run Node with `~/.local/opt/node/bin/node`.
@@ -144,6 +144,22 @@ into-the-fold/
 - `tick(now)`: a manual frame step for hidden tabs.
 - `setDate("YYYY-MM-DD")`: overrides "today" for date-rollover tests.
 - `selfTest()`: loads 20 baked dailies spread across the weekdays, plays each solver solution through `ITF.swipe`, and asserts a win at exactly par. It also asserts undo/restart counting, splash counting, the no-direction share text, and that the save is byte-identical after `solve()`. It returns `{pass, failures[]}`. The run happens on a scratch save namespace, so it never touches the player's real save.
+
+**M1 builder decisions (2026-09-26)**
+- **Dates before launch** play launch day's board as #1 (header "#1 · Monday"), so the page never shows #0 and the weekday label always matches the pool. `config.launchDate` is 2026-09-28 for now.
+- **Rollover:** a finished or untouched daily swaps to the new date at once (checked at most once per second in the frame loop, plus `focus`/`visibilitychange`). A daily in progress keeps going until the page is hidden and shown again, so the board is never swapped under a live swipe.
+- **State commits when an action applies; animation only replays it.** One action is queued during an animation. If one is already queued, the running animation snaps to its end, the queued action applies and the new one takes the slot, so no input is ever dropped. The page and `ITF` share one facade, `act()` → `game.input()`.
+- **Timing** (`config.anim`): constant speed within a swipe (ease-out per sheep, `cellMs` 48, longest slide capped at `slideMaxMs` 270) + `stopMs` 110 squash = 380 ms max. Splash: slide ≤ 170 + hold 110 + rewind 120 = 400 ms. Undo glides back (≤ 270 ms). Restart snaps.
+- A splash leaves the board unchanged, so it pushes no undo state; Undo after a splash steps back to the last real board.
+- **Restart confirm** is an in-page panel (never `window.confirm`), shown only on a daily with swipes > 0 that isn't already at the start. R opens it; Y / N / Esc answer; the buttons are Restart / Keep playing. Tutorial restarts need no confirm.
+- Keys with Cmd/Ctrl/Alt are ignored (Cmd+R must reload, not restart). Key repeat is ignored except for undo.
+- **HUD medal target** shows the best medal still reachable ("🥇 ≤ 7", then "🥈 ≤ 10", then "🥉"); after a win it shows the medal earned.
+- **Help** replays the tutorial without discarding the daily: the daily's game stays in memory keyed by puzzle #N, so Help → tutorial → "Back to today" can't reset the swipe count. `tutorialSeen` is written on Skip or when board 3's result shows.
+- **Result panel (M1):** medal, "N swipes · par P", "A new flock arrives at midnight.", How to play. Tutorial: Next / Play again, then "Play today's flock". M2 fills `#res-extra` (share, stats, countdown, Practice).
+- Pens show a faint ghost sheep of their colour while empty; the gate stands open (pointing out of the open side) and swings shut when a sheep is penned. The black pen has a slate floor, the white pen straw.
+- `config.json` is fetched with its own `?v=` (a constant in main.js); the level files carry `config.dataVersion`, which a rebake bumps.
+- **selfTest (M1):** the daily picker (launch = #1, pre-launch = #1, past-horizon symmetry, determinism); 20 dailies at launch + 41·i days (all 7 weekdays, 2 past the horizon under symmetry) solved in-page from the start via `ITF.solve()` and played through `ITF.swipe`, asserting a win at exactly par, plus the baked `sol` replayed through rules; undo/restart never refund and never count; `solve()` leaves the live game unchanged; a splash counts, logs `s`, and leaves the board as it was; a no-op is free; three rapid swipes inside one slide all land. It runs on scratch games and a memory save, on a virtual clock through `ITF.tick`, then asserts the player's stored save is byte-identical. About 0.2 s. The share-text check lands with share in M2.
+- `window.ITF` also has `tutorial(i)`, and `setDate(null)` clears the override.
 
 ## 9. Studio checklist (every milestone)
 

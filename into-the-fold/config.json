@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "dataVersion": "1-20261001-105",
+  "launchDate": "2026-09-28",
+  "medals": [
+    { "id": "gold", "name": "Gold fleece", "emoji": "🥇", "maxOverPar": 0 },
+    { "id": "silver", "name": "Silver", "emoji": "🥈", "maxOverPar": 3 },
+    { "id": "bronze", "name": "Bronze", "emoji": "🥉", "maxOverPar": null }
+  ],
+  "anim": {
+    "cellMs": 48,
+    "slideMaxMs": 270,
+    "stopMs": 110,
+    "squash": 0.26,
+    "splashSlideMaxMs": 170,
+    "splashHoldMs": 110,
+    "splashRewindMs": 120,
+    "bumpMs": 160,
+    "bumpPx": 7,
+    "resultDelayMs": 380
+  },
+  "input": { "swipePx": 24 },
+  "board": { "maxCssPx": 560, "fenceCells": 0.42, "sheepScale": 0.9, "pennedScale": 0.8, "ghostAlpha": 0.28 },
+  "dateCheckMs": 1000,
+  "save": { "key": "intothefold.save.v1" },
+  "selfTest": { "boards": 20, "stepDays": 41 }
+}

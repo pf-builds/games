@@ -5,6 +5,9 @@ const R = require("../src/rules.js");
 const Sym = require("../src/sym.js");
 const Solver = require("../src/solver.js");
 const Gen = require("./gen.js");
+const Daily = require("../src/daily.js");
+const Save = require("../src/save.js");
+const Game = require("../src/game.js");
 
 let pass = 0, fail = 0;
 function ok(cond, name) { if (cond) pass++; else { fail++; console.log("FAIL  " + name); } }
@@ -205,12 +208,63 @@ function refPar(b, limit) {
   ok(symChecked > 20 && symOk === symChecked, "sym: par, dead ends and mapped solution invariant under all 8 symmetries (" + symOk + "/" + symChecked + ")");
 }
 
+// ---- daily picker (M1) ---------------------------------------------------------
+{
+  const pools = {}; for (const d of Daily.DAYS) pools[d] = [0, 1, 2].map((i) => board(["w.P", "..."], ["2,0,W,w"])).map((b, i) => Object.assign(b, { id: d + "-" + i, par: 1, sol: "E" }));
+  ok(Daily.dayNumber("1970-01-02") === 1 && Daily.dayNumber("2026-02-30") === null && Daily.dayNumber("26-9-1") === null, "daily: dayNumber parses and rejects");
+  ok(Daily.weekday(Daily.dayNumber("2026-09-28")) === 0 && Daily.weekday(Daily.dayNumber("2026-10-04")) === 6, "daily: 2026-09-28 is a Monday, 2026-10-04 a Sunday");
+  ok(Daily.localDate(new Date(2026, 2, 8, 23, 59)) === "2026-03-08", "daily: localDate uses local calendar fields");
+  const L = "2026-09-28", p = (d) => Daily.puzzleFor(d, L, pools);
+  eq([p(L).n, p(L).day, p(L).board.id, p(L).sym], [1, "mon", "mon-0", 0], "daily: launch day is #1 Monday pool[0]");
+  eq([p("2026-09-20").n, p("2026-09-20").board.id], [1, "mon-0"], "daily: a date before launch plays #1");
+  eq([p("2026-10-04").n, p("2026-10-04").day, p("2026-10-04").board.id], [7, "sun", "sun-0"], "daily: first Sunday is #7, sun pool[0]");
+  eq([p("2026-10-05").board.id, p("2026-10-19").board.id], ["mon-1", "mon-0~s2"], "daily: k counts that weekday; past the horizon, pool[k mod len] under the first dims-keeping symmetry (3x2 test pool: s2)");
+  eq([1, 7, 8, 14].map((c) => Daily.symFor(c, 6, 6)), [1, 7, 1, 7], "daily: symmetry cycles 1..7, never identity again");
+  eq([Daily.symFor(1, 5, 4), Daily.symFor(2, 5, 4), Daily.symFor(3, 5, 4)], [2, 4, 5], "daily: non-square boards only use dims-keeping symmetries");
+  ok(p("2026-10-01").date === "2026-10-01" && Daily.dateString(Daily.dayNumber("2027-01-01")) === "2027-01-01", "daily: dateString round-trips");
+}
+
+// ---- save (M1) --------------------------------------------------------------------
+{
+  eq([Save.sanitize(null), Save.sanitize({ tutorialSeen: "yes", junk: 1 }), Save.sanitize({ tutorialSeen: true })], [{ v: 1, tutorialSeen: false }, { v: 1, tutorialSeen: false }, { v: 1, tutorialSeen: true }], "save: sanitize clamps every field");
+  const m = Save.memoryStore(); m.setItem("k", "{not json"); ok(Save.open(m, "k").data.tutorialSeen === false, "save: a corrupt save loads fresh");
+  const sv = Save.open(m, "k"); sv.data.tutorialSeen = true; sv.write(); ok(Save.open(m, "k").data.tutorialSeen === true, "save: write + reopen round-trips");
+}
+
+// ---- game state machine (M1): facade, queue, undo/restart never refund ------------------
+{
+  const cfg = { anim: { cellMs: 48, slideMaxMs: 270, stopMs: 110, squash: 0.26, splashSlideMaxMs: 170, splashHoldMs: 110, splashRewindMs: 120, bumpMs: 160, bumpPx: 7, resultDelayMs: 380 },
+    medals: [{ id: "gold", maxOverPar: 0 }, { id: "silver", maxOverPar: 3 }, { id: "bronze", maxOverPar: null }] };
+  const b = Object.assign(board(["w....", "..~..", "....P"], ["4,2,N,w"]), { par: 2 });
+  let g = Game.create(cfg, b), t = 0;
+  const tick = () => { t += 1000; Game.frame(g, t); };
+  Game.input(g, "E"); ok(Game.busy(g) && g.swipes === 1, "game: a swipe commits at once and animates");
+  ok(g.anim.total <= 400, "game: a full swipe resolves in <= 400 ms (" + g.anim.total + ")");
+  ok(Game.input(g, "W").queued && g.swipes === 1, "game: input during a slide is queued");
+  Game.input(g, "E"); ok(g.swipes === 2 && g.queue === "E", "game: a third input fast-forwards the queue, none dropped");
+  tick(); ok(!Game.busy(g) && g.queue === null && g.swipes === 3, "game: frame drains the queue on frame time");
+  const d = g.history.length; Game.input(g, "E"); tick(); ok(g.swipes === 3 && g.history.length === d && g.bump.t0 < 0, "game: a no-op is free (and the bump ends)");
+  Game.input(g, "undo"); tick(); Game.input(g, "restart"); tick(); ok(g.swipes === 3 && g.history.length === 1, "game: undo + restart never refund");
+  g = Game.create(cfg, Object.assign(board(["w.~..", ".....", "....P"], ["4,2,N,w"]), { par: 2 }));
+  Game.input(g, "E"); ok(g.swipes === 1 && g.squares === "s" && g.state.sheep[0].x === 0 && g.anim.total <= 400, "game: a splash counts, logs s, keeps the board, fits 400 ms");
+  for (const dir of "SENES") { tick(); Game.input(g, dir); }
+  tick();
+  ok(g.won && g.squares === "swwwwg" && Game.input(g, "W").ignored, "game: win, squares log, input ignored after the win");
+  ok(Game.resultDue(g) && Game.medal(cfg, 4, 2).id === "silver" && Game.medal(cfg, 2, 2).id === "gold" && Game.medal(cfg, 6, 2).id === "bronze", "game: result due, medal thresholds from config");
+  const g2 = Game.create(cfg, board(["w..w.", ".....", "P...P"], ["0,2,N,w", "4,2,N,w"]));
+  Game.input(g2, "E"); Game.frame(g2, 5000); // one sheep to the east fence; solve from there, not from the start
+  const before = JSON.stringify(g2.state); const sv = Game.solveFrom(g2, Solver);
+  let s2 = g2.state; for (const dir of sv.solution || "") s2 = R.swipe(g2.B, s2, dir).state;
+  ok(sv.solved && sv.par === sv.solution.length && R.isWin(g2.B, s2) && JSON.stringify(g2.state) === before, "game: solveFrom solves the CURRENT state on a clone (par " + sv.par + ")");
+}
+
 // ---- UMD: the same files load as browser globals (no module/require), in page script order ----
 {
   const vm = require("vm"), fs = require("fs"), path = require("path"), ctx = vm.createContext({});
-  for (const f of ["rules.js", "sym.js", "solver.js"]) vm.runInContext(fs.readFileSync(path.join(__dirname, "../src", f), "utf8"), ctx, { filename: f });
+  for (const f of ["rules.js", "sym.js", "solver.js", "daily.js", "save.js", "game.js"]) vm.runInContext(fs.readFileSync(path.join(__dirname, "../src", f), "utf8"), ctx, { filename: f });
   const F = ctx.IntoTheFold, s = F && F.solver.solve({ w: 5, h: 3, rows: ["w....", ".....", "....P"], pens: [{ x: 4, y: 2, open: "N", c: "w" }] });
   ok(F && F.rules && F.sym && s && s.par === 2 && F.sym.mapDir(1, "N") === "E", "UMD: window.IntoTheFold.rules/sym/solver work without require");
+  ok(F.daily && F.save && F.game && typeof F.game.input === "function", "UMD: daily/save/game load as browser globals too");
 }
 
 // ---- baked levels (skipped until tools/bake.js has run) ------------------------
