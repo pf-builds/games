@@ -5,7 +5,7 @@
 (function () {
   "use strict";
   const NS = window.IntoTheFold, R = NS.rules, Solver = NS.solver, Daily = NS.daily, Save = NS.save, Game = NS.game, Render = NS.render, Audio = NS.audio;
-  const CONFIG_V = 4; // config.json's own ?v=; the levels carry config.dataVersion
+  const CONFIG_V = 5; // config.json's own ?v=; the levels carry config.dataVersion
   const DEBUG = /[?&]debug=1(&|$)/.test(location.search);
   const $ = (id) => document.getElementById(id);
   const KEYS = { ArrowUp: "N", ArrowRight: "E", ArrowDown: "S", ArrowLeft: "W", w: "N", d: "E", s: "S", a: "W", z: "undo", Backspace: "undo", r: "restart" };

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "dataVersion": "1-20261001-105-r3",
-  "launchDate": "2026-09-28",
+  "launchDate": "2026-09-26",
   "medals": [
     {"id": "gold", "name": "Gold fleece", "emoji": "🥇", "maxOverPar": 0},
     {"id": "silver", "name": "Silver", "emoji": "🥈", "maxOverPar": 3},
