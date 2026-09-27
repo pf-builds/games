@@ -7,7 +7,7 @@ Ideas and parked items. Nothing here is in v1.
 - Endless generated levels.
 - Goblin repairers that rebuild a tile each turn.
 - A level editor.
-- Hints, including a "no way through from here" notice when the solver says the position is lost.
+- Hints, including a "no way through from here" notice when the solver says the position is lost. (M1: `Game.solveFrom` already answers it in well under a millisecond on these boards.)
 - CrazyGames SDK (reuse Peasant Swarm's portal kit once it's on GitHub).
 - More materials.
 - (M0) A second difficulty proxy for Worlds 3–4, where random win sits on the floor: the share of first moves that keep a win alive, or the lost-state ratio along the optimal line.
@@ -17,3 +17,9 @@ Ideas and parked items. Nothing here is in v1.
 - (M0b) Deliberate lever cascades in World 4 (cut from M0b): make the middle-curtain arc behind lever 1 an iron gate (door 2), with lever 2 a courtyard tile touching door 2 in another yard. Reaching that yard throws lever 2 → door 2 → lever 1 → door 1 in one derive.
 - (M0b) Deeper World 1 within stone and timber: min 3 needs a structure that makes two-material scarcity bite (0-4% of castle boards today). One idea is a 2-thick outer curtain with one material per layer on 8×8 only. Another is a later World 1 level that deliberately teaches a single-crew muster ("three masons, find the stone route").
 - (M0b) A stronger World 2 pool: 36 accepted from 1,600 boards. Try the 2-wide courtyard plan more often, or relax the greedy rule for its first two baked levels.
+- (M1) A generator rule against permanently unreachable decoys (a section sealed by moat, seen on the old bake's w3-07). M2 renders such sections as scenery (SPEC §7); the final bake has none, but the generator should never make one.
+- (M1) Real names for baked levels: "The Hedge Garden 2" repeats the world name in the top bar. Levels are final for v1, so this is a names-only pass on `levels/levels.json` later.
+- (M2) A richer goblin march: crews cheer at the keep, the goblin drops the crown, a short chase to the edge.
+- (M2) Lever cascades animated in derive order (today every lever a break exposes clanks together, then every door it opens).
+- (M2) Per-world banner scenery (hedge rows in World 2, ice floes in World 3) and an ambient music loop.
+- (M2) A clearer pickaxe badge at the smallest cell sizes (it reads, but it is the weakest of the five icons).

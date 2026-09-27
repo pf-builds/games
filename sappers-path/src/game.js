@@ -7,7 +7,7 @@
 //   blocked   the tapped section is out of reach: it shakes, the walls in the way flash (see blockers())
 //   empty     that crew has none left: its card flashes at 0          break    a section was broken (a move)
 //   iron      an iron door: only levers open it (it shakes)           clear    ground, moat, keep or rubble: pick cleared
-//   over      the level is already won
+//   over      the level is already won                                  scenery  a section nothing can ever reach (see scenery())
 (function (root, factory) {
   const E = typeof module === "object" && module.exports ? require("./engine.js") : root.SappersPath.engine;
   const api = factory(E);
@@ -25,12 +25,26 @@
     for (let i = 0; i < 4; i++) if (B.muster[i] > 0) present[i] = 1;
     for (let i = 0; i < B.chestCrew.length; i++) present[B.chestCrew[i]] = 1;
     return {
-      L, B, cfg, st: E.start(B), pick: -1, ver: 0, endT: -1, present, events: [],
+      L, B, cfg, st: E.start(B), pick: -1, ver: 0, endT: -1, present, events: [], scenery: scenery(B),
       fx: { pulseS: -1, pulseT: NEVER, shakeS: -1, shakeT: NEVER, flash: new Int16Array(B.nsec), flashN: 0, flashT: NEVER,
         cardM: -1, cardT: NEVER, crumbleS: -1, crumbleT: NEVER },
       // blockers() scratch: allocated once per level, so a tap allocates nothing but its event.
       bfs: { dist: new Int16Array(n), par: new Int32Array(n), a: new Int32Array(n * 4), b: new Int32Array(n * 4), seen: new Uint8Array(B.nsec) },
     };
+  }
+
+  // SPEC §7 (M2) scenery rule: a section is scenery if no tile of it can ever be exposed, even with unlimited crews and
+  // every lever thrown. Flood from the board edge through every cell that can ever be open (ground, chests and every
+  // wall, iron included); moat, levers and the keep block. A section with no flooded tile is scenery: drawn muted, no
+  // badge, and a tap on it only clears the pick. Computed once per level. Returns a Uint8Array over sections.
+  function scenery(B) {
+    const n = B.n, seen = new Uint8Array(n), q = new Int32Array(n), out = new Uint8Array(B.nsec);
+    const ever = (c) => { const k = B.kind[c]; return k === E.OPEN || k === E.CHEST || k === E.WALL; };
+    let h = 0, t = 0;
+    for (let c = 0; c < n; c++) if (B.edge[c] && ever(c)) { seen[c] = 1; q[t++] = c; }
+    while (h < t) { const c = q[h++]; for (let d = 0; d < 4; d++) { const e = B.nb[c * 4 + d]; if (e >= 0 && !seen[e] && ever(e)) { seen[e] = 1; q[t++] = e; } } }
+    for (let s = 0; s < B.nsec; s++) { let live = 0; for (let i = B.secStart[s]; i < B.secStart[s + 1] && !live; i++) live = seen[B.secCells[i]]; out[s] = live ? 0 : 1; }
+    return out;
   }
 
   // SPEC §1 stars from crews used (= sections broken) against the solver's minimum; offsets from config.stars.
@@ -43,6 +57,7 @@
     const B = g.B, st = g.st, s = E.sectionAt(B, x, y);
     if (st.won) return "over";
     if (s < 0 || st.broken[s] || st.doorOpen[s]) { g.pick = -1; return "clear"; }
+    if (g.scenery[s]) { g.pick = -1; return "scenery"; }
     if (!E.isCrewSection(B, s)) { shake(g, s, now); g.fx.flashN = 0; return "iron"; }
     const m = B.secMat[s];
     if (st.remaining[m] <= 0) { g.fx.cardM = m; g.fx.cardT = now; if (g.pick === m) g.pick = -1; return "empty"; }
@@ -166,5 +181,5 @@
   // First tile of section s as [x, y] (what the baked `line` uses).
   function firstTile(B, s) { const c = B.secCells[B.secStart[s]]; return [c % B.w, (c / B.w) | 0]; }
 
-  return { create, stars, tapCell, tapCrew, undo, restart, blockers, solveFrom, firstTile, NEVER };
+  return { create, scenery, stars, tapCell, tapCrew, undo, restart, blockers, solveFrom, firstTile, NEVER };
 });

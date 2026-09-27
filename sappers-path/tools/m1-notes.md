@@ -70,10 +70,7 @@ Screenshots: `tools/shots/m1/{1280x720,375x812}-{midplay,win,stuck}.png` and `hi
 - `LATER.md` is outside this milestone's file list, so the ideas below are parked here for the orchestrator to move.
 
 ## For LATER.md
-- Hint on a lost position ("no way through from here"): `Game.solveFrom` already answers it in well under a millisecond on these boards.
-- A section sealed by moat can never be reached (seen on the old bake's w3-07). It only shakes when tapped. Worth a generator rule (no permanently unreachable decoys) for readability.
-- Baked names repeat the world name ("The Hedge Garden 2"); the select screen and top bar would read better with real names.
-- Board sits centred with ~130 CSS px of air above and below at 375×812; M2 could use it for the walk-in lane or the crowned goblin.
+Moved into `LATER.md` in M2 (the dead-space item was done in M2, not parked).
 
 ## Engine
 No engine bugs found. Everything goes through `parse / start / apply / undo / restart / sectionAt / isCrewSection / serialize / fromMoves / legalMoves`; `E.CREWS` is the card order. The page loads `solver.js` only for `SP.solve()`.

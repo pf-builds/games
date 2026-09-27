@@ -1,32 +1,77 @@
 {
-  "version": 1,
+  "version": 2,
   "input": { "twoTap": true, "keepPick": false },
   "stars": { "threeAtMinPlus": 0, "twoAtMinPlus": 1 },
   "save": { "key": "sappers-path.v1", "maxCrews": 99 },
+  "unlock": { "worldNeeds": 6 },
   "layout": {
-    "wideMinPx": 700, "wideAspect": 1.15, "railPx": 210, "gapPx": 28,
-    "marginCells": 0.4, "minCellPx": 14, "maxCellPx": 84, "maxDpr": 3
+    "wideMinPx": 700, "wideAspect": 1.15, "railPx": 210, "gapPx": 28, "sidePx": 230,
+    "marginCells": 0.3, "minCellPx": 14, "maxCellPx": 84, "maxDpr": 3, "bannerMinPx": 64, "artPx": 3
   },
   "fx": {
     "maxDtMs": 100, "pulseMs": 520, "shakeMs": 380, "shakeCells": 0.11, "shakeHz": 22,
-    "flashMs": 900, "flashBlinks": 3, "cardFlashMs": 750, "crumbleMs": 420,
-    "dustPerTile": 5, "dustPool": 700, "dustMs": 650, "dustSpeed": 1.6, "dustGravity": 5,
-    "glowHz": 1.4, "dimAlpha": 0.55, "winPanelMs": 900, "stuckPanelMs": 450, "keepBurstMs": 1400
+    "flashMs": 900, "flashBlinks": 3, "cardFlashMs": 750,
+    "dustPerTile": 6, "dustPool": 900, "dustMs": 650, "dustSpeed": 1.6, "dustGravity": 5,
+    "glowHz": 1.4, "dimAlpha": 0.55, "winPanelMs": 450, "stuckPanelMs": 450, "skipPanelMs": 200, "keepBurstMs": 1400,
+    "boardNudgeMs": 260, "boardNudgePx": 5, "boardNudgeHz": 18, "starMs": 260, "bumpMs": 320,
+    "moatFrameMs": 280, "bannerFrameMs": 520, "sceneryAlpha": 0.5
+  },
+  "show": {
+    "speedFast": 2, "walkTileMs": 95, "walkMaxTiles": 5, "fadeInMs": 120, "swings": 2, "swingMs": 150,
+    "ringMs": 55, "popMs": 230, "crewOutMs": 220, "leverDelayMs": 80, "leverMs": 240, "doorTileMs": 45, "doorMs": 260,
+    "chestPopMs": 320, "flyMs": 520, "lightMs": 260, "keepDelayMs": 120, "marchDelayMs": 380, "marchTileMs": 170,
+    "marchMaxTiles": 6, "crewScale": 1.15, "goblinScale": 1.2, "edgeStand": 0.08, "wallStand": 0.18
+  },
+  "audio": {
+    "volume": 0.5, "tickGapMs": 22,
+    "cues": {
+      "ui": [{ "w": "triangle", "f": 880, "f1": 660, "d": 0.06, "g": 0.18 }],
+      "bad": [{ "w": "square", "f": 170, "f1": 120, "d": 0.14, "g": 0.1, "lp": 900 }, { "w": "square", "f": 150, "f1": 110, "d": 0.12, "g": 0.08, "lp": 900, "at": 0.09 }],
+      "undo": [{ "w": "triangle", "f": 520, "f1": 340, "d": 0.08, "g": 0.16 }],
+      "clink": [{ "w": "triangle", "f": 2300, "f1": 2100, "d": 0.14, "g": 0.2 }, { "w": "sine", "f": 3450, "d": 0.09, "g": 0.1 }, { "w": "noise", "d": 0.03, "g": 0.18, "hp": 3000 }],
+      "thunk": [{ "w": "sine", "f": 190, "f1": 70, "d": 0.16, "g": 0.55 }, { "w": "noise", "d": 0.07, "g": 0.3, "lp": 900 }],
+      "bleat": [{ "w": "sawtooth", "f": 540, "f1": 500, "d": 0.36, "g": 0.12, "lp": 1500, "vib": 8, "vd": 45 }, { "w": "sawtooth", "f": 548, "f1": 505, "d": 0.34, "g": 0.08, "lp": 1500, "vib": 8, "vd": 40 }],
+      "munch": [{ "w": "noise", "d": 0.05, "g": 0.2, "bp": 900 }],
+      "sizzle": [{ "w": "noise", "d": 0.45, "g": 0.2, "hp": 4200 }, { "w": "sine", "f": 1400, "f1": 300, "d": 0.3, "g": 0.05 }],
+      "tick": [{ "w": "noise", "d": 0.035, "g": 0.26, "bp": 1400, "step": 90 }, { "w": "sine", "f": 320, "f1": 220, "d": 0.04, "g": 0.1, "step": 18 }],
+      "clank": [{ "w": "square", "f": 150, "f1": 90, "d": 0.1, "g": 0.14, "lp": 1800 }, { "w": "noise", "d": 0.06, "g": 0.2, "bp": 2600 }, { "w": "square", "f": 115, "f1": 80, "d": 0.12, "g": 0.12, "lp": 1600, "at": 0.12 }, { "w": "noise", "d": 0.05, "g": 0.16, "bp": 2200, "at": 0.12 }],
+      "door": [{ "w": "sawtooth", "f": 95, "f1": 60, "d": 0.34, "g": 0.1, "lp": 500 }],
+      "chime": [{ "w": "sine", "f": 1319, "d": 0.28, "g": 0.16 }, { "w": "sine", "f": 1760, "d": 0.28, "g": 0.14, "at": 0.07 }, { "w": "sine", "f": 2637, "d": 0.34, "g": 0.12, "at": 0.14 }],
+      "pop": [{ "w": "sine", "f": 620, "f1": 1240, "d": 0.09, "g": 0.18 }],
+      "fanfare": [{ "w": "square", "f": 523, "d": 0.13, "g": 0.08, "lp": 3000 }, { "w": "square", "f": 659, "d": 0.13, "g": 0.08, "lp": 3000, "at": 0.13 }, { "w": "square", "f": 784, "d": 0.13, "g": 0.08, "lp": 3000, "at": 0.26 }, { "w": "square", "f": 1047, "d": 0.5, "g": 0.09, "lp": 3000, "at": 0.39 }, { "w": "triangle", "f": 523, "d": 0.5, "g": 0.12, "at": 0.39 }, { "w": "triangle", "f": 659, "d": 0.5, "g": 0.1, "at": 0.39 }],
+      "star": [{ "w": "triangle", "f": 1047, "d": 0.18, "g": 0.18, "step": 262 }, { "w": "sine", "f": 2094, "d": 0.12, "g": 0.06, "step": 524 }],
+      "lock": [{ "w": "square", "f": 220, "f1": 200, "d": 0.08, "g": 0.08, "lp": 1200 }, { "w": "square", "f": 180, "f1": 170, "d": 0.1, "g": 0.08, "lp": 1200, "at": 0.08 }]
+    },
+    "work": ["clink", "thunk", "bleat", "sizzle"], "workAfter": ["clink", "thunk", "munch", null]
   },
   "art": {
-    "outside": "#8fb45e", "ground": "#d8c496", "groundShade": "#b8a47c", "speck": "#a88f60",
-    "stone": ["#9a9ca6", "#6d6f7a", "#b9bbc4"],
-    "timber": ["#a36d38", "#6e4520", "#c28b50"],
-    "hedge": ["#3f7a33", "#24521d", "#63a24b"],
-    "ice": ["#d4f0f8", "#8cc6dc", "#ffffff"],
-    "iron": ["#3c434f", "#1f242c", "#8a93a3"],
-    "moat": ["#3b73b0", "#8fbde6"],
-    "keep": ["#5b5460", "#3a343f", "#c0392b", "#f2c230"],
-    "chest": ["#8a5a2b", "#f2c230", "#4a2f14"],
-    "lever": ["#6d6f7a", "#c9a227", "#2b2b2b"],
+    "ink": "#221a26",
+    "grass": ["#7fae4f", "#5f8f3a", "#a1cc66", "#46732b"],
+    "ground": ["#dcc79a", "#c2ab7c", "#ecdcb4", "#a38a5c"],
+    "stone": ["#a2a5b0", "#666a77", "#cdd0d8", "#4b4e5a"],
+    "timber": ["#b27a41", "#74481f", "#d29c5e", "#4a2c10"],
+    "hedge": ["#3f8c34", "#23581d", "#72bb52", "#143a11", "#f4e27a"],
+    "ice": ["#c9ecf8", "#86c3dc", "#ffffff", "#4f98bb"],
+    "iron": ["#485161", "#272c36", "#94a0b2", "#14171d"],
+    "moat": ["#3a74b3", "#2b5d97", "#9ccaf0", "#1d4477"],
+    "keep": ["#8a8292", "#5a5363", "#b2abb9", "#302a36"],
+    "flag": ["#46a553", "#246b30", "#f2c230"],
+    "chest": ["#a2682f", "#643d16", "#f2c230", "#b8860b"],
+    "lever": ["#d4432f", "#f2c230", "#3a3440"],
+    "skin": ["#f1c39a", "#c98f66"],
+    "crew": [["#8d93a3", "#5c6272", "#c6ccd8"], ["#c0452f", "#7e2618", "#e0714f"], ["#f2eee4", "#b9b2a0", "#8a7f6a"], ["#3d6fc0", "#264a86", "#6f9be0"]],
+    "goblin": ["#71b340", "#3f7a22", "#8d3fa3", "#5b2470", "#f2c230", "#ffe680"],
+    "flame": ["#ffcf3d", "#ff7a1f", "#fff4b0"],
+    "wood": ["#8a5a2b", "#5a3716"],
+    "metal": ["#c7cdd8", "#6d7483"],
+    "sky": ["#8fd0f2", "#aee0f6", "#cdeefa", "#e9f8fd"],
+    "hills": ["#6aa344", "#548a35"],
+    "sun": "#ffe27a", "cloud": "#ffffff",
+    "night": ["#2a2440", "#3a3358", "#4c4470"],
+    "outside": "#7fae4f", "groundShade": "#b8a47c",
     "outline": "rgba(20,16,24,0.78)",
     "badge": ["#fbf5e6", "#2a2430"],
-    "glow": "#fff3a8", "flash": "#ff5a3c", "pulse": "#ffffff", "burst": "#ffe27a"
+    "glow": "#fff3a8", "flash": "#ff5a3c", "pulse": "#ffffff", "burst": "#ffe27a", "trail": "#f3e3b4"
   },
-  "selfTest": { "minLevels": 20, "maxLevels": 60, "stuckTries": 400, "stuckSeed": 7 }
+  "selfTest": { "minLevels": 20, "maxLevels": 60, "stuckTries": 400, "stuckSeed": 7, "settleMs": 60000 }
 }
