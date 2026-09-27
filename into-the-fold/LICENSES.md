@@ -1,4 +1,4 @@
-# Flockstop: asset licenses
+# Into the Fold: asset licenses
 
 | Asset | Source | License | Date |
 |---|---|---|---|

@@ -1,4 +1,4 @@
-// Flockstop bake: tools/bake-config.json → levels/daily.json (7 weekday pools) + levels/practice.json.
+// Into the Fold bake: tools/bake-config.json → levels/daily.json (7 weekday pools) + levels/practice.json.
 // Deterministic: every pool is filled from fixed-seed chunks consumed in chunk order, so thread timing never
 // changes the output. Boards are deduped up to symmetry across the whole bake (dailies first, then practice).
 // If a pool can't fill inside maxChunks, the closest near-band boards fill the gap and the log says so (never throws).

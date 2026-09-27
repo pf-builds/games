@@ -1,5 +1,5 @@
-// Flockstop rules engine (SPEC §1). PURE: no DOM, no clock, no randomness. UMD, so the Node tools and the
-// browser load this exact file: require('./rules.js') in Node, window.Flockstop.rules in the page.
+// Into the Fold rules engine (SPEC §1). PURE: no DOM, no clock, no randomness. UMD, so the Node tools and the
+// browser load this exact file: require('./rules.js') in Node, window.IntoTheFold.rules in the page.
 //
 // Board JSON: {w, h, rows:[h strings of w chars], pens:[{x, y, open:"N"|"E"|"S"|"W", c:"w"|"b"}], par?, id?}
 // Row legend:
@@ -13,7 +13,7 @@
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
-  else (root.Flockstop = root.Flockstop || {}).rules = api;
+  else (root.IntoTheFold = root.IntoTheFold || {}).rules = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
   const GRASS = 0, ROCK = 1, MUD = 2, POND = 3, PEN = 4;

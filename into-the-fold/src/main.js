@@ -5,6 +5,6 @@
   const g = c.getContext('2d');
   g.fillStyle = '#9ccf7a'; g.fillRect(0, 0, 360, 360);
   g.fillStyle = '#3b4a2a'; g.font = 'bold 32px system-ui'; g.textAlign = 'center';
-  g.fillText('Flockstop', 180, 190);
+  g.fillText('Into the Fold', 180, 190);
   window.FS_SCAFFOLD_OK = true;
 })();

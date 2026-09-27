@@ -1,4 +1,4 @@
-# Flockstop: LATER
+# Into the Fold: LATER
 
 Out of v1 by design (from the Phase 0 contract):
 - Archive of past days

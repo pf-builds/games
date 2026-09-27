@@ -1,6 +1,6 @@
-# Flockstop: SPEC (v1)
+# Into the Fold: SPEC (v1)
 
-Approved 2026-09-26 (Phase 0). Design source: `claude-workspace/business/D-click-it-studios/game-research/ewe-turn-kickoff-prompt.md` (the game was renamed from "Ewe Turn" after a name collision). This file is the build contract. Where it's silent, the builder decides and writes the decision here.
+Approved 2026-09-26 (Phase 0). Design source: `claude-workspace/business/D-click-it-studios/game-research/ewe-turn-kickoff-prompt.md` (renamed "Ewe Turn" → "Flockstop" after a name collision, then → "Into the Fold" 2026-09-26 because "Flock" now reads as Flock Safety cameras). This file is the build contract. Where it's silent, the builder decides and writes the decision here.
 
 **One line:** a daily sliding puzzle. Swipe and every loose sheep in the pasture sprints that way until something stops it. Pen every sheep in as few swipes as you can, scored against a solver-proven par.
 
@@ -41,10 +41,10 @@ Approved 2026-09-26 (Phase 0). Design source: `claude-workspace/business/D-click
 - **Resume:** the in-progress daily (history, swipe count, share squares) is saved on every swipe, so a reload can't reset the count.
 - **Share** (`navigator.share` when available and on a touch device, otherwise the clipboard, with a visible "Copied" toast):
   ```
-  Flockstop #N 🐑 9/7 🥇
+  Into the Fold #N 🐑 9/7 🥇
   🟩⬜🟩🟦⬜🟩🟩
   🟩⬜
-  https://pf-builds.github.io/games/flockstop/
+  https://pf-builds.github.io/games/into-the-fold/
   ```
   - One square per counted swipe, in play order, including swipes later undone. 🟩 means at least one sheep was penned on that swipe, ⬜ nothing penned, 🟦 splash. Rows hold at most 7 squares.
   - The medal emoji is 🥇/🥈/🥉.
@@ -54,7 +54,7 @@ Approved 2026-09-26 (Phase 0). Design source: `claude-workspace/business/D-click
 - **Tutorial:** on first launch, the page opens straight into tutorial board 1 of 3. They're hand-made boards with a one-line inline hint each: (1) swipe moves every sheep, pen one; (2) sheep stop on each other, so use one as a stopper; (3) pens only open on one side. A "Skip" link goes to today's daily. The help button replays the tutorial. After the tutorial (or on every later visit), the page opens straight onto today's board: **0 clicks to play.**
 - New elements get a one-time inline hint the first time they appear (mud, black sheep, pond).
 
-## 3. Weekday ramp: PROPOSED (pending Peter)
+## 3. Weekday ramp: APPROVED by Peter 2026-09-26
 
 M0 measured before setting any target (`tools/par-report.md`, 2000 random layouts per config). The numbers below are the builder's proposal. They live in `tools/bake-config.json`, so a retune is a config edit plus a rebake (about 1 minute).
 
@@ -107,7 +107,7 @@ Accept criteria per board (all enforced by `tools/gen.js` `rejectReason`, M0 def
 ## 7. Architecture
 
 ```
-flockstop/
+into-the-fold/
   index.html         shell; every script/CSS tag carries ?v=N
   style.css
   config.json        all tuning: launchDate, medal thresholds, anim durations, swipe threshold, dataVersion
@@ -117,7 +117,7 @@ flockstop/
   src/rules.js       PURE rules engine, no DOM; UMD so Node and browser share it
   src/solver.js      PURE BFS solver (uses rules.js)
   src/sym.js         8 board symmetries (pure)
-  src/save.js        versioned save (key "flockstop.save.v1"), sanitize/clamp every field on load
+  src/save.js        versioned save (key "intothefold.save.v1"), sanitize/clamp every field on load
   src/daily.js       date → puzzle #N → board (pure given a date)
   src/render.js      canvas drawing + sprite caches
   src/audio.js       WebAudio synth
@@ -136,14 +136,14 @@ flockstop/
 
 ## 8. Debug and test hooks (`?debug=1` only)
 
-`window.FS` exposes:
+`window.ITF` exposes (the pure modules live on the `window.IntoTheFold` namespace: `.rules`, `.sym`, `.solver`):
 - `state()`: a deep copy of the current state.
 - `swipe(dir)`: goes through the **same input facade** as touch and keys.
 - `undo()`, `restart()`
 - `solve()`: runs on a **cloned** state. It must leave the stored save byte-identical.
 - `tick(now)`: a manual frame step for hidden tabs.
 - `setDate("YYYY-MM-DD")`: overrides "today" for date-rollover tests.
-- `selfTest()`: loads 20 baked dailies spread across the weekdays, plays each solver solution through `FS.swipe`, and asserts a win at exactly par. It also asserts undo/restart counting, splash counting, the no-direction share text, and that the save is byte-identical after `solve()`. It returns `{pass, failures[]}`. The run happens on a scratch save namespace, so it never touches the player's real save.
+- `selfTest()`: loads 20 baked dailies spread across the weekdays, plays each solver solution through `ITF.swipe`, and asserts a win at exactly par. It also asserts undo/restart counting, splash counting, the no-direction share text, and that the save is byte-identical after `solve()`. It returns `{pass, failures[]}`. The run happens on a scratch save namespace, so it never touches the player's real save.
 
 ## 9. Studio checklist (every milestone)
 

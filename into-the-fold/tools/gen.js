@@ -1,4 +1,4 @@
-// Flockstop random board generator + accept filter. Node tools only (the page never generates boards).
+// Into the Fold random board generator + accept filter. Node tools only (the page never generates boards).
 // A day config (tools/bake-config.json) looks like:
 //   {size, white, black, rocks, mud, pond, penEdge, par:[lo,hi], minDeadEdges, needStopper, noPenFirst, cap}
 // Counts may be a number or an inclusive [lo,hi] range. penEdge = chance a pen sits on the outer edge, opening inward.

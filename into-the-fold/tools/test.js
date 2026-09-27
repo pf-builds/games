@@ -1,4 +1,4 @@
-// Flockstop node unit checks: rules (every SPEC §1 rule + edge cases), symmetry, solver.
+// Into the Fold node unit checks: rules (every SPEC §1 rule + edge cases), symmetry, solver.
 // Run: ~/.local/opt/node/bin/node tools/test.js   (exit code 1 on any failure)
 "use strict";
 const R = require("../src/rules.js");
@@ -209,8 +209,8 @@ function refPar(b, limit) {
 {
   const vm = require("vm"), fs = require("fs"), path = require("path"), ctx = vm.createContext({});
   for (const f of ["rules.js", "sym.js", "solver.js"]) vm.runInContext(fs.readFileSync(path.join(__dirname, "../src", f), "utf8"), ctx, { filename: f });
-  const F = ctx.Flockstop, s = F && F.solver.solve({ w: 5, h: 3, rows: ["w....", ".....", "....P"], pens: [{ x: 4, y: 2, open: "N", c: "w" }] });
-  ok(F && F.rules && F.sym && s && s.par === 2 && F.sym.mapDir(1, "N") === "E", "UMD: window.Flockstop.rules/sym/solver work without require");
+  const F = ctx.IntoTheFold, s = F && F.solver.solve({ w: 5, h: 3, rows: ["w....", ".....", "....P"], pens: [{ x: 4, y: 2, open: "N", c: "w" }] });
+  ok(F && F.rules && F.sym && s && s.par === 2 && F.sym.mapDir(1, "N") === "E", "UMD: window.IntoTheFold.rules/sym/solver work without require");
 }
 
 // ---- baked levels (skipped until tools/bake.js has run) ------------------------

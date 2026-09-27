@@ -1,14 +1,14 @@
-// Flockstop BFS solver. PURE, UMD like rules.js; uses rules.resolve so the solver and the game can never disagree.
+// Into the Fold BFS solver. PURE, UMD like rules.js; uses rules.resolve so the solver and the game can never disagree.
 // State = every sheep's cell, sorted within each colour (same-colour sheep are interchangeable). A penned sheep
 // sits on its pen, so the filled-pen set is part of the positions. Splash and no-op swipes are pruned: a splash
 // leaves the board as it was and costs a swipe, so it is never on a shortest path.
 // solve() explores the WHOLE reachable graph (not just to the first win) so it can also count dead ends,
 // then walks distances back from the one win state.
 (function (root, factory) {
-  const R = typeof module === "object" && module.exports ? require("./rules.js") : root.Flockstop.rules;
+  const R = typeof module === "object" && module.exports ? require("./rules.js") : root.IntoTheFold.rules;
   const api = factory(R);
   if (typeof module === "object" && module.exports) module.exports = api;
-  else (root.Flockstop = root.Flockstop || {}).solver = api;
+  else (root.IntoTheFold = root.IntoTheFold || {}).solver = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function (R) {
   "use strict";
   const DEFAULT_CAP = 250000;

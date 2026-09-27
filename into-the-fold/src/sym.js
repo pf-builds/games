@@ -1,11 +1,11 @@
-// Flockstop board symmetries (SPEC §2 "past the bake horizon"). PURE, UMD like rules.js.
+// Into the Fold board symmetries (SPEC §2 "past the bake horizon"). PURE, UMD like rules.js.
 // k = 0..7: 0 identity, 1 rot90 cw, 2 rot180, 3 rot270 cw, 4 mirror left-right, 5 mirror top-bottom,
 // 6 transpose, 7 anti-transpose. Odd rotations and 6/7 swap w and h. Pen open sides and swipe
 // directions rotate with the board, so par (and the solution, via mapDirs) carries over unchanged.
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
-  else (root.Flockstop = root.Flockstop || {}).sym = api;
+  else (root.IntoTheFold = root.IntoTheFold || {}).sym = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
   const DIRS = ["N", "E", "S", "W"];
