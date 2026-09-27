@@ -323,7 +323,7 @@ async function main() {
       // selfTest on the title screen before any match, then the fight matrix (each call is its own evaluate, well under 15 s)
       // one evaluate per part so each stays well under ~15 s of wall time (lesson 20); the merged verdict is the selfTest verdict
       const s0 = Date.now(), st = { pass: true, fails: [], results: {}, partMs: {}, wallMs: 0 };
-      for (const part of ["config", "sprites", "terrain", "caches", "art", "flow", "fight", "fixtures", "flipflop", "ai", "rivals", "fog", "spoils", "structures", "parity", "replay", "match", "audio", "portal"]) { // v3 M1: "portal"; v3 M3a: "structures"
+      for (const part of ["config", "sprites", "terrain", "caches", "art", "flow", "fight", "fixtures", "flipflop", "ai", "rivals", "fog", "spoils", "structures", "sites", "units", "parity", "replay", "match", "audio", "portal"]) { // v3 M1: "portal"; v3 M3a: "structures"; v3 M3b: "sites"; v3 M4: "units" (the game's own list, src/game.js)
         const p0 = Date.now(), r = await page.evaluate((part) => window.PS.selfTest({ parts: part }), part);
         st.partMs[part] = Date.now() - p0; Object.assign(st.results, r.results); for (const f of r.fails) if (st.fails.indexOf(f) < 0) st.fails.push(f);
       }
