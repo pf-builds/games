@@ -1,15 +1,24 @@
 {
-  "version": 1,
-  "note": "Hand-authored world-1 teaching boards (SPEC §2). The bake solver-verifies each and copies it to the front of world 1.",
+  "version": 2,
+  "note": "Hand-authored teaching boards (SPEC §2): World 1 levels 1-3 and the first level of Worlds 2-4. The bake solver-verifies each and puts it at the front of its world.",
   "levels": [
-    { "id": "w1-t1", "name": "One Wall", "teaches": "Tap the mason, tap the wall. One break reaches the keep.",
+    { "id": "w1-t1", "world": 1, "name": "One Wall", "teaches": "Tap the mason, tap the wall. One break reaches the keep.",
       "w": 7, "h": 7, "muster": { "stone": 1 }, "chests": [],
       "grid": [".......", ".......", "..SSS..", "..SKS..", "..SSS..", ".......", "......."] },
-    { "id": "w1-t2", "name": "Outside In", "teaches": "The timber is sealed inside the stone. Break the outer wall first, then the inner one opens to you.",
+    { "id": "w1-t2", "world": 1, "name": "Outside In", "teaches": "The timber is sealed inside the stone. Break the outer wall first, then the inner one opens to you.",
       "w": 7, "h": 7, "muster": { "stone": 1, "timber": 1 }, "chests": [],
       "grid": ["SSSSSSS", "S.....S", "S.TTT.S", "S.TKT.S", "S.TTT.S", "S.....S", "SSSSSSS"] },
-    { "id": "w1-t3", "name": "The Wrong Wall", "teaches": "One mason. Spend it on the outer stone and the inner stone is out of reach forever. The axemen go first.",
+    { "id": "w1-t3", "world": 1, "name": "The Wrong Wall", "teaches": "One mason. Spend it on the outer stone and the inner stone is out of reach forever. The axemen go first.",
       "w": 7, "h": 7, "muster": { "stone": 1, "timber": 1 }, "chests": [],
-      "grid": ["TTTTSSS", "T.....S", "T.SSS.S", "T.SKS.S", "T.SSS.S", "T.....S", "TTTTSSS"] }
+      "grid": ["TTTTSSS", "T.....S", "T.SSS.S", "T.SKS.S", "T.SSS.S", "T.....S", "TTTTSSS"] },
+    { "id": "w2-t1", "world": 2, "name": "Goats and a Chest", "teaches": "Goats eat hedge. Open the garden and the chest inside hands you a mason for the keep.",
+      "w": 8, "h": 8, "muster": { "hedge": 1 }, "chests": [{ "x": 5, "y": 5, "crew": "stone" }],
+      "grid": ["HHHHHHHH", "H......H", "H.SSS..H", "H.SKS..H", "H.SSS..H", "H....C.H", "H......H", "HHHHHHHH"] },
+    { "id": "w3-t1", "world": 3, "name": "The Frozen Moat", "teaches": "Nobody crosses the moat. Torchbearers melt the ice bridge, then the masons have a way in.",
+      "w": 9, "h": 9, "muster": { "stone": 1, "timber": 1, "ice": 1 }, "chests": [],
+      "grid": ["TTTTTTTTT", "T.......T", "T.~~II~.T", "T.~SSS~.T", "T.~SKS~.T", "T.~SSS~.T", "T.~~~~~.T", "T.......T", "TTTTTTTTT"] },
+    { "id": "w4-t1", "world": 4, "name": "Iron and a Lever", "teaches": "No crew can break iron. Reach the lever and it swings the iron door open for you.",
+      "w": 11, "h": 11, "muster": { "stone": 1, "timber": 1 }, "chests": [],
+      "grid": ["SSSSSSSSSSS", "S.........S", "S.TTTTTTT.S", "S.T.....T.S", "S.T.FFF.T.S", "S.T.FKF.T.S", "S.T.FFF.T.S", "S.T..L..T.S", "S.TTTTTTT.S", "S.........S", "SSSSSSSSSSS"] }
   ]
 }

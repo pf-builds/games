@@ -3,7 +3,8 @@
 "use strict";
 const E = require("../src/engine.js");
 const S = require("../src/solver.js");
-const TEACH = require("../levels/teaching.json").levels;
+const TEACH_ALL = require("../levels/teaching.json").levels;
+const TEACH = TEACH_ALL.filter((t) => (t.world || 1) === 1);
 
 let pass = 0, fail = 0;
 function ok(cond, name) { if (cond) pass++; else { fail++; console.log("FAIL  " + name); } }
@@ -133,6 +134,89 @@ function play(B, cells) { let s = E.start(B); for (const [x, y] of cells) { cons
   const r = S.solve(B);
   let s = E.start(B); for (const mv of r.line) s = E.apply(B, s, mv);
   eq([s.won, s.used], [true, r.min], "solve: the optimal line replays to a win in min crews");
+}
+
+
+// ---- M0b: trap-rate proxy -------------------------------------------------------------------------------------
+{
+  const B = E.parse(TEACH[2]), r = S.solve(B), t = S.traps(B, { line: r.line });
+  eq([t.winnable, t.moves, t.traps, t.decisions, t.choices], [2, 4, 2, 2, 2], "traps on The Wrong Wall: 2 winnable states, 4 moves, 2 lose, 2 decision points");
+  ok(Math.abs(t.trapRate - 0.5) < 1e-9, "traps: The Wrong Wall trap rate is 0.5 (" + t.trapRate + ")");
+  const one = S.traps(E.parse(TEACH[0]));
+  eq([one.trapRate, one.decisions], [0, 0], "traps: One Wall has no traps");
+  eq(S.traps(E.parse(TEACH[2]), { cap: 2 }).capped, true, "traps: the cap reports capped and does not throw");
+  eq(S.solve(B).min, r.min, "traps: solve() is unchanged after traps()");
+}
+
+// ---- M0b: teaching boards for worlds 2-4 -----------------------------------------------------------------------
+{
+  const T = (id) => TEACH_ALL.find((t) => t.id === id);
+  const w2 = E.parse(T("w2-t1")), r2 = S.solve(w2);
+  eq([r2.win, r2.min, r2.chestRequired], [true, 2, true], "teach w2: goats then the chest's mason, min 2, chest required");
+  const w3 = T("w3-t1"), r3 = S.solve(E.parse(w3));
+  eq([r3.win, r3.min], [true, 3], "teach w3: timber, ice bridge, stone, min 3");
+  eq(S.solve(E.parse(Object.assign({}, w3, { muster: { stone: 1, timber: 1 } }))).win, false, "teach w3: no torchbearer, no way over the moat");
+  const w4 = T("w4-t1"), r4 = S.solve(E.parse(w4));
+  eq([r4.win, r4.min], [true, 2], "teach w4: stone, timber, the lever opens the iron, min 2");
+  eq(S.solve(E.parse(w4, { noLevers: true })).win, false, "teach w4: without the lever there is no win");
+  eq(TEACH_ALL.map((t) => t.world || 1).join(""), "111234", "teaching.json: three world-1 boards, then one each for worlds 2-4");
+}
+
+// ---- M0b: castle generator invariants ---------------------------------------------------------------------------
+{
+  const Gen = require("./gen.js"), C = require("./bake-config.json");
+  for (const wk of ["1", "2", "3", "4"]) {
+    const W = C.worlds[wk], rng = S.mulberry32(4242 + +wk);
+    let made = 0, chests = 0, bad = [];
+    for (let i = 0; i < 40 && made < 12; i++) {
+      const g = Gen.castle(W, C, rng);
+      if (g.fail) continue;
+      made++;
+      const L = g.level, B = E.parse(L), q = S.quickest(B), kx = B.keep % B.w, ky = (B.keep / B.w) | 0;
+      if (Math.abs(kx - (B.w - 1) / 2) > 0.5 || Math.abs(ky - (B.h - 1) / 2) > 0.5) bad.push("keep off centre");
+      if (!(q.win && q.min >= 2)) bad.push("straight route " + q.min + " (a single break reaches the keep)");
+      for (let s = 0; s < B.nsec; s++) if (B.secEdge[s] && B.secMat[s] < E.IRON && E.sectionCells(B, s).some((c) => Math.abs(c % B.w - kx) + Math.abs(((c / B.w) | 0) - ky) === 1)) bad.push("section " + s + " runs from the edge to the keep");
+      if (W.lever) {
+        for (let d = 0; d < 4; d++) { const e = B.nb[B.keep * 4 + d]; if (e < 0 || B.mat[e] !== E.IRON) bad.push("keep ring not iron"); }
+        if (!Array.from(B.levers).some((c) => { for (let d = 0; d < 4; d++) { const e = B.nb[c * 4 + d]; if (e >= 0 && B.mat[e] === E.IRON && B.sec[e] === B.sec[B.nb[B.keep * 4]]) return true; } return false; })) bad.push("no lever on door 1");
+      }
+      const r = S.solve(B, { cap: C.cap });
+      if (!r.win || r.min !== g.info.k) bad.push("min " + r.min + " vs info.k " + g.info.k);
+      if (L.chests.length > 1) bad.push("two chests"); chests += L.chests.length;
+    }
+    ok(made >= 10, "castle w" + wk + ": generates boards (" + made + ")");
+    ok(W.chests ? chests >= made / 2 : chests === 0, "castle w" + wk + ": a chest on most boards from world 2 on (" + chests + "/" + made + "); the band rejects the rest");
+    eq(bad.slice(0, 3), [], "castle w" + wk + ": invariants (centred keep, no edge-to-keep section, straight route >= 2, iron keep ring + lever, min matches)");
+  }
+}
+
+// ---- M0b: the baked levels -------------------------------------------------------------------------------------
+{
+  const LV = require("../levels/levels.json"), C = require("./bake-config.json");
+  eq([LV.draft, LV.worlds.map((w) => w.world).join("")], [false, "1234"], "levels.json: final bake, four worlds");
+  for (const w of LV.worlds) {
+    const band = C.bands[w.world], baked = w.levels.filter((l) => l.source !== "teaching"), bad = [];
+    ok(w.levels.length >= 6 && w.levels.length <= 10, "levels w" + w.world + ": 6-10 levels (" + w.levels.length + ")");
+    eq(w.levels[0].source, "teaching", "levels w" + w.world + ": opens with its teaching board");
+    for (const L of w.levels) {
+      for (const k of ["id", "name", "world", "w", "h", "grid", "muster", "chests", "min", "line", "metrics"]) if (!(k in L)) bad.push(L.id + " missing " + k);
+      const B = E.parse(L); let s = E.start(B);
+      for (const [x, y] of L.line) { const n = E.apply(B, s, E.sectionAt(B, x, y)); if (n) s = n; }
+      if (!s.won || s.used !== L.min) bad.push(L.id + " line does not replay to a win in min");
+    }
+    for (const L of baked) {
+      const m = L.metrics, spare = Object.values(L.muster).reduce((a, b) => a + (b | 0), 0) + (m.chestKind === "required" ? 1 : 0) - L.min;   // a detour chest's crew costs a break
+      if (m.walls > band.maxSections) bad.push(L.id + " over the section cap");
+      if (m.singles > band.maxSingles) bad.push(L.id + " too many single tiles");
+      if (L.min < band.min[0] || L.min > band.min[1]) bad.push(L.id + " min out of band");
+      if (spare < 0 || spare > 1) bad.push(L.id + " spare " + spare);
+      if (band.chest && m.chestKind !== "required" && m.chestKind !== "detour") bad.push(L.id + " chest idle");
+      if (band.levers && m.leversMatter !== true) bad.push(L.id + " levers idle");
+    }
+    for (let i = 1; i < baked.length; i++) if (baked[i].min < baked[i - 1].min) bad.push("w" + w.world + " not ordered by min");
+    if (band.chest) { const d = baked.filter((l) => l.metrics.chestKind === "detour").length / baked.length; ok(d >= 0.15 && d <= 0.35, "levels w" + w.world + ": detour chests about 25% (" + d.toFixed(2) + ")"); }
+    eq(bad.slice(0, 3), [], "levels w" + w.world + ": caps, bands, spare 0-1, chest and lever rules, lines replay, easiest first");
+  }
 }
 
 console.log(pass + " passed, " + fail + " failed");

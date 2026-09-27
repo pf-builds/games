@@ -202,5 +202,83 @@
     return { winRate: n ? wins / n : 0, wins, n };
   }
 
-  return { solve, quickest, greedy, playouts, bound, mulberry32, keyOf, INF };
+  // Trap-rate proxy (M0b, additive: solve() is untouched). Explores the same state graph as solve() under the muster.
+  // A winnable state = reachable from the start, not won, a win still reachable. trapRate = over every winnable state,
+  // the share of legal breaks that lose (lead to a state with no win). decisions = steps on an optimal line where at
+  // least one legal break loses; choices = steps on it with two or more legal breaks. opts.line (section ids) walks
+  // that line instead of the first optimal one. Never throws; at the cap it reports capped with what it has.
+  // Returns {trapRate, traps, moves, winnable, decisions, choices, lineTrap, states, capped}.
+  function traps(B, opts) {
+    const cap = (opts && opts.cap) || DEFAULT_CAP, depth = B.nsec + 2;
+    const out = { trapRate: 0, traps: 0, moves: 0, winnable: 0, decisions: 0, choices: 0, lineTrap: 0, states: 0, capped: false };
+    try {
+      const br = [], Ds = [], memo = new Map();
+      for (let d = 0; d < depth; d++) { br.push(new Uint8Array(B.nsec)); Ds.push(E.scratch(B)); }
+      const legalOk = (D, b, s) => !b[s] && D.reach[s] && B.secMat[s] < E.IRON && D.remaining[B.secMat[s]] > 0;
+      const visit = (d, key) => {
+        const D = E.derive(B, br[d], Ds[d]);
+        let v = INF;
+        if (D.won) v = 0;
+        else {
+          const nx = br[d + 1];
+          for (let s = 0; s < B.nsec; s++) {
+            if (!legalOk(D, br[d], s)) continue;
+            nx.set(br[d]); nx[s] = 1;
+            const k = keyOf(nx);
+            let p = memo.get(k);
+            if (p === undefined) { if (memo.size >= cap) { out.capped = true; continue; } p = visit(d + 1, k); }
+            if (p < INF && p + 1 < v) v = p + 1;
+          }
+        }
+        memo.set(key, v); return v;
+      };
+      const k0 = keyOf(br[0]); memo.set(k0, INF);
+      const v0 = visit(0, k0);
+      out.states = memo.size;
+      // Every winnable state: count its legal breaks and the ones that lose.
+      const cur = new Uint8Array(B.nsec), D = E.scratch(B);
+      const tally = (b) => {   // derive b into D first; returns [legal, losing]
+        let m = 0, lose = 0;
+        for (let s = 0; s < B.nsec; s++) {
+          if (!legalOk(D, b, s)) continue;
+          b[s] = 1; const p = memo.get(keyOf(b)); b[s] = 0;
+          m++; if (p === INF) lose++;
+        }
+        return [m, lose];
+      };
+      for (const [k, v] of memo) {
+        if (v === 0 || v >= INF) continue;
+        unkey(k, cur); E.derive(B, cur, D);
+        const [m, lose] = tally(cur);
+        out.winnable++; out.moves += m; out.traps += lose;
+      }
+      out.trapRate = out.moves ? out.traps / out.moves : 0;
+      // Walk the line (given, or the first optimal one) and count the steps where a wrong break loses.
+      if (v0 < INF) {
+        cur.fill(0);
+        const given = opts && Array.isArray(opts.line) ? opts.line : null;
+        let shareSum = 0, steps = 0;
+        for (let want = v0; want > 0 && steps < depth; steps++, want--) {
+          E.derive(B, cur, D);
+          if (D.won) break;
+          const [m, lose] = tally(cur);
+          if (lose > 0) out.decisions++;
+          if (m > 1) out.choices++;
+          shareSum += m ? lose / m : 0;
+          let pick = given ? (steps < given.length ? given[steps] : -1) : -1;
+          for (let s = 0; s < B.nsec && pick < 0; s++) {
+            if (!legalOk(D, cur, s)) continue;
+            cur[s] = 1; const p = memo.get(keyOf(cur)); cur[s] = 0;
+            if (p === want - 1) pick = s;
+          }
+          if (pick < 0) break;
+          cur[pick] = 1;
+        }
+        out.lineTrap = steps ? shareSum / steps : 0;
+      }
+    } catch (e) { out.error = String(e && e.message || e); }
+    return out;
+  }
+
+  return { solve, quickest, greedy, playouts, bound, traps, mulberry32, keyOf, INF };
 });

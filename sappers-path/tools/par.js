@@ -7,7 +7,7 @@ const os = require("os");
 if (!isMainThread) {
   const Gen = require("./gen.js");
   const { C, task } = workerData;
-  let out; try { out = Gen.batch(C, task.wk, task.seed, task.n); } catch (e) { out = { recs: [], fails: { ["error: " + (e && e.message)]: 1 } }; }
+  let out; try { out = Gen.batch(C, task.wk, task.seed, task.n, task.mode); } catch (e) { out = { recs: [], fails: { ["error: " + (e && e.message)]: 1 } }; }
   parentPort.postMessage(out);
   return;
 }
