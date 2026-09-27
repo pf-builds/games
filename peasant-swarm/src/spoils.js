@@ -297,11 +297,11 @@
       return n;
     }
     // a site changes hands (SPEC-v3 §3). why "ring": a captor takes the bank (raid); "rout": a rout next to it hands it over, bank and all.
-    // The captor knows its own site live (kt); nobody else learns of it until they see it. Logged in S.ev.sites [t, team, from, why, paid].
+    // The captor knows its own site live (kt); nobody else learns of it until they see it. Logged in S.ev.sites [t, team, from, why, paid, kind].
     function takeSite(o, t, why) {
       const from = o.owner; o.owner = t.id; o.kt[t.id] = t.id; o.holdTeam = 0; o.prog = 0; o.colT = 0; o.bankT = 0;
       const paid = why === "ring" ? payOut(o, t, true) : 0; o.kb[t.id] = o.bank;
-      S.ev.sites.push([+S.t.toFixed(1), t.id, from, why, paid]);
+      S.ev.sites.push([+S.t.toFixed(1), t.id, from, why, paid, o.site]);
       const NM = o.site === "stockade" ? "STOCKADE" : "MILL"; o.fireT = 0;
       if (t.isPlayer && !S.aiPlayer) { G.banner(NM + " TAKEN" + (paid ? " · +" + paid : ""), t.color, 2.2, t.id, 2); if (o.site === "stockade" && !S._hintStockade) S._hintStockade = 1; }
       else if (from === 1 && G.playerSees(o.x, o.y)) G.banner(NM + " LOST", "#FF7A6E", 2.2, 0, 2);
@@ -347,7 +347,7 @@
     // a cleared bandit camp becomes a stockade owned by t (the team that landed the last hit; none: a neutral stockade). The captor knows it live
     function toStockade(o, t) {
       o.site = "stockade"; o.owner = t ? t.id : 0; o.bank = 0; o.fireT = 0; o.holdTeam = 0; o.prog = 0; if (t) o.kt[t.id] = t.id;
-      S.ev.sites.push([+S.t.toFixed(1), o.owner, 8, "clear", 0]);
+      S.ev.sites.push([+S.t.toFixed(1), o.owner, 8, "clear", 0, "stockade"]);
       if (t && t.isPlayer && !S.aiPlayer && !S._hintStockade) S._hintStockade = 1;
     }
     // a stockade (SPEC-v3 §3): captured by the ring hold at stockade.captureMin, never while an owner agent stands in the ring; from
@@ -423,7 +423,7 @@
     // SPEC-v3 §3 elimination (structures.neutralOnElim): the team's sites go neutral with nothing banked
     function onElim(t) {
       if (!SON() || !ST().neutralOnElim) return;
-      for (const o of S.objs) if (o.site && o.owner === t.id) { o.owner = 0; o.bank = 0; o.bankT = 0; o.colT = 0; S.ev.sites.push([+S.t.toFixed(1), 0, t.id, "elim", 0]); }
+      for (const o of S.objs) if (o.site && o.owner === t.id) { o.owner = 0; o.bank = 0; o.bankT = 0; o.colT = 0; S.ev.sites.push([+S.t.toFixed(1), 0, t.id, "elim", 0, o.site]); }
     }
     // a village joins: its garrison walks out of the gate and converts through convert() (muster counts, rout rules), a cheer within
     // encampments.cheer px of your swarm whether you see it or not (a tell through the dark). v3: it stays as the joiner's mill (SPEC-v3 §3)

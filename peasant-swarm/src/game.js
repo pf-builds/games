@@ -38,8 +38,8 @@
   const mkEv = () => ({ fights: 0, routs: 0, remnants: 0, scattered: 0, firstFight: -1, firstPlayerFight: -1, firstSightAny: -1, elims: [], hornLeader: 0, hornAlive: 0,
     alive60: 0, alive120: 0, alive180: 0, pileOns: 0, scentPings: 0, crownMoves: 0, trickle: 0, trickleFav: 0,
     gains: [], taken: [], drops: 0, trickleChests: 0, tiers60: null, tiers180: null, tiers300: null, // M6: tier gains [t, team, axis, tier, source], objectives taken [t, team, type], tiers at 1:00 / 3:00 / 5:00
-    millPaid: [0, 0, 0, 0, 0, 0, 0, 0, 0], millCollects: 0, sites: [],
-    forge: [], stockKills: 0, stockShots: 0, trained: [0, 0, 0, 0, 0, 0, 0, 0, 0], kind180: null }); // v3 M3b: forge sales [t, team, axis, tier, price], stockade kills and shots, recruits tagged by a trains hook per team, archer share per team at 3:00 // v3 M3a (SPEC-v3 §3): peasants each team collected from mills, collections, sites changing hands [t, team, from, why, paid]
+    millPaid: [0, 0, 0, 0, 0, 0, 0, 0, 0], millCollects: 0, sites: [], // v3 M3a (SPEC-v3 §3): peasants each team collected from mills, collections, sites changing hands [t, team, from, why, paid, kind]
+    forge: [], stockKills: 0, stockShots: 0, trained: [0, 0, 0, 0, 0, 0, 0, 0, 0], kind180: null }); // v3 M3b: forge sales [t, team, axis, tier, price], stockade kills and shots, recruits tagged by a trains hook per team, archer share per team at 3:00
   // heard noise (SPEC-v2 §7): the clashes going on now, a fixed pool; each AI hears one within its difficulty's hearing radius
   const mkNoise = () => { const a = []; for (let i = 0; i < 16; i++) a.push({ on: false, a: 0, b: 0, x: 0, y: 0, t0: -1e9, t1: -1e9 }); return a; };
   // the finale crown (the biggest swarm, position broadcast every finale.crownEvery s), the pile-on flag, Bully's scent pings
@@ -1492,7 +1492,7 @@
             if (!(c.kn[t.id] > 0) || !inRing(c.x, c.y)) continue; let skip = false; for (let k = 0; k < nVB; k++) if ((VBX[k] - c.x) * (VBX[k] - c.x) + (VBY[k] - c.y) * (VBY[k] - c.y) < AI.campAvoidRadius * AI.campAvoidRadius) { skip = true; break; }
             if (skip) continue; const sc = 1 / (dist(c.x, c.y) + 120); if (sc > bs) { bs = sc; bc = c; }
           }
-          const so = SPL.aiPick(t, dist, pw, P.powerBias, nVB, VBX, VBY, nSw, inRing); // v3 M3b (SPEC-v3 §3): a site inside its ring becomes its mill or stockade
+          const so = cfg.structures.enabled ? SPL.aiPick(t, dist, pw, P.powerBias, nVB, VBX, VBY, nSw, inRing) : null; // v3 M3b (SPEC-v3 §3): an objective inside its ring (a village, a camp, a site) becomes its mill or stockade (off: v2's hold exactly)
           if (so && so.score > P.neutralBias * AI.neutralScore * bs) { t.claimEmpty = S.t; SPL.knowObj(t, so.obj); aim(t, so.x, so.y); }
           else if (bc) { t.claimEmpty = S.t; knowCamp(t, bc); aim(t, bc.x, bc.y); } else { if (S.t - t.claimEmpty > P.reclaimEmpty) t.claimOn = false; aim(t, t.claimX, t.claimY); }
           t.state = "hold"; t.speedMod = AI.roamSpeed; return;
@@ -3058,9 +3058,39 @@
       let o = null; for (const q of S.objs) if (q.type === (name === "relic" ? "chest" : name === "mill" ? "village" : name) && q.live && (name !== "bandit" || q.kind === (opts.kind || 0))) { o = q; break; }
       if (!o) return { name, error: "no " + name };
       if (name === "relic") { o.live = false; o = SPL.relicAt(o.x + 40, o.y, o.axis, false, "chest", Infinity); }
-      if (name === "mill") { SPL.joinVillage(o, pl); o.bank = opts.bank != null ? opts.bank : 7; }
+      if (name === "mill") { if (opts.hint) S._hintMill = 0; SPL.joinVillage(o, pl); o.bank = opts.bank != null ? opts.bank : 7; }
       const g = opts.gap || (name === "bandit" || name === "mill" ? 230 : 130), cdx = W / 2 - o.x, cdy = W / 2 - o.y, cl = Math.hypot(cdx, cdy) || 1, [x, y] = near(o.x + (cdx / cl) * g, o.y + (cdy / cl) * g + 40, 60); clear([1]); freeze(); put(x, y, opts.n || 24, 1); // g px toward the map centre
       const r = done(o.x, o.y + 20); PS.aim(x, y); return Object.assign(r, { obj: { type: o.type, x: Math.round(o.x), y: Math.round(o.y), gar: o.gar, n: o.n, axis: o.axis } });
+    }
+    // v3 M3b critic scenes (SPEC-v3 §3, §6). "forge": your opts.n (60) swarm opts.gap (230) px from the first forge (of opts.axis) toward the
+    // centre; opts.buy aims into its ring (the hold, the pay walk and "ARMS I · 20 PAID" follow as the match runs); opts.hint re-arms the
+    // one-shot forge hint. "stockade": the first bandit camp (opts.kind) cleared and made opts.owner's (1) stockade, a Greedy opts.rival (20)
+    // 150 px off it (in range), your opts.n (30) 300 px toward the centre, the clock moved past stockade.activeAfter (and the match clock with
+    // it) so it shoots at once (with opts.owner 2 it is Greedy's and your label shows the need). "rivalmill" (the M3a critic's unstaged items): the first village is Greedy's mill with opts.bank (9) banked;
+    // you saw it, then your swarm stands opts.away (700) px off, so the label is the need you last saw under fog; the real bank then changes
+    // to 2 (your label must not). opts.hint on "mill" re-arms the one-shot mill hint (it fires on the next join).
+    if (name === "forge") {
+      let o = null; for (const q of S.objs) if (q.type === "forge" && (!opts.axis || q.axis === opts.axis)) { o = q; break; } if (!o) return { name, error: "no forge" };
+      const g = opts.gap || 230, cdx = W / 2 - o.x, cdy = W / 2 - o.y, cl = Math.hypot(cdx, cdy) || 1, [x, y] = near(o.x + (cdx / cl) * g, o.y + (cdy / cl) * g, 60);
+      clear([1]); freeze(); put(x, y, opts.n || 60, 1); if (opts.hint) S._hintForge = 0; const r = done((o.x + x) / 2, (o.y + y) / 2); PS.aim(opts.buy ? o.x : x, opts.buy ? o.y : y);
+      return Object.assign(r, { obj: { type: "forge", axis: o.axis, x: Math.round(o.x), y: Math.round(o.y) } });
+    }
+    if (name === "stockade") {
+      let o = null; for (const q of S.objs) if (q.type === "bandit" && q.live && q.kind === (opts.kind || 0)) { o = q; break; } if (!o) return { name, error: "no bandit camp" };
+      for (const a of o.agents) a.dead = true; o.n = 0; o.live = false; o.opened = S.t; SPL.toStockade(o, S.teams[opts.owner == null ? 1 : opts.owner] || null); if (opts.hint) S._hintStockade = 1;
+      const K = S.cfg.structures.stockade; if (S.t < K.activeAfter) { S.timeLeft -= K.activeAfter - S.t; S.t = K.activeAfter; }
+      const cdx = W / 2 - o.x, cdy = W / 2 - o.y, cl = Math.hypot(cdx, cdy) || 1, ux = cdx / cl, uy = cdy / cl, [rx, ry] = near(o.x - uy * 150, o.y + ux * 150, 40), [x, y] = near(o.x + ux * 300, o.y + uy * 300, 100); // Greedy to one side, you toward the centre
+      clear([1, 2]); freeze(); put(x, y, opts.n || 30, 1); put(rx, ry, opts.rival || 20, 2); const r = done(o.x, o.y); PS.aim(x, y); const gr = S.teams[2]; gr.tx = rx; gr.ty = ry;
+      return Object.assign(r, { obj: { type: "stockade", owner: o.owner, x: Math.round(o.x), y: Math.round(o.y) } });
+    }
+    if (name === "rivalmill") {
+      let o = null; for (const q of S.objs) if (q.type === "village" && q.live) { o = q; break; } if (!o) return { name, error: "no village" };
+      SPL.joinVillage(o, S.teams[2]); o.bank = opts.bank != null ? opts.bank : 9;
+      const cdx = W / 2 - o.x, cdy = W / 2 - o.y, cl = Math.hypot(cdx, cdy) || 1, [x, y] = near(o.x + (cdx / cl) * 200, o.y + (cdy / cl) * 200, 60);
+      const s2 = m.spawns[S.teams[2].slot], [gx, gy] = near(s2.x, s2.y, 80); clear([1, 2]); freeze(); put(x, y, opts.n || 24, 1); put(gx, gy, 20, 2); done(o.x, o.y); const saw = { team: o.sk.team, n: o.sk.n }; // Greedy lives on at home (an eliminated owner's mill goes neutral)
+      const aw = opts.away || 700, [x2, y2] = near(o.x + (cdx / cl) * aw, o.y + (cdy / cl) * aw, 80); for (const a of S.agents) if (a.team === 1) { a.x += x2 - x; a.y += y2 - y; a.hx = a.wx = a.x; a.hy = a.wy = a.y; }
+      const r = done((o.x + x2) / 2, (o.y + y2) / 2); o.bank = 2; PS.aim(x2, y2);
+      return Object.assign(r, { obj: { type: "mill", owner: 2, x: Math.round(o.x), y: Math.round(o.y), saw, seesNow: PS.fog.sees(1, o.x, o.y), realBank: o.bank } });
     }
     if (name === "teams") {
       const s0 = m.spawns[pl.slot], [x, y] = near(s0.x, s0.y, 80), R0 = opts.r || 150;
@@ -3116,6 +3146,7 @@
       trickle: E.trickle, trickleFav: E.trickleFav, leftHome: S.teams.slice(1).map((t) => t.leftHome), ai: FS ? { ...FS.ai } : null, aiCost: aiCostReport(), dbg: { ...S.dbg },
       tiers: S.teams.slice(1).map((t) => t.tierN), tiers60: E.tiers60, tiers180: E.tiers180, tiers300: E.tiers300, taken: E.taken.slice(), gains: E.gains.slice(), drops: E.drops, trickleChests: E.trickleChests, mustered: S.teams.slice(1).map((t) => t.mustered),
       millPaid: E.millPaid.slice(1, 7), millCollects: E.millCollects, sites: E.sites.slice(),
+      ...(S.cfg.structures.enabled ? { forge: E.forge.slice(), stockKills: E.stockKills, stockShots: E.stockShots, trained: E.trained.slice(1, 7), kind180: E.kind180 } : {}), // v3 M3b: forge sales, stockade shots and kills, trains tags, trained share at 3:00
       ...(FS && PS.fog.losOn() ? { los: { rustles: FS.rustleN, playerRustles: FS.stats.rustles, reveals: FS.stats.reveals, forestCells: S.map.forest ? S.map.forest.cells : 0, cache: { hits: PS.fog.LOS.hits, misses: PS.fog.LOS.misses } } } : {}) }; // v3: only with sight layers on, so the kill-switch records match v2's
   }
 
@@ -3788,6 +3819,12 @@
         const L = benchLayout(cx, cy, per, zoom, (x, y) => PS.terrain.placementOk(x, y, 1));
         for (const b of L.blobs) blob(b[0], b[1], per, b[2]);
         for (const q of L.camps) spawnCamp(q[0], q[1], 5);
+        // v3 M3b (SPEC-v3 §9): opts.stockades (up to 6) stockades round the two clashes, three each, owned by the other clash's teams, 150 px
+        // past the blob edge (in stockade.range, outside the ring) and the clock past stockade.activeAfter, so all of them shoot from tick 1
+        const SK = cfg.structures.stockade, nSt = Math.min(6, opts.stockades | 0), stocks = [];
+        if (nSt) { S.t = SK.activeAfter; const land = (S.vw / zoom) >= (S.vh / zoom), D = blobR(per) + 150, br = blobR(per);
+          for (let k = 0; k < nSt; k++) { const c = k % 2, b0 = L.blobs[2 * c], mx = (b0[0] + L.blobs[2 * c + 1][0]) / 2, my = (b0[1] + L.blobs[2 * c + 1][1]) / 2, j = (k >> 1) % 3, a = j === 0 ? -1 : j === 1 ? 1 : 0, sg = j === 2 ? -1 : 1;
+            stocks.push(SPL.stage("stockade", land ? mx + a * br : mx + sg * D, land ? my + sg * D : my + a * br, { owner: c === 0 ? 3 + (k & 1) : 1 + (k & 1) })); } }
         recount(); for (let i = 1; i < S.teams.length; i++) { const t = S.teams[i]; t.pcx = t.cx; t.pcy = t.cy; }
         fogStampAll();
         const T = S.teams, pin = () => { S.cam.x = cx; S.cam.y = cy; S.cam.zoom = zoom; S.shake = 0; };
@@ -3809,7 +3846,8 @@
           spot: [Math.round(cx), Math.round(cy), c.blockedInClash, +c.open.toFixed(2)], terrainBad: S.dbg.terrainBad,
           update: { p50: pct(up, 0.5), p90: pct(up, 0.9), p99: pct(up, 0.99), mean: mean(up) }, draw: { p50: pct(dr, 0.5), p90: pct(dr, 0.9), p99: pct(dr, 0.99), mean: mean(dr) },
           drawImage: cnt.drawImage, layers: cnt.layers, agentsDrawn: cnt.agentsDrawn, drawPerAgentOk: cnt.drawImage <= cfg.art.drawPerAgent * cnt.agentsDrawn + cfg.art.drawOverhead, // M5: one draw per agent
-          canvas: canvasMemory(), flow, wallMs: Math.round(performance.now() - w0), shot: opts.shot ? canvas.toDataURL() : undefined };
+          canvas: canvasMemory(), flow, wallMs: Math.round(performance.now() - w0), shot: opts.shot ? canvas.toDataURL() : undefined,
+          stockades: nSt ? { n: nSt, shots: S.ev.stockShots, kills: S.ev.stockKills, owners: stocks.map((o) => o.owner).join(""), arrowsDrawn: SPL.arrowCount() } : undefined };
       });
     } finally { cfg.combat.engageDelay = delay0; benchTick = () => {}; if (benchMap) releaseGround(benchMap); } // the bench map's chunks are zeroed, not kept (memory)
   }
