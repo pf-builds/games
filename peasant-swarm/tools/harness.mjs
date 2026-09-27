@@ -135,7 +135,7 @@ function installHelpers() {
         let ob = null, od = Infinity;
         for (const o of V.objectives ? V.objectives() : []) {
           if (!o.live && !o.mill) continue; // v3 M3a: its own mill once 6 are banked (SPEC-v3 §3; the bot collects by walking in)
-          const use = o.type === "relic" || o.type === "chest" ? tier[o.axis] < cap(o.axis, o.t3) : o.type === "village" ? (o.mill ? o.owner === 1 && o.bank >= 6 : p.count >= 0.5 * o.need) : o.type === "bandit" ? p.count >= 2 * o.need : false;
+          const use = o.type === "relic" || o.type === "chest" ? tier[o.axis] < cap(o.axis, o.t3) : o.type === "village" ? (o.mill ? o.owner === 1 && o.bank >= 6 : p.count >= 0.5 * o.need) : o.type === "bandit" ? p.count >= 2 * o.need : o.type === "forge" ? o.price > 0 && !o.tooFew && p.count >= 2.5 * o.price : false; // v3 M3b: a forge it can pay with 2.5 x the price (it stands in the ring: its target is the forge)
           if (!use) continue; const k = T.cellOf(o.x, o.y), d = k >= 0 ? this.D[k] : -1; if (d >= 0 && d * 0.5 < od) { od = d * 0.5; ob = o; }
         }
         if (ob && od < bd) { best = ob; bd = od; }

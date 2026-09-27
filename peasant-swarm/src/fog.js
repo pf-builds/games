@@ -202,6 +202,13 @@
       for (let i = ci - hx < 0 ? 0 : ci - hx, i1 = ci + hx >= N ? N - 1 : ci + hx; i <= i1; i++) { const c = j * N + i; if (vis[c] !== v1) continue; vis[c] = v; n++; if (!ex[c]) { ex[c] = 1; w.nExp[team]++; } } }
     return n;
   }
+  // v3 M3b (SPEC-v3 §3): one more sight source for team (a stockade it owns) into the version its last stamp() set: the same disc and LOS
+  // rule as any source, the explored grid, and for the player the display grid and the hole list (the fog render cuts a hole there)
+  function stampAt(team, x, y, r, kn) {
+    const w = W; if (!w || !w.ver[team]) return; const isP = team === 1;
+    disc(w, team, w.ver[team], x, y, r, isP ? r + CFG.exploreMargin : 0, isP && w.learn ? kn : null);
+    if (isP && w.srcN < MAXSRC) { const q = 3 * w.srcN++; w.src[q] = x; w.src[q + 1] = y; w.src[q + 2] = r; }
+  }
   // warm the centroid cache for a list of cells (fog.losWarmIris: spawn and pass cells during the iris)
   function warm(cells, k) { if (!W || !losMap || !W.map.losOn) return 0; let n = 0; for (let q = 0; q < cells.length; q++) { const c = cells[q]; if (!needLos(c, LC[k || 0].R)) continue; viewshed(k || 0, c % N, (c / N) | 0); n++; } return n; }
   // concealed (in sight and LOS but inside forest) for team: vis === ver + 1
@@ -449,7 +456,7 @@
 
   function sig() { const w = W; if (!w) return null; return [Array.from(w.nExp), Array.from(w.stamps), Array.from(w.ver)].join("|"); }
   const canvases = () => [maskCv, cloudCv, tileCv, tilesCv, vigCv, fogCv, shCv, ...holeSprites.values()].filter(Boolean); // for the memory report
-  const F = (PS.fog = { init, canvases, world, reset, use, stamp, sees, seesCell, explored, cellOf, reveal, warm, concealedCell, losCode, cacheEqual, losClear, losArm, losOn, LOS, losKeep: (on) => { keep = !!on; }, resize, render, flushMask, recover, drop, report, maskAlphaAt, dispAt, fogAlphaAt, SHS, shadowRect: () => [shX0, shY0, shX1, shY1], shadowForce: () => { shT = -1e9; }, minAlpha4, sumAlpha4, sig, holeGrad,
+  const F = (PS.fog = { init, canvases, world, reset, use, stamp, stampAt, sees, seesCell, explored, cellOf, reveal, warm, concealedCell, losCode, cacheEqual, losClear, losArm, losOn, LOS, losKeep: (on) => { keep = !!on; }, resize, render, flushMask, recover, drop, report, maskAlphaAt, dispAt, fogAlphaAt, SHS, shadowRect: () => [shX0, shY0, shX1, shY1], shadowForce: () => { shT = -1e9; }, minAlpha4, sumAlpha4, sig, holeGrad,
     vis: (team) => (W ? W.vis[team] : null), verOf: (team) => (W ? W.ver[team] : 0), exploredArr: (team) => (W ? W.explored[team] : null), world0: () => W, RS, ST,
     get N() { return N; }, get BN() { return BN; }, get BK() { return BK; }, get fogSize() { return [fw, fh, cssW, cssH]; }, get maskCanvas() { return maskCv; }, get cloudCanvas() { return cloudCv; } });
 })();

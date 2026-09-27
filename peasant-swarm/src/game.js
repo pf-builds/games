@@ -38,7 +38,8 @@
   const mkEv = () => ({ fights: 0, routs: 0, remnants: 0, scattered: 0, firstFight: -1, firstPlayerFight: -1, firstSightAny: -1, elims: [], hornLeader: 0, hornAlive: 0,
     alive60: 0, alive120: 0, alive180: 0, pileOns: 0, scentPings: 0, crownMoves: 0, trickle: 0, trickleFav: 0,
     gains: [], taken: [], drops: 0, trickleChests: 0, tiers60: null, tiers180: null, tiers300: null, // M6: tier gains [t, team, axis, tier, source], objectives taken [t, team, type], tiers at 1:00 / 3:00 / 5:00
-    millPaid: [0, 0, 0, 0, 0, 0, 0, 0, 0], millCollects: 0, sites: [] }); // v3 M3a (SPEC-v3 §3): peasants each team collected from mills, collections, sites changing hands [t, team, from, why, paid]
+    millPaid: [0, 0, 0, 0, 0, 0, 0, 0, 0], millCollects: 0, sites: [],
+    forge: [], stockKills: 0, stockShots: 0, trained: [0, 0, 0, 0, 0, 0, 0, 0, 0], kind180: null }); // v3 M3b: forge sales [t, team, axis, tier, price], stockade kills and shots, recruits tagged by a trains hook per team, archer share per team at 3:00 // v3 M3a (SPEC-v3 §3): peasants each team collected from mills, collections, sites changing hands [t, team, from, why, paid]
   // heard noise (SPEC-v2 §7): the clashes going on now, a fixed pool; each AI hears one within its difficulty's hearing radius
   const mkNoise = () => { const a = []; for (let i = 0; i < 16; i++) a.push({ on: false, a: 0, b: 0, x: 0, y: 0, t0: -1e9, t1: -1e9 }); return a; };
   // the finale crown (the biggest swarm, position broadcast every finale.crownEvery s), the pile-on flag, Bully's scent pings
@@ -62,6 +63,7 @@
     aiCost: { ms: 0, thinks: 0, ticks: 0, max: 0 }, // AI think script time (the < 0.1 ms per tick gate)
     dprCap: 2, zDpr: 1, dprHot: 0, scriptP90: 0, // M7: adaptive DPR tier, the zoom table's DPR, seconds over the p90 line, the live p90 script ms
     rafHot: 0, rafP90: 0, dprGrace: 0, dprPin: false, capLow: false, hadInput: false, perfSteps: [], sessionMatches: 0, fontsOk: null, // M1 (SPEC-v3 §5.5): the rAF-interval trigger, the grace window (wall ms), ?dpr=, the agent-cap lever, first input seen, matches started this session
+    aid: 0, // v3 M3b: the last agent id handed out (mkAgent; reset per world): the tie-break wherever one agent must win (SPEC-v3 §0)
     objs: [], bandits: [], spT: 0, // M6 spoils (src/spoils.js): every objective, the bandit camps among them (never in S.teams), the trickle-chest timer
   };
   if (S.debug || POSTER) window.PSS = S; // (the harness reads the staged poster scene through it too)
@@ -126,7 +128,7 @@
       // scripted control for critics and the harness bot: route the player to (x, y) through its field, as a cursor-follow target
       PS.aim = (x, y) => { const inp = S.input, p = S.teams[1]; inp.route.on = false; inp.hold = false; inp.active = false; inp.joy.active = false; if (!p) return null; p.tx = x; p.ty = y; p.mode = "route"; return p.mode; };
       // QA: start a live match without the title click. { seed, difficulty, aiPlayer } (aiPlayer: all six swarms AI, the harness's pacing matches)
-      PS.debugStart = (o) => { o = o || {}; if (o.difficulty && S.cfg.difficulty[o.difficulty]) S.difficulty = o.difficulty; PS.audio.setSilent(true); newGame(false, { seed: o.seed, aiPlayer: !!o.aiPlayer }); S.mode = "play"; S._hintFight = S._hintHud = S._hintRecruit = S._hintFog = true; S._hintRelic = S._hintRem = S._hintForest = S._hintMill = 2; S._routedBy = null; showOverlay(null); $("hud").classList.remove("hidden"); layoutHUD(); updateHUD(true); return { seed: S.seed, difficulty: S.difficulty, slots: S.teams.slice(1).map((t) => t.slot) }; };
+      PS.debugStart = (o) => { o = o || {}; if (o.difficulty && S.cfg.difficulty[o.difficulty]) S.difficulty = o.difficulty; PS.audio.setSilent(true); newGame(false, { seed: o.seed, aiPlayer: !!o.aiPlayer }); S.mode = "play"; S._hintFight = S._hintHud = S._hintRecruit = S._hintFog = true; S._hintRelic = S._hintRem = S._hintForest = S._hintMill = S._hintForge = S._hintStockade = 2; S._routedBy = null; showOverlay(null); $("hud").classList.remove("hidden"); layoutHUD(); updateHUD(true); return { seed: S.seed, difficulty: S.difficulty, slots: S.teams.slice(1).map((t) => t.slot) }; };
       PS.pacing = pacing;
       PS.cfgOverride = cfgOverride; // M8 sweeps (SPEC-v2 §13)
       PS.artScene = artScene;
@@ -155,7 +157,7 @@
     // the neighbour loop reads x, y, team, dead and escapeT of hundreds of agents per agent: keep them first (one cache line)
     return { x, y, team, dead: false, escapeT: 0, vx: 0, vy: 0, hp: S.cfg.agent.hp, atk: R() * 0.5, tgt: null,
       ph: R() * 10, face: R() < 0.5 ? 1 : -1, fl: 0, lunge: 0, wx: x, wy: y, hx: x, hy: y, fight: false, r: S.cfg.agent.radius, pop: 9, camp: null,
-      rec: 0, seenA: 0, seenT: -1e9, drawnF: 0, ex: 0, ey: 0, groupId: 0, rd: 0, fieldT: 0, fdx: 0, fdy: 0, fok: 0, strag: 0, gar: false, exr: false, pk: -1, wT: -1, wTeam: 0 }; // strag: left behind terrain, it follows the field (P1); wT / wTeam: the rout wave (M7, render only: until sim time wT it is drawn hands up in team wTeam); pk: its slot in the packed hash this tick (M7); gar: a village garrison inside its palisade (M6); exr: a scattered ex-rival (no muster credit)
+      rec: 0, seenA: 0, seenT: -1e9, drawnF: 0, ex: 0, ey: 0, groupId: 0, rd: 0, fieldT: 0, fdx: 0, fdy: 0, fok: 0, strag: 0, gar: false, exr: false, pk: -1, wT: -1, wTeam: 0, id: ++S.aid, kind: 0 }; // id: per-world serial (the SPEC-v3 §0 tie-break); kind: 0 peasant, 1 archer (SPEC-v3 §3 trains tag, M4 reads it); strag: left behind terrain, it follows the field (P1); wT / wTeam: the rout wave (M7, render only: until sim time wT it is drawn hands up in team wTeam); pk: its slot in the packed hash this tick (M7); gar: a village garrison inside its palisade (M6); exr: a scattered ex-rival (no muster credit)
   }
   const z9 = () => [0, 0, 0, 0, 0, 0, 0, 0, 0]; // team-indexed arrays: neutral 0, player 1, rivals 2-6, spare 7, bandits 8 (SPEC-v2 §6)
   // route: the team steers by its flow field (else direct seek); mode (player): "route" | "steer" | "hold"; hyst: route hysteresis applies;
@@ -178,7 +180,7 @@
       spr: S.spr.peasantSet(color, id), ban: S.spr.banner(color, id), kills: 0, peak: 1, state: "roam", speedMod: 1, thinkT: S.rng() * 0.5, lastHint: 0, minY: 0, huntStart: 0, huntCooldown: 0,
       regroupUntil: 0, fleeFrom: 0, leftHome: -1, atCentre: -1, preyId: 0, exX: 0, exY: 0, exUntil: -1, escUntil: -1, escFrom: 0, escReplanAt: 0, escGX: 0, escGY: 0,
       kind: ai ? ai.kind || "" : "", sense: 1, mem: S.cfg.fog.aiMemory, hear: S.cfg.fog.clashNoise, lastFight: -1e9, scentX: 0, scentY: 0, scentT: -1e9, leaveUntil: -1e9,
-      lurkX: 0, lurkY: 0, lurkUntil: -1e9, lurkCool: 0, crowsT: -1e9, claimX: 0, claimY: 0, claimOn: false, claimEmpty: 0, rustleX: 0, rustleY: 0, rustleT: -1e9 }; // rustle*: the last rustle this team saw (v3, ai.rustleMemory)
+      lurkX: 0, lurkY: 0, lurkUntil: -1e9, lurkCool: 0, crowsT: -1e9, claimX: 0, claimY: 0, claimOn: false, claimEmpty: 0, rustleX: 0, rustleY: 0, rustleT: -1e9, kindN: 0, trainAcc: 0 }; // kindN / trainAcc: trained agents now and the trains hook's share accumulator (v3 M3b); rustle*: the last rustle this team saw (v3, ai.rustleMemory)
     SPL.initTeam(t); return t;
   }
   // speed by swarm size: small swarms get a boost that fades by `full`, big ones slow a little per peasant above it (SPEC-v2 §3)
@@ -261,7 +263,7 @@
     S.flowW.know.fill(0); // the player starts knowing nothing: explored cells teach its field (fog stamps call PS.flow.learn)
     S.fogW = PS.fog.use(PS.fog.reset(sandbox ? sbFog : liveFog, m, { learn: true })); S.fogS = mkFogS(); S.fogOn = !attract;
     S.cap = opts.cap || capFor();
-    S.agents.length = 0; S.obstacles.length = 0; S.powerups.length = 0; S.camps.length = 0; S.banners.length = 0; S.decals.length = 0; S.trails.length = 0; SPL.reset();
+    S.agents.length = 0; S.obstacles.length = 0; S.powerups.length = 0; S.camps.length = 0; S.banners.length = 0; S.decals.length = 0; S.trails.length = 0; SPL.reset(); S.aid = 0;
     if (!sandbox) for (const st of [...S.spr.sets.values()]) if (st.relics) S.spr.dropSet(st); // last match's relic atlases: zeroed (every team starts at tier 0)
     S.t = 0; S.tick = 0; S.acc = 0; S.timeLeft = cfg.world.matchSeconds; S.trickleT = 0; S.shake = 0; S.result = null; S.engagedNow = false; S.finalCalled = false; S.pendingEnd = null; S._routedBy = null; S.lastDrawSim = 0;
     S.stats = { recruited: 0, kills: 0, routs: 0, lost: 0, peak: 1, powerups: 0, fights: 0 };
@@ -365,9 +367,9 @@
 
   // camps: also the neutral head-count of every camp (update(), once per tick)
   function recount(camps) {
-    for (let i = 1; i < S.teams.length; i++) { const t = S.teams[i]; t.count = 0; t._sx = 0; t._sy = 0; t.minY = Infinity; }
+    for (let i = 1; i < S.teams.length; i++) { const t = S.teams[i]; t.count = 0; t._sx = 0; t._sy = 0; t.minY = Infinity; t.kindN = 0; }
     if (camps) for (const c of S.camps) c.n = 0;
-    for (const a of S.agents) { if (a.dead) continue; if (a.team === 0) { if (camps && a.camp) a.camp.n++; continue; } if (a.team === 8) continue; const t = S.teams[a.team]; t.count++; t._sx += a.x; t._sy += a.y; if (a.y < t.minY) t.minY = a.y; }
+    for (const a of S.agents) { if (a.dead || a.gar) continue; if (a.team === 0) { if (camps && a.camp) a.camp.n++; continue; } if (a.team === 8) continue; const t = S.teams[a.team]; t.count++; t._sx += a.x; t._sy += a.y; if (a.y < t.minY) t.minY = a.y; if (a.kind) t.kindN++; } // (a garrison or a forge payer, gar, is nobody's count; kindN: agents carrying a trained type, SPEC-v3 §3)
     for (let i = 1; i < S.teams.length; i++) {
       const t = S.teams[i];
       if (t.count > 0) { t.cx = t._sx / t.count; t.cy = t._sy / t.count; if (t.count > t.peak) t.peak = t.count; const p = PS.terrain.snapXY(t.cx, t.cy); t.ax = p.x; t.ay = p.y; }
@@ -397,7 +399,7 @@
       burst: (x, y, c, n, sp, l, sz, g) => particles.burst(x, y, c, n, sp, l, sz, g), puff: (x, y) => particles.burst(x, y - 2, "#C8B08A", 2, 30, 0.35, 2, -20),
       playerSees: (x, y) => playerSees(x, y), fxOk: (x, y) => fxOk(x, y), fogGate: () => fogGate(), sightR: (t) => sightR(t), randPos: (l) => randPos(l), placeOk: (x, y, k, pad) => placeOk(x, y, k, pad),
       noiseAt: (a, b, x, y) => noiseAt(a, b, x, y), clashPing: (x, y, r) => clashPing(x, y, r), sandbox: () => sandbox, swarms, seenSwarm: (id) => !fogGate() || S.fogS.obs[1][id].seen,
-      knowFail: (t, what) => knowFail(t, what), gained: (t, axis) => onGained(t, axis) };
+      knowFail: (t, what) => knowFail(t, what), gained: (t, axis) => onGained(t, axis), kill: (a, by) => killAgent(a, by), heard: (t, maxD, who) => heardFight(t, maxD, who), onScreen: (x, y) => onScreen(x, y) };
   }
 
   // ---------------------------------------------------------------- spatial hash: agents packed by 48 px cell into contiguous typed arrays
@@ -555,6 +557,7 @@
   function fogStamp(i) {
     const t = S.teams[i]; if (!t || !t.alive || t.count === 0) return;
     PS.fog.stamp(i, t.cx, t.cy, sightR(t), FBL, i * BB, FBN[i], S.cfg.fog.bucketSight, PS.knowledge);
+    SPL.sight(i); // v3 M3b (SPEC-v3 §3): each stockade team i owns stamps structures.stockade.sight into i's own grid (one more source, same LOS rule)
     const R = S.fogS.rev; for (let s = 0; s < 4; s++) { const b = (i * 4 + s) * 3; if (R[b + 2] > S.t) PS.fog.reveal(i, R[b], R[b + 1], S.cfg.forest.fightReveal); } // v3 fight reveals
     observe(i);
   }
@@ -1056,6 +1059,9 @@
     if (S._hintForest === 1 && showHint("Trees hide small mobs. Leaves shake where something moves", S.cfg.polish.hintForest)) S._hintForest = 2;
     // v3 M3a: the mill hint, due when your first village becomes a mill (src/spoils.js joinVillage)
     if (S._hintMill === 1 && showHint("Your village is a mill now. It banks peasants: walk through to collect", S.cfg.polish.hintMill)) S._hintMill = 2;
+    // v3 M3b: the forge hint (the first forge you see) and the stockade hint (your first stockade)
+    if (S._hintForge === 1 && showHint("A forge sells a tier for peasants. Send your swarm into its ring and stand", S.cfg.polish.hintForge)) S._hintForge = 2;
+    if (S._hintStockade === 1 && showHint("Your stockade shoots rivals near it and watches the ground round it", S.cfg.polish.hintStockade)) S._hintStockade = 2;
 
     // win / lose
     if (player.count === 0 && !S.result) endGame(false, S._routedBy ? "Your swarm broke and joined " + S._routedBy + "." : "Every last peasant fell.");
@@ -1366,6 +1372,7 @@
   function lurkSpot(t, P) {
     const AI = S.cfg.ai, os2 = AI.objectiveSight * AI.objectiveSight; let ox = 0, oy = 0, bd = Infinity, on = false;
     for (const p of S.powerups) { if (!p.alive) continue; const d = (p.x - t.ax) * (p.x - t.ax) + (p.y - t.ay) * (p.y - t.ay); if (d <= os2 && d < bd) { bd = d; ox = p.x; oy = p.y; on = true; } }
+    if (!on && SPL.rivalMill(t, os2)) { ox = SPL.OS.x; oy = SPL.OS.y; on = true; } // v3 M3b (SPEC-v3 §3): Sly lurks at a rival mill it has seen
     if (!on) { let bn = 0; for (const c of S.camps) if (c.kn[t.id] > bn) { bn = c.kn[t.id]; ox = c.x; oy = c.y; on = true; } }
     if (!on) return false;
     const pc = S.map.place.passCells, N = S.map.N, cell = S.map.cell, lim = P.lurkPassMax * P.lurkPassMax; let bc = -1; bd = lim;
@@ -1398,7 +1405,7 @@
   // hearing. The two announced exceptions: Bully's scent and the finale crown. State machine, first match wins: FLEE (cornered: fight) >
   // CROWN (finale) > HUNT (huntTimeout, then huntCooldown) > PILE-ON > personality (Bully TRACK, Wary LEAVE, Sly INVESTIGATE / LURK,
   // Stubborn HOLD) > REGROUP > FORAGE > EXPLORE. Before ai.grace nobody hunts and every AI steers away from any swarm it sees.
-  const TH = { ax: 0, ay: 0 }, PR = { x: 0, y: 0, vx: 0, vy: 0 }, VBX = new Float64Array(9), VBY = new Float64Array(9);
+  const TH = { ax: 0, ay: 0 }, PR = { x: 0, y: 0, vx: 0, vy: 0 }, VBX = new Float64Array(16), VBY = new Float64Array(16); // swarms and a rustle (<= 9), then rival stockades (SPEC-v3 §3)
   function aiThink(t) {
     const cfg = S.cfg, P = t.ai, K = t.kind, AI = cfg.ai, FW = cfg.flow, FG = cfg.fog, FN = cfg.finale, FL = PS.flow, FS = S.fogS;
     const final = S.timeLeft <= cfg.world.finalSeconds, grace = !final && S.t < AI.grace, cap = AI.sight * FW.fromMeCap, me = FL.buildFromMe(t.id, t.ax, t.ay, cap);
@@ -1426,11 +1433,12 @@
       if (sc > preyScore) { preyScore = sc; prey = o; PR.x = ox; PR.y = oy; PR.vx = KP.vx; PR.vy = KP.vy; }
     }
     if (S.t - t.rustleT <= AI.rustleMemory && nVB < 9) { VBX[nVB] = t.rustleX; VBY[nVB++] = t.rustleY; } // v3: a rustle it saw is an unknown threat (camp avoidance only)
+    const nSw = nVB; nVB = SPL.avoidList(t, nVB, VBX, VBY); // v3 M3b (SPEC-v3 §3): rival stockades it has seen owned join the avoid list (a stockade objective checks only the first nSw)
     // grace: steer straight away from the nearest swarm it sees
     if (avoid) { knowSwarm(t, avoid, 0); const dx = t.ax - TH.ax, dy = t.ay - TH.ay, l = Math.sqrt(dx * dx + dy * dy) || 1, q = FL.rayOut(t.ax, t.ay, dx / l, dy / l, AI.fleeDistance, null); aim(t, q.x, q.y); t.state = "avoid"; t.preyId = 0; t.speedMod = AI.roamSpeed; return; }
     // FLEE, or turn and fight when caught (never while regrouping or escaping: M2 critic MAJOR-2)
     if (threat && threatD < AI.corneredDist && t.count >= 3 && !regroup && !escaping) { knowSwarm(t, threat, FG.aiFleeMemory); aim(t, TH.ax, TH.ay); t.state = "hunt"; t.preyId = threat.id; t.speedMod = AI.huntSpeed; return; }
-    if (threat) { knowSwarm(t, threat, FG.aiFleeMemory); t.speedMod = AI.fleeSpeed; const q = fleeTarget(t, TH, me, false); aim(t, q.x, q.y); t.state = "flee"; t.preyId = 0; return; }
+    if (threat) { knowSwarm(t, threat, FG.aiFleeMemory); t.speedMod = AI.fleeSpeed; const q = K === "wary" && SPL.ownStockade(t, TH.ax, TH.ay, P.clashLeave) ? SPL.OS : fleeTarget(t, TH, me, false); aim(t, q.x, q.y); t.state = "flee"; t.preyId = 0; return; } // v3 M3b: Wary flees toward its own stockade (SPEC-v3 §3)
     // CROWN: every rival goes for the crowned leader; one under finale.underdogRatio x the leader closes to finale.closeTo px and commits only
     // once a second attacker it sees stands within finale.pairRadius of the crown, or it hears the leader fighting
     if (crown && !regroup && !escaping && t.count >= 3) {
@@ -1484,7 +1492,9 @@
             if (!(c.kn[t.id] > 0) || !inRing(c.x, c.y)) continue; let skip = false; for (let k = 0; k < nVB; k++) if ((VBX[k] - c.x) * (VBX[k] - c.x) + (VBY[k] - c.y) * (VBY[k] - c.y) < AI.campAvoidRadius * AI.campAvoidRadius) { skip = true; break; }
             if (skip) continue; const sc = 1 / (dist(c.x, c.y) + 120); if (sc > bs) { bs = sc; bc = c; }
           }
-          if (bc) { t.claimEmpty = S.t; knowCamp(t, bc); aim(t, bc.x, bc.y); } else { if (S.t - t.claimEmpty > P.reclaimEmpty) t.claimOn = false; aim(t, t.claimX, t.claimY); }
+          const so = SPL.aiPick(t, dist, pw, P.powerBias, nVB, VBX, VBY, nSw, inRing); // v3 M3b (SPEC-v3 §3): a site inside its ring becomes its mill or stockade
+          if (so && so.score > P.neutralBias * AI.neutralScore * bs) { t.claimEmpty = S.t; SPL.knowObj(t, so.obj); aim(t, so.x, so.y); }
+          else if (bc) { t.claimEmpty = S.t; knowCamp(t, bc); aim(t, bc.x, bc.y); } else { if (S.t - t.claimEmpty > P.reclaimEmpty) t.claimOn = false; aim(t, t.claimX, t.claimY); }
           t.state = "hold"; t.speedMod = AI.roamSpeed; return;
         }
       }
@@ -1510,7 +1520,7 @@
       const sc = P.powerBias * AI.powerScore / (dist(p.x, p.y) + 120); if (sc > bestS) { bestS = sc; tx = p.x; ty = p.y; pu = true; }
     }
     // spoils (SPEC-v2 §7, §8): the same roam score over the objectives it believes live, feasible on count x power (src/spoils.js aiPick)
-    const op = SPL.aiPick(t, dist, pw, P.powerBias, nVB, VBX, VBY); if (op && op.score > bestS) { bestS = op.score; tx = op.x; ty = op.y; pu = true; po = op.obj; }
+    const op = SPL.aiPick(t, dist, pw, P.powerBias, nVB, VBX, VBY, nSw, null); if (op && op.score > bestS) { bestS = op.score; tx = op.x; ty = op.y; pu = true; po = op.obj; }
     if (bestS > 0) { if (po) SPL.knowObj(t, po); else if (!pu) knowCamp(t, bestC); aim(t, tx, ty); t.state = po ? "spoils" : "forage"; t.speedMod = AI.roamSpeed; return; }
     // EXPLORE: fog.exploreSamples points fog.exploreRing px away on walkable ground it has not explored, the nearest that does not lead toward
     // a bigger swarm it remembers (ai.ghostKeep); kept fog.exploreCommit s or until reached. Wary weighs edges.
@@ -1879,7 +1889,7 @@
     for (let i = 0; i < 9; i++) { PVN[i] = 0; PVX[i] = 0; PVY[i] = 0; PVMY[i] = 1e9; }
     const DL = S.drawList; DL.length = 0;
     for (const a of S.agents) {
-      if (a.gar) continue; // a village garrison is inside its palisade (the number on the gate stands for it)
+      if (a.gar === true) continue; // a village garrison is inside its palisade (the number on the gate stands for it); a forge payer (gar 2) is drawn walking in
       const tm = a.team, out = a.x < x0 - 20 || a.x > x1 + 20 || a.y < y0 - 30 || a.y > y1 + 20; let vis = true;
       if (gate && tm === 0 && out) { a.seenA = 0; continue; } // a neutral out of view needs no lookup: it fades in if it enters the view in sight
       if (gate && tm !== 1) { const x = a.x, y = a.y; vis = v1 !== 0 && x >= 0 && y >= 0 && x < lim && y < lim && V1[((y / cell) | 0) * NC + ((x / cell) | 0)] === v1; }
@@ -2621,7 +2631,7 @@
   function syncMixer() { const m = PS.audio.mixState(), el = $("mixer"); if (!el) return; for (const b of el.querySelectorAll("button")) b.classList.toggle("off", !m[b.dataset.k]); el.querySelector("span").textContent = Math.round(m.volume * 100) + "%"; }
   function showOverlay(id) { document.querySelectorAll(".overlay").forEach((o) => o.classList.toggle("active", o.id === id)); }
   // the first-ever match (no stored difficulty, no records, nothing picked this visit) runs Easy silently; the end screens carry the picker
-  function startGame() { S.sessionMatches++; if (SCR) SCR.drop(); $("teams").classList.add("rumour"); if (S.firstEver) { S.firstEver = false; S.difficulty = "easy"; syncDifficulty(); } PS.audio.setSilent(false); PS.audio.unlock(); PS.audio.click(); portal("gameplayStop"); newGame(false); S.mode = "play"; S._hintFight = S._hintHud = S._hintRecruit = S._hintFog = false; S._hintRelic = S._hintRem = S._hintForest = S._hintMill = 0; S.fly = null; S.gained = false; S._routedBy = null; showOverlay(null); $("hud").classList.remove("hidden"); layoutHUD(); updateHUD(true); }
+  function startGame() { S.sessionMatches++; if (SCR) SCR.drop(); $("teams").classList.add("rumour"); if (S.firstEver) { S.firstEver = false; S.difficulty = "easy"; syncDifficulty(); } PS.audio.setSilent(false); PS.audio.unlock(); PS.audio.click(); portal("gameplayStop"); newGame(false); S.mode = "play"; S._hintFight = S._hintHud = S._hintRecruit = S._hintFog = false; S._hintRelic = S._hintRem = S._hintForest = S._hintMill = S._hintForge = S._hintStockade = 0; S.fly = null; S.gained = false; S._routedBy = null; showOverlay(null); $("hud").classList.remove("hidden"); layoutHUD(); updateHUD(true); }
   function toTitle() { portal("gameplayStop"); if (SCR) SCR.drop(); PS.audio.stopDrum(); PS.audio.murmur(0); PS.audio.melee(0); S.mode = "title"; showOverlay("ov-title"); $("hud").classList.add("hidden"); setHuddle(false); newGame(true); }
   // reason "hidden" | "blur" | "user": CrazyGames gets no gameplayStop for focus loss (its platform handles that; src/portal.js)
   function pause(reason) { portal("gameplayStop", reason || "user"); S.mode = "pause"; PS.audio.stopDrum(); PS.audio.murmur(0); PS.audio.melee(0); showOverlay("ov-pause"); setHuddle(false); S.input.joy.active = false; S.input.joy.id = -1; S.input.tp.active = false; S.input.hud2 = -1; }
@@ -2685,7 +2695,7 @@
   const SANDBOX_KEYS = ["mode", "t", "timeLeft", "agents", "teams", "obstacles", "powerups", "camps", "cam", "input", "rng", "seed", "trickleT", "shake",
     "banners", "hintT", "stats", "engagedNow", "result", "decals", "trails", "attract", "difficulty", "spr", "tick", "acc", "map", "obs", "cap", "dbg",
     "finalCalled", "pendingEnd", "_routedBy", "_hintRecruit", "_hintFight", "_hintHud", "camS", "ev", "lastRout", "thinkRR", "flowW", "fixture",
-    "fogW", "fogS", "fogOn", "frameId", "lastDrawT", "lastDrawSim", "noise", "crown", "pile", "scent", "relaxUntil", "torches", "aiPlayer", "aiCost", "objs", "bandits", "spT", "meleeN"];
+    "fogW", "fogS", "fogOn", "frameId", "lastDrawT", "lastDrawSim", "noise", "crown", "pile", "scent", "relaxUntil", "torches", "aiPlayer", "aiCost", "objs", "bandits", "spT", "meleeN", "aid", "_hintForge", "_hintStockade"];
   let sbParticles = null, sbSmoke = null, sbFloaters = null, sbSpr = null, sbSprOf = null, flatMap = null;
   function withSandbox(fn) {
     if (sandbox) return fn(); // nested call shares the outer throwaway world
@@ -2707,7 +2717,7 @@
     }
   }
   function sandboxField(map) {
-    S.agents = []; S.obstacles = []; S.powerups = []; S.camps = []; S.banners = []; S.decals = []; S.trails = []; S.teams = []; SPL.reset();
+    S.agents = []; S.obstacles = []; S.powerups = []; S.camps = []; S.banners = []; S.decals = []; S.trails = []; S.teams = []; SPL.reset(); S.aid = 0;
     S.map = map || flatMap || (flatMap = PS.terrain.flat()); PS.terrain.use(S.map); placeTables(S.map); bucketObstacles();
     S.flowW = PS.flow.use(PS.flow.reset(sbFlow, S.map));
     S.fogW = PS.fog.use(PS.fog.reset(sbFog, S.map, { learn: false })); S.fogS = mkFogS(); S.fogOn = false; // fog data runs; the view is unfogged unless a test sets fogOn
@@ -2785,7 +2795,7 @@
   // a fresh scene on map m in the current world: player + the three rivals (dormant), no AI think, no trickle, no power-ups, seeded
   function fixtureBase(m, seed) {
     const cfg = S.cfg, old = S.map;
-    S.agents = []; S.obstacles = []; S.powerups = []; S.camps = []; S.banners = []; S.decals = []; S.trails = []; SPL.reset();
+    S.agents = []; S.obstacles = []; S.powerups = []; S.camps = []; S.banners = []; S.decals = []; S.trails = []; SPL.reset(); S.aid = 0;
     S.map = m; PS.terrain.use(m); placeTables(m); bucketObstacles(); if (!sandbox && old && old !== m) releaseGround(old);
     S.flowW = PS.flow.use(PS.flow.reset(sandbox ? sbFlow : liveFlow, m));
     S.fogW = PS.fog.use(PS.fog.reset(sandbox ? sbFog : liveFog, m, { learn: false })); S.fogS = mkFogS(); S.fogOn = false; // fixtures keep full knowledge and an unfogged view
@@ -2828,6 +2838,7 @@
     if (opts.blob) blob(g.x0 - FX.startGap, g.cy, FX.ambushColumn, 2);
     else for (let k = 0; k < FX.ambushColumn; k++) { const lane = k % FX.ambushLanes, x = g.x1 - 8 - Math.floor(k / FX.ambushLanes) * FX.ambushSpacing, y = g.cy + (lane - (FX.ambushLanes - 1) / 2) * 16; S.agents.push(mkAgent(x, y, 2)); }
     blob(hx, g.cy, nWait, 1); settle(wait); settle(col);
+    if (opts.stockade) SPL.stage("stockade", hx + (opts.stockade === "in" ? 90 : 700), g.cy, { owner: 1 }); // v3 M3b (stockFixtures)
     wait.mode = "hold"; wait.route = false; let R = null, tail = -1, tailKept = -1, colAfter = -1, colBefore = FX.ambushColumn;
     return { name: "ambush", drive() {
       if (S.lastRout && !R) { R = S.lastRout; tail = 0; tailKept = 0; for (const a of S.agents) { if (a.dead || a.x >= g.x0) continue; if (a.team === 2) tailKept++; tail++; } colAfter = col.count; }
@@ -2888,6 +2899,7 @@
     const FX = S.cfg.fixtures, m = fixtureMap("pass64"), g = passGeom("pass64"); fixtureBase(m, seed);
     const hold = S.teams[1], col = S.teams[2], hx = g.x1 + (opts.at != null ? opts.at : FX.holdAt), tx = g.x1 + FX.holdTarget; col.alive = true;
     blob(g.x0 - FX.holdStart - blobR(FX.holdColumn), g.cy, FX.holdColumn, 2); blob(hx, g.cy, FX.holdN, 1); settle(hold); settle(col);
+    if (opts.stockade) SPL.stage("stockade", hx + (opts.stockade === "in" ? 90 : 700), g.cy, { owner: 1 }); // v3 M3b: the holders' stockade in range or out of it (stockFixtures)
     let contact = -1, broke = -1, killsAtBreak = -1, first = null, firstRout = null;
     return { name: "hold", drive() {
       if (contact < 0 && hold.engT[2] > 0) contact = S.t;
@@ -2971,7 +2983,7 @@
       const w0 = performance.now(), fx = mk(opts.seed == null ? 1 : opts.seed >>> 0, opts), max = Math.round(S.cfg.fixtures.maxSeconds * 60), wallMs = clamp(+opts.wallMs || 9000, 500, 14000);
       S.fixture = fx; S.mode = "sandbox"; let truncated = false;
       for (let i = 0; i < max && !fx.done(); i++) { update(DT); if ((i & 63) === 63 && performance.now() - w0 > wallMs) { truncated = true; break; } } // lesson 20
-      const r = fx.result(); r.truncated = truncated; r.terrainBad = S.dbg.terrainBad; r.firstBad = S.dbg.firstBad; r.flow = PS.flow.stats; r.wallMs = Math.round(performance.now() - w0);
+      const r = fx.result(); r.truncated = truncated; r.stockKills = S.ev.stockKills; r.terrainBad = S.dbg.terrainBad; r.firstBad = S.dbg.firstBad; r.flow = PS.flow.stats; r.wallMs = Math.round(performance.now() - w0);
       return r;
     });
   }
@@ -3241,7 +3253,7 @@
   function spoilsPlacement(n) {
     const out = [], EN = S.cfg.encampments;
     for (let i = 0; i < n; i++) out.push(withSandbox(() => {
-      sandboxField(); newGame(false, { seed: 1000 + i * 7919 }); const m = S.map, U = m.cell / 3, bad = [], cnt = { village: 0, chest: 0, bandit: [0, 0, 0] }; let minB = 1e9;
+      sandboxField(); newGame(false, { seed: 1000 + i * 7919 }); const m = S.map, U = m.cell / 3, bad = [], cnt = { village: 0, chest: 0, bandit: [0, 0, 0], forge: 0 }; let minB = 1e9;
       for (const o of S.objs) {
         const c = PS.terrain.cellOf(o.x, o.y); let far = 1e9; for (let k = 0; k < 6; k++) { const d = m.dist[k][c]; if (d >= 65535) bad.push(o.type + " unreachable from spawn " + k); if (d * U < far) far = d * U; }
         if (o.type === "bandit") { cnt.bandit[o.kind]++; if (far < minB) minB = far; if (far < EN.banditMinPath) bad.push("bandit camp " + Math.round(far) + " px from a spawn"); } else cnt[o.type]++;
@@ -3250,7 +3262,7 @@
       const gars = S.objs.filter((o) => o.type === "village").map((o) => o.gar).sort((a, b) => a - b).join(","), want = EN.villages.slice().sort((a, b) => a - b).join(",");
       const garN = S.agents.filter((a) => a.gar).length, banN = S.agents.filter((a) => a.team === 8).length, sumG = S.objs.filter((o) => o.type === "village").reduce((s, o) => s + o.gar, 0), sumB = S.bandits.reduce((s, b) => s + b.n0, 0);
       if (cnt.village !== 6 || gars !== want) bad.push("villages " + gars); if (cnt.chest !== 6) bad.push("chests " + cnt.chest); if (cnt.bandit.join() !== EN.banditCounts.join()) bad.push("bandit camps " + cnt.bandit.join("/"));
-      if (Object.keys(cnt).length !== 3) bad.push("objective types " + Object.keys(cnt).join("/")); if (garN !== sumG || banN !== sumB) bad.push("agents gar " + garN + "/" + sumG + " bandits " + banN + "/" + sumB);
+      if (Object.keys(cnt).length !== 4) bad.push("objective types " + Object.keys(cnt).join("/")); if (cnt.forge !== (S.cfg.structures.enabled ? S.cfg.structures.forge.count : 0)) bad.push("forges " + cnt.forge); // v3 M3b: the forges (SPEC-v3 §3) if (garN !== sumG || banN !== sumB) bad.push("agents gar " + garN + "/" + sumG + " bandits " + banN + "/" + sumB);
       if (S.agents.some((a) => !PS.terrain.walkable(a.x, a.y))) bad.push("agent on blocked ground");
       return { seed: S.seed, counts: cnt, garrisons: gars, bandits: S.bandits.map((b) => b.n0).join(","), minBanditPath: Math.round(minB), agents: S.agents.length, bad };
     }));
@@ -3516,6 +3528,169 @@
       });
     } finally { ST.enabled = keep; }
   }
+  // ---------------------------------------------------------------- QA: M3b forges, stockades, the trains hook (SPEC-v3 §3, §9 M3b gates)
+  const inRingN = (tid, x, y, r) => { let n = 0; for (const a of S.agents) if (a.team === tid && !a.dead && !a.gar && (a.x - x) * (a.x - x) + (a.y - y) * (a.y - y) < r * r) n++; return n; };
+  // the intent rule (SPEC-v3 §3 forge.needTarget): (past) a forgeN swarm routed from 400 px west to 400 px east straight through an Arms
+  // forge; (parked) the same swarm pinned inside the ring for 3 x forge.hold s while its target sits 400 px east: neither pays (longest run
+  // with >= price in the ring reported: the parked run is the teeth). (buy) target inside the ring: after forge.hold the nearest 20 leave the
+  // counts at once, walk in over forge.payWalk (gar 2, drawn), then Arms I is granted with "ARMS I · 20 PAID"; tier II (40) is then refused
+  // by the floor (40 - 40 < minShare x 40) and the player's view says "too few"
+  function forgeTest() {
+    const F = S.cfg.structures.forge, n = S.cfg.fixtures.forgeN, price = F.prices[0];
+    const run = (mode) => withSandbox(() => {
+      const { W, p } = spoilsScene(71), x = W / 2, y = W / 2, f = SPL.stage("forge", x, y, { axis: "arms" }); blob(mode === "past" ? x - 400 : x, y, n, 1); settle(p);
+      const P0 = S.agents.filter((a) => a.team === 1).map((a) => [a, a.x, a.y]), seenB = []; let runT = 0, maxRun = 0, payAt = -1, gar2 = 0, dropAt = -1, grantAt = -1;
+      const total = mode === "buy" ? 6 : mode === "past" ? 8 : 3 * F.hold + 1;
+      for (let i = 0; i < Math.round(total / DT); i++) {
+        if (mode === "past") { p.tx = x + 400; p.ty = y; p.route = true; p.mode = "route"; } else if (mode === "parked") { p.tx = x + 400; p.ty = y; p.mode = "hold"; p.route = false; for (const q of P0) { q[0].x = q[1]; q[0].y = q[2]; q[0].vx = q[0].vy = 0; } } else holdAt(p, x, y);
+        update(DT); const k = inRingN(1, x, y, F.ring); runT = k >= price ? runT + DT : 0; if (runT > maxRun) maxRun = runT;
+        const g = S.agents.filter((a) => a.gar === 2).length; if (g > gar2) gar2 = g; if (g && payAt < 0) { payAt = S.t; dropAt = p.count; } if (p.tier.arms > 0 && grantAt < 0) grantAt = S.t;
+        for (const b of S.banners) if (seenB.indexOf(b.text) < 0) seenB.push(b.text);
+      }
+      const v = SPL.playerView().find((o) => o.type === "forge");
+      return { mode, tier: p.tier.arms, count: p.count, maxRunInRing: +maxRun.toFixed(2), sales: S.ev.forge.map((e) => e.join(":")), payAt: +payAt.toFixed(2), countAtPay: dropAt, walkers: gar2, walk: +(grantAt - payAt).toFixed(2), banner: seenB.join("|"), view: v && { price: v.price, tooFew: v.tooFew } };
+    });
+    const past = run("past"), parked = run("parked"), buy = run("buy");
+    return { past, parked, buy, pass: past.tier === 0 && past.sales.length === 0 && past.count === n && parked.tier === 0 && parked.sales.length === 0 && parked.maxRunInRing >= F.hold &&
+      buy.tier === 1 && buy.sales.length === 1 && buy.countAtPay === n - price && buy.walkers === price && Math.abs(buy.walk - F.payWalk) <= 2 * DT + 1e-6 && buy.count === n - price &&
+      S.cfg.structures.forge.prices[1] === buy.view.price && buy.view.tooFew === true && buy.banner.indexOf("ARMS I · " + price + " PAID") >= 0 };
+  }
+  // the floor (SPEC-v3 §3 forge.minShare): with the target inside the ring, a swarm that would keep less than minShare of itself never buys
+  // (price 20: 39 keep 19 < 19.5 in 3 x hold s, "too few" shown); 40 keep 20 and buy
+  function forgeFloorTest() {
+    const F = S.cfg.structures.forge, price = F.prices[0], edge = Math.ceil(price / (1 - F.minShare));
+    const run = (n) => withSandbox(() => {
+      const { W, p } = spoilsScene(73), x = W / 2, y = W / 2; SPL.stage("forge", x, y, { axis: "boots" }); blob(x, y, n, 1); settle(p); const v0 = SPL.playerView().find((o) => o.type === "forge");
+      steps(Math.round((3 * F.hold + F.payWalk + 0.5) / DT), [[1, x, y]]); return { n, tooFewShown: v0.tooFew, boots: p.tier.boots, count: p.count };
+    });
+    const under = run(edge - 1), at = run(edge);
+    return { edge, under, at, pass: under.boots === 0 && under.count === edge - 1 && under.tooFewShown && at.boots === 1 && at.count === edge - price && !at.tooFewShown };
+  }
+  // tower-only contact (SPEC-v3 §3, §9): fixtures.towerN rivals held 150 px from a stockade you own (in its range, outside its ring) for
+  // fixtures.towerSeconds: shot and killed (kills never convert: your count unchanged), no engagement and no rout; kills in the first 10 s
+  // reported (the spec's bound: about 3)
+  function towerTest() {
+    const FX = S.cfg.fixtures;
+    return withSandbox(() => {
+      const { W, p, r } = spoilsScene(75), x = W / 2, y = W / 2; SPL.stage("stockade", x, y, { owner: 1 }); r.alive = true; blob(x - 900, y, 10, 1); blob(x + 150, y, FX.towerN, 2); settle(p); settle(r);
+      const c0 = p.count, r0 = r.count; let k10 = -1;
+      steps(Math.round(FX.towerSeconds / DT), [[1, x - 900, y], [2, x + 150, y]], (i) => { if (i === 599) k10 = S.ev.stockKills; return false; });
+      return { kills: S.ev.stockKills, shots: S.ev.stockShots, killsFirst10s: k10, routs: S.ev.routs, fights: S.ev.fights, owner: [c0, p.count], rival: [r0, r.count], mustered: p.mustered,
+        pass: S.ev.routs === 0 && S.ev.fights === 0 && S.ev.stockKills > 0 && k10 >= 1 && k10 <= 5 && p.count === c0 && p.mustered === 0 && r.count === r0 - S.ev.stockKills };
+    });
+  }
+  // never shot (SPEC-v3 §3): rivals in their escape window (remnants), neutrals and bandits in range draw no shot in 5 s; the same rivals once
+  // their window closes are shot at once (the teeth); among two rivals at the same distance the lower agent id is shot first
+  function stockTargetTest() {
+    return withSandbox(() => {
+      const { W, p, r } = spoilsScene(77), x = W / 2, y = W / 2; SPL.stage("stockade", x, y, { owner: 1 }); r.alive = true; blob(x - 900, y, 10, 1); blob(x + 150, y, 10, 2); blob(x, y + 150, 8, 0); SPL.stage("bandit", x - 170, y, { kind: 0, n: 3 }); settle(p); settle(r);
+      const R = S.agents.filter((a) => a.team === 2), P = R.map((a) => [a.x, a.y]);
+      steps(300, [[1, x - 900, y], [2, x + 150, y]], () => { R.forEach((a, k) => { a.escapeT = 5; a.x = P[k][0]; a.y = P[k][1]; a.vx = a.vy = 0; }); return false; });
+      const whileRemnant = S.ev.stockShots, hpN = S.agents.filter((a) => (a.team === 0 || a.team === 8) && a.hp < (a.team === 8 ? S.cfg.encampments.banditHp : S.cfg.agent.hp)).length;
+      for (const a of R) a.escapeT = 0; steps(60, [[1, x - 900, y], [2, x + 150, y]]);
+      // tie: two lone rivals at the same distance, pinned; the first shot lands on the lower id
+      const tie = withSandbox(() => { const q = spoilsScene(79), st = SPL.stage("stockade", x, y, { owner: 1 }); q.r.alive = true; blob(x - 900, y, 5, 1); settle(q.p);
+        const a = mkAgent(x + 120, y, 2), b = mkAgent(x - 120, y, 2); S.agents.push(b, a); settle(q.r); let hitFirst = null;
+        steps(60, [[1, x - 900, y]], () => { a.x = x + 120; a.y = y; b.x = x - 120; b.y = y; a.vx = a.vy = b.vx = b.vy = 0; if (!hitFirst && (a.hp < b.hp || b.hp < a.hp)) hitFirst = a.hp < b.hp ? a.id : b.id; return !!hitFirst; });
+        return { ids: [a.id, b.id], hitFirst, fire: st.fireT }; });
+      return { whileRemnant, neutralOrBanditHurt: hpN, afterWindow: S.ev.stockShots, tie, pass: whileRemnant === 0 && hpN === 0 && S.ev.stockShots > 0 && tie.hitFirst === Math.min(tie.ids[0], tie.ids[1]) };
+    });
+  }
+  // capture (SPEC-v3 §3): a rival 8 (captureMin) in the ring with one owner agent in it: held 5 s (timer frozen, never flipped) while the
+  // stockade shoots the captors; the guard leaves and the 8 take it at once ("STOCKADE LOST" shows for you)
+  function stockCaptureTest() {
+    const K = S.cfg.structures.stockade;
+    return withSandbox(() => {
+      const { W, p, r } = spoilsScene(81), x = W / 2, y = W / 2, st = SPL.stage("stockade", x, y, { owner: 1 }), tr0 = S.cfg.combat.truceSeconds; r.alive = true; S.cfg.combat.truceSeconds = 1e9; // a truce: the guard must not be killed (presence, not a fight)
+      try {
+        blob(x - 900, y, 10, 1); blob(x - 40, y, 1, 1); settle(p); blob(x + 30, y, K.captureMin + 4, 2); settle(r); const g = S.agents.filter((a) => a.team === 1 && Math.hypot(a.x - x, a.y - y) < 60);
+        let shots = 0; steps(300, [[1, x - 900, y], [2, x + 30, y]], () => { for (const a of g) { a.x = x - 40; a.y = y; a.vx = a.vy = 0; } shots = S.ev.stockShots; return st.owner !== 1; });
+        const held = st.owner; for (const a of g) { a.x -= 900; a.hx = a.wx = a.x; } settle(p); const t1 = S.t; steps(120, [[1, x - 900, y], [2, x + 30, y]], () => st.owner !== 1);
+        return { guard: g.length, heldOwner: held, shotsWhileHeld: shots, owner: st.owner, after: +(S.t - t1).toFixed(2), banner: S.banners.map((b) => b.text).join("|"), sites: S.ev.sites.map((e) => e.join(":")).join(","),
+          pass: g.length === 1 && held === 1 && shots > 0 && st.owner === 2 && S.t - t1 <= scanSlack() };
+      } finally { S.cfg.combat.truceSeconds = tr0; }
+    });
+  }
+  // stockade sight (SPEC-v3 §3): the owner alone sees round it. A stockade team 2 owns far from everyone: team 2 sees 300 px from it, you do
+  // not, and your whole grid is the same cell for cell with or without it (leak 0); it shoots team 3 agents you cannot see and draws no arrow
+  // and no banner for you. Your own stockade lights the same ground for you (the teeth)
+  function stockSightTest() {
+    const K = S.cfg.structures.stockade;
+    const run = (owner, keep) => withSandbox(() => {
+      const { W, p, r } = spoilsScene(83), x = W / 2, y = W / 2, q = S.teams[3]; r.alive = q.alive = true; S.fogOn = true;
+      const st = keep ? SPL.stage("stockade", x, y, { owner }) : null; blob(300, 300, 10, 2); blob(W - 300, W - 300, 20, 1); blob(x + 150, y, 6, 3); settle(p); settle(r); settle(q); fogStampAll();
+      const V = PS.fog.vis(1), v = PS.fog.verOf(1); let cells = 0, hash = 0; for (let c = 0; c < V.length; c++) if (V[c] === v) { cells++; hash = (hash * 31 + c) >>> 0; }
+      const out = { owner, keep, ownerSees: owner ? PS.fog.sees(owner, x + 300, y) : null, youSee: PS.fog.sees(1, x + 300, y), cells, hash };
+      if (keep && owner === 2) { S.banners.length = 0; let arrows = 0; steps(120, [[1, W - 300, W - 300], [2, 300, 300], [3, x + 150, y]], () => { arrows = Math.max(arrows, SPL.arrowCount()); return false; }); out.shots = S.ev.stockShots; out.arrows = arrows; out.banners = S.banners.length; out.inView = SPL.playerView().filter((o) => o.stockade).length; }
+      return out;
+    });
+    const rival = run(2, true), none = run(2, false), own = run(1, true);
+    return { rival, none, own, sight: K.sight, pass: rival.ownerSees && !rival.youSee && rival.cells === none.cells && rival.hash === none.hash && rival.shots > 0 && rival.arrows === 0 && rival.banners === 0 && rival.inView === 0 && own.ownerSees && own.youSee };
+  }
+  // AI knowledge (SPEC-v3 §3): an AI 30 never aims at a rival's stockade it has not seen as one (kt -1) in 5 s; walked into sight of it,
+  // it knows the owner and goes for it (count >= captureMin); a Greedy 70 goes to an Arms forge it knows and buys (70 >= 20 x (1 +
+  // forgeReserve)); a Greedy 50 does not (the reserve); a Bully never targets a Horn forge (not in its forgeAxes). Knowledge violations 0.
+  function aiSitesTest() {
+    const AI = S.cfg.ai, kr = AI.siteKnowRadius; AI.siteKnowRadius = 0;
+    try {
+      const stock = withSandbox(() => {
+        const { W, r } = spoilsScene(85), x = W / 2, y = W / 2, st = SPL.stage("stockade", x + 700, y, { owner: 3 }); r.alive = S.teams[3].alive = true; blob(300, 300, 3, 1); blob(W - 300, W - 300, 3, 3); settle(S.teams[1]); settle(S.teams[3]);
+        blob(x, y, 30, 2); settle(r); fogStampAll(); r.thinkT = 0; let aimed = 0, aimed2 = 0;
+        const keep = [[1, 300, 300], [3, W - 300, W - 300]], at = () => r.state === "spoils" && Math.hypot(r.tx - st.x, r.ty - st.y) < 60;
+        steps(300, keep, () => { if (at()) aimed++; return false; }); const unseen = { aimed, kt: st.kt[2] };
+        move(2, x + 450 - r.cx, y - r.cy); fogStampAll(); const kt = st.kt[2]; r.thinkT = 0; steps(180, keep, () => { if (at()) aimed2++; return false; });
+        return { unseen, seen: { kt, aimed: aimed2, ownerAfter: st.owner }, violations: S.fogS.ai.violations };
+      });
+      const forge = (n, kind) => withSandbox(() => {
+        const { W } = spoilsScene(87), x = W / 2, y = W / 2, t = kind === "bully" ? S.teams[3] : S.teams[2]; t.alive = true; blob(300, 300, 3, 1); settle(S.teams[1]);
+        const f = SPL.stage("forge", x + 600, y, { axis: kind === "bully" ? "horn" : "arms" }); blob(x, y, n, t.id); settle(t); fogStampAll(); t.thinkT = 0; let aimed = 0;
+        steps(60 * 12, [[1, 300, 300]], () => { if (t.state === "spoils" && Math.hypot(t.tx - f.x, t.ty - f.y) < 60) aimed++; return S.ev.forge.length > 0; });
+        return { n, kind, aimed, sales: S.ev.forge.map((e) => e.join(":")), violations: S.fogS.ai.violations };
+      });
+      const g70 = forge(70, "greedy"), g50 = forge(50, "greedy"), b = forge(90, "bully");
+      return { stock, greedy70: g70, greedy50: g50, bullyHorn: b, pass: stock.unseen.aimed === 0 && stock.unseen.kt === -1 && stock.seen.kt === 3 && stock.seen.aimed > 0 && stock.violations === 0 &&
+        g70.sales.length === 1 && g70.sales[0].split(":")[1] === "2" && g50.aimed === 0 && g50.sales.length === 0 && b.aimed === 0 && b.sales.length === 0 && g70.violations + g50.violations + b.violations === 0 };
+    } finally { AI.siteKnowRadius = kr; }
+  }
+  // the trains hook (SPEC-v3 §3): owning a stockade, 100 neutral recruits give share x 100 archer tags (the accumulator: exact); absorbed
+  // rivals are never tagged; two stockades (share summed) hit units.maxShare of the team and never pass it; units.enabled false tags none
+  function trainsTest() {
+    const U = S.cfg.units, K = S.cfg.structures.stockade;
+    const run = (nSt, enabled) => withSandbox(() => {
+      const keep = U.enabled; U.enabled = enabled;
+      try {
+        const { W, p } = spoilsScene(89), x = W / 2, y = W / 2; for (let k = 0; k < nSt; k++) SPL.stage("stockade", x + 800 + k * 300, y, { owner: 1 }); blob(x, y, 20, 1); settle(p); let over = 0;
+        for (let k = 0; k < 100; k++) { const a = mkAgent(x + 20, y, 0); S.agents.push(a); convert(a, 1, false); settle(p); if (p.kindN > U.maxShare * p.count + 1e-9) over++; }
+        const t0 = S.ev.trained[1]; for (let k = 0; k < 50; k++) { const a = mkAgent(x + 20, y, 2); S.agents.push(a); convert(a, 1, true); settle(p); }
+        return { stockades: nSt, enabled, tagged: t0, afterAbsorb: S.ev.trained[1], kindN: p.kindN, count: p.count, share: +(p.kindN / p.count).toFixed(3), over };
+      } finally { U.enabled = keep; }
+    });
+    const one = run(1, true), two = run(2, true), off = run(1, false), share = K.trains.share;
+    return { one, two, off, share, maxShare: U.maxShare, pass: one.tagged === Math.round(share * 100) && one.afterAbsorb === one.tagged && one.over === 0 && two.over === 0 && two.kindN / (two.count - 50) >= U.maxShare - 0.02 && two.tagged < Math.round(2 * share * 100) && off.tagged === 0 && off.kindN === 0 };
+  }
+  // the kill switch (SPEC-v3 §0): structures.enabled false places no forge on a real map, a cleared camp stays a plain cleared camp (no site,
+  // no shots), and nobody is tagged; on: three forges, the camp becomes its clearer's stockade
+  function m3bOffTest() {
+    const ST = S.cfg.structures, keep = ST.enabled;
+    const run = (on) => { ST.enabled = on; try { return withSandbox(() => {
+      sandboxField(); newGame(false, { seed: 4242 }); const forges = S.objs.filter((o) => o.type === "forge").length;
+      const { W, p } = spoilsScene(91), x = W / 2, y = W / 2, c = SPL.stage("bandit", x, y, { kind: 0, n: 1 }); blob(x - 200, y, 10, 1); settle(p); for (const a of c.agents) killAgent(a, 1); steps(6, [[1, x - 200, y]]);
+      return { forges, site: c.site, owner: c.owner, relic: S.objs.filter((o) => o.type === "relic").length };
+    }); } finally { ST.enabled = keep; } };
+    const off = run(false), on = run(true);
+    return { off, on, pass: off.forges === 0 && off.site === "" && off.relic === 1 && on.forges === ST.forge.count && on.site === "stockade" && on.owner === 1 && on.relic === 1 };
+  }
+  // hold and ambush fixtures with a stockade the holders own in range (90 px behind them) and out of range (700 px), stockade.activeAfter
+  // parked at 0 for the scene; reported, not gated (SPEC-v3 §9)
+  function stockFixtures() {
+    const K = S.cfg.structures.stockade, a0 = K.activeAfter, seeds = [1, 2, 3, 4]; K.activeAfter = 0;
+    try {
+      const row = (name, where) => seeds.map((sd) => fixture(name, { seed: sd, stockade: where }));
+      const pick = (l) => l.map((r) => ({ pass: r.pass, lasted: r.lasted, first: r.firstBreak || r.loser, holdersLeft: r.holdersLeft, columnLeft: r.columnLeft != null ? r.columnLeft : r.columnAfter, kills: r.stockKills, t: r.seconds }));
+      const out = {}; for (const name of ["hold", "ambush"]) for (const where of ["none", "in", "out"]) out[name + "_" + where] = pick(row(name, where === "none" ? null : where));
+      return out;
+    } finally { K.activeAfter = a0; }
+  }
   // Arms parity matrix (SPEC-v2 §8, R8): 40 and 60 Arms I-III peasants against 1.0x, their configured power (progression.armsPower) and the
   // gate x base peasants (PS.fight, 5 seeded runs per size and point, pooled: 10 per point). Gates: Arms I beats an even number (>= 70%);
   // Arms II does not beat 1.4x base, Arms III not 1.75x (< 50%: else cut the per-tier percent); at its configured power each tier is a
@@ -3731,7 +3906,13 @@
     "ai.forestFleeBonus:n ai.rustleMemory:n ai.siteKnowRadius:n powerups.firstDelay:n fixtures.concealN:n fixtures.concealDist:n fixtures.groveN:n fixtures.groveColumn:n " +
     // v3 M3a (SPEC-v3 §3, §7): structures plumbing (ownership by ring hold, the mill, rout flips, elimination to neutral)
     "structures.enabled:b structures.guardMin:n structures.routFlipRadius:n structures.neutralOnElim:b structures.mill:o structures.mill.every:n structures.mill.cap:n " +
-    "structures.mill.collectMin:n structures.mill.collectHold:n structures.mill.ring:n ai.objMill:n ai.millCollectAt:n polish.hintMill:n").split(" ");
+    "structures.mill.collectMin:n structures.mill.collectHold:n structures.mill.ring:n ai.objMill:n ai.millCollectAt:n polish.hintMill:n " +
+    // v3 M3b (SPEC-v3 §3, §7): forges, stockades, the trains hook, AI structure objectives
+    "structures.forge:o structures.forge.count:n structures.forge.ringR:n structures.forge.ring:n structures.forge.prices:a structures.forge.hold:n structures.forge.needTarget:b " +
+    "structures.forge.minShare:n structures.forge.shareFloor:n structures.forge.payWalk:n structures.stockade:o structures.stockade.range:n structures.stockade.every:n " +
+    "structures.stockade.damage:n structures.stockade.sight:n structures.stockade.captureMin:n structures.stockade.ring:n structures.stockade.activeAfter:n structures.stockade.arrowSpeed:n " +
+    "structures.stockade.arrowPool:n structures.stockade.trains:o structures.stockade.trains.type:s structures.stockade.trains.share:n units:o units.enabled:b units.maxShare:n " +
+    "ai.objForge:n ai.objStockade:n ai.forgeReserve:n ai.forgeRankStep:n polish.hintForge:n polish.hintStockade:n fixtures.towerN:n fixtures.towerSeconds:n fixtures.forgeN:n fixtures.stockadeShare:n").split(" ");
   const cfgGet = (path) => { let o = S.cfg; for (const k of path.split(".")) { if (o == null) return undefined; o = o[k]; } return o; };
   const typeOk = (v, t) => (t === "n" ? typeof v === "number" && isFinite(v) : t === "s" ? typeof v === "string" && v.length > 0 : t === "a" ? Array.isArray(v) && v.length > 0 : t === "b" ? typeof v === "boolean" : !!v && typeof v === "object");
   // PS.cfgOverride(patch) (SPEC-v2 §13, M8 sweeps): deep-merges patch into the live config in place, so every module holding a section sees
@@ -3752,9 +3933,9 @@
     const cfg = S.cfg, missing = [], used = {};
     for (const e of CFG_KEYS) { const [path, t] = e.split(":"); used[path.replace(/\.\d+$/, "")] = 1; used[path] = 1; if (!typeOk(cfgGet(path), t)) missing.push(path); }
     // the five rivals (SPEC-v2 §7): the shared fields, and each kind's specials
-    const SPECIAL = { greedy: [], bully: ["scentSearch:n", "trackRatio:n"], wary: ["clashLeave:n", "leaveSeconds:n", "edgeBias:n"], sly: ["clashGo:n", "foughtSeconds:n", "foughtHuntRatio:n", "lurkSeconds:n", "lurkCooldown:n", "lurkPassMax:n", "lurkForest:b"],
+    const SPECIAL = { greedy: ["millCollectAt:n", "collectRange:n"], bully: ["scentSearch:n", "trackRatio:n"], wary: ["clashLeave:n", "leaveSeconds:n", "edgeBias:n", "collectQuiet:n"], sly: ["clashGo:n", "foughtSeconds:n", "foughtHuntRatio:n", "lurkSeconds:n", "lurkCooldown:n", "lurkPassMax:n", "lurkForest:b", "stealDist:n", "stealBonus:n"],
       stubborn: ["homeFleeRatio:n", "holdRadius:n", "clusterRadius:n", "reclaimEmpty:n"], proxy: [] };
-    (cfg.ai && cfg.ai.personalities || []).concat(cfg.ai && cfg.ai.proxy ? [cfg.ai.proxy] : []).forEach((p, i) => { for (const k of ["name:s", "kind:s", "color:s", "huntRatio:n", "fleeRatio:n", "neutralBias:n", "powerBias:n", "hatesPlayer:n"].concat(SPECIAL[p.kind] || ["kind (greedy | bully | wary | sly | stubborn)"])) { const [f, t] = k.split(":"); if (!typeOk(p[f], t)) missing.push("ai.personalities." + i + "." + f); } });
+    (cfg.ai && cfg.ai.personalities || []).concat(cfg.ai && cfg.ai.proxy ? [cfg.ai.proxy] : []).forEach((p, i) => { for (const k of ["name:s", "kind:s", "color:s", "huntRatio:n", "fleeRatio:n", "neutralBias:n", "powerBias:n", "hatesPlayer:n", "structBias:o", "forgeAxes:a"].concat(SPECIAL[p.kind] || ["kind (greedy | bully | wary | sly | stubborn)"])) { const [f, t] = k.split(":"); if (!typeOk(p[f], t)) missing.push("ai.personalities." + i + "." + f); } });
     if (!cfg.ai || !cfg.ai.personalities || cfg.ai.personalities.length !== 5) missing.push("ai.personalities (five rivals, SPEC-v2 §7)");
     for (const d in cfg.difficulty || {}) for (const k of ["label:s", "aiSpeed:n", "think:n", "huntMult:n", "startBonus:n", "sight:n", "memory:n", "hearing:n", "scentEvery:n"]) { const [f, t] = k.split(":"); if (!typeOk(cfg.difficulty[d][f], t)) missing.push("difficulty." + d + "." + f); }
     (cfg.pace || []).forEach((v, i) => { if (!typeOk(v, "n")) missing.push("pace." + i); });
@@ -3771,11 +3952,15 @@
       if (!(PG.armsPower && PG.armsPower.length === PG.armsMax + 1)) missing.push("progression.armsPower (one per Arms tier 0..armsMax)");
       if (!(PG.hornRadius && PG.hornRadius.length === PG.hornMax + 1)) missing.push("progression.hornRadius (one per Horn tier 0..hornMax)");
       if (!(EN.banditSizes && EN.banditCounts && EN.banditSizes.length === 3 && EN.banditCounts.length === 3)) missing.push("encampments.banditSizes / banditCounts (green, orange, red)"); }
-    { const M = cfg.structures && cfg.structures.mill; if (!M || !("trains" in M) || (M.trains !== null && typeof M.trains !== "object")) missing.push("structures.mill.trains (null or { type, share }, SPEC-v3 §3)"); else used["structures.mill.trains"] = 1; }
+    for (const kind of ["mill", "forge", "stockade"]) { const M = cfg.structures && cfg.structures[kind]; if (!M || !("trains" in M) || (M.trains !== null && typeof M.trains !== "object")) missing.push("structures." + kind + ".trains (null or { type, share }, SPEC-v3 §3)"); else used["structures." + kind + ".trains"] = 1; }
+    (cfg.ai && cfg.ai.personalities || []).concat(cfg.ai && cfg.ai.proxy ? [cfg.ai.proxy] : []).forEach((p, i) => { const b = p.structBias || {}, ax = p.forgeAxes || []; // v3 M3b shapes (SPEC-v3 §3)
+      if (!["mill", "forge", "stockade"].every((k) => typeOk(b[k], "n"))) missing.push("ai.personalities." + i + ".structBias {mill, forge, stockade}");
+      if (!ax.every((a) => ["arms", "boots", "horn"].indexOf(a) >= 0)) missing.push("ai.personalities." + i + ".forgeAxes (arms | boots | horn)"); });
+    { const F = cfg.structures && cfg.structures.forge; if (!(F && F.prices && F.prices.length >= 1 && F.prices.length <= 2)) missing.push("structures.forge.prices (one per tier the forge sells, tier II at most)"); }
     for (const k in (cfg.powerups && cfg.powerups.weights) || {}) { if (!S.spr.PU[k] || !typeOk(cfg.powerups.duration[k], "n")) missing.push("powerups.weights." + k + " (needs a PU icon + duration)"); }
     // tunables in config.json that no code reads (informational: a retune there does nothing)
     const unused = [];
-    for (const sec of ["world", "spawn", "agent", "flock", "flow", "combat", "powerups", "ai", "camera", "touch", "fog", "forest", "terrain", "input", "finale", "fixtures", "art", "progression", "encampments", "structures", "banner", "polish", "audio"]) for (const k in cfg[sec] || {}) {
+    for (const sec of ["world", "spawn", "agent", "flock", "flow", "combat", "powerups", "ai", "camera", "touch", "fog", "forest", "terrain", "input", "finale", "fixtures", "art", "progression", "encampments", "structures", "units", "banner", "polish", "audio"]) for (const k in cfg[sec] || {}) {
       const path = sec + "." + k; if (used[path]) continue; unused.push(path);
     }
     return { checked: CFG_KEYS.length, missing, unused };
@@ -4342,7 +4527,7 @@
   }
   function selfTest(opts) {
     opts = opts || {};
-    const all = ["config", "sprites", "terrain", "caches", "art", "flow", "fight", "fixtures", "flipflop", "ai", "rivals", "fog", "spoils", "structures", "parity", "replay", "match", "audio", "portal"];
+    const all = ["config", "sprites", "terrain", "caches", "art", "flow", "fight", "fixtures", "flipflop", "ai", "rivals", "fog", "spoils", "structures", "sites", "parity", "replay", "match", "audio", "portal"];
     const parts = opts.parts ? (Array.isArray(opts.parts) ? opts.parts : String(opts.parts).split(",")) : all, has = (p) => parts.indexOf(p) >= 0;
     const horizon = clamp(+opts.matchSeconds || (S.cfg ? S.cfg.world.matchSeconds : 240), 10, 600);
     const w0 = performance.now(), results = {}, fails = [], ms = {};
@@ -4470,6 +4655,19 @@
       const re = structRoutElimTest(); check("struct_rout_flip_elim_neutral", re.pass, re);
       const fg = structFogTest(); check("struct_fog_last_seen_ai", fg.pass, fg);
       const off = structOffTest(); check("struct_kill_switch", off.pass, off);
+    });
+    if (has("sites")) timed("sites", () => { // v3 M3b (SPEC-v3 §3, §9): forges, stockades, the trains hook, AI structure objectives
+      const fg = forgeTest(); check("m3b_forge_walk_past_never_pays", fg.pass, fg);
+      const fl = forgeFloorTest(); check("m3b_forge_floor", fl.pass, fl);
+      const tw = towerTest(); check("m3b_tower_only_never_routs", tw.pass, tw);
+      const tg = stockTargetTest(); check("m3b_stockade_never_shoots_remnants", tg.pass, tg);
+      const cp = stockCaptureTest(); check("m3b_stockade_capture_owner_blocks", cp.pass, cp);
+      const sg = stockSightTest(); check("m3b_stockade_sight_no_leak", sg.pass, sg);
+      const ai = aiSitesTest(); check("m3b_ai_rival_site_after_seen", ai.pass, ai);
+      const tr = trainsTest(); check("m3b_trains_share_cap", tr.pass, tr);
+      const off = m3bOffTest(); check("m3b_kill_switch", off.pass, off);
+      const fx = stockFixtures(); check("m3b_hold_ambush_stockade_report", Object.keys(fx).every((k) => fx[k].every((r) => r.pass !== undefined)), fx);
+      const rp = replay(9191, 120); check("m3b_replay_120s_stockades", rp.same, rp);
     });
     if (has("parity")) timed("parity", () => { const p = parityTest(); check("spoils_arms_parity", p.pass, p); });
     if (has("replay")) timed("replay", () => { const r = replay(424242, 60); check("replay_60s", r.same, r); });

@@ -7,7 +7,9 @@
 // player's last-seen state, drawn under fog). All tuning in config.progression, config.encampments and config.structures.
 // v3 structures (SPEC-v3 §3, M3a): a joined village stays on the map as a site ("mill") with an owner and a bank. One capture rule for every
 // site (holdStep: the v2 village ring rule), rout flips and elimination to neutral. Owner and bank are last-seen state (sk.team, sk.n for
-// the player; kt[team] / kb[team] for each AI). The stockade (a bandit-camp state) and the forges plug into holdStep / takeSite in M3b.
+// the player; kt[team] / kb[team] for each AI). M3b: a cleared bandit camp becomes its clearer's stockade (shoots, sights, captured by the
+// same ring hold with no owner agent in it), three forges sell tier I-II for peasants (intent rule, floor, pay walk), and the trains hook
+// tags a share of each team's new neutral recruits while it owns a stockade (data only; archers are M4).
 // game.js binds this module once with its hooks (PS.Spoils(G)) and calls place / tick / observe / draw from newGame, update, observe, draw.
 (function () {
   const PS = (window.PS = window.PS || {});
@@ -20,9 +22,9 @@
     const mkObj = (type, x, y, landmark) => ({ type, id: nextId++, x, y, live: true, landmark: !!landmark, kn: new Int8Array(9).fill(-1), pr: true,
       axis: "", t3: false, src: "", life: Infinity, pair: null, gar: 0, prog: 0, holdTeam: 0, have: 0, agents: null, owner: 0, weight: 0, hold: 0,
       kind: 0, n0: 0, n: 0, lastHit: 0, fn: 0, fx: 0, fy: 0, vs: 0, opened: -1, sk: { seen: false, live: true, n: 0, team: 0 },
-      site: "", bank: 0, bankT: 0, colT: 0, kt: new Int8Array(9).fill(-1), kb: new Int8Array(9) }); // v3 sites (SPEC-v3 §3): kind ("mill"), bank, bank / collect clocks; kt / kb: the owner and bank each team last saw (-1 never)
+      site: "", bank: 0, bankT: 0, colT: 0, kt: new Int8Array(9).fill(-1), kb: new Int8Array(9), fh: null, payT0: 0, payTeam: 0, fireT: 0, shot: null }); // v3 sites (SPEC-v3 §3): kind ("mill" | "stockade" | "forge"), bank, bank / collect clocks; kt / kb: the owner and bank each team last saw (-1 never); fh: a forge's hold per team, payT0 / payTeam: its pay walk; fireT / shot: a stockade's shot clock and its last target
     const ST = () => cfgOf().structures, SON = () => cfgOf().structures.enabled; // SPEC-v3 §0 kill switch: false keeps v2's villages
-    function reset() { S.objs = []; S.bandits = []; S.spT = 0; nextId = 1; }
+    function reset() { S.objs = []; S.bandits = []; S.spT = 0; nextId = 1; arrowsInit(); }
 
     // ---------------------------------------------------------------- team tiers and their stats
     // hpMax / atkMul / power from Arms, spdMul / fordMul from Boots, recR from Horn. rescale: every living agent keeps its share of hp.
@@ -44,13 +46,13 @@
     }
     // +1 tier on axis (capped: Arms II, III only with a t3 relic; Boots II; Horn II). Banner, floater and a sound for your gains; a floater
     // over a rival you can see. Logged in S.ev.gains [t, team, axis, tier, source].
-    function grant(t, axis, t3, why, x, y) {
+    function grant(t, axis, t3, why, x, y, paid) {
       if (!canTake(t, axis, t3)) return false;
       t.tier[axis]++; applyTiers(t, true); if (axis === "arms") restyle(t);
       const lvl = t.tier[axis], name = AXNAME[axis] + " " + ROMAN[lvl], col = S.spr.spoils.relics[axis].color;
       S.ev.gains.push([+S.t.toFixed(1), t.id, axis, lvl, why]);
       if (t.isPlayer && !S.aiPlayer) {
-        G.banner((why === "muster" ? "MUSTER " + cfgOf().progression.muster[t.musterK] + ": " : "") + name, col, 2.4, 0, 2);
+        G.banner((why === "muster" ? "MUSTER " + cfgOf().progression.muster[t.musterK] + ": " : "") + name + (paid ? " · " + paid + " PAID" : ""), col, 2.4, 0, 2); // v3 forge: "ARMS II · 40 PAID"
         G.floater(t.cx, t.cy - 34, "+" + name, col, 16, 1.4); if (why === "muster") PS.audio.fanfare(); else PS.audio.relic();
         if (G.gained) G.gained(t, axis); // M7 onboarding: the first gain's icon flies into the relic strip
       } else if (G.fxOk(t.ax, t.ay) && G.seenSwarm(t.id)) G.floater(t.ax, t.ay - 40, "+" + name, t.color, 13, 1.2);
@@ -59,7 +61,7 @@
     // muster milestones (progression.muster, absorbed rivals excluded): neutrals recruited through convert() count
     function onConvert(a, t, from, absorbed) {
       if (from !== 0 || absorbed || a.exr) { a.exr = false; return; }
-      t.mustered++; const M = cfgOf().progression.muster, MA = cfgOf().progression.musterAxes;
+      train(a, t); t.mustered++; const M = cfgOf().progression.muster, MA = cfgOf().progression.musterAxes;
       for (let g = 0; g < M.length && t.musterK < M.length && t.mustered >= M[t.musterK]; g++) { grant(t, MA[t.musterK], false, "muster", t.cx, t.cy); t.musterK++; }
     }
 
@@ -137,7 +139,30 @@
         if (best < 0) continue;
         mkCamp(((best % N) + 0.5) * cell, (((best / N) | 0) + 0.5) * cell, kind, EN.banditSizes[kind], kind === 0 ? (R() < 0.5 ? "boots" : "horn") : "arms");
       }
-      // (v3: the heavy chests are gone, SPEC-v3 §3; the three forge sites are placed here in M3b)
+      // v3: the heavy chests are gone; the forges take their place (SPEC-v3 §3). Only with structures on, so the kill switch draws no S.rng
+      if (SON() && ST().forge.count > 0) placeForges(m);
+    }
+    // forge.count forges round the centre at about forge.ringR x W, one in every other gap between neighbouring spawns (which set of gaps: one
+    // S.rng draw; axes shuffled on S.rng), so each serves two spawns. The gap's own angle is the ridge between their regions, so each forge
+    // takes the open cell (placement rules, objectGap) that best splits the two spawns' path distances, weighed with how far it strays from
+    // the ring and the gap (one scan of the grid per forge at match start, no draws; SPEC-v3 §3 leaves the exact spot open)
+    function placeForges(m) {
+      const F = ST().forge, EN = cfgOf().encampments, T = PS.terrain, R = S.rng, N = m.N, cell = m.cell, U = cell / 3, c0 = m.W / 2, rr = F.ringR * m.W, sp = m.spawns;
+      const angOf = (i) => Math.atan2(sp[i].y - c0, sp[i].x - c0), idx = sp.map((s, i) => i).sort((a, b) => angOf(a) - angOf(b));
+      const off = R() < 0.5 ? 0 : 1, ax = AXES.slice(); for (let i = ax.length - 1; i > 0; i--) { const j = (R() * (i + 1)) | 0, q = ax[i]; ax[i] = ax[j]; ax[j] = q; }
+      for (let k = 0; k < F.count; k++) {
+        const i = (off + ((k * idx.length / F.count) | 0)) % idx.length, A = idx[i], B = idx[(i + 1) % idx.length], aA = angOf(A), aB = angOf(B) + (i + 1 < idx.length ? 0 : Math.PI * 2), g = (aA + aB) / 2;
+        let best = -1, bs = Infinity;
+        for (let c = 0; c < N * N; c++) {
+          const x = ((c % N) + 0.5) * cell, y = (((c / N) | 0) + 0.5) * cell, dx = x - c0, dy = y - c0, r = Math.sqrt(dx * dx + dy * dy); if (Math.abs(r - rr) > 0.1 * m.W) continue;
+          let da = Math.atan2(dy, dx) - g; while (da > Math.PI) da -= Math.PI * 2; while (da < -Math.PI) da += Math.PI * 2; if (Math.abs(da) > 0.6) continue;
+          const dA = m.dist[A][c], dB = m.dist[B][c]; if (dA >= 65535 || dB >= 65535) continue;
+          const sc = Math.abs(dA - dB) * U + Math.abs(r - rr) * 0.5 + Math.abs(da) * rr * 0.25; if (sc >= bs || !T.placementOk(x, y, 3) || !clearAt(x, y, EN.objectGap)) continue;
+          bs = sc; best = c;
+        }
+        if (best < 0) continue;
+        const o = mkObj("forge", ((best % N) + 0.5) * cell, (((best / N) | 0) + 0.5) * cell, true); o.site = "forge"; o.axis = ax[k % ax.length]; o.fh = new Float32Array(9); o.agents = []; S.objs.push(o);
+      }
     }
     // a village of gar with its garrison inside the palisade (hidden agents: they count toward the cap and join through convert())
     function mkVillage(x, y, gar) {
@@ -162,6 +187,8 @@
       if (type === "mill") { const v = mkVillage(x, y, 0); v.live = false; v.opened = S.t; v.site = "mill"; v.owner = o.owner || 0; v.bank = o.bank || 0; if (v.owner) v.kt[v.owner] = v.owner; return v; }
       if (type === "bandit") return mkCamp(x, y, o.kind || 0, o.n || cfgOf().encampments.banditSizes[o.kind || 0], o.axis || "arms");
       if (type === "relic") return relicAt(x, y, o.axis || "arms", !!o.t3, "qa", o.life || Infinity);
+      if (type === "forge") { const f = mkObj("forge", x, y, true); f.site = "forge"; f.axis = o.axis || "arms"; f.fh = new Float32Array(9); f.agents = []; S.objs.push(f); return f; }
+      if (type === "stockade") { const b = mkObj("bandit", x, y, true); b.kind = o.kind || 0; b.agents = []; b.live = false; b.opened = S.t; S.objs.push(b); S.bandits.push(b); toStockade(b, o.owner ? S.teams[o.owner] : null); return b; } // a cleared camp owned by o.owner
       const b = mkObj(type, x, y, o.landmark !== false); b.axis = o.axis || "arms"; b.src = "qa"; S.objs.push(b); return b;
     }
     // a ground relic (a scroll with its axis icon): life s (Infinity: until taken)
@@ -186,9 +213,10 @@
     function tick(dt, finalPhase) {
       const cfg = cfgOf(), EN = cfg.encampments, PG = cfg.progression, pr = PG.pickupRadius, scan = S.tick % EN.scanTicks === 0, sdt = dt * EN.scanTicks;
       if (S.tick === 3600 || S.tick === 10800 || S.tick === 18000) S.ev["tiers" + S.tick / 60] = G.swarms().map((t) => t.tierN); // tiers at 1:00 / 3:00 / 5:00 (three times a match)
+      if (S.tick === 10800) S.ev.kind180 = G.swarms().map((t) => (t.count ? +(t.kindN / t.count).toFixed(3) : 0)); // v3 M3b: trained share per team at 3:00
       for (let i = S.objs.length - 1; i >= 0; i--) {
         const o = S.objs[i];
-        if (o.site) { if (scan) siteTick(o, sdt); continue; } // v3 structures (SPEC-v3 §3): mills (M3a); stockades and forges join here in M3b
+        if (o.site) { if (o.agents !== null && o.agents.length && o.site === "forge") payStep(o, dt); if (scan) siteTick(o, sdt); continue; } // v3 structures (SPEC-v3 §3): mills, stockades, forges
         if (o.type === "relic") {
           if (o.life !== Infinity && (o.life -= dt) <= 0) { S.objs.splice(i, 1); continue; } // rare: one splice when a drop expires
           const t = toucher(o.x, o.y, pr, o.axis, o.t3); if (!t) continue;
@@ -203,12 +231,12 @@
           if (G.fxOk(o.x, o.y)) { G.burst(o.x, o.y - 8, "#F6CF6A", 14, 120, 0.6, 3, 160); PS.audio.chest(); }
         } else if (o.type === "village" && scan) {
           const lead = holdStep(o, EN.villageRing, o.gar, 0, sdt); if (lead) joinVillage(o, S.teams[lead]);
-        } else if (o.type === "forge") { // M3b placeholder (SPEC-v3 §3: the heavy-chest branch became the forge branch): intent rule, price, floor, pay walk
         } else if (o.type === "bandit") {
           if (o.fn > 0) { const x = o.fx / o.fn, y = o.fy / o.fn; G.noiseAt(8, o.vs, x, y); if (S.fogOn && o.vs !== 1 && !PS.fog.sees(1, x, y)) G.clashPing(x, y, false); } // bandit fights make clash noise (SPEC-v2 §5, §7)
           o.fn = 0; o.fx = 0; o.fy = 0;
           if (o.n <= 0) { o.live = false; o.opened = S.t; const t = S.teams[o.lastHit]; if (t) taken(o, t); relicAt(o.x, o.y, o.axis, o.t3, "bandit", Infinity);
-            if (t && t.isPlayer && !S.aiPlayer) { G.banner(KIND[o.kind] + " CAMP CLEARED", KCOL[o.kind], 2.2, 0, 2); PS.audio.chest(); } else if (G.playerSees(o.x, o.y)) G.banner((t ? t.name.toUpperCase() : "BANDITS") + " CLEARED A CAMP", t ? t.color : "#F1EEDF", 1.8, 0, 0); }
+            if (t && t.isPlayer && !S.aiPlayer) { G.banner(KIND[o.kind] + " CAMP CLEARED", KCOL[o.kind], 2.2, 0, 2); PS.audio.chest(); } else if (G.playerSees(o.x, o.y)) G.banner((t ? t.name.toUpperCase() : "BANDITS") + " CLEARED A CAMP", t ? t.color : "#F1EEDF", 1.8, 0, 0);
+            if (SON()) toStockade(o, t); } // v3 (SPEC-v3 §3): the cleared camp is the clearer's stockade
         }
       }
       // trickle chest: every progression.trickleChestEvery s from progression.trickleChestAfter, off in the finale, at most trickleChestMax
@@ -234,19 +262,23 @@
     // escape window never count; a tie goes to the lower team id) takes it at once with >= need, else after max(villageMin, villageStep x
     // (need - have)); any other team's agent in the ring pauses the timer; a new lead restarts it. exclude: a team that never captures here
     // (the owner of an owned site: its agents in the ring only pause a rival). Returns the captor's id, else 0. Leaves the counts in TC.
-    function holdStep(o, ring, need, exclude, sdt) {
+    // block: a team whose agents in the ring stop any capture (a stockade's owner, SPEC-v3 §3): the timer holds where it is
+    function holdStep(o, ring, need, exclude, sdt, block) {
       const EN = cfgOf().encampments, rc = ringCount(o.x, o.y, ring), lead = rc & 0xffff, rival = rc >> 16, have = lead ? TC[lead] : 0; o.have = have;
       if (!lead || lead === exclude) { o.holdTeam = 0; o.prog = 0; return 0; }
       if (lead !== o.holdTeam) { o.holdTeam = lead; o.prog = 0; }
+      if (block && TC[block] > 0) return 0;
       if (have >= need) o.prog = 1; else if (!rival) o.prog += sdt / Math.max(EN.villageMin, EN.villageStep * (need - have)); // a rival in the ring pauses the timer
       return o.prog >= 1 ? lead : 0;
     }
     // the need a rival sees on a site (SPEC-v3 §3): a mill max(structures.guardMin, banked) (a neutral mill: guardMin)
-    const needOf = (o, bank) => Math.max(ST().guardMin, bank);
+    const needOf = (o, bank) => (o.site === "stockade" ? ST().stockade.captureMin : Math.max(ST().guardMin, bank)); // a stockade: stockade.captureMin
     // one site per scan tick (SPEC-v3 §3). Mill: +1 banked every mill.every s while its owner lives, up to mill.cap; captured by ring hold at
     // needOf (the owner never captures its own); collected by >= mill.collectMin owner agents in the ring for mill.collectHold s (walking
     // through collects; a rival in the ring does not stop the owner collecting)
     function siteTick(o, sdt) {
+      if (o.site === "forge") { forgeTick(o, sdt); return; }
+      if (o.site === "stockade") { stockTick(o, sdt); return; }
       const M = ST().mill, t = o.owner ? S.teams[o.owner] : null;
       if (t && t.alive && o.bank < M.cap) { o.bankT += sdt; if (o.bankT >= M.every) { o.bankT -= M.every; o.bank++; } } else o.bankT = 0;
       const cap = holdStep(o, M.ring, needOf(o, o.bank), o.owner, sdt); if (cap) { takeSite(o, S.teams[cap], "ring"); return; }
@@ -270,9 +302,117 @@
       const from = o.owner; o.owner = t.id; o.kt[t.id] = t.id; o.holdTeam = 0; o.prog = 0; o.colT = 0; o.bankT = 0;
       const paid = why === "ring" ? payOut(o, t, true) : 0; o.kb[t.id] = o.bank;
       S.ev.sites.push([+S.t.toFixed(1), t.id, from, why, paid]);
-      if (t.isPlayer && !S.aiPlayer) G.banner("MILL TAKEN" + (paid ? " · +" + paid : ""), t.color, 2.2, t.id, 2);
-      else if (from === 1 && G.playerSees(o.x, o.y)) G.banner("MILL LOST", "#FF7A6E", 2.2, 0, 2);
-      else if (G.playerSees(o.x, o.y)) G.banner(t.name.toUpperCase() + " TAKES A MILL", t.color, 1.8, 0, 0);
+      const NM = o.site === "stockade" ? "STOCKADE" : "MILL"; o.fireT = 0;
+      if (t.isPlayer && !S.aiPlayer) { G.banner(NM + " TAKEN" + (paid ? " · +" + paid : ""), t.color, 2.2, t.id, 2); if (o.site === "stockade" && !S._hintStockade) S._hintStockade = 1; }
+      else if (from === 1 && G.playerSees(o.x, o.y)) G.banner(NM + " LOST", "#FF7A6E", 2.2, 0, 2);
+      else if (G.playerSees(o.x, o.y)) G.banner(t.name.toUpperCase() + " TAKES A " + NM, t.color, 1.8, 0, 0);
+    }
+    // ---------------------------------------------------------------- v3 M3b: forges, stockades, the trains hook (SPEC-v3 §3)
+    // a forge has no owner. It sells each team its next tier on o.axis (tier II at most: forge.prices has one price per tier) for that many
+    // peasants when (forge.needTarget) the team's route target lies inside the ring, >= price of its agents stand in it and paying leaves
+    // >= forge.minShare of its count, all held forge.hold s (a scan-tick clock per team, teams in id order). forge.shareFloor > 0 raises
+    // the price to that share of the team (a leader tax; 0 = off). One sale at a time: the payers walk in over forge.payWalk s, then grant().
+    const priceOf = (t, o) => { const F = ST().forge, k = t.tier ? t.tier[o.axis] : 99; if (k >= F.prices.length || !canTake(t, o.axis, false)) return 0; return Math.max(F.prices[k], Math.ceil(F.shareFloor * t.count)); };
+    const floorOk = (t, price) => t.count - price >= ST().forge.minShare * t.count;
+    const aimsAt = (t, o) => { const r = ST().forge.ring; return !ST().forge.needTarget || (t.tx - o.x) * (t.tx - o.x) + (t.ty - o.y) * (t.ty - o.y) <= r * r; };
+    function forgeTick(o, sdt) {
+      const F = ST().forge; ringCount(o.x, o.y, F.ring); o.have = TC[1];
+      for (let i = 1; i < 7; i++) {
+        const t = S.teams[i]; if (!t || !t.alive) { o.fh[i] = 0; continue; } const price = priceOf(t, o);
+        if (o.agents.length || !price || TC[i] < price || !aimsAt(t, o) || !floorOk(t, price)) { o.fh[i] = 0; continue; }
+        if ((o.fh[i] += sdt) >= F.hold) { o.fh[i] = 0; pay(o, t, price); }
+      }
+    }
+    // the nearest price agents in the ring (ties by agent id) leave the sim at once (gar 2: out of the hash, the counts and every fight;
+    // drawn walking to the door by payStep), so the team's count drops as it pays
+    const PAY = [];
+    function pay(o, t, price) {
+      const r = ST().forge.ring, n = G.gather(o.x, o.y, r), NEAR = G.NEAR, r2 = r * r; PAY.length = 0;
+      for (let k = 0; k < n; k++) { const b = NEAR[k]; if (b.team !== t.id || b.dead || b.gar || b.escapeT > 0) continue; const dx = b.x - o.x, dy = b.y - o.y, d2 = dx * dx + dy * dy; if (d2 < r2) { b.rd = d2; PAY.push(b); } }
+      if (PAY.length < price) { PAY.length = 0; return; }
+      PAY.sort((p, q) => p.rd - q.rd || p.id - q.id);
+      for (let k = 0; k < price; k++) { const a = PAY[k]; a.gar = 2; a.tgt = null; a.fight = false; a.vx = a.vy = 0; a.hx = a.x; a.hy = a.y; o.agents.push(a); }
+      PAY.length = 0; o.payT0 = S.t; o.payTeam = t.id; t.count -= price;
+      if (t.isPlayer && !S.aiPlayer && G.fxOk(o.x, o.y)) PS.audio.chest();
+    }
+    // the pay walk (render only: the payers are already out of the sim): into the door over forge.payWalk s, then removed and the tier granted
+    function payStep(o, dt) {
+      const W = ST().forge.payWalk, f = W > 0 ? (S.t - o.payT0) / W : 1, dx = o.x, dy = o.y - 8;
+      if (f < 1) { for (const a of o.agents) { a.x = a.hx + (dx - a.hx) * f; a.y = a.hy + (dy - a.hy) * f; a.ph += dt * 9; a.face = dx >= a.hx ? 1 : -1; } return; }
+      const t = S.teams[o.payTeam], paid = o.agents.length; for (const a of o.agents) a.dead = true; o.agents.length = 0;
+      if (!t || !grant(t, o.axis, false, "forge", o.x, o.y, paid)) return;
+      S.ev.forge.push([+S.t.toFixed(1), t.id, o.axis, t.tier[o.axis], paid]);
+      if (G.fxOk(o.x, o.y)) G.burst(o.x, o.y - 20, S.spr.spoils.relics[o.axis].color, 14, 120, 0.6, 3, 160);
+    }
+    // a cleared bandit camp becomes a stockade owned by t (the team that landed the last hit; none: a neutral stockade). The captor knows it live
+    function toStockade(o, t) {
+      o.site = "stockade"; o.owner = t ? t.id : 0; o.bank = 0; o.fireT = 0; o.holdTeam = 0; o.prog = 0; if (t) o.kt[t.id] = t.id;
+      S.ev.sites.push([+S.t.toFixed(1), o.owner, 8, "clear", 0]);
+      if (t && t.isPlayer && !S.aiPlayer && !S._hintStockade) S._hintStockade = 1;
+    }
+    // a stockade (SPEC-v3 §3): captured by the ring hold at stockade.captureMin, never while an owner agent stands in the ring; from
+    // stockade.activeAfter s of match time it shoots every stockade.every s (a scan-tick clock) at the nearest rival agent within stockade.range
+    // (teams 1-6 but its owner; never a remnant, a neutral, a bandit or a payer), engaged agents first, then the agent it shot last while it
+    // stays valid (focus fire: kills land at about the spec's 3 in 10 s rather than chip damage spread over a jostling blob), then the
+    // nearest, ties by agent id. stockade.damage a
+    // shot, landed at once (the arrow is drawn, never simulated); a kill is credited to the owner and never converts. Not a team: it enters
+    // no engagement pair, so it cannot start or break a fight; its kills thin whatever rout group the victim stands in.
+    function stockTick(o, sdt) {
+      const K = ST().stockade, t = o.owner ? S.teams[o.owner] : null;
+      const cap = holdStep(o, K.ring, K.captureMin, o.owner, sdt, o.owner); if (cap) { takeSite(o, S.teams[cap], "ring"); return; }
+      if (!t || !t.alive || S.t < K.activeAfter) { o.fireT = 0; return; }
+      if ((o.fireT += sdt) < K.every) return;
+      const n = G.gather(o.x, o.y, K.range), NEAR = G.NEAR, r2 = K.range * K.range, last = o.shot; let best = null, bd = 0, be = 0, bl = 0;
+      for (let k = 0; k < n; k++) {
+        const b = NEAR[k], tm = b.team; if (tm < 1 || tm > 6 || tm === o.owner || b.dead || b.gar || b.escapeT > 0) continue;
+        const dx = b.x - o.x, dy = b.y - o.y, d2 = dx * dx + dy * dy; if (d2 >= r2) continue; const e = b.fight ? 1 : 0, l = b === last ? 1 : 0; // focus: the last target keeps its place among its peers
+        if (!best || e > be || (e === be && (l > bl || (l === bl && (d2 < bd || (d2 === bd && b.id < best.id)))))) { best = b; bd = d2; be = e; bl = l; }
+      }
+      o.shot = best;
+      if (!best) { o.fireT = K.every; return; } // loaded: the next rival in range is shot on the next scan
+      o.fireT -= K.every; S.ev.stockShots++; best.hp -= K.damage; best.fl = 0.16;
+      if (G.playerSees(best.x, best.y) && G.onScreen(best.x, best.y)) arrowAdd(o.x, o.y - 30, best.x, best.y - 8, Math.sqrt(bd) / K.arrowSpeed);
+      if (best.hp <= 0) { G.kill(best, o.owner); S.ev.stockKills++; }
+    }
+    // the drawn arrows: a fixed ring of stockade.arrowPool (typed arrays, sim-time stamped), drawn by drawOver while in flight
+    let AR = null, arN = 0;
+    function arrowsInit() { const n = cfgOf() && cfgOf().structures.stockade ? cfgOf().structures.stockade.arrowPool : 16; if (!AR || AR.length !== n * 6) AR = new Float32Array(n * 6); AR.fill(0); arN = 0; }
+    function arrowAdd(x0, y0, x1, y1, dur) { const q = (arN++ % (AR.length / 6)) * 6; AR[q] = x0; AR[q + 1] = y0; AR[q + 2] = x1; AR[q + 3] = y1; AR[q + 4] = S.t; AR[q + 5] = Math.max(0.05, dur); }
+    function drawArrows(ctx) {
+      if (!AR || !arN) return; const T = S.t; let any = false;
+      for (let q = 0; q < AR.length; q += 6) { const f = (T - AR[q + 4]) / AR[q + 5]; if (!(AR[q + 5] > 0) || f < 0 || f > 1) continue; if (!any) { ctx.strokeStyle = "#2A1C10"; ctx.lineWidth = 2; ctx.beginPath(); any = true; }
+        const dx = AR[q + 2] - AR[q], dy = AR[q + 3] - AR[q + 1], l = Math.sqrt(dx * dx + dy * dy) || 1, x = AR[q] + dx * f, y = AR[q + 1] + dy * f - Math.sin(f * 3.1416) * l * 0.12; ctx.moveTo(x - (dx / l) * 8, y - (dy / l) * 8); ctx.lineTo(x, y); }
+      if (any) ctx.stroke();
+    }
+    // the stockade's sight (SPEC-v3 §3): its owner stamps stockade.sight px round it into its own grid only, through the same LOS rule
+    function sight(i) { if (!SON() || !(ST().stockade.sight > 0)) return; for (const o of S.objs) if (o.site === "stockade" && o.owner === i) PS.fog.stampAt(i, o.x, o.y, ST().stockade.sight, PS.knowledge); }
+    // AI helpers (knowledge through kt, the owner each team last saw): rival stockades it has seen owned join its avoid list once they shoot;
+    // its own stockade (live: it knows its own sites) within maxD that lies farther from the threat than it does (Wary's flight); the nearest
+    // rival mill it has seen within sqrt(r2) (Sly's lurk). OS holds the spot.
+    const OS = { x: 0, y: 0 };
+    function avoidList(t, n, X, Y) {
+      if (!SON() || S.t < ST().stockade.activeAfter) return n;
+      for (const o of S.objs) { if (o.site !== "stockade" || n >= X.length) continue; const kt = o.kt[t.id]; if (kt < 1 || kt === t.id) continue; X[n] = o.x; Y[n++] = o.y; }
+      return n;
+    }
+    function ownStockade(t, hx, hy, maxD) {
+      if (!SON()) return false; const m2 = maxD * maxD, me = (t.ax - hx) * (t.ax - hx) + (t.ay - hy) * (t.ay - hy); let bd = Infinity;
+      for (const o of S.objs) { if (o.site !== "stockade" || o.owner !== t.id) continue; const d = (o.x - t.ax) * (o.x - t.ax) + (o.y - t.ay) * (o.y - t.ay); if (d > m2 || (o.x - hx) * (o.x - hx) + (o.y - hy) * (o.y - hy) <= me || d >= bd) continue; bd = d; OS.x = o.x; OS.y = o.y; }
+      return bd < Infinity;
+    }
+    function rivalMill(t, r2) {
+      if (!SON()) return false; let bd = Infinity;
+      for (const o of S.objs) { if (o.site !== "mill") continue; const kt = o.kt[t.id]; if (kt < 1 || kt === t.id) continue; const d = (o.x - t.ax) * (o.x - t.ax) + (o.y - t.ay) * (o.y - t.ay); if (d <= r2 && d < bd) { bd = d; OS.x = o.x; OS.y = o.y; } }
+      return bd < Infinity;
+    }
+    // SPEC-v3 §3 trains hook: while t owns sites whose kind trains a type, the summed share of each new neutral recruit carries it (a per-team
+    // accumulator, no S.rng draw), never past units.maxShare of the team (units.enabled false: nobody is tagged). Data only in M3b.
+    const KINDS = { archer: 1 };
+    function train(a, t) {
+      const U = cfgOf().units; if (!SON() || !U.enabled) return; let sh = 0, kind = 0;
+      for (const o of S.objs) { if (!o.site || o.owner !== t.id) continue; const tr = ST()[o.site].trains; if (tr && KINDS[tr.type]) { sh += tr.share; kind = KINDS[tr.type]; } }
+      if (!sh) return; t.trainAcc += sh; if (t.trainAcc < 1) return; t.trainAcc -= 1;
+      if (t.kindN + 1 > U.maxShare * (t.count + 1)) return; a.kind = kind; t.kindN++; S.ev.trained[t.id]++;
     }
     // SPEC-v3 §3 rout flip: a rout whose contact centroid lies within structures.routFlipRadius of a site the loser owns hands it to the winner
     function routFlip(loser, winner, cx, cy) {
@@ -313,7 +453,7 @@
       for (const b of S.objs) {
         if (!PS.fog.seesCell(o, PS.fog.cellOf(b.x, b.y))) continue;
         b.kn[o] = b.live ? 1 : 0; if (b.site) { b.kt[o] = b.owner; b.kb[o] = b.bank; } // v3: owner and bank as last seen (SPEC-v3 §3)
-        if (o === 1) { const k = b.sk; k.seen = true; k.live = b.live; k.team = b.owner; k.n = b.type === "bandit" ? b.n : b.site ? b.bank : b.type === "village" ? b.gar : 0; }
+        if (o === 1) { if (b.type === "forge" && !S._hintForge && !S.aiPlayer) S._hintForge = 1; const k = b.sk; k.seen = true; k.live = b.live; k.team = b.owner; k.n = b.site ? b.bank : b.type === "bandit" ? b.n : b.type === "village" ? b.gar : 0; }
       }
     }
     // AI forage (SPEC-v2 §7, §8): value / (path distance + 120) x the personality's treasure bias over the objectives within ai.objectiveSight it
@@ -329,20 +469,36 @@
       const R = cfgOf().ai.siteKnowRadius; if (!(R > 0)) return true; const sp = S.map.spawns[t.slot];
       if (sp && (sp.x - o.x) * (sp.x - o.x) + (sp.y - o.y) * (sp.y - o.y) <= R * R) return true; return PS.fog.explored(t.id, o.x, o.y);
     }
-    function aiPick(t, dist, pw, bias, nVB, VBX, VBY) {
-      const AI = cfgOf().ai, os2 = AI.objectiveSight * AI.objectiveSight, av2 = AI.campAvoidRadius * AI.campAvoidRadius; AP.score = 0; AP.obj = null;
+    // v3 M3b (SPEC-v3 §3): the personality's structBias {mill, forge, stockade} on each site kind. Forge: its next tier there when count >= price
+    // x (1 + ai.forgeReserve) and paying keeps the floor, valued ai.objForge x (1 - rank x ai.forgeRankStep) by the axis's place in its
+    // forgeAxes (an axis not listed: never). Stockade: one it has seen neutral or owned by someone else, when count >= captureMin (ai.objStockade;
+    // only swarms, not stockades, are checked against the avoid list for it: nSw). Mill: its own at millCollectAt (Greedy: its own
+    // millCollectAt within collectRange px; Wary: only with no clash heard within collectQuiet px); Bully weighs your mills by hatesPlayer;
+    // Sly weighs a site stealBonus while it hears the owner it saw there fighting >= stealDist px away. ring(x, y): only sites inside it (Stubborn).
+    function aiPick(t, dist, pw, bias, nVB, VBX, VBY, nSw, ring) {
+      const AI = cfgOf().ai, P = t.ai || {}, SB = P.structBias, os2 = AI.objectiveSight * AI.objectiveSight, av2 = AI.campAvoidRadius * AI.campAvoidRadius; AP.score = 0; AP.obj = null;
+      if (nSw == null) nSw = nVB;
       for (const o of S.objs) {
-        const k = o.kn[t.id], kt = o.kt[t.id]; if (kt < 0 && (k === 0 || (k < 0 && !(o.landmark && landKnown(t, o))))) continue;
-        const dx = o.x - t.ax, dy = o.y - t.ay; if (dx * dx + dy * dy > os2) continue;
-        let v = 0;
-        if (kt >= 0) { // a site it has seen as one (or took): its own live, any other as last seen
-          if (!SON()) continue; const bank = o.owner === t.id ? o.bank : o.kb[t.id];
-          if (kt === t.id) { if (bank < AI.millCollectAt) continue; v = AI.objMill * bank; } else { const need = needOf(o, bank); if (t.count < need) continue; v = AI.objMill * need; }
+        const k = o.kn[t.id], kt = o.kt[t.id], forge = o.site === "forge";
+        if (forge ? k !== 1 && !landKnown(t, o) : kt < 0 && (k === 0 || (k < 0 && !(o.landmark && landKnown(t, o))))) continue;
+        const dx = o.x - t.ax, dy = o.y - t.ay; if (dx * dx + dy * dy > os2 || (ring && !ring(o.x, o.y))) continue;
+        let v = 0, nv = nVB;
+        if (forge) { const price = priceOf(t, o), rank = P.forgeAxes ? P.forgeAxes.indexOf(o.axis) : 0; if (!price || rank < 0 || t.count < price * (1 + AI.forgeReserve) || !floorOk(t, price)) continue; v = AI.objForge * (1 - rank * AI.forgeRankStep) * (SB ? SB.forge : 1); }
+        else if (kt >= 0) { // a site it has seen as one (or took): its own live, any other as last seen
+          if (!SON()) continue;
+          if (o.site === "stockade") { if (kt === t.id || t.count < needOf(o, 0)) continue; v = AI.objStockade * (SB ? SB.stockade : 1); nv = nSw; }
+          else {
+            const bank = o.owner === t.id ? o.bank : o.kb[t.id];
+            if (kt === t.id) { const at = P.millCollectAt && dist(o.x, o.y) <= P.collectRange ? P.millCollectAt : AI.millCollectAt; if (bank < at || (P.collectQuiet && G.heard(t, P.collectQuiet, 0))) continue; v = AI.objMill * bank; }
+            else { const need = needOf(o, bank); if (t.count < need) continue; v = AI.objMill * need * (kt === 1 && t.kind === "bully" ? P.hatesPlayer : 1); }
+            v *= SB ? SB.mill : 1;
+          }
+          if (P.stealDist && kt > 0 && kt !== t.id) { const q = G.heard(t, 1e9, kt); if (q && (q.x - o.x) * (q.x - o.x) + (q.y - o.y) * (q.y - o.y) >= P.stealDist * P.stealDist) v *= P.stealBonus; }
         }
         else if (o.type === "relic" || o.type === "chest") { if (!canTake(t, o.axis, o.t3)) continue; v = AI.objRelic; }
         else if (o.type === "village") { if (t.count < o.gar) continue; v = AI.objVillage * o.gar; }
         else if (o.type === "bandit") { if (pw < AI.banditFeasible * o.n0 || !canTake(t, o.axis, o.t3)) continue; v = AI.objBandit; }
-        let skip = false; for (let q = 0; q < nVB; q++) if ((VBX[q] - o.x) * (VBX[q] - o.x) + (VBY[q] - o.y) * (VBY[q] - o.y) < av2) { skip = true; break; }
+        let skip = false; for (let q = 0; q < nv; q++) if ((VBX[q] - o.x) * (VBX[q] - o.x) + (VBY[q] - o.y) * (VBY[q] - o.y) < av2) { skip = true; break; }
         if (skip) continue;
         const sc = bias * v / (dist(o.x, o.y) + 120); if (sc > AP.score) { AP.score = sc; AP.x = o.x; AP.y = o.y; AP.obj = o; }
       }
@@ -362,8 +518,9 @@
         if (!inView(o, x0, y0, x1, y1, 120) || (gate && !o.sk.seen && !vis(o, gate))) continue;
         const live = vis(o, gate) ? o.live : o.sk.live;
         if (o.type === "bandit") { const im = spr.camps[1]; ctx.drawImage(im, snapA(o.x) - im.width * 1.5, snapA(o.y) - im.height * 1.5, im.width * 3, im.height * 3); }
-        if (o.type !== "village" || !(live || SON())) continue; // v3: a mill keeps its ring (SPEC-v3 §6), in its owner's colour as last seen
-        const r = live ? EN.villageRing : ST().mill.ring, tm = live ? 0 : vis(o, gate) ? o.owner : o.sk.team;
+        const site = !live && SON() && (o.type === "village" || o.type === "bandit"), forge = o.type === "forge"; // v3: mill and stockade rings in the owner's colour as last seen; a forge's ring (SPEC-v3 §6)
+        if (!forge && (o.type !== "village" || !live) && !site) continue;
+        const r = forge ? ST().forge.ring : live ? EN.villageRing : o.type === "bandit" ? ST().stockade.ring : ST().mill.ring, tm = live || forge ? 0 : vis(o, gate) ? o.owner : o.sk.team;
         ctx.globalAlpha = 0.35; ctx.strokeStyle = tm && S.teams[tm] ? S.teams[tm].color : "#F1EEDF"; ctx.lineWidth = 2; ctx.setLineDash(RDASH); ctx.beginPath(); ctx.arc(o.x, o.y, r, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash(NODASH); ctx.globalAlpha = 1;
       }
     }
@@ -376,8 +533,21 @@
         if (!live && SON()) sails(ctx, x - 20, y - 56, seen && tm ? T * 1.6 + o.id : 0.4); } // v3 mill (SPEC-v3 §3, §6): sails turn while it works for an owner you see
       else if (o.type === "chest") { const im = sp.chest[live ? 0 : 1]; ctx.drawImage(im, x - 12, y - 18, 24, 20); if (live) { const ic = sp.relics[o.axis].icon; ctx.drawImage(ic, x - 8, y - 38 + (seen ? Math.round(Math.sin(T * 3 + o.id) * 2) : 0), 16, 16); if (seen && ((T * 1.3 + o.id) % 2) < 0.25) { ctx.fillStyle = "#FFF6D0"; ctx.fillRect(x + 4, y - 16, 2, 2); } } }
       else if (o.type === "relic") { ctx.drawImage(sp.scroll, x - 10, y - 14, 20, 16); const ic = sp.relics[o.axis].icon, bob = seen ? Math.round(Math.sin(T * 4 + o.id) * 3) : 0; if (seen) { ctx.globalAlpha = 0.25 + 0.15 * Math.sin(T * 5); ctx.fillStyle = sp.relics[o.axis].color; ctx.beginPath(); ctx.arc(x, y - 26 + bob, 14, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; } ctx.drawImage(ic, x - 12, y - 38 + bob, 24, 24); }
-      else if (o.type === "bandit") { const im = sp.tent; ctx.drawImage(im, x - 20, y - 30, 40, 32); if (live) { ctx.fillStyle = KCOL[o.kind]; ctx.fillRect(x - 1, y - 40, 8, 6); ctx.fillRect(x - 1, y - 34, 4, 2); } }
+      else if (o.type === "bandit") { const im = sp.tent; ctx.drawImage(im, x - 20, y - 30, 40, 32); if (live) { ctx.fillStyle = KCOL[o.kind]; ctx.fillRect(x - 1, y - 40, 8, 6); ctx.fillRect(x - 1, y - 34, 4, 2); }
+        else if (SON()) { const tm = seen ? o.owner : o.sk.team; stockade(ctx, x, y, tm && S.teams[tm] ? S.teams[tm].color : "#B8A88A"); } } // v3 stockade (SPEC-v3 §6): palisade + pennant
+      else if (o.type === "forge") { forgeArt(ctx, x, y, sp.relics[o.axis].icon, seen && o.agents.length > 0); }
       ctx.globalAlpha = 1;
+    }
+    // v3 M3b art, primitives only (no new atlas; render only, no allocation): the stockade's stakes round the tent with a pennant in the
+    // owner's colour, and the forge (a stone hut, anvil and chimney, its axis icon above; the hearth glows while payers walk in)
+    function stockade(ctx, x, y, col) {
+      for (let k = 0; k < 12; k++) { const a = k * 0.5236 + 0.26, sx = x + Math.cos(a) * 30, sy = y - 6 + Math.sin(a) * 18; if (sy > y + 4 && Math.abs(sx - x) < 8) continue; ctx.fillStyle = "#2A1C10"; ctx.fillRect(sx - 3, sy - 16, 6, 18); ctx.fillStyle = "#8A6038"; ctx.fillRect(sx - 2, sy - 16, 3, 16); }
+      ctx.fillStyle = "#3E2A1C"; ctx.fillRect(x + 16, y - 52, 2, 34); ctx.fillStyle = col; ctx.fillRect(x + 18, y - 52, 14, 9);
+    }
+    function forgeArt(ctx, x, y, icon, hot) {
+      ctx.fillStyle = "#2A1C10"; ctx.fillRect(x - 24, y - 30, 48, 32); ctx.fillStyle = "#6E6A62"; ctx.fillRect(x - 22, y - 28, 44, 28); ctx.fillStyle = "#4A4640"; ctx.fillRect(x - 26, y - 36, 52, 8); ctx.fillRect(x + 10, y - 48, 8, 14);
+      ctx.fillStyle = hot ? "#FFB347" : "#C0502C"; ctx.fillRect(x - 8, y - 18, 16, 18); ctx.fillStyle = "#1E1A16"; ctx.fillRect(x - 20, y - 8, 10, 4); ctx.fillRect(x - 18, y - 4, 6, 4);
+      ctx.drawImage(icon, x - 12, y - 66, 24, 24);
     }
     // the mill's four sails on the left hut's roof (render only, no allocation): a dark stroke under a light one
     function sails(ctx, hx, hy, a) {
@@ -393,12 +563,21 @@
     // while you hold the ring. v3 mill (SPEC-v3 §3): your own shows its bank in your colour (your collect arc while you stand in it); anyone
     // else's shows the need a rival faces, max(guardMin, bank), with your capture arc.
     function drawOver(ctx, gate, x0, y0, x1, y1) {
-      const EN = cfgOf().encampments; ctx.font = "800 12px 'Nunito', system-ui"; ctx.textAlign = "center";
+      const EN = cfgOf().encampments; drawArrows(ctx); ctx.font = "800 12px 'Nunito', system-ui"; ctx.textAlign = "center";
       for (const o of S.objs) {
         if (o.type === "relic" || o.type === "chest" || !inView(o, x0, y0, x1, y1, 60)) continue;
         const seen = vis(o, gate); if (gate && !seen && !o.sk.seen) continue; const live = seen ? o.live : o.sk.live;
         let txt = "", col = "#F1EEDF", ly = o.y - 8;
-        if (!live) {
+        if (o.type === "forge") { // v3 forge (SPEC-v3 §6): your next price here (greyed "TOO FEW" under the floor, "MAX" at tier II), your hold arc
+          const p = S.teams[1], F = ST().forge, price = p && p.tier ? priceOf(p, o) : 0, few = price > 0 && !floorOk(p, price); ly = o.y + 22;
+          txt = !price ? "MAX" : few ? price + " · TOO FEW" : String(price); col = !price || few ? "#9A968C" : "#F6CF6A";
+          if (seen && o.fh[1] > 0) arc(ctx, o.x, o.y, F.ring, o.fh[1] / F.hold, p.color);
+        }
+        else if (!live && o.type === "bandit") { // v3 stockade: a rival's (or a neutral one) shows the need, with your capture arc; your own shows nothing
+          if (!SON()) continue; const tm = seen ? o.owner : o.sk.team; if (tm === 1) continue; txt = String(needOf(o, 0)); ly = o.y + 22;
+          if (seen && o.holdTeam === 1 && o.prog > 0) arc(ctx, o.x, o.y, ST().stockade.ring, o.prog, S.teams[1].color);
+        }
+        else if (!live) {
           if (o.type !== "village" || !SON()) continue;
           const M = ST().mill, tm = seen ? o.owner : o.sk.team, bank = seen ? o.bank : o.sk.n; ly = o.y + 22;
           if (tm === 1) { txt = String(bank); col = S.teams[1].color; if (seen && o.colT > 0) arc(ctx, o.x, o.y, M.ring, o.colT / M.collectHold, S.teams[1].color); }
@@ -406,6 +585,7 @@
         }
         else if (o.type === "village") { txt = String(o.gar); ly = o.y - 14; if (seen && o.holdTeam === 1 && o.prog > 0) arc(ctx, o.x, o.y, EN.villageRing, o.prog, S.teams[1].color); }
         else if (o.type === "bandit") { txt = String(seen ? o.n : o.sk.n); col = KCOL[o.kind]; ly = o.y + 16; }
+        if (!txt) continue;
         const w = ctx.measureText(txt).width + 10; ctx.globalAlpha = seen ? 0.95 : 0.6; ctx.fillStyle = "rgba(8,14,6,.8)"; ctx.fillRect(o.x - w / 2, ly - 12, w, 16); ctx.fillStyle = col; ctx.fillText(txt, o.x, ly); ctx.globalAlpha = 1;
       }
     }
@@ -415,6 +595,8 @@
       for (const o of S.objs) {
         if (gate && !o.sk.seen && !vis(o, gate)) continue; const live = vis(o, gate) ? o.live : o.sk.live, x = (o.x * k) | 0, y = (o.y * k) | 0;
         if (o.type === "village") { const tm = vis(o, gate) ? o.owner : o.sk.team; mctx.fillStyle = "#15110C"; mctx.fillRect(x - 3, y - 3, 6, 6); mctx.fillStyle = !live && tm && S.teams[tm] ? S.teams[tm].color : "#B08A48"; mctx.fillRect(x - 2, y - 2, 4, 4); }
+        else if (o.type === "forge") { mctx.fillStyle = "#15110C"; mctx.fillRect(x - 3, y - 3, 7, 7); mctx.fillStyle = S.spr.spoils.relics[o.axis].color; mctx.fillRect(x - 2, y - 2, 5, 5); }
+        else if (!live && o.type === "bandit" && SON()) { const tm = vis(o, gate) ? o.owner : o.sk.team; mctx.fillStyle = "#15110C"; mctx.fillRect(x - 3, y - 3, 6, 6); mctx.fillStyle = tm && S.teams[tm] ? S.teams[tm].color : "#8A6038"; mctx.fillRect(x - 2, y - 2, 4, 4); }
         else if (!live) continue;
         else if (o.type === "bandit") { mctx.fillStyle = "#15110C"; mctx.fillRect(x - 3, y - 3, 6, 6); mctx.fillStyle = KCOL[o.kind]; mctx.fillRect(x - 2, y - 2, 4, 4); }
         else { mctx.fillStyle = "#15110C"; mctx.fillRect(x - 2, y - 2, 5, 5); mctx.fillStyle = S.spr.spoils.relics[o.axis].color; mctx.fillRect(x - 1, y - 1, 3, 3); }
@@ -456,12 +638,15 @@
       for (const o of S.objs) {
         const v = vis(o, gate); if (gate && !v && !o.sk.seen) continue; const live = v ? o.live : o.sk.live;
         const mill = !live && o.type === "village" && SON(), owner = mill ? (v ? o.owner : o.sk.team) : 0, bank = mill ? (v ? o.bank : o.sk.n) : 0; // v3: a mill as last seen (SPEC-v3 §3)
-        out.push({ type: o.type, x: Math.round(o.x), y: Math.round(o.y), live, visible: v, axis: o.axis, t3: o.t3, need: mill ? (owner === 1 ? 0 : needOf(o, bank)) : o.type === "village" ? o.gar : o.type === "bandit" ? (v ? o.n : o.sk.n) : 0, kind: o.kind, mill, owner, bank });
+        const stock = !live && o.type === "bandit" && SON(), sOwner = stock ? (v ? o.owner : o.sk.team) : 0, p = S.teams[1], price = o.type === "forge" && p && p.tier ? priceOf(p, o) : 0; // v3 M3b: a stockade as last seen, a forge's price for you
+        out.push({ type: o.type, x: Math.round(o.x), y: Math.round(o.y), live, visible: v, axis: o.axis, t3: o.t3, need: mill ? (owner === 1 ? 0 : needOf(o, bank)) : stock ? (sOwner === 1 ? 0 : needOf(o, 0)) : o.type === "village" ? o.gar : o.type === "bandit" ? (v ? o.n : o.sk.n) : 0, kind: o.kind, mill, owner: stock ? sOwner : owner, bank,
+          stockade: stock, price, tooFew: price > 0 && !floorOk(p, price) });
       }
       return out;
     }
     const tierSum = (t) => (t && t.tier ? t.tier.arms + t.tier.boots + t.tier.horn : 0);
     return { stage, reset, initTeam, applyTiers, grant, canTake, onConvert, place, blocks, relicAt, tick, leaderDrop, observe, aiPick, knowObj, drawGround, pushProps, drawProp, drawOver,
-      minimap, drawHorn, dust, hud, playerView, tierSum, tables, restyle, joinVillage, holdStep, takeSite, routFlip, onElim, needOf, AXES, KCOL };
+      minimap, drawHorn, dust, hud, playerView, tierSum, tables, restyle, joinVillage, holdStep, takeSite, routFlip, onElim, needOf, AXES, KCOL,
+      sight, avoidList, ownStockade, rivalMill, OS, priceOf, floorOk, toStockade, arrowCount: () => { let n = 0; if (AR) for (let q = 0; q < AR.length; q += 6) { const f = (S.t - AR[q + 4]) / AR[q + 5]; if (AR[q + 5] > 0 && f >= 0 && f <= 1) n++; } return n; } };
   };
 })();
