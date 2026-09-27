@@ -170,3 +170,11 @@ Parked ideas and open follow-ups from v1 and the v2 build (M1-M8), grouped by th
 - `tools/font-subset.py` scans the source for characters. New on-screen text with a character outside the current set (anything past ASCII other than · × – — ‘ ’ “ ” … and arrows) needs a re-run from the original Google files, which are in git history before M2b (`git show fd608b1^:peasant-swarm/fonts/nunito-latin.woff2`).
 - A rustle's leaves are drawn only when a frame runs: a hidden tab or a skipped frame drops that rustle's draw and its leaf hiss (the sim event is kept). Fine for a tell; note it if a test ever counts drawn rustles against events.
 
+
+### Parked during v3 M3a Structures plumbing (2026-09-26)
+- Mill creak on collect (SPEC-v3 §6 audio list) not built: a collect already plays the recruit blips through convert(). Add a `mill` cue on the low-priority budget with the M3b forge clang and stockade twang.
+- Mill churn: in 20 all-AI matches the AIs take a mill by ring hold 14.7 times a match (bot rows 10.0). Any passing swarm of >= guardMin takes an unguarded mill at once and raids its bank. If M5 wants mills to stick, a higher `structures.guardMin`, a hold time on owned sites, or the M3b `structBias` (Wary/Stubborn guard) are the levers.
+- Mill income is under R3's 20-40 per owner: median 16 (all-AI) and 13 (bot rows) peasants collected per owning team per match; the harness bot collects 19.6 a match. Tune `structures.mill.every` / `ai.millCollectAt` in M5, after M3b's Greedy collect-at-6.
+- The harness bot walks back to its own mill at 6 banked while AIs wait for 10 (M3a has no per-personality bias). With mills on, bot Normal wins 10/20 (M2 tree 7/20) and the bell drops 75% -> 55% (the extra matches end in bot wins by elimination at 4:16-4:57). Recheck when M3b gives Greedy its collect-at-6; pacing is M5's gate.
+- A rout flip hands the site over with its bank kept (the winner collects by walking in). If the design wants the rout winner to take the bank at once like a ring captor, pass "ring" instead of "rout" to `takeSite` (one word, `src/spoils.js` routFlip).
+- The capclash bench has no mills in it. A mill costs one ring gather per scan tick (six at most, the same as v2's six unjoined villages), so it was not staged; M3b's bench with six firing stockades can add owned mills to the scene.
