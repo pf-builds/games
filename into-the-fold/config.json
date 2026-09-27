@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "dataVersion": "1-20261001-105",
+  "dataVersion": "1-20261001-105-r3",
   "launchDate": "2026-09-28",
   "medals": [
-    { "id": "gold", "name": "Gold fleece", "emoji": "🥇", "maxOverPar": 0 },
-    { "id": "silver", "name": "Silver", "emoji": "🥈", "maxOverPar": 3 },
-    { "id": "bronze", "name": "Bronze", "emoji": "🥉", "maxOverPar": null }
+    {"id": "gold", "name": "Gold fleece", "emoji": "🥇", "maxOverPar": 0},
+    {"id": "silver", "name": "Silver", "emoji": "🥈", "maxOverPar": 3},
+    {"id": "bronze", "name": "Bronze", "emoji": "🥉", "maxOverPar": null}
   ],
   "anim": {
     "cellMs": 48,
@@ -17,11 +17,57 @@
     "splashRewindMs": 120,
     "bumpMs": 160,
     "bumpPx": 7,
-    "resultDelayMs": 380
+    "resultDelayMs": 900,
+    "trotMs": 70,
+    "hopMs": 240,
+    "hopCells": 0.2,
+    "winJumpMs": 300,
+    "winJumps": 2,
+    "winStaggerMs": 70,
+    "winJumpCells": 0.3
   },
-  "input": { "swipePx": 24 },
-  "board": { "maxCssPx": 560, "fenceCells": 0.42, "sheepScale": 0.9, "pennedScale": 0.8, "ghostAlpha": 0.28 },
+  "input": {"swipePx": 24},
+  "board": {"maxCssPx": 560, "fenceCells": 0.42, "sheepScale": 0.9, "pennedScale": 0.8, "ghostAlpha": 0.28},
   "dateCheckMs": 1000,
-  "save": { "key": "intothefold.save.v1" },
-  "selfTest": { "boards": 20, "stepDays": 41 }
+  "save": {"key": "intothefold.save.v1", "limits": {"maxCount": 10000000, "maxLog": 20000, "maxId": 40}},
+  "selfTest": {"boards": 20, "stepDays": 41},
+  "share": {
+    "title": "Into the Fold",
+    "mark": "🐑",
+    "perRow": 7,
+    "squares": {"g": "🟩", "w": "⬜", "s": "🟦"},
+    "url": "https://pf-builds.github.io/games/into-the-fold/",
+    "toastMs": 1600
+  },
+  "stats": {"buckets": 6, "labels": ["≤par", "+1", "+2", "+3", "+4", "+5+"]},
+  "hints": {
+    "mud": "Mud stops a sheep. Next swipe it walks out.",
+    "black": "The black sheep only fits the dark pen.",
+    "pond": "Ponds splash the swipe back. It still counts."
+  },
+  "particles": {
+    "cap": 64,
+    "splash": {"n": 10, "speed": 3.2, "lift": 2.2, "g": 11, "lifeMs": 520, "size": 0.055},
+    "pen": {"n": 7, "speed": 1.6, "lift": 1.4, "g": -0.8, "lifeMs": 650, "size": 0.05},
+    "win": {"n": 5, "speed": 1.4, "lift": 1.6, "g": -0.6, "lifeMs": 950, "size": 0.08},
+    "stop": {"n": 3, "speed": 0.9, "lift": 0.6, "g": 3, "lifeMs": 300, "size": 0.035}
+  },
+  "audio": {
+    "volume": 0.5,
+    "whistle": {"gain": 0.16, "f0": 1750, "f1": 2450, "f2": 2050, "ms": 150},
+    "bleat": {
+      "gain": 0.2,
+      "white": 430,
+      "black": 330,
+      "jitter": 0.12,
+      "ms": 300,
+      "vibratoHz": 26,
+      "vibratoDepth": 0.05,
+      "formantHz": 1100,
+      "maxPerSwipe": 2
+    },
+    "latch": {"gain": 0.25, "delayMs": 90, "f0": 190, "f1": 95, "ms": 70, "clickHz": 2600},
+    "splash": {"gain": 0.3, "ms": 420, "cut0": 3200, "cut1": 350, "plop0": 620, "plop1": 160},
+    "win": {"gain": 0.16, "notes": [523.25, 659.25, 783.99, 1046.5], "stepMs": 95, "noteMs": 260}
+  }
 }

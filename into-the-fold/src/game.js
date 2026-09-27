@@ -4,6 +4,8 @@
 // action is applied; the slide animation only replays it on frame time. An action that arrives while a swipe is
 // animating is queued (max 1). If one is already queued, the running animation snaps to its end, the queued action
 // applies, and the new one takes the slot, so a fast player never loses a swipe.
+// M2: every effective action is appended to g.log (a resume replays it), and timed events (swipe, stop, pen, splash,
+// win) go into a small preallocated ring that the page drains on frame time for sound and particles.
 (function (root, factory) {
   const R = typeof module === "object" && module.exports ? require("./rules.js") : root.IntoTheFold.rules;
   const api = factory(R);
@@ -15,6 +17,9 @@
   const STOP_CODE = { wall: 0, sheep: 1, mud: 2, pen: 3, pond: 4 };
   const STOP_PEN = 3, STOP_POND = 4;
   const ACTION = { N: "N", E: "E", S: "S", W: "W", up: "N", right: "E", down: "S", left: "W", undo: "undo", restart: "restart" };
+  const LOG_OF = { N: "N", E: "E", S: "S", W: "W", undo: "u", restart: "r" }, ACTION_OF = { N: "N", E: "E", S: "S", W: "W", u: "undo", r: "restart" };
+  // Timed events for sound and particles. The ring holds EV_CAP; the oldest drops if the page falls behind.
+  const EV_SWIPE = 1, EV_STOP = 2, EV_PEN = 3, EV_SPLASH = 4, EV_WIN = 5, EV_BUMP = 6, EV_CAP = 32;
 
   const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
   const easeOut = (u) => 1 - (1 - u) * (1 - u);
@@ -26,13 +31,34 @@
     return {
       cfg, json, B, meta: meta || {}, par: B.par,
       start: s0, state: s0, history: [s0],
-      swipes: 0, squares: "", // one char per counted swipe, in play order: g = penned one, w = nothing penned, s = splash (M2 share)
+      swipes: 0, squares: "", // one char per counted swipe, in play order: g = penned one, w = nothing penned, s = splash (share)
+      log: "", rev: 0, quiet: false, // log: every effective action (N/E/S/W, u = undo, r = restart); rev bumps with it
       won: false, wonAt: 0, now: 0, queue: null, last: null,
       anim: { kind: ANIM_NONE, t0: 0, slideMs: 0, total: 0, dir: 0,
         fx: new Float32Array(m), fy: new Float32Array(m), tx: new Float32Array(m), ty: new Float32Array(m),
         dur: new Float32Array(m), stop: new Int8Array(m), moving: new Uint8Array(m) },
       bump: { t0: -1, dir: 0 },
+      pennedAt: new Float64Array(m).fill(-1e9), hopUntil: 0, // when each sheep reached its pen (drives its one hop)
+      ev: { type: new Uint8Array(EV_CAP), i: new Int8Array(EV_CAP), x: new Float32Array(EV_CAP), y: new Float32Array(EV_CAP), t: new Float64Array(EV_CAP), w: 0, r: 0 },
     };
+  }
+
+  function emit(g, type, i, x, y, t) {
+    if (g.quiet) return;
+    const E = g.ev, k = E.w % EV_CAP;
+    E.type[k] = type; E.i[k] = i; E.x[k] = x; E.y[k] = y; E.t[k] = t; E.w++;
+    if (E.w - E.r > EV_CAP) E.r = E.w - EV_CAP;
+  }
+
+  // Hand every event due by `now` to fn(type, sheepIndex, x, y) in time order. Allocation-free.
+  function drain(g, now, fn) {
+    const E = g.ev;
+    for (let guard = 0; guard < EV_CAP && E.r < E.w; guard++) {
+      const k = E.r % EV_CAP;
+      if (E.t[k] > now) break;
+      E.r++;
+      fn(E.type[k], E.i[k], E.x[k], E.y[k]);
+    }
   }
 
   function busy(g) { return g.anim.kind !== ANIM_NONE && g.now < g.anim.t0 + g.anim.total; }
@@ -74,27 +100,62 @@
         const from = g.state;
         g.history.pop(); g.state = g.history[g.history.length - 1];
         startAnim(g, diffPaths(from, g.state), ANIM_UNDO, t0, 0);
+        for (let i = 0; i < g.state.sheep.length; i++) if (!g.state.sheep[i].penned) g.pennedAt[i] = -1e9;
         res = { action: a, noop: false };
       }
     } else if (a === "restart") {
       const changed = g.history.length > 1;
-      g.history = [g.start]; g.state = g.start; g.anim.kind = ANIM_NONE;
+      g.history = [g.start]; g.state = g.start; g.anim.kind = ANIM_NONE; g.pennedAt.fill(-1e9);
       res = { action: a, noop: !changed };
     } else {
       const r = R.swipe(g.B, g.state, a), d = R.dirIndex(a);
-      if (r.noop) { g.bump.t0 = t0; g.bump.dir = d; }
+      if (r.noop) { g.bump.t0 = t0; g.bump.dir = d; emit(g, EV_BUMP, -1, 0, 0, t0); }
       else {
         g.swipes++;
         g.squares += r.splash ? "s" : r.penned.length ? "g" : "w";
         if (r.moved) { g.state = r.state; g.history.push(r.state); }
         startAnim(g, r.paths, r.splash ? ANIM_SPLASH : ANIM_SLIDE, t0, d);
-        if (r.moved && R.isWin(g.B, g.state)) { g.won = true; g.queue = null; g.wonAt = t0 + (g.anim.kind === ANIM_NONE ? 0 : g.anim.total); }
+        swipeEvents(g, r, t0);
+        if (r.moved && R.isWin(g.B, g.state)) {
+          g.won = true; g.queue = null; g.wonAt = t0 + (g.anim.kind === ANIM_NONE ? 0 : g.anim.total);
+          emit(g, EV_WIN, -1, 0, 0, g.wonAt);
+        }
       }
       res = { action: a, noop: r.noop, counts: r.counts, splash: r.splash, penned: r.penned.length };
     }
+    if (!res.noop) { g.log += LOG_OF[a]; g.rev++; }
     res.swipes = g.swipes; res.won = g.won;
     g.last = res;
     return res;
+  }
+
+  // Events for one counted swipe, in time order: the whistle now, then each sheep's stop / pen / splash as it lands.
+  function swipeEvents(g, r, t0) {
+    const A = g.anim, C = g.cfg.anim;
+    emit(g, EV_SWIPE, -1, 0, 0, t0);
+    const land = r.paths.map((p) => ({ p, t: t0 + A.dur[p.i] })).sort((a, b) => a.t - b.t);
+    for (const e of land) {
+      const p = e.p;
+      if (r.splash) { if (p.stop === "pond") emit(g, EV_SPLASH, p.i, p.to.x, p.to.y, e.t); }
+      else if (p.stop === "pen") { emit(g, EV_PEN, p.i, p.to.x, p.to.y, e.t); g.pennedAt[p.i] = e.t; g.hopUntil = Math.max(g.hopUntil, e.t + C.stopMs + C.hopMs); }
+      else emit(g, EV_STOP, p.i, p.to.x, p.to.y, e.t);
+    }
+  }
+
+  // Rebuild a game from its action log (a resume) with no animation, events or hops. Returns false on a bad char.
+  function replay(g, log) {
+    g.quiet = true;
+    let ok = true;
+    for (let k = 0; k < log.length && !g.won; k++) {
+      const a = ACTION_OF[log[k]];
+      if (!a) { ok = false; break; }
+      apply(g, a, g.now);
+      g.anim.kind = ANIM_NONE; g.bump.t0 = -1;
+    }
+    g.quiet = false; g.queue = null;
+    g.pennedAt.fill(-1e9); g.hopUntil = 0;
+    if (g.won) g.wonAt = -1e9; // a restored win shows its result at once, without the flock jump
+    return ok;
   }
 
   // THE input facade. a: "N"/"E"/"S"/"W" (or up/right/down/left), "undo", "restart". Restart's "are you sure" lives
@@ -108,6 +169,7 @@
       const q = g.queue;
       g.queue = a;
       g.anim.kind = ANIM_NONE; // snap the running animation to its end
+      g.ev.r = g.ev.w; // and drop its not-yet-heard events (no burst of stale bleats)
       const r = apply(g, q, g.now);
       if (g.won) g.queue = null;
       return Object.assign(r, { queued: !g.won });
@@ -128,18 +190,29 @@
     if (g.bump.t0 >= 0 && g.now >= g.bump.t0 + g.cfg.anim.bumpMs) g.bump.t0 = -1;
   }
 
-  function animating(g) { return busy(g) || g.bump.t0 >= 0 || g.queue !== null; }
+  // Win celebration length: every sheep hops winJumps times, each starting winStaggerMs after the one before.
+  function winMs(g) { const C = g.cfg.anim; return (g.state.sheep.length - 1) * C.winStaggerMs + C.winJumps * C.winJumpMs; }
+
+  function animating(g) { return busy(g) || g.bump.t0 >= 0 || g.queue !== null || g.now < g.hopUntil || (g.won && g.now < g.wonAt + winMs(g)); }
 
   function resultDue(g) { return g.won && !busy(g) && g.now >= g.wonAt + g.cfg.anim.resultDelayMs; }
 
   // Where sheep i is drawn right now, written into `out` (allocation-free): x, y in cells (float); sq = squash
   // amount along axis (0 = the E-W axis, 1 = N-S); dunk 0..1 while a splashing sheep sits in the pond; ripple
-  // 0..1 through the splash hold (-1 otherwise).
+  // 0..1 through the splash hold (-1 otherwise); hop = lift in cells (the pen hop, the win jump); trot = 0 standing,
+  // 1 or 2 = the leg frame while running.
   function pose(g, i, out) {
-    const q = g.state.sheep[i], A = g.anim;
-    out.x = q.x; out.y = q.y; out.sq = 0; out.axis = 0; out.dunk = 0; out.ripple = -1;
+    const q = g.state.sheep[i], A = g.anim, C = g.cfg.anim;
+    out.x = q.x; out.y = q.y; out.sq = 0; out.axis = 0; out.dunk = 0; out.ripple = -1; out.hop = 0; out.trot = 0;
+    const th = g.now - g.pennedAt[i] - C.stopMs;
+    if (th >= 0 && th < C.hopMs) out.hop = Math.sin((Math.PI * th) / C.hopMs) * C.hopCells;
+    if (g.won) {
+      const tw = g.now - g.wonAt - i * C.winStaggerMs;
+      if (tw >= 0 && tw < C.winJumps * C.winJumpMs) out.hop = Math.max(out.hop, Math.abs(Math.sin((Math.PI * tw) / C.winJumpMs)) * C.winJumpCells);
+    }
     if (A.kind === ANIM_NONE || !A.moving[i] || !busy(g)) return out;
-    const C = g.cfg.anim, t = g.now - A.t0, di = A.dur[i];
+    const t = g.now - A.t0, di = A.dur[i];
+    if (t < di && A.kind !== ANIM_UNDO) out.trot = 1 + (Math.floor(t / C.trotMs) & 1);
     let p;
     if (A.kind === ANIM_SPLASH) {
       if (t < A.slideMs) p = di > 0 ? easeOut(clamp01(t / di)) : 1;
@@ -194,5 +267,22 @@
     return Solver.solve(S, opts);
   }
 
-  return { ANIM_NONE, ANIM_SLIDE, ANIM_SPLASH, ANIM_UNDO, create, input, frame, busy, animating, resultDue, pose, gateShut, bumpPx, medal, solveFrom };
+  // The share text (SPEC §2): header, then one square per counted swipe (<= perRow a row), then the URL. It is built
+  // from the square log alone, so it can never carry a direction.
+  function shareText(cfg, n, swipes, par, squares) {
+    const S = cfg.share, md = medal(cfg, swipes, par), lines = [S.title + " #" + n + " " + S.mark + " " + swipes + "/" + par + " " + md.emoji];
+    let row = "", k = 0;
+    for (let j = 0; j < squares.length; j++) {
+      const e = S.squares[squares[j]];
+      if (!e) continue;
+      row += e;
+      if (++k === S.perRow) { lines.push(row); row = ""; k = 0; }
+    }
+    if (row) lines.push(row);
+    lines.push(S.url);
+    return lines.join("\n");
+  }
+
+  return { ANIM_NONE, ANIM_SLIDE, ANIM_SPLASH, ANIM_UNDO, EV_SWIPE, EV_STOP, EV_PEN, EV_SPLASH, EV_WIN, EV_BUMP,
+    create, input, frame, busy, animating, resultDue, pose, gateShut, bumpPx, medal, solveFrom, drain, replay, winMs, shareText };
 });

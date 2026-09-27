@@ -226,15 +226,36 @@ function refPar(b, limit) {
 
 // ---- save (M1) --------------------------------------------------------------------
 {
-  eq([Save.sanitize(null), Save.sanitize({ tutorialSeen: "yes", junk: 1 }), Save.sanitize({ tutorialSeen: true })], [{ v: 1, tutorialSeen: false }, { v: 1, tutorialSeen: false }, { v: 1, tutorialSeen: true }], "save: sanitize clamps every field");
+  const pick = (d) => [d.v, d.tutorialSeen, "junk" in d];
+  eq([Save.sanitize(null), Save.sanitize({ tutorialSeen: "yes", junk: 1 }), Save.sanitize({ tutorialSeen: true })].map(pick), [[1, false, false], [1, false, false], [1, true, false]], "save: sanitize clamps every field");
   const m = Save.memoryStore(); m.setItem("k", "{not json"); ok(Save.open(m, "k").data.tutorialSeen === false, "save: a corrupt save loads fresh");
   const sv = Save.open(m, "k"); sv.data.tutorialSeen = true; sv.write(); ok(Save.open(m, "k").data.tutorialSeen === true, "save: write + reopen round-trips");
 }
 
+// ---- save + stats (M2): resume, stats, sound, hints, practice; every field sanitized -----------------------------
+{
+  const f = Save.fresh();
+  eq([f.sound, f.hints, f.stats, f.daily, f.practice], [true, { mud: false, black: false, pond: false }, { hist: [0, 0, 0, 0, 0, 0], streak: 0, maxStreak: 0, lastN: 0 }, null, { index: 0 }], "save: fresh M2 fields");
+  const bad = Save.sanitize({ sound: 0, hints: { mud: 1, black: true }, stats: { hist: [2, -1, "3", 1e99, NaN, 1.9, 7], streak: -3, maxStreak: 1e20, lastN: "9" }, daily: { n: 4.7, id: "mon-000", log: "NESWur" }, practice: { index: 12.9 } });
+  eq([bad.sound, bad.hints, bad.stats.hist, bad.stats.streak, bad.stats.maxStreak, bad.stats.lastN, bad.daily, bad.practice.index],
+    [true, { mud: false, black: true, pond: false }, [2, 0, 0, 1e7, 0, 1], 0, 1e7, 0, { n: 4, id: "mon-000", log: "NESWur" }, 12], "save: M2 fields clamped (hist to [0, max], counts floored, 7th bucket dropped)");
+  eq([Save.sanitize({ daily: { n: 3, id: "x", log: "NEX" } }).daily, Save.sanitize({ daily: { n: 0, id: "x", log: "N" } }).daily, Save.sanitize({ daily: { n: 3, id: 7, log: "N" } }).daily, Save.sanitize({ daily: { n: 3, id: "x", log: "N".repeat(20001) } }).daily], [null, null, null, null], "save: a bad resume (char, #0, id, too long) is dropped");
+  eq(Save.sanitize({ stats: { hist: [1, 1], streak: 5, maxStreak: 9, lastN: 3 } }).stats, { hist: [1, 1, 0, 0, 0, 0], streak: 2, maxStreak: 2, lastN: 3 }, "save: streaks can't exceed games played");
+  const st = Save.fresh().stats;
+  ok(Save.recordDaily(st, 1, 5, 5) && Save.recordDaily(st, 2, 6, 5) && Save.recordDaily(st, 3, 12, 5), "stats: three finishes record");
+  eq([st.hist, st.streak, st.maxStreak, Save.played(st), Save.parPct(st)], [[1, 1, 0, 0, 0, 1], 3, 3, 3, 33], "stats: histogram buckets (par, +1, +5 or more), streak 3");
+  ok(!Save.recordDaily(st, 3, 5, 5) && !Save.recordDaily(st, 2, 5, 5) && Save.played(st) === 3, "stats: the same (or an older) puzzle never records twice");
+  ok(Save.streakNow(st, 3) === 3 && Save.streakNow(st, 4) === 3 && Save.streakNow(st, 5) === 0, "stats: streak alive today and tomorrow, broken after a missed day");
+  Save.recordDaily(st, 5, 5, 5); ok(st.streak === 1 && st.maxStreak === 3, "stats: a gap restarts the streak, max stays");
+  eq([Save.bucket(-2, 6), Save.bucket(0, 6), Save.bucket(4, 6), Save.bucket(5, 6), Save.bucket(40, 6)], [0, 0, 4, 5, 5], "stats: bucket edges");
+}
+
 // ---- game state machine (M1): facade, queue, undo/restart never refund ------------------
 {
-  const cfg = { anim: { cellMs: 48, slideMaxMs: 270, stopMs: 110, squash: 0.26, splashSlideMaxMs: 170, splashHoldMs: 110, splashRewindMs: 120, bumpMs: 160, bumpPx: 7, resultDelayMs: 380 },
+  const cfg = { anim: { cellMs: 48, slideMaxMs: 270, stopMs: 110, squash: 0.26, splashSlideMaxMs: 170, splashHoldMs: 110, splashRewindMs: 120, bumpMs: 160, bumpPx: 7, resultDelayMs: 380,
+    trotMs: 70, hopMs: 240, hopCells: 0.2, winJumpMs: 300, winJumps: 2, winStaggerMs: 70, winJumpCells: 0.3 },
     medals: [{ id: "gold", maxOverPar: 0 }, { id: "silver", maxOverPar: 3 }, { id: "bronze", maxOverPar: null }] };
+  const cfgReal = JSON.parse(require("fs").readFileSync(require("path").join(__dirname, "../config.json"), "utf8"));
   const b = Object.assign(board(["w....", "..~..", "....P"], ["4,2,N,w"]), { par: 2 });
   let g = Game.create(cfg, b), t = 0;
   const tick = () => { t += 1000; Game.frame(g, t); };
@@ -256,6 +277,27 @@ function refPar(b, limit) {
   const before = JSON.stringify(g2.state); const sv = Game.solveFrom(g2, Solver);
   let s2 = g2.state; for (const dir of sv.solution || "") s2 = R.swipe(g2.B, s2, dir).state;
   ok(sv.solved && sv.par === sv.solution.length && R.isWin(g2.B, s2) && JSON.stringify(g2.state) === before, "game: solveFrom solves the CURRENT state on a clone (par " + sv.par + ")");
+
+  // M2: the action log, replay (resume), events, share text.
+  const b3 = Object.assign(board(["w.~..", ".....", "....P"], ["4,2,N,w"]), { par: 2 });
+  let g3 = Game.create(cfg, b3), t3 = 0;
+  const step3 = (a) => { Game.input(g3, a); t3 += 1000; Game.frame(g3, t3); };
+  const heard = [], hear = (type, i, x, y) => heard.push([type, i, x, y]);
+  step3("E"); Game.drain(g3, t3, hear);
+  ok(heard.length === 2 && heard[0][0] === Game.EV_SWIPE && heard[1][0] === Game.EV_SPLASH && heard[1][2] === 2 && heard[1][3] === 0, "events: a splash swipe emits a whistle then a splash at the pond");
+  for (const a of ["S", "undo", "S", "E", "E", "restart", "W"]) step3(a); // the 2nd E and the W are no-ops
+  ok(g3.log === "ESuSEr" && g3.swipes === 4, "log: counted swipes, undo and restart logged; no-ops not (" + g3.log + ")");
+  const r3 = Game.create(cfg, b3); Game.replay(r3, g3.log);
+  ok(r3.swipes === g3.swipes && r3.squares === g3.squares && r3.history.length === g3.history.length && JSON.stringify(r3.state) === JSON.stringify(g3.state) && r3.ev.w === 0, "replay: same swipes, squares, history and board, and no events");
+  for (const d of "SENES") step3(d);
+  heard.length = 0; Game.drain(g3, t3, hear);
+  const types = heard.map((e) => e[0]);
+  ok(g3.won && types.includes(Game.EV_PEN) && types[types.length - 1] === Game.EV_WIN, "events: the winning swipe emits a pen then the win (" + types.join(",") + ")");
+  const w3 = Game.create(cfg, b3); ok(Game.replay(w3, g3.log) && w3.won && Game.resultDue(w3), "replay: a restored win shows its result at once");
+  ok(!Game.replay(Game.create(cfg, b3), "NX"), "replay: a bad log char reports false");
+  const share = Game.shareText(cfgReal, 12, 9, 7, "gwgswggsw");
+  eq(share.split("\n"), ["Into the Fold #12 🐑 9/7 🥈", "🟩⬜🟩🟦⬜🟩🟩", "🟦⬜", "https://pf-builds.github.io/games/into-the-fold/"], "share: SPEC §2 format, rows of 7, medal from config");
+  ok(Game.shareText(cfgReal, 3, 7, 7, "wwwwwwg").split("\n").length === 3 && Game.shareText(cfgReal, 3, 7, 7, "wwwwwwg").split("\n")[0].endsWith("🥇"), "share: exactly 7 squares make one row; gold at par");
 }
 
 // ---- UMD: the same files load as browser globals (no module/require), in page script order ----
