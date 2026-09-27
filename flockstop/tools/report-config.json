@@ -1,0 +1,36 @@
+{
+  "seed": 777,
+  "candidates": [
+    {"name": "Mon alt: 2 sheep", "day": "mon", "white": 2},
+    {"name": "Mon alt: rocks 5-8", "day": "mon", "rocks": [5, 8]},
+    {"name": "Tue alt: 7x7", "day": "tue", "size": 7, "rocks": [4, 8]},
+    {"name": "Wed alt: 3 sheep, mud 2-3", "day": "wed", "white": 3, "mud": [2, 3]},
+    {"name": "Thu alt: 4 white + 1 black", "day": "thu", "white": 4},
+    {"name": "Fri alt: 8x8", "day": "fri", "size": 8, "rocks": [6, 10]},
+    {"name": "Sat alt: 5 white + 1 black", "day": "sat", "white": 5},
+    {"name": "Sun alt: 4 white + 2 black", "day": "sun", "white": 4, "black": 2},
+    {"name": "Sun alt: pens mostly inside", "day": "sun", "penEdge": 0.2}
+  ],
+  "notes": [
+    "Par medians of the baked pools run 5, 6, 7, 8, 9, 11, 13 from Mon to Sun (the table's \"accepted\" column uses this run's smaller sample). Par is the main ramp axis. Board size, new elements, the stopper rule (Wed+), and the no-free-pen opening (Thu+) sit on top of it.",
+    "",
+    "**Bake (final config):** 735 dailies (105 per weekday) + 500 practice, all distinct up to symmetry, each one re-parsed and replayed to a win at exactly par before writing. It took 57 s wall on 16 threads and is byte-identical across runs. daily.json is 206 KB, practice.json 139 KB. No below-band fallbacks were needed. Baked par spread: Mon 4:26 5:42 6:37, Tue 5:27 6:32 7:46, Wed 6:24 7:39 8:42, Thu 7:45 8:60, Fri 8:23 9:40 10:42, Sat 10:34 11:25 12:46, Sun 12:28 13:39 14:38.",
+    "",
+    "**What the data says**",
+    "- Random layouts overshoot par. They don't undershoot it. Raw par medians run from 7 (Mon kit) to 17 (Sat kit), and the p90 reaches 32. The bands sit in the low tail of each distribution on purpose: par 14+ on a slide-everything board is past what most people will plan out. DeJam needed a hardening pass to raise par, and this game doesn't. Accept rates are only 1-11%, but the slowest day costs about 1.5 s of solve per accepted board, so supply isn't a constraint.",
+    "- 49-79% of random layouts are unsolvable (a pen whose doorstep is unreachable, the black sheep with no route). They're cheap to reject.",
+    "- The par line is close to unique: on 92-96% of its steps, exactly one direction keeps par. That suits a daily, because everyone's gold run is the same idea. The share text still carries no directions.",
+    "- Hard traps are rare on the par line. On average, less than one dead-end move is available along the whole solution, and 0.1-0.4 on swipe 1. Straying mostly costs extra swipes and doesn't lock the board, which fits unlimited undo plus medals.",
+    "- A free pen on swipe 1 is the norm (65-93% of in-band boards), so the Thu+ \"no pen on swipe 1\" rule does real filtering.",
+    "- The dead-end branch count mostly tracks the size of the search space (Mon ~12, Sat ~700). It works as a \"not trivial\" floor, not as a difficulty dial, and that's how it's used: the floors cut roughly the bottom 10-20% of in-band boards.",
+    "- The black sheep is the expensive element. One black sheep multiplies the states about 4-10x, because the colours can't be swapped. Two black sheep (Sun alt) hit the 250k state cap on 4% of layouts and push median par to 20. **Recommendation: at most 1 black sheep in v1.**",
+    "- Pens placed mostly inside the field (penEdge 0.2) made no real difference to par or accept rate, so 0.5 stays.",
+    "",
+    "**Accept-criteria definitions (builder decisions, also in SPEC §3)**",
+    "- A dead-end branch is a move from a state that can still be won into a state that can't. Swipes that splash or do nothing are not moves.",
+    "- \"Needs a stopper\": every shortest solution includes a swipe in which a sliding sheep is stopped by another loose sheep. It's computed on the par-only move graph with those swipes removed. This is lenient on purpose, because it counts two sheep stacking against a fence. It still rejects 10-40% of in-band boards.",
+    "- \"No pen on swipe 1\": none of the four opening swipes pens a sheep.",
+    "",
+    "**Rule-change proposal: none.** Every SPEC §1 rule shows up in the data doing distinct work. Mud raises median par by about 2 at the same size and sheep count. The pond takes directions away (Fri boards have fewer reachable states than Thu but higher par). Filled-pen-as-wall is what makes pen order matter. The one change I'd consider is a config limit, not a rule: cap black sheep at 1 (above)."
+  ]
+}

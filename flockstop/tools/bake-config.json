@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "seed": 20261001,
+  "practiceSeed": 50261001,
+  "perDay": 105,
+  "practiceCount": 500,
+  "cap": 250000,
+  "chunkLayouts": 400,
+  "maxChunks": 200,
+  "days": {
+    "mon": { "size": 6, "white": 3, "black": 0, "rocks": [3, 6], "mud": 0, "pond": 0, "penEdge": 0.5, "par": [4, 6], "minDeadEdges": 1, "needStopper": false, "noPenFirst": false,
+      "why": "Learn the slide: 3 sheep on an open 6x6; a pen is often one swipe away." },
+    "tue": { "size": 6, "white": 4, "black": 0, "rocks": [3, 6], "mud": 0, "pond": 0, "penEdge": 0.5, "par": [5, 7], "minDeadEdges": 3, "needStopper": false, "noPenFirst": false,
+      "why": "One more sheep, so the flock bunches into lines and starts stopping on itself." },
+    "wed": { "size": 7, "white": 4, "black": 0, "rocks": [4, 8], "mud": [1, 3], "pond": 0, "penEdge": 0.5, "par": [6, 8], "minDeadEdges": 5, "needStopper": true, "noPenFirst": false,
+      "why": "7x7 plus mud gives mid-field stops; every par line has to use a sheep as a stopper." },
+    "thu": { "size": 7, "white": 3, "black": 1, "rocks": [4, 8], "mud": [1, 3], "pond": 0, "penEdge": 0.5, "par": [7, 8], "minDeadEdges": 10, "needStopper": true, "noPenFirst": true,
+      "why": "The black sheep has exactly one home, and no pen is free on swipe 1, so the opening needs a plan." },
+    "fri": { "size": 7, "white": 3, "black": 1, "rocks": [4, 8], "mud": [1, 2], "pond": [1, 2], "penEdge": 0.5, "par": [8, 10], "minDeadEdges": 10, "needStopper": true, "noPenFirst": true,
+      "why": "Same 7x7 so the pond is the one new idea: it bans a direction whenever a sheep lines up with it." },
+    "sat": { "size": 8, "white": 4, "black": 1, "rocks": [6, 10], "mud": [1, 3], "pond": [1, 2], "penEdge": 0.5, "par": [10, 12], "minDeadEdges": 40, "needStopper": true, "noPenFirst": true,
+      "why": "8x8 with every element: about 4x Friday's search space, and the par band steps past Friday's." },
+    "sun": { "size": 8, "white": 4, "black": 1, "rocks": [6, 10], "mud": [1, 3], "pond": [1, 2], "penEdge": 0.5, "par": [12, 14], "minDeadEdges": 100, "needStopper": true, "noPenFirst": true,
+      "why": "Saturday's kit with the longest par band; a higher dead-end floor drops the forgiving boards." }
+  },
+  "practice": { "mix": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] }
+}

@@ -1,0 +1,5 @@
+{"version":1,"boards":[
+  {"id":"tut-1","w":5,"h":5,"rows":[".....","w...P","Pw...",".....","....."],"pens":[{"x":4,"y":1,"open":"W","c":"w"},{"x":0,"y":2,"open":"E","c":"w"}],"par":2,"sol":"EW","hint":"Swipe: every sheep runs until something stops it."},
+  {"id":"tut-2","w":5,"h":5,"rows":["w.w..",".....",".....",".....","...PP"],"pens":[{"x":3,"y":4,"open":"N","c":"w"},{"x":4,"y":4,"open":"N","c":"w"}],"par":2,"sol":"ES","hint":"Sheep stop on each other. Use one as a stopper."},
+  {"id":"tut-3","w":5,"h":5,"rows":[".....",".....","w...P",".....","....."],"pens":[{"x":4,"y":2,"open":"N","c":"w"}],"par":3,"sol":"NES","hint":"Pens open on one side only. Find the gate."}
+]}

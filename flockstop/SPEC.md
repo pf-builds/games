@@ -54,24 +54,35 @@ Approved 2026-09-26 (Phase 0). Design source: `claude-workspace/business/D-click
 - **Tutorial:** on first launch, the page opens straight into tutorial board 1 of 3. They're hand-made boards with a one-line inline hint each: (1) swipe moves every sheep, pen one; (2) sheep stop on each other, so use one as a stopper; (3) pens only open on one side. A "Skip" link goes to today's daily. The help button replays the tutorial. After the tutorial (or on every later visit), the page opens straight onto today's board: **0 clicks to play.**
 - New elements get a one-time inline hint the first time they appear (mud, black sheep, pond).
 
-## 3. Weekday ramp (provisional; M0 measures and proposes, Peter approves)
+## 3. Weekday ramp: PROPOSED (pending Peter)
 
-| Day | Size | Elements | Par band |
-|---|---|---|---|
-| Mon | 6×6 | pens, rocks | TBD by M0 data |
-| Tue | 6×6 or 7×7 | + more sheep | TBD |
-| Wed | 7×7 | + mud | TBD |
-| Thu | 7×7 | + black sheep/pen | TBD |
-| Fri | 7×7 or 8×8 | + pond | TBD |
-| Sat | 8×8 | all | TBD |
-| Sun | 8×8 | all | TBD |
+M0 measured before setting any target (`tools/par-report.md`, 2000 random layouts per config). The numbers below are the builder's proposal. They live in `tools/bake-config.json`, so a retune is a config edit plus a rebake (about 1 minute).
 
-Accept criteria per board (M0 proposes the exact thresholds from data):
+| Day | Size | Sheep | Elements | Par band | Dead-end floor | Extra rules | Baked median par |
+|---|---|---|---|---|---|---|---|
+| Mon | 6×6 | 3 white | rocks 3-6 | 4-6 | ≥ 1 | | 5 |
+| Tue | 6×6 | 4 white | rocks 3-6 | 5-7 | ≥ 3 | | 6 |
+| Wed | 7×7 | 4 white | rocks 4-8, mud 1-3 | 6-8 | ≥ 5 | stopper needed | 7 |
+| Thu | 7×7 | 3 white + 1 black | rocks 4-8, mud 1-3 | 7-8 | ≥ 10 | stopper; no pen on swipe 1 | 8 |
+| Fri | 7×7 | 3 white + 1 black | rocks 4-8, mud 1-2, pond 1-2 | 8-10 | ≥ 10 | stopper; no pen on swipe 1 | 9 |
+| Sat | 8×8 | 4 white + 1 black | rocks 6-10, mud 1-3, pond 1-2 | 10-12 | ≥ 40 | stopper; no pen on swipe 1 | 11 |
+| Sun | 8×8 | 4 white + 1 black | rocks 6-10, mud 1-3, pond 1-2 | 12-14 | ≥ 100 | stopper; no pen on swipe 1 | 13 |
+
+Accept criteria per board (all enforced by `tools/gen.js` `rejectReason`, M0 definitions):
 - par inside the weekday band
-- at least N dead-end branches, so it isn't trivial
-- Wed+: the solution needs at least one sheep-as-stopper move
-- Thu+: no sheep can be penned on swipe 1
-- no two baked boards identical up to symmetry
+- **dead-end floor:** at least N dead-end branches. A dead-end branch is a move from a state that can still be won into one that can't (splash and no-op swipes aren't moves). The count tracks search-space size, so it's used as a "not trivial" floor, not a difficulty dial.
+- **Wed+ stopper needed:** every shortest solution contains a swipe where a sliding sheep is stopped by another loose sheep (checked on the par-only move graph with those swipes removed). This is lenient on purpose: two sheep stacking against a fence counts.
+- **Thu+ no pen on swipe 1:** none of the four opening swipes pens a sheep.
+- no two baked boards identical up to symmetry, across the daily and practice pools together
+- Recommendation from the data: at most 1 black sheep in v1. Two black sheep push median par to 20, and 4% of layouts hit the solver's 250k state cap.
+
+**M0 builder decisions**
+- Generator: pens never sit on another pen's doorstep (the cell in front of the open side). Ponds never sit on a pen's doorstep, because that would lock the pen for good. Sheep may start on mud. `penEdge` 0.5 is the chance a pen sits on the fence line opening inward (0.2 measured no different).
+- Ties in the 2048 order can't matter: sheep only interact within their own row or column, and the furthest one along d always resolves first.
+- On a splash, `swipe()` still returns the would-be `paths` (the splashing sheep ends on its pond cell with `stop:"pond"`) so the renderer can animate the splash. The returned state equals the old one.
+- The solver explores the whole reachable graph, not just up to the first win, so it can count dead ends. Measured on all 735 baked dailies in Node: mean 0.1 ms (Mon) to 22 ms (Sat/Sun), worst 140 ms (a Saturday board, 113k states). One `swipe()` costs about 0.3 µs. In the page, `solve()` is for debug and selfTest only.
+- Tutorial boards are 5×5 and hand-made, with no dead ends: tut-1 par 2 (EW, or WE, both win), tut-2 par 2 (needs the stopper), tut-3 par 3.
+- Practice: 500 boards, interleaved Mon→Sun kits in a fixed order (board i uses the kit of weekday i mod 7), from a separate seed.
 
 ## 4. Controls
 
@@ -120,7 +131,8 @@ flockstop/
 
 - Run Node with `~/.local/opt/node/bin/node`.
 - **fetch() of levels/config carries its own `?v=` data version**, and `index.html` must revalidate (a `<meta http-equiv="Cache-Control" content="no-cache">` hint plus versioned tags).
-- Board JSON format (compact, human-readable): `{"w":7,"h":7,"rows":["..R....","..."],"pens":[{"x":3,"y":0,"open":"S","c":"w"}],"par":8,"id":"wed-012"}`. The row legend lives in rules.js.
+- Board JSON format (compact, human-readable): `{"id":"wed-012","w":7,"h":7,"rows":["..R....","..."],"pens":[{"x":3,"y":0,"open":"S","c":"w"}],"par":8,"sol":"NESWNESW"}`. The row legend lives in rules.js (`.` grass, `R` rock, `M` mud, `~` pond, `P` pen, `w`/`b` sheep, `W`/`B` sheep standing on mud). `sol` is one optimal line for selfTest. It's never shown to the player and never put in the share text. Tutorial boards also carry `hint`.
+- rules.js API (M0): `parseBoard(json)`, `initialState(B)`, `swipe(B, state, dir)` → `{state, moved, counts, penned, splash, noop, paths}`, `isWin(B, state)`, `play(B, dirs)`. Directions are `"N","E","S","W"` (aliases `up/right/down/left`). State is `{sheep:[{x,y,c,penned}]}`, and the sheep order is row-major from the board. solver.js: `solve(board, {cap})`. sym.js: `apply(k, board)`, `mapDir(s)`, `canonicalKey`, `keepsDims`.
 
 ## 8. Debug and test hooks (`?debug=1` only)
 
