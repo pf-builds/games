@@ -1,322 +1,328 @@
-// Sapper's Path rules engine v2 (SPEC-v2 §2; SPEC.md §1 wherever v2 is silent). PURE: no DOM, no clock, no randomness.
-// UMD, so the Node tools and the browser load this exact file: require('./engine.js') in Node, window.SappersPath.engine
-// in the page.
+// Sapper's Path rules engine v3 (SPEC-v3 §2-4; decisions in SPEC-v3 §9). PURE: no DOM, no clock, no randomness, so it
+// ports to Godot as-is. UMD: require('./engine.js') in Node, window.SappersPath.engine in the page.
 //
-// Level JSON: {id?, name?, w, h, grid:[h strings of w chars], muster:{stone, timber, hedge, ice}, chests:[{x, y, crew}],
-//              rule?: "A" | "B", stacks?: [[crew, ...], ...] (each column front token first)}
-// Grid legend:  .  ground   P  camp (a block of ground joined to the board edge; crews start here)   ~  moat   K  keep (one block)
-//               S stone   T timber   H hedge   I ice   F iron door   L lever   C chest (ground holding a chest)
-// x grows east, y grows south; a cell index is y * w + x. Crew/material index: 0 stone, 1 timber, 2 hedge, 3 ice, 4 iron.
+// Level JSON: {w, h, grid:[h strings of w chars], gates?:[{at:[x,y], key:[x,y]}], towers?:[{at:[x,y], r}],
+//              cols:[5 x [[mat, count], ...]] (each column front card first)}
+// Grid legend:  .  grass   ,  dirt   ~  water   #  camp   a..n  material 1..14 (MATS order in config.json)
+// x grows east, y grows south; a cell index is y * w + x. Material 10 (j, Iron) exists only as locked gate pixels and
+// material 14 (n, Gilt) holds the keys. A gate is the 4-connected iron group holding `at`; a tower is the 4-connected
+// group of `at`'s material, its range a disc of radius r around the group's centroid.
 //
-// A move is a CALL. Name a material (stacks mode: a column, whose front token names it) and one crew walks from the camp
-// over connected ground to that material's target and breaks it. Rule A ("closest", the default): the one reachable
-// section with the smallest walk; ties go to the section nearer the keep (Chebyshev), then the lowest first tile.
-// Rule B ("all reachable"): every reachable section of that material at once. Either way the call costs one crew.
-//
-// The whole game state is (broken sections, spent), spent = calls per material [0..3] then each column's head (stacks).
-// Open ground, connected ground, walk distances, targets, claimed chests, thrown levers, open doors and remaining crews
-// all derive from it (derive), so undo is "drop the last call and replay".
+// Rules (SPEC-v3 §2-4 plus the §9 M0 decisions):
+//   Walkable = grass, dirt, camp. Connected ground = walkable cells 4-joined to the camp. A pixel is reachable when it
+//   touches connected ground; its distance is the smallest camp-BFS distance of a connected neighbour. Ties go to the
+//   smaller |y - campRow| (campRow = the camp's top row), then the lower x, then the lower y.
+//   A squad {m, n} eats n pixels one at a time, each the nearest reachable pixel of m. An eaten pixel turns to dirt.
+//   Archers: while a tower stands, a target inside its range (and not itself a tower pixel) is covered. A card squad whose
+//   next target is covered is hit: every remaining sapper of that squad (the target never moves). Easy/Normal send them
+//   to the holding line; Hard kills them. Holding-line sappers are wary: an entry resumes only when its next target is
+//   uncovered, and stops (keeping its place) before walking into range. That is the re-hit rule; it also bounds the
+//   cascade, since every resume eats at least one pixel.
+//   Leftovers join the holding line: merge into the entry of their material, else a new space; past capacity = fail.
+//   After the play, the first entry (in line order) that can resume does, and the scan restarts until nothing moves.
+//   Win: no pixels left. Fail: overflow; short (Hard: a kill leaves a material with fewer sappers than pixels); stuck
+//   (tray empty, line settled, pixels left); no move (every front card would overflow or be killed on play).
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
   else (root.SappersPath = root.SappersPath || {}).engine = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
-  const OPEN = 0, MOAT = 1, KEEP = 2, WALL = 3, LEVER = 4, CHEST = 5, CAMP = 6;
-  const CREWS = ["stone", "timber", "hedge", "ice"];
-  const MAT_CODES = "STHIF", IRON = 4, FAR = 32767;
-  const CREW_OF = { stone: 0, timber: 1, hedge: 2, ice: 3 };
-  const DX = [0, 1, 0, -1], DY = [-1, 0, 1, 0];
+  const GRASS = 0, WATER = -1, DIRT = -2, CAMP = -3;
+  const NCOL = 5, NMAT = 15, IRON = 10, GILT = 14, MAXCELLS = 4096, MAXTOWERS = 8, MAXLINE = 8;
+  const PLAYING = 0, WON = 1, FAILED = -1;
+  const OVERFLOW = 1, SHORT = 2, STUCK = 3, NOMOVE = 4;
+  const REASONS = ["", "overflow", "short", "stuck", "nomove"];
+  // Event log (optional, S.logOn): [type, a, b] triples. EAT cell mat, JOIN mat count, HIT mat count, KILL mat count,
+  // RESUME mat count, GATE gate 0, TOWER tower 0.
+  const EV = { EAT: 1, JOIN: 2, HIT: 3, KILL: 4, RESUME: 5, GATE: 6, TOWER: 7 };
+  const CODE = { ".": GRASS, ",": DIRT, "~": WATER, "#": CAMP };
+  const matOf = (ch) => { const k = ch.charCodeAt(0) - 96; return k >= 1 && k <= 14 ? k : 0; };
+  const chOf = (v) => (v > 0 ? String.fromCharCode(96 + v) : v === GRASS ? "." : v === DIRT ? "," : v === WATER ? "~" : "#");
+  const DX = [1, -1, 0, 0], DY = [0, 0, 1, -1];
 
-  // Compile a level once. opts.noLevers: levers throw nothing (report metric "do levers matter"). opts.rule and
-  // opts.stacks override the level's own (opts.stacks null = no stacks). Throws on malformed data (the baker and the
-  // page catch); everything after parse never throws.
-  function parse(L, opts) {
-    opts = opts || {};
+  // 4-connected group of cells matching pred, from c0.
+  function group(w, h, c0, pred) {
+    const out = [c0], seen = new Uint8Array(w * h); seen[c0] = 1;
+    for (let i = 0; i < out.length; i++) {
+      const c = out[i], x = c % w, y = (c / w) | 0;
+      for (let d = 0; d < 4; d++) { const nx = x + DX[d], ny = y + DY[d], e = ny * w + nx; if (nx >= 0 && ny >= 0 && nx < w && ny < h && !seen[e] && pred(e)) { seen[e] = 1; out.push(e); } }
+    }
+    return out;
+  }
+
+  // Compile a level once (static board data). Throws on malformed data; everything after compile never throws.
+  function compile(L) {
     const w = L.w | 0, h = L.h | 0, n = w * h, grid = L.grid;
-    if (!(w > 0 && h > 0) || n > 16000 || !Array.isArray(grid) || grid.length !== h) throw new Error("level: bad size or grid");
-    const kind = new Uint8Array(n), mat = new Int8Array(n).fill(-1), nb = new Int16Array(n * 4), base = new Uint8Array(n);
-    const camp = [], campEdge = [], keepCells = [];
+    if (!(w > 1 && h > 1) || n > MAXCELLS || !Array.isArray(grid) || grid.length !== h) throw new Error("level: bad size or grid");
+    const a0 = new Int8Array(n);
+    let campRow = h;
     for (let y = 0; y < h; y++) {
       if (typeof grid[y] !== "string" || grid[y].length !== w) throw new Error("level: row " + y + " is not " + w + " wide");
       for (let x = 0; x < w; x++) {
-        const c = y * w + x, ch = grid[y][x], m = MAT_CODES.indexOf(ch), edge = x === 0 || y === 0 || x === w - 1 || y === h - 1;
-        if (m >= 0) { kind[c] = WALL; mat[c] = m; }
-        else if (ch === ".") { kind[c] = OPEN; base[c] = 1; }
-        else if (ch === "P") { kind[c] = CAMP; base[c] = 1; camp.push(c); if (edge) campEdge.push(c); }
-        else if (ch === "~") kind[c] = MOAT;
-        else if (ch === "L") kind[c] = LEVER;
-        else if (ch === "C") { kind[c] = CHEST; base[c] = 1; }
-        else if (ch === "K") { kind[c] = KEEP; keepCells.push(c); }
-        else throw new Error("level: bad cell '" + ch + "' at " + x + "," + y);
-        for (let d = 0; d < 4; d++) { const nx = x + DX[d], ny = y + DY[d]; nb[c * 4 + d] = nx < 0 || ny < 0 || nx >= w || ny >= h ? -1 : ny * w + nx; }
+        const ch = grid[y][x], c = y * w + x, m = matOf(ch);
+        if (m) a0[c] = m; else if (ch in CODE) a0[c] = CODE[ch]; else throw new Error("level: bad cell '" + ch + "' at " + x + "," + y);
+        if (a0[c] === CAMP && y < campRow) campRow = y;
       }
     }
-    if (!camp.length) throw new Error("level: no camp");
-    // The camp may be deeper than one row (a 2-deep patch), but every camp cell joins a camp cell on the board edge.
-    const cseen = new Uint8Array(n), cq = campEdge.slice(); for (const c of cq) cseen[c] = 1;
-    for (let i = 0; i < cq.length; i++) for (let d = 0; d < 4; d++) { const e = nb[cq[i] * 4 + d]; if (e >= 0 && kind[e] === CAMP && !cseen[e]) { cseen[e] = 1; cq.push(e); } }
-    for (const c of camp) if (!cseen[c]) throw new Error("level: camp at " + (c % w) + "," + ((c / w) | 0) + " is not joined to the edge");
-    if (!keepCells.length) throw new Error("level: no keep");
-    // The keep is one block: every K cell 4-connected to the first.
-    const kseen = new Uint8Array(n), kq = [keepCells[0]]; kseen[keepCells[0]] = 1;
-    for (let i = 0; i < kq.length; i++) for (let d = 0; d < 4; d++) { const e = nb[kq[i] * 4 + d]; if (e >= 0 && kind[e] === KEEP && !kseen[e]) { kseen[e] = 1; kq.push(e); } }
-    if (kq.length !== keepCells.length) throw new Error("level: the keep is not one block");
+    if (campRow === h) throw new Error("level: no camp");
+    const nb = new Int32Array(n * 4);
+    for (let c = 0; c < n; c++) { const x = c % w, y = (c / w) | 0; for (let d = 0; d < 4; d++) { const nx = x + DX[d], ny = y + DY[d]; nb[c * 4 + d] = nx < 0 || ny < 0 || nx >= w || ny >= h ? -1 : ny * w + nx; } }
+    // Tie-break rank: |y - campRow|, then x, then y. Unique per cell, so heap keys never tie.
+    const order = Array.from({ length: n }, (_, c) => c).sort((p, q) => {
+      const px = p % w, py = (p / w) | 0, qx = q % w, qy = (q / w) | 0;
+      return Math.abs(py - campRow) - Math.abs(qy - campRow) || px - qx || py - qy;
+    });
+    const rank = new Int32Array(n); order.forEach((c, i) => { rank[c] = i; });
+    const cellAt = (p, what) => { const x = p && p[0] | 0, y = p && p[1] | 0; if (!Array.isArray(p) || x < 0 || y < 0 || x >= w || y >= h) throw new Error("level: bad " + what + " cell"); return y * w + x; };
 
-    // Sections: maximal 4-connected same-material wall groups, fixed for the level. A section's id order is its first
-    // tile's scan order, so "lowest (y, x) of its first tile" is "lowest id".
-    const sec = new Int16Array(n).fill(-1), secMat = [], secStart = [0], cells = [];
-    for (let c0 = 0; c0 < n; c0++) {
-      if (kind[c0] !== WALL || sec[c0] >= 0) continue;
-      const id = secMat.length; secMat.push(mat[c0]); sec[c0] = id; cells.push(c0);
-      for (let i = secStart[id]; i < cells.length; i++) {
-        const c = cells[i];
-        for (let d = 0; d < 4; d++) { const e = nb[c * 4 + d]; if (e >= 0 && kind[e] === WALL && mat[e] === mat[c0] && sec[e] < 0) { sec[e] = id; cells.push(e); } }
-      }
-      secStart.push(cells.length);
-    }
-    const nsec = secMat.length, secKeep = new Int16Array(nsec).fill(FAR), secFirst = new Int16Array(nsec);
-    for (let s = 0; s < nsec; s++) {
-      secFirst[s] = cells[secStart[s]];
-      for (let i = secStart[s]; i < secStart[s + 1]; i++) for (const k of keepCells) {
-        const c = cells[i], d = Math.max(Math.abs(c % w - k % w), Math.abs(((c / w) | 0) - ((k / w) | 0)));
-        if (d < secKeep[s]) secKeep[s] = d;
-      }
-    }
+    // Gates and keys.
+    const gateOf = new Int8Array(n).fill(-1), keyOf = new Int8Array(n).fill(-1), gateCells = [];
+    (L.gates || []).forEach((G, g) => {
+      const at = cellAt(G.at, "gate"), k = cellAt(G.key, "key");
+      if (a0[at] !== IRON || gateOf[at] >= 0) throw new Error("level: gate " + g + " is not an unclaimed iron cell");
+      if (a0[k] !== GILT || keyOf[k] >= 0) throw new Error("level: key " + g + " is not an unclaimed gilt cell");
+      const cells = group(w, h, at, (e) => a0[e] === IRON);
+      for (const c of cells) gateOf[c] = g;
+      keyOf[k] = g; gateCells.push(Int32Array.from(cells));
+    });
+    for (let c = 0; c < n; c++) if (a0[c] === IRON && gateOf[c] < 0) throw new Error("level: iron outside a gate at " + (c % w) + "," + ((c / w) | 0));
+    if (gateCells.length > 32) throw new Error("level: too many gates");
 
-    // Levers and the iron sections they open.
-    const levers = [], leverDoorStart = [0], leverDoors = [];
-    for (let c = 0; c < n; c++) {
-      if (kind[c] !== LEVER) continue;
-      levers.push(c);
-      if (!opts.noLevers) for (let d = 0; d < 4; d++) {
-        const e = nb[c * 4 + d];
-        if (e >= 0 && kind[e] === WALL && mat[e] === IRON && leverDoors.indexOf(sec[e], leverDoorStart[leverDoorStart.length - 1]) < 0) leverDoors.push(sec[e]);
-      }
-      leverDoorStart.push(leverDoors.length);
-    }
+    // Archer towers: the group of `at`'s material, range around its centroid.
+    const towerOf = new Int8Array(n).fill(-1), cover = new Uint8Array(n), towers = [];
+    (L.towers || []).forEach((T, t) => {
+      if (t >= MAXTOWERS) throw new Error("level: too many towers");
+      const at = cellAt(T.at, "tower"), m = a0[at], r = +T.r;
+      if (!(m > 0) || m === IRON || towerOf[at] >= 0 || !(r > 0)) throw new Error("level: tower " + t + " is bad");
+      const cells = group(w, h, at, (e) => a0[e] === m && towerOf[e] < 0);
+      let sx = 0, sy = 0; for (const c of cells) { towerOf[c] = t; sx += c % w; sy += (c / w) | 0; }
+      const cx = sx / cells.length, cy = sy / cells.length;
+      for (let c = 0; c < n; c++) { const dx = (c % w) - cx, dy = ((c / w) | 0) - cy; if (dx * dx + dy * dy <= r * r) cover[c] |= 1 << t; }
+      towers.push({ m, r, cx, cy, size: cells.length });
+    });
 
-    // Chests: every C cell needs one chests[] entry naming its crew.
-    const chestCell = [], chestCrew = [], list = Array.isArray(L.chests) ? L.chests : [];
-    for (let c = 0; c < n; c++) {
-      if (kind[c] !== CHEST) continue;
-      const e = list.find((q) => q && q.x === c % w && q.y === ((c / w) | 0));
-      if (!e || !(e.crew in CREW_OF)) throw new Error("level: chest at " + (c % w) + "," + ((c / w) | 0) + " has no crew");
-      chestCell.push(c); chestCrew.push(CREW_OF[e.crew]);
-    }
-    const rule = opts.rule || L.rule || "A";
-    if (rule !== "A" && rule !== "B") throw new Error("level: rule must be A or B");
-    // Stacks: K columns of crew tokens, front first. The muster is then the columns' contents; each claimed chest adds a
-    // one-token column of its own (column K + chest index).
-    const st = opts.stacks !== undefined ? opts.stacks : L.stacks, muster = new Int16Array(4);
-    let cols = null;
-    if (Array.isArray(st) && st.length) {
-      cols = st.map((col) => Int8Array.from((Array.isArray(col) ? col : []).map((k) => { if (!(k in CREW_OF)) throw new Error("level: bad stack token " + k); return CREW_OF[k]; })));
-      for (const col of cols) for (const m of col) muster[m]++;
-    } else { const M = L.muster || {}; for (let i = 0; i < 4; i++) muster[i] = Math.max(0, Math.min(99, M[CREWS[i]] | 0)); }
-    const ncol = cols ? cols.length + chestCell.length : 0;
-    let calls = chestCell.length; for (let i = 0; i < 4; i++) calls += muster[i];
-
-    return {
-      id: L.id, name: L.name, w, h, n, kind, mat, nb, base, keep: keepCells[0], keepCells: Int16Array.from(keepCells), camp: Int16Array.from(camp),
-      sec, nsec, secMat: Int8Array.from(secMat), secStart: Int32Array.from(secStart), secCells: Int16Array.from(cells), secKeep, secFirst,
-      levers: Int16Array.from(levers), leverDoorStart: Int32Array.from(leverDoorStart), leverDoors: Int16Array.from(leverDoors),
-      chestCell: Int16Array.from(chestCell), chestCrew: Int8Array.from(chestCrew), muster, rule, cols, ncol,
-      spentLen: 4 + ncol, maxCalls: Math.min(calls, 250), moves: cols ? ncol : 4,
-    };
+    // Deck: five columns, front card first.
+    const cols = L.cols || [[], [], [], [], []];
+    if (!Array.isArray(cols) || cols.length !== NCOL) throw new Error("level: cols must be 5 columns");
+    const cardM = [], cardN = [], colStart = new Int32Array(NCOL), colLen = new Int32Array(NCOL), sapTotal = new Int32Array(NMAT);
+    cols.forEach((col, j) => {
+      colStart[j] = cardM.length; colLen[j] = col.length;
+      for (const cd of col) { const m = cd[0] | 0, k = cd[1] | 0; if (!(m >= 1 && m < NMAT) || m === IRON || !(k >= 1 && k <= 999)) throw new Error("level: bad card"); cardM.push(m); cardN.push(k); sapTotal[m] += k; }
+    });
+    const pix = new Int32Array(NMAT); for (let c = 0; c < n; c++) if (a0[c] > 0) pix[a0[c]]++;
+    const hoff = new Int32Array(NMAT + 1); for (let m = 0; m < NMAT; m++) hoff[m + 1] = hoff[m] + (m === IRON ? 0 : pix[m]);
+    // Zobrist keys for eaten cells (fixed-seed, so hashes are stable across runs).
+    const Z1 = new Int32Array(n), Z2 = new Int32Array(n); let s = 0x5A17 ^ n;
+    const rnd = () => { s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return t ^ (t >>> 14); };
+    for (let c = 0; c < n; c++) { Z1[c] = rnd(); Z2[c] = rnd(); }
+    let pixTotal = 0; for (let m = 1; m < NMAT; m++) pixTotal += pix[m];
+    return { w, h, n, a0, nb, rank, campRow, gateOf, keyOf, gateCells, towerOf, cover, towers, cardM: Int32Array.from(cardM), cardN: Int32Array.from(cardN),
+      colStart, colLen, sapTotal, pix, hoff, Z1, Z2, pixTotal, ncards: cardM.length };
   }
 
-  // Scratch for derive. The solver keeps one per search depth, so its hot path allocates nothing.
-  function scratch(B) {
-    return {
-      open: new Uint8Array(B.n), conn: new Uint8Array(B.n), dist: new Int16Array(B.n), queue: new Int16Array(B.n),
-      reach: new Uint8Array(B.nsec), sdist: new Int16Array(B.nsec), contact: new Int16Array(B.nsec), ground: new Int16Array(B.nsec),
-      doorOpen: new Uint8Array(B.nsec), thrown: new Uint8Array(B.levers.length), claimed: new Uint8Array(B.chestCell.length),
-      remaining: new Int16Array(4), target: new Int16Array(4), tie: new Uint8Array(4), front: new Int8Array(Math.max(1, B.ncol)),
-      used: 0, calls: 0, legal: 0, legalMask: 0, won: false, stuck: false, cascade: 0,
-    };
-  }
+  // A mutable game on a compiled board. rules = {hold, archersKill}. opts.deal: dealing mode (no tray; play squads with
+  // playSquad; no short/stuck/no-move checks). The whole state lives in one Int32Array, so save/load are one copy.
+  function sim(B, rules, opts) {
+    const n = B.n, nb = B.nb, rank = B.rank, cover = B.cover, towerOf = B.towerOf, keyOf = B.keyOf, gateOf = B.gateOf, hoff = B.hoff;
+    const cap = Math.max(1, Math.min(MAXLINE, rules.hold | 0)), lethal = !!rules.archersKill, deal = !!(opts && opts.deal), nt = B.towers.length;
+    // Layout of the state buffer.
+    let o = 0; const at = (k) => { const r = o; o += k; return r; };
+    const oA = at(n), oD = at(n), oK = at(n), oP = at(n), oH = at(B.hoff[NMAT]), oHL = at(NMAT), oLeft = at(NMAT), oSap = at(NMAT), oT = at(MAXTOWERS),
+      oHead = at(NCOL), oLM = at(MAXLINE), oLN = at(MAXLINE), oS = at(16);
+    const M = new Int32Array(o), init = new Int32Array(o);
+    const a = M.subarray(oA, oA + n), d = M.subarray(oD, oD + n), hk = M.subarray(oK, oK + n), hpos = M.subarray(oP, oP + n), heap = M.subarray(oH, oH + B.hoff[NMAT]);
+    const hlen = M.subarray(oHL, oHL + NMAT), left = M.subarray(oLeft, oLeft + NMAT), sap = M.subarray(oSap, oSap + NMAT), tleft = M.subarray(oT, oT + MAXTOWERS);
+    const heads = M.subarray(oHead, oHead + NCOL), lineM = M.subarray(oLM, oLM + MAXLINE), lineN = M.subarray(oLN, oLN + MAXLINE);
+    // Scalars in M[oS + k].
+    const S_LEN = oS, S_PIX = oS + 1, S_STAND = oS + 2, S_STATUS = oS + 3, S_REASON = oS + 4, S_HITS = oS + 5, S_KILLS = oS + 6, S_Z1 = oS + 7, S_Z2 = oS + 8, S_PEAK = oS + 9, S_PLAYS = oS + 10, S_FAILM = oS + 11;
+    const q = new Int32Array(n);
+    const ev = new Int32Array(3 * (4 * n + 64)); let evLen = 0;
+    let logOn = false;
+    const log = (t, p, r) => { if (logOn && evLen + 3 <= ev.length) { ev[evLen++] = t; ev[evLen++] = p; ev[evLen++] = r; } };
 
-  function touches(B, conn, c) { const nb = B.nb; for (let d = 0; d < 4; d++) { const e = nb[c * 4 + d]; if (e >= 0 && conn[e]) return true; } return false; }
-  function front(B, spent, D, j) {
-    const K = B.cols.length;
-    if (j < K) { const col = B.cols[j], k = spent[4 + j]; return k < col.length ? col[k] : -1; }
-    return D.claimed[j - K] && !spent[4 + j] ? B.chestCrew[j - K] : -1;
-  }
-
-  // SPEC-v2 §2 derived state for (broken, spent), written into D. Order-independent: every step only ever opens more
-  // ground, so the fixed point is unique. The lever cascade is capped at W×H rounds.
-  function derive(B, broken, spent, D) {
-    const n = B.n, nb = B.nb, open = D.open, conn = D.conn, dist = D.dist, q = D.queue, cells = B.secCells;
-    open.set(B.base); conn.fill(0);
-    D.doorOpen.fill(0); D.thrown.fill(0); D.claimed.fill(0);
-    let used = 0;
-    for (let s = 0; s < B.nsec; s++) {
-      if (!broken[s]) continue;
-      used++;
-      for (let i = B.secStart[s]; i < B.secStart[s + 1]; i++) open[cells[i]] = 1;
+    // Indexed min-heap per material over reachable pixels, keyed hk = distance * n + rank.
+    function up(m, i) {
+      const base = hoff[m], c = heap[base + i], k = hk[c];
+      while (i > 0) { const p = (i - 1) >> 1, pc = heap[base + p]; if (hk[pc] <= k) break; heap[base + i] = pc; hpos[pc] = i; i = p; }
+      heap[base + i] = c; hpos[c] = i;
     }
-    // 1. Connected ground: a flood from the camp (edges are not outside). 4. Exposed levers open their doors; repeat.
-    let head = 0, tail = 0, rounds = 0;
-    for (let i = 0; i < B.camp.length; i++) { const c = B.camp[i]; conn[c] = 1; dist[c] = 0; q[tail++] = c; }
-    for (; rounds < n; rounds++) {
-      while (head < tail) {
-        const c = q[head++];
-        for (let d = 0; d < 4; d++) { const e = nb[c * 4 + d]; if (e >= 0 && open[e] && !conn[e]) { conn[e] = 1; dist[e] = dist[c] + 1; q[tail++] = e; } }
+    function down(m, i) {
+      const base = hoff[m], len = hlen[m], c = heap[base + i], k = hk[c];
+      for (;;) {
+        let l = 2 * i + 1; if (l >= len) break;
+        const r = l + 1; if (r < len && hk[heap[base + r]] < hk[heap[base + l]]) l = r;
+        const lc = heap[base + l]; if (hk[lc] >= k) break;
+        heap[base + i] = lc; hpos[lc] = i; i = l;
       }
-      let opened = false;
-      for (let i = 0; i < B.levers.length; i++) {
-        if (D.thrown[i] || !touches(B, conn, B.levers[i])) continue;
-        D.thrown[i] = 1;
-        for (let j = B.leverDoorStart[i]; j < B.leverDoorStart[i + 1]; j++) {
-          const s = B.leverDoors[j];
-          if (D.doorOpen[s]) continue;
-          D.doorOpen[s] = 1; opened = true;
-          for (let k = B.secStart[s]; k < B.secStart[s + 1]; k++) {
-            const c = cells[k]; open[c] = 1;
-            if (!conn[c] && touches(B, conn, c)) { conn[c] = 1; q[tail++] = c; }
-          }
+      heap[base + i] = c; hpos[c] = i;
+    }
+    function touch(p, dist) {
+      const m = a[p]; if (m <= 0 || gateOf[p] >= 0) return;
+      const key = dist * n + rank[p];
+      if (hk[p] < 0) { hk[p] = key; const i = hlen[m]++; heap[hoff[m] + i] = p; up(m, i); } else if (key < hk[p]) { hk[p] = key; up(m, hpos[p]); }
+    }
+    function popTop(m) {
+      const base = hoff[m], c = heap[base], len = --hlen[m];
+      if (len > 0) { heap[base] = heap[base + len]; hpos[heap[base]] = 0; down(m, 0); }
+      hk[c] = -1; hpos[c] = -1; return c;
+    }
+    // Incremental BFS: c just became walkable. Distances only ever shrink (ground only grows), so one FIFO pass from c
+    // repairs every label it improves and re-keys the pixels those labels touch.
+    function relax(c) {
+      let best = -1;
+      for (let k = 0; k < 4; k++) { const e = nb[c * 4 + k]; if (e >= 0 && a[e] <= 0 && a[e] !== WATER && d[e] >= 0 && (best < 0 || d[e] < best)) best = d[e]; }
+      if (best < 0 || (d[c] >= 0 && d[c] <= best + 1)) return;
+      d[c] = best + 1; let qh = 0, qt = 0; q[qt++] = c;
+      while (qh < qt) {
+        const u = q[qh++], du = d[u];
+        for (let k = 0; k < 4; k++) {
+          const v = nb[u * 4 + k]; if (v < 0) continue; const av = a[v];
+          if (av > 0) { touch(v, du); continue; }
+          if (av === WATER) continue;
+          if (d[v] < 0 || d[v] > du + 1) { d[v] = du + 1; if (qt < n) q[qt++] = v; }
         }
       }
-      if (!opened) break;
     }
-    D.cascade = rounds;
-    // A door opened mid-flood: walking distances again by a clean BFS over the final connected ground.
-    if (rounds > 0) {
-      for (let c = 0; c < n; c++) dist[c] = -1;
-      head = 0; tail = 0;
-      for (let i = 0; i < B.camp.length; i++) { const c = B.camp[i]; dist[c] = 0; q[tail++] = c; }
-      while (head < tail) {
-        const c = q[head++];
-        for (let d = 0; d < 4; d++) { const e = nb[c * 4 + d]; if (e >= 0 && conn[e] && dist[e] < 0) { dist[e] = dist[c] + 1; q[tail++] = e; } }
+    const covered = (c) => (cover[c] & M[S_STAND]) !== 0 && towerOf[c] < 0;
+    const target = (m) => (m > 0 && m < NMAT && hlen[m] > 0 ? heap[hoff[m]] : -1);
+
+    function eatCell(c) {
+      const m = a[c]; popTop(m);
+      a[c] = DIRT; left[m]--; M[S_PIX]--; M[S_Z1] ^= B.Z1[c]; M[S_Z2] ^= B.Z2[c]; log(EV.EAT, c, m);
+      const t = towerOf[c]; if (t >= 0 && --tleft[t] === 0) { M[S_STAND] &= ~(1 << t); log(EV.TOWER, t, 0); }
+      const g = keyOf[c];
+      if (g >= 0) {
+        const cells = B.gateCells[g];
+        for (let i = 0; i < cells.length; i++) { a[cells[i]] = DIRT; left[IRON]--; M[S_PIX]--; }
+        log(EV.GATE, g, 0);
+        for (let i = 0; i < cells.length; i++) relax(cells[i]);
+      }
+      relax(c);
+    }
+    // Up to cnt sappers of m eat one pixel each. Returns how many ate; stop = 0 nothing reachable, 1 covered, 2 done.
+    let stop = 2;
+    function march(m, cnt) {
+      let k = 0; stop = 2;
+      while (k < cnt) {
+        if (hlen[m] === 0) { stop = 0; break; }
+        const c = heap[hoff[m]];
+        if (covered(c)) { stop = 1; break; }
+        eatCell(c); k++;
+        if (M[S_PIX] === 0) break;
+      }
+      return k;
+    }
+    function lineFind(m) { const len = M[S_LEN]; for (let i = 0; i < len; i++) if (lineM[i] === m) return i; return -1; }
+    function fail(r, m) { M[S_STATUS] = FAILED; M[S_REASON] = r; M[S_FAILM] = m; }
+    function join(m, cnt) {
+      const i = lineFind(m);
+      if (i >= 0) { lineN[i] += cnt; log(EV.JOIN, m, cnt); return; }
+      const len = M[S_LEN];
+      if (len >= cap) { fail(OVERFLOW, m); log(EV.JOIN, m, cnt); return; }
+      lineM[len] = m; lineN[len] = cnt; M[S_LEN] = len + 1; if (len + 1 > M[S_PEAK]) M[S_PEAK] = len + 1; log(EV.JOIN, m, cnt);
+    }
+    function removeEntry(i) { const len = M[S_LEN]; for (let k = i; k < len - 1; k++) { lineM[k] = lineM[k + 1]; lineN[k] = lineN[k + 1]; } lineM[len - 1] = 0; lineN[len - 1] = 0; M[S_LEN] = len - 1; }
+    // Resume cascade: the first entry in line order that has an uncovered target marches; repeat until nothing moves.
+    // Each round eats at least one pixel, so pixTotal + 1 rounds bound it.
+    function cascade() {
+      for (let guard = 0; guard <= B.pixTotal + 1 && M[S_PIX] > 0; guard++) {
+        const len = M[S_LEN]; let i = 0;
+        for (; i < len; i++) { const t = target(lineM[i]); if (t >= 0 && !covered(t)) break; }
+        if (i === len) return;
+        const m = lineM[i]; log(EV.RESUME, m, lineN[i]);
+        const k = march(m, lineN[i]); sap[m] -= k; lineN[i] -= k;
+        if (lineN[i] <= 0) removeEntry(i);
       }
     }
-    // 3. Chests on connected ground. 5. Win: a keep cell 4-adjacent to connected ground.
-    for (let i = 0; i < B.chestCell.length; i++) if (conn[B.chestCell[i]]) D.claimed[i] = 1;
-    let won = false;
-    for (let i = 0; i < B.keepCells.length && !won; i++) if (touches(B, conn, B.keepCells[i])) won = true;
-    D.won = won;
-    const rem = D.remaining;
-    let calls = 0; for (let m = 0; m < 4; m++) calls += spent[m];
-    if (B.cols) {
-      rem.fill(0);
-      for (let j = 0; j < B.cols.length; j++) for (let k = spent[4 + j]; k < B.cols[j].length; k++) rem[B.cols[j][k]]++;
-      for (let i = 0; i < B.chestCell.length; i++) if (D.claimed[i] && !spent[4 + B.cols.length + i]) rem[B.chestCrew[i]]++;
-    } else {
-      for (let m = 0; m < 4; m++) rem[m] = B.muster[m] - spent[m];
-      for (let i = 0; i < B.chestCell.length; i++) if (D.claimed[i]) rem[B.chestCrew[i]]++;
+    // Would playing this front card end the assault? (the no-move rule)
+    function cardFails(m, cnt) {
+      const t = target(m);
+      if (t >= 0 && !covered(t)) return false;
+      if (t >= 0 && lethal) return sap[m] - cnt < left[m];
+      return lineFind(m) < 0 && M[S_LEN] >= cap;
     }
-    // 2. Reachable sections and their walk: the nearest connected ground cell beside a tile (ties: lowest ground cell).
-    const T = D.target, tie = D.tie;
-    T.fill(-1); tie.fill(0);
-    for (let s = 0; s < B.nsec; s++) {
-      D.reach[s] = 0; D.sdist[s] = FAR; D.contact[s] = -1; D.ground[s] = -1;
-      if (broken[s] || B.secMat[s] >= IRON || won) continue;
-      let best = FAR, bg = -1, bt = -1;
-      for (let i = B.secStart[s]; i < B.secStart[s + 1]; i++) {
-        const t = cells[i];
-        for (let d = 0; d < 4; d++) { const g = nb[t * 4 + d]; if (g >= 0 && conn[g] && (dist[g] < best || (dist[g] === best && g < bg))) { best = dist[g]; bg = g; bt = t; } }
+    function settle() {
+      if (M[S_STATUS] !== PLAYING) return;
+      if (M[S_PIX] === 0) { M[S_STATUS] = WON; return; }
+      if (deal) return;
+      let any = false, safe = false;
+      for (let j = 0; j < NCOL; j++) {
+        if (heads[j] >= B.colLen[j]) continue; any = true;
+        const ci = B.colStart[j] + heads[j];
+        if (!cardFails(B.cardM[ci], B.cardN[ci])) { safe = true; break; }
       }
-      if (bg < 0) continue;
-      D.reach[s] = 1; D.sdist[s] = best; D.contact[s] = bt; D.ground[s] = bg;
-      // Rule A target: smallest walk, then nearer the keep, then lowest first tile (= lowest id, and ids ascend here).
-      const m = B.secMat[s], t = T[m];
-      if (t < 0 || best < D.sdist[t]) { T[m] = s; tie[m] = 0; }
-      else if (best === D.sdist[t]) {
-        if (B.secKeep[s] < B.secKeep[t]) { T[m] = s; tie[m] = 1; }
-        else if (B.secKeep[s] > B.secKeep[t]) { if (tie[m] < 1) tie[m] = 1; }
-        else tie[m] = 2;
-      }
+      if (!any) fail(STUCK, M[S_LEN] > 0 ? lineM[0] : 0);
+      else if (!safe) fail(NOMOVE, 0);
     }
-    // Legal calls: a material with a crew left and a target (stacks: a column whose front token has a target).
-    let legal = 0, mask = 0;
-    if (B.cols) {
-      for (let j = 0; j < B.ncol; j++) {
-        const f = front(B, spent, D, j); D.front[j] = f;
-        if (!won && f >= 0 && T[f] >= 0) { legal++; mask |= 1 << j; }
+    // Send a squad (the tap, after the card leaves its column).
+    function playSquad(m, cnt) {
+      if (M[S_STATUS] !== PLAYING) return M[S_STATUS];
+      M[S_PLAYS]++;
+      const k = march(m, cnt); sap[m] -= k;
+      const rest = cnt - k;
+      if (rest > 0 && M[S_PIX] > 0) {
+        if (stop === 1) {
+          M[S_HITS] += rest;
+          if (lethal) { M[S_KILLS] += rest; sap[m] -= rest; log(EV.KILL, m, rest); if (deal || sap[m] < left[m]) fail(SHORT, m); }
+          else { log(EV.HIT, m, rest); join(m, rest); }
+        } else join(m, rest);
       }
-    } else for (let m = 0; m < 4; m++) if (!won && rem[m] > 0 && T[m] >= 0) { legal++; mask |= 1 << m; }
-    D.used = used; D.calls = calls; D.legal = legal; D.legalMask = mask; D.stuck = !won && legal === 0;
-    return D;
+      if (M[S_STATUS] === PLAYING) cascade();
+      settle();
+      return M[S_STATUS];
+    }
+    function play(col) {
+      if (M[S_STATUS] !== PLAYING || col < 0 || col >= NCOL || heads[col] >= B.colLen[col]) return -2;
+      const ci = B.colStart[col] + heads[col]++;
+      return playSquad(B.cardM[ci], B.cardN[ci]);
+    }
+
+    // Initial state.
+    a.set(B.a0); d.fill(-1); hk.fill(-1); hpos.fill(-1);
+    for (let m = 0; m < NMAT; m++) left[m] = B.pix[m];
+    for (let m = 0; m < NMAT; m++) sap[m] = deal ? 1 << 24 : B.sapTotal[m];
+    for (let t = 0; t < nt; t++) { tleft[t] = B.towers[t].size; M[S_STAND] |= 1 << t; }
+    M[S_PIX] = B.pixTotal;
+    { let qh = 0, qt = 0; for (let c = 0; c < n; c++) if (a[c] === CAMP) { d[c] = 0; q[qt++] = c; }
+      while (qh < qt) { const u = q[qh++]; for (let k = 0; k < 4; k++) { const v = nb[u * 4 + k]; if (v < 0) continue; const av = a[v]; if (av > 0) { touch(v, d[u]); continue; } if (av !== WATER && d[v] < 0) { d[v] = d[u] + 1; q[qt++] = v; } } } }
+    init.set(M);
+    settle();
+    init.set(M);
+
+    const hash = () => {
+      let h1 = M[S_Z1] ^ 0x1234567, h2 = M[S_Z2] ^ 0x7654321;
+      for (let j = 0; j < NCOL; j++) { h1 = Math.imul(h1 ^ heads[j], 0x9E3779B1); h2 = Math.imul(h2 ^ (heads[j] + 17), 0x85EBCA77); }
+      const len = M[S_LEN];
+      for (let i = 0; i < len; i++) { h1 = Math.imul(h1 ^ (lineM[i] * 1024 + lineN[i]), 0xC2B2AE3D); h2 = Math.imul(h2 ^ (lineN[i] * 64 + lineM[i]), 0x27D4EB2F); }
+      h1 ^= h1 >>> 15; h2 ^= h2 >>> 13;
+      return (h1 >>> 0) * 2097152 + (h2 >>> 11);
+    };
+    return {
+      B, M, a, d, heads, lineM, lineN, left, cap, lethal, ev, play, playSquad, target, covered, hash,
+      get logOn() { return logOn; }, set logOn(v) { logOn = !!v; },
+      reset() { M.set(init); evLen = 0; },
+      save(buf) { (buf || (buf = new Int32Array(M.length))).set(M); return buf; },
+      load(buf) { M.set(buf); },
+      clearLog() { evLen = 0; },
+      get evLen() { return evLen; },
+      get status() { return M[S_STATUS]; }, get reason() { return REASONS[M[S_REASON]]; }, get failMat() { return M[S_FAILM]; },
+      get lineLen() { return M[S_LEN]; }, get pixLeft() { return M[S_PIX]; }, get standing() { return M[S_STAND]; },
+      get hits() { return M[S_HITS]; }, get kills() { return M[S_KILLS]; }, get peak() { return M[S_PEAK]; }, get plays() { return M[S_PLAYS]; },
+      sappers: (m) => sap[m],
+      front(j) { return heads[j] < B.colLen[j] ? B.colStart[j] + heads[j] : -1; },
+      // Reachable pixel count of m right now (tools and UI; not on the hot path).
+      reachable(m) { return m > 0 && m < NMAT ? hlen[m] : 0; },
+    };
   }
 
-  // Low-level move for the solver (allocation-free): D is derive()d for (broken, spent); writes the child into (nbr, nsp).
-  // Returns the called material, or -1 if move a is not legal.
-  function stepInto(B, broken, spent, D, a, nbr, nsp) {
-    if (a < 0 || a >= B.moves || !((D.legalMask >> a) & 1)) return -1;
-    const m = B.cols ? D.front[a] : a;
-    nbr.set(broken); nsp.set(spent);
-    if (B.rule === "B") { for (let s = 0; s < B.nsec; s++) if (D.reach[s] && B.secMat[s] === m) nbr[s] = 1; }
-    else nbr[D.target[m]] = 1;
-    nsp[m]++;
-    if (B.cols) nsp[4 + a]++;
-    return m;
+  // Replay a column order ("0123..."). Returns the sim (status tells the result).
+  function replay(B, rules, order) {
+    const S = sim(B, rules);
+    for (let i = 0; i < order.length && S.status === PLAYING; i++) if (S.play(order.charCodeAt(i) - 48) === -2) break;
+    return S;
   }
+  const gridOf = (w, h, a) => { const g = []; for (let y = 0; y < h; y++) { let s = ""; for (let x = 0; x < w; x++) s += chOf(a[y * w + x]); g.push(s); } return g; };
 
-  // ---- Game-facing state: {moves, breaks, broken, spent, ...derived}. Treat as immutable; call/undo return new objects.
-  // moves: the calls (material index, or column index in stacks mode). breaks[i]: the section ids call i broke.
-  function fromMoves(B, moves) {
-    let br = new Uint8Array(B.nsec), sp = new Int16Array(B.spentLen);
-    const D = scratch(B), done = [], breaks = [];
-    for (let i = 0; i < moves.length && i < B.maxCalls; i++) {
-      derive(B, br, sp, D);
-      const nbr = new Uint8Array(B.nsec), nsp = new Int16Array(B.spentLen);
-      if (stepInto(B, br, sp, D, moves[i], nbr, nsp) < 0) break;
-      const got = []; for (let s = 0; s < B.nsec; s++) if (nbr[s] && !br[s]) got.push(s);
-      done.push(moves[i]); breaks.push(got); br = nbr; sp = nsp;
-    }
-    const st = derive(B, br, sp, D);
-    delete st.queue;
-    st.moves = done; st.breaks = breaks; st.broken = br; st.spent = sp;
-    return st;
-  }
-  function start(B) { return fromMoves(B, []); }
-  function restart(B) { return start(B); }
-  // A call names a crew ("stone" or 0-3); in stacks mode it names a column (0..ncol-1). Returns the new state, or null.
-  function moveOf(B, what) { return typeof what === "string" ? (B.cols ? -1 : what in CREW_OF ? CREW_OF[what] : -1) : what | 0; }
-  function canCall(B, st, what) { const a = moveOf(B, what); return a >= 0 && a < B.moves && ((st.legalMask >> a) & 1) === 1; }
-  function call(B, st, what) { return canCall(B, st, what) ? fromMoves(B, st.moves.concat([moveOf(B, what)])) : null; }
-  // Undo replays the call list minus the last call, so it is exact by construction (crew, chests, levers, stacks).
-  function undo(B, st) { return st.moves.length ? fromMoves(B, st.moves.slice(0, -1)) : st; }
-  function legalMoves(B, st) { const out = []; for (let a = 0; a < B.moves; a++) if ((st.legalMask >> a) & 1) out.push(a); return out; }
-  const xy = (B, c) => (c < 0 ? null : [c % B.w, (c / B.w) | 0]);
-  // The target flags: one entry per legal call. section is Rule A's closest (the flag); all is what the call breaks.
-  function targets(B, st) {
-    return legalMoves(B, st).map((a) => {
-      const m = B.cols ? st.front[a] : a, s = st.target[m], all = [];
-      if (B.rule === "B") { for (let q = 0; q < B.nsec; q++) if (st.reach[q] && B.secMat[q] === m) all.push(q); } else all.push(s);
-      return { move: a, crew: CREWS[m], mat: m, section: s, all, contact: xy(B, st.contact[s]), ground: xy(B, st.ground[s]), dist: st.sdist[s], tie: st.tie[m] };
-    });
-  }
-  // The walk to a connected ground cell: camp first, by strictly falling distance (lowest cell on ties). [] if unreachable.
-  function pathTo(B, st, x, y) {
-    let c = x < 0 || y < 0 || x >= B.w || y >= B.h ? -1 : y * B.w + x;
-    if (c < 0 || !st.conn[c]) return [];
-    const out = [c];
-    for (let k = 0; k < B.n && st.dist[c] > 0; k++) {
-      let nx = -1;
-      for (let d = 0; d < 4; d++) { const e = B.nb[c * 4 + d]; if (e >= 0 && st.conn[e] && st.dist[e] === st.dist[c] - 1 && (nx < 0 || e < nx)) nx = e; }
-      if (nx < 0) break;
-      c = nx; out.push(c);
-    }
-    return out.reverse().map((q) => xy(B, q));
-  }
-  function sectionAt(B, x, y) { return x < 0 || y < 0 || x >= B.w || y >= B.h ? -1 : B.sec[y * B.w + x]; }
-  function sectionCells(B, s) { return Array.from(B.secCells.subarray(B.secStart[s], B.secStart[s + 1])); }
-  function crewOf(B, s) { return B.secMat[s] < IRON ? CREWS[B.secMat[s]] : null; }
-  function isCrewSection(B, s) { return s >= 0 && s < B.nsec && B.secMat[s] < IRON; }
-  // Stable text form of every derived field, for undo-parity tests and the page's renderSignature.
-  function serialize(st) {
-    return [st.moves.join(","), st.breaks.map((b) => b.join("+")).join(","), st.broken.join(""), st.spent.join(","), st.open.join(""), st.conn.join(""),
-      st.dist.join(","), st.reach.join(""), st.target.join(","), st.tie.join(""), st.doorOpen.join(""), st.thrown.join(""), st.claimed.join(""),
-      st.remaining.join(","), st.front.join(","), st.used, st.calls, st.legal, st.legalMask, st.won, st.stuck].join("|");
-  }
-  // Crew totals the muster object form uses; handy for tools.
-  function musterObj(arr) { const o = {}; for (let i = 0; i < 4; i++) o[CREWS[i]] = arr[i] | 0; return o; }
-
-  return {
-    OPEN, MOAT, KEEP, WALL, LEVER, CHEST, CAMP, IRON, FAR, CREWS, CREW_OF, MAT_CODES,
-    parse, scratch, derive, stepInto, start, restart, call, canCall, undo, legalMoves, fromMoves, targets, pathTo,
-    sectionAt, sectionCells, crewOf, isCrewSection, serialize, musterObj, touches,
-  };
+  return { compile, sim, replay, gridOf, chOf, matOf, GRASS, WATER, DIRT, CAMP, NCOL, NMAT, IRON, GILT, PLAYING, WON, FAILED, EV, REASONS };
 });

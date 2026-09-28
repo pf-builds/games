@@ -1,4 +1,31 @@
 {
+  "v3": {
+    "note": "Sapper's Path v3 rules and palette (SPEC-v3). Holding spaces and archer lethality per difficulty; MATS order is the material id (1-14) the grid letters a-n name.",
+    "rules": {
+      "easy": {"hold": 6, "archersKill": false},
+      "normal": {"hold": 5, "archersKill": false},
+      "hard": {"hold": 4, "archersKill": true}
+    },
+    "mats": [
+      null,
+      {"n": "Earth bank", "c": "#ff8c1a", "crew": "Diggers"},
+      {"n": "Palisade", "c": "#e6262e", "crew": "Axemen"},
+      {"n": "Thatch", "c": "#ffe21f", "crew": "Torchbearers"},
+      {"n": "Timber", "c": "#ff3fa4", "crew": "Sawyers"},
+      {"n": "Rubble stone", "c": "#a3aab4", "crew": "Masons"},
+      {"n": "Ashlar", "c": "#f4f1ea", "crew": "Stonecutters"},
+      {"n": "Slate", "c": "#2f62ff", "crew": "Quarrymen"},
+      {"n": "Roof tile", "c": "#8f45ff", "crew": "Roofers"},
+      {"n": "Brick", "c": "#9ee52a", "crew": "Miners"},
+      {"n": "Iron", "c": "#1b1b22", "crew": "Smiths"},
+      {"n": "Hedge", "c": "#16a34a", "crew": "Goats"},
+      {"n": "Warded stone", "c": "#0fb5a6", "crew": "Hexbreakers"},
+      {"n": "Crystal", "c": "#3fd4ff", "crew": "Braziers"},
+      {"n": "Gilt", "c": "#ffb6d9", "crew": "Looters"}
+    ],
+    "ground": {"grass": "#3f4a36", "dirt": "#5e5448", "camp": "#6e6150", "water": "#243b5c"},
+    "feel": {"cellPx": 10, "behind": 3, "rangeAlpha": 0.14}
+  },
   "version": 3,
   "input": {"confirm": false},
   "stars": {"threeAtMinPlus": 0, "twoAtMinPlus": 1},
