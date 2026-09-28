@@ -89,3 +89,12 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - Richer fort plans: shaped buildings, gatehouses, Era 1 corner towers without archers, and no gaps in ditch corners.
 - A distinct key colour or icon (Gilt reads close to Timber at 10 px).
 - Delete the v2 page files (`src/main.js`, `game.js`, `solver.js`, v2 `harness.mjs`, `artmeta.js`, `artview.js`) once M1's page replaces them.
+
+## From v3 M1 (2026-09-28)
+
+- Landscape phones get the wide layout, and a 36×48 Era 3 board drops to about 5.5 px a cell there. Either rotate the board in landscape (the tie-break order would need checking) or ask for portrait on phones.
+- Archer hits have no show yet: a toast says how many were driven back or cut down. Runners that walk to the range edge and fall back would read better (M2 juice).
+- The haul crates scale down when a colour has more pixels than a crate holds; a count label per crate would make the haul exact.
+- Sapper helmets and carried blocks of the same colour blend (white on Ashlar crews). An outline on the carried block would fix it.
+- Idle sappers at the camp all stand still facing the same way; a few could wander.
+- Delete `SPEC-v2.md`-era tool notes (`tools/m0*.md`, `m1-notes.md`, `m2-notes.md`, critic files) or move them under `tools/v2/`, now that the v2 page is gone (git keeps tag `sappers-path-v2-fixed`).
