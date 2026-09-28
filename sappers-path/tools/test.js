@@ -1,327 +1,227 @@
-// Sapper's Path v2 node checks: engine rules (SPEC-v2 §2) and the solver on hand-made boards with known answers.
+// Sapper's Path v3 node checks: the rules engine (SPEC-v3 §2-4, §9) on hand-made boards with known answers, then a
+// differential run of the engine against the slow reference (tools/ref.js) on every baked level, and the stored winning
+// orders on every difficulty.
 // Run: ~/.local/opt/node/bin/node tools/test.js   (exit code 1 on any failure)
 "use strict";
 const E = require("../src/engine.js");
-const S = require("../src/solver.js");
-const TEACH = require("../levels/teaching.json").levels;
+const Ref = require("./ref.js");
+const Gr = require("./grade.js");
+const RULES = require("../config.json").v3.rules;
 const LEVELS = require("../levels/levels.json");
 
 let pass = 0, fail = 0;
 function ok(cond, name) { if (cond) pass++; else { fail++; console.log("FAIL  " + name); } }
 function eq(a, b, name) { const A = JSON.stringify(a), B = JSON.stringify(b); ok(A === B, name + (A === B ? "" : "\n      got " + A + "\n     want " + B)); }
 function throws(fn, name) { let t = false; try { fn(); } catch (e) { t = true; } ok(t, name); }
-const lv = (grid, muster, chests, extra) => Object.assign({ w: grid[0].length, h: grid.length, grid, muster: muster || {}, chests: chests || [] }, extra || {});
-const at = (B, x, y) => E.sectionAt(B, x, y);
-function play(B, calls) { let s = E.start(B); for (const a of calls) { const n = E.call(B, s, a); if (!n) return null; s = n; } return s; }
+const N = RULES.normal, EZ = RULES.easy, H = RULES.hard;
+const lv = (grid, cols, extra) => Object.assign({ w: grid[0].length, h: grid.length, grid, cols: cols || [[], [], [], [], []] }, extra || {});
+const xy = (B, c) => [c % B.w, (c / B.w) | 0];
+// Play and return the cells eaten (in order) by that play.
+function eats(S, col) { S.logOn = true; S.clearLog(); S.play(col); const out = []; for (let i = 0; i < S.evLen; i += 3) if (S.ev[i] === E.EV.EAT) out.push(xy(S.B, S.ev[i + 1])); return out; }
+const line = (S) => { const o = []; for (let i = 0; i < S.lineLen; i++) o.push([S.lineM[i], S.lineN[i]]); return o; };
 
-// ---- parse --------------------------------------------------------------------------------------------------
+// ---- compile ----------------------------------------------------------------------------------------------------
 {
-  const B = E.parse(lv(["...P...", "TTTTTTT", "T.SSS.T", "T.SKS.T", "T.SSS.T", "TTTTTTT"], { stone: 1, timber: 1 }));
-  eq([B.nsec, B.secMat[at(B, 0, 1)], B.secMat[at(B, 2, 2)], B.camp.length, B.keepCells.length, B.rule], [2, 1, 0, 1, 1, "A"], "parse: two rings, one camp cell, one keep cell, rule A by default");
-  throws(() => E.parse(lv(["...", ".K.", "..."])), "parse: no camp throws");
-  throws(() => E.parse(lv(["...", ".P.", "K.."])), "parse: a camp cell off the edge throws");
-  throws(() => E.parse(lv(["P..", ".K.", ".P.", "..."])), "parse: a camp cell not joined to an edge camp cell throws");
-  const D2 = E.parse(lv([".K..", "....", ".PP.", ".PP."], { stone: 0 }));
-  eq([D2.camp.length, E.start(D2).dist[1 * 4 + 1], E.start(D2).won], [4, 1, true], "parse: a 2-deep camp is one camp; walks start from its front row");
-  throws(() => E.parse(lv(["P..", "...", "..."])), "parse: no keep throws");
-  throws(() => E.parse(lv(["P..", "K.K", "..."])), "parse: a keep in two pieces throws");
-  throws(() => E.parse(lv(["P.C", ".K.", "..."])), "parse: a chest without a chests[] entry throws");
-  throws(() => E.parse(lv(["P.X", ".K.", "..."])), "parse: an unknown cell code throws");
-  throws(() => E.parse(lv(["P..", ".K.", "..."], {}, [], { rule: "C" })), "parse: rule must be A or B");
-  const K = E.parse(lv(["P.....", ".SSSS.", ".SKKS.", ".SKKS.", ".SSSS."]));
-  eq([K.keepCells.length, K.nsec], [4, 1], "parse: a 2×2 keep is one keep");
+  throws(() => E.compile(lv(["..a", "..."])), "compile: no camp throws");
+  throws(() => E.compile(lv(["..X", ".##"])), "compile: an unknown cell throws");
+  throws(() => E.compile(lv(["..j", ".##"])), "compile: iron outside a gate throws");
+  throws(() => E.compile(lv([".jn", ".##"], null, { gates: [{ at: [1, 0], key: [0, 0] }] })), "compile: a key that is not gilt throws");
+  throws(() => E.compile(lv(["..a", ".##"], [[[10, 1]], [], [], [], []])), "compile: an iron card throws");
+  throws(() => E.compile(lv(["..a", ".##"], [[[1, 0]], [], [], [], []])), "compile: a zero card throws");
+  throws(() => E.compile(lv(["..a", ".##"], [[], [], [], []])), "compile: four columns throws");
+  const B = E.compile(lv(["a~b", "...", ".##"]));
+  eq([B.campRow, B.pixTotal, B.pix[1], B.pix[2]], [2, 2, 1, 1], "compile: camp row is the camp's top row; pixels counted per material");
 }
 
-// ---- camp connectivity: edges are not outside ------------------------------------------------------------------
+// ---- reachability ---------------------------------------------------------------------------------------------------
 {
-  const L = lv(["S~.....", "~~.TTT.", "...TKT.", "...TTT.", "P......"], { stone: 1, timber: 1 }), B = E.parse(L), s0 = E.start(B);
-  eq([s0.reach[at(B, 0, 0)], s0.reach[at(B, 3, 1)], s0.conn[0], s0.conn[2]], [0, 1, 0, 1], "camp: a stone on the board edge behind moat is not reachable; the ground by the camp is connected");
-  eq([E.call(B, s0, "stone"), E.canCall(B, s0, "timber")], [null, true], "camp: a crew with no reachable wall cannot be called");
-  const P = E.parse(lv(["......", ".TTTT.", ".T..T.", ".TTTT.", ".SKS..", "P....."], { timber: 1 }));
-  const p0 = E.start(P);
-  eq([p0.conn[2 * 6 + 2], p0.conn[0], p0.dist[0], p0.dist[5 * 6 + 5]], [0, 1, 5, 5], "camp: an enclosed pocket is not connected; walking distance is a BFS from the camp");
+  // a: touches grass. b: behind water. c: inside a closed ring of d (its yard is not connected).
+  const L = lv(["~~~~~~~", "~b~ddd.", "~~~dcd.", "a..ddd.", "...##.."]);
+  const S = E.sim(E.compile(L), N);
+  eq([S.reachable(1), S.reachable(2), S.reachable(3), S.reachable(4)], [1, 0, 0, 5], "reach: grass-side pixels reach (5 of 8 d); behind water and inside a ring do not");
+  eq(S.d[4 * 7 + 3], 0, "reach: camp cells are distance 0");
+  eq(S.d[1 * 7 + 6], 5, "reach: walk distance over grass (camp -> right edge -> up)");
+  eq(S.d[1 * 7 + 1] < 0, true, "reach: pixel cells have no walk distance");
+}
+{
+  // Eating the ring opens the yard; the inner pixel becomes reachable with a distance through the gap.
+  const L = lv([".....", ".aaa.", ".aba.", ".aaa.", "..#.."], [[[1, 1]], [], [], [], []]);
+  const S = E.sim(E.compile(L), N);
+  eq(S.reachable(2), 0, "reach: an enclosed pixel is unreachable");
+  const e = eats(S, 0);
+  eq([e, S.reachable(2)], [[[2, 3]], 1], "reach: eating the nearest ring pixel (bottom middle) makes the inside reachable");
 }
 
-// ---- Rule A: the closest pick and each tie-break step ----------------------------------------------------------
+// ---- nearest pixel and the tie-break ---------------------------------------------------------------------------------
 {
-  const B = E.parse(lv([".........", ".TTT.....", ".TKT....S", ".TTT.....", ".........", "S........", "....P...."], { stone: 1, timber: 1 }));
-  const s = E.start(B), t = E.targets(B, s).find((q) => q.crew === "stone");
-  eq([t.section, t.dist, t.tie, t.contact, t.ground], [at(B, 0, 5), 4, 0, [0, 5], [1, 5]], "closest: the stone 4 steps from the camp beats the one 7 steps away (contact ground: lowest cell of the tied ones)");
-  const after = E.call(B, s, "stone");
-  eq([after.broken[at(B, 0, 5)], after.broken[at(B, 8, 2)], after.calls, after.remaining[0]], [1, 0, 1, 0], "closest: calling stone breaks exactly the closest stone section");
-  eq(E.pathTo(B, s, 1, 5), [[4, 6], [4, 5], [3, 5], [2, 5], [1, 5]], "closest: the walk runs from the camp along falling distance");
-  const T1 = E.parse(lv([".........", "....TTT..", "....TKT..", "....TTT..", ".........", ".S.....S.", "....P...."], { stone: 1 }));
-  const a1 = E.targets(T1, E.start(T1))[0];
-  eq([a1.section, a1.dist, a1.tie], [at(T1, 7, 5), 3, 1], "tie step 1: equal walk, the stone nearer the keep (Chebyshev 3 vs 4) wins");
-  const T2 = E.parse(lv([".........", "...TTT...", "...TKT...", "...TTT...", ".........", ".S.....S.", "....P...."], { stone: 1 }));
-  const a2 = E.targets(T2, E.start(T2))[0];
-  eq([a2.section, a2.dist, a2.tie], [at(T2, 1, 5), 3, 2], "tie step 2: equal walk and keep distance, the lowest (y, x) first tile wins");
-  const r2 = S.solve(E.parse(lv([".........", "...TTT...", "...TKT...", "...TTT...", ".........", ".S.....S.", "....P...."], { stone: 1, timber: 1 })));
-  eq([r2.min, r2.tieAny, r2.tieMove], [1, true, false], "tie proxy: a tie on a callable crew is seen, and it did not decide the optimal call");
+  // Four a pixels at walk distance 1 from the camp row. Ties: smaller |y - campRow|, then lower x.
+  //   row 2 is the camp's top row; (1,2) and (4,2) sit on it beside the camp, (2,1) and (3,1) above it.
+  const L = lv(["......", "..aa..", ".a##a.", "..##.."], [[[1, 4]], [], [], [], []]);
+  const S = E.sim(E.compile(L), N);
+  eq(eats(S, 0), [[1, 2], [4, 2], [2, 1], [3, 1]], "tie-break: same distance -> the camp row first, then lower x");
+}
+{
+  // Distance beats the tie-break: a far pixel on the camp row loses to a near one above it.
+  const L = lv(["...a......", "..........", "........a.", "..........", "...##....."], [[[1, 2]], [], [], [], []]);
+  const S = E.sim(E.compile(L), N);
+  eq(eats(S, 0), [[3, 0], [8, 2]], "nearest: the smallest walk distance wins before the tie-break");
+}
+{
+  // A pixel's distance is its nearest connected walkable neighbour's, and eating opens shortcuts.
+  const L = lv(["bbbbb", "b...b", "baaab", ".....", "..#.."], [[[1, 3]], [[2, 2]], [], [], []]);
+  const S = E.sim(E.compile(L), N);
+  eq(eats(S, 0), [[2, 2], [1, 2], [3, 2]], "nearest: a row eaten from the camp outward, lower x first on ties");
+  eq(eats(S, 1), [[0, 2], [4, 2]], "nearest: three b pixels tie at walk 3; the two on row 2 (nearer the camp row) beat the top middle, lower x first");
 }
 
-// ---- Rule B: every reachable section of the material at once, one crew -----------------------------------------
+// ---- holding line: merge, cascade, overflow -------------------------------------------------------------------------
+// RING: b, b and c inside a ring of 12 a pixels.
+const RING = [".......", ".aaaaa.", ".abbca.", ".aaaaa.", "...#..."];
 {
-  const grid = [".........", ".TTT.....", ".TKT....S", ".TTT.....", ".........", "S........", "....P...."];
-  const B = E.parse(lv(grid, { stone: 1, timber: 1 }, [], { rule: "B" }));
-  const s = E.call(B, E.start(B), "stone");
-  eq([s.breaks[0].length, s.broken[at(B, 0, 5)], s.broken[at(B, 8, 2)], s.calls, s.remaining[0]], [2, 1, 1, 1, 0], "rule B: one stone call breaks both reachable stone sections for one crew");
-  eq(E.targets(B, E.start(B)).find((q) => q.crew === "stone").all.length, 2, "rule B: the stone flag lists every section the call breaks");
-  const A = E.parse(lv(grid, { stone: 1, timber: 1 }), { rule: "B" });
-  eq(A.rule, "B", "rule B: parse option overrides the level's rule");
+  const S = E.sim(E.compile(lv(RING, [[[2, 1]], [[2, 1]], [[3, 1]], [[1, 12]], []])), N);
+  S.play(0); eq(line(S), [[2, 1]], "holding: an unreachable squad waits");
+  S.play(1); eq(line(S), [[2, 2]], "holding: the same colour merges into its entry");
+  S.play(2); eq(line(S), [[2, 2], [3, 1]], "holding: a new colour takes the next space");
+  S.logOn = true; S.clearLog(); S.play(3);
+  const order = []; for (let i = 0; i < S.evLen; i += 3) if (S.ev[i] === E.EV.RESUME) order.push(S.ev[i + 1]);
+  eq([S.status, S.lineLen, order], [E.WON, 0, [2, 3]], "cascade: after the ring falls both entries resume, in line order, and win");
+}
+{
+  // Cascade chain: c waits inside a ring of b, b inside a ring of a. After a falls, b resumes, which opens c.
+  const L = lv([".......", ".aaaaa.", ".abbba.", ".abcba.", ".abbba.", ".aaaaa.", "...#..."], [[[3, 1]], [[2, 8]], [[1, 16]], [], []]);
+  const S = E.sim(E.compile(L), N);
+  S.play(0); S.play(1); eq(line(S), [[3, 1], [2, 8]], "cascade: two entries wait");
+  S.logOn = true; S.clearLog(); S.play(2);
+  const order = []; for (let i = 0; i < S.evLen; i += 3) if (S.ev[i] === E.EV.RESUME) order.push(S.ev[i + 1]);
+  eq([S.status, S.lineLen, order], [E.WON, 0, [2, 3]], "cascade: c (first in line) cannot move, b resumes, then the scan restarts and c resumes");
+}
+{
+  // Overflow: two spaces, three different unreachable colours.
+  const G3 = [".......", ".aaaaa.", ".abcda.", ".aaaaa.", "...#..."], cols = [[[2, 1]], [[3, 1]], [[4, 1]], [[1, 12]], []];
+  const S = E.sim(E.compile(lv(G3, cols)), { hold: 2, archersKill: false });
+  S.play(0); S.play(1); eq(S.status, E.PLAYING, "overflow: two entries fit in two spaces");
+  S.play(2); eq([S.status, S.reason], [E.FAILED, "overflow"], "overflow: a third entry fails the assault");
+  const S5 = E.sim(E.compile(lv(G3, cols)), N); S5.play(0); S5.play(1); S5.play(2); S5.play(3);
+  eq(S5.status, E.WON, "overflow: the same taps win with five spaces");
+}
+{
+  // Leftovers: a squad bigger than what's open eats what it can reach and the rest wait, then finish.
+  const L = lv(["......", ".aaaa.", ".abba.", ".aaaa.", "bb....", "..##.."], [[[2, 4]], [[1, 10]], [], [], []]);
+  const S = E.sim(E.compile(L), N);
+  S.play(0); eq([line(S), S.pixLeft], [[[2, 2]], 12], "leftovers: 2 of 4 eat the outside pixels, 2 wait");
+  S.play(1); eq(S.status, E.WON, "leftovers: they resume once the ring opens");
+}
+{
+  // Stuck: the tray runs out with pixels left (a short hand-made deck).
+  const S = E.sim(E.compile(lv(["....", ".aa.", "..#."], [[[1, 1]], [], [], [], []])), N); S.play(0);
+  eq([S.status, S.reason], [E.FAILED, "stuck"], "stuck: tray empty and nothing left to resume");
+}
+{
+  // No move: one space, filled by b; every front card is another unreachable colour (the card behind is ignored).
+  const S = E.sim(E.compile(lv([".......", ".aaaaa.", ".abcda.", ".aaaaa.", "...#..."], [[[2, 1]], [[3, 1], [1, 12]], [[4, 1]], [], []])), { hold: 1, archersKill: false });
+  S.play(0); eq([S.status, S.reason], [E.FAILED, "nomove"], "no move: line full and every front card would overflow");
+  const S2 = E.sim(E.compile(lv(RING, [[[2, 1]], [[3, 1], [1, 12]], [[2, 1]], [], []])), { hold: 1, archersKill: false });
+  S2.play(0); eq(S2.status, E.PLAYING, "no move: a front card that can merge into the line is a legal move");
 }
 
-// ---- stacks: a move is a column pick; only front tokens are callable ------------------------------------------
+// ---- gates and keys --------------------------------------------------------------------------------------------------
 {
-  const grid = ["...P...", "TTTTTTT", "T.....T", "T.SSS.T", "T.SKS.T", "T.SSS.T", "TTTTTTT"];
-  const B = E.parse(lv(grid, {}, [], { stacks: [["stone", "timber"], ["timber"]] }));
-  const s0 = E.start(B);
-  eq([B.ncol, Array.from(s0.front), s0.legalMask, Array.from(s0.remaining)], [2, [0, 1], 2, [1, 2, 0, 0]], "stacks: fronts stone | timber; the stone front has no target yet, so only column 2 is legal");
-  eq([E.call(B, s0, 0), E.call(B, s0, "timber")], [null, null], "stacks: a blocked column and a crew name are not moves");
-  const s1 = E.call(B, s0, 1), s2 = E.call(B, s1, 0);
-  eq([s1.calls, Array.from(s1.front), s2.won, s2.calls, Array.from(s2.spent)], [1, [0, -1], true, 2, [1, 1, 0, 0, 1, 1]], "stacks: column 2's timber opens the ring, then column 1's stone reaches the keep");
-  const r = S.solve(B);
-  eq([r.win, r.min, r.line], [true, 2, [1, 0]], "stacks: the solver's line is column picks");
-  const C = E.parse(lv(["...P...", "TTTTTTT", "TC....T", "T.SSS.T", "T.SKS.T", "T.SSS.T", "TTTTTTT"], {}, [{ x: 1, y: 2, crew: "stone" }], { stacks: [["timber"]] }));
-  const c1 = E.call(C, E.start(C), 0);
-  eq([C.ncol, Array.from(c1.front), c1.legalMask], [2, [-1, 0], 2], "stacks: a claimed chest's crew is a column of its own");
-  eq(E.call(C, c1, 1).won, true, "stacks: the chest column wins it");
+  // The keep (c inside water) opens only through the gate j; the key n sits outside.
+  const L = lv(["~~~~~", "~ccc~", "~~j~~", ".....", "n.#.."], [[[3, 3]], [[14, 1]], [], [], []], { gates: [{ at: [2, 2], key: [0, 4] }] });
+  const B = E.compile(L), S = E.sim(B, N);
+  eq([S.reachable(3), S.pixLeft], [0, 5], "gate: iron blocks the way; the gate's pixels count toward the fort");
+  S.play(0); eq(line(S), [[3, 3]], "gate: the crew for the keep waits behind the locked gate");
+  S.logOn = true; S.clearLog(); S.play(1);
+  let gateEv = false; for (let i = 0; i < S.evLen; i += 3) if (S.ev[i] === E.EV.GATE) gateEv = true;
+  eq([gateEv, S.a[2 * 5 + 2], S.status], [true, E.DIRT, E.WON], "gate: eating the key opens the gate (its pixels turn to dirt) and the waiting crew finishes");
+  eq(E.sim(B, N).target(10), -1, "gate: iron is never a target");
 }
 
-// ---- multi-cell keep, win ---------------------------------------------------------------------------------------
+// ---- archers ---------------------------------------------------------------------------------------------------------
+// Tower g (3 pixels, top right, centroid (7,0)) with range 3. a pixels: (4,2) walk 1, (3,2) and (6,2) walk 2 (tie ->
+// lower x), then the far ones. (6,2) and (7,2) are covered; (3,2), (4,2) are not.
+const ARCH = (cols) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "....##..."], cols, { towers: [{ at: [7, 0], r: 3 }] });
 {
-  const B = E.parse(lv(["P.......", ".TTTTTT.", ".TSSSST.", ".TSKKST.", ".TSKKST.", ".TSSSST.", ".TTTTTT."], { stone: 1, timber: 1 }));
-  eq(E.start(B).won, false, "keep: a walled 2×2 keep is not won at start");
-  const s = play(B, ["timber", "stone"]);
-  eq([s.won, s.calls, s.legal, s.stuck], [true, 2, 0, false], "keep: open ground beside any keep cell wins");
-  eq(E.call(B, s, "stone"), null, "keep: no calls after the win");
-  const D = E.parse(lv(["P.....", ".TTTT.", ".TKKT.", ".TTTT.", "......"], { timber: 1 }));
-  eq(play(D, ["timber"]).won, true, "keep: one break beside a 2-cell keep wins");
+  const S = E.sim(E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []])), N);
+  eq([S.covered(2 * 9 + 7), S.covered(2 * 9 + 6), S.covered(2 * 9 + 3), S.covered(7)], [true, true, false, false], "archers: range covers nearby pixels; tower pixels are never covered");
+  S.logOn = true; S.clearLog(); const e = eats(S, 0);
+  eq([e, line(S), S.hits, S.pixLeft], [[[4, 2], [3, 2]], [[1, 4]], 4, 7], "archers (Normal): the squad eats until its nearest target is covered; the other 4 are hit and wait");
+  S.play(1);
+  eq([S.status, S.hits, S.lineLen], [E.WON, 4, 0], "archers: once the tower falls the parked entry resumes and wins");
+}
+{
+  const S = E.sim(E.compile(ARCH([[[1, 6]], [[7, 1], [7, 2]], [], [], []])), N);
+  S.play(0); S.play(1);
+  eq([S.hits, line(S), S.status], [4, [[1, 4]], E.PLAYING], "re-hit: while any tower pixel stands the hit entry stays parked (wary): no second hit, no loop");
+  S.play(1); eq([S.status, S.hits], [E.WON, 4], "re-hit: the tower's last pixel lets it resume");
+}
+{
+  const S = E.sim(E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []])), EZ);
+  S.play(0); eq([S.hits, S.kills, line(S)], [4, 0, [[1, 4]]], "archers (Easy): hit sappers go to the holding line");
+}
+{
+  const S = E.sim(E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []])), H);
+  S.play(0); eq([S.kills, S.lineLen, S.status, S.reason], [4, 0, E.FAILED, "short"], "archers (Hard): hit sappers die, and the level fails short of sappers");
+  const S2 = E.sim(E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []])), H);
+  S2.play(1); S2.play(0); eq([S2.kills, S2.status], [0, E.WON], "archers (Hard): the tower first wins");
+}
+{
+  // One covered a pixel; the only front card is its crew, the tower crew behind it.
+  const L = lv(["......ggg", ".......a.", ".........", "....##..."], [[[1, 1], [7, 3]], [], [], [], []], { towers: [{ at: [7, 0], r: 3 }] });
+  const SH = E.sim(E.compile(L), H); eq([SH.status, SH.reason], [E.FAILED, "nomove"], "archers (Hard): the only front card would be killed, so no move");
+  const SN = E.sim(E.compile(L), N); SN.play(0); eq([SN.status, line(SN)], [E.PLAYING, [[1, 1]]], "archers (Normal): the same card is hit and waits");
+  SN.play(0); eq(SN.status, E.WON, "archers (Normal): the tower behind it frees the waiting sapper");
 }
 
-// ---- chests -----------------------------------------------------------------------------------------------------
+// ---- save / load, bounded ---------------------------------------------------------------------------------------------
 {
-  const L = lv(["...P...", "TTTTTTT", "TC....T", "T.SSS.T", "T.SKS.T", "T.SSS.T", "TTTTTTT"], { timber: 1 }, [{ x: 1, y: 2, crew: "stone" }]);
-  const B = E.parse(L), r = S.solve(B);
-  eq([r.win, r.min, r.chestOnOptimal, r.chestRequired, r.minNoChest], [true, 2, true, true, null], "chest: the mason in the chest is required");
-  const s = play(B, ["timber"]);
-  eq([s.claimed[0], s.remaining[0], s.remaining[1]], [1, 1, 0], "chest: claimed once on connected ground, +1 mason");
-  eq(S.solve(E.parse(lv(L.grid.map((row) => row.replace("C", ".")), { timber: 1 }))).win, false, "chest: the same board without the chest has no win");
-  eq(E.start(B).claimed[0], 0, "chest: a sealed chest is not claimed at start");
+  const B = E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []])), S = E.sim(B, N), buf = S.save();
+  S.play(0); const h1 = S.hash(); S.load(buf); eq([S.lineLen, S.pixLeft, S.heads[0]], [0, 9, 0], "save/load: load restores the whole state");
+  S.play(0); eq(S.hash(), h1, "save/load: replaying gives the same state hash");
+  eq(S.play(0), -2, "play: an empty column is refused");
 }
 
-// ---- levers: the cascade ----------------------------------------------------------------------------------------
+// ---- differential: engine vs the slow reference on every baked level --------------------------------------------------
 {
-  const grid = ["....P....", "TTTTTTTTT", "T..L....T", "T~~FF~~~T", "T~.....~T", "T~~.L~~~T", "T~~FF~~~T", "T~~~K~~~T", "~~~~~~~~~"];
-  const B = E.parse(lv(grid, { timber: 1 }));
-  const s0 = E.start(B);
-  eq([s0.thrown.join(""), s0.doorOpen[at(B, 4, 3)], s0.won], ["00", 0, false], "lever: sealed levers are not thrown at start");
-  const s1 = play(B, ["timber"]);
-  eq([s1.thrown.join(""), s1.doorOpen[at(B, 4, 3)], s1.doorOpen[at(B, 4, 6)], s1.won], ["11", 1, 1, true], "lever cascade: lever 1 → door 1 → lever 2 → door 2 → keep reached");
-  ok(s1.cascade >= 2, "lever cascade: took at least two rounds (" + s1.cascade + ")");
-  eq(S.solve(B).min, 1, "lever: the solver sees the cascade, min 1");
-  eq(S.solve(E.parse(lv(grid, { timber: 1 }), { noLevers: true })).win, false, "lever: with levers disabled there is no win");
-  const s2 = E.fromMoves(B, [1]);
-  ok(s2.dist[4 * 9 + 4] > 0 && s2.dist[4 * 9 + 4] < 32767, "lever: walking distances are rebuilt after a door opens (" + s2.dist[4 * 9 + 4] + ")");
-}
-
-// ---- stuck, undo parity, immutability -----------------------------------------------------------------------------
-{
-  const B = E.parse(TEACH.find((t) => t.id === "w1-t3"));
-  const s1 = play(B, ["stone"]);
-  eq([s1.stuck, s1.legal, s1.remaining[0], s1.breaks[0].length], [false, 1, 0, 1], "stuck: stone first spends the mason on the back wall; the axemen can still move");
-  const s2 = play(B, ["stone", "timber"]);
-  eq([s2.stuck, s2.won, s2.reach[at(B, 6, 8)], s2.remaining[0]], [true, false, 1, 0], "stuck: the keep's wall is reachable but no mason is left");
-  eq(play(B, ["timber", "stone"]).won, true, "closest first: axemen first makes the keep's wall the nearest stone");
-  const boards = [
-    lv(["...P...", "TTTTTTT", "TC....T", "T.SSS.T", "T.SKS.T", "T.SSS.T", "TTTTTTT"], { timber: 1, stone: 1 }, [{ x: 1, y: 2, crew: "stone" }]),
-    lv(["....P....", "TTTTTTTTT", "T..L....T", "T~~FF~~~T", "T~.....~T", "T~~.L~~~T", "T~~FF~~~T", "T~~~K~~~T", "~~~~~~~~~"], { timber: 1 }),
-    lv([".........", ".TTT.....", ".TKT....S", ".TTT.....", ".........", "S........", "....P...."], { stone: 2, timber: 1 }, [], { rule: "B" }),
-    lv(["...P...", "TTTTTTT", "T.....T", "T.SSS.T", "T.SKS.T", "T.SSS.T", "TTTTTTT"], {}, [], { stacks: [["stone", "timber"], ["timber"]] }),
-    TEACH.find((t) => t.id === "w1-t3"), TEACH.find((t) => t.id === "w4-t1"),
-  ];
-  for (const L of boards) {
-    const B2 = E.parse(L);
-    let s = E.start(B2);
-    for (let step = 0; step < 8 && !s.won && !s.stuck; step++) {
-      const before = E.serialize(s), mv = E.legalMoves(B2, s)[0], next = E.call(B2, s, mv);
-      eq(E.serialize(s), before, "undo: call leaves the old state untouched");
-      eq(E.serialize(E.undo(B2, next)), before, "undo parity: call then undo is identical (" + L.grid[1] + " step " + step + ")");
-      s = next;
-    }
-    eq(E.serialize(E.restart(B2)), E.serialize(E.start(B2)), "restart equals start");
-  }
-}
-
-// ---- solver, frontier, naive players --------------------------------------------------------------------------------
-{
-  const mins = TEACH.map((t) => S.solve(E.parse(t)).min);
-  eq(mins, [1, 2, 2, 2, 3, 2], "teaching: One Wall 1, Outside In 2, Closest First 2, Goats 2, Moat 3, Lever 2");
-  const B = E.parse(TEACH.find((t) => t.id === "w1-t3")), r = S.solve(B);
-  eq([r.states, r.wins, r.dead, r.lost, r.decisions, r.line], [5, 1, 1, 2, 1, [1, 0]], "solve counts on Closest First: 5 states, 1 win, 1 dead end, 2 lost, 1 decision point");
-  eq(S.frontier(B, { maxLen: 6 }).vecs.map((v) => v.comp), [[2, 0, 0, 0], [1, 1, 0, 0]], "frontier: Closest First wins with a mason and axemen, or two masons (the back wall first)");
-  eq(S.solve(E.parse(Object.assign({}, TEACH.find((t) => t.id === "w1-t3"), { muster: { stone: 2 } }))).min, 2, "frontier: two masons really do win");
-  const g = S.greedy(B);
-  eq([g.win, g.used], [true, 2], "greedy: calls the crew whose target is nearest the keep (the axemen' gate) and wins");
-  eq(S.playouts(B, 60, 3), S.playouts(B, 60, 3), "playouts: same seed, same result");
-  const p = S.playouts(B, 4000, 7);
-  ok(Math.abs(p.winRate - 0.5) < 0.04, "playouts: Closest First random win ~50% (got " + p.winRate + ")");
-  const c = S.solve(E.parse(TEACH[2]), { cap: 2 });
-  eq([c.capped, typeof c.ms], [true, "number"], "solve: hitting the cap reports capped and does not throw");
-  const bad = S.solve({ nsec: 0 });
-  ok(typeof bad.error === "string", "solve: a broken board returns an error field, never throws");
-}
-
-// ---- the draft bake: every level replays to a win in min calls ------------------------------------------------------
-{
-  let n = 0, good = 0;
-  for (const w of LEVELS.worlds) for (const L of w.levels) {
-    n++;
-    const B = E.parse(L); let s = E.start(B);
-    for (const a of L.line) { const nx = E.call(B, s, a); if (nx) s = nx; }
-    if (s.won && s.calls === L.min && S.solve(B).min === L.min) good++; else console.log("      level " + L.id + " won " + s.won + " calls " + s.calls + " min " + L.min);
-  }
-  eq([good, n >= 36], [n, true], "bake: all " + n + " levels replay their line to a win in exactly min calls");
-}
-
-// ---- M0c: depth, density and the bake's invariants (tools/m0c-report.md) -------------------------------------------
-{
-  const C = require("./bake-config.json"), Gen = require("./gen.js"), NAMES = require("../levels/names.json");
-  const cov = (L) => { let k = 0; for (const row of L.grid) for (const ch of row) if ("STHI".includes(ch)) k++; return k / (L.w * L.h); };
-  const layers = (B) => {   // walls to cross from the camp to the keep (iron free): the concentric rings show here
-    const D = E.derive(B, new Uint8Array(B.nsec), new Int16Array(B.spentLen), E.scratch(B)), km = new Uint8Array(B.n);
-    for (const k of B.keepCells) km[k] = 1;
-    return S.bound(B, D, { dist: new Int16Array(B.n), a: new Int32Array(B.n * 2), b: new Int32Array(B.n * 2), keepMark: km });
-  };
-  const counts = LEVELS.worlds.map((w) => w.levels.length), total = counts.reduce((a, b) => a + b, 0);
-  ok(total >= 36 && total <= 40, "m0c bake: 36-40 levels (" + counts.join("/") + ")");
-  const bad = { band: [], sections: [], tie: [], levers: [], chest: [], time: [], single: [], cover: [], rings: [], order: [], names: [] };
-  for (const w of LEVELS.worlds) {
-    const band = C.bands[w.world];
-    let seenBaked = false, lastMin = 0;
-    for (const L of w.levels) {
-      if (typeof NAMES[L.id] !== "string" || !NAMES[L.id].trim() || NAMES[L.id].length > 24 || L.name !== NAMES[L.id]) bad.names.push(L.id);
-      const B = E.parse(L), r = S.solve(B, { cap: C.cap });
-      if (r.capped || r.ms > 250) bad.time.push(L.id + " " + r.ms + "ms");
-      for (let s = 0; s < B.nsec; s++) if (B.secMat[s] < E.IRON && B.secStart[s + 1] - B.secStart[s] < 2) bad.single.push(L.id);
-      if (L.source === "teaching") { if (seenBaked) bad.order.push(L.id); continue; }
-      seenBaked = true;
-      if (L.metrics.difficulty < lastMin) bad.order.push(L.id); lastMin = L.metrics.difficulty;
-      if (L.min < band.min[0] || L.min > band.min[1]) bad.band.push(L.id + " min " + L.min);
-      if (B.nsec > band.maxSections) bad.sections.push(L.id + " " + B.nsec);
-      // No tie-break decides any call on the shipped line.
-      let st = E.start(B);
-      for (const a of L.line) { if (st.tie[E.CREW_OF[a]]) bad.tie.push(L.id); st = E.call(B, st, a) || st; }
-      if (band.levers) { const r2 = S.solve(E.parse(L, { noLevers: true }), { cap: C.cap, traps: false }); if (r2.win && r2.min <= L.min) bad.levers.push(L.id); }
-      if (L.metrics.chestKind === "required") {
-        const L2 = Object.assign({}, L, { grid: L.grid.map((row) => row.replace("C", ".")), chests: [] }), r2 = S.solve(E.parse(L2), { cap: C.cap, traps: false });
-        if (!r.chestRequired || (r2.win && r2.min <= L.min)) bad.chest.push(L.id);
+  let games = 0, taps = 0, diffs = 0;
+  const t0 = Date.now();
+  for (const L of LEVELS.levels) {
+    const B = E.compile(L);
+    for (const [dn, rules] of Object.entries(RULES)) {
+      for (let k = 0; k < 3; k++) {
+        const S = E.sim(B, rules), R = Ref.game(L, rules), r = Gr.rng(L.n * 1009 + k * 17 + dn.length);
+        S.logOn = true;
+        for (let g = 0; g <= B.ncards && S.status === E.PLAYING; g++) {
+          const open = []; for (let j = 0; j < 5; j++) if (S.heads[j] < B.colLen[j]) open.push(j);
+          const j = open[Math.floor(r() * open.length)];
+          S.clearLog(); const before = R.eaten.length; S.play(j); R.play(j); taps++;
+          const mine = []; for (let i = 0; i < S.evLen; i += 3) if (S.ev[i] === E.EV.EAT) mine.push(S.ev[i + 1]);
+          const st = S.status === E.WON ? "won" : S.status === E.FAILED ? "failed" : "playing";
+          const same = JSON.stringify(mine) === JSON.stringify(R.eaten.slice(before)) && st === R.status && (st !== "failed" || S.reason === R.reason) && JSON.stringify(line(S)) === JSON.stringify(R.line.map((e) => [e.m, e.n]));
+          if (!same) { diffs++; if (diffs <= 3) console.log("  diff: level " + L.n + " " + dn + " game " + k + " tap " + g + " (" + st + "/" + R.status + ")"); break; }
+        }
+        games++;
       }
-      if (w.world >= 3 && cov(L) < 0.4) bad.cover.push(L.id + " " + Math.round(cov(L) * 100) + "%");
-      if (w.world >= 3 && layers(B) < (w.world === 3 ? 4 : 3)) bad.rings.push(L.id + " " + layers(B));
     }
   }
-  eq(bad.names, [], "m0c names: every level has a short name in names.json, and the bake uses it");
-  eq(bad.order, [], "m0c order: teaching boards first in each world, then easiest first (composite difficulty never falls)");
-  eq(bad.band, [], "m0c depth: every baked level's min calls sits in its world band (W3 6-10, W4 7-12)");
-  eq(bad.sections, [], "m0c phone cap: wall sections within the band cap");
-  eq(bad.tie, [], "m0c ties: no tie-break decides a call on any shipped line");
-  eq(bad.levers, [], "m0c levers: every World 4 board needs its lever (without it, no win or more calls)");
-  eq(bad.chest, [], "m0c chests: every required chest is required (without it, no win or more calls)");
-  eq(bad.time, [], "m0c solver: every level solves uncapped in under 250 ms");
-  eq(bad.single, [], "m0c pictures: no single-block crew section on any level");
-  eq(bad.cover, [], "m0c density: every World 3-4 baked board is at least 40% crew wall");
-  eq(bad.rings, [], "m0c depth: World 3 boards have at least 4 wall layers camp to keep, World 4 at least 3 plus the lever house");
-  // The generator: deterministic from a seed, never throws, and Worlds 3-4 castles are concentric.
-  for (const wk of ["1", "2", "3", "4"]) {
-    const run = () => { const rng = S.mulberry32(4242 + +wk), out = []; for (let t = 0; t < 30; t++) { let r; try { r = Gen.castle(C.worlds[wk], C, rng); } catch (e) { r = { fail: "THREW " + e.message }; } out.push(r.fail ? r.fail : r.level.grid.join("/") + (r.info.inner ? "+inner" : "")); } return out; };
-    const a = run(), b = run(), made = a.filter((x) => x.includes("/"));
-    ok(JSON.stringify(a) === JSON.stringify(b), "m0c generator: world " + wk + " castles are deterministic from the seed");
-    ok(!a.some((x) => x.startsWith("THREW")), "m0c generator: world " + wk + " castle() never throws");
-    ok(made.length > 0 && made.every((x) => (+wk >= 3) === x.endsWith("+inner")), "m0c generator: world " + wk + (+wk >= 3 ? " castles all have an inner curtain" : " castles keep one ring") + " (" + made.length + " made)");
-  }
+  eq(diffs, 0, "differential: engine == reference on " + games + " random games (" + taps + " taps) over every baked level and difficulty");
+  console.log("  differential: " + games + " games, " + taps + " taps in " + ((Date.now() - t0) / 1000).toFixed(1) + " s");
 }
 
-// ---- fix-v2 gen: art metadata, decor never blocks, the camp, closest margin, no spam, stars, the curve -------------
+// ---- baked levels: stored winning orders, sums, bands ------------------------------------------------------------------
 {
-  const C = require("./bake-config.json"), NAMES = require("../levels/names.json");
-  const all = LEVELS.worlds.flatMap((w) => w.levels), pools = [1, 2, 3, 4].flatMap((k) => require("../levels/pool-w" + k + ".json").levels);
-  const KINDS = ["bush", "well", "cart", "flowers", "barrel", "path"], SIDES = ["n", "e", "s", "w"];
-  const int = (v) => Number.isInteger(v);
-  const inB = (L, r) => r.slice(0, 4).every(int) && r[2] >= 1 && r[3] >= 1 && r[0] >= 0 && r[1] >= 0 && r[0] + r[2] <= L.w && r[1] + r[3] <= L.h;
-  const bad = { art: [], rects: [], keep: [], decor: [], block: [], camp: [], margin: [], spam: [], mats: [], step: [] };
-  // Every cell a crew walks to a target (engine.pathTo from the target's ground cell) in any reachable state, plus the
-  // win march (pathTo from the keep's nearest connected neighbour, as show.js picks it).
-  const walked = (L) => {
-    const B = E.parse(L), mark = new Uint8Array(B.n), s0 = E.start(B), seen = new Set([s0.broken.join("")]), q = [s0];
-    for (let i = 0; i < q.length && q.length < 60000; i++) {
-      const st = q[i];
-      if (st.won) {
-        let first = -1, fd = 1e9;
-        for (const k of B.keepCells) for (let d = 0; d < 4; d++) { const e = B.nb[k * 4 + d]; if (e >= 0 && st.conn[e] && st.dist[e] < fd) { fd = st.dist[e]; first = e; } }
-        if (first >= 0) for (const [x, y] of E.pathTo(B, st, first % B.w, (first / B.w) | 0)) mark[y * B.w + x] = 1;
-        continue;
-      }
-      for (const t of E.targets(B, st)) for (const [x, y] of E.pathTo(B, st, t.ground[0], t.ground[1])) mark[y * B.w + x] = 1;
-      for (const a of E.legalMoves(B, st)) { const n = E.call(B, st, a), k = n.broken.join(""); if (!seen.has(k)) { seen.add(k); q.push(n); } }
+  let wins = 0, total = 0;
+  for (const L of LEVELS.levels) {
+    const B = E.compile(L);
+    let sum = 0; for (let m = 0; m < E.NMAT; m++) sum += B.sapTotal[m];
+    ok(sum === B.pixTotal - (B.pix[E.IRON] || 0), "level " + L.n + ": sappers sum to the fort's eatable pixels");
+    for (const d of ["easy", "normal", "hard"]) {
+      total++; const S = E.replay(B, RULES[d], L.win[d] || "");
+      if (S.status === E.WON) wins++; else console.log("FAIL  level " + L.n + " " + d + ": stored order does not win (" + S.reason + ")");
     }
-    return mark;
-  };
-  let decorN = 0;
-  for (const L of all.concat(pools)) {
-    const a = L.art, g = L.grid.join("");
-    if (!a || !Array.isArray(a.towers) || !Array.isArray(a.gates) || !Array.isArray(a.keep) || !Array.isArray(a.decor)) { bad.art.push(L.id); continue; }
-    for (const r of a.towers) if (r.length !== 4 || !inB(L, r)) bad.rects.push(L.id + " tower " + r);
-    for (const r of a.gates) if (r.length !== 5 || !inB(L, r) || !SIDES.includes(r[4])) bad.rects.push(L.id + " gate " + r);
-    // Tower and gate rects sit on the castle: every rect covers wall cells.
-    for (const r of a.towers.concat(a.gates)) { let k = 0; for (let y = r[1]; y < r[1] + r[3]; y++) for (let x = r[0]; x < r[0] + r[2]; x++) if ("STHIF".includes(g[y * L.w + x])) k++; if (!k) bad.rects.push(L.id + " off-wall " + r); }
-    let kc = 0; for (const ch of g) if (ch === "K") kc++;
-    if (!inB(L, a.keep) || a.keep[2] * a.keep[3] !== kc) bad.keep.push(L.id);
-    else for (let y = a.keep[1]; y < a.keep[1] + a.keep[3]; y++) for (let x = a.keep[0]; x < a.keep[0] + a.keep[2]; x++) if (g[y * L.w + x] !== "K") bad.keep.push(L.id);
-    const used = new Set();
-    for (const d of a.decor) { if (d.length !== 3 || !inB(L, [d[0], d[1], 1, 1]) || !KINDS.includes(d[2]) || g[d[1] * L.w + d[0]] !== "." || used.has(d[0] + "," + d[1])) bad.decor.push(L.id + " " + d); used.add(d[0] + "," + d[1]); }
-    decorN += a.decor.length;
   }
-  for (const L of all) { const m = walked(L); for (const [x, y] of L.art.decor) if (m[y * L.w + x]) bad.block.push(L.id + " " + x + "," + y); }
-  // The camp: one rectangle 4-6 wide and 2 deep on the bottom edge, centred (within a block and a half).
-  for (const L of all.concat(pools)) {
-    const cells = []; L.grid.forEach((row, y) => [...row].forEach((ch, x) => { if (ch === "P") cells.push([x, y]); }));
-    const xs = cells.map((c) => c[0]), ys = cells.map((c) => c[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
-    const cw = x1 - x0 + 1, ch = y1 - y0 + 1;
-    if (cells.length !== cw * ch || cw < 4 || cw > 6 || ch !== 2 || y1 !== L.h - 1 || Math.abs((x0 + x1) / 2 - (L.w - 1) / 2) > 1.5) bad.camp.push(L.id + " " + cw + "x" + ch + " at " + x0);
-  }
-  let slow = 0, baked = 0;
-  for (const w of LEVELS.worlds) for (const L of w.levels) {
-    if (L.source === "teaching") continue;
-    baked++;
-    const B = E.parse(L), r = S.solve(B, { cap: C.cap }), band = C.bands[w.world];
-    if (r.margin !== null && r.margin < band.margin) bad.margin.push(L.id + " " + r.margin);
-    if (r.slowWin) slow++;
-    for (let k = 0; k < 4; k++) { let s = E.start(B); for (let t = 0; t < 60 && !s.won; t++) { const nx = E.call(B, s, E.CREWS[k]); if (!nx) break; s = nx; } if (s.won) bad.spam.push(L.id + " " + E.CREWS[k]); }
-    if (new Set(L.line).size < 2) bad.mats.push(L.id);
-  }
-  // The curve: each world's baked levels no easier than the previous world's median (composite difficulty).
-  let floor = -1;
-  for (const w of LEVELS.worlds) {
-    const ds = w.levels.filter((l) => l.source !== "teaching").map((l) => l.metrics.difficulty).sort((a, b) => a - b);
-    if (floor >= 0 && ds[0] < floor) bad.step.push("W" + w.world + " starts at " + ds[0] + " under " + floor);
-    floor = ds[(ds.length - 1) >> 1];
-  }
-  eq(bad.art, [], "fix-v2 art: every level and pool board carries art {towers, gates, keep, decor}");
-  eq(bad.rects, [], "fix-v2 art: tower and gate rects are in bounds, gate sides are n/e/s/w, every rect covers wall");
-  eq(bad.keep, [], "fix-v2 art: the keep rect is exactly the K block");
-  eq(bad.decor, [], "fix-v2 decor: known kinds, in bounds, on plain ground only, one per cell (" + decorN + " items)");
-  eq(bad.block, [], "fix-v2 decor never blocks: no decor cell is on any crew walk or the win march in any reachable state");
-  eq(bad.camp, [], "fix-v2 camp: a 4-6 × 2 patch centred on the bottom edge on every level and pool board");
-  eq(bad.margin, [], "fix-v2 closest margin: every call on every baked line beats the next-nearest wall of its material by >= band.margin");
-  eq(bad.spam, [], "fix-v2 no spam: calling one card over and over never wins a baked level");
-  eq(bad.mats, [], "fix-v2 two materials: every baked line uses at least two kinds of crew");
-  ok(slow * 4 >= baked * 3, "fix-v2 stars: a slower (2-star) win exists on at least 3/4 of baked levels (" + slow + "/" + baked + ")");
-  eq(bad.step, [], "fix-v2 curve: each world's baked levels start no easier than the previous world's median");
-  // Worlds 1-2 density: plain ground with no decor under 40% of the board, and no blank square over 5×5.
-  const Art = require("./artmeta.js"), thin = [];
-  for (const w of LEVELS.worlds) if (w.world <= 2) for (const L of w.levels) { const gr = Art.ground(L); if (gr.empty > 0.4 || gr.bigBlank > 5) thin.push(L.id + " " + Math.round(gr.empty * 100) + "% " + gr.bigBlank); }
-  eq(thin, [], "fix-v2 density: Worlds 1-2 boards keep empty ground under 40% and no blank square over 5×5");
+  eq(wins, total, "levels: every stored winning order wins on its difficulty (" + total + " replays)");
+  eq(LEVELS.levels.length, 75, "levels: 75 levels baked");
 }
 
 console.log(pass + " passed, " + fail + " failed");
