@@ -1,178 +1,209 @@
-// Sapper's Path v2 bake: tools/bake-config.json → levels/levels.json (versioned) + levels/pool-w{1..4}.json.
-// Rule from the command line or bake-config (C.rule, C.stacksInBake):
-//   node tools/bake.js              Rule A (the recommendation)
-//   node tools/bake.js --rule B     Rule B ("all reachable")
-//   node tools/bake.js --stacks     Rule A + stacks (C.stacks.k columns)
-// Deterministic: bake.chunks[w] fixed-seed chunks of castle() boards per world, consumed in chunk order, so thread
-// timing never changes the output. Accepts under C.bands (gen.accept), dedupes by grid, keeps up to bake.poolMax per
-// world, then picks bake.levels[w] minus the world's teaching boards: about bake.detourShare with a detour chest, the
-// rest required, each group spread evenly across the pool's difficulty order. Every world opens with its hand-authored
-// teaching boards (levels/teaching.json, solved under the baked rule); the rest run easiest first (min calls, then
-// random win). Never throws: a short pool is filled from near misses (logged), and every fallback is written into the
-// bake block of tools/m0c-report.md. levels.json and the pools are written atomically (temp file, then rename), because
-// the page reads levels.json while tools run. Names come from levels/names.json (keyed by level id), so a rebake keeps them.
-// fix-v2: every level (pools too) carries `art` (tools/artmeta.js: tower and gate rects, the keep, cosmetic decor), and
-// levels run by a composite difficulty (bake.difficulty weights: min calls, decision points, trap rate, random win), each
-// world's baked levels drawn from pool boards no easier than the previous world's median (bake.stepUp), boards with a
-// slower win (2 stars reachable) preferred.
+// Sapper's Path v3 bake (SPEC-v3 §5): tools/bake-config.json + levels/teaching.json -> levels/levels.json (versioned)
+// and levels/pool-e{1,2,3}.json (every graded candidate, kept for rebakes and the app's longer curve).
+//   ~/.local/opt/node/bin/node tools/bake.js
+// Per generated level: perLevel candidates, each a seeded fort (colour count in the level's range), a deal simulated as
+// a winning order under the dealing rules (so it wins on Easy, Normal and Hard), then tightened into the level's Normal
+// band (gen.tune: card moves between columns, squad splits and merges). Every candidate is graded on all three
+// difficulties. Levels are picked in order: the in-band candidate nearest its band's centre that is not a near-duplicate
+// of an earlier pick; otherwise the nearest miss, logged as a fallback. Levels run in worker threads, one task per
+// level with seeds derived from the level number, so thread timing never changes the output. Never throws: a task that
+// fails is logged and its level falls back. The report tables are written between the bake markers of
+// tools/v3-m0-report.md.
 "use strict";
 const fs = require("fs");
 const path = require("path");
-const Par = require("./par.js");
-const Gen = require("./gen.js");
+const os = require("os");
+const { Worker, isMainThread, parentPort, workerData } = require("worker_threads");
 const E = require("../src/engine.js");
-const S = require("../src/solver.js");
-const Art = require("./artmeta.js");
+const G = require("./gen.js");
+const R = require("./grade.js");
 
 const ROOT = path.join(__dirname, "..");
-const log = [];
-const say = (s) => { log.push(s); console.log(s); };
-// Composite difficulty (bake.difficulty weights) and the order it gives: easy first, min calls then random win on ties.
-let DF = { min: 1, decisions: 0.5, trap: 4, rand: 6 };
-const diffOf = (m) => DF.min * m.min + DF.decisions * m.decisions + DF.trap * m.trapRate + DF.rand * (1 - m.randWin);
-const harder = (A, B) => diffOf(A) - diffOf(B) || A.min - B.min || B.randWin - A.randWin;
-// n picks spread evenly across a difficulty-ordered list.
-function spread(list, n) { const out = []; for (let k = 0; k < n && list.length; k++) { const it = list[n === 1 ? 0 : Math.round((k * (list.length - 1)) / (n - 1))]; if (!out.includes(it)) out.push(it); } return out; }
-// Near misses, least serious first (a proxy band before a depth or structure miss).
-const NEAR = ["no-slow-win", "random-win-band", "trap-band", "greedy-solves", "few-decisions", "no-reshape", "chest-idle", "margin", "tie-decides", "min-band", "section-cap", "levers-idle", "one-material", "spam", "single-block"];
-let ART_CAPPED = [];
+const DIFFS = ["easy", "normal", "hard"];
 
-function levelOut(L, m, id, name, world, source, extra, hints, C) {
-  const B = E.parse(L);
-  const out = {
-    id, name, world, source, rule: B.rule, w: L.w, h: L.h, grid: L.grid, muster: L.muster, chests: L.chests || [], min: m.min,
-    line: m.line.map((a) => (B.cols ? a : E.CREWS[a])),
-    lineCells: m.lineSecs.map((ss) => { const c = B.secFirst[ss[0]]; return [c % B.w, (c / B.w) | 0]; }),
-    metrics: { sections: m.sections, blocks: +m.blocks.toFixed(1), walls: m.walls, randWin: +m.randWin.toFixed(3), greedyWin: m.greedyWin, greedyUsed: m.greedyUsed,
-      states: m.states, trapRate: +m.trapRate.toFixed(3), decisions: m.decisions, reshapes: m.reshapes, tieAny: m.tieAny, chestKind: m.chestKind, leversMatter: m.leversMatter, minB: m.minB,
-      margin: m.margin, slowWin: m.slowWin, maxWin: m.maxWin, spam: m.spam, lineMats: m.lineMats, difficulty: +diffOf(m).toFixed(2) },
-  };
-  if (L.stacks) out.stacks = L.stacks;
-  Object.assign(out, extra || {});
-  const a = Art.artFor(Object.assign({}, L, { rule: B.rule }), hints, C);
-  if (a.capped) ART_CAPPED.push(id);
-  out.art = a.art;
-  return out;
+// ---- shared by main and workers -------------------------------------------------------------------------------
+function eraOf(n, C) { for (const e of Object.keys(C.eras)) if (n >= C.eras[e].from && n <= C.eras[e].to) return +e; return 1; }
+function bandOf(n, C) {
+  const cv = C.curve;
+  if (n <= cv.early.to) return { kind: "early", sub: "early", band: cv.early.band };
+  if (n <= cv.mid.to) { const k = (n - cv.mid.from) % cv.mid.saw.length; return { kind: "mid", sub: "saw" + k, band: cv.mid.saw[k] }; }
+  const sub = cv.late.pattern[(n - cv.late.from) % cv.late.pattern.length];
+  return { kind: "late", sub, band: cv.late.bands[sub] };
+}
+function coloursOf(n, C, b) {
+  if (b.sub === "relief") return C.reliefColours;
+  if (b.sub === "saw" + (C.curve.mid.saw.length - 1)) return C.sawLowColours;
+  for (const [a, z, lo, hi] of C.colours) if (n >= a && n <= z) return [lo, hi];
+  return [5, 5];
+}
+const seedOf = (C, n, k) => (C.seed ^ Math.imul(n + 1, 0x9E3779B1) ^ Math.imul(k + 7, 0x85EBCA77)) | 0;
+const countPix = (L) => { let p = 0; for (const row of L.grid) for (const ch of row) if (E.matOf(ch)) p++; return p; };
+
+// Grade a finished level on every difficulty; `hint` is a known winning order (tried first).
+function gradeLevel(L, rules, C, hint, seed) {
+  const B = E.compile(L), win = {}, grade = { cards: B.ncards, pixels: B.pixTotal, colours: G.coloursOf(L).size };
+  for (const d of DIFFS) {
+    let order = hint, line = order ? R.line(B, rules[d], order) : null;
+    if (!line || !line.won) { order = R.solve(B, rules[d], C.grade.solveNodes, hint); line = order ? R.line(B, rules[d], order) : null; }
+    win[d] = line && line.won ? order : null;
+    grade[d] = { rate: +R.rate(B, rules[d], C.grade.playouts, seed).toFixed(4), peak: line ? line.peak : null, len: order ? order.length : null };
+  }
+  const oc = R.orders(B, rules.normal, C.grade.orderCap, C.grade.orderNodes);
+  grade.normal.orders = oc.count; grade.normal.ordersCapped = oc.capped; grade.normal.ordersExact = oc.exact;
+  grade.normal.greedy = +R.greedy(B, rules.normal, C.grade.greedyPlayouts, seed ^ 0x2545f491).toFixed(3);
+  if (win.normal) { const nw = R.narrow(B, rules.normal, win.normal, C.grade.narrowNodes); grade.normal.forced = nw.forced; grade.normal.minSafe = nw.minSafe; grade.normal.meanSafe = nw.meanSafe; grade.normal.narrowUnknown = nw.unknown; }
+  return { win, grade };
 }
 
-(async () => {
-  const t0 = Date.now();
-  let C;
-  try { C = JSON.parse(fs.readFileSync(path.join(__dirname, "bake-config.json"), "utf8")); }
-  catch (e) { console.log("bake: cannot read bake-config.json: " + e.message); return; }
-  const argv = process.argv.slice(2), ri = argv.indexOf("--rule");
-  const rule = ri >= 0 && (argv[ri + 1] === "A" || argv[ri + 1] === "B") ? argv[ri + 1] : C.rule || "A";
-  const stacks = rule === "A" && (argv.includes("--stacks") || (C.stacksInBake && !argv.includes("--no-stacks")));
-  const vk = rule === "B" ? "B" : stacks ? "AS" : "A";
-  if (C.bake.difficulty) DF = C.bake.difficulty;
-  say("bake: rule " + rule + (stacks ? " + stacks (" + C.stacks.k + " columns)" : "") + ", variant " + vk);
-  const tasks = [];
-  for (const wk of Object.keys(C.worlds)) for (let i = 0; i < C.bake.chunks[wk]; i++) tasks.push({ wk, seed: C.seed + (+wk) * 100000 + i, n: C.chunk, variants: [vk] });
-  const res = await Par.run(C, tasks);
-  let NAMES = {};
-  try { NAMES = JSON.parse(fs.readFileSync(path.join(ROOT, "levels", "names.json"), "utf8")) || {}; }
-  catch (e) { say("FALLBACK names.json unreadable (" + e.message + "); levels keep their default names"); }
-  const nameOf = (id, dflt) => (typeof NAMES[id] === "string" && NAMES[id].trim() ? NAMES[id].trim() : dflt);
-  let TEACH = [];
-  try { TEACH = JSON.parse(fs.readFileSync(path.join(ROOT, "levels", "teaching.json"), "utf8")).levels; }
-  catch (e) { say("FALLBACK teaching.json unreadable (" + e.message + "); no teaching boards"); }
+// All candidates for one generated level. Never throws: failures come back as {fail} entries.
+function candidates(n, C, rules) {
+  const era = eraOf(n, C), b = bandOf(n, C), [cmin, cmax] = coloursOf(n, C, b), out = [], stats = { forts: 0, deals: 0, evals: 0, grades: 0 };
+  const D = Object.assign({}, C.deal, C.dealBy[b.kind] || {});
+  const dealRules = { hold: C.deal.hold, archersKill: true };
+  for (let k = 0; k < C.candidates.perLevel; k++) {
+    try {
+      let L = null, seed = 0;
+      for (let t = 0; t < C.candidates.fortTries && !L; t++) {
+        seed = seedOf(C, n, k * 1000 + t);
+        const P = Object.assign({}, C.eras[era].gen, { colours: cmin + (Math.abs(seed) % (cmax - cmin + 1)) });
+        const f = G.fort(era, seed, P); stats.forts++;
+        if (!f) continue;
+        const nc = G.coloursOf(f).size; if (nc < cmin || nc > cmax) continue;
+        if (era === 2 && !(f.gates && f.gates.length)) continue;
+        if (era === 3 && !(f.towers && f.towers.length)) continue;
+        L = f;
+      }
+      if (!L) { out.push({ k, fail: "no fort with " + cmin + "-" + cmax + " colours in " + C.candidates.fortTries + " seeds" }); continue; }
+      let dl = null;
+      for (let a = 0; a < D.attempts && !dl; a++) { dl = G.deal(L, seed ^ Math.imul(a + 1, 0x27D4EB2F), D); stats.deals++; }
+      if (!dl) { out.push({ k, seed, fail: "no deal in " + D.attempts + " attempts" }); continue; }
+      const T = Object.assign({}, C.tune, { seed: seed ^ 0x3c6ef372 }, b.kind === "late" && b.sub !== "relief" ? { narrow: C.tune.narrow } : { narrow: null });
+      const res = G.tune(L, dl.play, G.assign(dl.play, 0, seed), b.band[0], b.band[1], T, { normal: rules.normal, deal: dealRules });
+      stats.evals += res.evals;
+      const level = Object.assign({}, L, { cols: G.colsOf(res.play, res.colOf) });
+      const g = gradeLevel(level, rules, C, G.orderOf(res.colOf), seed); stats.grades++;
+      const rate = g.grade.normal.rate, miss = Math.max(0, b.band[0] - rate, rate - b.band[1]);
+      out.push({ k, seed, level, win: g.win, grade: g.grade, miss: +miss.toFixed(4), tuneSteps: res.steps, winnable: DIFFS.every((d) => g.win[d]) });
+    } catch (e) { out.push({ k, fail: "error: " + (e && e.message) }); }
+  }
+  return { n, era, band: b, colours: [cmin, cmax], cands: out, stats };
+}
 
-  const worlds = [], pools = {};
-  let floor = -1;   // bake.stepUp: the previous world's median difficulty
-  for (const wk of Object.keys(C.worlds)) {
-    const W = C.worlds[wk], band = C.bands[wk], seen = new Set(), pool = [], near = [];
-    let made = 0;
-    tasks.forEach((t, i) => {
-      if (t.wk !== wk) return;
-      for (const r of res[i].recs) {
-        made++;
-        const v = r.v[vk];
-        if (!v || !v.m) continue;
-        const key = v.level.grid.join("/");
-        if (seen.has(key)) continue;
-        seen.add(key);
-        const why = Gen.accept(v.m, band), rec = { r, v, m: v.m };
-        if (!why) { if (pool.length < C.bake.poolMax) pool.push(rec); }
-        else if (v.m.win && !v.m.capped && !v.m.tieMove && NAMES && near.length < 400) near.push(Object.assign(rec, { why }));
+if (!isMainThread) {
+  const { n, C, rules } = workerData;
+  let res; try { res = candidates(n, C, rules); } catch (e) { res = { n, cands: [{ fail: "worker error: " + (e && e.message) }], stats: {} }; }
+  parentPort.postMessage(res);
+  return;
+}
+
+// ---- main ------------------------------------------------------------------------------------------------------
+function runPool(tasks, threads, C, rules, deadline, onDone) {
+  const results = new Array(tasks.length); let next = 0, running = 0, done = 0;
+  return new Promise((resolve) => {
+    const pump = () => {
+      if (done === tasks.length) { resolve(results); return; }
+      while (running < threads && next < tasks.length) {
+        const i = next++; running++;
+        if (Date.now() > deadline) { results[i] = { n: tasks[i], cands: [{ fail: "wall budget" }], stats: {} }; running--; done++; continue; }
+        const wk = new Worker(__filename, { workerData: { n: tasks[i], C, rules } });
+        let got = false;
+        wk.on("message", (m) => { got = true; results[i] = m; });
+        wk.on("error", (e) => { console.log("worker error (level " + tasks[i] + "): " + e.message); });
+        wk.on("exit", () => { if (!got) results[i] = { n: tasks[i], cands: [{ fail: "worker died" }], stats: {} }; running--; done++; if (onDone) onDone(done, tasks.length); pump(); });
       }
-    });
-    pool.sort((a, b) => harder(a.m, b.m));
-    const teach = TEACH.filter((t) => (t.world || 1) === +wk);
-    const want = Math.max(0, C.bake.levels[wk] - teach.length), kind = (p) => p.m.chestKind;
-    // Step up: only pool boards no easier than the previous world's median (the hardest ones when too few are).
-    let elig = C.bake.stepUp && floor >= 0 ? pool.filter((p) => diffOf(p.m) >= floor) : pool.slice();
-    if (elig.length < want) { say("W" + wk + ": FALLBACK only " + elig.length + " pool boards at or above the step-up floor " + floor.toFixed(2) + "; taking the hardest " + want); elig = pool.slice(-Math.max(want, elig.length)); }
-    // Spread across the difficulty order, then swap a pick without a slower win (2 stars reachable) for a neighbour
-    // within 2 places that has one, so the curve keeps its span.
-    const pickSlow = (list, k) => {
-      const base = spread(list, k), out = [];
-      for (const p of base) {
-        let q = p;
-        if (!p.m.slowWin) { const i = list.indexOf(p); for (let d = 1; d <= 2 && q === p; d++) for (const j of [i - d, i + d]) { const c = list[j]; if (c && c.m.slowWin && !base.includes(c) && !out.includes(c)) { q = c; break; } } }
-        if (!out.includes(q)) out.push(q);
-      }
-      return out;
+      if (done === tasks.length) resolve(results);
     };
-    const det = elig.filter((p) => kind(p) === "detour"), req = elig.filter((p) => kind(p) !== "detour");
-    const nDet = W.chests ? Math.min(det.length, Math.round(want * C.bake.detourShare)) : 0;
-    const chosen = pickSlow(det, nDet).concat(pickSlow(req, want - nDet));
-    for (const p of elig) { if (chosen.length >= want) break; if (!chosen.includes(p)) chosen.push(p); }
-    if (chosen.length < want) {
-      near.sort((a, b) => NEAR.indexOf(a.why) - NEAR.indexOf(b.why) || harder(a.m, b.m));
-      say("W" + wk + ": FALLBACK only " + chosen.length + "/" + want + " accepted boards; filling from " + near.length + " near misses");
-      for (const nm of near) { if (chosen.length >= want) break; chosen.push(Object.assign(nm, { fallback: nm.why })); }
-    }
-    chosen.sort((a, b) => harder(a.m, b.m));
-    if (chosen.length) { const ds = chosen.map((p) => diffOf(p.m)).sort((a, b) => a - b); floor = ds[(ds.length - 1) >> 1]; }
-    say("W" + wk + ": " + made + " boards, " + pool.length + " accepted into the pool (cap " + C.bake.poolMax + ", " + det.length + " detour chests), " + chosen.length + " picked (" + chosen.filter((p) => kind(p) === "detour").length + " detour)");
+    pump();
+  });
+}
+function nearDup(A, B, frac) {
+  if (A.w !== B.w || A.h !== B.h) return false;
+  let same = 0; for (let y = 0; y < A.h; y++) for (let x = 0; x < A.w; x++) if (A.grid[y][x] === B.grid[y][x]) same++;
+  return same / (A.w * A.h) >= frac;
+}
+function writeAtomic(file, text) { const tmp = file + ".tmp"; fs.writeFileSync(tmp, text); fs.renameSync(tmp, file); }
+const pct = (x) => (x == null ? "-" : (100 * x).toFixed(1) + "%");
 
-    const levels = [];
-    for (const t of teach) {
-      try {
-        const L = Object.assign({}, t, { rule }), B = E.parse(L), r = S.solve(B, { cap: C.cap });
-        if (!r.win) { say("W" + wk + ": FALLBACK teaching board " + t.id + " has no win under rule " + rule + "; skipped"); continue; }
-        const m = Gen.measure(L, C, { ab: rule === "A" });
-        const T0 = Object.assign({}, t); delete T0.art;
-        levels.push(levelOut(Object.assign(T0, { rule }), m, t.id, nameOf(t.id, t.name), +wk, "teaching", { teaches: t.teaches }, t.art, C));
-      } catch (e) { say("W" + wk + ": FALLBACK teaching board " + (t && t.id) + " failed (" + e.message + "); skipped"); }
-    }
-    chosen.forEach((c) => {
-      const n = levels.length + 1, id = "w" + wk + "-" + String(n).padStart(2, "0");
-      levels.push(levelOut(c.v.level, c.m, id, nameOf(id, W.name + " " + n), +wk, c.fallback ? "near-miss:" + c.fallback : "baked", { seed: c.r.seed, idx: c.r.idx }, c.r.info.art, C));
-    });
-    worlds.push({ world: +wk, name: W.name, band, levels });
-    pools[wk] = pool.map((p, i) => levelOut(p.v.level, p.m, "p" + wk + "-" + String(i + 1).padStart(3, "0"), W.name + " pool " + (i + 1), +wk, "pool", { seed: p.r.seed, idx: p.r.idx }, p.r.info.art, C));
-  }
-
-  // Every shipped level should have a name in names.json, and every name a shipped level (logged, never fatal).
-  const shipped = new Set(worlds.flatMap((w) => w.levels.map((l) => l.id)));
-  for (const id of shipped) if (!(id in NAMES)) say("note: " + id + " has no name in names.json");
-  for (const id of Object.keys(NAMES)) if (!shipped.has(id)) say("note: names.json names " + id + ", which is not shipped");
-
-  // Replay every shipped line through engine.call before writing (a bad line is logged, never written silently).
-  let bad = 0;
-  for (const w of worlds) for (const L of w.levels) {
-    const B = E.parse(L); let s = E.start(B);
-    for (const a of L.line) { const n = E.call(B, s, a); if (n) s = n; }
-    if (!s.won || s.calls !== L.min) { bad++; say("REPLAY FAIL " + L.id + ": won " + s.won + " calls " + s.calls + " min " + L.min); }
-  }
-
-  if (ART_CAPPED.length) say("note: no decor on " + ART_CAPPED.length + " levels (state cap " + C.decor.stateCap + "): " + ART_CAPPED.join(" "));
-  const out = { version: C.version, draft: true, rule, stacks, note: "fix-v2 gen bake: castle pictures with towers, gatehouses and a 2-deep camp, art metadata on every level, closest margin, no one-card spam, difficulty step-up; rule " + rule + (stacks ? " + stacks" : "") + ". Level format: SPEC-v2 §8. Numbers: tools/fix-v2-gen-report.md and tools/m0c-report.md.", seed: C.seed, worlds };
-  const atomic = (file, text) => { const tmp = file + ".tmp" + process.pid; fs.writeFileSync(tmp, text); fs.renameSync(tmp, file); };
-  atomic(path.join(ROOT, "levels", "levels.json"), JSON.stringify(out, null, 0).replace(/\{"id"/g, "\n{\"id\"") + "\n");
-  for (const [wk, p] of Object.entries(pools)) atomic(path.join(ROOT, "levels", "pool-w" + wk + ".json"), JSON.stringify({ version: C.version, world: +wk, rule, stacks, count: p.length, levels: p }).replace(/\{"id"/g, "\n{\"id\"") + "\n");
-  const secs = ((Date.now() - t0) / 1000).toFixed(1);
-  say("bake: " + worlds.reduce((a, w) => a + w.levels.length, 0) + " levels, pools " + Object.values(pools).map((p) => p.length).join("/") + ", " + bad + " replay failures, " + secs + " s");
-
-  // Bake block in the report.
-  const rp = path.join(__dirname, "m0c-report.md");
+(async () => {
+  const t0 = Date.now(), log = [], say = (s) => { log.push(s); console.log(s); };
+  let C, CFG, TEACH;
   try {
-    let md = fs.existsSync(rp) ? fs.readFileSync(rp, "utf8") : "";
-    const rows = worlds.map((w) => "| " + w.world + " | " + w.levels.length + " | " + w.levels.map((l) => l.min).join(" ") + " | " + w.levels.map((l) => l.metrics.decisions).join(" ") + " | " + w.levels.map((l) => l.metrics.randWin.toFixed(2)).join(" ") + " | " + w.levels.map((l) => l.metrics.trapRate.toFixed(2)).join(" ") + " | " + w.levels.map((l) => l.metrics.sections).join(" ") + " | " + w.levels.map((l) => (l.metrics.chestKind || "-")[0]).join(" ") + " | " + w.levels.filter((l) => l.source.startsWith("near")).length + " |");
-    const block = ["<!-- bake:start -->", "## Draft bake", "", "`tools/bake.js`" + (rule !== "A" || stacks ? " " + argv.join(" ") : "") + ", rule " + rule + (stacks ? " + stacks" : "") + ", seed " + C.seed + ", chunks " + JSON.stringify(C.bake.chunks) + " × " + C.chunk + " boards, " + secs + " s wall clock. Teaching boards first, then easiest first (min calls, then random win). Chest: r required, d detour, - none.", "",
-      "| world | levels | min calls | decision points | random win | trap rate | crew sections | chest | near-miss fallbacks |", "|---|---|---|---|---|---|---|---|---|", ...rows, "", "Bake log:", "", "```", ...log, "```", "<!-- bake:end -->"].join("\n");
-    md = md.includes("<!-- bake:start -->") ? md.replace(/<!-- bake:start -->[\s\S]*<!-- bake:end -->/, block) : md + "\n" + block + "\n";
-    fs.writeFileSync(rp, md);
-  } catch (e) { console.log("bake: could not update m0c-report.md (" + e.message + ")"); }
-})().catch((e) => { console.log("bake failed: " + (e && e.stack || e)); });
+    C = JSON.parse(fs.readFileSync(path.join(__dirname, "bake-config.json"), "utf8"));
+    CFG = JSON.parse(fs.readFileSync(path.join(ROOT, "config.json"), "utf8"));
+    TEACH = JSON.parse(fs.readFileSync(path.join(ROOT, "levels/teaching.json"), "utf8")).levels;
+  } catch (e) { console.log("bake: cannot read config: " + e.message); process.exitCode = 1; return; }
+  const rules = CFG.v3.rules, deadline = t0 + C.budget.wallSec * 1000;
+  const threads = C.budget.threads || Math.max(2, os.cpus().length - 2);
+  const teachBy = new Map(TEACH.map((L) => [L.n, L]));
+  const tasks = []; for (let n = 1; n <= C.levels; n++) if (!teachBy.has(n)) tasks.push(n);
+  say("bake v" + C.version + ": " + C.levels + " levels, " + tasks.length + " generated on " + threads + " threads");
+  const results = await runPool(tasks, threads, C, rules, deadline, (d, t) => { if (d % 10 === 0 || d === t) console.log("  " + d + "/" + t + " levels  " + ((Date.now() - t0) / 1000).toFixed(1) + " s"); });
+  const byN = new Map(results.map((r) => [r.n, r]));
+  const tot = { forts: 0, deals: 0, evals: 0, grades: 0 };
+  for (const r of results) for (const k of Object.keys(tot)) tot[k] += (r.stats && r.stats[k]) || 0;
+
+  const levels = [], fallbacks = [], pools = { 1: [], 2: [], 3: [] };
+  for (let n = 1; n <= C.levels; n++) {
+    const b = bandOf(n, C), era = eraOf(n, C), id = "e" + era + "-" + String(n).padStart(2, "0");
+    if (teachBy.has(n)) {
+      const T = teachBy.get(n), L = { w: T.w, h: T.h, grid: T.grid, gates: T.gates || [], towers: T.towers || [], cols: T.cols };
+      let g; try { g = gradeLevel(L, rules, C, null, seedOf(C, n, 0)); } catch (e) { say("level " + n + ": teaching level failed to grade: " + e.message); continue; }
+      const winnable = DIFFS.every((d) => g.win[d]); if (!winnable) say("level " + n + ": teaching level NOT winnable on every difficulty");
+      levels.push(Object.assign({ id, n, era, source: "teaching", name: T.name, teaches: T.teaches, hint: T.hint, band: b.sub, target: b.band }, L, { win: g.win, grade: g.grade, exempt: "teaching" }));
+      continue;
+    }
+    const r = byN.get(n), cands = (r && r.cands) || [], ok = cands.filter((c) => c.level && c.winnable);
+    for (const c of ok) pools[era].push({ n, k: c.k, seed: c.seed, band: b.sub, target: b.band, miss: c.miss, grade: c.grade, win: c.win, level: c.level });
+    for (const c of cands) if (c.fail) say("level " + n + " candidate " + c.k + ": " + c.fail);
+    const mid = (b.band[0] + b.band[1]) / 2;
+    // Late hard slots: among in-band candidates, the one a one-move-lookahead player wins least; elsewhere the band's centre.
+    const lateHard = b.kind === "late" && b.sub !== "relief";
+    ok.sort((p, q) => p.miss - q.miss || (lateHard ? p.grade.normal.greedy - q.grade.normal.greedy : 0) || Math.abs(p.grade.normal.rate - mid) - Math.abs(q.grade.normal.rate - mid) || p.k - q.k);
+    let pickC = null, why = null;
+    for (const c of ok) { if (c.miss > 0) break; if (!levels.some((L) => nearDup(L, c.level, C.dedupe.sameCells))) { pickC = c; break; } }
+    if (!pickC) {
+      pickC = ok.find((c) => !levels.some((L) => nearDup(L, c.level, C.dedupe.sameCells))) || ok[0] || null;
+      why = !ok.length ? "no winnable candidate" : pickC.miss > 0 ? "out of band: Normal " + pct(pickC.grade.normal.rate) + " vs " + pct(b.band[0]) + "-" + pct(b.band[1]) : "near-duplicate of an earlier level";
+    }
+    if (!pickC) { fallbacks.push({ n, why }); say("level " + n + ": NO LEVEL (" + why + ")"); continue; }
+    if (why) { fallbacks.push({ n, why }); say("level " + n + ": fallback, " + why); }
+    levels.push(Object.assign({ id, n, era, source: "gen", seed: pickC.seed, band: b.sub, target: b.band }, pickC.level, { win: pickC.win, grade: pickC.grade, inBand: pickC.miss === 0 }, why ? { fallback: why } : {}));
+  }
+  const secs = (Date.now() - t0) / 1000;
+  const graded = tot.evals + tot.grades * 3;
+  say("bake: " + levels.length + " levels in " + secs.toFixed(1) + " s; forts " + tot.forts + ", deals " + tot.deals + ", tune evaluations " + tot.evals + ", full grades " + tot.grades + " (x3 difficulties)");
+  say("bake: " + (graded / secs).toFixed(0) + " graded candidate decks per second across " + threads + " threads (" + (graded / secs / threads).toFixed(1) + " per thread)");
+
+  const out = { version: C.version, bake: { config: C.version, seed: C.seed, forts: tot.forts, deals: tot.deals, tuneEvals: tot.evals, fullGrades: tot.grades, fallbacks }, levels };
+  try {
+    writeAtomic(path.join(ROOT, "levels/levels.json"), JSON.stringify(out));
+    for (const e of [1, 2, 3]) writeAtomic(path.join(ROOT, "levels/pool-e" + e + ".json"), JSON.stringify({ version: C.version, era: e, cands: pools[e] }));
+  } catch (e) { say("bake: write failed: " + e.message); process.exitCode = 1; }
+  try { writeReport(out, C, log); } catch (e) { say("bake: report tables failed: " + e.message); }
+})();
+
+// ---- report tables (between the markers in tools/v3-m0-report.md) --------------------------------------------------
+function writeReport(out, C, log) {
+  const file = path.join(__dirname, "v3-m0-report.md"), A = "<!-- bake:start -->", Z = "<!-- bake:end -->";
+  const L = out.levels, med = (a) => { const s = a.slice().sort((p, q) => p - q); return s.length ? s[(s.length - 1) >> 1] : null; };
+  const rows = [];
+  rows.push("### Bands on Normal", "", "| Band | Levels | In band | Exempt (teaching) | Normal min | median | max |", "|---|---|---|---|---|---|---|");
+  for (const kind of ["early", "saw0", "saw1", "saw2", "hard", "hardest", "relief"]) {
+    const ls = L.filter((l) => (kind === "early" ? l.band === "early" : l.band === kind));
+    if (!ls.length) continue;
+    const gen = ls.filter((l) => !l.exempt), rs = ls.map((l) => l.grade.normal.rate);
+    const t = ls[0].target;
+    rows.push(`| ${kind} ${pct(t[0])}-${pct(t[1])} | ${ls.length} | ${gen.filter((l) => l.inBand).length}/${gen.length} | ${ls.length - gen.length} | ${pct(Math.min(...rs))} | ${pct(med(rs))} | ${pct(Math.max(...rs))} |`);
+  }
+  rows.push("", "### Every level", "", "| # | Era | Band | Target (Normal) | Easy | Normal | Hard | In band | Cards | Colours | Pixels | Peak line E/N/H | Winning orders (Normal, cap " + C.grade.orderCap + ") | Lookahead player (Normal) | Forced turns / mean safe taps | Note |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|");
+  for (const l of L) {
+    const g = l.grade, oc = g.normal.orders + (g.normal.ordersCapped ? "+" : g.normal.ordersExact ? "" : "?");
+    rows.push(`| ${l.n} | ${l.era} | ${l.band} | ${pct(l.target[0])}-${pct(l.target[1])} | ${pct(g.easy.rate)} | ${pct(g.normal.rate)} | ${pct(g.hard.rate)} | ${l.exempt ? "exempt" : l.inBand ? "yes" : "NO"} | ${g.cards} | ${g.colours} | ${g.pixels} | ${g.easy.peak}/${g.normal.peak}/${g.hard.peak} | ${oc} | ${pct(g.normal.greedy)} | ${g.normal.forced}/${g.normal.meanSafe} | ${l.exempt ? "teaching: " + l.teaches : l.fallback || ""} |`);
+  }
+  rows.push("", "### Bake", "", "```", ...log, "```");
+  const block = A + "\n" + rows.join("\n") + "\n" + Z;
+  let text = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "# Sapper's Path v3 M0 report\n\n" + A + "\n" + Z + "\n";
+  if (!text.includes(A)) text += "\n" + A + "\n" + Z + "\n";
+  text = text.slice(0, text.indexOf(A)) + block + text.slice(text.indexOf(Z) + Z.length);
+  writeAtomic(file, text);
+}
