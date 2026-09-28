@@ -207,7 +207,8 @@ function fort(era, seed, P) {
 const coloursOf = (L) => { const s = new Set(); for (const row of L.grid) for (const ch of row) { const m = E.matOf(ch); if (m && m !== IRON) s.add(m); } return s; };
 
 // Deal by simulation: pick a colour and a squad size, play it under dealing rules (D.hold spaces, archers lethal), keep
-// it if nothing fails. D: {hold, size:[lo,hi], deep, finish, maxCard, maxCards, tries}.
+// it if nothing fails. D: {hold, size:[lo,hi], deep, finish, maxCard, maxCards, tries, maxTaps (optional: a deal with more
+// cards than this is dropped, so a level never asks for more taps)}.
 function deal(L, seed, D) {
   const B = E.compile(Object.assign({ cols: [[], [], [], [], []] }, L)), r = rng(seed);
   const S = E.sim(B, { hold: D.hold, archersKill: true }, { deal: true }), buf = new Int32Array(S.M.length);
@@ -229,7 +230,7 @@ function deal(L, seed, D) {
       if (S.status === E.FAILED) { S.load(buf); continue; }
       un[m] -= n; play.push([m, n]); done = true;
     }
-    if (!done) return null;
+    if (!done || (D.maxTaps && play.length > D.maxTaps)) return null;
   }
   return S.pixLeft === 0 ? { play, peak: S.peak } : null;
 }
@@ -244,7 +245,7 @@ function assign(play, beta, seed) {
 // steps}), each on its own common seeds; a later stage with more playouts confirms the screening stage and keeps
 // climbing if the estimate moved out. Moves: move one card to another column (keeps `play` winning), split a card in
 // two, or merge two same-colour cards adjacent in `play` (resizing; kept only if `play` still wins under the dealing
-// rules). T: {stages, seed, margin, colMin, colMax, resize, split, minCard, maxCard}; rules: {normal, deal}.
+// rules). T: {stages, seed, margin, colMin, colMax, resize, split, minCard, maxCard, maxTaps}; rules: {normal, deal}.
 // Returns {play, colOf, rate, steps, evals}.
 function tune(L, play, colOf, lo, hi, T, rules) {
   let res = { play, colOf, rate: 0, steps: 0, evals: 0 };
@@ -256,7 +257,8 @@ function tune(L, play, colOf, lo, hi, T, rules) {
   return res;
 }
 // Late hard slots: keep the Normal random-tap rate in band and hill-climb the one-move-lookahead player's win rate down
-// (card moves only, so the dealt order stays a winner). T: {playouts, greedyPlayouts, steps}.
+// (card moves only, so the dealt order stays a winner) until it reaches T.stopAt (a floor, so the late band stays hard
+// without turning into a wall). T: {playouts, greedyPlayouts, steps, stopAt}.
 function narrowStage(L, play, colOf, lo, hi, T, rules) {
   const R = require("./grade.js"), r = rng(T.seed ^ 0x68e31da4);
   let evals = 0;
@@ -265,7 +267,7 @@ function narrowStage(L, play, colOf, lo, hi, T, rules) {
     return x < lo2 || x > hi2 ? null : { rate: x, g: R.greedy(B, rules.normal, T.greedyPlayouts, T.seed) }; };
   let cur = score(colOf), step = 0;
   if (!cur) return { play, colOf, rate: R.rate(E.compile(Object.assign({}, L, { cols: colsOf(play, colOf) })), rules.normal, T.playouts, T.seed), steps: 0, evals };
-  for (; step < T.steps && cur.g > 0; step++) {
+  for (; step < T.steps && cur.g > (T.stopAt || 0); step++) {
     const i = Math.floor(r() * play.length), j = Math.floor(r() * 5); if (j === colOf[i]) continue;
     const co = colOf.slice(); co[i] = j;
     const c = [0, 0, 0, 0, 0]; for (const x of co) c[x]++; if (Math.min(...c) < T.colMin || Math.max(...c) > T.colMax) continue;
@@ -291,7 +293,7 @@ function stage(L, play, colOf, lo, hi, T, rules) {
     const kind = r();
     if (kind < T.resize && play.length > 5) {
       if (r() < T.split) {
-        const i = Math.floor(r() * play.length), [m, n] = play[i]; if (n < 2 * T.minCard) continue;
+        const i = Math.floor(r() * play.length), [m, n] = play[i]; if (n < 2 * T.minCard || (T.maxTaps && play.length >= T.maxTaps)) continue;
         const a = T.minCard + Math.floor(r() * (n - 2 * T.minCard + 1));
         pl = play.slice(0, i).concat([[m, a], [m, n - a]], play.slice(i + 1)); co = colOf.slice(0, i + 1).concat([Math.floor(r() * 5)], colOf.slice(i + 1));
       } else {

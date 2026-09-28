@@ -58,9 +58,10 @@ function gradeLevel(L, rules, C, hint, seed) {
 // All candidates for one generated level. Never throws: failures come back as {fail} entries.
 function candidates(n, C, rules) {
   const era = eraOf(n, C), b = bandOf(n, C), [cmin, cmax] = coloursOf(n, C, b), out = [], stats = { forts: 0, deals: 0, evals: 0, grades: 0 };
-  const D = Object.assign({}, C.deal, C.dealBy[b.kind] || {});
+  const D = Object.assign({}, C.deal, C.dealBy[b.kind] || {}, { maxTaps: C.maxTaps });
   const dealRules = { hold: C.deal.hold, archersKill: true };
-  for (let k = 0; k < C.candidates.perLevel; k++) {
+  const per = (C.candidates.perLevelBy && C.candidates.perLevelBy[b.sub]) || C.candidates.perLevel;
+  for (let k = 0; k < per; k++) {
     try {
       let L = null, seed = 0;
       for (let t = 0; t < C.candidates.fortTries && !L; t++) {
@@ -77,7 +78,7 @@ function candidates(n, C, rules) {
       let dl = null;
       for (let a = 0; a < D.attempts && !dl; a++) { dl = G.deal(L, seed ^ Math.imul(a + 1, 0x27D4EB2F), D); stats.deals++; }
       if (!dl) { out.push({ k, seed, fail: "no deal in " + D.attempts + " attempts" }); continue; }
-      const T = Object.assign({}, C.tune, { seed: seed ^ 0x3c6ef372 }, b.kind === "late" && b.sub !== "relief" ? { narrow: C.tune.narrow } : { narrow: null });
+      const T = Object.assign({}, C.tune, { seed: seed ^ 0x3c6ef372, maxTaps: C.maxTaps }, b.kind === "late" && b.sub !== "relief" ? { narrow: C.tune.narrow } : { narrow: null });
       const res = G.tune(L, dl.play, G.assign(dl.play, 0, seed), b.band[0], b.band[1], T, { normal: rules.normal, deal: dealRules });
       stats.evals += res.evals;
       const level = Object.assign({}, L, { cols: G.colsOf(res.play, res.colOf) });
@@ -142,7 +143,7 @@ const pct = (x) => (x == null ? "-" : (100 * x).toFixed(1) + "%");
   const tot = { forts: 0, deals: 0, evals: 0, grades: 0 };
   for (const r of results) for (const k of Object.keys(tot)) tot[k] += (r.stats && r.stats[k]) || 0;
 
-  const levels = [], fallbacks = [], pools = { 1: [], 2: [], 3: [] };
+  const levels = [], fallbacks = [], lookMiss = [], pools = { 1: [], 2: [], 3: [] };
   for (let n = 1; n <= C.levels; n++) {
     const b = bandOf(n, C), era = eraOf(n, C), id = "e" + era + "-" + String(n).padStart(2, "0");
     if (teachBy.has(n)) {
@@ -156,9 +157,11 @@ const pct = (x) => (x == null ? "-" : (100 * x).toFixed(1) + "%");
     for (const c of ok) pools[era].push({ n, k: c.k, seed: c.seed, band: b.sub, target: b.band, miss: c.miss, grade: c.grade, win: c.win, level: c.level });
     for (const c of cands) if (c.fail) say("level " + n + " candidate " + c.k + ": " + c.fail);
     const mid = (b.band[0] + b.band[1]) / 2;
-    // Late hard slots: among in-band candidates, the one a one-move-lookahead player wins least; elsewhere the band's centre.
     const lateHard = b.kind === "late" && b.sub !== "relief";
-    ok.sort((p, q) => p.miss - q.miss || (lateHard ? p.grade.normal.greedy - q.grade.normal.greedy : 0) || Math.abs(p.grade.normal.rate - mid) - Math.abs(q.grade.normal.rate - mid) || p.k - q.k);
+    // Late hard slots: in-band candidates the lookahead player wins no more than its target (C.lookahead) first, nearest
+    // the band's centre among them; if none, the lowest lookahead rate. Elsewhere the band's centre.
+    const lookT0 = lateHard && C.lookahead ? C.lookahead[b.sub] : null, over = (c) => (lookT0 != null && c.grade.normal.greedy > lookT0 ? 1 : 0);
+    ok.sort((p, q) => p.miss - q.miss || over(p) - over(q) || (over(p) ? p.grade.normal.greedy - q.grade.normal.greedy : 0) || Math.abs(p.grade.normal.rate - mid) - Math.abs(q.grade.normal.rate - mid) || p.k - q.k);
     let pickC = null, why = null;
     for (const c of ok) { if (c.miss > 0) break; if (!levels.some((L) => nearDup(L, c.level, C.dedupe.sameCells))) { pickC = c; break; } }
     if (!pickC) {
@@ -167,6 +170,9 @@ const pct = (x) => (x == null ? "-" : (100 * x).toFixed(1) + "%");
     }
     if (!pickC) { fallbacks.push({ n, why }); say("level " + n + ": NO LEVEL (" + why + ")"); continue; }
     if (why) { fallbacks.push({ n, why }); say("level " + n + ": fallback, " + why); }
+    // Late hard slots are judged by the thinking player too (C.lookahead): an in-band pick over its target is logged.
+    const lookT = lateHard && C.lookahead ? C.lookahead[b.sub] : null, look = pickC.grade.normal.greedy;
+    if (lookT != null && look > lookT) { lookMiss.push({ n, sub: b.sub, look }); say("level " + n + ": lookahead fallback, " + pct(look) + " over the " + pct(lookT) + " target (" + ok.filter((c) => c.miss === 0).length + " in-band candidates)"); }
     levels.push(Object.assign({ id, n, era, source: "gen", seed: pickC.seed, band: b.sub, target: b.band }, pickC.level, { win: pickC.win, grade: pickC.grade, inBand: pickC.miss === 0 }, why ? { fallback: why } : {}));
   }
   const secs = (Date.now() - t0) / 1000;
@@ -174,7 +180,10 @@ const pct = (x) => (x == null ? "-" : (100 * x).toFixed(1) + "%");
   say("bake: " + levels.length + " levels in " + secs.toFixed(1) + " s; forts " + tot.forts + ", deals " + tot.deals + ", tune evaluations " + tot.evals + ", full grades " + tot.grades + " (x3 difficulties)");
   say("bake: " + (graded / secs).toFixed(0) + " graded candidate decks per second across " + threads + " threads (" + (graded / secs / threads).toFixed(1) + " per thread)");
 
-  const out = { version: C.version, bake: { config: C.version, seed: C.seed, forts: tot.forts, deals: tot.deals, tuneEvals: tot.evals, fullGrades: tot.grades, fallbacks }, levels };
+  const late = levels.filter((l) => l.band === "hard" || l.band === "hardest"), med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length ? q[(q.length - 1) >> 1] : null; };
+  for (const sub of ["hard", "hardest"]) { const g = late.filter((l) => l.band === sub && !l.exempt).map((l) => l.grade.normal.greedy); say("bake: lookahead player on " + sub + " (Normal): median " + pct(med(g)) + ", max " + pct(Math.max(...g)) + " over " + g.length + " levels"); }
+  say("bake: taps per level: max " + Math.max(...levels.map((l) => l.grade.cards)) + " (cap " + C.maxTaps + "); late band max " + Math.max(...levels.filter((l) => l.n >= C.curve.late.from).map((l) => l.grade.cards)));
+  const out = { version: C.version, bake: { config: C.version, seed: C.seed, forts: tot.forts, deals: tot.deals, tuneEvals: tot.evals, fullGrades: tot.grades, fallbacks, lookaheadFallbacks: lookMiss }, levels };
   try {
     writeAtomic(path.join(ROOT, "levels/levels.json"), JSON.stringify(out));
     for (const e of [1, 2, 3]) writeAtomic(path.join(ROOT, "levels/pool-e" + e + ".json"), JSON.stringify({ version: C.version, era: e, cands: pools[e] }));

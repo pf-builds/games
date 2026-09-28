@@ -1,6 +1,6 @@
 {
-  "version": 4,
-  "note": "Sapper's Path v3 bake (SPEC-v3 §5). Bands are Normal random-tap win rates. colours: [from, to, min, max] per level range. dealBy and genBy override deal/era params per band kind. Holding spaces per difficulty live in config.json v3.rules.",
+  "version": 5,
+  "note": "Sapper's Path v3 bake (SPEC-v3 §5). Bands are Normal random-tap win rates. maxTaps caps the cards (taps) in any level. lookahead: the one-move-lookahead player's Normal win-rate target for late hard slots (a pick over it is logged). colours: [from, to, min, max] per level range. dealBy and genBy override deal/era params per band kind. Holding spaces per difficulty live in config.json v3.rules.",
   "seed": 20260928,
   "levels": 75,
   "eras": {
@@ -13,14 +13,16 @@
     "mid": {"from": 16, "to": 45, "saw": [[0.62, 0.80], [0.46, 0.64], [0.30, 0.48]]},
     "late": {"from": 46, "to": 75, "pattern": ["hard", "hard", "hard", "hardest", "relief"], "bands": {"hard": [0.0, 0.10], "hardest": [0.0, 0.05], "relief": [0.25, 0.60]}}
   },
+  "maxTaps": 55,
+  "lookahead": {"hard": 0.25, "hardest": 0.25},
   "colours": [[4, 6, 3, 3], [7, 9, 4, 4], [10, 12, 5, 6], [13, 15, 7, 7], [16, 25, 7, 8], [27, 45, 7, 9], [46, 50, 10, 11], [52, 75, 11, 12]],
   "reliefColours": [9, 10],
   "sawLowColours": [8, 9],
   "deal": {"hold": 4, "size": [3, 12], "deep": 0.15, "finish": 0.3, "maxCard": 40, "maxCards": 240, "tries": 14, "attempts": 24},
-  "dealBy": {"early": {"size": [10, 30], "deep": 0.05}, "mid": {"size": [4, 14], "deep": 0.12}, "late": {"size": [3, 12], "deep": 0.18}},
-  "tune": {"stages": [{"playouts": 64, "steps": 700}, {"playouts": 256, "steps": 200}], "narrow": {"playouts": 256, "greedyPlayouts": 64, "steps": 150, "margin": 0.005}, "margin": 0.02, "colMin": 3, "colMax": 30, "resize": 0.25, "split": 0.5, "minCard": 2, "maxCard": 40},
+  "dealBy": {"early": {"size": [10, 30], "deep": 0.05}, "mid": {"size": [5, 15], "deep": 0.12}, "late": {"size": [7, 18], "deep": 0.18}},
+  "tune": {"stages": [{"playouts": 64, "steps": 700}, {"playouts": 256, "steps": 200}], "narrow": {"playouts": 256, "greedyPlayouts": 128, "steps": 400, "stopAt": 0.08, "margin": 0.005}, "margin": 0.02, "colMin": 3, "colMax": 30, "resize": 0.25, "split": 0.5, "minCard": 2, "maxCard": 40},
   "grade": {"playouts": 400, "greedyPlayouts": 100, "orderCap": 1000, "orderNodes": 200000, "solveNodes": 200000, "narrowNodes": 20000},
-  "candidates": {"perLevel": 6, "fortTries": 80},
+  "candidates": {"perLevel": 6, "perLevelBy": {"saw1": 8, "hard": 12, "hardest": 12}, "fortTries": 80},
   "dedupe": {"sameCells": 0.9},
   "budget": {"wallSec": 1500, "threads": 0}
 }
