@@ -17,7 +17,9 @@
   const app = { cfg: null, entries: [], byId: new Map(), ids: new Set(), byWorld: new Map(), worldOrder: [], worldName: new Map(), save: null, entry: null, game: null, V: null,
     show: null, prevSt: null, audio: null, clock: 0, lastT: 0, hold: false, screen: "title", panel: null, panelAt: -1, panelT: 0, starsWon: 0, starsShown: 0,
     pact: {}, dirty: true, testing: false, cardFlash: -1, cacheRebuilds: 0, pending: [0, 0, 0, 0], bumpT: [-1e12, -1e12, -1e12, -1e12],
-    fly: { on: false, m: 0, t0: 0, t1: 1, x0: 0, y0: 0, x1: 0, y1: 0 }, nudgeT: -1e12, nudged: false, bannerF: -1, titleF: -1, hintDone: new Set(), mapCards: [] };
+    fly: { on: false, m: 0, t0: 0, t1: 1, x0: 0, y0: 0, x1: 0, y1: 0 }, nudgeT: -1e12, thumpT: -1e12, nudged: false, bannerF: -1, titleF: -1, hintDone: new Set(), mapCards: [],
+    toastT: -1e12, toastOn: false };
+  const CREW_ONE = ["mason", "axeman", "goat", "torchbearer"];
 
   // ---- boot --------------------------------------------------------------------------------------------------------
   function getJSON(u) { return fetch(u, { cache: "no-cache" }).then((r) => { if (!r.ok) throw new Error(u + " " + r.status); return r.json(); }); }
@@ -32,7 +34,7 @@
     app.V = Render.create($("board"), app.cfg);
     app.audio = Audio.create(app.cfg.audio);
     setMuted(app.save.data.settings.muted, false); setFast(app.save.data.settings.fast, false);
-    drawCardIcons(); buildMap(); buildSelect(); wire(); layout();
+    paintWall(); drawCardIcons(); buildMap(); buildSelect(); wire(); layout();
     showScreen("title");
     if (DEBUG) { window.SP = SP; $("btn-debug").hidden = false; }
     requestAnimationFrame(frame);
@@ -56,6 +58,15 @@
   }
 
   function storage() { try { const s = window.localStorage; s.getItem("sappers-path.probe"); return s; } catch (e) { return Save.memoryStore(); } }
+
+  // The dark brick texture behind the chrome (art.js), upscaled once to whole device pixels and used as a CSS background.
+  function paintWall() {
+    try {
+      const L = app.cfg.layout, a = L.wallArtPx, dpr = Math.min(L.maxDpr, Math.max(1, window.devicePixelRatio || 1)), src = Art.wall(app.cfg.art);
+      const c = Art.up(src, src.width * a * dpr, src.height * a * dpr), r = document.documentElement.style;
+      r.setProperty("--wall", "url(" + c.toDataURL() + ")"); r.setProperty("--wall-size", src.width * a + "px " + src.height * a + "px");
+    } catch (e) { /* the flat --bg colour stays */ }
+  }
 
   // Crew cards show the same pixel icon as the board badges, on a disc of the material's colour.
   function drawCardIcons() {
@@ -84,6 +95,8 @@
     for (const b of togMute) b.addEventListener("click", () => { setMuted(!app.audio.muted, true); cue("ui"); });
     for (const b of togFast) b.addEventListener("click", () => { setFast(!app.save.data.settings.fast, true); cue("ui"); });
     for (const k of ["primary", "secondary", "third"]) $("p-" + k).addEventListener("click", () => { if (app.pact[k]) { cue("ui"); app.pact[k](); } });
+    // After the winning break, a tap anywhere skips straight to the panel.
+    $("app").addEventListener("pointerdown", () => { if (app.screen === "play" && app.game && app.game.st.won && !app.panel) skip(); }, true);
     window.addEventListener("keydown", onKey);
     // The audio context may only start inside a user gesture: make it on the first one.
     const unlock = () => Audio.unlock(app.audio);
@@ -115,10 +128,16 @@
     app.dirty = true;
   }
 
+  // The title scene fills the whole screen at a whole number of CSS px per art pixel (the castle always fits across),
+  // repainted when the screen size or the goblin's frame changes.
   function paintTitle(force) {
+    const L = app.cfg.layout, box = $("title"), c = $("title-art"), W = box.clientWidth, H = box.clientHeight;
+    if (!W || !H) return;
+    const a = Math.max(L.titleArtMin, Math.min(L.titleArtMax, Math.floor(Math.min(W / L.titleArtW, H / L.titleArtH)))), w = Math.ceil(W / a), h = Math.ceil(H / a);
     const f = Math.floor(app.clock / app.cfg.fx.bannerFrameMs) % 2;
-    if (!force && f === app.titleF) return;
-    app.titleF = f; Art.title($("title-art"), app.cfg.art, app.V.src, f);
+    if (!force && f === app.titleF && c.width === w && c.height === h) return;
+    if (c.width !== w || c.height !== h) { c.width = w; c.height = h; c.style.width = w * a + "px"; c.style.height = h * a + "px"; }
+    app.titleF = f; Art.title(c, app.cfg.art, app.V.src, f, W > H ? L.titleBaseFracWide : L.titleBaseFrac);
   }
 
   // SPEC §7 (M2) unlock rule: a level opens when the level before it in its world is won; the first level of a world
@@ -146,7 +165,9 @@
     for (const w of app.worldOrder) {
       const list = app.byWorld.get(w), card = document.createElement("div"), cv = document.createElement("canvas"), head = document.createElement("div");
       card.className = "wcard"; cv.className = "pix"; head.className = "whead";
-      head.innerHTML = "<b></b><span></span>"; head.firstChild.textContent = "World " + w + ": " + app.worldName.get(w);
+      // Two rows so nothing wraps on a phone: "WORLD 2" and the stars (or the lock note), then the world's name.
+      head.innerHTML = '<div class="wrow"><b class="weye"></b><span class="wnote"></span></div><b class="wname"></b>';
+      head.querySelector(".weye").textContent = "World " + w; head.querySelector(".wname").textContent = app.worldName.get(w);
       card.append(cv, head);
       for (const e of list) {
         const b = document.createElement("button");
@@ -155,7 +176,7 @@
         b.addEventListener("animationend", () => b.classList.remove("shake"));
         card.append(b); e.node = b;
       }
-      box.append(card); app.mapCards.push({ world: w, card, cv, head, list, locked: null, W: 0 });
+      box.append(card); app.mapCards.push({ world: w, card, cv, head, note: head.querySelector(".wnote"), list, locked: null, W: 0 });
     }
   }
   function onNode(e) {
@@ -178,7 +199,9 @@
       }
       got += ws; all += mc.list.length * 3;
       const locked = !isOpen(mc.list[0]), wi = app.worldOrder.indexOf(mc.world);
-      mc.head.lastChild.textContent = locked && wi > 0 ? "Win " + Math.min(app.cfg.unlock.worldNeeds, app.byWorld.get(app.worldOrder[wi - 1]).length) + " in World " + app.worldOrder[wi - 1] : "★ " + ws + " / " + mc.list.length * 3;
+      if (locked && wi > 0) mc.note.innerHTML = LOCK + "<span>Win " + Math.min(app.cfg.unlock.worldNeeds, app.byWorld.get(app.worldOrder[wi - 1]).length) + " in World " + app.worldOrder[wi - 1] + "</span>";
+      else mc.note.textContent = "★ " + ws + " / " + mc.list.length * 3;
+      mc.note.classList.toggle("lock", locked && wi > 0);
       if (mc.locked !== locked) { mc.locked = locked; mc.W = 0; }
     }
     $("map-stars").textContent = "★ " + got + " / " + all;
@@ -186,7 +209,7 @@
   // Nodes snake along the card, four to a row; the painted strip draws the trail through their centres.
   function layoutMap(force) {
     if (app.screen !== "map") return;
-    const a = app.cfg.layout.artPx, headH = 40, rowH = 80, cols = 4, pad = 18;
+    const L = app.cfg.layout, a = L.artPx, headH = L.mapHeadPx, rowH = L.mapRowPx, cols = L.mapCols, pad = L.mapPadPx;
     for (const mc of app.mapCards) {
       const W = mc.card.clientWidth; if (!W) continue;
       const rows = Math.ceil(mc.list.length / cols), H = headH + rows * rowH + 18, pts = [];
@@ -237,7 +260,7 @@
   // Show a game on the board (no save writes: selfTest uses this to hand the player's game back).
   function mount(entry, g) {
     app.entry = entry; app.game = g; app.cardFlash = -1; app.show = Show.create(g.B); app.panelAt = -1;
-    app.pending.fill(0); app.fly.on = false; $("fly").hidden = true; app.nudgeT = -1e12;
+    app.pending.fill(0); app.fly.on = false; $("fly").hidden = true; app.nudgeT = app.thumpT = -1e12; hideToast();
     hidePanel();
     Render.setLevel(app.V, g.B);
     $("lvl-num").textContent = entry.world + "-" + entry.n;
@@ -294,7 +317,11 @@
   function feedback(r) {
     if (r === "pick" || r === "unpick" || r === "break") cue("ui");
     else if (r === "blocked" || r === "iron" || r === "empty") { cue("bad"); app.nudgeT = app.clock; }
+    else if (r === "chest") { cue("ui"); const m = app.game.B.chestCrew[app.game.fx.chestI]; showToast("Reach it for +1 " + CREW_ONE[m]); }
   }
+  // A short note over the top of the board (the chest hint), gone after config.fx.toastMs on the sim clock.
+  function showToast(text) { $("toast").textContent = text; $("toast").hidden = false; app.toastT = app.clock; app.toastOn = true; }
+  function hideToast() { $("toast").hidden = true; app.toastOn = false; }
 
   function onKey(e) {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -322,7 +349,8 @@
         for (let c = 0; c < g.B.chestCell.length; c++) if (S.chestAt[c] < Show.INF) app.pending[g.B.chestCrew[c]]++;
       } else if (t === "win") {
         Save.record(app.save.data, app.entry.id, Game.stars(app.cfg, g.L.min, g.st.used), g.st.used); app.save.write();
-        app.panelAt = app.show.end + F.winPanelMs * speedK();
+        // The panel comes up a beat after the keep opens; the goblin keeps marching beside it.
+        app.panelAt = Math.min(app.show.end + F.winPanelMs * speedK(), app.show.keepAt + F.winPanelAfterKeepMs * speedK());
       } else if (t === "stuck") app.panelAt = app.show.end + F.stuckPanelMs * speedK();
       else if (t === "undo" || t === "restart") { hidePanel(); app.panelAt = -1; }
     }
@@ -334,12 +362,15 @@
   function onShow(kind, arg, t) {
     const S = app.show, EV = Show.EV, A = app.cfg.audio;
     if (kind === EV.WORK) { const n = arg === 0 ? A.work[S.m] : A.workAfter[S.m]; if (n) cue(n, arg); }
-    else if (kind === EV.TICK) { Render.dustRing(app.V, S, arg, t); cue("tick", arg); }
+    else if (kind === EV.TICK) { // a tile pops: rubble and dust, a tick that rises in pitch across the wave, a thump on the last
+      Render.popTile(app.V, S, arg, t); cue("tick", S.secN > 1 ? (arg * app.cfg.show.tickRise) / (S.secN - 1) : 0);
+      if (arg === S.secN - 1) app.thumpT = t;
+    }
     else if (kind === EV.CLANK) cue("clank");
     else if (kind === EV.DOOR) cue("door");
     else if (kind === EV.CHEST) { cue("chime"); startFly(arg, t); }
     else if (kind === EV.ARRIVE) { cue("pop"); arrive(arg, t); }
-    else if (kind === EV.KEEP) cue("fanfare");
+    else if (kind === EV.KEEP) { cue("fanfare"); Render.confetti(app.V, S, t); }
   }
   function startFly(i, t) {
     const g = app.game, B = g.B, m = B.chestCrew[i], c = B.chestCell[i], fl = app.fly, fe = $("fly");
@@ -411,7 +442,8 @@
     if (!app.cfg) return;
     const L = app.cfg.layout, play = $("play"), stage = $("stage"), cv = $("board");
     const wide = innerWidth >= L.wideMinPx && innerWidth >= innerHeight * L.wideAspect;
-    document.body.classList.toggle("wide", wide);
+    document.body.classList.toggle("wide", wide); document.body.classList.toggle("compact", wide && innerHeight <= L.compactRailMaxH);
+    if (app.screen === "title") paintTitle(false);
     play.style.setProperty("--rail", L.railPx + "px"); play.style.setProperty("--gap", L.gapPx + "px"); play.style.setProperty("--side", L.sidePx + "px");
     if (app.screen === "map") layoutMap(false);
     if (!app.game) return;
@@ -426,6 +458,12 @@
       stage.style.height = Math.ceil(r.cssH) + "px";
     }
     cv.style.left = Math.round((stage.clientWidth - r.cssW) / 2) + "px"; cv.style.top = Math.max(0, Math.round((stage.clientHeight - r.cssH) / 2)) + "px";
+    // Wide: the win/stuck panel sits over the rail column, so the board (and the keep) stay in view.
+    const pn = $("panel");
+    if (wide) {
+      const o = $("app").getBoundingClientRect(), q = $("rail").getBoundingClientRect(), w = Math.min(o.width - 16, Math.max(q.width, L.panelWidePx)), x = Math.min(q.left - o.left, o.width - w - 8);
+      pn.style.setProperty("--pl", Math.round(x) + "px"); pn.style.setProperty("--pw", Math.round(w) + "px");
+    }
     app.bannerF = -1; app.dirty = true;
   }
   // The banner's pixel scene at config.layout.artPx CSS px per art pixel; repainted when its size or goblin frame changes.
@@ -458,8 +496,10 @@
     const cf = now - g.fx.cardT < F.cardFlashMs ? g.fx.cardM : -1;
     if (cf !== app.cardFlash) { app.cardFlash = cf; for (const b of cards) b.classList.toggle("flash", +b.dataset.m === cf); }
     for (let m = 0; m < 4; m++) if (app.bumpT[m] > -1e12 && now - app.bumpT[m] >= F.bumpMs) { cards[m].classList.remove("bump"); app.bumpT[m] = -1e12; }
-    const nt = now - app.nudgeT, cv = $("board");
+    if (app.toastOn && now - app.toastT >= F.toastMs) hideToast();
+    const nt = now - app.nudgeT, ht = now - app.thumpT, cv = $("board");
     if (nt < F.boardNudgeMs) { cv.style.transform = "translateX(" + Math.round(Math.sin((nt / 1000) * F.boardNudgeHz * Math.PI * 2) * F.boardNudgePx * (1 - nt / F.boardNudgeMs)) + "px)"; app.nudged = true; }
+    else if (ht >= 0 && ht < F.thumpMs) { cv.style.transform = "translateY(" + Math.round(Math.sin((ht / 1000) * F.thumpHz * Math.PI * 2) * F.thumpPx * (1 - ht / F.thumpMs)) + "px)"; app.nudged = true; }
     else if (app.nudged) { cv.style.transform = ""; app.nudged = false; }
     if (app.testing) return;
     paintBanner();
@@ -710,6 +750,18 @@
         g.pick = 0; check(Game.tapCell(g, 3, 3, 0) === "scenery" && g.pick === -1, "a scenery tap did not just clear");
         let baked = 0; for (const e of app.entries) baked += Game.create(e.L, cfg).scenery.reduce((a, b) => a + b, 0);
         out.scenerySections = baked;
+      }
+
+      // An unclaimed chest: a tap clears the pick and the note names the crew it holds.
+      {
+        const e = app.entries.find((q) => (q.L.chests || []).length);
+        if (check(e, "no level has a chest")) {
+          loadLevel(e); const ch = e.L.chests[0]; tapCrew(ch.crew === "stone" ? "timber" : "stone");
+          const r = tapCell(ch.x, ch.y), want = "Reach it for +1 " + CREW_ONE[CREWS.indexOf(ch.crew)];
+          check(r === "chest" && app.game.pick === -1 && !$("toast").hidden && $("toast").textContent === want, e.id + ": chest tap gave " + r + " / " + $("toast").textContent);
+          out.chestHint = $("toast").textContent;
+          step(cfg.fx.toastMs + 1); check($("toast").hidden, e.id + ": the chest note did not clear");
+        }
       }
 
       // Teaching hint card: shown on a board with teaches, dismissible, and its button is hittable.

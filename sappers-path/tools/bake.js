@@ -5,7 +5,8 @@
 // chest, the rest required-chest, each group spread evenly across the pool's difficulty order. Every world opens with
 // its hand-authored teaching boards (levels/teaching.json); the rest run easiest first (min crews, then random win).
 // Never throws: a short pool is filled from near misses (a proxy band only), and every fallback is logged and written
-// into the bake block of tools/m0b-report.md.
+// into the bake block of tools/m0b-report.md. Level names come from levels/names.json (keyed by level id) and win over
+// teaching.json's names and the "<world> N" fallback, so a rebake keeps them.
 // Run: ~/.local/opt/node/bin/node tools/bake.js
 "use strict";
 const fs = require("fs");
@@ -47,6 +48,10 @@ function levelOut(L, m, id, name, world, source, extra) {
   const tasks = [];
   for (const wk of Object.keys(C.worlds)) for (let i = 0; i < C.bake.chunks[wk]; i++) tasks.push({ wk, seed: C.seed + (+wk) * 100000 + i, n: C.chunk });
   const res = await Par.run(C, tasks);
+  let NAMES = {};
+  try { NAMES = JSON.parse(fs.readFileSync(path.join(ROOT, "levels", "names.json"), "utf8")) || {}; }
+  catch (e) { say("FALLBACK names.json unreadable (" + e.message + "); levels keep their default names"); }
+  const nameOf = (id, dflt) => (typeof NAMES[id] === "string" && NAMES[id].trim() ? NAMES[id].trim() : dflt);
 
   const worlds = [], pools = {};
   for (const wk of Object.keys(C.worlds)) {
@@ -86,16 +91,21 @@ function levelOut(L, m, id, name, world, source, extra) {
         if (!r.win) { say("W" + wk + ": FALLBACK teaching board " + t.id + " has no win; skipped"); continue; }
         if (r.min !== used + (t.chests || []).length) say("W" + wk + ": note " + t.id + " min " + r.min + " vs muster " + used);
         const m = Gen.measure(t, C);
-        levels.push(levelOut(t, m, t.id, t.name, +wk, "teaching", { teaches: t.teaches }));
+        levels.push(levelOut(t, m, t.id, nameOf(t.id, t.name), +wk, "teaching", { teaches: t.teaches }));
       } catch (e) { say("W" + wk + ": FALLBACK teaching board " + (t && t.id) + " failed to parse (" + e.message + "); skipped"); }
     }
     chosen.forEach((c, i) => {
       const n = levels.length + 1, id = "w" + wk + "-" + String(n).padStart(2, "0");
-      levels.push(levelOut(c.L, pick(c.r, spare), id, W.name + " " + n, +wk, c.fallback ? "near-miss:" + c.fallback : "baked", { seed: c.r.seed, idx: c.r.idx }));
+      levels.push(levelOut(c.L, pick(c.r, spare), id, nameOf(id, W.name + " " + n), +wk, c.fallback ? "near-miss:" + c.fallback : "baked", { seed: c.r.seed, idx: c.r.idx }));
     });
     worlds.push({ world: +wk, name: W.name, band, levels });
     pools[wk] = pool.map((p, i) => levelOut(p.L, pick(p.r, spare), "p" + wk + "-" + String(i + 1).padStart(3, "0"), W.name + " pool " + (i + 1), +wk, "pool", { seed: p.r.seed, idx: p.r.idx }));
   }
+
+  // Every shipped level should have a name in names.json, and every name a shipped level (logged, never fatal).
+  const shipped = new Set(worlds.flatMap((w) => w.levels.map((l) => l.id)));
+  for (const id of shipped) if (!(id in NAMES)) say("note: " + id + " has no name in names.json");
+  for (const id of Object.keys(NAMES)) if (!shipped.has(id)) say("note: names.json names " + id + ", which is not shipped");
 
   // Replay every shipped line through the engine before writing (a bad line is logged, never written silently).
   for (const w of worlds) for (const L of w.levels) {

@@ -8,6 +8,7 @@
 //   empty     that crew has none left: its card flashes at 0          break    a section was broken (a move)
 //   iron      an iron door: only levers open it (it shakes)           clear    ground, moat, keep or rubble: pick cleared
 //   over      the level is already won                                  scenery  a section nothing can ever reach (see scenery())
+//   chest     an unclaimed chest: pick cleared, g.fx.chestI names it (the page says which crew it holds)
 (function (root, factory) {
   const E = typeof module === "object" && module.exports ? require("./engine.js") : root.SappersPath.engine;
   const api = factory(E);
@@ -27,7 +28,7 @@
     return {
       L, B, cfg, st: E.start(B), pick: -1, ver: 0, endT: -1, present, events: [], scenery: scenery(B),
       fx: { pulseS: -1, pulseT: NEVER, shakeS: -1, shakeT: NEVER, flash: new Int16Array(B.nsec), flashN: 0, flashT: NEVER,
-        cardM: -1, cardT: NEVER, crumbleS: -1, crumbleT: NEVER },
+        cardM: -1, cardT: NEVER, crumbleS: -1, crumbleT: NEVER, chestI: -1 },
       // blockers() scratch: allocated once per level, so a tap allocates nothing but its event.
       bfs: { dist: new Int16Array(n), par: new Int32Array(n), a: new Int32Array(n * 4), b: new Int32Array(n * 4), seen: new Uint8Array(B.nsec) },
     };
@@ -56,6 +57,10 @@
   function tapCell(g, x, y, now) {
     const B = g.B, st = g.st, s = E.sectionAt(B, x, y);
     if (st.won) return "over";
+    if (s < 0 && x >= 0 && y >= 0 && x < B.w && y < B.h) {
+      const c = y * B.w + x;
+      for (let i = 0; i < B.chestCell.length; i++) if (B.chestCell[i] === c && !st.claimed[i]) { g.pick = -1; g.fx.chestI = i; return "chest"; }
+    }
     if (s < 0 || st.broken[s] || st.doorOpen[s]) { g.pick = -1; return "clear"; }
     if (g.scenery[s]) { g.pick = -1; return "scenery"; }
     if (!E.isCrewSection(B, s)) { shake(g, s, now); g.fx.flashN = 0; return "iron"; }

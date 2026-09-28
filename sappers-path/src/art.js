@@ -6,6 +6,7 @@
 //   sprites  16×16 frames on one sheet per character: mason, axeman, goat, torchbearer (frames 0-3 walk, 4-5 work:
 //            raised, struck) and the crowned goblin (0-3 walk, 4-5 taunt)
 //   icons    12×12 badge icons: pickaxe, axe, goat, torch, lever (the board badges and the crew cards share them)
+//   chrome   the crack overlay (X) a tile shows before it pops, and the dark brick texture behind the page (wall)
 //   scenes   the title castle, the portrait battlements banner and the world-map strips, painted into logical-size
 //            canvases the page scales with image-rendering: pixelated
 // Every material differs by pattern as well as hue (horizontal courses, vertical planks, leaf clusters, diagonal facets,
@@ -182,9 +183,11 @@
   function sheet(A, who) { const c = mk(G * FRAMES, G), P = pen(c); for (let f = 0; f < FRAMES; f++) { P.g.save(); P.g.translate(f * G, 0); who === 2 ? goat(P, A, f) : person(P, A, who, f); P.g.restore(); } return c; }
 
   // ---- badge icons (12×12) -------------------------------------------------------------------------------------------
+  // Pickaxe (M2 fix): a thick crescent head hugging the top-right corner on a diagonal handle, so it can't read as a
+  // "T". Axe: a double-bit axe, two filled wedge blades flaring out from an upright handle.
   const ICONS = [
-    ["..########..", ".##......##.", "##...##...##", "#....##....#", ".....##.....", "....##......", "....##......", "...##.......", "...##.......", "..##........", "..##........", ".##........."],
-    [".......###..", "......#####.", ".....######.", ".....######.", "....##.####.", "...##...##..", "...##.......", "..##........", "..##........", ".##.........", ".##.........", "##.........."],
+    ["..###.......", ".#######....", "#########...", "...#######..", "......#####.", "......#####.", ".....##.####", "....##...###", "...##....###", "..##.....###", ".##......###", "##........#."],
+    [".....##.....", ".##..##..##.", "####.##.####", "############", "############", "############", "####.##.####", ".##..##..##.", ".....##.....", ".....##.....", ".....##.....", "....####...."],
     ["##........##", ".##......##.", "..##....##..", "...######...", "####.##.####", "...######...", "....####....", "....####....", "....####....", ".....##.....", ".....##.....", "............"],
     ["......#.....", ".....##.....", ".....###....", "....####....", "....#####...", "....#####...", ".....###....", "............", "...######...", "....####....", ".....##.....", ".....##....."],
     ["........###.", "........###.", ".......##...", "......##....", ".....##.....", "....##......", "...##.......", "..####......", ".########...", ".########...", "............", "............"],
@@ -206,8 +209,25 @@
     for (let f = 0; f < 3; f++) t("L" + f, (P) => TILE.lever(P, A, 0, f));
     t("C", (P) => TILE.chest(P, A, 0, false)); t("Co", (P) => TILE.chest(P, A, 0, true));
     t("K", (P) => TILE.keep(P, A, 0, false)); t("Ko", (P) => TILE.keep(P, A, 0, true));
+    t("X", (P) => crack(P, A));
     for (const who of [0, 1, 2, 3, 4]) S["s" + who] = sheet(A, who);
     return S;
+  }
+  // The crack overlay a tile shows just before it pops (transparent but for the ink cracks and pale chips).
+  function crack(P, A) {
+    const ink = A.ink;
+    line(P, 8, 0, 6, 5, ink); line(P, 6, 5, 9, 9, ink); line(P, 9, 9, 7, 15, ink); line(P, 6, 5, 1, 7, ink); line(P, 9, 9, 15, 11, ink); line(P, 9, 9, 13, 3, ink);
+    P.p(7, 4, "#ffffff"); P.p(10, 8, "#ffffff"); P.p(2, 6, "#ffffff"); P.p(12, 4, "#ffffff");
+  }
+  // The dark castle-wall texture behind the page chrome: two staggered brick courses, 32 × 16 logical, repeating.
+  function wall(A) {
+    const c = mk(32, 16), P = pen(c), [b, mortar, l, deep] = A.wall; P.r(0, 0, 32, 16, b);
+    for (let r = 0; r < 2; r++) {
+      const y = r * 8; P.r(0, y, 32, 1, mortar);
+      for (let k = 0; k < 2; k++) { const x = (r * 8 + k * 16) % 32; P.wr(x, y + 1, 1, 7, mortar); P.wr(x + 1, y + 1, 6, 1, l); P.wr(x + 9, y + 6, 5, 1, deep); }
+      P.p((r * 13 + 5) % 32, y + 4, deep); P.p((r * 7 + 21) % 32, y + 3, l);
+    }
+    return c;
   }
   // A logical point inside frame 0 of each sheet that is always opaque (the torso), for the cache-health checks.
   const SHEET_PROBE = [[7, 9], [7, 9], [6, 8], [7, 9], [7, 10]];
@@ -229,10 +249,12 @@
 
   // Title: sky, hills, the goblins' castle (stone curtain, towers, a keep with a timber gate and a goblin flag), a hedge,
   // an iced moat, and the four crews on the green in front. f: the taunting goblin's frame (0/1).
-  function title(c, A, S, f) {
-    const P = pen(c), W = P.w, H = P.h, base = H - 30;
+  // baseFrac: where the castle's foot sits (a fraction of the height), so a tall full-screen canvas keeps the castle in
+  // the middle with sky above for the logo and green below.
+  function title(c, A, S, f, baseFrac) {
+    const P = pen(c), W = P.w, H = P.h, base = Math.max(96, Math.min(H - 30, Math.round(H * (baseFrac || 1) - (baseFrac ? 0 : 30))));
     P.g.imageSmoothingEnabled = false;
-    sky(P, A, 0.6, false);
+    sky(P, A, Math.min(1, (base - 24) / H), false);
     disc(P, W - 24, 18, 8, A.sun); cloud(P, A, 14, 14); cloud(P, A, W * 0.52, 8);
     for (let x = 0; x < W; x++) { const h1 = base - 30 + Math.round(5 * Math.sin(x / 13) + 3 * Math.sin(x / 5.3)); P.r(x, h1, 1, H - h1, A.hills[1]); const h2 = base - 18 + Math.round(4 * Math.sin(x / 9 + 2)); P.r(x, h2, 1, H - h2, A.hills[0]); }
     const cx = W >> 1;
@@ -247,8 +269,8 @@
     P.r(0, base, W, 9, A.moat[0]); for (let x = (f & 1) * 2; x < W; x += 9) P.r(x, base + 3, 3, 1, A.moat[2]);
     for (let k = 0; k < 3; k++) { const ix = 10 + k * ((W - 30) / 3) + ((noise(k + 5) * 12) | 0); P.r(ix, base + 1, 14, 7, A.ink); P.r(ix + 1, base + 2, 12, 5, A.ice[0]); P.r(ix + 2, base + 2, 5, 1, A.ice[2]); }
     tiles(P, S.q0, 0, base + 9, W, H - base - 9);
-    const gap = W / 5;
-    for (let i = 0; i < 4; i++) sprite(P, S, i, i === 1 ? WORK : 0, Math.round(gap * (i + 1) - 8), H - 19, i >= 2);
+    const gap = Math.min(W, 170) / 5, x0 = (W - Math.min(W, 170)) / 2, cy = Math.min(H - 19, base + 13);
+    for (let i = 0; i < 4; i++) sprite(P, S, i, i === 1 ? WORK : 0, Math.round(x0 + gap * (i + 1) - 8), cy, i >= 2);
   }
 
   // Portrait banner above the board: sky (night in World 4), a crenellated wall along the bottom, a torch, and the
@@ -289,5 +311,5 @@
     if (locked) { P.g.globalAlpha = 0.55; P.r(0, 0, W, H, A.ink); P.g.globalAlpha = 1; }
   }
 
-  return { G, MATS, WALK, WORK, FRAMES, SHEET_PROBE, noise, mk, up, icon, sources, title, banner, worldStrip };
+  return { G, MATS, WALK, WORK, FRAMES, SHEET_PROBE, noise, mk, up, icon, sources, title, banner, worldStrip, wall };
 });

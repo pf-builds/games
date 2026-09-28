@@ -3,11 +3,15 @@
 //   sprite caches  every tile, the five crew/goblin sheets and the badges at the current cell size (built on fit,
 //                  checked for opaque pixels on wake, lessons 27-28)
 //   board layer    grass margin, every tile (broken walls as rubble), shadow on cut-off ground, section outlines, one
-//                  crew badge per section; scenery sections (SPEC §7) muted, no badge. Re-baked on game.ver or cell change.
+//                  crew badge per section (on the material's colour ring; a big one centred on a 2×2 block when the
+//                  section has one), a bright inner outline and full badge on the sections a crew can break right now
+//                  and a dimmed badge on the rest; each unclaimed chest wears its crew's badge; scenery sections (SPEC
+//                  §7) muted, no badge. Re-baked on game.ver or cell change.
 //   pick layers    the dim veil and the glow outline for the picked crew; re-baked when ver or pick changes
-//   per frame      the layer, moat wave frame, the show (show.js: crews walking in, the crumble wave, lever, doors,
-//                  chests, the keep and the marching goblin), shake, pick, flash, pulse, dust. The frame path
-//                  allocates nothing: it walks typed arrays, the show's cell lists and a preallocated dust pool.
+//   per frame      the layer, moat wave frame, the show (show.js: crews walking in, tiles cracking and popping one
+//                  by one, lever, doors, chests, the keep punch, rays and confetti, the big marching goblin), shake,
+//                  pick, flash, pulse, dust and rubble chunks. The frame path allocates nothing: it walks typed
+//                  arrays, the show's cell lists and preallocated particle pools.
 (function (root, factory) {
   (root.SappersPath = root.SappersPath || {}).render = factory(root.SappersPath.engine, root.SappersPath.art, root.SappersPath.show);
 })(window, function (E, Art, Show) {
@@ -17,14 +21,17 @@
   function mk(w, h) { return Art.mk(w, h); }
 
   function create(canvas, cfg) {
-    const N = cfg.fx.dustPool;
+    const N = cfg.fx.dustPool, K = cfg.fx.confettiN;
     return {
       canvas, g: canvas.getContext("2d"), cfg, art: cfg.art, fx: cfg.fx, sh: cfg.show, src: Art.sources(cfg.art),
-      dpr: 1, cell: 0, ox: 0, oy: 0, B: null, dustUntil: -1e12, anchor: null, chestAt: null, leverAt: null, moat: null, moatN: 0, moatDrawn: 0,
+      dpr: 1, cell: 0, ox: 0, oy: 0, B: null, dustUntil: -1e12, chestAt: null, leverAt: null, moat: null, moatN: 0, moatDrawn: 0,
       tiles: {}, frameW: 0, tileCell: 0, layer: mk(1, 1), dim: mk(1, 1), glow: mk(1, 1),
       layerVer: -1, layerCell: 0, pickVer: -1, pickM: -1, pickCell: 0, rebuilds: 0,
+      // dust (kind 0) drifts and fades; rubble chunks (kind 1) hop, land on floor at tLand, sit, then fade
       dust: { x: new Float32Array(N), y: new Float32Array(N), vx: new Float32Array(N), vy: new Float32Array(N), t0: new Float64Array(N).fill(-1e12),
-        mat: new Uint8Array(N), size: new Float32Array(N), head: 0, seed: 1 },
+        mat: new Uint8Array(N), size: new Float32Array(N), kind: new Uint8Array(N), floor: new Float32Array(N), tLand: new Float32Array(N), life: new Float32Array(N), head: 0, seed: 1 },
+      conf: { x: new Float32Array(K), y: new Float32Array(K), vx: new Float32Array(K), vy: new Float32Array(K), spin: new Float32Array(K), col: new Uint8Array(K), t0: -1e12 },
+      frameT: [1, 1, 1, 1, 1], ax: null, ay: null, big: null,
       hit: { x: 0, y: 0 }, center: { x: 0, y: 0 },
     };
   }
@@ -32,25 +39,33 @@
   // Force both layers to re-bake on the next frame.
   function stale(V) { V.layerVer = V.pickVer = -1; }
 
-  // Per-level lookups: the badge anchor (the tile nearest each section's centroid), chest and lever indices by cell,
-  // and the moat cells (redrawn per wave frame).
+  // Per-level lookups: the badge anchor (the centre of the 2×2 block of the section nearest its centroid, for a big
+  // badge; else the centre of the tile nearest the centroid), chest and lever indices by cell, and the moat cells
+  // (redrawn per wave frame).
   function setLevel(V, B) {
     V.B = B; stale(V);
-    V.anchor = new Int16Array(B.nsec);
+    V.ax = new Float32Array(B.nsec); V.ay = new Float32Array(B.nsec); V.big = new Uint8Array(B.nsec);
     for (let s = 0; s < B.nsec; s++) {
-      let sx = 0, sy = 0; const a = B.secStart[s], b = B.secStart[s + 1];
-      for (let i = a; i < b; i++) { sx += B.secCells[i] % B.w; sy += (B.secCells[i] / B.w) | 0; }
+      let sx = 0, sy = 0; const a = B.secStart[s], b = B.secStart[s + 1], w = B.w;
+      for (let i = a; i < b; i++) { sx += B.secCells[i] % w + 0.5; sy += ((B.secCells[i] / w) | 0) + 0.5; }
       sx /= b - a; sy /= b - a;
-      let best = B.secCells[a], bd = 1e9;
-      for (let i = a; i < b; i++) { const c = B.secCells[i], d = (c % B.w - sx) ** 2 + (((c / B.w) | 0) - sy) ** 2; if (d < bd - 1e-9) { bd = d; best = c; } }
-      V.anchor[s] = best;
+      let bd = 1e9, bb = 1e9;
+      for (let i = a; i < b; i++) {
+        const c = B.secCells[i], x = c % w, y = (c / w) | 0, d = (x + 0.5 - sx) ** 2 + (y + 0.5 - sy) ** 2;
+        if (d < bd - 1e-9) { bd = d; if (bb >= 1e9) { V.ax[s] = x + 0.5; V.ay[s] = y + 0.5; } }
+        if (x + 1 < w && y + 1 < B.h && B.sec[c + 1] === s && B.sec[c + w] === s && B.sec[c + w + 1] === s) {
+          const e = (x + 1 - sx) ** 2 + (y + 1 - sy) ** 2;
+          if (e < bb - 1e-9) { bb = e; V.ax[s] = x + 1; V.ay[s] = y + 1; V.big[s] = 1; }
+        }
+      }
+      if (!V.big[s]) { bd = 1e9; for (let i = a; i < b; i++) { const c = B.secCells[i], x = c % w, y = (c / w) | 0, d = (x + 0.5 - sx) ** 2 + (y + 0.5 - sy) ** 2; if (d < bd - 1e-9) { bd = d; V.ax[s] = x + 0.5; V.ay[s] = y + 0.5; } } }
     }
     V.chestAt = new Int16Array(B.n).fill(-1); V.leverAt = new Int16Array(B.n).fill(-1);
     for (let i = 0; i < B.chestCell.length; i++) V.chestAt[B.chestCell[i]] = i;
     for (let i = 0; i < B.levers.length; i++) V.leverAt[B.levers[i]] = i;
     V.moat = new Int16Array(B.n); V.moatN = 0;
     for (let c = 0; c < B.n; c++) if (B.kind[c] === E.MOAT) V.moat[V.moatN++] = c;
-    V.dust.t0.fill(-1e12); V.dustUntil = -1e12;
+    V.dust.t0.fill(-1e12); V.conf.t0 = -1e12; V.dustUntil = -1e12;
   }
 
   // Fit the board (grid plus an outside margin) into availW × availH CSS px at dpr. The cell snaps to whole device
@@ -62,7 +77,7 @@
     const ox = Math.round(cell * m), W = cell * B.w + 2 * ox, H = cell * B.h + 2 * ox;
     V.dpr = dpr; V.ox = V.oy = ox;
     if (V.canvas.width !== W || V.canvas.height !== H) { V.canvas.width = W; V.canvas.height = H; }
-    if (cell !== V.cell) { V.cell = cell; buildTiles(V); }
+    if (cell !== V.cell || dpr !== V.tileDpr) { V.cell = cell; buildTiles(V); }
     for (const c of [V.layer, V.dim, V.glow]) if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
     stale(V);
     const cssW = W / dpr, cssH = H / dpr;
@@ -89,24 +104,37 @@
   // Draw crew icon m (0-3; 4 = iron) centred at (cx, cy) in a (2r)² box, into any 2D context (the crew cards too).
   function icon(g, m, cx, cy, r, ink) { Art.icon(g, m, cx, cy, r, ink); }
 
-  // Scale every logical source to the cell size: tiles at s × s, sheets at frameW per frame, badges.
-  function buildTiles(V) {
-    const s = V.cell, A = V.art, T = {}, F = Math.round(s * V.sh.crewScale);
-    for (const k in V.src) T[k] = k[0] === "s" ? Art.up(V.src[k], F * Art.FRAMES, F) : Art.up(V.src[k], s, s);
-    const br = Math.max(4, Math.round(s * 0.34));
-    for (let m = 0; m < 5; m++) {
-      const c = mk(br * 2, br * 2), g = c.getContext("2d");
-      g.fillStyle = A.badge[1]; g.beginPath(); g.arc(br, br, br, 0, TAU); g.fill();
-      g.fillStyle = A.badge[0]; g.beginPath(); g.arc(br, br, br * 0.84, 0, TAU); g.fill();
-      icon(g, m, br, br, br * 0.6, A.badge[1]);
-      T["b" + m] = c;
+  // A crew badge of radius r (device px): ink rim, the material's colour ring (as on the crew cards), a cream disc and the
+  // icon, scaled by a whole number of device px per art pixel when it can be. plus: a small gold "+" at the top left
+  // (the chest badge: this crew is a reward).
+  function badge(V, m, r, plus) {
+    const A = V.art, pad = plus ? Math.round(r * 0.3) : 0, c = mk(2 * r + pad, 2 * r + pad), g = c.getContext("2d"), cx = r + pad, cy = r + pad;
+    g.fillStyle = A.badge[1]; g.beginPath(); g.arc(cx, cy, r, 0, TAU); g.fill();
+    g.fillStyle = A[MATS[m]][0]; g.beginPath(); g.arc(cx, cy, r * 0.9, 0, TAU); g.fill();
+    g.fillStyle = A.badge[0]; g.beginPath(); g.arc(cx, cy, r * 0.74, 0, TAU); g.fill();
+    const raw = r * 1.3, box = raw >= 24 ? Math.min(Math.round(raw / 12) * 12, Math.floor(r * 1.4)) : Math.round(raw);
+    icon(g, m, cx, cy, box / 2, A.badge[1]);
+    if (plus) {
+      const u = Math.max(2, Math.round(r * 0.17)), px = pad + Math.round(r * 0.18), py = pad + Math.round(r * 0.18);
+      g.fillStyle = A.ink; g.fillRect(px - u * 1.5 - 1, py - u / 2 - 1, u * 3 + 2, u + 2); g.fillRect(px - u / 2 - 1, py - u * 1.5 - 1, u + 2, u * 3 + 2);
+      g.fillStyle = A.chest[2]; g.fillRect(px - u * 1.5, py - u / 2, u * 3, u); g.fillRect(px - u / 2, py - u * 1.5, u, u * 3);
     }
+    return c;
+  }
+  // Scale every logical source to the cell size: tiles at s × s, sheets at frameT per frame (the goblin bigger), badges.
+  function buildTiles(V) {
+    const s = V.cell, F = V.fx, T = {}, fc = Math.round(s * V.sh.crewScale), fg = Math.round(s * V.sh.goblinScale), cap = F.badgeMaxCss * V.dpr;
+    for (const k in V.src) T[k] = k[0] === "s" ? (k === "s4" ? Art.up(V.src[k], fg * Art.FRAMES, fg) : Art.up(V.src[k], fc * Art.FRAMES, fc)) : Art.up(V.src[k], s, s);
+    const rS = Math.max(5, Math.round(Math.min(s * F.badgeR, cap))), rB = Math.max(rS, Math.round(Math.min(s * F.badgeBigR, cap * F.badgeBigCap))), rC = Math.max(5, Math.round(Math.min(s * F.chestBadgeR, cap)));
+    for (let m = 0; m < 5; m++) { T["b" + m] = badge(V, m, rS, false); T["B" + m] = badge(V, m, rB, false); if (m < 4) T["c" + m] = badge(V, m, rC, true); }
     // index tables so the frame path never builds a key string
-    V.matT = []; V.moatT = []; V.sheetT = [];
+    V.matT = []; V.moatT = []; V.sheetT = []; V.badgeT = []; V.bigT = []; V.chestT = [];
     for (let m = 0; m < 5; m++) for (let v = 0; v < 2; v++) V.matT[m * 2 + v] = T["m" + m + v];
     for (let f = 0; f < 4; f++) for (let v = 0; v < 2; v++) V.moatT[f * 2 + v] = T["~" + f + v];
     for (let w = 0; w < 5; w++) V.sheetT[w] = T["s" + w];
-    V.tiles = T; V.frameW = F; V.tileCell = s; stale(V); V.rebuilds++;
+    for (let m = 0; m < 5; m++) { V.badgeT[m] = T["b" + m]; V.bigT[m] = T["B" + m]; V.chestT[m] = T["c" + m] || T["b" + m]; }
+    V.frameT = [fc, fc, fc, fc, fg]; V.chestR = rC;
+    V.tiles = T; V.frameW = fc; V.tileCell = s; V.tileDpr = V.dpr; stale(V); V.rebuilds++;
   }
 
   // ---- board layer ---------------------------------------------------------------------------------------------------
@@ -141,15 +169,36 @@
       const q = B.sec[c];
       edges(g, B, c, ox + (c % B.w) * s, oy + ((c / B.w) | 0) * s, s, lw, (e) => e >= 0 && B.kind[e] === E.WALL && !st.open[e] && B.sec[e] === q);
     }
+    // What a crew can break right now (reachable, a crew section, a crew of it left): a bright inner outline and a full
+    // badge. Everything else keeps a dimmed badge, so the live moves read at a glance before any pick.
+    const rl = Math.max(2, Math.round(s * 0.07));
+    g.fillStyle = A.reach; g.globalAlpha = V.fx.reachAlpha;
+    for (let q = 0; q < B.nsec; q++) {
+      if (!live(B, st, sc, q)) continue;
+      for (let i = B.secStart[q]; i < B.secStart[q + 1]; i++) {
+        const c = B.secCells[i], px = ox + (c % B.w) * s, py = oy + ((c / B.w) | 0) * s;
+        for (let d = 0; d < 4; d++) { const e = B.nb[c * 4 + d]; if (!(e >= 0 && B.sec[e] === q)) edgeRect(g, d, px + (d === 3 ? lw : d === 1 ? -lw : 0), py + (d === 0 ? lw : d === 2 ? -lw : 0), s, rl); }
+      }
+    }
+    g.globalAlpha = 1;
     for (let q = 0; q < B.nsec; q++) {
       if (st.broken[q] || st.doorOpen[q] || sc[q]) continue;
-      drawBadge(V, g, q);
+      drawBadge(V, g, q, live(B, st, sc, q) ? 1 : V.fx.badgeDimAlpha);
     }
+    for (let i = 0; i < B.chestCell.length; i++) if (!st.claimed[i]) drawChestBadge(V, g, i);
     V.layerVer = game.ver; V.layerCell = s;
   }
-  function drawBadge(V, g, q) {
-    const B = V.B, s = V.cell, c = V.anchor[q], b = V.tiles["b" + B.secMat[q]];
-    g.drawImage(b, Math.round(V.ox + ((c % B.w) + 0.5) * s - b.width / 2), Math.round(V.oy + (((c / B.w) | 0) + 0.5) * s - b.height / 2));
+  function live(B, st, sc, q) { return !st.broken[q] && !st.doorOpen[q] && !sc[q] && st.reach[q] === 1 && B.secMat[q] < E.IRON && st.remaining[B.secMat[q]] > 0; }
+  function drawBadge(V, g, q, alpha) {
+    const B = V.B, s = V.cell, m = B.secMat[q], b = V.big[q] ? V.bigT[m] : V.badgeT[m];
+    g.globalAlpha = alpha;
+    g.drawImage(b, Math.round(V.ox + V.ax[q] * s - b.width / 2), Math.round(V.oy + V.ay[q] * s - b.height / 2));
+    g.globalAlpha = 1;
+  }
+  // An unclaimed chest wears its crew's badge (with the gold "+") over its lid.
+  function drawChestBadge(V, g, i) {
+    const B = V.B, s = V.cell, c = B.chestCell[i], b = V.chestT[B.chestCrew[i]], r = V.chestR, pad = b.width - 2 * r;
+    g.drawImage(b, Math.round(V.ox + ((c % B.w) + 0.5) * s - r - pad), Math.round(V.oy + (((c / B.w) | 0) + V.fx.chestBadgeY) * s - r - pad));
   }
 
   // Dim veil over everything except the reachable standing sections of the picked crew; glow outline around those.
@@ -172,24 +221,40 @@
   }
 
   // ---- effects -------------------------------------------------------------------------------------------------------
-  // Dust for the cells [from, to) of a list, stamped with time t (the event's own time on the sim clock).
-  function spawnDust(V, list, from, to, mat, t) {
-    const B = V.B, D = V.dust, N = D.x.length, per = V.fx.dustPerTile, cell = V.cell, sp = (V.fx.dustSpeed * cell) / 1000;
-    for (let i = from; i < to; i++) {
-      const c = list[i];
-      for (let k = 0; k < per; k++) {
-        const j = D.head; D.head = (D.head + 1) % N;
-        const r1 = Art.noise(D.seed++), r2 = Art.noise(D.seed++), r3 = Art.noise(D.seed++);
-        D.x[j] = V.ox + ((c % B.w) + r1) * cell; D.y[j] = V.oy + (((c / B.w) | 0) + r2) * cell;
-        D.vx[j] = (r1 - 0.5) * 2 * sp; D.vy[j] = -(0.4 + r3) * sp; D.mat[j] = mat; D.size[j] = Math.max(1, Math.round(cell * (0.06 + 0.07 * r3))); D.t0[j] = t;
-      }
+  function rnd(D) { return Art.noise(D.seed++); }
+  // Tile i of the show's list pops at time t (its own time on the sim clock): chunky rubble in the material's colours
+  // that hops, lands inside the tile and settles, plus a puff of dust.
+  function popTile(V, S, i, t) {
+    const B = V.B, D = V.dust, N = D.x.length, F = V.fx, cell = V.cell, ap = cell / 16, c = S.cells[i], x0 = V.ox + (c % B.w) * cell, y0 = V.oy + ((c / B.w) | 0) * cell;
+    const sp = (F.chunkSpeed * cell) / 1000, up = (F.chunkUp * cell) / 1000, gr = (F.chunkGravity * cell) / 1e6;
+    for (let k = 0; k < F.chunkPerTile; k++) {
+      const j = D.head; D.head = (D.head + 1) % N;
+      const r1 = rnd(D), r2 = rnd(D), r3 = rnd(D), size = Math.max(2, Math.round(ap * (3 + r3)));
+      D.kind[j] = 1; D.mat[j] = S.m; D.size[j] = size; D.t0[j] = t; D.life[j] = F.chunkMs;
+      D.x[j] = x0 + r1 * (cell - size); D.y[j] = y0 + r2 * cell * 0.5;
+      D.vx[j] = (r1 - 0.5) * 2 * sp; D.vy[j] = -(0.5 + r3) * up;
+      const fl = y0 + cell - size - r2 * cell * 0.35, dy = fl - D.y[j], vy = D.vy[j];
+      D.floor[j] = fl; D.tLand[j] = (-vy + Math.sqrt(Math.max(0, vy * vy + 4 * gr * dy))) / (2 * gr);
     }
-    V.dustUntil = Math.max(V.dustUntil, t + V.fx.dustMs);
+    const dsp = (F.dustSpeed * cell) / 1000;
+    for (let k = 0; k < F.dustPerTile; k++) {
+      const j = D.head; D.head = (D.head + 1) % N;
+      const r1 = rnd(D), r2 = rnd(D), r3 = rnd(D);
+      D.kind[j] = 0; D.mat[j] = S.m; D.t0[j] = t; D.life[j] = F.dustMs * (0.7 + 0.3 * r3);
+      D.x[j] = x0 + r1 * cell; D.y[j] = y0 + (0.3 + 0.6 * r2) * cell; D.vx[j] = (r1 - 0.5) * 2 * dsp; D.vy[j] = -(0.3 + r3) * dsp;
+      D.size[j] = Math.max(2, Math.round(ap * (F.dustArt + r3)));
+    }
+    V.dustUntil = Math.max(V.dustUntil, t + Math.max(F.chunkMs, F.dustMs));
   }
-  // Dust for the show's crumble ring r (the cells whose pop time equals ring r's).
-  function dustRing(V, S, r, t) {
-    const T = V.sh, at = S.popT0 + r * T.ringMs * S.k;
-    for (let i = 0; i < S.cellsN; i++) { const c = S.cells[i]; if (!S.isDoor[c] && Math.abs(S.popAt[c] - at) < 0.5) spawnDust(V, S.cells, i, i + 1, S.m, t); }
+  // The keep opens: confetti in the materials' and the flag's colours bursts up from it.
+  function confetti(V, S, t) {
+    const B = V.B, C = V.conf, F = V.fx, cell = V.cell, n = C.x.length, D = V.dust, sp = (F.confettiSpeed * cell) / 1000;
+    const cx = V.ox + ((B.keep % B.w) + 0.5) * cell, cy = V.oy + (((B.keep / B.w) | 0) + 0.3) * cell;
+    for (let k = 0; k < n; k++) {
+      const a = -Math.PI / 2 + (rnd(D) - 0.5) * F.confettiSpread, v = sp * (0.45 + 0.75 * rnd(D));
+      C.x[k] = cx; C.y[k] = cy; C.vx[k] = Math.cos(a) * v; C.vy[k] = Math.sin(a) * v; C.spin[k] = 0.006 + 0.02 * rnd(D); C.col[k] = (rnd(D) * V.art.confetti.length) | 0;
+    }
+    C.t0 = t; V.dustUntil = Math.max(V.dustUntil, t + F.confettiMs);
   }
 
   function fillSection(V, g, q) {
@@ -209,7 +274,7 @@
 
   // A sheet frame at (x, y) in cell units, feet on the cell's lower edge, optionally mirrored.
   function drawSprite(V, g, who, frame, x, y, flip, alpha) {
-    const F = V.frameW, s = V.cell, sheet = V.sheetT[who];
+    const F = V.frameT[who], s = V.cell, sheet = V.sheetT[who];
     const dx = Math.round(V.ox + (x + 0.5) * s - F / 2), dy = Math.round(V.oy + (y + 1) * s - F * 0.98);
     g.globalAlpha = alpha;
     if (flip) { g.setTransform(-1, 0, 0, 1, dx + F, dy); g.drawImage(sheet, frame * F, 0, F, F, 0, 0, F, F); g.setTransform(1, 0, 0, 1, 0, 0); }
@@ -223,21 +288,28 @@
     // newly connected ground comes out of shadow
     const la = 0.42 * Math.max(0, Math.min(1, 1 - (now - S.lightAt) / S.lightMs));
     if (la > 0) { g.globalAlpha = la; g.fillStyle = "#000"; for (let i = 0; i < S.litN; i++) { const c = S.lit[i]; g.fillRect(ox + (c % B.w) * s, oy + ((c / B.w) | 0) * s, s, s); } g.globalAlpha = 1; }
-    // standing tiles not yet popped; popping tiles hop, shrink and fade; doors swing shut-to-open on their left hinge
-    const lw = Math.max(1, Math.round(s * 0.07));
+    // standing tiles not yet popped (the last crackMs before its pop a tile shudders and cracks); a popping tile swells,
+    // flashes and shrinks away while its rubble flies; doors swing shut-to-open on their left hinge
+    const lw = Math.max(1, Math.round(s * 0.07)), ap = Math.max(1, Math.round(s / 16)), crack = S.crackMs;
     for (let i = 0; i < S.cellsN; i++) {
       const c = S.cells[i], at = S.popAt[c], px = ox + (c % B.w) * s, py = oy + ((c / B.w) | 0) * s, v = ((c % B.w) * 3 + ((c / B.w) | 0) * 5) & 1;
       const tile = V.matT[B.mat[c] * 2 + v];
       if (now < at) {
-        g.drawImage(tile, px, py);
+        const ck = !S.isDoor[c] && now >= S.popT0 && now >= at - crack, jx = ck ? ((((now / 45) | 0) + c) & 1 ? ap : -ap) : 0;
+        g.drawImage(tile, px + jx, py);
+        if (ck) { g.globalAlpha = Math.min(1, 0.35 + (now - (at - crack)) / crack); g.drawImage(T.X, px + jx, py); g.globalAlpha = 1; }
         g.fillStyle = V.art.outline; const q = B.sec[c];
         for (let d = 0; d < 4; d++) { const e = B.nb[c * 4 + d]; if (!(e >= 0 && B.sec[e] === q && S.popAt[e] > now)) edgeRect(g, d, px, py, s, lw); }
       } else if (S.isDoor[c] ? now < at + doorMs : now < at + popMs) {
         if (S.isDoor[c]) { const p = (now - at) / doorMs, w = Math.max(1, Math.round(s * (1 - p))); g.globalAlpha = 1 - p * 0.5; g.drawImage(tile, px, py, w, s); g.globalAlpha = 1; }
-        else { const p = (now - at) / popMs, z = s * (p < 0.3 ? 1 + p * 0.5 : 1.15 * (1 - (p - 0.3) / 0.7)), hop = s * 0.25 * Math.sin(Math.min(1, p / 0.6) * Math.PI); g.globalAlpha = Math.min(1, 1.4 - p); g.drawImage(tile, px + (s - z) / 2, py + (s - z) / 2 - hop, z, z); g.globalAlpha = 1; }
+        else {
+          const p = (now - at) / popMs, z = Math.round(s * (p < 0.2 ? 1 + p * 0.6 : 1.12 * (1 - (p - 0.2) / 0.8))), zx = px + ((s - z) >> 1), zy = py + ((s - z) >> 1);
+          g.drawImage(tile, zx, zy, z, z);
+          g.globalAlpha = 0.6 * (1 - p) * (1 - p); g.fillStyle = V.art.cloud; g.fillRect(zx, zy, z, z); g.globalAlpha = 1;
+        }
       }
     }
-    if (now < S.popT0) drawBadge(V, g, S.s);
+    if (now < S.popT0) drawBadge(V, g, S.s, 1);
     // levers: up until their clank, a mid frame while they swing
     for (let i = 0; i < B.levers.length; i++) {
       const at = S.leverAt[i]; if (at >= INF || now >= at + sh.leverMs * k) continue;
@@ -248,7 +320,7 @@
       const at = S.chestAt[i]; if (at >= INF || now >= at + sh.chestPopMs * k) continue;
       const c = B.chestCell[i], px = ox + (c % B.w) * s, py = oy + ((c / B.w) | 0) * s;
       g.drawImage(T.g0, px, py);
-      if (now < at) g.drawImage(T.C, px, py);
+      if (now < at) { g.drawImage(T.C, px, py); drawChestBadge(V, g, i); }
       else { const p = (now - at) / (sh.chestPopMs * k); g.drawImage(T.Co, px, py - Math.round(s * 0.22 * Math.sin(p * Math.PI)), s, s); }
     }
     // the keep stays shut until its moment
@@ -268,9 +340,27 @@
     const mf = Math.floor(now / F.moatFrameMs) % 4; V.moatDrawn = mf;
     if (mf) for (let i = 0; i < V.moatN; i++) { const c = V.moat[i], x = c % B.w, y = (c / B.w) | 0; g.drawImage(V.moatT[mf * 2 + ((x * 3 + y * 5) & 1)], V.ox + x * s, V.oy + y * s); }
     if (S && S.active) drawShow(V, g, S, now);
-    if (S && S.won) { const P = Show.goblinAt(S, now, S.pos); if (P.on) drawSprite(V, g, 4, P.frame, P.x, P.y, P.flip, 1); }
+    // the keep opens with a punch (it swells and settles), then the big crowned goblin taunts (bouncing, the crown
+    // glinting) and marches out
+    let t = S ? now - S.keepAt : -1;
+    if (S && S.won && !S.skipped && t >= 0 && t < F.keepPunchMs) {
+      const z = Math.round(s * (1 + F.keepPunch * Math.sin((t / F.keepPunchMs) * Math.PI))), kx = V.ox + (B.keep % B.w) * s + ((s - z) >> 1), ky = V.oy + ((B.keep / B.w) | 0) * s + ((s - z) >> 1);
+      g.drawImage(T.Ko, kx, ky, z, z);
+    }
+    if (S && S.won) {
+      const P = Show.goblinAt(S, now, S.pos);
+      if (P.on) {
+        const lift = P.frame >= 4 ? F.goblinBounce * Math.abs(Math.sin((now / F.goblinBounceMs) * Math.PI)) : 0;
+        drawSprite(V, g, 4, P.frame, P.x, P.y - lift, P.flip, 1);
+        const gp = now % F.glintMs;
+        if (gp < F.glintOnMs) { // a four-point glint on the crown
+          const fg = V.frameT[4], u = Math.max(1, Math.round(fg / 16)), gx = Math.round(V.ox + (P.x + 0.5) * s - fg / 2 + fg * (P.flip ? 7 : 8) / 16), gy = Math.round(V.oy + (P.y - lift + 1) * s - fg * 0.98 + fg * 1.5 / 16), k = gp < F.glintOnMs / 2 ? 2 : 1;
+          g.fillStyle = V.art.cloud; g.fillRect(gx - u * k, gy, u * (2 * k + 1), u); g.fillRect(gx, gy - u * k, u, u * (2 * k + 1));
+        }
+      }
+    }
     // shake: redraw the section's tiles from the layer, shifted
-    let t = now - f.shakeT;
+    t = now - f.shakeT;
     if (f.shakeS >= 0 && t >= 0 && t < F.shakeMs) {
       const p = t / F.shakeMs, dx = Math.round(Math.sin((t / 1000) * F.shakeHz * TAU) * F.shakeCells * s * (1 - p)), q = f.shakeS;
       g.fillStyle = A.outline; fillSection(V, g, q);
@@ -292,27 +382,50 @@
     // pulse: the section a tap just picked
     t = now - f.pulseT;
     if (f.pulseS >= 0 && t >= 0 && t < F.pulseMs) { g.globalAlpha = 0.6 * (1 - t / F.pulseMs); g.fillStyle = A.pulse; fillSection(V, g, f.pulseS); g.globalAlpha = 1; }
-    // keep burst when the keep opens
+    // keep burst when the keep opens: a flash, then two rings of thick rays turning outward
     t = S ? now - S.keepAt : -1;
     if (S && S.won && !S.skipped && t >= 0 && t < F.keepBurstMs) {
-      const p = t / F.keepBurstMs, cx = V.ox + ((B.keep % B.w) + 0.5) * s, cy = V.oy + (((B.keep / B.w) | 0) + 0.5) * s, R = s * (0.8 + 2.2 * p);
-      g.globalAlpha = 1 - p; g.strokeStyle = A.burst; g.lineWidth = Math.max(2, s * 0.12); g.lineCap = "round"; g.beginPath();
-      for (let k = 0; k < 12; k++) { const a = (k / 12) * TAU + p; g.moveTo(cx + Math.cos(a) * R * 0.45, cy + Math.sin(a) * R * 0.45); g.lineTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R); }
-      g.stroke(); g.globalAlpha = 1;
+      const p = t / F.keepBurstMs, cx = V.ox + ((B.keep % B.w) + 0.5) * s, cy = V.oy + (((B.keep / B.w) | 0) + 0.5) * s, R = s * (0.9 + F.raysR * Math.sqrt(p)), n = F.raysN;
+      if (p < 0.18) { g.globalAlpha = 0.7 * (1 - p / 0.18); g.fillStyle = A.cloud; g.beginPath(); g.arc(cx, cy, s * (0.8 + 2 * p), 0, TAU); g.fill(); }
+      g.lineCap = "butt";
+      for (let ring = 0; ring < 2; ring++) {
+        g.globalAlpha = (1 - p) * (ring ? 0.8 : 1); g.strokeStyle = ring ? A.cloud : A.burst; g.lineWidth = Math.max(3, s * (ring ? 0.1 : 0.22)); g.beginPath();
+        for (let k = 0; k < n; k++) { const a = ((k + ring * 0.5) / n) * TAU + p * 0.8, r0 = R * (ring ? 0.55 : 0.4), r1 = R * (ring ? 0.85 : 1); g.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); g.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1); }
+        g.stroke();
+      }
+      g.globalAlpha = 1;
     }
-    // dust: square pixel motes in the material's colours
-    const D = V.dust, life = F.dustMs, grav = (F.dustGravity * s) / 1e6;
+    // confetti: flipping pixel flakes that burst from the keep and fall
+    const C = V.conf, ca = now - C.t0;
+    if (ca >= 0 && ca < F.confettiMs) {
+      const cg = (F.confettiGravity * s) / 1e6, cz = Math.max(2, Math.round(s * 0.12)), pal = A.confetti;
+      g.globalAlpha = Math.min(1, 3 * (1 - ca / F.confettiMs));
+      for (let k = 0; k < C.x.length; k++) {
+        const w = Math.max(1, Math.round(cz * Math.abs(Math.cos(C.spin[k] * ca)))), drag = 1 - Math.min(0.5, ca / 4000);
+        g.fillStyle = pal[C.col[k]]; g.fillRect(Math.round(C.x[k] + C.vx[k] * ca * drag - w / 2), Math.round(C.y[k] + C.vy[k] * ca * drag + cg * ca * ca), w, cz);
+      }
+      g.globalAlpha = 1;
+    }
+    // dust puffs drift and fade; rubble chunks (material face, dark underside) hop, land, sit, then fade
+    const D = V.dust, dg = (F.dustGravity * s) / 1e6, kg = (F.chunkGravity * s) / 1e6;
     for (let j = 0; j < D.x.length; j++) {
-      const a = now - D.t0[j];
+      const a = now - D.t0[j], life = D.life[j];
       if (a < 0 || a >= life) continue;
-      g.globalAlpha = 1 - a / life; g.fillStyle = A[MATS[D.mat[j]]][(j & 1) * 2];
-      g.fillRect(Math.round(D.x[j] + D.vx[j] * a), Math.round(D.y[j] + D.vy[j] * a + grav * a * a), D.size[j], D.size[j]);
+      const M = A[MATS[D.mat[j]]], z = D.size[j];
+      if (D.kind[j]) {
+        const tl = D.tLand[j], ta = a < tl ? a : tl, x = Math.round(D.x[j] + D.vx[j] * ta), y = Math.round(a < tl ? D.y[j] + D.vy[j] * a + kg * a * a : D.floor[j]);
+        g.globalAlpha = Math.min(1, 3.2 * (1 - a / life));
+        g.fillStyle = M[3]; g.fillRect(x, y, z, z); g.fillStyle = (j & 1) ? M[2] : M[0]; g.fillRect(x, y, z, z - Math.max(1, (z / 3) | 0));
+      } else {
+        g.globalAlpha = 0.85 * (1 - a / life); g.fillStyle = (j & 1) ? M[2] : A.ground[2];
+        g.fillRect(Math.round(D.x[j] + D.vx[j] * a), Math.round(D.y[j] + D.vy[j] * a + dg * a * a), z, z);
+      }
     }
     g.globalAlpha = 1;
   }
 
   // ---- cache health (SPEC §5; lessons 27-28) ---------------------------------------------------------------------------
-  const OPAQUE_KEYS = ["g0", "g1", "q0", "~00", "~01", "m00", "m10", "m20", "m30", "m40", "m01", "m11", "m21", "m31", "m41", "r00", "r41", "K", "Ko", "C", "Co", "L0", "L2", "b0", "b1", "b2", "b3", "b4"];
+  const OPAQUE_KEYS = ["g0", "g1", "q0", "~00", "~01", "m00", "m10", "m20", "m30", "m40", "m01", "m11", "m21", "m31", "m41", "r00", "r41", "K", "Ko", "C", "Co", "L0", "L2", "b0", "b1", "b2", "b3", "b4", "B0", "B3", "c0", "c2"];
   // Readbacks go through one small probe canvas (willReadFrequently), never the sprite canvases themselves.
   let probe = null;
   function probeCtx(w, h) {
@@ -333,9 +446,9 @@
   // Which sprite caches read blank (an evicted backing store reads all zero): tiles at their centre, each character
   // sheet at a torso pixel of frame 0.
   function blankTiles(V) {
-    const out = [], F = V.frameW;
+    const out = [];
     for (const k of OPAQUE_KEYS) { const c = V.tiles[k]; if (!c || alphaAt(c, c.width / 2, c.height / 2) < 255) out.push(k); }
-    for (let w = 0; w < 5; w++) { const c = V.tiles["s" + w], p = Art.SHEET_PROBE[w]; if (!c || alphaAt(c, ((p[0] + 0.5) * F) / 16, ((p[1] + 0.5) * F) / 16) < 255) out.push("s" + w); }
+    for (let w = 0; w < 5; w++) { const c = V.tiles["s" + w], p = Art.SHEET_PROBE[w], F = V.frameT[w]; if (!c || alphaAt(c, ((p[0] + 0.5) * F) / 16, ((p[1] + 0.5) * F) / 16) < 255) out.push("s" + w); }
     return out;
   }
   // After the tab comes back: rebuild the sprites if any read blank, and always re-bake the layers. Returns true on a rebuild.
@@ -343,5 +456,5 @@
   // Test hook: blank every cache the way a discarded backing store would.
   function dropCaches(V) { let n = 0; for (const k in V.tiles) { const c = V.tiles[k]; c.width = c.width; n++; } V.layer.width = V.layer.width; return n; }
 
-  return { create, setLevel, fit, cellAt, cellCenter, icon, draw, busy, spawnDust, dustRing, blankTiles, check, dropCaches, pixelHash, MATS };
+  return { create, setLevel, fit, cellAt, cellCenter, icon, draw, busy, popTile, confetti, blankTiles, check, dropCaches, pixelHash, MATS };
 });

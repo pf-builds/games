@@ -2,7 +2,8 @@
 // A break commits in the engine at once; build() lays out what the player SEES afterwards, on the page's sim clock:
 //   walk     the crew enters from the board edge along the ground that was connected BEFORE the break
 //   work     swings at the contact tile (a WORK event on each strike)
-//   crumble  the section's tiles pop in a wave from the contact tile (BFS rings inside the section; a TICK per ring)
+//   crumble  the section's tiles crack, then pop one by one in BFS order from the contact tile (a TICK per tile, arg =
+//            its index in S.cells). The whole crumble lasts crumbleTileMs per tile, clamped to [crumbleMinMs, crumbleMaxMs]
 //   cascade  levers the break exposed clank (CLANK), their iron doors swing open tile by tile (DOOR)
 //   light    ground the break connected comes out of shadow; chests it claimed pop (CHEST) and fly +1 to the card (ARRIVE)
 //   keep     on a win the keep opens (KEEP, the fanfare) and the crowned goblin marches out along connected ground
@@ -25,7 +26,7 @@
       B, active: false, skipped: false, won: false, t0: 0, end: 0, k: 1, s: -1, m: -1,
       px: new Float32Array(n + 2), py: new Float32Array(n + 2), pathN: 0, walkFrom: 0, walkT0: 0, walkT1: 0, stepMs: 1, fade: false, fadeMs: 1,
       face: 1, swingMs: 1, workT1: 0, crewOut: 0,
-      cells: new Int16Array(n), cellsN: 0, popAt: new Float64Array(n).fill(INF), isDoor: new Uint8Array(n), popT0: INF, crumbleEnd: 0, rings: 0,
+      cells: new Int16Array(n), cellsN: 0, secN: 0, popAt: new Float64Array(n).fill(INF), isDoor: new Uint8Array(n), popT0: INF, crumbleEnd: 0, crackMs: 1,
       leverAt: new Float64Array(B.levers.length).fill(INF), chestAt: new Float64Array(B.chestCell.length).fill(INF),
       lit: new Int16Array(n), litN: 0, lightAt: INF, lightMs: 1,
       keepAt: INF, mx: new Float32Array(n + 2), my: new Float32Array(n + 2), marchN: 0, marchT0: INF, marchT1: INF, marchStep: 1,
@@ -37,7 +38,7 @@
 
   function clear(S) {
     for (let i = 0; i < S.cellsN; i++) { S.popAt[S.cells[i]] = INF; S.isDoor[S.cells[i]] = 0; }
-    S.cellsN = 0; S.litN = 0; S.pathN = 0; S.marchN = 0; S.ev.length = 0; S.evi = 0;
+    S.cellsN = 0; S.secN = 0; S.litN = 0; S.pathN = 0; S.marchN = 0; S.ev.length = 0; S.evi = 0;
     S.leverAt.fill(INF); S.chestAt.fill(INF); S.popT0 = S.lightAt = S.keepAt = S.marchT0 = S.marchT1 = INF;
     S.active = false; S.skipped = false; S.won = false;
   }
@@ -104,19 +105,20 @@
     S.workT1 = S.walkT1 + T.swings * S.swingMs;
     for (let i = 0; i < T.swings; i++) push(S, S.walkT1 + (i + 0.5) * S.swingMs, EV.WORK, i);
 
-    // Crumble: rings of the section by BFS distance from the contact tile.
-    const R = S.ring, sec = B.sec; let h = 0, t = 0, rings = 0;
+    // Crumble: the section's tiles in BFS order from the contact tile. Each cracks for crackMs, then pops; the pops are
+    // spread evenly so the whole crumble lasts D = crumbleTileMs per tile, clamped to [crumbleMinMs, crumbleMaxMs].
+    const R = S.ring, sec = B.sec; let h = 0, t = 0;
     R[t++] = contact; S.popAt[contact] = 0;
-    const ringOf = S.dist; ringOf[contact] = 0; // S.dist is free again (the walk is laid out)
     while (h < t) {
       const c = R[h++];
-      for (let d = 0; d < 4; d++) { const e = nb[c * 4 + d]; if (e >= 0 && sec[e] === s && S.popAt[e] === INF) { S.popAt[e] = 0; ringOf[e] = ringOf[c] + 1; R[t++] = e; } }
+      for (let d = 0; d < 4; d++) { const e = nb[c * 4 + d]; if (e >= 0 && sec[e] === s && S.popAt[e] === INF) { S.popAt[e] = 0; R[t++] = e; } }
     }
-    S.popT0 = S.workT1;
-    for (let i = 0; i < t; i++) { const c = R[i]; S.popAt[c] = S.popT0 + ringOf[c] * T.ringMs * k; S.cells[S.cellsN++] = c; rings = Math.max(rings, ringOf[c] + 1); }
-    S.rings = rings;
-    for (let r = 0; r < rings; r++) push(S, S.popT0 + r * T.ringMs * k, EV.TICK, r);
-    S.crumbleEnd = S.popT0 + (rings - 1) * T.ringMs * k + T.popMs * k;
+    const D = Math.min(T.crumbleMaxMs, Math.max(T.crumbleMinMs, t * T.crumbleTileMs)) * k, pop = T.popMs * k;
+    const lead = t > 1 ? Math.min(T.crackMs * k, D - pop) : D - pop, gap = t > 1 ? (D - lead - pop) / (t - 1) : 0;
+    S.popT0 = S.workT1; S.crackMs = Math.max(1, Math.min(T.crackMs * k, lead));
+    for (let i = 0; i < t; i++) { const c = R[i], at = S.popT0 + lead + i * gap; S.popAt[c] = at; S.cells[S.cellsN++] = c; push(S, at, EV.TICK, i); }
+    S.secN = t;
+    S.crumbleEnd = S.popT0 + D;
     S.crewOut = S.crumbleEnd + T.crewOutMs * k;
 
     // Cascade: levers this break exposed, then the iron doors they open (tiles staggered by distance from a lever).

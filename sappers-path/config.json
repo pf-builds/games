@@ -6,21 +6,29 @@
   "unlock": { "worldNeeds": 6 },
   "layout": {
     "wideMinPx": 700, "wideAspect": 1.15, "railPx": 210, "gapPx": 28, "sidePx": 230,
-    "marginCells": 0.3, "minCellPx": 14, "maxCellPx": 84, "maxDpr": 3, "bannerMinPx": 64, "artPx": 3
+    "marginCells": 0.3, "minCellPx": 14, "maxCellPx": 84, "maxDpr": 3, "bannerMinPx": 64, "artPx": 3,
+    "titleArtW": 125, "titleArtH": 190, "titleArtMin": 2, "titleArtMax": 5, "titleBaseFrac": 0.58, "titleBaseFracWide": 0.56,
+    "wallArtPx": 3, "mapHeadPx": 62, "mapRowPx": 80, "mapCols": 4, "mapPadPx": 18, "compactRailMaxH": 480, "panelWidePx": 264
   },
   "fx": {
     "maxDtMs": 100, "pulseMs": 520, "shakeMs": 380, "shakeCells": 0.11, "shakeHz": 22,
     "flashMs": 900, "flashBlinks": 3, "cardFlashMs": 750,
-    "dustPerTile": 6, "dustPool": 900, "dustMs": 650, "dustSpeed": 1.6, "dustGravity": 5,
-    "glowHz": 1.4, "dimAlpha": 0.55, "winPanelMs": 450, "stuckPanelMs": 450, "skipPanelMs": 200, "keepBurstMs": 1400,
+    "dustPerTile": 4, "dustPool": 900, "dustMs": 620, "dustSpeed": 0.9, "dustGravity": -0.5, "dustArt": 2,
+    "chunkPerTile": 6, "chunkMs": 760, "chunkSpeed": 1.1, "chunkUp": 2.6, "chunkGravity": 8,
+    "thumpMs": 170, "thumpPx": 3, "thumpHz": 26,
+    "glowHz": 1.4, "dimAlpha": 0.55, "winPanelMs": 450, "winPanelAfterKeepMs": 480, "stuckPanelMs": 450, "skipPanelMs": 0, "keepBurstMs": 1100,
+    "keepPunchMs": 300, "keepPunch": 0.5, "raysN": 16, "raysR": 3.4, "confettiN": 72, "confettiMs": 1800, "confettiSpeed": 6, "confettiGravity": 6,
+    "goblinBounce": 0.18, "goblinBounceMs": 240, "glintMs": 900, "glintOnMs": 220, "confettiSpread": 2.4,
+    "badgeR": 0.42, "badgeBigR": 0.6, "badgeBigCap": 1.35, "badgeMaxCss": 22, "badgeDimAlpha": 0.38, "reachAlpha": 0.9,
+    "chestBadgeR": 0.36, "chestBadgeY": 0.3, "toastMs": 1800,
     "boardNudgeMs": 260, "boardNudgePx": 5, "boardNudgeHz": 18, "starMs": 260, "bumpMs": 320,
     "moatFrameMs": 280, "bannerFrameMs": 520, "sceneryAlpha": 0.5
   },
   "show": {
-    "speedFast": 2, "walkTileMs": 95, "walkMaxTiles": 5, "fadeInMs": 120, "swings": 2, "swingMs": 150,
-    "ringMs": 55, "popMs": 230, "crewOutMs": 220, "leverDelayMs": 80, "leverMs": 240, "doorTileMs": 45, "doorMs": 260,
-    "chestPopMs": 320, "flyMs": 520, "lightMs": 260, "keepDelayMs": 120, "marchDelayMs": 380, "marchTileMs": 170,
-    "marchMaxTiles": 6, "crewScale": 1.15, "goblinScale": 1.2, "edgeStand": 0.08, "wallStand": 0.18
+    "speedFast": 2, "walkTileMs": 80, "walkMaxTiles": 4, "fadeInMs": 120, "swings": 2, "swingMs": 125,
+    "crumbleTileMs": 90, "crumbleMinMs": 600, "crumbleMaxMs": 860, "crackMs": 140, "popMs": 240, "tickRise": 10, "crewOutMs": 220, "leverDelayMs": 40, "leverMs": 200, "doorTileMs": 35, "doorMs": 220,
+    "chestPopMs": 320, "flyMs": 520, "lightMs": 260, "keepDelayMs": 60, "marchDelayMs": 380, "marchTileMs": 170,
+    "marchMaxTiles": 6, "crewScale": 1.15, "goblinScale": 2.1, "edgeStand": 0.08, "wallStand": 0.18
   },
   "audio": {
     "volume": 0.5, "tickGapMs": 22,
@@ -33,7 +41,7 @@
       "bleat": [{ "w": "sawtooth", "f": 540, "f1": 500, "d": 0.36, "g": 0.12, "lp": 1500, "vib": 8, "vd": 45 }, { "w": "sawtooth", "f": 548, "f1": 505, "d": 0.34, "g": 0.08, "lp": 1500, "vib": 8, "vd": 40 }],
       "munch": [{ "w": "noise", "d": 0.05, "g": 0.2, "bp": 900 }],
       "sizzle": [{ "w": "noise", "d": 0.45, "g": 0.2, "hp": 4200 }, { "w": "sine", "f": 1400, "f1": 300, "d": 0.3, "g": 0.05 }],
-      "tick": [{ "w": "noise", "d": 0.035, "g": 0.26, "bp": 1400, "step": 90 }, { "w": "sine", "f": 320, "f1": 220, "d": 0.04, "g": 0.1, "step": 18 }],
+      "tick": [{ "w": "noise", "d": 0.04, "g": 0.26, "bp": 1200, "step": 120 }, { "w": "triangle", "f": 300, "f1": 240, "d": 0.05, "g": 0.14, "step": 42 }],
       "clank": [{ "w": "square", "f": 150, "f1": 90, "d": 0.1, "g": 0.14, "lp": 1800 }, { "w": "noise", "d": 0.06, "g": 0.2, "bp": 2600 }, { "w": "square", "f": 115, "f1": 80, "d": 0.12, "g": 0.12, "lp": 1600, "at": 0.12 }, { "w": "noise", "d": 0.05, "g": 0.16, "bp": 2200, "at": 0.12 }],
       "door": [{ "w": "sawtooth", "f": 95, "f1": 60, "d": 0.34, "g": 0.1, "lp": 500 }],
       "chime": [{ "w": "sine", "f": 1319, "d": 0.28, "g": 0.16 }, { "w": "sine", "f": 1760, "d": 0.28, "g": 0.14, "at": 0.07 }, { "w": "sine", "f": 2637, "d": 0.34, "g": 0.12, "at": 0.14 }],
@@ -71,7 +79,9 @@
     "outside": "#7fae4f", "groundShade": "#b8a47c",
     "outline": "rgba(20,16,24,0.78)",
     "badge": ["#fbf5e6", "#2a2430"],
-    "glow": "#fff3a8", "flash": "#ff5a3c", "pulse": "#ffffff", "burst": "#ffe27a", "trail": "#f3e3b4"
+    "glow": "#fff3a8", "flash": "#ff5a3c", "pulse": "#ffffff", "burst": "#ffe27a", "trail": "#f3e3b4", "reach": "#fff3a8",
+    "wall": ["#2e2935", "#1f1b25", "#3b3544", "#18151d"],
+    "confetti": ["#f2c230", "#ffe27a", "#d4432f", "#46a553", "#8d3fa3", "#3d6fc0", "#c9ecf8", "#ffffff"]
   },
   "selfTest": { "minLevels": 20, "maxLevels": 60, "stuckTries": 400, "stuckSeed": 7, "settleMs": 60000 }
 }
