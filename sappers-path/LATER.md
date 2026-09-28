@@ -58,3 +58,9 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - The board layer is baked in the committed state, so sections a break makes reachable get their bright outline and full badge as the show starts, a moment before the wall in front of them has crumbled. Holding the old reach set until the crumble ends would need a second layer.
 - At 360 px wide two top-bar names were shortened to fit ("Goats & a Chest", "Throne Room"); a longer name added later will ellipsize there.
 - Jersey 10 has no ★ glyph; stars in pixel-font text fall back to the system font. Fine today; a pixel star icon would match better.
+
+## From the loop-2 re-check critic (2026-09-27)
+- The pixel font draws 0 and O the same. No in-game text mixes them today; check before adding any.
+- Chest badges are never dimmed, so an unreachable chest looks as live as a breakable wall. Dim them like wall badges.
+- Phone landscape: the win panel covers 22–25 px of the board's right edge.
+- The chest hint toast sits over the board's top row for 1.8 s. Move it off the board or shorten it.
