@@ -260,7 +260,7 @@ function tune(L, play, colOf, lo, hi, T, rules) {
 function narrowStage(L, play, colOf, lo, hi, T, rules) {
   const R = require("./grade.js"), r = rng(T.seed ^ 0x68e31da4);
   let evals = 0;
-  const lo2 = lo + T.margin, hi2 = hi - T.margin;
+  const lo2 = lo > 0 ? lo + T.margin : 0, hi2 = hi < 1 ? hi - T.margin : 1;
   const score = (co) => { evals++; const B = E.compile(Object.assign({}, L, { cols: colsOf(play, co) })), x = R.rate(B, rules.normal, T.playouts, T.seed);
     return x < lo2 || x > hi2 ? null : { rate: x, g: R.greedy(B, rules.normal, T.greedyPlayouts, T.seed) }; };
   let cur = score(colOf), step = 0;
@@ -281,7 +281,8 @@ function stage(L, play, colOf, lo, hi, T, rules) {
   let evals = 0;
   const build = (pl, co) => E.compile(Object.assign({}, L, { cols: colsOf(pl, co) }));
   const rateOf = (pl, co) => { evals++; return R.rate(build(pl, co), rules.normal, T.playouts, T.seed); };
-  const lo2 = lo + T.margin, hi2 = hi - T.margin, miss = (x) => Math.max(0, lo2 - x, x - hi2);
+  // The margin keeps estimates off a band edge, except the 0% and 100% edges no estimate can cross.
+  const lo2 = lo > 0 ? lo + T.margin : 0, hi2 = hi < 1 ? hi - T.margin : 1, miss = (x) => Math.max(0, lo2 - x, x - hi2);
   const lens = (co) => { const c = [0, 0, 0, 0, 0]; for (const j of co) c[j]++; return c; };
   const dealWins = (pl, co) => { const B = build(pl, co), S = E.replay(B, rules.deal, orderOf(co)); return S.status === E.WON; };
   let cur = rateOf(play, colOf), step = 0;

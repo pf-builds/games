@@ -17,7 +17,7 @@
   "reliefColours": [9, 10],
   "sawLowColours": [8, 9],
   "deal": {"hold": 4, "size": [3, 12], "deep": 0.15, "finish": 0.3, "maxCard": 40, "maxCards": 240, "tries": 14, "attempts": 24},
-  "dealBy": {"early": {"size": [6, 20], "deep": 0.05}, "mid": {"size": [4, 14], "deep": 0.12}, "late": {"size": [3, 12], "deep": 0.18}},
+  "dealBy": {"early": {"size": [10, 30], "deep": 0.05}, "mid": {"size": [4, 14], "deep": 0.12}, "late": {"size": [3, 12], "deep": 0.18}},
   "tune": {"stages": [{"playouts": 64, "steps": 700}, {"playouts": 256, "steps": 200}], "narrow": {"playouts": 256, "greedyPlayouts": 64, "steps": 150, "margin": 0.005}, "margin": 0.02, "colMin": 3, "colMax": 30, "resize": 0.25, "split": 0.5, "minCard": 2, "maxCard": 40},
   "grade": {"playouts": 400, "greedyPlayouts": 100, "orderCap": 1000, "orderNodes": 200000, "solveNodes": 200000, "narrowNodes": 20000},
   "candidates": {"perLevel": 6, "fortTries": 80},
