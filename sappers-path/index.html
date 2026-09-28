@@ -6,10 +6,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#2e2935">
 <title>Sapper's Path</title>
-<meta name="description" content="Goblins stole the crown and walled themselves in. Each crew breaks one material. Break in from the outside and reach the keep.">
+<meta name="description" content="Goblins stole the crown and walled themselves in. Tap a crew and it marches from the siege camp to the nearest wall it can break. Pick the order, reach the keep.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%239a9ca6'/><rect x='30' y='38' width='40' height='52' fill='%235b5460'/><rect x='30' y='26' width='9' height='14' fill='%235b5460'/><rect x='45' y='26' width='10' height='14' fill='%235b5460'/><rect x='61' y='26' width='9' height='14' fill='%235b5460'/><path d='M42 90V70a8 8 0 0 1 16 0v20z' fill='%23f2c230'/></svg>">
-<link rel="preload" href="fonts/Jersey10-Regular.ttf?v=4" as="font" type="font/ttf" crossorigin>
-<link rel="stylesheet" href="style.css?v=4">
+<link rel="preload" href="fonts/Jersey10-Regular.ttf?v=5" as="font" type="font/ttf" crossorigin>
+<link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
 <div id="app">
@@ -17,6 +17,8 @@
     <button id="btn-menu" class="round" aria-label="World map"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
     <div id="lvl"><span id="lvl-num"></span><span id="lvl-name"></span></div>
     <div id="hud" aria-live="polite"><span id="hud-used">0</span><span class="of">/</span><span id="hud-par">0</span><span class="star" aria-hidden="true">&#9733;</span></div>
+    <button class="round tog tog-fast topt" aria-label="Double speed" aria-pressed="false">2&times;</button>
+    <button class="round tog tog-mute topt" aria-label="Mute sound" aria-pressed="false"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="waves" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="cross" d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
   </header>
   <main id="play">
     <aside id="side">
@@ -27,10 +29,10 @@
           <button class="round tog tog-fast" aria-label="Double speed" aria-pressed="false">2&times;</button>
           <button class="round tog tog-mute" aria-label="Mute sound" aria-pressed="false"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="waves" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="cross" d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
         </div>
-        <div id="hint" class="panel" hidden><p id="hint-text"></p><button id="btn-hint">Got it</button></div>
       </div>
     </aside>
-    <div id="stage"><canvas id="board" aria-label="The castle"></canvas><div id="toast" role="status" hidden></div></div>
+    <div id="stage"><canvas id="board" aria-label="The castle"></canvas><div id="toast" role="status" hidden></div>
+      <div id="hint" class="panel" hidden><p id="hint-text"></p><button id="btn-hint">Got it</button></div></div>
     <div id="rail">
       <div id="cards">
         <button class="crew" data-m="0" aria-label="Masons"><canvas class="ico" width="64" height="64"></canvas><b class="n">0</b><span class="lab">Masons</span></button>
@@ -55,7 +57,7 @@
     <div class="title-card">
       <h1>Sapper's Path</h1>
       <div class="title-foot panel">
-        <p>Goblins stole the crown and walled themselves in. Each crew breaks one material. Break in from the outside and reach the keep.</p>
+        <p>Goblins stole the crown and walled themselves in. Tap a crew: it marches from the camp and eats the nearest wall it can break. Pick the order, reach the keep.</p>
         <button id="btn-play" class="primary big">Play</button>
         <p id="load-msg" class="small"></p>
       </div>
@@ -76,14 +78,14 @@
     <div id="worlds"></div>
   </section>
 </div>
-<script src="src/engine.js?v=4"></script>
-<script src="src/solver.js?v=4"></script>
-<script src="src/save.js?v=4"></script>
-<script src="src/game.js?v=4"></script>
-<script src="src/art.js?v=4"></script>
-<script src="src/show.js?v=4"></script>
-<script src="src/audio.js?v=4"></script>
-<script src="src/render.js?v=4"></script>
-<script src="src/main.js?v=4"></script>
+<script src="src/engine.js?v=5"></script>
+<script src="src/solver.js?v=5"></script>
+<script src="src/save.js?v=5"></script>
+<script src="src/game.js?v=5"></script>
+<script src="src/art.js?v=5"></script>
+<script src="src/show.js?v=5"></script>
+<script src="src/audio.js?v=5"></script>
+<script src="src/render.js?v=5"></script>
+<script src="src/main.js?v=5"></script>
 </body>
 </html>

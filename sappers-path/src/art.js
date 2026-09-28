@@ -311,5 +311,194 @@
     if (locked) { P.g.globalAlpha = 0.55; P.r(0, 0, W, H, A.ink); P.g.globalAlpha = 1; }
   }
 
-  return { G, MATS, WALK, WORK, FRAMES, SHEET_PROBE, noise, mk, up, icon, sources, title, banner, worldStrip, wall };
+  // ---- v2 board picture (SPEC-v2 §4 "The castle is the picture") ------------------------------------------------------
+  // The board is painted as ONE pixel picture at bp logical px per block (config.art.blockPx), one block of field all
+  // round. Every material is a texture in world coordinates (brick courses, planks, leaves, ice facets, iron plates,
+  // water, grass, flagstones), so a region's texture runs unbroken across its blocks; each region gets an ink outline and
+  // a bevel (lit top-left, shaded bottom-right), walls cast a short shadow on the ground south and east of them, and
+  // ground the camp can't reach yet sits in shade. Painted into a Uint32Array (RGBA bytes, little-endian) and put once;
+  // the renderer scales the logical canvas up with smoothing off. textures() once per level, compose() per state.
+  function u32(hex) { const v = parseInt(hex.slice(1), 16); return (0xff000000 | ((v & 255) << 16) | (v & 0xff00) | ((v >> 16) & 255)) >>> 0; }
+  function mix(c, k, to) { // k 0..1 toward to (0 black, 255 white), on each channel
+    const r = c & 255, g = (c >>> 8) & 255, b = (c >>> 16) & 255, f = 1 - k, t = to * k;
+    return (0xff000000 | (((b * f + t) | 0) << 16) | (((g * f + t) | 0) << 8) | ((r * f + t) | 0)) >>> 0;
+  }
+  function h2(x, y, s) { return noise(Math.imul(x, 73856093) ^ Math.imul(y, 19349663) ^ Math.imul(s | 0, 83492791)); }
+  const TEX = { // world-coordinate texture functions: (X, Y, palette as u32) → u32
+    field(X, Y, p) { const n = h2(X, Y, 1); return n < 0.05 ? p[3] : n < 0.15 ? p[1] : n > 0.93 ? p[2] : h2(X >> 2, Y >> 2, 2) < 0.22 && n < 0.4 ? p[1] : p[0]; },
+    yard(X, Y, p) { // packed earth: soft patches and pebbles (a lit top, a dark foot), nothing on a grid, so it never reads as a wall
+      const n = h2(X, Y, 3), pb = h2(X >> 1, Y >> 1, 14);
+      if (pb > 0.965) return (Y & 1) ? p[3] : p[2];
+      return n < 0.05 ? p[3] : n < 0.16 || h2(X >> 3, Y >> 2, 15) < 0.18 && n < 0.5 ? p[1] : p[0];
+    },
+    stone(X, Y, p) { // brick courses 4 px, bricks 8 px, staggered half a brick: mortar, lit top edge, dark foot
+      const row = Y >> 2, yy = Y & 3, xx = (X + (row & 1) * 4) & 7;
+      if (yy === 0 || xx === 0) return p[1];
+      if (yy === 1 && xx <= 5) return p[2];
+      if (yy === 3 && xx >= 4) return p[3];
+      return h2(X, Y, 4) < 0.06 ? p[1] : p[0];
+    },
+    timber(X, Y, p) { // upright planks 4 px: seam, lit edge, grain dashes, staggered plank ends with a peg
+      const col = X >> 2, xx = X & 3, e = (Y + ((h2(col, 0, 5) * 16) | 0)) % 14;
+      if (xx === 0) return p[3];
+      if (e === 0) return p[3];
+      if (xx === 1) return e === 1 ? p[0] : p[2];
+      if (e === 2 && xx === 2) return p[3];
+      return h2(X, Y >> 1, 6) < 0.3 ? p[1] : p[0];
+    },
+    hedge(X, Y, p) { // leaf clumps (2 px mottle), lit tops, a rare blossom
+      if (h2(X, Y, 7) > 0.988) return p[4];
+      const n = h2((X + (Y >> 1 & 1)) >> 1, Y >> 1, 8);
+      return n < 0.2 ? p[3] : n < 0.47 ? p[1] : n < 0.83 ? p[0] : p[2];
+    },
+    ice(X, Y, p) { // diagonal glints, criss-cross cracks, frost speckle
+      const a = (X + Y) % 11, b = (X - Y + 4400) % 17;
+      if (a === 0 && h2((X + Y) / 11 | 0, (X - Y) >> 3, 9) < 0.7) return p[2];
+      if (b === 0 && h2((X - Y) / 17 | 0, (X + Y) >> 2, 10) < 0.55) return p[3];
+      if (a === 1 && h2((X + Y) / 11 | 0, (X - Y) >> 3, 9) < 0.7) return p[1];
+      return h2(X, Y, 11) < 0.05 ? p[1] : p[0];
+    },
+    iron(X, Y, p) { // one plate per block: lit top, dark seams, a strap with rivets
+      const xx = X & 7, yy = Y & 7;
+      if (xx === 7 || yy === 7) return p[3];
+      if (yy === 0) return p[2];
+      if (yy === 3 || yy === 4) return (xx === 1 || xx === 5) && yy === 3 ? p[2] : p[1];
+      return p[0];
+    },
+    moat(X, Y, p, f) { // water with drifting wave dashes (f: the wave frame)
+      const yy = Y & 3, w = (X + f * 2 + (Y >> 2) * 5 + ((h2(Y >> 2, (X + f * 2) >> 4, 12) * 6) | 0)) % 10;
+      if (yy === 1 && w < 3) return p[2];
+      if (yy === 2 && w >= 1 && w < 4) return p[3];
+      return h2(X, Y, 13) < 0.06 ? p[1] : p[0];
+    },
+  };
+  // Tiny sprites painted on single blocks (8×8 logical): k ink, and palette letters per sprite.
+  const SPR = {
+    tent: ["...kk...", "..kRCk..", ".kRCCRk.", ".kRCCRk.", "kRCRRCRk", "kRCkkCRk", "kRCkkCRk", "kkkkkkkk"],
+    chest: ["........", ".kkkkkk.", ".kddddk.", ".kggggk.", ".kwwgwk.", ".kwwwwk.", ".kkkkkk.", "........"],
+    chestO: [".kkkkkk.", ".kddddk.", ".kGGGGk.", ".kgGgGk.", ".kwwwwk.", ".kwwwwk.", ".kkkkkk.", "........"],
+    lever: ["......kk", ".....kRk", "....kwk.", "...kwk..", "..kwk...", ".kkkkkk.", ".kSSSSk.", "........"],
+    leverT: ["kk......", "kGk.....", ".kwk....", "..kwk...", "...kwk..", ".kkkkkk.", ".kSSSSk.", "........"],
+  };
+  // Per-level textures: one Uint32Array per kind, the full picture size, world-aligned. Also the moat's wave frames.
+  function textures(A, B, bp) {
+    const PW = (B.w + 2) * bp, PH = (B.h + 2) * bp, N = PW * PH, P = (k) => A[k].map(u32), T = { bp, PW, PH };
+    const one = (fn, pal, f) => { const a = new Uint32Array(N); for (let Y = 0, i = 0; Y < PH; Y++) for (let X = 0; X < PW; X++, i++) a[i] = fn(X, Y, pal, f); return a; };
+    T.field = one(TEX.field, P("grass")); T.yard = one(TEX.yard, P("ground"));
+    T.mat = [one(TEX.stone, P("stone")), one(TEX.timber, P("timber")), one(TEX.hedge, P("hedge")), one(TEX.ice, P("ice")), one(TEX.iron, P("iron"))];
+    T.keepT = one(TEX.stone, P("keep"));
+    let moat = false; for (let c = 0; c < B.n && !moat; c++) moat = B.kind[c] === 1;
+    T.moat = moat ? [0, 1, 2, 3].map((f) => one(TEX.moat, P("moat"), f)) : null;
+    T.pal = { ink: u32(A.ink), mat: MATS.map((m) => A[m].map(u32)), chest: A.chest.map(u32), lever: A.lever.map(u32), wood: A.wood.map(u32),
+      stone: A.stone.map(u32), keep: A.keep.map(u32), roof: [A.goblin[2], A.goblin[3], A.goblin[4]].map(u32), flag: A.flag.map(u32), tent: A.tent.map(u32), crew: A.crew.map((c) => u32(c[0])), moat: A.moat.map(u32) };
+    return T;
+  }
+  // Level facts the picture needs (once per level): field (open ground joined to the board edge through open ground:
+  // grass; everything else open is courtyard), the keep's bounds.
+  function levelInfo(B) {
+    const n = B.n, field = new Uint8Array(n), q = new Int32Array(n), openK = (k) => k === 0 || k === 5 || k === 6;
+    let h = 0, t = 0;
+    for (let c = 0; c < n; c++) { const x = c % B.w, y = (c / B.w) | 0; if ((x === 0 || y === 0 || x === B.w - 1 || y === B.h - 1) && openK(B.kind[c])) { field[c] = 1; q[t++] = c; } }
+    while (h < t) { const c = q[h++]; for (let d = 0; d < 4; d++) { const e = B.nb[c * 4 + d]; if (e >= 0 && !field[e] && openK(B.kind[e])) { field[e] = 1; q[t++] = e; } } }
+    let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
+    for (const c of B.keepCells) { const x = c % B.w, y = (c / B.w) | 0; x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+    return { field, kx0: x0, ky0: y0, kx1: x1, ky1: y1 };
+  }
+  // Paint the picture of state st (any engine state) into buf (PW × PH). Walls are standing unless st.open.
+  function compose(buf, T, B, st, I, moatF) {
+    const bp = T.bp, PW = T.PW, w = B.w, h = B.h, kind = B.kind, mat = B.mat, sec = B.sec, nb = B.nb, P = T.pal, ink = P.ink;
+    const standing = (c) => c >= 0 && (kind[c] === 2 || kind[c] === 4 || (kind[c] === 3 && !st.open[c]));
+    const blit = (src, X0, Y0) => { for (let j = 0; j < bp; j++) { const o = (Y0 + j) * PW + X0; for (let i = 0; i < bp; i++) buf[o + i] = src[o + i]; } };
+    const row = (X0, Y, n, fn) => { const o = Y * PW + X0; for (let i = 0; i < n; i++) buf[o + i] = fn(buf[o + i]); };
+    const col = (X, Y0, n, fn) => { for (let j = 0; j < n; j++) { const o = (Y0 + j) * PW + X; buf[o] = fn(buf[o]); } };
+    const sprite = (rows, X0, Y0, pal) => { for (let j = 0; j < rows.length; j++) for (let i = 0; i < rows[j].length; i++) { const ch = rows[j][i]; if (ch !== ".") buf[(Y0 + j) * PW + X0 + i] = ch === "k" ? ink : pal[ch]; } };
+    const dark = (k) => (c) => mix(c, k, 0), lite = (k) => (c) => mix(c, k, 255), toInk = () => ink;
+    // the field ring round the board
+    buf.set(T.field);
+    for (let c = 0; c < B.n; c++) {
+      const x = c % w, y = (c / w) | 0, X0 = (x + 1) * bp, Y0 = (y + 1) * bp, k = kind[c];
+      if (k === 3 && !st.open[c]) { blit(T.mat[mat[c]], X0, Y0); continue; }
+      if (k === 1) { blit(T.moat ? T.moat[moatF | 0] : T.yard, X0, Y0); continue; }
+      if (k === 4) { blit(T.mat[0], X0, Y0); continue; }
+      if (k === 2) continue; // the keep is painted as one block below
+      blit(I.field[c] ? T.field : T.yard, X0, Y0);
+      if (k === 3) { // rubble where a wall stood: chunks of its material, dark undersides
+        const M = P.mat[mat[c]];
+        for (let i = 0; i < 2; i++) { const px = X0 + 1 + ((h2(c, i, 20) * (bp - 3)) | 0), py = Y0 + 1 + ((h2(c, i, 21) * (bp - 3)) | 0), wd = i ? 1 : 2; row(px, py + 1, wd, () => M[3]); row(px, py, wd, () => (i ? M[2] : M[0])); }
+      }
+    }
+    // outlines and bevels: each standing region is a raised slab; ground south / east of a wall gets its shadow
+    for (let c = 0; c < B.n; c++) {
+      const x = c % w, y = (c / w) | 0, X0 = (x + 1) * bp, Y0 = (y + 1) * bp, k = kind[c];
+      if (k === 3 && !st.open[c]) {
+        const q = sec[c], same = (e) => e >= 0 && kind[e] === 3 && !st.open[e] && sec[e] === q;
+        const u = !same(nb[c * 4]), r = !same(nb[c * 4 + 1]), d = !same(nb[c * 4 + 2]), l = !same(nb[c * 4 + 3]);
+        if (u) { row(X0, Y0 + 1, bp, lite(0.3)); row(X0, Y0, bp, toInk); }
+        if (l) { col(X0 + 1, Y0, bp, lite(0.18)); col(X0, Y0, bp, toInk); }
+        if (d) { row(X0, Y0 + bp - 2, bp, dark(0.28)); row(X0, Y0 + bp - 1, bp, toInk); }
+        if (r) { col(X0 + bp - 2, Y0, bp, dark(0.22)); col(X0 + bp - 1, Y0, bp, toInk); }
+      } else if (k === 1) {
+        const P2 = T.pal.moat[2];
+        for (let d = 0; d < 4; d++) { const e = nb[c * 4 + d]; if (e >= 0 && kind[e] !== 1) { if (d === 0) row(X0, Y0, bp, () => P2); else if (d === 2) row(X0, Y0 + bp - 1, bp, dark(0.3)); else if (d === 3) col(X0, Y0, bp, () => P2); else col(X0 + bp - 1, Y0, bp, dark(0.25)); } }
+      } else if (k !== 2 && k !== 4) {
+        if (standing(nb[c * 4])) { row(X0, Y0, bp, dark(0.34)); row(X0, Y0 + 1, bp, dark(0.16)); }
+        if (standing(nb[c * 4 + 3])) col(X0, Y0, bp, dark(0.22));
+      }
+    }
+    // levers on a stone plate (up, or thrown), chests (shut, or open once claimed), the camp's tents and pennants
+    for (let i = 0; i < B.levers.length; i++) { const c = B.levers[i]; sprite(st.thrown[i] ? SPR.leverT : SPR.lever, (c % w + 1) * bp, ((c / w | 0) + 1) * bp, { R: P.lever[0], G: P.lever[1], w: P.wood[0], S: P.lever[2] }); }
+    for (let i = 0; i < B.chestCell.length; i++) { const c = B.chestCell[i]; sprite(st.claimed[i] ? SPR.chestO : SPR.chest, (c % w + 1) * bp, ((c / w | 0) + 1) * bp, { d: P.chest[1], g: P.chest[3], G: P.chest[2], w: P.chest[0] }); }
+    for (let i = 0; i < B.camp.length; i++) {
+      const c = B.camp[i], X0 = (c % w + 1) * bp, Y0 = ((c / w | 0) + 1) * bp;
+      sprite(SPR.tent, X0, Y0, { R: P.tent[0], C: P.tent[1] });
+      if (i % 2 === 0) { col(X0 + 3, Y0 - 3, 3, toInk); const fc = P.crew[(i >> 1) % 4]; row(X0 + 4, Y0 - 3, 3, () => fc); row(X0 + 4, Y0 - 2, 2, () => fc); }
+    }
+    // the keep: one block. A goblin-purple shingled roof with gold eaves and the goblin flag at its peak, over brick walls
+    // in the keep's own palette and a portcullis (open on a win), so the goal never reads as another wall.
+    const kx = (I.kx0 + 1) * bp, ky = (I.ky0 + 1) * bp, KW = (I.kx1 - I.kx0 + 1) * bp, KH = (I.ky1 - I.ky0 + 1) * bp, K = P.keep, R = P.roof;
+    const onK = (X, Y) => kind[((Y / bp | 0) - 1) * w + ((X / bp | 0) - 1)] === 2, rh = KH >> 1, mid = (KW - 1) / 2;
+    for (let Y = ky; Y < ky + KH; Y++) for (let X = kx; X < kx + KW; X++) {
+      if (!onK(X, Y)) continue;
+      const i = X - kx, j = Y - ky, o = Y * PW + X;
+      let v;
+      if (j < rh) { // roof: a triangle from a 2 px peak at row 2 to the full width at the eaves
+        const half = 1 + ((j - 2) * (mid + 0.5)) / Math.max(1, rh - 3), dx = Math.abs(i - mid);
+        if (j < 2 || dx > half + 0.5) v = j < 2 ? K[3] : K[3];
+        else if (dx > half - 0.5 || j === rh - 1) v = j === rh - 1 ? R[2] : ink;
+        else v = (i + (j >> 1)) % 3 === 0 ? R[1] : R[0];
+      } else v = T.keepT[o];
+      if (i === 0 || i === KW - 1 || j === KH - 1 || j === 0) v = ink;
+      buf[o] = v;
+    }
+    const gw = Math.max(4, (KW / 3) & ~1), gh = Math.max(4, Math.round(KH * 0.3)), gx = kx + ((KW - gw) >> 1), gy = ky + KH - 1 - gh;
+    for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) {
+      const edge = i === 0 || i === gw - 1 || j === 0;
+      buf[(gy + j) * PW + gx + i] = edge ? ink : st.won ? (j === 1 ? K[1] : ink) : (i % 2 === 1 || j % 3 === 1 ? K[1] : K[3]);
+    }
+    const fx = kx + (KW >> 1), fy = ky + 1;
+    col(fx - 1, fy, 3, toInk);
+    row(fx, fy, 3, () => P.flag[0]); row(fx, fy + 1, 2, () => P.flag[1]);
+    // ground the camp can't reach yet sits in shade (the lit ground is where crews can walk)
+    for (let c = 0; c < B.n; c++) {
+      const k = kind[c];
+      if (!(k === 0 || k === 5 || (k === 3 && st.open[c])) || st.conn[c]) continue;
+      const X0 = (c % w + 1) * bp, Y0 = ((c / w | 0) + 1) * bp;
+      for (let j = 0; j < bp; j++) row(X0, Y0 + j, bp, dark(0.42));
+    }
+  }
+  // The moat's wave frame f alone (every other pixel transparent), for the per-frame overlay.
+  function moatFrame(buf, T, B, f) {
+    const bp = T.bp, PW = T.PW, src = T.moat[f], P2 = T.pal.moat[2];
+    buf.fill(0);
+    for (let c = 0; c < B.n; c++) {
+      if (B.kind[c] !== 1) continue;
+      const X0 = (c % B.w + 1) * bp, Y0 = ((c / B.w | 0) + 1) * bp;
+      for (let j = 0; j < bp; j++) { const o = (Y0 + j) * PW + X0; for (let i = 0; i < bp; i++) buf[o + i] = src[o + i]; }
+      for (let d = 0; d < 4; d++) { const e = B.nb[c * 4 + d]; if (e >= 0 && B.kind[e] !== 1) {
+        if (d === 0) for (let i = 0; i < bp; i++) buf[Y0 * PW + X0 + i] = P2; else if (d === 3) for (let j = 0; j < bp; j++) buf[(Y0 + j) * PW + X0] = P2;
+        else if (d === 2) for (let i = 0; i < bp; i++) { const o = (Y0 + bp - 1) * PW + X0 + i; buf[o] = mix(buf[o], 0.3, 0); } else for (let j = 0; j < bp; j++) { const o = (Y0 + j) * PW + X0 + bp - 1; buf[o] = mix(buf[o], 0.25, 0); } } }
+    }
+  }
+
+  return { G, MATS, WALK, WORK, FRAMES, SHEET_PROBE, noise, mk, up, icon, sources, title, banner, worldStrip, wall, u32, textures, levelInfo, compose, moatFrame };
 });
