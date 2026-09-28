@@ -181,5 +181,63 @@ function play(B, calls) { let s = E.start(B); for (const a of calls) { const n =
   eq([good, n >= 36], [n, true], "bake: all " + n + " levels replay their line to a win in exactly min calls");
 }
 
+// ---- M0c: depth, density and the bake's invariants (tools/m0c-report.md) -------------------------------------------
+{
+  const C = require("./bake-config.json"), Gen = require("./gen.js"), NAMES = require("../levels/names.json");
+  const cov = (L) => { let k = 0; for (const row of L.grid) for (const ch of row) if ("STHI".includes(ch)) k++; return k / (L.w * L.h); };
+  const layers = (B) => {   // walls to cross from the camp to the keep (iron free): the concentric rings show here
+    const D = E.derive(B, new Uint8Array(B.nsec), new Int16Array(B.spentLen), E.scratch(B)), km = new Uint8Array(B.n);
+    for (const k of B.keepCells) km[k] = 1;
+    return S.bound(B, D, { dist: new Int16Array(B.n), a: new Int32Array(B.n * 2), b: new Int32Array(B.n * 2), keepMark: km });
+  };
+  const counts = LEVELS.worlds.map((w) => w.levels.length), total = counts.reduce((a, b) => a + b, 0);
+  ok(total >= 36 && total <= 40, "m0c bake: 36-40 levels (" + counts.join("/") + ")");
+  const bad = { band: [], sections: [], tie: [], levers: [], chest: [], time: [], single: [], cover: [], rings: [], order: [], names: [] };
+  for (const w of LEVELS.worlds) {
+    const band = C.bands[w.world];
+    let seenBaked = false, lastMin = 0;
+    for (const L of w.levels) {
+      if (typeof NAMES[L.id] !== "string" || !NAMES[L.id].trim() || NAMES[L.id].length > 24 || L.name !== NAMES[L.id]) bad.names.push(L.id);
+      const B = E.parse(L), r = S.solve(B, { cap: C.cap });
+      if (r.capped || r.ms > 250) bad.time.push(L.id + " " + r.ms + "ms");
+      for (let s = 0; s < B.nsec; s++) if (B.secMat[s] < E.IRON && B.secStart[s + 1] - B.secStart[s] < 2) bad.single.push(L.id);
+      if (L.source === "teaching") { if (seenBaked) bad.order.push(L.id); continue; }
+      seenBaked = true;
+      if (L.min < lastMin) bad.order.push(L.id); lastMin = L.min;
+      if (L.min < band.min[0] || L.min > band.min[1]) bad.band.push(L.id + " min " + L.min);
+      if (B.nsec > band.maxSections) bad.sections.push(L.id + " " + B.nsec);
+      // No tie-break decides any call on the shipped line.
+      let st = E.start(B);
+      for (const a of L.line) { if (st.tie[E.CREW_OF[a]]) bad.tie.push(L.id); st = E.call(B, st, a) || st; }
+      if (band.levers) { const r2 = S.solve(E.parse(L, { noLevers: true }), { cap: C.cap, traps: false }); if (r2.win && r2.min <= L.min) bad.levers.push(L.id); }
+      if (L.metrics.chestKind === "required") {
+        const L2 = Object.assign({}, L, { grid: L.grid.map((row) => row.replace("C", ".")), chests: [] }), r2 = S.solve(E.parse(L2), { cap: C.cap, traps: false });
+        if (!r.chestRequired || (r2.win && r2.min <= L.min)) bad.chest.push(L.id);
+      }
+      if (w.world >= 3 && cov(L) < 0.4) bad.cover.push(L.id + " " + Math.round(cov(L) * 100) + "%");
+      if (w.world >= 3 && layers(B) < (w.world === 3 ? 4 : 3)) bad.rings.push(L.id + " " + layers(B));
+    }
+  }
+  eq(bad.names, [], "m0c names: every level has a short name in names.json, and the bake uses it");
+  eq(bad.order, [], "m0c order: teaching boards first in each world, then easiest first (min calls never falls)");
+  eq(bad.band, [], "m0c depth: every baked level's min calls sits in its world band (W3 6-10, W4 7-12)");
+  eq(bad.sections, [], "m0c phone cap: wall sections within the band cap");
+  eq(bad.tie, [], "m0c ties: no tie-break decides a call on any shipped line");
+  eq(bad.levers, [], "m0c levers: every World 4 board needs its lever (without it, no win or more calls)");
+  eq(bad.chest, [], "m0c chests: every required chest is required (without it, no win or more calls)");
+  eq(bad.time, [], "m0c solver: every level solves uncapped in under 250 ms");
+  eq(bad.single, [], "m0c pictures: no single-block crew section on any level");
+  eq(bad.cover, [], "m0c density: every World 3-4 baked board is at least 40% crew wall");
+  eq(bad.rings, [], "m0c depth: World 3 boards have at least 4 wall layers camp to keep, World 4 at least 3 plus the lever house");
+  // The generator: deterministic from a seed, never throws, and Worlds 3-4 castles are concentric.
+  for (const wk of ["1", "2", "3", "4"]) {
+    const run = () => { const rng = S.mulberry32(4242 + +wk), out = []; for (let t = 0; t < 30; t++) { let r; try { r = Gen.castle(C.worlds[wk], C, rng); } catch (e) { r = { fail: "THREW " + e.message }; } out.push(r.fail ? r.fail : r.level.grid.join("/") + (r.info.inner ? "+inner" : "")); } return out; };
+    const a = run(), b = run(), made = a.filter((x) => x.includes("/"));
+    ok(JSON.stringify(a) === JSON.stringify(b), "m0c generator: world " + wk + " castles are deterministic from the seed");
+    ok(!a.some((x) => x.startsWith("THREW")), "m0c generator: world " + wk + " castle() never throws");
+    ok(made.length > 0 && made.every((x) => (+wk >= 3) === x.endsWith("+inner")), "m0c generator: world " + wk + (+wk >= 3 ? " castles all have an inner curtain" : " castles keep one ring") + " (" + made.length + " made)");
+  }
+}
+
 console.log(pass + " passed, " + fail + " failed");
 process.exitCode = fail ? 1 : 0;

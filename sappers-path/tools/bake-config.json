@@ -56,7 +56,8 @@
         "p": 0.75,
         "r": [2, 2],
         "round": 0.6,
-        "contrast": 0.7
+        "contrast": 0.85,
+        "own": false
       },
       "gate": {
         "w": [3, 4],
@@ -119,7 +120,8 @@
         "p": 0.8,
         "r": [2, 3],
         "round": 0.6,
-        "contrast": 0.7
+        "contrast": 0.85,
+        "own": false
       },
       "gate": {
         "w": [3, 5],
@@ -172,55 +174,52 @@
       ],
       "mats": ["S", "T", "H", "I"],
       "margin": {
-        "side": [2, 3],
-        "top": [0, 3],
+        "side": [0, 1],
+        "top": [0, 1],
         "front": [6, 7]
       },
       "curtain": {
-        "thick": [2, 3],
+        "thick": [2, 2],
         "arcs": [4, 6],
         "cutJitter": 0.5,
         "minPiece": 4
       },
       "towers": {
-        "p": 0.8,
-        "r": [2, 3],
+        "p": 0.85,
+        "r": [2, 2],
         "round": 0.6,
-        "contrast": 0.7
+        "contrast": 0.95,
+        "own": true
       },
       "gate": {
-        "w": [3, 5],
-        "in": [0, 1],
+        "w": [3, 4],
+        "in": [0, 0],
         "out": [0, 1],
         "shift": [-2, 2],
         "mats": ["T", "H"]
       },
       "keep": {
-        "size": [2, 3],
-        "ring": [1, 2],
-        "arcs": [2, 3],
+        "size": [2, 2],
+        "ring": [1, 1],
+        "arcs": [2, 2],
         "yard": 1,
-        "up": [0, 2],
-        "front": 2,
+        "up": [0, 1],
+        "front": 0,
         "iron": false
       },
-      "divider": {
-        "p": 0.5,
-        "thick": [1, 2],
-        "segs": [2, 3]
-      },
+      "divider": null,
       "buildings": {
-        "n": [1, 3],
+        "n": [1, 2],
         "w": [2, 3],
-        "h": [2, 3]
+        "h": [2, 2]
       },
       "moat": {
         "p": 1,
-        "gap": [0, 1],
+        "gap": [0, 0],
         "thick": [1, 2],
         "wobble": 0.6,
         "freq": [2, 3],
-        "bridges": [1, 3],
+        "bridges": [1, 2],
         "mats": ["I"]
       },
       "lever": null,
@@ -229,15 +228,63 @@
         "side": 0.15,
         "shift": [-2, 2]
       },
-      "depth": [4, 10],
+      "depth": [6, 10],
       "chests": 1,
       "detour": 0.5,
       "spare": 0,
       "slack": [0, 1],
       "palisade": {
-        "p": 0.5,
+        "p": 0.7,
         "segs": [2, 3],
         "clear": 1
+      },
+      "barbican": {
+        "p": 0.5,
+        "pad": [0, 1],
+        "depth": [1, 2],
+        "thick": [1, 1],
+        "clear": 4
+      },
+      "inner": {
+        "side": [2, 2],
+        "back": [2, 2],
+        "front": [3, 4],
+        "thick": [2, 2],
+        "ward": [6, 5],
+        "arcs": [3, 4],
+        "towers": {
+          "p": 0.7,
+          "r": [1, 2],
+          "round": 0.6,
+          "contrast": 0.95,
+          "own": true
+        },
+        "gate": {
+          "w": [2, 3],
+          "sides": ["left", "right", "top", "bottom"],
+          "mats": ["T", "H"]
+        }
+      },
+      "radial": {
+        "n": [1, 2],
+        "thick": [2, 2],
+        "sides": ["left", "right", "top", "bottom"]
+      },
+      "gardens": {
+        "n": [0, 1],
+        "w": [3, 4],
+        "h": [2, 2]
+      },
+      "wardBuildings": {
+        "n": [0, 1],
+        "w": [2, 2],
+        "h": [2, 2]
+      },
+      "outworks": {
+        "n": [1, 2],
+        "w": [2, 3],
+        "h": [2, 2],
+        "clear": 2
       }
     },
     "4": {
@@ -247,9 +294,9 @@
       ],
       "mats": ["S", "T", "H", "I"],
       "margin": {
-        "side": [3, 4],
-        "top": [0, 3],
-        "front": [6, 8]
+        "side": [0, 1],
+        "top": [0, 1],
+        "front": [7, 8]
       },
       "curtain": {
         "thick": [2, 3],
@@ -258,14 +305,15 @@
         "minPiece": 4
       },
       "towers": {
-        "p": 0.85,
+        "p": 0.9,
         "r": [2, 3],
         "round": 0.6,
-        "contrast": 0.7
+        "contrast": 0.95,
+        "own": true
       },
       "gate": {
-        "w": [3, 5],
-        "in": [0, 1],
+        "w": [3, 4],
+        "in": [0, 0],
         "out": [0, 1],
         "shift": [-2, 2],
         "mats": ["T", "H"]
@@ -274,28 +322,24 @@
         "size": [2, 3],
         "ring": [1, 1],
         "arcs": [1, 1],
-        "yard": 3,
-        "up": [0, 2],
-        "front": 2,
+        "yard": 1,
+        "up": [0, 1],
+        "front": 0,
         "iron": true
       },
-      "divider": {
-        "p": 0.6,
-        "thick": [1, 2],
-        "segs": [2, 3]
-      },
+      "divider": null,
       "buildings": {
         "n": [1, 3],
         "w": [2, 3],
         "h": [2, 3]
       },
       "moat": {
-        "p": 0.6,
-        "gap": [0, 1],
+        "p": 1,
+        "gap": [0, 0],
         "thick": [1, 2],
         "wobble": 0.6,
         "freq": [2, 3],
-        "bridges": [1, 3],
+        "bridges": [1, 2],
         "mats": ["I", "T"]
       },
       "lever": {
@@ -306,15 +350,63 @@
         "side": 0.15,
         "shift": [-2, 2]
       },
-      "depth": [5, 12],
+      "depth": [7, 12],
       "chests": 1,
       "detour": 0.5,
       "spare": 0,
       "slack": [0, 1],
       "palisade": {
-        "p": 0.5,
+        "p": 0.85,
         "segs": [2, 3],
         "clear": 1
+      },
+      "barbican": {
+        "p": 0.6,
+        "pad": [0, 1],
+        "depth": [1, 2],
+        "thick": [1, 1],
+        "clear": 4
+      },
+      "inner": {
+        "side": [2, 2],
+        "back": [2, 2],
+        "front": [3, 5],
+        "thick": [2, 2],
+        "ward": [8, 8],
+        "arcs": [4, 5],
+        "towers": {
+          "p": 0.8,
+          "r": [1, 2],
+          "round": 0.6,
+          "contrast": 0.95,
+          "own": true
+        },
+        "gate": {
+          "w": [2, 3],
+          "sides": ["left", "right", "top", "bottom"],
+          "mats": ["T", "H"]
+        }
+      },
+      "radial": {
+        "n": [1, 3],
+        "thick": [2, 2],
+        "sides": ["left", "right", "top", "bottom"]
+      },
+      "gardens": {
+        "n": [0, 2],
+        "w": [3, 4],
+        "h": [2, 2]
+      },
+      "wardBuildings": {
+        "n": [1, 2],
+        "w": [2, 2],
+        "h": [2, 2]
+      },
+      "outworks": {
+        "n": [1, 3],
+        "w": [2, 3],
+        "h": [2, 2],
+        "clear": 2
       }
     }
   },
@@ -331,7 +423,7 @@
       "levers": false
     },
     "2": {
-      "min": [4, 6],
+      "min": [4, 7],
       "maxSections": 20,
       "greedy": 1,
       "decisions": 1,
@@ -342,8 +434,8 @@
       "levers": false
     },
     "3": {
-      "min": [5, 7],
-      "maxSections": 24,
+      "min": [6, 10],
+      "maxSections": 30,
       "greedy": 1,
       "decisions": 2,
       "reshapes": 0,
@@ -353,8 +445,8 @@
       "levers": false
     },
     "4": {
-      "min": [5, 8],
-      "maxSections": 28,
+      "min": [7, 12],
+      "maxSections": 34,
       "greedy": 1,
       "decisions": 2,
       "reshapes": 0,
@@ -363,5 +455,8 @@
       "chest": true,
       "levers": true
     }
+  },
+  "m0c": {
+    "perWorld": 300
   }
 }

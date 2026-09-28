@@ -9,7 +9,8 @@
 // rest required, each group spread evenly across the pool's difficulty order. Every world opens with its hand-authored
 // teaching boards (levels/teaching.json, solved under the baked rule); the rest run easiest first (min calls, then
 // random win). Never throws: a short pool is filled from near misses (logged), and every fallback is written into the
-// bake block of tools/m0v2-report.md. Names come from levels/names.json (keyed by level id), so a rebake keeps them.
+// bake block of tools/m0c-report.md. levels.json and the pools are written atomically (temp file, then rename), because
+// the page reads levels.json while tools run. Names come from levels/names.json (keyed by level id), so a rebake keeps them.
 "use strict";
 const fs = require("fs");
 const path = require("path");
@@ -125,14 +126,15 @@ function levelOut(L, m, id, name, world, source, extra) {
     if (!s.won || s.calls !== L.min) { bad++; say("REPLAY FAIL " + L.id + ": won " + s.won + " calls " + s.calls + " min " + L.min); }
   }
 
-  const out = { version: C.version, draft: true, rule, stacks, note: "M0 v2 draft bake: castle pictures under tools/bake-config.json bands, rule " + rule + (stacks ? " + stacks" : "") + ". Level format: SPEC-v2 §8. Peter reviews tools/m0v2-report.md before M1.", seed: C.seed, worlds };
-  fs.writeFileSync(path.join(ROOT, "levels", "levels.json"), JSON.stringify(out, null, 0).replace(/\{"id"/g, "\n{\"id\"") + "\n");
-  for (const [wk, p] of Object.entries(pools)) fs.writeFileSync(path.join(ROOT, "levels", "pool-w" + wk + ".json"), JSON.stringify({ version: C.version, world: +wk, rule, stacks, count: p.length, levels: p }).replace(/\{"id"/g, "\n{\"id\"") + "\n");
+  const out = { version: C.version, draft: true, rule, stacks, note: "M0c bake: concentric castle pictures in Worlds 3-4 under tools/bake-config.json bands, rule " + rule + (stacks ? " + stacks" : "") + ". Level format: SPEC-v2 §8. Numbers: tools/m0c-report.md.", seed: C.seed, worlds };
+  const atomic = (file, text) => { const tmp = file + ".tmp" + process.pid; fs.writeFileSync(tmp, text); fs.renameSync(tmp, file); };
+  atomic(path.join(ROOT, "levels", "levels.json"), JSON.stringify(out, null, 0).replace(/\{"id"/g, "\n{\"id\"") + "\n");
+  for (const [wk, p] of Object.entries(pools)) atomic(path.join(ROOT, "levels", "pool-w" + wk + ".json"), JSON.stringify({ version: C.version, world: +wk, rule, stacks, count: p.length, levels: p }).replace(/\{"id"/g, "\n{\"id\"") + "\n");
   const secs = ((Date.now() - t0) / 1000).toFixed(1);
   say("bake: " + worlds.reduce((a, w) => a + w.levels.length, 0) + " levels, pools " + Object.values(pools).map((p) => p.length).join("/") + ", " + bad + " replay failures, " + secs + " s");
 
   // Bake block in the report.
-  const rp = path.join(__dirname, "m0v2-report.md");
+  const rp = path.join(__dirname, "m0c-report.md");
   try {
     let md = fs.existsSync(rp) ? fs.readFileSync(rp, "utf8") : "";
     const rows = worlds.map((w) => "| " + w.world + " | " + w.levels.length + " | " + w.levels.map((l) => l.min).join(" ") + " | " + w.levels.map((l) => l.metrics.decisions).join(" ") + " | " + w.levels.map((l) => l.metrics.randWin.toFixed(2)).join(" ") + " | " + w.levels.map((l) => l.metrics.trapRate.toFixed(2)).join(" ") + " | " + w.levels.map((l) => l.metrics.sections).join(" ") + " | " + w.levels.map((l) => (l.metrics.chestKind || "-")[0]).join(" ") + " | " + w.levels.filter((l) => l.source.startsWith("near")).length + " |");
@@ -140,5 +142,5 @@ function levelOut(L, m, id, name, world, source, extra) {
       "| world | levels | min calls | decision points | random win | trap rate | crew sections | chest | near-miss fallbacks |", "|---|---|---|---|---|---|---|---|---|", ...rows, "", "Bake log:", "", "```", ...log, "```", "<!-- bake:end -->"].join("\n");
     md = md.includes("<!-- bake:start -->") ? md.replace(/<!-- bake:start -->[\s\S]*<!-- bake:end -->/, block) : md + "\n" + block + "\n";
     fs.writeFileSync(rp, md);
-  } catch (e) { console.log("bake: could not update m0v2-report.md (" + e.message + ")"); }
+  } catch (e) { console.log("bake: could not update m0c-report.md (" + e.message + ")"); }
 })().catch((e) => { console.log("bake failed: " + (e && e.stack || e)); });

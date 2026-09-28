@@ -1,11 +1,15 @@
 // Sapper's Path v2 board generator + per-board metrics (SPEC-v2 §4-5). Node only; every number comes from bake-config.json.
 // castle():    a castle-plan PICTURE (no muster yet). The castle rectangle sits in a field with the siege camp on the
 //              board edge (usually the bottom). Outer curtain several blocks thick, cut by angle into a few big arcs;
-//              corner towers (round or square) bulge out of it; a gatehouse faces the camp; the courtyard may hold a
-//              cross wall (divider) and buildings (the "closest" decoys); the keep block sits at the back inside its
-//              own ring (World 4: an iron ring, opened by a lever inside a small lever house). World 3+ adds a curving
-//              moat around the whole footprint with breakable bridges. Materials are a colouring where pieces of
-//              different groups (outer / yard / inner / bridges) never share a material, so no section spans two layers.
+//              corner towers (round or square) bulge out of it; a gatehouse faces the camp, optionally behind a barbican
+//              (a walled gate passage). Single-ring castles (Worlds 1-2): the courtyard may hold a cross wall (divider)
+//              and buildings (the "closest" decoys). Concentric castles (W.inner, Worlds 3-4, M0c): an inner curtain with
+//              its own towers and gatehouse on any side, a bailey between the curtains cut by cross walls (W.radial) and
+//              holding buildings and hedge gardens, more buildings in the inner ward. The keep block sits inside its own
+//              ring (World 4: an iron ring, opened by a lever inside a small lever house). World 3+ adds a curving moat
+//              around the whole footprint with breakable bridges; outworks and a palisade fill the front field.
+//              Materials are a colouring where pieces of different groups (outer / bridges / barbican / field / bailey /
+//              inner curtain / ward / keep ring) never share a material, so no section spans two layers.
 // musterize(): depth through scarcity for ONE rule. The solver's Pareto frontier lists every crew mix whose every win
 //              spends exactly that mix; pick a length k in W.depth (random k that has hits), then among up to
 //              C.musterEval mixes of that k the one with the most decision points (then reshapes, then trap rate).
@@ -24,7 +28,9 @@ function shuffle(rng, a) { for (let i = a.length - 1; i > 0; i--) { const j = Ma
 function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const TAU = Math.PI * 2;
-const OUTER = 1, YARD = 2, INNER = 3, BRIDGE = 4, FIELD = 5;
+const OUTER = 1, YARD = 2, INNER = 3, BRIDGE = 4, FIELD = 5, MID = 6, WARD = 7, BARB = 8;
+// Colouring order by group, outside in: outer curtain, bridges, barbican, field, bailey, inner curtain, ward, keep ring.
+const RANK = [0, 1, 5, 8, 2, 4, 6, 7, 3];
 
 // One castle picture. Returns {level, info} or {fail: reason}.
 function castle(W, C, rng) {
@@ -33,26 +39,66 @@ function castle(W, C, rng) {
   const nb4 = (c) => [X(c) > 0 ? c - 1 : -1, X(c) < w - 1 ? c + 1 : -1, c >= w ? c - w : -1, c < n - w ? c + w : -1];
   const M = W.margin, x0 = randInt(rng, M.side), x1 = w - 1 - randInt(rng, M.side), y0 = randInt(rng, M.top), y1 = h - 1 - randInt(rng, M.front);
   const T = randInt(rng, W.curtain.thick), ccx = (x0 + x1) / 2, ccy = (y0 + y1) / 2;
+  const cxL = x0 + T, cxR = x1 - T, cyT = y0 + T, cyB = y1 - T;
   const g = new Array(n).fill("."), piece = new Int16Array(n).fill(-1), P = [];
   const add = (group, kind) => { P.push({ group, kind, cells: [], mat: null }); return P.length - 1; };
   const own = (c, i) => { if (piece[c] >= 0) P[piece[c]].cells = P[piece[c]].cells.filter((q) => q !== c); piece[c] = i; P[i].cells.push(c); };
-  // role: 0 field, 1 curtain, 2 courtyard.
+  const freeIn = (c, r) => c >= 0 && role[c] === r && piece[c] < 0 && g[c] === ".";
+  // role: 0 field, 1 outer curtain, 2 courtyard (the outer bailey when there is an inner ring), 3 inner curtain, 4 inner ward.
   const role = new Uint8Array(n);
   for (let c = 0; c < n; c++) { const x = X(c), y = Y(c); if (x >= x0 && x <= x1 && y >= y0 && y <= y1) role[c] = Math.min(x - x0, x1 - x, y - y0, y1 - y) < T ? 1 : 2; }
-  const info = { w, h, T, towers: 0, gate: null, divider: 0, buildings: 0, moat: false, bridges: 0, palisade: 0, keep: 0, lever: false, camp: "bottom" };
+  const info = { w, h, T, towers: 0, towersRead: 0, gate: null, divider: 0, buildings: 0, gardens: 0, wardBuildings: 0, radial: 0, barbican: false, outworks: 0, inner: false, innerGate: null, moat: false, bridges: 0, palisade: 0, keep: 0, lever: false, camp: "bottom" };
 
-  // Towers bulge out of the four corners (never into the courtyard).
-  const TW = W.towers, off = (T - 1) / 2;
-  for (const [cx, cy] of [[x0 + off, y0 + off], [x1 - off, y0 + off], [x0 + off, y1 - off], [x1 - off, y1 - off]]) {
-    if (rng() >= TW.p) continue;
-    const r = randInt(rng, TW.r), round = rng() < TW.round, i = add(OUTER, "tower");
-    for (let y = Math.floor(cy - r - 1); y <= Math.ceil(cy + r + 1); y++) for (let x = Math.floor(cx - r - 1); x <= Math.ceil(cx + r + 1); x++) {
-      const c = at(x, y), dx = x - cx, dy = y - cy;
-      if (c < 0 || role[c] === 2) continue;
-      if (round ? dx * dx + dy * dy <= r * r + 0.3 : Math.abs(dx) <= r - 0.5 && Math.abs(dy) <= r - 0.5) own(c, i);
+  // Corner towers of one ring: round or square, radius TW.r, never entering the ring's inside (inside(c)) or another group.
+  const towers = (TW, ax, ay, bx, by, t, inside, group) => {
+    const off = (t - 1) / 2;
+    for (const [cx, cy] of [[ax + off, ay + off], [bx - off, ay + off], [ax + off, by - off], [bx - off, by - off]]) {
+      if (rng() >= TW.p) continue;
+      const r = randInt(rng, TW.r), round = rng() < TW.round, i = add(group, "tower");
+      for (let y = Math.floor(cy - r - 1); y <= Math.ceil(cy + r + 1); y++) for (let x = Math.floor(cx - r - 1); x <= Math.ceil(cx + r + 1); x++) {
+        const c = at(x, y), dx = x - cx, dy = y - cy;
+        if (c < 0 || inside(c) || (piece[c] >= 0 && P[piece[c]].group !== group)) continue;
+        if (round ? dx * dx + dy * dy <= r * r + 0.3 : Math.abs(dx) <= r - 0.5 && Math.abs(dy) <= r - 0.5) own(c, i);
+      }
+      if (P[i].cells.length) info.towers++;
     }
-    info.towers++;
-  }
+  };
+  // Cut a ring's leftover cells into k arcs by angle around (cx, cy), with jittered cuts.
+  const arcs = (cells, group, kind, k, cx, cy) => {
+    const o0 = rng(), cuts = [];
+    for (let i = 0; i < k; i++) cuts.push((o0 + (i + (rng() - 0.5) * W.curtain.cutJitter) / k + 1) % 1);
+    cuts.sort((a, b) => a - b);
+    const ap = cuts.map(() => -1);
+    for (const c of cells) {
+      const t = (Math.atan2(Y(c) - cy, X(c) - cx) / TAU + 1) % 1;
+      let s = cuts.length - 1; for (let i = 0; i < cuts.length; i++) if (t >= cuts[i]) s = i;
+      if (ap[s] < 0) ap[s] = add(group, kind);
+      own(c, ap[s]);
+    }
+  };
+  // Free-standing blocks in one region of role r with a clear ring (the "closest" decoys): buildings, gardens, outworks.
+  const blocks = (spec, r, group, kind, rx0, ry0, rx1, ry1, edgeOk) => {
+    if (!spec) return 0;
+    let made = 0;
+    const want = randInt(rng, spec.n);
+    for (let t = 0; made < want && t < 60; t++) {
+      const bw = randInt(rng, spec.w), bh = randInt(rng, spec.h);
+      if (rx1 - bw + 1 < rx0 || ry1 - bh + 1 < ry0) break;
+      const bx = randInt(rng, [rx0, rx1 - bw + 1]), by = randInt(rng, [ry0, ry1 - bh + 1]);
+      let ok = true;
+      for (let y = by - 1; y <= by + bh && ok; y++) for (let x = bx - 1; x <= bx + bw && ok; x++) { const c = at(x, y); if (c < 0 ? !edgeOk : role[c] === r && !freeIn(c, r)) ok = false; }
+      for (let y = by; y < by + bh && ok; y++) for (let x = bx; x < bx + bw && ok; x++) if (!freeIn(at(x, y), r)) ok = false;
+      if (!ok) continue;
+      const i = add(group, kind);
+      for (let y = by; y < by + bh; y++) for (let x = bx; x < bx + bw; x++) own(at(x, y), i);
+      made++;
+    }
+    return made;
+  };
+
+  // Outer towers bulge out of the four corners (never into the courtyard).
+  const TW = W.towers;
+  towers(TW, x0, y0, x1, y1, T, (c) => role[c] >= 2, OUTER);
   // Gatehouse on the front (camp) side, between the towers, through the curtain and out one row.
   const GT = W.gate, gw = randInt(rng, GT.w), gin = randInt(rng, GT.in), gout = randInt(rng, GT.out);
   let gx0 = -1;
@@ -67,26 +113,59 @@ function castle(W, C, rng) {
   for (let y = y1 - T + 1 - gin; y <= y1 + gout; y++) for (let k = 0; k < gw; k++) own(at(gx0 + k, y), gi);
   info.gate = { x: gx0, w: gw };
   const gcx = gx0 + (gw - 1) / 2;
+  // Barbican: a walled gate passage (a U against the curtain) in front of the gatehouse. A decoy and a picture piece.
+  const BA = W.barbican;
+  let front = y1 + gout;
+  const passage = [];   // the barbican passage counts as footprint, so the moat wraps outside it
+  if (BA && rng() < BA.p) {
+    const pad = randInt(rng, BA.pad), dep = randInt(rng, BA.depth), th = randInt(rng, BA.thick);
+    const lx = gx0 - pad - th, rx = gx0 + gw - 1 + pad + th, by = y1 + gout + dep + th, cells = [];
+    let ok = lx >= 0 && rx < w && by <= h - 1 - BA.clear;
+    for (let y = y1 + 1; ok && y <= by; y++) for (let x = lx; x <= rx && ok; x++) {
+      const c = at(x, y);
+      if (x < lx + th || x > rx - th || y > by - th) { if (!freeIn(c, 0)) ok = false; else cells.push(c); }
+      else if (c < 0 || role[c] !== 0 || (piece[c] >= 0 && piece[c] !== gi)) ok = false;
+      else if (y > y1 + gout || piece[c] < 0) passage.push(c);
+    }
+    if (!ok) passage.length = 0;
+    else { const i = add(BARB, "barbican"); for (const c of cells) own(c, i); front = by; info.barbican = true; }
+  }
+  // Outer curtain arcs: what the towers and gate left.
+  const rest = []; for (let c = 0; c < n; c++) if (role[c] === 1 && piece[c] < 0) rest.push(c);
+  arcs(rest, OUTER, "arc", randInt(rng, W.curtain.arcs), ccx, ccy);
 
-  // Curtain arcs: what the towers and gate left, cut by angle around the castle centre with jittered cuts.
-  const CU = W.curtain, k = randInt(rng, CU.arcs), o0 = rng(), cuts = [];
-  for (let i = 0; i < k; i++) cuts.push((o0 + (i + (rng() - 0.5) * CU.cutJitter) / k + 1) % 1);
-  cuts.sort((a, b) => a - b);
-  const arcPiece = cuts.map(() => -1);
-  for (let c = 0; c < n; c++) {
-    if (role[c] !== 1 || piece[c] >= 0) continue;
-    const t = (Math.atan2(Y(c) - ccy, X(c) - ccx) / TAU + 1) % 1;
-    let s = cuts.length - 1; for (let i = 0; i < cuts.length; i++) if (t >= cuts[i]) s = i;
-    if (arcPiece[s] < 0) arcPiece[s] = add(OUTER, "arc");
-    own(c, arcPiece[s]);
+  // Inner curtain (concentric castles): a second ring inside the courtyard, with a bailey between the two, its own
+  // corner towers and gatehouse (on any side, so the bailey is a walk), cut into arcs. The keep sits in its ward.
+  const IN = W.inner;
+  let wL = cxL, wR = cxR, wT = cyT, wB = cyB, inRole = 2, ix0 = 0, ix1 = 0, iy0 = 0, iy1 = 0;
+  if (IN) {
+    const bs = randInt(rng, IN.side), bb = randInt(rng, IN.back), bf = randInt(rng, IN.front), Tm = randInt(rng, IN.thick);
+    ix0 = cxL + bs; ix1 = cxR - bs; iy0 = cyT + bb; iy1 = cyB - bf;
+    if (ix1 - ix0 + 1 - 2 * Tm < IN.ward[0] || iy1 - iy0 + 1 - 2 * Tm < IN.ward[1]) return { fail: "inner-room" };
+    for (let c = 0; c < n; c++) { if (role[c] !== 2) continue; const x = X(c), y = Y(c); if (x >= ix0 && x <= ix1 && y >= iy0 && y <= iy1) role[c] = Math.min(x - ix0, ix1 - x, y - iy0, iy1 - y) < Tm ? 3 : 4; }
+    wL = ix0 + Tm; wR = ix1 - Tm; wT = iy0 + Tm; wB = iy1 - Tm; inRole = 4;
+    towers(IN.towers, ix0, iy0, ix1, iy1, Tm, (c) => role[c] === 4 || role[c] === 1, MID);
+    const side = pick(rng, IN.gate.sides), gw2 = randInt(rng, IN.gate.w);
+    for (let t = 0; t < 20 && !info.innerGate; t++) {
+      const cells = [], horiz = side === "bottom" || side === "top";
+      const lo = (horiz ? ix0 : iy0) + Tm, hi = (horiz ? ix1 : iy1) - Tm - gw2 + 1;
+      if (hi < lo) break;
+      const a = randInt(rng, [lo, hi]), s0 = side === "bottom" ? iy1 - Tm + 1 : side === "top" ? iy0 : side === "right" ? ix1 - Tm + 1 : ix0;
+      for (let d = s0; d < s0 + Tm; d++) for (let k = 0; k < gw2; k++) cells.push(horiz ? at(a + k, d) : at(d, a + k));
+      if (cells.some((c) => c < 0 || role[c] !== 3 || piece[c] >= 0)) continue;
+      const i = add(MID, "gate"); for (const c of cells) own(c, i);
+      info.innerGate = side;
+    }
+    const irest = []; for (let c = 0; c < n; c++) if (role[c] === 3 && piece[c] < 0) irest.push(c);
+    arcs(irest, MID, "arc", randInt(rng, IN.arcs), (ix0 + ix1) / 2, (iy0 + iy1) / 2);
+    info.inner = true;
   }
 
-  // Keep block at the back of the courtyard inside its own ring (rounded corners when 2 thick).
+  // Keep block at the back of its ward inside its own ring (rounded corners when 2 thick).
   const KP = W.keep, ks = randInt(rng, KP.size), Ti = randInt(rng, KP.ring), yd = KP.yard;
-  const cxL = x0 + T, cxR = x1 - T, cyT = y0 + T, cyB = y1 - T;
-  const kxMin = cxL + yd + Ti, kxMax = cxR - yd - Ti - ks + 1, kyMin = cyT + yd + Ti, kyMax = cyB - yd - Ti - ks + 1 - KP.front;
+  const kxMin = wL + yd + Ti, kxMax = wR - yd - Ti - ks + 1, kyMin = wT + yd + Ti, kyMax = wB - yd - Ti - ks + 1 - KP.front;
   if (kxMin > kxMax || kyMin > kyMax) return { fail: "room" };
-  const kx0 = clamp(Math.round((cxL + cxR + 1 - ks) / 2) + randInt(rng, [-1, 1]), kxMin, kxMax), ky0 = clamp(kyMin + randInt(rng, KP.up), kyMin, kyMax);
+  const kx0 = clamp(Math.round((wL + wR + 1 - ks) / 2) + randInt(rng, [-1, 1]), kxMin, kxMax), ky0 = clamp(kyMin + randInt(rng, KP.up), kyMin, kyMax);
   const kcx = kx0 + (ks - 1) / 2, kcy = ky0 + (ks - 1) / 2, ringCells = [];
   for (let y = ky0 - Ti; y < ky0 + ks + Ti; y++) for (let x = kx0 - Ti; x < kx0 + ks + Ti; x++) {
     const c = at(x, y), dx = x < kx0 ? kx0 - x : x >= kx0 + ks ? x - kx0 - ks + 1 : 0, dy = y < ky0 ? ky0 - y : y >= ky0 + ks ? y - ky0 - ks + 1 : 0;
@@ -96,20 +175,9 @@ function castle(W, C, rng) {
   }
   info.keep = ks;
   if (KP.iron) { const i = add(INNER, "iron"); P[i].mat = "F"; for (const c of ringCells) own(c, i); }
-  else {
-    const ka = randInt(rng, KP.arcs), q0 = rng(), kc = [];
-    for (let i = 0; i < ka; i++) kc.push((q0 + (i + (rng() - 0.5) * CU.cutJitter) / ka + 1) % 1);
-    kc.sort((a, b) => a - b);
-    const kp = kc.map(() => -1);
-    for (const c of ringCells) {
-      const t = (Math.atan2(Y(c) - kcy, X(c) - kcx) / TAU + 1) % 1;
-      let s = kc.length - 1; for (let i = 0; i < kc.length; i++) if (t >= kc[i]) s = i;
-      if (kp[s] < 0) kp[s] = add(INNER, "ring");
-      own(c, kp[s]);
-    }
-  }
+  else arcs(ringCells, INNER, "ring", randInt(rng, KP.arcs), kcx, kcy);
   const wardBottom = ky0 + ks + Ti - 1;
-  const free = (c) => c >= 0 && role[c] === 2 && piece[c] < 0 && g[c] === ".";
+  const free = (c) => freeIn(c, inRole);
 
   // World 4: the lever sits against the iron ring's outer face, closed in by a small lever house (3×2 less the lever).
   if (W.lever) {
@@ -123,14 +191,14 @@ function castle(W, C, rng) {
       const Lc = at(L[0], L[1]);
       if (!free(Lc) || house.some((c) => !free(c))) continue;
       g[Lc] = "L";
-      const i = add(YARD, "house"); for (const c of house) own(c, i);
+      const i = add(IN ? WARD : YARD, "house"); for (const c of house) own(c, i);
       placed = true; info.lever = side;
     }
     if (!placed) return { fail: "lever" };
   }
-  // A cross wall splits the courtyard into a front and a back bailey, cut into a few segments.
+  // Single-ring castles: a cross wall splits the courtyard into a front and a back bailey, cut into a few segments.
   const DV = W.divider;
-  if (DV && rng() < DV.p) {
+  if (!IN && DV && rng() < DV.p) {
     const th = randInt(rng, DV.thick), top = wardBottom + 2, bot = cyB - 2 - th + 1;
     if (top <= bot) {
       const yv = randInt(rng, [top, bot]), segs = randInt(rng, DV.segs), cutsX = [];
@@ -143,27 +211,40 @@ function castle(W, C, rng) {
       info.divider = segs;
     }
   }
-  // Buildings: free-standing blocks in the courtyard with a clear ring around them (the decoys).
-  const BU = W.buildings, nbld = randInt(rng, BU.n);
-  for (let b = 0, t = 0; b < nbld && t < 60; t++) {
-    const bw = randInt(rng, BU.w), bh = randInt(rng, BU.h), bx = randInt(rng, [cxL, cxR - bw + 1]), by = randInt(rng, [cyT, cyB - bh + 1]);
-    let ok = true;
-    for (let y = by - 1; y <= by + bh && ok; y++) for (let x = bx - 1; x <= bx + bw && ok; x++) { const c = at(x, y); if (c < 0 || (role[c] === 2 && !free(c))) ok = false; }
-    for (let y = by; y < by + bh && ok; y++) for (let x = bx; x < bx + bw && ok; x++) if (!free(at(x, y))) ok = false;
-    if (!ok) continue;
-    const i = add(YARD, "building");
-    for (let y = by; y < by + bh; y++) for (let x = bx; x < bx + bw; x++) own(at(x, y), i);
-    b++; info.buildings++;
+  // Concentric castles: cross walls span the bailey from curtain to curtain, cutting it into sectors (never side by side).
+  const RA = W.radial;
+  if (IN && RA) {
+    const want = randInt(rng, RA.n);
+    for (let b = 0, t = 0; b < want && t < 40; t++) {
+      const th = randInt(rng, RA.thick), side = pick(rng, RA.sides), cells = [];
+      if (side === "left" || side === "right") {
+        if (iy1 - th < iy0 + 1) continue;
+        const y = randInt(rng, [iy0 + 1, iy1 - th]), xa = side === "left" ? cxL : ix1 + 1, xb = side === "left" ? ix0 - 1 : cxR;
+        for (let yy = y; yy < y + th; yy++) for (let x = xa; x <= xb; x++) cells.push(at(x, yy));
+      } else {
+        if (ix1 - th < ix0 + 1) continue;
+        const x = randInt(rng, [ix0 + 1, ix1 - th]), ya = side === "top" ? cyT : iy1 + 1, yb = side === "top" ? iy0 - 1 : cyB;
+        for (let y = ya; y <= yb; y++) for (let xx = x; xx < x + th; xx++) cells.push(at(xx, y));
+      }
+      if (!cells.length || cells.some((c) => !freeIn(c, 2) || nb4(c).some((e) => e >= 0 && piece[e] >= 0 && P[piece[e]].group === YARD))) continue;
+      const i = add(YARD, "radial"); for (const c of cells) own(c, i);
+      b++; info.radial++;
+    }
   }
+  // Buildings and gardens (hedge) in the courtyard or bailey; more buildings in the inner ward.
+  info.buildings = blocks(W.buildings, 2, YARD, "building", cxL, cyT, cxR, cyB, false);
+  info.gardens = blocks(W.gardens, 2, YARD, "garden", cxL, cyT, cxR, cyB, false);
+  if (IN) info.wardBuildings = blocks(W.wardBuildings, 4, WARD, "building", wL, wT, wR, wB, false);
 
-  // Moat: a band around the whole footprint (curtain, towers, gate), wobbled by angle so it curves; bridges cross it.
+  // Moat: a band around the whole footprint (curtain, towers, gate, barbican), wobbled by angle; bridges cross it.
   const MO = W.moat;
   if (MO && rng() < MO.p) {
-    const foot = new Uint8Array(n); for (let c = 0; c < n; c++) if (role[c] === 1 || (piece[c] >= 0 && P[piece[c]].group === OUTER)) foot[c] = 1;
+    const foot = new Uint8Array(n); for (let c = 0; c < n; c++) if (role[c] === 1 || (piece[c] >= 0 && (P[piece[c]].group === OUTER || P[piece[c]].group === BARB))) foot[c] = 1;
+    for (const c of passage) foot[c] = 1;
     const edge = []; for (let c = 0; c < n; c++) if (foot[c] && nb4(c).some((e) => e >= 0 && !foot[e])) edge.push(c);
     const gap = randInt(rng, MO.gap), th = randInt(rng, MO.thick), amp = MO.wobble, fq = randInt(rng, MO.freq), ph = rng() * TAU;
     for (let c = 0; c < n; c++) {
-      if (foot[c] || role[c] === 2) continue;
+      if (foot[c] || role[c] >= 2) continue;
       let d2 = 1e9; for (const e of edge) { const dx = X(c) - X(e), dy = Y(c) - Y(e), q = dx * dx + dy * dy; if (q < d2) d2 = q; }
       // Inner edge fixed, outer edge bulges by up to W.moat.wobble: the band curves but never thins below th.
       const d = Math.sqrt(d2), bulge = amp * (0.5 + 0.5 * Math.sin(fq * Math.atan2(Y(c) - ccy, X(c) - ccx) + ph));
@@ -192,25 +273,30 @@ function castle(W, C, rng) {
     if (!info.bridges) return { fail: "bridge" };
   }
 
+  let low = front + 2;
+  for (let c = 0; c < n; c++) if (g[c] === "~" && Y(c) + 2 > low) low = Y(c) + 2;
+  // Outworks: a few earthwork blocks in the front field (clear of the moat and the camp rows; the fence then avoids them).
+  if (W.outworks) info.outworks = blocks(W.outworks, 0, FIELD, "outwork", 0, low - 1, w - 1, h - 1 - W.outworks.clear, true);
   // Palisade: a fence across the whole front field between the castle (and its moat) and the camp, cut into segments.
   const PA = W.palisade;
   if (PA && rng() < PA.p) {
-    let low = y1 + gout + 2;
-    for (let c = 0; c < n; c++) if (g[c] === "~" && Y(c) + 2 > low) low = Y(c) + 2;
     const hi = h - 1 - PA.clear;
     if (low <= hi) {
-      const yp = randInt(rng, [low, hi]), segs = randInt(rng, PA.segs), cutsX = [];
+      let yp = -1;
+      for (let t = 0; t < 12 && yp < 0; t++) { const y = randInt(rng, [low, hi]); let ok = true; for (let x = 0; x < w && ok; x++) for (let d = -1; d <= 1; d++) { const c = at(x, y + d); if (c >= 0 && piece[c] >= 0 && P[piece[c]].kind === "outwork") ok = false; } if (ok) yp = y; }
+      const segs = randInt(rng, PA.segs), cutsX = [];
       for (let i = 1; i < segs; i++) cutsX.push(Math.round((w * i) / segs) + randInt(rng, [-2, 2]));
       let seg = -1, si = 0;
-      for (let x = 0; x < w; x++) {
+      for (let x = 0; x < w && yp >= 0; x++) {
         if (seg < 0 || (si < cutsX.length && x >= cutsX[si])) { if (seg >= 0) si++; seg = add(FIELD, "palisade"); }
         const c = at(x, yp); if (g[c] === "." && piece[c] < 0) own(c, seg);
       }
-      info.palisade = segs;
+      if (yp >= 0) info.palisade = segs;
     }
   }
 
   // Fold stray fragments (and pieces under minPiece) into the neighbouring piece of the same group with most contact.
+  const CU = W.curtain;
   for (let i = 0; i < P.length; i++) {
     if (P[i].kind === "iron" || P[i].kind === "house") continue;
     const comps = [], seen = new Set();
@@ -231,22 +317,31 @@ function castle(W, C, rng) {
     }
   }
 
-  // Colour: outer first, then bridges, yard, inner ring. Hard: a touching piece of another group never shares a material.
-  // Soft: avoid touching pieces of the same group (towers merge into an arc with 1 - towers.contrast).
+  // Colour, outside in (RANK), and within a group the gate first and the towers last. Hard: a touching piece of another
+  // group never shares a material. Soft: avoid touching pieces of the same group. A tower takes a material none of its
+  // ring's neighbours use with probability towers.contrast, the ring's first tower material when it can (towers read).
   const adj = (i) => { const o = new Set(); for (const c of P[i].cells) for (const e of nb4(c)) if (e >= 0 && piece[e] >= 0 && piece[e] !== i) o.add(piece[e]); return o; };
-  const order = P.map((_, i) => i).filter((i) => P[i].cells.length && !P[i].mat).sort((a, b) => [0, 1, 4, 5, 2, 3][P[a].group] - [0, 1, 4, 5, 2, 3][P[b].group] || (P[a].kind === "gate" ? -1 : 0) - (P[b].kind === "gate" ? -1 : 0) || a - b);
+  const twOf = (p) => (p.group === MID ? IN.towers : TW), kr = (p) => (p.kind === "gate" ? 0 : p.kind === "tower" && twOf(p).own ? 2 : 1), towerMat = {};
+  const order = P.map((_, i) => i).filter((i) => P[i].cells.length && !P[i].mat).sort((a, b) => RANK[P[a].group] - RANK[P[b].group] || kr(P[a]) - kr(P[b]) || a - b);
   for (const i of order) {
-    const hard = new Set(), soft = new Set();
-    for (const o of adj(i)) if (P[o].mat) (P[o].group !== P[i].group ? hard : soft).add(P[o].mat);
+    const hard = new Set(), soft = new Set(), p = P[i];
+    for (const o of adj(i)) if (P[o].mat) (P[o].group !== p.group ? hard : soft).add(P[o].mat);
     const opts = W.mats.filter((q) => !hard.has(q));
     if (!opts.length) return { fail: "colour" };
     let pref = opts.filter((q) => !soft.has(q));
-    if (P[i].kind === "tower" && rng() >= TW.contrast) pref = opts;
-    const want = P[i].kind === "gate" ? GT.mats : P[i].kind === "bridge" && MO ? MO.mats : null;
+    if (p.kind === "tower") {
+      const tm = towerMat[p.group];
+      if (rng() >= twOf(p).contrast) pref = opts;
+      else if (twOf(p).own && tm && pref.includes(tm)) pref = [tm];
+    }
+    const want = p.kind === "gate" ? (p.group === MID ? IN.gate.mats : GT.mats) : p.kind === "bridge" && MO ? MO.mats : p.kind === "garden" ? ["H"] : null;
     const wp = want ? pref.filter((q) => want.includes(q)) : [];
-    P[i].mat = pick(rng, wp.length ? wp : pref.length ? pref : opts);
+    p.mat = pick(rng, wp.length ? wp : pref.length ? pref : opts);
+    if (p.kind === "tower" && !towerMat[p.group]) towerMat[p.group] = p.mat;
   }
   for (let i = 0; i < P.length; i++) for (const c of P[i].cells) g[c] = P[i].mat;
+  // A tower reads when no touching wall shares its material (it is its own section, so its silhouette shows).
+  info.towersRead = 0; for (let i = 0; i < P.length; i++) if (P[i].kind === "tower" && P[i].cells.length && ![...adj(i)].some((o) => P[o].mat === P[i].mat)) info.towersRead++;
 
   // The siege camp: on the front edge near the gate, or low on a side edge.
   const CA = W.camp, cw = randInt(rng, CA.w), side = rng() < CA.side ? pick(rng, ["left", "right"]) : "bottom", camp = [];
@@ -260,9 +355,9 @@ function castle(W, C, rng) {
   let B; try { B = E.parse(level); } catch (e) { return { fail: "parse" }; }
   const s0 = E.start(B);
   if (s0.won) return { fail: "trivial" };
-  // A moat must close: at the start no curtain, tower or gate tile touches the camp's ground (bridges and the
-  // palisade are the way in). Any section the camp can never reach, even with every wall broken, is scenery: reject.
-  if (info.moat) for (let c = 0; c < n; c++) if (piece[c] >= 0 && P[piece[c]].group === OUTER && E.touches(B, s0.conn, c)) return { fail: "moat-leak" };
+  // A moat must close: at the start no curtain, tower, gate or barbican tile touches the camp's ground (bridges, the
+  // palisade and outworks are the way in). Any section the camp can never reach, even with every wall broken, is scenery.
+  if (info.moat) for (let c = 0; c < n; c++) if (piece[c] >= 0 && (P[piece[c]].group === OUTER || P[piece[c]].group === BARB) && E.touches(B, s0.conn, c)) return { fail: "moat-leak" };
   const all = new Uint8Array(B.nsec).fill(1), sp = new Int16Array(B.spentLen), Dall = E.derive(B, all, sp, E.scratch(B));
   for (let s = 0; s < B.nsec; s++) { let ok = false; for (const c of E.sectionCells(B, s)) if (Dall.conn[c]) ok = true; if (!ok) return { fail: "scenery" }; }
   return { level, info };

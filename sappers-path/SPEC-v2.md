@@ -113,3 +113,9 @@ Dailies, endless mode, an editor, hints beyond the target flags, and the portal 
   - `lineCells`: `[x, y]` of the first tile of the first section each call breaks.
   - `metrics`: `{sections, blocks, walls, randWin, greedyWin, greedyUsed, states, trapRate, decisions, reshapes, tieAny, chestKind, leversMatter, minB}`.
   - Also `teaches` (teaching boards), and `seed`/`idx` (generated boards).
+- 2026-09-27 (M0c, generator depth and density; `tools/m0c-report.md`): **Worlds 3-4 are concentric castles.** Rules unchanged.
+  - An inner curtain (2 thick) inside the outer one, with a bailey between (2 blocks at the sides and back, 3-5 at the front), its own corner towers, and a gatehouse on a random side. The keep ring sits in the inner ward. Bailey cross walls (2 thick, curtain to curtain), bailey buildings and hedge gardens, ward buildings, a barbican in front of the outer gate, and earthwork outworks in the front field. The moat is on every World 3-4 board and wraps around the barbican.
+  - Towers are coloured after their ring's arcs, avoid their neighbours' materials, and share one material per ring (Worlds 3-4).
+  - **Bands revised:** min calls W1 3-5, W2 4-7, W3 6-10, W4 7-12. Wall-section caps 14 / 20 / 30 / 34. Everything else as M0 v2.
+  - Measured (raw median min calls, before → after): W3 5 → 8, W4 5 → 8. Crew-wall coverage W3 41% → 50%, W4 32% → 48%. The bake is 38 levels (9/9/10/10); World 3 runs 6-10 calls and World 4 7-12.
+  - Worlds 1-2 keep the single-ring generator (their density pass was cut for time).
