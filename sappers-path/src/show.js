@@ -5,7 +5,9 @@
 //            whole walk is capped at walkMaxMs, so a long march never drags
 //   work     swings at the contact tile (a WORK event on each strike)
 //   eat      the section is eaten block by block in rings spreading out from the contact tile (a TICK per ring, arg =
-//            ring index). Rings are ringMs apart, squeezed so the whole eat never exceeds eatMaxMs
+//            ring index). Rings are ringMs apart, squeezed so the whole eat never exceeds eatMaxMs. On a big wall a few
+//            helpers (one per helperCells blocks, at most helpersMax) fan out from the crew along the wave front: each
+//            takes one cell of every ring, the nearest to its last, and stops where its branch of the wave ends
 //   cascade  levers the call exposed clank (CLANK), their iron doors swing open tile by tile (DOOR)
 //   light    ground the call connected comes out of shadow; chests it claimed pop (CHEST) and fly +1 to the card (ARRIVE)
 //   keep     on a win the keep opens (KEEP, the fanfare) and the crowned goblin is marched out toward the camp
@@ -21,8 +23,8 @@
   const INF = 1e15, EV = { WORK: 0, TICK: 1, CLANK: 2, DOOR: 3, CHEST: 4, ARRIVE: 5, KEEP: 6 };
 
   // One per level (sized to the board); build() reuses it for every call.
-  function create(B) {
-    const n = B.n; let kx = 0, ky = 0;
+  function create(B, hMax) {
+    const n = B.n; let kx = 0, ky = 0; hMax = Math.max(0, hMax | 0);
     for (let i = 0; i < B.keepCells.length; i++) { kx += B.keepCells[i] % B.w; ky += (B.keepCells[i] / B.w) | 0; }
     return {
       B, keepX: kx / B.keepCells.length, keepY: ky / B.keepCells.length, id: 0, prev: null, active: false, skipped: false, won: false, t0: 0, end: 0, k: 1, s: -1, m: -1,
@@ -34,14 +36,15 @@
       lit: new Int16Array(n), litN: 0, lightAt: INF, lightMs: 1,
       keepAt: INF, mx: new Float32Array(n + 2), my: new Float32Array(n + 2), marchN: 0, marchT0: INF, marchT1: INF, marchStep: 1,
       ev: [], evi: 0,
-      ring: new Int16Array(n), depth: new Int16Array(n),
+      ring: new Int16Array(n), depth: new Int16Array(n), taken: new Uint8Array(n),
+      hMax, hN: 0, hStride: n + 1, hc: new Int16Array(hMax * (n + 1)), hLast: new Int16Array(hMax),
       pos: { on: false, x: 0, y: 0, frame: 0, flip: false, alpha: 1, i: 0 },
     };
   }
 
   function clear(S) {
     for (let i = 0; i < S.cellsN; i++) { S.popAt[S.cells[i]] = INF; S.isDoor[S.cells[i]] = 0; }
-    S.cellsN = 0; S.secN = 0; S.litN = 0; S.pathN = 0; S.marchN = 0; S.rings = 0; S.ev.length = 0; S.evi = 0;
+    S.cellsN = 0; S.secN = 0; S.litN = 0; S.pathN = 0; S.marchN = 0; S.rings = 0; S.hN = 0; S.ev.length = 0; S.evi = 0;
     S.leverAt.fill(INF); S.chestAt.fill(INF); S.popT0 = S.lightAt = S.keepAt = S.marchT0 = S.marchT1 = INF;
     S.active = false; S.skipped = false; S.won = false;
   }
@@ -109,6 +112,23 @@
     for (let i = 0; i < t; i++) { const c = R[i], r = dep[c]; while (r0 < r) S.ringStart[++r0] = i; S.popAt[c] = S.ringAt[r]; S.cells[S.cellsN++] = c; }
     S.ringStart[rings] = t;
     S.secN = t;
+    // Helpers along the wave front: all start at the first contact tile; at each ring a helper takes the ring cell nearest
+    // its last (ties spread them round the ring, a cell another helper took costs a little more), or stops when the
+    // nearest is more than helperReach away (its branch ended).
+    const H = Math.min(S.hMax, rings > 2 ? Math.floor(t / T.helperCells) : 0), st = S.hStride, tk = S.taken;
+    S.hN = H;
+    for (let hh = 0; hh < H; hh++) { S.hc[hh * st] = S.cells[0]; S.hLast[hh] = 0; }
+    for (let r = 1; r < rings && H; r++) {
+      const a = S.ringStart[r], b = S.ringStart[r + 1];
+      for (let hh = 0; hh < H; hh++) {
+        if (S.hLast[hh] !== r - 1) continue;
+        const pc = S.hc[hh * st + r - 1], px = pc % w, py = (pc / w) | 0; let best = -1, bd = 1e9;
+        for (let i = a; i < b; i++) { const c = S.cells[i], d = Math.abs((c % w) - px) + Math.abs(((c / w) | 0) - py) + tk[c] * 0.6 + (((i - a + b - a - hh) % (b - a)) * 0.01); if (d < bd) { bd = d; best = c; } }
+        if (best < 0 || bd > T.helperReach + 1) continue;
+        S.hc[hh * st + r] = best; S.hLast[hh] = r; tk[best]++;
+      }
+      for (let i = a; i < b; i++) tk[S.cells[i]] = 0;
+    }
     S.crumbleEnd = S.popT0 + lead + Math.max(0, rings - 1) * gap + pop;
     S.crewOut = S.crumbleEnd + T.crewOutMs * k;
     S.trailEnd = S.crumbleEnd + T.trailFadeMs * k;

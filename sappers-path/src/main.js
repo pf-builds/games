@@ -19,7 +19,7 @@
     show: null, prevSt: null, audio: null, clock: 0, lastT: 0, hold: false, screen: "title", panel: null, panelAt: -1, panelT: 0, starsWon: 0, starsShown: 0,
     pact: {}, dirty: true, testing: false, cardFlash: -1, cacheRebuilds: 0, pending: [0, 0, 0, 0], bumpT: [-1e12, -1e12, -1e12, -1e12],
     fly: { on: false, m: 0, t0: 0, t1: 1, x0: 0, y0: 0, x1: 0, y1: 0 }, nudgeT: -1e12, thumpT: -1e12, nudged: false, bannerF: -1, titleF: -1, hintDone: new Set(), mapCards: [],
-    toastT: -1e12, toastOn: false, banner: true };
+    toastT: -1e12, toastOn: false, toastMs: 0, bumps: 0, infoLine: null, banner: true, wide: false };
   const CREW_ONE = ["mason", "axeman", "goat", "torchbearer"], CREW_MANY = ["Masons", "Axemen", "Goats", "Torchbearers"], MAT_NAME = ["stone", "timber", "hedge", "ice"];
 
   // ---- boot --------------------------------------------------------------------------------------------------------
@@ -31,7 +31,7 @@
       app.cfg = cfg; indexLevels(lv);
     } catch (e) { $("load-msg").textContent = "Couldn't load the castle. Reload to try again."; return; }
     if (!app.entries.length) { $("load-msg").textContent = "No levels found."; return; }
-    app.save = Save.open(storage(), app.cfg.save.key, app.ids, app.cfg.save.maxCrews);
+    app.save = Save.open(storage(), app.cfg.save.key, app.ids, app.cfg.save.maxCrews, saveRules());
     app.V = Render.create($("board"), app.cfg);
     app.audio = Audio.create(app.cfg.audio);
     setMuted(app.save.data.settings.muted, false); setFast(app.save.data.settings.fast, false);
@@ -57,6 +57,9 @@
       });
     });
   }
+
+  // What sanitize() checks a save against: each level's min, the worlds in order, the unlock and star rules.
+  function saveRules() { const min = {}; for (const e of app.entries) min[e.id] = e.L.min; return { min, worlds: app.worldOrder.map((w) => app.byWorld.get(w).map((e) => e.id)), worldNeeds: app.cfg.unlock.worldNeeds, stars: app.cfg.stars }; }
 
   function storage() { try { const s = window.localStorage; s.getItem("sappers-path.probe"); return s; } catch (e) { return Save.memoryStore(); } }
 
@@ -126,7 +129,7 @@
     app.screen = name;
     $("title").hidden = name !== "title"; $("map").hidden = name !== "map"; $("select").hidden = name !== "select";
     if (name === "title") paintTitle(true);
-    app.dirty = true;
+    dockHint(); app.dirty = true;
   }
 
   // The title scene fills the whole screen at a whole number of CSS px per art pixel (the castle always fits across),
@@ -207,12 +210,15 @@
     }
     $("map-stars").textContent = "★ " + got + " / " + all;
   }
-  // Nodes snake along the card, four to a row; the painted strip draws the trail through their centres.
+  // Nodes per map row: config.layout.mapCols, one fewer when that would leave a lone node on the last row (9 → 3-3-3).
+  function mapCols(n, cols) { return n % cols === 1 && cols > 2 && n % (cols - 1) !== 1 ? cols - 1 : cols; }
+  // Nodes snake along the card, mapCols to a row; the painted strip draws the trail through their centres.
   function layoutMap(force) {
     if (app.screen !== "map") return;
-    const L = app.cfg.layout, a = L.artPx, headH = L.mapHeadPx, rowH = L.mapRowPx, cols = L.mapCols, pad = L.mapPadPx;
+    const L = app.cfg.layout, a = L.artPx, headH = L.mapHeadPx, rowH = L.mapRowPx, pad = L.mapPadPx;
     for (const mc of app.mapCards) {
       const W = mc.card.clientWidth; if (!W) continue;
+      const cols = mapCols(mc.list.length, L.mapCols);
       const rows = Math.ceil(mc.list.length / cols), H = headH + rows * rowH + 18, pts = [];
       mc.card.style.height = H + "px";
       mc.list.forEach((e, i) => {
@@ -260,18 +266,19 @@
 
   // Show a game on the board (no save writes: selfTest uses this to hand the player's game back).
   function mount(entry, g) {
-    app.entry = entry; app.game = g; app.cardFlash = -1; app.show = Show.create(g.B); app.panelAt = -1;
+    app.entry = entry; app.game = g; app.cardFlash = -1; app.show = Show.create(g.B, app.cfg.show.helpersMax); app.panelAt = -1;
     app.pending.fill(0); app.fly.on = false; $("fly").hidden = true; app.nudgeT = app.thumpT = -1e12; hideToast();
     hidePanel();
-    Render.setLevel(app.V, g.B);
+    Render.setLevel(app.V, g.B, g.L.art, g.present);
     $("lvl-num").textContent = entry.world + "-" + entry.n;
     $("lvl-name").textContent = entry.L.name || "";
     $("w-num").textContent = "World " + entry.world; $("w-name").textContent = entry.worldName;
-    $("hint-text").textContent = entry.L.teaches || ""; $("hint").hidden = !entry.L.teaches || app.hintDone.has(entry.id);
+    $("hint-text").textContent = entry.L.teaches || ""; $("hint").hidden = !entry.L.teaches || app.hintDone.has(entry.id); dockHint();
     for (const b of cards) { b.hidden = !g.present[+b.dataset.m]; b.classList.remove("flash", "bump"); }
+    app.infoLine = null;
     showScreen("play"); app.bannerF = -1; layout(); ui();
   }
-  function dismissHint() { if (app.entry) app.hintDone.add(app.entry.id); $("hint").hidden = true; cue("ui"); }
+  function dismissHint() { if (app.entry) app.hintDone.add(app.entry.id); $("hint").hidden = true; dockHint(); cue("ui"); }
 
   function nextEntry() { return app.entry ? app.entries[app.entry.idx + 1] || null : null; }
 
@@ -300,6 +307,7 @@
     if (!g || app.screen !== "play" || app.panel === "win") return "ignored";
     skip();
     const r = Game.tapCell(g, x | 0, y | 0, app.clock);
+    info(r, x | 0, y | 0);
     feedback(r, g.fx.infoM); drain(); return r;
   }
 
@@ -307,30 +315,44 @@
   function callCrew(type) {
     const g = app.game, m = typeof type === "number" ? type : CREWS.indexOf(type);
     if (!g || app.screen !== "play" || app.panel === "win") return "ignored";
-    skip();
+    skip(); Render.clearInfo(app.V); app.infoLine = null;
     app.prevSt = g.st;
     const r = Game.callCrew(g, m, app.clock);
     feedback(r, m); drain(); return r;
   }
 
-  function undo() { if (!app.game || app.screen !== "play") return false; skip(); const r = Game.undo(app.game); if (r) cue("undo"); drain(); return r; }
-  function restart() { if (!app.game || app.screen !== "play") return false; skip(); const r = Game.restart(app.game); if (r) cue("undo"); drain(); return r; }
+  function undo() { if (!app.game || app.screen !== "play") return false; skip(); Render.clearInfo(app.V); const r = Game.undo(app.game); if (r) cue("undo"); drain(); return r; }
+  function restart() { if (!app.game || app.screen !== "play") return false; skip(); Render.clearInfo(app.V); const r = Game.restart(app.game); if (r) cue("undo"); drain(); return r; }
+
+  // An info tap on a wall its crew can reach (functional M1): the two walks from the camp, to the wall the crew's flag
+  // marks and to this one, drawn as dotted paths until the next tap, and both step counts on the note. Anything else
+  // clears them. Info only: nothing in the game changes.
+  function info(r, x, y) {
+    const g = app.game, st = g.st, m = g.fx.infoM;
+    app.infoLine = null;
+    if ((r !== "next" && r !== "closer") || m < 0) { Render.clearInfo(app.V); return; }
+    const s = E.sectionAt(g.B, x, y), t = st.target[m], steps = (q) => st.sdist[q] + 1, word = (n) => n + (n === 1 ? " step" : " steps");
+    Render.setInfo(app.V, g, m, s);
+    app.infoLine = r === "next" ? CREW_MANY[m] + " break this next\n" + word(steps(s)) + " from the camp" : CREW_MANY[m] + ": flagged wall " + word(steps(t)) + "\nthis wall " + word(steps(s));
+  }
 
   // Sound, the board nudge and the note over the board for a tap result.
   function feedback(r, m) {
     const who = m >= 0 ? CREW_MANY[m] : "";
     if (r === "call" || r === "aim") { cue("ui"); if (r === "aim") showToast("Tap again to send the " + who.toLowerCase()); }
-    else if (r === "empty") { cue("bad"); showToast("No " + who.toLowerCase() + " left"); }
+    else if (r === "empty") { cue("bad"); showToast(chestHolds(m) ? "Open the chest to get " + who.toLowerCase() : "No " + who.toLowerCase() + " left"); }
     else if (r === "none") { cue("bad"); showToast(who + " can't reach any " + MAT_NAME[m] + " yet"); }
     else if (r === "far") { cue("bad"); app.nudgeT = app.clock; showToast(who + " can't reach this yet"); }
-    else if (r === "next") { cue("ui"); showToast(who + " break this next"); }
-    else if (r === "closer") { cue("ui"); showToast(who + " go for a closer wall first"); }
+    else if (r === "next") { cue("ui"); showToast(app.infoLine || who + " break this next"); }
+    else if (r === "closer") { cue("ui"); showToast(app.infoLine || who + " go for a closer wall first"); }
     else if (r === "iron") { cue("bad"); app.nudgeT = app.clock; showToast("Iron: a lever opens it"); }
     else if (r === "keep") { cue("ui"); showToast("Open a path to the keep"); }
     else if (r === "chest") { cue("ui"); showToast("Reach it for +1 " + CREW_ONE[app.game.B.chestCrew[app.game.fx.chestI]]); }
   }
-  // A short note over the top of the board, gone after config.fx.toastMs on the sim clock.
-  function showToast(text) { $("toast").textContent = text; $("toast").hidden = false; app.toastT = app.clock; app.toastOn = true; }
+  // True if an unclaimed chest holds a crew of type m (a 0 card then says where its crew is).
+  function chestHolds(m) { const g = app.game, B = g.B; for (let i = 0; i < B.chestCell.length; i++) if (B.chestCrew[i] === m && !g.st.claimed[i]) return true; return false; }
+  // A short note over the top of the board, gone after config.fx.toastMs (config.fx.infoToastMs for the walks) on the sim clock.
+  function showToast(text) { $("toast").textContent = text; $("toast").hidden = false; app.toastT = app.clock; app.toastOn = true; app.toastMs = text === app.infoLine ? app.cfg.fx.infoToastMs : app.cfg.fx.toastMs; }
   function hideToast() { $("toast").hidden = true; app.toastOn = false; }
 
   function onKey(e) {
@@ -356,6 +378,7 @@
       const t = ev[i].t;
       if (t === "call") {
         const S = Show.build(app.show, app.prevSt, g.st, ev[i].m, ev[i].s, app.clock, app.cfg.show, speedK());
+        Render.adoptPrev(app.V, g.ver - 1, S);
         for (let c = 0; c < g.B.chestCell.length; c++) if (S.chestAt[c] < Show.INF) app.pending[g.B.chestCrew[c]]++;
       } else if (t === "win") {
         Save.record(app.save.data, app.entry.id, Game.stars(app.cfg, g.L.min, g.st.calls), g.st.calls); app.save.write();
@@ -401,7 +424,7 @@
     const m = app.game.B.chestCrew[i];
     if (app.pending[m] > 0) app.pending[m]--;
     app.fly.on = false; $("fly").hidden = true;
-    cards[m].classList.add("bump"); app.bumpT[m] = t; ui();
+    cards[m].classList.add("bump"); app.bumpT[m] = t; app.bumps++; ui();
   }
 
   // ---- HUD, cards, panel -------------------------------------------------------------------------------------------
@@ -418,6 +441,7 @@
       b.setAttribute("aria-label", CREW_MANY[m] + ", " + shown + " left" + (why === "none" ? ", no wall in reach" : ""));
     }
     $("btn-undo").disabled = !g.st.moves.length; $("btn-restart").disabled = !g.st.moves.length;
+    dockHint();
   }
 
   function setPanelButton(k, label, fn) { const b = $("p-" + k); b.hidden = !label; b.textContent = label || ""; app.pact[k] = fn || null; }
@@ -450,30 +474,36 @@
   // Portrait: the rail sits at the bottom and the board directly above it, as large as the width (or the height left
   // above the rail) allows: the v2 boards are portrait-shaped, so the board comes first. The banner (world, 2× and mute,
   // the goblin on the battlements) takes whatever height is left; under config.layout.bannerMinPx it folds away and the
-  // toggles move into the top bar. Wide (desktop 16:9): side column | board | rail, the three centred as a group.
+  // toggles move into the top bar. Wide (desktop 16:9 and landscape phones): the top bar folds into the side column, so
+  // the board gets the full height; side column | board | rail, the three centred as a group. Compact (a wide screen
+  // under config.layout.compactRailMaxH tall): the banner's scene goes too, leaving the world tag and the toggles, the
+  // side column narrows to sidePxCompact, and the cards go two by two.
   function layout() {
     if (!app.cfg) return;
-    const L = app.cfg.layout, play = $("play"), stage = $("stage"), cv = $("board");
-    const wide = innerWidth >= L.wideMinPx && innerWidth >= innerHeight * L.wideAspect;
-    document.body.classList.toggle("wide", wide); document.body.classList.toggle("compact", wide && innerHeight <= L.compactRailMaxH);
+    const L = app.cfg.layout, play = $("play"), stage = $("stage"), cv = $("board"), top = $("top"), side = $("side");
+    const wide = innerWidth >= L.wideMinPx && innerWidth >= innerHeight * L.wideAspect, compact = wide && innerHeight <= L.compactRailMaxH;
+    document.body.classList.toggle("wide", wide); document.body.classList.toggle("compact", compact); app.wide = wide;
+    if (wide && top.parentNode !== side) side.prepend(top); else if (!wide && top.parentNode !== $("app")) $("app").insertBefore(top, play);
     if (app.screen === "title") paintTitle(false);
-    play.style.setProperty("--rail", L.railPx + "px"); play.style.setProperty("--gap", L.gapPx + "px"); play.style.setProperty("--side", L.sidePx + "px");
+    const sideW = compact ? L.sidePxCompact : L.sidePx;
+    play.style.setProperty("--rail", L.railPx + "px"); play.style.setProperty("--gap", L.gapPx + "px"); play.style.setProperty("--side", sideW + "px");
     if (app.screen === "map") layoutMap(false);
     if (!app.game) return;
     const dpr = Math.min(L.maxDpr, Math.max(1, window.devicePixelRatio || 1));
     let r;
     if (wide) {
       stage.style.height = "";
-      r = Render.fit(app.V, Math.max(1, play.clientWidth - L.railPx - L.sidePx - 2 * L.gapPx), Math.max(1, play.clientHeight - 16), dpr);
+      r = Render.fit(app.V, Math.max(1, play.clientWidth - L.railPx - sideW - 2 * L.gapPx), Math.max(1, play.clientHeight - 2 * L.widePadPx), dpr);
       play.style.setProperty("--bw", Math.ceil(r.cssW) + "px");
+      setBanner(true);
     } else {
       const railH = $("rail").offsetHeight, total = play.clientHeight;
       r = Render.fit(app.V, Math.max(1, play.clientWidth), Math.max(1, total - railH - L.boardGapPx), dpr);
       stage.style.height = Math.ceil(r.cssH) + "px";
       setBanner(total - railH - Math.ceil(r.cssH) - L.boardGapPx >= L.bannerMinPx);
     }
-    if (wide) setBanner(true);
     cv.style.left = Math.round((stage.clientWidth - r.cssW) / 2) + "px"; cv.style.top = Math.max(0, Math.round((stage.clientHeight - r.cssH) / 2)) + "px";
+    dockHint();
     // Wide: the win/stuck panel sits over the rail column, so the board (and the keep) stay in view.
     const pn = $("panel");
     if (wide) {
@@ -481,6 +511,14 @@
       pn.style.setProperty("--pl", Math.round(x) + "px"); pn.style.setProperty("--pw", Math.round(w) + "px");
     }
     app.bannerF = -1; app.dirty = true;
+  }
+  // The teaching hint docks where it hides nothing the player needs: over the banner in portrait (the toggles move into
+  // the top bar meanwhile), in place of the banner in the wide side column, and over the top of the board only when there
+  // is no banner.
+  function dockHint() {
+    const h = $("hint"), host = app.wide || app.banner ? $("side") : $("stage");
+    if (h.parentNode !== host) host.append(h);
+    document.body.classList.toggle("hinting", !h.hidden && host === $("side") && app.screen === "play");
   }
   function setBanner(on) { if (app.banner !== on) { app.banner = on; document.body.classList.toggle("nobanner", !on); app.bannerF = -1; } }
   // The banner's pixel scene at config.layout.artPx CSS px per art pixel (bannerSmallArtPx on a short strip); repainted
@@ -515,7 +553,7 @@
     const cf = now - g.fx.cardT < F.cardFlashMs ? g.fx.cardM : -1;
     if (cf !== app.cardFlash) { app.cardFlash = cf; for (const b of cards) b.classList.toggle("flash", +b.dataset.m === cf); }
     for (let m = 0; m < 4; m++) if (app.bumpT[m] > -1e12 && now - app.bumpT[m] >= F.bumpMs) { cards[m].classList.remove("bump"); app.bumpT[m] = -1e12; }
-    if (app.toastOn && now - app.toastT >= F.toastMs) hideToast();
+    if (app.toastOn && now - app.toastT >= app.toastMs) hideToast();
     const nt = now - app.nudgeT, ht = now - app.thumpT, cv = $("board");
     if (nt < F.boardNudgeMs) { cv.style.transform = "translateX(" + Math.round(Math.sin((nt / 1000) * F.boardNudgeHz * Math.PI * 2) * F.boardNudgePx * (1 - nt / F.boardNudgeMs)) + "px)"; app.nudged = true; }
     else if (ht >= 0 && ht < F.thumpMs) { cv.style.transform = "translateY(" + Math.round(Math.sin((ht / 1000) * F.thumpHz * Math.PI * 2) * F.thumpPx * (1 - ht / F.thumpMs)) + "px)"; app.nudged = true; }
@@ -682,13 +720,13 @@
           if (hit) break;
         }
         if (check(hit, "no line claims a chest before its win")) {
-          loadLevel(hit.e); const c0 = Object.assign({}, app.audio.counts), g = app.game;
+          loadLevel(hit.e); const c0 = Object.assign({}, app.audio.counts), g = app.game, b0 = app.bumps;
           for (let k = 0; k <= hit.k; k++) { callCrew(hit.e.L.line[k]); if (k < hit.k) settle(); }
           const shownBefore = +cards[hit.m].querySelector(".n").textContent;
           check(app.pending[hit.m] === 1 && shownBefore === g.st.remaining[hit.m] - 1, hit.e.id + ": the chest crew was not held back (" + shownBefore + ")");
           settle();
           const c = app.audio.counts;
-          check((c.chime || 0) > (c0.chime || 0) && (c.pop || 0) > (c0.pop || 0) && app.pending[hit.m] === 0 && +cards[hit.m].querySelector(".n").textContent === g.st.remaining[hit.m] && app.bumpT[hit.m] > -1e12, hit.e.id + ": chest chime/arrival/bump missing");
+          check((c.chime || 0) > (c0.chime || 0) && (c.pop || 0) > (c0.pop || 0) && app.pending[hit.m] === 0 && +cards[hit.m].querySelector(".n").textContent === g.st.remaining[hit.m] && app.bumps > b0, hit.e.id + ": chest chime/arrival/bump missing");
           out.chest = hit.e.id + " call " + hit.k;
         }
       }
@@ -761,10 +799,16 @@
           const m = B.secMat[s], [x, y] = Game.firstTile(B, s);
           const want = g.st.remaining[m] <= 0 ? "empty" : !g.st.reach[s] ? "far" : g.st.target[m] === s ? "next" : "closer";
           if (seen[want] || (want === "far" && Game.blockers(g, s) === 0)) continue;
-          const r = tapCell(x, y);
-          check(r === want && g.st.moves.length === 0, e.id + ": board tap gave " + r + ", want " + want);
-          if (want === "far") check(g.fx.flashN > 0 && g.fx.shakeS === s && app.audio.last === "bad" && $("toast").textContent.indexOf("can't reach") > 0, e.id + ": far tap feedback");
-          if (want === "closer") check(g.fx.pulseS === g.st.target[m], e.id + ": closer tap did not pulse the real target");
+          const before = E.serialize(g.st), ver = g.ver, r = tapCell(x, y), note = $("toast").textContent;
+          check(r === want && g.st.moves.length === 0 && E.serialize(g.st) === before && g.ver === ver, e.id + ": board tap gave " + r + ", want " + want + " (or changed the game)");
+          if (want === "far") check(g.fx.flashN > 0 && g.fx.shakeS === s && app.audio.last === "bad" && note.indexOf("can't reach") > 0 && !app.V.infoOn, e.id + ": far tap feedback");
+          if (want === "closer") check(g.fx.pulseS === g.st.target[m] && app.V.infoOn && new RegExp("flagged wall " + (g.st.sdist[g.st.target[m]] + 1) + " steps?\\nthis wall " + (g.st.sdist[s] + 1) + " step").test(note), e.id + ": closer tap: no pulse or walks (" + note + ")");
+          if (want === "next") check(app.V.infoOn && new RegExp((g.st.sdist[s] + 1) + " steps? from the camp").test(note), e.id + ": next tap: no walk (" + note + ")");
+          if (want === "next" || want === "closer") { // the walks draw, change nothing, and clear on the next tap
+            Render.draw(app.V, g, app.clock, app.show); const k0 = g.B.keepCells[0];
+            tapCell(k0 % g.B.w, (k0 / g.B.w) | 0);
+            check(!app.V.infoOn && E.serialize(g.st) === before, e.id + ": the walks did not clear on the next tap");
+          }
           if (want === "empty") { step(1); check(cards[m].classList.contains("flash") && callCrew(CREWS[m]) === "empty", e.id + ": empty card"); }
           seen[want]++;
         }
@@ -838,6 +882,26 @@
       const ms = Save.memoryStore(); ms.setItem(cfg.save.key, "{not json");
       check(Save.open(ms, cfg.save.key, app.ids, cfg.save.maxCrews).data.v === Save.VERSION, "open() on bad JSON");
       check(cfg.save.key === "sappers-path.v2", "save key is " + cfg.save.key);
+      // With the level rules (functional m4): stars follow best, a best under min is dropped, a locked level keeps
+      // nothing, `last` must be open, and junk never throws.
+      {
+        const R = saveRules(), w1 = app.byWorld.get(app.worldOrder[0]), wl = app.byWorld.get(app.worldOrder[app.worldOrder.length - 1]), lastL = wl[wl.length - 1];
+        const k = w1.findIndex((e, i) => i >= 2 && e.L.min >= 2), a = w1[0], b = w1[1], c = w1[k], mn = (e) => e.L.min;
+        const raw = { stars: {}, best: {}, last: lastL.id };
+        for (let i = 0; i <= k; i++) { raw.stars[w1[i].id] = 3; raw.best[w1[i].id] = mn(w1[i]); }
+        raw.stars[a.id] = 1; raw.stars[b.id] = 3; raw.best[b.id] = mn(b) + 2; raw.stars[c.id] = 2; raw.best[c.id] = mn(c) - 1;
+        raw.stars[lastL.id] = 2; raw.best[lastL.id] = 99;
+        const r = Save.sanitize(raw, app.ids, cfg.save.maxCrews, R);
+        check(r.stars[a.id] === 3 && r.best[a.id] === mn(a), "sanitize: stars not raised to what best earns on " + a.id);
+        check(r.stars[b.id] === Game.stars(cfg, mn(b), mn(b) + 2) && r.best[b.id] === mn(b) + 2, "sanitize: stars not lowered to what best earns on " + b.id);
+        check(r.stars[c.id] === 2 && !(c.id in r.best), "sanitize: a best under min kept on " + c.id);
+        check(!(lastL.id in r.stars) && !(lastL.id in r.best) && r.last === null, "sanitize: progress kept on a locked level " + lastL.id);
+        const gap = { stars: { [w1[2].id]: 3 }, best: { [w1[2].id]: mn(w1[2]) } }, rg = Save.sanitize(gap, app.ids, cfg.save.maxCrews, R);
+        check(!(w1[2].id in rg.stars), "sanitize: kept stars on " + w1[2].id + " with the levels before it unwon");
+        const odd = junk.concat([{ stars: { ["__proto__"]: 3, [a.id]: "3" }, best: [] }, { stars: { [a.id]: 3 }, best: { [a.id]: 1e9 } }, { stars: { [a.id]: NaN, [b.id]: Infinity }, best: { [a.id]: -Infinity } }]);
+        for (const j of odd) { let q = null; try { q = Save.sanitize(j, app.ids, cfg.save.maxCrews, R); } catch (e) { q = null; } check(q && q.v === Save.VERSION, "sanitize (rules) threw on " + JSON.stringify(j)); }
+        out.sanitize = { a: r.stars[a.id], b: r.stars[b.id], c: [r.stars[c.id], r.best[c.id]], locked: lastL.id in r.stars };
+      }
     } catch (e) { check(false, "selfTest threw: " + (e && e.stack || e)); }
 
     // Hand everything back.

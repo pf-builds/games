@@ -9,6 +9,9 @@
 //   chrome   the crack overlay (X) a tile shows before it pops, and the dark brick texture behind the page (wall)
 //   scenes   the title castle, the portrait battlements banner and the world-map strips, painted into logical-size
 //            canvases the page scales with image-rendering: pixelated
+//   board    (v2) the castle picture: world-aligned material textures with battlements, tower caps and gatehouse arches
+//            from the level's art metadata, decor, the siege camp's trodden earth, tents and standard, big levers and
+//            chests (compose); the flag banners and chest chips the renderer scales on the pixel grid (flagArt, chipArt)
 // Every material differs by pattern as well as hue (horizontal courses, vertical planks, leaf clusters, diagonal facets,
 // straps and rivets, wave dashes), so the board reads in grayscale.
 (function (root, factory) {
@@ -229,6 +232,29 @@
     }
     return c;
   }
+  // A hex colour mixed toward black (k > 0) or white (k < 0), as a CSS colour.
+  function shade(hex, k) { const v = parseInt(hex.slice(1), 16), t = k < 0 ? 255 : 0, a = Math.abs(k), ch = (s) => Math.round(((v >> s) & 255) * (1 - a) + t * a); return "rgb(" + ch(16) + "," + ch(8) + "," + ch(0) + ")"; }
+  // A target flag's banner (26 × 18 logical; the renderer draws the pole): a swallowtail in the crew card's colour
+  // (config.art.flagFill), the crew's icon on a cream plate, a lit top and shaded foot, and the tail rippling (frame f of 3).
+  function flagArt(A, m, f) {
+    const c = mk(26, 18), P = pen(c), ink = A.ink, fill = A.flagFill[m], hi = shade(fill, -0.35), lo = shade(fill, 0.3);
+    for (let j = 0; j < 18; j++) {
+      const o = Math.round(Math.sin((j / 18 + f / 3) * Math.PI * 2)), r = 18 + Math.round((7 * Math.abs(j - 8.5)) / 8.5) + (j > 1 && j < 16 ? o : 0);
+      for (let x = 0; x <= r; x++) P.p(x, j, x === r || x === 0 || j === 0 || j === 17 ? ink : j === 1 ? hi : j === 16 || (x + f * 3) % 9 === 0 && x > 15 ? lo : fill);
+    }
+    P.r(2, 2, 14, 14, ink); P.r(3, 3, 12, 12, A.badge[0]); P.p(2, 2, fill); P.p(15, 2, fill); P.p(2, 15, fill); P.p(15, 15, fill);
+    glyph(P, ICONS[m], 3, 3, { "#": A.badge[1] });
+    return c;
+  }
+  // A chest's "+1" chip (28 × 16 logical): the crew's icon on a cream plate and a gold "+1", on the crew card's colour.
+  function chipArt(A, m) {
+    const c = mk(28, 16), P = pen(c), ink = A.ink, fill = A.flagFill[m];
+    P.r(1, 0, 26, 16, ink); P.r(0, 1, 28, 14, ink); P.r(1, 1, 26, 14, fill); P.r(1, 1, 26, 1, shade(fill, -0.35)); P.r(1, 14, 26, 1, shade(fill, 0.3));
+    P.r(2, 2, 12, 12, A.badge[0]); glyph(P, ICONS[m], 2, 2, { "#": A.badge[1] });
+    glyph(P, ["..#..", "..#..", "#####", "..#..", "..#.."], 16, 5, { "#": A.chest[2] }, ink);
+    glyph(P, [".#.", "##.", ".#.", ".#.", ".#.", ".#.", "###"], 23, 4, { "#": A.chest[2] }, ink);
+    return c;
+  }
   // A logical point inside frame 0 of each sheet that is always opaque (the torso), for the cache-health checks.
   const SHEET_PROBE = [[7, 9], [7, 9], [6, 8], [7, 9], [7, 10]];
 
@@ -314,8 +340,10 @@
   // ---- v2 board picture (SPEC-v2 §4 "The castle is the picture") ------------------------------------------------------
   // The board is painted as ONE pixel picture at bp logical px per block (config.art.blockPx), one block of field all
   // round. Every material is a texture in world coordinates (brick courses, planks, leaves, ice facets, iron plates,
-  // water, grass, flagstones), so a region's texture runs unbroken across its blocks; each region gets an ink outline and
-  // a bevel (lit top-left, shaded bottom-right), walls cast a short shadow on the ground south and east of them, and
+  // water, grass, courtyard earth, camp earth), so a region's texture runs unbroken across its blocks; each region gets an
+  // ink outline and a bevel (lit top-left, shaded bottom-right) with battlements (merlons and crenels) along every edge
+  // that faces open ground, towers get a square or round cap of merlons and gatehouses an arched portcullis (both only
+  // over their standing blocks), walls cast a shadow on the ground south and east of them (towers a longer one), and
   // ground the camp can't reach yet sits in shade. Painted into a Uint32Array (RGBA bytes, little-endian) and put once;
   // the renderer scales the logical canvas up with smoothing off. textures() once per level, compose() per state.
   function u32(hex) { const v = parseInt(hex.slice(1), 16); return (0xff000000 | ((v & 255) << 16) | (v & 0xff00) | ((v >> 16) & 255)) >>> 0; }
@@ -372,86 +400,169 @@
       return h2(X, Y, 13) < 0.06 ? p[1] : p[0];
     },
   };
-  // Tiny sprites painted on single blocks (8×8 logical): k ink, and palette letters per sprite.
-  const SPR = {
-    tent: ["...kk...", "..kRCk..", ".kRCCRk.", ".kRCCRk.", "kRCRRCRk", "kRCkkCRk", "kRCkkCRk", "kkkkkkkk"],
-    chest: ["........", ".kkkkkk.", ".kddddk.", ".kggggk.", ".kwwgwk.", ".kwwwwk.", ".kkkkkk.", "........"],
-    chestO: [".kkkkkk.", ".kddddk.", ".kGGGGk.", ".kgGgGk.", ".kwwwwk.", ".kwwwwk.", ".kkkkkk.", "........"],
-    lever: ["......kk", ".....kRk", "....kwk.", "...kwk..", "..kwk...", ".kkkkkk.", ".kSSSSk.", "........"],
-    leverT: ["kk......", "kGk.....", ".kwk....", "..kwk...", "...kwk..", ".kkkkkk.", ".kSSSSk.", "........"],
+  TEX.camp = function (X, Y, p) { // trodden camp earth: packed ruts along the camp, bootprints, a few pebbles
+    const n = h2(X, Y, 16), rut = (Y + ((h2(X >> 3, 0, 17) * 3) | 0)) % 6;
+    if (n > 0.972) return p[2];
+    if (n < 0.05 || (rut === 0 && h2(X >> 1, Y, 18) < 0.55)) return p[3];
+    return n < 0.2 || h2(X >> 2, Y >> 1, 19) < 0.2 ? p[1] : p[0];
   };
+  // Sprites painted onto the picture (logical px): k ink, palette letters per sprite, "." clear. Chests and levers are
+  // bigger than a block (they sit centred on theirs, drawn after the shade so they read on shaded ground too); decor is
+  // one block of ground detail.
+  const SPR = {
+    chest: ["..kkkkkkkk..", ".kddddddddk.", "kdDDDDDDDDdk", "kggggggggggk", "kwwwwGGwwwwk", "kwWwwkGwwWwk", "kwwwwGGwwwwk", "kwwwwwwwwwwk", "kddddddddddk", ".kkkkkkkkkk."],
+    chestO: ["............", ".kkkkkkkkkk.", ".kDddddddDk.", "kkkkkkkkkkkk", "kgnnnnnnnngk", "kwnnnnnnnnwk", "kwwwwwwwwwwk", "kwWwwwwwwWwk", "kddddddddddk", ".kkkkkkkkkk."],
+    lever: [".kkkk.........", "kRRWRk........", "kRRRRk........", "kRRRRk........", ".kkkwwk.......", "....kwwk......", ".....kwwk.....", "......kwwk....",
+      "..kkkkkkwwkk..", ".kYYYYYnnYYYk.", ".kGGGGnnnnGGk.", ".kGGGGGGGGGGk.", ".kggggggggggk.", "..kkkkkkkkkk.."],
+    bush: ["..kkkk..", ".kLLbLk.", "kLbbLbbk", "kbLbbbfk", "kbbbLbbk", "kdbbbbdk", ".kddddk.", "..kkkk.."],
+    flowers: ["........", ".r...y..", ".g..rg..", "..g..g.p", ".y.g...g", ".g..p...", "....g...", "........"],
+    well: ["..kkkk..", ".kSSsSk.", "kSkkkkSk", "kskWwksk", "kSkwwkSk", "kSkkkkSk", ".kSsSSk.", "..kkkk.."],
+    cart: ["...kk...", "...ww...", ".kkkkkk.", "kkwWwWkk", "KkwWwWkK", "KkwWwWkK", "kkwWwWkk", ".kkkkkk."],
+    barrel: ["..kkkk..", ".khhhhk.", "khWWWwhk", "khWwwwhk", "khWwwwhk", "khwwwwhk", ".khhhhk.", "..kkkk.."],
+  };
+  SPR.leverT = SPR.lever.map((r) => r.split("").reverse().join("").replace(/R/g, "T").replace(/W/g, "V"));
+  const DECOR = ["bush", "well", "cart", "flowers", "barrel", "path"], SIDES = "nesw";
   // Per-level textures: one Uint32Array per kind, the full picture size, world-aligned. Also the moat's wave frames.
   function textures(A, B, bp) {
     const PW = (B.w + 2) * bp, PH = (B.h + 2) * bp, N = PW * PH, P = (k) => A[k].map(u32), T = { bp, PW, PH };
     const one = (fn, pal, f) => { const a = new Uint32Array(N); for (let Y = 0, i = 0; Y < PH; Y++) for (let X = 0; X < PW; X++, i++) a[i] = fn(X, Y, pal, f); return a; };
-    T.field = one(TEX.field, P("grass")); T.yard = one(TEX.yard, P("ground"));
+    T.field = one(TEX.field, P("grass")); T.yard = one(TEX.yard, P("ground")); T.camp = one(TEX.camp, P("campGround"));
     T.mat = [one(TEX.stone, P("stone")), one(TEX.timber, P("timber")), one(TEX.hedge, P("hedge")), one(TEX.ice, P("ice")), one(TEX.iron, P("iron"))];
     T.keepT = one(TEX.stone, P("keep"));
     let moat = false; for (let c = 0; c < B.n && !moat; c++) moat = B.kind[c] === 1;
     T.moat = moat ? [0, 1, 2, 3].map((f) => one(TEX.moat, P("moat"), f)) : null;
-    T.pal = { ink: u32(A.ink), mat: MATS.map((m) => A[m].map(u32)), chest: A.chest.map(u32), lever: A.lever.map(u32), wood: A.wood.map(u32),
-      stone: A.stone.map(u32), keep: A.keep.map(u32), roof: [A.goblin[2], A.goblin[3], A.goblin[4]].map(u32), flag: A.flag.map(u32), tent: A.tent.map(u32), crew: A.crew.map((c) => u32(c[0])), moat: A.moat.map(u32) };
+    const G = A.goldPlate.map(u32), CH = A.chest.map(u32);
+    T.pal = { ink: u32(A.ink), mat: MATS.map((m) => A[m].map(u32)), chest: CH, lever: A.lever.map(u32), wood: A.wood.map(u32),
+      stone: A.stone.map(u32), keep: A.keep.map(u32), roof: [A.goblin[2], A.goblin[3], A.goblin[4]].map(u32), flag: A.flag.map(u32), tent: A.tent.map(u32), crew: A.crew.map((c) => u32(c[0])), moat: A.moat.map(u32),
+      grass: A.grass.map(u32), rubbleGrass: A.rubbleGrass.map(u32) };
+    const L = T.pal.lever, W = u32("#ffffff"), hg = A.hedge.map(u32), st = A.stone.map(u32), wd = A.wood.map(u32), tm = A.timber.map(u32), fl = A.decorFlowers.map(u32);
+    T.spr = { // sprite palettes
+      chest: { d: CH[1], D: mix(CH[1], 0.25, 255), g: CH[3], G: CH[2], w: CH[0], W: mix(CH[0], 0.3, 255), n: mix(CH[1], 0.6, 0) },
+      lever: { R: L[0], T: L[1], W, V: W, w: wd[0], Y: G[0], G: G[1], g: G[2], n: L[2] },
+      bush: { L: hg[2], b: hg[0], d: hg[1], f: hg[4] }, flowers: { r: fl[0], y: fl[1], p: fl[2], g: hg[1] },
+      well: { S: st[0], s: st[2], W: T.pal.moat[2], w: T.pal.moat[3] }, cart: { w: tm[0], W: tm[2], K: T.pal.mat[4][3] },
+      barrel: { w: tm[0], W: tm[2], h: tm[3] },
+    };
     return T;
   }
-  // Level facts the picture needs (once per level): field (open ground joined to the board edge through open ground:
-  // grass; everything else open is courtyard), the keep's bounds.
-  function levelInfo(B) {
-    const n = B.n, field = new Uint8Array(n), q = new Int32Array(n), openK = (k) => k === 0 || k === 5 || k === 6;
-    let h = 0, t = 0;
-    for (let c = 0; c < n; c++) { const x = c % B.w, y = (c / B.w) | 0; if ((x === 0 || y === 0 || x === B.w - 1 || y === B.h - 1) && openK(B.kind[c])) { field[c] = 1; q[t++] = c; } }
-    while (h < t) { const c = q[h++]; for (let d = 0; d < 4; d++) { const e = B.nb[c * 4 + d]; if (e >= 0 && !field[e] && openK(B.kind[e])) { field[e] = 1; q[t++] = e; } } }
+  // Level facts the picture needs (once per level), from the grid and the generator's optional art metadata:
+  //   field    open ground joined to the board edge through open ground (grass; every other open cell is courtyard)
+  //   grassy   for every cell, the ground its rubble lies on once broken: the nearest open cell's, through walls, so an
+  //            outer wall leaves grass-tinted rubble in the field and an inner one courtyard rubble
+  //   camp     the siege camp's trodden patch (the P cells plus the field within config.art.campPad of them), the edge it
+  //            sits on (0 n, 1 e, 2 s, 3 w, as engine.DX/DY) and its span along that edge
+  //   towers, gates, decor   the art metadata, validated against the board (anything off it is dropped)
+  function levelInfo(B, art, A) {
+    const n = B.n, w = B.w, h = B.h, kind = B.kind, nb = B.nb, field = new Uint8Array(n), q = new Int32Array(n), openK = (k) => k === 0 || k === 5 || k === 6;
+    let hd = 0, t = 0;
+    for (let c = 0; c < n; c++) { const x = c % w, y = (c / w) | 0; if ((x === 0 || y === 0 || x === w - 1 || y === h - 1) && openK(kind[c])) { field[c] = 1; q[t++] = c; } }
+    while (hd < t) { const c = q[hd++]; for (let d = 0; d < 4; d++) { const e = nb[c * 4 + d]; if (e >= 0 && !field[e] && openK(kind[e])) { field[e] = 1; q[t++] = e; } } }
+    const grassy = new Uint8Array(n), seen = new Uint8Array(n); hd = t = 0;
+    for (let c = 0; c < n; c++) if (openK(kind[c])) { seen[c] = 1; grassy[c] = field[c]; q[t++] = c; }
+    while (hd < t) { const c = q[hd++]; for (let d = 0; d < 4; d++) { const e = nb[c * 4 + d]; if (e >= 0 && !seen[e] && (kind[e] === 3 || kind[e] === 4)) { seen[e] = 1; grassy[e] = grassy[c]; q[t++] = e; } } }
+    // the camp patch: camp cells, then field cells up to campPad steps from them
+    const camp = new Uint8Array(n), cd = new Int16Array(n).fill(-1); hd = t = 0;
+    for (const c of B.camp) { camp[c] = 1; cd[c] = 0; q[t++] = c; }
+    while (hd < t) { const c = q[hd++]; if (cd[c] >= A.campPad) continue; for (let d = 0; d < 4; d++) { const e = nb[c * 4 + d]; if (e >= 0 && cd[e] < 0 && field[e] && kind[e] === 0) { cd[e] = cd[c] + 1; camp[e] = 1; q[t++] = e; } } }
+    const votes = [0, 0, 0, 0];
+    for (const c of B.camp) { const x = c % w, y = (c / w) | 0; if (y === h - 1) votes[2]++; if (x === 0) votes[3]++; if (x === w - 1) votes[1]++; if (y === 0) votes[0]++; }
+    let side = 2; for (let d = 0; d < 4; d++) if (votes[d] > votes[side]) side = d;
+    const along = side === 0 || side === 2, us = B.camp.map((c) => (along ? c % w : (c / w) | 0)), vs = B.camp.map((c) => (along ? (c / w) | 0 : c % w));
+    const u0 = Math.min.apply(null, us), u1 = Math.max.apply(null, us) + 1, v0 = Math.min.apply(null, vs), v1 = Math.max.apply(null, vs);
+    const vOut = side === 1 || side === 2 ? v1 : v0, vIn = side === 1 || side === 2 ? v0 : v1; // the camp's outer and inner rows
+    // the art metadata
+    const a = art && typeof art === "object" ? art : {}, rect = (r) => Array.isArray(r) && r.length >= 4 && r.slice(0, 4).every((v) => Number.isInteger(v)) && r[0] >= 0 && r[1] >= 0 && r[2] > 0 && r[3] > 0 && r[0] + r[2] <= w && r[1] + r[3] <= h;
+    const towers = (Array.isArray(a.towers) ? a.towers : []).filter(rect), towerAt = new Int16Array(n);
+    towers.forEach((r, i) => { for (let y = r[1]; y < r[1] + r[3]; y++) for (let x = r[0]; x < r[0] + r[2]; x++) towerAt[y * w + x] = i + 1; });
+    const gates = (Array.isArray(a.gates) ? a.gates : []).filter((r) => rect(r) && SIDES.indexOf(r[4]) >= 0);
+    const decor = (Array.isArray(a.decor) ? a.decor : []).filter((d) => Array.isArray(d) && Number.isInteger(d[0]) && Number.isInteger(d[1]) && d[0] >= 0 && d[1] >= 0 && d[0] < w && d[1] < h && DECOR.indexOf(d[2]) >= 0 && kind[d[1] * w + d[0]] === 0);
     let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
-    for (const c of B.keepCells) { const x = c % B.w, y = (c / B.w) | 0; x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
-    return { field, kx0: x0, ky0: y0, kx1: x1, ky1: y1 };
+    for (const c of B.keepCells) { const x = c % w, y = (c / w) | 0; x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+    return { field, grassy, camp, side, u0, u1, vOut, vIn, towers, towerAt, gates, decor, kx0: x0, ky0: y0, kx1: x1, ky1: y1 };
   }
   // Paint the picture of state st (any engine state) into buf (PW × PH). Walls are standing unless st.open.
   function compose(buf, T, B, st, I, moatF) {
-    const bp = T.bp, PW = T.PW, w = B.w, h = B.h, kind = B.kind, mat = B.mat, sec = B.sec, nb = B.nb, P = T.pal, ink = P.ink;
+    const bp = T.bp, PW = T.PW, PH = T.PH, w = B.w, h = B.h, kind = B.kind, mat = B.mat, sec = B.sec, nb = B.nb, P = T.pal, ink = P.ink;
     const standing = (c) => c >= 0 && (kind[c] === 2 || kind[c] === 4 || (kind[c] === 3 && !st.open[c]));
+    const wallUp = (c) => c >= 0 && kind[c] === 3 && !st.open[c];
     const blit = (src, X0, Y0) => { for (let j = 0; j < bp; j++) { const o = (Y0 + j) * PW + X0; for (let i = 0; i < bp; i++) buf[o + i] = src[o + i]; } };
-    const row = (X0, Y, n, fn) => { const o = Y * PW + X0; for (let i = 0; i < n; i++) buf[o + i] = fn(buf[o + i]); };
-    const col = (X, Y0, n, fn) => { for (let j = 0; j < n; j++) { const o = (Y0 + j) * PW + X; buf[o] = fn(buf[o]); } };
-    const sprite = (rows, X0, Y0, pal) => { for (let j = 0; j < rows.length; j++) for (let i = 0; i < rows[j].length; i++) { const ch = rows[j][i]; if (ch !== ".") buf[(Y0 + j) * PW + X0 + i] = ch === "k" ? ink : pal[ch]; } };
+    const row = (X0, Y, n, fn) => { const o = Y * PW + X0; for (let i = 0; i < n; i++) buf[o + i] = fn(buf[o + i], X0 + i, Y); };
+    const col = (X, Y0, n, fn) => { for (let j = 0; j < n; j++) { const o = (Y0 + j) * PW + X; buf[o] = fn(buf[o], X, Y0 + j); } };
+    const sprite = (rows, X0, Y0, pal) => { for (let j = 0; j < rows.length; j++) { const Y = Y0 + j; if (Y < 0 || Y >= PH) continue; for (let i = 0; i < rows[j].length; i++) { const ch = rows[j][i], X = X0 + i; if (ch !== "." && X >= 0 && X < PW) buf[Y * PW + X] = ch === "k" ? ink : pal[ch]; } } };
     const dark = (k) => (c) => mix(c, k, 0), lite = (k) => (c) => mix(c, k, 255), toInk = () => ink;
-    // the field ring round the board
+    // battlements along a wall edge that faces open ground: merlons (lit) and crenels (dark), 2 px deep
+    const merlonA = (c, X, Y) => mix(c, ((X + Y) & 3) < 2 ? 0.42 : 0.3, ((X + Y) & 3) < 2 ? 255 : 0), merlonB = (c, X, Y) => mix(c, ((X + Y) & 3) < 2 ? 0.16 : 0.3, ((X + Y) & 3) < 2 ? 255 : 0);
+    // the field ring round the board; the camp's trodden earth runs out into it
     buf.set(T.field);
+    const sd = I.side, ox = sd === 1 ? 1 : sd === 3 ? -1 : 0, oy = sd === 2 ? 1 : sd === 0 ? -1 : 0, alg = sd === 0 || sd === 2;
+    for (const c of B.camp) { const x = c % w, y = (c / w) | 0; if ((alg ? y : x) === I.vOut) blit(T.camp, (x + ox + 1) * bp, (y + oy + 1) * bp); }
     for (let c = 0; c < B.n; c++) {
       const x = c % w, y = (c / w) | 0, X0 = (x + 1) * bp, Y0 = (y + 1) * bp, k = kind[c];
       if (k === 3 && !st.open[c]) { blit(T.mat[mat[c]], X0, Y0); continue; }
       if (k === 1) { blit(T.moat ? T.moat[moatF | 0] : T.yard, X0, Y0); continue; }
-      if (k === 4) { blit(T.mat[0], X0, Y0); continue; }
+      if (k === 4) { blit(I.grassy[c] ? T.field : T.yard, X0, Y0); continue; }
       if (k === 2) continue; // the keep is painted as one block below
-      blit(I.field[c] ? T.field : T.yard, X0, Y0);
-      if (k === 3) { // rubble where a wall stood: chunks of its material, dark undersides
-        const M = P.mat[mat[c]];
-        for (let i = 0; i < 2; i++) { const px = X0 + 1 + ((h2(c, i, 20) * (bp - 3)) | 0), py = Y0 + 1 + ((h2(c, i, 21) * (bp - 3)) | 0), wd = i ? 1 : 2; row(px, py + 1, wd, () => M[3]); row(px, py, wd, () => (i ? M[2] : M[0])); }
+      blit(I.camp[c] ? T.camp : I.grassy[c] ? T.field : T.yard, X0, Y0);
+      if (k === 3) { // rubble where a wall stood: chunks of its material, dark undersides; out in the field it is overgrown
+        const M = P.mat[mat[c]], gr = I.grassy[c], G = P.rubbleGrass;
+        for (let i = 0; i < (gr ? 2 : 3); i++) { const px = X0 + 1 + ((h2(c, i, 20) * (bp - 3)) | 0), py = Y0 + 1 + ((h2(c, i, 21) * (bp - 3)) | 0), wd = i ? 1 : 2; row(px, py + 1, wd, () => (gr ? G[1] : M[3])); row(px, py, wd, () => (gr ? (i ? G[0] : mix(M[0], 0.45, 0)) : i === 1 ? M[2] : M[0])); }
       }
     }
-    // outlines and bevels: each standing region is a raised slab; ground south / east of a wall gets its shadow
+    // decor on open ground (a path is trodden earth; the rest are sprites)
+    for (const d of I.decor) {
+      const X0 = (d[0] + 1) * bp, Y0 = (d[1] + 1) * bp;
+      if (d[2] === "path") { blit(T.camp, X0, Y0); for (let j = 0; j < bp; j++) row(X0, Y0 + j, bp, lite(0.22)); } else sprite(SPR[d[2]], X0, Y0, T.spr[d[2]]);
+    }
+    // outlines and bevels: each standing region is a raised slab with battlements where it faces open ground; ground south
+    // / east of a wall gets its shadow (a tower's is longer)
     for (let c = 0; c < B.n; c++) {
       const x = c % w, y = (c / w) | 0, X0 = (x + 1) * bp, Y0 = (y + 1) * bp, k = kind[c];
       if (k === 3 && !st.open[c]) {
-        const q = sec[c], same = (e) => e >= 0 && kind[e] === 3 && !st.open[e] && sec[e] === q;
-        const u = !same(nb[c * 4]), r = !same(nb[c * 4 + 1]), d = !same(nb[c * 4 + 2]), l = !same(nb[c * 4 + 3]);
-        if (u) { row(X0, Y0 + 1, bp, lite(0.3)); row(X0, Y0, bp, toInk); }
-        if (l) { col(X0 + 1, Y0, bp, lite(0.18)); col(X0, Y0, bp, toInk); }
-        if (d) { row(X0, Y0 + bp - 2, bp, dark(0.28)); row(X0, Y0 + bp - 1, bp, toInk); }
-        if (r) { col(X0 + bp - 2, Y0, bp, dark(0.22)); col(X0 + bp - 1, Y0, bp, toInk); }
+        const q = sec[c], same = (e) => e >= 0 && kind[e] === 3 && !st.open[e] && sec[e] === q, open = (e) => e >= 0 && !standing(e);
+        const eu = nb[c * 4], er = nb[c * 4 + 1], ed = nb[c * 4 + 2], el = nb[c * 4 + 3];
+        const u = !same(eu), r = !same(er), d = !same(ed), l = !same(el);
+        if (u) { if (open(eu)) { row(X0, Y0 + 1, bp, merlonA); row(X0, Y0 + 2, bp, merlonB); } else row(X0, Y0 + 1, bp, lite(0.3)); row(X0, Y0, bp, toInk); }
+        if (l) { if (open(el)) { col(X0 + 1, Y0, bp, merlonA); col(X0 + 2, Y0, bp, merlonB); } else col(X0 + 1, Y0, bp, lite(0.18)); col(X0, Y0, bp, toInk); }
+        if (d) { if (open(ed)) { row(X0, Y0 + bp - 3, bp, merlonB); row(X0, Y0 + bp - 2, bp, dark(0.34)); } else row(X0, Y0 + bp - 2, bp, dark(0.28)); row(X0, Y0 + bp - 1, bp, toInk); }
+        if (r) { if (open(er)) { col(X0 + bp - 3, Y0, bp, merlonB); col(X0 + bp - 2, Y0, bp, dark(0.3)); } else col(X0 + bp - 2, Y0, bp, dark(0.22)); col(X0 + bp - 1, Y0, bp, toInk); }
       } else if (k === 1) {
         const P2 = T.pal.moat[2];
         for (let d = 0; d < 4; d++) { const e = nb[c * 4 + d]; if (e >= 0 && kind[e] !== 1) { if (d === 0) row(X0, Y0, bp, () => P2); else if (d === 2) row(X0, Y0 + bp - 1, bp, dark(0.3)); else if (d === 3) col(X0, Y0, bp, () => P2); else col(X0 + bp - 1, Y0, bp, dark(0.25)); } }
       } else if (k !== 2 && k !== 4) {
-        if (standing(nb[c * 4])) { row(X0, Y0, bp, dark(0.34)); row(X0, Y0 + 1, bp, dark(0.16)); }
-        if (standing(nb[c * 4 + 3])) col(X0, Y0, bp, dark(0.22));
+        const eu = nb[c * 4], el = nb[c * 4 + 3], tall = (e) => e >= 0 && I.towerAt[e] > 0 && wallUp(e);
+        if (standing(eu)) { const tw = tall(eu); row(X0, Y0, bp, dark(0.4)); row(X0, Y0 + 1, bp, dark(tw ? 0.32 : 0.24)); row(X0, Y0 + 2, bp, dark(tw ? 0.24 : 0.1)); if (tw) row(X0, Y0 + 3, bp, dark(0.12)); }
+        if (standing(el)) { col(X0, Y0, bp, dark(0.26)); col(X0 + 1, Y0, bp, dark(tall(el) ? 0.18 : 0.1)); }
       }
     }
-    // levers on a stone plate (up, or thrown), chests (shut, or open once claimed), the camp's tents and pennants
-    for (let i = 0; i < B.levers.length; i++) { const c = B.levers[i]; sprite(st.thrown[i] ? SPR.leverT : SPR.lever, (c % w + 1) * bp, ((c / w | 0) + 1) * bp, { R: P.lever[0], G: P.lever[1], w: P.wood[0], S: P.lever[2] }); }
-    for (let i = 0; i < B.chestCell.length; i++) { const c = B.chestCell[i]; sprite(st.claimed[i] ? SPR.chestO : SPR.chest, (c % w + 1) * bp, ((c / w | 0) + 1) * bp, { d: P.chest[1], g: P.chest[3], G: P.chest[2], w: P.chest[0] }); }
-    for (let i = 0; i < B.camp.length; i++) {
-      const c = B.camp[i], X0 = (c % w + 1) * bp, Y0 = ((c / w | 0) + 1) * bp;
-      sprite(SPR.tent, X0, Y0, { R: P.tent[0], C: P.tent[1] });
-      if (i % 2 === 0) { col(X0 + 3, Y0 - 3, 3, toInk); const fc = P.crew[(i >> 1) % 4]; row(X0 + 4, Y0 - 3, 3, () => fc); row(X0 + 4, Y0 - 2, 2, () => fc); }
+    // towers: a cap over the standing blocks of each footprint: square ones get a ring of merlons round a darker roof walk,
+    // round ones (square footprints, by position) a circular ring of merlons
+    for (let i = 0; i < I.towers.length; i++) {
+      const r = I.towers[i], X0 = (r[0] + 1) * bp, Y0 = (r[1] + 1) * bp, W = r[2] * bp, H = r[3] * bp, round = r[2] === r[3] && r[2] >= 2 && h2(r[0], r[1], 22) < 0.6;
+      const cx = X0 + (W - 1) / 2, cy = Y0 + (H - 1) / 2, R = Math.min(W, H) / 2 - 1.5;
+      for (let Y = Y0 + 1; Y < Y0 + H - 1; Y++) for (let X = X0 + 1; X < X0 + W - 1; X++) {
+        const c = (((Y / bp) | 0) - 1) * w + ((X / bp) | 0) - 1; if (!wallUp(c)) continue;
+        const o = Y * PW + X;
+        let e; // distance inside the rim
+        if (round) { const dd = R - Math.sqrt((X - cx) * (X - cx) + (Y - cy) * (Y - cy)); if (dd < -0.5) { buf[o] = mix(buf[o], 0.22, 0); continue; } e = dd; }
+        else e = Math.min(X - X0 - 1, Y - Y0 - 1, X0 + W - 2 - X, Y0 + H - 2 - Y);
+        if (e < 0.5) buf[o] = ink;
+        else if (e < 2.5) { const a = round ? Math.atan2(Y - cy, X - cx) * R : X + Y, m = (Math.floor(a / 2) & 1) === 0; buf[o] = m ? mix(buf[o], e < 1.5 ? 0.5 : 0.25, 255) : mix(buf[o], 0.35, 0); }
+        else if (e < 3.5) buf[o] = mix(buf[o], 0.45, 0);
+        else buf[o] = mix(buf[o], 0.14, 0);
+      }
+    }
+    // gatehouse gates: an arched doorway with a portcullis on the side facing out, over the gate's standing blocks
+    for (const gt of I.gates) {
+      const X0 = (gt[0] + 1) * bp, Y0 = (gt[1] + 1) * bp, s = SIDES.indexOf(gt[4]), horiz = s === 0 || s === 2, U = (horiz ? gt[2] : gt[3]) * bp, D = (horiz ? gt[3] : gt[2]) * bp;
+      const aw = Math.max(4, U - 4), ah = Math.min(D - 1, Math.max(5, Math.round(aw * 0.9))), mid = (U - 1) / 2, half = aw / 2;
+      for (let u = 0; u < U; u++) for (let v = 0; v < ah + 2; v++) {
+        const X = s === 1 ? X0 + gt[2] * bp - 1 - v : s === 3 ? X0 + v : X0 + u, Y = s === 2 ? Y0 + gt[3] * bp - 1 - v : s === 0 ? Y0 + v : Y0 + u;
+        const c = (((Y / bp) | 0) - 1) * w + ((X / bp) | 0) - 1; if (!wallUp(c)) continue;
+        const du = Math.abs(u - mid) / half, top = du >= 1 ? -1 : ah - 2 - Math.round((1 - Math.sqrt(1 - du * du)) * half * 0.8), o = Y * PW + X;
+        if (du > 1 + 1.5 / half || v > top + 2) continue;
+        if (du >= 1 || v > top) buf[o] = v > top + 1 || du >= 1 + 1 / half ? mix(buf[o], 0.35, 255) : ink;
+        else buf[o] = (u & 1) === (horiz ? 0 : 1) || v % 3 === 1 ? mix(buf[o], 0.55, 0) : mix(buf[o], 0.2, 0);
+      }
     }
     // the keep: one block. A goblin-purple shingled roof with gold eaves and the goblin flag at its peak, over brick walls
     // in the keep's own palette and a portcullis (open on a win), so the goal never reads as another wall.
@@ -463,7 +574,7 @@
       let v;
       if (j < rh) { // roof: a triangle from a 2 px peak at row 2 to the full width at the eaves
         const half = 1 + ((j - 2) * (mid + 0.5)) / Math.max(1, rh - 3), dx = Math.abs(i - mid);
-        if (j < 2 || dx > half + 0.5) v = j < 2 ? K[3] : K[3];
+        if (j < 2 || dx > half + 0.5) v = K[3];
         else if (dx > half - 0.5 || j === rh - 1) v = j === rh - 1 ? R[2] : ink;
         else v = (i + (j >> 1)) % 3 === 0 ? R[1] : R[0];
       } else v = T.keepT[o];
@@ -485,6 +596,38 @@
       const X0 = (c % w + 1) * bp, Y0 = ((c / w | 0) + 1) * bp;
       for (let j = 0; j < bp; j++) row(X0, Y0 + j, bp, dark(0.42));
     }
+    // over the shade: big levers on gold plates (up, or thrown), chests (shut, or open and empty once claimed), and the
+    // siege camp: striped tents along its edge with pennants, and a war standard at its end
+    for (let i = 0; i < B.levers.length; i++) { const c = B.levers[i]; sprite(st.thrown[i] ? SPR.leverT : SPR.lever, (c % w + 1) * bp + 4 - 7, ((c / w | 0) + 1) * bp + 4 - 8, T.spr.lever); }
+    for (let i = 0; i < B.chestCell.length; i++) { const c = B.chestCell[i]; sprite(st.claimed[i] ? SPR.chestO : SPR.chest, (c % w + 1) * bp + 4 - 6, ((c / w | 0) + 1) * bp + 4 - 5, T.spr.chest); }
+    campArt(buf, T, B, I);
+  }
+  // Tent and standard positions along the camp (logical px of the picture): tents stand on the camp's outer edge, half
+  // in the field ring, spread along its span; the idle crews (render.js) stand in front of them.
+  function campArt(buf, T, B, I) {
+    const bp = T.bp, PW = T.PW, PH = T.PH, P = T.pal, ink = P.ink, [R, C] = P.tent, sd = I.side, along = sd === 0 || sd === 2;
+    const put = (X, Y, v) => { if (X >= 0 && Y >= 0 && X < PW && Y < PH) buf[Y * PW + X] = v; };
+    const span = I.u1 - I.u0, nT = Math.max(1, Math.min(3, Math.round(span / 2)));
+    // the edge line in picture px: the camp's outer edge
+    const ex = sd === 1 ? (I.vOut + 2) * bp : sd === 3 ? (I.vOut + 1) * bp : 0, ey = sd === 2 ? (I.vOut + 2) * bp : sd === 0 ? (I.vOut + 1) * bp : 0;
+    for (let i = 0; i < nT; i++) {
+      const u = (I.u0 + (span * (i + 0.5)) / nT + 1) * bp; // picture px along the edge
+      // tent: 13 wide × 11 tall, its foot 2 px out past the edge (s camp), or standing in the edge column (w / e camps)
+      const cx = Math.round(along ? u : sd === 3 ? ex + 3 : ex - 4), foot = Math.round(along ? (sd === 2 ? ey - 1 : ey + 10) : u + 5);
+      for (let j = 0; j < 11; j++) {
+        const hw = Math.round((j * 6) / 10), Y = foot - 10 + j;
+        for (let dx = -hw; dx <= hw; dx++) {
+          const door = j >= 6 && Math.abs(dx) <= (j - 6) >> 1;
+          put(cx + dx, Y, Math.abs(dx) === hw || j === 10 ? ink : door ? mix(R, 0.55, 0) : ((dx + 20) >> 1) & 1 ? R : C);
+        }
+      }
+      put(cx, foot - 11, ink); put(cx, foot - 12, ink); // the pole, a pennant in a crew colour
+      const pc = P.crew[i % 4]; put(cx + 1, foot - 12, pc); put(cx + 2, foot - 12, pc); put(cx + 1, foot - 11, pc);
+    }
+    // the war standard at the camp's far end: a tall pole and a swallowtail banner, red with a gold band
+    const su = (I.u1 - 0.25 + 1) * bp, sx = Math.round(along ? su : sd === 3 ? ex + 2 : ex - 3), sy = Math.round(along ? (sd === 2 ? ey - 1 : ey + 12) : su + 12);
+    for (let j = 0; j < 16; j++) put(sx, sy - j, ink);
+    for (let j = 0; j < 6; j++) for (let i = 0; i < 7; i++) { if (i >= 5 && (j === 2 || j === 3)) continue; put(sx + 1 + i, sy - 15 + j, j === 0 || j === 5 || i === 6 ? ink : j === 2 || j === 3 ? P.chest[2] : R); }
   }
   // The moat's wave frame f alone (every other pixel transparent), for the per-frame overlay.
   function moatFrame(buf, T, B, f) {
@@ -500,5 +643,5 @@
     }
   }
 
-  return { G, MATS, WALK, WORK, FRAMES, SHEET_PROBE, noise, mk, up, icon, sources, title, banner, worldStrip, wall, u32, textures, levelInfo, compose, moatFrame };
+  return { G, MATS, WALK, WORK, FRAMES, SHEET_PROBE, noise, mk, up, icon, sources, title, banner, worldStrip, wall, u32, textures, levelInfo, compose, moatFrame, flagArt, chipArt };
 });

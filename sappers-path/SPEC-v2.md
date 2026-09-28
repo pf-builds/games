@@ -147,3 +147,10 @@ Dailies, endless mode, an editor, hints beyond the target flags, and the portal 
     - Each world's baked levels come from pool boards no easier than the previous world's median (`bake.stepUp`).
     - Picks are spread across the pool's difficulty order, and a pick with no slower win swaps for a neighbour within two places that has one.
   - **m6, documented, not changed:** once `won` is true, `derive` returns no targets (`st.target` is -1 for every crew and `targets()` is empty), because no call is legal after a win. Tools that read targets on a won state must not expect any.
+- 2026-09-27 (fix-v2 UI pass; notes in `tools/fix-v2-ui-notes.md`): every visual-critic MAJOR and MINOR in the UI files, plus the functional critic's UI half.
+  - **Picture.** `level.art` draws tower caps (square or round merlon rings), gatehouse arches and decor; every wall edge facing open ground has battlements; rubble lies on the ground of its nearest open cell. The camp is trodden earth with tents, a war standard and one idle sprite per crew (dimmed at 0, away while it walks).
+  - **Flags and chests.** A flag is a pole with a rippling swallowtail banner in the crew card's colour, and its section gets a faint rim. A chest is a pixel chest with a static "+1" chip; a claimed chest is drawn open and empty. Levers are 1.75 blocks on a gold plate with an idle glint.
+  - **Show.** Blocks swell and pop in the wave with rubble sized in CSS px, and helpers chew along the wave front (at most 4). The win's rays, goblin and confetti are sized to the screen and the board.
+  - **Info tap.** A board tap on a reachable wall draws the walks to the flagged wall and to this one, with both step counts. It never changes state.
+  - **Layout.** On wide screens the top bar folds into the side column (in landscape the banner scene goes too). The hint docks over the banner. `fit()` never overflows its box.
+  - **Save.** `sanitize` checks each record against the level's min, the star offsets and the unlock rule.

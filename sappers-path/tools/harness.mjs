@@ -8,8 +8,10 @@
 //   show); elementFromPoint on every primary button of every screen visited; thumb targets in the bottom third
 //   (portrait); frame time during the busiest eat on the largest board; a hidden-tab load (document.hidden faked, rAF
 //   held until shown, driven by SP.tick) plus a sprite-cache drop and recovery; 390×844, 768×1024 and landscape 812×375
-//   layout checks; zero console errors AND warnings. Screenshots (tools/shots/v2m1/, not committed): title, map, mid-play
-//   per world (375×812), W4 at 1280×720, a mid-walk, a mid-eat, win, stuck, and a grayscale World 4 board.
+//   layout checks (the board on screen with a bottom margin); the frames at the tap itself on the busiest eat, in a cold
+//   context (the first real gesture, which also starts the audio) and warm; zero console errors AND warnings.
+//   Screenshots (tools/shots/v2m1/, not committed): title, map, mid-play per world (375×812), W4 at 1280×720, a
+//   mid-walk, a mid-eat, win, stuck, and a grayscale World 4 board.
 //
 //   export PATH="$HOME/.local/opt/node/bin:$PATH"
 //   PLAYWRIGHT_MODULE=$(npm root -g)/playwright/index.mjs node tools/harness.mjs [--url http://127.0.0.1:8491/sappers-path/] [--out tools/shots/v2m1]
@@ -23,7 +25,7 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const i = process.argv.indexOf("--" + k); return i > 0 ? process.argv[i + 1] : d; };
 const URL_ = arg("url", "http://127.0.0.1:8491/sappers-path/");
-const OUT = resolve(arg("out", resolve(here, "shots/v2m1")));
+const OUT = resolve(arg("out", resolve(here, "shots/v2fix/harness")));
 const WALL_MS = 300000;
 mkdirSync(OUT, { recursive: true });
 const wall = setTimeout(() => { console.error("harness: wall budget exceeded"); process.exit(2); }, WALL_MS);
@@ -271,12 +273,13 @@ async function extra(browser, vp, touch) {
   await page.goto(URL_ + "?debug=1");
   await page.waitForFunction(() => window.SP, null, { timeout: 8000 });
   await hits(page, key + " title");
-  await page.evaluate(() => { SP.load(SP.levels().filter((l) => l.world === 4).pop().id); document.getElementById("hint").hidden = true; });
+  await page.evaluate(() => { SP.load(SP.levels().filter((l) => l.world === 4).pop().id); if (!document.getElementById("hint").hidden) document.getElementById("btn-hint").click(); });
   await page.waitForTimeout(200);
   const b = await hits(page, key + " play");
   if (portrait) for (const x of b) if (!TOP.test(x.id)) ok(x.y >= (vp.height * 2) / 3, `${key}: ${x.id} centre y ${Math.round(x.y)} is above the bottom third`);
   E.layout = await page.evaluate(() => { const r = document.getElementById("board").getBoundingClientRect(), n = document.getElementById("banner").getBoundingClientRect(); return { board: [Math.round(r.width), Math.round(r.height), Math.round(r.top)], banner: Math.round(n.height), wide: document.body.classList.contains("wide"), cell: +(SP.state().cell / SP.state().dpr).toFixed(1) }; });
-  ok(E.layout.board[0] <= vp.width && E.layout.board[1] + E.layout.board[2] <= vp.height, `${key}: board off screen ${JSON.stringify(E.layout)}`);
+  ok(E.layout.board[0] <= vp.width && E.layout.board[1] + E.layout.board[2] <= vp.height - 4, `${key}: board off screen or on the bottom edge ${JSON.stringify(E.layout)}`);
+  if (!portrait) ok(E.layout.cell >= 11, `${key}: landscape cell ${E.layout.cell} px`);
   await page.screenshot({ path: `${OUT}/${key}-play.png` });
   // a win panel fits too
   await page.evaluate(() => { const lv = SP.levels().find((l) => l.id === SP.state().id); for (const c of lv.line) SP.call(c); SP.tick(10000); });
@@ -284,6 +287,44 @@ async function extra(browser, vp, touch) {
   await page.screenshot({ path: `${OUT}/${key}-win.png` });
   ok(E.console.length === 0, `${key}: console messages ${JSON.stringify(E.console)}`);
   await ctx.close();
+}
+
+// The tap itself on the busiest eat (functional m3): a fresh browser, the title's Play tapped for real first (the page's
+// first gesture starts the audio: the browser's first AudioContext is a ~100 ms long task, and in play it always lands on
+// Play, never on a card), the level played up to that call on the manual clock, then the card tapped for real; rAF deltas
+// from the tap until the first block pops, and long tasks. Then again warm (undo, tap again).
+async function tapRun(browser) {
+  const T = { console: [] }; report.tap = T;
+  const br = await browser.browserType().launch(); // a fresh browser process, so nothing is warm
+  const ctx = await br.newContext({ viewport: { width: 375, height: 812 }, deviceScaleFactor: 3, hasTouch: true, isMobile: true });
+  const page = await ctx.newPage();
+  watch(page, T.console);
+  await page.goto(URL_ + "?debug=1");
+  await page.waitForFunction(() => window.SP, null, { timeout: 8000 });
+  await page.waitForTimeout(300);
+  await page.evaluate(() => { window.__plt = []; try { window.__ppo = new PerformanceObserver((l) => { for (const e of l.getEntries()) window.__plt.push(Math.round(e.duration)); }); window.__ppo.observe({ entryTypes: ["longtask"] }); } catch (e) { /* none */ } });
+  await page.locator("#btn-play").tap({ timeout: 3000 });
+  await page.waitForTimeout(400);
+  T.playTap = await page.evaluate(() => { if (window.__ppo) window.__ppo.disconnect(); return { longTasks: window.__plt.slice(), screen: SP.state().screen }; });
+  const busy = await page.evaluate(() => SP.busiest(Math.max(...SP.levels().map((l) => l.world))));
+  const crew = await page.evaluate((b) => { const lv = SP.levels().find((l) => l.id === b.id); SP.load(b.id); if (!document.getElementById("hint").hidden) document.getElementById("btn-hint").click(); for (let k = 0; k < b.step; k++) { SP.call(lv.line[k]); SP.tick(9000); } return lv.line[b.step]; }, busy);
+  await page.waitForTimeout(300);
+  const measure = async () => {
+    await page.evaluate(() => { window.__fd = []; window.__lt = []; window.__t0 = 0; let last = 0; const f = (t) => { if (last && window.__t0) window.__fd.push({ dt: t - last, c: SP.state().clock }); last = t; if (window.__fd.length < 200) requestAnimationFrame(f); }; requestAnimationFrame(f);
+      try { window.__po = new PerformanceObserver((l) => { for (const e of l.getEntries()) window.__lt.push(Math.round(e.duration)); }); window.__po.observe({ entryTypes: ["longtask"] }); } catch (e) { /* no longtask support */ } });
+    await page.waitForTimeout(200);
+    const c = await page.evaluate((k) => { window.__t0 = 1; return SP.card(k); }, crew);
+    await page.touchscreen.tap(c.x, c.y);
+    await page.waitForTimeout(900);
+    return page.evaluate(() => { const s = SP.state().show, d = window.__fd.filter((q) => q.c <= s.popT0 + 50).map((q) => q.dt); if (window.__po) window.__po.disconnect(); return { frames: d.length, maxMs: +Math.max(0, ...d).toFixed(1), longTasks: window.__lt.slice(), moves: SP.state().moves }; });
+  };
+  T.busiest = busy; T.cold = await measure();
+  await page.evaluate(() => { SP.undo(); SP.tick(100); });
+  await page.waitForTimeout(300);
+  T.warm = await measure();
+  ok(T.cold.maxMs <= 25 && T.warm.maxMs <= 25 && T.cold.moves === busy.step + 1, "tap frames " + JSON.stringify({ cold: T.cold, warm: T.warm }));
+  ok(T.console.length === 0, "tap: console messages " + JSON.stringify(T.console));
+  await ctx.close(); await br.close();
 }
 
 // Hidden-tab load: document.hidden is true and rAF callbacks are held from the first script on, until __show().
@@ -340,6 +381,7 @@ try {
   await extra(browser, { width: 768, height: 1024 }, true);
   await extra(browser, { width: 812, height: 375 }, true);
   await hiddenRun(browser);
+  await tapRun(browser);
   await browser.close();
 } catch (e) {
   console.error("harness crashed: " + (e && e.stack || e));
@@ -355,5 +397,6 @@ for (const [k, R] of Object.entries(report.runs)) brief[k] = { selfTest: `${R.se
   busiest: R.busiest, frames: R.frames && `mean ${R.frames.meanMs.toFixed(1)} p95 ${R.frames.p95Ms.toFixed(1)} max ${R.frames.maxMs.toFixed(1)} ms over ${R.frames.n} frames (${R.frames.rings} rings, ${R.frames.eaten} blocks, ${R.frames.eatMs} ms)`,
   bench: R.bench && `${R.bench.msPerDraw.toFixed(3)} ms/draw @ ${R.bench.canvas}`, layout: R.layout, console: R.console.length };
 console.log(JSON.stringify({ ok: report.ok, payload: { files: report.payload.files, kb: report.payload.kb, external: report.payload.external }, runs: brief, extra: Object.fromEntries(Object.entries(report.extra).map(([k, v]) => [k, v.layout])),
-  hidden: report.hidden && { selfTest: report.hidden.selfTest.ok, play: report.hidden.play, afterShow: report.hidden.afterShow, cacheDrop: report.hidden.cacheDrop, console: report.hidden.console.length }, fails: report.fails }, null, 1));
+  hidden: report.hidden && { selfTest: report.hidden.selfTest.ok, play: report.hidden.play, afterShow: report.hidden.afterShow, cacheDrop: report.hidden.cacheDrop, console: report.hidden.console.length },
+  tap: report.tap && { busiest: report.tap.busiest, playTap: report.tap.playTap, cold: report.tap.cold, warm: report.tap.warm }, fails: report.fails }, null, 1));
 process.exit(report.ok ? 0 : 1);

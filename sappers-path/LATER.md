@@ -72,3 +72,10 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - Stacks as an optional hard mode or a late-world twist (`node tools/bake.js --stacks`), if the playtest says Rule A levels are too easy. It raised decision-point boards from 41% to 63% in World 3.
 - Towers that always contrast with their arc (`towers.contrast` 1.0) if the art can't make a merged tower read as a tower; costs some colour failures in World 1's two materials.
 - A curved palisade (it's a straight fence today and reads as siege lines).
+
+## From the v2 UI fix pass (2026-09-27)
+- Landscape W4 is 11 px a cell (32 rows in 375 px). 12 px or more needs the W4 boards rotated in landscape, and that needs Rule A's tie-break order proven rotation-safe first.
+- `blockPx` 6 on World 4, so the board's texture reads as chunkier pixels next to the UI (the textures are designed on 8 px blocks today).
+- A small count chip on each idle crew at the camp.
+- The victory lap: every remaining wall crumbles in a fast wave after the keep opens.
+- The browser's first AudioContext is a ~100 ms long task on the page's first gesture (the title's Play). If it ever shows, give Play its pressed state before starting the audio.
