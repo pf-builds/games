@@ -64,3 +64,11 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - Chest badges are never dimmed, so an unreachable chest looks as live as a breakable wall. Dim them like wall badges.
 - Phone landscape: the win panel covers 22–25 px of the board's right edge.
 - The chest hint toast sits over the board's top row for 1.8 s. Move it off the board or shorten it.
+
+## From M0 v2 (2026-09-27)
+- Deeper boards (the 8-12 call end of SPEC-v2's 4-12 target): a concentric castle (two full curtains with a berm), a second cross wall, or taller boards. Scarcity alone tops out around 7-8 calls on these pictures.
+- Detour chests under Rule A: place the chest in a pocket exactly one wall off the optimal line, checked by the solver (today 0-3% of chests classify as a detour).
+- World 4 lever polish: a gate portcullis in iron with its lever in a guardhouse outside the curtain, and deliberate cascades (lever house → door → lever → keep ring).
+- Stacks as an optional hard mode or a late-world twist (`node tools/bake.js --stacks`), if the playtest says Rule A levels are too easy. It raised decision-point boards from 41% to 63% in World 3.
+- Towers that always contrast with their arc (`towers.contrast` 1.0) if the art can't make a merged tower read as a tower; costs some colour failures in World 1's two materials.
+- A curved palisade (it's a straight fence today and reads as siege lines).

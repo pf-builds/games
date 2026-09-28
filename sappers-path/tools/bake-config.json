@@ -1,12 +1,19 @@
 {
-  "version": 2,
+  "version": 3,
   "seed": 20260927,
+  "rule": "A",
+  "stacksInBake": false,
   "cap": 150000,
-  "quickCap": 60000,
-  "playouts": 300,
-  "triesPerBoard": 20,
-  "musterTries": 120,
-  "chunk": 20,
+  "frontierCap": 150000,
+  "playouts": 200,
+  "triesPerBoard": 8,
+  "musterEval": 12,
+  "chunk": 10,
+  "stacks": {
+    "k": 3,
+    "tries": 16,
+    "eval": 8
+  },
   "report": {
     "perWorld": 300,
     "examples": 1
@@ -14,14 +21,14 @@
   "bake": {
     "poolMax": 60,
     "chunks": {
-      "1": 40,
-      "2": 80,
-      "3": 40,
+      "1": 60,
+      "2": 40,
+      "3": 80,
       "4": 60
     },
     "levels": {
-      "1": 8,
-      "2": 8,
+      "1": 9,
+      "2": 9,
       "3": 10,
       "4": 10
     },
@@ -31,462 +38,330 @@
     "1": {
       "name": "The Outer Bailey",
       "sizes": [
-        7,
-        8
+        [16, 20]
       ],
-      "mats": [
-        "S",
-        "T"
-      ],
-      "plans": {
-        "7": [
-          "KWOW"
-        ],
-        "8": [
-          "KWOWW"
-        ]
+      "mats": ["S", "T"],
+      "margin": {
+        "side": [1, 2],
+        "top": [0, 2],
+        "front": [4, 5]
       },
-      "segs": {
-        "keep": [
-          2,
-          3
-        ],
-        "mid": [
-          3,
-          4
-        ],
-        "outer": [
-          3,
-          4
-        ]
+      "curtain": {
+        "thick": [2, 2],
+        "arcs": [3, 5],
+        "cutJitter": 0.5,
+        "minPiece": 4
       },
-      "cutJitter": 0.5,
-      "layered": 0,
-      "minPiece": 2,
-      "dividers": [
-        1,
-        2
-      ],
-      "bridges": [
-        0,
-        0
-      ],
-      "depth": [
-        2,
-        3
-      ],
+      "towers": {
+        "p": 0.75,
+        "r": [2, 2],
+        "round": 0.6,
+        "contrast": 0.7
+      },
+      "gate": {
+        "w": [3, 4],
+        "in": [0, 1],
+        "out": [0, 1],
+        "shift": [-2, 2],
+        "mats": ["T"]
+      },
+      "keep": {
+        "size": [2, 2],
+        "ring": [1, 2],
+        "arcs": [2, 3],
+        "yard": 1,
+        "up": [0, 1],
+        "front": 2,
+        "iron": false
+      },
+      "divider": null,
+      "buildings": {
+        "n": [0, 2],
+        "w": [2, 3],
+        "h": [2, 3]
+      },
+      "moat": null,
+      "lever": null,
+      "camp": {
+        "w": [4, 6],
+        "side": 0.15,
+        "shift": [-2, 2]
+      },
+      "depth": [2, 6],
       "chests": 0,
       "detour": 0,
-      "lever": null
+      "spare": 0,
+      "slack": [0, 1],
+      "palisade": {
+        "p": 0.6,
+        "segs": [2, 3],
+        "clear": 1
+      }
     },
     "2": {
       "name": "The Hedge Garden",
       "sizes": [
-        8,
-        9
+        [18, 24]
       ],
-      "mats": [
-        "S",
-        "T",
-        "H"
-      ],
-      "plans": {
-        "8": [
-          "KWOWW"
-        ],
-        "9": [
-          "KWOWW",
-          "KWOOW"
-        ]
+      "mats": ["S", "T", "H"],
+      "margin": {
+        "side": [1, 2],
+        "top": [0, 2],
+        "front": [4, 6]
       },
-      "segs": {
-        "keep": [
-          2,
-          3
-        ],
-        "mid": [
-          3,
-          4
-        ],
-        "outer": [
-          4,
-          5
-        ]
+      "curtain": {
+        "thick": [2, 3],
+        "arcs": [4, 6],
+        "cutJitter": 0.5,
+        "minPiece": 4
       },
-      "cutJitter": 0.5,
-      "layered": 0.6,
-      "minPiece": 2,
-      "dividers": [
-        2,
-        3
-      ],
-      "bridges": [
-        0,
-        0
-      ],
-      "depth": [
-        3,
-        4
-      ],
+      "towers": {
+        "p": 0.8,
+        "r": [2, 3],
+        "round": 0.6,
+        "contrast": 0.7
+      },
+      "gate": {
+        "w": [3, 5],
+        "in": [0, 1],
+        "out": [0, 1],
+        "shift": [-2, 2],
+        "mats": ["T", "H"]
+      },
+      "keep": {
+        "size": [2, 3],
+        "ring": [1, 2],
+        "arcs": [2, 3],
+        "yard": 1,
+        "up": [0, 2],
+        "front": 2,
+        "iron": false
+      },
+      "divider": {
+        "p": 0.4,
+        "thick": [1, 2],
+        "segs": [2, 3]
+      },
+      "buildings": {
+        "n": [1, 2],
+        "w": [2, 3],
+        "h": [2, 3]
+      },
+      "moat": null,
+      "lever": null,
+      "camp": {
+        "w": [4, 6],
+        "side": 0.15,
+        "shift": [-2, 2]
+      },
+      "depth": [3, 8],
       "chests": 1,
       "detour": 0.5,
-      "lever": null
+      "spare": 0,
+      "slack": [0, 1],
+      "palisade": {
+        "p": 0.6,
+        "segs": [2, 3],
+        "clear": 1
+      }
     },
     "3": {
       "name": "The Frozen Moat",
       "sizes": [
-        9,
-        10
+        [20, 28]
       ],
-      "mats": [
-        "S",
-        "T",
-        "H",
-        "I"
-      ],
-      "plans": {
-        "9": [
-          "KWOMW"
-        ],
-        "10": [
-          "KWOMWW",
-          "KWOWMW"
-        ]
+      "mats": ["S", "T", "H", "I"],
+      "margin": {
+        "side": [2, 3],
+        "top": [0, 3],
+        "front": [6, 7]
       },
-      "segs": {
-        "keep": [
-          2,
-          3
-        ],
-        "mid": [
-          3,
-          5
-        ],
-        "outer": [
-          4,
-          5
-        ]
+      "curtain": {
+        "thick": [2, 3],
+        "arcs": [4, 6],
+        "cutJitter": 0.5,
+        "minPiece": 4
       },
-      "cutJitter": 0.5,
-      "layered": 0.6,
-      "minPiece": 2,
-      "dividers": [
-        2,
-        3
-      ],
-      "bridges": [
-        2,
-        3
-      ],
-      "depth": [
-        4,
-        5
-      ],
+      "towers": {
+        "p": 0.8,
+        "r": [2, 3],
+        "round": 0.6,
+        "contrast": 0.7
+      },
+      "gate": {
+        "w": [3, 5],
+        "in": [0, 1],
+        "out": [0, 1],
+        "shift": [-2, 2],
+        "mats": ["T", "H"]
+      },
+      "keep": {
+        "size": [2, 3],
+        "ring": [1, 2],
+        "arcs": [2, 3],
+        "yard": 1,
+        "up": [0, 2],
+        "front": 2,
+        "iron": false
+      },
+      "divider": {
+        "p": 0.5,
+        "thick": [1, 2],
+        "segs": [2, 3]
+      },
+      "buildings": {
+        "n": [1, 3],
+        "w": [2, 3],
+        "h": [2, 3]
+      },
+      "moat": {
+        "p": 1,
+        "gap": [0, 1],
+        "thick": [1, 2],
+        "wobble": 0.6,
+        "freq": [2, 3],
+        "bridges": [1, 3],
+        "mats": ["I"]
+      },
+      "lever": null,
+      "camp": {
+        "w": [4, 6],
+        "side": 0.15,
+        "shift": [-2, 2]
+      },
+      "depth": [4, 10],
       "chests": 1,
       "detour": 0.5,
-      "lever": null
+      "spare": 0,
+      "slack": [0, 1],
+      "palisade": {
+        "p": 0.5,
+        "segs": [2, 3],
+        "clear": 1
+      }
     },
     "4": {
       "name": "The Goblin Keep",
       "sizes": [
-        10,
-        11
+        [24, 32]
       ],
-      "mats": [
-        "S",
-        "T",
-        "H",
-        "I"
-      ],
-      "plans": {
-        "10": [
-          "KFOWMW"
-        ],
-        "11": [
-          "KFOWMW"
-        ]
+      "mats": ["S", "T", "H", "I"],
+      "margin": {
+        "side": [3, 4],
+        "top": [0, 3],
+        "front": [6, 8]
       },
-      "segs": {
-        "keep": [
-          2,
-          3
-        ],
-        "mid": [
-          3,
-          5
-        ],
-        "outer": [
-          4,
-          6
-        ]
+      "curtain": {
+        "thick": [2, 3],
+        "arcs": [5, 7],
+        "cutJitter": 0.5,
+        "minPiece": 4
       },
-      "cutJitter": 0.5,
-      "layered": 0.6,
-      "minPiece": 2,
-      "dividers": [
-        2,
-        3
-      ],
-      "bridges": [
-        2,
-        3
-      ],
-      "depth": [
-        5,
-        6
-      ],
+      "towers": {
+        "p": 0.85,
+        "r": [2, 3],
+        "round": 0.6,
+        "contrast": 0.7
+      },
+      "gate": {
+        "w": [3, 5],
+        "in": [0, 1],
+        "out": [0, 1],
+        "shift": [-2, 2],
+        "mats": ["T", "H"]
+      },
+      "keep": {
+        "size": [2, 3],
+        "ring": [1, 1],
+        "arcs": [1, 1],
+        "yard": 3,
+        "up": [0, 2],
+        "front": 2,
+        "iron": true
+      },
+      "divider": {
+        "p": 0.6,
+        "thick": [1, 2],
+        "segs": [2, 3]
+      },
+      "buildings": {
+        "n": [1, 3],
+        "w": [2, 3],
+        "h": [2, 3]
+      },
+      "moat": {
+        "p": 0.6,
+        "gap": [0, 1],
+        "thick": [1, 2],
+        "wobble": 0.6,
+        "freq": [2, 3],
+        "bridges": [1, 3],
+        "mats": ["I", "T"]
+      },
+      "lever": {
+        "sides": ["top", "left", "right"]
+      },
+      "camp": {
+        "w": [4, 6],
+        "side": 0.15,
+        "shift": [-2, 2]
+      },
+      "depth": [5, 12],
       "chests": 1,
       "detour": 0.5,
-      "lever": {
-        "sealBoth": 0.5,
-        "second": 0.3
+      "spare": 0,
+      "slack": [0, 1],
+      "palisade": {
+        "p": 0.5,
+        "segs": [2, 3],
+        "clear": 1
       }
     }
   },
   "bands": {
     "1": {
-      "spare": 0,
-      "min": [
-        2,
-        3
-      ],
-      "maxSections": 10,
-      "maxSingles": 2,
-      "greedy": false,
+      "min": [3, 5],
+      "maxSections": 14,
+      "greedy": 0,
       "decisions": 1,
-      "randWin": [
-        0.2,
-        0.6
-      ],
-      "trap": [
-        0.25,
-        0.6
-      ],
+      "reshapes": 0,
+      "randWin": [0.05, 0.9],
+      "trap": [0.02, 0.7],
       "chest": false,
       "levers": false
     },
     "2": {
-      "spare": 1,
-      "min": [
-        3,
-        4
-      ],
-      "maxSections": 14,
-      "maxSingles": 2,
-      "greedy": true,
+      "min": [4, 6],
+      "maxSections": 20,
+      "greedy": 1,
       "decisions": 1,
-      "randWin": [
-        0.03,
-        0.55
-      ],
-      "trap": [
-        0.2,
-        0.65
-      ],
+      "reshapes": 0,
+      "randWin": [0.02, 0.8],
+      "trap": [0.05, 0.7],
       "chest": true,
       "levers": false
     },
     "3": {
-      "spare": 1,
-      "min": [
-        4,
-        5
-      ],
-      "maxSections": 18,
-      "maxSingles": 2,
-      "greedy": true,
+      "min": [5, 7],
+      "maxSections": 24,
+      "greedy": 1,
       "decisions": 2,
-      "randWin": [
-        0.005,
-        0.3
-      ],
-      "trap": [
-        0.2,
-        0.65
-      ],
+      "reshapes": 0,
+      "randWin": [0.005, 0.6],
+      "trap": [0.05, 0.7],
       "chest": true,
       "levers": false
     },
     "4": {
-      "spare": 1,
-      "min": [
-        5,
-        6
-      ],
-      "maxSections": 22,
-      "maxSingles": 2,
-      "greedy": true,
+      "min": [5, 8],
+      "maxSections": 28,
+      "greedy": 1,
       "decisions": 2,
-      "randWin": [
-        0.002,
-        0.2
-      ],
-      "trap": [
-        0.2,
-        0.7
-      ],
+      "reshapes": 0,
+      "randWin": [0.002, 0.5],
+      "trap": [0.05, 0.7],
       "chest": true,
       "levers": true
-    }
-  },
-  "m0": {
-    "note": "M0 generator + M0 proposed bands, kept so tools/report.js can measure the before column with the M0b metrics.",
-    "worlds": {
-      "1": {
-        "name": "The Outer Bailey",
-        "sizes": [
-          7,
-          8
-        ],
-        "mats": [
-          "S",
-          "T"
-        ],
-        "bands": "KWOW",
-        "blobSize": 3.2,
-        "blobJitter": 0.4,
-        "wobble": 0.35,
-        "divider": 0.5,
-        "gap": 0.04,
-        "avoidMerge": 0.85,
-        "moat": null,
-        "chests": 0,
-        "doors": null
-      },
-      "2": {
-        "name": "The Hedge Garden",
-        "sizes": [
-          8,
-          9
-        ],
-        "mats": [
-          "S",
-          "T",
-          "H"
-        ],
-        "bands": "KWOWW",
-        "blobSize": 3.8,
-        "blobJitter": 0.4,
-        "wobble": 0.35,
-        "divider": 0.5,
-        "gap": 0.04,
-        "avoidMerge": 0.85,
-        "moat": null,
-        "chests": 1,
-        "doors": null
-      },
-      "3": {
-        "name": "The Frozen Moat",
-        "sizes": [
-          9,
-          10
-        ],
-        "mats": [
-          "S",
-          "T",
-          "H",
-          "I"
-        ],
-        "bands": "KWOMWW",
-        "blobSize": 4.4,
-        "blobJitter": 0.4,
-        "wobble": 0.35,
-        "divider": 0.55,
-        "gap": 0.04,
-        "avoidMerge": 0.85,
-        "moat": {
-          "p": 0.6
-        },
-        "chests": 1,
-        "doors": null
-      },
-      "4": {
-        "name": "The Goblin Keep",
-        "sizes": [
-          11
-        ],
-        "mats": [
-          "S",
-          "T",
-          "H",
-          "I"
-        ],
-        "bands": "KWOWMW",
-        "blobSize": 5.0,
-        "blobJitter": 0.4,
-        "wobble": 0.35,
-        "divider": 0.6,
-        "gap": 0.04,
-        "avoidMerge": 0.85,
-        "moat": {
-          "p": 0.5
-        },
-        "chests": 1,
-        "doors": [
-          1,
-          2
-        ],
-        "doorLayer": 2,
-        "cascade": 0.5
-      }
-    },
-    "bands": {
-      "1": {
-        "spare": 0,
-        "randWin": [
-          0.06,
-          0.5
-        ],
-        "min": [
-          2,
-          3
-        ],
-        "maxSections": 22,
-        "chest": null,
-        "levers": false
-      },
-      "2": {
-        "spare": 1,
-        "randWin": [
-          0.04,
-          0.3
-        ],
-        "min": [
-          2,
-          3
-        ],
-        "maxSections": 30,
-        "chest": "optimal",
-        "levers": false
-      },
-      "3": {
-        "spare": 1,
-        "randWin": [
-          0.01,
-          0.1
-        ],
-        "min": [
-          3,
-          4
-        ],
-        "maxSections": 34,
-        "chest": "optimal",
-        "levers": false
-      },
-      "4": {
-        "spare": 1,
-        "randWin": [
-          0.004,
-          0.06
-        ],
-        "min": [
-          3,
-          5
-        ],
-        "maxSections": 40,
-        "chest": "optimal",
-        "levers": true
-      }
     }
   }
 }

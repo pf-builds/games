@@ -1,4 +1,4 @@
-// Runs gen.batch tasks across worker threads; results come back in task order, so thread timing never changes output.
+// Runs gen.batch tasks (task.variants: "A", "B", "AS") across worker threads; results come back in task order, so thread timing never changes output.
 // A worker that throws is logged and its task returns empty (callers never see an exception).
 "use strict";
 const { Worker, isMainThread, parentPort, workerData } = require("worker_threads");
@@ -7,7 +7,7 @@ const os = require("os");
 if (!isMainThread) {
   const Gen = require("./gen.js");
   const { C, task } = workerData;
-  let out; try { out = Gen.batch(C, task.wk, task.seed, task.n, task.mode); } catch (e) { out = { recs: [], fails: { ["error: " + (e && e.message)]: 1 } }; }
+  let out; try { out = Gen.batch(C, task.wk, task.seed, task.n, task.variants); } catch (e) { out = { recs: [], fails: { ["error: " + (e && e.message)]: 1 } }; }
   parentPort.postMessage(out);
   return;
 }

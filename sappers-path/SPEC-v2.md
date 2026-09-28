@@ -86,3 +86,30 @@ Dailies, endless mode, an editor, hints beyond the target flags, and the portal 
 
 ## 8. Decisions log (builders append)
 - 2026-09-27: v2 direction approved by Peter ("go on with v2, I want to see these suggestions for a more in depth game"). v1 is tagged and unshipped.
+- 2026-09-27 (M0 v2, engine): a move is a **call** (`engine.call(B, st, crew)`, or a column index in stacks mode). The state is (broken sections, spent), with spent = calls per material, then each column's head. Everything else derives from it, and undo replays the call list minus the last call.
+  - **Walk.** A section's walk is the smallest BFS distance from the camp to a connected ground cell beside any of its tiles. Ties go to the lowest ground cell; the contact tile is beside it.
+  - **Rule A tie-break.** Exactly §2: walk, then Chebyshev distance to the nearest keep cell, then the lowest first tile (= lowest section id). `tie` records which step decided it.
+  - **Rule B.** Breaks the sections reachable at the moment of the call (a snapshot); walls the breaks expose wait for the next call.
+  - **Stacks.** Each claimed chest becomes a one-token column of its own.
+  - **Levers.** When a lever opens a door mid-flood, distances are rebuilt by a clean BFS.
+  - **Validation.** `P` must be on the edge, and the keep must be one 4-connected block.
+- 2026-09-27 (M0 v2, generator): castle pictures at 16×20, 18×24, 20×28 and 24×32.
+  - A curtain 2-3 blocks thick in 3-7 arcs, corner towers, and a gatehouse facing the camp.
+  - A keep block in its own ring (World 4: iron, with a lever house), plus optional courtyard buildings, a cross wall and a front palisade.
+  - World 3+: a curving moat with 2-wide bridges.
+  - **Depth.** The solver's Pareto frontier of winning crew mixes, plus 0-1 slack. The best of 12 candidate musters is kept, scored on decision points (details in `tools/m0v2-notes.md`).
+- 2026-09-27 (M0 v2, measured; `tools/m0v2-report.md`): **Rule A, no stacks** is recommended to Peter.
+  - Rule B is shallow: median random win 1.00, 1-3% of boards pass the bands.
+  - Stacks add decision points (mostly World 3), but through queue order, not the castle.
+  - Measured depth is 3-8 calls, not 4-12. §4's target is revised to the bands below until Peter says otherwise.
+  - **Bands:** min calls 3-5 / 4-6 / 5-7 / 5-8; decision points ≥ 1 / 1 / 2 / 2; no tie-break on a solution call. The full band table is in the report.
+  - **Levels:** 9 / 9 / 10 / 10 = 38, each world opening with its teaching board(s): Closest First teaches Rule A in World 1.
+  - `levels.json` is `draft: true` until Peter reviews the report.
+- **Level format v2** (`levels/levels.json`: `{version: 3, draft, rule, stacks, note, seed, worlds: [{world, name, band, levels}]}`; `levels/pool-w{n}.json`: `{version, world, rule, stacks, count, levels}`). A level is `{id, name, world, source, rule, w, h, grid, muster, chests, min, line, lineCells, metrics}`, plus the fields below:
+  - `grid` uses v1's codes plus `P` (camp, on the edge). `K` may be a block.
+  - `muster`: `{stone, timber, hedge, ice}`.
+  - `stacks` (only when baked with `--stacks`): an array of columns of crew names, front first. The muster then equals their contents.
+  - `line`: the solver's optimal line, as crew names (column indices in stacks mode), replayable through `call()`.
+  - `lineCells`: `[x, y]` of the first tile of the first section each call breaks.
+  - `metrics`: `{sections, blocks, walls, randWin, greedyWin, greedyUsed, states, trapRate, decisions, reshapes, tieAny, chestKind, leversMatter, minB}`.
+  - Also `teaches` (teaching boards), and `seed`/`idx` (generated boards).
