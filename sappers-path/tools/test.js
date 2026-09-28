@@ -20,6 +20,9 @@ function play(B, calls) { let s = E.start(B); for (const a of calls) { const n =
   eq([B.nsec, B.secMat[at(B, 0, 1)], B.secMat[at(B, 2, 2)], B.camp.length, B.keepCells.length, B.rule], [2, 1, 0, 1, 1, "A"], "parse: two rings, one camp cell, one keep cell, rule A by default");
   throws(() => E.parse(lv(["...", ".K.", "..."])), "parse: no camp throws");
   throws(() => E.parse(lv(["...", ".P.", "K.."])), "parse: a camp cell off the edge throws");
+  throws(() => E.parse(lv(["P..", ".K.", ".P.", "..."])), "parse: a camp cell not joined to an edge camp cell throws");
+  const D2 = E.parse(lv([".K..", "....", ".PP.", ".PP."], { stone: 0 }));
+  eq([D2.camp.length, E.start(D2).dist[1 * 4 + 1], E.start(D2).won], [4, 1, true], "parse: a 2-deep camp is one camp; walks start from its front row");
   throws(() => E.parse(lv(["P..", "...", "..."])), "parse: no keep throws");
   throws(() => E.parse(lv(["P..", "K.K", "..."])), "parse: a keep in two pieces throws");
   throws(() => E.parse(lv(["P.C", ".K.", "..."])), "parse: a chest without a chests[] entry throws");
@@ -203,7 +206,7 @@ function play(B, calls) { let s = E.start(B); for (const a of calls) { const n =
       for (let s = 0; s < B.nsec; s++) if (B.secMat[s] < E.IRON && B.secStart[s + 1] - B.secStart[s] < 2) bad.single.push(L.id);
       if (L.source === "teaching") { if (seenBaked) bad.order.push(L.id); continue; }
       seenBaked = true;
-      if (L.min < lastMin) bad.order.push(L.id); lastMin = L.min;
+      if (L.metrics.difficulty < lastMin) bad.order.push(L.id); lastMin = L.metrics.difficulty;
       if (L.min < band.min[0] || L.min > band.min[1]) bad.band.push(L.id + " min " + L.min);
       if (B.nsec > band.maxSections) bad.sections.push(L.id + " " + B.nsec);
       // No tie-break decides any call on the shipped line.
@@ -219,7 +222,7 @@ function play(B, calls) { let s = E.start(B); for (const a of calls) { const n =
     }
   }
   eq(bad.names, [], "m0c names: every level has a short name in names.json, and the bake uses it");
-  eq(bad.order, [], "m0c order: teaching boards first in each world, then easiest first (min calls never falls)");
+  eq(bad.order, [], "m0c order: teaching boards first in each world, then easiest first (composite difficulty never falls)");
   eq(bad.band, [], "m0c depth: every baked level's min calls sits in its world band (W3 6-10, W4 7-12)");
   eq(bad.sections, [], "m0c phone cap: wall sections within the band cap");
   eq(bad.tie, [], "m0c ties: no tie-break decides a call on any shipped line");
@@ -237,6 +240,88 @@ function play(B, calls) { let s = E.start(B); for (const a of calls) { const n =
     ok(!a.some((x) => x.startsWith("THREW")), "m0c generator: world " + wk + " castle() never throws");
     ok(made.length > 0 && made.every((x) => (+wk >= 3) === x.endsWith("+inner")), "m0c generator: world " + wk + (+wk >= 3 ? " castles all have an inner curtain" : " castles keep one ring") + " (" + made.length + " made)");
   }
+}
+
+// ---- fix-v2 gen: art metadata, decor never blocks, the camp, closest margin, no spam, stars, the curve -------------
+{
+  const C = require("./bake-config.json"), NAMES = require("../levels/names.json");
+  const all = LEVELS.worlds.flatMap((w) => w.levels), pools = [1, 2, 3, 4].flatMap((k) => require("../levels/pool-w" + k + ".json").levels);
+  const KINDS = ["bush", "well", "cart", "flowers", "barrel", "path"], SIDES = ["n", "e", "s", "w"];
+  const int = (v) => Number.isInteger(v);
+  const inB = (L, r) => r.slice(0, 4).every(int) && r[2] >= 1 && r[3] >= 1 && r[0] >= 0 && r[1] >= 0 && r[0] + r[2] <= L.w && r[1] + r[3] <= L.h;
+  const bad = { art: [], rects: [], keep: [], decor: [], block: [], camp: [], margin: [], spam: [], mats: [], step: [] };
+  // Every cell a crew walks to a target (engine.pathTo from the target's ground cell) in any reachable state, plus the
+  // win march (pathTo from the keep's nearest connected neighbour, as show.js picks it).
+  const walked = (L) => {
+    const B = E.parse(L), mark = new Uint8Array(B.n), s0 = E.start(B), seen = new Set([s0.broken.join("")]), q = [s0];
+    for (let i = 0; i < q.length && q.length < 60000; i++) {
+      const st = q[i];
+      if (st.won) {
+        let first = -1, fd = 1e9;
+        for (const k of B.keepCells) for (let d = 0; d < 4; d++) { const e = B.nb[k * 4 + d]; if (e >= 0 && st.conn[e] && st.dist[e] < fd) { fd = st.dist[e]; first = e; } }
+        if (first >= 0) for (const [x, y] of E.pathTo(B, st, first % B.w, (first / B.w) | 0)) mark[y * B.w + x] = 1;
+        continue;
+      }
+      for (const t of E.targets(B, st)) for (const [x, y] of E.pathTo(B, st, t.ground[0], t.ground[1])) mark[y * B.w + x] = 1;
+      for (const a of E.legalMoves(B, st)) { const n = E.call(B, st, a), k = n.broken.join(""); if (!seen.has(k)) { seen.add(k); q.push(n); } }
+    }
+    return mark;
+  };
+  let decorN = 0;
+  for (const L of all.concat(pools)) {
+    const a = L.art, g = L.grid.join("");
+    if (!a || !Array.isArray(a.towers) || !Array.isArray(a.gates) || !Array.isArray(a.keep) || !Array.isArray(a.decor)) { bad.art.push(L.id); continue; }
+    for (const r of a.towers) if (r.length !== 4 || !inB(L, r)) bad.rects.push(L.id + " tower " + r);
+    for (const r of a.gates) if (r.length !== 5 || !inB(L, r) || !SIDES.includes(r[4])) bad.rects.push(L.id + " gate " + r);
+    // Tower and gate rects sit on the castle: every rect covers wall cells.
+    for (const r of a.towers.concat(a.gates)) { let k = 0; for (let y = r[1]; y < r[1] + r[3]; y++) for (let x = r[0]; x < r[0] + r[2]; x++) if ("STHIF".includes(g[y * L.w + x])) k++; if (!k) bad.rects.push(L.id + " off-wall " + r); }
+    let kc = 0; for (const ch of g) if (ch === "K") kc++;
+    if (!inB(L, a.keep) || a.keep[2] * a.keep[3] !== kc) bad.keep.push(L.id);
+    else for (let y = a.keep[1]; y < a.keep[1] + a.keep[3]; y++) for (let x = a.keep[0]; x < a.keep[0] + a.keep[2]; x++) if (g[y * L.w + x] !== "K") bad.keep.push(L.id);
+    const used = new Set();
+    for (const d of a.decor) { if (d.length !== 3 || !inB(L, [d[0], d[1], 1, 1]) || !KINDS.includes(d[2]) || g[d[1] * L.w + d[0]] !== "." || used.has(d[0] + "," + d[1])) bad.decor.push(L.id + " " + d); used.add(d[0] + "," + d[1]); }
+    decorN += a.decor.length;
+  }
+  for (const L of all) { const m = walked(L); for (const [x, y] of L.art.decor) if (m[y * L.w + x]) bad.block.push(L.id + " " + x + "," + y); }
+  // The camp: one rectangle 4-6 wide and 2 deep on the bottom edge, centred (within a block and a half).
+  for (const L of all.concat(pools)) {
+    const cells = []; L.grid.forEach((row, y) => [...row].forEach((ch, x) => { if (ch === "P") cells.push([x, y]); }));
+    const xs = cells.map((c) => c[0]), ys = cells.map((c) => c[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    const cw = x1 - x0 + 1, ch = y1 - y0 + 1;
+    if (cells.length !== cw * ch || cw < 4 || cw > 6 || ch !== 2 || y1 !== L.h - 1 || Math.abs((x0 + x1) / 2 - (L.w - 1) / 2) > 1.5) bad.camp.push(L.id + " " + cw + "x" + ch + " at " + x0);
+  }
+  let slow = 0, baked = 0;
+  for (const w of LEVELS.worlds) for (const L of w.levels) {
+    if (L.source === "teaching") continue;
+    baked++;
+    const B = E.parse(L), r = S.solve(B, { cap: C.cap }), band = C.bands[w.world];
+    if (r.margin !== null && r.margin < band.margin) bad.margin.push(L.id + " " + r.margin);
+    if (r.slowWin) slow++;
+    for (let k = 0; k < 4; k++) { let s = E.start(B); for (let t = 0; t < 60 && !s.won; t++) { const nx = E.call(B, s, E.CREWS[k]); if (!nx) break; s = nx; } if (s.won) bad.spam.push(L.id + " " + E.CREWS[k]); }
+    if (new Set(L.line).size < 2) bad.mats.push(L.id);
+  }
+  // The curve: each world's baked levels no easier than the previous world's median (composite difficulty).
+  let floor = -1;
+  for (const w of LEVELS.worlds) {
+    const ds = w.levels.filter((l) => l.source !== "teaching").map((l) => l.metrics.difficulty).sort((a, b) => a - b);
+    if (floor >= 0 && ds[0] < floor) bad.step.push("W" + w.world + " starts at " + ds[0] + " under " + floor);
+    floor = ds[(ds.length - 1) >> 1];
+  }
+  eq(bad.art, [], "fix-v2 art: every level and pool board carries art {towers, gates, keep, decor}");
+  eq(bad.rects, [], "fix-v2 art: tower and gate rects are in bounds, gate sides are n/e/s/w, every rect covers wall");
+  eq(bad.keep, [], "fix-v2 art: the keep rect is exactly the K block");
+  eq(bad.decor, [], "fix-v2 decor: known kinds, in bounds, on plain ground only, one per cell (" + decorN + " items)");
+  eq(bad.block, [], "fix-v2 decor never blocks: no decor cell is on any crew walk or the win march in any reachable state");
+  eq(bad.camp, [], "fix-v2 camp: a 4-6 × 2 patch centred on the bottom edge on every level and pool board");
+  eq(bad.margin, [], "fix-v2 closest margin: every call on every baked line beats the next-nearest wall of its material by >= band.margin");
+  eq(bad.spam, [], "fix-v2 no spam: calling one card over and over never wins a baked level");
+  eq(bad.mats, [], "fix-v2 two materials: every baked line uses at least two kinds of crew");
+  ok(slow * 4 >= baked * 3, "fix-v2 stars: a slower (2-star) win exists on at least 3/4 of baked levels (" + slow + "/" + baked + ")");
+  eq(bad.step, [], "fix-v2 curve: each world's baked levels start no easier than the previous world's median");
+  // Worlds 1-2 density: plain ground with no decor under 40% of the board, and no blank square over 5×5.
+  const Art = require("./artmeta.js"), thin = [];
+  for (const w of LEVELS.worlds) if (w.world <= 2) for (const L of w.levels) { const gr = Art.ground(L); if (gr.empty > 0.4 || gr.bigBlank > 5) thin.push(L.id + " " + Math.round(gr.empty * 100) + "% " + gr.bigBlank); }
+  eq(thin, [], "fix-v2 density: Worlds 1-2 boards keep empty ground under 40% and no blank square over 5×5");
 }
 
 console.log(pass + " passed, " + fail + " failed");

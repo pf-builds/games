@@ -10,13 +10,17 @@
 //              around the whole footprint with breakable bridges; outworks and a palisade fill the front field.
 //              Materials are a colouring where pieces of different groups (outer / bridges / barbican / field / bailey /
 //              inner curtain / ward / keep ring) never share a material, so no section spans two layers.
+//              fix-v2: towers flank the gate (a gatehouse), the camp is a patch W.camp.w wide and W.camp.depth deep centred
+//              on the bottom edge, and info.art carries the tower and gate rects and the keep for levels' `art` field.
 // musterize(): depth through scarcity for ONE rule. The solver's Pareto frontier lists every crew mix whose every win
 //              spends exactly that mix; pick a length k in W.depth (random k that has hits), then among up to
 //              C.musterEval mixes of that k the one with the most decision points (then reshapes, then trap rate).
-//              Then the chest (required or detour, as v1) and the spare (W.spare crews that keep the min).
+//              Then the chest (required or detour, as v1) and the spare (W.spare crews that keep the min, keep a required
+//              chest required, and keep band.decisions; the one leaving a slower win and the most decision points).
 // deal():      Rule A + stacks: the A level's crews dealt into C.stacks.k columns, the winnable deal with the most
 //              decision points among C.stacks.eval tries.
-// measure():   solve (+ traps, ties, reshapes) + greedy + seeded random playouts + board shape for one level.
+// measure():   solve (+ traps, ties, reshapes, slow win, closest margin) + greedy + seeded random playouts + one-card
+//              spam + board shape for one level.
 // batch():     n boards for one world from one seed, measured under the requested variants (A, B, AS).
 "use strict";
 const E = require("../src/engine.js");
@@ -31,6 +35,25 @@ const TAU = Math.PI * 2;
 const OUTER = 1, YARD = 2, INNER = 3, BRIDGE = 4, FIELD = 5, MID = 6, WARD = 7, BARB = 8;
 // Colouring order by group, outside in: outer curtain, bridges, barbican, field, bailey, inner curtain, ward, keep ring.
 const RANK = [0, 1, 5, 8, 2, 4, 6, 7, 3];
+
+// One-card spam: the crew (name) that wins by calling only its own card again and again, else null (non-stacks only).
+function spamOf(B) {
+  for (let k = 0; k < 4 && !B.cols; k++) {
+    if (!B.muster[k]) continue;
+    let s = E.start(B);
+    for (let t = 0; t < B.maxCalls && !s.won; t++) { const nx = E.call(B, s, k); if (!nx) break; s = nx; }
+    if (s.won) return E.CREWS[k];
+  }
+  return null;
+}
+// A required chest really is required: with the chest taken off the board there is no win, or only a longer one.
+function chestNeeded(L, min, C) {
+  const L2 = Object.assign({}, L, { grid: L.grid.map((row) => row.replace("C", ".")), chests: [] }), r = S.solve(E.parse(L2), { cap: C.cap, traps: false });
+  return !r.capped && (!r.win || r.min > min);
+}
+// Muster score (musterize, the spare): decision points first, a reshape, traps, depth; ties, one-card spam and a closest
+// margin under band.margin cost it.
+const mscore = (r, spam, band) => r.decisions * 4 + (r.reshapes > 0 ? 2 : 0) + r.trapRate + 0.25 * r.min - (r.tieMove ? 8 : 0) - (spam ? 12 : 0) - (band && band.margin && r.margin !== null && r.margin < band.margin ? 6 : 0);
 
 // One castle picture. Returns {level, info} or {fail: reason}.
 function castle(W, C, rng) {
@@ -129,6 +152,18 @@ function castle(W, C, rng) {
     }
     if (!ok) passage.length = 0;
     else { const i = add(BARB, "barbican"); for (const c of cells) own(c, i); front = by; info.barbican = true; }
+  }
+  // Gatehouse towers: one either side of the gate, from the curtain's second row out GT.flank.out rows past the gate
+  // (the curtain's inner row stays behind them, so a tower is never a breach). They take only unowned cells outside the
+  // courtyard and off the barbican passage, so a barbican's U stays whole.
+  const FL = GT.flank;
+  if (FL) {
+    const fw = randInt(rng, FL.w), yb = y1 + gout + randInt(rng, FL.out), pas = new Set(passage);
+    for (const sx of [gx0 - fw, gx0 + gw]) {
+      const i = add(OUTER, "tower");
+      for (let y = y1 - T + 2; y <= yb; y++) for (let x = sx; x < sx + fw; x++) { const c = at(x, y); if (c >= 0 && role[c] < 2 && piece[c] < 0 && g[c] === "." && !pas.has(c)) own(c, i); }
+      if (P[i].cells.length) info.towers++;
+    }
   }
   // Outer curtain arcs: what the towers and gate left.
   const rest = []; for (let c = 0; c < n; c++) if (role[c] === 1 && piece[c] < 0) rest.push(c);
@@ -322,6 +357,7 @@ function castle(W, C, rng) {
   // ring's neighbours use with probability towers.contrast, the ring's first tower material when it can (towers read).
   const adj = (i) => { const o = new Set(); for (const c of P[i].cells) for (const e of nb4(c)) if (e >= 0 && piece[e] >= 0 && piece[e] !== i) o.add(piece[e]); return o; };
   const twOf = (p) => (p.group === MID ? IN.towers : TW), kr = (p) => (p.kind === "gate" ? 0 : p.kind === "tower" && twOf(p).own ? 2 : 1), towerMat = {};
+  let gateMat = null;
   const order = P.map((_, i) => i).filter((i) => P[i].cells.length && !P[i].mat).sort((a, b) => RANK[P[a].group] - RANK[P[b].group] || kr(P[a]) - kr(P[b]) || a - b);
   for (const i of order) {
     const hard = new Set(), soft = new Set(), p = P[i];
@@ -334,22 +370,31 @@ function castle(W, C, rng) {
       if (rng() >= twOf(p).contrast) pref = opts;
       else if (twOf(p).own && tm && pref.includes(tm)) pref = [tm];
     }
+    // KP.avoidGate: the keep ring avoids the outer gate's material (the way in takes two kinds of crew).
+    if (KP.avoidGate && p.group === INNER && gateMat) pref = pref.filter((q) => q !== gateMat).length ? pref.filter((q) => q !== gateMat) : pref;
     const want = p.kind === "gate" ? (p.group === MID ? IN.gate.mats : GT.mats) : p.kind === "bridge" && MO ? MO.mats : p.kind === "garden" ? ["H"] : null;
     const wp = want ? pref.filter((q) => want.includes(q)) : [];
     p.mat = pick(rng, wp.length ? wp : pref.length ? pref : opts);
     if (p.kind === "tower" && !towerMat[p.group]) towerMat[p.group] = p.mat;
+    if (p.kind === "gate" && p.group === OUTER) gateMat = p.mat;
   }
   for (let i = 0; i < P.length; i++) for (const c of P[i].cells) g[c] = P[i].mat;
   // A tower reads when no touching wall shares its material (it is its own section, so its silhouette shows).
   info.towersRead = 0; for (let i = 0; i < P.length; i++) if (P[i].kind === "tower" && P[i].cells.length && ![...adj(i)].some((o) => P[o].mat === P[i].mat)) info.towersRead++;
 
-  // The siege camp: on the front edge near the gate, or low on a side edge.
-  const CA = W.camp, cw = randInt(rng, CA.w), side = rng() < CA.side ? pick(rng, ["left", "right"]) : "bottom", camp = [];
-  if (side === "bottom") { const cx = clamp(Math.round(gcx - cw / 2 + 0.5) + randInt(rng, CA.shift), 0, w - cw); for (let k = 0; k < cw; k++) camp.push(at(cx + k, h - 1)); }
-  else for (let k = 0; k < cw && g[at(side === "left" ? 0 : w - 1, h - 1 - k)] === "."; k++) camp.push(at(side === "left" ? 0 : w - 1, h - 1 - k));
-  if (camp.length < 2 || camp.some((c) => c < 0 || g[c] !== ".")) return { fail: "camp" };
+  // The siege camp: a patch CA.w wide and CA.depth deep, centred on the bottom edge (CA.shift), facing the gatehouse.
+  const CA = W.camp, cw = randInt(rng, CA.w), cd = CA.depth, camp = [], cx = clamp(Math.round((w - cw) / 2) + randInt(rng, CA.shift), 0, w - cw);
+  for (let y = h - cd; y < h; y++) for (let k = 0; k < cw; k++) camp.push(at(cx + k, y));
+  if (camp.some((c) => c < 0 || g[c] !== ".")) return { fail: "camp" };
   for (const c of camp) g[c] = "P";
-  info.camp = side;
+  info.camp = "bottom";
+
+  // Art hints for the renderer (levels' `art` field; decor is added at bake): tower and gate rects, the keep.
+  const rect = (cells) => { let a = w, b = h, e = -1, f = -1; for (const c of cells) { a = Math.min(a, X(c)); b = Math.min(b, Y(c)); e = Math.max(e, X(c)); f = Math.max(f, Y(c)); } return [a, b, e - a + 1, f - b + 1]; };
+  const SIDE = { bottom: "s", top: "n", left: "w", right: "e" };
+  info.art = { towers: [], gates: [], keep: [kx0, ky0, ks, ks] };
+  for (const p of P) if (p.cells.length && p.kind === "tower") info.art.towers.push(rect(p.cells));
+  for (const p of P) if (p.cells.length && p.kind === "gate") info.art.gates.push(rect(p.cells).concat(p.group === MID ? SIDE[info.innerGate] : "s"));
 
   const level = { w, h, grid: Array.from({ length: h }, (_, y) => g.slice(y * w, y * w + w).join("")), muster: {}, chests: [] };
   let B; try { B = E.parse(level); } catch (e) { return { fail: "parse" }; }
@@ -364,7 +409,7 @@ function castle(W, C, rng) {
 }
 
 // Depth through scarcity for one rule, then the chest and the spare. Returns {level, info} or {fail}.
-function musterize(L0, W, C, rng, rule) {
+function musterize(L0, W, C, rng, rule, band) {
   const L = { w: L0.w, h: L0.h, grid: L0.grid.slice(), muster: {}, chests: [], rule };
   const B = E.parse(L), F = S.frontier(B, { maxLen: W.depth[1], cap: C.frontierCap });
   if (F.capped) return { fail: "frontier-capped" };
@@ -373,11 +418,15 @@ function musterize(L0, W, C, rng, rule) {
   // min in W.depth and |u| - min in W.slack. Pick a random min that has candidates, then the best of a few by solve.
   const present = [0, 1, 2, 3].filter((m) => L.grid.some((row) => row.includes("STHI"[m])));
   const minOf = (u) => { let b = 99; for (const v of F.vecs) if (v.len < b && v.comp[0] <= u[0] && v.comp[1] <= u[1] && v.comp[2] <= u[2] && v.comp[3] <= u[3]) b = v.len; return b; };
+  // band.noSpam: no candidate may cover a one-material winning mix (one card alone could win), the structural half
+  // of the spam rule (measure() still plays the spam out).
+  const mono = band && band.noSpam ? F.vecs.filter((v) => v.comp.filter((q) => q > 0).length === 1) : [];
+  const covers = (u) => mono.some((v) => v.comp.every((q, i) => q <= u[i]));
   const byK = {}, u = [0, 0, 0, 0], top = W.depth[1] + W.slack[1];
   const walk = (i, left) => {
     if (i === present.length) {
       const tot = u[0] + u[1] + u[2] + u[3], mn = minOf(u);
-      if (mn >= W.depth[0] && mn <= W.depth[1] && tot - mn >= W.slack[0] && tot - mn <= W.slack[1]) (byK[mn] = byK[mn] || []).push(u.slice());
+      if (mn >= W.depth[0] && mn <= W.depth[1] && tot - mn >= W.slack[0] && tot - mn <= W.slack[1] && !covers(u)) (byK[mn] = byK[mn] || []).push(u.slice());
       return;
     }
     for (let v = 0; v <= left; v++) { u[present[i]] = v; walk(i + 1, left - v); }
@@ -388,13 +437,14 @@ function musterize(L0, W, C, rng, rule) {
   // Up to C.musterEval candidates, dealt round-robin across the mins that have any (so every depth gets a look).
   const pools = ks.map((k) => shuffle(rng, byK[k])), cand = [];
   for (let r = 0; cand.length < C.musterEval && pools.some((p) => r < p.length); r++) for (const p of pools) if (r < p.length && cand.length < C.musterEval) cand.push(p[r]);
-  if (!cand.length) cand.push(F.vecs[F.vecs.length - 1].comp);
+  if (!cand.length && !mono.length) cand.push(F.vecs[F.vecs.length - 1].comp);
+  if (!cand.length) return { fail: "mono" };
   let best = null;
   for (const v of cand) {
     L.muster = E.musterObj(v);
-    const r = S.solve(E.parse(L), { cap: C.cap });
+    const Bv = E.parse(L), r = S.solve(Bv, { cap: C.cap });
     if (!r.win || r.capped) continue;
-    const score = r.decisions * 4 + (r.reshapes > 0 ? 2 : 0) + r.trapRate + 0.25 * r.min - (r.tieMove ? 8 : 0);
+    const score = mscore(r, spamOf(Bv), band);
     if (!best || score > best.score) best = { comp: v.slice(), r, score };
   }
   if (!best) return { fail: "no-win" };
@@ -427,17 +477,23 @@ function musterize(L0, W, C, rng, rule) {
     info.chestMode = mode;
   }
   L.muster = E.musterObj(comp);
-  const r1 = S.solve(E.parse(L), { cap: C.cap, traps: false });
+  const r1 = S.solve(E.parse(L), { cap: C.cap });
   if (!r1.win || r1.capped) return { fail: "no-win" };
-  // Spare crews that keep the min (first material in random order that does; logged when none does).
+  // Spare crews (W.spare): a crew that keeps the min, keeps a required chest required and keeps band.decisions; of
+  // those, the one that leaves a slower win (2 stars reachable), then the most decision points. Logged when none does.
   for (let sp = 0; sp < (W.spare | 0); sp++) {
-    let done = false;
+    let best = null;
     for (const m of shuffle(rng, present.slice())) {
       const L2 = Object.assign({}, L, { muster: Object.assign({}, L.muster, { [E.CREWS[m]]: (L.muster[E.CREWS[m]] | 0) + 1 }) });
-      const r2 = S.solve(E.parse(L2), { cap: C.cap, traps: false });
-      if (r2.win && !r2.capped && r2.min === r1.min) { L.muster = L2.muster; info.spare = E.CREWS[m]; done = true; break; }
+      const B2 = E.parse(L2), r2 = S.solve(B2, { cap: C.cap });
+      if (!r2.win || r2.capped || r2.min !== r1.min || r2.decisions < ((band && band.decisions) || 0) || r2.tieMove) continue;
+      if (info.chestMode === "required" && (!r2.chestRequired || !chestNeeded(L2, r2.min, C))) continue;
+      if (band && band.noSpam && (spamOf(B2) || covers([0, 1, 2, 3].map((q) => B2.muster[q])))) continue;
+      if (band && band.margin && r2.margin !== null && r2.margin < band.margin && (r1.margin === null || r1.margin >= band.margin)) continue;
+      const sc = (r2.slowWin ? 100 : 0) + mscore(r2, false, band);
+      if (!best || sc > best.sc) best = { L2, sc, m };
     }
-    if (!done) info.spareLowersMin = true;
+    if (best) { L.muster = best.L2.muster; info.spare = E.CREWS[best.m]; } else info.spareLowersMin = true;
   }
   return { level: L, info };
 }
@@ -464,14 +520,14 @@ function deal(L0, C, rng) {
 // Metrics for one level as given. opts.ab: also solve it under Rule B (the A≠B share).
 function measure(L, C, opts) {
   const B = E.parse(L), r = S.solve(B, { cap: C.cap }), gr = S.greedy(B), p = S.playouts(B, C.playouts, hashStr(L.grid.join("") + JSON.stringify(L.muster) + JSON.stringify(L.stacks || "")));
-  let crewSecs = 0, iron = 0, singles = 0, blocks = 0;
+  let crewSecs = 0, iron = 0, singles = 0, crewSingles = 0, blocks = 0;
   for (let s = 0; s < B.nsec; s++) {
     const sz = B.secStart[s + 1] - B.secStart[s];
-    if (B.secMat[s] < E.IRON) { crewSecs++; blocks += sz; } else iron++;
+    if (B.secMat[s] < E.IRON) { crewSecs++; blocks += sz; if (sz === 1) crewSingles++; } else iron++;
     if (sz === 1) singles++;
   }
   const m = {
-    sections: crewSecs, iron, walls: crewSecs + iron, blocks: crewSecs ? blocks / crewSecs : 0, singles, cells: B.n,
+    sections: crewSecs, iron, walls: crewSecs + iron, blocks: crewSecs ? blocks / crewSecs : 0, singles, crewSingles, cells: B.n,
     win: r.win, min: r.min, capped: r.capped, states: r.states, dead: r.dead, lost: r.lost, ms: r.ms,
     deadRatio: r.states ? r.dead / r.states : 0, lostRatio: r.states ? r.lost / r.states : 0,
     randWin: p.winRate, greedyWin: gr.win, greedyUsed: gr.used, greedyExcess: gr.win && r.win ? gr.used - r.min : null,
@@ -479,7 +535,9 @@ function measure(L, C, opts) {
     line: r.line, lineSecs: r.lineSecs, chests: B.chestCell.length, chestRequired: r.chestRequired, minChest: r.minChest, minNoChest: r.minNoChest,
     chestKind: null, levers: B.levers.length, leversMatter: null, minB: null,
   };
-  if (B.chestCell.length && r.win) m.chestKind = r.chestRequired ? "required" : r.minChest != null && r.minChest <= r.min + 1 ? "detour" : "idle";
+  // One-card spam: calling a single material again and again wins, so "closest" makes every choice (non-stacks).
+  m.spam = spamOf(B); m.lineMats = B.cols ? null : new Set(r.line).size; m.margin = r.margin; m.slowWin = r.slowWin; m.maxWin = r.maxWin;
+  if (B.chestCell.length && r.win) m.chestKind = r.chestRequired && chestNeeded(L, r.min, C) ? "required" : r.minChest != null && r.minChest <= r.min + 1 ? "detour" : "idle";
   if (B.levers.length && r.win) { const r2 = S.solve(E.parse(L, { noLevers: true }), { cap: C.cap, traps: false }); m.leversMatter = r2.capped ? null : !r2.win || r2.min > r.min; }
   if (opts && opts.ab && r.win) { const rb = S.solve(E.parse(L, { rule: "B" }), { cap: C.cap, traps: false }); m.minB = rb.win ? rb.min : null; }
   if (r.error) m.error = r.error;
@@ -496,7 +554,7 @@ function batch(C, wk, seed, n, variants) {
     if (pic.fail) { fail("castle-" + pic.fail); continue; }
     const rec = { world: +wk, seed, idx: made, level: pic.level, info: pic.info, v: {} };
     if (vs.includes("A") || vs.includes("AS")) {
-      const a = musterize(pic.level, W, C, rng, "A");
+      const a = musterize(pic.level, W, C, rng, "A", C.bands[wk]);
       if (a.fail) { fail("A-" + a.fail); continue; }
       rec.v.A = { level: a.level, info: a.info, m: measure(a.level, C, { ab: true }) };
       if (vs.includes("AS")) {
@@ -505,7 +563,7 @@ function batch(C, wk, seed, n, variants) {
       }
     }
     if (vs.includes("B")) {
-      const b = musterize(pic.level, W, C, rng, "B");
+      const b = musterize(pic.level, W, C, rng, "B", C.bands[wk]);
       rec.v.B = b.fail ? { fail: b.fail } : { level: b.level, info: b.info, m: measure(b.level, C) };
     }
     rec.ms = Date.now() - t0;
@@ -518,8 +576,12 @@ function batch(C, wk, seed, n, variants) {
 function accept(m, band) {
   if (!m || !m.win || m.capped) return !m ? "no-level" : m.capped ? "capped" : "no-win";
   if (m.walls > band.maxSections) return "section-cap";
+  if (m.crewSingles) return "single-block";
   if (m.min < band.min[0] || m.min > band.min[1]) return "min-band";
   if (m.tieMove) return "tie-decides";
+  if (band.noSpam && m.spam) return "spam";
+  if (band.lineMats && m.lineMats !== null && m.lineMats < band.lineMats) return "one-material";
+  if (band.margin && m.margin !== null && m.margin < band.margin) return "margin";
   if (band.greedy && m.greedyWin && m.greedyUsed - m.min < band.greedy) return "greedy-solves";
   if (m.decisions < (band.decisions || 0)) return "few-decisions";
   if (band.reshapes && m.reshapes < band.reshapes) return "no-reshape";
@@ -527,7 +589,8 @@ function accept(m, band) {
   if (band.trap && (m.trapRate < band.trap[0] || m.trapRate > band.trap[1])) return "trap-band";
   if (band.chest && m.chestKind !== "required" && m.chestKind !== "detour") return "chest-idle";
   if (band.levers && !m.leversMatter) return "levers-idle";
+  if (band.slow && !m.slowWin) return "no-slow-win";
   return null;
 }
 
-module.exports = { castle, musterize, deal, measure, batch, accept, hashStr, shuffle };
+module.exports = { castle, musterize, deal, measure, batch, accept, hashStr, shuffle, spamOf };

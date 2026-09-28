@@ -4,7 +4,7 @@
 //
 // Level JSON: {id?, name?, w, h, grid:[h strings of w chars], muster:{stone, timber, hedge, ice}, chests:[{x, y, crew}],
 //              rule?: "A" | "B", stacks?: [[crew, ...], ...] (each column front token first)}
-// Grid legend:  .  ground   P  camp (ground on the board edge; crews start here)   ~  moat   K  keep (one 4-connected block)
+// Grid legend:  .  ground   P  camp (a block of ground joined to the board edge; crews start here)   ~  moat   K  keep (one block)
 //               S stone   T timber   H hedge   I ice   F iron door   L lever   C chest (ground holding a chest)
 // x grows east, y grows south; a cell index is y * w + x. Crew/material index: 0 stone, 1 timber, 2 hedge, 3 ice, 4 iron.
 //
@@ -36,14 +36,14 @@
     const w = L.w | 0, h = L.h | 0, n = w * h, grid = L.grid;
     if (!(w > 0 && h > 0) || n > 16000 || !Array.isArray(grid) || grid.length !== h) throw new Error("level: bad size or grid");
     const kind = new Uint8Array(n), mat = new Int8Array(n).fill(-1), nb = new Int16Array(n * 4), base = new Uint8Array(n);
-    const camp = [], keepCells = [];
+    const camp = [], campEdge = [], keepCells = [];
     for (let y = 0; y < h; y++) {
       if (typeof grid[y] !== "string" || grid[y].length !== w) throw new Error("level: row " + y + " is not " + w + " wide");
       for (let x = 0; x < w; x++) {
         const c = y * w + x, ch = grid[y][x], m = MAT_CODES.indexOf(ch), edge = x === 0 || y === 0 || x === w - 1 || y === h - 1;
         if (m >= 0) { kind[c] = WALL; mat[c] = m; }
         else if (ch === ".") { kind[c] = OPEN; base[c] = 1; }
-        else if (ch === "P") { if (!edge) throw new Error("level: camp at " + x + "," + y + " is not on the edge"); kind[c] = CAMP; base[c] = 1; camp.push(c); }
+        else if (ch === "P") { kind[c] = CAMP; base[c] = 1; camp.push(c); if (edge) campEdge.push(c); }
         else if (ch === "~") kind[c] = MOAT;
         else if (ch === "L") kind[c] = LEVER;
         else if (ch === "C") { kind[c] = CHEST; base[c] = 1; }
@@ -53,6 +53,10 @@
       }
     }
     if (!camp.length) throw new Error("level: no camp");
+    // The camp may be deeper than one row (a 2-deep patch), but every camp cell joins a camp cell on the board edge.
+    const cseen = new Uint8Array(n), cq = campEdge.slice(); for (const c of cq) cseen[c] = 1;
+    for (let i = 0; i < cq.length; i++) for (let d = 0; d < 4; d++) { const e = nb[cq[i] * 4 + d]; if (e >= 0 && kind[e] === CAMP && !cseen[e]) { cseen[e] = 1; cq.push(e); } }
+    for (const c of camp) if (!cseen[c]) throw new Error("level: camp at " + (c % w) + "," + ((c / w) | 0) + " is not joined to the edge");
     if (!keepCells.length) throw new Error("level: no keep");
     // The keep is one block: every K cell 4-connected to the first.
     const kseen = new Uint8Array(n), kq = [keepCells[0]]; kseen[keepCells[0]] = 1;

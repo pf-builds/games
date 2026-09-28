@@ -6,6 +6,9 @@
 //              ends and traps; each state stores three distances-to-win (any win, a win that claimed a chest, a win that
 //              claimed none). Returns min calls, one optimal line, counts, trap rate, decision points, and the v2 proxies:
 //              ties on the line, and "reshapes" (a wall the line needs later was reachable but not its crew's target).
+//              Also the longest win (maxWin; slowWin = a win in more than min calls exists, so 2 stars are reachable) and
+//              the closest margin (margin: along the line, the smallest gap in walk between a called crew's target and
+//              the next-nearest reachable wall of the same material; null when no call had a runner-up).
 //              Hard state cap from opts.cap; at the cap it says capped, never throws.
 // frontier():  with unlimited crews, the Pareto-minimal crew mixes that win (vectors of calls per material, length at
 //              most opts.maxLen). Every frontier vector v is a muster whose every win spends exactly v (the generator's
@@ -41,12 +44,14 @@
   const pack = (v, c, z) => v | (c << 8) | (z << 16);
 
   // Returns {win, min, line:[moves], lineSecs:[[sections]], states, dead, lost, wins, capped, ms, minChest, minNoChest,
-  //   chestOnOptimal, chestRequired, trapRate, traps, moves, winnable, decisions, choices, lineTrap, tieAny, tieMove, reshapes}.
+  //   chestOnOptimal, chestRequired, trapRate, traps, moves, winnable, decisions, choices, lineTrap, tieAny, tieMove, reshapes,
+//   maxWin, slowWin, margin}. A state's depth is its call count (each state's key fixes it), so maxWin is exact.
   // min/minChest/minNoChest are null when no such win exists. opts.traps === false skips the trap/line proxies.
   function solve(B, opts) {
     const t0 = Date.now(), cap = (opts && opts.cap) || DEFAULT_CAP, depth = B.maxCalls + 2;
     const out = { win: false, min: null, line: [], lineSecs: [], states: 0, dead: 0, lost: 0, wins: 0, capped: false, ms: 0, minChest: null, minNoChest: null,
-      chestOnOptimal: false, chestRequired: false, trapRate: 0, traps: 0, moves: 0, winnable: 0, decisions: 0, choices: 0, lineTrap: 0, tieAny: false, tieMove: false, reshapes: 0 };
+      chestOnOptimal: false, chestRequired: false, trapRate: 0, traps: 0, moves: 0, winnable: 0, decisions: 0, choices: 0, lineTrap: 0, tieAny: false, tieMove: false, reshapes: 0,
+      maxWin: null, slowWin: false, margin: null };
     try {
       const br = [], sp = [], Ds = [];
       for (let d = 0; d < depth; d++) { br.push(new Uint8Array(B.nsec)); sp.push(new Int16Array(B.spentLen)); Ds.push(E.scratch(B)); }
@@ -58,6 +63,7 @@
         if (D.won) {
           let any = 0; for (let i = 0; i < D.claimed.length; i++) any |= D.claimed[i];
           out.wins++; v = 0; if (any) vc = 0; else vz = 0;
+          if (out.maxWin === null || d > out.maxWin) out.maxWin = d;
         } else if (d + 1 < depth) {
           if (D.legal === 0) out.dead++;
           for (let a = 0; a < B.moves; a++) {
@@ -80,7 +86,7 @@
       const valOf = (b, s, shift) => { const p = memo.get(keyOf(B, b, s)); return p === undefined ? -1 : (p >> shift) & 255; };
       if (v0 < INF) {
         out.win = true; out.min = v0;
-        out.minChest = c0 < INF ? c0 : null; out.minNoChest = z0 < INF ? z0 : null;
+        out.minChest = c0 < INF ? c0 : null; out.minNoChest = z0 < INF ? z0 : null; out.slowWin = out.maxWin > v0;
         out.chestOnOptimal = B.chestCell.length > 0 && c0 === v0;
         out.chestRequired = B.chestCell.length > 0 && c0 === v0 && (z0 === INF || z0 > v0);
         // Optimal line; prefers a chest-claiming line when one is optimal (it shows what the chest is for).
@@ -137,6 +143,12 @@
         if (D.tie[mt]) { out.tieAny = true; if (a === out.line[i]) out.tieMove = true; }
       }
       if (B.rule === "A") for (let s = 0; s < B.nsec; s++) if (later[s] > i && D.reach[s] && D.target[B.secMat[s]] !== s && !reshaped[s]) { reshaped[s] = 1; out.reshapes++; }
+      // Closest margin: the called crew's target against the next-nearest reachable wall of its material.
+      const mc = B.cols ? D.front[out.line[i]] : out.line[i], t = mc >= 0 ? D.target[mc] : -1;
+      if (B.rule === "A" && t >= 0) {
+        let r = 32767; for (let s = 0; s < B.nsec; s++) if (s !== t && D.reach[s] && !cb[s] && B.secMat[s] === mc && D.sdist[s] < r) r = D.sdist[s];
+        if (r < 32767 && (out.margin === null || r - D.sdist[t] < out.margin)) out.margin = r - D.sdist[t];
+      }
       E.stepInto(B, cb, cs, D, out.line[i], nb, ns); cb.set(nb); cs.set(ns);
     }
     out.lineTrap = steps ? shareSum / steps : 0;

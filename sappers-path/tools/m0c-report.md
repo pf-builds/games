@@ -286,23 +286,23 @@ Line: 1. ice, 2. stone, 3. timber, 4. stone, 5. hedge, 6. hedge, 7. hedge, 8. ti
 <!-- bake:start -->
 ## Draft bake
 
-`tools/bake.js`, rule A, seed 20260927, chunks {"1":60,"2":40,"3":80,"4":60} × 10 boards, 6.4 s wall clock. Teaching boards first, then easiest first (min calls, then random win). Chest: r required, d detour, - none.
+`tools/bake.js`, rule A, seed 20260927, chunks {"1":1000,"2":400,"3":200,"4":300} × 10 boards, 43.8 s wall clock. Teaching boards first, then easiest first (min calls, then random win). Chest: r required, d detour, - none.
 
 | world | levels | min calls | decision points | random win | trap rate | crew sections | chest | near-miss fallbacks |
 |---|---|---|---|---|---|---|---|---|
-| 1 | 9 | 1 2 2 3 3 3 4 4 5 | 0 0 1 1 3 3 1 4 4 | 1.00 1.00 0.48 0.76 0.14 0.12 0.86 0.06 0.47 | 0.00 0.00 0.33 0.17 0.50 0.50 0.11 0.50 0.27 | 1 2 3 6 12 10 11 13 12 | - - - - - - - - - | 0 |
-| 2 | 9 | 2 4 4 4 4 4 5 6 7 | 0 1 3 4 4 4 2 2 2 | 1.00 0.79 0.12 0.09 0.05 0.03 0.52 0.64 0.48 | 0.00 0.14 0.43 0.50 0.50 0.50 0.18 0.13 0.14 | 2 16 17 17 13 16 14 16 20 | r r r r r r r r r | 0 |
-| 3 | 10 | 3 6 6 7 7 7 8 8 10 10 | 0 2 3 2 5 4 4 6 3 6 | 1.00 0.56 0.12 0.51 0.23 0.05 0.10 0.02 0.59 0.02 | 0.00 0.14 0.27 0.15 0.22 0.36 0.20 0.42 0.12 0.35 | 3 21 22 21 27 25 25 25 22 26 | - r r r r r r r r r | 0 |
-| 4 | 10 | 2 7 7 7 9 9 10 10 11 12 | 0 3 4 5 3 4 4 6 5 6 | 1.00 0.40 0.07 0.03 0.36 0.18 0.42 0.04 0.31 0.01 | 0.00 0.17 0.36 0.42 0.09 0.26 0.18 0.34 0.14 0.29 | 2 27 29 27 29 27 30 32 30 31 | - r r r d r r r d r | 0 |
+| 1 | 9 | 1 2 2 3 3 3 4 3 4 | 0 0 1 1 1 1 1 2 3 | 1.00 1.00 0.53 0.73 0.77 0.74 0.80 0.26 0.09 | 0.00 0.00 0.33 0.10 0.17 0.17 0.06 0.40 0.43 | 1 2 3 7 8 7 10 11 11 | - - - - - - - - - | 0 |
+| 2 | 9 | 2 4 4 5 4 5 5 5 6 | 0 1 1 2 1 1 3 3 4 | 1.00 0.77 0.51 0.68 0.46 0.43 0.39 0.04 0.03 | 0.00 0.06 0.14 0.07 0.19 0.14 0.27 0.36 0.40 | 2 15 16 14 20 16 16 17 20 | r r r d r r r r r | 0 |
+| 3 | 10 | 3 6 6 8 7 7 8 8 9 8 | 0 2 2 3 3 2 3 3 3 7 | 1.00 0.56 0.16 0.54 0.29 0.17 0.16 0.09 0.06 0.03 | 0.00 0.13 0.13 0.11 0.20 0.28 0.20 0.24 0.26 0.39 | 3 25 26 25 28 28 25 27 26 25 | - r d r d r r r r r | 0 |
+| 4 | 10 | 2 7 8 8 8 7 7 10 8 11 | 0 5 3 3 3 4 5 3 6 7 | 1.00 0.30 0.13 0.07 0.06 0.06 0.04 0.07 0.01 0.04 | 0.00 0.22 0.15 0.16 0.23 0.36 0.42 0.19 0.43 0.27 | 2 30 31 30 31 32 32 29 30 28 | - r d r r d r r r r | 0 |
 
 Bake log:
 
 ```
 bake: rule A, variant A
-W1: 600 boards, 51 accepted into the pool (cap 60, 0 detour chests), 6 picked (0 detour)
-W2: 400 boards, 42 accepted into the pool (cap 60, 0 detour chests), 8 picked (0 detour)
-W3: 800 boards, 60 accepted into the pool (cap 60, 0 detour chests), 9 picked (0 detour)
-W4: 600 boards, 37 accepted into the pool (cap 60, 2 detour chests), 9 picked (2 detour)
-bake: 38 levels, pools 51/42/60/37, 0 replay failures, 6.4 s
+W1: 7107 boards, 14 accepted into the pool (cap 60, 0 detour chests), 6 picked (0 detour)
+W2: 4000 boards, 60 accepted into the pool (cap 60, 1 detour chests), 8 picked (1 detour)
+W3: 2000 boards, 60 accepted into the pool (cap 60, 2 detour chests), 9 picked (2 detour)
+W4: 3000 boards, 55 accepted into the pool (cap 60, 3 detour chests), 9 picked (2 detour)
+bake: 38 levels, pools 14/60/60/55, 0 replay failures, 43.8 s
 ```
 <!-- bake:end -->
