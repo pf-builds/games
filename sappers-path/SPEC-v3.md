@@ -109,3 +109,10 @@ All the /game-forge lessons apply:
   - rainbow palette
   - phone cap 36×48
   - compressed difficulty curve for the web build
+- 2026-09-28 (kickoff review, Peter approved):
+  - **Winnable per difficulty.** A Hard archer kill takes sappers out of play, so the counts no longer sum to the fort. Grade each level on Easy, Normal and Hard separately, and store a winning order for each. A level ships only if all three are winnable. selfTest replays all three.
+  - **No archer re-hit loop.** On Easy and Normal, a sapper sent to the holding line by an archer must not resume straight back into the same range and get hit again. M0 picks the rule, for example a hit entry stays parked until that tower falls, or resume skips covered pixels. Log it here. Resolution stays bounded.
+  - **Bands are graded on Normal (5 spaces).** §5's 85% / 30–80% / under-10% bands refer to Normal. The report also lists the Easy and Hard rates for every level.
+  - **Reference screenshots** are in the workspace at `business/D-click-it-studios/game-research/sappers-path-v3/reference/` (4 images plus a README). The visual critic gets all four. Numbered panels and lock tiles in them are out of scope.
+  - **After the fix pass,** re-run the functional critic's rule re-implementation and level diff before the playtest gate. v2's fixes were never re-checked.
+  - Peter hasn't played the concept prototype yet. The M0 report should include a quick feel check: a playable debug board of one level per band, so he can judge pixel size and holding-line tension before M1.
