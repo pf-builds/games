@@ -1,14 +1,14 @@
-/* Sapper's Path chrome: castle-wall background (painted by art.js, set as --wall), bevelled stone and gold buttons,
-   parchment panels, and the Jersey 10 pixel face (SIL OFL, fonts/) for headings, buttons and numbers: condensed, and its
-   5 never reads as an S. Body copy stays on the system stack. Colours are the board's palette (config.art). */
-@font-face { font-family: "Jersey 10"; src: url("fonts/Jersey10-Regular.ttf?v=6") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+/* Sapper's Path v3 chrome: castle-wall background (painted by art.js, set as --wall), bevelled stone and gold buttons,
+   parchment panels, and the Jersey 10 pixel face (SIL OFL, fonts/) for headings, buttons and numbers. The board sits in
+   a light wooden frame (Food Hunt); tray cards are solid colour with big numbers. main.js sets the material colours. */
+@font-face { font-family: "Jersey 10"; src: url("fonts/Jersey10-Regular.ttf?v=7") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
 :root { --bg: #2e2935; --ink: #221a26; --cream: #f3ead8; --cream-soft: #cfc4d6;
   --stone: #a2a5b0; --stone-hi: #cdd0d8; --stone-lo: #666a77; --gold: #f2c230; --gold-hi: #ffe27a; --gold-lo: #b8860b; --gold-dark: #7a5a06;
   --parch: #fbf5e6; --parch-edge: #e3d3ad; --parch-ink: #2a2430; --parch-soft: #5a4e3c;
-  --glow: #fff3a8; --flash: #ff5a3c; --pill: rgba(20,16,28,.78); --off: #544e5c; --off-hi: #6d6676; --off-lo: #3d3844;
+  --glow: #fff3a8; --flash: #ff5a3c; --pill: rgba(20,16,28,.78); --off: #544e5c;
+  --wood: #e8cf9e; --wood-mid: #b98d52; --wood-lo: #7a5a33;
   --px: "Jersey 10", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --outline: -2px 0 0 var(--ink), 2px 0 0 var(--ink), 0 -2px 0 var(--ink), 0 2px 0 var(--ink), -2px -2px 0 var(--ink), 2px -2px 0 var(--ink), -2px 2px 0 var(--ink), 2px 2px 0 var(--ink);
-  --gut: max(8px, env(safe-area-inset-left)); --bw: 300px; }
+  --gut: max(8px, env(safe-area-inset-left)); }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; font-synthesis: none; overflow: hidden; overscroll-behavior: none; color: var(--cream);
   background: var(--bg) var(--wall, none) repeat; background-size: var(--wall-size, auto); image-rendering: pixelated;
@@ -23,107 +23,88 @@ button { font-family: var(--px); font-weight: 400; font-size: 26px; min-height: 
   background: var(--stone); color: var(--ink); cursor: pointer; touch-action: manipulation;
   box-shadow: inset 0 3px 0 var(--stone-hi), inset 0 -5px 0 var(--stone-lo), 0 3px 0 rgba(0,0,0,.5); }
 button:active:not(:disabled) { transform: translateY(2px); box-shadow: inset 0 3px 0 var(--stone-hi), inset 0 -2px 0 var(--stone-lo), 0 1px 0 rgba(0,0,0,.5); }
-button:disabled { opacity: .5; cursor: default; }
+button:disabled { cursor: default; }
 button[hidden] { display: none; }
 button.primary { background: var(--gold); box-shadow: inset 0 3px 0 var(--gold-hi), inset 0 -5px 0 var(--gold-lo), 0 3px 0 rgba(0,0,0,.5); }
 button.primary:active:not(:disabled) { box-shadow: inset 0 3px 0 var(--gold-hi), inset 0 -2px 0 var(--gold-lo), 0 1px 0 rgba(0,0,0,.5); }
-button.round { width: 44px; height: 44px; min-height: 44px; padding: 0; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex: none; }
+button.round { width: 42px; height: 42px; min-height: 42px; padding: 0; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex: none; }
 button.big { min-height: 58px; font-size: 36px; width: 100%; }
 .panel { background: var(--parch); color: var(--parch-ink); border: 3px solid var(--ink); border-radius: 8px;
   box-shadow: inset 0 0 0 3px var(--parch-edge), 0 5px 0 rgba(0,0,0,.45); }
-
-/* Top bar: map, level number and name, crews used against the 3-star mark. */
-#top { flex: none; display: flex; align-items: center; gap: 10px; height: 56px; padding: 0 2px; }
-#lvl { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; white-space: nowrap; overflow: hidden; }
-#lvl-num { flex: none; font-family: var(--px); font-weight: 400; font-size: 21px; line-height: 1; padding: 5px 7px 4px; border-radius: 5px; border: 2px solid var(--ink);
-  background: var(--gold); color: var(--ink); box-shadow: inset 0 -3px 0 var(--gold-lo); }
-#lvl-name { font-family: var(--px); font-weight: 400; font-size: 27px; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 2px 0 var(--ink); }
-#hud { flex: none; font-family: var(--px); font-weight: 400; font-size: 34px; font-variant-numeric: tabular-nums; display: flex; align-items: baseline; gap: 2px; text-shadow: 0 2px 0 var(--ink); }
-#hud .of { opacity: .6; margin: 0 2px; }
-#hud #hud-par { color: var(--gold); }
-#hud .star { color: var(--gold); font-size: 20px; font-family: system-ui, sans-serif; }
-
-/* Portrait: the board comes first (v2 boards are portrait-shaped); the banner (goblin on the battlements, world,
-   toggles) takes the spare height above it and folds away (body.nobanner) when there isn't enough, and the toggles move
-   into the top bar (.topt). The rail stays in the bottom third. */
-#top .topt { display: none; }
-body.nobanner #top .topt, body.hinting #top .topt { display: flex; }
-body.hinting .toggles { display: none; }
-body.nobanner #side { display: none; }
-body.nobanner #stage { margin-top: auto; }
-body.nobanner #top { gap: 6px; }
-#play { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-#side { position: relative; z-index: 2; flex: 1 1 auto; min-height: 64px; display: flex; flex-direction: column; padding-bottom: 8px; }
-#banner { position: relative; flex: 1; min-height: 0; border-radius: 8px; overflow: hidden; background: #8fd0f2; border: 3px solid var(--ink); box-shadow: 0 4px 0 rgba(0,0,0,.4); }
-#banner-art { position: absolute; left: 0; bottom: 0; display: block; }
-#world-tag { position: absolute; left: 7px; top: 7px; display: flex; flex-direction: column; line-height: 1.1; color: #fff; pointer-events: none;
-  background: var(--pill); padding: 5px 9px 6px; border-radius: 6px; }
-#world-tag b { font-family: var(--px); font-size: 16px; font-weight: 400; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gold-hi); }
-#world-tag span { font-family: var(--px); font-size: 24px; font-weight: 400; }
-.toggles { position: absolute; right: 6px; top: 6px; display: flex; gap: 6px; }
-.tog { font-size: 24px; }
+.tog { font-size: 22px; }
 .tog[aria-pressed="true"] { background: var(--gold); box-shadow: inset 0 3px 0 var(--gold-hi), inset 0 -5px 0 var(--gold-lo), 0 3px 0 rgba(0,0,0,.5); }
 .tog-mute .cross { display: none; }
 .tog-mute[aria-pressed="true"] .cross { display: inline; }
 .tog-mute[aria-pressed="true"] .waves { display: none; }
-#hint { position: absolute; left: 8px; right: 8px; top: 8px; z-index: 4; display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 12px; }
+
+/* Difficulty: three stone keys, the chosen one gold. */
+.seg { display: flex; gap: 6px; }
+.seg button { flex: 1; min-height: 42px; font-size: 24px; padding: 0 6px; }
+.seg button[aria-pressed="true"] { background: var(--gold); box-shadow: inset 0 3px 0 var(--gold-hi), inset 0 -5px 0 var(--gold-lo), 0 3px 0 rgba(0,0,0,.5); }
+
+/* Top bar: map, level number and era, difficulty, retry, 2x, mute. */
+#top { flex: none; display: flex; align-items: center; gap: 6px; height: 50px; padding: 0 1px; }
+#lvl { flex: 1; min-width: 0; display: flex; align-items: center; gap: 7px; white-space: nowrap; overflow: hidden; }
+#lvl-num { flex: none; font-family: var(--px); font-size: 22px; line-height: 1; padding: 5px 7px 4px; border-radius: 5px; border: 2px solid var(--ink);
+  background: var(--gold); color: var(--ink); box-shadow: inset 0 -3px 0 var(--gold-lo); font-variant-numeric: tabular-nums; }
+#lvl-name { font-family: var(--px); font-size: 23px; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 2px 0 var(--ink); }
+#diff-chip { flex: none; font-family: var(--px); font-size: 18px; line-height: 1; padding: 4px 6px 3px; border-radius: 5px; background: var(--pill); color: var(--gold-hi); }
+
+/* Play: the board takes the height; the holding line and the tray sit under it (portrait) or beside it (wide). */
+#play { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+#stage { flex: 1 1 auto; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; }
+#frame { position: relative; border-radius: 8px; padding: 5px; background: var(--wood); line-height: 0;
+  box-shadow: inset 0 -3px 0 var(--wood-mid), 0 0 0 2px var(--wood-lo), 0 5px 0 2px rgba(0,0,0,.45); }
+#board { display: block; border-radius: 3px; touch-action: none; cursor: pointer; image-rendering: pixelated; }
+#hint { position: absolute; left: 6px; right: 6px; top: 6px; z-index: 3; padding: 7px 10px; pointer-events: none; }
 #hint[hidden] { display: none; }
-#hint p { margin: 0; flex: 1; font-family: var(--px); font-size: 20px; line-height: 1.05; }
-/* docked over the banner (portrait) or in the side column in place of the banner (wide) */
-#side > #hint { left: 0; right: 0; top: 0; min-height: calc(100% - 8px); }
-body.wide #side > #hint { position: static; min-height: 0; }
-body.wide.hinting #banner { display: none; }
-#hint button { flex: none; padding: 0 12px; font-size: 22px; }
-#stage { flex: none; position: relative; }
-#board { position: absolute; display: block; touch-action: none; border-radius: 6px; cursor: pointer; box-shadow: 0 0 0 3px var(--ink), 0 6px 0 3px rgba(0,0,0,.4); }
-#toast { position: absolute; left: 50%; top: 10px; z-index: 3; transform: translateX(-50%); white-space: pre; text-align: center; line-height: 1; pointer-events: none;
-  font-family: var(--px); font-weight: 400; font-size: 22px; padding: 5px 12px 6px; background: var(--parch); color: var(--parch-ink);
-  border: 3px solid var(--ink); border-radius: 8px; box-shadow: 0 4px 0 rgba(0,0,0,.45); }
+#hint p { margin: 0; font-family: var(--px); font-size: 20px; line-height: 1.05; }
+#toast { position: absolute; left: 50%; bottom: 10px; z-index: 3; transform: translateX(-50%); max-width: 92%; text-align: center; line-height: 1.05; pointer-events: none;
+  font-family: var(--px); font-size: 20px; padding: 5px 12px 6px; background: var(--parch); color: var(--parch-ink); border: 3px solid var(--ink); border-radius: 8px; box-shadow: 0 4px 0 rgba(0,0,0,.45); }
 #toast[hidden] { display: none; }
-#rail { flex: none; display: flex; flex-direction: column; gap: 10px; padding: 12px 0 max(14px, env(safe-area-inset-bottom)); }
-#cards { display: flex; gap: 8px; justify-content: center; }
-#tools { display: flex; gap: 10px; }
-#tools button { flex: 1; }
+#toast.bad { background: #ffd9cf; }
 
-.crew { flex: 1 1 0; max-width: 104px; min-height: 76px; padding: 4px 4px 7px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr auto;
-  align-items: center; justify-items: center; border-radius: 8px; position: relative; }
-.crew[hidden] { display: none; }
-.crew .ico { width: 36px; height: 36px; image-rendering: pixelated; }
-.crew .n { font-family: var(--px); font-size: 40px; font-weight: 400; line-height: 1; font-variant-numeric: tabular-nums; }
-.crew .lab { grid-column: 1 / 3; font-family: var(--px); font-size: 18px; line-height: .9; color: var(--parch-ink); }
-.crew.picked { background: var(--glow); box-shadow: inset 0 3px 0 #fffbe0, inset 0 -5px 0 var(--gold-lo), 0 0 0 3px rgba(255,243,168,.55), 0 3px 0 rgba(0,0,0,.5); }
-/* A dimmed card goes dark with its icon faded, but keeps the count and label at full strength (cream on the dark face,
-   6.7:1): "0" is what the player needs. */
-.crew.zero, .crew.off { background: var(--off); color: var(--cream); }
-.crew.zero .lab, .crew.off .lab { color: var(--cream); }
-.crew.zero .ico, .crew.off .ico { opacity: .45; }
-.crew.off { box-shadow: inset 0 3px 0 var(--off-hi), inset 0 -2px 0 var(--off-lo), 0 1px 0 rgba(0,0,0,.5); cursor: default; }
-.crew.flash { opacity: 1; animation: cardflash .24s steps(1) infinite; }
-.crew.flash .n, .crew.flash .lab { color: var(--ink); }
-.crew.bump .n { animation: bump .32s ease-out; color: #9c2a14; }
-@keyframes cardflash { 0% { background: var(--flash); } 50% { background: var(--stone); } }
-@keyframes bump { 0% { transform: scale(1.7); } 100% { transform: scale(1); } }
-#fly { position: absolute; left: 0; top: 0; width: 40px; height: 40px; z-index: 6; pointer-events: none; image-rendering: pixelated; }
-#fly[hidden] { display: none; }
+#rail { flex: none; display: flex; flex-direction: column; gap: 8px; padding: 8px 0 max(10px, env(safe-area-inset-bottom)); }
+#line-wrap { display: flex; align-items: center; gap: 6px; }
+#line-lab { flex: none; width: 44px; font-family: var(--px); font-size: 15px; line-height: .9; color: var(--cream-soft); text-align: right; }
+#line { flex: 1; display: grid; grid-template-columns: repeat(var(--cap, 5), 1fr); gap: 4px; }
+.slot { position: relative; height: 38px; border-radius: 6px; border: 2px dashed rgba(243,234,216,.35); background: rgba(20,16,28,.35);
+  display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.slot.full { border: 2px solid var(--ink); background: var(--mc, #666); color: var(--tc, #fff); box-shadow: inset 0 -4px 0 rgba(0,0,0,.25); }
+.slot .men { position: absolute; left: 2px; bottom: 1px; height: 14px; background-repeat: repeat-x; background-size: 14px 14px; image-rendering: pixelated; }
+.slot b { position: relative; font-family: var(--px); font-weight: 400; font-size: 26px; line-height: 1; font-variant-numeric: tabular-nums; margin-left: 12px; }
+.slot.over { animation: slotflash .24s steps(1) 4; }
+@keyframes slotflash { 0% { background: var(--flash); } 50% { background: transparent; } }
 
-/* Win / stuck panel: a parchment sheet over the rail in portrait, so its buttons stay under the thumb. */
+#tray { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.col { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.card { position: relative; width: 100%; min-height: 0; height: 64px; padding: 3px 2px 4px; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  background: var(--mc, var(--stone)); color: var(--tc, var(--ink)); box-shadow: inset 0 3px 0 rgba(255,255,255,.35), inset 0 -5px 0 rgba(0,0,0,.28), 0 3px 0 rgba(0,0,0,.5); }
+.card:active:not(:disabled) { box-shadow: inset 0 3px 0 rgba(255,255,255,.35), inset 0 -2px 0 rgba(0,0,0,.28), 0 1px 0 rgba(0,0,0,.5); }
+.card .top { display: flex; align-items: center; gap: 4px; }
+.card .sw { flex: none; width: 15px; height: 15px; border-radius: 3px; background-size: 100% 100%; image-rendering: pixelated; box-shadow: 0 0 0 1.5px rgba(0,0,0,.45); }
+.card .n { font-family: var(--px); font-weight: 400; font-size: 36px; line-height: .85; font-variant-numeric: tabular-nums; }
+.card .lab { max-width: 100%; font-family: var(--px); font-size: 14px; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card.empty { background: rgba(20,16,28,.5); color: var(--cream-soft); box-shadow: none; border-style: dashed; border-color: rgba(243,234,216,.3); }
+.card.dead { filter: saturate(.35) brightness(.8); }
+.next { height: 20px; border-radius: 5px; display: flex; align-items: center; justify-content: center; gap: 4px; border: 2px solid var(--ink);
+  background: var(--mc, transparent); color: var(--tc, var(--cream)); font-family: var(--px); font-size: 17px; line-height: 1; font-variant-numeric: tabular-nums; }
+.next .sw { width: 11px; height: 11px; border-radius: 2px; background-size: 100% 100%; image-rendering: pixelated; box-shadow: 0 0 0 1px rgba(0,0,0,.4); }
+.next.d1 { opacity: .78; } .next.d2 { opacity: .55; } .next.d3 { opacity: .36; }
+.next.none { visibility: hidden; }
+
+/* Win / fail panel: a parchment sheet over the rail in portrait, so its buttons stay under the thumb. */
 .sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; justify-content: center; pointer-events: none; }
 .sheet[hidden] { display: none; }
-.sheet .card { pointer-events: auto; width: 100%; max-width: 560px; border-bottom: 0; border-radius: 12px 12px 0 0;
+.sheet .sheetcard { pointer-events: auto; width: 100%; max-width: 560px; border-bottom: 0; border-radius: 12px 12px 0 0; background: var(--parch); color: var(--parch-ink);
   padding: 14px 16px max(16px, env(safe-area-inset-bottom)); text-align: center; animation: sheetin .22s cubic-bezier(.3,1.4,.5,1); }
-/* a short rise (the buttons stay on screen and hittable from the first frame) */
 @keyframes sheetin { 0% { transform: translateY(12px); opacity: .4; } 100% { transform: none; opacity: 1; } }
-.stars { font-size: 50px; letter-spacing: 8px; line-height: 1.05; min-height: 1em; }
-.stars i { font-style: normal; display: inline-block; color: #d8ccb0; text-shadow: var(--outline); }
-.stars i.on { color: var(--gold); animation: starpop .42s cubic-bezier(.3,1.9,.5,1); text-shadow: var(--outline), 0 4px 0 var(--ink); }
-.stars[hidden] { display: none; }
-@keyframes starpop { 0% { transform: scale(0.2) rotate(-40deg); } 60% { transform: scale(1.35) rotate(8deg); } 100% { transform: scale(1) rotate(0); } }
-.p-title { font-family: var(--px); font-weight: 400; font-size: 40px; margin: 2px 0 2px; }
-.p-line { font-family: var(--px); font-size: 22px; line-height: 1.05; color: var(--parch-soft); margin-bottom: 12px; font-variant-numeric: tabular-nums; }
+.p-title { font-family: var(--px); font-size: 42px; margin: 2px 0 2px; }
+.p-line { font-family: var(--px); font-size: 22px; line-height: 1.05; color: var(--parch-soft); margin-bottom: 12px; }
 .row { display: flex; gap: 10px; }
 .row button { flex: 1; min-width: 0; padding: 0 8px; }
 
-/* Title: the painted scene fills the screen; the logo sits on the sky, the blurb and Play on a parchment panel below. */
+/* Title: the painted scene fills the screen; the logo sits on the sky, the blurb, difficulty and Play on a panel below. */
 .screen { position: absolute; inset: 0; z-index: 10; background: var(--bg) var(--wall, none) repeat; background-size: var(--wall-size, auto); image-rendering: pixelated;
   overflow-y: auto; padding: env(safe-area-inset-top) var(--gut) max(16px, env(safe-area-inset-bottom)); }
 .screen > * { image-rendering: auto; }
@@ -134,87 +115,47 @@ body.wide.hinting #banner { display: none; }
   padding: max(28px, calc(env(safe-area-inset-top) + 18px)) var(--gut) max(18px, env(safe-area-inset-bottom)); }
 .title-card h1 { margin: 0; font-family: var(--px); font-weight: 400; font-size: 66px; line-height: 1; letter-spacing: 1px; color: var(--gold);
   text-shadow: -3px 0 0 var(--ink), 3px 0 0 var(--ink), 0 -3px 0 var(--ink), 0 3px 0 var(--ink), -3px -3px 0 var(--ink), 3px -3px 0 var(--ink), -3px 3px 0 var(--ink), 3px 3px 0 var(--ink), 0 8px 0 var(--ink); }
-.title-foot { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px 14px; }
-.title-foot p { margin: 0; font-family: var(--px); font-size: 21px; line-height: 1.1; color: var(--parch-soft); }
+.title-foot { display: flex; flex-direction: column; gap: 9px; padding: 12px 14px 14px; }
+.title-foot p { margin: 0; font-family: var(--px); font-size: 20px; line-height: 1.08; color: var(--parch-soft); }
 .title-foot p:empty { display: none; }
 .small { font-size: 16px !important; }
 
-/* World map. */
-.map-top { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; gap: 10px; height: 62px; margin: 0 calc(-1 * var(--gut)); padding: 0 var(--gut);
+/* Era map: three chapters, each with its history line and 25 level nodes; Play sticks to the bottom. */
+.map-top { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; gap: 10px; height: 60px; margin: 0 calc(-1 * var(--gut)); padding: 0 var(--gut);
   background: var(--bg) var(--wall, none) repeat; background-size: var(--wall-size, auto); border-bottom: 3px solid var(--ink); }
 .map-top h2 { margin: 0; font-family: var(--px); font-weight: 400; font-size: 34px; flex: 1; text-shadow: 0 2px 0 var(--ink); }
-#map-stars { font-family: var(--px); font-weight: 400; font-size: 24px; color: var(--gold); font-variant-numeric: tabular-nums; text-shadow: 0 2px 0 var(--ink); }
-#map-worlds { display: flex; flex-direction: column; gap: 14px; padding: 12px 0 16px; }
-.wcard { position: relative; border-radius: 8px; overflow: hidden; border: 3px solid var(--ink); box-shadow: 0 5px 0 rgba(0,0,0,.4); }
-.wcard canvas { position: absolute; left: 0; top: 0; display: block; }
-.whead { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 1px; padding: 6px 12px 7px; color: var(--cream); background: var(--pill); }
-.wrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; white-space: nowrap; }
-.weye { font-family: var(--px); font-size: 17px; font-weight: 400; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gold-hi); }
-.wnote { font-family: var(--px); font-size: 21px; font-weight: 400; color: var(--gold-hi); white-space: nowrap; }
-.wnote.lock { display: inline-flex; align-items: center; gap: 5px; color: var(--cream); }
-.wnote.lock svg { width: 15px; height: 15px; flex: none; }
-.wname { font-family: var(--px); font-size: 29px; font-weight: 400; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.node { position: absolute; z-index: 1; width: 56px; height: 56px; min-height: 56px; padding: 0; border-radius: 50%; border: 3px solid var(--ink); background: var(--parch); color: var(--parch-ink);
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; font-size: 29px; box-shadow: inset 0 -4px 0 var(--parch-edge), 0 4px 0 var(--ink); line-height: 1; }
-.node i { font-style: normal; font-size: 11px; letter-spacing: 0; color: #c98d10; min-height: 11px; font-family: system-ui, sans-serif; }
-.node.done { background: #ffe9a8; box-shadow: inset 0 -4px 0 #e0c060, 0 4px 0 var(--ink); }
-.node.locked { background: #6d6676; color: #d6cfdc; box-shadow: inset 0 -4px 0 #4f4957, 0 4px 0 var(--ink); }
+#map-count { font-family: var(--px); font-size: 22px; color: var(--gold); font-variant-numeric: tabular-nums; text-shadow: 0 2px 0 var(--ink); }
+.map-seg { margin: 12px 0 4px; }
+#eras { display: flex; flex-direction: column; gap: 14px; padding: 10px 0 12px; }
+.era { border-radius: 8px; border: 3px solid var(--ink); background: rgba(20,16,28,.72); box-shadow: 0 5px 0 rgba(0,0,0,.4); padding: 8px 10px 12px; }
+.era .eye { font-family: var(--px); font-size: 17px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gold-hi); display: flex; justify-content: space-between; }
+.era h3 { margin: 0; font-family: var(--px); font-weight: 400; font-size: 30px; line-height: 1.05; }
+.era p { margin: 3px 0 10px; font-family: var(--px); font-size: 19px; line-height: 1.1; color: var(--cream-soft); }
+.nodes { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.node { min-height: 50px; padding: 0; border-radius: 10px; background: var(--parch); color: var(--parch-ink); font-size: 27px; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1;
+  box-shadow: inset 0 -4px 0 var(--parch-edge), 0 3px 0 rgba(0,0,0,.5); }
+.node i { font-style: normal; font-size: 10px; letter-spacing: 2px; min-height: 10px; color: var(--gold-dark); font-family: system-ui, sans-serif; }
+.node.done { background: var(--gold-hi); box-shadow: inset 0 -4px 0 #e0c060, 0 3px 0 rgba(0,0,0,.5); }
+.node.locked { background: #6d6676; color: #d6cfdc; box-shadow: inset 0 -4px 0 #4f4957, 0 3px 0 rgba(0,0,0,.5); }
 .node.next { animation: nodepulse 1.1s ease-in-out infinite; }
-.node.shake { animation: nodeshake .32s linear; }
-@keyframes nodepulse { 50% { box-shadow: inset 0 -4px 0 var(--parch-edge), 0 4px 0 var(--ink), 0 0 0 6px rgba(255,243,168,.8); } }
-@keyframes nodeshake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
-#btn-debug { width: 100%; margin-bottom: 16px; }
-.select-top { display: flex; align-items: center; justify-content: space-between; height: 60px; }
-.select-top h2 { margin: 0; font-family: var(--px); font-weight: 400; font-size: 32px; }
-.world h3 { margin: 14px 0 8px; font-family: var(--px); font-weight: 400; font-size: 22px; color: var(--cream-soft); }
-.levels { display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 8px; }
-.levels button { min-height: 60px; padding: 4px 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 27px; }
-.levels button i { font-style: normal; font-size: 11px; letter-spacing: 1px; color: var(--gold-dark); }
-.levels button.done { background: var(--gold-hi); }
+@keyframes nodepulse { 50% { box-shadow: inset 0 -4px 0 var(--parch-edge), 0 3px 0 rgba(0,0,0,.5), 0 0 0 5px rgba(255,243,168,.85); } }
+.map-foot { position: sticky; bottom: 0; padding: 8px 0 4px; }
 
-/* Desktop 16:9: side column (banner, world, toggles, hint) | board | crew cards and tools. main.js sets --bw, and puts
-   the win/stuck panel over the rail column (--pl, --pw) so the board and the keep stay in view. */
+/* Desktop 16:9: the board on the left, the holding line and tray in a column on the right. */
 body.wide #app { max-width: none; }
-body.wide #play { display: grid; grid-template-columns: var(--side, 230px) var(--bw) var(--rail, 210px); column-gap: var(--gap, 28px);
-  justify-content: center; align-items: center; padding: 8px 0; }
-/* the top bar folds into the side column: map and the HUD on one row, the level number and name under them */
-body.wide #side { grid-column: 1; grid-row: 1; height: min(100%, 520px); padding: 0; gap: 10px; }
-body.wide #top { flex-wrap: wrap; height: auto; gap: 8px; padding: 0; }
-body.wide #lvl { order: 3; flex-basis: 100%; }
-body.wide #hud { margin-left: auto; }
-body.wide #stage { grid-column: 2; grid-row: 1; height: 100%; }
-body.wide #rail { grid-column: 3; grid-row: 1; width: var(--rail, 210px); padding: 0; }
-body.wide #cards { flex-direction: column; }
-body.wide .crew { max-width: none; min-height: 64px; grid-template-columns: 44px 1fr auto; grid-template-rows: 1fr; justify-items: start; padding: 0 14px; }
-body.wide .crew .lab { grid-column: auto; font-size: 22px; }
-body.wide .crew .n { grid-column: 3; grid-row: 1; }
-body.wide #world-tag { top: 58px; }
-body.wide .sheet { left: var(--pl, 0); right: auto; width: var(--pw, 260px); top: 8px; bottom: 8px; align-items: center; }
-body.wide .sheet .card { border-radius: 8px; border-bottom: 3px solid var(--ink); padding: 14px 12px; }
-body.wide .sheet .row { flex-direction: column; }
-body.wide .stars { font-size: 42px; letter-spacing: 4px; }
-body.wide .p-title { font-size: 34px; }
-body.wide .p-line { font-size: 14px; }
-body.wide #map-worlds { display: grid; grid-template-columns: 1fr 1fr; }
-body.wide #map, body.wide #select { padding-left: max(var(--gut), calc(50% - 480px)); padding-right: max(var(--gut), calc(50% - 480px)); }
-body.wide #title { padding: 0; }
-/* Landscape phone (wide and short): the banner's scene goes (the world tag and the toggles stay), and the four cards go
-   two by two, icon and count only, so the board gets the height and the rail fits it. */
-body.compact #side { height: auto; }
-body.compact #banner { flex: none; background: none; border: 0; box-shadow: none; overflow: visible; display: flex; flex-direction: column; gap: 8px; }
-body.compact #banner-art { display: none; }
-body.compact #world-tag, body.compact .toggles { position: static; }
-body.compact #lvl-name { font-size: 24px; }
-body.compact #cards { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-body.compact .crew { min-height: 52px; grid-template-columns: 38px 1fr; padding: 0 8px; }
-body.compact .crew .lab { display: none; }
-body.compact .crew .n { grid-column: 2; font-size: 34px; }
-body.compact #tools button { min-height: 46px; }
-body.compact #rail { gap: 8px; }
-body.compact .sheet .card { padding: 8px 10px; }
-body.compact .sheet .row { flex-direction: row; flex-wrap: wrap; gap: 6px; }
-body.compact .sheet .row button { min-height: 44px; font-size: 22px; flex: 1 1 40%; }
-body.compact .stars { font-size: 34px; }
-body.compact .p-title { font-size: 30px; }
-body.compact .p-line { margin-bottom: 8px; font-size: 13px; }
-@media (max-height: 640px) { #top { height: 48px; } .crew { min-height: 64px; } #rail { gap: 8px; padding-top: 8px; } }
+body.wide #play { flex-direction: row; gap: 24px; align-items: center; justify-content: center; padding: 6px 0 12px; }
+body.wide #stage { flex: 0 1 auto; height: 100%; width: var(--stage-w, 60%); }
+body.wide #rail { width: var(--rail-w, 400px); padding: 0; gap: 14px; }
+body.wide #top { max-width: 1100px; width: 100%; margin: 0 auto; }
+body.wide .card { height: 76px; }
+body.wide .card .n { font-size: 44px; }
+body.wide .card .lab { font-size: 16px; }
+body.wide .next { height: 24px; font-size: 19px; }
+body.wide .slot { height: 44px; }
+body.wide .sheet { left: auto; right: max(12px, calc(50% - 550px)); width: var(--rail-w, 400px); top: 0; bottom: 0; align-items: center; }
+body.wide .sheet .sheetcard { border-radius: 10px; border-bottom: 3px solid var(--ink); }
+body.wide #eras { display: grid; grid-template-columns: repeat(3, 1fr); align-items: start; }
+body.wide #map { padding-left: max(var(--gut), calc(50% - 560px)); padding-right: max(var(--gut), calc(50% - 560px)); }
+body.wide .map-foot { max-width: 420px; margin: 0 auto; }
+@media (max-height: 700px) { #top { height: 44px; } .card { height: 56px; } .card .n { font-size: 32px; } .next { height: 17px; font-size: 15px; } .slot { height: 34px; } }
+.slot[hidden] { display: none; }
