@@ -116,3 +116,20 @@ All the /game-forge lessons apply:
   - **Reference screenshots** are in the workspace at `business/D-click-it-studios/game-research/sappers-path-v3/reference/` (4 images plus a README). The visual critic gets all four. Numbered panels and lock tiles in them are out of scope.
   - **After the fix pass,** re-run the functional critic's rule re-implementation and level diff before the playtest gate. v2's fixes were never re-checked.
   - Peter hasn't played the concept prototype yet. The M0 report should include a quick feel check: a playable debug board of one level per band, so he can judge pixel size and holding-line tension before M1.
+- 2026-09-28 (M0 builder, measured; full numbers in `tools/v3-m0-report.md`):
+  - **Archer rule.** While any pixel of a tower stands, its range is a disc of radius r around the tower's centroid. It covers every non-tower pixel inside it; tower pixels are never covered. A card squad whose next target is covered is hit: that sapper and, since the target doesn't move, every sapper left in the squad. Easy and Normal send them to the holding line (merging like leftovers). Hard kills them.
+  - **Re-hit rule.** Holding-line sappers are wary. An entry resumes only when its next target is uncovered, and a resuming entry stops before walking into range, keeping its place. It can't be hit again, and it moves on its own when the tower falls or a nearer uncovered pixel opens. Every resume eats at least one pixel, so the cascade is bounded.
+  - **Fail rules.**
+    - Overflow: a new holding entry past capacity. It's checked when the leftovers join, before the resume cascade.
+    - Stuck: the tray is empty, the line has settled, and pixels are left.
+    - No move (the third rule, confirmed with a correction): every front card would end the assault if tapped. That means either its colour has no reachable uncovered pixel, the line has no entry of that colour to merge into, and the line is full, or (Hard) it would be killed short. A card that can merge is a legal move. The rule is checked after every play and at load.
+    - Short (new, Hard): an archer kill that leaves a colour with fewer sappers than pixels ends the level at once. Otherwise it's a dead game that plays on.
+  - **Tie-break.** The camp row is the camp strip's top row; the lower y breaks any tie left after x.
+  - **Resume order.** The first entry in line order that can move resumes, then the scan restarts from the front.
+  - **Gates.** Iron exists only as gate pixels, so there are no Smiths cards. A gate is a 4-connected iron group. Its pixels count toward the fort and vanish when its key (a gilt pixel, the Looters) is eaten.
+  - **Towers.** Each Era 3 tower is a slate disc on a curtain corner.
+  - **Colour counts ramp** past the design table: Era 1 goes from 3 to 9, the mid band uses 7-9, the late band 10-12, and reliefs 9-10. With 6 or fewer colours Normal can't overflow, so it wins 100%.
+  - **One order for every difficulty.** Deals are simulated under Hard rules (4 spaces, lethal archers), so the stored winning order is the same for Easy, Normal and Hard.
+  - **Winning orders.** "1-3 winning orders" isn't reachable as literally counted: every generated level has 1000+ distinct winning tap orders. The report adds a one-move-lookahead player's win rate and safe taps per turn as narrowness measures, and late hard slots are tuned to lower the lookahead rate.
+  - **Teaching levels** (1-3, 26, 51) are exempt from the bands. Level 26 sits in a saw-tooth slot and level 51 in a late slot, where it serves as a relief.
+  - **Level format** (grid letters a-n = MATS 1-14, gates, towers, cols, win per difficulty) is documented at the top of `src/engine.js`.

@@ -79,3 +79,13 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - A small count chip on each idle crew at the camp.
 - The victory lap: every remaining wall crumbles in a fast wave after the keep opens.
 - The browser's first AudioContext is a ~100 ms long task on the page's first gesture (the title's Play). If it ever shows, give Play its pressed state before starting the audio.
+
+## From v3 M0 (2026-09-28)
+
+- A narrowness-driven tuner for the app's hardest levels: maximise forced turns (exactly one safe tap) along the winning line instead of only lowering random-tap and lookahead rates. `grade.narrow` exists; it costs about 20-40 ms per level.
+- A hint power-up from `grade.solve(B, rules, nodes, null, state)`, which already solves from any mid-game state.
+- An undo power-up. `sim.save()`/`load()` is one typed-array copy, so undo is a stack of snapshots.
+- A per-era squad-size curve, so later levels stay long enough to be hard but not 80 taps.
+- Richer fort plans: shaped buildings, gatehouses, Era 1 corner towers without archers, and no gaps in ditch corners.
+- A distinct key colour or icon (Gilt reads close to Timber at 10 px).
+- Delete the v2 page files (`src/main.js`, `game.js`, `solver.js`, v2 `harness.mjs`, `artmeta.js`, `artview.js`) once M1's page replaces them.
