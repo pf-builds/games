@@ -146,6 +146,8 @@ const ARCH = (cols) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "
   eq([S.covered(2 * 9 + 7), S.covered(2 * 9 + 6), S.covered(2 * 9 + 3), S.covered(7)], [true, true, false, false], "archers: range covers nearby pixels; tower pixels are never covered");
   S.logOn = true; S.clearLog(); const e = eats(S, 0);
   eq([e, line(S), S.hits, S.pixLeft], [[[4, 2], [3, 2]], [[1, 4]], 4, 7], "archers (Normal): the squad eats until its nearest target is covered; the other 4 are hit and wait");
+  const aim = []; for (let i = 0; i < S.evLen; i += 3) if (S.ev[i] === E.EV.AIM) aim.push([xy(S.B, S.ev[i + 1]), S.ev[i + 2], S.ev[i + 3]]);
+  eq(aim, [[[6, 2], 1, E.EV.HIT]], "archers: the log names the covered pixel the squad was going for (AIM), just before its HIT");
   S.play(1);
   eq([S.status, S.hits, S.lineLen], [E.WON, 4, 0], "archers: once the tower falls the parked entry resumes and wins");
 }

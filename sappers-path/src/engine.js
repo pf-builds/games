@@ -34,8 +34,9 @@
   const OVERFLOW = 1, SHORT = 2, STUCK = 3, NOMOVE = 4;
   const REASONS = ["", "overflow", "short", "stuck", "nomove"];
   // Event log (optional, S.logOn): [type, a, b] triples. EAT cell mat, JOIN mat count, HIT mat count, KILL mat count,
-  // RESUME mat count, GATE gate 0, TOWER tower 0.
-  const EV = { EAT: 1, JOIN: 2, HIT: 3, KILL: 4, RESUME: 5, GATE: 6, TOWER: 7 };
+  // RESUME mat count, GATE gate 0, TOWER tower 0, AIM cell mat (the covered pixel a squad was hit going for; logged
+  // just before its HIT or KILL, for the page's arrow show only).
+  const EV = { EAT: 1, JOIN: 2, HIT: 3, KILL: 4, RESUME: 5, GATE: 6, TOWER: 7, AIM: 8 };
   const CODE = { ".": GRASS, ",": DIRT, "~": WATER, "#": CAMP };
   const matOf = (ch) => { const k = ch.charCodeAt(0) - 96; return k >= 1 && k <= 14 ? k : 0; };
   const chOf = (v) => (v > 0 ? String.fromCharCode(96 + v) : v === GRASS ? "." : v === DIRT ? "," : v === WATER ? "~" : "#");
@@ -263,6 +264,7 @@
       const rest = cnt - k;
       if (rest > 0 && M[S_PIX] > 0) {
         if (stop === 1) {
+          log(EV.AIM, target(m), m);
           M[S_HITS] += rest;
           if (lethal) { M[S_KILLS] += rest; sap[m] -= rest; log(EV.KILL, m, rest); if (deal || sap[m] < left[m]) fail(SHORT, m); }
           else { log(EV.HIT, m, rest); join(m, rest); }
