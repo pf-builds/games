@@ -8,8 +8,8 @@
 <title>Sapper's Path</title>
 <meta name="description" content="Goblins stole the crown and walled themselves in. Tap a squad: its sappers run up, pull their colour off the fort and carry it home. Keep the holding line clear and raze every block.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%232e2935'/><rect x='14' y='14' width='22' height='22' rx='5' fill='%23ff8c1a'/><rect x='39' y='14' width='22' height='22' rx='5' fill='%23e6262e'/><rect x='64' y='14' width='22' height='22' rx='5' fill='%23ffe21f'/><rect x='14' y='39' width='22' height='22' rx='5' fill='%232f62ff'/><rect x='64' y='39' width='22' height='22' rx='5' fill='%239ee52a'/><rect x='14' y='64' width='22' height='22' rx='5' fill='%238f45ff'/><rect x='39' y='64' width='22' height='22' rx='5' fill='%230fb5a6'/><rect x='64' y='64' width='22' height='22' rx='5' fill='%23ff3fa4'/></svg>">
-<link rel="preload" href="fonts/Jersey10-Regular.ttf?v=7" as="font" type="font/ttf" crossorigin>
-<link rel="stylesheet" href="style.css?v=7">
+<link rel="preload" href="fonts/Jersey10-Regular.ttf?v=8" as="font" type="font/ttf" crossorigin>
+<link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
 <div id="app">
@@ -24,7 +24,7 @@
   <main id="play">
     <div id="stage">
       <div id="frame"><canvas id="board" aria-label="The fort"></canvas></div>
-      <div id="hint" class="panel" hidden><p id="hint-text"></p></div>
+      <p id="coach" class="panel" role="status" hidden></p>
       <div id="toast" role="status" hidden></div>
     </div>
     <div id="rail">
@@ -36,9 +36,12 @@
     <div class="sheetcard panel">
       <div id="p-title" class="p-title"></div>
       <div id="p-line" class="p-line"></div>
+      <div id="p-medals" hidden><span class="medal">E</span><span class="medal">N</span><span class="medal">H</span></div>
       <div class="row"><button id="p-primary" class="primary"></button><button id="p-secondary"></button></div>
     </div>
   </div>
+  <div id="hand" aria-hidden="true" hidden><svg viewBox="0 0 16 18" width="34" height="38"><path d="M5 1h6v8h4l-7 8-7-8h4z" fill="#ffe27a" stroke="#221a26" stroke-width="1.6" stroke-linejoin="round"/><path d="M7 3h2v7" fill="none" stroke="#fff8d0" stroke-width="1.2"/></svg></div>
+  <button id="pause" hidden><span class="pz-t">Paused</span><span class="pz-s">Tap to play on</span></button>
   <section id="title" class="screen">
     <canvas id="title-art" class="pix" width="1" height="1" aria-hidden="true"></canvas>
     <div class="title-card">
@@ -64,11 +67,11 @@
     <div class="map-foot"><button id="map-play" class="primary big">Play</button></div>
   </section>
 </div>
-<script src="src/engine.js?v=7"></script>
-<script src="src/save.js?v=7"></script>
-<script src="src/art.js?v=7"></script>
-<script src="src/audio.js?v=7"></script>
-<script src="src/board.js?v=7"></script>
-<script src="src/main.js?v=7"></script>
+<script src="src/engine.js?v=8"></script>
+<script src="src/save.js?v=8"></script>
+<script src="src/art.js?v=8"></script>
+<script src="src/audio.js?v=8"></script>
+<script src="src/board.js?v=8"></script>
+<script src="src/main.js?v=8"></script>
 </body>
 </html>

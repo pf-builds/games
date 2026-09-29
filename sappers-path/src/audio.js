@@ -3,11 +3,13 @@
 // vib/vd: vibrato Hz/depth, step: Hz added per unit of the cue's argument (tick pitch by ring, star by index)}.
 // The context is created on the first user gesture only (no autoplay warning). cue() always records the last cue and a
 // count per cue (the debug facade reads them), even when muted, when the context isn't up yet, or while selfTest runs.
+// Busy cues are throttled per name (config.audio.gaps, ms of sim time): 70 pixels popping in a second make a rattle, not
+// a wall of noise. suspend() / unlock() pause and resume the whole context (the page pauses on blur).
 (function (root, factory) {
   (root.SappersPath = root.SappersPath || {}).audio = factory();
 })(window, function () {
   "use strict";
-  function create(cfg) { return { cfg, ctx: null, out: null, noise: null, muted: false, quiet: false, last: null, lastAt: -1, counts: {}, tickT: -1e9 }; }
+  function create(cfg) { return { cfg, ctx: null, out: null, noise: null, muted: false, quiet: false, last: null, lastAt: -1, counts: {}, tickT: -1e9, gapT: {} }; }
 
   // Call from a pointerdown / keydown handler: makes (or resumes) the context inside the gesture.
   function unlock(A) {
@@ -51,10 +53,13 @@
     if (!R) return false;
     A.last = name; A.lastAt = now; A.counts[name] = (A.counts[name] || 0) + 1;
     if (name === "tick") { if (now - A.tickT < A.cfg.tickGapMs) return false; A.tickT = now; }
+    const gap = A.cfg.gaps && A.cfg.gaps[name];
+    if (gap) { const last = A.gapT[name]; if (last !== undefined && now - last < gap && now >= last) return false; A.gapT[name] = now; }
     if (A.muted || A.quiet || !A.ctx || A.ctx.state !== "running") return false;
     try { const t0 = A.ctx.currentTime + 0.005; for (const v of R) voice(A, v, t0, arg || 0); return true; } catch (e) { return false; }
   }
   function setMuted(A, on) { A.muted = !!on; if (A.out) A.out.gain.value = on ? 0 : A.cfg.volume; }
+  function suspend(A) { try { if (A.ctx && A.ctx.state === "running") A.ctx.suspend(); } catch (e) { /* stays as it was */ } }
 
-  return { create, unlock, cue, setMuted };
+  return { create, unlock, cue, setMuted, suspend };
 });
