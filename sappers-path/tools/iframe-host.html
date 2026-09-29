@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sapper's Path in a portal-style iframe</title>
+<style>
+  /* A stand-in for a game portal page: some host chrome, and the game in a fixed 400x600 iframe (M2 portal-shape test).
+     Open http://localhost:8491/sappers-path/tools/iframe-host.html; ?w=&h= change the frame size. */
+  html, body { margin: 0; background: #1d1b22; color: #ddd; font: 14px system-ui, sans-serif; }
+  header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: #2b2833; }
+  #host-btn { font: inherit; padding: 6px 12px; }
+  #game { display: block; margin: 16px; border: 0; width: 400px; height: 600px; background: #000; }
+</style>
+</head>
+<body>
+<header><strong>Portal host</strong><button id="host-btn">Host UI (takes focus)</button></header>
+<iframe id="game" title="Sapper's Path" allow="autoplay"></iframe>
+<script>
+  const q = new URLSearchParams(location.search), f = document.getElementById("game");
+  if (q.get("w")) f.style.width = (+q.get("w") | 0) + "px";
+  if (q.get("h")) f.style.height = (+q.get("h") | 0) + "px";
+  f.src = "../" + (q.get("debug") === "0" ? "" : "?debug=1");
+</script>
+</body>
+</html>
