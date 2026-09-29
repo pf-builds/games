@@ -102,8 +102,23 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 ## From v3 M2 (2026-09-28)
 
 - The canvas label (archer hits) uses Jersey 10. If the font hasn't loaded by the first hit, that label draws in the system font. Preload it into the canvas at boot (`document.fonts.load`) if it ever shows.
-- Short landscape hides the level name (the number stays). A second line under the number, or a tooltip, would bring it back.
+- ~~Short landscape hides the level name.~~ Done in the v3 fix pass (name in the side panel).
 - The coach bubble covers the board's top row on the teaching levels (grass there today). If a teaching board ever puts blocks in row 0, dock the bubble above the frame instead.
-- The coach arrow over a front card sits on the "Holding line" label. Pointing from the side would clear it.
-- The turned landscape board's crates are narrow (3-row yard). A 4-row yard when turned would give them room.
+- ~~The coach arrow sits on the "Holding line" label.~~ Done in the v3 fix pass (the label moved above the slots).
+- ~~Narrow crates on the turned board.~~ Replaced by per-colour bins in the v3 fix pass.
 - A "keep" material in the generator: the win's keep is drawn at the last pixel eaten, not at a real keep on the board.
+
+## From the v3 fix pass (2026-09-28)
+
+- Functional minor 3: doomed positions play on until you tap. With the line full the fatal marks now show every card red, but the game doesn't end. Widening no-move to "every front card fails on a scratch copy" would end it one tap sooner (the look-ahead code exists in `judge()`).
+- Functional minor 4: Easy's sixth space collapses the late band (L64 84%, L69 98% random-tap on Easy). Grade or tune Easy separately if Peter wants Easy to bite.
+- Visual minor 3: the 812×375 map loses the era titles and the difficulty switch, and Play covers rows at rest.
+- Visual minor 4: the map has no progression art (locked tiles look alike, no path, no era band).
+- Visual minor 5: in portrait the fail sheet covers the holding line that overflowed. Anchor the sheet over the board or keep the line above it.
+- Visual minor 10: eaten lodges and buildings leave bare dirt rectangles; a trodden-rubble texture on eaten dirt would read as siege work.
+- Visual minor 12: the 812 title's goblin and flag cover the logotype.
+- Era 2 forts still show a third of the board as grass beside the round motte. A wider motte or outworks (a barbican, a second bailey) would fill it.
+- Early 3-colour forts have a single building colour, so the sweep can't pack them wall to wall (same colour never touches). Their courtyards stay open.
+- The lookahead floor (`tune.narrow.stopAt` 8%) now leaves the hardest slots at a 7% median; raise it a little if Peter's playtest finds them walls.
+- Bins show one or two rows of mini blocks at 375; a count on the bin would make the haul exact.
+- The critic's independent rules (`/private/tmp/claude-501/sp-critic/rules.mjs`) don't know `safeArchers`; give the next critic the one-line change so level 51 on Hard diffs clean.

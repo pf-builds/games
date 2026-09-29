@@ -140,7 +140,7 @@
     "focus": "#fff3a8"
   },
   "layout": {"wideMinPx": 760, "wideAspect": 1.15, "railWidePx": 520, "railMinPx": 340, "railFrac": 0.42, "gapWidePx": 32, "gapShortPx": 12, "sidePadPx": 24, "maxDtMs": 100, "lineSlots": 8, "sapperIcons": 2,
-    "rotateBelowCss": 10, "shortMaxH": 480, "railShortPx": 330, "coachFontPx": [21, 15], "labMinPx": 10, "nameMinPx": 12, "fullText": "Line full: only matching colours are safe"},
+    "rotateBelowCss": 10, "shortMaxH": 480, "railShortPx": 348, "coachFontPx": [21, 15], "labMinPx": 10, "nameMinPx": 12, "fullText": "Line full: only matching colours are safe"},
   "title": {"artW": 125, "artH": 190, "artMin": 2, "artMax": 5, "baseFrac": 0.58, "baseFracWide": 0.56, "wallArtPx": 3},
   "audio": {
     "volume": 0.5,

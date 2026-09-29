@@ -162,7 +162,7 @@
     const e = app.entry; if (!e) return;
     $("lvl-num").textContent = e.n; $("lvl-name").textContent = e.L.name || (app.eras[e.era - 1] ? app.eras[e.era - 1].name : "Era " + e.era);
     $("diff-chip").textContent = DNAME[app.diff];
-    fitText($("lvl-name"), "name:" + $("lvl-name").textContent, app.cfg.layout.nameMinPx);
+    app.labFit.delete("name"); fitText($("lvl-name"), "name", app.cfg.layout.nameMinPx); // the room beside the number changes with its digits
   }
   function renderAll() { judge(); renderTop(); renderTray(); renderLine(); }
 
