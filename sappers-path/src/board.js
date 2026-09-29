@@ -24,26 +24,22 @@
 // quarter turn makes it bigger, the canvas is drawn turned: the fort's south (camp and yard) faces right, next to the
 // tray. Only positions turn (MX/MY and the cell helpers); sprites, crates and text stay upright.
 //
-// Show. startShow(S) reads the log of the tap just played: EAT cells in resolution order, split into segments (the squad,
-// then each holding-line resume). The eats are dealt to at most show.maxRunners runners (a runner takes a batch of
-// consecutive eats of one segment), staggered so they leave the yard in lines. A runner's route is found when it
-// launches: a BFS from the camp over the ground as it will be once every earlier runner's eats are gone, so it walks
-// round walls, never through them. It walks crate -> camp -> route -> the pixel, bites its batch (each pixel pops off
-// the board with crumbs and dust), and carries the blocks back to its colour's crate. An archer hit (AIM + HIT/KILL in
-// the log) adds up to show.hitMax hit runners: they walk toward the covered pixel, an arrow meets them at the ring's
-// edge, and they are knocked back to the camp (Easy/Normal) or fall (Hard). Every runner is sped up just enough to
-// finish inside show.capMs, so a play never runs longer than that at 1x. fastForward() lands every remaining pop and
-// haul at once (a new tap, a board tap, or selfTest), with no BFS. On the winning play the last fx.winFallN pixels fall
-// instead of popping (the keep coming down), with a shake and a dust burst on the last one.
-// Time is the page's sim clock passed to update(); nothing here reads a real clock. showT runs the runners; fxT (always
-// running, 2x included) runs pops, crumbs, shakes, the lock, the archer's fall and labels. Per-frame work allocates
-// nothing: runners, routes, pops and particles live in typed arrays sized once.
+// Show (playtest 1: the dispatch model). The engine runs the siege in time and the board draws its state: sync(S) reads
+// the engine's log after every advance. A dispatch gets a runner (pooled, show.maxRunners) whose route leaves its
+// space's point on the canvas edge (setSlots), crosses the camp and walks the ground as it stands to the face of its
+// pixel; the pixel pops when the engine says it does, with crumbs and dust, and the runner carries the block back to its
+// colour's bin, where it lands on the engine's home time. An archer hit is a runner that stops where its route first
+// enters a standing ring: an arrow meets it there and it is knocked back to its space (Easy, Normal) or falls (Hard).
+// Squads overlap freely; a skip runs the engine to quiet and lands everything with no animation. On the fort's last
+// fx.winFallN pixels the blocks fall instead of popping (the keep coming down), with a shake and a dust burst.
+// Time: V.t is the page's engine time (runners), fxT the effects clock (pops, crumbs, shakes, the lock, labels); nothing
+// here reads a real clock. Per-frame work allocates nothing: runners, routes, pops and particles live in typed arrays.
 (function (root, factory) {
   (root.SappersPath = root.SappersPath || {}).board = factory(root.SappersPath.engine);
 })(window, function (E) {
   "use strict";
   const { GRASS, WATER, DIRT, CAMP, IRON, GILT, EV } = E;
-  const POPS = 512, PARTS = 768, MAXG = 32, MAXT = 8;
+  const POPS = 512, PARTS = 768, MAXG = 32, MAXT = 8, MAXS = 8;
 
   function mk(w, h) { const c = document.createElement("canvas"); c.width = Math.max(1, w | 0); c.height = Math.max(1, h | 0); return c; }
   // A hex colour mixed toward white (k > 0) or black (k < 0), as a CSS colour.
@@ -115,29 +111,27 @@
     const C = cfg.v3, K = cfg.board, SH = cfg.show, FX = cfg.fx, g = canvas.getContext("2d", { alpha: false });
     const V = {
       canvas, g, cfg, B: null, S: null, w: 0, h: 0, n: 0, cs: 0, dpr: 1, Y: K.yardRows | 0, rot: false, calm: false,
-      disp: null, wg: null, dist: null, q: null, tone: null, deco: null, idleC: [], layer: null, lg: null, sprites: null, piles: [], pileOf: new Int16Array(E.NMAT).fill(-1),
+      disp: null, dist: null, q: null, tone: null, deco: null, idleC: [], layer: null, lg: null, sprites: null, piles: [], pileOf: new Int16Array(E.NMAT).fill(-1),
       haul: new Int32Array(E.NMAT), total: new Int32Array(E.NMAT), towerLeft: new Int32Array(MAXT), towerOfCell: null,
       clock: 0, speed: 1, fxT: 0, rebuilds: 0, lastPop: -1, pileDirty: true, font: "", seed: 12345,
-      // show
-      showOn: false, showT: 0, eN: 0, eCell: null, eMat: null, eSeg: null, eGate: null,
-      rN: 0, rLaunched: 0, rDone: 0, rM: null, rE0: null, rEn: null, rT0: null, rArr: null, rBite: null, rEnd: null, rPop: null,
-      rSt: null, rPts: [], rCum: [], rNp: null, rSeg: null, rJx: null, rJy: null, maxPts: 0, stats: { hits: 0, kills: 0, eats: 0, runners: 0, hitRunners: 0 },
-      rK: null, rTgt: null, rHitD: null, rTw: null, rHx: null, rHy: null, rAim: null,
+      // show: runners (a pool of show.maxRunners) keyed by the engine's sapper ids
+      t: 0, biteMs: 0, knockMs: 0, left: 0, live: 0, dispVer: 0, bfsVer: -1, idR: new Int32Array(1), slotPt: new Float32Array(MAXS * 2), rFreeN: 0,
+      rPts: [], rCum: [], maxPts: 0, stats: { hits: 0, dropped: 0 },
       popC: new Int32Array(POPS), popM: new Int8Array(POPS), popT: new Float64Array(POPS), popK: new Int8Array(POPS), popHead: 0,
       pX: new Float32Array(PARTS), pY: new Float32Array(PARTS), pVX: new Float32Array(PARTS), pVY: new Float32Array(PARTS), pT: new Float64Array(PARTS).fill(-1e12),
       pL: new Float32Array(PARTS), pS: new Float32Array(PARTS), pC: new Int8Array(PARTS), pHead: 0,
       gSt: new Int8Array(MAXG), gT: new Float64Array(MAXG), gX: new Float32Array(MAXG), gY: new Float32Array(MAXG), keyC: new Int32Array(MAXG).fill(-1),
       tFallT: new Float64Array(MAXT).fill(-1e12), shT: -1e12, shMs: 1, shAmp: 0,
-      win: false, winFrom: 1e9, label: { t: -1e12, x: 0, y: 0, kill: false, text: "", w: 0 },
+      label: { t: -1e12, x: 0, y: 0, kill: false, text: "", w: 0 },
       focus: { on: false, x: 0, y: 0, r: 1 },
       gob: { on: false, t0: 0, x: 0, y: 0, done: false },
-      hooks: { pop: null, deposit: null, gate: null, tower: null, shot: null, hit: null, collapse: null },
+      hooks: { pop: null, deposit: null, gate: null, tower: null, shot: null, hit: null, collapse: null, tap: null, free: null, move: null },
     };
-    const RMAX = Math.max(1, SH.maxRunners | 0) * 2 + Math.max(0, SH.hitMax | 0);
-    V.rM = new Int8Array(RMAX); V.rE0 = new Int32Array(RMAX); V.rEn = new Int32Array(RMAX); V.rT0 = new Float64Array(RMAX);
-    V.rArr = new Float64Array(RMAX); V.rBite = new Float64Array(RMAX); V.rEnd = new Float64Array(RMAX); V.rPop = new Int32Array(RMAX);
-    V.rSt = new Int8Array(RMAX); V.rNp = new Int32Array(RMAX); V.rSeg = new Int32Array(RMAX); V.rJx = new Float32Array(RMAX); V.rJy = new Float32Array(RMAX);
-    V.rK = new Int8Array(RMAX); V.rTgt = new Int32Array(RMAX); V.rHitD = new Float32Array(RMAX); V.rTw = new Int8Array(RMAX); V.rHx = new Float32Array(RMAX); V.rHy = new Float32Array(RMAX); V.rAim = new Float32Array(RMAX);
+    const RMAX = Math.max(8, Math.min(1024, SH.maxRunners | 0));
+    V.rOn = new Int8Array(RMAX); V.rId = new Int32Array(RMAX); V.rK = new Int8Array(RMAX); V.rS = new Int8Array(RMAX); V.rM = new Int8Array(RMAX); V.rC = new Int32Array(RMAX);
+    V.rT0 = new Float64Array(RMAX); V.rT1 = new Float64Array(RMAX); V.rT2 = new Float64Array(RMAX); V.rNp = new Int32Array(RMAX); V.rL = new Float32Array(RMAX);
+    V.rShot = new Int8Array(RMAX); V.rDie = new Float64Array(RMAX); V.rBx = new Float32Array(RMAX); V.rBy = new Float32Array(RMAX); V.rFree = new Int32Array(RMAX);
+    V.rJx = new Float32Array(RMAX); V.rJy = new Float32Array(RMAX); V.rHitD = new Float32Array(RMAX); V.rTw = new Int8Array(RMAX); V.rHx = new Float32Array(RMAX); V.rHy = new Float32Array(RMAX); V.rAim = new Float32Array(RMAX);
     for (let i = 0; i < RMAX; i++) { const u = hash(i, 91) / 4294967296, v = hash(i, 37) / 4294967296; V.rJx[i] = (u - 0.5) * 2 * SH.jitter; V.rJy[i] = (v - 0.5) * 2 * SH.jitter; }
     const TYPE = (v) => (v === GRASS ? 0 : v === DIRT ? 1 : v === CAMP ? 2 : 3);
     const COL = C.mats.map((m) => (m ? m.c : FX.dustColor)); COL[0] = FX.dustColor; COL[IRON] = K.gateBar;
@@ -211,7 +205,9 @@
     // ---- level and layout -------------------------------------------------------------------------------------------
     function setLevel(B, S) {
       V.B = B; V.S = S; V.w = B.w; V.h = B.h; V.n = B.n;
-      if (!V.disp || V.disp.length < B.n) { V.disp = new Int8Array(B.n); V.wg = new Int8Array(B.n); V.dist = new Int16Array(B.n); V.q = new Int32Array(B.n); V.eCell = new Int32Array(B.n); V.eMat = new Int8Array(B.n); V.eSeg = new Int32Array(B.n); V.eGate = new Int8Array(B.n); V.towerOfCell = new Int8Array(B.n); }
+      if (!V.disp || V.disp.length < B.n) { V.disp = new Int8Array(B.n); V.dist = new Int16Array(B.n); V.q = new Int32Array(B.n); V.towerOfCell = new Int8Array(B.n); }
+      if (V.idR.length < S.SMAX) V.idR = new Int32Array(S.SMAX);
+      V.biteMs = S.T.biteMs; V.knockMs = S.T.knockMs;
       const pts = B.n + 4;
       if (V.maxPts < pts) { V.maxPts = pts; V.rPts = []; V.rCum = []; for (let i = 0; i < RMAX; i++) { V.rPts.push(new Float32Array(pts * 2)); V.rCum.push(new Float32Array(pts)); } }
       // Crates: one per colour on the board (iron is gates, never hauled), in material order across the yard.
@@ -294,11 +290,11 @@
     }
     function reset() {
       const B = V.B; if (!B) return;
-      V.disp.set(V.S.a.subarray(0, B.n)); V.haul.fill(0); V.lastPop = -1;
+      V.disp.set(V.S.a.subarray(0, B.n)); V.dispVer++; V.haul.fill(0); V.lastPop = -1; V.left = V.S.pixLeft; V.t = V.S.now;
+      V.rOn.fill(0); V.live = 0; V.rFreeN = 0; for (let i = RMAX - 1; i >= 0; i--) V.rFree[V.rFreeN++] = i; V.idR.fill(-1); V.stats.hits = 0; V.stats.dropped = 0;
       V.towerLeft.fill(0); for (let c = 0; c < B.n; c++) { const t = B.towerOf[c]; V.towerOfCell[c] = t; if (t >= 0 && t < MAXT && V.disp[c] > 0) V.towerLeft[t]++; }
       for (let k = 0; k < MAXG; k++) { const gc = B.gateCells[k]; V.gSt[k] = gc && gc.length && V.disp[gc[0]] > 0 ? 0 : 1; V.gT[k] = -1e12; }
-      V.tFallT.fill(-1e12); V.shT = -1e12; V.label.t = -1e12; V.win = false; V.winFrom = 1e9;
-      V.showOn = false; V.rN = 0; V.rLaunched = 0; V.rDone = 0; V.eN = 0; V.gob.on = false; V.gob.done = false;
+      V.tFallT.fill(-1e12); V.shT = -1e12; V.label.t = -1e12; V.gob.on = false; V.gob.done = false;
       V.popT.fill(-1e12); V.pT.fill(-1e12);
       paintLayer();
     }
@@ -394,48 +390,15 @@
     }
 
     // ---- the show -----------------------------------------------------------------------------------------------------
-    // Read the tap's event log (S.logOn must have been set before the play). Returns {eats, hits, kills, runners, hitRunners}.
-    function startShow(S) {
-      fastForward();
-      const ev = S.ev, len = S.evLen; let seg = 0, eN = 0, hits = 0, kills = 0, aimAt = -1, aimCell = -1, aimM = 0, aimN = 0, kill = false;
-      for (let i = 0; i + 2 < len; i += 3) {
-        const t = ev[i], a = ev[i + 1], b = ev[i + 2];
-        if (t === EV.EAT) { V.eCell[eN] = a; V.eMat[eN] = b; V.eSeg[eN] = seg; V.eGate[eN] = -1; eN++; }
-        else if (t === EV.RESUME) seg++;
-        else if (t === EV.GATE && eN > 0) V.eGate[eN - 1] = a;
-        else if (t === EV.AIM) { aimAt = eN; aimCell = a; aimM = b; }
-        else if (t === EV.HIT) { hits += b; aimN = b; }
-        else if (t === EV.KILL) { kills += b; aimN = b; kill = true; }
-      }
-      V.eN = eN; V.rN = 0; V.rLaunched = 0; V.rDone = 0; V.showT = 0;
-      V.stats.hits = hits; V.stats.kills = kills; V.stats.eats = eN;
-      V.win = S.status === E.WON; V.winFrom = V.win ? Math.max(0, eN - FX.winFallN) : 1e9;
-      const hitK = aimCell >= 0 && aimN > 0 ? Math.min(aimN, SH.hitMax | 0) : 0;
-      V.stats.hitRunners = hitK;
-      if (!eN && !hitK) { V.showOn = false; V.stats.runners = 0; return V.stats; }
-      if (hitK) { V.label.t = -1e12; V.label.text = (kill ? SH.killText : SH.hitText).replace("{n}", aimN); V.label.kill = kill; V.label.w = 0; }
-      // Hit runners go out right after the squad's own eats (before any holding-line resume).
-      const addHits = () => { for (let h = 0; h < hitK && V.rN < RMAX; h++) { const i = V.rN++; V.rK[i] = kill ? 2 : 1; V.rTgt[i] = aimCell; V.rM[i] = aimM; V.rE0[i] = 0; V.rEn[i] = 0; V.rSeg[i] = 0; V.rSt[i] = 0; V.rPop[i] = 0; } };
-      // Deal eats to runners: a batch of `per` consecutive eats of one segment (one colour) each.
-      const per = Math.max(1, Math.ceil(eN / Math.max(1, SH.maxRunners)));
-      let added = !hitK;
-      for (let e = 0; e < eN;) {
-        if (!added && e >= aimAt) { addHits(); added = true; }
-        let k = 1; while (k < per && e + k < eN && V.eSeg[e + k] === V.eSeg[e]) k++;
-        if (V.rN < RMAX) { const i = V.rN++; V.rK[i] = 0; V.rM[i] = V.eMat[e]; V.rE0[i] = e; V.rEn[i] = k; V.rSeg[i] = V.eSeg[e]; V.rSt[i] = 0; V.rPop[i] = 0; }
-        else V.rEn[V.rN - 1] += k; // pool full (never at the configured sizes): the last runner takes the rest
-        e += k;
-      }
-      if (!added) addHits();
-      const stag = Math.min(SH.staggerMs, (0.45 * SH.capMs) / V.rN);
-      for (let i = 0; i < V.rN; i++) V.rT0[i] = i * stag;
-      V.wg.set(V.disp.subarray(0, V.n));
-      V.showOn = true; V.stats.runners = V.rN;
-      return V.stats;
-    }
-    // BFS from the camp over the working grid's walkable cells.
+    // The engine is the truth: every sapper out is a record in it (space, target, dispatch, pop or hit, home times).
+    // sync(S) reads the engine's log after each advance: a dispatch gets a runner (a pooled slot with a route over the
+    // ground as it stands), a pop takes the block off the board, a home drops the block in its bin. Runners are drawn
+    // at the page's engine time (V.t), so what the player sees is exactly when the rules act.
+    // BFS from the camp over the displayed ground (cached until the next pop).
     function bfs() {
-      const n = V.n, w = V.w, h = V.h, wg = V.wg, dist = V.dist, q = V.q; let qh = 0, qt = 0;
+      if (V.bfsVer === V.dispVer) return;
+      V.bfsVer = V.dispVer;
+      const n = V.n, w = V.w, h = V.h, wg = V.disp, dist = V.dist, q = V.q; let qh = 0, qt = 0;
       dist.fill(-1, 0, n);
       for (let c = 0; c < n; c++) if (wg[c] === CAMP) { dist[c] = 0; q[qt++] = c; }
       while (qh < qt) {
@@ -450,44 +413,47 @@
     // Standing towers whose ring covers cell c, as a bit mask (display state).
     const coverNow = (c) => { if (c < 0 || c >= V.n) return 0; let m = V.B.cover[c]; for (let t = 0; t < V.B.towers.length && t < MAXT; t++) if (V.towerLeft[t] <= 0) m &= ~(1 << t); return m; };
     const lowBit = (m) => { for (let t = 0; t < MAXT; t++) if (m & (1 << t)) return t; return -1; };
-    // Launch runner i: route crate -> camp -> ground -> the face of its first pixel; timings squeezed into capMs.
-    function launch(i) {
+    // Where space s's sappers come onto the board (the point on the canvas nearest its slot in the holding line).
+    const slotX = (s) => V.slotPt[(s % MAXS) * 2], slotY = (s) => V.slotPt[(s % MAXS) * 2 + 1];
+    // Runner i's route: its space's point -> the camp -> the ground -> half into the face of its pixel c.
+    function route(i, s, c) {
       bfs();
-      const tgt = V.rK[i] ? V.rTgt[i] : V.eCell[V.rE0[i]], w = V.w, pts = V.rPts[i], cum = V.rCum[i], p = V.piles[Math.max(0, V.pileOf[V.rM[i]])];
+      const w = V.w, pts = V.rPts[i], cum = V.rCum[i];
       let u = -1, best = 1e9;
-      for (let k = 0; k < 4; k++) { const v = nbOf(tgt, k); if (v >= 0 && V.dist[v] >= 0 && V.dist[v] < best) { best = V.dist[v]; u = v; } }
-      // Walk the distance field down to the camp, collecting cells target-side first (bounded by the distance).
+      for (let k = 0; k < 4; k++) { const v = nbOf(c, k); if (v >= 0 && V.dist[v] >= 0 && V.dist[v] < best) { best = V.dist[v]; u = v; } }
       let np = 0;
       const put = (x, y) => { pts[np * 2] = x; pts[np * 2 + 1] = y; np++; };
-      put(p ? p.x : w / 2, p ? p.y : V.h + V.Y / 2);
+      put(slotX(s), slotY(s));
       if (u >= 0) {
-        const base = np; let c = u, guard = V.dist[u];
-        put(c % w + 0.5, ((c / w) | 0) + 0.5);
-        while (V.dist[c] > 0 && guard-- >= 0) { let nx = -1; for (let k = 0; k < 4; k++) { const v = nbOf(c, k); if (v >= 0 && V.dist[v] === V.dist[c] - 1) { nx = v; break; } } if (nx < 0) break; c = nx; put(c % w + 0.5, ((c / w) | 0) + 0.5); }
+        const base = np; let e = u, guard = V.dist[u];
+        put(e % w + 0.5, ((e / w) | 0) + 0.5);
+        while (V.dist[e] > 0 && guard-- >= 0) { let nx = -1; for (let k = 0; k < 4; k++) { const v = nbOf(e, k); if (v >= 0 && V.dist[v] === V.dist[e] - 1) { nx = v; break; } } if (nx < 0) break; e = nx; put(e % w + 0.5, ((e / w) | 0) + 0.5); }
         for (let a = base, b = np - 1; a < b; a++, b--) { const ax = pts[a * 2], ay = pts[a * 2 + 1]; pts[a * 2] = pts[b * 2]; pts[a * 2 + 1] = pts[b * 2 + 1]; pts[b * 2] = ax; pts[b * 2 + 1] = ay; }
-        put((u % w + 0.5 + (tgt % w) + 0.5) / 2, (((u / w) | 0) + 0.5 + ((tgt / w) | 0) + 0.5) / 2);
-      } else put(tgt % w + 0.5, ((tgt / w) | 0) + 1.2); // no route (can't happen in resolution order): walk straight up to it
+        put((u % w + 0.5 + (c % w) + 0.5) / 2, (((u / w) | 0) + 0.5 + ((c / w) | 0) + 0.5) / 2);
+      } else put(c % w + 0.5, ((c / w) | 0) + 1.2); // no ground route (a resync mid-flight): straight up to it
       cum[0] = 0; for (let k = 1; k < np; k++) cum[k] = cum[k - 1] + Math.hypot(pts[k * 2] - pts[k * 2 - 2], pts[k * 2 + 1] - pts[k * 2 - 1]);
-      V.rNp[i] = np;
-      if (V.rK[i]) { launchHit(i, tgt, np); return; }
-      // Apply this runner's eats to the working grid, so the next route sees them gone.
-      for (let e = V.rE0[i], z = e + V.rEn[i]; e < z; e++) { V.wg[V.eCell[e]] = DIRT; const gt = V.eGate[e]; if (gt >= 0) { const gc = V.B.gateCells[gt]; for (let j = 0; j < gc.length; j++) V.wg[gc[j]] = DIRT; } }
-      const walk = cum[np - 1] * SH.walkCellMs, bite = SH.biteMs * Math.min(3, V.rEn[i]), natural = 2 * walk + bite;
-      const avail = Math.max(1, SH.capMs - V.rT0[i]), f = natural > avail ? avail / natural : 1;
-      V.rArr[i] = V.rT0[i] + walk * f; V.rBite[i] = bite * f; V.rEnd[i] = V.rArr[i] + V.rBite[i] + walk * f; V.rSt[i] = 1;
+      V.rNp[i] = np; V.rL[i] = cum[np - 1];
     }
-    // A hit runner stops where its route first enters a standing ring (or at the pixel's face); the arrow meets it there.
-    function launchHit(i, tgt, np) {
-      const pts = V.rPts[i], cum = V.rCum[i], w = V.w; let dH = cum[np - 1], tw = lowBit(coverNow(tgt));
-      for (let k = 1; k < np; k++) { const px = Math.floor(pts[k * 2]), py = Math.floor(pts[k * 2 + 1]); if (px < 0 || py < 0 || px >= w || py >= V.h) continue; const m = coverNow(py * w + px); if (m) { dH = Math.max(0, cum[k] - 0.45); tw = lowBit(m); break; } }
-      V.rHitD[i] = dH; V.rTw[i] = Math.max(0, tw);
-      const walk = dH * SH.walkCellMs, back = V.rK[i] === 1 ? SH.knockMs + dH * SH.walkCellMs * SH.retreat : SH.hitFallMs, natural = walk + back;
-      const avail = Math.max(1, SH.capMs - V.rT0[i]), f = natural > avail ? avail / natural : 1;
-      V.rArr[i] = V.rT0[i] + walk * f; V.rBite[i] = (V.rK[i] === 1 ? SH.knockMs : SH.hitFallMs) * f; V.rEnd[i] = V.rT0[i] + natural * f; V.rSt[i] = 1;
-      V.rAim[i] = Math.max(1, Math.min(SH.arrowMs, V.rArr[i] - V.rT0[i]));
+    // A runner for sapper id (engine records), or none when the pool is full (the rules don't care; it isn't drawn).
+    function runner(S, id) {
+      V.idR[id] = -1;
+      if (V.rFreeN <= 0) { V.stats.dropped++; return -1; }
+      const i = V.rFree[--V.rFreeN], s = S.qS[id], c = S.qC[id], k = S.qK[id];
+      V.rOn[i] = 1; V.rId[i] = id; V.idR[id] = i; V.rK[i] = k; V.rS[i] = s; V.rM[i] = S.spM[s]; V.rC[i] = c;
+      V.rT0[i] = S.q0[id]; V.rT1[i] = S.q1[id]; V.rT2[i] = S.q2[id]; V.rShot[i] = 0; V.rDie[i] = -1; V.live++;
+      route(i, s, c);
+      const p = V.piles[Math.max(0, V.pileOf[V.rM[i]])];
+      if (k === 1) { V.rBx[i] = p ? p.x : V.w / 2; V.rBy[i] = p ? p.y : V.h + V.Y / 2; return i; }
+      // A hit: it stops where its route first enters a standing ring (or at the pixel's face); the arrow meets it there.
+      const pts = V.rPts[i], cum = V.rCum[i], np = V.rNp[i], w = V.w; let dH = cum[np - 1], tw = lowBit(coverNow(c));
+      for (let q = 1; q < np; q++) { const px = Math.floor(pts[q * 2]), py = Math.floor(pts[q * 2 + 1]); if (px < 0 || py < 0 || px >= w || py >= V.h) continue; const m = coverNow(py * w + px); if (m) { dH = Math.max(0, cum[q] - 0.45); tw = lowBit(m); break; } }
+      V.rHitD[i] = dH; V.rTw[i] = Math.max(0, tw); V.rBx[i] = pts[0]; V.rBy[i] = pts[1];
+      V.rAim[i] = Math.max(1, Math.min(SH.arrowMs, V.rT1[i] - V.rT0[i]));
       along(i, dH, pos); V.rHx[i] = pos[0]; V.rHy[i] = pos[1];
+      return i;
     }
-    // Board point at distance d along runner i's route.
+    function drop(i) { if (!V.rOn[i]) return; V.rOn[i] = 0; if (V.idR[V.rId[i]] === i) V.idR[V.rId[i]] = -1; V.rFree[V.rFreeN++] = i; V.live--; }
+    // Board point at distance d along runner i's route (point 0 is its space's point).
     function along(i, d, out) {
       const pts = V.rPts[i], cum = V.rCum[i], np = V.rNp[i];
       let k = 1; while (k < np - 1 && cum[k] < d) k++;
@@ -504,7 +470,7 @@
     }
     function popCell(c, m, anim, kind, delay) {
       if (V.disp[c] <= 0) return;
-      V.disp[c] = DIRT; paintCell(c); V.lastPop = c;
+      V.disp[c] = DIRT; V.dispVer++; paintCell(c); V.lastPop = c;
       const t = V.towerOfCell[c];
       if (t >= 0 && t < MAXT && V.towerLeft[t] > 0 && --V.towerLeft[t] === 0) {
         V.tFallT[t] = anim ? V.fxT : -1e12;
@@ -517,60 +483,60 @@
         spawn(MX(bx, by), MY(bx, by), m, FX.crumbs, FX.crumbSize, FX.lift, FX.spread, d); spawn(MX(bx, by), MY(bx, by), 0, FX.dust, FX.dustSize, FX.lift * 0.4, FX.spread * 0.5, d);
       }
     }
-    function popEat(e, anim) {
-      const fall = e >= V.winFrom;
-      popCell(V.eCell[e], V.eMat[e], anim, fall ? 1 : 0, 0);
-      const gt = V.eGate[e];
-      if (gt >= 0) {
-        const gc = V.B.gateCells[gt];
-        for (let j = 0; j < gc.length; j++) popCell(gc[j], IRON, anim, 1, anim ? (j + 1) * FX.gateStaggerMs : 0);
-        if (gt < MAXG) { V.gSt[gt] = 1; V.gT[gt] = anim ? V.fxT : -1e12; }
-        if (anim) { shake(FX.gateShake[0], FX.gateShake[1]); if (V.hooks.gate) V.hooks.gate(gt); }
-      }
-      if (anim && V.hooks.pop) V.hooks.pop(e, V.eMat[e]);
-      // The winning play's last pixel throws a cloud of dust.
-      if (anim && V.win && e === V.eN - 1) { const c = V.eCell[e], bx = c % V.w + 0.5, by = ((c / V.w) | 0) + 0.5; spawn(MX(bx, by), MY(bx, by), 0, FX.winDust >> 1, FX.dustSize * 1.4, FX.lift, FX.spread * 1.3); }
+    // The fort's last fx.winFallN pixels fall and tumble instead of popping (the keep coming down).
+    function eat(c, anim) {
+      const m = V.B.a0[c], fall = V.left <= FX.winFallN;
+      V.left--; popCell(c, m, anim, fall ? 1 : 0, 0);
+      if (anim && V.hooks.pop) V.hooks.pop(c, m);
+      if (anim && V.left <= 0) { const bx = c % V.w + 0.5, by = ((c / V.w) | 0) + 0.5; spawn(MX(bx, by), MY(bx, by), 0, FX.winDust >> 1, FX.dustSize * 1.4, FX.lift, FX.spread * 1.3); }
     }
-    function deposit(i) { const m = V.rM[i]; V.haul[m] += V.rEn[i]; V.pileDirty = true; if (V.hooks.deposit) V.hooks.deposit(m); }
+    function gate(g, anim) {
+      const gc = V.B.gateCells[g]; V.left -= gc.length;
+      for (let j = 0; j < gc.length; j++) popCell(gc[j], IRON, anim, 1, anim ? (j + 1) * FX.gateStaggerMs : 0);
+      if (g < MAXG) { V.gSt[g] = 1; V.gT[g] = anim ? V.fxT : -1e12; }
+      if (anim) { shake(FX.gateShake[0], FX.gateShake[1]); if (V.hooks.gate) V.hooks.gate(g); }
+    }
+    function deposit(m) { V.haul[m]++; V.pileDirty = true; if (V.hooks.deposit) V.hooks.deposit(m); }
     function shake(amp, ms) { if (V.calm) return; V.shT = V.fxT; V.shMs = Math.max(1, ms); V.shAmp = amp; }
+    // Read the engine's log since the last sync (then clear it). anim false: land everything quietly (a skip).
+    function sync(S, anim) {
+      if (S.evLost) { resync(S); S.clearLog(); return; }
+      const ev = S.ev, len = S.evLen;
+      for (let j = 0; j + 2 < len; j += 3) {
+        const t = ev[j], a = ev[j + 1], b = ev[j + 2];
+        if (t === EV.DISP) { runner(S, a); if (V.hooks.move) V.hooks.move(); }
+        else if (t === EV.EAT) eat(a, anim);
+        else if (t === EV.GATE) gate(a, anim);
+        else if (t === EV.HIT || t === EV.KILL) {
+          const i = V.idR[a], kill = t === EV.KILL; V.stats.hits++;
+          if (anim && V.hooks.hit) V.hooks.hit(kill ? 2 : 1);
+          const hx = i >= 0 ? V.rHx[i] : (S.qC[a] % V.w) + 0.5, hy = i >= 0 ? V.rHy[i] : ((S.qC[a] / V.w) | 0) + 0.5;
+          if (anim) { V.label.t = V.fxT; V.label.x = hx; V.label.y = hy; V.label.kill = kill; V.label.text = (kill ? SH.killText : SH.hitText).replace("{n}", 1); V.label.w = 0; spawn(MX(hx, hy), MY(hx, hy), 0, FX.dust + 2, FX.dustSize, FX.lift * 0.5, FX.spread * 0.6); }
+          if (kill && i >= 0) { if (anim) V.rDie[i] = V.fxT; else drop(i); }
+        } else if (t === EV.HOME) { if (S.qK[a] === 1) deposit(S.spM[S.qS[a]]); const i = V.idR[a]; if (i >= 0) drop(i); if (V.hooks.move) V.hooks.move(); }
+        else if (t === EV.TAP) { if (V.hooks.tap) V.hooks.tap(a, b); }
+        else if (t === EV.FREE) { if (V.hooks.free) V.hooks.free(a, b); }
+      }
+      S.clearLog();
+    }
+    // The log overflowed (never at the configured sizes): rebuild the picture from the engine's state.
+    function resync(S) {
+      for (let i = 0; i < RMAX; i++) drop(i);
+      V.disp.set(S.a.subarray(0, V.n)); V.dispVer++; V.left = S.pixLeft;
+      V.towerLeft.fill(0); for (let c = 0; c < V.n; c++) { const t = V.B.towerOf[c]; if (t >= 0 && t < MAXT && V.disp[c] > 0) V.towerLeft[t]++; }
+      for (let k = 0; k < MAXG; k++) { const gc = V.B.gateCells[k]; V.gSt[k] = gc && gc.length && V.disp[gc[0]] > 0 ? 0 : 1; }
+      for (let m = 1; m < E.NMAT; m++) V.haul[m] = Math.max(0, V.total[m] - S.left[m]);
+      for (let id = 0; id < S.sent; id++) { if (S.q2[id] <= S.now || (S.qK[id] === 3 && S.q1[id] <= S.now)) continue; if (S.qK[id] === 1 && S.q1[id] <= S.now) V.haul[S.spM[S.qS[id]]]--; runner(S, id); }
+      paintLayer();
+    }
     function update(dt, speed) {
       V.fxT += dt * (speed || 1);
       if (V.gob.on && !V.gob.done && V.clock - V.gob.t0 >= SH.goblinMs) V.gob.done = true;
-      if (!V.showOn) return;
-      V.showT += dt * (speed || 1);
-      const t = V.showT;
-      while (V.rLaunched < V.rN && V.rT0[V.rLaunched] <= t) launch(V.rLaunched++);
-      for (let i = 0; i < V.rLaunched; i++) {
-        const st = V.rSt[i]; if (st === 3) continue;
-        if (V.rK[i]) {
-          if (V.rPop[i] === 0 && t >= V.rArr[i] - V.rAim[i]) { V.rPop[i] = 1; if (V.hooks.shot) V.hooks.shot(); }
-          if (st === 1 && t >= V.rArr[i]) {
-            V.rSt[i] = 2; if (V.hooks.hit) V.hooks.hit(V.rK[i]);
-            if (V.label.t < V.fxT - SH.labelMs) { V.label.t = V.fxT; V.label.x = V.rHx[i]; V.label.y = V.rHy[i]; V.label.w = 0; }
-            const sx = MX(V.rHx[i], V.rHy[i]), sy = MY(V.rHx[i], V.rHy[i]); spawn(sx, sy, 0, FX.dust + 2, FX.dustSize, FX.lift * 0.5, FX.spread * 0.6);
-          }
-          if (V.rSt[i] === 2 && t >= V.rEnd[i]) { V.rSt[i] = 3; V.rDone++; }
-          continue;
-        }
-        if (t >= V.rArr[i]) {
-          const n = V.rEn[i], step = V.rBite[i] / n;
-          while (V.rPop[i] < n && t >= V.rArr[i] + step * (V.rPop[i] + 1)) popEat(V.rE0[i] + V.rPop[i]++, true);
-          if (V.rPop[i] >= n) V.rSt[i] = 2;
-        }
-        if (V.rSt[i] === 2 && t >= V.rEnd[i]) { V.rSt[i] = 3; V.rDone++; deposit(i); }
+      for (let i = 0; i < RMAX; i++) {
+        if (!V.rOn[i] || !V.rK[i] || V.rK[i] === 1) continue;
+        if (!V.rShot[i] && V.t >= V.rT1[i] - V.rAim[i]) { V.rShot[i] = 1; if (V.hooks.shot) V.hooks.shot(); }
+        if (V.rDie[i] >= 0 && V.fxT - V.rDie[i] >= SH.hitFallMs) drop(i);
       }
-      if (V.rDone >= V.rN) V.showOn = false;
-    }
-    // Land every remaining pop and haul now (no routes, no animation).
-    function fastForward() {
-      if (!V.showOn) return false;
-      for (let i = 0; i < V.rN; i++) {
-        if (V.rSt[i] === 3) continue;
-        for (let e = V.rE0[i] + V.rPop[i], z = V.rE0[i] + V.rEn[i]; e < z; e++) popEat(e, false);
-        V.rPop[i] = V.rEn[i]; V.rSt[i] = 3; if (!V.rK[i]) deposit(i);
-      }
-      V.rLaunched = V.rN; V.rDone = V.rN; V.showOn = false; V.popT.fill(-1e12); V.pT.fill(-1e12); V.label.t = -1e12;
-      return true;
     }
     // The win: the goblins' keep stands where the last pixel went and comes down (it sinks into its own dust with a shake
     // and the collapse), the crowned goblin scrambles out of the rubble and flees off the top of the board.
@@ -580,25 +546,46 @@
       shake(FX.winShake[0], FX.winShake[1]); spawn(MX(V.gob.x, V.gob.y + SH.keepScale * 0.35), MY(V.gob.x, V.gob.y + SH.keepScale * 0.35), 0, FX.winDust, FX.dustSize * 1.7, FX.lift, FX.spread * 1.8);
       if (V.hooks.collapse) V.hooks.collapse();
     }
+    // Where each space's sappers enter: css points relative to the canvas's top-left, clamped to the canvas edge.
+    function setSlots(list) {
+      const cols = V.rot ? V.h + V.Y : V.w, rows = V.rot ? V.w : V.h + V.Y;
+      for (let s = 0; s < MAXS; s++) {
+        const p = list && list[s]; let sx = p ? (p.x * V.dpr) / V.cs : cols / 2, sy = p ? (p.y * V.dpr) / V.cs : rows - 0.3;
+        sx = Math.max(0.3, Math.min(cols - 0.3, sx)); sy = Math.max(0.3, Math.min(rows - 0.3, sy));
+        V.slotPt[s * 2] = V.rot ? V.w - sy : sx; V.slotPt[s * 2 + 1] = V.rot ? sx : sy;
+      }
+    }
 
     // ---- drawing ----------------------------------------------------------------------------------------------------
     const dash = [0, 0];
-    // Runner i's board position at show time t (hit runners stop at the ring, then are knocked back or fall).
+    // Runner i's board position at engine time t. Eaters: out along the route by the bite, at the face while biting,
+    // then back with the block to their colour's bin. Hit runners: out to the ring's edge by the hit, then knocked back
+    // and walking home to their space (Easy, Normal), or down where they stood (Hard).
     function position(i, t, out) {
-      const L = V.rCum[i][V.rNp[i] - 1];
-      let d;
-      if (V.rK[i]) {
-        const dH = V.rHitD[i];
-        if (t < V.rArr[i]) d = ((t - V.rT0[i]) / Math.max(1, V.rArr[i] - V.rT0[i])) * dH;
-        else if (V.rK[i] === 2) d = dH;
-        else if (t < V.rArr[i] + V.rBite[i]) { const u = (t - V.rArr[i]) / Math.max(1, V.rBite[i]); d = dH - SH.knockCells * (1 - (1 - u) * (1 - u)); }
-        else d = Math.max(0, dH - SH.knockCells) * (1 - (t - V.rArr[i] - V.rBite[i]) / Math.max(1, V.rEnd[i] - V.rArr[i] - V.rBite[i]));
-      } else if (t < V.rArr[i]) d = ((t - V.rT0[i]) / Math.max(1, V.rArr[i] - V.rT0[i])) * L;
-      else if (t < V.rArr[i] + V.rBite[i]) d = L;
-      else d = (1 - (t - V.rArr[i] - V.rBite[i]) / Math.max(1, V.rEnd[i] - V.rArr[i] - V.rBite[i])) * L;
+      const L = V.rL[i], t0 = V.rT0[i], t1 = V.rT1[i], t2 = V.rT2[i], pts = V.rPts[i];
+      let d = 0;
+      if (V.rK[i] === 1) {
+        const tb = t1 - V.biteMs;
+        if (t < t1) d = t < tb ? ((t - t0) / Math.max(1, tb - t0)) * L : L;
+        else {
+          // Home: the route back to the camp, then across the yard to the bin (instead of the space's point).
+          const seg0 = V.rCum[i][1] || 0, far = L - seg0, bx = V.rBx[i], by = V.rBy[i], x1 = pts[2], y1 = pts[3], yard = Math.hypot(bx - x1, by - y1);
+          const db = Math.max(0, Math.min(1, (t - t1) / Math.max(1, t2 - t1))) * (far + yard);
+          if (db <= far) along(i, L - db, out); else { const f = yard > 0 ? (db - far) / yard : 1; out[0] = x1 + (bx - x1) * f; out[1] = y1 + (by - y1) * f; }
+          d = L - db;
+          const edge = Math.max(0, Math.min(1, d / 1.5, (L - d) / 1.2)); out[0] += V.rJx[i] * edge; out[1] += V.rJy[i] * edge;
+          return;
+        }
+      } else {
+        const dH = V.rHitD[i], back = Math.max(0, dH - SH.knockCells), tk = t1 + V.knockMs;
+        if (t < t1) d = ((t - t0) / Math.max(1, t1 - t0)) * dH;
+        else if (V.rK[i] === 3) d = dH;
+        else if (t < tk) { const u = (t - t1) / Math.max(1, V.knockMs); d = dH - SH.knockCells * (1 - (1 - u) * (1 - u)); }
+        else d = back * (1 - Math.min(1, (t - tk) / Math.max(1, t2 - tk)));
+      }
       d = Math.max(0, Math.min(L, d));
       along(i, d, out);
-      // Jitter fades in off the crate and out at the pixel, so each runner reaches its face.
+      // Jitter fades in off the space's point and out at the pixel, so each runner reaches its face.
       const edge = Math.max(0, Math.min(1, d / 1.5, (L - d) / 1.2));
       out[0] += V.rJx[i] * edge; out[1] += V.rJy[i] * edge;
     }
@@ -607,7 +594,7 @@
     const archX = (k) => V.B.towers[k].cx + 0.5, archY = (k) => V.B.towers[k].cy + 0.5 - K.archer.lift;
     function draw() {
       if (!V.B || !V.sprites) return;
-      const cs = V.cs, S = V.sprites, gx = V.g, t = V.showT, ft = V.fxT, ss = S.ss, mb = S.mb, CW = canvas.width, CH = canvas.height;
+      const cs = V.cs, S = V.sprites, gx = V.g, t = V.t, ft = V.fxT, ss = S.ss, mb = S.mb, CW = canvas.width, CH = canvas.height;
       if (V.pileDirty) { for (let k = 0; k < V.piles.length; k++) paintPile(k); V.pileDirty = false; }
       gx.imageSmoothingEnabled = false;
       // A shake moves everything; the frame's wood shows at the edge it uncovers.
@@ -663,28 +650,31 @@
         const c = V.idleC[k], f = ((V.clock / (SH.stepMs * 3) + k) | 0) & 1, bx = c % V.w + 0.5, by = ((c / V.w) | 0) + 0.5;
         gx.drawImage(S.sap[V.piles.length ? V.piles[k % V.piles.length].m : 1], f * ss, 0, ss, ss, MX(bx, by) * cs - ss / 2, MY(bx, by) * cs - ss / 2, ss, ss);
       }
-      // Runners: out empty-handed, back with their batch on their heads. Hit runners: an arrow meets them at the ring.
+      // Runners: out empty-handed, back with their block on their heads. Hit runners: an arrow meets them at the ring.
       let shooting = 0;
-      if (V.showOn) for (let i = 0; i < V.rLaunched; i++) {
-        if (V.rSt[i] === 3) continue;
+      for (let i = 0; i < RMAX; i++) {
+        if (!V.rOn[i]) continue;
+        const k = V.rK[i], t1 = V.rT1[i];
         position(i, t, pos);
         const x = MX(pos[0], pos[1]) * cs - ss / 2;
-        if (V.rK[i]) {
-          const hit = t >= V.rArr[i], u = hit ? (t - V.rArr[i]) / Math.max(1, V.rBite[i]) : 0, f = ((t / SH.stepMs + i) | 0) & 1;
+        if (k !== 1) {
+          const hit = t >= t1, f = ((t / SH.stepMs + i) | 0) & 1;
           let y = MY(pos[0], pos[1]) * cs - ss / 2 - (hit ? 0 : f * cs * SH.bob);
-          if (!hit && t >= V.rArr[i] - V.rAim[i]) { shooting |= 1 << V.rTw[i]; arrow(i, (t - (V.rArr[i] - V.rAim[i])) / V.rAim[i]); }
-          if (V.rK[i] === 2 && hit) { // falls over and fades
+          if (!hit && t >= t1 - V.rAim[i]) { shooting |= 1 << V.rTw[i]; arrow(i, (t - (t1 - V.rAim[i])) / V.rAim[i]); }
+          if (k === 3 && hit) { // falls over and fades
+            const u = V.rDie[i] >= 0 ? (ft - V.rDie[i]) / SH.hitFallMs : 0;
             gx.save(); gx.globalAlpha = Math.max(0, Math.min(1, (1 - u) * 2.5)); gx.translate(x + ss / 2, y + ss * 0.9); gx.rotate(Math.min(1, u * 3) * Math.PI / 2); gx.drawImage(S.sap[V.rM[i]], 0, 0, ss, ss, -ss / 2, -ss * 0.9, ss, ss); gx.restore(); continue;
           }
-          if (hit && u < 1) { y -= Math.sin(Math.min(1, u) * Math.PI) * cs * 0.5; gx.save(); gx.translate(x + ss / 2, y); gx.scale(-1, 1); gx.drawImage(S.sap[V.rM[i]], f * ss, 0, ss, ss, -ss / 2, 0, ss, ss); gx.restore(); continue; }
+          const u = hit ? (t - t1) / Math.max(1, V.knockMs) : 0;
+          if (hit && u < 1) { y -= Math.sin(u * Math.PI) * cs * 0.5; gx.save(); gx.translate(x + ss / 2, y); gx.scale(-1, 1); gx.drawImage(S.sap[V.rM[i]], f * ss, 0, ss, ss, -ss / 2, 0, ss, ss); gx.restore(); continue; }
           gx.drawImage(S.sap[V.rM[i]], f * ss, 0, ss, ss, x, y, ss, ss);
           continue;
         }
-        const back = t >= V.rArr[i] + V.rBite[i], biting = !back && t >= V.rArr[i], f = biting ? 0 : ((t / SH.stepMs + i) | 0) & 1;
+        const back = t >= t1, biting = !back && t >= t1 - V.biteMs, f = biting ? 0 : ((t / SH.stepMs + i) | 0) & 1;
         const bob = biting ? Math.abs(Math.sin(t / 60)) * cs * SH.bob * 2 : f * cs * SH.bob;
         const y = MY(pos[0], pos[1]) * cs - ss / 2 - bob;
         gx.drawImage(S.sap[V.rM[i]], f * ss, 0, ss, ss, x, y, ss, ss);
-        if (back) { const n = Math.min(3, V.rEn[i]); for (let j = 0; j < n; j++) gx.drawImage(S.mini[V.rM[i]], x + (ss - mb) / 2, y - mb * (j + 0.6)); }
+        if (back) gx.drawImage(S.mini[V.rM[i]], x + (ss - mb) / 2, y - mb * 0.6);
       }
       // Archers on their towers (bow drawn while an arrow is out); a falling tower throws its archer.
       const as = S.as;
@@ -734,9 +724,15 @@
     function cssAt(bx, by, out) { out.x = (MX(bx, by) * V.cs) / V.dpr; out.y = (MY(bx, by) * V.cs) / V.dpr; return out; }
     // Show introspection for selfTest: live hit runners, arrows in flight, struck ones; gate and particle state.
     function hitInfo() {
-      let live = 0, arrows = 0, struck = 0, kind = 0; const t = V.showT;
-      for (let i = 0; i < V.rN; i++) { if (!V.rK[i] || V.rSt[i] === 3) continue; live++; kind = V.rK[i]; if (V.rSt[i] === 2) struck++; else if (i < V.rLaunched && t >= V.rArr[i] - V.rAim[i]) arrows++; }
-      return { live, arrows, struck, kind, label: V.fxT - V.label.t < SH.labelMs };
+      let live = 0, arrows = 0, struck = 0, kind = 0; const t = V.t;
+      for (let i = 0; i < RMAX; i++) { if (!V.rOn[i] || V.rK[i] === 1) continue; live++; kind = V.rK[i]; if (t >= V.rT1[i]) struck++; else if (t >= V.rT1[i] - V.rAim[i]) arrows++; }
+      return { live, arrows, struck, kind: kind === 3 ? 2 : kind === 2 ? 1 : 0, label: V.fxT - V.label.t < SH.labelMs };
+    }
+    // Live runners by space and kind (selfTest and the harness).
+    function runners() {
+      const bySpace = [0, 0, 0, 0, 0, 0, 0, 0]; let eat = 0, carrying = 0, hit = 0;
+      for (let i = 0; i < RMAX; i++) { if (!V.rOn[i]) continue; bySpace[V.rS[i] & 7]++; if (V.rK[i] === 1) { eat++; if (V.t >= V.rT1[i]) carrying++; } else hit++; }
+      return { live: V.live, eat, carrying, hit, bySpace, dropped: V.stats.dropped, cap: RMAX };
     }
     function fxInfo() {
       let pops = 0, falls = 0, parts = 0; const ft = V.fxT;
@@ -745,8 +741,8 @@
       return { pops, falls, parts, shaking: (ft - V.shT) / V.shMs < 1, keep: V.gob.on && (V.clock - V.gob.t0) / (SH.goblinMs * SH.keepFrac) < 1, gates: Array.from(V.gSt.subarray(0, V.B ? V.B.gateCells.length : 0)), lockFalling: V.B ? V.B.gateCells.some((_, k) => V.gSt[k] === 1 && ft - V.gT[k] < FX.lockFallMs) : false };
     }
 
-    Object.assign(V, { setLevel, reset, layout, startShow, update, fastForward, goblin, draw, checkSprites, buildSprites, paintLayer, shake, cssAt, hitInfo, fxInfo,
-      idle: () => !V.showOn, chip: (m, px) => block(m, px), man: (m, px) => sapper(m, px) });
+    Object.assign(V, { setLevel, reset, layout, sync, setSlots, update, goblin, draw, checkSprites, buildSprites, paintLayer, shake, cssAt, hitInfo, fxInfo, runners,
+      chip: (m, px) => block(m, px), man: (m, px) => sapper(m, px) });
     return V;
   }
 

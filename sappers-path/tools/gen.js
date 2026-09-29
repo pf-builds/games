@@ -243,12 +243,12 @@ function fort(era, seed, P) {
 }
 const coloursOf = (L) => { const s = new Set(); for (const row of L.grid) for (const ch of row) { const m = E.matOf(ch); if (m && m !== IRON) s.add(m); } return s; };
 
-// Deal by simulation: pick a colour and a squad size, play it under dealing rules (D.hold spaces, archers lethal), keep
-// it if nothing fails. D: {hold, size:[lo,hi], deep, finish, maxCard, maxCards, tries, maxTaps (optional: a deal with more
+// Deal by simulation: pick a colour and a squad size, play it patiently under dealing rules (D.hold spaces, archers
+// lethal, D.time the engine timing), keep it if nothing fails. D: {hold, size:[lo,hi], deep, finish, maxCard, maxCards, tries, maxTaps (optional: a deal with more
 // cards than this is dropped, so a level never asks for more taps)}.
 function deal(L, seed, D) {
   const B = E.compile(Object.assign({ cols: [[], [], [], [], []] }, L)), r = rng(seed);
-  const S = E.sim(B, { hold: D.hold, archersKill: true }, { deal: true }), buf = new Int32Array(S.M.length);
+  const S = E.sim(B, { hold: D.hold, archersKill: true, time: D.time }, { deal: true }), buf = new Int32Array(S.M.length);
   const un = new Int32Array(E.NMAT); for (let m = 1; m < E.NMAT; m++) if (m !== IRON) un[m] = B.pix[m];
   const play = [];
   for (let guard = 0; guard < D.maxCards && S.pixLeft > 0; guard++) {
@@ -263,7 +263,7 @@ function deal(L, seed, D) {
       let n = Math.min(un[m], ri(r, D.size[0], D.size[1]), D.maxCard);
       if (un[m] <= D.maxCard && r() < D.finish) n = un[m];
       S.save(buf);
-      S.playSquad(m, n);
+      S.playSquad(m, n); S.quiet();
       if (S.status === E.FAILED) { S.load(buf); continue; }
       un[m] -= n; play.push([m, n]); done = true;
     }

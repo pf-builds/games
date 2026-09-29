@@ -1,10 +1,11 @@
-// Sapper's Path v3 grader (SPEC-v3 §5 grading). Every number comes from the caller's config.
+// Sapper's Path v3 grader (SPEC-v3 §5 grading). Every number comes from the caller's config. Every game is played
+// patiently (SPEC-v3 §9, the dispatch model): tap, run the engine until nothing moves, tap again.
 //   rate(B, rules, n, seed)            random-tap win rate: n seeded playouts, each tap a uniform pick of a non-empty column
 //   greedy(B, rules, n, seed)          one-move-lookahead player's win rate (a human proxy)
 //   orders(B, rules, cap, nodes)       capped count of winning tap orders (memoised DFS over whole-game states)
 //   solve(B, rules, nodes, hint)       one winning order (DFS; tries `hint` first), or null
 //   narrow(B, rules, order, nodes)     safe taps per turn along a winning line (forced turns = exactly one safe tap)
-//   line(B, rules, order)              replay: {won, reason, peak, len}
+//   line(B, rules, order)              patient replay: {won, reason, peak, len, ms (engine time to the end)}
 // All loops are bounded by the node budgets and the deck size.
 "use strict";
 const E = require("../src/engine.js");
@@ -20,7 +21,7 @@ function rate(B, rules, n, seed, S) {
     for (let guard = 0; guard <= B.ncards && S.status === E.PLAYING; guard++) {
       let c = 0; for (let j = 0; j < E.NCOL; j++) if (S.heads[j] < B.colLen[j]) open[c++] = j;
       if (!c) break;
-      S.play(open[Math.floor(r() * c)]);
+      S.play(open[Math.floor(r() * c)]); S.quiet();
     }
     if (S.status === E.WON) wins++;
   }
@@ -38,11 +39,11 @@ function greedy(B, rules, n, seed) {
       S.save(buf); let nb = 0, bl = 1e9;
       for (let j = 0; j < E.NCOL; j++) {
         if (S.heads[j] >= B.colLen[j]) continue;
-        S.play(j); const v = S.status === E.WON ? -1 : S.status === E.FAILED ? 1e6 : S.lineLen; S.load(buf);
+        S.play(j); S.quiet(); const v = S.status === E.WON ? -1 : S.status === E.FAILED ? 1e6 : S.lineLen; S.load(buf);
         if (v < bl) { bl = v; nb = 0; } if (v === bl) best[nb++] = j;
       }
       if (!nb) break;
-      S.play(best[Math.floor(r() * nb)]);
+      S.play(best[Math.floor(r() * nb)]); S.quiet();
     }
     if (S.status === E.WON) wins++;
   }
@@ -63,7 +64,7 @@ function orders(B, rules, cap, nodes) {
     let total = 0; S.save(bufs[k]);
     for (let j = 0; j < E.NCOL && total < cap; j++) {
       if (S.heads[j] >= B.colLen[j]) continue;
-      S.play(j); total += dfs(k + 1); S.load(bufs[k]);
+      S.play(j); S.quiet(); total += dfs(k + 1); S.load(bufs[k]);
       if (out) break;
     }
     if (total > cap) total = cap;
@@ -89,12 +90,12 @@ function solve(B, rules, nodes, hint, from) {
     const kids = [];
     for (let j = 0; j < E.NCOL; j++) {
       if (S.heads[j] >= B.colLen[j]) continue;
-      S.play(j); if (S.status !== E.FAILED) kids.push([j, S.status === E.WON ? -1 : S.lineLen]); S.load(bufs[k]);
+      S.play(j); S.quiet(); if (S.status !== E.FAILED) kids.push([j, S.status === E.WON ? -1 : S.lineLen]); S.load(bufs[k]);
     }
     const hj = hint && k < hint.length ? hint.charCodeAt(k) - 48 : -1;
     kids.sort((p, q) => (q[0] === hj) - (p[0] === hj) || p[1] - q[1] || p[0] - q[0]);
     for (const [j] of kids) {
-      S.play(j); path.push(j);
+      S.play(j); S.quiet(); path.push(j);
       if (dfs(k + 1)) return true;
       path.pop(); S.load(bufs[k]);
       if (used > nodes) return false;
@@ -116,20 +117,20 @@ function narrow(B, rules, order, nodes) {
     for (let j = 0; j < E.NCOL; j++) {
       if (S.heads[j] >= B.colLen[j]) continue; open++;
       if (j === order.charCodeAt(t) - 48) { safe++; continue; }
-      S.play(j);
+      S.play(j); S.quiet();
       if (S.status === E.WON) safe++;
       else if (S.status === E.PLAYING) { S.save(kid); const got = solve(B, rules, nodes, null, kid); if (got) safe++; else if (got === undefined) unknown++; }
       S.load(buf);
     }
     if (open > 1) { turns++; sum += safe; if (safe === 1) forced++; if (safe < minSafe) minSafe = safe; }
-    S.play(order.charCodeAt(t) - 48);
+    S.play(order.charCodeAt(t) - 48); S.quiet();
   }
   return { turns, forced, minSafe: turns ? minSafe : null, meanSafe: turns ? +(sum / turns).toFixed(2) : null, unknown };
 }
 
 function line(B, rules, order) {
   const S = E.replay(B, rules, order);
-  return { won: S.status === E.WON, reason: S.reason, peak: S.peak, len: order.length, hits: S.hits, kills: S.kills };
+  return { won: S.status === E.WON, reason: S.reason, peak: S.peak, len: order.length, hits: S.hits, kills: S.kills, ms: S.now };
 }
 
 module.exports = { rate, greedy, orders, solve, narrow, line, rng };

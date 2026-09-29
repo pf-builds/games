@@ -9,20 +9,26 @@
 // material 14 (n, Gilt) holds the keys. A gate is the 4-connected iron group holding `at`; a tower is the 4-connected
 // group of `at`'s material, its range a disc of radius r around the group's centroid.
 //
-// Rules (SPEC-v3 §2-4 plus the §9 M0 decisions):
+// Rules (SPEC-v3 §2-4 and §9; the dispatch model from playtest 1): a deterministic, event-driven time simulation.
 //   Walkable = grass, dirt, camp. Connected ground = walkable cells 4-joined to the camp. A pixel is reachable when it
 //   touches connected ground; its distance is the smallest camp-BFS distance of a connected neighbour. Ties go to the
 //   smaller |y - campRow| (campRow = the camp's top row), then the lower x, then the lower y.
-//   A squad {m, n} eats n pixels one at a time, each the nearest reachable pixel of m. An eaten pixel turns to dirt.
-//   Archers: while a tower stands, a target inside its range (and not itself a tower pixel) is covered. A card squad whose
-//   next target is covered is hit: every remaining sapper of that squad (the target never moves). Easy/Normal send them
-//   to the holding line; Hard kills them. Holding-line sappers are wary: an entry resumes only when its next target is
-//   uncovered, and stops (keeping its place) before walking into range. That is the re-hit rule; it also bounds the
-//   cascade, since every resume eats at least one pixel.
-//   Leftovers join the holding line: merge into the entry of their material, else a new space; past capacity = fail.
-//   After the play, the first entry (in line order) that can resume does, and the scan restarts until nothing moves.
-//   Win: no pixels left. Fail: overflow; short (Hard: a kill leaves a material with fewer sappers than pixels); stuck
-//   (tray empty, line settled, pixels left); no move (every front card would overflow or be killed on play).
+//   Tap: the squad {m, n} takes a free holding space at once (no merging: two squads of a colour take two spaces). No
+//   free space = overflow, the assault fails. Its sappers wait at the space.
+//   Dispatch: whenever a space has sappers waiting and its colour has an unclaimed reachable pixel, one sapper goes to
+//   the nearest one and claims it (so no pixel is targeted twice); at most one per space every time.staggerMs. Spaces
+//   dispatch in tap order. So with 2 pixels open, a squad of 14 sends 2, and the next round goes as those pop.
+//   Walk, pop, carry: tiles = the pixel's distance + 1. It pops (turns to dirt, reachability updates) at dispatch +
+//   yardMs + tiles * tileMs + biteMs, and the sapper is home at pop + yardMs + tiles * carryMs. A space frees when every
+//   sapper of its squad has been sent and is home.
+//   Archers: while a tower stands, a pixel inside its range (and not itself a tower pixel) is covered. A sapper sent at
+//   a covered pixel is hit on the way (at dispatch + yardMs + ceil(tiles / 2) * tileMs; the pixel is never claimed) and
+//   its squad turns wary: from then on it only goes for uncovered pixels. Easy and Normal: the hit sapper walks back to
+//   its space (home after knockMs and the walk) and waits again. Hard: it dies, and a colour left with fewer sappers
+//   than pixels fails the level short (level 51, safeArchers, never kills).
+//   Events at the same time run in the order they were scheduled; then dispatch; then the checks. Win: the last pixel
+//   pops. Once nothing is moving: stuck (tray empty, pixels left) or no move (every front card would overflow).
+//   Patient play = tap, run until nothing moves, tap again (replay, the grader, the baker). Rushing only adds risk.
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
@@ -34,10 +40,10 @@
   const PLAYING = 0, WON = 1, FAILED = -1;
   const OVERFLOW = 1, SHORT = 2, STUCK = 3, NOMOVE = 4;
   const REASONS = ["", "overflow", "short", "stuck", "nomove"];
-  // Event log (optional, S.logOn): [type, a, b] triples. EAT cell mat, JOIN mat count, HIT mat count, KILL mat count,
-  // RESUME mat count, GATE gate 0, TOWER tower 0, AIM cell mat (the covered pixel a squad was hit going for; logged
-  // just before its HIT or KILL, for the page's arrow show only).
-  const EV = { EAT: 1, JOIN: 2, HIT: 3, KILL: 4, RESUME: 5, GATE: 6, TOWER: 7, AIM: 8 };
+  // Event log (optional, S.logOn; the page's show reads it): [type, a, b] triples. TAP space mat (space -1: overflow),
+  // DISP sapper space, EAT cell sapper (the pixel pops), GATE gate 0, TOWER tower 0, HIT sapper mat (sent back), KILL
+  // sapper mat, HOME sapper space, FREE space mat.
+  const EV = { TAP: 1, DISP: 2, EAT: 3, GATE: 4, TOWER: 5, HIT: 6, KILL: 7, HOME: 8, FREE: 9 };
   const CODE = { ".": GRASS, ",": DIRT, "~": WATER, "#": CAMP };
   const matOf = (ch) => { const k = ch.charCodeAt(0) - 96; return k >= 1 && k <= 14 ? k : 0; };
   const chOf = (v) => (v > 0 ? String.fromCharCode(96 + v) : v === GRASS ? "." : v === DIRT ? "," : v === WATER ? "~" : "#");
@@ -123,27 +129,50 @@
       colStart, colLen, sapTotal, pix, hoff, Z1, Z2, pixTotal, ncards: cardM.length, safeArchers: L.safeArchers === true };
   }
 
-  // A mutable game on a compiled board. rules = {hold, archersKill}. opts.deal: dealing mode (no tray; play squads with
-  // playSquad; no short/stuck/no-move checks). The whole state lives in one Int32Array, so save/load are one copy.
+  // Timing (config v3.time, whole ms of engine time; the page plays engine time at show.pace x real time). Every value
+  // is clamped to a sane integer so a bad config can't stall or reorder the simulation.
+  function timeOf(T) {
+    const g = (k, d, lo) => { const v = T && Number.isFinite(+T[k]) ? Math.round(+T[k]) : d; return Math.max(lo, Math.min(60000, v)); };
+    return { tileMs: g("tileMs", 80, 1), carryMs: g("carryMs", 90, 1), yardMs: g("yardMs", 250, 0), biteMs: g("biteMs", 180, 0), staggerMs: g("staggerMs", 120, 0), knockMs: g("knockMs", 300, 0) };
+  }
+
+  // A mutable game on a compiled board: a deterministic, event-driven time simulation (SPEC-v3 §3, the dispatch model).
+  // rules = {hold, archersKill, time, mergeLeftovers?}. opts.deal: dealing mode (no tray: squads come from playSquad;
+  // no stuck or no-move checks; any archer kill fails). The whole state (grid, reachability heaps, spaces, sappers in
+  // flight, the event queue, the clock) lives in one Int32Array, so save/load are one copy and a replay is exact.
   function sim(B, rules, opts) {
     const n = B.n, nb = B.nb, rank = B.rank, cover = B.cover, towerOf = B.towerOf, keyOf = B.keyOf, gateOf = B.gateOf, hoff = B.hoff;
     const cap = Math.max(1, Math.min(MAXLINE, rules.hold | 0)), lethal = !!rules.archersKill && !B.safeArchers, deal = !!(opts && opts.deal), nt = B.towers.length;
+    const merge = rules.mergeLeftovers === true, T = timeOf(rules.time);
+    // Sappers are numbered per game: every dispatch is one pixel popped or one archer hit (at most one per squad, then
+    // it is wary), so pixels + squads bounds them. Pending events: one per sapper in flight, plus a wake per space.
+    const SQ = deal ? 4096 : B.ncards + 8, SMAX = B.pixTotal + SQ + 8, EMAX = SMAX + 4 * MAXLINE + 8;
     // Layout of the state buffer.
     let o = 0; const at = (k) => { const r = o; o += k; return r; };
     const oA = at(n), oD = at(n), oK = at(n), oP = at(n), oH = at(B.hoff[NMAT]), oHL = at(NMAT), oLeft = at(NMAT), oSap = at(NMAT), oT = at(MAXTOWERS),
-      oHead = at(NCOL), oLM = at(MAXLINE), oLN = at(MAXLINE), oS = at(16);
+      oHead = at(NCOL), oSM = at(MAXLINE), oSW = at(MAXLINE), oSO = at(MAXLINE), oSF = at(MAXLINE), oSN = at(MAXLINE), oSQ = at(MAXLINE), oOrd = at(MAXLINE),
+      oS = at(24), oQS = at(SMAX), oQC = at(SMAX), oQK = at(SMAX), oQ0 = at(SMAX), oQ1 = at(SMAX), oQ2 = at(SMAX), oET = at(EMAX), oEQ = at(EMAX), oEX = at(EMAX);
     const M = new Int32Array(o), init = new Int32Array(o);
-    const a = M.subarray(oA, oA + n), d = M.subarray(oD, oD + n), hk = M.subarray(oK, oK + n), hpos = M.subarray(oP, oP + n), heap = M.subarray(oH, oH + B.hoff[NMAT]);
-    const hlen = M.subarray(oHL, oHL + NMAT), left = M.subarray(oLeft, oLeft + NMAT), sap = M.subarray(oSap, oSap + NMAT), tleft = M.subarray(oT, oT + MAXTOWERS);
-    const heads = M.subarray(oHead, oHead + NCOL), lineM = M.subarray(oLM, oLM + MAXLINE), lineN = M.subarray(oLN, oLN + MAXLINE);
+    const sub = (k, len) => M.subarray(k, k + len);
+    const a = sub(oA, n), d = sub(oD, n), hk = sub(oK, n), hpos = sub(oP, n), heap = sub(oH, B.hoff[NMAT]);
+    const hlen = sub(oHL, NMAT), left = sub(oLeft, NMAT), sap = sub(oSap, NMAT), tleft = sub(oT, MAXTOWERS), heads = sub(oHead, NCOL);
+    // Spaces (the holding line): material, sappers waiting at the space, sappers out, flags (1 wary), next dispatch
+    // time, tap number (0 = free). ord: occupied spaces in tap order (dispatch priority).
+    const spM = sub(oSM, MAXLINE), spW = sub(oSW, MAXLINE), spO = sub(oSO, MAXLINE), spF = sub(oSF, MAXLINE), spN = sub(oSN, MAXLINE), spQ = sub(oSQ, MAXLINE), ord = sub(oOrd, MAXLINE);
+    // Sappers: space, target cell, kind (1 eat, 2 hit and sent back, 3 killed), dispatch time, pop or hit time, home time.
+    const qS = sub(oQS, SMAX), qC = sub(oQC, SMAX), qK = sub(oQK, SMAX), q0 = sub(oQ0, SMAX), q1 = sub(oQ1, SMAX), q2 = sub(oQ2, SMAX);
+    // Event queue: a binary heap on (time, sequence); payload x = id * 4 + type (0 pop, 1 hit, 2 home, 3 wake a space).
+    const eT = sub(oET, EMAX), eQ = sub(oEQ, EMAX), eX = sub(oEX, EMAX);
     // Scalars in M[oS + k].
-    const S_LEN = oS, S_PIX = oS + 1, S_STAND = oS + 2, S_STATUS = oS + 3, S_REASON = oS + 4, S_HITS = oS + 5, S_KILLS = oS + 6, S_Z1 = oS + 7, S_Z2 = oS + 8, S_PEAK = oS + 9, S_PLAYS = oS + 10, S_FAILM = oS + 11;
+    const S_LEN = oS, S_PIX = oS + 1, S_STAND = oS + 2, S_STATUS = oS + 3, S_REASON = oS + 4, S_HITS = oS + 5, S_KILLS = oS + 6, S_Z1 = oS + 7, S_Z2 = oS + 8,
+      S_PEAK = oS + 9, S_PLAYS = oS + 10, S_FAILM = oS + 11, S_NOW = oS + 12, S_SN = oS + 13, S_EL = oS + 14, S_ESEQ = oS + 15, S_ORD = oS + 16, S_TAPS = oS + 17, S_OUT = oS + 18, S_DISP = oS + 19;
+    const CLAIMED = -2;
     const q = new Int32Array(n);
-    const ev = new Int32Array(3 * (4 * n + 64)); let evLen = 0;
+    const ev = new Int32Array(3 * (4 * SMAX + 64)); let evLen = 0, evLost = false;
     let logOn = false;
-    const log = (t, p, r) => { if (logOn && evLen + 3 <= ev.length) { ev[evLen++] = t; ev[evLen++] = p; ev[evLen++] = r; } };
+    const log = (t, p, r) => { if (!logOn) return; if (evLen + 3 <= ev.length) { ev[evLen++] = t; ev[evLen++] = p; ev[evLen++] = r; } else evLost = true; };
 
-    // Indexed min-heap per material over reachable pixels, keyed hk = distance * n + rank.
+    // Indexed min-heap per material over reachable, unclaimed pixels, keyed hk = distance * n + rank.
     function up(m, i) {
       const base = hoff[m], c = heap[base + i], k = hk[c];
       while (i > 0) { const p = (i - 1) >> 1, pc = heap[base + p]; if (hk[pc] <= k) break; heap[base + i] = pc; hpos[pc] = i; i = p; }
@@ -159,15 +188,16 @@
       }
       heap[base + i] = c; hpos[c] = i;
     }
+    // A claimed pixel (a sapper is on its way) is out of the heap and stays out: touch leaves it alone.
     function touch(p, dist) {
-      const m = a[p]; if (m <= 0 || gateOf[p] >= 0) return;
+      const m = a[p]; if (m <= 0 || gateOf[p] >= 0 || hk[p] === CLAIMED) return;
       const key = dist * n + rank[p];
       if (hk[p] < 0) { hk[p] = key; const i = hlen[m]++; heap[hoff[m] + i] = p; up(m, i); } else if (key < hk[p]) { hk[p] = key; up(m, hpos[p]); }
     }
-    function popTop(m) {
-      const base = hoff[m], c = heap[base], len = --hlen[m];
-      if (len > 0) { heap[base] = heap[base + len]; hpos[heap[base]] = 0; down(m, 0); }
-      hk[c] = -1; hpos[c] = -1; return c;
+    function removeAt(m, i) {
+      const base = hoff[m], c = heap[base + i], len = --hlen[m];
+      if (i < len) { const mv = heap[base + len]; heap[base + i] = mv; hpos[mv] = i; down(m, i); up(m, hpos[mv]); }
+      hpos[c] = -1; return c;
     }
     // Incremental BFS: c just became walkable. Distances only ever shrink (ground only grows), so one FIFO pass from c
     // repairs every label it improves and re-keys the pixels those labels touch.
@@ -188,10 +218,40 @@
     }
     const covered = (c) => (cover[c] & M[S_STAND]) !== 0 && towerOf[c] < 0;
     const target = (m) => (m > 0 && m < NMAT && hlen[m] > 0 ? heap[hoff[m]] : -1);
+    // A wary squad's target: the nearest unclaimed reachable pixel outside every standing ring (a scan of its heap).
+    function wareTarget(m) {
+      if (!(m > 0 && m < NMAT) || !hlen[m]) return -1;
+      if (!M[S_STAND]) return heap[hoff[m]];
+      let best = -1, bk = 0; const base = hoff[m], len = hlen[m];
+      for (let i = 0; i < len; i++) { const c = heap[base + i]; if (!covered(c) && (best < 0 || hk[c] < bk)) { best = c; bk = hk[c]; } }
+      return best;
+    }
 
-    function eatCell(c) {
-      const m = a[c]; popTop(m);
-      a[c] = DIRT; left[m]--; M[S_PIX]--; M[S_Z1] ^= B.Z1[c]; M[S_Z2] ^= B.Z2[c]; log(EV.EAT, c, m);
+    // ---- event queue -----------------------------------------------------------------------------------------------
+    function push(t, x) {
+      let i = M[S_EL]; if (i >= EMAX) return; M[S_EL] = i + 1; const s = M[S_ESEQ]++;
+      while (i > 0) { const p = (i - 1) >> 1; if (eT[p] < t || (eT[p] === t && eQ[p] < s)) break; eT[i] = eT[p]; eQ[i] = eQ[p]; eX[i] = eX[p]; i = p; }
+      eT[i] = t; eQ[i] = s; eX[i] = x;
+    }
+    function pop() {
+      const x = eX[0], len = --M[S_EL];
+      if (len > 0) {
+        const t = eT[len], s = eQ[len], y = eX[len]; let i = 0;
+        for (;;) {
+          let l = 2 * i + 1; if (l >= len) break;
+          const r = l + 1; if (r < len && (eT[r] < eT[l] || (eT[r] === eT[l] && eQ[r] < eQ[l]))) l = r;
+          if (eT[l] > t || (eT[l] === t && eQ[l] > s)) break;
+          eT[i] = eT[l]; eQ[i] = eQ[l]; eX[i] = eX[l]; i = l;
+        }
+        eT[i] = t; eQ[i] = s; eX[i] = y;
+      }
+      return x;
+    }
+
+    // ---- the rules -------------------------------------------------------------------------------------------------
+    function eatCell(c, id) {
+      const m = a[c];
+      a[c] = DIRT; hk[c] = -1; left[m]--; M[S_PIX]--; M[S_Z1] ^= B.Z1[c]; M[S_Z2] ^= B.Z2[c]; log(EV.EAT, c, id);
       const t = towerOf[c]; if (t >= 0 && --tleft[t] === 0) { M[S_STAND] &= ~(1 << t); log(EV.TOWER, t, 0); }
       const g = keyOf[c];
       if (g >= 0) {
@@ -202,83 +262,120 @@
       }
       relax(c);
     }
-    // Up to cnt sappers of m eat one pixel each. Returns how many ate; stop = 0 nothing reachable, 1 covered, 2 done.
-    let stop = 2;
-    function march(m, cnt) {
-      let k = 0; stop = 2;
-      while (k < cnt) {
-        if (hlen[m] === 0) { stop = 0; break; }
-        const c = heap[hoff[m]];
-        if (covered(c)) { stop = 1; break; }
-        eatCell(c); k++;
-        if (M[S_PIX] === 0) break;
-      }
-      return k;
-    }
-    function lineFind(m) { const len = M[S_LEN]; for (let i = 0; i < len; i++) if (lineM[i] === m) return i; return -1; }
     function fail(r, m) { M[S_STATUS] = FAILED; M[S_REASON] = r; M[S_FAILM] = m; }
-    function join(m, cnt) {
-      const i = lineFind(m);
-      if (i >= 0) { lineN[i] += cnt; log(EV.JOIN, m, cnt); return; }
-      const len = M[S_LEN];
-      if (len >= cap) { fail(OVERFLOW, m); log(EV.JOIN, m, cnt); return; }
-      lineM[len] = m; lineN[len] = cnt; M[S_LEN] = len + 1; if (len + 1 > M[S_PEAK]) M[S_PEAK] = len + 1; log(EV.JOIN, m, cnt);
+    // Send one sapper of space s at pixel c at time t. Covered (and the squad not yet wary): an archer hit, the pixel
+    // is not claimed, and the squad turns wary. Otherwise the pixel is claimed and pops when the sapper gets there.
+    // Walk tiles = the pixel's distance key + 1 (the step to its face).
+    function send(s, c, t) {
+      const id = M[S_SN]; if (id >= SMAX) return false;
+      M[S_SN] = id + 1; M[S_DISP]++;
+      const m = spM[s], tiles = ((hk[c] / n) | 0) + 1, hit = (spF[s] & 1) === 0 && covered(c);
+      qS[id] = s; qC[id] = c; q0[id] = t; spW[s]--; spO[s]++; M[S_OUT]++;
+      if (hit) {
+        const half = (tiles + 1) >> 1; spF[s] |= 1;
+        qK[id] = lethal || deal ? 3 : 2; q1[id] = t + T.yardMs + half * T.tileMs; q2[id] = q1[id] + T.knockMs + T.yardMs + half * T.tileMs;
+        push(q1[id], id * 4 + 1);
+      } else {
+        removeAt(m, hpos[c]); hk[c] = CLAIMED;
+        qK[id] = 1; q1[id] = t + T.yardMs + tiles * T.tileMs + T.biteMs; q2[id] = q1[id] + T.yardMs + tiles * T.carryMs;
+        push(q1[id], id * 4);
+      }
+      log(EV.DISP, id, s);
+      return true;
     }
-    function removeEntry(i) { const len = M[S_LEN]; for (let k = i; k < len - 1; k++) { lineM[k] = lineM[k + 1]; lineN[k] = lineN[k + 1]; } lineM[len - 1] = 0; lineN[len - 1] = 0; M[S_LEN] = len - 1; }
-    // Resume cascade: the first entry in line order that has an uncovered target marches; repeat until nothing moves.
-    // Each round eats at least one pixel, so pixTotal + 1 rounds bound it.
-    function cascade() {
-      for (let guard = 0; guard <= B.pixTotal + 1 && M[S_PIX] > 0; guard++) {
-        const len = M[S_LEN]; let i = 0;
-        for (; i < len; i++) { const t = target(lineM[i]); if (t >= 0 && !covered(t)) break; }
-        if (i === len) return;
-        const m = lineM[i]; log(EV.RESUME, m, lineN[i]);
-        const k = march(m, lineN[i]); sap[m] -= k; lineN[i] -= k;
-        if (lineN[i] <= 0) removeEntry(i);
+    // Every space with sappers waiting, in tap order, sends what it can: one sapper per staggerMs (all at once at 0),
+    // each to the nearest unclaimed reachable pixel of its colour (a wary squad: the nearest outside the rings).
+    function dispatch(t) {
+      if (M[S_STATUS] !== PLAYING) return;
+      const len = M[S_ORD];
+      for (let k = 0; k < len; k++) {
+        const s = ord[k];
+        for (let g = spW[s]; g > 0 && spN[s] <= t; g--) {
+          const c = spF[s] & 1 ? wareTarget(spM[s]) : target(spM[s]);
+          if (c < 0 || !send(s, c, t)) break;
+          if (T.staggerMs > 0) { spN[s] = t + T.staggerMs; if (spW[s] > 0) push(spN[s], s * 4 + 3); break; }
+        }
       }
     }
-    // Would playing this front card end the assault? (the no-move rule)
-    function cardFails(m, cnt) {
-      const t = target(m);
-      if (t >= 0 && !covered(t)) return false;
-      if (t >= 0 && lethal) return sap[m] - cnt < left[m];
-      return lineFind(m) < 0 && M[S_LEN] >= cap;
+    function freeIf(s) {
+      if (spQ[s] === 0 || spW[s] > 0 || spO[s] > 0) return;
+      spQ[s] = 0; M[S_LEN]--; log(EV.FREE, s, spM[s]);
+      const len = M[S_ORD]; let j = 0; for (let k = 0; k < len; k++) if (ord[k] !== s) ord[j++] = ord[k]; M[S_ORD] = j;
     }
+    function handle(x, t) {
+      const type = x & 3, id = x >> 2;
+      if (type === 0) { // the sapper reaches its pixel: it pops, then the sapper carries it home
+        const c = qC[id], m = a[c];
+        if (m > 0) { eatCell(c, id); sap[m]--; }
+        push(q2[id], id * 4 + 2);
+        if (M[S_PIX] === 0 && M[S_STATUS] === PLAYING) M[S_STATUS] = WON;
+      } else if (type === 1) { // an arrow: sent back to its space (Easy, Normal) or killed (Hard)
+        const s = qS[id], m = spM[s]; M[S_HITS]++;
+        if (qK[id] === 3) {
+          M[S_KILLS]++; sap[m]--; spO[s]--; M[S_OUT]--; log(EV.KILL, id, m);
+          if (M[S_STATUS] === PLAYING && (deal || sap[m] < left[m])) fail(SHORT, m);
+          freeIf(s);
+        } else { log(EV.HIT, id, m); push(q2[id], id * 4 + 2); }
+      } else if (type === 2) { // home: a hit sapper rejoins its squad; the space frees when its squad is all home
+        const s = qS[id]; spO[s]--; M[S_OUT]--; if (qK[id] === 2) spW[s]++;
+        log(EV.HOME, id, s); freeIf(s);
+      }
+      // type 3: a space's stagger is up; dispatch runs after every batch of events
+    }
+    // Would a tap on a card of m end the assault? Only when there is no free space (and it can't merge).
+    function tapFails(m) {
+      if (M[S_LEN] < cap) return false;
+      if (merge) for (let k = 0; k < M[S_ORD]; k++) if (spM[ord[k]] === m) return false;
+      return true;
+    }
+    // After every batch: the win, and once nothing is moving (no event pending), stuck and no move.
     function settle() {
       if (M[S_STATUS] !== PLAYING) return;
       if (M[S_PIX] === 0) { M[S_STATUS] = WON; return; }
-      if (deal) return;
+      if (deal || M[S_EL] > 0) return;
       let any = false, safe = false;
-      for (let j = 0; j < NCOL; j++) {
-        if (heads[j] >= B.colLen[j]) continue; any = true;
-        const ci = B.colStart[j] + heads[j];
-        if (!cardFails(B.cardM[ci], B.cardN[ci])) { safe = true; break; }
-      }
-      if (!any) fail(STUCK, M[S_LEN] > 0 ? lineM[0] : 0);
+      for (let j = 0; j < NCOL; j++) { if (heads[j] >= B.colLen[j]) continue; any = true; if (!tapFails(B.cardM[B.colStart[j] + heads[j]])) { safe = true; break; } }
+      if (!any) fail(STUCK, M[S_ORD] > 0 ? spM[ord[0]] : 0);
       else if (!safe) fail(NOMOVE, 0);
     }
-    // Send a squad (the tap, after the card leaves its column).
-    function playSquad(m, cnt) {
-      if (M[S_STATUS] !== PLAYING) return M[S_STATUS];
-      M[S_PLAYS]++;
-      const k = march(m, cnt); sap[m] -= k;
-      const rest = cnt - k;
-      if (rest > 0 && M[S_PIX] > 0) {
-        if (stop === 1) {
-          log(EV.AIM, target(m), m);
-          M[S_HITS] += rest;
-          if (lethal) { M[S_KILLS] += rest; sap[m] -= rest; log(EV.KILL, m, rest); if (deal || sap[m] < left[m]) fail(SHORT, m); }
-          else { log(EV.HIT, m, rest); join(m, rest); }
-        } else join(m, rest);
+    // Run every event up to time t (each batch of equal-time events, then dispatch, then settle), and set the clock to t.
+    function advanceTo(t) {
+      t = Math.max(M[S_NOW], Math.min(2e9, Math.floor(t)));
+      for (let guard = 0; guard < 4 * EMAX + 4 * SMAX && M[S_EL] > 0 && eT[0] <= t; guard++) {
+        const te = eT[0]; M[S_NOW] = te;
+        for (let g = 0; g < EMAX && M[S_EL] > 0 && eT[0] === te; g++) handle(pop(), te);
+        dispatch(te); settle();
       }
-      if (M[S_STATUS] === PLAYING) cascade();
-      settle();
+      M[S_NOW] = t;
       return M[S_STATUS];
     }
-    function play(col) {
+    // Run until nothing is moving (the patient player's wait). Returns the clock.
+    function quiet() {
+      for (let guard = 0; guard < 4 * EMAX + 4 * SMAX && M[S_EL] > 0; guard++) { const te = eT[0]; M[S_NOW] = te; advanceTo(te); }
+      return M[S_NOW];
+    }
+    // A squad takes a space at time t (the clock first runs to t). No free space (and no merge): overflow.
+    function tap(m, cnt, t) {
+      if (t != null) advanceTo(t);
+      if (M[S_STATUS] !== PLAYING) return M[S_STATUS];
+      M[S_PLAYS]++;
+      let s = -1;
+      if (merge) for (let k = 0; k < M[S_ORD]; k++) if (spM[ord[k]] === m) { s = ord[k]; spW[s] += cnt; break; }
+      if (s < 0) {
+        if (M[S_LEN] >= cap) { fail(OVERFLOW, m); log(EV.TAP, -1, m); return M[S_STATUS]; }
+        for (s = 0; s < cap && spQ[s] !== 0; s++);
+        spM[s] = m; spW[s] = cnt; spO[s] = 0; spF[s] = 0; spN[s] = M[S_NOW]; spQ[s] = ++M[S_TAPS]; ord[M[S_ORD]++] = s;
+        M[S_LEN]++; if (M[S_LEN] > M[S_PEAK]) M[S_PEAK] = M[S_LEN];
+      }
+      log(EV.TAP, s, m);
+      dispatch(M[S_NOW]); settle();
+      return M[S_STATUS];
+    }
+    function play(col, t) {
       if (M[S_STATUS] !== PLAYING || col < 0 || col >= NCOL || heads[col] >= B.colLen[col]) return -2;
+      if (t != null) { advanceTo(t); if (M[S_STATUS] !== PLAYING) return -2; }
       const ci = B.colStart[col] + heads[col]++;
-      return playSquad(B.cardM[ci], B.cardN[ci]);
+      return tap(B.cardM[ci], B.cardN[ci], null);
     }
 
     // Initial state.
@@ -293,39 +390,50 @@
     settle();
     init.set(M);
 
+    // Position hash (the patient solver's memo): eaten cells, heads, spaces in tap order, status. Meant for quiet states.
     const hash = () => {
       let h1 = M[S_Z1] ^ 0x1234567, h2 = M[S_Z2] ^ 0x7654321;
       for (let j = 0; j < NCOL; j++) { h1 = Math.imul(h1 ^ heads[j], 0x9E3779B1); h2 = Math.imul(h2 ^ (heads[j] + 17), 0x85EBCA77); }
-      const len = M[S_LEN];
-      for (let i = 0; i < len; i++) { h1 = Math.imul(h1 ^ (lineM[i] * 1024 + lineN[i]), 0xC2B2AE3D); h2 = Math.imul(h2 ^ (lineN[i] * 64 + lineM[i]), 0x27D4EB2F); }
-      h1 ^= h1 >>> 15; h2 ^= h2 >>> 13;
+      for (let k = 0; k < M[S_ORD]; k++) { const s = ord[k], v = spM[s] * 65536 + (spW[s] + spO[s]) * 4 + (spF[s] & 1) * 2; h1 = Math.imul(h1 ^ v, 0xC2B2AE3D); h2 = Math.imul(h2 ^ (v + 0x3141), 0x27D4EB2F); }
+      h1 ^= M[S_STATUS] * 0x51ED27; h1 ^= h1 >>> 15; h2 ^= h2 >>> 13;
       return (h1 >>> 0) * 2097152 + (h2 >>> 11);
     };
     return {
-      B, M, a, d, heads, lineM, lineN, left, cap, lethal, ev, play, playSquad, target, covered, hash,
+      B, M, a, d, heads, left, cap, lethal, ev, T, SMAX, target, covered, wareTarget, hash, play, advanceTo, quiet,
+      spM, spW, spO, spF, spQ, qS, qC, qK, q0, q1, q2,
+      // Dealing: a squad of m and n at the clock (or at t). The patient caller then runs quiet().
+      playSquad: (m, cnt, t) => tap(m, cnt, t == null ? M[S_NOW] : t),
       get logOn() { return logOn; }, set logOn(v) { logOn = !!v; },
-      reset() { M.set(init); evLen = 0; },
+      reset() { M.set(init); evLen = 0; evLost = false; },
       save(buf) { (buf || (buf = new Int32Array(M.length))).set(M); return buf; },
       load(buf) { M.set(buf); },
-      clearLog() { evLen = 0; },
-      get evLen() { return evLen; },
+      clearLog() { evLen = 0; evLost = false; },
+      get evLen() { return evLen; }, get evLost() { return evLost; },
       get status() { return M[S_STATUS]; }, get reason() { return REASONS[M[S_REASON]]; }, get failMat() { return M[S_FAILM]; },
       get lineLen() { return M[S_LEN]; }, get pixLeft() { return M[S_PIX]; }, get standing() { return M[S_STAND]; },
       get hits() { return M[S_HITS]; }, get kills() { return M[S_KILLS]; }, get peak() { return M[S_PEAK]; }, get plays() { return M[S_PLAYS]; },
+      get now() { return M[S_NOW]; }, get busy() { return M[S_EL] > 0; }, get out() { return M[S_OUT]; }, get sent() { return M[S_SN]; },
+      get nextAt() { return M[S_EL] > 0 ? eT[0] : -1; },
+      // Spaces in tap order (the holding line as the player reads it).
+      order: (out) => { out = out || []; out.length = 0; for (let k = 0; k < M[S_ORD]; k++) out.push(ord[k]); return out; },
       sappers: (m) => sap[m],
       front(j) { return heads[j] < B.colLen[j] ? B.colStart[j] + heads[j] : -1; },
-      // Reachable pixel count of m right now (tools and UI; not on the hot path).
+      tapFails: (m) => tapFails(m),
+      // Reachable, unclaimed pixels of m right now (tools and UI; not on the hot path).
       reachable(m) { return m > 0 && m < NMAT ? hlen[m] : 0; },
     };
   }
 
-  // Replay a column order ("0123..."). Returns the sim (status tells the result).
+  // Replay a column order patiently ("0123..."): tap, run until nothing moves, tap again. Returns the sim.
   function replay(B, rules, order) {
     const S = sim(B, rules);
-    for (let i = 0; i < order.length && S.status === PLAYING; i++) if (S.play(order.charCodeAt(i) - 48) === -2) break;
+    for (let i = 0; i < order.length && S.status === PLAYING; i++) { if (S.play(order.charCodeAt(i) - 48) === -2) break; S.quiet(); }
+    S.quiet();
     return S;
   }
+  // The engine rules for one difficulty: config v3.rules[d] with v3.time (and the comparison flags) attached.
+  const rulesOf = (v3, d) => Object.assign({}, v3.rules[d] || v3.rules.normal, { time: v3.time }, v3.flags || {});
   const gridOf = (w, h, a) => { const g = []; for (let y = 0; y < h; y++) { let s = ""; for (let x = 0; x < w; x++) s += chOf(a[y * w + x]); g.push(s); } return g; };
 
-  return { compile, sim, replay, gridOf, chOf, matOf, GRASS, WATER, DIRT, CAMP, NCOL, NMAT, IRON, GILT, PLAYING, WON, FAILED, EV, REASONS };
+  return { compile, sim, replay, rulesOf, timeOf, gridOf, chOf, matOf, GRASS, WATER, DIRT, CAMP, NCOL, NMAT, IRON, GILT, PLAYING, WON, FAILED, EV, REASONS };
 });

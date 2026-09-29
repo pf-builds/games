@@ -8,7 +8,8 @@
 // of an earlier pick; otherwise the nearest miss, logged as a fallback. Levels run in worker threads, one task per
 // level with seeds derived from the level number, so thread timing never changes the output. Never throws: a task that
 // fails is logged and its level falls back. The report tables are written between the bake markers of
-// tools/v3-m0-report.md.
+// tools/v3-m0-report.md. `--out DIR` writes levels.json, the pools and the report into DIR instead (a trial bake that
+// leaves the tracked level files alone).
 "use strict";
 const fs = require("fs");
 const path = require("path");
@@ -19,6 +20,8 @@ const G = require("./gen.js");
 const R = require("./grade.js");
 
 const ROOT = path.join(__dirname, "..");
+const OUT = (() => { const i = process.argv.indexOf("--out"); return i > 0 && process.argv[i + 1] ? path.resolve(process.argv[i + 1]) : null; })();
+const outPath = (rel) => (OUT ? path.join(OUT, path.basename(rel)) : path.join(ROOT, rel));
 const DIFFS = ["easy", "normal", "hard"];
 
 // ---- shared by main and workers -------------------------------------------------------------------------------
@@ -46,7 +49,7 @@ function gradeLevel(L, rules, C, hint, seed) {
     let order = hint, line = order ? R.line(B, rules[d], order) : null;
     if (!line || !line.won) { order = R.solve(B, rules[d], C.grade.solveNodes, hint); line = order ? R.line(B, rules[d], order) : null; }
     win[d] = line && line.won ? order : null;
-    grade[d] = { rate: +R.rate(B, rules[d], C.grade.playouts, seed).toFixed(4), peak: line ? line.peak : null, len: order ? order.length : null };
+    grade[d] = { rate: +R.rate(B, rules[d], C.grade.playouts, seed).toFixed(4), peak: line ? line.peak : null, len: order ? order.length : null, ms: line && line.won ? line.ms : null };
   }
   const oc = R.orders(B, rules.normal, C.grade.orderCap, C.grade.orderNodes);
   grade.normal.orders = oc.count; grade.normal.ordersCapped = oc.capped; grade.normal.ordersExact = oc.exact;
@@ -58,8 +61,8 @@ function gradeLevel(L, rules, C, hint, seed) {
 // All candidates for one generated level. Never throws: failures come back as {fail} entries.
 function candidates(n, C, rules) {
   const era = eraOf(n, C), b = bandOf(n, C), [cmin, cmax] = coloursOf(n, C, b), out = [], stats = { forts: 0, deals: 0, evals: 0, grades: 0 };
-  const D = Object.assign({}, C.deal, C.dealBy[b.kind] || {}, { maxTaps: C.maxTaps });
-  const dealRules = { hold: C.deal.hold, archersKill: true };
+  const D = Object.assign({}, C.deal, C.dealBy[b.kind] || {}, { maxTaps: C.maxTaps, time: rules.hard.time });
+  const dealRules = Object.assign({}, rules.hard, { hold: C.deal.hold, archersKill: true });
   const per = (C.candidates.perLevelBy && C.candidates.perLevelBy[b.sub]) || C.candidates.perLevel;
   for (let k = 0; k < per; k++) {
     try {
@@ -133,7 +136,7 @@ const pct = (x) => (x == null ? "-" : (100 * x).toFixed(1) + "%");
     CFG = JSON.parse(fs.readFileSync(path.join(ROOT, "config.json"), "utf8"));
     TEACH = JSON.parse(fs.readFileSync(path.join(ROOT, "levels/teaching.json"), "utf8")).levels;
   } catch (e) { console.log("bake: cannot read config: " + e.message); process.exitCode = 1; return; }
-  const rules = CFG.v3.rules, deadline = t0 + C.budget.wallSec * 1000;
+  const rules = { easy: E.rulesOf(CFG.v3, "easy"), normal: E.rulesOf(CFG.v3, "normal"), hard: E.rulesOf(CFG.v3, "hard") }, deadline = t0 + C.budget.wallSec * 1000;
   const threads = C.budget.threads || Math.max(2, os.cpus().length - 2);
   const teachBy = new Map(TEACH.map((L) => [L.n, L]));
   const tasks = []; for (let n = 1; n <= C.levels; n++) if (!teachBy.has(n)) tasks.push(n);
@@ -182,18 +185,20 @@ const pct = (x) => (x == null ? "-" : (100 * x).toFixed(1) + "%");
 
   const late = levels.filter((l) => l.band === "hard" || l.band === "hardest"), med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length ? q[(q.length - 1) >> 1] : null; };
   for (const sub of ["hard", "hardest"]) { const g = late.filter((l) => l.band === sub && !l.exempt).map((l) => l.grade.normal.greedy); say("bake: lookahead player on " + sub + " (Normal): median " + pct(med(g)) + ", max " + pct(Math.max(...g)) + " over " + g.length + " levels"); }
+  { const ms = levels.map((l) => l.grade.normal.ms).filter((x) => x != null); say("bake: patient winning line on Normal at 1x (engine time): median " + (med(ms) / 1000).toFixed(0) + " s, max " + (Math.max(...ms) / 1000).toFixed(0) + " s"); }
   say("bake: taps per level: max " + Math.max(...levels.map((l) => l.grade.cards)) + " (cap " + C.maxTaps + "); late band max " + Math.max(...levels.filter((l) => l.n >= C.curve.late.from).map((l) => l.grade.cards)));
   const out = { version: C.version, bake: { config: C.version, seed: C.seed, forts: tot.forts, deals: tot.deals, tuneEvals: tot.evals, fullGrades: tot.grades, fallbacks, lookaheadFallbacks: lookMiss }, levels };
   try {
-    writeAtomic(path.join(ROOT, "levels/levels.json"), JSON.stringify(out));
-    for (const e of [1, 2, 3]) writeAtomic(path.join(ROOT, "levels/pool-e" + e + ".json"), JSON.stringify({ version: C.version, era: e, cands: pools[e] }));
+    if (OUT) fs.mkdirSync(OUT, { recursive: true });
+    writeAtomic(outPath("levels/levels.json"), JSON.stringify(out));
+    for (const e of [1, 2, 3]) writeAtomic(outPath("levels/pool-e" + e + ".json"), JSON.stringify({ version: C.version, era: e, cands: pools[e] }));
   } catch (e) { say("bake: write failed: " + e.message); process.exitCode = 1; }
   try { writeReport(out, C, log); } catch (e) { say("bake: report tables failed: " + e.message); }
 })();
 
 // ---- report tables (between the markers in tools/v3-m0-report.md) --------------------------------------------------
 function writeReport(out, C, log) {
-  const file = path.join(__dirname, "v3-m0-report.md"), A = "<!-- bake:start -->", Z = "<!-- bake:end -->";
+  const file = outPath("tools/v3-m0-report.md"), A = "<!-- bake:start -->", Z = "<!-- bake:end -->";
   const L = out.levels, med = (a) => { const s = a.slice().sort((p, q) => p - q); return s.length ? s[(s.length - 1) >> 1] : null; };
   const rows = [];
   rows.push("### Bands on Normal", "", "| Band | Levels | In band | Exempt (teaching) | Normal min | median | max |", "|---|---|---|---|---|---|---|");

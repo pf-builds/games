@@ -1,23 +1,27 @@
 #!/usr/bin/env node
-// Sapper's Path v3 M2 harness. Headless Chromium via Playwright, real input for every play (a move is ONE tap on a
+// Sapper's Path v3 harness (M2, updated for playtest 1's dispatch model). Headless Chromium via Playwright, real input for every play (a move is ONE tap on a
 // front card, SPEC-v3 §3). Four viewports: 375×812 portrait phone (touch), 812×375 landscape phone (touch), 1280×720
 // desktop (mouse), and a 400×600 iframe inside a portal-style host page (tools/iframe-host.html, mouse). Per viewport,
 // on a fresh profile:
 //   portal shape: every request same-origin (no external requests), payload bytes, load-to-gameplay time and clicks
 //   (the title's Play is the one click), no page scrollbars on the title, map and level, primary buttons hittable;
-//   SP.selfTest(); level 1's coach line and arrow; a win on level 1 through the card buttons, the goblin, the win panel,
-//   Next reaches level 2; an overflow loss through the cards, the fail panel names it, one Retry tap restarts; a live
-//   frame sample and the draw cost on the busiest play; the Era 3 board's CSS px per cell (8 or more required);
+//   SP.selfTest(); level 1's coach line and arrow; a patient win on level 1 through the card buttons (tap, then wait
+//   until every squad is home), the goblin, the win panel, Next reaches level 2; a rushed overflow loss through the
+//   cards (a patient prefix, then three taps with squads still out), the fail sheet only once they settle, one Retry tap
+//   restarts; live frame times with three rapid taps on levels 65 and 70 at 1x and 2x, and the draw cost; the Era 3
+//   board's CSS px per cell (8 or more required);
 //   pause and resume: on window blur (a real focus change to the host page in the iframe run) and on a hidden tab,
 //   the clock stops, the Paused sheet takes the next tap, the game resumes without a jump and no card is played;
 //   the map button; a garbage save loads clean.
 // Then a hidden-tab load (document.hidden faked, rAF held, driven by SP.tick) that runs selfTest and wins a level.
 // Zero console errors AND warnings anywhere.
-// Screenshots (tools/shots-v3-m2/): 375×812 level 1 teach, level 26 gate teach, level 51 archer hit mid-animation, the
-// win mid-collapse and the goblin fleeing, a fail; 812×375 an Era 3 board; 1280×720 mid-show; the iframe mid-level.
+// Screenshots (default tools/shots-v3-playtest1/): 375×812 level 1 teach, level 26 gate teach, level 51 archer hit, the
+// win mid-collapse and the goblin fleeing, a fail; 375 and 1280: two and three overlapping squads mid-show; frame
+// strips (six frames 300 ms apart, stitched): a first squad still working while a second heads out, and level 3's
+// "only what can reach goes, then the next round"; 812×375 an Era 3 board; the iframe mid-level.
 //
 //   export PATH="$HOME/.local/opt/node/bin:$PATH"
-//   PLAYWRIGHT_MODULE=$(npm root -g)/playwright/index.mjs node tools/harness.mjs [--url http://127.0.0.1:8491/sappers-path/] [--out tools/shots-v3-m2]
+//   PLAYWRIGHT_MODULE=$(npm root -g)/playwright/index.mjs node tools/harness.mjs [--url http://127.0.0.1:8491/sappers-path/] [--out tools/shots-v3-playtest1]
 //
 // Exit 0: every assertion passed. Exit 1: an assertion or console message. Exit 2: the harness crashed or ran out of
 // time. Every page.evaluate is a short call; every wait has its own timeout; the whole run has a wall budget.
@@ -29,7 +33,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const i = process.argv.indexOf("--" + k); return i > 0 ? process.argv[i + 1] : d; };
 const URL_ = arg("url", "http://127.0.0.1:8491/sappers-path/");
 const ORIGIN = new URL(URL_).origin;
-const OUT = resolve(arg("out", resolve(here, "shots-v3-m2")));
+const OUT = resolve(arg("out", resolve(here, "shots-v3-playtest1")));
 const WALL_MS = 420000, MIN_CELL = 8;
 mkdirSync(OUT, { recursive: true });
 const wall = setTimeout(() => { console.error("harness: wall budget exceeded"); process.exit(2); }, WALL_MS);
@@ -47,6 +51,43 @@ const VIEWPORTS = [
   { name: "1280x720", width: 1280, height: 720, touch: false, dpr: 1, shots: "1280" },
   { name: "iframe-400x600", width: 480, height: 700, touch: false, dpr: 2, shots: "iframe", iframe: { w: 400, h: 600 } },
 ];
+
+// Screens for playtest 1: two and three overlapping squads mid-show (the first still out), and two frame strips.
+async function overlapShots(page, ev, tap, shot, tag, R) {
+  const reach = () => ev(() => { const st = SP.state(), o = [], p = []; st.fronts.forEach((f, j) => { if (f) (SP.reachable(f.mat) > 0 ? o : p).push(j); }); return o.concat(p); });
+  const hold = (ms) => ev((m) => { SP.tick(m); return SP.state(); }, ms);
+  R.shots = R.shots || {};
+  // Two, then three squads out on level 65.
+  await ev(() => { SP.fast(false); SP.load(65, "normal"); });
+  let cols = await reach(); await tap(`.card[data-col="${cols[0]}"]`); await hold(700);
+  cols = await reach(); if (cols.length) await tap(`.card[data-col="${cols[0]}"]`); let st = await hold(700);
+  await shot("two-squads"); R.shots.two = { spaces: st.line.length, runners: st.runners };
+  cols = await reach(); if (cols.length) await tap(`.card[data-col="${cols[0]}"]`); st = await hold(500);
+  await shot("three-squads"); R.shots.three = { spaces: st.line.length, runners: st.runners };
+  if (tag !== "375") return;
+  // Frame strips: six frames 300 ms apart (engine time), the board region only, stitched side by side.
+  const board = await page.locator("#board").boundingBox(), clip = { x: board.x, y: board.y, width: board.width, height: board.height };
+  const strip = async (name, setup) => {
+    await setup(); const bufs = [];
+    for (let k = 0; k < 6; k++) { bufs.push(await page.screenshot({ clip })); await hold(300); }
+    R.shots[name] = await stitch(page, bufs, resolve(OUT, tag + "-" + name + ".png"));
+  };
+  await strip("strip-overlap", async () => { await ev(() => SP.load(65, "normal")); const c = await reach(); await tap(`.card[data-col="${c[0]}"]`); await hold(1800); const c2 = await reach(); if (c2.length) await tap(`.card[data-col="${c2[0]}"]`); await hold(60); });
+  await strip("strip-next-round", async () => { await ev(() => SP.load(3, "normal")); const c = await ev(() => SP.state().fronts.findIndex((f) => f && f.crew === "Sawyers")); await tap(`.card[data-col="${c}"]`); await hold(200); });
+}
+// Stitch PNG buffers side by side on a canvas in a scratch page; writes the file, returns its size.
+async function stitch(page, bufs, file) {
+  const ctx = page.context(), p = await ctx.newPage();
+  const urls = bufs.map((b) => "data:image/png;base64," + b.toString("base64"));
+  const out = await p.evaluate(async (list) => {
+    const imgs = await Promise.all(list.map((u) => new Promise((r) => { const i = new Image(); i.onload = () => r(i); i.src = u; })));
+    const gap = 6, w = imgs.reduce((s, i) => s + i.width + gap, -gap), h = Math.max(...imgs.map((i) => i.height)), c = document.createElement("canvas"); c.width = w; c.height = h;
+    const g = c.getContext("2d"); g.fillStyle = "#221a26"; g.fillRect(0, 0, w, h); let x = 0; for (const i of imgs) { g.drawImage(i, x, 0); x += i.width + gap; }
+    return { url: c.toDataURL("image/png"), w, h };
+  }, urls);
+  writeFileSync(file, Buffer.from(out.url.split(",")[1], "base64")); await p.close();
+  return { w: out.w, h: out.h };
+}
 
 async function run() {
   const { chromium } = await loadPlaywright();
@@ -100,13 +141,14 @@ async function run() {
       ok(st.fail.length === 0, tag + " selfTest: " + st.fail.join("; "));
       await ev(() => SP.load(1, "normal"));
 
-      // A win through the cards.
+      // A patient win through the cards: tap, then wait until every squad is home, then the next tap.
+      const quiet = () => ev(() => { for (let i = 0; i < 6000 && SP.state().busy; i++) SP.tick(16); return SP.state(); });
       const win = await ev(() => SP.winOrder());
-      for (const c of win) await tap(`.card[data-col="${c}"]`);
+      for (const c of win) { await tap(`.card[data-col="${c}"]`); await quiet(); }
       s = await S();
-      ok(s.status === "won" && s.plays === win.length, tag + " level 1 won through the cards (" + s.status + ", " + s.plays + " plays)");
-      s = await ev(() => SP.tick(3200));
-      ok(s.goblin || s.panel === "win", tag + " the goblin flees after the last pixel");
+      ok(s.status === "won" && s.plays === win.length && !s.busy, tag + " level 1 won patiently through the cards (" + s.status + ", " + s.plays + " plays)");
+      s = await ev(() => SP.tick(1600));
+      ok(s.goblin || s.panel === "win", tag + " the goblin flees once the squads are home");
       s = await ev(() => SP.tick(3000));
       ok(s.panel === "win" && (await L("#p-title").textContent()) === "Fort razed!", tag + " win panel");
       await page.waitForTimeout(400);
@@ -114,36 +156,48 @@ async function run() {
       s = await S();
       ok(s.n === 2 && s.status === "playing" && s.panel === null, tag + " Next level loads level 2");
 
-      // A loss through the cards: an overflow on a late level.
-      await ev(() => SP.load(46, "normal"));
-      const loss = await ev(() => SP.lossOrder());
-      if (ok(!!loss, tag + " found an overflow order on level 46")) {
-        for (const c of loss) await tap(`.card[data-col="${c}"]`);
-        s = await ev(() => SP.tick(4000));
-        ok(s.status === "failed" && s.reason === "overflow" && s.panel === "fail", tag + " overflow fail through the cards (" + s.status + " " + s.reason + ")");
-        ok(/overflow/.test(await L("#p-line").textContent()), tag + " the fail panel names the reason");
+      // A rushed loss through the cards: a patient prefix, then three taps while the squads are still out.
+      const plan = await ev(() => { for (let n = 46; n <= 75; n++) { SP.load(n, "normal"); const p = SP.lossPlan(); if (p) return Object.assign({ n }, p); } return null; });
+      if (ok(!!plan, tag + " found a rush that overflows on a late level")) {
+        await ev((n) => SP.load(n, "normal"), plan.n);
+        for (const c of plan.prefix) { await tap(`.card[data-col="${c}"]`); await quiet(); }
+        for (const c of plan.rush) await tap(`.card[data-col="${c}"]`);
+        s = await S();
+        ok(s.status === "failed" && s.reason === "overflow" && s.panel === null, tag + " rushed taps overflow at the tap; the sheet waits for the squads (" + s.status + " " + s.reason + ", busy " + s.busy + ")");
+        s = await ev(() => { for (let i = 0; i < 600 && !SP.state().panel; i++) SP.tick(16); return SP.state(); });
+        ok(s.status === "failed" && s.reason === "overflow" && s.panel === "fail" && !s.busy, tag + " overflow fail sheet once the squads are home (" + s.status + " " + s.reason + ")");
+        ok(/Too many squads/.test(await L("#p-line").textContent()), tag + " the fail panel names the reason (too many squads out)");
         await page.waitForTimeout(400);
         if (vp.shots === "375") await shot("fail");
         await tap("#p-primary");
         s = await S();
         ok(s.status === "playing" && s.plays === 0 && s.panel === null, tag + " one tap on Retry restarts");
-        R.loss = loss;
+        R.loss = plan;
       }
 
-      // Mid-show on the busiest play: live frame times, then the JS cost of one draw at that moment.
-      const bz = await ev(() => SP.busiest());
-      const playTo = async () => { await ev((n) => SP.load(n, "normal"), bz.n); const o = await ev(() => SP.winOrder()); for (let i = 0; i < bz.i; i++) { await tap(`.card[data-col="${o[i]}"]`); await ev(() => SP.tick(3500)); } await tap(`.card[data-col="${o[bz.i]}"]`); };
-      await playTo();
-      R.frames = await ev(() => new Promise((res) => { const d = []; let last = performance.now(); const f = (t) => { d.push(t - last); last = t; if (d.length < 60) requestAnimationFrame(f); else { d.sort((a, b) => a - b); res({ n: d.length, p50: +d[30].toFixed(1), p95: +d[57].toFixed(1), max: +d[59].toFixed(1) }); } }; requestAnimationFrame(f); }));
-      ok(R.frames.p95 < 25, tag + " frame time during the busiest live show (p95 " + R.frames.p95 + " ms)");
-      await playTo();
-      await ev(() => SP.tick(1250));
+      // Three rapid taps on levels 65 and 70, at 1x and 2x: live frame times while the squads overlap, then the JS cost
+      // of one draw at that moment.
+      const rapid = async (n, fast) => {
+        await ev((a) => { SP.load(a[0], "normal"); SP.fast(a[1]); }, [n, fast]);
+        const cols = await ev(() => { const st = SP.state(), o = [], p = []; st.fronts.forEach((f, j) => { if (f) (SP.reachable(f.mat) > 0 ? o : p).push(j); }); return o.concat(p); });
+        for (const c of cols.slice(0, 3)) await tap(`.card[data-col="${c}"]`);
+        return ev(() => new Promise((res) => { const d = []; let last = performance.now(); const f = (t) => { d.push(t - last); last = t; if (d.length < 120) requestAnimationFrame(f); else { d.sort((a, b) => a - b); res({ n: d.length, p50: +d[60].toFixed(1), p95: +d[113].toFixed(1), max: +d[119].toFixed(1), runners: SP.state().runners, spaces: SP.state().line.length }); } }; requestAnimationFrame(f); }));
+      };
+      R.frames = {};
+      for (const n of [65, 70]) for (const fast of [false, true]) {
+        const fr = await rapid(n, fast); R.frames["L" + n + (fast ? " 2x" : " 1x")] = fr;
+        ok(fr.p95 < 25 && fr.spaces >= 2, tag + " frame time with overlapping squads, level " + n + (fast ? " 2x" : " 1x") + " (p95 " + fr.p95 + " ms, " + fr.runners + " runners, " + fr.spaces + " squads)");
+      }
+      await ev(() => { SP.fast(false); SP.load(70, "normal"); });
+      { const cols = await ev(() => { const st = SP.state(), o = []; st.fronts.forEach((f, j) => { if (f && SP.reachable(f.mat) > 0) o.push(j); }); return o; }); for (const c of cols.slice(0, 3)) await tap(`.card[data-col="${c}"]`); }
+      await ev(() => SP.tick(900));
       const perf = await ev(() => SP.perf(120));
-      R.midShow = { level: bz.n, play: bz.i, perf };
-      ok(perf.launched >= 20, tag + " the busiest play has its runners out (" + JSON.stringify(perf) + ")");
+      R.midShow = { perf };
+      ok(perf.runners >= 3, tag + " runners are out mid-show (" + JSON.stringify(perf) + ")");
       ok(perf.mean < 4 && perf.max < 12, tag + " draw cost mid-show (mean " + perf.mean + " ms, max " + perf.max + " ms)");
-      if (vp.shots === "1280" || vp.shots === "iframe") await shot("mid-show");
-      await ev(() => SP.tick(4000));
+      if (vp.shots === "iframe") await shot("mid-show");
+      if (vp.shots === "375" || vp.shots === "1280") await overlapShots(page, ev, tap, shot, vp.shots, R);
+      await ev(() => SP.settle());
 
       // Era 3's biggest board: CSS px per cell (turned a quarter on a landscape phone).
       const big = await ev(() => { let b = null; for (let n = 51; n <= 75; n++) { SP.load(n, "normal"); const s = SP.state(); if (!b || s.cs / devicePixelRatio < b.px) b = { n, px: +(s.cs / devicePixelRatio).toFixed(2), turned: document.body.classList.contains("turned") }; } return b; });
@@ -221,11 +275,11 @@ async function run() {
     await page.goto(URL_ + "?debug=1", { waitUntil: "load" });
     await page.waitForFunction(() => window.SP, null, { timeout: 15000 });
     const st = await page.evaluate(() => SP.selfTest());
-    const won = await page.evaluate(() => { SP.load(10, "hard"); for (const c of SP.winOrder()) SP.play(+c); return SP.tick(9000); });
+    const won = await page.evaluate(() => { SP.load(10, "hard"); for (const c of SP.winOrder()) { SP.play(+c); for (let i = 0; i < 6000 && SP.state().busy; i++) SP.tick(16); } return SP.tick(9000); });
     const spr = await page.evaluate(() => SP.sprites());
     report.hidden = { selfTest: { pass: st.pass, fail: st.fail, ms: st.ms }, panel: won.panel, sprites: spr };
     ok(st.fail.length === 0, "hidden selfTest: " + st.fail.join("; "));
-    ok(won.status === "won" && won.panel === "win", "hidden: level 10 on Hard won and its panel shown on SP.tick alone");
+    ok(won.status === "won" && won.panel === "win", "hidden: level 10 on Hard won patiently and its panel shown on SP.tick alone");
     ok(spr.length === 0, "hidden: sprite caches opaque (" + spr.join(",") + ")");
     await ctx.close();
   } finally { await browser.close(); }
@@ -234,7 +288,7 @@ async function run() {
 
 run().then(() => {
   writeFileSync(resolve(OUT, "harness-report.json"), JSON.stringify(report, null, 1));
-  const brief = {}; for (const [k, R] of Object.entries(report.runs)) brief[k] = { selfTest: R.selfTest && R.selfTest.pass + " pass, " + R.selfTest.fail.length + " fail", titleReadyMs: R.titleReadyMs, loadToGameplayMs: R.loadToGameplayMs, clicks: R.clicksToGameplay, era3: R.era3MinCellCss, frames: R.frames, draw: R.midShow && R.midShow.perf, pause: R.pause, requests: R.requests, payloadBytes: R.payloadBytes };
+  const brief = {}; for (const [k, R] of Object.entries(report.runs)) brief[k] = { selfTest: R.selfTest && R.selfTest.pass + " pass, " + R.selfTest.fail.length + " fail", titleReadyMs: R.titleReadyMs, loadToGameplayMs: R.loadToGameplayMs, clicks: R.clicksToGameplay, era3: R.era3MinCellCss, frames: R.frames, draw: R.midShow && R.midShow.perf, shots: R.shots, pause: R.pause, requests: R.requests, payloadBytes: R.payloadBytes };
   console.log(JSON.stringify({ runs: brief, hidden: report.hidden, console: report.console }, null, 1));
   console.log(report.fails.length ? "HARNESS: " + report.fails.length + " failure(s)" : "HARNESS: all passed");
   clearTimeout(wall); process.exit(report.fails.length ? 1 : 0);
