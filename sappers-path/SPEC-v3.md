@@ -25,7 +25,7 @@ Squads of sappers, each with a colour and a count, eat a top-down pixel fort fro
 - **Leftovers:** if the squad runs out of reachable pixels, its remaining sappers join the **holding line**. They merge into an existing entry of the same material, or take a new space.
 - **Holding capacity** is set by difficulty: Easy 6, Normal 5, Hard 4. A new entry past capacity means **fail**.
 - **Resuming:** after every play, in line order, any holding entry that has a reachable pixel resumes automatically, and this repeats until nothing changes.
-- **Logical resolution is instant at the tap,** including the cascade of resumes. Animation is presentation only and never blocks input; a tap during animation fast-forwards it.
+- **Superseded in playtest 1 (§9):** resolution is no longer instant and nothing merges. The engine is a timed dispatch simulation (a tap takes a space; only sappers who can reach a pixel go, round by round), and the show draws its state. Input never waits on it.
 - **Win:** no material pixels left.
 - **Fail:**
   - the holding line overflows, or
@@ -157,3 +157,24 @@ All the /game-forge lessons apply:
   - **Level 51 archers never kill.** The level carries `safeArchers: true`: on every difficulty a hit sends the squad to the holding line. Engine, reference rules and teaching data honour it. Every other Era 3 level keeps lethal archers on Hard.
   - **Full holding line.** At capacity each front card is marked safe or fatal by a one-tap look-ahead (exact: fatal means that tap ends the assault), with a pulsing red line and "Line full: only matching colours are safe".
   - **Wide layout.** Desktop and landscape phones put the controls, level name, holding line and tray in one side panel beside a full-height board; the win/fail sheet covers the panel.
+- 2026-09-28 (playtest 1; Peter's notes: squads stay on the board, slower, spamming must fail, only sappers who can reach a block go. Notes in `tools/v3-playtest1-notes.md`):
+  - **The dispatch model (the game's foundation).** The engine is a pure, deterministic, event-driven time simulation: `play(col, t)`, `advanceTo(t)`, `quiet()`. It stays portable.
+    - A tap takes a holding space at once. There is no merging: two squads of a colour take two spaces. A tap with no free space fails the assault (overflow, "Too many squads out").
+    - Whenever a space has sappers waiting and its colour has an unclaimed reachable pixel, one sapper goes to the nearest one (the §2 tie-break) and claims it, so no pixel is targeted twice. Each space sends one every `time.staggerMs`; spaces go in tap order.
+    - The pixel pops at dispatch + yardMs + tiles × tileMs + biteMs (tiles = its distance + 1). Reachability updates, and any waiting squad of that colour goes at once: the next round. The sapper is home yardMs + tiles × carryMs later, and the block lands in its bin.
+    - A space frees when its whole squad has been sent and is home. Waiting squads go on their own when their colour opens, whoever opened it.
+    - Events at the same time run in the order they were scheduled, then dispatch, then the checks.
+  - **Archer rule.** A sapper sent at a covered pixel is hit halfway out; the pixel is never claimed, and its squad turns wary (from then on it only goes for uncovered pixels). Easy and Normal: the sapper walks back to its space and waits. Hard: it dies, and a colour left with fewer sappers than pixels fails short. Level 51 never kills.
+  - **Fails.** Overflow at the tap; short at a kill; once nothing moves, stuck (tray empty, pixels left) or no move (every space held by a squad that can't move). Win: the last pixel pops.
+  - **Sheets.** The win or fail sheet waits until every squad is home, at most `show.settleCapMs` (6 s) after the deciding moment, then everything lands. A board tap (or Space) skips: the engine runs until nothing moves.
+  - **Patient play** (tap, wait until nothing moves, tap again) is what the grader, the dealer and the stored orders use. Rushing only adds risk, since squads hold their spaces while out. A 10-level sample (300 random games each, Normal) shows rushing never easier: rushed win rates are 0-22% where patient play is 1-100%.
+  - **Duration target (bake v7).** New graded metric: the patient play-through at 1× on the stored Normal line. Targets in `tools/bake-config.json` `duration`: median about 90 s, none over 180 s, levels 1-15 in 30-75 s. Picks prefer candidates inside the limits (misses are logged fallbacks). They are met by smaller forts (about 0.7× per side) and bigger squads (about 1.6×), not by walk speed. Result: median 97 s, max 179 s, early 41-69 s, max 26 taps.
+  - **Settings Peter can turn** (`config.json`):
+    - `show.pace` (1): the page plays engine time at pace × real time. It slows or speeds everything alike and changes no outcome.
+    - `show.speedFast` (2): the 2× toggle.
+    - `show.settleCapMs` (6000): the longest a sheet waits for squads to come home.
+    - `show.maxRunners` (240): sappers drawn at once (the rules never depend on it).
+    - `v3.time` (tileMs 80, carryMs 90, yardMs 250, biteMs 180, staggerMs 120, knockMs 300): the engine's timings. Their ratios shape which pixels squads claim, so changing them needs a rebake.
+    - `v3.flags.mergeLeftovers` (false): brings back same-colour merging for comparison. The bake assumes false. A `spaceOnTap` flag was not added: in the timed model every tap needs a space.
+  - **Speed.** Walk is 80 ms a tile at 1× (it was 40, then squeezed into a 3 s cap per play) and 40 at 2×.
+  - **Show.** Runners are the engine's sappers, drawn at engine time. They enter from their slot's point on the canvas edge and route over the ground as it stands, so they never cross a drawn block (blocks only disappear). They bite, then carry the block to the bin. The holding line shows each space's waiting count and a walking marker with the number out. When every space is taken, each front card is marked fatal.
