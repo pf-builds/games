@@ -147,7 +147,7 @@ const pct = (x) => (x == null ? "-" : (100 * x).toFixed(1) + "%");
   for (let n = 1; n <= C.levels; n++) {
     const b = bandOf(n, C), era = eraOf(n, C), id = "e" + era + "-" + String(n).padStart(2, "0");
     if (teachBy.has(n)) {
-      const T = teachBy.get(n), L = { w: T.w, h: T.h, grid: T.grid, gates: T.gates || [], towers: T.towers || [], cols: T.cols };
+      const T = teachBy.get(n), L = Object.assign({ w: T.w, h: T.h, grid: T.grid, gates: T.gates || [], towers: T.towers || [], cols: T.cols }, T.safeArchers ? { safeArchers: true } : {});
       let g; try { g = gradeLevel(L, rules, C, null, seedOf(C, n, 0)); } catch (e) { say("level " + n + ": teaching level failed to grade: " + e.message); continue; }
       const winnable = DIFFS.every((d) => g.win[d]); if (!winnable) say("level " + n + ": teaching level NOT winnable on every difficulty");
       levels.push(Object.assign({ id, n, era, source: "teaching", name: T.name, teaches: T.teaches, hint: T.hint, band: b.sub, target: b.band }, L, { win: g.win, grade: g.grade, exempt: "teaching" }));

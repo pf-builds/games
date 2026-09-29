@@ -1,12 +1,12 @@
 {
-  "version": 5,
+  "version": 6,
   "note": "Sapper's Path v3 bake (SPEC-v3 §5). Bands are Normal random-tap win rates. maxTaps caps the cards (taps) in any level. lookahead: the one-move-lookahead player's Normal win-rate target for late hard slots (a pick over it is logged). colours: [from, to, min, max] per level range. dealBy and genBy override deal/era params per band kind. Holding spaces per difficulty live in config.json v3.rules.",
   "seed": 20260928,
   "levels": 75,
   "eras": {
-    "1": {"from": 1, "to": 25, "gen": {"w": [22, 28], "h": [28, 36], "campDepth": [2, 3], "campW": [4, 8], "ditch": 0.3, "gateway": 0.25, "bankT": [1, 3], "palT": [1, 2], "fill": 0.55}},
-    "2": {"from": 26, "to": 50, "gen": {"w": [26, 32], "h": [34, 40], "campDepth": [2, 3], "campW": [4, 8], "motteR": [6, 8], "twoGates": 0.5, "fill": 0.6}},
-    "3": {"from": 51, "to": 75, "gen": {"w": [30, 36], "h": [40, 48], "campDepth": [2, 3], "campW": [4, 8], "moat": 0.5, "towerR": [2.2, 3.2], "keep": [5, 8], "towers": [2, 4], "range": [5, 7], "wallT": 2, "innerWall": 1, "fill": 0.6}}
+    "1": {"from": 1, "to": 25, "gen": {"w": [20, 26], "h": [26, 34], "campDepth": [2, 3], "campW": [4, 8], "ditch": 0.3, "gateway": 0.25, "bankT": [1, 3], "palT": [1, 2], "walkFrom": 5, "walk": 0.6, "fill": 0.72, "pack": 0.8, "sizes": {"big": [5, 8], "mid": [3, 5]}, "margin": 1, "gap": 2}},
+    "2": {"from": 26, "to": 50, "gen": {"w": [24, 30], "h": [32, 40], "campDepth": [2, 3], "campW": [4, 8], "motteR": [6, 8], "twoGates": 0.5, "bankT": [1, 2], "fill": 0.72, "pack": 0.8, "sizes": {"big": [5, 8], "mid": [3, 5]}, "margin": 1, "gap": 2}},
+    "3": {"from": 51, "to": 75, "gen": {"w": [28, 34], "h": [38, 46], "campDepth": [2, 3], "campW": [4, 8], "moat": 0.5, "towerR": [2.2, 3.2], "keep": [5, 8], "towers": [2, 4], "range": [5, 7], "wallT": 2, "innerWall": 1, "fill": 0.72, "pack": 0.8, "sizes": {"big": [5, 9], "mid": [3, 6]}, "margin": 1, "gap": 2}}
   },
   "curve": {
     "early": {"from": 1, "to": 15, "band": [0.85, 1.0]},
@@ -19,10 +19,10 @@
   "reliefColours": [9, 10],
   "sawLowColours": [8, 9],
   "deal": {"hold": 4, "size": [3, 12], "deep": 0.15, "finish": 0.3, "maxCard": 40, "maxCards": 240, "tries": 14, "attempts": 24},
-  "dealBy": {"early": {"size": [10, 30], "deep": 0.05}, "mid": {"size": [5, 15], "deep": 0.12}, "late": {"size": [7, 18], "deep": 0.18}},
+  "dealBy": {"early": {"size": [10, 30], "deep": 0.05}, "mid": {"size": [6, 16], "deep": 0.12}, "late": {"size": [8, 20], "deep": 0.18}},
   "tune": {"stages": [{"playouts": 64, "steps": 700}, {"playouts": 256, "steps": 200}], "narrow": {"playouts": 256, "greedyPlayouts": 128, "steps": 400, "stopAt": 0.08, "margin": 0.005}, "margin": 0.02, "colMin": 3, "colMax": 30, "resize": 0.25, "split": 0.5, "minCard": 2, "maxCard": 40},
   "grade": {"playouts": 400, "greedyPlayouts": 100, "orderCap": 1000, "orderNodes": 200000, "solveNodes": 200000, "narrowNodes": 20000},
-  "candidates": {"perLevel": 6, "perLevelBy": {"saw1": 8, "hard": 12, "hardest": 12}, "fortTries": 80},
+  "candidates": {"perLevel": 6, "perLevelBy": {"saw0": 8, "saw1": 8, "hard": 12, "hardest": 12}, "fortTries": 80},
   "dedupe": {"sameCells": 0.9},
   "budget": {"wallSec": 1500, "threads": 0}
 }

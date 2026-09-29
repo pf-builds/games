@@ -40,36 +40,49 @@ const band = (G, sdf, k0, k1, v) => G.each((x, y) => { const s = sdf(x, y); if (
 const fill = (G, sdf, k0, v) => G.each((x, y) => { if (sdf(x, y) <= -k0) G.put(x, y, v); });
 const disc = (G, cx, cy, r, v) => G.each((x, y) => { if (Math.hypot(x + 0.5 - cx, y + 0.5 - cy) <= r) G.put(x, y, v); });
 
-// Buildings in a yard: rectangles of DIRT with a one-cell dirt margin. Each role paints its colours.
-const ROLE_MATS = { hut: [4, 3], hedge: [11], well: [5], longhouse: [4, 8], oven: [9], chapel: [6, 12], hall: [6, 8], barracks: [9, 3], garden: [11, 13], store: [2, 1], shrine: [12], fountain: [13, 5] };
-function freeRect(G, x0, y0, x1, y1) {
-  for (let y = y0 - 1; y <= y1 + 1; y++) for (let x = x0 - 1; x <= x1 + 1; x++) if (G.get(x, y) !== DIRT) return false;
+// Buildings in a yard (denser since the v3 fix pass): a building is a rectangle of yard dirt whose ring touches no other
+// building, so buildings keep one-cell lanes between them but may lean on a wall. A role paints a ring of its first colour
+// and (3x3 and bigger) a roof of its second. P.sizes sets the big and mid building sides; P.fill the built share of the yard.
+const ROLE_MATS = { hut: [4, 3], hedge: [11], well: [5], longhouse: [4, 8], oven: [9], chapel: [6, 12], hall: [6, 8], barracks: [9, 3], garden: [11, 13], store: [2, 1], shrine: [12], fountain: [13, 5], stable: [4, 3], tower: [5, 8] };
+const BIG = { longhouse: 1, hall: 1, barracks: 1, stable: 1 }, SMALL = { well: 1, oven: 1, shrine: 1, fountain: 1 };
+// `m` set: the ring may touch a building of another colour (the sweep packs buildings wall to wall, never same to same).
+function freeRect(G, bld, x0, y0, x1, y1, m) {
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (G.get(x, y) !== DIRT) return false;
+  for (let y = y0 - 1; y <= y1 + 1; y++) for (let x = x0 - 1; x <= x1 + 1; x++) if (x >= 0 && y >= 0 && x < G.w && y < G.h && bld[y * G.w + x] && (!m || G.get(x, y) === m)) return false;
   return true;
 }
-function placeRole(G, r, role, tries) {
-  for (let t = 0; t < tries; t++) {
-    const big = role === "longhouse" || role === "hall" || role === "barracks";
-    const bw = big ? ri(r, 5, 8) : role === "well" || role === "oven" || role === "shrine" || role === "fountain" ? ri(r, 2, 3) : ri(r, 3, 5);
-    const bh = big ? ri(r, 3, 4) : role === "well" || role === "oven" || role === "shrine" || role === "fountain" ? ri(r, 2, 3) : ri(r, 3, 5);
-    const x0 = ri(r, 1, G.w - bw - 1), y0 = ri(r, 1, G.h - bh - 1), x1 = x0 + bw - 1, y1 = y0 + bh - 1;
-    if (!freeRect(G, x0, y0, x1, y1)) continue;
-    const [m1, m2] = ROLE_MATS[role];
-    if (m2 && bw >= 3 && bh >= 3) { G.rect(x0, y0, x1, y1, m1); G.rect(x0 + 1, y0 + 1, x1 - 1, y1 - 1, m2); }
-    else if (role === "hedge" || role === "garden") { G.rect(x0, y0, x1, y1, m1); if (m2) G.put(x0 + (bw >> 1), y0 + (bh >> 1), m2); }
-    else G.rect(x0, y0, x1, y1, m2 && (bw + bh) % 2 ? m2 : m1);
-    return [x0, y0, x1, y1];
-  }
-  return null;
+function paint(G, bld, role, x0, y0, bw, bh) {
+  const [m1, m2] = ROLE_MATS[role], x1 = x0 + bw - 1, y1 = y0 + bh - 1;
+  if (m2 && bw >= 3 && bh >= 3) { G.rect(x0, y0, x1, y1, m1); G.rect(x0 + 1, y0 + 1, x1 - 1, y1 - 1, m2); }
+  else if (role === "hedge" || role === "garden") { G.rect(x0, y0, x1, y1, m1); if (m2) G.put(x0 + (bw >> 1), y0 + (bh >> 1), m2); }
+  else G.rect(x0, y0, x1, y1, m2 && (bw + bh) % 2 ? m2 : m1);
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) bld[y * G.w + x] = 1;
+  return bw * bh;
 }
-// Place the colour roles, then keep adding buildings whose colours the fort already has until `fill` of the yard is built.
-function furnish(G, r, roles, fill) {
-  let yard = 0; G.each((x, y) => { if (G.get(x, y) === DIRT) yard++; });
-  for (const role of roles) placeRole(G, r, role, 80);
+function placeRole(G, bld, r, role, tries, S) {
+  for (let t = 0; t < tries; t++) {
+    const bw = BIG[role] ? ri(r, S.big[0], S.big[1]) : SMALL[role] ? ri(r, 2, 3) : ri(r, S.mid[0], S.mid[1]);
+    const bh = BIG[role] ? ri(r, 3, 5) : SMALL[role] ? ri(r, 2, 3) : ri(r, S.mid[0], S.mid[1]);
+    const x0 = ri(r, 1, G.w - bw - 1), y0 = ri(r, 1, G.h - bh - 1);
+    if (freeRect(G, bld, x0, y0, x0 + bw - 1, y0 + bh - 1)) return paint(G, bld, role, x0, y0, bw, bh);
+  }
+  return 0;
+}
+// Place the colour roles, then keep adding buildings whose colours the fort already has until P.fill of the yard is
+// built (bounded attempts).
+function furnish(G, r, roles, P) {
+  const bld = new Uint8Array(G.w * G.h), S = P.sizes || { big: [5, 8], mid: [3, 5] };
+  let yard = 0, built = 0; G.each((x, y) => { if (G.get(x, y) === DIRT) yard++; });
+  for (const role of roles) built += placeRole(G, bld, r, role, 120, S);
   const pool = roles.length ? roles : ["hut"];
-  for (let t = 0; t < 400; t++) {
-    let free = 0; G.each((x, y) => { if (G.get(x, y) === DIRT) free++; });
-    if (1 - free / Math.max(1, yard) >= fill) break;
-    placeRole(G, r, pick(r, pool), 6);
+  for (let t = 0; t < 300 && built < P.fill * yard; t++) built += placeRole(G, bld, r, pick(r, pool), 8, S);
+  // Then sweep the yard in reading order and drop the biggest building that fits at each spot, wall to wall with a
+  // neighbour of another colour, so the gaps fill up to P.pack of the yard.
+  for (let y = 1; y < G.h - 1 && built < P.pack * yard; y++) for (let x = 1; x < G.w - 1 && built < P.pack * yard; x++) {
+    if (G.get(x, y) !== DIRT) continue;
+    const role = pick(r, pool), wMax = BIG[role] ? S.big[1] : SMALL[role] ? 3 : S.mid[1], hMax = BIG[role] ? 5 : SMALL[role] ? 3 : S.mid[1];
+    let done = false;
+    for (let bw = wMax; bw >= 2 && !done; bw--) for (let bh = Math.min(hMax, bw + 1); bh >= 2 && !done; bh--) if (freeRect(G, bld, x, y, x + bw - 1, y + bh - 1, ROLE_MATS[role][0])) { built += paint(G, bld, role, x, y, bw, bh); done = true; }
   }
 }
 // Pick roles until the fort holds `k` colours (base colours already in `have`).
@@ -89,38 +102,65 @@ function camp(G, r, P) {
   G.rect(x0, G.h - depth, x0 + cw - 1, G.h - 1, CAMP);
   return { x0, x1: x0 + cw - 1, y0: G.h - depth };
 }
+// The key lodge (4x3 timber round a gilt key) beside the camp on its roomier side, one grass column away. Null when it
+// would land on water (the moat must stay whole, or the gate could be walked round).
+function lodge(G, r, cp) {
+  const lw = 4, lh = 3, left = cp.x0 - 1 >= G.w - 2 - cp.x1, x0 = left ? cp.x0 - lw - 1 : cp.x1 + 2, y0 = G.h - lh;
+  if (x0 < 0 || x0 + lw > G.w) return null;
+  for (let y = y0 - 1; y < G.h; y++) for (let x = x0 - 1; x <= x0 + lw; x++) if (G.get(x, y) === WATER && y >= 0 && x >= 0 && x < G.w) return null;
+  G.rect(x0, y0, x0 + lw - 1, G.h - 1, 4); const k = [x0 + 1 + ri(r, 0, 1), y0 + 1]; G.put(k[0], k[1], GILT);
+  return k;
+}
+// Tight framing (v3 fix pass): trim grass-only columns and top rows to P.margin cells, and squeeze each later run of
+// grass-only rows (the camp approach) to P.gap rows. Gate, key and tower cells move with the crop.
+function crop(G, gates, towers, P) {
+  const W = G.w, H = G.h, grassCol = (x) => { for (let y = 0; y < H; y++) if (G.get(x, y) !== GRASS) return false; return true; };
+  let x0 = 0; while (x0 < W - 1 && grassCol(x0)) x0++;
+  let x1 = W - 1; while (x1 > x0 && grassCol(x1)) x1--;
+  x0 = Math.max(0, x0 - P.margin); x1 = Math.min(W - 1, x1 + P.margin);
+  const grassRow = (y) => { for (let x = x0; x <= x1; x++) if (G.get(x, y) !== GRASS) return false; return true; };
+  const ys = [], ny = new Int32Array(H).fill(-1); let run = 0, seen = false;
+  for (let y = 0; y < H; y++) { if (grassRow(y)) { if (++run > (seen ? P.gap : P.margin)) continue; } else { run = 0; seen = true; } ny[y] = ys.length; ys.push(y); }
+  const C = board(x1 - x0 + 1, ys.length);
+  ys.forEach((y, j) => { for (let x = x0; x <= x1; x++) C.put(x - x0, j, G.get(x, y)); });
+  const mv = (p) => [p[0] - x0, ny[p[1]]];
+  return out(C, gates.map((g) => ({ at: mv(g.at), key: mv(g.key) })), towers.map((t) => ({ at: mv(t.at), r: t.r })));
+}
 const out = (G, gates, towers) => ({ w: G.w, h: G.h, grid: E.gridOf(G.w, G.h, G.a), gates, towers });
 
-// Era 1: palisade stockade. Earth bank and palisade rings (an optional ditch with a causeway, an optional open gateway),
-// huts and yards inside.
+// Era 1: palisade stockade. Earth bank and palisade rings (an optional ditch with a causeway, an optional open gateway,
+// and from P.walkFrom colours an optional timber wall-walk inside), huts and yards packed inside.
 function era1(r, P) {
   const w = ri(r, P.w[0], P.w[1]), h = ri(r, P.h[0], P.h[1]), G = board(w, h);
-  const cp = camp(G, r, P), top = ri(r, 1, 2), bottom = cp.y0 - ri(r, 2, 3);
-  const cx = w / 2 + ri(r, -1, 1) * 0.5, cy = (top + bottom + 1) / 2, rx = w / 2 - ri(r, 1, 2), ry = (bottom - top + 1) / 2;
+  const cp = camp(G, r, P), top = 1, bottom = cp.y0 - ri(r, 2, 3);
+  const cx = w / 2 + ri(r, -1, 1) * 0.5, cy = (top + bottom + 1) / 2, rx = w / 2 - 1, ry = (bottom - top + 1) / 2;
   const sdf = shape(pick(r, ["ellipse", "rrect", "octagon"]), cx, cy, rx, ry);
   const ditch = r() < P.ditch, bankT = ri(r, P.bankT[0], P.bankT[1]), palT = ri(r, P.palT[0], P.palT[1]), off = ditch ? 1 : 0;
+  const walk = P.colours >= P.walkFrom && r() < P.walk ? 1 : 0, base = walk ? [1, 2, 4] : [1, 2];
   if (ditch) band(G, sdf, 0, 1, WATER);
-  band(G, sdf, off, off + bankT, 1); band(G, sdf, off + bankT, off + bankT + palT, 2); fill(G, sdf, off + bankT + palT, DIRT);
+  band(G, sdf, off, off + bankT, 1); band(G, sdf, off + bankT, off + bankT + palT, 2);
+  if (walk) band(G, sdf, off + bankT + palT, off + bankT + palT + 1, 4);
+  fill(G, sdf, off + bankT + palT + walk, DIRT);
   const gx = Math.floor(cx);
   if (ditch) for (let y = 0; y < h; y++) for (let x = gx - 1; x <= gx + 1; x++) if (G.get(x, y) === WATER && y > cy) G.put(x, y, GRASS);
-  if (r() < P.gateway) for (let y = Math.floor(cy); y < h; y++) for (let x = gx - 1; x <= gx; x++) { const v = G.get(x, y); if (v === 1 || v === 2) G.put(x, y, DIRT); }
-  furnish(G, r, rolesFor(r, [1, 2], P.colours, ["hut", "hedge", "well", "longhouse", "oven", "chapel", "store"]), P.fill);
-  return out(G, [], []);
+  if (r() < P.gateway) for (let y = Math.floor(cy); y < h; y++) for (let x = gx - 1; x <= gx; x++) { const v = G.get(x, y); if (v === 1 || v === 2 || v === 4) G.put(x, y, DIRT); }
+  furnish(G, r, rolesFor(r, base, P.colours, ["hut", "hedge", "well", "longhouse", "oven", "chapel", "store", "stable"]), P);
+  return crop(G, [], [], P);
 }
 
 // Era 2: motte and bailey. A moated mound (the motte) whose only way in is an iron gate on the bridge, its key a gilt
 // pixel inside the bailey. gates 2: the whole fort sits inside a moat too, its gate at the bottom and its key in a lodge
-// by the camp.
+// beside the camp.
 function era2(r, P) {
   const w = ri(r, P.w[0], P.w[1]), h = ri(r, P.h[0], P.h[1]), G = board(w, h);
   const cp = camp(G, r, P), twoGates = r() < P.twoGates;
-  const lodgeH = twoGates ? 5 : 0, top = 1, bottom = cp.y0 - ri(r, 2, 3) - lodgeH;
+  const top = 1, bottom = cp.y0 - ri(r, 2, 3) - (twoGates ? 2 : 0), bankT = ri(r, P.bankT[0], P.bankT[1]);
   const rm = ri(r, P.motteR[0], P.motteR[1]), mx = w / 2 + ri(r, -2, 2), my = top + rm + (twoGates ? 1.5 : 0);
   const bTop = my + rm * 0.35, bcx = w / 2 + ri(r, -1, 1) * 0.5, bcy = (bTop + bottom + 1) / 2, brx = w / 2 - (twoGates ? 2 : 1), bry = (bottom - bTop + 1) / 2;
   const bs = shape(pick(r, ["ellipse", "rrect"]), bcx, bcy, brx, bry), ms = shape("ellipse", mx, my, rm, rm);
   if (twoGates) { const us = (x, y) => Math.min(bs(x, y), ms(x, y)); band(G, (x, y) => us(x, y) - 1.2, 0, 1.2, WATER); }
-  band(G, bs, 0, 1, 1); band(G, bs, 1, 2, 2); fill(G, bs, 2, DIRT);
-  const roles = rolesFor(r, [1, 2, 4], P.colours - 1, ["hut", "hedge", "well", "longhouse", "oven", "chapel", "barracks", "store"]);
+  band(G, bs, 0, bankT, 1); band(G, bs, bankT, bankT + 1, 2); fill(G, bs, bankT + 1, DIRT);
+  const roles = rolesFor(r, [1, 2, 4], P.colours - 1, ["hut", "hedge", "well", "longhouse", "oven", "chapel", "barracks", "store", "stable"]);
   // Motte on top of the bailey's upper edge: water ring, then bank, palisade, yard and a timber tower.
   band(G, ms, -1.5, 0, WATER); band(G, ms, 0, 2, 1); band(G, ms, 2, 3, 2); fill(G, ms, 3, DIRT);
   const tw = Math.max(2, Math.floor(rm * 0.55)), tx0 = Math.round(mx - tw / 2), ty0 = Math.round(my - tw / 2);
@@ -131,7 +171,7 @@ function era2(r, P) {
   for (let y = Math.floor(my); y < h; y++) for (let x = gx - 1; x <= gx; x++) if (G.get(x, y) === WATER && ms(x, y) > -0.5) { G.put(x, y, IRON); gcell = gcell || [x, y]; }
   // Make sure the bridge reaches the bailey yard: dirt below the gate until the yard.
   if (gcell) for (let y = gcell[1] + 1; y < h; y++) { let hit = false; for (let x = gx - 1; x <= gx; x++) { const v = G.get(x, y); if (v === IRON || v === WATER) continue; if (v === DIRT) hit = true; else G.put(x, y, DIRT); } if (hit || ms(gx, y) > 2) break; }
-  furnish(G, r, roles, P.fill);
+  furnish(G, r, roles, P);
   // Key 1 inside the bailey: on a building if there is one, else in the yard.
   const k1 = keySpot(G, r, (x, y) => bs(x, y) < -2 && ms(x, y) > 1);
   if (!gcell || !k1) return null;
@@ -139,14 +179,11 @@ function era2(r, P) {
   if (twoGates) {
     let g2 = null; const bx = Math.floor(bcx);
     for (let y = h - 1; y > bcy; y--) for (let x = bx - 1; x <= bx; x++) if (G.get(x, y) === WATER) { G.put(x, y, IRON); g2 = g2 || [x, y]; }
-    // Lodge: a small hut between the moat and the camp holding key 2.
-    const ly = cp.y0 - 4, lx = Math.max(1, Math.min(w - 5, cp.x0 - 5 + ri(r, 0, 2) * (r() < 0.5 ? -1 : 1)));
-    G.rect(lx, ly, lx + 3, ly + 2, 4); G.put(lx + 1 + ri(r, 0, 1), ly + 1, GILT);
-    const k2 = [G.get(lx + 1, ly + 1) === GILT ? lx + 1 : lx + 2, ly + 1];
-    if (!g2) return null;
+    const k2 = lodge(G, r, cp);
+    if (!g2 || !k2) return null;
     gates.push({ at: g2, key: k2 });
   }
-  return out(G, gates, []);
+  return crop(G, gates, [], P);
 }
 function keySpot(G, r, ok) {
   const cand = []; G.each((x, y) => { const v = G.get(x, y); if (v > 0 && v !== IRON && v !== GILT && v !== 1 && v !== 2 && ok(x, y)) cand.push([x, y]); });
@@ -154,12 +191,13 @@ function keySpot(G, r, ok) {
   return cand.length ? pick(r, cand) : null;
 }
 
-// Era 3: stone keep. A two-thick rubble curtain with slate archer towers on its corners, a keep in the middle, buildings
-// in the ward, and (gates > 0) a moat whose gatehouse bridge is locked, its key in a lodge by the camp.
+// Era 3: stone keep. A two-thick rubble curtain with an ashlar wall-walk, slate archer towers on its corners, a keep in
+// the middle, buildings packed into the ward, and (gates > 0) a moat whose gatehouse bridge is locked, its key in a lodge
+// beside the camp.
 function era3(r, P) {
   const w = ri(r, P.w[0], P.w[1]), h = ri(r, P.h[0], P.h[1]), G = board(w, h);
   const cp = camp(G, r, P), moat = r() < P.moat, tR = P.towerR[0] + r() * (P.towerR[1] - P.towerR[0]);
-  const lodgeH = moat ? 5 : 0, pad = Math.ceil(tR) + (moat ? 2 : 0), top = pad, bottom = cp.y0 - 2 - lodgeH - pad + 1;
+  const pad = Math.ceil(tR) + (moat ? 2 : 0), top = pad, bottom = cp.y0 - 2 - (moat ? 2 : 0) - pad + 1;
   const cx = w / 2, cy = (top + bottom + 1) / 2, rx = w / 2 - pad, ry = (bottom - top + 1) / 2;
   const kind = pick(r, ["rrect", "octagon"]), sdf = shape(kind, cx, cy, rx, ry);
   if (moat) band(G, (x, y) => sdf(x, y) - tR + 0.5, 0, 1.5, WATER);
@@ -169,8 +207,8 @@ function era3(r, P) {
   G.rect(kx - 1, ky - 1, kx + kw, ky + kh, DIRT); G.rect(kx, ky, kx + kw - 1, ky + kh - 1, 6); G.rect(kx + 1, ky + 1, kx + kw - 2, ky + kh - 2, 8);
   if (kw >= 6 && kh >= 6) G.rect(kx + 2, ky + 2, kx + kw - 3, ky + kh - 3, pick(r, [12, 13]));
   const have = new Set([5, 6, 8, 7]); G.each((x, y) => { const v = G.get(x, y); if (v > 0) have.add(v); });
-  const roles = rolesFor(r, [...have], P.colours, ["hut", "hedge", "well", "oven", "chapel", "barracks", "garden", "store", "shrine", "fountain"]);
-  furnish(G, r, roles, P.fill);
+  const roles = rolesFor(r, [...have], P.colours, ["hut", "hedge", "well", "oven", "chapel", "barracks", "garden", "store", "shrine", "fountain", "tower", "hall"]);
+  furnish(G, r, roles, P);
   // Archer towers on chosen corners (the corners nearest the camp first when few), each a slate disc.
   // Tower centres sit on the curtain: walk each bounding-box corner in along its diagonal to the wall's middle.
   const corners = [[-1, 1], [1, 1], [-1, -1], [1, -1]].map(([sx, sy]) => {
@@ -186,13 +224,12 @@ function era3(r, P) {
   if (moat) {
     let g = null; const bx = Math.floor(cx);
     for (let y = h - 1; y > cy; y--) for (let x = bx - 1; x <= bx; x++) if (G.get(x, y) === WATER) { G.put(x, y, IRON); g = g || [x, y]; }
-    const ly = cp.y0 - 4, lx = Math.max(1, Math.min(w - 5, cp.x0 - 5));
-    G.rect(lx, ly, lx + 3, ly + 2, 4); G.put(lx + 1, ly + 1, GILT);
-    if (!g) return null;
-    gates.push({ at: g, key: [lx + 1, ly + 1] });
+    const k = lodge(G, r, cp);
+    if (!g || !k) return null;
+    gates.push({ at: g, key: k });
   }
   for (const t of towers) if (G.get(t.at[0], t.at[1]) !== 7) return null;
-  return out(G, gates, towers);
+  return crop(G, gates, towers, P);
 }
 
 const ERAS = { 1: era1, 2: era2, 3: era3 };

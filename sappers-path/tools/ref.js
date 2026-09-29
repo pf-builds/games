@@ -20,6 +20,7 @@ function load(L) {
 }
 
 function game(L, rules) {
+  if (L.safeArchers === true) rules = Object.assign({}, rules, { archersKill: false }); // the archer teaching level
   const R = load(L), w = R.w, h = R.h, g = R.g.slice(), cols = R.cols, heads = [0, 0, 0, 0, 0], line = [];
   const sap = {}; cols.forEach((c) => c.forEach((cd) => { sap[cd.m] = (sap[cd.m] || 0) + cd.n; }));
   let status = "playing", reason = "", peak = 0; const eaten = [];

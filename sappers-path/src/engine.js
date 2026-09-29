@@ -2,7 +2,8 @@
 // ports to Godot as-is. UMD: require('./engine.js') in Node, window.SappersPath.engine in the page.
 //
 // Level JSON: {w, h, grid:[h strings of w chars], gates?:[{at:[x,y], key:[x,y]}], towers?:[{at:[x,y], r}],
-//              cols:[5 x [[mat, count], ...]] (each column front card first)}
+//              cols:[5 x [[mat, count], ...]] (each column front card first), safeArchers?: true}
+// safeArchers (the archer teaching level, 51): its archers never kill, on any difficulty; a hit goes to the line.
 // Grid legend:  .  grass   ,  dirt   ~  water   #  camp   a..n  material 1..14 (MATS order in config.json)
 // x grows east, y grows south; a cell index is y * w + x. Material 10 (j, Iron) exists only as locked gate pixels and
 // material 14 (n, Gilt) holds the keys. A gate is the 4-connected iron group holding `at`; a tower is the 4-connected
@@ -119,14 +120,14 @@
     for (let c = 0; c < n; c++) { Z1[c] = rnd(); Z2[c] = rnd(); }
     let pixTotal = 0; for (let m = 1; m < NMAT; m++) pixTotal += pix[m];
     return { w, h, n, a0, nb, rank, campRow, gateOf, keyOf, gateCells, towerOf, cover, towers, cardM: Int32Array.from(cardM), cardN: Int32Array.from(cardN),
-      colStart, colLen, sapTotal, pix, hoff, Z1, Z2, pixTotal, ncards: cardM.length };
+      colStart, colLen, sapTotal, pix, hoff, Z1, Z2, pixTotal, ncards: cardM.length, safeArchers: L.safeArchers === true };
   }
 
   // A mutable game on a compiled board. rules = {hold, archersKill}. opts.deal: dealing mode (no tray; play squads with
   // playSquad; no short/stuck/no-move checks). The whole state lives in one Int32Array, so save/load are one copy.
   function sim(B, rules, opts) {
     const n = B.n, nb = B.nb, rank = B.rank, cover = B.cover, towerOf = B.towerOf, keyOf = B.keyOf, gateOf = B.gateOf, hoff = B.hoff;
-    const cap = Math.max(1, Math.min(MAXLINE, rules.hold | 0)), lethal = !!rules.archersKill, deal = !!(opts && opts.deal), nt = B.towers.length;
+    const cap = Math.max(1, Math.min(MAXLINE, rules.hold | 0)), lethal = !!rules.archersKill && !B.safeArchers, deal = !!(opts && opts.deal), nt = B.towers.length;
     // Layout of the state buffer.
     let o = 0; const at = (k) => { const r = o; o += k; return r; };
     const oA = at(n), oD = at(n), oK = at(n), oP = at(n), oH = at(B.hoff[NMAT]), oHL = at(NMAT), oLeft = at(NMAT), oSap = at(NMAT), oT = at(MAXTOWERS),
