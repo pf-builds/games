@@ -164,12 +164,16 @@ const pct = (x) => (x == null ? "-" : (100 * x).toFixed(1) + "%");
     // Late hard slots: in-band candidates the lookahead player wins no more than its target (C.lookahead) first, nearest
     // the band's centre among them; if none, the lowest lookahead rate. Elsewhere the band's centre.
     const lookT0 = lateHard && C.lookahead ? C.lookahead[b.sub] : null, over = (c) => (lookT0 != null && c.grade.normal.greedy > lookT0 ? 1 : 0);
-    ok.sort((p, q) => p.miss - q.miss || over(p) - over(q) || (over(p) ? p.grade.normal.greedy - q.grade.normal.greedy : 0) || Math.abs(p.grade.normal.rate - mid) - Math.abs(q.grade.normal.rate - mid) || p.k - q.k);
+    // Duration (C.duration): the patient play-through on the stored Normal line must sit inside the level's limits.
+    const DU = C.duration, dLim = DU ? (n <= DU.earlyTo ? DU.early : [0, DU.maxMs]) : null;
+    const dmiss = (c) => { if (!dLim) return 0; const ms = c.grade.normal.ms; return ms == null ? 1e9 : Math.max(0, dLim[0] - ms, ms - dLim[1]); };
+    ok.sort((p, q) => (p.miss > 0) - (q.miss > 0) || (dmiss(p) > 0) - (dmiss(q) > 0) || p.miss - q.miss || dmiss(p) - dmiss(q) || over(p) - over(q) || (over(p) ? p.grade.normal.greedy - q.grade.normal.greedy : 0) || Math.abs(p.grade.normal.rate - mid) - Math.abs(q.grade.normal.rate - mid) || p.k - q.k);
     let pickC = null, why = null;
-    for (const c of ok) { if (c.miss > 0) break; if (!levels.some((L) => nearDup(L, c.level, C.dedupe.sameCells))) { pickC = c; break; } }
+    for (const c of ok) { if (c.miss > 0 || dmiss(c) > 0) break; if (!levels.some((L) => nearDup(L, c.level, C.dedupe.sameCells))) { pickC = c; break; } }
     if (!pickC) {
       pickC = ok.find((c) => !levels.some((L) => nearDup(L, c.level, C.dedupe.sameCells))) || ok[0] || null;
-      why = !ok.length ? "no winnable candidate" : pickC.miss > 0 ? "out of band: Normal " + pct(pickC.grade.normal.rate) + " vs " + pct(b.band[0]) + "-" + pct(b.band[1]) : "near-duplicate of an earlier level";
+      why = !ok.length ? "no winnable candidate" : pickC.miss > 0 ? "out of band: Normal " + pct(pickC.grade.normal.rate) + " vs " + pct(b.band[0]) + "-" + pct(b.band[1])
+        : dmiss(pickC) > 0 ? "duration " + Math.round(pickC.grade.normal.ms / 1000) + " s outside " + dLim[0] / 1000 + "-" + dLim[1] / 1000 + " s" : "near-duplicate of an earlier level";
     }
     if (!pickC) { fallbacks.push({ n, why }); say("level " + n + ": NO LEVEL (" + why + ")"); continue; }
     if (why) { fallbacks.push({ n, why }); say("level " + n + ": fallback, " + why); }
@@ -185,7 +189,8 @@ const pct = (x) => (x == null ? "-" : (100 * x).toFixed(1) + "%");
 
   const late = levels.filter((l) => l.band === "hard" || l.band === "hardest"), med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length ? q[(q.length - 1) >> 1] : null; };
   for (const sub of ["hard", "hardest"]) { const g = late.filter((l) => l.band === sub && !l.exempt).map((l) => l.grade.normal.greedy); say("bake: lookahead player on " + sub + " (Normal): median " + pct(med(g)) + ", max " + pct(Math.max(...g)) + " over " + g.length + " levels"); }
-  { const ms = levels.map((l) => l.grade.normal.ms).filter((x) => x != null); say("bake: patient winning line on Normal at 1x (engine time): median " + (med(ms) / 1000).toFixed(0) + " s, max " + (Math.max(...ms) / 1000).toFixed(0) + " s"); }
+  { const gen = levels.filter((l) => !l.exempt), ms = gen.map((l) => l.grade.normal.ms).filter((x) => x != null), early = gen.filter((l) => l.n <= (C.duration ? C.duration.earlyTo : 15)).map((l) => l.grade.normal.ms);
+    say("bake: patient play-through on the stored Normal line at 1x (generated levels): median " + (med(ms) / 1000).toFixed(0) + " s, max " + (Math.max(...ms) / 1000).toFixed(0) + " s; early " + (Math.min(...early) / 1000).toFixed(0) + "-" + (Math.max(...early) / 1000).toFixed(0) + " s; all levels " + (Math.min(...levels.map((l) => l.grade.normal.ms)) / 1000).toFixed(0) + "-" + (Math.max(...levels.map((l) => l.grade.normal.ms)) / 1000).toFixed(0) + " s"); }
   say("bake: taps per level: max " + Math.max(...levels.map((l) => l.grade.cards)) + " (cap " + C.maxTaps + "); late band max " + Math.max(...levels.filter((l) => l.n >= C.curve.late.from).map((l) => l.grade.cards)));
   const out = { version: C.version, bake: { config: C.version, seed: C.seed, forts: tot.forts, deals: tot.deals, tuneEvals: tot.evals, fullGrades: tot.grades, fallbacks, lookaheadFallbacks: lookMiss }, levels };
   try {
@@ -209,10 +214,10 @@ function writeReport(out, C, log) {
     const t = ls[0].target;
     rows.push(`| ${kind} ${pct(t[0])}-${pct(t[1])} | ${ls.length} | ${gen.filter((l) => l.inBand).length}/${gen.length} | ${ls.length - gen.length} | ${pct(Math.min(...rs))} | ${pct(med(rs))} | ${pct(Math.max(...rs))} |`);
   }
-  rows.push("", "### Every level", "", "| # | Era | Band | Target (Normal) | Easy | Normal | Hard | In band | Cards | Colours | Pixels | Peak line E/N/H | Winning orders (Normal, cap " + C.grade.orderCap + ") | Lookahead player (Normal) | Forced turns / mean safe taps | Note |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|");
+  rows.push("", "### Every level", "", "| # | Era | Band | Target (Normal) | Easy | Normal | Hard | In band | Cards | Colours | Pixels | Peak line E/N/H | Winning orders (Normal, cap " + C.grade.orderCap + ") | Lookahead player (Normal) | Forced turns / mean safe taps | Patient time (Normal, 1x) | Note |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|");
   for (const l of L) {
     const g = l.grade, oc = g.normal.orders + (g.normal.ordersCapped ? "+" : g.normal.ordersExact ? "" : "?");
-    rows.push(`| ${l.n} | ${l.era} | ${l.band} | ${pct(l.target[0])}-${pct(l.target[1])} | ${pct(g.easy.rate)} | ${pct(g.normal.rate)} | ${pct(g.hard.rate)} | ${l.exempt ? "exempt" : l.inBand ? "yes" : "NO"} | ${g.cards} | ${g.colours} | ${g.pixels} | ${g.easy.peak}/${g.normal.peak}/${g.hard.peak} | ${oc} | ${pct(g.normal.greedy)} | ${g.normal.forced}/${g.normal.meanSafe} | ${l.exempt ? "teaching: " + l.teaches : l.fallback || ""} |`);
+    rows.push(`| ${l.n} | ${l.era} | ${l.band} | ${pct(l.target[0])}-${pct(l.target[1])} | ${pct(g.easy.rate)} | ${pct(g.normal.rate)} | ${pct(g.hard.rate)} | ${l.exempt ? "exempt" : l.inBand ? "yes" : "NO"} | ${g.cards} | ${g.colours} | ${g.pixels} | ${g.easy.peak}/${g.normal.peak}/${g.hard.peak} | ${oc} | ${pct(g.normal.greedy)} | ${g.normal.forced}/${g.normal.meanSafe} | ${g.normal.ms != null ? Math.round(g.normal.ms / 1000) + " s" : "-"} | ${l.exempt ? "teaching: " + l.teaches : l.fallback || ""} |`);
   }
   rows.push("", "### Bake", "", "```", ...log, "```");
   const block = A + "\n" + rows.join("\n") + "\n" + Z;
