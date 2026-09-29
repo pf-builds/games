@@ -98,3 +98,12 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - Sapper helmets and carried blocks of the same colour blend (white on Ashlar crews). An outline on the carried block would fix it.
 - Idle sappers at the camp all stand still facing the same way; a few could wander.
 - Delete `SPEC-v2.md`-era tool notes (`tools/m0*.md`, `m1-notes.md`, `m2-notes.md`, critic files) or move them under `tools/v2/`, now that the v2 page is gone (git keeps tag `sappers-path-v2-fixed`).
+
+## From v3 M2 (2026-09-28)
+
+- The canvas label (archer hits) uses Jersey 10. If the font hasn't loaded by the first hit, that label draws in the system font. Preload it into the canvas at boot (`document.fonts.load`) if it ever shows.
+- Short landscape hides the level name (the number stays). A second line under the number, or a tooltip, would bring it back.
+- The coach bubble covers the board's top row on the teaching levels (grass there today). If a teaching board ever puts blocks in row 0, dock the bubble above the frame instead.
+- The coach arrow over a front card sits on the "Holding line" label. Pointing from the side would clear it.
+- The turned landscape board's crates are narrow (3-row yard). A 4-row yard when turned would give them room.
+- A "keep" material in the generator: the win's keep is drawn at the last pixel eaten, not at a real keep on the board.
