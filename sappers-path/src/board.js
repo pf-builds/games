@@ -316,6 +316,7 @@
       }
     }
     function paintCell(c) {
+      if (!V.lg) return; // no layer until the first layout (a 0x0 frame); paintLayer redraws everything once it exists
       const S = V.sprites, cs = V.cs, bx = c % V.w, by = (c / V.w) | 0, x = CX(bx, by) * cs, y = CY(bx, by) * cs, v = V.disp[c];
       if (v > 0) { V.lg.drawImage(S.tb[v][V.tone[c]], x, y); const t = V.B.towerOf[c]; if (t >= 0) rim(c, t, x, y); return; }
       V.lg.drawImage(S.gnd[TYPE(v) * 2 + (hash(bx, by) & 1)], x, y);

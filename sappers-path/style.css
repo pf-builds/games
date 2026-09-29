@@ -1,7 +1,7 @@
 /* Sapper's Path v3 chrome: castle-wall background (painted by art.js, set as --wall), bevelled stone and gold buttons,
    parchment panels, and the Jersey 10 pixel face (SIL OFL, fonts/) for headings, buttons and numbers. The board sits in
    a light wooden frame (Food Hunt); tray cards are solid colour with big numbers. main.js sets the material colours. */
-@font-face { font-family: "Jersey 10"; src: url("fonts/Jersey10-Regular.ttf?v=12") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Jersey 10"; src: url("fonts/Jersey10-Regular.ttf?v=14") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
 :root { --bg: #2e2935; --ink: #221a26; --cream: #f3ead8; --cream-soft: #cfc4d6;
   --stone: #a2a5b0; --stone-hi: #cdd0d8; --stone-lo: #666a77; --gold: #f2c230; --gold-hi: #ffe27a; --gold-lo: #b8860b; --gold-dark: #7a5a06;
   --parch: #fbf5e6; --parch-edge: #e3d3ad; --parch-ink: #2a2430; --parch-soft: #5a4e3c;

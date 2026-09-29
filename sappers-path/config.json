@@ -225,13 +225,13 @@
     "campPad": 1
   },
   "teach": {
-    "note": "Coach scripts for the teaching levels (SPEC-v3 §5), by level id: one line over the board and a bouncing arrow on what to tap. A step ends when any `until` holds: play (a tap after the step showed), line (a space is taken), wait (a squad has more sappers waiting than pixels in reach), lineEmpty (every squad home), gate (every gate open), tower (every tower down), reach:m (colour m has a pixel in reach), used:m (a card of colour m was played), hit. A step whose `if` fails when it comes up is skipped (the same words, plus short:m = the front card of m is bigger than what is in reach, and front:m = m is a front card). Pointers: card (the leftmost front card of that colour), next (a faded card behind a front one), line (the holding line; with a card it glows while the arrow points at the card), ring (key, gate or tower on the board). {n} {crew} {reach} fill in from the pointed card.",
+    "note": "Coach scripts for the teaching levels (SPEC-v3 §5), by level id: one line over the board and a bouncing arrow on what to tap. A step ends when any `until` holds: play (a tap after the step showed), line (a space is taken), wait (a squad has more sappers waiting than pixels in reach), lineEmpty (every squad home), gate (every gate open), tower (every tower down), reach:m (colour m has a pixel in reach), used:m (a card of colour m was played), hit. A step whose `if` fails when it comes up is skipped (the same words, plus short:m = the front card of m is bigger than what is in reach, and front:m = m is a front card). Pointers: card (the leftmost front card of that colour), next (a faded card behind a front one), line (the holding line; with a card it glows while the arrow points at the card), ring (key, gate or tower on the board). {n} {crew} {reach} {go} fill in from the pointed card ({go} = the smaller of the squad and what is in reach).",
     "e1-01": [{"say": "Tap a squad. Its sappers run for their colour.", "card": 1, "until": "play"},
               {"say": "The faded squads move up next. Raze it all!", "next": true, "until": "play"}],
     "e1-02": [{"say": "Thatch is walled in. Send the Torchbearers!", "card": 3, "until": ["wait", "reach:3"]},
               {"say": "No thatch in reach: they wait in a space.", "line": true, "if": "wait", "until": "play"},
               {"say": "No free space for a tap fails the assault.", "line": true, "until": "play"}],
-    "e1-03": [{"say": "{n} {crew}, {reach} timber in reach: {reach} go.", "card": 4, "if": "short:4", "until": "used:4"},
+    "e1-03": [{"say": "{n} {crew}, {reach} timber in reach: {go} go.", "card": 4, "if": "short:4", "until": "used:4"},
               {"say": "The rest wait their turn. Break the wall!", "card": 1, "line": true, "if": "wait", "until": "lineEmpty"}],
     "e2-26": [{"say": "A locked gate! Dig out its gold key first.", "card": 4, "ring": "key", "until": ["reach:14", "gate"]},
               {"say": "Send the Looters: the key opens the gate.", "card": 14, "ring": "key", "if": "front:14", "until": "gate"},
