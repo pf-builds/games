@@ -12,6 +12,9 @@
 // (tap, a throttled pop per pixel, haul, line fill and last-space warning, overflow, gate, arrows, collapse, fanfare), the
 // win beat (difficulty medals), and portal shape: pause on blur or a hidden tab (the clock stops and the audio context
 // suspends; a Paused sheet takes the next tap so it can never play a card), and the board turned a quarter in landscape.
+// Fix pass: the level's name sits over its difficulty and steps its size down to fit (never an ellipsis), crew names on
+// cards fit the same way, a full holding line pulses red and marks each front card safe or fatal (a one-tap look-ahead
+// on a scratch copy, run on a play, never per frame), and wide screens put every control in one side panel.
 (function () {
   "use strict";
   const NS = window.SappersPath, E = NS.engine, Save = NS.save, Board = NS.board, Art = NS.art, Audio = NS.audio;
@@ -21,7 +24,7 @@
   const app = { cfg: null, levels: [], byId: new Map(), order: [], eras: [], save: null, entry: null, B: null, S: null, V: null, audio: null, sheets: null,
     clock: 0, lastT: 0, screen: "title", diff: "normal", fast: false, ending: null, endAt: -1, panel: null, panelAt: 0, testing: false,
     toastT: -1e12, popK: 0, cards: [], nexts: [], slots: [], wide: false, chipURL: [], manURL: [], nodes: [], lastW: 0, lastH: 0,
-    coach: null, used: 0, cues: {}, paused: false, pauses: 0, focusEl: null, pt: { x: 0, y: 0 } };
+    coach: null, used: 0, cues: {}, paused: false, pauses: 0, focusEl: null, pt: { x: 0, y: 0 }, T: null, tbuf: null, labFit: new Map(), verdict: [] };
   const togMute = Array.from(document.querySelectorAll(".tog-mute")), togFast = Array.from(document.querySelectorAll(".tog-fast")), segs = Array.from(document.querySelectorAll(".seg button"));
 
   // ---- boot --------------------------------------------------------------------------------------------------------
@@ -98,7 +101,18 @@
     const line = $("line");
     for (let i = 0; i < app.cfg.layout.lineSlots; i++) { const s = document.createElement("div"); s.className = "slot"; s.innerHTML = '<i class="men"></i><b></b>'; line.append(s); app.slots.push(s); }
   }
-  function paintMat(el, m) { const c = mat(m).c; el.style.setProperty("--mc", c); el.style.setProperty("--tc", Board.lum(c) > 0.62 ? "#221a26" : "#ffffff"); }
+  // Text on a colour: white or ink, whichever has the higher contrast (WCAG relative luminance).
+  const INK = "#221a26", relLum = (hex) => { const v = parseInt(hex.slice(1), 16), f = (s) => { const x = ((v >> s) & 255) / 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }; return 0.2126 * f(16) + 0.7152 * f(8) + 0.0722 * f(0); };
+  const textOn = (hex) => { const L = relLum(hex); return 1.05 / (L + 0.05) >= (L + 0.05) / (relLum(INK) + 0.05) ? "#ffffff" : INK; };
+  function paintMat(el, m) { const c = mat(m).c, t = textOn(c); el.style.setProperty("--mc", c); el.style.setProperty("--tc", t); el.style.setProperty("--oc", t === INK ? "rgba(255,255,255,.45)" : "rgba(20,16,28,.7)"); }
+  // Fit a label to its box: the CSS size, stepped down in one measure (cached per text until the next resize).
+  function fitText(el, key, min) {
+    let px = app.labFit.get(key);
+    if (px == null) { el.style.fontSize = ""; const base = parseFloat(getComputedStyle(el).fontSize) || 14; px = base;
+      if (el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 0.5) px = Math.max(min, Math.floor((base * el.clientWidth * 10) / el.scrollWidth) / 10);
+      if (el.clientWidth > 0) app.labFit.set(key, px); }
+    el.style.fontSize = px + "px";
+  }
   function renderTray() {
     const S = app.S, B = app.B, live = S && S.status === E.PLAYING && !app.panel;
     for (let j = 0; j < E.NCOL; j++) {
@@ -106,9 +120,10 @@
       if (f < 0) { b.className = "card empty"; b.disabled = true; b.querySelector(".n").textContent = ""; b.querySelector(".lab").textContent = "empty"; b.querySelector(".sw").style.backgroundImage = "none"; b.style.removeProperty("--mc"); b.setAttribute("aria-label", "Empty column"); }
       else {
         const m = B.cardM[f], k = B.cardN[f];
-        b.className = "card"; b.disabled = !live; paintMat(b, m);
-        b.querySelector(".n").textContent = k; b.querySelector(".lab").textContent = mat(m).crew; b.querySelector(".sw").style.backgroundImage = app.chipURL[m];
-        b.setAttribute("aria-label", mat(m).crew + ", " + k + " sappers");
+        b.className = "card" + (app.verdict[j] === 1 ? " safe" : app.verdict[j] === 2 ? " fatal" : ""); b.disabled = !live; paintMat(b, m);
+        const lab = b.querySelector(".lab"); lab.textContent = mat(m).crew; fitText(lab, "crew:" + m, app.cfg.layout.labMinPx);
+        b.querySelector(".n").textContent = k; b.querySelector(".sw").style.backgroundImage = app.chipURL[m];
+        b.setAttribute("aria-label", mat(m).crew + ", " + k + " sappers" + (app.verdict[j] === 2 ? ", would end the assault" : app.verdict[j] === 1 ? ", safe" : ""));
       }
       for (let d = 1; d <= 3; d++) {
         const x = app.nexts[j][d - 1], h = S ? S.heads[j] + d : 1e9;
@@ -118,9 +133,22 @@
       }
     }
   }
+  // The holding line full: every front card gets a verdict from a one-tap look-ahead on a scratch copy (1 safe, 2 fatal:
+  // that tap would end the assault). Run on a play or a load, never per frame.
+  function judge() {
+    const S = app.S, full = S && S.status === E.PLAYING && S.lineLen >= S.cap && !app.panel;
+    for (let j = 0; j < E.NCOL; j++) app.verdict[j] = 0;
+    if (!full) return false;
+    S.save(app.tbuf);
+    for (let j = 0; j < E.NCOL; j++) { if (S.front(j) < 0) continue; app.T.load(app.tbuf); app.T.play(j); app.verdict[j] = app.T.status === E.FAILED ? 2 : 1; }
+    return true;
+  }
   function renderLine() {
     const S = app.S; if (!S) return;
     $("line").style.setProperty("--cap", S.cap);
+    const full = S.status === E.PLAYING && S.lineLen >= S.cap && !app.panel;
+    $("line-wrap").classList.toggle("full", full);
+    $("line-lab").textContent = full ? app.cfg.layout.fullText : "Holding line"; $("line-cnt").textContent = S.lineLen + "/" + S.cap;
     app.slots.forEach((s, i) => {
       s.hidden = i >= S.cap; s.classList.remove("over");
       if (i < S.lineLen) { const m = S.lineM[i], n = S.lineN[i]; s.classList.add("full"); paintMat(s, m); s.querySelector("b").textContent = n;
@@ -134,8 +162,9 @@
     const e = app.entry; if (!e) return;
     $("lvl-num").textContent = e.n; $("lvl-name").textContent = e.L.name || (app.eras[e.era - 1] ? app.eras[e.era - 1].name : "Era " + e.era);
     $("diff-chip").textContent = DNAME[app.diff];
+    fitText($("lvl-name"), "name:" + $("lvl-name").textContent, app.cfg.layout.nameMinPx);
   }
-  function renderAll() { renderTop(); renderTray(); renderLine(); }
+  function renderAll() { judge(); renderTop(); renderTray(); renderLine(); }
 
   function buildMap() {
     const host = $("eras"); app.eras = app.cfg.eras || [];
@@ -179,7 +208,7 @@
   function startLevel(id, diff) {
     const e = app.byId.get(id) || app.levels[0];
     if (diff && DIFFS.indexOf(diff) >= 0) app.diff = diff;
-    app.entry = e; app.B = E.compile(e.L); app.S = E.sim(app.B, rulesOf(app.diff));
+    app.entry = e; app.B = E.compile(e.L); app.S = E.sim(app.B, rulesOf(app.diff)); app.T = E.sim(app.B, rulesOf(app.diff)); app.tbuf = new Int32Array(app.S.M.length);
     app.ending = null; app.endAt = -1; app.panel = null; app.popK = 0; app.used = 0; $("panel").hidden = true; hideToast();
     app.V.setLevel(app.B, app.S);
     app.save.data.last = e.id; writeSave();
@@ -212,7 +241,7 @@
       app.ending = { won: S.status === E.WON, reason: S.reason, m: S.failMat };
       if (app.ending.won) { const was = app.save.data.done[app.entry.id] | 0, first = Save.record(app.save.data, app.entry.id, app.diff); app.ending.first = first; app.ending.medal = !(was & (1 << DIFFS.indexOf(app.diff))); app.save.data.last = Save.next(app.save.data, app.order); writeSave(); }
     }
-    renderTray(); renderLine(); coachStep();
+    judge(); renderTray(); renderLine(); coachStep();
     return true;
   }
   function skip() {
@@ -239,7 +268,7 @@
     Array.from(md.children).forEach((el, k) => { el.className = "medal" + (mask & (1 << k) ? " got" : "") + (e.won && e.medal && DIFFS[k] === app.diff ? " new" : ""); });
     $("panel").hidden = false;
     cue(e.won ? "chime" : "bad"); if (e.won && e.medal) cue("star", 2);
-    renderTray();
+    judge(); renderTray(); renderLine();
   }
   // A panel button ignores taps for show.panelGuardMs after the panel appears, so a thumb still tapping cards can't hit it.
   const panelLive = () => app.clock - app.panelAt >= app.cfg.show.panelGuardMs || app.testing;
@@ -380,14 +409,21 @@
     const short = app.wide && H <= L.shortMaxH;
     document.body.classList.toggle("wide", app.wide); document.body.classList.toggle("short", short);
     const r = document.documentElement.style;
-    if (app.wide) { const rw = short ? L.railShortPx : Math.min(L.railWidePx, Math.max(300, W * 0.34)); r.setProperty("--rail-w", rw + "px"); r.setProperty("--stage-w", Math.max(200, Math.min(W - rw - (short ? 36 : 60), 1100 - rw - 24)) + "px"); }
+    if (app.wide) { const rw = short ? L.railShortPx : Math.round(Math.min(L.railWidePx, Math.max(L.railMinPx, W * L.railFrac))); r.setProperty("--rail-w", rw + "px"); r.setProperty("--wide-gap", (short ? L.gapShortPx : L.gapWidePx) + "px"); }
+    app.labFit.clear();
     if (app.screen === "title") paintTitle();
     fitBoard();
+    if (app.S) { renderTop(); renderTray(); }
   }
   function fitBoard() {
     if (!app.B || !app.V) return;
+    // Wide: offer the stage every px beside the panel, fit the board, then shrink the stage to it so the board and the
+    // panel sit together in the middle (the cell size doesn't change on the second fit).
+    const L = app.cfg.layout, r = document.documentElement.style;
+    if (app.wide) r.setProperty("--stage-w", Math.max(200, window.innerWidth - (parseFloat(r.getPropertyValue("--rail-w")) || L.railWidePx) - (app.wide && window.innerHeight <= L.shortMaxH ? L.gapShortPx : L.gapWidePx) - L.sidePadPx) + "px");
     const st = $("stage"), w = st.clientWidth - 14, h = st.clientHeight - 16;
     if (w > 0 && h > 0) app.V.layout(w, h, window.devicePixelRatio || 1, app.wide);
+    if (app.wide) { const cw = parseFloat($("board").style.width) || 0; if (cw > 0) r.setProperty("--stage-w", Math.ceil(cw + 16) + "px"); }
     document.body.classList.toggle("turned", app.V.rot);
     if (app.coach) { fitCoach(); placeHand(app.focusEl); }
   }
@@ -569,6 +605,15 @@
         else { ok(app.S.status === E.FAILED && app.S.reason === "short", "archers hard: the kill ends the assault short, at once"); retry(); ok(busy && app.S.plays === 0 && !app.V.showOn && app.S.status === E.PLAYING, "archers hard: Retry mid-animation restarts at once"); }
         out.notes["archer_" + d] = found.e.id + " '" + found.o + "'";
       }
+      // 4b. The archer teaching level never kills (safeArchers): on Hard a hit sends the squad to the line and play goes on.
+      if (app.byId.has("e3-51")) { const e = app.byId.get("e3-51"), o = search(e, "hard", (S) => S.hits > 0, app.cfg.selfTest.searchTries, app.cfg.selfTest.searchSeed);
+        if (ok(!!o, "e3-51 hard: found a tap into the ring")) { startLevel("e3-51", "hard"); playOrder(o); app.V.fastForward(); ok(app.S.hits > 0 && app.S.kills === 0 && app.S.status === E.PLAYING && app.S.lineLen > 0, "e3-51 hard: archers send the hit squad to the line, never kill"); } }
+      // 4c. A full holding line pulses and marks every front card: fatal exactly when that tap would end the assault.
+      { let fl = null; for (const e of app.levels) { if (e.L.band !== "hard") continue; const o = search(e, "normal", (S) => S.status === E.PLAYING && S.lineLen >= S.cap, app.cfg.selfTest.searchTries, app.cfg.selfTest.searchSeed); if (o) { fl = { e, o }; break; } }
+        if (ok(!!fl, "full line: found an order that fills the line")) {
+          startLevel(fl.e.id, "normal"); playOrder(fl.o); app.V.fastForward(); let right = true, marked = 0;
+          for (let j = 0; j < E.NCOL; j++) { if (app.S.front(j) < 0) continue; const c = app.cards[j].classList, T = E.sim(app.B, rulesOf("normal")); T.load(app.S.save()); T.play(j); marked++; if (c.contains("fatal") !== (T.status === E.FAILED) || c.contains("safe") === c.contains("fatal")) right = false; }
+          ok($("line-wrap").classList.contains("full") && marked > 0 && right, "full line: the line pulses and every front card is marked safe or fatal, correctly (" + fl.e.id + " '" + fl.o + "')"); } }
       // 5. The show cap: the play with the most eats, at 1x and 2x (app time, not show time).
       let big = null;
       for (const e of app.levels) { const B = E.compile(e.L); if (!big || B.pixTotal > big.p) big = { e, p: B.pixTotal }; }
