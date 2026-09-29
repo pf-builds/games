@@ -11,6 +11,15 @@
 // Towers (M2): tower blocks carry a crenellated rim on the tower's outer edge and a hooded goblin archer stands on top
 // while any of it stands; the range disc fades and the archer tumbles when it falls.
 //
+// Surface and scenery (v3 fix pass). Each block has four tones of its colour (base, lit, shade, alt), picked once per
+// level from the fort's shape: a block on a region's top or left edge is lit, on its bottom or right edge shaded, and the
+// inside of a big mass gets a faint running bond, so walls and roofs have form; the per-material mark stays for grayscale.
+// The leftover ground carries muted, flat scenery (never bevelled, so it never reads as a block): a trodden path from the
+// camp to the fort, tents beside the camp, trees, fields, tufts and flowers on grass, ripples on water. It is decided
+// once per level (V.deco) and painted with the ground; it changes no rule. Archer rings tint the ground only.
+// Haul bins (fix pass): one bin per colour in its own colour, with its block (glyph and all) as a label and a pile that
+// grows with the haul; more than board.binsRow colours go on two rows (board.yardRows2).
+//
 // Rotation (M2, landscape phones). When the board would be small (under layout.rotateBelowCss CSS px a cell) and a
 // quarter turn makes it bigger, the canvas is drawn turned: the fort's south (camp and yard) faces right, next to the
 // tray. Only positions turn (MX/MY and the cell helpers); sprites, crates and text stay upright.
@@ -39,6 +48,10 @@
   function mk(w, h) { const c = document.createElement("canvas"); c.width = Math.max(1, w | 0); c.height = Math.max(1, h | 0); return c; }
   // A hex colour mixed toward white (k > 0) or black (k < 0), as a CSS colour.
   function shade(hex, k) { const v = parseInt(hex.slice(1), 16), t = k > 0 ? 255 : 0, a = Math.abs(k), ch = (s) => Math.round(((v >> s) & 255) * (1 - a) + t * a); return "rgb(" + ch(16) + "," + ch(8) + "," + ch(0) + ")"; }
+  // The same mix as a hex colour (block tones are built from it).
+  function mixHex(hex, k) { const v = parseInt(hex.slice(1), 16), t = k > 0 ? 255 : 0, a = Math.abs(k), ch = (s) => Math.round(((v >> s) & 255) * (1 - a) + t * a); return "#" + ((1 << 24) | (ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).slice(1); }
+  // A block tone: k > 0 brightens by scaling (the hue holds: a lit red stays red, never pink), k < 0 darkens toward black.
+  function toneHex(hex, k) { if (k < 0) return mixHex(hex, k); const v = parseInt(hex.slice(1), 16), ch = (s) => Math.min(255, Math.round(((v >> s) & 255) * (1 + k))); return "#" + ((1 << 24) | (ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).slice(1); }
   function lum(hex) { const v = parseInt(hex.slice(1), 16); return (0.299 * ((v >> 16) & 255) + 0.587 * ((v >> 8) & 255) + 0.114 * (v & 255)) / 255; }
   function rr(g, x, y, w, h, r) { r = Math.min(r, w / 2, h / 2); g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
   const hash = (x, y) => { let t = Math.imul(x + 17, 73856093) ^ Math.imul(y + 5, 19349663); t ^= t >>> 13; t = Math.imul(t, 0x5bd1e995); return (t ^ (t >>> 15)) >>> 0; };
@@ -102,7 +115,7 @@
     const C = cfg.v3, K = cfg.board, SH = cfg.show, FX = cfg.fx, g = canvas.getContext("2d", { alpha: false });
     const V = {
       canvas, g, cfg, B: null, S: null, w: 0, h: 0, n: 0, cs: 0, dpr: 1, Y: K.yardRows | 0, rot: false, calm: false,
-      disp: null, wg: null, dist: null, q: null, layer: null, lg: null, sprites: null, piles: [], pileOf: new Int16Array(E.NMAT).fill(-1),
+      disp: null, wg: null, dist: null, q: null, tone: null, deco: null, idleC: [], layer: null, lg: null, sprites: null, piles: [], pileOf: new Int16Array(E.NMAT).fill(-1),
       haul: new Int32Array(E.NMAT), total: new Int32Array(E.NMAT), towerLeft: new Int32Array(MAXT), towerOfCell: null,
       clock: 0, speed: 1, fxT: 0, rebuilds: 0, lastPop: -1, pileDirty: true, font: "", seed: 12345,
       // show
@@ -138,8 +151,8 @@
     const SIDE = [[0, 1, 2, 3], [3, 2, 0, 1]];
 
     // ---- sprite caches ----------------------------------------------------------------------------------------------
-    function block(m, s) {
-      const c = mk(s, s), x = c.getContext("2d"), base = C.mats[m].c, dark = lum(base) < 0.3;
+    function block(m, s, k) {
+      const c = mk(s, s), x = c.getContext("2d"), base = k ? toneHex(C.mats[m].c, k) : C.mats[m].c, dark = lum(C.mats[m].c) < 0.3;
       x.fillStyle = shade(base, K.grout); x.fillRect(0, 0, s, s);
       const i = Math.max(1, Math.round(s * K.inset)), a = s - 2 * i, b = Math.max(1, Math.round(s * K.bevel));
       rr(x, i, i, a, a, s * K.radius); x.fillStyle = base; x.fill();
@@ -173,8 +186,8 @@
     }
     function buildSprites() {
       const s = V.cs, ss = Math.max(6, Math.round(s * K.sapper.scale)), mb = Math.max(3, Math.round(s * K.sapper.carry)), as = Math.max(8, Math.round(s * K.archer.scale)), ls = Math.max(8, Math.round(s * K.lockScale));
-      const S = { blk: [], mini: [], sap: [], gnd: [], lock: [], ss, mb, as, ls, arch: null };
-      for (let m = 1; m < E.NMAT; m++) { S.blk[m] = block(m, s); S.mini[m] = block(m, mb); S.sap[m] = sapper(m, ss); }
+      const S = { blk: [], tb: [], mini: [], sap: [], gnd: [], lock: [], ss, mb, as, ls, arch: null };
+      for (let m = 1; m < E.NMAT; m++) { S.blk[m] = block(m, s); S.tb[m] = K.tones.map((k, v) => (v ? block(m, s, k) : S.blk[m])); S.mini[m] = block(m, mb); S.sap[m] = sapper(m, ss); }
       for (let t = 0; t < 4; t++) for (let v = 0; v < 2; v++) S.gnd[t * 2 + v] = ground(t, v, s);
       const A = K.archer; S.arch = figure(ARCH, { h: A.hood, s: A.skin, e: A.eye, b: A.body, w: A.bow, q: A.string, a: A.arrow }, as);
       K.gateTints.forEach((tint, k) => { S.lock[k] = padlock(tint, ls); });
@@ -189,7 +202,7 @@
       const pc = mk(1, 1), px = pc.getContext("2d", { willReadFrequently: true });
       const probe = (c, name) => { try { if (pc.width !== c.width || pc.height !== c.height) { pc.width = c.width; pc.height = c.height; } px.clearRect(0, 0, pc.width, pc.height); px.drawImage(c, 0, 0);
         const d = px.getImageData(0, 0, pc.width, pc.height).data; for (let i = 3; i < d.length; i += 4) if (d[i] !== 255) { bad.push(name); return; } } catch (e) { bad.push(name); } };
-      for (let m = 1; m < E.NMAT; m++) { probe(S.blk[m], "blk" + m); probe(S.mini[m], "mini" + m); }
+      for (let m = 1; m < E.NMAT; m++) { S.tb[m].forEach((c, v) => probe(c, "blk" + m + "." + v)); probe(S.mini[m], "mini" + m); }
       S.gnd.forEach((c, k) => probe(c, "gnd" + k));
       if (V.layer) probe(V.layer, "layer");
       return bad;
@@ -204,9 +217,15 @@
       // Crates: one per colour on the board (iron is gates, never hauled), in material order across the yard.
       V.piles = []; V.pileOf.fill(-1); V.total.fill(0);
       for (let m = 1; m < E.NMAT; m++) if (m !== IRON && B.pix[m] > 0) { V.pileOf[m] = V.piles.length; V.piles.push({ m, x: 0, y: 0 }); V.total[m] = B.pix[m]; }
+      V.Y = V.piles.length > K.binsRow ? K.yardRows2 : K.yardRows;
       placePiles();
-      // Camp cells for idle sappers and the tents.
+      // Camp cells, and the idle sappers' spots: spread along the camp's middle row.
       V.camp = []; for (let c = 0; c < B.n; c++) if (B.a0[c] === CAMP) V.camp.push(c);
+      let cx0 = 1e9, cx1 = -1; for (const c of V.camp) { const x = c % B.w; if (x < cx0) cx0 = x; if (x > cx1) cx1 = x; }
+      const idle = Math.min(K.idle | 0, V.camp.length), iy = Math.min(B.h - 1, B.campRow + 1); V.idleC = [];
+      for (let k = 0; k < idle; k++) V.idleC.push(iy * B.w + Math.round(cx0 + ((k + 0.5) * (cx1 - cx0 + 1)) / idle - 0.5));
+      if (!V.tone || V.tone.length < B.n) { V.tone = new Int8Array(B.n); V.deco = new Int8Array(B.n); }
+      tones(B); scenery(B);
       // Gate centres (for the padlock) and their keys.
       V.keyC.fill(-1);
       B.gateCells.forEach((gc, k) => { if (k >= MAXG) return; let sx = 0, sy = 0; for (let j = 0; j < gc.length; j++) { sx += gc[j] % B.w; sy += (gc[j] / B.w) | 0; } V.gX[k] = sx / gc.length + 0.5; V.gY[k] = sy / gc.length + 0.5; });
@@ -214,9 +233,64 @@
       V.towerOfCell.fill(-1);
       reset();
     }
+    // Block tones from the fort's shape (engine nb order E, W, S, N): 1 lit (a top or left edge), 2 shade (a bottom or
+    // right edge), 3 alt (the running bond inside a mass), 0 base.
+    function tones(B) {
+      const a = B.a0, nb = B.nb, w = B.w;
+      for (let c = 0; c < B.n; c++) {
+        const v = a[c]; if (v <= 0) { V.tone[c] = 0; continue; }
+        const same = (k) => { const e = nb[c * 4 + k]; return e >= 0 && a[e] === v; }, x = c % w, y = (c / w) | 0;
+        const lit = !same(3) || !same(1), dk = !same(2) || !same(0);
+        V.tone[c] = lit && !dk ? 1 : dk && !lit ? 2 : !lit && !dk && (((x + ((y & 1) << 1)) >> 1) & 1) ? 3 : 0;
+      }
+    }
+    // Scenery codes on grass (and water): 1 tuft, 2 flowers, 3 tree, 4 field, 5 path, 6 tent, 7 stone, 8 ripple. A path
+    // runs from the camp to the fort (its gate when locked); tents stand beside the camp; trees and fields keep off the
+    // fort's edge (K.deco.clear cells). Deterministic from the board.
+    function scenery(B) {
+      const a = B.a0, w = B.w, h = B.h, n = B.n, D = K.deco, deco = V.deco, dist = V.dist, q = V.q;
+      deco.fill(0, 0, n);
+      // Distance (8-way, cells) from anything that isn't grass or camp: the fort, water, dirt.
+      dist.fill(-1, 0, n); let qh = 0, qt = 0;
+      for (let c = 0; c < n; c++) if (a[c] !== GRASS && a[c] !== CAMP) { dist[c] = 0; q[qt++] = c; }
+      while (qh < qt) { const u = q[qh++], x = u % w, y = (u / w) | 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const X = x + dx, Y = y + dy; if (X < 0 || Y < 0 || X >= w || Y >= h) continue; const v = Y * w + X; if (dist[v] < 0) { dist[v] = dist[u] + 1; q[qt++] = v; } } }
+      for (let c = 0; c < n; c++) {
+        const v = a[c], x = c % w, y = (c / w) | 0, r = hash(x * 3 + 1, y * 7 + 2) % 100;
+        if (v === WATER) { if (r < D.ripplePct) deco[c] = 8; continue; }
+        if (v !== GRASS) continue;
+        const far = dist[c] < 0 || dist[c] > D.clear;
+        if (far && hash(x >> 1, (y >> 1) + 41) % 100 < D.treePct && r < 70) deco[c] = 3;
+        else if (far && hash((x / 3) | 0, ((y / 3) | 0) + 97) % 100 < D.fieldPct) deco[c] = 4;
+        else deco[c] = r < D.tuftPct ? 1 : r < D.tuftPct + D.flowerPct ? 2 : r < D.tuftPct + D.flowerPct + D.stonePct ? 7 : 0;
+      }
+      // The path: BFS over the starting ground from the camp to the nearest fort block (the first gate when there is one).
+      let end = -1;
+      for (let pass = B.gateCells.length ? 0 : 1; pass < 2 && end < 0; pass++) {
+        const tgt = pass ? -1 : B.gateCells[0][0];
+        dist.fill(-1, 0, n); qh = 0; qt = 0;
+        for (let c = 0; c < n; c++) if (a[c] === CAMP) { dist[c] = 0; q[qt++] = c; }
+        while (qh < qt && end < 0) {
+        const u = q[qh++];
+        for (let k = 0; k < 4 && end < 0; k++) { const e = B.nb[u * 4 + k]; if (e < 0) continue;
+          if (a[e] > 0 && (tgt < 0 || e === tgt)) { end = u; break; }
+          if (dist[e] < 0 && (a[e] === GRASS || a[e] === DIRT || a[e] === CAMP)) { dist[e] = dist[u] + 1; q[qt++] = e; } }
+        }
+      }
+      for (let c = end, g = n; c >= 0 && dist[c] > 0 && g-- > 0;) {
+        if (a[c] === GRASS) deco[c] = 5;
+        let nx = -1; for (let k = 0; k < 4; k++) { const e = B.nb[c * 4 + k]; if (e >= 0 && dist[e] === dist[c] - 1) { nx = e; break; } }
+        c = nx;
+      }
+      // Tents on the grass beside the camp, every other cell out from its sides.
+      for (const c of V.camp) {
+        const x = c % w; for (const s of [-1, 1]) for (let j = 1; j <= D.tents; j++) { const X = x + s * (2 * j - 1); if (X < 0 || X >= w) continue; const e = c - x + X; if (a[e] === GRASS && ((c / w) | 0) === B.h - 1) deco[e] = 6; }
+      }
+    }
+    // Bins: one per colour, on one row (or two past K.binsRow), placed in board cells below the grid.
     function placePiles() {
-      const np = V.piles.length;
-      V.piles.forEach((p, k) => { p.x = ((k + 0.5) * V.w) / np; p.y = V.rot ? V.h + V.Y * 0.5 : V.h + V.Y - K.crateH * 0.5 - 0.2; });
+      const np = V.piles.length, two = np > K.binsRow, per = two ? Math.ceil(np / 2) : np;
+      V.piles.forEach((p, k) => { const row = two && k >= per ? 1 : 0, j = row ? k - per : k, inRow = row ? np - per : per;
+        p.x = ((j + 0.5 + (per - inRow) / 2) * V.w) / per; p.y = V.h + ((row + 0.5) * V.Y) / (two ? 2 : 1); p.row = row; });
     }
     function reset() {
       const B = V.B; if (!B) return;
@@ -247,8 +321,27 @@
     }
     function paintCell(c) {
       const S = V.sprites, cs = V.cs, bx = c % V.w, by = (c / V.w) | 0, x = CX(bx, by) * cs, y = CY(bx, by) * cs, v = V.disp[c];
-      V.lg.drawImage(v > 0 ? S.blk[v] : S.gnd[TYPE(v) * 2 + (hash(bx, by) & 1)], x, y);
-      const t = V.B.towerOf[c]; if (t >= 0 && v > 0) rim(c, t, x, y);
+      if (v > 0) { V.lg.drawImage(S.tb[v][V.tone[c]], x, y); const t = V.B.towerOf[c]; if (t >= 0) rim(c, t, x, y); return; }
+      V.lg.drawImage(S.gnd[TYPE(v) * 2 + (hash(bx, by) & 1)], x, y);
+      if (V.deco[c] && (v === GRASS || v === WATER)) decor(V.deco[c], x, y, bx, by);
+      if (coverNow(c)) { V.lg.fillStyle = K.rangeFill; V.lg.fillRect(x, y, cs, cs); }
+    }
+    // One cell of scenery, flat and muted (K.deco colours). Upright when turned.
+    function decor(d, x, y, bx, by) {
+      const g2 = V.lg, cs = V.cs, D = K.deco, u = Math.max(1, Math.round(cs / 10)), hv = hash(bx + 7, by + 3), P = (fx, fy, w, h, col) => { g2.fillStyle = col; g2.fillRect(Math.round(x + fx * cs), Math.round(y + fy * cs), Math.max(1, Math.round(w)), Math.max(1, Math.round(h))); };
+      if (d === 1) { for (let j = 0; j < 3; j++) P(0.25 + j * 0.2 + ((hv >> j) & 1) * 0.05, 0.45 + ((hv >> (j + 3)) & 1) * 0.1, u, cs * 0.28, D.tuft); }
+      else if (d === 2) { P(0.3, 0.35, u * 1.5, u * 1.5, D.flowers[hv % D.flowers.length]); P(0.62, 0.6, u * 1.5, u * 1.5, D.flowers[(hv >> 4) % D.flowers.length]); }
+      else if (d === 3) { g2.fillStyle = D.trunk; g2.beginPath(); g2.ellipse(x + cs * 0.5, y + cs * 0.82, cs * 0.34, cs * 0.12, 0, 0, Math.PI * 2); g2.fill();
+        g2.fillStyle = D.tree[0]; g2.beginPath(); g2.arc(x + cs * 0.5, y + cs * 0.47, cs * 0.4, 0, Math.PI * 2); g2.fill();
+        g2.fillStyle = D.tree[1]; g2.beginPath(); g2.arc(x + cs * 0.42, y + cs * 0.38, cs * 0.2, 0, Math.PI * 2); g2.fill(); }
+      else if (d === 4) { P(0, 0, cs, cs, D.field[0]); for (let j = 0; j < 3; j++) P(0, (j + 0.55) / 3, cs, Math.max(1, cs * 0.12), D.field[1]); }
+      else if (d === 5) { P(0, 0, cs, cs, D.path[0]); P(0.2 + (hv & 3) * 0.12, 0.3 + ((hv >> 2) & 3) * 0.12, u, u, D.path[1]); }
+      else if (d === 6) { const T = K.tents;
+        g2.fillStyle = T[2]; g2.beginPath(); g2.moveTo(x + cs * 0.5, y + cs * 0.12); g2.lineTo(x + cs * 1.02, y + cs * 0.96); g2.lineTo(x - cs * 0.02, y + cs * 0.96); g2.closePath(); g2.fill();
+        g2.fillStyle = T[0]; g2.beginPath(); g2.moveTo(x + cs * 0.5, y + cs * 0.2); g2.lineTo(x + cs * 0.92, y + cs * 0.92); g2.lineTo(x + cs * 0.08, y + cs * 0.92); g2.closePath(); g2.fill();
+        P(0.45, 0.55, cs * 0.1, cs * 0.37, T[2]); P(0.49, -0.05, Math.max(1, cs * 0.06), cs * 0.25, T[2]); P(0.54, -0.05, cs * 0.24, cs * 0.14, T[1]); }
+      else if (d === 7) { g2.fillStyle = D.stone; g2.beginPath(); g2.ellipse(x + cs * 0.5, y + cs * 0.6, cs * 0.22, cs * 0.15, 0, 0, Math.PI * 2); g2.fill(); }
+      else if (d === 8) { g2.strokeStyle = D.ripple; g2.lineWidth = u; g2.beginPath(); g2.arc(x + cs * (0.35 + (hv & 3) * 0.1), y + cs * 0.7, cs * 0.22, Math.PI * 1.15, Math.PI * 1.85); g2.stroke(); }
     }
     // A tower block's crenellated rim on the tower's outer edges: a dark wall line and two pale merlons per edge.
     function rim(c, t, x, y) {
@@ -269,42 +362,35 @@
       if (V.layer.width !== W || V.layer.height !== H) { V.layer.width = W; V.layer.height = H; }
       const g2 = V.lg; g2.imageSmoothingEnabled = false;
       for (let c = 0; c < V.n; c++) paintCell(c);
-      paintYard(); paintTents(); V.pileDirty = false;
+      paintYard(); V.pileDirty = false;
     }
     function paintYard() {
       const cs = V.cs, g2 = V.lg, e = Math.max(1, Math.round(cs * 0.12));
-      g2.fillStyle = K.yard; g2.fillStyle = K.yard;
+      g2.fillStyle = K.yard;
       if (V.rot) { g2.fillRect(V.h * cs, 0, V.Y * cs, V.w * cs); g2.fillStyle = K.yardEdge; g2.fillRect(V.h * cs, 0, e, V.w * cs); }
       else { g2.fillRect(0, V.h * cs, V.w * cs, V.Y * cs); g2.fillStyle = K.yardEdge; g2.fillRect(0, V.h * cs, V.w * cs, e); }
       for (let k = 0; k < V.piles.length; k++) paintPile(k);
     }
-    // A crate: wooden frame, filled bottom-up with mini blocks in proportion to the haul; a chip of its colour on the lip
-    // (beside it when turned). Upright either way.
+    // A bin in its colour: a bevelled box, a darker inside, its block (with the glyph) as a label on the short side, and
+    // the haul piled up inside in mini blocks (one per pixel while the colour fits, else to scale). Upright either way.
     function paintPile(k) {
-      const p = V.piles[k], cs = V.cs, g2 = V.lg, S = V.sprites, mb = S.mb, slot = V.w / V.piles.length, bw = Math.max(1, Math.round(cs * 0.14));
-      const cw = V.rot ? Math.max(mb * 2 + 4, Math.round(Math.min(V.Y - 0.9, 2.4) * cs)) : Math.max(mb * 2 + 4, Math.round(Math.min(slot * K.crateW, 3) * cs));
-      const ch = V.rot ? Math.max(mb * 2 + 4, Math.round(Math.min(slot * K.crateW, K.crateH) * cs)) : Math.round(K.crateH * cs);
-      const cx = MX(p.x, p.y) * cs, cy = MY(p.x, p.y) * cs, x = Math.round(cx - cw / 2 + (V.rot ? mb * 0.5 : 0)), y = Math.round(cy - ch / 2);
-      g2.fillStyle = K.yard;
-      if (V.rot) g2.fillRect(x - bw - mb - 1, y - bw, cw + 2 * bw + mb + 1, ch + 2 * bw); else g2.fillRect(x - bw, y - bw - mb, cw + 2 * bw, ch + 2 * bw + mb);
-      g2.fillStyle = K.crateWood[1]; g2.fillRect(x, y, cw, ch);
-      const cols = Math.max(1, Math.floor((cw - 2 * bw) / mb)), rows = Math.max(1, Math.floor((ch - bw) / mb)), cap = cols * rows;
-      // One mini block per hauled pixel while the colour fits the crate; scaled to the crate when it doesn't.
-      const tot = V.total[p.m], fill = !tot ? 0 : tot <= cap ? Math.min(cap, V.haul[p.m]) : Math.min(cap, Math.round((cap * V.haul[p.m]) / tot)), ox = x + Math.round((cw - cols * mb) / 2);
-      for (let i = 0; i < fill; i++) g2.drawImage(S.mini[p.m], ox + (i % cols) * mb, y + ch - bw - (1 + ((i / cols) | 0)) * mb);
-      g2.fillStyle = K.crateWood[0]; g2.fillRect(x, y + ch - bw, cw, bw); g2.fillRect(x, y, bw, ch); g2.fillRect(x + cw - bw, y, bw, ch);
-      g2.fillStyle = K.crateWood[2]; g2.fillRect(x, y + ch - bw, cw, Math.max(1, bw >> 1));
-      if (V.rot) g2.drawImage(S.mini[p.m], x - mb - 1, Math.round(cy - mb / 2)); else g2.drawImage(S.mini[p.m], Math.round(cx - mb / 2), y - mb);
-    }
-    function paintTents() {
-      if (!V.camp.length) return;
-      const cs = V.cs, g2 = V.lg, T = K.tents; let x0 = 1e9, x1 = -1;
-      for (const c of V.camp) { const x = c % V.w; if (x < x0) x0 = x; if (x > x1) x1 = x; }
-      // Two small tents on the camp's outer corners (decor only; sappers walk over them).
-      for (const tx of [x0, x1]) { const px = CX(tx, V.h - 1) * cs, py = CY(tx, V.h - 1) * cs, s = cs;
-        g2.fillStyle = T[2]; g2.beginPath(); g2.moveTo(px + s * 0.5, py + s * 0.05); g2.lineTo(px + s * 0.98, py + s * 0.95); g2.lineTo(px + s * 0.02, py + s * 0.95); g2.closePath(); g2.fill();
-        g2.fillStyle = T[0]; g2.beginPath(); g2.moveTo(px + s * 0.5, py + s * 0.15); g2.lineTo(px + s * 0.88, py + s * 0.9); g2.lineTo(px + s * 0.12, py + s * 0.9); g2.closePath(); g2.fill();
-        g2.fillStyle = T[1]; g2.fillRect(Math.round(px + s * 0.44), Math.round(py + s * 0.5), Math.max(1, Math.round(s * 0.12)), Math.round(s * 0.4)); }
+      const p = V.piles[k], cs = V.cs, g2 = V.lg, S = V.sprites, mb = S.mb, np = V.piles.length, two = np > K.binsRow, per = two ? Math.ceil(np / 2) : np;
+      const sw = V.rot ? V.Y / (two ? 2 : 1) : V.w / per, sh = V.rot ? V.w / per : V.Y / (two ? 2 : 1);
+      const bw = Math.round(Math.min(sw * K.binFill, K.binMax) * cs), bh = Math.round(Math.min(sh * K.binFill, K.binMax) * cs);
+      const cx = MX(p.x, p.y) * cs, cy = MY(p.x, p.y) * cs, x = Math.round(cx - bw / 2), y = Math.round(cy - bh / 2), col = C.mats[p.m].c;
+      const o = Math.max(1, Math.round(cs * 0.12)), lab = Math.max(K.binChipPx * V.dpr, Math.round(cs * 0.95)), wide = bw >= bh;
+      g2.fillStyle = K.yard; g2.fillRect(Math.round(cx - (sw * cs) / 2), Math.round(cy - (sh * cs) / 2), Math.round(sw * cs), Math.round(sh * cs));
+      g2.fillStyle = K.binInk; g2.fillRect(x - o, y - o, bw + 2 * o, bh + 2 * o);
+      g2.fillStyle = col; g2.fillRect(x, y, bw, bh);
+      g2.fillStyle = mixHex(col, K.hi); g2.fillRect(x, y, bw, o); g2.fillStyle = mixHex(col, K.lo); g2.fillRect(x, y + bh - o, bw, o);
+      // The label (the block itself) on the short side; the inside takes the rest.
+      const lx = wide ? x + o : Math.round(cx - lab / 2), ly = wide ? Math.round(cy - lab / 2) : y + o;
+      const ix = wide ? lx + lab + o : x + o, iy = wide ? y + o : ly + lab + o, iw = wide ? x + bw - o - ix : bw - 2 * o, ih = wide ? bh - 2 * o : y + bh - o - iy;
+      g2.fillStyle = mixHex(col, K.binInside); g2.fillRect(ix, iy, Math.max(1, iw), Math.max(1, ih));
+      g2.drawImage(S.tb[p.m][0], lx, ly, lab, lab);
+      const cols = Math.max(1, Math.floor(iw / mb)), rows = Math.max(1, Math.floor(ih / mb)), cap = cols * rows;
+      const tot = V.total[p.m], fill = !tot ? 0 : tot <= cap ? Math.min(cap, V.haul[p.m]) : Math.min(cap, Math.round((cap * V.haul[p.m]) / tot)), ox = ix + Math.round((iw - cols * mb) / 2);
+      for (let i = 0; i < fill; i++) g2.drawImage(S.mini[p.m], ox + (i % cols) * mb, iy + ih - (1 + ((i / cols) | 0)) * mb);
     }
 
     // ---- the show -----------------------------------------------------------------------------------------------------
@@ -422,6 +508,7 @@
       const t = V.towerOfCell[c];
       if (t >= 0 && t < MAXT && V.towerLeft[t] > 0 && --V.towerLeft[t] === 0) {
         V.tFallT[t] = anim ? V.fxT : -1e12;
+        for (let e = 0; e < V.n; e++) if (V.B.cover[e] & (1 << t) && V.disp[e] <= 0) paintCell(e); // the ring's tint goes
         if (anim) { shake(FX.towerShake[0], FX.towerShake[1]); if (V.hooks.tower) V.hooks.tower(t); }
       }
       if (anim) {
@@ -546,10 +633,10 @@
       const T = V.B.towers;
       if (T.length) {
         gx.save(); gx.lineWidth = Math.max(1, cs * K.rangeW); dash[0] = cs * K.rangeDash[0]; dash[1] = cs * K.rangeDash[1]; gx.setLineDash(dash);
-        gx.fillStyle = K.rangeFill; gx.strokeStyle = K.rangeStroke;
+        gx.strokeStyle = K.rangeStroke; // (the ring's tint is on the ground, painted with the layer)
         for (let k = 0; k < T.length && k < MAXT; k++) {
           let al = 1; if (V.towerLeft[k] <= 0) { al = 1 - (ft - V.tFallT[k]) / FX.towerFallMs; if (!(al > 0)) continue; }
-          gx.globalAlpha = al; gx.beginPath(); gx.arc(MX(T[k].cx + 0.5, T[k].cy + 0.5) * cs, MY(T[k].cx + 0.5, T[k].cy + 0.5) * cs, T[k].r * cs, 0, Math.PI * 2); gx.fill(); gx.stroke();
+          gx.globalAlpha = al; gx.beginPath(); gx.arc(MX(T[k].cx + 0.5, T[k].cy + 0.5) * cs, MY(T[k].cx + 0.5, T[k].cy + 0.5) * cs, T[k].r * cs, 0, Math.PI * 2); gx.stroke();
         }
         gx.restore();
       }
@@ -572,9 +659,8 @@
       }
       gx.globalAlpha = 1;
       // Idle sappers at the camp.
-      const idle = Math.min(K.idle | 0, V.camp.length);
-      for (let k = 0; k < idle; k++) {
-        const c = V.camp[Math.floor(((k + 0.5) * V.camp.length) / idle)], f = ((V.clock / (SH.stepMs * 3) + k) | 0) & 1, bx = c % V.w + 0.5, by = ((c / V.w) | 0) + 0.5;
+      for (let k = 0; k < V.idleC.length; k++) {
+        const c = V.idleC[k], f = ((V.clock / (SH.stepMs * 3) + k) | 0) & 1, bx = c % V.w + 0.5, by = ((c / V.w) | 0) + 0.5;
         gx.drawImage(S.sap[V.piles.length ? V.piles[k % V.piles.length].m : 1], f * ss, 0, ss, ss, MX(bx, by) * cs - ss / 2, MY(bx, by) * cs - ss / 2, ss, ss);
       }
       // Runners: out empty-handed, back with their batch on their heads. Hit runners: an arrow meets them at the ring.
