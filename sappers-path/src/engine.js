@@ -13,8 +13,9 @@
 //   Walkable = grass, dirt, camp. Connected ground = walkable cells 4-joined to the camp. A pixel is reachable when it
 //   touches connected ground; its distance is the smallest camp-BFS distance of a connected neighbour. Ties go to the
 //   smaller |y - campRow| (campRow = the camp's top row), then the lower x, then the lower y.
-//   Tap: the squad {m, n} takes a free holding space at once (no merging: two squads of a colour take two spaces). No
-//   free space = overflow, the assault fails. Its sappers wait at the space.
+//   Tap: the squad {m, n} takes a free holding space at once (no merging: two squads of a colour take two spaces). Its
+//   sappers wait at the space. No free space: the tap is refused (v3.1): play() returns REFUSED and nothing changes (the
+//   card stays at the front of its column). Dealing mode keeps the old overflow fail, which the dealer reads.
 //   Dispatch: whenever a space has sappers waiting and its colour has an unclaimed reachable pixel, one sapper goes to
 //   the nearest one and claims it (so no pixel is targeted twice); at most one per space every time.staggerMs. Spaces
 //   dispatch in tap order. So with 2 pixels open, a squad of 14 sends 2, and the next round goes as those pop.
@@ -27,8 +28,10 @@
 //   its space (home after knockMs and the walk) and waits again. Hard: it dies, and a colour left with fewer sappers
 //   than pixels fails the level short (level 51, safeArchers, never kills).
 //   Events at the same time run in the order they were scheduled; then dispatch; then the checks. Win: the last pixel
-//   pops. Once nothing is moving: stuck (tray empty, pixels left) or no move (every front card would overflow).
-//   Patient play = tap, run until nothing moves, tap again (replay, the grader, the baker). Rushing only adds risk.
+//   pops. Once nothing is moving: stuck (tray empty, pixels left) or jam (v3.1: every space is held by a squad that can't
+//   reach a pixel, and so every front card is refused). Short at a Hard kill.
+//   Patient play = tap, run until nothing moves, tap again (replay, the grader, the baker). A patient tap never meets a
+//   full line (a full line at rest is already a jam), so v3.1's refusal only ever touches rushed taps.
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
@@ -37,10 +40,10 @@
   "use strict";
   const GRASS = 0, WATER = -1, DIRT = -2, CAMP = -3;
   const NCOL = 5, NMAT = 15, IRON = 10, GILT = 14, MAXCELLS = 4096, MAXTOWERS = 8, MAXLINE = 8;
-  const PLAYING = 0, WON = 1, FAILED = -1;
-  const OVERFLOW = 1, SHORT = 2, STUCK = 3, NOMOVE = 4;
-  const REASONS = ["", "overflow", "short", "stuck", "nomove"];
-  // Event log (optional, S.logOn; the page's show reads it): [type, a, b] triples. TAP space mat (space -1: overflow),
+  const PLAYING = 0, WON = 1, FAILED = -1, NOPLAY = -2, REFUSED = -3;
+  const OVERFLOW = 1, SHORT = 2, STUCK = 3, JAM = 4; // OVERFLOW: dealing mode only (v3.1)
+  const REASONS = ["", "overflow", "short", "stuck", "jam"];
+  // Event log (optional, S.logOn; the page's show reads it): [type, a, b] triples. TAP space mat (space -1: dealing overflow),
   // DISP sapper space, EAT cell sapper (the pixel pops), GATE gate 0, TOWER tower 0, HIT sapper mat (sent back), KILL
   // sapper mat, HOME sapper space, FREE space mat.
   const EV = { TAP: 1, DISP: 2, EAT: 3, GATE: 4, TOWER: 5, HIT: 6, KILL: 7, HOME: 8, FREE: 9 };
@@ -322,21 +325,22 @@
       }
       // type 3: a space's stagger is up; dispatch runs after every batch of events
     }
-    // Would a tap on a card of m end the assault? Only when there is no free space (and it can't merge).
-    function tapFails(m) {
+    // Would a tap on a card of m be refused? Only when there is no free space (and it can't merge).
+    function blocked(m) {
       if (M[S_LEN] < cap) return false;
       if (merge) for (let k = 0; k < M[S_ORD]; k++) if (spM[ord[k]] === m) return false;
       return true;
     }
-    // After every batch: the win, and once nothing is moving (no event pending), stuck and no move.
+    // After every batch: the win, and once nothing is moving (no event pending), stuck and jam. At rest no squad can
+    // send anyone (it would have), so a full line at rest is a line of squads that can't reach a pixel.
     function settle() {
       if (M[S_STATUS] !== PLAYING) return;
       if (M[S_PIX] === 0) { M[S_STATUS] = WON; return; }
       if (deal || M[S_EL] > 0) return;
       let any = false, safe = false;
-      for (let j = 0; j < NCOL; j++) { if (heads[j] >= B.colLen[j]) continue; any = true; if (!tapFails(B.cardM[B.colStart[j] + heads[j]])) { safe = true; break; } }
+      for (let j = 0; j < NCOL; j++) { if (heads[j] >= B.colLen[j]) continue; any = true; if (!blocked(B.cardM[B.colStart[j] + heads[j]])) { safe = true; break; } }
       if (!any) fail(STUCK, M[S_ORD] > 0 ? spM[ord[0]] : 0);
-      else if (!safe) fail(NOMOVE, 0);
+      else if (!safe) fail(JAM, M[S_ORD] > 0 ? spM[ord[0]] : 0);
     }
     // Run every event up to time t (each batch of equal-time events, then dispatch, then settle), and set the clock to t.
     function advanceTo(t) {
@@ -354,7 +358,8 @@
       for (let guard = 0; guard < 4 * EMAX + 4 * SMAX && M[S_EL] > 0; guard++) { const te = eT[0]; M[S_NOW] = te; advanceTo(te); }
       return M[S_NOW];
     }
-    // A squad takes a space at time t (the clock first runs to t). No free space (and no merge): overflow.
+    // A squad takes a space at time t (the clock first runs to t). No free space (and no merge): overflow, which only
+    // dealing mode reaches (play() refuses first).
     function tap(m, cnt, t) {
       if (t != null) advanceTo(t);
       if (M[S_STATUS] !== PLAYING) return M[S_STATUS];
@@ -371,11 +376,21 @@
       dispatch(M[S_NOW]); settle();
       return M[S_STATUS];
     }
+    // Tap column col at time t (the clock first runs to t). Returns the status, NOPLAY (not playable) or REFUSED (no
+    // free space: a no-op, the card stays at the front and nothing in the state changes).
     function play(col, t) {
-      if (M[S_STATUS] !== PLAYING || col < 0 || col >= NCOL || heads[col] >= B.colLen[col]) return -2;
-      if (t != null) { advanceTo(t); if (M[S_STATUS] !== PLAYING) return -2; }
-      const ci = B.colStart[col] + heads[col]++;
+      if (M[S_STATUS] !== PLAYING || col < 0 || col >= NCOL || heads[col] >= B.colLen[col]) return NOPLAY;
+      if (t != null) { advanceTo(t); if (M[S_STATUS] !== PLAYING) return NOPLAY; }
+      const ci = B.colStart[col] + heads[col];
+      if (!deal && blocked(B.cardM[ci])) return REFUSED;
+      heads[col]++;
       return tap(B.cardM[ci], B.cardN[ci], null);
+    }
+    // A squad at space s that can't send anyone now: all its sappers are home and its colour has no pixel it may go
+    // for (a wary squad: none outside the rings). The page marks it stuck; a line of them is a jam.
+    function stuckAt(s) {
+      if (s < 0 || s >= cap || !spQ[s] || spO[s] > 0 || spW[s] <= 0) return false;
+      return (spF[s] & 1 ? wareTarget(spM[s]) : target(spM[s])) < 0;
     }
 
     // Initial state.
@@ -418,7 +433,7 @@
       order: (out) => { out = out || []; out.length = 0; for (let k = 0; k < M[S_ORD]; k++) out.push(ord[k]); return out; },
       sappers: (m) => sap[m],
       front(j) { return heads[j] < B.colLen[j] ? B.colStart[j] + heads[j] : -1; },
-      tapFails: (m) => tapFails(m),
+      blocked: (m) => blocked(m), stuck: (s) => stuckAt(s),
       // Reachable, unclaimed pixels of m right now (tools and UI; not on the hot path).
       reachable(m) { return m > 0 && m < NMAT ? hlen[m] : 0; },
     };
@@ -427,7 +442,7 @@
   // Replay a column order patiently ("0123..."): tap, run until nothing moves, tap again. Returns the sim.
   function replay(B, rules, order) {
     const S = sim(B, rules);
-    for (let i = 0; i < order.length && S.status === PLAYING; i++) { if (S.play(order.charCodeAt(i) - 48) === -2) break; S.quiet(); }
+    for (let i = 0; i < order.length && S.status === PLAYING; i++) { if (S.play(order.charCodeAt(i) - 48) < -1) break; S.quiet(); }
     S.quiet();
     return S;
   }
@@ -435,5 +450,5 @@
   const rulesOf = (v3, d) => Object.assign({}, v3.rules[d] || v3.rules.normal, { time: v3.time }, v3.flags || {});
   const gridOf = (w, h, a) => { const g = []; for (let y = 0; y < h; y++) { let s = ""; for (let x = 0; x < w; x++) s += chOf(a[y * w + x]); g.push(s); } return g; };
 
-  return { compile, sim, replay, rulesOf, timeOf, gridOf, chOf, matOf, GRASS, WATER, DIRT, CAMP, NCOL, NMAT, IRON, GILT, PLAYING, WON, FAILED, EV, REASONS };
+  return { compile, sim, replay, rulesOf, timeOf, gridOf, chOf, matOf, GRASS, WATER, DIRT, CAMP, NCOL, NMAT, IRON, GILT, PLAYING, WON, FAILED, NOPLAY, REFUSED, EV, REASONS };
 });

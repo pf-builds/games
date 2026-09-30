@@ -104,7 +104,7 @@ const COLUMN = ["~aa~", "~aa~", "~aa~", "~aa~", "~aa~", "~aa~", "~aa~", "....", 
   S.advanceTo(home); eq([S.lineLen, S.busy], [0, false], "space: it frees at the computed home time (" + home + " ms)");
 }
 
-// ---- spaces: no merging, a space per tap, overflow at the tap ---------------------------------------------------------
+// ---- spaces: no merging, a space per tap; no free space refuses the tap (v3.1) -----------------------------------------
 const RING = [".......", ".aaaaa.", ".abbca.", ".aaaaa.", "...#..."];
 {
   const S = E.sim(E.compile(lv(RING, [[[2, 1]], [[2, 1]], [[3, 1]], [[1, 12]], []])), N);
@@ -126,11 +126,21 @@ const RING = [".......", ".aaaaa.", ".abbca.", ".aaaaa.", "...#..."];
   eq(pat(S, 2), E.WON, "cascade: the a ring falls, b goes, which opens c: all without another tap");
 }
 {
-  // Spam: three rapid taps with two spaces overflow while the first squads are still out; the same taps, patient, win.
+  // v3.1: a third rapid tap with both spaces taken is refused: a no-op (the card stays, the state is byte-identical, the
+  // level plays on); once a squad is home the same tap goes through. The same taps, patient, win.
   const L = lv(["abc....", ".......", "...##.."], [[[1, 1]], [[2, 1]], [[3, 1]], [], []]);
   const S = E.sim(E.compile(L), hold(2));
-  S.play(0, 0); S.play(1, 10); eq(S.status, E.PLAYING, "spam: two squads out fill both spaces"); S.play(2, 20);
-  eq([S.status, S.reason], [E.FAILED, "overflow"], "spam: a third rapid tap has no space: overflow, at the tap");
+  S.play(0, 0); S.play(1, 10); eq(S.status, E.PLAYING, "spam: two squads out fill both spaces");
+  S.advanceTo(20); const before = S.save();
+  eq(S.play(2), E.REFUSED, "refused: a third rapid tap has no free space: play() returns REFUSED");
+  const after = S.save();
+  ok(before.length === after.length && before.every((v, i) => v === after[i]), "refused: the state is byte-identical (tray, line, board, clock)");
+  eq([S.status, S.heads[2], S.plays, S.lineLen, S.blocked(3)], [E.PLAYING, 0, 2, 2, true], "refused: no fail, the card stays at the front, no play counted");
+  eq(S.play(2, 30), E.REFUSED, "refused: tapping again while both squads are out is refused again");
+  let t = 30; for (let g = 0; g < 200 && S.lineLen === 2; g++) { t += 10; S.advanceTo(t); }
+  eq([S.lineLen < 2, S.status], [true, E.PLAYING], "refused: a squad comes home and frees its space");
+  eq([S.play(2), S.heads[2], S.lineLen], [E.PLAYING, 1, 2], "refused, then accepted: the same tap takes the freed space");
+  S.quiet(); eq(S.status, E.WON, "refused, then accepted: the level still wins");
   const P = E.sim(E.compile(L), hold(2)); pat(P, 0); pat(P, 1); pat(P, 2);
   eq(P.status, E.WON, "patience: the same taps, each after the squads are home, win");
   const P2 = E.sim(E.compile(L), hold(2)); P2.play(0, 0); P2.play(1, 10); P2.quiet(); P2.play(2); P2.quiet();
@@ -142,9 +152,30 @@ const RING = [".......", ".aaaaa.", ".abbca.", ".aaaaa.", "...#..."];
 }
 {
   const S = E.sim(E.compile(lv([".......", ".aaaaa.", ".abcda.", ".aaaaa.", "...#..."], [[[2, 1]], [[3, 1], [1, 12]], [[4, 1]], [], []])), hold(1));
-  S.play(0); eq([S.status, S.reason], [E.FAILED, "nomove"], "no move: the one space holds a squad that can't move, and every tap would overflow");
+  S.play(0); eq([S.status, S.reason], [E.FAILED, "jam"], "jam: the one space holds a squad that can't reach a pixel, nothing moves: the line is jammed");
+  eq(S.stuck(S.order()[0]), true, "jam: the squad in the space reads stuck");
   const M1 = E.sim(E.compile(lv(RING, [[[2, 1]], [[3, 1], [1, 12]], [[2, 1]], [], []])), Object.assign({}, hold(1), { mergeLeftovers: true }));
-  M1.play(0); eq(M1.status, E.PLAYING, "no move (flag mergeLeftovers): a front card that can merge is a legal move");
+  M1.play(0); eq(M1.status, E.PLAYING, "jam (flag mergeLeftovers): a front card that can merge is a legal move, so no jam");
+}
+{
+  // Wrong-colour spam ends in a jam: five inner colours tapped before the ring's crew, rushed, fill every space with
+  // squads that can't reach; the ring's crew is refused; the line is jammed as soon as nothing moves.
+  const JAMB = [".........", ".aaaaaaa.", ".abcdefa.", ".aaaaaaa.", "....#...."];
+  const L = lv(JAMB, [[[2, 1], [1, 16]], [[3, 1]], [[4, 1]], [[5, 1]], [[6, 1]]]);
+  const S = E.sim(E.compile(L), N);
+  for (const j of [1, 2, 3, 4]) S.play(j, S.now + 30);
+  eq([S.status, S.lineLen], [E.PLAYING, 4], "spam: four wrong colours wait in four spaces");
+  S.play(0, S.now + 30);
+  eq([S.status, S.reason, S.lineLen, S.order().every((s) => S.stuck(s))], [E.FAILED, "jam", 5, true], "spam: the fifth fills the line with stuck squads: jammed at once, at rest");
+  const R = E.sim(E.compile(L), N); for (const j of [1, 2, 3, 4]) R.play(j, R.now + 30);
+  eq(R.play(0, R.now + 30), E.FAILED, "spam: rushed, the fifth wrong colour's tap is taken (a space was free) and jams");
+  const W = E.sim(E.compile(L), N); pat(W, 0); pat(W, 0); for (const j of [1, 2, 3, 4]) pat(W, j);
+  eq(W.status, E.WON, "spam: the ring's crew first, then the inner colours, wins");
+  const H4 = E.sim(E.compile(L), hold(4)); for (const j of [1, 2, 3, 4]) H4.play(j, H4.now + 30);
+  eq([H4.status, H4.reason], [E.FAILED, "jam"], "spam (4 spaces): four stuck squads and a refused front card: jammed");
+  // Dealing mode keeps the old overflow (the dealer reads it): a squad with no space fails the deal.
+  const D = E.sim(E.compile(lv(JAMB)), hold(2), { deal: true }); D.playSquad(2, 1); D.playSquad(3, 1); D.playSquad(4, 1);
+  eq([D.status, D.reason], [E.FAILED, "overflow"], "dealing: a squad with no free space still fails the deal (overflow)");
 }
 
 // ---- gates and keys --------------------------------------------------------------------------------------------------
@@ -193,9 +224,12 @@ const ARCH = (cols) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "
 // ---- determinism, save / load ------------------------------------------------------------------------------------------
 {
   const L = LEVELS.levels.find((l) => l.n === 58) || LEVELS.levels[50], B = E.compile(L);
-  const run = () => { const S = E.sim(B, N), r = Gr.rng(99); let t = 0; for (let g = 0; g < 30 && S.status === E.PLAYING; g++) { const o = []; for (let j = 0; j < 5; j++) if (S.heads[j] < B.colLen[j]) o.push(j); if (!o.length) break; t += Math.floor(r() * 2500); S.play(o[Math.floor(r() * o.length)], t); } S.advanceTo(t + 4000); return S.save(); };
+  let refusedN = 0, seed = 99;
+  const run = () => { const S = E.sim(B, N), r = Gr.rng(seed); let t = 0; refusedN = 0; for (let g = 0; g < 80 && S.status === E.PLAYING; g++) { const o = []; for (let j = 0; j < 5; j++) if (S.heads[j] < B.colLen[j]) o.push(j); if (!o.length) break; t += Math.floor(r() * 200); if (S.play(o[Math.floor(r() * o.length)], t) === E.REFUSED) refusedN++; } S.advanceTo(t + 4000); return S.save(); };
+  for (let k = 0; k < 40; k++) { seed = 99 + k; run(); if (refusedN > 0) break; } // a seed whose rushed taps meet a full line
   const A = run(), Bm = run();
-  ok(A.length === Bm.length && A.every((v, i) => v === Bm[i]), "determinism: the same taps at the same times give an identical state (level " + L.n + ")");
+  ok(A.length === Bm.length && A.every((v, i) => v === Bm[i]), "determinism: the same taps at the same times give an identical state (level " + L.n + ", seed " + seed + ")");
+  ok(refusedN > 0, "determinism: that run includes refused taps (" + refusedN + ")");
 }
 {
   const B = E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []])), S = E.sim(B, N), buf = S.save();
@@ -206,7 +240,7 @@ const ARCH = (cols) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "
 
 // ---- differential: engine vs the slow reference on every baked level, patient and rushed --------------------------------
 {
-  let games = 0, taps = 0, pops = 0, diffs = 0;
+  let games = 0, taps = 0, pops = 0, diffs = 0, refused = 0, patientRefused = 0;
   const t0 = Date.now();
   for (const L of LEVELS.levels) {
     const B = E.compile(L);
@@ -215,29 +249,36 @@ const ARCH = (cols) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "
         const S = E.sim(B, rules), R = Ref.game(L, rules), r = Gr.rng(L.n * 1009 + (rushed ? 17 : 3) + dn.length);
         S.logOn = true; let t = 0, bad = null;
         const mine = [];
-        for (let g = 0; g <= B.ncards && S.status === E.PLAYING && !bad; g++) {
+        for (let g = 0; g <= 6 * B.ncards + 40 && S.status === E.PLAYING && !bad; g++) {
           const open = []; for (let j = 0; j < 5; j++) if (S.heads[j] < B.colLen[j]) open.push(j);
           if (!open.length) break;
           const j = open[Math.floor(r() * open.length)];
           S.clearLog();
-          if (rushed) { t += Math.floor(r() * 1800); S.play(j, t); R.play(j, t); } else { S.play(j); S.quiet(); R.play(j); R.quiet(); }
+          let a1, a2;
+          if (rushed) { t += Math.floor(r() * 1800); a1 = S.play(j, t); a2 = R.play(j, t); } else { a1 = S.play(j); S.quiet(); a2 = R.play(j); R.quiet(); }
           taps++;
+          if ((a1 === E.REFUSED) !== (a2 === "refused")) bad = "refusal " + a1 + "/" + a2;
+          if (a1 === E.REFUSED) { refused++; if (!rushed) patientRefused++; }
           for (let i = 0; i < S.evLen; i += 3) if (S.ev[i] === E.EV.EAT) mine.push([S.ev[i + 1], S.q1[S.ev[i + 2]]]);
           const st = S.status === E.WON ? "won" : S.status === E.FAILED ? "failed" : "playing";
           const lineR = R.spaces.map((s, k) => [k, s]).filter(([, s]) => s).sort((p, q) => p[1].seq - q[1].seq).map(([, s]) => [s.m, s.wait + s.out]);
+          if (bad) break;
           if (JSON.stringify(mine) !== JSON.stringify(R.pops)) bad = "pops";
           else if (st !== R.status || (st === "failed" && S.reason !== R.reason)) bad = "status " + st + "/" + R.status + " " + S.reason + "/" + R.reason;
           else if (JSON.stringify(line(S)) !== JSON.stringify(lineR)) bad = "spaces";
           else if (S.now !== R.now) bad = "clock";
         }
+        if (!bad) { S.quiet(); R.quiet(); const st = S.status === E.WON ? "won" : S.status === E.FAILED ? "failed" : "playing"; if (st !== R.status || S.reason !== R.reason) bad = "final " + st + "/" + R.status + " " + S.reason + "/" + R.reason; }
         pops += mine.length;
         if (bad) { diffs++; if (diffs <= 4) console.log("  diff: level " + L.n + " " + dn + (rushed ? " rushed" : " patient") + ": " + bad); }
         games++;
       }
     }
   }
-  eq(diffs, 0, "differential: engine == reference on " + games + " random games (" + taps + " taps, " + pops + " pops), patient and rushed, every baked level and difficulty");
-  console.log("  differential: " + games + " games, " + taps + " taps in " + ((Date.now() - t0) / 1000).toFixed(1) + " s");
+  eq(diffs, 0, "differential: engine == reference on " + games + " random games (" + taps + " taps, " + refused + " refused, " + pops + " pops), patient and rushed, every baked level and difficulty");
+  eq(patientRefused, 0, "differential: a patient tap is never refused (a full line at rest is already a jam)");
+  ok(refused > 0, "differential: the rushed games include refused taps (" + refused + ")");
+  console.log("  differential: " + games + " games, " + taps + " taps (" + refused + " refused) in " + ((Date.now() - t0) / 1000).toFixed(1) + " s");
 }
 
 // ---- baked levels: stored winning orders (played patiently), sums ------------------------------------------------------

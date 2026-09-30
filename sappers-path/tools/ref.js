@@ -3,6 +3,8 @@
 // every pixel for the nearest, and the event list scanned for its earliest entry every step. Same level JSON, the same
 // rules and the same config timing; nothing shared with the engine but the file format.
 //   game(L, rules) -> {play(col, t?), advanceTo(t), quiet(), status, reason, now, spaces, pops, ...}
+// v3.1: a tap with no free space is refused (play returns "refused", the card stays, nothing changes); the overflow fail
+// is gone, and a full line at rest is a jam (every space held by a squad that can't reach a pixel).
 // pops: every popped pixel as [cell, time], in the order they popped.
 "use strict";
 const MATCH = { ".": 0, ",": -2, "~": -1, "#": -3 };
@@ -105,7 +107,7 @@ function game(L, rules) {
     if (events.length) return;
     const fronts = cols.map((c, i) => c[heads[i]]).filter(Boolean);
     if (!fronts.length) fail("stuck");
-    else if (spaces.filter(Boolean).length >= rules.hold) fail("nomove");
+    else if (spaces.filter(Boolean).length >= rules.hold) fail("jam");
   }
   function advanceTo(t) {
     for (let guard = 0; guard < 1e6; guard++) {
@@ -121,10 +123,10 @@ function game(L, rules) {
   function play(j, t) {
     if (status !== "playing" || heads[j] >= cols[j].length) return;
     if (t != null) { advanceTo(t); if (status !== "playing") return; }
-    const { m, n } = cols[j][heads[j]++]; taps++;
     let i = -1;
     for (let k = 0; k < rules.hold; k++) if (!spaces[k]) { i = k; break; }
-    if (i < 0) { fail("overflow"); return; }
+    if (i < 0) return "refused";
+    const { m, n } = cols[j][heads[j]++]; taps++;
     spaces[i] = { m, wait: n, out: 0, wary: false, next: now, seq: taps };
     peak = Math.max(peak, spaces.filter(Boolean).length);
     dispatch(now); settle();
