@@ -1,0 +1,377 @@
+{
+  "version": 1,
+  "note": "Sapper's Path v4 M4, the Gallery. convert: the converter (tools/convert.js). kinds: per kind of picture, its mask (alpha: emoji; flood: our generated pictures, flat backgrounds; none: paintings), the picture box [columns, rows] without the ring, the outline rings and the margin (cells of background plus outline round the subject's box). minDE: every pair of colours in a picture is at least this far apart (CIEDE2000; a kind may set its own, never under 20; a colour closer to one already kept is left out and its pixels vote for their nearest kept colour). minShare: the least share of the subject a colour must hold to be kept. chroma (a kind): its colours' a* and b* are scaled by this for display. maxColours: the most colours a picture keeps (material ids 1-9 and 11-13). k0: k-means clusters before merging. ink: the outline black. bgs: background colours an emoji may take (the one farthest from its colours). names: colour names for aria-labels (nearest by CIEDE2000). bgGap: an emoji's background is the first of bgs this far past minDE from all its colours (else the farthest).",
+  "convert": {
+    "seed": 20261001,
+    "k0": 24,
+    "minDE": 25,
+    "maxColours": 12,
+    "alphaMin": 128,
+    "floodDE": 12,
+    "ink": "#1f1b24",
+    "kinds": {
+      "emoji": {
+        "mask": "alpha",
+        "box": [
+          32,
+          32
+        ],
+        "outline": 1,
+        "margin": 2
+      },
+      "ours": {
+        "mask": "flood",
+        "box": [
+          32,
+          32
+        ],
+        "outline": 1,
+        "margin": 2
+      },
+      "painting": {
+        "mask": "none",
+        "box": [
+          40,
+          32
+        ],
+        "outline": 0,
+        "margin": 0,
+        "chroma": 1.4,
+        "minDE": 20
+      }
+    },
+    "bgs": [
+      "#8ecdf2",
+      "#f7df86",
+      "#a8e6b0",
+      "#f6b8cf",
+      "#c9b8f0",
+      "#f3ead8",
+      "#4f8fd6",
+      "#5fae5f",
+      "#a066c8",
+      "#e2745a",
+      "#3e9c9a"
+    ],
+    "names": [
+      [
+        "black",
+        "#1f1b24"
+      ],
+      [
+        "charcoal",
+        "#474350"
+      ],
+      [
+        "grey",
+        "#8a8791"
+      ],
+      [
+        "silver",
+        "#c4c3c9"
+      ],
+      [
+        "white",
+        "#fbfaf7"
+      ],
+      [
+        "cream",
+        "#f3ead8"
+      ],
+      [
+        "red",
+        "#d8262e"
+      ],
+      [
+        "dark red",
+        "#8c1c22"
+      ],
+      [
+        "pink",
+        "#f58cb4"
+      ],
+      [
+        "rose",
+        "#e0567d"
+      ],
+      [
+        "salmon",
+        "#f59a82"
+      ],
+      [
+        "orange",
+        "#f4892a"
+      ],
+      [
+        "peach",
+        "#fcc79a"
+      ],
+      [
+        "brown",
+        "#8a5a2e"
+      ],
+      [
+        "dark brown",
+        "#4e3120"
+      ],
+      [
+        "tan",
+        "#c9a26b"
+      ],
+      [
+        "gold",
+        "#d9a826"
+      ],
+      [
+        "yellow",
+        "#f7d83a"
+      ],
+      [
+        "butter",
+        "#f7e79a"
+      ],
+      [
+        "olive",
+        "#7d7a2e"
+      ],
+      [
+        "lime",
+        "#9ad13b"
+      ],
+      [
+        "green",
+        "#3fa34d"
+      ],
+      [
+        "dark green",
+        "#1f5e30"
+      ],
+      [
+        "mint",
+        "#a8e6b0"
+      ],
+      [
+        "teal",
+        "#1d9a8e"
+      ],
+      [
+        "cyan",
+        "#3cc8e0"
+      ],
+      [
+        "sky",
+        "#8ecdf2"
+      ],
+      [
+        "blue",
+        "#2f6fd8"
+      ],
+      [
+        "navy",
+        "#1f2f6b"
+      ],
+      [
+        "slate",
+        "#5a6e8c"
+      ],
+      [
+        "lilac",
+        "#c9b8f0"
+      ],
+      [
+        "purple",
+        "#7b3fb8"
+      ],
+      [
+        "plum",
+        "#5a2656"
+      ],
+      [
+        "magenta",
+        "#d23fb0"
+      ],
+      [
+        "blush",
+        "#f6b8cf"
+      ],
+      [
+        "sand",
+        "#e6d2a4"
+      ]
+    ],
+    "minShare": 0.006,
+    "bgGap": 6
+  },
+  "bake": {
+    "version": 1,
+    "note": "The Gallery bake (tools/gallery-bake.js). curve: the first `intro` pictures in the intro band, then `pattern` repeating (bands: Normal random-tap win rates). maxTaps, maxWaitMs and duration.maxMs as the siege (bake-config). capOf: the outline's squads (the ink colour): [first squad at most, every later one at most], so the first breach is narrow. deal, dealBy, tune, grade, fast, candidates, dedupe, penalty, budget: as the siege's bake-config. narrowFor: slots whose tuning also narrows the one-move-lookahead player's win rate (down to tune.narrow.stopAt, so a thinking player can lose there too).",
+    "seed": 20261002,
+    "curve": {
+      "intro": 4,
+      "pattern": [
+        "saw0",
+        "saw1",
+        "saw2",
+        "saw1",
+        "hard",
+        "relief"
+      ],
+      "bands": {
+        "intro": [
+          0.62,
+          0.9
+        ],
+        "saw0": [
+          0.62,
+          0.8
+        ],
+        "saw1": [
+          0.46,
+          0.64
+        ],
+        "saw2": [
+          0.3,
+          0.48
+        ],
+        "hard": [
+          0.1,
+          0.3
+        ],
+        "relief": [
+          0.62,
+          0.85
+        ]
+      }
+    },
+    "maxTaps": 55,
+    "maxWaitMs": 15000,
+    "duration": {
+      "medianMs": 120000,
+      "maxMs": 240000
+    },
+    "capOf": [
+      12,
+      24
+    ],
+    "deal": {
+      "hold": 4,
+      "size": [
+        8,
+        30
+      ],
+      "deep": 0.15,
+      "finish": 0.3,
+      "maxCard": 72,
+      "maxCards": 240,
+      "tries": 14,
+      "attempts": 24,
+      "shrink": 0.5,
+      "shrinks": 5,
+      "park": 2,
+      "noParkUnderArchers": true
+    },
+    "dealBy": {
+      "intro": {
+        "size": [
+          20,
+          56
+        ],
+        "deep": 0.05
+      },
+      "saw0": {
+        "size": [
+          14,
+          44
+        ],
+        "deep": 0.12
+      },
+      "saw1": {
+        "size": [
+          14,
+          44
+        ],
+        "deep": 0.12
+      },
+      "saw2": {
+        "size": [
+          14,
+          44
+        ],
+        "deep": 0.12
+      },
+      "relief": {
+        "size": [
+          16,
+          48
+        ],
+        "deep": 0.08
+      },
+      "hard": {
+        "size": [
+          18,
+          52
+        ],
+        "deep": 0.18
+      }
+    },
+    "tune": {
+      "stages": [
+        {
+          "playouts": 64,
+          "steps": 700
+        },
+        {
+          "playouts": 256,
+          "steps": 200
+        }
+      ],
+      "narrow": {
+        "playouts": 256,
+        "greedyPlayouts": 128,
+        "steps": 600,
+        "stopAt": 0.35,
+        "margin": 0.005
+      },
+      "margin": 0.02,
+      "colMin": 1,
+      "colMax": 30,
+      "resize": 0.25,
+      "split": 0.5,
+      "minCard": 3,
+      "maxCard": 72
+    },
+    "narrowFor": [
+      "hard"
+    ],
+    "grade": {
+      "playouts": 400,
+      "greedyPlayouts": 100,
+      "solveNodes": 200000
+    },
+    "fast": {
+      "games": 300,
+      "gapMs": 0,
+      "ratio": 1.75,
+      "minPts": 0.03,
+      "pts": 0.1
+    },
+    "candidates": {
+      "perLevel": 6,
+      "perLevelBy": {
+        "saw2": 8,
+        "hard": 10
+      }
+    },
+    "dedupe": 0.9,
+    "penalty": {
+      "band": 100,
+      "durationMs": 30000,
+      "waitMs": 3000,
+      "fast": 1
+    },
+    "budget": {
+      "wallSec": 7200,
+      "threads": 0
+    }
+  }
+}
