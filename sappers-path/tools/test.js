@@ -1,7 +1,9 @@
 // Sapper's Path v3 node checks: the rules engine (SPEC-v3 §2-4, §9; the dispatch model from playtest 1) on hand-made
 // boards with known answers, then a differential run of the engine against the slow reference (tools/ref.js) on every
-// baked level, patient and rushed, and the stored winning orders on every difficulty, played patiently; last, the page
-// save's settings (v4 M1: speed and colour-blind marks) through sanitize.
+// baked level, patient and rushed, and the stored winning orders on every difficulty, played patiently; v4 M2's twists
+// (mystery cards, linked squads, the locked space, the generalized jam, dealing mode) on hand-made boards, a no-hang
+// sweep and a second differential on the debug levels and on baked levels with random twists injected, the grader's
+// info model and the fast tapper; last, the page save's settings (v4 M1: speed and colour-blind marks) through sanitize.
 // Run: ~/.local/opt/node/bin/node tools/test.js   (exit code 1 on any failure)
 "use strict";
 const E = require("../src/engine.js");
@@ -296,6 +298,260 @@ const ARCH = (cols) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "
   }
   eq(wins, total, "levels: every stored winning order wins patiently on its difficulty (" + total + " replays)");
   eq(LEVELS.levels.length, 75, "levels: 75 levels baked");
+}
+
+// ==== v4 M2: the twists (mystery cards, linked squads, the locked space) =================================================
+// Events of one type since the log was cleared, as [a, b].
+const evs = (S, type) => { const o = []; for (let i = 0; i < S.evLen; i += 3) if (S.ev[i] === type) o.push([S.ev[i + 1], S.ev[i + 2]]); return o; };
+const same = (x, y) => x.length === y.length && x.every((v, i) => v === y[i]);
+const ROW6 = ["abcdef", "......", "..##.."]; // six colours, one pixel each, all in reach
+
+// ---- compile: the new fields ---------------------------------------------------------------------------------------------
+{
+  const C6 = [[[1, 1]], [[2, 1], [3, 1]], [[4, 1]], [], []];
+  throws(() => E.compile(lv(ROW6, [[[1, 1], [2, 1]], [], [], [], []], { links: [[[0, 0], [0, 1]]] })), "compile: a link inside one column throws");
+  throws(() => E.compile(lv(ROW6, C6, { links: [[[0, 0], [1, 0]], [[1, 0], [2, 0]]] })), "compile: a card in two links throws");
+  throws(() => E.compile(lv(ROW6, C6, { links: [[[0, 0], [1, 2]]] })), "compile: a link to a card that isn't there throws");
+  throws(() => E.compile(lv(ROW6, [[[1, 1, 2]], [], [], [], []])), "compile: unknown card flags throw");
+  throws(() => E.compile(lv(ROW6, C6, { lock: { key: [0, 0] } })), "compile: a lock key that isn't gilt throws");
+  throws(() => E.compile(lv([".jn", ".##"], null, { gates: [{ at: [1, 0], key: [2, 0] }], lock: { key: [2, 0] } })), "compile: a gate's key can't also be the lock's key");
+  const B = E.compile(lv(ROW6, [[[1, 1]], [[2, 1, 1], [3, 1]], [[4, 1]], [], []], { links: [[[0, 0], [1, 1]]] }));
+  eq([Array.from(B.cardF), B.nlinks, B.linkOf[0], B.linkOf[2], B.linkOf[1], B.lockKey], [[0, 1, 0, 0], 1, 2, 0, -1, -1], "compile: flags, links (both ways) and no lock");
+  const old = LEVELS.levels[40], Bo = E.compile(old);
+  eq([Bo.nlinks, Bo.lockKey, Array.from(Bo.cardF).every((f) => f === 0)], [0, -1, true], "compile: a baked level has no twists (old files parse as before)");
+}
+
+// ---- mystery cards --------------------------------------------------------------------------------------------------------
+{
+  const L = lv(ROW6, [[[1, 1], [2, 1, 1]], [[3, 1, 1], [4, 1, 1], [5, 1]], [[6, 1]], [], []]);
+  const S = E.sim(E.compile(L), N);
+  eq([0, 1, 2, 3, 4, 5].map((c) => S.hidden(c)), [false, true, false, true, false, false], "mystery: a flagged card behind the front is hidden; a flagged front card and an unflagged card are not");
+  S.logOn = true; S.clearLog(); S.play(0);
+  eq([S.hidden(1), evs(S, E.EV.REVEAL)], [false, [[1, 0]]], "mystery: the card that reaches the front is revealed for good (one REVEAL: card 1, column 0)");
+  S.quiet(); S.clearLog(); S.play(0); S.quiet();
+  eq([S.hidden(1), evs(S, E.EV.REVEAL)], [false, []], "mystery: played, it stays revealed; no second REVEAL");
+  eq(E.check(L), ["column 1: a mystery flag on the first card means nothing"], "check: warns about a mystery flag on a column's first card");
+  // Information only: the same level with every flag stripped plays the same order identically.
+  const P = E.sim(E.compile(lv(ROW6, L.cols.map((c) => c.map((cd) => cd.slice(0, 2))))), N), Q = E.sim(E.compile(L), N);
+  for (const j of [1, 0, 1, 2, 0, 1]) { P.play(j); P.quiet(); Q.play(j); Q.quiet(); }
+  eq([Q.status, Q.now, Q.pixLeft, Array.from(Q.a)], [P.status, P.now, P.pixLeft, Array.from(P.a)], "mystery: rules never read it (the same taps with and without flags end identically)");
+}
+
+// ---- linked squads ----------------------------------------------------------------------------------------------------------
+{
+  // a (column 0's front) is linked to b, third in column 1 behind c and a hidden d; e sits behind b.
+  const L = lv(ROW6, [[[1, 1]], [[3, 1], [4, 1, 1], [2, 1], [5, 1]], [[6, 1]], [], []], { links: [[[0, 0], [1, 2]]] });
+  const S = E.sim(E.compile(L), N); S.logOn = true;
+  eq([S.partner(0), S.partner(3), S.card(1, 2), S.refused(0)], [3, 0, 3, false], "link: a and b (column 1, third card) are partners; with the line empty the tap is legal");
+  const r = S.play(0);
+  eq([r, S.lineLen, S.plays, evs(S, E.EV.TAP), evs(S, E.EV.LINK)], [E.PLAYING, 2, 1, [[0, 1], [1, 2]], [[0, 1]]], "link: one tap takes two spaces at the same moment: the tapped squad first (space 0), then its partner (space 1); one play");
+  eq([S.card(1, 0), S.card(1, 1), S.card(1, 2), S.card(1, 3), S.heads[1], S.gone[3]], [1, 2, 4, -1, 0, 1], "link: the buried partner leaves its column and the cards behind it close up (c, d, e)");
+  const disp = evs(S, E.EV.DISP).map(([id]) => [S.qS[id], S.q0[id]]);
+  eq(disp, [[0, 0], [1, 0]], "link: both squads go out together (each dispatches at once for its own colour)");
+  S.quiet(); eq([S.status, S.lineLen, S.pixLeft], [E.PLAYING, 0, 4], "link: both pixels pop; both spaces free");
+  // The partner hidden: revealed as it leaves.
+  const H2 = E.sim(E.compile(lv(ROW6, [[[1, 1]], [[3, 1], [2, 1, 1], [5, 1]], [[6, 1]], [], []], { links: [[[0, 0], [1, 1]]] })), N); H2.logOn = true;
+  eq(H2.hidden(2), true, "link: a hidden partner reads hidden before the tap");
+  H2.play(0); eq([H2.hidden(2), evs(H2, E.EV.REVEAL)], [false, [[2, 1]]], "link: a hidden partner is revealed as it leaves (REVEAL card 2, column 1)");
+  // The partner at the front of its column: that column's head moves on (and reveals a mystery card behind it).
+  const F2 = E.sim(E.compile(lv(ROW6, [[[1, 1]], [[2, 1], [3, 1, 1]], [], [], []], { links: [[[0, 0], [1, 0]]] })), N); F2.logOn = true;
+  F2.play(0); eq([F2.heads[0], F2.heads[1], F2.card(1, 0), F2.hidden(2), evs(F2, E.EV.REVEAL)], [1, 1, 2, false, [[2, 1]]], "link: a partner at its column's front: both columns move on; the new front is revealed");
+  // Tapped from the other side: column 1's front pulls column 0's second card; column 0's front stays.
+  const O2 = E.sim(E.compile(lv(ROW6, [[[1, 1], [2, 1]], [[3, 1]], [], [], []], { links: [[[0, 1], [1, 0]]] })), N);
+  O2.play(1); eq([O2.heads[0], O2.card(0, 0), O2.card(0, 1), O2.lineLen, O2.order().map((s) => O2.spM[s])], [0, 0, -1, 2, [3, 2]], "link: tapped from either side; the partner's column keeps its front");
+}
+{
+  // Two free spaces or refused. RING: b and c walled in; a's ring (12) is linked to c. Two spaces: b waits (walled in),
+  // one space left, the linked tap is refused (from either side, byte-identical), the unlinked d is still legal.
+  const L = lv(RING, [[[2, 1]], [[1, 12]], [[3, 1]], [[4, 1]], []], { links: [[[1, 0], [2, 0]]] });
+  const S = E.sim(E.compile(L), hold(2)); pat(S, 0);
+  eq([S.status, S.lineLen, S.open, S.refused(1), S.refused(2), S.refused(3)], [E.PLAYING, 1, 2, true, true, false], "link refused: one space free: both linked fronts are refused, the unlinked one is legal");
+  const b0 = S.save();
+  eq([S.play(1), S.play(2)], [E.REFUSED, E.REFUSED], "link refused: play() returns REFUSED on either linked card");
+  ok(same(b0, S.save()), "link refused: the state is byte-identical (tray, line, board, clock)");
+  pat(S, 3); eq([S.status, S.reason, S.jamWhy], [E.FAILED, "jam", 0], "link refused: then d fills the line with two stuck squads: a plain jam (no free space)");
+  // Generalized jam: one space free but every front card linked.
+  const J = lv(RING, [[[2, 2]], [[1, 12]], [[3, 1]], [], []], { links: [[[1, 0], [2, 0]]] });
+  const JS = E.sim(E.compile(J), hold(2)); pat(JS, 0);
+  eq([JS.status, JS.reason, JS.jamWhy, JS.lineLen], [E.FAILED, "jam", 1, 1], "jam (generalized): at rest, one space free, every front card linked: jam, jamWhy 1 (linked squads need 2)");
+  const JR = Ref.game(J, hold(2)); JR.play(0); JR.quiet(); eq([JR.status, JR.reason, JR.jamWhy], ["failed", "jam", 1], "jam (generalized): the reference rules agree");
+  const W3 = E.sim(E.compile(J), hold(3)); pat(W3, 0); eq(pat(W3, 1), E.WON, "jam (generalized): with 3 spaces the same taps win (the pair takes the last two)");
+}
+{
+  // Coupled freeing: a's pixel is near the camp, b's far. The pair goes; a is home first but its space holds (held) until
+  // b is home; then both free at that moment, the earlier-placed space first.
+  const L = lv(["b.......", "........", "........", ".....a..", "........", "...##..."], [[[1, 1]], [[2, 1]], [], [], []], { links: [[[0, 0], [1, 0]]] });
+  const S = E.sim(E.compile(L), N); S.logOn = true; S.play(0, 0);
+  const ia = [0, 1].find((id) => S.qS[id] === 0), ib = 1 - ia, ta = S.q2[ia], tb = S.q2[ib];
+  ok(ta < tb, "coupled: a's sapper is home before b's (" + ta + " < " + tb + " ms)");
+  S.advanceTo(ta); eq([S.lineLen, S.held(0), S.stuck(0), S.held(1)], [2, true, false, false], "coupled: a is finished and home, but its space holds for its partner (held, not stuck)");
+  S.clearLog(); S.advanceTo(tb - 1); eq([S.lineLen, evs(S, E.EV.FREE)], [2, []], "coupled: nothing frees while b is still out");
+  S.advanceTo(tb); eq([S.lineLen, evs(S, E.EV.FREE)], [0, [[0, 1], [1, 2]]], "coupled: b home: both spaces free at that moment, space 0 then space 1");
+}
+{
+  // Coupled freeing with a Hard kill: g (tower, 3) is linked to a (1); both a pixels sit in the tower's ring, so a's one
+  // sapper is shot dead on the way. Dead counts as finished: a's space holds for g, and both free once g is home. A spare a
+  // sapper in column 2 keeps the colour from going short; it finishes once the tower is down.
+  const L = lv(["......ggg", ".........", "......aa.", ".........", "....##..."], [[[7, 3]], [[1, 1]], [[1, 2]], [], []], { towers: [{ at: [7, 0], r: 3 }], links: [[[0, 0], [1, 0]]] });
+  const S = E.sim(E.compile(L), H); S.play(0, 0); S.advanceTo(600);
+  eq([S.kills, S.status, S.lineLen, S.held(1), S.spO[0] > 0], [1, E.PLAYING, 2, true, true], "coupled (Hard kill): a's sapper is killed; a counts as finished and holds for g, still working");
+  S.quiet(); eq([S.lineLen, S.standing, S.status], [0, 0, E.PLAYING], "coupled (Hard kill): the tower falls, g is home: both spaces free");
+  eq(pat(S, 2), E.WON, "coupled (Hard kill): the spare a squad finishes");
+}
+
+// ---- the locked space ------------------------------------------------------------------------------------------------------
+{
+  const L = lv(["abn...", "......", "..##.."], [[[1, 1]], [[2, 1]], [[14, 1]], [], []], { lock: { key: [2, 0] } });
+  const B = E.compile(L);
+  eq(["easy", "normal", "hard"].map((d) => { const S = E.sim(B, RULES[d]); return [S.cap, S.open, S.locked]; }), [[6, 5, 1], [5, 4, 1], [4, 3, 1]], "lock: Easy 5 of 6 spaces open, Normal 4 of 5, Hard 3 of 4");
+  eq(E.sim(E.compile(lv(L.grid, L.cols)), N).open, 5, "lock: the same board without a lock opens every space");
+  const S = E.sim(B, N); S.logOn = true; S.play(2, 0);
+  const pop = S.q1[0];
+  S.advanceTo(pop - 1); eq([S.open, S.locked], [4, 1], "lock: shut until its key pops");
+  S.clearLog(); S.advanceTo(pop); eq([S.open, S.locked, evs(S, E.EV.UNLOCK)], [5, 0, [[2, 0]]], "lock: the key pops and the space opens at that moment (UNLOCK)");
+  // Unlocking can let a waiting tap through at once: two spaces, one locked; the Looters out; a tap is refused until
+  // the key pops, then taken while the Looters are still carrying it home.
+  const U = E.sim(B, hold(2)); U.play(2, 0); U.advanceTo(10);
+  eq([U.open, U.play(0)], [1, E.REFUSED], "lock: one open space, taken: a second tap is refused");
+  U.advanceTo(pop); eq([U.open, U.play(0), U.lineLen, U.out > 0], [2, E.PLAYING, 2, true], "lock: the key pops: the same tap is taken at once, before the Looters are home");
+  // A squad never takes a locked space; a line full but for the locked space at rest is a jam (jamWhy 2).
+  const J = E.sim(E.compile(lv(["abn...", "......", "..##.."], [[[4, 1]], [[5, 1]], [[14, 1]], [], []], { lock: { key: [2, 0] } })), hold(3));
+  pat(J, 0); pat(J, 1);
+  eq([J.status, J.reason, J.jamWhy, J.spQ[2], J.lineLen, J.open], [E.FAILED, "jam", 2, 0, 2, 2], "lock: two stuck squads fill the two open spaces; the locked one stays empty; jam, jamWhy 2");
+}
+
+// ---- dealing mode (the dealer, M3) -------------------------------------------------------------------------------------------
+{
+  const D = E.sim(E.compile(lv(RING)), hold(2), { deal: true });
+  D.playSquad(2, 1); eq(D.playPair(1, 12, 3, 1), E.FAILED, "dealing: a pair with one open space fails the deal");
+  eq(D.reason, "overflow", "dealing: the pair's fail is overflow");
+  const P = E.sim(E.compile(lv(RING)), hold(3), { deal: true }); P.playSquad(2, 2); P.playPair(1, 12, 3, 1); P.quiet();
+  eq([P.status, P.lineLen], [E.WON, 0], "dealing: a pair with two open spaces plays like the tray's pair and wins");
+  const K = E.sim(E.compile(lv(["abn...", "......", "..##.."], null, { lock: { key: [2, 0] } })), hold(3), { deal: true });
+  K.playSquad(4, 1); K.playSquad(5, 1); eq([K.open, K.playSquad(6, 1), K.reason], [2, E.FAILED, "overflow"], "dealing: the lock counts (two of three spaces open); the third squad overflows");
+  const T = E.sim(E.compile(lv(RING, [[[2, 1]], [[1, 12]], [[3, 1]], [], []], { links: [[[1, 0], [2, 0]]] })), hold(2), { deal: true });
+  T.play(0); T.quiet(); eq([T.play(1), T.reason], [E.FAILED, "overflow"], "dealing: a linked tray card with one open space overflows (dealing never refuses)");
+}
+
+// ---- no state hangs: random play on twisted levels, patient and rushed ----------------------------------------------------
+// inject(L, seed): a copy of a baked level with random twists: mystery flags on about 40% of the cards behind the fronts,
+// 1-3 links (neighbouring columns, rows at most 2 apart), and (60%) a lock whose key is a fort pixel turned gilt (one
+// sapper moved off a card of its colour onto a new Looters card).
+function inject(L0, seed) {
+  const L = JSON.parse(JSON.stringify(L0)), r = Gr.rng(seed), ri = (k) => Math.floor(r() * k);
+  delete L.win; delete L.grade;
+  L.cols.forEach((col) => col.forEach((cd, i) => { if (i > 0 && r() < 0.4) cd[2] = E.MYSTERY; }));
+  const used = new Set(), links = [];
+  for (let t = 0, want = 1 + ri(3); t < 40 && links.length < want; t++) {
+    const j = ri(4), k = j + 1, i = ri(L.cols[j].length || 1), q = Math.max(0, Math.min((L.cols[k].length || 1) - 1, i + ri(5) - 2));
+    if (!L.cols[j].length || !L.cols[k].length || Math.abs(i - q) > 2 || used.has(j + "," + i) || used.has(k + "," + q)) continue;
+    used.add(j + "," + i); used.add(k + "," + q); links.push(r() < 0.5 ? [[j, i], [k, q]] : [[k, q], [j, i]]);
+  }
+  L.links = links;
+  if (r() < 0.6) {
+    const B = E.compile(L), cells = [];
+    for (let c = 0; c < B.n; c++) { const m = B.a0[c]; if (m > 0 && m !== E.IRON && m !== E.GILT && B.towerOf[c] < 0 && L.cols.some((col) => col.some((cd) => cd[0] === m && cd[1] > 1))) cells.push(c); }
+    if (cells.length) {
+      const c = cells[ri(cells.length)], x = c % B.w, y = (c / B.w) | 0, m = B.a0[c];
+      L.grid[y] = L.grid[y].slice(0, x) + "n" + L.grid[y].slice(x + 1);
+      const col = L.cols.find((cl) => cl.some((cd) => cd[0] === m && cd[1] > 1)); col.find((cd) => cd[0] === m && cd[1] > 1)[1]--;
+      L.cols[ri(5)].push([E.GILT, 1]); L.lock = { key: [x, y] };
+    }
+  }
+  return L;
+}
+const DEBUG = require("../levels/debug-v4.json").levels;
+const TWISTED = DEBUG.concat(LEVELS.levels.filter((l, k) => k % 2 === 1).map((l, k) => inject(l, 7001 + k)));
+{
+  let rests = 0, hangs = 0, games = 0, fails = { jam: 0, stuck: 0, short: 0 }, jam1 = 0, jam2 = 0;
+  for (const L of TWISTED) {
+    const B = E.compile(L);
+    for (const [dn, rules] of Object.entries(RULES)) for (let g = 0; g < 6; g++) {
+      const S = E.sim(B, rules), r = Gr.rng(L.id ? L.id.length * 131 + g : g * 977 + B.n), rushed = g >= 3; let t = 0; games++;
+      const restCheck = () => { if (S.busy) return; rests++; if (S.status !== E.PLAYING) return;
+        let legalN = 0, cards = 0; for (let j = 0; j < 5; j++) { if (S.front(j) >= 0) cards++; if (Gr.legal(S, j)) legalN++; }
+        if (!legalN) { hangs++; if (hangs <= 3) console.log("  hang: " + (L.id || "injected") + " " + dn + " cards " + cards + " pixels " + S.pixLeft); } };
+      restCheck();
+      for (let k = 0; k <= 8 * B.ncards + 40 && S.status === E.PLAYING; k++) {
+        const open = []; for (let j = 0; j < 5; j++) if (S.front(j) >= 0) open.push(j);
+        if (!open.length) break;
+        if (rushed) { t += Math.floor(r() * 1500); S.play(open[Math.floor(r() * open.length)], t); } else { S.play(open[Math.floor(r() * open.length)]); S.quiet(); }
+        restCheck();
+      }
+      S.quiet(); restCheck();
+      if (S.status === E.FAILED) { fails[S.reason] = (fails[S.reason] || 0) + 1; if (S.reason === "jam") { if (S.jamWhy & 1) jam1++; if (S.jamWhy & 2) jam2++; } }
+    }
+  }
+  eq(hangs, 0, "no hang: " + rests + " rest states in " + games + " random games on " + TWISTED.length + " twisted levels: every one is a win, a fail, or has a legal tap");
+  ok(jam1 > 0 && jam2 > 0, "no hang: the games include jams where a linked card needed 2 spaces (" + jam1 + ") and jams with a space still locked (" + jam2 + "); fails " + JSON.stringify(fails));
+  eq(TWISTED.slice(DEBUG.length).filter((L) => E.check(L).some((w) => /rows apart/.test(w))).length, 0, "inject: the random links keep to 2 rows apart");
+}
+
+// ---- differential on twisted levels: engine vs the reference, patient and rushed ------------------------------------------
+{
+  let games = 0, taps = 0, refused = 0, pops = 0, diffs = 0, pairs = 0, unlocks = 0, reveals = 0; const t0 = Date.now();
+  const rline = (R) => R.spaces.map((s, k) => [k, s]).filter(([, s]) => s).sort((p, q) => p[1].seq - q[1].seq).map(([k, s]) => [s.m, s.wait + s.out, s.pair == null ? -1 : R.spaces[s.pair].seq]);
+  const eline = (S) => S.order().map((s) => [S.spM[s], S.spW[s] + S.spO[s], S.spL[s] ? S.spQ[S.spL[s] - 1] : -1]);
+  for (const L of TWISTED) {
+    const B = E.compile(L);
+    for (const [dn, rules] of Object.entries(RULES)) for (const rushed of [false, true]) {
+      const S = E.sim(B, rules), R = Ref.game(L, rules), r = Gr.rng(B.n * 31 + (rushed ? 5 : 1) + dn.length); S.logOn = true;
+      let t = 0, bad = null; const mine = [];
+      for (let g = 0; g <= 6 * B.ncards + 40 && S.status === E.PLAYING && !bad; g++) {
+        const open = []; for (let j = 0; j < 5; j++) if (S.front(j) >= 0) open.push(j);
+        if (!open.length) break;
+        const j = open[Math.floor(r() * open.length)];
+        S.clearLog(); let a1, a2;
+        if (rushed) { t += Math.floor(r() * 1800); a1 = S.play(j, t); a2 = R.play(j, t); } else { a1 = S.play(j); S.quiet(); a2 = R.play(j); R.quiet(); }
+        taps++; if (a1 === E.REFUSED) refused++;
+        if ((a1 === E.REFUSED) !== (a2 === "refused")) { bad = "refusal " + a1 + "/" + a2; break; }
+        for (let i = 0; i < S.evLen; i += 3) { const ty = S.ev[i]; if (ty === E.EV.EAT) mine.push([S.ev[i + 1], S.q1[S.ev[i + 2]]]); else if (ty === E.EV.LINK) pairs++; else if (ty === E.EV.UNLOCK) unlocks++; else if (ty === E.EV.REVEAL) reveals++; }
+        const st = S.status === E.WON ? "won" : S.status === E.FAILED ? "failed" : "playing";
+        const colsE = [0, 1, 2, 3, 4].map((c) => { const o = []; for (let d = 0, ci = S.card(c, 0); ci >= 0; ci = S.card(c, ++d)) o.push(ci); return o; }), colsR = R.cols.map((c) => c.map((cd) => cd.ci));
+        const hidE = [], hidR = []; for (let ci = 0; ci < B.ncards; ci++) { if (S.hidden(ci)) hidE.push(ci); if (R.hidden(ci)) hidR.push(ci); }
+        if (JSON.stringify(mine) !== JSON.stringify(R.pops)) bad = "pops";
+        else if (st !== R.status || (st === "failed" && (S.reason !== R.reason || (S.reason === "jam" && S.jamWhy !== R.jamWhy)))) bad = "status " + st + "/" + R.status + " " + S.reason + "/" + R.reason + " " + S.jamWhy + "/" + R.jamWhy;
+        else if (JSON.stringify(eline(S)) !== JSON.stringify(rline(R))) bad = "spaces " + JSON.stringify(eline(S)) + " / " + JSON.stringify(rline(R));
+        else if (S.now !== R.now || S.open !== R.open || S.locked !== R.locked) bad = "clock or lock";
+        else if (JSON.stringify(colsE) !== JSON.stringify(colsR)) bad = "columns";
+        else if (JSON.stringify(hidE) !== JSON.stringify(hidR)) bad = "hidden cards";
+      }
+      if (!bad) { S.quiet(); R.quiet(); const st = S.status === E.WON ? "won" : S.status === E.FAILED ? "failed" : "playing"; if (st !== R.status || S.reason !== R.reason || S.jamWhy !== R.jamWhy) bad = "final " + st + "/" + R.status; }
+      pops += mine.length; games++;
+      if (bad) { diffs++; if (diffs <= 4) console.log("  diff: " + (L.id || "injected " + B.n) + " " + dn + (rushed ? " rushed" : " patient") + ": " + bad); }
+    }
+  }
+  eq(diffs, 0, "differential (twists): engine == reference on " + games + " games (" + taps + " taps, " + refused + " refused, " + pops + " pops; " + pairs + " pairs, " + unlocks + " unlocks, " + reveals + " reveals): pops and times, status, reason and jamWhy, spaces and pairs, columns, hidden cards, lock");
+  ok(pairs > 0 && unlocks > 0 && reveals > 0 && refused > 0, "differential (twists): the games exercise pairs, unlocks, reveals and refusals");
+  console.log("  differential (twists): " + games + " games in " + ((Date.now() - t0) / 1000).toFixed(1) + " s");
+}
+
+// ---- the grader's info model, legal taps, the fast tapper -------------------------------------------------------------------
+{
+  const L = DEBUG.find((l) => l.id === "v4-all"), B = E.compile(L), S = E.sim(B, N), V = Gr.view(S);
+  const hid = V.cols.flat().filter((cd) => cd[0] === 0).length, hidE = Array.from({ length: B.ncards }, (_, c) => S.hidden(c)).filter(Boolean).length;
+  eq([hid, hid === hidE, V.cols.every((c) => c.every((cd) => cd[1] > 0))], [hidE, true, true], "view: hidden cards show as colour 0 with their count (" + hid + " hidden)");
+  let seen = 0; for (let c = 0; c < B.ncards; c++) if (!S.hidden(c)) seen += B.cardN[c];
+  eq(V.unseen.reduce((a, b) => a + b, 0), B.pixTotal - B.pix[E.IRON] - seen, "view: unseen = the board's eatable pixels less every card already seen");
+  // The lookahead never reads a hidden colour: give every hidden card another colour (counts kept, board unchanged) and
+  // its scores for every first move are identical, although a linked front card pulls a hidden partner.
+  const f = [0, 1, 2, 3, 4].find((j) => { const ci = S.front(j), p = S.partner(ci); return ci >= 0 && p >= 0 && S.hidden(p); });
+  ok(f !== undefined, "lookahead: v4-all opens with a linked front card whose partner is hidden (column " + f + ")");
+  const mats = [...new Set(L.cols.flat().map((cd) => cd[0]))], L2 = JSON.parse(JSON.stringify(L)); let k = 0;
+  L2.cols.forEach((col, j) => col.forEach((cd, i) => { if (S.hidden(B.colStart[j] + i)) { const alt = mats.filter((m) => m !== cd[0]); cd[0] = alt[k++ % alt.length]; } }));
+  const S2 = E.sim(E.compile(L2), N), s1 = Gr.look(S, new Int32Array(S.M.length), new Float64Array(5)), s2 = Gr.look(S2, new Int32Array(S2.M.length), new Float64Array(5));
+  eq(Array.from(s2), Array.from(s1), "lookahead: re-colouring every hidden card leaves its scores unchanged (" + Array.from(s1).map((v) => (v === Infinity ? "x" : +v.toFixed(2))).join(" ") + ")");
+  // Every stored debug order wins patiently on its difficulty, holds no refused tap and keeps to the tap cap.
+  let good = 0;
+  for (const D of DEBUG) for (const d of ["easy", "normal", "hard"]) {
+    const T = E.sim(E.compile(D), RULES[d]); let ref = 0; for (const ch of D.win[d]) { if (T.play(+ch) === E.REFUSED) ref++; T.quiet(); }
+    if (T.status === E.WON && !ref && D.win[d].length <= 55 && !E.check(D).length) good++; else console.log("FAIL  " + D.id + " " + d);
+  }
+  eq([good, DEBUG.length >= 4, ["v4-mystery", "v4-linked", "v4-locked", "v4-all"].every((id) => DEBUG.some((D) => D.id === id))], [DEBUG.length * 3, true, true], "debug levels: one per twist and one with all three; every stored order wins on its difficulty with no refused tap and 55 taps or fewer");
+  const lk = DEBUG.find((l) => l.id === "v4-linked"), LB = E.compile(lk);
+  ok(Gr.solve(LB, N, 50000) && Gr.rate(LB, N, 40, 3) >= 0 && Gr.greedy(LB, N, 20, 3) >= 0, "grader: rate, greedy and solve finish on a linked level (legal taps only)");
+  const fr = [Gr.fast(E.compile(LEVELS.levels[60]), N, 30, 9, 0), Gr.fast(LB, N, 30, 9, 250)];
+  ok(fr.every((x) => x >= 0 && x <= 1), "grader: the fast tapper finishes on a baked level and a linked one (" + fr.join(", ") + ")");
 }
 
 // ---- the page's save (v4 M1 settings: speed replaces the 2x flag, colour-blind marks) ----------------------------------

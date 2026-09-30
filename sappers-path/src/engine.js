@@ -2,8 +2,14 @@
 // ports to Godot as-is. UMD: require('./engine.js') in Node, window.SappersPath.engine in the page.
 //
 // Level JSON: {w, h, grid:[h strings of w chars], gates?:[{at:[x,y], key:[x,y]}], towers?:[{at:[x,y], r}],
-//              cols:[5 x [[mat, count], ...]] (each column front card first), safeArchers?: true}
+//              cols:[5 x [card, ...]] (each column front card first), safeArchers?: true,
+//              links?:[[[col, i], [col, i]], ...], lock?:{key:[x,y]}}
 // safeArchers (the archer teaching level, 51): its archers never kill, on any difficulty; a hit goes to the line.
+// v4 M2 (backward compatible: a file without the new fields parses and plays exactly as before). A card is [mat, count]
+// or [mat, count, flags]; flags is 0 or 1 (1 = mystery). links pairs two cards by [column, index in that column] (index
+// 0 = the column's first card); the two must be in different columns, and a card is in at most one pair. lock gives the
+// key of the locked space: a gilt cell that is not a gate's key. E.check(L) lists warnings (a mystery flag on a first
+// card, partners more than 2 rows apart or not in neighbouring columns); compile throws on errors.
 // Grid legend:  .  grass   ,  dirt   ~  water   #  camp   a..n  material 1..14 (MATS order in config.json)
 // x grows east, y grows south; a cell index is y * w + x. Material 10 (j, Iron) exists only as locked gate pixels and
 // material 14 (n, Gilt) holds the keys. A gate is the 4-connected iron group holding `at`; a tower is the 4-connected
@@ -32,6 +38,24 @@
 //   reach a pixel, and so every front card is refused). Short at a Hard kill.
 //   Patient play = tap, run until nothing moves, tap again (replay, the grader, the baker). A patient tap never meets a
 //   full line (a full line at rest is already a jam), so v3.1's refusal only ever touches rushed taps.
+// v4 M2, the twists (SPEC-v4 §9). A level that uses none of them plays exactly as above.
+//   Mystery: a mystery card is hidden (the page shows "?" and its count) while it is behind the front of its column. The
+//   front card is never hidden (so a flag on a column's first card means nothing), a card that reaches the front is
+//   revealed for good, and a linked partner pulled out while hidden is revealed as it leaves. Information only: no rule
+//   reads it.
+//   Linked squads: a tap on a linked card (it must be the front of its column) needs 2 free spaces, else it is refused
+//   like v3.1's (REFUSED, nothing changes). It takes both at the same moment: the tapped card's squad the lowest free
+//   space, then its partner's the next lowest, the partner pulled out of its column wherever it sits (the cards behind it
+//   close up). One play. Each squad dispatches on its own for its own colour, but neither space frees until both squads
+//   are finished (every sapper sent and home; a Hard kill counts as finished); then both free at that moment, the
+//   earlier-placed space first. A linked squad never merges (mergeLeftovers).
+//   Locked space: a level with a lock starts with rules.lockSpaces (1, never all) of its difficulty's spaces locked,
+//   always the last ones; a squad only takes an open space. The lock opens the moment its key pixel pops.
+//   Jam, generalized: at rest (nothing moving), with cards left, if every front card's tap would be refused (no free
+//   space, or a linked card with fewer than 2), the level fails jam. jamWhy: bit 1 a space was free (so a linked card
+//   needed 2), bit 2 a space was still locked. With it, every rest state has a legal tap, a win, or a fail.
+//   Patient play still never meets a refused tap on a level without links; with links a patient player picks only
+//   among taps that are not refused (the grader does).
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
@@ -39,14 +63,16 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
   const GRASS = 0, WATER = -1, DIRT = -2, CAMP = -3;
-  const NCOL = 5, NMAT = 15, IRON = 10, GILT = 14, MAXCELLS = 4096, MAXTOWERS = 8, MAXLINE = 8;
+  const NCOL = 5, NMAT = 15, IRON = 10, GILT = 14, MAXCELLS = 4096, MAXTOWERS = 8, MAXLINE = 8, MYSTERY = 1;
   const PLAYING = 0, WON = 1, FAILED = -1, NOPLAY = -2, REFUSED = -3;
   const OVERFLOW = 1, SHORT = 2, STUCK = 3, JAM = 4; // OVERFLOW: dealing mode only (v3.1)
   const REASONS = ["", "overflow", "short", "stuck", "jam"];
   // Event log (optional, S.logOn; the page's show reads it): [type, a, b] triples. TAP space mat (space -1: dealing overflow),
   // DISP sapper space, EAT cell sapper (the pixel pops), GATE gate 0, TOWER tower 0, HIT sapper mat (sent back), KILL
-  // sapper mat, HOME sapper space, FREE space mat.
-  const EV = { TAP: 1, DISP: 2, EAT: 3, GATE: 4, TOWER: 5, HIT: 6, KILL: 7, HOME: 8, FREE: 9 };
+  // sapper mat, HOME sapper space, FREE space mat. v4 M2: REVEAL card column (a mystery card is revealed: it reached the
+  // front, or it left hidden as a partner), LINK space space (a linked pair took these two spaces; after both TAPs),
+  // UNLOCK cell 0 (the locked space opened: its key popped).
+  const EV = { TAP: 1, DISP: 2, EAT: 3, GATE: 4, TOWER: 5, HIT: 6, KILL: 7, HOME: 8, FREE: 9, REVEAL: 10, LINK: 11, UNLOCK: 12 };
   const CODE = { ".": GRASS, ",": DIRT, "~": WATER, "#": CAMP };
   const matOf = (ch) => { const k = ch.charCodeAt(0) - 96; return k >= 1 && k <= 14 ? k : 0; };
   const chOf = (v) => (v > 0 ? String.fromCharCode(96 + v) : v === GRASS ? "." : v === DIRT ? "," : v === WATER ? "~" : "#");
@@ -113,14 +139,32 @@
       towers.push({ m, r, cx, cy, size: cells.length });
     });
 
-    // Deck: five columns, front card first.
+    // Deck: five columns, front card first. A card is [mat, count] or [mat, count, flags] (v4 M2: flags 1 = mystery).
     const cols = L.cols || [[], [], [], [], []];
     if (!Array.isArray(cols) || cols.length !== NCOL) throw new Error("level: cols must be 5 columns");
-    const cardM = [], cardN = [], colStart = new Int32Array(NCOL), colLen = new Int32Array(NCOL), sapTotal = new Int32Array(NMAT);
+    const cardM = [], cardN = [], cardF = [], cardCol = [], colStart = new Int32Array(NCOL), colLen = new Int32Array(NCOL), sapTotal = new Int32Array(NMAT);
     cols.forEach((col, j) => {
       colStart[j] = cardM.length; colLen[j] = col.length;
-      for (const cd of col) { const m = cd[0] | 0, k = cd[1] | 0; if (!(m >= 1 && m < NMAT) || m === IRON || !(k >= 1 && k <= 999)) throw new Error("level: bad card"); cardM.push(m); cardN.push(k); sapTotal[m] += k; }
+      for (const cd of col) {
+        const m = cd[0] | 0, k = cd[1] | 0, f = cd.length > 2 ? cd[2] : 0;
+        if (!(m >= 1 && m < NMAT) || m === IRON || !(k >= 1 && k <= 999) || !(f === 0 || f === MYSTERY)) throw new Error("level: bad card");
+        cardM.push(m); cardN.push(k); cardF.push(f); cardCol.push(j); sapTotal[m] += k;
+      }
     });
+    // Linked squads (v4 M2): pairs of cards [column, index], in different columns, each card in at most one pair.
+    if (L.links != null && !Array.isArray(L.links)) throw new Error("level: links must be a list");
+    const linkOf = new Int32Array(cardM.length).fill(-1), links = [];
+    const cardAt = (p) => { const j = Array.isArray(p) ? p[0] : -1, i = Array.isArray(p) ? p[1] : -1; if (!(j >= 0 && j < NCOL && i >= 0 && i < colLen[j]) || (j | 0) !== j || (i | 0) !== i) throw new Error("level: bad link card"); return colStart[j] + i; };
+    (L.links || []).forEach((P, k) => {
+      if (!Array.isArray(P) || P.length !== 2) throw new Error("level: link " + k + " is not a pair");
+      const a = cardAt(P[0]), b = cardAt(P[1]);
+      if (cardCol[a] === cardCol[b]) throw new Error("level: link " + k + " joins two cards of one column");
+      if (linkOf[a] >= 0 || linkOf[b] >= 0) throw new Error("level: link " + k + " reuses a linked card");
+      linkOf[a] = b; linkOf[b] = a; links.push(a, b);
+    });
+    // Locked space (v4 M2): its key is a gilt cell that is not a gate's key.
+    let lockKey = -1;
+    if (L.lock != null) { const k = cellAt(L.lock.key, "lock key"); if (a0[k] !== GILT || keyOf[k] >= 0) throw new Error("level: the lock's key is not a free gilt cell"); lockKey = k; }
     const pix = new Int32Array(NMAT); for (let c = 0; c < n; c++) if (a0[c] > 0) pix[a0[c]]++;
     const hoff = new Int32Array(NMAT + 1); for (let m = 0; m < NMAT; m++) hoff[m + 1] = hoff[m] + (m === IRON ? 0 : pix[m]);
     // Zobrist keys for eaten cells (fixed-seed, so hashes are stable across runs).
@@ -129,7 +173,8 @@
     for (let c = 0; c < n; c++) { Z1[c] = rnd(); Z2[c] = rnd(); }
     let pixTotal = 0; for (let m = 1; m < NMAT; m++) pixTotal += pix[m];
     return { w, h, n, a0, nb, rank, campRow, gateOf, keyOf, gateCells, towerOf, cover, towers, cardM: Int32Array.from(cardM), cardN: Int32Array.from(cardN),
-      colStart, colLen, sapTotal, pix, hoff, Z1, Z2, pixTotal, ncards: cardM.length, safeArchers: L.safeArchers === true };
+      colStart, colLen, sapTotal, pix, hoff, Z1, Z2, pixTotal, ncards: cardM.length, safeArchers: L.safeArchers === true,
+      cardF: Int32Array.from(cardF), cardCol: Int32Array.from(cardCol), linkOf, links: Int32Array.from(links), nlinks: links.length >> 1, lockKey };
   }
 
   // Timing (config v3.time, whole ms of engine time; the page plays engine time at show.pace x real time). Every value
@@ -140,13 +185,16 @@
   }
 
   // A mutable game on a compiled board: a deterministic, event-driven time simulation (SPEC-v3 §3, the dispatch model).
-  // rules = {hold, archersKill, time, mergeLeftovers?}. opts.deal: dealing mode (no tray: squads come from playSquad;
-  // no stuck or no-move checks; any archer kill fails). The whole state (grid, reachability heaps, spaces, sappers in
-  // flight, the event queue, the clock) lives in one Int32Array, so save/load are one copy and a replay is exact.
+  // rules = {hold, archersKill, time, mergeLeftovers?, lockSpaces?}. opts.deal: dealing mode (no tray: squads come from
+  // playSquad and playPair; no refusal, no stuck or jam checks: a squad with no open space fails overflow; any archer kill
+  // fails). The whole state (grid, reachability heaps, spaces, sappers in flight, the event queue, the clock, and v4 M2's
+  // pulled cards, space pairs and lock) lives in one Int32Array, so save/load are one copy and a replay is exact.
   function sim(B, rules, opts) {
-    const n = B.n, nb = B.nb, rank = B.rank, cover = B.cover, towerOf = B.towerOf, keyOf = B.keyOf, gateOf = B.gateOf, hoff = B.hoff;
+    const n = B.n, nb = B.nb, rank = B.rank, cover = B.cover, towerOf = B.towerOf, keyOf = B.keyOf, gateOf = B.gateOf, hoff = B.hoff, linkOf = B.linkOf;
     const cap = Math.max(1, Math.min(MAXLINE, rules.hold | 0)), lethal = !!rules.archersKill && !B.safeArchers, deal = !!(opts && opts.deal), nt = B.towers.length;
     const merge = rules.mergeLeftovers === true, T = timeOf(rules.time);
+    // Locked spaces (v4 M2): rules.lockSpaces (default 1) of the line's last spaces, never all of them.
+    const lockN = B.lockKey >= 0 ? Math.max(0, Math.min(cap - 1, rules.lockSpaces == null ? 1 : rules.lockSpaces | 0)) : 0;
     // Sappers are numbered per game: every dispatch is one pixel popped or one archer hit (at most one per squad, then
     // it is wary), so pixels + squads bounds them. Pending events: one per sapper in flight, plus a wake per space.
     const SQ = deal ? 4096 : B.ncards + 8, SMAX = B.pixTotal + SQ + 8, EMAX = SMAX + 4 * MAXLINE + 8;
@@ -154,7 +202,8 @@
     let o = 0; const at = (k) => { const r = o; o += k; return r; };
     const oA = at(n), oD = at(n), oK = at(n), oP = at(n), oH = at(B.hoff[NMAT]), oHL = at(NMAT), oLeft = at(NMAT), oSap = at(NMAT), oT = at(MAXTOWERS),
       oHead = at(NCOL), oSM = at(MAXLINE), oSW = at(MAXLINE), oSO = at(MAXLINE), oSF = at(MAXLINE), oSN = at(MAXLINE), oSQ = at(MAXLINE), oOrd = at(MAXLINE),
-      oS = at(24), oQS = at(SMAX), oQC = at(SMAX), oQK = at(SMAX), oQ0 = at(SMAX), oQ1 = at(SMAX), oQ2 = at(SMAX), oET = at(EMAX), oEQ = at(EMAX), oEX = at(EMAX);
+      oS = at(24), oQS = at(SMAX), oQC = at(SMAX), oQK = at(SMAX), oQ0 = at(SMAX), oQ1 = at(SMAX), oQ2 = at(SMAX), oET = at(EMAX), oEQ = at(EMAX), oEX = at(EMAX),
+      oGone = at(B.ncards + 1), oSL = at(MAXLINE);
     const M = new Int32Array(o), init = new Int32Array(o);
     const sub = (k, len) => M.subarray(k, k + len);
     const a = sub(oA, n), d = sub(oD, n), hk = sub(oK, n), hpos = sub(oP, n), heap = sub(oH, B.hoff[NMAT]);
@@ -166,9 +215,12 @@
     const qS = sub(oQS, SMAX), qC = sub(oQC, SMAX), qK = sub(oQK, SMAX), q0 = sub(oQ0, SMAX), q1 = sub(oQ1, SMAX), q2 = sub(oQ2, SMAX);
     // Event queue: a binary heap on (time, sequence); payload x = id * 4 + type (0 pop, 1 hit, 2 home, 3 wake a space).
     const eT = sub(oET, EMAX), eQ = sub(oEQ, EMAX), eX = sub(oEX, EMAX);
-    // Scalars in M[oS + k].
+    // v4 M2: gone (a linked partner pulled out of its column: 1), and each space's partner space + 1 (0 = not linked).
+    const gone = sub(oGone, B.ncards), spL = sub(oSL, MAXLINE);
+    // Scalars in M[oS + k]. LOCK: spaces still locked (v4 M2); JAMK: why a jam happened (bits, see settle).
     const S_LEN = oS, S_PIX = oS + 1, S_STAND = oS + 2, S_STATUS = oS + 3, S_REASON = oS + 4, S_HITS = oS + 5, S_KILLS = oS + 6, S_Z1 = oS + 7, S_Z2 = oS + 8,
-      S_PEAK = oS + 9, S_PLAYS = oS + 10, S_FAILM = oS + 11, S_NOW = oS + 12, S_SN = oS + 13, S_EL = oS + 14, S_ESEQ = oS + 15, S_ORD = oS + 16, S_TAPS = oS + 17, S_OUT = oS + 18, S_DISP = oS + 19;
+      S_PEAK = oS + 9, S_PLAYS = oS + 10, S_FAILM = oS + 11, S_NOW = oS + 12, S_SN = oS + 13, S_EL = oS + 14, S_ESEQ = oS + 15, S_ORD = oS + 16, S_TAPS = oS + 17, S_OUT = oS + 18, S_DISP = oS + 19,
+      S_LOCK = oS + 20, S_JAMK = oS + 21;
     const CLAIMED = -2;
     const q = new Int32Array(n);
     const ev = new Int32Array(3 * (4 * SMAX + 64)); let evLen = 0, evLost = false;
@@ -256,6 +308,7 @@
       const m = a[c];
       a[c] = DIRT; hk[c] = -1; left[m]--; M[S_PIX]--; M[S_Z1] ^= B.Z1[c]; M[S_Z2] ^= B.Z2[c]; log(EV.EAT, c, id);
       const t = towerOf[c]; if (t >= 0 && --tleft[t] === 0) { M[S_STAND] &= ~(1 << t); log(EV.TOWER, t, 0); }
+      if (c === B.lockKey && M[S_LOCK] > 0) { M[S_LOCK] = 0; log(EV.UNLOCK, c, 0); } // v4 M2: the locked space opens
       const g = keyOf[c];
       if (g >= 0) {
         const cells = B.gateCells[g];
@@ -300,9 +353,17 @@
         }
       }
     }
+    // A space frees when its squad is finished (all sent, all home). v4 M2: a linked squad's space holds until its
+    // partner is finished too; then both free, the earlier-placed one first.
     function freeIf(s) {
       if (spQ[s] === 0 || spW[s] > 0 || spO[s] > 0) return;
-      spQ[s] = 0; M[S_LEN]--; log(EV.FREE, s, spM[s]);
+      const p = spL[s] - 1;
+      if (p < 0) { release(s); return; }
+      if (spW[p] > 0 || spO[p] > 0) return;
+      if (spQ[p] < spQ[s]) { release(p); release(s); } else { release(s); release(p); }
+    }
+    function release(s) {
+      spQ[s] = 0; spL[s] = 0; M[S_LEN]--; log(EV.FREE, s, spM[s]);
       const len = M[S_ORD]; let j = 0; for (let k = 0; k < len; k++) if (ord[k] !== s) ord[j++] = ord[k]; M[S_ORD] = j;
     }
     function handle(x, t) {
@@ -325,22 +386,29 @@
       }
       // type 3: a space's stagger is up; dispatch runs after every batch of events
     }
-    // Would a tap on a card of m be refused? Only when there is no free space (and it can't merge).
+    // Would a tap on a card of m be refused? Only when there is no open free space (and it can't merge). Open = the
+    // line's spaces less the locked ones (v4 M2).
     function blocked(m) {
-      if (M[S_LEN] < cap) return false;
-      if (merge) for (let k = 0; k < M[S_ORD]; k++) if (spM[ord[k]] === m) return false;
+      if (M[S_LEN] < cap - M[S_LOCK]) return false;
+      if (merge) for (let k = 0; k < M[S_ORD]; k++) if (spM[ord[k]] === m && !spL[ord[k]]) return false;
       return true;
     }
+    // Would a tap on card ci (a front card) be refused? A linked card needs 2 open free spaces (v4 M2).
+    const refusedAt = (ci) => (linkOf[ci] >= 0 ? M[S_LEN] + 2 > cap - M[S_LOCK] : blocked(B.cardM[ci]));
+    // A mystery card is hidden while it is still in its column behind the front (v4 M2).
+    const hiddenAt = (ci) => { const j = B.cardCol[ci]; return (B.cardF[ci] & MYSTERY) !== 0 && !gone[ci] && ci > B.colStart[j] + heads[j]; };
     // After every batch: the win, and once nothing is moving (no event pending), stuck and jam. At rest no squad can
-    // send anyone (it would have), so a full line at rest is a line of squads that can't reach a pixel.
+    // send anyone (it would have), so a full line at rest is a line of squads that can't reach a pixel. v4 M2: jam is
+    // every front card refused (no free space, or a linked card with fewer than 2); JAMK bit 1 a space was free, bit 2
+    // a space was still locked.
     function settle() {
       if (M[S_STATUS] !== PLAYING) return;
       if (M[S_PIX] === 0) { M[S_STATUS] = WON; return; }
       if (deal || M[S_EL] > 0) return;
       let any = false, safe = false;
-      for (let j = 0; j < NCOL; j++) { if (heads[j] >= B.colLen[j]) continue; any = true; if (!blocked(B.cardM[B.colStart[j] + heads[j]])) { safe = true; break; } }
+      for (let j = 0; j < NCOL; j++) { if (heads[j] >= B.colLen[j]) continue; any = true; if (!refusedAt(B.colStart[j] + heads[j])) { safe = true; break; } }
       if (!any) fail(STUCK, M[S_ORD] > 0 ? spM[ord[0]] : 0);
-      else if (!safe) fail(JAM, M[S_ORD] > 0 ? spM[ord[0]] : 0);
+      else if (!safe) { fail(JAM, M[S_ORD] > 0 ? spM[ord[0]] : 0); M[S_JAMK] = (M[S_LEN] < cap - M[S_LOCK] ? 1 : 0) | (M[S_LOCK] > 0 ? 2 : 0); }
     }
     // Run every event up to time t (each batch of equal-time events, then dispatch, then settle), and set the clock to t.
     function advanceTo(t) {
@@ -358,33 +426,63 @@
       for (let guard = 0; guard < 4 * EMAX + 4 * SMAX && M[S_EL] > 0; guard++) { const te = eT[0]; M[S_NOW] = te; advanceTo(te); }
       return M[S_NOW];
     }
-    // A squad takes a space at time t (the clock first runs to t). No free space (and no merge): overflow, which only
-    // dealing mode reaches (play() refuses first).
+    // A squad takes the lowest free space (while the lock holds, the free spaces are all below the locked ones).
+    function place(m, cnt) {
+      let s = 0; while (s < cap && spQ[s] !== 0) s++;
+      spM[s] = m; spW[s] = cnt; spO[s] = 0; spF[s] = 0; spN[s] = M[S_NOW]; spQ[s] = ++M[S_TAPS]; spL[s] = 0; ord[M[S_ORD]++] = s;
+      M[S_LEN]++; if (M[S_LEN] > M[S_PEAK]) M[S_PEAK] = M[S_LEN];
+      return s;
+    }
+    // A squad takes a space at time t (the clock first runs to t). No open free space (and no merge): overflow, which
+    // only dealing mode reaches (play() refuses first).
     function tap(m, cnt, t) {
       if (t != null) advanceTo(t);
       if (M[S_STATUS] !== PLAYING) return M[S_STATUS];
       M[S_PLAYS]++;
       let s = -1;
-      if (merge) for (let k = 0; k < M[S_ORD]; k++) if (spM[ord[k]] === m) { s = ord[k]; spW[s] += cnt; break; }
+      if (merge) for (let k = 0; k < M[S_ORD]; k++) if (spM[ord[k]] === m && !spL[ord[k]]) { s = ord[k]; spW[s] += cnt; break; }
       if (s < 0) {
-        if (M[S_LEN] >= cap) { fail(OVERFLOW, m); log(EV.TAP, -1, m); return M[S_STATUS]; }
-        for (s = 0; s < cap && spQ[s] !== 0; s++);
-        spM[s] = m; spW[s] = cnt; spO[s] = 0; spF[s] = 0; spN[s] = M[S_NOW]; spQ[s] = ++M[S_TAPS]; ord[M[S_ORD]++] = s;
-        M[S_LEN]++; if (M[S_LEN] > M[S_PEAK]) M[S_PEAK] = M[S_LEN];
+        if (M[S_LEN] >= cap - M[S_LOCK]) { fail(OVERFLOW, m); log(EV.TAP, -1, m); return M[S_STATUS]; }
+        s = place(m, cnt);
       }
       log(EV.TAP, s, m);
       dispatch(M[S_NOW]); settle();
       return M[S_STATUS];
     }
+    // A linked pair (v4 M2) takes two spaces at the same moment: m1's squad first, then m2's. One play. Fewer than 2 open
+    // free spaces: overflow (dealing mode only; play() refuses first).
+    function pair(m1, n1, m2, n2, t) {
+      if (t != null) advanceTo(t);
+      if (M[S_STATUS] !== PLAYING) return M[S_STATUS];
+      M[S_PLAYS]++;
+      if (M[S_LEN] + 2 > cap - M[S_LOCK]) { fail(OVERFLOW, m1); log(EV.TAP, -1, m1); return M[S_STATUS]; }
+      const s1 = place(m1, n1); log(EV.TAP, s1, m1);
+      const s2 = place(m2, n2); log(EV.TAP, s2, m2);
+      spL[s1] = s2 + 1; spL[s2] = s1 + 1; log(EV.LINK, s1, s2);
+      dispatch(M[S_NOW]); settle();
+      return M[S_STATUS];
+    }
+    // Column j's head moves on past pulled partners; a mystery card that becomes the front is revealed for good.
+    function advanceHead(j) {
+      const s0 = B.colStart[j], len = B.colLen[j];
+      let h = heads[j] + 1; while (h < len && gone[s0 + h]) h++;
+      heads[j] = h;
+      if (h < len && (B.cardF[s0 + h] & MYSTERY)) log(EV.REVEAL, s0 + h, j);
+    }
     // Tap column col at time t (the clock first runs to t). Returns the status, NOPLAY (not playable) or REFUSED (no
-    // free space: a no-op, the card stays at the front and nothing in the state changes).
+    // free space, or fewer than 2 for a linked card: a no-op, the card stays at the front and nothing in the state
+    // changes). A linked card pulls its partner out of the partner's column (revealed if it was hidden).
     function play(col, t) {
       if (M[S_STATUS] !== PLAYING || col < 0 || col >= NCOL || heads[col] >= B.colLen[col]) return NOPLAY;
       if (t != null) { advanceTo(t); if (M[S_STATUS] !== PLAYING) return NOPLAY; }
-      const ci = B.colStart[col] + heads[col];
-      if (!deal && blocked(B.cardM[ci])) return REFUSED;
-      heads[col]++;
-      return tap(B.cardM[ci], B.cardN[ci], null);
+      const ci = B.colStart[col] + heads[col], p = linkOf[ci];
+      if (!deal && refusedAt(ci)) return REFUSED;
+      advanceHead(col);
+      if (p < 0) return tap(B.cardM[ci], B.cardN[ci], null);
+      const pj = B.cardCol[p];
+      if (hiddenAt(p)) log(EV.REVEAL, p, pj);
+      gone[p] = 1; if (B.colStart[pj] + heads[pj] === p) advanceHead(pj);
+      return pair(B.cardM[ci], B.cardN[ci], B.cardM[p], B.cardN[p], null);
     }
     // A squad at space s that can't send anyone now: all its sappers are home and its colour has no pixel it may go
     // for (a wary squad: none outside the rings). The page marks it stuck; a line of them is a jam.
@@ -392,13 +490,15 @@
       if (s < 0 || s >= cap || !spQ[s] || spO[s] > 0 || spW[s] <= 0) return false;
       return (spF[s] & 1 ? wareTarget(spM[s]) : target(spM[s])) < 0;
     }
+    // A linked squad that is finished but holds its space for its partner (v4 M2).
+    const heldAt = (s) => s >= 0 && s < cap && spQ[s] !== 0 && spL[s] !== 0 && spW[s] === 0 && spO[s] === 0;
 
     // Initial state.
     a.set(B.a0); d.fill(-1); hk.fill(-1); hpos.fill(-1);
     for (let m = 0; m < NMAT; m++) left[m] = B.pix[m];
     for (let m = 0; m < NMAT; m++) sap[m] = deal ? 1 << 24 : B.sapTotal[m];
     for (let t = 0; t < nt; t++) { tleft[t] = B.towers[t].size; M[S_STAND] |= 1 << t; }
-    M[S_PIX] = B.pixTotal;
+    M[S_PIX] = B.pixTotal; M[S_LOCK] = lockN;
     { let qh = 0, qt = 0; for (let c = 0; c < n; c++) if (a[c] === CAMP) { d[c] = 0; q[qt++] = c; }
       while (qh < qt) { const u = q[qh++]; for (let k = 0; k < 4; k++) { const v = nb[u * 4 + k]; if (v < 0) continue; const av = a[v]; if (av > 0) { touch(v, d[u]); continue; } if (av !== WATER && d[v] < 0) { d[v] = d[u] + 1; q[qt++] = v; } } } }
     init.set(M);
@@ -410,14 +510,20 @@
       let h1 = M[S_Z1] ^ 0x1234567, h2 = M[S_Z2] ^ 0x7654321;
       for (let j = 0; j < NCOL; j++) { h1 = Math.imul(h1 ^ heads[j], 0x9E3779B1); h2 = Math.imul(h2 ^ (heads[j] + 17), 0x85EBCA77); }
       for (let k = 0; k < M[S_ORD]; k++) { const s = ord[k], v = spM[s] * 65536 + (spW[s] + spO[s]) * 4 + (spF[s] & 1) * 2; h1 = Math.imul(h1 ^ v, 0xC2B2AE3D); h2 = Math.imul(h2 ^ (v + 0x3141), 0x27D4EB2F); }
+      if (B.nlinks) { // v4 M2: which partners were pulled, and which spaces are paired (by line position)
+        for (let i = 0; i < B.links.length; i++) h1 = Math.imul(h1 ^ (gone[B.links[i]] * 4099 + i), 0x2C1B3C6D);
+        for (let k = 0; k < M[S_ORD]; k++) { const p = spL[ord[k]] - 1; if (p < 0) continue; let pk = 0; while (pk < M[S_ORD] && ord[pk] !== p) pk++; h2 = Math.imul(h2 ^ (k * 64 + pk + 1), 0x297A2D39); }
+      }
       h1 ^= M[S_STATUS] * 0x51ED27; h1 ^= h1 >>> 15; h2 ^= h2 >>> 13;
       return (h1 >>> 0) * 2097152 + (h2 >>> 11);
     };
     return {
       B, M, a, d, heads, left, cap, lethal, ev, T, SMAX, target, covered, wareTarget, hash, play, advanceTo, quiet,
-      spM, spW, spO, spF, spQ, qS, qC, qK, q0, q1, q2,
-      // Dealing: a squad of m and n at the clock (or at t). The patient caller then runs quiet().
+      spM, spW, spO, spF, spQ, spL, gone, qS, qC, qK, q0, q1, q2,
+      // Dealing: a squad of m and n at the clock (or at t); v4 M2 a linked pair (m1's squad, then m2's). The patient
+      // caller then runs quiet().
       playSquad: (m, cnt, t) => tap(m, cnt, t == null ? M[S_NOW] : t),
+      playPair: (m1, n1, m2, n2, t) => pair(m1, n1, m2, n2, t == null ? M[S_NOW] : t),
       get logOn() { return logOn; }, set logOn(v) { logOn = !!v; },
       reset() { M.set(init); evLen = 0; evLost = false; },
       save(buf) { (buf || (buf = new Int32Array(M.length))).set(M); return buf; },
@@ -434,6 +540,14 @@
       sappers: (m) => sap[m],
       front(j) { return heads[j] < B.colLen[j] ? B.colStart[j] + heads[j] : -1; },
       blocked: (m) => blocked(m), stuck: (s) => stuckAt(s),
+      // v4 M2. open: spaces a squad may take now (the line's less the locked ones); locked: spaces still locked; jamWhy
+      // (see settle). card(j, d): the d-th card still in column j (0 = the front), past pulled partners, or -1.
+      // refused(j): would a tap on column j's front card be refused now. hidden(ci): is card ci a mystery the player
+      // can't see yet. partner(ci): its linked card or -1. held(s): a finished linked squad holding its space.
+      get open() { return cap - M[S_LOCK]; }, get locked() { return M[S_LOCK]; }, get jamWhy() { return M[S_JAMK]; },
+      card(j, d) { const s0 = B.colStart[j], len = B.colLen[j]; for (let h = heads[j], k = 0; h < len; h++) { if (gone[s0 + h]) continue; if (k++ === d) return s0 + h; } return -1; },
+      refused(j) { return heads[j] < B.colLen[j] && refusedAt(B.colStart[j] + heads[j]); },
+      hidden: (ci) => ci >= 0 && ci < B.ncards && hiddenAt(ci), partner: (ci) => (ci >= 0 && ci < B.ncards ? linkOf[ci] : -1), held: (s) => heldAt(s),
       // Reachable, unclaimed pixels of m right now (tools and UI; not on the hot path).
       reachable(m) { return m > 0 && m < NMAT ? hlen[m] : 0; },
     };
@@ -446,9 +560,23 @@
     S.quiet();
     return S;
   }
-  // The engine rules for one difficulty: config v3.rules[d] with v3.time (and the comparison flags) attached.
-  const rulesOf = (v3, d) => Object.assign({}, v3.rules[d] || v3.rules.normal, { time: v3.time }, v3.flags || {});
+  // The engine rules for one difficulty: config v3.rules[d] with v3.time (and the comparison flags) attached; v4 M2 the
+  // locked spaces per lock (v3.twists.lockSpaces).
+  const rulesOf = (v3, d) => Object.assign({}, v3.rules[d] || v3.rules.normal, { time: v3.time }, v3.flags || {}, v3.twists ? { lockSpaces: v3.twists.lockSpaces } : {});
   const gridOf = (w, h, a) => { const g = []; for (let y = 0; y < h; y++) { let s = ""; for (let x = 0; x < w; x++) s += chOf(a[y * w + x]); g.push(s); } return g; };
+  // Level warnings (v4 M2): things compile accepts but a player would find hard to read. opts.linkRowGap (default 2):
+  // linked partners dealt more than this many rows apart; partners not in neighbouring columns (the rod would cross a
+  // column); a mystery flag on a column's first card (it means nothing). Returns a list of strings (empty: clean).
+  function check(L, opts) {
+    const B = compile(L), out = [], gap = opts && opts.linkRowGap != null ? opts.linkRowGap : 2;
+    for (let j = 0; j < NCOL; j++) if (B.colLen[j] && B.cardF[B.colStart[j]] & MYSTERY) out.push("column " + j + ": a mystery flag on the first card means nothing");
+    for (let i = 0; i < B.links.length; i += 2) {
+      const a = B.links[i], b = B.links[i + 1], ja = B.cardCol[a], jb = B.cardCol[b], ra = a - B.colStart[ja], rb = b - B.colStart[jb];
+      if (Math.abs(ra - rb) > gap) out.push("link " + (i >> 1) + ": partners are " + Math.abs(ra - rb) + " rows apart (more than " + gap + ")");
+      if (Math.abs(ja - jb) > 1) out.push("link " + (i >> 1) + ": partners are not in neighbouring columns");
+    }
+    return out;
+  }
 
-  return { compile, sim, replay, rulesOf, timeOf, gridOf, chOf, matOf, GRASS, WATER, DIRT, CAMP, NCOL, NMAT, IRON, GILT, PLAYING, WON, FAILED, NOPLAY, REFUSED, EV, REASONS };
+  return { compile, sim, replay, rulesOf, timeOf, gridOf, chOf, matOf, check, GRASS, WATER, DIRT, CAMP, NCOL, NMAT, IRON, GILT, MYSTERY, PLAYING, WON, FAILED, NOPLAY, REFUSED, EV, REASONS };
 });
