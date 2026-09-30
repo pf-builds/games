@@ -125,3 +125,7 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - v3.1: level 27 (saw2) is the one level where the random rushing player beats patient play by more than 10 points (59% against 44% at 2,000 games). If playtests show rushing it is the easy way through, retune that slot's deal.
 - v3.1: in the near-jam state, a front card whose tap would jam the line at once (all other squads stuck, its colour out of reach) could wear a red mark. Left out on purpose: it hands the player the lookahead and makes the puzzle easier than the grade assumes.
 - v3.1: the rushed random player now wins about as often as the patient one, so the bands could be graded with a mixed player. Only worth doing if playtests show players mostly rush.
+- v4 M1: the holding line's head is nearly full at 375 wide when the line is full ("Line full: wait for a squad to come home" beside "3 stuck · 2 working"); on a 360 px phone it would crowd. A shorter full text or a second line.
+- v4 M1: `tools/palette.js` could also score the palette under simulated deuteranopia and protanopia (colour-blind mode's marks cover it today, but a palette that holds up without them is better).
+- v4 M1: tower blocks' crenellated rims (dark edge, pale merlons) are now the busiest thing on a flat board. A simpler tower marker (a darker rim only) is worth a look with the visual critic.
+- v4 M1: in the small iframe (36 px spaces) a working space's "out" marker touches its stepping figures.
