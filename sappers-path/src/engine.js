@@ -3,7 +3,7 @@
 //
 // Level JSON: {w, h, grid:[h strings of w chars], gates?:[{at:[x,y], key:[x,y]}], towers?:[{at:[x,y], r}],
 //              cols:[5 x [card, ...]] (each column front card first), safeArchers?: true,
-//              links?:[[[col, i], [col, i]], ...], lock?:{key:[x,y]}}
+//              links?:[[[col, i], [col, i]], ...], lock?:{key:[x,y]}, ring?: true (v4 M4)}
 // safeArchers (the archer teaching level, 51): its archers never kill, on any difficulty; a hit goes to the line.
 // v4 M2 (backward compatible: a file without the new fields parses and plays exactly as before). A card is [mat, count]
 // or [mat, count, flags]; flags is 0 or 1 (1 = mystery). links pairs two cards by [column, index in that column] (index
@@ -56,6 +56,12 @@
 //   needed 2), bit 2 a space was still locked. With it, every rest state has a legal tap, a win, or a fail.
 //   Patient play still never meets a refused tap on a level without links; with links a patient player picks only
 //   among taps that are not refused (the grader does).
+// v4 M4, ring levels (the Gallery; SPEC-v4 §9). ring: true means the board is all picture inside a 1-cell ring of camp
+//   cells round its border (compile throws unless the border is camp and nothing else is), so sappers come in from all
+//   four edges. Every rule above holds with the ring as the camp: distance is the BFS distance over connected ground from
+//   the nearest ring cell (every ring cell is distance 0). Only the tie-break changes, since "nearest the camp row" would
+//   favour the top edge: equal walks go to the smaller ringKey (below: layer from the border, then the place along the
+//   layer's side, then the side). A level's pal (material id -> colour and name) is the page's; the rules never read it.
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
@@ -77,6 +83,19 @@
   const matOf = (ch) => { const k = ch.charCodeAt(0) - 96; return k >= 1 && k <= 14 ? k : 0; };
   const chOf = (v) => (v > 0 ? String.fromCharCode(96 + v) : v === GRASS ? "." : v === DIRT ? "," : v === WATER ? "~" : "#");
   const DX = [1, -1, 0, 0], DY = [0, 0, 1, -1];
+
+  // v4 M4: a ring level's tie-break key for cell (x, y) on a w x h board, as one number (smaller goes first). layer =
+  // min(x, y, w-1-x, h-1-y) (the ring is layer 0); with a = layer, x1 = w-1-a, y1 = h-1-a, the cell sits on one side of its
+  // layer's rectangle, tested in this order: top (y = a, x < x1; pos = x - a), right (x = x1, y < y1; pos = y - a), bottom
+  // (y = y1, x > a; pos = x1 - x), left (x = a, y > a; pos = y1 - y); a cell none of these fit (the centre of an odd
+  // square) is top, pos 0. Key: layer, then pos, then side (0 top, 1 right, 2 bottom, 3 left). So equal walks go outside
+  // in, and along a layer the four sides take turns from their clockwise-first corner: no edge is favoured.
+  function ringKey(x, y, w, h) {
+    const a = Math.min(x, y, w - 1 - x, h - 1 - y), x1 = w - 1 - a, y1 = h - 1 - a;
+    let side = 0, pos = 0;
+    if (y === a && x < x1) pos = x - a; else if (x === x1 && y < y1) { side = 1; pos = y - a; } else if (y === y1 && x > a) { side = 2; pos = x1 - x; } else if (x === a && y > a) { side = 3; pos = y1 - y; }
+    return (a * 4096 + pos) * 4 + side;
+  }
 
   // 4-connected group of cells matching pred, from c0.
   function group(w, h, c0, pred) {
@@ -103,10 +122,15 @@
       }
     }
     if (campRow === h) throw new Error("level: no camp");
+    // v4 M4, a ring level (the Gallery): the border is a 1-cell ring of camp and no other cell is camp.
+    const ring = L.ring === true;
+    if (ring) for (let c = 0; c < n; c++) { const x = c % w, y = (c / w) | 0; if ((x === 0 || y === 0 || x === w - 1 || y === h - 1) !== (a0[c] === CAMP)) throw new Error("level: a ring level's border must be camp, and only its border"); }
     const nb = new Int32Array(n * 4);
     for (let c = 0; c < n; c++) { const x = c % w, y = (c / w) | 0; for (let d = 0; d < 4; d++) { const nx = x + DX[d], ny = y + DY[d]; nb[c * 4 + d] = nx < 0 || ny < 0 || nx >= w || ny >= h ? -1 : ny * w + nx; } }
-    // Tie-break rank: |y - campRow|, then x, then y. Unique per cell, so heap keys never tie.
-    const order = Array.from({ length: n }, (_, c) => c).sort((p, q) => {
+    // Tie-break rank: |y - campRow|, then x, then y. Unique per cell, so heap keys never tie. A ring level ranks by its
+    // ring key instead (ringKey: the layer, then the place along the layer's side, then the side), unique per cell too.
+    const rk = ring ? Array.from({ length: n }, (_, c) => ringKey(c % w, (c / w) | 0, w, h)) : null;
+    const order = Array.from({ length: n }, (_, c) => c).sort(ring ? (p, q) => rk[p] - rk[q] : (p, q) => {
       const px = p % w, py = (p / w) | 0, qx = q % w, qy = (q / w) | 0;
       return Math.abs(py - campRow) - Math.abs(qy - campRow) || px - qx || py - qy;
     });
@@ -174,7 +198,7 @@
     let pixTotal = 0; for (let m = 1; m < NMAT; m++) pixTotal += pix[m];
     return { w, h, n, a0, nb, rank, campRow, gateOf, keyOf, gateCells, towerOf, cover, towers, cardM: Int32Array.from(cardM), cardN: Int32Array.from(cardN),
       colStart, colLen, sapTotal, pix, hoff, Z1, Z2, pixTotal, ncards: cardM.length, safeArchers: L.safeArchers === true,
-      cardF: Int32Array.from(cardF), cardCol: Int32Array.from(cardCol), linkOf, links: Int32Array.from(links), nlinks: links.length >> 1, lockKey };
+      cardF: Int32Array.from(cardF), cardCol: Int32Array.from(cardCol), linkOf, links: Int32Array.from(links), nlinks: links.length >> 1, lockKey, ring };
   }
 
   // Timing (config v3.time, whole ms of engine time; the page plays engine time at show.pace x real time). Every value
@@ -578,5 +602,5 @@
     return out;
   }
 
-  return { compile, sim, replay, rulesOf, timeOf, gridOf, chOf, matOf, check, GRASS, WATER, DIRT, CAMP, NCOL, NMAT, IRON, GILT, MYSTERY, PLAYING, WON, FAILED, NOPLAY, REFUSED, EV, REASONS };
+  return { compile, sim, replay, rulesOf, timeOf, gridOf, chOf, matOf, check, ringKey, GRASS, WATER, DIRT, CAMP, NCOL, NMAT, IRON, GILT, MYSTERY, PLAYING, WON, FAILED, NOPLAY, REFUSED, EV, REASONS };
 });

@@ -560,6 +560,87 @@ const TWISTED = DEBUG.concat(LEVELS.levels.filter((l, k) => k % 2 === 1).map((l,
   ok(fr.every((x) => x >= 0 && x <= 1), "grader: the fast tapper finishes on a baked level and a linked one (" + fr.join(", ") + ")");
 }
 
+// ==== v4 M4: ring levels (the Gallery) ======================================================================================
+// A ring board: a picture of w x h cells inside a 1-cell ring of camp.
+const ringLv = (rows, cols, extra) => { const w = rows[0].length + 2, grid = ["#".repeat(w)].concat(rows.map((r) => "#" + r + "#"), ["#".repeat(w)]); return lv(grid, cols, Object.assign({ ring: true }, extra || {})); };
+{
+  throws(() => E.compile(lv(["#####", "#aaa#", "#a.a#", "#####"].map((r, y) => (y === 2 ? "#a.a." : r)), null, { ring: true })), "ring: a border cell that isn't camp throws");
+  throws(() => E.compile(lv(["#####", "#a#a#", "#aaa#", "#####"], null, { ring: true })), "ring: a camp cell inside the ring throws");
+  const B = E.compile(ringLv(["aaa", "aba", "aaa"], [[[1, 8]], [[2, 1]], [], [], []]));
+  eq([B.ring, B.campRow, E.compile(LEVELS.levels[0]).ring], [true, 0, false], "ring: compile flags a ring level; a siege level is not one");
+  // ringKey on a 5x5 board: layer 1's eight cells, the four sides taking turns from their clockwise-first corner.
+  const k = []; for (let y = 1; y <= 3; y++) for (let x = 1; x <= 3; x++) if (x !== 2 || y !== 2) k.push([E.ringKey(x, y, 5, 5), x, y]);
+  eq(k.sort((p, q) => p[0] - q[0]).map((q) => [q[1], q[2]]), [[1, 1], [3, 1], [3, 3], [1, 3], [2, 1], [3, 2], [2, 3], [1, 2]], "ringKey: layer 1 of a 5x5 goes top-left, top-right, bottom-right, bottom-left corners, then one step clockwise along each side");
+  eq([E.ringKey(2, 2, 5, 5) > E.ringKey(1, 2, 5, 5), E.ringKey(3, 2, 7, 5) < E.ringKey(2, 2, 7, 5) === false], [true, true], "ringKey: an inner layer ranks after the outer one; a one-row layer runs from its left end");
+  // Known answer: the eight a's round the b all touch the ring (walk 0), so the squad claims them in ring-key order,
+  // one per stagger, and they pop in that order; the b is reachable after.
+  const S = E.sim(B, N);
+  eq(eats(S, 0), [[1, 1], [3, 1], [3, 3], [1, 3], [2, 1], [3, 2], [2, 3], [1, 2]], "ring: equal walks go in ring-key order (the corners first, then clockwise along each side)");
+  eq([S.reachable(2), pat(S, 1)], [1, E.WON], "ring: the b inside is in reach once its neighbours popped, and the picture is razed");
+}
+{
+  // The walk comes first: the top a sits behind water (walk 2), the lower one opens onto grass (walk 1), so the lower one
+  // goes first although the top one's ring key is smaller.
+  const L = lv(["#######", "#~~~..#", "#~a~..#", "#.....#", "#..a..#", "#.....#", "#######"], [[[1, 2]], [], [], [], []], { ring: true }), S = E.sim(E.compile(L), N);
+  ok(E.ringKey(2, 2, 7, 7) < E.ringKey(3, 4, 7, 7), "ring: the top a has the smaller ring key");
+  eq(eats(S, 0), [[3, 4], [2, 2]], "ring: the shorter walk is claimed first; the ring key only breaks ties");
+}
+{
+  // An outline needs no rule of its own: a black ring round the picture's inside shuts it off until black is eaten, and
+  // black is only reachable once the background in front of it is gone.
+  const L = ringLv(["aaaaaaa", "akkkkka", "akbbbka", "akbbbka", "akkkkka", "aaaaaaa"], [[[2, 6]], [[11, 14]], [[1, 22]], [], []]), S = E.sim(E.compile(L), N);
+  eq([S.reachable(1), S.reachable(11), S.reachable(2)], [22, 0, 0], "outline: at the start only the background touches the ring");
+  eq([pat(S, 0), S.lineLen], [E.PLAYING, 1], "outline: a squad of the inside colour waits (nothing in reach)");
+  eq([pat(S, 1), S.lineLen, S.reachable(11)], [E.PLAYING, 2, 0], "outline: black waits too while the background stands");
+  eq([pat(S, 2), S.status], [E.WON, E.WON], "outline: the background goes, then black breaches the outline, then the inside goes: razed");
+}
+// Random ring boards (a background, blobs of other colours, an outline round one of them) with random decks, for the
+// differential against the reference.
+function ringRandom(seed) {
+  const r = Gr.rng(seed), ri = (a, b) => a + Math.floor(r() * (b - a + 1)), w = ri(6, 14), h = ri(6, 16), g = [];
+  for (let y = 0; y < h; y++) { g.push([]); for (let x = 0; x < w; x++) g[y].push(1); }
+  for (let k = 0, nk = ri(2, 5); k < nk; k++) { const cx = ri(1, w - 2), cy = ri(1, h - 2), rr = ri(1, 4), m = ri(2, 6);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if ((x - cx) ** 2 + (y - cy) ** 2 <= rr * rr) g[y][x] = m;
+    if (k === 0) for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { if (g[y][x] === m) continue; const nbm = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => g[y + dy] && g[y + dy][x + dx] === m && (x - cx) ** 2 + (y - cy) ** 2 <= (rr + 1.5) ** 2); if (nbm) g[y][x] = 11; } }
+  const rows = g.map((row) => row.map((m) => E.chOf(m)).join("")), cnt = {}; for (const row of g) for (const m of row) cnt[m] = (cnt[m] || 0) + 1;
+  const cards = []; for (const m of Object.keys(cnt)) { let left = cnt[m]; while (left > 0) { const k = Math.min(left, ri(2, 14)); cards.push([+m, k]); left -= k; } }
+  for (let i = cards.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [cards[i], cards[j]] = [cards[j], cards[i]]; }
+  const cols = [[], [], [], [], []]; cards.forEach((cd, i) => cols[r() < 0.5 ? i % 5 : ri(0, 4)].push(cd));
+  return ringLv(rows, cols);
+}
+const RINGS = []; for (let k = 0; k < 40; k++) { const L = ringRandom(9101 + k); RINGS.push(k % 4 === 3 ? inject(L, 9301 + k) : L); }
+{
+  let games = 0, taps = 0, refused = 0, pops = 0, diffs = 0; const t0 = Date.now();
+  const rline = (R) => R.spaces.map((s, k) => [k, s]).filter(([, s]) => s).sort((p, q) => p[1].seq - q[1].seq).map(([k, s]) => [s.m, s.wait + s.out]);
+  for (const L of RINGS) {
+    const B = E.compile(L);
+    for (const [dn, rules] of Object.entries(RULES)) for (const rushed of [false, true]) {
+      const S = E.sim(B, rules), R = Ref.game(L, rules), r = Gr.rng(B.n * 17 + (rushed ? 5 : 1) + dn.length); S.logOn = true;
+      let t = 0, bad = null; const mine = [];
+      for (let g = 0; g <= 6 * B.ncards + 40 && S.status === E.PLAYING && !bad; g++) {
+        const open = []; for (let j = 0; j < 5; j++) if (S.front(j) >= 0) open.push(j);
+        if (!open.length) break;
+        const j = open[Math.floor(r() * open.length)];
+        S.clearLog(); let a1, a2;
+        if (rushed) { t += Math.floor(r() * 1500); a1 = S.play(j, t); a2 = R.play(j, t); } else { a1 = S.play(j); S.quiet(); a2 = R.play(j); R.quiet(); }
+        taps++; if (a1 === E.REFUSED) refused++;
+        if ((a1 === E.REFUSED) !== (a2 === "refused")) { bad = "refusal"; break; }
+        for (let i = 0; i < S.evLen; i += 3) if (S.ev[i] === E.EV.EAT) mine.push([S.ev[i + 1], S.q1[S.ev[i + 2]]]);
+        const st = S.status === E.WON ? "won" : S.status === E.FAILED ? "failed" : "playing";
+        if (JSON.stringify(mine) !== JSON.stringify(R.pops)) bad = "pops";
+        else if (st !== R.status || (st === "failed" && S.reason !== R.reason)) bad = "status " + st + "/" + R.status;
+        else if (JSON.stringify(S.order().map((s) => [S.spM[s], S.spW[s] + S.spO[s]])) !== JSON.stringify(rline(R))) bad = "spaces";
+        else if (S.now !== R.now) bad = "clock";
+      }
+      if (!bad) { S.quiet(); R.quiet(); const st = S.status === E.WON ? "won" : S.status === E.FAILED ? "failed" : "playing"; if (st !== R.status || S.reason !== R.reason) bad = "final"; }
+      pops += mine.length; games++;
+      if (bad) { diffs++; if (diffs <= 4) console.log("  diff: ring board " + B.w + "x" + B.h + " " + dn + (rushed ? " rushed" : " patient") + ": " + bad); }
+    }
+  }
+  eq(diffs, 0, "differential (ring boards): engine == reference on " + games + " games (" + taps + " taps, " + refused + " refused, " + pops + " pops) on " + RINGS.length + " random ring boards, patient and rushed");
+  console.log("  differential (ring boards): " + games + " games, " + taps + " taps, " + pops + " pops, " + refused + " refused in " + ((Date.now() - t0) / 1000).toFixed(1) + " s");
+}
+
 // ---- the page's save (v4 M1 settings: speed replaces the 2x flag, colour-blind marks) ----------------------------------
 {
   const Save = require("../src/save.js"), order = LEVELS.levels.map((l) => l.id), set = (raw) => Save.sanitize({ settings: raw }, order).settings;
