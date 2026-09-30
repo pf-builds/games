@@ -5,7 +5,7 @@ Contract for the **v3 web build**. Design source: `claude-workspace/business/D-c
 Earlier builds are preserved: v1 at tag `sappers-path-v1-playtest`, v2 at tag `sappers-path-v2-fixed`. `SPEC.md` (v1) and `SPEC-v2.md` stay for history. **Where this file is silent, the builder decides and logs the decision in §9.**
 
 ## 1. The game in one line
-Squads of sappers, each with a colour and a count, eat a top-down pixel fort from the siege camp outward-in, one pixel each, always the nearest reachable pixel of their colour. Raze every pixel to win. Sappers with nothing to reach wait on the holding line; if it overflows, the assault fails. The reference loop is Food Hunt: Pixel Puzzle.
+Squads of sappers, each with a colour and a count, eat a top-down pixel fort from the siege camp outward-in, one pixel each, always the nearest reachable pixel of their colour. Raze every pixel to win. Sappers with nothing to reach wait on the holding line; if it overflows, the assault fails (v3.1, §9: a tap with no free space is refused, and the fail is a line jammed with squads that can't reach a block). The reference loop is Food Hunt: Pixel Puzzle.
 
 ## 2. Board
 - A W×H grid, capped at 36×48 so every pixel reads on a 375 px phone. Era 1 is ≤28×36, Era 2 ≤32×40, Era 3 ≤36×48.
@@ -25,6 +25,7 @@ Squads of sappers, each with a colour and a count, eat a top-down pixel fort fro
 - **Leftovers:** if the squad runs out of reachable pixels, its remaining sappers join the **holding line**. They merge into an existing entry of the same material, or take a new space.
 - **Holding capacity** is set by difficulty: Easy 6, Normal 5, Hard 4. A new entry past capacity means **fail**.
 - **Resuming:** after every play, in line order, any holding entry that has a reachable pixel resumes automatically, and this repeats until nothing changes.
+- **Superseded in v3.1 (§9):** a tap with no free space is refused, not a fail. The fails are a jammed line, stuck and short.
 - **Superseded in playtest 1 (§9):** resolution is no longer instant and nothing merges. The engine is a timed dispatch simulation (a tap takes a space; only sappers who can reach a pixel go, round by round), and the show draws its state. Input never waits on it.
 - **Win:** no material pixels left.
 - **Fail:**
@@ -79,7 +80,7 @@ Squads of sappers, each with a colour and a count, eat a top-down pixel fort fro
 - `SP.state()`, `SP.load(id)`, `SP.retry()`, `SP.tick(ms)`, `SP.solve()` (on a clone), `SP.selfTest()`.
 - **selfTest** replays each level's stored winning order through `play()`. It asserts:
   - the win
-  - a fail by overflow on a level built for it
+  - a fail by overflow on a level built for it (v3.1: a jam on a level built for it, and a refused tap that changes nothing)
   - the key and gate
   - an archer hit on each difficulty
   - the save is byte-identical after `solve()`
@@ -178,3 +179,12 @@ All the /game-forge lessons apply:
     - `v3.flags.mergeLeftovers` (false): brings back same-colour merging for comparison. The bake assumes false. A `spaceOnTap` flag was not added: in the timed model every tap needs a space.
   - **Speed.** Walk is 80 ms a tile at 1× (it was 40, then squeezed into a 3 s cap per play) and 40 at 2×.
   - **Show.** Runners are the engine's sappers, drawn at engine time. They enter from their slot's point on the canvas edge and route over the ground as it stands, so they never cross a drawn block (blocks only disappear). They bite, then carry the block to the bin. The holding line shows each space's waiting count and a walking marker with the number out. When every space is taken, each front card is marked fatal.
+- 2026-09-29 (v3.1, post-ship rules fix; Peter: "If all five spots are full and you click another it erased the group, which isn't right, it should just not work until there is space." Notes in `tools/v3.1-notes.md`):
+  - **A tap with no free space is refused.** It's a no-op in the engine: `play()` returns `REFUSED`, the card stays at the front of its column, nothing is dispatched and no state changes (the saved state is byte-identical). The page shakes the card every time, and shows "No space: wait for a squad to come home" with a soft blocked sound at most once per `show.blockedGapMs` (700). No input lock. Dealing mode (the level generator) keeps the old overflow fail, since the dealer reads it.
+  - **The overflow fail is gone. The jam replaces it.** Once nothing moves, a line where every space is held by a squad that can't reach a block (and so every front card would be refused) fails as `jam`: "Line jammed: Masons, Roofers, Axemen and 2 more can't reach a block." (up to `layout.jamNames` crews, in line order). This is the old "no move" check renamed; at rest no squad can send anyone, so a full line at rest is always a jam. The fail set is jam, stuck (tray empty, pixels left, nothing moving) and short (a Hard kill). No state can hang: at rest, either the tray is empty (win or stuck), the line is full (jam), or a tap is possible.
+  - **Patient outcomes can't change.** A patient tap never meets a full line, because a full line at rest is already a jam, and the old rules failed it the same way. Measured: all 75 levels re-graded on 3 difficulties with the bake's seeds and playout counts (random-tap rate, stored winning lines, the lookahead player): 0 differences from `levels.json` (`tools/regrade.js`). No rebake.
+  - **Rushing** is now about as good as patience, where it used to lose almost always. On all 75 levels (300 games each, Normal), rushed and patient rates agree within 10 points except level 27, where rushing wins 59% against 44% patient (confirmed at 2,000 games). Flagged for Peter, not changed.
+  - **The line at a glance.** A stuck squad (nothing it can reach, every sapper home) is hatched dark with a lock. A working squad has a gold rim, a walking marker with the number out, and stepping figures. The head counts them ("3 stuck · 1 working · 1 free"). One space left with every other squad but one stuck is the near-jam warning: "One space left", the last space pulses, and a warn cue on the tap that caused it. A full line reads "Line full: wait for a squad to come home", and each front card wears a lock (blocked, never "fatal"). The red pulse is kept for a full line with at most one squad working.
+  - **Victory march** (Peter: "it's fine to speed it up at 1.5 speed as a reward"). Once the tray is empty, no input is left, so a scratch copy of the engine run to rest gives the exact outcome. If it's a win, the show plays at `show.victoryPace` (1.5) until the sheet, or 2x if that's on and faster. The head reads "Victory march ×1.5". It's presentation only: the final state is identical to 1x (selfTest). There's no march on a line that will end stuck; a jam always has cards left, so it can never march.
+  - **Teaching.** Level 2's third coach line is now "If every space is stuck waiting, you lose."
+  - `mergeLeftovers` stays off. Hard archer kills are unchanged.

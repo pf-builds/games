@@ -4,7 +4,7 @@
 // show in board.js, the title scene, wall and goblin sprites in art.js, the synth in audio.js.
 //
 // Playtest 1 (the dispatch model): the engine is a timed simulation. A tap takes a holding space at once (no free space:
-// overflow); its sappers go out only to pixels they can reach, a round at a time, and the space frees when they are all
+// refused, v3.1); its sappers go out only to pixels they can reach, a round at a time, and the space frees when they are all
 // home. The page plays engine time at show.pace x real time (2x doubles it), reads the engine's log into the board every
 // step, and draws engine state. Cards stay live at any time; a board tap (or Space) skips: the engine runs until nothing
 // moves and the board lands. Win and fail sheets wait for the squads to settle, at most show.settleCapMs after the end.
@@ -12,12 +12,18 @@
 // SP.tick(ms) advances it by hand, so a hidden tab (no rAF) can still be driven. The engine, the goblin, the panel delay
 // and toasts all run on this clock; nothing here uses setTimeout or setInterval.
 // M2: the teaching coach (config.teach: one line and a bouncing arrow on what to tap, advanced by play), the sound set
-// (tap, a throttled pop per pixel, haul, line fill and last-space warning, overflow, gate, arrows, collapse, fanfare), the
+// (tap, a throttled pop per pixel, haul, line fill and near-jam warning, jam, blocked, gate, arrows, collapse, fanfare), the
 // win beat (difficulty medals), and portal shape: pause on blur or a hidden tab (the clock stops and the audio context
 // suspends; a Paused sheet takes the next tap so it can never play a card), and the board turned a quarter in landscape.
 // Fix pass: the level's name sits over its difficulty and steps its size down to fit (never an ellipsis), crew names on
-// cards fit the same way, a full holding line pulses red and marks each front card safe or fatal (a one-tap look-ahead
-// on a scratch copy, run on a play, never per frame), and wide screens put every control in one side panel.
+// cards fit the same way, a full holding line marks each front card blocked (or safe, merge flag only; run on a play,
+// never per frame), and wide screens put every control in one side panel.
+// v3.1: a tap with no free space is refused (the card shakes, a toast, a soft "blocked" sound, all throttled by
+// show.blockedGapMs; no input lock). The overflow fail is gone: the fail is a jammed line (every space held by a squad
+// that can't reach a block, found at rest). Each space reads stuck (hatched, a lock) or working (gold rim, a walking
+// marker, the figures step); one space left with every other squad stuck warns ("One space left", the last space pulses);
+// a full line marks each front card blocked. Victory march: once the tray is empty and a scratch copy run to rest wins,
+// the show plays at show.victoryPace (never slower than 2x when that is on) until the sheet.
 (function () {
   "use strict";
   const NS = window.SappersPath, E = NS.engine, Save = NS.save, Board = NS.board, Art = NS.art, Audio = NS.audio;
@@ -28,7 +34,8 @@
     clock: 0, lastT: 0, screen: "title", diff: "normal", fast: false, ending: null, endAt: -1, panel: null, panelAt: 0, testing: false,
     toastT: -1e12, popK: 0, cards: [], nexts: [], slots: [], wide: false, chipURL: [], manURL: [], nodes: [], lastW: 0, lastH: 0,
     coach: null, used: 0, cues: {}, paused: false, pauses: 0, focusEl: null, pt: { x: 0, y: 0 }, T: null, tbuf: null, labFit: new Map(), verdict: [],
-    et: 0, endT: -1, lineDirty: false, lineMoved: false, ord: [], slotPts: [] };
+    et: 0, endT: -1, lineDirty: false, lineMoved: false, ord: [], slotPts: [], blockT: -1e12, refused: 0, march: false,
+    li: { stuck: 0, work: 0, occ: 0, free: 0, near: false, full: false, danger: false } };
   const togMute = Array.from(document.querySelectorAll(".tog-mute")), togFast = Array.from(document.querySelectorAll(".tog-fast")), segs = Array.from(document.querySelectorAll(".seg button"));
 
   // ---- boot --------------------------------------------------------------------------------------------------------
@@ -125,10 +132,10 @@
       if (f < 0) { b.className = "card empty"; b.disabled = true; b.querySelector(".n").textContent = ""; b.querySelector(".lab").textContent = "empty"; b.querySelector(".sw").style.backgroundImage = "none"; b.style.removeProperty("--mc"); b.setAttribute("aria-label", "Empty column"); }
       else {
         const m = B.cardM[f], k = B.cardN[f];
-        b.className = "card" + (app.verdict[j] === 1 ? " safe" : app.verdict[j] === 2 ? " fatal" : ""); b.disabled = !live; paintMat(b, m);
+        b.className = "card" + (app.verdict[j] === 1 ? " safe" : app.verdict[j] === 2 ? " blocked" : ""); b.disabled = !live; paintMat(b, m);
         const lab = b.querySelector(".lab"); lab.textContent = mat(m).crew; fitText(lab, "crew:" + m, app.cfg.layout.labMinPx);
         b.querySelector(".n").textContent = k; b.querySelector(".sw").style.backgroundImage = app.chipURL[m];
-        b.setAttribute("aria-label", mat(m).crew + ", " + k + " sappers" + (app.verdict[j] === 2 ? ", would end the assault" : app.verdict[j] === 1 ? ", safe" : ""));
+        b.setAttribute("aria-label", mat(m).crew + ", " + k + " sappers" + (app.verdict[j] === 2 ? ", blocked: no free space" : app.verdict[j] === 1 ? ", safe" : ""));
       }
       for (let d = 1; d <= 3; d++) {
         const x = app.nexts[j][d - 1], h = S ? S.heads[j] + d : 1e9;
@@ -138,35 +145,49 @@
       }
     }
   }
-  // Every space taken: each front card is marked fatal (a tap now has no space: overflow) or safe (it can merge, only
-  // with the comparison flag on). Run when the line changes, never per frame.
+  // Every space taken: each front card is marked blocked (a tap now is refused until a squad comes home) or safe (it can
+  // merge, only with the comparison flag on). Run when the line changes, never per frame.
   function judge() {
     const S = app.S, full = S && S.status === E.PLAYING && S.lineLen >= S.cap && !app.panel;
     for (let j = 0; j < E.NCOL; j++) app.verdict[j] = 0;
     if (!full) return false;
-    for (let j = 0; j < E.NCOL; j++) { const f = S.front(j); if (f >= 0) app.verdict[j] = S.tapFails(app.B.cardM[f]) ? 2 : 1; }
+    for (let j = 0; j < E.NCOL; j++) { const f = S.front(j); if (f >= 0) app.verdict[j] = S.blocked(app.B.cardM[f]) ? 2 : 1; }
     return true;
   }
-  // The holding spaces, straight from the engine: a squad's space shows its colour and the sappers still waiting there;
-  // while any are out, a walking marker with the number out. The count is the engine's, so room is never misread.
+  // The line at a glance (into app.li, no allocation): squads stuck (nothing they can reach, all home), working (sappers
+  // out), free spaces; near = one space left and every other squad but one stuck; danger = full and at most one working.
+  function readLine() {
+    const S = app.S, li = app.li; li.stuck = 0; li.work = 0; li.occ = 0;
+    for (let i = 0; i < S.cap; i++) { if (!S.spQ[i]) continue; li.occ++; if (S.stuck(i)) li.stuck++; else if (S.spO[i] > 0) li.work++; }
+    const live = S.status === E.PLAYING && !app.panel;
+    li.free = S.cap - li.occ; li.full = live && li.free === 0; li.danger = li.full && li.stuck >= li.occ - 1;
+    li.near = live && li.free === 1 && li.occ > 0 && li.stuck >= li.occ - 1;
+    return li;
+  }
+  // The holding spaces, straight from the engine: a squad's space shows its colour and the sappers still waiting there.
+  // Stuck (nothing it can reach, all home): hatched with a lock. Working: a gold rim and a walking marker with the number
+  // out. The head says the line's state and counts stuck, working and free. The counts are the engine's.
   function renderLine() {
     const S = app.S; if (!S) return;
     app.lineDirty = false;
     $("line").style.setProperty("--cap", S.cap);
-    const full = S.status === E.PLAYING && S.lineLen >= S.cap && !app.panel, L = app.cfg.layout;
-    $("line-wrap").classList.toggle("full", full);
-    $("line-lab").textContent = full ? L.fullText : L.lineText; $("line-cnt").textContent = S.lineLen + "/" + S.cap;
+    const li = readLine(), L = app.cfg.layout, wrap = $("line-wrap"), march = app.march && !app.panel;
+    wrap.classList.toggle("full", li.full); wrap.classList.toggle("danger", li.danger); wrap.classList.toggle("near", li.near && !li.full); wrap.classList.toggle("march", march);
+    $("line-lab").textContent = march ? L.marchText.replace("{x}", app.cfg.show.victoryPace) : li.full ? L.fullText : li.near ? L.nearText : L.lineText;
+    let cnt = li.stuck ? li.stuck + " " + L.stuckWord : "";
+    if (li.work) cnt += (cnt ? " · " : "") + li.work + " " + L.workWord;
+    if (li.free) cnt += (cnt ? " · " : "") + li.free + " " + L.freeWord;
+    $("line-cnt").textContent = cnt;
     let free = -1; for (let i = 0; i < S.cap; i++) if (!S.spQ[i]) { free = free < 0 ? i : free; }
     app.slots.forEach((s, i) => {
-      s.hidden = i >= S.cap; s.classList.remove("over");
-      if (i < S.cap && S.spQ[i]) { const m = S.spM[i], w = S.spW[i], o = S.spO[i]; s.classList.add("full"); s.classList.toggle("work", o > 0); paintMat(s, m); s.querySelector("b").textContent = w || "";
+      s.hidden = i >= S.cap;
+      if (i < S.cap && S.spQ[i]) { const m = S.spM[i], w = S.spW[i], o = S.spO[i], st = S.stuck(i); s.classList.add("full"); s.classList.toggle("work", o > 0); s.classList.toggle("stuck", st); paintMat(s, m); s.querySelector("b").textContent = w || "";
         s.querySelector(".out").textContent = o > 0 ? o : "";
         const men = s.querySelector(".men"); men.style.backgroundImage = app.manURL[m]; men.style.width = Math.min(w, L.sapperIcons) * 14 + "px";
-        s.setAttribute("aria-label", mat(m).crew + ", " + w + " waiting" + (o ? ", " + o + " out" : "")); }
-      else { s.classList.remove("full", "work"); s.style.removeProperty("--mc"); s.querySelector("b").textContent = ""; s.querySelector(".out").textContent = ""; s.querySelector(".men").style.width = "0"; s.setAttribute("aria-label", "Empty space"); }
-      s.classList.toggle("last", i === free && S.lineLen === S.cap - 1 && S.status === E.PLAYING); // the last free space pulses
+        s.setAttribute("aria-label", mat(m).crew + ", " + w + " waiting" + (o ? ", " + o + " out" : "") + (st ? ", stuck: nothing in reach" : "")); }
+      else { s.classList.remove("full", "work", "stuck"); s.style.removeProperty("--mc"); s.querySelector("b").textContent = ""; s.querySelector(".out").textContent = ""; s.querySelector(".men").style.width = "0"; s.setAttribute("aria-label", "Empty space"); }
+      s.classList.toggle("last", i === free && li.near); // one space left and the rest stuck: the last free space pulses
     });
-    if (S.status === E.FAILED && S.reason === "overflow") { const s = app.slots[Math.min(S.cap, app.slots.length) - 1]; if (s) s.classList.add("over"); }
   }
   function renderTop() {
     const e = app.entry; if (!e) return;
@@ -219,7 +240,7 @@
     const e = app.byId.get(id) || app.levels[0];
     if (diff && DIFFS.indexOf(diff) >= 0) app.diff = diff;
     app.entry = e; app.B = E.compile(e.L); app.S = E.sim(app.B, rulesOf(app.diff)); app.S.logOn = true; app.et = 0;
-    app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.popK = 0; app.used = 0; $("panel").hidden = true; hideToast();
+    app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.popK = 0; app.used = 0; app.march = false; app.blockT = -1e12; $("panel").hidden = true; hideToast();
     app.V.setLevel(app.B, app.S); placeSlots();
     app.save.data.last = e.id; writeSave();
     showScreen("play"); renderAll(); coachStart();
@@ -227,33 +248,53 @@
   }
   function retry() {
     if (!app.S) return;
-    app.S.reset(); app.et = 0; app.V.reset(); app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.popK = 0; app.used = 0; $("panel").hidden = true; hideToast();
+    app.S.reset(); app.et = 0; app.V.reset(); app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.popK = 0; app.used = 0; app.march = false; app.blockT = -1e12; $("panel").hidden = true; hideToast();
     renderAll(); coachStart();
   }
   const playNext = () => startLevel(Save.next(app.save.data, app.order));
 
   // The one play entry point: the card tap, the keyboard and SP.play all call this. Returns true if a card was played.
-  // The squad takes its space at the engine's current time; nothing waits on the show.
+  // The squad takes its space at the engine's current time; nothing waits on the show. No free space: refused (below).
   function playCol(col) {
     const S = app.S;
     if (app.screen !== "play" || !S || S.status !== E.PLAYING || app.panel || !(col >= 0 && col < E.NCOL) || S.front(col) < 0) return false;
-    const m = app.B.cardM[S.front(col)], line0 = S.lineLen;
-    if (S.play(col) === -2) return false;
+    const m = app.B.cardM[S.front(col)], line0 = S.lineLen, got = S.play(col);
+    if (got === E.REFUSED) { refusedTap(col); return false; }
+    if (got === E.NOPLAY) return false;
     app.used |= 1 << m;
     app.V.sync(S, true);
     app.popK = 0;
     cue("tap");
-    if (S.status === E.FAILED && S.reason === "overflow") cue("overflow");
-    else if (S.status === E.PLAYING && S.lineLen === S.cap - 1 && S.lineLen > line0) cue("warn");
+    if (S.status === E.PLAYING && S.lineLen > line0 && readLine().near) cue("warn");
     else if (S.lineLen > line0) cue("fill");
     ended();
+    marchCheck();
     judge(); renderTray(); renderLine(); coachStep();
     return true;
   }
+  // A tap with no free space: nothing changes in the rules. The card shakes every time; the toast and the soft blocked
+  // sound come at most once per show.blockedGapMs, so a thumb hammering a card isn't noisy. No input lock.
+  function refusedTap(col) {
+    app.refused++;
+    const b = app.cards[col], SH = app.cfg.show;
+    if (!app.V.calm && b.animate) b.animate(SH.blockedShake.map((x) => ({ transform: "translateX(" + x + "px)" })), { duration: SH.blockedShakeMs, easing: "linear" });
+    if (app.clock - app.blockT < SH.blockedGapMs) return;
+    app.blockT = app.clock; cue("blocked"); toast(app.cfg.layout.blockedText, true);
+  }
+  // Victory march: once the tray is empty no input is left, so a scratch copy of the engine run to rest gives the exact
+  // outcome. A win: the show plays at show.victoryPace until the sheet. A jam or a stuck line: no march.
+  function marchCheck() {
+    const S = app.S, B = app.B; if (app.march || S.status === E.FAILED) return;
+    for (let j = 0; j < E.NCOL; j++) if (S.front(j) >= 0) return;
+    const X = E.sim(B, rulesOf(app.diff)); X.load(S.save()); X.quiet();
+    app.march = X.status === E.WON;
+  }
+  const paceNow = () => app.cfg.show.pace * Math.max(app.fast ? app.cfg.show.speedFast : 1, app.march ? app.cfg.show.victoryPace : 1);
   // The rules just ended the assault (at a tap, a pop or an arrow): record it; the sheet waits for the squads to settle.
   function ended() {
     const S = app.S; if (app.ending || S.status === E.PLAYING) return;
-    app.ending = { won: S.status === E.WON, reason: S.reason, m: S.failMat }; app.endT = app.clock;
+    app.ending = { won: S.status === E.WON, reason: S.reason, m: S.failMat, crews: [] }; app.endT = app.clock;
+    if (S.reason === "jam") { for (const s of S.order(app.ord)) { const c = mat(S.spM[s]).crew; if (app.ending.crews.indexOf(c) < 0) app.ending.crews.push(c); } cue("jam"); }
     if (app.ending.won) { const was = app.save.data.done[app.entry.id] | 0, first = Save.record(app.save.data, app.entry.id, app.diff); app.ending.first = first; app.ending.medal = !(was & (1 << DIFFS.indexOf(app.diff))); app.save.data.last = Save.next(app.save.data, app.order); writeSave(); }
     judge(); renderTray(); renderLine();
   }
@@ -270,10 +311,12 @@
     if (app.V.gob.on && !app.V.gob.done) app.V.gob.done = true;
     else if (app.ending && !app.panel) app.endAt = app.clock;
   }
+  // The jam names the crews that jammed, in line order (up to layout.jamNames, then "and n more").
   function reasonText(e) {
-    const who = e.m ? mat(e.m).crew : "sappers";
-    return { overflow: "Too many squads out: no space left for the " + who + ".", short: "Archers cut down the " + who + ": too few left to finish.",
-      stuck: "Out of squads, and the waiting sappers can't reach their colour.", nomove: "Every space is taken by a squad that can't move: no room for another." }[e.reason] || "The assault failed.";
+    const who = e.m ? mat(e.m).crew : "sappers", k = app.cfg.layout.jamNames, c = e.crews || [];
+    const names = c.length > k ? c.slice(0, k).join(", ") + " and " + (c.length - k) + " more" : c.length > 1 ? c.slice(0, -1).join(", ") + " and " + c[c.length - 1] : c[0] || "the squads";
+    return { short: "Archers cut down the " + who + ": too few left to finish.", stuck: "Out of squads, and the waiting sappers can't reach their colour.",
+      jam: "Line jammed: " + names + " can't reach a block." }[e.reason] || "The assault failed.";
   }
   function showPanel() {
     const e = app.ending; if (!e) return;
@@ -473,8 +516,9 @@
     const V = app.V; if (!V) return;
     V.clock = app.clock;
     if (app.screen !== "play" || !app.B) return;
-    // The engine plays at show.pace x real time (x speedFast on 2x); its log goes to the board every step.
-    const S = app.S, sp = app.cfg.show.pace * (app.fast ? app.cfg.show.speedFast : 1);
+    // The engine plays at show.pace x real time (x speedFast on 2x, or the victory march's pace, whichever is faster); its
+    // log goes to the board every step.
+    const S = app.S, sp = paceNow();
     app.et += dt * sp; S.advanceTo(app.et); V.t = app.et; V.sync(S, true);
     V.update(dt, sp);
     ended();
@@ -534,17 +578,31 @@
     }
     return null;
   }
-  // A rush loss: a patient prefix that leaves at most 2 spaces free with 3 columns still to tap; then those 3 taps,
-  // made at once, overflow while the squads are still out. Returns {prefix, rush} or null.
-  function rushPlan(e, diff) {
-    const B = E.compile(e.L), rules = rulesOf(diff), cap = Math.max(1, rules.hold | 0), cols = (S) => { const o = []; for (let j = 0; j < E.NCOL; j++) if (S.heads[j] < B.colLen[j]) o.push(j); return o; };
-    const pre = search(e, diff, (S) => S.status === E.PLAYING && S.lineLen >= cap - 2 && cols(S).length >= 3, app.cfg.selfTest.searchTries, app.cfg.selfTest.searchSeed);
-    if (pre == null) return null;
-    const S = E.replay(B, rules, pre), o = cols(S), rush = String(o[0]) + o[1] + o[2];
-    for (const ch of rush) S.play(+ch);
-    return S.status === E.FAILED && S.reason === "overflow" ? { prefix: pre, rush } : null;
+  // A jam loss (v3.1): seeded random patient taps until the line jams. Returns {prefix} (its last tap jams) or null.
+  function jamPlan(e, diff) {
+    const pre = search(e, diff, (S) => S.status === E.FAILED && S.reason === "jam", app.cfg.selfTest.searchTries, app.cfg.selfTest.searchSeed);
+    return pre == null ? null : { prefix: pre };
   }
-  function lossPlan(id, diff) { const e = app.byId.get(id) || app.entry; return e ? rushPlan(e, diff || app.diff) : null; }
+  function lossPlan(id, diff) { const e = app.byId.get(id) || app.entry; return e ? jamPlan(e, diff || app.diff) : null; }
+  // Rushed taps (no waiting) of the front card with the most in reach until every space is taken with squads out; returns
+  // the taps made. The full-line checks and the harness's screens use it.
+  function fillLine() {
+    let taps = "";
+    for (let g = 0; g < 12 && app.S.status === E.PLAYING && app.S.lineLen < app.S.cap; g++) { let j = -1; for (let k = 0; k < E.NCOL; k++) { const f = app.S.front(k); if (f >= 0 && (j < 0 || app.S.reachable(app.B.cardM[f]) > app.S.reachable(app.B.cardM[app.S.front(j)]))) j = k; } if (j < 0) break; playCol(j); taps += j; }
+    return taps;
+  }
+  // A line of k stuck squads and w working ones, patient taps from the level's start: fronts with nothing in reach
+  // first, then fronts with the most in reach. Returns the taps, or null if the fronts don't allow it.
+  function stageLine(k, w) {
+    let taps = "";
+    for (let g = 0; g < k + w; g++) {
+      let j = -1, best = -1;
+      for (let c = 0; c < E.NCOL; c++) { const f = app.S.front(c); if (f < 0) continue; const r = app.S.reachable(app.B.cardM[f]); if (g < k ? r === 0 && j < 0 : r > 0 && r > best) { j = c; best = r; } }
+      if (j < 0 || !playCol(j)) return null;
+      taps += j; if (g < k) settleNow();
+    }
+    return taps;
+  }
 
   // ---- debug facade ---------------------------------------------------------------------------------------------------
   function state() {
@@ -555,7 +613,8 @@
       status: !S ? null : S.status === E.WON ? "won" : S.status === E.FAILED ? "failed" : "playing", reason: S && S.status === E.FAILED ? S.reason : null,
       pixLeft: S ? S.pixLeft : null, cap: S ? S.cap : null, line, fronts, plays: S ? S.plays : 0, hits: S ? S.hits : 0, kills: S ? S.kills : 0,
       busy: S ? S.busy : false, out: S ? S.out : 0, runners: V ? V.live : 0, now: S ? S.now : 0, goblin: V ? V.gob.on && !V.gob.done : false,
-      panel: app.panel, fast: app.fast, clock: Math.round(app.clock), cs: V ? V.cs : 0, done: Object.keys(app.save.data.done).length };
+      panel: app.panel, fast: app.fast, clock: Math.round(app.clock), cs: V ? V.cs : 0, done: Object.keys(app.save.data.done).length,
+      refused: app.refused, march: app.march, pace: app.cfg ? paceNow() : 1, li: S ? Object.assign({}, readLine()) : null };
   }
   const resolve = (id) => (typeof id === "number" ? (app.levels.find((e) => e.n === id) || {}).id : id);
   const hitOK = (el) => { if (!el) return false; const r = el.getBoundingClientRect(); if (!(r.width > 0 && r.height > 0)) return false; const t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!t && (t === el || el.contains(t)); };
@@ -563,12 +622,13 @@
   function tick(ms) { let left = Math.max(0, Math.min(600000, +ms || 0)); while (left > 0) { const d = Math.min(16, left); step(d); left -= d; } if (app.screen === "play" && app.V) app.V.draw(); return state(); }
   const playOrder = (ord) => { for (let i = 0; i < ord.length; i++) if (!playCol(ord.charCodeAt(i) - 48)) return false; return true; };
 
-  // selfTest (SPEC-v3 §7, playtest 1): every stored winning order on every difficulty played patiently through playCol,
-  // a sample of them on real ticks, the dispatch rule on a real board, three overlapping squads, a rush that overflows
-  // (the sheet waits for the squads), the key and gate, an archer hit per difficulty, the full line, determinism on
-  // ticks, the save byte-identical after solve(), elementFromPoint on the primary buttons, the win, pause, the coach,
-  // opaque sprite caches. Runs on a scratch save; the real save is compared byte for byte at the end. Leaves the page
-  // on the level it was on (restarted).
+  // selfTest (SPEC-v3 §7, playtest 1, v3.1): every stored winning order on every difficulty played patiently through
+  // playCol, a sample of them on real ticks, the dispatch rule on a real board, three overlapping squads, a jam loss (the
+  // sheet names the crews), the key and gate, an archer hit per difficulty, the full line (blocked cards; a refused tap
+  // changes nothing, then plays once a space frees), stuck and working squads, the near-jam warning and the jam on a
+  // level built for it (selfTest.jamLevel), the victory march, determinism on ticks, the save byte-identical after
+  // solve(), elementFromPoint on the primary buttons, the win, pause, the coach, opaque sprite caches. Runs on a scratch
+  // save; the real save is compared byte for byte at the end. Leaves the page on the level it was on (restarted).
   function selfTest() {
     const T0 = performance.now(), out = { pass: 0, fail: [], notes: {}, ms: 0 };
     const ok = (c, m) => { if (c) out.pass++; else out.fail.push(m); return !!c; };
@@ -582,6 +642,9 @@
     // Real ticks until the engine is quiet (bounded); returns the ms ticked.
     const tickQuiet = (max) => { let t = 0; while (app.S.busy && t < max) { step(16); t += 16; } return t; };
     const allHome = () => !app.S.busy && app.V.live === 0 && app.S.out === 0;
+    // Levels built for a check (config selfTest.jamLevel, stuckLevel): registered for the run only.
+    const fx = (k) => { const e = { L: ST[k], id: "fx-" + k, n: 0, era: 1, idx: -1, node: null }; app.byId.set(e.id, e); return e; };
+    const LY = app.cfg.layout;
     try {
       // 1. Stored winning orders, all levels, all difficulties, played patiently through the play entry point.
       let wins = 0, total = 0;
@@ -621,23 +684,21 @@
         const R = app.V.runners(), spaces = R.bySpace.filter((k) => k > 0).length;
         ok(cols.length === 3 && app.S.lineLen === 3 && spaces === 3 && R.live >= 3, "overlap: three rapid taps leave three squads out, runners alive in all three (" + JSON.stringify(R.bySpace) + ")");
         out.notes.overlap = e.id + " cols " + cols.join("") + " runners " + R.live; }
-      // 4. A rush: a patient prefix, then three taps at once with the squads still out: overflow at the tap; the fail
-      // sheet waits for the squads (or the cap); Retry clears every runner.
-      let rp = null; for (const e of app.levels) { if (e.L.band !== "hard" && e.L.band !== "hardest") continue; const p = rushPlan(e, "normal"); if (p) { rp = { e, p }; break; } }
-      if (ok(!!rp, "rush: found a patient prefix that leaves too few spaces for three rapid taps")) {
-        startLevel(rp.e.id, "normal"); patient(rp.p.prefix); const ov0 = app.cues.overflow | 0;
-        for (const ch of rp.p.rush) playCol(+ch);
-        ok(app.S.status === E.FAILED && app.S.reason === "overflow" && app.ending && app.ending.reason === "overflow", "rush: the tap with no space ends the assault at once (overflow)");
-        ok((app.cues.overflow | 0) === ov0 + 1, "rush: the overflow cue plays once, on the tap");
-        const busy0 = app.S.busy; let at = null;
-        for (let t = 0; t < SH.settleCapMs + 3000 && !app.panel; t += 16) { step(16); if (app.panel && !at) at = { busy: app.S.busy, ms: app.clock - app.endT }; }
-        ok(busy0 && app.panel === "fail" && at && !at.busy, "rush: the fail sheet waits until the squads are home (or the " + SH.settleCapMs + " ms cap), then shows (" + JSON.stringify(at) + ")");
-        ok(/Too many squads/.test($("p-line").textContent) && hitOK($("p-primary")) && $("p-primary").textContent === "Retry", "rush: the sheet says too many squads out, Retry is primary and hittable");
-        out.notes.rush = rp.e.id + " '" + rp.p.prefix + "' then '" + rp.p.rush + "' (sheet after " + (at ? Math.round(at.ms) : "?") + " ms)";
-        startLevel(rp.e.id, "normal"); patient(rp.p.prefix); for (const ch of rp.p.rush.slice(0, 2)) playCol(+ch); step(16); step(16);
-        const liveBefore = app.V.live; retry();
-        ok(liveBefore > 0 && app.V.live === 0 && !app.S.busy && app.S.plays === 0 && app.S.lineLen === 0, "retry: mid-show, every runner goes and the level restarts (" + liveBefore + " runners cleared)");
+      // 4. A jam loss on a late level: seeded patient taps until every space holds a squad that can't reach a block; the
+      // line jams at rest, one jam cue, the sheet names the crews, Retry is primary. Then a Retry mid-show clears every runner.
+      let jp = null; for (const e of app.levels) { if (e.L.band !== "hard" && e.L.band !== "hardest") continue; const p = jamPlan(e, "normal"); if (p) { jp = { e, p }; break; } }
+      if (ok(!!jp, "jam: found a patient order that jams a late level")) {
+        startLevel(jp.e.id, "normal"); const j0 = app.cues.jam | 0; patient(jp.p.prefix);
+        ok(app.S.status === E.FAILED && app.S.reason === "jam" && app.ending && app.ending.reason === "jam" && app.S.lineLen === app.S.cap, "jam: the line fills with squads that can't reach a block and jams at rest");
+        ok(app.S.order(app.ord).every((q) => app.S.stuck(q)) && (app.cues.jam | 0) === j0 + 1, "jam: every squad in the line reads stuck; one jam cue");
+        let at = null; for (let t = 0; t < SH.settleCapMs + 3000 && !app.panel; t += 16) { step(16); if (app.panel && !at) at = { busy: app.S.busy, ms: app.clock - app.endT }; }
+        const pl = $("p-line").textContent;
+        ok(app.panel === "fail" && /^Line jammed: .+ can't reach a block\.$/.test(pl) && pl.indexOf(app.ending.crews[0]) >= 0 && hitOK($("p-primary")) && $("p-primary").textContent === "Retry", "jam: the sheet names the jammed crews (" + pl + "), Retry is primary and hittable");
+        out.notes.jam = jp.e.id + " '" + jp.p.prefix + "' (sheet after " + (at ? Math.round(at.ms) : "?") + " ms)";
       }
+      { const e = app.byId.get(ST.overlapLevel) || app.levels[app.levels.length - 1]; startLevel(e.id, "normal"); fillLine(); step(16); step(16);
+        const liveBefore = app.V.live; retry();
+        ok(liveBefore > 0 && app.V.live === 0 && !app.S.busy && app.S.plays === 0 && app.S.lineLen === 0, "retry: mid-show, every runner goes and the level restarts (" + liveBefore + " runners cleared)"); }
       // 5. Key and gate: the gate stays iron until its key pops; then the lock drops, the bars fall, the board shakes.
       const ge = app.levels.find((e) => e.L.gates && e.L.gates.length);
       if (ok(!!ge, "gate: a level with a gate exists")) {
@@ -672,15 +733,49 @@
       // 6b. The archer teaching level never kills (safeArchers): on Hard a hit walks back to its space and play goes on.
       if (app.byId.has("e3-51")) { const e = app.byId.get("e3-51"), o = search(e, "hard", (S) => S.hits > 0, ST.searchTries, ST.searchSeed);
         if (ok(!!o, "e3-51 hard: found a tap into the ring")) { startLevel("e3-51", "hard"); patient(o); ok(app.S.hits > 0 && app.S.kills === 0 && app.S.status === E.PLAYING, "e3-51 hard: archers send the hit sapper back, never kill"); } }
-      // 7. Every space taken (rushed taps, squads out): the line pulses and every front card is marked fatal (a tap now
-      // overflows). With patient play a full line of stuck squads is already "no move", so this state only comes from rushing.
-      { const e = app.byId.get(ST.overlapLevel) || app.levels[app.levels.length - 1]; startLevel(e.id, "normal"); let taps = "";
-        for (let g = 0; g < 12 && app.S.status === E.PLAYING && app.S.lineLen < app.S.cap; g++) { let j = -1; for (let k = 0; k < E.NCOL; k++) { const f = app.S.front(k); if (f >= 0 && (j < 0 || app.S.reachable(app.B.cardM[f]) > app.S.reachable(app.B.cardM[app.S.front(j)]))) j = k; } if (j < 0) break; playCol(j); taps += j; }
+      // 7. Every space taken (rushed taps, squads out): each front card is marked blocked and the head says to wait. A tap
+      // on one is refused: engine state, tray, line and board byte-identical; the card shakes, the toast, one blocked
+      // sound, and hammering it stays quiet. Once a squad is home the same card plays. (With patient play a full line of
+      // stuck squads is already a jam, so this state only comes from rushing.)
+      { const e = app.byId.get(ST.overlapLevel) || app.levels[app.levels.length - 1]; startLevel(e.id, "normal"); const taps = fillLine();
         let right = true, marked = 0;
-        for (let j = 0; j < E.NCOL; j++) { if (app.S.front(j) < 0) continue; marked++; if (!app.cards[j].classList.contains("fatal")) right = false; }
-        ok(app.S.status === E.PLAYING && app.S.lineLen === app.S.cap && $("line-wrap").classList.contains("full") && marked > 0 && right, "full line: rushed taps fill every space with squads out; the line pulses and every front card is marked fatal (" + e.id + " '" + taps + "')");
-        const f0 = app.cards.findIndex((b, k) => app.S.front(k) >= 0); playCol(f0);
-        ok(app.S.status === E.FAILED && app.S.reason === "overflow", "full line: tapping a fatal card overflows"); }
+        for (let j = 0; j < E.NCOL; j++) { if (app.S.front(j) < 0) continue; marked++; if (!app.cards[j].classList.contains("blocked")) right = false; }
+        ok(app.S.status === E.PLAYING && app.S.lineLen === app.S.cap && $("line-wrap").classList.contains("full") && $("line-lab").textContent === LY.fullText && marked > 0 && right, "full line: rushed taps fill every space with squads out; every front card is marked blocked, the head says wait (" + e.id + " '" + taps + "')");
+        ok(readLine().work > 0 && app.slots.some((q) => q.classList.contains("work") && !q.classList.contains("stuck")), "full line: squads with sappers out wear the working mark, not stuck");
+        const j = app.cards.findIndex((b, k) => app.S.front(k) >= 0);
+        const snap = () => Array.from(app.S.save()).join(",") + "|" + app.cards.map((b) => b.className + ":" + b.textContent + ":" + b.disabled).join("/") + "|" + app.slots.map((q) => q.className + ":" + q.textContent).join("/") + "|" + Array.from(app.V.disp).join("");
+        const b0 = snap(), c0 = app.cues.blocked | 0, r0 = app.refused, played = playCol(j);
+        ok(!played && snap() === b0 && app.S.status === E.PLAYING && app.S.front(j) >= 0, "refused: a tap with no free space changes nothing (engine state, tray, line and board byte-identical); no fail");
+        ok((app.cues.blocked | 0) === c0 + 1 && !$("toast").hidden && $("toast").textContent === LY.blockedText && (!app.cards[j].getAnimations || app.cards[j].getAnimations().length > 0), "refused: the card shakes, the toast says wait, one soft blocked sound");
+        playCol(j); playCol(j);
+        ok(app.refused === r0 + 3 && (app.cues.blocked | 0) === c0 + 1 && snap() === b0, "refused: hammering the card is throttled (no second sound within " + SH.blockedGapMs + " ms) and still changes nothing");
+        let t = 0; for (; app.S.lineLen >= app.S.cap && app.S.status === E.PLAYING && t < ST.tickCapMs; t += 16) step(16);
+        const p0 = app.S.plays;
+        ok(app.S.lineLen < app.S.cap && playCol(j) && app.S.plays === p0 + 1, "refused, then accepted: once a squad is home the same card plays (after " + t + " ms)"); }
+      // 7b. Stuck and working on a real level: 2 squads with nothing in reach (hatched, locked) and 2 out working (gold rim,
+      // walking marker); the head counts them. Then the near jam: 3 stuck, 1 working, 1 free warns.
+      { let got = null, near = null;
+        for (const e of app.levels) { if (e.n < 16) continue; startLevel(e.id, "normal"); const tp = stageLine(2, 2); if (tp) { step(16); got = { e, tp, li: Object.assign({}, readLine()) }; break; } }
+        if (ok(!!got, "stuck/working: a level whose fronts give 2 stuck and 2 working squads")) {
+          const st = app.slots.filter((q) => q.classList.contains("stuck")).length, wk = app.slots.filter((q) => q.classList.contains("work") && !q.classList.contains("stuck")).length;
+          ok(got.li.stuck === 2 && got.li.work === 2 && got.li.free === 1 && !got.li.near && st === 2 && wk === 2 && /2 stuck/.test($("line-cnt").textContent) && /2 working/.test($("line-cnt").textContent) && /1 free/.test($("line-cnt").textContent), "stuck/working: two hatched stuck spaces, two working, the head reads '" + $("line-cnt").textContent + "' (" + got.e.id + " '" + got.tp + "')"); }
+        for (const e of app.levels) { if (e.n < 16) continue; startLevel(e.id, "normal"); const tp = stageLine(3, 1); if (tp) { step(16); near = { e, tp, li: Object.assign({}, readLine()) }; break; } }
+        if (ok(!!near, "near jam: a level whose fronts give 3 stuck and 1 working")) {
+          const last = app.slots.filter((q) => q.classList.contains("last")).length;
+          ok(near.li.near && $("line-wrap").classList.contains("near") && $("line-lab").textContent === LY.nearText && last === 1, "near jam: every squad but one stuck and one space left: '" + LY.nearText + "', the last space pulses (" + near.e.id + " '" + near.tp + "')"); } }
+      // 7c. The jam on a level built for it (selfTest.jamLevel): four inner colours wait stuck (the near-jam warning, the
+      // warn cue on that tap), the fifth fills the line and it jams at rest; no victory march; the sheet names the crews.
+      { const e = fx("jamLevel"); startLevel(e.id, "normal"); const w0 = app.cues.warn | 0; patient("1234");
+        ok(readLine().near && readLine().stuck === 4 && app.slots.filter((q) => q.classList.contains("stuck")).length === 4 && app.slots.some((q) => q.classList.contains("last")) && (app.cues.warn | 0) === w0 + 1, "jam level: four stuck squads, one space left: the near-jam warning and one warn cue");
+        playCol(0); settleNow();
+        ok(app.S.status === E.FAILED && app.S.reason === "jam" && !app.march, "jam level: the fifth stuck squad jams the line at rest; the pace never switches to the victory march");
+        for (let t = 0; t < SH.settleCapMs + 3000 && !app.panel; t += 16) step(16);
+        ok(app.panel === "fail" && /^Line jammed: .+ and 2 more can't reach a block\.$/.test($("p-line").textContent), "jam level: the sheet names three crews and 'and 2 more' (" + $("p-line").textContent + ")");
+        startLevel(e.id, "normal"); patient("001234"); settleNow();
+        ok(app.S.status === E.WON, "jam level: the ring's crew first wins (the level is fair)");
+        const s2 = fx("stuckLevel"); startLevel(s2.id, "normal"); playCol(0);
+        ok(!app.march, "stuck level: the tray is empty but the line will end stuck: no victory march"); settleNow();
+        ok(app.S.status === E.FAILED && app.S.reason === "stuck" && !app.march, "stuck level: it fails stuck, the pace never switched"); }
       // 8. Determinism on ticks (a hidden tab driven by SP.tick): the same taps at the same ticks give the same state.
       { const e = app.byId.get(ST.overlapLevel) || app.levels[40], sig = () => { startLevel(e.id, "normal"); const o = e.L.win.normal; for (let i = 0; i < 8 && i < o.length; i++) { playCol(+o[i]); for (let k = 0; k < 37; k++) step(16); } for (let k = 0; k < 90; k++) step(16); return Array.from(app.S.save()).join(",") + "|" + app.V.live + "|" + Array.from(app.V.disp).join(""); };
         ok(sig() === sig(), "ticks: the same taps at the same 16 ms ticks give an identical engine state and board (" + e.id + ")"); }
@@ -735,10 +830,27 @@
       }
       if (app.byId.has("e1-02")) { startLevel("e1-02", "normal"); playCol(frontOf(3)); settleNow(); const cs = coachState(); ok(cs.i === 1 && app.focusEl === $("line"), "coach e1-02: the Torchbearers wait in their space, the arrow moves to the holding line"); }
       if (app.byId.has("e3-51")) { startLevel("e3-51", "normal"); ok(app.V.focus.on && coachState().target && /card/.test(coachState().target), "coach e3-51: the tower wears the ring and the arrow points at the Quarrymen"); }
+      // 13b. Victory march: on a stored winning line the pace stays 1x until the tray empties, then plays at
+      // show.victoryPace; the final state (board, every sapper's times, status) is identical to the same taps at 1x; with
+      // 2x on, the faster pace stays.
+      { const e = app.byId.get("e1-03") || app.levels[0], o = e.L.win.normal, vp = SH.victoryPace;
+        const run = () => { startLevel(e.id, "normal"); let before = false; for (let i = 0; i < o.length - 1; i++) { playCol(+o[i]); tickQuiet(ST.tickCapMs); before = before || app.march; } playCol(+o[o.length - 1]);
+          const r = { before, march: app.march, pace: paceNow(), busy: app.S.busy }; tickQuiet(ST.tickCapMs); const S = app.S, k = S.sent;
+          r.sig = Array.from(S.a).join("") + "|" + S.status + "|" + S.hash() + "|" + k + "|" + Array.from(S.q0.subarray(0, k)).join(",") + "|" + Array.from(S.q1.subarray(0, k)).join(",") + "|" + Array.from(S.q2.subarray(0, k)).join(",");
+          r.won = S.status === E.WON; return r; };
+        let A = null, Z = null, F = null;
+        try { A = run(); SH.victoryPace = 1; Z = run(); SH.victoryPace = vp; app.fast = true; F = run(); } finally { SH.victoryPace = vp; app.fast = false; }
+        ok(!A.before && A.march && A.busy && A.pace === SH.pace * vp && A.won, "victory march: 1x until the tray empties; the last tap of the winning line switches to " + vp + "x while the squads come home");
+        ok(A.sig === Z.sig, "victory march: the final state is identical to the same line at 1x");
+        ok(F.march && F.pace === SH.pace * Math.max(SH.speedFast, vp) && F.won, "victory march: with 2x on the faster pace stays (" + F.pace + "x)");
+        startLevel(e.id, "normal"); for (let i = 0; i < o.length; i++) { playCol(+o[i]); if (i < o.length - 1) tickQuiet(ST.tickCapMs); }
+        ok(app.march && $("line-wrap").classList.contains("march") && $("line-lab").textContent === LY.marchText.replace("{x}", vp), "victory march: the head reads '" + $("line-lab").textContent + "'");
+        skip(); ok(!app.S.busy && app.S.status === E.WON, "victory march: skip still lands everything"); }
       // 14. Opaque sprite caches.
       const bad = app.V.checkSprites(); ok(!bad.length, "sprites: every opaque cache is opaque" + (bad.length ? " (" + bad.join(",") + ")" : ""));
     } catch (err) { ok(false, "selfTest threw: " + (err && err.message) + " " + (err && err.stack ? err.stack.split("\n")[1] : "")); }
     finally {
+      app.byId.delete("fx-jamLevel"); app.byId.delete("fx-stuckLevel");
       app.save = was.save; app.testing = false; app.fast = was.fast; app.diff = was.diff;
       if (was.entry) startLevel(was.entry.id, was.diff); showScreen(was.screen); renderAll();
     }
@@ -751,6 +863,10 @@
     solve: (nodes) => solveHere(nodes), selfTest, coach: coachState, cues: () => Object.assign({}, app.cues), fx: () => app.V.fxInfo(), hits: () => app.V.hitInfo(), runners: () => app.V.runners(),
     paused: () => app.paused, pause: () => { pause(); return app.paused; }, resume: () => { resume(); return app.paused; }, winOrder: (d) => (app.entry ? app.entry.L.win[d || app.diff] : null),
     lossPlan: (id, d) => lossPlan(resolve(id), d), settle: () => { settleNow(); return state(); }, reachable: (m) => (app.S ? app.S.reachable(m) : 0),
+    // Screens for the harness: fill the line with rushed taps; stage k stuck and w working squads on level n (or the first
+    // level from n whose fronts allow it). Both return the state plus the taps made.
+    fill: () => { const taps = fillLine(); return Object.assign(state(), { taps }); },
+    stage: (n, k, w) => { for (const e of app.levels) { if (e.n < n) continue; startLevel(e.id, "normal"); const tp = stageLine(k, w); if (tp) return Object.assign(state(), { taps: tp }); } return null; },
     screen: (name) => { showScreen(name); return state(); }, skip: () => { skip(); return state(); }, fast: (on) => { setFast(!!on, false); return app.fast; },
     // Cost of n board draws right now (ms): the harness calls it mid-show.
     perf: (n) => { const k = Math.max(1, Math.min(500, n | 0 || 60)); let max = 0; const t0 = performance.now(); for (let i = 0; i < k; i++) { const a = performance.now(); app.V.draw(); max = Math.max(max, performance.now() - a); } return { mean: +((performance.now() - t0) / k).toFixed(3), max: +max.toFixed(3), runners: app.V.live }; },

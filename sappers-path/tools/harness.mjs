@@ -6,22 +6,24 @@
 //   portal shape: every request same-origin (no external requests), payload bytes, load-to-gameplay time and clicks
 //   (the title's Play is the one click), no page scrollbars on the title, map and level, primary buttons hittable;
 //   SP.selfTest(); level 1's coach line and arrow; a patient win on level 1 through the card buttons (tap, then wait
-//   until every squad is home), the goblin, the win panel, Next reaches level 2; a rushed overflow loss through the
-//   cards (a patient prefix, then three taps with squads still out), the fail sheet only once they settle, one Retry tap
-//   restarts; live frame times with three rapid taps on levels 65 and 70 at 1x and 2x, and the draw cost; the Era 3
+//   until every squad is home), the goblin, the win panel, Next reaches level 2; a jam loss through the cards (v3.1: a
+//   patient order that fills every space with squads that can't reach), the sheet naming the crews, one Retry tap
+//   restarts; a full line (v3.1): every front card wears the lock, a real tap on one is refused (nothing changes, the
+//   toast), and plays once a squad is home; stuck and working squads; the near-jam warning; the victory march; live frame times with three rapid taps on levels 65 and 70 at 1x and 2x, and the draw cost; the Era 3
 //   board's CSS px per cell (8 or more required);
 //   pause and resume: on window blur (a real focus change to the host page in the iframe run) and on a hidden tab,
 //   the clock stops, the Paused sheet takes the next tap, the game resumes without a jump and no card is played;
 //   the map button; a garbage save loads clean.
 // Then a hidden-tab load (document.hidden faked, rAF held, driven by SP.tick) that runs selfTest and wins a level.
 // Zero console errors AND warnings anywhere.
-// Screenshots (default tools/shots-v3-playtest1/): 375×812 level 1 teach, level 26 gate teach, level 51 archer hit, the
+// Screenshots (default tools/shots-v3.1/): v3.1 at 375×812: stuck-vs-working, near-jam, full-blocked, refused, jam-sheet,
+// victory-march; and, as before, 375×812 level 1 teach, level 26 gate teach, level 51 archer hit, the
 // win mid-collapse and the goblin fleeing, a fail; 375 and 1280: two and three overlapping squads mid-show; frame
 // strips (six frames 300 ms apart, stitched): a first squad still working while a second heads out, and level 3's
 // "only what can reach goes, then the next round"; 812×375 an Era 3 board; the iframe mid-level.
 //
 //   export PATH="$HOME/.local/opt/node/bin:$PATH"
-//   PLAYWRIGHT_MODULE=$(npm root -g)/playwright/index.mjs node tools/harness.mjs [--url http://127.0.0.1:8491/sappers-path/] [--out tools/shots-v3-playtest1]
+//   PLAYWRIGHT_MODULE=$(npm root -g)/playwright/index.mjs node tools/harness.mjs [--url http://127.0.0.1:8491/sappers-path/] [--out tools/shots-v3.1]
 //
 // Exit 0: every assertion passed. Exit 1: an assertion or console message. Exit 2: the harness crashed or ran out of
 // time. Every page.evaluate is a short call; every wait has its own timeout; the whole run has a wall budget.
@@ -33,7 +35,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const i = process.argv.indexOf("--" + k); return i > 0 ? process.argv[i + 1] : d; };
 const URL_ = arg("url", "http://127.0.0.1:8491/sappers-path/");
 const ORIGIN = new URL(URL_).origin;
-const OUT = resolve(arg("out", resolve(here, "shots-v3-playtest1")));
+const OUT = resolve(arg("out", resolve(here, "shots-v3.1")));
 const WALL_MS = 420000, MIN_CELL = 8;
 mkdirSync(OUT, { recursive: true });
 const wall = setTimeout(() => { console.error("harness: wall budget exceeded"); process.exit(2); }, WALL_MS);
@@ -156,24 +158,57 @@ async function run() {
       s = await S();
       ok(s.n === 2 && s.status === "playing" && s.panel === null, tag + " Next level loads level 2");
 
-      // A rushed loss through the cards: a patient prefix, then three taps while the squads are still out.
+      // A jam loss through the cards (v3.1): a patient order that fills every space with squads that can't reach a block.
       const plan = await ev(() => { for (let n = 46; n <= 75; n++) { SP.load(n, "normal"); const p = SP.lossPlan(); if (p) return Object.assign({ n }, p); } return null; });
-      if (ok(!!plan, tag + " found a rush that overflows on a late level")) {
+      if (ok(!!plan, tag + " found a patient order that jams a late level")) {
         await ev((n) => SP.load(n, "normal"), plan.n);
         for (const c of plan.prefix) { await tap(`.card[data-col="${c}"]`); await quiet(); }
-        for (const c of plan.rush) await tap(`.card[data-col="${c}"]`);
         s = await S();
-        ok(s.status === "failed" && s.reason === "overflow" && s.panel === null, tag + " rushed taps overflow at the tap; the sheet waits for the squads (" + s.status + " " + s.reason + ", busy " + s.busy + ")");
+        ok(s.status === "failed" && s.reason === "jam" && s.li.stuck === s.cap, tag + " the line jams at rest: every space stuck (" + s.status + " " + s.reason + ", " + JSON.stringify(s.li) + ")");
         s = await ev(() => { for (let i = 0; i < 600 && !SP.state().panel; i++) SP.tick(16); return SP.state(); });
-        ok(s.status === "failed" && s.reason === "overflow" && s.panel === "fail" && !s.busy, tag + " overflow fail sheet once the squads are home (" + s.status + " " + s.reason + ")");
-        ok(/Too many squads/.test(await L("#p-line").textContent()), tag + " the fail panel names the reason (too many squads out)");
+        const pl = await L("#p-line").textContent();
+        ok(s.panel === "fail" && /^Line jammed: .+ can't reach a block\.$/.test(pl), tag + " the jam sheet names the crews (" + pl + ")");
         await page.waitForTimeout(400);
-        if (vp.shots === "375") await shot("fail");
+        if (vp.shots === "375") await shot("jam-sheet");
         await tap("#p-primary");
         s = await S();
         ok(s.status === "playing" && s.plays === 0 && s.panel === null, tag + " one tap on Retry restarts");
         R.loss = plan;
       }
+
+      // v3.1 line states through the real buttons. Full line: every front card wears the lock and the head says wait; a
+      // real tap on one is refused (the tray and play count don't change, no fail, the toast; the byte-identical engine
+      // check is selfTest's, since the clock runs here), and the same card plays once a squad is home.
+      { const full = await ev(() => SP.fill());
+        const locks = await ev(() => Array.from(document.querySelectorAll(".card")).filter((b, j) => SP.state().fronts[j]).every((b) => b.classList.contains("blocked")));
+        ok(full.li.full && locks && full.status === "playing", tag + " full line: every front card wears the lock (" + full.taps + ", " + JSON.stringify(full.li) + ")");
+        await page.waitForTimeout(250);
+        if (vp.shots === "375") await shot("full-blocked");
+        const col = full.fronts.findIndex((f) => f), before = await ev(() => JSON.stringify([SP.state().fronts, SP.state().plays, SP.state().refused]));
+        await tap(`.card[data-col="${col}"]`);
+        const after = await ev(() => JSON.stringify([SP.state().fronts, SP.state().plays, SP.state().refused - 1]));
+        await page.waitForTimeout(90);
+        if (vp.shots === "375") await shot("refused");
+        s = await S();
+        ok(before === after && s.refused >= 1 && s.status === "playing" && (await L("#toast").isVisible()), tag + " a real tap on a blocked card is refused: nothing changes, the toast shows (" + (await L("#toast").textContent()) + ")");
+        s = await ev(() => { for (let i = 0; i < 3000 && SP.state().li.full; i++) SP.tick(16); return SP.state(); });
+        const p0 = s.plays; await tap(`.card[data-col="${col}"]`); s = await S();
+        ok(s.plays === p0 + 1, tag + " once a squad is home, the same card plays"); }
+      // Stuck and working, and the near jam (patient taps of fronts with nothing in reach, then rushed ones with reach).
+      { const sw = await ev(() => { const r = SP.stage(16, 2, 2); SP.tick(400); return r && SP.state(); });
+        ok(!!sw && sw.li.stuck === 2 && sw.li.work >= 1, tag + " stuck and working squads side by side (" + (sw && JSON.stringify(sw.li)) + ")");
+        if (vp.shots === "375" && sw) await shot("stuck-vs-working");
+        const nj = await ev(() => { const r = SP.stage(16, 3, 1); SP.tick(300); return r && SP.state(); });
+        ok(!!nj && nj.li.near && (await L("#line-lab").textContent()) === "One space left", tag + " near jam: 'One space left' (" + (nj && JSON.stringify(nj.li)) + ")");
+        if (vp.shots === "375" && nj) await shot("near-jam"); }
+      // Victory march: level 3's stored line through the cards; once the tray is empty the pace goes to 1.5x.
+      { await ev(() => { SP.fast(false); SP.load(3, "normal"); });
+        const o = await ev(() => SP.winOrder());
+        for (let i = 0; i < o.length; i++) { await tap(`.card[data-col="${o[i]}"]`); if (i < o.length - 1) await quiet(); }
+        s = await ev(() => SP.tick(400));
+        ok(s.march && s.pace === 1.5 && s.busy && (await L("#line-lab").textContent()).startsWith("Victory march"), tag + " victory march: the tray is empty and the line wins: 1.5x (" + s.pace + ")");
+        if (vp.shots === "375") await shot("victory-march");
+        s = await quiet(); ok(s.status === "won", tag + " victory march ends in the win"); }
 
       // Three rapid taps on levels 65 and 70, at 1x and 2x: live frame times while the squads overlap, then the JS cost
       // of one draw at that moment.
