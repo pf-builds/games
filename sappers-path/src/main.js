@@ -35,6 +35,8 @@
 // (dimmed) for its partner; a lock level's last space is a padlocked socket that pops open with a cue when its key goes.
 // The jam sheet says why (linked squads needing 2 spaces, a space still locked). Under ?debug=1 the map has a "v4
 // twists" row of debug levels (levels/debug-v4.json), kept out of the save's progress.
+// v4 M3 (the Siege to 100; levels in the rebaked levels.json): a fourth era on the map, the coach's pointers and
+// conditions for the twists' teaching levels (35, 62, 76, 77), and a tile's flip or shake landing when a level starts.
 (function () {
   "use strict";
   const NS = window.SappersPath, E = NS.engine, Save = NS.save, Board = NS.board, Art = NS.art, Audio = NS.audio;
@@ -46,7 +48,7 @@
     toastT: -1e12, popK: 0, cards: [], nexts: [], slots: [], wide: false, glURL: [], manURL: [], nodes: [], lastW: 0, lastH: 0,
     coach: null, used: 0, cues: {}, paused: false, pauses: 0, focusEl: null, pt: { x: 0, y: 0 }, T: null, tbuf: null, labFit: new Map(), verdict: [],
     et: 0, endT: -1, lineDirty: false, lineMoved: false, ord: [], slotPts: [], blockT: -1e12, refused: 0, march: false,
-    debug: [], flip: [false, false, false, false, false], rods: null, unlockT: -1e12, lockN: 0,
+    debug: [], flip: [false, false, false, false, false], rods: null, unlockT: -1e12, lockN: 0, reveals: 0, pairsOut: 0,
     li: { stuck: 0, work: 0, occ: 0, free: 0, near: false, full: false, danger: false } };
   const togMute = Array.from(document.querySelectorAll(".tog-mute")), togSpeed = Array.from(document.querySelectorAll(".tog-speed")), togCb = Array.from(document.querySelectorAll(".tog-cb"));
   const segs = Array.from(document.querySelectorAll(".seg button"));
@@ -68,7 +70,8 @@
     H.pop = onPop; H.deposit = () => cue("haul"); H.gate = () => cue("gate"); H.tower = () => cue("tower"); H.shot = () => cue("arrow");
     H.hit = (k) => cue(k === 2 ? "fall" : "thud"); H.collapse = () => cue("collapse");
     H.tap = () => { app.lineDirty = true; }; H.free = () => { app.lineDirty = true; }; H.move = () => { app.lineMoved = true; };
-    H.reveal = (ci, j) => { if (app.S && app.S.front(j) === ci) { app.flip[j] = true; cue("flip"); } app.lineDirty = true; };
+    H.reveal = (ci, j) => { if (app.S && app.S.front(j) === ci) { app.flip[j] = true; cue("flip"); } app.reveals++; app.lineDirty = true; };
+    H.link = () => { app.pairsOut++; app.lineDirty = true; };
     H.unlock = () => { app.unlockT = app.clock; cue("unlock"); app.lineDirty = true; };
     try { app.V.calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { /* motion stays on */ }
     app.audio = Audio.create(app.cfg.audio);
@@ -319,16 +322,18 @@
     if (diff && DIFFS.indexOf(diff) >= 0) app.diff = diff;
     app.entry = e; app.B = E.compile(e.L); app.S = E.sim(app.B, rulesOf(app.diff)); app.S.logOn = true; app.et = 0;
     app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.popK = 0; app.used = 0; app.march = false; app.blockT = -1e12; $("panel").hidden = true; hideToast();
-    app.lockN = app.S.locked; app.unlockT = -1e12; app.flip.fill(false);
+    app.lockN = app.S.locked; app.unlockT = -1e12; app.flip.fill(false); app.reveals = 0; app.pairsOut = 0; landTiles();
     app.V.setLevel(app.B, app.S); placeSlots();
     if (!e.debug) { app.save.data.last = e.id; writeSave(); }
     renderAll(); showScreen("play"); coachStart(); // the line and tray take their size before the board is fitted to what is left
     return e;
   }
+  // v4 M3: a tile's flip or shake from the last game lands at once when a level starts (a flip left mid-turn has no width).
+  function landTiles() { for (const b of app.cards) if (b.getAnimations) for (const a of b.getAnimations()) if (a.effect && isFinite(a.effect.getComputedTiming().endTime)) a.finish(); }
   function retry() {
     if (!app.S) return;
     app.S.reset(); app.et = 0; app.V.reset(); app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.popK = 0; app.used = 0; app.march = false; app.blockT = -1e12; $("panel").hidden = true; hideToast();
-    app.unlockT = -1e12; app.flip.fill(false);
+    app.unlockT = -1e12; app.flip.fill(false); app.reveals = 0; app.pairsOut = 0; landTiles();
     renderAll(); coachStart();
   }
   const playNext = () => startLevel(Save.next(app.save.data, app.order));
@@ -426,7 +431,10 @@
   // ---- teaching coach (config.teach) ---------------------------------------------------------------------------------
   // One line over the board and a bouncing arrow on the thing to tap: a front card, a card behind one, the holding line,
   // or a ring on the board (key, gate, tower). Steps advance on play; conditions read the rules state, so any tap order
-  // works. DOM work happens on a play or a resize only, never per frame.
+  // works. DOM work happens on a play or a resize only, never per frame. v4 M3 (the twists' teaching levels): pointers
+  // mystery (a hidden "?" tile in view), linked (a linked front card), lockSlot (the padlocked space) and the ring
+  // lockKey (the space's key on the board); conditions reveal (a "?" turned over), pair (a linked pair went out), unlock
+  // (the space opened), locked (it is still shut), hidden (a "?" is in view), linkedFront (a front card is linked).
   function coachStart() {
     const e = app.entry, steps = e && ((app.cfg.teach || {})[e.id] || (e.L.hint ? [{ say: e.L.hint, until: "play" }] : null));
     app.coach = steps && steps.length ? { steps, i: 0, at: 0 } : null;
@@ -448,9 +456,18 @@
       case "hit": return S.hits > 0;
       case "front": return frontOf(m) >= 0;
       case "short": { const j = frontOf(m); return j >= 0 && B.cardN[S.front(j)] > S.reachable(m); }
+      case "reveal": return app.reveals > 0;
+      case "pair": return app.pairsOut > 0;
+      case "unlock": return B.lockKey >= 0 && S.locked === 0;
+      case "locked": return S.locked > 0;
+      case "hidden": return hiddenTile() !== null;
+      case "linkedFront": return linkedFront() >= 0;
     }
     return false;
   }
+  // The first hidden "?" tile in the visible rows, and the first column whose front card is linked (-1: none).
+  function hiddenTile() { const S = app.S, RW = app.cfg.layout.queueRows; for (let d = 1; d < RW; d++) for (let j = 0; j < E.NCOL; j++) { const ci = S.card(j, d); if (ci >= 0 && S.hidden(ci)) return tileOf(j, d); } return null; }
+  function linkedFront() { const S = app.S; for (let j = 0; j < E.NCOL; j++) { const f = S.front(j); if (f >= 0 && S.partner(f) >= 0) return j; } return -1; }
   const any = (u) => [].concat(u || "play").some(cond);
   function skipDead() { const co = app.coach; while (co.i < co.steps.length && co.steps[co.i].if && !cond(co.steps[co.i].if)) co.i++; co.at = app.S.plays; }
   function coachStep() {
@@ -469,9 +486,13 @@
     let el = null, cm = 0, cn = 0;
     if (st.card) { const j = frontOf(st.card); if (j >= 0) { el = app.cards[j]; cm = st.card; cn = B.cardN[S.front(j)]; } }
     if (!el && st.next) { for (let j = 0; j < E.NCOL && !el; j++) if (!app.nexts[j][0].classList.contains("none")) el = app.nexts[j][0]; }
+    if (!el && st.mystery) el = hiddenTile();
+    if (!el && st.linked) { const j = linkedFront(); if (j >= 0) el = app.cards[j]; }
+    if (!el && st.lockSlot && S.locked > 0) el = app.slots[S.cap - 1];
     if (!el && st.line) el = $("line");
     // A ring on the board: the first gate's key (or the gate once the key is gone), the first standing tower.
     if (st.ring === "key" || st.ring === "gate") { const k = 0, kc = V.keyC[k]; if (B.gateCells.length) { if (st.ring === "key" && kc >= 0 && S.a[kc] > 0) Object.assign(V.focus, { on: true, x: kc % B.w + 0.5, y: ((kc / B.w) | 0) + 0.5, r: 1.1 }); else Object.assign(V.focus, { on: true, x: V.gX[k], y: V.gY[k], r: 1.6 }); } }
+    if (st.ring === "lockKey" && B.lockKey >= 0 && S.a[B.lockKey] > 0) Object.assign(V.focus, { on: true, x: B.lockKey % B.w + 0.5, y: ((B.lockKey / B.w) | 0) + 0.5, r: 1.1 });
     if (st.ring === "tower") { for (let k = 0; k < B.towers.length; k++) if (S.standing & (1 << k)) { const T = B.towers[k]; Object.assign(V.focus, { on: true, x: T.cx + 0.5, y: T.cy + 0.5, r: Math.sqrt(T.size / Math.PI) + 0.9 }); break; } }
     txt.textContent = st.say.replace(/\{n\}/g, cn).replace(/\{crew\}/g, cm ? mat(cm).crew : "").replace(/\{reach\}/g, cm ? S.reachable(cm) : 0).replace(/\{go\}/g, cm ? Math.min(cn, S.reachable(cm)) : 0);
     txt.hidden = false; fitCoach();
@@ -927,7 +948,7 @@
         startLevel(id, "normal"); const saw = new Set();
         for (let g = 0; g <= app.B.ncards && app.S.status === E.PLAYING; g++) {
           const cs = coachState(); if (cs.on) saw.add(cs.i);
-          let jj = app.focusEl ? app.cards.indexOf(app.focusEl) : -1; if (jj < 0 || app.S.front(jj) < 0) jj = app.cards.findIndex((b, k) => app.S.front(k) >= 0);
+          let jj = app.focusEl ? app.cards.indexOf(app.focusEl) : -1; if (jj < 0 || app.S.front(jj) < 0 || app.S.refused(jj)) jj = app.cards.findIndex((b, k) => app.S.front(k) >= 0 && !app.S.refused(k));
           playCol(jj); settleNow();
         }
         ok(saw.size === steps.length && app.S.status === E.WON && !coachState().on, id + ": following the arrow shows all " + steps.length + " steps (" + Array.from(saw).join(",") + ") and wins");
@@ -935,6 +956,11 @@
       }
       if (app.byId.has("e1-02")) { startLevel("e1-02", "normal"); playCol(frontOf(3)); settleNow(); const cs = coachState(); ok(cs.i === 1 && app.focusEl === $("line"), "coach e1-02: the Torchbearers wait in their space, the arrow moves to the holding line"); }
       if (app.byId.has("e3-51")) { startLevel("e3-51", "normal"); ok(app.V.focus.on && coachState().target && /card/.test(coachState().target), "coach e3-51: the tower wears the ring and the arrow points at the Quarrymen"); }
+      // v4 M3: the twists' lessons point at their twist from the first tap: a ? tile (35), a linked front card (62), the
+      // padlocked space with a ring on its key (76).
+      if (app.byId.has("e2-35")) { startLevel("e2-35", "normal"); const el = app.focusEl; ok(!!el && el.classList.contains("next") && el.classList.contains("mys"), "coach e2-35: the arrow points at a hidden ? squad (" + (el && el.className) + ")"); }
+      if (app.byId.has("e3-62")) { startLevel("e3-62", "normal"); const j = app.cards.indexOf(app.focusEl); ok(j >= 0 && app.S.partner(app.S.front(j)) >= 0 && app.rods.innerHTML.indexOf("<path") >= 0, "coach e3-62: the arrow points at a linked front card, its rod drawn"); }
+      if (app.byId.has("e4-76")) { startLevel("e4-76", "normal"); ok(app.focusEl === app.slots[app.S.cap - 1] && app.focusEl.classList.contains("locked") && app.V.focus.on && app.S.locked === 1, "coach e4-76: the arrow points at the padlocked space and the key wears the ring"); }
       // 13b. Victory march: on a stored winning line the pace stays 1x until the tray empties, then plays at
       // show.victoryPace; the final state (board, every sapper's times, status) is identical to the same taps at 1x; with
       // 2x or 3x on, the faster pace stays.

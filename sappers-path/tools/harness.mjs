@@ -20,6 +20,9 @@
 // toggle persist across a reload. The M1 screens themselves come from tools/shots-v4-m1.mjs.
 // v4 M2: each debug level opens from the map's "v4 twists" row by a real tap (8 CSS px a cell or more, no scrollbars),
 // and a real tap on a linked card sends both squads (two spaces taken). The M2 screens come from tools/shots-v4-m2.mjs.
+// v4 M3 (the Siege to 100): the cell-size check covers all 100 boards (the smallest per era, 8 CSS px or more at every
+// viewport, a screen of the smallest), the frame check adds level 100 (the boss), output to tools/shots-v4-m3/harness/.
+// The M3 screens come from tools/shots-v4-m3.mjs.
 // Screenshots (default tools/shots-v4-m1/harness/): v3.1 at 375×812: stuck-vs-working, near-jam, full-blocked, refused, jam-sheet,
 // victory-march; and, as before, 375×812 level 1 teach, level 26 gate teach, level 51 archer hit, the
 // win mid-collapse and the goblin fleeing, a fail; 375 and 1280: two and three overlapping squads mid-show; frame
@@ -39,8 +42,10 @@ const here = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const i = process.argv.indexOf("--" + k); return i > 0 ? process.argv[i + 1] : d; };
 const URL_ = arg("url", "http://127.0.0.1:8491/sappers-path/");
 const ORIGIN = new URL(URL_).origin;
-const OUT = resolve(arg("out", resolve(here, "shots-v4-m2", "harness")));
-const WALL_MS = 420000, MIN_CELL = 8;
+const OUT = resolve(arg("out", resolve(here, "shots-v4-m3", "harness")));
+// v4 M3: every one of the 100 boards keeps MIN_CELL CSS px a cell at every viewport (the smallest per era is reported;
+// the boss at 100 is the smallest, exactly 8 in the 400x600 iframe).
+const WALL_MS = 480000, MIN_CELL = 8;
 mkdirSync(OUT, { recursive: true });
 const wall = setTimeout(() => { console.error("harness: wall budget exceeded"); process.exit(2); }, WALL_MS);
 
@@ -214,7 +219,7 @@ async function run() {
         if (vp.shots === "375") await shot("victory-march");
         s = await quiet(); ok(s.status === "won", tag + " victory march ends in the win"); }
 
-      // Three rapid taps on levels 65 and 70, at 1x and 3x: live frame times while the squads overlap, then the JS cost
+      // Three rapid taps on levels 65, 70 and 100 (v4 M3: the boss, the biggest squads), at 1x and 3x: live frame times while the squads overlap, then the JS cost
       // of one draw at that moment.
       const rapid = async (n, fast) => {
         await ev((a) => { SP.load(a[0], "normal"); SP.speed(a[1] ? 3 : 1); }, [n, fast]);
@@ -224,7 +229,7 @@ async function run() {
         return ev(() => new Promise((res) => { const d = []; let last = performance.now(), runners = 0, spaces = 0; const f = (t) => { d.push(t - last); last = t; if (d.length % 8 === 1) { const s = SP.state(); runners = Math.max(runners, s.runners); spaces = Math.max(spaces, s.line.length); } if (d.length < 120) requestAnimationFrame(f); else { d.sort((a, b) => a - b); res({ n: d.length, p50: +d[60].toFixed(1), p95: +d[113].toFixed(1), max: +d[119].toFixed(1), runners, spaces }); } }; requestAnimationFrame(f); }));
       };
       R.frames = {};
-      for (const n of [65, 70]) for (const fast of [false, true]) {
+      for (const n of [65, 70, 100]) for (const fast of [false, true]) {
         const fr = await rapid(n, fast); R.frames["L" + n + (fast ? " 3x" : " 1x")] = fr;
         ok(fr.p95 < 25 && fr.spaces >= 2, tag + " frame time with overlapping squads, level " + n + (fast ? " 3x" : " 1x") + " (p95 " + fr.p95 + " ms, peak " + fr.runners + " runners, " + fr.spaces + " squads)");
       }
@@ -239,12 +244,13 @@ async function run() {
       if (vp.shots === "375" || vp.shots === "1280") await overlapShots(page, ev, tap, shot, vp.shots, R);
       await ev(() => SP.settle());
 
-      // Era 3's biggest board: CSS px per cell (turned a quarter on a landscape phone).
-      const big = await ev(() => { let b = null; for (let n = 51; n <= 75; n++) { SP.load(n, "normal"); const s = SP.state(); if (!b || s.cs / devicePixelRatio < b.px) b = { n, px: +(s.cs / devicePixelRatio).toFixed(2), turned: document.body.classList.contains("turned") }; } return b; });
-      R.era3MinCellCss = big;
-      ok(big.px >= MIN_CELL, tag + " Era 3 boards keep " + MIN_CELL + " CSS px a cell or more (smallest: level " + big.n + ", " + big.px + " px" + (big.turned ? ", turned" : "") + ")");
-      if (vp.shots === "812") { await ev((n) => SP.load(n, "normal"), big.n); await page.waitForTimeout(300); await shot("era3"); }
-      ok(await noScroll(), tag + " Era 3 level: no scrollbars");
+      // v4 M3: every board's CSS px per cell (turned a quarter on a landscape phone), the smallest per era.
+      const cells = await ev(() => { const by = {}; for (let n = 1; n <= 100; n++) { const st = SP.load(n, "normal"); if (st.n !== n) continue; const e = st.era, px = +(st.cs / devicePixelRatio).toFixed(2); if (!by[e] || px < by[e].px) by[e] = { n, px, turned: document.body.classList.contains("turned") }; } return by; });
+      R.minCellCss = cells;
+      const worst = Object.values(cells).reduce((a, b) => (b.px < a.px ? b : a));
+      ok(worst.px >= MIN_CELL, tag + " every board keeps " + MIN_CELL + " CSS px a cell or more (smallest per era: " + JSON.stringify(cells) + ")");
+      await ev((n) => SP.load(n, "normal"), worst.n); await page.waitForTimeout(300); await shot("smallest-cell");
+      ok(await noScroll(), tag + " the smallest-cell level: no scrollbars");
 
       // Pause on blur, resume with one tap on the Paused sheet: no clock jump, no card played.
       await ev(() => SP.load(3, "normal"));
@@ -346,7 +352,7 @@ async function run() {
 
 run().then(() => {
   writeFileSync(resolve(OUT, "harness-report.json"), JSON.stringify(report, null, 1));
-  const brief = {}; for (const [k, R] of Object.entries(report.runs)) brief[k] = { selfTest: R.selfTest && R.selfTest.pass + " pass, " + R.selfTest.fail.length + " fail", titleReadyMs: R.titleReadyMs, loadToGameplayMs: R.loadToGameplayMs, clicks: R.clicksToGameplay, era3: R.era3MinCellCss, frames: R.frames, draw: R.midShow && R.midShow.perf, shots: R.shots, pause: R.pause, requests: R.requests, payloadBytes: R.payloadBytes };
+  const brief = {}; for (const [k, R] of Object.entries(report.runs)) brief[k] = { selfTest: R.selfTest && R.selfTest.pass + " pass, " + R.selfTest.fail.length + " fail", titleReadyMs: R.titleReadyMs, loadToGameplayMs: R.loadToGameplayMs, clicks: R.clicksToGameplay, cells: R.minCellCss, frames: R.frames, draw: R.midShow && R.midShow.perf, shots: R.shots, pause: R.pause, requests: R.requests, payloadBytes: R.payloadBytes };
   console.log(JSON.stringify({ runs: brief, hidden: report.hidden, console: report.console }, null, 1));
   console.log(report.fails.length ? "HARNESS: " + report.fails.length + " failure(s)" : "HARNESS: all passed");
   clearTimeout(wall); process.exit(report.fails.length ? 1 : 0);

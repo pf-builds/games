@@ -2,7 +2,7 @@
    parchment panels, and the Jersey 10 pixel face (SIL OFL, fonts/) for headings, buttons and numbers. The board sits in
    a light wooden frame; queue tiles are solid colour with big numbers (v4 M1: colour first, three rows). main.js sets the
    material colours. v4 M2: mystery tiles, the rods between linked tiles, the padlocked space and linked spaces. */
-@font-face { font-family: "Jersey 10"; src: url("fonts/Jersey10-Regular.ttf?v=17") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Jersey 10"; src: url("fonts/Jersey10-Regular.ttf?v=18") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
 :root { --bg: #2e2935; --ink: #221a26; --cream: #f3ead8; --cream-soft: #cfc4d6;
   --stone: #a2a5b0; --stone-hi: #cdd0d8; --stone-lo: #666a77; --gold: #f2c230; --gold-hi: #ffe27a; --gold-lo: #b8860b; --gold-dark: #7a5a06;
   --parch: #fbf5e6; --parch-edge: #e3d3ad; --parch-ink: #2a2430; --parch-soft: #5a4e3c;
@@ -241,7 +241,8 @@ body.wide { --tile-h: 74px; --tile-n: 54px; --tile-gap: 8px; --gl-s: 18px; --slo
 body.wide #line-head { font-size: 20px; }
 body.wide .sheet { position: relative; grid-column: 2; grid-row: 1 / -1; left: auto; right: auto; bottom: auto; align-items: center; padding: 0; background: rgba(20,16,28,.82); border-radius: 12px; }
 body.wide .sheet .sheetcard { border-radius: 10px; border-bottom: 3px solid var(--ink); width: calc(100% - 24px); }
-body.wide #eras { display: grid; grid-template-columns: repeat(3, 1fr); align-items: start; }
+body.wide #eras { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); align-items: start; }
+body.wide .era.dbg { grid-column: 1 / -1; }
 body.wide #map { padding-left: max(var(--gut), calc(50% - 560px)); padding-right: max(var(--gut), calc(50% - 560px)); }
 body.wide .map-foot { max-width: 420px; margin: 0 auto; }
 @media (max-height: 700px) { #top { height: 44px; } :root { --tile-h: 46px; --tile-n: 34px; --slot-h: 44px; --slot-n: 32px; --man: 16px; } }
