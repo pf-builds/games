@@ -643,7 +643,7 @@
   }
   function frame(t) { advance(t); requestAnimationFrame(frame); }
 
-  // ---- solver (debug): DFS from the current position on a clone, played patiently ------------------------------------
+  // ---- solver (debug): DFS from the current position on a clone, played patiently (legal taps only, v4 M2) ------------
   function solveHere(nodes) {
     const B = app.B; if (!B) return null;
     const S = E.sim(B, rulesOf(app.diff)), dead = new Set(), path = [], bufs = [];
@@ -656,7 +656,7 @@
       const h = S.hash(); if (dead.has(h)) return false;
       S.save(bufs[k]);
       const kids = [];
-      for (let j = 0; j < E.NCOL; j++) { if (S.front(j) < 0) continue; S.play(j); S.quiet(); if (S.status !== E.FAILED) kids.push([j, S.status === E.WON ? -1 : S.lineLen]); S.load(bufs[k]); }
+      for (let j = 0; j < E.NCOL; j++) { if (S.front(j) < 0 || S.refused(j)) continue; S.play(j); S.quiet(); if (S.status !== E.FAILED) kids.push([j, S.status === E.WON ? -1 : S.lineLen]); S.load(bufs[k]); }
       kids.sort((p, q) => p[1] - q[1] || p[0] - q[0]);
       for (const [j] of kids) { S.play(j); S.quiet(); path.push(j); if (dfs(k + 1)) return true; path.pop(); S.load(bufs[k]); if (used > cap) return false; }
       dead.add(h); return false;
@@ -670,7 +670,7 @@
     for (let k = 0; k < tries; k++) {
       S.reset(); let ord = "";
       for (let g = 0; g <= B.ncards && S.status === E.PLAYING; g++) {
-        open.length = 0; for (let j = 0; j < E.NCOL; j++) if (S.front(j) >= 0) open.push(j);
+        open.length = 0; for (let j = 0; j < E.NCOL; j++) if (S.front(j) >= 0 && !S.refused(j)) open.push(j); // legal taps (v4 M2)
         if (!open.length) break;
         const j = open[Math.floor(rnd() * open.length)]; S.play(j); S.quiet(); ord += j;
         if (pred(S)) return ord;

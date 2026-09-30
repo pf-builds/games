@@ -129,3 +129,14 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - v4 M1: `tools/palette.js` could also score the palette under simulated deuteranopia and protanopia (colour-blind mode's marks cover it today, but a palette that holds up without them is better).
 - v4 M1: tower blocks' crenellated rims (dark edge, pale merlons) are now the busiest thing on a flat board. A simpler tower marker (a darker rim only) is worth a look with the visual critic.
 - v4 M1: in the small iframe (36 px spaces) a working space's "out" marker touches its stepping figures.
+
+## From v4 M2 (the twists, 2026-09-30)
+
+- The plan's other lock: "unlock after N blocks cleared" (a counter on the padlock instead of a key block). Not built; the engine's lock opens only on its key's pop today (`src/engine.js` eatCell), so it would be a second lock kind in the level format.
+- Food Hunt's "?" pixels on the board (reference shot 7): board blocks whose colour is hidden until they are exposed. Cards first, per the plan.
+- Food Hunt's dark "4" tile with a lid (shot 7): meaning unconfirmed. Could be a sealed card that opens after N taps.
+- Grading mystery levels: the one-move lookahead can't feel a "?" (it only reads front cards), and the sampling planner prototype (`tools/m2-measure.js --pimc`) collapses to the random floor when every card behind the fronts is hidden. M3 decides the metric (proposal in `tools/v4-m2-notes.md`). A cheaper sampler (rollouts by the one-move player instead of the solver) is the likely route for a full bake.
+- A near-jam hint for linked cards: with one space free the linked front cards wear the lock, but the head only warns "One space left" when the other squads are stuck. A line such as "Linked squads need 2: one space left" would teach it sooner.
+- Rods between partners two rows apart and a column over cross the corner of a tile in between. Fine in the debug levels; M3's dealer could prefer partners at most one row apart (Food Hunt's pairs are one row apart).
+- A skip lands an unlock silently (no cue, no padlock pop), the same as a gate opened by a skip.
+- The fast tapper wins level 61 about twice as often as patient play (11.2% against 5.9% at 2,000 games, Normal). Information for M3's rebake; nothing changed.
