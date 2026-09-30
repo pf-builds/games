@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const i = process.argv.indexOf("--" + k); return i > 0 ? process.argv[i + 1] : d; };
-const BASE = arg("url", "http://127.0.0.1:8493/sappers-path/"), OUT = resolve(here, "visual"), ONLY = arg("only", "375,1280,812,400,checks").split(",");
+const BASE = arg("url", "http://127.0.0.1:8493/sappers-path/"), OUT = resolve(here, arg("out", "visual")), ONLY = arg("only", "375,1280,812,400,checks").split(",");
 mkdirSync(OUT, { recursive: true });
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || "playwright");
 const browser = await chromium.launch(), log = [], notes = {};
@@ -105,8 +105,15 @@ async function viewport(V, full) {
   await shot(V, "jam-sheet", jam, 30, 600);
   await shot(V, "win-sheet", win, 8, 600);
   await shot(V, "v4-all-rest", rest, "v4-all");
+  await shot(V, "linked-leaving", linkedLeave, 350, 60);
+  await shot(V, "mystery-rest", rest, "v4-mystery");
+  await shot(V, "easy-full-line", (n) => { SP.speed(1); SP.load(n, "easy"); SP.tick(40); const f = SP.fill(); SP.tick(300); return { taps: f.taps, li: SP.state().li, open: SP.state().open }; }, 40);
+  await shot(V, "l64-mid", (n) => { SP.speed(1); SP.load(n, "normal"); const o = SP.winOrder("normal"); for (let i = 0; i < 4; i++) { SP.play(+o[i]); SP.settle(); } SP.tick(600); return o.slice(0, 4); }, 64, 500);
+  await shot(V, "linked-jam", (id) => { SP.speed(1); const p = SP.lossPlan(id, "normal"); if (!p) return null; SP.load(id, "normal"); for (const ch of p.prefix) { SP.play(+ch); SP.settle(); } SP.tick(2500); return { prefix: p.prefix, reason: SP.state().reason }; }, "v4-linked", 600);
   if (!full) return;
-  await shot(V, "swarm-l9", (a) => { swarmPrep(a); return SP.tick(900).runners; }, [9, 1]);
+  for (const [n, k] of [[67, 20], [71, 6], [82, 3], [89, 3], [91, 13]]) await shot(V, "rods-l" + n, (a) => { SP.speed(1); SP.load(a[0], "normal"); SP.tick(20); const o = SP.winOrder("normal"); for (let i = 0; i < a[1]; i++) { SP.play(+o[i]); SP.settle(); } SP.tick(20); return a; }, [n, k]);
+  await shot(V, "teach-l51", rest, 51);
+  await shot(V, "swarm-l9", (a) => { SP.speed(1); SP.load(a[0], "normal"); SP.tick(40); SP.play(a[1]); return SP.tick(900).runners; }, [9, 1]);
   await strip(V, "swarm", swarmPrep, [9, 1], 6, 250, "#board");
   await strip(V, "march", marchPrep, 8, 6, 450, null);
   await shot(V, "mystery-rest", rest, "v4-mystery");

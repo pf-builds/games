@@ -170,3 +170,4 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - (Critics 1 re-check) M5's power-up bar: at 1280 four ~96 px badges need `--pw-h` about 110 px (or a 2×2 layout); in the 400×600 iframe the queue ends at y 586 of 600, so the bar still has no room there and needs an explicit decision.
 - (Critics 1 re-check) The landscape title's logo still grazes the keep's flag at 812×375 (cosmetic).
 - (Critics 1 fix 2) On a coached linked card the side arrow and the rod's top rivet share the column gap for as long as the coach shows (level 62's first step).
+- (Critics 1 re-check 2, N6, minor) Two links can share one column gutter and read as a single line touching three tiles (level 78, 17 of 543 queue states along its stored order; debug v4-linked at rest). Fix: a second lane 4 px over, or tint each pair differently. Shots in tools/shots-v4-critic1/recheck2/.
