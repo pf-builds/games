@@ -3,7 +3,8 @@
 // main.js does (fades()). For every level (levels.json and the debug levels), every pair of different materials dealt
 // in its queue: CIEDE2000 between material A faded to row d (1, 2) and material B at the front, both ways. Reports the
 // critic's three pairs (M2: Ashlar vs Rubble stone, Thatch vs Gilt, Brick vs Hedge, each way), the smallest pair over
-// all, the faded tiles against the tray, and the mystery card's back against every material. Nothing is written.
+// all, the faded tiles against the tray and against their row's band (fix 2), and the mystery card's back against every
+// material. Nothing is written.
 //   ~/.local/opt/node/bin/node tools/fade.js [--t 0,0.1,0.2] [--tray #ddd3c0]   (a candidate instead of config.json)
 "use strict";
 const { lab, de00 } = require("./palette.js");
@@ -35,6 +36,11 @@ console.log("  lowest: " + lows.join("; "));
 const tray = lab(TRAY); let vis = { e: 1e9 };
 for (let m = 1; m < P.length; m++) { if (m === 10) continue; const e = de00(lab(faded(m, T.length - 1)), tray); if (e < vis.e) vis = { m, e }; }
 console.log("\nFaded tile (row " + (T.length - 1) + ") against the tray: smallest " + NAME(vis.m) + " " + f1(vis.e) + " (every tile keeps a rim of its own colour toward ink)");
+// Fix 2: the rows sit on tray bands (layout.fade.band: that share of black mixed into the tray). The faces don't change,
+// so every number above holds; this is each faded tile against the band it sits on.
+const BAND = F.band || [0, 0, 0]; let onBand = { e: 1e9 };
+for (let m = 1; m < P.length; m++) { if (m === 10) continue; for (let d = 1; d < T.length; d++) { const e = de00(lab(faded(m, d)), lab(mix(TRAY, "#000000", BAND[d]))); if (e < onBand.e) onBand = { m, d, e }; } }
+console.log("Faded tile against its row's band (" + BAND.slice(1).map((b) => mix(TRAY, "#000000", b)).join(", ") + "): smallest " + NAME(onBand.m) + " at row " + onBand.d + " " + f1(onBand.e));
 const Y = C.layout.mystery.c; let my = { e: 1e9 };
 for (let m = 1; m < P.length; m++) { if (m === 10) continue; for (let d = 1; d < T.length; d++) { const e = de00(lab(mix(Y, TRAY, T[d])), lab(P[m])); if (e < my.e) my = { m, d, e }; } }
 console.log("Mystery back (" + Y + ", faded) against every material: smallest " + NAME(my.m) + " " + f1(my.e) + " (plus its gold lattice, rim and '?')");

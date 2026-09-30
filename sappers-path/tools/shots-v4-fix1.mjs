@@ -4,7 +4,10 @@
 // critic's own captures, copied to tools/shots-v4-fix1/before/. Viewports as the critic's: 375x812 (dpr 3, touch),
 // 1280x720, 812x375 (dpr 3, touch) and the 400x600 iframe host (tools/iframe-host.html, dpr 2).
 //   PLAYWRIGHT_MODULE=$(~/.local/opt/node/bin/npm root -g)/playwright/index.mjs ~/.local/opt/node/bin/node tools/shots-v4-fix1.mjs [--url http://127.0.0.1:8491/sappers-path/] [--only 375,1280,812,400,measure]
-// Writes tools/shots-v4-fix1/after/*.png and tools/shots-v4-fix1/measure.json. Read-only on the game (debug facade).
+// Writes tools/shots-v4-fix1/<out>/*.png (--out, default after2: the second fix pass; the first pass's run is after/)
+// and tools/shots-v4-fix1/<out>-measure.json. Read-only on the game (debug facade). Fix 2 adds the critic's rivet scan
+// (rods and rivets against every count's glyph box, along every linked level's stored Normal order) at 375, 1280 and the
+// iframe, and the desktop column's blank tray.
 // Every page.evaluate is short; the whole run has a wall budget.
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
@@ -12,7 +15,7 @@ import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const i = process.argv.indexOf("--" + k); return i > 0 ? process.argv[i + 1] : d; };
-const BASE = arg("url", "http://127.0.0.1:8491/sappers-path/"), OUT = resolve(here, "shots-v4-fix1", "after"), ONLY = arg("only", "375,1280,812,400,measure").split(",");
+const OUTN = arg("out", "after2"), BASE = arg("url", "http://127.0.0.1:8491/sappers-path/"), OUT = resolve(here, "shots-v4-fix1", OUTN), ONLY = arg("only", "375,1280,812,400,measure").split(",");
 mkdirSync(OUT, { recursive: true });
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || "playwright");
 const browser = await chromium.launch(), log = [], M = {};
@@ -80,7 +83,9 @@ function measure(kind, arg) {
   }
   if (kind === "desk") {
     SP.load(arg, "normal"); SP.tick(40); const bd = R(document.getElementById("frame")), sd = R(document.getElementById("side")), vw = innerWidth, vh = innerHeight, pw = R(document.getElementById("powers"));
+    const rl = R(document.getElementById("rail")), last = Math.max(...Array.from(document.querySelectorAll("#tray .tile")).filter((t) => shown(t)).map((t) => R(t).bottom)), blank = Math.max(0, rl.bottom - last - 12);
     return { frame: [bd.left, bd.top, bd.width, bd.height].map(Math.round), side: [sd.left, sd.top, sd.width, sd.height].map(Math.round), topAligned: Math.round(sd.top - bd.top), bottomAligned: Math.round(sd.bottom - bd.bottom),
+      tray: [Math.round(rl.top), Math.round(rl.bottom)], queueBottom: Math.round(last), blankTrayPx: Math.round(blank), blankTrayPctOfColumn: +((100 * blank) / sd.height).toFixed(1), trayPctOfColumn: Math.round((100 * rl.height) / sd.height),
       coverPct: Math.round((100 * (bd.width * bd.height + sd.width * sd.height)) / (vw * vh)), leftGap: Math.round(bd.left), rightGap: Math.round(vw - sd.right), powers: [pw.top, pw.height].map(Math.round), powerButtons: document.querySelectorAll("#powers button").length };
   }
   if (kind === "sheet") {
@@ -99,6 +104,20 @@ function measure(kind, arg) {
     const res = [];
     for (const t of document.querySelectorAll("#tray .tile")) { if (!shown(t)) continue; const n = t.querySelector(".n"), ch = t.querySelector(".ch"); if (!n.textContent || !shown(ch)) continue; res.push({ count: n.textContent, over: over(glyph(n), R(ch)) }); }
     return res;
+  }
+  if (kind === "rivets") { // the visual critic's scan (tools/shots-v4-critic1/visual-rivets.mjs), at any viewport
+    const out = { states: 0, rivetOnGlyph: 0, rodThroughGlyph: 0, ex: [] };
+    for (const n of arg) {
+      const st = SP.load(n, "normal"); if (!st.links) continue; SP.tick(20); const o = SP.winOrder("normal") || "";
+      for (let i = 0; i <= o.length; i++) {
+        const svg = document.querySelector("#tray svg.rods"), sb = svg.getBoundingClientRect(); out.states++;
+        const gl = Array.from(document.querySelectorAll("#tray .tile .n")).filter((e) => e.textContent && e.getBoundingClientRect().width).map((e) => ({ t: e.textContent, r: glyph(e) }));
+        for (const c of svg.querySelectorAll("circle")) { const b = c.getBoundingClientRect(); for (const g of gl) { const x = Math.min(b.right, g.r.right) - Math.max(b.left, g.r.left), y = Math.min(b.bottom, g.r.bottom) - Math.max(b.top, g.r.top); if (x > 1 && y > 1 && b.width > 6) { out.rivetOnGlyph++; if (out.ex.length < 8) out.ex.push(n + "@" + i + " rivet over '" + g.t + "'"); } } }
+        for (const p of svg.querySelectorAll("path")) { const L = p.getTotalLength(); if (L < 4 || +getComputedStyle(p).strokeWidth < 6) continue; const hit = new Set(); for (let k = 0; k <= 30; k++) { const q = p.getPointAtLength((L * k) / 30), x = sb.left + q.x, y = sb.top + q.y; gl.forEach((g, j) => { if (x > g.r.left && x < g.r.right && y > g.r.top && y < g.r.bottom) hit.add(j); }); } out.rodThroughGlyph += hit.size; }
+        if (i < o.length) { SP.play(+o[i]); SP.settle(); }
+      }
+    }
+    return out;
   }
   if (kind === "rods") {
     const res = [];
@@ -183,6 +202,8 @@ try {
       await V.T.evaluate(() => { SP.load(70, "easy"); SP.tick(40); SP.fill(); SP.tick(420); }); M[tag + "-slots-easy-full"] = await run(V, "slots");
       await V.T.evaluate(() => { SP.load(70, "normal"); SP.tick(40); SP.fill(); SP.tick(420); }); M[tag + "-slots-normal-full"] = await run(V, "slots");
       await V.T.evaluate(() => { SP.load("v4-all", "normal"); SP.tick(40); }); M[tag + "-tiles-v4-all"] = await run(V, "tiles");
+      const LINKED = [62, 66, 67, 70, 71, 75, 77, 78, 79, 82, 85, 87, 89, 91, 95, 99, 100, "v4-linked", "v4-all"];
+      if (tag !== "812") M[tag + "-rivets"] = await run(V, "rivets", LINKED);
       if (tag === "375") M["375-rods"] = await run(V, "rods", Array.from({ length: 100 }, (_, i) => i + 1).concat(["v4-linked", "v4-all"]));
       if (tag === "400") M["400-rods"] = await run(V, "rods", [62, 67, 71, 77, 82, 89, 91, 100, "v4-linked", "v4-all"]);
       await V.ctx.close();
@@ -191,5 +212,5 @@ try {
 } catch (e) { log.push("crashed: " + ((e && e.stack) || e)); }
 clearTimeout(wall); await browser.close();
 M.console = log;
-writeFileSync(resolve(here, "shots-v4-fix1", "measure.json"), JSON.stringify(M, null, 1));
+writeFileSync(resolve(here, "shots-v4-fix1", (OUTN === "after" ? "" : OUTN + "-") + "measure.json"), JSON.stringify(M, null, 1));
 console.log(log.length ? "LOG " + log.length + "\n" + log.join("\n") : "LOG: 0 console errors or warnings");

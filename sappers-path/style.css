@@ -7,9 +7,10 @@
    to a left column beside its count (a grid), so no badge ever covers a count; mystery tiles are a face-down card; the
    coach has a fixed-height box (above the board, or in the top bar, or in the side panel on wide screens); desktop puts
    the controls, line and queue in one side column the board's height, with a reserved spot for M5's power-up bar. */
-@font-face { font-family: "Jersey 10"; src: url("fonts/Jersey10-Regular.ttf?v=19") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Jersey 10"; src: url("fonts/Jersey10-Regular.ttf?v=20") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
 :root { --bg: #2e2935; --ink: #221a26; --cream: #f3ead8; --cream-soft: #cfc4d6;
   --tray: #ddd3c0; --tray-hi: #ece5d6; --tray-edge: #c4b89e; --tray-ink: #3a3027; --tray-soft: #6b5c47; --socket: #c3b697; --socket-lo: #a99a7b;
+  --band1: #d0c6b4; --band2: #c2baa9; /* the rows' tray bands, set from layout.fade.band at boot */
   --tray-full: #93540a; --tray-bad: #b3301c; --tray-march: #7a5a06; --lock-socket: #3b3342; --mys-dot: rgba(242,194,48,.34); --mys-rim: rgba(242,194,48,.55);
   --stone: #a2a5b0; --stone-hi: #cdd0d8; --stone-lo: #666a77; --gold: #f2c230; --gold-hi: #ffe27a; --gold-lo: #b8860b; --gold-dark: #7a5a06;
   --parch: #fbf5e6; --parch-edge: #e3d3ad; --parch-ink: #2a2430; --parch-soft: #5a4e3c;
@@ -83,7 +84,7 @@ body.coach-above #stage { padding-top: calc(var(--coach-h) + 6px); }
 #coach { position: fixed; left: 0; top: 0; z-index: 7; margin: 0; height: var(--coach-h); padding: 2px 8px; pointer-events: none; text-align: center;
   display: flex; align-items: center; justify-content: center; font-family: var(--px); font-size: var(--coach-fs); line-height: 1; white-space: nowrap; overflow: hidden; animation: coachin .25s ease-out; }
 #coach.two { white-space: normal; }
-body.coach-top #coach { border-width: 2px; padding: 0 6px; }
+body.coach-top #coach { border-width: 2px; padding: 0 6px; white-space: nowrap; }
 #coach[hidden] { display: none; }
 #coach-dock { display: none; flex: none; height: var(--coach-h); }
 body.wide.coached #coach-dock { display: block; }
@@ -188,6 +189,12 @@ body.wide.coached #coach-dock { display: block; }
    own colour toward ink (--rim1, --rim2) instead of the front's black edge. Sizes come from --tile-h,
    --tile-n, --tile-gap. */
 #tray { position: relative; display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--tile-gap); }
+/* Critics 1 fix 2: the rows behind sit on tray bands a step darker each (--band1, --band2: 6% and 12%), a shelf that
+   reads as stepping back without touching the tile faces. The tray reaches out to the panel's edges and foot for them. */
+#tray { margin: 0 calc(-1 * var(--tray-pad)) calc(-1 * var(--tray-pad)); padding: 0 var(--tray-pad) var(--tray-pad); border-radius: 0 0 9px 9px;
+  --y1: calc(var(--tile-h) + var(--tile-gap) / 2); --y2: calc(var(--y1) + var(--tile-h) * var(--s1) + var(--tile-gap));
+  background: linear-gradient(to bottom, transparent var(--y1), var(--tray-hi) var(--y1), var(--tray-hi) calc(var(--y1) + 1px), var(--band1) calc(var(--y1) + 1px), var(--band1) var(--y2),
+    var(--tray-hi) var(--y2), var(--tray-hi) calc(var(--y2) + 1px), var(--band2) calc(var(--y2) + 1px)); }
 .col { display: flex; flex-direction: column; align-items: center; gap: var(--tile-gap); min-width: 0; }
 .tile { position: relative; width: 100%; height: var(--tile-h); min-height: 0; padding: 0; border-radius: 9px; border: 3px solid var(--ink); display: flex; align-items: center; justify-content: center;
   background: var(--mc, var(--stone)); color: var(--tc, var(--ink)); font-family: var(--px); font-size: var(--tile-n); }
@@ -216,7 +223,7 @@ body.cb .tile .gl { display: block; }
 body.cb .tile.mys .gl { display: none; }
 .tile .ch { position: absolute; z-index: 3; left: calc(var(--ch-s) * -.45); bottom: calc(var(--ch-s) * -.45); width: var(--ch-s); height: var(--ch-s); box-shadow: 0 0 0 1px var(--tray); }
 .tile.ch-r .ch { left: auto; right: calc(var(--ch-s) * -.45); } /* on the bottom corner away from its rod (main.js), clear of the count */
-.tile.linked { padding-left: calc(var(--ch-s) * .6); } .tile.linked.ch-r { padding-left: 0; padding-right: calc(var(--ch-s) * .6); } /* the count steps away from the tag */
+.next .ch { left: calc(var(--ch-s) * -.7); } .next.ch-r .ch { left: auto; right: calc(var(--ch-s) * -.7); } /* the narrower rows have more gap */
 .tile.linked .ch { display: block; }
 .rods { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 2; fill: none; }
 
@@ -297,16 +304,17 @@ body.cb .chip .gl { display: inline-block; }
    the holding line and the tray sit together in one side column on the right (main.js sizes --stage-w to the board and
    --rail-w to the screen). Critics 1 fix (desktop 16:9 first): the side column is the board's height (--blk-h, the
    frame's), top-aligned with it, the two centred as one block; the column's foot keeps --pw-h free for M5's power-up bar
-   (#powers, empty until then). The win / fail sheet covers the column below the line (placed by main.js). */
+   (#powers, empty until then). Fix 2: the tray ends at the queue and #powers sits outside it, so the rest of the column
+   is brick, not blank tray. The win / fail sheet covers the column below the line (placed by main.js). */
 body.wide #app { max-width: none; display: grid; justify-content: center; align-items: center; column-gap: var(--wide-gap, 28px); padding-top: 8px; padding-bottom: 8px;
   grid-template-columns: var(--stage-w, 60%) var(--rail-w, 400px); grid-template-rows: minmax(0, 1fr); }
 body.wide #play { display: contents; }
 body.wide #stage { grid-column: 1; grid-row: 1; height: 100%; min-width: 0; }
 body.wide #side { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; height: var(--blk-h, auto); min-height: fit-content; max-height: 100%; }
 body.wide #top { order: 0; height: auto; padding: 12px 12px 10px; background: rgba(20,16,28,.62); border: 3px solid var(--ink); border-bottom: 0; border-radius: 12px 12px 0 0; }
-body.wide #rail { flex: 1 1 auto; margin: 0; padding: 12px; gap: 12px; border-radius: 0 0 12px 12px; }
+body.wide #rail { flex: none; margin: 0; padding: var(--tray-pad); gap: 12px; border-radius: 0 0 12px 12px; } /* ends at the queue (fix 2): the column's foot is brick */
 body.wide #lvl-name { font-size: 26px; } body.wide #diff-chip { font-size: 17px; }
-body.wide { --tile-h: 74px; --tile-n: 54px; --tile-gap: 8px; --gl-s: 18px; --slot-h: 62px; --slot-n: 44px; --man: 20px; --ch-s: 16px; --bd: 20px; --lk-s: 18px; --out-n: 16px; --coach-h: 48px; --pw-h: 84px; }
+body.wide { --tile-h: 74px; --tile-n: 54px; --tile-gap: 8px; --gl-s: 18px; --slot-h: 62px; --slot-n: 44px; --man: 20px; --ch-s: 16px; --bd: 20px; --lk-s: 18px; --out-n: 16px; --coach-h: 48px; --pw-h: 84px; --tray-pad: 12px; }
 body.wide #line-head { font-size: 20px; }
 body.wide .sheet .sheetcard { max-width: none; border: 3px solid var(--ink); border-radius: 12px; }
 body.wide .sheet:not(.float) .sheetcard { border-radius: 10px 10px 12px 12px; }
@@ -320,8 +328,8 @@ body.wide #map-play { display: block; max-width: 420px; margin: 0 auto; }
 /* Short screens (landscape phones, small iframes): a tighter chrome so the board keeps its cells. */
 @media (max-height: 480px) {
   #top { height: 40px; } button.round { width: 38px; height: 38px; min-height: 38px; } #lvl-num { font-size: 19px; } #lvl-name { font-size: 20px; }
-  body.wide #app { padding-top: 4px; padding-bottom: 4px; column-gap: 12px; } body.wide #top { padding: 6px 8px 4px; } body.wide #rail { gap: 6px; padding: 6px 8px 8px; }
-  body.wide { --tile-h: 46px; --tile-n: 34px; --tile-gap: 5px; --gl-s: 13px; --slot-h: 40px; --slot-n: 30px; --man: 14px; --ch-s: 11px; --bd: 13px; --lk-s: 12px; --out-n: 11px; --coach-h: 40px; --coach-fs: 19px; --pw-h: 0px; }
+  body.wide #app { padding-top: 4px; padding-bottom: 4px; column-gap: 12px; } body.wide #top { padding: 6px 8px 4px; } body.wide #rail { gap: 6px; padding: 6px var(--tray-pad) var(--tray-pad); }
+  body.wide { --tile-h: 46px; --tile-n: 34px; --tile-gap: 5px; --gl-s: 13px; --slot-h: 40px; --slot-n: 30px; --man: 14px; --ch-s: 11px; --bd: 13px; --lk-s: 12px; --out-n: 11px; --coach-h: 40px; --coach-fs: 19px; --pw-h: 0px; --tray-pad: 8px; }
   body.wide #lvl-name { font-size: 18px; } body.wide #diff-chip { font-size: 13px; } body.wide #line-head { font-size: 15px; }
   .title-card { padding-top: 4px; padding-bottom: 8px; } .title-card h1 { font-size: 40px; } .title-foot { gap: 6px; padding: 8px 12px 10px; } .title-foot p { font-size: 17px; }
   .title-foot .tog-cb span { display: none; } .title-foot .row .tog-cb { flex: 0 0 48px; padding: 0; }

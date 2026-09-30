@@ -46,6 +46,9 @@
 // player can send (V.hot) so only the archer rings that matter are loud. The jam sheet shows colour chips (names in its
 // aria-label); win and fail sheets never slice the holding line (placeSheet). Wide screens: the side column is the
 // board's height (--blk-h). The victory march's label shows the pace in use.
+// Critics 1 fix 2: rods run between rivets on the tiles' facing rims, never over a face; the rows behind sit on darker
+// tray bands (layout.fade.band); the desktop tray ends at the queue; in the top bar the coach sits beside the level's
+// number, one line (a step's short text).
 (function () {
   "use strict";
   const NS = window.SappersPath, E = NS.engine, Save = NS.save, Board = NS.board, Art = NS.art, Audio = NS.audio;
@@ -169,7 +172,8 @@
   // colour (sRGB); index 0 is the mystery card's back. The tray colour goes to CSS (--tray) from the same place.
   const mixHex = (a, b, t) => { const x = parseInt(a.slice(1), 16), y = parseInt(b.slice(1), 16), ch = (s) => Math.round(((x >> s) & 255) * (1 - t) + ((y >> s) & 255) * t); return "#" + ((1 << 24) | (ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).slice(1); };
   function fades() {
-    const F = app.cfg.layout.fade; document.documentElement.style.setProperty("--tray", F.tray);
+    const F = app.cfg.layout.fade, rs = document.documentElement.style; rs.setProperty("--tray", F.tray);
+    F.band.forEach((t, d) => { if (d) rs.setProperty("--band" + d, mixHex(F.tray, "#000000", t)); }); // the rows' tray bands (fix 2)
     app.fadeC = F.t.map((t) => { const row = [mixHex(app.cfg.layout.mystery.c, F.tray, t)]; for (let m = 1; m < E.NMAT; m++) row.push(mixHex(mat(m).c, F.tray, t)); return row; });
   }
   // Fit a label to its box: the CSS size, stepped down in one measure (cached per text until the next resize).
@@ -210,42 +214,47 @@
     if (S && S.status === E.PLAYING) { for (let j = 0; j < E.NCOL; j++) { const f = S.front(j); if (f >= 0) m |= 1 << B.cardM[f]; } for (let i = 0; i < S.cap; i++) if (S.spQ[i]) m |= 1 << S.spM[i]; }
     app.V.hot = m;
   }
-  // v4 M2: the rods between linked tiles, as SVG paths over the tray. Critics 1 fix: a rod runs from its tile's centre
-  // to its partner's, over the faces and under the counts (they sit above the SVG), with a rivet on each tile where it
-  // leaves: straight when the two are in neighbouring columns at most one row apart (a diagonal passes through the
-  // four-tile corner), else down the gutter between the two columns, so it never crosses a third tile. A partner below
-  // the visible rows: the rod runs down the gutter past its column's last visible row and ends in two dots. Sizes are
-  // layout.rod at a phone tile, scaled with the tile. Each pair is drawn once (from its card nearer the front). Run with
-  // the tray, never per frame.
+  // v4 M2: the rods between linked tiles, as SVG paths over the tray. Critics 1 fix 2: a rod never touches a tile's
+  // face, so it never crosses a count. Each end is a rivet on the rim of its tile's edge that faces the partner's column,
+  // at the tile's middle; the rod runs between the rivets in the gaps: straight when that line stays out of every tile
+  // (partners in neighbouring columns at most one row apart: through the four-tile corner), else down the gutter between
+  // the two columns. A partner below the visible rows: along the gutter past its column's last visible row, then two
+  // dots. Sizes are layout.rod at a phone tile, scaled with the tile. Each pair is drawn once (from its card nearer the
+  // front). Run with the tray, never per frame.
   function tileOf(j, d) { return d ? app.nexts[j][d - 1] : app.cards[j]; }
   function rowOf(S, j, ci) { for (let d = 0; d < app.cfg.layout.queueRows; d++) { const c = S.card(j, d); if (c < 0) return -1; if (c === ci) return d; } return -1; }
   function drawRods() {
     const S = app.S, B = app.B, svg = app.rods; if (!svg) return;
     let html = "";
     if (S && B && B.nlinks) {
-      const R = app.cfg.layout.rod, tr = $("tray").getBoundingClientRect(), RW = app.cfg.layout.queueRows, f = (v) => v.toFixed(1);
-      const box = (el) => { const r = el.getBoundingClientRect(); return { x: r.left - tr.left + r.width / 2, y: r.top - tr.top + r.height / 2, hw: r.width / 2, hh: r.height / 2, l: r.left - tr.left, r: r.right - tr.left, b: r.bottom - tr.top }; };
+      const R = app.cfg.layout.rod, RW = app.cfg.layout.queueRows, f = (v) => v.toFixed(1);
+      // A tile's layout box in the tray (offsets ignore a flip or shake in progress, which would narrow or move its rect).
+      const box = (el) => { const l = el.offsetLeft, t = el.offsetTop, w = el.offsetWidth, h = el.offsetHeight; return { x: l + w / 2, y: t + h / 2, hw: w / 2, hh: h / 2, l, r: l + w, t, b: t + h }; };
       const k = Math.max(0.7, Math.min(1.4, (box(app.cards[0]).hh * 2) / 52)), rv = R.rivet * k, sw = 'stroke-linecap="round" stroke-linejoin="round"';
+      // Every shown tile's box, for the straight rod's check.
+      const tiles = []; for (let j = 0; j < E.NCOL; j++) for (let d = 0; d < RW; d++) { const el = tileOf(j, d); if (!el.classList.contains("none") && !el.classList.contains("empty") && el.offsetWidth) tiles.push(box(el)); }
+      const inside = (x, y) => tiles.some((q) => x > q.l + 1 && x < q.r - 1 && y > q.t + 1 && y < q.b - 1);
+      const clear = (P) => { for (let i = 0; i + 3 < P.length; i += 2) for (let u = 1; u < 16; u++) if (inside(P[i] + ((P[i + 2] - P[i]) * u) / 16, P[i + 1] + ((P[i + 3] - P[i + 1]) * u) / 16)) return false; return true; };
       // The gutter between neighbouring columns j and pj: midway between their front tiles' facing edges.
       const gutter = (j, pj) => { const a = box(app.cards[j]), b = box(app.cards[pj]); return pj > j ? (a.r + b.l) / 2 : (a.l + b.r) / 2; };
       const rod = (P) => { let d = "M" + f(P[0]) + " " + f(P[1]); for (let i = 2; i < P.length; i += 2) d += "L" + f(P[i]) + " " + f(P[i + 1]);
         return '<path d="' + d + '" stroke="' + R.ink + '" stroke-width="' + f(R.w * k) + '" ' + sw + '/><path d="' + d + '" stroke="' + R.metal + '" stroke-width="' + f(R.core * k) + '" ' + sw + '/><path d="' + d + '" stroke="' + R.hi + '" stroke-width="' + f(Math.max(1, k)) + '" ' + sw + ' transform="translate(0 -1)" opacity=".6"/>'; };
-      // The rivet on tile a, where the rod leaving its centre toward (tx, ty) comes within rv + 3 px of a's edge.
-      const rivet = (a, tx, ty) => { const dx = tx - a.x, dy = ty - a.y, t = Math.max(0, Math.min(dx ? (a.hw - rv - 3) / Math.abs(dx) : 1e9, dy ? (a.hh - rv - 3) / Math.abs(dy) : 1e9));
-        return '<circle cx="' + f(a.x + dx * t) + '" cy="' + f(a.y + dy * t) + '" r="' + f(rv) + '" fill="' + R.metal + '" stroke="' + R.ink + '" stroke-width="' + f(1.6 * k) + '"/><circle cx="' + f(a.x + dx * t - rv * 0.3) + '" cy="' + f(a.y + dy * t - rv * 0.3) + '" r="' + f(rv * 0.35) + '" fill="' + R.hi + '" opacity=".8"/>'; };
+      const rivet = (x, y) => '<circle cx="' + f(x) + '" cy="' + f(y) + '" r="' + f(rv) + '" fill="' + R.metal + '" stroke="' + R.ink + '" stroke-width="' + f(1.6 * k) + '"/><circle cx="' + f(x - rv * 0.3) + '" cy="' + f(y - rv * 0.3) + '" r="' + f(rv * 0.35) + '" fill="' + R.hi + '" opacity=".8"/>';
       for (let j = 0; j < E.NCOL; j++) for (let d = 0; d < RW; d++) {
         const ci = S.card(j, d); if (ci < 0) break;
         const p = S.partner(ci); if (p < 0) continue;
-        const pj = B.cardCol[p], pd = rowOf(S, pj, p), a = box(tileOf(j, d)), near = Math.abs(pj - j) === 1;
+        const pj = B.cardCol[p], pd = rowOf(S, pj, p), a = box(tileOf(j, d)), right = pj > j, ax = right ? a.r : a.l, gx = gutter(j, pj);
         if (pd >= 0) {
           if (pd < d || (pd === d && pj < j)) continue;
-          const b = box(tileOf(pj, pd)), gx = near ? gutter(j, pj) : a.x, P = !near || pd - d <= 1 ? [a.x, a.y, b.x, b.y] : [a.x, a.y, gx, a.y, gx, b.y, b.x, b.y];
-          html += rod(P) + rivet(a, P[2], P[3]) + rivet(b, P[P.length - 4], P[P.length - 3]);
+          const b = box(tileOf(pj, pd)), bx = right ? b.l : b.r;
+          let P = [ax, a.y, bx, b.y];
+          if (Math.abs(pj - j) !== 1 || !clear(P)) P = [ax, a.y, gx, a.y, gx, b.y, bx, b.y];
+          html += rod(P) + rivet(ax, a.y) + rivet(bx, b.y);
           continue;
         }
-        // Stub: down the gutter toward the partner's column, past its last visible row, then two dots.
-        const gx = near ? gutter(j, pj) : a.x, y2 = Math.max(a.y + a.hh * 0.5, box(tileOf(pj, RW - 1)).b - R.stub * k * 0.4), P = near ? [a.x, a.y, gx, a.y, gx, y2] : [a.x, a.y, a.x, y2];
-        html += rod(P) + rivet(a, P[2], P[3]);
+        // Stub: along the gutter toward the partner's column, past its last visible row, then two dots.
+        const y2 = Math.max(a.y + a.hh, box(tileOf(pj, RW - 1)).b - R.stub * k * 0.4);
+        html += rod([ax, a.y, gx, a.y, gx, y2]) + rivet(ax, a.y);
         for (let q = 1; q <= 2; q++) html += '<circle class="dot" cx="' + f(gx) + '" cy="' + f(y2 + R.cap * k * 2.3 * q) + '" r="' + f(R.cap * k * 0.8) + '" fill="' + R.metal + '" stroke="' + R.ink + '" stroke-width="1"/>';
       }
     }
@@ -378,7 +387,7 @@
     return e;
   }
   // v4 M3: a tile's flip or shake from the last game lands at once when a level starts (a flip left mid-turn has no width).
-  function landTiles() { for (const b of app.cards) if (b.getAnimations) for (const a of b.getAnimations()) if (a.effect && isFinite(a.effect.getComputedTiming().endTime)) a.finish(); }
+  function landTiles() { for (const b of app.cards.concat(app.nexts.flat())) if (b.getAnimations) for (const a of b.getAnimations()) if (a.effect && isFinite(a.effect.getComputedTiming().endTime)) a.finish(); }
   function retry() {
     if (!app.S) return;
     app.S.reset(); app.et = 0; app.V.reset(); app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.popK = 0; app.used = 0; app.march = false; app.blockT = -1e12; $("panel").hidden = true; hideToast();
@@ -558,7 +567,7 @@
     if (st.ring === "key" || st.ring === "gate") { const k = 0, kc = V.keyC[k]; if (B.gateCells.length) { if (st.ring === "key" && kc >= 0 && S.a[kc] > 0) Object.assign(V.focus, { on: true, x: kc % B.w + 0.5, y: ((kc / B.w) | 0) + 0.5, r: 1.1 }); else Object.assign(V.focus, { on: true, x: V.gX[k], y: V.gY[k], r: 1.6 }); } }
     if (st.ring === "lockKey" && B.lockKey >= 0 && S.a[B.lockKey] > 0) Object.assign(V.focus, { on: true, x: B.lockKey % B.w + 0.5, y: ((B.lockKey / B.w) | 0) + 0.5, r: 1.1 });
     if (st.ring === "tower") { for (let k = 0; k < B.towers.length; k++) if (S.standing & (1 << k)) { const T = B.towers[k]; Object.assign(V.focus, { on: true, x: T.cx + 0.5, y: T.cy + 0.5, r: Math.sqrt(T.size / Math.PI) + 0.9 }); break; } }
-    txt.textContent = st.say.replace(/\{n\}/g, cn).replace(/\{crew\}/g, cm ? mat(cm).crew : "").replace(/\{reach\}/g, cm ? S.reachable(cm) : 0).replace(/\{go\}/g, cm ? Math.min(cn, S.reachable(cm)) : 0);
+    txt.textContent = (app.coachMode === "top" && st.short ? st.short : st.say).replace(/\{n\}/g, cn).replace(/\{crew\}/g, cm ? mat(cm).crew : "").replace(/\{reach\}/g, cm ? S.reachable(cm) : 0).replace(/\{go\}/g, cm ? Math.min(cn, S.reachable(cm)) : 0);
     V.ringsLoud = st.ring === "tower"; // the lesson is the ring: every ring loud while it shows
     txt.hidden = false; placeCoach(); fitCoach();
     if (el) { el.classList.add("coach-on"); app.focusEl = el; }
@@ -572,15 +581,17 @@
     const t = $("coach"); if (t.hidden) return;
     let r;
     if (app.coachMode === "side") { const q = $("coach-dock").getBoundingClientRect(); r = [q.left, q.top, q.width, q.height]; }
-    else if (app.coachMode === "top") { const a = $("lvl").getBoundingClientRect(), b = $("top").getBoundingClientRect(); r = [a.left, b.top, a.width, b.height]; }
+    else if (app.coachMode === "top") { const a = document.querySelector("#lvl .lvl-txt").getBoundingClientRect(), b = $("top").getBoundingClientRect(), m = app.cfg.layout.coachTopMarginPx; r = [a.left, b.top + m, a.width, b.height - 2 * m]; } // beside the level's number
     else { const q = $("stage").getBoundingClientRect(); r = [q.left + 6, q.top + 2, q.width - 12, coachH()]; }
     t.style.left = r[0] + "px"; t.style.top = r[1] + "px"; t.style.width = Math.max(0, r[2]) + "px"; t.style.height = Math.max(0, r[3]) + "px";
   }
-  // One line if it fits (the font steps down through layout.coachFontPx [max, min]), else two (Critics 1 fix, m3).
+  // One line if it fits (the font steps down through layout.coachFontPx [max, min]), else two (Critics 1 fix, m3). In
+  // the top bar it is always one line (the step's short text there, when it has one).
   function fitCoach() {
     const t = $("coach"), [hi, lo] = app.cfg.layout.coachFontPx; if (t.hidden) return;
     t.classList.remove("two");
     for (let px = hi; px >= lo; px--) { t.style.fontSize = px + "px"; if (t.scrollWidth <= t.clientWidth && t.scrollHeight <= t.clientHeight) return; }
+    if (app.coachMode === "top") return;
     t.classList.add("two");
     for (let px = hi; px >= lo; px--) { t.style.fontSize = px + "px"; if (t.scrollWidth <= t.clientWidth && t.scrollHeight <= t.clientHeight) return; }
   }
@@ -915,11 +926,18 @@
           const o = over(g, { left: x, top: y, right: x + bd, bottom: y + bd }); if (o) return "the lock covers the count " + b.textContent + " by " + o; } }
       return true; };
     // M3: a linked tile's chain tag clears every count in the tray.
-    const chainClear = () => { const ns = Array.from(document.querySelectorAll("#tray .tile .n")).filter((n) => n.textContent && shown(n.parentElement));
+    const chainClear = () => { landTiles(); const ns = Array.from(document.querySelectorAll("#tray .tile .n")).filter((n) => n.textContent && shown(n.parentElement));
       for (const ch of document.querySelectorAll("#tray .tile .ch")) { if (!shown(ch)) continue; for (const n of ns) { const o = over(glyph(n), ch.getBoundingClientRect()); if (o) return "a chain covers '" + n.textContent + "' by " + o; } }
       return true; };
+    // M3 (Critics 1 fix 2): no rod or rivet touches a count's glyph box: no rivet disc overlaps one, no point along a rod lies
+    // inside one.
+    const rodGlyph = () => { landTiles(); const sb = app.rods.getBoundingClientRect(), G = Array.from(document.querySelectorAll("#tray .tile .n")).filter((n) => n.textContent && shown(n.parentElement)).map((n) => [n.textContent, glyph(n)]);
+      for (const c of app.rods.querySelectorAll("circle")) { const r = c.getBoundingClientRect(); if (r.width <= 6) continue; for (const [t, g] of G) { const o = over(r, g); if (o) return "a rivet covers '" + t + "' by " + o; } }
+      for (const g0 of app.rods.querySelectorAll("path")) { const L = g0.getTotalLength(); if (L < 4) continue; for (let i = 0; i <= 32; i++) { const q = g0.getPointAtLength((L * i) / 32), x = sb.left + q.x, y = sb.top + q.y;
+        for (const [t, g] of G) if (x > g.left && x < g.right && y > g.top && y < g.bottom) return "a rod crosses '" + t + "'"; } }
+      return true; };
     // M3: every rod's two ends lie on two tiles and no point along it lies inside a third tile (3 px in from its edge).
-    const rodClear = () => { const T = []; for (let j = 0; j < E.NCOL; j++) for (let d = 0; d < LY.queueRows; d++) { const el = tileOf(j, d); if (shown(el) && !el.classList.contains("empty")) T.push(el.getBoundingClientRect()); }
+    const rodClear = () => { landTiles(); const T = []; for (let j = 0; j < E.NCOL; j++) for (let d = 0; d < LY.queueRows; d++) { const el = tileOf(j, d); if (shown(el) && !el.classList.contains("empty")) T.push(el.getBoundingClientRect()); }
       const sb = app.rods.getBoundingClientRect(), inT = (x, y, b, e) => x > b.left + e && x < b.right - e && y > b.top + e && y < b.bottom - e;
       for (const g of app.rods.querySelectorAll("path")) { const L = g.getTotalLength(); if (L < 4) continue;
         const at = (u) => { const p = g.getPointAtLength(L * u); return [sb.left + p.x, sb.top + p.y]; }, e0 = at(0), e1 = at(1), own = T.filter((b) => inT(e0[0], e0[1], b, -1) || inT(e1[0], e1[1], b, -1));
@@ -1102,7 +1120,7 @@
         if (app.focusEl) ok(hitOK(app.focusEl), id + ": the arrow never covers its target");
         const cc = coachClear(); ok(cc === true, id + ": the coach box covers no board and the arrow no count or line head (" + cc + ")");
         const seen = new Set([c0.i]); let last = c0.i, mono = true;
-        let clear = true; for (const ch of e.L.win.normal) { playCol(+ch); settleNow(); const cs = coachState(); if (cs.i >= 0) { if (cs.i < last) mono = false; last = cs.i; seen.add(cs.i); if (cs.on && clear === true) clear = coachClear(); } }
+        let clear = true; for (const ch of e.L.win.normal) { playCol(+ch); settleNow(); const cs = coachState(); if (cs.i >= 0) { if (cs.i < last) mono = false; last = cs.i; seen.add(cs.i); if (cs.on && clear === true) clear = cs.fits ? coachClear() : "'" + cs.text + "' overflows its box"; } }
         ok(clear === true, id + ": at every step of the stored order the coach covers no board and the arrow no count (" + clear + ")");
         ok(mono && !coachState().on && app.S.status === E.WON, id + ": on the stored order the coach only moves forward (" + Array.from(seen).join(",") + ") and is gone at the win");
         startLevel(id, "normal"); const saw = new Set();
@@ -1265,9 +1283,9 @@
       // 23. Critics 1 fix: the rods on the debug levels along their stored orders (every rod on its two tiles, never over a
       // third); B1: a linked pair leaving and then at rest, and a full line of big squads rushed out, with every count
       // clear of every badge.
-      for (const id of ["v4-linked", "v4-all"]) { const e = app.byId.get(id); if (!e) continue; startLevel(id, "normal"); let bad = rodClear(), cb = chainClear(), n = 0;
-        for (const ch of e.L.win.normal) { if (bad !== true || cb !== true) break; playCol(+ch); settleNow(); bad = rodClear(); cb = chainClear(); n++; }
-        ok(bad === true && cb === true, id + ": after each of " + n + " taps every rod lands on its two tiles and crosses no third, and no chain tag covers a count (" + bad + ", " + cb + ")"); }
+      for (const id of ["v4-linked", "v4-all", "e3-62", "e3-67", "e4-89"]) { const e = app.byId.get(id); if (!e) continue; startLevel(id, "normal"); let bad = rodClear(), cb = chainClear(), gb = rodGlyph(), n = 0;
+        for (const ch of e.L.win.normal) { if (bad !== true || cb !== true || gb !== true) break; playCol(+ch); settleNow(); bad = rodClear(); cb = chainClear(); gb = rodGlyph(); n++; }
+        ok(bad === true && cb === true && gb === true, id + ": after each of " + n + " taps every rod lands on its two tiles and crosses no third, no rod or rivet touches a count, no chain tag covers one (" + bad + ", " + gb + ", " + cb + ")"); }
       if (app.byId.has("v4-linked")) { startLevel("v4-linked", "normal"); const j = app.cards.findIndex((b, k) => app.S.front(k) >= 0 && app.S.partner(app.S.front(k)) >= 0);
         if (ok(j >= 0 && playCol(j), "B1: a linked front card plays")) { for (let t = 0; t < 350; t += 16) step(16); const a = slotClear(), lk = app.slots.filter((q) => q.classList.contains("linked")).length; settleNow(); const b = slotClear();
           ok(a === true && b === true && lk === 2, "B1: both linked spaces wear the chain and every count stays clear of every badge, leaving and at rest (" + a + ", " + b + ")"); } }

@@ -24,8 +24,9 @@
 // once per level (V.deco) and painted with the ground; it changes no rule. Archer rings tint the ground only.
 // Haul bins (fix pass): one bin per colour in its own colour, with its block (glyph and all) as a label and a pile that
 // grows with the haul; more than board.binsRow colours go on two rows (board.yardRows2). v4 Critics 1 fix: a bin shows
-// only once its colour has hauled a block (it grows in over board.binGrowMs), so the yard at rest is bare ground, not a
-// colour legend.
+// only once its colour has hauled a block (it grows in over board.binGrowMs), so the yard is not a colour legend. Fix 2:
+// the yard at rest holds empty wooden crates (board.crate, no colour), and a colour takes the next crate from the left
+// the first time it sends a sapper, so the bins fill left to right in the order they are first used.
 // Archer rings (v4 Critics 1 fix): a ring is loud (board.rangeStroke, dashed) only while it matters: a colour the player
 // can send now (V.hot, the page's mask of front cards and squads in the line) has a block in reach inside it, its archer
 // is shooting or just hit someone, or the coach points at a tower (V.ringsLoud). Otherwise it is a faint thin dash
@@ -123,7 +124,7 @@
   function create(canvas, cfg, sheets) {
     const C = cfg.v3, K = cfg.board, SH = cfg.show, FX = cfg.fx, g = canvas.getContext("2d", { alpha: false });
     const V = {
-      canvas, g, cfg, B: null, S: null, w: 0, h: 0, n: 0, cs: 0, dpr: 1, Y: K.yardRows | 0, rot: false, calm: false, cb: false,
+      canvas, g, cfg, B: null, S: null, w: 0, h: 0, n: 0, cs: 0, dpr: 1, Y: K.yardRows | 0, rot: false, calm: false, cb: false, mats: [], nextPile: 0,
       disp: null, dist: null, q: null, tone: null, deco: null, idleC: [], layer: null, lg: null, sprites: null, piles: [], pileOf: new Int16Array(E.NMAT).fill(-1),
       haul: new Int32Array(E.NMAT), total: new Int32Array(E.NMAT), towerLeft: new Int32Array(MAXT), towerOfCell: null,
       clock: 0, speed: 1, fxT: 0, rebuilds: 0, lastPop: -1, pileDirty: true, font: "", seed: 12345,
@@ -232,8 +233,9 @@
       const pts = B.n + 4;
       if (V.maxPts < pts) { V.maxPts = pts; V.rPts = []; V.rCum = []; for (let i = 0; i < RMAX; i++) { V.rPts.push(new Float32Array(pts * 2)); V.rCum.push(new Float32Array(pts)); } }
       // Crates: one per colour on the board (iron is gates, never hauled), in material order across the yard.
-      V.piles = []; V.pileOf.fill(-1); V.total.fill(0);
-      for (let m = 1; m < E.NMAT; m++) if (m !== IRON && B.pix[m] > 0) { V.pileOf[m] = V.piles.length; V.piles.push({ m, x: 0, y: 0 }); V.total[m] = B.pix[m]; }
+      // (fix 2: a crate per colour, each taken by a colour on its first sapper out, left to right; claim()).
+      V.piles = []; V.pileOf.fill(-1); V.total.fill(0); V.mats = [];
+      for (let m = 1; m < E.NMAT; m++) if (m !== IRON && B.pix[m] > 0) { V.mats.push(m); V.piles.push({ m: 0, x: 0, y: 0 }); V.total[m] = B.pix[m]; }
       V.Y = V.piles.length > K.binsRow ? K.yardRows2 : K.yardRows;
       placePiles();
       // Camp cells, and the idle sappers' spots: spread along the camp's middle row.
@@ -317,6 +319,7 @@
       V.towerLeft.fill(0); for (let c = 0; c < B.n; c++) { const t = B.towerOf[c]; V.towerOfCell[c] = t; if (t >= 0 && t < MAXT && V.disp[c] > 0) V.towerLeft[t]++; }
       for (let k = 0; k < MAXG; k++) { const gc = B.gateCells[k]; V.gSt[k] = gc && gc.length && V.disp[gc[0]] > 0 ? 0 : 1; V.gT[k] = -1e12; }
       V.tFallT.fill(-1e12); V.shT = -1e12; V.label.t = -1e12; V.gob.on = false; V.gob.done = false; V.lockOpen = !V.S.locked;
+      V.pileOf.fill(-1); V.nextPile = 0; for (const p of V.piles) p.m = 0;
       V.popT.fill(-1e12); V.pT.fill(-1e12); V.binT.fill(-1e12); V.ringHitT.fill(-1e12); V.shootM = 0; V.hotVer = -1;
       for (let k = 0; k < MAXT; k++) V.ringA[k] = k < B.towers.length && hotNow(k) ? 1 : 0;
       paintLayer();
@@ -401,12 +404,17 @@
     // A bin in its colour: a bevelled box, a darker inside, its block (with the glyph) as a label on the short side, and
     // the haul piled up inside in mini blocks (one per pixel while the colour fits, else to scale). Upright either way.
     // Critics 1 fix: nothing but the yard until the colour's first block lands; then it grows in (binGrow, 0..1).
-    const binGrow = (k) => { const m = V.piles[k].m; if (V.haul[m] <= 0) return 0; const a = (V.fxT - V.binT[m]) / Math.max(1, K.binGrowMs); return a >= 1 || V.calm ? 1 : a <= 0 ? 0 : 1 - (1 - a) * (1 - a) * (1 - 2.2 * a); };
+    const binGrow = (k) => { const m = V.piles[k].m; if (!m || V.haul[m] <= 0) return 0; const a = (V.fxT - V.binT[m]) / Math.max(1, K.binGrowMs); return a >= 1 || V.calm ? 1 : a <= 0 ? 0 : 1 - (1 - a) * (1 - a) * (1 - 2.2 * a); };
     function paintPile(k) {
       const p = V.piles[k], cs = V.cs, g2 = V.lg, S = V.sprites, mb = S.mb, np = V.piles.length, two = np > K.binsRow, per = two ? Math.ceil(np / 2) : np;
       const sw = V.rot ? V.Y / (two ? 2 : 1) : V.w / per, sh = V.rot ? V.w / per : V.Y / (two ? 2 : 1), u = binGrow(k);
       const cx = MX(p.x, p.y) * cs, cy = MY(p.x, p.y) * cs;
       g2.fillStyle = K.yard; g2.fillRect(Math.round(cx - (sw * cs) / 2), Math.round(cy - (sh * cs) / 2), Math.round(sw * cs), Math.round(sh * cs));
+      if (u < 1) { // the empty crate (fix 2): muted wood, no colour; the bin grows in over it
+        const CR = K.crate, cw = Math.round(Math.min(sw * K.binFill, K.binMax) * cs * CR.scale), ch = Math.round(Math.min(sh * K.binFill, K.binMax) * cs * CR.scale), e = Math.max(1, Math.round(cs * 0.12)), x0 = Math.round(cx - cw / 2), y0 = Math.round(cy - ch / 2);
+        g2.fillStyle = CR.edge; g2.fillRect(x0 - e, y0 - e, cw + 2 * e, ch + 2 * e); g2.fillStyle = CR.face; g2.fillRect(x0, y0, cw, ch); g2.fillStyle = CR.inside; g2.fillRect(x0 + e, y0 + e, cw - 2 * e, ch - 2 * e);
+        g2.fillStyle = CR.plank; for (let q = 1; q < CR.planks; q++) g2.fillRect(x0 + e, Math.round(y0 + e + ((ch - 2 * e) * q) / CR.planks), cw - 2 * e, Math.max(1, e >> 1));
+      }
       if (u <= 0) return;
       const bw = Math.max(2, Math.round(Math.min(sw * K.binFill, K.binMax) * cs * u)), bh = Math.max(2, Math.round(Math.min(sh * K.binFill, K.binMax) * cs * u));
       const x = Math.round(cx - bw / 2), y = Math.round(cy - bh / 2), col = C.mats[p.m].c;
@@ -478,7 +486,7 @@
       V.rOn[i] = 1; V.rId[i] = id; V.idR[id] = i; V.rK[i] = k; V.rS[i] = s; V.rM[i] = S.spM[s]; V.rC[i] = c;
       V.rT0[i] = S.q0[id]; V.rT1[i] = S.q1[id]; V.rT2[i] = S.q2[id]; V.rShot[i] = 0; V.rDie[i] = -1; V.live++;
       route(i, s, c);
-      const p = V.piles[Math.max(0, V.pileOf[V.rM[i]])];
+      const p = k === 1 ? V.piles[claim(V.rM[i])] : null;
       if (k === 1) { V.rBx[i] = p ? p.x : V.w / 2; V.rBy[i] = p ? p.y : V.h + V.Y / 2; return i; }
       // A hit: it stops where its route first enters a standing ring (or at the pixel's face); the arrow meets it there.
       const pts = V.rPts[i], cum = V.rCum[i], np = V.rNp[i], w = V.w; let dH = cum[np - 1], tw = lowBit(coverNow(c));
@@ -532,7 +540,9 @@
       if (g < MAXG) { V.gSt[g] = 1; V.gT[g] = anim ? V.fxT : -1e12; }
       if (anim) { shake(FX.gateShake[0], FX.gateShake[1]); if (V.hooks.gate) V.hooks.gate(g); }
     }
-    function deposit(m) { if (V.haul[m]++ === 0) V.binT[m] = V.fxT; V.pileDirty = true; if (V.hooks.deposit) V.hooks.deposit(m); }
+    function deposit(m) { claim(m); if (V.haul[m]++ === 0) V.binT[m] = V.fxT; V.pileDirty = true; if (V.hooks.deposit) V.hooks.deposit(m); }
+    // Colour m's crate: the next one from the left, the first time it is needed (-1 past the last, never at these sizes).
+    function claim(m) { if (V.pileOf[m] < 0 && V.nextPile < V.piles.length) { V.pileOf[m] = V.nextPile; V.piles[V.nextPile++].m = m; V.pileDirty = true; } return V.pileOf[m]; }
     function shake(amp, ms) { if (V.calm) return; V.shT = V.fxT; V.shMs = Math.max(1, ms); V.shAmp = amp; }
     // Read the engine's log since the last sync (then clear it). anim false: land everything quietly (a skip).
     function sync(S, anim) {
@@ -565,7 +575,7 @@
       V.towerLeft.fill(0); for (let c = 0; c < V.n; c++) { const t = V.B.towerOf[c]; if (t >= 0 && t < MAXT && V.disp[c] > 0) V.towerLeft[t]++; }
       for (let k = 0; k < MAXG; k++) { const gc = V.B.gateCells[k]; V.gSt[k] = gc && gc.length && V.disp[gc[0]] > 0 ? 0 : 1; }
       V.lockOpen = !S.locked;
-      for (let m = 1; m < E.NMAT; m++) V.haul[m] = Math.max(0, V.total[m] - S.left[m]);
+      for (let m = 1; m < E.NMAT; m++) { V.haul[m] = Math.max(0, V.total[m] - S.left[m]); if (V.haul[m] > 0) claim(m); }
       for (let id = 0; id < S.sent; id++) { if (S.q2[id] <= S.now || (S.qK[id] === 3 && S.q1[id] <= S.now)) continue; if (S.qK[id] === 1 && S.q1[id] <= S.now) V.haul[S.spM[S.qS[id]]]--; runner(S, id); }
       paintLayer();
     }
@@ -653,7 +663,7 @@
       if (!V.B || !V.sprites) return;
       const cs = V.cs, S = V.sprites, gx = V.g, t = V.t, ft = V.fxT, ss = S.ss, mb = S.mb, CW = canvas.width, CH = canvas.height;
       if (V.pileDirty) { for (let k = 0; k < V.piles.length; k++) paintPile(k); V.pileDirty = false; }
-      else for (let k = 0; k < V.piles.length; k++) { const m = V.piles[k].m; if (V.haul[m] > 0 && ft - V.binT[m] < K.binGrowMs + 34) paintPile(k); } // a bin growing in
+      else for (let k = 0; k < V.piles.length; k++) { const m = V.piles[k].m; if (m && V.haul[m] > 0 && ft - V.binT[m] < K.binGrowMs + 34) paintPile(k); } // a bin growing in
       gx.imageSmoothingEnabled = false;
       // A shake moves everything; the frame's wood shows at the edge it uncovers.
       let dx = 0, dy = 0; const sa = (ft - V.shT) / V.shMs;
@@ -716,7 +726,7 @@
       // Idle sappers at the camp.
       for (let k = 0; k < V.idleC.length; k++) {
         const c = V.idleC[k], f = ((V.clock / (SH.stepMs * 3) + k) | 0) & 1, bx = c % V.w + 0.5, by = ((c / V.w) | 0) + 0.5;
-        gx.drawImage(S.sap[V.piles.length ? V.piles[k % V.piles.length].m : 1], f * ss, 0, ss, ss, MX(bx, by) * cs - ss / 2, MY(bx, by) * cs - ss / 2, ss, ss);
+        gx.drawImage(S.sap[V.mats.length ? V.mats[k % V.mats.length] : 1], f * ss, 0, ss, ss, MX(bx, by) * cs - ss / 2, MY(bx, by) * cs - ss / 2, ss, ss);
       }
       // Runners: out empty-handed, back with their block on their heads. Hit runners: an arrow meets them at the ring.
       let shooting = 0;

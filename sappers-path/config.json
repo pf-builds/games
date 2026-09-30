@@ -75,6 +75,7 @@
     "binMax": 4.4,
     "binChipPx": 8,
     "binGrowMs": 260,
+    "crate": {"note": "Critics 1 fix 2: an empty crate in the yard for each colour until its bin grows in (muted wood, no colour, so the yard at rest has content but no legend). scale: of the bin's size; planks: plank lines across it.", "scale": 0.8, "face": "#6b5842", "edge": "#2a221b", "inside": "#3d3228", "plank": "#56473a", "planks": 3},
     "binInk": "#221a26",
     "binInside": -0.5,
     "tones": [0, 0, 0, 0],
@@ -149,8 +150,8 @@
     "linkedText": "Linked squads need 2 free spaces", "jamLinkedText": "Line jammed: linked squads need 2 free spaces", "jamLockText": "The locked space never opened.",
     "linkedWord": "linked", "linkedAria": "linked with column {c}", "debugNum": "v4", "heldText": "done, holding for its partner", "lockedText": "Locked space: its key is on the board",
     "mystery": {"c": "#2b3566", "tc": "#f3ead8", "q": "?"}, "rod": {"w": 8, "core": 5, "ink": "#221a26", "metal": "#b08f6a", "hi": "#f3e3c4", "rivet": 5, "stub": 10, "cap": 2.6}, "debugRow": "v4 twists",
-    "fixNote": "Critics 1 fix. fade: the rows behind the front mix this share (t, per row) of the tray colour into their tile, in sRGB, never opacity (tools/fade.js: every faded tile stays ΔE00 20+ from every other colour it shows with); tray is the rail's stone (style.css --tray, set from here at boot). minCellCss: the smallest board cell a coach band above the board may leave (else the coach sits in the top bar). hand: the coach's arrow; for a queue tile it comes in from the side at sideScale (its tip sideIn px inside the tile), for a space or the line from above (tip downIn px inside), and the line head's count steps aside by the arrow's half width (halfW) plus gap. rod: w, core and rivet (radius) in CSS px at a phone tile (52 px), scaled with the tile; partners two rows apart (and a partner below the visible rows: a stub of stub px and two dots) run down the gutter between their columns. mystery.c: the face-down card's back. jamChips: the most colour chips the jam sheet shows.",
-    "fade": {"tray": "#ddd3c0", "t": [0, 0.1, 0.2]}, "minCellCss": 8, "hand": {"sideScale": 0.56, "sideIn": 5, "downIn": 4, "halfW": 17, "gap": 6}, "jamChips": 6},
+    "fixNote": "Critics 1 fix. fade: the rows behind the front mix this share (t, per row) of the tray colour into their tile, in sRGB, never opacity (tools/fade.js: every faded tile stays ΔE00 20+ from every other colour it shows with); tray is the rail's stone (style.css --tray, set from here at boot); band (fix 2): row d sits on a band of the tray with this share of black mixed in (--band1, --band2), so the rows step back without touching the tile faces. minCellCss: the smallest board cell a coach band above the board may leave (else the coach sits in the top bar). hand: the coach's arrow; for a queue tile it comes in from the side at sideScale (its tip sideIn px inside the tile), for a space or the line from above (tip downIn px inside), and the line head's count steps aside by the arrow's half width (halfW) plus gap. rod: w, core and rivet (radius) in CSS px at a phone tile (52 px), scaled with the tile; partners two rows apart (and a partner below the visible rows: a stub of stub px and two dots) run down the gutter between their columns. mystery.c: the face-down card's back. jamChips: the most colour chips the jam sheet shows.",
+    "fade": {"tray": "#ddd3c0", "t": [0, 0.1, 0.2], "band": [0, 0.06, 0.12]}, "minCellCss": 8, "coachTopMarginPx": 3, "hand": {"sideScale": 0.56, "sideIn": 5, "downIn": 4, "halfW": 17, "gap": 6}, "jamChips": 6},
   "title": {"artW": 125, "artH": 190, "artMin": 2, "artMax": 5, "baseFrac": 0.58, "baseFracWide": 0.56, "wallArtPx": 3},
   "audio": {
     "volume": 0.5,
@@ -241,7 +242,7 @@
     "campPad": 1
   },
   "teach": {
-    "note": "Coach scripts for the teaching levels (SPEC-v3 §5), by level id: one line over the board and a bouncing arrow on what to tap. A step ends when any `until` holds: play (a tap after the step showed), line (a space is taken), wait (a squad has more sappers waiting than pixels in reach), lineEmpty (every squad home), gate (every gate open), tower (every tower down), reach:m (colour m has a pixel in reach), used:m (a card of colour m was played), hit; v4 M3: reveal (a ? squad turned over), pair (a linked pair went out), unlock (the locked space opened), locked (it is still shut), hidden (a ? is in view), linkedFront (a front card is linked). v4 M3 pointers: mystery (a ? tile in view), linked (a linked front card), lockSlot (the padlocked space), ring lockKey (the space's key on the board). A step whose `if` fails when it comes up is skipped (the same words, plus short:m = the front card of m is bigger than what is in reach, and front:m = m is a front card). Pointers: card (the leftmost front card of that colour), next (a faded card behind a front one), line (the holding line; with a card it glows while the arrow points at the card), ring (key, gate or tower on the board). {n} {crew} {reach} {go} fill in from the pointed card ({go} = the smaller of the squad and what is in reach).",
+    "note": "Coach scripts for the teaching levels (SPEC-v3 §5), by level id: one line over the board and a bouncing arrow on what to tap. A step ends when any `until` holds: play (a tap after the step showed), line (a space is taken), wait (a squad has more sappers waiting than pixels in reach), lineEmpty (every squad home), gate (every gate open), tower (every tower down), reach:m (colour m has a pixel in reach), used:m (a card of colour m was played), hit; v4 M3: reveal (a ? squad turned over), pair (a linked pair went out), unlock (the locked space opened), locked (it is still shut), hidden (a ? is in view), linkedFront (a front card is linked). v4 M3 pointers: mystery (a ? tile in view), linked (a linked front card), lockSlot (the padlocked space), ring lockKey (the space's key on the board). Critics 1 fix 2: short, the step's line where the coach sits in the top bar (a small screen where a band above the board would cost the board its 8 px cells). A step whose `if` fails when it comes up is skipped (the same words, plus short:m = the front card of m is bigger than what is in reach, and front:m = m is a front card). Pointers: card (the leftmost front card of that colour), next (a faded card behind a front one), line (the holding line; with a card it glows while the arrow points at the card), ring (key, gate or tower on the board). {n} {crew} {reach} {go} fill in from the pointed card ({go} = the smaller of the squad and what is in reach).",
     "e1-01": [{"say": "Tap a squad. Its sappers run for their colour.", "card": 1, "until": "play"},
               {"say": "The faded squads move up next. Raze it all!", "next": true, "until": "play"}],
     "e1-02": [{"say": "Thatch is walled in. Send the Torchbearers!", "card": 3, "until": ["wait", "reach:3"]},
@@ -261,9 +262,9 @@
     "e4-76": [{"say": "One space is locked. Its key is on the board.", "lockSlot": true, "ring": "lockKey", "until": "play"},
               {"say": "Dig to the key (dashed box): Looters!", "card": 14, "ring": "lockKey", "if": "locked", "until": "unlock"},
               {"say": "Unlocked! One more space for your squads.", "until": "play"}],
-    "e4-77": [{"say": "All twists at once. Linked squads: 2 spaces.", "linked": true, "if": "linkedFront", "until": "pair"},
-              {"say": "The locked space's key wears a dashed box.", "lockSlot": true, "ring": "lockKey", "if": "locked", "until": "unlock"},
-              {"say": "? squads turn at the front. Raze it all!", "until": "play"}]
+    "e4-77": [{"say": "All twists at once. Linked squads: 2 spaces.", "short": "Linked squads: 2 spaces.", "linked": true, "if": "linkedFront", "until": "pair"},
+              {"say": "The locked space's key wears a dashed box.", "short": "Space key: the dashed box.", "lockSlot": true, "ring": "lockKey", "if": "locked", "until": "unlock"},
+              {"say": "? squads turn at the front. Raze it all!", "short": "? squads turn at the front.", "until": "play"}]
   },
   "selfTest": {
     "solveNodes": 200000,

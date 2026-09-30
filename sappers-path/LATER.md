@@ -166,3 +166,7 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - The coach in the top bar (only the 400×600 iframe's level 77, where a band above the board would take its board under 8 px a cell) covers the level's number and name while it shows.
 - Easy on a phone (six spaces) uses the tight space layout (the count at 78%, the badges above it). If the counts feel small there, the line could drop to two rows of three.
 - The critic's section 3 (what M5's home screen and power-up bar must match: a full-width bar of four round badges with "+" states, the space budget at 375×812 and in the 400×600 iframe, one dominant Play button on the title scene) is M5's brief.
+- (Critics 1 re-check) Scale the desktop queue tiles up to use the side column (at 1280 the column is 520 px wide, so about 110 px tiles would fit); the fix 2 tray ends at the queue with brick below instead.
+- (Critics 1 re-check) M5's power-up bar: at 1280 four ~96 px badges need `--pw-h` about 110 px (or a 2×2 layout); in the 400×600 iframe the queue ends at y 586 of 600, so the bar still has no room there and needs an explicit decision.
+- (Critics 1 re-check) The landscape title's logo still grazes the keep's flag at 812×375 (cosmetic).
+- (Critics 1 fix 2) On a coached linked card the side arrow and the rod's top rivet share the column gap for as long as the coach shows (level 62's first step).
