@@ -6,10 +6,11 @@
 //   ~/.local/opt/node/bin/node tools/palette.js --opt [rounds]     search for a palette (hue families and lightness bands
 //                                                                  from PLAN below); prints the best one found
 //   --md '["#..", ...]'  a markdown before/after report: the argument is the BEFORE palette, config.json is AFTER
-// Deterministic (seeded). Levels are only read.
+//   --levels FILE        read the levels from FILE instead of levels/levels.json (v4 M3: a trial bake's output)
+// Deterministic (seeded). Levels are only read. v4 M3: require()d, it exports the colour maths (lab, de00) and minPair
+// (the smallest pair among a level's materials) and reads no levels.
 "use strict";
 const V3 = require("../config.json").v3;
-const LV = require("../levels/levels.json").levels;
 const arg = (k) => { const i = process.argv.indexOf("--" + k); return i > 0 ? process.argv[i + 1] : null; };
 
 // ---- colour maths ---------------------------------------------------------------------------------------------------
@@ -45,7 +46,16 @@ function okHex(L, C, hDeg) {
   return "#" + rgb.map((v) => gam(v).toString(16).padStart(2, "0")).join("");
 }
 
+// The smallest CIEDE2000 between any two of the materials a (ids 1-14) in palette pal (default config.json): {min, at}.
+function minPair(mats, pal) {
+  const P = pal || V3.mats.map((m) => (m ? m.c : null)); let min = 1e9, at = null;
+  for (let i = 0; i < mats.length; i++) for (let j = i + 1; j < mats.length; j++) { const d = de00(lab(P[mats[i]]), lab(P[mats[j]])); if (d < min) { min = d; at = [mats[i], mats[j]]; } }
+  return { min: at ? min : null, at };
+}
+if (require.main !== module) { module.exports = { lab, de00, minPair }; return; }
+
 // ---- which materials stand together ---------------------------------------------------------------------------------
+const LV = require(arg("levels") ? require("path").resolve(arg("levels")) : "../levels/levels.json").levels;
 const SETS = LV.map((L) => { const s = new Set(); for (const r of L.grid) for (const ch of r) { const k = ch.charCodeAt(0) - 96; if (k >= 1 && k <= 14) s.add(k); } return { n: L.n, id: L.id, mats: [...s].sort((a, b) => a - b) }; });
 const PAIRS = new Map(); // "a-b" -> levels
 for (const S of SETS) for (let i = 0; i < S.mats.length; i++) for (let j = i + 1; j < S.mats.length; j++) { const k = S.mats[i] + "-" + S.mats[j]; if (!PAIRS.has(k)) PAIRS.set(k, 0); PAIRS.set(k, PAIRS.get(k) + 1); }

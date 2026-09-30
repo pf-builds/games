@@ -8,6 +8,7 @@
 //   line(B, rules, order)              patient replay: {won, reason, peak, len, ms (engine time to the end)}
 //   fast(B, rules, n, seed, gapMs)     v4 M2: the fast tapper's win rate (taps whenever a tap is legal, never waits for rest)
 //   view(S) / look(S, ...)             v4 M2: what the player can see of the tray, and the lookahead player's scores
+//   plan(B, rules, n, seed, k, seeing) v4 M3: the sampling planner's win rate, honest about mystery cards or all-seeing
 // v4 M2: every player picks only among legal taps (a front card whose tap would not be refused: a free space, or 2 for a
 // linked card), so a stored order never holds a refused tap. On a level without links a patient player never meets a
 // refused tap (a line with no room at rest is already a jam), so every number there is the same as before.
@@ -172,9 +173,12 @@ function narrow(B, rules, order, nodes) {
   return { turns, forced, minSafe: turns ? minSafe : null, meanSafe: turns ? +(sum / turns).toFixed(2) : null, unknown };
 }
 
+// v4 M3: maxWait is the dead-time measure, the longest single tap from the tap until nothing moves.
 function line(B, rules, order) {
-  const S = E.replay(B, rules, order);
-  return { won: S.status === E.WON, reason: S.reason, peak: S.peak, len: order.length, hits: S.hits, kills: S.kills, ms: S.now };
+  const S = E.sim(B, rules); let maxWait = 0;
+  for (let i = 0; i < order.length && S.status === E.PLAYING; i++) { const t0 = S.now; if (S.play(order.charCodeAt(i) - 48) < -1) break; S.quiet(); if (S.now - t0 > maxWait) maxWait = S.now - t0; }
+  S.quiet();
+  return { won: S.status === E.WON, reason: S.reason, peak: S.peak, len: order.length, hits: S.hits, kills: S.kills, ms: S.now, maxWait };
 }
 
 // The fast tapper (v4 M2; the plan's "taps whenever a squad can go", the limit of tools/rush.js's rushed player): the
@@ -198,4 +202,51 @@ function fast(B, rules, n, seed, gapMs) {
   return wins / n;
 }
 
-module.exports = { rate, greedy, orders, solve, narrow, line, fast, view, look, legal, rng };
+// The sampling planner (v4 M3, the bake-speed version of M2's proposal). At each turn with a choice it scores every legal
+// tap by k rollouts: in each, the hidden cards take colours drawn from what the player hasn't seen (each card on its own: a
+// colour with at least its count unseen, weighted by the unseen count, as look() does), then the tap, then the one-move-
+// lookahead player to the end. A rollout scores the share of the fort razed (1 = a win); the planner plays the best tap
+// (seeded ties). seeing: it knows the true colours (the same k rollouts, each on its own lookahead seed). Returns its win
+// rate over n games. The gap between the honest and the seeing planner is what the "?" cards cost a player who reads the
+// board and the tray but doesn't count every pixel. Bounded: turns by the deck, rollouts by the lookahead's own guard.
+function plan(B, rules, n, seed, k, seeing) {
+  const S = E.sim(B, rules), top = new Int32Array(S.M.length), lb = new Int32Array(S.M.length), sc = new Float64Array(E.NCOL), gs = new Float64Array(E.NCOL), gb = new Int32Array(E.NCOL);
+  const real = Int32Array.from(B.cardM), hid = [], w = new Float64Array(E.NMAT);
+  let wins = 0;
+  const rollout = (r) => {
+    for (let guard = 0; guard <= B.ncards && S.status === E.PLAYING; guard++) {
+      look(S, lb, gs); let nb = 0, bl = 1e9;
+      for (let j = 0; j < E.NCOL; j++) { const v = gs[j]; if (v === Infinity) continue; if (v < bl) { bl = v; nb = 0; } if (v === bl) gb[nb++] = j; }
+      if (!nb) break;
+      S.play(gb[Math.floor(r() * nb)]); S.quiet();
+    }
+    return S.status === E.WON ? 1 : 1 - S.pixLeft / B.pixTotal;
+  };
+  try {
+    for (let g = 0; g < n; g++) {
+      S.reset(); const r = rng((seed | 0) + g * 7727);
+      for (let guard = 0; guard <= B.ncards && S.status === E.PLAYING; guard++) {
+        let nl = 0, only = -1; for (let j = 0; j < E.NCOL; j++) if (legal(S, j)) { nl++; only = j; }
+        if (!nl) break;
+        if (nl > 1) {
+          S.save(top); hid.length = 0; for (let ci = 0; ci < B.ncards; ci++) if (S.hidden(ci)) hid.push(ci);
+          const u = hid.length && !seeing ? view(S).unseen : null; sc.fill(0);
+          for (let s = 0; s < k; s++) {
+            if (u) for (const ci of hid) { let tot = 0; for (let m = 1; m < E.NMAT; m++) { w[m] = m !== E.IRON && u[m] >= B.cardN[ci] ? u[m] : 0; tot += w[m]; }
+              if (!tot) for (let m = 1; m < E.NMAT; m++) { w[m] = m !== E.IRON && S.left[m] > 0 ? 1 : 0; tot += w[m]; }
+              let x = r() * tot, m = 1; for (; m < E.NMAT - 1 && x >= w[m]; m++) x -= w[m]; B.cardM[ci] = tot ? m : real[ci]; }
+            for (let j = 0; j < E.NCOL; j++) { if (!legal(S, j)) continue; S.play(j); S.quiet(); sc[j] += rollout(r); S.load(top); }
+            if (u) for (const ci of hid) B.cardM[ci] = real[ci];
+          }
+          let bj = -1, bs = -1, nt = 0; for (let j = 0; j < E.NCOL; j++) { if (!legal(S, j)) continue; if (sc[j] > bs + 1e-9) { bs = sc[j]; bj = j; nt = 1; } else if (Math.abs(sc[j] - bs) <= 1e-9 && r() < 1 / ++nt) bj = j; }
+          only = bj;
+        }
+        S.play(only); S.quiet();
+      }
+      if (S.status === E.WON) wins++;
+    }
+  } finally { B.cardM.set(real); }
+  return wins / n;
+}
+
+module.exports = { rate, greedy, orders, solve, narrow, line, fast, view, look, plan, legal, rng };
