@@ -9,14 +9,16 @@
 //   until every squad is home), the goblin, the win panel, Next reaches level 2; a jam loss through the cards (v3.1: a
 //   patient order that fills every space with squads that can't reach), the sheet naming the crews, one Retry tap
 //   restarts; a full line (v3.1): every front card wears the lock, a real tap on one is refused (nothing changes, the
-//   toast), and plays once a squad is home; stuck and working squads; the near-jam warning; the victory march; live frame times with three rapid taps on levels 65 and 70 at 1x and 2x, and the draw cost; the Era 3
+//   toast), and plays once a squad is home; stuck and working squads; the near-jam warning; the victory march; live frame times with three rapid taps on levels 65 and 70 at 1x and 3x, and the draw cost; the Era 3
 //   board's CSS px per cell (8 or more required);
 //   pause and resume: on window blur (a real focus change to the host page in the iframe run) and on a hidden tab,
 //   the clock stops, the Paused sheet takes the next tap, the game resumes without a jump and no card is played;
 //   the map button; a garbage save loads clean.
 // Then a hidden-tab load (document.hidden faked, rAF held, driven by SP.tick) that runs selfTest and wins a level.
 // Zero console errors AND warnings anywhere.
-// Screenshots (default tools/shots-v3.1/): v3.1 at 375×812: stuck-vs-working, near-jam, full-blocked, refused, jam-sheet,
+// v4 M1: the speed button cycles 1x, 2x, 3x (the rapid-tap frame check runs at 1x and 3x); the speed and the colour-blind
+// toggle persist across a reload. The M1 screens themselves come from tools/shots-v4-m1.mjs.
+// Screenshots (default tools/shots-v4-m1/harness/): v3.1 at 375×812: stuck-vs-working, near-jam, full-blocked, refused, jam-sheet,
 // victory-march; and, as before, 375×812 level 1 teach, level 26 gate teach, level 51 archer hit, the
 // win mid-collapse and the goblin fleeing, a fail; 375 and 1280: two and three overlapping squads mid-show; frame
 // strips (six frames 300 ms apart, stitched): a first squad still working while a second heads out, and level 3's
@@ -35,7 +37,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const i = process.argv.indexOf("--" + k); return i > 0 ? process.argv[i + 1] : d; };
 const URL_ = arg("url", "http://127.0.0.1:8491/sappers-path/");
 const ORIGIN = new URL(URL_).origin;
-const OUT = resolve(arg("out", resolve(here, "shots-v3.1")));
+const OUT = resolve(arg("out", resolve(here, "shots-v4-m1", "harness")));
 const WALL_MS = 420000, MIN_CELL = 8;
 mkdirSync(OUT, { recursive: true });
 const wall = setTimeout(() => { console.error("harness: wall budget exceeded"); process.exit(2); }, WALL_MS);
@@ -60,7 +62,7 @@ async function overlapShots(page, ev, tap, shot, tag, R) {
   const hold = (ms) => ev((m) => { SP.tick(m); return SP.state(); }, ms);
   R.shots = R.shots || {};
   // Two, then three squads out on level 65.
-  await ev(() => { SP.fast(false); SP.load(65, "normal"); });
+  await ev(() => { SP.speed(1); SP.load(65, "normal"); });
   let cols = await reach(); await tap(`.card[data-col="${cols[0]}"]`); await hold(700);
   cols = await reach(); if (cols.length) await tap(`.card[data-col="${cols[0]}"]`); let st = await hold(700);
   await shot("two-squads"); R.shots.two = { spaces: st.line.length, runners: st.runners };
@@ -202,7 +204,7 @@ async function run() {
         ok(!!nj && nj.li.near && (await L("#line-lab").textContent()) === "One space left", tag + " near jam: 'One space left' (" + (nj && JSON.stringify(nj.li)) + ")");
         if (vp.shots === "375" && nj) await shot("near-jam"); }
       // Victory march: level 3's stored line through the cards; once the tray is empty the pace goes to 1.5x.
-      { await ev(() => { SP.fast(false); SP.load(3, "normal"); });
+      { await ev(() => { SP.speed(1); SP.load(3, "normal"); });
         const o = await ev(() => SP.winOrder());
         for (let i = 0; i < o.length; i++) { await tap(`.card[data-col="${o[i]}"]`); if (i < o.length - 1) await quiet(); }
         s = await ev(() => SP.tick(400));
@@ -210,20 +212,21 @@ async function run() {
         if (vp.shots === "375") await shot("victory-march");
         s = await quiet(); ok(s.status === "won", tag + " victory march ends in the win"); }
 
-      // Three rapid taps on levels 65 and 70, at 1x and 2x: live frame times while the squads overlap, then the JS cost
+      // Three rapid taps on levels 65 and 70, at 1x and 3x: live frame times while the squads overlap, then the JS cost
       // of one draw at that moment.
       const rapid = async (n, fast) => {
-        await ev((a) => { SP.load(a[0], "normal"); SP.fast(a[1]); }, [n, fast]);
+        await ev((a) => { SP.load(a[0], "normal"); SP.speed(a[1] ? 3 : 1); }, [n, fast]);
         const cols = await ev(() => { const st = SP.state(), o = [], p = []; st.fronts.forEach((f, j) => { if (f) (SP.reachable(f.mat) > 0 ? o : p).push(j); }); return o.concat(p); });
         for (const c of cols.slice(0, 3)) await tap(`.card[data-col="${c}"]`);
-        return ev(() => new Promise((res) => { const d = []; let last = performance.now(); const f = (t) => { d.push(t - last); last = t; if (d.length < 120) requestAnimationFrame(f); else { d.sort((a, b) => a - b); res({ n: d.length, p50: +d[60].toFixed(1), p95: +d[113].toFixed(1), max: +d[119].toFixed(1), runners: SP.state().runners, spaces: SP.state().line.length }); } }; requestAnimationFrame(f); }));
+        // Peak runners and squads out are sampled every 8th frame (at 3x the squads can be home before the window ends).
+        return ev(() => new Promise((res) => { const d = []; let last = performance.now(), runners = 0, spaces = 0; const f = (t) => { d.push(t - last); last = t; if (d.length % 8 === 1) { const s = SP.state(); runners = Math.max(runners, s.runners); spaces = Math.max(spaces, s.line.length); } if (d.length < 120) requestAnimationFrame(f); else { d.sort((a, b) => a - b); res({ n: d.length, p50: +d[60].toFixed(1), p95: +d[113].toFixed(1), max: +d[119].toFixed(1), runners, spaces }); } }; requestAnimationFrame(f); }));
       };
       R.frames = {};
       for (const n of [65, 70]) for (const fast of [false, true]) {
-        const fr = await rapid(n, fast); R.frames["L" + n + (fast ? " 2x" : " 1x")] = fr;
-        ok(fr.p95 < 25 && fr.spaces >= 2, tag + " frame time with overlapping squads, level " + n + (fast ? " 2x" : " 1x") + " (p95 " + fr.p95 + " ms, " + fr.runners + " runners, " + fr.spaces + " squads)");
+        const fr = await rapid(n, fast); R.frames["L" + n + (fast ? " 3x" : " 1x")] = fr;
+        ok(fr.p95 < 25 && fr.spaces >= 2, tag + " frame time with overlapping squads, level " + n + (fast ? " 3x" : " 1x") + " (p95 " + fr.p95 + " ms, peak " + fr.runners + " runners, " + fr.spaces + " squads)");
       }
-      await ev(() => { SP.fast(false); SP.load(70, "normal"); });
+      await ev(() => { SP.speed(1); SP.load(70, "normal"); });
       { const cols = await ev(() => { const st = SP.state(), o = []; st.fronts.forEach((f, j) => { if (f && SP.reachable(f.mat) > 0) o.push(j); }); return o; }); for (const c of cols.slice(0, 3)) await tap(`.card[data-col="${c}"]`); }
       await ev(() => SP.tick(900));
       const perf = await ev(() => SP.perf(120));
@@ -283,11 +286,18 @@ async function run() {
       R.requests = reqs.length; R.payloadBytes = bytes; R.external = ext;
       ok(ext.length === 0, tag + " no external requests (" + ext.join(", ") + ")");
 
-      // Mute persists in the save; then a garbage save loads clean.
+      // Mute, the speed (v4 M1: 1x, 2x, 3x) and colour-blind mode (the map's toggle) persist in the save; then a garbage
+      // save loads clean.
       if (!vp.iframe) {
         await ev(() => SP.load(1, "normal")); await tap("#top .tog-mute");
+        await tap("#top .tog-speed"); await tap("#top .tog-speed");
+        ok((await L("#top .tog-speed").textContent()) === "3\u00d7" && (await S()).speed === 3, tag + " the speed button cycles to 3x");
+        await tap("#btn-map"); await tap("#map .tog-cb");
+        ok((await S()).cb === true && (await L("#map .tog-cb").getAttribute("aria-pressed")) === "true", tag + " the map's toggle turns colour-blind marks on");
         await page.reload({ waitUntil: "load" }); await page.waitForFunction(() => window.SP, null, { timeout: 15000 });
         ok((await page.getAttribute("#top .tog-mute", "aria-pressed")) === "true", tag + " mute persists across a reload");
+        s = await S();
+        ok(s.speed === 3 && (await page.textContent("#top .tog-speed")) === "3\u00d7" && s.cb === true && (await page.getAttribute("#title .tog-cb", "aria-pressed")) === "true" && (await page.evaluate(() => document.body.classList.contains("cb"))), tag + " speed 3x and colour-blind marks persist across a reload");
         await page.evaluate(() => localStorage.setItem("sappers-path.v3", '{"v":1,"done":{"e1-01":7,"e3-75":7,"x":9},"settings":{"diff":"nightmare","muted":"yes"},"last":"e3-75"}'));
         await page.reload({ waitUntil: "load" });
         await page.waitForFunction(() => window.SP, null, { timeout: 15000 });

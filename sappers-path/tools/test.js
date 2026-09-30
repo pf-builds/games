@@ -1,6 +1,7 @@
 // Sapper's Path v3 node checks: the rules engine (SPEC-v3 §2-4, §9; the dispatch model from playtest 1) on hand-made
 // boards with known answers, then a differential run of the engine against the slow reference (tools/ref.js) on every
-// baked level, patient and rushed, and the stored winning orders on every difficulty, played patiently.
+// baked level, patient and rushed, and the stored winning orders on every difficulty, played patiently; last, the page
+// save's settings (v4 M1: speed and colour-blind marks) through sanitize.
 // Run: ~/.local/opt/node/bin/node tools/test.js   (exit code 1 on any failure)
 "use strict";
 const E = require("../src/engine.js");
@@ -295,6 +296,15 @@ const ARCH = (cols) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "
   }
   eq(wins, total, "levels: every stored winning order wins patiently on its difficulty (" + total + " replays)");
   eq(LEVELS.levels.length, 75, "levels: 75 levels baked");
+}
+
+// ---- the page's save (v4 M1 settings: speed replaces the 2x flag, colour-blind marks) ----------------------------------
+{
+  const Save = require("../src/save.js"), order = LEVELS.levels.map((l) => l.id), set = (raw) => Save.sanitize({ settings: raw }, order).settings;
+  eq(Save.fresh().settings, { muted: false, speed: 1, cb: false, diff: "normal" }, "save: a fresh save plays at 1x with colour-blind marks off");
+  eq([set({ speed: 3, cb: true }).speed, set({ speed: 3, cb: true }).cb], [3, true], "save: speed 3 and colour-blind on load as saved");
+  eq([set({ fast: true }).speed, set({ fast: false }).speed, set({ speed: 2.5 }).speed, set({ speed: 9 }).speed, set({ speed: "3" }).speed], [2, 1, 1, 1, 1], "save: the old 2x flag loads as 2; a bad speed loads as 1");
+  eq([set({ cb: "yes" }).cb, set({ cb: 1 }).cb, set({}).cb], [false, false, false], "save: colour-blind is on only for a strict true");
 }
 
 console.log(pass + " passed, " + fail + " failed");

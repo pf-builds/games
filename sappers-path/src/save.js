@@ -1,8 +1,10 @@
 // Sapper's Path save (SPEC-v3 §6). One localStorage key (config.save.key, "sappers-path.v3"; the v1 and v2 keys are left
-// alone) holding {v, done: {id: mask}, settings: {muted, fast, diff}, last}. mask is a bit per difficulty the level was
+// alone) holding {v, done: {id: mask}, settings: {muted, speed, cb, diff}, last}. mask is a bit per difficulty the level was
 // won on (1 easy, 2 normal, 4 hard). Every field is sanitized and clamped on load against the levels the page actually
 // has, in order: a level opens when the one before it is won on any difficulty, so a win on a level that is still locked
 // is dropped, and `last` must be an open level. Never throws. UMD like engine.js, so Node can check sanitize().
+// v4 M1: speed (the speed button's multiplier, a whole number 1-3; the page also checks it against config show.speeds)
+// replaces the old 2x flag (a save with fast: true loads as 2), and cb (colour-blind marks) is a strict boolean.
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
@@ -11,7 +13,8 @@
   "use strict";
   const VERSION = 1, DIFFS = ["easy", "normal", "hard"], ALL = 7;
 
-  function fresh() { return { v: VERSION, done: {}, settings: { muted: false, fast: false, diff: "normal" }, last: null }; }
+  const MAXSPEED = 3;
+  function fresh() { return { v: VERSION, done: {}, settings: { muted: false, speed: 1, cb: false, diff: "normal" }, last: null }; }
   const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
   const isObj = (o) => !!o && typeof o === "object" && !Array.isArray(o);
 
@@ -30,7 +33,8 @@
         if (m) s.done[id] = m;
       }
       const set = isObj(raw.settings) ? raw.settings : {};
-      s.settings.muted = set.muted === true; s.settings.fast = set.fast === true;
+      s.settings.muted = set.muted === true; s.settings.cb = set.cb === true;
+      s.settings.speed = Number.isInteger(set.speed) && set.speed >= 1 && set.speed <= MAXSPEED ? set.speed : set.fast === true ? 2 : 1;
       s.settings.diff = DIFFS.indexOf(set.diff) >= 0 ? set.diff : "normal";
       if (typeof raw.last === "string" && open.has(raw.last)) s.last = raw.last;
       return s;

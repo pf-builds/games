@@ -1,6 +1,6 @@
 {
   "v3": {
-    "note": "Sapper's Path v3 rules and palette (SPEC-v3). Holding spaces and archer lethality per difficulty (rules: turn these after playtest); MATS order is the material id (1-14) the grid letters a-n name. Gilt (keys) is an amber bronze no other material is near, and its blocks carry a key glyph.",
+    "note": "Sapper's Path v3 rules and palette (SPEC-v3). Holding spaces and archer lethality per difficulty (rules: turn these after playtest); MATS order is the material id (1-14) the grid letters a-n name. v4 M1 retuned the colours for distance (tools/palette.js, report in tools/v4-m1-palette.md): every pair of materials that stand together in a level is 25+ apart in CIEDE2000. Gilt (keys) is a dark old gold, and its blocks always carry a key glyph.",
     "rules": {
       "easy": {"hold": 6, "archersKill": false},
       "normal": {"hold": 5, "archersKill": false},
@@ -10,20 +10,20 @@
     "flags": {"note": "Comparison switch (SPEC-v3 §9, playtest 1). mergeLeftovers true: a tapped squad joins the space of its colour instead of taking its own (the old spam exploit). The bake assumes false.", "mergeLeftovers": false},
     "mats": [
       null,
-      {"n": "Earth bank", "c": "#ff8c1a", "crew": "Diggers"},
-      {"n": "Palisade", "c": "#e6262e", "crew": "Axemen"},
-      {"n": "Thatch", "c": "#ffe21f", "crew": "Torchbearers"},
-      {"n": "Timber", "c": "#ff3fa4", "crew": "Sawyers"},
-      {"n": "Rubble stone", "c": "#a3aab4", "crew": "Masons"},
-      {"n": "Ashlar", "c": "#f4f1ea", "crew": "Stonecutters"},
-      {"n": "Slate", "c": "#2f62ff", "crew": "Quarrymen"},
-      {"n": "Roof tile", "c": "#8f45ff", "crew": "Roofers"},
-      {"n": "Brick", "c": "#9ee52a", "crew": "Miners"},
-      {"n": "Iron", "c": "#1b1b22", "crew": "Smiths"},
-      {"n": "Hedge", "c": "#16a34a", "crew": "Goats"},
-      {"n": "Warded stone", "c": "#0fb5a6", "crew": "Hexbreakers"},
-      {"n": "Crystal", "c": "#3fd4ff", "crew": "Braziers"},
-      {"n": "Gilt", "c": "#c7861a", "crew": "Looters"}
+      {"n": "Earth bank", "c": "#ff8a3d", "crew": "Diggers"},
+      {"n": "Palisade", "c": "#e40932", "crew": "Axemen"},
+      {"n": "Thatch", "c": "#ffd80b", "crew": "Torchbearers"},
+      {"n": "Timber", "c": "#fd4bc0", "crew": "Sawyers"},
+      {"n": "Rubble stone", "c": "#969196", "crew": "Masons"},
+      {"n": "Ashlar", "c": "#fefbfb", "crew": "Stonecutters"},
+      {"n": "Slate", "c": "#116fe3", "crew": "Quarrymen"},
+      {"n": "Roof tile", "c": "#8d04cd", "crew": "Roofers"},
+      {"n": "Brick", "c": "#8cf531", "crew": "Miners"},
+      {"n": "Iron", "c": "#17161d", "crew": "Smiths"},
+      {"n": "Hedge", "c": "#2b9601", "crew": "Goats"},
+      {"n": "Warded stone", "c": "#03c9b0", "crew": "Hexbreakers"},
+      {"n": "Crystal", "c": "#1fbefe", "crew": "Braziers"},
+      {"n": "Gilt", "c": "#9f7d00", "crew": "Looters"}
     ],
     "ground": {
       "grass": "#3f4a36",
@@ -50,14 +50,9 @@
     "yardRows": 3,
     "maxCellCss": 22,
     "maxDpr": 3,
-    "inset": 0.06,
-    "radius": 0.26,
-    "bevel": 0.15,
-    "grout": -0.62,
+    "stud": {"note": "v4 M1 flat stud: seam width in CSS px and its tone (the block's colour toward black), face corner radius (fraction of the face), a soft highlight band on the face's top (hi toward white, hiH of the face) and a faint foot (lo toward black, loH), and a small glint [x, y, w, h] as fractions of the face.", "seamCss": 1, "seam": -0.34, "radius": 0.22, "hi": 0.14, "hiH": 0.12, "lo": -0.07, "loH": 0.14, "glint": [0.14, 0.14, 0.28, 0.16], "glintAlpha": 0.5},
     "hi": 0.34,
     "lo": -0.3,
-    "stud": 0.13,
-    "studAlpha": 0.55,
     "markW": 0.1,
     "mark": -0.42,
     "markLight": 0.5,
@@ -78,7 +73,7 @@
     "binChipPx": 8,
     "binInk": "#221a26",
     "binInside": -0.5,
-    "tones": [0, 0.14, -0.2, -0.08],
+    "tones": [0, 0, 0, 0],
     "deco": {"clear": 1, "treePct": 38, "fieldPct": 16, "tuftPct": 9, "flowerPct": 4, "stonePct": 2, "ripplePct": 30, "tents": 2,
       "tree": ["#2c4527", "#3a5a31"], "trunk": "#2a3222", "field": ["#4d5234", "#40452a"], "path": ["#56503f", "#6a634e"], "tuft": "#56654a",
       "flowers": ["#b9837a", "#c9b36a", "#b8a9c2"], "stone": "#5c5a52", "ripple": "#3f5f86"},
@@ -100,9 +95,9 @@
     "labelKill": "#ff8a70"
   },
   "show": {
-    "note": "Pacing (playtest 1). The page plays engine time (v3.time) at pace x real time, and speedFast x that on 2x; turning pace slows or speeds everything alike and changes no outcome. settleCapMs: the win or fail sheet waits for every squad to get home, at most this long (real ms) after the deciding moment, then everything lands. maxRunners: sappers drawn at once (the rules never depend on it). v3.1: a refused tap (no free space) shakes its card for blockedShakeMs (blockedShake: px offsets) every time; its toast and blocked sound come at most once per blockedGapMs. victoryPace: once the tray is empty and the line is sure to win, the show plays at this pace (or 2x if that is on and faster) until the sheet; presentation only.",
+    "note": "Pacing (playtest 1). The page plays engine time (v3.time) at pace x real time, and x the speed button's multiplier (speeds: it cycles 1x, 2x, 3x; v4 M1); turning pace slows or speeds everything alike and changes no outcome. settleCapMs: the win or fail sheet waits for every squad to get home, at most this long (real ms) after the deciding moment, then everything lands. maxRunners: sappers drawn at once (the rules never depend on it). v3.1: a refused tap (no free space) shakes its card for blockedShakeMs (blockedShake: px offsets) every time; its toast and blocked sound come at most once per blockedGapMs. victoryPace: once the tray is empty and the line is sure to win, the show plays at this pace (or the speed button's, if that is faster) until the sheet; presentation only.",
     "pace": 1,
-    "speedFast": 2,
+    "speeds": [1, 2, 3],
     "settleCapMs": 6000,
     "maxRunners": 240,
     "popMs": 260,
@@ -141,7 +136,7 @@
     "focus": "#fff3a8"
   },
   "layout": {"wideMinPx": 760, "wideAspect": 1.15, "railWidePx": 520, "railMinPx": 340, "railFrac": 0.42, "gapWidePx": 32, "gapShortPx": 12, "sidePadPx": 24, "maxDtMs": 100, "lineSlots": 8, "sapperIcons": 2,
-    "rotateBelowCss": 10, "shortMaxH": 480, "railShortPx": 348, "coachFontPx": [21, 15], "labMinPx": 10, "nameMinPx": 12, "lineText": "Squads out", "fullText": "Line full: wait for a squad to come home", "nearText": "One space left",
+    "rotateBelowCss": 10, "shortMaxH": 480, "railShortPx": 348, "coachFontPx": [21, 15], "nameMinPx": 12, "queueRows": 3, "glyphPx": 18, "manPx": 20, "lineText": "Squads out", "fullText": "Line full: wait for a squad to come home", "nearText": "One space left",
     "marchText": "Victory march ×{x}", "blockedText": "No space: wait for a squad to come home", "stuckWord": "stuck", "workWord": "working", "freeWord": "free", "jamNames": 3},
   "title": {"artW": 125, "artH": 190, "artMin": 2, "artMax": 5, "baseFrac": 0.58, "baseFracWide": 0.56, "wallArtPx": 3},
   "audio": {
@@ -253,6 +248,7 @@
     "tickSample": ["e1-01", "e2-26", "e3-51", "e3-65"],
     "tickCapMs": 90000,
     "overlapLevel": "e3-65",
+    "queueLevel": "e2-40",
     "jamLevel": {"name": "Jam check", "w": 9, "h": 5, "grid": [".........", ".aaaaaaa.", ".abcdefa.", ".aaaaaaa.", "....#...."],
       "cols": [[[2, 1], [1, 16]], [[3, 1]], [[4, 1]], [[5, 1]], [[6, 1]]]},
     "stuckLevel": {"name": "Stuck check", "w": 4, "h": 3, "grid": ["....", ".aa.", "..#."], "cols": [[[1, 1]], [], [], [], []]}

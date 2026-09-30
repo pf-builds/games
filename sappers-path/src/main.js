@@ -15,15 +15,19 @@
 // (tap, a throttled pop per pixel, haul, line fill and near-jam warning, jam, blocked, gate, arrows, collapse, fanfare), the
 // win beat (difficulty medals), and portal shape: pause on blur or a hidden tab (the clock stops and the audio context
 // suspends; a Paused sheet takes the next tap so it can never play a card), and the board turned a quarter in landscape.
-// Fix pass: the level's name sits over its difficulty and steps its size down to fit (never an ellipsis), crew names on
-// cards fit the same way, a full holding line marks each front card blocked (or safe, merge flag only; run on a play,
-// never per frame), and wide screens put every control in one side panel.
+// Fix pass: the level's name sits over its difficulty and steps its size down to fit (never an ellipsis), a full
+// holding line marks each front card blocked (or safe, merge flag only; run on a play, never per frame), and wide
+// screens put every control in one side panel.
 // v3.1: a tap with no free space is refused (the card shakes, a toast, a soft "blocked" sound, all throttled by
 // show.blockedGapMs; no input lock). The overflow fail is gone: the fail is a jammed line (every space held by a squad
 // that can't reach a block, found at rest). Each space reads stuck (hatched, a lock) or working (gold rim, a walking
 // marker, the figures step); one space left with every other squad stuck warns ("One space left", the last space pulses);
 // a full line marks each front card blocked. Victory march: once the tray is empty and a scratch copy run to rest wins,
-// the show plays at show.victoryPace (never slower than 2x when that is on) until the sheet.
+// the show plays at show.victoryPace (never slower than the speed button) until the sheet.
+// v4 M1 (the look pass): the queue is colour first (solid tiles with a big count, no crew names) and shows three rows,
+// the front one tappable and two faded behind; the holding spaces are bigger; the speed button cycles 1x, 2x, 3x; a
+// colour-blind toggle on the title and the map puts the material marks on the blocks and a glyph on the tiles. Both
+// settings live in the save. The board's flat studs and retuned palette are board.js and config.json.
 (function () {
   "use strict";
   const NS = window.SappersPath, E = NS.engine, Save = NS.save, Board = NS.board, Art = NS.art, Audio = NS.audio;
@@ -31,12 +35,13 @@
   const DEBUG = new URLSearchParams(location.search).get("debug") === "1";
   const DIFFS = Save.DIFFS, DNAME = { easy: "Easy", normal: "Normal", hard: "Hard" }, $ = (id) => document.getElementById(id);
   const app = { cfg: null, levels: [], byId: new Map(), order: [], eras: [], save: null, entry: null, B: null, S: null, V: null, audio: null, sheets: null,
-    clock: 0, lastT: 0, screen: "title", diff: "normal", fast: false, ending: null, endAt: -1, panel: null, panelAt: 0, testing: false,
-    toastT: -1e12, popK: 0, cards: [], nexts: [], slots: [], wide: false, chipURL: [], manURL: [], nodes: [], lastW: 0, lastH: 0,
+    clock: 0, lastT: 0, screen: "title", diff: "normal", speed: 1, cb: false, ending: null, endAt: -1, panel: null, panelAt: 0, testing: false,
+    toastT: -1e12, popK: 0, cards: [], nexts: [], slots: [], wide: false, glURL: [], manURL: [], nodes: [], lastW: 0, lastH: 0,
     coach: null, used: 0, cues: {}, paused: false, pauses: 0, focusEl: null, pt: { x: 0, y: 0 }, T: null, tbuf: null, labFit: new Map(), verdict: [],
     et: 0, endT: -1, lineDirty: false, lineMoved: false, ord: [], slotPts: [], blockT: -1e12, refused: 0, march: false,
     li: { stuck: 0, work: 0, occ: 0, free: 0, near: false, full: false, danger: false } };
-  const togMute = Array.from(document.querySelectorAll(".tog-mute")), togFast = Array.from(document.querySelectorAll(".tog-fast")), segs = Array.from(document.querySelectorAll(".seg button"));
+  const togMute = Array.from(document.querySelectorAll(".tog-mute")), togSpeed = Array.from(document.querySelectorAll(".tog-speed")), togCb = Array.from(document.querySelectorAll(".tog-cb"));
+  const segs = Array.from(document.querySelectorAll(".seg button"));
 
   // ---- boot --------------------------------------------------------------------------------------------------------
   function getJSON(u) { return fetch(u, { cache: "no-cache" }).then((r) => { if (!r.ok) throw new Error(u + " " + r.status); return r.json(); }); }
@@ -56,7 +61,7 @@
     H.tap = () => { app.lineDirty = true; }; H.free = () => { app.lineDirty = true; }; H.move = () => { app.lineMoved = true; };
     try { app.V.calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { /* motion stays on */ }
     app.audio = Audio.create(app.cfg.audio);
-    setMuted(app.save.data.settings.muted, false); setFast(app.save.data.settings.fast, false); setDiff(app.diff, false);
+    setMuted(app.save.data.settings.muted, false); setSpeed(app.save.data.settings.speed, false); setCb(app.save.data.settings.cb, false); setDiff(app.diff, false);
     paintWall(); chips(); buildTray(); buildLine(); buildMap(); wire();
     showScreen("title"); layout();
     if (DEBUG) window.SP = SP;
@@ -86,26 +91,30 @@
       const r = document.documentElement.style; r.setProperty("--wall", "url(" + c.toDataURL() + ")"); r.setProperty("--wall-size", src.width * a + "px " + src.height * a + "px");
     } catch (e) { /* the flat background colour stays */ }
   }
-  // Block chips (tray swatches) and sapper figures (holding line) as image URLs, drawn by board.js.
+  // Material glyphs (the queue tiles' mark in colour-blind mode, used as a CSS mask so it takes the tile's text colour) and
+  // sapper figures (holding line) as image URLs, drawn by board.js.
   function chips() {
-    const dpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1)), s = Math.round(16 * dpr), ms = Math.round(14 * dpr);
+    const dpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1)), s = Math.round(app.cfg.layout.glyphPx * dpr), ms = Math.round(app.cfg.layout.manPx * dpr);
     for (let m = 1; m < E.NMAT; m++) {
-      try { app.chipURL[m] = "url(" + app.V.chip(m, s).toDataURL() + ")"; } catch (e) { app.chipURL[m] = "none"; }
+      try { app.glURL[m] = "url(" + app.V.glyph(m, s, "#ffffff").toDataURL() + ")"; } catch (e) { app.glURL[m] = "none"; }
       try { const f = app.V.man(m, ms), c = document.createElement("canvas"); c.width = ms; c.height = ms; c.getContext("2d").drawImage(f, 0, 0, ms, ms, 0, 0, ms, ms); app.manURL[m] = "url(" + c.toDataURL() + ")"; } catch (e) { app.manURL[m] = "none"; }
     }
   }
 
   // ---- tray, holding line, map (built once, updated in place) ------------------------------------------------------
+  // v4 M1, the queue: colour first. Each column shows layout.queueRows tiles at full size, each a solid tile in its
+  // material's colour with a big count (no crew name, no swatch; the material's glyph only in colour-blind mode): the
+  // front one is the tap target (a raised button), the ones behind sit back, flat and progressively faded, so three moves
+  // ahead read at a glance.
   function buildTray() {
-    const tray = $("tray");
+    const tray = $("tray"), inner = '<b class="n"></b><i class="gl" aria-hidden="true"></i>';
     for (let j = 0; j < E.NCOL; j++) {
       const col = document.createElement("div"); col.className = "col";
-      const b = document.createElement("button"); b.className = "card"; b.dataset.col = j;
-      b.innerHTML = '<span class="top"><i class="sw"></i><b class="n"></b></span><span class="lab"></span>';
+      const b = document.createElement("button"); b.className = "tile card"; b.dataset.col = j; b.innerHTML = inner;
       b.addEventListener("click", () => { playCol(j); });
       col.append(b); app.cards.push(b);
       const nx = [];
-      for (let d = 1; d <= 3; d++) { const x = document.createElement("div"); x.className = "next d" + d; x.innerHTML = '<i class="sw"></i><span></span>'; col.append(x); nx.push(x); }
+      for (let d = 1; d < app.cfg.layout.queueRows; d++) { const x = document.createElement("div"); x.className = "tile next d" + d; x.setAttribute("aria-hidden", "true"); x.innerHTML = inner; col.append(x); nx.push(x); }
       app.nexts.push(nx); tray.append(col);
     }
   }
@@ -116,7 +125,7 @@
   // Text on a colour: white or ink, whichever has the higher contrast (WCAG relative luminance).
   const INK = "#221a26", relLum = (hex) => { const v = parseInt(hex.slice(1), 16), f = (s) => { const x = ((v >> s) & 255) / 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }; return 0.2126 * f(16) + 0.7152 * f(8) + 0.0722 * f(0); };
   const textOn = (hex) => { const L = relLum(hex); return 1.05 / (L + 0.05) >= (L + 0.05) / (relLum(INK) + 0.05) ? "#ffffff" : INK; };
-  function paintMat(el, m) { const c = mat(m).c, t = textOn(c); el.style.setProperty("--mc", c); el.style.setProperty("--tc", t); el.style.setProperty("--oc", t === INK ? "rgba(255,255,255,.45)" : "rgba(20,16,28,.7)"); }
+  function paintMat(el, m) { const c = mat(m).c, t = textOn(c); el.style.setProperty("--mc", c); el.style.setProperty("--tc", t); el.style.setProperty("--oc", t === INK ? "rgba(255,255,255,.45)" : "rgba(20,16,28,.7)"); el.style.setProperty("--gl", app.glURL[m] || "none"); }
   // Fit a label to its box: the CSS size, stepped down in one measure (cached per text until the next resize).
   function fitText(el, key, min) {
     let px = app.labFit.get(key);
@@ -129,19 +138,18 @@
     const S = app.S, B = app.B, live = S && S.status === E.PLAYING && !app.panel;
     for (let j = 0; j < E.NCOL; j++) {
       const b = app.cards[j], f = S ? S.front(j) : -1;
-      if (f < 0) { b.className = "card empty"; b.disabled = true; b.querySelector(".n").textContent = ""; b.querySelector(".lab").textContent = "empty"; b.querySelector(".sw").style.backgroundImage = "none"; b.style.removeProperty("--mc"); b.setAttribute("aria-label", "Empty column"); }
+      if (f < 0) { b.className = "tile card empty"; b.disabled = true; b.querySelector(".n").textContent = ""; b.style.removeProperty("--mc"); b.style.removeProperty("--gl"); b.setAttribute("aria-label", "Empty column"); }
       else {
         const m = B.cardM[f], k = B.cardN[f];
-        b.className = "card" + (app.verdict[j] === 1 ? " safe" : app.verdict[j] === 2 ? " blocked" : ""); b.disabled = !live; paintMat(b, m);
-        const lab = b.querySelector(".lab"); lab.textContent = mat(m).crew; fitText(lab, "crew:" + m, app.cfg.layout.labMinPx);
-        b.querySelector(".n").textContent = k; b.querySelector(".sw").style.backgroundImage = app.chipURL[m];
+        b.className = "tile card" + (app.verdict[j] === 1 ? " safe" : app.verdict[j] === 2 ? " blocked" : ""); b.disabled = !live; paintMat(b, m);
+        b.querySelector(".n").textContent = k;
         b.setAttribute("aria-label", mat(m).crew + ", " + k + " sappers" + (app.verdict[j] === 2 ? ", blocked: no free space" : app.verdict[j] === 1 ? ", safe" : ""));
       }
-      for (let d = 1; d <= 3; d++) {
+      for (let d = 1; d <= app.nexts[j].length; d++) {
         const x = app.nexts[j][d - 1], h = S ? S.heads[j] + d : 1e9;
-        if (!S || h >= B.colLen[j]) { x.className = "next d" + d + " none"; continue; }
-        const ci = B.colStart[j] + h; x.className = "next d" + d; paintMat(x, B.cardM[ci]);
-        x.querySelector("span").textContent = B.cardN[ci]; x.querySelector(".sw").style.backgroundImage = app.chipURL[B.cardM[ci]];
+        if (!S || h >= B.colLen[j]) { x.className = "tile next d" + d + " none"; x.querySelector(".n").textContent = ""; continue; }
+        const ci = B.colStart[j] + h; x.className = "tile next d" + d; paintMat(x, B.cardM[ci]);
+        x.querySelector(".n").textContent = B.cardN[ci];
       }
     }
   }
@@ -183,7 +191,7 @@
       s.hidden = i >= S.cap;
       if (i < S.cap && S.spQ[i]) { const m = S.spM[i], w = S.spW[i], o = S.spO[i], st = S.stuck(i); s.classList.add("full"); s.classList.toggle("work", o > 0); s.classList.toggle("stuck", st); paintMat(s, m); s.querySelector("b").textContent = w || "";
         s.querySelector(".out").textContent = o > 0 ? o : "";
-        const men = s.querySelector(".men"); men.style.backgroundImage = app.manURL[m]; men.style.width = Math.min(w, L.sapperIcons) * 14 + "px";
+        const men = s.querySelector(".men"); men.style.backgroundImage = app.manURL[m]; men.style.width = "calc(var(--man) * " + Math.min(w, L.sapperIcons) + ")";
         s.setAttribute("aria-label", mat(m).crew + ", " + w + " waiting" + (o ? ", " + o + " out" : "") + (st ? ", stuck: nothing in reach" : "")); }
       else { s.classList.remove("full", "work", "stuck"); s.style.removeProperty("--mc"); s.querySelector("b").textContent = ""; s.querySelector(".out").textContent = ""; s.querySelector(".men").style.width = "0"; s.setAttribute("aria-label", "Empty space"); }
       s.classList.toggle("last", i === free && li.near); // one space left and the rest stuck: the last free space pulses
@@ -243,7 +251,7 @@
     app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.popK = 0; app.used = 0; app.march = false; app.blockT = -1e12; $("panel").hidden = true; hideToast();
     app.V.setLevel(app.B, app.S); placeSlots();
     app.save.data.last = e.id; writeSave();
-    showScreen("play"); renderAll(); coachStart();
+    renderAll(); showScreen("play"); coachStart(); // the line and tray take their size before the board is fitted to what is left
     return e;
   }
   function retry() {
@@ -289,7 +297,7 @@
     const X = E.sim(B, rulesOf(app.diff)); X.load(S.save()); X.quiet();
     app.march = X.status === E.WON;
   }
-  const paceNow = () => app.cfg.show.pace * Math.max(app.fast ? app.cfg.show.speedFast : 1, app.march ? app.cfg.show.victoryPace : 1);
+  const paceNow = () => app.cfg.show.pace * Math.max(app.speed, app.march ? app.cfg.show.victoryPace : 1);
   // The rules just ended the assault (at a tap, a pop or an arrow): record it; the sheet waits for the squads to settle.
   function ended() {
     const S = app.S; if (app.ending || S.status === E.PLAYING) return;
@@ -429,7 +437,20 @@
     if (app.audio && app.audio.ctx) Audio.unlock(app.audio);
   }
   function setMuted(on, save) { Audio.setMuted(app.audio, on); togMute.forEach((b) => b.setAttribute("aria-pressed", on ? "true" : "false")); if (save) { app.save.data.settings.muted = !!on; writeSave(); } }
-  function setFast(on, save) { app.fast = !!on; togFast.forEach((b) => b.setAttribute("aria-pressed", on ? "true" : "false")); if (save) { app.save.data.settings.fast = app.fast; writeSave(); } }
+  // The speed button cycles show.speeds (1x, 2x, 3x); anything else loads as the first one. Gold above 1x.
+  function setSpeed(k, save) {
+    const sp = app.cfg.show.speeds; app.speed = sp.indexOf(k) >= 0 ? k : sp[0];
+    togSpeed.forEach((b) => { b.textContent = app.speed + "\u00d7"; b.classList.toggle("on", app.speed > sp[0]); b.setAttribute("aria-label", "Speed " + app.speed + "x (tap for " + sp[(sp.indexOf(app.speed) + 1) % sp.length] + "x)"); });
+    if (save) { app.save.data.settings.speed = app.speed; writeSave(); }
+  }
+  const nextSpeed = () => { const sp = app.cfg.show.speeds; setSpeed(sp[(sp.indexOf(app.speed) + 1) % sp.length], true); };
+  // Colour-blind mode (v4 M1): the board's blocks and the queue tiles wear their material's mark. A toggle on the title
+  // and the map, kept in the save.
+  function setCb(on, save) {
+    app.cb = !!on; document.body.classList.toggle("cb", app.cb); if (app.V) app.V.setCb(app.cb);
+    togCb.forEach((b) => b.setAttribute("aria-pressed", app.cb ? "true" : "false"));
+    if (save) { app.save.data.settings.cb = app.cb; writeSave(); }
+  }
   function setDiff(d, save) { if (DIFFS.indexOf(d) < 0) return; app.diff = d; segs.forEach((b) => b.setAttribute("aria-pressed", b.dataset.diff === d ? "true" : "false")); if (save) { app.save.data.settings.diff = d; writeSave(); } }
 
   function wire() {
@@ -456,7 +477,8 @@
     $("p-primary").addEventListener("click", panelPrimary);
     $("p-secondary").addEventListener("click", panelSecondary);
     togMute.forEach((b) => b.addEventListener("click", () => setMuted(!app.audio.muted, true)));
-    togFast.forEach((b) => b.addEventListener("click", () => setFast(!app.fast, true)));
+    togSpeed.forEach((b) => b.addEventListener("click", nextSpeed));
+    togCb.forEach((b) => b.addEventListener("click", () => setCb(!app.cb, true)));
     segs.forEach((b) => b.addEventListener("click", () => { setDiff(b.dataset.diff, true); if (app.screen === "map") renderMap(); }));
     window.addEventListener("resize", layout);
     // A hidden tab can lose canvas backing stores: re-check every opaque cache when the page shows again, rebuild once.
@@ -516,8 +538,8 @@
     const V = app.V; if (!V) return;
     V.clock = app.clock;
     if (app.screen !== "play" || !app.B) return;
-    // The engine plays at show.pace x real time (x speedFast on 2x, or the victory march's pace, whichever is faster); its
-    // log goes to the board every step.
+    // The engine plays at show.pace x real time (x the speed button's 1x, 2x or 3x, or the victory march's pace, whichever
+    // is faster); its log goes to the board every step.
     const S = app.S, sp = paceNow();
     app.et += dt * sp; S.advanceTo(app.et); V.t = app.et; V.sync(S, true);
     V.update(dt, sp);
@@ -613,7 +635,7 @@
       status: !S ? null : S.status === E.WON ? "won" : S.status === E.FAILED ? "failed" : "playing", reason: S && S.status === E.FAILED ? S.reason : null,
       pixLeft: S ? S.pixLeft : null, cap: S ? S.cap : null, line, fronts, plays: S ? S.plays : 0, hits: S ? S.hits : 0, kills: S ? S.kills : 0,
       busy: S ? S.busy : false, out: S ? S.out : 0, runners: V ? V.live : 0, now: S ? S.now : 0, goblin: V ? V.gob.on && !V.gob.done : false,
-      panel: app.panel, fast: app.fast, clock: Math.round(app.clock), cs: V ? V.cs : 0, done: Object.keys(app.save.data.done).length,
+      panel: app.panel, speed: app.speed, cb: app.cb, clock: Math.round(app.clock), cs: V ? V.cs : 0, done: Object.keys(app.save.data.done).length,
       refused: app.refused, march: app.march, pace: app.cfg ? paceNow() : 1, li: S ? Object.assign({}, readLine()) : null };
   }
   const resolve = (id) => (typeof id === "number" ? (app.levels.find((e) => e.n === id) || {}).id : id);
@@ -627,16 +649,17 @@
   // sheet names the crews), the key and gate, an archer hit per difficulty, the full line (blocked cards; a refused tap
   // changes nothing, then plays once a space frees), stuck and working squads, the near-jam warning and the jam on a
   // level built for it (selfTest.jamLevel), the victory march, determinism on ticks, the save byte-identical after
-  // solve(), elementFromPoint on the primary buttons, the win, pause, the coach, opaque sprite caches. Runs on a scratch
-  // save; the real save is compared byte for byte at the end. Leaves the page on the level it was on (restarted).
+  // solve(), elementFromPoint on the primary buttons, the win, pause, the coach, opaque sprite caches; v4 M1: the queue's
+  // three rows against the engine, colour-blind mode (the toggles, the marks, the save) and the speed cycle. Runs on a
+  // scratch save; the real save is compared byte for byte at the end. Leaves the page on the level it was on (restarted).
   function selfTest() {
     const T0 = performance.now(), out = { pass: 0, fail: [], notes: {}, ms: 0 };
     const ok = (c, m) => { if (c) out.pass++; else out.fail.push(m); return !!c; };
-    const was = { save: app.save, screen: app.screen, entry: app.entry, diff: app.diff, fast: app.fast };
+    const was = { save: app.save, screen: app.screen, entry: app.entry, diff: app.diff, speed: app.speed, cb: app.cb };
     const key = app.cfg.save.key, snap = (() => { try { return was.save.store.getItem(key); } catch (e) { return "?"; } })();
     if (app.paused) resume();
-    app.testing = true; app.save = Save.open(Save.memoryStore(), key, app.order); app.fast = false;
-    const ST = app.cfg.selfTest, SH = app.cfg.show;
+    const ST = app.cfg.selfTest, SH = app.cfg.show, SPD = SH.speeds;
+    app.testing = true; app.save = Save.open(Save.memoryStore(), key, app.order); setSpeed(SPD[0], false); setCb(false, false);
     // Patient play: tap, then the engine runs until nothing moves and the board lands (the skip path).
     const patient = (ord) => { for (let i = 0; i < ord.length && app.S.status === E.PLAYING; i++) { if (!playCol(ord.charCodeAt(i) - 48)) return false; settleNow(); } return true; };
     // Real ticks until the engine is quiet (bounded); returns the ms ticked.
@@ -832,26 +855,74 @@
       if (app.byId.has("e3-51")) { startLevel("e3-51", "normal"); ok(app.V.focus.on && coachState().target && /card/.test(coachState().target), "coach e3-51: the tower wears the ring and the arrow points at the Quarrymen"); }
       // 13b. Victory march: on a stored winning line the pace stays 1x until the tray empties, then plays at
       // show.victoryPace; the final state (board, every sapper's times, status) is identical to the same taps at 1x; with
-      // 2x on, the faster pace stays.
+      // 2x or 3x on, the faster pace stays.
       { const e = app.byId.get("e1-03") || app.levels[0], o = e.L.win.normal, vp = SH.victoryPace;
         const run = () => { startLevel(e.id, "normal"); let before = false; for (let i = 0; i < o.length - 1; i++) { playCol(+o[i]); tickQuiet(ST.tickCapMs); before = before || app.march; } playCol(+o[o.length - 1]);
           const r = { before, march: app.march, pace: paceNow(), busy: app.S.busy }; tickQuiet(ST.tickCapMs); const S = app.S, k = S.sent;
           r.sig = Array.from(S.a).join("") + "|" + S.status + "|" + S.hash() + "|" + k + "|" + Array.from(S.q0.subarray(0, k)).join(",") + "|" + Array.from(S.q1.subarray(0, k)).join(",") + "|" + Array.from(S.q2.subarray(0, k)).join(",");
           r.won = S.status === E.WON; return r; };
-        let A = null, Z = null, F = null;
-        try { A = run(); SH.victoryPace = 1; Z = run(); SH.victoryPace = vp; app.fast = true; F = run(); } finally { SH.victoryPace = vp; app.fast = false; }
+        let A = null, Z = null, F = null, F3 = null;
+        try { A = run(); SH.victoryPace = 1; Z = run(); SH.victoryPace = vp; app.speed = SPD[1]; F = run(); app.speed = SPD[2]; F3 = run(); } finally { SH.victoryPace = vp; app.speed = SPD[0]; }
         ok(!A.before && A.march && A.busy && A.pace === SH.pace * vp && A.won, "victory march: 1x until the tray empties; the last tap of the winning line switches to " + vp + "x while the squads come home");
         ok(A.sig === Z.sig, "victory march: the final state is identical to the same line at 1x");
-        ok(F.march && F.pace === SH.pace * Math.max(SH.speedFast, vp) && F.won, "victory march: with 2x on the faster pace stays (" + F.pace + "x)");
+        ok(F.march && F.pace === SH.pace * Math.max(SPD[1], vp) && F.won && F3.march && F3.pace === SH.pace * Math.max(SPD[2], vp) && F3.won, "victory march: with 2x or 3x on the faster pace stays (" + F.pace + "x, " + F3.pace + "x)");
         startLevel(e.id, "normal"); for (let i = 0; i < o.length; i++) { playCol(+o[i]); if (i < o.length - 1) tickQuiet(ST.tickCapMs); }
         ok(app.march && $("line-wrap").classList.contains("march") && $("line-lab").textContent === LY.marchText.replace("{x}", vp), "victory march: the head reads '" + $("line-lab").textContent + "'");
         skip(); ok(!app.S.busy && app.S.status === E.WON, "victory march: skip still lands everything"); }
+      // 15. The queue (v4 M1): every column shows layout.queueRows tiles, front first, checked against the engine at load
+      // and after every tap of a stored order (played patiently): each shown tile has its card's colour and count and
+      // nothing else (no crew name), a row past the column's end is hidden, the rows behind are full size and fade back.
+      { const e = app.byId.get(ST.queueLevel) || app.levels[Math.min(39, app.levels.length - 1)], RW = LY.queueRows;
+        const qCheck = () => { const S = app.S, B = app.B; let n = 0;
+          for (let j = 0; j < E.NCOL; j++) for (let d = 0; d < RW; d++) {
+            const el = d ? app.nexts[j][d - 1] : app.cards[j], h = S.heads[j] + d, r = el.getBoundingClientRect(), shown = getComputedStyle(el).visibility !== "hidden" && r.width > 0 && r.height > 0;
+            if (h >= B.colLen[j]) { if (d ? shown : !el.classList.contains("empty")) return "column " + j + " row " + d + " shows a card past the column's end"; continue; }
+            const ci = B.colStart[j] + h, m = B.cardM[ci], k = String(B.cardN[ci]);
+            if (!shown) return "column " + j + " row " + d + " is hidden";
+            if (el.style.getPropertyValue("--mc") !== mat(m).c || el.textContent !== k) return "column " + j + " row " + d + " shows '" + el.textContent + "' in " + el.style.getPropertyValue("--mc") + ", the engine has " + k + " " + mat(m).c;
+            n++; }
+          return n; };
+        startLevel(e.id, "normal");
+        const S = app.S, want = app.cards.reduce((a, b, j) => a + Math.min(RW, app.B.colLen[j]), 0), q0 = qCheck();
+        const hs = [], op = []; for (let d = 0; d < RW; d++) { const el = d ? app.nexts[0][d - 1] : app.cards[0]; hs.push(el.getBoundingClientRect().height); op.push(+getComputedStyle(el).opacity); }
+        ok(q0 === want && RW === 3 && hs.every((h) => Math.abs(h - hs[0]) < 0.6) && op[0] === 1 && op[1] < 1 && op[2] < op[1], "queue: " + RW + " rows per column at full size (" + hs.map((h) => h.toFixed(1)).join(", ") + " px), front bright, the rows behind fading (" + op.join(", ") + "); " + q0 + " tiles match the engine (" + e.id + ")");
+        let moved = true, taps = 0; const o = e.L.win.normal;
+        for (let i = 0; i < o.length && app.S.status === E.PLAYING; i++) { playCol(+o[i]); settleNow(); taps++; const q = qCheck(); if (typeof q === "string") { moved = q + " after tap " + taps; break; } }
+        ok(moved === true && S.status === E.WON, "queue: the rows move up with the engine on every tap of the stored order (" + (moved === true ? taps + " taps" : moved) + ")"); }
+      // 16. Colour-blind mode (v4 M1): off by default, every block a plain stud but the iron gate (bars) and the gilt key
+      // (its glyph). The title's toggle (a real click) turns it on: every other material's stud gains its mark, the gate and
+      // key are unchanged, the queue tiles show their glyph, and the save keeps it (read back through sanitize). The map's
+      // toggle turns it off again.
+      { startLevel(ST.queueLevel && app.byId.has(ST.queueLevel) ? ST.queueLevel : app.levels[0].id, "normal");
+        const off = app.V.studInfo(), gl = () => { const el = app.cards.find((b) => !b.classList.contains("empty")), g = el && el.querySelector(".gl"), r = g && g.getBoundingClientRect(); return !!g && getComputedStyle(g).display !== "none" && r.width > 0 && el.style.getPropertyValue("--gl").indexOf("url(") === 0; };
+        ok(!app.cb && !off.cb && off.ink[E.IRON] > 0 && off.ink[E.GILT] > 0 && !gl(), "colour-blind off (the default): the gate keeps its bars (" + off.ink[E.IRON] + " px) and the key its glyph (" + off.ink[E.GILT] + " px); no glyph on the tiles");
+        showScreen("title"); const tb = document.querySelector("#title .tog-cb"), hit1 = hitOK(tb); tb.click();
+        showScreen("play"); const on = app.V.studInfo();
+        let marked = 0; for (let m = 1; m < E.NMAT; m++) if (m !== E.IRON && m !== E.GILT && on.sum[m] !== off.sum[m] && on.ink[m] > off.ink[m]) marked++;
+        const saved = app.save.data.settings.cb === true; app.save.write(); const reread = Save.open(app.save.store, key, app.order).data.settings.cb === true;
+        ok(hit1 && app.cb && on.cb && tb.getAttribute("aria-pressed") === "true" && document.body.classList.contains("cb") && marked === E.NMAT - 3 && on.sum[E.IRON] === off.sum[E.IRON] && on.sum[E.GILT] === off.sum[E.GILT] && gl(),
+          "colour-blind on (the title's toggle): all " + marked + " other materials wear their mark, the gate and key are unchanged, the tiles show their glyph");
+        ok(saved && reread, "colour-blind: the save keeps it and reads it back (sanitized)");
+        const junk = Save.sanitize({ settings: { cb: "yes", speed: 7, fast: true } }, app.order), junk2 = Save.sanitize({ settings: { cb: true, speed: 3 } }, app.order);
+        ok(junk.settings.cb === false && junk.settings.speed === 2 && junk2.settings.cb === true && junk2.settings.speed === 3, "save: a bad colour-blind value loads off; a bad speed falls back (the old 2x flag loads as 2); good values load as saved");
+        showScreen("map"); const mb = document.querySelector("#map .tog-cb"), hit2 = hitOK(mb); mb.click(); showScreen("play");
+        const off2 = app.V.studInfo();
+        ok(hit2 && !app.cb && !off2.cb && off2.sum.every((h, m) => h === off.sum[m]) && !gl() && app.save.data.settings.cb === false, "colour-blind off again (the map's toggle): the studs are plain again, byte for byte"); }
+      // 17. Speed (v4 M1): the top bar's button cycles 1x, 2x, 3x and back to 1x through real clicks; its label, the pace
+      // and the save follow, and at 3x the engine really runs three times real time.
+      { startLevel(app.levels[0].id, "normal"); const b = document.querySelector("#top .tog-speed"), seen = [], hit = hitOK(b);
+        for (let k = 0; k < SPD.length; k++) { b.click(); seen.push([app.speed, b.textContent, paceNow() / SH.pace, app.save.data.settings.speed].join(":")); }
+        const want = SPD.map((_, k) => { const v = SPD[(k + 1) % SPD.length]; return [v, v + "×", v, v].join(":"); });
+        ok(hit && seen.join(" ") === want.join(" "), "speed: the button cycles " + seen.join(" ") + " (speed:label:pace:saved)");
+        b.click(); b.click(); const et0 = app.et; for (let k = 0; k < 10; k++) step(16);
+        ok(app.speed === SPD[2] && Math.abs(app.et - et0 - 160 * SPD[2] * SH.pace) < 1e-6, "speed: at " + app.speed + "x, 160 ms of real time moves the engine " + (app.et - et0) + " ms");
+        setSpeed(SPD[0], false); }
       // 14. Opaque sprite caches.
       const bad = app.V.checkSprites(); ok(!bad.length, "sprites: every opaque cache is opaque" + (bad.length ? " (" + bad.join(",") + ")" : ""));
     } catch (err) { ok(false, "selfTest threw: " + (err && err.message) + " " + (err && err.stack ? err.stack.split("\n")[1] : "")); }
     finally {
       app.byId.delete("fx-jamLevel"); app.byId.delete("fx-stuckLevel");
-      app.save = was.save; app.testing = false; app.fast = was.fast; app.diff = was.diff;
+      app.save = was.save; app.testing = false; setSpeed(was.speed, false); setCb(was.cb, false); app.diff = was.diff;
       if (was.entry) startLevel(was.entry.id, was.diff); showScreen(was.screen); renderAll();
     }
     let snap2 = "?"; try { snap2 = was.save.store.getItem(key); } catch (e) { /* stays "?" */ }
@@ -867,7 +938,7 @@
     // level from n whose fronts allow it). Both return the state plus the taps made.
     fill: () => { const taps = fillLine(); return Object.assign(state(), { taps }); },
     stage: (n, k, w) => { for (const e of app.levels) { if (e.n < n) continue; startLevel(e.id, "normal"); const tp = stageLine(k, w); if (tp) return Object.assign(state(), { taps: tp }); } return null; },
-    screen: (name) => { showScreen(name); return state(); }, skip: () => { skip(); return state(); }, fast: (on) => { setFast(!!on, false); return app.fast; },
+    screen: (name) => { showScreen(name); return state(); }, skip: () => { skip(); return state(); }, speed: (k) => { setSpeed(k, false); return app.speed; },
     // Cost of n board draws right now (ms): the harness calls it mid-show.
     perf: (n) => { const k = Math.max(1, Math.min(500, n | 0 || 60)); let max = 0; const t0 = performance.now(); for (let i = 0; i < k; i++) { const a = performance.now(); app.V.draw(); max = Math.max(max, performance.now() - a); } return { mean: +((performance.now() - t0) / k).toFixed(3), max: +max.toFixed(3), runners: app.V.live }; },
     sprites: () => app.V.checkSprites() };

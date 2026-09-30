@@ -1,9 +1,11 @@
 // Sapper's Path v3 board (SPEC-v3 §6): the fort as Food Hunt blocks, the siege yard with a haul crate per colour, and the
 // run-and-carry show. Presentation only: the engine has already resolved the tap; the show replays its event log.
 //
-// Look. Every material pixel is a rounded, bevelled block with a stud glint and a per-material mark (bar, posts, hatch,
-// dots, cross, chevron, diamond...), so the fort still reads in grayscale; iron gates are barred, Gilt keys carry a key
-// glyph. Ground and water are dark and muted. Below the grid is the yard: one crate per colour that fills with the haul.
+// Look (v4 M1, the look pass). Every material pixel is a flat stud: a solid face on a 1 CSS px seam of its own colour
+// darkened, with a soft highlight, and nothing inside, so the fort reads as a clean picture at 8 CSS px a cell (Food
+// Hunt's level 1492). The per-material marks (bar, posts, hatch, dots, cross, chevron, diamond...) come back in
+// colour-blind mode (V.cb, setCb); iron gates keep their bars and Gilt keys their key glyph in both modes. Ground and
+// water are dark and muted. Below the grid is the yard: one crate per colour that fills with the haul.
 // Sprite caches (blocks, ground, mini blocks) are opaque by construction (a grout or ground fill under everything);
 // sappers, the archer, the padlocks and the goblin are the only transparent sprites.
 // Gates and keys (M2): each gate wears a padlock in its tint (board.gateTints) and its key a ring of the same tint, so a
@@ -11,9 +13,9 @@
 // Towers (M2): tower blocks carry a crenellated rim on the tower's outer edge and a hooded goblin archer stands on top
 // while any of it stands; the range disc fades and the archer tumbles when it falls.
 //
-// Surface and scenery (v3 fix pass). Each block has four tones of its colour (base, lit, shade, alt), picked once per
-// level from the fort's shape: a block on a region's top or left edge is lit, on its bottom or right edge shaded, and the
-// inside of a big mass gets a faint running bond, so walls and roofs have form; the per-material mark stays for grayscale.
+// Surface and scenery (v3 fix pass). Each block can take one of four tones of its colour (base, lit, shade, alt), picked
+// once per level from the fort's shape (a region's top or left edge lit, its bottom or right edge shaded, a running bond
+// inside a big mass); v4 M1 sets them all to 0 (board.tones) so every block of a colour is the same flat stud.
 // The leftover ground carries muted, flat scenery (never bevelled, so it never reads as a block): a trodden path from the
 // camp to the fort, tents beside the camp, trees, fields, tufts and flowers on grass, ripples on water. It is decided
 // once per level (V.deco) and painted with the ground; it changes no rule. Archer rings tint the ground only.
@@ -110,7 +112,7 @@
   function create(canvas, cfg, sheets) {
     const C = cfg.v3, K = cfg.board, SH = cfg.show, FX = cfg.fx, g = canvas.getContext("2d", { alpha: false });
     const V = {
-      canvas, g, cfg, B: null, S: null, w: 0, h: 0, n: 0, cs: 0, dpr: 1, Y: K.yardRows | 0, rot: false, calm: false,
+      canvas, g, cfg, B: null, S: null, w: 0, h: 0, n: 0, cs: 0, dpr: 1, Y: K.yardRows | 0, rot: false, calm: false, cb: false,
       disp: null, dist: null, q: null, tone: null, deco: null, idleC: [], layer: null, lg: null, sprites: null, piles: [], pileOf: new Int16Array(E.NMAT).fill(-1),
       haul: new Int32Array(E.NMAT), total: new Int32Array(E.NMAT), towerLeft: new Int32Array(MAXT), towerOfCell: null,
       clock: 0, speed: 1, fxT: 0, rebuilds: 0, lastPop: -1, pileDirty: true, font: "", seed: 12345,
@@ -145,17 +147,22 @@
     const SIDE = [[0, 1, 2, 3], [3, 2, 0, 1]];
 
     // ---- sprite caches ----------------------------------------------------------------------------------------------
-    function block(m, s, k) {
-      const c = mk(s, s), x = c.getContext("2d"), base = k ? toneHex(C.mats[m].c, k) : C.mats[m].c, dark = lum(C.mats[m].c) < 0.3;
-      x.fillStyle = shade(base, K.grout); x.fillRect(0, 0, s, s);
-      const i = Math.max(1, Math.round(s * K.inset)), a = s - 2 * i, b = Math.max(1, Math.round(s * K.bevel));
-      rr(x, i, i, a, a, s * K.radius); x.fillStyle = base; x.fill();
-      x.save(); rr(x, i, i, a, a, s * K.radius); x.clip();
-      x.fillStyle = shade(base, K.hi); x.fillRect(i, i, a, b); x.fillRect(i, i, b, a);
-      x.fillStyle = shade(base, K.lo); x.fillRect(i, s - i - b, a, b); x.fillRect(s - i - b, i, b, a);
+    // v4 M1: a flat stud. A solid face with rounded corners on a seam of its own colour darkened (K.stud.seam), the seam
+    // K.stud.seamCss CSS px wide between neighbours (half from each block), a soft highlight along the face's top and a
+    // faint foot. No mark inside, except in colour-blind mode (V.cb), and always on the iron gate (bars) and gilt keys.
+    // seamPx: the seam in device px (mini blocks pass 1).
+    function block(m, s, k, seamPx) {
+      const c = mk(s, s), x = c.getContext("2d"), base = k ? toneHex(C.mats[m].c, k) : C.mats[m].c, dark = lum(C.mats[m].c) < 0.3, T = K.stud;
+      const sw = Math.min(s >> 2, seamPx || Math.max(1, Math.round(V.dpr * T.seamCss))), a = sw >> 1, f = s - sw, r = Math.max(0.5, f * T.radius);
+      x.fillStyle = toneHex(base, T.seam); x.fillRect(0, 0, s, s);
+      rr(x, a, a, f, f, r); x.fillStyle = base; x.fill();
+      x.save(); rr(x, a, a, f, f, r); x.clip();
+      const hh = Math.max(1, Math.round(f * T.hiH)), lh = Math.max(1, Math.round(f * T.loH));
+      x.fillStyle = mixHex(base, T.hi); x.fillRect(a, a, f, hh);
+      x.fillStyle = mixHex(base, T.lo); x.fillRect(a, a + f - lh, f, lh);
+      if (f >= 7) { x.globalAlpha = T.glintAlpha; x.fillStyle = "#ffffff"; rr(x, a + f * T.glint[0], a + f * T.glint[1], Math.max(1, f * T.glint[2]), Math.max(1, f * T.glint[3]), f * T.glint[3] / 2); x.fill(); x.globalAlpha = 1; }
       x.restore();
-      if (s >= 6) { x.globalAlpha = K.studAlpha; x.fillStyle = "#ffffff"; x.beginPath(); x.arc(i + b + s * K.stud, i + b + s * K.stud, Math.max(0.7, s * K.stud * 0.75), 0, Math.PI * 2); x.fill(); x.globalAlpha = 1; }
-      if (s >= 5) mark(x, m, s, m === IRON ? K.gateBar : m === GILT ? K.keyInk : dark ? shade(base, K.markLight) : shade(base, K.mark), K);
+      if (s >= 5 && (V.cb || m === IRON || m === GILT)) mark(x, m, s, m === IRON ? K.gateBar : m === GILT ? K.keyInk : dark ? shade(base, K.markLight) : shade(base, K.mark), K);
       return c;
     }
     function ground(type, v, s) {
@@ -181,7 +188,7 @@
     function buildSprites() {
       const s = V.cs, ss = Math.max(6, Math.round(s * K.sapper.scale)), mb = Math.max(3, Math.round(s * K.sapper.carry)), as = Math.max(8, Math.round(s * K.archer.scale)), ls = Math.max(8, Math.round(s * K.lockScale));
       const S = { blk: [], tb: [], mini: [], sap: [], gnd: [], lock: [], ss, mb, as, ls, arch: null };
-      for (let m = 1; m < E.NMAT; m++) { S.blk[m] = block(m, s); S.tb[m] = K.tones.map((k, v) => (v ? block(m, s, k) : S.blk[m])); S.mini[m] = block(m, mb); S.sap[m] = sapper(m, ss); }
+      for (let m = 1; m < E.NMAT; m++) { S.blk[m] = block(m, s); S.tb[m] = K.tones.map((k) => (k ? block(m, s, k) : S.blk[m])); S.mini[m] = block(m, mb, 0, 1); S.sap[m] = sapper(m, ss); }
       for (let t = 0; t < 4; t++) for (let v = 0; v < 2; v++) S.gnd[t * 2 + v] = ground(t, v, s);
       const A = K.archer; S.arch = figure(ARCH, { h: A.hood, s: A.skin, e: A.eye, b: A.body, w: A.bow, q: A.string, a: A.arrow }, as);
       K.gateTints.forEach((tint, k) => { S.lock[k] = padlock(tint, ls); });
@@ -735,6 +742,20 @@
       for (let i = 0; i < RMAX; i++) { if (!V.rOn[i]) continue; bySpace[V.rS[i] & 7]++; if (V.rK[i] === 1) { eat++; if (V.t >= V.rT1[i]) carrying++; } else hit++; }
       return { live: V.live, eat, carrying, hit, bySpace, dropped: V.stats.dropped, cap: RMAX };
     }
+    // Block caches for selfTest (v4 M1): per material, a checksum of its stud and how many of its pixels are exactly its
+    // mark's ink (the gate's bars, the key's glyph, or the colour-blind mark). Read through one scratch canvas.
+    function studInfo() {
+      const S = V.sprites, pc = mk(1, 1), px = pc.getContext("2d", { willReadFrequently: true }), sum = [0], ink = [0];
+      for (let m = 1; m < E.NMAT; m++) {
+        const c = S.blk[m], base = C.mats[m].c, mc = m === IRON ? K.gateBar : m === GILT ? K.keyInk : lum(base) < 0.3 ? shade(base, K.markLight) : shade(base, K.mark);
+        const rgb = mc[0] === "#" ? [parseInt(mc.slice(1, 3), 16), parseInt(mc.slice(3, 5), 16), parseInt(mc.slice(5, 7), 16)] : mc.slice(4, -1).split(",").map(Number);
+        pc.width = c.width; pc.height = c.height; px.drawImage(c, 0, 0);
+        const d = px.getImageData(0, 0, pc.width, pc.height).data; let h = 0, k = 0;
+        for (let i = 0; i < d.length; i += 4) { h = (Math.imul(h, 31) + d[i] * 65536 + d[i + 1] * 256 + d[i + 2]) | 0; if (d[i] === rgb[0] && d[i + 1] === rgb[1] && d[i + 2] === rgb[2]) k++; }
+        sum.push(h); ink.push(k);
+      }
+      return { sum, ink, cb: V.cb };
+    }
     function fxInfo() {
       let pops = 0, falls = 0, parts = 0; const ft = V.fxT;
       for (let k = 0; k < POPS; k++) { const a = (ft - V.popT[k]) / (V.popK[k] ? FX.fallMs : SH.popMs); if (a < 1 && a > -20) { pops++; if (V.popK[k]) falls++; } }
@@ -742,8 +763,13 @@
       return { pops, falls, parts, shaking: (ft - V.shT) / V.shMs < 1, keep: V.gob.on && (V.clock - V.gob.t0) / (SH.goblinMs * SH.keepFrac) < 1, gates: Array.from(V.gSt.subarray(0, V.B ? V.B.gateCells.length : 0)), lockFalling: V.B ? V.B.gateCells.some((_, k) => V.gSt[k] === 1 && ft - V.gT[k] < FX.lockFallMs) : false };
     }
 
-    Object.assign(V, { setLevel, reset, layout, sync, setSlots, update, goblin, draw, checkSprites, buildSprites, paintLayer, shake, cssAt, hitInfo, fxInfo, runners,
-      chip: (m, px) => block(m, px), man: (m, px) => sapper(m, px) });
+    // Colour-blind mode (v4 M1): every block wears its material's mark. Rebuilds the caches and repaints (a settings tap).
+    function setCb(on) { on = !!on; if (on === V.cb) return; V.cb = on; if (V.sprites) { buildSprites(); paintLayer(); } }
+    // A material's mark alone (transparent around it, drawn in ink): the queue tiles' glyph in colour-blind mode.
+    function glyph(m, px, ink) { const c = mk(px, px); mark(c.getContext("2d"), m, px, ink, K); return c; }
+
+    Object.assign(V, { setLevel, reset, layout, sync, setSlots, update, goblin, draw, checkSprites, buildSprites, paintLayer, shake, cssAt, hitInfo, fxInfo, runners, setCb, glyph, studInfo,
+      man: (m, px) => sapper(m, px) });
     return V;
   }
 
