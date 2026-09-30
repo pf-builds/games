@@ -1,0 +1,376 @@
+{
+ "linked jam sheet text": {
+  "pass": true,
+  "info": {
+   "status": "failed",
+   "reason": "jam",
+   "title": "Assault failed",
+   "line": "Line jammed: linked squads need 2 free spaces, and Axemen, Torchbearers, Sawyers and 1 more can't reach a block."
+  }
+ },
+ "busiest moment frame pacing (4x CPU throttle)": {
+  "pass": true,
+  "info": {
+   "frames": 291,
+   "p50": 16.7,
+   "p95": 16.7,
+   "p99": 16.8,
+   "max": 16.8,
+   "over33": 0,
+   "over50": 0,
+   "longtasks": 0,
+   "longtaskMax": 0,
+   "peakRunners": 96,
+   "peakOut": 96
+  }
+ },
+ "busiest moment frame pacing (no throttle)": {
+  "pass": true,
+  "info": {
+   "frames": 430,
+   "p95": 16.8,
+   "max": 16.8,
+   "over33": 0
+  }
+ },
+ "viewport 375x812": {
+  "pass": true,
+  "info": {
+   "l1": {
+    "id": "e1-01",
+    "cs": 34,
+    "scrollW": 375,
+    "innerW": 375,
+    "scrollH": 812,
+    "innerH": 812,
+    "map": "ok",
+    "retry": "ok",
+    "speed": "ok",
+    "mute": "ok",
+    "tiles": "ok ok ok ok ok",
+    "trayBottom": 802,
+    "board": [
+     340,
+     357
+    ]
+   },
+   "sheet": {
+    "p-primary": "Next level:ok",
+    "p-secondary": "Retry:ok",
+    "panel": "win"
+   },
+   "next": "e1-02",
+   "l62": {
+    "id": "e3-62",
+    "cs": 30,
+    "scrollW": 375,
+    "innerW": 375,
+    "scrollH": 812,
+    "innerH": 812,
+    "map": "ok",
+    "retry": "ok",
+    "speed": "ok",
+    "mute": "ok",
+    "tiles": "ok ok ok ok ok",
+    "trayBottom": 802,
+    "board": [
+     345,
+     465
+    ]
+   },
+   "l77": {
+    "id": "e4-77",
+    "cs": 23,
+    "scrollW": 375,
+    "innerW": 375,
+    "scrollH": 812,
+    "innerH": 812,
+    "map": "ok",
+    "retry": "ok",
+    "speed": "ok",
+    "mute": "ok",
+    "tiles": "ok ok ok ok ok",
+    "trayBottom": 802,
+    "board": [
+     345,
+     460
+    ]
+   },
+   "l100": {
+    "id": "e4-100",
+    "cs": 21,
+    "scrollW": 375,
+    "innerW": 375,
+    "scrollH": 812,
+    "innerH": 812,
+    "map": "ok",
+    "retry": "ok",
+    "speed": "ok",
+    "mute": "ok",
+    "tiles": "ok ok ok ok ok",
+    "trayBottom": 802,
+    "board": [
+     336,
+     452
+    ]
+   },
+   "bad": []
+  }
+ },
+ "viewport 1280x720": {
+  "pass": true,
+  "info": {
+   "l1": {
+    "id": "e1-01",
+    "cs": 22,
+    "scrollW": 1280,
+    "innerW": 1280,
+    "scrollH": 720,
+    "innerH": 720,
+    "map": "ok",
+    "retry": "ok",
+    "speed": "ok",
+    "mute": "ok",
+    "tiles": "ok ok ok ok ok",
+    "trayBottom": 557,
+    "board": [
+     440,
+     462
+    ]
+   },
+   "sheet": {
+    "p-primary": "Next level:ok",
+    "p-secondary": "Retry:ok",
+    "panel": "win"
+   },
+   "next": "e1-02",
+   "l62": {
+    "id": "e3-62",
+    "cs": 22,
+    "scrollW": 1280,
+    "innerW": 1280,
+    "scrollH": 720,
+    "innerH": 720,
+    "map": "ok",
+    "retry": "ok",
+    "speed": "ok",
+    "mute": "ok",
+    "tiles": "ok ok ok ok ok",
+    "trayBottom": 557,
+    "board": [
+     506,
+     682
+    ]
+   },
+   "l77": {
+    "id": "e4-77",
+    "cs": 17,
+    "scrollW": 1280,
+    "innerW": 1280,
+    "scrollH": 720,
+    "innerH": 720,
+    "map": "ok",
+    "retry": "ok",
+    "speed": "ok",
+    "mute": "ok",
+    "tiles": "ok ok ok ok ok",
+    "trayBottom": 557,
+    "board": [
+     510,
+     680
+    ]
+   },
+   "l100": {
+    "id": "e4-100",
+    "cs": 16,
+    "scrollW": 1280,
+    "innerW": 1280,
+    "scrollH": 720,
+    "innerH": 720,
+    "map": "ok",
+    "retry": "ok",
+    "speed": "ok",
+    "mute": "ok",
+    "tiles": "ok ok ok ok ok",
+    "trayBottom": 557,
+    "board": [
+     512,
+     688
+    ]
+   },
+   "bad": []
+  }
+ },
+ "viewport 812x375": {
+  "pass": true,
+  "info": {
+   "l1": {
+    "id": "e1-01",
+    "cs": 33,
+    "scrollW": 812,
+    "innerW": 812,
+    "scrollH": 375,
+    "innerH": 375,
+    "map": "ok",
+    "retry": "ok",
+    "speed": "ok",
+    "mute": "ok",
+    "tiles": "ok ok ok ok ok",
+    "trayBottom": 315,
+    "board": [
+     330,
+     347
+    ]
+   },
+   "sheet": {
+    "p-primary": "Next level:ok",
+    "p-secondary": "Retry:ok",
+    "panel": "win"
+   },
+   "next": "e1-02",
+   "l62": {
+    "id": "e3-62",
+    "cs": 22,
+    "scrollW": 812,
+    "innerW": 812,
+    "scrollH": 375,
+    "innerH": 375,
+    "map": "ok",
+    "retry": "ok",
+    "speed": "ok",
+    "mute": "ok",
+    "tiles": "ok ok ok ok ok",
+    "trayBottom": 315,
+    "board": [
+     253,
+     341
+    ]
+   },
+   "l77": {
+    "id": "e4-77",
+    "cs": 20,
+    "scrollW": 812,
+    "innerW": 812,
+    "scrollH": 375,
+    "innerH": 375,
+    "map": "ok",
+    "retry": "ok",
+    "speed": "ok",
+    "mute": "ok",
+    "tiles": "ok ok ok ok ok",
+    "trayBottom": 315,
+    "board": [
+     400,
+     300
+    ]
+   },
+   "l100": {
+    "id": "e4-100",
+    "cs": 19,
+    "scrollW": 812,
+    "innerW": 812,
+    "scrollH": 375,
+    "innerH": 375,
+    "map": "ok",
+    "retry": "ok",
+    "speed": "ok",
+    "mute": "ok",
+    "tiles": "ok ok ok ok ok",
+    "trayBottom": 315,
+    "board": [
+     409,
+     304
+    ]
+   },
+   "bad": []
+  }
+ },
+ "viewport iframe400x600": {
+  "pass": true,
+  "info": {
+   "l1": {
+    "id": "e1-01",
+    "cs": 17,
+    "scrollW": 400,
+    "innerW": 400,
+    "scrollH": 600,
+    "innerH": 600,
+    "map": "ok",
+    "retry": "ok",
+    "speed": "ok",
+    "mute": "ok",
+    "tiles": "ok ok ok ok ok",
+    "trayBottom": 594,
+    "board": [
+     340,
+     357
+    ]
+   },
+   "sheet": {
+    "p-primary": "Next level:ok",
+    "p-secondary": "Retry:ok",
+    "panel": "win"
+   },
+   "next": "e1-02",
+   "l62": {
+    "id": "e3-62",
+    "cs": 11,
+    "scrollW": 400,
+    "innerW": 400,
+    "scrollH": 600,
+    "innerH": 600,
+    "map": "ok",
+    "retry": "ok",
+    "speed": "ok",
+    "mute": "ok",
+    "tiles": "ok ok ok ok ok",
+    "trayBottom": 594,
+    "board": [
+     253,
+     341
+    ]
+   },
+   "l77": {
+    "id": "e4-77",
+    "cs": 8,
+    "scrollW": 400,
+    "innerW": 400,
+    "scrollH": 600,
+    "innerH": 600,
+    "map": "ok",
+    "retry": "ok",
+    "speed": "ok",
+    "mute": "ok",
+    "tiles": "ok ok ok ok ok",
+    "trayBottom": 594,
+    "board": [
+     240,
+     320
+    ]
+   },
+   "l100": {
+    "id": "e4-100",
+    "cs": 8,
+    "scrollW": 400,
+    "innerW": 400,
+    "scrollH": 600,
+    "innerH": 600,
+    "map": "ok",
+    "retry": "ok",
+    "speed": "ok",
+    "mute": "ok",
+    "tiles": "ok ok ok ok ok",
+    "trayBottom": 594,
+    "board": [
+     256,
+     344
+    ]
+   },
+   "bad": []
+  }
+ },
+ "zero console errors/warnings (part 2b)": {
+  "pass": true,
+  "info": []
+ }
+}

@@ -1,0 +1,13 @@
+const PW = await import(process.env.PLAYWRIGHT_MODULE); const { chromium } = PW.default || PW;
+const b = await chromium.launch(); const ctx = await b.newContext({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+const p = await ctx.newPage(); const errs = []; p.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); }); p.on('pageerror', (e) => errs.push('PAGEERROR ' + e.message));
+const t0 = Date.now(); await p.goto('http://127.0.0.1:8492/sappers-path/?debug=1'); await p.waitForFunction(() => window.SP && document.querySelector('#title') && !document.querySelector('#title').hidden);
+console.log('title ready ms', Date.now() - t0);
+const st = Date.now(); const r = await p.evaluate(async () => { const x = await SP.selfTest(); return x; }); console.log('selfTest ms', Date.now() - st, JSON.stringify(r).slice(0, 1500));
+await p.evaluate(() => SP.load('v4-mystery', 'normal')); await p.waitForTimeout(300);
+console.log('TRAY', (await p.evaluate(() => document.querySelector('#tray').outerHTML)).slice(0, 3000));
+console.log('LINE', (await p.evaluate(() => document.querySelector('#line').outerHTML)).slice(0, 1200));
+console.log('state', JSON.stringify(await p.evaluate(() => SP.state())).slice(0, 900));
+console.log('coach', JSON.stringify(await p.evaluate(() => SP.coach())).slice(0, 400));
+await p.evaluate(() => SP.load(1, 'normal')); console.log('coach L1', JSON.stringify(await p.evaluate(() => SP.coach())).slice(0, 400));
+console.log('errors', errs); await b.close();

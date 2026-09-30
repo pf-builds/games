@@ -1,0 +1,42 @@
+{
+ "stats": {
+  "games": 3744,
+  "replays": 312,
+  "replayWins": 312,
+  "gradeChecks": 300,
+  "gradeMismatch": [],
+  "statusCounts": {
+   "1/": 731,
+   "-1/jam": 1039,
+   "-1/short": 102
+  },
+  "ms": 4009,
+  "cov": {
+   "hitGames": 596,
+   "killGames": 193,
+   "unlockGames": 163,
+   "linkTaps": 428,
+   "refused": 24830,
+   "refusedLinked": 1108,
+   "revealChecks": 638282,
+   "revealMismatch": 0,
+   "jamWhy": {
+    "0": 1567,
+    "1": 5,
+    "2": 312
+   },
+   "rushedEnd": {
+    "1/": 624,
+    "-1/jam": 845,
+    "-1/short": 91
+   }
+  },
+  "opt": {
+   "waryAt": "disp",
+   "backWalk": "yardTile",
+   "discLE": true
+  },
+  "levels": 104
+ },
+ "mism": []
+}
