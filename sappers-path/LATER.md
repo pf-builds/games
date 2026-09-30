@@ -128,7 +128,7 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - v4 M1: the holding line's head is nearly full at 375 wide when the line is full ("Line full: wait for a squad to come home" beside "3 stuck · 2 working"); on a 360 px phone it would crowd. A shorter full text or a second line.
 - v4 M1: `tools/palette.js` could also score the palette under simulated deuteranopia and protanopia (colour-blind mode's marks cover it today, but a palette that holds up without them is better).
 - v4 M1: tower blocks' crenellated rims (dark edge, pale merlons) are now the busiest thing on a flat board. A simpler tower marker (a darker rim only) is worth a look with the visual critic.
-- v4 M1: in the small iframe (36 px spaces) a working space's "out" marker touches its stepping figures.
+- v4 M1: in the small iframe (36 px spaces) a working space's "out" marker touches its stepping figures. (Done in the Critics 1 fix: a space is a grid, the marker and the figures in separate rows.)
 
 ## From v4 M2 (the twists, 2026-09-30)
 
@@ -137,7 +137,7 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - Food Hunt's dark "4" tile with a lid (shot 7): meaning unconfirmed. Could be a sealed card that opens after N taps.
 - Grading mystery levels: the one-move lookahead can't feel a "?" (it only reads front cards), and the sampling planner prototype (`tools/m2-measure.js --pimc`) collapses to the random floor when every card behind the fronts is hidden. M3 decides the metric (proposal in `tools/v4-m2-notes.md`). A cheaper sampler (rollouts by the one-move player instead of the solver) is the likely route for a full bake.
 - A near-jam hint for linked cards: with one space free the linked front cards wear the lock, but the head only warns "One space left" when the other squads are stuck. A line such as "Linked squads need 2: one space left" would teach it sooner.
-- Rods between partners two rows apart and a column over cross the corner of a tile in between. Fine in the debug levels; M3's dealer could prefer partners at most one row apart (Food Hunt's pairs are one row apart).
+- Rods between partners two rows apart and a column over cross the corner of a tile in between. Fine in the debug levels; M3's dealer could prefer partners at most one row apart (Food Hunt's pairs are one row apart). (Done in the Critics 1 fix without touching the dealer: those rods run down the column gutter.)
 - A skip lands an unlock silently (no cue, no padlock pop), the same as a gate opened by a skip.
 - The fast tapper wins level 61 about twice as often as patient play (11.2% against 5.9% at 2,000 games, Normal). Information for M3's rebake; nothing changed.
 
@@ -146,10 +146,23 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - Board size against the time targets. Patient time is set by walking (tileMs 80 and carryMs 90 are Peter's; bite, yard and stagger only trim a few per cent), about 0.25 s a block on Era 1's open stockades and 0.45-0.55 s on moated, archer-covered Era 3-4 castles. So the 4-minute max caps Era 3 at about 1.2× its v3 block count and Era 4 at about 380 blocks. Bigger Era 3-4 boards need either a longer max (about 5-6 minutes) or a faster walk; Peter's call.
 - Hidden linked partners. M3 never puts a "?" on a linked card, so the one-move lookahead's grade never depends on a hidden colour and the mystery flags can go on after the pick. The "tap a pair whose partner is a ?" interaction (M2 measured it costs the lookahead player about 5 points) is left for a later mixed level or the Gallery.
 - A counting player for the mystery grade: the sampling planner draws hidden colours card by card from the unseen counts (a player who reads the tray but doesn't count every block). A planner that only samples colourings consistent with the exact per-colour totals would be the strict upper bound; with 2-4 "?" cards the colours are often deducible that way.
-- Level 76's coach arrow on the padlocked space covers the line head's "free" count at 375 wide. Point the arrow from the side, or drop the count while the arrow is there.
-- An arrow on a "?" tile in the second row sits on the front card above it (level 35), as the level 1 arrow on a faded squad always has. A side arrow for rows behind the front would read better.
+- Level 76's coach arrow on the padlocked space covers the line head's "free" count at 375 wide. Point the arrow from the side, or drop the count while the arrow is there. (Done in the Critics 1 fix: the count steps aside.)
+- An arrow on a "?" tile in the second row sits on the front card above it (level 35), as the level 1 arrow on a faded squad always has. A side arrow for rows behind the front would read better. (Done in the Critics 1 fix: every queue tile gets a side arrow.)
 - Teaching levels 1-3 run 22-27 s patient, under the 60-90 s window for levels 1-15 (they are exempt, as tutorials). If Peter wants them in the window, grow their squads and forts again.
 - The map's Era 4 history note wraps to four lines in the wide layout, one more than the others; a shorter note would square the row.
 - The dealer's "no parking under archers" rule keeps every stored Hard line free of arrows, but it also keeps Era 3-4 squads small while towers stand (average 10-16 a card), which is where most of the late taps come from. A dealer that parks a squad only when none of its colour's blocks are covered would allow bigger squads.
 - Era 4 forts under about 30 columns often fail (the inner ring gets too thin), which is why Era 4 reliefs are only scaled to 0.95.
 - Era 3 castles now always have their moat (the bake asks every fort from Era 2 on for a gate; v3 moated half of them). Moatless keeps were quicker per block (about 0.44 s against 0.56 s patient); letting half of Era 3 go without would shorten the era or allow bigger keeps.
+
+## From v4 Critics 1 (the fix pass, 2026-09-30; references are to `tools/critic-v4-1-visual.md`)
+
+- m5, the win's payoff: plant a banner in the razed ground and burst each full bin; send the whole camp out in one column for the victory march. Juice for M5 (the meta milestone), not a fix.
+- m8, colour-blind access: the toggle is on the title and the map only. M5's settings sheet and a pause menu should carry it, and it could be offered once after a jam where two stuck squads were a low-ΔE pair (Palisade/Hedge 1.3 under deuteranopia).
+- M6, the critic's other ring options: long-press or hover a tower to show its ring loud; or draw only the ring the next front card's path enters. The fix makes a ring loud only while a colour the player can send has a block in reach inside it.
+- M7, the critic's other bin options: one thin progress strip per colour along the yard edge, which could also free two or three board rows (bigger cells); or the bins out of the frame at 60%. The fix shows a bin only once its colour has hauled a block.
+- M1/M2, a Food Hunt-strength fade: the rows behind fade only 10% and 20% toward the tray, because every faded tile has to stay ΔE00 20 or more from every front colour it is dealt with (`tools/fade.js`). A pastel fade like Food Hunt's (30% and 55%) would read deeper but puts 12 pairs under 20, the worst about 13 (Roof tile faded against Timber; `node tools/fade.js --t 0,0.3,0.55`). Depth now comes from the size step, the flat face and the softer rim.
+- A texture on the stone tray (faint ashlar courses) if the flat tray reads too plain next to the board.
+- Desktop: the side column has empty tray below the queue until M5's power-up bar (the reserved 84 px spot) and the level report arrive; taller queue tiles on desktop would use more of it.
+- The coach in the top bar (only the 400×600 iframe's level 77, where a band above the board would take its board under 8 px a cell) covers the level's number and name while it shows.
+- Easy on a phone (six spaces) uses the tight space layout (the count at 78%, the badges above it). If the counts feel small there, the line could drop to two rows of three.
+- The critic's section 3 (what M5's home screen and power-up bar must match: a full-width bar of four round badges with "+" states, the space budget at 375×812 and in the 400×600 iframe, one dominant Play button on the title scene) is M5's brief.
