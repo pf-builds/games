@@ -1,8 +1,8 @@
 /* Sapper's Path v3 chrome: castle-wall background (painted by art.js, set as --wall), bevelled stone and gold buttons,
    parchment panels, and the Jersey 10 pixel face (SIL OFL, fonts/) for headings, buttons and numbers. The board sits in
    a light wooden frame; queue tiles are solid colour with big numbers (v4 M1: colour first, three rows). main.js sets the
-   material colours. */
-@font-face { font-family: "Jersey 10"; src: url("fonts/Jersey10-Regular.ttf?v=16") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+   material colours. v4 M2: mystery tiles, the rods between linked tiles, the padlocked space and linked spaces. */
+@font-face { font-family: "Jersey 10"; src: url("fonts/Jersey10-Regular.ttf?v=17") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
 :root { --bg: #2e2935; --ink: #221a26; --cream: #f3ead8; --cream-soft: #cfc4d6;
   --stone: #a2a5b0; --stone-hi: #cdd0d8; --stone-lo: #666a77; --gold: #f2c230; --gold-hi: #ffe27a; --gold-lo: #b8860b; --gold-dark: #7a5a06;
   --parch: #fbf5e6; --parch-edge: #e3d3ad; --parch-ink: #2a2430; --parch-soft: #5a4e3c;
@@ -126,6 +126,20 @@ button.big { min-height: 58px; font-size: 36px; width: 100%; }
 .slot.stuck .men { opacity: .55; }
 .slot.last { border-color: rgba(255,110,90,.95); animation: lastpulse .8s ease-in-out infinite; }
 @keyframes lastpulse { 50% { background: rgba(255,90,60,.35); box-shadow: 0 0 0 2px rgba(255,90,60,.55); } }
+/* v4 M2: the locked space is a socket with a padlock (dashed rim); it pops open when its key block goes. Linked squads'
+   spaces wear a chain; a finished one holding its space for its partner is dimmed. */
+.slot .pad { display: none; position: absolute; left: 50%; top: 50%; width: calc(var(--slot-h) * .62); height: calc(var(--slot-h) * .62); transform: translate(-50%, -50%);
+  background: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 11V8a5 5 0 0 1 10 0v3' fill='none' stroke='%23221a26' stroke-width='5'/%3E%3Cpath d='M7 11V8a5 5 0 0 1 10 0v3' fill='none' stroke='%23f3ead8' stroke-width='2.4'/%3E%3Crect x='3.5' y='10' width='17' height='12' rx='2.5' fill='%23221a26'/%3E%3Crect x='5.5' y='12' width='13' height='8' rx='1.5' fill='%23f3ead8'/%3E%3Ccircle cx='12' cy='15.4' r='1.7' fill='%23221a26'/%3E%3Crect x='11.2' y='15.6' width='1.6' height='3' fill='%23221a26'/%3E%3C/svg%3E"); }
+.slot.locked { border-style: dashed; border-color: rgba(243,234,216,.55); background: rgba(12,9,16,.82); }
+.slot.locked .pad, .slot.unlocking .pad { display: block; }
+.slot.unlocking .pad { animation: padpop .7s ease-out both; }
+@keyframes padpop { 0% { transform: translate(-50%, -50%); opacity: 1; } 30% { transform: translate(-50%, -62%) scale(1.25) rotate(-10deg); opacity: 1; } 100% { transform: translate(-50%, -150%) scale(.7) rotate(28deg); opacity: 0; } }
+.slot .lk { display: none; position: absolute; right: 3px; top: 3px; z-index: 1; width: 18px; height: 18px; border-radius: 5px; background: #221a26 center / 14px 14px no-repeat;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Crect x='1' y='4' width='7' height='5' rx='2.5' fill='none' stroke='%23efe2c8' stroke-width='1.6'/%3E%3Crect x='6' y='5' width='7' height='5' rx='2.5' fill='none' stroke='%23b9a48a' stroke-width='1.6'/%3E%3C/svg%3E"); }
+.slot.linked .lk { display: block; }
+.slot.held { filter: saturate(.6) brightness(.82); }
+.era.dbg .nodes { grid-template-columns: repeat(4, 1fr); }
+.dbg-node { font-size: 16px; line-height: 1; padding: 4px; }
 
 /* v4 M1, the queue: colour first. Five columns of layout.queueRows tiles at full size, each a solid tile in its colour
    with a big count (the material's glyph only in colour-blind mode, body.cb). The front tile is the raised button you
@@ -146,6 +160,15 @@ body.cb .tile .gl { display: block; }
 .next { border-color: rgba(34,26,38,.8); box-shadow: inset 0 2px 0 rgba(255,255,255,.22), inset 0 -3px 0 rgba(0,0,0,.2); }
 .next.d1 { opacity: .66; } .next.d2 { opacity: .38; }
 .next.none { visibility: hidden; }
+/* v4 M2: a hidden mystery card is a neutral hatched tile with a gold "?" badge and its count; main.js never gives it
+   the card's colour, crew or glyph. The rods joining linked tiles are an SVG over the tray (main.js draws them). */
+.tile .q { display: none; position: absolute; left: 3px; top: 2px; min-width: calc(var(--gl-s) + 4px); font-family: var(--px); font-style: normal; font-size: calc(var(--tile-n) * .56); line-height: .9;
+  color: var(--gold-hi); text-shadow: 0 2px 0 var(--ink); }
+.tile.mys { background: repeating-linear-gradient(135deg, rgba(255,255,255,.07) 0 4px, rgba(0,0,0,0) 4px 9px), var(--mc); }
+.tile.mys .q { display: block; }
+body.cb .tile.mys .gl { display: none; }
+#tray { position: relative; }
+.rods { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 2; fill: none; }
 
 /* Win / fail panel: a parchment sheet over the rail in portrait, so its buttons stay under the thumb. */
 .sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; justify-content: center; pointer-events: none; }

@@ -18,6 +18,8 @@
 // Zero console errors AND warnings anywhere.
 // v4 M1: the speed button cycles 1x, 2x, 3x (the rapid-tap frame check runs at 1x and 3x); the speed and the colour-blind
 // toggle persist across a reload. The M1 screens themselves come from tools/shots-v4-m1.mjs.
+// v4 M2: each debug level opens from the map's "v4 twists" row by a real tap (8 CSS px a cell or more, no scrollbars),
+// and a real tap on a linked card sends both squads (two spaces taken). The M2 screens come from tools/shots-v4-m2.mjs.
 // Screenshots (default tools/shots-v4-m1/harness/): v3.1 at 375×812: stuck-vs-working, near-jam, full-blocked, refused, jam-sheet,
 // victory-march; and, as before, 375×812 level 1 teach, level 26 gate teach, level 51 archer hit, the
 // win mid-collapse and the goblin fleeing, a fail; 375 and 1280: two and three overlapping squads mid-show; frame
@@ -37,7 +39,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const i = process.argv.indexOf("--" + k); return i > 0 ? process.argv[i + 1] : d; };
 const URL_ = arg("url", "http://127.0.0.1:8491/sappers-path/");
 const ORIGIN = new URL(URL_).origin;
-const OUT = resolve(arg("out", resolve(here, "shots-v4-m1", "harness")));
+const OUT = resolve(arg("out", resolve(here, "shots-v4-m2", "harness")));
 const WALL_MS = 420000, MIN_CELL = 8;
 mkdirSync(OUT, { recursive: true });
 const wall = setTimeout(() => { console.error("harness: wall budget exceeded"); process.exit(2); }, WALL_MS);
@@ -265,6 +267,17 @@ async function run() {
       await tap("#btn-map");
       s = await S();
       ok(s.screen === "map" && (await hit("#map-play")) && (await noScroll()), tag + " map button; map Play hittable; no scrollbars");
+      // v4 M2 debug levels: each from the map's debug row by a real tap; a real tap on a linked card takes two spaces.
+      R.debug = {};
+      for (const id of ["v4-mystery", "v4-linked", "v4-locked", "v4-all"]) {
+        await ev(() => { SP.screen("map"); document.getElementById("map").scrollTop = 0; });
+        await tap(`.dbg-node[data-id="${id}"]`); s = await S();
+        R.debug[id] = { cell: +(s.cs / (vp.dpr || 1)).toFixed(2), hidden: s.hidden, links: s.links, open: s.open, cap: s.cap };
+        ok(s.screen === "play" && s.id === id && s.debug && s.cs / (vp.dpr || 1) >= MIN_CELL && (await noScroll()), tag + " " + id + " opens from the map's debug row (" + JSON.stringify(R.debug[id]) + ")");
+        if (id === "v4-linked") { const lj = await ev(() => Array.from(document.querySelectorAll(".card")).findIndex((b) => b.classList.contains("linked") && !b.classList.contains("blocked")));
+          await tap(`.card[data-col="${lj}"]`); s = await S(); ok(s.line.length === 2 && s.plays === 1, tag + " a real tap on a linked card sends both squads (" + s.line.length + " spaces, " + s.plays + " play)"); }
+        if (id === "v4-locked") ok(s.open === s.cap - 1 && (await ev(() => { const q = document.querySelectorAll(".slot")[SP.state().cap - 1]; return q.classList.contains("locked") && !q.hidden; })), tag + " the locked space shows its padlock");
+      }
 
       // Screens for the critics (portrait phone): the gate teach, an archer hit mid-animation, the win's collapse and goblin.
       if (vp.shots === "375") {

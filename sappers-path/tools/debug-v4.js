@@ -9,7 +9,7 @@
 const fs = require("fs"), path = require("path");
 const E = require("../src/engine.js"), R = require("./grade.js"), C = require("./bake-config.json");
 const V3 = require("../config.json").v3, LV = require("../levels/levels.json").levels;
-const OUT = path.resolve(__dirname, "../levels/debug-v4.json"), DIFFS = ["easy", "normal", "hard"], NODES = 400000, GAP = V3.twists.linkRowGap;
+const OUT = path.resolve(__dirname, "../levels/debug-v4.json"), DIFFS = ["easy", "normal", "hard"], NODES = 400000, GAP = V3.twists.linkRowGap, ROWS = require("../config.json").layout.queueRows;
 const rules = { easy: E.rulesOf(V3, "easy"), normal: E.rulesOf(V3, "normal"), hard: E.rulesOf(V3, "hard") };
 const copy = (o) => JSON.parse(JSON.stringify(o));
 const byN = (n) => LV.find((l) => l.n === n);
@@ -19,13 +19,15 @@ function mystery(L) { L.cols.forEach((col) => col.forEach((cd, i) => { if (i > 0
 // k links, picked one at a time: every pair of unlinked cards in neighbouring columns, rows at most v3.twists.linkRowGap
 // (2) apart (E.check's rule), with at least one of the two behind its column's front (so the pull shows), tried on Normal; keep the pair
 // the one-move-lookahead player wins most with (a debug level should teach the twist, not wall the player), ties to
-// the first in column order. Only pairs that still win on all three difficulties count.
-function links(L, k) {
+// the first in column order. Only pairs that still win on all three difficulties count. stub: the first pair starts
+// with its partner below the page's visible rows (layout.queueRows) and its other card in view, so the rod stub shows.
+function links(L, k, stub) {
   for (let t = 0; t < k; t++) {
     const used = new Set(); for (const P of L.links || []) for (const q of P) used.add(q.join(","));
     let best = null, bg = -1;
     for (let j = 0; j < 4; j++) for (let i = 0; i < L.cols[j].length; i++) for (let r = Math.max(0, i - GAP); r <= i + GAP && r < L.cols[j + 1].length; r++) {
       if ((i === 0 && r === 0) || used.has(j + "," + i) || used.has(j + 1 + "," + r)) continue;
+      if (stub && t === 0 && !(Math.max(i, r) >= ROWS && Math.min(i, r) >= 1 && Math.min(i, r) < ROWS)) continue;
       const T = Object.assign(copy(L), { links: (L.links || []).concat([[[j, i], [j + 1, r]]]) }), B = E.compile(T);
       if (!DIFFS.every((d) => R.solve(B, rules[d], 20000))) continue;
       const g = R.greedy(B, rules.normal, 60, 11);
@@ -81,7 +83,7 @@ function build(id, name, hint, from, make) {
 function all() {
   return [
     build("v4-mystery", "Mystery squads", "? squads hide their colour until they reach the front.", 40, (L) => mystery(L)),
-    build("v4-linked", "Linked squads", "Linked squads go out together: they need 2 free spaces.", 20, (L) => links(L, 3)),
+    build("v4-linked", "Linked squads", "Linked squads go out together: they need 2 free spaces.", 20, (L) => links(L, 3, true)),
     build("v4-locked", "The locked space", "The last space is locked: pop its key (white corners).", 29, (L) => lock(L, 2)),
     build("v4-all", "All three twists", "Mystery, linked squads and a locked space, all at once.", 38, (L) => links(lock(mystery(L), 3), 2)),
   ];

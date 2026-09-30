@@ -83,6 +83,7 @@
     "tents": ["#d8c7a0", "#c0452f", "#6b5534"],
     "idle": 4,
     "gateTints": ["#ffd23a", "#5ce8ff"],
+    "lockKey": {"note": "v4 M2: the locked space's key block wears corner brackets in the holding line's socket colour (a gate's key wears a full ring in its gate's tint), pulsing while the space is locked. w: line width, arm: bracket arm, both as a fraction of the cell.", "tint": "#f3ead8", "w": 0.15, "arm": 0.42},
     "lockScale": 1.45,
     "lockInk": "#1a1418",
     "lockShackle": "#c9ced8",
@@ -127,7 +128,9 @@
     "blockedGapMs": 700,
     "blockedShakeMs": 280,
     "blockedShake": [0, -6, 6, -4, 4, -2, 0],
-    "victoryPace": 1.5
+    "victoryPace": 1.5,
+    "flipMs": 340,
+    "unlockMs": 700
   },
   "fx": {
     "note": "Juice (M2): crumbs of the block's colour and a dust puff per popped pixel (sizes in cells, speeds in cells/s, gravity in cells/s^2, ms), the falling pops (gate bars, and the keep's last fx.winFallN pixels on the winning play), shakes [amplitude in cells, ms], and the coach's ring colour. Shakes are off under prefers-reduced-motion.",
@@ -138,7 +141,11 @@
   },
   "layout": {"wideMinPx": 760, "wideAspect": 1.15, "railWidePx": 520, "railMinPx": 340, "railFrac": 0.42, "gapWidePx": 32, "gapShortPx": 12, "sidePadPx": 24, "maxDtMs": 100, "lineSlots": 8, "sapperIcons": 2,
     "rotateBelowCss": 10, "shortMaxH": 480, "railShortPx": 348, "coachFontPx": [21, 15], "nameMinPx": 12, "queueRows": 3, "glyphPx": 18, "manPx": 20, "lineText": "Squads out", "fullText": "Line full: wait for a squad to come home", "nearText": "One space left",
-    "marchText": "Victory march ×{x}", "blockedText": "No space: wait for a squad to come home", "stuckWord": "stuck", "workWord": "working", "freeWord": "free", "jamNames": 3},
+    "marchText": "Victory march ×{x}", "blockedText": "No space: wait for a squad to come home", "stuckWord": "stuck", "workWord": "working", "freeWord": "free", "jamNames": 3,
+    "twistsNote": "v4 M2 twists on the page. linkedText: the toast for a refused linked tap. jamLinkedText / jamLockText: the jam sheet when a linked card needed 2 spaces, or a space was still locked. mystery: a hidden card's tile (colour c, text tc, glyph q; it never shows the card's colour or crew). rod: the bar joining linked tiles (width, stub length and gap in CSS px, colours). debugRow: the map's row of debug levels under ?debug=1.",
+    "linkedText": "Linked squads need 2 free spaces", "jamLinkedText": "Line jammed: linked squads need 2 free spaces", "jamLockText": "The locked space never opened.",
+    "linkedWord": "linked", "linkedAria": "linked with column {c}", "debugNum": "v4", "heldText": "done, holding for its partner", "lockedText": "Locked space: its key is on the board",
+    "mystery": {"c": "#3d3747", "tc": "#f3ead8", "q": "?"}, "rod": {"w": 11, "core": 7, "ink": "#221a26", "metal": "#b08f6a", "hi": "#f3e3c4", "stub": 16, "cap": 3.5}, "debugRow": "v4 twists"},
   "title": {"artW": 125, "artH": 190, "artMin": 2, "artMax": 5, "baseFrac": 0.58, "baseFracWide": 0.56, "wallArtPx": 3},
   "audio": {
     "volume": 0.5,
@@ -173,7 +180,9 @@
       "pop": [{"w": "sine", "f": 620, "f1": 1240, "d": 0.09, "g": 0.18}],
       "fanfare": [{"w": "square", "f": 523, "d": 0.13, "g": 0.08, "lp": 3000}, {"w": "square", "f": 659, "d": 0.13, "g": 0.08, "lp": 3000, "at": 0.13}, {"w": "square", "f": 784, "d": 0.13, "g": 0.08, "lp": 3000, "at": 0.26}, {"w": "square", "f": 1047, "d": 0.5, "g": 0.09, "lp": 3000, "at": 0.39}, {"w": "triangle", "f": 523, "d": 0.5, "g": 0.12, "at": 0.39}, {"w": "triangle", "f": 659, "d": 0.5, "g": 0.1, "at": 0.39}],
       "star": [{"w": "triangle", "f": 1047, "d": 0.18, "g": 0.18, "step": 262}, {"w": "sine", "f": 2094, "d": 0.12, "g": 0.06, "step": 524}],
-      "lock": [{"w": "square", "f": 220, "f1": 200, "d": 0.08, "g": 0.08, "lp": 1200}, {"w": "square", "f": 180, "f1": 170, "d": 0.1, "g": 0.08, "lp": 1200, "at": 0.08}]
+      "lock": [{"w": "square", "f": 220, "f1": 200, "d": 0.08, "g": 0.08, "lp": 1200}, {"w": "square", "f": 180, "f1": 170, "d": 0.1, "g": 0.08, "lp": 1200, "at": 0.08}],
+      "unlock": [{"w": "square", "f": 180, "f1": 150, "d": 0.06, "g": 0.1, "lp": 1600}, {"w": "noise", "d": 0.04, "g": 0.16, "bp": 2600}, {"w": "triangle", "f": 660, "f1": 990, "d": 0.12, "g": 0.14, "at": 0.08}, {"w": "sine", "f": 1320, "d": 0.18, "g": 0.1, "at": 0.16}],
+      "flip": [{"w": "triangle", "f": 700, "f1": 1100, "d": 0.06, "g": 0.1}]
     },
     "work": ["clink", "thunk", "bleat", "sizzle"],
     "workAfter": ["clink", "thunk", "munch", null]
@@ -252,6 +261,11 @@
     "queueLevel": "e2-40",
     "jamLevel": {"name": "Jam check", "w": 9, "h": 5, "grid": [".........", ".aaaaaaa.", ".abcdefa.", ".aaaaaaa.", "....#...."],
       "cols": [[[2, 1], [1, 16]], [[3, 1]], [[4, 1]], [[5, 1]], [[6, 1]]]},
-    "stuckLevel": {"name": "Stuck check", "w": 4, "h": 3, "grid": ["....", ".aa.", "..#."], "cols": [[[1, 1]], [], [], [], []]}
+    "stuckLevel": {"name": "Stuck check", "w": 4, "h": 3, "grid": ["....", ".aa.", "..#."], "cols": [[[1, 1]], [], [], [], []]},
+    "linkJamLevel": {"name": "Linked jam check", "w": 9, "h": 5, "grid": [".........", ".aaaaaaa.", ".abcdefa.", ".aaaaaaa.", "....#...."],
+      "cols": [[[2, 1], [1, 16]], [[3, 1], [6, 1]], [[4, 1]], [[5, 1]], []], "links": [[[0, 1], [1, 1]]]},
+    "lockJamLevel": {"name": "Lock jam check", "w": 9, "h": 5, "grid": [".........", ".aaaaaaa.", ".abcdena.", ".aaaaaaa.", "....#...."],
+      "cols": [[[2, 1], [1, 16]], [[3, 1]], [[4, 1]], [[5, 1]], [[14, 1]]], "lock": {"key": [6, 2]}},
+    "debugOrder": ["v4-mystery", "v4-linked", "v4-locked", "v4-all"]
   }
 }

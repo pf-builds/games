@@ -12,6 +12,9 @@
 // key reads as that gate's. When the key goes, the lock drops and the gate's bars crumble one by one with a shake.
 // Towers (M2): tower blocks carry a crenellated rim on the tower's outer edge and a hooded goblin archer stands on top
 // while any of it stands; the range disc fades and the archer tumbles when it falls.
+// The locked space's key (v4 M2): the gilt block that opens the holding line's locked space wears pulsing corner brackets
+// in the socket colour (board.lockKey), so it reads as a space key, not a gate key (a full ring in the gate's tint).
+// The page plays the padlock and the cue; sync() passes REVEAL, LINK and UNLOCK to the page's hooks.
 //
 // Surface and scenery (v3 fix pass). Each block can take one of four tones of its colour (base, lit, shade, alt), picked
 // once per level from the fort's shape (a region's top or left edge lit, its bottom or right edge shaded, a running bond
@@ -127,7 +130,8 @@
       label: { t: -1e12, x: 0, y: 0, kill: false, text: "", w: 0 },
       focus: { on: false, x: 0, y: 0, r: 1 },
       gob: { on: false, t0: 0, x: 0, y: 0, done: false },
-      hooks: { pop: null, deposit: null, gate: null, tower: null, shot: null, hit: null, collapse: null, tap: null, free: null, move: null },
+      hooks: { pop: null, deposit: null, gate: null, tower: null, shot: null, hit: null, collapse: null, tap: null, free: null, move: null, reveal: null, link: null, unlock: null },
+      lockKey: -1, lockOpen: true,
     };
     const RMAX = Math.max(8, Math.min(1024, SH.maxRunners | 0));
     V.rOn = new Int8Array(RMAX); V.rId = new Int32Array(RMAX); V.rK = new Int8Array(RMAX); V.rS = new Int8Array(RMAX); V.rM = new Int8Array(RMAX); V.rC = new Int32Array(RMAX);
@@ -233,6 +237,7 @@
       V.keyC.fill(-1);
       B.gateCells.forEach((gc, k) => { if (k >= MAXG) return; let sx = 0, sy = 0; for (let j = 0; j < gc.length; j++) { sx += gc[j] % B.w; sy += (gc[j] / B.w) | 0; } V.gX[k] = sx / gc.length + 0.5; V.gY[k] = sy / gc.length + 0.5; });
       for (let c = 0; c < B.n; c++) { const k = B.keyOf[c]; if (k >= 0 && k < MAXG) V.keyC[k] = c; }
+      V.lockKey = B.lockKey;
       V.towerOfCell.fill(-1);
       reset();
     }
@@ -301,7 +306,7 @@
       V.rOn.fill(0); V.live = 0; V.rFreeN = 0; for (let i = RMAX - 1; i >= 0; i--) V.rFree[V.rFreeN++] = i; V.idR.fill(-1); V.stats.hits = 0; V.stats.dropped = 0;
       V.towerLeft.fill(0); for (let c = 0; c < B.n; c++) { const t = B.towerOf[c]; V.towerOfCell[c] = t; if (t >= 0 && t < MAXT && V.disp[c] > 0) V.towerLeft[t]++; }
       for (let k = 0; k < MAXG; k++) { const gc = B.gateCells[k]; V.gSt[k] = gc && gc.length && V.disp[gc[0]] > 0 ? 0 : 1; V.gT[k] = -1e12; }
-      V.tFallT.fill(-1e12); V.shT = -1e12; V.label.t = -1e12; V.gob.on = false; V.gob.done = false;
+      V.tFallT.fill(-1e12); V.shT = -1e12; V.label.t = -1e12; V.gob.on = false; V.gob.done = false; V.lockOpen = !V.S.locked;
       V.popT.fill(-1e12); V.pT.fill(-1e12);
       paintLayer();
     }
@@ -524,6 +529,9 @@
         } else if (t === EV.HOME) { if (S.qK[a] === 1) deposit(S.spM[S.qS[a]]); const i = V.idR[a]; if (i >= 0) drop(i); if (V.hooks.move) V.hooks.move(); }
         else if (t === EV.TAP) { if (V.hooks.tap) V.hooks.tap(a, b); }
         else if (t === EV.FREE) { if (V.hooks.free) V.hooks.free(a, b); }
+        else if (t === EV.REVEAL) { if (V.hooks.reveal) V.hooks.reveal(a, b); }
+        else if (t === EV.LINK) { if (V.hooks.link) V.hooks.link(a, b); }
+        else if (t === EV.UNLOCK) { V.lockOpen = true; if (anim && V.hooks.unlock) V.hooks.unlock(a); }
       }
       S.clearLog();
     }
@@ -533,6 +541,7 @@
       V.disp.set(S.a.subarray(0, V.n)); V.dispVer++; V.left = S.pixLeft;
       V.towerLeft.fill(0); for (let c = 0; c < V.n; c++) { const t = V.B.towerOf[c]; if (t >= 0 && t < MAXT && V.disp[c] > 0) V.towerLeft[t]++; }
       for (let k = 0; k < MAXG; k++) { const gc = V.B.gateCells[k]; V.gSt[k] = gc && gc.length && V.disp[gc[0]] > 0 ? 0 : 1; }
+      V.lockOpen = !S.locked;
       for (let m = 1; m < E.NMAT; m++) V.haul[m] = Math.max(0, V.total[m] - S.left[m]);
       for (let id = 0; id < S.sent; id++) { if (S.q2[id] <= S.now || (S.qK[id] === 3 && S.q1[id] <= S.now)) continue; if (S.qK[id] === 1 && S.q1[id] <= S.now) V.haul[S.spM[S.qS[id]]]--; runner(S, id); }
       paintLayer();
@@ -623,6 +632,16 @@
           const a = (ft - V.gT[k]) / FX.lockFallMs;
           if (a >= 0 && a < 1) { gx.save(); gx.globalAlpha = 1 - a * a; gx.translate(lx + ls / 2, ly + ls / 2 + a * a * cs * 2.2); gx.rotate(a * 1.4); gx.drawImage(lk, -ls / 2, -ls / 2); gx.restore(); }
         }
+      }
+      // The locked space's key: corner brackets in the socket colour, pulsing while the space is locked.
+      if (V.lockKey >= 0 && !V.lockOpen && V.disp[V.lockKey] > 0) {
+        const LK = K.lockKey, kc = V.lockKey, x = CX(kc % V.w, (kc / V.w) | 0) * cs, y = CY(kc % V.w, (kc / V.w) | 0) * cs, lw = Math.max(1.5, cs * LK.w), o = lw / 2, a = cs * LK.arm + o;
+        gx.globalAlpha = 0.6 + 0.4 * Math.sin(ft / 170); gx.lineWidth = lw; gx.strokeStyle = LK.tint; gx.lineCap = "butt"; gx.beginPath();
+        gx.moveTo(x - o, y - o + a); gx.lineTo(x - o, y - o); gx.lineTo(x - o + a, y - o);
+        gx.moveTo(x + cs + o - a, y - o); gx.lineTo(x + cs + o, y - o); gx.lineTo(x + cs + o, y - o + a);
+        gx.moveTo(x + cs + o, y + cs + o - a); gx.lineTo(x + cs + o, y + cs + o); gx.lineTo(x + cs + o - a, y + cs + o);
+        gx.moveTo(x - o + a, y + cs + o); gx.lineTo(x - o, y + cs + o); gx.lineTo(x - o, y + cs + o - a);
+        gx.stroke(); gx.globalAlpha = 1;
       }
       // Archer ranges while any pixel of their tower stands on the board; they fade as the tower falls.
       const T = V.B.towers;
@@ -760,7 +779,7 @@
       let pops = 0, falls = 0, parts = 0; const ft = V.fxT;
       for (let k = 0; k < POPS; k++) { const a = (ft - V.popT[k]) / (V.popK[k] ? FX.fallMs : SH.popMs); if (a < 1 && a > -20) { pops++; if (V.popK[k]) falls++; } }
       for (let k = 0; k < PARTS; k++) { const a = (ft - V.pT[k]) / V.pL[k]; if (a >= 0 && a < 1) parts++; }
-      return { pops, falls, parts, shaking: (ft - V.shT) / V.shMs < 1, keep: V.gob.on && (V.clock - V.gob.t0) / (SH.goblinMs * SH.keepFrac) < 1, gates: Array.from(V.gSt.subarray(0, V.B ? V.B.gateCells.length : 0)), lockFalling: V.B ? V.B.gateCells.some((_, k) => V.gSt[k] === 1 && ft - V.gT[k] < FX.lockFallMs) : false };
+      return { pops, falls, parts, shaking: (ft - V.shT) / V.shMs < 1, keep: V.gob.on && (V.clock - V.gob.t0) / (SH.goblinMs * SH.keepFrac) < 1, gates: Array.from(V.gSt.subarray(0, V.B ? V.B.gateCells.length : 0)), lockKey: V.lockKey >= 0 && !V.lockOpen && V.disp[V.lockKey] > 0, lockFalling: V.B ? V.B.gateCells.some((_, k) => V.gSt[k] === 1 && ft - V.gT[k] < FX.lockFallMs) : false };
     }
 
     // Colour-blind mode (v4 M1): every block wears its material's mark. Rebuilds the caches and repaints (a settings tap).
