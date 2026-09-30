@@ -1,43 +1,380 @@
 {
- "version": 3,
- "note": "Hand-authored v3 teaching levels (SPEC-v3 §5): Era 1 levels 1-3 (the tray, the holding line, squads bigger than what's open), then the opener of Era 2 (gate and key) and Era 3 (archer tower). Legend in src/engine.js. The bake grades each on Easy, Normal and Hard and stores a winning order for each.",
+ "version": 4,
+ "note": "Teaching levels (SPEC-v3 §5, SPEC-v4 §9 M3): levels 1-3 re-authored at the v4 board size, 26 (gate and key) and 51 (archers) from v3, and the v4 twists: 35 mystery cards, 62 linked squads, 76 the locked space, 77 everything at once. Built by tools/teach-v4.js. Legend in src/engine.js. The bake grades each on Easy, Normal and Hard and stores a winning order for each.",
  "levels": [
   {
-   "n": 1, "era": 1, "name": "Open Gate", "teaches": "tray",
+   "n": 1,
+   "era": 1,
+   "name": "Open Gate",
+   "teaches": "tray",
    "hint": "Tap a squad. Its sappers march from the camp and each eats the nearest pixel of their colour.",
-   "w": 14, "h": 16,
-   "grid": ["..............", "..............", "...aaaaaaaa...", "..aa,,,,,,aa..", "..a,,kkkk,,a..", "..a,,kkkk,,a..", "..a,,kkkk,,a..", "..a,,,,,,,,a..", "..a,,,,,,,,a..", "..aa,,,,,,aa..", "...aaa,,aaa...", "..............", "..............", "..............", ".....####.....", ".....####....."],
-   "cols": [[[1, 8]], [[1, 8]], [[11, 6], [11, 6]], [[1, 8]], [[1, 8]]]
+   "w": 20,
+   "h": 18,
+   "grid": ["....................", "....................", ".....aaaaaaaaaa.....", "....aaaaaaaaaaaa....", "...aa,,,,,,,,,,aa...", "...aa,,kkkkkk,,aa...", "...aa,kkkkkkkk,aa...", "...aa,kkkkkkkk,aa...", "...aa,kkkkkkkk,aa...", "...aa,,kkkkkk,,aa...", "...aa,,,,,,,,,,aa...", "....aaaaa,,aaaaa....", ".....aaaa,,aaaa.....", "....................", "....................", "....................", ".......######.......", ".......######......."],
+   "cols": [
+    [
+     [1, 24]
+    ],
+    [
+     [11, 12],
+     [11, 12]
+    ],
+    [
+     [1, 22]
+    ],
+    [
+     [11, 12]
+    ],
+    [
+     [1, 22]
+    ]
+   ]
   },
   {
-   "n": 2, "era": 1, "name": "The Waiting Line", "teaches": "holding",
+   "n": 2,
+   "era": 1,
+   "name": "The Waiting Line",
+   "teaches": "holding",
    "hint": "Sappers who can't reach their colour wait on the holding line, and march on their own once it opens up.",
-   "w": 14, "h": 15,
-   "grid": ["..............", "...aaaaaaaa...", "..aa,,,,,,aa..", "..a,,,,,,,,a..", "..a,,dddd,,a..", "..a,,dccd,,a..", "..a,,dccd,,a..", "..a,,dddd,,a..", "..a,,,,,,,,a..", "..aa,,,,,,aa..", "...aaaaaaaa...", "..............", "..............", ".....####.....", ".....####....."],
-   "cols": [[[3, 4], [1, 9]], [[1, 9], [4, 6]], [[1, 9]], [[4, 6]], [[1, 9]]]
+   "w": 20,
+   "h": 18,
+   "grid": ["....................", "....aaaaaaaaaaaa....", "...aa,,,,,,,,,,aa...", "..aa,,,,,,,,,,,,aa..", "..a,,,dddddddd,,,a..", "..a,,,dddddddd,,,a..", "..a,,,ddccccdd,,,a..", "..a,,,ddccccdd,,,a..", "..a,,,ddccccdd,,,a..", "..a,,,dddddddd,,,a..", "..a,,,dddddddd,,,a..", "..aa,,,,,,,,,,,,aa..", "...aa,,,,,,,,,,aa...", "....aaaaaaaaaaaa....", "....................", "....................", ".......######.......", ".......######......."],
+   "cols": [
+    [
+     [3, 12],
+     [1, 18]
+    ],
+    [
+     [1, 18]
+    ],
+    [
+     [4, 22]
+    ],
+    [
+     [1, 18]
+    ],
+    [
+     [4, 22]
+    ]
+   ]
   },
   {
-   "n": 3, "era": 1, "name": "Woodpile", "teaches": "overshoot",
+   "n": 3,
+   "era": 1,
+   "name": "Woodpile",
+   "teaches": "overshoot",
    "hint": "A squad bigger than what's open eats what it can reach. The rest wait, then finish the job.",
-   "w": 14, "h": 16,
-   "grid": ["..............", "...aaaaaaaa...", "..aa,,,,,,aa..", "..a,,,,,,,,a..", "..a,,dddd,,a..", "..a,,dccd,,a..", "..a,,dccd,,a..", "..a,,dddd,,a..", "..a,,,,,,,,a..", "..aa,,,,,,aa..", "...aaaaaaaa...", "..............", "..dd......dd..", "..............", ".....####.....", ".....####....."],
-   "cols": [[[4, 10], [1, 9]], [[1, 9]], [[1, 9], [3, 4]], [[1, 9]], [[4, 6]]]
+   "w": 20,
+   "h": 19,
+   "grid": ["....................", "....aaaaaaaaaaaa....", "...aa,,,,,,,,,,aa...", "..aa,,,,,,,,,,,,aa..", "..a,,,dddddddd,,,a..", "..a,,,dddddddd,,,a..", "..a,,,ddccccdd,,,a..", "..a,,,ddccccdd,,,a..", "..a,,,dddddddd,,,a..", "..a,,,dddddddd,,,a..", "..aa,,,,,,,,,,,,aa..", "...aa,,,,,,,,,,aa...", "....aaaaaaaaaaaa....", "....................", "...dd..........dd...", "...dd..........dd...", "....................", ".......######.......", ".......######......."],
+   "cols": [
+    [
+     [4, 20],
+     [1, 18]
+    ],
+    [
+     [1, 17]
+    ],
+    [
+     [1, 17],
+     [3, 8]
+    ],
+    [
+     [4, 14]
+    ],
+    [
+     [4, 14]
+    ]
+   ]
   },
   {
-   "n": 26, "era": 2, "name": "The Locked Bridge", "teaches": "gate",
+   "n": 26,
+   "era": 2,
+   "name": "The Locked Bridge",
+   "teaches": "gate",
    "hint": "The iron gate won't budge. Send the Looters for the gold key and the gate swings open.",
-   "w": 16, "h": 19,
+   "w": 16,
+   "h": 19,
    "grid": ["................", ".....~~~~~~.....", "....~~aaaa~~....", "...~~aaddaa~~...", "...~aadccdaa~...", "...~aadccdaa~...", "...~~aaddaa~~...", "....~~aaaa~~....", ".....~~jj~~.....", "................", "................", "...dddd.........", "...dndd......kk.", "...dddd......kk.", "................", "................", "................", "......####......", "......####......"],
-   "gates": [{"at": [7, 8], "key": [4, 12]}],
-   "cols": [[[4, 11], [1, 12]], [[14, 1], [3, 4]], [[1, 12]], [[4, 8]], [[11, 4]]]
+   "gates": [
+    {
+     "at": [7, 8],
+     "key": [4, 12]
+    }
+   ],
+   "cols": [
+    [
+     [4, 11],
+     [1, 12]
+    ],
+    [
+     [14, 1],
+     [3, 4]
+    ],
+    [
+     [1, 12]
+    ],
+    [
+     [4, 8]
+    ],
+    [
+     [11, 4]
+    ]
+   ]
   },
   {
-   "n": 51, "era": 3, "name": "The Corner Tower", "teaches": "archers",
+   "n": 35,
+   "era": 2,
+   "name": "Hidden Colours",
+   "teaches": "mystery",
+   "hint": "A ? squad hides its colour until it reaches the front. Its count always shows.",
+   "w": 22,
+   "h": 24,
+   "grid": ["..........~~~~~~~.....", ".........~~aaaaa~~....", "........~~aaaaaaa~~...", ".......~~aaabbbaaa~~..", ".......~~aab,,,baa~~..", ".......~~aab,dddaa~~..", ".......~~aab,dddaa~~..", ".......~~aab,dddaa~~..", ".aaaaaa~~aaabbbaaa~~a.", ".abbbbbb~~aaaaaaa~~ba.", ".ab,,,,,,~~aaaaa~~,ba.", ".abkkkkk,,~~jj~~~eeba.", ".abkkkkk,,,,,,kkkeeba.", ".abkkkkk,,eee,kkk,,ba.", ".abkkkkk,,eee,eee,,ba.", ".ab,,,,,,,,,kkene,,ba.", ".abee,eee,eekk,kkkkba.", ".abee,eee,eekk,kkkkba.", ".abbbbbbbbbbbbbbbbbba.", ".aaaaaaaaaaaaaaaaaaaa.", "......................", "......................", ".......#######........", ".......#######........"],
+   "gates": [
+    {
+     "at": [12, 11],
+     "key": [15, 15]
+    }
+   ],
+   "towers": [],
+   "cols": [
+    [
+     [1, 27],
+     [5, 29, 1],
+     [1, 7]
+    ],
+    [
+     [1, 19],
+     [14, 1]
+    ],
+    [
+     [2, 35],
+     [1, 18, 1]
+    ],
+    [
+     [11, 40],
+     [4, 9]
+    ],
+    [
+     [2, 17],
+     [1, 28, 1]
+    ]
+   ]
+  },
+  {
+   "n": 51,
+   "era": 3,
+   "name": "The Corner Tower",
+   "teaches": "archers",
    "hint": "Sappers aimed inside the red ring get shot. Bring the tower down first.",
-   "w": 18, "h": 18,
+   "w": 18,
+   "h": 18,
    "grid": ["..................", "..................", "...eeeeeeeeeeee...", "...e,,,,,,,,,,e...", "...e,,,,,,,,,,e...", "...e,,,ffff,,,e...", "...e,,,fhhf,,,e...", "...e,,,fhhf,,,e...", "...e,,,ffff,,,e...", "...e,,,,,,,,,,e...", "...e,,,,,,,,,,e...", "...e,,,,,,,,,ggg..", "...eeeeeeeeeeggg..", ".............ggg..", "..................", "..................", "..........####....", "..........####...."],
-   "towers": [{"at": [14, 12], "r": 5}], "safeArchers": true,
-   "cols": [[[7, 9]], [[5, 13], [6, 12]], [[5, 13]], [[5, 13]], [[8, 4]]]
+   "towers": [
+    {
+     "at": [14, 12],
+     "r": 5
+    }
+   ],
+   "safeArchers": true,
+   "cols": [
+    [
+     [7, 9]
+    ],
+    [
+     [5, 13],
+     [6, 12]
+    ],
+    [
+     [5, 13]
+    ],
+    [
+     [5, 13]
+    ],
+    [
+     [8, 4]
+    ]
+   ]
+  },
+  {
+   "n": 62,
+   "era": 3,
+   "name": "Linked Squads",
+   "teaches": "linked",
+   "hint": "Linked squads go out together and need 2 free spaces; both stay taken until both squads are home.",
+   "w": 23,
+   "h": 28,
+   "grid": [".......................", "..................gg...", "...eeeeeeeeeeeeeegggg..", "..eeeeeeeeeeeeeegggggg.", ".eefffffffffffffgggggg.", ".eef,,,,,,,,,,,ffgggg..", ".eef,,,,,fffff,flfgge..", ".eef,fff,flllf,flffee..", ".eef,flf,fffff,ffffee..", ".eef,fff,,,,,,,,,,fee..", ".eefbbbbffffff,bbbfee..", ".eefbbbbfhhhhf,babfee..", ".eef,,,,fhhhhf,babfee..", ".eef,bbbfhhhhf,bbbfee..", ".eef,babffffff,lllfee..", ".eef,babll,,,,,lllfee..", ".eef,bbbllbbb,bbb,fee..", ".eefffffllbab,bab,fee..", ".eeffllf,,bab,bbb,fee..", ".eefffff,,bbb,,,,,fee..", ".eeffffffffffffffffee..", "..eeeeeeeeeeeeeeeeee...", "...eeeeeeeeeeeeeeee....", ".......................", ".......................", ".....########..........", ".....########..........", ".....########.........."],
+   "gates": [],
+   "towers": [
+    {
+     "at": [18, 4],
+     "r": 5.3
+    }
+   ],
+   "cols": [
+    [
+     [5, 19],
+     [6, 36],
+     [2, 23],
+     [1, 7]
+    ],
+    [
+     [5, 17],
+     [7, 12],
+     [5, 56]
+    ],
+    [
+     [7, 12],
+     [8, 12],
+     [6, 40]
+    ],
+    [
+     [2, 23],
+     [6, 29],
+     [12, 20]
+    ],
+    [
+     [6, 9],
+     [5, 33]
+    ]
+   ],
+   "links": [
+    [
+     [1, 0],
+     [0, 1]
+    ]
+   ]
+  },
+  {
+   "n": 76,
+   "era": 4,
+   "name": "The Locked Space",
+   "teaches": "lock",
+   "hint": "One space starts locked. Its key is a gold block on the board: dig it out and send the Looters.",
+   "w": 27,
+   "h": 33,
+   "grid": ["...........................", "........~~~~~~~~~~~........", ".......~~.........~~.......", "......~~.eeeeeeeee.~~......", ".....~~.eeeeeeeeeee.~~.....", "....~~.eeddd,dddd,ee.~~....", "...~~.ee,dcd,dccd,,ee.~~...", "..~~.ee,,ddd,dddd,ccee.~~..", ".~~.eecc,,,fffff,,cc,ee.~~.", ".~.ee,ccdd,,,,,,,,ccddee.~.", ".~.ee,ccddfffffff,,,ddee.~.", ".~.ee,,,f,fhhhhhf,f,,,ee.~.", ".~.eedddf,fhlllhf,fdddee.~.", ".~.eedcdf,fhlllhf,fdcdee.~.", ".~.endcdf,fhlllhf,fdddee.~.", ".~.eedddf,fhhhhhf,f,,,ee.~.", ".~.ee,,,f,fffffff,fcccee.~.", ".~.eedddf,,,,,,,,,fcccee.~.", ".~.eednd,fffjjlfff,,,,ee.~.", ".~.eeddd,,ffjjfff,,gg,ee.~.", ".~~.ee,,,,,fjjff,,ggggg.~~.", "..~~.ee,,ddddd,,,,ggggg~~..", "...~~.ee,dcccd,,,,ggggg~...", "....~~.eeddddd,,,,ggggg....", ".....~~.eeeeeeeeeeegg~.....", "......~~.eeeeeeeee.~~......", ".......~~.........~~.......", "........~~~~jj~~~~~........", "...........................", "...........................", ".......dddd.######.........", ".......ddnd.######.........", ".......dddd.######........."],
+   "gates": [
+    {
+     "at": [12, 27],
+     "key": [9, 31]
+    },
+    {
+     "at": [12, 18],
+     "key": [6, 18]
+    }
+   ],
+   "towers": [
+    {
+     "at": [20, 21],
+     "r": 5.5
+    }
+   ],
+   "lock": {
+    "key": [4, 14]
+   },
+   "cols": [
+    [
+     [7, 24],
+     [12, 10],
+     [5, 7]
+    ],
+    [
+     [3, 27],
+     [5, 30],
+     [4, 21]
+    ],
+    [
+     [6, 57],
+     [5, 29],
+     [4, 40]
+    ],
+    [
+     [5, 18],
+     [14, 3],
+     [8, 16]
+    ],
+    [
+     [4, 14],
+     [5, 23]
+    ]
+   ]
+  },
+  {
+   "n": 77,
+   "era": 4,
+   "name": "All at Once",
+   "teaches": "mixed",
+   "hint": "Gates, archers, ? squads, linked squads and a locked space, all in one castle.",
+   "w": 30,
+   "h": 36,
+   "grid": ["..............................", "........~~~~~~~~~~~~~~........", ".......~~~..........~~~.......", "......~~~eeeeeeeeeeee~~~......", ".....~~~eeeeeeeeeeeeee~~~.....", "....~gggge,ii,,,,,,,egggg~....", "...~~ggggg,ii,ii,,,,ggggg~~...", "..~~gggggg,,,,ii,,,,gggggg~~..", ".~~~eggggg,,,,ii,,,,ggggge~~~.", ".~~eegggg,,,ffffffg,,ggggee~~.", ".~.ee,,,,,,fffffgggg,,,,,ee.~.", ".~.ee,,,,,f,,,,,ggggg,,,iee.~.", ".~.ee,,,,ff,ffffggggg,,iiee.~.", ".~.ee,iiiff,fh,,ggggg,,,,ee.~.", ".~.ee,iiiff,fhm,,gggf,,,,ee.~.", ".~.ee,iiiff,fhmm,,f,fiii,ee.~.", ".~.ee,,,,ff,fhmmmhf,fiii,ee.~.", ".~.ee,,,,ff,fhmmmhf,f,,,,ee.~.", ".~.eeiii,ff,fhhhhhf,f,iiiee.~.", ".~.eeiii,ff,fffffff,f,iiiee.~.", ".~.ee,,,,,f,,,,,,,,,,,,,,ee.~.", ".~.ee,,,iiifffjjfff,ii,,,ee.~.", ".~~eee,,iii,ffjjff,,ii,,eee~~.", ".~~~eee,nii,iii,,,,,ii,eee~~~.", "..~~~eee,,,,iii,,,,,,,eee~~~..", "...~~~eee,,,,,,,,iii,eee~~~...", "....~~~eee,,,,,,,iiieee~~~....", ".....~~~eeeeeeeeeeeeee~~~.....", "......~~~neeeeeeeeeee~~~......", ".......~~~..........~~~.......", "........~~~~~~jj~~~~~~........", "..............................", "..............................", "......dddd....................", "......ddnd.########...........", "......dddd.########..........."],
+   "gates": [
+    {
+     "at": [14, 30],
+     "key": [8, 34]
+    },
+    {
+     "at": [14, 21],
+     "key": [8, 23]
+    }
+   ],
+   "towers": [
+    {
+     "at": [7, 7],
+     "r": 4.5
+    },
+    {
+     "at": [22, 7],
+     "r": 4.8
+    },
+    {
+     "at": [18, 12],
+     "r": 4.1
+    }
+   ],
+   "lock": {
+    "key": [9, 28]
+   },
+   "cols": [
+    [
+     [4, 11],
+     [7, 22, 1],
+     [14, 2],
+     [5, 14]
+    ],
+    [
+     [14, 1],
+     [7, 25],
+     [6, 20],
+     [13, 9],
+     [5, 27]
+    ],
+    [
+     [5, 32],
+     [9, 26],
+     [5, 29],
+     [5, 20]
+    ],
+    [
+     [5, 15],
+     [9, 40],
+     [6, 24]
+    ],
+    [
+     [7, 24],
+     [8, 12, 1],
+     [6, 22]
+    ]
+   ],
+   "links": [
+    [
+     [2, 0],
+     [1, 1]
+    ]
+   ]
   }
  ]
 }

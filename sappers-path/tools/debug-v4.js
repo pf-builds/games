@@ -2,13 +2,19 @@
 // three, built from copies of baked levels, each solved patiently on Easy, Normal and Hard and verified. Writes
 // levels/debug-v4.json (only this file; levels.json and teaching.json are never touched). The page loads it under
 // ?debug=1 only (the map's "v4 twists" row, SP.load(id)); it never enters the save's progress.
-//   ~/.local/opt/node/bin/node tools/debug-v4.js [--check]   (--check: rebuild in memory and diff against the file)
+//   ~/.local/opt/node/bin/node tools/debug-v4.js            v4 M3: re-solve every stored order in levels/debug-v4.json
+//                                                           under the current rules (the levels stay as M2 built them;
+//                                                           only the orders change, e.g. after a v3.time change)
+//   ~/.local/opt/node/bin/node tools/debug-v4.js --check    re-solve in memory and diff against the file
+//   ... [--out DIR]                                         write DIR/debug-v4.json instead (a trial)
+//   ~/.local/opt/node/bin/node tools/debug-v4.js --rebuild FILE   M2's build, from a levels file holding the v3 bake
+//                                                           (git 8ec282d:sappers-path/levels/levels.json)
 // Deterministic: the same seeds give the same file. Each level must win on all three difficulties within the 55-tap
 // cap (bake-config maxTaps), its stored orders must hold no refused tap, and E.check must find nothing to warn about.
 "use strict";
 const fs = require("fs"), path = require("path");
 const E = require("../src/engine.js"), R = require("./grade.js"), C = require("./bake-config.json");
-const V3 = require("../config.json").v3, LV = require("../levels/levels.json").levels;
+const V3 = require("../config.json").v3, RB = process.argv.indexOf("--rebuild"), LV = RB > 0 ? JSON.parse(fs.readFileSync(path.resolve(process.argv[RB + 1]), "utf8")).levels : [];
 const OUT = path.resolve(__dirname, "../levels/debug-v4.json"), DIFFS = ["easy", "normal", "hard"], NODES = 400000, GAP = V3.twists.linkRowGap, ROWS = require("../config.json").layout.queueRows;
 const rules = { easy: E.rulesOf(V3, "easy"), normal: E.rulesOf(V3, "normal"), hard: E.rulesOf(V3, "hard") };
 const copy = (o) => JSON.parse(JSON.stringify(o));
@@ -63,7 +69,12 @@ function lock(L, pick) {
 // Build, solve on all three difficulties, verify. from: the baked level copied; make(L): the twists.
 function build(id, name, hint, from, make) {
   const src = byN(from), L = make(Object.assign(copy({ w: src.w, h: src.h, grid: src.grid, gates: src.gates, towers: src.towers, cols: src.cols }), { id, name, hint, from: src.id }));
-  const B = E.compile(L), warn = E.check(L, { linkRowGap: GAP });
+  return solveAll(L);
+}
+// Solve a debug level on all three difficulties and verify each order (v4 M3: also the re-solve of a stored level).
+function solveAll(L) {
+  delete L.win;
+  const B = E.compile(L), warn = E.check(L, { linkRowGap: GAP }), id = L.id;
   if (warn.length) throw new Error(id + ": " + warn.join("; "));
   let sum = 0; for (let m = 1; m < E.NMAT; m++) sum += B.sapTotal[m];
   if (sum !== B.pixTotal - B.pix[E.IRON]) throw new Error(id + ": sappers don't sum to the fort's eatable pixels");
@@ -89,9 +100,10 @@ function all() {
   ];
 }
 
-const levels = all(), text = JSON.stringify({ version: 1, note: "Sapper's Path v4 M2 debug levels (tools/debug-v4.js): one per twist and one with all three, copied from baked levels. Loaded only under ?debug=1; never in the save's progress.", levels }, null, 0).replace(/\{"id"/g, "\n{\"id\"") + "\n";
+const FILE = JSON.parse(fs.readFileSync(OUT, "utf8"));
+const levels = RB > 0 ? all() : FILE.levels.map((L) => solveAll(copy(L))), text = JSON.stringify({ version: 1, note: "Sapper's Path v4 M2 debug levels (tools/debug-v4.js): one per twist and one with all three, copied from the v3 bake's levels (M3 re-solved their stored orders under the v4 timing). Loaded only under ?debug=1; never in the save's progress.", levels }, null, 0).replace(/\{"id"/g, "\n{\"id\"") + "\n";
 if (process.argv.includes("--check")) {
   const same = fs.existsSync(OUT) && fs.readFileSync(OUT, "utf8") === text;
-  console.log(same ? "debug-v4.json matches a fresh build" : "debug-v4.json differs from a fresh build"); process.exitCode = same ? 0 : 1;
-} else { fs.writeFileSync(OUT, text); console.log("wrote " + path.relative(process.cwd(), OUT)); }
+  console.log(same ? "debug-v4.json matches a fresh " + (RB > 0 ? "build" : "re-solve") : "debug-v4.json differs from a fresh " + (RB > 0 ? "build" : "re-solve")); process.exitCode = same ? 0 : 1;
+} else { const oi = process.argv.indexOf("--out"), dest = oi > 0 ? path.resolve(process.argv[oi + 1], "debug-v4.json") : OUT; fs.writeFileSync(dest, text); console.log("wrote " + dest); }
 for (const L of levels) console.log(L.id.padEnd(11) + " from " + L.from + ", " + L.cols.reduce((a, c) => a + c.length, 0) + " cards, links " + (L.links || []).length + (L.lock ? ", lock key " + JSON.stringify(L.lock.key) : "") + "; taps E/N/H " + DIFFS.map((d) => L.win[d].length).join("/"));

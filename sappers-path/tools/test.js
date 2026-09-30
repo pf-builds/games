@@ -261,7 +261,7 @@ const ARCH = (cols) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "
           if (rushed) { t += Math.floor(r() * 1800); a1 = S.play(j, t); a2 = R.play(j, t); } else { a1 = S.play(j); S.quiet(); a2 = R.play(j); R.quiet(); }
           taps++;
           if ((a1 === E.REFUSED) !== (a2 === "refused")) bad = "refusal " + a1 + "/" + a2;
-          if (a1 === E.REFUSED) { refused++; if (!rushed) patientRefused++; }
+          if (a1 === E.REFUSED) { refused++; if (!rushed && !B.nlinks) patientRefused++; }
           for (let i = 0; i < S.evLen; i += 3) if (S.ev[i] === E.EV.EAT) mine.push([S.ev[i + 1], S.q1[S.ev[i + 2]]]);
           const st = S.status === E.WON ? "won" : S.status === E.FAILED ? "failed" : "playing";
           const lineR = R.spaces.map((s, k) => [k, s]).filter(([, s]) => s).sort((p, q) => p[1].seq - q[1].seq).map(([, s]) => [s.m, s.wait + s.out]);
@@ -279,7 +279,7 @@ const ARCH = (cols) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "
     }
   }
   eq(diffs, 0, "differential: engine == reference on " + games + " random games (" + taps + " taps, " + refused + " refused, " + pops + " pops), patient and rushed, every baked level and difficulty");
-  eq(patientRefused, 0, "differential: a patient tap is never refused (a full line at rest is already a jam)");
+  eq(patientRefused, 0, "differential: a patient tap is never refused on a level without links (a full line at rest is already a jam)");
   ok(refused > 0, "differential: the rushed games include refused taps (" + refused + ")");
   console.log("  differential: " + games + " games, " + taps + " taps (" + refused + " refused) in " + ((Date.now() - t0) / 1000).toFixed(1) + " s");
 }
@@ -297,7 +297,13 @@ const ARCH = (cols) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "
     }
   }
   eq(wins, total, "levels: every stored winning order wins patiently on its difficulty (" + total + " replays)");
-  eq(LEVELS.levels.length, 75, "levels: 75 levels baked");
+  const NL = require("./bake-config.json").levels;
+  eq([LEVELS.levels.length, LEVELS.levels.every((L, i) => L.n === i + 1)], [NL, true], "levels: " + NL + " levels baked, in order (v4 M3: the Siege to 100)");
+  // v4 M3: every era present, Era 4 from 76; every stored Normal line inside the dead-time cap and the tap cap.
+  const eras = [...new Set(LEVELS.levels.map((L) => L.era))], BC = require("./bake-config.json");
+  eq([eras.join(","), LEVELS.levels.filter((L) => L.n >= 76).every((L) => L.era === 4)], ["1,2,3,4", true], "levels: four eras, Era 4 from level 76");
+  let dead = 0, longest = 0; for (const L of LEVELS.levels) { const ln = Gr.line(E.compile(L), RULES.normal, L.win.normal); longest = Math.max(longest, ln.maxWait); if (ln.maxWait > BC.maxWaitMs || L.win.normal.length > BC.maxTaps) dead++; }
+  eq(dead, 0, "levels: every stored Normal line keeps every tap under " + BC.maxWaitMs / 1000 + " s (longest " + (longest / 1000).toFixed(1) + " s) and " + BC.maxTaps + " taps");
 }
 
 // ==== v4 M2: the twists (mystery cards, linked squads, the locked space) =================================================
@@ -317,7 +323,7 @@ const ROW6 = ["abcdef", "......", "..##.."]; // six colours, one pixel each, all
   throws(() => E.compile(lv([".jn", ".##"], null, { gates: [{ at: [1, 0], key: [2, 0] }], lock: { key: [2, 0] } })), "compile: a gate's key can't also be the lock's key");
   const B = E.compile(lv(ROW6, [[[1, 1]], [[2, 1, 1], [3, 1]], [[4, 1]], [], []], { links: [[[0, 0], [1, 1]]] }));
   eq([Array.from(B.cardF), B.nlinks, B.linkOf[0], B.linkOf[2], B.linkOf[1], B.lockKey], [[0, 1, 0, 0], 1, 2, 0, -1, -1], "compile: flags, links (both ways) and no lock");
-  const old = LEVELS.levels[40], Bo = E.compile(old);
+  const old = LEVELS.levels.find((L) => !L.links && !L.lock && L.cols.every((c) => c.every((cd) => cd.length === 2))), Bo = E.compile(old); // v4 M3: the first baked level without twists
   eq([Bo.nlinks, Bo.lockKey, Array.from(Bo.cardF).every((f) => f === 0)], [0, -1, true], "compile: a baked level has no twists (old files parse as before)");
 }
 
@@ -561,6 +567,14 @@ const TWISTED = DEBUG.concat(LEVELS.levels.filter((l, k) => k % 2 === 1).map((l,
   eq([set({ speed: 3, cb: true }).speed, set({ speed: 3, cb: true }).cb], [3, true], "save: speed 3 and colour-blind on load as saved");
   eq([set({ fast: true }).speed, set({ fast: false }).speed, set({ speed: 2.5 }).speed, set({ speed: 9 }).speed, set({ speed: "3" }).speed], [2, 1, 1, 1, 1], "save: the old 2x flag loads as 2; a bad speed loads as 1");
   eq([set({ cb: "yes" }).cb, set({ cb: 1 }).cb, set({}).cb], [false, false, false], "save: colour-blind is on only for a strict true");
+  // v4 M3: a v3 save (level ids e1-01 .. e3-75, the ids the rebake keeps: era and number) loads against the 100-level file:
+  // every win is kept by id, level 76 (Era 4's opener) opens next, and a win recorded past the first gap is still dropped.
+  const old = { v: 1, done: {}, settings: { muted: true, speed: 2, cb: false, diff: "hard" }, last: "e3-75" };
+  for (let n = 1; n <= 75; n++) old.done["e" + (n <= 25 ? 1 : n <= 50 ? 2 : 3) + "-" + String(n).padStart(2, "0")] = n % 3 ? 2 : 7;
+  const sv = Save.sanitize(JSON.parse(JSON.stringify(old)), order);
+  eq([Object.keys(sv.done).length, sv.done["e3-75"], Save.next(sv, order), Save.isOpen(sv, order, "e4-76"), Save.isOpen(sv, order, "e4-77"), sv.last, sv.settings.diff], [75, 7, "e4-76", true, false, "e3-75", "hard"], "save: a v3 save with 75 wins loads against the rebake: 75 kept, level 76 next and open, 77 locked");
+  const gap = JSON.parse(JSON.stringify(old)); delete gap.done["e2-40"]; const sg = Save.sanitize(gap, order);
+  eq([Object.keys(sg.done).length, Save.next(sg, order)], [39, "e2-40"], "save: a gap in an old save still drops every later win (levels open in order)");
 }
 
 console.log(pass + " passed, " + fail + " failed");
