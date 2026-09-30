@@ -140,3 +140,16 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - Rods between partners two rows apart and a column over cross the corner of a tile in between. Fine in the debug levels; M3's dealer could prefer partners at most one row apart (Food Hunt's pairs are one row apart).
 - A skip lands an unlock silently (no cue, no padlock pop), the same as a gate opened by a skip.
 - The fast tapper wins level 61 about twice as often as patient play (11.2% against 5.9% at 2,000 games, Normal). Information for M3's rebake; nothing changed.
+
+## From v4 M3 (the Siege to 100, 2026-09-30)
+
+- Board size against the time targets. Patient time is set by walking (tileMs 80 and carryMs 90 are Peter's; bite, yard and stagger only trim a few per cent), about 0.25 s a block on Era 1's open stockades and 0.45-0.55 s on moated, archer-covered Era 3-4 castles. So the 4-minute max caps Era 3 at about 1.2× its v3 block count and Era 4 at about 380 blocks. Bigger Era 3-4 boards need either a longer max (about 5-6 minutes) or a faster walk; Peter's call.
+- Hidden linked partners. M3 never puts a "?" on a linked card, so the one-move lookahead's grade never depends on a hidden colour and the mystery flags can go on after the pick. The "tap a pair whose partner is a ?" interaction (M2 measured it costs the lookahead player about 5 points) is left for a later mixed level or the Gallery.
+- A counting player for the mystery grade: the sampling planner draws hidden colours card by card from the unseen counts (a player who reads the tray but doesn't count every block). A planner that only samples colourings consistent with the exact per-colour totals would be the strict upper bound; with 2-4 "?" cards the colours are often deducible that way.
+- Level 76's coach arrow on the padlocked space covers the line head's "free" count at 375 wide. Point the arrow from the side, or drop the count while the arrow is there.
+- An arrow on a "?" tile in the second row sits on the front card above it (level 35), as the level 1 arrow on a faded squad always has. A side arrow for rows behind the front would read better.
+- Teaching levels 1-3 run 22-27 s patient, under the 60-90 s window for levels 1-15 (they are exempt, as tutorials). If Peter wants them in the window, grow their squads and forts again.
+- The map's Era 4 history note wraps to four lines in the wide layout, one more than the others; a shorter note would square the row.
+- The dealer's "no parking under archers" rule keeps every stored Hard line free of arrows, but it also keeps Era 3-4 squads small while towers stand (average 10-16 a card), which is where most of the late taps come from. A dealer that parks a squad only when none of its colour's blocks are covered would allow bigger squads.
+- Era 4 forts under about 30 columns often fail (the inner ring gets too thin), which is why Era 4 reliefs are only scaled to 0.95.
+- Era 3 castles now always have their moat (the bake asks every fort from Era 2 on for a gate; v3 moated half of them). Moatless keeps were quicker per block (about 0.44 s against 0.56 s patient); letting half of Era 3 go without would shorten the era or allow bigger keeps.
