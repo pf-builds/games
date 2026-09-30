@@ -37,6 +37,15 @@
 // twists" row of debug levels (levels/debug-v4.json), kept out of the save's progress.
 // v4 M3 (the Siege to 100; levels in the rebaked levels.json): a fourth era on the map, the coach's pointers and
 // conditions for the twists' teaching levels (35, 62, 76, 77), and a tile's flip or shake landing when a level starts.
+// v4 Critics 1 fix (presentation only): the line and queue sit on a light stone tray; the rows behind the front fade
+// toward the tray colour and step down in size (layout.fade; never opacity); rods run centre to centre under the counts
+// with a rivet on each tile, and partners two rows apart (or below the visible rows) run down the column gutter; a
+// linked tile wears a chain. The coach has its own band for the whole level (above the board, else over the level's
+// name, or in the side column on wide screens), fits one line or two, and its arrow comes in from the side for a tile
+// and from above for a space (the head's count steps aside), never over a count. The board is told which colours the
+// player can send (V.hot) so only the archer rings that matter are loud. The jam sheet shows colour chips (names in its
+// aria-label); win and fail sheets never slice the holding line (placeSheet). Wide screens: the side column is the
+// board's height (--blk-h). The victory march's label shows the pace in use.
 (function () {
   "use strict";
   const NS = window.SappersPath, E = NS.engine, Save = NS.save, Board = NS.board, Art = NS.art, Audio = NS.audio;
@@ -49,6 +58,7 @@
     coach: null, used: 0, cues: {}, paused: false, pauses: 0, focusEl: null, pt: { x: 0, y: 0 }, T: null, tbuf: null, labFit: new Map(), verdict: [],
     et: 0, endT: -1, lineDirty: false, lineMoved: false, ord: [], slotPts: [], blockT: -1e12, refused: 0, march: false,
     debug: [], flip: [false, false, false, false, false], rods: null, unlockT: -1e12, lockN: 0, reveals: 0, pairsOut: 0,
+    fadeC: null, coached: false, coachMode: "", handKind: "", meas: null,
     li: { stuck: 0, work: 0, occ: 0, free: 0, near: false, full: false, danger: false } };
   const togMute = Array.from(document.querySelectorAll(".tog-mute")), togSpeed = Array.from(document.querySelectorAll(".tog-speed")), togCb = Array.from(document.querySelectorAll(".tog-cb"));
   const segs = Array.from(document.querySelectorAll(".seg button"));
@@ -64,7 +74,7 @@
     if (!app.levels.length) { $("load-msg").textContent = "No levels found."; return; }
     app.save = Save.open(storage(), app.cfg.save.key, app.order);
     app.diff = app.save.data.settings.diff;
-    app.sheets = Art.sources(app.cfg.art);
+    app.sheets = Art.sources(app.cfg.art); fades();
     app.V = Board.create($("board"), app.cfg, app.sheets);
     const H = app.V.hooks;
     H.pop = onPop; H.deposit = () => cue("haul"); H.gate = () => cue("gate"); H.tower = () => cue("tower"); H.shot = () => cue("arrow");
@@ -131,7 +141,7 @@
   // front one is the tap target (a raised button), the ones behind sit back, flat and progressively faded, so three moves
   // ahead read at a glance.
   function buildTray() {
-    const tray = $("tray"), inner = '<b class="n"></b><i class="gl" aria-hidden="true"></i><i class="q" aria-hidden="true"></i>';
+    const tray = $("tray"), inner = '<b class="n"></b><i class="gl" aria-hidden="true"></i><i class="q" aria-hidden="true"></i><i class="ch" aria-hidden="true"></i>';
     for (let j = 0; j < E.NCOL; j++) {
       const col = document.createElement("div"); col.className = "col";
       const b = document.createElement("button"); b.className = "tile card"; b.dataset.col = j; b.innerHTML = inner;
@@ -150,9 +160,18 @@
   // Text on a colour: white or ink, whichever has the higher contrast (WCAG relative luminance).
   const INK = "#221a26", relLum = (hex) => { const v = parseInt(hex.slice(1), 16), f = (s) => { const x = ((v >> s) & 255) / 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }; return 0.2126 * f(16) + 0.7152 * f(8) + 0.0722 * f(0); };
   const textOn = (hex) => { const L = relLum(hex); return 1.05 / (L + 0.05) >= (L + 0.05) / (relLum(INK) + 0.05) ? "#ffffff" : INK; };
-  function paintMat(el, m) { const c = mat(m).c, t = textOn(c); el.style.setProperty("--mc", c); el.style.setProperty("--tc", t); el.style.setProperty("--oc", t === INK ? "rgba(255,255,255,.45)" : "rgba(20,16,28,.7)"); el.style.setProperty("--gl", app.glURL[m] || "none"); }
-  // A hidden mystery card (v4 M2): the neutral tile of layout.mystery and its "?" glyph; nothing of the card's colour.
-  function paintMys(el) { const Y = app.cfg.layout.mystery; el.style.setProperty("--mc", Y.c); el.style.setProperty("--tc", Y.tc); el.style.setProperty("--oc", "rgba(20,16,28,.7)"); el.style.setProperty("--gl", "none"); }
+  // d (the row behind the front, 0 = the front): the tile's face is its colour faded toward the tray (--fc, app.fadeC);
+  // --mc stays the material's own colour.
+  function paintMat(el, m, d) { const c = mat(m).c, f = d ? app.fadeC[d][m] : c, t = textOn(f); el.style.setProperty("--mc", c); el.style.setProperty("--fc", f); el.style.setProperty("--tc", t); el.style.setProperty("--oc", t === INK ? "rgba(255,255,255,.45)" : "rgba(20,16,28,.7)"); el.style.setProperty("--gl", app.glURL[m] || "none"); }
+  // A hidden mystery card (v4 M2): the face-down tile of layout.mystery and its "?" glyph; nothing of the card's colour.
+  function paintMys(el, d) { const Y = app.cfg.layout.mystery; el.style.setProperty("--mc", Y.c); el.style.setProperty("--fc", d ? app.fadeC[d][0] : Y.c); el.style.setProperty("--tc", Y.tc); el.style.setProperty("--oc", "rgba(20,16,28,.7)"); el.style.setProperty("--gl", "none"); }
+  // Critics 1 fix: the faded faces, once per boot: row d mixes layout.fade.t[d] of the tray colour into each material's
+  // colour (sRGB); index 0 is the mystery card's back. The tray colour goes to CSS (--tray) from the same place.
+  const mixHex = (a, b, t) => { const x = parseInt(a.slice(1), 16), y = parseInt(b.slice(1), 16), ch = (s) => Math.round(((x >> s) & 255) * (1 - t) + ((y >> s) & 255) * t); return "#" + ((1 << 24) | (ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).slice(1); };
+  function fades() {
+    const F = app.cfg.layout.fade; document.documentElement.style.setProperty("--tray", F.tray);
+    app.fadeC = F.t.map((t) => { const row = [mixHex(app.cfg.layout.mystery.c, F.tray, t)]; for (let m = 1; m < E.NMAT; m++) row.push(mixHex(mat(m).c, F.tray, t)); return row; });
+  }
   // Fit a label to its box: the CSS size, stepped down in one measure (cached per text until the next resize).
   function fitText(el, key, min) {
     let px = app.labFit.get(key);
@@ -168,7 +187,7 @@
       if (f < 0) { b.className = "tile card empty"; b.disabled = true; b.querySelector(".n").textContent = ""; b.querySelector(".q").textContent = ""; b.style.removeProperty("--mc"); b.style.removeProperty("--gl"); b.setAttribute("aria-label", "Empty column"); app.flip[j] = false; }
       else {
         const m = B.cardM[f], k = B.cardN[f], p = S.partner(f);
-        b.className = "tile card" + (app.verdict[j] === 1 ? " safe" : app.verdict[j] === 2 ? " blocked" : "") + (p >= 0 ? " linked" : ""); b.disabled = !live; paintMat(b, m);
+        b.className = "tile card" + (app.verdict[j] === 1 ? " safe" : app.verdict[j] === 2 ? " blocked" : "") + (p >= 0 ? " linked" + (B.cardCol[p] < j ? " ch-r" : "") : ""); b.disabled = !live; paintMat(b, m); // ch-r: the chain tag on the corner away from the rod
         b.querySelector(".n").textContent = k; b.querySelector(".q").textContent = "";
         b.setAttribute("aria-label", mat(m).crew + ", " + k + " sappers" + (p >= 0 ? ", " + LY.linkedAria.replace("{c}", B.cardCol[p] + 1) : "") + (app.verdict[j] === 2 ? ", blocked: " + (p >= 0 ? LY.linkedText : "no free space") : app.verdict[j] === 1 ? ", safe" : ""));
         // A mystery card that just reached the front turns over (presentation only).
@@ -178,39 +197,56 @@
         const x = app.nexts[j][d - 1], ci = S ? S.card(j, d) : -1;
         if (ci < 0) { x.className = "tile next d" + d + " none"; x.querySelector(".n").textContent = ""; x.querySelector(".q").textContent = ""; continue; }
         const hid = S.hidden(ci);
-        x.className = "tile next d" + d + (hid ? " mys" : "") + (S.partner(ci) >= 0 ? " linked" : "");
-        if (hid) paintMys(x); else paintMat(x, B.cardM[ci]);
+        const xp = S.partner(ci); x.className = "tile next d" + d + (hid ? " mys" : "") + (xp >= 0 ? " linked" + (B.cardCol[xp] < j ? " ch-r" : "") : "");
+        if (hid) paintMys(x, d); else paintMat(x, B.cardM[ci], d);
         x.querySelector(".n").textContent = B.cardN[ci]; x.querySelector(".q").textContent = hid ? LY.mystery.q : "";
       }
     }
-    drawRods();
+    drawRods(); sendable();
   }
-  // v4 M2: the rods between linked tiles, as SVG paths over the tray. Both tiles in the visible rows: a rod from edge to
-  // edge. The partner below the visible rows: a short stub from the visible tile toward the partner's column, ending in
-  // two dots. Each pair is drawn once (from its card nearer the front). Run with the tray, never per frame.
+  // The colours the player can send now (front cards and squads in the line), for the board's archer rings (V.hot).
+  function sendable() {
+    const S = app.S, B = app.B; let m = 0;
+    if (S && S.status === E.PLAYING) { for (let j = 0; j < E.NCOL; j++) { const f = S.front(j); if (f >= 0) m |= 1 << B.cardM[f]; } for (let i = 0; i < S.cap; i++) if (S.spQ[i]) m |= 1 << S.spM[i]; }
+    app.V.hot = m;
+  }
+  // v4 M2: the rods between linked tiles, as SVG paths over the tray. Critics 1 fix: a rod runs from its tile's centre
+  // to its partner's, over the faces and under the counts (they sit above the SVG), with a rivet on each tile where it
+  // leaves: straight when the two are in neighbouring columns at most one row apart (a diagonal passes through the
+  // four-tile corner), else down the gutter between the two columns, so it never crosses a third tile. A partner below
+  // the visible rows: the rod runs down the gutter past its column's last visible row and ends in two dots. Sizes are
+  // layout.rod at a phone tile, scaled with the tile. Each pair is drawn once (from its card nearer the front). Run with
+  // the tray, never per frame.
   function tileOf(j, d) { return d ? app.nexts[j][d - 1] : app.cards[j]; }
   function rowOf(S, j, ci) { for (let d = 0; d < app.cfg.layout.queueRows; d++) { const c = S.card(j, d); if (c < 0) return -1; if (c === ci) return d; } return -1; }
   function drawRods() {
     const S = app.S, B = app.B, svg = app.rods; if (!svg) return;
     let html = "";
     if (S && B && B.nlinks) {
-      const R = app.cfg.layout.rod, tr = $("tray").getBoundingClientRect(), RW = app.cfg.layout.queueRows;
-      const box = (el) => { const r = el.getBoundingClientRect(); return { x: r.left - tr.left + r.width / 2, y: r.top - tr.top + r.height / 2, hw: r.width / 2, hh: r.height / 2 }; };
-      // Where the segment from box a's centre toward (tx, ty) leaves box a (inset 2 px into its border).
-      const edge = (a, tx, ty) => { const dx = tx - a.x, dy = ty - a.y, t = Math.min(dx ? (a.hw - 2) / Math.abs(dx) : 1e9, dy ? (a.hh - 2) / Math.abs(dy) : 1e9); return [a.x + dx * t, a.y + dy * t]; };
-      const rod = (x1, y1, x2, y2) => { const d = "M" + x1.toFixed(1) + " " + y1.toFixed(1) + "L" + x2.toFixed(1) + " " + y2.toFixed(1);
-        return '<path d="' + d + '" stroke="' + R.ink + '" stroke-width="' + R.w + '" stroke-linecap="round"/><path d="' + d + '" stroke="' + R.metal + '" stroke-width="' + R.core + '" stroke-linecap="round"/><path d="' + d + '" stroke="' + R.hi + '" stroke-width="1" stroke-linecap="round" transform="translate(0 -1)" opacity=".7"/>'; };
+      const R = app.cfg.layout.rod, tr = $("tray").getBoundingClientRect(), RW = app.cfg.layout.queueRows, f = (v) => v.toFixed(1);
+      const box = (el) => { const r = el.getBoundingClientRect(); return { x: r.left - tr.left + r.width / 2, y: r.top - tr.top + r.height / 2, hw: r.width / 2, hh: r.height / 2, l: r.left - tr.left, r: r.right - tr.left, b: r.bottom - tr.top }; };
+      const k = Math.max(0.7, Math.min(1.4, (box(app.cards[0]).hh * 2) / 52)), rv = R.rivet * k, sw = 'stroke-linecap="round" stroke-linejoin="round"';
+      // The gutter between neighbouring columns j and pj: midway between their front tiles' facing edges.
+      const gutter = (j, pj) => { const a = box(app.cards[j]), b = box(app.cards[pj]); return pj > j ? (a.r + b.l) / 2 : (a.l + b.r) / 2; };
+      const rod = (P) => { let d = "M" + f(P[0]) + " " + f(P[1]); for (let i = 2; i < P.length; i += 2) d += "L" + f(P[i]) + " " + f(P[i + 1]);
+        return '<path d="' + d + '" stroke="' + R.ink + '" stroke-width="' + f(R.w * k) + '" ' + sw + '/><path d="' + d + '" stroke="' + R.metal + '" stroke-width="' + f(R.core * k) + '" ' + sw + '/><path d="' + d + '" stroke="' + R.hi + '" stroke-width="' + f(Math.max(1, k)) + '" ' + sw + ' transform="translate(0 -1)" opacity=".6"/>'; };
+      // The rivet on tile a, where the rod leaving its centre toward (tx, ty) comes within rv + 3 px of a's edge.
+      const rivet = (a, tx, ty) => { const dx = tx - a.x, dy = ty - a.y, t = Math.max(0, Math.min(dx ? (a.hw - rv - 3) / Math.abs(dx) : 1e9, dy ? (a.hh - rv - 3) / Math.abs(dy) : 1e9));
+        return '<circle cx="' + f(a.x + dx * t) + '" cy="' + f(a.y + dy * t) + '" r="' + f(rv) + '" fill="' + R.metal + '" stroke="' + R.ink + '" stroke-width="' + f(1.6 * k) + '"/><circle cx="' + f(a.x + dx * t - rv * 0.3) + '" cy="' + f(a.y + dy * t - rv * 0.3) + '" r="' + f(rv * 0.35) + '" fill="' + R.hi + '" opacity=".8"/>'; };
       for (let j = 0; j < E.NCOL; j++) for (let d = 0; d < RW; d++) {
         const ci = S.card(j, d); if (ci < 0) break;
         const p = S.partner(ci); if (p < 0) continue;
-        const pj = B.cardCol[p], pd = rowOf(S, pj, p), a = box(tileOf(j, d));
-        if (pd >= 0) { if (pd < d || (pd === d && pj < j)) continue; const b = box(tileOf(pj, pd)), [x1, y1] = edge(a, b.x, b.y), [x2, y2] = edge(b, a.x, a.y); html += rod(x1, y1, x2, y2); continue; }
-        // Stub: toward where the partner's column would show a row below the last visible one (read off the tiles).
-        const pc = box(app.cards[pj]), lr = box(tileOf(j, RW - 1)), step = RW > 1 ? lr.y - box(tileOf(j, RW - 2)).y : lr.hh * 2;
-        const tx = pc.x, ty = lr.y + step, [x1, y1] = edge(a, tx, ty), L = Math.hypot(tx - x1, ty - y1) || 1, ux = (tx - x1) / L, uy = (ty - y1) / L;
-        const x2 = x1 + ux * R.stub, y2 = y1 + uy * R.stub;
-        html += rod(x1, y1, x2, y2);
-        for (let k = 1; k <= 2; k++) html += '<circle cx="' + (x2 + ux * (R.cap * 2.4 * k)).toFixed(1) + '" cy="' + (y2 + uy * (R.cap * 2.4 * k)).toFixed(1) + '" r="' + R.cap / 1.5 + '" fill="' + R.metal + '" stroke="' + R.ink + '" stroke-width="1"/>';
+        const pj = B.cardCol[p], pd = rowOf(S, pj, p), a = box(tileOf(j, d)), near = Math.abs(pj - j) === 1;
+        if (pd >= 0) {
+          if (pd < d || (pd === d && pj < j)) continue;
+          const b = box(tileOf(pj, pd)), gx = near ? gutter(j, pj) : a.x, P = !near || pd - d <= 1 ? [a.x, a.y, b.x, b.y] : [a.x, a.y, gx, a.y, gx, b.y, b.x, b.y];
+          html += rod(P) + rivet(a, P[2], P[3]) + rivet(b, P[P.length - 4], P[P.length - 3]);
+          continue;
+        }
+        // Stub: down the gutter toward the partner's column, past its last visible row, then two dots.
+        const gx = near ? gutter(j, pj) : a.x, y2 = Math.max(a.y + a.hh * 0.5, box(tileOf(pj, RW - 1)).b - R.stub * k * 0.4), P = near ? [a.x, a.y, gx, a.y, gx, y2] : [a.x, a.y, a.x, y2];
+        html += rod(P) + rivet(a, P[2], P[3]);
+        for (let q = 1; q <= 2; q++) html += '<circle class="dot" cx="' + f(gx) + '" cy="' + f(y2 + R.cap * k * 2.3 * q) + '" r="' + f(R.cap * k * 0.8) + '" fill="' + R.metal + '" stroke="' + R.ink + '" stroke-width="1"/>';
       }
     }
     if (svg.innerHTML !== html) svg.innerHTML = html;
@@ -245,7 +281,7 @@
     $("line").style.setProperty("--cap", S.cap);
     const li = readLine(), L = app.cfg.layout, wrap = $("line-wrap"), march = app.march && !app.panel;
     wrap.classList.toggle("full", li.full); wrap.classList.toggle("danger", li.danger); wrap.classList.toggle("near", li.near && !li.full); wrap.classList.toggle("march", march);
-    $("line-lab").textContent = march ? L.marchText.replace("{x}", app.cfg.show.victoryPace) : li.full ? L.fullText : li.near ? L.nearText : L.lineText;
+    $("line-lab").textContent = march ? L.marchText.replace("{x}", Math.max(app.speed, app.cfg.show.victoryPace)) : li.full ? L.fullText : li.near ? L.nearText : L.lineText; // the pace in use
     let cnt = li.stuck ? li.stuck + " " + L.stuckWord : "";
     if (li.work) cnt += (cnt ? " · " : "") + li.work + " " + L.workWord;
     if (li.free) cnt += (cnt ? " · " : "") + li.free + " " + L.freeWord;
@@ -263,6 +299,18 @@
       else { s.classList.remove("full", "work", "stuck", "linked", "held"); s.style.removeProperty("--mc"); s.querySelector("b").textContent = ""; s.querySelector(".out").textContent = ""; s.querySelector(".men").style.width = "0"; s.setAttribute("aria-label", shut ? L.lockedText : "Empty space"); }
       s.classList.toggle("last", i === free && li.near); // one space left and the rest stuck: the last free space pulses
     });
+    sendable();
+  }
+  // Critics 1 fix: a space too narrow for its badge column beside a two-digit count takes the tight layout (the badges
+  // on top, the count below: #line.tight). Worked out from a space's width and the fonts in use, at layout time only.
+  function fitLine() {
+    const line = $("line"), s = app.slots[0]; if (!s || s.hidden || !s.clientWidth) return;
+    line.classList.remove("tight");
+    const cs = getComputedStyle(s), g = app.meas || (app.meas = document.createElement("canvas").getContext("2d")), px = (v) => parseFloat(v) || 0;
+    g.font = getComputedStyle(s.querySelector("b")).fontSize + ' "Jersey 10"'; const two = g.measureText("88").width;
+    g.font = cs.getPropertyValue("--out-n").trim() + ' "Jersey 10"'; const out = g.measureText("88").width + 5 + 1 + 4;
+    const room = s.clientWidth - px(cs.paddingLeft) - px(cs.paddingRight) - px(cs.columnGap);
+    line.classList.toggle("tight", room < two + Math.max(out, px(cs.getPropertyValue("--bd")), px(cs.getPropertyValue("--lk-s"))));
   }
   function renderTop() {
     const e = app.entry; if (!e) return;
@@ -323,9 +371,10 @@
     app.entry = e; app.B = E.compile(e.L); app.S = E.sim(app.B, rulesOf(app.diff)); app.S.logOn = true; app.et = 0;
     app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.popK = 0; app.used = 0; app.march = false; app.blockT = -1e12; $("panel").hidden = true; hideToast();
     app.lockN = app.S.locked; app.unlockT = -1e12; app.flip.fill(false); app.reveals = 0; app.pairsOut = 0; landTiles();
+    app.coached = !!coachSteps(e); // the coach's band is kept for the whole level, so the board never jumps when it goes
     app.V.setLevel(app.B, app.S); placeSlots();
     if (!e.debug) { app.save.data.last = e.id; writeSave(); }
-    renderAll(); showScreen("play"); coachStart(); // the line and tray take their size before the board is fitted to what is left
+    renderAll(); fitLine(); showScreen("play"); coachStart(); // the line and tray take their size before the board is fitted to what is left
     return e;
   }
   // v4 M3: a tile's flip or shake from the last game lands at once when a level starts (a flip left mid-turn has no width).
@@ -381,7 +430,7 @@
   function ended() {
     const S = app.S; if (app.ending || S.status === E.PLAYING) return;
     app.ending = { won: S.status === E.WON, reason: S.reason, m: S.failMat, crews: [], why: S.status === E.FAILED && S.reason === "jam" ? S.jamWhy : 0 }; app.endT = app.clock;
-    if (S.reason === "jam") { for (const s of S.order(app.ord)) { if (!S.stuck(s)) continue; const c = mat(S.spM[s]).crew; if (app.ending.crews.indexOf(c) < 0) app.ending.crews.push(c); } cue("jam"); }
+    if (S.reason === "jam") { app.ending.squads = []; for (const s of S.order(app.ord)) { if (!S.stuck(s)) continue; app.ending.squads.push([S.spM[s], S.spW[s]]); const c = mat(S.spM[s]).crew; if (app.ending.crews.indexOf(c) < 0) app.ending.crews.push(c); } cue("jam"); }
     if (app.ending.won && app.entry.debug) app.ending.medal = false;
     else if (app.ending.won) { const was = app.save.data.done[app.entry.id] | 0, first = Save.record(app.save.data, app.entry.id, app.diff); app.ending.first = first; app.ending.medal = !(was & (1 << DIFFS.indexOf(app.diff))); app.save.data.last = Save.next(app.save.data, app.order); writeSave(); }
     judge(); renderTray(); renderLine();
@@ -399,7 +448,8 @@
     if (app.V.gob.on && !app.V.gob.done) app.V.gob.done = true;
     else if (app.ending && !app.panel) app.endAt = app.clock;
   }
-  // The jam names the crews that jammed, in line order (up to layout.jamNames, then "and n more").
+  // The jam names the crews that jammed, in line order (up to layout.jamNames, then "and n more"). Critics 1 fix: this
+  // text is the sheet's aria-label; what shows is sheetLine's (colour chips, since no tile shows a crew name).
   function reasonText(e) {
     const who = e.m ? mat(e.m).crew : "sappers", k = app.cfg.layout.jamNames, c = e.crews || [];
     const names = c.length > k ? c.slice(0, k).join(", ") + " and " + (c.length - k) + " more" : c.length > 1 ? c.slice(0, -1).join(", ") + " and " + c[c.length - 1] : c[0] || "the squads";
@@ -408,18 +458,31 @@
     return { short: "Archers cut down the " + who + ": too few left to finish.", stuck: "Out of squads, and the waiting sappers can't reach their colour.",
       jam }[e.reason] || "The assault failed.";
   }
+  // The fail sheet's line as the player sees the squads: each jammed squad a chip in its colour with its count (a short
+  // colour: a chip with no count); the words around them as reasonText's. The names stay in the aria-label.
+  function sheetLine(e) {
+    const pl = $("p-line"), L = app.cfg.layout, add = (t) => pl.append(t);
+    pl.textContent = ""; pl.setAttribute("aria-label", reasonText(e));
+    const chip = (m, k) => { const c = document.createElement("span"); c.className = "chip"; c.setAttribute("aria-hidden", "true"); paintMat(c, m); c.innerHTML = '<i class="gl"></i>'; if (k) c.append(String(k)); pl.append(c); };
+    const chips = () => { (e.squads || []).slice(0, L.jamChips).forEach(([m, k]) => chip(m, k)); };
+    const n = (e.squads || []).length;
+    if (e.reason === "jam" && e.why & 1) { add(L.jamLinkedText); if (n) { add(", and "); chips(); add(" can't reach a block."); } else add("."); }
+    else if (e.reason === "jam") { add("Line jammed: "); if (n) chips(); else add("the squads"); add(" can't reach a block." + (e.why & 2 ? " " + L.jamLockText : "")); }
+    else if (e.reason === "short" && e.m) { add("Archers cut down the "); chip(e.m, 0); add(" squad: too few left to finish."); }
+    else add(reasonText(e));
+  }
   function showPanel() {
     const e = app.ending; if (!e) return;
     app.panel = e.won ? "win" : "fail"; app.panelAt = app.clock; renderCoach();
     const last = app.entry.debug || app.entry.idx === app.levels.length - 1;
     $("p-title").textContent = e.won ? "Fort razed!" : "Assault failed";
-    $("p-line").textContent = e.won ? "The goblin king flees. " + (app.entry.debug ? app.entry.L.name : "Level " + app.entry.n) + " won on " + DNAME[app.diff] + "." : reasonText(e);
+    if (e.won) { $("p-line").textContent = "The goblin king flees. " + (app.entry.debug ? app.entry.L.name : "Level " + app.entry.n) + " won on " + DNAME[app.diff] + "."; $("p-line").removeAttribute("aria-label"); } else sheetLine(e);
     $("p-primary").textContent = e.won ? (last ? "Era map" : "Next level") : "Retry";
     $("p-secondary").textContent = e.won ? "Retry" : "Era map";
     // The win beat: the level's difficulty medals, this one stamped in if it's new.
     const mask = app.save.data.done[app.entry.id] | 0, md = $("p-medals"); md.hidden = !e.won;
     Array.from(md.children).forEach((el, k) => { el.className = "medal" + (mask & (1 << k) ? " got" : "") + (e.won && e.medal && DIFFS[k] === app.diff ? " new" : ""); });
-    $("panel").hidden = false;
+    $("panel").hidden = false; placeSheet();
     cue(e.won ? "chime" : "bad"); if (e.won && e.medal) cue("star", 2);
     judge(); renderTray(); renderLine();
   }
@@ -435,9 +498,10 @@
   // mystery (a hidden "?" tile in view), linked (a linked front card), lockSlot (the padlocked space) and the ring
   // lockKey (the space's key on the board); conditions reveal (a "?" turned over), pair (a linked pair went out), unlock
   // (the space opened), locked (it is still shut), hidden (a "?" is in view), linkedFront (a front card is linked).
+  const coachSteps = (e) => { const st = e && ((app.cfg.teach || {})[e.id] || (e.L.hint ? [{ say: e.L.hint, until: "play" }] : null)); return st && st.length ? st : null; };
   function coachStart() {
-    const e = app.entry, steps = e && ((app.cfg.teach || {})[e.id] || (e.L.hint ? [{ say: e.L.hint, until: "play" }] : null));
-    app.coach = steps && steps.length ? { steps, i: 0, at: 0 } : null;
+    const steps = coachSteps(app.entry);
+    app.coach = steps ? { steps, i: 0, at: 0 } : null;
     if (app.coach) skipDead();
     renderCoach();
   }
@@ -479,8 +543,8 @@
   function renderCoach() {
     const co = app.coach, hand = $("hand"), txt = $("coach"), V = app.V;
     if (app.focusEl) { app.focusEl.classList.remove("coach-on"); app.focusEl = null; }
-    $("line").classList.remove("coach-on");
-    V.focus.on = false;
+    $("line").classList.remove("coach-on"); $("line-cnt").style.removeProperty("--cnt-shift");
+    V.focus.on = false; V.ringsLoud = false;
     if (!co || app.screen !== "play" || app.panel || co.i >= co.steps.length) { txt.hidden = true; hand.hidden = true; return; }
     const st = co.steps[co.i], S = app.S, B = app.B;
     let el = null, cm = 0, cn = 0;
@@ -495,26 +559,53 @@
     if (st.ring === "lockKey" && B.lockKey >= 0 && S.a[B.lockKey] > 0) Object.assign(V.focus, { on: true, x: B.lockKey % B.w + 0.5, y: ((B.lockKey / B.w) | 0) + 0.5, r: 1.1 });
     if (st.ring === "tower") { for (let k = 0; k < B.towers.length; k++) if (S.standing & (1 << k)) { const T = B.towers[k]; Object.assign(V.focus, { on: true, x: T.cx + 0.5, y: T.cy + 0.5, r: Math.sqrt(T.size / Math.PI) + 0.9 }); break; } }
     txt.textContent = st.say.replace(/\{n\}/g, cn).replace(/\{crew\}/g, cm ? mat(cm).crew : "").replace(/\{reach\}/g, cm ? S.reachable(cm) : 0).replace(/\{go\}/g, cm ? Math.min(cn, S.reachable(cm)) : 0);
-    txt.hidden = false; fitCoach();
+    V.ringsLoud = st.ring === "tower"; // the lesson is the ring: every ring loud while it shows
+    txt.hidden = false; placeCoach(); fitCoach();
     if (el) { el.classList.add("coach-on"); app.focusEl = el; }
     if (st.line) $("line").classList.add("coach-on");
     placeHand(el);
   }
-  // One line: step the font down (layout.coachFontPx [max, min]) until the line fits the bubble.
+  // The coach's box (fixed, --coach-h tall): the band above the board, the level's name in the top bar, or its spot in
+  // the side column (app.coachMode, set when the board is fitted).
+  const coachH = () => parseFloat(getComputedStyle(document.body).getPropertyValue("--coach-h")) || 46;
+  function placeCoach() {
+    const t = $("coach"); if (t.hidden) return;
+    let r;
+    if (app.coachMode === "side") { const q = $("coach-dock").getBoundingClientRect(); r = [q.left, q.top, q.width, q.height]; }
+    else if (app.coachMode === "top") { const a = $("lvl").getBoundingClientRect(), b = $("top").getBoundingClientRect(); r = [a.left, b.top, a.width, b.height]; }
+    else { const q = $("stage").getBoundingClientRect(); r = [q.left + 6, q.top + 2, q.width - 12, coachH()]; }
+    t.style.left = r[0] + "px"; t.style.top = r[1] + "px"; t.style.width = Math.max(0, r[2]) + "px"; t.style.height = Math.max(0, r[3]) + "px";
+  }
+  // One line if it fits (the font steps down through layout.coachFontPx [max, min]), else two (Critics 1 fix, m3).
   function fitCoach() {
     const t = $("coach"), [hi, lo] = app.cfg.layout.coachFontPx; if (t.hidden) return;
-    for (let px = hi; px >= lo; px--) { t.style.fontSize = px + "px"; if (t.scrollWidth <= t.clientWidth) break; }
+    t.classList.remove("two");
+    for (let px = hi; px >= lo; px--) { t.style.fontSize = px + "px"; if (t.scrollWidth <= t.clientWidth && t.scrollHeight <= t.clientHeight) return; }
+    t.classList.add("two");
+    for (let px = hi; px >= lo; px--) { t.style.fontSize = px + "px"; if (t.scrollWidth <= t.clientWidth && t.scrollHeight <= t.clientHeight) return; }
   }
-  // The arrow sits above its target and points down at it; a board ring when there is no element.
+  // The arrow (Critics 1 fix: it never covers a count). A queue tile: in from the side at its middle (from the left, or
+  // from the right in the first column), over its neighbour's empty edge. A space: from above; the line head's count
+  // steps aside. The whole line: over the gap between the head's label and count, or no arrow (the line glows). Else a
+  // ring on the board.
   function placeHand(el) {
-    const hand = $("hand"), V = app.V; let x, y;
-    if (el) { const r = el.getBoundingClientRect(); x = r.left + r.width / 2; y = r.top + Math.min(8, r.height * 0.3); }
-    else if (V.focus.on) { const r = $("board").getBoundingClientRect(), p = V.cssAt(V.focus.x, V.focus.y, app.pt); x = r.left + p.x; y = r.top + p.y - (V.focus.r * V.cs) / V.dpr; }
-    else { hand.hidden = true; return; }
-    hand.style.transform = "translate(" + Math.round(x) + "px," + Math.round(y) + "px)"; hand.hidden = false;
+    const hand = $("hand"), V = app.V, H = app.cfg.layout.hand; let x, y, rot = 0, sc = 1, kind = "";
+    $("line-cnt").style.removeProperty("--cnt-shift");
+    if (el && el.classList.contains("tile")) { const r = el.getBoundingClientRect(), right = el.closest(".col") === $("tray").firstElementChild; x = right ? r.right - H.sideIn : r.left + H.sideIn; y = r.top + r.height / 2; rot = right ? 90 : -90; sc = H.sideScale; kind = "side"; }
+    else if (el && el.classList.contains("slot")) {
+      const r = el.getBoundingClientRect(), head = $("line-head").getBoundingClientRect(); x = r.left + r.width / 2; y = r.top + H.downIn; kind = "slot";
+      const shift = head.right - (x - H.halfW) + H.gap; if (shift > 0) $("line-cnt").style.setProperty("--cnt-shift", Math.ceil(shift) + "px");
+    } else if (el && el.id === "line") {
+      const a = $("line-lab").getBoundingClientRect(), b = $("line-cnt").getBoundingClientRect(), r = el.getBoundingClientRect(), right = b.width ? b.left : r.right;
+      if (right - a.right < 2 * (H.halfW + H.gap)) { hand.hidden = true; app.handKind = "none"; return; }
+      x = (a.right + right) / 2; y = r.top + H.downIn; kind = "line";
+    } else if (V.focus.on) { const r = $("board").getBoundingClientRect(), p = V.cssAt(V.focus.x, V.focus.y, app.pt); x = r.left + p.x; y = r.top + p.y - (V.focus.r * V.cs) / V.dpr; kind = "ring"; }
+    else { hand.hidden = true; app.handKind = ""; return; }
+    app.handKind = kind; hand.classList.toggle("side", kind === "side");
+    hand.style.transform = "translate(" + Math.round(x) + "px," + Math.round(y) + "px)" + (rot ? " rotate(" + rot + "deg) scale(" + sc + ")" : ""); hand.hidden = false;
   }
-  const coachState = () => ({ on: !!app.coach && !$("coach").hidden, i: app.coach ? app.coach.i : -1, text: $("coach").hidden ? "" : $("coach").textContent, hand: !$("hand").hidden,
-    target: app.focusEl ? app.focusEl.id || app.focusEl.className : null, ring: app.V.focus.on, oneLine: $("coach").scrollWidth <= $("coach").clientWidth });
+  const coachState = () => { const t = $("coach"); return { on: !!app.coach && !t.hidden, i: app.coach ? app.coach.i : -1, text: t.hidden ? "" : t.textContent, hand: !$("hand").hidden, kind: app.handKind, mode: app.coachMode,
+    target: app.focusEl ? app.focusEl.id || app.focusEl.className : null, ring: app.V.focus.on, oneLine: !t.classList.contains("two"), fits: t.scrollWidth <= t.clientWidth && t.scrollHeight <= t.clientHeight }; };
 
   // ---- toasts, audio, toggles ----------------------------------------------------------------------------------------
   function toast(text, bad) { const t = $("toast"); t.textContent = text; t.classList.toggle("bad", !!bad); t.hidden = false; app.toastT = app.clock + app.cfg.show.toastMs; }
@@ -596,8 +687,10 @@
     if (app.wide) { const rw = short ? L.railShortPx : Math.round(Math.min(L.railWidePx, Math.max(L.railMinPx, W * L.railFrac))); r.setProperty("--rail-w", rw + "px"); r.setProperty("--wide-gap", (short ? L.gapShortPx : L.gapWidePx) + "px"); }
     app.labFit.clear();
     if (app.screen === "title") paintTitle();
+    if (app.S) fitLine();
     fitBoard();
     if (app.S) { renderTop(); renderTray(); placeSlots(); }
+    if (app.panel) placeSheet();
   }
   // Where each space's sappers walk onto the board: its slot's centre, relative to the canvas (clamped to its edge there).
   function placeSlots() {
@@ -613,12 +706,35 @@
     // panel sit together in the middle (the cell size doesn't change on the second fit).
     const L = app.cfg.layout, r = document.documentElement.style;
     if (app.wide) r.setProperty("--stage-w", Math.max(200, window.innerWidth - (parseFloat(r.getPropertyValue("--rail-w")) || L.railWidePx) - (app.wide && window.innerHeight <= L.shortMaxH ? L.gapShortPx : L.gapWidePx) - L.sidePadPx) + "px");
-    const st = $("stage"), w = st.clientWidth - 14, h = st.clientHeight - 16;
-    if (w > 0 && h > 0) app.V.layout(w, h, window.devicePixelRatio || 1, app.wide);
-    if (app.wide) { const cw = parseFloat($("board").style.width) || 0; if (cw > 0) r.setProperty("--stage-w", Math.ceil(cw + 16) + "px"); }
+    // Critics 1 fix: a level with a coach keeps a band for it. Wide: its spot in the side column. Portrait: the band above
+    // the board when the board still gets layout.minCellCss CSS px a cell there, else over the level's name.
+    const st = $("stage"), dpr = window.devicePixelRatio || 1, w = st.clientWidth - 14, h0 = st.clientHeight - 16, BD = document.body;
+    let mode = app.coached && app.screen === "play" ? (app.wide ? "side" : "above") : "";
+    const res = mode === "above" ? coachH() + 6 : 0;
+    if (mode === "above" && app.V.fitCs(w, h0 - res, dpr, false) < L.minCellCss) mode = "top";
+    app.coachMode = mode; BD.classList.toggle("coached", !!mode); BD.classList.toggle("coach-above", mode === "above"); BD.classList.toggle("coach-top", mode === "top");
+    const h = h0 - (mode === "above" ? res : 0);
+    if (w > 0 && h > 0) app.V.layout(w, h, dpr, app.wide);
+    if (app.wide) { const cw = parseFloat($("board").style.width) || 0; if (cw > 0) r.setProperty("--stage-w", Math.ceil(cw + 16) + "px"); r.setProperty("--blk-h", $("frame").offsetHeight + "px"); } // the side column is the board's height (M10)
     document.body.classList.toggle("turned", app.V.rot);
-    if (app.coach) { fitCoach(); placeHand(app.focusEl); }
+    if (app.coach && !$("coach").hidden) { placeCoach(); fitCoach(); placeHand(app.focusEl); }
     placeSlots();
+  }
+  // Critics 1 fix: the win / fail sheet never slices the holding line. A fail sheet starts under the line (its text steps
+  // down, .tight, if the room is short) and covers the queue, so the jammed line stays in view; if it still doesn't fit
+  // it floats above the line (.float) instead. A win sheet covers the whole rail (and reaches up over the board's foot if
+  // it needs more room). Wide: the same within the side column.
+  function placeSheet() {
+    const P = $("panel"), card = P.firstElementChild, st = P.style, A = $("app").getBoundingClientRect(), lw = $("line-wrap").getBoundingClientRect(), rl = $("rail").getBoundingClientRect(), sd = $("side").getBoundingClientRect();
+    if (P.hidden) return;
+    P.classList.remove("float", "tight"); st.top = ""; st.bottom = ""; st.left = ""; st.width = ""; st.right = "";
+    if (app.wide) { st.left = sd.left - A.left + "px"; st.width = sd.width + "px"; st.right = "auto"; st.bottom = A.bottom - sd.bottom + "px"; }
+    const foot = app.wide ? sd.bottom : A.bottom, gap = 6, natural = () => { P.classList.add("float"); const k = card.offsetHeight; P.classList.remove("float"); return k; };
+    if (app.panel === "win") { const hh = natural(); st.top = Math.min(rl.top, foot - hh) - A.top + "px"; return; }
+    let hh = natural(); const room = foot - lw.bottom - gap;
+    if (hh > room) { P.classList.add("tight"); hh = natural(); }
+    if (hh <= room) { st.top = lw.bottom + gap - A.top + "px"; return; }
+    P.classList.add("float"); st.top = "auto"; st.bottom = A.bottom - lw.top + gap + "px";
   }
   function paintTitle() {
     if (!app.cfg) return;
@@ -771,6 +887,45 @@
     // Levels built for a check (config selfTest.jamLevel, stuckLevel): registered for the run only.
     const fx = (k) => { const e = { L: ST[k], id: "fx-" + k, n: 0, era: 1, idx: -1, node: null }; app.byId.set(e.id, e); return e; };
     const LY = app.cfg.layout;
+    // Critics 1 fix, measured in the page: a text's glyph box (a Range), the overlap of two rects, whether an element shows.
+    const glyph = (el) => { const r = document.createRange(); r.selectNodeContents(el); return r.getBoundingClientRect(); };
+    const over = (a, b) => { const x = Math.min(a.right, b.right) - Math.max(a.left, b.left), y = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top); return x > 0.5 && y > 0.5 ? Math.round(x) + "x" + Math.round(y) : 0; };
+    const shown = (el) => { if (!el) return false; const c = getComputedStyle(el), r = el.getBoundingClientRect(); return c.display !== "none" && c.visibility !== "hidden" && r.width > 0 && r.height > 0; };
+    // The jam sheet's chips: one per jammed squad (up to layout.jamChips) in its colour with its count; no crew name shows.
+    const chipCheck = () => { const cs = Array.from($("p-line").querySelectorAll(".chip")), want = ((app.ending && app.ending.squads) || []).slice(0, LY.jamChips);
+      if (cs.length !== want.length) return cs.length + " chips for " + want.length + " squads";
+      for (let i = 0; i < cs.length; i++) if (cs[i].style.getPropertyValue("--mc") !== mat(want[i][0]).c || cs[i].textContent !== String(want[i][1])) return "chip " + i + " is wrong";
+      for (let m = 1; m < E.NMAT; m++) if ($("p-line").textContent.indexOf(mat(m).crew) >= 0) return "the text names " + mat(m).crew;
+      return true; };
+    // The sheet never slices the holding line: a fail sheet starts under it or ends above it; a win sheet covers it or ends above it.
+    const sheetClear = (win) => { const a = $("panel").getBoundingClientRect(), l = $("line").getBoundingClientRect(), fine = a.bottom <= l.top + 0.5 || (win ? a.top <= l.top + 0.5 : a.top >= l.bottom - 0.5);
+      return fine || "sheet " + Math.round(a.top) + "-" + Math.round(a.bottom) + ", line " + Math.round(l.top) + "-" + Math.round(l.bottom); };
+    // The coach box clear of the board; the arrow (at the far end of its bob) clear of every count shown and the line head.
+    const coachClear = () => { const t = $("coach"); if (t.hidden) return true; const o = over($("board").getBoundingClientRect(), t.getBoundingClientRect()); if (o) return "the coach covers the board by " + o;
+      const hd = $("hand"); if (hd.hidden) return true;
+      const q = hd.getBoundingClientRect(), bob = parseFloat(getComputedStyle(hd).getPropertyValue("--bob")) || 0, k = app.handKind === "side" ? LY.hand.sideScale : 1, left = /rotate\(-90/.test(hd.style.transform), right = /rotate\(90/.test(hd.style.transform);
+      const r = { left: q.left - (left ? bob * k : 0), right: q.right + (right ? bob * k : 0), top: q.top - (left || right ? 0 : bob), bottom: q.bottom };
+      const texts = Array.from(document.querySelectorAll("#tray .tile .n, #line .slot b")).filter((el) => el.textContent && shown(el.parentElement)).concat([$("line-lab"), $("line-cnt")].filter((el) => el.textContent));
+      for (const el of texts) { const w = over(r, glyph(el)); if (w) return "the arrow (" + app.handKind + ") covers '" + el.textContent + "' by " + w; }
+      return true; };
+    // B1: in every taken space the count clears every badge (the chain, the working marker, the figures, the stuck lock).
+    const slotClear = () => { for (const s of app.slots) { if (s.hidden || !s.classList.contains("full")) continue; const b = s.querySelector("b"); if (!b.textContent) continue; const g = glyph(b);
+        for (const sel of [".lk", ".out", ".men"]) { const el = s.querySelector(sel); if (!shown(el)) continue; const o = over(g, el.getBoundingClientRect()); if (o) return sel + " covers the count " + b.textContent + " by " + o; }
+        if (s.classList.contains("stuck")) { const cs = getComputedStyle(s), r = s.getBoundingClientRect(), bd = parseFloat(cs.getPropertyValue("--bd")), x = r.left + parseFloat(cs.borderLeftWidth) + parseFloat(cs.paddingLeft), y = r.top + parseFloat(cs.borderTopWidth) + parseFloat(cs.paddingTop);
+          const o = over(g, { left: x, top: y, right: x + bd, bottom: y + bd }); if (o) return "the lock covers the count " + b.textContent + " by " + o; } }
+      return true; };
+    // M3: a linked tile's chain tag clears every count in the tray.
+    const chainClear = () => { const ns = Array.from(document.querySelectorAll("#tray .tile .n")).filter((n) => n.textContent && shown(n.parentElement));
+      for (const ch of document.querySelectorAll("#tray .tile .ch")) { if (!shown(ch)) continue; for (const n of ns) { const o = over(glyph(n), ch.getBoundingClientRect()); if (o) return "a chain covers '" + n.textContent + "' by " + o; } }
+      return true; };
+    // M3: every rod's two ends lie on two tiles and no point along it lies inside a third tile (3 px in from its edge).
+    const rodClear = () => { const T = []; for (let j = 0; j < E.NCOL; j++) for (let d = 0; d < LY.queueRows; d++) { const el = tileOf(j, d); if (shown(el) && !el.classList.contains("empty")) T.push(el.getBoundingClientRect()); }
+      const sb = app.rods.getBoundingClientRect(), inT = (x, y, b, e) => x > b.left + e && x < b.right - e && y > b.top + e && y < b.bottom - e;
+      for (const g of app.rods.querySelectorAll("path")) { const L = g.getTotalLength(); if (L < 4) continue;
+        const at = (u) => { const p = g.getPointAtLength(L * u); return [sb.left + p.x, sb.top + p.y]; }, e0 = at(0), e1 = at(1), own = T.filter((b) => inT(e0[0], e0[1], b, -1) || inT(e1[0], e1[1], b, -1));
+        if (!own.length) return "a rod starts on no tile";
+        for (let i = 1; i < 32; i++) { const [x, y] = at(i / 32); const hit = T.find((b) => own.indexOf(b) < 0 && inT(x, y, b, 3)); if (hit) return "a rod crosses a third tile at " + Math.round(x) + "," + Math.round(y); } }
+      return true; };
     try {
       // 1. Stored winning orders, all levels, all difficulties, played patiently through the play entry point.
       let wins = 0, total = 0;
@@ -818,8 +973,10 @@
         ok(app.S.status === E.FAILED && app.S.reason === "jam" && app.ending && app.ending.reason === "jam" && app.S.lineLen === app.S.cap, "jam: the line fills with squads that can't reach a block and jams at rest");
         ok(app.S.order(app.ord).every((q) => app.S.stuck(q)) && (app.cues.jam | 0) === j0 + 1, "jam: every squad in the line reads stuck; one jam cue");
         let at = null; for (let t = 0; t < SH.settleCapMs + 3000 && !app.panel; t += 16) { step(16); if (app.panel && !at) at = { busy: app.S.busy, ms: app.clock - app.endT }; }
-        const pl = $("p-line").textContent;
-        ok(app.panel === "fail" && /^Line jammed: .+ can't reach a block\.$/.test(pl) && pl.indexOf(app.ending.crews[0]) >= 0 && hitOK($("p-primary")) && $("p-primary").textContent === "Retry", "jam: the sheet names the jammed crews (" + pl + "), Retry is primary and hittable");
+        const pl = $("p-line").getAttribute("aria-label") || "", chipsOK = chipCheck();
+        ok(app.panel === "fail" && /^Line jammed: .+ can't reach a block\.$/.test(pl) && pl.indexOf(app.ending.crews[0]) >= 0 && hitOK($("p-primary")) && $("p-primary").textContent === "Retry", "jam: the sheet's label names the jammed crews (" + pl + "), Retry is primary and hittable");
+        ok(chipsOK === true, "jam: the sheet shows one colour chip with its count per jammed squad, no crew names (" + chipsOK + ")");
+        const sl = sheetClear(); ok(sl === true, "jam: the fail sheet leaves the jammed line in view (" + sl + ")");
         out.notes.jam = jp.e.id + " '" + jp.p.prefix + "' (sheet after " + (at ? Math.round(at.ms) : "?") + " ms)";
       }
       { const e = app.byId.get(ST.overlapLevel) || app.levels[app.levels.length - 1]; startLevel(e.id, "normal"); fillLine(); step(16); step(16);
@@ -896,7 +1053,7 @@
         playCol(0); settleNow();
         ok(app.S.status === E.FAILED && app.S.reason === "jam" && !app.march, "jam level: the fifth stuck squad jams the line at rest; the pace never switches to the victory march");
         for (let t = 0; t < SH.settleCapMs + 3000 && !app.panel; t += 16) step(16);
-        ok(app.panel === "fail" && /^Line jammed: .+ and 2 more can't reach a block\.$/.test($("p-line").textContent), "jam level: the sheet names three crews and 'and 2 more' (" + $("p-line").textContent + ")");
+        ok(app.panel === "fail" && /^Line jammed: .+ and 2 more can't reach a block\.$/.test($("p-line").getAttribute("aria-label")) && chipCheck() === true && $("p-line").querySelectorAll(".chip").length === 5, "jam level: the sheet's label names three crews and 'and 2 more' (" + $("p-line").getAttribute("aria-label") + "); five chips show");
         startLevel(e.id, "normal"); patient("001234"); settleNow();
         ok(app.S.status === E.WON, "jam level: the ring's crew first wins (the level is fair)");
         const s2 = fx("stuckLevel"); startLevel(s2.id, "normal"); playCol(0);
@@ -926,6 +1083,7 @@
       ok(falls > 0 && kf.keep && kf.shaking && app.V.gob.on && gobBusy === false && (app.cues.collapse | 0) === col0 + 1 && (app.cues.fanfare | 0) > 0, "win: the last blocks fall, the keep comes down once every sapper is home, one collapse, the fanfare");
       tick(8000);
       ok(app.panel === "win" && hitOK($("p-primary")), "hit: the win panel's Next");
+      { const w = sheetClear(true); ok(w === true, "win: the sheet covers the whole holding line or none of it (" + w + ")"); }
       ok(!$("p-medals").hidden && $("p-medals").querySelectorAll(".medal.new").length === 1, "win: the panel stamps the new Normal medal");
       // 12. Pause: nothing moves and the sheet takes the tap; one tap resumes with no jump in time and no card played.
       startLevel(app.levels[0].id, "normal");
@@ -940,10 +1098,12 @@
         if (id === "note") continue;
         const e = app.byId.get(id); if (!ok(!!e, "coach: level " + id + " exists")) continue;
         startLevel(id, "normal"); const c0 = coachState(), steps = app.cfg.teach[id];
-        ok(c0.on && c0.text.length > 0 && c0.oneLine && c0.text.indexOf("{") < 0 && (c0.hand || c0.ring), id + ": one coach line (fits one line) with its arrow at load (" + c0.text + ")");
+        ok(c0.on && c0.text.length > 0 && c0.fits && c0.text.indexOf("{") < 0 && (c0.hand || c0.ring), id + ": the coach line fits its box (" + (c0.oneLine ? "one line" : "two lines") + ", " + c0.mode + ") with its arrow at load (" + c0.text + ")");
         if (app.focusEl) ok(hitOK(app.focusEl), id + ": the arrow never covers its target");
+        const cc = coachClear(); ok(cc === true, id + ": the coach box covers no board and the arrow no count or line head (" + cc + ")");
         const seen = new Set([c0.i]); let last = c0.i, mono = true;
-        for (const ch of e.L.win.normal) { playCol(+ch); settleNow(); const cs = coachState(); if (cs.i >= 0) { if (cs.i < last) mono = false; last = cs.i; seen.add(cs.i); } }
+        let clear = true; for (const ch of e.L.win.normal) { playCol(+ch); settleNow(); const cs = coachState(); if (cs.i >= 0) { if (cs.i < last) mono = false; last = cs.i; seen.add(cs.i); if (cs.on && clear === true) clear = coachClear(); } }
+        ok(clear === true, id + ": at every step of the stored order the coach covers no board and the arrow no count (" + clear + ")");
         ok(mono && !coachState().on && app.S.status === E.WON, id + ": on the stored order the coach only moves forward (" + Array.from(seen).join(",") + ") and is gone at the win");
         startLevel(id, "normal"); const saw = new Set();
         for (let g = 0; g <= app.B.ncards && app.S.status === E.PLAYING; g++) {
@@ -976,7 +1136,10 @@
         ok(F.march && F.pace === SH.pace * Math.max(SPD[1], vp) && F.won && F3.march && F3.pace === SH.pace * Math.max(SPD[2], vp) && F3.won, "victory march: with 2x or 3x on the faster pace stays (" + F.pace + "x, " + F3.pace + "x)");
         startLevel(e.id, "normal"); for (let i = 0; i < o.length; i++) { playCol(+o[i]); if (i < o.length - 1) tickQuiet(ST.tickCapMs); }
         ok(app.march && $("line-wrap").classList.contains("march") && $("line-lab").textContent === LY.marchText.replace("{x}", vp), "victory march: the head reads '" + $("line-lab").textContent + "'");
-        skip(); ok(!app.S.busy && app.S.status === E.WON, "victory march: skip still lands everything"); }
+        skip(); ok(!app.S.busy && app.S.status === E.WON, "victory march: skip still lands everything");
+        setSpeed(SPD[2], false); startLevel(e.id, "normal"); for (let i = 0; i < o.length; i++) { playCol(+o[i]); if (i < o.length - 1) tickQuiet(ST.tickCapMs); }
+        const l3 = $("line-lab").textContent; setSpeed(SPD[0], false); skip();
+        ok(l3 === LY.marchText.replace("{x}", Math.max(SPD[2], vp)), "victory march: at " + SPD[2] + "x the head shows the pace in use (" + l3 + ")"); }
       // 15. The queue (v4 M1): every column shows layout.queueRows tiles, front first, checked against the engine at load
       // and after every tap of a stored order (played patiently): each shown tile has its card's colour and count and
       // nothing else (no crew name), a row past the column's end is hidden, the rows behind are full size and fade back.
@@ -988,12 +1151,14 @@
             const m = B.cardM[ci], k = String(B.cardN[ci]);
             if (!shown) return "column " + j + " row " + d + " is hidden";
             if (el.style.getPropertyValue("--mc") !== mat(m).c || el.textContent !== k) return "column " + j + " row " + d + " shows '" + el.textContent + "' in " + el.style.getPropertyValue("--mc") + ", the engine has " + k + " " + mat(m).c;
+            if (d && el.style.getPropertyValue("--fc") !== app.fadeC[d][m]) return "column " + j + " row " + d + " is not faded toward the tray";
             n++; }
           return n; };
         startLevel(e.id, "normal");
         const S = app.S, want = app.cards.reduce((a, b, j) => a + Math.min(RW, app.B.colLen[j]), 0), q0 = qCheck();
-        const hs = [], op = []; for (let d = 0; d < RW; d++) { const el = d ? app.nexts[0][d - 1] : app.cards[0]; hs.push(el.getBoundingClientRect().height); op.push(+getComputedStyle(el).opacity); }
-        ok(q0 === want && RW === 3 && hs.every((h) => Math.abs(h - hs[0]) < 0.6) && op[0] === 1 && op[1] < 1 && op[2] < op[1], "queue: " + RW + " rows per column at full size (" + hs.map((h) => h.toFixed(1)).join(", ") + " px), front bright, the rows behind fading (" + op.join(", ") + "); " + q0 + " tiles match the engine (" + e.id + ")");
+        const hs = [], op = [], fc = [], j0 = Math.max(0, app.cards.findIndex((b, j) => S.card(j, RW - 1) >= 0));
+        for (let d = 0; d < RW; d++) { const el = tileOf(j0, d); hs.push(el.getBoundingClientRect().height); op.push(+getComputedStyle(el).opacity); fc.push(el.style.getPropertyValue("--fc") === (d ? app.fadeC[d][app.B.cardM[S.card(j0, d)]] : mat(app.B.cardM[S.card(j0, 0)]).c)); }
+        ok(q0 === want && RW === 3 && hs[1] < hs[0] && hs[2] < hs[1] && op.every((o) => o === 1) && fc.every(Boolean), "queue: " + RW + " rows per column stepping down (" + hs.map((h) => h.toFixed(1)).join(", ") + " px), all at full opacity, the rows behind faded toward the tray (layout.fade); " + q0 + " tiles match the engine (" + e.id + ")");
         let moved = true, taps = 0; const o = e.L.win.normal;
         for (let i = 0; i < o.length && app.S.status === E.PLAYING; i++) { playCol(+o[i]); settleNow(); taps++; const q = qCheck(); if (typeof q === "string") { moved = q + " after tap " + taps; break; } }
         ok(moved === true && S.status === E.WON, "queue: the rows move up with the engine on every tap of the stored order (" + (moved === true ? taps + " taps" : moved) + ")"); }
@@ -1054,7 +1219,7 @@
       // 20. Linked squads (v4-linked): the rods at load; a pair both of whose colours are in reach leaves together (runners
       // from both spaces); a stub when a partner sits below the visible rows; a linked tap with one space free is refused
       // and changes nothing (engine state, tray, line, board), both tiles shake, the toast says why.
-      { const e = app.byId.get("v4-linked"), rodsN = () => app.rods.querySelectorAll("path").length / 3, stubs = () => app.rods.querySelectorAll("circle").length / 2;
+      { const e = app.byId.get("v4-linked"), rodsN = () => app.rods.querySelectorAll("path").length / 3, stubs = () => app.rods.querySelectorAll("circle.dot").length / 2;
         if (ok(!!e, "linked: v4-linked is loaded")) {
           startLevel(e.id, "normal"); const r0 = rodsN(); let pairN = 0, together = null, stubSeen = 0;
           for (const ch of e.L.win.normal) { const j = +ch, f = app.S.front(j), p = app.S.partner(f); stubSeen = Math.max(stubSeen, stubs());
@@ -1094,9 +1259,20 @@
       for (const [k, jam, win, re] of [["linkJamLevel", "2301", "00123", LY.jamLinkedText], ["lockJamLevel", "1234", "001234", LY.jamLockText]]) {
         const e = fx(k); startLevel(e.id, "normal"); patient(jam); settleNow();
         for (let t = 0; t < SH.settleCapMs + 3000 && !app.panel; t += 16) step(16);
-        const pl = $("p-line").textContent, want = k === "linkJamLevel" ? pl.indexOf(re) === 0 : pl.slice(-re.length) === re;
-        ok(app.S.status === E.FAILED && app.S.reason === "jam" && app.panel === "fail" && want, k + ": at rest every front card is refused: the sheet says why (" + pl + ")");
+        const pl = $("p-line").getAttribute("aria-label") || "", tx = $("p-line").textContent, want = k === "linkJamLevel" ? pl.indexOf(re) === 0 && tx.indexOf(re) === 0 : pl.slice(-re.length) === re && tx.slice(-re.length) === re;
+        ok(app.S.status === E.FAILED && app.S.reason === "jam" && app.panel === "fail" && want && chipCheck() === true, k + ": at rest every front card is refused: the sheet says why (" + tx + " / " + pl + ")");
         startLevel(e.id, "normal"); patient(win); settleNow(); ok(app.S.status === E.WON, k + ": the right order wins"); }
+      // 23. Critics 1 fix: the rods on the debug levels along their stored orders (every rod on its two tiles, never over a
+      // third); B1: a linked pair leaving and then at rest, and a full line of big squads rushed out, with every count
+      // clear of every badge.
+      for (const id of ["v4-linked", "v4-all"]) { const e = app.byId.get(id); if (!e) continue; startLevel(id, "normal"); let bad = rodClear(), cb = chainClear(), n = 0;
+        for (const ch of e.L.win.normal) { if (bad !== true || cb !== true) break; playCol(+ch); settleNow(); bad = rodClear(); cb = chainClear(); n++; }
+        ok(bad === true && cb === true, id + ": after each of " + n + " taps every rod lands on its two tiles and crosses no third, and no chain tag covers a count (" + bad + ", " + cb + ")"); }
+      if (app.byId.has("v4-linked")) { startLevel("v4-linked", "normal"); const j = app.cards.findIndex((b, k) => app.S.front(k) >= 0 && app.S.partner(app.S.front(k)) >= 0);
+        if (ok(j >= 0 && playCol(j), "B1: a linked front card plays")) { for (let t = 0; t < 350; t += 16) step(16); const a = slotClear(), lk = app.slots.filter((q) => q.classList.contains("linked")).length; settleNow(); const b = slotClear();
+          ok(a === true && b === true && lk === 2, "B1: both linked spaces wear the chain and every count stays clear of every badge, leaving and at rest (" + a + ", " + b + ")"); } }
+      { const e = app.byId.get(ST.overlapLevel) || app.levels[app.levels.length - 1]; startLevel(e.id, "easy"); fillLine(); step(16); step(16); for (let t = 0; t < 400; t += 16) step(16);
+        const c = slotClear(); ok(c === true && app.slots.some((q) => q.classList.contains("work")), "B1: a full Easy line of working squads (" + app.S.cap + " spaces" + ($("line").classList.contains("tight") ? ", tight" : "") + "): every count clear of every badge (" + c + ")"); }
       // 14. Opaque sprite caches.
       const bad = app.V.checkSprites(); ok(!bad.length, "sprites: every opaque cache is opaque" + (bad.length ? " (" + bad.join(",") + ")" : ""));
     } catch (err) { ok(false, "selfTest threw: " + (err && err.message) + " " + (err && err.stack ? err.stack.split("\n")[1] : "")); }

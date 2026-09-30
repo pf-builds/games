@@ -12,7 +12,7 @@
 // key reads as that gate's. When the key goes, the lock drops and the gate's bars crumble one by one with a shake.
 // Towers (M2): tower blocks carry a crenellated rim on the tower's outer edge and a hooded goblin archer stands on top
 // while any of it stands; the range disc fades and the archer tumbles when it falls.
-// The locked space's key (v4 M2): the gilt block that opens the holding line's locked space wears pulsing corner brackets
+// The locked space's key (v4 M2): the gilt block that opens the holding line's locked space wears a pulsing dashed square
 // in the socket colour (board.lockKey), so it reads as a space key, not a gate key (a full ring in the gate's tint).
 // The page plays the padlock and the cue; sync() passes REVEAL, LINK and UNLOCK to the page's hooks.
 //
@@ -23,7 +23,15 @@
 // camp to the fort, tents beside the camp, trees, fields, tufts and flowers on grass, ripples on water. It is decided
 // once per level (V.deco) and painted with the ground; it changes no rule. Archer rings tint the ground only.
 // Haul bins (fix pass): one bin per colour in its own colour, with its block (glyph and all) as a label and a pile that
-// grows with the haul; more than board.binsRow colours go on two rows (board.yardRows2).
+// grows with the haul; more than board.binsRow colours go on two rows (board.yardRows2). v4 Critics 1 fix: a bin shows
+// only once its colour has hauled a block (it grows in over board.binGrowMs), so the yard at rest is bare ground, not a
+// colour legend.
+// Archer rings (v4 Critics 1 fix): a ring is loud (board.rangeStroke, dashed) only while it matters: a colour the player
+// can send now (V.hot, the page's mask of front cards and squads in the line) has a block in reach inside it, its archer
+// is shooting or just hit someone, or the coach points at a tower (V.ringsLoud). Otherwise it is a faint thin dash
+// (board.ring). Each ring eases between the two (board.ring.fadeMs).
+// The locked space's key (Critics 1 fix): a dashed square in the socket's cream (board.lockKey.dash), the same dash the
+// locked space wears in the holding line; gate tints (board.gateTints) keep clear of cream and yellow.
 //
 // Rotation (M2, landscape phones). When the board would be small (under layout.rotateBelowCss CSS px a cell) and a
 // quarter turn makes it bigger, the canvas is drawn turned: the fort's south (camp and yard) faces right, next to the
@@ -132,6 +140,8 @@
       gob: { on: false, t0: 0, x: 0, y: 0, done: false },
       hooks: { pop: null, deposit: null, gate: null, tower: null, shot: null, hit: null, collapse: null, tap: null, free: null, move: null, reveal: null, link: null, unlock: null },
       lockKey: -1, lockOpen: true,
+      // Critics 1 fix: rings (V.hot from the page, the loud mask worked out per board change, each ring's ease) and bins.
+      hot: 0, ringsLoud: false, hotVer: -1, hotFor: -1, hotMask: 0, shootM: 0, ringA: new Float32Array(MAXT), ringHitT: new Float64Array(MAXT).fill(-1e12), binT: new Float64Array(E.NMAT).fill(-1e12),
     };
     const RMAX = Math.max(8, Math.min(1024, SH.maxRunners | 0));
     V.rOn = new Int8Array(RMAX); V.rId = new Int32Array(RMAX); V.rK = new Int8Array(RMAX); V.rS = new Int8Array(RMAX); V.rM = new Int8Array(RMAX); V.rC = new Int32Array(RMAX);
@@ -307,16 +317,24 @@
       V.towerLeft.fill(0); for (let c = 0; c < B.n; c++) { const t = B.towerOf[c]; V.towerOfCell[c] = t; if (t >= 0 && t < MAXT && V.disp[c] > 0) V.towerLeft[t]++; }
       for (let k = 0; k < MAXG; k++) { const gc = B.gateCells[k]; V.gSt[k] = gc && gc.length && V.disp[gc[0]] > 0 ? 0 : 1; V.gT[k] = -1e12; }
       V.tFallT.fill(-1e12); V.shT = -1e12; V.label.t = -1e12; V.gob.on = false; V.gob.done = false; V.lockOpen = !V.S.locked;
-      V.popT.fill(-1e12); V.pT.fill(-1e12);
+      V.popT.fill(-1e12); V.pT.fill(-1e12); V.binT.fill(-1e12); V.ringHitT.fill(-1e12); V.shootM = 0; V.hotVer = -1;
+      for (let k = 0; k < MAXT; k++) V.ringA[k] = k < B.towers.length && hotNow(k) ? 1 : 0;
       paintLayer();
     }
     // Fit the canvas into (cssW, cssH): whole device pixels per cell, turned a quarter when that is bigger and allowed.
+    // fit() only works it out (the page asks it before it reserves room for the coach); fitCs is its CSS px per cell.
+    const fitOut = { cs: 0, rot: false };
+    function fit(cssW, cssH, dpr, allowRot) {
+      const rows = V.h + V.Y, cu = Math.min(K.maxCellCss, cssW / V.w, cssH / rows), cr = Math.min(K.maxCellCss, cssW / rows, cssH / V.w);
+      fitOut.rot = !!allowRot && cu < cfg.layout.rotateBelowCss && cr > cu * 1.04;
+      fitOut.cs = Math.max(2, Math.floor((fitOut.rot ? cr : cu) * dpr)); return fitOut;
+    }
+    function fitCs(cssW, cssH, dpr, allowRot) { if (!V.B) return 0; const d = Math.max(1, Math.min(K.maxDpr, dpr || 1)); return fit(cssW, cssH, d, allowRot).cs / d; }
     function layout(cssW, cssH, dpr, allowRot) {
       if (!V.B) return;
       V.dpr = Math.max(1, Math.min(K.maxDpr, dpr || 1));
-      const rows = V.h + V.Y, cu = Math.min(K.maxCellCss, cssW / V.w, cssH / rows), cr = Math.min(K.maxCellCss, cssW / rows, cssH / V.w);
-      const rot = !!allowRot && cu < cfg.layout.rotateBelowCss && cr > cu * 1.04;
-      const cs = Math.max(2, Math.floor((rot ? cr : cu) * V.dpr)), turned = rot !== V.rot;
+      const rows = V.h + V.Y, f = fit(cssW, cssH, V.dpr, allowRot), rot = f.rot;
+      const cs = f.cs, turned = rot !== V.rot;
       const fresh = cs !== V.cs || !V.sprites;
       V.rot = rot; if (turned) { placePiles(); V.pT.fill(-1e12); }
       if (fresh) { V.cs = cs; buildSprites(); }
@@ -382,13 +400,17 @@
     }
     // A bin in its colour: a bevelled box, a darker inside, its block (with the glyph) as a label on the short side, and
     // the haul piled up inside in mini blocks (one per pixel while the colour fits, else to scale). Upright either way.
+    // Critics 1 fix: nothing but the yard until the colour's first block lands; then it grows in (binGrow, 0..1).
+    const binGrow = (k) => { const m = V.piles[k].m; if (V.haul[m] <= 0) return 0; const a = (V.fxT - V.binT[m]) / Math.max(1, K.binGrowMs); return a >= 1 || V.calm ? 1 : a <= 0 ? 0 : 1 - (1 - a) * (1 - a) * (1 - 2.2 * a); };
     function paintPile(k) {
       const p = V.piles[k], cs = V.cs, g2 = V.lg, S = V.sprites, mb = S.mb, np = V.piles.length, two = np > K.binsRow, per = two ? Math.ceil(np / 2) : np;
-      const sw = V.rot ? V.Y / (two ? 2 : 1) : V.w / per, sh = V.rot ? V.w / per : V.Y / (two ? 2 : 1);
-      const bw = Math.round(Math.min(sw * K.binFill, K.binMax) * cs), bh = Math.round(Math.min(sh * K.binFill, K.binMax) * cs);
-      const cx = MX(p.x, p.y) * cs, cy = MY(p.x, p.y) * cs, x = Math.round(cx - bw / 2), y = Math.round(cy - bh / 2), col = C.mats[p.m].c;
-      const o = Math.max(1, Math.round(cs * 0.12)), lab = Math.max(K.binChipPx * V.dpr, Math.round(cs * 0.95)), wide = bw >= bh;
+      const sw = V.rot ? V.Y / (two ? 2 : 1) : V.w / per, sh = V.rot ? V.w / per : V.Y / (two ? 2 : 1), u = binGrow(k);
+      const cx = MX(p.x, p.y) * cs, cy = MY(p.x, p.y) * cs;
       g2.fillStyle = K.yard; g2.fillRect(Math.round(cx - (sw * cs) / 2), Math.round(cy - (sh * cs) / 2), Math.round(sw * cs), Math.round(sh * cs));
+      if (u <= 0) return;
+      const bw = Math.max(2, Math.round(Math.min(sw * K.binFill, K.binMax) * cs * u)), bh = Math.max(2, Math.round(Math.min(sh * K.binFill, K.binMax) * cs * u));
+      const x = Math.round(cx - bw / 2), y = Math.round(cy - bh / 2), col = C.mats[p.m].c;
+      const o = Math.max(1, Math.round(cs * 0.12)), lab = Math.max(1, Math.round(Math.max(K.binChipPx * V.dpr, Math.round(cs * 0.95)) * u)), wide = bw >= bh;
       g2.fillStyle = K.binInk; g2.fillRect(x - o, y - o, bw + 2 * o, bh + 2 * o);
       g2.fillStyle = col; g2.fillRect(x, y, bw, bh);
       g2.fillStyle = mixHex(col, K.hi); g2.fillRect(x, y, bw, o); g2.fillStyle = mixHex(col, K.lo); g2.fillRect(x, y + bh - o, bw, o);
@@ -397,6 +419,7 @@
       const ix = wide ? lx + lab + o : x + o, iy = wide ? y + o : ly + lab + o, iw = wide ? x + bw - o - ix : bw - 2 * o, ih = wide ? bh - 2 * o : y + bh - o - iy;
       g2.fillStyle = mixHex(col, K.binInside); g2.fillRect(ix, iy, Math.max(1, iw), Math.max(1, ih));
       g2.drawImage(S.tb[p.m][0], lx, ly, lab, lab);
+      if (u < 1) return;
       const cols = Math.max(1, Math.floor(iw / mb)), rows = Math.max(1, Math.floor(ih / mb)), cap = cols * rows;
       const tot = V.total[p.m], fill = !tot ? 0 : tot <= cap ? Math.min(cap, V.haul[p.m]) : Math.min(cap, Math.round((cap * V.haul[p.m]) / tot)), ox = ix + Math.round((iw - cols * mb) / 2);
       for (let i = 0; i < fill; i++) g2.drawImage(S.mini[p.m], ox + (i % cols) * mb, iy + ih - (1 + ((i / cols) | 0)) * mb);
@@ -509,7 +532,7 @@
       if (g < MAXG) { V.gSt[g] = 1; V.gT[g] = anim ? V.fxT : -1e12; }
       if (anim) { shake(FX.gateShake[0], FX.gateShake[1]); if (V.hooks.gate) V.hooks.gate(g); }
     }
-    function deposit(m) { V.haul[m]++; V.pileDirty = true; if (V.hooks.deposit) V.hooks.deposit(m); }
+    function deposit(m) { if (V.haul[m]++ === 0) V.binT[m] = V.fxT; V.pileDirty = true; if (V.hooks.deposit) V.hooks.deposit(m); }
     function shake(amp, ms) { if (V.calm) return; V.shT = V.fxT; V.shMs = Math.max(1, ms); V.shAmp = amp; }
     // Read the engine's log since the last sync (then clear it). anim false: land everything quietly (a skip).
     function sync(S, anim) {
@@ -521,7 +544,7 @@
         else if (t === EV.EAT) eat(a, anim);
         else if (t === EV.GATE) gate(a, anim);
         else if (t === EV.HIT || t === EV.KILL) {
-          const i = V.idR[a], kill = t === EV.KILL; V.stats.hits++;
+          const i = V.idR[a], kill = t === EV.KILL; V.stats.hits++; if (i >= 0 && V.rTw[i] < MAXT) V.ringHitT[V.rTw[i]] = V.fxT;
           if (anim && V.hooks.hit) V.hooks.hit(kill ? 2 : 1);
           const hx = i >= 0 ? V.rHx[i] : (S.qC[a] % V.w) + 0.5, hy = i >= 0 ? V.rHy[i] : ((S.qC[a] / V.w) | 0) + 0.5;
           if (anim) { V.label.t = V.fxT; V.label.x = hx; V.label.y = hy; V.label.kill = kill; V.label.text = (kill ? SH.killText : SH.hitText).replace("{n}", 1); V.label.w = 0; spawn(MX(hx, hy), MY(hx, hy), 0, FX.dust + 2, FX.dustSize, FX.lift * 0.5, FX.spread * 0.6); }
@@ -548,6 +571,7 @@
     }
     function update(dt, speed) {
       V.fxT += dt * (speed || 1);
+      if (V.B) { const T = V.B.towers.length, st = dt / Math.max(1, K.ring.fadeMs); for (let k = 0; k < T && k < MAXT; k++) { const h = hotNow(k) ? 1 : 0, a = V.ringA[k]; V.ringA[k] = h > a ? Math.min(1, a + st) : Math.max(0, a - st); } }
       if (V.gob.on && !V.gob.done && V.clock - V.gob.t0 >= SH.goblinMs) V.gob.done = true;
       for (let i = 0; i < RMAX; i++) {
         if (!V.rOn[i] || !V.rK[i] || V.rK[i] === 1) continue;
@@ -574,7 +598,23 @@
     }
 
     // ---- drawing ----------------------------------------------------------------------------------------------------
-    const dash = [0, 0];
+    const dash = [0, 0], NODASH = [];
+    // Critics 1 fix: does tower k's ring matter now? Its archer is shooting or just hit someone, the coach points at a
+    // tower, or a colour the player can send now (V.hot) has a block in reach inside the ring (worked out once per board
+    // change or page mask, into V.hotMask; allocation-free).
+    function hotNow(k) {
+      if (V.ringsLoud || (V.shootM & (1 << k)) || V.fxT - V.ringHitT[k] < SH.labelMs) return true;
+      if (V.hotVer !== V.dispVer || V.hotFor !== V.hot) {
+        V.hotVer = V.dispVer; V.hotFor = V.hot; V.hotMask = 0; bfs();
+        const n = V.n, d = V.dist, tw = V.B.towerOf;
+        for (let c = 0; c < n; c++) {
+          const v = V.disp[c]; if (v <= 0 || !(V.hot & (1 << v)) || tw[c] >= 0) continue;
+          const cov = coverNow(c); if (!cov || (V.hotMask & cov) === cov) continue;
+          for (let j = 0; j < 4; j++) { const e = nbOf(c, j); if (e >= 0 && d[e] >= 0) { V.hotMask |= cov; break; } }
+        }
+      }
+      return (V.hotMask & (1 << k)) !== 0;
+    }
     // Runner i's board position at engine time t. Eaters: out along the route by the bite, at the face while biting,
     // then back with the block to their colour's bin. Hit runners: out to the ring's edge by the hit, then knocked back
     // and walking home to their space (Easy, Normal), or down where they stood (Hard).
@@ -613,6 +653,7 @@
       if (!V.B || !V.sprites) return;
       const cs = V.cs, S = V.sprites, gx = V.g, t = V.t, ft = V.fxT, ss = S.ss, mb = S.mb, CW = canvas.width, CH = canvas.height;
       if (V.pileDirty) { for (let k = 0; k < V.piles.length; k++) paintPile(k); V.pileDirty = false; }
+      else for (let k = 0; k < V.piles.length; k++) { const m = V.piles[k].m; if (V.haul[m] > 0 && ft - V.binT[m] < K.binGrowMs + 34) paintPile(k); } // a bin growing in
       gx.imageSmoothingEnabled = false;
       // A shake moves everything; the frame's wood shows at the edge it uncovers.
       let dx = 0, dy = 0; const sa = (ft - V.shT) / V.shMs;
@@ -633,24 +674,24 @@
           if (a >= 0 && a < 1) { gx.save(); gx.globalAlpha = 1 - a * a; gx.translate(lx + ls / 2, ly + ls / 2 + a * a * cs * 2.2); gx.rotate(a * 1.4); gx.drawImage(lk, -ls / 2, -ls / 2); gx.restore(); }
         }
       }
-      // The locked space's key: corner brackets in the socket colour, pulsing while the space is locked.
+      // The locked space's key: a dashed square in the socket colour (the locked space's own dash), pulsing while the
+      // space is locked.
       if (V.lockKey >= 0 && !V.lockOpen && V.disp[V.lockKey] > 0) {
-        const LK = K.lockKey, kc = V.lockKey, x = CX(kc % V.w, (kc / V.w) | 0) * cs, y = CY(kc % V.w, (kc / V.w) | 0) * cs, lw = Math.max(1.5, cs * LK.w), o = lw / 2, a = cs * LK.arm + o;
-        gx.globalAlpha = 0.6 + 0.4 * Math.sin(ft / 170); gx.lineWidth = lw; gx.strokeStyle = LK.tint; gx.lineCap = "butt"; gx.beginPath();
-        gx.moveTo(x - o, y - o + a); gx.lineTo(x - o, y - o); gx.lineTo(x - o + a, y - o);
-        gx.moveTo(x + cs + o - a, y - o); gx.lineTo(x + cs + o, y - o); gx.lineTo(x + cs + o, y - o + a);
-        gx.moveTo(x + cs + o, y + cs + o - a); gx.lineTo(x + cs + o, y + cs + o); gx.lineTo(x + cs + o - a, y + cs + o);
-        gx.moveTo(x - o + a, y + cs + o); gx.lineTo(x - o, y + cs + o); gx.lineTo(x - o, y + cs + o - a);
-        gx.stroke(); gx.globalAlpha = 1;
+        const LK = K.lockKey, kc = V.lockKey, x = CX(kc % V.w, (kc / V.w) | 0) * cs, y = CY(kc % V.w, (kc / V.w) | 0) * cs, lw = Math.max(1.5, cs * LK.w), o = lw / 2 + cs * LK.out;
+        dash[0] = Math.max(1.5, cs * LK.dash[0]); dash[1] = Math.max(1, cs * LK.dash[1]);
+        gx.globalAlpha = 0.6 + 0.4 * Math.sin(ft / 170); gx.lineWidth = lw; gx.strokeStyle = LK.tint; gx.lineCap = "butt"; gx.setLineDash(dash); gx.lineDashOffset = 0;
+        gx.strokeRect(x - o, y - o, cs + 2 * o, cs + 2 * o); gx.setLineDash(NODASH); gx.globalAlpha = 1;
       }
-      // Archer ranges while any pixel of their tower stands on the board; they fade as the tower falls.
-      const T = V.B.towers;
+      // Archer ranges while any pixel of their tower stands on the board; they fade as the tower falls. Critics 1 fix: a
+      // faint thin dash, loud only while the ring matters (hotNow), easing between the two (V.ringA).
+      const T = V.B.towers, RG = K.ring;
       if (T.length) {
-        gx.save(); gx.lineWidth = Math.max(1, cs * K.rangeW); dash[0] = cs * K.rangeDash[0]; dash[1] = cs * K.rangeDash[1]; gx.setLineDash(dash);
-        gx.strokeStyle = K.rangeStroke; // (the ring's tint is on the ground, painted with the layer)
+        gx.save(); gx.strokeStyle = K.rangeStroke; // (the ring's tint is on the ground, painted with the layer)
         for (let k = 0; k < T.length && k < MAXT; k++) {
           let al = 1; if (V.towerLeft[k] <= 0) { al = 1 - (ft - V.tFallT[k]) / FX.towerFallMs; if (!(al > 0)) continue; }
-          gx.globalAlpha = al; gx.beginPath(); gx.arc(MX(T[k].cx + 0.5, T[k].cy + 0.5) * cs, MY(T[k].cx + 0.5, T[k].cy + 0.5) * cs, T[k].r * cs, 0, Math.PI * 2); gx.stroke();
+          const a = V.ringA[k], rx = MX(T[k].cx + 0.5, T[k].cy + 0.5) * cs, ry = MY(T[k].cx + 0.5, T[k].cy + 0.5) * cs, rr = T[k].r * cs;
+          if (a < 1) { gx.globalAlpha = al * (1 - a) * RG.quietA; gx.lineWidth = Math.max(1, V.dpr * RG.quietW); dash[0] = V.dpr * RG.quietDash[0]; dash[1] = V.dpr * RG.quietDash[1]; gx.setLineDash(dash); gx.beginPath(); gx.arc(rx, ry, rr, 0, Math.PI * 2); gx.stroke(); }
+          if (a > 0) { gx.globalAlpha = al * a; gx.lineWidth = Math.max(1, cs * K.rangeW); dash[0] = cs * K.rangeDash[0]; dash[1] = cs * K.rangeDash[1]; gx.setLineDash(dash); gx.beginPath(); gx.arc(rx, ry, rr, 0, Math.PI * 2); gx.stroke(); }
         }
         gx.restore();
       }
@@ -703,6 +744,7 @@
         gx.drawImage(S.sap[V.rM[i]], f * ss, 0, ss, ss, x, y, ss, ss);
         if (back) gx.drawImage(S.mini[V.rM[i]], x + (ss - mb) / 2, y - mb * 0.6);
       }
+      V.shootM = shooting;
       // Archers on their towers (bow drawn while an arrow is out); a falling tower throws its archer.
       const as = S.as;
       for (let k = 0; k < T.length && k < MAXT; k++) {
@@ -787,7 +829,7 @@
     // A material's mark alone (transparent around it, drawn in ink): the queue tiles' glyph in colour-blind mode.
     function glyph(m, px, ink) { const c = mk(px, px); mark(c.getContext("2d"), m, px, ink, K); return c; }
 
-    Object.assign(V, { setLevel, reset, layout, sync, setSlots, update, goblin, draw, checkSprites, buildSprites, paintLayer, shake, cssAt, hitInfo, fxInfo, runners, setCb, glyph, studInfo,
+    Object.assign(V, { setLevel, reset, layout, fitCs, hotNow, sync, setSlots, update, goblin, draw, checkSprites, buildSprites, paintLayer, shake, cssAt, hitInfo, fxInfo, runners, setCb, glyph, studInfo,
       man: (m, px) => sapper(m, px) });
     return V;
   }

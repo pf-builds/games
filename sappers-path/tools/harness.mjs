@@ -23,6 +23,10 @@
 // v4 M3 (the Siege to 100): the cell-size check covers all 100 boards (the smallest per era, 8 CSS px or more at every
 // viewport, a screen of the smallest), the frame check adds level 100 (the boss), output to tools/shots-v4-m3/harness/.
 // The M3 screens come from tools/shots-v4-m3.mjs.
+// v4 Critics 1 fix: the coach check asks that its line fits its box (one line or two); the jam sheet shows a colour chip
+// per jammed squad, names the crews in its aria-label and never slices the holding line. The fix pass's screens and
+// measurements come from tools/shots-v4-fix1.mjs; selfTest carries the per-viewport checks (coach clear of the board,
+// the arrow clear of every count, every count clear of its space's badges, rods over no third tile, sheets whole).
 // Screenshots (default tools/shots-v4-m1/harness/): v3.1 at 375×812: stuck-vs-working, near-jam, full-blocked, refused, jam-sheet,
 // victory-march; and, as before, 375×812 level 1 teach, level 26 gate teach, level 51 archer hit, the
 // win mid-collapse and the goblin fleeing, a fail; 375 and 1280: two and three overlapping squads mid-show; frame
@@ -142,7 +146,7 @@ async function run() {
       ok(await noScroll(), tag + " level: no scrollbars");
       // Level 1's coach: one line and the arrow on a card.
       const co = await ev(() => SP.coach());
-      ok(co.on && co.hand && co.oneLine && /card/.test(co.target || ""), tag + " level 1: the coach line and its arrow on a card (" + JSON.stringify(co) + ")");
+      ok(co.on && co.hand && co.fits && /card/.test(co.target || ""), tag + " level 1: the coach line fits its box and its arrow is on a card (" + JSON.stringify(co) + ")");
       await page.waitForTimeout(350);
       if (vp.shots === "375") await shot("teach-l1");
 
@@ -175,8 +179,8 @@ async function run() {
         s = await S();
         ok(s.status === "failed" && s.reason === "jam" && s.li.stuck === s.cap, tag + " the line jams at rest: every space stuck (" + s.status + " " + s.reason + ", " + JSON.stringify(s.li) + ")");
         s = await ev(() => { for (let i = 0; i < 600 && !SP.state().panel; i++) SP.tick(16); return SP.state(); });
-        const pl = await L("#p-line").textContent();
-        ok(s.panel === "fail" && /^Line jammed: .+ can't reach a block\.$/.test(pl), tag + " the jam sheet names the crews (" + pl + ")");
+        const pl = (await L("#p-line").getAttribute("aria-label")) || "", chips = await ev(() => document.querySelectorAll("#p-line .chip").length), cut = await ev(() => { const a = document.getElementById("panel").getBoundingClientRect(), l = document.getElementById("line").getBoundingClientRect(); return a.top > l.top + 0.5 && a.top < l.bottom - 0.5; });
+        ok(s.panel === "fail" && /^Line jammed: .+ can't reach a block\.$/.test(pl) && chips === s.cap && !cut, tag + " the jam sheet shows a colour chip per jammed squad (" + chips + "), names the crews in its label (" + pl + ") and leaves the line whole");
         await page.waitForTimeout(400);
         if (vp.shots === "375") await shot("jam-sheet");
         await tap("#p-primary");
