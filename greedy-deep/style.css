@@ -225,6 +225,9 @@ body.booting #col { opacity: 0; }
   min-height: 48px;
 }
 .row-main { flex: 1; min-width: 0; }
+/* The styled tooltip is desktop-rail only (shown by JS on hover at >= 900 px). Hidden at every
+   width by default so it never renders inline in a phone or tablet shop row. */
+.row-tip { display: none; }
 .row-name { font-size: calc(6px * var(--s)); font-weight: 700; display: flex; align-items: center; gap: calc(2px * var(--s)); }
 .row-sub { font-size: calc(4.5px * var(--s)); color: var(--dim); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row-effect { font-size: calc(3.5px * var(--s)); color: #8d85a0; font-style: italic; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

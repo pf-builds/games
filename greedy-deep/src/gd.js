@@ -1957,6 +1957,20 @@
       check("gate_on_attaches_everything", "all of " + gr.names.length, gr.missingWhenOn.join(","), gr.missingWhenOn.length === 0);
       check("gate_ui_handle_already_claimed", "no __claimInternal left", typeof GD.__claimInternal, typeof GD.__claimInternal === "undefined");
 
+      // --- shop rows readable without hover: the desktop tooltip never renders inline, a
+      // mouseenter (a phone tap emulates one) never opens it, and the name column has width
+      var noHover = !(window.matchMedia && window.matchMedia("(hover: hover) and (min-width: 900px)").matches);
+      var tipRows = document.querySelectorAll("#tabpanel .row, .rail-section .row"), tipBad = [];
+      for (var tr = 0; tr < tipRows.length; tr++) {
+        var rEl = tipRows[tr], tEl = rEl.querySelector(".row-tip"), mEl = rEl.querySelector(".row-main");
+        if (noHover) rEl.dispatchEvent(new MouseEvent("mouseenter"));
+        if (tEl && getComputedStyle(tEl).display !== "none") tipBad.push("tip shown in row " + tr);
+        if (rEl.offsetParent && mEl && mEl.getBoundingClientRect().width < 40) tipBad.push("row " + tr + " name column " + Math.round(mEl.getBoundingClientRect().width) + " px");
+        if (noHover) rEl.dispatchEvent(new MouseEvent("mouseleave"));
+      }
+      check("p1_shop_rows_readable", "no inline tips, name column >= 40 px", tipBad.slice(0, 4).join(" | ") || tipRows.length + " rows ok",
+        tipRows.length > 0 && tipBad.length === 0);
+
       // --- console clean (last, so it counts everything above)
       if (!opts.skipConsoleCheck) {
         check("m2_no_console_errors", 0, dbg.errors, dbg.errors === 0);

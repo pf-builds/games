@@ -596,11 +596,13 @@
       btn.addEventListener("click", (function (id) {
         return function () { onBuy(id); };
       })(p.id));
-      // Position the styled tooltip on hover (fixed to escape rail overflow)
+      // Position the styled tooltip on hover (fixed to escape rail overflow). Desktop rails
+      // only: a tap on a phone fires an emulated mouseenter, which used to force the tip open.
       var tip = row.querySelector(".row-tip");
       if (tip) {
         row.addEventListener("mouseenter", (function (rowEl, tipEl) {
           return function () {
+            if (!tipHoverOk()) return;
             // Briefly show to measure height, then position
             tipEl.style.display = "block";
             tipEl.style.visibility = "hidden";
@@ -629,6 +631,9 @@
       });
     }
   }
+
+  var tipMq = window.matchMedia ? window.matchMedia("(hover: hover) and (min-width: 900px)") : null;
+  function tipHoverOk() { return !!(tipMq && tipMq.matches); }
 
   function onBuy(id) {
     unlockAudio();
