@@ -184,3 +184,18 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - Converter: more colour names (36 now) if aria-labels ever repeat a vague name; a per-picture `bg` or `crop` override already exists in the manifest for hand fixes.
 - The Gallery's hard slots: the lookahead player still wins Plumed Helm (51) every time; more candidates or a smaller narrowing floor would bring it down.
 - The Apache 2.0 text: LICENSES.md names the license with its URL; ship the full text beside it if a portal asks.
+
+## From v4 M5 (the meta layer, 2026-09-30)
+
+- A "continue" offer at a jam (Food Hunt's "out of space"): a jam is final today, so a Ladder or Recall only helps before the line comes to rest. Letting the jam sheet offer one would need the engine to undo the fail at that instant (a rule change, logged and tested like the rest).
+- Lives (off on the web): only a fail costs a life, so quitting a level that looks lost costs nothing. If lives go on for the app, decide whether leaving a started level costs one (Food Hunt's way, with a confirm).
+- The rest of m5's payoff: a banner planted in the razed ground, the bins bursting, the whole camp marching out in one column. The report (coins counting up, best results, the medal stamp) is the payoff M5 built.
+- m8's other half: offering colour-blind marks once after a jam where two stuck squads were a low-ΔE pair.
+- A first-use hint for the power-up bar (a coach line the first time a badge can help, e.g. "One space left: a Ladder adds one"). The badges explain themselves by toast today.
+- Undo and hint power-ups (v3 M0's notes: `sim.save()`/`load()` and `grade.solve` from any state make both cheap).
+- The Quartermaster reaches 2 cards back in the engine; in the two-row frames the page offers only the visible row behind the front.
+- 360-wide phones: the widest painting (g-met-57007, 42 columns) is width-limited to 7.5-7.67 CSS px a cell at 360×640 and 360×740, as it was in M4 (the bar costs nothing there). A narrower crop or a turned board for that picture.
+- 375×667 (iPhone SE): 57 of 160 boards drop to two queue rows to keep 8 px a cell (per level, at fit time), so the queue's depth changes between levels on that phone. If that reads badly, use two rows on every level below about 760 px tall.
+- The win sheet on desktop covers the whole side column with the report near its middle; a shorter sheet anchored to the rail would leave the power-up bar in view.
+- The economy's numbers (start 400; wins 5/10/20 plus first-clear 10/20/40; prices 120/80/60/100; uses per level 1/3/1/2) are a first proposal. Peter's playtest decides.
+- Recall is refused on linked squads (simplest exact rule). Recalling a pair together (both cards back) would be the generous version.
