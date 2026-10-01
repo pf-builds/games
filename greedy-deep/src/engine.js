@@ -489,6 +489,13 @@
     // Entry band's rate, flat: no mid-offline band change (PRD 9, 16).
     out.gold = d.goldRateBase * out.cappedSeconds * rate;
     out.depth = o.advanceDepth ? d.digRate * out.cappedSeconds * rate : 0;
+    // The ending only ever plays while the player is watching: offline digging stops
+    // `milestoneHoldM` short of the milestone the first time round (gold is unchanged).
+    var m = cfg.milestone;
+    if (m && !state.endingSeen && state.depth < m.depth && state.depth + out.depth > m.depth - (o.milestoneHoldM || 0)) {
+      out.depth = Math.max(0, m.depth - (o.milestoneHoldM || 0) - state.depth);
+      out.heldAtMilestone = true;
+    }
     return out;
   };
 
@@ -1132,6 +1139,7 @@
 
     var o2 = cfg.offline;
     if (!(o2.ratePercent > 0 && o2.ratePercent <= 1)) errors.push("offline.ratePercent must be 0..1");
+    if (o2.milestoneHoldM !== undefined && !(o2.milestoneHoldM >= 0)) errors.push("offline.milestoneHoldM must be >= 0");
     if (!(o2.capHours > 0)) errors.push("offline.capHours must be > 0");
     if (!(o2.minSeconds >= 0)) errors.push("offline.minSeconds must be >= 0");
     if (!(o2.maxClockSkewHours > 0)) errors.push("offline.maxClockSkewHours must be > 0");

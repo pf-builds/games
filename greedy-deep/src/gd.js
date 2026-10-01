@@ -172,8 +172,12 @@
     var cost = GD.costOf(id);
     var gold = GD.state.gold;
     if (gold >= cost - 1e-9) return 0;
-    var rate = E.derive(GD.config, GD.state).goldRate;
-    if (!(rate > 0)) return Infinity;
+    // Real earnings (taps + crew, the ~30 s rolling rate) when that beats crew income, so a
+    // tapper sees seconds, not "24m". The rolling rate decays smoothly toward crew income
+    // when tapping stops, and never drops below it, so the ETA never blanks or flickers.
+    var d = E.derive(GD.config, GD.state);
+    var rate = Math.max(d.goldRate, (GD.state.earnRate > 0 ? GD.state.earnRate : 0) * d.goldAllMul);
+    if (!(rate > 1e-9)) return Infinity;
     return (cost - gold) / rate;
   };
 
@@ -797,6 +801,14 @@
       check("m2_eta_formula", wantEta, GD.etaFor("pick"), approx(GD.etaFor("pick"), wantEta, 1e-9));
       GD.state.gold = GD.costOf("pick") + 1;
       check("m2_eta_zero_when_affordable", 0, GD.etaFor("pick"), GD.etaFor("pick") === 0);
+      // B3: a tapper's rolling earnings set the ETA once they beat crew income
+      GD.state.gold = 0;
+      GD.state.earnRate = dEta.goldRate * 50;
+      var wantTapEta = GD.costOf("pick") / (GD.state.earnRate * dEta.goldAllMul);
+      check("p1_eta_uses_real_earnings", wantTapEta, GD.etaFor("pick"), approx(GD.etaFor("pick"), wantTapEta, 1e-9));
+      GD.state.earnRate = 0;
+      check("p1_eta_floors_at_crew_income", GD.costOf("pick") / dEta.goldRate, GD.etaFor("pick"),
+        approx(GD.etaFor("pick"), GD.costOf("pick") / dEta.goldRate, 1e-9));
       if (window.GDUI && window.GDUI.rowReport) {
         var rr = window.GDUI.rowReport();
         check("m2_shop_lists_all_tracks_and_dwarves", cfg.tracks.length + cfg.dwarves.length, rr.rows, rr.rows === cfg.tracks.length + cfg.dwarves.length);
@@ -1194,6 +1206,39 @@
         var badResult = GD.import(badExport);
         check("m4_version_bumped_import_fails", false, badResult.ok, badResult.ok === false);
         check("m4_version_bumped_gold_untouched", 777, GD.state.gold, GD.state.gold === 777);
+      }
+
+      // --- Phase 1 (2026-09-30)
+      // B6: offline digging stops short of the milestone the first time round
+      var md = cfg.milestone.depth, hold = cfg.offline.milestoneHoldM || 0;
+      D.setState({ depth: md - 100, owned: { dorrik: 40, hald: 10 } });
+      var pM = D.offlinePreview(8 * 3600 * 1000);
+      var apM = D.applyOffline(8 * 3600 * 1000);
+      check("p1_offline_stops_short_of_milestone", "depth " + (md - hold) + ", ending not seen",
+        "depth " + GD.state.depth.toFixed(2) + ", seen " + GD.state.endingSeen + ", held " + pM.heldAtMilestone,
+        pM.heldAtMilestone === true && approx(GD.state.depth, md - hold, 1e-6) && !GD.state.endingSeen && approx(apM.depth, pM.depth, 1e-9));
+      D.setState({ depth: md + 50, owned: { dorrik: 40 }, endingSeen: true });
+      var pPast = D.offlinePreview(8 * 3600 * 1000);
+      check("p1_offline_unclamped_after_ending", "no hold", pPast.heldAtMilestone ? "held" : "no hold", !pPast.heldAtMilestone && pPast.depth > 0);
+      // B7: time played survives a save round trip and an export/import
+      D.reset();
+      GD.state.t = 4321.5;
+      window.GDSave.write(cfg, GD.state);
+      var rT = window.GDSave.read(cfg);
+      var xT = window.GDSave.importString(cfg, window.GDSave.exportString(cfg, GD.state));
+      check("p1_time_played_persists", 4321.5, (rT && rT.t) + " / " + (xT.ok && xT.state.t),
+        !!rT && rT.t === 4321.5 && xT.ok && xT.state.t === 4321.5);
+      var legacy = window.GDSave.serialize(cfg, GD.state); delete legacy.playSeconds;
+      try { localStorage.setItem(cfg.save.key, JSON.stringify(legacy)); } catch (e) {}
+      var rL = window.GDSave.read(cfg);
+      check("p1_old_save_without_time_loads", 0, rL && rL.t, !!rL && rL.t === 0);
+      // B8: the ending scene blocks pickups and stops drawing them; reset clears the scene
+      if (window.GDRender && window.GDRender.startEnding && window.GDRender.stopEnding) {
+        D.reset();
+        window.GDRender.startEnding(GD.state, GD.derive());
+        check("p1_ending_scene_blocks_pickups", "overlay", GD.pickupsBlocked(), GD.pickupsBlocked() === "overlay");
+        window.GDRender.stopEnding();
+        check("p1_stop_ending_unblocks", "", GD.pickupsBlocked() || "", !GD.pickupsBlocked());
       }
 
       // jumpTo(1200) triggers ending once, sets endingSeen, game continues

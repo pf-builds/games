@@ -3,7 +3,7 @@
 (function () {
   "use strict";
 
-  var CONFIG_VERSION = 25;
+  var CONFIG_VERSION = 26;
 
   var UI = (window.GDUI = {});
   var E = window.GDEngine, GD = window.GD;
@@ -153,6 +153,7 @@
         (p.reason === "capped" ? ' <i class="cap">(cap)</i>' : "") + "</b></div>" +
       '<div class="wb-row"><span>Gold</span><b>+' + GD.format(p.gold) + "</b></div>" +
       '<div class="wb-row"><span>Dug</span><b>+' + p.depth.toFixed(1) + " m</b></div>" +
+      (p.heldAtMilestone ? '<p class="flavor">The crew stopped at the last wall. They want you there for it.</p>' : "") +
       '<p class="flavor">' + line + "</p>";
     els.welcome.classList.remove("hidden");
   }
@@ -171,6 +172,11 @@
     // Prevent repeating the same band-entry line back-to-back (M3 carry)
     if (b.id === lastBandLogId) return;
     lastBandLogId = b.id;
+    // The ending scene owns the screen: log the band, skip the card and the ring.
+    if (window.GDRender && window.GDRender.endingActive && window.GDRender.endingActive()) {
+      pushLog(b.name + " — " + intro, "band");
+      return;
+    }
     els.intro.innerHTML = '<b>' + b.name + "</b><span>" + intro + "</span>";
     els.intro.classList.remove("hidden");
     introT = 4.5;
@@ -193,6 +199,7 @@
     if (els.settings && !els.settings.classList.contains("hidden")) return true;
     if (els.welcome && !els.welcome.classList.contains("hidden")) return true;
     if (els.ending && !els.ending.classList.contains("hidden")) return true;
+    if (window.GDRender && window.GDRender.endingActive && window.GDRender.endingActive()) return true;
     return false;
   }
   UI.overlayOpen = overlayOpen;
@@ -255,6 +262,10 @@
   }
 
   function onEnding(st, m) {
+    if (els.hint) els.hint.classList.add("gone");
+    // A band card from the same tick (1,200 m is also a band line) would sit on the scene.
+    if (els.intro) els.intro.classList.add("hidden");
+    introT = 0;
     // Start the canvas-drawn ending scene (item 4)
     if (window.GDRender && window.GDRender.startEnding) {
       window.GDRender.startEnding(st, GD.derive());
@@ -267,7 +278,9 @@
     var showPanelAfter = dur * 1000 - 2000; // show panel 2s before scene ends
     // Use a juice-clock driven check rather than setTimeout for the timing
     endingPanelT = showPanelAfter / 1000;
-    endingPanelData = { st: st, m: m };
+    // Snapshot the numbers at the moment of the ending so the canvas scene and the panel
+    // agree (the live state keeps earning while the scene plays).
+    endingPanelData = { st: { depth: st.depth, goldEarnedTotal: st.goldEarnedTotal, endingAtSeconds: st.endingAtSeconds, endingScore: st.endingScore }, m: m };
   }
 
   var endingPanelT = -1;
@@ -293,7 +306,7 @@
       "<p>" + body + "</p>" +
       '<div class="wb-row"><span>Depth</span><b>' + st.depth.toFixed(0) + " m</b></div>" +
       '<div class="wb-row"><span>Gold earned</span><b>' + GD.format(st.goldEarnedTotal) + "</b></div>" +
-      '<div class="wb-row"><span>Run time</span><b>' + E.formatEta(st.endingAtSeconds) + "</b></div>";
+      '<div class="wb-row"><span>Time played</span><b>' + E.formatEta(st.endingAtSeconds) + "</b></div>";
     els.ending.querySelector(".score").textContent = "SCORE " + GD.format(st.endingScore);
     els.ending.querySelector(".panel-btn").textContent = m.buttonLabel || "KEEP DIGGING";
     els.ending.classList.remove("hidden");
@@ -1179,6 +1192,8 @@
     lastBandLogId = "";
     if (els.log) els.log.innerHTML = "";
     if (els.hint) els.hint.classList.remove("gone");
+    if (window.GDRender && window.GDRender.stopEnding) window.GDRender.stopEnding();
+    endingPanelT = -1; endingPanelData = null;
     if (els.ending) els.ending.classList.add("hidden");
     if (els.welcome) els.welcome.classList.add("hidden");
     buildRoster();

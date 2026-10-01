@@ -84,16 +84,20 @@
   R.shake = function (amount, dur) { shakeAmt = amount || 3; shakeT = dur || 0.18; };
 
   // --------------------------------------------------------------- ending scene state
-  var endScene = { active: false, t: 0, cavern: null, totalT: 10 };
+  var endScene = { active: false, t: 0, cavern: null, totalT: 10, stats: null };
 
   R.startEnding = function (state, derived) {
     endScene.active = true;
+    // Numbers frozen at the moment of the ending, so the scene and the panel agree.
+    endScene.stats = { depth: state.depth, goldEarnedTotal: state.goldEarnedTotal,
+      endingAtSeconds: state.endingAtSeconds || 0, endingScore: state.endingScore || 0 };
     endScene.t = 0;
     endScene.totalT = (cfg.ending && cfg.ending.totalDurationS) || 10;
     endScene.cavern = buildCavern();
   };
 
   R.endingActive = function () { return endScene.active; };
+  R.stopEnding = function () { endScene.active = false; endScene.t = 0; };
 
   function buildCavern() {
     // Draw the cavern once to an offscreen canvas: vaulted ceiling, gold pile, columns
@@ -154,6 +158,13 @@
     var crewEnd = crewStart + derived.dwarves * (e.crewFileInDelayS || 0.2);
     var titleStart = crewEnd + 0.5;
 
+    // Backdrop: the live shaft (pickups, vein bracket, crew) fades out under the scene
+    // instead of showing through it.
+    ctx2.globalAlpha = Math.min(1, t / (e.backdropFadeS || 0.6)) * (e.backdropAlpha === undefined ? 0.94 : e.backdropAlpha);
+    ctx2.fillStyle = "#0d0a14";
+    ctx2.fillRect(0, 0, W, H);
+    ctx2.globalAlpha = 1;
+
     // Draw the cavern below the face
     if (endScene.cavern) {
       var cy = Math.min(H, Math.round((depth * cfg.layout.buPerMeter - (cam.topBu || 0)) + 4));
@@ -201,7 +212,7 @@
       ctx2.textAlign = "center";
       ctx2.font = "bold 12px ui-monospace, Menlo, monospace";
       ctx2.fillStyle = "#f2c14e";
-      var state2 = window.GD ? window.GD.state : {};
+      var state2 = endScene.stats || (window.GD ? window.GD.state : {});
       var endTitle = "THE GREEDY DEEP";
       if (cfg.flavor && cfg.flavor.fallbacks && cfg.flavor.fallbacks.endingTitle) {
         endTitle = cfg.flavor.fallbacks.endingTitle;
@@ -212,7 +223,7 @@
       ctx2.fillText(Math.floor(state2.depth || 0) + " m deep", W / 2, H / 2 - 12);
       if (window.GD) {
         ctx2.fillText(window.GD.format(state2.goldEarnedTotal || 0) + " gold earned", W / 2, H / 2 + 2);
-        ctx2.fillText(window.GDEngine.formatEta(state2.endingAtSeconds || 0) + " run time", W / 2, H / 2 + 16);
+        ctx2.fillText(window.GDEngine.formatEta(state2.endingAtSeconds || 0) + " played", W / 2, H / 2 + 16);
         ctx2.font = "bold 10px ui-monospace, Menlo, monospace";
         ctx2.fillStyle = "#f2c14e";
         ctx2.fillText("SCORE " + window.GD.format(state2.endingScore || 0), W / 2, H / 2 + 36);
@@ -872,7 +883,7 @@
     }
 
     // ---------------------------------------------------------- pickups (M5)
-    drawPickups(H, glow);
+    if (!endScene.active) drawPickups(H, glow);
 
     // ---------------------------------------------------------- depth readout
     ctx.fillStyle = "rgba(8,6,12,.72)";
@@ -903,7 +914,7 @@
     }
 
     // ---------------------------------------------------------- floaters
-    for (var f = 0; f < floaters.length; f++) {
+    for (var f = 0; f < floaters.length && !endScene.active; f++) {
       var fl = floaters[f];
       var kf = fl.t / cfg.vein.floaterSeconds;
       ctx.globalAlpha = 1 - kf;

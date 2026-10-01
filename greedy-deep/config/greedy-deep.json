@@ -1,5 +1,5 @@
 {
-  "configVersion": 25,
+  "configVersion": 26,
   "title": "Greedy Deep",
   "start": {
     "gold": 0,
@@ -358,7 +358,8 @@
     "capHours": 8,
     "minSeconds": 60,
     "maxClockSkewHours": 48,
-    "advanceDepth": true
+    "advanceDepth": true,
+    "milestoneHoldM": 2
   },
   "milestone": {
     "id": "the_greedy_deep",
