@@ -1,0 +1,12 @@
+const PW = await import(process.env.PLAYWRIGHT_MODULE); const { chromium } = PW.default || PW;
+const b = await chromium.launch(); const p = await (await b.newContext({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 })).newPage();
+const errs = []; p.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errs.push(m.text()); }); p.on('pageerror', (e) => errs.push('PAGEERROR ' + e.message));
+await p.goto('http://127.0.0.1:8492/sappers-path/?debug=1'); await p.waitForFunction(() => window.SP && SP.state().screen); await p.evaluate(() => localStorage.clear()); await p.reload(); await p.waitForFunction(() => window.SP && SP.state().screen === 'title');
+console.log('home', await p.evaluate(() => ({ prog: document.querySelector('#home-prog').textContent, coins: document.querySelector('#home-coins').textContent, lives: document.querySelector('#home-lives').outerHTML.slice(0, 200), era: document.querySelector('#home-era').textContent, play: document.querySelector('#btn-play').textContent, gal: document.querySelector('#btn-gallery').outerHTML.slice(0, 300), tabs: [...document.querySelectorAll('.tabs .tab')].map((t) => t.id + ':' + t.textContent.trim() + (t.hidden ? '(hidden)' : '')) })));
+console.log('meta', JSON.stringify(await p.evaluate(() => SP.meta())));
+await p.tap('#btn-play'); await p.waitForFunction(() => SP.state().screen === 'play');
+console.log('POWERS', (await p.evaluate(() => document.querySelector('#powers').outerHTML)).replace(/url\(data:[^)]*\)/g, 'url(..)').slice(0, 2500));
+await p.evaluate(() => { for (const c of SP.winOrder('normal')) { SP.play(+c); SP.settle(); } }); await p.waitForFunction(() => SP.state().panel, null, { timeout: 15000 }); await p.waitForTimeout(2500);
+console.log('PANEL', (await p.evaluate(() => document.querySelector('#panel').innerText.replace(/\n+/g, ' | '))), JSON.stringify(await p.evaluate(() => SP.meta())).slice(0, 600));
+console.log('settings', (await p.evaluate(() => document.querySelector('#settings').outerHTML)).replace(/<svg.*?<\/svg>/g, '').slice(0, 1200));
+console.log('errors', errs); await b.close();

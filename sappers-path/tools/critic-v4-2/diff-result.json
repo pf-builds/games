@@ -1,0 +1,74 @@
+{
+ "ms": 45931,
+ "levels": 164,
+ "cov": {
+  "why": {
+   "1:isFront": 2729,
+   "2:noneHidden": 10366,
+   "0:perLevel": 9206,
+   "3:emptySpace": 5303,
+   "3:badSpace": 1625,
+   "3:sappersOut": 1779,
+   "1:notInColumn": 2546,
+   "3:perLevel": 1260,
+   "1:perLevel": 1705,
+   "1:tooDeep": 1691,
+   "2:perLevel": 1358,
+   "3:linked": 77
+  },
+  "endNoplay": 15744,
+  "endNoplayBad": 0,
+  "games": 8364,
+  "byKind": {
+   "stored": 492,
+   "patient": 1968,
+   "rushed": 1968,
+   "patient+power": 1968,
+   "rushed+power": 1968
+  },
+  "ops": {
+   "taken": [
+    3113,
+    3939,
+    593,
+    1879
+   ],
+   "refused": [
+    9206,
+    8671,
+    11724,
+    10044
+   ],
+   "noplay": [
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  "refusedChecked": 39645,
+  "refusedChanged": 0,
+  "canPowerDisagree": 0,
+  "hiddenChecks": 4095845,
+  "outcomes": {
+   "1/": 4352,
+   "-1/jam": 3711,
+   "-1/short": 301
+  },
+  "jamWhy": {
+   "0": 3258,
+   "1": 7,
+   "2": 446
+  },
+  "killGames": 301,
+  "unlockGames": 228,
+  "gradeChecks": 480,
+  "orderOnly": 656,
+  "orderOnlyKinds": {
+   "REVEAL/POWER": "e2-35 easy patient+power ops[P0:0 P0:0R P2:0 4 1 2 1 P0:0R 2 P1:10R 3 0 0 0 4 3] game [[0,\"POWER\",0,6],[0,\"REVEAL\",1],[0,\"REVEAL\",6]] mine [[0,\"POWER\",0,6],[0,\"POWER\",2,3],[0,\"REVEAL\",1]]",
+   "REVEAL/REVEAL": "v4-all easy stored ops[0 0 0 0 2 1 1 1 2 4 2 3 3 3 3 4] game [[0,\"REVEAL\",1],[0,\"REVEAL\",6]] mine [[0,\"REVEAL\",6],[0,\"REVEAL\",1]]"
+  }
+ },
+ "gradeBad": [],
+ "mism": []
+}
