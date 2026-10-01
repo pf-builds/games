@@ -15,6 +15,13 @@
 // its walking distances start at every ring cell; ties go to the smaller layer (distance in from the board's edge), then
 // the place along that layer's side counted clockwise from the side's first corner, then the side (top, right, bottom,
 // left) instead of the camp row.
+// v4 M5 (SPEC-v4 §9, the power-ups, from the rules text): power(k, a, t) -> undefined (taken), "refused" or nothing (the
+// game is over). Each level allows rules.powers[k] uses. A card seen at the front of its list stays face up. Ladder (0):
+// one more space, at most 8 in the line. Quartermaster (1, a = a card's file index): a card 1..rules.pullDepth (2) places
+// behind the front of its list moves to the front; at rest, refused if every front card would then be refused. Scout
+// (2): every hidden card turns face up; refused if none is hidden. Recall (3, a = a space): an unlinked squad with
+// sappers waiting and none out goes back to the front of the list it was tapped from, as a card of the sappers waiting,
+// and its space is free.
 // pops: every popped pixel as [cell, time], in the order they popped.
 "use strict";
 const MATCH = { ".": 0, ",": -2, "~": -1, "#": -3 };
@@ -33,7 +40,7 @@ function load(L) {
     const cx = cells.reduce((s, c) => s + (c % w), 0) / cells.length, cy = cells.reduce((s, c) => s + Math.floor(c / w), 0) / cells.length; return { cells, cx, cy, r: T.r }; });
   // Cards carry their place in the file (ci: the running index over the columns, front first) so tests can name them.
   let ci = 0;
-  const cols = L.cols.map((c) => c.map((cd) => ({ m: cd[0], n: cd[1], mystery: cd[2] === 1, ci: ci++, partner: null })));
+  const cols = L.cols.map((c, j) => c.map((cd) => ({ m: cd[0], n: cd[1], mystery: cd[2] === 1, ci: ci++, partner: null, col: j, seen: false })));
   for (const P of L.links || []) { const a = cols[P[0][0]][P[0][1]], b = cols[P[1][0]][P[1][1]]; a.partner = b; b.partner = a; }
   const lockKey = L.lock ? idx(L.lock.key) : -1;
   return { w, h, g, campRow, gates, towers, cols, lockKey, ring: L.ring === true };
@@ -48,6 +55,9 @@ function game(L, rules) {
   const claimed = new Set(), pops = [];
   let status = "playing", reason = "", jamWhy = 0, now = 0, seq = 0, taps = 0, peak = 0, hitsN = 0, killsN = 0;
   let locked = R.lockKey >= 0 ? Math.max(0, Math.min(rules.hold - 1, rules.lockSpaces == null ? 1 : rules.lockSpaces)) : 0;
+  let extra = 0; const uses = [0, 0, 0, 0], limits = rules.powers || [0, 0, 0, 0], reach = rules.pullDepth == null ? 2 : rules.pullDepth;
+  const seeFronts = () => { for (const c of cols) if (c.length) c[0].seen = true; };
+  seeFronts();
   const walk = (v) => v === 0 || v === -2 || v === -3;
   const at = (x, y) => (x < 0 || y < 0 || x >= w || y >= h ? null : y * w + x);
   function dist() {
@@ -89,7 +99,7 @@ function game(L, rules) {
   const schedule = (t, kind, extra) => events.push(Object.assign({ t, seq: seq++, kind }, extra));
   const fail = (r) => { status = "failed"; reason = r; };
   // Spaces a squad may take: the line's, less the locked ones. Free: open spaces nobody holds.
-  const openN = () => rules.hold - locked, used = () => spaces.filter(Boolean).length, free = () => openN() - used();
+  const openN = () => rules.hold + extra - locked, used = () => spaces.filter(Boolean).length, free = () => openN() - used();
   const done = (s) => s.wait === 0 && s.out === 0;
   function freeIf(i) {
     const s = spaces[i]; if (!s || !done(s)) return;
@@ -156,7 +166,7 @@ function game(L, rules) {
   function quiet() { for (let guard = 0; guard < 1e6 && events.length; guard++) advanceTo(Math.min(...events.map((e) => e.t))); }
   function take(cd) {
     let i = 0; while (spaces[i]) i++;
-    taps++; spaces[i] = { m: cd.m, wait: cd.n, out: 0, wary: false, next: now, seq: taps, pair: null };
+    taps++; spaces[i] = { m: cd.m, wait: cd.n, out: 0, wary: false, next: now, seq: taps, pair: null, card: cd };
     return i;
   }
   function play(j, t) {
@@ -166,13 +176,33 @@ function game(L, rules) {
     if (need(cd) > free()) return "refused";
     cols[j].shift();
     const i = take(cd);
-    if (cd.partner) { const pc = cols.find((c) => c.includes(cd.partner)); pc.splice(pc.indexOf(cd.partner), 1); const k = take(cd.partner); spaces[i].pair = k; spaces[k].pair = i; }
+    if (cd.partner) { const pc = cols.find((c) => c.includes(cd.partner)); pc.splice(pc.indexOf(cd.partner), 1); cd.partner.seen = true; const k = take(cd.partner); spaces[i].pair = k; spaces[k].pair = i; }
     peak = Math.max(peak, used());
-    dispatch(now); settle();
+    seeFronts(); dispatch(now); settle();
   }
-  // Is the card with file index ci hidden: a mystery card still in its column, behind the front.
-  const hidden = (ci) => cols.some((c) => c.some((cd, k) => k > 0 && cd.ci === ci && cd.mystery));
-  return { play, advanceTo, quiet, hidden, get status() { return status; }, get reason() { return reason; }, get now() { return now; }, get peak() { return peak; },
+  // Is the card with file index ci hidden: a mystery card still in its column, behind the front, never seen face up.
+  const hidden = (ci) => cols.some((c) => c.some((cd, k) => k > 0 && cd.ci === ci && cd.mystery && !cd.seen));
+  function power(k, a, t) {
+    if (status !== "playing") return;
+    if (t != null) { advanceTo(t); if (status !== "playing") return; }
+    if (!(uses[k] < limits[k])) return "refused";
+    if (k === 0) { if (rules.hold + extra >= 8) return "refused"; extra++; }
+    else if (k === 1) {
+      const c = cols.find((q) => q.some((cd) => cd.ci === a)), i = c ? c.findIndex((cd) => cd.ci === a) : -1;
+      if (i < 1 || i > reach) return "refused";
+      if (!events.length && cols.every((q, j) => !(q === c ? c[i] : q[0]) || need(q === c ? c[i] : q[0]) > free())) return "refused";
+      const [cd] = c.splice(i, 1); c.unshift(cd);
+    } else if (k === 2) {
+      const hid = []; for (const c of cols) c.forEach((cd, i) => { if (i > 0 && cd.mystery && !cd.seen) hid.push(cd); });
+      if (!hid.length) return "refused";
+      for (const cd of hid) cd.seen = true;
+    } else if (k === 3) {
+      const s = spaces[a]; if (!s || s.pair != null || s.out > 0 || s.wait === 0 || !s.card) return "refused";
+      s.card.n = s.wait; cols[s.card.col].unshift(s.card); spaces[a] = null;
+    } else return "refused";
+    uses[k]++; seeFronts(); settle();
+  }
+  return { play, power, advanceTo, quiet, hidden, get status() { return status; }, get reason() { return reason; }, get now() { return now; }, get peak() { return peak; }, get extra() { return extra; },
     get hits() { return hitsN; }, get kills() { return killsN; }, get open() { return openN(); }, get locked() { return locked; }, get jamWhy() { return jamWhy; },
     spaces, pops, g, cols };
 }

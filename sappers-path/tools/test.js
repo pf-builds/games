@@ -6,6 +6,8 @@
 // info model and the fast tapper; last, the page save's settings (v4 M1: speed and colour-blind marks) through sanitize.
 // v4 M4: ring levels (the tie-break, the outline, engine vs reference on random ring boards), the Gallery converter on a
 // tiny hand image, the Gallery file's invariants and engine vs reference on its boards, the save's Gallery wins.
+// v4 M5: the power-ups (Ladder, Quartermaster, Scout, Recall) on hand-made boards with known answers, their refusals and
+// limits, colour balance, identical play when none is used, and engine vs reference with random power-ups mixed in.
 // Run: ~/.local/opt/node/bin/node tools/test.js   (exit code 1 on any failure)
 "use strict";
 const E = require("../src/engine.js");
@@ -713,6 +715,174 @@ const CV = require("./convert.js"), GCFG = require("./gallery-config.json"), PAL
   }
   eq(diffs, 0, "differential (Gallery): engine == reference on " + games + " games on the Gallery's ring boards (" + pops + " pops)");
   console.log("  differential (Gallery): " + games + " games in " + ((Date.now() - t0) / 1000).toFixed(1) + " s");
+}
+
+// ==== v4 M5: power-ups (engine operations at the clock; SPEC-v4 §9) ========================================================
+const META = require("../config.json").meta;
+const PR = { easy: E.rulesOf(V3, "easy", META), normal: E.rulesOf(V3, "normal", META), hard: E.rulesOf(V3, "hard", META) }, PN = PR.normal, PW = E.PW;
+const phold = (k, powers) => Object.assign({}, PN, { hold: k }, powers ? { powers } : {});
+// At rest: every colour's sappers (cards still in a column, by their counts now, plus the sappers waiting in the line)
+// equal S.sappers(m), and with no Hard kill they equal its pixels still standing.
+function balanced(S) {
+  const B = S.B, sum = new Array(E.NMAT).fill(0);
+  for (let j = 0; j < 5; j++) for (let d = 0, ci = S.card(j, 0); ci >= 0; ci = S.card(j, ++d)) sum[B.cardM[ci]] += S.count(ci);
+  for (const s of S.order()) sum[S.spM[s]] += S.spW[s] + S.spO[s];
+  for (let m = 1; m < E.NMAT; m++) { if (m === E.IRON) continue; if (sum[m] !== S.sappers(m)) return "colour " + m + ": " + sum[m] + " in the tray and line, " + S.sappers(m) + " sappers"; if (!S.kills && S.sappers(m) !== S.left[m]) return "colour " + m + ": " + S.sappers(m) + " sappers, " + S.left[m] + " pixels"; }
+  return true;
+}
+const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0, ci = S.card(j, 0); ci >= 0; ci = S.card(j, ++d)) o.push([ci, S.count(ci)]); return o; });
+{
+  eq([PN.powers, PN.pullDepth, E.POWERS, N.powers === undefined], [[1, 3, 1, 2], 2, ["ladder", "quartermaster", "scout", "recall"], true], "powers: config meta gives the uses per level (Ladder 1, Quartermaster 3, Scout 1, Recall 2) and the reach; rules without meta allow none");
+  const S0 = E.sim(E.compile(lv(RING, [[[2, 1]], [], [], [], []])), N);
+  eq([0, 1, 2, 3].map((k) => [S0.canPower(k, 0), S0.power(k, 0)]), [[false, E.REFUSED], [false, E.REFUSED], [false, E.REFUSED], [false, E.REFUSED]], "powers: with no uses allowed (the grader's rules) every power-up is refused");
+}
+// ---- Ladder -----------------------------------------------------------------------------------------------------------------
+{
+  const L = lv(RING, [[[2, 2]], [[1, 12]], [[3, 1]], [], []]);
+  const S = E.sim(E.compile(L), phold(2)); S.logOn = true; pat(S, 0);
+  eq([S.cap, S.open, S.lineLen, S.stuck(0)], [2, 2, 1, true], "ladder: two spaces, b (walled in) waits stuck in one");
+  S.clearLog(); const r = S.power(PW.LADDER);
+  eq([r, S.cap, S.open, S.extra, S.used(PW.LADDER), evs(S, E.EV.POWER)], [E.PLAYING, 3, 3, 1, 1, [[0, 2]]], "ladder: one more space for this level (3; POWER 0, the new space 2)");
+  const b0 = S.save(); eq([S.canPower(PW.LADDER), S.power(PW.LADDER)], [false, E.REFUSED], "ladder: a second is refused (1 a level)"); ok(same(b0, S.save()), "ladder: the refusal changes nothing");
+  pat(S, 2); eq([S.status, S.lineLen], [E.PLAYING, 2], "ladder: c takes a space too (b and c both wait; the third space is free)");
+  eq(pat(S, 1), E.WON, "ladder: a razes the ring; b and c go in: won");
+  S.reset(); eq([S.cap, S.extra, S.used(PW.LADDER)], [2, 0, 0], "ladder: Retry (reset) takes the extra space and the use back");
+  // The line's maximum: 8 spaces.
+  const X = E.sim(E.compile(L), phold(6, [5, 0, 0, 0]));
+  eq([X.power(PW.LADDER), X.power(PW.LADDER), X.cap, X.canPower(PW.LADDER), X.power(PW.LADDER), X.used(PW.LADDER)], [E.PLAYING, E.PLAYING, 8, false, E.REFUSED, 2], "ladder: never past " + E.MAXLINE + " spaces (Easy's 6 + 2, then refused)");
+  // With the lock: the new space opens below the locked one, which stays the last.
+  const K = E.sim(E.compile(lv(["abn...", "......", "..##.."], [[[1, 1]], [[2, 1]], [[14, 1]], [[4, 1]], [[5, 1]]], { lock: { key: [2, 0] } })), PN); K.logOn = true;
+  K.power(PW.LADDER); eq([K.cap, K.open, K.locked, evs(K, E.EV.POWER)], [6, 5, 1, [[0, 4]]], "ladder with the lock: 6 spaces, 5 open, the locked one still the last (the new open space is 4)");
+  for (const j of [3, 4, 0, 1]) K.play(j, 0);
+  eq([K.lineLen, K.spQ[5], K.open - K.lineLen, K.play(2, 0), K.spQ[4] > 0, K.spQ[5]], [4, 0, 1, E.PLAYING, true, 0], "ladder with the lock: squads fill spaces 0-4; the locked space 5 stays empty");
+}
+// ---- Quartermaster ----------------------------------------------------------------------------------------------------------
+{
+  // Column 0: a (flagged: a first card's flag means nothing), b (?), c, d. Column 1: e. Column 2: f.
+  const L = lv(ROW6, [[[1, 1, 1], [2, 1, 1], [3, 1], [4, 1]], [[5, 1]], [[6, 1]], [], []]);
+  const S = E.sim(E.compile(L), PN); S.logOn = true;
+  eq([S.hidden(1), S.canPower(PW.PULL, 0), S.canPower(PW.PULL, 3), S.canPower(PW.PULL, 2)], [true, false, false, true], "pull: the front can't be pulled, nor a card 3 back (reach 2); 2 back can");
+  const r = S.power(PW.PULL, 1);
+  eq([r, colsOf(S)[0].map((c) => c[0]), S.hidden(1), S.hidden(0), evs(S, E.EV.REVEAL), evs(S, E.EV.POWER)], [E.PLAYING, [1, 0, 2, 3], false, false, [[1, 0]], [[1, 1]]], "pull: the hidden b steps to the front, revealed (REVEAL, POWER 1 b); a steps back and stays face up");
+  S.clearLog(); eq([S.canPower(PW.PULL, 3), S.power(PW.PULL, 2)], [false, E.PLAYING], "pull: d is now 3 back (refused); c, 2 back, is taken");
+  eq([colsOf(S)[0].map((c) => c[0]), evs(S, E.EV.REVEAL), S.used(PW.PULL)], [[2, 1, 0, 3], [], 2], "pull: c to the front; the cards it passes step back one; no reveal for a face-up card");
+  pat(S, 0); eq([S.card(0, 0), S.canPower(PW.PULL, 2), S.power(PW.PULL, 2)], [1, false, E.REFUSED], "pull: a played card can't be pulled");
+  S.power(PW.PULL, 3); const b0 = S.save(); eq([S.card(0, 0), S.used(PW.PULL), S.canPower(PW.PULL, 0), S.power(PW.PULL, 0)], [3, 3, false, E.REFUSED], "pull: a fourth is refused (3 a level)"); ok(same(b0, S.save()), "pull: the refusal changes nothing");
+  // A linked card pulled to the front still pulls its partner when tapped; a gone partner can't be pulled.
+  const P = E.sim(E.compile(lv(ROW6, [[[1, 1], [2, 1]], [[3, 1], [4, 1]], [[6, 1]], [], []], { links: [[[0, 1], [1, 1]]] })), PN);
+  P.power(PW.PULL, 1); eq([P.card(0, 0), P.partner(1), P.play(0), P.lineLen, P.gone[3], P.canPower(PW.PULL, 3)], [1, 3, E.PLAYING, 2, 1, false], "pull: a linked card pulled to the front takes its partner (from 2nd in its column) on the tap; the gone partner can't be pulled");
+  // At rest, a pull that would leave every front refused (a linked card with one space free) is refused; while squads are
+  // still moving the same pull is taken (the line is judged when it comes to rest).
+  const J = lv(RING, [[[2, 1]], [[1, 12], [3, 1]], [[1, 1]], [[2, 1]], []], { links: [[[1, 1], [2, 0]]] });
+  const R1 = E.sim(E.compile(J), phold(3)); pat(R1, 0); pat(R1, 3);
+  eq([R1.status, R1.open - R1.lineLen, R1.refused(1), R1.refused(2), R1.canPower(PW.PULL, 2)], [E.PLAYING, 1, false, true, false], "pull at rest: one space free, the pull would front a linked card beside its linked partner: refused (it would jam)");
+  const b1 = R1.save(); eq(R1.power(PW.PULL, 2), E.REFUSED, "pull at rest: power() refuses it"); ok(same(b1, R1.save()), "pull at rest: nothing changes");
+  const R2 = E.sim(E.compile(lv(RING, J.cols.slice(0, 4).concat([[[1, 12]]]), { links: J.links })), phold(4)); R2.play(4, 0); R2.play(0, 0); R2.play(3, 0);
+  eq([R2.busy, R2.open - R2.lineLen, R2.power(PW.PULL, 2)], [true, 1, E.PLAYING], "pull mid-show: the same kind of pull is taken while a squad is still out");
+}
+// ---- Scout ------------------------------------------------------------------------------------------------------------------
+{
+  const L = lv(ROW6, [[[1, 1], [2, 1, 1], [3, 1, 1]], [[4, 1], [5, 1, 1]], [[6, 1]], [], []]);
+  const S = E.sim(E.compile(L), phold(5, [0, 0, 2, 0])); S.logOn = true;
+  eq([1, 2, 4].map((c) => S.hidden(c)), [true, true, true], "scout: three hidden cards");
+  eq([S.power(PW.SCOUT), [1, 2, 4].map((c) => S.hidden(c)), evs(S, E.EV.REVEAL), evs(S, E.EV.POWER)], [E.PLAYING, [false, false, false], [[1, 0], [2, 0], [4, 1]], [[2, 3]]], "scout: every hidden card is revealed (a REVEAL each, POWER 2 3)");
+  S.clearLog(); pat(S, 0); eq([evs(S, E.EV.REVEAL), S.canPower(PW.SCOUT), S.power(PW.SCOUT)], [[], false, E.REFUSED], "scout: a scouted card reaches the front with no second reveal; with nothing hidden a second Scout is refused");
+}
+// ---- Recall -----------------------------------------------------------------------------------------------------------------
+{
+  // b (walled in) is tapped from column 0, which has x behind it; it waits stuck. Recall: b goes back to column 0's front.
+  const L = lv(RING, [[[2, 2], [3, 1]], [[1, 12]], [], [], []]);
+  const S = E.sim(E.compile(L), PN); S.logOn = true; pat(S, 0);
+  eq([S.lineLen, S.stuck(0), S.card(0, 0), S.canPower(PW.RECALL, 0), S.canPower(PW.RECALL, 1)], [1, true, 1, true, false], "recall: b waits stuck in space 0; space 1 is free (nothing to recall)");
+  S.clearLog(); const r = S.power(PW.RECALL, 0);
+  eq([r, S.lineLen, colsOf(S)[0], S.plays, evs(S, E.EV.POWER), evs(S, E.EV.FREE)], [E.PLAYING, 0, [[0, 2], [1, 1]], 1, [[3, 0]], [[0, 2]]], "recall: b back at column 0's front with its 2 sappers, its space free at once (POWER 3 0, FREE); not a play");
+  ok(balanced(S) === true, "recall: every colour's sappers still equal its pixels (" + balanced(S) + ")");
+  eq([pat(S, 1), pat(S, 0), pat(S, 0)], [E.PLAYING, E.PLAYING, E.WON], "recall: a razes the ring; b plays again from the front; won");
+  // A squad that ate part of its count goes back with the sappers still waiting.
+  const P = E.sim(E.compile(lv([".a.~b", "...~~", ".##.."], [[[1, 3]], [[2, 1]], [], [], []])), PN); pat(P, 0);
+  eq([P.spW[0], P.stuck(0), P.power(PW.RECALL, 0), P.card(0, 0), P.count(0)], [2, true, E.PLAYING, 0, 2], "recall: a squad of 3 that ate the 1 pixel in reach goes back as a card of 2");
+  // Refused: a squad with a sapper out, a linked squad, a free space, past the uses.
+  const W = E.sim(E.compile(L), PN); W.play(1, 0);
+  eq([W.out > 0, W.canPower(PW.RECALL, 0), W.power(PW.RECALL, 0)], [true, false, E.REFUSED], "recall: a squad with sappers out is refused");
+  const K = E.sim(E.compile(lv(RING, [[[2, 2]], [[3, 1]], [[1, 12]], [], []], { links: [[[0, 0], [1, 0]]] })), PN); pat(K, 0);
+  eq([K.lineLen, K.stuck(0), K.spL[0] > 0, K.canPower(PW.RECALL, 0), K.canPower(PW.RECALL, 1)], [2, true, true, false, false], "recall: linked squads are refused (either one)");
+  const U = E.sim(E.compile(lv(RING, [[[2, 1]], [[2, 1]], [[2, 1]], [[1, 12]], []])), PN); pat(U, 0); pat(U, 1); pat(U, 2);
+  eq([U.power(PW.RECALL, 0), U.power(PW.RECALL, 1), U.canPower(PW.RECALL, 2), U.power(PW.RECALL, 2), U.used(PW.RECALL)], [E.PLAYING, E.PLAYING, false, E.REFUSED, 2], "recall: a third is refused (2 a level)");
+  // A recalled mystery card is at its column's front, so it is face up; pulled back behind a new front it stays face up.
+  const M2 = E.sim(E.compile(lv(RING, [[[1, 12], [2, 2, 1], [3, 1]], [], [], [], []])), PN); M2.power(PW.PULL, 1); pat(M2, 0);
+  eq([M2.power(PW.RECALL, 0), M2.power(PW.PULL, 2), M2.card(0, 1), M2.hidden(1)], [E.PLAYING, E.PLAYING, 1, false], "recall: a card once face up stays face up when another is pulled in front of it");
+}
+// ---- every operation: dealing, game over, determinism ------------------------------------------------------------------------
+{
+  const D = E.sim(E.compile(lv(RING)), PN, { deal: true }); D.playSquad(2, 1);
+  eq([0, 1, 2, 3].map((k) => D.power(k, 0)), [E.NOPLAY, E.NOPLAY, E.NOPLAY, E.NOPLAY], "powers: dealing mode never takes one (NOPLAY)");
+  const W = E.sim(E.compile(lv(ROW6, [[[1, 1]], [[2, 1]], [[3, 1]], [[4, 1]], [[5, 1], [6, 1]]])), PN); for (const j of [0, 1, 2, 3, 4, 4]) pat(W, j);
+  eq([W.status, W.power(PW.LADDER)], [E.WON, E.NOPLAY], "powers: none once the level is over");
+  // Without a power used, rules with power-ups allowed play every stored order identically (hash, clock, state) to the
+  // grader's rules.
+  let same2 = 0, tot = 0;
+  for (const L of DEBUG.concat(LEVELS.levels.filter((l, k) => k % 10 === 7))) for (const d of ["easy", "normal", "hard"]) {
+    const B = E.compile(L), A = E.sim(B, RULES[d]), Z = E.sim(B, PR[d]); let okk = true;
+    for (const ch of L.win[d]) { A.play(+ch); A.quiet(); Z.play(+ch); Z.quiet(); if (A.hash() !== Z.hash() || A.now !== Z.now || !same(A.save(), Z.save())) okk = false; }
+    tot++; if (okk && Z.status === E.WON) same2++;
+  }
+  eq(same2, tot, "powers: with none used, the power rules replay " + tot + " stored orders state for state (hash, clock, buffer) and win");
+}
+// ---- differential with power-ups: engine vs the reference, random taps and power-ups, patient and rushed ----------------------
+{
+  let games = 0, ops = 0, taken = [0, 0, 0, 0], refusedP = 0, diffs = 0, rests = 0, hangs = 0, unbal = 0, dry = 0; const t0 = Date.now();
+  const rline = (R) => R.spaces.map((s, k) => [k, s]).filter(([, s]) => s).sort((p, q) => p[1].seq - q[1].seq).map(([k, s]) => [k, s.m, s.wait, s.out, s.pair == null ? -1 : s.pair]);
+  const eline = (S) => S.order().map((s) => [s, S.spM[s], S.spW[s], S.spO[s], S.spL[s] - 1]);
+  const lim = [2, 4, 2, 3];
+  const SET = TWISTED.filter((L, k) => k < 4 || k % 3 === 0);
+  for (const L of SET) {
+    const B = E.compile(L);
+    for (const dn of ["normal", "hard", "easy"]) for (const rushed of [false, true]) {
+      const rules = Object.assign({}, PR[dn], { powers: lim }), S = E.sim(B, rules), R = Ref.game(L, rules), r = Gr.rng(B.n * 17 + (rushed ? 9 : 2) + dn.length);
+      let t = 0, bad = null;
+      const restCheck = () => { if (S.busy || S.status !== E.PLAYING) return; rests++; let legal = 0; for (let j = 0; j < 5; j++) if (Gr.legal(S, j)) legal++; if (!legal) hangs++; if (!rushed && balanced(S) !== true) unbal++; };
+      for (let g = 0; g <= 8 * B.ncards + 60 && S.status === E.PLAYING && !bad; g++) {
+        const usePower = r() < 0.3;
+        if (rushed) t += Math.floor(r() * 1500);
+        let a1, a2, what;
+        if (usePower) {
+          const k = Math.floor(r() * 4); let a = 0;
+          if (k === PW.PULL) { const j = Math.floor(r() * 5), d = 1 + Math.floor(r() * 3), c = S.card(j, d); a = c >= 0 ? c : Math.floor(r() * B.ncards); }
+          else if (k === PW.RECALL) { const o = S.order(); a = o.length && r() < 0.8 ? o[Math.floor(r() * o.length)] : Math.floor(r() * 8); }
+          if (rushed) { S.advanceTo(t); R.advanceTo(t); }
+          const can = S.canPower(k, a);
+          a1 = S.power(k, a); a2 = R.power(k, a); what = "power " + k + " " + a;
+          if (can !== (a1 === E.PLAYING || a1 === E.WON || a1 === E.FAILED)) dry++;
+          if (a1 === E.REFUSED) refusedP++; else if (a1 !== E.NOPLAY) taken[k]++;
+          if ((a1 === E.REFUSED) !== (a2 === "refused")) { bad = what + ": " + a1 + "/" + a2; break; }
+          if (!rushed) { S.quiet(); R.quiet(); }
+        } else {
+          const open = []; for (let j = 0; j < 5; j++) if (S.front(j) >= 0) open.push(j);
+          if (!open.length) break;
+          const j = open[Math.floor(r() * open.length)]; what = "tap " + j;
+          if (rushed) { a1 = S.play(j, t); a2 = R.play(j, t); } else { a1 = S.play(j); S.quiet(); a2 = R.play(j); R.quiet(); }
+          if ((a1 === E.REFUSED) !== (a2 === "refused")) { bad = what + ": refusal " + a1 + "/" + a2; break; }
+        }
+        ops++; restCheck();
+        const st = S.status === E.WON ? "won" : S.status === E.FAILED ? "failed" : "playing";
+        const colsR = R.cols.map((c) => c.map((cd) => [cd.ci, cd.n]));
+        const hidE = [], hidR = []; for (let ci = 0; ci < B.ncards; ci++) { if (S.hidden(ci)) hidE.push(ci); if (R.hidden(ci)) hidR.push(ci); }
+        if (JSON.stringify(R.pops.length) !== JSON.stringify(B.pixTotal - S.pixLeft - (B.pix[E.IRON] - S.left[E.IRON]))) bad = what + ": pops";
+        else if (st !== R.status || (st === "failed" && S.reason !== R.reason)) bad = what + ": status " + st + "/" + R.status + " " + S.reason + "/" + R.reason;
+        else if (JSON.stringify(eline(S)) !== JSON.stringify(rline(R))) bad = what + ": spaces " + JSON.stringify(eline(S)) + " / " + JSON.stringify(rline(R));
+        else if (S.now !== R.now || S.open !== R.open || S.cap !== rules.hold + R.extra) bad = what + ": clock or spaces";
+        else if (JSON.stringify(colsOf(S)) !== JSON.stringify(colsR)) bad = what + ": columns " + JSON.stringify(colsOf(S)) + " / " + JSON.stringify(colsR);
+        else if (JSON.stringify(hidE) !== JSON.stringify(hidR)) bad = what + ": hidden cards";
+      }
+      if (!bad) { S.quiet(); R.quiet(); restCheck(); const st = S.status === E.WON ? "won" : S.status === E.FAILED ? "failed" : "playing"; if (st !== R.status || S.reason !== R.reason) bad = "final " + st + "/" + R.status; }
+      games++;
+      if (bad) { diffs++; if (diffs <= 4) console.log("  diff: " + (L.id || "injected " + B.n) + " " + dn + (rushed ? " rushed" : " patient") + ": " + bad); }
+    }
+  }
+  eq(diffs, 0, "differential (power-ups): engine == reference on " + games + " games, " + ops + " taps and power-ups (taken: Ladder " + taken[0] + ", Quartermaster " + taken[1] + ", Scout " + taken[2] + ", Recall " + taken[3] + "; " + refusedP + " refused): acceptance, status, spaces, columns and counts, hidden cards, clock");
+  ok(taken.every((k) => k > 0) && refusedP > 0, "differential (power-ups): every power-up is taken and refused in the run");
+  eq([dry, hangs, unbal], [0, 0, 0], "power-ups: canPower always agrees with power(); " + rests + " rest states all have a legal tap or are over; every patient rest state keeps each colour's sappers equal to its pixels");
+  console.log("  differential (power-ups): " + games + " games, " + ops + " operations (taken " + taken.join("/") + ", " + refusedP + " refused) in " + ((Date.now() - t0) / 1000).toFixed(1) + " s");
 }
 
 // ---- the page's save (v4 M1 settings: speed replaces the 2x flag, colour-blind marks) ----------------------------------

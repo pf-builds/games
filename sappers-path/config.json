@@ -291,5 +291,17 @@
     "winTitle": "Picture razed!", "winLine": "{title} cleared on {diff}.", "nextBtn": "Next picture",
     "credits": "Pictures: Twemoji by Twitter, Inc and other contributors (CC BY 4.0); Noto Emoji by Google (Apache 2.0); paintings and prints from The Metropolitan Museum of Art Open Access (public domain); the rest are Click it! Studios originals.",
     "thumbPx": 3, "dim": ["#231e2a", "#6c6475"]
+  },
+  "meta": {
+    "note": "v4 M5, the meta layer (SPEC-v4 §9). lives: the lives system's switch (false on the web: plan Decision 2; turn it on for the app); livesMax, livesRefillMin (one life back per this many minutes, real time). coins: start (a new save's balance: enough to try each power-up once), win (coins per win by difficulty) and first (added the first time a level or picture is won on that difficulty, a new medal). pullDepth: how far behind the front the Quartermaster reaches (cards). powers: the four power-ups in engine order (engine.js PW), each with its price in coins and its uses per level (perLevel; the engine refuses past it).",
+    "lives": false, "livesMax": 5, "livesRefillMin": 20,
+    "coins": {"start": 400, "win": {"easy": 5, "normal": 10, "hard": 20}, "first": {"easy": 10, "normal": 20, "hard": 40}},
+    "pullDepth": 2,
+    "powers": [
+      {"id": "ladder", "price": 120, "perLevel": 1},
+      {"id": "quartermaster", "price": 80, "perLevel": 3},
+      {"id": "scout", "price": 60, "perLevel": 1},
+      {"id": "recall", "price": 100, "perLevel": 2}
+    ]
   }
 }
