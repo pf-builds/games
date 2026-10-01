@@ -171,3 +171,16 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - (Critics 1 re-check) The landscape title's logo still grazes the keep's flag at 812×375 (cosmetic).
 - (Critics 1 fix 2) On a coached linked card the side arrow and the rod's top rivet share the column gap for as long as the coach shows (level 62's first step).
 - (Critics 1 re-check 2, N6, minor) Two links can share one column gutter and read as a single line touching three tiles (level 78, 17 of 543 queue states along its stored order; debug v4-linked at rest). Fix: a second lane 4 px over, or tint each pair differently. Shots in tools/shots-v4-critic1/recheck2/.
+
+## From v4 M4 (the Gallery, 2026-09-30)
+
+- Peter's veto at the playtest: 28 spares are in `levels/gallery-manifest.json` (keep false, with why), their sources stored; a swap is a manifest edit and a 10-minute `node tools/gallery-bake.js`.
+- More paintings: 8 of 18 Met works read at 40 cells. Flat-colour prints and posters with big shapes read best (the Great Wave, Red Fuji); dark or busy oils don't. NGA's open data needs its image table (tens of MB) to find IIIF ids, so it was skipped for the download budget.
+- Paintings' faded queue tiles: 42 pairs under the siege's ΔE00 20 (smallest 12.0). The converter's faded rule exempts paintings to keep their tones; if the critic finds the queue muddy there, either apply it (some paintings lose a tone) or fade the rows less on Gallery levels.
+- The Gallery has none of the siege's twists. "?" cards, linked pairs or the lock on picture levels (the lock needs a gilt key, id 14, which a picture never uses: a key would be one more colour).
+- Food Hunt's "?" pixels on the board (plan feature 1) would suit pictures: a patch hidden until exposed.
+- A Gallery level report or stars per picture (M5's level report could cover the Gallery too).
+- The dimmed thumbnails show every picture's shape before it is won; a true silhouette (one dark tone for the subject, the background lighter) would keep more mystery for emoji and ours.
+- Converter: more colour names (36 now) if aria-labels ever repeat a vague name; a per-picture `bg` or `crop` override already exists in the manifest for hand fixes.
+- The Gallery's hard slots: the lookahead player still wins Plumed Helm (51) every time; more candidates or a smaller narrowing floor would bring it down.
+- The Apache 2.0 text: LICENSES.md names the license with its URL; ship the full text beside it if a portal asks.
