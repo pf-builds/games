@@ -211,3 +211,5 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - Gallery paintings still have 27 faded pairs between 16 and 20 (Irises, Roses, Apples and Primroses, Wheat Field, Oleanders, Red Fuji); the floor is 16 to keep the paintings' tones. A floor of 20 would move more colours further.
 - Teapot and Fruit (`met-437999`) is a spare now (muddy at 42 cells); with Trophy in its slot the Gallery has 7 paintings.
 - The functional critic's edge case "Recall a wary squad, re-tap" numbers one archer-hit sapper differently from the game (a log label only; SPEC-v4 §9's Critics 2 entry says ids are labels). Their script could compare events without the sapper id.
+- (Critics 2 re-check, n1, minor) Level 77's top-bar coach line at 375×667 wraps as "Linked squads: 2 / spaces." Readable; fix with balanced wrapping or a shorter small-screen line. Shots in tools/shots-v4-critic2/recheck/.
+- (Critics 2 re-check) The debug level v4-linked still shows two brass rods in one gutter (campaign level 78 is fixed with brass and steel lanes).

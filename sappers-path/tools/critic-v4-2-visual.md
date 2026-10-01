@@ -150,3 +150,74 @@ None of this is a rejection reason. Our home is clean, has a clear hierarchy and
 **Not rejected on sight by either portal.** CrazyGames accepts it as it stands. For Poki, fix V1 and V2 first, then m1–m2 and m8.
 
 **Counts: 0 blocking, 2 major (V1, V2), 10 minor (m1–m10).**
+
+---
+
+## Re-check (after fix pass)
+
+HEAD `984eb5d` (branch `sappers-path`, `?v=23`), my own server on :8493. 2026-09-30.
+
+**How I checked** (I did not use the builder's numbers):
+- `SP.selfTest()`: 1015 pass, 0 fail. 0 console errors or warnings.
+- `visual-shots.mjs --out recheck`, with the Gallery set now Pizza Slice, Red Fuji, Trophy, Irises, Roses, and Apples and Primroses.
+- `visual-recheck.mjs`: coach fit on 8 teaching levels at 8 viewports, buy states, badge sizes, the Gallery's next tile, and the Gallery win report.
+- My Critics 1 rod and gutter scans re-run, the painting ΔE00 recomputed from `gallery.json`, and one extra probe for the era card and the rod lane tints.
+- Everything is in `tools/shots-v4-critic2/recheck/`, with sheets `s1`–`s4` and `probe.json`.
+
+| Item | Status | Evidence |
+|---|---|---|
+| **V1** coach clipped in the top-bar fallback | **Fixed** | See V1 note below. |
+| **V2** Gallery payoff | **Fixed** | See V2 note below. |
+| **m1** painting pairs and Teapot | **Fixed** | See m1 note below. |
+| **m2** unaffordable "+" | **Fixed** | `.pw.poor`: a grey "+" (`rgb(125,117,136)`, against green `rgb(63,191,90)` when affordable) and a red price pill. "need N" shows under the badge on wide screens. The tap still gives the toast (`s3`, top row). |
+| **m3** Recall icon | **Fixed** | A gold U-turn arrow over a steel helmet. It reads as "bring back", not a pipe (`s3`, `s4`). |
+| **m4** iframe badges | **Fixed** | 44×44 px in the 400×600 iframe (was 41). 58 px on phones. |
+| **m5** landscape power panel padding | **Fixed** | At 812×375 the badges are 78 px (was 50) and fill the 134 px panel (`s3`). |
+| **m6** era chip on the crew | **Fixed** | The chip now lies on the river band. The four figures stand clear on the grass at 667, the iframe, 812 and 1280 (`s4`, top and middle). |
+| **m7** era card and settings | **Fixed** | The era card is a 39 px band with 22 px medal discs and 20 px counts (probe). The settings Speed row shows "1×" on the right (`375-settings.png`). |
+| **m8** thin siege win | **Part fixed** | On desktop the win sheet is sized to its content (panel 343 px tall, was a 623 px column of mostly cream) and the power-up bar stays in view (`1280-win-report.png`). The banner and bin burst are parked in LATER. |
+| **m9 / Critics 1 N6** two links in one gutter | **Fixed in the campaign** | See m9 note below. |
+| **m10** wide paintings on portrait | **Parked** (LATER) | Unchanged: Red Fuji at 8.0 px cells on 375×812. |
+
+**V1 note.**
+- **Measured:** 0 clipped, 0 coach-over-board and 0 coach-over-level-number on levels 1, 2, 3, 35, 51, 62, 76 and 77 at all 8 viewports: 375×667, 414×736, 375×812, 390×844, 1280×720, 812×375, the 400×600 iframe and 360×640.
+- **Modes:** "above" on phones, "side" on wide screens. Only level 77 falls back to the top bar: at 375×667 (17 px, 2 lines) and in the iframe (19 px, 1 line).
+- **Cost:** on short phones the teaching levels take 2 queue rows. Level 76 at 375×667 drops to 8.0 px cells, which is still at the floor.
+- **Screenshots:** `coach-*.png`, sheet `s1`.
+
+**V2 note.**
+- **Win report:** "Picture complete!" with "Trophy is in your Gallery now." and the finished picture as a 142×142 canvas above the stat cells (`galwin-375-trophy.png`, `375-gal-win-fuji.png`, `1280-gal-win.png`).
+- **Siege reports** keep "Fort razed!" with no picture (`siegewin-375-l8.png`).
+- **Gallery screen:** the next picture has a gold border (`rgb(242,194,48)`) and a "▶ Play" chip. A cleared picture shows in full colour with its name, and the Play chip moves to the next one (`gallery-375-fresh.png`, `gallery-375-after.png`, `1280-gallery-after-win.png`; sheet `s2`).
+- **Still true:** the uncleared wall is grey. That's acceptable now that "start here" is marked.
+
+**m1 note.**
+- **Measured** (my own ΔE00 recompute):
+  - Faded-vs-front pairs under 20 are now 23 ordered pairs in 6 paintings (was 29 in 7). None are under 16.
+  - Worst per painting: Irises 16.0, Apples and Primroses 16.2, Roses 16.5, Wheat Field 17.3, Oleanders 18.2, Red Fuji 18.7.
+  - The smallest front pair per painting is 20.4 or more.
+- **Trophy** (slot 33, `noto-1f3c6`) reads at once: a gold cup on blue with an outline and five distinct queue colours (`375-gal-noto-1f3c6.png`).
+- **Visually:** Irises and Roses still carry close greens and creams in the queue (`s3`, `s4`). Each colour is now at least 16 apart, which meets the bar I set.
+
+**m9 note.**
+- **Level 78, steps 13–29:** the two rods in the col 3/4 gutter take their own lanes (x 270 and 274) in brass `rgb(176,143,106)` and steel `rgb(143,157,179)`, and read as two links (`375-rods-l78-step13.png`). My 5 px gutter scan still lists level 78 (17 states), because the lanes are 4 px apart by design. The tint is what separates them.
+- **Residual, debug level only:** on v4-linked at rest, the 3↔21 rod and 6's stub share the col 0/1 gutter at x 67 and x 73, both brass, and still read as one line (`375-v4-linked-rest2.png`). It isn't in the Siege or the Gallery, so I'm noting it, not counting it.
+
+**Regression pass:**
+- Rods: 0 rivets or rod samples on counts or tile faces and 0 third-tile crossings, over 543 states each at 375, 1280 and the iframe.
+- The tray, its bands and the B1 slots are clean in every capture.
+
+**New finding.**
+
+**n1 (MINOR). Level 77's top-bar coach at 375×667 wraps with an orphan.**
+- **Screenshot:** `coach-375x667-l77.png` (sheet `s1`, 2nd). It reads "Linked squads: 2 / spaces." on two lines at 17 px.
+- **Why only a minor:** it is readable and not clipped. The iframe fits the same line on one line at 19 px.
+- **Fix:** add `text-wrap: balance`, or use a shorter top-bar line for 77 ("Linked: 2 spaces.").
+
+**Final counts:**
+- **Open:** 0 blocking, 0 major, 1 minor (n1).
+- **Parked in LATER:** the rest of m8 (banner and bin burst) and m10 (portrait crops for wide paintings).
+
+**Portal verdict:**
+- **CrazyGames: accept.** No visible defect is left on any screen I captured.
+- **Poki: would not reject on sight.** It is now a credible submission, with a home, meta, power-ups, a collection mode with a real payoff, and clean layouts from 360×640 to 1280×720. What separates it from a Poki feature is juice, not defects: the parked win celebration and a livelier Gallery wall.
