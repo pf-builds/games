@@ -170,16 +170,16 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - (Critics 1 re-check) M5's power-up bar: at 1280 four ~96 px badges need `--pw-h` about 110 px (or a 2×2 layout); in the 400×600 iframe the queue ends at y 586 of 600, so the bar still has no room there and needs an explicit decision.
 - (Critics 1 re-check) The landscape title's logo still grazes the keep's flag at 812×375 (cosmetic).
 - (Critics 1 fix 2) On a coached linked card the side arrow and the rod's top rivet share the column gap for as long as the coach shows (level 62's first step).
-- (Critics 1 re-check 2, N6, minor) Two links can share one column gutter and read as a single line touching three tiles (level 78, 17 of 543 queue states along its stored order; debug v4-linked at rest). Fix: a second lane 4 px over, or tint each pair differently. Shots in tools/shots-v4-critic1/recheck2/.
+- (Critics 1 re-check 2, N6, minor) Two links can share one column gutter and read as a single line touching three tiles (level 78, 17 of 543 queue states along its stored order; debug v4-linked at rest). Fix: a second lane 4 px over, or tint each pair differently. Shots in tools/shots-v4-critic1/recheck2/. (Done in the Critics 2 fix, m9: a lane each, the second rod in steel.)
 
 ## From v4 M4 (the Gallery, 2026-09-30)
 
 - Peter's veto at the playtest: 28 spares are in `levels/gallery-manifest.json` (keep false, with why), their sources stored; a swap is a manifest edit and a 10-minute `node tools/gallery-bake.js`.
 - More paintings: 8 of 18 Met works read at 40 cells. Flat-colour prints and posters with big shapes read best (the Great Wave, Red Fuji); dark or busy oils don't. NGA's open data needs its image table (tens of MB) to find IIIF ids, so it was skipped for the download budget.
-- Paintings' faded queue tiles: 42 pairs under the siege's ΔE00 20 (smallest 12.0). The converter's faded rule exempts paintings to keep their tones; if the critic finds the queue muddy there, either apply it (some paintings lose a tone) or fade the rows less on Gallery levels.
+- Paintings' faded queue tiles: 42 pairs under the siege's ΔE00 20 (smallest 12.0). The converter's faded rule exempts paintings to keep their tones; if the critic finds the queue muddy there, either apply it (some paintings lose a tone) or fade the rows less on Gallery levels. (Critics 2 fix: the converter lifts paintings' display lightness to a floor of 16, palette only; 27 pairs under 20 remain, smallest 16.0. Teapot and Fruit was replaced by Trophy.)
 - The Gallery has none of the siege's twists. "?" cards, linked pairs or the lock on picture levels (the lock needs a gilt key, id 14, which a picture never uses: a key would be one more colour).
 - Food Hunt's "?" pixels on the board (plan feature 1) would suit pictures: a patch hidden until exposed.
-- A Gallery level report or stars per picture (M5's level report could cover the Gallery too).
+- A Gallery level report or stars per picture (M5's level report could cover the Gallery too). (Done: M5's report covers pictures, and the Critics 2 fix shows the finished picture on it.)
 - The dimmed thumbnails show every picture's shape before it is won; a true silhouette (one dark tone for the subject, the background lighter) would keep more mystery for emoji and ours.
 - Converter: more colour names (36 now) if aria-labels ever repeat a vague name; a per-picture `bg` or `crop` override already exists in the manifest for hand fixes.
 - The Gallery's hard slots: the lookahead player still wins Plumed Helm (51) every time; more candidates or a smaller narrowing floor would bring it down.
@@ -196,6 +196,18 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - The Quartermaster reaches 2 cards back in the engine; in the two-row frames the page offers only the visible row behind the front.
 - 360-wide phones: the widest painting (g-met-57007, 42 columns) is width-limited to 7.5-7.67 CSS px a cell at 360×640 and 360×740, as it was in M4 (the bar costs nothing there). A narrower crop or a turned board for that picture.
 - 375×667 (iPhone SE): 57 of 160 boards drop to two queue rows to keep 8 px a cell (per level, at fit time), so the queue's depth changes between levels on that phone. If that reads badly, use two rows on every level below about 760 px tall.
-- The win sheet on desktop covers the whole side column with the report near its middle; a shorter sheet anchored to the rail would leave the power-up bar in view.
+- The win sheet on desktop covers the whole side column with the report near its middle; a shorter sheet anchored to the rail would leave the power-up bar in view. (Done in the Critics 2 fix, m8: the sheet is the rail's height, or its content's.)
 - The economy's numbers (start 400; wins 5/10/20 plus first-clear 10/20/40; prices 120/80/60/100; uses per level 1/3/1/2) are a first proposal. Peter's playtest decides.
 - Recall is refused on linked squads (simplest exact rule). Recalling a pair together (both cards back) would be the generous version.
+
+## From v4 Critics 2 (the fix pass, 2026-09-30; references are to `tools/critic-v4-2-visual.md`)
+
+- m10, wide paintings on portrait phones: Red Fuji (42×29) gets 8.0 px cells at 375×812 with dark brick above and below. The converter could prefer portrait crops (34 columns or fewer) for paintings, which would also help 360-wide phones (M5's open item). Needs a rebake of those pictures.
+- m8, the rest of the siege win's moment: a banner planted in the razed ground and the bins bursting (LATER m5 above). The wide sheet is sized to the rail now.
+- V2, the critic's option: a 1 s rebuild on a Gallery win (blocks fly back from the bins into the picture before the sheet slides up). The report shows the finished picture instead; on short landscape screens it hangs over the razed board. Showing it over the board on every screen would be a bigger payoff than the report's 4 px-a-cell copy.
+- V2, the critic's other option: a lighter panel behind the Gallery's grid (like the stone tray), so the dim thumbnails sit on light instead of brick.
+- On desktop a Gallery win's sheet (with its picture) is taller than the rail and covers the top of the power-up panel (its coin pill).
+- At 375 wide an era report card's coin total wraps to a second line under the medals.
+- Gallery paintings still have 27 faded pairs between 16 and 20 (Irises, Roses, Apples and Primroses, Wheat Field, Oleanders, Red Fuji); the floor is 16 to keep the paintings' tones. A floor of 20 would move more colours further.
+- Teapot and Fruit (`met-437999`) is a spare now (muddy at 42 cells); with Trophy in its slot the Gallery has 7 paintings.
+- The functional critic's edge case "Recall a wary squad, re-tap" numbers one archer-hit sapper differently from the game (a log label only; SPEC-v4 §9's Critics 2 entry says ids are labels). Their script could compare events without the sapper id.

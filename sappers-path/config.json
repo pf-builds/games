@@ -157,7 +157,7 @@
     "m5Note": "v4 M5. Short frames (CSS max-height shortRowsMaxH, e.g. the 400x600 iframe and landscape phones) show queueRowsShort rows so the power-up bar fits under the queue (orchestrator's call, 9/30); every other size keeps queueRows, unless a portrait board would then be under minCellCss CSS px a cell (then that level shows queueRowsShort and the compact bar). stageGapPx: the px kept free round the board's frame [across, down, down with two rows] (was 14 and 16 in code). pwGrid: on wide screens the bar lays its badges out 2x2 once the column's foot has this many CSS px of height and the badges come out bigger that way, else in a row; pwFit: the foot's fixed parts in CSS px (side padding, top padding, the coins header, bottom padding, a badge's name below it, the gap between rows and beside each badge) and the badge's min and max diameter.",
     "queueRowsShort": 2, "shortRowsMaxH": 640, "stageGapPx": [14, 16, 6], "pwGrid": 250, "pwFit": {"padX": 24, "padTop": 10, "head": 38, "padBottom": 14, "name": 30, "rowGap": 8, "gapX": 14, "min": 84, "max": 112},
     "fix2Note": "Critics 2 fix. coachTopFontPx: the coach in the top bar (only where neither three nor two queue rows leave the board minCellCss with the band above it) steps its font from the first to the second, one line, then two. rod.lane and rod.metal2 (m9): two rods down one gutter over the same rows take a lane each, lane px either side of its middle (scaled with the tile, never past the tiles' edges), the second in metal2.",
-    "coachTopFontPx": [17, 13]},
+    "coachTopFontPx": [19, 13]},
   "title": {"artW": 125, "artH": 190, "artMin": 2, "artMax": 5, "baseFrac": 0.58, "baseFracWide": 0.56, "wallArtPx": 3},
   "audio": {
     "volume": 0.5,

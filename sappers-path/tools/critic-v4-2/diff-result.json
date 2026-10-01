@@ -1,18 +1,18 @@
 {
- "ms": 45931,
+ "ms": 45708,
  "levels": 164,
  "cov": {
   "why": {
-   "1:isFront": 2729,
-   "2:noneHidden": 10366,
-   "0:perLevel": 9206,
-   "3:emptySpace": 5303,
-   "3:badSpace": 1625,
-   "3:sappersOut": 1779,
-   "1:notInColumn": 2546,
-   "3:perLevel": 1260,
-   "1:perLevel": 1705,
-   "1:tooDeep": 1691,
+   "1:isFront": 2721,
+   "2:noneHidden": 10300,
+   "0:perLevel": 9123,
+   "3:emptySpace": 5298,
+   "3:badSpace": 1622,
+   "3:sappersOut": 1763,
+   "1:notInColumn": 2538,
+   "3:perLevel": 1226,
+   "1:perLevel": 1706,
+   "1:tooDeep": 1679,
    "2:perLevel": 1358,
    "3:linked": 77
   },
@@ -28,16 +28,16 @@
   },
   "ops": {
    "taken": [
-    3113,
-    3939,
+    3104,
+    3938,
     593,
-    1879
+    1865
    ],
    "refused": [
-    9206,
-    8671,
-    11724,
-    10044
+    9123,
+    8644,
+    11658,
+    9986
    ],
    "noplay": [
     0,
@@ -46,17 +46,17 @@
     0
    ]
   },
-  "refusedChecked": 39645,
+  "refusedChecked": 39411,
   "refusedChanged": 0,
   "canPowerDisagree": 0,
-  "hiddenChecks": 4095845,
+  "hiddenChecks": 4083497,
   "outcomes": {
-   "1/": 4352,
-   "-1/jam": 3711,
+   "1/": 4350,
+   "-1/jam": 3713,
    "-1/short": 301
   },
   "jamWhy": {
-   "0": 3258,
+   "0": 3260,
    "1": 7,
    "2": 446
   },
