@@ -225,7 +225,7 @@
   // few objects made here are per click, never per frame.
   function onPickupClick(res) {
     var pk = cfg.pickups, J = pk.juice, P = pk.palette;
-    var bx = res.xBu, by = window.GDRender.screenYBu(res.yBu);
+    var bx = res.xBu, by = window.GDRender.pickupScreenY(res.yBu);
     var ty = E.pickupType(cfg, res.type), label = ty ? ty.label : res.type;
     var col = res.kind === "gem" ? P.gem.light : (res.kind === "chest" ? P.chest.band : P.geode.crystalLit);
     if (!res.done) {

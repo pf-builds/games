@@ -922,24 +922,23 @@
   };
 
   // --------------------------------------------------------------- pickups (M5)
-  // World-anchored in a side wall: a pulsing plus-shaped halo in the pickup's colour so
+  // Screen-anchored in a side wall (viewport bu, offset only by a deliberate drag-pan, so
+  // the dig scrolling past never moves one): a pulsing plus-shaped halo in the pickup's colour so
   // it reads against any band, the cached sprite popping in over its first 0.2 s, a
   // four-point sparkle that sweeps round, a jolt on each geode crack, and a blink over
   // the last `expireBlinkS`. Integer blits and fillRects only: nothing allocates here.
   function field() { return window.GD ? window.GD.pickups : null; }
-  function camTop() {
-    if (cam.topBu !== null) return cam.topBu;
-    var st = window.GD && window.GD.state;
-    return st ? st.depth * cfg.layout.buPerMeter - faceY() : 0;
-  }
+  // Viewport y of a pickup. Follows the player's drag-pan (cam.userBu) so a pickup stays
+  // on its patch of wall while they look around, but ignores the dig and the camera ease.
+  function pickupY(yBu) { return yBu - cam.userBu; }
   function drawPickups(H, glow) {
     var f = field();
     if (!f || !f.live) return;
-    var pk = cfg.pickups, P = pk.palette, top = camTop();
+    var pk = cfg.pickups, P = pk.palette;
     for (var i = 0; i < f.slots.length; i++) {
       var s = f.slots[i];
       if (!s.active) continue;
-      var sy = s.yBu - top;
+      var sy = pickupY(s.yBu);
       if (sy < -s.sizeBu || sy > H + s.sizeBu) continue;
       if (s.ttl < pk.expireBlinkS && (Math.floor(s.ttl * 8) & 1)) continue;
       var stage = s.kind === "geode" ? Math.ceil((SP.GEODE_STAGES - 1) * (s.clicksMax - s.clicks) / s.clicksMax) : 0;
@@ -985,19 +984,18 @@
   }
   // Canvas-local CSS px centre and hit radius for one live pickup (debug + tests).
   R.pickupCss = function (s) {
-    var top = camTop();
-    return { x: s.xBu * scale, y: (s.yBu - top) * scale, r: hitRadiusPx(s) };
+    return { x: s.xBu * scale, y: pickupY(s.yBu) * scale, r: hitRadiusPx(s) };
   };
   // The pickup under a canvas-local CSS point, or 0. A square hit box at least
   // hitMinCssPx across, padded hitPadBu past the sprite; the nearest wins on overlap.
   R.pickupAt = function (cssX, cssY) {
     var f = field();
     if (!f || !f.live || !cfg.pickups) return 0;
-    var top = camTop(), best = 0, bestD = Infinity;
+    var best = 0, bestD = Infinity;
     for (var i = 0; i < f.slots.length; i++) {
       var s = f.slots[i];
       if (!s.active) continue;
-      var dx = Math.abs(cssX - s.xBu * scale), dy = Math.abs(cssY - (s.yBu - top) * scale);
+      var dx = Math.abs(cssX - s.xBu * scale), dy = Math.abs(cssY - pickupY(s.yBu) * scale);
       var r = hitRadiusPx(s);
       if (dx > r || dy > r) continue;
       var dd = dx > dy ? dx : dy;
@@ -1005,7 +1003,7 @@
     }
     return best;
   };
-  R.screenYBu = function (worldYBu) { return worldYBu - camTop(); };
+  R.pickupScreenY = pickupY;
   R.flashPickup = function (id) {
     var f = field();
     if (!f) return;

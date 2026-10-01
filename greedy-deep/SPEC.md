@@ -227,7 +227,9 @@ Offline pay uses the pre-buff crew rate.
   `GD.step` share it). Own rng, so pickups never shift the event rng. Pool of `maxLive` 4
   slots, allocated once. Placement: a random side wall (left 8-34 bu, right 122-146 bu),
   within 96 bu above / 44 bu below the face on a settled camera, kept clear of the active
-  vein and 20 bu from other pickups. World-anchored: they scroll with the shaft.
+  vein and 20 bu from other pickups. Screen-anchored (changed 2026-09-30): a pickup holds
+  its spot while the shaft scrolls past and only leaves on its lifetime, so it never has
+  to be chased mid-dig. A drag-pan moves it with the view.
 - **Never while hidden or behind an overlay.** The spawn clock stops (does not bank) when
   the tab is hidden or the splash, settings, welcome-back or ending overlay is up, and a
   click is refused in either state. `applyOffline()` never sees the field, so offline time

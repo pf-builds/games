@@ -543,10 +543,6 @@
     var floorY = lan.minFaceYBu === undefined ? L.faceYBu : lan.minFaceYBu;
     return Math.max(floorY, L.faceYBu - bias);
   };
-  // World y (bu) drawn at the top of the viewport when the camera is settled on the face.
-  function settledTopBu(cfg, state, derived) {
-    return state.depth * cfg.layout.buPerMeter - E.faceYBu(cfg, derived.revealBonus);
-  }
 
   E.newPickupField = function (cfg) {
     var n = (cfg.pickups && cfg.pickups.maxLive) || 0, slots = [];
@@ -567,9 +563,11 @@
     return null;
   };
 
-  // Place a pickup in a side wall inside the settled viewport near the face. The right
-  // wall keeps clear of the active vein (the strike target) and pickups keep clear of
-  // each other; both are bounded rerolls. `opts` (debug/tests) can pin x, y (viewport bu),
+  // Place a pickup in a side wall inside the settled viewport near the face. Pickups are
+  // screen-anchored: xBu/yBu are viewport bu and stay put while the shaft scrolls past,
+  // so a moving dig never drags one out from under the cursor. The right wall keeps
+  // clear of the active vein (the strike target) and pickups keep clear of each other;
+  // both are bounded rerolls. `opts` (debug/tests) can pin x, y (viewport bu),
   // side, ttl and clicks. Returns the slot, or null when the pool is full.
   E.spawnPickup = function (cfg, field, state, derived, typeId, rng, opts) {
     var ty = pickupType(cfg, typeId);
@@ -583,12 +581,10 @@
     var fy = E.faceYBu(cfg, derived.revealBonus);
     var y0 = Math.max(sp.padTopBu, fy - sp.aboveFaceBu), y1 = Math.min(H - sp.padBottomBu, fy + sp.belowFaceBu);
     // The active vein's bracket owns that stretch of the right wall. Clear it by half the
-    // sprite plus a margin, and further below it by the distance the face will carry the
-    // pickup up the screen over its lifetime, so it never drifts into the bracket either.
+    // sprite plus a margin. Pickups never scroll, so the clearance never has to grow.
     var half = ty.sizeBu * 0.5 + sp.veinClearBu;
-    var drift = derived.digRate * L.buPerMeter * (ty.lifetimeS + pk.lanternLifetimeS * (derived.revealBonus || 0));
     var vTop = Math.max(L.tileBu * 2, fy - cfg.vein.aboveFaceBu);
-    var veinTop = vTop - half, veinBot = vTop + cfg.vein.hBu + half + drift;
+    var veinTop = vTop - half, veinBot = vTop + cfg.vein.hBu + half;
     var pinSide = opts.side === 0 || opts.side === "left" ? 0 : (opts.side === 1 || opts.side === "right" ? 1 : -1);
     var sx = 0, sy = 0, side = 0, tries = 0, clear = false;
     while (!clear && tries++ < 6) {
@@ -599,11 +595,10 @@
       sx = opts.x !== undefined ? opts.x : xr[0] + rng() * (xr[1] - xr[0]);
       clear = true;
       if (opts.x !== undefined || opts.y !== undefined) break;
-      var topNow = settledTopBu(cfg, state, derived);
       for (i = 0; i < field.slots.length; i++) {
         var o = field.slots[i];
         if (!o.active) continue;
-        if (Math.abs(o.xBu - sx) < sp.minGapBu && Math.abs((o.yBu - topNow) - sy) < sp.minGapBu) { clear = false; break; }
+        if (Math.abs(o.xBu - sx) < sp.minGapBu && Math.abs(o.yBu - sy) < sp.minGapBu) { clear = false; break; }
       }
     }
     var bi = derived.band.index;
@@ -621,7 +616,7 @@
     slot.clicks = slot.clicksMax;
     slot.bandIndex = bi;
     slot.xBu = sx;
-    slot.yBu = settledTopBu(cfg, state, derived) + sy;
+    slot.yBu = sy;
     slot.sizeBu = ty.sizeBu;
     field.live++;
     field.spawned++;
@@ -630,19 +625,18 @@
 
   function freePickup(field, slot) { slot.active = false; field.live--; }
 
-  // Age, expire (lifetime or scrolled off the top of a settled camera), then roll spawns
+  // Age, expire on lifetime (pickups are screen-anchored, so nothing scrolls off), then roll spawns
   // once per `checkSeconds`. `canSpawn` false (hidden tab, overlay up) stops the spawn
   // clock outright, so nothing banks while nobody can see the shaft.
   E.tickPickups = function (cfg, field, state, dt, derived, rng, canSpawn, hooks) {
     var pk = cfg.pickups;
     if (!pk || !field) return;
-    var topBu = settledTopBu(cfg, state, derived);
     var i, s;
     for (i = 0; i < field.slots.length; i++) {
       s = field.slots[i];
       if (!s.active) continue;
       s.ttl -= dt; s.age += dt;
-      if (s.ttl <= 0 || s.yBu - topBu + s.sizeBu * 0.5 < 0) {
+      if (s.ttl <= 0) {
         freePickup(field, s);
         field.expired++;
         if (hooks && hooks.onPickupExpire) hooks.onPickupExpire(s);

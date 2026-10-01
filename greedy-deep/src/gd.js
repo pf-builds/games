@@ -1764,7 +1764,7 @@
       if (window.GDUI && window.GDUI.refresh) window.GDUI.refresh();
       check("m5_chest_chip_clears_at_end", "hidden", chip ? chip.className : "no chip", !!chip && chip.classList.contains("hidden"));
 
-      // --- expiry by lifetime and by scrolling off the top
+      // --- expiry by lifetime only; a pickup is screen-anchored, so digging never removes it
       m5Setup();
       var se = D.spawnPickup("gem", { ttl: 1 });
       D.step(1.5);
@@ -1773,7 +1773,7 @@
       var ss5 = D.spawnPickup("gem", { y: PK.spawn.padTopBu });
       GD.state.depth += 60;
       D.step(0.1);
-      check("m5_expires_when_scrolled_off", "gone", !!E.pickupById(GD.pickups, ss5.id), !E.pickupById(GD.pickups, ss5.id));
+      check("m5_survives_digging_past", "alive", !!E.pickupById(GD.pickups, ss5.id), !!E.pickupById(GD.pickups, ss5.id));
       m5Setup();
       D.grantForTest("lantern", 2);
       var sl = D.spawnPickup("gem");
@@ -1892,15 +1892,30 @@
       }
       check("m5_spawn_side_option_honoured", "left wall for 'left' and 0", sideBad.join(" | "), sideBad.length === 0);
       var veinBad = 0, dV = GD.derive(), fyV = E.faceYBu(cfg, dV.revealBonus), vtV = Math.max(cfg.layout.tileBu * 2, fyV - cfg.vein.aboveFaceBu);
-      var topV = GD.state.depth * cfg.layout.buPerMeter - fyV;
       for (var vv = 0; vv < 300; vv++) {
         GD.pickups = E.newPickupField(cfg);
         var tyV = PK.types[vv % PK.types.length];
         var pV = E.pickupById(GD.pickups, D.spawnPickup(tyV.id, vv % 2 ? { side: "right" } : undefined).id);
-        var syV = pV.yBu - topV, hh = tyV.sizeBu / 2;
+        var syV = pV.yBu, hh = tyV.sizeBu / 2;
         if (pV.xBu + hh > cfg.vein.xBu && syV + hh > vtV && syV - hh < vtV + cfg.vein.hBu) veinBad++;
       }
       check("m5_pickups_clear_the_vein_bracket", "0 of 300 overlap", veinBad, veinBad === 0);
+
+      // --- screen-anchored: digging deeper never moves a live pickup or scrolls it away
+      if (window.GDRender && window.GDRender.pickupCss) {
+        m5Setup(700);
+        GD.pickups = E.newPickupField(cfg);
+        RND.cameraSnap();
+        RND.renderProbe(GD.state, GD.derive(), 2, 1 / 60);
+        var sA = D.spawnPickup("geode", { ttl: 30, clicks: 5 }), pA = E.pickupById(GD.pickups, sA.id);
+        var yA0 = RND.pickupCss(pA).y;
+        D.step(5);
+        GD.state.depth += 40;
+        RND.renderProbe(GD.state, GD.derive(), 30, 1 / 60);
+        var pA1 = E.pickupById(GD.pickups, sA.id);
+        check("m5_pickup_holds_screen_position", "alive, same y after 40 m", pA1 ? Math.round(RND.pickupCss(pA1).y - yA0) : "gone",
+          !!pA1 && Math.abs(RND.pickupCss(pA1).y - yA0) < 0.5);
+      }
 
       // --- rarer and better deeper; scaling capped
       var rb0 = E.pickupBandPow(PK.types[2].rateMulPerBand, 0, cfg), rb3 = E.pickupBandPow(PK.types[2].rateMulPerBand, 3, cfg);
