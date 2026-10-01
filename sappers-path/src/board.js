@@ -48,6 +48,13 @@
 // fx.winFallN pixels the blocks fall instead of popping (the keep coming down), with a shake and a dust burst.
 // Time: V.t is the page's engine time (runners), fxT the effects clock (pops, crumbs, shakes, the lock, labels); nothing
 // here reads a real clock. Per-frame work allocates nothing: runners, routes, pops and particles live in typed arrays.
+// v4 M4, the Gallery. A level may bring its own palette (setLevel's pal: material id -> {c}); every stud, sapper helmet,
+// crumb and bin takes V.pal, and the sprite caches are rebuilt when the palette changes (ids keep their colour-blind
+// marks). A ring level (B.ring) has no camp strip: no idle sappers or tents, and a runner comes in from outside the board
+// at the edge its route starts on (its first ring cell: the top, left or right edge; the bottom edge enters from its
+// space's point across the yard, as in the siege). Carrying home it walks back out the same way: off the board through
+// the top, left or right edge, or into its colour's bin in the yard from the bottom edge. The bins count every block as
+// it lands (the engine's home time) either way, so the yard still fills.
 (function (root, factory) {
   (root.SappersPath = root.SappersPath || {}).board = factory(root.SappersPath.engine);
 })(window, function (E) {
@@ -140,7 +147,7 @@
       focus: { on: false, x: 0, y: 0, r: 1 },
       gob: { on: false, t0: 0, x: 0, y: 0, done: false },
       hooks: { pop: null, deposit: null, gate: null, tower: null, shot: null, hit: null, collapse: null, tap: null, free: null, move: null, reveal: null, link: null, unlock: null },
-      lockKey: -1, lockOpen: true,
+      lockKey: -1, lockOpen: true, pal: null, palKey: "", ring: false,
       // Critics 1 fix: rings (V.hot from the page, the loud mask worked out per board change, each ring's ease) and bins.
       hot: 0, ringsLoud: false, hotVer: -1, hotFor: -1, hotMask: 0, shootM: 0, ringA: new Float32Array(MAXT), ringHitT: new Float64Array(MAXT).fill(-1e12), binT: new Float64Array(E.NMAT).fill(-1e12),
     };
@@ -152,6 +159,7 @@
     for (let i = 0; i < RMAX; i++) { const u = hash(i, 91) / 4294967296, v = hash(i, 37) / 4294967296; V.rJx[i] = (u - 0.5) * 2 * SH.jitter; V.rJy[i] = (v - 0.5) * 2 * SH.jitter; }
     const TYPE = (v) => (v === GRASS ? 0 : v === DIRT ? 1 : v === CAMP ? 2 : 3);
     const COL = C.mats.map((m) => (m ? m.c : FX.dustColor)); COL[0] = FX.dustColor; COL[IRON] = K.gateBar;
+    V.pal = C.mats.map((m) => (m ? m.c : FX.dustColor)); V.palKey = V.pal.join();
     const rnd = () => { V.seed = (Math.imul(V.seed, 1664525) + 1013904223) | 0; return (V.seed >>> 0) / 4294967296; };
 
     // ---- board -> screen (cells) ---------------------------------------------------------------------------------------
@@ -167,7 +175,7 @@
     // faint foot. No mark inside, except in colour-blind mode (V.cb), and always on the iron gate (bars) and gilt keys.
     // seamPx: the seam in device px (mini blocks pass 1).
     function block(m, s, k, seamPx) {
-      const c = mk(s, s), x = c.getContext("2d"), base = k ? toneHex(C.mats[m].c, k) : C.mats[m].c, dark = lum(C.mats[m].c) < 0.3, T = K.stud;
+      const c = mk(s, s), x = c.getContext("2d"), base = k ? toneHex(V.pal[m], k) : V.pal[m], dark = lum(V.pal[m]) < 0.3, T = K.stud;
       const sw = Math.min(s >> 2, seamPx || Math.max(1, Math.round(V.dpr * T.seamCss))), a = sw >> 1, f = s - sw, r = Math.max(0.5, f * T.radius);
       x.fillStyle = toneHex(base, T.seam); x.fillRect(0, 0, s, s);
       rr(x, a, a, f, f, r); x.fillStyle = base; x.fill();
@@ -188,7 +196,7 @@
         x.fillStyle = shade(base, (j & 1 ? 1 : -1) * K.groundSpeck * (type === 3 ? 2.2 : 1)); x.fillRect(Math.round(px * (s - k)), Math.round(py * (s - k)), type === 3 ? k * 3 : k, k); }
       return c;
     }
-    const sapper = (m, ss) => figure(SAP, { h: C.mats[m].c, s: K.sapper.skin, e: K.sapper.eye, b: K.sapper.body }, ss);
+    const sapper = (m, ss) => figure(SAP, { h: V.pal[m], s: K.sapper.skin, e: K.sapper.eye, b: K.sapper.body }, ss);
     // A padlock in a gate's tint: shackle, body, keyhole, ink outline. Transparent around it.
     function padlock(tint, s) {
       const c = mk(s, s), x = c.getContext("2d"), o = Math.max(1, Math.round(s * 0.09)), bw = s * 0.7, bh = s * 0.46, bx = (s - bw) / 2, by = s * 0.46;
@@ -225,8 +233,12 @@
     }
 
     // ---- level and layout -------------------------------------------------------------------------------------------
-    function setLevel(B, S) {
-      V.B = B; V.S = S; V.w = B.w; V.h = B.h; V.n = B.n;
+    // pal (v4 M4, optional): the level's own colours, {id: {c}}; other ids keep config's. A new palette drops the sprite
+    // caches (the page's layout() rebuilds them before the next draw).
+    function setLevel(B, S, pal) {
+      V.B = B; V.S = S; V.w = B.w; V.h = B.h; V.n = B.n; V.ring = !!B.ring;
+      const P = C.mats.map((m, k) => (pal && pal[k] ? pal[k].c : m ? m.c : FX.dustColor)), key = P.join();
+      if (key !== V.palKey) { V.pal = P; V.palKey = key; for (let m = 1; m < E.NMAT; m++) if (m !== IRON) COL[m] = P[m]; V.sprites = null; }
       if (!V.disp || V.disp.length < B.n) { V.disp = new Int8Array(B.n); V.dist = new Int16Array(B.n); V.q = new Int32Array(B.n); V.towerOfCell = new Int8Array(B.n); }
       if (V.idR.length < S.SMAX) V.idR = new Int32Array(S.SMAX);
       V.biteMs = S.T.biteMs; V.knockMs = S.T.knockMs;
@@ -241,7 +253,7 @@
       // Camp cells, and the idle sappers' spots: spread along the camp's middle row.
       V.camp = []; for (let c = 0; c < B.n; c++) if (B.a0[c] === CAMP) V.camp.push(c);
       let cx0 = 1e9, cx1 = -1; for (const c of V.camp) { const x = c % B.w; if (x < cx0) cx0 = x; if (x > cx1) cx1 = x; }
-      const idle = Math.min(K.idle | 0, V.camp.length), iy = Math.min(B.h - 1, B.campRow + 1); V.idleC = [];
+      const idle = V.ring ? 0 : Math.min(K.idle | 0, V.camp.length), iy = Math.min(B.h - 1, B.campRow + 1); V.idleC = [];
       for (let k = 0; k < idle; k++) V.idleC.push(iy * B.w + Math.round(cx0 + ((k + 0.5) * (cx1 - cx0 + 1)) / idle - 0.5));
       if (!V.tone || V.tone.length < B.n) { V.tone = new Int8Array(B.n); V.deco = new Int8Array(B.n); }
       tones(B); scenery(B);
@@ -417,7 +429,7 @@
       }
       if (u <= 0) return;
       const bw = Math.max(2, Math.round(Math.min(sw * K.binFill, K.binMax) * cs * u)), bh = Math.max(2, Math.round(Math.min(sh * K.binFill, K.binMax) * cs * u));
-      const x = Math.round(cx - bw / 2), y = Math.round(cy - bh / 2), col = C.mats[p.m].c;
+      const x = Math.round(cx - bw / 2), y = Math.round(cy - bh / 2), col = V.pal[p.m];
       const o = Math.max(1, Math.round(cs * 0.12)), lab = Math.max(1, Math.round(Math.max(K.binChipPx * V.dpr, Math.round(cs * 0.95)) * u)), wide = bw >= bh;
       g2.fillStyle = K.binInk; g2.fillRect(x - o, y - o, bw + 2 * o, bh + 2 * o);
       g2.fillStyle = col; g2.fillRect(x, y, bw, bh);
@@ -474,6 +486,10 @@
         while (V.dist[e] > 0 && guard-- >= 0) { let nx = -1; for (let k = 0; k < 4; k++) { const v = nbOf(e, k); if (v >= 0 && V.dist[v] === V.dist[e] - 1) { nx = v; break; } } if (nx < 0) break; e = nx; put(e % w + 0.5, ((e / w) | 0) + 0.5); }
         for (let a = base, b = np - 1; a < b; a++, b--) { const ax = pts[a * 2], ay = pts[a * 2 + 1]; pts[a * 2] = pts[b * 2]; pts[a * 2 + 1] = pts[b * 2 + 1]; pts[b * 2] = ax; pts[b * 2 + 1] = ay; }
         put((u % w + 0.5 + (c % w) + 0.5) / 2, (((u / w) | 0) + 0.5 + ((c / w) | 0) + 0.5) / 2);
+        // v4 M4, a ring level: in from outside the edge its first ring cell is on (top, left, right); the bottom edge
+        // keeps the space's point below the yard.
+        if (V.ring) { const e0 = ((pts[2] | 0) + ((pts[3] | 0) * w)), ex = e0 % w, ey = (e0 / w) | 0;
+          if (ey === 0) { pts[0] = ex + 0.5; pts[1] = -0.7; } else if (ex === 0) { pts[0] = -0.7; pts[1] = ey + 0.5; } else if (ex === w - 1) { pts[0] = w + 0.7; pts[1] = ey + 0.5; } }
       } else put(c % w + 0.5, ((c / w) | 0) + 1.2); // no ground route (a resync mid-flight): straight up to it
       cum[0] = 0; for (let k = 1; k < np; k++) cum[k] = cum[k - 1] + Math.hypot(pts[k * 2] - pts[k * 2 - 2], pts[k * 2 + 1] - pts[k * 2 - 1]);
       V.rNp[i] = np; V.rL[i] = cum[np - 1];
@@ -487,7 +503,9 @@
       V.rT0[i] = S.q0[id]; V.rT1[i] = S.q1[id]; V.rT2[i] = S.q2[id]; V.rShot[i] = 0; V.rDie[i] = -1; V.live++;
       route(i, s, c);
       const p = k === 1 ? V.piles[claim(V.rM[i])] : null;
-      if (k === 1) { V.rBx[i] = p ? p.x : V.w / 2; V.rBy[i] = p ? p.y : V.h + V.Y / 2; return i; }
+      if (k === 1) { V.rBx[i] = p ? p.x : V.w / 2; V.rBy[i] = p ? p.y : V.h + V.Y / 2;
+        if (V.ring && V.rPts[i][1] < V.h) { V.rBx[i] = V.rPts[i][0]; V.rBy[i] = V.rPts[i][1]; } // v4 M4: out the edge it came in by
+        return i; }
       // A hit: it stops where its route first enters a standing ring (or at the pixel's face); the arrow meets it there.
       const pts = V.rPts[i], cum = V.rCum[i], np = V.rNp[i], w = V.w; let dH = cum[np - 1], tw = lowBit(coverNow(c));
       for (let q = 1; q < np; q++) { const px = Math.floor(pts[q * 2]), py = Math.floor(pts[q * 2 + 1]); if (px < 0 || py < 0 || px >= w || py >= V.h) continue; const m = coverNow(py * w + px); if (m) { dH = Math.max(0, cum[q] - 0.45); tw = lowBit(m); break; } }
@@ -807,6 +825,9 @@
       for (let i = 0; i < RMAX; i++) { if (!V.rOn[i] || V.rK[i] === 1) continue; live++; kind = V.rK[i]; if (t >= V.rT1[i]) struck++; else if (t >= V.rT1[i] - V.rAim[i]) arrows++; }
       return { live, arrows, struck, kind: kind === 3 ? 2 : kind === 2 ? 1 : 0, label: V.fxT - V.label.t < SH.labelMs };
     }
+    // v4 M4: where live runners came in (selfTest and the harness on ring levels): counts by edge, [top, left, right,
+    // bottom (the yard)], from each route's first point.
+    function sides() { const o = [0, 0, 0, 0]; for (let i = 0; i < RMAX; i++) { if (!V.rOn[i]) continue; const x = V.rPts[i][0], y = V.rPts[i][1]; o[y < 0 ? 0 : x < 0 ? 1 : x > V.w ? 2 : 3]++; } return o; }
     // Live runners by space and kind (selfTest and the harness).
     function runners() {
       const bySpace = [0, 0, 0, 0, 0, 0, 0, 0]; let eat = 0, carrying = 0, hit = 0;
@@ -818,7 +839,7 @@
     function studInfo() {
       const S = V.sprites, pc = mk(1, 1), px = pc.getContext("2d", { willReadFrequently: true }), sum = [0], ink = [0];
       for (let m = 1; m < E.NMAT; m++) {
-        const c = S.blk[m], base = C.mats[m].c, mc = m === IRON ? K.gateBar : m === GILT ? K.keyInk : lum(base) < 0.3 ? shade(base, K.markLight) : shade(base, K.mark);
+        const c = S.blk[m], base = V.pal[m], mc = m === IRON ? K.gateBar : m === GILT ? K.keyInk : lum(base) < 0.3 ? shade(base, K.markLight) : shade(base, K.mark);
         const rgb = mc[0] === "#" ? [parseInt(mc.slice(1, 3), 16), parseInt(mc.slice(3, 5), 16), parseInt(mc.slice(5, 7), 16)] : mc.slice(4, -1).split(",").map(Number);
         pc.width = c.width; pc.height = c.height; px.drawImage(c, 0, 0);
         const d = px.getImageData(0, 0, pc.width, pc.height).data; let h = 0, k = 0;
@@ -839,7 +860,7 @@
     // A material's mark alone (transparent around it, drawn in ink): the queue tiles' glyph in colour-blind mode.
     function glyph(m, px, ink) { const c = mk(px, px); mark(c.getContext("2d"), m, px, ink, K); return c; }
 
-    Object.assign(V, { setLevel, reset, layout, fitCs, hotNow, sync, setSlots, update, goblin, draw, checkSprites, buildSprites, paintLayer, shake, cssAt, hitInfo, fxInfo, runners, setCb, glyph, studInfo,
+    Object.assign(V, { setLevel, reset, layout, fitCs, hotNow, sync, setSlots, update, goblin, draw, checkSprites, buildSprites, paintLayer, shake, cssAt, hitInfo, fxInfo, runners, sides, setCb, glyph, studInfo,
       man: (m, px) => sapper(m, px) });
     return V;
   }

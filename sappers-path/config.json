@@ -283,5 +283,13 @@
     "lockJamLevel": {"name": "Lock jam check", "w": 9, "h": 5, "grid": [".........", ".aaaaaaa.", ".abcdena.", ".aaaaaaa.", "....#...."],
       "cols": [[[2, 1], [1, 16]], [[3, 1]], [[4, 1]], [[5, 1]], [[14, 1]]], "lock": {"key": [6, 2]}},
     "debugOrder": ["v4-mystery", "v4-linked", "v4-locked", "v4-all"]
+  },
+  "gallery": {
+    "note": "v4 M4, the Gallery (levels/gallery.json). openAt: the siege level whose win (any difficulty) opens it. Text: title, btn, count ({n} won of {t}), lockedHint (on the locked buttons), winTitle, winLine ({title}, {diff}), nextBtn. credits: the plain-text credits line under the grid (no links; the full list is LICENSES.md). thumbPx: canvas px a cell in the grid's thumbnails; dim: the dark and light ends a picture's lightness is squeezed into until it is won.",
+    "openAt": "e1-25",
+    "title": "The Gallery", "btn": "Gallery", "count": "{n}/{t} cleared", "lockedHint": "Win level 25 to open",
+    "winTitle": "Picture razed!", "winLine": "{title} cleared on {diff}.", "nextBtn": "Next picture",
+    "credits": "Pictures: Twemoji by Twitter, Inc and other contributors (CC BY 4.0); Noto Emoji by Google (Apache 2.0); paintings and prints from The Metropolitan Museum of Art Open Access (public domain); the rest are Click it! Studios originals.",
+    "thumbPx": 3, "dim": ["#231e2a", "#6c6475"]
   }
 }

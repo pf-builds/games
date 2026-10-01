@@ -23,6 +23,10 @@
 // v4 M3 (the Siege to 100): the cell-size check covers all 100 boards (the smallest per era, 8 CSS px or more at every
 // viewport, a screen of the smallest), the frame check adds level 100 (the boss), output to tools/shots-v4-m3/harness/.
 // The M3 screens come from tools/shots-v4-m3.mjs.
+// v4 M4 (the Gallery): the map's Gallery button is padlocked until level 25 is won; once it is (SP.unlockGallery), a real
+// tap opens the Gallery, a real tap on a painting's tile plays it (a real card tap, sappers in from the board's edges),
+// the top bar's button goes back to the grid; every Gallery board keeps 8 CSS px a cell or more (the smallest reported,
+// with a screen). Output to tools/shots-v4-m4/harness/.
 // v4 Critics 1 fix: the coach check asks that its line fits its box (one line or two); the jam sheet shows a colour chip
 // per jammed squad, names the crews in its aria-label and never slices the holding line. The fix pass's screens and
 // measurements come from tools/shots-v4-fix1.mjs; selfTest carries the per-viewport checks (coach clear of the board,
@@ -46,7 +50,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const i = process.argv.indexOf("--" + k); return i > 0 ? process.argv[i + 1] : d; };
 const URL_ = arg("url", "http://127.0.0.1:8491/sappers-path/");
 const ORIGIN = new URL(URL_).origin;
-const OUT = resolve(arg("out", resolve(here, "shots-v4-m3", "harness")));
+const OUT = resolve(arg("out", resolve(here, "shots-v4-m4", "harness")));
 // v4 M3: every one of the 100 boards keeps MIN_CELL CSS px a cell at every viewport (the smallest per era is reported;
 // the boss at 100 is the smallest, exactly 8 in the 400x600 iframe).
 const WALL_MS = 480000, MIN_CELL = 8;
@@ -289,6 +293,33 @@ async function run() {
         if (id === "v4-locked") ok(s.open === s.cap - 1 && (await ev(() => { const q = document.querySelectorAll(".slot")[SP.state().cap - 1]; return q.classList.contains("locked") && !q.hidden; })), tag + " the locked space shows its padlock");
       }
 
+      // v4 M4, the Gallery: locked on the map until level 25 is won; then a real tap opens it and a real tap on a painting
+      // plays it; every Gallery board's cell size.
+      {
+        await ev(() => { SP.screen("map"); document.getElementById("map").scrollTop = 0; });
+        ok(await ev(() => document.getElementById("map-gallery").classList.contains("locked")), tag + " the map's Gallery button is padlocked before level 25 is won");
+        await L("#map-gallery").click({ force: true, timeout: 5000 }); s = await S(); ok(s.screen === "map", tag + " a tap on the locked (aria-disabled) Gallery button stays on the map");
+        ok(await ev(() => SP.unlockGallery()), tag + " level 25 won: the Gallery opens");
+        await ev(() => SP.screen("map")); await tap("#map-gallery"); s = await S();
+        const nt = await ev(() => document.querySelectorAll("#gal-grid .gal-tile").length);
+        ok(s.screen === "gallery" && nt === (await ev(() => SP.gallery().length)) && (await noScroll()), tag + " a real tap opens the Gallery: " + nt + " pictures, no page scrollbars");
+        if (vp.shots === "375" || vp.shots === "1280") await shot("gallery");
+        const gi = await ev(() => SP.gallery().findIndex((id) => /^g-met-/.test(id)));
+        await ev((i) => document.querySelectorAll("#gal-grid .gal-tile")[i].scrollIntoView({ block: "center" }), gi);
+        await tap(`#gal-grid .gal-tile:nth-child(${gi + 1})`); s = await S();
+        ok(s.screen === "play" && /^g-met-/.test(s.id) && s.cs / (vp.dpr || 1) >= MIN_CELL && (await noScroll()), tag + " a real tap on a painting's tile plays it (" + s.id + ", " + (s.cs / (vp.dpr || 1)).toFixed(2) + " CSS px a cell)");
+        const gc = await ev(() => SP.state().fronts.findIndex((f) => f && SP.reachable(f.mat) > 0)); await tap(`.card[data-col="${gc}"]`);
+        await ev(() => SP.tick(700)); const sd = await ev(() => SP.sides()); s = await S();
+        ok(s.plays === 1 && sd.filter((k) => k > 0).length >= 2, tag + " a real card tap sends a squad in from the board's edges (top, left, right, yard: " + sd.join(", ") + ")");
+        await shot("gallery-level-mid");
+        await tap("#btn-map"); s = await S(); ok(s.screen === "gallery", tag + " the top bar's button goes back to the Gallery");
+        const gcells = await ev(() => { let w = null; for (const id of SP.gallery()) { const st = SP.load(id, "normal"), px = +(st.cs / devicePixelRatio).toFixed(2); if (!w || px < w.px) w = { id, px, turned: document.body.classList.contains("turned") }; } return w; });
+        R.galleryMinCell = gcells;
+        ok(gcells.px >= MIN_CELL, tag + " every Gallery board keeps " + MIN_CELL + " CSS px a cell or more (smallest " + JSON.stringify(gcells) + ")");
+        await ev((id) => SP.load(id, "normal"), gcells.id); await page.waitForTimeout(300); await shot("gallery-smallest-cell");
+        ok(await noScroll(), tag + " the smallest Gallery board: no scrollbars");
+      }
+
       // Screens for the critics (portrait phone): the gate teach, an archer hit mid-animation, the win's collapse and goblin.
       if (vp.shots === "375") {
         await ev(() => { SP.load(26, "normal"); SP.play(0); SP.tick(3500); });
@@ -341,7 +372,7 @@ async function run() {
     page.on("console", (m) => { if (m.type() === "error" || m.type() === "warning") report.console.push("hidden " + m.type() + ": " + m.text()); });
     page.on("pageerror", (e) => report.console.push("hidden pageerror: " + e.message));
     await page.goto(URL_ + "?debug=1", { waitUntil: "load" });
-    await page.waitForFunction(() => window.SP, null, { timeout: 15000 });
+    await page.waitForFunction(() => window.SP, null, { timeout: 15000, polling: 100 }); // rAF is held here, so poll by time (M4: boot awaits one more fetch)
     const st = await page.evaluate(() => SP.selfTest());
     const won = await page.evaluate(() => { SP.load(10, "hard"); for (const c of SP.winOrder()) { SP.play(+c); for (let i = 0; i < 6000 && SP.state().busy; i++) SP.tick(16); } return SP.tick(9000); });
     const spr = await page.evaluate(() => SP.sprites());
@@ -356,7 +387,7 @@ async function run() {
 
 run().then(() => {
   writeFileSync(resolve(OUT, "harness-report.json"), JSON.stringify(report, null, 1));
-  const brief = {}; for (const [k, R] of Object.entries(report.runs)) brief[k] = { selfTest: R.selfTest && R.selfTest.pass + " pass, " + R.selfTest.fail.length + " fail", titleReadyMs: R.titleReadyMs, loadToGameplayMs: R.loadToGameplayMs, clicks: R.clicksToGameplay, cells: R.minCellCss, frames: R.frames, draw: R.midShow && R.midShow.perf, shots: R.shots, pause: R.pause, requests: R.requests, payloadBytes: R.payloadBytes };
+  const brief = {}; for (const [k, R] of Object.entries(report.runs)) brief[k] = { selfTest: R.selfTest && R.selfTest.pass + " pass, " + R.selfTest.fail.length + " fail", titleReadyMs: R.titleReadyMs, loadToGameplayMs: R.loadToGameplayMs, clicks: R.clicksToGameplay, cells: R.minCellCss, galleryCell: R.galleryMinCell, frames: R.frames, draw: R.midShow && R.midShow.perf, shots: R.shots, pause: R.pause, requests: R.requests, payloadBytes: R.payloadBytes };
   console.log(JSON.stringify({ runs: brief, hidden: report.hidden, console: report.console }, null, 1));
   console.log(report.fails.length ? "HARNESS: " + report.fails.length + " failure(s)" : "HARNESS: all passed");
   clearTimeout(wall); process.exit(report.fails.length ? 1 : 0);

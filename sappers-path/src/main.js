@@ -49,13 +49,20 @@
 // Critics 1 fix 2: rods run between rivets on the tiles' facing rims, never over a face; the rows behind sit on darker
 // tray bands (layout.fade.band); the desktop tray ends at the queue; in the top bar the coach sits beside the level's
 // number, one line (a step's short text).
+// v4 M4, the Gallery (levels/gallery.json, config.gallery): picture levels on ring boards with their own palettes. The
+// Gallery screen (a grid of the pictures: dimmed until won, then in colour with its title; the count; a plain-text
+// credits line, no links) opens from the title and the map once siege level gallery.openAt is won; before that both
+// buttons are locked and say so. Every picture is open once the Gallery is; a win goes in the save's gal (per
+// difficulty, like the siege). A picture level uses its palette everywhere a colour shows (app.mats: tiles, spaces,
+// chips, the board, the sappers' helmets) and its colour names wherever a crew name would be read (aria-labels, the jam
+// sheet's label). The win sheet offers the next picture not yet won; the top bar's map button goes back to the Gallery.
 (function () {
   "use strict";
   const NS = window.SappersPath, E = NS.engine, Save = NS.save, Board = NS.board, Art = NS.art, Audio = NS.audio;
   const V_ = (document.currentScript && new URL(document.currentScript.src).searchParams.get("v")) || "1";
   const DEBUG = new URLSearchParams(location.search).get("debug") === "1";
   const DIFFS = Save.DIFFS, DNAME = { easy: "Easy", normal: "Normal", hard: "Hard" }, $ = (id) => document.getElementById(id);
-  const app = { cfg: null, levels: [], byId: new Map(), order: [], eras: [], save: null, entry: null, B: null, S: null, V: null, audio: null, sheets: null,
+  const app = { cfg: null, levels: [], byId: new Map(), order: [], eras: [], save: null, entry: null, B: null, S: null, V: null, audio: null, sheets: null, gal: [], mats: null, palKey: "", galTiles: [],
     clock: 0, lastT: 0, screen: "title", diff: "normal", speed: 1, cb: false, ending: null, endAt: -1, panel: null, panelAt: 0, testing: false,
     toastT: -1e12, popK: 0, cards: [], nexts: [], slots: [], wide: false, glURL: [], manURL: [], nodes: [], lastW: 0, lastH: 0,
     coach: null, used: 0, cues: {}, paused: false, pauses: 0, focusEl: null, pt: { x: 0, y: 0 }, T: null, tbuf: null, labFit: new Map(), verdict: [],
@@ -74,8 +81,9 @@
       app.cfg = cfg; indexLevels(lv);
     } catch (e) { $("load-msg").textContent = "Couldn't load the siege. Reload to try again."; return; }
     if (DEBUG) { try { indexDebug(await getJSON("levels/debug-v4.json?v=" + V_)); } catch (e) { /* no debug row */ } }
+    try { indexGallery(await getJSON("levels/gallery.json?v=" + V_)); } catch (e) { /* no Gallery: its buttons stay hidden */ }
     if (!app.levels.length) { $("load-msg").textContent = "No levels found."; return; }
-    app.save = Save.open(storage(), app.cfg.save.key, app.order);
+    app.save = Save.open(storage(), app.cfg.save.key, app.order, app.gal.map((e) => e.id)); app.mats = app.cfg.v3.mats;
     app.diff = app.save.data.settings.diff;
     app.sheets = Art.sources(app.cfg.art); fades();
     app.V = Board.create($("board"), app.cfg, app.sheets);
@@ -89,7 +97,7 @@
     try { app.V.calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { /* motion stays on */ }
     app.audio = Audio.create(app.cfg.audio);
     setMuted(app.save.data.settings.muted, false); setSpeed(app.save.data.settings.speed, false); setCb(app.save.data.settings.cb, false); setDiff(app.diff, false);
-    paintWall(); chips(); buildTray(); buildLine(); buildMap(); wire();
+    paintWall(); chips(); buildTray(); buildLine(); buildMap(); buildGallery(); wire();
     showScreen("title"); layout();
     if (DEBUG) window.SP = SP;
     requestAnimationFrame(frame);
@@ -114,9 +122,18 @@
       app.debug.push(entry); app.byId.set(id, entry);
     }
   }
+  // v4 M4 Gallery levels: by id, in the Gallery's order; never in the siege's play order.
+  function indexGallery(lv) {
+    for (const L of lv && Array.isArray(lv.levels) ? lv.levels : []) {
+      try { E.compile(L); } catch (e) { continue; }
+      const id = String(L.id); if (app.byId.has(id)) continue;
+      const entry = { L, id, n: L.n | 0, era: 0, idx: -1, node: null, gallery: true };
+      app.gal.push(entry); app.byId.set(id, entry);
+    }
+  }
   function storage() { try { const s = window.localStorage; s.getItem("sappers-path.probe"); return s; } catch (e) { return Save.memoryStore(); } }
   const rulesOf = (d) => E.rulesOf(app.cfg.v3, d);
-  const mat = (m) => app.cfg.v3.mats[m] || { n: "?", c: "#888888", crew: "?" };
+  const mat = (m) => (app.mats || app.cfg.v3.mats)[m] || { n: "?", c: "#888888", crew: "?" };
   const writeSave = () => { if (!app.testing) app.save.write(); };
 
   // The dark brick texture behind the chrome (art.js), upscaled once to whole device pixels.
@@ -131,11 +148,14 @@
   // Material glyphs (the queue tiles' mark in colour-blind mode, used as a CSS mask so it takes the tile's text colour) and
   // sapper figures (holding line) as image URLs, drawn by board.js.
   function chips() {
-    const dpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1)), s = Math.round(app.cfg.layout.glyphPx * dpr), ms = Math.round(app.cfg.layout.manPx * dpr);
-    for (let m = 1; m < E.NMAT; m++) {
-      try { app.glURL[m] = "url(" + app.V.glyph(m, s, "#ffffff").toDataURL() + ")"; } catch (e) { app.glURL[m] = "none"; }
-      try { const f = app.V.man(m, ms), c = document.createElement("canvas"); c.width = ms; c.height = ms; c.getContext("2d").drawImage(f, 0, 0, ms, ms, 0, 0, ms, ms); app.manURL[m] = "url(" + c.toDataURL() + ")"; } catch (e) { app.manURL[m] = "none"; }
-    }
+    const dpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1)), s = Math.round(app.cfg.layout.glyphPx * dpr);
+    for (let m = 1; m < E.NMAT; m++) { try { app.glURL[m] = "url(" + app.V.glyph(m, s, "#ffffff").toDataURL() + ")"; } catch (e) { app.glURL[m] = "none"; } }
+    men();
+  }
+  // The sappers' figures in the holding line, helmets in the board's current colours (v4 M4: a Gallery level's palette).
+  function men() {
+    const ms = Math.round(app.cfg.layout.manPx * Math.min(3, Math.max(1, window.devicePixelRatio || 1)));
+    for (let m = 1; m < E.NMAT; m++) { try { const f = app.V.man(m, ms), c = document.createElement("canvas"); c.width = ms; c.height = ms; c.getContext("2d").drawImage(f, 0, 0, ms, ms, 0, 0, ms, ms); app.manURL[m] = "url(" + c.toDataURL() + ")"; } catch (e) { app.manURL[m] = "none"; } }
   }
 
   // ---- tray, holding line, map (built once, updated in place) ------------------------------------------------------
@@ -174,7 +194,16 @@
   function fades() {
     const F = app.cfg.layout.fade, rs = document.documentElement.style; rs.setProperty("--tray", F.tray);
     F.band.forEach((t, d) => { if (d) rs.setProperty("--band" + d, mixHex(F.tray, "#000000", t)); }); // the rows' tray bands (fix 2)
-    app.fadeC = F.t.map((t) => { const row = [mixHex(app.cfg.layout.mystery.c, F.tray, t)]; for (let m = 1; m < E.NMAT; m++) row.push(mixHex(mat(m).c, F.tray, t)); return row; });
+    fadeRows();
+  }
+  function fadeRows() { const F = app.cfg.layout.fade; app.fadeC = F.t.map((t) => { const row = [mixHex(app.cfg.layout.mystery.c, F.tray, t)]; for (let m = 1; m < E.NMAT; m++) row.push(mixHex(mat(m).c, F.tray, t)); return row; }); }
+  // v4 M4: the level's colours. A Gallery level's pal overrides config's colours by id and names each one (its crew, for
+  // aria-labels and the jam sheet, is the colour's name); the faded rows and the sappers' figures follow. Cached by palette.
+  function usePalette(e) {
+    const P = e && e.L.pal, base = app.cfg.v3.mats, key = P ? JSON.stringify(P) : "";
+    if (key === app.palKey) return;
+    app.palKey = key; app.mats = !P ? base : base.map((m, k) => (P[k] ? { n: P[k].n, c: P[k].c, crew: P[k].n.charAt(0).toUpperCase() + P[k].n.slice(1) } : m));
+    fadeRows(); men();
   }
   // Fit a label to its box: the CSS size, stepped down in one measure (cached per text until the next resize).
   function fitText(el, key, min) {
@@ -323,7 +352,8 @@
   }
   function renderTop() {
     const e = app.entry; if (!e) return;
-    $("lvl-num").textContent = e.debug ? app.cfg.layout.debugNum : e.n; $("lvl-name").textContent = e.L.name || (app.eras[e.era - 1] ? app.eras[e.era - 1].name : "Era " + e.era);
+    $("lvl-num").textContent = e.debug ? app.cfg.layout.debugNum : e.n; $("lvl-name").textContent = e.gallery ? e.L.title : e.L.name || (app.eras[e.era - 1] ? app.eras[e.era - 1].name : "Era " + e.era);
+    $("btn-map").setAttribute("aria-label", e.gallery ? app.cfg.gallery.title : "Era map");
     $("diff-chip").textContent = DNAME[app.diff];
     app.labFit.delete("name"); fitText($("lvl-name"), "name", app.cfg.layout.nameMinPx); // the room beside the number changes with its digits
   }
@@ -364,10 +394,61 @@
     const ne = app.byId.get(next); $("map-play").textContent = ne ? "Play level " + ne.n : "Play";
   }
 
+  // ---- the Gallery (v4 M4) -------------------------------------------------------------------------------------------
+  // The Gallery is open once siege level gallery.openAt is won (any difficulty). Its buttons (title, map) say so while
+  // locked; the screen is a grid of every picture: dimmed (its cells' lightness squeezed into gallery.dim, no colour) until
+  // it is won, then in its colours with its title and its E/N/H medals. Thumbnails are drawn when the grid renders.
+  const galOpen = () => !!(app.cfg.gallery && app.save.data.done[app.cfg.gallery.openAt]);
+  const galWon = () => app.gal.filter((e) => app.save.data.gal[e.id]).length;
+  function buildGallery() {
+    const G = app.cfg.gallery, host = $("gal-grid"); if (!G || !host) return;
+    $("gal-title").textContent = G.title; $("gal-credits").textContent = G.credits;
+    for (const b of [$("btn-gallery"), $("map-gallery")]) { b.hidden = !app.gal.length; b.querySelector(".gt").textContent = G.btn; b.addEventListener("click", () => { if (galOpen()) showScreen("gallery"); else lockedTap(b); }); }
+    for (const e of app.gal) {
+      const b = document.createElement("button"); b.className = "gal-tile"; b.innerHTML = '<canvas class="pix" aria-hidden="true"></canvas><span class="gn"></span><i class="gm"></i>';
+      b.addEventListener("click", () => { if (galOpen()) startLevel(e.id); });
+      e.node = b; host.append(b);
+    }
+  }
+  // A locked Gallery button shakes (its hint is already on it).
+  function lockedTap(b) { if (!app.V.calm && b.animate) b.animate(app.cfg.show.blockedShake.map((x) => ({ transform: "translateX(" + x + "px)" })), { duration: app.cfg.show.blockedShakeMs }); cue("blocked"); }
+  // The title's and the map's Gallery buttons: locked with the hint, or open with the count.
+  function renderGalButtons() {
+    const G = app.cfg.gallery; if (!G) return; const open = galOpen(), sub = open ? G.count.replace("{n}", galWon()).replace("{t}", app.gal.length) : G.lockedHint;
+    for (const b of [$("btn-gallery"), $("map-gallery")]) { b.classList.toggle("locked", !open); b.setAttribute("aria-disabled", open ? "false" : "true"); b.querySelector(".gs").textContent = sub; b.setAttribute("aria-label", G.btn + ": " + sub); }
+  }
+  function renderGallery() {
+    const G = app.cfg.gallery, d = app.save.data; if (!G) return;
+    $("gal-count").textContent = G.count.replace("{n}", galWon()).replace("{t}", app.gal.length);
+    for (const e of app.gal) {
+      const m = d.gal[e.id] | 0, b = e.node, won = !!m, key = won ? "c" : "d";
+      b.classList.toggle("done", won); b.querySelector(".gn").textContent = won ? e.L.title : e.n;
+      b.querySelector(".gm").textContent = (m & 1 ? "E" : "") + (m & 2 ? "N" : "") + (m & 4 ? "H" : "");
+      b.setAttribute("aria-label", won ? e.L.title + ", cleared" : "Picture " + e.n + ", not cleared yet");
+      if (b.dataset.drawn !== key) { thumb(b.querySelector("canvas"), e.L, won); b.dataset.drawn = key; }
+    }
+  }
+  // A picture's thumbnail: gallery.thumbPx canvas px a cell, the ring left out; dimmed (lightness only) until won.
+  function thumb(c, L, colour) {
+    const k = app.cfg.gallery.thumbPx, w = L.w - 2, h = L.h - 2, [lo, hi] = app.cfg.gallery.dim.map((x) => parseInt(x.slice(1), 16));
+    c.width = w * k; c.height = h * k; const g = c.getContext("2d");
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const id = E.matOf(L.grid[y + 1][x + 1]), hex = L.pal[id] ? L.pal[id].c : "#888888";
+      if (colour) g.fillStyle = hex;
+      else { const v = parseInt(hex.slice(1), 16), t = (0.299 * ((v >> 16) & 255) + 0.587 * ((v >> 8) & 255) + 0.114 * (v & 255)) / 255, ch = (s) => Math.round(((lo >> s) & 255) * (1 - t) + ((hi >> s) & 255) * t); g.fillStyle = "rgb(" + ch(16) + "," + ch(8) + "," + ch(0) + ")"; }
+      g.fillRect(x * k, y * k, k, k);
+    }
+  }
+  // The next Gallery picture to offer after e: the first not yet won after it (wrapping round), else the one after it.
+  function nextPicture(e) { const i = app.gal.indexOf(e), n = app.gal.length; for (let k = 1; k <= n; k++) { const x = app.gal[(i + k) % n]; if (!app.save.data.gal[x.id]) return x; } return app.gal[(i + 1) % n]; }
+
   // ---- screens and levels --------------------------------------------------------------------------------------------
   function showScreen(name) {
+    if (name === "gallery" && !galOpen()) name = "title";
     app.screen = name;
-    $("title").hidden = name !== "title"; $("map").hidden = name !== "map";
+    $("title").hidden = name !== "title"; $("map").hidden = name !== "map"; $("gallery").hidden = name !== "gallery";
+    if (name === "title" || name === "map") renderGalButtons();
+    if (name === "gallery") renderGallery();
     if (name === "map") { renderMap(); const ne = app.byId.get(Save.next(app.save.data, app.order)); if (ne && ne.node && ne.node.scrollIntoView) ne.node.scrollIntoView({ block: "center" }); }
     if (name === "title") paintTitle();
     if (name === "play") fitBoard();
@@ -378,11 +459,12 @@
     const e = app.byId.get(id) || app.levels[0];
     if (diff && DIFFS.indexOf(diff) >= 0) app.diff = diff;
     app.entry = e; app.B = E.compile(e.L); app.S = E.sim(app.B, rulesOf(app.diff)); app.S.logOn = true; app.et = 0;
+    app.V.setLevel(app.B, app.S, e.L.pal); usePalette(e); // v4 M4: the level's colours before anything is painted
     app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.popK = 0; app.used = 0; app.march = false; app.blockT = -1e12; $("panel").hidden = true; hideToast();
     app.lockN = app.S.locked; app.unlockT = -1e12; app.flip.fill(false); app.reveals = 0; app.pairsOut = 0; landTiles();
     app.coached = !!coachSteps(e); // the coach's band is kept for the whole level, so the board never jumps when it goes
-    app.V.setLevel(app.B, app.S); placeSlots();
-    if (!e.debug) { app.save.data.last = e.id; writeSave(); }
+    placeSlots();
+    if (!e.debug && !e.gallery) { app.save.data.last = e.id; writeSave(); }
     renderAll(); fitLine(); showScreen("play"); coachStart(); // the line and tray take their size before the board is fitted to what is left
     return e;
   }
@@ -441,6 +523,7 @@
     app.ending = { won: S.status === E.WON, reason: S.reason, m: S.failMat, crews: [], why: S.status === E.FAILED && S.reason === "jam" ? S.jamWhy : 0 }; app.endT = app.clock;
     if (S.reason === "jam") { app.ending.squads = []; for (const s of S.order(app.ord)) { if (!S.stuck(s)) continue; app.ending.squads.push([S.spM[s], S.spW[s]]); const c = mat(S.spM[s]).crew; if (app.ending.crews.indexOf(c) < 0) app.ending.crews.push(c); } cue("jam"); }
     if (app.ending.won && app.entry.debug) app.ending.medal = false;
+    else if (app.ending.won && app.entry.gallery) { const was = app.save.data.gal[app.entry.id] | 0; app.ending.first = Save.record(app.save.data, app.entry.id, app.diff, "gal"); app.ending.medal = !(was & (1 << DIFFS.indexOf(app.diff))); writeSave(); }
     else if (app.ending.won) { const was = app.save.data.done[app.entry.id] | 0, first = Save.record(app.save.data, app.entry.id, app.diff); app.ending.first = first; app.ending.medal = !(was & (1 << DIFFS.indexOf(app.diff))); app.save.data.last = Save.next(app.save.data, app.order); writeSave(); }
     judge(); renderTray(); renderLine();
   }
@@ -483,13 +566,13 @@
   function showPanel() {
     const e = app.ending; if (!e) return;
     app.panel = e.won ? "win" : "fail"; app.panelAt = app.clock; renderCoach();
-    const last = app.entry.debug || app.entry.idx === app.levels.length - 1;
-    $("p-title").textContent = e.won ? "Fort razed!" : "Assault failed";
-    if (e.won) { $("p-line").textContent = "The goblin king flees. " + (app.entry.debug ? app.entry.L.name : "Level " + app.entry.n) + " won on " + DNAME[app.diff] + "."; $("p-line").removeAttribute("aria-label"); } else sheetLine(e);
-    $("p-primary").textContent = e.won ? (last ? "Era map" : "Next level") : "Retry";
-    $("p-secondary").textContent = e.won ? "Retry" : "Era map";
+    const last = app.entry.debug || app.entry.idx === app.levels.length - 1, G = app.cfg.gallery, gal = !!app.entry.gallery;
+    $("p-title").textContent = e.won ? (gal ? G.winTitle : "Fort razed!") : "Assault failed";
+    if (e.won) { $("p-line").textContent = gal ? G.winLine.replace("{title}", app.entry.L.title).replace("{diff}", DNAME[app.diff]) : "The goblin king flees. " + (app.entry.debug ? app.entry.L.name : "Level " + app.entry.n) + " won on " + DNAME[app.diff] + "."; $("p-line").removeAttribute("aria-label"); } else sheetLine(e);
+    $("p-primary").textContent = e.won ? (gal ? G.nextBtn : last ? "Era map" : "Next level") : "Retry";
+    $("p-secondary").textContent = e.won ? "Retry" : gal ? G.title : "Era map";
     // The win beat: the level's difficulty medals, this one stamped in if it's new.
-    const mask = app.save.data.done[app.entry.id] | 0, md = $("p-medals"); md.hidden = !e.won;
+    const mask = (gal ? app.save.data.gal : app.save.data.done)[app.entry.id] | 0, md = $("p-medals"); md.hidden = !e.won;
     Array.from(md.children).forEach((el, k) => { el.className = "medal" + (mask & (1 << k) ? " got" : "") + (e.won && e.medal && DIFFS[k] === app.diff ? " new" : ""); });
     $("panel").hidden = false; placeSheet();
     cue(e.won ? "chime" : "bad"); if (e.won && e.medal) cue("star", 2);
@@ -497,8 +580,8 @@
   }
   // A panel button ignores taps for show.panelGuardMs after the panel appears, so a thumb still tapping cards can't hit it.
   const panelLive = () => app.clock - app.panelAt >= app.cfg.show.panelGuardMs || app.testing;
-  function panelPrimary() { if (!app.panel || !panelLive()) return; if (app.panel === "win") { if (app.entry.debug || app.entry.idx === app.levels.length - 1) showScreen("map"); else playNext(); } else retry(); }
-  function panelSecondary() { if (!app.panel || !panelLive()) return; if (app.panel === "win") retry(); else showScreen("map"); }
+  function panelPrimary() { if (!app.panel || !panelLive()) return; if (app.panel === "win") { if (app.entry.gallery) startLevel(nextPicture(app.entry).id); else if (app.entry.debug || app.entry.idx === app.levels.length - 1) showScreen("map"); else playNext(); } else retry(); }
+  function panelSecondary() { if (!app.panel || !panelLive()) return; if (app.panel === "win") retry(); else showScreen(app.entry.gallery ? "gallery" : "map"); }
 
   // ---- teaching coach (config.teach) ---------------------------------------------------------------------------------
   // One line over the board and a bouncing arrow on the thing to tap: a front card, a card behind one, the holding line,
@@ -669,7 +752,8 @@
     window.addEventListener("focus", () => { if (app.screen !== "play") resume(); });
     document.addEventListener("visibilitychange", () => { if (document.hidden) pause(); else if (app.screen !== "play") resume(); });
     $("btn-retry").addEventListener("click", retry);
-    $("btn-map").addEventListener("click", () => showScreen("map"));
+    $("btn-map").addEventListener("click", () => showScreen(app.entry && app.entry.gallery ? "gallery" : "map"));
+    $("gal-back").addEventListener("click", () => showScreen("title"));
     $("btn-play").addEventListener("click", playNext);
     $("btn-tomap").addEventListener("click", () => showScreen("map"));
     $("btn-home").addEventListener("click", () => showScreen("title"));
@@ -1291,6 +1375,48 @@
           ok(a === true && b === true && lk === 2, "B1: both linked spaces wear the chain and every count stays clear of every badge, leaving and at rest (" + a + ", " + b + ")"); } }
       { const e = app.byId.get(ST.overlapLevel) || app.levels[app.levels.length - 1]; startLevel(e.id, "easy"); fillLine(); step(16); step(16); for (let t = 0; t < 400; t += 16) step(16);
         const c = slotClear(); ok(c === true && app.slots.some((q) => q.classList.contains("work")), "B1: a full Easy line of working squads (" + app.S.cap + " spaces" + ($("line").classList.contains("tight") ? ", tight" : "") + "): every count clear of every badge (" + c + ")"); }
+      // 24. v4 M4, the Gallery: every picture's stored order on every difficulty, played patiently through playCol (the
+      // board matches the rules, every sapper home); the level's palette on the tiles, the spaces' aria and the board;
+      // sappers coming in from the edges; the Gallery screen locked before gallery.openAt is won and open after, a won
+      // picture in colour with its title; a win recorded in the save's gal and the win sheet's next picture.
+      if (app.gal.length) {
+        const GC = app.cfg.gallery; let wins = 0, total = 0;
+        for (const e of app.gal) for (const d of DIFFS) { total++; startLevel(e.id, d); const good = patient(e.L.win[d] || ""); settleNow();
+          if (ok(good && app.S.status === E.WON && dispMatches() && allHome(), e.id + " " + d + ": the Gallery's stored order wins played patiently through play()")) wins++; }
+        out.notes.gallery = wins + "/" + total;
+        { const e = app.gal.find((x) => Object.keys(x.L.pal).length >= 5) || app.gal[0], P = e.L.pal; startLevel(e.id, "normal"); let bad = null;
+          for (let j = 0; j < E.NCOL && !bad; j++) { const f = app.S.front(j); if (f < 0) continue; const m = app.B.cardM[f], want = P[m];
+            if (app.cards[j].style.getPropertyValue("--mc") !== want.c) bad = "tile " + j + " is " + app.cards[j].style.getPropertyValue("--mc") + ", its colour is " + want.c;
+            else if (app.cards[j].getAttribute("aria-label").toLowerCase().indexOf(want.n) !== 0) bad = "tile " + j + " reads '" + app.cards[j].getAttribute("aria-label") + "', not its colour's name " + want.n;
+            else if (app.V.pal[m] !== want.c) bad = "the board draws " + m + " as " + app.V.pal[m]; }
+          ok(!bad && app.V.sprites && !app.V.checkSprites().length, e.id + ": the tiles and the board use the picture's own colours, the tiles are named by colour (" + (bad || Object.keys(P).length + " colours") + ")");
+          const o = e.L.win.normal; playCol(+o[0]); let seen = [0, 0, 0, 0]; for (let t = 0; t < 1200; t += 16) { step(16); const sd = app.V.sides(); for (let k = 0; k < 4; k++) seen[k] = Math.max(seen[k], sd[k]); }
+          ok(seen.filter((k) => k > 0).length >= 3 && app.S.status === E.PLAYING, e.id + ": the first squad's sappers come in from the board's edges (top, left, right, yard: " + seen.join(", ") + ")");
+          settleNow(); const sl = app.slots.find((q) => q.classList.contains("full")); ok(!sl || sl.getAttribute("aria-label").toLowerCase().indexOf(P[app.S.spM[+app.slots.indexOf(sl)]].n) === 0, e.id + ": a space reads its colour's name (" + (sl ? sl.getAttribute("aria-label") : "no squad waiting") + ")"); }
+        // Locked: a fresh save. Both buttons show the padlock and the hint; a tap on either never opens the Gallery.
+        app.save.data.done = {}; app.save.data.gal = {}; showScreen("title");
+        const gb = $("btn-gallery"), mg = $("map-gallery");
+        ok(!galOpen() && gb.classList.contains("locked") && gb.getAttribute("aria-disabled") === "true" && gb.querySelector(".gs").textContent === GC.lockedHint && hitOK(gb), "gallery: locked before level " + GC.openAt + " is won; the title's button shows the hint (" + gb.querySelector(".gs").textContent + ")");
+        gb.click(); const s1 = app.screen; showScreen("map"); const mh = hitOK(mg); mg.click(); const s2 = app.screen; showScreen("gallery"); const s3 = app.screen;
+        ok(s1 === "title" && s2 === "map" && s3 === "title" && mg.classList.contains("locked") && mh, "gallery: while locked, the title's and the map's buttons (hittable, padlocked) don't open it, nor does asking for the screen (" + [s1, s2, s3].join(", ") + ")");
+        // Open: win the opening level. The buttons show the count; the screen shows every picture, dimmed.
+        Save.record(app.save.data, GC.openAt, "normal"); showScreen("title");
+        ok(galOpen() && !gb.classList.contains("locked") && gb.querySelector(".gs").textContent === GC.count.replace("{n}", 0).replace("{t}", app.gal.length), "gallery: open once level " + GC.openAt + " is won; the button counts " + gb.querySelector(".gs").textContent);
+        gb.click(); const tiles = Array.from(document.querySelectorAll("#gal-grid .gal-tile"));
+        ok(app.screen === "gallery" && tiles.length === app.gal.length && !tiles.some((t) => t.classList.contains("done")) && $("gal-credits").textContent === GC.credits && !document.querySelector("#gallery a") && hitOK(tiles[0]), "gallery: the title's button opens the grid of " + tiles.length + " pictures, none cleared, the credits line in plain text (no links)");
+        const px = (c) => { const q = document.createElement("canvas"); q.width = c.width; q.height = c.height; const g = q.getContext("2d", { willReadFrequently: true }); g.drawImage(c, 0, 0); const d = g.getImageData(0, 0, c.width, c.height).data, s = new Set(); for (let i = 0; i < d.length; i += 4) s.add("#" + [d[i], d[i + 1], d[i + 2]].map((v) => v.toString(16).padStart(2, "0")).join("")); return s; };
+        const e0 = app.gal[1] || app.gal[0], i0 = app.gal.indexOf(e0), pal0 = new Set(Object.values(e0.L.pal).map((q) => q.c.toLowerCase())), dim0 = px(tiles[i0].querySelector("canvas"));
+        // Cleared: win a picture through its stored order; the save's gal holds it, the sheet offers the next picture.
+        startLevel(e0.id, "normal"); patient(e0.L.win.normal); settleNow(); tick(9000);
+        const nx = nextPicture(e0);
+        ok(app.panel === "win" && $("p-title").textContent === GC.winTitle && $("p-primary").textContent === GC.nextBtn && (app.save.data.gal[e0.id] & 2) && !app.save.data.done[e0.id] && hitOK($("p-primary")), "gallery: a picture won goes in the save's gal (" + app.save.data.gal[e0.id] + "), the sheet says '" + $("p-title").textContent + "' and offers '" + $("p-primary").textContent + "'");
+        $("p-primary").click(); ok(app.entry === nx && app.screen === "play", "gallery: Next picture opens the next one not yet won (" + nx.id + ")");
+        $("btn-map").click(); const col = px(tiles[i0].querySelector("canvas"));
+        ok(app.screen === "gallery" && tiles[i0].classList.contains("done") && tiles[i0].querySelector(".gn").textContent === e0.L.title && [...col].every((c) => pal0.has(c)) && ![...dim0].some((c) => pal0.has(c)), "gallery: the top bar's button goes back to the grid; the won picture shows in its own colours with its title (" + e0.L.title + "), the rest stay dimmed");
+        const saved = JSON.stringify(Save.sanitize(JSON.parse(JSON.stringify(app.save.data)), app.order, app.gal.map((x) => x.id)).gal), junk = Save.sanitize({ gal: { [e0.id]: 99, nope: 1, [app.gal[0].id]: "x" } }, app.order, app.gal.map((x) => x.id)).gal;
+        ok(saved === JSON.stringify(app.save.data.gal) && JSON.stringify(junk) === JSON.stringify({ [e0.id]: 3 }), "gallery: the save's gal reads back through sanitize; a bad mask is clamped, unknown ids and non-numbers are dropped");
+        showScreen("title");
+      }
       // 14. Opaque sprite caches.
       const bad = app.V.checkSprites(); ok(!bad.length, "sprites: every opaque cache is opaque" + (bad.length ? " (" + bad.join(",") + ")" : ""));
     } catch (err) { ok(false, "selfTest threw: " + (err && err.message) + " " + (err && err.stack ? err.stack.split("\n")[1] : "")); }
@@ -1317,7 +1443,11 @@
     screen: (name) => { showScreen(name); return state(); }, skip: () => { skip(); return state(); }, speed: (k) => { setSpeed(k, false); return app.speed; },
     // Cost of n board draws right now (ms): the harness calls it mid-show.
     perf: (n) => { const k = Math.max(1, Math.min(500, n | 0 || 60)); let max = 0; const t0 = performance.now(); for (let i = 0; i < k; i++) { const a = performance.now(); app.V.draw(); max = Math.max(max, performance.now() - a); } return { mean: +((performance.now() - t0) / k).toFixed(3), max: +max.toFixed(3), runners: app.V.live }; },
-    sprites: () => app.V.checkSprites() };
+    sprites: () => app.V.checkSprites(),
+    // v4 M4: win siege levels 1 to gallery.openAt in the live save (the harness opens the Gallery this way); the ids of
+    // the Gallery's pictures; the board's runners by entry edge.
+    unlockGallery: () => { const k = app.order.indexOf(app.cfg.gallery.openAt); for (let i = 0; i <= k; i++) Save.record(app.save.data, app.order[i], "normal"); writeSave(); renderGalButtons(); return galOpen(); },
+    gallery: () => app.gal.map((e) => e.id), sides: () => app.V.sides() };
 
   boot();
 })();
