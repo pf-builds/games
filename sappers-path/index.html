@@ -8,14 +8,15 @@
 <title>Sapper's Path</title>
 <meta name="description" content="Goblins stole the crown and walled themselves in. Tap a squad: its sappers run up, pull their colour off the fort and carry it home. Keep the holding line clear and raze every block.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%232e2935'/><rect x='14' y='14' width='22' height='22' rx='5' fill='%23ff8c1a'/><rect x='39' y='14' width='22' height='22' rx='5' fill='%23e6262e'/><rect x='64' y='14' width='22' height='22' rx='5' fill='%23ffe21f'/><rect x='14' y='39' width='22' height='22' rx='5' fill='%232f62ff'/><rect x='64' y='39' width='22' height='22' rx='5' fill='%239ee52a'/><rect x='14' y='64' width='22' height='22' rx='5' fill='%238f45ff'/><rect x='39' y='64' width='22' height='22' rx='5' fill='%230fb5a6'/><rect x='64' y='64' width='22' height='22' rx='5' fill='%23ff3fa4'/></svg>">
-<link rel="preload" href="fonts/Jersey10-Regular.ttf?v=22" as="font" type="font/ttf" crossorigin>
-<link rel="stylesheet" href="style.css?v=22">
+<link rel="preload" href="fonts/Jersey10-Regular.ttf?v=23" as="font" type="font/ttf" crossorigin>
+<link rel="stylesheet" href="style.css?v=23">
 </head>
 <body>
 <div id="app">
   <main id="play">
     <div id="stage">
       <div id="frame"><canvas id="board" aria-label="The fort"></canvas></div>
+      <div id="stage-pic" role="img" hidden><canvas class="pix"></canvas></div>
       <p id="coach" class="panel" role="status" hidden></p>
       <div id="toast" role="status" hidden></div>
     </div>
@@ -39,6 +40,7 @@
     <div class="sheetcard panel">
       <div id="p-title" class="p-title"></div>
       <div id="p-line" class="p-line"></div>
+      <div id="p-pic" role="img" hidden><canvas class="pix"></canvas></div>
       <div id="p-stats" hidden><div class="st"><span class="k"></span><b id="p-time"></b><em></em></div><div class="st"><span class="k"></span><b id="p-taps"></b><em></em></div><div class="st coin"><span class="k"></span><b id="p-coins"></b><em></em></div></div>
       <div id="p-medals" hidden><span class="medal">E</span><span class="medal">N</span><span class="medal">H</span></div>
       <div class="row"><button id="p-primary" class="primary"></button><button id="p-secondary"></button></div>
@@ -57,8 +59,8 @@
         <span id="home-coins" class="pill coins" role="img"><i class="ico ico-coin" aria-hidden="true"></i><b></b></span>
       </div>
       <h1>Sapper's Path</h1>
+      <p id="home-era"></p>
       <div class="home-foot">
-        <p id="home-era"></p>
         <div class="seg" role="group" aria-label="Difficulty"><button data-diff="easy">Easy</button><button data-diff="normal">Normal</button><button data-diff="hard">Hard</button></div>
         <button id="btn-play" class="primary play"><svg viewBox="0 0 12 12" width="22" height="22" aria-hidden="true"><path d="M3 1.5l7 4.5-7 4.5z" fill="currentColor" stroke="var(--ink)" stroke-width="1.2" stroke-linejoin="round"/></svg><span id="play-lab">Play</span></button>
         <p id="load-msg" class="small"></p>
@@ -75,7 +77,7 @@
       <div id="set-title" class="p-title">Settings</div>
       <div class="set-rows">
         <button class="set-row tog tog-mute" aria-pressed="false" aria-label="Mute sound"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="waves" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="cross" d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="sl">Sound</span><span class="sv"></span></button>
-        <button class="set-row tog-speed" aria-label="Speed 1x"><span class="sx">1&times;</span><span class="sl">Speed</span><span class="sv"></span></button>
+        <button class="set-row tog-speed" aria-label="Speed 1x"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 5l9 7-9 7zM12 5l9 7-9 7z" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg><span class="sl">Speed</span><span class="sv">1&times;</span></button>
         <button class="set-row tog tog-cb" aria-pressed="false" aria-label="Colour-blind marks"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2" fill="currentColor"/><rect x="13" y="3" width="8" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="3" y="13" width="8" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13" y="13" width="8" height="8" rx="2" fill="currentColor"/><path d="M5 9l4-4M15 19l4-4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg><span class="sl">Colour-blind marks</span><span class="sv"></span></button>
       </div>
       <div class="row"><button id="set-close" class="primary">Done</button></div>
@@ -105,12 +107,12 @@
     <p id="gal-credits"></p>
   </section>
 </div>
-<script src="src/engine.js?v=22"></script>
-<script src="src/save.js?v=22"></script>
-<script src="src/meta.js?v=22"></script>
-<script src="src/art.js?v=22"></script>
-<script src="src/audio.js?v=22"></script>
-<script src="src/board.js?v=22"></script>
-<script src="src/main.js?v=22"></script>
+<script src="src/engine.js?v=23"></script>
+<script src="src/save.js?v=23"></script>
+<script src="src/meta.js?v=23"></script>
+<script src="src/art.js?v=23"></script>
+<script src="src/audio.js?v=23"></script>
+<script src="src/board.js?v=23"></script>
+<script src="src/main.js?v=23"></script>
 </body>
 </html>

@@ -27,6 +27,7 @@
 // tap opens the Gallery, a real tap on a painting's tile plays it (a real card tap, sappers in from the board's edges),
 // the top bar's button goes back to the grid; every Gallery board keeps 8 CSS px a cell or more (the smallest reported,
 // with a screen). Output to tools/shots-v4-m4/harness/.
+// v4 Critics 2 fix: six viewports (375x667 and 414x736 added); the coach's checks per viewport are selfTest's.
 // v4 M5 (the meta layer): the home's Play reads the next level and one real tap reaches it; the settings sheet opens and
 // closes by real taps; the power-up bar through real taps (a Ladder bought and used on level 1: one more space; a
 // Quartermaster bought, asked for and applied to a real tile on level 40); every bar on screen. The colour-blind toggle
@@ -57,7 +58,7 @@ const ORIGIN = new URL(URL_).origin;
 const OUT = resolve(arg("out", resolve(here, "shots-v4-m5", "harness")));
 // v4 M3: every one of the 100 boards keeps MIN_CELL CSS px a cell at every viewport (the smallest per era is reported;
 // the boss at 100 is the smallest, exactly 8 in the 400x600 iframe).
-const WALL_MS = 480000, MIN_CELL = 8;
+const WALL_MS = 720000, MIN_CELL = 8; // Critics 2 fix: two more viewports
 mkdirSync(OUT, { recursive: true });
 const wall = setTimeout(() => { console.error("harness: wall budget exceeded"); process.exit(2); }, WALL_MS);
 
@@ -68,8 +69,12 @@ async function loadPlaywright() {
 const report = { url: URL_, runs: {}, hidden: null, fails: [], console: [] };
 const fail = (m) => { report.fails.push(m); console.log("FAIL " + m); };
 const ok = (c, m) => { if (!c) fail(m); return !!c; };
+// Critics 2 fix (V1): 375x667 (iPhone SE/8) and 414x736 (iPhone 8 Plus), where the teaching coach used to clip; selfTest
+// there checks every teaching level's line at every step of its stored order (fits its box, off the board).
 const VIEWPORTS = [
   { name: "375x812", width: 375, height: 812, touch: true, dpr: 2, shots: "375" },
+  { name: "375x667", width: 375, height: 667, touch: true, dpr: 2, shots: "667" },
+  { name: "414x736", width: 414, height: 736, touch: true, dpr: 3, shots: "736" },
   { name: "812x375", width: 812, height: 375, touch: true, dpr: 3, shots: "812" },
   { name: "1280x720", width: 1280, height: 720, touch: false, dpr: 1, shots: "1280" },
   { name: "iframe-400x600", width: 480, height: 700, touch: false, dpr: 2, shots: "iframe", iframe: { w: 400, h: 600 } },

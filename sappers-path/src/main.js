@@ -65,6 +65,10 @@
 // per era, the Gallery one for its pictures. The power-up bar under the queue (the foot of the side column on wide
 // screens): four round badges with an owned count or a "+" price that buys one in place; the Quartermaster and Recall
 // ask for a target (a tile behind the front, a waiting squad). Short frames (layout.shortRowsMaxH) show two queue rows.
+// v4 Critics 2 fix: a coached level tries three rows with the coach's band above the board, then two rows with it, then
+// the top bar (two lines there); a Gallery win shows the finished picture on the report (or over the razed board where
+// the sheet has no room) and the Gallery marks the next picture; a buy short of coins looks it; the landscape bar fits its
+// foot; the home's era chip lies on the river; era cards are a band; two rods down one gutter take a lane each.
 (function () {
   "use strict";
   const NS = window.SappersPath, E = NS.engine, Save = NS.save, Board = NS.board, Art = NS.art, Audio = NS.audio, Meta = NS.meta;
@@ -286,9 +290,11 @@
       const clear = (P) => { for (let i = 0; i + 3 < P.length; i += 2) for (let u = 1; u < 16; u++) if (inside(P[i] + ((P[i + 2] - P[i]) * u) / 16, P[i + 1] + ((P[i + 3] - P[i + 1]) * u) / 16)) return false; return true; };
       // The gutter between neighbouring columns j and pj: midway between their front tiles' facing edges.
       const gutter = (j, pj) => { const a = box(app.cards[j]), b = box(app.cards[pj]); return pj > j ? (a.r + b.l) / 2 : (a.l + b.r) / 2; };
-      const rod = (P) => { let d = "M" + f(P[0]) + " " + f(P[1]); for (let i = 2; i < P.length; i += 2) d += "L" + f(P[i]) + " " + f(P[i + 1]);
-        return '<path d="' + d + '" stroke="' + R.ink + '" stroke-width="' + f(R.w * k) + '" ' + sw + '/><path d="' + d + '" stroke="' + R.metal + '" stroke-width="' + f(R.core * k) + '" ' + sw + '/><path d="' + d + '" stroke="' + R.hi + '" stroke-width="' + f(Math.max(1, k)) + '" ' + sw + ' transform="translate(0 -1)" opacity=".6"/>'; };
-      const rivet = (x, y) => '<circle cx="' + f(x) + '" cy="' + f(y) + '" r="' + f(rv) + '" fill="' + R.metal + '" stroke="' + R.ink + '" stroke-width="' + f(1.6 * k) + '"/><circle cx="' + f(x - rv * 0.3) + '" cy="' + f(y - rv * 0.3) + '" r="' + f(rv * 0.35) + '" fill="' + R.hi + '" opacity=".8"/>';
+      const rod = (P, mt) => { let d = "M" + f(P[0]) + " " + f(P[1]); for (let i = 2; i < P.length; i += 2) d += "L" + f(P[i]) + " " + f(P[i + 1]);
+        return '<path d="' + d + '" stroke="' + R.ink + '" stroke-width="' + f(R.w * k) + '" ' + sw + '/><path d="' + d + '" stroke="' + mt + '" stroke-width="' + f(R.core * k) + '" ' + sw + '/><path d="' + d + '" stroke="' + R.hi + '" stroke-width="' + f(Math.max(1, k)) + '" ' + sw + ' transform="translate(0 -1)" opacity=".6"/>'; };
+      const rivet = (x, y, mt) => '<circle cx="' + f(x) + '" cy="' + f(y) + '" r="' + f(rv) + '" fill="' + mt + '" stroke="' + R.ink + '" stroke-width="' + f(1.6 * k) + '"/><circle cx="' + f(x - rv * 0.3) + '" cy="' + f(y - rv * 0.3) + '" r="' + f(rv * 0.35) + '" fill="' + R.hi + '" opacity=".8"/>';
+      // First every rod as points (a run down a gutter is the segment P[2..5]), then the lanes, then the SVG.
+      const rods = [];
       for (let j = 0; j < E.NCOL; j++) for (let d = 0; d < RW; d++) {
         const ci = S.card(j, d); if (ci < 0) break;
         const p = S.partner(ci); if (p < 0) continue;
@@ -298,13 +304,27 @@
           const b = box(tileOf(pj, pd)), bx = right ? b.l : b.r;
           let P = [ax, a.y, bx, b.y];
           if (Math.abs(pj - j) !== 1 || !clear(P)) P = [ax, a.y, gx, a.y, gx, b.y, bx, b.y];
-          html += rod(P) + rivet(ax, a.y) + rivet(bx, b.y);
+          rods.push({ P, ends: [ax, a.y, bx, b.y], dots: null, j, pj });
           continue;
         }
         // Stub: along the gutter toward the partner's column, past its last visible row, then two dots.
         const y2 = Math.max(a.y + a.hh, box(tileOf(pj, RW - 1)).b - R.stub * k * 0.4);
-        html += rod([ax, a.y, gx, a.y, gx, y2]) + rivet(ax, a.y);
-        for (let q = 1; q <= 2; q++) html += '<circle class="dot" cx="' + f(gx) + '" cy="' + f(y2 + R.cap * k * 2.3 * q) + '" r="' + f(R.cap * k * 0.8) + '" fill="' + R.metal + '" stroke="' + R.ink + '" stroke-width="1"/>';
+        rods.push({ P: [ax, a.y, gx, a.y, gx, y2], ends: [ax, a.y], dots: y2, j, pj });
+      }
+      // Critics 2 fix (m9, Critics 1 N6): two rods running down the same gutter over the same rows take a lane each, R.lane
+      // px either side of its middle (never past the tiles' edges), and the second wears the second metal (R.metal2), so
+      // they read as two links, not one rod touching three tiles.
+      const run = (q) => (q.P.length >= 6 ? [q.P[2], Math.min(q.P[3], q.P[5]), Math.max(q.P[3], q.P[5])] : null);
+      for (let u = 0; u < rods.length; u++) for (let v = u + 1; v < rods.length; v++) {
+        const A = run(rods[u]), Bq = run(rods[v]); if (!A || !Bq || Math.abs(A[0] - Bq[0]) > 0.5 || Math.min(A[2], Bq[2]) - Math.max(A[1], Bq[1]) <= 0 || rods[u].lane || rods[v].lane) continue;
+        const lo = Math.min(rods[u].j, rods[u].pj), half = (box(app.cards[lo + 1]).l - box(app.cards[lo]).r) / 2, off = Math.max(0, Math.min(R.lane * k, half - 0.5));
+        rods[u].lane = -1; rods[v].lane = 1; rods[v].metal = R.metal2;
+        for (const [q, s] of [[rods[u], -off], [rods[v], off]]) { q.P[2] += s; q.P[4] += s; }
+      }
+      for (const q of rods) {
+        const mt = q.metal || R.metal; html += rod(q.P, mt);
+        for (let i = 0; i < q.ends.length; i += 2) html += rivet(q.ends[i], q.ends[i + 1], mt);
+        if (q.dots != null) for (let t = 1; t <= 2; t++) html += '<circle class="dot" cx="' + f(q.P[4]) + '" cy="' + f(q.dots + R.cap * k * 2.3 * t) + '" r="' + f(R.cap * k * 0.8) + '" fill="' + mt + '" stroke="' + R.ink + '" stroke-width="1"/>';
       }
     }
     if (svg.innerHTML !== html) svg.innerHTML = html;
@@ -381,20 +401,22 @@
     const host = $("powers");
     for (let k = 0; k < E.POWERS.length; k++) {
       const b = document.createElement("button"); b.className = "pw"; b.dataset.k = k;
-      b.innerHTML = '<i class="pw-ic" aria-hidden="true"></i><b class="pw-n" aria-hidden="true"></b><span class="pw-tag" aria-hidden="true"><i class="ico ico-coin"></i><span></span></span><span class="pw-name" aria-hidden="true"></span>';
+      b.innerHTML = '<i class="pw-ic" aria-hidden="true"></i><b class="pw-n" aria-hidden="true"></b><span class="pw-tag" aria-hidden="true"><i class="ico ico-coin"></i><span></span></span><span class="pw-name" aria-hidden="true"></span><span class="pw-need" aria-hidden="true"></span>';
       b.querySelector(".pw-ic").style.backgroundImage = app.icoURL["p" + k] || "none"; b.querySelector(".pw-name").textContent = pwName(k);
       b.addEventListener("click", () => onPower(k)); host.append(b); app.pws.push(b);
     }
   }
   // Each badge's state: owned (a count), buy (a "+" and the price) or spent (this level's uses gone); the coins pill.
+  // Critics 2 fix (m2): a buy short of coins is .poor (a muted "+", the price in red, "need N" under it on wide screens),
+  // still tappable for the toast that says so.
   function renderPowers() {
-    const S = app.S, inv = app.save.data.inv, T = PWT(), pop = app.cfg.show.pwPopMs;
+    const S = app.S, inv = app.save.data.inv, T = PWT(), pop = app.cfg.show.pwPopMs, have = app.save.data.coins | 0;
     $("pw-coins").querySelector("b").textContent = app.save.data.coins; $("pw-coins").setAttribute("aria-label", fill(app.meta.home.coins, { n: app.save.data.coins }));
     app.pws.forEach((b, k) => {
-      const P = Meta.powerOf(app.meta, k), n = inv[E.POWERS[k]] | 0, spent = !!S && S.used(k) >= S.limit(k), st = spent ? "spent" : n > 0 ? "own" : "buy";
-      b.className = "pw " + st + (app.pick && app.pick.k === k ? " picking" : "") + (app.clock - app.pwPop[k] < pop ? " pop" : "");
-      b.querySelector(".pw-n").textContent = n > 0 ? n : "+"; b.querySelector(".pw-tag span").textContent = P.price;
-      b.setAttribute("aria-label", fill(T.aria, { name: P.name, say: P.say, state: spent ? T.spent : n > 0 ? fill(T.owned, { n }) : fill(T.buy, { price: P.price }) }));
+      const P = Meta.powerOf(app.meta, k), n = inv[E.POWERS[k]] | 0, spent = !!S && S.used(k) >= S.limit(k), st = spent ? "spent" : n > 0 ? "own" : "buy", need = st === "buy" ? Math.max(0, P.price - have) : 0;
+      b.className = "pw " + st + (need ? " poor" : "") + (app.pick && app.pick.k === k ? " picking" : "") + (app.clock - app.pwPop[k] < pop ? " pop" : "");
+      b.querySelector(".pw-n").textContent = n > 0 ? n : "+"; b.querySelector(".pw-tag span").textContent = P.price; b.querySelector(".pw-need").textContent = need ? fill(T.need, { need }) : "";
+      b.setAttribute("aria-label", fill(T.aria, { name: P.name, say: P.say, state: spent ? T.spent : n > 0 ? fill(T.owned, { n }) : fill(need ? T.poor : T.buy, { price: P.price, need }) }));
     });
   }
   const livePlay = () => app.screen === "play" && app.S && app.S.status === E.PLAYING && !app.panel && !app.paused;
@@ -513,7 +535,7 @@
     $("gal-title").textContent = G.title; $("gal-credits").textContent = G.credits;
     for (const b of [$("btn-gallery"), $("map-gallery")]) { b.hidden = !app.gal.length; b.querySelector(".gt").textContent = G.btn; b.addEventListener("click", () => { if (galOpen()) showScreen("gallery"); else lockedTap(b); }); }
     for (const e of app.gal) {
-      const b = document.createElement("button"); b.className = "gal-tile"; b.innerHTML = '<canvas class="pix" aria-hidden="true"></canvas><span class="gn"></span><i class="gm"></i>';
+      const b = document.createElement("button"); b.className = "gal-tile"; b.innerHTML = '<canvas class="pix" aria-hidden="true"></canvas><span class="gn"></span><i class="gm"></i><span class="gp" aria-hidden="true"></span>';
       b.addEventListener("click", () => { if (galOpen()) startLevel(e.id); });
       e.node = b; host.append(b);
     }
@@ -549,17 +571,18 @@
   function renderGallery() {
     const G = app.cfg.gallery, d = app.save.data; if (!G) return;
     $("gal-count").textContent = G.count.replace("{n}", galWon()).replace("{t}", app.gal.length); reportCard($("gal-card"), app.gal);
+    const nx = app.gal.find((e) => !d.gal[e.id]); // Critics 2 fix (V2): the first picture not yet cleared wears a gold frame and a Play chip
     for (const e of app.gal) {
       const m = d.gal[e.id] | 0, b = e.node, won = !!m, key = won ? "c" : "d";
-      b.classList.toggle("done", won); b.querySelector(".gn").textContent = won ? e.L.title : e.n;
-      b.querySelector(".gm").textContent = (m & 1 ? "E" : "") + (m & 2 ? "N" : "") + (m & 4 ? "H" : "");
-      b.setAttribute("aria-label", won ? e.L.title + ", cleared" : "Picture " + e.n + ", not cleared yet");
+      b.classList.toggle("done", won); b.classList.toggle("next", e === nx); b.querySelector(".gn").textContent = won ? e.L.title : e.n;
+      b.querySelector(".gm").textContent = (m & 1 ? "E" : "") + (m & 2 ? "N" : "") + (m & 4 ? "H" : ""); b.querySelector(".gp").textContent = e === nx ? G.playChip : "";
+      b.setAttribute("aria-label", won ? e.L.title + ", cleared" : fill(e === nx ? G.nextAria : G.tileAria, { n: e.n }));
       if (b.dataset.drawn !== key) { thumb(b.querySelector("canvas"), e.L, won); b.dataset.drawn = key; }
     }
   }
-  // A picture's thumbnail: gallery.thumbPx canvas px a cell, the ring left out; dimmed (lightness only) until won.
-  function thumb(c, L, colour) {
-    const k = app.cfg.gallery.thumbPx, w = L.w - 2, h = L.h - 2, [lo, hi] = app.cfg.gallery.dim.map((x) => parseInt(x.slice(1), 16));
+  // A picture's thumbnail: gallery.thumbPx (or kp) canvas px a cell, the ring left out; dimmed (lightness only) until won.
+  function thumb(c, L, colour, kp) {
+    const k = kp || app.cfg.gallery.thumbPx, w = L.w - 2, h = L.h - 2, [lo, hi] = app.cfg.gallery.dim.map((x) => parseInt(x.slice(1), 16));
     c.width = w * k; c.height = h * k; const g = c.getContext("2d");
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
       const id = E.matOf(L.grid[y + 1][x + 1]), hex = L.pal[id] ? L.pal[id].c : "#888888";
@@ -580,7 +603,7 @@
     $("title").hidden = name !== "title"; $("map").hidden = name !== "map"; $("gallery").hidden = name !== "gallery";
     if (name === "title" || name === "map") renderGalButtons();
     if (name === "title") renderHome();
-    if (name === "gallery") renderGallery();
+    if (name === "gallery") { renderGallery(); const nx = document.querySelector("#gal-grid .gal-tile.next"); if (nx && nx.scrollIntoView) nx.scrollIntoView({ block: "nearest" }); }
     if (name === "map") { renderMap(); const ne = app.byId.get(Save.next(app.save.data, app.order)); if (ne && ne.node && ne.node.scrollIntoView) ne.node.scrollIntoView({ block: "center" }); }
     if (name === "title") paintTitle();
     if (name === "play") fitBoard();
@@ -593,7 +616,7 @@
     if (diff && DIFFS.indexOf(diff) >= 0) app.diff = diff;
     app.entry = e; app.B = E.compile(e.L); app.S = E.sim(app.B, rulesOf(app.diff)); app.S.logOn = true; app.et = 0;
     app.V.setLevel(app.B, app.S, e.L.pal); usePalette(e); // v4 M4: the level's colours before anything is painted
-    app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.popK = 0; app.used = 0; app.march = false; app.blockT = -1e12; $("panel").hidden = true; hideToast();
+    app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.popK = 0; app.used = 0; app.march = false; app.blockT = -1e12; $("panel").hidden = true; $("stage-pic").hidden = true; hideToast();
     app.lockN = app.S.locked; app.unlockT = -1e12; app.flip.fill(false); app.reveals = 0; app.pairsOut = 0; landTiles();
     app.t0 = app.clock; app.report = null; app.pick = null; app.pwPop.fill(-1e12); renderPowers();
     app.coached = !!coachSteps(e); // the coach's band is kept for the whole level, so the board never jumps when it goes
@@ -607,7 +630,7 @@
   function retry() {
     if (!app.S) return;
     if (!livesLeft()) { showScreen("title"); return; } // v4 M5: no lives left: home, where the refill time shows
-    app.S.reset(); app.et = 0; app.t0 = app.clock; app.report = null; app.pick = null; app.pwPop.fill(-1e12); app.V.reset(); app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.popK = 0; app.used = 0; app.march = false; app.blockT = -1e12; $("panel").hidden = true; hideToast();
+    app.S.reset(); app.et = 0; app.t0 = app.clock; app.report = null; app.pick = null; app.pwPop.fill(-1e12); app.V.reset(); app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.popK = 0; app.used = 0; app.march = false; app.blockT = -1e12; $("panel").hidden = true; $("stage-pic").hidden = true; hideToast();
     app.unlockT = -1e12; app.flip.fill(false); app.reveals = 0; app.pairsOut = 0; landTiles();
     renderAll(); renderPowers(); coachStart();
   }
@@ -715,7 +738,8 @@
     app.panel = e.won ? "win" : "fail"; app.panelAt = app.clock; renderCoach();
     const last = app.entry.debug || app.entry.idx === app.levels.length - 1, G = app.cfg.gallery, gal = !!app.entry.gallery;
     $("p-title").textContent = e.won ? (gal ? G.winTitle : "Fort razed!") : "Assault failed";
-    if (e.won) { $("p-line").textContent = gal ? G.winLine.replace("{title}", app.entry.L.title).replace("{diff}", DNAME[app.diff]) : "The goblin king flees. " + (app.entry.debug ? app.entry.L.name : "Level " + app.entry.n) + " won on " + DNAME[app.diff] + "."; $("p-line").removeAttribute("aria-label"); } else sheetLine(e);
+    if (e.won) { $("p-line").textContent = gal ? fill(e.first ? G.winLine : G.winLineAgain, { title: app.entry.L.title, diff: DNAME[app.diff] }) : "The goblin king flees. " + (app.entry.debug ? app.entry.L.name : "Level " + app.entry.n) + " won on " + DNAME[app.diff] + "."; $("p-line").removeAttribute("aria-label"); } else sheetLine(e);
+    reportPic(e.won && gal);
     $("p-primary").textContent = e.won ? (gal ? G.nextBtn : last ? "Era map" : "Next level") : "Retry";
     $("p-secondary").textContent = e.won ? "Retry" : gal ? G.title : "Era map";
     // The win beat: the level's difficulty medals, this one stamped in if it's new.
@@ -737,6 +761,27 @@
     rows[1].querySelector(".k").textContent = T.taps; $("p-taps").textContent = R.taps; rows[1].querySelector("em").textContent = best(R.taps, R.best[1], R.newTaps, String); rows[1].classList.toggle("new", !!R.best[1] && R.newTaps);
     rows[2].querySelector(".k").textContent = T.coins; app.countTxt = ""; countCoins(); rows[2].querySelector("em").textContent = e.medal ? fill(T.medal, { n: R.coins - Meta.winCoins(app.meta, app.diff, false) }) : "";
     st.setAttribute("aria-label", T.time + " " + Meta.clock(R.ms) + ", " + T.taps + " " + R.taps + ", " + T.coins + " +" + R.coins);
+  }
+  // Critics 2 fix (V2): a Gallery win shows the finished picture above the report, in its colours on its own frame, at
+  // gallery.reportCellPx CSS px a cell (whole device px a cell), at most gallery.reportMaxPx tall; placeSheet shrinks it
+  // to the room there is (picSize), or hides it under gallery.reportMinPx.
+  function reportPic(on) {
+    const box = $("p-pic"); box.hidden = !on; box.dataset.on = on ? "1" : ""; $("stage-pic").hidden = true; if (!on) return;
+    const G = app.cfg.gallery, L = app.entry.L, dpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1)), k = Math.max(1, Math.round(Math.min(G.reportCellPx, G.reportMaxPx / (L.h - 2)) * dpr));
+    thumb(box.firstElementChild, L, true, k); box.dataset.h = ((L.h - 2) * k) / dpr; box.setAttribute("aria-label", fill(G.picAria, { title: L.title })); picSize(1e9);
+  }
+  // Where the sheet has no room for it (a short landscape screen) the picture hangs over the razed board instead
+  // (#stage-pic), as big as gallery.stageFrac of the board's frame allows.
+  function stagePic(on) {
+    const box = $("stage-pic"); box.hidden = !on; if (!on) return;
+    const L = app.entry.L, f = $("frame").getBoundingClientRect(), dpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1)), s = (app.cfg.gallery.stageFrac * Math.min(f.width / (L.w - 2), f.height / (L.h - 2)));
+    const k = Math.max(1, Math.floor(s * dpr)); thumb(box.firstElementChild, L, true, k); box.firstElementChild.style.width = ((L.w - 2) * k) / dpr + "px"; box.firstElementChild.style.height = ((L.h - 2) * k) / dpr + "px"; box.setAttribute("aria-label", fill(app.cfg.gallery.picAria, { title: L.title }));
+  }
+  // The picture at its full size, or at most h CSS px tall (its aspect kept); false when that is under reportMinPx.
+  function picSize(h) {
+    const box = $("p-pic"), c = box.firstElementChild, full = +box.dataset.h || 0, t = Math.min(full, h); if (!full) return false;
+    if (t < app.cfg.gallery.reportMinPx) return false;
+    c.style.height = t + "px"; c.style.width = (t * c.width) / c.height + "px"; return true;
   }
   // The coins count up on the sim clock (meta.report: countDelayMs, then countMs); a coin cue when they start.
   function countCoins() {
@@ -835,12 +880,12 @@
     t.style.left = r[0] + "px"; t.style.top = r[1] + "px"; t.style.width = Math.max(0, r[2]) + "px"; t.style.height = Math.max(0, r[3]) + "px";
   }
   // One line if it fits (the font steps down through layout.coachFontPx [max, min]), else two (Critics 1 fix, m3). In
-  // the top bar it is always one line (the step's short text there, when it has one).
+  // the top bar (the step's short text there, when it has one) the font steps through layout.coachTopFontPx, one line
+  // first, then two (Critics 2 fix, V1).
   function fitCoach() {
-    const t = $("coach"), [hi, lo] = app.cfg.layout.coachFontPx; if (t.hidden) return;
+    const t = $("coach"), [hi, lo] = app.cfg.layout[app.coachMode === "top" ? "coachTopFontPx" : "coachFontPx"]; if (t.hidden) return;
     t.classList.remove("two");
     for (let px = hi; px >= lo; px--) { t.style.fontSize = px + "px"; if (t.scrollWidth <= t.clientWidth && t.scrollHeight <= t.clientHeight) return; }
-    if (app.coachMode === "top") return;
     t.classList.add("two");
     for (let px = hi; px >= lo; px--) { t.style.fontSize = px + "px"; if (t.scrollWidth <= t.clientWidth && t.scrollHeight <= t.clientHeight) return; }
   }
@@ -888,10 +933,11 @@
   // v4 M5: a settings row (.set-row) also shows its value in words.
   const rowVal = (b, t) => { const v = b.querySelector(".sv"); if (v) v.textContent = t; };
   function setMuted(on, save) { Audio.setMuted(app.audio, on); togMute.forEach((b) => { b.setAttribute("aria-pressed", on ? "true" : "false"); rowVal(b, on ? "Off" : "On"); }); if (save) { app.save.data.settings.muted = !!on; writeSave(); } }
-  // The speed button cycles show.speeds (1x, 2x, 3x); anything else loads as the first one. Gold above 1x.
+  // The speed button cycles show.speeds (1x, 2x, 3x); anything else loads as the first one. Gold above 1x. The settings
+  // row shows it on the right, as its other rows do (Critics 2 fix, m7).
   function setSpeed(k, save) {
     const sp = app.cfg.show.speeds; app.speed = sp.indexOf(k) >= 0 ? k : sp[0];
-    togSpeed.forEach((b) => { const x = b.querySelector(".sx") || b; x.textContent = app.speed + "\u00d7"; b.classList.toggle("on", app.speed > sp[0]); b.setAttribute("aria-label", "Speed " + app.speed + "x (tap for " + sp[(sp.indexOf(app.speed) + 1) % sp.length] + "x)"); });
+    togSpeed.forEach((b) => { const x = b.querySelector(".sv") || b; x.textContent = app.speed + "\u00d7"; b.classList.toggle("on", app.speed > sp[0]); b.setAttribute("aria-label", "Speed " + app.speed + "x (tap for " + sp[(sp.indexOf(app.speed) + 1) % sp.length] + "x)"); });
     if (save) { app.save.data.settings.speed = app.speed; writeSave(); }
   }
   const nextSpeed = () => { const sp = app.cfg.show.speeds; setSpeed(sp[(sp.indexOf(app.speed) + 1) % sp.length], true); };
@@ -983,14 +1029,17 @@
     const st = $("stage"), dpr = window.devicePixelRatio || 1, BD = document.body, G = L.stageGapPx;
     // v4 M5: in portrait above the short frames, three queue rows unless this board would then be under minCellCss (two
     // rows, with the compact bar). Two rows also take a smaller gap round the frame (stageGapPx[2]).
-    if (!app.wide && app.S && window.innerHeight > L.shortRowsMaxH) {
-      setRows(L.queueRows); renderTray();
-      if (app.V.fitCs(st.clientWidth - G[0], st.clientHeight - G[1], dpr, false) < L.minCellCss) { setRows(L.queueRowsShort); renderTray(); }
-    }
-    const w = st.clientWidth - G[0], h0 = st.clientHeight - (app.rows < L.queueRows ? G[2] : G[1]);
+    // Critics 2 fix (V1): a coached level tries, in order, three rows with the coach's band above the board, two rows with
+    // the band, then the top bar (three rows again when the board keeps minCellCss with them); every try keeps minCellCss.
     let mode = app.coached && app.screen === "play" ? (app.wide ? "side" : "above") : "";
-    const res = mode === "above" ? coachH() + 6 : 0;
-    if (mode === "above" && app.V.fitCs(w, h0 - res, dpr, false) < L.minCellCss) mode = "top";
+    const res = coachH() + 6, room = () => [st.clientWidth - G[0], st.clientHeight - (app.rows < L.queueRows ? G[2] : G[1])];
+    const cellAt = (cut) => { const [a, b] = room(); return app.V.fitCs(a, b - cut, dpr, false); }, rowsTo = (k) => { if (app.rows !== k) { setRows(k); renderTray(); } };
+    if (!app.wide && app.S && window.innerHeight > L.shortRowsMaxH) {
+      rowsTo(L.queueRows); const three = cellAt(0) >= L.minCellCss;
+      if (mode === "above" && !(three && cellAt(res) >= L.minCellCss)) { rowsTo(L.queueRowsShort); if (cellAt(res) < L.minCellCss) { mode = "top"; if (three) rowsTo(L.queueRows); } }
+      else if (!three) rowsTo(L.queueRowsShort);
+    } else if (mode === "above" && cellAt(res) < L.minCellCss) mode = "top";
+    const [w, h0] = room();
     app.coachMode = mode; BD.classList.toggle("coached", !!mode); BD.classList.toggle("coach-above", mode === "above"); BD.classList.toggle("coach-top", mode === "top");
     const h = h0 - (mode === "above" ? res : 0);
     if (w > 0 && h > 0) app.V.layout(w, h, dpr, app.wide);
@@ -1004,9 +1053,19 @@
   // v4 M5: on a wide screen (not short) the bar fills the side column's foot. Its badges take the larger of two fits to
   // the foot's free height and width: a row of four, or 2 x 2 once the foot is layout.pwGrid CSS px tall (each with its
   // name below; layout.pwFit: header, padding, name and gap px, and the badge's min and max).
+  // Critics 2 fix (m5): a short landscape screen's panel (its height is the column's foot) fits its badges too, taking
+  // the biggest of: a row with the coins beside it, a row under the coins (.head), or 2 x 2 beside them (.grid). Its
+  // padding, gaps and the coins pill are read from the page.
   function sizePowers() {
     const P = $("powers"), F = app.cfg.layout.pwFit, wideFoot = app.wide && !document.body.classList.contains("short");
-    P.classList.remove("grid"); P.style.removeProperty("--pw-d"); if (!wideFoot) return;
+    P.classList.remove("grid", "head"); P.style.removeProperty("--pw-d"); if (!app.wide) return;
+    if (!wideFoot) {
+      const cs = getComputedStyle(P), px = (k) => parseFloat(cs[k]) || 0, gx = px("columnGap"), co = $("pw-coins"), h = P.clientHeight - px("paddingTop") - px("paddingBottom"), w = P.clientWidth - px("paddingLeft") - px("paddingRight");
+      const fits = [["", Math.min(h, (w - co.offsetWidth - 4 * gx) / 4)], ["head", Math.min(h - co.offsetHeight - F.rowGap, (w - 3 * gx) / 4)], ["grid", Math.min((h - F.rowGap) / 2, (w - co.offsetWidth - 2 * gx) / 2)]];
+      let best = fits[0]; for (const q of fits) if (q[1] > best[1] + 1) best = q;
+      if (best[0]) P.classList.add(best[0]); P.style.setProperty("--pw-d", Math.floor(Math.min(F.max, best[1])) + "px");
+      return;
+    }
     const h = P.clientHeight, w = P.clientWidth - F.padX, fix = F.padTop + F.head + F.padBottom;
     const row = Math.min(w / 4 - F.gapX, h - fix - F.name), grid = Math.min(w / 2 - F.gapX, (h - fix - F.rowGap) / 2 - F.name), two = h >= app.cfg.layout.pwGrid && grid > row;
     P.classList.toggle("grid", two); P.style.setProperty("--pw-d", Math.floor(Math.max(F.min, Math.min(F.max, two ? grid : row))) + "px");
@@ -1021,7 +1080,16 @@
     P.classList.remove("float", "tight"); st.top = ""; st.bottom = ""; st.left = ""; st.width = ""; st.right = "";
     if (app.wide) { st.left = sd.left - A.left + "px"; st.width = sd.width + "px"; st.right = "auto"; st.bottom = A.bottom - sd.bottom + "px"; }
     const foot = app.wide ? sd.bottom : A.bottom, gap = 6, natural = () => { P.classList.add("float"); const k = card.offsetHeight; P.classList.remove("float"); return k; };
-    if (app.panel === "win") { const hh = natural(); st.top = Math.min(rl.top, foot - hh) - A.top + "px"; return; }
+    if (app.panel === "win") {
+      // Critics 2 fix: a Gallery win's picture shrinks to the room (from the screen's or the column's top), or goes.
+      let hh = natural(); const top0 = app.wide ? sd.top : A.top;
+      const pic = $("p-pic"), pc = pic.firstElementChild;
+      if (pic.dataset.on) { pic.hidden = false; picSize(1e9); hh = natural(); if (hh > foot - top0 && !picSize(parseFloat(pc.style.height) - (hh - (foot - top0)))) pic.hidden = true; hh = natural(); stagePic(pic.hidden); }
+      // Wide (m8): the sheet is the rail's height, or its content's when that is taller, from the rail's top (the bar
+      // under it stays in view); else the whole rail to the foot, as before.
+      if (app.wide) { const want = Math.max(hh, rl.height), t = Math.max(top0, Math.min(rl.top, foot - want)); st.top = t - A.top + "px"; st.bottom = A.bottom - Math.min(foot, t + want) + "px"; return; }
+      st.top = Math.min(rl.top, foot - hh) - A.top + "px"; return;
+    }
     let hh = natural(); const room = foot - lw.bottom - gap;
     if (hh > room) { P.classList.add("tight"); hh = natural(); }
     if (hh <= room) { st.top = lw.bottom + gap - A.top + "px"; return; }
@@ -1034,7 +1102,7 @@
     app.lastW = W; app.lastH = H;
     const a = Math.max(T.artMin, Math.min(T.artMax, Math.floor(Math.min(W / T.artW, H / T.artH)))), w = Math.ceil(W / a), h = Math.ceil(H / a);
     c.width = w; c.height = h; c.style.width = w * a + "px"; c.style.height = h * a + "px";
-    try { Art.title(c, app.cfg.art, app.sheets, 0, W > H ? T.baseFracWide : T.baseFrac); } catch (e) { /* sky colour stays */ }
+    try { const g = Art.title(c, app.cfg.art, app.sheets, 0, W > H ? T.baseFracWide : T.baseFrac); $("title").style.setProperty("--river-y", (g.base + g.river / 2) * a + "px"); } catch (e) { /* sky colour stays */ }
   }
 
   // ---- frame loop -----------------------------------------------------------------------------------------------------
@@ -1568,9 +1636,14 @@
       // 23. Critics 1 fix: the rods on the debug levels along their stored orders (every rod on its two tiles, never over a
       // third); B1: a linked pair leaving and then at rest, and a full line of big squads rushed out, with every count
       // clear of every badge.
-      for (const id of ["v4-linked", "v4-all", "e3-62", "e3-67", "e4-89"]) { const e = app.byId.get(id); if (!e) continue; startLevel(id, "normal"); let bad = rodClear(), cb = chainClear(), gb = rodGlyph(), n = 0;
-        for (const ch of e.L.win.normal) { if (bad !== true || cb !== true || gb !== true) break; playCol(+ch); settleNow(); bad = rodClear(); cb = chainClear(); gb = rodGlyph(); n++; }
-        ok(bad === true && cb === true && gb === true, id + ": after each of " + n + " taps every rod lands on its two tiles and crosses no third, no rod or rivet touches a count, no chain tag covers one (" + bad + ", " + gb + ", " + cb + ")"); }
+      // Critics 2 fix (m9): no two rods run down one gutter over the same rows (each takes its own lane).
+      const laneClash = () => { const seg = []; for (const pth of app.rods.querySelectorAll("path")) { if (pth.getAttribute("stroke") !== LY.rod.ink) continue; const v = (pth.getAttribute("d").match(/-?[\d.]+/g) || []).map(Number);
+          for (let i = 0; i + 3 < v.length; i += 2) if (Math.abs(v[i] - v[i + 2]) < 0.05 && Math.abs(v[i + 1] - v[i + 3]) > 0.5) seg.push([v[i], Math.min(v[i + 1], v[i + 3]), Math.max(v[i + 1], v[i + 3])]); }
+        for (let u = 0; u < seg.length; u++) for (let w = u + 1; w < seg.length; w++) if (Math.abs(seg[u][0] - seg[w][0]) < 1 && Math.min(seg[u][2], seg[w][2]) - Math.max(seg[u][1], seg[w][1]) > 0) return "two rods share the gutter at x " + Math.round(seg[u][0]);
+        return true; };
+      for (const id of ["v4-linked", "v4-all", "e3-62", "e3-67", "e4-78", "e4-89"]) { const e = app.byId.get(id); if (!e) continue; startLevel(id, "normal"); let bad = rodClear(), cb = chainClear(), gb = rodGlyph(), lc = laneClash(), n = 0;
+        for (const ch of e.L.win.normal) { if (bad !== true || cb !== true || gb !== true || lc !== true) break; playCol(+ch); settleNow(); bad = rodClear(); cb = chainClear(); gb = rodGlyph(); lc = laneClash(); n++; }
+        ok(bad === true && cb === true && gb === true && lc === true, id + ": after each of " + n + " taps every rod lands on its two tiles and crosses no third, no rod or rivet touches a count, no chain tag covers one, no two rods share a lane (" + bad + ", " + gb + ", " + cb + ", " + lc + ")"); }
       if (app.byId.has("v4-linked")) { startLevel("v4-linked", "normal"); const j = app.cards.findIndex((b, k) => app.S.front(k) >= 0 && app.S.partner(app.S.front(k)) >= 0);
         if (ok(j >= 0 && playCol(j), "B1: a linked front card plays")) { for (let t = 0; t < 350; t += 16) step(16); const a = slotClear(), lk = app.slots.filter((q) => q.classList.contains("linked")).length; settleNow(); const b = slotClear();
           ok(a === true && b === true && lk === 2, "B1: both linked spaces wear the chain and every count stays clear of every badge, leaving and at rest (" + a + ", " + b + ")"); } }
@@ -1605,12 +1678,20 @@
         ok(galOpen() && !gb.classList.contains("locked") && gb.querySelector(".gs").textContent === GC.count.replace("{n}", 0).replace("{t}", app.gal.length), "gallery: open once level " + GC.openAt + " is won; the button counts " + gb.querySelector(".gs").textContent);
         gb.click(); const tiles = Array.from(document.querySelectorAll("#gal-grid .gal-tile"));
         ok(app.screen === "gallery" && tiles.length === app.gal.length && !tiles.some((t) => t.classList.contains("done")) && $("gal-credits").textContent === GC.credits && !document.querySelector("#gallery a") && hitOK(tiles[0]), "gallery: the title's button opens the grid of " + tiles.length + " pictures, none cleared, the credits line in plain text (no links)");
+        { const nxt = tiles.filter((t) => t.classList.contains("next")), chip = tiles[0].querySelector(".gp");
+          ok(nxt.length === 1 && nxt[0] === tiles[0] && chip.textContent === GC.playChip && shown(chip) && getComputedStyle(tiles[0]).borderTopColor !== getComputedStyle(tiles[1]).borderTopColor && tiles[0].getAttribute("aria-label") === fill(GC.nextAria, { n: app.gal[0].n }), "gallery (Critics 2 fix, V2): the first picture not yet cleared, and only it, wears the gold frame and the '" + chip.textContent + "' chip"); }
         const px = (c) => { const q = document.createElement("canvas"); q.width = c.width; q.height = c.height; const g = q.getContext("2d", { willReadFrequently: true }); g.drawImage(c, 0, 0); const d = g.getImageData(0, 0, c.width, c.height).data, s = new Set(); for (let i = 0; i < d.length; i += 4) s.add("#" + [d[i], d[i + 1], d[i + 2]].map((v) => v.toString(16).padStart(2, "0")).join("")); return s; };
         const e0 = app.gal[1] || app.gal[0], i0 = app.gal.indexOf(e0), pal0 = new Set(Object.values(e0.L.pal).map((q) => q.c.toLowerCase())), dim0 = px(tiles[i0].querySelector("canvas"));
         // Cleared: win a picture through its stored order; the save's gal holds it, the sheet offers the next picture.
         startLevel(e0.id, "normal"); patient(e0.L.win.normal); settleNow(); tick(9000);
         const nx = nextPicture(e0);
         ok(app.panel === "win" && $("p-title").textContent === GC.winTitle && $("p-primary").textContent === GC.nextBtn && (app.save.data.gal[e0.id] & 2) && !app.save.data.done[e0.id] && hitOK($("p-primary")), "gallery: a picture won goes in the save's gal (" + app.save.data.gal[e0.id] + "), the sheet says '" + $("p-title").textContent + "' and offers '" + $("p-primary").textContent + "'");
+        { for (const an of $("panel").firstElementChild.getAnimations()) an.finish(); const pc = $("p-pic").firstElementChild, pr = pc.getBoundingClientRect(), cr = $("panel").firstElementChild.getBoundingClientRect(), cols = px(pc), cell = pr.height / (e0.L.h - 2), sc = sheetClear(true);
+          out.notes.reportPic = Math.round(pr.width) + "x" + Math.round(pr.height) + " CSS px, " + cell.toFixed(2) + " a cell";
+          const sp = $("stage-pic"), onStage = !shown($("p-pic")) && shown(sp), spr = sp.firstElementChild.getBoundingClientRect(), fr = $("frame").getBoundingClientRect(), scol = onStage ? px(sp.firstElementChild) : cols;
+          if (onStage) out.notes.reportPic = "over the board, " + Math.round(spr.width) + "x" + Math.round(spr.height) + " CSS px";
+          ok((shown($("p-pic")) ? pr.top >= cr.top && pr.bottom <= cr.bottom : onStage && spr.left >= fr.left && spr.right <= fr.right && spr.top >= fr.top && spr.bottom <= fr.bottom) && $("p-line").textContent === fill(GC.winLine, { title: e0.L.title }) && [...scol].every((c) => pal0.has(c)) && scol.size === pal0.size && cr.top >= -0.5 && cr.bottom <= innerHeight + 0.5 && sc === true && hitOK($("p-primary")) && hitOK($("p-secondary")),
+            "gallery (Critics 2 fix, V2): the win shows the finished picture (" + out.notes.reportPic + ", all " + scol.size + " of its colours) on the sheet (or over the razed board where the sheet has no room), and the sheet fits the screen; '" + $("p-line").textContent + "' (" + sc + ")"); }
         $("p-primary").click(); ok(app.entry === nx && app.screen === "play", "gallery: Next picture opens the next one not yet won (" + nx.id + ")");
         $("btn-map").click(); const col = px(tiles[i0].querySelector("canvas"));
         ok(app.screen === "gallery" && tiles[i0].classList.contains("done") && tiles[i0].querySelector(".gn").textContent === e0.L.title && [...col].every((c) => pal0.has(c)) && ![...dim0].some((c) => pal0.has(c)), "gallery: the top bar's button goes back to the grid; the won picture shows in its own colours with its title (" + e0.L.title + "), the rest stay dimmed");
@@ -1634,31 +1715,37 @@
         for (let i = 0; i < 40; i++) Save.record(app.save.data, app.order[i], "normal");
         showScreen("title"); const ne = app.byId.get(Save.next(app.save.data, app.order));
         ok($("play-lab").textContent === fill(HT.play, { n: ne.n }) && $("home-prog").textContent === "40/" + app.levels.length && $("home-era").textContent === fill(HT.era, { e: ne.era, name: app.eras[ne.era - 1].name }), "home (mid-campaign): Play reads '" + $("play-lab").textContent + "', progress " + $("home-prog").textContent + ", " + $("home-era").textContent);
+        { app.lastW = 0; paintTitle(); const ch = $("home-era").getBoundingClientRect(), ry = $("title").getBoundingClientRect().top + (parseFloat(getComputedStyle($("title")).getPropertyValue("--river-y")) || -1e9), hits = ["btn-play", "play-lab", "home-prog", "home-coins", "btn-settings"].filter((id) => over(ch, $(id).getBoundingClientRect()));
+          if (over(ch, document.querySelector(".home h1").getBoundingClientRect())) hits.push("h1");
+          for (const b of document.querySelectorAll(".home .seg button")) if (over(ch, b.getBoundingClientRect())) hits.push(b.textContent);
+          ok(Math.abs((ch.top + ch.bottom) / 2 - ry) < 1 && !hits.length && ch.left >= -0.5 && ch.right <= innerWidth + 0.5, "home (Critics 2 fix, m6): the era chip lies on the river at the castle's foot (centre " + Math.round((ch.top + ch.bottom) / 2) + ", river " + Math.round(ry) + "), so the crew (on the grass, 13 scene px under the river) stands clear; clear of the logo, the pills and the buttons (" + hits.join(", ") + ")"); }
         $("btn-play").click(); ok(app.screen === "play" && app.entry === ne, "home (mid-campaign): one tap on Play opens level " + ne.n);
         showScreen("title"); const tabsHit = hitOK($("btn-tomap")) && hitOK($("tab-home")) && hitOK($("btn-gallery")); $("btn-tomap").click(); const t1 = app.screen; $("btn-home").click(); const t2 = app.screen; $("tab-home").click(); const t3 = app.screen;
         ok(tabsHit && t1 === "map" && t2 === "title" && t3 === "title" && $("map-story").textContent === HT.story, "home tabs: Siege map opens the map (the story is there now), back reaches Home; every tab is hittable");
         { $("btn-settings").click(); const open = !$("settings").hidden && hitOK($("set-close")), m0 = app.audio.muted, mb = document.querySelector("#settings .tog-mute"); mb.click();
           const muted = app.audio.muted !== m0 && app.save.data.settings.muted === app.audio.muted && mb.querySelector(".sv").textContent === (app.audio.muted ? "Off" : "On"); mb.click();
-          const sp0 = app.speed; document.querySelector("#settings .tog-speed").click(); const sp1 = app.speed, lab = document.querySelector("#settings .tog-speed .sx").textContent; setSpeed(SPD[0], false); $("set-close").click();
+          const sp0 = app.speed; document.querySelector("#settings .tog-speed").click(); const sp1 = app.speed, lab = document.querySelector("#settings .tog-speed .sv").textContent; setSpeed(SPD[0], false); $("set-close").click();
           ok(open && muted && sp1 !== sp0 && lab === sp1 + "×" && $("settings").hidden && app.audio.muted === m0, "settings: the gear opens the sheet; sound and speed (" + lab + ") change and save through it, colour-blind is section 16; Done closes it"); }
         // The bar's geometry at this viewport.
         startLevel(app.levels[0].id, "normal");
         { const tileH = app.cards[0].getBoundingClientRect().height, rl = $("rail").getBoundingClientRect(), pw = $("powers").getBoundingClientRect(); let geo = true;
-          app.pws.forEach((b) => { const r = b.getBoundingClientRect(); if (getComputedStyle(b).borderTopLeftRadius !== "50%" || Math.abs(r.width - r.height) > 1 || r.width <= tileH - 0.5 || !hitOK(b) || r.bottom > innerHeight + 0.5 || r.right > innerWidth + 0.5) geo = false; });
+          app.pws.forEach((b) => { const r = b.getBoundingClientRect(); if (getComputedStyle(b).borderTopLeftRadius !== "50%" || Math.abs(r.width - r.height) > 1 || r.width <= tileH - 0.5 || r.width < ST.minTapPx - 0.5 || !hitOK(b) || r.bottom > innerHeight + 0.5 || r.right > innerWidth + 0.5) geo = false; }); // Critics 2 fix (m4): a tap target
           const wideOK = !app.wide || pw.top >= rl.bottom - 0.5, tallOK = app.wide || pw.top >= rl.bottom - 0.5;
           out.notes.powerBar = Math.round(app.pws[0].getBoundingClientRect().width) + " px badges (tiles " + Math.round(tileH) + " px), bar " + Math.round(pw.height) + " px, " + app.rows + " queue rows" + ($("powers").classList.contains("grid") ? ", 2x2" : "");
           if (app.wide && !document.body.classList.contains("short")) { const sd = $("side").getBoundingClientRect(), used = $("top").getBoundingClientRect().height + rl.height + pw.height; out.notes.powerBarBlank = (100 * Math.max(0, 1 - used / sd.height)).toFixed(1) + "% of the side column not covered"; }
-          ok(geo && wideOK && tallOK && (innerHeight > LY.shortRowsMaxH || app.rows === LY.queueRowsShort), "power-up bar: four round badges (" + out.notes.powerBar + "), each bigger than a tile, hittable and on screen, under the queue" + (innerHeight <= LY.shortRowsMaxH ? "; a short frame shows " + LY.queueRowsShort + " rows" : "")); }
+          ok(geo && wideOK && tallOK && (innerHeight > LY.shortRowsMaxH || app.rows === LY.queueRowsShort), "power-up bar: four round badges (" + out.notes.powerBar + "), each bigger than a tile and " + ST.minTapPx + " px or more, hittable and on screen, under the queue" + (innerHeight <= LY.shortRowsMaxH ? "; a short frame shows " + LY.queueRowsShort + " rows" : "")); }
         // Buying, then the Ladder.
         { const c0 = coins(), P = Meta.powerOf(MT, PWK.LADDER), b = app.pws[PWK.LADDER];
-          ok(app.pws.every((q) => q.classList.contains("buy") && q.querySelector(".pw-n").textContent === "+" && !q.disabled) && b.querySelector(".pw-tag span").textContent === String(P.price), "power-ups: none owned: every badge shows a green + and its price (no disabled button)");
+          ok(app.pws.every((q) => q.classList.contains("buy") && !q.classList.contains("poor") && q.querySelector(".pw-n").textContent === "+" && !q.disabled) && b.querySelector(".pw-tag span").textContent === String(P.price), "power-ups: none owned: every badge shows a green + and its price (no disabled button)");
           b.click(); const bought = coins() === c0 - P.price && inv().ladder === 1 && b.classList.contains("own") && b.querySelector(".pw-n").textContent === "1";
           const cap0 = app.S.cap; b.click();
           ok(bought && app.S.cap === cap0 + 1 && app.S.extra === 1 && inv().ladder === 0 && b.classList.contains("spent") && app.slots.filter((q) => !q.hidden).length === app.S.cap, "Ladder through its badge: bought (" + c0 + " -> " + (c0 - P.price) + " coins), then used: " + app.S.cap + " spaces show; one spent");
           const c1 = coins(); b.click();
           ok(coins() === c1 && inv().ladder === 0 && app.S.extra === 1 && tx() === fill(MT.power.limit, { name: P.name, n: app.S.limit(PWK.LADDER) }), "Ladder: past its uses this level the tap is refused (nothing bought or spent): '" + tx() + "'");
+          app.save.data.coins = 70; renderPowers(); const pq = app.pws.map((q, k) => q.classList.contains("poor") === (k !== PWK.SCOUT && !q.classList.contains("spent"))), pc = getComputedStyle(app.pws[PWK.RECALL].querySelector(".pw-n")).backgroundColor !== getComputedStyle(app.pws[PWK.SCOUT].querySelector(".pw-n")).backgroundColor;
+          ok(pq.every(Boolean) && pc && /need 30/.test(app.pws[PWK.RECALL].getAttribute("aria-label")), "power-ups (Critics 2 fix, m2): at 70 coins the buys over 70 look different (.poor, another '+' colour, the price in red; aria '" + app.pws[PWK.RECALL].getAttribute("aria-label") + "') and Scout (60) does not");
           app.save.data.coins = 5; renderPowers(); const sb = app.pws[PWK.SCOUT]; sb.click();
-          ok(coins() === 5 && inv().scout === 0 && tx() === fill(MT.power.short, { name: Meta.powerOf(MT, PWK.SCOUT).name, price: Meta.powerOf(MT, PWK.SCOUT).price, have: 5 }), "power-ups: short of coins a buy is refused and says so: '" + tx() + "'");
+          ok(coins() === 5 && inv().scout === 0 && sb.classList.contains("poor") && !sb.disabled && tx() === fill(MT.power.short, { name: Meta.powerOf(MT, PWK.SCOUT).name, price: Meta.powerOf(MT, PWK.SCOUT).price, have: 5 }), "power-ups: short of coins a buy (.poor, still tappable) is refused and says so: '" + tx() + "'");
           app.save.data.coins = 1000; }
         // Scout on v4-mystery; refused where nothing is hidden.
         if (app.byId.has("v4-mystery")) { startLevel("v4-mystery", "normal"); inv().scout = 1; renderPowers(); const h0 = nHidden(); app.pws[PWK.SCOUT].click();
@@ -1688,8 +1775,10 @@
         { const e = app.byId.get("e1-03") || app.levels[2], o = e.L.win.hard, c0 = coins(), want = Meta.winCoins(MT, "hard", true);
           startLevel(e.id, "hard"); patient(o.slice(0, -1)); tick(5000); playCol(+o[o.length - 1]); settleNow(); for (let t = 0; t < 12000 && !app.panel; t += 16) step(16);
           const R = app.report, early = $("p-coins").textContent; for (let t = 0; t < MT.report.countDelayMs + MT.report.countMs + 48; t += 16) step(16);
-          ok(app.panel === "win" && !!R && R.coins === want && coins() === c0 + want && R.taps === app.S.plays && R.ms >= 5000 && $("p-time").textContent === Meta.clock(R.ms) && $("p-taps").textContent === String(R.taps) && early === "+0" && $("p-coins").textContent === "+" + want && !$("p-stats").hidden && hitOK($("p-primary")),
-            "report (a first win on Hard): +" + want + " coins counted up (" + early + " -> " + $("p-coins").textContent + "), time " + $("p-time").textContent + ", taps " + $("p-taps").textContent + ", the medal; the save's coins follow");
+          ok(app.panel === "win" && !!R && R.coins === want && coins() === c0 + want && R.taps === app.S.plays && R.ms >= 5000 && $("p-time").textContent === Meta.clock(R.ms) && $("p-taps").textContent === String(R.taps) && early === "+0" && $("p-coins").textContent === "+" + want && !$("p-stats").hidden && $("p-pic").hidden && hitOK($("p-primary")),
+            "report (a first win on Hard): +" + want + " coins counted up (" + early + " -> " + $("p-coins").textContent + "), time " + $("p-time").textContent + ", taps " + $("p-taps").textContent + ", the medal (no picture: a siege level); the save's coins follow");
+          if (app.wide) { for (const an of $("panel").firstElementChild.getAnimations()) an.finish(); const sh = $("panel").getBoundingClientRect(), rl = $("rail").getBoundingClientRect(), pw = $("powers").getBoundingClientRect(), cd = $("panel").firstElementChild, k = cd.scrollHeight;
+            ok(sh.top <= rl.top + 0.5 && sh.bottom >= rl.bottom - 0.5 && (sh.height <= Math.max(rl.height, k) + 12) && (document.body.classList.contains("short") || sh.bottom < pw.bottom - 1), "report (Critics 2 fix, m8): on a wide screen the win sheet covers the rail and is the rail's height or its content's (" + Math.round(sh.height) + " px against the rail's " + Math.round(rl.height) + ", content " + k + ", sheet " + Math.round(sh.top) + "-" + Math.round(sh.bottom) + ", rail " + Math.round(rl.top) + "-" + Math.round(rl.bottom) + "); the power-up bar's foot stays in view"); }
           const firstEm = $("p-stats").children[0].querySelector("em").textContent; startLevel(e.id, "hard"); patient(o.slice(0, -1)); tick(2000); playCol(+o[o.length - 1]); settleNow(); for (let t = 0; t < 12000 && !app.panel; t += 16) step(16);
           const R2 = app.report, b = Meta.bestOf(app.save.data, e.id);
           ok(R2.coins === Meta.winCoins(MT, "hard", false) && R2.newMs && !R2.newTaps && $("p-stats").children[0].querySelector("em").textContent === MT.report.newBest && $("p-stats").children[1].querySelector("em").textContent === fill(MT.report.best, { v: R.taps }) && b[2] === R2.ms && b[5] === R.taps && firstEm === MT.report.first,

@@ -260,8 +260,9 @@
 
   // ---- v4 M5: power-up and meta icons ---------------------------------------------------------------------------------
   // Power-ups on a 20 × 20 logical grid: 0 a siege ladder, 1 the quartermaster's crate under a gold arrow (bring a squad
-  // forward), 2 the scout's spyglass, 3 the recall horn. Small icons, 12 × 12: coin, heart, castle (the siege's
-  // progress). Ink outlines throughout; transparent around the shape. The page turns them into image URLs once at boot.
+  // forward), 2 the scout's spyglass, 3 the recall (a gold arrow turning back over a helmet). Small icons, 12 × 12: coin,
+  // heart, castle (the siege's progress). Ink outlines throughout; transparent around the shape. The page turns them into
+  // image URLs once at boot.
   const PWN = 20;
   const CRATE = [".........hA.........", "........hAAa........", ".......hAAAAa.......", "......hAAAAAAa......", ".....hAAAAAAAAa.....", "....hAAAAAAAAAAa....",
     "........hAAa........", "........hAAa........", "........hAAa........", "....................", "...cccccccccccccc...", "...cllllllllllllc...", "...cCCCCCCCCCCCCc...",
@@ -283,13 +284,21 @@
       along(P, pts.slice(0, 11), () => 1, g2); along(P, pts.slice(19), () => 2.3, A.timber[0]);
       for (const i of [10, 19]) disc(P, Math.round(pts[i][0]), Math.round(pts[i][1]), Math.round(r(i / 30)), g0);
       const e = pts[30]; disc(P, Math.round(e[0]), Math.round(e[1]), 2, A.ice[1]); P.p(Math.round(e[0]) - 1, Math.round(e[1]) - 1, "#ffffff");
-    } else { // the recall horn: ivory, shaded underneath, two brass bands, flaring to a dark mouth
-      const iv = A.crew[2], pts = bez([4, n - 3], [3, 6], [n - 5, 5], 36), r = (t) => 0.8 + 1.8 * t + (t > 0.78 ? (t - 0.78) * 11 : 0);
-      along(P, pts, (t) => r(t) + 1, ink); along(P, pts, r, iv[1]); along(P, pts, (t) => r(t) - 1, iv[0], -0.7, -0.7);
-      for (const i of [13, 24]) disc(P, Math.round(pts[i][0]), Math.round(pts[i][1]), Math.round(r(i / 36)), g1);
-      const e = pts[36]; disc(P, Math.round(e[0]) + 1, Math.round(e[1]), Math.max(1, Math.round(r(1) - 2)), A.timber[3]);
-    }
+    } else glyph(P, recallRows(n), 0, 0, { h: g0, A: g1, a: g2, S: A.crew[0][0], D: A.crew[0][1], L: A.crew[0][2], K: A.iron[0] }, ink);
     return c;
+  }
+  // Critics 2 fix (m3): Recall is a gold arrow turning back (a ↶: up from the squad, over, and down to the left) over a
+  // sapper's steel helmet, so it reads as "send a squad back" at 34 px (it was an ivory horn). Rows of glyph() keys:
+  // h/A/a the arrow's lit, mid and shaded gold, L/S/D the helmet's light, steel and dark band, K its brim.
+  function recallRows(n) {
+    const cx = 10.5, cy = 9, Ro = 7.6, Ri = 4.2, hx = 12.5, hy = 16.5, hr = 4.4, lx = cx - (Ro + Ri) / 2, t0 = cy + 0.2, t1 = cy + 6.4, rows = [];
+    for (let y = 0; y < n; y++) { let r = ""; for (let x = 0; x < n; x++) { const X = x + 0.5, Y = y + 0.5, d = Math.hypot(X - cx, Y - cy); let ch = ".";
+      if (Y <= hy && Math.hypot(X - hx, (Y - hy) * 1.05) <= hr) ch = X < hx - 0.5 && Y < hy - 2 && X > hx - 3.6 ? "L" : Y > hy - 1.2 ? "D" : "S"; // the helmet's dome
+      if (Y > hy && Y <= hy + 1.4 && Math.abs(X - hx) <= hr + 1.8) ch = "K"; // its brim
+      if (d <= Ro && d >= Ri && (Y <= cy || (X > cx && Y <= cy + 2.2))) ch = d > Ro - 1.1 ? "h" : d < Ri + 1.1 ? "a" : "A"; // the arc, rising from the helmet
+      if (Y >= t0 && Y <= t1) { const hw = (4.3 * (t1 - Y)) / (t1 - t0) + 0.3; if (Math.abs(X - lx) <= hw) ch = X < lx - hw + 1.2 ? "h" : X > lx + hw - 1.2 ? "a" : "A"; } // the head, pointing down
+      r += ch; } rows.push(r); }
+    return rows;
   }
   const SMALL = {
     coin: ["...######...", ".##GGGGGG##.", ".#GGWGGGGd#.", "#GGWGGddGGd#", "#GWGGdGGdGd#", "#GGGGdGGdGd#", "#GGGGdGGdGd#", "#GGGGdGGdGd#", "#GGGGGddGGd#", ".#GGGGGGdd#.", ".##ddddddd#.", "...######..."],
@@ -343,6 +352,7 @@
     tiles(P, S.q0, 0, base + 9, W, H - base - 9);
     const gap = Math.min(W, 170) / 5, x0 = (W - Math.min(W, 170)) / 2, cy = Math.min(H - 19, base + 13);
     for (let i = 0; i < 4; i++) sprite(P, S, i, i === 1 ? WORK : 0, Math.round(x0 + gap * (i + 1) - 8), cy, i >= 2);
+    return { base, river: 9 }; // Critics 2 fix (m6): where the river runs (logical px), for the home's era chip
   }
 
   // Portrait banner above the board: sky (night in World 4), a crenellated wall along the bottom, a torch, and the
