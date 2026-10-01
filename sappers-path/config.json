@@ -134,7 +134,9 @@
     "blockedShake": [0, -6, 6, -4, 4, -2, 0],
     "victoryPace": 1.5,
     "flipMs": 340,
-    "unlockMs": 700
+    "unlockMs": 700,
+    "pwNote": "v4 M5: a power-up badge pops for pwPopMs when it is used or bought; the win's report counts its coins up over meta.report.countMs.",
+    "pwPopMs": 420
   },
   "fx": {
     "note": "Juice (M2): crumbs of the block's colour and a dust puff per popped pixel (sizes in cells, speeds in cells/s, gravity in cells/s^2, ms), the falling pops (gate bars, and the keep's last fx.winFallN pixels on the winning play), shakes [amplitude in cells, ms], and the coach's ring colour. Shakes are off under prefers-reduced-motion.",
@@ -151,7 +153,9 @@
     "linkedWord": "linked", "linkedAria": "linked with column {c}", "debugNum": "v4", "heldText": "done, holding for its partner", "lockedText": "Locked space: its key is on the board",
     "mystery": {"c": "#2b3566", "tc": "#f3ead8", "q": "?"}, "rod": {"w": 8, "core": 5, "ink": "#221a26", "metal": "#b08f6a", "hi": "#f3e3c4", "rivet": 5, "stub": 10, "cap": 2.6}, "debugRow": "v4 twists",
     "fixNote": "Critics 1 fix. fade: the rows behind the front mix this share (t, per row) of the tray colour into their tile, in sRGB, never opacity (tools/fade.js: every faded tile stays ΔE00 20+ from every other colour it shows with); tray is the rail's stone (style.css --tray, set from here at boot); band (fix 2): row d sits on a band of the tray with this share of black mixed in (--band1, --band2), so the rows step back without touching the tile faces. minCellCss: the smallest board cell a coach band above the board may leave (else the coach sits in the top bar). hand: the coach's arrow; for a queue tile it comes in from the side at sideScale (its tip sideIn px inside the tile), for a space or the line from above (tip downIn px inside), and the line head's count steps aside by the arrow's half width (halfW) plus gap. rod: w, core and rivet (radius) in CSS px at a phone tile (52 px), scaled with the tile; partners two rows apart (and a partner below the visible rows: a stub of stub px and two dots) run down the gutter between their columns. mystery.c: the face-down card's back. jamChips: the most colour chips the jam sheet shows.",
-    "fade": {"tray": "#ddd3c0", "t": [0, 0.1, 0.2], "band": [0, 0.06, 0.12]}, "minCellCss": 8, "coachTopMarginPx": 3, "hand": {"sideScale": 0.56, "sideIn": 5, "downIn": 4, "halfW": 17, "gap": 6}, "jamChips": 6},
+    "fade": {"tray": "#ddd3c0", "t": [0, 0.1, 0.2], "band": [0, 0.06, 0.12]}, "minCellCss": 8, "coachTopMarginPx": 3, "hand": {"sideScale": 0.56, "sideIn": 5, "downIn": 4, "halfW": 17, "gap": 6}, "jamChips": 6,
+    "m5Note": "v4 M5. Short frames (CSS max-height shortRowsMaxH, e.g. the 400x600 iframe and landscape phones) show queueRowsShort rows so the power-up bar fits under the queue (orchestrator's call, 9/30); every other size keeps queueRows, unless a portrait board would then be under minCellCss CSS px a cell (then that level shows queueRowsShort and the compact bar). stageGapPx: the px kept free round the board's frame [across, down, down with two rows] (was 14 and 16 in code). pwGrid: on wide screens the bar lays its badges out 2x2 once the column's foot has this many CSS px of height and the badges come out bigger that way, else in a row; pwFit: the foot's fixed parts in CSS px (side padding, top padding, the coins header, bottom padding, a badge's name below it, the gap between rows and beside each badge) and the badge's min and max diameter.",
+    "queueRowsShort": 2, "shortRowsMaxH": 640, "stageGapPx": [14, 16, 6], "pwGrid": 250, "pwFit": {"padX": 24, "padTop": 10, "head": 38, "padBottom": 14, "name": 30, "rowGap": 8, "gapX": 14, "min": 84, "max": 112}},
   "title": {"artW": 125, "artH": 190, "artMin": 2, "artMax": 5, "baseFrac": 0.58, "baseFracWide": 0.56, "wallArtPx": 3},
   "audio": {
     "volume": 0.5,
@@ -188,7 +192,9 @@
       "star": [{"w": "triangle", "f": 1047, "d": 0.18, "g": 0.18, "step": 262}, {"w": "sine", "f": 2094, "d": 0.12, "g": 0.06, "step": 524}],
       "lock": [{"w": "square", "f": 220, "f1": 200, "d": 0.08, "g": 0.08, "lp": 1200}, {"w": "square", "f": 180, "f1": 170, "d": 0.1, "g": 0.08, "lp": 1200, "at": 0.08}],
       "unlock": [{"w": "square", "f": 180, "f1": 150, "d": 0.06, "g": 0.1, "lp": 1600}, {"w": "noise", "d": 0.04, "g": 0.16, "bp": 2600}, {"w": "triangle", "f": 660, "f1": 990, "d": 0.12, "g": 0.14, "at": 0.08}, {"w": "sine", "f": 1320, "d": 0.18, "g": 0.1, "at": 0.16}],
-      "flip": [{"w": "triangle", "f": 700, "f1": 1100, "d": 0.06, "g": 0.1}]
+      "flip": [{"w": "triangle", "f": 700, "f1": 1100, "d": 0.06, "g": 0.1}],
+      "power": [{"w": "triangle", "f": 392, "f1": 523, "d": 0.08, "g": 0.16}, {"w": "triangle", "f": 659, "f1": 784, "d": 0.1, "g": 0.14, "at": 0.07}, {"w": "sine", "f": 1047, "d": 0.2, "g": 0.1, "at": 0.14}],
+      "coin": [{"w": "square", "f": 1568, "d": 0.05, "g": 0.06, "lp": 4200}, {"w": "sine", "f": 2093, "d": 0.16, "g": 0.1, "at": 0.05}]
     },
     "work": ["clink", "thunk", "bleat", "sizzle"],
     "workAfter": ["clink", "thunk", "munch", null]
@@ -298,10 +304,21 @@
     "coins": {"start": 400, "win": {"easy": 5, "normal": 10, "hard": 20}, "first": {"easy": 10, "normal": 20, "hard": 40}},
     "pullDepth": 2,
     "powers": [
-      {"id": "ladder", "price": 120, "perLevel": 1},
-      {"id": "quartermaster", "price": 80, "perLevel": 3},
-      {"id": "scout", "price": 60, "perLevel": 1},
-      {"id": "recall", "price": 100, "perLevel": 2}
-    ]
+      {"id": "ladder", "name": "Ladder", "say": "+1 space this level", "price": 120, "perLevel": 1},
+      {"id": "quartermaster", "name": "Quartermaster", "say": "bring a squad forward", "price": 80, "perLevel": 3},
+      {"id": "scout", "name": "Scout", "say": "reveal every ? squad", "price": 60, "perLevel": 1},
+      {"id": "recall", "name": "Recall", "say": "send a waiting squad back", "price": 100, "perLevel": 2}
+    ],
+    "textNote": "The page's words for the meta layer. power: the power-up bar's toasts ({name}, {price}, {have}, {n}, {say}). report: the level report's rows ({v} a value, {n} coins). home: the home screen ({n} a level, {done} levels won, {t} total, {t} a countdown in lives). eraCard: the map's report card per era (and the Gallery's).",
+    "power": {"pickPull": "Pick a squad to bring forward", "pickRecall": "Pick a waiting squad to recall",
+      "bought": "{name} bought (-{price} coins)", "short": "{name} costs {price}: you have {have} coins", "full": "You can't carry more {name}s",
+      "limit": "{name}: {n} per level", "noPull": "No squad behind the front can come forward", "noPullJam": "Bringing that squad forward would jam the line",
+      "noScout": "No hidden squads to scout", "noRecall": "No squad is waiting with all its sappers home", "noLadder": "The line can't take more spaces",
+      "used": "{name}: {say}", "aria": "{name}: {say}. {state}", "owned": "{n} owned", "buy": "buy for {price} coins", "spent": "used up this level"},
+    "report": {"time": "Time", "taps": "Taps", "coins": "Coins", "best": "Best {v}", "first": "First win", "newBest": "New best!", "medal": "New medal +{n}", "countMs": 900, "countDelayMs": 250},
+    "home": {"play": "Level {n}", "playGallery": "Play", "era": "Era {e} \u00b7 {name}", "progress": "{done}/{t} levels won", "coins": "{n} coins", "lives": "{n} lives", "livesFull": "Lives full",
+      "noLives": "Next life {t}", "noLivesToast": "No lives left: the next one comes in {t}", "lifeLost": "-1 life ({n} left)", "galTab": "Opens at 25",
+      "story": "Goblins stole the crown and walled themselves in. Tap a squad: its sappers run up, pull their colour off the fort and carry it home. Keep the holding line clear. Raze every block."},
+    "eraCard": {"cleared": "{n}/{t} cleared", "coins": "{n} coins", "aria": "{n} of {t} cleared; medals: {e} Easy, {m} Normal, {h} Hard; {c} coins earned"}
   }
 }

@@ -14,7 +14,7 @@
 // while any of it stands; the range disc fades and the archer tumbles when it falls.
 // The locked space's key (v4 M2): the gilt block that opens the holding line's locked space wears a pulsing dashed square
 // in the socket colour (board.lockKey), so it reads as a space key, not a gate key (a full ring in the gate's tint).
-// The page plays the padlock and the cue; sync() passes REVEAL, LINK and UNLOCK to the page's hooks.
+// The page plays the padlock and the cue; sync() passes REVEAL, LINK and UNLOCK to the page's hooks (v4 M5: and POWER).
 //
 // Surface and scenery (v3 fix pass). Each block can take one of four tones of its colour (base, lit, shade, alt), picked
 // once per level from the fort's shape (a region's top or left edge lit, its bottom or right edge shaded, a running bond
@@ -146,7 +146,7 @@
       label: { t: -1e12, x: 0, y: 0, kill: false, text: "", w: 0 },
       focus: { on: false, x: 0, y: 0, r: 1 },
       gob: { on: false, t0: 0, x: 0, y: 0, done: false },
-      hooks: { pop: null, deposit: null, gate: null, tower: null, shot: null, hit: null, collapse: null, tap: null, free: null, move: null, reveal: null, link: null, unlock: null },
+      hooks: { pop: null, deposit: null, gate: null, tower: null, shot: null, hit: null, collapse: null, tap: null, free: null, move: null, reveal: null, link: null, unlock: null, power: null },
       lockKey: -1, lockOpen: true, pal: null, palKey: "", ring: false,
       // Critics 1 fix: rings (V.hot from the page, the loud mask worked out per board change, each ring's ease) and bins.
       hot: 0, ringsLoud: false, hotVer: -1, hotFor: -1, hotMask: 0, shootM: 0, ringA: new Float32Array(MAXT), ringHitT: new Float64Array(MAXT).fill(-1e12), binT: new Float64Array(E.NMAT).fill(-1e12),
@@ -583,6 +583,7 @@
         else if (t === EV.REVEAL) { if (V.hooks.reveal) V.hooks.reveal(a, b); }
         else if (t === EV.LINK) { if (V.hooks.link) V.hooks.link(a, b); }
         else if (t === EV.UNLOCK) { V.lockOpen = true; if (anim && V.hooks.unlock) V.hooks.unlock(a); }
+        else if (t === EV.POWER) { if (V.hooks.power) V.hooks.power(a, b); }
       }
       S.clearLog();
     }

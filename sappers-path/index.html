@@ -8,8 +8,8 @@
 <title>Sapper's Path</title>
 <meta name="description" content="Goblins stole the crown and walled themselves in. Tap a squad: its sappers run up, pull their colour off the fort and carry it home. Keep the holding line clear and raze every block.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%232e2935'/><rect x='14' y='14' width='22' height='22' rx='5' fill='%23ff8c1a'/><rect x='39' y='14' width='22' height='22' rx='5' fill='%23e6262e'/><rect x='64' y='14' width='22' height='22' rx='5' fill='%23ffe21f'/><rect x='14' y='39' width='22' height='22' rx='5' fill='%232f62ff'/><rect x='64' y='39' width='22' height='22' rx='5' fill='%239ee52a'/><rect x='14' y='64' width='22' height='22' rx='5' fill='%238f45ff'/><rect x='39' y='64' width='22' height='22' rx='5' fill='%230fb5a6'/><rect x='64' y='64' width='22' height='22' rx='5' fill='%23ff3fa4'/></svg>">
-<link rel="preload" href="fonts/Jersey10-Regular.ttf?v=21" as="font" type="font/ttf" crossorigin>
-<link rel="stylesheet" href="style.css?v=21">
+<link rel="preload" href="fonts/Jersey10-Regular.ttf?v=22" as="font" type="font/ttf" crossorigin>
+<link rel="stylesheet" href="style.css?v=22">
 </head>
 <body>
 <div id="app">
@@ -32,33 +32,55 @@
         <div id="line-wrap"><div id="line-head"><span id="line-lab">Holding line</span><span id="line-cnt"></span></div><div id="line" aria-label="Holding line"></div></div>
         <div id="tray" aria-label="Squads"></div>
       </div>
-      <div id="powers" aria-hidden="true"></div>
+      <div id="powers" role="group" aria-label="Power-ups"><span id="pw-coins" class="pill coins" role="img"><i class="ico ico-coin" aria-hidden="true"></i><b></b></span></div>
     </div>
   </main>
   <div id="panel" class="sheet" hidden>
     <div class="sheetcard panel">
       <div id="p-title" class="p-title"></div>
       <div id="p-line" class="p-line"></div>
+      <div id="p-stats" hidden><div class="st"><span class="k"></span><b id="p-time"></b><em></em></div><div class="st"><span class="k"></span><b id="p-taps"></b><em></em></div><div class="st coin"><span class="k"></span><b id="p-coins"></b><em></em></div></div>
       <div id="p-medals" hidden><span class="medal">E</span><span class="medal">N</span><span class="medal">H</span></div>
       <div class="row"><button id="p-primary" class="primary"></button><button id="p-secondary"></button></div>
     </div>
   </div>
   <div id="hand" aria-hidden="true" hidden><svg viewBox="0 0 16 18" width="34" height="38"><path d="M5 1h6v8h4l-7 8-7-8h4z" fill="#ffe27a" stroke="#221a26" stroke-width="1.6" stroke-linejoin="round"/><path d="M7 3h2v7" fill="none" stroke="#fff8d0" stroke-width="1.2"/></svg></div>
-  <button id="pause" hidden><span class="pz-t">Paused</span><span class="pz-s">Tap to play on</span></button>
-  <section id="title" class="screen">
+  <div id="pause" role="dialog" aria-label="Paused: tap to play on" tabindex="-1" hidden><span class="pz-t">Paused</span><span class="pz-s">Tap to play on</span>
+    <span class="pz-set"><button class="round tog tog-cb" aria-pressed="false" aria-label="Colour-blind marks"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2" fill="currentColor"/><rect x="13" y="3" width="8" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="3" y="13" width="8" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13" y="13" width="8" height="8" rx="2" fill="currentColor"/><path d="M5 9l4-4M15 19l4-4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg></button><button class="round tog tog-mute" aria-label="Mute sound" aria-pressed="false"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="waves" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="cross" d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></span></div>
+  <section id="title" class="screen home">
     <canvas id="title-art" class="pix" width="1" height="1" aria-hidden="true"></canvas>
-    <div class="title-card">
+    <div class="home-card">
+      <div class="home-top">
+        <button id="btn-settings" class="round" aria-label="Settings"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M10.3 2h3.4l.5 2.6 1.7.8 2.3-1.4 2.4 2.4-1.4 2.3.8 1.7 2.6.5v3.4l-2.6.5-.8 1.7 1.4 2.3-2.4 2.4-2.3-1.4-1.7.8-.5 2.6h-3.4l-.5-2.6-1.7-.8-2.3 1.4-2.4-2.4 1.4-2.3-.8-1.7L2 13.7v-3.4l2.6-.5.8-1.7L4 5.8l2.4-2.4 2.3 1.4 1.7-.8z" fill="currentColor"/><circle cx="12" cy="12" r="3.6" fill="var(--stone)" stroke="var(--ink)" stroke-width="1.6"/></svg></button>
+        <span id="home-prog" class="pill" role="img"><i class="ico ico-castle" aria-hidden="true"></i><b></b></span>
+        <span id="home-lives" class="pill" role="img" hidden><i class="ico ico-heart" aria-hidden="true"></i><b></b></span>
+        <span id="home-coins" class="pill coins" role="img"><i class="ico ico-coin" aria-hidden="true"></i><b></b></span>
+      </div>
       <h1>Sapper's Path</h1>
-      <div class="title-foot panel">
-        <p>Goblins stole the crown and walled themselves in. Tap a squad: its sappers run up, pull their colour off the fort and carry it home. Keep the holding line clear. Raze every block.</p>
+      <div class="home-foot">
+        <p id="home-era"></p>
         <div class="seg" role="group" aria-label="Difficulty"><button data-diff="easy">Easy</button><button data-diff="normal">Normal</button><button data-diff="hard">Hard</button></div>
-        <button id="btn-play" class="primary big">Play</button>
-        <button id="btn-gallery" class="gal-btn" hidden><svg class="gi" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M5 18l5-6 3 3 2-2 4 5z" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1.8" fill="currentColor"/></svg><svg class="gk" viewBox="0 0 12 12" width="16" height="16" aria-hidden="true"><path d="M4 5.5V4a2 2 0 0 1 4 0v1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="2.5" y="5.5" width="7" height="5" rx="1" fill="currentColor"/></svg><span class="gl"><span class="gt">Gallery</span><span class="gs"></span></span></button>
-        <div class="row"><button id="btn-tomap">Era map</button><button class="tog tog-cb" aria-pressed="false" aria-label="Colour-blind marks"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2" fill="currentColor"/><rect x="13" y="3" width="8" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="3" y="13" width="8" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13" y="13" width="8" height="8" rx="2" fill="currentColor"/><path d="M5 9l4-4M15 19l4-4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg><span>Colour-blind</span></button></div>
+        <button id="btn-play" class="primary play"><svg viewBox="0 0 12 12" width="22" height="22" aria-hidden="true"><path d="M3 1.5l7 4.5-7 4.5z" fill="currentColor" stroke="var(--ink)" stroke-width="1.2" stroke-linejoin="round"/></svg><span id="play-lab">Play</span></button>
         <p id="load-msg" class="small"></p>
       </div>
+      <nav class="tabs" aria-label="Screens">
+        <button id="btn-tomap" class="tab"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span class="tl">Siege map</span></button>
+        <button id="tab-home" class="tab on" aria-current="page"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M3 11l9-7 9 7v10h-6v-6H9v6H3z" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg><span class="tl">Home</span></button>
+        <button id="btn-gallery" class="tab gal-btn" hidden><svg class="gi" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M5 18l5-6 3 3 2-2 4 5z" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1.8" fill="currentColor"/></svg><svg class="gk" viewBox="0 0 12 12" width="22" height="22" aria-hidden="true"><path d="M4 5.5V4a2 2 0 0 1 4 0v1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="2.5" y="5.5" width="7" height="5" rx="1" fill="currentColor"/></svg><span class="gl"><span class="gt">Gallery</span><span class="gs"></span></span></button>
+      </nav>
     </div>
   </section>
+  <div id="settings" class="modal" role="dialog" aria-modal="true" aria-labelledby="set-title" hidden>
+    <div class="sheetcard panel">
+      <div id="set-title" class="p-title">Settings</div>
+      <div class="set-rows">
+        <button class="set-row tog tog-mute" aria-pressed="false" aria-label="Mute sound"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="waves" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="cross" d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="sl">Sound</span><span class="sv"></span></button>
+        <button class="set-row tog-speed" aria-label="Speed 1x"><span class="sx">1&times;</span><span class="sl">Speed</span><span class="sv"></span></button>
+        <button class="set-row tog tog-cb" aria-pressed="false" aria-label="Colour-blind marks"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2" fill="currentColor"/><rect x="13" y="3" width="8" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="3" y="13" width="8" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13" y="13" width="8" height="8" rx="2" fill="currentColor"/><path d="M5 9l4-4M15 19l4-4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg><span class="sl">Colour-blind marks</span><span class="sv"></span></button>
+      </div>
+      <div class="row"><button id="set-close" class="primary">Done</button></div>
+    </div>
+  </div>
   <section id="map" class="screen" hidden>
     <div class="map-top">
       <button id="btn-home" class="round" aria-label="Title"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -68,6 +90,7 @@
       <button class="round tog tog-mute" aria-label="Mute sound" aria-pressed="false"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="waves" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="cross" d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
     </div>
     <div class="seg map-seg" role="group" aria-label="Difficulty"><button data-diff="easy">Easy</button><button data-diff="normal">Normal</button><button data-diff="hard">Hard</button></div>
+    <p id="map-story" class="story"></p>
     <div id="eras"></div>
     <div class="map-foot"><div class="row"><button id="map-play" class="primary big">Play</button><button id="map-gallery" class="gal-btn" hidden><svg class="gi" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M5 18l5-6 3 3 2-2 4 5z" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1.8" fill="currentColor"/></svg><svg class="gk" viewBox="0 0 12 12" width="16" height="16" aria-hidden="true"><path d="M4 5.5V4a2 2 0 0 1 4 0v1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="2.5" y="5.5" width="7" height="5" rx="1" fill="currentColor"/></svg><span class="gl"><span class="gt">Gallery</span><span class="gs"></span></span></button></div></div>
   </section>
@@ -77,15 +100,17 @@
       <h2 id="gal-title">The Gallery</h2>
       <span id="gal-count"></span>
     </div>
+    <div id="gal-card" class="rc"></div>
     <div id="gal-grid"></div>
     <p id="gal-credits"></p>
   </section>
 </div>
-<script src="src/engine.js?v=21"></script>
-<script src="src/save.js?v=21"></script>
-<script src="src/art.js?v=21"></script>
-<script src="src/audio.js?v=21"></script>
-<script src="src/board.js?v=21"></script>
-<script src="src/main.js?v=21"></script>
+<script src="src/engine.js?v=22"></script>
+<script src="src/save.js?v=22"></script>
+<script src="src/meta.js?v=22"></script>
+<script src="src/art.js?v=22"></script>
+<script src="src/audio.js?v=22"></script>
+<script src="src/board.js?v=22"></script>
+<script src="src/main.js?v=22"></script>
 </body>
 </html>

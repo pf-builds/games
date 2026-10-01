@@ -56,9 +56,18 @@
 // difficulty, like the siege). A picture level uses its palette everywhere a colour shows (app.mats: tiles, spaces,
 // chips, the board, the sappers' helmets) and its colour names wherever a crew name would be read (aria-labels, the jam
 // sheet's label). The win sheet offers the next picture not yet won; the top bar's map button goes back to the Gallery.
+// v4 M5, the meta layer (rules of the power-ups in engine.js, coins, best results and lives in meta.js): the home screen
+// replaces the title (the title scene with a top row: settings gear, siege progress, coins, lives only when meta.lives is
+// on; one Play button labelled with the next level; a tab bar: Siege map, Home, Gallery padlocked until it opens; the
+// story moves to the map). The settings sheet holds sound, speed and colour-blind marks (the Paused sheet carries
+// colour-blind and sound too). The win sheet is the level report: time (real play time, pauses excluded), taps, coins
+// counting up, best time and taps, the medals; the fail sheet keeps its reason and chips. The map shows a report card
+// per era, the Gallery one for its pictures. The power-up bar under the queue (the foot of the side column on wide
+// screens): four round badges with an owned count or a "+" price that buys one in place; the Quartermaster and Recall
+// ask for a target (a tile behind the front, a waiting squad). Short frames (layout.shortRowsMaxH) show two queue rows.
 (function () {
   "use strict";
-  const NS = window.SappersPath, E = NS.engine, Save = NS.save, Board = NS.board, Art = NS.art, Audio = NS.audio;
+  const NS = window.SappersPath, E = NS.engine, Save = NS.save, Board = NS.board, Art = NS.art, Audio = NS.audio, Meta = NS.meta;
   const V_ = (document.currentScript && new URL(document.currentScript.src).searchParams.get("v")) || "1";
   const DEBUG = new URLSearchParams(location.search).get("debug") === "1";
   const DIFFS = Save.DIFFS, DNAME = { easy: "Easy", normal: "Normal", hard: "Hard" }, $ = (id) => document.getElementById(id);
@@ -69,7 +78,10 @@
     et: 0, endT: -1, lineDirty: false, lineMoved: false, ord: [], slotPts: [], blockT: -1e12, refused: 0, march: false,
     debug: [], flip: [false, false, false, false, false], rods: null, unlockT: -1e12, lockN: 0, reveals: 0, pairsOut: 0,
     fadeC: null, coached: false, coachMode: "", handKind: "", meas: null,
-    li: { stuck: 0, work: 0, occ: 0, free: 0, near: false, full: false, danger: false } };
+    li: { stuck: 0, work: 0, occ: 0, free: 0, near: false, full: false, danger: false },
+    // v4 M5: config.meta (selfTest swaps in a copy), the lives clock (real time), the queue rows shown, the level's start
+    // on app.clock, the win's report, a power-up waiting for its target (pick: {k}), the bar's badges, the icons' URLs.
+    meta: null, now: () => Date.now(), rows: 3, t0: 0, report: null, pick: null, pws: [], icoURL: {}, pwPop: [-1e12, -1e12, -1e12, -1e12], lifeTxt: "", countTxt: "" };
   const togMute = Array.from(document.querySelectorAll(".tog-mute")), togSpeed = Array.from(document.querySelectorAll(".tog-speed")), togCb = Array.from(document.querySelectorAll(".tog-cb"));
   const segs = Array.from(document.querySelectorAll(".seg button"));
 
@@ -83,7 +95,7 @@
     if (DEBUG) { try { indexDebug(await getJSON("levels/debug-v4.json?v=" + V_)); } catch (e) { /* no debug row */ } }
     try { indexGallery(await getJSON("levels/gallery.json?v=" + V_)); } catch (e) { /* no Gallery: its buttons stay hidden */ }
     if (!app.levels.length) { $("load-msg").textContent = "No levels found."; return; }
-    app.save = Save.open(storage(), app.cfg.save.key, app.order, app.gal.map((e) => e.id)); app.mats = app.cfg.v3.mats;
+    app.meta = app.cfg.meta; app.save = Save.open(storage(), app.cfg.save.key, app.order, app.gal.map((e) => e.id), app.meta); app.mats = app.cfg.v3.mats;
     app.diff = app.save.data.settings.diff;
     app.sheets = Art.sources(app.cfg.art); fades();
     app.V = Board.create($("board"), app.cfg, app.sheets);
@@ -94,10 +106,11 @@
     H.reveal = (ci, j) => { if (app.S && app.S.front(j) === ci) { app.flip[j] = true; cue("flip"); } app.reveals++; app.lineDirty = true; };
     H.link = () => { app.pairsOut++; app.lineDirty = true; };
     H.unlock = () => { app.unlockT = app.clock; cue("unlock"); app.lineDirty = true; };
+    H.power = () => { app.lineDirty = true; };
     try { app.V.calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { /* motion stays on */ }
     app.audio = Audio.create(app.cfg.audio);
     setMuted(app.save.data.settings.muted, false); setSpeed(app.save.data.settings.speed, false); setCb(app.save.data.settings.cb, false); setDiff(app.diff, false);
-    paintWall(); chips(); buildTray(); buildLine(); buildMap(); buildGallery(); wire();
+    paintWall(); chips(); icons(); buildTray(); buildLine(); buildPowers(); buildMap(); buildGallery(); wire();
     showScreen("title"); layout();
     if (DEBUG) window.SP = SP;
     requestAnimationFrame(frame);
@@ -132,7 +145,7 @@
     }
   }
   function storage() { try { const s = window.localStorage; s.getItem("sappers-path.probe"); return s; } catch (e) { return Save.memoryStore(); } }
-  const rulesOf = (d) => E.rulesOf(app.cfg.v3, d);
+  const rulesOf = (d) => E.rulesOf(app.cfg.v3, d, app.meta); // v4 M5: with the power-ups' uses per level
   const mat = (m) => (app.mats || app.cfg.v3.mats)[m] || { n: "?", c: "#888888", crew: "?" };
   const writeSave = () => { if (!app.testing) app.save.write(); };
 
@@ -151,6 +164,13 @@
     const dpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1)), s = Math.round(app.cfg.layout.glyphPx * dpr);
     for (let m = 1; m < E.NMAT; m++) { try { app.glURL[m] = "url(" + app.V.glyph(m, s, "#ffffff").toDataURL() + ")"; } catch (e) { app.glURL[m] = "none"; } }
     men();
+  }
+  // v4 M5: the power-up and meta icons (art.js) as image URLs at whole device pixels; the small ones go to CSS
+  // (--ic-coin, --ic-heart, --ic-castle) for .ico elements.
+  function icons() {
+    const dpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1)), I = Art.icons(app.cfg.art), rs = document.documentElement.style;
+    for (const [k, c] of Object.entries(I)) { try { const z = Math.max(1, Math.round((k[0] === "p" ? 3 : 2) * dpr)); app.icoURL[k] = "url(" + Art.up(c, c.width * z, c.height * z).toDataURL() + ")"; } catch (e) { app.icoURL[k] = "none"; } }
+    for (const k of ["coin", "heart", "castle"]) rs.setProperty("--ic-" + k, app.icoURL[k]);
   }
   // The sappers' figures in the holding line, helmets in the board's current colours (v4 M4: a Gallery level's palette).
   function men() {
@@ -171,14 +191,14 @@
       b.addEventListener("click", () => { playCol(j); });
       col.append(b); app.cards.push(b);
       const nx = [];
-      for (let d = 1; d < app.cfg.layout.queueRows; d++) { const x = document.createElement("div"); x.className = "tile next d" + d; x.setAttribute("aria-hidden", "true"); x.innerHTML = inner; col.append(x); nx.push(x); }
+      for (let d = 1; d < app.cfg.layout.queueRows; d++) { const x = document.createElement("div"); x.className = "tile next d" + d; x.setAttribute("aria-hidden", "true"); x.innerHTML = inner; x.addEventListener("click", () => pickTile(j, d)); col.append(x); nx.push(x); }
       app.nexts.push(nx); tray.append(col);
     }
     app.rods = document.createElementNS("http://www.w3.org/2000/svg", "svg"); app.rods.setAttribute("class", "rods"); app.rods.setAttribute("aria-hidden", "true"); tray.append(app.rods);
   }
   function buildLine() {
     const line = $("line");
-    for (let i = 0; i < app.cfg.layout.lineSlots; i++) { const s = document.createElement("div"); s.className = "slot"; s.innerHTML = '<i class="men"></i><b></b><em class="out"></em><i class="lk"></i><i class="pad"></i>'; line.append(s); app.slots.push(s); }
+    for (let i = 0; i < app.cfg.layout.lineSlots; i++) { const s = document.createElement("div"); s.className = "slot"; s.innerHTML = '<i class="men"></i><b></b><em class="out"></em><i class="lk"></i><i class="pad"></i>'; s.addEventListener("click", () => pickSlot(i)); line.append(s); app.slots.push(s); }
   }
   // Text on a colour: white or ink, whichever has the higher contrast (WCAG relative luminance).
   const INK = "#221a26", relLum = (hex) => { const v = parseInt(hex.slice(1), 16), f = (s) => { const x = ((v >> s) & 255) / 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }; return 0.2126 * f(16) + 0.7152 * f(8) + 0.0722 * f(0); };
@@ -219,7 +239,7 @@
       const b = app.cards[j], f = S ? S.front(j) : -1;
       if (f < 0) { b.className = "tile card empty"; b.disabled = true; b.querySelector(".n").textContent = ""; b.querySelector(".q").textContent = ""; b.style.removeProperty("--mc"); b.style.removeProperty("--gl"); b.setAttribute("aria-label", "Empty column"); app.flip[j] = false; }
       else {
-        const m = B.cardM[f], k = B.cardN[f], p = S.partner(f);
+        const m = B.cardM[f], k = S.count(f), p = S.partner(f);
         b.className = "tile card" + (app.verdict[j] === 1 ? " safe" : app.verdict[j] === 2 ? " blocked" : "") + (p >= 0 ? " linked" + (B.cardCol[p] < j ? " ch-r" : "") : ""); b.disabled = !live; paintMat(b, m); // ch-r: the chain tag on the corner away from the rod
         b.querySelector(".n").textContent = k; b.querySelector(".q").textContent = "";
         b.setAttribute("aria-label", mat(m).crew + ", " + k + " sappers" + (p >= 0 ? ", " + LY.linkedAria.replace("{c}", B.cardCol[p] + 1) : "") + (app.verdict[j] === 2 ? ", blocked: " + (p >= 0 ? LY.linkedText : "no free space") : app.verdict[j] === 1 ? ", safe" : ""));
@@ -227,15 +247,15 @@
         if (app.flip[j]) { app.flip[j] = false; if (!app.V.calm && b.animate) b.animate([{ transform: "perspective(240px) rotateY(90deg)" }, { transform: "none" }], { duration: SH.flipMs, easing: "ease-out" }); }
       }
       for (let d = 1; d <= app.nexts[j].length; d++) {
-        const x = app.nexts[j][d - 1], ci = S ? S.card(j, d) : -1;
-        if (ci < 0) { x.className = "tile next d" + d + " none"; x.querySelector(".n").textContent = ""; x.querySelector(".q").textContent = ""; continue; }
+        const x = app.nexts[j][d - 1], ci = S && d < app.rows ? S.card(j, d) : -1;
+        if (ci < 0) { x.className = "tile next d" + d + (d < app.rows ? " none" : " off"); x.querySelector(".n").textContent = ""; x.querySelector(".q").textContent = ""; continue; }
         const hid = S.hidden(ci);
         const xp = S.partner(ci); x.className = "tile next d" + d + (hid ? " mys" : "") + (xp >= 0 ? " linked" + (B.cardCol[xp] < j ? " ch-r" : "") : "");
         if (hid) paintMys(x, d); else paintMat(x, B.cardM[ci], d);
-        x.querySelector(".n").textContent = B.cardN[ci]; x.querySelector(".q").textContent = hid ? LY.mystery.q : "";
+        x.querySelector(".n").textContent = S.count(ci); x.querySelector(".q").textContent = hid ? LY.mystery.q : "";
       }
     }
-    drawRods(); sendable();
+    drawRods(); sendable(); markPick();
   }
   // The colours the player can send now (front cards and squads in the line), for the board's archer rings (V.hot).
   function sendable() {
@@ -251,12 +271,12 @@
   // dots. Sizes are layout.rod at a phone tile, scaled with the tile. Each pair is drawn once (from its card nearer the
   // front). Run with the tray, never per frame.
   function tileOf(j, d) { return d ? app.nexts[j][d - 1] : app.cards[j]; }
-  function rowOf(S, j, ci) { for (let d = 0; d < app.cfg.layout.queueRows; d++) { const c = S.card(j, d); if (c < 0) return -1; if (c === ci) return d; } return -1; }
+  function rowOf(S, j, ci) { for (let d = 0; d < app.rows; d++) { const c = S.card(j, d); if (c < 0) return -1; if (c === ci) return d; } return -1; }
   function drawRods() {
     const S = app.S, B = app.B, svg = app.rods; if (!svg) return;
     let html = "";
     if (S && B && B.nlinks) {
-      const R = app.cfg.layout.rod, RW = app.cfg.layout.queueRows, f = (v) => v.toFixed(1);
+      const R = app.cfg.layout.rod, RW = app.rows, f = (v) => v.toFixed(1);
       // A tile's layout box in the tray (offsets ignore a flip or shake in progress, which would narrow or move its rect).
       const box = (el) => { const l = el.offsetLeft, t = el.offsetTop, w = el.offsetWidth, h = el.offsetHeight; return { x: l + w / 2, y: t + h / 2, hw: w / 2, hh: h / 2, l, r: l + w, t, b: t + h }; };
       const k = Math.max(0.7, Math.min(1.4, (box(app.cards[0]).hh * 2) / 52)), rv = R.rivet * k, sw = 'stroke-linecap="round" stroke-linejoin="round"';
@@ -337,7 +357,7 @@
       else { s.classList.remove("full", "work", "stuck", "linked", "held"); s.style.removeProperty("--mc"); s.querySelector("b").textContent = ""; s.querySelector(".out").textContent = ""; s.querySelector(".men").style.width = "0"; s.setAttribute("aria-label", shut ? L.lockedText : "Empty space"); }
       s.classList.toggle("last", i === free && li.near); // one space left and the rest stuck: the last free space pulses
     });
-    sendable();
+    sendable(); markPick();
   }
   // Critics 1 fix: a space too narrow for its badge column beside a two-digit count takes the tight layout (the badges
   // on top, the count below: #line.tight). Worked out from a space's width and the fonts in use, at layout time only.
@@ -350,6 +370,85 @@
     const room = s.clientWidth - px(cs.paddingLeft) - px(cs.paddingRight) - px(cs.columnGap);
     line.classList.toggle("tight", room < two + Math.max(out, px(cs.getPropertyValue("--bd")), px(cs.getPropertyValue("--lk-s"))));
   }
+  // ---- the power-up bar (v4 M5; the rules are engine.js power(), the coins and inventory meta.js) ------------------------
+  // Four round badges: the icon, then the count owned, or a "+" with the price (a tap buys one in place; short of coins
+  // the tap says so). A tap on an owned one uses it: the Ladder and the Scout at once; the Quartermaster and Recall first
+  // ask for a target (the tiles or spaces they can take glow; a tap on one applies it; the badge again cancels). A refused
+  // power-up costs nothing and says why. One spent per use the engine takes.
+  const PWT = () => app.meta.power, pwName = (k) => Meta.powerOf(app.meta, k).name || E.POWERS[k];
+  const fill = (t, o) => String(t).replace(/\{(\w+)\}/g, (m, k) => (o && o[k] != null ? o[k] : m));
+  function buildPowers() {
+    const host = $("powers");
+    for (let k = 0; k < E.POWERS.length; k++) {
+      const b = document.createElement("button"); b.className = "pw"; b.dataset.k = k;
+      b.innerHTML = '<i class="pw-ic" aria-hidden="true"></i><b class="pw-n" aria-hidden="true"></b><span class="pw-tag" aria-hidden="true"><i class="ico ico-coin"></i><span></span></span><span class="pw-name" aria-hidden="true"></span>';
+      b.querySelector(".pw-ic").style.backgroundImage = app.icoURL["p" + k] || "none"; b.querySelector(".pw-name").textContent = pwName(k);
+      b.addEventListener("click", () => onPower(k)); host.append(b); app.pws.push(b);
+    }
+  }
+  // Each badge's state: owned (a count), buy (a "+" and the price) or spent (this level's uses gone); the coins pill.
+  function renderPowers() {
+    const S = app.S, inv = app.save.data.inv, T = PWT(), pop = app.cfg.show.pwPopMs;
+    $("pw-coins").querySelector("b").textContent = app.save.data.coins; $("pw-coins").setAttribute("aria-label", fill(app.meta.home.coins, { n: app.save.data.coins }));
+    app.pws.forEach((b, k) => {
+      const P = Meta.powerOf(app.meta, k), n = inv[E.POWERS[k]] | 0, spent = !!S && S.used(k) >= S.limit(k), st = spent ? "spent" : n > 0 ? "own" : "buy";
+      b.className = "pw " + st + (app.pick && app.pick.k === k ? " picking" : "") + (app.clock - app.pwPop[k] < pop ? " pop" : "");
+      b.querySelector(".pw-n").textContent = n > 0 ? n : "+"; b.querySelector(".pw-tag span").textContent = P.price;
+      b.setAttribute("aria-label", fill(T.aria, { name: P.name, say: P.say, state: spent ? T.spent : n > 0 ? fill(T.owned, { n }) : fill(T.buy, { price: P.price }) }));
+    });
+  }
+  const livePlay = () => app.screen === "play" && app.S && app.S.status === E.PLAYING && !app.panel && !app.paused;
+  function pwToast(key, o, bad) { toast(fill(PWT()[key], o), bad); }
+  function pwShake(k) { const b = app.pws[k]; if (b && !app.V.calm && b.animate) b.animate(app.cfg.show.blockedShake.map((x) => ({ transform: "translateX(" + x + "px)" })), { duration: app.cfg.show.blockedShakeMs }); }
+  function onPower(k) {
+    if (!livePlay()) return false;
+    const S = app.S, P = Meta.powerOf(app.meta, k), D = app.save.data, PW = E.PW;
+    if (app.pick) { const was = app.pick.k; cancelPick(); if (was === k) return false; }
+    if (S.used(k) >= S.limit(k)) { pwShake(k); cue("blocked"); pwToast("limit", { name: P.name, n: S.limit(k) }, true); return false; }
+    if (!(D.inv[E.POWERS[k]] > 0)) { // buy one in place
+      const r = Meta.buy(D, app.meta, k);
+      if (!r.ok) { pwShake(k); cue("blocked"); pwToast(r.full ? "full" : "short", { name: P.name, price: r.price, have: D.coins }, true); renderPowers(); return false; }
+      writeSave(); app.pwPop[k] = app.clock; cue("coin"); pwToast("bought", { name: P.name, price: r.price }); renderPowers(); return true;
+    }
+    if (k === PW.PULL || k === PW.RECALL) { // ask for a target
+      if (!pickTargets(k).length) { pwShake(k); cue("blocked"); pwToast(k === PW.RECALL ? "noRecall" : pullWhy(), null, true); return false; }
+      app.pick = { k }; pwToast(k === PW.PULL ? "pickPull" : "pickRecall"); renderPowers(); markPick(); return true;
+    }
+    return applyPower(k, 0);
+  }
+  // Why no tile can be pulled: one could if the line weren't at rest with every front refused (it would jam), or none
+  // is in reach at all.
+  function pullWhy() { const S = app.S; for (let j = 0; j < E.NCOL; j++) for (let d = 1; d < app.rows && d <= S.pullDepth; d++) { const ci = S.card(j, d); if (ci >= 0) return "noPullJam"; } return "noPull"; }
+  // The Quartermaster's tiles (j, d, card) in the visible rows, or Recall's spaces, that the engine would take now.
+  function pickTargets(k) {
+    const S = app.S, out = [];
+    if (k === E.PW.PULL) { for (let j = 0; j < E.NCOL; j++) for (let d = 1; d < app.rows && d <= S.pullDepth; d++) { const ci = S.card(j, d); if (ci >= 0 && S.canPower(k, ci)) out.push([j, d, ci]); } }
+    else for (let i = 0; i < S.cap; i++) if (S.canPower(k, i)) out.push([i]);
+    return out;
+  }
+  // Use power k on a (the engine refuses: nothing spent, the reason); taken: one spent, the show and the bar update.
+  function applyPower(k, a) {
+    const S = app.S, P = Meta.powerOf(app.meta, k), r = S.power(k, a);
+    if (r !== E.PLAYING && r !== E.WON && r !== E.FAILED) { pwShake(k); cue("blocked"); pwToast(k === E.PW.LADDER ? "noLadder" : k === E.PW.SCOUT ? "noScout" : k === E.PW.RECALL ? "noRecall" : pullWhy(), null, true); return false; }
+    Meta.take(app.save.data, k); writeSave(); app.pwPop[k] = app.clock; app.pick = null;
+    app.V.sync(S, true); cue("power"); pwToast("used", { name: P.name, say: P.say });
+    app.march = false; marchCheck(); ended();
+    judge(); renderTray(); renderLine(); renderPowers(); placeSlots(); coachStep();
+    return true;
+  }
+  function cancelPick() { if (!app.pick) return; app.pick = null; hideToast(); markPick(); renderPowers(); }
+  // While a target is asked for, the tiles or spaces it can take wear .pickable (recomputed with the tray and the line,
+  // since squads come home meanwhile); with none left, the ask ends.
+  function markPick() {
+    const k = app.pick ? app.pick.k : -1, T = k >= 0 && app.S && livePlay() ? pickTargets(k) : [];
+    if (k >= 0 && !T.length) { app.pick = null; renderPowers(); }
+    for (let j = 0; j < E.NCOL; j++) for (let d = 1; d <= app.nexts[j].length; d++) { const x = app.nexts[j][d - 1], on = k === E.PW.PULL && T.some((t) => t[0] === j && t[1] === d); x.classList.toggle("pickable", on); if (on) { x.setAttribute("role", "button"); x.removeAttribute("aria-hidden"); x.setAttribute("aria-label", fill(PWT().pickPull, {})); } else { x.removeAttribute("role"); x.setAttribute("aria-hidden", "true"); x.removeAttribute("aria-label"); } }
+    app.slots.forEach((q, i) => q.classList.toggle("pickable", k === E.PW.RECALL && T.some((t) => t[0] === i)));
+    document.body.classList.toggle("picking", k >= 0 && T.length > 0);
+  }
+  function pickTile(j, d) { if (!app.pick || app.pick.k !== E.PW.PULL || !livePlay()) return false; const ci = app.S.card(j, d); return ci >= 0 && app.S.canPower(E.PW.PULL, ci) ? applyPower(E.PW.PULL, ci) : false; }
+  function pickSlot(i) { if (!app.pick || app.pick.k !== E.PW.RECALL || !livePlay()) return false; return app.S.canPower(E.PW.RECALL, i) ? applyPower(E.PW.RECALL, i) : false; }
+
   function renderTop() {
     const e = app.entry; if (!e) return;
     $("lvl-num").textContent = e.debug ? app.cfg.layout.debugNum : e.n; $("lvl-name").textContent = e.gallery ? e.L.title : e.L.name || (app.eras[e.era - 1] ? app.eras[e.era - 1].name : "Era " + e.era);
@@ -359,8 +458,17 @@
   }
   function renderAll() { judge(); renderTop(); renderTray(); renderLine(); }
 
+  // v4 M5: a report card for a set of levels (an era, or the Gallery): cleared, the medals by difficulty, coins earned.
+  function reportCard(el, list) {
+    if (!el) return;
+    const C = app.meta.eraCard, gal = list.length && list[0].gallery, map = gal ? app.save.data.gal : app.save.data.done, md = [0, 0, 0]; let won = 0, coins = 0;
+    for (const e of list) { const m = map[e.id] | 0; if (m) won++; for (let k = 0; k < 3; k++) if (m & (1 << k)) md[k]++; coins += Meta.bestOf(app.save.data, e.id)[6]; }
+    el.innerHTML = '<span class="rc-n"></span><span class="rc-m"><i>E</i><b></b><i>N</i><b></b><i>H</i><b></b></span><span class="rc-c"><i class="ico ico-coin" aria-hidden="true"></i><b></b></span>';
+    el.querySelector(".rc-n").textContent = fill(C.cleared, { n: won, t: list.length }); el.querySelectorAll(".rc-m b").forEach((b, k) => { b.textContent = md[k]; }); el.querySelector(".rc-c b").textContent = coins;
+    el.setAttribute("role", "img"); el.setAttribute("aria-label", fill(C.aria, { n: won, t: list.length, e: md[0], m: md[1], h: md[2], c: coins }));
+  }
   function buildMap() {
-    const host = $("eras"); app.eras = app.cfg.eras || [];
+    const host = $("eras"); app.eras = app.cfg.eras || []; $("map-story").textContent = app.meta.home.story;
     if (app.debug.length) { // ?debug=1: the v4 twists' debug levels, one button each (never in the play order)
       const sec = document.createElement("section"); sec.className = "era dbg";
       sec.innerHTML = '<div class="eye"><span></span><span class="cnt">debug</span></div><div class="nodes"></div>'; sec.querySelector(".eye span").textContent = app.cfg.layout.debugRow;
@@ -369,7 +477,7 @@
     }
     app.eras.forEach((er) => {
       const sec = document.createElement("section"); sec.className = "era";
-      sec.innerHTML = '<div class="eye"><span>Era ' + er.era + '</span><span class="cnt"></span></div><h3></h3><p></p><div class="nodes"></div>';
+      sec.innerHTML = '<div class="eye"><span>Era ' + er.era + '</span><span class="cnt"></span></div><h3></h3><p></p><div class="rc"></div><div class="nodes"></div>';
       sec.querySelector("h3").textContent = er.name; sec.querySelector("p").textContent = er.note;
       const nodes = sec.querySelector(".nodes");
       for (const e of app.levels) {
@@ -389,7 +497,7 @@
       e.node.disabled = !open; e.node.querySelector("i").textContent = (m & 1 ? "E" : "") + (m & 2 ? "N" : "") + (m & 4 ? "H" : "");
       e.node.setAttribute("aria-label", "Level " + e.n + (m ? ", won" : open ? "" : ", locked"));
     }
-    app.eras.forEach((er) => { const ls = app.levels.filter((e) => e.era === er.era); er.sec.querySelector(".cnt").textContent = ls.filter((e) => d.done[e.id]).length + "/" + ls.length; });
+    app.eras.forEach((er) => { const ls = app.levels.filter((e) => e.era === er.era); er.sec.querySelector(".cnt").textContent = ls.filter((e) => d.done[e.id]).length + "/" + ls.length; reportCard(er.sec.querySelector(".rc"), ls); });
     $("map-count").textContent = won + "/" + app.levels.length;
     const ne = app.byId.get(next); $("map-play").textContent = ne ? "Play level " + ne.n : "Play";
   }
@@ -416,10 +524,31 @@
   function renderGalButtons() {
     const G = app.cfg.gallery; if (!G) return; const open = galOpen(), sub = open ? G.count.replace("{n}", galWon()).replace("{t}", app.gal.length) : G.lockedHint;
     for (const b of [$("btn-gallery"), $("map-gallery")]) { b.classList.toggle("locked", !open); b.setAttribute("aria-disabled", open ? "false" : "true"); b.querySelector(".gs").textContent = sub; b.setAttribute("aria-label", G.btn + ": " + sub); }
+    if (!open) $("btn-gallery").querySelector(".gs").textContent = app.meta.home.galTab; // v4 M5: the home's tab is narrow
   }
+  // ---- the home screen (v4 M5) -----------------------------------------------------------------------------------------
+  // The title scene with its top row (settings, the siege's progress, coins, lives only when meta.lives is on), the
+  // logo, the next level's era, the difficulty and one Play button labelled with the next level (one tap to play), and
+  // the tab bar (Siege map, Home, Gallery).
+  function renderHome() {
+    const H = app.meta.home, d = app.save.data, ne = app.byId.get(Save.next(d, app.order)), won = app.levels.filter((e) => d.done[e.id]).length, er = ne && app.eras[ne.era - 1];
+    $("home-prog").querySelector("b").textContent = won + "/" + app.levels.length; $("home-prog").setAttribute("aria-label", fill(H.progress, { done: won, t: app.levels.length }));
+    $("home-coins").querySelector("b").textContent = d.coins; $("home-coins").setAttribute("aria-label", fill(H.coins, { n: d.coins }));
+    $("home-era").textContent = er ? fill(H.era, { e: er.era, name: er.name }) : "";
+    app.lifeTxt = ""; livesPill();
+  }
+  // The lives pill and, with none left, Play's countdown (the text changes once a second; written only then).
+  function livesPill() {
+    const H = app.meta.home, L = Meta.lives(app.save.data, app.meta, app.now()), pill = $("home-lives"), ne = app.byId.get(Save.next(app.save.data, app.order));
+    const cd = L.nextMs > 0 ? Meta.clock(L.nextMs, true) : "", txt = L.on ? L.n + (cd ? " \u00b7 " + cd : "") : "", play = L.on && L.n <= 0 ? fill(H.noLives, { t: cd }) : fill(H.play, { n: ne ? ne.n : 1 });
+    if (txt + play === app.lifeTxt) return; app.lifeTxt = txt + play;
+    pill.hidden = !L.on; pill.querySelector("b").textContent = txt; pill.setAttribute("aria-label", L.on ? (L.n >= L.max ? H.livesFull : fill(H.lives, { n: L.n }) + (cd ? ", " + fill(H.noLives, { t: cd }) : "")) : "");
+    $("play-lab").textContent = play; $("btn-play").classList.toggle("wait", L.on && L.n <= 0); $("btn-play").setAttribute("aria-label", play);
+  }
+  function openSettings(on) { $("settings").hidden = !on; if (on) $("set-close").focus(); }
   function renderGallery() {
     const G = app.cfg.gallery, d = app.save.data; if (!G) return;
-    $("gal-count").textContent = G.count.replace("{n}", galWon()).replace("{t}", app.gal.length);
+    $("gal-count").textContent = G.count.replace("{n}", galWon()).replace("{t}", app.gal.length); reportCard($("gal-card"), app.gal);
     for (const e of app.gal) {
       const m = d.gal[e.id] | 0, b = e.node, won = !!m, key = won ? "c" : "d";
       b.classList.toggle("done", won); b.querySelector(".gn").textContent = won ? e.L.title : e.n;
@@ -445,9 +574,12 @@
   // ---- screens and levels --------------------------------------------------------------------------------------------
   function showScreen(name) {
     if (name === "gallery" && !galOpen()) name = "title";
+    if (name !== "play") { app.pick = null; document.body.classList.remove("picking"); }
+    $("settings").hidden = true;
     app.screen = name;
     $("title").hidden = name !== "title"; $("map").hidden = name !== "map"; $("gallery").hidden = name !== "gallery";
     if (name === "title" || name === "map") renderGalButtons();
+    if (name === "title") renderHome();
     if (name === "gallery") renderGallery();
     if (name === "map") { renderMap(); const ne = app.byId.get(Save.next(app.save.data, app.order)); if (ne && ne.node && ne.node.scrollIntoView) ne.node.scrollIntoView({ block: "center" }); }
     if (name === "title") paintTitle();
@@ -457,11 +589,13 @@
   }
   function startLevel(id, diff) {
     const e = app.byId.get(id) || app.levels[0];
+    if (!livesLeft()) return null; // v4 M5: lives on and none left: no level starts (the toast says when the next comes)
     if (diff && DIFFS.indexOf(diff) >= 0) app.diff = diff;
     app.entry = e; app.B = E.compile(e.L); app.S = E.sim(app.B, rulesOf(app.diff)); app.S.logOn = true; app.et = 0;
     app.V.setLevel(app.B, app.S, e.L.pal); usePalette(e); // v4 M4: the level's colours before anything is painted
     app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.popK = 0; app.used = 0; app.march = false; app.blockT = -1e12; $("panel").hidden = true; hideToast();
     app.lockN = app.S.locked; app.unlockT = -1e12; app.flip.fill(false); app.reveals = 0; app.pairsOut = 0; landTiles();
+    app.t0 = app.clock; app.report = null; app.pick = null; app.pwPop.fill(-1e12); renderPowers();
     app.coached = !!coachSteps(e); // the coach's band is kept for the whole level, so the board never jumps when it goes
     placeSlots();
     if (!e.debug && !e.gallery) { app.save.data.last = e.id; writeSave(); }
@@ -472,17 +606,24 @@
   function landTiles() { for (const b of app.cards.concat(app.nexts.flat())) if (b.getAnimations) for (const a of b.getAnimations()) if (a.effect && isFinite(a.effect.getComputedTiming().endTime)) a.finish(); }
   function retry() {
     if (!app.S) return;
-    app.S.reset(); app.et = 0; app.V.reset(); app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.popK = 0; app.used = 0; app.march = false; app.blockT = -1e12; $("panel").hidden = true; hideToast();
+    if (!livesLeft()) { showScreen("title"); return; } // v4 M5: no lives left: home, where the refill time shows
+    app.S.reset(); app.et = 0; app.t0 = app.clock; app.report = null; app.pick = null; app.pwPop.fill(-1e12); app.V.reset(); app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.popK = 0; app.used = 0; app.march = false; app.blockT = -1e12; $("panel").hidden = true; hideToast();
     app.unlockT = -1e12; app.flip.fill(false); app.reveals = 0; app.pairsOut = 0; landTiles();
-    renderAll(); coachStart();
+    renderAll(); renderPowers(); coachStart();
   }
   const playNext = () => startLevel(Save.next(app.save.data, app.order));
+  // v4 M5, lives (meta.lives; off on the web): true when a level may start; else a toast says when the next life comes.
+  function livesLeft() {
+    if (Meta.canStart(app.save.data, app.meta, app.now())) return true;
+    const L = Meta.lives(app.save.data, app.meta, app.now()); toast(fill(app.meta.home.noLivesToast, { t: Meta.clock(L.nextMs, true) }), true); cue("blocked"); renderHome(); return false;
+  }
 
   // The one play entry point: the card tap, the keyboard and SP.play all call this. Returns true if a card was played.
   // The squad takes its space at the engine's current time; nothing waits on the show. No free space: refused (below).
   function playCol(col) {
     const S = app.S;
     if (app.screen !== "play" || !S || S.status !== E.PLAYING || app.panel || !(col >= 0 && col < E.NCOL) || S.front(col) < 0) return false;
+    if (app.pick) { cancelPick(); return false; } // v4 M5: a front card can't be a target: the tap cancels the ask
     const m = app.B.cardM[S.front(col)], line0 = S.lineLen, got = S.play(col);
     if (got === E.REFUSED) { refusedTap(col); return false; }
     if (got === E.NOPLAY) return false;
@@ -525,6 +666,12 @@
     if (app.ending.won && app.entry.debug) app.ending.medal = false;
     else if (app.ending.won && app.entry.gallery) { const was = app.save.data.gal[app.entry.id] | 0; app.ending.first = Save.record(app.save.data, app.entry.id, app.diff, "gal"); app.ending.medal = !(was & (1 << DIFFS.indexOf(app.diff))); writeSave(); }
     else if (app.ending.won) { const was = app.save.data.done[app.entry.id] | 0, first = Save.record(app.save.data, app.entry.id, app.diff); app.ending.first = first; app.ending.medal = !(was & (1 << DIFFS.indexOf(app.diff))); app.save.data.last = Save.next(app.save.data, app.order); writeSave(); }
+    // v4 M5: the report. A win of a siege level or a Gallery picture: real play time (app.clock: pauses excluded), taps,
+    // coins (more for a new medal), best time and taps. A fail with lives on costs one.
+    const e = app.entry, rewarded = !e.debug && (e.gallery || e.idx >= 0);
+    if (app.ending.won && rewarded) { app.report = Meta.recordWin(app.save.data, app.meta, e.id, app.diff, app.clock - app.t0, S.plays, app.ending.medal); writeSave(); }
+    else if (!app.ending.won && rewarded && app.meta.lives) { app.report = { lives: Meta.loseLife(app.save.data, app.meta, app.now()) }; writeSave(); }
+    app.pick = null; renderPowers();
     judge(); renderTray(); renderLine();
   }
   // Run the engine until nothing moves and land the board (a skip; the patient player's wait).
@@ -572,11 +719,30 @@
     $("p-primary").textContent = e.won ? (gal ? G.nextBtn : last ? "Era map" : "Next level") : "Retry";
     $("p-secondary").textContent = e.won ? "Retry" : gal ? G.title : "Era map";
     // The win beat: the level's difficulty medals, this one stamped in if it's new.
+    reportRows(e);
     const mask = (gal ? app.save.data.gal : app.save.data.done)[app.entry.id] | 0, md = $("p-medals"); md.hidden = !e.won;
     Array.from(md.children).forEach((el, k) => { el.className = "medal" + (mask & (1 << k) ? " got" : "") + (e.won && e.medal && DIFFS[k] === app.diff ? " new" : ""); });
     $("panel").hidden = false; placeSheet();
     cue(e.won ? "chime" : "bad"); if (e.won && e.medal) cue("star", 2);
     judge(); renderTray(); renderLine();
+  }
+  // v4 M5, the level report on the win sheet: time, taps and coins (counting up in step()), with the best time and taps
+  // underneath ("New best!" when beaten; the first win shows none); a fail with lives on adds the life it cost.
+  function reportRows(e) {
+    const R = app.report, st = $("p-stats"), T = app.meta.report, rows = st.children; st.hidden = !(e.won && R && R.coins != null);
+    if (!e.won && R && R.lives && R.lives.on) $("p-line").append(" " + fill(app.meta.home.lifeLost, { n: R.lives.n }));
+    if (st.hidden) return;
+    const best = (v, was, nw, f) => (!was ? (e.medal ? T.first : T.newBest) : nw ? T.newBest : fill(T.best, { v: f(was) })); // no best kept yet: a first win, or a win from before M5
+    rows[0].querySelector(".k").textContent = T.time; $("p-time").textContent = Meta.clock(R.ms); rows[0].querySelector("em").textContent = best(R.ms, R.best[0], R.newMs, Meta.clock); rows[0].classList.toggle("new", !!R.best[0] && R.newMs);
+    rows[1].querySelector(".k").textContent = T.taps; $("p-taps").textContent = R.taps; rows[1].querySelector("em").textContent = best(R.taps, R.best[1], R.newTaps, String); rows[1].classList.toggle("new", !!R.best[1] && R.newTaps);
+    rows[2].querySelector(".k").textContent = T.coins; app.countTxt = ""; countCoins(); rows[2].querySelector("em").textContent = e.medal ? fill(T.medal, { n: R.coins - Meta.winCoins(app.meta, app.diff, false) }) : "";
+    st.setAttribute("aria-label", T.time + " " + Meta.clock(R.ms) + ", " + T.taps + " " + R.taps + ", " + T.coins + " +" + R.coins);
+  }
+  // The coins count up on the sim clock (meta.report: countDelayMs, then countMs); a coin cue when they start.
+  function countCoins() {
+    const R = app.report, T = app.meta.report; if (!R || R.coins == null || app.panel !== "win") return;
+    const k = Math.max(0, Math.min(1, (app.clock - app.panelAt - T.countDelayMs) / T.countMs)), txt = "+" + Math.round(R.coins * k);
+    if (txt !== app.countTxt) { if (app.countTxt === "+0" && k > 0) cue("coin"); app.countTxt = txt; $("p-coins").textContent = txt; }
   }
   // A panel button ignores taps for show.panelGuardMs after the panel appears, so a thumb still tapping cards can't hit it.
   const panelLive = () => app.clock - app.panelAt >= app.cfg.show.panelGuardMs || app.testing;
@@ -622,7 +788,7 @@
     return false;
   }
   // The first hidden "?" tile in the visible rows, and the first column whose front card is linked (-1: none).
-  function hiddenTile() { const S = app.S, RW = app.cfg.layout.queueRows; for (let d = 1; d < RW; d++) for (let j = 0; j < E.NCOL; j++) { const ci = S.card(j, d); if (ci >= 0 && S.hidden(ci)) return tileOf(j, d); } return null; }
+  function hiddenTile() { const S = app.S, RW = app.rows; for (let d = 1; d < RW; d++) for (let j = 0; j < E.NCOL; j++) { const ci = S.card(j, d); if (ci >= 0 && S.hidden(ci)) return tileOf(j, d); } return null; }
   function linkedFront() { const S = app.S; for (let j = 0; j < E.NCOL; j++) { const f = S.front(j); if (f >= 0 && S.partner(f) >= 0) return j; } return -1; }
   const any = (u) => [].concat(u || "play").some(cond);
   function skipDead() { const co = app.coach; while (co.i < co.steps.length && co.steps[co.i].if && !cond(co.steps[co.i].if)) co.i++; co.at = app.S.plays; }
@@ -719,11 +885,13 @@
     app.paused = false; app.lastT = 0; $("pause").hidden = true;
     if (app.audio && app.audio.ctx) Audio.unlock(app.audio);
   }
-  function setMuted(on, save) { Audio.setMuted(app.audio, on); togMute.forEach((b) => b.setAttribute("aria-pressed", on ? "true" : "false")); if (save) { app.save.data.settings.muted = !!on; writeSave(); } }
+  // v4 M5: a settings row (.set-row) also shows its value in words.
+  const rowVal = (b, t) => { const v = b.querySelector(".sv"); if (v) v.textContent = t; };
+  function setMuted(on, save) { Audio.setMuted(app.audio, on); togMute.forEach((b) => { b.setAttribute("aria-pressed", on ? "true" : "false"); rowVal(b, on ? "Off" : "On"); }); if (save) { app.save.data.settings.muted = !!on; writeSave(); } }
   // The speed button cycles show.speeds (1x, 2x, 3x); anything else loads as the first one. Gold above 1x.
   function setSpeed(k, save) {
     const sp = app.cfg.show.speeds; app.speed = sp.indexOf(k) >= 0 ? k : sp[0];
-    togSpeed.forEach((b) => { b.textContent = app.speed + "\u00d7"; b.classList.toggle("on", app.speed > sp[0]); b.setAttribute("aria-label", "Speed " + app.speed + "x (tap for " + sp[(sp.indexOf(app.speed) + 1) % sp.length] + "x)"); });
+    togSpeed.forEach((b) => { const x = b.querySelector(".sx") || b; x.textContent = app.speed + "\u00d7"; b.classList.toggle("on", app.speed > sp[0]); b.setAttribute("aria-label", "Speed " + app.speed + "x (tap for " + sp[(sp.indexOf(app.speed) + 1) % sp.length] + "x)"); });
     if (save) { app.save.data.settings.speed = app.speed; writeSave(); }
   }
   const nextSpeed = () => { const sp = app.cfg.show.speeds; setSpeed(sp[(sp.indexOf(app.speed) + 1) % sp.length], true); };
@@ -731,7 +899,7 @@
   // and the map, kept in the save.
   function setCb(on, save) {
     app.cb = !!on; document.body.classList.toggle("cb", app.cb); if (app.V) app.V.setCb(app.cb);
-    togCb.forEach((b) => b.setAttribute("aria-pressed", app.cb ? "true" : "false"));
+    togCb.forEach((b) => { b.setAttribute("aria-pressed", app.cb ? "true" : "false"); rowVal(b, app.cb ? "On" : "Off"); });
     if (save) { app.save.data.settings.cb = app.cb; writeSave(); }
   }
   function setDiff(d, save) { if (DIFFS.indexOf(d) < 0) return; app.diff = d; segs.forEach((b) => b.setAttribute("aria-pressed", b.dataset.diff === d ? "true" : "false")); if (save) { app.save.data.settings.diff = d; writeSave(); } }
@@ -741,6 +909,8 @@
     document.addEventListener("keydown", (ev) => {
       if (app.audio) Audio.unlock(app.audio);
       if (app.paused) { if (ev.key === " " || ev.key === "Enter") { ev.preventDefault(); resume(); } return; }
+      if (!$("settings").hidden) { if (ev.key === "Escape") openSettings(false); return; }
+      if (ev.key === "Escape" && app.pick) { cancelPick(); return; }
       if (app.screen !== "play") return;
       if (ev.key >= "1" && ev.key <= "5") playCol(+ev.key - 1);
       else if (ev.key === "r" || ev.key === "R") retry();
@@ -748,6 +918,10 @@
     });
     $("board").addEventListener("pointerdown", skip);
     $("pause").addEventListener("click", resume);
+    document.querySelector("#pause .pz-set").addEventListener("click", (ev) => ev.stopPropagation()); // its toggles don't resume
+    $("btn-settings").addEventListener("click", () => openSettings(true)); $("set-close").addEventListener("click", () => openSettings(false));
+    $("settings").addEventListener("click", (ev) => { if (ev.target === $("settings")) openSettings(false); }); // the backdrop closes it
+    $("tab-home").addEventListener("click", () => showScreen("title"));
     window.addEventListener("blur", pause);
     window.addEventListener("focus", () => { if (app.screen !== "play") resume(); });
     document.addEventListener("visibilitychange", () => { if (document.hidden) pause(); else if (app.screen !== "play") resume(); });
@@ -778,6 +952,9 @@
     // Short and wide (a landscape phone): the top bar moves over the rail so the board gets the full height.
     const short = app.wide && H <= L.shortMaxH;
     document.body.classList.toggle("wide", app.wide); document.body.classList.toggle("short", short);
+    // v4 M5: short frames show queueRowsShort rows, so the power-up bar fits under the queue (the orchestrator's call);
+    // fitBoard may also drop to them on a taller phone, for a board that would be under minCellCss with three.
+    setRows(H <= L.shortRowsMaxH ? L.queueRowsShort : L.queueRows);
     const r = document.documentElement.style;
     if (app.wide) { const rw = short ? L.railShortPx : Math.round(Math.min(L.railWidePx, Math.max(L.railMinPx, W * L.railFrac))); r.setProperty("--rail-w", rw + "px"); r.setProperty("--wide-gap", (short ? L.gapShortPx : L.gapWidePx) + "px"); }
     app.labFit.clear();
@@ -803,7 +980,14 @@
     if (app.wide) r.setProperty("--stage-w", Math.max(200, window.innerWidth - (parseFloat(r.getPropertyValue("--rail-w")) || L.railWidePx) - (app.wide && window.innerHeight <= L.shortMaxH ? L.gapShortPx : L.gapWidePx) - L.sidePadPx) + "px");
     // Critics 1 fix: a level with a coach keeps a band for it. Wide: its spot in the side column. Portrait: the band above
     // the board when the board still gets layout.minCellCss CSS px a cell there, else over the level's name.
-    const st = $("stage"), dpr = window.devicePixelRatio || 1, w = st.clientWidth - 14, h0 = st.clientHeight - 16, BD = document.body;
+    const st = $("stage"), dpr = window.devicePixelRatio || 1, BD = document.body, G = L.stageGapPx;
+    // v4 M5: in portrait above the short frames, three queue rows unless this board would then be under minCellCss (two
+    // rows, with the compact bar). Two rows also take a smaller gap round the frame (stageGapPx[2]).
+    if (!app.wide && app.S && window.innerHeight > L.shortRowsMaxH) {
+      setRows(L.queueRows); renderTray();
+      if (app.V.fitCs(st.clientWidth - G[0], st.clientHeight - G[1], dpr, false) < L.minCellCss) { setRows(L.queueRowsShort); renderTray(); }
+    }
+    const w = st.clientWidth - G[0], h0 = st.clientHeight - (app.rows < L.queueRows ? G[2] : G[1]);
     let mode = app.coached && app.screen === "play" ? (app.wide ? "side" : "above") : "";
     const res = mode === "above" ? coachH() + 6 : 0;
     if (mode === "above" && app.V.fitCs(w, h0 - res, dpr, false) < L.minCellCss) mode = "top";
@@ -811,9 +995,21 @@
     const h = h0 - (mode === "above" ? res : 0);
     if (w > 0 && h > 0) app.V.layout(w, h, dpr, app.wide);
     if (app.wide) { const cw = parseFloat($("board").style.width) || 0; if (cw > 0) r.setProperty("--stage-w", Math.ceil(cw + 16) + "px"); r.setProperty("--blk-h", $("frame").offsetHeight + "px"); } // the side column is the board's height (M10)
+    sizePowers();
     document.body.classList.toggle("turned", app.V.rot);
     if (app.coach && !$("coach").hidden) { placeCoach(); fitCoach(); placeHand(app.focusEl); }
     placeSlots();
+  }
+  function setRows(k) { app.rows = k; document.body.classList.toggle("rows2", k < app.cfg.layout.queueRows); }
+  // v4 M5: on a wide screen (not short) the bar fills the side column's foot. Its badges take the larger of two fits to
+  // the foot's free height and width: a row of four, or 2 x 2 once the foot is layout.pwGrid CSS px tall (each with its
+  // name below; layout.pwFit: header, padding, name and gap px, and the badge's min and max).
+  function sizePowers() {
+    const P = $("powers"), F = app.cfg.layout.pwFit, wideFoot = app.wide && !document.body.classList.contains("short");
+    P.classList.remove("grid"); P.style.removeProperty("--pw-d"); if (!wideFoot) return;
+    const h = P.clientHeight, w = P.clientWidth - F.padX, fix = F.padTop + F.head + F.padBottom;
+    const row = Math.min(w / 4 - F.gapX, h - fix - F.name), grid = Math.min(w / 2 - F.gapX, (h - fix - F.rowGap) / 2 - F.name), two = h >= app.cfg.layout.pwGrid && grid > row;
+    P.classList.toggle("grid", two); P.style.setProperty("--pw-d", Math.floor(Math.max(F.min, Math.min(F.max, two ? grid : row))) + "px");
   }
   // Critics 1 fix: the win / fail sheet never slices the holding line. A fail sheet starts under the line (its text steps
   // down, .tight, if the room is short) and covers the queue, so the jammed line stays in view; if it still doesn't fit
@@ -846,7 +1042,10 @@
     app.clock += dt;
     const V = app.V; if (!V) return;
     V.clock = app.clock;
+    if (app.screen === "title" && app.meta.lives) livesPill(); // v4 M5: the refill countdown (a DOM write only when it changes)
     if (app.screen !== "play" || !app.B) return;
+    if (app.panel === "win") countCoins();
+    for (let k = 0; k < app.pwPop.length; k++) if (app.pwPop[k] > 0 && app.clock - app.pwPop[k] >= app.cfg.show.pwPopMs && app.clock - app.pwPop[k] < app.cfg.show.pwPopMs + dt) renderPowers(); // a badge's pop ends
     // The engine plays at show.pace x real time (x the speed button's 1x, 2x or 3x, or the victory march's pace, whichever
     // is faster); its log goes to the board every step.
     const S = app.S, sp = paceNow();
@@ -969,11 +1168,12 @@
   function selfTest() {
     const T0 = performance.now(), out = { pass: 0, fail: [], notes: {}, ms: 0 };
     const ok = (c, m) => { if (c) out.pass++; else out.fail.push(m); return !!c; };
-    const was = { save: app.save, screen: app.screen, entry: app.entry, diff: app.diff, speed: app.speed, cb: app.cb };
+    const was = { save: app.save, screen: app.screen, entry: app.entry, diff: app.diff, speed: app.speed, cb: app.cb, meta: app.meta, now: app.now };
     const key = app.cfg.save.key, snap = (() => { try { return was.save.store.getItem(key); } catch (e) { return "?"; } })();
     if (app.paused) resume();
     const ST = app.cfg.selfTest, SH = app.cfg.show, SPD = SH.speeds;
-    app.testing = true; app.save = Save.open(Save.memoryStore(), key, app.order); setSpeed(SPD[0], false); setCb(false, false);
+    const scratch = () => Save.open(Save.memoryStore(), key, app.order, app.gal.map((e) => e.id), app.meta); // v4 M5: with meta (coins)
+    app.testing = true; app.save = scratch(); setSpeed(SPD[0], false); setCb(false, false);
     // Patient play: tap, then the engine runs until nothing moves and the board lands (the skip path).
     const patient = (ord) => { for (let i = 0; i < ord.length && app.S.status === E.PLAYING; i++) { if (!playCol(ord.charCodeAt(i) - 48)) return false; settleNow(); } return true; };
     // Real ticks until the engine is quiet (bounded); returns the ms ticked.
@@ -1021,7 +1221,7 @@
         for (const [t, g] of G) if (x > g.left && x < g.right && y > g.top && y < g.bottom) return "a rod crosses '" + t + "'"; } }
       return true; };
     // M3: every rod's two ends lie on two tiles and no point along it lies inside a third tile (3 px in from its edge).
-    const rodClear = () => { landTiles(); const T = []; for (let j = 0; j < E.NCOL; j++) for (let d = 0; d < LY.queueRows; d++) { const el = tileOf(j, d); if (shown(el) && !el.classList.contains("empty")) T.push(el.getBoundingClientRect()); }
+    const rodClear = () => { landTiles(); const T = []; for (let j = 0; j < E.NCOL; j++) for (let d = 0; d < app.rows; d++) { const el = tileOf(j, d); if (shown(el) && !el.classList.contains("empty")) T.push(el.getBoundingClientRect()); }
       const sb = app.rods.getBoundingClientRect(), inT = (x, y, b, e) => x > b.left + e && x < b.right - e && y > b.top + e && y < b.bottom - e;
       for (const g of app.rods.querySelectorAll("path")) { const L = g.getTotalLength(); if (L < 4) continue;
         const at = (u) => { const p = g.getPointAtLength(L * u); return [sb.left + p.x, sb.top + p.y]; }, e0 = at(0), e1 = at(1), own = T.filter((b) => inT(e0[0], e0[1], b, -1) || inT(e1[0], e1[1], b, -1));
@@ -1245,7 +1445,7 @@
       // 15. The queue (v4 M1): every column shows layout.queueRows tiles, front first, checked against the engine at load
       // and after every tap of a stored order (played patiently): each shown tile has its card's colour and count and
       // nothing else (no crew name), a row past the column's end is hidden, the rows behind are full size and fade back.
-      { const e = app.byId.get(ST.queueLevel) || app.levels[Math.min(39, app.levels.length - 1)], RW = LY.queueRows;
+      { const e = app.byId.get(ST.queueLevel) || app.levels[Math.min(39, app.levels.length - 1)]; let RW = LY.queueRows; // v4 M5: app.rows once the level is fitted
         const qCheck = () => { const S = app.S, B = app.B; let n = 0;
           for (let j = 0; j < E.NCOL; j++) for (let d = 0; d < RW; d++) {
             const el = d ? app.nexts[j][d - 1] : app.cards[j], ci = S.card(j, d), r = el.getBoundingClientRect(), shown = getComputedStyle(el).visibility !== "hidden" && r.width > 0 && r.height > 0;
@@ -1256,11 +1456,12 @@
             if (d && el.style.getPropertyValue("--fc") !== app.fadeC[d][m]) return "column " + j + " row " + d + " is not faded toward the tray";
             n++; }
           return n; };
-        startLevel(e.id, "normal");
+        startLevel(e.id, "normal"); RW = app.rows;
         const S = app.S, want = app.cards.reduce((a, b, j) => a + Math.min(RW, app.B.colLen[j]), 0), q0 = qCheck();
         const hs = [], op = [], fc = [], j0 = Math.max(0, app.cards.findIndex((b, j) => S.card(j, RW - 1) >= 0));
         for (let d = 0; d < RW; d++) { const el = tileOf(j0, d); hs.push(el.getBoundingClientRect().height); op.push(+getComputedStyle(el).opacity); fc.push(el.style.getPropertyValue("--fc") === (d ? app.fadeC[d][app.B.cardM[S.card(j0, d)]] : mat(app.B.cardM[S.card(j0, 0)]).c)); }
-        ok(q0 === want && RW === 3 && hs[1] < hs[0] && hs[2] < hs[1] && op.every((o) => o === 1) && fc.every(Boolean), "queue: " + RW + " rows per column stepping down (" + hs.map((h) => h.toFixed(1)).join(", ") + " px), all at full opacity, the rows behind faded toward the tray (layout.fade); " + q0 + " tiles match the engine (" + e.id + ")");
+        const off = app.nexts.every((nx) => nx.slice(RW - 1).every((x) => getComputedStyle(x).display === "none")), rowsOK = RW === LY.queueRows ? !document.body.classList.contains("rows2") : RW === LY.queueRowsShort && document.body.classList.contains("rows2") && off;
+        ok(q0 === want && rowsOK && hs[1] < hs[0] && (RW < 3 || hs[2] < hs[1]) && op.every((o) => o === 1) && fc.every(Boolean), "queue: " + RW + " rows per column stepping down (" + hs.map((h) => h.toFixed(1)).join(", ") + " px), all at full opacity, the rows behind faded toward the tray (layout.fade); " + q0 + " tiles match the engine (" + e.id + ")");
         let moved = true, taps = 0; const o = e.L.win.normal;
         for (let i = 0; i < o.length && app.S.status === E.PLAYING; i++) { playCol(+o[i]); settleNow(); taps++; const q = qCheck(); if (typeof q === "string") { moved = q + " after tap " + taps; break; } }
         ok(moved === true && S.status === E.WON, "queue: the rows move up with the engine on every tap of the stored order (" + (moved === true ? taps + " taps" : moved) + ")"); }
@@ -1271,12 +1472,12 @@
       { startLevel(ST.queueLevel && app.byId.has(ST.queueLevel) ? ST.queueLevel : app.levels[0].id, "normal");
         const off = app.V.studInfo(), gl = () => { const el = app.cards.find((b) => !b.classList.contains("empty")), g = el && el.querySelector(".gl"), r = g && g.getBoundingClientRect(); return !!g && getComputedStyle(g).display !== "none" && r.width > 0 && el.style.getPropertyValue("--gl").indexOf("url(") === 0; };
         ok(!app.cb && !off.cb && off.ink[E.IRON] > 0 && off.ink[E.GILT] > 0 && !gl(), "colour-blind off (the default): the gate keeps its bars (" + off.ink[E.IRON] + " px) and the key its glyph (" + off.ink[E.GILT] + " px); no glyph on the tiles");
-        showScreen("title"); const tb = document.querySelector("#title .tog-cb"), hit1 = hitOK(tb); tb.click();
+        showScreen("title"); $("btn-settings").click(); const tb = document.querySelector("#settings .tog-cb"), hit1 = hitOK(tb); tb.click(); $("set-close").click(); // v4 M5: the home's settings sheet
         showScreen("play"); const on = app.V.studInfo();
         let marked = 0; for (let m = 1; m < E.NMAT; m++) if (m !== E.IRON && m !== E.GILT && on.sum[m] !== off.sum[m] && on.ink[m] > off.ink[m]) marked++;
         const saved = app.save.data.settings.cb === true; app.save.write(); const reread = Save.open(app.save.store, key, app.order).data.settings.cb === true;
         ok(hit1 && app.cb && on.cb && tb.getAttribute("aria-pressed") === "true" && document.body.classList.contains("cb") && marked === E.NMAT - 3 && on.sum[E.IRON] === off.sum[E.IRON] && on.sum[E.GILT] === off.sum[E.GILT] && gl(),
-          "colour-blind on (the title's toggle): all " + marked + " other materials wear their mark, the gate and key are unchanged, the tiles show their glyph");
+          "colour-blind on (the settings sheet's toggle): all " + marked + " other materials wear their mark, the gate and key are unchanged, the tiles show their glyph");
         ok(saved && reread, "colour-blind: the save keeps it and reads it back (sanitized)");
         const junk = Save.sanitize({ settings: { cb: "yes", speed: 7, fast: true } }, app.order), junk2 = Save.sanitize({ settings: { cb: true, speed: 3 } }, app.order);
         ok(junk.settings.cb === false && junk.settings.speed === 2 && junk2.settings.cb === true && junk2.settings.speed === 3, "save: a bad colour-blind value loads off; a bad speed falls back (the old 2x flag loads as 2); good values load as saved");
@@ -1306,7 +1507,7 @@
       // reaches the front turns over.
       { const Y = LY.mystery; let tiles = 0, hiddenSeen = 0, flips = 0, bad = null;
         const mCheck = () => { const S = app.S, B = app.B;
-          for (let j = 0; j < E.NCOL; j++) for (let d = 0; d < LY.queueRows; d++) {
+          for (let j = 0; j < E.NCOL; j++) for (let d = 0; d < app.rows; d++) {
             const el = tileOf(j, d), ci = S.card(j, d); if (ci < 0) continue; tiles++;
             const m = B.cardM[ci], html = el.outerHTML.toLowerCase(), hid = S.hidden(ci), gl = el.querySelector(".gl"), glOn = gl && getComputedStyle(gl).display !== "none" && el.style.getPropertyValue("--gl").indexOf("url(") === 0;
             if (hid) { hiddenSeen++;
@@ -1396,7 +1597,7 @@
         // Locked: a fresh save. Both buttons show the padlock and the hint; a tap on either never opens the Gallery.
         app.save.data.done = {}; app.save.data.gal = {}; showScreen("title");
         const gb = $("btn-gallery"), mg = $("map-gallery");
-        ok(!galOpen() && gb.classList.contains("locked") && gb.getAttribute("aria-disabled") === "true" && gb.querySelector(".gs").textContent === GC.lockedHint && hitOK(gb), "gallery: locked before level " + GC.openAt + " is won; the title's button shows the hint (" + gb.querySelector(".gs").textContent + ")");
+        ok(!galOpen() && gb.classList.contains("locked") && gb.getAttribute("aria-disabled") === "true" && gb.querySelector(".gs").textContent === app.meta.home.galTab && mg.querySelector(".gs").textContent === GC.lockedHint && hitOK(gb), "gallery: locked before level " + GC.openAt + " is won; the home's Gallery tab shows the padlock and '" + gb.querySelector(".gs").textContent + "', the map's button the hint");
         gb.click(); const s1 = app.screen; showScreen("map"); const mh = hitOK(mg); mg.click(); const s2 = app.screen; showScreen("gallery"); const s3 = app.screen;
         ok(s1 === "title" && s2 === "map" && s3 === "title" && mg.classList.contains("locked") && mh, "gallery: while locked, the title's and the map's buttons (hittable, padlocked) don't open it, nor does asking for the screen (" + [s1, s2, s3].join(", ") + ")");
         // Open: win the opening level. The buttons show the count; the screen shows every picture, dimmed.
@@ -1417,12 +1618,105 @@
         ok(saved === JSON.stringify(app.save.data.gal) && JSON.stringify(junk) === JSON.stringify({ [e0.id]: 3 }), "gallery: the save's gal reads back through sanitize; a bad mask is clamped, unknown ids and non-numbers are dropped");
         showScreen("title");
       }
+      // 25. v4 M5, the meta layer. The home: one tap on Play opens the right level (a new save: level 1; mid-campaign: the
+      // first level not won), with the progress, the coins and (lives off) no heart; the tabs; the settings sheet. The
+      // power-up bar through its real badges: round, bigger than a tile, hittable, inside the screen; buying (the price
+      // off the coins, one owned); each power-up used through its badge (Ladder: a space; Scout: every ? face up;
+      // Quartermaster: a tile to the front; Recall: a waiting squad back to its column) and refused (no target, past the
+      // level's uses, short coins: nothing spent, a toast that says why). The report: a win's coins counting up, its time,
+      // taps and best. The era report card. Lives forced on in a scratch copy of meta, then the shipped default (off).
+      { const MT = app.meta, HT = MT.home, PWK = E.PW, inv = () => app.save.data.inv, coins = () => app.save.data.coins, tx = () => $("toast").textContent;
+        const nHidden = () => { let n = 0; for (let c = 0; c < app.B.ncards; c++) if (app.S.hidden(c)) n++; return n; };
+        app.save = scratch(); showScreen("title");
+        ok($("play-lab").textContent === fill(HT.play, { n: app.levels[0].n }) && $("home-prog").textContent === "0/" + app.levels.length && $("home-coins").textContent === String(MT.coins.start) && $("home-lives").hidden && hitOK($("btn-play")) && hitOK($("btn-settings")),
+          "home (a new save): Play reads '" + $("play-lab").textContent + "', progress " + $("home-prog").textContent + ", " + $("home-coins").textContent + " coins, no lives pill (meta.lives off); Play and the gear are hittable");
+        $("btn-play").click(); ok(app.screen === "play" && app.entry === app.levels[0] && app.S.plays === 0 && !app.panel, "home: one tap on Play opens level 1, ready to play");
+        for (let i = 0; i < 40; i++) Save.record(app.save.data, app.order[i], "normal");
+        showScreen("title"); const ne = app.byId.get(Save.next(app.save.data, app.order));
+        ok($("play-lab").textContent === fill(HT.play, { n: ne.n }) && $("home-prog").textContent === "40/" + app.levels.length && $("home-era").textContent === fill(HT.era, { e: ne.era, name: app.eras[ne.era - 1].name }), "home (mid-campaign): Play reads '" + $("play-lab").textContent + "', progress " + $("home-prog").textContent + ", " + $("home-era").textContent);
+        $("btn-play").click(); ok(app.screen === "play" && app.entry === ne, "home (mid-campaign): one tap on Play opens level " + ne.n);
+        showScreen("title"); const tabsHit = hitOK($("btn-tomap")) && hitOK($("tab-home")) && hitOK($("btn-gallery")); $("btn-tomap").click(); const t1 = app.screen; $("btn-home").click(); const t2 = app.screen; $("tab-home").click(); const t3 = app.screen;
+        ok(tabsHit && t1 === "map" && t2 === "title" && t3 === "title" && $("map-story").textContent === HT.story, "home tabs: Siege map opens the map (the story is there now), back reaches Home; every tab is hittable");
+        { $("btn-settings").click(); const open = !$("settings").hidden && hitOK($("set-close")), m0 = app.audio.muted, mb = document.querySelector("#settings .tog-mute"); mb.click();
+          const muted = app.audio.muted !== m0 && app.save.data.settings.muted === app.audio.muted && mb.querySelector(".sv").textContent === (app.audio.muted ? "Off" : "On"); mb.click();
+          const sp0 = app.speed; document.querySelector("#settings .tog-speed").click(); const sp1 = app.speed, lab = document.querySelector("#settings .tog-speed .sx").textContent; setSpeed(SPD[0], false); $("set-close").click();
+          ok(open && muted && sp1 !== sp0 && lab === sp1 + "×" && $("settings").hidden && app.audio.muted === m0, "settings: the gear opens the sheet; sound and speed (" + lab + ") change and save through it, colour-blind is section 16; Done closes it"); }
+        // The bar's geometry at this viewport.
+        startLevel(app.levels[0].id, "normal");
+        { const tileH = app.cards[0].getBoundingClientRect().height, rl = $("rail").getBoundingClientRect(), pw = $("powers").getBoundingClientRect(); let geo = true;
+          app.pws.forEach((b) => { const r = b.getBoundingClientRect(); if (getComputedStyle(b).borderTopLeftRadius !== "50%" || Math.abs(r.width - r.height) > 1 || r.width <= tileH - 0.5 || !hitOK(b) || r.bottom > innerHeight + 0.5 || r.right > innerWidth + 0.5) geo = false; });
+          const wideOK = !app.wide || pw.top >= rl.bottom - 0.5, tallOK = app.wide || pw.top >= rl.bottom - 0.5;
+          out.notes.powerBar = Math.round(app.pws[0].getBoundingClientRect().width) + " px badges (tiles " + Math.round(tileH) + " px), bar " + Math.round(pw.height) + " px, " + app.rows + " queue rows" + ($("powers").classList.contains("grid") ? ", 2x2" : "");
+          if (app.wide && !document.body.classList.contains("short")) { const sd = $("side").getBoundingClientRect(), used = $("top").getBoundingClientRect().height + rl.height + pw.height; out.notes.powerBarBlank = (100 * Math.max(0, 1 - used / sd.height)).toFixed(1) + "% of the side column not covered"; }
+          ok(geo && wideOK && tallOK && (innerHeight > LY.shortRowsMaxH || app.rows === LY.queueRowsShort), "power-up bar: four round badges (" + out.notes.powerBar + "), each bigger than a tile, hittable and on screen, under the queue" + (innerHeight <= LY.shortRowsMaxH ? "; a short frame shows " + LY.queueRowsShort + " rows" : "")); }
+        // Buying, then the Ladder.
+        { const c0 = coins(), P = Meta.powerOf(MT, PWK.LADDER), b = app.pws[PWK.LADDER];
+          ok(app.pws.every((q) => q.classList.contains("buy") && q.querySelector(".pw-n").textContent === "+" && !q.disabled) && b.querySelector(".pw-tag span").textContent === String(P.price), "power-ups: none owned: every badge shows a green + and its price (no disabled button)");
+          b.click(); const bought = coins() === c0 - P.price && inv().ladder === 1 && b.classList.contains("own") && b.querySelector(".pw-n").textContent === "1";
+          const cap0 = app.S.cap; b.click();
+          ok(bought && app.S.cap === cap0 + 1 && app.S.extra === 1 && inv().ladder === 0 && b.classList.contains("spent") && app.slots.filter((q) => !q.hidden).length === app.S.cap, "Ladder through its badge: bought (" + c0 + " -> " + (c0 - P.price) + " coins), then used: " + app.S.cap + " spaces show; one spent");
+          const c1 = coins(); b.click();
+          ok(coins() === c1 && inv().ladder === 0 && app.S.extra === 1 && tx() === fill(MT.power.limit, { name: P.name, n: app.S.limit(PWK.LADDER) }), "Ladder: past its uses this level the tap is refused (nothing bought or spent): '" + tx() + "'");
+          app.save.data.coins = 5; renderPowers(); const sb = app.pws[PWK.SCOUT]; sb.click();
+          ok(coins() === 5 && inv().scout === 0 && tx() === fill(MT.power.short, { name: Meta.powerOf(MT, PWK.SCOUT).name, price: Meta.powerOf(MT, PWK.SCOUT).price, have: 5 }), "power-ups: short of coins a buy is refused and says so: '" + tx() + "'");
+          app.save.data.coins = 1000; }
+        // Scout on v4-mystery; refused where nothing is hidden.
+        if (app.byId.has("v4-mystery")) { startLevel("v4-mystery", "normal"); inv().scout = 1; renderPowers(); const h0 = nHidden(); app.pws[PWK.SCOUT].click();
+          ok(h0 > 0 && nHidden() === 0 && !document.querySelector("#tray .tile.mys") && inv().scout === 0 && app.S.used(PWK.SCOUT) === 1, "Scout through its badge: all " + h0 + " hidden squads turn face up (no ? tile left); one spent"); }
+        startLevel(app.levels[0].id, "normal"); inv().scout = 1; renderPowers(); app.pws[PWK.SCOUT].click();
+        ok(inv().scout === 1 && app.S.used(PWK.SCOUT) === 0 && tx() === MT.power.noScout, "Scout: nothing hidden: refused, nothing spent: '" + tx() + "'");
+        // Quartermaster on the queue level: the badge asks for a target, a real tap on a tile pulls it to its column's front.
+        { const e = app.byId.get(ST.queueLevel) || app.levels[39]; startLevel(e.id, "normal"); inv().quartermaster = 2; renderPowers(); const qb = app.pws[PWK.PULL]; qb.click();
+          const pk = Array.from(document.querySelectorAll("#tray .tile.next.pickable")), asking = app.pick && app.pick.k === PWK.PULL && pk.length > 0 && qb.classList.contains("picking") && tx() === MT.power.pickPull;
+          qb.click(); const cancelled = !app.pick && !document.querySelector(".pickable") && inv().quartermaster === 2;
+          qb.click(); const el = document.querySelector("#tray .tile.next.pickable"), j = el ? app.nexts.findIndex((nx) => nx.indexOf(el) >= 0) : -1, d = j >= 0 ? app.nexts[j].indexOf(el) + 1 : 0, ci = j >= 0 ? app.S.card(j, d) : -1;
+          if (el) el.click();
+          ok(asking && cancelled && ci >= 0 && app.S.front(j) === ci && app.cards[j].querySelector(".n").textContent === String(app.S.count(ci)) && app.cards[j].style.getPropertyValue("--mc") === mat(app.B.cardM[ci]).c && inv().quartermaster === 1 && !app.pick && !document.querySelector(".pickable"),
+            "Quartermaster through its badge: it asks (" + pk.length + " tiles glow), a second tap cancels (nothing spent), then a tap on a tile (column " + j + ", row " + (d + 1) + ") brings it to the front; one spent"); }
+        if (app.byId.has("v4-mystery")) { startLevel("v4-mystery", "normal"); inv().quartermaster = 1; renderPowers(); app.pws[PWK.PULL].click();
+          const el = Array.from(document.querySelectorAll("#tray .tile.next.pickable.mys"))[0], j = el ? app.nexts.findIndex((nx) => nx.indexOf(el) >= 0) : -1, ci = el ? app.S.card(j, app.nexts[j].indexOf(el) + 1) : -1; if (el) el.click();
+          ok(!!el && app.S.front(j) === ci && !app.S.hidden(ci) && !app.cards[j].classList.contains("mys") && app.cards[j].style.getPropertyValue("--mc") === mat(app.B.cardM[ci]).c, "Quartermaster on a ? tile: it comes to the front face up, in its colour"); }
+        // Recall: a squad waiting stuck goes back to its column's front through a real tap on its space.
+        { let got = null; for (const e of app.levels) { if (e.n < 16) continue; startLevel(e.id, "normal"); const tp = stageLine(1, 0); if (tp) { got = { e, tp }; break; } }
+          if (ok(!!got, "Recall: found a level whose front can't reach a block (a squad that waits)")) {
+            inv().recall = 1; renderPowers(); const s0 = app.S.order(app.ord)[0], m = app.S.spM[s0], n = app.S.spW[s0], j = +got.tp[got.tp.length - 1], rb = app.pws[PWK.RECALL]; rb.click();
+            const glow = app.slots[s0].classList.contains("pickable"); app.slots[s0].click(); const f = app.S.front(j);
+            ok(glow && app.S.lineLen === 0 && f >= 0 && app.B.cardM[f] === m && app.S.count(f) === n && app.cards[j].querySelector(".n").textContent === String(n) && inv().recall === 0, "Recall through its badge and a tap on the space: the waiting " + mat(m).crew + " (" + n + ") go back to column " + j + "'s front, the space is free; one spent (" + got.e.id + ")"); } }
+        startLevel(app.levels[0].id, "normal"); inv().recall = 1; renderPowers(); app.pws[PWK.RECALL].click();
+        ok(inv().recall === 1 && !app.pick && tx() === MT.power.noRecall, "Recall: no squad waiting: refused, nothing spent: '" + tx() + "'");
+        // The report: level 3 on Hard (not yet won there): coins for a first win on Hard, time, taps, the count-up.
+        { const e = app.byId.get("e1-03") || app.levels[2], o = e.L.win.hard, c0 = coins(), want = Meta.winCoins(MT, "hard", true);
+          startLevel(e.id, "hard"); patient(o.slice(0, -1)); tick(5000); playCol(+o[o.length - 1]); settleNow(); for (let t = 0; t < 12000 && !app.panel; t += 16) step(16);
+          const R = app.report, early = $("p-coins").textContent; for (let t = 0; t < MT.report.countDelayMs + MT.report.countMs + 48; t += 16) step(16);
+          ok(app.panel === "win" && !!R && R.coins === want && coins() === c0 + want && R.taps === app.S.plays && R.ms >= 5000 && $("p-time").textContent === Meta.clock(R.ms) && $("p-taps").textContent === String(R.taps) && early === "+0" && $("p-coins").textContent === "+" + want && !$("p-stats").hidden && hitOK($("p-primary")),
+            "report (a first win on Hard): +" + want + " coins counted up (" + early + " -> " + $("p-coins").textContent + "), time " + $("p-time").textContent + ", taps " + $("p-taps").textContent + ", the medal; the save's coins follow");
+          const firstEm = $("p-stats").children[0].querySelector("em").textContent; startLevel(e.id, "hard"); patient(o.slice(0, -1)); tick(2000); playCol(+o[o.length - 1]); settleNow(); for (let t = 0; t < 12000 && !app.panel; t += 16) step(16);
+          const R2 = app.report, b = Meta.bestOf(app.save.data, e.id);
+          ok(R2.coins === Meta.winCoins(MT, "hard", false) && R2.newMs && !R2.newTaps && $("p-stats").children[0].querySelector("em").textContent === MT.report.newBest && $("p-stats").children[1].querySelector("em").textContent === fill(MT.report.best, { v: R.taps }) && b[2] === R2.ms && b[5] === R.taps && firstEm === MT.report.first,
+            "report (again): +" + R2.coins + " (no new medal); faster: '" + MT.report.newBest + "'; taps tied: '" + $("p-stats").children[1].querySelector("em").textContent + "'; the save keeps the best of each"); }
+        if (app.byId.has("v4-linked")) { const c0 = coins(); startLevel("v4-linked", "normal"); patient(app.entry.L.win.normal); settleNow(); for (let t = 0; t < 12000 && !app.panel; t += 16) step(16); ok(app.panel === "win" && coins() === c0 && $("p-stats").hidden, "report: a debug level earns nothing and shows no report rows"); }
+        if (app.gal.length) { const g = app.gal[0], c0 = coins(); startLevel(g.id, "easy"); patient(g.L.win.easy); settleNow(); for (let t = 0; t < 12000 && !app.panel; t += 16) step(16);
+          ok(app.panel === "win" && coins() === c0 + Meta.winCoins(MT, "easy", true) && !$("p-stats").hidden && Meta.bestOf(app.save.data, g.id)[3] === app.report.taps, "report: a Gallery picture gets the same report (+" + app.report.coins + " coins, best kept per picture)"); }
+        { showScreen("map"); const er = app.eras[0], rc = er.sec.querySelector(".rc"), ls = app.levels.filter((e) => e.era === 1), won = ls.filter((e) => app.save.data.done[e.id]).length, cs = ls.reduce((a, e) => a + Meta.bestOf(app.save.data, e.id)[6], 0);
+          ok(rc.querySelector(".rc-n").textContent === fill(MT.eraCard.cleared, { n: won, t: ls.length }) && rc.querySelector(".rc-c b").textContent === String(cs) && +rc.querySelectorAll(".rc-m b")[2].textContent === ls.filter((e) => app.save.data.done[e.id] & 4).length, "map: Era 1's report card: " + rc.querySelector(".rc-n").textContent + ", medals E/N/H " + Array.from(rc.querySelectorAll(".rc-m b")).map((b) => b.textContent).join("/") + ", " + cs + " coins"); }
+        // Lives, forced on in a scratch copy of meta with a test clock.
+        { let T = 1.8e12; const per = MT.livesRefillMin * 60000; app.meta = Object.assign({}, MT, { lives: true }); app.now = () => T; app.save = scratch(); showScreen("title");
+          ok(!$("home-lives").hidden && $("home-lives").textContent === String(app.meta.livesMax) && hitOK($("btn-play")), "lives on (a scratch copy of meta): the home shows " + app.meta.livesMax + " lives");
+          if (jp) { startLevel(jp.e.id, "normal"); patient(jp.p.prefix); for (let t = 0; t < SH.settleCapMs + 3000 && !app.panel; t += 16) step(16);
+            ok(app.panel === "fail" && Meta.lives(app.save.data, app.meta, T).n === app.meta.livesMax - 1 && $("p-line").textContent.indexOf(fill(HT.lifeLost, { n: app.meta.livesMax - 1 })) >= 0, "lives on: a fail costs one (the sheet says '" + fill(HT.lifeLost, { n: app.meta.livesMax - 1 }) + "')"); }
+          app.save.data.lives = { n: 0, at: T }; showScreen("title"); const lab0 = $("play-lab").textContent; $("btn-play").click();
+          ok(lab0 === fill(HT.noLives, { t: Meta.clock(per, true) }) && $("btn-play").classList.contains("wait") && app.screen === "title" && tx() === fill(HT.noLivesToast, { t: Meta.clock(per, true) }), "lives on, none left: Play reads '" + lab0 + "' and a tap starts nothing (the toast says when)");
+          T += per; step(16); const lab1 = $("play-lab").textContent; $("btn-play").click();
+          ok(lab1 === fill(HT.play, { n: app.byId.get(Save.next(app.save.data, app.order)).n }) && app.screen === "play" && Meta.lives(app.save.data, app.meta, T).n === 1, "lives on: one comes back after " + MT.livesRefillMin + " minutes; Play starts the level again");
+          app.meta = MT; app.now = was.now; app.save = scratch(); showScreen("title");
+          ok(app.cfg.meta.lives === false && $("home-lives").hidden && !$("btn-play").classList.contains("wait"), "lives: the shipped default is off; no heart shows on the home"); }
+      }
       // 14. Opaque sprite caches.
       const bad = app.V.checkSprites(); ok(!bad.length, "sprites: every opaque cache is opaque" + (bad.length ? " (" + bad.join(",") + ")" : ""));
     } catch (err) { ok(false, "selfTest threw: " + (err && err.message) + " " + (err && err.stack ? err.stack.split("\n")[1] : "")); }
     finally {
       app.byId.delete("fx-jamLevel"); app.byId.delete("fx-stuckLevel"); app.byId.delete("fx-linkJamLevel"); app.byId.delete("fx-lockJamLevel");
-      app.save = was.save; app.testing = false; setSpeed(was.speed, false); setCb(was.cb, false); app.diff = was.diff;
+      app.save = was.save; app.meta = was.meta; app.now = was.now; app.testing = false; setSpeed(was.speed, false); setCb(was.cb, false); app.diff = was.diff;
       if (was.entry) startLevel(was.entry.id, was.diff); showScreen(was.screen); renderAll();
     }
     let snap2 = "?"; try { snap2 = was.save.store.getItem(key); } catch (e) { /* stays "?" */ }
@@ -1447,7 +1741,15 @@
     // v4 M4: win siege levels 1 to gallery.openAt in the live save (the harness opens the Gallery this way); the ids of
     // the Gallery's pictures; the board's runners by entry edge.
     unlockGallery: () => { const k = app.order.indexOf(app.cfg.gallery.openAt); for (let i = 0; i <= k; i++) Save.record(app.save.data, app.order[i], "normal"); writeSave(); renderGalButtons(); return galOpen(); },
-    gallery: () => app.gal.map((e) => e.id), sides: () => app.V.sides() };
+    gallery: () => app.gal.map((e) => e.id), sides: () => app.V.sides(),
+    // v4 M5: win siege levels 1..n (normal) in the live save (screens for the harness and the critics); a power-up through
+    // its badge (k), and for the Quartermaster or Recall a target (the tile [j, d] or the space); the meta state.
+    unlockTo: (n) => { for (let i = 0; i < n && i < app.order.length; i++) Save.record(app.save.data, app.order[i], "normal"); app.save.data.last = Save.next(app.save.data, app.order); writeSave(); renderHome(); return Object.keys(app.save.data.done).length; },
+    power: (k, a) => { const got = onPower(k); if (a == null || !app.pick) return got; return Array.isArray(a) ? pickTile(a[0], a[1]) : pickSlot(a); },
+    meta: () => ({ coins: app.save.data.coins, inv: Object.assign({}, app.save.data.inv), lives: Meta.lives(app.save.data, app.meta, app.now()), pick: app.pick ? app.pick.k : -1, rows: app.rows, report: app.report, used: app.S ? E.POWERS.map((k, i) => app.S.used(i)) : null }),
+    setMeta: (o) => { Object.assign(app.save.data, o || {}); writeSave(); renderHome(); if (app.S) renderPowers(); return app.save.data.coins; },
+    // Lives forced on (a copy of meta; debug screens only) with n left, the refill count started ago ms back; off restores.
+    forceLives: (on, n, ago) => { app.meta = on ? Object.assign({}, app.cfg.meta, { lives: true }) : app.cfg.meta; if (on) app.save.data.lives = { n: n | 0, at: n < app.meta.livesMax ? Date.now() - (ago | 0) : 0 }; renderHome(); return Meta.lives(app.save.data, app.meta, app.now()); } };
 
   boot();
 })();

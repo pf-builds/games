@@ -258,6 +258,52 @@
   // A logical point inside frame 0 of each sheet that is always opaque (the torso), for the cache-health checks.
   const SHEET_PROBE = [[7, 9], [7, 9], [6, 8], [7, 9], [7, 10]];
 
+  // ---- v4 M5: power-up and meta icons ---------------------------------------------------------------------------------
+  // Power-ups on a 20 × 20 logical grid: 0 a siege ladder, 1 the quartermaster's crate under a gold arrow (bring a squad
+  // forward), 2 the scout's spyglass, 3 the recall horn. Small icons, 12 × 12: coin, heart, castle (the siege's
+  // progress). Ink outlines throughout; transparent around the shape. The page turns them into image URLs once at boot.
+  const PWN = 20;
+  const CRATE = [".........hA.........", "........hAAa........", ".......hAAAAa.......", "......hAAAAAAa......", ".....hAAAAAAAAa.....", "....hAAAAAAAAAAa....",
+    "........hAAa........", "........hAAa........", "........hAAa........", "....................", "...cccccccccccccc...", "...cllllllllllllc...", "...cCCCCCCCCCCCCc...",
+    "...cCCCCCCCCCCCCc...", "...cccccccccccccc...", "...cllllllllllllc...", "...cCCCCCCCCCCCCc...", "...cCCCCCCCCCCCCc...", "...cccccccccccccc..."];
+  function along(P, pts, rOf, col, dx, dy) { for (let i = 0; i < pts.length; i++) disc(P, Math.round(pts[i][0] + (dx || 0)), Math.round(pts[i][1] + (dy || 0)), Math.max(0, Math.round(rOf(i / (pts.length - 1)))), col); }
+  function bez(p0, p1, p2, n) { const o = []; for (let i = 0; i <= n; i++) { const t = i / n, u = 1 - t; o.push([u * u * p0[0] + 2 * u * t * p1[0] + t * t * p2[0], u * u * p0[1] + 2 * u * t * p1[1] + t * t * p2[1]]); } return o; }
+  function powerIcon(A, k) {
+    const n = PWN, c = mk(n, n), P = pen(c), ink = A.ink, [g0, g1, g2] = A.goldPlate;
+    if (k === 0) { // ladder: two rails and four rungs, lit on the left
+      const [b, d, l, deep] = A.timber, x0 = 5, x1 = 14, top = 1, bot = n - 1;
+      P.r(x0 - 1, top - 1, 4, bot - top + 2, ink); P.r(x1 - 1, top - 1, 4, bot - top + 2, ink);
+      for (let y = 3; y + 2 < bot; y += 4) P.r(x0, y - 1, x1 - x0 + 2, 4, ink);
+      for (let y = 3; y + 2 < bot; y += 4) { P.r(x0 + 2, y, x1 - x0 - 2, 2, b); P.r(x0 + 2, y + 1, x1 - x0 - 2, 1, deep); }
+      for (const x of [x0, x1]) { P.r(x, top, 2, bot - top, b); P.r(x, top, 1, bot - top, l); P.r(x + 1, top, 1, bot - top, d); }
+    } else if (k === 1) glyph(P, CRATE, 0, 1, { A: g1, h: g0, a: g2, c: A.timber[3], l: A.timber[2], C: A.timber[0] }, ink);
+    else if (k === 2) { // the scout's spyglass: eyepiece, brass tube, a leather barrel and a blue lens
+      const pts = bez([3, n - 4], [9, 10], [n - 5, 4], 30), r = (t) => (t < 0.32 ? 1.6 : t < 0.62 ? 2.4 : 3.3);
+      along(P, pts, (t) => r(t) + 1, ink); along(P, pts, r, g1);
+      along(P, pts.slice(0, 11), () => 1, g2); along(P, pts.slice(19), () => 2.3, A.timber[0]);
+      for (const i of [10, 19]) disc(P, Math.round(pts[i][0]), Math.round(pts[i][1]), Math.round(r(i / 30)), g0);
+      const e = pts[30]; disc(P, Math.round(e[0]), Math.round(e[1]), 2, A.ice[1]); P.p(Math.round(e[0]) - 1, Math.round(e[1]) - 1, "#ffffff");
+    } else { // the recall horn: ivory, shaded underneath, two brass bands, flaring to a dark mouth
+      const iv = A.crew[2], pts = bez([4, n - 3], [3, 6], [n - 5, 5], 36), r = (t) => 0.8 + 1.8 * t + (t > 0.78 ? (t - 0.78) * 11 : 0);
+      along(P, pts, (t) => r(t) + 1, ink); along(P, pts, r, iv[1]); along(P, pts, (t) => r(t) - 1, iv[0], -0.7, -0.7);
+      for (const i of [13, 24]) disc(P, Math.round(pts[i][0]), Math.round(pts[i][1]), Math.round(r(i / 36)), g1);
+      const e = pts[36]; disc(P, Math.round(e[0]) + 1, Math.round(e[1]), Math.max(1, Math.round(r(1) - 2)), A.timber[3]);
+    }
+    return c;
+  }
+  const SMALL = {
+    coin: ["...######...", ".##GGGGGG##.", ".#GGWGGGGd#.", "#GGWGGddGGd#", "#GWGGdGGdGd#", "#GGGGdGGdGd#", "#GGGGdGGdGd#", "#GGGGdGGdGd#", "#GGGGGddGGd#", ".#GGGGGGdd#.", ".##ddddddd#.", "...######..."],
+    heart: ["..##...##...", ".#WR#.#RR#..", "#WRRR#RRRR#.", "#RRRRRRRRR#.", "#RRRRRRRRd#.", ".#RRRRRRd#..", "..#RRRRd#...", "...#RRd#....", "....#d#.....", ".....#......", "............", "............"],
+    castle: ["k.kk.kk.kk.k", "kSkkSkkSkkSk", "kSSSSSSSSSSk", "kSLSSSSSSLSk", "kSSSSSSSSSSk", "kSSSkkkkSSSk", "kSSkddddkSSk", "kSSkddddkSSk", "kSSkddddkSSk", "kkkkkkkkkkkk", "............", "............"],
+  };
+  function smallIcon(A, name) {
+    const c = mk(12, 12), P = pen(c), [g0, g1, g2] = A.goldPlate, [sb, sd, sl] = A.stone;
+    glyph(P, SMALL[name], 0, 0, { "#": A.ink, k: A.ink, G: g1, W: "#fff7d0", d: g2, R: "#d8322e", S: sb, L: sd, ...(name === "heart" ? { d: "#8f1d1a", W: "#ffb3a8" } : {}), ...(name === "castle" ? { d: A.timber[1], W: sl } : {}) });
+    return c;
+  }
+  // Every icon as one logical canvas (keyed p0-p3, coin, heart, castle).
+  function icons(A) { const o = {}; for (let k = 0; k < 4; k++) o["p" + k] = powerIcon(A, k); for (const name of Object.keys(SMALL)) o[name] = smallIcon(A, name); return o; }
+
   // ---- scenes (logical canvases; the page scales them with image-rendering: pixelated) ---------------------------------
   function sky(P, A, hFrac, night) {
     const cols = night ? A.night : A.sky, n = cols.length, bh = Math.max(2, Math.ceil((P.h * hFrac) / n));
@@ -643,5 +689,5 @@
     }
   }
 
-  return { G, MATS, WALK, WORK, FRAMES, SHEET_PROBE, noise, mk, up, icon, sources, title, banner, worldStrip, wall, u32, textures, levelInfo, compose, moatFrame, flagArt, chipArt };
+  return { G, MATS, WALK, WORK, FRAMES, SHEET_PROBE, noise, mk, up, icon, icons, sources, title, banner, worldStrip, wall, u32, textures, levelInfo, compose, moatFrame, flagArt, chipArt };
 });
