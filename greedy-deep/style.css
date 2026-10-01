@@ -52,7 +52,8 @@ body.booting #col { opacity: 0; }
 }
 .stat { display: flex; flex-direction: column; justify-content: center; min-width: 0; flex: 1; overflow: hidden; }
 .stat.right { align-items: flex-end; }
-.stat .label { font-size: calc(4px * var(--s)); letter-spacing: .12em; color: var(--dim); }
+.stat .label { font-size: calc(4px * var(--s)); letter-spacing: .12em; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+#stat-depth-label { letter-spacing: .05em; }
 .stat .value { font-size: calc(7px * var(--s)); font-weight: 700; color: var(--gold); line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .stat.rate .value { color: #8fd18a; }
 .stat.right .value { color: #bfd4e6; }
@@ -341,6 +342,11 @@ body.booting #col { opacity: 0; }
   z-index: 5;
 }
 .overlay.hidden { display: none; }
+/* Phones: a modal covers the whole screen, not just the shaft, which shrinks to make room
+   for the shop and would otherwise squeeze Settings until CLOSE sits on RESET. */
+@media (max-width: 599px) {
+  .overlay { position: fixed; z-index: 40; }
+}
 .panel-card {
   background: #171320; border: 2px solid #3a3050; border-radius: 6px;
   width: 100%; padding: calc(5px * var(--s)); text-align: left;
@@ -362,6 +368,7 @@ body.booting #col { opacity: 0; }
 .panel-card .score {
   margin-top: calc(8px * var(--s)); padding-top: calc(5px * var(--s)); border-top: 1px solid #2c2540; text-align: center;
   font-size: calc(8px * var(--s)); font-weight: 700; color: var(--gold); letter-spacing: .08em;
+  margin-bottom: calc(3px * var(--s));
 }
 .panel-btn {
   display: block; width: 100%; margin-top: calc(4px * var(--s));
@@ -387,6 +394,9 @@ body.booting #col { opacity: 0; }
 }
 .settings-row.danger button { color: #ec9a80; border-color: #5a3030; }
 .danger-btn { background: #3a1818 !important; color: #ec9a80 !important; border-color: #5a3030 !important; }
+/* Settings sub-parts (export box, import box + confirm, erase confirm) start hidden and
+   open on demand; without this rule they all showed at once. */
+.settings-body .hidden { display: none; }
 #export-area, #import-area {
   width: 100%; font: inherit; font-size: calc(4px * var(--s));
   background: #0f0c17; color: var(--ink); border: 1px solid #3a3050;

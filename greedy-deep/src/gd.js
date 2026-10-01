@@ -46,6 +46,7 @@
 
   GD.ctx = {
     rng: null, // null = engine default rng
+    holdDepth: null, // depth the live dig may not pass (welcome-back hold at the milestone)
     onEvent: function (e, st) { if (GD.hooks.onEvent) GD.hooks.onEvent(e, st); },
     onBand: function (b, prev, st) { if (GD.hooks.onBand) GD.hooks.onBand(b, prev, st); },
     onEnding: function (st, m) { if (GD.hooks.onEnding) GD.hooks.onEnding(st, m); },
@@ -110,6 +111,7 @@
   D.reset = function () {
     E.setSeed(GD.config.sim.seed === undefined ? 1 : GD.config.sim.seed);
     GD.state = E.newState(GD.config);
+    GD.ctx.holdDepth = null;
     resetPickups();
     return E.snapshot(GD.config, GD.state);
   };
@@ -173,7 +175,8 @@
   // INCOME readout and every ETA use this one number.
   GD.incomeRate = function () {
     var d = E.derive(GD.config, GD.state);
-    return Math.max(d.goldRate, (GD.state.earnRate > 0 ? GD.state.earnRate : 0) * d.goldAllMul);
+    var r = GD.state.earnRateFast > 0 ? GD.state.earnRateFast : 0;
+    return Math.max(d.goldRate, r * d.goldAllMul);
   };
 
   GD.etaFor = function (id) {
@@ -427,7 +430,7 @@
     // hooks for the duration so a test run never leaves a panel or a log line behind.
     var liveHooks = GD.hooks;
     GD.hooks = { onEvent: null, onBand: null, onEnding: null, onPickupSpawn: null, onPickupExpire: null, onPickupClick: null };
-    var livePickups = GD.pickups, liveVisibility = visOverride;
+    var livePickups = GD.pickups, liveVisibility = visOverride, liveHold = GD.ctx.holdDepth;
     var liveMuted = window.GDAudio ? window.GDAudio.isMuted() : false;
     var overlayIds = ["settings", "welcome", "ending"], overlayWasHidden = {};
 
@@ -814,10 +817,10 @@
       check("m2_eta_zero_when_affordable", 0, GD.etaFor("pick"), GD.etaFor("pick") === 0);
       // B3: a tapper's rolling earnings set the ETA once they beat crew income
       GD.state.gold = 0;
-      GD.state.earnRate = dEta.goldRate * 50;
-      var wantTapEta = GD.costOf("pick") / (GD.state.earnRate * dEta.goldAllMul);
+      GD.state.earnRateFast = dEta.goldRate * 50;
+      var wantTapEta = GD.costOf("pick") / (GD.state.earnRateFast * dEta.goldAllMul);
       check("p1_eta_uses_real_earnings", wantTapEta, GD.etaFor("pick"), approx(GD.etaFor("pick"), wantTapEta, 1e-9));
-      GD.state.earnRate = 0;
+      GD.state.earnRateFast = 0;
       check("p1_eta_floors_at_crew_income", GD.costOf("pick") / dEta.goldRate, GD.etaFor("pick"),
         approx(GD.etaFor("pick"), GD.costOf("pick") / dEta.goldRate, 1e-9));
       if (window.GDUI && window.GDUI.rowReport) {
@@ -1230,6 +1233,15 @@
         pM.heldAtMilestone === true && approx(GD.state.depth, md - hold, 1e-6) && !GD.state.endingSeen && approx(apM.depth, pM.depth, 1e-9));
       D.setState({ depth: md + 50, owned: { dorrik: 40 }, endingSeen: true });
       var pPast = D.offlinePreview(8 * 3600 * 1000);
+      // ...and the live dig holds there while the welcome panel is up (critic B-1)
+      D.setState({ depth: md - hold - 0.5, owned: { dorrik: 40, nix: 5 } });
+      GD.ctx.holdDepth = md - hold;
+      D.step(20);
+      var heldOk = approx(GD.state.depth, md - hold, 1e-9) && !GD.state.endingSeen;
+      GD.ctx.holdDepth = null;
+      D.step(20);
+      check("p1_live_dig_holds_until_welcome_dismissed", "held at " + (md - hold) + ", then ending",
+        heldOk + " / " + GD.state.endingSeen, heldOk && GD.state.endingSeen);
       check("p1_offline_unclamped_after_ending", "no hold", pPast.heldAtMilestone ? "held" : "no hold", !pPast.heldAtMilestone && pPast.depth > 0);
       // B7: time played survives a save round trip and an export/import
       D.reset();
@@ -2032,10 +2044,10 @@
         E.effectDesc([{ verb: "mul_gold", value: 1.12 }]) === "+12% crew gold");
       D.reset();
       D.grantForTest("dorrik", 2);
-      GD.state.earnRate = 1000;
+      GD.state.earnRateFast = 1000;
       var dInc = GD.derive();
       check("p1_income_is_real_earnings", 1000 * dInc.goldAllMul, GD.incomeRate(), approx(GD.incomeRate(), 1000 * dInc.goldAllMul, 1e-9));
-      GD.state.earnRate = 0;
+      GD.state.earnRateFast = 0;
       check("p1_income_floors_at_crew", dInc.goldRate, GD.incomeRate(), approx(GD.incomeRate(), dInc.goldRate, 1e-12));
       if (window.GDUI && window.GDUI.refresh) {
         var lblEl = document.getElementById("stat-depth-label"), tabCrew = document.querySelector('#tabbar .tab[data-tab="crew"]');
@@ -2077,6 +2089,27 @@
           rowH > 0 && fit / rowH >= 3);
       }
 
+      if (window.innerWidth < 600 && window.GDUI && window.GDUI.fitPhonePanel) {
+        window.GDUI.fitPhonePanel();
+        var over = document.documentElement.scrollHeight - window.innerHeight;
+        check("p1_phone_page_never_scrolls", "<= 1 px", over + " px", over <= 1);
+        var setB = document.getElementById("settings");
+        if (setB) {
+          setB.classList.remove("hidden");
+          var resetBtn = document.getElementById("set-reset"), closeBtn = document.getElementById("settings-close"), reachBad = [];
+          [resetBtn, closeBtn].forEach(function (btn) {
+            if (!btn) return;
+            var br = btn.getBoundingClientRect(), hit = document.elementFromPoint(br.left + br.width / 2, br.top + br.height / 2);
+            if (hit !== btn && !btn.contains(hit)) reachBad.push(btn.id + " -> " + (hit ? hit.id || hit.tagName : "null"));
+          });
+          var subShown = ["export-area", "import-area", "import-confirm", "reset-confirm"].filter(function (id) {
+            var e2 = document.getElementById(id); return e2 && e2.classList.contains("hidden") && e2.offsetHeight > 0; });
+          setB.classList.add("hidden");
+          check("p1_settings_hidden_parts_stay_hidden", "none", subShown.join(",") || "none", subShown.length === 0);
+          check("p1_phone_settings_buttons_reachable", "reset and close hit themselves", reachBad.join(" | ") || "ok", reachBad.length === 0);
+        }
+      }
+
       // --- console clean (last, so it counts everything above)
       if (!opts.skipConsoleCheck) {
         check("m2_no_console_errors", 0, dbg.errors, dbg.errors === 0);
@@ -2096,6 +2129,7 @@
       GD.state = liveState;
       GD.pickups = livePickups;
       visOverride = liveVisibility;
+      GD.ctx.holdDepth = liveHold;
       if (window.GDAudio) window.GDAudio.setMuted(liveMuted);
       for (var ok5 in overlayWasHidden) {
         var oe5 = document.getElementById(ok5);

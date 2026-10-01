@@ -1,5 +1,5 @@
 {
-  "configVersion": 27,
+  "configVersion": 28,
   "title": "Greedy Deep",
   "start": {
     "gold": 0,
@@ -390,6 +390,7 @@
     "hitMinCssPx": 44,
     "hitPadBu": 6,
     "earnWindowS": 30,
+    "incomeWindowS": 4,
     "earnCapTapsPerSec": 16,
     "expireBlinkS": 2,
     "spawn": {

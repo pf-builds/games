@@ -3,7 +3,7 @@
 (function () {
   "use strict";
 
-  var CONFIG_VERSION = 27;
+  var CONFIG_VERSION = 28;
 
   var UI = (window.GDUI = {});
   var E = window.GDEngine, GD = window.GD;
@@ -119,6 +119,12 @@
       if (window.GDSprites && window.GDSprites.ensure) window.GDSprites.ensure(false);
     });
     window.addEventListener("resize", layout);
+    // The roster strip grows as crew is hired; refit the phone shop when anything above it
+    // changes height.
+    if (window.ResizeObserver) {
+      var ro = new ResizeObserver(function () { fitPhonePanel(); });
+      ["topbar", "roster", "tabbar"].forEach(function (id) { var el = $(id); if (el) ro.observe(el); });
+    }
     if (GD.state.goldEarnedTotal > 0 && els.hint) els.hint.classList.add("gone");
     if (GI.debug) {
       els.overlay.classList.remove("hidden");
@@ -140,6 +146,7 @@
     var preview = GI.offlinePreview(elapsed);
     if (!(preview.gold > 0)) return;
     var applied = GI.applyOffline(elapsed);
+    if (applied.heldAtMilestone) GD.ctx.holdDepth = GD.state.depth;
     showWelcome(applied);
     try { if (window.GDAudio && !GD.state.prefs.muted) window.GDAudio.play("welcomeBack"); } catch (e) {}
   }
@@ -351,6 +358,20 @@
   }
 
   // ------------------------------------------------------------ layout
+  // Phone: the shop panel takes exactly the height left under the tab bar, measured from
+  // the real page (the tab bar and a roster with crew in it are taller than their bu
+  // budgets), so the page never scrolls. Tablet and desktop keep the stylesheet value.
+  function fitPhonePanel() {
+    if (!els.tabpanel) return;
+    var vw = window.innerWidth, vh = window.innerHeight, L = cfg.layout;
+    if (isDesktop || vw >= 600) { els.tabpanel.style.maxHeight = ""; return; }
+    var s = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--s")) || L.minScale;
+    var top = els.tabpanel.getBoundingClientRect().top + (window.scrollY || 0);
+    var room = Math.floor(vh - top);
+    els.tabpanel.style.maxHeight = Math.max(L.panelHeightBu * s * 0.5, room) + "px";
+  }
+  UI.fitPhonePanel = function () { fitPhonePanel(); };
+
   function layout() {
     var L = cfg.layout;
     var vw = window.innerWidth, vh = window.innerHeight;
@@ -399,11 +420,8 @@
 
     // Phone: the shop panel takes whatever height is left under the tab bar (its CSS cap
     // is the 80 bu panel). Tablet and desktop keep the stylesheet value.
-    if (els.tabpanel) {
-      var phoneLeft = vh - (L.topBarBu + cfg.layout._liveShaftBu + L.rosterHeightBu + L.tabBarHeightBu) * s;
-      els.tabpanel.style.maxHeight = (!isDesktop && vw < 600 && phoneLeft > L.panelHeightBu * s) ? Math.floor(phoneLeft) + "px" : "";
-    }
     window.GDRender.resize(s, cfg.layout._liveShaftBu);
+    fitPhonePanel();
     drawLogo(s);
     placeHint();
 
@@ -947,7 +965,7 @@
     if (els.descend) els.descend.addEventListener("click", dismissSplash);
 
     var wb = els.welcome && els.welcome.querySelector(".panel-btn");
-    if (wb) wb.addEventListener("click", function () { els.welcome.classList.add("hidden"); });
+    if (wb) wb.addEventListener("click", function () { els.welcome.classList.add("hidden"); GD.ctx.holdDepth = null; });
     var eb = els.ending && els.ending.querySelector(".panel-btn");
     if (eb) eb.addEventListener("click", function () { els.ending.classList.add("hidden"); });
 

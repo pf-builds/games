@@ -98,6 +98,7 @@
       // M5: real earnings per second (taps + crew, before the all-gold buff), a rolling
       // average over ~pickups.earnWindowS. Gems pay seconds of this. Never saved.
       earnRate: 0,
+      earnRateFast: 0,
       earnAcc: 0,
       prefs: { muted: false }
     };
@@ -400,6 +401,9 @@
     var d = E.derive(cfg, state);
     var depthBefore = state.depth;
     state.depth += d.digRate * dt;
+    // ctx.holdDepth (set by the UI while the welcome-back panel shows an offline return held
+    // short of the milestone) stops the live dig there, so the ending can't play behind it.
+    if (ctx && typeof ctx.holdDepth === "number" && state.depth > ctx.holdDepth) state.depth = Math.max(depthBefore, ctx.holdDepth);
     var g = d.goldRate * dt;
     state.gold = clamp(state.gold + g);
     state.goldEarnedTotal = clamp(state.goldEarnedTotal + g);
@@ -409,6 +413,8 @@
     var tau = (cfg.pickups && cfg.pickups.earnWindowS) || 30;
     var ek = 1 - Math.exp(-dt / tau);
     state.earnRate = clamp((state.earnRate || 0) + (state.earnAcc / dt - (state.earnRate || 0)) * ek);
+    var fk = 1 - Math.exp(-dt / ((cfg.pickups && cfg.pickups.incomeWindowS) || 4));
+    state.earnRateFast = clamp((state.earnRateFast || 0) + (state.earnAcc / dt - (state.earnRateFast || 0)) * fk);
     state.earnAcc = 0;
 
     // prune expired timed effects (derive already ignores them; this keeps the array small)
