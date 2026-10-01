@@ -14,7 +14,7 @@ mkdirSync(OUT, { recursive: true });
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || "playwright");
 const browser = await chromium.launch(), log = [], notes = {};
 const wall = setTimeout(() => { console.error("out of time"); process.exit(2); }, 580000);
-const GAL = ["g-tw-1f355", "g-met-57007", "g-met-437999", "g-met-436528", "g-ours-g24", "g-noto-1f432"];
+const GAL = ["g-tw-1f355", "g-met-57007", "g-noto-1f3c6", "g-met-436528", "g-met-436534", "g-met-435882"];
 
 async function open(tag, w, h, dpr, touch, iframe) {
   const ctx = await browser.newContext({ viewport: { width: iframe ? 460 : w, height: iframe ? 700 : h }, deviceScaleFactor: dpr, hasTouch: touch, isMobile: touch });
@@ -83,6 +83,8 @@ async function viewport(V, full) {
   if (!full) return;
   await shot(V, "gal-mid-fuji", galMid, "g-met-57007", 120);
   await shot(V, "gal-win", winRep, "g-tw-1f355", 400);
+  await shot(V, "gallery-after-win", () => { SP.screen("gallery"); return SP.state().screen; });
+  await shot(V, "gal-win-fuji", winRep, "g-met-57007", 400);
   await shot(V, "linked-rest", rest, "v4-linked");
   await shot(V, "l8-rest", rest, 8);
 }
