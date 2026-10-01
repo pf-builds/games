@@ -1,5 +1,5 @@
 {
-  "configVersion": 25,
+  "configVersion": 28,
   "title": "Greedy Deep",
   "start": {
     "gold": 0,
@@ -59,7 +59,7 @@
     {
       "id": "copper",
       "name": "Green Copper",
-      "startDepth": 40,
+      "startDepth": 15,
       "goldPerMeter": 5,
       "pattern": "vein",
       "intro": "It goes green when it's happy.",
@@ -141,7 +141,7 @@
     {
       "id": "cart",
       "name": "Bigger Cart",
-      "desc": "Hauls 12% more per trip.",
+      "desc": "The crew's carts haul 12% more per trip.",
       "base": 400,
       "ratio": 3.0,
       "effects": [
@@ -180,7 +180,7 @@
     {
       "id": "smelter",
       "name": "Smelter",
-      "desc": "Burns the slag off the take. +15% gold.",
+      "desc": "Burns the slag off the crew's take.",
       "base": 40000,
       "ratio": 3.2,
       "effects": [
@@ -226,7 +226,7 @@
       "id": "dorrik",
       "name": "Dorrik Quickpick",
       "job": "Hewer",
-      "base": 15,
+      "base": 10,
       "ratio": 2.8,
       "effects": [
         {
@@ -358,7 +358,8 @@
     "capHours": 8,
     "minSeconds": 60,
     "maxClockSkewHours": 48,
-    "advanceDepth": true
+    "advanceDepth": true,
+    "milestoneHoldM": 2
   },
   "milestone": {
     "id": "the_greedy_deep",
@@ -389,6 +390,7 @@
     "hitMinCssPx": 44,
     "hitPadBu": 6,
     "earnWindowS": 30,
+    "incomeWindowS": 4,
     "earnCapTapsPerSec": 16,
     "expireBlinkS": 2,
     "spawn": {
@@ -542,6 +544,8 @@
       "ringR0": 3,
       "ringR1": 20,
       "ringLife": 0.35,
+      "spawnRingR1": 14,
+      "spawnRingLife": 0.6,
       "floaterSize": 8,
       "floaterLife": 1.3,
       "gemBurstRings": 3
@@ -608,6 +612,8 @@
     "rightRailPx": 300,
     "rosterHeightBu": 22,
     "tabBarHeightBu": 18,
+    "phoneShopMinBu": 130,
+    "phoneShaftMinBu": 180,
     "panelHeightBu": 80,
     "tapMinPx": 44,
     "tabs": {

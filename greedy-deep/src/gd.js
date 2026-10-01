@@ -46,6 +46,7 @@
 
   GD.ctx = {
     rng: null, // null = engine default rng
+    holdDepth: null, // depth the live dig may not pass (welcome-back hold at the milestone)
     onEvent: function (e, st) { if (GD.hooks.onEvent) GD.hooks.onEvent(e, st); },
     onBand: function (b, prev, st) { if (GD.hooks.onBand) GD.hooks.onBand(b, prev, st); },
     onEnding: function (st, m) { if (GD.hooks.onEnding) GD.hooks.onEnding(st, m); },
@@ -110,6 +111,7 @@
   D.reset = function () {
     E.setSeed(GD.config.sim.seed === undefined ? 1 : GD.config.sim.seed);
     GD.state = E.newState(GD.config);
+    GD.ctx.holdDepth = null;
     resetPickups();
     return E.snapshot(GD.config, GD.state);
   };
@@ -168,12 +170,24 @@
 
   // ETA for a locked row: (cost - gold) / goldRate at the current passive rate.
   // Returns Infinity while goldRate is 0 so the UI can print the em dash.
+  // What the player is actually earning per second: crew income, or the ~30 s rolling
+  // real-earnings rate (taps + crew) through the all-gold buff when that is higher. The
+  // INCOME readout and every ETA use this one number.
+  GD.incomeRate = function () {
+    var d = E.derive(GD.config, GD.state);
+    var r = GD.state.earnRateFast > 0 ? GD.state.earnRateFast : 0;
+    return Math.max(d.goldRate, r * d.goldAllMul);
+  };
+
   GD.etaFor = function (id) {
     var cost = GD.costOf(id);
     var gold = GD.state.gold;
     if (gold >= cost - 1e-9) return 0;
-    var rate = E.derive(GD.config, GD.state).goldRate;
-    if (!(rate > 0)) return Infinity;
+    // Real earnings (taps + crew, the ~30 s rolling rate) when that beats crew income, so a
+    // tapper sees seconds, not "24m". The rolling rate decays smoothly toward crew income
+    // when tapping stops, and never drops below it, so the ETA never blanks or flickers.
+    var rate = GD.incomeRate();
+    if (!(rate > 1e-9)) return Infinity;
     return (cost - gold) / rate;
   };
 
@@ -416,7 +430,7 @@
     // hooks for the duration so a test run never leaves a panel or a log line behind.
     var liveHooks = GD.hooks;
     GD.hooks = { onEvent: null, onBand: null, onEnding: null, onPickupSpawn: null, onPickupExpire: null, onPickupClick: null };
-    var livePickups = GD.pickups, liveVisibility = visOverride;
+    var livePickups = GD.pickups, liveVisibility = visOverride, liveHold = GD.ctx.holdDepth;
     var liveMuted = window.GDAudio ? window.GDAudio.isMuted() : false;
     var overlayIds = ["settings", "welcome", "ending"], overlayWasHidden = {};
 
@@ -730,7 +744,10 @@
       // --- reveal: at depth d, ore renders through band d+1+revealBonus and no further
       if (window.GDRender && window.GDRender.bandPlan) {
         var revealBad = [];
-        var probes = [0, 39, 41, 179, 181, 599, 601, 1199, 1500];
+        // Probes straddle every seam in the JSON, so a retune of band depths keeps them honest.
+        var probes = [0, 1500];
+        for (var po = 1; po < cfg.ores.length; po++) probes.push(cfg.ores[po].startDepth - 1, cfg.ores[po].startDepth + 1);
+        probes.push(cfg.milestone.depth - 1);
         for (var ri = 0; ri < probes.length; ri++) {
           for (var rb = 0; rb <= 3; rb++) {
             var plan = window.GDRender.bandPlan(probes[ri], rb);
@@ -739,10 +756,11 @@
         }
         check("m2_reveal_never_past_cutoff", "maxIndex <= currentIndex + 1 + revealBonus", revealBad.join(" | "), revealBad.length === 0);
         // and the tease IS drawn: standing just above a seam, the next band is in the plan
-        var teasePlan = window.GDRender.bandPlan(38, 0);
+        var teaseD = cfg.ores[1].startDepth - 2;
+        var teasePlan = window.GDRender.bandPlan(teaseD, 0);
         check("m2_next_band_teased_above_seam", "band index 1 in the plan", JSON.stringify(teasePlan.indices),
           teasePlan.indices.indexOf(1) !== -1 && teasePlan.cutoffIndex === 1);
-        var veiled = window.GDRender.bandPlan(38, 0).veiledIndices;
+        var veiled = window.GDRender.bandPlan(teaseD, 0).veiledIndices;
         check("m2_next_band_is_veiled", "[1]", JSON.stringify(veiled), veiled.length === 1 && veiled[0] === 1);
 
         // --- Deep Lantern must be observable the moment it is bought, at EVERY depth,
@@ -797,6 +815,14 @@
       check("m2_eta_formula", wantEta, GD.etaFor("pick"), approx(GD.etaFor("pick"), wantEta, 1e-9));
       GD.state.gold = GD.costOf("pick") + 1;
       check("m2_eta_zero_when_affordable", 0, GD.etaFor("pick"), GD.etaFor("pick") === 0);
+      // B3: a tapper's rolling earnings set the ETA once they beat crew income
+      GD.state.gold = 0;
+      GD.state.earnRateFast = dEta.goldRate * 50;
+      var wantTapEta = GD.costOf("pick") / (GD.state.earnRateFast * dEta.goldAllMul);
+      check("p1_eta_uses_real_earnings", wantTapEta, GD.etaFor("pick"), approx(GD.etaFor("pick"), wantTapEta, 1e-9));
+      GD.state.earnRateFast = 0;
+      check("p1_eta_floors_at_crew_income", GD.costOf("pick") / dEta.goldRate, GD.etaFor("pick"),
+        approx(GD.etaFor("pick"), GD.costOf("pick") / dEta.goldRate, 1e-9));
       if (window.GDUI && window.GDUI.rowReport) {
         var rr = window.GDUI.rowReport();
         check("m2_shop_lists_all_tracks_and_dwarves", cfg.tracks.length + cfg.dwarves.length, rr.rows, rr.rows === cfg.tracks.length + cfg.dwarves.length);
@@ -1194,6 +1220,48 @@
         var badResult = GD.import(badExport);
         check("m4_version_bumped_import_fails", false, badResult.ok, badResult.ok === false);
         check("m4_version_bumped_gold_untouched", 777, GD.state.gold, GD.state.gold === 777);
+      }
+
+      // --- Phase 1 (2026-09-30)
+      // B6: offline digging stops short of the milestone the first time round
+      var md = cfg.milestone.depth, hold = cfg.offline.milestoneHoldM || 0;
+      D.setState({ depth: md - 100, owned: { dorrik: 40, hald: 10 } });
+      var pM = D.offlinePreview(8 * 3600 * 1000);
+      var apM = D.applyOffline(8 * 3600 * 1000);
+      check("p1_offline_stops_short_of_milestone", "depth " + (md - hold) + ", ending not seen",
+        "depth " + GD.state.depth.toFixed(2) + ", seen " + GD.state.endingSeen + ", held " + pM.heldAtMilestone,
+        pM.heldAtMilestone === true && approx(GD.state.depth, md - hold, 1e-6) && !GD.state.endingSeen && approx(apM.depth, pM.depth, 1e-9));
+      D.setState({ depth: md + 50, owned: { dorrik: 40 }, endingSeen: true });
+      var pPast = D.offlinePreview(8 * 3600 * 1000);
+      // ...and the live dig holds there while the welcome panel is up (critic B-1)
+      D.setState({ depth: md - hold - 0.5, owned: { dorrik: 40, nix: 5 } });
+      GD.ctx.holdDepth = md - hold;
+      D.step(20);
+      var heldOk = approx(GD.state.depth, md - hold, 1e-9) && !GD.state.endingSeen;
+      GD.ctx.holdDepth = null;
+      D.step(20);
+      check("p1_live_dig_holds_until_welcome_dismissed", "held at " + (md - hold) + ", then ending",
+        heldOk + " / " + GD.state.endingSeen, heldOk && GD.state.endingSeen);
+      check("p1_offline_unclamped_after_ending", "no hold", pPast.heldAtMilestone ? "held" : "no hold", !pPast.heldAtMilestone && pPast.depth > 0);
+      // B7: time played survives a save round trip and an export/import
+      D.reset();
+      GD.state.t = 4321.5;
+      window.GDSave.write(cfg, GD.state);
+      var rT = window.GDSave.read(cfg);
+      var xT = window.GDSave.importString(cfg, window.GDSave.exportString(cfg, GD.state));
+      check("p1_time_played_persists", 4321.5, (rT && rT.t) + " / " + (xT.ok && xT.state.t),
+        !!rT && rT.t === 4321.5 && xT.ok && xT.state.t === 4321.5);
+      var legacy = window.GDSave.serialize(cfg, GD.state); delete legacy.playSeconds;
+      try { localStorage.setItem(cfg.save.key, JSON.stringify(legacy)); } catch (e) {}
+      var rL = window.GDSave.read(cfg);
+      check("p1_old_save_without_time_loads", 0, rL && rL.t, !!rL && rL.t === 0);
+      // B8: the ending scene blocks pickups and stops drawing them; reset clears the scene
+      if (window.GDRender && window.GDRender.startEnding && window.GDRender.stopEnding) {
+        D.reset();
+        window.GDRender.startEnding(GD.state, GD.derive());
+        check("p1_ending_scene_blocks_pickups", "overlay", GD.pickupsBlocked(), GD.pickupsBlocked() === "overlay");
+        window.GDRender.stopEnding();
+        check("p1_stop_ending_unblocks", "", GD.pickupsBlocked() || "", !GD.pickupsBlocked());
       }
 
       // jumpTo(1200) triggers ending once, sets endingSeen, game continues
@@ -1764,7 +1832,7 @@
       if (window.GDUI && window.GDUI.refresh) window.GDUI.refresh();
       check("m5_chest_chip_clears_at_end", "hidden", chip ? chip.className : "no chip", !!chip && chip.classList.contains("hidden"));
 
-      // --- expiry by lifetime and by scrolling off the top
+      // --- expiry by lifetime only; a pickup is screen-anchored, so digging never removes it
       m5Setup();
       var se = D.spawnPickup("gem", { ttl: 1 });
       D.step(1.5);
@@ -1773,7 +1841,7 @@
       var ss5 = D.spawnPickup("gem", { y: PK.spawn.padTopBu });
       GD.state.depth += 60;
       D.step(0.1);
-      check("m5_expires_when_scrolled_off", "gone", !!E.pickupById(GD.pickups, ss5.id), !E.pickupById(GD.pickups, ss5.id));
+      check("m5_survives_digging_past", "alive", !!E.pickupById(GD.pickups, ss5.id), !!E.pickupById(GD.pickups, ss5.id));
       m5Setup();
       D.grantForTest("lantern", 2);
       var sl = D.spawnPickup("gem");
@@ -1892,15 +1960,30 @@
       }
       check("m5_spawn_side_option_honoured", "left wall for 'left' and 0", sideBad.join(" | "), sideBad.length === 0);
       var veinBad = 0, dV = GD.derive(), fyV = E.faceYBu(cfg, dV.revealBonus), vtV = Math.max(cfg.layout.tileBu * 2, fyV - cfg.vein.aboveFaceBu);
-      var topV = GD.state.depth * cfg.layout.buPerMeter - fyV;
       for (var vv = 0; vv < 300; vv++) {
         GD.pickups = E.newPickupField(cfg);
         var tyV = PK.types[vv % PK.types.length];
         var pV = E.pickupById(GD.pickups, D.spawnPickup(tyV.id, vv % 2 ? { side: "right" } : undefined).id);
-        var syV = pV.yBu - topV, hh = tyV.sizeBu / 2;
+        var syV = pV.yBu, hh = tyV.sizeBu / 2;
         if (pV.xBu + hh > cfg.vein.xBu && syV + hh > vtV && syV - hh < vtV + cfg.vein.hBu) veinBad++;
       }
       check("m5_pickups_clear_the_vein_bracket", "0 of 300 overlap", veinBad, veinBad === 0);
+
+      // --- screen-anchored: digging deeper never moves a live pickup or scrolls it away
+      if (window.GDRender && window.GDRender.pickupCss) {
+        m5Setup(700);
+        GD.pickups = E.newPickupField(cfg);
+        RND.cameraSnap();
+        RND.renderProbe(GD.state, GD.derive(), 2, 1 / 60);
+        var sA = D.spawnPickup("geode", { ttl: 30, clicks: 5 }), pA = E.pickupById(GD.pickups, sA.id);
+        var yA0 = RND.pickupCss(pA).y;
+        D.step(5);
+        GD.state.depth += 40;
+        RND.renderProbe(GD.state, GD.derive(), 30, 1 / 60);
+        var pA1 = E.pickupById(GD.pickups, sA.id);
+        check("m5_pickup_holds_screen_position", "alive, same y after 40 m", pA1 ? Math.round(RND.pickupCss(pA1).y - yA0) : "gone",
+          !!pA1 && Math.abs(RND.pickupCss(pA1).y - yA0) < 0.5);
+      }
 
       // --- rarer and better deeper; scaling capped
       var rb0 = E.pickupBandPow(PK.types[2].rateMulPerBand, 0, cfg), rb3 = E.pickupBandPow(PK.types[2].rateMulPerBand, 3, cfg);
@@ -1942,6 +2025,91 @@
       check("gate_on_attaches_everything", "all of " + gr.names.length, gr.missingWhenOn.join(","), gr.missingWhenOn.length === 0);
       check("gate_ui_handle_already_claimed", "no __claimInternal left", typeof GD.__claimInternal, typeof GD.__claimInternal === "undefined");
 
+      // --- shop rows readable without hover: the desktop tooltip never renders inline, a
+      // mouseenter (a phone tap emulates one) never opens it, and the name column has width
+      var noHover = !(window.matchMedia && window.matchMedia("(hover: hover) and (min-width: 900px)").matches);
+      var tipRows = document.querySelectorAll("#tabpanel .row, .rail-section .row"), tipBad = [];
+      for (var tr = 0; tr < tipRows.length; tr++) {
+        var rEl = tipRows[tr], tEl = rEl.querySelector(".row-tip"), mEl = rEl.querySelector(".row-main");
+        if (noHover) rEl.dispatchEvent(new MouseEvent("mouseenter"));
+        if (tEl && getComputedStyle(tEl).display !== "none") tipBad.push("tip shown in row " + tr);
+        if (rEl.offsetParent && mEl && mEl.getBoundingClientRect().width < 40) tipBad.push("row " + tr + " name column " + Math.round(mEl.getBoundingClientRect().width) + " px");
+        if (noHover) rEl.dispatchEvent(new MouseEvent("mouseleave"));
+      }
+      check("p1_shop_rows_readable", "no inline tips, name column >= 40 px", tipBad.slice(0, 4).join(" | ") || tipRows.length + " rows ok",
+        tipRows.length > 0 && tipBad.length === 0);
+
+      // --- Phase 1 week 2 (2026-09-30)
+      check("p1_gold_mul_labelled_crew_gold", "+12% crew gold", E.effectDesc([{ verb: "mul_gold", value: 1.12 }]),
+        E.effectDesc([{ verb: "mul_gold", value: 1.12 }]) === "+12% crew gold");
+      D.reset();
+      D.grantForTest("dorrik", 2);
+      GD.state.earnRateFast = 1000;
+      var dInc = GD.derive();
+      check("p1_income_is_real_earnings", 1000 * dInc.goldAllMul, GD.incomeRate(), approx(GD.incomeRate(), 1000 * dInc.goldAllMul, 1e-9));
+      GD.state.earnRateFast = 0;
+      check("p1_income_floors_at_crew", dInc.goldRate, GD.incomeRate(), approx(GD.incomeRate(), dInc.goldRate, 1e-12));
+      if (window.GDUI && window.GDUI.refresh) {
+        var lblEl = document.getElementById("stat-depth-label"), tabCrew = document.querySelector('#tabbar .tab[data-tab="crew"]');
+        D.reset();
+        GD.state.gold = 1e6;
+        window.GDUI.refresh();
+        var badgeOn = !!tabCrew && (tabCrew.classList.contains("active") || tabCrew.classList.contains("has-buy"));
+        GD.state.gold = 0;
+        window.GDUI.refresh();
+        var badgeOff = !!tabCrew && !tabCrew.classList.contains("has-buy");
+        check("p1_tab_badge_when_buyable", "on with gold, off without", badgeOn + "/" + badgeOff, badgeOn && badgeOff);
+        var goalShown = lblEl ? lblEl.textContent : "";
+        GD.state.endingSeen = true;
+        window.GDUI.refresh();
+        var goalAfter = lblEl ? lblEl.textContent : "";
+        check("p1_goal_on_hud_until_ending", "DEPTH / 1,200 M, then DEPTH", goalShown + " -> " + goalAfter,
+          goalShown.indexOf(Math.round(cfg.milestone.depth).toLocaleString("en-US")) !== -1 && goalAfter === "DEPTH");
+      }
+      if (liveHooks.onPickupSpawn && window.GDAudio) {
+        D.reset();
+        GD.state.prefs.muted = false;
+        window.GDAudio.setMuted(false);
+        GD.pickups = E.newPickupField(cfg);
+        var spS = E.pickupById(GD.pickups, D.spawnPickup("gem").id);
+        window.GDAudio.lastCue = null;
+        liveHooks.onPickupSpawn(spS);
+        check("p1_pickup_spawn_cue", "pickupSpawn", window.GDAudio.lastCue, window.GDAudio.lastCue === "pickupSpawn");
+      }
+      if (window.innerWidth < 600 && window.innerHeight >= 800 && document.getElementById("tabpanel")) {
+        var tpR = document.getElementById("tabpanel").getBoundingClientRect();
+        var rowH = 0, rowsP = document.querySelectorAll("#tabpanel .tab-section.active .row");
+        for (var rp = 0; rp < rowsP.length; rp++) if (rowsP[rp].offsetHeight) { rowH = rowsP[rp].offsetHeight; break; }
+        var qbH = document.getElementById("qty-bar") ? document.getElementById("qty-bar").offsetHeight : 0;
+        // Room, not content (the DIG tab only has two rows): from the panel top to the lower
+        // of its max-height and the viewport, less the quantity bar.
+        var tpMax = parseFloat(getComputedStyle(document.getElementById("tabpanel")).maxHeight) || 0;
+        var fit = rowH ? Math.min(tpR.top + tpMax, window.innerHeight) - tpR.top - qbH : 0;
+        check("p1_phone_shop_shows_three_rows", ">= 3 rows of room", rowH ? (fit / rowH).toFixed(2) + " rows" : "no rows",
+          rowH > 0 && fit / rowH >= 3);
+      }
+
+      if (window.innerWidth < 600 && window.GDUI && window.GDUI.fitPhonePanel) {
+        window.GDUI.fitPhonePanel();
+        var over = document.documentElement.scrollHeight - window.innerHeight;
+        check("p1_phone_page_never_scrolls", "<= 1 px", over + " px", over <= 1);
+        var setB = document.getElementById("settings");
+        if (setB) {
+          setB.classList.remove("hidden");
+          var resetBtn = document.getElementById("set-reset"), closeBtn = document.getElementById("settings-close"), reachBad = [];
+          [resetBtn, closeBtn].forEach(function (btn) {
+            if (!btn) return;
+            var br = btn.getBoundingClientRect(), hit = document.elementFromPoint(br.left + br.width / 2, br.top + br.height / 2);
+            if (hit !== btn && !btn.contains(hit)) reachBad.push(btn.id + " -> " + (hit ? hit.id || hit.tagName : "null"));
+          });
+          var subShown = ["export-area", "import-area", "import-confirm", "reset-confirm"].filter(function (id) {
+            var e2 = document.getElementById(id); return e2 && e2.classList.contains("hidden") && e2.offsetHeight > 0; });
+          setB.classList.add("hidden");
+          check("p1_settings_hidden_parts_stay_hidden", "none", subShown.join(",") || "none", subShown.length === 0);
+          check("p1_phone_settings_buttons_reachable", "reset and close hit themselves", reachBad.join(" | ") || "ok", reachBad.length === 0);
+        }
+      }
+
       // --- console clean (last, so it counts everything above)
       if (!opts.skipConsoleCheck) {
         check("m2_no_console_errors", 0, dbg.errors, dbg.errors === 0);
@@ -1961,6 +2129,7 @@
       GD.state = liveState;
       GD.pickups = livePickups;
       visOverride = liveVisibility;
+      GD.ctx.holdDepth = liveHold;
       if (window.GDAudio) window.GDAudio.setMuted(liveMuted);
       for (var ok5 in overlayWasHidden) {
         var oe5 = document.getElementById(ok5);

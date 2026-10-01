@@ -3,7 +3,7 @@
 (function () {
   "use strict";
 
-  var CONFIG_VERSION = 25;
+  var CONFIG_VERSION = 28;
 
   var UI = (window.GDUI = {});
   var E = window.GDEngine, GD = window.GD;
@@ -59,6 +59,7 @@
     els.gold = $("stat-gold");
     els.rate = $("stat-rate");
     els.depth = $("stat-depth");
+    els.depthLabel = $("stat-depth-label");
     els.canvas = $("shaft");
     els.overlay = $("dbg");
     els.hint = $("hint");
@@ -84,6 +85,7 @@
     GD.hooks.onBand = onBand;
     GD.hooks.onEnding = onEnding;
     GD.hooks.onPickupClick = onPickupClick;
+    GD.hooks.onPickupSpawn = onPickupSpawn;
 
     // Particles (from staged GDParticles)
     if (window.GDParticles) {
@@ -117,6 +119,12 @@
       if (window.GDSprites && window.GDSprites.ensure) window.GDSprites.ensure(false);
     });
     window.addEventListener("resize", layout);
+    // The roster strip grows as crew is hired; refit the phone shop when anything above it
+    // changes height.
+    if (window.ResizeObserver) {
+      var ro = new ResizeObserver(function () { fitPhonePanel(); });
+      ["topbar", "roster", "tabbar"].forEach(function (id) { var el = $(id); if (el) ro.observe(el); });
+    }
     if (GD.state.goldEarnedTotal > 0 && els.hint) els.hint.classList.add("gone");
     if (GI.debug) {
       els.overlay.classList.remove("hidden");
@@ -138,6 +146,7 @@
     var preview = GI.offlinePreview(elapsed);
     if (!(preview.gold > 0)) return;
     var applied = GI.applyOffline(elapsed);
+    if (applied.heldAtMilestone) GD.ctx.holdDepth = GD.state.depth;
     showWelcome(applied);
     try { if (window.GDAudio && !GD.state.prefs.muted) window.GDAudio.play("welcomeBack"); } catch (e) {}
   }
@@ -153,6 +162,7 @@
         (p.reason === "capped" ? ' <i class="cap">(cap)</i>' : "") + "</b></div>" +
       '<div class="wb-row"><span>Gold</span><b>+' + GD.format(p.gold) + "</b></div>" +
       '<div class="wb-row"><span>Dug</span><b>+' + p.depth.toFixed(1) + " m</b></div>" +
+      (p.heldAtMilestone ? '<p class="flavor">The crew stopped at the last wall. They want you there for it.</p>' : "") +
       '<p class="flavor">' + line + "</p>";
     els.welcome.classList.remove("hidden");
   }
@@ -171,6 +181,11 @@
     // Prevent repeating the same band-entry line back-to-back (M3 carry)
     if (b.id === lastBandLogId) return;
     lastBandLogId = b.id;
+    // The ending scene owns the screen: log the band, skip the card and the ring.
+    if (window.GDRender && window.GDRender.endingActive && window.GDRender.endingActive()) {
+      pushLog(b.name + " — " + intro, "band");
+      return;
+    }
     els.intro.innerHTML = '<b>' + b.name + "</b><span>" + intro + "</span>";
     els.intro.classList.remove("hidden");
     introT = 4.5;
@@ -193,6 +208,7 @@
     if (els.settings && !els.settings.classList.contains("hidden")) return true;
     if (els.welcome && !els.welcome.classList.contains("hidden")) return true;
     if (els.ending && !els.ending.classList.contains("hidden")) return true;
+    if (window.GDRender && window.GDRender.endingActive && window.GDRender.endingActive()) return true;
     return false;
   }
   UI.overlayOpen = overlayOpen;
@@ -223,9 +239,23 @@
 
   // Pop + floater at the pickup, a log line for chests and geodes. Event-driven, so the
   // few objects made here are per click, never per frame.
+  // A soft shimmer and a ring where a pickup appears, so one that spawns while the player
+  // is reading the shop doesn't expire unseen. Never while hidden or behind an overlay
+  // (the spawn clock is stopped then anyway).
+  function onPickupSpawn(s) {
+    if (!s || overlayOpen()) return;
+    var P = cfg.pickups.palette, J = cfg.pickups.juice;
+    var col = s.kind === "gem" ? P.gem.light : (s.kind === "chest" ? P.chest.band : P.geode.crystalLit);
+    if (particleSystem && window.GDRender) {
+      var sy = window.GDRender.pickupScreenY(s.yBu);
+      particleSystem.ring(s.xBu, sy, col, J.ringR0, J.spawnRingR1 || 14, J.spawnRingLife || 0.6);
+    }
+    if (window.GDAudio && !GD.state.prefs.muted) window.GDAudio.play("pickupSpawn");
+  }
+
   function onPickupClick(res) {
     var pk = cfg.pickups, J = pk.juice, P = pk.palette;
-    var bx = res.xBu, by = window.GDRender.screenYBu(res.yBu);
+    var bx = res.xBu, by = window.GDRender.pickupScreenY(res.yBu);
     var ty = E.pickupType(cfg, res.type), label = ty ? ty.label : res.type;
     var col = res.kind === "gem" ? P.gem.light : (res.kind === "chest" ? P.chest.band : P.geode.crystalLit);
     if (!res.done) {
@@ -255,6 +285,10 @@
   }
 
   function onEnding(st, m) {
+    if (els.hint) els.hint.classList.add("gone");
+    // A band card from the same tick (1,200 m is also a band line) would sit on the scene.
+    if (els.intro) els.intro.classList.add("hidden");
+    introT = 0;
     // Start the canvas-drawn ending scene (item 4)
     if (window.GDRender && window.GDRender.startEnding) {
       window.GDRender.startEnding(st, GD.derive());
@@ -267,7 +301,9 @@
     var showPanelAfter = dur * 1000 - 2000; // show panel 2s before scene ends
     // Use a juice-clock driven check rather than setTimeout for the timing
     endingPanelT = showPanelAfter / 1000;
-    endingPanelData = { st: st, m: m };
+    // Snapshot the numbers at the moment of the ending so the canvas scene and the panel
+    // agree (the live state keeps earning while the scene plays).
+    endingPanelData = { st: { depth: st.depth, goldEarnedTotal: st.goldEarnedTotal, endingAtSeconds: st.endingAtSeconds, endingScore: st.endingScore }, m: m };
   }
 
   var endingPanelT = -1;
@@ -293,7 +329,7 @@
       "<p>" + body + "</p>" +
       '<div class="wb-row"><span>Depth</span><b>' + st.depth.toFixed(0) + " m</b></div>" +
       '<div class="wb-row"><span>Gold earned</span><b>' + GD.format(st.goldEarnedTotal) + "</b></div>" +
-      '<div class="wb-row"><span>Run time</span><b>' + E.formatEta(st.endingAtSeconds) + "</b></div>";
+      '<div class="wb-row"><span>Time played</span><b>' + E.formatEta(st.endingAtSeconds) + "</b></div>";
     els.ending.querySelector(".score").textContent = "SCORE " + GD.format(st.endingScore);
     els.ending.querySelector(".panel-btn").textContent = m.buttonLabel || "KEEP DIGGING";
     els.ending.classList.remove("hidden");
@@ -322,6 +358,20 @@
   }
 
   // ------------------------------------------------------------ layout
+  // Phone: the shop panel takes exactly the height left under the tab bar, measured from
+  // the real page (the tab bar and a roster with crew in it are taller than their bu
+  // budgets), so the page never scrolls. Tablet and desktop keep the stylesheet value.
+  function fitPhonePanel() {
+    if (!els.tabpanel) return;
+    var vw = window.innerWidth, vh = window.innerHeight, L = cfg.layout;
+    if (isDesktop || vw >= 600) { els.tabpanel.style.maxHeight = ""; return; }
+    var s = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--s")) || L.minScale;
+    var top = els.tabpanel.getBoundingClientRect().top + (window.scrollY || 0);
+    var room = Math.floor(vh - top);
+    els.tabpanel.style.maxHeight = Math.max(L.panelHeightBu * s * 0.5, room) + "px";
+  }
+  UI.fitPhonePanel = function () { fitPhonePanel(); };
+
   function layout() {
     var L = cfg.layout;
     var vw = window.innerWidth, vh = window.innerHeight;
@@ -362,10 +412,16 @@
       var tabletShaft = Math.floor(vh / s) - L.topBarBu - L.rosterHeightBu - L.tabBarHeightBu;
       cfg.layout._liveShaftBu = Math.max(180, Math.min(L.shaftBu, tabletShaft));
     } else {
-      cfg.layout._liveShaftBu = L.shaftBu;
+      // Phone: the shaft gives up height (down to phoneShaftMinBu) so the shop under the
+      // tab bar keeps phoneShopMinBu, about three rows, instead of a row and a half.
+      var phoneShaft = Math.floor(vh / s) - L.topBarBu - L.rosterHeightBu - L.tabBarHeightBu - (L.phoneShopMinBu || 0);
+      cfg.layout._liveShaftBu = Math.max(L.phoneShaftMinBu || L.shaftBu, Math.min(L.shaftBu, phoneShaft));
     }
 
+    // Phone: the shop panel takes whatever height is left under the tab bar (its CSS cap
+    // is the 80 bu panel). Tablet and desktop keep the stylesheet value.
     window.GDRender.resize(s, cfg.layout._liveShaftBu);
+    fitPhonePanel();
     drawLogo(s);
     placeHint();
 
@@ -596,11 +652,13 @@
       btn.addEventListener("click", (function (id) {
         return function () { onBuy(id); };
       })(p.id));
-      // Position the styled tooltip on hover (fixed to escape rail overflow)
+      // Position the styled tooltip on hover (fixed to escape rail overflow). Desktop rails
+      // only: a tap on a phone fires an emulated mouseenter, which used to force the tip open.
       var tip = row.querySelector(".row-tip");
       if (tip) {
         row.addEventListener("mouseenter", (function (rowEl, tipEl) {
           return function () {
+            if (!tipHoverOk()) return;
             // Briefly show to measure height, then position
             tipEl.style.display = "block";
             tipEl.style.visibility = "hidden";
@@ -629,6 +687,9 @@
       });
     }
   }
+
+  var tipMq = window.matchMedia ? window.matchMedia("(hover: hover) and (min-width: 900px)") : null;
+  function tipHoverOk() { return !!(tipMq && tipMq.matches); }
 
   function onBuy(id) {
     unlockAudio();
@@ -904,7 +965,7 @@
     if (els.descend) els.descend.addEventListener("click", dismissSplash);
 
     var wb = els.welcome && els.welcome.querySelector(".panel-btn");
-    if (wb) wb.addEventListener("click", function () { els.welcome.classList.add("hidden"); });
+    if (wb) wb.addEventListener("click", function () { els.welcome.classList.add("hidden"); GD.ctx.holdDepth = null; });
     var eb = els.ending && els.ending.querySelector(".panel-btn");
     if (eb) eb.addEventListener("click", function () { els.ending.classList.add("hidden"); });
 
@@ -1011,7 +1072,13 @@
       displayGold = st.gold;
     }
     els.gold.textContent = GD.format(displayGold);
-    els.rate.textContent = (d.goldRate > 0 ? "+" + GD.format(d.goldRate) : "+0") + "/s";
+    var inc = GD.incomeRate();
+    els.rate.textContent = (inc > 0 ? "+" + GD.format(inc) : "+0") + "/s";
+    // The goal sits on the HUD until the ending has been seen.
+    if (els.depthLabel) {
+      var goalTxt = cfg.milestone && !st.endingSeen ? "DEPTH / " + Math.round(cfg.milestone.depth).toLocaleString("en-US") + " M" : "DEPTH";
+      if (els.depthLabel.textContent !== goalTxt) els.depthLabel.textContent = goalTxt;
+    }
     // Compact depth: use km for large depths, formatted number for very large
     if (st.depth >= 10000) {
       els.depth.textContent = GD.format(st.depth / 1000) + " km";
@@ -1061,6 +1128,16 @@
           var eta = GD.etaFor(r.p.id);
           r.eta.textContent = isFinite(eta) ? E.formatEta(eta) : "—";
         }
+      }
+    }
+    // Badge a tab when something in it is buyable and the player isn't looking at it.
+    if (els.tabbar) {
+      var buyTabs = {};
+      for (var bt = 0; bt < rows.length; bt++) if (rows[bt].el.classList.contains("buyable")) buyTabs[rows[bt].tab] = true;
+      var tabBtns = els.tabbar.querySelectorAll(".tab");
+      for (var tb = 0; tb < tabBtns.length; tb++) {
+        var tid = tabBtns[tb].getAttribute("data-tab");
+        tabBtns[tb].classList.toggle("has-buy", !!buyTabs[tid] && !tabBtns[tb].classList.contains("active"));
       }
     }
     renderNextBands(d);
@@ -1174,6 +1251,8 @@
     lastBandLogId = "";
     if (els.log) els.log.innerHTML = "";
     if (els.hint) els.hint.classList.remove("gone");
+    if (window.GDRender && window.GDRender.stopEnding) window.GDRender.stopEnding();
+    endingPanelT = -1; endingPanelData = null;
     if (els.ending) els.ending.classList.add("hidden");
     if (els.welcome) els.welcome.classList.add("hidden");
     buildRoster();

@@ -98,6 +98,7 @@
       // M5: real earnings per second (taps + crew, before the all-gold buff), a rolling
       // average over ~pickups.earnWindowS. Gems pay seconds of this. Never saved.
       earnRate: 0,
+      earnRateFast: 0,
       earnAcc: 0,
       prefs: { muted: false }
     };
@@ -400,6 +401,9 @@
     var d = E.derive(cfg, state);
     var depthBefore = state.depth;
     state.depth += d.digRate * dt;
+    // ctx.holdDepth (set by the UI while the welcome-back panel shows an offline return held
+    // short of the milestone) stops the live dig there, so the ending can't play behind it.
+    if (ctx && typeof ctx.holdDepth === "number" && state.depth > ctx.holdDepth) state.depth = Math.max(depthBefore, ctx.holdDepth);
     var g = d.goldRate * dt;
     state.gold = clamp(state.gold + g);
     state.goldEarnedTotal = clamp(state.goldEarnedTotal + g);
@@ -409,6 +413,8 @@
     var tau = (cfg.pickups && cfg.pickups.earnWindowS) || 30;
     var ek = 1 - Math.exp(-dt / tau);
     state.earnRate = clamp((state.earnRate || 0) + (state.earnAcc / dt - (state.earnRate || 0)) * ek);
+    var fk = 1 - Math.exp(-dt / ((cfg.pickups && cfg.pickups.incomeWindowS) || 4));
+    state.earnRateFast = clamp((state.earnRateFast || 0) + (state.earnAcc / dt - (state.earnRateFast || 0)) * fk);
     state.earnAcc = 0;
 
     // prune expired timed effects (derive already ignores them; this keeps the array small)
@@ -489,6 +495,13 @@
     // Entry band's rate, flat: no mid-offline band change (PRD 9, 16).
     out.gold = d.goldRateBase * out.cappedSeconds * rate;
     out.depth = o.advanceDepth ? d.digRate * out.cappedSeconds * rate : 0;
+    // The ending only ever plays while the player is watching: offline digging stops
+    // `milestoneHoldM` short of the milestone the first time round (gold is unchanged).
+    var m = cfg.milestone;
+    if (m && !state.endingSeen && state.depth < m.depth && state.depth + out.depth > m.depth - (o.milestoneHoldM || 0)) {
+      out.depth = Math.max(0, m.depth - (o.milestoneHoldM || 0) - state.depth);
+      out.heldAtMilestone = true;
+    }
     return out;
   };
 
@@ -543,10 +556,6 @@
     var floorY = lan.minFaceYBu === undefined ? L.faceYBu : lan.minFaceYBu;
     return Math.max(floorY, L.faceYBu - bias);
   };
-  // World y (bu) drawn at the top of the viewport when the camera is settled on the face.
-  function settledTopBu(cfg, state, derived) {
-    return state.depth * cfg.layout.buPerMeter - E.faceYBu(cfg, derived.revealBonus);
-  }
 
   E.newPickupField = function (cfg) {
     var n = (cfg.pickups && cfg.pickups.maxLive) || 0, slots = [];
@@ -567,9 +576,11 @@
     return null;
   };
 
-  // Place a pickup in a side wall inside the settled viewport near the face. The right
-  // wall keeps clear of the active vein (the strike target) and pickups keep clear of
-  // each other; both are bounded rerolls. `opts` (debug/tests) can pin x, y (viewport bu),
+  // Place a pickup in a side wall inside the settled viewport near the face. Pickups are
+  // screen-anchored: xBu/yBu are viewport bu and stay put while the shaft scrolls past,
+  // so a moving dig never drags one out from under the cursor. The right wall keeps
+  // clear of the active vein (the strike target) and pickups keep clear of each other;
+  // both are bounded rerolls. `opts` (debug/tests) can pin x, y (viewport bu),
   // side, ttl and clicks. Returns the slot, or null when the pool is full.
   E.spawnPickup = function (cfg, field, state, derived, typeId, rng, opts) {
     var ty = pickupType(cfg, typeId);
@@ -583,12 +594,10 @@
     var fy = E.faceYBu(cfg, derived.revealBonus);
     var y0 = Math.max(sp.padTopBu, fy - sp.aboveFaceBu), y1 = Math.min(H - sp.padBottomBu, fy + sp.belowFaceBu);
     // The active vein's bracket owns that stretch of the right wall. Clear it by half the
-    // sprite plus a margin, and further below it by the distance the face will carry the
-    // pickup up the screen over its lifetime, so it never drifts into the bracket either.
+    // sprite plus a margin. Pickups never scroll, so the clearance never has to grow.
     var half = ty.sizeBu * 0.5 + sp.veinClearBu;
-    var drift = derived.digRate * L.buPerMeter * (ty.lifetimeS + pk.lanternLifetimeS * (derived.revealBonus || 0));
     var vTop = Math.max(L.tileBu * 2, fy - cfg.vein.aboveFaceBu);
-    var veinTop = vTop - half, veinBot = vTop + cfg.vein.hBu + half + drift;
+    var veinTop = vTop - half, veinBot = vTop + cfg.vein.hBu + half;
     var pinSide = opts.side === 0 || opts.side === "left" ? 0 : (opts.side === 1 || opts.side === "right" ? 1 : -1);
     var sx = 0, sy = 0, side = 0, tries = 0, clear = false;
     while (!clear && tries++ < 6) {
@@ -599,11 +608,10 @@
       sx = opts.x !== undefined ? opts.x : xr[0] + rng() * (xr[1] - xr[0]);
       clear = true;
       if (opts.x !== undefined || opts.y !== undefined) break;
-      var topNow = settledTopBu(cfg, state, derived);
       for (i = 0; i < field.slots.length; i++) {
         var o = field.slots[i];
         if (!o.active) continue;
-        if (Math.abs(o.xBu - sx) < sp.minGapBu && Math.abs((o.yBu - topNow) - sy) < sp.minGapBu) { clear = false; break; }
+        if (Math.abs(o.xBu - sx) < sp.minGapBu && Math.abs(o.yBu - sy) < sp.minGapBu) { clear = false; break; }
       }
     }
     var bi = derived.band.index;
@@ -621,7 +629,7 @@
     slot.clicks = slot.clicksMax;
     slot.bandIndex = bi;
     slot.xBu = sx;
-    slot.yBu = settledTopBu(cfg, state, derived) + sy;
+    slot.yBu = sy;
     slot.sizeBu = ty.sizeBu;
     field.live++;
     field.spawned++;
@@ -630,19 +638,18 @@
 
   function freePickup(field, slot) { slot.active = false; field.live--; }
 
-  // Age, expire (lifetime or scrolled off the top of a settled camera), then roll spawns
+  // Age, expire on lifetime (pickups are screen-anchored, so nothing scrolls off), then roll spawns
   // once per `checkSeconds`. `canSpawn` false (hidden tab, overlay up) stops the spawn
   // clock outright, so nothing banks while nobody can see the shaft.
   E.tickPickups = function (cfg, field, state, dt, derived, rng, canSpawn, hooks) {
     var pk = cfg.pickups;
     if (!pk || !field) return;
-    var topBu = settledTopBu(cfg, state, derived);
     var i, s;
     for (i = 0; i < field.slots.length; i++) {
       s = field.slots[i];
       if (!s.active) continue;
       s.ttl -= dt; s.age += dt;
-      if (s.ttl <= 0 || s.yBu - topBu + s.sizeBu * 0.5 < 0) {
+      if (s.ttl <= 0) {
         freePickup(field, s);
         field.expired++;
         if (hooks && hooks.onPickupExpire) hooks.onPickupExpire(s);
@@ -1028,7 +1035,8 @@
       if (v === "add_click") parts.push("+" + val + " tap power");
       else if (v === "add_rate") parts.push("+" + val + " m/s dig");
       else if (v === "mul_rate") parts.push("+" + Math.round((val - 1) * 100) + "% dig speed");
-      else if (v === "mul_gold") parts.push("+" + Math.round((val - 1) * 100) + "% gold");
+      // mul_gold only multiplies crew income (taps never see it), so say so.
+      else if (v === "mul_gold") parts.push("+" + Math.round((val - 1) * 100) + "% crew gold");
       else if (v === "add_rate_per_dwarf") parts.push("+" + val + " m/s per dwarf");
       else if (v === "reveal_bands") parts.push("+" + val + " band revealed");
       else if (v === "mul_hazard_resist") parts.push("-" + Math.round((1 - val) * 100) + "% hazard");
@@ -1138,6 +1146,7 @@
 
     var o2 = cfg.offline;
     if (!(o2.ratePercent > 0 && o2.ratePercent <= 1)) errors.push("offline.ratePercent must be 0..1");
+    if (o2.milestoneHoldM !== undefined && !(o2.milestoneHoldM >= 0)) errors.push("offline.milestoneHoldM must be >= 0");
     if (!(o2.capHours > 0)) errors.push("offline.capHours must be > 0");
     if (!(o2.minSeconds >= 0)) errors.push("offline.minSeconds must be >= 0");
     if (!(o2.maxClockSkewHours > 0)) errors.push("offline.maxClockSkewHours must be > 0");

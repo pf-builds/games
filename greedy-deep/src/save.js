@@ -1,5 +1,7 @@
 // Greedy Deep — versioned localStorage save + export/import. Click it! Studios, 2026.
-// Shape (PRD 4): {version, savedAt, depth, gold, goldEarnedTotal, owned, endingSeen, prefs}
+// Shape (PRD 4): {version, savedAt, depth, gold, goldEarnedTotal, owned, endingSeen, prefs, playSeconds}
+// playSeconds (2026-09-30) is the sim clock state.t, so "time played" survives a reload. Optional:
+// an older save without it loads at 0, so no version bump.
 // Export = base64(JSON+checksum); import validates version + checksum, fails safely.
 (function () {
   "use strict";
@@ -18,7 +20,8 @@
       goldEarnedTotal: state.goldEarnedTotal,
       owned: JSON.parse(JSON.stringify(state.owned)),
       endingSeen: !!state.endingSeen,
-      prefs: JSON.parse(JSON.stringify(state.prefs || {}))
+      prefs: JSON.parse(JSON.stringify(state.prefs || {})),
+      playSeconds: state.t > 0 && isFinite(state.t) ? state.t : 0
     };
   };
 
@@ -72,6 +75,7 @@
       }
     }
     st.endingSeen = !!data.endingSeen;
+    if (typeof data.playSeconds === "number" && isFinite(data.playSeconds) && data.playSeconds > 0) st.t = data.playSeconds;
     if (data.prefs && typeof data.prefs === "object") {
       st.prefs = data.prefs;
     }
@@ -122,6 +126,7 @@
       }
     }
     st.endingSeen = !!data.endingSeen;
+    if (typeof data.playSeconds === "number" && isFinite(data.playSeconds) && data.playSeconds > 0) st.t = data.playSeconds;
     if (data.prefs && typeof data.prefs === "object") st.prefs = data.prefs;
     st.bandId = window.GDEngine.bandAt(cfg, st.depth).id;
     return { ok: true, state: st };
