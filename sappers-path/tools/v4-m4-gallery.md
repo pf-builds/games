@@ -11,7 +11,7 @@ Written by `tools/gallery-bake.js`; notes in `tools/v4-m4-notes.md`.
 | saw0 | 62.0%-80.0% | 10 | 10/10 | 69.3% | 71.3% | 72.5% | 73.7% | 100.0% |
 | saw1 | 46.0%-64.0% | 19 | 19/19 | 52.8% | 55.0% | 58.0% | 54.7% | 100.0% |
 | saw2 | 30.0%-48.0% | 9 | 9/9 | 37.5% | 39.0% | 40.0% | 39.3% | 100.0% |
-| hard | 10.0%-30.0% | 9 | 9/9 | 18.0% | 21.0% | 25.8% | 19.7% | 61.0% |
+| hard | 10.0%-30.0% | 9 | 9/9 | 18.0% | 21.3% | 25.8% | 22.0% | 62.0% |
 | relief | 62.0%-85.0% | 9 | 9/9 | 71.8% | 74.5% | 82.3% | 78.0% | 100.0% |
 
 ### Every level
@@ -52,14 +52,14 @@ Normal = the random-tap rate (400 games); lookahead = the one-move-lookahead pla
 | 30 | ours-g11 | Melon Catapult | ours | saw1 | 34×29 | 6 | 27.9 | 41 (41) | 55.8% | 67.3% | 38.0% | 100.0% | 45.7% | 199 s | 13 s | 9, tap 1, 0/0 |  |
 | 31 | noto-1f9c1 | Cupcake | emoji | saw2 | 28×34 | 6 | 28.9 | 36 (36) | 40.0% | 50.2% | 26.0% | 100.0% | 35.0% | 97 s | 5.7 s | 5, tap 5, 3/2 |  |
 | 32 | tw-1f984 | Unicorn | emoji | saw1 | 34×34 | 5 | 26.8 | 46 (46) | 52.8% | 66.3% | 37.0% | 91.0% | 52.7% | 152 s | 13 s | 10, tap 5, 3/2 |  |
-| 33 | met-437999 | Teapot and Fruit | painting | hard | 42×31 | 9 | 21.8 | 42 (42) | 20.5% | 48.3% | 5.5% | 45.0% | 16.3% | 181 s | 14 s | - |  |
+| 33 | noto-1f3c6 | Trophy | emoji | hard | 34×34 | 5 | 30.9 | 42 (42) | 22.0% | 32.8% | 11.0% | 100.0% | 22.0% | 145 s | 14 s | 9, tap 6, 0/3 |  |
 | 34 | ours-g15 | Happy Potion | ours | relief | 24×34 | 4 | 29.7 | 26 (26) | 74.5% | 83.8% | 64.8% | 100.0% | 80.3% | 101 s | 14 s | 7, tap 2, 3/0 |  |
 | 35 | noto-1f989 | Owl | emoji | saw0 | 26×34 | 5 | 28 | 34 (34) | 70.0% | 81.8% | 49.5% | 100.0% | 73.7% | 111 s | 9.9 s | 8, tap 3, 3/1 |  |
 | 36 | tw-1f951 | Avocado | emoji | saw1 | 34×33 | 5 | 26.9 | 49 (49) | 54.5% | 64.5% | 41.3% | 100.0% | 46.3% | 142 s | 7.9 s | 8, tap 3, 2/1 |  |
 | 37 | ours-g08 | Iron Pig | ours | saw2 | 28×34 | 4 | 28.3 | 31 (31) | 38.8% | 54.5% | 23.5% | 100.0% | 43.0% | 124 s | 12 s | 8, tap 4, 0/1 |  |
 | 38 | noto-1f437 | Pig | emoji | saw1 | 34×31 | 4 | 26 | 36 (36) | 58.0% | 70.5% | 41.5% | 100.0% | 55.0% | 114 s | 13 s | 9, tap 3, 2/1 |  |
 | 39 | tw-1f3f0 | Castle | emoji | hard | 34×31 | 4 | 31.1 | 36 (36) | 20.5% | 42.0% | 9.3% | 75.0% | 24.3% | 121 s | 9.3 s | 6, tap 4, 2/1 |  |
-| 40 | met-436534 | Roses | painting | relief | 30×34 | 5 | 20.3 | 28 (28) | 82.3% | 88.8% | 46.5% | 100.0% | 79.3% | 135 s | 13 s | - |  |
+| 40 | met-436534 | Roses | painting | relief | 30×34 | 5 | 21.5 | 28 (28) | 82.3% | 88.8% | 46.5% | 100.0% | 79.3% | 135 s | 13 s | - |  |
 | 41 | ours-g16 | Mushroom House | ours | saw0 | 27×34 | 7 | 25.4 | 32 (32) | 71.0% | 85.3% | 50.2% | 95.0% | 72.0% | 112 s | 13 s | 10, tap 4, 3/0 |  |
 | 42 | noto-1f432 | Dragon | emoji | saw1 | 32×34 | 6 | 30.2 | 46 (46) | 53.8% | 83.8% | 27.0% | 100.0% | 58.0% | 147 s | 12 s | 13, tap 2, 2/0 |  |
 | 43 | tw-1f438 | Frog | emoji | saw2 | 34×31 | 4 | 33.4 | 38 (38) | 38.3% | 49.3% | 25.8% | 100.0% | 39.3% | 106 s | 8.4 s | 10, tap 3, 2/0 |  |
@@ -85,7 +85,7 @@ Normal = the random-tap rate (400 games); lookahead = the one-move-lookahead pla
 
 ```
 gallery bake v1: 60 pictures, 60 baked on 16 threads
-gallery bake: 60 levels in 622.6 s, 0 fallbacks
+gallery bake: 60 levels in 639.9 s, 0 fallbacks
 gallery bake: patient play-through on the stored Normal line at 1x: median 124 s, 79 s-217 s; longest single tap max 15 s; taps max 54
 ```
 <!-- bake:end -->

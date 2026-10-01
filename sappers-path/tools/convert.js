@@ -30,6 +30,8 @@
 //      inside is in reach until a black squad breaches it (reachability alone; no rule of its own).
 //   6. Ids and names: palette colours by population get material ids 1-9, 11-13 (never 10 or 14); each gets a name from
 //      convert.names, all different (nameAll: nearest unused, best matches first); then the ring.
+//   7. Critics 2 fix, a kind's fadeFloor (paintings 16): with the cells final, a pair still under the floor with one
+//      faded to a queue row has a colour's display lightness moved apart (lift); the grid never changes.
 "use strict";
 const fs = require("fs");
 const path = require("path");
@@ -185,7 +187,34 @@ function plan(src0, opt, C) {
     pal.splice(j, 1);
   }
   const { W, H, grid, out, used, outlineN } = res;
-  return { w: W, h: H, grid, ring: true, pal: out, stats: { colours: used.length, minDE: +res.minDE.toFixed(1), minFade: +res.minFade.toFixed(1), cells: pw * ph, outline: outlineN, bg: masked ? bgHex : null } };
+  const lifted = K.fadeFloor ? lift(out, used, res.pop, K.fadeFloor, minDE, C) : null; // 7. paintings: display lightness only
+  return { w: W, h: H, grid, ring: true, pal: out, stats: { colours: used.length, minDE: +(lifted ? lifted.minDE : res.minDE).toFixed(1), minFade: +(lifted ? lifted.minFade : res.minFade).toFixed(1), cells: pw * ph, outline: outlineN, bg: masked ? bgHex : null } };
+}
+// 7. Critics 2 fix (a kind's fadeFloor; paintings 16): the cells are final, so this moves only the colours shown. While
+// the picture's smallest faded pair is under the floor, each colour of that pair may move its lightness nudge L* away
+// from the other's (up to nudges times a colour, never under minDE from any colour unfaded); the move that leaves the
+// best smallest faded pair over the whole picture is taken (a tie: the rarer colour), and only if it improves on it. The
+// names follow the new colours. out: {id: {c, n}} in place; returns the new smallest pair and faded pair.
+function lift(out, used, pop, floor, minDE, C) {
+  const ids = used.map((j, k) => IDS[k]), popOf = {}; used.forEach((j, k) => { popOf[IDS[k]] = pop[j]; });
+  const moved = new Map(), clampL = (v) => Math.max(4, Math.min(97, v));
+  const worstOf = (j, h) => { let w = Infinity, pair = null; for (let a = 0; a < ids.length; a++) for (let b = a + 1; b < ids.length; b++) {
+    const ca = ids[a] === j ? h : out[ids[a]].c, cb = ids[b] === j ? h : out[ids[b]].c, f = fadeGap(ca, cb); if (f < w) { w = f; pair = [ids[a], ids[b]]; } } return { w, pair }; };
+  for (let guard = 0; guard < 64; guard++) {
+    const now = worstOf(0, null); if (now.w >= floor || !now.pair) break;
+    let best = null;
+    for (const j of now.pair.slice().sort((p, q) => popOf[p] - popOf[q] || p - q)) {
+      const o = j === now.pair[0] ? now.pair[1] : now.pair[0], n = moved.get(j) || 0; if (n >= C.nudges) continue;
+      const L = PAL.lab(out[j].c), Lo = PAL.lab(out[o].c); L[0] = clampL(L[0] + (L[0] >= Lo[0] ? C.nudge : -C.nudge));
+      const h = hexOfLab(L), hl = PAL.lab(h); if (ids.some((k) => k !== j && de(hl, PAL.lab(out[k].c)) < minDE)) continue;
+      const w = worstOf(j, h).w; if (w > now.w && (!best || w > best.w)) best = { j, h, w };
+    }
+    if (!best) break;
+    out[best.j].c = best.h; moved.set(best.j, (moved.get(best.j) || 0) + 1);
+  }
+  const nm = nameAll(ids.map((k) => out[k].c), C); ids.forEach((k, i) => { out[k].n = nm[i]; });
+  let mDE = 100, mF = 100; for (let a = 0; a < ids.length; a++) for (let b = a + 1; b < ids.length; b++) { mDE = Math.min(mDE, de(PAL.lab(out[ids[a]].c), PAL.lab(out[ids[b]].c))); mF = Math.min(mF, fadeGap(out[ids[a]].c, out[ids[b]].c)); }
+  return { minDE: mDE, minFade: mF };
 }
 // 4. Cells: a majority vote of the source pixels each cell covers (background, or the nearest palette colour). 5. The
 // outline: background cells 8-adjacent to the subject turn ink, K.outline rings deep. 6. Ids by population (never 10 or

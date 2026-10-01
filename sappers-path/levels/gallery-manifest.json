@@ -34,7 +34,7 @@
   "ours-g11",
   "noto-1f9c1",
   "tw-1f984",
-  "met-437999",
+  "noto-1f3c6",
   "ours-g15",
   "noto-1f989",
   "tw-1f951",
@@ -694,8 +694,7 @@
    "fetched": "2026-09-30",
    "raw": "noto-1f3c6.png",
    "file": "tools/gallery-src/noto-1f3c6.png",
-   "keep": false,
-   "why": "spare: reads; room for the paintings and ours"
+   "swapped": "Critics 2 fix (2026-09-30): replaces Teapot and Fruit at Gallery 33"
   },
   {
    "id": "noto-1f388",
@@ -1008,7 +1007,9 @@
    "license": "Public domain (CC0, The Metropolitan Museum of Art Open Access)",
    "fetched": "2026-09-30",
    "raw": "met-437999.jpg",
-   "file": "tools/gallery-src/met-437999.png"
+   "file": "tools/gallery-src/met-437999.png",
+   "keep": false,
+   "why": "Critics 2: muddy at 42 cells (dark ground, the teapot hard to find) and its navy and slate queue tiles fade together (ΔE00 12.0); Trophy took its slot (33)"
   },
   {
    "id": "met-56727",
