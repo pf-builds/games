@@ -27,6 +27,10 @@
 // tap opens the Gallery, a real tap on a painting's tile plays it (a real card tap, sappers in from the board's edges),
 // the top bar's button goes back to the grid; every Gallery board keeps 8 CSS px a cell or more (the smallest reported,
 // with a screen). Output to tools/shots-v4-m4/harness/.
+// v4 M5 (the meta layer): the home's Play reads the next level and one real tap reaches it; the settings sheet opens and
+// closes by real taps; the power-up bar through real taps (a Ladder bought and used on level 1: one more space; a
+// Quartermaster bought, asked for and applied to a real tile on level 40); every bar on screen. The colour-blind toggle
+// that persists is the settings sheet's. Output to tools/shots-v4-m5/harness/.
 // v4 Critics 1 fix: the coach check asks that its line fits its box (one line or two); the jam sheet shows a colour chip
 // per jammed squad, names the crews in its aria-label and never slices the holding line. The fix pass's screens and
 // measurements come from tools/shots-v4-fix1.mjs; selfTest carries the per-viewport checks (coach clear of the board,
@@ -50,7 +54,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const i = process.argv.indexOf("--" + k); return i > 0 ? process.argv[i + 1] : d; };
 const URL_ = arg("url", "http://127.0.0.1:8491/sappers-path/");
 const ORIGIN = new URL(URL_).origin;
-const OUT = resolve(arg("out", resolve(here, "shots-v4-m4", "harness")));
+const OUT = resolve(arg("out", resolve(here, "shots-v4-m5", "harness")));
 // v4 M3: every one of the 100 boards keeps MIN_CELL CSS px a cell at every viewport (the smallest per era is reported;
 // the boss at 100 is the smallest, exactly 8 in the 400x600 iframe).
 const WALL_MS = 480000, MIN_CELL = 8;
@@ -141,6 +145,9 @@ async function run() {
       // Portal shape: one click from load to gameplay.
       ok(await noScroll(), tag + " title: no scrollbars");
       ok(await hit("#btn-play"), tag + " title Play is hittable");
+      // v4 M5, the home: Play reads the next level; the settings sheet opens and closes by real taps.
+      { const lab = await L("#play-lab").textContent(), coins = await L("#home-coins").textContent();
+        ok(lab === "Level 1" && /^\d+$/.test(coins) && !(await L("#home-lives").isVisible()), tag + " home: Play reads '" + lab + "', " + coins + " coins, no lives pill"); }
       await tap("#btn-play"); let clicks = 1;
       await F.waitForFunction(() => SP.state().screen === "play", null, { timeout: 5000 });
       R.loadToGameplayMs = Date.now() - t0; R.clicksToGameplay = clicks;
@@ -160,6 +167,17 @@ async function run() {
       ok(st.fail.length === 0, tag + " selfTest: " + st.fail.join("; "));
       await ev(() => SP.load(1, "normal"));
 
+      // v4 M5, the power-up bar through real taps: a Ladder bought and used on level 1 (one more space), a Quartermaster
+      // bought, asked for and applied to a real tile on level 40; every badge on screen.
+      { await ev(() => SP.load(1, "normal")); const m0 = await ev(() => SP.meta()), cap0 = (await S()).cap;
+        const onScreen = await ev(() => Array.from(document.querySelectorAll(".pw")).every((b) => { const r = b.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth; }));
+        await tap('.pw[data-k="0"]'); const m1 = await ev(() => SP.meta()); await tap('.pw[data-k="0"]'); const m2 = await ev(() => SP.meta()), s1 = await S();
+        ok(onScreen && m1.inv.ladder === 1 && m1.coins < m0.coins && m2.inv.ladder === 0 && s1.cap === cap0 + 1, tag + " power-up bar: every badge on screen; a real tap buys a Ladder (" + m0.coins + " -> " + m1.coins + " coins), a second uses it (" + cap0 + " -> " + s1.cap + " spaces)");
+        await ev(() => SP.load(40, "normal")); await tap('.pw[data-k="1"]'); await tap('.pw[data-k="1"]');
+        const ask = await ev(() => document.querySelectorAll("#tray .tile.next.pickable").length); await tap("#tray .tile.next.pickable");
+        const m3 = await ev(() => SP.meta()), s3 = await S();
+        ok(ask > 0 && m3.inv.quartermaster === 0 && m3.used[1] === 1 && m3.pick === -1, tag + " power-up bar: a real tap buys a Quartermaster, a second asks (" + ask + " tiles glow), a real tap on a tile brings it forward");
+        await page.waitForTimeout(200); if (vp.shots === "375" || vp.shots === "iframe") await shot("power-bar"); await ev(() => SP.load(1, "normal")); }
       // A patient win through the cards: tap, then wait until every squad is home, then the next tap.
       const quiet = () => ev(() => { for (let i = 0; i < 6000 && SP.state().busy; i++) SP.tick(16); return SP.state(); });
       const win = await ev(() => SP.winOrder());
@@ -293,6 +311,10 @@ async function run() {
         if (id === "v4-locked") ok(s.open === s.cap - 1 && (await ev(() => { const q = document.querySelectorAll(".slot")[SP.state().cap - 1]; return q.classList.contains("locked") && !q.hidden; })), tag + " the locked space shows its padlock");
       }
 
+      // v4 M5: the home's settings sheet by real taps.
+      { await ev(() => SP.screen("title")); await page.waitForTimeout(150); await tap("#btn-settings"); const open = await L("#settings").isVisible();
+        if (vp.shots === "375") await shot("settings");
+        await tap("#set-close"); ok(open && !(await L("#settings").isVisible()), tag + " home: the gear opens the settings sheet and Done closes it"); }
       // v4 M4, the Gallery: locked on the map until level 25 is won; then a real tap opens it and a real tap on a painting
       // plays it; every Gallery board's cell size.
       {
@@ -351,7 +373,7 @@ async function run() {
         await page.reload({ waitUntil: "load" }); await page.waitForFunction(() => window.SP, null, { timeout: 15000 });
         ok((await page.getAttribute("#top .tog-mute", "aria-pressed")) === "true", tag + " mute persists across a reload");
         s = await S();
-        ok(s.speed === 3 && (await page.textContent("#top .tog-speed")) === "3\u00d7" && s.cb === true && (await page.getAttribute("#title .tog-cb", "aria-pressed")) === "true" && (await page.evaluate(() => document.body.classList.contains("cb"))), tag + " speed 3x and colour-blind marks persist across a reload");
+        ok(s.speed === 3 && (await page.textContent("#top .tog-speed")) === "3\u00d7" && s.cb === true && (await page.getAttribute("#settings .tog-cb", "aria-pressed")) === "true" && (await page.evaluate(() => document.body.classList.contains("cb"))), tag + " speed 3x and colour-blind marks persist across a reload");
         await page.evaluate(() => localStorage.setItem("sappers-path.v3", '{"v":1,"done":{"e1-01":7,"e3-75":7,"x":9},"settings":{"diff":"nightmare","muted":"yes"},"last":"e3-75"}'));
         await page.reload({ waitUntil: "load" });
         await page.waitForFunction(() => window.SP, null, { timeout: 15000 });
