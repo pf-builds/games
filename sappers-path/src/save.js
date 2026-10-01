@@ -5,6 +5,9 @@
 // is dropped, and `last` must be an open level. Never throws. UMD like engine.js, so Node can check sanitize().
 // v4 M1: speed (the speed button's multiplier, a whole number 1-3; the page also checks it against config show.speeds)
 // replaces the old 2x flag (a save with fast: true loads as 2), and cb (colour-blind marks) is a strict boolean.
+// v4 M4: gal {id: mask}, the Gallery's pictures won, a bit per difficulty like done. Every Gallery picture is open once
+// the Gallery is (the page decides that from done), so a mask is kept for any Gallery id the page has, clamped to the
+// three bits; unknown ids and non-numbers are dropped. A save from before M4 loads with an empty gal.
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
@@ -14,13 +17,13 @@
   const VERSION = 1, DIFFS = ["easy", "normal", "hard"], ALL = 7;
 
   const MAXSPEED = 3;
-  function fresh() { return { v: VERSION, done: {}, settings: { muted: false, speed: 1, cb: false, diff: "normal" }, last: null }; }
+  function fresh() { return { v: VERSION, done: {}, gal: {}, settings: { muted: false, speed: 1, cb: false, diff: "normal" }, last: null }; }
   const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
   const isObj = (o) => !!o && typeof o === "object" && !Array.isArray(o);
 
   // order: the level ids in play order. Unknown ids are dropped; masks are clamped to the three difficulty bits; a win
-  // on a level whose predecessor has no win is dropped (and so is every win after it).
-  function sanitize(raw, order) {
+  // on a level whose predecessor has no win is dropped (and so is every win after it). gal: the Gallery's ids (v4 M4).
+  function sanitize(raw, order, gal) {
     const s = fresh();
     if (!isObj(raw)) return s;
     try {
@@ -32,6 +35,8 @@
         const m = own(d, id) && typeof d[id] === "number" && isFinite(d[id]) ? (d[id] | 0) & ALL : 0;
         if (m) s.done[id] = m;
       }
+      const g = isObj(raw.gal) ? raw.gal : {};
+      for (const id of gal || []) { const m = own(g, id) && typeof g[id] === "number" && isFinite(g[id]) ? (g[id] | 0) & ALL : 0; if (m) s.gal[id] = m; }
       const set = isObj(raw.settings) ? raw.settings : {};
       s.settings.muted = set.muted === true; s.settings.cb = set.cb === true;
       s.settings.speed = Number.isInteger(set.speed) && set.speed >= 1 && set.speed <= MAXSPEED ? set.speed : set.fast === true ? 2 : 1;
@@ -40,10 +45,11 @@
       return s;
     } catch (e) { return fresh(); }
   }
-  // Record a win on difficulty diff. Returns true if it is the level's first win on any difficulty.
-  function record(data, id, diff) {
-    const bit = 1 << Math.max(0, DIFFS.indexOf(diff)), old = data.done[id] | 0;
-    data.done[id] = old | bit;
+  // Record a win on difficulty diff (in data.done, or v4 M4 a Gallery picture's in data.gal: field "gal"). Returns true if
+  // it is the level's first win on any difficulty.
+  function record(data, id, diff, field) {
+    const bit = 1 << Math.max(0, DIFFS.indexOf(diff)), map = data[field || "done"], old = map[id] | 0;
+    map[id] = old | bit;
     return !old;
   }
   // The first level (in order) with no win, or the last level when every one is won.
@@ -57,9 +63,9 @@
   }
 
   // Returns {key, store, data, write()}; neither open nor write ever throws.
-  function open(store, key, order) {
+  function open(store, key, order, gal) {
     let data = fresh();
-    try { const raw = store.getItem(key); if (raw) data = sanitize(JSON.parse(raw), order); } catch (e) { data = fresh(); }
+    try { const raw = store.getItem(key); if (raw) data = sanitize(JSON.parse(raw), order, gal); } catch (e) { data = fresh(); }
     return { key, store, data, write() { try { store.setItem(key, JSON.stringify(this.data)); return true; } catch (e) { return false; } } };
   }
 

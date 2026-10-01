@@ -19,7 +19,9 @@
 //      clusters); then the ink (the outline black) and the background (the manifest's, else for an emoji the first of
 //      convert.bgs, pale ones first, bgGap past minDE from all its colours, else the farthest, for ours the flood's mean; lightened if it is near the ink), then the
 //      clusters, best sqrt(population) x distance first, each kept when it holds minShare of the subject and is minDE
-//      (CIEDE2000) from every kept colour, up to maxColours (select). A kind may scale chroma (a*, b*) first (paintings:
+//      (CIEDE2000) from every kept colour, up to maxColours (select). Then every pair must also stay fadeDE apart with one
+//      of them faded as the queue's rows behind the front are (layout.fade): the rarer colour's lightness is nudged away
+//      (a few times), else it goes. A kind may scale chroma (a*, b*) first (paintings:
 //      old varnish reads muddy at 40 cells).
 //   4. Cells: each cell is the majority vote of the source pixels it covers (a pixel votes background or its nearest
 //      palette colour), so edges stay crisp and no in-between colours appear.
@@ -38,6 +40,7 @@ const { rng } = require("./grade.js");
 
 const ROOT = path.join(__dirname, "..");
 const IDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13];
+const FADE = require("../config.json").layout.fade;
 
 // ---- PNG in and out (zlib only) ------------------------------------------------------------------------------------
 function decode(buf) {
@@ -76,6 +79,11 @@ const rgbOf = (h) => { const v = parseInt(h.slice(1), 16); return [(v >> 16) & 2
 const labOf = (r, g, b) => PAL.lab(hex(r, g, b));
 const d76 = (p, q) => (p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2 + (p[2] - q[2]) ** 2;
 const de = (p, q) => PAL.de00(p, q);
+// The queue's rows behind the front mix layout.fade.t[d] of the tray into a tile's colour in sRGB (main.js mixHex), so a
+// picture's colours must stay apart faded too: the least CIEDE2000 between either colour faded to a row behind and the
+// other at the front.
+const mixHex = (a, b, t) => { const x = parseInt(a.slice(1), 16), y = parseInt(b.slice(1), 16), ch = (s) => Math.round(((x >> s) & 255) * (1 - t) + ((y >> s) & 255) * t); return "#" + ((1 << 24) | (ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).slice(1); };
+function fadeGap(ha, hb) { let m = Infinity; for (let d = 1; d < FADE.t.length; d++) m = Math.min(m, de(PAL.lab(mixHex(ha, FADE.tray, FADE.t[d])), PAL.lab(hb)), de(PAL.lab(mixHex(hb, FADE.tray, FADE.t[d])), PAL.lab(ha))); return m; }
 
 // The subject mask at source resolution: 1 subject, 0 background.
 function maskOf(img, mode, C) {
@@ -113,8 +121,9 @@ function kmeans(img, mask, k0, seed) {
 // The palette: the pinned colours (ink, the background), then the subject's clusters one at a time, each time the one
 // with the best sqrt(population) x distance to the nearest kept colour, kept only when it holds at least minShare of the
 // subject and stands minDE or more (CIEDE2000) from every kept colour, up to max. A cluster left out goes to its nearest
-// kept colour when the cells are voted, so every pair that stands together in the picture is minDE apart by
-// construction, and the kept colours spread over the picture's range instead of piling up on its commonest tones.
+// kept colour when the cells are voted, so every pair that stands together in the picture is apart by construction, and
+// the kept colours spread over the picture's range instead of piling up on its commonest tones.
+const hexOfC = (c) => c.hex || (c.hex = hexOfLab(c.lab));
 function select(pins, cols, minDE, minShare, max) {
   const tot = cols.reduce((s, c) => s + c.n, 0) || 1, out = pins.slice(), left = cols.filter((c) => c.n / tot >= minShare);
   for (let guard = 0; guard < 64 && out.length < max && left.length; guard++) {
@@ -148,30 +157,35 @@ function plan(src0, opt, C) {
   const masked = mode !== "none", mg = masked ? K.margin : 0, [BW, BH] = K.box, sw = bx1 - bx0 + 1, sh = by1 - by0 + 1;
   const scale = Math.min((BW - 2 * mg) / sw, (BH - 2 * mg) / sh), cw = Math.max(1, Math.round(sw * scale)), ch = Math.max(1, Math.round(sh * scale)), pw = cw + 2 * mg, ph = ch + 2 * mg;
   // 3. The palette: the ink and (masked) the background pinned, then the subject's clusters (select).
-  const cols = kmeans(src, mask, C.k0, C.seed), max = K.colours || C.maxColours, minDE = K.minDE || C.minDE;
+  const cols = kmeans(src, mask, C.k0, C.seed), max = K.colours || C.maxColours, minDE = K.minDE || C.minDE, fadeDE = K.fadeDE != null ? K.fadeDE : C.fadeDE;
   if (K.chroma) for (const c of cols) { c.lab[1] *= K.chroma; c.lab[2] *= K.chroma; } // a kind's chroma boost (paintings), before the choice
-  const ink = { lab: PAL.lab(C.ink), n: 0, pin: true, ink: true }, pins = masked ? [ink] : [];
+  const ink = { lab: PAL.lab(C.ink), n: 0, pin: true, ink: true, hex: C.ink }, pins = masked ? [ink] : [];
   let bgHex = K.bg;
   if (masked && !bgHex) {
     if (mode === "flood") { let s = [0, 0, 0], n = 0; for (let i = 0; i < src.w * src.h; i++) if (!mask[i]) { s[0] += src.rgba[i * 4]; s[1] += src.rgba[i * 4 + 1]; s[2] += src.rgba[i * 4 + 2]; n++; } bgHex = n ? hex(s[0] / n, s[1] / n, s[2] / n) : C.bgs[0]; }
     else { // the first of convert.bgs (pale ones first) that stands bgGap past minDE from every subject colour, else the farthest
       const sub = select([ink], cols, minDE, C.minShare, max - 1), dist = (b) => Math.min(...sub.map((c) => de(c.lab, PAL.lab(b))));
       bgHex = C.bgs.find((b) => dist(b) >= minDE + C.bgGap) || C.bgs.slice().sort((a, b) => dist(b) - dist(a))[0]; }
-    // A background too near the ink (a dark one) is lightened until the outline stands out from it.
-    for (let g = 0; g < 40 && de(PAL.lab(bgHex), ink.lab) < minDE; g++) { const L = PAL.lab(bgHex); L[0] += 3; bgHex = hexOfLab(L); }
+    // A background too near the ink (a dark one) is lightened until the outline stands out from it, faded or not.
+    for (let g = 0; g < 40 && (de(PAL.lab(bgHex), ink.lab) < minDE || fadeGap(bgHex, C.ink) < fadeDE); g++) { const L = PAL.lab(bgHex); L[0] += 3; bgHex = hexOfLab(L); }
   }
-  const bg = masked ? { lab: PAL.lab(bgHex), n: 0, pin: true, bg: true } : null; if (bg) pins.push(bg);
+  const bg = masked ? { lab: PAL.lab(bgHex), n: 0, pin: true, bg: true, hex: bgHex } : null; if (bg) pins.push(bg);
   const pal = select(pins, cols, minDE, C.minShare, max);
-  // Steps 4-6, again without the rarer colour of the nearest pair while a pair falls under minDE once the colours are
-  // clamped into sRGB (a boosted painting colour can move).
-  let res = null;
-  for (let guard = 0; guard < 12; guard++) {
-    res = cellsOf(src, mask, pal, bg, ink, K, C, { masked, pw, ph, mg, scale, bx0, by0, bgHex });
-    if (res.minDE >= minDE || res.pair.length < 2) break;
-    const drop = res.pair.filter((j) => !pal[j].pin).sort((a, b) => res.pop[a] - res.pop[b])[0]; if (drop == null) break; pal.splice(drop, 1);
+  // Steps 4-6 until every pair of used colours passes: a pair under fadeDE faded (the queue's rows) moves its rarer
+  // non-pinned colour's lightness away from the other, nudge L* at a time (up to nudges times a colour); a pair under
+  // minDE, or one no nudge fixes, loses its rarer non-pinned colour (its cells vote again). This also covers a colour
+  // that moved when it was clamped into sRGB (a boosted painting colour).
+  let res = null; const moved = new Map();
+  for (let guard = 0; guard < 60; guard++) {
+    res = cellsOf(src, mask, pal, bg, ink, K, C, { masked, pw, ph, mg, scale, bx0, by0, bgHex, minDE, fadeDE });
+    if (res.worst >= 0 || res.pair.length < 2) break;
+    const j = res.pair.filter((k) => !pal[k].pin).sort((a, b) => res.pop[a] - res.pop[b])[0]; if (j == null) break;
+    const c = pal[j], o = pal[res.pair[0] === j ? res.pair[1] : res.pair[0]], n = moved.get(c) || 0;
+    if (res.fadeBad && n < C.nudges) { const L = c.lab.slice(); L[0] = Math.max(4, Math.min(97, L[0] + (L[0] >= o.lab[0] ? C.nudge : -C.nudge))); c.lab = PAL.lab(hexOfLab(L)); c.hex = null; moved.set(c, n + 1); continue; }
+    pal.splice(j, 1);
   }
   const { W, H, grid, out, used, outlineN } = res;
-  return { w: W, h: H, grid, ring: true, pal: out, stats: { colours: used.length, minDE: +res.minDE.toFixed(1), cells: pw * ph, outline: outlineN, bg: masked ? bgHex : null } };
+  return { w: W, h: H, grid, ring: true, pal: out, stats: { colours: used.length, minDE: +res.minDE.toFixed(1), minFade: +res.minFade.toFixed(1), cells: pw * ph, outline: outlineN, bg: masked ? bgHex : null } };
 }
 // 4. Cells: a majority vote of the source pixels each cell covers (background, or the nearest palette colour). 5. The
 // outline: background cells 8-adjacent to the subject turn ink, K.outline rings deep. 6. Ids by population (never 10 or
@@ -205,9 +219,10 @@ function cellsOf(src, mask, pal, bg, ink, K, C, F) {
   used.forEach((j, k) => { out[IDS[k]] = { c: hexes[k], n: nm[k] }; });
   const W = pw + 2, H = ph + 2, grid = [];
   for (let y = 0; y < H; y++) { let s = ""; for (let x = 0; x < W; x++) s += x === 0 || y === 0 || x === W - 1 || y === H - 1 ? "#" : E.chOf(idOf[cell[(y - 1) * pw + (x - 1)]] || idOf[used[0]]); grid.push(s); }
-  const labs = hexes.map((h) => PAL.lab(h)); let minDE = Infinity, pair = [];
-  for (let a = 0; a < labs.length; a++) for (let b = a + 1; b < labs.length; b++) { const d = de(labs[a], labs[b]); if (d < minDE) { minDE = d; pair = [used[a], used[b]]; } }
-  return { W, H, grid, out, used, outlineN, pop, minDE: labs.length > 1 ? minDE : 100, pair };
+  const labs = hexes.map((h) => PAL.lab(h)); let minDE = 100, minFade = 100, worst = Infinity, pair = [], fadeBad = false;
+  for (let a = 0; a < labs.length; a++) for (let b = a + 1; b < labs.length; b++) { const d = de(labs[a], labs[b]), f = fadeGap(hexes[a], hexes[b]), m = Math.min(d - F.minDE, F.fadeDE ? f - F.fadeDE : Infinity);
+    minDE = Math.min(minDE, d); minFade = Math.min(minFade, f); if (m < worst) { worst = m; pair = [used[a], used[b]]; fadeBad = d >= F.minDE; } }
+  return { W, H, grid, out, used, outlineN, pop, minDE, minFade, worst: labs.length > 1 ? worst : 0, pair, fadeBad };
 }
 // A name per colour, all different: the colours in order of how near their best match is, each taking the nearest
 // name in C.names (CIEDE2000) not already taken.
@@ -242,7 +257,7 @@ if (require.main === module) {
     const W = cols * cw, H = rows * chh, rgb = new Uint8Array(W * H * 3).fill(40);
     plans.forEach((P, k) => { if (!P) return; const R = render(P, px), x0 = (k % cols) * cw + 4, y0 = ((k / cols) | 0) * chh + 4;
       for (let y = 0; y < R.h; y++) rgb.set(R.rgb.subarray(y * R.w * 3, (y + 1) * R.w * 3), ((y0 + y) * W + x0) * 3);
-      console.log(String(k + 1).padStart(2) + " " + pics[k].id.padEnd(22) + " " + (P.w + "x" + P.h).padEnd(6) + " colours " + P.stats.colours + " minDE " + P.stats.minDE + " cells " + P.stats.cells + " outline " + P.stats.outline); });
+      console.log(String(k + 1).padStart(2) + " " + pics[k].id.padEnd(22) + " " + (P.w + "x" + P.h).padEnd(6) + " colours " + P.stats.colours + " minDE " + P.stats.minDE + " faded " + P.stats.minFade + " cells " + P.stats.cells + " outline " + P.stats.outline); });
     fs.writeFileSync(arg("sheet"), encode(W, H, rgb));
   } else {
     const id = process.argv[2], pic = M.pictures.find((p) => p.id === id); if (!pic) { console.log("no picture " + id); process.exitCode = 1; }

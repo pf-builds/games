@@ -318,11 +318,13 @@ const coloursOf = (L) => { const s = new Set(); for (const row of L.grid) for (c
 // squads wait on the line at rest (a squad with nothing in reach is only dealt below it). D.noParkUnderArchers: while any
 // tower stands no squad may be left waiting (on Hard a waiting squad released into a ring loses a sapper, so the deal
 // would fail later with no way back). A level with a lock deals with one open space fewer until its key pops.
+// v4 M4 (the Gallery): D.capOf (optional) {m: [first, rest]} caps colour m's first squad at `first` and every later one at
+// `rest` (the outline: a narrow first breach, then more black squads); with no capOf the deal is exactly as before.
 function deal(L, seed, D) {
   const B = E.compile(Object.assign({ cols: [[], [], [], [], []] }, L)), r = rng(seed);
   const S = E.sim(B, { hold: D.hold, archersKill: true, time: D.time }, { deal: true }), buf = new Int32Array(S.M.length);
   const un = new Int32Array(E.NMAT); for (let m = 1; m < E.NMAT; m++) if (m !== IRON) un[m] = B.pix[m];
-  const play = [], cap = D.maxWaitMs || 0;
+  const play = [], cap = D.maxWaitMs || 0, dealt = new Int32Array(E.NMAT);
   let maxWait = 0;
   for (let guard = 0; guard < D.maxCards && S.pixLeft > 0; guard++) {
     const reach = [], deep = [];
@@ -335,12 +337,13 @@ function deal(L, seed, D) {
       const m = opts[t];
       let n = Math.min(un[m], ri(r, D.size[0], D.size[1]), D.maxCard);
       if (un[m] <= D.maxCard && r() < D.finish) n = un[m];
+      if (D.capOf) n = Math.min(n, D.capOf[m] ? (dealt[m] ? D.capOf[m][1] : D.capOf[m][0]) : n); // v4 M4 (the Gallery): the outline's squads
       for (let s = 0; s <= (D.shrinks || 0) && !done && n > 0; s++) {
         S.save(buf); const t0 = S.now, l0 = S.lineLen;
         S.playSquad(m, n); S.quiet();
         const wait = S.now - t0;
         if (S.status === E.FAILED || (cap && wait > cap) || (D.noParkUnderArchers && S.standing && S.lineLen > l0)) { S.load(buf); n = Math.floor(n * (D.shrink || 0.6)); continue; }
-        un[m] -= n; play.push([m, n]); done = true; if (wait > maxWait) maxWait = wait;
+        un[m] -= n; play.push([m, n]); done = true; dealt[m]++; if (wait > maxWait) maxWait = wait;
       }
     }
     if (!done || (D.maxTaps && play.length > D.maxTaps)) return null;

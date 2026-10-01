@@ -6,12 +6,24 @@
 // all, the faded tiles against the tray and against their row's band (fix 2), and the mystery card's back against every
 // material. Nothing is written.
 //   ~/.local/opt/node/bin/node tools/fade.js [--t 0,0.1,0.2] [--tray #ddd3c0]   (a candidate instead of config.json)
+//   ~/.local/opt/node/bin/node tools/fade.js --gallery   v4 M4: the Gallery's levels, each with its own palette: every
+//                                                        ordered pair of its queue colours, faded vs front
 "use strict";
 const { lab, de00 } = require("./palette.js");
 const C = require("../config.json"), V3 = C.v3, F = C.layout.fade;
 const arg = (k) => { const i = process.argv.indexOf("--" + k); return i > 0 ? process.argv[i + 1] : null; };
 const T = arg("t") ? arg("t").split(",").map(Number) : F.t, TRAY = arg("tray") || F.tray;
 const LV = require("../levels/levels.json").levels.concat(require("../levels/debug-v4.json").levels);
+if (process.argv.includes("--gallery")) { // v4 M4: per level, its own colours
+  const G = require("../levels/gallery.json").levels, mixG = (a, b, t) => { const x = parseInt(a.slice(1), 16), y = parseInt(b.slice(1), 16), ch = (s) => Math.round(((x >> s) & 255) * (1 - t) + ((y >> s) & 255) * t); return "#" + ((1 << 24) | (ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).slice(1); };
+  let n = 0, under = 0, worst = { e: 1e9 }; const perLevel = [];
+  for (const L of G) { const s = new Set(); for (const c of L.cols) for (const k of c) s.add(k[0]); let lm = 1e9;
+    for (const a of s) for (const b of s) { if (a === b) continue; for (let d = 1; d < T.length; d++) { const e = de00(lab(mixG(L.pal[a].c, TRAY, T[d])), lab(L.pal[b].c)); n++; if (e < 20) under++; if (e < lm) lm = e; if (e < worst.e) worst = { e, id: L.id, a: L.pal[a].n, b: L.pal[b].n, d }; } }
+    perLevel.push(lm); }
+  perLevel.sort((p, q) => p - q);
+  console.log("Gallery: " + G.length + " levels, " + n + " faded-vs-front pairs (rows 1-" + (T.length - 1) + "); under 20: " + under + "; smallest " + worst.e.toFixed(1) + " (" + worst.id + ": " + worst.a + " at row " + worst.d + " vs " + worst.b + "); per-level smallest median " + perLevel[perLevel.length >> 1].toFixed(1));
+  return;
+}
 const P = V3.mats.map((m) => (m ? m.c : null)), NAME = (m) => V3.mats[m].n;
 // The page's mix (main.js mixHex): per channel, rounded.
 const mix = (a, b, t) => { const x = parseInt(a.slice(1), 16), y = parseInt(b.slice(1), 16), ch = (s) => Math.round(((x >> s) & 255) * (1 - t) + ((y >> s) & 255) * t); return "#" + ((1 << 24) | (ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).slice(1); };

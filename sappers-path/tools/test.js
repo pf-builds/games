@@ -4,6 +4,8 @@
 // (mystery cards, linked squads, the locked space, the generalized jam, dealing mode) on hand-made boards, a no-hang
 // sweep and a second differential on the debug levels and on baked levels with random twists injected, the grader's
 // info model and the fast tapper; last, the page save's settings (v4 M1: speed and colour-blind marks) through sanitize.
+// v4 M4: ring levels (the tie-break, the outline, engine vs reference on random ring boards), the Gallery converter on a
+// tiny hand image, the Gallery file's invariants and engine vs reference on its boards, the save's Gallery wins.
 // Run: ~/.local/opt/node/bin/node tools/test.js   (exit code 1 on any failure)
 "use strict";
 const E = require("../src/engine.js");
@@ -641,6 +643,78 @@ const RINGS = []; for (let k = 0; k < 40; k++) { const L = ringRandom(9101 + k);
   console.log("  differential (ring boards): " + games + " games, " + taps + " taps, " + pops + " pops, " + refused + " refused in " + ((Date.now() - t0) / 1000).toFixed(1) + " s");
 }
 
+// ---- v4 M4: the converter on a tiny hand image with a known answer; PNG in and out -----------------------------------------
+const CV = require("./convert.js"), GCFG = require("./gallery-config.json"), PAL = require("./palette.js");
+{
+  // 6x6 transparent source with a 2x2 red block in the middle. Box 6x6 with a 2-cell margin: one source pixel a cell,
+  // the subject in the middle, one ring of ink round it (8-adjacent), the rest the given background, then the camp ring.
+  const w = 6, h = 6, rgba = new Uint8Array(w * h * 4);
+  for (let y = 2; y <= 3; y++) for (let x = 2; x <= 3; x++) rgba.set([255, 0, 0, 255], (y * w + x) * 4);
+  const P = CV.plan({ w, h, rgba }, { kind: "emoji", box: [6, 6], margin: 2, outline: 1, bg: "#8ecdf2" }, GCFG.convert);
+  eq(P.grid, ["########", "#aaaaaa#", "#abbbba#", "#abccba#", "#abccba#", "#abbbba#", "#aaaaaa#", "########"], "convert: a 2x2 red block on transparency becomes the block, an 8-adjacent ink outline, the background and the camp ring (ids by population)");
+  eq([P.pal[1].c, P.pal[1].n, P.pal[2].c, P.pal[2].n, P.pal[3].n, P.stats.colours, P.stats.outline], ["#8ecdf2", "sky", GCFG.convert.ink, "black", "red", 3, 12], "convert: the palette is the background, the ink and the red, each named");
+  ok(PAL.de00(PAL.lab(P.pal[3].c), PAL.lab("#ff0000")) < 1, "convert: the red keeps its colour (" + P.pal[3].c + ")");
+  const S = E.sim(E.compile(Object.assign({ cols: [[[3, 4]], [[2, 12]], [[1, 20]], [], []] }, P)), N);
+  eq([S.B.ring, S.reachable(1), S.reachable(2), S.reachable(3)], [true, 20, 0, 0], "convert: the plan is a ring level; only the background is in reach at the start (the outline shuts the block off)");
+  eq([pat(S, 0), pat(S, 1), pat(S, 2), S.status], [E.PLAYING, E.PLAYING, E.WON, E.WON], "convert: red and black wait, the background goes, then black breaches, then red: razed");
+  // A colour closer than minDE to a kept one is left out: two reds 5 apart become one.
+  const r2 = new Uint8Array(w * h * 4); for (let y = 1; y <= 4; y++) for (let x = 1; x <= 4; x++) r2.set(x < 3 ? [255, 0, 0, 255] : [245, 10, 10, 255], (y * w + x) * 4);
+  const P2 = CV.plan({ w, h, rgba: r2 }, { kind: "emoji", box: [8, 8], margin: 2, outline: 1, bg: "#8ecdf2" }, GCFG.convert);
+  eq(P2.stats.colours, 3, "convert: two near-identical reds (under minDE) merge into one colour");
+  // PNG: an RGB image encoded and decoded comes back pixel for pixel.
+  const rgb = new Uint8Array(5 * 3 * 3); for (let i = 0; i < rgb.length; i++) rgb[i] = (i * 37) & 255;
+  const D = CV.decode(CV.encode(5, 3, rgb)); let same = D.w === 5 && D.h === 3; for (let i = 0; i < 15 && same; i++) for (let k = 0; k < 3; k++) if (D.rgba[i * 4 + k] !== rgb[i * 3 + k] || D.rgba[i * 4 + 3] !== 255) same = false;
+  ok(same, "convert: PNG encode then decode round-trips an RGB image");
+}
+
+// ---- v4 M4: the Gallery file's invariants ------------------------------------------------------------------------------
+{
+  const GF = require("../levels/gallery.json"), GL = GF.levels, MAN = require("../levels/gallery-manifest.json"), GB = GCFG.bake, LIC = require("fs").readFileSync(require("path").join(__dirname, "../LICENSES.md"), "utf8");
+  const kept = MAN.order.filter((id) => (MAN.pictures.find((p) => p.id === id) || {}).keep !== false);
+  eq([GL.length, GL.map((L) => L.src).join(), GL.every((L, i) => L.n === i + 1 && L.id === "g-" + L.src)], [kept.length, kept.join(), true], "gallery: one level per kept picture, in the manifest's order, ids g-<picture>");
+  let bad = [], wins = 0, dead = 0, taps = 0, over = 0, ms = [], dmin = 99, dminFade = 99, band = 0;
+  const fadeHex = (a, t) => { const F = require("../config.json").layout.fade, x = parseInt(a.slice(1), 16), y = parseInt(F.tray.slice(1), 16), ch = (s) => Math.round(((x >> s) & 255) * (1 - t) + ((y >> s) & 255) * t); return "#" + ((1 << 24) | (ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).slice(1); };
+  const T = require("../config.json").layout.fade.t;
+  for (const L of GL) {
+    const B = E.compile(L), used = new Set(); for (const row of L.grid) for (const ch of row) { const m = E.matOf(ch); if (m) used.add(m); }
+    const ids = Object.keys(L.pal).map(Number).sort((a, b) => a - b), pic = MAN.pictures.find((p) => p.id === L.src);
+    if (!B.ring || E.check(L).length || L.links || L.lock || (L.gates && L.gates.length) || (L.towers && L.towers.length) || L.cols.some((c) => c.some((cd) => cd[2]))) bad.push(L.id + ": not a plain ring level");
+    if (ids.join() !== [...used].sort((a, b) => a - b).join() || ids.some((m) => m === E.IRON || m === E.GILT)) bad.push(L.id + ": palette ids " + ids + " vs grid " + [...used]);
+    for (let m = 1; m < E.NMAT; m++) if (B.sapTotal[m] !== B.pix[m]) bad.push(L.id + ": colour " + m + " has " + B.sapTotal[m] + " sappers for " + B.pix[m] + " pixels");
+    for (const d of ["easy", "normal", "hard"]) { if (E.replay(B, RULES[d], L.win[d] || "").status === E.WON) wins++; else bad.push(L.id + " " + d + ": stored order does not win"); }
+    const ln = Gr.line(B, RULES.normal, L.win.normal); ms.push(ln.ms); if (ln.maxWait > GB.maxWaitMs) dead++; if (L.win.normal.length > GB.maxTaps) taps++; if (ln.ms > GB.duration.maxMs) over++;
+    if (L.grade.normal.rate >= L.target[0] && L.grade.normal.rate <= L.target[1]) band++;
+    const hx = ids.map((m) => L.pal[m].c); let lmin = 99, fmin = 99;
+    for (let a = 0; a < hx.length; a++) for (let b = a + 1; b < hx.length; b++) { lmin = Math.min(lmin, PAL.de00(PAL.lab(hx[a]), PAL.lab(hx[b]))); for (let d = 1; d < T.length; d++) fmin = Math.min(fmin, PAL.de00(PAL.lab(fadeHex(hx[a], T[d])), PAL.lab(hx[b])), PAL.de00(PAL.lab(fadeHex(hx[b], T[d])), PAL.lab(hx[a]))); }
+    const want = pic.kind === "painting" ? GCFG.convert.kinds.painting.minDE : GCFG.convert.minDE; if (lmin < want) bad.push(L.id + ": colours only " + lmin.toFixed(1) + " apart"); dmin = Math.min(dmin, lmin);
+    if (pic.kind !== "painting") { dminFade = Math.min(dminFade, fmin); if (fmin < GCFG.convert.fadeDE) bad.push(L.id + ": a faded tile only " + fmin.toFixed(1) + " from a front colour"); }
+    if (!pic.license || !(pic.url || (pic.prompt && pic.seed != null && pic.model)) || !(pic.fetched || pic.generated) || LIC.indexOf(pic.id) < 0) bad.push(L.id + ": manifest or LICENSES.md line missing");
+  }
+  for (let i = 0; i < GL.length; i++) for (let j = i + 1; j < GL.length; j++) { const A = GL[i], Bq = GL[j]; if (A.w !== Bq.w || A.h !== Bq.h) continue; let same = 0; for (let y = 0; y < A.h; y++) for (let x = 0; x < A.w; x++) if (A.grid[y][x] === Bq.grid[y][x]) same++; if (same / (A.w * A.h) >= GB.dedupe) bad.push(A.id + " and " + Bq.id + " are near-duplicates"); }
+  ms.sort((a, b) => a - b);
+  eq(bad, [], "gallery: every level is a plain ring level whose palette is exactly its colours (never 10 or 14), sappers sum to pixels, stored orders win on Easy, Normal and Hard, colours " + GCFG.convert.minDE + " apart (paintings " + GCFG.convert.kinds.painting.minDE + "; smallest " + dmin.toFixed(1) + "), faded tiles " + GCFG.convert.fadeDE + " apart (not paintings; smallest " + dminFade.toFixed(1) + "), a manifest and LICENSES.md line each, no near-duplicates");
+  eq([wins, dead, taps, over, band], [GL.length * 3, 0, 0, 0, GL.length], "gallery: " + wins + " stored orders win; every Normal line under " + GB.maxWaitMs / 1000 + " s a tap, " + GB.maxTaps + " taps and " + GB.duration.maxMs / 1000 + " s (median " + (ms[(ms.length - 1) >> 1] / 1000).toFixed(0) + " s, max " + (ms[ms.length - 1] / 1000).toFixed(0) + " s); every level in its Normal band");
+  // Engine vs the slow reference on the Gallery's ring boards: Normal patient and rushed on every level, Easy and Hard
+  // patient on every fourth.
+  let games = 0, diffs = 0, pops = 0; const t0 = Date.now();
+  for (const [k, L] of GL.entries()) for (const [dn, rules] of Object.entries(RULES)) for (const rushed of [false, true]) {
+    if (dn !== "normal" && (rushed || k % 4)) continue;
+    const S = E.sim(E.compile(L), rules), R = Ref.game(L, rules), r = Gr.rng(k * 131 + (rushed ? 7 : 3) + dn.length); S.logOn = true; let t = 0, bad2 = null; const mine = [];
+    for (let g = 0; g <= 200 && S.status === E.PLAYING && !bad2; g++) {
+      const open = []; for (let j = 0; j < 5; j++) if (S.front(j) >= 0) open.push(j); if (!open.length) break;
+      const j = open[Math.floor(r() * open.length)]; S.clearLog(); let a1, a2;
+      if (rushed) { t += Math.floor(r() * 1500); a1 = S.play(j, t); a2 = R.play(j, t); } else { a1 = S.play(j); S.quiet(); a2 = R.play(j); R.quiet(); }
+      if ((a1 === E.REFUSED) !== (a2 === "refused")) bad2 = "refusal";
+      for (let i = 0; i < S.evLen; i += 3) if (S.ev[i] === E.EV.EAT) mine.push([S.ev[i + 1], S.q1[S.ev[i + 2]]]);
+      const st = S.status === E.WON ? "won" : S.status === E.FAILED ? "failed" : "playing";
+      if (!bad2 && JSON.stringify(mine) !== JSON.stringify(R.pops)) bad2 = "pops"; else if (!bad2 && (st !== R.status || S.now !== R.now)) bad2 = "status or clock";
+    }
+    pops += mine.length; games++; if (bad2) { diffs++; if (diffs <= 3) console.log("  diff: " + L.id + " " + dn + (rushed ? " rushed" : " patient") + ": " + bad2); }
+  }
+  eq(diffs, 0, "differential (Gallery): engine == reference on " + games + " games on the Gallery's ring boards (" + pops + " pops)");
+  console.log("  differential (Gallery): " + games + " games in " + ((Date.now() - t0) / 1000).toFixed(1) + " s");
+}
+
 // ---- the page's save (v4 M1 settings: speed replaces the 2x flag, colour-blind marks) ----------------------------------
 {
   const Save = require("../src/save.js"), order = LEVELS.levels.map((l) => l.id), set = (raw) => Save.sanitize({ settings: raw }, order).settings;
@@ -654,6 +728,11 @@ const RINGS = []; for (let k = 0; k < 40; k++) { const L = ringRandom(9101 + k);
   for (let n = 1; n <= 75; n++) old.done["e" + (n <= 25 ? 1 : n <= 50 ? 2 : 3) + "-" + String(n).padStart(2, "0")] = n % 3 ? 2 : 7;
   const sv = Save.sanitize(JSON.parse(JSON.stringify(old)), order);
   eq([Object.keys(sv.done).length, sv.done["e3-75"], Save.next(sv, order), Save.isOpen(sv, order, "e4-76"), Save.isOpen(sv, order, "e4-77"), sv.last, sv.settings.diff], [75, 7, "e4-76", true, false, "e3-75", "hard"], "save: a v3 save with 75 wins loads against the rebake: 75 kept, level 76 next and open, 77 locked");
+  // v4 M4: the Gallery's wins (gal): kept per id the page has, clamped to three bits; unknown ids and junk dropped; a save
+  // from before M4 loads with an empty gal.
+  const gids = require("../levels/gallery.json").levels.map((l) => l.id);
+  eq(Save.sanitize({ gal: { [gids[0]]: 2, [gids[1]]: 13, nope: 7, [gids[2]]: "4" } }, order, gids).gal, { [gids[0]]: 2, [gids[1]]: 5 }, "save: the Gallery's wins are kept per picture, clamped; unknown ids and non-numbers are dropped");
+  eq([Save.sanitize(JSON.parse(JSON.stringify(old)), order, gids).gal, Save.fresh().gal], [{}, {}], "save: a save from before the Gallery loads with no Gallery wins");
   const gap = JSON.parse(JSON.stringify(old)); delete gap.done["e2-40"]; const sg = Save.sanitize(gap, order);
   eq([Object.keys(sg.done).length, Save.next(sg, order)], [39, "e2-40"], "save: a gap in an old save still drops every later win (levels open in order)");
 }

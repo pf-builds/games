@@ -5,13 +5,16 @@
 // longest single tap (maxWait) and, from bake-config fast.from, the fast tapper's rate, when the file stores them.
 //   ~/.local/opt/node/bin/node tools/regrade.js [--quick] [--levels FILE]   (--quick: rates only, no lookahead player;
 //   --levels: another levels file, e.g. a trial bake's)
+//   ~/.local/opt/node/bin/node tools/regrade.js --gallery [--levels FILE]   v4 M4: levels/gallery.json (or FILE) with the
+//   Gallery bake's own counts (tools/gallery-config.json bake: grade, fast; every level has a fast-tapper grade)
 // Exit 1 when anything differs.
 "use strict";
 const E = require("../src/engine.js");
 const R = require("./grade.js");
-const C = require("./bake-config.json");
+const GAL = process.argv.includes("--gallery");
+const C = GAL ? require("./gallery-config.json").bake : require("./bake-config.json");
 const V3 = require("../config.json").v3;
-const LV = JSON.parse(require("fs").readFileSync(process.argv.indexOf("--levels") > 0 ? require("path").resolve(process.argv[process.argv.indexOf("--levels") + 1]) : require("path").join(__dirname, "../levels/levels.json"), "utf8")).levels;
+const LV = JSON.parse(require("fs").readFileSync(process.argv.indexOf("--levels") > 0 ? require("path").resolve(process.argv[process.argv.indexOf("--levels") + 1]) : require("path").join(__dirname, GAL ? "../levels/gallery.json" : "../levels/levels.json"), "utf8")).levels;
 
 const DIFFS = ["easy", "normal", "hard"], QUICK = process.argv.includes("--quick");
 const rules = { easy: E.rulesOf(V3, "easy"), normal: E.rulesOf(V3, "normal"), hard: E.rulesOf(V3, "hard") };

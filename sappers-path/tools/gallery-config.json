@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "note": "Sapper's Path v4 M4, the Gallery. convert: the converter (tools/convert.js). kinds: per kind of picture, its mask (alpha: emoji; flood: our generated pictures, flat backgrounds; none: paintings), the picture box [columns, rows] without the ring, the outline rings and the margin (cells of background plus outline round the subject's box). minDE: every pair of colours in a picture is at least this far apart (CIEDE2000; a kind may set its own, never under 20; a colour closer to one already kept is left out and its pixels vote for their nearest kept colour). minShare: the least share of the subject a colour must hold to be kept. chroma (a kind): its colours' a* and b* are scaled by this for display. maxColours: the most colours a picture keeps (material ids 1-9 and 11-13). k0: k-means clusters before merging. ink: the outline black. bgs: background colours an emoji may take (the one farthest from its colours). names: colour names for aria-labels (nearest by CIEDE2000). bgGap: an emoji's background is the first of bgs this far past minDE from all its colours (else the farthest).",
+  "note": "Sapper's Path v4 M4, the Gallery. convert: the converter (tools/convert.js). kinds: per kind of picture, its mask (alpha: emoji; flood: our generated pictures, flat backgrounds; none: paintings), the picture box [columns, rows] without the ring, the outline rings and the margin (cells of background plus outline round the subject's box); a kind may set its own minDE (never under 20), fadeDE and chroma. minDE: every pair of colours in a picture is at least this far apart (CIEDE2000; a colour closer to one already kept is left out and its pixels vote for their nearest kept colour). fadeDE: every pair also stays this far apart with one of them faded to a queue row behind the front (config.json layout.fade), as the siege's tiles do (tools/fade.js): a pair under it has its rarer colour's lightness moved `nudge` L* away, up to `nudges` times, else that colour goes; paintings set 0 (their muted tones are posterized already and the board is the point; tools/fade.js --gallery reports them). minShare: the least share of the subject a colour must hold to be kept. maxColours: the most colours a picture keeps (material ids 1-9 and 11-13). k0: k-means clusters before the choice. chroma (a kind): its colours' a* and b* are scaled by this before the choice (paintings). ink: the outline black. bgs: background colours an emoji may take: the first (pale ones first) bgGap past minDE from all its colours, else the farthest. names: colour names for aria-labels (nearest by CIEDE2000, all different). bake: see its own note.",
   "convert": {
     "seed": 20261001,
     "k0": 24,
@@ -12,195 +12,70 @@
     "kinds": {
       "emoji": {
         "mask": "alpha",
-        "box": [
-          32,
-          32
-        ],
+        "box": [32, 32],
         "outline": 1,
         "margin": 2
       },
       "ours": {
         "mask": "flood",
-        "box": [
-          32,
-          32
-        ],
+        "box": [32, 32],
         "outline": 1,
         "margin": 2
       },
       "painting": {
         "mask": "none",
-        "box": [
-          40,
-          32
-        ],
+        "box": [40, 32],
         "outline": 0,
         "margin": 0,
         "chroma": 1.4,
-        "minDE": 20
+        "minDE": 20,
+        "fadeDE": 0
       }
     },
-    "bgs": [
-      "#8ecdf2",
-      "#f7df86",
-      "#a8e6b0",
-      "#f6b8cf",
-      "#c9b8f0",
-      "#f3ead8",
-      "#4f8fd6",
-      "#5fae5f",
-      "#a066c8",
-      "#e2745a",
-      "#3e9c9a"
-    ],
+    "bgs": ["#8ecdf2", "#f7df86", "#a8e6b0", "#f6b8cf", "#c9b8f0", "#f3ead8", "#4f8fd6", "#5fae5f", "#a066c8", "#e2745a", "#3e9c9a"],
     "names": [
-      [
-        "black",
-        "#1f1b24"
-      ],
-      [
-        "charcoal",
-        "#474350"
-      ],
-      [
-        "grey",
-        "#8a8791"
-      ],
-      [
-        "silver",
-        "#c4c3c9"
-      ],
-      [
-        "white",
-        "#fbfaf7"
-      ],
-      [
-        "cream",
-        "#f3ead8"
-      ],
-      [
-        "red",
-        "#d8262e"
-      ],
-      [
-        "dark red",
-        "#8c1c22"
-      ],
-      [
-        "pink",
-        "#f58cb4"
-      ],
-      [
-        "rose",
-        "#e0567d"
-      ],
-      [
-        "salmon",
-        "#f59a82"
-      ],
-      [
-        "orange",
-        "#f4892a"
-      ],
-      [
-        "peach",
-        "#fcc79a"
-      ],
-      [
-        "brown",
-        "#8a5a2e"
-      ],
-      [
-        "dark brown",
-        "#4e3120"
-      ],
-      [
-        "tan",
-        "#c9a26b"
-      ],
-      [
-        "gold",
-        "#d9a826"
-      ],
-      [
-        "yellow",
-        "#f7d83a"
-      ],
-      [
-        "butter",
-        "#f7e79a"
-      ],
-      [
-        "olive",
-        "#7d7a2e"
-      ],
-      [
-        "lime",
-        "#9ad13b"
-      ],
-      [
-        "green",
-        "#3fa34d"
-      ],
-      [
-        "dark green",
-        "#1f5e30"
-      ],
-      [
-        "mint",
-        "#a8e6b0"
-      ],
-      [
-        "teal",
-        "#1d9a8e"
-      ],
-      [
-        "cyan",
-        "#3cc8e0"
-      ],
-      [
-        "sky",
-        "#8ecdf2"
-      ],
-      [
-        "blue",
-        "#2f6fd8"
-      ],
-      [
-        "navy",
-        "#1f2f6b"
-      ],
-      [
-        "slate",
-        "#5a6e8c"
-      ],
-      [
-        "lilac",
-        "#c9b8f0"
-      ],
-      [
-        "purple",
-        "#7b3fb8"
-      ],
-      [
-        "plum",
-        "#5a2656"
-      ],
-      [
-        "magenta",
-        "#d23fb0"
-      ],
-      [
-        "blush",
-        "#f6b8cf"
-      ],
-      [
-        "sand",
-        "#e6d2a4"
-      ]
+      ["black", "#1f1b24"],
+      ["charcoal", "#474350"],
+      ["grey", "#8a8791"],
+      ["silver", "#c4c3c9"],
+      ["white", "#fbfaf7"],
+      ["cream", "#f3ead8"],
+      ["red", "#d8262e"],
+      ["dark red", "#8c1c22"],
+      ["pink", "#f58cb4"],
+      ["rose", "#e0567d"],
+      ["salmon", "#f59a82"],
+      ["orange", "#f4892a"],
+      ["peach", "#fcc79a"],
+      ["brown", "#8a5a2e"],
+      ["dark brown", "#4e3120"],
+      ["tan", "#c9a26b"],
+      ["gold", "#d9a826"],
+      ["yellow", "#f7d83a"],
+      ["butter", "#f7e79a"],
+      ["olive", "#7d7a2e"],
+      ["lime", "#9ad13b"],
+      ["green", "#3fa34d"],
+      ["dark green", "#1f5e30"],
+      ["mint", "#a8e6b0"],
+      ["teal", "#1d9a8e"],
+      ["cyan", "#3cc8e0"],
+      ["sky", "#8ecdf2"],
+      ["blue", "#2f6fd8"],
+      ["navy", "#1f2f6b"],
+      ["slate", "#5a6e8c"],
+      ["lilac", "#c9b8f0"],
+      ["purple", "#7b3fb8"],
+      ["plum", "#5a2656"],
+      ["magenta", "#d23fb0"],
+      ["blush", "#f6b8cf"],
+      ["sand", "#e6d2a4"]
     ],
     "minShare": 0.006,
-    "bgGap": 6
+    "bgGap": 6,
+    "fadeDE": 20,
+    "nudge": 4,
+    "nudges": 4
   },
   "bake": {
     "version": 1,
@@ -208,39 +83,14 @@
     "seed": 20261002,
     "curve": {
       "intro": 4,
-      "pattern": [
-        "saw0",
-        "saw1",
-        "saw2",
-        "saw1",
-        "hard",
-        "relief"
-      ],
+      "pattern": ["saw0", "saw1", "saw2", "saw1", "hard", "relief"],
       "bands": {
-        "intro": [
-          0.62,
-          0.9
-        ],
-        "saw0": [
-          0.62,
-          0.8
-        ],
-        "saw1": [
-          0.46,
-          0.64
-        ],
-        "saw2": [
-          0.3,
-          0.48
-        ],
-        "hard": [
-          0.1,
-          0.3
-        ],
-        "relief": [
-          0.62,
-          0.85
-        ]
+        "intro": [0.62, 0.9],
+        "saw0": [0.62, 0.8],
+        "saw1": [0.46, 0.64],
+        "saw2": [0.3, 0.48],
+        "hard": [0.1, 0.3],
+        "relief": [0.62, 0.85]
       }
     },
     "maxTaps": 55,
@@ -249,16 +99,10 @@
       "medianMs": 120000,
       "maxMs": 240000
     },
-    "capOf": [
-      12,
-      24
-    ],
+    "capOf": [12, 24],
     "deal": {
       "hold": 4,
-      "size": [
-        8,
-        30
-      ],
+      "size": [8, 30],
       "deep": 0.15,
       "finish": 0.3,
       "maxCard": 72,
@@ -272,45 +116,27 @@
     },
     "dealBy": {
       "intro": {
-        "size": [
-          20,
-          56
-        ],
+        "size": [20, 56],
         "deep": 0.05
       },
       "saw0": {
-        "size": [
-          14,
-          44
-        ],
+        "size": [14, 44],
         "deep": 0.12
       },
       "saw1": {
-        "size": [
-          14,
-          44
-        ],
+        "size": [14, 44],
         "deep": 0.12
       },
       "saw2": {
-        "size": [
-          14,
-          44
-        ],
+        "size": [14, 44],
         "deep": 0.12
       },
       "relief": {
-        "size": [
-          16,
-          48
-        ],
+        "size": [16, 48],
         "deep": 0.08
       },
       "hard": {
-        "size": [
-          18,
-          52
-        ],
+        "size": [18, 52],
         "deep": 0.18
       }
     },
@@ -340,9 +166,7 @@
       "minCard": 3,
       "maxCard": 72
     },
-    "narrowFor": [
-      "hard"
-    ],
+    "narrowFor": ["hard"],
     "grade": {
       "playouts": 400,
       "greedyPlayouts": 100,
