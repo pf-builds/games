@@ -8,6 +8,12 @@
 // v4 M4: gal {id: mask}, the Gallery's pictures won, a bit per difficulty like done. Every Gallery picture is open once
 // the Gallery is (the page decides that from done), so a mask is kept for any Gallery id the page has, clamped to the
 // three bits; unknown ids and non-numbers are dropped. A save from before M4 loads with an empty gal.
+// v4 M5 (the meta layer, src/meta.js): coins (a whole number 0-9,999,999), inv {ladder, quartermaster, scout, recall}
+// (each 0-99), best {id: [ms easy, ms normal, ms hard, taps easy, taps normal, taps hard, coins earned]} (whole numbers,
+// ms 0-3,600,000 and taps 0-999 with 0 = none, kept only for a difficulty the level or picture was won on; ids the page
+// has), and lives {n, at} (n 0-livesMax, at a time in ms or 0). meta (config.meta) gives a new save its coins
+// (meta.coins.start) and full lives. A save from before M5 has no coins field: it loads with the starting balance (the
+// same as a new player, so everyone can try each power-up once), an empty inventory, no best results and full lives.
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
@@ -17,14 +23,19 @@
   const VERSION = 1, DIFFS = ["easy", "normal", "hard"], ALL = 7;
 
   const MAXSPEED = 3;
-  function fresh() { return { v: VERSION, done: {}, gal: {}, settings: { muted: false, speed: 1, cb: false, diff: "normal" }, last: null }; }
+  const MAXCOINS = 9999999, MAXINV = 99, MAXMS = 3600000, MAXTAPS = 999, POWERS = ["ladder", "quartermaster", "scout", "recall"];
+  const whole = (v, hi) => (typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.min(hi, Math.round(v))) : 0);
+  const startCoins = (meta) => whole(meta && meta.coins && meta.coins.start, MAXCOINS), maxLives = (meta) => Math.max(1, Math.min(99, (meta && meta.livesMax) | 0 || 5));
+  function fresh(meta) { return { v: VERSION, done: {}, gal: {}, settings: { muted: false, speed: 1, cb: false, diff: "normal" }, last: null,
+    coins: startCoins(meta), inv: { ladder: 0, quartermaster: 0, scout: 0, recall: 0 }, best: {}, lives: { n: maxLives(meta), at: 0 } }; }
   const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
   const isObj = (o) => !!o && typeof o === "object" && !Array.isArray(o);
 
   // order: the level ids in play order. Unknown ids are dropped; masks are clamped to the three difficulty bits; a win
   // on a level whose predecessor has no win is dropped (and so is every win after it). gal: the Gallery's ids (v4 M4).
-  function sanitize(raw, order, gal) {
-    const s = fresh();
+  // meta: config.meta (v4 M5: the starting coins and lives).
+  function sanitize(raw, order, gal, meta) {
+    const s = fresh(meta);
     if (!isObj(raw)) return s;
     try {
       const d = isObj(raw.done) ? raw.done : {}, open = new Set();
@@ -42,8 +53,19 @@
       s.settings.speed = Number.isInteger(set.speed) && set.speed >= 1 && set.speed <= MAXSPEED ? set.speed : set.fast === true ? 2 : 1;
       s.settings.diff = DIFFS.indexOf(set.diff) >= 0 ? set.diff : "normal";
       if (typeof raw.last === "string" && open.has(raw.last)) s.last = raw.last;
+      // v4 M5: coins (an old save without the field keeps the starting balance), the inventory, best results, lives.
+      if (own(raw, "coins")) s.coins = whole(raw.coins, MAXCOINS);
+      const inv = isObj(raw.inv) ? raw.inv : {}; for (const k of POWERS) s.inv[k] = whole(inv[k], MAXINV);
+      const best = isObj(raw.best) ? raw.best : {};
+      for (const [id, mask] of Object.entries(s.done).concat(Object.entries(s.gal))) {
+        const b = own(best, id) && Array.isArray(best[id]) ? best[id] : null; if (!b) continue;
+        const row = [0, 1, 2].map((k) => (mask & (1 << k) ? whole(b[k], MAXMS) : 0)).concat([0, 1, 2].map((k) => (mask & (1 << k) ? whole(b[3 + k], MAXTAPS) : 0)), [whole(b[6], MAXCOINS)]);
+        if (row.some((v) => v > 0)) s.best[id] = row;
+      }
+      const lv = isObj(raw.lives) ? raw.lives : null;
+      if (lv) { s.lives.n = Math.min(maxLives(meta), whole(lv.n, 99)); s.lives.at = whole(lv.at, 8.64e15); }
       return s;
-    } catch (e) { return fresh(); }
+    } catch (e) { return fresh(meta); }
   }
   // Record a win on difficulty diff (in data.done, or v4 M4 a Gallery picture's in data.gal: field "gal"). Returns true if
   // it is the level's first win on any difficulty.
@@ -63,9 +85,9 @@
   }
 
   // Returns {key, store, data, write()}; neither open nor write ever throws.
-  function open(store, key, order, gal) {
-    let data = fresh();
-    try { const raw = store.getItem(key); if (raw) data = sanitize(JSON.parse(raw), order, gal); } catch (e) { data = fresh(); }
+  function open(store, key, order, gal, meta) {
+    let data = fresh(meta);
+    try { const raw = store.getItem(key); if (raw) data = sanitize(JSON.parse(raw), order, gal, meta); } catch (e) { data = fresh(meta); }
     return { key, store, data, write() { try { store.setItem(key, JSON.stringify(this.data)); return true; } catch (e) { return false; } } };
   }
 

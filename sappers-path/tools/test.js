@@ -907,5 +907,42 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
   eq([Object.keys(sg.done).length, Save.next(sg, order)], [39, "e2-40"], "save: a gap in an old save still drops every later win (levels open in order)");
 }
 
+// ---- v4 M5, the meta layer (src/meta.js) and its save fields ----------------------------------------------------------------
+{
+  const Save = require("../src/save.js"), Meta = require("../src/meta.js"), order = LEVELS.levels.map((l) => l.id), gids = require("../levels/gallery.json").levels.map((l) => l.id);
+  const prices = META.powers.map((p) => p.price), total = prices.reduce((a, b) => a + b, 0);
+  const f = Save.fresh(META);
+  eq([f.coins, f.inv, f.best, f.lives], [META.coins.start, { ladder: 0, quartermaster: 0, scout: 0, recall: 0 }, {}, { n: META.livesMax, at: 0 }], "meta save: a new save starts with " + META.coins.start + " coins, no power-ups, no best results, full lives");
+  ok(META.coins.start >= total && META.lives === false, "meta: the starting balance (" + META.coins.start + ") buys each power-up once (" + total + "); lives are off on the web");
+  // Old saves: no coins field -> the starting balance; junk is clamped or dropped.
+  const old = Save.sanitize({ done: { [order[0]]: 2 }, settings: { speed: 2 } }, order, gids, META);
+  eq([old.coins, old.inv.ladder, old.best, old.lives.n], [META.coins.start, 0, {}, META.livesMax], "meta save: a save from before M5 loads with the starting balance, an empty inventory, no best results and full lives");
+  const junk = Save.sanitize({ done: { [order[0]]: 3, [order[1]]: 1 }, gal: { [gids[0]]: 4 }, coins: 2.6e9, inv: { ladder: 3.4, scout: -2, recall: 1e9, quartermaster: "9" },
+    best: { [order[0]]: [9000, 12000, 7000, 20, 30, 40, 55], [order[1]]: [1, 2, 3, 4, 5, 6, 7], [gids[0]]: [0, 0, 4e6, 0, 0, 2000, 1], nope: [1, 1, 1, 1, 1, 1, 1], [order[2]]: [5, 5, 5, 5, 5, 5, 5] }, lives: { n: 40, at: -3 } }, order, gids, META);
+  eq([junk.coins, junk.inv, junk.best, junk.lives], [Meta.MAXCOINS, { ladder: 3, quartermaster: 0, scout: 0, recall: 99 },
+    { [order[0]]: [9000, 12000, 0, 20, 30, 0, 55], [order[1]]: [1, 0, 0, 4, 0, 0, 7], [gids[0]]: [0, 0, Meta.MAXMS, 0, 0, Meta.MAXTAPS, 1] }, { n: META.livesMax, at: 0 }],
+    "meta save: coins and inventory clamped; best kept only for difficulties won (and clamped), unknown or unwon levels dropped; lives clamped");
+  eq(Save.sanitize(JSON.parse(JSON.stringify(junk)), order, gids, META), junk, "meta save: a sanitized save reads back unchanged");
+  // Coins: per win by difficulty, more for a new medal.
+  eq(["easy", "normal", "hard"].map((d) => [Meta.winCoins(META, d, false), Meta.winCoins(META, d, true)]), ["easy", "normal", "hard"].map((d) => [META.coins.win[d], META.coins.win[d] + META.coins.first[d]]), "meta: a win earns the difficulty's coins, plus its first-clear coins on a new medal");
+  const d = Save.fresh(META), id = order[4];
+  const w1 = Meta.recordWin(d, META, id, "normal", 81234, 22, true), w2 = Meta.recordWin(d, META, id, "normal", 90000, 19, false), w3 = Meta.recordWin(d, META, id, "hard", 70000, 30, true);
+  eq([w1.coins, w1.newMs, w1.newTaps, w1.best, w2.coins, w2.newMs, w2.newTaps, w2.best, d.best[id], d.coins],
+    [30, true, true, [0, 0], 10, false, true, [81234, 22], [0, 81234, 70000, 0, 19, 30, 100], META.coins.start + 100], "meta: best time and fewest taps kept apart per difficulty, coins earned there summed");
+  // Buying: price off the balance, one in the inventory; short coins refused with what's missing.
+  const b = Save.fresh(META); b.coins = prices[0] + 5;
+  const y1 = Meta.buy(b, META, 0), y2 = Meta.buy(b, META, 0);
+  eq([y1.ok, b.inv.ladder, y2.ok, y2.short, b.coins, Meta.take(b, 0), b.inv.ladder, Meta.take(b, 0)], [true, 1, false, prices[0] - 5, 5, true, 0, false], "meta: buy spends the price into the inventory; short coins are refused and say how many are missing; take uses one");
+  // Lives (forced on in a copy of the config): a fail costs one, one back per refill period, none: no start.
+  const LM = Object.assign({}, META, { lives: true }), per = LM.livesRefillMin * 60000, L = Save.fresh(LM), t0 = 1.7e12;
+  eq([Meta.lives(L, META, t0).on, Meta.canStart(L, META, t0)], [false, true], "lives off: no count, a level always starts");
+  for (let k = 0; k < LM.livesMax; k++) Meta.loseLife(L, LM, t0 + k * 1000);
+  const z = Meta.lives(L, LM, t0 + 5000);
+  eq([z.n, Meta.canStart(L, LM, t0 + 5000), z.nextMs], [0, false, per - 5000], "lives on: " + LM.livesMax + " fails empty them; no level starts; the first comes back a refill period after the first fail");
+  eq([Meta.lives(L, LM, t0 + per).n, Meta.lives(L, LM, t0 + 3 * per + 10).n, Meta.lives(L, LM, t0 + 99 * per).n, L.lives.at], [1, 3, LM.livesMax, 0], "lives on: one back per period, up to full (then the count stops)");
+  const back = Save.fresh(LM); Meta.loseLife(back, LM, t0); eq(Meta.lives(back, LM, t0 - 60000).nextMs, per, "lives on: a clock that went back restarts the count, never runs it negative");
+  eq([Meta.clock(81234), Meta.clock(59001, true), Meta.clock(3723000)], ["1:21", "1:00", "1:02:03"], "meta: times read m:ss (h:mm:ss past an hour)");
+}
+
 console.log(pass + " passed, " + fail + " failed");
 process.exitCode = fail ? 1 : 0;
