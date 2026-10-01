@@ -184,6 +184,12 @@ body.booting #col { opacity: 0; }
   max-height: calc(80px * var(--s));
   overflow-y: auto;
 }
+.tab { position: relative; }
+.tab.has-buy::after {
+  content: ""; position: absolute; top: calc(3px * var(--s)); right: calc(6px * var(--s));
+  width: calc(2.5px * var(--s)); height: calc(2.5px * var(--s)); border-radius: 50%;
+  background: var(--gold); box-shadow: 0 0 calc(2px * var(--s)) var(--gold);
+}
 .tab-section { display: none; }
 .tab-section.active { display: block; }
 .tab-head { display: none; }

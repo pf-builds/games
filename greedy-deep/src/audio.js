@@ -152,6 +152,13 @@
     tone(1320, 1320, 0.07, "triangle", 0.09 * g);
     tone(1760, 1980, 0.12, "sine", 0.07 * g, 0.05);
   };
+  // A quiet two-note shimmer when a pickup appears (2026-09-30): audible over the drone,
+  // well under the collect cues, gated so a burst of spawns is one sound.
+  CUES.pickupSpawn = function (g) {
+    if (!gate("pickupSpawn", gt2("pickupSpawn", 400))) return;
+    tone(2093, 2093, 0.06, "sine", 0.035 * g);
+    tone(2637, 2637, 0.09, "sine", 0.03 * g, 0.06);
+  };
   CUES.chestOpen = function (g) {
     noise(0.12, 0.08 * g, 0, 900, 1.6); tone(160, 110, 0.12, "sawtooth", 0.05 * g);
     [523, 659, 784, 1047].forEach(function (f, i) { tone(f, f, 0.12, "triangle", 0.08 * g, 0.1 + i * 0.07); });

@@ -3,7 +3,7 @@
 (function () {
   "use strict";
 
-  var CONFIG_VERSION = 26;
+  var CONFIG_VERSION = 27;
 
   var UI = (window.GDUI = {});
   var E = window.GDEngine, GD = window.GD;
@@ -59,6 +59,7 @@
     els.gold = $("stat-gold");
     els.rate = $("stat-rate");
     els.depth = $("stat-depth");
+    els.depthLabel = $("stat-depth-label");
     els.canvas = $("shaft");
     els.overlay = $("dbg");
     els.hint = $("hint");
@@ -84,6 +85,7 @@
     GD.hooks.onBand = onBand;
     GD.hooks.onEnding = onEnding;
     GD.hooks.onPickupClick = onPickupClick;
+    GD.hooks.onPickupSpawn = onPickupSpawn;
 
     // Particles (from staged GDParticles)
     if (window.GDParticles) {
@@ -230,6 +232,20 @@
 
   // Pop + floater at the pickup, a log line for chests and geodes. Event-driven, so the
   // few objects made here are per click, never per frame.
+  // A soft shimmer and a ring where a pickup appears, so one that spawns while the player
+  // is reading the shop doesn't expire unseen. Never while hidden or behind an overlay
+  // (the spawn clock is stopped then anyway).
+  function onPickupSpawn(s) {
+    if (!s || overlayOpen()) return;
+    var P = cfg.pickups.palette, J = cfg.pickups.juice;
+    var col = s.kind === "gem" ? P.gem.light : (s.kind === "chest" ? P.chest.band : P.geode.crystalLit);
+    if (particleSystem && window.GDRender) {
+      var sy = window.GDRender.pickupScreenY(s.yBu);
+      particleSystem.ring(s.xBu, sy, col, J.ringR0, J.spawnRingR1 || 14, J.spawnRingLife || 0.6);
+    }
+    if (window.GDAudio && !GD.state.prefs.muted) window.GDAudio.play("pickupSpawn");
+  }
+
   function onPickupClick(res) {
     var pk = cfg.pickups, J = pk.juice, P = pk.palette;
     var bx = res.xBu, by = window.GDRender.pickupScreenY(res.yBu);
@@ -375,9 +391,18 @@
       var tabletShaft = Math.floor(vh / s) - L.topBarBu - L.rosterHeightBu - L.tabBarHeightBu;
       cfg.layout._liveShaftBu = Math.max(180, Math.min(L.shaftBu, tabletShaft));
     } else {
-      cfg.layout._liveShaftBu = L.shaftBu;
+      // Phone: the shaft gives up height (down to phoneShaftMinBu) so the shop under the
+      // tab bar keeps phoneShopMinBu, about three rows, instead of a row and a half.
+      var phoneShaft = Math.floor(vh / s) - L.topBarBu - L.rosterHeightBu - L.tabBarHeightBu - (L.phoneShopMinBu || 0);
+      cfg.layout._liveShaftBu = Math.max(L.phoneShaftMinBu || L.shaftBu, Math.min(L.shaftBu, phoneShaft));
     }
 
+    // Phone: the shop panel takes whatever height is left under the tab bar (its CSS cap
+    // is the 80 bu panel). Tablet and desktop keep the stylesheet value.
+    if (els.tabpanel) {
+      var phoneLeft = vh - (L.topBarBu + cfg.layout._liveShaftBu + L.rosterHeightBu + L.tabBarHeightBu) * s;
+      els.tabpanel.style.maxHeight = (!isDesktop && vw < 600 && phoneLeft > L.panelHeightBu * s) ? Math.floor(phoneLeft) + "px" : "";
+    }
     window.GDRender.resize(s, cfg.layout._liveShaftBu);
     drawLogo(s);
     placeHint();
@@ -1029,7 +1054,13 @@
       displayGold = st.gold;
     }
     els.gold.textContent = GD.format(displayGold);
-    els.rate.textContent = (d.goldRate > 0 ? "+" + GD.format(d.goldRate) : "+0") + "/s";
+    var inc = GD.incomeRate();
+    els.rate.textContent = (inc > 0 ? "+" + GD.format(inc) : "+0") + "/s";
+    // The goal sits on the HUD until the ending has been seen.
+    if (els.depthLabel) {
+      var goalTxt = cfg.milestone && !st.endingSeen ? "DEPTH / " + Math.round(cfg.milestone.depth).toLocaleString("en-US") + " M" : "DEPTH";
+      if (els.depthLabel.textContent !== goalTxt) els.depthLabel.textContent = goalTxt;
+    }
     // Compact depth: use km for large depths, formatted number for very large
     if (st.depth >= 10000) {
       els.depth.textContent = GD.format(st.depth / 1000) + " km";
@@ -1079,6 +1110,16 @@
           var eta = GD.etaFor(r.p.id);
           r.eta.textContent = isFinite(eta) ? E.formatEta(eta) : "—";
         }
+      }
+    }
+    // Badge a tab when something in it is buyable and the player isn't looking at it.
+    if (els.tabbar) {
+      var buyTabs = {};
+      for (var bt = 0; bt < rows.length; bt++) if (rows[bt].el.classList.contains("buyable")) buyTabs[rows[bt].tab] = true;
+      var tabBtns = els.tabbar.querySelectorAll(".tab");
+      for (var tb = 0; tb < tabBtns.length; tb++) {
+        var tid = tabBtns[tb].getAttribute("data-tab");
+        tabBtns[tb].classList.toggle("has-buy", !!buyTabs[tid] && !tabBtns[tb].classList.contains("active"));
       }
     }
     renderNextBands(d);

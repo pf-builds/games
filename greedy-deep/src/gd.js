@@ -168,6 +168,14 @@
 
   // ETA for a locked row: (cost - gold) / goldRate at the current passive rate.
   // Returns Infinity while goldRate is 0 so the UI can print the em dash.
+  // What the player is actually earning per second: crew income, or the ~30 s rolling
+  // real-earnings rate (taps + crew) through the all-gold buff when that is higher. The
+  // INCOME readout and every ETA use this one number.
+  GD.incomeRate = function () {
+    var d = E.derive(GD.config, GD.state);
+    return Math.max(d.goldRate, (GD.state.earnRate > 0 ? GD.state.earnRate : 0) * d.goldAllMul);
+  };
+
   GD.etaFor = function (id) {
     var cost = GD.costOf(id);
     var gold = GD.state.gold;
@@ -175,8 +183,7 @@
     // Real earnings (taps + crew, the ~30 s rolling rate) when that beats crew income, so a
     // tapper sees seconds, not "24m". The rolling rate decays smoothly toward crew income
     // when tapping stops, and never drops below it, so the ETA never blanks or flickers.
-    var d = E.derive(GD.config, GD.state);
-    var rate = Math.max(d.goldRate, (GD.state.earnRate > 0 ? GD.state.earnRate : 0) * d.goldAllMul);
+    var rate = GD.incomeRate();
     if (!(rate > 1e-9)) return Infinity;
     return (cost - gold) / rate;
   };
@@ -734,7 +741,10 @@
       // --- reveal: at depth d, ore renders through band d+1+revealBonus and no further
       if (window.GDRender && window.GDRender.bandPlan) {
         var revealBad = [];
-        var probes = [0, 39, 41, 179, 181, 599, 601, 1199, 1500];
+        // Probes straddle every seam in the JSON, so a retune of band depths keeps them honest.
+        var probes = [0, 1500];
+        for (var po = 1; po < cfg.ores.length; po++) probes.push(cfg.ores[po].startDepth - 1, cfg.ores[po].startDepth + 1);
+        probes.push(cfg.milestone.depth - 1);
         for (var ri = 0; ri < probes.length; ri++) {
           for (var rb = 0; rb <= 3; rb++) {
             var plan = window.GDRender.bandPlan(probes[ri], rb);
@@ -743,10 +753,11 @@
         }
         check("m2_reveal_never_past_cutoff", "maxIndex <= currentIndex + 1 + revealBonus", revealBad.join(" | "), revealBad.length === 0);
         // and the tease IS drawn: standing just above a seam, the next band is in the plan
-        var teasePlan = window.GDRender.bandPlan(38, 0);
+        var teaseD = cfg.ores[1].startDepth - 2;
+        var teasePlan = window.GDRender.bandPlan(teaseD, 0);
         check("m2_next_band_teased_above_seam", "band index 1 in the plan", JSON.stringify(teasePlan.indices),
           teasePlan.indices.indexOf(1) !== -1 && teasePlan.cutoffIndex === 1);
-        var veiled = window.GDRender.bandPlan(38, 0).veiledIndices;
+        var veiled = window.GDRender.bandPlan(teaseD, 0).veiledIndices;
         check("m2_next_band_is_veiled", "[1]", JSON.stringify(veiled), veiled.length === 1 && veiled[0] === 1);
 
         // --- Deep Lantern must be observable the moment it is bought, at EVERY depth,
@@ -2015,6 +2026,56 @@
       }
       check("p1_shop_rows_readable", "no inline tips, name column >= 40 px", tipBad.slice(0, 4).join(" | ") || tipRows.length + " rows ok",
         tipRows.length > 0 && tipBad.length === 0);
+
+      // --- Phase 1 week 2 (2026-09-30)
+      check("p1_gold_mul_labelled_crew_gold", "+12% crew gold", E.effectDesc([{ verb: "mul_gold", value: 1.12 }]),
+        E.effectDesc([{ verb: "mul_gold", value: 1.12 }]) === "+12% crew gold");
+      D.reset();
+      D.grantForTest("dorrik", 2);
+      GD.state.earnRate = 1000;
+      var dInc = GD.derive();
+      check("p1_income_is_real_earnings", 1000 * dInc.goldAllMul, GD.incomeRate(), approx(GD.incomeRate(), 1000 * dInc.goldAllMul, 1e-9));
+      GD.state.earnRate = 0;
+      check("p1_income_floors_at_crew", dInc.goldRate, GD.incomeRate(), approx(GD.incomeRate(), dInc.goldRate, 1e-12));
+      if (window.GDUI && window.GDUI.refresh) {
+        var lblEl = document.getElementById("stat-depth-label"), tabCrew = document.querySelector('#tabbar .tab[data-tab="crew"]');
+        D.reset();
+        GD.state.gold = 1e6;
+        window.GDUI.refresh();
+        var badgeOn = !!tabCrew && (tabCrew.classList.contains("active") || tabCrew.classList.contains("has-buy"));
+        GD.state.gold = 0;
+        window.GDUI.refresh();
+        var badgeOff = !!tabCrew && !tabCrew.classList.contains("has-buy");
+        check("p1_tab_badge_when_buyable", "on with gold, off without", badgeOn + "/" + badgeOff, badgeOn && badgeOff);
+        var goalShown = lblEl ? lblEl.textContent : "";
+        GD.state.endingSeen = true;
+        window.GDUI.refresh();
+        var goalAfter = lblEl ? lblEl.textContent : "";
+        check("p1_goal_on_hud_until_ending", "DEPTH / 1,200 M, then DEPTH", goalShown + " -> " + goalAfter,
+          goalShown.indexOf(Math.round(cfg.milestone.depth).toLocaleString("en-US")) !== -1 && goalAfter === "DEPTH");
+      }
+      if (liveHooks.onPickupSpawn && window.GDAudio) {
+        D.reset();
+        GD.state.prefs.muted = false;
+        window.GDAudio.setMuted(false);
+        GD.pickups = E.newPickupField(cfg);
+        var spS = E.pickupById(GD.pickups, D.spawnPickup("gem").id);
+        window.GDAudio.lastCue = null;
+        liveHooks.onPickupSpawn(spS);
+        check("p1_pickup_spawn_cue", "pickupSpawn", window.GDAudio.lastCue, window.GDAudio.lastCue === "pickupSpawn");
+      }
+      if (window.innerWidth < 600 && window.innerHeight >= 800 && document.getElementById("tabpanel")) {
+        var tpR = document.getElementById("tabpanel").getBoundingClientRect();
+        var rowH = 0, rowsP = document.querySelectorAll("#tabpanel .tab-section.active .row");
+        for (var rp = 0; rp < rowsP.length; rp++) if (rowsP[rp].offsetHeight) { rowH = rowsP[rp].offsetHeight; break; }
+        var qbH = document.getElementById("qty-bar") ? document.getElementById("qty-bar").offsetHeight : 0;
+        // Room, not content (the DIG tab only has two rows): from the panel top to the lower
+        // of its max-height and the viewport, less the quantity bar.
+        var tpMax = parseFloat(getComputedStyle(document.getElementById("tabpanel")).maxHeight) || 0;
+        var fit = rowH ? Math.min(tpR.top + tpMax, window.innerHeight) - tpR.top - qbH : 0;
+        check("p1_phone_shop_shows_three_rows", ">= 3 rows of room", rowH ? (fit / rowH).toFixed(2) + " rows" : "no rows",
+          rowH > 0 && fit / rowH >= 3);
+      }
 
       // --- console clean (last, so it counts everything above)
       if (!opts.skipConsoleCheck) {
