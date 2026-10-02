@@ -1,0 +1,123 @@
+{
+ "ms": 19708,
+ "levels": 164,
+ "cov": {
+  "why": {
+   "3:emptySpace": 4624,
+   "1:notInColumn": 2570,
+   "0:perLevel": 7422,
+   "2:noneHidden": 8504,
+   "3:sappersOut": 1790,
+   "3:badSpace": 1485,
+   "1:isFront": 2709,
+   "3:perLevel": 738,
+   "1:perLevel": 593,
+   "1:tooDeep": 1286,
+   "2:perLevel": 1359,
+   "3:linked": 70
+  },
+  "endNoplay": 15744,
+  "endNoplayBad": 0,
+  "games": 8364,
+  "byKind": {
+   "stored": 492,
+   "patient": 1968,
+   "rushed": 1968,
+   "patient+power": 1968,
+   "rushed+power": 1968
+  },
+  "ops": {
+   "taken": [
+    3283,
+    3756,
+    654,
+    1796
+   ],
+   "refused": [
+    7422,
+    7158,
+    9863,
+    8707
+   ],
+   "noplay": [
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  "refusedChecked": 33150,
+  "refusedChanged": 0,
+  "canPowerDisagree": 0,
+  "hiddenChecks": 2464157,
+  "outcomes": {
+   "1/": 4305,
+   "-1/jam": 3874,
+   "-1/short": 185
+  },
+  "jamWhy": {
+   "0": 3456,
+   "1": 3,
+   "2": 412,
+   "3": 3
+  },
+  "killGames": 185,
+  "unlockGames": 268,
+  "gradeChecks": 480,
+  "maxWait": {
+   "n": 160,
+   "diff": []
+  }
+ },
+ "gradeBad": [],
+ "fmt": [],
+ "park": [
+  "e1-03 easy before tap 2: 1 squads waiting, biggest 12",
+  "e1-03 easy before tap 3: 1 squads waiting, biggest 12",
+  "e1-03 easy before tap 4: 1 squads waiting, biggest 12",
+  "e1-03 easy before tap 6: 1 squads waiting, biggest 20",
+  "e1-03 easy before tap 7: 1 squads waiting, biggest 20",
+  "e1-03 normal before tap 2: 1 squads waiting, biggest 12",
+  "e1-03 normal before tap 3: 1 squads waiting, biggest 12",
+  "e1-03 normal before tap 4: 1 squads waiting, biggest 12",
+  "e1-03 normal before tap 6: 1 squads waiting, biggest 20",
+  "e1-03 normal before tap 7: 1 squads waiting, biggest 20",
+  "e1-03 hard before tap 2: 1 squads waiting, biggest 12",
+  "e1-03 hard before tap 3: 1 squads waiting, biggest 12",
+  "e1-03 hard before tap 4: 1 squads waiting, biggest 12",
+  "e1-03 hard before tap 6: 1 squads waiting, biggest 20",
+  "e1-03 hard before tap 7: 1 squads waiting, biggest 20",
+  "e4-94 easy before tap 6: 1 squads waiting, biggest 1, a tower stands",
+  "e4-94 normal before tap 6: 1 squads waiting, biggest 1, a tower stands",
+  "e4-94 hard before tap 6: 1 squads waiting, biggest 1, a tower stands",
+  "v4-locked easy before tap 7: 1 squads waiting, biggest 23",
+  "v4-locked easy before tap 8: 2 squads waiting, biggest 23",
+  "v4-locked easy before tap 9: 3 squads waiting, biggest 23",
+  "v4-locked easy before tap 10: 4 squads waiting, biggest 23",
+  "v4-locked easy before tap 11: 5 squads waiting, biggest 23",
+  "v4-locked normal before tap 7: 1 squads waiting, biggest 23",
+  "v4-locked normal before tap 8: 2 squads waiting, biggest 23",
+  "v4-locked normal before tap 9: 3 squads waiting, biggest 23",
+  "v4-locked normal before tap 10: 4 squads waiting, biggest 23",
+  "v4-locked hard before tap 9: 3 squads waiting, biggest 8",
+  "g-tw-1f43c easy before tap 14: 2 squads waiting, biggest 7",
+  "g-tw-1f43c easy before tap 15: 2 squads waiting, biggest 7",
+  "g-tw-1f43c easy before tap 16: 2 squads waiting, biggest 7",
+  "g-tw-1f43c easy before tap 17: 2 squads waiting, biggest 7",
+  "g-tw-1f43c normal before tap 14: 2 squads waiting, biggest 7",
+  "g-tw-1f43c normal before tap 15: 2 squads waiting, biggest 7",
+  "g-tw-1f43c normal before tap 16: 2 squads waiting, biggest 7",
+  "g-tw-1f43c normal before tap 17: 2 squads waiting, biggest 7",
+  "g-tw-1f43c hard before tap 14: 2 squads waiting, biggest 7",
+  "g-tw-1f43c hard before tap 15: 2 squads waiting, biggest 7",
+  "g-tw-1f43c hard before tap 16: 2 squads waiting, biggest 7",
+  "g-tw-1f43c hard before tap 17: 2 squads waiting, biggest 7",
+  "g-met-436530 easy before tap 12: 3 squads waiting, biggest 4",
+  "g-met-436530 easy before tap 13: 3 squads waiting, biggest 3",
+  "g-met-436530 normal before tap 12: 3 squads waiting, biggest 4",
+  "g-met-436530 normal before tap 13: 3 squads waiting, biggest 3",
+  "g-met-436530 hard before tap 12: 3 squads waiting, biggest 4",
+  "g-met-436530 hard before tap 13: 3 squads waiting, biggest 3"
+ ],
+ "mism": []
+}

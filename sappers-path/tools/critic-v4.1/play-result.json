@@ -1,0 +1,94 @@
+{
+ "375x812 e2-26 (moat)": {
+  "pass": true,
+  "info": {
+   "win": "won | Fort razed!",
+   "runner": {
+    "runners": 1,
+    "sides": null
+   },
+   "cs": 14.5,
+   "loss": "failed/jam | Line jammed: Black, Timber, Earth and 1 more can't reach a block.",
+   "refused": "1 refused, plays 5->5, toast \"No space: wait for a squad to come home\"",
+   "power": "Ladder open 5->6; QM col 0: \"12 7 9\" -> \"7 12 9\"; inv {\"ladder\":0,\"quartermaster\":0,\"scout\":1,\"recall\":1} used [1,1,0,0]"
+  }
+ },
+ "375x812 e3-52 (towered castle)": {
+  "pass": true,
+  "info": {
+   "win": "won | Fort razed!",
+   "runner": {
+    "runners": 17,
+    "sides": null
+   },
+   "cs": 14,
+   "loss": "failed/jam | Line jammed: Ashlar, Stone and Black can't reach a block.",
+   "refused": "1 refused, plays 5->5, toast \"No space: wait for a squad to come home\"",
+   "power": "Ladder open 5->6; QM col 0: \"18 5 4 ?\" -> \"5 18 4 ?\"; inv {\"ladder\":0,\"quartermaster\":0,\"scout\":1,\"recall\":1} used [1,1,0,0]"
+  }
+ },
+ "375x812 g-tw-1f355 (Gallery)": {
+  "pass": true,
+  "info": {
+   "win": "won | Picture complete!",
+   "runner": {
+    "runners": 24,
+    "sides": null
+   },
+   "cs": 15,
+   "loss": "failed/jam | Line jammed: Red and Yellow can't reach a block.",
+   "refused": "1 refused, plays 5->5, toast \"No space: wait for a squad to come home\"",
+   "power": "Ladder open 5->6; QM col 1: \"27 48 48\" -> \"48 27 48\"; inv {\"ladder\":0,\"quartermaster\":0,\"scout\":1,\"recall\":1} used [1,1,0,0]"
+  }
+ },
+ "SP.selfTest()": {
+  "pass": true,
+  "info": "pass 1017 fail [] in 3537 ms"
+ },
+ "iframe400x600 e2-26 (moat)": {
+  "pass": true,
+  "info": {
+   "win": "won | Fort razed!",
+   "runner": {
+    "runners": 1,
+    "sides": null
+   },
+   "cs": 12,
+   "loss": "failed/jam | Line jammed: Black, Timber, Earth and 1 more can't reach a block.",
+   "refused": "1 refused, plays 5->5, toast \"No space: wait for a squad to come home\"",
+   "power": "Ladder open 5->6; QM col 0: \"12 7\" -> \"7 12\"; inv {\"ladder\":0,\"quartermaster\":0,\"scout\":1,\"recall\":1} used [1,1,0,0]"
+  }
+ },
+ "iframe400x600 e3-52 (towered castle)": {
+  "pass": true,
+  "info": {
+   "win": "won | Fort razed!",
+   "runner": {
+    "runners": 17,
+    "sides": null
+   },
+   "cs": 12,
+   "loss": "failed/jam | Line jammed: Ashlar, Stone and Black can't reach a block.",
+   "refused": "1 refused, plays 5->5, toast \"No space: wait for a squad to come home\"",
+   "power": "Ladder open 5->6; QM col 0: \"18 5\" -> \"5 18\"; inv {\"ladder\":0,\"quartermaster\":0,\"scout\":1,\"recall\":1} used [1,1,0,0]"
+  }
+ },
+ "iframe400x600 g-tw-1f355 (Gallery)": {
+  "pass": true,
+  "info": {
+   "win": "won | Picture complete!",
+   "runner": {
+    "runners": 24,
+    "sides": null
+   },
+   "cs": 13,
+   "loss": "failed/jam | Line jammed: Red and Yellow can't reach a block.",
+   "refused": "1 refused, plays 5->5, toast \"No space: wait for a squad to come home\"",
+   "power": "Ladder open 5->6; QM col 1: \"27 48\" -> \"48 27\"; inv {\"ladder\":0,\"quartermaster\":0,\"scout\":1,\"recall\":1} used [1,1,0,0]"
+  }
+ },
+ "zero console errors/warnings": {
+  "pass": true,
+  "info": []
+ }
+}
