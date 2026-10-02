@@ -55,9 +55,9 @@ const SPECS = [
   { n: 62, era: 3, name: "Linked Squads", teaches: "linked", hint: "Linked squads go out together and need 2 free spaces; both stay taken until both squads are home.",
     gen: { w: [17, 17], h: [22, 22], towers: [2, 2] }, colours: 9, pairs: [1], minRate: 0.5, maxMs: 160000 },
   { n: 76, era: 4, name: "The Locked Space", teaches: "lock", hint: "One space starts locked. Its key is a gold block on the board: dig it out and send the Looters.",
-    gen: { w: [18, 18], h: [25, 25], towersOut: [2, 2], towersIn: [0, 0] }, colours: 9, lock: true, minRate: 0.5, maxMs: 200000 },
+    gen: { w: [20, 20], h: [23, 23], towersOut: [2, 2], towersIn: [0, 0] }, colours: 9, lock: true, minRate: 0.5, maxMs: 200000 },
   { n: 77, era: 4, name: "All at Once", teaches: "mixed", hint: "Gates, archers, ? squads, linked squads and a locked space, all in one castle.",
-    gen: { w: [18, 18], h: [26, 26], towersOut: [2, 2], towersIn: [2, 2] }, colours: 10, lock: true, pairs: [2], flags: [[0, 1], [4, 1]], minRate: 0.3, maxMs: 230000 },
+    gen: { w: [21, 21], h: [24, 24], towersOut: [2, 2], towersIn: [2, 2] }, colours: 10, lock: true, pairs: [2], flags: [[0, 1], [4, 1]], minRate: 0.3, maxMs: 230000 },
 ];
 const DEAL = { hold: 4, size: [14, 36], deep: 0, finish: 0.4, maxCard: 60, maxCards: 120, tries: 14, maxTaps: 26, maxWaitMs: C.maxWaitMs, shrink: 0.5, shrinks: 5, park: 1, parkMax: C.deal.parkMax, noParkUnderArchers: true };
 
@@ -124,7 +124,7 @@ function build(spec) {
   const why = {};
   for (let s = 1; s <= 600; s++) {
     const seed = (C.seed ^ Math.imul(spec.n + 1, 0x9E3779B1) ^ Math.imul(s, 0x85EBCA77)) | 0;
-    const L = G.fort(spec.era, seed, Object.assign({}, C.eras[spec.era].gen, spec.gen, { colours: spec.colours }), C.picture); if (!L) continue;
+    const L = G.fort(spec.era, seed, Object.assign({}, C.eras[spec.era].gen, { scene: "day" }, spec.gen, { colours: spec.colours }), C.picture); // v4.1 fix: lessons by day if (!L) continue;
     delete L.roles;
     if ((spec.era === 2 || spec.era === 4) && !(L.gates && L.gates.length)) continue;
     if (spec.lock && !G.lockKey(L, seed)) continue;

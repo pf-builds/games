@@ -17,6 +17,11 @@
 // report tables are written between the bake markers of tools/v4.1-rebake.md. `--out DIR` writes levels.json, the
 // pools and the report into DIR instead (a trial bake that leaves the tracked files alone); `--only A-B` bakes only
 // those levels (a trial: the file holds just them); `--teach FILE` reads the teaching levels from FILE.
+// v4.1 fix, the variety gate (config variety; tools/variety.js): within an era, how alike two castle pictures are is the
+// share of a cols x rows grid of picture cells whose colours match. A candidate meeting every target is picked only if
+// its median match against the era's earlier generated picks is variety.maxMedian or under; when none is, the least alike
+// of those meeting every target is picked and logged ("variety"). After the picks the bake reports each era's median over
+// every pair and its most alike pair, and logs VARIETY GATE FAILED for an era whose median is over variety.maxMedian.
 "use strict";
 const fs = require("fs");
 const path = require("path");
@@ -26,6 +31,7 @@ const E = require("../src/engine.js");
 const G = require("./gen.js");
 const R = require("./grade.js");
 const PAL = require("./palette.js");
+const VAR = require("./variety.js");
 
 const ROOT = path.join(__dirname, "..");
 const arg = (k) => { const i = process.argv.indexOf("--" + k); return i > 0 && process.argv[i + 1] ? process.argv[i + 1] : null; };
@@ -230,7 +236,7 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
   for (const r of results) for (const k of Object.keys(tot)) tot[k] += (r.stats && r.stats[k]) || 0;
   const t1 = Date.now();
 
-  const levels = [], fallbacks = [], lookMiss = [], pools = { 1: [], 2: [], 3: [], 4: [] }, DU = C.duration;
+  const levels = [], fallbacks = [], lookMiss = [], varMiss = [], pools = { 1: [], 2: [], 3: [], 4: [] }, DU = C.duration, VC = C.variety, maps = { 1: [], 2: [], 3: [], 4: [] };
   for (let n = 1; n <= C.levels; n++) {
     if (!inRun(n)) continue;
     const b = bandOf(n, C), era = eraOf(n, C), id = "e" + era + "-" + String(n).padStart(2, "0");
@@ -256,12 +262,15 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
     ok.sort((p, q) => (p.miss > 0) - (q.miss > 0) || (dmiss(p) > 0) - (dmiss(q) > 0) || (wmiss(p) > 0) - (wmiss(q) > 0) || fbad(p) - fbad(q) || twMiss(p) - twMiss(q) || p.miss - q.miss || dmiss(p) - dmiss(q) || wmiss(p) - wmiss(q)
       || over(p) - over(q) || (over(p) ? p.grade.normal.greedy - q.grade.normal.greedy : 0) || Math.abs(p.grade.normal.rate - mid) - Math.abs(q.grade.normal.rate - mid) || p.k - q.k);
     const good = (c) => c.miss === 0 && !dmiss(c) && !wmiss(c) && !fbad(c) && !twMiss(c) && !over(c);
+    const alike = (c) => { if (c.alike == null) { const m = VAR.mapOf(c.level, VC); c.map = m; c.alike = maps[era].length ? med(maps[era].map((q) => VAR.match(m, q))) : 0; } return c.alike; };
     // When no candidate meets every target, the fallback is the one that misses least overall (C.penalty: a band miss of
     // 1 point, 30 s of duration, 3 s of dead time, a fast-tapper flag, a missing pair or 25 points of lookahead over its
     // target each count about 1), so a few seconds over the time limit never outweighs a lookahead of 99%.
     const PN = C.penalty, pen = (c) => PN.band * c.miss + dmiss(c) / PN.durationMs + wmiss(c) / PN.waitMs + PN.fast * fbad(c) + PN.pairs * twMiss(c) + (over(c) ? (c.grade.normal.greedy - lookT0) / PN.lookahead : 0);
     let pickC = null, why = null;
-    for (const c of ok) { if (!good(c)) break; if (!levels.some((L) => nearDup(L, c.level, C.dedupe.sameCells))) { pickC = c; break; } }
+    for (const c of ok) { if (!good(c)) break; if (alike(c) <= VC.maxMedian && !levels.some((L) => nearDup(L, c.level, C.dedupe.sameCells))) { pickC = c; break; } }
+    if (!pickC) { const gv = ok.filter((c) => good(c) && !levels.some((L) => nearDup(L, c.level, C.dedupe.sameCells))).sort((p, q) => alike(p) - alike(q) || p.k - q.k);
+      if (gv.length) { pickC = gv[0]; varMiss.push({ n, alike: +alike(pickC).toFixed(3) }); say("level " + n + ": variety, the least alike candidate meeting every target is " + pct(alike(pickC)) + " alike its era's earlier picks (median; target " + pct(VC.maxMedian) + ")"); } }
     if (!pickC) {
       const rest = ok.filter((c) => !levels.some((L) => nearDup(L, c.level, C.dedupe.sameCells))).sort((p, q) => pen(p) - pen(q) || p.k - q.k);
       pickC = rest[0] || ok[0] || null;
@@ -282,6 +291,7 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
     const lookT = lookT0, look = pickC.grade.normal.greedy;
     if (lookT != null && look > lookT) { lookMiss.push({ n, sub: b.sub, look }); say("level " + n + ": lookahead fallback, " + pct(look) + " over the " + pct(lookT) + " target (" + ok.filter((c) => c.miss === 0).length + " in-band candidates)"); }
     levels.push(Object.assign({ id, n, era, source: "gen", seed: pickC.seed, band: b.sub, target: b.band, twists: tw }, pickC.level, { win: pickC.win, grade: pickC.grade, inBand: pickC.miss === 0 }, why ? { fallback: why } : {}));
+    maps[era].push(pickC.map || VAR.mapOf(pickC.level, VC));
   }
   say("bake: " + levels.length + " levels picked in " + ((t1 - t0) / 1000).toFixed(1) + " s; forts " + tot.forts + ", deals " + tot.deals + ", tune evaluations " + tot.evals + ", full grades " + tot.grades + " (x3 difficulties)");
 
@@ -303,8 +313,10 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
   { const ms = gen.map((l) => l.grade.normal.ms).filter((x) => x != null), all = levels.map((l) => l.grade.normal.ms).filter((x) => x != null), early = gen.filter((l) => l.n <= DU.earlyTo).map((l) => l.grade.normal.ms);
     if (ms.length) say("bake: patient play-through on the stored Normal line at 1x (generated levels): median " + secs(med(ms)) + ", max " + secs(Math.max(...ms)) + (early.length ? "; early " + secs(Math.min(...early)) + "-" + secs(Math.max(...early)) : "") + "; all levels median " + secs(med(all)) + ", " + secs(Math.min(...all)) + "-" + secs(Math.max(...all)));
     const w = levels.map((l) => l.grade.normal.maxWait).filter((x) => x != null); if (w.length) say("bake: longest single tap on the stored Normal line: median " + secs(med(w)) + ", max " + secs(Math.max(...w)) + " (cap " + C.maxWaitMs / 1000 + " s)"); }
+  const variety = VAR.eraReport(levels, VC);
+  for (const e of Object.keys(variety)) { const v = variety[e]; say("bake: variety, era " + e + ": median match " + pct(v.median) + " over " + v.n + " generated pictures (gate " + pct(VC.maxMedian) + (v.median > VC.maxMedian ? ": VARIETY GATE FAILED" : "") + "), most alike " + v.worst.a + " and " + v.worst.b + " at " + pct(v.worst.m)); }
   say("bake: taps per level: max " + Math.max(...levels.map((l) => l.win.normal ? l.win.normal.length : 0)) + " (cap " + C.maxTaps + "), median " + med(levels.map((l) => (l.win.normal ? l.win.normal.length : 0))) + "; cards max " + Math.max(...levels.map((l) => l.grade.cards)));
-  const out = { version: C.version, bake: { config: C.version, seed: C.seed, time: CFG.v3.time, forts: tot.forts, deals: tot.deals, tuneEvals: tot.evals, fullGrades: tot.grades, seconds: +secsAll.toFixed(1), fallbacks, lookaheadFallbacks: lookMiss }, levels };
+  const out = { version: C.version, bake: { config: C.version, seed: C.seed, time: CFG.v3.time, forts: tot.forts, deals: tot.deals, tuneEvals: tot.evals, fullGrades: tot.grades, seconds: +secsAll.toFixed(1), fallbacks, lookaheadFallbacks: lookMiss, variety, varietyMisses: varMiss }, levels };
   try {
     if (OUT) fs.mkdirSync(OUT, { recursive: true });
     writeAtomic(outPath("levels/levels.json"), JSON.stringify(out));
@@ -324,6 +336,8 @@ function writeReport(out, C, log) {
     const gen = ls.filter((l) => !l.exempt), rs = ls.map((l) => l.grade.normal.rate), t = ls[0].target;
     rows.push(`| ${kind} ${pct(t[0])}-${pct(t[1])} | ${ls.length} | ${gen.filter((l) => l.inBand).length}/${gen.length} | ${ls.length - gen.length} | ${pct(Math.min(...rs))} | ${pct(med(rs))} | ${pct(Math.max(...rs))} |`);
   }
+  if (out.bake.variety) { rows.push("", "### Variety (picture cells matching within an era; gate " + pct(C.variety.maxMedian) + ")", "", "| Era | Generated pictures | Median match | 10th percentile | Most alike pair |", "|---|---|---|---|---|");
+    for (const e of Object.keys(out.bake.variety)) { const v = out.bake.variety[e]; rows.push(`| ${e} | ${v.n} | ${pct(v.median)}${v.median > C.variety.maxMedian ? " (over)" : ""} | ${pct(v.p10)} | ${v.worst.a} and ${v.worst.b}, ${pct(v.worst.m)} |`); } }
   rows.push("", "### Every level", "", "Normal random = the random-tap rate (" + C.grade.playouts + " games); lookahead = the one-move-lookahead player (" + C.grade.greedyPlayouts + "); fast = the fast tapper (" + C.fast.games + ", from level " + C.fast.from + "); ? planner = the sampling planner honest / all-seeing (" + C.mystery.games + " games); time and longest tap = patient play on the stored Normal line at 1x; ΔE = the smallest CIEDE2000 between two colours standing in the level.", "",
     "| # | Era | Band | Twists | Board | Pixels | Colours | Min ΔE00 | Taps (cards) | Normal random | Easy | Hard | Lookahead | Fast | ? planner | Time | Longest tap | Note |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|");
   for (const l of L) {

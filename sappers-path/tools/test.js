@@ -327,6 +327,13 @@ const ARCH = (cols) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "
   ok(dmin >= Q.minDE - 0.05 && fmin >= Q.fadeDE - 0.05, "pictures: every pair of a level's card colours is " + Q.minDE + " apart (smallest " + dmin.toFixed(1) + ", " + at + ") and " + Q.fadeDE + " apart with one faded to a queue row (smallest " + fmin.toFixed(1) + ")");
 }
 
+// v4.1 fix: within an era the castle pictures differ (tools/variety.js; bake-config variety): over every pair of an era's
+// generated pictures, the median share of sampled picture cells whose colours match is variety.maxMedian or under.
+{
+  const VAR = require("./variety.js"), VC = require("./bake-config.json").variety, R = VAR.eraReport(LEVELS.levels, VC);
+  ok(Object.keys(R).length === 4 && Object.values(R).every((v) => v.median <= VC.maxMedian), "variety: every era's median picture-cell match is " + VC.maxMedian + " or under (" + Object.keys(R).map((e) => "era " + e + " " + R[e].median).join(", ") + ")");
+}
+
 // ==== v4 M2: the twists (mystery cards, linked squads, the locked space) =================================================
 // Events of one type since the log was cleared, as [a, b].
 const evs = (S, type) => { const o = []; for (let i = 0; i < S.evLen; i += 3) if (S.ev[i] === type) o.push([S.ev[i + 1], S.ev[i + 2]]); return o; };

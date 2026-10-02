@@ -7,6 +7,11 @@
 //                                                                  from PLAN below); prints the best one found
 //   --md '["#..", ...]'  a markdown before/after report: the argument is the BEFORE palette, config.json is AFTER
 //   --levels FILE        read the levels from FILE instead of levels/levels.json (v4 M3: a trial bake's output)
+//   --scenes             v4.1 fix: the castle pictures' scenes (tools/bake-config.json picture.scenes): for each scene and
+//                        each era it serves, every pair of roles that can stand together in that era's pictures (must and
+//                        opt, less the scene's drop, with the black outline and the gilt keys), in the scene's colours,
+//                        must be picture.minDE apart in CIEDE2000 and picture.fadeDE with one faded (tools/pic.js), and
+//                        no two roles may share a name; exits 1 when one isn't
 // Deterministic (seeded). Levels are only read. v4 M3: require()d, it exports the colour maths (lab, de00) and minPair
 // (the smallest pair among a level's materials) and reads no levels.
 "use strict";
@@ -52,7 +57,20 @@ function minPair(mats, pal) {
   for (let i = 0; i < mats.length; i++) for (let j = i + 1; j < mats.length; j++) { const d = de00(lab(P[mats[i]]), lab(P[mats[j]])); if (d < min) { min = d; at = [mats[i], mats[j]]; } }
   return { min: at ? min : null, at };
 }
-if (require.main !== module) { module.exports = { lab, de00, minPair }; return; }
+module.exports = { lab, de00, minPair }; // (set first: --scenes requires tools/pic.js, which requires this file)
+if (require.main !== module) return;
+
+if (process.argv.includes("--scenes")) {
+  const PIC = require("./pic.js"), Q = require("./bake-config.json").picture, gilt = V3.mats[require("../src/engine.js").GILT].c; let bad = 0;
+  for (const [k, S] of Object.entries(Q.scenes)) for (const e of S.eras) {
+    const roles = ["ink", "gilt"].concat(Q.eras[e].must, Q.eras[e].opt).filter((x, i, a) => a.indexOf(x) === i && (S.drop || []).indexOf(x) < 0);
+    const col = (x) => (x === "ink" ? Q.ink : x === "gilt" ? gilt : (S.c && S.c[x]) || Q.roles[x].c[0]), nm = (x) => (x === "gilt" ? "gilt" : (S.n && S.n[x]) || Q.roles[x].name);
+    let w = null; for (let a = 0; a < roles.length; a++) for (let b = a + 1; b < roles.length; b++) { const d = PIC.de(col(roles[a]), col(roles[b])), f = PIC.fadeGap(col(roles[a]), col(roles[b])), s = Math.min(d - Q.minDE, f - Q.fadeDE); if (!w || s < w.s) w = { s, d, f, p: roles[a] + "/" + roles[b] }; }
+    const names = roles.map(nm), dup = names.filter((x, i) => names.indexOf(x) !== i), ok = w.s >= 0 && !dup.length; if (!ok) bad++;
+    console.log((ok ? "ok  " : "BAD ") + k + " era " + e + ": " + roles.length + " roles, closest pair " + w.p + " ΔE00 " + w.d.toFixed(1) + " (faded " + w.f.toFixed(1) + ")" + (dup.length ? ", names shared: " + dup.join(", ") : ""));
+  }
+  process.exitCode = bad ? 1 : 0; return;
+}
 
 // ---- which materials stand together ---------------------------------------------------------------------------------
 const LV = require(arg("levels") ? require("path").resolve(arg("levels")) : "../levels/levels.json").levels;
