@@ -10,51 +10,56 @@
    "hint": "Tap a squad. Its sappers come out at the bottom and each eats the nearest block of their colour.",
    "w": 17,
    "h": 18,
-   "grid": [",,,,,,,,,,,,,,,,,", ",aaaaaaaaaaaaaaa,", ",aaaaaaaaaaaaaaa,", ",aacccccaaaaaaaa,", ",aacdcdcaaaaaaaa,", ",aacdddcccccccaa,", ",aacdcdcdcdcdcaa,", ",aacdddddddddcaa,", ",aacdddcccdddcaa,", ",aacdddcccdddcaa,", ",aacdddcccdddcaa,", ",aacccccccccccaa,", ",abbbbbbbbbbbbba,", ",abbbbbbbbbbbbba,", ",bbbbbbbbbbbbbbb,", ",bbbbbbbbbbbbbbb,", ",bbbbbbbbbbbbbbb,", ",,,,,,,###,,,,,,,"],
+   "grid": [",,,,,,,,,,,,,,,,,", ",aaaaaaaaaaaaaaa,", ",aaaaaaaaaaaaaaa,", ",aaaaaaaaaaaaaaa,", ",aaaaaaaaaaaaaaa,", ",aaaaaaaaaaaaaaa,", ",aaaaaaaaaabbbbb,", ",aaaaaaaaaabcbcb,", ",aaaaaaaaaabcccb,", ",aaaabbbbbbbcbcb,", ",aaaabcbcbcbcccb,", ",aaaabcccbbbcccb,", ",aaaabcccbbbcccb,", ",aaaabcccbbbcccb,", ",bbbbbbbbbbbbbbb,", ",bccccbdddbccccb,", ",bbbbbbdddbbbbbb,", ",,,,,,,###,,,,,,,"],
    "pic": true,
    "gates": [],
    "towers": [],
    "pal": {
     "1": {
      "c": "#2cb4e0",
-     "n": "sky"
+     "n": "sky",
+     "r": "sky"
     },
     "2": {
-     "c": "#48b03d",
-     "n": "grass"
+     "c": "#1f1b24",
+     "n": "black",
+     "r": "ink"
     },
     "3": {
-     "c": "#1f1b24",
-     "n": "black"
+     "c": "#6d3314",
+     "n": "timber",
+     "r": "wood"
     },
     "4": {
-     "c": "#6d3314",
-     "n": "timber"
+     "c": "#48b03d",
+     "n": "grass",
+     "r": "grass"
     }
    },
+   "scene": "day",
+   "style": "flat-1w",
    "palette": {
     "minDE": 26.8,
-    "minFade": 21.3,
-    "worst": ["wood", "ink"]
+    "minFade": 21.3
    },
    "cols": [
     [
-     [2, 44],
-     [3, 13]
+     [4, 6],
+     [2, 39]
     ],
     [
-     [2, 27],
-     [1, 34]
+     [2, 31],
+     [3, 2]
     ],
     [
-     [3, 25],
-     [4, 37]
+     [3, 37],
+     [1, 30]
     ],
     [
-     [1, 48]
+     [1, 52]
     ],
     [
-     [3, 12]
+     [1, 43]
     ]
    ],
    "win": {
@@ -71,64 +76,71 @@
    "hint": "Sappers who can't reach their colour wait on the holding line, and march on their own once it opens up.",
    "w": 18,
    "h": 19,
-   "grid": [",,,,,,,,,,,,,,,,,,", ",aaaaaaaaaaaaaaaa,", ",aaaaaaaaaaaaeeaa,", ",aaacccaaaaaeeeea,", ",aacceccaaaaeeeea,", ",acceeeccaaaaeeaa,", ",aceeeeecccaaaaaa,", ",accdddccecccccca,", ",aacdcdcdedcdcdca,", ",aacddddccdddddca,", ",aacddddccdddddca,", ",aacddddccdddddca,", ",aaccccccccccccca,", ",abbbbbbbbbbbbbba,", ",bbbbbbbbbbbbbbbb,", ",bbbbbbbbbbbbbbbb,", ",bbbbbbbbbbbbbbbb,", ",bbbbbbbbbbbbbbbb,", ",,,,,,,,##,,,,,,,,"],
+   "grid": [",,,,,,,,,,,,,,,,,,", ",aaaaaaaaaaaaaaaa,", ",aaeeaaaaaaaaaaaa,", ",aeeeeaaaaaaaaaaa,", ",aeeeeaaaaaaaaaaa,", ",aaeeaaaaaabbbaaa,", ",aaaaaaaaabbebbaa,", ",aaaaaaaabbeeebba,", ",aaaaaaaabeeeeeba,", ",aaaaaaaabbcccbba,", ",aaabbbbbbbcbcbaa,", ",aaabcbcbcbcccbaa,", ",aaabccccbbcccbaa,", ",aaabccccbbcccbaa,", ",aaabccccbbcccbaa,", ",dddbbbbbbbbbbbbb,", ",ddddddddddbccccb,", ",ddddddddddbbbbbb,", ",,,,,,,,##,,,,,,,,"],
    "pic": true,
    "gates": [],
    "towers": [],
    "pal": {
     "1": {
      "c": "#2cb4e0",
-     "n": "sky"
+     "n": "sky",
+     "r": "sky"
     },
     "2": {
-     "c": "#48b03d",
-     "n": "grass"
+     "c": "#1f1b24",
+     "n": "black",
+     "r": "ink"
     },
     "3": {
-     "c": "#1f1b24",
-     "n": "black"
+     "c": "#6d3314",
+     "n": "timber",
+     "r": "wood"
     },
     "4": {
-     "c": "#6d3314",
-     "n": "timber"
+     "c": "#48b03d",
+     "n": "grass",
+     "r": "grass"
     },
     "5": {
      "c": "#efdb32",
-     "n": "thatch"
+     "n": "thatch",
+     "r": "thatch"
     }
    },
+   "scene": "day",
+   "style": "wide-1w",
    "palette": {
     "minDE": 26.8,
-    "minFade": 21.3,
-    "worst": ["wood", "ink"]
+    "minFade": 21.3
    },
    "cols": [
     [
-     [4, 3],
-     [2, 40],
-     [3, 21]
+     [5, 5],
+     [1, 45],
+     [1, 6]
     ],
     [
      [1, 31],
-     [4, 33]
+     [5, 4],
+     [2, 27]
     ],
     [
-     [1, 24],
-     [1, 24]
+     [3, 4],
+     [2, 37]
     ],
     [
-     [3, 21],
-     [5, 23]
+     [1, 46],
+     [5, 12]
     ],
     [
-     [3, 14],
-     [2, 38]
+     [4, 23],
+     [3, 32]
     ]
    ],
    "win": {
-    "easy": "01234012340",
-    "normal": "01234012340",
-    "hard": "01234012340"
+    "easy": "012340123401",
+    "normal": "012340123401",
+    "hard": "012340123401"
    }
   },
   {
@@ -139,66 +151,76 @@
    "hint": "A squad bigger than what's open eats what it can reach. The rest wait, then finish the job.",
    "w": 18,
    "h": 19,
-   "grid": [",,,,,,,,,,,,,,,,,,", ",bbbbbbbbbbbbbbbb,", ",bbbbbbbbbbbbbbbb,", ",bbbaaabbbbbaaabb,", ",bbaafaabbbaafaab,", ",baafffaabaafffaa,", ",bafffffaaafffffa,", ",baacccaafaacccaa,", ",bbacacacfcacacab,", ",bbaccccaacccccab,", ",bbaccccaacccccab,", ",aaaccccaacccccaa,", ",eeeeaaaaaaaeeeea,", ",eeeeadddddaeeeea,", ",eeeeadddddaeeeea,", ",aaaaadddddaaaaaa,", ",dacaddddddddacad,", ",daaaddddddddaaad,", ",,,,,,,,##,,,,,,,,"],
+   "grid": [",,,,,,,,,,,,,,,,,,", ",aaaaaaaaaaaaaaaa,", ",aaddaaaaaaaaaaaa,", ",addddaaaaaaaaaaa,", ",addddaaaaaaaaaaa,", ",aaddaaaaaaaaaaaa,", ",aaaaaaaaaaaaaaaa,", ",aaaaaaaacccccaaa,", ",aaaaaaaacbcbcaaa,", ",aaaaaaaacbbbcaaa,", ",aaaccccccbcbccaa,", ",aaecbcbcbbbbbcaa,", ",aeecbbbbbbbbbcaa,", ",eeecbbbbbbbbbcee,", ",eeccbbbbbbbbbccc,", ",cccbbccccccccbbc,", ",cbbcccfffccbbccc,", ",bbbbbcfffcbbbbbc,", ",,,,,,,,##,,,,,,,,"],
    "pic": true,
    "gates": [],
    "towers": [],
    "pal": {
     "1": {
-     "c": "#1f1b24",
-     "n": "black"
+     "c": "#2cb4e0",
+     "n": "sky",
+     "r": "sky"
     },
     "2": {
-     "c": "#2cb4e0",
-     "n": "sky"
+     "c": "#6d3314",
+     "n": "timber",
+     "r": "wood"
     },
     "3": {
-     "c": "#6d3314",
-     "n": "timber"
+     "c": "#1f1b24",
+     "n": "black",
+     "r": "ink"
     },
     "4": {
-     "c": "#48b03d",
-     "n": "grass"
+     "c": "#efdb32",
+     "n": "thatch",
+     "r": "thatch"
     },
     "5": {
      "c": "#27664a",
-     "n": "forest"
+     "n": "forest",
+     "r": "tree"
     },
     "6": {
-     "c": "#efdb32",
-     "n": "thatch"
+     "c": "#48b03d",
+     "n": "grass",
+     "r": "grass"
     }
    },
+   "scene": "day",
+   "style": "flat-1w",
    "palette": {
     "minDE": 26.8,
-    "minFade": 21.3,
-    "worst": ["wood", "ink"]
+    "minFade": 21.3
    },
    "cols": [
     [
-     [5, 24],
-     [2, 18]
+     [2, 18],
+     [1, 50],
+     [2, 15]
     ],
     [
-     [4, 35],
-     [1, 50]
+     [5, 10],
+     [1, 13],
+     [3, 15]
     ],
     [
-     [2, 25],
+     [1, 36],
      [3, 41]
     ],
     [
-     [1, 41],
-     [2, 18]
+     [1, 30],
+     [6, 6]
     ],
     [
-     [6, 20]
+     [4, 12],
+     [2, 26]
     ]
    ],
    "win": {
-    "easy": "012340123",
-    "normal": "012340123",
-    "hard": "012340123"
+    "easy": "012340123401",
+    "normal": "012340123401",
+    "hard": "012340123401"
    }
   },
   {
@@ -209,80 +231,90 @@
    "hint": "The drawbridge is locked: dig out its gold key in the lodge, then send the Looters.",
    "w": 17,
    "h": 21,
-   "grid": [",,,,,,,,,,,,,,,,,", ",aaaaaaaaaaaaaaa,", ",aaaaafffaaaaaaa,", ",aaaafffffaaaaaa,", ",aaaafbbbbbaaaaa,", ",aaaaabcbcbaaaaa,", ",aaaaabcccbaaaaa,", ",aaaaabcbcbaaaaa,", ",abbbbbcccbbbbaa,", ",bbeeeeccceeebbb,", ",bcececececececb,", ",ecccccbbbcccccb,", ",bcccccbbbcccccb,", ",,,,,,,,,,,,,,,,,", "~~~~~~~jjj~~~~~~~", "~~~~~~~jjj~~~~~~~", ",ccccbbbbbbddddd,", ",cccbbdddddddddd,", ",nccbddddddddddd,", ",bbbbddddddddddd,", ",,,,,,,###,,,,,,,"],
+   "grid": [",,,,,,,,,,,,,,,,,", ",aaddaaaaaaaaaaa,", ",dddddaaaaaaaaaa,", ",dddddaaaaadddaa,", ",aaaaaaaaaddddda,", ",aaaaabbbbbdddda,", ",aaaaabcbcbbaaaa,", ",aaaaabccccbaaaa,", ",aabbbbccccbbbaa,", ",bbbeeecccceebbb,", ",bcececececececb,", ",bcccbbbcccccccb,", ",bcccbbbcccccccb,", ",,,,,,,,,,,,,,,,,", "~~~~~jjj~~~~~~~~~", "~~~~~jjj~~~~~~~~~", ",fffbbbbbbbccccb,", ",fbbbbbbfbcccccc,", ",fbccccbfbbccccb,", ",fbbbbbbffbcnccb,", ",,,,,,,###,,,,,,,"],
    "pic": true,
    "gates": [
     {
-     "at": [7, 14],
-     "key": [1, 18]
+     "at": [5, 14],
+     "key": [12, 19]
     }
    ],
    "towers": [],
    "pal": {
     "1": {
      "c": "#2cb4e0",
-     "n": "sky"
+     "n": "sky",
+     "r": "sky"
     },
     "2": {
      "c": "#1f1b24",
-     "n": "black"
+     "n": "black",
+     "r": "ink"
     },
     "3": {
      "c": "#6d3314",
-     "n": "timber"
+     "n": "timber",
+     "r": "wood"
     },
     "4": {
-     "c": "#48b03d",
-     "n": "grass"
+     "c": "#e0fffc",
+     "n": "cloud",
+     "r": "cloud"
     },
     "5": {
      "c": "#ffa46c",
-     "n": "earth"
+     "n": "earth",
+     "r": "earth"
     },
     "6": {
-     "c": "#e0fffc",
-     "n": "cloud"
+     "c": "#48b03d",
+     "n": "grass",
+     "r": "grass"
     },
     "10": {
      "c": "#6b6f7c",
-     "n": "drawbridge"
+     "n": "drawbridge",
+     "r": "iron"
     }
    },
+   "scene": "day",
+   "style": "mid-square",
    "palette": {
     "minDE": 26,
-    "minFade": 21.3,
-    "worst": ["sky", "cloud"]
+    "minFade": 21.3
    },
    "cols": [
     [
-     [2, 12],
-     [5, 7],
-     [6, 9]
-    ],
-    [
-     [2, 7],
-     [3, 32],
-     [1, 35]
-    ],
-    [
-     [4, 37],
-     [5, 7],
-     [1, 25]
-    ],
-    [
+     [3, 18],
      [14, 1],
-     [1, 18],
-     [1, 1]
+     [2, 32],
+     [1, 26]
     ],
     [
-     [3, 17],
-     [2, 32]
+     [2, 22],
+     [6, 10],
+     [2, 4]
+    ],
+    [
+     [3, 5],
+     [1, 16],
+     [4, 2]
+    ],
+    [
+     [2, 5],
+     [4, 22],
+     [5, 11]
+    ],
+    [
+     [2, 1],
+     [1, 26],
+     [3, 39]
     ]
    ],
    "win": {
-    "easy": "01234012340123",
-    "normal": "01234012340123",
-    "hard": "01234012340123"
+    "easy": "0123401234012340",
+    "normal": "0123401234012340",
+    "hard": "0123401234012340"
    }
   },
   {
@@ -293,85 +325,89 @@
    "hint": "A ? squad hides its colour until it reaches the front. Its count always shows.",
    "w": 18,
    "h": 22,
-   "grid": [",,,,,,,,,,,,,,,,,,", ",aaaaaaaaaaaaaaaa,", ",aaaaaaaaaaaaaaaa,", ",aaaaaaaaaaaaaaaa,", ",aaaaaaaaaaaaaaaa,", ",aaaaaacccccaaaaa,", ",aaaaaacbcbccaaaa,", ",aaaaaacbbbbcaaaa,", ",aaaaaacbcbbcaaaa,", ",aaaccccbbbbcccaa,", ",cccceeebbbbeeccc,", ",bcbebebebebebebc,", ",bbbbbbbccbbbbbbb,", ",bbbbbbbccbbbbbbb,", ",,,,,,,,,,,,,,,,,,", "~~~~~~~~jj~~~~~~~~", "~~~~~~~~jj~~~~~~~~", ",ffffbbccccdcfffc,", ",cbbbbccddddccccc,", ",cbnbbcddddddcbcd,", ",ccccccddddddcccd,", ",,,,,,,,##,,,,,,,,"],
+   "grid": [",,,,,,,,,,,,,,,,,,", ",aaaaaaaaaaaaaaaa,", ",aaeeaaaaaaaaaaaa,", ",aeeeeaaaabbbaaaa,", ",aeeeeaaabbebbaaa,", ",aaeeaaabbeeebbaa,", ",aaaaaaabeeeeebaa,", ",aaaaaaabbcccbbaa,", ",aaaaaaaabcbcbaaa,", ",aaaaaaaabcccbaaa,", ",aaaaabbbbcccbbba,", ",aaabbbdddcccddbb,", ",bbbbddddddeddddd,", ",bcbcdcdcdcecdcdd,", ",bccccccccbbccccd,", ",bccccccccbbccccd,", ",,,,,,,,,,,,,,,,,,", "~~~~~~~~~~jj~~~~~~", "~~~~~~~~~~jj~~~~~~", ",bccccbffbbbbcccc,", ",bcnccbfffffbbbbb,", ",,,,,,,,##,,,,,,,,"],
    "pic": true,
    "gates": [
     {
-     "at": [8, 15],
-     "key": [3, 19]
+     "at": [10, 17],
+     "key": [3, 20]
     }
    ],
    "towers": [],
    "pal": {
     "1": {
      "c": "#2cb4e0",
-     "n": "sky"
+     "n": "sky",
+     "r": "sky"
     },
     "2": {
-     "c": "#6d3314",
-     "n": "timber"
+     "c": "#1f1b24",
+     "n": "black",
+     "r": "ink"
     },
     "3": {
-     "c": "#1f1b24",
-     "n": "black"
+     "c": "#6d3314",
+     "n": "timber",
+     "r": "wood"
     },
     "4": {
-     "c": "#48b03d",
-     "n": "grass"
+     "c": "#ffa46c",
+     "n": "earth",
+     "r": "earth"
     },
     "5": {
-     "c": "#ffa46c",
-     "n": "earth"
+     "c": "#efdb32",
+     "n": "thatch",
+     "r": "thatch"
     },
     "6": {
-     "c": "#27664a",
-     "n": "forest"
+     "c": "#48b03d",
+     "n": "grass",
+     "r": "grass"
     },
     "10": {
      "c": "#6b6f7c",
-     "n": "drawbridge"
+     "n": "drawbridge",
+     "r": "iron"
     }
    },
+   "scene": "day",
+   "style": "right-tall",
    "palette": {
     "minDE": 26.4,
-    "minFade": 21.3,
-    "worst": ["wood", "ink"]
+    "minFade": 21.3
    },
    "cols": [
     [
-     [4, 18],
-     [14, 1, 1],
-     [1, 27],
-     [1, 34]
+     [2, 14],
+     [1, 25, 1],
+     [1, 11]
     ],
     [
-     [4, 1],
-     [3, 23],
-     [5, 6],
-     [1, 22]
+     [14, 1],
+     [1, 11],
+     [2, 20]
     ],
     [
-     [6, 7],
-     [5, 5, 1],
-     [3, 7],
-     [2, 30]
+     [1, 33],
+     [6, 7, 1],
+     [4, 12]
     ],
     [
-     [2, 8],
-     [3, 9],
-     [3, 7],
-     [1, 9]
+     [1, 22],
+     [2, 25],
+     [5, 23]
     ],
     [
-     [3, 15],
-     [2, 25, 1],
-     [1, 18]
+     [4, 12],
+     [3, 35, 1],
+     [3, 21]
     ]
    ],
    "win": {
-    "easy": "0123401234012340123",
-    "normal": "0123401234012340123",
-    "hard": "0123401234012340123"
+    "easy": "012340123401234",
+    "normal": "012340123401234",
+    "hard": "012340123401234"
    }
   },
   {
@@ -382,74 +418,84 @@
    "hint": "Archers shoot anyone in their red ring. Take the tower first: here the archers only drive sappers back.",
    "w": 18,
    "h": 21,
-   "grid": [",,,,,,,,,,,,,,,,,,", ",bbbbbbbbbbbbbbbb,", ",bbbbbbbbbbbbbbbb,", ",bbbbbbbbbbbbbbbb,", ",bbbcccccccccbbbb,", ",ccccacacacaccbbb,", ",fcfcaaaaaaaacbbb,", ",fffcaaaaaaaacbbb,", ",fcfcaaaaaacacccc,", ",fffcaaaaaaaaacac,", ",fffaaaaaaaaaaaaa,", ",fcfaaaaaaaaaaaaa,", ",fffaaaaccaaaaaaa,", ",fffaaaaccaaaaaaa,", ",,,,,,,,,,,,,,,,,,", ",eeeecddddceeeeee,", ",eeeecddddceeeeee,", ",eeeecddddcceeeec,", ",cccccdddddcccccc,", ",dddddddddddddddd,", ",,,,,,,,##,,,,,,,,"],
+   "grid": [",,,,,,,,,,,,,,,,,,", ",bbbbfffbbbbbbbbb,", ",bbbffffbbbbffffb,", ",bbbfffbbbbbfffff,", ",bbbbbbbbbbbbbfbb,", ",cccccccccccccbbb,", ",ececcacacacacbbb,", ",eeecccaaaaaaccbb,", ",ececcaaaaaaaacbb,", ",eeeccaaaaacaaccc,", ",eeecaaaaaaaaacac,", ",eceaaaaaaaaaaaaa,", ",eeeaaaaaaaaacaaa,", ",eeeaaaaccaaaaaaa,", ",eeeaaaaccaaaaaaa,", ",,,,,,,,,,,,,,,,,,", ",dddddddddddddddd,", ",ddddddddddddcccd,", ",dddddddddddccacc,", ",dddddddddddcaaac,", ",,,,,,,,##,,,,,,,,"],
    "pic": true,
    "gates": [],
    "towers": [
     {
-     "at": [2, 12],
-     "r": 4.8
+     "at": [2, 13],
+     "r": 4.4
     }
    ],
    "pal": {
     "1": {
      "c": "#a498a3",
-     "n": "stone"
+     "n": "stone",
+     "r": "stone"
     },
     "2": {
      "c": "#2cb4e0",
-     "n": "sky"
+     "n": "sky",
+     "r": "sky"
     },
     "3": {
      "c": "#1f1b24",
-     "n": "black"
+     "n": "black",
+     "r": "ink"
     },
     "4": {
      "c": "#48b03d",
-     "n": "grass"
+     "n": "grass",
+     "r": "grass"
     },
     "5": {
-     "c": "#27664a",
-     "n": "forest"
+     "c": "#465593",
+     "n": "slate",
+     "r": "slate"
     },
     "6": {
-     "c": "#465593",
-     "n": "slate"
+     "c": "#e0fffc",
+     "n": "cloud",
+     "r": "cloud"
     }
    },
+   "scene": "day",
+   "style": "round-1t",
    "palette": {
     "minDE": 26,
-    "minFade": 21.2,
-    "worst": ["slate", "ink"]
+    "minFade": 21.2
    },
    "cols": [
     [
-     [4, 33],
-     [1, 17],
-     [1, 29]
+     [4, 51],
+     [2, 31],
+     [1, 28]
     ],
     [
-     [1, 4],
-     [2, 31]
+     [1, 9],
+     [2, 21],
+     [3, 12]
     ],
     [
-     [5, 28],
-     [2, 4]
+     [5, 24],
+     [3, 16],
+     [1, 15]
     ],
     [
-     [6, 21],
-     [1, 35]
+     [6, 10],
+     [1, 34],
+     [2, 2]
     ],
     [
-     [2, 29],
-     [3, 57]
+     [3, 25],
+     [6, 10]
     ]
    ],
    "safeArchers": true,
    "win": {
-    "easy": "01234012340",
-    "normal": "01234012340",
-    "hard": "01234012340"
+    "easy": "01234012340123",
+    "normal": "01234012340123",
+    "hard": "01234012340123"
    }
   },
   {
@@ -460,100 +506,109 @@
    "hint": "Linked squads go out together and need 2 free spaces; both stay taken until both squads are home.",
    "w": 19,
    "h": 24,
-   "grid": [",,,,,,,,,,,,,,,,,,,", ",ccccccccccccccccc,", ",cccccccgggccccccc,", ",cccccgggggccccccc,", ",cccbbbbbbbbbbcccc,", ",bbbbeebbhheebbbbb,", ",bebeeeebheeeebbeb,", ",eeebaababaaabbeee,", ",eeeeaaaaaaaabeeee,", ",dddbaaaaaaaabbddd,", ",dbdbbababababbdbd,", ",dddbbaaaaaaabbddd,", ",dddbaaaaaaaaabddd,", ",dbdaaaaaaaaaaadbd,", ",dddaaaaaaaaaaaddd,", ",dddaaaabbbaaaaddd,", ",dddaaaabbbaaaaddd,", ",,,,,,,,,,,,,,,,,,,", "~~~~~~~~jjj~~~~~~~~", "~~~~~~~~jjj~~~~~~~~", ",baaaabbbbbbbebbff,", ",banaabffffbebebff,", ",bbbbbbffffbbbbbff,", ",,,,,,,,###,,,,,,,,"],
+   "grid": [",,,,,,,,,,,,,,,,,,,", ",dddddddddahhadddd,", ",ddddddddgahaadddd,", ",ddddddggaacaadddd,", ",ddddddgaacccaaddd,", ",daaaddaacccccaaad,", ",aacaaaaccccccccaa,", ",acccaacccccccccca,", ",cccccaaabbbbccccc,", ",aeeeaaabbbbbbeeea,", ",aeaeaaabababaeaea,", ",aeeeaabbbbbbaeeea,", ",aeeeabbbbbbbbeeea,", ",aeaebbbbbbbbbeaea,", ",aeeebbbbbbbbaeeea,", ",aeeebbbbabbbbeeea,", ",aeeebbbaaabbbeeea,", ",,,,,,,,,,,,,,,,,,,", "~~~~~~~~jjj~~~~~~~~", "~~~~~~~~jjj~~~~~~~~", ",ffaaafaaaacccccca,", ",faacaafffaabbbbaa,", ",facacaffffabnbbaf,", ",,,,,,,,###,,,,,,,,"],
    "pic": true,
    "gates": [
     {
      "at": [8, 18],
-     "key": [3, 21]
+     "key": [13, 22]
     }
    ],
    "towers": [
     {
-     "at": [2, 15],
-     "r": 5.3
+     "at": [3, 15],
+     "r": 4.4
     },
     {
-     "at": [16, 15],
-     "r": 5.1
+     "at": [15, 15],
+     "r": 4.6
     }
    ],
    "pal": {
     "1": {
-     "c": "#a498a3",
-     "n": "stone"
+     "c": "#1f1b24",
+     "n": "black",
+     "r": "ink"
     },
     "2": {
-     "c": "#1f1b24",
-     "n": "black"
+     "c": "#a498a3",
+     "n": "stone",
+     "r": "stone"
     },
     "3": {
-     "c": "#2cb4e0",
-     "n": "sky"
+     "c": "#e14143",
+     "n": "roof",
+     "r": "roof"
     },
     "4": {
-     "c": "#465593",
-     "n": "slate"
+     "c": "#2cb4e0",
+     "n": "sky",
+     "r": "sky"
     },
     "5": {
-     "c": "#e14143",
-     "n": "roof"
+     "c": "#465593",
+     "n": "slate",
+     "r": "slate"
     },
     "6": {
      "c": "#48b03d",
-     "n": "grass"
+     "n": "grass",
+     "r": "grass"
     },
     "7": {
      "c": "#e0fffc",
-     "n": "cloud"
+     "n": "cloud",
+     "r": "cloud"
     },
     "8": {
      "c": "#b44092",
-     "n": "banner"
+     "n": "banner",
+     "r": "banner"
     },
     "10": {
      "c": "#6b6f7c",
-     "n": "drawbridge"
+     "n": "drawbridge",
+     "r": "iron"
     }
    },
+   "scene": "day",
+   "style": "round-narrow-2t",
    "palette": {
     "minDE": 26,
-    "minFade": 21.2,
-    "worst": ["sky", "cloud"]
+    "minFade": 21.2
    },
    "cols": [
     [
-     [6, 14],
-     [5, 1],
+     [1, 13],
      [2, 4],
-     [2, 3],
-     [1, 28],
-     [5, 5]
-    ],
-    [
-     [2, 18],
      [14, 1],
-     [3, 50],
-     [2, 53],
+     [1, 15],
+     [3, 12],
+     [7, 4]
+    ],
+    [
+     [6, 13],
+     [5, 29],
+     [3, 9],
+     [1, 32]
+    ],
+    [
+     [3, 6],
+     [5, 15],
+     [4, 36],
+     [1, 24]
+    ],
+    [
+     [3, 2],
+     [3, 21],
+     [2, 23],
+     [4, 12]
+    ],
+    [
+     [1, 6],
+     [8, 3],
+     [2, 38],
      [1, 5]
-    ],
-    [
-     [1, 4],
-     [5, 1],
-     [7, 8],
-     [8, 3]
-    ],
-    [
-     [5, 1],
-     [4, 23],
-     [4, 21],
-     [1, 31]
-    ],
-    [
-     [1, 2],
-     [2, 7],
-     [1, 17],
-     [5, 23]
     ]
    ],
    "links": [
@@ -563,9 +618,9 @@
     ]
    ],
    "win": {
-    "easy": "0123401234012340123401",
-    "normal": "0123401234012340123401",
-    "hard": "0123401234012340123401"
+    "easy": "012340123401234012340",
+    "normal": "012340123401234012340",
+    "hard": "012340123401234012340"
    }
   },
   {
@@ -574,108 +629,126 @@
    "name": "The Locked Space",
    "teaches": "lock",
    "hint": "One space starts locked. Its key is a gold block on the board: dig it out and send the Looters.",
-   "w": 20,
-   "h": 27,
-   "grid": [",,,,,,,,,,,,,,,,,,,,", ",aaaaaaaaaaaaaaaaaa,", ",aaaaaaaaaaaaaaaaaa,", ",aaaaaaaaaaaaaaaaaa,", ",aaaaacccccccaaaaaa,", ",aaaaacecececcaaaaa,", ",aaaaaceeeeeecaaaaa,", ",aaaaaceeeeeecaaaaa,", ",aacccceeeeeecccaaa,", ",aacbcbeeeeeecbccaa,", ",aacbbbbbbbbbbbbcaa,", ",aacbbcbbbbbcbbbcaa,", ",aacbbbbbjjbbbbbcaa,", ",aacbbbbbjjbbbbbcaa,", ",,,,,,,,,,,,,,,,,,,,", ",dddccccbcbcccccddd,", ",dcdcbcbbbbbcbcbdcd,", ",dddbbbbbnbbbbbbddd,", ",dddnbbbbccbbbbbddd,", ",dddbbbbbccbbbbbddd,", ",,,,,,,,,,,,,,,,,,,,", "~~~~~~~~~jj~~~~~~~~~", "~~~~~~~~~jj~~~~~~~~~", ",cggggcfccccfffcccf,", ",cgnggcffffffffcgcf,", ",ccccccffffffffcccf,", ",,,,,,,,,##,,,,,,,,,"],
+   "w": 22,
+   "h": 25,
+   "grid": [",,,,,,,,,,,,,,,,,,,,,,", ",cccccccccccccccccccc,", ",cccccccccbbbbccccccc,", ",cccccccccbggbccccccc,", ",ccccccbbbbgbbbbccccc,", ",ccccccbfbfbfbfbbdccc,", ",ccccdcbffffffffbddcc,", ",cbbbbbbffffffffbbbdc,", ",dbababafafafafababbd,", ",dbaaaaaaaaaaaaaaaabd,", ",dbaabaabaaaaabaaaabd,", ",dbaaaaaaajjaaaaaaabd,", ",dbaaaaaaajjaaaaaaabd,", ",,,,,,,,,,,,,,,,,,,,,,", ",eeebbababbbbbbbbbeee,", ",ebebaaaaabnbababaebe,", ",eeeaaanaaaaaaaaaaeee,", ",eeeaaabbaaaaaaaaaeee,", ",eeeaaabbaaaaaaaaaeee,", ",,,,,,,,,,,,,,,,,,,,,,", "~~~~~~~jj~~~~~~~~~~~~~", "~~~~~~~jj~~~~~~~~~~~~~", ",baaaabbbbdddbbhbbddd,", ",banaabddddddbhbhbddd,", ",,,,,,,,,,##,,,,,,,,,,"],
    "pic": true,
    "gates": [
     {
-     "at": [9, 21],
-     "key": [3, 24]
+     "at": [7, 20],
+     "key": [3, 23]
     },
     {
-     "at": [9, 12],
-     "key": [9, 17]
+     "at": [10, 11],
+     "key": [7, 16]
     }
    ],
    "towers": [
     {
-     "at": [2, 18],
-     "r": 4.8
+     "at": [2, 17],
+     "r": 4.3
     },
     {
-     "at": [17, 18],
-     "r": 4.1
+     "at": [19, 17],
+     "r": 4.7
     }
    ],
    "pal": {
     "1": {
-     "c": "#2cb4e0",
-     "n": "sky"
+     "c": "#a498a3",
+     "n": "stone",
+     "r": "stone"
     },
     "2": {
-     "c": "#a498a3",
-     "n": "stone"
+     "c": "#1f1b24",
+     "n": "black",
+     "r": "ink"
     },
     "3": {
-     "c": "#1f1b24",
-     "n": "black"
+     "c": "#2cb4e0",
+     "n": "sky",
+     "r": "sky"
     },
     "4": {
-     "c": "#465593",
-     "n": "slate"
+     "c": "#48b03d",
+     "n": "grass",
+     "r": "grass"
     },
     "5": {
-     "c": "#eecca0",
-     "n": "ashlar"
+     "c": "#465593",
+     "n": "slate",
+     "r": "slate"
     },
     "6": {
-     "c": "#48b03d",
-     "n": "grass"
+     "c": "#eecca0",
+     "n": "ashlar",
+     "r": "ashlar"
     },
     "7": {
-     "c": "#6d3314",
-     "n": "timber"
+     "c": "#b44092",
+     "n": "banner",
+     "r": "banner"
+    },
+    "8": {
+     "c": "#e14143",
+     "n": "roof",
+     "r": "roof"
     },
     "10": {
      "c": "#6b6f7c",
-     "n": "drawbridge"
+     "n": "drawbridge",
+     "r": "iron"
     }
    },
+   "scene": "day",
+   "style": "concentric-2t",
    "palette": {
     "minDE": 26,
-    "minFade": 21.2,
-    "worst": ["slate", "ink"]
+    "minFade": 21.2
    },
    "lock": {
-    "key": [4, 18]
+    "key": [11, 15]
    },
    "cols": [
     [
-     [6, 17],
-     [14, 1],
-     [2, 19],
-     [1, 22]
+     [1, 7],
+     [5, 28],
+     [1, 33],
+     [2, 11],
+     [1, 27]
     ],
     [
-     [3, 15],
-     [4, 28],
-     [2, 35],
-     [2, 14]
+     [4, 14],
+     [4, 15],
+     [2, 27],
+     [1, 17],
+     [7, 3]
     ],
     [
-     [6, 6],
-     [1, 36],
-     [3, 21],
-     [5, 27]
-    ],
-    [
-     [7, 8],
+     [4, 1],
+     [3, 33],
      [14, 2],
-     [3, 12],
-     [1, 37]
+     [3, 36],
+     [1, 3]
     ],
     [
-     [3, 6],
-     [2, 17],
-     [1, 25],
-     [3, 26]
+     [2, 11],
+     [8, 3],
+     [3, 4],
+     [3, 3],
+     [6, 24]
+    ],
+    [
+     [14, 1],
+     [1, 32],
+     [3, 5],
+     [2, 36]
     ]
    ],
    "win": {
-    "easy": "01234012340123401234",
-    "normal": "01234012340123401234",
-    "hard": "01234012340123401234"
+    "easy": "012340123401234012340123",
+    "normal": "012340123401234012340123",
+    "hard": "012340123401234012340123"
    }
   },
   {
@@ -684,119 +757,135 @@
    "name": "All at Once",
    "teaches": "mixed",
    "hint": "Gates, archers, ? squads, linked squads and a locked space, all in one castle.",
-   "w": 20,
-   "h": 28,
-   "grid": [",,,,,,,,,,,,,,,,,,,,", ",cccccccccccccccccc,", ",cccccccaaaaccccccc,", ",cccccccaiiaccccccc,", ",ccaaaaaaiaaaaaaacc,", ",caafaeaeaeaeaafaac,", ",aafffeeeeeeeefffaa,", ",affffeeeeeeeeffffa,", ",aadddeeeeeeeedddaa,", ",cadadeeeeeeeedadac,", ",cadddbbbbbbbbdddac,", ",cadddbbbbbbbbdddac,", ",cadddbbbjjbbbdddac,", ",cadddbbbjjbbbdddac,", ",,,,,,,,,,,,,,,,,,,,", ",dddaaaababaaaaaddd,", ",dadababbbbbababdad,", ",dddbbbbbnbbbbbbddd,", ",dddbbbbbaabbnbbddd,", ",dddbbbbbaabbbbbddd,", ",,,,,,,,,,,,,,,,,,,,", "~~~~~~~~~jj~~~~~~~~~", "~~~~~~~~~jj~~~~~~~~~", ",ffffffaaaaaggaaagg,", ",ahhhhaagggggaafaag,", ",ahnhhaggggggafafag,", ",aaaaaaggggggaaaaag,", ",,,,,,,,,##,,,,,,,,,"],
+   "w": 23,
+   "h": 26,
+   "grid": [",,,,,,,,,,,,,,,,,,,,,,,", ",ddddhhddddddddddddddd,", ",ddhhhhdddaaaadddhhhdd,", ",dhaaaadddaiiaddhhhhhd,", ",ddaiiaaaaaiaaaaahhhdd,", ",daaiaaeaeaeaeaeaaaaad,", ",dacacaeeeeeeeeeacacad,", ",dacccaeeeeeeeeeacccad,", ",dacacabababababacacad,", ",dacccbbbbbbbbbbbcccad,", ",dacccbbabbbbbabbcccad,", ",dacccbbbbjjjbbbbcccad,", ",dacccbbbbjjjbbbbcccad,", ",,,,,,,,,,,,,,,,,,,,,,,", ",cccaaaaaaaabababaaccc,", ",cacababababbbbbbbacac,", ",cccbbbbbbbbbbnbbbbccc,", ",cccbbbbbbbbbbabbbbccc,", ",cccbbbbbbbbbaaabbbccc,", ",,,,,,,,,,,,,,,,,,,,,,,", "~~~~~~~~~~~~~jjj~~~~~~~", "~~~~~~~~~~~~~jjj~~~~~~~", ",ggggaaaffagaaffnfffag,", ",gggaaffaaaggaaffffaag,", ",gggafffffagggafnffagg,", ",,,,,,,,,,###,,,,,,,,,,"],
    "pic": true,
    "gates": [
     {
-     "at": [9, 21],
-     "key": [3, 25]
+     "at": [13, 20],
+     "key": [16, 24]
     },
     {
-     "at": [9, 12],
-     "key": [9, 17]
+     "at": [10, 11],
+     "key": [14, 16]
     }
    ],
    "towers": [
     {
-     "at": [2, 18],
+     "at": [2, 17],
+     "r": 4.5
+    },
+    {
+     "at": [20, 17],
+     "r": 4.6
+    },
+    {
+     "at": [4, 11],
      "r": 4.2
     },
     {
-     "at": [17, 18],
-     "r": 4.4
-    },
-    {
-     "at": [4, 12],
-     "r": 3.9
-    },
-    {
-     "at": [15, 12],
-     "r": 3.9
+     "at": [18, 11],
+     "r": 3.7
     }
    ],
    "pal": {
     "1": {
      "c": "#1f1b24",
-     "n": "black"
+     "n": "black",
+     "r": "ink"
     },
     "2": {
      "c": "#a498a3",
-     "n": "stone"
+     "n": "stone",
+     "r": "stone"
     },
     "3": {
-     "c": "#2cb4e0",
-     "n": "sky"
+     "c": "#465593",
+     "n": "slate",
+     "r": "slate"
     },
     "4": {
-     "c": "#465593",
-     "n": "slate"
+     "c": "#2cb4e0",
+     "n": "sky",
+     "r": "sky"
     },
     "5": {
      "c": "#eecca0",
-     "n": "ashlar"
+     "n": "ashlar",
+     "r": "ashlar"
     },
     "6": {
-     "c": "#e14143",
-     "n": "roof"
+     "c": "#6d3314",
+     "n": "timber",
+     "r": "wood"
     },
     "7": {
      "c": "#48b03d",
-     "n": "grass"
+     "n": "grass",
+     "r": "grass"
     },
     "8": {
-     "c": "#6d3314",
-     "n": "timber"
+     "c": "#e0fffc",
+     "n": "cloud",
+     "r": "cloud"
     },
     "9": {
      "c": "#b44092",
-     "n": "banner"
+     "n": "banner",
+     "r": "banner"
     },
     "10": {
      "c": "#6b6f7c",
-     "n": "drawbridge"
+     "n": "drawbridge",
+     "r": "iron"
     }
    },
+   "scene": "day",
+   "style": "concentric-4t",
    "palette": {
     "minDE": 26,
-    "minFade": 21.2,
-    "worst": ["slate", "ink"]
+    "minFade": 21.2
    },
    "lock": {
-    "key": [13, 18]
+    "key": [16, 22]
    },
    "cols": [
     [
-     [7, 24],
-     [1, 8, 1],
-     [3, 17],
-     [3, 18]
-    ],
-    [
-     [1, 17],
      [14, 1],
-     [4, 20],
-     [1, 26],
-     [5, 35]
+     [3, 16, 1],
+     [2, 15],
+     [4, 14],
+     [1, 29]
     ],
     [
-     [8, 7],
-     [4, 20],
-     [14, 2],
-     [5, 1]
+     [7, 20],
+     [1, 12],
+     [4, 1],
+     [3, 11],
+     [1, 28],
+     [2, 29]
     ],
     [
-     [4, 22],
-     [3, 27],
-     [2, 33],
-     [1, 51]
+     [6, 10],
+     [6, 11],
+     [1, 29],
+     [8, 18],
+     [5, 23]
     ],
     [
-     [2, 4],
-     [6, 25, 1],
-     [2, 31],
-     [9, 3]
+     [1, 9],
+     [14, 1],
+     [4, 27],
+     [9, 6],
+     [2, 18]
+    ],
+    [
+     [3, 28],
+     [3, 11, 1],
+     [14, 1],
+     [4, 14],
+     [2, 32]
     ]
    ],
    "links": [
@@ -806,9 +895,9 @@
     ]
    ],
    "win": {
-    "easy": "01234012340123401234",
-    "normal": "01234012340123401234",
-    "hard": "01234012340123401234"
+    "easy": "0123401234012340123401234",
+    "normal": "0123401234012340123401234",
+    "hard": "0123401234012340123401234"
    }
   }
  ]
