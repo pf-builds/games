@@ -7,8 +7,8 @@
 //                                                           only the orders change, e.g. after a v3.time change)
 //   ~/.local/opt/node/bin/node tools/debug-v4.js --check    re-solve in memory and diff against the file
 //   ... [--out DIR]                                         write DIR/debug-v4.json instead (a trial)
-//   ~/.local/opt/node/bin/node tools/debug-v4.js --rebuild FILE   M2's build, from a levels file holding the v3 bake
-//                                                           (git 8ec282d:sappers-path/levels/levels.json)
+//   ~/.local/opt/node/bin/node tools/debug-v4.js --rebuild FILE   M2's build, from a levels file (v4.1: the rebake's
+//                                                           levels/levels.json, so the debug levels are pictures too)
 // Deterministic: the same seeds give the same file. Each level must win on all three difficulties within the 55-tap
 // cap (bake-config maxTaps), its stored orders must hold no refused tap, and E.check must find nothing to warn about.
 "use strict";
@@ -68,7 +68,7 @@ function lock(L, pick) {
 
 // Build, solve on all three difficulties, verify. from: the baked level copied; make(L): the twists.
 function build(id, name, hint, from, make) {
-  const src = byN(from), L = make(Object.assign(copy({ w: src.w, h: src.h, grid: src.grid, gates: src.gates, towers: src.towers, cols: src.cols }), { id, name, hint, from: src.id }));
+  const src = byN(from), L = make(Object.assign(copy(Object.assign({ w: src.w, h: src.h, grid: src.grid }, src.pic ? { pic: true } : {}, { gates: src.gates, towers: src.towers, cols: src.cols }, src.pal ? { pal: src.pal } : {})), { id, name, hint, from: src.id }));
   return solveAll(L);
 }
 // Solve a debug level on all three difficulties and verify each order (v4 M3: also the re-solve of a stored level).

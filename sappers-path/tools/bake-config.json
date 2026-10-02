@@ -1,15 +1,15 @@
 {
-  "version": 8,
-  "note": "Sapper's Path bake (SPEC-v3 §5; v4 M3, the Siege to 100). Bands are Normal random-tap win rates. maxTaps caps the taps in any level (a linked pair is one tap, two cards). maxWaitMs: the dead-time cap, the longest single tap on the stored Normal line (patient play, from a tap until nothing moves). lookahead: the one-move-lookahead player's Normal win-rate target for late hard slots (a pick over it is logged). colours: [from, to, min, max] per level range. dealBy and genBy override deal/era params per band kind or slot. twists: which generated levels carry mystery cards, linked pairs and the lock (twistsOf in bake.js). fast: the fast tapper's check. mystery: the '?' flags and the sampling planner that measures them. Holding spaces per difficulty live in config.json v3.rules.",
+  "version": 9,
+  "note": "Sapper's Path bake (SPEC-v3 §5; v4 M3, the Siege to 100; v4.1, castle pictures entered from the bottom). Bands are Normal random-tap win rates. maxTaps caps the taps in any level (a linked pair is one tap, two cards). maxWaitMs: the dead-time cap, the longest single tap on the stored Normal line (patient play, from a tap until nothing moves). lookahead: the one-move-lookahead player's Normal win-rate target for late hard slots (a pick over it is logged). colours: [from, to, min, max] per level range (a picture needs 4: sky, grass, the black outline and its walls). dealBy and genBy override deal/era params per band kind or slot. twists: which generated levels carry mystery cards, linked pairs and the lock (twistsOf in bake.js). fast: the fast tapper's check. mystery: the '?' flags and the sampling planner that measures them. eras[e].gen: the era's castle picture (tools/castle.js; w and h are the picture's columns and rows without its frame). picture: the pictures' frame, palette and roles (tools/castle.js, tools/pic.js). Holding spaces per difficulty live in config.json v3.rules.",
   "seed": 20260930,
   "levels": 100,
   "eras": {
-    "1": {"from": 1, "to": 25, "gen": {"w": [20, 24], "h": [24, 30], "campDepth": [2, 3], "campW": [5, 8], "ditch": 0.3, "gateway": 0.25, "bankT": [1, 3], "palT": [1, 2], "walkFrom": 5, "walk": 0.6, "fill": 0.72, "pack": 0.8, "sizes": {"big": [5, 7], "mid": [3, 5]}, "margin": 1, "gap": 2}},
-    "2": {"from": 26, "to": 50, "gen": {"w": [22, 26], "h": [26, 32], "campDepth": [2, 3], "campW": [5, 8], "motteR": [5, 8], "twoGates": 0.5, "bankT": [1, 2], "fill": 0.72, "pack": 0.8, "sizes": {"big": [5, 7], "mid": [3, 5]}, "margin": 1, "gap": 2}},
-    "3": {"from": 51, "to": 75, "gen": {"w": [25, 29], "h": [31, 36], "campDepth": [2, 3], "campW": [5, 8], "moat": 0.5, "towerR": [2.2, 3], "keep": [5, 8], "towers": [2, 4], "range": [5, 6.5], "wallT": 2, "innerWall": 1, "fill": 0.72, "pack": 0.8, "sizes": {"big": [5, 7], "mid": [3, 5]}, "margin": 1, "gap": 2}},
-    "4": {"from": 76, "to": 100, "gen": {"w": [30, 33], "h": [35, 40], "campDepth": [2, 3], "campW": [5, 8], "towerR": [2.2, 3], "rangeOut": [4.5, 5.5], "rangeIn": [3.5, 4.5], "towersOut": [2, 3], "towersIn": [1, 2], "wallT": 2, "innerT": 2, "walk": 1, "ward": [3, 4], "innerMoat": 0.7, "keep": [6, 9], "fill": 0.72, "pack": 0.8, "sizes": {"big": [5, 7], "mid": [3, 5]}, "margin": 1, "gap": 2}}
+    "1": {"from": 1, "to": 25, "gen": {"w": [17, 18], "h": [19, 20], "fg": [3, 4], "hill": [3, 4], "span": [0.62, 0.78], "palH": [4, 6], "watch": [1, 2], "skyMin": 2}},
+    "2": {"from": 26, "to": 50, "gen": {"w": [17, 18], "h": [21, 22], "fg": [3, 4], "moatH": 2, "palH": [3, 3], "motteW": [11, 14], "motteH": [4, 5], "towerH": [3, 4], "twoGates": 0.5, "twoMinH": 24}},
+    "3": {"from": 51, "to": 75, "gen": {"w": [18, 19], "h": [23, 24], "fg": [3, 4], "moatH": 2, "curtainH": [4, 5], "keepW": [7, 9], "keepH": [5, 7], "towers": [2, 4], "towerUp": [3, 4], "range": [4, 5.5], "skyMin": 2}},
+    "4": {"from": 76, "to": 100, "gen": {"w": [18, 19], "h": [26, 27], "fg": [3, 4], "moatH": 2, "outerH": [3, 3], "ward": [1, 1], "innerMoat": 0.65, "innerH": [4, 5], "inset": [2, 3], "towersOut": [2, 2], "towersIn": [2, 2], "rangeOut": [4, 5], "rangeIn": [3.5, 4.5], "keepW": [7, 9], "keepH": [4, 6], "skyMin": 2}}
   },
-  "boss": {"n": 100, "note": "Level 100, the boss fort: the biggest castle, both moats, four towers on the outer ring and three or four on the inner, every twist, twelve colours.", "gen": {"w": [36, 39], "h": [42, 46], "towersOut": [4, 4], "towersIn": [3, 4], "innerMoat": 1, "keep": [7, 8], "ward": [4, 5], "fill": 0.45, "pack": 0.55}, "colours": [12, 12], "cards": [3, 4], "pairs": [2, 3]},
+  "boss": {"n": 100, "note": "Level 100, the boss: the biggest castle picture, both moats with their drawbridges, four towers on the outer curtain and three or four on the inner, every twist, twelve colours.", "gen": {"w": [23, 24], "h": [29, 30], "towersOut": [4, 4], "towersIn": [3, 4], "innerMoat": 1, "keepW": [7, 8], "ward": [1, 1]}, "colours": [12, 12], "cards": [3, 4], "pairs": [2, 3]},
   "curve": {
     "early": {"from": 1, "to": 15, "band": [0.85, 1]},
     "mid": {"from": 16, "to": 45, "saw": [[0.62, 0.8], [0.46, 0.64], [0.3, 0.48]]},
@@ -22,16 +22,48 @@
   "fast": {"note": "The fast tapper (grade.fast: taps a random legal card the moment one exists). From level `from` on, a level is much easier tapped fast when fast - patient >= pts, or fast > ratio x patient and fast - patient >= minPts; the picker prefers candidates that pass.", "from": 46, "games": 300, "gapMs": 0, "ratio": 1.75, "minPts": 0.03, "pts": 0.1},
   "twists": {"note": "Generated levels from `from` carry the twist with probability p (fixed per level), forced after `gap` levels without it; from mixFrom every level carries at least one. mystery.cards: '?' flags per level; links.pairs: linked pairs per level.", "mystery": {"from": 36, "p": 0.45, "gap": 3, "cards": [2, 4]}, "links": {"from": 63, "p": 0.45, "gap": 3, "pairs": [1, 2]}, "lock": {"from": 77, "p": 0.45, "gap": 3}, "mixFrom": 78},
   "mystery": {"note": "'?' flags go on cards dealt in rows rows[0]-rows[1] of their column (0 = the front), never a linked card, never two in a row in one column. Each placement is measured by the sampling planner (grade.plan: games games, samples colourings per decision), honest and all-seeing; the first within maxGap is kept, else the smallest gap after tries (one flag fewer each try, never under 2).", "rows": [1, 2], "games": 16, "samples": 4, "maxGap": 0.2, "tries": 4},
-  "colours": [[4, 6, 3, 3], [7, 9, 4, 4], [10, 12, 5, 6], [13, 15, 7, 7], [16, 25, 7, 8], [27, 45, 7, 9], [46, 50, 10, 11], [52, 75, 11, 12], [76, 99, 11, 12]],
+  "colours": [[4, 6, 4, 4], [7, 9, 5, 5], [10, 12, 5, 6], [13, 15, 6, 7], [16, 25, 7, 8], [27, 45, 7, 9], [46, 50, 10, 11], [52, 75, 11, 12], [76, 99, 11, 12]],
   "reliefColours": [9, 10],
   "sawLowColours": [8, 9],
-  "deal": {"hold": 4, "size": [8, 30], "deep": 0.15, "finish": 0.3, "maxCard": 72, "maxCards": 240, "tries": 14, "attempts": 24, "shrink": 0.5, "shrinks": 5, "park": 2, "noParkUnderArchers": true},
+  "deal": {"hold": 4, "size": [8, 30], "deep": 0.15, "finish": 0.3, "maxCard": 72, "maxCards": 240, "tries": 14, "attempts": 24, "shrink": 0.5, "shrinks": 5, "park": 2, "noParkUnderArchers": true, "parkMax": 6},
   "dealBy": {"early": {"size": [20, 56], "deep": 0.05}, "mid": {"size": [14, 44], "deep": 0.12}, "late": {"size": [18, 52], "deep": 0.18}},
   "tune": {"stages": [{"playouts": 64, "steps": 700}, {"playouts": 256, "steps": 200}], "narrow": {"playouts": 256, "greedyPlayouts": 128, "steps": 600, "stopAt": 0.08, "margin": 0.005}, "margin": 0.02, "colMin": 1, "colMax": 30, "resize": 0.25, "split": 0.5, "minCard": 3, "maxCard": 72},
   "grade": {"playouts": 400, "greedyPlayouts": 100, "orderCap": 1000, "orderNodes": 200000, "solveNodes": 200000, "narrowNodes": 20000},
   "candidates": {"perLevel": 6, "perLevelBy": {"saw0": 8, "saw1": 8, "hard": 20, "hardest": 30, "relief": 8, "boss": 40}, "fortTries": 120},
   "dedupe": {"sameCells": 0.9},
   "budget": {"wallSec": 7200, "finishSec": 3600, "threads": 0},
-  "genBy": {"note": "Per slot: scale the era's board sides (per era). Reliefs are smaller and quicker.", "relief": {"scale": {"1": 0.88, "2": 0.88, "3": 0.88, "4": 0.95}}},
-  "penalty": {"note": "Fallback picks (no candidate meets every target): the least total of band miss x band (per unit rate), duration miss / durationMs, dead-time miss / waitMs, fast x a fast-tapper flag, pairs x a missing pair, lookahead over its target / lookahead.", "band": 100, "durationMs": 30000, "waitMs": 3000, "fast": 1, "pairs": 1, "lookahead": 0.25}
+  "genBy": {"note": "Per slot: scale the era's picture sides (per era). Early levels (4-15) and reliefs are smaller, and quicker.", "early": {"scale": {"1": 0.93}}, "relief": {"scale": {"1": 0.9, "2": 0.9, "3": 0.9, "4": 0.94}}},
+  "penalty": {"note": "Fallback picks (no candidate meets every target): the least total of band miss x band (per unit rate), duration miss / durationMs, dead-time miss / waitMs, fast x a fast-tapper flag, pairs x a missing pair, lookahead over its target / lookahead.", "band": 100, "durationMs": 30000, "waitMs": 3000, "fast": 1, "pairs": 1, "lookahead": 0.25},
+  "dealNote": "deal.park: at most this many squads wait on the line at rest; v4.1 deal.parkMax: none of them with more than this many sappers (a big squad parked behind a gate pours out when the gate opens, and far from the entry square every round of it is a long walk, so the tap that opened the gate would run past the dead-time cap).",
+  "picture": {
+    "note": "v4.1 castle pictures (tools/castle.js, tools/pic.js). entryHalf: the entry square is the bottom frame row's cells within this many of its middle (3 cells on an odd width, 2 on an even one). minDE, fadeDE: every pair of a picture's colours (gilt keys and the black outline included) should be this far apart in CIEDE2000, plain and with one faded to a queue row behind the front (config.json layout.fade); the role colours were searched for it and every pair of roles that can stand together meets both. starts: the palette search's starts (pic.js choose). ink: the outline black; iron: the drawbridge and portcullis (gates); show: the colours tools/castle.js --sheet draws open ground, the entry, water and gates in. roles: each role's name (a crew's name where the page reads one) and its colour. eras[e]: the roles every picture of the era has (must), the optional ones added in a seeded order until the level's colour count is reached (opt; `first` ahead of the rest), and the colour count tools/castle.js --sheet samples.",
+    "entryHalf": 1,
+    "minDE": 25,
+    "fadeDE": 20,
+    "starts": 6,
+    "ink": "#1f1b24",
+    "iron": "#6b6f7c",
+    "show": {"ground": "#5e5448", "camp": "#7d6c55", "water": "#3477d6", "iron": "#6b6f7c"},
+    "roles": {
+      "sky": {"name": "sky", "c": ["#2cb4e0"]},
+      "cloud": {"name": "cloud", "c": ["#e0fffc"]},
+      "grass": {"name": "grass", "c": ["#48b03d"]},
+      "tree": {"name": "forest", "c": ["#27664a"]},
+      "wood": {"name": "timber", "c": ["#6d3314"]},
+      "earth": {"name": "earth", "c": ["#ffa46c"]},
+      "thatch": {"name": "thatch", "c": ["#efdb32"]},
+      "stone": {"name": "stone", "c": ["#a498a3"]},
+      "ashlar": {"name": "ashlar", "c": ["#eecca0"]},
+      "slate": {"name": "slate", "c": ["#465593"]},
+      "roof": {"name": "roof", "c": ["#e14143"]},
+      "banner": {"name": "banner", "c": ["#b44092"]},
+      "ink": {"name": "black"}
+    },
+    "eras": {
+      "1": {"must": ["sky", "grass", "ink", "wood"], "opt": ["thatch", "tree", "cloud", "earth", "roof", "banner"], "first": ["thatch"], "sample": 8},
+      "2": {"must": ["sky", "grass", "ink", "wood", "earth", "gilt"], "opt": ["thatch", "roof", "tree", "cloud", "banner"], "sample": 9},
+      "3": {"must": ["sky", "grass", "ink", "stone", "slate", "gilt"], "opt": ["roof", "banner", "tree", "cloud", "wood", "ashlar"], "sample": 11},
+      "4": {"must": ["sky", "grass", "ink", "stone", "slate", "gilt", "ashlar"], "opt": ["roof", "banner", "tree", "cloud", "wood"], "sample": 12}
+    }
+  }
 }

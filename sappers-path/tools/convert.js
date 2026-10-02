@@ -38,6 +38,7 @@ const path = require("path");
 const zlib = require("zlib");
 const E = require("../src/engine.js");
 const PAL = require("./palette.js");
+const PIC = require("./pic.js");
 const { rng } = require("./grade.js");
 
 const ROOT = path.join(__dirname, "..");
@@ -188,7 +189,7 @@ function plan(src0, opt, C) {
   }
   const { W, H, grid, out, used, outlineN } = res;
   const lifted = K.fadeFloor ? lift(out, used, res.pop, K.fadeFloor, minDE, C) : null; // 7. paintings: display lightness only
-  return { w: W, h: H, grid, ring: true, pal: out, stats: { colours: used.length, minDE: +(lifted ? lifted.minDE : res.minDE).toFixed(1), minFade: +(lifted ? lifted.minFade : res.minFade).toFixed(1), cells: pw * ph, outline: outlineN, bg: masked ? bgHex : null } };
+  return { w: W, h: H, grid, pic: true, pal: out, stats: { colours: used.length, minDE: +(lifted ? lifted.minDE : res.minDE).toFixed(1), minFade: +(lifted ? lifted.minFade : res.minFade).toFixed(1), cells: pw * ph, outline: outlineN, bg: masked ? bgHex : null } };
 }
 // 7. Critics 2 fix (a kind's fadeFloor; paintings 16): the cells are final, so this moves only the colours shown. While
 // the picture's smallest faded pair is under the floor, each colour of that pair may move its lightness nudge L* away
@@ -246,8 +247,8 @@ function cellsOf(src, mask, pal, bg, ink, K, C, F) {
   const idOf = new Int16Array(pal.length).fill(0); used.forEach((j, k) => { idOf[j] = IDS[k]; });
   const out = {}, hexes = used.map((j) => (pal[j].ink ? C.ink : pal[j].bg ? bgHex : hexOfLab(pal[j].lab))), nm = nameAll(hexes, C);
   used.forEach((j, k) => { out[IDS[k]] = { c: hexes[k], n: nm[k] }; });
-  const W = pw + 2, H = ph + 2, grid = [];
-  for (let y = 0; y < H; y++) { let s = ""; for (let x = 0; x < W; x++) s += x === 0 || y === 0 || x === W - 1 || y === H - 1 ? "#" : E.chOf(idOf[cell[(y - 1) * pw + (x - 1)]] || idOf[used[0]]); grid.push(s); }
+  // v4.1: the picture in its frame (tools/pic.js frame): open ground round it, the entry square in the bottom row.
+  const Fr = PIC.frame((x, y) => E.chOf(idOf[cell[y * pw + x]] || idOf[used[0]]), pw, ph, C), W = Fr.w, H = Fr.h, grid = Fr.grid;
   const labs = hexes.map((h) => PAL.lab(h)); let minDE = 100, minFade = 100, worst = Infinity, pair = [], fadeBad = false;
   for (let a = 0; a < labs.length; a++) for (let b = a + 1; b < labs.length; b++) { const d = de(labs[a], labs[b]), f = fadeGap(hexes[a], hexes[b]), m = Math.min(d - F.minDE, F.fadeDE ? f - F.fadeDE : Infinity);
     minDE = Math.min(minDE, d); minFade = Math.min(minFade, f); if (m < worst) { worst = m; pair = [used[a], used[b]]; fadeBad = d >= F.minDE; } }

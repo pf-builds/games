@@ -1,7 +1,7 @@
 // Sapper's Path v4 M4, the Gallery bake: levels/gallery-manifest.json (the kept pictures, in the Gallery's order) +
 // tools/gallery-config.json (bake) -> levels/gallery.json (versioned). levels/levels.json is never read or written.
 //   ~/.local/opt/node/bin/node tools/gallery-bake.js [--out DIR] [--only A-B]
-// Per picture: the converter's plan (tools/convert.js: a ring board, its own palette), then `perLevel` candidates, each a
+// Per picture: the converter's plan (tools/convert.js: v4.1 a picture board entered from the bottom, its own palette), then `perLevel` candidates, each a
 // deal simulated as a winning order under the dealing rules (Hard's 4 spaces, so it wins on Easy, Normal and Hard) within
 // the dead-time cap, the outline's squads capped (bake.capOf: a narrow first breach, then more black squads), tightened
 // into the slot's Normal band (gen.tune; the hard slots also narrow the lookahead player), and graded on all three
@@ -9,7 +9,7 @@
 // pick is the candidate meeting every target (band, time, dead time, fast tapper, taps) nearest its band's centre, else
 // the least total miss (logged as a fallback naming what it missed). Workers, one per picture, seeds from the position:
 // thread timing never changes the output. Never throws: a picture that fails is logged and left out. The report tables go
-// between the bake markers of tools/v4-m4-gallery.md. --out DIR writes gallery.json and the report there (a trial);
+// between the gallery markers of tools/v4.1-rebake.md (v4.1; it was tools/v4-m4-gallery.md). --out DIR writes gallery.json and the report there (a trial);
 // --only A-B bakes only those positions.
 "use strict";
 const fs = require("fs");
@@ -62,7 +62,7 @@ function breachOf(L, inkId) {
 function candidates(job, B, rules) {
   const { n, pic } = job, b = bandOf(n, B), out = [], stats = { deals: 0, evals: 0, grades: 0 };
   let P; try { P = V.planOf(pic, V.config()); } catch (e) { return { n, cands: [{ fail: "convert: " + e.message }], stats }; }
-  const L = { w: P.w, h: P.h, grid: P.grid, ring: true }, inkId = +Object.keys(P.pal).find((k) => P.pal[k].c === V.config().convert.ink) || 0;
+  const L = { w: P.w, h: P.h, grid: P.grid, pic: true }, inkId = +Object.keys(P.pal).find((k) => P.pal[k].c === V.config().convert.ink) || 0;
   const D = Object.assign({}, B.deal, B.dealBy[b.sub] || {}, { maxTaps: B.maxTaps, time: rules.hard.time, maxWaitMs: B.maxWaitMs }, inkId ? { capOf: { [inkId]: B.capOf } } : {});
   const dealRules = Object.assign({}, rules.hard, { hold: B.deal.hold, archersKill: true });
   for (let k = 0; k < (B.candidates.perLevelBy[b.sub] || B.candidates.perLevel); k++) {
@@ -160,9 +160,9 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
   try { writeReport(out, B, log, kept); } catch (e) { say("gallery bake: report failed: " + e.message); }
 })();
 
-// ---- report tables (between the markers in tools/v4-m4-gallery.md) -------------------------------------------------
+// ---- report tables (v4.1: between the gallery markers in tools/v4.1-rebake.md) -------------------------------------
 function writeReport(out, B, log, kept) {
-  const file = outPath("tools/v4-m4-gallery.md"), A = "<!-- bake:start -->", Z = "<!-- bake:end -->", L = out.levels, rows = [];
+  const file = outPath("tools/v4.1-rebake.md"), A = "<!-- gallery:start -->", Z = "<!-- gallery:end -->", L = out.levels, rows = [];
   rows.push("### Bands on Normal", "", "| Slot | Band | Levels | In band | Normal min | median | max | Fast tapper median | Lookahead median |", "|---|---|---|---|---|---|---|---|---|");
   for (const sub of Object.keys(B.curve.bands)) { const ls = L.filter((l) => l.band === sub); if (!ls.length) continue; const rs = ls.map((l) => l.grade.normal.rate), t = B.curve.bands[sub];
     rows.push(`| ${sub} | ${pct(t[0])}-${pct(t[1])} | ${ls.length} | ${ls.filter((l) => l.inBand).length}/${ls.length} | ${pct(Math.min(...rs))} | ${pct(med(rs))} | ${pct(Math.max(...rs))} | ${pct(med(ls.map((l) => l.grade.normal.fast)))} | ${pct(med(ls.map((l) => l.grade.normal.greedy)))} |`); }
@@ -172,7 +172,7 @@ function writeReport(out, B, log, kept) {
     rows.push(`| ${l.n} | ${l.src} | ${l.title} | ${l.kind} | ${l.band} | ${l.w}×${l.h} | ${l.convert.colours} | ${l.convert.minDE} | ${l.win.normal.length} (${g.cards}) | ${pct(g.normal.rate)} | ${pct(g.easy.rate)} | ${pct(g.hard.rate)} | ${pct(g.normal.greedy)} | ${pct(g.normal.fast)}${fastBad(g, B) ? " !" : ""} | ${secs(g.normal.ms)} | ${secs(g.normal.maxWait)} | ${br ? br.squads + ", tap " + br.firstTap + ", " + (br.start ? br.start.join("/") : "-") : "-"} | ${l.fallback || ""} |`); }
   rows.push("", "### Bake log", "", "```", ...log, "```");
   const block = A + "\n" + rows.join("\n") + "\n" + Z;
-  let text = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "# Sapper's Path v4 M4: the Gallery bake\n\nWritten by `tools/gallery-bake.js`; notes in `tools/v4-m4-notes.md`.\n\n" + A + "\n" + Z + "\n";
+  let text = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "# Sapper's Path v4.1 rebake\n\n" + A + "\n" + Z + "\n";
   if (!text.includes(A)) text += "\n" + A + "\n" + Z + "\n";
   text = text.slice(0, text.indexOf(A)) + block + text.slice(text.indexOf(Z) + Z.length);
   writeAtomic(file, text);

@@ -14,7 +14,7 @@
 // by the sampling planner (honest against all-seeing; the flags change nothing any other player reads, so every other
 // grade stands). Both passes run in worker threads, one task per level with seeds derived from the level number, so
 // thread timing never changes the output. Never throws: a task that fails is logged and its level falls back. The
-// report tables are written between the bake markers of tools/v4-m3-rebake.md. `--out DIR` writes levels.json, the
+// report tables are written between the bake markers of tools/v4.1-rebake.md. `--out DIR` writes levels.json, the
 // pools and the report into DIR instead (a trial bake that leaves the tracked files alone); `--only A-B` bakes only
 // those levels (a trial: the file holds just them); `--teach FILE` reads the teaching levels from FILE.
 "use strict";
@@ -82,8 +82,9 @@ function twistsOf(n, C, teachBy) {
 function gradeLevel(L, rules, C, hint, seed, n) {
   const B = E.compile(L), win = {}, grade = { cards: B.ncards, pixels: B.pixTotal, colours: G.coloursOf(L).size };
   for (const d of DIFFS) {
-    let order = hint, line = order ? R.line(B, rules[d], order) : null;
-    if (!line || !line.won) { order = R.solve(B, rules[d], C.grade.solveNodes, hint); line = order ? R.line(B, rules[d], order) : null; }
+    const h = hint && typeof hint === "object" ? hint[d] : hint; // v4.1: a teaching level brings its own order per difficulty
+    let order = h, line = order ? R.line(B, rules[d], order) : null;
+    if (!line || !line.won) { order = R.solve(B, rules[d], C.grade.solveNodes, h); line = order ? R.line(B, rules[d], order) : null; }
     win[d] = line && line.won ? order : null;
     grade[d] = { rate: +R.rate(B, rules[d], C.grade.playouts, seed).toFixed(4), peak: line ? line.peak : null, len: order ? order.length : null, ms: line && line.won ? line.ms : null };
     if (d === "normal") grade[d].maxWait = line && line.won ? line.maxWait : null;
@@ -109,13 +110,13 @@ function candidates(n, C, rules, tw) {
         seed = seedOf(C, n, k * 1000 + t);
         const P = Object.assign({}, C.eras[era].gen, b.sub === "boss" ? C.boss.gen : {}, { colours: cmin + (Math.abs(seed) % (cmax - cmin + 1)) }), g0 = C.genBy && C.genBy[b.sub] && C.genBy[b.sub].scale, sc = g0 && typeof g0 === "object" ? g0[era] : g0;
         if (sc) { P.w = P.w.map((v) => Math.round(v * sc)); P.h = P.h.map((v) => Math.round(v * sc)); } // genBy: a slot's boards scaled (reliefs are smaller, and quicker)
-        const f = G.fort(era, seed, P); stats.forts++;
+        const f = G.fort(era, seed, P, C.picture); stats.forts++;
         if (!f) continue;
         if (tw.lock && !G.lockKey(f, seed)) continue;
         const nc = G.coloursOf(f).size; if (nc < cmin || nc > cmax) continue;
         if (era >= 2 && !(f.gates && f.gates.length)) continue; // every fort from Era 2 has a gate (v4 M3: so Era 3 keeps its moat)
         if (era >= 3 && !(f.towers && f.towers.length)) continue;
-        L = f;
+        delete f.roles; L = f; // v4.1: the picture's roles are the generator's business; pal (colours, names) ships
       }
       if (!L) { out.push({ k, fail: "no fort with " + cmin + "-" + cmax + " colours in " + C.candidates.fortTries + " seeds" }); continue; }
       let dl = null;
@@ -234,7 +235,7 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
     if (!inRun(n)) continue;
     const b = bandOf(n, C), era = eraOf(n, C), id = "e" + era + "-" + String(n).padStart(2, "0");
     if (teachBy.has(n)) {
-      const T = teachBy.get(n), L = Object.assign({ w: T.w, h: T.h, grid: T.grid, gates: T.gates || [], towers: T.towers || [], cols: T.cols }, T.links ? { links: T.links } : {}, T.lock ? { lock: T.lock } : {}, T.safeArchers ? { safeArchers: true } : {});
+      const T = teachBy.get(n), L = Object.assign({ w: T.w, h: T.h, grid: T.grid }, T.pic ? { pic: true } : {}, { gates: T.gates || [], towers: T.towers || [], cols: T.cols }, T.links ? { links: T.links } : {}, T.lock ? { lock: T.lock } : {}, T.safeArchers ? { safeArchers: true } : {}, T.pal ? { pal: T.pal } : {}, T.palette ? { palette: T.palette } : {});
       let g; try { g = gradeLevel(L, rules, C, T.win || null, seedOf(C, n, 0), n); } catch (e) { say("level " + n + ": teaching level failed to grade: " + e.message); continue; }
       const winnable = DIFFS.every((d) => g.win[d]); if (!winnable) say("level " + n + ": teaching level NOT winnable on every difficulty");
       levels.push(Object.assign({ id, n, era, source: "teaching", name: T.name, teaches: T.teaches, hint: T.hint, band: b.sub, target: b.band }, L, { win: g.win, grade: g.grade, exempt: "teaching" }));
@@ -285,7 +286,7 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
   say("bake: " + levels.length + " levels picked in " + ((t1 - t0) / 1000).toFixed(1) + " s; forts " + tot.forts + ", deals " + tot.deals + ", tune evaluations " + tot.evals + ", full grades " + tot.grades + " (x3 difficulties)");
 
   // Second pass: order counts and safe taps (report only), the mystery flags and their planner measures.
-  const fin = levels.map((l) => ({ kind: "finish", n: l.n, L: { w: l.w, h: l.h, grid: l.grid, gates: l.gates, towers: l.towers, cols: l.cols, links: l.links, lock: l.lock, safeArchers: l.safeArchers, win: l.win }, want: l.twists ? l.twists.mystery : 0, seed: l.seed || seedOf(C, l.n, 0) }));
+  const fin = levels.map((l) => ({ kind: "finish", n: l.n, L: { w: l.w, h: l.h, grid: l.grid, pic: l.pic, gates: l.gates, towers: l.towers, cols: l.cols, links: l.links, lock: l.lock, safeArchers: l.safeArchers, win: l.win }, want: l.twists ? l.twists.mystery : 0, seed: l.seed || seedOf(C, l.n, 0) }));
   const done = await runPool(fin, threads, C, rules, Date.now() + C.budget.finishSec * 1000, (d, t) => { if (d % 20 === 0 || d === t) console.log("  finish " + d + "/" + t + "  " + ((Date.now() - t0) / 1000).toFixed(1) + " s"); });
   for (const f of done) {
     const l = levels.find((x) => x.n === f.n); if (!l) continue;
@@ -312,10 +313,10 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
   try { writeReport(out, C, log); } catch (e) { say("bake: report tables failed: " + e.message); }
 })();
 
-// ---- report tables (between the markers in tools/v4-m3-rebake.md) --------------------------------------------------
+// ---- report tables (between the markers in tools/v4.1-rebake.md) --------------------------------------------------
 function writeReport(out, C, log) {
-  const file = outPath("tools/v4-m3-rebake.md"), A = "<!-- bake:start -->", Z = "<!-- bake:end -->";
-  const L = out.levels, rows = [], minDE = (l) => { const s = new Set(); for (const row of l.grid) for (const ch of row) { const m = E.matOf(ch); if (m) s.add(m); } return PAL.minPair([...s]).min; };
+  const file = outPath("tools/v4.1-rebake.md"), A = "<!-- bake:start -->", Z = "<!-- bake:end -->";
+  const L = out.levels, rows = [], minDE = (l) => (l.palette ? l.palette.minDE : (() => { const s = new Set(); for (const row of l.grid) for (const ch of row) { const m = E.matOf(ch); if (m) s.add(m); } return PAL.minPair([...s]).min; })());
   const twOf = (l) => { const t = []; if (l.gates && l.gates.length) t.push("gates " + l.gates.length); if (l.towers && l.towers.length) t.push("archers " + l.towers.length); const mc = l.cols.flat().filter((cd) => cd[2]).length; if (mc) t.push("? " + mc); if (l.links && l.links.length) t.push("linked " + l.links.length); if (l.lock) t.push("lock"); return t.join(", ") || "-"; };
   rows.push("### Bands on Normal", "", "| Band | Levels | In band | Exempt (teaching) | Normal min | median | max |", "|---|---|---|---|---|---|---|");
   for (const kind of ["early", "saw0", "saw1", "saw2", "hard", "hardest", "relief", "boss"]) {
@@ -331,7 +332,7 @@ function writeReport(out, C, log) {
   }
   rows.push("", "### Bake log", "", "```", ...log, "```");
   const block = A + "\n" + rows.join("\n") + "\n" + Z;
-  let text = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "# Sapper's Path v4 M3 rebake\n\n" + A + "\n" + Z + "\n";
+  let text = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "# Sapper's Path v4.1 rebake\n\n" + A + "\n" + Z + "\n";
   if (!text.includes(A)) text += "\n" + A + "\n" + Z + "\n";
   text = text.slice(0, text.indexOf(A)) + block + text.slice(text.indexOf(Z) + Z.length);
   writeAtomic(file, text);

@@ -7,23 +7,27 @@
 // material. Nothing is written.
 //   ~/.local/opt/node/bin/node tools/fade.js [--t 0,0.1,0.2] [--tray #ddd3c0]   (a candidate instead of config.json)
 //   ~/.local/opt/node/bin/node tools/fade.js --gallery   v4 M4: the Gallery's levels, each with its own palette: every
-//                                                        ordered pair of its queue colours, faded vs front
+//                                                        ordered pair of its queue colours, faded vs front (v4.1: the
+//                                                        Siege's levels carry their own palettes too, and are measured so)
 "use strict";
 const { lab, de00 } = require("./palette.js");
 const C = require("../config.json"), V3 = C.v3, F = C.layout.fade;
 const arg = (k) => { const i = process.argv.indexOf("--" + k); return i > 0 ? process.argv[i + 1] : null; };
 const T = arg("t") ? arg("t").split(",").map(Number) : F.t, TRAY = arg("tray") || F.tray;
 const LV = require("../levels/levels.json").levels.concat(require("../levels/debug-v4.json").levels);
-if (process.argv.includes("--gallery")) { // v4 M4: per level, its own colours
-  const G = require("../levels/gallery.json").levels, mixG = (a, b, t) => { const x = parseInt(a.slice(1), 16), y = parseInt(b.slice(1), 16), ch = (s) => Math.round(((x >> s) & 255) * (1 - t) + ((y >> s) & 255) * t); return "#" + ((1 << 24) | (ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).slice(1); };
+// v4 M4 (the Gallery) and v4.1 (every Siege level is a castle picture with its own palette): per level, its own colours
+// (pal; ids a level's palette leaves out, the gilt keys, take config's).
+if (process.argv.includes("--gallery") || LV.some((L) => L.pal)) {
+  const GAL = process.argv.includes("--gallery"), G = GAL ? require("../levels/gallery.json").levels : LV, mixG = (a, b, t) => { const x = parseInt(a.slice(1), 16), y = parseInt(b.slice(1), 16), ch = (s) => Math.round(((x >> s) & 255) * (1 - t) + ((y >> s) & 255) * t); return "#" + ((1 << 24) | (ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).slice(1); };
+  const col = (L, m) => (L.pal && L.pal[m] ? L.pal[m] : { c: V3.mats[m].c, n: V3.mats[m].n.toLowerCase() });
   let n = 0, under = 0, worst = { e: 1e9 }; const perLevel = [];
   const paint = [];
   for (const L of G) { const s = new Set(); for (const c of L.cols) for (const k of c) s.add(k[0]); let lm = 1e9, lw = "", lu = 0;
-    for (const a of s) for (const b of s) { if (a === b) continue; for (let d = 1; d < T.length; d++) { const e = de00(lab(mixG(L.pal[a].c, TRAY, T[d])), lab(L.pal[b].c)); n++; if (e < 20) { under++; lu++; } if (e < lm) { lm = e; lw = L.pal[a].n + " at row " + d + " vs " + L.pal[b].n; } if (e < worst.e) worst = { e, id: L.id, a: L.pal[a].n, b: L.pal[b].n, d }; } }
+    for (const a of s) for (const b of s) { if (a === b) continue; for (let d = 1; d < T.length; d++) { const e = de00(lab(mixG(col(L, a).c, TRAY, T[d])), lab(col(L, b).c)); n++; if (e < 20) { under++; lu++; } if (e < lm) { lm = e; lw = col(L, a).n + " at row " + d + " vs " + col(L, b).n; } if (e < worst.e) worst = { e, id: L.id, a: col(L, a).n, b: col(L, b).n, d }; } }
     perLevel.push(lm); if (L.kind === "painting") paint.push(L.n + " " + L.title + ": " + lm.toFixed(1) + " (" + lw + "), " + lu + " under 20"); }
   perLevel.sort((p, q) => p - q);
-  console.log("Gallery: " + G.length + " levels, " + n + " faded-vs-front pairs (rows 1-" + (T.length - 1) + "); under 20: " + under + "; smallest " + worst.e.toFixed(1) + " (" + worst.id + ": " + worst.a + " at row " + worst.d + " vs " + worst.b + "); per-level smallest median " + perLevel[perLevel.length >> 1].toFixed(1));
-  console.log("Paintings (Critics 2 fix: the converter's display lift, floor 16), smallest faded pair each:\n  " + paint.join("\n  "));
+  console.log((GAL ? "Gallery" : "Siege and debug levels") + ": " + G.length + " levels, " + n + " faded-vs-front pairs (rows 1-" + (T.length - 1) + "); under 20: " + under + "; smallest " + worst.e.toFixed(1) + " (" + worst.id + ": " + worst.a + " at row " + worst.d + " vs " + worst.b + "); per-level smallest median " + perLevel[perLevel.length >> 1].toFixed(1));
+  if (paint.length) console.log("Paintings (Critics 2 fix: the converter's display lift, floor 16), smallest faded pair each:\n  " + paint.join("\n  "));
   return;
 }
 const P = V3.mats.map((m) => (m ? m.c : null)), NAME = (m) => V3.mats[m].n;
