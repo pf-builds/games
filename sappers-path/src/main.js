@@ -49,13 +49,16 @@
 // Critics 1 fix 2: rods run between rivets on the tiles' facing rims, never over a face; the rows behind sit on darker
 // tray bands (layout.fade.band); the desktop tray ends at the queue; in the top bar the coach sits beside the level's
 // number, one line (a step's short text).
-// v4 M4, the Gallery (levels/gallery.json, config.gallery): picture levels on ring boards with their own palettes. The
+// v4 M4, the Gallery (levels/gallery.json, config.gallery): picture levels with their own palettes (ring boards then). The
 // Gallery screen (a grid of the pictures: dimmed until won, then in colour with its title; the count; a plain-text
 // credits line, no links) opens from the title and the map once siege level gallery.openAt is won; before that both
 // buttons are locked and say so. Every picture is open once the Gallery is; a win goes in the save's gal (per
 // difficulty, like the siege). A picture level uses its palette everywhere a colour shows (app.mats: tiles, spaces,
 // chips, the board, the sappers' helmets) and its colour names wherever a crew name would be read (aria-labels, the jam
 // sheet's label). The win sheet offers the next picture not yet won; the top bar's map button goes back to the Gallery.
+// v4.1 (castle pictures, bottom entry): every Siege level is a picture too (its own palette, pal; a crew reads as its
+// colour's name), and every board is entered from the entry square in the middle of its frame's bottom row. selfTest checks
+// that runners leave their crates and come up through it, on a Siege level and a Gallery picture.
 // v4 M5, the meta layer (rules of the power-ups in engine.js, coins, best results and lives in meta.js): the home screen
 // replaces the title (the title scene with a top row: settings gear, siege progress, coins, lives only when meta.lives is
 // on; one Play button labelled with the next level; a tab bar: Siege map, Home, Gallery padlocked until it opens; the
@@ -1214,7 +1217,7 @@
       busy: S ? S.busy : false, out: S ? S.out : 0, runners: V ? V.live : 0, now: S ? S.now : 0, goblin: V ? V.gob.on && !V.gob.done : false,
       panel: app.panel, speed: app.speed, cb: app.cb, clock: Math.round(app.clock), cs: V ? V.cs : 0, done: Object.keys(app.save.data.done).length,
       refused: app.refused, march: app.march, pace: app.cfg ? paceNow() : 1, li: S ? Object.assign({}, readLine()) : null,
-      open: S ? S.open : null, locked: S ? S.locked : 0, links: B ? B.nlinks : 0, hidden: S ? Array.from({ length: B.ncards }, (_, c) => S.hidden(c)).filter(Boolean).length : 0, debug: !!(app.entry && app.entry.debug) };
+      open: S ? S.open : null, locked: S ? S.locked : 0, links: B ? B.nlinks : 0, hidden: S ? Array.from({ length: B.ncards }, (_, c) => S.hidden(c)).filter(Boolean).length : 0, debug: !!(app.entry && app.entry.debug), w: B ? B.w : 0, h: B ? B.h : 0 };
   }
   const resolve = (id) => (typeof id === "number" ? (app.levels.find((e) => e.n === id) || {}).id : id);
   const hitOK = (el) => { if (!el) return false; const r = el.getBoundingClientRect(); if (!(r.width > 0 && r.height > 0)) return false; const t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!t && (t === el || el.contains(t)); };
@@ -1315,13 +1318,16 @@
         ok(app.S.status === E.WON && dispMatches() && allHome(), id + ": the stored order wins on real ticks, tap after tap once the squads are home");
         out.notes["ticked_" + id] = Math.round(t / 1000) + " s";
       }
-      // 2. Only what can be reached goes: level 3's Sawyers (10) with 4 timber in reach send 4, the rest wait at the space.
+      // 2. Only what can be reached goes: level 3's coached squad (more sappers than blocks of its colour in reach) sends
+      // what is in reach, the rest wait at the space. v4.1: the colour is the coach's card (config teach).
       if (app.byId.has("e1-03")) {
-        startLevel("e1-03", "normal"); const j = frontOf(4), reach = app.S.reachable(4);
-        if (ok(j >= 0 && app.B.cardN[app.S.front(j)] > reach, "dispatch: level 3 opens with more Sawyers than timber in reach")) {
-          playCol(j); for (let t = 0; t < 1500; t += 16) step(16);
+        const cm = ((app.cfg.teach || {})["e1-03"] || [{}])[0].card | 0;
+        startLevel("e1-03", "normal"); const j = frontOf(cm), reach = app.S.reachable(cm);
+        if (ok(j >= 0 && app.B.cardN[app.S.front(j)] > reach, "dispatch: level 3 opens with more " + mat(cm).crew + " than blocks of theirs in reach")) {
+          const TT = app.cfg.v3.time, early = TT.yardMs + TT.tileMs + TT.biteMs - 20; // v4.1: before the first pop opens more of the colour
+          playCol(j); for (let t = 0; t < early; t += 16) step(16);
           const s = app.S.order(app.ord)[0];
-          ok(app.S.sent <= reach && app.S.spW[s] > 0 && app.V.runners().live === app.S.out, "dispatch: " + reach + " in reach, " + app.S.sent + " go, " + app.S.spW[s] + " wait at the space; one runner per sapper out");
+          ok(app.S.sent <= reach && app.S.spW[s] > 0 && app.V.runners().live === app.S.out, "dispatch: " + reach + " in reach, " + app.S.sent + " go before the first pop, " + app.S.spW[s] + " wait at the space; one runner per sapper out");
         }
       }
       // 3. Three rapid taps: three squads out at once, each with runners alive; no play completes early.
@@ -1334,7 +1340,12 @@
         for (let t = 0; t < 700; t += 16) step(16);
         const R = app.V.runners(), spaces = R.bySpace.filter((k) => k > 0).length;
         ok(cols.length === 3 && app.S.lineLen === 3 && spaces === 3 && R.live >= 3, "overlap: three rapid taps leave three squads out, runners alive in all three (" + JSON.stringify(R.bySpace) + ")");
-        out.notes.overlap = e.id + " cols " + cols.join("") + " runners " + R.live; }
+        out.notes.overlap = e.id + " cols " + cols.join("") + " runners " + R.live;
+        // v4.1: every runner left its colour's crate in the yard and came up through the entry square at the bottom; every
+        // Siege level and Gallery picture is a picture board (the frame open ground, the entry its bottom row's middle).
+        const q = app.V.entryInfo(), notPic = app.levels.concat(app.gal).filter((x) => !E.compile(x.L).pic).map((x) => x.id);
+        ok(q.live > 0 && q.yard === q.live && q.crate === q.live && q.entry === q.live, "bottom entry: " + e.id + "'s runners leave their crates in the yard and come up through the entry square (" + JSON.stringify(q) + ")");
+        ok(!notPic.length && !app.V.idleC.length, "bottom entry: every level is a picture board, no idle sappers (" + (notPic.join(",") || app.levels.length + app.gal.length + " boards") + ")"); }
       // 4. A jam loss on a late level: seeded patient taps until every space holds a squad that can't reach a block; the
       // line jams at rest, one jam cue, the sheet names the crews, Retry is primary. Then a Retry mid-show clears every runner.
       let jp = null; for (const e of app.levels) { if (e.L.band !== "hard" && e.L.band !== "hardest") continue; const p = jamPlan(e, "normal"); if (p) { jp = { e, p }; break; } }
@@ -1484,8 +1495,8 @@
         ok(saw.size === steps.length && app.S.status === E.WON && !coachState().on, id + ": following the arrow shows all " + steps.length + " steps (" + Array.from(saw).join(",") + ") and wins");
         out.notes["coach_" + id] = Array.from(seen).join(",") + " / " + Array.from(saw).join(",");
       }
-      if (app.byId.has("e1-02")) { startLevel("e1-02", "normal"); playCol(frontOf(3)); settleNow(); const cs = coachState(); ok(cs.i === 1 && app.focusEl === $("line"), "coach e1-02: the Torchbearers wait in their space, the arrow moves to the holding line"); }
-      if (app.byId.has("e3-51")) { startLevel("e3-51", "normal"); ok(app.V.focus.on && coachState().target && /card/.test(coachState().target), "coach e3-51: the tower wears the ring and the arrow points at the Quarrymen"); }
+      if (app.byId.has("e1-02")) { const cm = app.cfg.teach["e1-02"][0].card; startLevel("e1-02", "normal"); playCol(frontOf(cm)); settleNow(); const cs = coachState(); ok(cs.i === 1 && app.focusEl === $("line"), "coach e1-02: the walled-in " + mat(cm).crew + " wait in their space, the arrow moves to the holding line"); }
+      if (app.byId.has("e3-51")) { startLevel("e3-51", "normal"); ok(app.V.focus.on && coachState().target && /card/.test(coachState().target), "coach e3-51: the tower wears the ring and the arrow points at its colour's card"); }
       // v4 M3: the twists' lessons point at their twist from the first tap: a ? tile (35), a linked front card (62), the
       // padlocked space with a ring on its key (76).
       if (app.byId.has("e2-35")) { startLevel("e2-35", "normal"); const el = app.focusEl; ok(!!el && el.classList.contains("next") && el.classList.contains("mys"), "coach e2-35: the arrow points at a hidden ? squad (" + (el && el.className) + ")"); }
@@ -1664,8 +1675,8 @@
             else if (app.cards[j].getAttribute("aria-label").toLowerCase().indexOf(want.n) !== 0) bad = "tile " + j + " reads '" + app.cards[j].getAttribute("aria-label") + "', not its colour's name " + want.n;
             else if (app.V.pal[m] !== want.c) bad = "the board draws " + m + " as " + app.V.pal[m]; }
           ok(!bad && app.V.sprites && !app.V.checkSprites().length, e.id + ": the tiles and the board use the picture's own colours, the tiles are named by colour (" + (bad || Object.keys(P).length + " colours") + ")");
-          const o = e.L.win.normal; playCol(+o[0]); let seen = [0, 0, 0, 0]; for (let t = 0; t < 1200; t += 16) { step(16); const sd = app.V.sides(); for (let k = 0; k < 4; k++) seen[k] = Math.max(seen[k], sd[k]); }
-          ok(seen.filter((k) => k > 0).length >= 3 && app.S.status === E.PLAYING, e.id + ": the first squad's sappers come in from the board's edges (top, left, right, yard: " + seen.join(", ") + ")");
+          const o = e.L.win.normal; playCol(+o[0]); let seen = { live: 0 }; for (let t = 0; t < 1200; t += 16) { step(16); const q = app.V.entryInfo(); if (q.live > seen.live) seen = q; }
+          ok(seen.live > 0 && seen.yard === seen.live && seen.crate === seen.live && seen.entry === seen.live && app.S.status === E.PLAYING, e.id + ": v4.1, the first squad's sappers leave their crate in the yard and come up through the entry square at the bottom (" + JSON.stringify(seen) + ")");
           settleNow(); const sl = app.slots.find((q) => q.classList.contains("full")); ok(!sl || sl.getAttribute("aria-label").toLowerCase().indexOf(P[app.S.spM[+app.slots.indexOf(sl)]].n) === 0, e.id + ": a space reads its colour's name (" + (sl ? sl.getAttribute("aria-label") : "no squad waiting") + ")"); }
         // Locked: a fresh save. Both buttons show the padlock and the hint; a tap on either never opens the Gallery.
         app.save.data.done = {}; app.save.data.gal = {}; showScreen("title");
@@ -1816,7 +1827,7 @@
   const SP = { play: playCol, state, load: (id, diff) => { startLevel(resolve(id), diff); return state(); }, retry: () => { retry(); return state(); }, tick,
     solve: (nodes) => solveHere(nodes), selfTest, coach: coachState, cues: () => Object.assign({}, app.cues), fx: () => app.V.fxInfo(), hits: () => app.V.hitInfo(), runners: () => app.V.runners(),
     paused: () => app.paused, pause: () => { pause(); return app.paused; }, resume: () => { resume(); return app.paused; }, winOrder: (d) => (app.entry ? app.entry.L.win[d || app.diff] : null),
-    lossPlan: (id, d) => lossPlan(resolve(id), d), settle: () => { settleNow(); return state(); }, reachable: (m) => (app.S ? app.S.reachable(m) : 0),
+    lossPlan: (id, d) => lossPlan(resolve(id), d), hitPlan: (id, d) => { const e = app.byId.get(resolve(id)), T = app.cfg.selfTest; return e ? search(e, d || app.diff, (S) => S.hits > 0, T.searchTries, T.searchSeed) : null; }, settle: () => { settleNow(); return state(); }, reachable: (m) => (app.S ? app.S.reachable(m) : 0),
     // Screens for the harness: fill the line with rushed taps; stage k stuck and w working squads on level n (or the first
     // level from n whose fronts allow it). Both return the state plus the taps made.
     fill: () => { const taps = fillLine(); return Object.assign(state(), { taps }); },
@@ -1830,7 +1841,7 @@
     // v4 M4: win siege levels 1 to gallery.openAt in the live save (the harness opens the Gallery this way); the ids of
     // the Gallery's pictures; the board's runners by entry edge.
     unlockGallery: () => { const k = app.order.indexOf(app.cfg.gallery.openAt); for (let i = 0; i <= k; i++) Save.record(app.save.data, app.order[i], "normal"); writeSave(); renderGalButtons(); return galOpen(); },
-    gallery: () => app.gal.map((e) => e.id), sides: () => app.V.sides(),
+    gallery: () => app.gal.map((e) => e.id), entry: () => app.V.entryInfo(),
     // v4 M5: win siege levels 1..n (normal) in the live save (screens for the harness and the critics); a power-up through
     // its badge (k), and for the Quartermaster or Recall a target (the tile [j, d] or the space); the meta state.
     unlockTo: (n) => { for (let i = 0; i < n && i < app.order.length; i++) Save.record(app.save.data, app.order[i], "normal"); app.save.data.last = Save.next(app.save.data, app.order); writeSave(); renderHome(); return Object.keys(app.save.data.done).length; },

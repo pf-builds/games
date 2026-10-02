@@ -28,6 +28,9 @@
 // the top bar's button goes back to the grid; every Gallery board keeps 8 CSS px a cell or more (the smallest reported,
 // with a screen). Output to tools/shots-v4-m4/harness/.
 // v4 Critics 2 fix: six viewports (375x667 and 414x736 added); the coach's checks per viewport are selfTest's.
+// v4.1 (castle pictures, bottom entry): a real card tap on a Gallery picture sends its squad out of its crate and up
+// through the entry square (was: in from the board's edges); every Siege and Gallery board keeps 8 CSS px a cell. Output
+// to tools/shots-v4.1/harness/.
 // v4 M5 (the meta layer): the home's Play reads the next level and one real tap reaches it; the settings sheet opens and
 // closes by real taps; the power-up bar through real taps (a Ladder bought and used on level 1: one more space; a
 // Quartermaster bought, asked for and applied to a real tile on level 40); every bar on screen. The colour-blind toggle
@@ -55,7 +58,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const i = process.argv.indexOf("--" + k); return i > 0 ? process.argv[i + 1] : d; };
 const URL_ = arg("url", "http://127.0.0.1:8491/sappers-path/");
 const ORIGIN = new URL(URL_).origin;
-const OUT = resolve(arg("out", resolve(here, "shots-v4-m5", "harness")));
+const OUT = resolve(arg("out", resolve(here, "shots-v4.1", "harness")));
 // v4 M3: every one of the 100 boards keeps MIN_CELL CSS px a cell at every viewport (the smallest per era is reported;
 // the boss at 100 is the smallest, exactly 8 in the 400x600 iframe).
 const WALL_MS = 720000, MIN_CELL = 8; // Critics 2 fix: two more viewports
@@ -101,7 +104,7 @@ async function overlapShots(page, ev, tap, shot, tag, R) {
     R.shots[name] = await stitch(page, bufs, resolve(OUT, tag + "-" + name + ".png"));
   };
   await strip("strip-overlap", async () => { await ev(() => SP.load(65, "normal")); const c = await reach(); await tap(`.card[data-col="${c[0]}"]`); await hold(1800); const c2 = await reach(); if (c2.length) await tap(`.card[data-col="${c2[0]}"]`); await hold(60); });
-  await strip("strip-next-round", async () => { await ev(() => SP.load(3, "normal")); const c = await ev(() => SP.state().fronts.findIndex((f) => f && f.crew === "Sawyers")); await tap(`.card[data-col="${c}"]`); await hold(200); });
+  await strip("strip-next-round", async () => { await ev(() => SP.load(3, "normal")); const c = await ev(() => SP.state().fronts.findIndex((f) => f && SP.reachable(f.mat) > 0 && f.n > SP.reachable(f.mat))); /* v4.1: the squad bigger than its reach */ await tap(`.card[data-col="${c}"]`); await hold(200); });
 }
 // Stitch PNG buffers side by side on a canvas in a scratch page; writes the file, returns its size.
 async function stitch(page, bufs, file) {
@@ -336,8 +339,8 @@ async function run() {
         await tap(`#gal-grid .gal-tile:nth-child(${gi + 1})`); s = await S();
         ok(s.screen === "play" && /^g-met-/.test(s.id) && s.cs / (vp.dpr || 1) >= MIN_CELL && (await noScroll()), tag + " a real tap on a painting's tile plays it (" + s.id + ", " + (s.cs / (vp.dpr || 1)).toFixed(2) + " CSS px a cell)");
         const gc = await ev(() => SP.state().fronts.findIndex((f) => f && SP.reachable(f.mat) > 0)); await tap(`.card[data-col="${gc}"]`);
-        await ev(() => SP.tick(700)); const sd = await ev(() => SP.sides()); s = await S();
-        ok(s.plays === 1 && sd.filter((k) => k > 0).length >= 2, tag + " a real card tap sends a squad in from the board's edges (top, left, right, yard: " + sd.join(", ") + ")");
+        await ev(() => SP.tick(700)); const sd = await ev(() => SP.entry()); s = await S();
+        ok(s.plays === 1 && sd.live > 0 && sd.crate === sd.live && sd.entry === sd.live, tag + " v4.1: a real card tap sends a squad out of its crate and up through the entry square at the bottom (" + JSON.stringify(sd) + ")");
         await shot("gallery-level-mid");
         await tap("#btn-map"); s = await S(); ok(s.screen === "gallery", tag + " the top bar's button goes back to the Gallery");
         const gcells = await ev(() => { let w = null; for (const id of SP.gallery()) { const st = SP.load(id, "normal"), px = +(st.cs / devicePixelRatio).toFixed(2); if (!w || px < w.px) w = { id, px, turned: document.body.classList.contains("turned") }; } return w; });
@@ -353,7 +356,7 @@ async function run() {
         await page.waitForTimeout(250); await shot("teach-l26-gate");
         await ev(() => { SP.play(1); for (let i = 0; i < 400; i++) { SP.tick(16); if (SP.fx().gates[0] === 1) break; } SP.tick(100); });
         await shot("gate-opening");
-        await ev(() => { SP.load(51, "normal"); SP.play(2); for (let i = 0; i < 400; i++) { SP.tick(16); if (SP.hits().struck) break; } SP.tick(120); });
+        await ev(() => { const o = SP.hitPlan(51, "normal") || "2"; SP.load(51, "normal"); for (let k = 0; k < o.length - 1; k++) { SP.play(+o[k]); SP.settle(); } SP.play(+o[o.length - 1]); for (let i = 0; i < 600; i++) { SP.tick(16); if (SP.hits().struck) break; } SP.tick(120); }); // v4.1: a patient order whose last tap walks into the ring
         const hh = await ev(() => SP.hits()); ok(hh.struck > 0 && hh.label, tag + " level 51: an arrow has struck mid-show");
         await shot("archer-hit");
         await ev(() => { SP.load(2, "normal"); const o = SP.winOrder(); for (let i = 0; i < o.length - 1; i++) SP.play(+o[i]); SP.skip(); SP.play(+o[o.length - 1]); for (let i = 0; i < 400; i++) { SP.tick(16); if (SP.fx().falls > 4) break; } SP.tick(60); });

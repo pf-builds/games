@@ -50,11 +50,14 @@
 // here reads a real clock. Per-frame work allocates nothing: runners, routes, pops and particles live in typed arrays.
 // v4 M4, the Gallery. A level may bring its own palette (setLevel's pal: material id -> {c}); every stud, sapper helmet,
 // crumb and bin takes V.pal, and the sprite caches are rebuilt when the palette changes (ids keep their colour-blind
-// marks). A ring level (B.ring) has no camp strip: no idle sappers or tents, and a runner comes in from outside the board
-// at the edge its route starts on (its first ring cell: the top, left or right edge; the bottom edge enters from its
-// space's point across the yard, as in the siege). Carrying home it walks back out the same way: off the board through
-// the top, left or right edge, or into its colour's bin in the yard from the bottom edge. The bins count every block as
-// it lands (the engine's home time) either way, so the yard still fills.
+// marks).
+// v4.1, picture boards (B.pic: every Siege level and Gallery picture). The board is the picture: no scenery (no path,
+// tents, trees, fields or tufts), no idle sappers, no crenellated rim on tower blocks (the towers are drawn in the
+// picture; the archer stands on the tower's top row). Water is part of the picture: flat water studs with a wave
+// (board.pic.water), never a block. The camp is the entry square, a dark gateway in the frame's bottom row
+// (board.pic.entry). A runner leaves its colour's crate in the yard, walks up to the entry square, then the ground as it
+// stands to the face of its pixel, and carries its block back the same way into that crate. (v4 M4's ring entry is
+// retired.)
 (function (root, factory) {
   (root.SappersPath = root.SappersPath || {}).board = factory(root.SappersPath.engine);
 })(window, function (E) {
@@ -147,7 +150,7 @@
       focus: { on: false, x: 0, y: 0, r: 1 },
       gob: { on: false, t0: 0, x: 0, y: 0, done: false },
       hooks: { pop: null, deposit: null, gate: null, tower: null, shot: null, hit: null, collapse: null, tap: null, free: null, move: null, reveal: null, link: null, unlock: null, power: null },
-      lockKey: -1, lockOpen: true, pal: null, palKey: "", ring: false,
+      lockKey: -1, lockOpen: true, pal: null, palKey: "", pic: false, towerTop: new Float32Array(MAXT),
       // Critics 1 fix: rings (V.hot from the page, the loud mask worked out per board change, each ring's ease) and bins.
       hot: 0, ringsLoud: false, hotVer: -1, hotFor: -1, hotMask: 0, shootM: 0, ringA: new Float32Array(MAXT), ringHitT: new Float64Array(MAXT).fill(-1e12), binT: new Float64Array(E.NMAT).fill(-1e12),
     };
@@ -196,6 +199,19 @@
         x.fillStyle = shade(base, (j & 1 ? 1 : -1) * K.groundSpeck * (type === 3 ? 2.2 : 1)); x.fillRect(Math.round(px * (s - k)), Math.round(py * (s - k)), type === 3 ? k * 3 : k, k); }
       return c;
     }
+    // v4.1: a water stud (the picture's moat): the flat stud in board.pic.water with a light wave across it; never a block.
+    function waterStud(s) {
+      const c = mk(s, s), x = c.getContext("2d"), P = K.pic, T = K.stud, sw = Math.min(s >> 2, Math.max(1, Math.round(V.dpr * T.seamCss))), a = sw >> 1, f = s - sw;
+      x.fillStyle = toneHex(P.water, T.seam); x.fillRect(0, 0, s, s); rr(x, a, a, f, f, Math.max(0.5, f * T.radius)); x.fillStyle = P.water; x.fill();
+      if (s >= 5) { x.strokeStyle = P.wave; x.lineWidth = Math.max(1, Math.round(s * 0.09)); x.beginPath(); x.moveTo(a + f * 0.18, a + f * 0.58); x.quadraticCurveTo(a + f * 0.34, a + f * 0.38, a + f * 0.5, a + f * 0.56); x.quadraticCurveTo(a + f * 0.66, a + f * 0.74, a + f * 0.82, a + f * 0.52); x.stroke(); }
+      return c;
+    }
+    // v4.1: the entry square (a camp cell of a picture): the frame's ground with a dark gateway in it, a lit rim round it.
+    function entry(s) {
+      const c = mk(s, s), x = c.getContext("2d"), P = K.pic.entry, o = Math.max(1, Math.round(s * 0.12));
+      x.fillStyle = C.ground.dirt; x.fillRect(0, 0, s, s); x.fillStyle = P.rim; x.fillRect(0, 0, s, s); x.fillStyle = P.face; x.fillRect(o, o, s - 2 * o, s - o);
+      return c;
+    }
     const sapper = (m, ss) => figure(SAP, { h: V.pal[m], s: K.sapper.skin, e: K.sapper.eye, b: K.sapper.body }, ss);
     // A padlock in a gate's tint: shackle, body, keyhole, ink outline. Transparent around it.
     function padlock(tint, s) {
@@ -213,6 +229,7 @@
       const S = { blk: [], tb: [], mini: [], sap: [], gnd: [], lock: [], ss, mb, as, ls, arch: null };
       for (let m = 1; m < E.NMAT; m++) { S.blk[m] = block(m, s); S.tb[m] = K.tones.map((k) => (k ? block(m, s, k) : S.blk[m])); S.mini[m] = block(m, mb, 0, 1); S.sap[m] = sapper(m, ss); }
       for (let t = 0; t < 4; t++) for (let v = 0; v < 2; v++) S.gnd[t * 2 + v] = ground(t, v, s);
+      S.water = waterStud(s); S.entry = entry(s);
       const A = K.archer; S.arch = figure(ARCH, { h: A.hood, s: A.skin, e: A.eye, b: A.body, w: A.bow, q: A.string, a: A.arrow }, as);
       K.gateTints.forEach((tint, k) => { S.lock[k] = padlock(tint, ls); });
       S.keep = keepArt(cfg.art, Math.max(14, Math.round(s * SH.keepScale)));
@@ -236,7 +253,7 @@
     // pal (v4 M4, optional): the level's own colours, {id: {c}}; other ids keep config's. A new palette drops the sprite
     // caches (the page's layout() rebuilds them before the next draw).
     function setLevel(B, S, pal) {
-      V.B = B; V.S = S; V.w = B.w; V.h = B.h; V.n = B.n; V.ring = !!B.ring;
+      V.B = B; V.S = S; V.w = B.w; V.h = B.h; V.n = B.n; V.pic = !!B.pic;
       const P = C.mats.map((m, k) => (pal && pal[k] ? pal[k].c : m ? m.c : FX.dustColor)), key = P.join();
       if (key !== V.palKey) { V.pal = P; V.palKey = key; for (let m = 1; m < E.NMAT; m++) if (m !== IRON) COL[m] = P[m]; V.sprites = null; }
       if (!V.disp || V.disp.length < B.n) { V.disp = new Int8Array(B.n); V.dist = new Int16Array(B.n); V.q = new Int32Array(B.n); V.towerOfCell = new Int8Array(B.n); }
@@ -253,7 +270,7 @@
       // Camp cells, and the idle sappers' spots: spread along the camp's middle row.
       V.camp = []; for (let c = 0; c < B.n; c++) if (B.a0[c] === CAMP) V.camp.push(c);
       let cx0 = 1e9, cx1 = -1; for (const c of V.camp) { const x = c % B.w; if (x < cx0) cx0 = x; if (x > cx1) cx1 = x; }
-      const idle = V.ring ? 0 : Math.min(K.idle | 0, V.camp.length), iy = Math.min(B.h - 1, B.campRow + 1); V.idleC = [];
+      const idle = V.pic ? 0 : Math.min(K.idle | 0, V.camp.length), iy = Math.min(B.h - 1, B.campRow + 1); V.idleC = [];
       for (let k = 0; k < idle; k++) V.idleC.push(iy * B.w + Math.round(cx0 + ((k + 0.5) * (cx1 - cx0 + 1)) / idle - 0.5));
       if (!V.tone || V.tone.length < B.n) { V.tone = new Int8Array(B.n); V.deco = new Int8Array(B.n); }
       tones(B); scenery(B);
@@ -263,6 +280,7 @@
       for (let c = 0; c < B.n; c++) { const k = B.keyOf[c]; if (k >= 0 && k < MAXG) V.keyC[k] = c; }
       V.lockKey = B.lockKey;
       V.towerOfCell.fill(-1);
+      V.towerTop.fill(0); for (let k = 0; k < B.towers.length && k < MAXT; k++) { let top = B.h; for (let c = 0; c < B.n; c++) if (B.towerOf[c] === k && ((c / B.w) | 0) < top) top = (c / B.w) | 0; V.towerTop[k] = top; }
       reset();
     }
     // Block tones from the fort's shape (engine nb order E, W, S, N): 1 lit (a top or left edge), 2 shade (a bottom or
@@ -282,6 +300,7 @@
     function scenery(B) {
       const a = B.a0, w = B.w, h = B.h, n = B.n, D = K.deco, deco = V.deco, dist = V.dist, q = V.q;
       deco.fill(0, 0, n);
+      if (V.pic) return; // v4.1: the picture is the whole board
       // Distance (8-way, cells) from anything that isn't grass or camp: the fort, water, dirt.
       dist.fill(-1, 0, n); let qh = 0, qt = 0;
       for (let c = 0; c < n; c++) if (a[c] !== GRASS && a[c] !== CAMP) { dist[c] = 0; q[qt++] = c; }
@@ -363,8 +382,9 @@
     function paintCell(c) {
       if (!V.lg) return; // no layer until the first layout (a 0x0 frame); paintLayer redraws everything once it exists
       const S = V.sprites, cs = V.cs, bx = c % V.w, by = (c / V.w) | 0, x = CX(bx, by) * cs, y = CY(bx, by) * cs, v = V.disp[c];
-      if (v > 0) { V.lg.drawImage(S.tb[v][V.tone[c]], x, y); const t = V.B.towerOf[c]; if (t >= 0) rim(c, t, x, y); return; }
-      V.lg.drawImage(S.gnd[TYPE(v) * 2 + (hash(bx, by) & 1)], x, y);
+      if (v > 0) { V.lg.drawImage(S.tb[v][V.tone[c]], x, y); const t = V.B.towerOf[c]; if (t >= 0 && !V.pic) rim(c, t, x, y); return; }
+      if (V.pic && v === WATER) { V.lg.drawImage(S.water, x, y); return; } // v4.1: the moat is part of the picture
+      V.lg.drawImage(V.pic && v === CAMP ? S.entry : S.gnd[TYPE(v) * 2 + (hash(bx, by) & 1)], x, y);
       if (V.deco[c] && (v === GRASS || v === WATER)) decor(V.deco[c], x, y, bx, by);
       if (coverNow(c)) { V.lg.fillStyle = K.rangeFill; V.lg.fillRect(x, y, cs, cs); }
     }
@@ -471,25 +491,22 @@
     const lowBit = (m) => { for (let t = 0; t < MAXT; t++) if (m & (1 << t)) return t; return -1; };
     // Where space s's sappers come onto the board (the point on the canvas nearest its slot in the holding line).
     const slotX = (s) => V.slotPt[(s % MAXS) * 2], slotY = (s) => V.slotPt[(s % MAXS) * 2 + 1];
-    // Runner i's route: its space's point -> the camp -> the ground -> half into the face of its pixel c.
-    function route(i, s, c) {
+    // Runner i's route: its space's point (v4.1, a picture: its colour's crate in the yard, p) -> the camp -> the ground ->
+    // half into the face of its pixel c.
+    function route(i, s, c, p) {
       bfs();
       const w = V.w, pts = V.rPts[i], cum = V.rCum[i];
       let u = -1, best = 1e9;
       for (let k = 0; k < 4; k++) { const v = nbOf(c, k); if (v >= 0 && V.dist[v] >= 0 && V.dist[v] < best) { best = V.dist[v]; u = v; } }
       let np = 0;
       const put = (x, y) => { pts[np * 2] = x; pts[np * 2 + 1] = y; np++; };
-      put(slotX(s), slotY(s));
+      if (p) put(p.x, p.y); else put(slotX(s), slotY(s));
       if (u >= 0) {
         const base = np; let e = u, guard = V.dist[u];
         put(e % w + 0.5, ((e / w) | 0) + 0.5);
         while (V.dist[e] > 0 && guard-- >= 0) { let nx = -1; for (let k = 0; k < 4; k++) { const v = nbOf(e, k); if (v >= 0 && V.dist[v] === V.dist[e] - 1) { nx = v; break; } } if (nx < 0) break; e = nx; put(e % w + 0.5, ((e / w) | 0) + 0.5); }
         for (let a = base, b = np - 1; a < b; a++, b--) { const ax = pts[a * 2], ay = pts[a * 2 + 1]; pts[a * 2] = pts[b * 2]; pts[a * 2 + 1] = pts[b * 2 + 1]; pts[b * 2] = ax; pts[b * 2 + 1] = ay; }
         put((u % w + 0.5 + (c % w) + 0.5) / 2, (((u / w) | 0) + 0.5 + ((c / w) | 0) + 0.5) / 2);
-        // v4 M4, a ring level: in from outside the edge its first ring cell is on (top, left, right); the bottom edge
-        // keeps the space's point below the yard.
-        if (V.ring) { const e0 = ((pts[2] | 0) + ((pts[3] | 0) * w)), ex = e0 % w, ey = (e0 / w) | 0;
-          if (ey === 0) { pts[0] = ex + 0.5; pts[1] = -0.7; } else if (ex === 0) { pts[0] = -0.7; pts[1] = ey + 0.5; } else if (ex === w - 1) { pts[0] = w + 0.7; pts[1] = ey + 0.5; } }
       } else put(c % w + 0.5, ((c / w) | 0) + 1.2); // no ground route (a resync mid-flight): straight up to it
       cum[0] = 0; for (let k = 1; k < np; k++) cum[k] = cum[k - 1] + Math.hypot(pts[k * 2] - pts[k * 2 - 2], pts[k * 2 + 1] - pts[k * 2 - 1]);
       V.rNp[i] = np; V.rL[i] = cum[np - 1];
@@ -501,11 +518,9 @@
       const i = V.rFree[--V.rFreeN], s = S.qS[id], c = S.qC[id], k = S.qK[id];
       V.rOn[i] = 1; V.rId[i] = id; V.idR[id] = i; V.rK[i] = k; V.rS[i] = s; V.rM[i] = S.spM[s]; V.rC[i] = c;
       V.rT0[i] = S.q0[id]; V.rT1[i] = S.q1[id]; V.rT2[i] = S.q2[id]; V.rShot[i] = 0; V.rDie[i] = -1; V.live++;
-      route(i, s, c);
-      const p = k === 1 ? V.piles[claim(V.rM[i])] : null;
-      if (k === 1) { V.rBx[i] = p ? p.x : V.w / 2; V.rBy[i] = p ? p.y : V.h + V.Y / 2;
-        if (V.ring && V.rPts[i][1] < V.h) { V.rBx[i] = V.rPts[i][0]; V.rBy[i] = V.rPts[i][1]; } // v4 M4: out the edge it came in by
-        return i; }
+      const p = k === 1 || V.pic ? V.piles[claim(V.rM[i])] : null; // v4.1: a picture's runner leaves its colour's crate
+      route(i, s, c, V.pic ? p : null);
+      if (k === 1) { V.rBx[i] = p ? p.x : V.w / 2; V.rBy[i] = p ? p.y : V.h + V.Y / 2; return i; }
       // A hit: it stops where its route first enters a standing ring (or at the pixel's face); the arrow meets it there.
       const pts = V.rPts[i], cum = V.rCum[i], np = V.rNp[i], w = V.w; let dH = cum[np - 1], tw = lowBit(coverNow(c));
       for (let q = 1; q < np; q++) { const px = Math.floor(pts[q * 2]), py = Math.floor(pts[q * 2 + 1]); if (px < 0 || py < 0 || px >= w || py >= V.h) continue; const m = coverNow(py * w + px); if (m) { dH = Math.max(0, cum[q] - 0.45); tw = lowBit(m); break; } }
@@ -677,7 +692,8 @@
     }
     const pos = new Float32Array(2);
     // Archer k's board spot: on top of its tower, a little north of the centre.
-    const archX = (k) => V.B.towers[k].cx + 0.5, archY = (k) => V.B.towers[k].cy + 0.5 - K.archer.lift;
+    // v4.1: on a picture the archer stands on the tower's top row (board.archer.picLift above its middle).
+    const archX = (k) => V.B.towers[k].cx + 0.5, archY = (k) => (V.pic ? V.towerTop[k] + 0.5 - K.archer.picLift : V.B.towers[k].cy + 0.5 - K.archer.lift);
     function draw() {
       if (!V.B || !V.sprites) return;
       const cs = V.cs, S = V.sprites, gx = V.g, t = V.t, ft = V.fxT, ss = S.ss, mb = S.mb, CW = canvas.width, CH = canvas.height;
@@ -826,9 +842,15 @@
       for (let i = 0; i < RMAX; i++) { if (!V.rOn[i] || V.rK[i] === 1) continue; live++; kind = V.rK[i]; if (t >= V.rT1[i]) struck++; else if (t >= V.rT1[i] - V.rAim[i]) arrows++; }
       return { live, arrows, struck, kind: kind === 3 ? 2 : kind === 2 ? 1 : 0, label: V.fxT - V.label.t < SH.labelMs };
     }
-    // v4 M4: where live runners came in (selfTest and the harness on ring levels): counts by edge, [top, left, right,
-    // bottom (the yard)], from each route's first point.
-    function sides() { const o = [0, 0, 0, 0]; for (let i = 0; i < RMAX; i++) { if (!V.rOn[i]) continue; const x = V.rPts[i][0], y = V.rPts[i][1]; o[y < 0 ? 0 : x < 0 ? 1 : x > V.w ? 2 : 3]++; } return o; }
+    // v4.1: where live runners came from (selfTest and the harness): {live, yard (the route starts in the yard below the
+    // board), crate (it starts on its colour's crate), entry (its first board cell is an entry square, the camp)}.
+    function entryInfo() {
+      const o = { live: 0, yard: 0, crate: 0, entry: 0 };
+      for (let i = 0; i < RMAX; i++) { if (!V.rOn[i]) continue; o.live++; const P = V.rPts[i], x = P[0], y = P[1], p = V.piles[V.pileOf[V.rM[i]]];
+        if (y >= V.h) o.yard++; if (p && Math.abs(p.x - x) < 0.01 && Math.abs(p.y - y) < 0.01) o.crate++;
+        const cx = Math.floor(P[2]), cy = Math.floor(P[3]); if (V.rNp[i] > 2 && cx >= 0 && cy >= 0 && cx < V.w && cy < V.h && V.B.a0[cy * V.w + cx] === CAMP) o.entry++; }
+      return o;
+    }
     // Live runners by space and kind (selfTest and the harness).
     function runners() {
       const bySpace = [0, 0, 0, 0, 0, 0, 0, 0]; let eat = 0, carrying = 0, hit = 0;
@@ -861,7 +883,7 @@
     // A material's mark alone (transparent around it, drawn in ink): the queue tiles' glyph in colour-blind mode.
     function glyph(m, px, ink) { const c = mk(px, px); mark(c.getContext("2d"), m, px, ink, K); return c; }
 
-    Object.assign(V, { setLevel, reset, layout, fitCs, hotNow, sync, setSlots, update, goblin, draw, checkSprites, buildSprites, paintLayer, shake, cssAt, hitInfo, fxInfo, runners, sides, setCb, glyph, studInfo,
+    Object.assign(V, { setLevel, reset, layout, fitCs, hotNow, sync, setSlots, update, goblin, draw, checkSprites, buildSprites, paintLayer, shake, cssAt, hitInfo, fxInfo, runners, entryInfo, setCb, glyph, studInfo,
       man: (m, px) => sapper(m, px) });
     return V;
   }
