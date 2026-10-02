@@ -122,3 +122,86 @@ HEAD `f933ab6` (branch `sappers-path`, `?v=24`), my own server on :8493. 2026-10
 | MINOR | m4: 24×24 emoji lose fine detail (Dragon). | Accept; per-picture 24×28 where identity suffers. |
 
 **Portal verdict:** CrazyGames accepts. Poki would not reject on sight, but V1 is what a reviewer would remember after a few levels. Fix the layout and silhouette variety (levers 1–3 and 7) before a Poki submission.
+
+---
+
+## Re-check (after fix pass)
+
+HEAD `8b4ed96` (branch `sappers-path`, `?v=25`), my own server on :8493. 2026-10-02.
+
+**How I checked** (I did not use the builder's numbers):
+- `SP.selfTest()`: 1017 pass, 0 fail. 0 console errors or warnings.
+- `visual-shots.mjs --out recheck` at 5 viewports.
+- `recheck-scenes.mjs`: night levels 14, 22, 57, 91 and winter levels 34, 72, 43 at 375×812, 375×667 and 1280, plus a 5-frame strip of the entry gate.
+- `recheck-probe.mjs` (coach, bar, Gallery), and the Critics 1 rod and gutter scans.
+- My own variety measures from `levels/levels.json`, against the pre-fix bake (`git show d52eda8`).
+- Everything is in `tools/shots-v4.1-critic/recheck/`, with sheets `r1`–`r2`. I also looked at the new contact sheet, `tools/shots-v4.1/contact-sheet-fix.png`.
+
+### V1 variety: much improved, downgraded to MINOR (residual)
+
+**Measured.** I used a 10×14 sample with the frame left out and the teaching levels excluded, comparing every pair of levels within an era. Medians, with the most alike pair in brackets:
+
+| Era | Colour map | Layout (scene stripped) | Silhouette: castle against background |
+|---|---|---|---|
+| 1 | 0.19 (0.73) | 0.43 | 0.64 |
+| 2 | 0.24 (0.67) | 0.43 | 0.71 |
+| 3 | 0.25 (0.60) | 0.39 | 0.74 |
+| 4 | 0.33 (0.75) | 0.41 | 0.74 |
+
+- **Layout:** was 0.67 / 0.66 / 0.60 / 0.53 on my v4.1 role maps.
+- **Silhouette:** was 0.79 / 0.80 / 0.88 / 0.84 on the pre-fix bake.
+- **Colours:** 7 sky colours (day 48 levels, dawn 17, night 17, winter 12, dusk 6), 3 grass, 3 ashlar and 2 slate. Before, every role had one colour.
+
+**By eye** (the fix contact sheet and sheets `r1`/`r2`):
+- **Era 1** now has real shape variety: the stockade left, middle or right, different spans, 0–2 towers, huts and props.
+- **Eras 3–4** vary their keep form (cone, spire, twin), tower colour and placement. The three Era 4 families are distinguishable.
+- **Era 2** is still one motte template (a salmon mound, a tower and a moat band), moved and recoloured.
+- **Across Eras 3–4** the "cream keep between blue towers with red roofs" family still dominates at thumbnail size.
+
+**Answer: not mostly recolours any more.** Layout and silhouette both moved, not just colour. It reads as 100 variations on 4–6 themes, which fits an era structure. It no longer reads as 4 pictures.
+
+**Residual (MINOR):**
+- Silhouettes still match 0.71–0.74 in Eras 2–4. Era 2 needs a second silhouette family, e.g. a ringwork, a motte with its bailey beside it rather than in front, or a hill-fort with two baileys.
+- Target a silhouette median of 0.65 or less in every era.
+
+### The other items
+
+| Item | Status | Evidence |
+|---|---|---|
+| **m1** entry square barely marked | **Fixed** | See m1 note below. |
+| **m2** keep reads as a face | **Fixed** | The keep has rows of arrow slits and no centred door (`375-l64-rest.png`, `375-l100-boss.png`, sheet `r2`). Level 88's inner-gate padlock under two slits is the closest to a face now, and only faintly. |
+| **m3** 375×667 Era 4 small | **Fixed** | 375×667 cells: level 88 10.0 px (was 8.5), level 100 8.5 px (was 8.0), level 64 10.5 px. All teaching levels are 8 px or more at 8 viewports. |
+| **m4** 24×24 emoji detail | **Accepted, unchanged** | Still the right call. |
+
+**m1 note.** A small timber gate stands in the bottom frame's middle with a path to the crates. In the 5-frame strip (`375-gate-strip-f0..f4`) the column walks from the crate yard to the gate, then out along the bottom frame and up both sides. The eye now finds where they come from.
+
+### Night and winter scenes: readable
+
+- **Screenshots:** `375-scene-l14/22/57/91` (night) and `-l34/72/43` (winter), `667-scene-*`, `1280-scene-l57/72` (sheet `r1`).
+- **Night:**
+  - The sky is mid-navy with stars and a moon. The black outline stays clearly visible against it.
+  - Timber, stone and teal slate towers separate from the sky through the outline and their lightness.
+  - Measured: no colour that stands against a night sky comes within ΔE00 20 of it. The one sub-20 pair, the drawbridge at 19.6, sits inside the water band, never against the sky.
+- **Winter:**
+  - A pale blue-grey sky with white snow in the foreground and drifts beside the walls.
+  - Grey stone against the winter sky is the lowest-contrast pair by eye, but the outline carries it (`375-scene-l72.png`).
+- **At 375×667** (10 px) both still read.
+
+### Regression
+
+- **Coach fit:** 0 clipped, 0 over the board, 0 over the level number at all 8 viewports. Minimum cell 8.0 px at 375×667.
+- **Rods:** 0 on counts, 0 on faces, 0 third-tile crossings over 538 states each at 375, 1280 and the iframe. Level 78's shared gutter (10 states at 375, 4 at 1280) is the 4 px brass/steel lane pair by design.
+- **Power-up bar:** 58 / 44 / 78 px with the poor, own and buy states.
+- **Gallery win picture:** 102×102, "Picture complete!".
+
+### New findings
+
+None.
+
+**Final counts:**
+- 0 blocking, 0 major.
+- 2 minor: V1 residual (Eras 2–4 silhouettes) and m4 (accepted).
+
+**Portal verdict:**
+- **CrazyGames: accept.**
+- **Poki: would not reject on sight.** The campaign now feels varied level to level (skies, times of day, props, layouts). What remains is the Era 2 silhouette and the Eras 3–4 keep family, which is polish, not a gate.

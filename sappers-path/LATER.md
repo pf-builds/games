@@ -235,3 +235,4 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - Era 4's lake family is the rarest pick: its castles reach the late levels' 11-12 colours less often and its walks run longer (the castle stands higher). A shallower lake or a wider shore would even it out.
 - Era 2 reads alike at a glance more than the others (the salmon motte and the red hall are its identity); a second motte colour (a grassy motte) would need a palette check against grass.
 - The entry gate's path in the yard is a short stub under the gate; a path that winds between the crates would read better but crosses the crates' slots.
+- (v4.1 critic re-check, V1 residual, minor) Era 2 is still one motte template moved and recoloured, and the cream-keep-between-blue-towers family dominates Eras 3-4. Next: a second Era 2 silhouette family and a silhouette-match median of 0.65 or less per era (now 0.64-0.74). See tools/critic-v4.1-visual.md re-check.
