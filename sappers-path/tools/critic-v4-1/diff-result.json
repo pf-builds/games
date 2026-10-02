@@ -6,29 +6,30 @@
   "gradeChecks": 300,
   "gradeMismatch": [],
   "statusCounts": {
-   "1/": 731,
-   "-1/jam": 1039,
-   "-1/short": 102
+   "1/": 767,
+   "-1/jam": 1043,
+   "-1/short": 62
   },
-  "ms": 4075,
+  "ms": 3117,
   "cov": {
-   "hitGames": 596,
-   "killGames": 193,
-   "unlockGames": 163,
-   "linkTaps": 428,
-   "refused": 24830,
-   "refusedLinked": 1108,
-   "revealChecks": 638282,
+   "hitGames": 400,
+   "killGames": 121,
+   "unlockGames": 179,
+   "linkTaps": 447,
+   "refused": 24152,
+   "refusedLinked": 831,
+   "revealChecks": 689958,
    "revealMismatch": 0,
    "jamWhy": {
-    "0": 1567,
-    "1": 5,
-    "2": 312
+    "0": 1637,
+    "1": 2,
+    "2": 308,
+    "3": 1
    },
    "rushedEnd": {
-    "1/": 624,
-    "-1/jam": 845,
-    "-1/short": 91
+    "1/": 596,
+    "-1/jam": 905,
+    "-1/short": 59
    }
   },
   "opt": {

@@ -1,20 +1,20 @@
 {
- "ms": 47340,
+ "ms": 19657,
  "levels": 164,
  "cov": {
   "why": {
-   "1:isFront": 2721,
-   "2:noneHidden": 10300,
-   "0:perLevel": 9123,
-   "3:emptySpace": 5298,
-   "3:badSpace": 1622,
-   "3:sappersOut": 1763,
-   "1:notInColumn": 2538,
-   "3:perLevel": 1226,
-   "1:perLevel": 1706,
-   "1:tooDeep": 1679,
-   "2:perLevel": 1358,
-   "3:linked": 77
+   "3:emptySpace": 4624,
+   "1:notInColumn": 2570,
+   "0:perLevel": 7422,
+   "2:noneHidden": 8504,
+   "3:sappersOut": 1790,
+   "3:badSpace": 1485,
+   "1:isFront": 2709,
+   "3:perLevel": 738,
+   "1:perLevel": 593,
+   "1:tooDeep": 1286,
+   "2:perLevel": 1359,
+   "3:linked": 70
   },
   "endNoplay": 15744,
   "endNoplayBad": 0,
@@ -28,16 +28,16 @@
   },
   "ops": {
    "taken": [
-    3104,
-    3938,
-    593,
-    1865
+    3283,
+    3756,
+    654,
+    1796
    ],
    "refused": [
-    9123,
-    8644,
-    11658,
-    9986
+    7422,
+    7158,
+    9863,
+    8707
    ],
    "noplay": [
     0,
@@ -46,27 +46,28 @@
     0
    ]
   },
-  "refusedChecked": 39411,
+  "refusedChecked": 33150,
   "refusedChanged": 0,
   "canPowerDisagree": 0,
-  "hiddenChecks": 4083497,
+  "hiddenChecks": 2464157,
   "outcomes": {
-   "1/": 4350,
-   "-1/jam": 3713,
-   "-1/short": 301
+   "1/": 4305,
+   "-1/jam": 3874,
+   "-1/short": 185
   },
   "jamWhy": {
-   "0": 3260,
-   "1": 7,
-   "2": 446
+   "0": 3456,
+   "1": 3,
+   "2": 412,
+   "3": 3
   },
-  "killGames": 301,
-  "unlockGames": 228,
+  "killGames": 185,
+  "unlockGames": 268,
   "gradeChecks": 480,
-  "orderOnly": 656,
+  "orderOnly": 715,
   "orderOnlyKinds": {
-   "REVEAL/POWER": "e2-35 easy patient+power ops[P0:0 P0:0R P2:0 4 1 2 1 P0:0R 2 P1:10R 3 0 0 0 4 3] game [[0,\"POWER\",0,6],[0,\"REVEAL\",1],[0,\"REVEAL\",6]] mine [[0,\"POWER\",0,6],[0,\"POWER\",2,3],[0,\"REVEAL\",1]]",
-   "REVEAL/REVEAL": "v4-all easy stored ops[0 0 0 0 2 1 1 1 2 4 2 3 3 3 3 4] game [[0,\"REVEAL\",1],[0,\"REVEAL\",6]] mine [[0,\"REVEAL\",6],[0,\"REVEAL\",1]]"
+   "REVEAL/POWER": "e2-35 easy patient+power ops[P2:0 4 P0:0 3 P1:6 P2:0R P1:2 4 P0:0R 0 P3:3R 2 3 4 P1:5 P1:8R P1:4R 3 2 0 1 2] game [[0,\"REVEAL\",1],[0,\"REVEAL\",9]] mine [[0,\"POWER\",2,3],[0,\"REVEAL\",1]]",
+   "REVEAL/REVEAL": "e4-85 easy stored ops[0 1 2 2 4 0 1 2 3 4 0 1 2 3 4 0 1 2 3 4 0] game [[12330,\"EAT\",424],[12360,\"EAT\",426],[13010,\"EAT\",441],[14020,\"FREE\",0],[14020,\"REVEAL\",12],[14020,\"REVEAL\",7]] mine [[12330,\"EAT\",424],[12360,\"EAT\",426],[13010,\"EAT\",441],[14020,\"FREE\",0],[14020,\"REVEAL\",7],[14020,\"REVEAL\",12]]"
   }
  },
  "gradeBad": [],

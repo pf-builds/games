@@ -213,3 +213,15 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - The functional critic's edge case "Recall a wary squad, re-tap" numbers one archer-hit sapper differently from the game (a log label only; SPEC-v4 §9's Critics 2 entry says ids are labels). Their script could compare events without the sapper id.
 - (Critics 2 re-check, n1, minor) Level 77's top-bar coach line at 375×667 wraps as "Linked squads: 2 / spaces." Readable; fix with balanced wrapping or a shorter small-screen line. Shots in tools/shots-v4-critic2/recheck/.
 - (Critics 2 re-check) The debug level v4-linked still shows two brass rods in one gutter (campaign level 78 is fixed with brass and steel lanes).
+
+## From v4.1 (castle pictures, bottom entry, 2026-10-01)
+
+- Peter's call, the entry's width. The entry square is 3 cells (2 on an even width) in the middle of the frame's bottom row, as Peter described ("the square at the bottom"). Measured on Gallery boards, a whole-bottom-row entry walks about 20% less, which would buy back some board size within the same time targets.
+- Board size against the time targets (as in M3): with bottom entry every block costs a longer walk, so the boards are smaller than v4's in cells (the block counts are about the same: v4's forts stood in grass). Bigger boards need a longer max (4 minutes) or a faster walk.
+- Variety: the castles of one era share their layout and colours (one master colour per role), so neighbours in the Siege look alike at a glance. Ideas: a few palette families per era (dusk sky, autumn grass, red-brick or white-stone castles), more foreground props (carts, siege engines, banners on poles, a river), mirrored layouts, a night castle for the boss.
+- Era 4's inner moat fits only on the boss at these sizes; other concentric castles take a portcullis in the inner gatehouse as their second gate. A taller Era 4 (or a longer max) would bring the inner moat back.
+- Era 2's second moat (round the motte) needs 24 picture rows; at the time-limited sizes no Era 2 level has it.
+- The drawbridge is drawn in `picture.iron` (steel) with the gate's bars; a wooden drawbridge with iron bands would read better as a bridge.
+- Archer towers stand against the frame or on a bank path so a hit-free deal exists on Hard; towers inside a wall (reached only through covered blocks) would need a dealer that allows one hit on Easy and Normal only.
+- `tools/shots-v4-m4.mjs` and older shots scripts call `SP.sides()`, retired with the ring entry (`SP.entry()` replaces it); rerunning them needs that one change.
+- Peter's old v3/v4 saves keep their wins by level id; the levels behind those ids are new pictures.
