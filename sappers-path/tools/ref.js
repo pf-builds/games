@@ -11,10 +11,9 @@
 // spaces free together once both squads are done. A lock keeps the last lockSpaces (1) spaces shut until its key pixel
 // pops. At rest with cards left, if no front card's tap would be taken, the level jams (jamWhy: 1 a space was free,
 // 2 a space was still locked).
-// v4 M4 (SPEC-v4 §9, from the rules text): a ring level (ring: true) is entered from its border ring of camp cells, so
-// its walking distances start at every ring cell; ties go to the smaller layer (distance in from the board's edge), then
-// the place along that layer's side counted clockwise from the side's first corner, then the side (top, right, bottom,
-// left) instead of the camp row.
+// v4.1 (SPEC-v4 §9, from the rules text): v4 M4's ring levels are retired (no level carries ring: true). A picture board
+// (pic: true) is entered from its camp, the entry square in the bottom border row, so every level uses the camp rules
+// above: walks from the camp, ties to the row nearest the camp row, then the lower x, then the lower y.
 // v4 M5 (SPEC-v4 §9, the power-ups, from the rules text): power(k, a, t) -> undefined (taken), "refused" or nothing (the
 // game is over). Each level allows rules.powers[k] uses. A card seen at the front of its list stays face up. Ladder (0):
 // one more space, at most 8 in the line. Quartermaster (1, a = a card's file index): a card 1..rules.pullDepth (2) places
@@ -43,7 +42,7 @@ function load(L) {
   const cols = L.cols.map((c, j) => c.map((cd) => ({ m: cd[0], n: cd[1], mystery: cd[2] === 1, ci: ci++, partner: null, col: j, seen: false })));
   for (const P of L.links || []) { const a = cols[P[0][0]][P[0][1]], b = cols[P[1][0]][P[1][1]]; a.partner = b; b.partner = a; }
   const lockKey = L.lock ? idx(L.lock.key) : -1;
-  return { w, h, g, campRow, gates, towers, cols, lockKey, ring: L.ring === true };
+  return { w, h, g, campRow, gates, towers, cols, lockKey };
 }
 
 function game(L, rules) {
@@ -73,15 +72,6 @@ function game(L, rules) {
     return R.towers.some((T) => T.cells.some((tc) => g[tc] > 0) && (x - T.cx) ** 2 + (y - T.cy) ** 2 <= T.r * T.r);
   }
   const better = (k, b) => { for (let i = 0; i < 4; i++) if (k[i] !== b[i]) return k[i] < b[i]; return false; };
-  // A ring level's tie-break for (x, y): [layer, place along the layer's side, side]. The layer's rectangle runs from
-  // (lay, lay) to (w-1-lay, h-1-lay); walking it clockwise, each side owns its first corner and not its last. A lone
-  // centre cell counts as the top side's first.
-  function ringTie(x, y) {
-    const lay = Math.min(x, y, w - 1 - x, h - 1 - y), right = w - 1 - lay, bottom = h - 1 - lay;
-    const sides = [[y === lay && x !== right, x - lay], [x === right && y !== bottom, y - lay], [y === bottom && x !== lay, right - x], [x === lay && y !== lay, bottom - y]];
-    const s = sides.findIndex((q) => q[0]);
-    return s < 0 ? [lay, 0, 0] : [lay, sides[s][1], s];
-  }
   // Nearest unclaimed reachable pixel of m (wary: outside every standing ring): [cell, walk distance] or null.
   function nearest(m, wary) {
     const d = dist(); let best = null, bk = null;
@@ -90,7 +80,7 @@ function game(L, rules) {
       const x = c % w, y = Math.floor(c / w); let t = Infinity;
       for (const [dx, dy] of DIRS) { const e = at(x + dx, y + dy); if (e !== null && d[e] >= 0) t = Math.min(t, d[e]); }
       if (t === Infinity) continue;
-      const k = R.ring ? [t].concat(ringTie(x, y)) : [t, Math.abs(y - R.campRow), x, y];
+      const k = [t, Math.abs(y - R.campRow), x, y];
       if (!bk || better(k, bk)) { best = [c, t]; bk = k; }
     }
     return best;

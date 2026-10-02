@@ -4,8 +4,8 @@
 // (mystery cards, linked squads, the locked space, the generalized jam, dealing mode) on hand-made boards, a no-hang
 // sweep and a second differential on the debug levels and on baked levels with random twists injected, the grader's
 // info model and the fast tapper; last, the page save's settings (v4 M1: speed and colour-blind marks) through sanitize.
-// v4 M4: ring levels (the tie-break, the outline, engine vs reference on random ring boards), the Gallery converter on a
-// tiny hand image, the Gallery file's invariants and engine vs reference on its boards, the save's Gallery wins.
+// v4.1: picture boards entered from the bottom (compile, known answers, a moat, the outline, engine vs reference on random
+// picture boards; v4 M4's ring levels are retired), the Gallery converter on a tiny hand image, the Gallery file's invariants and engine vs reference on its boards, the save's Gallery wins.
 // v4 M5: the power-ups (Ladder, Quartermaster, Scout, Recall) on hand-made boards with known answers, their refusals and
 // limits, colour balance, identical play when none is used, and engine vs reference with random power-ups mixed in.
 // Run: ~/.local/opt/node/bin/node tools/test.js   (exit code 1 on any failure)
@@ -310,6 +310,23 @@ const ARCH = (cols) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "
   eq(dead, 0, "levels: every stored Normal line keeps every tap under " + BC.maxWaitMs / 1000 + " s (longest " + (longest / 1000).toFixed(1) + " s) and " + BC.maxTaps + " taps");
 }
 
+// ---- v4.1: every Siege level is a castle picture -------------------------------------------------------------------------
+// A picture board (pic: the frame open ground, the entry square its bottom row's middle); a palette for every colour it
+// shows (the gilt keys keep config's, the drawbridge may take its own); every pair of its card colours (gilt and the black
+// outline included) apart by the picture minDE in CIEDE2000, plain and with one faded to a queue row (bake-config picture).
+{
+  const PAL = require("./palette.js"), PIC = require("./pic.js"), Q = require("./bake-config.json").picture, bad = []; let dmin = 99, fmin = 99, at = "";
+  for (const L of LEVELS.levels) {
+    const B = E.compile(L), used = new Set(); for (const row of L.grid) for (const ch of row) { const m = E.matOf(ch); if (m) used.add(m); }
+    if (!B.pic || !L.pal) { bad.push(L.id + ": not a picture"); continue; }
+    const cards = [...used].filter((m) => m !== E.IRON), hx = cards.map((m) => (m === E.GILT ? V3.mats[m].c : L.pal[m] && L.pal[m].c));
+    if (hx.some((h) => !h) || Object.keys(L.pal).some((k) => !used.has(+k))) { bad.push(L.id + ": palette ids " + Object.keys(L.pal) + " vs " + [...used]); continue; }
+    for (let a = 0; a < hx.length; a++) for (let b = a + 1; b < hx.length; b++) { const d = PIC.de(hx[a], hx[b]), f = PIC.fadeGap(hx[a], hx[b]); if (d < dmin) { dmin = d; at = L.id; } if (f < fmin) fmin = f; }
+  }
+  eq(bad, [], "pictures: every Siege level is a picture board with a palette for exactly its colours (gilt keys keep config's)");
+  ok(dmin >= Q.minDE - 0.05 && fmin >= Q.fadeDE - 0.05, "pictures: every pair of a level's card colours is " + Q.minDE + " apart (smallest " + dmin.toFixed(1) + ", " + at + ") and " + Q.fadeDE + " apart with one faded to a queue row (smallest " + fmin.toFixed(1) + ")");
+}
+
 // ==== v4 M2: the twists (mystery cards, linked squads, the locked space) =================================================
 // Events of one type since the log was cleared, as [a, b].
 const evs = (S, type) => { const o = []; for (let i = 0; i < S.evLen; i += 3) if (S.ev[i] === type) o.push([S.ev[i + 1], S.ev[i + 2]]); return o; };
@@ -564,59 +581,67 @@ const TWISTED = DEBUG.concat(LEVELS.levels.filter((l, k) => k % 2 === 1).map((l,
   ok(fr.every((x) => x >= 0 && x <= 1), "grader: the fast tapper finishes on a baked level and a linked one (" + fr.join(", ") + ")");
 }
 
-// ==== v4 M4: ring levels (the Gallery) ======================================================================================
-// A ring board: a picture of w x h cells inside a 1-cell ring of camp.
-const ringLv = (rows, cols, extra) => { const w = rows[0].length + 2, grid = ["#".repeat(w)].concat(rows.map((r) => "#" + r + "#"), ["#".repeat(w)]); return lv(grid, cols, Object.assign({ ring: true }, extra || {})); };
+// ==== v4.1: picture boards entered from the bottom (every Siege level and Gallery picture) ======================================
+// A picture board: the picture's rows inside a 1-cell frame of open ground, the entry square (camp) centred in the
+// bottom row (entryHalf 1: 3 cells on an odd width, 2 on an even one). water: picture rows whose frame cells are water.
+const picLv = (rows, cols, extra, wet) => { const w = rows[0].length + 2, mid = (w - 1) / 2, grid = [",".repeat(w)].concat(rows.map((r, y) => ((wet || []).indexOf(y) >= 0 ? "~" + r + "~" : "," + r + ","))), bot = Array.from({ length: w }, (_, x) => (Math.abs(x - mid) <= 1 ? "#" : ",")).join(""); grid.push(bot); return lv(grid, cols, Object.assign({ pic: true }, extra || {})); };
 {
-  throws(() => E.compile(lv(["#####", "#aaa#", "#a.a#", "#####"].map((r, y) => (y === 2 ? "#a.a." : r)), null, { ring: true })), "ring: a border cell that isn't camp throws");
-  throws(() => E.compile(lv(["#####", "#a#a#", "#aaa#", "#####"], null, { ring: true })), "ring: a camp cell inside the ring throws");
-  const B = E.compile(ringLv(["aaa", "aba", "aaa"], [[[1, 8]], [[2, 1]], [], [], []]));
-  eq([B.ring, B.campRow, E.compile(LEVELS.levels[0]).ring], [true, 0, false], "ring: compile flags a ring level; a siege level is not one");
-  // ringKey on a 5x5 board: layer 1's eight cells, the four sides taking turns from their clockwise-first corner.
-  const k = []; for (let y = 1; y <= 3; y++) for (let x = 1; x <= 3; x++) if (x !== 2 || y !== 2) k.push([E.ringKey(x, y, 5, 5), x, y]);
-  eq(k.sort((p, q) => p[0] - q[0]).map((q) => [q[1], q[2]]), [[1, 1], [3, 1], [3, 3], [1, 3], [2, 1], [3, 2], [2, 3], [1, 2]], "ringKey: layer 1 of a 5x5 goes top-left, top-right, bottom-right, bottom-left corners, then one step clockwise along each side");
-  eq([E.ringKey(2, 2, 5, 5) > E.ringKey(1, 2, 5, 5), E.ringKey(3, 2, 7, 5) < E.ringKey(2, 2, 7, 5) === false], [true, true], "ringKey: an inner layer ranks after the outer one; a one-row layer runs from its left end");
-  // Known answer: the eight a's round the b all touch the ring (walk 0), so the squad claims them in ring-key order,
-  // one per stagger, and they pop in that order; the b is reachable after.
-  const S = E.sim(B, N);
-  eq(eats(S, 0), [[1, 1], [3, 1], [3, 3], [1, 3], [2, 1], [3, 2], [2, 3], [1, 2]], "ring: equal walks go in ring-key order (the corners first, then clockwise along each side)");
-  eq([S.reachable(2), pat(S, 1)], [1, E.WON], "ring: the b inside is in reach once its neighbours popped, and the picture is razed");
+  throws(() => E.compile(lv(["#####", "#aaa#", "#aaa#", "#####"], null, { ring: true })), "pic: v4 M4's ring levels are retired (ring: true throws)");
+  throws(() => E.compile(lv([".....", ",aaa,", ",,#,,"], null, { pic: true })), "pic: a border cell that is grass throws");
+  throws(() => E.compile(lv([",,,,,", ",a#a,", ",,#,,"], null, { pic: true })), "pic: a camp cell inside the picture throws");
+  throws(() => E.compile(lv([",,,,,", ",aaa,", "#,,,#"], null, { pic: true })), "pic: an entry that is not one run throws");
+  throws(() => E.compile(lv(["~~~~~", ",aaa,", ",,#,,"], null, { pic: true })), "pic: water on the top border throws");
+  const B = E.compile(picLv(["aaa", "a~a", "aaa"], [[[1, 8]], [], [], [], []], null, [1]));
+  eq([B.pic, B.campRow, B.w, B.h, E.compile(lv(["a~b", "...", ".##"])).pic], [true, 4, 5, 5, false], "pic: compile flags a picture board (water allowed on the side borders); a plain level is not one; the camp row is the bottom row");
 }
 {
-  // The walk comes first: the top a sits behind water (walk 2), the lower one opens onto grass (walk 1), so the lower one
-  // goes first although the top one's ring key is smaller.
-  const L = lv(["#######", "#~~~..#", "#~a~..#", "#.....#", "#..a..#", "#.....#", "#######"], [[[1, 2]], [], [], [], []], { ring: true }), S = E.sim(E.compile(L), N);
-  ok(E.ringKey(2, 2, 7, 7) < E.ringKey(3, 4, 7, 7), "ring: the top a has the smaller ring key");
-  eq(eats(S, 0), [[3, 4], [2, 2]], "ring: the shorter walk is claimed first; the ring key only breaks ties");
+  // Known answer: 12 a's round three b's. Every a touches the frame; all 12 are claimed before the first pop (a squad of
+  // 12 leaves within 12 staggers), so the claim order is the pop order: the walk from the entry square first (the bottom
+  // row's middle three 0, the ends 1, up the sides 4 and 5, the top row 8 and 9), equal walks to the row nearest the camp
+  // row, then the lower x. The b's inside are reached once an a beside them pops.
+  const L = picLv(["aaaaa", "abbba", "aaaaa"], [[[1, 12]], [[2, 3]], [], [], []]), S = E.sim(E.compile(L), N);
+  eq([S.B.campRow, S.d[4 * 7 + 3], S.d[4 * 7 + 2], S.d[4 * 7 + 4], S.d[4 * 7 + 0], S.d[0 * 7 + 3]], [4, 0, 0, 0, 2, 9], "bottom entry: the entry square is 3 cells (walk 0); the top border's middle is the long walk (2 to the corner, 4 up, 3 along)");
+  eq(eats(S, 0), [[2, 3], [3, 3], [4, 3], [1, 3], [5, 3], [1, 2], [5, 2], [1, 1], [5, 1], [2, 1], [4, 1], [3, 1]], "bottom entry: nearest the entry first, the top last; equal walks go to the row nearest the camp row, then the lower x");
+  eq([S.reachable(2), pat(S, 1)], [3, E.WON], "bottom entry: the b's are in reach once the a's round them pop; razed");
 }
 {
-  // An outline needs no rule of its own: a black ring round the picture's inside shuts it off until black is eaten, and
-  // black is only reachable once the background in front of it is gone.
-  const L = ringLv(["aaaaaaa", "akkkkka", "akbbbka", "akbbbka", "akkkkka", "aaaaaaa"], [[[2, 6]], [[11, 14]], [[1, 22]], [], []]), S = E.sim(E.compile(L), N);
-  eq([S.reachable(1), S.reachable(11), S.reachable(2)], [22, 0, 0], "outline: at the start only the background touches the ring");
+  // A moat runs off both sides (water in the frame on its rows): the far side is reached only over the drawbridge, an iron
+  // gate whose gilt key is on the near side. The bank path (open ground) above the moat joins the frame on both sides.
+  const L = picLv(["aaaaa", ",,,,,", "~~j~~", "bbnbb", "bbbbb"], [[[2, 9]], [[14, 1]], [[1, 5]], [], []], { gates: [{ at: [3, 3], key: [3, 4] }] }, [2]), S = E.sim(E.compile(L), N);
+  eq([S.reachable(1), S.reachable(2), S.reachable(14)], [0, 7, 0], "moat: before the key only the near side is in reach (the frame is water where the moat runs off)");
+  eq([pat(S, 0), S.reachable(14), S.reachable(1)], [E.PLAYING, 1, 0], "moat: the near side goes; its key is in reach; the far side still is not");
+  eq([pat(S, 1), S.reachable(1)], [E.PLAYING, 5], "moat: the key pops, the drawbridge drops, and the bank path joins the frame: every block on the far side is in reach");
+  eq(pat(S, 2), E.WON, "moat: the far side goes over the bridge: razed");
+}
+{
+  // An outline needs no rule of its own: a black ring round the picture's inside shuts it off until black is eaten.
+  const L = picLv(["aaaaaaa", "akkkkka", "akbbbka", "akbbbka", "akkkkka", "aaaaaaa"], [[[2, 6]], [[11, 14]], [[1, 22]], [], []]), S = E.sim(E.compile(L), N);
+  eq([S.reachable(1), S.reachable(11), S.reachable(2)], [22, 0, 0], "outline: at the start only the background touches the frame");
   eq([pat(S, 0), S.lineLen], [E.PLAYING, 1], "outline: a squad of the inside colour waits (nothing in reach)");
   eq([pat(S, 1), S.lineLen, S.reachable(11)], [E.PLAYING, 2, 0], "outline: black waits too while the background stands");
   eq([pat(S, 2), S.status], [E.WON, E.WON], "outline: the background goes, then black breaches the outline, then the inside goes: razed");
 }
-// Random ring boards (a background, blobs of other colours, an outline round one of them) with random decks, for the
-// differential against the reference.
-function ringRandom(seed) {
+// Random picture boards (a background, blobs of other colours, an outline round one of them, sometimes a moat band with
+// a drawbridge and its key) with random decks, for the differential against the reference.
+function picRandom(seed) {
   const r = Gr.rng(seed), ri = (a, b) => a + Math.floor(r() * (b - a + 1)), w = ri(6, 14), h = ri(6, 16), g = [];
   for (let y = 0; y < h; y++) { g.push([]); for (let x = 0; x < w; x++) g[y].push(1); }
   for (let k = 0, nk = ri(2, 5); k < nk; k++) { const cx = ri(1, w - 2), cy = ri(1, h - 2), rr = ri(1, 4), m = ri(2, 6);
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if ((x - cx) ** 2 + (y - cy) ** 2 <= rr * rr) g[y][x] = m;
     if (k === 0) for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { if (g[y][x] === m) continue; const nbm = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => g[y + dy] && g[y + dy][x + dx] === m && (x - cx) ** 2 + (y - cy) ** 2 <= (rr + 1.5) ** 2); if (nbm) g[y][x] = 11; } }
-  const rows = g.map((row) => row.map((m) => E.chOf(m)).join("")), cnt = {}; for (const row of g) for (const m of row) cnt[m] = (cnt[m] || 0) + 1;
+  let wet = [], gates; const my = h >= 8 && r() < 0.4 ? ri(2, h - 4) : -1;
+  if (my >= 0) { const bx = ri(1, w - 2); for (let x = 0; x < w; x++) { g[my][x] = x === bx ? 10 : -1; g[my - 1][x] = -2; } const ky = ri(my + 1, h - 1), kx = ri(0, w - 1); g[ky][kx] = 14; wet = [my]; gates = [{ at: [bx + 1, my + 1], key: [kx + 1, ky + 1] }]; }
+  const rows = g.map((row) => row.map((m) => (m === -1 ? "~" : m === -2 ? "," : E.chOf(m))).join("")), cnt = {}; for (const row of g) for (const m of row) if (m > 0 && m !== 10) cnt[m] = (cnt[m] || 0) + 1;
   const cards = []; for (const m of Object.keys(cnt)) { let left = cnt[m]; while (left > 0) { const k = Math.min(left, ri(2, 14)); cards.push([+m, k]); left -= k; } }
   for (let i = cards.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [cards[i], cards[j]] = [cards[j], cards[i]]; }
   const cols = [[], [], [], [], []]; cards.forEach((cd, i) => cols[r() < 0.5 ? i % 5 : ri(0, 4)].push(cd));
-  return ringLv(rows, cols);
+  return picLv(rows, cols, gates ? { gates } : null, wet);
 }
-const RINGS = []; for (let k = 0; k < 40; k++) { const L = ringRandom(9101 + k); RINGS.push(k % 4 === 3 ? inject(L, 9301 + k) : L); }
+const PICS = []; for (let k = 0; k < 40; k++) { const L = picRandom(9101 + k); PICS.push(k % 4 === 3 ? inject(L, 9301 + k) : L); }
 {
-  let games = 0, taps = 0, refused = 0, pops = 0, diffs = 0; const t0 = Date.now();
+  let games = 0, taps = 0, refused = 0, pops = 0, diffs = 0, moats = PICS.filter((L) => L.gates).length; const t0 = Date.now();
   const rline = (R) => R.spaces.map((s, k) => [k, s]).filter(([, s]) => s).sort((p, q) => p[1].seq - q[1].seq).map(([k, s]) => [s.m, s.wait + s.out]);
-  for (const L of RINGS) {
+  for (const L of PICS) {
     const B = E.compile(L);
     for (const [dn, rules] of Object.entries(RULES)) for (const rushed of [false, true]) {
       const S = E.sim(B, rules), R = Ref.game(L, rules), r = Gr.rng(B.n * 17 + (rushed ? 5 : 1) + dn.length); S.logOn = true;
@@ -638,11 +663,11 @@ const RINGS = []; for (let k = 0; k < 40; k++) { const L = ringRandom(9101 + k);
       }
       if (!bad) { S.quiet(); R.quiet(); const st = S.status === E.WON ? "won" : S.status === E.FAILED ? "failed" : "playing"; if (st !== R.status || S.reason !== R.reason) bad = "final"; }
       pops += mine.length; games++;
-      if (bad) { diffs++; if (diffs <= 4) console.log("  diff: ring board " + B.w + "x" + B.h + " " + dn + (rushed ? " rushed" : " patient") + ": " + bad); }
+      if (bad) { diffs++; if (diffs <= 4) console.log("  diff: picture board " + B.w + "x" + B.h + " " + dn + (rushed ? " rushed" : " patient") + ": " + bad); }
     }
   }
-  eq(diffs, 0, "differential (ring boards): engine == reference on " + games + " games (" + taps + " taps, " + refused + " refused, " + pops + " pops) on " + RINGS.length + " random ring boards, patient and rushed");
-  console.log("  differential (ring boards): " + games + " games, " + taps + " taps, " + pops + " pops, " + refused + " refused in " + ((Date.now() - t0) / 1000).toFixed(1) + " s");
+  eq(diffs, 0, "differential (picture boards): engine == reference on " + games + " games (" + taps + " taps, " + refused + " refused, " + pops + " pops) on " + PICS.length + " random picture boards (" + moats + " with a moat), patient and rushed");
+  console.log("  differential (picture boards): " + games + " games, " + taps + " taps, " + pops + " pops, " + refused + " refused in " + ((Date.now() - t0) / 1000).toFixed(1) + " s");
 }
 
 // ---- v4 M4: the converter on a tiny hand image with a known answer; PNG in and out -----------------------------------------
@@ -653,11 +678,11 @@ const CV = require("./convert.js"), GCFG = require("./gallery-config.json"), PAL
   const w = 6, h = 6, rgba = new Uint8Array(w * h * 4);
   for (let y = 2; y <= 3; y++) for (let x = 2; x <= 3; x++) rgba.set([255, 0, 0, 255], (y * w + x) * 4);
   const P = CV.plan({ w, h, rgba }, { kind: "emoji", box: [6, 6], margin: 2, outline: 1, bg: "#8ecdf2" }, GCFG.convert);
-  eq(P.grid, ["########", "#aaaaaa#", "#abbbba#", "#abccba#", "#abccba#", "#abbbba#", "#aaaaaa#", "########"], "convert: a 2x2 red block on transparency becomes the block, an 8-adjacent ink outline, the background and the camp ring (ids by population)");
+  eq(P.grid, [",,,,,,,,", ",aaaaaa,", ",abbbba,", ",abccba,", ",abccba,", ",abbbba,", ",aaaaaa,", ",,,##,,,"], "convert: a 2x2 red block on transparency becomes the block, an 8-adjacent ink outline, the background, in a frame of open ground with the entry square in its bottom row (v4.1; ids by population)");
   eq([P.pal[1].c, P.pal[1].n, P.pal[2].c, P.pal[2].n, P.pal[3].n, P.stats.colours, P.stats.outline], ["#8ecdf2", "sky", GCFG.convert.ink, "black", "red", 3, 12], "convert: the palette is the background, the ink and the red, each named");
   ok(PAL.de00(PAL.lab(P.pal[3].c), PAL.lab("#ff0000")) < 1, "convert: the red keeps its colour (" + P.pal[3].c + ")");
   const S = E.sim(E.compile(Object.assign({ cols: [[[3, 4]], [[2, 12]], [[1, 20]], [], []] }, P)), N);
-  eq([S.B.ring, S.reachable(1), S.reachable(2), S.reachable(3)], [true, 20, 0, 0], "convert: the plan is a ring level; only the background is in reach at the start (the outline shuts the block off)");
+  eq([S.B.pic, S.reachable(1), S.reachable(2), S.reachable(3)], [true, 20, 0, 0], "convert: the plan is a picture board; only the background is in reach at the start (the outline shuts the block off)");
   eq([pat(S, 0), pat(S, 1), pat(S, 2), S.status], [E.PLAYING, E.PLAYING, E.WON, E.WON], "convert: red and black wait, the background goes, then black breaches, then red: razed");
   // A colour closer than minDE to a kept one is left out: two reds 5 apart become one.
   const r2 = new Uint8Array(w * h * 4); for (let y = 1; y <= 4; y++) for (let x = 1; x <= 4; x++) r2.set(x < 3 ? [255, 0, 0, 255] : [245, 10, 10, 255], (y * w + x) * 4);
@@ -680,7 +705,7 @@ const CV = require("./convert.js"), GCFG = require("./gallery-config.json"), PAL
   for (const L of GL) {
     const B = E.compile(L), used = new Set(); for (const row of L.grid) for (const ch of row) { const m = E.matOf(ch); if (m) used.add(m); }
     const ids = Object.keys(L.pal).map(Number).sort((a, b) => a - b), pic = MAN.pictures.find((p) => p.id === L.src);
-    if (!B.ring || E.check(L).length || L.links || L.lock || (L.gates && L.gates.length) || (L.towers && L.towers.length) || L.cols.some((c) => c.some((cd) => cd[2]))) bad.push(L.id + ": not a plain ring level");
+    if (!B.pic || E.check(L).length || L.links || L.lock || (L.gates && L.gates.length) || (L.towers && L.towers.length) || L.cols.some((c) => c.some((cd) => cd[2]))) bad.push(L.id + ": not a plain picture board");
     if (ids.join() !== [...used].sort((a, b) => a - b).join() || ids.some((m) => m === E.IRON || m === E.GILT)) bad.push(L.id + ": palette ids " + ids + " vs grid " + [...used]);
     for (let m = 1; m < E.NMAT; m++) if (B.sapTotal[m] !== B.pix[m]) bad.push(L.id + ": colour " + m + " has " + B.sapTotal[m] + " sappers for " + B.pix[m] + " pixels");
     for (const d of ["easy", "normal", "hard"]) { if (E.replay(B, RULES[d], L.win[d] || "").status === E.WON) wins++; else bad.push(L.id + " " + d + ": stored order does not win"); }
@@ -694,9 +719,9 @@ const CV = require("./convert.js"), GCFG = require("./gallery-config.json"), PAL
   }
   for (let i = 0; i < GL.length; i++) for (let j = i + 1; j < GL.length; j++) { const A = GL[i], Bq = GL[j]; if (A.w !== Bq.w || A.h !== Bq.h) continue; let same = 0; for (let y = 0; y < A.h; y++) for (let x = 0; x < A.w; x++) if (A.grid[y][x] === Bq.grid[y][x]) same++; if (same / (A.w * A.h) >= GB.dedupe) bad.push(A.id + " and " + Bq.id + " are near-duplicates"); }
   ms.sort((a, b) => a - b);
-  eq(bad, [], "gallery: every level is a plain ring level whose palette is exactly its colours (never 10 or 14), sappers sum to pixels, stored orders win on Easy, Normal and Hard, colours " + GCFG.convert.minDE + " apart (paintings " + GCFG.convert.kinds.painting.minDE + "; smallest " + dmin.toFixed(1) + "), faded tiles " + GCFG.convert.fadeDE + " apart (not paintings; smallest " + dminFade.toFixed(1) + "), a manifest and LICENSES.md line each, no near-duplicates");
+  eq(bad, [], "gallery: every level is a plain picture board whose palette is exactly its colours (never 10 or 14), sappers sum to pixels, stored orders win on Easy, Normal and Hard, colours " + GCFG.convert.minDE + " apart (paintings " + GCFG.convert.kinds.painting.minDE + "; smallest " + dmin.toFixed(1) + "), faded tiles " + GCFG.convert.fadeDE + " apart (not paintings; smallest " + dminFade.toFixed(1) + "), a manifest and LICENSES.md line each, no near-duplicates");
   eq([wins, dead, taps, over, band], [GL.length * 3, 0, 0, 0, GL.length], "gallery: " + wins + " stored orders win; every Normal line under " + GB.maxWaitMs / 1000 + " s a tap, " + GB.maxTaps + " taps and " + GB.duration.maxMs / 1000 + " s (median " + (ms[(ms.length - 1) >> 1] / 1000).toFixed(0) + " s, max " + (ms[ms.length - 1] / 1000).toFixed(0) + " s); every level in its Normal band");
-  // Engine vs the slow reference on the Gallery's ring boards: Normal patient and rushed on every level, Easy and Hard
+  // Engine vs the slow reference on the Gallery's picture boards: Normal patient and rushed on every level, Easy and Hard
   // patient on every fourth.
   let games = 0, diffs = 0, pops = 0; const t0 = Date.now();
   for (const [k, L] of GL.entries()) for (const [dn, rules] of Object.entries(RULES)) for (const rushed of [false, true]) {
@@ -713,7 +738,7 @@ const CV = require("./convert.js"), GCFG = require("./gallery-config.json"), PAL
     }
     pops += mine.length; games++; if (bad2) { diffs++; if (diffs <= 3) console.log("  diff: " + L.id + " " + dn + (rushed ? " rushed" : " patient") + ": " + bad2); }
   }
-  eq(diffs, 0, "differential (Gallery): engine == reference on " + games + " games on the Gallery's ring boards (" + pops + " pops)");
+  eq(diffs, 0, "differential (Gallery): engine == reference on " + games + " games on the Gallery's picture boards (" + pops + " pops)");
   console.log("  differential (Gallery): " + games + " games in " + ((Date.now() - t0) / 1000).toFixed(1) + " s");
 }
 
