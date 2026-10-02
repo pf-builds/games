@@ -218,10 +218,20 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 
 - Peter's call, the entry's width. The entry square is 3 cells (2 on an even width) in the middle of the frame's bottom row, as Peter described ("the square at the bottom"). Measured on Gallery boards, a whole-bottom-row entry walks about 20% less, which would buy back some board size within the same time targets.
 - Board size against the time targets (as in M3): with bottom entry every block costs a longer walk, so the boards are smaller than v4's in cells (the block counts are about the same: v4's forts stood in grass). Bigger boards need a longer max (4 minutes) or a faster walk.
-- Variety: the castles of one era share their layout and colours (one master colour per role), so neighbours in the Siege look alike at a glance. Ideas: a few palette families per era (dusk sky, autumn grass, red-brick or white-stone castles), more foreground props (carts, siege engines, banners on poles, a river), mirrored layouts, a night castle for the boss.
+- Variety (done in the v4.1 fix pass, below): scenes, layouts, props, Era 4 families and the bake's variety gate.
 - Era 4's inner moat fits only on the boss at these sizes; other concentric castles take a portcullis in the inner gatehouse as their second gate. A taller Era 4 (or a longer max) would bring the inner moat back.
 - Era 2's second moat (round the motte) needs 24 picture rows; at the time-limited sizes no Era 2 level has it.
 - The drawbridge is drawn in `picture.iron` (steel) with the gate's bars; a wooden drawbridge with iron bands would read better as a bridge.
 - Archer towers stand against the frame or on a bank path so a hit-free deal exists on Hard; towers inside a wall (reached only through covered blocks) would need a dealer that allows one hit on Easy and Normal only.
 - `tools/shots-v4-m4.mjs` and older shots scripts call `SP.sides()`, retired with the ring entry (`SP.entry()` replaces it); rerunning them needs that one change.
 - Peter's old v3/v4 saves keep their wins by level id; the levels behind those ids are new pictures.
+
+## From the v4.1 fix pass (2026-10-02; the critics' reports `tools/critic-v4.1-visual.md` and `-functional.md`)
+
+- Autumn scene: searched and dropped. No olive-orange hill keeps ΔE00 25 (faded 20) against roof, thatch, earth and gilt at once; it would need roles dropped (no thatch or earth in autumn) or a recoloured roof.
+- Levers not used: banner hues per level (the critic's 5) and weather overlays (6). Banners are one magenta; three or four pre-checked banner hues would add a little at low risk.
+- Overcast (a grey sky, the critic's other scene) was not searched: grey against stone is the likely clash.
+- The variety measure is by colour (a dawn sky is not a day sky). By role alone (the layout without its scene) the era medians are higher (see `tools/v4.1-notes.md` §12); more silhouettes (a cliff-top fortress, a river bend, a ruined wall) would bring those down too.
+- Era 4's lake family is the rarest pick: its castles reach the late levels' 11-12 colours less often and its walks run longer (the castle stands higher). A shallower lake or a wider shore would even it out.
+- Era 2 reads alike at a glance more than the others (the salmon motte and the red hall are its identity); a second motte colour (a grassy motte) would need a palette check against grass.
+- The entry gate's path in the yard is a short stub under the gate; a path that winds between the crates would read better but crosses the crates' slots.

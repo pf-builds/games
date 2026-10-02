@@ -169,3 +169,35 @@ Milestones (plan): M1 the look pass, M2 the rules (mystery cards, linked squads,
   - **Debug levels** (`levels/debug-v4.json`): rebuilt by `tools/debug-v4.js --rebuild levels/levels.json` from the rebake's levels 40, 20, 29 and 38, so they are pictures too.
   - **The page.** No scenery, no idle sappers, no crenellated rim on tower blocks; water studs; the entry square is a dark gateway in the frame. A runner's route starts at its colour's crate in the yard below the board, crosses the yard to the entry square, then walks the ground as it stands (as before) to its pixel's face; it carries the block home the same way into that crate. selfTest and the harness check every live runner starts on its crate in the yard and enters through an entry cell. Cache tag `?v=24`.
   - **Results** (`tools/v4.1-rebake.md`): Siege 100/100 and Gallery 60/60 winnable on Easy, Normal and Hard with stored orders; every generated level and picture in its Normal band; 0 lookahead fallbacks (hard and hardest median 17%, max 25%); 35 mystery levels, planner gap max 18.8 points; no level much easier for the fast tapper; Siege median 130 s, levels 4-15 68-90 s, max 234 s; Gallery median 131 s, 71-185 s; longest single tap 14.95 s (Gallery 14.98 s); max 39 taps; smallest colour pair ΔE00 26.0 (faded 21.2); no fallbacks; no near-duplicates. `tools/regrade.js` and `--gallery` 0 differences; both critics' rule diffs 0 mismatching games (their ring tie-break no longer runs: no level is a ring level).
+- 2026-10-02 (v4.1 fix pass). Both critics reviewed f933ab6: functional PASS with 1 minor, visual 1 major and 4 minors (`tools/critic-v4.1-functional.md`, `tools/critic-v4.1-visual.md`). Peter's call: the entry square stays 3 cells. Notes: `tools/v4.1-notes.md` §12. A Siege rebake (bake config v10); the Gallery is unchanged.
+  - **Castle variety (visual V1).**
+    - **Measure** (`tools/variety.js`): two pictures of an era are as alike as the share of a 10 × 14 grid of picture cells whose colours match.
+    - **Gate** (bake config `variety`, `maxMedian` 0.40):
+      - The picker takes a candidate that meets every target only if its median match against its era's earlier generated picks is 0.40 or under. Failing that, it takes the least alike of the candidates that meet every target, and logs it. Variety never outranks a game target.
+      - The bake reports each era's median over every pair.
+      - `tools/test.js` checks every era's median is 0.40 or under.
+    - **Levers** (`tools/castle.js`), in the critic's order:
+      - layouts and silhouettes: placement, keep and tower styles, a narrow or full curtain;
+      - ground and horizon: hills, a plateau, flat ground, distant hills;
+      - foreground props;
+      - three Era 4 families: concentric, lake and twin keeps;
+      - pre-checked scene palettes (`picture.scenes`: day, dawn, dusk, night, winter, weighted per era; the boss at night). Every pair of colours that can stand together in a scene is ΔE00 25 or more, and 20 or more faded; `tools/palette.js --scenes` checks every scene. Autumn could not meet that and was left out.
+    - **Result:** era medians 0.193, 0.243, 0.271 and 0.329 (v4.1: 0.62, 0.59, 0.68, 0.66).
+    - **Era identity and every rule are unchanged.**
+  - **Sizes (visual m3).** Era 3 and Era 4 pictures are wider and shorter (Era 4 21-22 × 23-24 without the frame, the boss 24-25 × 26-27). At 375×667, generated Era 4 boards are 9.5-10 px a cell and 219-240 px wide (v4.1: 8.5-9.5 px, 170-190 px wide); the boss is 8.5 px (8.0). The floor stays 8 px: teaching level 76 sits at 8.0 because the page keeps a third tray row whenever the board still gets `layout.minCellCss` with it.
+  - **The entry gate and the keep (visual m1, m2).**
+    - The entry square is drawn as a timber gate, a lintel across it and a post at each end, with a dirt path from it into the yard (`board.pic.entry`). The rule is unchanged.
+    - Keeps carry rows of arrow slits (one on a narrow block, three or more on a wide one, never a pair) and no door. The door is the gatehouse's arch.
+  - **Park limits (functional P1), the rule as written.** `deal.park` (2 squads at rest), `deal.parkMax` (6 sappers in a squad at rest) and M3's "no squad waits at rest while an archer tower stands" bind the **dealer's own line only**: the line the dealer builds and simulates when it deals a level.
+    - The tuner then moves cards between columns and splits and merges squads to bring a level into its band. Its output, and the stored winning orders (`win`), are checked for winning on Easy, Normal and Hard and for the dead-time cap (`maxWaitMs`, 15 s). They are not checked against the park limits, so a stored order may leave more squads, or a bigger squad, waiting at rest.
+    - That is by design: the dead-time cap is what the limits protect, and it holds on every stored Normal line.
+    - In this build the critic's `diff.mjs` finds the limits broken along the stored orders of e1-24, e2-37, g-tw-1f43c, g-met-436530 and v4-linked. Every one wins and matches its grade.
+  - **Renderer.** During a screen shake the board canvas is cleared before the frame colour fills it, so the browser drops the commands it has recorded. Before, back-to-back draws in the harness piled up into a 15-30 ms flush; live frames were never affected.
+  - **Teaching coach ids** (`config.json` teach): e1-01 4, e1-02 5, e1-03 2, e2-26 3, e3-51 5. The teaching levels were rebuilt by day with the same lessons. Cache tag `?v=25`.
+  - **Results** (`tools/v4.1-rebake.md`):
+    - **Winnable and bands:** 100/100 winnable on Easy, Normal and Hard with stored orders; 91/91 in band; 0 fallbacks; 0 lookahead fallbacks (median 12%, max 25%).
+    - **Twists:** 35 mystery levels, planner gap max 18.8 points; no fast-tapper flags.
+    - **Time:** median 139 s, levels 4-15 67-87 s, max 235 s.
+    - **Taps and dead time:** longest tap 14.98 s; max 39 taps.
+    - **Colours:** smallest pair ΔE00 25.7 (faded 21.2).
+    - **Rule checks:** regrades 0 differences; all three critics' rule diffs 0 mismatching games.
