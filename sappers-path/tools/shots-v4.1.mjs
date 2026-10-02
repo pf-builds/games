@@ -10,6 +10,8 @@
 //     Gallery board with the smallest cells.
 // Measurements go to tools/shots-v4.1/notes.json. Exit 1 on a console error or warning.
 //   PLAYWRIGHT_MODULE=$(npm root -g)/playwright/index.mjs node tools/shots-v4.1.mjs [--url http://127.0.0.1:8491/sappers-path/]
+//   [--sheet NAME]  the Siege contact sheet's name (v4.1 fix: contact-sheet-fix); the smallest-cell notes also give each
+//   era's smallest cells and the boss's (the visual critic's m3)
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -68,7 +70,9 @@ async function smallest(tag, w, h, dpr, touch) {
   const { ctx, page } = await open(w, h, dpr, touch);
   for (const which of ["siege", "gallery"]) {
     notes[tag + "-" + which + "-smallest"] = await ev(page, (which) => { let b = null; const ids = which === "gallery" ? SP.gallery() : Array.from({ length: 100 }, (_, k) => k + 1);
-      for (const id of ids) { const s = SP.load(id, "normal"), px = +(s.cs / devicePixelRatio).toFixed(2); if (!b || px < b.px) b = { id: s.id, px, board: s.w + "x" + s.h, turned: document.body.classList.contains("turned") }; }
+      const era = {}; for (const id of ids) { const s = SP.load(id, "normal"), px = +(s.cs / devicePixelRatio).toFixed(2); if (!b || px < b.px) b = { id: s.id, px, board: s.w + "x" + s.h, turned: document.body.classList.contains("turned") };
+        if (which === "siege") { const e = s.n === 100 ? "boss" : "era" + Math.ceil(s.n / 25); if (!era[e] || px < era[e].px) era[e] = { id: s.id, px, cssW: Math.round((s.w * s.cs) / devicePixelRatio) }; } }
+      if (which === "siege") b.eras = era;
       SP.load(b.id, "normal"); SP.tick(40); return b; }, which);
     await page.waitForTimeout(200); await snap(page, tag + "-" + which + "-smallest-cell");
   }
@@ -76,7 +80,7 @@ async function smallest(tag, w, h, dpr, touch) {
 }
 
 try {
-  await sheet("contact-sheet", "siege", 10);
+  await sheet(arg("sheet", "contact-sheet"), "siege", 10);
   await sheet("gallery-sheet", "gallery", 10);
   await screens("375", 375, 812, 2, true);
   await screens("1280", 1280, 720, 1, false);

@@ -57,7 +57,8 @@
 // (board.pic.water), never a block. The camp is the entry square, a dark gateway in the frame's bottom row
 // (board.pic.entry). A runner leaves its colour's crate in the yard, walks up to the entry square, then the ground as it
 // stands to the face of its pixel, and carries its block back the same way into that crate. (v4 M4's ring entry is
-// retired.)
+// retired.) v4.1 fix (the visual critic's m1): the entry square is a timber gate, a lintel across its cells and a post at
+// each end (board.pic.entry timber), with a dirt path (entry.path, pathRows of the yard) from it down to the crates.
 (function (root, factory) {
   (root.SappersPath = root.SappersPath || {}).board = factory(root.SappersPath.engine);
 })(window, function (E) {
@@ -206,10 +207,16 @@
       if (s >= 5) { x.strokeStyle = P.wave; x.lineWidth = Math.max(1, Math.round(s * 0.09)); x.beginPath(); x.moveTo(a + f * 0.18, a + f * 0.58); x.quadraticCurveTo(a + f * 0.34, a + f * 0.38, a + f * 0.5, a + f * 0.56); x.quadraticCurveTo(a + f * 0.66, a + f * 0.74, a + f * 0.82, a + f * 0.52); x.stroke(); }
       return c;
     }
-    // v4.1: the entry square (a camp cell of a picture): the frame's ground with a dark gateway in it, a lit rim round it.
-    function entry(s) {
-      const c = mk(s, s), x = c.getContext("2d"), P = K.pic.entry, o = Math.max(1, Math.round(s * 0.12));
-      x.fillStyle = C.ground.dirt; x.fillRect(0, 0, s, s); x.fillStyle = P.rim; x.fillRect(0, 0, s, s); x.fillStyle = P.face; x.fillRect(o, o, s - 2 * o, s - o);
+    // v4.1: the entry square (a camp cell of a picture): a dark gateway under a timber lintel. v4.1 fix: one sprite per
+    // place in the gate (k: 1 its left end, 2 its right end, 3 both, 0 between), the posts at its ends; turned with the
+    // board (rot: the board's up is the screen's left), since the gate is part of the picture.
+    function entry(s, k, rot) {
+      const c = mk(s, s), x = c.getContext("2d"), P = K.pic.entry, lt = Math.max(1, Math.round(s * P.lintel)), pw = Math.max(1, Math.round(s * P.post)), e = Math.max(1, Math.round(s * 0.08));
+      if (rot) { x.translate(0, s); x.rotate(-Math.PI / 2); }
+      x.fillStyle = P.face; x.fillRect(0, 0, s, s); x.fillStyle = P.rim; x.fillRect(0, s - e, s, e); // the opening, its sill lit
+      x.fillStyle = P.timber; x.fillRect(0, 0, s, lt); x.fillStyle = P.timberDark; x.fillRect(0, lt, s, e);
+      if (k & 1) { x.fillStyle = P.timber; x.fillRect(0, 0, pw, s); x.fillStyle = P.timberDark; x.fillRect(pw, lt, e, s - lt); }
+      if (k & 2) { x.fillStyle = P.timber; x.fillRect(s - pw, 0, pw, s); x.fillStyle = P.timberDark; x.fillRect(s - pw - e, lt, e, s - lt); }
       return c;
     }
     const sapper = (m, ss) => figure(SAP, { h: V.pal[m], s: K.sapper.skin, e: K.sapper.eye, b: K.sapper.body }, ss);
@@ -229,7 +236,7 @@
       const S = { blk: [], tb: [], mini: [], sap: [], gnd: [], lock: [], ss, mb, as, ls, arch: null };
       for (let m = 1; m < E.NMAT; m++) { S.blk[m] = block(m, s); S.tb[m] = K.tones.map((k) => (k ? block(m, s, k) : S.blk[m])); S.mini[m] = block(m, mb, 0, 1); S.sap[m] = sapper(m, ss); }
       for (let t = 0; t < 4; t++) for (let v = 0; v < 2; v++) S.gnd[t * 2 + v] = ground(t, v, s);
-      S.water = waterStud(s); S.entry = entry(s);
+      S.water = waterStud(s); S.entry = [0, 1].map((rot) => [0, 1, 2, 3].map((k) => entry(s, k, rot)));
       const A = K.archer; S.arch = figure(ARCH, { h: A.hood, s: A.skin, e: A.eye, b: A.body, w: A.bow, q: A.string, a: A.arrow }, as);
       K.gateTints.forEach((tint, k) => { S.lock[k] = padlock(tint, ls); });
       S.keep = keepArt(cfg.art, Math.max(14, Math.round(s * SH.keepScale)));
@@ -245,6 +252,7 @@
         const d = px.getImageData(0, 0, pc.width, pc.height).data; for (let i = 3; i < d.length; i += 4) if (d[i] !== 255) { bad.push(name); return; } } catch (e) { bad.push(name); } };
       for (let m = 1; m < E.NMAT; m++) { S.tb[m].forEach((c, v) => probe(c, "blk" + m + "." + v)); probe(S.mini[m], "mini" + m); }
       S.gnd.forEach((c, k) => probe(c, "gnd" + k));
+      probe(S.water, "water"); S.entry.forEach((row, r) => row.forEach((c, k) => probe(c, "entry" + r + "." + k))); // v4.1 fix: the picture's caches too
       if (V.layer) probe(V.layer, "layer");
       return bad;
     }
@@ -270,6 +278,7 @@
       // Camp cells, and the idle sappers' spots: spread along the camp's middle row.
       V.camp = []; for (let c = 0; c < B.n; c++) if (B.a0[c] === CAMP) V.camp.push(c);
       let cx0 = 1e9, cx1 = -1; for (const c of V.camp) { const x = c % B.w; if (x < cx0) cx0 = x; if (x > cx1) cx1 = x; }
+      V.cx0 = cx0; V.cx1 = cx1; // the entry gate's ends (a picture's)
       const idle = V.pic ? 0 : Math.min(K.idle | 0, V.camp.length), iy = Math.min(B.h - 1, B.campRow + 1); V.idleC = [];
       for (let k = 0; k < idle; k++) V.idleC.push(iy * B.w + Math.round(cx0 + ((k + 0.5) * (cx1 - cx0 + 1)) / idle - 0.5));
       if (!V.tone || V.tone.length < B.n) { V.tone = new Int8Array(B.n); V.deco = new Int8Array(B.n); }
@@ -384,7 +393,7 @@
       const S = V.sprites, cs = V.cs, bx = c % V.w, by = (c / V.w) | 0, x = CX(bx, by) * cs, y = CY(bx, by) * cs, v = V.disp[c];
       if (v > 0) { V.lg.drawImage(S.tb[v][V.tone[c]], x, y); const t = V.B.towerOf[c]; if (t >= 0 && !V.pic) rim(c, t, x, y); return; }
       if (V.pic && v === WATER) { V.lg.drawImage(S.water, x, y); return; } // v4.1: the moat is part of the picture
-      V.lg.drawImage(V.pic && v === CAMP ? S.entry : S.gnd[TYPE(v) * 2 + (hash(bx, by) & 1)], x, y);
+      V.lg.drawImage(V.pic && v === CAMP ? S.entry[V.rot ? 1 : 0][(bx === V.cx0 ? 1 : 0) | (bx === V.cx1 ? 2 : 0)] : S.gnd[TYPE(v) * 2 + (hash(bx, by) & 1)], x, y);
       if (V.deco[c] && (v === GRASS || v === WATER)) decor(V.deco[c], x, y, bx, by);
       if (coverNow(c)) { V.lg.fillStyle = K.rangeFill; V.lg.fillRect(x, y, cs, cs); }
     }
@@ -431,7 +440,17 @@
       g2.fillStyle = K.yard;
       if (V.rot) { g2.fillRect(V.h * cs, 0, V.Y * cs, V.w * cs); g2.fillStyle = K.yardEdge; g2.fillRect(V.h * cs, 0, e, V.w * cs); }
       else { g2.fillRect(0, V.h * cs, V.w * cs, V.Y * cs); g2.fillStyle = K.yardEdge; g2.fillRect(0, V.h * cs, V.w * cs, e); }
+      yardPath(-1e9, -1e9, 1e9, 1e9);
       for (let k = 0; k < V.piles.length; k++) paintPile(k);
+    }
+    // v4.1 fix: a picture's path in the yard, from the entry gate down toward the crates (board.pic.entry path, pathRows),
+    // painted where it crosses the canvas box x0..x1, y0..y1 (a crate's slot repaints its share of it).
+    function yardPath(x0, y0, x1, y1) {
+      if (!V.pic || V.cx1 < 0) return;
+      const cs = V.cs, P = K.pic.entry, a = V.cx0 + P.pathInset, b = V.cx1 + 1 - P.pathInset, d = P.pathRows * V.Y;
+      const px0 = Math.round((V.rot ? V.h : a) * cs), py0 = Math.round((V.rot ? V.w - b : V.h) * cs), px1 = Math.round((V.rot ? V.h + d : b) * cs), py1 = Math.round((V.rot ? V.w - a : V.h + d) * cs);
+      const X0 = Math.max(px0, x0), Y0 = Math.max(py0, y0), X1 = Math.min(px1, x1), Y1 = Math.min(py1, y1);
+      if (X1 > X0 && Y1 > Y0) { V.lg.fillStyle = P.path; V.lg.fillRect(X0, Y0, X1 - X0, Y1 - Y0); }
     }
     // A bin in its colour: a bevelled box, a darker inside, its block (with the glyph) as a label on the short side, and
     // the haul piled up inside in mini blocks (one per pixel while the colour fits, else to scale). Upright either way.
@@ -441,7 +460,7 @@
       const p = V.piles[k], cs = V.cs, g2 = V.lg, S = V.sprites, mb = S.mb, np = V.piles.length, two = np > K.binsRow, per = two ? Math.ceil(np / 2) : np;
       const sw = V.rot ? V.Y / (two ? 2 : 1) : V.w / per, sh = V.rot ? V.w / per : V.Y / (two ? 2 : 1), u = binGrow(k);
       const cx = MX(p.x, p.y) * cs, cy = MY(p.x, p.y) * cs;
-      g2.fillStyle = K.yard; g2.fillRect(Math.round(cx - (sw * cs) / 2), Math.round(cy - (sh * cs) / 2), Math.round(sw * cs), Math.round(sh * cs));
+      { const x0 = Math.round(cx - (sw * cs) / 2), y0 = Math.round(cy - (sh * cs) / 2), ww = Math.round(sw * cs), hh = Math.round(sh * cs); g2.fillStyle = K.yard; g2.fillRect(x0, y0, ww, hh); yardPath(x0, y0, x0 + ww, y0 + hh); }
       if (u < 1) { // the empty crate (fix 2): muted wood, no colour; the bin grows in over it
         const CR = K.crate, cw = Math.round(Math.min(sw * K.binFill, K.binMax) * cs * CR.scale), ch = Math.round(Math.min(sh * K.binFill, K.binMax) * cs * CR.scale), e = Math.max(1, Math.round(cs * 0.12)), x0 = Math.round(cx - cw / 2), y0 = Math.round(cy - ch / 2);
         g2.fillStyle = CR.edge; g2.fillRect(x0 - e, y0 - e, cw + 2 * e, ch + 2 * e); g2.fillStyle = CR.face; g2.fillRect(x0, y0, cw, ch); g2.fillStyle = CR.inside; g2.fillRect(x0 + e, y0 + e, cw - 2 * e, ch - 2 * e);
@@ -702,7 +721,9 @@
       gx.imageSmoothingEnabled = false;
       // A shake moves everything; the frame's wood shows at the edge it uncovers.
       let dx = 0, dy = 0; const sa = (ft - V.shT) / V.shMs;
-      if (sa >= 0 && sa < 1) { const k = V.shAmp * cs * (1 - sa); dx = Math.round(Math.sin(ft * 0.09) * k); dy = Math.round(Math.cos(ft * 0.071) * k * 0.6); gx.fillStyle = K.frame[0]; gx.fillRect(0, 0, CW, CH); }
+      // (v4.1 fix: the clear first, so the canvas drops what it had recorded: during a shake nothing else covers it whole,
+      // and the harness's back-to-back draws piled up into a 15-30 ms flush every ~60 draws.)
+      if (sa >= 0 && sa < 1) { const k = V.shAmp * cs * (1 - sa); dx = Math.round(Math.sin(ft * 0.09) * k); dy = Math.round(Math.cos(ft * 0.071) * k * 0.6); gx.clearRect(0, 0, CW, CH); gx.fillStyle = K.frame[0]; gx.fillRect(0, 0, CW, CH); }
       gx.setTransform(1, 0, 0, 1, dx, dy);
       gx.drawImage(V.layer, 0, 0);
       // Gates: a padlock in the gate's tint (it drops when the key goes); the key wears a ring of the same tint.
