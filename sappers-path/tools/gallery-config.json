@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "note": "Sapper's Path v4 M4, the Gallery. convert: the converter (tools/convert.js). kinds: per kind of picture, its mask (alpha: emoji; flood: our generated pictures, flat backgrounds; none: paintings), the picture box [columns, rows] without the ring, the outline rings and the margin (cells of background plus outline round the subject's box); a kind may set its own minDE (never under 20), fadeDE and chroma. minDE: every pair of colours in a picture is at least this far apart (CIEDE2000; a colour closer to one already kept is left out and its pixels vote for their nearest kept colour). fadeDE: every pair also stays this far apart with one of them faded to a queue row behind the front (config.json layout.fade), as the siege's tiles do (tools/fade.js): a pair under it has its rarer colour's lightness moved `nudge` L* away, up to `nudges` times, else that colour goes; paintings set 0 (their muted tones are posterized already and the board is the point; tools/fade.js --gallery reports them). fadeFloor (Critics 2 fix, paintings 16): once the cells are voted, a pair still under it faded has its rarer colour's display lightness moved `nudge` L* away (up to `nudges` times a colour, never closer than minDE to another colour); the grid never changes, only the colours shown and their names. minShare: the least share of the subject a colour must hold to be kept. maxColours: the most colours a picture keeps (material ids 1-9 and 11-13). k0: k-means clusters before the choice. chroma (a kind): its colours' a* and b* are scaled by this before the choice (paintings). ink: the outline black. bgs: background colours an emoji may take: the first (pale ones first) bgGap past minDE from all its colours, else the farthest. names: colour names for aria-labels (nearest by CIEDE2000, all different). bake: see its own note.",
+  "note": "Sapper's Path v4 M4, the Gallery. convert: the converter (tools/convert.js). kinds: per kind of picture, its mask (alpha: emoji; flood: our generated pictures, flat backgrounds; none: paintings), the picture box [columns, rows] without the ring, the outline rings and the margin (cells of background plus outline round the subject's box); a kind may set its own minDE (never under 20), fadeDE and chroma. minDE: every pair of colours in a picture is at least this far apart (CIEDE2000; a colour closer to one already kept is left out and its pixels vote for their nearest kept colour). fadeDE: every pair also stays this far apart with one of them faded to a queue row behind the front (config.json layout.fade), as the siege's tiles do (tools/fade.js): a pair under it has its rarer colour's lightness moved `nudge` L* away, up to `nudges` times, else that colour goes; paintings set 0 (their muted tones are posterized already and the board is the point; tools/fade.js --gallery reports them). fadeFloor (Critics 2 fix, paintings 16): once the cells are voted, a pair still under it faded has its rarer colour's display lightness moved `nudge` L* away (up to `nudges` times a colour, never closer than minDE to another colour); the grid never changes, only the colours shown and their names. minShare: the least share of the subject a colour must hold to be kept. maxColours: the most colours a picture keeps (material ids 1-9 and 11-13). k0: k-means clusters before the choice. chroma (a kind): its colours' a* and b* are scaled by this before the choice (paintings). ink: the outline black. bgs: background colours an emoji may take: the first (pale ones first) bgGap past minDE from all its colours, else the farthest. names: colour names for aria-labels (nearest by CIEDE2000, all different). bake: see its own note. v4.2: the boxes are full-screen (39 x 39 for emoji and ours, 40 x 39 for paintings, without the frame: a 375x812 phone at 8 CSS px a cell) and the emoji margin is 3.",
   "convert": {
     "seed": 20261001,
     "entryHalf": 1,
@@ -13,19 +13,19 @@
     "kinds": {
       "emoji": {
         "mask": "alpha",
-        "box": [22, 22],
+        "box": [39, 39],
         "outline": 1,
-        "margin": 2
+        "margin": 3
       },
       "ours": {
         "mask": "flood",
-        "box": [22, 22],
+        "box": [39, 39],
         "outline": 1,
-        "margin": 2
+        "margin": 3
       },
       "painting": {
         "mask": "none",
-        "box": [26, 20],
+        "box": [40, 39],
         "outline": 0,
         "margin": 0,
         "chroma": 1.4,
@@ -80,8 +80,8 @@
     "nudges": 4
   },
   "bake": {
-    "version": 2,
-    "note": "The Gallery bake (tools/gallery-bake.js). curve: the first `intro` pictures in the intro band, then `pattern` repeating (bands: Normal random-tap win rates). maxTaps, maxWaitMs and duration.maxMs as the siege (bake-config). capOf: the outline's squads (the ink colour): [first squad at most, every later one at most], so the first breach is narrow. deal, dealBy, tune, grade, fast, candidates, dedupe, penalty, budget: as the siege's bake-config. narrowFor: slots whose tuning also narrows the one-move-lookahead player's win rate (down to tune.narrow.stopAt, so a thinking player can lose there too).",
+    "version": 3,
+    "note": "The Gallery bake (tools/gallery-bake.js). curve: the first `intro` pictures in the intro band, then `pattern` repeating (bands: Normal random-tap win rates). maxTaps, maxWaitMs and duration.maxMs as the siege (bake-config). capOf: the outline's squads (the ink colour): [first squad at most, every later one at most], so the first breach is narrow. deal, dealBy, tune, grade, fast, candidates, dedupe, penalty, budget: as the siege's bake-config. narrowFor: slots whose tuning also narrows the one-move-lookahead player's win rate (down to tune.narrow.stopAt, so a thinking player can lose there too). v4.2: squads of 45-99 are dealt (shrunk where a tap would run past the dead-time cap; more taps than the castles' 90-99 because a picture, with no moats, walks shorter), capOf is doubled for the longer outlines, and duration.pace sets the limits on the real pace as the Siege does, from 150 s (bake-config duration.pace; the patient maxMs no longer applies).",
     "seed": 20261002,
     "curve": {
       "intro": 4,
@@ -99,47 +99,48 @@
     "maxWaitMs": 15000,
     "duration": {
       "medianMs": 120000,
-      "maxMs": 240000
+      "maxMs": 240000,
+      "pace": {"from": 1, "factor": 1.77, "range": [150000, 300000], "medianMs": 240000}
     },
-    "capOf": [12, 24],
+    "capOf": [24, 48],
     "deal": {
       "hold": 4,
       "size": [8, 30],
       "deep": 0.15,
       "finish": 0.3,
-      "maxCard": 72,
+      "maxCard": 99,
       "maxCards": 240,
-      "tries": 14,
+      "tries": 20,
       "attempts": 24,
-      "shrink": 0.5,
-      "shrinks": 5,
+      "shrink": 0.85,
+      "shrinks": 16,
       "park": 2,
       "parkMax": 6,
       "noParkUnderArchers": true
     },
     "dealBy": {
       "intro": {
-        "size": [20, 56],
+        "size": [45, 99],
         "deep": 0.05
       },
       "saw0": {
-        "size": [14, 44],
+        "size": [45, 99],
         "deep": 0.12
       },
       "saw1": {
-        "size": [14, 44],
+        "size": [45, 99],
         "deep": 0.12
       },
       "saw2": {
-        "size": [14, 44],
+        "size": [45, 99],
         "deep": 0.12
       },
       "relief": {
-        "size": [16, 48],
+        "size": [45, 99],
         "deep": 0.08
       },
       "hard": {
-        "size": [18, 52],
+        "size": [45, 99],
         "deep": 0.18
       }
     },
@@ -167,7 +168,7 @@
       "resize": 0.25,
       "split": 0.5,
       "minCard": 3,
-      "maxCard": 72
+      "maxCard": 99
     },
     "narrowFor": ["hard"],
     "grade": {

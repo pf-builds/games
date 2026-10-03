@@ -39,6 +39,12 @@ const LESSON = {
 // gen: the era's generator params with these overrides; colours; deal: dealer overrides; lock; pairs: [[play index, ...]]
 // consecutive plays joined (index of the first); flags: [[column, row]] mystery cards; minRate: the gentlest Normal
 // random-tap rate accepted; maxMs: the longest patient Normal play-through accepted.
+// v4.2: the teaching levels from 26 are full-screen castles a little smaller than the rest (TEACH42: 38 x 37 boards, the
+// feature scale 1.8, so a coached level keeps its coach band on a 375x812 phone), dealt with the big squads (DEAL42); their
+// patient times are long, so maxMs is a loose bound (the bake reports their real pace). 1-3 are as v4.1 built them.
+// beta: the deck's column fill (gen.assign; 77's column by column, so the coach's follower, who taps the leftmost card it
+// may, meets the dealt order on a board this size).
+const TEACH42 = { w: [36, 36], h: [35, 35], k: 1.8 }, DEAL42 = { size: [40, 99], maxCard: 99, maxTaps: 40, shrink: 0.85, shrinks: 16, tries: 20 };
 const SPECS = [
   { n: 1, era: 1, name: "Open Gate", teaches: "tray", hint: "Tap a squad. Its sappers come out at the bottom and each eats the nearest block of their colour.",
     gen: { w: [15, 15], h: [16, 16], watch: [1, 1], fg: [3, 3] }, colours: 4, deal: { size: [30, 60], maxCard: 60 }, minRate: 0.99, maxMs: 90000 },
@@ -47,17 +53,17 @@ const SPECS = [
   { n: 3, era: 1, name: "Woodpile", teaches: "overshoot", hint: "A squad bigger than what's open eats what it can reach. The rest wait, then finish the job.",
     gen: { w: [16, 16], h: [17, 17], watch: [1, 2], fg: [3, 3], first: ["tree", "thatch"] }, colours: 6, deal: { size: [24, 50], maxCard: 50 }, minRate: 0.95, maxMs: 90000 },
   { n: 26, era: 2, name: "The Locked Bridge", teaches: "gate", hint: "The drawbridge is locked: dig out its gold key in the lodge, then send the Looters.",
-    gen: { w: [15, 15], h: [19, 19], twoGates: 0 }, colours: 7, minRate: 0.6, maxMs: 110000 },
+    gen: Object.assign({}, TEACH42, { twoGates: 0 }), colours: 7, deal: DEAL42, minRate: 0.6, maxMs: 600000 },
   { n: 35, era: 2, name: "Hidden Colours", teaches: "mystery", hint: "A ? squad hides its colour until it reaches the front. Its count always shows.",
-    gen: { w: [16, 16], h: [20, 20], twoGates: 0 }, colours: 7, flags: [[0, 1], [2, 1], [4, 1]], minRate: 0.6, maxMs: 120000 },
+    gen: Object.assign({}, TEACH42, { twoGates: 0 }), colours: 7, deal: DEAL42, flags: [[0, 1], [2, 1], [4, 1]], minRate: 0.6, maxMs: 600000 },
   { n: 51, era: 3, name: "The Corner Tower", teaches: "archers", hint: "Archers shoot anyone in their red ring. Take the tower first: here the archers only drive sappers back.", safeArchers: true,
-    gen: { w: [16, 16], h: [19, 19], moat: false, towers: [1, 1], keepH: [4, 6] }, colours: 7, minRate: 0.6, maxMs: 110000 },
+    gen: Object.assign({}, TEACH42, { moat: false, towers: [1, 1], keepH: [8, 11] }), colours: 7, deal: DEAL42, minRate: 0.6, maxMs: 600000 },
   { n: 62, era: 3, name: "Linked Squads", teaches: "linked", hint: "Linked squads go out together and need 2 free spaces; both stay taken until both squads are home.",
-    gen: { w: [17, 17], h: [22, 22], towers: [2, 2] }, colours: 9, pairs: [1], minRate: 0.5, maxMs: 160000 },
+    gen: Object.assign({}, TEACH42, { towers: [2, 2] }), colours: 9, deal: DEAL42, pairs: [1], minRate: 0.5, maxMs: 600000 },
   { n: 76, era: 4, name: "The Locked Space", teaches: "lock", hint: "One space starts locked. Its key is a gold block on the board: dig it out and send the Looters.",
-    gen: { w: [20, 20], h: [23, 23], towersOut: [2, 2], towersIn: [0, 0] }, colours: 9, lock: true, minRate: 0.5, maxMs: 200000 },
+    gen: Object.assign({}, TEACH42, { towersOut: [2, 2], towersIn: [0, 0] }), colours: 9, deal: DEAL42, lock: true, minRate: 0.5, maxMs: 600000 },
   { n: 77, era: 4, name: "All at Once", teaches: "mixed", hint: "Gates, archers, ? squads, linked squads and a locked space, all in one castle.",
-    gen: { w: [21, 21], h: [24, 24], towersOut: [2, 2], towersIn: [2, 2] }, colours: 10, lock: true, pairs: [2], flags: [[0, 1], [4, 1]], minRate: 0.3, maxMs: 230000 },
+    gen: Object.assign({}, TEACH42, { w: [32, 32], h: [31, 31], k: 1.6, towersOut: [2, 2], towersIn: [2, 2] }), colours: 10, deal: Object.assign({}, DEAL42, { size: [70, 99], maxTaps: 30 }), beta: 1, lock: true, pairs: [1], flags: [[2, 1], [4, 1]], minRate: 0.15, maxMs: 600000 },
 ];
 const DEAL = { hold: 4, size: [14, 36], deep: 0, finish: 0.4, maxCard: 60, maxCards: 120, tries: 14, maxTaps: 26, maxWaitMs: C.maxWaitMs, shrink: 0.5, shrinks: 5, park: 1, parkMax: C.deal.parkMax, noParkUnderArchers: true };
 
@@ -143,7 +149,7 @@ function build(spec) {
       for (let i = 1; i < play.length && !got; i++) { const [m, n] = play[i]; if (play[i].length > 2 || !(S0.reachable(m) > 0 && n > S0.reachable(m))) continue;
         const next = [play[i]].concat(play.slice(0, i), play.slice(i + 1)), ln = G.dealLine(L, next, D); if (ln.won && ln.maxWait <= D.maxWaitMs) { play = next; got = true; } }
       if (!got && !(play[0] && S0.reachable(play[0][0]) > 0 && play[0][1] > S0.reachable(play[0][0]))) continue; }
-    const co = G.assign(play, 0, seed), dk = G.deck(play, co); if (dk.bad) continue;
+    const co = G.assign(play, spec.beta || 0, seed), dk = G.deck(play, co); if (dk.bad) continue;
     if (spec.pairs && dk.links.some(([a, b]) => Math.min(a[1], b[1]) !== 0 || Math.abs(a[1] - b[1]) !== 1)) continue; // the rod shows from the first tap
     const lv = Object.assign({ n: spec.n, era: spec.era, name: spec.name, teaches: spec.teaches, hint: spec.hint }, L, { cols: dk.cols }, dk.links.length ? { links: dk.links } : {}, spec.safeArchers ? { safeArchers: true } : {});
     let flagsOk = true;

@@ -5,6 +5,8 @@
 //                                (tools/castle.js; P: the level's generator params, config eras[e]; Q: config picture)
 //   deal(B, seed, D)          -> {play:[[m,n],...]} a winning play order simulated under dealing rules (D.hold spaces,
 //                                archers lethal, so the order wins on Easy, Normal and Hard), or null
+//                                (v4.2: with D.best > 1 each squad is the biggest of the first `best` colours that fit,
+//                                so a full-screen board deals in fewer taps; 1, the default, deals as before)
 //   assign(play, beta, seed)  -> colOf[] per card: round-robin mixed with contiguous chunks (beta 0 = pure round-robin,
 //                                the easiest deal; 1 = five chunks of the order, the deepest)
 //   colsOf(play, colOf)       -> the five tray columns;  orderOf(colOf) -> the tap order that replays `play`
@@ -44,7 +46,7 @@ const coloursOf = (L) => { const s = new Set(); for (const row of L.grid) for (c
 // `rest` (the outline: a narrow first breach, then more black squads); with no capOf the deal is exactly as before.
 function deal(L, seed, D) {
   const B = E.compile(Object.assign({ cols: [[], [], [], [], []] }, L)), r = rng(seed);
-  const S = E.sim(B, { hold: D.hold, archersKill: true, time: D.time }, { deal: true }), buf = new Int32Array(S.M.length);
+  const S = E.sim(B, { hold: D.hold, archersKill: true, time: D.time }, { deal: true }), buf = new Int32Array(S.M.length), want = Math.max(1, D.best | 0), top = want > 1 ? new Int32Array(S.M.length) : null;
   const un = new Int32Array(E.NMAT); for (let m = 1; m < E.NMAT; m++) if (m !== IRON) un[m] = B.pix[m];
   const play = [], cap = D.maxWaitMs || 0, dealt = new Int32Array(E.NMAT);
   let maxWait = 0;
@@ -54,8 +56,8 @@ function deal(L, seed, D) {
     const opts = [], park = (D.park == null || S.lineLen < D.park) && !(D.noParkUnderArchers && S.standing);
     if (park && deep.length && r() < D.deep) opts.push(...shuffle(r, deep));
     opts.push(...shuffle(r, reach)); if (park) opts.push(...shuffle(r, deep));
-    let done = false;
-    for (let t = 0; t < Math.min(D.tries, opts.length) && !done; t++) {
+    let done = false, got = 0, bm = 0, bn = 0, bw = 0;
+    for (let t = 0; t < Math.min(D.tries, opts.length) && !done && got < want; t++) {
       const m = opts[t];
       let n = Math.min(un[m], ri(r, D.size[0], D.size[1]), D.maxCard);
       if (un[m] <= D.maxCard && r() < D.finish) n = un[m];
@@ -65,9 +67,11 @@ function deal(L, seed, D) {
         S.playSquad(m, n); S.quiet();
         const wait = S.now - t0;
         if (S.status === E.FAILED || (cap && wait > cap) || (D.noParkUnderArchers && S.standing && S.lineLen > l0) || (D.park != null && S.lineLen > Math.max(l0, D.park)) || (D.parkMax && overPark(S, D.parkMax))) { S.load(buf); n = Math.floor(n * (D.shrink || 0.6)); continue; }
+        if (want > 1) { got++; if (n > bn) { bn = n; bm = m; bw = wait; S.save(top); } S.load(buf); break; } // v4.2 D.best: the biggest of the first `best` squads that fit
         un[m] -= n; play.push([m, n]); done = true; dealt[m]++; if (wait > maxWait) maxWait = wait;
       }
     }
+    if (!done && bn > 0) { S.load(top); un[bm] -= bn; play.push([bm, bn]); done = true; dealt[bm]++; if (bw > maxWait) maxWait = bw; }
     if (!done || (D.maxTaps && play.length > D.maxTaps)) return null;
   }
   return S.pixLeft === 0 ? { play, peak: S.peak, maxWait } : null;
