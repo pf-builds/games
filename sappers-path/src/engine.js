@@ -571,8 +571,12 @@
       if (k === PW.PULL) {
         if (!(a >= 0 && a < B.ncards) || gone[a]) return false;
         const j = B.cardCol[a]; if (pos[a] <= heads[j] || depthOf(a) > pullDepth) return false;
-        if (M[S_EL] > 0 || !refusedAt(a)) return true;
-        for (let c = 0; c < NCOL; c++) if (c !== j && heads[c] < B.colLen[c] && !refusedAt(frontAt(c))) return true;
+        if (M[S_EL] > 0) return true;
+        // At rest: refused when every front card would be refused after the pull (v4.3: on the columns as they would be,
+        // a at column j's front and the card it passes no longer a front, so a linked front whose partner is passed waits).
+        const fr = (p) => p === a || (B.cardCol[p] !== j && frontAt(B.cardCol[p]) === p), no = (ci) => { const p = linkOf[ci]; return p < 0 ? blocked(B.cardM[ci]) : !fr(p) || M[S_LEN] + 2 > capNow() - M[S_LOCK]; };
+        if (!no(a)) return true;
+        for (let c = 0; c < NCOL; c++) if (c !== j && heads[c] < B.colLen[c] && !no(frontAt(c))) return true;
         return false; // at rest, every front would be refused: the pull would jam the line
       }
       if (k === PW.RECALL) return a >= 0 && a < capNow() && spQ[a] !== 0 && spL[a] === 0 && spO[a] === 0 && spW[a] > 0 && spC[a] > 0;

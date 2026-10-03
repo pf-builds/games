@@ -884,6 +884,11 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
   const P = E.sim(E.compile(lv(ROW6, [[[1, 1], [2, 1]], [[3, 1], [4, 1]], [[6, 1]], [], []], { links: [[[0, 1], [1, 1]]] })), PN);
   P.power(PW.PULL, 1); const w1 = P.why(0); P.power(PW.PULL, 3);
   eq([P.card(0, 0), P.card(1, 0), P.partner(1), w1, P.why(0), P.play(0), P.lineLen, P.gone[3], P.canPower(PW.PULL, 3)], [1, 3, 3, 3, 0, E.PLAYING, 2, 1, false], "pull (v4.3): a linked card pulled to the front waits for its partner (why 3); pulling the partner to its front too, one tap sends both; the gone partner can't be pulled");
+  // v4.3: a pull that would bury the partner of another linked front (pairs y-x and z-w, z pulled ahead of y) leaves both
+  // fronts waiting for buried partners: at rest that would jam, so it is refused; the reference agrees.
+  { const X = lv(ROW6, [[[1, 1], [2, 1]], [[3, 1], [4, 1]], [], [], []], { links: [[[0, 0], [1, 0]], [[0, 1], [1, 1]]] }), XR = phold(2);
+    const XS = E.sim(E.compile(X), XR), XF = Ref.game(X, XR), b0 = XS.save();
+    eq([XS.power(PW.PULL, 1), same(b0, XS.save()), XF.power(PW.PULL, 1), XS.play(0), XS.lineLen], [E.REFUSED, true, "refused", E.PLAYING, 2], "pull (v4.3): a pull that would leave every linked front waiting for a buried partner is refused at rest (engine and reference); the pair then goes"); }
   // At rest, a pull that would leave every front refused (a linked card with one space free) is refused; while squads are
   // still moving the same pull is taken (the line is judged when it comes to rest).
   const J = lv(RING, [[[2, 1]], [[1, 12], [3, 1]], [[1, 1]], [[2, 1]], []], { links: [[[1, 1], [2, 0]]] });
