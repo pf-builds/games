@@ -1,6 +1,7 @@
 // Sapper's Path v4 M4, the Gallery bake: levels/gallery-manifest.json (the kept pictures, in the Gallery's order) +
 // tools/gallery-config.json (bake) -> levels/gallery.json (versioned). levels/levels.json is never read or written.
-//   ~/.local/opt/node/bin/node tools/gallery-bake.js [--out DIR] [--only A-B] [--threads N]
+//   ~/.local/opt/node/bin/node tools/gallery-bake.js [--out DIR] [--only A-B] [--threads N] [--extra K]
+//   ~/.local/opt/node/bin/node tools/gallery-bake.js --merge FULL,FIX1,... [--logs LOG,...] [--out DIR]   (v4.3)
 // Per picture: the converter's plan (tools/convert.js: v4.1 a picture board entered from the bottom, its own palette), then `perLevel` candidates, each a
 // deal simulated as a winning order under the dealing rules (Hard's 4 spaces, so it wins on Easy, Normal and Hard) within
 // the dead-time cap, the outline's squads capped (bake.capOf: a narrow first breach, then more black squads), tightened
@@ -74,7 +75,7 @@ function candidates(job, B, rules) {
   const L = { w: P.w, h: P.h, grid: P.grid, pic: true }, inkId = +Object.keys(P.pal).find((k) => P.pal[k].c === V.config().convert.ink) || 0;
   const D = Object.assign({}, B.deal, B.dealBy[b.sub] || {}, { maxTaps: B.maxTaps, time: rules.hard.time, maxWaitMs: B.maxWaitMs }, inkId ? { capOf: { [inkId]: B.capOf } } : {});
   const dealRules = Object.assign({}, rules.hard, { hold: B.deal.hold, archersKill: true });
-  for (let k = 0; k < (B.candidates.perLevelBy[b.sub] || B.candidates.perLevel); k++) {
+  for (let k = 0; k < (B.candidates.perLevelBy[b.sub] || B.candidates.perLevel) + (B.extra | 0); k++) { // v4.3 --extra K: a fix-up run
     try {
       const seed = seedOf(B, n, k);
       let dl = null; for (let a = 0; a < D.attempts && !dl; a++) { dl = G.deal(L, seed ^ Math.imul(a + 1, 0x27D4EB2F), D); stats.deals++; }
@@ -125,9 +126,20 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
   const t0 = Date.now(), log = [], say = (s) => { log.push(s); console.log(s); };
   let GC, CFG, M;
   try { GC = V.config(); CFG = JSON.parse(fs.readFileSync(path.join(ROOT, "config.json"), "utf8")); M = V.manifest(); } catch (e) { console.log("gallery bake: cannot read config: " + e.message); process.exitCode = 1; return; }
-  const B = GC.bake, rules = { easy: E.rulesOf(CFG.v3, "easy"), normal: E.rulesOf(CFG.v3, "normal"), hard: E.rulesOf(CFG.v3, "hard") };
+  const B = Object.assign({}, GC.bake, { extra: +arg("extra") || 0 }), rules = { easy: E.rulesOf(CFG.v3, "easy"), normal: E.rulesOf(CFG.v3, "normal"), hard: E.rulesOf(CFG.v3, "hard") };
   const kept = M.order.map((id) => M.pictures.find((p) => p.id === id)).filter((p) => p && p.keep !== false);
   const inRun = (n) => !ONLY || (n >= ONLY[0] && n <= (ONLY[1] || ONLY[0]));
+  // v4.3 --merge FILE,FILE... [--logs FILE,...]: no bake; the first file's pictures with each later file's in their place
+  // (fix-up runs of single pictures, --only N --extra K), written as gallery.json with its report (the runs' logs below).
+  if (arg("merge")) {
+    const files = arg("merge").split(",").map((f) => JSON.parse(fs.readFileSync(path.resolve(f), "utf8"))), out = files[0], fixed = [];
+    for (const F of files.slice(1)) for (const l of F.levels) { const i = out.levels.findIndex((x) => x.n === l.n); if (i >= 0) { out.levels[i] = l; fixed.push(l.n); } }
+    out.bake.fallbacks = out.levels.filter((l) => l.fallback).map((l) => ({ n: l.n, why: l.fallback })); out.bake.fixups = fixed;
+    for (const f of (arg("logs") || "").split(",").filter(Boolean)) for (const line of fs.readFileSync(path.resolve(f), "utf8").split("\n")) if (line && !/^ {2}\d/.test(line)) log.push(line);
+    log.push("gallery bake: merged " + fixed.length + " fix-up picture(s) (" + fixed.join(", ") + ") into " + arg("merge").split(",")[0] + "; fallbacks now " + out.bake.fallbacks.length);
+    try { if (OUT) fs.mkdirSync(OUT, { recursive: true }); writeAtomic(outPath("levels/gallery.json"), JSON.stringify(out)); writeReport(out, B, log, kept); } catch (e) { console.log("gallery merge failed: " + e.message); process.exitCode = 1; }
+    console.log(log.slice(-1)[0]); return;
+  }
   const jobs = kept.map((pic, i) => ({ n: i + 1, pic, tag: TG.tagOf(i + 1, B.tags, false) })).filter((j) => inRun(j.n)), threads = +arg("threads") || B.budget.threads || Math.max(2, os.cpus().length - 2); // v4.3 --threads N
   say("gallery bake v" + B.version + ": " + kept.length + " pictures, " + jobs.length + " baked on " + threads + " threads" + (ONLY ? " (only " + ONLY.join("-") + ")" : ""));
   const results = await runPool(jobs, threads, B, rules, t0 + B.budget.wallSec * 1000, (d, t) => { if (d % 10 === 0 || d === t) console.log("  " + d + "/" + t + "  " + ((Date.now() - t0) / 1000).toFixed(1) + " s"); });

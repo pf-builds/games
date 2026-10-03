@@ -2,6 +2,7 @@
 // levels/levels.json (versioned) and levels/pool-e{1,2,3,4}.json (every graded candidate, kept for rebakes and the app's
 // longer curve).
 //   ~/.local/opt/node/bin/node tools/bake.js [--out DIR] [--only A-B] [--boards FILE] [--keep FILE] [--config FILE] [--threads N]
+//   ~/.local/opt/node/bin/node tools/bake.js --merge FULL,FIX1,... [--logs LOG,...] [--out DIR]   (v4.3: fix-up runs in)
 // Per generated level: perLevel candidates, each a seeded fort (colour count in the level's range; the level's twists from
 // the config's schedule: a lock key dug into the fort, linked pairs joined in the deal), a deal simulated as a winning
 // order under the dealing rules (so it wins on Easy, Normal and Hard) within the dead-time cap, then tightened into the
@@ -128,7 +129,7 @@ const fastBad = (g, C) => g.fast != null && (g.fast - g.rate >= C.fast.pts || (g
 // All candidates for one generated level. Never throws: failures come back as {fail} entries.
 function candidates(n, C, rules, tw, tag, board) {
   const era = eraOf(n, C), b = bandOf(n, C, tag), [cmin, cmax] = coloursOf(n, C, b), out = [], stats = { forts: 0, deals: 0, evals: 0, grades: 0 };
-  const D0 = Object.assign({}, C.deal, C.dealBy[b.kind] || {}, C.dealBy["era" + era] || {}, C.dealBy[b.sub] || {}, { maxTaps: C.maxTaps, time: rules.hard.time, maxWaitMs: C.maxWaitMs, lockSpaces: rules.hard.lockSpaces }); // v4.3: dealBy.era<e>
+  const D0 = Object.assign({}, C.deal, C.dealBy[b.kind] || {}, C.dealBy["era" + era] || {}, C.dealBy[b.sub] || {}, (C.dealByLevel || {})[n] || {}, { maxTaps: C.maxTaps, time: rules.hard.time, maxWaitMs: C.maxWaitMs, lockSpaces: rules.hard.lockSpaces }); // v4.3: dealBy.era<e>
   const per = ((C.candidates.perLevelBy && C.candidates.perLevelBy[b.sub]) || C.candidates.perLevel) + (C.extra | 0); // v4.2 --extra
   // v4.3 --boards: every candidate deals the level's own board; only when none of them deals (`fresh`) do `per` more
   // candidates draw new forts (the level is then marked newBoard).
@@ -255,6 +256,19 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
   const teachBy = new Map(TEACH.map((L) => [L.n, L]));
   const inRun = (n) => !ONLY || (n >= ONLY[0] && n <= (ONLY[1] || ONLY[0]));
   const tagN = (n) => TG.tagOf(n, C.tags, teachBy.has(n)); // v4.3: the level's fixed tag
+  // v4.3 --merge FULL,FIX1,... [--logs LOG,...]: no bake; FULL's levels with each fix-up run's levels (by n) in their place
+  // (fix-up runs: --only N-N --keep FULL), the bake record's lists and the variety redone, written with the report.
+  if (arg("merge")) {
+    const files = arg("merge").split(",").map((f) => JSON.parse(fs.readFileSync(path.resolve(f), "utf8"))), out = files[0], fixed = [];
+    files.slice(1).forEach((F, k) => { const run = F.bake.run || []; for (const l of F.levels) { if (run.length && run.indexOf(l.n) < 0) continue; const i = out.levels.findIndex((x) => x.n === l.n); if (i >= 0) { out.levels[i] = l; fixed.push(l.n); } }
+      for (const key of ["fallbacks", "lookaheadFallbacks", "varietyMisses", "paceFell", "newBoards"]) { const mine = (F.bake[key] || []).filter((x) => run.indexOf(typeof x === "number" ? x : x.n) >= 0);
+        out.bake[key] = (out.bake[key] || []).filter((x) => run.indexOf(typeof x === "number" ? x : x.n) < 0).concat(mine); } });
+    out.bake.fixups = fixed; out.bake.variety = VAR.eraReport(out.levels, C.variety);
+    for (const f of (arg("logs") || "").split(",").filter(Boolean)) for (const line of fs.readFileSync(path.resolve(f), "utf8").split("\n")) if (line && !/^ {2}/.test(line)) log.push(line);
+    say("bake: merged fix-up level(s) " + fixed.join(", ") + " into " + arg("merge").split(",")[0] + "; fallbacks now " + out.bake.fallbacks.length + (out.bake.fallbacks.length ? " (" + out.bake.fallbacks.map((x) => x.n).join(", ") + ")" : ""));
+    try { if (OUT) fs.mkdirSync(OUT, { recursive: true }); writeAtomic(outPath("levels/levels.json"), JSON.stringify(out)); writeReport(out, C, log); } catch (e) { say("bake merge failed: " + e.message); process.exitCode = 1; }
+    return;
+  }
   const BOARDS = arg("boards") ? new Map(JSON.parse(fs.readFileSync(path.resolve(arg("boards")), "utf8")).levels.map((l) => [l.n, boardOf(l)])) : null;
   const jobs = []; for (let n = 1; n <= C.levels; n++) if (!teachBy.has(n) && inRun(n)) jobs.push({ kind: "cand", n, tag: tagN(n), tw: twistsOf(n, C, teachBy), board: BOARDS && BOARDS.get(n) });
   for (const j of jobs) if (j.board && !!j.board.lock !== !!j.tw.lock) { say("level " + j.n + ": the kept board's lock does not match the level's twists; a new fort is drawn"); j.board = null; }
@@ -362,7 +376,7 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
   const variety = VAR.eraReport(levels, VC);
   for (const e of Object.keys(variety)) { const v = variety[e]; say("bake: variety, era " + e + ": median match " + pct(v.median) + " over " + v.n + " generated pictures (gate " + pct(VC.maxMedian) + (v.median > VC.maxMedian ? ": VARIETY GATE FAILED" : "") + "), most alike " + v.worst.a + " and " + v.worst.b + " at " + pct(v.worst.m)); }
   say("bake: tags " + TG.TAGS.map((t) => t + " " + levels.filter((l) => l.tag === t).length).join(", ") + "; taps per level: max " + Math.max(...levels.map((l) => wn(l) ? wn(l).length : 0)) + " (cap " + C.maxTaps + "), median " + med(levels.map((l) => (wn(l) ? wn(l).length : 0))) + "; cards max " + Math.max(...levels.map((l) => l.grade.cards)));
-  const out = { version: C.version, bake: { config: C.version, seed: C.seed, time: CFG.v3.time, forts: tot.forts, deals: tot.deals, tuneEvals: tot.evals, fullGrades: tot.grades, seconds: +secsAll.toFixed(1), fallbacks, lookaheadFallbacks: lookMiss, variety, varietyMisses: varMiss, paceFell, newBoards }, levels };
+  const out = { version: C.version, bake: { config: C.version, seed: C.seed, time: CFG.v3.time, forts: tot.forts, deals: tot.deals, tuneEvals: tot.evals, fullGrades: tot.grades, seconds: +secsAll.toFixed(1), fallbacks, lookaheadFallbacks: lookMiss, variety, varietyMisses: varMiss, paceFell, newBoards, run: ONLY ? jobs.map((j) => j.n) : undefined }, levels };
   try {
     if (OUT) fs.mkdirSync(OUT, { recursive: true });
     writeAtomic(outPath("levels/levels.json"), JSON.stringify(out));
