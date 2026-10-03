@@ -267,7 +267,9 @@
       if (!V.disp || V.disp.length < B.n) { V.disp = new Int8Array(B.n); V.dist = new Int16Array(B.n); V.q = new Int32Array(B.n); V.towerOfCell = new Int8Array(B.n); }
       if (V.idR.length < S.SMAX) V.idR = new Int32Array(S.SMAX);
       V.biteMs = S.T.biteMs; V.knockMs = S.T.knockMs;
-      const pts = B.n + 4;
+      // v4.2: a route's points start at 2(w + h) + 8 a runner (any walk on these open boards) and a runner's arrays grow
+      // when a longer one comes (route(); rare, never per frame), so a full-screen board's 640 runners stay small.
+      const pts = Math.min(B.n, 2 * (B.w + B.h)) + 8;
       if (V.maxPts < pts) { V.maxPts = pts; V.rPts = []; V.rCum = []; for (let i = 0; i < RMAX; i++) { V.rPts.push(new Float32Array(pts * 2)); V.rCum.push(new Float32Array(pts)); } }
       // Crates: one per colour on the board (iron is gates, never hauled), in material order across the yard.
       // (fix 2: a crate per colour, each taken by a colour on its first sapper out, left to right; claim()).
@@ -514,9 +516,11 @@
     // half into the face of its pixel c.
     function route(i, s, c, p) {
       bfs();
-      const w = V.w, pts = V.rPts[i], cum = V.rCum[i];
+      const w = V.w;
       let u = -1, best = 1e9;
       for (let k = 0; k < 4; k++) { const v = nbOf(c, k); if (v >= 0 && V.dist[v] >= 0 && V.dist[v] < best) { best = V.dist[v]; u = v; } }
+      if (u >= 0 && V.rCum[i].length < best + 6) { const n = best + 6 + (best >> 1); V.rPts[i] = new Float32Array(n * 2); V.rCum[i] = new Float32Array(n); } // v4.2: grow to fit
+      const pts = V.rPts[i], cum = V.rCum[i];
       let np = 0;
       const put = (x, y) => { pts[np * 2] = x; pts[np * 2 + 1] = y; np++; };
       if (p) put(p.x, p.y); else put(slotX(s), slotY(s));

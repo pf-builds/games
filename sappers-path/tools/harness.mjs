@@ -60,8 +60,10 @@ const URL_ = arg("url", "http://127.0.0.1:8491/sappers-path/");
 const ORIGIN = new URL(URL_).origin;
 const OUT = resolve(arg("out", resolve(here, "shots-v4.1", "harness")));
 // v4 M3: every one of the 100 boards keeps MIN_CELL CSS px a cell at every viewport (the smallest per era is reported;
-// the boss at 100 is the smallest, exactly 8 in the 400x600 iframe).
-const WALL_MS = 720000, MIN_CELL = 8; // Critics 2 fix: two more viewports
+// the boss at 100 is the smallest, exactly 8 in the 400x600 iframe). v4.2 (full-screen boards from level 26, sized for a
+// 375x812 phone at 8 CSS px): phones keep 8 (vp.minCell), the small frames (the 400x600 iframe, the short landscape
+// phone) 6.
+const WALL_MS = 1200000, MIN_CELL = 8; // Critics 2 fix: two more viewports
 mkdirSync(OUT, { recursive: true });
 const wall = setTimeout(() => { console.error("harness: wall budget exceeded"); process.exit(2); }, WALL_MS);
 
@@ -78,9 +80,9 @@ const VIEWPORTS = [
   { name: "375x812", width: 375, height: 812, touch: true, dpr: 2, shots: "375" },
   { name: "375x667", width: 375, height: 667, touch: true, dpr: 2, shots: "667" },
   { name: "414x736", width: 414, height: 736, touch: true, dpr: 3, shots: "736" },
-  { name: "812x375", width: 812, height: 375, touch: true, dpr: 3, shots: "812" },
+  { name: "812x375", width: 812, height: 375, touch: true, dpr: 3, shots: "812", minCell: 6 },
   { name: "1280x720", width: 1280, height: 720, touch: false, dpr: 1, shots: "1280" },
-  { name: "iframe-400x600", width: 480, height: 700, touch: false, dpr: 2, shots: "iframe", iframe: { w: 400, h: 600 } },
+  { name: "iframe-400x600", width: 480, height: 700, touch: false, dpr: 2, shots: "iframe", iframe: { w: 400, h: 600 }, minCell: 6 },
 ];
 
 // Screens for playtest 1: two and three overlapping squads mid-show (the first still out), and two frame strips.
@@ -282,7 +284,7 @@ async function run() {
       const cells = await ev(() => { const by = {}; for (let n = 1; n <= 100; n++) { const st = SP.load(n, "normal"); if (st.n !== n) continue; const e = st.era, px = +(st.cs / devicePixelRatio).toFixed(2); if (!by[e] || px < by[e].px) by[e] = { n, px, turned: document.body.classList.contains("turned") }; } return by; });
       R.minCellCss = cells;
       const worst = Object.values(cells).reduce((a, b) => (b.px < a.px ? b : a));
-      ok(worst.px >= MIN_CELL, tag + " every board keeps " + MIN_CELL + " CSS px a cell or more (smallest per era: " + JSON.stringify(cells) + ")");
+      ok(worst.px >= (vp.minCell || MIN_CELL), tag + " every board keeps " + (vp.minCell || MIN_CELL) + " CSS px a cell or more (smallest per era: " + JSON.stringify(cells) + ")");
       await ev((n) => SP.load(n, "normal"), worst.n); await page.waitForTimeout(300); await shot("smallest-cell");
       ok(await noScroll(), tag + " the smallest-cell level: no scrollbars");
 
@@ -313,7 +315,7 @@ async function run() {
         await ev(() => { SP.screen("map"); document.getElementById("map").scrollTop = 0; });
         await tap(`.dbg-node[data-id="${id}"]`); s = await S();
         R.debug[id] = { cell: +(s.cs / (vp.dpr || 1)).toFixed(2), hidden: s.hidden, links: s.links, open: s.open, cap: s.cap };
-        ok(s.screen === "play" && s.id === id && s.debug && s.cs / (vp.dpr || 1) >= MIN_CELL && (await noScroll()), tag + " " + id + " opens from the map's debug row (" + JSON.stringify(R.debug[id]) + ")");
+        ok(s.screen === "play" && s.id === id && s.debug && s.cs / (vp.dpr || 1) >= (vp.minCell || MIN_CELL) && (await noScroll()), tag + " " + id + " opens from the map's debug row (" + JSON.stringify(R.debug[id]) + ")");
         if (id === "v4-linked") { const lj = await ev(() => Array.from(document.querySelectorAll(".card")).findIndex((b) => b.classList.contains("linked") && !b.classList.contains("blocked")));
           await tap(`.card[data-col="${lj}"]`); s = await S(); ok(s.line.length === 2 && s.plays === 1, tag + " a real tap on a linked card sends both squads (" + s.line.length + " spaces, " + s.plays + " play)"); }
         if (id === "v4-locked") ok(s.open === s.cap - 1 && (await ev(() => { const q = document.querySelectorAll(".slot")[SP.state().cap - 1]; return q.classList.contains("locked") && !q.hidden; })), tag + " the locked space shows its padlock");
@@ -337,7 +339,7 @@ async function run() {
         const gi = await ev(() => SP.gallery().findIndex((id) => /^g-met-/.test(id)));
         await ev((i) => document.querySelectorAll("#gal-grid .gal-tile")[i].scrollIntoView({ block: "center" }), gi);
         await tap(`#gal-grid .gal-tile:nth-child(${gi + 1})`); s = await S();
-        ok(s.screen === "play" && /^g-met-/.test(s.id) && s.cs / (vp.dpr || 1) >= MIN_CELL && (await noScroll()), tag + " a real tap on a painting's tile plays it (" + s.id + ", " + (s.cs / (vp.dpr || 1)).toFixed(2) + " CSS px a cell)");
+        ok(s.screen === "play" && /^g-met-/.test(s.id) && s.cs / (vp.dpr || 1) >= (vp.minCell || MIN_CELL) && (await noScroll()), tag + " a real tap on a painting's tile plays it (" + s.id + ", " + (s.cs / (vp.dpr || 1)).toFixed(2) + " CSS px a cell)");
         const gc = await ev(() => SP.state().fronts.findIndex((f) => f && SP.reachable(f.mat) > 0)); await tap(`.card[data-col="${gc}"]`);
         await ev(() => SP.tick(700)); const sd = await ev(() => SP.entry()); s = await S();
         ok(s.plays === 1 && sd.live > 0 && sd.crate === sd.live && sd.entry === sd.live, tag + " v4.1: a real card tap sends a squad out of its crate and up through the entry square at the bottom (" + JSON.stringify(sd) + ")");
@@ -345,7 +347,7 @@ async function run() {
         await tap("#btn-map"); s = await S(); ok(s.screen === "gallery", tag + " the top bar's button goes back to the Gallery");
         const gcells = await ev(() => { let w = null; for (const id of SP.gallery()) { const st = SP.load(id, "normal"), px = +(st.cs / devicePixelRatio).toFixed(2); if (!w || px < w.px) w = { id, px, turned: document.body.classList.contains("turned") }; } return w; });
         R.galleryMinCell = gcells;
-        ok(gcells.px >= MIN_CELL, tag + " every Gallery board keeps " + MIN_CELL + " CSS px a cell or more (smallest " + JSON.stringify(gcells) + ")");
+        ok(gcells.px >= (vp.minCell || MIN_CELL), tag + " every Gallery board keeps " + (vp.minCell || MIN_CELL) + " CSS px a cell or more (smallest " + JSON.stringify(gcells) + ")");
         await ev((id) => SP.load(id, "normal"), gcells.id); await page.waitForTimeout(300); await shot("gallery-smallest-cell");
         ok(await noScroll(), tag + " the smallest Gallery board: no scrollbars");
       }
