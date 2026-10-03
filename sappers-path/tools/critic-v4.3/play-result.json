@@ -1,0 +1,208 @@
+{
+ "375x812 e1-01 [easy]: tag shown, 6 spaces, report without medals": {
+  "pass": true,
+  "info": {
+   "cap": 6,
+   "open": 6,
+   "slots": 6,
+   "report": "Fort razed! | EASY | The goblin king flees. Level 1 cleared again. | Time | 0:00 | New best! | Taps | 8 | New best! | Coins | +5 | Next level | Retry",
+   "medals": "absent"
+  }
+ },
+ "375x812 e1-06 [hard]: tag shown, 4 spaces, report without medals": {
+  "pass": true,
+  "info": {
+   "cap": 4,
+   "open": 4,
+   "slots": 4,
+   "report": "Fort razed! | HARD | The goblin king flees. Level 6 cleared again. | Time | 0:00 | New best! | Taps | 8 | New best! | Coins | +20 | Next level | Retry",
+   "medals": "absent"
+  }
+ },
+ "375x812 linked tap with a buried partner refused": {
+  "pass": true,
+  "info": {
+   "plays": [
+    0,
+    0
+   ],
+   "refused": [
+    0,
+    1
+   ],
+   "toast": "Linked squads go together: bring both to the front"
+  }
+ },
+ "375x812 Gallery: picture 2 locked until picture 1 is cleared": {
+  "pass": true,
+  "info": {
+   "before": [
+    "gal-tile next | Picture 1, play this one next, Easy",
+    "gal-tile locked | Picture 2, locked: clear the one before it, Easy",
+    "gal-tile locked | Picture 3, locked: clear the one before it"
+   ],
+   "tapLocked": "gallery",
+   "won": "Picture complete! | EASY | Pizza Slice is in your Gallery now. | Time | 0:02 | First win | Taps | 44 | First win | Coins | +15 | First clear +10 | Next picture | Retry",
+   "medals": "absent",
+   "after": [
+    "gal-tile done | Pizza Slice, cleared, Easy",
+    "gal-tile next | Picture 2, play this one next, Easy",
+    "gal-tile locked | Picture 3, locked: clear the one before it"
+   ],
+   "picture2": "play g-ours-g01"
+  }
+ },
+ "375x812 old v4.2-shaped save migrates (progress, coins, inventory, bests, settings)": {
+  "pass": true,
+  "info": {
+   "home": {
+    "prog": "30/100",
+    "play": "Level 31",
+    "coins": "777"
+   },
+   "saved": {
+    "v": 2,
+    "done": 30,
+    "gal": {
+     "g-tw-1f355": 1
+    },
+    "best": {
+     "e1-01": [
+      7033,
+      6,
+      40
+     ],
+     "e1-04": [
+      8000,
+      11,
+      30
+     ],
+     "e1-07": [
+      7000,
+      12,
+      20
+     ]
+    },
+    "settings": {
+     "muted": true,
+     "speed": 2,
+     "cb": true
+    },
+    "inv": {
+     "ladder": 2,
+     "quartermaster": 1,
+     "scout": 0,
+     "recall": 3
+    },
+    "coins": 777
+   }
+  }
+ },
+ "SP.selfTest()": {
+  "pass": true,
+  "info": "pass 502 fail [] in 3574 ms"
+ },
+ "iframe400x600 e1-01 [easy]: tag shown, 6 spaces, report without medals": {
+  "pass": true,
+  "info": {
+   "cap": 6,
+   "open": 6,
+   "slots": 6,
+   "report": "Fort razed! | EASY | The goblin king flees. Level 1 cleared again. | Time | 0:00 | New best! | Taps | 8 | New best! | Coins | +5 | Next level | Retry",
+   "medals": "absent"
+  }
+ },
+ "iframe400x600 e1-06 [hard]: tag shown, 4 spaces, report without medals": {
+  "pass": true,
+  "info": {
+   "cap": 4,
+   "open": 4,
+   "slots": 4,
+   "report": "Fort razed! | HARD | The goblin king flees. Level 6 cleared again. | Time | 0:00 | New best! | Taps | 8 | New best! | Coins | +20 | Next level | Retry",
+   "medals": "absent"
+  }
+ },
+ "iframe400x600 linked tap with a buried partner refused": {
+  "pass": true,
+  "info": {
+   "plays": [
+    0,
+    0
+   ],
+   "refused": [
+    0,
+    1
+   ],
+   "toast": "Linked squads go together: bring both to the front"
+  }
+ },
+ "iframe400x600 Gallery: picture 2 locked until picture 1 is cleared": {
+  "pass": true,
+  "info": {
+   "before": [
+    "gal-tile next | Picture 1, play this one next, Easy",
+    "gal-tile locked | Picture 2, locked: clear the one before it, Easy",
+    "gal-tile locked | Picture 3, locked: clear the one before it"
+   ],
+   "tapLocked": "gallery",
+   "won": "Picture complete! | EASY | Pizza Slice is in your Gallery now. | Time | 0:01 | First win | Taps | 44 | First win | Coins | +15 | First clear +10 | Next picture | Retry",
+   "medals": "absent",
+   "after": [
+    "gal-tile done | Pizza Slice, cleared, Easy",
+    "gal-tile next | Picture 2, play this one next, Easy",
+    "gal-tile locked | Picture 3, locked: clear the one before it"
+   ],
+   "picture2": "play g-ours-g01"
+  }
+ },
+ "iframe400x600 old v4.2-shaped save migrates (progress, coins, inventory, bests, settings)": {
+  "pass": true,
+  "info": {
+   "home": {
+    "prog": "30/100",
+    "play": "Level 31",
+    "coins": "777"
+   },
+   "saved": {
+    "v": 2,
+    "done": 30,
+    "gal": {
+     "g-tw-1f355": 1
+    },
+    "best": {
+     "e1-01": [
+      7033,
+      6,
+      40
+     ],
+     "e1-04": [
+      8000,
+      11,
+      30
+     ],
+     "e1-07": [
+      7000,
+      12,
+      20
+     ]
+    },
+    "settings": {
+     "muted": true,
+     "speed": 2,
+     "cb": true
+    },
+    "inv": {
+     "ladder": 2,
+     "quartermaster": 1,
+     "scout": 0,
+     "recall": 3
+    },
+    "coins": 777
+   }
+  }
+ },
+ "zero console errors/warnings": {
+  "pass": true,
+  "info": []
+ }
+}

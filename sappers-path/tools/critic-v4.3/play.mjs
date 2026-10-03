@@ -1,0 +1,46 @@
+// Critic v4.3 browser pass at 375x812 (touch) and the 400x600 iframe: an Easy and a Hard level (tag shown, 6 vs 4 spaces, win
+// report without medals), a linked refusal (e3-62: column 1's front waits for a buried partner), the Gallery one picture at a
+// time (picture 2 locked until picture 1 is cleared), an old format-1 (v4.2-shaped) save migrated, zero console errors.
+import fs from 'fs'; import path from 'path'; import { fileURLToPath } from 'url';
+const PW = await import(process.env.PLAYWRIGHT_MODULE); const { chromium } = PW.default || PW;
+const here = path.dirname(fileURLToPath(import.meta.url)), root = path.resolve(here, '../..'), SHOTS = path.join(root, 'tools/shots-v4.3-critic/functional'), BASE = 'http://127.0.0.1:8492/sappers-path/';
+const LV = JSON.parse(fs.readFileSync(path.join(root, 'levels/levels.json'))).levels, GAL = JSON.parse(fs.readFileSync(path.join(root, 'levels/gallery.json'))).levels;
+const easy = LV.find((l) => l.tag === 'easy'), hard = LV.find((l) => l.tag === 'hard'), linked = LV.find((l) => l.id === 'e3-62');
+const R = {}, errs = []; const ok = (k, pass, info) => { R[k] = { pass: !!pass, info }; console.log((pass ? 'PASS ' : 'FAIL ') + k + ' :: ' + JSON.stringify(info).slice(0, 1000)); };
+const b = await chromium.launch(); const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+async function run(label, opts, url, frameSel) { const ctx = await b.newContext(opts); const p = await ctx.newPage(); p.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errs.push(`[${label}] ${m.type()}: ${m.text()}`); }); p.on('pageerror', (e) => errs.push(`[${label}] PAGEERROR ${e.message}`));
+  await p.goto(url); let F = p.mainFrame(); const frame = async (any) => { if (frameSel) { await p.waitForSelector(frameSel); F = await (await p.$(frameSel)).contentFrame(); } await F.waitForFunction((any) => window.SP && (any || SP.state().screen === 'title'), any); };
+  const fresh = async (seed) => { await frame(true); await F.evaluate((s) => { localStorage.clear(); if (s) localStorage.setItem('sappers-path.v3', JSON.stringify(s)); }, seed || null); await p.reload(); await frame(); };
+  const tap = (sel) => (opts.hasTouch ? F.tap(sel, { timeout: 3000 }) : F.click(sel, { timeout: 3000 })); const st = () => F.evaluate(() => SP.state()); const txt = (s) => F.evaluate((s) => { const e = document.querySelector(s); return e ? e.textContent.trim() : null; }, s);
+  await fresh(); await F.evaluate(() => SP.unlockTo(99));
+  // Easy and Hard: tag, spaces, win report without medals
+  for (const L of [easy, hard]) { await F.evaluate((id) => SP.load(id), L.id); await wait(250); const s0 = await st(); const top = await F.evaluate(() => ({ chip: (document.querySelector('#diff-chip') || {}).textContent, slots: [...document.querySelectorAll('#line .slot')].filter((e) => e.offsetParent && !e.hidden).length }));
+    for (const c of L.win[L.tag]) { const s = await st(); if (s.status !== 'playing') break; await tap(`#tray button.tile.card[data-col="${c}"]`); await F.evaluate(() => SP.settle()); }
+    await F.waitForFunction(() => SP.state().panel, null, { timeout: 15000 }).catch(() => {}); await wait(2600); const rep = await F.evaluate(() => ({ text: document.querySelector('#panel').innerText.replace(/\n+/g, ' | '), medals: (() => { const m = document.querySelector('#p-medals'); return !m ? 'absent' : m.hidden || !m.offsetParent ? 'hidden' : 'SHOWN'; })() }));
+    if (L === hard) await p.screenshot({ path: path.join(SHOTS, `${label}-hard-report.png`) });
+    const want = L.tag === 'hard' ? 4 : 6; ok(`${label} ${L.id} [${L.tag}]: tag shown, ${want} spaces, report without medals`, s0.cap === want && top.slots === want && (L.tag === 'normal' || new RegExp(L.tag, 'i').test(top.chip + rep.text)) && rep.medals !== 'SHOWN' && /razed|complete/i.test(rep.text), { cap: s0.cap, open: s0.open, slots: top.slots, chip: top.chip, report: rep.text, medals: rep.medals }); }
+  // linked refusal: e3-62 at load, column 1's front waits for its buried partner
+  await F.evaluate(() => SP.load('e3-62')); await wait(250); const l0 = await st(); const h0 = await F.evaluate(() => SP.state().hidden); await tap('#tray button.tile.card[data-col="1"]'); await wait(150); const l1 = await st(); const t = await F.evaluate(() => document.querySelector('#toast').hidden ? '' : document.querySelector('#toast').textContent);
+  ok(`${label} linked tap with a buried partner refused`, l1.plays === l0.plays && l1.line.length === l0.line.length && JSON.stringify(l1.fronts) === JSON.stringify(l0.fronts) && l1.refused === l0.refused + 1, { plays: [l0.plays, l1.plays], refused: [l0.refused, l1.refused], toast: t });
+  // Gallery one picture at a time
+  await fresh(); await F.evaluate(() => SP.unlockTo(25)); await F.evaluate(() => SP.screen('gallery')); await wait(300); const ids = await F.evaluate(() => SP.gallery());
+  const g0 = await F.evaluate(() => [...document.querySelectorAll('#gal-grid > *')].slice(0, 3).map((e) => e.className + ' | ' + (e.getAttribute('aria-label') || e.innerText.replace(/\s+/g, ' ')).slice(0, 60)));
+  const ftap = (sel) => (opts.hasTouch ? F.tap(sel, { force: true }) : F.click(sel, { force: true })); await ftap('#gal-grid > *:nth-child(2)'); await wait(300); const lockedTap = (await st()).screen;
+  await tap('#gal-grid > *:nth-child(1)'); await F.waitForFunction(() => SP.state().screen === 'play'); const G1 = GAL.find((g) => g.id === ids[0]); const gid = (await st()).id;
+  for (const c of G1.win[G1.tag]) { const s = await st(); if (s.status !== 'playing') break; await tap(`#tray button.tile.card[data-col="${c}"]`); await F.evaluate(() => SP.settle()); }
+  await F.waitForFunction(() => SP.state().panel, null, { timeout: 15000 }).catch(() => {}); await wait(2600); const gp = await F.evaluate(() => document.querySelector('#panel').innerText.replace(/\n+/g, ' | ')); const gmed = await F.evaluate(() => { const m = document.querySelector('#p-medals'); return !m ? 'absent' : m.hidden || !m.offsetParent ? 'hidden' : 'SHOWN'; });
+  await F.evaluate(() => SP.screen('gallery')); await wait(300); const g1 = await F.evaluate(() => [...document.querySelectorAll('#gal-grid > *')].slice(0, 3).map((e) => e.className + ' | ' + (e.getAttribute('aria-label') || e.innerText.replace(/\s+/g, ' ')).slice(0, 60)));
+  await tap('#gal-grid > *:nth-child(2)'); await wait(400); const open2 = await st();
+  ok(`${label} Gallery: picture 2 locked until picture 1 is cleared`, lockedTap !== 'play' && gid === ids[0] && open2.screen === 'play' && open2.id === ids[1] && gmed !== 'SHOWN', { before: g0, tapLocked: lockedTap, won: gp, medals: gmed, after: g1, picture2: open2.screen + ' ' + open2.id });
+  // old format-1 (v4.2-shaped) save
+  const old = { v: 1, done: Object.fromEntries(LV.filter((l) => l.n <= 30).map((l) => [l.id, l.n === 4 ? 3 : l.n === 7 ? 4 : 2])), gal: { [GAL[0].id]: 2 }, settings: { muted: true, speed: 2, cb: true, diff: 'hard' }, last: 'e2-30', coins: 777, inv: { ladder: 2, quartermaster: 1, scout: 0, recall: 3 }, best: { 'e1-01': [0, 7033, 0, 0, 6, 0, 40], 'e1-04': [9000, 8000, 0, 12, 11, 0, 30], 'e1-07': [5000, 6000, 7000, 10, 11, 12, 20] }, lives: { n: 5, at: 0 } };
+  await fresh(old); const m = await F.evaluate(() => ({ meta: SP.meta(), st: SP.state(), prog: document.querySelector('#home-prog').textContent, play: document.querySelector('#btn-play').textContent.trim(), coins: document.querySelector('#home-coins').textContent }));
+  await tap('#btn-settings'); await tap('#settings .tog-cb'); await tap('#settings .tog-cb'); await tap('#set-close'); await wait(150); const saved = JSON.parse(await F.evaluate(() => localStorage.getItem('sappers-path.v3')));
+  const migOK = m.meta.coins === 777 && /30\/100/.test(m.prog) && /31/.test(m.play) && saved.v === 2 && saved.done['e1-01'] === 1 && Object.keys(saved.done).length === 30 && saved.gal[GAL[0].id] === 1 && JSON.stringify(saved.best['e1-01']) === '[7033,6,40]' && JSON.stringify(saved.best['e1-04']) === '[8000,11,30]' && JSON.stringify(saved.best['e1-07']) === '[7000,12,20]' && saved.settings.speed === 2 && saved.settings.cb === true && saved.settings.muted === true && !('diff' in saved.settings) && saved.inv.recall === 3;
+  ok(`${label} old v4.2-shaped save migrates (progress, coins, inventory, bests, settings)`, migOK, { home: { prog: m.prog, play: m.play, coins: m.coins }, saved: { v: saved.v, done: Object.keys(saved.done).length, gal: saved.gal, best: saved.best, settings: saved.settings, inv: saved.inv, coins: saved.coins } });
+  if (label === '375x812') { const t1 = Date.now(); const r = await F.evaluate(() => SP.selfTest()); ok('SP.selfTest()', !r.fail.length, `pass ${r.pass} fail ${JSON.stringify(r.fail).slice(0, 300)} in ${Date.now() - t1} ms`); }
+  await ctx.close(); }
+await run('375x812', { viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 }, BASE + '?debug=1');
+await run('iframe400x600', { viewport: { width: 900, height: 700 } }, BASE + 'tools/iframe-host.html', '#game');
+ok('zero console errors/warnings', errs.length === 0, errs.slice(0, 10)); console.log('levels:', easy.id, hard.id, 'linked e3-62');
+fs.writeFileSync(path.join(here, 'play-result.json'), JSON.stringify(R, null, 1)); await b.close();
