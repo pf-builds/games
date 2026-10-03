@@ -1,0 +1,150 @@
+{
+ "375x812 e2-27 (moat castle 42x41)": {
+  "pass": true,
+  "info": {
+   "css": 8,
+   "win": "won | Fort razed!",
+   "loss": "failed/jam | Line jammed: Night sky can't reach a block.",
+   "refused": "1 refused, plays 5->5",
+   "ladder": "open 5->6, inv 0",
+   "busiest": {
+    "cpu": "4x",
+    "peakRunners": 61,
+    "frames": 282,
+    "p95": 16.8,
+    "max": 16.8,
+    "over33": 0,
+    "longtasks": 0,
+    "draw": {
+     "mean": 0.123,
+     "max": 0.7,
+     "runners": 50
+    }
+   }
+  }
+ },
+ "375x812 e4-100 (boss 42x41)": {
+  "pass": true,
+  "info": {
+   "css": 8,
+   "win": "won | Fort razed!",
+   "refused": "1 refused, plays 4->4",
+   "ladder": "open 4->5, inv 0",
+   "busiest": {
+    "cpu": "4x",
+    "peakRunners": 57,
+    "frames": 285,
+    "p95": 16.7,
+    "max": 16.8,
+    "over33": 0,
+    "longtasks": 0,
+    "draw": {
+     "mean": 0.153,
+     "max": 0.8,
+     "runners": 45
+    }
+   }
+  }
+ },
+ "375x812 g-tw-1f98a (Gallery 41x37)": {
+  "pass": true,
+  "info": {
+   "css": 8,
+   "win": "won | Picture complete!",
+   "refused": "1 refused, plays 5->5",
+   "ladder": "open 5->6, inv 0",
+   "busiest": {
+    "cpu": "4x",
+    "peakRunners": 79,
+    "frames": 277,
+    "p95": 16.7,
+    "max": 16.8,
+    "over33": 0,
+    "longtasks": 0,
+    "draw": {
+     "mean": 0.117,
+     "max": 0.7,
+     "runners": 52
+    }
+   }
+  }
+ },
+ "SP.selfTest()": {
+  "pass": true,
+  "info": "pass 1017 fail [] in 7125 ms"
+ },
+ "iframe400x600 e2-27 (moat castle 42x41)": {
+  "pass": true,
+  "info": {
+   "css": 7,
+   "win": "won | Fort razed!",
+   "loss": "failed/jam | Line jammed: Night sky can't reach a block.",
+   "refused": "1 refused, plays 5->5",
+   "ladder": "open 5->6, inv 0",
+   "busiest": {
+    "cpu": "1x",
+    "peakRunners": 60,
+    "frames": 275,
+    "p95": 16.7,
+    "max": 16.8,
+    "over33": 0,
+    "longtasks": 0,
+    "draw": {
+     "mean": 0.067,
+     "max": 0.2,
+     "runners": 51
+    }
+   }
+  }
+ },
+ "iframe400x600 e4-100 (boss 42x41)": {
+  "pass": true,
+  "info": {
+   "css": 7,
+   "win": "won | Fort razed!",
+   "refused": "1 refused, plays 4->4",
+   "ladder": "open 4->5, inv 0",
+   "busiest": {
+    "cpu": "1x",
+    "peakRunners": 58,
+    "frames": 277,
+    "p95": 16.7,
+    "max": 16.8,
+    "over33": 0,
+    "longtasks": 0,
+    "draw": {
+     "mean": 0.097,
+     "max": 0.2,
+     "runners": 45
+    }
+   }
+  }
+ },
+ "iframe400x600 g-tw-1f98a (Gallery 41x37)": {
+  "pass": true,
+  "info": {
+   "css": 8,
+   "win": "won | Picture complete!",
+   "refused": "1 refused, plays 5->5",
+   "ladder": "open 5->6, inv 0",
+   "busiest": {
+    "cpu": "1x",
+    "peakRunners": 79,
+    "frames": 275,
+    "p95": 16.7,
+    "max": 16.8,
+    "over33": 0,
+    "longtasks": 0,
+    "draw": {
+     "mean": 0.077,
+     "max": 0.2,
+     "runners": 53
+    }
+   }
+  }
+ },
+ "zero console errors/warnings": {
+  "pass": true,
+  "info": []
+ }
+}
