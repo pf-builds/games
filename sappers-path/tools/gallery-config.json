@@ -80,9 +80,10 @@
     "nudges": 4
   },
   "bake": {
-    "version": 3,
-    "note": "The Gallery bake (tools/gallery-bake.js). curve: the first `intro` pictures in the intro band, then `pattern` repeating (bands: Normal random-tap win rates). maxTaps, maxWaitMs and duration.maxMs as the siege (bake-config). capOf: the outline's squads (the ink colour): [first squad at most, every later one at most], so the first breach is narrow. deal, dealBy, tune, grade, fast, candidates, dedupe, penalty, budget: as the siege's bake-config. narrowFor: slots whose tuning also narrows the one-move-lookahead player's win rate (down to tune.narrow.stopAt, so a thinking player can lose there too). v4.2: squads of 45-99 are dealt (shrunk where a tap would run past the dead-time cap; more taps than the castles' 90-99 because a picture, with no moats, walks shorter), capOf is doubled for the longer outlines, and duration.pace sets the limits on the real pace as the Siege does, from 150 s (bake-config duration.pace; the patient maxMs no longer applies).",
+    "version": 4,
+    "note": "The Gallery bake (tools/gallery-bake.js). curve: the first `intro` pictures in the intro band, then `pattern` repeating (bands: Normal random-tap win rates). maxTaps, maxWaitMs and duration.maxMs as the siege (bake-config). capOf: the outline's squads (the ink colour): [first squad at most, every later one at most], so the first breach is narrow. deal, dealBy, tune, grade, fast, candidates, dedupe, penalty, budget: as the siege's bake-config. narrowFor: slots whose tuning also narrows the one-move-lookahead player's win rate (down to tune.narrow.stopAt, so a thinking player can lose there too). v4.2: squads of 45-99 are dealt (shrunk where a tap would run past the dead-time cap; more taps than the castles' 90-99 because a picture, with no moats, walks shorter), capOf is doubled for the longer outlines, and duration.pace sets the limits on the real pace as the Siege does, from 150 s (bake-config duration.pace; the patient maxMs no longer applies). v4.3: every picture has one fixed tag (tags) and is graded on it alone; the slot follows the tag (curve.byTag); a lost real-pace replay is a duration miss; pace.aim and aimWeight: among candidates meeting every target the picker prefers the real pace nearest aim (aimWeight ms from it weigh as one point of rate from the band's middle); pace.thinks: the stored order is also replayed waiting this many ms after each tap (reported). v4.3: a space frees at its squad's last pickup, so a picture plays about a seventh quicker on the same deal; the squads are dealt at 30-60 (more taps, each squad holding its space a shorter while), which brings the real pace back toward its v4.2 median (tools/v4.3-notes.md).",
     "seed": 20261002,
+    "tags": {"note": "v4.3 (tools/tags.js, as the Siege's bake-config tags): every picture plays on one fixed tag; the last picture is a Hard end, the first ones Easy, then the cycle (Gallery: 8 easy, 38 normal, 14 hard).", "from": 3, "ends": [60], "first": "easy", "afterEnd": "easy", "teach": "normal", "cycle": ["normal", "normal", "hard", "normal", "normal", "normal", "hard", "easy", "normal"]},
     "curve": {
       "intro": 4,
       "pattern": ["saw0", "saw1", "saw2", "saw1", "hard", "relief"],
@@ -93,14 +94,15 @@
         "saw2": [0.3, 0.48],
         "hard": [0.1, 0.3],
         "relief": [0.62, 0.85]
-      }
+      },
+      "byTag": {"note": "v4.3: the slot follows the tag (the intro stays): easy takes relief, hard takes hard; normal keeps its slot, with hard read as saw2 and relief as saw0.", "easy": "relief", "hard": "hard", "normal": {"hard": "saw2", "relief": "saw0"}}
     },
     "maxTaps": 55,
     "maxWaitMs": 15000,
     "duration": {
       "medianMs": 120000,
       "maxMs": 240000,
-      "pace": {"from": 1, "factor": 1.77, "range": [150000, 300000], "medianMs": 240000}
+      "pace": {"from": 1, "factor": 1.77, "range": [150000, 300000], "medianMs": 240000, "aim": 200000, "aimWeight": 5000, "thinks": [1000, 2000, 4000]}
     },
     "capOf": [24, 48],
     "deal": {
@@ -120,27 +122,27 @@
     },
     "dealBy": {
       "intro": {
-        "size": [45, 99],
+        "size": [30, 60],
         "deep": 0.05
       },
       "saw0": {
-        "size": [45, 99],
+        "size": [30, 60],
         "deep": 0.12
       },
       "saw1": {
-        "size": [45, 99],
+        "size": [30, 60],
         "deep": 0.12
       },
       "saw2": {
-        "size": [45, 99],
+        "size": [30, 60],
         "deep": 0.12
       },
       "relief": {
-        "size": [45, 99],
+        "size": [30, 60],
         "deep": 0.08
       },
       "hard": {
-        "size": [45, 99],
+        "size": [30, 60],
         "deep": 0.18
       }
     },

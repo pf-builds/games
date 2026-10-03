@@ -11,15 +11,24 @@
 // it may (selfTest's coach check does the same). Seeds are searched in a fixed order until a level passes, so the output
 // is deterministic. The coach's card for each level (a material id: picture ids go by population) is printed; config.json
 // teach holds it.
-//   ~/.local/opt/node/bin/node tools/teach-v4.js [--check] [--out DIR]   (--check: rebuild in memory and diff against the
-//   file; --out: write DIR/teaching.json instead, for a trial bake's --teach)
+//   ~/.local/opt/node/bin/node tools/teach-v4.js [--check] [--out DIR] [--boards FILE]   (--check: rebuild in memory and
+//   diff against the file; --out: write DIR/teaching.json instead, for a trial bake's --teach)
+// v4.3: each teaching level plays on its fixed tag (tools/tags.js, bake-config tags with teaching on: Easy or Normal,
+// never Hard) and is solved, rated (minRate) and coach-followed on that tag only; the file stores its tag and one order
+// (win[tag]). `--boards FILE` keeps each level's board (grid, palette, gates, towers, lock) from FILE (the shipped
+// teaching.json): first the level as it ships (its deck too, seed pass 0) if it still passes every check under the v4.3
+// rules on its tag, else new deals on the kept board (KEEPTRIES seeds), else new forts (and says so).
 "use strict";
 const fs = require("fs"), path = require("path");
-const E = require("../src/engine.js"), G = require("./gen.js"), R = require("./grade.js");
+const E = require("../src/engine.js"), G = require("./gen.js"), R = require("./grade.js"), TG = require("./tags.js");
 const C = JSON.parse(fs.readFileSync(path.join(__dirname, "bake-config.json"), "utf8")), CFG = require("../config.json");
 const FILE = path.join(__dirname, "../levels/teaching.json");
 const OUTI = process.argv.indexOf("--out"), DEST = OUTI > 0 ? path.resolve(process.argv[OUTI + 1], "teaching.json") : FILE;
-const DIFFS = ["easy", "normal", "hard"], rules = {}; for (const d of DIFFS) rules[d] = E.rulesOf(CFG.v3, d);
+const rules = {}; for (const d of TG.TAGS) rules[d] = E.rulesOf(CFG.v3, d);
+const tagOf = (n) => TG.tagOf(n, C.tags, true); // v4.3: the teaching level's fixed tag
+const BI = process.argv.indexOf("--boards"), BOARD = ["w", "h", "grid", "pic", "gates", "towers", "pal", "scene", "style", "palette", "lock"];
+const KEEPL = BI > 0 ? new Map(JSON.parse(fs.readFileSync(path.resolve(process.argv[BI + 1]), "utf8")).levels.map((l) => [l.n, l])) : null;
+const KEEP = KEEPL ? new Map([...KEEPL].map(([n, l]) => { const b = {}; for (const k of Object.keys(l)) if (BOARD.indexOf(k) >= 0) b[k] = l[k]; return [n, b]; })) : null;
 const GAP = CFG.v3.twists.linkRowGap;
 
 // The coach's card for a lesson, read from the dealt level at load (Normal): the material id the coach points at, or 0
@@ -58,7 +67,7 @@ const SPECS = [
     gen: Object.assign({}, TEACH42, { twoGates: 0 }), colours: 7, deal: DEAL42, flags: [[0, 1], [2, 1], [4, 1]], minRate: 0.6, maxMs: 600000 },
   { n: 51, era: 3, name: "The Corner Tower", teaches: "archers", hint: "Archers shoot anyone in their red ring. Take the tower first: here the archers only drive sappers back.", safeArchers: true,
     gen: Object.assign({}, TEACH42, { moat: false, towers: [1, 1], keepH: [8, 11] }), colours: 7, deal: DEAL42, minRate: 0.6, maxMs: 600000 },
-  { n: 62, era: 3, name: "Linked Squads", teaches: "linked", hint: "Linked squads go out together and need 2 free spaces; both stay taken until both squads are home.",
+  { n: 62, era: 3, name: "Linked Squads", teaches: "linked", hint: "Linked squads go out together: both must be at the front, with 2 free spaces. Both spaces free once both squads have picked up their last blocks.",
     gen: Object.assign({}, TEACH42, { towers: [2, 2] }), colours: 9, deal: DEAL42, pairs: [1], minRate: 0.5, maxMs: 600000 },
   { n: 76, era: 4, name: "The Locked Space", teaches: "lock", hint: "One space starts locked. Its key is a gold block on the board: dig it out and send the Looters.",
     gen: Object.assign({}, TEACH42, { towersOut: [2, 2], towersIn: [0, 0] }), colours: 9, deal: DEAL42, lock: true, minRate: 0.5, maxMs: 600000 },
@@ -80,11 +89,11 @@ const COACH = {
 };
 const coachOf = (n, m) => (COACH[n] ? JSON.parse(JSON.stringify(COACH[n]).replace(/"@"/g, String(m)).replace(/:@/g, ":" + m)) : (CFG.teach || {})[idOf(n)] || null);
 const idOf = (n) => "e" + (n <= 25 ? 1 : n <= 50 ? 2 : n <= 75 ? 3 : 4) + "-" + String(n).padStart(2, "0");
-// The coach follower on Normal, with the page's coach machine (main.js cond/skipDead/coachStep, read at rest after each
+// The coach follower on the level's tag (v4.3; Normal before), with the page's coach machine (main.js cond/skipDead/coachStep, read at rest after each
 // patient tap): it taps the arrowed card (a card pointer, or a linked front card) when its tap is legal, else the first
 // legal column. Returns {won, saw (steps shown), steps}.
-function follower(B, steps) {
-  const S = E.sim(B, rules.normal); S.logOn = true; let used = 0, reveals = 0, pairs = 0, i = 0, at = 0; const saw = new Set(); steps = steps || [];
+function follower(B, steps, rt) {
+  const S = E.sim(B, rt); S.logOn = true; let used = 0, reveals = 0, pairs = 0, i = 0, at = 0; const saw = new Set(); steps = steps || [];
   const frontOf = (m) => { for (let j = 0; j < E.NCOL; j++) { const f = S.front(j); if (f >= 0 && B.cardM[f] === m) return j; } return -1; };
   const cond = (k) => { const [w, a] = String(k).split(":"), m = a | 0;
     switch (w) {
@@ -115,25 +124,34 @@ function follower(B, steps) {
 function verify(L, coach, hint) {
   const B = E.compile(L), w = E.check(L, { linkRowGap: GAP }); if (w.length) return { bad: w.join("; ") };
   for (let m = 1; m < E.NMAT; m++) if (m !== E.IRON && B.sapTotal[m] !== B.pix[m]) return { bad: "colour " + m + ": " + B.sapTotal[m] + " sappers for " + B.pix[m] + " pixels" };
-  const out = { orders: {} };
-  for (const d of DIFFS) {
-    const o = R.solve(B, rules[d], 400000, out.orders.easy || hint || null), ln = o && R.line(B, rules[d], o);
-    if (!ln || !ln.won) return { bad: d + ": no winning order" };
-    out.orders[d] = o; if (d === "normal") { out.ms = ln.ms; out.maxWait = ln.maxWait; }
-  }
-  out.rate = R.rate(B, rules.normal, 400, 7);
-  const f = follower(B, coachOf(L.n, coach)); out.first = f.won && f.saw === f.steps; out.coach = coachOf(L.n, coach);
+  const out = { orders: {} }, d = tagOf(L.n), rt = rules[d];
+  const o = R.solve(B, rt, 400000, hint || null), ln = o && R.line(B, rt, o);
+  if (!ln || !ln.won) return { bad: d + ": no winning order" };
+  out.orders[d] = o; out.ms = ln.ms; out.maxWait = ln.maxWait;
+  out.rate = R.rate(B, rt, 400, 7);
+  const f = follower(B, coachOf(L.n, coach), rt); out.first = f.won && f.saw === f.steps; out.coach = coachOf(L.n, coach);
   return out;
 }
+// The checks every built teaching level passes (null) or the first it misses.
+const missOf = (spec, v) => (v.rate < spec.minRate ? "rate" : v.ms > spec.maxMs ? "time" : v.maxWait > C.maxWaitMs ? "wait" : !v.first ? "coach" : null);
 function build(spec) {
   const D = Object.assign({}, DEAL, spec.deal || {}, { time: rules.hard.time, lockSpaces: rules.hard.lockSpaces });
   const why = {};
+  if (KEEPL && KEEPL.get(spec.n)) { // v4.3 --boards: the shipped level as it is (board and deck), re-verified on its tag
+    const K = KEEPL.get(spec.n), lv = Object.assign({ n: spec.n, era: spec.era, name: spec.name, teaches: spec.teaches, tag: tagOf(spec.n), hint: spec.hint }, KEEP.get(spec.n), { cols: JSON.parse(JSON.stringify(K.cols)) }, K.links ? { links: K.links } : {}, spec.safeArchers ? { safeArchers: true } : {});
+    let coach = 0; try { const B = E.compile(lv); coach = LESSON[spec.teaches](E.sim(B, rules[tagOf(spec.n)]), B, lv); } catch (e) { coach = 0; }
+    const v = coach ? verify(lv, coach, K.win && K.win[tagOf(spec.n)]) : { bad: "lesson" };
+    if (!v.bad && !missOf(spec, v)) { lv.win = v.orders; return { lv, v, s: 0, coach, kept: true }; }
+    console.log("level " + spec.n + ": the shipped deck no longer passes (" + (v.bad || missOf(spec, v)) + "); new deals on its board");
+  }
   for (let s = 1; s <= 600; s++) {
     const seed = (C.seed ^ Math.imul(spec.n + 1, 0x9E3779B1) ^ Math.imul(s, 0x85EBCA77)) | 0;
-    const L = G.fort(spec.era, seed, Object.assign({}, C.eras[spec.era].gen, { scene: "day" }, spec.gen, { colours: spec.colours }), C.picture); // v4.1 fix: lessons by day if (!L) continue;
+    const kept = KEEP && KEEP.get(spec.n) && s <= KEEPTRIES; // v4.3 --boards: the shipped board first, new forts after KEEPTRIES seeds
+    const L = kept ? JSON.parse(JSON.stringify(KEEP.get(spec.n))) : G.fort(spec.era, seed, Object.assign({}, C.eras[spec.era].gen, { scene: "day" }, spec.gen, { colours: spec.colours }), C.picture); // v4.1 fix: lessons by day if (!L) continue;
+    if (!L) continue;
     delete L.roles;
     if ((spec.era === 2 || spec.era === 4) && !(L.gates && L.gates.length)) continue;
-    if (spec.lock && !G.lockKey(L, seed)) continue;
+    if (spec.lock && !kept && !G.lockKey(L, seed)) continue;
     let dl = null; for (let a = 0; a < 6 && !dl; a++) dl = G.deal(L, seed ^ Math.imul(a + 1, 0x27D4EB2F), D);
     if (!dl) continue;
     let play = dl.play.map((c) => c.slice()), okPairs = true;
@@ -145,32 +163,35 @@ function build(spec) {
     }
     if (!okPairs) continue;
     // The overshoot lesson: a squad of a colour with a few blocks in reach and the rest walled in goes first (its rest waits).
-    if (spec.teaches === "overshoot") { const B0 = E.compile(Object.assign({ cols: [[], [], [], [], []] }, L)), S0 = E.sim(B0, rules.normal); let got = false;
+    if (spec.teaches === "overshoot") { const B0 = E.compile(Object.assign({ cols: [[], [], [], [], []] }, L)), S0 = E.sim(B0, rules[tagOf(spec.n)]); let got = false;
       for (let i = 1; i < play.length && !got; i++) { const [m, n] = play[i]; if (play[i].length > 2 || !(S0.reachable(m) > 0 && n > S0.reachable(m))) continue;
         const next = [play[i]].concat(play.slice(0, i), play.slice(i + 1)), ln = G.dealLine(L, next, D); if (ln.won && ln.maxWait <= D.maxWaitMs) { play = next; got = true; } }
       if (!got && !(play[0] && S0.reachable(play[0][0]) > 0 && play[0][1] > S0.reachable(play[0][0]))) continue; }
     const co = G.assign(play, spec.beta || 0, seed), dk = G.deck(play, co); if (dk.bad) continue;
     if (spec.pairs && dk.links.some(([a, b]) => Math.min(a[1], b[1]) !== 0 || Math.abs(a[1] - b[1]) !== 1)) continue; // the rod shows from the first tap
-    const lv = Object.assign({ n: spec.n, era: spec.era, name: spec.name, teaches: spec.teaches, hint: spec.hint }, L, { cols: dk.cols }, dk.links.length ? { links: dk.links } : {}, spec.safeArchers ? { safeArchers: true } : {});
+    const lv = Object.assign({ n: spec.n, era: spec.era, name: spec.name, teaches: spec.teaches, tag: tagOf(spec.n), hint: spec.hint }, L, { cols: dk.cols }, dk.links.length ? { links: dk.links } : {}, spec.safeArchers ? { safeArchers: true } : {});
     let flagsOk = true;
     for (const [j, i] of spec.flags || []) { const cd = lv.cols[j][i]; if (!cd || dk.links.some((P) => P.some((q) => q[0] === j && q[1] === i))) { flagsOk = false; break; } cd[2] = E.MYSTERY; }
     if (!flagsOk) continue;
-    let coach; try { const B = E.compile(lv); coach = LESSON[spec.teaches](E.sim(B, rules.normal), B, lv); } catch (e) { continue; }
+    let coach; try { const B = E.compile(lv); coach = LESSON[spec.teaches](E.sim(B, rules[tagOf(spec.n)]), B, lv); } catch (e) { continue; }
     if (!coach) { why.lesson = (why.lesson || 0) + 1; continue; }
     const v = verify(lv, coach, G.orderOf(co)); if (v.bad) { why.verify = (why.verify || 0) + 1; continue; }
-    const miss = v.rate < spec.minRate ? "rate" : v.ms > spec.maxMs ? "time" : v.maxWait > C.maxWaitMs ? "wait" : !v.first ? "coach" : null;
+    const miss = missOf(spec, v);
     if (miss) { why[miss] = (why[miss] || 0) + 1; continue; }
-    lv.win = v.orders; // the verified orders (inside the dead-time cap): the bake grades the level on them
-    return { lv, v, s, coach };
+    lv.win = v.orders; // the verified order on the tag (inside the dead-time cap): the bake grades the level on it
+    if (KEEP && KEEP.get(spec.n) && !kept) console.log("level " + spec.n + ": its kept board found no passing deal in " + KEEPTRIES + " seeds; a new board");
+    return { lv, v, s, coach, kept };
   }
   throw new Error("level " + spec.n + ": no seed in 600 passes " + JSON.stringify(why));
 }
 
+const KEEPTRIES = 300; // v4.3 --boards: deal seeds tried on a kept board before new forts are drawn
 const levels = SPECS.map(build).sort((a, b) => a.lv.n - b.lv.n);
-const text = JSON.stringify({ version: 5, note: "Teaching levels (SPEC-v3 §5, SPEC-v4 §9 M3 and v4.1): castle pictures entered from the bottom, each with its lesson where the coach can point at it from the first tap. 1-3 the tray, the holding line, a squad bigger than its reach; 26 gate and key; 35 mystery cards; 51 archers; 62 linked squads; 76 the locked space; 77 everything at once. Built by tools/teach-v4.js. Legend in src/engine.js. The bake grades each on Easy, Normal and Hard and stores a winning order for each.", levels: levels.map((x) => x.lv) }, null, 1)
+const text = JSON.stringify({ version: 6, note: "Teaching levels (SPEC-v3 §5, SPEC-v4 §9 M3 and v4.1): castle pictures entered from the bottom, each with its lesson where the coach can point at it from the first tap. 1-3 the tray, the holding line, a squad bigger than its reach; 26 gate and key; 35 mystery cards; 51 archers; 62 linked squads; 76 the locked space; 77 everything at once. Built by tools/teach-v4.js. Legend in src/engine.js. v4.3: each plays on its fixed tag (tag; Easy or Normal) and stores one winning order on it (win[tag]); the boards are v4.2's (teach-v4.js --boards).", levels: levels.map((x) => x.lv) }, null, 1)
   .replace(/\[\n\s+(\[[\d, ]+\]|[\d.]+|"[^"\n]*")(,\n\s+(\[[\d, ]+\]|[\d.]+|"[^"\n]*"))*\n\s+\]/g, (m) => "[" + m.slice(1, -1).trim().split(/,\n\s+/).join(", ") + "]") + "\n";
 if (process.argv.includes("--check")) { const same = fs.readFileSync(FILE, "utf8") === text; console.log(same ? "teaching.json matches a fresh build" : "teaching.json differs from a fresh build"); process.exitCode = same ? 0 : 1; }
 else { fs.writeFileSync(DEST, text); console.log("wrote " + DEST); }
 { const bad = levels.filter((x) => COACH[x.lv.n] && JSON.stringify((CFG.teach || {})[idOf(x.lv.n)]) !== JSON.stringify(x.v.coach)).map((x) => idOf(x.lv.n)); console.log(bad.length ? "config.json teach differs for " + bad.join(", ") + ": paste the lines below" : "config.json teach matches this build's coach cards"); }
 console.log("config.json teach (the coach's cards for this build):\n" + levels.filter((x) => COACH[x.lv.n]).map((x) => '    "' + idOf(x.lv.n) + '": ' + JSON.stringify(x.v.coach)).join(",\n"));
-for (const { lv, v, s, coach } of levels) console.log(String(lv.n).padStart(3) + " " + lv.name.padEnd(18) + lv.w + "x" + lv.h + " seed pass " + s + ", cards " + lv.cols.flat().length + ", taps E/N/H " + DIFFS.map((d) => v.orders[d].length).join("/") + ", Normal random " + (100 * v.rate).toFixed(1) + "%, " + Math.round(v.ms / 1000) + " s, longest tap " + (v.maxWait / 1000).toFixed(1) + " s, coach card " + (coach > 0 ? coach + " (" + (lv.pal[coach] ? lv.pal[coach].n : coach === E.GILT ? "gilt" : "?") + ")" : "-") + (lv.links ? ", links " + JSON.stringify(lv.links) : "") + (lv.lock ? ", lock " + JSON.stringify(lv.lock.key) : ""));
+const x0 = (n) => levels.find((x) => x.lv.n === n).kept;
+for (const { lv, v, s, coach } of levels) console.log(String(lv.n).padStart(3) + " " + lv.name.padEnd(18) + lv.w + "x" + lv.h + " seed pass " + s + (KEEP ? (s === 0 ? " (shipped deck)" : x0(lv.n) ? " (kept board)" : " (NEW board)") : "") + ", cards " + lv.cols.flat().length + ", tag " + lv.tag + ", taps " + v.orders[lv.tag].length + ", random " + (100 * v.rate).toFixed(1) + "%, " + Math.round(v.ms / 1000) + " s, longest tap " + (v.maxWait / 1000).toFixed(1) + " s, coach card " + (coach > 0 ? coach + " (" + (lv.pal[coach] ? lv.pal[coach].n : coach === E.GILT ? "gilt" : "?") + ")" : "-") + (lv.links ? ", links " + JSON.stringify(lv.links) : "") + (lv.lock ? ", lock " + JSON.stringify(lv.lock.key) : ""));

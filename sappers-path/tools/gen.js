@@ -16,6 +16,12 @@
 //   deck(play, colOf)          -> {cols, links, bad}: the columns with each partner placed a row from its card;
 //   lockKey(L, seed)           turns a block dug in one layer into the locked space's gilt key (sets L.lock);
 //   dealLine(L, play, D)       -> {won, ms, maxWait}: a play replayed patiently under dealing rules.
+// v4.3, rushed dealing (D.rush; the bake sets it on a Hard level whose archers stand): a Hard kill leaves its colour
+//   short, so a deal that only wins patiently is lost by a player who taps the moment a space is free. With D.rush the
+//   dealt play must also win that way: a second simulation plays each squad the moment a space is free (grade.pace's
+//   player, no thinking time) beside the patient one, and a squad whose rushed tap fails (run to rest with no more taps,
+//   or before the next space frees) is dealt again smaller, then another colour is tried, as the dead-time cap does.
+//   rushLine(L, play, D)       -> {won, ms}: a play replayed that way under dealing rules (linkUp and the tuner check it).
 "use strict";
 const E = require("../src/engine.js");
 const { rng } = require("./grade.js");
@@ -47,6 +53,9 @@ const coloursOf = (L) => { const s = new Set(); for (const row of L.grid) for (c
 function deal(L, seed, D) {
   const B = E.compile(Object.assign({ cols: [[], [], [], [], []] }, L)), r = rng(seed);
   const S = E.sim(B, { hold: D.hold, archersKill: true, time: D.time }, { deal: true }), buf = new Int32Array(S.M.length), want = Math.max(1, D.best | 0), top = want > 1 ? new Int32Array(S.M.length) : null;
+  const S2 = D.rush ? E.sim(B, { hold: D.hold, archersKill: true, time: D.time }, { deal: true }) : null, rcap = 8 * (B.pixTotal + D.maxCards) + 64; // v4.3 D.rush
+  const buf2 = S2 ? new Int32Array(S2.M.length) : null, tmp2 = S2 ? new Int32Array(S2.M.length) : null, top2 = S2 && top ? new Int32Array(S2.M.length) : null;
+  const rushBad = (m, n) => { S2.playSquad(m, n); S2.save(tmp2); S2.quiet(); const bad = S2.status === E.FAILED; S2.load(tmp2); return bad || (!rushTo(S2, 1, rcap) && S2.status !== E.WON); };
   const un = new Int32Array(E.NMAT); for (let m = 1; m < E.NMAT; m++) if (m !== IRON) un[m] = B.pix[m];
   const play = [], cap = D.maxWaitMs || 0, dealt = new Int32Array(E.NMAT);
   let maxWait = 0;
@@ -63,15 +72,15 @@ function deal(L, seed, D) {
       if (un[m] <= D.maxCard && r() < D.finish) n = un[m];
       if (D.capOf) n = Math.min(n, D.capOf[m] ? (dealt[m] ? D.capOf[m][1] : D.capOf[m][0]) : n); // v4 M4 (the Gallery): the outline's squads
       for (let s = 0; s <= (D.shrinks || 0) && !done && n > 0; s++) {
-        S.save(buf); const t0 = S.now, l0 = S.lineLen;
+        S.save(buf); if (S2) S2.save(buf2); const t0 = S.now, l0 = S.lineLen;
         S.playSquad(m, n); S.quiet();
         const wait = S.now - t0;
-        if (S.status === E.FAILED || (cap && wait > cap) || (D.noParkUnderArchers && S.standing && S.lineLen > l0) || (D.park != null && S.lineLen > Math.max(l0, D.park)) || (D.parkMax && overPark(S, D.parkMax))) { S.load(buf); n = Math.floor(n * (D.shrink || 0.6)); continue; }
-        if (want > 1) { got++; if (n > bn) { bn = n; bm = m; bw = wait; S.save(top); } S.load(buf); break; } // v4.2 D.best: the biggest of the first `best` squads that fit
+        if (S.status === E.FAILED || (cap && wait > cap) || (D.noParkUnderArchers && S.standing && S.lineLen > l0) || (D.park != null && S.lineLen > Math.max(l0, D.park)) || (D.parkMax && overPark(S, D.parkMax)) || (S2 && rushBad(m, n))) { S.load(buf); if (S2) S2.load(buf2); n = Math.floor(n * (D.shrink || 0.6)); continue; }
+        if (want > 1) { got++; if (n > bn) { bn = n; bm = m; bw = wait; S.save(top); if (S2) S2.save(top2); } S.load(buf); if (S2) S2.load(buf2); break; } // v4.2 D.best: the biggest of the first `best` squads that fit
         un[m] -= n; play.push([m, n]); done = true; dealt[m]++; if (wait > maxWait) maxWait = wait;
       }
     }
-    if (!done && bn > 0) { S.load(top); un[bm] -= bn; play.push([bm, bn]); done = true; dealt[bm]++; if (bw > maxWait) maxWait = bw; }
+    if (!done && bn > 0) { S.load(top); if (S2) S2.load(top2); un[bm] -= bn; play.push([bm, bn]); done = true; dealt[bm]++; if (bw > maxWait) maxWait = bw; }
     if (!done || (D.maxTaps && play.length > D.maxTaps)) return null;
   }
   return S.pixLeft === 0 ? { play, peak: S.peak, maxWait } : null;
@@ -93,6 +102,19 @@ function dealLine(L, play, D) {
   S.quiet();
   return { won: S.status === E.WON, ms: S.now, maxWait };
 }
+// v4.3: run S (dealing mode) on until `need` spaces are free (true), or it stops (false). Bounded by cap events.
+function rushTo(S, need, cap) { for (let g = 0; g < cap && S.status === E.PLAYING && S.open - S.lineLen < need && S.busy; g++) S.advanceTo(S.nextAt); return S.status === E.PLAYING && S.open - S.lineLen >= need; }
+// v4.3: a play replayed rushed under dealing rules: each squad (a pair: both) tapped the moment its spaces are free.
+function rushLine(L, play, D) {
+  const B = E.compile(Object.assign({ cols: [[], [], [], [], []] }, L));
+  const S = E.sim(B, { hold: D.hold, archersKill: true, time: D.time, lockSpaces: D.lockSpaces }, { deal: true }), cap = 8 * (B.pixTotal + play.length) + 64;
+  for (let i = 0; i < play.length && S.status === E.PLAYING; i++) {
+    const p = play[i]; if (!rushTo(S, p.length >= 4 ? 2 : 1, cap)) break;
+    if (p.length >= 4) S.playPair(p[0], p[1], p[2], p[3]); else S.playSquad(p[0], p[1]);
+  }
+  S.quiet();
+  return { won: S.status === E.WON, ms: S.now };
+}
 // Linked squads (v4 M3): join k pairs of consecutive plays [m1, n1] then [m2, n2] (different colours, both singles) into
 // one pair [m1, n1, m2, n2] that goes out at once, kept only when the whole play still wins patiently under dealing rules
 // within the dead-time cap (D.maxWaitMs). Bounded tries; returns the new play (fewer pairs when none fit).
@@ -102,7 +124,7 @@ function linkUp(L, play, k, seed, D) {
     const i = Math.floor(r() * (cur.length - 1)); if (i < 0) break;
     const a = cur[i], b = cur[i + 1]; if (a.length > 2 || b.length > 2 || a[0] === b[0]) continue;
     const next = cur.slice(0, i).concat([[a[0], a[1], b[0], b[1]]], cur.slice(i + 2)), ln = dealLine(L, next, D);
-    if (!ln.won || (D.maxWaitMs && ln.maxWait > D.maxWaitMs)) continue;
+    if (!ln.won || (D.maxWaitMs && ln.maxWait > D.maxWaitMs) || (D.rush && !rushLine(L, next, D).won)) continue; // v4.3 D.rush
     cur = next; got++;
   }
   return cur;
@@ -183,7 +205,7 @@ function stage(L, play, colOf, lo, hi, T, rules) {
   // The margin keeps estimates off a band edge, except the 0% and 100% edges no estimate can cross.
   const lo2 = lo > 0 ? lo + T.margin : 0, hi2 = hi < 1 ? hi - T.margin : 1, miss = (x) => Math.max(0, lo2 - x, x - hi2);
   const lens = (co) => { const c = [0, 0, 0, 0, 0]; for (const j of co) c[j]++; return c; };
-  const dealWins = (pl) => { const ln = dealLine(L, pl, rules.deal); return ln.won && !(T.maxWaitMs && ln.maxWait > T.maxWaitMs); };
+  const dealWins = (pl) => { const ln = dealLine(L, pl, rules.deal); return ln.won && !(T.maxWaitMs && ln.maxWait > T.maxWaitMs) && !(rules.deal.rush && !rushLine(L, pl, rules.deal).won); }; // v4.3 rush
   let cur = rateOf(play, colOf), step = 0;
   if (cur < 0) cur = 0;
   for (; step < T.steps && miss(cur) > 0; step++) {
@@ -230,4 +252,4 @@ function deck(play, colOf) {
 const colsOf = (play, colOf) => deck(play, colOf).cols;
 const orderOf = (colOf) => colOf.join("");
 
-module.exports = { fort, deal, dealLine, linkUp, lockKey, assign, tune, deck, colsOf, orderOf, coloursOf };
+module.exports = { fort, deal, dealLine, rushLine, linkUp, lockKey, assign, tune, deck, colsOf, orderOf, coloursOf };

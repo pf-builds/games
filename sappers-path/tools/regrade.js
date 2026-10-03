@@ -4,7 +4,8 @@
 // (won, peak spaces, taps, engine ms); on Normal also the one-move-lookahead player's rate. v4 M3: the Normal line's
 // longest single tap (maxWait) and, from bake-config fast.from, the fast tapper's rate, when the file stores them. v4.2:
 // the real pace (grade.pace: the stored Normal order replayed tapping the moment a space is free, times duration.pace's
-// factor), when the file stores it.
+// factor), when the file stores it. v4.3: every level is graded on its own tag only (L.tag; grade[tag], win[tag]); the
+// lookahead, dead time, real pace, fast tapper and the thinking replays (duration.pace.thinks) on it.
 //   ~/.local/opt/node/bin/node tools/regrade.js [--quick] [--levels FILE]   (--quick: rates only, no lookahead player;
 //   --levels: another levels file, e.g. a trial bake's)
 //   ~/.local/opt/node/bin/node tools/regrade.js --gallery [--levels FILE]   v4 M4: levels/gallery.json (or FILE) with the
@@ -18,7 +19,7 @@ const C = GAL ? require("./gallery-config.json").bake : require("./bake-config.j
 const V3 = require("../config.json").v3;
 const LV = JSON.parse(require("fs").readFileSync(process.argv.indexOf("--levels") > 0 ? require("path").resolve(process.argv[process.argv.indexOf("--levels") + 1]) : require("path").join(__dirname, GAL ? "../levels/gallery.json" : "../levels/levels.json"), "utf8")).levels;
 
-const DIFFS = ["easy", "normal", "hard"], QUICK = process.argv.includes("--quick");
+const QUICK = process.argv.includes("--quick");
 const rules = { easy: E.rulesOf(V3, "easy"), normal: E.rulesOf(V3, "normal"), hard: E.rulesOf(V3, "hard") };
 // The bake's seeds: a generated level carries its candidate seed; a teaching level is graded with seedOf(C, n, 0).
 const seedOf = (n, k) => (C.seed ^ Math.imul(n + 1, 0x9E3779B1) ^ Math.imul(k + 7, 0x85EBCA77)) | 0;
@@ -26,17 +27,17 @@ const t0 = Date.now();
 let diffs = 0, checks = 0;
 const say = (L, d, what, was, now) => { diffs++; console.log("DIFF level " + L.n + " " + d + " " + what + ": stored " + JSON.stringify(was) + ", now " + JSON.stringify(now)); };
 for (const L of LV) {
-  const B = E.compile(L), seed = L.source === "teaching" ? seedOf(L.n, 0) : L.seed;
-  for (const d of DIFFS) {
-    const g = L.grade[d], rate = +R.rate(B, rules[d], C.grade.playouts, seed).toFixed(4); checks++;
-    if (rate !== g.rate) say(L, d, "rate", g.rate, rate);
-    const ln = R.line(B, rules[d], L.win[d]), now = { won: ln.won, peak: ln.peak, len: ln.len, ms: ln.ms }, was = { won: true, peak: g.peak, len: g.len, ms: g.ms }; checks++;
-    if (d === "normal" && g.maxWait != null) { now.maxWait = ln.maxWait; was.maxWait = g.maxWait; }
-    if (JSON.stringify(now) !== JSON.stringify(was)) say(L, d, "winning line", was, now);
-  }
-  if (!QUICK) { const gr = +R.greedy(B, rules.normal, C.grade.greedyPlayouts, seed ^ 0x2545f491).toFixed(3); checks++; if (gr !== L.grade.normal.greedy) say(L, "normal", "lookahead", L.grade.normal.greedy, gr); }
-  if (L.grade.normal.pace) { const pc = R.pace(B, rules.normal, L.win.normal, 0), now = pc.won ? { raw: pc.ms, ms: Math.round(pc.ms * C.duration.pace.factor) } : { raw: null, ms: L.grade.normal.ms, fell: true }; checks++; if (JSON.stringify(now) !== JSON.stringify(L.grade.normal.pace)) say(L, "normal", "real pace", L.grade.normal.pace, now); }
-  if (!QUICK && L.grade.normal.fast != null) { const fr = +R.fast(B, rules.normal, C.fast.games, seed ^ 0x1f123bb5, C.fast.gapMs).toFixed(4); checks++; if (fr !== L.grade.normal.fast) say(L, "normal", "fast tapper", L.grade.normal.fast, fr); }
+  const B = E.compile(L), seed = L.source === "teaching" ? seedOf(L.n, 0) : L.seed, d = L.tag, g = L.grade[d], rt = rules[d];
+  if (!rules[d] || !g || !L.win[d]) { say(L, d, "tag", "a tag with its grade and order", { tag: d, grade: !!g, win: !!(L.win && L.win[d]) }); continue; }
+  const rate = +R.rate(B, rt, C.grade.playouts, seed).toFixed(4); checks++;
+  if (rate !== g.rate) say(L, d, "rate", g.rate, rate);
+  const ln = R.line(B, rt, L.win[d]), now = { won: ln.won, peak: ln.peak, len: ln.len, ms: ln.ms }, was = { won: true, peak: g.peak, len: g.len, ms: g.ms }; checks++;
+  if (g.maxWait != null) { now.maxWait = ln.maxWait; was.maxWait = g.maxWait; }
+  if (JSON.stringify(now) !== JSON.stringify(was)) say(L, d, "winning line", was, now);
+  if (!QUICK && g.greedy != null) { const gr = +R.greedy(B, rt, C.grade.greedyPlayouts, seed ^ 0x2545f491).toFixed(3); checks++; if (gr !== g.greedy) say(L, d, "lookahead", g.greedy, gr); }
+  if (g.pace) { const pc = R.pace(B, rt, L.win[d], 0), now = pc.won ? { raw: pc.ms, ms: Math.round(pc.ms * C.duration.pace.factor) } : { raw: null, ms: g.ms, fell: true }; checks++; if (JSON.stringify(now) !== JSON.stringify(g.pace)) say(L, d, "real pace", g.pace, now); }
+  if (g.thinks) { const th = C.duration.pace.thinks.map((x) => (R.pace(B, rt, L.win[d], x).won ? 1 : 0)); checks++; if (JSON.stringify(th) !== JSON.stringify(g.thinks)) say(L, d, "thinking replays", g.thinks, th); }
+  if (!QUICK && g.fast != null) { const fr = +R.fast(B, rt, C.fast.games, seed ^ 0x1f123bb5, C.fast.gapMs).toFixed(4); checks++; if (fr !== g.fast) say(L, d, "fast tapper", g.fast, fr); }
 }
 console.log(LV.length + " levels, " + checks + " checks, " + diffs + " differences (" + ((Date.now() - t0) / 1000).toFixed(1) + " s)");
 process.exitCode = diffs ? 1 : 0;

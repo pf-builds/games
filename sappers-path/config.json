@@ -267,13 +267,12 @@
               {"say": "Tower down: the ring is safe now.", "until": "play"}],
     "e2-35": [{"say": "? squads hide their colour until the front.", "short": "? squads show at the front.", "mystery": true, "until": "reveal"},
               {"say": "Turned over! The count always shows.", "short": "The count always shows.", "until": "play"}],
-    "e3-62": [{"say": "Linked squads go out together: 2 spaces.", "short": "Linked squads: 2 spaces.", "linked": true, "if": "linkedFront", "until": "pair"},
-              {"say": "Both spaces stay taken until both are home.", "short": "Both stay till both are home.", "line": true, "until": "play"}],
+    "e3-62": [{"say": "Linked: tap when both reach the front.", "short": "Linked: both at the front.", "linked": true, "if": "linkedFront", "until": "pair"},
+              {"say": "Both spaces free once both last blocks go.", "short": "Free at both last blocks.", "line": true, "until": "play"}],
     "e4-76": [{"say": "One space is locked. Its key is on the board.", "short": "A space is locked: find its key.", "lockSlot": true, "ring": "lockKey", "until": "play"},
               {"say": "Dig to the key (dashed box): Looters!", "short": "Looters: dig to the key!", "card": 14, "ring": "lockKey", "if": "locked", "until": "unlock"},
               {"say": "Unlocked! One more space for your squads.", "short": "Unlocked! One more space.", "until": "play"}],
-    "e4-77": [{"say": "All twists at once. Linked squads: 2 spaces.", "short": "Linked squads: 2 spaces.", "linked": true, "if": "linkedFront", "until": "pair"},
-              {"say": "The locked space's key wears a dashed box.", "short": "Space key: the dashed box.", "lockSlot": true, "ring": "lockKey", "if": "locked", "until": "unlock"},
+    "e4-77": [{"say": "All at once. Linked: both at the front.", "short": "Linked: both at the front.", "linked": true, "if": "linkedFront", "until": "pair"},
               {"say": "? squads turn at the front. Raze it all!", "short": "? squads turn at the front.", "until": "play"}]
   },
   "selfTest": {

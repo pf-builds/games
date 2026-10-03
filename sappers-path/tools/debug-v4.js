@@ -11,11 +11,14 @@
 //                                                           levels/levels.json, so the debug levels are pictures too)
 // Deterministic: the same seeds give the same file. Each level must win on all three difficulties within the 55-tap
 // cap (bake-config maxTaps), its stored orders must hold no refused tap, and E.check must find nothing to warn about.
+// v4.3: no difficulty picker; every debug level plays on the Normal tag (tag "normal") and stores one order (win.normal),
+// re-solved under the v4.3 rules (a space frees at its squad's last pickup; a linked card goes only with its partner at
+// a front).
 "use strict";
 const fs = require("fs"), path = require("path");
 const E = require("../src/engine.js"), R = require("./grade.js"), C = require("./bake-config.json");
 const V3 = require("../config.json").v3, RB = process.argv.indexOf("--rebuild"), LV = RB > 0 ? JSON.parse(fs.readFileSync(path.resolve(process.argv[RB + 1]), "utf8")).levels : [];
-const OUT = path.resolve(__dirname, "../levels/debug-v4.json"), DIFFS = ["easy", "normal", "hard"], NODES = 400000, GAP = V3.twists.linkRowGap, ROWS = require("../config.json").layout.queueRows;
+const OUT = path.resolve(__dirname, "../levels/debug-v4.json"), DIFFS = ["normal"], TAG = "normal", NODES = 400000, GAP = V3.twists.linkRowGap, ROWS = require("../config.json").layout.queueRows;
 const rules = { easy: E.rulesOf(V3, "easy"), normal: E.rulesOf(V3, "normal"), hard: E.rulesOf(V3, "hard") };
 const copy = (o) => JSON.parse(JSON.stringify(o));
 const byN = (n) => LV.find((l) => l.n === n);
@@ -76,14 +79,14 @@ function build(id, name, hint, from, make) {
 }
 // Solve a debug level on all three difficulties and verify each order (v4 M3: also the re-solve of a stored level).
 function solveAll(L) {
-  delete L.win;
+  delete L.win; delete L.tag;
   const B = E.compile(L), warn = E.check(L, { linkRowGap: GAP }), id = L.id;
   if (warn.length) throw new Error(id + ": " + warn.join("; "));
   let sum = 0; for (let m = 1; m < E.NMAT; m++) sum += B.sapTotal[m];
   if (sum !== B.pixTotal - B.pix[E.IRON]) throw new Error(id + ": sappers don't sum to the fort's eatable pixels");
   L.win = {};
   for (const d of DIFFS) {
-    const o = R.solve(B, rules[d], NODES, d === "easy" ? null : L.win.easy);
+    const o = R.solve(B, rules[d], NODES, null);
     if (!o) throw new Error(id + " " + d + ": no winning order found (" + o + ")");
     // Verify: patient replay wins, never meets a refused tap, and keeps to the tap cap.
     const S = E.sim(B, rules[d]); let refused = 0;
@@ -91,7 +94,7 @@ function solveAll(L) {
     if (S.status !== E.WON || refused || o.length > C.maxTaps) throw new Error(id + " " + d + ": the stored order doesn't verify (" + S.reason + ", refused " + refused + ", " + o.length + " taps)");
     L.win[d] = o;
   }
-  return L;
+  return Object.assign(L, { tag: TAG, win: L.win }); // v4.3: the tag, then the order (key order: tag before win)
 }
 
 function all() {
@@ -104,9 +107,9 @@ function all() {
 }
 
 const FILE = JSON.parse(fs.readFileSync(OUT, "utf8"));
-const levels = RB > 0 ? all() : FILE.levels.map((L) => solveAll(copy(L))), text = JSON.stringify({ version: 1, note: "Sapper's Path v4 M2 debug levels (tools/debug-v4.js): one per twist and one with all three, copied from the v3 bake's levels (M3 re-solved their stored orders under the v4 timing). Loaded only under ?debug=1; never in the save's progress.", levels }, null, 0).replace(/\{"id"/g, "\n{\"id\"") + "\n";
+const levels = RB > 0 ? all() : FILE.levels.map((L) => solveAll(copy(L))), text = JSON.stringify({ version: 2, note: "Sapper's Path v4 M2 debug levels (tools/debug-v4.js): one per twist and one with all three, copied from the v3 bake's levels (M3 re-solved their stored orders under the v4 timing; v4.3 re-solved them on the Normal tag under the v4.3 rules). Loaded only under ?debug=1; never in the save's progress.", levels }, null, 0).replace(/\{"id"/g, "\n{\"id\"") + "\n";
 if (process.argv.includes("--check")) {
   const same = fs.existsSync(OUT) && fs.readFileSync(OUT, "utf8") === text;
   console.log(same ? "debug-v4.json matches a fresh " + (RB > 0 ? "build" : "re-solve") : "debug-v4.json differs from a fresh " + (RB > 0 ? "build" : "re-solve")); process.exitCode = same ? 0 : 1;
 } else { const oi = process.argv.indexOf("--out"), dest = oi > 0 ? path.resolve(process.argv[oi + 1], "debug-v4.json") : OUT; fs.writeFileSync(dest, text); console.log("wrote " + dest); }
-for (const L of levels) console.log(L.id.padEnd(11) + " from " + L.from + ", " + L.cols.reduce((a, c) => a + c.length, 0) + " cards, links " + (L.links || []).length + (L.lock ? ", lock key " + JSON.stringify(L.lock.key) : "") + "; taps E/N/H " + DIFFS.map((d) => L.win[d].length).join("/"));
+for (const L of levels) console.log(L.id.padEnd(11) + " from " + L.from + ", " + L.cols.reduce((a, c) => a + c.length, 0) + " cards, links " + (L.links || []).length + (L.lock ? ", lock key " + JSON.stringify(L.lock.key) : "") + "; tag " + L.tag + ", taps " + L.win[TAG].length);
