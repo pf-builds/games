@@ -5,6 +5,9 @@
 //   that difficulty (a new medal). They buy power-ups (meta.powers[k].price) one at a time into data.inv.
 //   Best: data.best[id] = [ms easy, ms normal, ms hard, taps easy, taps normal, taps hard, coins earned there], 0 = none;
 //   the fastest win and the fewest taps are kept apart (they can come from different runs).
+//   v4.3: every level has one fixed tag (no difficulty picker), so diff below is the level's tag; a win earns
+//   meta.coins.win[tag], plus meta.coins.first[tag] on the level's first clear (the medals are gone); best is [fastest ms,
+//   fewest taps, coins earned there] (save format 2).
 //   Lives (meta.lives; off on the web): data.lives = {n, at}. A fail costs one; while n < livesMax one comes back every
 //   livesRefillMin minutes, counted from at (the moment the line first dropped below full). With n = 0 no level starts.
 (function (root, factory) {
@@ -14,19 +17,19 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
   const DIFFS = ["easy", "normal", "hard"], POWERS = ["ladder", "quartermaster", "scout", "recall"];
-  const MAXCOINS = 9999999, MAXINV = 99, MAXMS = 3600000, MAXTAPS = 999, BEST = 7;
+  const MAXCOINS = 9999999, MAXINV = 99, MAXMS = 3600000, MAXTAPS = 999, BEST = 3; // v4.3: best = [ms, taps, coins]
   const clampInt = (v, lo, hi) => (Number.isFinite(v) ? Math.max(lo, Math.min(hi, Math.round(v))) : lo);
   const powerOf = (meta, k) => (meta && Array.isArray(meta.powers) ? meta.powers.find((p) => p && p.id === POWERS[k]) : null) || { id: POWERS[k], price: 0, perLevel: 0 };
 
-  // Coins a win earns: the difficulty's win coins, plus its first-clear coins on a new medal.
+  // Coins a win earns: the tag's win coins, plus its first-clear coins on the level's first clear (v4.3; a new medal before).
   function winCoins(meta, diff, first) { const C = (meta && meta.coins) || {}; return clampInt(((C.win || {})[diff] | 0) + (first ? (C.first || {})[diff] | 0 : 0), 0, MAXCOINS); }
-  // Record a win of id on diff after ms of play and taps plays: coins in, best time and taps, coins earned there.
-  // first: the first win on this difficulty. Returns {coins, ms, taps, best: [ms, taps] before, newMs, newTaps}.
-  function recordWin(data, meta, id, diff, ms, taps, first) {
-    const k = Math.max(0, DIFFS.indexOf(diff)), coins = winCoins(meta, diff, first), b = bestOf(data, id), was = [b[k], b[3 + k]];
+  // Record a win of id (on its tag) after ms of play and taps plays: coins in, best time and taps, coins earned there.
+  // first: the level's first clear. Returns {coins, ms, taps, best: [ms, taps] before, newMs, newTaps}.
+  function recordWin(data, meta, id, tag, ms, taps, first) {
+    const coins = winCoins(meta, tag, first), b = bestOf(data, id), was = [b[0], b[1]];
     ms = clampInt(ms, 1, MAXMS); taps = clampInt(taps, 1, MAXTAPS);
     const newMs = !was[0] || ms < was[0], newTaps = !was[1] || taps < was[1];
-    if (newMs) b[k] = ms; if (newTaps) b[3 + k] = taps; b[6] = clampInt(b[6] + coins, 0, MAXCOINS);
+    if (newMs) b[0] = ms; if (newTaps) b[1] = taps; b[2] = clampInt(b[2] + coins, 0, MAXCOINS);
     data.best[id] = b; data.coins = clampInt((data.coins | 0) + coins, 0, MAXCOINS);
     return { coins, ms, taps, best: was, newMs, newTaps };
   }
