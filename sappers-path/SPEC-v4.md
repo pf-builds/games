@@ -227,3 +227,23 @@ Milestones (plan): M1 the look pass, M2 the rules (mystery cards, linked squads,
     - Regrades and all three critics' rule diffs: 0 differences.
     - Busiest moment (the boss, 1× and 3×): 126-139 runners, frames p95 16.8 ms, draw 0.1 ms, 0 dropped.
   - **Speed** (Peter, 10/2): 2× and 3× go behind a rewarded ad or a paid unlock in the monetization pass (LATER). Levels are designed around 1×.
+- 2026-10-03 (v4.2 fix pass). The critics on 35e760f found: functional PASS with 2 minors; visual 1 blocking, 1 major and 5 minors (`tools/critic-v4.2-functional.md`, `tools/critic-v4.2-visual.md`). Notes: `tools/v4.2-notes.md` §12. No level data changed.
+  - **Phones play upright (B1; the orchestrator's call).** A touch screen (CSS `pointer: coarse`) held sideways (wider than tall) under `layout.upright.maxH` (480) CSS px tall shows a full-screen card in place of the game: the wall, a phone with a turning arrow, and one line, `layout.upright.text`, "Turn your phone upright".
+    - Showing the card pauses the game as a blur does (the clock stops; no state changes).
+    - Nothing resumes behind it. Turning the phone upright hides the card and resumes, but only a pause the card made; a blur pause still waits for its tap.
+    - A desktop window or a portal's iframe on a desktop (`pointer: fine`) never shows the card, whatever its shape, and keeps today's layouts, the wide side panel included.
+    - A touch tablet in landscape (768 tall or more) plays as before.
+    - Before the fix, 667×375 and 740×360 drew 1-2.5 px cells.
+  - **Boards are never turned (V1).** M2's quarter turn (`layout.rotateBelowCss`) is gone, with every turned drawing path. Boards are drawn upright and the wide layout fits them as they are: 8.0 px at 812×375 and 844×390 in a desktop window, where v4.2 drew 75 Siege and 39 Gallery boards sideways.
+  - **Real pace (R1), exactly.**
+    - `pace.raw` is the engine time at which the replay goes quiet after its last tap: every squad home, the same convention as `grade.ms`. It is not the winning pop.
+    - `pace.ms` is `raw × duration.pace.factor`, rounded to the nearest whole ms.
+  - **The dead-time cap's measure (R2), exactly.**
+    - `grade.normal.maxWait` is the longest tap on the stored Normal line, patient play. Each tap is measured from the tap until nothing moves (every squad home, as `grade.ms`).
+    - The winning tap is included and measured to everyone home, not to the winning pop.
+    - On g-ours-g15 that tap is the longest: 14,770 ms. The winning pop is at +11,780; the longest tap before it is tap 20, 14,670 ms. The stored value stands.
+  - **Minors.**
+    - The fill gaps on teaching boards at 414×736 and on level 77 at 375×667 come from the coach's band and those levels' smaller boards (by design); the cells stay 8 px or more.
+    - The iframe's 7.5 px and levels 1-25's narrow boards on short phones are accepted.
+    - Era 4's silhouette sameness and the landscape paintings' letterbox go to LATER.
+  - **Checks.** selfTest checks the card and the upright boards; on a phone held sideways it checks the card alone (there is nothing else on screen). The harness checks that 667×375, 740×360 and 812×375 touch phones show the card and pause, and play on upright when turned (8 px; a 360-wide phone 7.67). It checks that 900×500, 1280×720, 812×375 desktop windows and a 400×600 iframe in a 900×500 page never show it, with upright boards. The harness's 812×375 run is now a desktop window. Cache tag `?v=27`.

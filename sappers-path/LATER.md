@@ -243,3 +243,7 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - Squad sizes: cards run up to 99, but the 15 s dead-time cap keeps squads that must walk to the top of a full-screen board small, so the median card is about 20 (see `tools/v4.2-notes.md`). A wider entry or a cap that scales with the board would let them grow.
 - Real-pace calibration rests on one report (Peter's 1-1.5 min at 1×, 20-30 s at 3× on v4.1). Two models fit it: a factor of 1.77 on the replay (used: v4.2 levels 26+ median 231 s) and a wait of about 2.9 s of game time per tap (median 157 s on the same levels). Timing a few of his v4.2 playthroughs would settle which, and so whether levels need more taps.
 - 375×667 decides the board height: a board sized to fill 375×812 at exactly 8 px would draw 7 px there. If the older small phones matter less than filling the 812 screen, the boards can grow about 10% taller.
+- From the v4.2 critics (2026-10-03):
+  - Era 4's silhouette median is 0.76 on the critic's measure: towers flanking a cream keep dominate at thumbnail size. A second Era 4 silhouette family (a cliff-top fortress, a water castle seen from the shore) would break it.
+  - Phones play upright only. A real landscape phone layout (board left, rail right, for any `w > h && h < 480`) is the alternative, if a portal wants landscape.
+  - A 360-wide phone (common Android) draws the 42-column boards at 7.67 px.
