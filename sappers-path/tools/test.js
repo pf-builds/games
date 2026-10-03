@@ -334,6 +334,20 @@ const ARCH = (cols) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "
   ok(Object.keys(R).length === 4 && Object.values(R).every((v) => v.median <= VC.maxMedian), "variety: every era's median picture-cell match is " + VC.maxMedian + " or under (" + Object.keys(R).map((e) => "era " + e + " " + R[e].median).join(", ") + ")");
 }
 
+// ---- v4.2: full-screen boards from level 26, real pace ------------------------------------------------------------------
+// Every generated level from duration.pace.from is its era's full-screen picture (bake-config eras[e].gen w x h, plus the
+// frame); the real-pace replay (grade.pace) of a stored winning order wins, is no slower than patient play, and never taps
+// sooner than thinkMs after the tap before.
+{
+  const BC = require("./bake-config.json"), PC = BC.duration.pace, R2 = require("./grade.js"), N2 = E.rulesOf(V3, "normal"), bad = [];
+  for (const L of LEVELS.levels) { if (L.n < PC.from || L.source === "teaching") continue; const g = Object.assign({}, BC.eras[L.era].gen, L.n === BC.boss.n ? BC.boss.gen : {}); if (L.w !== g.w[1] + 2 || L.h !== g.h[1] + 2) bad.push(L.id + " " + L.w + "x" + L.h); }
+  eq(bad, [], "v4.2: every generated level from " + PC.from + " is its era's full-screen board (" + (BC.eras[4].gen.w[1] + 2) + "x" + (BC.eras[4].gen.h[1] + 2) + ")");
+  const L = LEVELS.levels.find((l) => l.n >= PC.from && l.source !== "teaching"), B = E.compile(L), o = L.win.normal, p0 = R2.pace(B, N2, o, 0), pl = R2.line(B, N2, o), pt = R2.pace(B, N2, o, 20000);
+  ok(p0.won && p0.taps === o.length && p0.ms <= pl.ms, "pace: " + L.id + "'s stored Normal order replayed at real pace wins in " + o.length + " taps, no slower than patient play (" + p0.ms + " <= " + pl.ms + " ms)");
+  ok(pt.won && pt.ms >= (o.length - 1) * 20000, "pace: with 20 s to think before each tap the replay takes at least " + (o.length - 1) + " x 20 s (" + pt.ms + " ms)");
+  ok(L.grade.normal.pace && L.grade.normal.pace.ms === Math.round(p0.ms * PC.factor), "pace: the stored real pace is the replay times " + PC.factor);
+}
+
 // ==== v4 M2: the twists (mystery cards, linked squads, the locked space) =================================================
 // Events of one type since the log was cleared, as [a, b].
 const evs = (S, type) => { const o = []; for (let i = 0; i < S.evLen; i += 3) if (S.ev[i] === type) o.push([S.ev[i + 1], S.ev[i + 2]]); return o; };
@@ -716,7 +730,7 @@ const CV = require("./convert.js"), GCFG = require("./gallery-config.json"), PAL
     if (ids.join() !== [...used].sort((a, b) => a - b).join() || ids.some((m) => m === E.IRON || m === E.GILT)) bad.push(L.id + ": palette ids " + ids + " vs grid " + [...used]);
     for (let m = 1; m < E.NMAT; m++) if (B.sapTotal[m] !== B.pix[m]) bad.push(L.id + ": colour " + m + " has " + B.sapTotal[m] + " sappers for " + B.pix[m] + " pixels");
     for (const d of ["easy", "normal", "hard"]) { if (E.replay(B, RULES[d], L.win[d] || "").status === E.WON) wins++; else bad.push(L.id + " " + d + ": stored order does not win"); }
-    const ln = Gr.line(B, RULES.normal, L.win.normal); ms.push(ln.ms); if (ln.maxWait > GB.maxWaitMs) dead++; if (L.win.normal.length > GB.maxTaps) taps++; if (ln.ms > GB.duration.maxMs) over++;
+    const ln = Gr.line(B, RULES.normal, L.win.normal); ms.push(ln.ms); if (ln.maxWait > GB.maxWaitMs) dead++; if (L.win.normal.length > GB.maxTaps) taps++; if (GB.duration.pace ? !L.grade.normal.pace || L.grade.normal.pace.ms > GB.duration.pace.range[1] : ln.ms > GB.duration.maxMs) over++; // v4.2: the real pace
     if (L.grade.normal.rate >= L.target[0] && L.grade.normal.rate <= L.target[1]) band++;
     const hx = ids.map((m) => L.pal[m].c); let lmin = 99, fmin = 99;
     for (let a = 0; a < hx.length; a++) for (let b = a + 1; b < hx.length; b++) { lmin = Math.min(lmin, PAL.de00(PAL.lab(hx[a]), PAL.lab(hx[b]))); for (let d = 1; d < T.length; d++) fmin = Math.min(fmin, PAL.de00(PAL.lab(fadeHex(hx[a], T[d])), PAL.lab(hx[b])), PAL.de00(PAL.lab(fadeHex(hx[b], T[d])), PAL.lab(hx[a]))); }
@@ -727,7 +741,7 @@ const CV = require("./convert.js"), GCFG = require("./gallery-config.json"), PAL
   for (let i = 0; i < GL.length; i++) for (let j = i + 1; j < GL.length; j++) { const A = GL[i], Bq = GL[j]; if (A.w !== Bq.w || A.h !== Bq.h) continue; let same = 0; for (let y = 0; y < A.h; y++) for (let x = 0; x < A.w; x++) if (A.grid[y][x] === Bq.grid[y][x]) same++; if (same / (A.w * A.h) >= GB.dedupe) bad.push(A.id + " and " + Bq.id + " are near-duplicates"); }
   ms.sort((a, b) => a - b);
   eq(bad, [], "gallery: every level is a plain picture board whose palette is exactly its colours (never 10 or 14), sappers sum to pixels, stored orders win on Easy, Normal and Hard, colours " + GCFG.convert.minDE + " apart (paintings " + GCFG.convert.kinds.painting.minDE + "; smallest " + dmin.toFixed(1) + "), faded tiles " + GCFG.convert.fadeDE + " apart (not paintings; smallest " + dminFade.toFixed(1) + "), a manifest and LICENSES.md line each, no near-duplicates");
-  eq([wins, dead, taps, over, band], [GL.length * 3, 0, 0, 0, GL.length], "gallery: " + wins + " stored orders win; every Normal line under " + GB.maxWaitMs / 1000 + " s a tap, " + GB.maxTaps + " taps and " + GB.duration.maxMs / 1000 + " s (median " + (ms[(ms.length - 1) >> 1] / 1000).toFixed(0) + " s, max " + (ms[ms.length - 1] / 1000).toFixed(0) + " s); every level in its Normal band");
+  eq([wins, dead, taps, over, band], [GL.length * 3, 0, 0, 0, GL.length], "gallery: " + wins + " stored orders win; every Normal line under " + GB.maxWaitMs / 1000 + " s a tap, " + GB.maxTaps + " taps and " + (GB.duration.pace ? GB.duration.pace.range[1] / 1000 + " s of real pace; patient" : GB.duration.maxMs / 1000 + " s") + " (median " + (ms[(ms.length - 1) >> 1] / 1000).toFixed(0) + " s, max " + (ms[ms.length - 1] / 1000).toFixed(0) + " s); every level in its Normal band");
   // Engine vs the slow reference on the Gallery's picture boards: Normal patient and rushed on every level, Easy and Hard
   // patient on every fourth.
   let games = 0, diffs = 0, pops = 0; const t0 = Date.now();
