@@ -28,6 +28,7 @@
 // the top bar's button goes back to the grid; every Gallery board keeps 8 CSS px a cell or more (the smallest reported,
 // with a screen). Output to tools/shots-v4-m4/harness/.
 // v4 Critics 2 fix: six viewports (375x667 and 414x736 added); the coach's checks per viewport are selfTest's.
+// v4.3: no difficulty picker (SP.load plays a level on its own tag); a format-1 save migrates to format 2 by level id.
 // v4.1 (castle pictures, bottom entry): a real card tap on a Gallery picture sends its squad out of its crate and up
 // through the entry square (was: in from the board's edges); every Siege and Gallery board keeps 8 CSS px a cell. Output
 // to tools/shots-v4.1/harness/.
@@ -91,7 +92,7 @@ async function overlapShots(page, ev, tap, shot, tag, R) {
   const hold = (ms) => ev((m) => { SP.tick(m); return SP.state(); }, ms);
   R.shots = R.shots || {};
   // Two, then three squads out on level 65.
-  await ev(() => { SP.speed(1); SP.load(65, "normal"); });
+  await ev(() => { SP.speed(1); SP.load(65); });
   let cols = await reach(); await tap(`.card[data-col="${cols[0]}"]`); await hold(700);
   cols = await reach(); if (cols.length) await tap(`.card[data-col="${cols[0]}"]`); let st = await hold(700);
   await shot("two-squads"); R.shots.two = { spaces: st.line.length, runners: st.runners };
@@ -105,8 +106,8 @@ async function overlapShots(page, ev, tap, shot, tag, R) {
     for (let k = 0; k < 6; k++) { bufs.push(await page.screenshot({ clip })); await hold(300); }
     R.shots[name] = await stitch(page, bufs, resolve(OUT, tag + "-" + name + ".png"));
   };
-  await strip("strip-overlap", async () => { await ev(() => SP.load(65, "normal")); const c = await reach(); await tap(`.card[data-col="${c[0]}"]`); await hold(1800); const c2 = await reach(); if (c2.length) await tap(`.card[data-col="${c2[0]}"]`); await hold(60); });
-  await strip("strip-next-round", async () => { await ev(() => SP.load(3, "normal")); const c = await ev(() => SP.state().fronts.findIndex((f) => f && SP.reachable(f.mat) > 0 && f.n > SP.reachable(f.mat))); /* v4.1: the squad bigger than its reach */ await tap(`.card[data-col="${c}"]`); await hold(200); });
+  await strip("strip-overlap", async () => { await ev(() => SP.load(65)); const c = await reach(); await tap(`.card[data-col="${c[0]}"]`); await hold(1800); const c2 = await reach(); if (c2.length) await tap(`.card[data-col="${c2[0]}"]`); await hold(60); });
+  await strip("strip-next-round", async () => { await ev(() => SP.load(3)); const c = await ev(() => SP.state().fronts.findIndex((f) => f && SP.reachable(f.mat) > 0 && f.n > SP.reachable(f.mat))); /* v4.1: the squad bigger than its reach */ await tap(`.card[data-col="${c}"]`); await hold(200); });
 }
 // Stitch PNG buffers side by side on a canvas in a scratch page; writes the file, returns its size.
 async function stitch(page, bufs, file) {
@@ -175,19 +176,19 @@ async function run() {
       const st = await ev(() => SP.selfTest());
       R.selfTest = { pass: st.pass, fail: st.fail, ms: st.ms, notes: st.notes };
       ok(st.fail.length === 0, tag + " selfTest: " + st.fail.join("; "));
-      await ev(() => SP.load(1, "normal"));
+      await ev(() => SP.load(1));
 
       // v4 M5, the power-up bar through real taps: a Ladder bought and used on level 1 (one more space), a Quartermaster
       // bought, asked for and applied to a real tile on level 40; every badge on screen.
-      { await ev(() => SP.load(1, "normal")); const m0 = await ev(() => SP.meta()), cap0 = (await S()).cap;
+      { await ev(() => SP.load(1)); const m0 = await ev(() => SP.meta()), cap0 = (await S()).cap;
         const onScreen = await ev(() => Array.from(document.querySelectorAll(".pw")).every((b) => { const r = b.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth; }));
         await tap('.pw[data-k="0"]'); const m1 = await ev(() => SP.meta()); await tap('.pw[data-k="0"]'); const m2 = await ev(() => SP.meta()), s1 = await S();
         ok(onScreen && m1.inv.ladder === 1 && m1.coins < m0.coins && m2.inv.ladder === 0 && s1.cap === cap0 + 1, tag + " power-up bar: every badge on screen; a real tap buys a Ladder (" + m0.coins + " -> " + m1.coins + " coins), a second uses it (" + cap0 + " -> " + s1.cap + " spaces)");
-        await ev(() => SP.load(40, "normal")); await tap('.pw[data-k="1"]'); await tap('.pw[data-k="1"]');
+        await ev(() => SP.load(40)); await tap('.pw[data-k="1"]'); await tap('.pw[data-k="1"]');
         const ask = await ev(() => document.querySelectorAll("#tray .tile.next.pickable").length); await tap("#tray .tile.next.pickable");
         const m3 = await ev(() => SP.meta()), s3 = await S();
         ok(ask > 0 && m3.inv.quartermaster === 0 && m3.used[1] === 1 && m3.pick === -1, tag + " power-up bar: a real tap buys a Quartermaster, a second asks (" + ask + " tiles glow), a real tap on a tile brings it forward");
-        await page.waitForTimeout(200); if (vp.shots === "375" || vp.shots === "iframe") await shot("power-bar"); await ev(() => SP.load(1, "normal")); }
+        await page.waitForTimeout(200); if (vp.shots === "375" || vp.shots === "iframe") await shot("power-bar"); await ev(() => SP.load(1)); }
       // A patient win through the cards: tap, then wait until every squad is home, then the next tap.
       const quiet = () => ev(() => { for (let i = 0; i < 6000 && SP.state().busy; i++) SP.tick(16); return SP.state(); });
       const win = await ev(() => SP.winOrder());
@@ -204,9 +205,9 @@ async function run() {
       ok(s.n === 2 && s.status === "playing" && s.panel === null, tag + " Next level loads level 2");
 
       // A jam loss through the cards (v3.1): a patient order that fills every space with squads that can't reach a block.
-      const plan = await ev(() => { for (let n = 46; n <= 75; n++) { SP.load(n, "normal"); const p = SP.lossPlan(); if (p) return Object.assign({ n }, p); } return null; });
+      const plan = await ev(() => { for (let n = 46; n <= 75; n++) { SP.load(n); const p = SP.lossPlan(); if (p) return Object.assign({ n }, p); } return null; });
       if (ok(!!plan, tag + " found a patient order that jams a late level")) {
-        await ev((n) => SP.load(n, "normal"), plan.n);
+        await ev((n) => SP.load(n), plan.n);
         for (const c of plan.prefix) { await tap(`.card[data-col="${c}"]`); await quiet(); }
         s = await S();
         ok(s.status === "failed" && s.reason === "jam" && s.li.stuck === s.cap, tag + " the line jams at rest: every space stuck (" + s.status + " " + s.reason + ", " + JSON.stringify(s.li) + ")");
@@ -247,7 +248,7 @@ async function run() {
         ok(!!nj && nj.li.near && (await L("#line-lab").textContent()) === "One space left", tag + " near jam: 'One space left' (" + (nj && JSON.stringify(nj.li)) + ")");
         if (vp.shots === "375" && nj) await shot("near-jam"); }
       // Victory march: level 3's stored line through the cards; once the tray is empty the pace goes to 1.5x.
-      { await ev(() => { SP.speed(1); SP.load(3, "normal"); });
+      { await ev(() => { SP.speed(1); SP.load(3); });
         const o = await ev(() => SP.winOrder());
         for (let i = 0; i < o.length; i++) { await tap(`.card[data-col="${o[i]}"]`); if (i < o.length - 1) await quiet(); }
         s = await ev(() => SP.tick(400));
@@ -258,7 +259,7 @@ async function run() {
       // Three rapid taps on levels 65, 70 and 100 (v4 M3: the boss, the biggest squads), at 1x and 3x: live frame times while the squads overlap, then the JS cost
       // of one draw at that moment.
       const rapid = async (n, fast) => {
-        await ev((a) => { SP.load(a[0], "normal"); SP.speed(a[1] ? 3 : 1); }, [n, fast]);
+        await ev((a) => { SP.load(a[0]); SP.speed(a[1] ? 3 : 1); }, [n, fast]);
         const cols = await ev(() => { const st = SP.state(), o = [], p = []; st.fronts.forEach((f, j) => { if (f) (SP.reachable(f.mat) > 0 ? o : p).push(j); }); return o.concat(p); });
         for (const c of cols.slice(0, 3)) await tap(`.card[data-col="${c}"]`);
         // Peak runners and squads out are sampled every 8th frame (at 3x the squads can be home before the window ends).
@@ -269,7 +270,7 @@ async function run() {
         const fr = await rapid(n, fast); R.frames["L" + n + (fast ? " 3x" : " 1x")] = fr;
         ok(fr.p95 < 25 && fr.spaces >= 2, tag + " frame time with overlapping squads, level " + n + (fast ? " 3x" : " 1x") + " (p95 " + fr.p95 + " ms, peak " + fr.runners + " runners, " + fr.spaces + " squads)");
       }
-      await ev(() => { SP.speed(1); SP.load(70, "normal"); });
+      await ev(() => { SP.speed(1); SP.load(70); });
       { const cols = await ev(() => { const st = SP.state(), o = []; st.fronts.forEach((f, j) => { if (f && SP.reachable(f.mat) > 0) o.push(j); }); return o; }); for (const c of cols.slice(0, 3)) await tap(`.card[data-col="${c}"]`); }
       await ev(() => SP.tick(900));
       const perf = await ev(() => SP.perf(120));
@@ -281,15 +282,15 @@ async function run() {
       await ev(() => SP.settle());
 
       // v4 M3: every board's CSS px per cell (turned a quarter on a landscape phone), the smallest per era.
-      const cells = await ev(() => { const by = {}; for (let n = 1; n <= 100; n++) { const st = SP.load(n, "normal"); if (st.n !== n) continue; const e = st.era, px = +(st.cs / devicePixelRatio).toFixed(2); if (!by[e] || px < by[e].px) by[e] = { n, px, turned: document.body.classList.contains("turned") }; } return by; });
+      const cells = await ev(() => { const by = {}; for (let n = 1; n <= 100; n++) { const st = SP.load(n); if (st.n !== n) continue; const e = st.era, px = +(st.cs / devicePixelRatio).toFixed(2); if (!by[e] || px < by[e].px) by[e] = { n, px, turned: document.body.classList.contains("turned") }; } return by; });
       R.minCellCss = cells;
       const worst = Object.values(cells).reduce((a, b) => (b.px < a.px ? b : a));
       ok(worst.px >= (vp.minCell || MIN_CELL), tag + " every board keeps " + (vp.minCell || MIN_CELL) + " CSS px a cell or more (smallest per era: " + JSON.stringify(cells) + ")");
-      await ev((n) => SP.load(n, "normal"), worst.n); await page.waitForTimeout(300); await shot("smallest-cell");
+      await ev((n) => SP.load(n), worst.n); await page.waitForTimeout(300); await shot("smallest-cell");
       ok(await noScroll(), tag + " the smallest-cell level: no scrollbars");
 
       // Pause on blur, resume with one tap on the Paused sheet: no clock jump, no card played.
-      await ev(() => SP.load(3, "normal"));
+      await ev(() => SP.load(3));
       if (vp.iframe) { await L("#board").click({ timeout: 5000, force: true }); await page.locator("#host-btn").click(); }
       else await ev(() => window.dispatchEvent(new Event("blur")));
       await page.waitForTimeout(60);
@@ -316,8 +317,10 @@ async function run() {
         await tap(`.dbg-node[data-id="${id}"]`); s = await S();
         R.debug[id] = { cell: +(s.cs / (vp.dpr || 1)).toFixed(2), hidden: s.hidden, links: s.links, open: s.open, cap: s.cap };
         ok(s.screen === "play" && s.id === id && s.debug && s.cs / (vp.dpr || 1) >= (vp.minCell || MIN_CELL) && (await noScroll()), tag + " " + id + " opens from the map's debug row (" + JSON.stringify(R.debug[id]) + ")");
-        if (id === "v4-linked") { const lj = await ev(() => Array.from(document.querySelectorAll(".card")).findIndex((b) => b.classList.contains("linked") && !b.classList.contains("blocked")));
-          await tap(`.card[data-col="${lj}"]`); s = await S(); ok(s.line.length === 2 && s.plays === 1, tag + " a real tap on a linked card sends both squads (" + s.line.length + " spaces, " + s.plays + " play)"); }
+        if (id === "v4-linked") { // v4.3: the stored order up to its first pair (both cards at a front), then a real tap on it
+          const pre = await ev(() => { const o = SP.winOrder(), cs = () => document.querySelectorAll("#tray .card"); let i = 0; for (; i < o.length && !cs()[+o[i]].classList.contains("linked"); i++) { SP.play(+o[i]); SP.settle(); }
+            const st = SP.state(); return { lj: i < o.length ? +o[i] : -1, line: st.line.length, plays: st.plays }; });
+          await tap(`.card[data-col="${pre.lj}"]`); s = await S(); ok(pre.lj >= 0 && s.line.length === pre.line + 2 && s.plays === pre.plays + 1, tag + " a real tap on a linked card (its partner at a front) sends both squads (" + (s.line.length - pre.line) + " spaces, " + (s.plays - pre.plays) + " play)"); }
         if (id === "v4-locked") ok(s.open === s.cap - 1 && (await ev(() => { const q = document.querySelectorAll(".slot")[SP.state().cap - 1]; return q.classList.contains("locked") && !q.hidden; })), tag + " the locked space shows its padlock");
       }
 
@@ -337,7 +340,11 @@ async function run() {
         ok(s.screen === "gallery" && nt === (await ev(() => SP.gallery().length)) && (await noScroll()), tag + " a real tap opens the Gallery: " + nt + " pictures, no page scrollbars");
         if (vp.shots === "375" || vp.shots === "1280") await shot("gallery");
         const gi = await ev(() => SP.gallery().findIndex((id) => /^g-met-/.test(id)));
+        // v4.3: the pictures open in order; the painting's tile is padlocked (a tap stays on the Gallery) until the ones
+        // before it are cleared.
         await ev((i) => document.querySelectorAll("#gal-grid .gal-tile")[i].scrollIntoView({ block: "center" }), gi);
+        await L(`#gal-grid .gal-tile:nth-child(${gi + 1})`).click({ force: true, timeout: 5000 }); s = await S(); ok(s.screen === "gallery", tag + " v4.3: a tap on a padlocked picture stays on the Gallery");
+        await ev((i) => { SP.clearPictures(i); document.querySelectorAll("#gal-grid .gal-tile")[i].scrollIntoView({ block: "center" }); }, gi);
         await tap(`#gal-grid .gal-tile:nth-child(${gi + 1})`); s = await S();
         ok(s.screen === "play" && /^g-met-/.test(s.id) && s.cs / (vp.dpr || 1) >= (vp.minCell || MIN_CELL) && (await noScroll()), tag + " a real tap on a painting's tile plays it (" + s.id + ", " + (s.cs / (vp.dpr || 1)).toFixed(2) + " CSS px a cell)");
         const gc = await ev(() => SP.state().fronts.findIndex((f) => f && SP.reachable(f.mat) > 0)); await tap(`.card[data-col="${gc}"]`);
@@ -345,23 +352,23 @@ async function run() {
         ok(s.plays === 1 && sd.live > 0 && sd.crate === sd.live && sd.entry === sd.live, tag + " v4.1: a real card tap sends a squad out of its crate and up through the entry square at the bottom (" + JSON.stringify(sd) + ")");
         await shot("gallery-level-mid");
         await tap("#btn-map"); s = await S(); ok(s.screen === "gallery", tag + " the top bar's button goes back to the Gallery");
-        const gcells = await ev(() => { let w = null; for (const id of SP.gallery()) { const st = SP.load(id, "normal"), px = +(st.cs / devicePixelRatio).toFixed(2); if (!w || px < w.px) w = { id, px, turned: document.body.classList.contains("turned") }; } return w; });
+        const gcells = await ev(() => { let w = null; for (const id of SP.gallery()) { const st = SP.load(id), px = +(st.cs / devicePixelRatio).toFixed(2); if (!w || px < w.px) w = { id, px, turned: document.body.classList.contains("turned") }; } return w; });
         R.galleryMinCell = gcells;
         ok(gcells.px >= (vp.minCell || MIN_CELL), tag + " every Gallery board keeps " + (vp.minCell || MIN_CELL) + " CSS px a cell or more (smallest " + JSON.stringify(gcells) + ")");
-        await ev((id) => SP.load(id, "normal"), gcells.id); await page.waitForTimeout(300); await shot("gallery-smallest-cell");
+        await ev((id) => SP.load(id), gcells.id); await page.waitForTimeout(300); await shot("gallery-smallest-cell");
         ok(await noScroll(), tag + " the smallest Gallery board: no scrollbars");
       }
 
       // Screens for the critics (portrait phone): the gate teach, an archer hit mid-animation, the win's collapse and goblin.
       if (vp.shots === "375") {
-        await ev(() => { SP.load(26, "normal"); SP.play(0); SP.tick(3500); });
+        await ev(() => { SP.load(26); SP.play(0); SP.tick(3500); });
         await page.waitForTimeout(250); await shot("teach-l26-gate");
         await ev(() => { SP.play(1); for (let i = 0; i < 400; i++) { SP.tick(16); if (SP.fx().gates[0] === 1) break; } SP.tick(100); });
         await shot("gate-opening");
-        await ev(() => { const o = SP.hitPlan(51, "normal") || "2"; SP.load(51, "normal"); for (let k = 0; k < o.length - 1; k++) { SP.play(+o[k]); SP.settle(); } SP.play(+o[o.length - 1]); for (let i = 0; i < 600; i++) { SP.tick(16); if (SP.hits().struck) break; } SP.tick(120); }); // v4.1: a patient order whose last tap walks into the ring
+        await ev(() => { const o = SP.hitPlan(51) || "2"; SP.load(51); for (let k = 0; k < o.length - 1; k++) { SP.play(+o[k]); SP.settle(); } SP.play(+o[o.length - 1]); for (let i = 0; i < 600; i++) { SP.tick(16); if (SP.hits().struck) break; } SP.tick(120); }); // v4.1: a patient order whose last tap walks into the ring
         const hh = await ev(() => SP.hits()); ok(hh.struck > 0 && hh.label, tag + " level 51: an arrow has struck mid-show");
         await shot("archer-hit");
-        await ev(() => { SP.load(2, "normal"); const o = SP.winOrder(); for (let i = 0; i < o.length - 1; i++) SP.play(+o[i]); SP.skip(); SP.play(+o[o.length - 1]); for (let i = 0; i < 400; i++) { SP.tick(16); if (SP.fx().falls > 4) break; } SP.tick(60); });
+        await ev(() => { SP.load(2); const o = SP.winOrder(); for (let i = 0; i < o.length - 1; i++) SP.play(+o[i]); SP.skip(); SP.play(+o[o.length - 1]); for (let i = 0; i < 400; i++) { SP.tick(16); if (SP.fx().falls > 4) break; } SP.tick(60); });
         await shot("win-collapse");
         await ev(() => { for (let i = 0; i < 400 && !SP.state().goblin; i++) SP.tick(16); SP.tick(700); });
         await shot("win-goblin");
@@ -375,7 +382,7 @@ async function run() {
       // Mute, the speed (v4 M1: 1x, 2x, 3x) and colour-blind mode (the map's toggle) persist in the save; then a garbage
       // save loads clean.
       if (!vp.iframe) {
-        await ev(() => SP.load(1, "normal")); await tap("#top .tog-mute");
+        await ev(() => SP.load(1)); await tap("#top .tog-mute");
         await tap("#top .tog-speed"); await tap("#top .tog-speed");
         ok((await L("#top .tog-speed").textContent()) === "3\u00d7" && (await S()).speed === 3, tag + " the speed button cycles to 3x");
         await tap("#btn-map"); await tap("#map .tog-cb");
@@ -388,7 +395,8 @@ async function run() {
         await page.reload({ waitUntil: "load" });
         await page.waitForFunction(() => window.SP, null, { timeout: 15000 });
         s = await S();
-        ok(s.done === 1 && s.diff === "normal", tag + " sanitize: only reachable wins survive, bad difficulty clamps (" + s.done + " " + s.diff + ")");
+        const sv = await page.evaluate(() => { SP.setMeta({}); return JSON.parse(localStorage.getItem("sappers-path.v3")); }); // v4.3: a write stores format 2
+        ok(s.done === 2 && sv.v === 2 && sv.done["e1-01"] === 1 && sv.done["e3-75"] === 1 && !sv.done.x && !("diff" in sv.settings), tag + " sanitize (v4.3): a format-1 save migrates by id (both cleared levels kept, unknown ids dropped, the difficulty setting gone): " + JSON.stringify(sv.done) + " " + JSON.stringify(sv.settings));
       }
       await ctx.close();
     }
@@ -402,7 +410,7 @@ async function run() {
         page.on("console", (m) => { if (m.type() === "error" || m.type() === "warning") report.console.push(tag + " " + m.type() + ": " + m.text()); });
         page.on("pageerror", (e) => report.console.push(tag + " pageerror: " + e.message));
         await page.goto(URL_ + "?debug=1", { waitUntil: "load" }); await page.waitForFunction(() => window.SP && document.fonts && document.fonts.status === "loaded", null, { timeout: 15000 });
-        const c0 = await page.evaluate(() => { SP.load(64, "normal"); return SP.state().clock; }); await page.waitForTimeout(600); // real frames: the paused clock must not move
+        const c0 = await page.evaluate(() => { SP.load(64); return SP.state().clock; }); await page.waitForTimeout(600); // real frames: the paused clock must not move
         const a = await page.evaluate((c0) => { const u = document.getElementById("upright"), r = u.getBoundingClientRect(); return { up: SP.upright().on && !u.hidden && r.width >= innerWidth && r.height >= innerHeight, paused: SP.paused(), still: SP.state().clock === c0 }; }, c0);
         await page.setViewportSize({ width: h, height: w }); await page.waitForTimeout(200);
         const b = await page.evaluate(() => { const s = SP.state(); return { up: SP.upright().on || !document.getElementById("upright").hidden, paused: SP.paused(), cs: +(s.cs / devicePixelRatio).toFixed(2), upright: Math.abs(document.getElementById("board").width / document.getElementById("board").height - s.w / (s.h + 4)) < 0.05 }; });
@@ -419,7 +427,7 @@ async function run() {
         if (frame) { await page.goto(URL_ + "tools/iframe-host.html?w=" + frame[0] + "&h=" + frame[1], { waitUntil: "load" }); const fh = await page.waitForSelector("#game"); for (let k = 0; k < 100 && !(F = await fh.contentFrame()); k++) await page.waitForTimeout(50); }
         else await page.goto(URL_ + "?debug=1", { waitUntil: "load" });
         await F.waitForFunction(() => window.SP && document.fonts && document.fonts.status === "loaded", null, { timeout: 15000 });
-        const c = await F.evaluate(() => { const out = { card: false, turned: [] }; for (const n of [64, 100]) { const s = SP.load(n, "normal"); SP.tick(40); const bd = document.getElementById("board"); if (Math.abs(bd.width / bd.height - s.w / (s.h + 4)) > 0.05) out.turned.push(n); } out.card = SP.upright().on || !document.getElementById("upright").hidden; return out; });
+        const c = await F.evaluate(() => { const out = { card: false, turned: [] }; for (const n of [64, 100]) { const s = SP.load(n); SP.tick(40); const bd = document.getElementById("board"); if (Math.abs(bd.width / bd.height - s.w / (s.h + 4)) > 0.05) out.turned.push(n); } out.card = SP.upright().on || !document.getElementById("upright").hidden; return out; });
         report.upright[tag] = c;
         ok(!c.card && !c.turned.length, tag + ": never the upright card, and the boards stand upright (" + JSON.stringify(c) + ")");
         await ctx.close();
@@ -438,11 +446,11 @@ async function run() {
     await page.goto(URL_ + "?debug=1", { waitUntil: "load" });
     await page.waitForFunction(() => window.SP, null, { timeout: 15000, polling: 100 }); // rAF is held here, so poll by time (M4: boot awaits one more fetch)
     const st = await page.evaluate(() => SP.selfTest());
-    const won = await page.evaluate(() => { SP.load(10, "hard"); for (const c of SP.winOrder()) { SP.play(+c); for (let i = 0; i < 6000 && SP.state().busy; i++) SP.tick(16); } return SP.tick(9000); });
+    const won = await page.evaluate(() => { SP.load(10); /* v4.3: level 10 is a Hard level */ for (const c of SP.winOrder()) { SP.play(+c); for (let i = 0; i < 6000 && SP.state().busy; i++) SP.tick(16); } return SP.tick(9000); });
     const spr = await page.evaluate(() => SP.sprites());
     report.hidden = { selfTest: { pass: st.pass, fail: st.fail, ms: st.ms }, panel: won.panel, sprites: spr };
     ok(st.fail.length === 0, "hidden selfTest: " + st.fail.join("; "));
-    ok(won.status === "won" && won.panel === "win", "hidden: level 10 on Hard won patiently and its panel shown on SP.tick alone");
+    ok(won.status === "won" && won.panel === "win" && won.tag === "hard", "hidden: level 10 (Hard) won patiently and its panel shown on SP.tick alone");
     ok(spr.length === 0, "hidden: sprite caches opaque (" + spr.join(",") + ")");
     await ctx.close();
   } finally { await browser.close(); }

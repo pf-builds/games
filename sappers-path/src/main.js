@@ -7,7 +7,7 @@
 // refused, v3.1); its sappers go out only to pixels they can reach, a round at a time, and the space frees when they are all
 // home. The page plays engine time at show.pace x real time (2x doubles it), reads the engine's log into the board every
 // step, and draws engine state. Cards stay live at any time; a board tap (or Space) skips: the engine runs until nothing
-// moves and the board lands. Win and fail sheets wait for the squads to settle, at most show.settleCapMs after the end.
+// moves and the board lands. Win and fail sheets wait for the squads to settle (v4.3: until every sapper is home, no cap).
 // Clock: app.clock is sim time in ms. The rAF loop advances it by the real frame delta (capped at layout.maxDtMs);
 // SP.tick(ms) advances it by hand, so a hidden tab (no rAF) can still be driven. The engine, the goblin, the panel delay
 // and toasts all run on this clock; nothing here uses setTimeout or setInterval.
@@ -77,14 +77,25 @@
 // the top bar (two lines there); a Gallery win shows the finished picture on the report (or over the razed board where
 // the sheet has no room) and the Gallery marks the next picture; a buy short of coins looks it; the landscape bar fits its
 // foot; the home's era chip lies on the river; era cards are a band; two rods down one gutter take a lane each.
+// v4.3 (SPEC-v4 §9, the v4.3 entry): no difficulty picker. Every level (Siege and Gallery) plays on its one fixed tag
+// (L.tag: Easy 6 spaces, Normal 5, Hard 4 with lethal archers), shown on its map button and Gallery tile, in the top bar
+// and on the report (layout.tags: Hard a strong warning colour, Easy calm, Normal unmarked). Progress is by level id
+// (save format 2, save.js): a level is cleared or not, with its best time and taps; the medals are gone and coins pay by
+// tag (meta.coins). The Gallery opens one picture at a time: the first when Siege gallery.openAt is cleared, each next
+// when the one before it is; the locked ones are padlocked silhouettes. A space frees when its squad's last block is
+// picked up (engine.js), and the win or fail sheet waits until every sapper is home (no settle cap). A linked front card
+// whose partner is buried waits for it (S.why 3): it wears the waiting look, a tap is refused with layout.linkedBuriedText,
+// and a jam of them says layout.jamBuriedText.
 (function () {
   "use strict";
   const NS = window.SappersPath, E = NS.engine, Save = NS.save, Board = NS.board, Art = NS.art, Audio = NS.audio, Meta = NS.meta;
   const V_ = (document.currentScript && new URL(document.currentScript.src).searchParams.get("v")) || "1";
   const DEBUG = new URLSearchParams(location.search).get("debug") === "1";
-  const DIFFS = Save.DIFFS, DNAME = { easy: "Easy", normal: "Normal", hard: "Hard" }, $ = (id) => document.getElementById(id);
+  const TAGS = ["easy", "normal", "hard"], $ = (id) => document.getElementById(id);
+  // v4.3: a level's fixed tag (Normal when a file has none) and its one stored winning order.
+  const tagOf = (e) => (e && e.L && TAGS.indexOf(e.L.tag) >= 0 ? e.L.tag : "normal"), winOf = (e) => (e && e.L && e.L.win && e.L.win[tagOf(e)]) || "";
   const app = { cfg: null, levels: [], byId: new Map(), order: [], eras: [], save: null, entry: null, B: null, S: null, V: null, audio: null, sheets: null, gal: [], mats: null, palKey: "", galTiles: [],
-    clock: 0, lastT: 0, screen: "title", diff: "normal", speed: 1, cb: false, ending: null, endAt: -1, panel: null, panelAt: 0, testing: false,
+    clock: 0, lastT: 0, screen: "title", diff: "normal", speed: 1, cb: false, // diff: the playing level's tag (v4.3) ending: null, endAt: -1, panel: null, panelAt: 0, testing: false,
     toastT: -1e12, popK: 0, cards: [], nexts: [], slots: [], wide: false, glURL: [], manURL: [], nodes: [], lastW: 0, lastH: 0,
     coach: null, used: 0, cues: {}, paused: false, pauses: 0, upright: false, upPause: false, focusEl: null, pt: { x: 0, y: 0 }, T: null, tbuf: null, labFit: new Map(), verdict: [],
     et: 0, endT: -1, lineDirty: false, lineMoved: false, ord: [], slotPts: [], blockT: -1e12, refused: 0, march: false,
@@ -95,7 +106,6 @@
     // on app.clock, the win's report, a power-up waiting for its target (pick: {k}), the bar's badges, the icons' URLs.
     meta: null, now: () => Date.now(), rows: 3, t0: 0, report: null, pick: null, pws: [], icoURL: {}, pwPop: [-1e12, -1e12, -1e12, -1e12], lifeTxt: "", countTxt: "" };
   const togMute = Array.from(document.querySelectorAll(".tog-mute")), togSpeed = Array.from(document.querySelectorAll(".tog-speed")), togCb = Array.from(document.querySelectorAll(".tog-cb"));
-  const segs = Array.from(document.querySelectorAll(".seg button"));
 
   // ---- boot --------------------------------------------------------------------------------------------------------
   function getJSON(u) { return fetch(u, { cache: "no-cache" }).then((r) => { if (!r.ok) throw new Error(u + " " + r.status); return r.json(); }); }
@@ -108,7 +118,6 @@
     try { indexGallery(await getJSON("levels/gallery.json?v=" + V_)); } catch (e) { /* no Gallery: its buttons stay hidden */ }
     if (!app.levels.length) { $("load-msg").textContent = "No levels found."; return; }
     app.meta = app.cfg.meta; app.save = Save.open(storage(), app.cfg.save.key, app.order, app.gal.map((e) => e.id), app.meta); app.mats = app.cfg.v3.mats;
-    app.diff = app.save.data.settings.diff;
     app.sheets = Art.sources(app.cfg.art); fades();
     app.V = Board.create($("board"), app.cfg, app.sheets);
     const H = app.V.hooks;
@@ -121,7 +130,7 @@
     H.power = () => { app.lineDirty = true; };
     try { app.V.calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { /* motion stays on */ }
     app.audio = Audio.create(app.cfg.audio);
-    setMuted(app.save.data.settings.muted, false); setSpeed(app.save.data.settings.speed, false); setCb(app.save.data.settings.cb, false); setDiff(app.diff, false);
+    setMuted(app.save.data.settings.muted, false); setSpeed(app.save.data.settings.speed, false); setCb(app.save.data.settings.cb, false);
     paintWall(); chips(); icons(); buildTray(); buildLine(); buildPowers(); buildMap(); buildGallery(); wire();
     { const U = app.cfg.layout.upright, u = $("upright"); u.querySelector(".up-t").textContent = U.text; u.setAttribute("aria-label", U.text); }
     showScreen("title"); layout();
@@ -253,9 +262,9 @@
       if (f < 0) { b.className = "tile card empty"; b.disabled = true; b.querySelector(".n").textContent = ""; b.querySelector(".q").textContent = ""; b.style.removeProperty("--mc"); b.style.removeProperty("--gl"); b.setAttribute("aria-label", "Empty column"); app.flip[j] = false; }
       else {
         const m = B.cardM[f], k = S.count(f), p = S.partner(f);
-        b.className = "tile card" + (app.verdict[j] === 1 ? " safe" : app.verdict[j] === 2 ? " blocked" : "") + (p >= 0 ? " linked" + (B.cardCol[p] < j ? " ch-r" : "") : ""); b.disabled = !live; paintMat(b, m); // ch-r: the chain tag on the corner away from the rod
+        b.className = "tile card" + (app.verdict[j] === 1 ? " safe" : app.verdict[j] === 2 ? " blocked" : app.verdict[j] === 3 ? " waitpair" : "") + (p >= 0 ? " linked" + (B.cardCol[p] < j ? " ch-r" : "") : ""); b.disabled = !live; paintMat(b, m); // ch-r: the chain tag on the corner away from the rod
         b.querySelector(".n").textContent = k; b.querySelector(".q").textContent = "";
-        b.setAttribute("aria-label", mat(m).crew + ", " + k + " sappers" + (p >= 0 ? ", " + LY.linkedAria.replace("{c}", B.cardCol[p] + 1) : "") + (app.verdict[j] === 2 ? ", blocked: " + (p >= 0 ? LY.linkedText : "no free space") : app.verdict[j] === 1 ? ", safe" : ""));
+        b.setAttribute("aria-label", mat(m).crew + ", " + k + " sappers" + (p >= 0 ? ", " + LY.linkedAria.replace("{c}", B.cardCol[p] + 1) : "") + (app.verdict[j] === 2 ? ", blocked: " + (p >= 0 ? LY.linkedText : "no free space") : app.verdict[j] === 3 ? ", " + LY.linkedBuriedText : app.verdict[j] === 1 ? ", safe" : ""));
         // A mystery card that just reached the front turns over (presentation only).
         if (app.flip[j]) { app.flip[j] = false; if (!app.V.calm && b.animate) b.animate([{ transform: "perspective(240px) rotateY(90deg)" }, { transform: "none" }], { duration: SH.flipMs, easing: "ease-out" }); }
       }
@@ -338,15 +347,16 @@
     }
     if (svg.innerHTML !== html) svg.innerHTML = html;
   }
-  // Every open space taken: each front card is marked blocked (a tap now is refused until a squad comes home) or safe (it
+  // Every open space taken: each front card is marked blocked (a tap now is refused until a space frees) or safe (it
   // can merge, only with the comparison flag on). v4 M2: with one space left, a linked front card is blocked too (it needs
-  // 2). Run when the line changes, never per frame.
+  // 2). v4.3: a linked front card whose partner is still buried waits for it (verdict 3, the waiting look), whatever the
+  // line. Run when the line changes, never per frame.
   function judge() {
     const S = app.S, live = S && S.status === E.PLAYING && !app.panel, full = live && S.lineLen >= S.open;
     for (let j = 0; j < E.NCOL; j++) app.verdict[j] = 0;
     if (!live) return false;
     let any = false;
-    for (let j = 0; j < E.NCOL; j++) { const f = S.front(j); if (f < 0) continue; if (S.refused(j)) { app.verdict[j] = 2; any = true; } else if (full) app.verdict[j] = 1; }
+    for (let j = 0; j < E.NCOL; j++) { const f = S.front(j); if (f < 0) continue; if (S.refused(j)) { app.verdict[j] = S.why(j) === 3 ? 3 : 2; any = true; } else if (full) app.verdict[j] = 1; }
     return full || any;
   }
   // The line at a glance (into app.li, no allocation): squads stuck (nothing they can reach, all home), working (sappers
@@ -484,19 +494,21 @@
     const e = app.entry; if (!e) return;
     $("lvl-num").textContent = e.debug ? app.cfg.layout.debugNum : e.n; $("lvl-name").textContent = e.gallery ? e.L.title : e.L.name || (app.eras[e.era - 1] ? app.eras[e.era - 1].name : "Era " + e.era);
     $("btn-map").setAttribute("aria-label", e.gallery ? app.cfg.gallery.title : "Era map");
-    $("diff-chip").textContent = DNAME[app.diff];
+    tagChip($("tag-chip"), app.diff); // v4.3: the level's tag (Normal unmarked)
     app.labFit.delete("name"); fitText($("lvl-name"), "name", app.cfg.layout.nameMinPx); // the room beside the number changes with its digits
   }
+  // v4.3: a tag mark (layout.tags[tag]: its words, empty for Normal; class tag-<tag> colours it): hidden when empty.
+  function tagChip(el, tag) { if (!el) return; const t = (app.cfg.layout.tags || {})[tag] || ""; el.textContent = t; el.className = "tag tag-" + tag; el.hidden = !t; }
   function renderAll() { judge(); renderTop(); renderTray(); renderLine(); }
 
-  // v4 M5: a report card for a set of levels (an era, or the Gallery): cleared, the medals by difficulty, coins earned.
+  // v4 M5: a report card for a set of levels (an era, or the Gallery): cleared and coins earned (v4.3: no medals).
   function reportCard(el, list) {
     if (!el) return;
-    const C = app.meta.eraCard, gal = list.length && list[0].gallery, map = gal ? app.save.data.gal : app.save.data.done, md = [0, 0, 0]; let won = 0, coins = 0;
-    for (const e of list) { const m = map[e.id] | 0; if (m) won++; for (let k = 0; k < 3; k++) if (m & (1 << k)) md[k]++; coins += Meta.bestOf(app.save.data, e.id)[6]; }
-    el.innerHTML = '<span class="rc-n"></span><span class="rc-m"><i>E</i><b></b><i>N</i><b></b><i>H</i><b></b></span><span class="rc-c"><i class="ico ico-coin" aria-hidden="true"></i><b></b></span>';
-    el.querySelector(".rc-n").textContent = fill(C.cleared, { n: won, t: list.length }); el.querySelectorAll(".rc-m b").forEach((b, k) => { b.textContent = md[k]; }); el.querySelector(".rc-c b").textContent = coins;
-    el.setAttribute("role", "img"); el.setAttribute("aria-label", fill(C.aria, { n: won, t: list.length, e: md[0], m: md[1], h: md[2], c: coins }));
+    const C = app.meta.eraCard, gal = list.length && list[0].gallery, map = gal ? app.save.data.gal : app.save.data.done; let won = 0, coins = 0;
+    for (const e of list) { if (map[e.id]) won++; coins += Meta.bestOf(app.save.data, e.id)[2]; }
+    el.innerHTML = '<span class="rc-n"></span><span class="rc-c"><i class="ico ico-coin" aria-hidden="true"></i><b></b></span>';
+    el.querySelector(".rc-n").textContent = fill(C.cleared, { n: won, t: list.length }); el.querySelector(".rc-c b").textContent = coins;
+    el.setAttribute("role", "img"); el.setAttribute("aria-label", fill(C.aria, { n: won, t: list.length, c: coins }));
   }
   function buildMap() {
     const host = $("eras"); app.eras = app.cfg.eras || []; $("map-story").textContent = app.meta.home.story;
@@ -513,7 +525,7 @@
       const nodes = sec.querySelector(".nodes");
       for (const e of app.levels) {
         if (e.era !== er.era) continue;
-        const b = document.createElement("button"); b.className = "node"; b.innerHTML = e.n + "<i></i>";
+        const b = document.createElement("button"); b.className = "node"; b.innerHTML = e.n + '<i class="tag"></i>'; tagChip(b.querySelector("i"), tagOf(e)); // v4.3: its tag
         b.addEventListener("click", () => { if (Save.isOpen(app.save.data, app.order, e.id)) startLevel(e.id); });
         e.node = b; nodes.append(b);
       }
@@ -523,10 +535,10 @@
   function renderMap() {
     const d = app.save.data, next = Save.next(d, app.order); let won = 0;
     for (const e of app.levels) {
-      const m = d.done[e.id] | 0, open = Save.isOpen(d, app.order, e.id); if (m) won++;
+      const m = !!d.done[e.id], open = Save.isOpen(d, app.order, e.id), tg = (app.cfg.layout.tags || {})[tagOf(e)]; if (m) won++;
       e.node.className = "node" + (m ? " done" : open ? "" : " locked") + (e.id === next && !m ? " next" : "");
-      e.node.disabled = !open; e.node.querySelector("i").textContent = (m & 1 ? "E" : "") + (m & 2 ? "N" : "") + (m & 4 ? "H" : "");
-      e.node.setAttribute("aria-label", "Level " + e.n + (m ? ", won" : open ? "" : ", locked"));
+      e.node.disabled = !open;
+      e.node.setAttribute("aria-label", "Level " + e.n + (tg ? ", " + tg : "") + (m ? ", cleared" : open ? "" : ", locked"));
     }
     app.eras.forEach((er) => { const ls = app.levels.filter((e) => e.era === er.era); er.sec.querySelector(".cnt").textContent = ls.filter((e) => d.done[e.id]).length + "/" + ls.length; reportCard(er.sec.querySelector(".rc"), ls); });
     $("map-count").textContent = won + "/" + app.levels.length;
@@ -534,18 +546,22 @@
   }
 
   // ---- the Gallery (v4 M4) -------------------------------------------------------------------------------------------
-  // The Gallery is open once siege level gallery.openAt is won (any difficulty). Its buttons (title, map) say so while
-  // locked; the screen is a grid of every picture: dimmed (its cells' lightness squeezed into gallery.dim, no colour) until
-  // it is won, then in its colours with its title and its E/N/H medals. Thumbnails are drawn when the grid renders.
+  // The Gallery is open once siege level gallery.openAt is cleared. Its buttons (title, map) say so while locked; the
+  // screen is a grid of every picture: dimmed (its cells' lightness squeezed into gallery.dim, no colour) until it is won,
+  // then in its colours with its title. Thumbnails are drawn when the grid renders. v4.3: the pictures open one at a time
+  // (save.js isOpen, field "gal": the first when the Gallery opens, each next when the one before it is cleared); a
+  // locked picture is a padlocked silhouette (gallery.silhouette) and a tap on it shakes; every tile wears its tag.
   const galOpen = () => !!(app.cfg.gallery && app.save.data.done[app.cfg.gallery.openAt]);
   const galWon = () => app.gal.filter((e) => app.save.data.gal[e.id]).length;
+  const galIds = () => app.gal.map((e) => e.id), picOpen = (e) => Save.isOpen(app.save.data, galIds(), e.id, "gal", galOpen());
   function buildGallery() {
     const G = app.cfg.gallery, host = $("gal-grid"); if (!G || !host) return;
     $("gal-title").textContent = G.title; $("gal-credits").textContent = G.credits;
     for (const b of [$("btn-gallery"), $("map-gallery")]) { b.hidden = !app.gal.length; b.querySelector(".gt").textContent = G.btn; b.addEventListener("click", () => { if (galOpen()) showScreen("gallery"); else lockedTap(b); }); }
     for (const e of app.gal) {
-      const b = document.createElement("button"); b.className = "gal-tile"; b.innerHTML = '<canvas class="pix" aria-hidden="true"></canvas><span class="gn"></span><i class="gm"></i><span class="gp" aria-hidden="true"></span>';
-      b.addEventListener("click", () => { if (galOpen()) startLevel(e.id); });
+      const b = document.createElement("button"); b.className = "gal-tile"; b.innerHTML = '<canvas class="pix" aria-hidden="true"></canvas><span class="gn"></span><i class="tag"></i><span class="gp" aria-hidden="true"></span><span class="gk" aria-hidden="true"></span>';
+      tagChip(b.querySelector(".tag"), tagOf(e));
+      b.addEventListener("click", () => { if (picOpen(e)) startLevel(e.id); else lockedTap(b); });
       e.node = b; host.append(b);
     }
   }
@@ -559,7 +575,7 @@
   }
   // ---- the home screen (v4 M5) -----------------------------------------------------------------------------------------
   // The title scene with its top row (settings, the siege's progress, coins, lives only when meta.lives is on), the
-  // logo, the next level's era, the difficulty and one Play button labelled with the next level (one tap to play), and
+  // logo, the next level's era and one Play button labelled with the next level (one tap to play; v4.3 no difficulty), and
   // the tab bar (Siege map, Home, Gallery).
   function renderHome() {
     const H = app.meta.home, d = app.save.data, ne = app.byId.get(Save.next(d, app.order)), won = app.levels.filter((e) => d.done[e.id]).length, er = ne && app.eras[ne.era - 1];
@@ -580,14 +596,22 @@
   function renderGallery() {
     const G = app.cfg.gallery, d = app.save.data; if (!G) return;
     $("gal-count").textContent = G.count.replace("{n}", galWon()).replace("{t}", app.gal.length); reportCard($("gal-card"), app.gal);
-    const nx = app.gal.find((e) => !d.gal[e.id]); // Critics 2 fix (V2): the first picture not yet cleared wears a gold frame and a Play chip
+    const nx = app.byId.get(Save.next(d, galIds(), "gal", galOpen())); // Critics 2 fix (V2): the next picture (v4.3: the first open one not cleared) wears a gold frame and a Play chip
     for (const e of app.gal) {
-      const m = d.gal[e.id] | 0, b = e.node, won = !!m, key = won ? "c" : "d";
-      b.classList.toggle("done", won); b.classList.toggle("next", e === nx); b.querySelector(".gn").textContent = won ? e.L.title : e.n;
-      b.querySelector(".gm").textContent = (m & 1 ? "E" : "") + (m & 2 ? "N" : "") + (m & 4 ? "H" : ""); b.querySelector(".gp").textContent = e === nx ? G.playChip : "";
-      b.setAttribute("aria-label", won ? e.L.title + ", cleared" : fill(e === nx ? G.nextAria : G.tileAria, { n: e.n }));
-      if (b.dataset.drawn !== key) { thumb(b.querySelector("canvas"), e.L, won); b.dataset.drawn = key; }
+      const b = e.node, won = !!d.gal[e.id], open = picOpen(e), key = won ? "c" : open ? "d" : "s", tg = (app.cfg.layout.tags || {})[tagOf(e)];
+      b.classList.toggle("done", won); b.classList.toggle("next", e === nx); b.classList.toggle("locked", !open); b.setAttribute("aria-disabled", open ? "false" : "true");
+      b.querySelector(".gn").textContent = won ? e.L.title : e.n; b.querySelector(".gp").textContent = e === nx ? G.playChip : "";
+      b.setAttribute("aria-label", (won ? e.L.title + ", cleared" : fill(e === nx ? G.nextAria : open ? G.tileAria : G.lockedAria, { n: e.n })) + (tg ? ", " + tg : ""));
+      if (b.dataset.drawn !== key) { if (open) thumb(b.querySelector("canvas"), e.L, won); else silhouette(b.querySelector("canvas"), e.L); b.dataset.drawn = key; }
     }
+  }
+  // v4.3, a locked picture's silhouette: at gallery.thumbPx a cell (the ring left out), the cells of its background (the
+  // colour of its corners, when they agree) in gallery.silhouette[1] and every other cell in silhouette[0]: its shape only.
+  function silhouette(c, L) {
+    const k = app.cfg.gallery.thumbPx, w = L.w - 2, h = L.h - 2, [fg, bg] = app.cfg.gallery.silhouette, at = (x, y) => L.grid[y + 1][x + 1];
+    const cs = [at(0, 0), at(w - 1, 0), at(0, h - 1), at(w - 1, h - 1)], back = cs.every((q) => q === cs[0]) ? cs[0] : null;
+    c.width = w * k; c.height = h * k; const g = c.getContext("2d");
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { g.fillStyle = at(x, y) === back ? bg : fg; g.fillRect(x * k, y * k, k, k); }
   }
   // A picture's thumbnail: gallery.thumbPx (or kp) canvas px a cell, the ring left out; dimmed (lightness only) until won.
   function thumb(c, L, colour, kp) {
@@ -600,8 +624,9 @@
       g.fillRect(x * k, y * k, k, k);
     }
   }
-  // The next Gallery picture to offer after e: the first not yet won after it (wrapping round), else the one after it.
-  function nextPicture(e) { const i = app.gal.indexOf(e), n = app.gal.length; for (let k = 1; k <= n; k++) { const x = app.gal[(i + k) % n]; if (!app.save.data.gal[x.id]) return x; } return app.gal[(i + 1) % n]; }
+  // The next Gallery picture to offer after e (v4.3): the first open one not yet cleared, else (every picture cleared) the
+  // one after it.
+  function nextPicture(e) { const nx = app.byId.get(Save.next(app.save.data, galIds(), "gal", galOpen())); return nx && !app.save.data.gal[nx.id] ? nx : app.gal[(app.gal.indexOf(e) + 1) % app.gal.length]; }
 
   // ---- screens and levels --------------------------------------------------------------------------------------------
   function showScreen(name) {
@@ -619,10 +644,10 @@
     if (name !== "play") { $("pause").hidden = true; if (app.paused && !document.hidden) resume(); }
     renderCoach();
   }
-  function startLevel(id, diff) {
+  function startLevel(id) {
     const e = app.byId.get(id) || app.levels[0];
     if (!livesLeft()) return null; // v4 M5: lives on and none left: no level starts (the toast says when the next comes)
-    if (diff && DIFFS.indexOf(diff) >= 0) app.diff = diff;
+    app.diff = tagOf(e); // v4.3: every level plays on its own tag
     app.entry = e; app.B = E.compile(e.L); app.S = E.sim(app.B, rulesOf(app.diff)); app.S.logOn = true; app.et = 0;
     app.V.setLevel(app.B, app.S, e.L.pal); usePalette(e); // v4 M4: the level's colours before anything is painted
     app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.popK = 0; app.used = 0; app.march = false; app.blockT = -1e12; $("panel").hidden = true; $("stage-pic").hidden = true; hideToast();
@@ -672,14 +697,15 @@
   }
   // A tap with no free space: nothing changes in the rules. The card shakes every time; the toast and the soft blocked
   // sound come at most once per show.blockedGapMs, so a thumb hammering a card isn't noisy. No input lock.
-  // v4 M2: a linked card shakes with its partner's tile (when it is in the visible rows), and the toast says why.
+  // v4 M2: a linked card shakes with its partner's tile (when it is in the visible rows), and the toast says why (v4.3: a
+  // partner still buried behind its column's front says layout.linkedBuriedText).
   function refusedTap(col) {
     app.refused++;
-    const S = app.S, SH = app.cfg.show, p = S.partner(S.front(col)), pd = p >= 0 ? rowOf(S, app.B.cardCol[p], p) : -1;
+    const S = app.S, SH = app.cfg.show, why = S.why(col), p = S.partner(S.front(col)), pd = p >= 0 ? rowOf(S, app.B.cardCol[p], p) : -1;
     const shake = (b) => { if (!app.V.calm && b.animate) b.animate(SH.blockedShake.map((x) => ({ transform: "translateX(" + x + "px)" })), { duration: SH.blockedShakeMs, easing: "linear" }); };
     shake(app.cards[col]); if (pd >= 0) shake(tileOf(app.B.cardCol[p], pd));
     if (app.clock - app.blockT < SH.blockedGapMs) return;
-    app.blockT = app.clock; cue("blocked"); toast(p >= 0 ? app.cfg.layout.linkedText : app.cfg.layout.blockedText, true);
+    app.blockT = app.clock; cue("blocked"); toast(why === 3 ? app.cfg.layout.linkedBuriedText : p >= 0 ? app.cfg.layout.linkedText : app.cfg.layout.blockedText, true);
   }
   // Victory march: once the tray is empty no input is left, so a scratch copy of the engine run to rest gives the exact
   // outcome. A win: the show plays at show.victoryPace until the sheet. A jam or a stuck line: no march.
@@ -695,13 +721,14 @@
     const S = app.S; if (app.ending || S.status === E.PLAYING) return;
     app.ending = { won: S.status === E.WON, reason: S.reason, m: S.failMat, crews: [], why: S.status === E.FAILED && S.reason === "jam" ? S.jamWhy : 0 }; app.endT = app.clock;
     if (S.reason === "jam") { app.ending.squads = []; for (const s of S.order(app.ord)) { if (!S.stuck(s)) continue; app.ending.squads.push([S.spM[s], S.spW[s]]); const c = mat(S.spM[s]).crew; if (app.ending.crews.indexOf(c) < 0) app.ending.crews.push(c); } cue("jam"); }
-    if (app.ending.won && app.entry.debug) app.ending.medal = false;
-    else if (app.ending.won && app.entry.gallery) { const was = app.save.data.gal[app.entry.id] | 0; app.ending.first = Save.record(app.save.data, app.entry.id, app.diff, "gal"); app.ending.medal = !(was & (1 << DIFFS.indexOf(app.diff))); writeSave(); }
-    else if (app.ending.won) { const was = app.save.data.done[app.entry.id] | 0, first = Save.record(app.save.data, app.entry.id, app.diff); app.ending.first = first; app.ending.medal = !(was & (1 << DIFFS.indexOf(app.diff))); app.save.data.last = Save.next(app.save.data, app.order); writeSave(); }
+    // v4.3: a level is cleared or not (first: its first clear).
+    if (app.ending.won && app.entry.debug) app.ending.first = false;
+    else if (app.ending.won && app.entry.gallery) { app.ending.first = Save.record(app.save.data, app.entry.id, "gal"); writeSave(); }
+    else if (app.ending.won) { app.ending.first = Save.record(app.save.data, app.entry.id); app.save.data.last = Save.next(app.save.data, app.order); writeSave(); }
     // v4 M5: the report. A win of a siege level or a Gallery picture: real play time (app.clock: pauses excluded), taps,
-    // coins (more for a new medal), best time and taps. A fail with lives on costs one.
+    // coins (by the level's tag, more on its first clear), best time and taps. A fail with lives on costs one.
     const e = app.entry, rewarded = !e.debug && (e.gallery || e.idx >= 0);
-    if (app.ending.won && rewarded) { app.report = Meta.recordWin(app.save.data, app.meta, e.id, app.diff, app.clock - app.t0, S.plays, app.ending.medal); writeSave(); }
+    if (app.ending.won && rewarded) { app.report = Meta.recordWin(app.save.data, app.meta, e.id, app.diff, app.clock - app.t0, S.plays, app.ending.first); writeSave(); }
     else if (!app.ending.won && rewarded && app.meta.lives) { app.report = { lives: Meta.loseLife(app.save.data, app.meta, app.now()) }; writeSave(); }
     app.pick = null; renderPowers();
     judge(); renderTray(); renderLine();
@@ -725,7 +752,8 @@
     const who = e.m ? mat(e.m).crew : "sappers", k = app.cfg.layout.jamNames, c = e.crews || [];
     const names = c.length > k ? c.slice(0, k).join(", ") + " and " + (c.length - k) + " more" : c.length > 1 ? c.slice(0, -1).join(", ") + " and " + c[c.length - 1] : c[0] || "the squads";
     // v4 M2: a jam where a linked card needed 2 spaces says so; one with a space still locked adds that it never opened.
-    const L = app.cfg.layout, jam = e.why & 1 ? L.jamLinkedText + (c.length ? ", and " + names + " can't reach a block." : ".") : "Line jammed: " + names + " can't reach a block." + (e.why & 2 ? " " + L.jamLockText : "");
+    // v4.3: a jam where linked fronts wait for buried partners (jamWhy bit 4) says that first.
+    const L = app.cfg.layout, jam = e.why & 4 ? L.jamBuriedText + (c.length ? ", and " + names + " can't reach a block." : ".") : e.why & 1 ? L.jamLinkedText + (c.length ? ", and " + names + " can't reach a block." : ".") : "Line jammed: " + names + " can't reach a block." + (e.why & 2 ? " " + L.jamLockText : "");
     return { short: "Archers cut down the " + who + ": too few left to finish.", stuck: "Out of squads, and the waiting sappers can't reach their colour.",
       jam }[e.reason] || "The assault failed.";
   }
@@ -737,7 +765,8 @@
     const chip = (m, k) => { const c = document.createElement("span"); c.className = "chip"; c.setAttribute("aria-hidden", "true"); paintMat(c, m); c.innerHTML = '<i class="gl"></i>'; if (k) c.append(String(k)); pl.append(c); };
     const chips = () => { (e.squads || []).slice(0, L.jamChips).forEach(([m, k]) => chip(m, k)); };
     const n = (e.squads || []).length;
-    if (e.reason === "jam" && e.why & 1) { add(L.jamLinkedText); if (n) { add(", and "); chips(); add(" can't reach a block."); } else add("."); }
+    if (e.reason === "jam" && e.why & 4) { add(L.jamBuriedText); if (n) { add(", and "); chips(); add(" can't reach a block."); } else add("."); }
+    else if (e.reason === "jam" && e.why & 1) { add(L.jamLinkedText); if (n) { add(", and "); chips(); add(" can't reach a block."); } else add("."); }
     else if (e.reason === "jam") { add("Line jammed: "); if (n) chips(); else add("the squads"); add(" can't reach a block." + (e.why & 2 ? " " + L.jamLockText : "")); }
     else if (e.reason === "short" && e.m) { add("Archers cut down the "); chip(e.m, 0); add(" squad: too few left to finish."); }
     else add(reasonText(e));
@@ -746,17 +775,14 @@
     const e = app.ending; if (!e) return;
     app.panel = e.won ? "win" : "fail"; app.panelAt = app.clock; renderCoach();
     const last = app.entry.debug || app.entry.idx === app.levels.length - 1, G = app.cfg.gallery, gal = !!app.entry.gallery;
-    $("p-title").textContent = e.won ? (gal ? G.winTitle : "Fort razed!") : "Assault failed";
-    if (e.won) { $("p-line").textContent = gal ? fill(e.first ? G.winLine : G.winLineAgain, { title: app.entry.L.title, diff: DNAME[app.diff] }) : "The goblin king flees. " + (app.entry.debug ? app.entry.L.name : "Level " + app.entry.n) + " won on " + DNAME[app.diff] + "."; $("p-line").removeAttribute("aria-label"); } else sheetLine(e);
+    $("p-title").textContent = e.won ? (gal ? G.winTitle : "Fort razed!") : "Assault failed"; tagChip($("p-tag"), app.diff); // v4.3: the level's tag
+    if (e.won) { $("p-line").textContent = gal ? fill(e.first ? G.winLine : G.winLineAgain, { title: app.entry.L.title }) : "The goblin king flees. " + (app.entry.debug ? app.entry.L.name : "Level " + app.entry.n) + (e.first ? " cleared." : " cleared again."); $("p-line").removeAttribute("aria-label"); } else sheetLine(e);
     reportPic(e.won && gal);
     $("p-primary").textContent = e.won ? (gal ? G.nextBtn : last ? "Era map" : "Next level") : "Retry";
     $("p-secondary").textContent = e.won ? "Retry" : gal ? G.title : "Era map";
-    // The win beat: the level's difficulty medals, this one stamped in if it's new.
-    reportRows(e);
-    const mask = (gal ? app.save.data.gal : app.save.data.done)[app.entry.id] | 0, md = $("p-medals"); md.hidden = !e.won;
-    Array.from(md.children).forEach((el, k) => { el.className = "medal" + (mask & (1 << k) ? " got" : "") + (e.won && e.medal && DIFFS[k] === app.diff ? " new" : ""); });
+    reportRows(e); // v4.3: no medals; the report's rows and the tag
     $("panel").hidden = false; placeSheet();
-    cue(e.won ? "chime" : "bad"); if (e.won && e.medal) cue("star", 2);
+    cue(e.won ? "chime" : "bad"); if (e.won && e.first) cue("star", 2);
     judge(); renderTray(); renderLine();
   }
   // v4 M5, the level report on the win sheet: time, taps and coins (counting up in step()), with the best time and taps
@@ -765,10 +791,10 @@
     const R = app.report, st = $("p-stats"), T = app.meta.report, rows = st.children; st.hidden = !(e.won && R && R.coins != null);
     if (!e.won && R && R.lives && R.lives.on) $("p-line").append(" " + fill(app.meta.home.lifeLost, { n: R.lives.n }));
     if (st.hidden) return;
-    const best = (v, was, nw, f) => (!was ? (e.medal ? T.first : T.newBest) : nw ? T.newBest : fill(T.best, { v: f(was) })); // no best kept yet: a first win, or a win from before M5
+    const best = (v, was, nw, f) => (!was ? (e.first ? T.first : T.newBest) : nw ? T.newBest : fill(T.best, { v: f(was) })); // no best kept yet: a first win, or a win from before M5
     rows[0].querySelector(".k").textContent = T.time; $("p-time").textContent = Meta.clock(R.ms); rows[0].querySelector("em").textContent = best(R.ms, R.best[0], R.newMs, Meta.clock); rows[0].classList.toggle("new", !!R.best[0] && R.newMs);
     rows[1].querySelector(".k").textContent = T.taps; $("p-taps").textContent = R.taps; rows[1].querySelector("em").textContent = best(R.taps, R.best[1], R.newTaps, String); rows[1].classList.toggle("new", !!R.best[1] && R.newTaps);
-    rows[2].querySelector(".k").textContent = T.coins; app.countTxt = ""; countCoins(); rows[2].querySelector("em").textContent = e.medal ? fill(T.medal, { n: R.coins - Meta.winCoins(app.meta, app.diff, false) }) : "";
+    rows[2].querySelector(".k").textContent = T.coins; app.countTxt = ""; countCoins(); rows[2].querySelector("em").textContent = e.first ? fill(T.firstClear, { n: R.coins - Meta.winCoins(app.meta, app.diff, false) }) : "";
     st.setAttribute("aria-label", T.time + " " + Meta.clock(R.ms) + ", " + T.taps + " " + R.taps + ", " + T.coins + " +" + R.coins);
   }
   // Critics 2 fix (V2): a Gallery win shows the finished picture above the report, in its colours on its own frame, at
@@ -966,7 +992,6 @@
     togCb.forEach((b) => { b.setAttribute("aria-pressed", app.cb ? "true" : "false"); rowVal(b, app.cb ? "On" : "Off"); });
     if (save) { app.save.data.settings.cb = app.cb; writeSave(); }
   }
-  function setDiff(d, save) { if (DIFFS.indexOf(d) < 0) return; app.diff = d; segs.forEach((b) => b.setAttribute("aria-pressed", b.dataset.diff === d ? "true" : "false")); if (save) { app.save.data.settings.diff = d; writeSave(); } }
 
   function wire() {
     document.addEventListener("pointerdown", () => { if (app.audio) Audio.unlock(app.audio); }, { capture: true });
@@ -1001,7 +1026,6 @@
     togMute.forEach((b) => b.addEventListener("click", () => setMuted(!app.audio.muted, true)));
     togSpeed.forEach((b) => b.addEventListener("click", nextSpeed));
     togCb.forEach((b) => b.addEventListener("click", () => setCb(!app.cb, true)));
-    segs.forEach((b) => b.addEventListener("click", () => { setDiff(b.dataset.diff, true); if (app.screen === "map") renderMap(); }));
     window.addEventListener("resize", layout);
     // A hidden tab can lose canvas backing stores: re-check every opaque cache when the page shows again, rebuild once.
     const recheck = () => { if (document.hidden || !app.V || !app.V.sprites) return; if (app.V.checkSprites().length) { app.V.buildSprites(); app.V.paintLayer(); } };
@@ -1141,8 +1165,7 @@
     if (app.unlockT > 0 && app.clock - app.unlockT >= app.cfg.show.unlockMs && app.clock - app.unlockT < app.cfg.show.unlockMs + dt) app.lineMoved = true; // the padlock's pop ends
     if (app.lineDirty) { judge(); renderTray(); renderLine(); coachStep(); } else if (app.lineMoved) renderLine();
     app.lineMoved = false;
-    // The sheet waits for the squads to settle, at most show.settleCapMs after the end (then everything lands).
-    if (app.ending && !app.panel && S.busy && app.clock - app.endT >= app.cfg.show.settleCapMs) settleNow();
+    // The sheet waits until every sapper is home (v4.3: no cap; a board tap still skips the show).
     if (app.ending && !app.panel && !S.busy) {
       if (app.ending.won) { if (!V.gob.on) { V.goblin(true); cue("fanfare"); } else if (V.gob.done) showPanel(); }
       else if (app.endAt < 0) { app.endAt = app.clock + app.cfg.show.panelMs; V.shake(app.cfg.fx.failShake[0], app.cfg.fx.failShake[1]); }
@@ -1200,7 +1223,7 @@
     const pre = search(e, diff, (S) => S.status === E.FAILED && S.reason === "jam", app.cfg.selfTest.searchTries, app.cfg.selfTest.searchSeed);
     return pre == null ? null : { prefix: pre };
   }
-  function lossPlan(id, diff) { const e = app.byId.get(id) || app.entry; return e ? jamPlan(e, diff || app.diff) : null; }
+  function lossPlan(id) { const e = app.byId.get(id) || app.entry; return e ? jamPlan(e, tagOf(e)) : null; } // v4.3: on the level's tag
   // Rushed taps (no waiting) of the front card with the most in reach until every space is taken with squads out; returns
   // the taps made. The full-line checks and the harness's screens use it.
   function fillLine() {
@@ -1226,7 +1249,7 @@
     const S = app.S, B = app.B, V = app.V;
     const line = []; if (S) for (const s of S.order(app.ord)) line.push([mat(S.spM[s]).crew, S.spW[s], S.spO[s]]);
     const fronts = []; if (S) for (let j = 0; j < E.NCOL; j++) { const f = S.front(j); fronts.push(f < 0 ? null : { mat: B.cardM[f], crew: mat(B.cardM[f]).crew, n: B.cardN[f] }); }
-    return { screen: app.screen, id: app.entry ? app.entry.id : null, n: app.entry ? app.entry.n : null, era: app.entry ? app.entry.era : null, diff: app.diff,
+    return { screen: app.screen, id: app.entry ? app.entry.id : null, n: app.entry ? app.entry.n : null, era: app.entry ? app.entry.era : null, tag: app.diff,
       status: !S ? null : S.status === E.WON ? "won" : S.status === E.FAILED ? "failed" : "playing", reason: S && S.status === E.FAILED ? S.reason : null,
       pixLeft: S ? S.pixLeft : null, cap: S ? S.cap : null, line, fronts, plays: S ? S.plays : 0, hits: S ? S.hits : 0, kills: S ? S.kills : 0,
       busy: S ? S.busy : false, out: S ? S.out : 0, runners: V ? V.live : 0, now: S ? S.now : 0, goblin: V ? V.gob.on && !V.gob.done : false,
@@ -1250,7 +1273,10 @@
   // debug level's stored order on every difficulty, mystery tiles that never leak their colour (also in colour-blind mode)
   // and flip at the front, the rods, a linked refusal with one space free that changes nothing, both squads of a pair
   // leaving together, the padlock opening on its key, and the generalized jam's sheet. Runs on a scratch save; the real
-  // save is compared byte for byte at the end. Leaves the page on the level it was on (restarted).
+  // save is compared byte for byte at the end. Leaves the page on the level it was on (restarted). v4.3: every level on
+  // its own tag (one stored order each), the tags on the map, the top bar and the report (no medals), a linked front
+  // card waiting for its buried partner, a space freeing at its squad's last pickup while carriers walk home, the
+  // Gallery opening one picture at a time (padlocked silhouettes), and the save in format 2.
   function selfTest() {
     const T0 = performance.now(), out = { pass: 0, fail: [], notes: {}, ms: 0 };
     const ok = (c, m) => { if (c) out.pass++; else out.fail.push(m); return !!c; };
@@ -1321,21 +1347,22 @@
         for (let i = 1; i < 32; i++) { const [x, y] = at(i / 32); const hit = T.find((b) => own.indexOf(b) < 0 && inT(x, y, b, 3)); if (hit) return "a rod crosses a third tile at " + Math.round(x) + "," + Math.round(y); } }
       return true; };
     try {
-      // 1. Stored winning orders, all levels, all difficulties, played patiently through the play entry point.
+      // 1. Stored winning orders, every level on its own tag (v4.3: one order each), played patiently through the play
+      // entry point.
       let wins = 0, total = 0;
-      for (const e of app.levels) for (const d of DIFFS) {
-        total++; startLevel(e.id, d);
-        const ord = e.L.win && e.L.win[d];
+      for (const e of app.levels) {
+        const d = tagOf(e); total++; startLevel(e.id);
+        const ord = winOf(e);
         const good = !!ord && patient(ord); settleNow();
-        if (ok(good && app.S.status === E.WON, e.id + " " + d + ": stored order wins played patiently through play()")) wins++;
+        if (ok(good && app.S.status === E.WON && app.diff === d && app.S.cap === rulesOf(d).hold + app.S.extra, e.id + " " + d + ": stored order wins played patiently through play() on its tag")) wins++;
         ok(dispMatches() && allHome(), e.id + " " + d + ": the board display matches the rules and every sapper is home");
       }
       out.notes.wins = wins + "/" + total;
-      // 1b. The same on real ticks (SP.tick's 16 ms steps, no skip), Normal, on a sample: its time at 1x.
+      // 1b. The same on real ticks (SP.tick's 16 ms steps, no skip), on a sample: its time at 1x.
       for (const id of ST.tickSample) {
         const e = app.byId.get(id); if (!e) continue;
-        startLevel(id, "normal"); let t = 0;
-        for (const ch of e.L.win.normal) { if (!playCol(+ch)) break; t += tickQuiet(ST.tickCapMs); }
+        startLevel(id); let t = 0;
+        for (const ch of winOf(e)) { if (!playCol(+ch)) break; t += tickQuiet(ST.tickCapMs); }
         ok(app.S.status === E.WON && dispMatches() && allHome(), id + ": the stored order wins on real ticks, tap after tap once the squads are home");
         out.notes["ticked_" + id] = Math.round(t / 1000) + " s";
       }
@@ -1354,7 +1381,7 @@
       // 3. Three rapid taps: three squads out at once, each with runners alive; no play completes early.
       { const reachCols = (S, B) => { const o = []; for (let j = 0; j < E.NCOL; j++) { const f = S.front(j); if (f >= 0 && S.reachable(B.cardM[f]) > 0) o.push(j); } return o; };
         const pref = app.byId.get(ST.overlapLevel), pool = (pref ? [pref] : []).concat(app.levels.slice().reverse());
-        const e = pool.find((x) => { const B = E.compile(x.L); return reachCols(E.sim(B, rulesOf("normal")), B).length >= 3; }) || app.levels[0];
+        const e = pool.find((x) => { const B = E.compile(x.L); return reachCols(E.sim(B, rulesOf(tagOf(x))), B).length >= 3; }) || app.levels[0];
         startLevel(e.id, "normal");
         const cols = reachCols(app.S, app.B).slice(0, 3);
         for (const j of cols) { playCol(j); step(16); step(16); }
@@ -1369,12 +1396,12 @@
         ok(!notPic.length && !app.V.idleC.length, "bottom entry: every level is a picture board, no idle sappers (" + (notPic.join(",") || app.levels.length + app.gal.length + " boards") + ")"); }
       // 4. A jam loss on a late level: seeded patient taps until every space holds a squad that can't reach a block; the
       // line jams at rest, one jam cue, the sheet names the crews, Retry is primary. Then a Retry mid-show clears every runner.
-      let jp = null; for (const e of app.levels) { if (e.L.band !== "hard" && e.L.band !== "hardest") continue; const p = jamPlan(e, "normal"); if (p) { jp = { e, p }; break; } }
+      let jp = null; for (const e of app.levels) { if (e.L.band !== "hard" && e.L.band !== "hardest") continue; const p = jamPlan(e, tagOf(e)); if (p) { jp = { e, p }; break; } }
       if (ok(!!jp, "jam: found a patient order that jams a late level")) {
         startLevel(jp.e.id, "normal"); const j0 = app.cues.jam | 0; patient(jp.p.prefix);
         ok(app.S.status === E.FAILED && app.S.reason === "jam" && app.ending && app.ending.reason === "jam" && app.S.lineLen === app.S.cap, "jam: the line fills with squads that can't reach a block and jams at rest");
         ok(app.S.order(app.ord).every((q) => app.S.stuck(q)) && (app.cues.jam | 0) === j0 + 1, "jam: every squad in the line reads stuck; one jam cue");
-        let at = null; for (let t = 0; t < SH.settleCapMs + 3000 && !app.panel; t += 16) { step(16); if (app.panel && !at) at = { busy: app.S.busy, ms: app.clock - app.endT }; }
+        let at = null; for (let t = 0; t < ST.tickCapMs && !app.panel; t += 16) { step(16); if (app.panel && !at) at = { busy: app.S.busy, ms: app.clock - app.endT }; }
         const pl = $("p-line").getAttribute("aria-label") || "", chipsOK = chipCheck();
         ok(app.panel === "fail" && /^Line jammed: .+ can't reach a block\.$/.test(pl) && pl.indexOf(app.ending.crews[0]) >= 0 && hitOK($("p-primary")) && $("p-primary").textContent === "Retry", "jam: the sheet's label names the jammed crews (" + pl + "), Retry is primary and hittable");
         ok(chipsOK === true, "jam: the sheet shows one colour chip with its count per jammed squad, no crew names (" + chipsOK + ")");
@@ -1387,7 +1414,7 @@
       // 5. Key and gate: the gate stays iron until its key pops; then the lock drops, the bars fall, the board shakes.
       const ge = app.levels.find((e) => e.L.gates && e.L.gates.length);
       if (ok(!!ge, "gate: a level with a gate exists")) {
-        startLevel(ge.id, "normal"); const B = app.B, ord = ge.L.win.normal, gc = B.gateCells[0]; let seen = null, before = true;
+        startLevel(ge.id); const B = app.B, ord = winOf(ge), gc = B.gateCells[0]; let seen = null, before = true;
         for (let i = 0; i < ord.length && app.S.status === E.PLAYING && !seen; i++) {
           const c0 = app.cues.gate | 0; playCol(ord.charCodeAt(i) - 48);
           for (let t = 0; t < ST.tickCapMs && app.S.busy && !seen; t += 16) {
@@ -1400,12 +1427,12 @@
         tickQuiet(ST.tickCapMs); step(1500);
         ok(gc.every((c) => app.V.disp[c] <= 0 && app.S.a[c] === E.DIRT) && app.V.fxInfo().falls === 0, "gate show: the gate is open ground once its show ends");
       }
-      // 6. An archer hit on every difficulty (Easy/Normal: sent back to its space; Hard: killed, and the level fails short).
-      for (const d of DIFFS) {
+      // 6. An archer hit on a level of every tag (Easy/Normal: sent back to its space; Hard: killed, and the level fails short).
+      for (const d of TAGS) {
         const lethal = rulesOf(d).archersKill, pred = (S) => (lethal ? S.kills > 0 : S.hits > 0 && S.status === E.PLAYING); let found = null;
-        for (const e of app.levels) { if (!(e.L.towers && e.L.towers.length) || e.L.safeArchers) continue; const o = search(e, d, pred, ST.searchTries, ST.searchSeed); if (o) { found = { e, o }; break; } }
+        for (const e of app.levels) { if (tagOf(e) !== d || !(e.L.towers && e.L.towers.length) || e.L.safeArchers) continue; const o = search(e, d, pred, ST.searchTries, ST.searchSeed); if (o) { found = { e, o }; break; } }
         if (!ok(!!found, "archers " + d + ": found an order with a hit")) continue;
-        startLevel(found.e.id, d); patient(found.o.slice(0, -1)); playCol(found.o.charCodeAt(found.o.length - 1) - 48);
+        startLevel(found.e.id); patient(found.o.slice(0, -1)); playCol(found.o.charCodeAt(found.o.length - 1) - 48);
         let arrow = false, struck = null, live = 0;
         for (let t = 0; t < ST.tickCapMs && !struck; t += 16) { step(16); const h = app.V.hitInfo(); if (h.live) live = h.kind; if (h.arrows) arrow = true; if (h.struck) struck = h; }
         ok(live === (lethal ? 2 : 1) && arrow && !!struck && struck.label, "archers " + d + ": a " + (lethal ? "doomed" : "knocked-back") + " runner, the arrow flies and strikes, the label rises (" + JSON.stringify(struck) + ")");
@@ -1415,9 +1442,10 @@
         else { ok(app.S.status === E.FAILED && app.S.reason === "short", "archers hard: the kill leaves the colour short: the assault fails"); const busy = app.S.busy || app.V.live > 0; retry(); ok(busy && app.S.plays === 0 && app.V.live === 0 && app.S.status === E.PLAYING, "archers hard: Retry mid-show restarts at once"); }
         out.notes["archer_" + d] = found.e.id + " '" + found.o + "'";
       }
-      // 6b. The archer teaching level never kills (safeArchers): on Hard a hit walks back to its space and play goes on.
+      // 6b. The archer teaching level never kills (safeArchers; v4.3 it plays Easy, so this runs its board under Hard's rules
+      // on an engine copy): a hit walks back to its space and play goes on.
       if (app.byId.has("e3-51")) { const e = app.byId.get("e3-51"), o = search(e, "hard", (S) => S.hits > 0, ST.searchTries, ST.searchSeed);
-        if (ok(!!o, "e3-51 hard: found a tap into the ring")) { startLevel("e3-51", "hard"); patient(o); ok(app.S.hits > 0 && app.S.kills === 0 && app.S.status === E.PLAYING, "e3-51 hard: archers send the hit sapper back, never kill"); } }
+        if (ok(!!o, "e3-51 (Hard's rules): found a tap into the ring")) { const X = E.sim(E.compile(e.L), rulesOf("hard")); for (const ch of o) { X.play(+ch); X.quiet(); } ok(X.hits > 0 && X.kills === 0 && X.status === E.PLAYING && e.L.safeArchers === true, "e3-51 (Hard's rules): archers send the hit sapper back, never kill"); } }
       // 7. Every space taken (rushed taps, squads out): each front card is marked blocked and the head says to wait. A tap
       // on one is refused: engine state, tray, line and board byte-identical; the card shakes, the toast, one blocked
       // sound, and hammering it stays quiet. Once a squad is home the same card plays. (With patient play a full line of
@@ -1454,7 +1482,7 @@
         ok(readLine().near && readLine().stuck === 4 && app.slots.filter((q) => q.classList.contains("stuck")).length === 4 && app.slots.some((q) => q.classList.contains("last")) && (app.cues.warn | 0) === w0 + 1, "jam level: four stuck squads, one space left: the near-jam warning and one warn cue");
         playCol(0); settleNow();
         ok(app.S.status === E.FAILED && app.S.reason === "jam" && !app.march, "jam level: the fifth stuck squad jams the line at rest; the pace never switches to the victory march");
-        for (let t = 0; t < SH.settleCapMs + 3000 && !app.panel; t += 16) step(16);
+        for (let t = 0; t < ST.tickCapMs && !app.panel; t += 16) step(16);
         ok(app.panel === "fail" && /^Line jammed: .+ and 2 more can't reach a block\.$/.test($("p-line").getAttribute("aria-label")) && chipCheck() === true && $("p-line").querySelectorAll(".chip").length === 5, "jam level: the sheet's label names three crews and 'and 2 more' (" + $("p-line").getAttribute("aria-label") + "); five chips show");
         startLevel(e.id, "normal"); patient("001234"); settleNow();
         ok(app.S.status === E.WON, "jam level: the ring's crew first wins (the level is fair)");
@@ -1462,7 +1490,7 @@
         ok(!app.march, "stuck level: the tray is empty but the line will end stuck: no victory march"); settleNow();
         ok(app.S.status === E.FAILED && app.S.reason === "stuck" && !app.march, "stuck level: it fails stuck, the pace never switched"); }
       // 8. Determinism on ticks (a hidden tab driven by SP.tick): the same taps at the same ticks give the same state.
-      { const e = app.byId.get(ST.overlapLevel) || app.levels[40], sig = () => { startLevel(e.id, "normal"); const o = e.L.win.normal; for (let i = 0; i < 8 && i < o.length; i++) { playCol(+o[i]); for (let k = 0; k < 37; k++) step(16); } for (let k = 0; k < 90; k++) step(16); return Array.from(app.S.save()).join(",") + "|" + app.V.live + "|" + Array.from(app.V.disp).join(""); };
+      { const e = app.byId.get(ST.overlapLevel) || app.levels[40], sig = () => { startLevel(e.id); const o = winOf(e); for (let i = 0; i < 8 && i < o.length; i++) { playCol(+o[i]); for (let k = 0; k < 37; k++) step(16); } for (let k = 0; k < 90; k++) step(16); return Array.from(app.S.save()).join(",") + "|" + app.V.live + "|" + Array.from(app.V.disp).join(""); };
         ok(sig() === sig(), "ticks: the same taps at the same 16 ms ticks give an identical engine state and board (" + e.id + ")"); }
       // 9. solve() leaves the save byte-identical.
       startLevel(app.levels[Math.min(20, app.levels.length - 1)].id, "normal");
@@ -1475,10 +1503,10 @@
       startLevel(app.levels[0].id, "normal");
       for (let j = 0; j < E.NCOL; j++) if (app.S.front(j) >= 0) ok(hitOK(app.cards[j]), "hit: card " + j);
       ok(hitOK($("btn-retry")), "hit: Retry");
-      // 11. The win on ticks: the last blocks fall; the keep comes down only once every sapper is home; the panel stamps
-      // this difficulty's medal.
+      // 11. The win on ticks: the last blocks fall; the keep comes down only once every sapper is home; the report shows
+      // the level's tag and no medals (v4.3).
       delete app.save.data.done[app.levels[0].id];
-      const w1 = app.levels[0].L.win.normal, col0 = app.cues.collapse | 0; let falls = 0, gobBusy = null;
+      const w1 = winOf(app.levels[0]), col0 = app.cues.collapse | 0; let falls = 0, gobBusy = null;
       patient(w1.slice(0, -1)); playCol(w1.charCodeAt(w1.length - 1) - 48);
       for (let t = 0; t < ST.tickCapMs && !app.V.gob.on; t += 16) { step(16); falls = Math.max(falls, app.V.fxInfo().falls); if (app.V.gob.on) gobBusy = app.S.busy; }
       step(16); const kf = app.V.fxInfo();
@@ -1486,7 +1514,8 @@
       tick(8000);
       ok(app.panel === "win" && hitOK($("p-primary")), "hit: the win panel's Next");
       { const w = sheetClear(true); ok(w === true, "win: the sheet covers the whole holding line or none of it (" + w + ")"); }
-      ok(!$("p-medals").hidden && $("p-medals").querySelectorAll(".medal.new").length === 1, "win: the panel stamps the new Normal medal");
+      { const t0 = tagOf(app.levels[0]), want = (LY.tags || {})[t0] || "";
+        ok(!document.querySelector(".medal") && !$("p-medals") && $("p-tag").textContent === want && $("p-tag").hidden === !want && $("p-tag").classList.contains("tag-" + t0) && /cleared\.$/.test($("p-line").textContent), "win (v4.3): the report shows the level's tag (" + (want || "Normal, unmarked") + ") and no medals; '" + $("p-line").textContent + "'"); }
       // 12. Pause: nothing moves and the sheet takes the tap; one tap resumes with no jump in time and no card played.
       startLevel(app.levels[0].id, "normal");
       pause(); const pc = app.clock; advance(1000); advance(1600);
@@ -1519,7 +1548,7 @@
         if (app.focusEl) ok(hitOK(app.focusEl), id + ": the arrow never covers its target");
         const cc = coachClear(); ok(cc === true, id + ": the coach box covers no board and the arrow no count or line head (" + cc + ")");
         const seen = new Set([c0.i]); let last = c0.i, mono = true;
-        let clear = true; for (const ch of e.L.win.normal) { playCol(+ch); settleNow(); const cs = coachState(); if (cs.i >= 0) { if (cs.i < last) mono = false; last = cs.i; seen.add(cs.i); if (cs.on && clear === true) clear = cs.fits ? coachClear() : "'" + cs.text + "' overflows its box"; } }
+        let clear = true; for (const ch of winOf(e)) { playCol(+ch); settleNow(); const cs = coachState(); if (cs.i >= 0) { if (cs.i < last) mono = false; last = cs.i; seen.add(cs.i); if (cs.on && clear === true) clear = cs.fits ? coachClear() : "'" + cs.text + "' overflows its box"; } }
         ok(clear === true, id + ": at every step of the stored order the coach covers no board and the arrow no count (" + clear + ")");
         ok(mono && !coachState().on && app.S.status === E.WON, id + ": on the stored order the coach only moves forward (" + Array.from(seen).join(",") + ") and is gone at the win");
         startLevel(id, "normal"); const saw = new Set();
@@ -1541,7 +1570,7 @@
       // 13b. Victory march: on a stored winning line the pace stays 1x until the tray empties, then plays at
       // show.victoryPace; the final state (board, every sapper's times, status) is identical to the same taps at 1x; with
       // 2x or 3x on, the faster pace stays.
-      { const e = app.byId.get("e1-03") || app.levels[0], o = e.L.win.normal, vp = SH.victoryPace;
+      { const e = app.byId.get("e1-03") || app.levels[0], o = winOf(e), vp = SH.victoryPace;
         const run = () => { startLevel(e.id, "normal"); let before = false; for (let i = 0; i < o.length - 1; i++) { playCol(+o[i]); tickQuiet(ST.tickCapMs); before = before || app.march; } playCol(+o[o.length - 1]);
           const r = { before, march: app.march, pace: paceNow(), busy: app.S.busy }; tickQuiet(ST.tickCapMs); const S = app.S, k = S.sent;
           r.sig = Array.from(S.a).join("") + "|" + S.status + "|" + S.hash() + "|" + k + "|" + Array.from(S.q0.subarray(0, k)).join(",") + "|" + Array.from(S.q1.subarray(0, k)).join(",") + "|" + Array.from(S.q2.subarray(0, k)).join(",");
@@ -1577,7 +1606,7 @@
         for (let d = 0; d < RW; d++) { const el = tileOf(j0, d); hs.push(el.getBoundingClientRect().height); op.push(+getComputedStyle(el).opacity); fc.push(el.style.getPropertyValue("--fc") === (d ? app.fadeC[d][app.B.cardM[S.card(j0, d)]] : mat(app.B.cardM[S.card(j0, 0)]).c)); }
         const off = app.nexts.every((nx) => nx.slice(RW - 1).every((x) => getComputedStyle(x).display === "none")), rowsOK = RW === LY.queueRows ? !document.body.classList.contains("rows2") : RW === LY.queueRowsShort && document.body.classList.contains("rows2") && off;
         ok(q0 === want && rowsOK && hs[1] < hs[0] && (RW < 3 || hs[2] < hs[1]) && op.every((o) => o === 1) && fc.every(Boolean), "queue: " + RW + " rows per column stepping down (" + hs.map((h) => h.toFixed(1)).join(", ") + " px), all at full opacity, the rows behind faded toward the tray (layout.fade); " + q0 + " tiles match the engine (" + e.id + ")");
-        let moved = true, taps = 0; const o = e.L.win.normal;
+        let moved = true, taps = 0; const o = winOf(e);
         for (let i = 0; i < o.length && app.S.status === E.PLAYING; i++) { playCol(+o[i]); settleNow(); taps++; const q = qCheck(); if (typeof q === "string") { moved = q + " after tap " + taps; break; } }
         ok(moved === true && S.status === E.WON, "queue: the rows move up with the engine on every tap of the stored order (" + (moved === true ? taps + " taps" : moved) + ")"); }
       // 16. Colour-blind mode (v4 M1): off by default, every block a plain stud but the iron gate (bars) and the gilt key
@@ -1608,11 +1637,11 @@
         b.click(); b.click(); const et0 = app.et; for (let k = 0; k < 10; k++) step(16);
         ok(app.speed === SPD[2] && Math.abs(app.et - et0 - 160 * SPD[2] * SH.pace) < 1e-6, "speed: at " + app.speed + "x, 160 ms of real time moves the engine " + (app.et - et0) + " ms");
         setSpeed(SPD[0], false); }
-      // 18. v4 M2 debug levels: every stored order wins on every difficulty, played patiently through playCol; the board
-      // matches the rules; none of it reaches the save's progress.
+      // 18. v4 M2 debug levels: every stored order wins on its tag (v4.3: Normal), played patiently through playCol; the
+      // board matches the rules; none of it reaches the save's progress.
       { let wins = 0, total = 0; const done0 = JSON.stringify(app.save.data.done), last0 = app.save.data.last;
         for (const id of ST.debugOrder) { const e = app.byId.get(id); if (!ok(!!e, "debug: level " + id + " is loaded")) continue;
-          for (const d of DIFFS) { total++; startLevel(id, d); const good = patient(e.L.win[d]); settleNow();
+          for (const d of [tagOf(e)]) { total++; startLevel(id); const good = patient(winOf(e)); settleNow();
             if (ok(good && app.S.status === E.WON && dispMatches() && allHome(), id + " " + d + ": stored order wins played patiently through play()")) wins++; } }
         ok(JSON.stringify(app.save.data.done) === done0 && app.save.data.last === last0, "debug: the wins never reach the save's progress");
         out.notes.debug = wins + "/" + total; }
@@ -1631,7 +1660,7 @@
           } return null; };
         for (const cb of [false, true]) { setCb(cb, false);
           for (const id of ["v4-mystery", "v4-all"]) { const e = app.byId.get(id); if (!e) continue; startLevel(id, "normal"); bad = bad || mCheck();
-            for (const ch of e.L.win.normal) { const j = +ch, f0 = app.S.front(j); playCol(j); if (app.S.front(j) >= 0 && app.S.front(j) !== f0 && app.B.cardF[app.S.front(j)] & E.MYSTERY && (app.V.calm || app.cards[j].getAnimations().length > 0)) flips++; bad = bad || mCheck(); settleNow(); bad = bad || mCheck(); } } }
+            for (const ch of winOf(e)) { const j = +ch, f0 = app.S.front(j); playCol(j); if (app.S.front(j) >= 0 && app.S.front(j) !== f0 && app.B.cardF[app.S.front(j)] & E.MYSTERY && (app.V.calm || app.cards[j].getAnimations().length > 0)) flips++; bad = bad || mCheck(); settleNow(); bad = bad || mCheck(); } } }
         setCb(false, false);
         ok(!bad && hiddenSeen > 0 && flips > 0, "mystery: " + tiles + " tiles checked (" + hiddenSeen + " hidden), colour-blind off and on: hidden ones show only ? and their count, the rest their colour; " + flips + " flips at the front" + (bad ? " (" + bad + ")" : "")); }
       // 20. Linked squads (v4-linked): the rods at load; a pair both of whose colours are in reach leaves together (runners
@@ -1640,7 +1669,7 @@
       { const e = app.byId.get("v4-linked"), rodsN = () => app.rods.querySelectorAll("path").length / 3, stubs = () => app.rods.querySelectorAll("circle.dot").length / 2;
         if (ok(!!e, "linked: v4-linked is loaded")) {
           startLevel(e.id, "normal"); const r0 = rodsN(); let pairN = 0, together = null, stubSeen = 0;
-          for (const ch of e.L.win.normal) { const j = +ch, f = app.S.front(j), p = app.S.partner(f); stubSeen = Math.max(stubSeen, stubs());
+          for (const ch of winOf(e)) { const j = +ch, f = app.S.front(j), p = app.S.partner(f); stubSeen = Math.max(stubSeen, stubs());
             if (p >= 0 && !together && app.S.reachable(app.B.cardM[f]) > 0 && app.S.reachable(app.B.cardM[p]) > 0) { playCol(j); for (let k = 0; k < 20; k++) step(16); const sp = app.S.order(app.ord).slice(-2), R = app.V.runners(); together = sp.length === 2 && sp.every((q) => R.bySpace[q] > 0) && app.slots[sp[0]].classList.contains("linked") && app.slots[sp[1]].classList.contains("linked"); pairN++; settleNow(); }
             else { if (p >= 0) pairN++; playCol(j); settleNow(); } }
           ok(r0 > 0 && app.S.status === E.WON && pairN === e.L.links.length, "linked: " + r0 + " rod(s) at load; the stored order plays all " + pairN + " pairs and wins");
@@ -1651,7 +1680,7 @@
           ok(stubSeen > 0, "linked: a partner below the visible rows shows a stub on the visible tile");
           // A same-instant tap order that leaves exactly one space free with a linked front card (searched on a copy).
           let plan = null; const X = E.sim(app.B, rulesOf("normal")), buf = X.save();
-          const dfs = (ord) => { if (X.status !== E.PLAYING) return null; if (X.lineLen === X.open - 1) { for (let j = 0; j < E.NCOL; j++) if (X.front(j) >= 0 && X.partner(X.front(j)) >= 0 && X.refused(j)) return { ord, j }; return null; }
+          const dfs = (ord) => { if (X.status !== E.PLAYING) return null; if (X.lineLen === X.open - 1) { for (let j = 0; j < E.NCOL; j++) if (X.front(j) >= 0 && X.partner(X.front(j)) >= 0 && X.why(j) === 2) return { ord, j }; return null; }
             const b2 = X.save(); for (let j = 0; j < E.NCOL; j++) { if (X.front(j) < 0 || X.partner(X.front(j)) >= 0 || X.refused(j)) continue; X.play(j); const got = dfs(ord + j); X.load(b2); if (got) return got; } return null; };
           plan = dfs(""); X.load(buf);
           if (ok(!!plan, "linked refusal: found taps that leave one space free with a linked card at the front")) {
@@ -1661,22 +1690,32 @@
             const b0 = snap(), c0 = app.cues.blocked | 0, blocked = app.cards[j].classList.contains("blocked"), played = playCol(j);
             ok(app.S.lineLen === app.S.open - 1 && blocked && !played && snap() === b0 && app.S.status === E.PLAYING, "linked refusal: one space free, the linked card wears the lock; its tap changes nothing (engine state, tray, line, board byte-identical)");
             ok((app.cues.blocked | 0) === c0 + 1 && $("toast").textContent === LY.linkedText && (app.V.calm || (app.cards[j].getAnimations().length > 0 && (!pt || pt.getAnimations().length > 0))), "linked refusal: both tiles shake, the toast says '" + $("toast").textContent + "'"); } } }
+      // 20b. v4.3: a linked front card whose partner is buried (v4-all at load) wears the waiting look; its tap is refused
+      // with layout.linkedBuriedText and changes nothing; once the partner reaches its column's front the pair goes.
+      { const e = app.byId.get("v4-all");
+        if (ok(!!e, "linked (v4.3): v4-all is loaded")) {
+          startLevel(e.id); const S = app.S, j = [0, 1, 2, 3, 4].find((k) => S.front(k) >= 0 && S.why(k) === 3);
+          if (ok(j !== undefined, "linked (v4.3): v4-all opens with a linked front card whose partner is buried (why 3)")) {
+            const p = S.partner(S.front(j)), pj = app.B.cardCol[p], b = app.cards[j], snap = () => Array.from(app.S.save()).join(",") + "|" + app.slots.map((q) => q.className).join("/") + "|" + Array.from(app.V.disp).join("");
+            const b0 = snap(), c0 = app.cues.blocked | 0, look = b.classList.contains("waitpair") && !b.classList.contains("blocked") && /front/.test(b.getAttribute("aria-label")), played = playCol(j);
+            ok(look && !played && snap() === b0 && (app.cues.blocked | 0) === c0 + 1 && $("toast").textContent === LY.linkedBuriedText && shown($("toast")), "linked (v4.3): the card waits for its partner (the waiting look, '" + b.getAttribute("aria-label") + "'); its tap is refused, changes nothing, and the toast says '" + $("toast").textContent + "'");
+            out.notes.waitpair = e.id + " column " + j + ", partner in column " + pj; } } }
       // 21. The locked space (v4-locked): at load the last space is a padlocked socket and the key wears its brackets; on
       // the stored order the key pops, the unlock cue plays once, the padlock pops and the space opens.
       { const e = app.byId.get("v4-locked");
         if (ok(!!e, "lock: v4-locked is loaded")) {
           startLevel(e.id, "normal"); const S = app.S, last = app.slots[S.cap - 1], u0 = app.cues.unlock | 0;
           ok(S.open === S.cap - 1 && last.classList.contains("locked") && !last.hidden && getComputedStyle(last.querySelector(".pad")).display !== "none" && last.getAttribute("aria-label") === LY.lockedText && app.V.fxInfo().lockKey, "lock: the last space shows a padlock (" + S.open + " of " + S.cap + " open) and the key block wears its brackets");
-          let seen = null; const o = e.L.win.normal;
+          let seen = null; const o = winOf(e);
           for (let i = 0; i < o.length && !seen; i++) { playCol(+o[i]); for (let t = 0; t < ST.tickCapMs && app.S.busy && !seen; t += 16) { step(16); if (!app.S.locked) seen = { cls: last.className, cue: (app.cues.unlock | 0) - u0, key: app.V.fxInfo().lockKey, open: app.S.open }; } }
           ok(!!seen && /unlocking/.test(seen.cls) && !/locked /.test(seen.cls + " ") && seen.cue === 1 && !seen.key && seen.open === app.S.cap, "lock: the key pops: one unlock cue, the padlock pops, the space opens (" + JSON.stringify(seen) + ")");
           for (let t = 0; t < app.cfg.show.unlockMs + 100; t += 16) step(16);
           ok(!last.classList.contains("unlocking") && !last.classList.contains("locked"), "lock: once the padlock's pop ends the space is an ordinary one"); } }
       // 22. The generalized jam's sheet: one space free and every front card linked (selfTest.linkJamLevel), and a line
       // full but for the locked space (selfTest.lockJamLevel). Both fixtures win with the right order.
-      for (const [k, jam, win, re] of [["linkJamLevel", "2301", "00123", LY.jamLinkedText], ["lockJamLevel", "1234", "001234", LY.jamLockText]]) {
-        const e = fx(k); startLevel(e.id, "normal"); patient(jam); settleNow();
-        for (let t = 0; t < SH.settleCapMs + 3000 && !app.panel; t += 16) step(16);
+      for (const [k, jam, win, re] of [["linkJamLevel", "2301", "10023", LY.jamLinkedText], ["lockJamLevel", "1234", "001234", LY.jamLockText]]) { // v4.3: the linked fixture wins once its partner is a front card
+        const e = fx(k); startLevel(e.id); patient(jam); settleNow();
+        for (let t = 0; t < ST.tickCapMs && !app.panel; t += 16) step(16);
         const pl = $("p-line").getAttribute("aria-label") || "", tx = $("p-line").textContent, want = k === "linkJamLevel" ? pl.indexOf(re) === 0 && tx.indexOf(re) === 0 : pl.slice(-re.length) === re && tx.slice(-re.length) === re;
         ok(app.S.status === E.FAILED && app.S.reason === "jam" && app.panel === "fail" && want && chipCheck() === true, k + ": at rest every front card is refused: the sheet says why (" + tx + " / " + pl + ")");
         startLevel(e.id, "normal"); patient(win); settleNow(); ok(app.S.status === E.WON, k + ": the right order wins"); }
@@ -1688,21 +1727,24 @@
           for (let i = 0; i + 3 < v.length; i += 2) if (Math.abs(v[i] - v[i + 2]) < 0.05 && Math.abs(v[i + 1] - v[i + 3]) > 0.5) seg.push([v[i], Math.min(v[i + 1], v[i + 3]), Math.max(v[i + 1], v[i + 3])]); }
         for (let u = 0; u < seg.length; u++) for (let w = u + 1; w < seg.length; w++) if (Math.abs(seg[u][0] - seg[w][0]) < 1 && Math.min(seg[u][2], seg[w][2]) - Math.max(seg[u][1], seg[w][1]) > 0) return "two rods share the gutter at x " + Math.round(seg[u][0]);
         return true; };
-      for (const id of ["v4-linked", "v4-all", "e3-62", "e3-67", "e4-78", "e4-89"]) { const e = app.byId.get(id); if (!e) continue; startLevel(id, "normal"); let bad = rodClear(), cb = chainClear(), gb = rodGlyph(), lc = laneClash(), n = 0;
-        for (const ch of e.L.win.normal) { if (bad !== true || cb !== true || gb !== true || lc !== true) break; playCol(+ch); settleNow(); bad = rodClear(); cb = chainClear(); gb = rodGlyph(); lc = laneClash(); n++; }
+      for (const id of ["v4-linked", "v4-all"].concat(app.levels.filter((x) => x.L.links && x.L.links.length).slice(0, 4).map((x) => x.id))) { const e = app.byId.get(id); if (!e) continue; startLevel(id); let bad = rodClear(), cb = chainClear(), gb = rodGlyph(), lc = laneClash(), n = 0;
+        for (const ch of winOf(e)) { if (bad !== true || cb !== true || gb !== true || lc !== true) break; playCol(+ch); settleNow(); bad = rodClear(); cb = chainClear(); gb = rodGlyph(); lc = laneClash(); n++; }
         ok(bad === true && cb === true && gb === true && lc === true, id + ": after each of " + n + " taps every rod lands on its two tiles and crosses no third, no rod or rivet touches a count, no chain tag covers one, no two rods share a lane (" + bad + ", " + gb + ", " + cb + ", " + lc + ")"); }
-      if (app.byId.has("v4-linked")) { startLevel("v4-linked", "normal"); const j = app.cards.findIndex((b, k) => app.S.front(k) >= 0 && app.S.partner(app.S.front(k)) >= 0);
+      if (app.byId.has("v4-linked")) { startLevel("v4-linked"); const o = winOf(app.entry); let i = 0; // v4.3: the stored order up to its first pair (both cards at a front)
+        for (; i < o.length && app.S.partner(app.S.front(+o[i])) < 0; i++) { playCol(+o[i]); settleNow(); }
+        const j = i < o.length ? +o[i] : -1;
         if (ok(j >= 0 && playCol(j), "B1: a linked front card plays")) { for (let t = 0; t < 350; t += 16) step(16); const a = slotClear(), lk = app.slots.filter((q) => q.classList.contains("linked")).length; settleNow(); const b = slotClear();
           ok(a === true && b === true && lk === 2, "B1: both linked spaces wear the chain and every count stays clear of every badge, leaving and at rest (" + a + ", " + b + ")"); } }
-      { const e = app.byId.get(ST.overlapLevel) || app.levels[app.levels.length - 1]; startLevel(e.id, "easy"); fillLine(); step(16); step(16); for (let t = 0; t < 400; t += 16) step(16);
+      { const e = app.levels.find((x) => x.n >= 26 && tagOf(x) === "easy" && !x.L.links) || app.levels[app.levels.length - 1]; startLevel(e.id); fillLine(); step(16); step(16); for (let t = 0; t < 400; t += 16) step(16); // v4.3: an Easy level (6 spaces)
         const c = slotClear(); ok(c === true && app.slots.some((q) => q.classList.contains("work")), "B1: a full Easy line of working squads (" + app.S.cap + " spaces" + ($("line").classList.contains("tight") ? ", tight" : "") + "): every count clear of every badge (" + c + ")"); }
-      // 24. v4 M4, the Gallery: every picture's stored order on every difficulty, played patiently through playCol (the
+      // 24. v4 M4, the Gallery: every picture's stored order on its tag (v4.3), played patiently through playCol (the
       // board matches the rules, every sapper home); the level's palette on the tiles, the spaces' aria and the board;
       // sappers coming in from the edges; the Gallery screen locked before gallery.openAt is won and open after, a won
-      // picture in colour with its title; a win recorded in the save's gal and the win sheet's next picture.
+      // picture in colour with its title; a win recorded in the save's gal and the win sheet's next picture. v4.3: the
+      // pictures open one at a time (the rest padlocked silhouettes a tap can't start).
       if (app.gal.length) {
         const GC = app.cfg.gallery; let wins = 0, total = 0;
-        for (const e of app.gal) for (const d of DIFFS) { total++; startLevel(e.id, d); const good = patient(e.L.win[d] || ""); settleNow();
+        for (const e of app.gal) { const d = tagOf(e); total++; startLevel(e.id); const good = patient(winOf(e)); settleNow();
           if (ok(good && app.S.status === E.WON && dispMatches() && allHome(), e.id + " " + d + ": the Gallery's stored order wins played patiently through play()")) wins++; }
         out.notes.gallery = wins + "/" + total;
         { const e = app.gal.find((x) => Object.keys(x.L.pal).length >= 5) || app.gal[0], P = e.L.pal; startLevel(e.id, "normal"); let bad = null;
@@ -1711,7 +1753,7 @@
             else if (app.cards[j].getAttribute("aria-label").toLowerCase().indexOf(want.n) !== 0) bad = "tile " + j + " reads '" + app.cards[j].getAttribute("aria-label") + "', not its colour's name " + want.n;
             else if (app.V.pal[m] !== want.c) bad = "the board draws " + m + " as " + app.V.pal[m]; }
           ok(!bad && app.V.sprites && !app.V.checkSprites().length, e.id + ": the tiles and the board use the picture's own colours, the tiles are named by colour (" + (bad || Object.keys(P).length + " colours") + ")");
-          const o = e.L.win.normal; playCol(+o[0]); let seen = { live: 0 }; for (let t = 0; t < 1200; t += 16) { step(16); const q = app.V.entryInfo(); if (q.live > seen.live) seen = q; }
+          const o = winOf(e); playCol(+o[0]); let seen = { live: 0 }; for (let t = 0; t < 1200; t += 16) { step(16); const q = app.V.entryInfo(); if (q.live > seen.live) seen = q; }
           ok(seen.live > 0 && seen.yard === seen.live && seen.crate === seen.live && seen.entry === seen.live && app.S.status === E.PLAYING, e.id + ": v4.1, the first squad's sappers leave their crate in the yard and come up through the entry square at the bottom (" + JSON.stringify(seen) + ")");
           settleNow(); const sl = app.slots.find((q) => q.classList.contains("full")); ok(!sl || sl.getAttribute("aria-label").toLowerCase().indexOf(P[app.S.spM[+app.slots.indexOf(sl)]].n) === 0, e.id + ": a space reads its colour's name (" + (sl ? sl.getAttribute("aria-label") : "no squad waiting") + ")"); }
         // Locked: a fresh save. Both buttons show the padlock and the hint; a tap on either never opens the Gallery.
@@ -1721,29 +1763,34 @@
         gb.click(); const s1 = app.screen; showScreen("map"); const mh = hitOK(mg); mg.click(); const s2 = app.screen; showScreen("gallery"); const s3 = app.screen;
         ok(s1 === "title" && s2 === "map" && s3 === "title" && mg.classList.contains("locked") && mh, "gallery: while locked, the title's and the map's buttons (hittable, padlocked) don't open it, nor does asking for the screen (" + [s1, s2, s3].join(", ") + ")");
         // Open: win the opening level. The buttons show the count; the screen shows every picture, dimmed.
-        Save.record(app.save.data, GC.openAt, "normal"); showScreen("title");
+        Save.record(app.save.data, GC.openAt); showScreen("title");
         ok(galOpen() && !gb.classList.contains("locked") && gb.querySelector(".gs").textContent === GC.count.replace("{n}", 0).replace("{t}", app.gal.length), "gallery: open once level " + GC.openAt + " is won; the button counts " + gb.querySelector(".gs").textContent);
         gb.click(); const tiles = Array.from(document.querySelectorAll("#gal-grid .gal-tile"));
         ok(app.screen === "gallery" && tiles.length === app.gal.length && !tiles.some((t) => t.classList.contains("done")) && $("gal-credits").textContent === GC.credits && !document.querySelector("#gallery a") && hitOK(tiles[0]), "gallery: the title's button opens the grid of " + tiles.length + " pictures, none cleared, the credits line in plain text (no links)");
         { const nxt = tiles.filter((t) => t.classList.contains("next")), chip = tiles[0].querySelector(".gp");
-          ok(nxt.length === 1 && nxt[0] === tiles[0] && chip.textContent === GC.playChip && shown(chip) && getComputedStyle(tiles[0]).borderTopColor !== getComputedStyle(tiles[1]).borderTopColor && tiles[0].getAttribute("aria-label") === fill(GC.nextAria, { n: app.gal[0].n }), "gallery (Critics 2 fix, V2): the first picture not yet cleared, and only it, wears the gold frame and the '" + chip.textContent + "' chip"); }
+          ok(nxt.length === 1 && nxt[0] === tiles[0] && chip.textContent === GC.playChip && shown(chip) && getComputedStyle(tiles[0]).borderTopColor !== getComputedStyle(tiles[1]).borderTopColor && tiles[0].getAttribute("aria-label").indexOf(fill(GC.nextAria, { n: app.gal[0].n })) === 0, "gallery (Critics 2 fix, V2): the first picture not yet cleared, and only it, wears the gold frame and the '" + chip.textContent + "' chip"); }
         const px = (c) => { const q = document.createElement("canvas"); q.width = c.width; q.height = c.height; const g = q.getContext("2d", { willReadFrequently: true }); g.drawImage(c, 0, 0); const d = g.getImageData(0, 0, c.width, c.height).data, s = new Set(); for (let i = 0; i < d.length; i += 4) s.add("#" + [d[i], d[i + 1], d[i + 2]].map((v) => v.toString(16).padStart(2, "0")).join("")); return s; };
-        const e0 = app.gal[1] || app.gal[0], i0 = app.gal.indexOf(e0), pal0 = new Set(Object.values(e0.L.pal).map((q) => q.c.toLowerCase())), dim0 = px(tiles[i0].querySelector("canvas"));
+        // v4.3: only the first picture is open; the second is a padlocked silhouette (two colours, gallery.silhouette) that
+        // a tap shakes and never starts.
+        { const t1 = tiles[1], sil = t1 ? px(t1.querySelector("canvas")) : new Set(), want = new Set(GC.silhouette.map((c) => c.toLowerCase())), s0 = app.screen, k0 = app.cues.blocked | 0; if (t1) t1.click();
+          ok(!t1 || (t1.classList.contains("locked") && !t1.classList.contains("next") && shown(t1.querySelector(".gk")) && [...sil].every((c) => want.has(c)) && app.screen === s0 && (app.cues.blocked | 0) === k0 + 1 && !tiles[0].classList.contains("locked")), "gallery (v4.3): picture 1 is open, picture 2 a padlocked silhouette (" + [...sil].join(" ") + ") that a tap shakes and never starts"); }
+        const e0 = app.gal[0], i0 = 0, pal0 = new Set(Object.values(e0.L.pal).map((q) => q.c.toLowerCase())), dim0 = px(tiles[i0].querySelector("canvas"));
         // Cleared: win a picture through its stored order; the save's gal holds it, the sheet offers the next picture.
-        startLevel(e0.id, "normal"); patient(e0.L.win.normal); settleNow(); tick(9000);
+        startLevel(e0.id); patient(winOf(e0)); settleNow(); tick(9000);
         const nx = nextPicture(e0);
-        ok(app.panel === "win" && $("p-title").textContent === GC.winTitle && $("p-primary").textContent === GC.nextBtn && (app.save.data.gal[e0.id] & 2) && !app.save.data.done[e0.id] && hitOK($("p-primary")), "gallery: a picture won goes in the save's gal (" + app.save.data.gal[e0.id] + "), the sheet says '" + $("p-title").textContent + "' and offers '" + $("p-primary").textContent + "'");
+        ok(app.panel === "win" && $("p-title").textContent === GC.winTitle && $("p-primary").textContent === GC.nextBtn && app.save.data.gal[e0.id] === 1 && !app.save.data.done[e0.id] && hitOK($("p-primary")), "gallery: a picture won goes in the save's gal (" + app.save.data.gal[e0.id] + "), the sheet says '" + $("p-title").textContent + "' and offers '" + $("p-primary").textContent + "'");
         { for (const an of $("panel").firstElementChild.getAnimations()) an.finish(); const pc = $("p-pic").firstElementChild, pr = pc.getBoundingClientRect(), cr = $("panel").firstElementChild.getBoundingClientRect(), cols = px(pc), cell = pr.height / (e0.L.h - 2), sc = sheetClear(true);
           out.notes.reportPic = Math.round(pr.width) + "x" + Math.round(pr.height) + " CSS px, " + cell.toFixed(2) + " a cell";
           const sp = $("stage-pic"), onStage = !shown($("p-pic")) && shown(sp), spr = sp.firstElementChild.getBoundingClientRect(), fr = $("frame").getBoundingClientRect(), scol = onStage ? px(sp.firstElementChild) : cols;
           if (onStage) out.notes.reportPic = "over the board, " + Math.round(spr.width) + "x" + Math.round(spr.height) + " CSS px";
           ok((shown($("p-pic")) ? pr.top >= cr.top && pr.bottom <= cr.bottom : onStage && spr.left >= fr.left && spr.right <= fr.right && spr.top >= fr.top && spr.bottom <= fr.bottom) && $("p-line").textContent === fill(GC.winLine, { title: e0.L.title }) && [...scol].every((c) => pal0.has(c)) && scol.size === pal0.size && cr.top >= -0.5 && cr.bottom <= innerHeight + 0.5 && sc === true && hitOK($("p-primary")) && hitOK($("p-secondary")),
             "gallery (Critics 2 fix, V2): the win shows the finished picture (" + out.notes.reportPic + ", all " + scol.size + " of its colours) on the sheet (or over the razed board where the sheet has no room), and the sheet fits the screen; '" + $("p-line").textContent + "' (" + sc + ")"); }
-        $("p-primary").click(); ok(app.entry === nx && app.screen === "play", "gallery: Next picture opens the next one not yet won (" + nx.id + ")");
+        $("p-primary").click(); ok(app.entry === nx && nx === app.gal[1] && app.screen === "play", "gallery: Next picture opens the next one, open now (" + nx.id + ")");
         $("btn-map").click(); const col = px(tiles[i0].querySelector("canvas"));
         ok(app.screen === "gallery" && tiles[i0].classList.contains("done") && tiles[i0].querySelector(".gn").textContent === e0.L.title && [...col].every((c) => pal0.has(c)) && ![...dim0].some((c) => pal0.has(c)), "gallery: the top bar's button goes back to the grid; the won picture shows in its own colours with its title (" + e0.L.title + "), the rest stay dimmed");
-        const saved = JSON.stringify(Save.sanitize(JSON.parse(JSON.stringify(app.save.data)), app.order, app.gal.map((x) => x.id)).gal), junk = Save.sanitize({ gal: { [e0.id]: 99, nope: 1, [app.gal[0].id]: "x" } }, app.order, app.gal.map((x) => x.id)).gal;
-        ok(saved === JSON.stringify(app.save.data.gal) && JSON.stringify(junk) === JSON.stringify({ [e0.id]: 3 }), "gallery: the save's gal reads back through sanitize; a bad mask is clamped, unknown ids and non-numbers are dropped");
+        ok(tiles[1].classList.contains("next") && !tiles[1].classList.contains("locked") && (!tiles[2] || tiles[2].classList.contains("locked")), "gallery (v4.3): with picture 1 cleared, picture 2 opens with the gold frame and Play chip; picture 3 stays padlocked");
+        const saved = JSON.stringify(Save.sanitize(JSON.parse(JSON.stringify(app.save.data)), app.order, app.gal.map((x) => x.id)).gal), junk = Save.sanitize({ gal: { [e0.id]: 99, nope: 1, [app.gal[1].id]: "x" } }, app.order, app.gal.map((x) => x.id)).gal;
+        ok(saved === JSON.stringify(app.save.data.gal) && JSON.stringify(junk) === JSON.stringify({ [e0.id]: 1 }), "gallery: the save's gal reads back through sanitize; a cleared mask reads as cleared, unknown ids and non-numbers are dropped");
         showScreen("title");
       }
       // 25. v4 M5, the meta layer. The home: one tap on Play opens the right level (a new save: level 1; mid-campaign: the
@@ -1759,12 +1806,11 @@
         ok($("play-lab").textContent === fill(HT.play, { n: app.levels[0].n }) && $("home-prog").textContent === "0/" + app.levels.length && $("home-coins").textContent === String(MT.coins.start) && $("home-lives").hidden && hitOK($("btn-play")) && hitOK($("btn-settings")),
           "home (a new save): Play reads '" + $("play-lab").textContent + "', progress " + $("home-prog").textContent + ", " + $("home-coins").textContent + " coins, no lives pill (meta.lives off); Play and the gear are hittable");
         $("btn-play").click(); ok(app.screen === "play" && app.entry === app.levels[0] && app.S.plays === 0 && !app.panel, "home: one tap on Play opens level 1, ready to play");
-        for (let i = 0; i < 40; i++) Save.record(app.save.data, app.order[i], "normal");
+        for (let i = 0; i < 40; i++) Save.record(app.save.data, app.order[i]);
         showScreen("title"); const ne = app.byId.get(Save.next(app.save.data, app.order));
         ok($("play-lab").textContent === fill(HT.play, { n: ne.n }) && $("home-prog").textContent === "40/" + app.levels.length && $("home-era").textContent === fill(HT.era, { e: ne.era, name: app.eras[ne.era - 1].name }), "home (mid-campaign): Play reads '" + $("play-lab").textContent + "', progress " + $("home-prog").textContent + ", " + $("home-era").textContent);
         { app.lastW = 0; paintTitle(); const ch = $("home-era").getBoundingClientRect(), ry = $("title").getBoundingClientRect().top + (parseFloat(getComputedStyle($("title")).getPropertyValue("--river-y")) || -1e9), hits = ["btn-play", "play-lab", "home-prog", "home-coins", "btn-settings"].filter((id) => over(ch, $(id).getBoundingClientRect()));
           if (over(ch, document.querySelector(".home h1").getBoundingClientRect())) hits.push("h1");
-          for (const b of document.querySelectorAll(".home .seg button")) if (over(ch, b.getBoundingClientRect())) hits.push(b.textContent);
           ok(Math.abs((ch.top + ch.bottom) / 2 - ry) < 1 && !hits.length && ch.left >= -0.5 && ch.right <= innerWidth + 0.5, "home (Critics 2 fix, m6): the era chip lies on the river at the castle's foot (centre " + Math.round((ch.top + ch.bottom) / 2) + ", river " + Math.round(ry) + "), so the crew (on the grass, 13 scene px under the river) stands clear; clear of the logo, the pills and the buttons (" + hits.join(", ") + ")"); }
         $("btn-play").click(); ok(app.screen === "play" && app.entry === ne, "home (mid-campaign): one tap on Play opens level " + ne.n);
         showScreen("title"); const tabsHit = hitOK($("btn-tomap")) && hitOK($("tab-home")) && hitOK($("btn-gallery")); $("btn-tomap").click(); const t1 = app.screen; $("btn-home").click(); const t2 = app.screen; $("tab-home").click(); const t3 = app.screen;
@@ -1818,27 +1864,27 @@
             ok(glow && app.S.lineLen === 0 && f >= 0 && app.B.cardM[f] === m && app.S.count(f) === n && app.cards[j].querySelector(".n").textContent === String(n) && inv().recall === 0, "Recall through its badge and a tap on the space: the waiting " + mat(m).crew + " (" + n + ") go back to column " + j + "'s front, the space is free; one spent (" + got.e.id + ")"); } }
         startLevel(app.levels[0].id, "normal"); inv().recall = 1; renderPowers(); app.pws[PWK.RECALL].click();
         ok(inv().recall === 1 && !app.pick && tx() === MT.power.noRecall, "Recall: no squad waiting: refused, nothing spent: '" + tx() + "'");
-        // The report: level 3 on Hard (not yet won there): coins for a first win on Hard, time, taps, the count-up.
-        { const e = app.byId.get("e1-03") || app.levels[2], o = e.L.win.hard, c0 = coins(), want = Meta.winCoins(MT, "hard", true);
-          startLevel(e.id, "hard"); patient(o.slice(0, -1)); tick(5000); playCol(+o[o.length - 1]); settleNow(); for (let t = 0; t < 12000 && !app.panel; t += 16) step(16);
+        // The report: the first Hard level not yet cleared (v4.3: coins by tag, a first-clear bonus), time, taps, the count-up.
+        { const e = app.levels.find((x) => tagOf(x) === "hard" && !app.save.data.done[x.id]) || app.levels[2], o = winOf(e), c0 = coins(), want = Meta.winCoins(MT, tagOf(e), true);
+          startLevel(e.id); patient(o.slice(0, -1)); tick(5000); playCol(+o[o.length - 1]); settleNow(); for (let t = 0; t < 12000 && !app.panel; t += 16) step(16);
           const R = app.report, early = $("p-coins").textContent; for (let t = 0; t < MT.report.countDelayMs + MT.report.countMs + 48; t += 16) step(16);
           ok(app.panel === "win" && !!R && R.coins === want && coins() === c0 + want && R.taps === app.S.plays && R.ms >= 5000 && $("p-time").textContent === Meta.clock(R.ms) && $("p-taps").textContent === String(R.taps) && early === "+0" && $("p-coins").textContent === "+" + want && !$("p-stats").hidden && $("p-pic").hidden && hitOK($("p-primary")),
-            "report (a first win on Hard): +" + want + " coins counted up (" + early + " -> " + $("p-coins").textContent + "), time " + $("p-time").textContent + ", taps " + $("p-taps").textContent + ", the medal (no picture: a siege level); the save's coins follow");
+            "report (a first clear of " + e.id + ", Hard): +" + want + " coins counted up (" + early + " -> " + $("p-coins").textContent + "), time " + $("p-time").textContent + ", taps " + $("p-taps").textContent + ", the first-clear line '" + $("p-stats").children[2].querySelector("em").textContent + "' (no picture: a siege level); the save's coins follow");
           if (app.wide) { for (const an of $("panel").firstElementChild.getAnimations()) an.finish(); const sh = $("panel").getBoundingClientRect(), rl = $("rail").getBoundingClientRect(), pw = $("powers").getBoundingClientRect(), cd = $("panel").firstElementChild, k = cd.scrollHeight;
             ok(sh.top <= rl.top + 0.5 && sh.bottom >= rl.bottom - 0.5 && (sh.height <= Math.max(rl.height, k) + 12) && (document.body.classList.contains("short") || sh.bottom < pw.bottom - 1), "report (Critics 2 fix, m8): on a wide screen the win sheet covers the rail and is the rail's height or its content's (" + Math.round(sh.height) + " px against the rail's " + Math.round(rl.height) + ", content " + k + ", sheet " + Math.round(sh.top) + "-" + Math.round(sh.bottom) + ", rail " + Math.round(rl.top) + "-" + Math.round(rl.bottom) + "); the power-up bar's foot stays in view"); }
-          const firstEm = $("p-stats").children[0].querySelector("em").textContent; startLevel(e.id, "hard"); patient(o.slice(0, -1)); tick(2000); playCol(+o[o.length - 1]); settleNow(); for (let t = 0; t < 12000 && !app.panel; t += 16) step(16);
+          const firstEm = $("p-stats").children[0].querySelector("em").textContent; startLevel(e.id); patient(o.slice(0, -1)); tick(2000); playCol(+o[o.length - 1]); settleNow(); for (let t = 0; t < 12000 && !app.panel; t += 16) step(16);
           const R2 = app.report, b = Meta.bestOf(app.save.data, e.id);
-          ok(R2.coins === Meta.winCoins(MT, "hard", false) && R2.newMs && !R2.newTaps && $("p-stats").children[0].querySelector("em").textContent === MT.report.newBest && $("p-stats").children[1].querySelector("em").textContent === fill(MT.report.best, { v: R.taps }) && b[2] === R2.ms && b[5] === R.taps && firstEm === MT.report.first,
-            "report (again): +" + R2.coins + " (no new medal); faster: '" + MT.report.newBest + "'; taps tied: '" + $("p-stats").children[1].querySelector("em").textContent + "'; the save keeps the best of each"); }
-        if (app.byId.has("v4-linked")) { const c0 = coins(); startLevel("v4-linked", "normal"); patient(app.entry.L.win.normal); settleNow(); for (let t = 0; t < 12000 && !app.panel; t += 16) step(16); ok(app.panel === "win" && coins() === c0 && $("p-stats").hidden, "report: a debug level earns nothing and shows no report rows"); }
-        if (app.gal.length) { const g = app.gal[0], c0 = coins(); startLevel(g.id, "easy"); patient(g.L.win.easy); settleNow(); for (let t = 0; t < 12000 && !app.panel; t += 16) step(16);
-          ok(app.panel === "win" && coins() === c0 + Meta.winCoins(MT, "easy", true) && !$("p-stats").hidden && Meta.bestOf(app.save.data, g.id)[3] === app.report.taps, "report: a Gallery picture gets the same report (+" + app.report.coins + " coins, best kept per picture)"); }
-        { showScreen("map"); const er = app.eras[0], rc = er.sec.querySelector(".rc"), ls = app.levels.filter((e) => e.era === 1), won = ls.filter((e) => app.save.data.done[e.id]).length, cs = ls.reduce((a, e) => a + Meta.bestOf(app.save.data, e.id)[6], 0);
-          ok(rc.querySelector(".rc-n").textContent === fill(MT.eraCard.cleared, { n: won, t: ls.length }) && rc.querySelector(".rc-c b").textContent === String(cs) && +rc.querySelectorAll(".rc-m b")[2].textContent === ls.filter((e) => app.save.data.done[e.id] & 4).length, "map: Era 1's report card: " + rc.querySelector(".rc-n").textContent + ", medals E/N/H " + Array.from(rc.querySelectorAll(".rc-m b")).map((b) => b.textContent).join("/") + ", " + cs + " coins"); }
+          ok(R2.coins === Meta.winCoins(MT, "hard", false) && R2.newMs && !R2.newTaps && $("p-stats").children[0].querySelector("em").textContent === MT.report.newBest && $("p-stats").children[1].querySelector("em").textContent === fill(MT.report.best, { v: R.taps }) && b[0] === R2.ms && b[1] === R.taps && firstEm === MT.report.first && $("p-stats").children[2].querySelector("em").textContent === "",
+            "report (again): +" + R2.coins + " (no first-clear bonus); faster: '" + MT.report.newBest + "'; taps tied: '" + $("p-stats").children[1].querySelector("em").textContent + "'; the save keeps the best of each"); }
+        if (app.byId.has("v4-linked")) { const c0 = coins(); startLevel("v4-linked"); patient(winOf(app.entry)); settleNow(); for (let t = 0; t < 12000 && !app.panel; t += 16) step(16); ok(app.panel === "win" && coins() === c0 && $("p-stats").hidden, "report: a debug level earns nothing and shows no report rows"); }
+        if (app.gal.length) { const g = app.gal[0], c0 = coins(); startLevel(g.id); patient(winOf(g)); settleNow(); for (let t = 0; t < 12000 && !app.panel; t += 16) step(16);
+          ok(app.panel === "win" && coins() === c0 + Meta.winCoins(MT, tagOf(g), true) && !$("p-stats").hidden && Meta.bestOf(app.save.data, g.id)[1] === app.report.taps, "report: a Gallery picture gets the same report (+" + app.report.coins + " coins, best kept per picture)"); }
+        { showScreen("map"); const er = app.eras[0], rc = er.sec.querySelector(".rc"), ls = app.levels.filter((e) => e.era === 1), won = ls.filter((e) => app.save.data.done[e.id]).length, cs = ls.reduce((a, e) => a + Meta.bestOf(app.save.data, e.id)[2], 0);
+          ok(rc.querySelector(".rc-n").textContent === fill(MT.eraCard.cleared, { n: won, t: ls.length }) && rc.querySelector(".rc-c b").textContent === String(cs) && !rc.querySelector(".rc-m"), "map: Era 1's report card: " + rc.querySelector(".rc-n").textContent + ", no medals (v4.3), " + rc.querySelector(".rc-c b").textContent + " coins"); }
         // Lives, forced on in a scratch copy of meta with a test clock.
         { let T = 1.8e12; const per = MT.livesRefillMin * 60000; app.meta = Object.assign({}, MT, { lives: true }); app.now = () => T; app.save = scratch(); showScreen("title");
           ok(!$("home-lives").hidden && $("home-lives").textContent === String(app.meta.livesMax) && hitOK($("btn-play")), "lives on (a scratch copy of meta): the home shows " + app.meta.livesMax + " lives");
-          if (jp) { startLevel(jp.e.id, "normal"); patient(jp.p.prefix); for (let t = 0; t < SH.settleCapMs + 3000 && !app.panel; t += 16) step(16);
+          if (jp) { startLevel(jp.e.id); patient(jp.p.prefix); for (let t = 0; t < ST.tickCapMs && !app.panel; t += 16) step(16);
             ok(app.panel === "fail" && Meta.lives(app.save.data, app.meta, T).n === app.meta.livesMax - 1 && $("p-line").textContent.indexOf(fill(HT.lifeLost, { n: app.meta.livesMax - 1 })) >= 0, "lives on: a fail costs one (the sheet says '" + fill(HT.lifeLost, { n: app.meta.livesMax - 1 }) + "')"); }
           app.save.data.lives = { n: 0, at: T }; showScreen("title"); const lab0 = $("play-lab").textContent; $("btn-play").click();
           ok(lab0 === fill(HT.noLives, { t: Meta.clock(per, true) }) && $("btn-play").classList.contains("wait") && app.screen === "title" && tx() === fill(HT.noLivesToast, { t: Meta.clock(per, true) }), "lives on, none left: Play reads '" + lab0 + "' and a tap starts nothing (the toast says when)");
@@ -1847,6 +1893,22 @@
           app.meta = MT; app.now = was.now; app.save = scratch(); showScreen("title");
           ok(app.cfg.meta.lives === false && $("home-lives").hidden && !$("btn-play").classList.contains("wait"), "lives: the shipped default is off; no heart shows on the home"); }
       }
+      // 26. v4.3. The tags: every map button wears its level's (layout.tags; Normal unmarked), Hard in the warning colour
+      // and Easy in the calm one; the top bar's chip on a Hard and a Normal level. The save is format 2 (no difficulty).
+      // A space frees at its squad's last pickup: on real ticks the space shows free while its carriers still walk home,
+      // and the sheet waits until every sapper is home.
+      { showScreen("map"); const bad = app.levels.filter((e) => { const i = e.node.querySelector(".tag"), t = (LY.tags || {})[tagOf(e)] || ""; return i.textContent !== t || i.hidden !== !t || !i.classList.contains("tag-" + tagOf(e)); }).map((e) => e.id);
+        const hn = app.levels.find((e) => tagOf(e) === "hard"), en = app.levels.find((e) => tagOf(e) === "easy"), hc = hn && getComputedStyle(hn.node.querySelector(".tag")).backgroundColor, ec = en && getComputedStyle(en.node.querySelector(".tag")).backgroundColor;
+        ok(!bad.length && hn && en && hc !== ec && shown(hn.node.querySelector(".tag")), "tags (v4.3): every map button wears its level's tag (Hard " + hc + ", Easy " + ec + ", Normal unmarked)" + (bad.length ? " (" + bad.slice(0, 5).join(",") + ")" : ""));
+        startLevel(hn.id); const hk = $("tag-chip"), hr = shown(hk) && hk.textContent === LY.tags.hard && hk.classList.contains("tag-hard") && app.S.cap === rulesOf("hard").hold;
+        const nn = app.levels.find((e) => tagOf(e) === "normal"); startLevel(nn.id); const nr = $("tag-chip").hidden && app.S.cap === rulesOf("normal").hold;
+        ok(hr && nr, "tags (v4.3): the top bar shows " + hn.id + "'s Hard tag (4 spaces) and nothing on " + nn.id + " (Normal, 5 spaces)");
+        ok(app.save.data.v === Save.VERSION && Save.VERSION === 2 && !("diff" in app.save.data.settings) && !document.querySelector(".seg") && !$("p-medals"), "save (v4.3): format 2, no difficulty setting; no difficulty picker anywhere, no medals"); }
+      { const e = app.levels.find((x) => x.n >= 26 && tagOf(x) === "normal" && !x.L.links) || app.levels[30]; startLevel(e.id); const o = winOf(e); playCol(+o[0]);
+        const s0 = app.S.order(app.ord)[0]; let seen = null;
+        for (let t = 0; t < ST.tickCapMs && !seen && app.S.busy; t += 16) { step(16); if (!app.S.spQ[s0] && app.S.out > 0) seen = { out: app.S.out, live: app.V.live, slot: app.slots[s0].classList.contains("full"), ms: app.S.now }; }
+        ok(!!seen && seen.live > 0 && !seen.slot, "pickup (v4.3): " + e.id + "'s first squad frees its space at its last pickup while " + (seen ? seen.out : "?") + " carriers still walk home (the space shows free, " + (seen ? seen.live : 0) + " runners drawn)");
+        out.notes.pickup = e.id + (seen ? " at " + seen.ms + " ms, " + seen.out + " carrying" : ""); }
       // 14. Opaque sprite caches.
       const bad = app.V.checkSprites(); ok(!bad.length, "sprites: every opaque cache is opaque" + (bad.length ? " (" + bad.join(",") + ")" : ""));
     } catch (err) { ok(false, "selfTest threw: " + (err && err.message) + " " + (err && err.stack ? err.stack.split("\n")[1] : "")); }
@@ -1860,27 +1922,30 @@
     out.ms = Math.round(performance.now() - T0);
     return out;
   }
-  const SP = { play: playCol, state, load: (id, diff) => { startLevel(resolve(id), diff); return state(); }, retry: () => { retry(); return state(); }, tick,
+  // v4.3: load(id) plays the level on its own tag (a second argument is ignored: no difficulty picker).
+  const SP = { play: playCol, state, load: (id) => { startLevel(resolve(id)); return state(); }, retry: () => { retry(); return state(); }, tick,
     solve: (nodes) => solveHere(nodes), selfTest, coach: coachState, cues: () => Object.assign({}, app.cues), fx: () => app.V.fxInfo(), hits: () => app.V.hitInfo(), runners: () => app.V.runners(),
-    paused: () => app.paused, upright: () => ({ on: app.upright, needed: uprightNeeded(innerWidth, innerHeight, coarse()), coarse: coarse() }), pause: () => { pause(); return app.paused; }, resume: () => { resume(); return app.paused; }, winOrder: (d) => (app.entry ? app.entry.L.win[d || app.diff] : null),
-    lossPlan: (id, d) => lossPlan(resolve(id), d), hitPlan: (id, d) => { const e = app.byId.get(resolve(id)), T = app.cfg.selfTest; return e ? search(e, d || app.diff, (S) => S.hits > 0, T.searchTries, T.searchSeed) : null; }, settle: () => { settleNow(); return state(); }, reachable: (m) => (app.S ? app.S.reachable(m) : 0),
+    paused: () => app.paused, upright: () => ({ on: app.upright, needed: uprightNeeded(innerWidth, innerHeight, coarse()), coarse: coarse() }), pause: () => { pause(); return app.paused; }, resume: () => { resume(); return app.paused; }, winOrder: () => (app.entry ? winOf(app.entry) : null),
+    lossPlan: (id) => { const e = app.byId.get(resolve(id)) || app.entry; return e ? jamPlan(e, tagOf(e)) : null; }, hitPlan: (id) => { const e = app.byId.get(resolve(id)), T = app.cfg.selfTest; return e ? search(e, tagOf(e), (S) => S.hits > 0, T.searchTries, T.searchSeed) : null; }, settle: () => { settleNow(); return state(); }, reachable: (m) => (app.S ? app.S.reachable(m) : 0),
     // Screens for the harness: fill the line with rushed taps; stage k stuck and w working squads on level n (or the first
     // level from n whose fronts allow it). Both return the state plus the taps made.
     fill: () => { const taps = fillLine(); return Object.assign(state(), { taps }); },
     // v4 M2: load a selfTest fixture level (config selfTest[name], e.g. linkJamLevel) like a debug level (no save).
-    fixture: (k, diff) => { const L = app.cfg.selfTest[k]; if (!L || !L.grid) return null; const id = "fx-" + k; if (!app.byId.has(id)) app.byId.set(id, { L, id, n: 0, era: 1, idx: -1, node: null, debug: true }); startLevel(id, diff); return state(); },
-    stage: (n, k, w) => { for (const e of app.levels) { if (e.n < n) continue; startLevel(e.id, "normal"); const tp = stageLine(k, w); if (tp) return Object.assign(state(), { taps: tp }); } return null; },
+    fixture: (k) => { const L = app.cfg.selfTest[k]; if (!L || !L.grid) return null; const id = "fx-" + k; if (!app.byId.has(id)) app.byId.set(id, { L, id, n: 0, era: 1, idx: -1, node: null, debug: true }); startLevel(id); return state(); },
+    stage: (n, k, w) => { for (const e of app.levels) { if (e.n < n) continue; startLevel(e.id); const tp = stageLine(k, w); if (tp) return Object.assign(state(), { taps: tp }); } return null; },
     screen: (name) => { showScreen(name); return state(); }, skip: () => { skip(); return state(); }, speed: (k) => { setSpeed(k, false); return app.speed; },
     // Cost of n board draws right now (ms): the harness calls it mid-show.
     perf: (n) => { const k = Math.max(1, Math.min(500, n | 0 || 60)); let max = 0; const t0 = performance.now(); for (let i = 0; i < k; i++) { const a = performance.now(); app.V.draw(); max = Math.max(max, performance.now() - a); } return { mean: +((performance.now() - t0) / k).toFixed(3), max: +max.toFixed(3), runners: app.V.live }; },
     sprites: () => app.V.checkSprites(),
     // v4 M4: win siege levels 1 to gallery.openAt in the live save (the harness opens the Gallery this way); the ids of
     // the Gallery's pictures; the board's runners by entry edge.
-    unlockGallery: () => { const k = app.order.indexOf(app.cfg.gallery.openAt); for (let i = 0; i <= k; i++) Save.record(app.save.data, app.order[i], "normal"); writeSave(); renderGalButtons(); return galOpen(); },
+    unlockGallery: () => { const k = app.order.indexOf(app.cfg.gallery.openAt); for (let i = 0; i <= k; i++) Save.record(app.save.data, app.order[i]); writeSave(); renderGalButtons(); return galOpen(); },
     gallery: () => app.gal.map((e) => e.id), entry: () => app.V.entryInfo(),
     // v4 M5: win siege levels 1..n (normal) in the live save (screens for the harness and the critics); a power-up through
     // its badge (k), and for the Quartermaster or Recall a target (the tile [j, d] or the space); the meta state.
-    unlockTo: (n) => { for (let i = 0; i < n && i < app.order.length; i++) Save.record(app.save.data, app.order[i], "normal"); app.save.data.last = Save.next(app.save.data, app.order); writeSave(); renderHome(); return Object.keys(app.save.data.done).length; },
+    // v4.3: clearPictures(k): clear the Gallery's first k pictures in the live save (the screens' sequential Gallery).
+    clearPictures: (k) => { for (let i = 0; i < k && i < app.gal.length; i++) Save.record(app.save.data, app.gal[i].id, "gal"); writeSave(); if (app.screen === "gallery") renderGallery(); return Object.keys(app.save.data.gal).length; },
+    unlockTo: (n) => { for (let i = 0; i < n && i < app.order.length; i++) Save.record(app.save.data, app.order[i]); app.save.data.last = Save.next(app.save.data, app.order); writeSave(); renderHome(); return Object.keys(app.save.data.done).length; },
     power: (k, a) => { const got = onPower(k); if (a == null || !app.pick) return got; return Array.isArray(a) ? pickTile(a[0], a[1]) : pickSlot(a); },
     meta: () => ({ coins: app.save.data.coins, inv: Object.assign({}, app.save.data.inv), lives: Meta.lives(app.save.data, app.meta, app.now()), pick: app.pick ? app.pick.k : -1, rows: app.rows, report: app.report, used: app.S ? E.POWERS.map((k, i) => app.S.used(i)) : null }),
     setMeta: (o) => { Object.assign(app.save.data, o || {}); writeSave(); renderHome(); if (app.S) renderPowers(); return app.save.data.coins; },

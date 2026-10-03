@@ -16,7 +16,7 @@
    v4 Critics 2 fix: the coach wraps to two lines in the top bar; the Gallery win's framed picture (#p-pic, #stage-pic);
    the Gallery's next tile (gold frame, Play chip); a buy short of coins (.pw.poor); 44 px badges in small frames; the
    landscape bar's .head and .grid; the home's era chip on the river; era report cards as a band. */
-@font-face { font-family: "Jersey 10"; src: url("fonts/Jersey10-Regular.ttf?v=27") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Jersey 10"; src: url("fonts/Jersey10-Regular.ttf?v=28") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
 :root { --bg: #2e2935; --ink: #221a26; --cream: #f3ead8; --cream-soft: #cfc4d6;
   --tray: #ddd3c0; --tray-hi: #ece5d6; --tray-edge: #c4b89e; --tray-ink: #3a3027; --tray-soft: #6b5c47; --socket: #c3b697; --socket-lo: #a99a7b;
   --band1: #d0c6b4; --band2: #c2baa9; /* the rows' tray bands, set from layout.fade.band at boot */
@@ -62,20 +62,22 @@ button.big { min-height: 58px; font-size: 36px; width: 100%; }
 .tog-mute[aria-pressed="true"] .cross { display: inline; }
 .tog-mute[aria-pressed="true"] .waves { display: none; }
 
-/* Difficulty: three stone keys, the chosen one gold. */
-.seg { display: flex; gap: 6px; }
-.seg button { flex: 1; min-height: 42px; font-size: 24px; padding: 0 6px; }
-.seg button[aria-pressed="true"] { background: var(--gold); box-shadow: inset 0 3px 0 var(--gold-hi), inset 0 -5px 0 var(--gold-lo), 0 3px 0 rgba(0,0,0,.5); }
+/* v4.3: no difficulty picker. A level's tag (config layout.tags): Hard a strong warning red, Easy a calm teal, Normal
+   unmarked. On the map's buttons, the Gallery's tiles, the top bar and the report. */
+.tag { display: inline-block; font-family: var(--px); font-style: normal; font-weight: 400; line-height: 1; padding: 2px 5px 1px; border-radius: 4px; border: 2px solid var(--ink); text-transform: uppercase; letter-spacing: .5px; white-space: nowrap; }
+.tag[hidden] { display: none; }
+.tag-hard { background: #d42a2a; color: #fff6e8; box-shadow: inset 0 -2px 0 #8e1515; }
+.tag-easy { background: #2f9e8f; color: #effff9; box-shadow: inset 0 -2px 0 #1d6a60; }
 
-/* Top bar: map, level number and era, difficulty, retry, 2x, mute. */
+/* Top bar: map, level number and era, the level's tag, retry, 2x, mute. */
 #top { flex: none; display: flex; align-items: center; gap: 6px; height: 50px; padding: 0 1px; }
 #lvl { flex: 1; min-width: 0; display: flex; align-items: center; gap: 7px; white-space: nowrap; overflow: hidden; }
-/* The level's name over its difficulty, beside the number; main.js steps the name's size down until it fits (no ellipsis). */
+/* The level's name over its tag (v4.3), beside the number; main.js steps the name's size down until it fits (no ellipsis). */
 .lvl-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
 #lvl-num { flex: none; font-family: var(--px); font-size: 22px; line-height: 1; padding: 5px 7px 4px; border-radius: 5px; border: 2px solid var(--ink);
   background: var(--gold); color: var(--ink); box-shadow: inset 0 -3px 0 var(--gold-lo); font-variant-numeric: tabular-nums; }
 #lvl-name { display: block; max-width: 100%; font-family: var(--px); font-size: 20px; line-height: .9; overflow: hidden; text-shadow: 0 2px 0 var(--ink); }
-#diff-chip { flex: none; font-family: var(--px); font-size: 14px; line-height: 1; padding: 1px 5px 0; border-radius: 4px; background: var(--pill); color: var(--gold-hi); }
+#tag-chip { flex: none; font-size: 14px; padding: 1px 5px 0; border-width: 1.5px; }
 
 /* Play: the board takes the height; the holding line and the tray sit under it (portrait) or beside it (wide). */
 #play { flex: 1; min-height: 0; display: flex; flex-direction: column; }
@@ -185,8 +187,11 @@ body.rows2:not(.wide) #rail { margin-bottom: 3px; } body.rows2:not(.wide) #pw-co
 #line-wrap.march #line-head { color: var(--tray-march); }
 @keyframes fullpulse { 50% { box-shadow: 0 0 0 3px rgba(255,90,60,1), 0 0 14px 3px rgba(255,90,60,.55); } }
 /* A blocked card is dimmed by a veil under its count (never a filter: the counts sit above the rods). */
-.card.blocked::before { content: ""; position: absolute; inset: 0; border-radius: 6px; background: rgba(34,26,38,.34); pointer-events: none; }
-.card.blocked, .card.safe { overflow: visible; }
+.card.blocked::before, .card.waitpair::before { content: ""; position: absolute; inset: 0; border-radius: 6px; background: rgba(34,26,38,.34); pointer-events: none; }
+/* v4.3: a linked front card whose partner is still buried waits for it: the veil, a dashed gold edge and a chain badge. */
+.card.waitpair::before { outline: 2px dashed rgba(255,226,122,.95); outline-offset: -5px; }
+.card.blocked, .card.safe, .card.waitpair { overflow: visible; }
+.card.waitpair::after { content: ""; position: absolute; right: -5px; top: -6px; width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--ink); background: #8a6d4c center / 12px 12px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M5 7l2-2M4.4 8.6a1.7 1.7 0 0 1-2.4-2.4l1.4-1.4a1.7 1.7 0 0 1 2.4 0M7.6 3.4a1.7 1.7 0 0 1 2.4 2.4L8.6 7.2a1.7 1.7 0 0 1-2.4 0' fill='none' stroke='%23fff' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E"); }
 .card.blocked::after, .card.safe::after { content: ""; position: absolute; right: -5px; top: -6px; width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--ink); background-position: center; background-size: 12px 12px; background-repeat: no-repeat; }
 .card.blocked::after { background-color: #5d5566; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M4 5.5V4a2 2 0 0 1 4 0v1.5' fill='none' stroke='%23fff' stroke-width='1.6'/%3E%3Crect x='2.5' y='5.5' width='7' height='5' rx='1' fill='%23fff'/%3E%3C/svg%3E"); }
 .card.safe::after { background-color: #3fbf5a; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.5l2.3 2.3L9.5 3.5' fill='none' stroke='%23fff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
@@ -292,7 +297,7 @@ body.cb .tile.mys .gl { display: none; }
 .sheet .sheetcard { pointer-events: auto; width: 100%; max-width: 560px; min-height: 100%; display: flex; flex-direction: column; justify-content: center; border-bottom: 0; border-radius: 12px 12px 0 0; background: var(--parch); color: var(--parch-ink);
   padding: 12px 16px max(14px, env(safe-area-inset-bottom)); text-align: center; animation: sheetin .22s cubic-bezier(.3,1.4,.5,1); }
 .sheet.float .sheetcard { min-height: 0; border-bottom: 3px solid var(--ink); border-radius: 12px; padding-bottom: 12px; }
-.sheet.tight .p-title { font-size: 32px; } .sheet.tight .p-line { font-size: 19px; margin-bottom: 7px; } .sheet.tight #p-medals { margin: -2px 0 7px; } .sheet.tight .medal { width: 28px; height: 28px; font-size: 19px; }
+.sheet.tight .p-title { font-size: 32px; } .sheet.tight .p-line { font-size: 19px; margin-bottom: 7px; } .sheet.tight #p-tag { font-size: 16px; margin: -2px auto 5px; }
 .sheet.tight .sheetcard { padding-top: 7px; padding-bottom: max(9px, env(safe-area-inset-bottom)); } .sheet.tight .row button { min-height: 44px; font-size: 24px; }
 /* The jam sheet shows the jammed squads as the player sees them: a chip in the squad's colour with its count (the crew
    names stay in the sheet's aria-label). */
@@ -303,13 +308,9 @@ body.cb .chip .gl { display: inline-block; }
 @keyframes sheetin { 0% { transform: translateY(12px); opacity: .4; } 100% { transform: none; opacity: 1; } }
 .p-title { font-family: var(--px); font-size: 42px; margin: 2px 0 2px; }
 .p-line { font-family: var(--px); font-size: 22px; line-height: 1.05; color: var(--parch-soft); margin-bottom: 12px; }
-#p-medals { display: flex; justify-content: center; gap: 10px; margin: -4px 0 12px; }
-#p-medals[hidden] { display: none; }
-.medal { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--px); font-size: 22px; line-height: 1;
-  border: 3px solid var(--ink); background: #d9cfbd; color: #8a7f6a; }
-.medal.got { background: var(--gold); color: var(--ink); box-shadow: inset 0 -3px 0 var(--gold-lo); }
-.medal.new { animation: stamp .5s cubic-bezier(.3,1.6,.5,1) .15s both; }
-@keyframes stamp { 0% { transform: scale(2.2) rotate(-18deg); opacity: 0; } 100% { transform: none; opacity: 1; } }
+/* v4.3: the report wears the level's tag under its title (the medals are gone). */
+#p-tag { display: table; margin: -2px auto 9px; font-size: 20px; }
+#p-tag[hidden] { display: none; }
 .row { display: flex; gap: 10px; }
 .row button { flex: 1; min-width: 0; padding: 0 8px; }
 
@@ -328,19 +329,17 @@ body.cb .chip .gl { display: inline-block; }
   background: var(--bg) var(--wall, none) repeat; background-size: var(--wall-size, auto); border-bottom: 3px solid var(--ink); }
 .map-top h2 { margin: 0; font-family: var(--px); font-weight: 400; font-size: 34px; flex: 1; text-shadow: 0 2px 0 var(--ink); }
 #map-count { font-family: var(--px); font-size: 22px; color: var(--gold); font-variant-numeric: tabular-nums; text-shadow: 0 2px 0 var(--ink); }
-.map-seg { margin: 12px 0 4px; }
 #eras { display: flex; flex-direction: column; gap: 14px; padding: 10px 0 12px; }
 .era { border-radius: 8px; border: 3px solid var(--ink); background: rgba(20,16,28,.72); box-shadow: 0 5px 0 rgba(0,0,0,.4); padding: 8px 10px 12px; }
 .era .eye { font-family: var(--px); font-size: 17px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gold-hi); display: flex; justify-content: space-between; }
 .era h3 { margin: 0; font-family: var(--px); font-weight: 400; font-size: 30px; line-height: 1.05; }
 .era p { margin: 3px 0 10px; font-family: var(--px); font-size: 19px; line-height: 1.1; color: var(--cream-soft); }
 .nodes { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
-.node { min-height: 50px; padding: 0; border-radius: 10px; background: var(--parch); color: var(--parch-ink); font-size: 27px; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1;
+.node { position: relative; min-height: 50px; padding: 0; border-radius: 10px; background: var(--parch); color: var(--parch-ink); font-size: 27px; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1;
   box-shadow: inset 0 -4px 0 var(--parch-edge), 0 3px 0 rgba(0,0,0,.5); }
-.node i { font-style: normal; font-size: 10px; letter-spacing: 2px; min-height: 10px; color: var(--gold-dark); font-family: system-ui, sans-serif; }
+.node .tag { position: absolute; z-index: 1; top: -7px; right: -5px; font-size: 12px; padding: 1px 3px 0; border-width: 1.5px; } /* v4.3: its tag on the corner */
 .node.done { background: var(--gold-hi); box-shadow: inset 0 -4px 0 #e0c060, 0 3px 0 rgba(0,0,0,.5); }
 .node.locked { background: #6d6676; color: #d6cfdc; box-shadow: inset 0 -4px 0 #4f4957, 0 3px 0 rgba(0,0,0,.5); opacity: .45; }
-.node.locked i { display: none; }
 .node.locked::after { content: ""; width: 12px; height: 12px; margin-top: 1px; background: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M4 5.5V4a2 2 0 0 1 4 0v1.5' fill='none' stroke='%23fff' stroke-width='1.6'/%3E%3Crect x='2.5' y='5.5' width='7' height='5' rx='1' fill='%23fff'/%3E%3C/svg%3E"); }
 .node.next { animation: nodepulse 1.1s ease-in-out infinite; }
 @keyframes nodepulse { 50% { box-shadow: inset 0 -4px 0 var(--parch-edge), 0 3px 0 rgba(0,0,0,.5), 0 0 0 5px rgba(255,243,168,.85); } }
@@ -362,7 +361,7 @@ body.wide #stage { grid-column: 1; grid-row: 1; height: 100%; min-width: 0; }
 body.wide #side { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; height: var(--blk-h, auto); min-height: fit-content; max-height: 100%; }
 body.wide #top { order: 0; height: auto; padding: 12px 12px 10px; background: rgba(20,16,28,.62); border: 3px solid var(--ink); border-bottom: 0; border-radius: 12px 12px 0 0; }
 body.wide #rail { flex: none; margin: 0; padding: var(--tray-pad); gap: 12px; border-radius: 0 0 12px 12px; } /* ends at the queue (fix 2): the column's foot is brick */
-body.wide #lvl-name { font-size: 26px; } body.wide #diff-chip { font-size: 17px; }
+body.wide #lvl-name { font-size: 26px; } body.wide #tag-chip { font-size: 17px; }
 body.wide { --tile-h: 74px; --tile-n: 54px; --tile-gap: 8px; --gl-s: 18px; --slot-h: 62px; --slot-n: 44px; --man: 20px; --ch-s: 16px; --bd: 20px; --lk-s: 18px; --out-n: 16px; --coach-h: 48px; --pw-h: 176px; --pw-d: 84px; --pw-b: 28px; --pw-bfs: 23px; --tray-pad: 12px; }
 /* v4 M5: on wide screens the bar fills the side column's foot under the rail (no bare brick): a header with the coins,
    then the four badges with their names, in a row, or 2 x 2 with bigger badges once the foot is tall (main.js:
@@ -397,23 +396,24 @@ body.wide #map-play { display: block; max-width: 420px; margin: 0 auto; }
   body.wide #powers.grid { --pw-b: 22px; --pw-bfs: 18px; grid-template-columns: auto repeat(2, minmax(0, 1fr)); grid-template-rows: 1fr 1fr; row-gap: 8px; } /* m5: 2 x 2 (main.js sizePowers) */
   body.wide #powers.grid #pw-coins { grid-row: 1 / 3; }
   body.wide #powers.head { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: auto 1fr; row-gap: 8px; } body.wide #powers.head #pw-coins { grid-column: 1 / -1; justify-self: start; }
-  body.wide #lvl-name { font-size: 18px; } body.wide #diff-chip { font-size: 13px; } body.wide #line-head { font-size: 15px; }
-  button.big { min-height: 48px; font-size: 30px; } .seg button { min-height: 38px; }
+  body.wide #lvl-name { font-size: 18px; } body.wide #tag-chip { font-size: 13px; } body.wide #line-head { font-size: 15px; }
+  button.big { min-height: 48px; font-size: 30px; }
 }
 /* Short portrait (a small iframe): every row of chrome gives a few px so a 48-row board keeps 8 px cells. */
 @media (max-height: 640px) and (max-width: 700px) {
-  #top { height: 38px; } button.round { width: 36px; height: 36px; min-height: 36px; } #lvl-num { font-size: 18px; } #lvl-name { font-size: 19px; } #diff-chip { font-size: 16px; }
+  #top { height: 38px; } button.round { width: 36px; height: 36px; min-height: 36px; } #lvl-num { font-size: 18px; } #lvl-name { font-size: 19px; } #tag-chip { font-size: 16px; }
   :root { --tile-h: 38px; --tile-n: 28px; --tile-gap: 4px; --gl-s: 11px; --slot-h: 36px; --slot-n: 26px; --man: 13px; --ch-s: 10px; --bd: 12px; --lk-s: 11px; --out-n: 11px; --coach-h: 40px; --coach-fs: 19px; --tray-pad: 4px;
   }
   body.rows2:not(.wide) { --pw-h: 46px; --pw-d: 44px; --pw-b: 18px; --pw-bfs: 15px; } /* Critics 2 fix (m4): 44 px tap targets; a badge sits over the band's 2 px rims */
   #rail { margin-bottom: 3px; } #powers { border-width: 2px; border-radius: 10px; margin-bottom: max(4px, env(safe-area-inset-bottom)); } #pw-coins { --pill-h: 28px; --pill-fs: 18px; --ico: 16px; }
   #rail { margin: 3px 0 max(4px, env(safe-area-inset-bottom)); border-width: 2px; border-radius: 10px; } #frame { padding: 4px; }
-  #line-head { font-size: 14px; } #lvl-name { font-size: 17px; } #diff-chip { font-size: 12px; } }
-@media (prefers-reduced-motion: reduce) { #hand svg, .coach-on, .slot.last, .slot.work .men, #line-wrap.full.danger #line, .node.next, .medal.new { animation: none; } }
+  #line-head { font-size: 14px; } #lvl-name { font-size: 17px; } #tag-chip { font-size: 12px; } }
+@media (prefers-reduced-motion: reduce) { #hand svg, .coach-on, .slot.last, .slot.work .men, #line-wrap.full.danger #line, .node.next { animation: none; } }
 
 /* v4 M4, the Gallery: its buttons (a frame icon, the name and a second line: the hint while locked, the count when open)
-   and its screen, a grid of picture tiles (the thumbnail, then the title once won, and the E/N/H medals) with the
-   credits line under it. A locked button is dimmed stone with a padlock; it never opens the screen. */
+   and its screen, a grid of picture tiles (the thumbnail, then the title once won; v4.3 its tag, no medals) with the
+   credits line under it. A locked button is dimmed stone with a padlock; it never opens the screen. v4.3: the pictures
+   open one at a time; a locked one is its silhouette under a padlock (main.js silhouette). */
 .gal-btn { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; padding: 2px 12px; text-align: left; }
 .gal-btn .gk { display: none; flex: none; }
 .gal-btn .gl { display: flex; flex-direction: column; line-height: .95; min-width: 0; }
@@ -430,9 +430,11 @@ body.wide #map-play { display: block; max-width: 420px; margin: 0 auto; }
   background: rgba(20,16,28,.72); color: var(--cream-soft); box-shadow: 0 3px 0 rgba(0,0,0,.5); border: 3px solid var(--ink); }
 .gal-tile canvas { width: 100%; height: auto; max-height: 96px; object-fit: contain; border-radius: 3px; background: #1a1620; }
 .gal-tile .gn { font-size: 17px; line-height: 1; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.gal-tile .gm { font-style: normal; font-size: 10px; letter-spacing: 2px; min-height: 10px; color: var(--gold-hi); font-family: system-ui, sans-serif; }
+.gal-tile .tag { position: absolute; z-index: 1; top: -9px; left: -7px; font-size: 13px; padding: 1px 4px 0; border-width: 1.5px; }
+.gal-tile .gk { display: none; }
+.gal-tile.locked { color: #8d8598; }
+.gal-tile.locked .gk { display: block; position: absolute; left: 50%; top: 6px; width: 30px; height: 30px; margin-left: -15px; border-radius: 50%; border: 2px solid var(--ink); background: #5d5566 center / 18px 18px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M4 5.5V4a2 2 0 0 1 4 0v1.5' fill='none' stroke='%23fff' stroke-width='1.6'/%3E%3Crect x='2.5' y='5.5' width='7' height='5' rx='1' fill='%23fff'/%3E%3C/svg%3E"); box-shadow: 0 2px 0 rgba(0,0,0,.45); }
 .gal-tile.done { background: var(--parch); color: var(--parch-ink); box-shadow: inset 0 -4px 0 var(--parch-edge), 0 3px 0 rgba(0,0,0,.5); }
-.gal-tile.done .gm { color: var(--gold-dark); }
 #gal-credits { margin: 4px 2px 8px; font-size: 13px; line-height: 1.35; color: var(--cream-soft); }
 /* Critics 2 fix (V2): the first picture not yet cleared wears a gold frame that breathes and a Play chip on its corner,
    so a Gallery of 60 dim pictures has a clear start (main.js scrolls it into view). */
@@ -450,7 +452,7 @@ body.wide .gal-tile canvas { max-height: 120px; }
 
 /* ---- v4 M5: the home screen ---------------------------------------------------------------------------------------------
    The title scene fills the screen (main.js paints #title-art); over it a top row (settings, the siege's progress, coins,
-   lives when meta.lives is on), the logo, then on the green the next level's era, the difficulty and one dominant Play
+   lives when meta.lives is on), the logo, then on the green the next level's era and one dominant Play
    (about 70% wide, --play-h tall), and a tab bar at the foot: Siege map, Home, Gallery (padlocked until it opens). */
 .home-card { position: relative; height: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; padding: max(10px, env(safe-area-inset-top)) var(--gut) 0; }
 .home-top { display: flex; align-items: center; gap: 7px; flex: none; }
@@ -462,7 +464,6 @@ body.wide .gal-tile canvas { max-height: 120px; }
    the crew on the grass and the keep. */
 #home-era { position: absolute; left: 50%; top: var(--river-y, 50%); z-index: 1; transform: translate(-50%, -50%); margin: 0; padding: 3px 12px 4px; border-radius: 6px; border: 2px solid var(--ink); background: var(--bg); color: var(--gold-hi); font-family: var(--px); font-size: 20px; line-height: 1; white-space: nowrap; }
 #home-era:empty { display: none; }
-.home .seg { width: 70%; } .home .seg button { min-height: 38px; font-size: 22px; }
 #btn-play.play { width: 70%; min-height: var(--play-h); height: var(--play-h); display: flex; align-items: center; justify-content: center; gap: 10px; border-radius: 14px; font-size: 40px; line-height: 1; }
 #btn-play.wait { background: var(--stone); box-shadow: inset 0 3px 0 var(--stone-hi), inset 0 -5px 0 var(--stone-lo), 0 3px 0 rgba(0,0,0,.5); font-size: 28px; }
 #btn-play.wait svg { display: none; }
@@ -507,16 +508,14 @@ body.wide .gal-tile canvas { max-height: 120px; }
 #p-stats .st.new em, #p-stats .st.coin em { color: #2f8a3f; }
 #p-stats .st.coin b { color: #8a5f00; }
 .sheet.tight #p-stats { margin-bottom: 6px; } .sheet.tight #p-stats b { font-size: 25px; }
-/* The map's story (moved off the home) and a report card per era (and the Gallery's): cleared, medals, coins. */
+/* The map's story (moved off the home) and a report card per era (and the Gallery's): cleared, coins (v4.3: no medals). */
 .story { margin: 12px 0 0; padding: 8px 10px 9px; border-radius: 8px; border: 3px solid var(--ink); background: rgba(20,16,28,.72); font-family: var(--px); font-size: 19px; line-height: 1.1; color: var(--cream-soft); }
-/* Critics 2 fix (m7): the report card is a band: cleared, then three medal discs with their counts, then the coins. */
+/* Critics 2 fix (m7): the report card is a band: cleared, then the coins. */
 .rc { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; margin: -2px 0 10px; padding: 6px 10px 7px; border-radius: 8px; border: 2px solid var(--ink); background: rgba(243,234,216,.1);
   box-shadow: inset 0 2px 0 rgba(255,255,255,.07); font-family: var(--px); font-size: 20px; line-height: 1; color: var(--cream); }
 .rc:empty { display: none; }
 .rc-n { flex: 1 0 auto; }
-.rc-m { display: inline-flex; align-items: center; gap: 5px; }
-.rc-m i { font-style: normal; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--ink); background: var(--gold); color: var(--ink); font-size: 16px; box-shadow: inset 0 -2px 0 var(--gold-lo); }
-.rc-m b, .rc-c b { font-weight: 400; margin-right: 6px; }
+.rc-c b { font-weight: 400; margin-right: 6px; }
 .rc-c { display: inline-flex; align-items: center; gap: 5px; --ico: 22px; color: var(--gold-hi); }
 #gal-card { margin: 10px 0 0; }
 @media (max-height: 700px) { :root { --tab-h: 62px; --play-h: 58px; } .home h1 { font-size: 50px; } }
@@ -524,7 +523,7 @@ body.wide .gal-tile canvas { max-height: 120px; }
 @media (max-height: 480px) {
   :root { --tab-h: 50px; --play-h: 48px; --pill-h: 32px; --pill-fs: 20px; --ico: 18px; }
   .home h1 { font-size: 36px; margin-top: 2px; } .home-foot { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 8px; padding-bottom: 8px; }
-  .home .seg { width: auto; flex: 0 1 300px; } #btn-play.play { width: auto; flex: 0 1 300px; font-size: 32px; } #home-era { font-size: 18px; }
+  #btn-play.play { width: auto; flex: 0 1 300px; font-size: 32px; } #home-era { font-size: 18px; }
   .tab { flex-direction: row; gap: 8px; font-size: 18px; } .tabs .gal-btn { flex-direction: row; }
   body.wide .home-card { max-width: 720px; }
   .home h1 { position: absolute; left: calc(var(--gut) + 58px); top: max(14px, env(safe-area-inset-top)); margin: 0; font-size: 32px; white-space: nowrap; } /* in the top row beside the gear, clear of the keep */
