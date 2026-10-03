@@ -9,6 +9,7 @@
 //   fast(B, rules, n, seed, gapMs)     v4 M2: the fast tapper's win rate (taps whenever a tap is legal, never waits for rest)
 //   view(S) / look(S, ...)             v4 M2: what the player can see of the tray, and the lookahead player's scores
 //   plan(B, rules, n, seed, k, seeing) v4 M3: the sampling planner's win rate, honest about mystery cards or all-seeing
+//   pace(B, rules, order, thinkMs)     v4.2: the real-pace replay of a winning order: {won, ms, taps} (below)
 // v4 M2: every player picks only among legal taps (a front card whose tap would not be refused: a free space, or 2 for a
 // linked card), so a stored order never holds a refused tap. On a level without links a patient player never meets a
 // refused tap (a line with no room at rest is already a jam), so every number there is the same as before.
@@ -249,4 +250,23 @@ function plan(B, rules, n, seed, k, seeing) {
   return wins / n;
 }
 
-module.exports = { rate, greedy, orders, solve, narrow, line, fast, view, look, plan, legal, rng };
+// v4.2, the real-pace player (Peter's pace, not the patient grader's): the stored order replayed, each next card tapped the
+// moment its tap is legal (a free space, the tap not refused), and never sooner than thinkMs of engine time after the tap
+// before (the player's own thinking, calibrated against Peter's times: tools/v4.2-notes.md). Returns {won, ms, taps};
+// won false when the early taps lose the level or leave the next tap refused at rest (the caller falls back to the
+// patient time and logs it). Bounded: every pass taps a card or moves to the next event.
+function pace(B, rules, order, thinkMs) {
+  const S = E.sim(B, rules), cap = 8 * (B.pixTotal + B.ncards) + 64, think = Math.max(0, thinkMs | 0);
+  let i = 0, t = 0;
+  for (let guard = 0; guard < cap && S.status === E.PLAYING && i < order.length; guard++) {
+    S.advanceTo(t); if (S.status !== E.PLAYING) break;
+    const j = order.charCodeAt(i) - 48;
+    if (legal(S, j)) { S.play(j); i++; t = S.now + think; continue; }
+    if (!S.busy || S.nextAt < 0) break; // at rest with the next tap refused: the replay is stuck
+    t = Math.max(t, S.nextAt);
+  }
+  S.quiet();
+  return { won: S.status === E.WON && i === order.length, ms: S.now, taps: i };
+}
+
+module.exports = { rate, greedy, orders, solve, narrow, line, fast, view, look, plan, pace, legal, rng };

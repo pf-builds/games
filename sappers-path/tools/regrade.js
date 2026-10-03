@@ -2,7 +2,9 @@
 // and playout counts (tools/bake-config.json grade), and diff against the grades stored in levels/levels.json. Nothing is
 // written. Per level and difficulty: the patient random-tap win rate, and the stored winning order replayed patiently
 // (won, peak spaces, taps, engine ms); on Normal also the one-move-lookahead player's rate. v4 M3: the Normal line's
-// longest single tap (maxWait) and, from bake-config fast.from, the fast tapper's rate, when the file stores them.
+// longest single tap (maxWait) and, from bake-config fast.from, the fast tapper's rate, when the file stores them. v4.2:
+// the real pace (grade.pace: the stored Normal order replayed tapping the moment a space is free, times duration.pace's
+// factor), when the file stores it.
 //   ~/.local/opt/node/bin/node tools/regrade.js [--quick] [--levels FILE]   (--quick: rates only, no lookahead player;
 //   --levels: another levels file, e.g. a trial bake's)
 //   ~/.local/opt/node/bin/node tools/regrade.js --gallery [--levels FILE]   v4 M4: levels/gallery.json (or FILE) with the
@@ -33,6 +35,7 @@ for (const L of LV) {
     if (JSON.stringify(now) !== JSON.stringify(was)) say(L, d, "winning line", was, now);
   }
   if (!QUICK) { const gr = +R.greedy(B, rules.normal, C.grade.greedyPlayouts, seed ^ 0x2545f491).toFixed(3); checks++; if (gr !== L.grade.normal.greedy) say(L, "normal", "lookahead", L.grade.normal.greedy, gr); }
+  if (L.grade.normal.pace) { const pc = R.pace(B, rules.normal, L.win.normal, 0), now = pc.won ? { raw: pc.ms, ms: Math.round(pc.ms * C.duration.pace.factor) } : { raw: null, ms: L.grade.normal.ms, fell: true }; checks++; if (JSON.stringify(now) !== JSON.stringify(L.grade.normal.pace)) say(L, "normal", "real pace", L.grade.normal.pace, now); }
   if (!QUICK && L.grade.normal.fast != null) { const fr = +R.fast(B, rules.normal, C.fast.games, seed ^ 0x1f123bb5, C.fast.gapMs).toFixed(4); checks++; if (fr !== L.grade.normal.fast) say(L, "normal", "fast tapper", L.grade.normal.fast, fr); }
 }
 console.log(LV.length + " levels, " + checks + " checks, " + diffs + " differences (" + ((Date.now() - t0) / 1000).toFixed(1) + " s)");

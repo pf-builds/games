@@ -14,9 +14,15 @@
 // by the sampling planner (honest against all-seeing; the flags change nothing any other player reads, so every other
 // grade stands). Both passes run in worker threads, one task per level with seeds derived from the level number, so
 // thread timing never changes the output. Never throws: a task that fails is logged and its level falls back. The
-// report tables are written between the bake markers of tools/v4.1-rebake.md. `--out DIR` writes levels.json, the
+// report tables are written between the bake markers of tools/v4.2-rebake.md. `--out DIR` writes levels.json, the
 // pools and the report into DIR instead (a trial bake that leaves the tracked files alone); `--only A-B` bakes only
 // those levels (a trial: the file holds just them); `--teach FILE` reads the teaching levels from FILE.
+// v4.2, real pace (config duration.pace; tools/grade.js pace): each level's stored Normal order is also replayed tapping each
+// next card the moment a space is free; that time times pace.factor is the level's real-pace time (Peter's pace). From
+// pace.from the duration limits are on it (pace.range, the boss pace.boss) instead of the patient time; a replay that loses
+// falls back to the patient time and is logged. `--keep FILE` (v4.2): the levels outside --only are copied from
+// FILE as they are (byte-identical) and count as earlier picks for the variety gate and the dedupe, so a run of 26-100
+// writes the whole campaign; `--extra K` gives every level in the run K more candidates (a fix-up run of one level).
 // v4.1 fix, the variety gate (config variety; tools/variety.js): within an era, how alike two castle pictures are is the
 // share of a cols x rows grid of picture cells whose colours match. A candidate meeting every target is picked only if
 // its median match against the era's earlier generated picks is variety.maxMedian or under; when none is, the least alike
@@ -96,6 +102,7 @@ function gradeLevel(L, rules, C, hint, seed, n) {
     if (d === "normal") grade[d].maxWait = line && line.won ? line.maxWait : null;
   }
   grade.normal.greedy = +R.greedy(B, rules.normal, C.grade.greedyPlayouts, seed ^ 0x2545f491).toFixed(3);
+  if (win.normal) { const pc = R.pace(B, rules.normal, win.normal, 0), PC = C.duration.pace; grade.normal.pace = pc.won ? { raw: pc.ms, ms: Math.round(pc.ms * PC.factor) } : { raw: null, ms: grade.normal.ms, fell: true }; } // v4.2: real pace
   if (n >= C.fast.from) grade.normal.fast = +R.fast(B, rules.normal, C.fast.games, seed ^ 0x1f123bb5, C.fast.gapMs).toFixed(4);
   return { win, grade };
 }
@@ -108,7 +115,7 @@ function candidates(n, C, rules, tw) {
   const era = eraOf(n, C), b = bandOf(n, C), [cmin, cmax] = coloursOf(n, C, b), out = [], stats = { forts: 0, deals: 0, evals: 0, grades: 0 };
   const D = Object.assign({}, C.deal, C.dealBy[b.kind] || {}, C.dealBy[b.sub] || {}, { maxTaps: C.maxTaps, time: rules.hard.time, maxWaitMs: C.maxWaitMs, lockSpaces: rules.hard.lockSpaces });
   const dealRules = Object.assign({}, rules.hard, { hold: C.deal.hold, archersKill: true });
-  const per = (C.candidates.perLevelBy && C.candidates.perLevelBy[b.sub]) || C.candidates.perLevel;
+  const per = ((C.candidates.perLevelBy && C.candidates.perLevelBy[b.sub]) || C.candidates.perLevel) + (C.extra | 0); // v4.2 --extra
   for (let k = 0; k < per; k++) {
     try {
       let L = null, seed = 0;
@@ -220,7 +227,7 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
   const t0 = Date.now(), log = [], say = (s) => { log.push(s); console.log(s); };
   let C, CFG, TEACH;
   try {
-    C = JSON.parse(fs.readFileSync(path.join(__dirname, "bake-config.json"), "utf8"));
+    C = JSON.parse(fs.readFileSync(path.join(__dirname, "bake-config.json"), "utf8")); C.extra = +arg("extra") || 0; // v4.2: --extra K more candidates a level (a fix-up run)
     CFG = JSON.parse(fs.readFileSync(path.join(ROOT, "config.json"), "utf8"));
     TEACH = JSON.parse(fs.readFileSync(arg("teach") ? path.resolve(arg("teach")) : path.join(ROOT, "levels/teaching.json"), "utf8")).levels;
   } catch (e) { console.log("bake: cannot read config: " + e.message); process.exitCode = 1; return; }
@@ -236,7 +243,11 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
   for (const r of results) for (const k of Object.keys(tot)) tot[k] += (r.stats && r.stats[k]) || 0;
   const t1 = Date.now();
 
-  const levels = [], fallbacks = [], lookMiss = [], varMiss = [], pools = { 1: [], 2: [], 3: [], 4: [] }, DU = C.duration, VC = C.variety, maps = { 1: [], 2: [], 3: [], 4: [] };
+  const levels = [], fallbacks = [], lookMiss = [], varMiss = [], paceFell = [], pools = { 1: [], 2: [], 3: [], 4: [] }, DU = C.duration, VC = C.variety, maps = { 1: [], 2: [], 3: [], 4: [] };
+  // v4.2 --keep FILE: the levels outside --only come from FILE as they are, and count as earlier picks (variety, dedupe).
+  const KEEP = arg("keep") && ONLY ? JSON.parse(fs.readFileSync(path.resolve(arg("keep")), "utf8")).levels.filter((l) => !inRun(l.n)) : [];
+  for (const l of KEEP) { levels.push(l); if (l.source !== "teaching" && maps[l.era]) maps[l.era].push(VAR.mapOf(l, VC)); }
+  if (KEEP.length) say("bake: " + KEEP.length + " levels outside " + ONLY.join("-") + " kept as they are from " + arg("keep"));
   for (let n = 1; n <= C.levels; n++) {
     if (!inRun(n)) continue;
     const b = bandOf(n, C), era = eraOf(n, C), id = "e" + era + "-" + String(n).padStart(2, "0");
@@ -255,8 +266,8 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
     // Late hard slots: the lookahead player's target (C.lookahead). Duration (C.duration): the patient play-through on the
     // stored Normal line inside the level's limits. Dead time (C.maxWaitMs): its longest single tap. Fast tapper (C.fast).
     const lookT0 = lateHard && C.lookahead ? C.lookahead[b.sub] : null, over = (c) => (lookT0 != null && c.grade.normal.greedy > lookT0 ? 1 : 0);
-    const dLim = n <= DU.earlyTo ? DU.early : [0, DU.maxMs];
-    const dmiss = (c) => { const ms = c.grade.normal.ms; return ms == null ? 1e9 : Math.max(0, dLim[0] - ms, ms - dLim[1]); };
+    const PC = DU.pace, real = PC && n >= PC.from, dLim = n <= DU.earlyTo ? DU.early : real ? (b.sub === "boss" ? PC.boss : PC.range) : [0, DU.maxMs];
+    const dmiss = (c) => { const ms = real ? (c.grade.normal.pace ? c.grade.normal.pace.ms : null) : c.grade.normal.ms; return ms == null ? 1e9 : Math.max(0, dLim[0] - ms, ms - dLim[1]); };
     const wmiss = (c) => { const w = c.grade.normal.maxWait; return w == null ? 1e9 : Math.max(0, w - C.maxWaitMs); };
     const fbad = (c) => (fastBad(c.grade, C) ? 1 : 0), twMiss = (c) => (c.pairs < tw.links ? 1 : 0);
     ok.sort((p, q) => (p.miss > 0) - (q.miss > 0) || (dmiss(p) > 0) - (dmiss(q) > 0) || (wmiss(p) > 0) - (wmiss(q) > 0) || fbad(p) - fbad(q) || twMiss(p) - twMiss(q) || p.miss - q.miss || dmiss(p) - dmiss(q) || wmiss(p) - wmiss(q)
@@ -277,7 +288,7 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
       const w = []; if (!ok.length) w.push("no winnable candidate");
       else {
         if (pickC.miss > 0) w.push("out of band: Normal " + pct(pickC.grade.normal.rate) + " vs " + pct(b.band[0]) + "-" + pct(b.band[1]));
-        if (dmiss(pickC) > 0) w.push("duration " + secs(pickC.grade.normal.ms) + " outside " + dLim[0] / 1000 + "-" + dLim[1] / 1000 + " s");
+        if (dmiss(pickC) > 0) w.push((real ? "real pace " + secs(pickC.grade.normal.pace && pickC.grade.normal.pace.ms) : "duration " + secs(pickC.grade.normal.ms)) + " outside " + dLim[0] / 1000 + "-" + dLim[1] / 1000 + " s");
         if (wmiss(pickC) > 0) w.push("longest tap " + secs(pickC.grade.normal.maxWait) + " over " + C.maxWaitMs / 1000 + " s");
         if (fbad(pickC)) w.push("fast tapper " + pct(pickC.grade.normal.fast) + " vs patient " + pct(pickC.grade.normal.rate));
         if (twMiss(pickC)) w.push("linked pairs " + pickC.pairs + " of " + tw.links);
@@ -288,6 +299,7 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
     }
     if (!pickC) { fallbacks.push({ n, why }); say("level " + n + ": NO LEVEL (" + why + ")"); continue; }
     if (why) { fallbacks.push({ n, why }); say("level " + n + ": fallback, " + why); }
+    if (real && pickC.grade.normal.pace && pickC.grade.normal.pace.fell) { paceFell.push(n); say("level " + n + ": the real-pace replay lost; its patient time stands in"); }
     const lookT = lookT0, look = pickC.grade.normal.greedy;
     if (lookT != null && look > lookT) { lookMiss.push({ n, sub: b.sub, look }); say("level " + n + ": lookahead fallback, " + pct(look) + " over the " + pct(lookT) + " target (" + ok.filter((c) => c.miss === 0).length + " in-band candidates)"); }
     levels.push(Object.assign({ id, n, era, source: "gen", seed: pickC.seed, band: b.sub, target: b.band, twists: tw }, pickC.level, { win: pickC.win, grade: pickC.grade, inBand: pickC.miss === 0 }, why ? { fallback: why } : {}));
@@ -296,7 +308,7 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
   say("bake: " + levels.length + " levels picked in " + ((t1 - t0) / 1000).toFixed(1) + " s; forts " + tot.forts + ", deals " + tot.deals + ", tune evaluations " + tot.evals + ", full grades " + tot.grades + " (x3 difficulties)");
 
   // Second pass: order counts and safe taps (report only), the mystery flags and their planner measures.
-  const fin = levels.map((l) => ({ kind: "finish", n: l.n, L: { w: l.w, h: l.h, grid: l.grid, pic: l.pic, gates: l.gates, towers: l.towers, cols: l.cols, links: l.links, lock: l.lock, safeArchers: l.safeArchers, win: l.win }, want: l.twists ? l.twists.mystery : 0, seed: l.seed || seedOf(C, l.n, 0) }));
+  const fin = levels.filter((l) => inRun(l.n)).map((l) => ({ kind: "finish", n: l.n, L: { w: l.w, h: l.h, grid: l.grid, pic: l.pic, gates: l.gates, towers: l.towers, cols: l.cols, links: l.links, lock: l.lock, safeArchers: l.safeArchers, win: l.win }, want: l.twists ? l.twists.mystery : 0, seed: l.seed || seedOf(C, l.n, 0) }));
   const done = await runPool(fin, threads, C, rules, Date.now() + C.budget.finishSec * 1000, (d, t) => { if (d % 20 === 0 || d === t) console.log("  finish " + d + "/" + t + "  " + ((Date.now() - t0) / 1000).toFixed(1) + " s"); });
   for (const f of done) {
     const l = levels.find((x) => x.n === f.n); if (!l) continue;
@@ -313,21 +325,24 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
   { const ms = gen.map((l) => l.grade.normal.ms).filter((x) => x != null), all = levels.map((l) => l.grade.normal.ms).filter((x) => x != null), early = gen.filter((l) => l.n <= DU.earlyTo).map((l) => l.grade.normal.ms);
     if (ms.length) say("bake: patient play-through on the stored Normal line at 1x (generated levels): median " + secs(med(ms)) + ", max " + secs(Math.max(...ms)) + (early.length ? "; early " + secs(Math.min(...early)) + "-" + secs(Math.max(...early)) : "") + "; all levels median " + secs(med(all)) + ", " + secs(Math.min(...all)) + "-" + secs(Math.max(...all)));
     const w = levels.map((l) => l.grade.normal.maxWait).filter((x) => x != null); if (w.length) say("bake: longest single tap on the stored Normal line: median " + secs(med(w)) + ", max " + secs(Math.max(...w)) + " (cap " + C.maxWaitMs / 1000 + " s)"); }
+  { const PC = C.duration.pace, rp = levels.filter((l) => PC && l.n >= PC.from && l.grade.normal.pace), g = rp.filter((l) => !l.exempt), ms = g.map((l) => l.grade.normal.pace.ms), boss = rp.find((l) => l.band === "boss");
+    if (ms.length) say("bake: real pace (stored Normal order, a tap the moment a space is free, x " + PC.factor + ") on generated levels " + PC.from + "+: median " + secs(med(ms)) + ", " + secs(Math.min(...ms)) + "-" + secs(Math.max(...ms)) + (boss ? "; boss " + secs(boss.grade.normal.pace.ms) : "") + "; replays that lost " + rp.filter((l) => l.grade.normal.pace.fell).length); }
+  levels.sort((a, b) => a.n - b.n);
   const variety = VAR.eraReport(levels, VC);
   for (const e of Object.keys(variety)) { const v = variety[e]; say("bake: variety, era " + e + ": median match " + pct(v.median) + " over " + v.n + " generated pictures (gate " + pct(VC.maxMedian) + (v.median > VC.maxMedian ? ": VARIETY GATE FAILED" : "") + "), most alike " + v.worst.a + " and " + v.worst.b + " at " + pct(v.worst.m)); }
   say("bake: taps per level: max " + Math.max(...levels.map((l) => l.win.normal ? l.win.normal.length : 0)) + " (cap " + C.maxTaps + "), median " + med(levels.map((l) => (l.win.normal ? l.win.normal.length : 0))) + "; cards max " + Math.max(...levels.map((l) => l.grade.cards)));
-  const out = { version: C.version, bake: { config: C.version, seed: C.seed, time: CFG.v3.time, forts: tot.forts, deals: tot.deals, tuneEvals: tot.evals, fullGrades: tot.grades, seconds: +secsAll.toFixed(1), fallbacks, lookaheadFallbacks: lookMiss, variety, varietyMisses: varMiss }, levels };
+  const out = { version: C.version, bake: { config: C.version, seed: C.seed, time: CFG.v3.time, forts: tot.forts, deals: tot.deals, tuneEvals: tot.evals, fullGrades: tot.grades, seconds: +secsAll.toFixed(1), fallbacks, lookaheadFallbacks: lookMiss, variety, varietyMisses: varMiss, paceFell }, levels };
   try {
     if (OUT) fs.mkdirSync(OUT, { recursive: true });
     writeAtomic(outPath("levels/levels.json"), JSON.stringify(out));
-    for (const e of [1, 2, 3, 4]) writeAtomic(outPath("levels/pool-e" + e + ".json"), JSON.stringify({ version: C.version, era: e, cands: pools[e] }));
+    for (const e of [1, 2, 3, 4]) if (!ONLY || pools[e].length) writeAtomic(outPath("levels/pool-e" + e + ".json"), JSON.stringify({ version: C.version, era: e, cands: pools[e] })); // v4.2: a partial run leaves the other eras' pools alone
   } catch (e) { say("bake: write failed: " + e.message); process.exitCode = 1; }
   try { writeReport(out, C, log); } catch (e) { say("bake: report tables failed: " + e.message); }
 })();
 
-// ---- report tables (between the markers in tools/v4.1-rebake.md) --------------------------------------------------
+// ---- report tables (between the markers in tools/v4.2-rebake.md) --------------------------------------------------
 function writeReport(out, C, log) {
-  const file = outPath("tools/v4.1-rebake.md"), A = "<!-- bake:start -->", Z = "<!-- bake:end -->";
+  const file = outPath("tools/v4.2-rebake.md"), A = "<!-- bake:start -->", Z = "<!-- bake:end -->";
   const L = out.levels, rows = [], minDE = (l) => (l.palette ? l.palette.minDE : (() => { const s = new Set(); for (const row of l.grid) for (const ch of row) { const m = E.matOf(ch); if (m) s.add(m); } return PAL.minPair([...s]).min; })());
   const twOf = (l) => { const t = []; if (l.gates && l.gates.length) t.push("gates " + l.gates.length); if (l.towers && l.towers.length) t.push("archers " + l.towers.length); const mc = l.cols.flat().filter((cd) => cd[2]).length; if (mc) t.push("? " + mc); if (l.links && l.links.length) t.push("linked " + l.links.length); if (l.lock) t.push("lock"); return t.join(", ") || "-"; };
   rows.push("### Bands on Normal", "", "| Band | Levels | In band | Exempt (teaching) | Normal min | median | max |", "|---|---|---|---|---|---|---|");
@@ -338,15 +353,15 @@ function writeReport(out, C, log) {
   }
   if (out.bake.variety) { rows.push("", "### Variety (picture cells matching within an era; gate " + pct(C.variety.maxMedian) + ")", "", "| Era | Generated pictures | Median match | 10th percentile | Most alike pair |", "|---|---|---|---|---|");
     for (const e of Object.keys(out.bake.variety)) { const v = out.bake.variety[e]; rows.push(`| ${e} | ${v.n} | ${pct(v.median)}${v.median > C.variety.maxMedian ? " (over)" : ""} | ${pct(v.p10)} | ${v.worst.a} and ${v.worst.b}, ${pct(v.worst.m)} |`); } }
-  rows.push("", "### Every level", "", "Normal random = the random-tap rate (" + C.grade.playouts + " games); lookahead = the one-move-lookahead player (" + C.grade.greedyPlayouts + "); fast = the fast tapper (" + C.fast.games + ", from level " + C.fast.from + "); ? planner = the sampling planner honest / all-seeing (" + C.mystery.games + " games); time and longest tap = patient play on the stored Normal line at 1x; ΔE = the smallest CIEDE2000 between two colours standing in the level.", "",
-    "| # | Era | Band | Twists | Board | Pixels | Colours | Min ΔE00 | Taps (cards) | Normal random | Easy | Hard | Lookahead | Fast | ? planner | Time | Longest tap | Note |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|");
+  rows.push("", "### Every level", "", "Normal random = the random-tap rate (" + C.grade.playouts + " games); lookahead = the one-move-lookahead player (" + C.grade.greedyPlayouts + "); fast = the fast tapper (" + C.fast.games + ", from level " + C.fast.from + "); ? planner = the sampling planner honest / all-seeing (" + C.mystery.games + " games); time and longest tap = patient play on the stored Normal line at 1x; real pace (v4.2) = the stored Normal order replayed tapping the moment a space is free, times " + (C.duration.pace ? C.duration.pace.factor : 1) + " (Peter's pace; * the replay lost, patient time shown); ΔE = the smallest CIEDE2000 between two colours standing in the level.", "",
+    "| # | Era | Band | Twists | Board | Pixels | Colours | Min ΔE00 | Taps (cards) | Normal random | Easy | Hard | Lookahead | Fast | ? planner | Real pace | Patient time | Longest tap | Note |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|");
   for (const l of L) {
     const g = l.grade, m = g.normal.mystery;
-    rows.push(`| ${l.n} | ${l.era} | ${l.band} | ${twOf(l)} | ${l.w}×${l.h} | ${g.pixels} | ${g.colours} | ${minDE(l) != null ? minDE(l).toFixed(1) : "-"} | ${l.win.normal ? l.win.normal.length : "-"} (${g.cards}) | ${pct(g.normal.rate)} | ${pct(g.easy.rate)} | ${pct(g.hard.rate)} | ${pct(g.normal.greedy)} | ${g.normal.fast != null ? pct(g.normal.fast) + (fastBad(g, C) ? " !" : "") : "-"} | ${m ? pct(m.honest) + " / " + pct(m.seeing) : "-"} | ${secs(g.normal.ms)} | ${secs(g.normal.maxWait)} | ${l.exempt ? "teaching: " + l.teaches : l.fallback || (l.inBand ? "" : "out of band")} |`);
+    rows.push(`| ${l.n} | ${l.era} | ${l.band} | ${twOf(l)} | ${l.w}×${l.h} | ${g.pixels} | ${g.colours} | ${minDE(l) != null ? minDE(l).toFixed(1) : "-"} | ${l.win.normal ? l.win.normal.length : "-"} (${g.cards}) | ${pct(g.normal.rate)} | ${pct(g.easy.rate)} | ${pct(g.hard.rate)} | ${pct(g.normal.greedy)} | ${g.normal.fast != null ? pct(g.normal.fast) + (fastBad(g, C) ? " !" : "") : "-"} | ${m ? pct(m.honest) + " / " + pct(m.seeing) : "-"} | ${g.normal.pace ? secs(g.normal.pace.ms) + (g.normal.pace.fell ? " *" : "") : "-"} | ${secs(g.normal.ms)} | ${secs(g.normal.maxWait)} | ${l.exempt ? "teaching: " + l.teaches : l.fallback || (l.inBand ? "" : "out of band")} |`);
   }
   rows.push("", "### Bake log", "", "```", ...log, "```");
   const block = A + "\n" + rows.join("\n") + "\n" + Z;
-  let text = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "# Sapper's Path v4.1 rebake\n\n" + A + "\n" + Z + "\n";
+  let text = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "# Sapper's Path v4.2 rebake\n\n" + A + "\n" + Z + "\n";
   if (!text.includes(A)) text += "\n" + A + "\n" + Z + "\n";
   text = text.slice(0, text.indexOf(A)) + block + text.slice(text.indexOf(Z) + Z.length);
   writeAtomic(file, text);
