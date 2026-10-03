@@ -1465,14 +1465,15 @@
         let t = 0; for (; app.S.lineLen >= app.S.cap && app.S.status === E.PLAYING && t < ST.tickCapMs; t += 16) step(16);
         const p0 = app.S.plays;
         ok(app.S.lineLen < app.S.cap && playCol(j) && app.S.plays === p0 + 1, "refused, then accepted: once a squad is home the same card plays (after " + t + " ms)"); }
-      // 7b. Stuck and working on a real level: 2 squads with nothing in reach (hatched, locked) and 2 out working (gold rim,
-      // walking marker); the head counts them. Then the near jam: 3 stuck, 1 working, 1 free warns.
+      // 7b. Stuck and working on a real level (v4.3: a Normal one, 5 spaces): 2 squads with nothing in reach (hatched,
+      // locked) and 2 out working (gold rim, walking marker); the head counts them. Then the near jam: 3 stuck, 1 working, 1
+      // free warns.
       { let got = null, near = null;
-        for (const e of app.levels) { if (e.n < 16) continue; startLevel(e.id, "normal"); const tp = stageLine(2, 2); if (tp) { step(16); got = { e, tp, li: Object.assign({}, readLine()) }; break; } }
+        for (const e of app.levels) { if (e.n < 16 || tagOf(e) !== "normal") continue; startLevel(e.id); const tp = stageLine(2, 2); if (tp) { step(16); got = { e, tp, li: Object.assign({}, readLine()) }; break; } } // v4.3: a Normal level (5 spaces)
         if (ok(!!got, "stuck/working: a level whose fronts give 2 stuck and 2 working squads")) {
           const st = app.slots.filter((q) => q.classList.contains("stuck")).length, wk = app.slots.filter((q) => q.classList.contains("work") && !q.classList.contains("stuck")).length;
           ok(got.li.stuck === 2 && got.li.work === 2 && got.li.free === 1 && !got.li.near && st === 2 && wk === 2 && /2 stuck/.test($("line-cnt").textContent) && /2 working/.test($("line-cnt").textContent) && /1 free/.test($("line-cnt").textContent), "stuck/working: two hatched stuck spaces, two working, the head reads '" + $("line-cnt").textContent + "' (" + got.e.id + " '" + got.tp + "')"); }
-        for (const e of app.levels) { if (e.n < 16) continue; startLevel(e.id, "normal"); const tp = stageLine(3, 1); if (tp) { step(16); near = { e, tp, li: Object.assign({}, readLine()) }; break; } }
+        for (const e of app.levels) { if (e.n < 16 || tagOf(e) !== "normal") continue; startLevel(e.id); const tp = stageLine(3, 1); if (tp) { step(16); near = { e, tp, li: Object.assign({}, readLine()) }; break; } }
         if (ok(!!near, "near jam: a level whose fronts give 3 stuck and 1 working")) {
           const last = app.slots.filter((q) => q.classList.contains("last")).length;
           ok(near.li.near && $("line-wrap").classList.contains("near") && $("line-lab").textContent === LY.nearText && last === 1, "near jam: every squad but one stuck and one space left: '" + LY.nearText + "', the last space pulses (" + near.e.id + " '" + near.tp + "')"); } }
@@ -1932,7 +1933,7 @@
     fill: () => { const taps = fillLine(); return Object.assign(state(), { taps }); },
     // v4 M2: load a selfTest fixture level (config selfTest[name], e.g. linkJamLevel) like a debug level (no save).
     fixture: (k) => { const L = app.cfg.selfTest[k]; if (!L || !L.grid) return null; const id = "fx-" + k; if (!app.byId.has(id)) app.byId.set(id, { L, id, n: 0, era: 1, idx: -1, node: null, debug: true }); startLevel(id); return state(); },
-    stage: (n, k, w) => { for (const e of app.levels) { if (e.n < n) continue; startLevel(e.id); const tp = stageLine(k, w); if (tp) return Object.assign(state(), { taps: tp }); } return null; },
+    stage: (n, k, w) => { for (const e of app.levels) { if (e.n < n || tagOf(e) !== "normal") continue; startLevel(e.id); /* v4.3: a Normal level (5 spaces) */ const tp = stageLine(k, w); if (tp) return Object.assign(state(), { taps: tp }); } return null; },
     screen: (name) => { showScreen(name); return state(); }, skip: () => { skip(); return state(); }, speed: (k) => { setSpeed(k, false); return app.speed; },
     // Cost of n board draws right now (ms): the harness calls it mid-show.
     perf: (n) => { const k = Math.max(1, Math.min(500, n | 0 || 60)); let max = 0; const t0 = performance.now(); for (let i = 0; i < k; i++) { const a = performance.now(); app.V.draw(); max = Math.max(max, performance.now() - a); } return { mean: +((performance.now() - t0) / k).toFixed(3), max: +max.toFixed(3), runners: app.V.live }; },
