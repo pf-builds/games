@@ -21,6 +21,11 @@
 // (2): every hidden card turns face up; refused if none is hidden. Recall (3, a = a space): an unlinked squad with
 // sappers waiting and none out goes back to the front of the list it was tapped from, as a card of the sappers waiting,
 // and its space is free.
+// v4.3 (SPEC-v4 §9, the v4.3 entry, from the rules text): a squad holds its space while any of its sappers waits at it,
+// walks out to a pixel, or (no kills) walks back after an arrow; the moment none does (its last block picked up, the
+// pixel popped), the space is free, though its carriers are still walking home (a pair: once both squads are there).
+// A linked card can be tapped only while its partner is the front of the partner's list too; then both go as before.
+// A linked front whose partner is buried counts as refused at rest, and the jam's jamWhy adds 4.
 // pops: every popped pixel as [cell, time], in the order they popped.
 "use strict";
 const MATCH = { ".": 0, ",": -2, "~": -1, "#": -3 };
@@ -49,7 +54,8 @@ function game(L, rules) {
   const kills = rules.archersKill && L.safeArchers !== true;
   const Tm = rules.time, R = load(L), w = R.w, h = R.h, g = R.g.slice(), cols = R.cols.map((c) => c.slice());
   const sap = {}; cols.forEach((c) => c.forEach((cd) => { sap[cd.m] = (sap[cd.m] || 0) + cd.n; }));
-  const spaces = [];           // {m, wait, out, wary, next, seq, pair}; index = space number, null = free; pair: the partner's space
+  const spaces = [];           // {m, wait, out, wary, next, seq, pair}; index = space number, null = free; pair: the partner's space;
+                               // out (v4.3): sappers walking out to a pixel or back after an arrow (carriers don't count)
   const events = [];           // {t, seq, kind: "pop" | "hit" | "home" | "wake", sapper?, space?}
   const claimed = new Set(), pops = [];
   let status = "playing", reason = "", jamWhy = 0, now = 0, seq = 0, taps = 0, peak = 0, hitsN = 0, killsN = 0;
@@ -126,22 +132,26 @@ function game(L, rules) {
         if (q.cell === R.lockKey) locked = 0; }
       schedule(q.back, "home", { sapper: Object.assign({}, q, { hit: false }) });
       if (!left() && status === "playing") status = "won";
+      spaces[q.space].out--; freeIf(q.space); // the block is picked up: the carrier no longer holds the space
     } else if (e.kind === "hit") {
       hitsN++;
       if (kills) { killsN++; sap[q.m]--; spaces[q.space].out--; if (status === "playing" && sap[q.m] < left(q.m)) fail("short"); freeIf(q.space); }
       else schedule(q.back, "home", { sapper: Object.assign({}, q, { hit: true }) });
-    } else if (e.kind === "home") {
-      const s = spaces[q.space]; s.out--; if (q.hit) s.wait++; freeIf(q.space);
+    } else if (e.kind === "home") { // only a sapper sent back by an arrow rejoins its squad; a carrier is just home
+      if (q.hit) { const s = spaces[q.space]; s.out--; s.wait++; freeIf(q.space); }
     }
   }
   const need = (cd) => (cd.partner ? 2 : 1);
+  // A linked card's partner must be the front of the list it is in (v4.3).
+  const buried = (cd) => !!cd.partner && !cols.some((c) => c[0] === cd.partner);
+  const refusedCard = (cd) => buried(cd) || need(cd) > free();
   function settle() {
     if (status !== "playing") return;
     if (!left()) { status = "won"; return; }
     if (events.length) return;
     const fronts = cols.map((c) => c[0]).filter(Boolean);
     if (!fronts.length) fail("stuck");
-    else if (fronts.every((cd) => need(cd) > free())) { fail("jam"); jamWhy = (free() > 0 ? 1 : 0) | (locked > 0 ? 2 : 0); }
+    else if (fronts.every(refusedCard)) { fail("jam"); jamWhy = (free() > 0 ? 1 : 0) | (locked > 0 ? 2 : 0) | (fronts.some(buried) ? 4 : 0); }
   }
   function advanceTo(t) {
     for (let guard = 0; guard < 1e6; guard++) {
@@ -163,7 +173,7 @@ function game(L, rules) {
     if (status !== "playing" || !cols[j].length) return;
     if (t != null) { advanceTo(t); if (status !== "playing") return; }
     const cd = cols[j][0];
-    if (need(cd) > free()) return "refused";
+    if (refusedCard(cd)) return "refused";
     cols[j].shift();
     const i = take(cd);
     if (cd.partner) { const pc = cols.find((c) => c.includes(cd.partner)); pc.splice(pc.indexOf(cd.partner), 1); cd.partner.seen = true; const k = take(cd.partner); spaces[i].pair = k; spaces[k].pair = i; }
@@ -180,7 +190,10 @@ function game(L, rules) {
     else if (k === 1) {
       const c = cols.find((q) => q.some((cd) => cd.ci === a)), i = c ? c.findIndex((cd) => cd.ci === a) : -1;
       if (i < 1 || i > reach) return "refused";
-      if (!events.length && cols.every((q, j) => !(q === c ? c[i] : q[0]) || need(q === c ? c[i] : q[0]) > free())) return "refused";
+      if (!events.length) { // at rest: refused if every front would then be refused
+        const trial = cols.map((q) => (q === c ? [c[i]].concat(c.filter((x, k) => k !== i)) : q)), fr = trial.map((q) => q[0]).filter(Boolean);
+        const bur = (cd) => !!cd.partner && !trial.some((q) => q[0] === cd.partner);
+        if (fr.every((cd) => bur(cd) || need(cd) > free())) return "refused"; }
       const [cd] = c.splice(i, 1); c.unshift(cd);
     } else if (k === 2) {
       const hid = []; for (const c of cols) c.forEach((cd, i) => { if (i > 0 && cd.mystery && !cd.seen) hid.push(cd); });

@@ -103,12 +103,31 @@ const COLUMN = ["~aa~", "~aa~", "~aa~", "~aa~", "~aa~", "~aa~", "~aa~", "....", 
   eq(dup, 0, "claims: five rushed taps on level " + L.n + ": no two sappers in flight share a pixel");
 }
 {
-  // A space frees exactly when its last sapper is home.
+  // v4.3: a space frees exactly when its squad's last block is picked up (the pop); the carrier walks home after.
   const S = E.sim(E.compile(lv(["..a..", ".....", "..#.."], [[[1, 1]], [], [], [], []])), N);
   S.play(0, 0);
-  const tiles = 2, home = TM.yardMs + tiles * TM.tileMs + TM.biteMs + TM.yardMs + tiles * TM.carryMs;
-  S.advanceTo(home - 1); eq([S.lineLen, S.pixLeft, S.status], [1, 0, E.WON], "space: the pixel popped, the sapper is still carrying it home, the space is held");
-  S.advanceTo(home); eq([S.lineLen, S.busy], [0, false], "space: it frees at the computed home time (" + home + " ms)");
+  const tiles = 2, popT = TM.yardMs + tiles * TM.tileMs + TM.biteMs, home = popT + TM.yardMs + tiles * TM.carryMs;
+  S.advanceTo(popT - 1); eq([S.lineLen, S.pixLeft, S.status], [1, 1, E.PLAYING], "space: the sapper is still walking out, the space is held");
+  S.advanceTo(popT); eq([S.lineLen, S.pixLeft, S.status, S.out, S.busy], [0, 0, E.WON, 1, true], "space (v4.3): the pixel pops at " + popT + " ms and the space frees at once, the carrier still out");
+  S.advanceTo(home - 1); eq([S.out, S.busy], [1, true], "space (v4.3): the carrier walks home with its block; the game is not at rest");
+  S.advanceTo(home); eq([S.out, S.busy], [0, false], "space (v4.3): home at " + home + " ms: nothing moves");
+}
+{
+  // v4.3: the freed space takes the next squad while the first squad's carriers are still walking home, and their
+  // homecoming never touches the new squad.
+  const S = E.sim(E.compile(lv(["..a.b..", ".......", "...#..."], [[[1, 1]], [[2, 1]], [], [], []])), Object.assign({}, N, { hold: 1 }));
+  S.play(0, 0); const popT = S.q1[0], home = S.q2[0];
+  S.advanceTo(popT - 1); const r0 = S.refused(1); S.advanceTo(popT); const r1 = S.refused(1); S.play(1, popT);
+  const sp = S.order()[0], before = [S.spW[sp], S.spO[sp]]; S.advanceTo(home); const after = [S.spW[sp], S.spO[sp]];
+  eq([r0, r1, S.lineLen, before, after, S.status], [true, false, 1, [0, 1], [0, 1], E.PLAYING], "space (v4.3): with one space, b's tap is refused until a pops, then taken at once; a's carrier comes home without touching b's squad (still walking out)");
+}
+{
+  // v4.3, archers on Easy and Normal: a hit sapper walking back keeps its squad's space held; on Hard a kill is done.
+  const TW = [".......", ".b.aaa.", ".......", "...#..."], T0 = lv(TW, [[[1, 3]], [[2, 1]], [], [], []], { towers: [{ at: [1, 1], r: 3 }] });
+  const S = E.sim(E.compile(T0), N); S.logOn = true; S.play(0, 0); let hid = -1;
+  for (let g = 0; g < 400 && S.busy && hid < 0; g++) { S.advanceTo(S.nextAt); for (let e = 0; e < S.evLen; e += 3) if (S.ev[e] === E.EV.HIT) hid = S.ev[e + 1]; S.clearLog(); }
+  const back = hid >= 0 ? S.q2[hid] : 0; S.advanceTo(back - 1); const heldBack = S.lineLen === 1; S.advanceTo(back); const rejoined = S.lineLen === 1 && S.spW[S.order()[0]] + S.spO[S.order()[0]] >= 1;
+  ok(hid >= 0 && heldBack && rejoined, "space (v4.3): an arrow-hit sapper walks back and waits again; its squad's space stays held meanwhile (Normal)");
 }
 
 // ---- spaces: no merging, a space per tap; no free space refuses the tap (v3.1) -----------------------------------------
@@ -295,19 +314,18 @@ const ARCH = (cols) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "
     const B = E.compile(L);
     let sum = 0; for (let m = 0; m < E.NMAT; m++) sum += B.sapTotal[m];
     ok(sum === B.pixTotal - (B.pix[E.IRON] || 0), "level " + L.n + ": sappers sum to the fort's eatable pixels");
-    for (const d of ["easy", "normal", "hard"]) {
-      total++; const S = E.replay(B, RULES[d], L.win[d] || "");
-      if (S.status === E.WON) wins++; else console.log("FAIL  level " + L.n + " " + d + ": stored order does not win patiently (" + S.reason + ")");
-    }
+    const d = L.tag; // v4.3: one fixed tag per level, one stored order on it
+    total++; const S = E.replay(B, RULES[d] || RULES.normal, (L.win && L.win[d]) || "");
+    if (S.status === E.WON && Object.keys(L.win).join() === d) wins++; else console.log("FAIL  level " + L.n + " " + d + ": stored order does not win patiently (" + S.reason + ")");
   }
-  eq(wins, total, "levels: every stored winning order wins patiently on its difficulty (" + total + " replays)");
+  eq(wins, total, "levels: every level's one stored winning order wins patiently on its tag (" + total + " replays)");
   const NL = require("./bake-config.json").levels;
   eq([LEVELS.levels.length, LEVELS.levels.every((L, i) => L.n === i + 1)], [NL, true], "levels: " + NL + " levels baked, in order (v4 M3: the Siege to 100)");
   // v4 M3: every era present, Era 4 from 76; every stored Normal line inside the dead-time cap and the tap cap.
   const eras = [...new Set(LEVELS.levels.map((L) => L.era))], BC = require("./bake-config.json");
   eq([eras.join(","), LEVELS.levels.filter((L) => L.n >= 76).every((L) => L.era === 4)], ["1,2,3,4", true], "levels: four eras, Era 4 from level 76");
-  let dead = 0, longest = 0; for (const L of LEVELS.levels) { const ln = Gr.line(E.compile(L), RULES.normal, L.win.normal); longest = Math.max(longest, ln.maxWait); if (ln.maxWait > BC.maxWaitMs || L.win.normal.length > BC.maxTaps) dead++; }
-  eq(dead, 0, "levels: every stored Normal line keeps every tap under " + BC.maxWaitMs / 1000 + " s (longest " + (longest / 1000).toFixed(1) + " s) and " + BC.maxTaps + " taps");
+  let dead = 0, longest = 0; for (const L of LEVELS.levels) { const ln = Gr.line(E.compile(L), RULES[L.tag], L.win[L.tag]); longest = Math.max(longest, ln.maxWait); if (ln.maxWait > BC.maxWaitMs || L.win[L.tag].length > BC.maxTaps) dead++; }
+  eq(dead, 0, "levels: every stored line (on its tag) keeps every tap under " + BC.maxWaitMs / 1000 + " s (longest " + (longest / 1000).toFixed(1) + " s) and " + BC.maxTaps + " taps");
 }
 
 // ---- v4.1: every Siege level is a castle picture -------------------------------------------------------------------------
@@ -342,10 +360,29 @@ const ARCH = (cols) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "
   const BC = require("./bake-config.json"), PC = BC.duration.pace, R2 = require("./grade.js"), N2 = E.rulesOf(V3, "normal"), bad = [];
   for (const L of LEVELS.levels) { if (L.n < PC.from || L.source === "teaching") continue; const g = Object.assign({}, BC.eras[L.era].gen, L.n === BC.boss.n ? BC.boss.gen : {}); if (L.w !== g.w[1] + 2 || L.h !== g.h[1] + 2) bad.push(L.id + " " + L.w + "x" + L.h); }
   eq(bad, [], "v4.2: every generated level from " + PC.from + " is its era's full-screen board (" + (BC.eras[4].gen.w[1] + 2) + "x" + (BC.eras[4].gen.h[1] + 2) + ")");
-  const L = LEVELS.levels.find((l) => l.n >= PC.from && l.source !== "teaching"), B = E.compile(L), o = L.win.normal, p0 = R2.pace(B, N2, o, 0), pl = R2.line(B, N2, o), pt = R2.pace(B, N2, o, 20000);
+  const L = LEVELS.levels.find((l) => l.n >= PC.from && l.source !== "teaching" && l.tag === "normal"), B = E.compile(L), o = L.win.normal, p0 = R2.pace(B, N2, o, 0), pl = R2.line(B, N2, o), pt = R2.pace(B, N2, o, 20000);
   ok(p0.won && p0.taps === o.length && p0.ms <= pl.ms, "pace: " + L.id + "'s stored Normal order replayed at real pace wins in " + o.length + " taps, no slower than patient play (" + p0.ms + " <= " + pl.ms + " ms)");
   ok(pt.won && pt.ms >= (o.length - 1) * 20000, "pace: with 20 s to think before each tap the replay takes at least " + (o.length - 1) + " x 20 s (" + pt.ms + " ms)");
   ok(L.grade.normal.pace && L.grade.normal.pace.ms === Math.round(p0.ms * PC.factor), "pace: the stored real pace is the replay times " + PC.factor);
+  // v4.3: every level's real pace on its own tag; a Hard level whose archers stand was dealt rushed, so its stored order
+  // also wins at real pace (a Hard kill leaves its colour short).
+  const lost = LEVELS.levels.filter((l) => l.n >= PC.from && l.grade[l.tag].pace && l.grade[l.tag].pace.fell).map((l) => l.id);
+  const rushed = LEVELS.levels.filter((l) => l.tag === "hard" && l.towers && l.towers.length && !l.safeArchers && l.source !== "teaching");
+  eq([lost, rushed.filter((l) => !l.rush || !R2.pace(E.compile(l), RULES.hard, l.win.hard, 0).won).map((l) => l.id)], [[], []], "v4.3 pace: every level's stored order wins at real pace on its tag; the " + rushed.length + " Hard levels with archers were dealt rushed and win at real pace");
+}
+
+// ---- v4.3: one fixed tag per level (tools/tags.js; bake-config tags, gallery-config bake.tags) ------------------------------
+{
+  const TG = require("./tags.js"), BC = require("./bake-config.json"), GB = require("./gallery-config.json").bake, GL = require("../levels/gallery.json").levels;
+  const mix = (ls) => TG.TAGS.map((t) => ls.filter((l) => l.tag === t).length);
+  eq([LEVELS.levels.every((l) => l.tag === TG.tagOf(l.n, BC.tags, l.source === "teaching")), GL.every((l) => l.tag === TG.tagOf(l.n, GB.tags, false))], [true, true], "tags: every level carries its schedule's tag");
+  const [e, n, h] = mix(LEVELS.levels), [ge, gn, gh] = mix(GL);
+  ok(Math.abs(e / 100 - 0.15) <= 0.03 && Math.abs(n / 100 - 0.6) <= 0.03 && Math.abs(h / 100 - 0.25) <= 0.03 && Math.abs(ge / 60 - 0.15) <= 0.05 && Math.abs(gn / 60 - 0.6) <= 0.05 && Math.abs(gh / 60 - 0.25) <= 0.05,
+    "tags: the mix is about 15% Easy, 60% Normal, 25% Hard (Siege " + [e, n, h].join("/") + ", Gallery " + [ge, gn, gh].join("/") + ")");
+  const ends = BC.tags.ends.map((x) => LEVELS.levels[x - 1].tag), after = BC.tags.ends.filter((x) => x < 100).map((x) => LEVELS.levels[x].tag);
+  const hards = LEVELS.levels.filter((l) => l.tag === "hard").map((l) => l.n), gaps = hards.slice(1).map((x, i) => x - hards[i]).filter((g) => g > 1);
+  eq([ends.every((t) => t === "hard"), after.every((t) => t === "easy"), LEVELS.levels.filter((l) => l.source === "teaching").every((l) => l.tag !== "hard"), Math.max(...gaps) <= 6, LEVELS.levels[50].safeArchers === true],
+    [true, true, true, true, true], "tags: every era ends on a Hard boss with an Easy level after it; teaching levels are Easy or Normal; Hard comes every 4-5 levels (longest gap " + Math.max(...gaps) + "); level 51 keeps safe archers");
 }
 
 // ==== v4 M2: the twists (mystery cards, linked squads, the locked space) =================================================
@@ -387,26 +424,29 @@ const ROW6 = ["abcdef", "......", "..##.."]; // six colours, one pixel each, all
 
 // ---- linked squads ----------------------------------------------------------------------------------------------------------
 {
-  // a (column 0's front) is linked to b, third in column 1 behind c and a hidden d; e sits behind b.
+  // a (column 0's front) is linked to b, third in column 1 behind c and a hidden d; e sits behind b. v4.3: a linked card
+  // goes only when its partner is a front card too.
   const L = lv(ROW6, [[[1, 1]], [[3, 1], [4, 1, 1], [2, 1], [5, 1]], [[6, 1]], [], []], { links: [[[0, 0], [1, 2]]] });
   const S = E.sim(E.compile(L), N); S.logOn = true;
-  eq([S.partner(0), S.partner(3), S.card(1, 2), S.refused(0)], [3, 0, 3, false], "link: a and b (column 1, third card) are partners; with the line empty the tap is legal");
-  const r = S.play(0);
-  eq([r, S.lineLen, S.plays, evs(S, E.EV.TAP), evs(S, E.EV.LINK)], [E.PLAYING, 2, 1, [[0, 1], [1, 2]], [[0, 1]]], "link: one tap takes two spaces at the same moment: the tapped squad first (space 0), then its partner (space 1); one play");
-  eq([S.card(1, 0), S.card(1, 1), S.card(1, 2), S.card(1, 3), S.heads[1], S.gone[3]], [1, 2, 4, -1, 0, 1], "link: the buried partner leaves its column and the cards behind it close up (c, d, e)");
-  const disp = evs(S, E.EV.DISP).map(([id]) => [S.qS[id], S.q0[id]]);
+  eq([S.partner(0), S.partner(3), S.card(1, 2), S.refused(0), S.why(0), S.refused(1)], [3, 0, 3, true, 3, false], "link (v4.3): a and b (column 1, third card) are partners; b is buried, so a's tap is refused (why 3), c's is legal");
+  const b0 = S.save(); eq([S.play(0), same(b0, S.save())], [E.REFUSED, true], "link (v4.3): play() on a returns REFUSED and changes nothing");
+  pat(S, 1); pat(S, 1); eq([S.card(1, 0), S.refused(0), S.why(0)], [3, false, 0], "link (v4.3): c and d played, b is column 1's front: a's tap is legal");
+  S.clearLog(); const r = S.play(0);
+  eq([r, S.lineLen, S.plays, evs(S, E.EV.TAP), evs(S, E.EV.LINK)], [E.PLAYING, 2, 3, [[0, 1], [1, 2]], [[0, 1]]], "link: one tap takes two spaces at the same moment: the tapped squad first (space 0), then its partner (space 1); one play");
+  eq([S.card(1, 0), S.card(1, 1), S.gone[3]], [4, -1, 1], "link: the partner leaves the front of its column, e moves up");
+  const disp = evs(S, E.EV.DISP).map(([id]) => [S.qS[id], S.q0[id] - S.now]);
   eq(disp, [[0, 0], [1, 0]], "link: both squads go out together (each dispatches at once for its own colour)");
-  S.quiet(); eq([S.status, S.lineLen, S.pixLeft], [E.PLAYING, 0, 4], "link: both pixels pop; both spaces free");
-  // The partner hidden: revealed as it leaves.
+  S.quiet(); eq([S.status, S.lineLen, S.pixLeft], [E.PLAYING, 0, 2], "link: both pixels pop; both spaces free");
+  // A hidden partner: refused while it is behind the front; at the front it is face up, and the pair goes.
   const H2 = E.sim(E.compile(lv(ROW6, [[[1, 1]], [[3, 1], [2, 1, 1], [5, 1]], [[6, 1]], [], []], { links: [[[0, 0], [1, 1]]] })), N); H2.logOn = true;
-  eq(H2.hidden(2), true, "link: a hidden partner reads hidden before the tap");
-  H2.play(0); eq([H2.hidden(2), evs(H2, E.EV.REVEAL)], [false, [[2, 1]]], "link: a hidden partner is revealed as it leaves (REVEAL card 2, column 1)");
+  eq([H2.hidden(2), H2.why(0)], [true, 3], "link (v4.3): a hidden partner behind the front: the linked tap is refused (why 3)");
+  pat(H2, 1); eq([H2.hidden(2), H2.why(0), evs(H2, E.EV.REVEAL)], [false, 0, [[2, 1]]], "link (v4.3): the partner reaches the front, face up (REVEAL), and the linked tap is legal");
   // The partner at the front of its column: that column's head moves on (and reveals a mystery card behind it).
   const F2 = E.sim(E.compile(lv(ROW6, [[[1, 1]], [[2, 1], [3, 1, 1]], [], [], []], { links: [[[0, 0], [1, 0]]] })), N); F2.logOn = true;
   F2.play(0); eq([F2.heads[0], F2.heads[1], F2.card(1, 0), F2.hidden(2), evs(F2, E.EV.REVEAL)], [1, 1, 2, false, [[2, 1]]], "link: a partner at its column's front: both columns move on; the new front is revealed");
-  // Tapped from the other side: column 1's front pulls column 0's second card; column 0's front stays.
+  // Tapped from the other side once both are fronts: column 1's front takes column 0's front with it.
   const O2 = E.sim(E.compile(lv(ROW6, [[[1, 1], [2, 1]], [[3, 1]], [], [], []], { links: [[[0, 1], [1, 0]]] })), N);
-  O2.play(1); eq([O2.heads[0], O2.card(0, 0), O2.card(0, 1), O2.lineLen, O2.order().map((s) => O2.spM[s])], [0, 0, -1, 2, [3, 2]], "link: tapped from either side; the partner's column keeps its front");
+  const o1 = O2.why(1); pat(O2, 0); O2.play(1); eq([o1, O2.heads[0], O2.card(0, 0), O2.lineLen, O2.order().map((s) => O2.spM[s])], [3, 2, -1, 2, [3, 2]], "link (v4.3): column 1's front waits for its partner (second in column 0) to reach the front; then one tap from either side sends both");
 }
 {
   // Two free spaces or refused. RING: b and c walled in; a's ring (12) is linked to c. Two spaces: b waits (walled in),
@@ -424,17 +464,24 @@ const ROW6 = ["abcdef", "......", "..##.."]; // six colours, one pixel each, all
   eq([JS.status, JS.reason, JS.jamWhy, JS.lineLen], [E.FAILED, "jam", 1, 1], "jam (generalized): at rest, one space free, every front card linked: jam, jamWhy 1 (linked squads need 2)");
   const JR = Ref.game(J, hold(2)); JR.play(0); JR.quiet(); eq([JR.status, JR.reason, JR.jamWhy], ["failed", "jam", 1], "jam (generalized): the reference rules agree");
   const W3 = E.sim(E.compile(J), hold(3)); pat(W3, 0); eq(pat(W3, 1), E.WON, "jam (generalized): with 3 spaces the same taps win (the pair takes the last two)");
+  // v4.3, a linked jam: a (column 0's front) is linked to d behind c, and c (column 1's front) to b behind a. Once column
+  // 2 is played out, both fronts wait for a buried partner: at rest that is the jam, jamWhy bit 4 (a buried partner; bit
+  // 1 too, since spaces are free). No state hangs.
+  const X = lv(ROW6, [[[1, 1], [2, 1]], [[3, 1], [4, 1]], [[5, 1], [6, 1]], [], []], { links: [[[0, 0], [1, 1]], [[1, 0], [0, 1]]] });
+  const XS = E.sim(E.compile(X), hold(2)); eq([XS.why(0), XS.why(1), XS.refused(2)], [3, 3, false], "jam (v4.3): both linked fronts wait for a buried partner (why 3); column 2 is legal");
+  pat(XS, 2); pat(XS, 2); eq([XS.status, XS.reason, XS.jamWhy], [E.FAILED, "jam", 5], "jam (v4.3): column 2 played out, every front waits for a buried partner: jam, jamWhy 5 (4 a buried partner, 1 a space free)");
+  const XR = Ref.game(X, hold(2)); XR.play(2); XR.quiet(); XR.play(2); XR.quiet(); eq([XR.status, XR.reason, XR.jamWhy], ["failed", "jam", 5], "jam (v4.3): the reference rules agree");
 }
 {
-  // Coupled freeing: a's pixel is near the camp, b's far. The pair goes; a is home first but its space holds (held) until
-  // b is home; then both free at that moment, the earlier-placed space first.
+  // Coupled freeing (v4.3: at pickup): a's pixel is near the camp, b's far. The pair goes; a's block is picked up first
+  // but its space holds (held) until b's is; then both free at that moment, the earlier-placed space first.
   const L = lv(["b.......", "........", "........", ".....a..", "........", "...##..."], [[[1, 1]], [[2, 1]], [], [], []], { links: [[[0, 0], [1, 0]]] });
   const S = E.sim(E.compile(L), N); S.logOn = true; S.play(0, 0);
-  const ia = [0, 1].find((id) => S.qS[id] === 0), ib = 1 - ia, ta = S.q2[ia], tb = S.q2[ib];
-  ok(ta < tb, "coupled: a's sapper is home before b's (" + ta + " < " + tb + " ms)");
-  S.advanceTo(ta); eq([S.lineLen, S.held(0), S.stuck(0), S.held(1)], [2, true, false, false], "coupled: a is finished and home, but its space holds for its partner (held, not stuck)");
-  S.clearLog(); S.advanceTo(tb - 1); eq([S.lineLen, evs(S, E.EV.FREE)], [2, []], "coupled: nothing frees while b is still out");
-  S.advanceTo(tb); eq([S.lineLen, evs(S, E.EV.FREE)], [0, [[0, 1], [1, 2]]], "coupled: b home: both spaces free at that moment, space 0 then space 1");
+  const ia = [0, 1].find((id) => S.qS[id] === 0), ib = 1 - ia, ta = S.q1[ia], tb = S.q1[ib];
+  ok(ta < tb, "coupled: a's block is picked up before b's (" + ta + " < " + tb + " ms)");
+  S.advanceTo(ta); eq([S.lineLen, S.held(0), S.stuck(0), S.held(1)], [2, true, false, false], "coupled: a is finished (its block picked up), but its space holds for its partner (held, not stuck)");
+  S.clearLog(); S.advanceTo(tb - 1); eq([S.lineLen, evs(S, E.EV.FREE)], [2, []], "coupled: nothing frees while b is still walking out");
+  S.advanceTo(tb); eq([S.lineLen, evs(S, E.EV.FREE), S.busy], [0, [[0, 1], [1, 2]], true], "coupled (v4.3): b's block picked up: both spaces free at that moment, space 0 then space 1, the carriers still walking home");
 }
 {
   // Coupled freeing with a Hard kill: g (tower, 3) is linked to a (1); both a pixels sit in the tower's ring, so a's one
@@ -461,7 +508,7 @@ const ROW6 = ["abcdef", "......", "..##.."]; // six colours, one pixel each, all
   // the key pops, then taken while the Looters are still carrying it home.
   const U = E.sim(B, hold(2)); U.play(2, 0); U.advanceTo(10);
   eq([U.open, U.play(0)], [1, E.REFUSED], "lock: one open space, taken: a second tap is refused");
-  U.advanceTo(pop); eq([U.open, U.play(0), U.lineLen, U.out > 0], [2, E.PLAYING, 2, true], "lock: the key pops: the same tap is taken at once, before the Looters are home");
+  U.advanceTo(pop); eq([U.open, U.play(0), U.lineLen, U.out > 0], [2, E.PLAYING, 1, true], "lock: the key pops: the lock opens and (v4.3) the Looters' space frees at once; the tap is taken before the Looters are home");
   // A squad never takes a locked space; a line full but for the locked space at rest is a jam (jamWhy 2).
   const J = E.sim(E.compile(lv(["abn...", "......", "..##.."], [[[4, 1]], [[5, 1]], [[14, 1]], [], []], { lock: { key: [2, 0] } })), hold(3));
   pat(J, 0); pat(J, 1);
@@ -574,6 +621,23 @@ const TWISTED = DEBUG.concat(LEVELS.levels.filter((l, k) => k % 2 === 1).map((l,
   console.log("  differential (twists): " + games + " games in " + ((Date.now() - t0) / 1000).toFixed(1) + " s");
 }
 
+// ---- v4.3: linked pairs in the baked decks -----------------------------------------------------------------------------------
+// The stored order taps every pair with both cards at a front (it holds no refused tap), and no two pairs are cross-buried
+// (pair P's card ahead of Q's in one column while Q's is ahead of P's in another: neither could ever go).
+{
+  let pairs = 0, cross = [], refused = [];
+  for (const L of LEVELS.levels.concat(DEBUG)) {
+    if (!L.links || !L.links.length) continue; pairs += L.links.length;
+    for (let a = 0; a < L.links.length; a++) for (let b = a + 1; b < L.links.length; b++) {
+      const P = L.links[a], Q = L.links[b], ahead = (x, y) => x[0] === y[0] && x[1] < y[1]; // x ahead of y in one column
+      const pq = P.some((x) => Q.some((y) => ahead(x, y))), qp = Q.some((y) => P.some((x) => ahead(y, x)));
+      if (pq && qp) cross.push((L.id || L.n) + " pairs " + a + "," + b);
+    }
+    const S = E.sim(E.compile(L), RULES[L.tag]); for (const ch of L.win[L.tag]) { if (S.play(+ch) === E.REFUSED) { refused.push(L.id); break; } S.quiet(); }
+  }
+  eq([cross, refused], [[], []], "links (v4.3): " + pairs + " linked pairs in the baked and debug decks: no two cross-buried, and every stored order taps each pair with both cards at a front (no refused tap)");
+}
+
 // ---- the grader's info model, legal taps, the fast tapper -------------------------------------------------------------------
 {
   const L = DEBUG.find((l) => l.id === "v4-all"), B = E.compile(L), S = E.sim(B, N), V = Gr.view(S);
@@ -589,13 +653,13 @@ const TWISTED = DEBUG.concat(LEVELS.levels.filter((l, k) => k % 2 === 1).map((l,
   L2.cols.forEach((col, j) => col.forEach((cd, i) => { if (S.hidden(B.colStart[j] + i)) { const alt = mats.filter((m) => m !== cd[0]); cd[0] = alt[k++ % alt.length]; } }));
   const S2 = E.sim(E.compile(L2), N), s1 = Gr.look(S, new Int32Array(S.M.length), new Float64Array(5)), s2 = Gr.look(S2, new Int32Array(S2.M.length), new Float64Array(5));
   eq(Array.from(s2), Array.from(s1), "lookahead: re-colouring every hidden card leaves its scores unchanged (" + Array.from(s1).map((v) => (v === Infinity ? "x" : +v.toFixed(2))).join(" ") + ")");
-  // Every stored debug order wins patiently on its difficulty, holds no refused tap and keeps to the tap cap.
+  // Every stored debug order wins patiently on its tag (v4.3: Normal), holds no refused tap and keeps to the tap cap.
   let good = 0;
-  for (const D of DEBUG) for (const d of ["easy", "normal", "hard"]) {
+  for (const D of DEBUG) for (const d of [D.tag]) {
     const T = E.sim(E.compile(D), RULES[d]); let ref = 0; for (const ch of D.win[d]) { if (T.play(+ch) === E.REFUSED) ref++; T.quiet(); }
     if (T.status === E.WON && !ref && D.win[d].length <= 55 && !E.check(D).length) good++; else console.log("FAIL  " + D.id + " " + d);
   }
-  eq([good, DEBUG.length >= 4, ["v4-mystery", "v4-linked", "v4-locked", "v4-all"].every((id) => DEBUG.some((D) => D.id === id))], [DEBUG.length * 3, true, true], "debug levels: one per twist and one with all three; every stored order wins on its difficulty with no refused tap and 55 taps or fewer");
+  eq([good, DEBUG.length >= 4, ["v4-mystery", "v4-linked", "v4-locked", "v4-all"].every((id) => DEBUG.some((D) => D.id === id))], [DEBUG.length, true, true], "debug levels: one per twist and one with all three; every stored order wins on its tag (Normal) with no refused tap and 55 taps or fewer");
   const lk = DEBUG.find((l) => l.id === "v4-linked"), LB = E.compile(lk);
   ok(Gr.solve(LB, N, 50000) && Gr.rate(LB, N, 40, 3) >= 0 && Gr.greedy(LB, N, 20, 3) >= 0, "grader: rate, greedy and solve finish on a linked level (legal taps only)");
   const fr = [Gr.fast(E.compile(LEVELS.levels[60]), N, 30, 9, 0), Gr.fast(LB, N, 30, 9, 250)];
@@ -729,9 +793,10 @@ const CV = require("./convert.js"), GCFG = require("./gallery-config.json"), PAL
     if (!B.pic || E.check(L).length || L.links || L.lock || (L.gates && L.gates.length) || (L.towers && L.towers.length) || L.cols.some((c) => c.some((cd) => cd[2]))) bad.push(L.id + ": not a plain picture board");
     if (ids.join() !== [...used].sort((a, b) => a - b).join() || ids.some((m) => m === E.IRON || m === E.GILT)) bad.push(L.id + ": palette ids " + ids + " vs grid " + [...used]);
     for (let m = 1; m < E.NMAT; m++) if (B.sapTotal[m] !== B.pix[m]) bad.push(L.id + ": colour " + m + " has " + B.sapTotal[m] + " sappers for " + B.pix[m] + " pixels");
-    for (const d of ["easy", "normal", "hard"]) { if (E.replay(B, RULES[d], L.win[d] || "").status === E.WON) wins++; else bad.push(L.id + " " + d + ": stored order does not win"); }
-    const ln = Gr.line(B, RULES.normal, L.win.normal); ms.push(ln.ms); if (ln.maxWait > GB.maxWaitMs) dead++; if (L.win.normal.length > GB.maxTaps) taps++; if (GB.duration.pace ? !L.grade.normal.pace || L.grade.normal.pace.ms > GB.duration.pace.range[1] : ln.ms > GB.duration.maxMs) over++; // v4.2: the real pace
-    if (L.grade.normal.rate >= L.target[0] && L.grade.normal.rate <= L.target[1]) band++;
+    const d = L.tag, g = L.grade[d] || {}; // v4.3: one fixed tag, one stored order
+    if (RULES[d] && Object.keys(L.win).join() === d && E.replay(B, RULES[d], L.win[d] || "").status === E.WON) wins++; else bad.push(L.id + " " + d + ": stored order does not win");
+    const ln = Gr.line(B, RULES[d] || RULES.normal, L.win[d]); ms.push(ln.ms); if (ln.maxWait > GB.maxWaitMs) dead++; if ((L.win[d] || "").length > GB.maxTaps) taps++; if (GB.duration.pace ? !g.pace || g.pace.fell || g.pace.ms > GB.duration.pace.range[1] : ln.ms > GB.duration.maxMs) over++; // v4.2: the real pace
+    if (g.rate >= L.target[0] && g.rate <= L.target[1]) band++;
     const hx = ids.map((m) => L.pal[m].c); let lmin = 99, fmin = 99;
     for (let a = 0; a < hx.length; a++) for (let b = a + 1; b < hx.length; b++) { lmin = Math.min(lmin, PAL.de00(PAL.lab(hx[a]), PAL.lab(hx[b]))); for (let d = 1; d < T.length; d++) fmin = Math.min(fmin, PAL.de00(PAL.lab(fadeHex(hx[a], T[d])), PAL.lab(hx[b])), PAL.de00(PAL.lab(fadeHex(hx[b], T[d])), PAL.lab(hx[a]))); }
     const want = pic.kind === "painting" ? GCFG.convert.kinds.painting.minDE : GCFG.convert.minDE; if (lmin < want) bad.push(L.id + ": colours only " + lmin.toFixed(1) + " apart"); dmin = Math.min(dmin, lmin);
@@ -740,8 +805,8 @@ const CV = require("./convert.js"), GCFG = require("./gallery-config.json"), PAL
   }
   for (let i = 0; i < GL.length; i++) for (let j = i + 1; j < GL.length; j++) { const A = GL[i], Bq = GL[j]; if (A.w !== Bq.w || A.h !== Bq.h) continue; let same = 0; for (let y = 0; y < A.h; y++) for (let x = 0; x < A.w; x++) if (A.grid[y][x] === Bq.grid[y][x]) same++; if (same / (A.w * A.h) >= GB.dedupe) bad.push(A.id + " and " + Bq.id + " are near-duplicates"); }
   ms.sort((a, b) => a - b);
-  eq(bad, [], "gallery: every level is a plain picture board whose palette is exactly its colours (never 10 or 14), sappers sum to pixels, stored orders win on Easy, Normal and Hard, colours " + GCFG.convert.minDE + " apart (paintings " + GCFG.convert.kinds.painting.minDE + "; smallest " + dmin.toFixed(1) + "), faded tiles " + GCFG.convert.fadeDE + " apart (not paintings; smallest " + dminFade.toFixed(1) + "), a manifest and LICENSES.md line each, no near-duplicates");
-  eq([wins, dead, taps, over, band], [GL.length * 3, 0, 0, 0, GL.length], "gallery: " + wins + " stored orders win; every Normal line under " + GB.maxWaitMs / 1000 + " s a tap, " + GB.maxTaps + " taps and " + (GB.duration.pace ? GB.duration.pace.range[1] / 1000 + " s of real pace; patient" : GB.duration.maxMs / 1000 + " s") + " (median " + (ms[(ms.length - 1) >> 1] / 1000).toFixed(0) + " s, max " + (ms[ms.length - 1] / 1000).toFixed(0) + " s); every level in its Normal band");
+  eq(bad, [], "gallery: every level is a plain picture board whose palette is exactly its colours (never 10 or 14), sappers sum to pixels, stored orders win on each picture's tag, colours " + GCFG.convert.minDE + " apart (paintings " + GCFG.convert.kinds.painting.minDE + "; smallest " + dmin.toFixed(1) + "), faded tiles " + GCFG.convert.fadeDE + " apart (not paintings; smallest " + dminFade.toFixed(1) + "), a manifest and LICENSES.md line each, no near-duplicates");
+  eq([wins, dead, taps, over, band], [GL.length, 0, 0, 0, GL.length], "gallery: " + wins + " stored orders win; every stored line under " + GB.maxWaitMs / 1000 + " s a tap, " + GB.maxTaps + " taps and " + (GB.duration.pace ? GB.duration.pace.range[1] / 1000 + " s of real pace; patient" : GB.duration.maxMs / 1000 + " s") + " (median " + (ms[(ms.length - 1) >> 1] / 1000).toFixed(0) + " s, max " + (ms[ms.length - 1] / 1000).toFixed(0) + " s); every level in its Normal band");
   // Engine vs the slow reference on the Gallery's picture boards: Normal patient and rushed on every level, Easy and Hard
   // patient on every fourth.
   let games = 0, diffs = 0, pops = 0; const t0 = Date.now();
@@ -814,9 +879,11 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
   eq([colsOf(S)[0].map((c) => c[0]), evs(S, E.EV.REVEAL), S.used(PW.PULL)], [[2, 1, 0, 3], [], 2], "pull: c to the front; the cards it passes step back one; no reveal for a face-up card");
   pat(S, 0); eq([S.card(0, 0), S.canPower(PW.PULL, 2), S.power(PW.PULL, 2)], [1, false, E.REFUSED], "pull: a played card can't be pulled");
   S.power(PW.PULL, 3); const b0 = S.save(); eq([S.card(0, 0), S.used(PW.PULL), S.canPower(PW.PULL, 0), S.power(PW.PULL, 0)], [3, 3, false, E.REFUSED], "pull: a fourth is refused (3 a level)"); ok(same(b0, S.save()), "pull: the refusal changes nothing");
-  // A linked card pulled to the front still pulls its partner when tapped; a gone partner can't be pulled.
+  // v4.3: a linked card pulled to the front waits for its partner; the Quartermaster may pull the partner forward too, and
+  // then one tap sends both; a gone partner can't be pulled.
   const P = E.sim(E.compile(lv(ROW6, [[[1, 1], [2, 1]], [[3, 1], [4, 1]], [[6, 1]], [], []], { links: [[[0, 1], [1, 1]]] })), PN);
-  P.power(PW.PULL, 1); eq([P.card(0, 0), P.partner(1), P.play(0), P.lineLen, P.gone[3], P.canPower(PW.PULL, 3)], [1, 3, E.PLAYING, 2, 1, false], "pull: a linked card pulled to the front takes its partner (from 2nd in its column) on the tap; the gone partner can't be pulled");
+  P.power(PW.PULL, 1); const w1 = P.why(0); P.power(PW.PULL, 3);
+  eq([P.card(0, 0), P.card(1, 0), P.partner(1), w1, P.why(0), P.play(0), P.lineLen, P.gone[3], P.canPower(PW.PULL, 3)], [1, 3, 3, 3, 0, E.PLAYING, 2, 1, false], "pull (v4.3): a linked card pulled to the front waits for its partner (why 3); pulling the partner to its front too, one tap sends both; the gone partner can't be pulled");
   // At rest, a pull that would leave every front refused (a linked card with one space free) is refused; while squads are
   // still moving the same pull is taken (the line is judged when it comes to rest).
   const J = lv(RING, [[[2, 1]], [[1, 12], [3, 1]], [[1, 1]], [[2, 1]], []], { links: [[[1, 1], [2, 0]]] });
@@ -867,7 +934,7 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
   // Without a power used, rules with power-ups allowed play every stored order identically (hash, clock, state) to the
   // grader's rules.
   let same2 = 0, tot = 0;
-  for (const L of DEBUG.concat(LEVELS.levels.filter((l, k) => k % 10 === 7))) for (const d of ["easy", "normal", "hard"]) {
+  for (const L of DEBUG.concat(LEVELS.levels.filter((l, k) => k % 10 === 7))) for (const d of [L.tag]) { // v4.3: each on its tag
     const B = E.compile(L), A = E.sim(B, RULES[d]), Z = E.sim(B, PR[d]); let okk = true;
     for (const ch of L.win[d]) { A.play(+ch); A.quiet(); Z.play(+ch); Z.quiet(); if (A.hash() !== Z.hash() || A.now !== Z.now || !same(A.save(), Z.save())) okk = false; }
     tot++; if (okk && Z.status === E.WON) same2++;
@@ -931,26 +998,43 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
   console.log("  differential (power-ups): " + games + " games, " + ops + " operations (taken " + taken.join("/") + ", " + refusedP + " refused) in " + ((Date.now() - t0) / 1000).toFixed(1) + " s");
 }
 
-// ---- the page's save (v4 M1 settings: speed replaces the 2x flag, colour-blind marks) ----------------------------------
+// ---- the page's save (v4 M1 settings: speed replaces the 2x flag, colour-blind marks; v4.3 format 2, progress by id) --------
 {
   const Save = require("../src/save.js"), order = LEVELS.levels.map((l) => l.id), set = (raw) => Save.sanitize({ settings: raw }, order).settings;
-  eq(Save.fresh().settings, { muted: false, speed: 1, cb: false, diff: "normal" }, "save: a fresh save plays at 1x with colour-blind marks off");
+  eq(Save.fresh().settings, { muted: false, speed: 1, cb: false }, "save: a fresh save plays at 1x with colour-blind marks off (v4.3: no difficulty setting)");
   eq([set({ speed: 3, cb: true }).speed, set({ speed: 3, cb: true }).cb], [3, true], "save: speed 3 and colour-blind on load as saved");
   eq([set({ fast: true }).speed, set({ fast: false }).speed, set({ speed: 2.5 }).speed, set({ speed: 9 }).speed, set({ speed: "3" }).speed], [2, 1, 1, 1, 1], "save: the old 2x flag loads as 2; a bad speed loads as 1");
-  eq([set({ cb: "yes" }).cb, set({ cb: 1 }).cb, set({}).cb], [false, false, false], "save: colour-blind is on only for a strict true");
-  // v4 M3: a v3 save (level ids e1-01 .. e3-75, the ids the rebake keeps: era and number) loads against the 100-level file:
-  // every win is kept by id, level 76 (Era 4's opener) opens next, and a win recorded past the first gap is still dropped.
-  const old = { v: 1, done: {}, settings: { muted: true, speed: 2, cb: false, diff: "hard" }, last: "e3-75" };
-  for (let n = 1; n <= 75; n++) old.done["e" + (n <= 25 ? 1 : n <= 50 ? 2 : 3) + "-" + String(n).padStart(2, "0")] = n % 3 ? 2 : 7;
-  const sv = Save.sanitize(JSON.parse(JSON.stringify(old)), order);
-  eq([Object.keys(sv.done).length, sv.done["e3-75"], Save.next(sv, order), Save.isOpen(sv, order, "e4-76"), Save.isOpen(sv, order, "e4-77"), sv.last, sv.settings.diff], [75, 7, "e4-76", true, false, "e3-75", "hard"], "save: a v3 save with 75 wins loads against the rebake: 75 kept, level 76 next and open, 77 locked");
-  // v4 M4: the Gallery's wins (gal): kept per id the page has, clamped to three bits; unknown ids and junk dropped; a save
-  // from before M4 loads with an empty gal.
-  const gids = require("../levels/gallery.json").levels.map((l) => l.id);
-  eq(Save.sanitize({ gal: { [gids[0]]: 2, [gids[1]]: 13, nope: 7, [gids[2]]: "4" } }, order, gids).gal, { [gids[0]]: 2, [gids[1]]: 5 }, "save: the Gallery's wins are kept per picture, clamped; unknown ids and non-numbers are dropped");
-  eq([Save.sanitize(JSON.parse(JSON.stringify(old)), order, gids).gal, Save.fresh().gal], [{}, {}], "save: a save from before the Gallery loads with no Gallery wins");
-  const gap = JSON.parse(JSON.stringify(old)); delete gap.done["e2-40"]; const sg = Save.sanitize(gap, order);
-  eq([Object.keys(sg.done).length, Save.next(sg, order)], [39, "e2-40"], "save: a gap in an old save still drops every later win (levels open in order)");
+  eq([set({ cb: "yes" }).cb, set({ cb: 1 }).cb, set({}).cb, "diff" in set({ diff: "hard" })], [false, false, false, false], "save: colour-blind is on only for a strict true; the difficulty setting is dropped");
+  // v4.3: progress by stable level id. A level opens when it is the first, cleared, or the one before it is cleared; a
+  // cleared level is kept wherever it sits (a gap no longer drops the wins after it).
+  const gap = { v: 2, done: {} }; for (let i = 0; i < 40; i++) if (i !== 20) gap.done[order[i]] = 1; const sg = Save.sanitize(gap, order);
+  eq([Object.keys(sg.done).length, Save.next(sg, order), Save.isOpen(sg, order, order[20]), Save.isOpen(sg, order, order[21]), Save.isOpen(sg, order, order[40]), Save.isOpen(sg, order, order[41])],
+    [39, order[20], true, true, true, false], "save v4.3: a gap keeps every cleared level; the gap is next and open, cleared levels stay open, the one after the last clear opens");
+  eq([Save.isOpen(Save.fresh(), order, order[0]), Save.isOpen(Save.fresh(), order, order[1]), Save.isOpen(Save.fresh(), order, "nope")], [true, false, false], "save v4.3: a new save opens only the first level; unknown ids are never open");
+  // The Gallery opens one picture at a time: the first on the gate (Siege gallery.openAt cleared), each next when the one
+  // before it is cleared.
+  const gids = require("../levels/gallery.json").levels.map((l) => l.id), g0 = Save.fresh();
+  eq([Save.isOpen(g0, gids, gids[0], "gal", false), Save.isOpen(g0, gids, gids[0], "gal", true), Save.isOpen(g0, gids, gids[1], "gal", true), Save.next(g0, gids, "gal", false), Save.next(g0, gids, "gal", true)],
+    [false, true, false, null, gids[0]], "save v4.3: the Gallery's first picture opens on the gate, the second only after the first");
+  const g1 = Save.sanitize({ v: 2, gal: { [gids[0]]: 1, [gids[5]]: 1 } }, order, gids);
+  eq([Save.isOpen(g1, gids, gids[1], "gal", true), Save.isOpen(g1, gids, gids[2], "gal", true), Save.isOpen(g1, gids, gids[5], "gal", true), Save.isOpen(g1, gids, gids[6], "gal", true), Save.next(g1, gids, "gal", true)],
+    [true, false, true, true, gids[1]], "save v4.3: a cleared picture stays open (and opens the next); the earliest open uncleared one is next");
+  eq(Save.sanitize({ gal: { [gids[0]]: 2, [gids[1]]: 13, nope: 7, [gids[2]]: "4", [gids[3]]: 8 } }, order, gids).gal, { [gids[0]]: 1, [gids[1]]: 1 }, "save: Gallery clears kept per picture; unknown ids, non-numbers and no difficulty bit are dropped");
+  // Every shipped save shape (format 1: v3, v4, v4.1, v4.2), as each version's own code wrote it (tools/saves/make.js):
+  // a mask with any difficulty bit becomes cleared, a best row keeps the fastest time and the fewest taps over the
+  // difficulties won, coins/inventory/lives/settings kept, the difficulty dropped; it reads back unchanged.
+  const Meta = require("../src/meta.js");
+  for (const ver of ["v3", "v4", "v4.1", "v4.2"]) {
+    const raw = JSON.parse(require("fs").readFileSync(require("path").join(__dirname, "saves", ver + ".json"), "utf8")), sv = Save.sanitize(JSON.parse(JSON.stringify(raw)), order, gids, META);
+    const wonIds = Object.keys(raw.done).filter((id) => raw.done[id] & 7), galIds = Object.keys(raw.gal || {}).filter((id) => raw.gal[id] & 7 && gids.indexOf(id) >= 0);
+    const bestOk = Object.keys(raw.best || {}).every((id) => { const r = raw.best[id], m = (raw.done[id] || (raw.gal || {})[id]) | 0, b = sv.best[id], ms = [0, 1, 2].filter((k) => m & (1 << k) && r[k] > 0).map((k) => r[k]), tp = [0, 1, 2].filter((k) => m & (1 << k) && r[3 + k] > 0).map((k) => r[3 + k]);
+      return b && b[0] === Math.min(...ms) && b[1] === Math.min(...tp) && b[2] === r[6]; });
+    const keep = raw.coins == null ? META.coins.start : raw.coins;
+    eq([sv.v, Object.keys(sv.done).sort(), Object.keys(sv.gal).sort(), Object.values(sv.done).concat(Object.values(sv.gal)).every((x) => x === 1), bestOk, sv.coins, sv.inv, sv.settings, sv.last, Save.next(sv, order)],
+      [2, wonIds.sort(), galIds.sort(), true, true, keep, raw.inv || { ladder: 0, quartermaster: 0, scout: 0, recall: 0 }, { muted: raw.settings.muted, speed: raw.settings.speed || (raw.settings.fast ? 2 : 1), cb: raw.settings.cb === true }, raw.last, order[wonIds.length] || order[order.length - 1]],
+      "save v4.3: the " + ver + " save (" + wonIds.length + " levels, " + galIds.length + " pictures) migrates: cleared by id, bests the best, coins and settings kept, difficulty dropped");
+    eq(Save.sanitize(JSON.parse(JSON.stringify(sv)), order, gids, META), sv, "save v4.3: the migrated " + ver + " save reads back unchanged (format 2)");
+  }
 }
 
 // ---- v4 M5, the meta layer (src/meta.js) and its save fields ----------------------------------------------------------------
@@ -966,15 +1050,18 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
   const junk = Save.sanitize({ done: { [order[0]]: 3, [order[1]]: 1 }, gal: { [gids[0]]: 4 }, coins: 2.6e9, inv: { ladder: 3.4, scout: -2, recall: 1e9, quartermaster: "9" },
     best: { [order[0]]: [9000, 12000, 7000, 20, 30, 40, 55], [order[1]]: [1, 2, 3, 4, 5, 6, 7], [gids[0]]: [0, 0, 4e6, 0, 0, 2000, 1], nope: [1, 1, 1, 1, 1, 1, 1], [order[2]]: [5, 5, 5, 5, 5, 5, 5] }, lives: { n: 40, at: -3 } }, order, gids, META);
   eq([junk.coins, junk.inv, junk.best, junk.lives], [Meta.MAXCOINS, { ladder: 3, quartermaster: 0, scout: 0, recall: 99 },
-    { [order[0]]: [9000, 12000, 0, 20, 30, 0, 55], [order[1]]: [1, 0, 0, 4, 0, 0, 7], [gids[0]]: [0, 0, Meta.MAXMS, 0, 0, Meta.MAXTAPS, 1] }, { n: META.livesMax, at: 0 }],
-    "meta save: coins and inventory clamped; best kept only for difficulties won (and clamped), unknown or unwon levels dropped; lives clamped");
+    { [order[0]]: [9000, 20, 55], [order[1]]: [1, 4, 7], [gids[0]]: [Meta.MAXMS, Meta.MAXTAPS, 1] }, { n: META.livesMax, at: 0 }],
+    "meta save: coins and inventory clamped; a format-1 best keeps the best over the difficulties won (clamped), unknown or unwon levels dropped; lives clamped");
+  const j2 = Save.sanitize({ v: 2, done: { [order[0]]: 1, [order[1]]: 1 }, best: { [order[0]]: [9000, 20, 55, 99], [order[1]]: [-4, 1e9, "x"], [order[3]]: [1, 1, 1] } }, order, gids, META);
+  eq(j2.best, { [order[0]]: [9000, 20, 55], [order[1]]: [0, Meta.MAXTAPS, 0] }, "meta save v4.3: a format-2 best row [ms, taps, coins] is clamped; an uncleared level's is dropped");
   eq(Save.sanitize(JSON.parse(JSON.stringify(junk)), order, gids, META), junk, "meta save: a sanitized save reads back unchanged");
-  // Coins: per win by difficulty, more for a new medal.
-  eq(["easy", "normal", "hard"].map((d) => [Meta.winCoins(META, d, false), Meta.winCoins(META, d, true)]), ["easy", "normal", "hard"].map((d) => [META.coins.win[d], META.coins.win[d] + META.coins.first[d]]), "meta: a win earns the difficulty's coins, plus its first-clear coins on a new medal");
+  // Coins: per win by the level's tag, more on its first clear (v4.3; a new medal before).
+  eq(["easy", "normal", "hard"].map((d) => [Meta.winCoins(META, d, false), Meta.winCoins(META, d, true)]), ["easy", "normal", "hard"].map((d) => [META.coins.win[d], META.coins.win[d] + META.coins.first[d]]), "meta: a win earns its tag's coins, plus its first-clear coins on the first clear");
+  eq([META.coins.win.easy, META.coins.win.normal, META.coins.win.hard], [5, 10, 20], "meta v4.3: wins pay 5/10/20 by tag");
   const d = Save.fresh(META), id = order[4];
-  const w1 = Meta.recordWin(d, META, id, "normal", 81234, 22, true), w2 = Meta.recordWin(d, META, id, "normal", 90000, 19, false), w3 = Meta.recordWin(d, META, id, "hard", 70000, 30, true);
-  eq([w1.coins, w1.newMs, w1.newTaps, w1.best, w2.coins, w2.newMs, w2.newTaps, w2.best, d.best[id], d.coins],
-    [30, true, true, [0, 0], 10, false, true, [81234, 22], [0, 81234, 70000, 0, 19, 30, 100], META.coins.start + 100], "meta: best time and fewest taps kept apart per difficulty, coins earned there summed");
+  const w1 = Meta.recordWin(d, META, id, "normal", 81234, 22, true), w2 = Meta.recordWin(d, META, id, "normal", 90000, 19, false), w3 = Meta.recordWin(d, META, id, "normal", 70000, 30, false);
+  eq([w1.coins, w1.newMs, w1.newTaps, w1.best, w2.coins, w2.newMs, w2.newTaps, w2.best, w3.newMs, w3.newTaps, d.best[id], d.coins],
+    [30, true, true, [0, 0], 10, false, true, [81234, 22], true, false, [70000, 19, 50], META.coins.start + 50], "meta v4.3: best time and fewest taps kept apart (they can come from different runs), coins earned there summed");
   // Buying: price off the balance, one in the inventory; short coins refused with what's missing.
   const b = Save.fresh(META); b.coins = prices[0] + 5;
   const y1 = Meta.buy(b, META, 0), y2 = Meta.buy(b, META, 0);

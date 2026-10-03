@@ -27,7 +27,7 @@
 //   dispatch in tap order. So with 2 pixels open, a squad of 14 sends 2, and the next round goes as those pop.
 //   Walk, pop, carry: tiles = the pixel's distance + 1. It pops (turns to dirt, reachability updates) at dispatch +
 //   yardMs + tiles * tileMs + biteMs, and the sapper is home at pop + yardMs + tiles * carryMs. A space frees when every
-//   sapper of its squad has been sent and is home.
+//   sapper of its squad has been sent and is home. (v4.3: when its last block is picked up; see the v4.3 note below.)
 //   Archers: while a tower stands, a pixel inside its range (and not itself a tower pixel) is covered. A sapper sent at
 //   a covered pixel is hit on the way (at dispatch + yardMs + ceil(tiles / 2) * tileMs; the pixel is never claimed) and
 //   its squad turns wary: from then on it only goes for uncovered pixels. Easy and Normal: the hit sapper walks back to
@@ -75,6 +75,17 @@
 //   Scout (k 2): every hidden card is revealed. Refused when none is hidden.
 //   Recall (k 3, a = a space): a squad with sappers waiting, none out and no partner goes back to the front of the
 //     column it was tapped from as a card of the sappers still waiting; its space frees at once.
+// v4.3 (SPEC-v4 §9, the v4.3 entry; every level rebaked). Two rule changes, nothing else:
+//   A space frees when its squad's last block is picked up. A squad holds its space while any of its sappers is waiting
+//   at it, walking out to a pixel, or (Easy, Normal) hit by an arrow and walking back to wait; a Hard kill is done. The
+//   moment the last of them pops its pixel, the space frees (a linked pair: when both squads are there, both free, the
+//   earlier-placed first), while those sappers still carry their blocks home. A freed space takes the next squad at once;
+//   the sappers walking home belong to no space. The level is won when the last pixel pops and is over when nothing moves
+//   (every sapper home): rest, the jam and stuck checks and the patient player's next tap all wait for that, as before.
+//   "None out" (Recall, a stuck squad, a finished linked squad) means none walking out or back.
+//   A linked card can be tapped only when its partner is the front card of its column too (and 2 open spaces are free);
+//   the one tap then sends both squads, as before. A linked front card whose partner is buried is refused. The jam check
+//   counts it as refused, and jamWhy bit 4 says a linked card's partner was buried.
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
@@ -397,8 +408,9 @@
         }
       }
     }
-    // A space frees when its squad is finished (all sent, all home). v4 M2: a linked squad's space holds until its
-    // partner is finished too; then both free, the earlier-placed one first.
+    // A space frees when its squad is finished: all sent and every block picked up (v4.3; spO counts the sappers walking
+    // out, or hit and walking back). v4 M2: a linked squad's space holds until its partner is finished too; then both
+    // free, the earlier-placed one first.
     function freeIf(s) {
       if (spQ[s] === 0 || spW[s] > 0 || spO[s] > 0) return;
       const p = spL[s] - 1;
@@ -412,11 +424,12 @@
     }
     function handle(x, t) {
       const type = x & 3, id = x >> 2;
-      if (type === 0) { // the sapper reaches its pixel: it pops, then the sapper carries it home
-        const c = qC[id], m = a[c];
+      if (type === 0) { // the sapper reaches its pixel: it pops (its block picked up), then the sapper carries it home
+        const c = qC[id], m = a[c], s = qS[id];
         if (m > 0) { eatCell(c, id); sap[m]--; }
         push(q2[id], id * 4 + 2);
         if (M[S_PIX] === 0 && M[S_STATUS] === PLAYING) M[S_STATUS] = WON;
+        spO[s]--; freeIf(s); // v4.3: the squad's space frees once its last block is picked up
       } else if (type === 1) { // an arrow: sent back to its space (Easy, Normal) or killed (Hard)
         const s = qS[id], m = spM[s]; M[S_HITS]++;
         if (qK[id] === 3) {
@@ -424,9 +437,11 @@
           if (M[S_STATUS] === PLAYING && (deal || sap[m] < left[m])) fail(SHORT, m);
           freeIf(s);
         } else { log(EV.HIT, id, m); push(q2[id], id * 4 + 2); }
-      } else if (type === 2) { // home: a hit sapper rejoins its squad; the space frees when its squad is all home
-        const s = qS[id]; spO[s]--; M[S_OUT]--; if (qK[id] === 2) spW[s]++;
-        log(EV.HOME, id, s); freeIf(s);
+      } else if (type === 2) { // home: a hit sapper rejoins its squad (Easy, Normal); a carrier is just home (v4.3: its
+        // space freed at its pop and may hold another squad by now, so it is not touched)
+        const s = qS[id]; M[S_OUT]--;
+        if (qK[id] === 2) { spO[s]--; spW[s]++; freeIf(s); }
+        log(EV.HOME, id, s);
       }
       // type 3: a space's stagger is up; dispatch runs after every batch of events
     }
@@ -437,8 +452,10 @@
       if (merge) for (let k = 0; k < M[S_ORD]; k++) if (spM[ord[k]] === m && !spL[ord[k]]) return false;
       return true;
     }
-    // Would a tap on card ci (a front card) be refused? A linked card needs 2 open free spaces (v4 M2).
-    const refusedAt = (ci) => (linkOf[ci] >= 0 ? M[S_LEN] + 2 > capNow() - M[S_LOCK] : blocked(B.cardM[ci]));
+    // Would a tap on card ci (a front card) be refused, and why: 0 no; 1 no open free space; 2 a linked card with fewer
+    // than 2 (v4 M2); 3 a linked card whose partner is not the front of its column (v4.3).
+    const whyAt = (ci) => { const p = linkOf[ci]; if (p < 0) return blocked(B.cardM[ci]) ? 1 : 0; if (frontAt(B.cardCol[p]) !== p) return 3; return M[S_LEN] + 2 > capNow() - M[S_LOCK] ? 2 : 0; };
+    const refusedAt = (ci) => whyAt(ci) !== 0;
     // A mystery card is hidden while it is still in its column behind the front (v4 M2) and has never been seen face up
     // (v4 M5: a card pushed back by a Quartermaster, or put back by a Recall, stays revealed).
     const hiddenAt = (ci) => (B.cardF[ci] & MYSTERY) !== 0 && !shown[ci] && !gone[ci] && pos[ci] > heads[B.cardCol[ci]];
@@ -447,15 +464,15 @@
     // After every batch: the win, and once nothing is moving (no event pending), stuck and jam. At rest no squad can
     // send anyone (it would have), so a full line at rest is a line of squads that can't reach a pixel. v4 M2: jam is
     // every front card refused (no free space, or a linked card with fewer than 2); JAMK bit 1 a space was free, bit 2
-    // a space was still locked.
+    // a space was still locked; v4.3 bit 4 a linked front card's partner was buried.
     function settle() {
       if (M[S_STATUS] !== PLAYING) return;
       if (M[S_PIX] === 0) { M[S_STATUS] = WON; return; }
       if (deal || M[S_EL] > 0) return;
-      let any = false, safe = false;
-      for (let j = 0; j < NCOL; j++) { if (heads[j] >= B.colLen[j]) continue; any = true; if (!refusedAt(frontAt(j))) { safe = true; break; } }
+      let any = false, safe = false, buried = 0;
+      for (let j = 0; j < NCOL; j++) { if (heads[j] >= B.colLen[j]) continue; any = true; const w = whyAt(frontAt(j)); if (!w) { safe = true; break; } if (w === 3) buried = 4; }
       if (!any) fail(STUCK, M[S_ORD] > 0 ? spM[ord[0]] : 0);
-      else if (!safe) { fail(JAM, M[S_ORD] > 0 ? spM[ord[0]] : 0); M[S_JAMK] = (M[S_LEN] < capNow() - M[S_LOCK] ? 1 : 0) | (M[S_LOCK] > 0 ? 2 : 0); }
+      else if (!safe) { fail(JAM, M[S_ORD] > 0 ? spM[ord[0]] : 0); M[S_JAMK] = (M[S_LEN] < capNow() - M[S_LOCK] ? 1 : 0) | (M[S_LOCK] > 0 ? 2 : 0) | buried; }
     }
     // Run every event up to time t (each batch of equal-time events, then dispatch, then settle), and set the clock to t.
     function advanceTo(t) {
@@ -517,8 +534,9 @@
       if (h < len) { const c = seq[s0 + h]; if ((B.cardF[c] & MYSTERY) && !shown[c]) log(EV.REVEAL, c, j); shown[c] = 1; }
     }
     // Tap column col at time t (the clock first runs to t). Returns the status, NOPLAY (not playable) or REFUSED (no
-    // free space, or fewer than 2 for a linked card: a no-op, the card stays at the front and nothing in the state
-    // changes). A linked card pulls its partner out of the partner's column (revealed if it was hidden).
+    // free space, fewer than 2 for a linked card, or v4.3 a linked card whose partner is not its column's front: a no-op,
+    // the card stays at the front and nothing in the state changes). A linked card sends its partner too (v4.3: the
+    // partner is always a front card, so it leaves the front of its column).
     function play(col, t) {
       if (M[S_STATUS] !== PLAYING || col < 0 || col >= NCOL || heads[col] >= B.colLen[col]) return NOPLAY;
       if (t != null) { advanceTo(t); if (M[S_STATUS] !== PLAYING) return NOPLAY; }
@@ -531,8 +549,8 @@
       shown[p] = 1; gone[p] = 1; if (frontAt(pj) === p) advanceHead(pj);
       return pair(B.cardM[ci], cn[ci], B.cardM[p], cn[p], null, ci, p);
     }
-    // A squad at space s that can't send anyone now: all its sappers are home and its colour has no pixel it may go
-    // for (a wary squad: none outside the rings). The page marks it stuck; a line of them is a jam.
+    // A squad at space s that can't send anyone now: none of its sappers out (v4.3: walking out or back) and its colour
+    // has no pixel it may go for (a wary squad: none outside the rings). The page marks it stuck; a line of them is a jam.
     function stuckAt(s) {
       if (s < 0 || s >= capNow() || !spQ[s] || spO[s] > 0 || spW[s] <= 0) return false;
       return (spF[s] & 1 ? wareTarget(spM[s]) : target(spM[s])) < 0;
@@ -648,6 +666,10 @@
       get open() { return capNow() - M[S_LOCK]; }, get locked() { return M[S_LOCK]; }, get jamWhy() { return M[S_JAMK]; },
       card(j, d) { const s0 = B.colStart[j], len = B.colLen[j]; for (let h = heads[j], k = 0; h < len; h++) { const c = seq[s0 + h]; if (gone[c]) continue; if (k++ === d) return c; } return -1; },
       refused(j) { return heads[j] < B.colLen[j] && refusedAt(frontAt(j)); },
+      // v4.3: why a tap on column j's front would be refused (0 not refused or no card, 1 no free space, 2 a linked card
+      // with fewer than 2, 3 a linked card whose partner is not a front card). holding(s): sappers of space s walking out
+      // or back (the space holds while any are, or any wait).
+      why(j) { return heads[j] < B.colLen[j] ? whyAt(frontAt(j)) : 0; },
       hidden: (ci) => ci >= 0 && ci < B.ncards && hiddenAt(ci), partner: (ci) => (ci >= 0 && ci < B.ncards ? linkOf[ci] : -1), held: (s) => heldAt(s),
       // Reachable, unclaimed pixels of m right now (tools and UI; not on the hot path).
       reachable(m) { return m > 0 && m < NMAT ? hlen[m] : 0; },
