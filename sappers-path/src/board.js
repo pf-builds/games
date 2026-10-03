@@ -34,9 +34,8 @@
 // The locked space's key (Critics 1 fix): a dashed square in the socket's cream (board.lockKey.dash), the same dash the
 // locked space wears in the holding line; gate tints (board.gateTints) keep clear of cream and yellow.
 //
-// Rotation (M2, landscape phones). When the board would be small (under layout.rotateBelowCss CSS px a cell) and a
-// quarter turn makes it bigger, the canvas is drawn turned: the fort's south (camp and yard) faces right, next to the
-// tray. Only positions turn (MX/MY and the cell helpers); sprites, crates and text stay upright.
+// Upright always (v4.2 fix, the visual critic's V1). M2 drew a small board turned a quarter on a landscape phone; with
+// picture boards that reads sideways, so the turn is gone: every board is drawn upright and fitted as it is.
 //
 // Show (playtest 1: the dispatch model). The engine runs the siege in time and the board draws its state: sync(S) reads
 // the engine's log after every advance. A dispatch gets a runner (pooled, show.maxRunners) whose route leaves its
@@ -135,7 +134,7 @@
   function create(canvas, cfg, sheets) {
     const C = cfg.v3, K = cfg.board, SH = cfg.show, FX = cfg.fx, g = canvas.getContext("2d", { alpha: false });
     const V = {
-      canvas, g, cfg, B: null, S: null, w: 0, h: 0, n: 0, cs: 0, dpr: 1, Y: K.yardRows | 0, rot: false, calm: false, cb: false, mats: [], nextPile: 0,
+      canvas, g, cfg, B: null, S: null, w: 0, h: 0, n: 0, cs: 0, dpr: 1, Y: K.yardRows | 0, calm: false, cb: false, mats: [], nextPile: 0,
       disp: null, dist: null, q: null, tone: null, deco: null, idleC: [], layer: null, lg: null, sprites: null, piles: [], pileOf: new Int16Array(E.NMAT).fill(-1),
       haul: new Int32Array(E.NMAT), total: new Int32Array(E.NMAT), towerLeft: new Int32Array(MAXT), towerOfCell: null,
       clock: 0, speed: 1, fxT: 0, rebuilds: 0, lastPop: -1, pileDirty: true, font: "", seed: 12345,
@@ -167,11 +166,12 @@
     const rnd = () => { V.seed = (Math.imul(V.seed, 1664525) + 1013904223) | 0; return (V.seed >>> 0) / 4294967296; };
 
     // ---- board -> screen (cells) ---------------------------------------------------------------------------------------
-    // A point (bx, by) in board cells lands at (MX, MY) screen cells; cell c's top-left at (CX, CY). Turned: (by, w - bx).
-    const MX = (bx, by) => (V.rot ? by : bx), MY = (bx, by) => (V.rot ? V.w - bx : by);
-    const CX = (x, y) => (V.rot ? y : x), CY = (x, y) => (V.rot ? V.w - 1 - x : y);
+    // A point (bx, by) in board cells lands at (MX, MY) screen cells; cell c's top-left at (CX, CY). The board is never
+    // turned (v4.2 fix), so they are the identity, kept as the one place the board-to-screen mapping lives.
+    const MX = (bx, by) => bx, MY = (bx, by) => by;
+    const CX = (x, y) => x, CY = (x, y) => y;
     // Board direction (engine nb order: E, W, S, N) -> screen side (0 right, 1 left, 2 bottom, 3 top).
-    const SIDE = [[0, 1, 2, 3], [3, 2, 0, 1]];
+    const SIDE = [0, 1, 2, 3];
 
     // ---- sprite caches ----------------------------------------------------------------------------------------------
     // v4 M1: a flat stud. A solid face with rounded corners on a seam of its own colour darkened (K.stud.seam), the seam
@@ -208,11 +208,9 @@
       return c;
     }
     // v4.1: the entry square (a camp cell of a picture): a dark gateway under a timber lintel. v4.1 fix: one sprite per
-    // place in the gate (k: 1 its left end, 2 its right end, 3 both, 0 between), the posts at its ends; turned with the
-    // board (rot: the board's up is the screen's left), since the gate is part of the picture.
-    function entry(s, k, rot) {
+    // place in the gate (k: 1 its left end, 2 its right end, 3 both, 0 between), the posts at its ends.
+    function entry(s, k) {
       const c = mk(s, s), x = c.getContext("2d"), P = K.pic.entry, lt = Math.max(1, Math.round(s * P.lintel)), pw = Math.max(1, Math.round(s * P.post)), e = Math.max(1, Math.round(s * 0.08));
-      if (rot) { x.translate(0, s); x.rotate(-Math.PI / 2); }
       x.fillStyle = P.face; x.fillRect(0, 0, s, s); x.fillStyle = P.rim; x.fillRect(0, s - e, s, e); // the opening, its sill lit
       x.fillStyle = P.timber; x.fillRect(0, 0, s, lt); x.fillStyle = P.timberDark; x.fillRect(0, lt, s, e);
       if (k & 1) { x.fillStyle = P.timber; x.fillRect(0, 0, pw, s); x.fillStyle = P.timberDark; x.fillRect(pw, lt, e, s - lt); }
@@ -236,7 +234,7 @@
       const S = { blk: [], tb: [], mini: [], sap: [], gnd: [], lock: [], ss, mb, as, ls, arch: null };
       for (let m = 1; m < E.NMAT; m++) { S.blk[m] = block(m, s); S.tb[m] = K.tones.map((k) => (k ? block(m, s, k) : S.blk[m])); S.mini[m] = block(m, mb, 0, 1); S.sap[m] = sapper(m, ss); }
       for (let t = 0; t < 4; t++) for (let v = 0; v < 2; v++) S.gnd[t * 2 + v] = ground(t, v, s);
-      S.water = waterStud(s); S.entry = [0, 1].map((rot) => [0, 1, 2, 3].map((k) => entry(s, k, rot)));
+      S.water = waterStud(s); S.entry = [0, 1, 2, 3].map((k) => entry(s, k));
       const A = K.archer; S.arch = figure(ARCH, { h: A.hood, s: A.skin, e: A.eye, b: A.body, w: A.bow, q: A.string, a: A.arrow }, as);
       K.gateTints.forEach((tint, k) => { S.lock[k] = padlock(tint, ls); });
       S.keep = keepArt(cfg.art, Math.max(14, Math.round(s * SH.keepScale)));
@@ -252,7 +250,7 @@
         const d = px.getImageData(0, 0, pc.width, pc.height).data; for (let i = 3; i < d.length; i += 4) if (d[i] !== 255) { bad.push(name); return; } } catch (e) { bad.push(name); } };
       for (let m = 1; m < E.NMAT; m++) { S.tb[m].forEach((c, v) => probe(c, "blk" + m + "." + v)); probe(S.mini[m], "mini" + m); }
       S.gnd.forEach((c, k) => probe(c, "gnd" + k));
-      probe(S.water, "water"); S.entry.forEach((row, r) => row.forEach((c, k) => probe(c, "entry" + r + "." + k))); // v4.1 fix: the picture's caches too
+      probe(S.water, "water"); S.entry.forEach((c, k) => probe(c, "entry" + k)); // v4.1 fix: the picture's caches too
       if (V.layer) probe(V.layer, "layer");
       return bad;
     }
@@ -366,25 +364,18 @@
       for (let k = 0; k < MAXT; k++) V.ringA[k] = k < B.towers.length && hotNow(k) ? 1 : 0;
       paintLayer();
     }
-    // Fit the canvas into (cssW, cssH): whole device pixels per cell, turned a quarter when that is bigger and allowed.
-    // fit() only works it out (the page asks it before it reserves room for the coach); fitCs is its CSS px per cell.
-    const fitOut = { cs: 0, rot: false };
-    function fit(cssW, cssH, dpr, allowRot) {
-      const rows = V.h + V.Y, cu = Math.min(K.maxCellCss, cssW / V.w, cssH / rows), cr = Math.min(K.maxCellCss, cssW / rows, cssH / V.w);
-      fitOut.rot = !!allowRot && cu < cfg.layout.rotateBelowCss && cr > cu * 1.04;
-      fitOut.cs = Math.max(2, Math.floor((fitOut.rot ? cr : cu) * dpr)); return fitOut;
-    }
-    function fitCs(cssW, cssH, dpr, allowRot) { if (!V.B) return 0; const d = Math.max(1, Math.min(K.maxDpr, dpr || 1)); return fit(cssW, cssH, d, allowRot).cs / d; }
-    function layout(cssW, cssH, dpr, allowRot) {
+    // Fit the canvas into (cssW, cssH): whole device pixels per cell, upright. fit() only works it out (the page asks it
+    // before it reserves room for the coach); fitCs is its CSS px per cell.
+    function fit(cssW, cssH, dpr) { return Math.max(2, Math.floor(Math.min(K.maxCellCss, cssW / V.w, cssH / (V.h + V.Y)) * dpr)); }
+    function fitCs(cssW, cssH, dpr) { if (!V.B) return 0; const d = Math.max(1, Math.min(K.maxDpr, dpr || 1)); return fit(cssW, cssH, d) / d; }
+    function layout(cssW, cssH, dpr) {
       if (!V.B) return;
       V.dpr = Math.max(1, Math.min(K.maxDpr, dpr || 1));
-      const rows = V.h + V.Y, f = fit(cssW, cssH, V.dpr, allowRot), rot = f.rot;
-      const cs = f.cs, turned = rot !== V.rot;
+      const rows = V.h + V.Y, cs = fit(cssW, cssH, V.dpr);
       const fresh = cs !== V.cs || !V.sprites;
-      V.rot = rot; if (turned) { placePiles(); V.pT.fill(-1e12); }
       if (fresh) { V.cs = cs; buildSprites(); }
-      const W = (rot ? rows : V.w) * cs, H = (rot ? V.w : rows) * cs;
-      if (fresh || turned || canvas.width !== W || canvas.height !== H) {
+      const W = V.w * cs, H = rows * cs;
+      if (fresh || canvas.width !== W || canvas.height !== H) {
         canvas.width = W; canvas.height = H;
         canvas.style.width = W / V.dpr + "px"; canvas.style.height = H / V.dpr + "px";
         paintLayer();
@@ -395,11 +386,11 @@
       const S = V.sprites, cs = V.cs, bx = c % V.w, by = (c / V.w) | 0, x = CX(bx, by) * cs, y = CY(bx, by) * cs, v = V.disp[c];
       if (v > 0) { V.lg.drawImage(S.tb[v][V.tone[c]], x, y); const t = V.B.towerOf[c]; if (t >= 0 && !V.pic) rim(c, t, x, y); return; }
       if (V.pic && v === WATER) { V.lg.drawImage(S.water, x, y); return; } // v4.1: the moat is part of the picture
-      V.lg.drawImage(V.pic && v === CAMP ? S.entry[V.rot ? 1 : 0][(bx === V.cx0 ? 1 : 0) | (bx === V.cx1 ? 2 : 0)] : S.gnd[TYPE(v) * 2 + (hash(bx, by) & 1)], x, y);
+      V.lg.drawImage(V.pic && v === CAMP ? S.entry[(bx === V.cx0 ? 1 : 0) | (bx === V.cx1 ? 2 : 0)] : S.gnd[TYPE(v) * 2 + (hash(bx, by) & 1)], x, y);
       if (V.deco[c] && (v === GRASS || v === WATER)) decor(V.deco[c], x, y, bx, by);
       if (coverNow(c)) { V.lg.fillStyle = K.rangeFill; V.lg.fillRect(x, y, cs, cs); }
     }
-    // One cell of scenery, flat and muted (K.deco colours). Upright when turned.
+    // One cell of scenery, flat and muted (K.deco colours).
     function decor(d, x, y, bx, by) {
       const g2 = V.lg, cs = V.cs, D = K.deco, u = Math.max(1, Math.round(cs / 10)), hv = hash(bx + 7, by + 3), P = (fx, fy, w, h, col) => { g2.fillStyle = col; g2.fillRect(Math.round(x + fx * cs), Math.round(y + fy * cs), Math.max(1, Math.round(w)), Math.max(1, Math.round(h))); };
       if (d === 1) { for (let j = 0; j < 3; j++) P(0.25 + j * 0.2 + ((hv >> j) & 1) * 0.05, 0.45 + ((hv >> (j + 3)) & 1) * 0.1, u, cs * 0.28, D.tuft); }
@@ -418,7 +409,7 @@
     }
     // A tower block's crenellated rim on the tower's outer edges: a dark wall line and two pale merlons per edge.
     function rim(c, t, x, y) {
-      const cs = V.cs, g2 = V.lg, tt = Math.max(1, Math.round(cs * K.towerRim)), mw = Math.max(1, Math.round(cs * 0.26)), mh = Math.max(1, Math.round(cs * 0.2)), sd = SIDE[V.rot ? 1 : 0];
+      const cs = V.cs, g2 = V.lg, tt = Math.max(1, Math.round(cs * K.towerRim)), mw = Math.max(1, Math.round(cs * 0.26)), mh = Math.max(1, Math.round(cs * 0.2)), sd = SIDE;
       for (let k = 0; k < 4; k++) {
         const e = V.B.nb[c * 4 + k]; if (e >= 0 && V.B.towerOf[e] === t) continue;
         const s = sd[k]; g2.fillStyle = K.towerWall;
@@ -430,7 +421,7 @@
     }
     function paintLayer() {
       if (!V.B || !V.sprites) return;
-      const cs = V.cs, rows = V.h + V.Y, W = (V.rot ? rows : V.w) * cs, H = (V.rot ? V.w : rows) * cs;
+      const cs = V.cs, rows = V.h + V.Y, W = V.w * cs, H = rows * cs;
       if (!V.layer) { V.layer = mk(W, H); V.lg = V.layer.getContext("2d", { alpha: false }); }
       if (V.layer.width !== W || V.layer.height !== H) { V.layer.width = W; V.layer.height = H; }
       const g2 = V.lg; g2.imageSmoothingEnabled = false;
@@ -440,8 +431,7 @@
     function paintYard() {
       const cs = V.cs, g2 = V.lg, e = Math.max(1, Math.round(cs * 0.12));
       g2.fillStyle = K.yard;
-      if (V.rot) { g2.fillRect(V.h * cs, 0, V.Y * cs, V.w * cs); g2.fillStyle = K.yardEdge; g2.fillRect(V.h * cs, 0, e, V.w * cs); }
-      else { g2.fillRect(0, V.h * cs, V.w * cs, V.Y * cs); g2.fillStyle = K.yardEdge; g2.fillRect(0, V.h * cs, V.w * cs, e); }
+      g2.fillRect(0, V.h * cs, V.w * cs, V.Y * cs); g2.fillStyle = K.yardEdge; g2.fillRect(0, V.h * cs, V.w * cs, e);
       yardPath(-1e9, -1e9, 1e9, 1e9);
       for (let k = 0; k < V.piles.length; k++) paintPile(k);
     }
@@ -450,7 +440,7 @@
     function yardPath(x0, y0, x1, y1) {
       if (!V.pic || V.cx1 < 0) return;
       const cs = V.cs, P = K.pic.entry, a = V.cx0 + P.pathInset, b = V.cx1 + 1 - P.pathInset, d = P.pathRows * V.Y;
-      const px0 = Math.round((V.rot ? V.h : a) * cs), py0 = Math.round((V.rot ? V.w - b : V.h) * cs), px1 = Math.round((V.rot ? V.h + d : b) * cs), py1 = Math.round((V.rot ? V.w - a : V.h + d) * cs);
+      const px0 = Math.round(a * cs), py0 = Math.round(V.h * cs), px1 = Math.round(b * cs), py1 = Math.round((V.h + d) * cs);
       const X0 = Math.max(px0, x0), Y0 = Math.max(py0, y0), X1 = Math.min(px1, x1), Y1 = Math.min(py1, y1);
       if (X1 > X0 && Y1 > Y0) { V.lg.fillStyle = P.path; V.lg.fillRect(X0, Y0, X1 - X0, Y1 - Y0); }
     }
@@ -460,7 +450,7 @@
     const binGrow = (k) => { const m = V.piles[k].m; if (!m || V.haul[m] <= 0) return 0; const a = (V.fxT - V.binT[m]) / Math.max(1, K.binGrowMs); return a >= 1 || V.calm ? 1 : a <= 0 ? 0 : 1 - (1 - a) * (1 - a) * (1 - 2.2 * a); };
     function paintPile(k) {
       const p = V.piles[k], cs = V.cs, g2 = V.lg, S = V.sprites, mb = S.mb, np = V.piles.length, two = np > K.binsRow, per = two ? Math.ceil(np / 2) : np;
-      const sw = V.rot ? V.Y / (two ? 2 : 1) : V.w / per, sh = V.rot ? V.w / per : V.Y / (two ? 2 : 1), u = binGrow(k);
+      const sw = V.w / per, sh = V.Y / (two ? 2 : 1), u = binGrow(k);
       const cx = MX(p.x, p.y) * cs, cy = MY(p.x, p.y) * cs;
       { const x0 = Math.round(cx - (sw * cs) / 2), y0 = Math.round(cy - (sh * cs) / 2), ww = Math.round(sw * cs), hh = Math.round(sh * cs); g2.fillStyle = K.yard; g2.fillRect(x0, y0, ww, hh); yardPath(x0, y0, x0 + ww, y0 + hh); }
       if (u < 1) { // the empty crate (fix 2): muted wood, no colour; the bin grows in over it
@@ -656,11 +646,11 @@
     }
     // Where each space's sappers enter: css points relative to the canvas's top-left, clamped to the canvas edge.
     function setSlots(list) {
-      const cols = V.rot ? V.h + V.Y : V.w, rows = V.rot ? V.w : V.h + V.Y;
+      const cols = V.w, rows = V.h + V.Y;
       for (let s = 0; s < MAXS; s++) {
         const p = list && list[s]; let sx = p ? (p.x * V.dpr) / V.cs : cols / 2, sy = p ? (p.y * V.dpr) / V.cs : rows - 0.3;
         sx = Math.max(0.3, Math.min(cols - 0.3, sx)); sy = Math.max(0.3, Math.min(rows - 0.3, sy));
-        V.slotPt[s * 2] = V.rot ? V.w - sy : sx; V.slotPt[s * 2 + 1] = V.rot ? sx : sy;
+        V.slotPt[s * 2] = sx; V.slotPt[s * 2 + 1] = sy;
       }
     }
 

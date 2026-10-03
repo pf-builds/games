@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Sapper's Path v3 harness (M2, updated for playtest 1's dispatch model). Headless Chromium via Playwright, real input for every play (a move is ONE tap on a
-// front card, SPEC-v3 §3). Four viewports: 375×812 portrait phone (touch), 812×375 landscape phone (touch), 1280×720
+// front card, SPEC-v3 §3). Four viewports: 375×812 portrait phone (touch), 812×375 landscape (touch until v4.2's fix; a short desktop window since, as a phone held sideways shows the upright card), 1280×720
 // desktop (mouse), and a 400×600 iframe inside a portal-style host page (tools/iframe-host.html, mouse). Per viewport,
 // on a fresh profile:
 //   portal shape: every request same-origin (no external requests), payload bytes, load-to-gameplay time and clicks
@@ -80,7 +80,7 @@ const VIEWPORTS = [
   { name: "375x812", width: 375, height: 812, touch: true, dpr: 2, shots: "375" },
   { name: "375x667", width: 375, height: 667, touch: true, dpr: 2, shots: "667" },
   { name: "414x736", width: 414, height: 736, touch: true, dpr: 3, shots: "736" },
-  { name: "812x375", width: 812, height: 375, touch: true, dpr: 3, shots: "812", minCell: 6 },
+  { name: "812x375", width: 812, height: 375, touch: false, dpr: 3, shots: "812", minCell: 6 }, // v4.2 fix: a short desktop window (a phone held so shows the upright card: below)
   { name: "1280x720", width: 1280, height: 720, touch: false, dpr: 1, shots: "1280" },
   { name: "iframe-400x600", width: 480, height: 700, touch: false, dpr: 2, shots: "iframe", iframe: { w: 400, h: 600 }, minCell: 6 },
 ];
@@ -393,6 +393,38 @@ async function run() {
       await ctx.close();
     }
 
+    // v4.2 fix (B1, V1): phones play upright. A touch phone held sideways (667x375, 740x360, 812x375) shows the upright
+    // card, paused, and turning it upright hides the card and plays on; a desktop window or a portal's iframe on a
+    // desktop (900x500, 1280x720, the 400x600 iframe in a 900x500 page) never shows it; no board is ever turned.
+    { report.upright = {};
+      for (const [w, h, dpr] of [[667, 375, 2], [740, 360, 3], [812, 375, 3]]) {
+        const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: dpr, hasTouch: true, isMobile: true }), page = await ctx.newPage(), tag = w + "x" + h + " touch";
+        page.on("console", (m) => { if (m.type() === "error" || m.type() === "warning") report.console.push(tag + " " + m.type() + ": " + m.text()); });
+        page.on("pageerror", (e) => report.console.push(tag + " pageerror: " + e.message));
+        await page.goto(URL_ + "?debug=1", { waitUntil: "load" }); await page.waitForFunction(() => window.SP && document.fonts && document.fonts.status === "loaded", null, { timeout: 15000 });
+        const c0 = await page.evaluate(() => { SP.load(64, "normal"); return SP.state().clock; }); await page.waitForTimeout(600); // real frames: the paused clock must not move
+        const a = await page.evaluate((c0) => { const u = document.getElementById("upright"), r = u.getBoundingClientRect(); return { up: SP.upright().on && !u.hidden && r.width >= innerWidth && r.height >= innerHeight, paused: SP.paused(), still: SP.state().clock === c0 }; }, c0);
+        await page.setViewportSize({ width: h, height: w }); await page.waitForTimeout(200);
+        const b = await page.evaluate(() => { const s = SP.state(); return { up: SP.upright().on || !document.getElementById("upright").hidden, paused: SP.paused(), cs: +(s.cs / devicePixelRatio).toFixed(2), upright: Math.abs(document.getElementById("board").width / document.getElementById("board").height - s.w / (s.h + 4)) < 0.05 }; });
+        report.upright[tag] = { landscape: a, portrait: b };
+        ok(a.up && a.paused && a.still, tag + ": the upright card covers the screen and the game is paused (" + JSON.stringify(a) + ")");
+        const floor = h < 375 ? 7.5 : MIN_CELL; // a 360-wide phone upright: about 8 (7.67), the board being 42 columns
+        ok(!b.up && !b.paused && b.upright && b.cs >= floor, tag + " turned upright: the card is gone and the game plays on, upright, at " + b.cs + " CSS px a cell (" + JSON.stringify(b) + ")");
+        await ctx.close();
+      }
+      for (const [w, h, frame] of [[900, 500, null], [1280, 720, null], [812, 375, null], [900, 500, [400, 600]]]) {
+        const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1 }), page = await ctx.newPage(), tag = w + "x" + h + " desktop" + (frame ? " iframe " + frame.join("x") : "");
+        page.on("console", (m) => { if (m.type() === "error" || m.type() === "warning") report.console.push(tag + " " + m.type() + ": " + m.text()); });
+        let F = page.mainFrame();
+        if (frame) { await page.goto(URL_ + "tools/iframe-host.html?w=" + frame[0] + "&h=" + frame[1], { waitUntil: "load" }); const fh = await page.waitForSelector("#game"); for (let k = 0; k < 100 && !(F = await fh.contentFrame()); k++) await page.waitForTimeout(50); }
+        else await page.goto(URL_ + "?debug=1", { waitUntil: "load" });
+        await F.waitForFunction(() => window.SP && document.fonts && document.fonts.status === "loaded", null, { timeout: 15000 });
+        const c = await F.evaluate(() => { const out = { card: false, turned: [] }; for (const n of [64, 100]) { const s = SP.load(n, "normal"); SP.tick(40); const bd = document.getElementById("board"); if (Math.abs(bd.width / bd.height - s.w / (s.h + 4)) > 0.05) out.turned.push(n); } out.card = SP.upright().on || !document.getElementById("upright").hidden; return out; });
+        report.upright[tag] = c;
+        ok(!c.card && !c.turned.length, tag + ": never the upright card, and the boards stand upright (" + JSON.stringify(c) + ")");
+        await ctx.close();
+      }
+    }
     // Hidden-tab load: rAF never fires, document.hidden is true; everything must still run on SP.tick.
     const ctx = await browser.newContext({ viewport: { width: 375, height: 812 }, deviceScaleFactor: 2 });
     await ctx.addInitScript(() => {

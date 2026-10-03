@@ -8,8 +8,8 @@
 <title>Sapper's Path</title>
 <meta name="description" content="Goblins stole the crown and walled themselves in. Tap a squad: its sappers run up, pull their colour off the fort and carry it home. Keep the holding line clear and raze every block.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%232e2935'/><rect x='14' y='14' width='22' height='22' rx='5' fill='%23ff8c1a'/><rect x='39' y='14' width='22' height='22' rx='5' fill='%23e6262e'/><rect x='64' y='14' width='22' height='22' rx='5' fill='%23ffe21f'/><rect x='14' y='39' width='22' height='22' rx='5' fill='%232f62ff'/><rect x='64' y='39' width='22' height='22' rx='5' fill='%239ee52a'/><rect x='14' y='64' width='22' height='22' rx='5' fill='%238f45ff'/><rect x='39' y='64' width='22' height='22' rx='5' fill='%230fb5a6'/><rect x='64' y='64' width='22' height='22' rx='5' fill='%23ff3fa4'/></svg>">
-<link rel="preload" href="fonts/Jersey10-Regular.ttf?v=26" as="font" type="font/ttf" crossorigin>
-<link rel="stylesheet" href="style.css?v=26">
+<link rel="preload" href="fonts/Jersey10-Regular.ttf?v=27" as="font" type="font/ttf" crossorigin>
+<link rel="stylesheet" href="style.css?v=27">
 </head>
 <body>
 <div id="app">
@@ -47,6 +47,7 @@
     </div>
   </div>
   <div id="hand" aria-hidden="true" hidden><svg viewBox="0 0 16 18" width="34" height="38"><path d="M5 1h6v8h4l-7 8-7-8h4z" fill="#ffe27a" stroke="#221a26" stroke-width="1.6" stroke-linejoin="round"/><path d="M7 3h2v7" fill="none" stroke="#fff8d0" stroke-width="1.2"/></svg></div>
+  <div id="upright" role="alertdialog" aria-label="Turn your phone upright" hidden><svg class="up-ico" viewBox="0 0 64 64" width="104" height="104" aria-hidden="true"><path d="M10 40a24 24 0 0 0 30 15" fill="none" stroke="var(--gold)" stroke-width="5" stroke-linecap="round"/><path d="M33 49l8 6-7 7" fill="none" stroke="var(--gold)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><rect x="24" y="5" width="22" height="38" rx="4" fill="var(--cream)" stroke="var(--ink)" stroke-width="3"/><rect x="28" y="10" width="14" height="26" fill="var(--stone-lo)"/><rect x="33" y="38" width="4" height="2" fill="var(--ink)"/></svg><span class="up-t">Turn your phone upright</span></div>
   <div id="pause" role="dialog" aria-label="Paused: tap to play on" tabindex="-1" hidden><span class="pz-t">Paused</span><span class="pz-s">Tap to play on</span>
     <span class="pz-set"><button class="round tog tog-cb" aria-pressed="false" aria-label="Colour-blind marks"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2" fill="currentColor"/><rect x="13" y="3" width="8" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="3" y="13" width="8" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13" y="13" width="8" height="8" rx="2" fill="currentColor"/><path d="M5 9l4-4M15 19l4-4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg></button><button class="round tog tog-mute" aria-label="Mute sound" aria-pressed="false"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="waves" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="cross" d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></span></div>
   <section id="title" class="screen home">
@@ -107,12 +108,12 @@
     <p id="gal-credits"></p>
   </section>
 </div>
-<script src="src/engine.js?v=26"></script>
-<script src="src/save.js?v=26"></script>
-<script src="src/meta.js?v=26"></script>
-<script src="src/art.js?v=26"></script>
-<script src="src/audio.js?v=26"></script>
-<script src="src/board.js?v=26"></script>
-<script src="src/main.js?v=26"></script>
+<script src="src/engine.js?v=27"></script>
+<script src="src/save.js?v=27"></script>
+<script src="src/meta.js?v=27"></script>
+<script src="src/art.js?v=27"></script>
+<script src="src/audio.js?v=27"></script>
+<script src="src/board.js?v=27"></script>
+<script src="src/main.js?v=27"></script>
 </body>
 </html>

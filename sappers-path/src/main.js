@@ -14,7 +14,12 @@
 // M2: the teaching coach (config.teach: one line and a bouncing arrow on what to tap, advanced by play), the sound set
 // (tap, a throttled pop per pixel, haul, line fill and near-jam warning, jam, blocked, gate, arrows, collapse, fanfare), the
 // win beat (difficulty medals), and portal shape: pause on blur or a hidden tab (the clock stops and the audio context
-// suspends; a Paused sheet takes the next tap so it can never play a card), and the board turned a quarter in landscape.
+// suspends; a Paused sheet takes the next tap so it can never play a card). (M2 also turned the board a quarter in
+// landscape; v4.2's fix keeps every board upright.)
+// v4.2 fix (the visual critic's B1 and V1): phones play upright. A touch screen held sideways under layout.upright.maxH
+// tall shows the "turn your phone upright" card (#upright) and pauses as a blur does; turning it upright hides the card
+// and resumes (only a pause the card made). A desktop window or a portal's iframe on a desktop never shows it. Boards
+// are never turned; the wide layout fits them upright.
 // Fix pass: the level's name sits over its difficulty and steps its size down to fit (never an ellipsis), a full
 // holding line marks each front card blocked (or safe, merge flag only; run on a play, never per frame), and wide
 // screens put every control in one side panel.
@@ -81,7 +86,7 @@
   const app = { cfg: null, levels: [], byId: new Map(), order: [], eras: [], save: null, entry: null, B: null, S: null, V: null, audio: null, sheets: null, gal: [], mats: null, palKey: "", galTiles: [],
     clock: 0, lastT: 0, screen: "title", diff: "normal", speed: 1, cb: false, ending: null, endAt: -1, panel: null, panelAt: 0, testing: false,
     toastT: -1e12, popK: 0, cards: [], nexts: [], slots: [], wide: false, glURL: [], manURL: [], nodes: [], lastW: 0, lastH: 0,
-    coach: null, used: 0, cues: {}, paused: false, pauses: 0, focusEl: null, pt: { x: 0, y: 0 }, T: null, tbuf: null, labFit: new Map(), verdict: [],
+    coach: null, used: 0, cues: {}, paused: false, pauses: 0, upright: false, upPause: false, focusEl: null, pt: { x: 0, y: 0 }, T: null, tbuf: null, labFit: new Map(), verdict: [],
     et: 0, endT: -1, lineDirty: false, lineMoved: false, ord: [], slotPts: [], blockT: -1e12, refused: 0, march: false,
     debug: [], flip: [false, false, false, false, false], rods: null, unlockT: -1e12, lockN: 0, reveals: 0, pairsOut: 0,
     fadeC: null, coached: false, coachMode: "", handKind: "", meas: null,
@@ -118,6 +123,7 @@
     app.audio = Audio.create(app.cfg.audio);
     setMuted(app.save.data.settings.muted, false); setSpeed(app.save.data.settings.speed, false); setCb(app.save.data.settings.cb, false); setDiff(app.diff, false);
     paintWall(); chips(); icons(); buildTray(); buildLine(); buildPowers(); buildMap(); buildGallery(); wire();
+    { const U = app.cfg.layout.upright, u = $("upright"); u.querySelector(".up-t").textContent = U.text; u.setAttribute("aria-label", U.text); }
     showScreen("title"); layout();
     if (DEBUG) window.SP = SP;
     requestAnimationFrame(frame);
@@ -929,9 +935,18 @@
     if (app.screen === "play") $("pause").hidden = false;
   }
   function resume() {
-    if (!app.paused) return;
+    if (!app.paused || app.upright) return; // v4.2 fix: never behind the upright card
     app.paused = false; app.lastT = 0; $("pause").hidden = true;
     if (app.audio && app.audio.ctx) Audio.unlock(app.audio);
+  }
+  // v4.2 fix: the upright card. coarse: a touch screen (CSS pointer: coarse); needed: held sideways under maxH CSS px tall
+  // (layout.upright). Showing it pauses as a blur does (unless already paused); hiding it resumes only that pause.
+  const coarse = () => !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
+  const uprightNeeded = (w, h, c) => !!c && w > h && h < app.cfg.layout.upright.maxH;
+  function setUpright(on) {
+    on = !!on; if (on === app.upright) return;
+    if (on) { if (!app.paused) { pause(); app.upPause = true; } app.upright = true; $("upright").hidden = false; }
+    else { app.upright = false; $("upright").hidden = true; if (app.upPause) { app.upPause = false; resume(); } }
   }
   // v4 M5: a settings row (.set-row) also shows its value in words.
   const rowVal = (b, t) => { const v = b.querySelector(".sv"); if (v) v.textContent = t; };
@@ -997,6 +1012,7 @@
   function layout() {
     if (!app.cfg) return;
     const L = app.cfg.layout, W = window.innerWidth, H = window.innerHeight;
+    setUpright(uprightNeeded(W, H, coarse()));
     app.wide = W >= L.wideMinPx && W / H >= L.wideAspect;
     // Short and wide (a landscape phone): the top bar moves over the rail so the board gets the full height.
     const short = app.wide && H <= L.shortMaxH;
@@ -1036,7 +1052,7 @@
     // the band, then the top bar (three rows again when the board keeps minCellCss with them); every try keeps minCellCss.
     let mode = app.coached && app.screen === "play" ? (app.wide ? "side" : "above") : "";
     const res = coachH() + 6, room = () => [st.clientWidth - G[0], st.clientHeight - (app.rows < L.queueRows ? G[2] : G[1])];
-    const cellAt = (cut) => { const [a, b] = room(); return app.V.fitCs(a, b - cut, dpr, false); }, rowsTo = (k) => { if (app.rows !== k) { setRows(k); renderTray(); } };
+    const cellAt = (cut) => { const [a, b] = room(); return app.V.fitCs(a, b - cut, dpr); }, rowsTo = (k) => { if (app.rows !== k) { setRows(k); renderTray(); } };
     if (!app.wide && app.S && window.innerHeight > L.shortRowsMaxH) {
       rowsTo(L.queueRows); const three = cellAt(0) >= L.minCellCss;
       if (mode === "above" && !(three && cellAt(res) >= L.minCellCss)) { rowsTo(L.queueRowsShort); if (cellAt(res) < L.minCellCss) { mode = "top"; if (three) rowsTo(L.queueRows); } }
@@ -1045,10 +1061,9 @@
     const [w, h0] = room();
     app.coachMode = mode; BD.classList.toggle("coached", !!mode); BD.classList.toggle("coach-above", mode === "above"); BD.classList.toggle("coach-top", mode === "top");
     const h = h0 - (mode === "above" ? res : 0);
-    if (w > 0 && h > 0) app.V.layout(w, h, dpr, app.wide);
+    if (w > 0 && h > 0) app.V.layout(w, h, dpr);
     if (app.wide) { const cw = parseFloat($("board").style.width) || 0; if (cw > 0) r.setProperty("--stage-w", Math.ceil(cw + 16) + "px"); r.setProperty("--blk-h", $("frame").offsetHeight + "px"); } // the side column is the board's height (M10)
     sizePowers();
-    document.body.classList.toggle("turned", app.V.rot);
     if (app.coach && !$("coach").hidden) { placeCoach(); fitCoach(); placeHand(app.focusEl); }
     placeSlots();
   }
@@ -1241,6 +1256,12 @@
     const ok = (c, m) => { if (c) out.pass++; else out.fail.push(m); return !!c; };
     const was = { save: app.save, screen: app.screen, entry: app.entry, diff: app.diff, speed: app.speed, cb: app.cb, meta: app.meta, now: app.now };
     const key = app.cfg.save.key, snap = (() => { try { return was.save.store.getItem(key); } catch (e) { return "?"; } })();
+    // v4.2 fix: a phone held sideways shows only the upright card, so that is all there is to check here; the game's own
+    // checks run on an upright screen.
+    const wasUp = app.upright;
+    if (wasUp) { const r = $("upright").getBoundingClientRect();
+      ok(app.paused && !$("upright").hidden && r.width >= innerWidth - 1 && r.height >= innerHeight - 1 && hitOK($("upright")) && uprightNeeded(innerWidth, innerHeight, coarse()), "upright: held sideways (" + innerWidth + "x" + innerHeight + ", touch) the upright card covers the screen and the game is paused");
+      out.notes.upright = "held sideways: the card only (the game's checks run upright)"; out.ms = Math.round(performance.now() - T0); return out; }
     if (app.paused) resume();
     const ST = app.cfg.selfTest, SH = app.cfg.show, SPD = SH.speeds;
     const scratch = () => Save.open(Save.memoryStore(), key, app.order, app.gal.map((e) => e.id), app.meta); // v4 M5: with meta (coins)
@@ -1473,6 +1494,21 @@
       $("pause").click(); advance(5000); advance(5016);
       ok(!app.paused && $("pause").hidden && app.clock - pc <= 32 && app.S.plays === 0, "pause: one tap resumes, the clock moves on without a jump, no card played");
       app.lastT = 0;
+      // 12b. v4.2 fix: phones play upright (B1) and boards are never turned (V1).
+      { const U = app.cfg.layout.upright, cases = [[667, 375, true, true], [740, 360, true, true], [812, 375, true, true], [844, 390, true, true], [375, 812, true, false], [1024, 768, true, false], [900, 500, false, false], [1280, 720, false, false], [400, 600, false, false], [667, 375, false, false]];
+        const bad = cases.filter(([w, h, c, want]) => uprightNeeded(w, h, c) !== want);
+        ok(!bad.length, "upright: a touch screen held sideways under " + U.maxH + " px tall asks to be turned upright; a desktop window, a portal's landscape iframe and a tablet never do" + (bad.length ? " (" + JSON.stringify(bad) + ")" : ""));
+        ok(!uprightNeeded(innerWidth, innerHeight, coarse()) && $("upright").hidden, "upright: no card here (" + innerWidth + "x" + innerHeight + (coarse() ? ", touch" : "") + ")");
+        startLevel(app.levels[0].id, "normal"); setUpright(true); const uc = app.clock; advance(1000); advance(1600);
+        const held = app.paused && app.clock === uc && !$("upright").hidden && hitOK($("upright")) && !hitOK(app.cards[0]);
+        resume(); $("pause").click(); const stayed = app.paused; // nothing resumes behind the card
+        setUpright(false); advance(5000); advance(5016);
+        ok(held && stayed && !app.paused && $("upright").hidden && $("pause").hidden && app.clock - uc <= 32 && app.S.plays === 0, "upright: the card pauses (the clock stops, it covers the cards, nothing resumes behind it) and turning upright resumes with no jump and no card played");
+        app.lastT = 0;
+        const turned = [];
+        for (const id of [resolve(64), resolve(100), (app.gal.find((e) => e.L.kind === "painting") || app.gal[0] || {}).id].filter(Boolean)) {
+          startLevel(id, "normal"); const c = $("board"), up = Math.abs(c.width / c.height - app.B.w / (app.B.h + app.V.Y)) < 0.01; if (!up) turned.push(id); }
+        ok(!turned.length, "upright: boards are never turned: the canvas has the board's own shape here (" + (turned.join(", ") || "64, 100 and a painting") + ")"); }
       // 13. The teaching coach: each script shows its first line and its arrow at load, only moves forward on the stored
       // order (played patiently), and is gone at the win; a player who follows the arrow sees every step.
       for (const id of Object.keys(app.cfg.teach || {})) {
@@ -1826,7 +1862,7 @@
   }
   const SP = { play: playCol, state, load: (id, diff) => { startLevel(resolve(id), diff); return state(); }, retry: () => { retry(); return state(); }, tick,
     solve: (nodes) => solveHere(nodes), selfTest, coach: coachState, cues: () => Object.assign({}, app.cues), fx: () => app.V.fxInfo(), hits: () => app.V.hitInfo(), runners: () => app.V.runners(),
-    paused: () => app.paused, pause: () => { pause(); return app.paused; }, resume: () => { resume(); return app.paused; }, winOrder: (d) => (app.entry ? app.entry.L.win[d || app.diff] : null),
+    paused: () => app.paused, upright: () => ({ on: app.upright, needed: uprightNeeded(innerWidth, innerHeight, coarse()), coarse: coarse() }), pause: () => { pause(); return app.paused; }, resume: () => { resume(); return app.paused; }, winOrder: (d) => (app.entry ? app.entry.L.win[d || app.diff] : null),
     lossPlan: (id, d) => lossPlan(resolve(id), d), hitPlan: (id, d) => { const e = app.byId.get(resolve(id)), T = app.cfg.selfTest; return e ? search(e, d || app.diff, (S) => S.hits > 0, T.searchTries, T.searchSeed) : null; }, settle: () => { settleNow(); return state(); }, reachable: (m) => (app.S ? app.S.reachable(m) : 0),
     // Screens for the harness: fill the line with rushed taps; stage k stuck and w working squads on level n (or the first
     // level from n whose fronts allow it). Both return the state plus the taps made.
