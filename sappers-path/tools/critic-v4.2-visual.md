@@ -126,3 +126,63 @@ These are the CSS px of the stage (the board area) left unused by the board fram
 | MINOR | m3: Era 4 silhouette median 0.76. | A second Era 4 silhouette family (carried from v4.1). |
 | MINOR | m4: levels 1–25 leave 129–138 px of width unused on 375×667 and 414×736. | Accept per Peter, or give Era 1 boards 2 rows on short phones. |
 | MINOR | m5: Red Fuji and the other landscape paintings letterbox on portrait phones. | LATER m10 (portrait crops). |
+
+---
+
+## Re-check (after fix pass)
+
+HEAD `110e51a` (branch `sappers-path`, `?v=27`), my own server on :8493. 2026-10-03.
+
+**How I checked:**
+- Probe: `tools/shots-v4.2-critic/recheck-upright.mjs`, results in `recheck/upright.json`.
+- Screenshots: `recheck/`, with sheet `recheck/sheets/r1-upright.png`.
+- 0 console errors or warnings.
+
+| Item | Status | Evidence |
+|---|---|---|
+| **B1** small landscape phones | **Fixed** | See B1 note below. |
+| **V1** rotated pictures | **Fixed** | See V1 note below. |
+| Portrait phones | **Unchanged** | See portrait note below. |
+
+**B1 note.**
+- **Touch phones held sideways** (667×375, 740×360, 844×390, mid-play on level 64): each shows the "Turn your phone upright" card, a phone icon with a turning arrow, in gold on the wall.
+  - The game pauses: `SP.paused()` is true, and the clock moved 0 ms over 1.2 s of real time.
+  - The home screen shows the card too.
+  - Turned upright (375×667, 360×740, 390×844) the card hides and play resumes: the clock moved 800 ms in 800 ms. Cells are 8 / 7.5 / 8.5 px, upright.
+  - Turned sideways again, the card returns.
+- **Never shown on desktop or the portal iframe:** 900×500, 1280×720, 812×375 desktop, 844×390 desktop and the 400×600 iframe. 0 cards and 0 pauses over 7 boards each.
+
+**V1 note.**
+- 0 turned boards anywhere.
+- 812×375 desktop: level 64 and level 100 are 8 px upright; Pizza 8, Cat 8.5, Red Fuji 9.5.
+- 844×390 desktop: 8 / 8 / 8.5 / 9 / 10.5.
+- 900×500: 10.5 px.
+- The castle sits upright beside the side column (`812x375desk-l100.png`, `844x390desk-l100.png`).
+
+**Portrait note.** The cell sizes match my pre-fix `fill.json`, rounded to the half-pixel steps of dpr 2:
+- 375×812: 26 8.5, 40 8, 100 8, Pizza 9, Red Fuji 8.
+- 375×667: 8–9.
+- 414×736: 8.5–9.5.
+- 390×844: 8.5–10.
+
+No card and no turn on any of them.
+
+**Observations, not defects:**
+- On a touch phone held sideways, a landscape portal iframe (740×360) also shows the card. That's correct: the alternative is 1 px cells. A portal's own rotate prompt may show on top of it; let the portal listing declare portrait.
+- The auto-resume when the phone turns upright is immediate. A 3-2-1 or a "Tap to play" would give the player a beat to grip the phone. That's optional polish.
+
+**New finding.**
+
+**n1 (MINOR). 360-wide Android phones draw 7.5 px cells.**
+- **Measured:** at 360×740, upright, the 42×41 boards draw 7.5 px cells. That's under the notes' 8 px phone floor; the board is width-bound.
+- **It isn't from the fix pass:** v4.2's board width sets it.
+- **Why only a minor:** 7.5 px reads the same as the iframe, which is fine.
+- **Fix:** below 380 px wide, trim the stage's side gutter from 8 to 4 px. That gives 8 px cells, or accept.
+
+**Final counts:**
+- 0 blocking, 0 major.
+- 6 minor: m1–m5 from the first pass (carried, unchanged) and n1.
+
+**Portal verdict:**
+- **CrazyGames: accept.** Desktop, portrait phones and the portal iframe all play well. A phone held sideways gets a clean "turn upright" card instead of a broken board.
+- **Poki: would not reject on sight.** Declare the game portrait-only on mobile.

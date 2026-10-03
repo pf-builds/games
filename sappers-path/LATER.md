@@ -246,4 +246,4 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - From the v4.2 critics (2026-10-03):
   - Era 4's silhouette median is 0.76 on the critic's measure: towers flanking a cream keep dominate at thumbnail size. A second Era 4 silhouette family (a cliff-top fortress, a water castle seen from the shore) would break it.
   - Phones play upright only. A real landscape phone layout (board left, rail right, for any `w > h && h < 480`) is the alternative, if a portal wants landscape.
-  - A 360-wide phone (common Android) draws the 42-column boards at 7.67 px.
+  - A 360-wide phone (common Android) draws the 42-column boards at 7.67 px. Critic fix idea (v4.2 re-check n1): trim the side gutter to 4 px below 380 px wide, which gives 8 px.
