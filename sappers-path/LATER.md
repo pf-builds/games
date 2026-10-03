@@ -236,3 +236,10 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - Era 2 reads alike at a glance more than the others (the salmon motte and the red hall are its identity); a second motte colour (a grassy motte) would need a palette check against grass.
 - The entry gate's path in the yard is a short stub under the gate; a path that winds between the crates would read better but crosses the crates' slots.
 - (v4.1 critic re-check, V1 residual, minor) Era 2 is still one motte template moved and recoloured, and the cream-keep-between-blue-towers family dominates Eras 3-4. Next: a second Era 2 silhouette family and a silhouette-match median of 0.65 or less per era (now 0.64-0.74). See tools/critic-v4.1-visual.md re-check.
+
+## From v4.2 (full-screen boards, longer levels, 2026-10-02)
+
+- Speed: 2× and 3× go behind a rewarded ad or a paid unlock in the monetization pass (Peter, 10/2). Levels are designed around 1× (the real-pace targets are at 1×); at 3× Peter finishes a v4.1 level in 20-30 s.
+- Squad sizes: cards run up to 99, but the 15 s dead-time cap keeps squads that must walk to the top of a full-screen board small, so the median card is about 20 (see `tools/v4.2-notes.md`). A wider entry or a cap that scales with the board would let them grow.
+- Real-pace calibration rests on one report (Peter's 1-1.5 min at 1×, 20-30 s at 3× on v4.1). Two models fit it: a factor of 1.77 on the replay (used: v4.2 levels 26+ median 231 s) and a wait of about 2.9 s of game time per tap (median 157 s on the same levels). Timing a few of his v4.2 playthroughs would settle which, and so whether levels need more taps.
+- 375×667 decides the board height: a board sized to fill 375×812 at exactly 8 px would draw 7 px there. If the older small phones matter less than filling the 812 screen, the boards can grow about 10% taller.

@@ -201,3 +201,29 @@ Milestones (plan): M1 the look pass, M2 the rules (mystery cards, linked squads,
     - **Taps and dead time:** longest tap 14.98 s; max 39 taps.
     - **Colours:** smallest pair ΔE00 25.7 (faded 21.2).
     - **Rule checks:** regrades 0 differences; all three critics' rule diffs 0 mismatching games.
+- 2026-10-03 (v4.2, full-screen boards and longer levels; plan section "v4.2", Peter's v4.1 playtest; notes in `tools/v4.2-notes.md`, tables in `tools/v4.2-rebake.md`). Levels 26-100, the teaching levels from 26, the debug levels and the Gallery are rebaked; levels 1-25 are byte-identical to v4.1.
+  - **Board size.** Sized for a 375×812 phone at 8 CSS px a cell, with the header, holding line, 3 queue rows and the power-up bar on screen. The board room was measured in the page: 345 × 408 CSS px with 3 rows (43 × 51 at 8 px). Every board from 26 is 42 × 41 with its frame (a 40 × 39 picture) plus the crate yard, 45 rows in all, because 375×667 decides the height: with its 2 queue rows it keeps exactly 8 px.
+    - Measured smallest cells: 375×812 8.0, 390×844 8.33, 414×736 9.0, 375×667 8.0, 812×375 8.33, the 400×600 page 7.5, 1280×720 15.
+    - The harness floors are 8 on phones (and desktop) and 6 on the small frames (the iframe, 812×375).
+    - Teaching levels 26, 35, 51, 62 and 76 are 38 × 37, so the coach keeps its band above the board; 77 is 34 × 33, with its deck filled column by column so the coach's follower wins.
+    - Gallery boxes are 39 × 39 (emoji, ours) and 40 × 39 (paintings, keeping their aspect).
+  - **Castles at the new size.** `tools/castle.js` sizes every part by a feature scale `k` (eras 2-4 from 26: 2; teaching 1.8, 77 1.6). At k = 1 it draws exactly v4.1's pictures (3,600 castles compared). Era identity, scenes, families, moats, gates, archers (ranges doubled to 7-11 cells), every twist and the boss (same size as the rest, at night, 12 colours, both moats) are as before.
+  - **Real pace (new measure, `tools/grade.js` pace).** The stored Normal winning order is replayed, each next card tapped the moment its tap is legal (a free space, the tap not refused). The result is that engine time × `duration.pace.factor` (1.77). If the replay loses, the patient time stands in and the bake logs it.
+    - **Calibration:** on the v4.1 levels 26-100 the replay's median is 42.3 s. Peter reported 60-90 s at 1× and 20-30 s at 3×; ×1.77 gives 75 s and 25 s, the middle of both.
+    - **Targets** (from level 26): real pace 180-300 s, aiming at a median of about 4 minutes; the boss 180-420 s; the Gallery 150-300 s.
+    - Levels 1-25 keep v4.1's patient limits. The patient max no longer applies from 26 (patient times are still reported). The 15 s dead-time cap on the patient stored Normal line stays.
+    - `regrade.js` checks the stored real pace.
+  - **Squads.** Cards are dealt at 90-99 sappers (the Gallery 45-99) and shrink by 0.85 a step where a tap would pass the dead-time cap. With `deal.best` 3, a squad is the biggest of the first three colours that fit (1, the default, deals as before). The 55-tap cap stays. Walk and swarm timing are unchanged.
+  - **The page.** `show.maxRunners` is 640 (was 240). A runner's route arrays start at 2(w + h) + 8 points and grow when a longer walk comes (never per frame). No engine limit changed: `MAXCELLS` 4096 holds 42 × 41. Cache tag `?v=26`.
+  - **Bake tools.** `bake.js --keep FILE` copies the levels outside `--only` as they are and counts them as earlier picks for the variety gate and the dedupe. `--extra K` gives K more candidates (the level-87 fix-up run). The report is `tools/v4.2-rebake.md`.
+  - **Results:**
+    - Siege 100/100 and Gallery 60/60 winnable on Easy, Normal and Hard with stored orders; every generated level and picture in its Normal band.
+    - Lookahead 40/40 under 25%. Mystery planner gap max 18.8 points. No fast-tapper flags.
+    - Real pace on generated levels 26+: median 231 s, 180-299 s; the boss 241 s. Gallery median 197 s, 153-289 s. Patient medians 498 s and 363 s.
+    - Longest tap 15.00 s. Taps max 55.
+    - Cards: Siege median 23, up to 99 (v4.1 median 10, max 72).
+    - Variety (colour) era medians 0.22, 0.22, 0.34; silhouette 0.37, 0.37, 0.41.
+    - 0 fallbacks in the final file (level 87 rebaked once with 20 extra candidates for its lookahead).
+    - Regrades and all three critics' rule diffs: 0 differences.
+    - Busiest moment (the boss, 1× and 3×): 126-139 runners, frames p95 16.8 ms, draw 0.1 ms, 0 dropped.
+  - **Speed** (Peter, 10/2): 2× and 3× go behind a rewarded ad or a paid unlock in the monetization pass (LATER). Levels are designed around 1×.
