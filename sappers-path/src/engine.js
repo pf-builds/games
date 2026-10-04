@@ -86,6 +86,10 @@
 //   A linked card can be tapped only when its partner is the front card of its column too (and 2 open spaces are free);
 //   the one tap then sends both squads, as before. A linked front card whose partner is buried is refused. The jam check
 //   counts it as refused, and jamWhy bit 4 says a linked card's partner was buried.
+// v5 R1 (SPEC-v4 §9, the v5 R1 entry; levels re-laid in R2). rules.hold spaces on every level (5; the tag sets nothing).
+//   Archers never kill: a hit sapper always walks back to its space and waits (the short fail, rules.archersKill and
+//   safeArchers are gone; a level's safeArchers is accepted and ignored). Dealing mode still fails a deal at any hit
+//   (reason "hit"), so the dealer deals hit-free.
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
@@ -95,8 +99,8 @@
   const GRASS = 0, WATER = -1, DIRT = -2, CAMP = -3;
   const NCOL = 5, NMAT = 15, IRON = 10, GILT = 14, MAXCELLS = 4096, MAXTOWERS = 8, MAXLINE = 8, MYSTERY = 1;
   const PLAYING = 0, WON = 1, FAILED = -1, NOPLAY = -2, REFUSED = -3;
-  const OVERFLOW = 1, SHORT = 2, STUCK = 3, JAM = 4; // OVERFLOW: dealing mode only (v3.1)
-  const REASONS = ["", "overflow", "short", "stuck", "jam"];
+  const OVERFLOW = 1, HIT = 2, STUCK = 3, JAM = 4; // OVERFLOW and HIT: dealing mode only (v3.1; v5 R1 the short fail is gone)
+  const REASONS = ["", "overflow", "hit", "stuck", "jam"];
   // Event log (optional, S.logOn; the page's show reads it): [type, a, b] triples. TAP space mat (space -1: dealing overflow),
   // DISP sapper space, EAT cell sapper (the pixel pops), GATE gate 0, TOWER tower 0, HIT sapper mat (sent back), KILL
   // sapper mat, HOME sapper space, FREE space mat. v4 M2: REVEAL card column (a mystery card is revealed: it reached the
@@ -236,7 +240,7 @@
   // pulled cards, space pairs and lock) lives in one Int32Array, so save/load are one copy and a replay is exact.
   function sim(B, rules, opts) {
     const n = B.n, nb = B.nb, rank = B.rank, cover = B.cover, towerOf = B.towerOf, keyOf = B.keyOf, gateOf = B.gateOf, hoff = B.hoff, linkOf = B.linkOf;
-    const cap = Math.max(1, Math.min(MAXLINE, rules.hold | 0)), lethal = !!rules.archersKill && !B.safeArchers, deal = !!(opts && opts.deal), nt = B.towers.length;
+    const cap = Math.max(1, Math.min(MAXLINE, rules.hold | 0)), deal = !!(opts && opts.deal), nt = B.towers.length; // v5 R1: archers never kill
     const merge = rules.mergeLeftovers === true, T = timeOf(rules.time);
     // Locked spaces (v4 M2): rules.lockSpaces (default 1) of the line's last spaces, never all of them.
     const lockN = B.lockKey >= 0 ? Math.max(0, Math.min(cap - 1, rules.lockSpaces == null ? 1 : rules.lockSpaces | 0)) : 0;
@@ -384,7 +388,7 @@
       qS[id] = s; qC[id] = c; q0[id] = t; spW[s]--; spO[s]++; M[S_OUT]++;
       if (hit) {
         const half = (tiles + 1) >> 1; spF[s] |= 1;
-        qK[id] = lethal || deal ? 3 : 2; q1[id] = t + T.yardMs + half * T.tileMs; q2[id] = q1[id] + T.knockMs + T.yardMs + half * T.tileMs;
+        qK[id] = deal ? 3 : 2; q1[id] = t + T.yardMs + half * T.tileMs; q2[id] = q1[id] + T.knockMs + T.yardMs + half * T.tileMs;
         push(q1[id], id * 4 + 1);
       } else {
         removeAt(m, hpos[c]); hk[c] = CLAIMED;
@@ -430,11 +434,11 @@
         push(q2[id], id * 4 + 2);
         if (M[S_PIX] === 0 && M[S_STATUS] === PLAYING) M[S_STATUS] = WON;
         spO[s]--; freeIf(s); // v4.3: the squad's space frees once its last block is picked up
-      } else if (type === 1) { // an arrow: sent back to its space (Easy, Normal) or killed (Hard)
+      } else if (type === 1) { // an arrow: the sapper is knocked back to its space (v5 R1: on every level, never killed)
         const s = qS[id], m = spM[s]; M[S_HITS]++;
-        if (qK[id] === 3) {
+        if (qK[id] === 3) { // dealing mode only: any hit fails the deal (the dealer deals hit-free)
           M[S_KILLS]++; sap[m]--; spO[s]--; M[S_OUT]--; log(EV.KILL, id, m);
-          if (M[S_STATUS] === PLAYING && (deal || sap[m] < left[m])) fail(SHORT, m);
+          if (M[S_STATUS] === PLAYING) fail(HIT, m);
           freeIf(s);
         } else { log(EV.HIT, id, m); push(q2[id], id * 4 + 2); }
       } else if (type === 2) { // home: a hit sapper rejoins its squad (Easy, Normal); a carrier is just home (v4.3: its
@@ -640,7 +644,7 @@
       return (h1 >>> 0) * 2097152 + (h2 >>> 11);
     };
     return {
-      B, M, a, d, heads, left, lethal, ev, T, SMAX, target, covered, wareTarget, hash, play, advanceTo, quiet,
+      B, M, a, d, heads, left, ev, T, SMAX, target, covered, wareTarget, hash, play, advanceTo, quiet,
       spM, spW, spO, spF, spQ, spL, gone, qS, qC, qK, q0, q1, q2,
       get cap() { return capNow(); }, // the line's spaces (v4 M5: Ladders included)
       // Dealing: a squad of m and n at the clock (or at t); v4 M2 a linked pair (m1's squad, then m2's). The patient

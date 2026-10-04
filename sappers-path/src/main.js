@@ -78,7 +78,7 @@
 // the sheet has no room) and the Gallery marks the next picture; a buy short of coins looks it; the landscape bar fits its
 // foot; the home's era chip lies on the river; era cards are a band; two rods down one gutter take a lane each.
 // v4.3 (SPEC-v4 §9, the v4.3 entry): no difficulty picker. Every level (Siege and Gallery) plays on its one fixed tag
-// (L.tag: Easy 6 spaces, Normal 5, Hard 4 with lethal archers), shown on its map button and Gallery tile, in the top bar
+// (L.tag; v5 R1: it sets no rule, every level has 5 spaces and archers never kill), shown on its map button and Gallery tile, in the top bar
 // and on the report (layout.tags: Hard a strong warning colour, Easy calm, Normal unmarked). Progress is by level id
 // (save format 2, save.js): a level is cleared or not, with its best time and taps; the medals are gone and coins pay by
 // tag (meta.coins). The Gallery opens one picture at a time: the first when Siege gallery.openAt is cleared, each next
@@ -777,7 +777,7 @@
     // v4 M2: a jam where a linked card needed 2 spaces says so; one with a space still locked adds that it never opened.
     // v4.3: a jam where linked fronts wait for buried partners (jamWhy bit 4) says that first.
     const L = app.cfg.layout, jam = e.why & 4 ? L.jamBuriedText + (c.length ? ", and " + names + " can't reach a block." : ".") : e.why & 1 ? L.jamLinkedText + (c.length ? ", and " + names + " can't reach a block." : ".") : "Line jammed: " + names + " can't reach a block." + (e.why & 2 ? " " + L.jamLockText : "");
-    return { short: "Archers cut down the " + who + ": too few left to finish.", stuck: "Out of squads, and the waiting sappers can't reach their colour.",
+    return { stuck: "Out of squads, and the waiting sappers can't reach their colour.",
       jam }[e.reason] || "The assault failed.";
   }
   // The fail sheet's line as the player sees the squads: each jammed squad a chip in its colour with its count (a short
@@ -791,7 +791,6 @@
     if (e.reason === "jam" && e.why & 4) { add(L.jamBuriedText); if (n) { add(", and "); chips(); add(" can't reach a block."); } else add("."); }
     else if (e.reason === "jam" && e.why & 1) { add(L.jamLinkedText); if (n) { add(", and "); chips(); add(" can't reach a block."); } else add("."); }
     else if (e.reason === "jam") { add("Line jammed: "); if (n) chips(); else add("the squads"); add(" can't reach a block." + (e.why & 2 ? " " + L.jamLockText : "")); }
-    else if (e.reason === "short" && e.m) { add("Archers cut down the "); chip(e.m, 0); add(" squad: too few left to finish."); }
     else add(reasonText(e));
   }
   function showPanel() {
@@ -1461,25 +1460,20 @@
         tickQuiet(ST.tickCapMs); step(1500);
         ok(gc.every((c) => app.V.disp[c] <= 0 && app.S.a[c] === E.DIRT) && app.V.fxInfo().falls === 0, "gate show: the gate is open ground once its show ends");
       }
-      // 6. An archer hit on a level of every tag (Easy/Normal: sent back to its space; Hard: killed, and the level fails short).
+      // 6. An archer hit on a level of every tag (v5 R1: archers never kill; the hit sapper is sent back to its space).
       for (const d of TAGS) {
-        const lethal = rulesOf(d).archersKill, pred = (S) => (lethal ? S.kills > 0 : S.hits > 0 && S.status === E.PLAYING); let found = null;
-        for (const e of app.levels) { if (tagOf(e) !== d || !(e.L.towers && e.L.towers.length) || e.L.safeArchers) continue; const o = search(e, d, pred, ST.searchTries, ST.searchSeed); if (o) { found = { e, o }; break; } }
+        const lethal = false, pred = (S) => S.hits > 0 && S.status === E.PLAYING; let found = null;
+        for (const e of app.levels) { if (tagOf(e) !== d || !(e.L.towers && e.L.towers.length)) continue; const o = search(e, d, pred, ST.searchTries, ST.searchSeed); if (o) { found = { e, o }; break; } }
         if (!ok(!!found, "archers " + d + ": found an order with a hit")) continue;
         startLevel(found.e.id); patient(found.o.slice(0, -1)); playCol(found.o.charCodeAt(found.o.length - 1) - 48);
         let arrow = false, struck = null, live = 0;
         for (let t = 0; t < ST.tickCapMs && !struck; t += 16) { step(16); const h = app.V.hitInfo(); if (h.live) live = h.kind; if (h.arrows) arrow = true; if (h.struck) struck = h; }
         ok(live === (lethal ? 2 : 1) && arrow && !!struck && struck.label, "archers " + d + ": a " + (lethal ? "doomed" : "knocked-back") + " runner, the arrow flies and strikes, the label rises (" + JSON.stringify(struck) + ")");
         ok(lethal ? app.S.kills > 0 : app.S.hits > 0 && app.S.kills === 0, "archers " + d + ": the engine records the " + (lethal ? "kill" : "hit") + " when the arrow lands");
-        if (!lethal) { const j = app.cards.findIndex((b, k) => app.S.front(k) >= 0), p0 = app.S.plays, busy = app.S.busy;
+        { const j = app.cards.findIndex((b, k) => app.S.front(k) >= 0), p0 = app.S.plays, busy = app.S.busy;
           ok(busy && (j < 0 || app.S.lineLen >= app.S.cap || (playCol(j) && app.S.plays === p0 + 1)), "archers " + d + ": a tap mid-show still plays (input never waits on the show)"); }
-        else { ok(app.S.status === E.FAILED && app.S.reason === "short", "archers hard: the kill leaves the colour short: the assault fails"); const busy = app.S.busy || app.V.live > 0; retry(); ok(busy && app.S.plays === 0 && app.V.live === 0 && app.S.status === E.PLAYING, "archers hard: Retry mid-show restarts at once"); }
         out.notes["archer_" + d] = found.e.id + " '" + found.o + "'";
       }
-      // 6b. The archer teaching level never kills (safeArchers; v4.3 it plays Easy, so this runs its board under Hard's rules
-      // on an engine copy): a hit walks back to its space and play goes on.
-      if (app.byId.has("e3-51")) { const e = app.byId.get("e3-51"), o = search(e, "hard", (S) => S.hits > 0, ST.searchTries, ST.searchSeed);
-        if (ok(!!o, "e3-51 (Hard's rules): found a tap into the ring")) { const X = E.sim(E.compile(e.L), rulesOf("hard")); for (const ch of o) { X.play(+ch); X.quiet(); } ok(X.hits > 0 && X.kills === 0 && X.status === E.PLAYING && e.L.safeArchers === true, "e3-51 (Hard's rules): archers send the hit sapper back, never kill"); } }
       // 7. Every space taken (rushed taps, squads out): each front card is marked blocked and the head says to wait. A tap
       // on one is refused: engine state, tray, line and board byte-identical; the card shakes, the toast, one blocked
       // sound, and hammering it stays quiet. Once a squad is home the same card plays. (With patient play a full line of

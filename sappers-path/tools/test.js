@@ -239,12 +239,18 @@ const ARCH = (cols) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "
   pat(S, 0); eq([S.hits, S.kills, line(S)], [1, 0, [[1, 2]]], "archers (Easy): the hit sapper walks back to its space");
 }
 {
-  const S = E.sim(E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []])), hold(4, true));
-  pat(S, 0); eq([S.kills, S.status, S.reason], [1, E.FAILED, "short"], "archers (Hard): the hit sapper dies, and the colour is short: fail");
-  const S2 = E.sim(E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []])), hold(4, true));
-  pat(S2, 1); pat(S2, 0); eq([S2.kills, S2.status], [0, E.WON], "archers (Hard): the tower first wins");
-  const S3 = E.sim(E.compile(Object.assign(ARCH([[[1, 6]], [[7, 3]], [], [], []]), { safeArchers: true })), hold(4, true));
-  pat(S3, 0); eq([S3.kills, S3.hits, S3.status], [0, 1, E.PLAYING], "archers (safeArchers, level 51): never kill, even on Hard");
+  // v5 R1: archers never kill. Every tag's rules (and a stale archersKill flag) knock the hit sapper back to wait.
+  for (const [nm, R] of [["Hard", H], ["archersKill: true (ignored)", hold(4, true)]]) {
+    const S = E.sim(E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []])), R);
+    pat(S, 0); eq([S.hits, S.kills, S.status, line(S)], [1, 0, E.PLAYING, [[1, 2]]], "archers (v5 R1, " + nm + "): the hit sapper walks back and waits; nobody dies");
+    eq(pat(S, 1), E.WON, "archers (v5 R1, " + nm + "): the tower falls and the wary squad finishes");
+  }
+  eq([H.hold, EZ.hold, N.hold, "archersKill" in H], [5, 5, 5, false], "rules (v5 R1): 5 spaces on every tag; no archersKill");
+  const R = Ref.game(ARCH([[[1, 6]], [[7, 3]], [], [], []]), hold(4, true)); R.play(0); R.quiet();
+  eq([R.hits, R.kills, R.status], [1, 0, "playing"], "archers (v5 R1, reference): never kill");
+  // Dealing mode keeps every deal hit-free: any hit fails it ("hit").
+  const D = E.sim(E.compile(ARCH([[], [], [], [], []])), N, { deal: true }); D.playSquad(1, 6); D.quiet();
+  eq([D.status, D.reason], [E.FAILED, "hit"], "archers (dealing mode): a hit fails the deal");
 }
 
 // ---- determinism, save / load ------------------------------------------------------------------------------------------
@@ -484,14 +490,13 @@ const ROW6 = ["abcdef", "......", "..##.."]; // six colours, one pixel each, all
   S.advanceTo(tb); eq([S.lineLen, evs(S, E.EV.FREE), S.busy], [0, [[0, 1], [1, 2]], true], "coupled (v4.3): b's block picked up: both spaces free at that moment, space 0 then space 1, the carriers still walking home");
 }
 {
-  // Coupled freeing with a Hard kill: g (tower, 3) is linked to a (1); both a pixels sit in the tower's ring, so a's one
-  // sapper is shot dead on the way. Dead counts as finished: a's space holds for g, and both free once g is home. A spare a
-  // sapper in column 2 keeps the colour from going short; it finishes once the tower is down.
+  // v5 R1 (was: coupled freeing with a Hard kill). g (tower, 3) is linked to a (1); both a pixels sit in the tower's ring,
+  // so a's one sapper is hit on the way and walks back: a is not finished, so neither space frees until the tower is down.
   const L = lv(["......ggg", ".........", "......aa.", ".........", "....##..."], [[[7, 3]], [[1, 1]], [[1, 2]], [], []], { towers: [{ at: [7, 0], r: 3 }], links: [[[0, 0], [1, 0]]] });
-  const S = E.sim(E.compile(L), hold(4, true)); S.play(0, 0); S.advanceTo(600);
-  eq([S.kills, S.status, S.lineLen, S.held(1), S.spO[0] > 0], [1, E.PLAYING, 2, true, true], "coupled (Hard kill): a's sapper is killed; a counts as finished and holds for g, still working");
-  S.quiet(); eq([S.lineLen, S.standing, S.status], [0, 0, E.PLAYING], "coupled (Hard kill): the tower falls, g is home: both spaces free");
-  eq(pat(S, 2), E.WON, "coupled (Hard kill): the spare a squad finishes");
+  const S = E.sim(E.compile(L), H); S.play(0, 0); S.advanceTo(600);
+  eq([S.hits, S.kills, S.status, S.lineLen, S.held(1)], [1, 0, E.PLAYING, 2, false], "coupled (v5 R1): a's sapper is hit, not killed; a still has a sapper, so it holds its space working");
+  S.quiet(); eq([S.lineLen, S.standing, S.status], [0, 0, E.PLAYING], "coupled (v5 R1): the tower falls, a finishes: both spaces free");
+  eq(pat(S, 2), E.WON, "coupled (v5 R1): the spare a squad finishes");
 }
 
 // ---- the locked space ------------------------------------------------------------------------------------------------------

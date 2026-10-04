@@ -26,6 +26,8 @@
 // pixel popped), the space is free, though its carriers are still walking home (a pair: once both squads are there).
 // A linked card can be tapped only while its partner is the front of the partner's list too; then both go as before.
 // A linked front whose partner is buried counts as refused at rest, and the jam's jamWhy adds 4.
+// v5 R1 (SPEC-v4 §9, the v5 R1 entry, from the rules text): rules.hold spaces on every level. Archers never kill: an
+// arrow always sends its sapper back to its space to wait, on every level (no short fail).
 // pops: every popped pixel as [cell, time], in the order they popped.
 "use strict";
 const MATCH = { ".": 0, ",": -2, "~": -1, "#": -3 };
@@ -51,7 +53,6 @@ function load(L) {
 }
 
 function game(L, rules) {
-  const kills = rules.archersKill && L.safeArchers !== true;
   const Tm = rules.time, R = load(L), w = R.w, h = R.h, g = R.g.slice(), cols = R.cols.map((c) => c.slice());
   const sap = {}; cols.forEach((c) => c.forEach((cd) => { sap[cd.m] = (sap[cd.m] || 0) + cd.n; }));
   const spaces = [];           // {m, wait, out, wary, next, seq, pair}; index = space number, null = free; pair: the partner's space;
@@ -134,9 +135,7 @@ function game(L, rules) {
       if (!left() && status === "playing") status = "won";
       spaces[q.space].out--; freeIf(q.space); // the block is picked up: the carrier no longer holds the space
     } else if (e.kind === "hit") {
-      hitsN++;
-      if (kills) { killsN++; sap[q.m]--; spaces[q.space].out--; if (status === "playing" && sap[q.m] < left(q.m)) fail("short"); freeIf(q.space); }
-      else schedule(q.back, "home", { sapper: Object.assign({}, q, { hit: true }) });
+      hitsN++; schedule(q.back, "home", { sapper: Object.assign({}, q, { hit: true }) });
     } else if (e.kind === "home") { // only a sapper sent back by an arrow rejoins its squad; a carrier is just home
       if (q.hit) { const s = spaces[q.space]; s.out--; s.wait++; freeIf(q.space); }
     }
