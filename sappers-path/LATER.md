@@ -257,3 +257,11 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - **Tags from a cycle.** The tags follow a fixed cycle from level 4 (a Hard every 4-5 levels, an Easy after the second Hard of each round) with the era ends Hard and the levels after them Easy. A hand-placed list per pack (P2's packs) could match the tag to each picture.
 - **Saves by id, holes allowed.** Format 2 keeps a cleared level wherever it sits, so a save can have holes (a level cleared with the one before it not). Shipped Siege saves have none (format 1 dropped wins after a gap), but a v4.2 player who won Gallery pictures out of order keeps them all: each cleared picture is open and opens the next, and the gold frame goes to the earliest open picture not cleared. Nothing forces the holes closed; packs that append at the end never make new ones.
 - **Level 83 runs short.** An Easy breather (6 spaces) on an Era 4 board: real pace 168 s against the 180 s floor, the one reported fallback of the v4.3 rebake. No deal of its board reaches 180 s on Easy. Options: accept it, tag it Normal (the cycle's choice), or a new board.
+
+## From v5 R1 (the rules engine batch, 2026-10-03)
+- The continue's rewarded-ad button (`#p-cont-ad`, main.js AD HOOK: its reward calls `contRun()`), once an ad SDK is chosen.
+- The Volley picks a colour by a queue tile or a space; picking it by tapping a block on the board would be more direct (board taps skip the show today).
+- The 2× speed sheet doesn't pause the game while it is open; a pause behind it (like the Paused sheet) may feel better.
+- A one-time "how mystery blocks work" coach line on the first level that has them (from 150).
+- Unlock intro tips can sit over the queue on small screens (level 1's coach is still readable); a placement that avoids the coach's target.
+- Five power-up badges on a phone under 375 px wide (360x640, 360x740) are 49 px, a little under the 52 px queue tile (still over the 44 px tap size); the selfTest's "bigger than a tile" check is waived there. A tighter coins pill would win the few px back.

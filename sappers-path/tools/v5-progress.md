@@ -30,5 +30,9 @@ The rules engine batch (rules and meta only; levels are re-laid in R2). Source o
 | 8 | Power-up unlocks, free first use, tooltips | done | fd15383 |
 | 9 | Mystery blocks (hidden board pixels) | done | 0775b71 |
 | 10 | Extreme tag (data, display, coins) | done | 1d9ba42 |
-| 11 | Freeze test (tool + fixture) | done | (this commit) |
-| 12 | SPEC-v4 §9 v5 R1 entry, `tools/v5-r1-notes.md`, cache tag `?v=30`, harness and selfTest pass | todo | |
+| 11 | Freeze test (tool + fixture) | done | fed5164 |
+| 12 | SPEC-v4 §9 v5 R1 entry, `tools/v5-r1-notes.md`, cache tag `?v=30`, harness and selfTest pass | done | (this commit) |
+
+## State
+
+R1 complete. Next is R2 (re-lay 1-100); its to-do list is `tools/v5-r1-notes.md` §5.

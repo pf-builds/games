@@ -1985,7 +1985,8 @@
         // The bar's geometry at this viewport.
         startLevel(app.levels[0].id, "normal");
         { const tileH = app.cards[0].getBoundingClientRect().height, rl = $("rail").getBoundingClientRect(), pw = $("powers").getBoundingClientRect(); let geo = true;
-          app.pws.forEach((b) => { const r = b.getBoundingClientRect(); if (getComputedStyle(b).borderTopLeftRadius !== "50%" || Math.abs(r.width - r.height) > 1 || r.width <= tileH - 0.5 || r.width < ST.minTapPx - 0.5 || !hitOK(b) || r.bottom > innerHeight + 0.5 || r.right > innerWidth + 0.5) geo = false; }); // Critics 2 fix (m4): a tap target
+          const big = innerWidth >= 375 || app.pws.filter((q) => !q.hidden).length < 5; // v5 R1: five badges on a phone under 375 px wide can't all beat a tile; they keep the tap size
+          app.pws.forEach((b) => { const r = b.getBoundingClientRect(); if (getComputedStyle(b).borderTopLeftRadius !== "50%" || Math.abs(r.width - r.height) > 1 || (big && r.width <= tileH - 0.5) || r.width < ST.minTapPx - 0.5 || !hitOK(b) || r.bottom > innerHeight + 0.5 || r.right > innerWidth + 0.5) geo = false; }); // Critics 2 fix (m4): a tap target
           const wideOK = !app.wide || pw.top >= rl.bottom - 0.5, tallOK = app.wide || pw.top >= rl.bottom - 0.5;
           out.notes.powerBar = Math.round(app.pws[0].getBoundingClientRect().width) + " px badges (tiles " + Math.round(tileH) + " px), bar " + Math.round(pw.height) + " px, " + app.rows + " queue rows" + ($("powers").classList.contains("grid") ? ", 2x2" : "");
           if (app.wide && !document.body.classList.contains("short")) { const sd = $("side").getBoundingClientRect(), used = $("top").getBoundingClientRect().height + rl.height + pw.height; out.notes.powerBarBlank = (100 * Math.max(0, 1 - used / sd.height)).toFixed(1) + "% of the side column not covered"; }
