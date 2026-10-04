@@ -63,7 +63,7 @@ Source: the rules review's "Confirmed", "The feature ladder", "Tags mean how man
 | 5 | Gallery re-grade under v5, re-deal failures; side-quest slots and prizes; interim Gallery unlocks | done: kept 42, tuned 14, dealt 4; regrade 0 | (this commit) |
 | 6 | Lore swap (realm names and lore in config; no real-world history) | done | (this commit) |
 | 7 | Page: realms on the map, coach lines, texts (5 spaces, no kills) | done (text pass on any leftover 6/4-space lines in 8) | (this commit) |
-| 8 | Close-out: `v5.relaid: true`, regrades 0, freeze snapshot, critic-v5 rules, tests, selfTest, harness, `?v=31`, SPEC, notes, screenshots | todo | |
+| 8 | Close-out: `v5.relaid: true`, regrades 0, freeze snapshot, critic-v5 rules, tests, selfTest, harness, `?v=31`, SPEC, notes, screenshots | done | (this commit) |
 
 ### State
-Levels, teaching, Gallery and page work landed together (tests 444/0, selfTest 509-511/0 at 375x812 and 1280x720). Next: piece 8.
+R2 complete. Levels, teaching, Gallery and page work landed together; close-out checks all pass (see `tools/v5-r2-notes.md` §8). Next is R3 (the journey map; `tools/v5-r2-notes.md` §10).

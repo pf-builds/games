@@ -81,7 +81,7 @@ function powerOp(M, G, R, t, ops, issues) { const k = Math.floor(R() * 4); let a
   if (rm.r !== rg.r) { issues.push(`power ${k}:${a}: mine ${rm.r} game ${rg.r}`); return false; } return true; }
 function patient(L, d, seed, kind, stored, withPowers) { const M = mine(L, d), G = engine(L, d), R = rng(seed), ops = [], issues = []; let guard = 0;
   while (M.status === PLAYING && G.status === PLAYING && guard++ < 220) {
-    if (withPowers) { let k = 0; while (R() < 0.45 && k++ < 3) { if (!powerOp(M, G, R, undefined, ops, issues)) break; hiddenCheck(M, G, 'after ' + ops[ops.length - 1], issues); } if (issues.length) break; if (M.status !== PLAYING || G.status !== PLAYING) break; }
+    if (withPowers) { let k = 0; while (R() < 0.45 && k++ < 3) { if (!powerOp(M, G, R, undefined, ops, issues)) break; hiddenCheck(M, G, 'after ' + ops[ops.length - 1], issues); } if (issues.length) break; M.quiet(); G.quiet(); if (M.status !== PLAYING || G.status !== PLAYING) break; } // v5: a Quartermaster places a squad (it can fill the line), so patient play waits for rest after the powers too
     if (kind === 'stored') { const pk = parkCheck(L, d, M); if (pk.worst > (+arg('parkMax', 6)) || pk.n > 2 || (pk.n && pk.tower)) park.push(`${L.id} ${d} before tap ${ops.length + 1}: ${pk.n} squads waiting, biggest ${pk.worst}${pk.tower ? ', a tower stands' : ''}`); }
     const legal = [0, 1, 2, 3, 4].filter((c) => M.G.legal(c)); if (!legal.length) { issues.push('mine: no legal tap at rest while playing'); break; }
     const col = stored ? (ops.filter((o) => !o.startsWith('P')).length < stored.length ? stored[ops.filter((o) => !o.startsWith('P')).length] : -1) : legal[Math.floor(R() * legal.length)]; if (col < 0) break;

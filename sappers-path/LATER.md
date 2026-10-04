@@ -265,3 +265,11 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - A one-time "how mystery blocks work" coach line on the first level that has them (from 150).
 - Unlock intro tips can sit over the queue on small screens (level 1's coach is still readable); a placement that avoids the coach's target.
 - Five power-up badges on a phone under 375 px wide (360x640, 360x740) are 49 px, a little under the 52 px queue tile (still over the 44 px tap size); the selfTest's "bigger than a tile" check is waived there. A tighter coins pill would win the few px back.
+
+## From v5 R2 (the re-lay, 2026-10-04)
+- Side-quest density: at one picture every 3-5 levels only 25 of the 60 pictures fall inside levels 1-100; the other 35 wait for R4's levels (until then they open one at a time once the campaign is cleared). Two quests per node, or a denser rhythm in the early realms, would put more pictures in front of players now.
+- The two 38x37 teaching boards that lost their lessons (v4.3's e3-51 and e4-76) were replaced by new boards because they top out near 2:30 of model time; they could come back as short breather levels if Peter wants a few quick levels.
+- Level 100 (The Mistmoor's opener) reuses the Era 2 mystery lesson's moated motte; R4's fog-fen art should give it a Mistmoor look.
+- The archer-hit harness screen is skipped while no level has towers (they return at 125).
+- Old saves keep cleared ids by slot, so a v4.3 player's progress now points at the re-laid levels in those slots; a save note or a one-time "the campaign was rebuilt" toast could explain it.
+- The interim Gallery screen: R3's journey map replaces it with side-quest nodes (prize on the node); the prize toast and grant move with it.

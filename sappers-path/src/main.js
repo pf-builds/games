@@ -2205,6 +2205,7 @@
     // its badge (k), and for the Quartermaster or Recall a target (the tile [j, d] or the space); the meta state.
     // v4.3: clearPictures(k): clear the Gallery's first k pictures in the live save (the screens' sequential Gallery).
     clearPictures: (k) => { for (let i = 0; i < k && i < app.gal.length; i++) Save.record(app.save.data, app.gal[i].id, "gal"); writeSave(); if (app.screen === "gallery") renderGallery(); return Object.keys(app.save.data.gal).length; },
+    quest: (id) => { const e = app.byId.get(id); return e && e.L.quest ? Object.assign({ open: picOpen(e) }, e.L.quest) : null; }, // v5 R2: a picture's side quest
     unlockTo: (n) => { for (let i = 0; i < n && i < app.order.length; i++) Save.record(app.save.data, app.order[i]); app.save.data.last = Save.next(app.save.data, app.order); writeSave(); renderHome(); return Object.keys(app.save.data.done).length; },
     power: (k, a) => { const got = onPower(k); if (a == null || !app.pick) return got; return Array.isArray(a) ? pickTile(a[0], a[1]) : pickSlot(a); },
     allPowers: (on) => { app.allPw = !!on; renderPowers(); return app.allPw; }, // v5 R1: every power-up shown whatever the campaign (tests)

@@ -52,7 +52,7 @@
 //
 // Exit 0: every assertion passed. Exit 1: an assertion or console message. Exit 2: the harness crashed or ran out of
 // time. Every page.evaluate is a short call; every wait has its own timeout; the whole run has a wall budget.
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync, readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -344,10 +344,10 @@ async function run() {
         if (vp.shots === "375" || vp.shots === "1280") await shot("gallery");
         const gi = await ev(() => SP.gallery().findIndex((id) => /^g-met-/.test(id)));
         // v4.3: the pictures open in order; the painting's tile is padlocked (a tap stays on the Gallery) until the ones
-        // before it are cleared.
+        // before it are cleared. v5 R2: until its side quest's main level is cleared.
         await ev((i) => document.querySelectorAll("#gal-grid .gal-tile")[i].scrollIntoView({ block: "center" }), gi);
         await L(`#gal-grid .gal-tile:nth-child(${gi + 1})`).click({ force: true, timeout: 5000 }); s = await S(); ok(s.screen === "gallery", tag + " v4.3: a tap on a padlocked picture stays on the Gallery");
-        await ev((i) => { SP.clearPictures(i); document.querySelectorAll("#gal-grid .gal-tile")[i].scrollIntoView({ block: "center" }); }, gi);
+        await ev((i) => { SP.clearPictures(i); SP.unlockTo(SP.quest(SP.gallery()[i]).after); SP.screen("gallery"); document.querySelectorAll("#gal-grid .gal-tile")[i].scrollIntoView({ block: "center" }); }, gi);
         await tap(`#gal-grid .gal-tile:nth-child(${gi + 1})`); s = await S();
         ok(s.screen === "play" && /^g-met-/.test(s.id) && s.cs / (vp.dpr || 1) >= (vp.minCell || MIN_CELL) && (await noScroll()), tag + " a real tap on a painting's tile plays it (" + s.id + ", " + (s.cs / (vp.dpr || 1)).toFixed(2) + " CSS px a cell)");
         const gc = await ev(() => SP.state().fronts.findIndex((f) => f && SP.reachable(f.mat) > 0)); await tap(`.card[data-col="${gc}"]`);
@@ -364,13 +364,15 @@ async function run() {
 
       // Screens for the critics (portrait phone): the gate teach, an archer hit mid-animation, the win's collapse and goblin.
       if (vp.shots === "375") {
-        await ev(() => { SP.load(26); SP.play(0); SP.tick(3500); });
-        await page.waitForTimeout(250); await shot("teach-l26-gate");
+        await ev(() => { SP.load(50); SP.play(0); SP.tick(3500); }); // v5 R2: the gate lesson is 50
+        await page.waitForTimeout(250); await shot("teach-l50-gate");
         await ev(() => { SP.play(1); for (let i = 0; i < 400; i++) { SP.tick(16); if (SP.fx().gates[0] === 1) break; } SP.tick(100); });
         await shot("gate-opening");
-        await ev(() => { const o = SP.hitPlan(51) || "2"; SP.load(51); for (let k = 0; k < o.length - 1; k++) { SP.play(+o[k]); SP.settle(); } SP.play(+o[o.length - 1]); for (let i = 0; i < 600; i++) { SP.tick(16); if (SP.hits().struck) break; } SP.tick(120); }); // v4.1: a patient order whose last tap walks into the ring
-        const hh = await ev(() => SP.hits()); ok(hh.struck > 0 && hh.label, tag + " level 51: an arrow has struck mid-show");
-        await shot("archer-hit");
+        // v5 R2: no level has towers until 125 (R4 builds them), so the archer-hit screen waits for those levels.
+        const towerN = (JSON.parse(readFileSync(resolve(here, "../levels/levels.json"), "utf8")).levels.find((l) => l.towers && l.towers.length) || {}).n;
+        if (towerN) { await ev((n) => { const o = SP.hitPlan(n) || "2"; SP.load(n); for (let k = 0; k < o.length - 1; k++) { SP.play(+o[k]); SP.settle(); } SP.play(+o[o.length - 1]); for (let i = 0; i < 600; i++) { SP.tick(16); if (SP.hits().struck) break; } SP.tick(120); }, towerN); // v4.1: a patient order whose last tap walks into the ring
+        const hh = await ev(() => SP.hits()); ok(hh.struck > 0 && hh.label, tag + " level " + towerN + ": an arrow has struck mid-show");
+        await shot("archer-hit"); } else console.log("SKIP " + tag + " archer hit: no level with towers before 125 (v5 R2)");
         await ev(() => { SP.load(2); const o = SP.winOrder(); for (let i = 0; i < o.length - 1; i++) SP.play(+o[i]); SP.skip(); SP.play(+o[o.length - 1]); for (let i = 0; i < 400; i++) { SP.tick(16); if (SP.fx().falls > 4) break; } SP.tick(60); });
         await shot("win-collapse");
         await ev(() => { for (let i = 0; i < 400 && !SP.state().goblin; i++) SP.tick(16); SP.tick(700); });
@@ -394,12 +396,12 @@ async function run() {
         ok((await page.getAttribute("#top .tog-mute", "aria-pressed")) === "true", tag + " mute persists across a reload");
         s = await S();
         ok(s.speed === 1 && (await page.textContent("#top .tog-speed")) === "1\u00d7" && s.cb === true && (await page.getAttribute("#settings .tog-cb", "aria-pressed")) === "true" && (await page.evaluate(() => document.body.classList.contains("cb"))), tag + " colour-blind marks persist across a reload; the speed is back to 1x (v5 R1: never saved)");
-        await page.evaluate(() => localStorage.setItem("sappers-path.v3", '{"v":1,"done":{"e1-01":7,"e3-75":7,"x":9},"settings":{"diff":"nightmare","muted":"yes"},"last":"e3-75"}'));
+        await page.evaluate(() => localStorage.setItem("sappers-path.v3", '{"v":1,"done":{"e1-01":7,"e3-74":7,"x":9},"settings":{"diff":"nightmare","muted":"yes"},"last":"e3-74"}'));
         await page.reload({ waitUntil: "load" });
         await page.waitForFunction(() => window.SP, null, { timeout: 15000 });
         s = await S();
         const sv = await page.evaluate(() => { SP.setMeta({}); return JSON.parse(localStorage.getItem("sappers-path.v3")); }); // v4.3: a write stores format 2
-        ok(s.done === 2 && sv.v === 2 && sv.done["e1-01"] === 1 && sv.done["e3-75"] === 1 && !sv.done.x && !("diff" in sv.settings), tag + " sanitize (v4.3): a format-1 save migrates by id (both cleared levels kept, unknown ids dropped, the difficulty setting gone): " + JSON.stringify(sv.done) + " " + JSON.stringify(sv.settings));
+        ok(s.done === 2 && sv.v === 2 && sv.done["e1-01"] === 1 && sv.done["e3-74"] === 1 && !sv.done.x && !("diff" in sv.settings), tag + " sanitize (v4.3): a format-1 save migrates by id (both cleared levels kept, unknown ids dropped, the difficulty setting gone): " + JSON.stringify(sv.done) + " " + JSON.stringify(sv.settings));
       }
       await ctx.close();
     }
