@@ -1,0 +1,362 @@
+diff --git a/sappers-path/config.json b/sappers-path/config.json
+index 7ea0a09..c28daf6 100644
+--- a/sappers-path/config.json
++++ b/sappers-path/config.json
+@@ -43,10 +43,11 @@
+     "key": "sappers-path.v3"
+   },
+   "eras": [
+-    {"era": 1, "name": "Palisade stockade", "note": "Log walls on an earth bank and ditch could go up in weeks, and forts like this were built for centuries."},
+-    {"era": 2, "name": "Motte and bailey", "note": "The Normans raised hundreds of these after 1066: a timber tower on an earth mound over a fenced yard."},
+-    {"era": 3, "name": "Stone keep", "note": "Stone replaced timber once a hold had to last. London's White Tower was begun about 1078."},
+-    {"era": 4, "name": "Concentric castle", "note": "Walls within walls: Edward I's castles in Wales put a high inner curtain behind the outer one. Beaumaris was begun in 1295."}
++    {"era": 1, "name": "The Greenmarch", "note": "Meadows and timber stockades on earth banks, thrown up overnight by goblin raiders. The crown's trail starts here."},
++    {"era": 2, "name": "Fenwater Vale", "note": "Rivers and reed marsh. Every motte has a moat, but the goblins left the drawbridges down in the fog."},
++    {"era": 3, "name": "The Ironhollows", "note": "Stone keeps in iron-veined hills. The gates are locked here, and the goblins hide the gold keys in the walls."},
++    {"era": 4, "name": "Twinspire Reach", "note": "Walls within walls and twin towers on every hold. The goblin captains send their crews out two by two."},
++    {"era": 5, "name": "The Mistmoor", "note": "Fog lies thick on the fens. Squads march out of it unmarked: nobody knows their colour until they reach the front."}
+   ],
+   "board": {
+     "yardRows": 3,
+@@ -156,7 +157,7 @@
+     "tags": {"easy": "Easy", "normal": "", "hard": "Hard", "extreme": "Extreme"},
+     "fixNote": "v4.3 fix pass. carryAria: the line head's return count (sappers carrying blocks home after their space freed). toastGapPx: on a wide screen a toast in play sits this far above the side column's tray.",
+     "carryAria": "{n} carrying blocks home", "toastGapPx": 10,
+-    "linkedWord": "linked", "linkedAria": "linked with column {c}", "debugNum": "v4", "heldText": "done, holding for its partner", "lockedText": "Locked space: its key is on the board", "colourLockText": "Locked space: opens when a {crew} squad goes out",
++    "realmEye": "Realm {e}", "mapName": "Map", "linkedWord": "linked", "linkedAria": "linked with column {c}", "debugNum": "v4", "heldText": "done, holding for its partner", "lockedText": "Locked space: its key is on the board", "colourLockText": "Locked space: opens when a {crew} squad goes out",
+     "mystery": {"c": "#2b3566", "tc": "#f3ead8", "q": "?"}, "rod": {"w": 8, "core": 5, "ink": "#221a26", "metal": "#b08f6a", "metal2": "#8f9db3", "lane": 2, "hi": "#f3e3c4", "rivet": 5, "stub": 10, "cap": 2.6}, "debugRow": "v4 twists",
+     "fixNote": "Critics 1 fix. fade: the rows behind the front mix this share (t, per row) of the tray colour into their tile, in sRGB, never opacity (tools/fade.js: every faded tile stays ΔE00 20+ from every other colour it shows with); tray is the rail's stone (style.css --tray, set from here at boot); band (fix 2): row d sits on a band of the tray with this share of black mixed in (--band1, --band2), so the rows step back without touching the tile faces. minCellCss: the smallest board cell a coach band above the board may leave (else the coach sits in the top bar). hand: the coach's arrow; for a queue tile it comes in from the side at sideScale (its tip sideIn px inside the tile), for a space or the line from above (tip downIn px inside), and the line head's count steps aside by the arrow's half width (halfW) plus gap. rod: w, core and rivet (radius) in CSS px at a phone tile (52 px), scaled with the tile; partners two rows apart (and a partner below the visible rows: a stub of stub px and two dots) run down the gutter between their columns. mystery.c: the face-down card's back. jamChips: the most colour chips the jam sheet shows.",
+     "fade": {"tray": "#ddd3c0", "t": [0, 0.1, 0.2], "band": [0, 0.06, 0.12]}, "minCellCss": 8, "coachTopMarginPx": 3, "hand": {"sideScale": 0.56, "sideIn": 5, "downIn": 4, "halfW": 17, "gap": 6}, "jamChips": 6,
+@@ -264,20 +265,23 @@
+               {"say": "If every space is stuck waiting, you lose.", "line": true, "until": "play"}],
+     "e1-03": [{"say": "{n} {crew}, {reach} in reach: {go} go.", "card": 2, "if": "short:2", "until": "used:2"},
+               {"say": "The rest wait their turn. Break the wall!", "line": true, "if": "wait", "until": "lineEmpty"}],
+-    "e2-26": [{"say": "A locked gate! Dig out its gold key first.", "card": 2, "ring": "key", "until": ["reach:14", "gate"]},
+-              {"say": "Send the Looters: the key opens the gate.", "card": 14, "ring": "key", "if": "front:14", "until": "gate"},
+-              {"say": "The gate is open. Raze the castle!", "until": "play"}],
+-    "e3-51": [{"say": "Archers shoot the red ring. Tower first!", "card": 6, "ring": "tower", "until": "tower"},
+-              {"say": "Tower down: the ring is safe now.", "until": "play"}],
+-    "e2-35": [{"say": "? squads hide their colour until the front.", "short": "? squads show at the front.", "mystery": true, "until": "reveal"},
+-              {"say": "Turned over! The count always shows.", "short": "The count always shows.", "until": "play"}],
+-    "e3-62": [{"say": "Linked: tap when both reach the front.", "short": "Linked: both at the front.", "linked": true, "if": "linkedFront", "until": "pair"},
++    "e2-25": [{"say": "Water! Sappers cross only at the bridge.", "short": "Sappers cross at the bridge.", "ring": "moat", "until": "play"},
++              {"say": "Blocks over the moat wait for a way in.", "short": "Over the moat? Find a way in.", "until": "play"},
++              {"say": "New power-up! The Quartermaster sends a squad.", "short": "New: the Quartermaster!", "power": "quartermaster", "until": "play"}],
++    "e3-50": [{"say": "A locked gate! Dig out its gold key first.", "short": "A locked gate: find its key.", "ring": "key", "until": ["reach:14", "gate"]},
++              {"say": "Send the Looters: the key opens the gate.", "short": "Looters open the gate.", "card": 14, "ring": "key", "if": "front:14", "until": "gate"},
++              {"say": "The gate is open. Raze the castle!", "short": "The gate is open!", "until": "play"},
++              {"say": "New power-up! Recall sends a stuck squad back.", "short": "New: Recall!", "power": "recall", "until": "play"}],
++    "e3-53": [{"say": "One space is locked. Its colour opens it!", "short": "Its colour opens the lock.", "card": 8, "lockSlot": true, "if": "locked", "until": "unlock"},
++              {"say": "Unlocked! Five spaces for your squads.", "short": "Unlocked! Five spaces.", "until": "play"}],
++    "e4-75": [{"say": "Linked: tap when both reach the front.", "short": "Linked: both at the front.", "linked": true, "if": "linkedFront", "until": "pair"},
+               {"say": "Both spaces free once both last blocks go.", "short": "Free at both last blocks.", "line": true, "until": "play"}],
+-    "e4-76": [{"say": "One space is locked. Its key is on the board.", "short": "A space is locked: find its key.", "lockSlot": true, "ring": "lockKey", "until": "play"},
++    "e4-87": [{"say": "One space is locked. Its key is on the board.", "short": "A space is locked: find its key.", "lockSlot": true, "ring": "lockKey", "until": "play"},
+               {"say": "Dig to the key (dashed box): Looters!", "short": "Looters: dig to the key!", "card": 14, "ring": "lockKey", "if": "locked", "until": "unlock"},
+               {"say": "Unlocked! One more space for your squads.", "short": "Unlocked! One more space.", "until": "play"}],
+-    "e4-77": [{"say": "All at once. Linked: both at the front.", "short": "Linked: both at the front.", "linked": true, "if": "linkedFront", "until": "pair"},
+-              {"say": "? squads turn at the front. Raze it all!", "short": "? squads turn at the front.", "until": "play"}]
++    "e5-100": [{"say": "? squads hide their colour until the front.", "short": "? squads show at the front.", "mystery": true, "until": "reveal"},
++               {"say": "Turned over! The count always shows.", "short": "The count always shows.", "until": "play"},
++               {"say": "New power-up! The Scout turns ? squads over.", "short": "New: the Scout!", "power": "scout", "until": "play"}]
+   },
+   "selfTest": {
+     "minTapPx": 44,
+@@ -302,15 +306,16 @@
+   },
+   "gallery": {
+     "note": "v4 M4, the Gallery (levels/gallery.json). openAt: the siege level whose clear opens it (v4.3: its first picture; the rest one at a time, seqNote). Text: title, btn, count ({n} won of {t}), lockedHint (on the locked buttons), winTitle, winLine ({title}), nextBtn. credits: the plain-text credits line under the grid (no links; the full list is LICENSES.md). thumbPx: canvas px a cell in the grid's thumbnails; dim: the dark and light ends a picture's lightness is squeezed into until it is won.",
+-    "openAt": "e1-25",
+-    "title": "The Gallery", "btn": "Gallery", "count": "{n}/{t} cleared", "lockedHint": "Win level 25 to open",
++    "openAt": "e1-04",
++    "title": "The Gallery", "btn": "Gallery", "count": "{n}/{t} cleared", "lockedHint": "Win level 4 to open",
+     "winTitle": "Picture complete!", "winLine": "{title} is in your Gallery now.", "winLineAgain": "{title}, cleared again.", "picAria": "{title}, finished", "nextBtn": "Next picture",
+     "credits": "Pictures: Twemoji by Twitter, Inc and other contributors (CC BY 4.0); Noto Emoji by Google (Apache 2.0); paintings and prints from The Metropolitan Museum of Art Open Access (public domain); the rest are Click it! Studios originals.",
+     "thumbPx": 3, "dim": ["#231e2a", "#6c6475"],
+     "fix2Note": "Critics 2 fix (V2), the Gallery's payoff. A picture's first win says winLine (a repeat winLineAgain) and shows the finished picture above the report: reportCellPx CSS px a cell (whole device px), at most reportMaxPx tall, shrunk to the room on a small screen; under reportMinPx (a short landscape screen) it hangs over the razed board instead, at stageFrac of the board's frame (picAria its label). On the Gallery screen the first picture not yet cleared wears a gold frame and the playChip (nextAria; the others tileAria).",
+     "reportCellPx": 4, "reportMaxPx": 136, "reportMinPx": 56, "stageFrac": 0.8, "playChip": "Play", "nextAria": "Picture {n}, play this one next", "tileAria": "Picture {n}, not cleared yet",
+-    "seqNote": "v4.3: the pictures open one at a time: the first when openAt is cleared, each next when the one before it is cleared (save.js isOpen). A locked picture is a silhouette: its background cells (the colour its four corners share) in silhouette[1], the rest in silhouette[0], under a padlock; lockedAria is its label.",
+-    "silhouette": ["#2b2533", "#625a6e"], "lockedAria": "Picture {n}, locked: clear the one before it"
++    "seqNote": "v4.3: the pictures open one at a time: the first when openAt is cleared, each next when the one before it is cleared (save.js isOpen). v5 R2: each opens when its side quest's main level is cleared (quests; save.js questOpen); openAt is the first quest's level. A locked picture is a silhouette: its background cells (the colour its four corners share) in silhouette[1], the rest in silhouette[0], under a padlock; lockedAria is its label.",
++    "silhouette": ["#2b2533", "#625a6e"], "lockedAria": "Picture {n}, a side quest: opens after level {after}",
++    "quests": {"note": "v5 R2, side quests (tools/quests.js; the rules review: a picture level every 3-5 main levels, optional, with a one-time power-up prize shown before playing). first: the main level picture 1 follows; gaps: the main levels between quests in turn; the prize: one use of a power-up the campaign has unlocked by then, in turn, except rare (the Volley), which comes on every volleyEvery-th quest once it is unlocked (125). Until R3's journey map, the Gallery screen stands in: a picture opens once its main level is cleared (quests past the last built level open one at a time once every level is cleared, the long tail), and its first clear adds the prize to the inventory. prizeText: the toast on that clear; prizeAria: the tile's prize words.", "first": 4, "gaps": [4, 3, 5, 4], "rare": "volley", "volleyEvery": 6, "prizeText": "Side quest prize: +1 {name}", "prizeAria": "prize: one {name}", "waitAria": "Picture {n}, a side quest past level {after}: opens once every level is cleared"}
+   },
+   "meta": {
+     "note": "v4 M5, the meta layer (SPEC-v4 §9). lives: the lives system's switch (false on the web: plan Decision 2; turn it on for the app); livesMax, livesRefillMin (one life back per this many minutes, real time). coins: start (a new save's balance: enough to try each power-up once), win (coins per win by the level's tag; v4.3, by difficulty before) and first (added on the level's or picture's first clear; v4.3, a new medal before). pullDepth: how far behind the front the Quartermaster reaches (cards). powers: the four power-ups in engine order (engine.js PW), each with its price in coins and its uses per level (perLevel; the engine refuses past it).",
+@@ -335,8 +340,8 @@
+       "noScout": "No hidden squads to scout", "noRecall": "No squad is just waiting (none of its sappers out)", "noLadder": "The line can't take more spaces",
+       "used": "{name}: {say}", "aria": "{name}: {say}. {state}", "owned": "{n} owned", "buy": "buy for {price} coins", "poor": "buy for {price} coins: you need {need} more", "need": "need {need}", "spent": "used up this level"},
+     "report": {"time": "Time", "taps": "Taps", "coins": "Coins", "best": "Best {v}", "first": "First win", "newBest": "New best!", "firstClear": "First clear +{n}", "countMs": 900, "countDelayMs": 250},
+-    "home": {"play": "Level {n}", "playGallery": "Play", "era": "Era {e} \u00b7 {name}", "progress": "{done}/{t} levels won", "coins": "{n} coins", "lives": "{n} lives", "livesFull": "Lives full",
+-      "noLives": "Next life {t}", "noLivesToast": "No lives left: the next one comes in {t}", "lifeLost": "-1 life ({n} left)", "galTab": "Opens at 25",
++    "home": {"play": "Level {n}", "playGallery": "Play", "era": "Realm {e} \u00b7 {name}", "progress": "{done}/{t} levels won", "coins": "{n} coins", "lives": "{n} lives", "livesFull": "Lives full",
++      "noLives": "Next life {t}", "noLivesToast": "No lives left: the next one comes in {t}", "lifeLost": "-1 life ({n} left)", "galTab": "Opens at 4",
+       "story": "Goblins stole the crown and walled themselves in. Tap a squad: its sappers run up, pull their colour off the fort and carry it home. Keep the holding line clear. Raze every block."},
+     "eraCard": {"cleared": "{n}/{t} cleared", "coins": "{n} coins", "aria": "{n} of {t} cleared; {c} coins earned"}
+   }
+diff --git a/sappers-path/index.html b/sappers-path/index.html
+index 6b934fc..7d2f3f8 100644
+--- a/sappers-path/index.html
++++ b/sappers-path/index.html
+@@ -22,7 +22,7 @@
+     </div>
+     <div id="side">
+       <header id="top">
+-        <button id="btn-map" class="round" aria-label="Era map"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
++        <button id="btn-map" class="round" aria-label="Map"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
+         <div id="lvl"><span id="lvl-num"></span><span class="lvl-txt"><span id="lvl-name"></span><span id="tag-chip" class="tag" hidden></span></span></div>
+         <button id="btn-retry" class="round" aria-label="Retry"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M5 12a7 7 0 1 0 2.1-5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M4 3.5v5h5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+         <button class="round tog tog-speed" aria-label="Speed 1x">1&times;</button>
+diff --git a/sappers-path/src/main.js b/sappers-path/src/main.js
+index 538497a..f3e58c8 100644
+--- a/sappers-path/src/main.js
++++ b/sappers-path/src/main.js
+@@ -551,8 +551,8 @@
+ 
+   function renderTop() {
+     const e = app.entry; if (!e) return;
+-    $("lvl-num").textContent = e.debug ? app.cfg.layout.debugNum : e.n; $("lvl-name").textContent = e.gallery ? e.L.title : e.L.name || (app.eras[e.era - 1] ? app.eras[e.era - 1].name : "Era " + e.era);
+-    $("btn-map").setAttribute("aria-label", e.gallery ? app.cfg.gallery.title : "Era map");
++    $("lvl-num").textContent = e.debug ? app.cfg.layout.debugNum : e.n; $("lvl-name").textContent = e.gallery ? e.L.title : e.L.name || (app.eras[e.era - 1] ? app.eras[e.era - 1].name : fill(app.cfg.layout.realmEye, { e: e.era }));
++    $("btn-map").setAttribute("aria-label", e.gallery ? app.cfg.gallery.title : app.cfg.layout.mapName); // v5 R2: realms (the journey map comes in R3)
+     tagChip($("tag-chip"), app.diff); // v4.3: the level's tag (Normal unmarked)
+     app.labFit.delete("name"); fitText($("lvl-name"), "name", app.cfg.layout.nameMinPx); // the room beside the number changes with its digits
+   }
+@@ -581,7 +581,7 @@
+     }
+     app.eras.forEach((er) => {
+       const sec = document.createElement("section"); sec.className = "era";
+-      sec.innerHTML = '<div class="eye"><span>Era ' + er.era + '</span><span class="cnt"></span></div><h3></h3><p></p><div class="rc"></div><div class="nodes"></div>';
++      sec.innerHTML = '<div class="eye"><span></span><span class="cnt"></span></div><h3></h3><p></p><div class="rc"></div><div class="nodes"></div>'; sec.querySelector(".eye span").textContent = fill(app.cfg.layout.realmEye, { e: er.era }); // v5 R2: a realm
+       sec.querySelector("h3").textContent = er.name; sec.querySelector("p").textContent = er.note;
+       const nodes = sec.querySelector(".nodes");
+       for (const e of app.levels) {
+@@ -614,13 +614,19 @@
+   // locked picture is a padlocked silhouette (gallery.silhouette) and a tap on it shakes; every tile wears its tag.
+   const galOpen = () => !!(app.cfg.gallery && app.save.data.done[app.cfg.gallery.openAt]);
+   const galWon = () => app.gal.filter((e) => app.save.data.gal[e.id]).length;
+-  const galIds = () => app.gal.map((e) => e.id), picOpen = (e) => Save.isOpen(app.save.data, galIds(), e.id, "gal", galOpen());
++  // v5 R2: the pictures are side quests (config gallery.quests, tools/quests.js): each opens once its quest's main level
++  // is cleared (save.js questOpen; past the last level, one at a time once all are cleared), shows its prize (a power-up
++  // icon) until its first clear, which adds the prize to the inventory with a toast.
++  const galIds = () => app.gal.map((e) => e.id), galAfter = () => app.gal.map((e) => (e.L.quest ? e.L.quest.after : 0)), picOpen = (e) => Save.questOpen(app.save.data, app.order, galIds(), galAfter(), e.id);
++  const galNext = () => Save.nextBy(app.save.data, galIds(), "gal", (id) => picOpen(app.byId.get(id)));
++  function questPrize(e) { const q = e.L.quest, k = q ? E.POWERS.indexOf(q.prize) : -1; if (k < 0 || !Meta.gift(app.save.data, q.prize)) return; toast(fill(app.cfg.gallery.quests.prizeText, { name: pwName(k) })); }
+   function buildGallery() {
+     const G = app.cfg.gallery, host = $("gal-grid"); if (!G || !host) return;
+     $("gal-title").textContent = G.title; $("gal-credits").textContent = G.credits;
+     for (const b of [$("btn-gallery"), $("map-gallery")]) { b.hidden = !app.gal.length; b.querySelector(".gt").textContent = G.btn; b.addEventListener("click", () => { if (galOpen()) showScreen("gallery"); else lockedTap(b); }); }
+     for (const e of app.gal) {
+-      const b = document.createElement("button"); b.className = "gal-tile"; b.innerHTML = '<canvas class="pix" aria-hidden="true"></canvas><span class="gn"></span><i class="tag"></i><span class="gp" aria-hidden="true"></span><span class="gk" aria-hidden="true"></span>';
++      const b = document.createElement("button"); b.className = "gal-tile"; b.innerHTML = '<canvas class="pix" aria-hidden="true"></canvas><span class="gn"></span><i class="tag"></i><span class="gp" aria-hidden="true"></span><span class="gk" aria-hidden="true"></span><i class="gq" aria-hidden="true"></i>';
++      const qk = e.L.quest ? E.POWERS.indexOf(e.L.quest.prize) : -1; if (qk >= 0) b.querySelector(".gq").style.backgroundImage = app.icoURL["p" + qk] || "none"; // v5 R2: the side quest's prize
+       tagChip(b.querySelector(".tag"), tagOf(e)); b.classList.toggle("paint", e.L.kind === "painting");
+       b.addEventListener("click", () => { if (picOpen(e)) startLevel(e.id); else lockedTap(b); });
+       e.node = b; host.append(b);
+@@ -658,12 +664,13 @@
+   function renderGallery() {
+     const G = app.cfg.gallery, d = app.save.data; if (!G) return;
+     $("gal-count").textContent = G.count.replace("{n}", galWon()).replace("{t}", app.gal.length); reportCard($("gal-card"), app.gal);
+-    const nx = app.byId.get(Save.next(d, galIds(), "gal", galOpen())); // Critics 2 fix (V2): the next picture (v4.3: the first open one not cleared) wears a gold frame and a Play chip
++    const nx = app.byId.get(galNext()); // Critics 2 fix (V2): the next picture (v4.3: the first open one not cleared) wears a gold frame and a Play chip
+     for (const e of app.gal) {
+       const b = e.node, won = !!d.gal[e.id], open = picOpen(e), key = won ? "c" : open ? "d" : "s", tg = (app.cfg.layout.tags || {})[tagOf(e)];
+       b.classList.toggle("done", won); b.classList.toggle("next", e === nx); b.classList.toggle("locked", !open); b.setAttribute("aria-disabled", open ? "false" : "true");
+       b.querySelector(".gn").textContent = won ? e.L.title : e.n; b.querySelector(".gp").textContent = e === nx ? G.playChip : ""; b.classList.toggle("hard", e === nx && (tagOf(e) === "hard" || tagOf(e) === "extreme")); // v4.3 fix (T1): a Hard next picture's Play chip goes red-gold
+-      b.setAttribute("aria-label", (won ? e.L.title + ", cleared" : fill(e === nx ? G.nextAria : open ? G.tileAria : G.lockedAria, { n: e.n })) + (tg ? ", " + tg : ""));
++      const q = e.L.quest, qk = q ? E.POWERS.indexOf(q.prize) : -1, late = q && q.after > app.levels.length; b.classList.toggle("prize", qk >= 0 && !won); // v5 R2: the prize shows until the first clear
++      b.setAttribute("aria-label", (won ? e.L.title + ", cleared" : fill(e === nx ? G.nextAria : open ? G.tileAria : late ? G.quests.waitAria : G.lockedAria, { n: e.n, after: q ? q.after : "" })) + (tg ? ", " + tg : "") + (qk >= 0 && !won ? ", " + fill(G.quests.prizeAria, { name: pwName(qk) }) : ""));
+       if (b.dataset.drawn !== key) { if (open) thumb(b.querySelector("canvas"), e.L, won); else silhouette(b.querySelector("canvas"), e.L); b.dataset.drawn = key; }
+     }
+   }
+@@ -695,7 +702,7 @@
+   }
+   // The next Gallery picture to offer after e (v4.3): the first open one not yet cleared, else (every picture cleared) the
+   // one after it.
+-  function nextPicture(e) { const nx = app.byId.get(Save.next(app.save.data, galIds(), "gal", galOpen())); return nx && !app.save.data.gal[nx.id] ? nx : app.gal[(app.gal.indexOf(e) + 1) % app.gal.length]; }
++  function nextPicture(e) { const nx = app.byId.get(galNext()); return nx && !app.save.data.gal[nx.id] ? nx : app.gal[(app.gal.indexOf(e) + 1) % app.gal.length]; }
+ 
+   // ---- screens and levels --------------------------------------------------------------------------------------------
+   function showScreen(name) {
+@@ -796,7 +803,7 @@
+     if (S.reason === "jam") { app.ending.squads = []; for (const s of S.order(app.ord)) { if (!S.stuck(s)) continue; app.ending.squads.push([S.spM[s], S.spW[s]]); const c = mat(S.spM[s]).crew; if (app.ending.crews.indexOf(c) < 0) app.ending.crews.push(c); } cue("jam"); }
+     // v4.3: a level is cleared or not (first: its first clear).
+     if (app.ending.won && app.entry.debug) app.ending.first = false;
+-    else if (app.ending.won && app.entry.gallery) { app.ending.first = Save.record(app.save.data, app.entry.id, "gal"); writeSave(); }
++    else if (app.ending.won && app.entry.gallery) { app.ending.first = Save.record(app.save.data, app.entry.id, "gal"); if (app.ending.first) questPrize(app.entry); writeSave(); }
+     else if (app.ending.won) { app.ending.first = Save.record(app.save.data, app.entry.id); app.save.data.last = Save.next(app.save.data, app.order); writeSave(); }
+     // v4 M5: the report. A win of a siege level or a Gallery picture: real play time (app.clock: pauses excluded), taps,
+     // coins (by the level's tag, more on its first clear), best time and taps. A fail with lives on costs one.
+@@ -851,9 +858,9 @@
+     if (e.won) { $("p-line").textContent = gal ? fill(e.first ? G.winLine : G.winLineAgain, { title: app.entry.L.title }) : "The goblin king flees. " + (app.entry.debug ? app.entry.L.name : "Level " + app.entry.n) + (e.first ? " cleared." : " cleared again."); $("p-line").removeAttribute("aria-label"); } else sheetLine(e);
+     reportPic(e.won && gal);
+     const pp = $("p-primary"), nextE = e.won && !app.entry.debug ? (gal ? nextPicture(app.entry) : last ? null : app.byId.get(Save.next(app.save.data, app.order))) : null;
+-    pp.querySelector(".pl").textContent = e.won ? (gal ? G.nextBtn : last ? "Era map" : "Next level") : "Retry"; playTag(pp, nextE); // v4.3 fix (T1): the next level's tag
++    pp.querySelector(".pl").textContent = e.won ? (gal ? G.nextBtn : last ? app.cfg.layout.mapName : "Next level") : "Retry"; playTag(pp, nextE); // v4.3 fix (T1): the next level's tag
+     $("p-stats").querySelector(".coin").classList.remove("go");
+-    $("p-secondary").textContent = e.won ? "Retry" : gal ? G.title : "Era map";
++    $("p-secondary").textContent = e.won ? "Retry" : gal ? G.title : app.cfg.layout.mapName;
+     reportRows(e); // v4.3: no medals; the report's rows and the tag
+     contOffer(e); // v5 R1: a jam's sheet offers the continue
+     $("panel").hidden = false; placeSheet();
+@@ -935,6 +942,8 @@
+   // mystery (a hidden "?" tile in view), linked (a linked front card), lockSlot (the padlocked space) and the ring
+   // lockKey (the space's key on the board); conditions reveal (a "?" turned over), pair (a linked pair went out), unlock
+   // (the space opened), locked (it is still shut), hidden (a "?" is in view), linkedFront (a front card is linked).
++  // v5 R2: pointer power (a power-up id: its badge, on the level that unlocks it); any level may have coach lines (the
++  // first lock levels, 53 and 87, do).
+   const coachSteps = (e) => { const st = e && ((app.cfg.teach || {})[e.id] || (e.L.hint ? [{ say: e.L.hint, until: "play" }] : null)); return st && st.length ? st : null; };
+   function coachStart() {
+     const steps = coachSteps(app.entry);
+@@ -942,6 +951,15 @@
+     if (app.coach) skipDead();
+     renderCoach();
+   }
++  // v5 R2, the moat lesson's ring: the middle of the ground run that crosses the water nearest the entry (an open
++  // drawbridge: open ground with water beside it), or -1 with no moat. Read once per level (coach renders only).
++  function bridgeOf(B) {
++    if (B.bridge != null) return B.bridge; B.bridge = -1; const w = B.w, a = B.a0;
++    for (let y = B.h - 1; y >= 0 && B.bridge < 0; y--) { let x0 = -1, x1 = -1;
++      for (let x = 1; x < w - 1; x++) { const c = y * w + x; if (a[c] === E.DIRT && (a[c - 1] === E.WATER || a[c + 1] === E.WATER)) { if (x0 < 0) x0 = x; x1 = x; } }
++      if (x0 >= 0) { let m = Math.round((x0 + x1) / 2); while (m < x1 && a[y * w + m] !== E.DIRT) m++; B.bridge = y * w + m; } }
++    return B.bridge;
++  }
+   function frontOf(m) { const S = app.S; for (let j = 0; j < E.NCOL; j++) { const f = S.front(j); if (f >= 0 && app.B.cardM[f] === m) return j; } return -1; }
+   function cond(k) {
+     const S = app.S, B = app.B, [w, a] = String(k).split(":"), m = a | 0;
+@@ -990,10 +1008,12 @@
+     if (!el && st.mystery) el = hiddenTile();
+     if (!el && st.linked) { const j = linkedFront(); if (j >= 0) el = app.cards[j]; }
+     if (!el && st.lockSlot && S.locked > 0) el = app.slots[S.cap - 1];
++    if (!el && st.power) { const b = app.pws[E.POWERS.indexOf(st.power)]; if (b && !b.hidden) el = b; } // v5 R2: a power-up's badge (the level that unlocks it)
+     if (!el && st.line) el = $("line");
+     // A ring on the board: the first gate's key (or the gate once the key is gone), the first standing tower.
+     if (st.ring === "key" || st.ring === "gate") { const k = 0, kc = V.keyC[k]; if (B.gateCells.length) { if (st.ring === "key" && kc >= 0 && S.a[kc] > 0) Object.assign(V.focus, { on: true, x: kc % B.w + 0.5, y: ((kc / B.w) | 0) + 0.5, r: 1.1 }); else Object.assign(V.focus, { on: true, x: V.gX[k], y: V.gY[k], r: 1.6 }); } }
+     if (st.ring === "lockKey" && B.lockKey >= 0 && S.a[B.lockKey] > 0) Object.assign(V.focus, { on: true, x: B.lockKey % B.w + 0.5, y: ((B.lockKey / B.w) | 0) + 0.5, r: 1.1 });
++    if (st.ring === "moat") { const c = bridgeOf(B); if (c >= 0) Object.assign(V.focus, { on: true, x: c % B.w + 0.5, y: ((c / B.w) | 0) + 0.5, r: 1.8 }); } // v5 R2: the moat lesson's bridge
+     if (st.ring === "tower") { for (let k = 0; k < B.towers.length; k++) if (S.standing & (1 << k)) { const T = B.towers[k]; Object.assign(V.focus, { on: true, x: T.cx + 0.5, y: T.cy + 0.5, r: Math.sqrt(T.size / Math.PI) + 0.9 }); break; } }
+     txt.textContent = (app.coachMode === "top" && st.short ? st.short : st.say).replace(/\{n\}/g, cn).replace(/\{crew\}/g, cm ? mat(cm).crew : "").replace(/\{reach\}/g, cm ? S.reachable(cm) : 0).replace(/\{go\}/g, cm ? Math.min(cn, S.reachable(cm)) : 0);
+     V.ringsLoud = st.ring === "tower"; // the lesson is the ring: every ring loud while it shows
+@@ -1682,16 +1702,19 @@
+           let jj = app.focusEl ? app.cards.indexOf(app.focusEl) : -1; if (jj < 0 || app.S.front(jj) < 0 || app.S.refused(jj)) jj = app.cards.findIndex((b, k) => app.S.front(k) >= 0 && !app.S.refused(k));
+           playCol(jj); settleNow();
+         }
+-        ok(saw.size === steps.length && app.S.status === E.WON && !coachState().on, id + ": following the arrow shows all " + steps.length + " steps (" + Array.from(saw).join(",") + ") and wins");
++        const lesson = e.L.source === "teaching"; // v5 R2: a coached Hard level (the first locks) need not be won by the naive follower
++        ok(saw.size === steps.length && (app.S.status === E.WON || !lesson) && !coachState().on, id + ": following the arrow shows all " + steps.length + " steps (" + Array.from(saw).join(",") + ")" + (lesson ? " and wins" : ""));
+         out.notes["coach_" + id] = Array.from(seen).join(",") + " / " + Array.from(saw).join(",");
+       }
+       if (app.byId.has("e1-02")) { const cm = app.cfg.teach["e1-02"][0].card; startLevel("e1-02", "normal"); playCol(frontOf(cm)); settleNow(); const cs = coachState(); ok(cs.i === 1 && app.focusEl === $("line"), "coach e1-02: the walled-in " + mat(cm).crew + " wait in their space, the arrow moves to the holding line"); }
+-      if (app.byId.has("e3-51")) { startLevel("e3-51", "normal"); ok(app.V.focus.on && coachState().target && /card/.test(coachState().target), "coach e3-51: the tower wears the ring and the arrow points at its colour's card"); }
+-      // v4 M3: the twists' lessons point at their twist from the first tap: a ? tile (35), a linked front card (62), the
+-      // padlocked space with a ring on its key (76).
+-      if (app.byId.has("e2-35")) { startLevel("e2-35", "normal"); const el = app.focusEl; ok(!!el && el.classList.contains("next") && el.classList.contains("mys"), "coach e2-35: the arrow points at a hidden ? squad (" + (el && el.className) + ")"); }
+-      if (app.byId.has("e3-62")) { startLevel("e3-62", "normal"); const j = app.cards.indexOf(app.focusEl); ok(j >= 0 && app.S.partner(app.S.front(j)) >= 0 && app.rods.innerHTML.indexOf("<path") >= 0, "coach e3-62: the arrow points at a linked front card, its rod drawn"); }
+-      if (app.byId.has("e4-76")) { startLevel("e4-76", "normal"); ok(app.focusEl === app.slots[app.S.cap - 1] && app.focusEl.classList.contains("locked") && app.V.focus.on && app.S.locked === 1, "coach e4-76: the arrow points at the padlocked space and the key wears the ring"); }
++      // v4 M3: the twists' lessons point at their twist from the first tap. v5 R2 (the re-laid lessons): the bridge over
++      // the moat wears the ring (25), a ? tile (100), a linked front card (75), the padlocked space with a ring on its key
++      // (87, the first key lock) or with its colour's card (53, the first colour lock).
++      if (app.byId.has("e2-25")) { startLevel("e2-25", "normal"); ok(app.V.focus.on && coachState().ring && app.B.a0[(Math.floor(app.V.focus.y) * app.B.w) + Math.floor(app.V.focus.x)] === E.DIRT, "coach e2-25: the bridge over the moat wears the ring"); }
++      if (app.byId.has("e5-100")) { startLevel("e5-100", "normal"); const el = app.focusEl; ok(!!el && el.classList.contains("next") && el.classList.contains("mys"), "coach e5-100: the arrow points at a hidden ? squad (" + (el && el.className) + ")"); }
++      if (app.byId.has("e4-75")) { startLevel("e4-75", "normal"); const j = app.cards.indexOf(app.focusEl); ok(j >= 0 && app.S.partner(app.S.front(j)) >= 0 && app.rods.innerHTML.indexOf("<path") >= 0, "coach e4-75: the arrow points at a linked front card, its rod drawn"); }
++      if (app.byId.has("e4-87")) { startLevel("e4-87", "normal"); ok(app.focusEl === app.slots[app.S.cap - 1] && app.focusEl.classList.contains("locked") && app.V.focus.on && app.S.locked === 1, "coach e4-87: the arrow points at the padlocked space and the key wears the ring"); }
++      if (app.byId.has("e3-53")) { startLevel("e3-53", "normal"); const st = app.cfg.teach["e3-53"][0], j = frontOf(st.card); ok(app.S.locked === 1 && app.B.lockMat === st.card && (j >= 0 ? app.focusEl === app.cards[j] : app.focusEl === app.slots[app.S.cap - 1]), "coach e3-53: a colour lock; the arrow points at its colour's card (or the padlocked space)"); }
+       // 13b. Victory march: on a stored winning line the pace stays 1x until the tray empties, then plays at
+       // show.victoryPace; the final state (board, every sapper's times, status) is identical to the same taps at 1x; with
+       // 2x or 3x on, the faster pace stays.
+diff --git a/sappers-path/src/meta.js b/sappers-path/src/meta.js
+index fa93aa9..2a53f05 100644
+--- a/sappers-path/src/meta.js
++++ b/sappers-path/src/meta.js
+@@ -55,6 +55,8 @@
+     return out;
+   }
+   // One of power k used (call after the engine took it). False when there was none.
++  // v5 R2, a side quest's prize: one use of power id, kept like a bought one (the inventory caps at 99). Returns true if added.
++  function gift(data, id) { const k = POWERS.indexOf(id); if (k < 0) return false; const n = data.inv[id] | 0; if (n >= MAXINV) return false; data.inv[id] = n + 1; return true; }
+   function take(data, k) { const n = data.inv[POWERS[k]] | 0; if (n <= 0) return false; data.inv[POWERS[k]] = n - 1; return true; }
+ 
+   // Lives at time now (refilled lazily into data.lives): {on, n, max, nextMs (ms to the next life; 0 when full)}.
+@@ -79,5 +81,5 @@
+   // m:ss (or h:mm:ss) for a time in ms, rounded up to the second for countdowns (up) or down for results.
+   function clock(ms, up) { const t = Math.max(0, up ? Math.ceil(ms / 1000) : Math.floor(ms / 1000)), h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60; return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(s).padStart(2, "0"); }
+ 
+-  return { DIFFS, POWERS, MAXCOINS, MAXINV, MAXMS, MAXTAPS, BEST, winCoins, recordWin, bestOf, buy, spend, take, unlockAt, isOpen, grant, lives, loseLife, canStart, clock, powerOf };
++  return { DIFFS, POWERS, MAXCOINS, MAXINV, MAXMS, MAXTAPS, BEST, winCoins, recordWin, bestOf, buy, spend, take, gift, unlockAt, isOpen, grant, lives, loseLife, canStart, clock, powerOf };
+ });
+diff --git a/sappers-path/src/save.js b/sappers-path/src/save.js
+index 5fee77a..aea90b9 100644
+--- a/sappers-path/src/save.js
++++ b/sappers-path/src/save.js
+@@ -85,10 +85,22 @@
+   }
+   // The first open level (in order) not cleared, or the last level when every one is (field and gate as isOpen; null when
+   // none is open, e.g. a Gallery still shut).
+-  function next(data, order, field, gate) {
++  function next(data, order, field, gate) { return nextBy(data, order, field, (id) => isOpen(data, order, id, field, gate)); }
++  // v5 R2: the same with any openness test, open(id) (the Gallery's side quests use questOpen).
++  function nextBy(data, order, field, open) {
+     const map = data[field || "done"] || {};
+-    for (const id of order) if (!map[id] && isOpen(data, order, id, field, gate)) return id;
+-    return order.length && isOpen(data, order, order[order.length - 1], field, gate) ? order[order.length - 1] : order.find((id) => isOpen(data, order, id, field, gate)) || null;
++    for (const id of order) if (!map[id] && open(id)) return id;
++    return order.length && open(order[order.length - 1]) ? order[order.length - 1] : order.find(open) || null;
++  }
++  // v5 R2, side quests: Gallery picture id (gal: the pictures' ids in order; after: each one's quest main level, numbered
++  // from 1 in `order`) is open when cleared, or once the main level numbered after is cleared. A quest past the last
++  // level waits for the whole campaign, then they open one at a time (the first at once, each next when the one before it
++  // is cleared): the long tail until R4 builds those levels.
++  function questOpen(data, order, gal, after, id) {
++    const i = gal.indexOf(id), done = data.done || {}, won = data.gal || {}; if (i < 0) return false; if (won[id]) return true;
++    const a = after[i] | 0; if (a >= 1 && a <= order.length) return !!done[order[a - 1]];
++    if (!order.every((x) => done[x])) return false;
++    return i === 0 || (after[i - 1] | 0) <= order.length || !!won[gal[i - 1]];
+   }
+ 
+   // In-memory storage: selfTest's scratch save, and the fallback when localStorage throws (private mode, blocked data).
+@@ -104,5 +116,5 @@
+     return { key, store, data, write() { try { store.setItem(key, JSON.stringify(this.data)); return true; } catch (e) { return false; } } };
+   }
+ 
+-  return { VERSION, fresh, sanitize, record, next, isOpen, memoryStore, open };
++  return { VERSION, fresh, sanitize, record, next, nextBy, isOpen, questOpen, memoryStore, open };
+ });
+diff --git a/sappers-path/style.css b/sappers-path/style.css
+index eb02fdc..efc0968 100644
+--- a/sappers-path/style.css
++++ b/sappers-path/style.css
+@@ -473,6 +473,9 @@ body.wide #map-play { display: block; max-width: 420px; margin: 0 auto; }
+ .gal-tile .gn { font-size: 17px; line-height: 1; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+ .gal-tile .tag { position: absolute; z-index: 1; top: -9px; left: -7px; font-size: 13px; padding: 1px 4px 0; border-width: 1.5px; }
+ .gal-tile .gk { display: none; }
++/* v5 R2: a side quest's prize (a power-up use) sits on the tile's corner until its first clear. */
++.gal-tile .gq { display: none; }
++.gal-tile.prize .gq { display: block; position: absolute; z-index: 1; right: -7px; bottom: 16px; width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--ink); background: var(--pw-disc) center / 72% 72% no-repeat; box-shadow: 0 2px 0 rgba(0,0,0,.45); image-rendering: pixelated; }
+ .gal-tile.locked .tag { opacity: .55; } /* v4.3 fix (m4): the locked wall's tags stay quiet */
+ .gal-tile.locked.paint canvas { outline: 2px solid rgba(243,234,216,.3); outline-offset: -2px; } /* a painting's stencil reads as a framed picture */
+ .gal-tile.next.hard .gp { background: #e8553a; color: #fff6e8; box-shadow: inset 0 0 0 2px var(--gold), 0 2px 0 rgba(0,0,0,.45); } /* v4.3 fix (T1) */
+diff --git a/sappers-path/tools/test.js b/sappers-path/tools/test.js
+index 115b851..0dc1c57 100644
+--- a/sappers-path/tools/test.js
++++ b/sappers-path/tools/test.js
+@@ -1288,5 +1288,20 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): "
+   eq(R.got, { ladder: 1 }, "unlocks (save): got keeps only 1s for known power-ups");
+ }
+ 
++// ---- v5 R2: side quests (tools/quests.js, save.js questOpen and nextBy, meta.js gift) -------------------------------------------
++{
++  const Save = require("../src/save.js"), Meta = require("../src/meta.js"), QS = require("./quests.js"), GQ = require("../config.json").gallery.quests, P = META.powers;
++  const q = QS.questsOf(60, GQ, P), gaps = q.slice(1).map((x, i) => x.after - q[i].after), un = (id) => P.find((p) => p.id === id).unlockAt;
++  ok(q[0].after === GQ.first && gaps.every((g) => g >= 3 && g <= 5) && q.every((x) => un(x.prize) <= x.after + 1), "side quests: picture 1 after level " + GQ.first + ", then one every 3-5 main levels (to " + q[59].after + "); every prize is unlocked by its quest");
++  const vol = q.filter((x) => x.prize === GQ.rare), pastV = q.filter((x) => x.after + 1 >= un(GQ.rare));
++  ok(vol.every((x) => x.after + 1 >= un(GQ.rare)) && vol.length === Math.floor(pastV.length / GQ.volleyEvery) && q.filter((x) => x.after < 24).every((x) => x.prize === "ladder"), "side quests: the Volley only from " + un(GQ.rare) + " and rare (" + vol.length + " of " + pastV.length + "); before 25 every prize is a Ladder");
++  const order = ["a1", "a2", "a3"], gal = ["p1", "p2", "p3", "p4"], after = [1, 3, 5, 6], D = Save.fresh(META), open = () => gal.map((id) => Save.questOpen(D, order, gal, after, id));
++  const s0 = open(); D.done.a1 = 1; const s1 = open(); D.done.a3 = 1; const s2 = open(); D.done.a2 = 1; const s3 = open(); D.gal.p3 = 1; const s4 = open();
++  eq([s0, s1, s2, s3, s4, Save.nextBy(D, gal, "gal", (id) => Save.questOpen(D, order, gal, after, id))], [[false, false, false, false], [true, false, false, false], [true, true, false, false], [true, true, true, false], [true, true, true, true], "p1"],
++    "side quests: a picture opens once its main level is cleared (optional, never blocking); past the last level they open once all are cleared, one at a time; nextBy finds the first open one not cleared");
++  const G = Save.fresh(META); G.inv.recall = 98; eq([Meta.gift(G, "scout"), G.inv.scout, Meta.gift(G, "recall"), Meta.gift(G, "recall"), G.inv.recall, Meta.gift(G, "nope")], [true, 1, true, false, 99, false], "side quests: a prize adds one use (capped at 99; unknown ids refused)");
++  defer("side quests: every Gallery picture carries its quest", () => { const GL = require("../levels/gallery.json").levels; eq(GL.map((l) => l.quest), q, "side quests: levels/gallery.json carries each picture's quest {after, prize} as tools/quests.js deals them"); });
++}
++
+ console.log(pass + " passed, " + fail + " failed");
+ process.exitCode = fail ? 1 : 0;
