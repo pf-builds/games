@@ -16,7 +16,7 @@
    v4 Critics 2 fix: the coach wraps to two lines in the top bar; the Gallery win's framed picture (#p-pic, #stage-pic);
    the Gallery's next tile (gold frame, Play chip); a buy short of coins (.pw.poor); 44 px badges in small frames; the
    landscape bar's .head and .grid; the home's era chip on the river; era report cards as a band. */
-@font-face { font-family: "Jersey 10"; src: url("fonts/Jersey10-Regular.ttf?v=28") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Jersey 10"; src: url("fonts/Jersey10-Regular.ttf?v=29") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
 :root { --bg: #2e2935; --ink: #221a26; --cream: #f3ead8; --cream-soft: #cfc4d6;
   --tray: #ddd3c0; --tray-hi: #ece5d6; --tray-edge: #c4b89e; --tray-ink: #3a3027; --tray-soft: #6b5c47; --socket: #c3b697; --socket-lo: #a99a7b;
   --band1: #d0c6b4; --band2: #c2baa9; /* the rows' tray bands, set from layout.fade.band at boot */
@@ -67,7 +67,13 @@ button.big { min-height: 58px; font-size: 36px; width: 100%; }
 .tag { display: inline-block; font-family: var(--px); font-style: normal; font-weight: 400; line-height: 1; padding: 2px 5px 1px; border-radius: 4px; border: 2px solid var(--ink); text-transform: uppercase; letter-spacing: .5px; white-space: nowrap; }
 .tag[hidden] { display: none; }
 .tag-hard { background: #d42a2a; color: #fff6e8; box-shadow: inset 0 -2px 0 #8e1515; }
-.tag-easy { background: #2f9e8f; color: #effff9; box-shadow: inset 0 -2px 0 #1d6a60; }
+.tag-easy { background: #1f7a6f; color: #effff9; box-shadow: inset 0 -2px 0 #14544c; } /* v4.3 fix (m6): 5:1 */
+/* v4.3 fix (T1): every Play wears the next level's tag on its corner; a Hard level's Play gets a red face inside its gold
+   rim (Food Hunt marks a hard level's button the same way). */
+#btn-play, #map-play, #p-primary { position: relative; }
+#btn-play .tag, #map-play .tag, #p-primary .tag { position: absolute; z-index: 1; top: -11px; right: -8px; font-size: 16px; padding: 2px 5px 1px; }
+button.primary.hard { background: #e8553a; color: #fff6e8; text-shadow: 0 2px 0 rgba(34,26,38,.45); box-shadow: inset 0 0 0 3px var(--gold), inset 0 6px 0 #ff9a80, inset 0 -7px 0 #a8341f, 0 3px 0 rgba(0,0,0,.5); }
+button.primary.hard:active:not(:disabled) { box-shadow: inset 0 0 0 3px var(--gold), inset 0 6px 0 #ff9a80, inset 0 -4px 0 #a8341f, 0 1px 0 rgba(0,0,0,.5); }
 
 /* Top bar: map, level number and era, the level's tag, retry, 2x, mute. */
 #top { flex: none; display: flex; align-items: center; gap: 6px; height: 50px; padding: 0 1px; }
@@ -128,6 +134,8 @@ body.wide.coached #coach-dock { display: block; }
 #toast { position: absolute; left: 50%; bottom: 10px; z-index: 3; transform: translateX(-50%); max-width: 92%; text-align: center; line-height: 1.05; pointer-events: none;
   font-family: var(--px); font-size: 20px; padding: 5px 12px 6px; background: var(--parch); color: var(--parch-ink); border: 3px solid var(--ink); border-radius: 8px; box-shadow: 0 4px 0 rgba(0,0,0,.45); }
 #toast[hidden] { display: none; }
+/* v4.3 fix (m2): on a wide screen a toast in play sits just above the side column's tray (main.js placeToast). */
+#toast.side { position: fixed; bottom: auto; z-index: 6; transform: translate(-50%, -100%); }
 #toast.bad { background: #ffd9cf; }
 
 /* The rail (Critics 1 fix): the holding line and the queue on one light stone tray, so the colours read in a light
@@ -176,6 +184,11 @@ body.rows2:not(.wide) #rail { margin-bottom: 3px; } body.rows2:not(.wide) #pw-co
 #line-wrap { display: flex; flex-direction: column; gap: 3px; }
 #line-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 0 2px; font-family: var(--px); font-size: 17px; line-height: 1; color: var(--tray-soft); white-space: nowrap; }
 #line-cnt { margin-right: var(--cnt-shift, 0px); font-variant-numeric: tabular-nums; }
+/* v4.3 fix (m1): the sappers carrying blocks home after their space freed: a return arrow and their number. */
+#line-cnt .ret { display: inline-flex; align-items: center; gap: 2px; opacity: .85; }
+#line-cnt .ret[hidden] { display: none; }
+#line-cnt .lc:not(:empty) + .ret::before { content: "\00b7"; margin: 0 5px 0 4px; }
+#line-cnt .ret i { display: inline-block; width: .8em; height: .8em; background: currentColor; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M4.5 1.5L1.5 4.5l3 3' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M2 4.5h5a3 3 0 0 1 0 6H4.5' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M4.5 1.5L1.5 4.5l3 3' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M2 4.5h5a3 3 0 0 1 0 6H4.5' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat; }
 #line { flex: 1; display: grid; grid-template-columns: repeat(var(--cap, 5), 1fr); gap: 4px; border-radius: 8px; }
 /* The line's state (v3.1). Full with squads still working: an amber rim, the head says wait, front cards wear a lock
    (a tap is refused, never fatal). Danger (full, or one space left, with at most one squad working): the red pulse.
@@ -297,7 +310,7 @@ body.cb .tile.mys .gl { display: none; }
 .sheet .sheetcard { pointer-events: auto; width: 100%; max-width: 560px; min-height: 100%; display: flex; flex-direction: column; justify-content: center; border-bottom: 0; border-radius: 12px 12px 0 0; background: var(--parch); color: var(--parch-ink);
   padding: 12px 16px max(14px, env(safe-area-inset-bottom)); text-align: center; animation: sheetin .22s cubic-bezier(.3,1.4,.5,1); }
 .sheet.float .sheetcard { min-height: 0; border-bottom: 3px solid var(--ink); border-radius: 12px; padding-bottom: 12px; }
-.sheet.tight .p-title { font-size: 32px; } .sheet.tight .p-line { font-size: 19px; margin-bottom: 7px; } .sheet.tight #p-tag { font-size: 16px; margin: -2px auto 5px; }
+.sheet.tight .p-title { font-size: 32px; } .sheet.tight .p-line { font-size: 19px; margin-bottom: 7px; } .sheet.tight #p-tag { font-size: 16px; margin: -2px auto 5px; } .sheet.tight #p-ribbon { font-size: 17px; margin-bottom: 5px; }
 .sheet.tight .sheetcard { padding-top: 7px; padding-bottom: max(9px, env(safe-area-inset-bottom)); } .sheet.tight .row button { min-height: 44px; font-size: 24px; }
 /* The jam sheet shows the jammed squads as the player sees them: a chip in the squad's colour with its count (the crew
    names stay in the sheet's aria-label). */
@@ -311,6 +324,18 @@ body.cb .chip .gl { display: inline-block; }
 /* v4.3: the report wears the level's tag under its title (the medals are gone). */
 #p-tag { display: table; margin: -2px auto 9px; font-size: 20px; }
 #p-tag[hidden] { display: none; }
+/* v4.3 fix (m3): a first clear's ribbon across the top of the report's cells, stamped in; the coins burst from their cell
+   as they start counting (main.js countCoins adds .go). Reduced motion: the ribbon just shows, no coin flies. */
+#p-ribbon { position: relative; z-index: 2; align-self: center; margin: -4px 0 8px; padding: 3px 14px 2px; font-family: var(--px); font-size: 20px; line-height: 1; color: #fff6e8; background: #e8553a;
+  border: 2px solid var(--ink); border-radius: 4px; box-shadow: inset 0 0 0 2px var(--gold), 0 3px 0 rgba(0,0,0,.35); transform: rotate(-3deg); text-shadow: 0 2px 0 rgba(34,26,38,.45); animation: ribbon .45s cubic-bezier(.3,1.6,.5,1) .35s both; }
+#p-ribbon[hidden] { display: none; }
+@keyframes ribbon { 0% { transform: rotate(-12deg) scale(2); opacity: 0; } 100% { transform: rotate(-3deg); opacity: 1; } }
+#p-stats .st.coin { position: relative; }
+#p-stats .burst { position: absolute; left: 50%; top: 45%; width: 0; height: 0; pointer-events: none; }
+#p-stats .burst i { position: absolute; left: -9px; top: -9px; width: 18px; height: 18px; background: var(--ic-coin) center / contain no-repeat; image-rendering: pixelated; opacity: 0; }
+#p-stats .st.coin.go .burst i { animation: coinfly .8s cubic-bezier(.2,.8,.4,1) both; }
+#p-stats .st.coin.go .burst i:nth-child(2n) { animation-delay: .06s; } #p-stats .st.coin.go .burst i:nth-child(3n) { animation-delay: .12s; }
+@keyframes coinfly { 0% { transform: translate(0, 0) scale(.6); opacity: 1; } 70% { opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(1.1); opacity: 0; } }
 .row { display: flex; gap: 10px; }
 .row button { flex: 1; min-width: 0; padding: 0 8px; }
 
@@ -408,7 +433,7 @@ body.wide #map-play { display: block; max-width: 420px; margin: 0 auto; }
   #rail { margin-bottom: 3px; } #powers { border-width: 2px; border-radius: 10px; margin-bottom: max(4px, env(safe-area-inset-bottom)); } #pw-coins { --pill-h: 28px; --pill-fs: 18px; --ico: 16px; }
   #rail { margin: 3px 0 max(4px, env(safe-area-inset-bottom)); border-width: 2px; border-radius: 10px; } #frame { padding: 4px; }
   #line-head { font-size: 14px; } #lvl-name { font-size: 17px; } #tag-chip { font-size: 12px; } }
-@media (prefers-reduced-motion: reduce) { #hand svg, .coach-on, .slot.last, .slot.work .men, #line-wrap.full.danger #line, .node.next { animation: none; } }
+@media (prefers-reduced-motion: reduce) { #hand svg, .coach-on, .slot.last, .slot.work .men, #line-wrap.full.danger #line, .node.next, #p-ribbon, #p-stats .st.coin.go .burst i { animation: none; } }
 
 /* v4 M4, the Gallery: its buttons (a frame icon, the name and a second line: the hint while locked, the count when open)
    and its screen, a grid of picture tiles (the thumbnail, then the title once won; v4.3 its tag, no medals) with the
@@ -432,6 +457,10 @@ body.wide #map-play { display: block; max-width: 420px; margin: 0 auto; }
 .gal-tile .gn { font-size: 17px; line-height: 1; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gal-tile .tag { position: absolute; z-index: 1; top: -9px; left: -7px; font-size: 13px; padding: 1px 4px 0; border-width: 1.5px; }
 .gal-tile .gk { display: none; }
+.gal-tile.locked .tag { opacity: .55; } /* v4.3 fix (m4): the locked wall's tags stay quiet */
+.gal-tile.locked.paint canvas { outline: 2px solid rgba(243,234,216,.3); outline-offset: -2px; } /* a painting's stencil reads as a framed picture */
+.gal-tile.next.hard .gp { background: #e8553a; color: #fff6e8; box-shadow: inset 0 0 0 2px var(--gold), 0 2px 0 rgba(0,0,0,.45); } /* v4.3 fix (T1) */
+.gal-tile.next.hard .gp::before { border-left-color: #fff6e8; }
 .gal-tile.locked { color: #8d8598; }
 .gal-tile.locked .gk { display: block; position: absolute; left: 50%; top: 6px; width: 30px; height: 30px; margin-left: -15px; border-radius: 50%; border: 2px solid var(--ink); background: #5d5566 center / 18px 18px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M4 5.5V4a2 2 0 0 1 4 0v1.5' fill='none' stroke='%23fff' stroke-width='1.6'/%3E%3Crect x='2.5' y='5.5' width='7' height='5' rx='1' fill='%23fff'/%3E%3C/svg%3E"); box-shadow: 0 2px 0 rgba(0,0,0,.45); }
 .gal-tile.done { background: var(--parch); color: var(--parch-ink); box-shadow: inset 0 -4px 0 var(--parch-edge), 0 3px 0 rgba(0,0,0,.5); }
@@ -530,3 +559,7 @@ body.wide .gal-tile canvas { max-height: 120px; }
 }
 body.wide .home-card { max-width: 760px; }
 @media (prefers-reduced-motion: reduce) { .pw.picking, .pw.pop .pw-ic, .tile.next.pickable, .slot.pickable, .gal-tile.next { animation: none; } }
+/* v4.3 fix (n1, carried from v4.2): a phone under 380 CSS px wide (360-wide Android) trims the play screen's side gutter
+   to 4 px, so the full-screen boards draw at 8 px a cell. The home, map and Gallery (screens over #app, padded by --gut)
+   keep theirs. */
+@media (max-width: 379px) { #app { padding-left: max(4px, env(safe-area-inset-left)); padding-right: max(4px, env(safe-area-inset-right)); } }

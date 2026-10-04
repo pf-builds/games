@@ -29,6 +29,7 @@
 // with a screen). Output to tools/shots-v4-m4/harness/.
 // v4 Critics 2 fix: six viewports (375x667 and 414x736 added); the coach's checks per viewport are selfTest's.
 // v4.3: no difficulty picker (SP.load plays a level on its own tag); a format-1 save migrates to format 2 by level id.
+// v4.3 fix: a seventh viewport, 360x740 (a 360-wide Android phone: the play screen's 4 px gutter gives 8 px cells).
 // v4.1 (castle pictures, bottom entry): a real card tap on a Gallery picture sends its squad out of its crate and up
 // through the entry square (was: in from the board's edges); every Siege and Gallery board keeps 8 CSS px a cell. Output
 // to tools/shots-v4.1/harness/.
@@ -81,6 +82,7 @@ const VIEWPORTS = [
   { name: "375x812", width: 375, height: 812, touch: true, dpr: 2, shots: "375" },
   { name: "375x667", width: 375, height: 667, touch: true, dpr: 2, shots: "667" },
   { name: "414x736", width: 414, height: 736, touch: true, dpr: 3, shots: "736" },
+  { name: "360x740", width: 360, height: 740, touch: true, dpr: 3, shots: "360" }, // v4.3 fix (n1): a 360-wide Android phone, 8 px cells
   { name: "812x375", width: 812, height: 375, touch: false, dpr: 3, shots: "812", minCell: 6 }, // v4.2 fix: a short desktop window (a phone held so shows the upright card: below)
   { name: "1280x720", width: 1280, height: 720, touch: false, dpr: 1, shots: "1280" },
   { name: "iframe-400x600", width: 480, height: 700, touch: false, dpr: 2, shots: "iframe", iframe: { w: 400, h: 600 }, minCell: 6 },

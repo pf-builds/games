@@ -86,6 +86,11 @@
 // picked up (engine.js), and the win or fail sheet waits until every sapper is home (no settle cap). A linked front card
 // whose partner is buried waits for it (S.why 3): it wears the waiting look, a tap is refused with layout.linkedBuriedText,
 // and a jam of them says layout.jamBuriedText.
+// v4.3 fix pass (the critics on 08fbc65): every Play wears the next level's tag (the home's, the map's, the report's Next,
+// the Gallery's Play chip; a red-gold face for Hard); the line head counts the sappers carrying blocks home after their
+// space freed; a win's coins burst from their cell and a first clear wears a ribbon (reduced motion: none of it moves);
+// on a wide screen a toast sits over the side column's tray and a fail sheet is its content's height; locked paintings
+// get a two-tone silhouette and every locked tile's tag is dimmed.
 (function () {
   "use strict";
   const NS = window.SappersPath, E = NS.engine, Save = NS.save, Board = NS.board, Art = NS.art, Audio = NS.audio, Meta = NS.meta;
@@ -104,7 +109,7 @@
     li: { stuck: 0, work: 0, occ: 0, free: 0, near: false, full: false, danger: false },
     // v4 M5: config.meta (selfTest swaps in a copy), the lives clock (real time), the queue rows shown, the level's start
     // on app.clock, the win's report, a power-up waiting for its target (pick: {k}), the bar's badges, the icons' URLs.
-    meta: null, now: () => Date.now(), rows: 3, t0: 0, report: null, pick: null, pws: [], icoURL: {}, pwPop: [-1e12, -1e12, -1e12, -1e12], lifeTxt: "", countTxt: "" };
+    meta: null, now: () => Date.now(), rows: 3, t0: 0, report: null, pick: null, pws: [], icoURL: {}, pwPop: [-1e12, -1e12, -1e12, -1e12], lifeTxt: "", countTxt: "", carry: -1 };
   const togMute = Array.from(document.querySelectorAll(".tog-mute")), togSpeed = Array.from(document.querySelectorAll(".tog-speed")), togCb = Array.from(document.querySelectorAll(".tog-cb"));
 
   // ---- boot --------------------------------------------------------------------------------------------------------
@@ -382,7 +387,7 @@
     let cnt = li.stuck ? li.stuck + " " + L.stuckWord : "";
     if (li.work) cnt += (cnt ? " · " : "") + li.work + " " + L.workWord;
     if (li.free) cnt += (cnt ? " · " : "") + li.free + " " + L.freeWord;
-    $("line-cnt").textContent = cnt;
+    $("line-cnt").firstElementChild.textContent = cnt; retCount();
     let free = -1; for (let i = 0; i < S.open; i++) if (!S.spQ[i]) { free = free < 0 ? i : free; }
     const popping = app.clock - app.unlockT < app.cfg.show.unlockMs;
     app.slots.forEach((s, i) => {
@@ -397,6 +402,14 @@
       s.classList.toggle("last", i === free && li.near); // one space left and the rest stuck: the last free space pulses
     });
     sendable(); markPick();
+  }
+  // v4.3 fix (m1): the sappers carrying blocks home after their space freed (everyone away, less those still walking out or
+  // back for a space), shown after the head's counts as a return arrow and a number. step() asks every frame; the DOM is
+  // written only when the number changes.
+  function carrying() { const S = app.S; if (!S) return 0; let o = 0; for (let i = 0; i < S.cap; i++) if (S.spQ[i]) o += S.spO[i]; return Math.max(0, S.out - o); }
+  function retCount() {
+    const n = app.screen === "play" && app.S && !app.panel ? carrying() : 0; if (n === app.carry) return; app.carry = n;
+    const r = $("line-cnt").lastElementChild; r.hidden = !n; r.querySelector("b").textContent = n ? n : ""; if (n) r.setAttribute("aria-label", fill(app.cfg.layout.carryAria, { n })); else r.removeAttribute("aria-label");
   }
   // Critics 1 fix: a space too narrow for its badge column beside a two-digit count takes the tight layout (the badges
   // on top, the count below: #line.tight). Worked out from a space's width and the fonts in use, at layout time only.
@@ -498,7 +511,9 @@
     app.labFit.delete("name"); fitText($("lvl-name"), "name", app.cfg.layout.nameMinPx); // the room beside the number changes with its digits
   }
   // v4.3: a tag mark (layout.tags[tag]: its words, empty for Normal; class tag-<tag> colours it): hidden when empty.
-  function tagChip(el, tag) { if (!el) return; const t = (app.cfg.layout.tags || {})[tag] || ""; el.textContent = t; el.className = "tag tag-" + tag; el.hidden = !t; }
+  function tagChip(el, tag) { if (!el) return; const t = (tag && (app.cfg.layout.tags || {})[tag]) || ""; el.textContent = t; el.className = "tag" + (tag ? " tag-" + tag : ""); el.hidden = !t; }
+  // v4.3 fix (T1): a Play button for level e (null: none) wears its tag pill, and a Hard level's the red-gold face.
+  function playTag(btn, e) { const tg = e ? tagOf(e) : null; tagChip(btn.querySelector(".tag"), tg); btn.classList.toggle("hard", tg === "hard"); }
   function renderAll() { judge(); renderTop(); renderTray(); renderLine(); }
 
   // v4 M5: a report card for a set of levels (an era, or the Gallery): cleared and coins earned (v4.3: no medals).
@@ -542,7 +557,7 @@
     }
     app.eras.forEach((er) => { const ls = app.levels.filter((e) => e.era === er.era); er.sec.querySelector(".cnt").textContent = ls.filter((e) => d.done[e.id]).length + "/" + ls.length; reportCard(er.sec.querySelector(".rc"), ls); });
     $("map-count").textContent = won + "/" + app.levels.length;
-    const ne = app.byId.get(next); $("map-play").textContent = ne ? "Play level " + ne.n : "Play";
+    const ne = app.byId.get(next), mp = $("map-play"); mp.querySelector(".pl").textContent = ne ? "Play level " + ne.n : "Play"; playTag(mp, ne);
   }
 
   // ---- the Gallery (v4 M4) -------------------------------------------------------------------------------------------
@@ -560,7 +575,7 @@
     for (const b of [$("btn-gallery"), $("map-gallery")]) { b.hidden = !app.gal.length; b.querySelector(".gt").textContent = G.btn; b.addEventListener("click", () => { if (galOpen()) showScreen("gallery"); else lockedTap(b); }); }
     for (const e of app.gal) {
       const b = document.createElement("button"); b.className = "gal-tile"; b.innerHTML = '<canvas class="pix" aria-hidden="true"></canvas><span class="gn"></span><i class="tag"></i><span class="gp" aria-hidden="true"></span><span class="gk" aria-hidden="true"></span>';
-      tagChip(b.querySelector(".tag"), tagOf(e));
+      tagChip(b.querySelector(".tag"), tagOf(e)); b.classList.toggle("paint", e.L.kind === "painting");
       b.addEventListener("click", () => { if (picOpen(e)) startLevel(e.id); else lockedTap(b); });
       e.node = b; host.append(b);
     }
@@ -590,7 +605,8 @@
     const cd = L.nextMs > 0 ? Meta.clock(L.nextMs, true) : "", txt = L.on ? L.n + (cd ? " \u00b7 " + cd : "") : "", play = L.on && L.n <= 0 ? fill(H.noLives, { t: cd }) : fill(H.play, { n: ne ? ne.n : 1 });
     if (txt + play === app.lifeTxt) return; app.lifeTxt = txt + play;
     pill.hidden = !L.on; pill.querySelector("b").textContent = txt; pill.setAttribute("aria-label", L.on ? (L.n >= L.max ? H.livesFull : fill(H.lives, { n: L.n }) + (cd ? ", " + fill(H.noLives, { t: cd }) : "")) : "");
-    $("play-lab").textContent = play; $("btn-play").classList.toggle("wait", L.on && L.n <= 0); $("btn-play").setAttribute("aria-label", play);
+    $("play-lab").textContent = play; $("btn-play").classList.toggle("wait", L.on && L.n <= 0); playTag($("btn-play"), L.on && L.n <= 0 ? null : ne);
+    $("btn-play").setAttribute("aria-label", play + (ne && !(L.on && L.n <= 0) && app.cfg.layout.tags[tagOf(ne)] ? ", " + app.cfg.layout.tags[tagOf(ne)] : ""));
   }
   function openSettings(on) { $("settings").hidden = !on; if (on) $("set-close").focus(); }
   function renderGallery() {
@@ -600,18 +616,25 @@
     for (const e of app.gal) {
       const b = e.node, won = !!d.gal[e.id], open = picOpen(e), key = won ? "c" : open ? "d" : "s", tg = (app.cfg.layout.tags || {})[tagOf(e)];
       b.classList.toggle("done", won); b.classList.toggle("next", e === nx); b.classList.toggle("locked", !open); b.setAttribute("aria-disabled", open ? "false" : "true");
-      b.querySelector(".gn").textContent = won ? e.L.title : e.n; b.querySelector(".gp").textContent = e === nx ? G.playChip : "";
+      b.querySelector(".gn").textContent = won ? e.L.title : e.n; b.querySelector(".gp").textContent = e === nx ? G.playChip : ""; b.classList.toggle("hard", e === nx && tagOf(e) === "hard"); // v4.3 fix (T1): a Hard next picture's Play chip goes red-gold
       b.setAttribute("aria-label", (won ? e.L.title + ", cleared" : fill(e === nx ? G.nextAria : open ? G.tileAria : G.lockedAria, { n: e.n })) + (tg ? ", " + tg : ""));
       if (b.dataset.drawn !== key) { if (open) thumb(b.querySelector("canvas"), e.L, won); else silhouette(b.querySelector("canvas"), e.L); b.dataset.drawn = key; }
     }
   }
   // v4.3, a locked picture's silhouette: at gallery.thumbPx a cell (the ring left out), the cells of its background (the
   // colour of its corners, when they agree) in gallery.silhouette[1] and every other cell in silhouette[0]: its shape only.
+  // v4.3 fix (m4): a picture with no plain background (a painting) is split at its median lightness instead, the lighter
+  // half light and the darker half dark: a two-tone stencil of it (the median colour itself goes to whichever side leaves
+  // the split nearer half and half).
   function silhouette(c, L) {
     const k = app.cfg.gallery.thumbPx, w = L.w - 2, h = L.h - 2, [fg, bg] = app.cfg.gallery.silhouette, at = (x, y) => L.grid[y + 1][x + 1];
     const cs = [at(0, 0), at(w - 1, 0), at(0, h - 1), at(w - 1, h - 1)], back = cs.every((q) => q === cs[0]) ? cs[0] : null;
+    const lum = (ch) => { const p = L.pal[E.matOf(ch)], v = p ? parseInt(p.c.slice(1), 16) : 0; return 0.299 * ((v >> 16) & 255) + 0.587 * ((v >> 8) & 255) + 0.114 * (v & 255); };
+    let cut = 0, eq = false; if (back === null) { const ls = []; for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) ls.push(lum(at(x, y))); ls.sort((p, q) => p - q); cut = ls[ls.length >> 1];
+      let gt = 0, ge = 0; for (const v of ls) { if (v > cut) gt++; if (v >= cut) ge++; } eq = Math.abs(ge - ls.length / 2) < Math.abs(gt - ls.length / 2); }
+    const light = (ch) => { const v = lum(ch); return eq ? v >= cut : v > cut; };
     c.width = w * k; c.height = h * k; const g = c.getContext("2d");
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { g.fillStyle = at(x, y) === back ? bg : fg; g.fillRect(x * k, y * k, k, k); }
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { g.fillStyle = (back === null ? light(at(x, y)) : at(x, y) === back) ? bg : fg; g.fillRect(x * k, y * k, k, k); }
   }
   // A picture's thumbnail: gallery.thumbPx (or kp) canvas px a cell, the ring left out; dimmed (lightness only) until won.
   function thumb(c, L, colour, kp) {
@@ -652,7 +675,7 @@
     app.V.setLevel(app.B, app.S, e.L.pal); usePalette(e); // v4 M4: the level's colours before anything is painted
     app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.popK = 0; app.used = 0; app.march = false; app.blockT = -1e12; $("panel").hidden = true; $("stage-pic").hidden = true; hideToast();
     app.lockN = app.S.locked; app.unlockT = -1e12; app.flip.fill(false); app.reveals = 0; app.pairsOut = 0; landTiles();
-    app.t0 = app.clock; app.report = null; app.pick = null; app.pwPop.fill(-1e12); renderPowers();
+    app.t0 = app.clock; app.report = null; app.pick = null; app.pwPop.fill(-1e12); app.carry = -1; renderPowers();
     app.coached = !!coachSteps(e); // the coach's band is kept for the whole level, so the board never jumps when it goes
     placeSlots();
     if (!e.debug && !e.gallery) { app.save.data.last = e.id; writeSave(); }
@@ -778,7 +801,9 @@
     $("p-title").textContent = e.won ? (gal ? G.winTitle : "Fort razed!") : "Assault failed"; tagChip($("p-tag"), app.diff); // v4.3: the level's tag
     if (e.won) { $("p-line").textContent = gal ? fill(e.first ? G.winLine : G.winLineAgain, { title: app.entry.L.title }) : "The goblin king flees. " + (app.entry.debug ? app.entry.L.name : "Level " + app.entry.n) + (e.first ? " cleared." : " cleared again."); $("p-line").removeAttribute("aria-label"); } else sheetLine(e);
     reportPic(e.won && gal);
-    $("p-primary").textContent = e.won ? (gal ? G.nextBtn : last ? "Era map" : "Next level") : "Retry";
+    const pp = $("p-primary"), nextE = e.won && !app.entry.debug ? (gal ? nextPicture(app.entry) : last ? null : app.byId.get(Save.next(app.save.data, app.order))) : null;
+    pp.querySelector(".pl").textContent = e.won ? (gal ? G.nextBtn : last ? "Era map" : "Next level") : "Retry"; playTag(pp, nextE); // v4.3 fix (T1): the next level's tag
+    $("p-stats").querySelector(".coin").classList.remove("go");
     $("p-secondary").textContent = e.won ? "Retry" : gal ? G.title : "Era map";
     reportRows(e); // v4.3: no medals; the report's rows and the tag
     $("panel").hidden = false; placeSheet();
@@ -789,12 +814,13 @@
   // underneath ("New best!" when beaten; the first win shows none); a fail with lives on adds the life it cost.
   function reportRows(e) {
     const R = app.report, st = $("p-stats"), T = app.meta.report, rows = st.children; st.hidden = !(e.won && R && R.coins != null);
+    const rb = $("p-ribbon"); rb.hidden = st.hidden || !e.first; if (!rb.hidden) rb.textContent = fill(T.firstClear, { n: R.coins - Meta.winCoins(app.meta, app.diff, false) }); // v4.3 fix (m3): a first clear's ribbon
     if (!e.won && R && R.lives && R.lives.on) $("p-line").append(" " + fill(app.meta.home.lifeLost, { n: R.lives.n }));
     if (st.hidden) return;
     const best = (v, was, nw, f) => (!was ? (e.first ? T.first : T.newBest) : nw ? T.newBest : fill(T.best, { v: f(was) })); // no best kept yet: a first win, or a win from before M5
     rows[0].querySelector(".k").textContent = T.time; $("p-time").textContent = Meta.clock(R.ms); rows[0].querySelector("em").textContent = best(R.ms, R.best[0], R.newMs, Meta.clock); rows[0].classList.toggle("new", !!R.best[0] && R.newMs);
     rows[1].querySelector(".k").textContent = T.taps; $("p-taps").textContent = R.taps; rows[1].querySelector("em").textContent = best(R.taps, R.best[1], R.newTaps, String); rows[1].classList.toggle("new", !!R.best[1] && R.newTaps);
-    rows[2].querySelector(".k").textContent = T.coins; app.countTxt = ""; countCoins(); rows[2].querySelector("em").textContent = e.first ? fill(T.firstClear, { n: R.coins - Meta.winCoins(app.meta, app.diff, false) }) : "";
+    rows[2].querySelector(".k").textContent = T.coins; app.countTxt = ""; countCoins(); rows[2].querySelector("em").textContent = ""; // v4.3 fix (m3): the first-clear bonus is on the ribbon
     st.setAttribute("aria-label", T.time + " " + Meta.clock(R.ms) + ", " + T.taps + " " + R.taps + ", " + T.coins + " +" + R.coins);
   }
   // Critics 2 fix (V2): a Gallery win shows the finished picture above the report, in its colours on its own frame, at
@@ -822,7 +848,7 @@
   function countCoins() {
     const R = app.report, T = app.meta.report; if (!R || R.coins == null || app.panel !== "win") return;
     const k = Math.max(0, Math.min(1, (app.clock - app.panelAt - T.countDelayMs) / T.countMs)), txt = "+" + Math.round(R.coins * k);
-    if (txt !== app.countTxt) { if (app.countTxt === "+0" && k > 0) cue("coin"); app.countTxt = txt; $("p-coins").textContent = txt; }
+    if (txt !== app.countTxt) { if (app.countTxt === "+0" && k > 0) { cue("coin"); if (!app.V.calm) $("p-stats").querySelector(".coin").classList.add("go"); } app.countTxt = txt; $("p-coins").textContent = txt; } // v4.3 fix (m3): the coins burst as they start
   }
   // A panel button ignores taps for show.panelGuardMs after the panel appears, so a thumb still tapping cards can't hit it.
   const panelLive = () => app.clock - app.panelAt >= app.cfg.show.panelGuardMs || app.testing;
@@ -948,7 +974,14 @@
     target: app.focusEl ? app.focusEl.id || app.focusEl.className : null, ring: app.V.focus.on, oneLine: !t.classList.contains("two"), fits: t.scrollWidth <= t.clientWidth && t.scrollHeight <= t.clientHeight }; };
 
   // ---- toasts, audio, toggles ----------------------------------------------------------------------------------------
-  function toast(text, bad) { const t = $("toast"); t.textContent = text; t.classList.toggle("bad", !!bad); t.hidden = false; app.toastT = app.clock + app.cfg.show.toastMs; }
+  function toast(text, bad) { const t = $("toast"); t.textContent = text; t.classList.toggle("bad", !!bad); t.hidden = false; placeToast(); app.toastT = app.clock + app.cfg.show.toastMs; }
+  // v4.3 fix (m2): on a wide screen a toast in play sits just above the side column's tray (by the cards and the line it is
+  // about), as wide as the tray at most; elsewhere at the board's foot, as before.
+  function placeToast() {
+    const t = $("toast"), side = app.wide && app.screen === "play"; t.classList.toggle("side", side);
+    if (!side) { t.style.left = ""; t.style.top = ""; t.style.maxWidth = ""; return; }
+    const r = $("tray").getBoundingClientRect(); t.style.left = r.left + r.width / 2 + "px"; t.style.top = r.top - app.cfg.layout.toastGapPx + "px"; t.style.maxWidth = r.width + "px";
+  }
   function hideToast() { $("toast").hidden = true; app.toastT = -1e12; }
   function cue(name, arg) { app.cues[name] = (app.cues[name] | 0) + 1; if (app.audio && !app.testing) Audio.cue(app.audio, name, arg, app.clock); }
   function onPop() { cue("pop", app.popK++ % 12); }
@@ -1052,6 +1085,7 @@
     fitBoard();
     if (app.S) { renderTop(); renderTray(); placeSlots(); }
     if (app.panel) placeSheet();
+    if (!$("toast").hidden) placeToast();
   }
   // Where each space's sappers walk onto the board: its slot's centre, relative to the canvas (clamped to its edge there).
   function placeSlots() {
@@ -1134,7 +1168,7 @@
     }
     let hh = natural(); const room = foot - lw.bottom - gap;
     if (hh > room) { P.classList.add("tight"); hh = natural(); }
-    if (hh <= room) { st.top = lw.bottom + gap - A.top + "px"; return; }
+    if (hh <= room) { st.top = lw.bottom + gap - A.top + "px"; if (app.wide) st.bottom = A.bottom - Math.min(foot, Math.max(lw.bottom + gap + hh, rl.bottom)) + "px"; return; } // v4.3 fix (m5): wide: its content's height (down to the tray's foot, so no queue row peeks out under it)
     P.classList.add("float"); st.top = "auto"; st.bottom = A.bottom - lw.top + gap + "px";
   }
   function paintTitle() {
@@ -1163,7 +1197,7 @@
     V.update(dt, sp);
     ended();
     if (app.unlockT > 0 && app.clock - app.unlockT >= app.cfg.show.unlockMs && app.clock - app.unlockT < app.cfg.show.unlockMs + dt) app.lineMoved = true; // the padlock's pop ends
-    if (app.lineDirty) { judge(); renderTray(); renderLine(); coachStep(); } else if (app.lineMoved) renderLine();
+    if (app.lineDirty) { judge(); renderTray(); renderLine(); coachStep(); } else if (app.lineMoved) renderLine(); else retCount();
     app.lineMoved = false;
     // The sheet waits until every sapper is home (v4.3: no cap; a board tap still skips the show).
     if (app.ending && !app.panel && !S.busy) {
@@ -1403,7 +1437,7 @@
         ok(app.S.order(app.ord).every((q) => app.S.stuck(q)) && (app.cues.jam | 0) === j0 + 1, "jam: every squad in the line reads stuck; one jam cue");
         let at = null; for (let t = 0; t < ST.tickCapMs && !app.panel; t += 16) { step(16); if (app.panel && !at) at = { busy: app.S.busy, ms: app.clock - app.endT }; }
         const pl = $("p-line").getAttribute("aria-label") || "", chipsOK = chipCheck();
-        ok(app.panel === "fail" && /^Line jammed: .+ can't reach a block\.$/.test(pl) && pl.indexOf(app.ending.crews[0]) >= 0 && hitOK($("p-primary")) && $("p-primary").textContent === "Retry", "jam: the sheet's label names the jammed crews (" + pl + "), Retry is primary and hittable");
+        ok(app.panel === "fail" && /^Line jammed: .+ can't reach a block\.$/.test(pl) && pl.indexOf(app.ending.crews[0]) >= 0 && hitOK($("p-primary")) && $("p-primary").querySelector(".pl").textContent === "Retry", "jam: the sheet's label names the jammed crews (" + pl + "), Retry is primary and hittable");
         ok(chipsOK === true, "jam: the sheet shows one colour chip with its count per jammed squad, no crew names (" + chipsOK + ")");
         const sl = sheetClear(); ok(sl === true, "jam: the fail sheet leaves the jammed line in view (" + sl + ")");
         out.notes.jam = jp.e.id + " '" + jp.p.prefix + "' (sheet after " + (at ? Math.round(at.ms) : "?") + " ms)";
@@ -1779,7 +1813,7 @@
         // Cleared: win a picture through its stored order; the save's gal holds it, the sheet offers the next picture.
         startLevel(e0.id); patient(winOf(e0)); settleNow(); tick(9000);
         const nx = nextPicture(e0);
-        ok(app.panel === "win" && $("p-title").textContent === GC.winTitle && $("p-primary").textContent === GC.nextBtn && app.save.data.gal[e0.id] === 1 && !app.save.data.done[e0.id] && hitOK($("p-primary")), "gallery: a picture won goes in the save's gal (" + app.save.data.gal[e0.id] + "), the sheet says '" + $("p-title").textContent + "' and offers '" + $("p-primary").textContent + "'");
+        ok(app.panel === "win" && $("p-title").textContent === GC.winTitle && $("p-primary").querySelector(".pl").textContent === GC.nextBtn && app.save.data.gal[e0.id] === 1 && !app.save.data.done[e0.id] && hitOK($("p-primary")), "gallery: a picture won goes in the save's gal (" + app.save.data.gal[e0.id] + "), the sheet says '" + $("p-title").textContent + "' and offers '" + $("p-primary").textContent + "'");
         { for (const an of $("panel").firstElementChild.getAnimations()) an.finish(); const pc = $("p-pic").firstElementChild, pr = pc.getBoundingClientRect(), cr = $("panel").firstElementChild.getBoundingClientRect(), cols = px(pc), cell = pr.height / (e0.L.h - 2), sc = sheetClear(true);
           out.notes.reportPic = Math.round(pr.width) + "x" + Math.round(pr.height) + " CSS px, " + cell.toFixed(2) + " a cell";
           const sp = $("stage-pic"), onStage = !shown($("p-pic")) && shown(sp), spr = sp.firstElementChild.getBoundingClientRect(), fr = $("frame").getBoundingClientRect(), scol = onStage ? px(sp.firstElementChild) : cols;
@@ -1910,6 +1944,48 @@
         for (let t = 0; t < ST.tickCapMs && !seen && app.S.busy; t += 16) { step(16); if (!app.S.spQ[s0] && app.S.out > 0) seen = { out: app.S.out, live: app.V.live, slot: app.slots[s0].classList.contains("full"), ms: app.S.now }; }
         ok(!!seen && seen.live > 0 && !seen.slot, "pickup (v4.3): " + e.id + "'s first squad frees its space at its last pickup while " + (seen ? seen.out : "?") + " carriers still walk home (the space shows free, " + (seen ? seen.live : 0) + " runners drawn)");
         out.notes.pickup = e.id + (seen ? " at " + seen.ms + " ms, " + seen.out + " carrying" : ""); }
+      // 27. v4.3 fix pass. T1: every Play wears the next level's tag (home, map, the report's Next, the Gallery's chip), a
+      // Hard one's face red-gold. m6: both tag pills 4.5:1 or more. m1: the line head's return count while carriers walk
+      // home. m2: a wide screen's toast sits over the side column's tray. m3: a first clear's ribbon and the coin burst.
+      // m4: the locked wall's tags dimmed; a locked painting a two-tone stencil. m5: a wide fail sheet its content's height.
+      { const LY2 = app.cfg.layout, cr = (el) => { const p = (c) => c.match(/[\d.]+/g).slice(0, 3).map(Number), lu = (rgb) => { const f = rgb.map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * f[0] + 0.7152 * f[1] + 0.0722 * f[2]; };
+          const c = getComputedStyle(el), a = lu(p(c.color)), b = lu(p(c.backgroundColor)); return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05); };
+        app.save = scratch(); const hn = app.levels.find((e) => tagOf(e) === "hard"), nn = app.levels.find((e) => tagOf(e) === "normal" && e.n > 3);
+        for (const e of app.levels) { if (e.n >= hn.n) break; Save.record(app.save.data, e.id); }
+        showScreen("title"); const pt = $("play-tag"), hardFace = getComputedStyle($("btn-play")).backgroundColor, h1 = !pt.hidden && pt.textContent === LY2.tags.hard && $("btn-play").classList.contains("hard") && hitOK($("btn-play"));
+        showScreen("map"); const mp = $("map-play"), m1 = mp.classList.contains("hard") && mp.querySelector(".tag").textContent === LY2.tags.hard && hitOK(mp);
+        app.save = scratch(); for (const e of app.levels) { if (e.n >= nn.n) break; Save.record(app.save.data, e.id); }
+        showScreen("title"); const n1 = pt.hidden && !$("btn-play").classList.contains("hard") && getComputedStyle($("btn-play")).backgroundColor !== hardFace;
+        ok(h1 && m1 && n1, "T1 (v4.3 fix): the home's and the map's Play wear the next level's tag (" + hn.id + ": Hard, a red-gold face " + hardFace + "; " + nn.id + ": Normal, unmarked)");
+        const easy = document.querySelector(".tag.tag-easy:not([hidden])") || (() => { const t = document.createElement("i"); t.className = "tag tag-easy"; t.textContent = "Easy"; document.body.append(t); return t; })(), hard = document.querySelector(".tag.tag-hard");
+        const ce = cr(easy), ch = hard ? cr(hard) : 0; if (!easy.closest("#app")) easy.remove();
+        ok(ce >= 4.5 && ch >= 4.5, "m6 (v4.3 fix): the Easy pill " + ce.toFixed(2) + ":1, the Hard pill " + ch.toFixed(2) + ":1 (4.5 or more)");
+        // m1: real ticks on a Normal level's first squad until its space frees with carriers out.
+        { const e = app.levels.find((x) => x.n >= 26 && tagOf(x) === "normal" && !x.L.links); startLevel(e.id); playCol(+winOf(e)[0]); let got = null;
+          for (let t = 0; t < ST.tickCapMs && !got && app.S.busy; t += 16) { step(16); if (app.S.lineLen === 0 && app.S.out > 0) got = { n: carrying(), r: $("line-cnt").lastElementChild }; }
+          const shownN = got && !got.r.hidden ? +got.r.querySelector("b").textContent : -1; settleNow(); step(16);
+          ok(!!got && got.n > 0 && shownN === got.n && $("line-cnt").lastElementChild.hidden, "m1 (v4.3 fix): with the space free and " + (got ? got.n : "?") + " carriers walking home the line head shows ↩" + shownN + "; at rest it goes"); }
+        // m2: the toast on a refused linked tap (v4-all at load).
+        { startLevel("v4-all"); const j = app.cards.findIndex((b, k) => app.S.front(k) >= 0 && app.S.why(k) === 3); playCol(j); const t = $("toast").getBoundingClientRect(), c = app.cards[j].getBoundingClientRect(), sd = $("side").getBoundingClientRect(), ty = $("tray").getBoundingClientRect();
+          const cx = (t.left + t.right) / 2, near = app.wide ? cx >= sd.left && cx <= sd.right && t.bottom <= ty.top + 1 && t.bottom >= ty.top - 40 : $("toast").classList.contains("side") === false;
+          ok(!$("toast").hidden && near && t.left >= -0.5 && t.right <= innerWidth + 0.5 && t.top >= -0.5, "m2 (v4.3 fix): the refusal's toast " + (app.wide ? "sits over the side column's tray, " + Math.round(Math.hypot(cx - (c.left + c.right) / 2, (t.top + t.bottom) / 2 - (c.top + c.bottom) / 2)) + " px from the tapped card" : "stays at the board's foot (not wide)")); hideToast(); }
+        // m3: a first clear's ribbon and, as the coins start, the burst (unless reduced motion).
+        { app.save = scratch(); const e = app.levels.find((x) => x.n > 3 && tagOf(x) === "easy") || app.levels[0]; startLevel(e.id); patient(winOf(e)); settleNow(); for (let t = 0; t < 12000 && !app.panel; t += 16) step(16);
+          const rb = $("p-ribbon"), rib = !rb.hidden && rb.textContent === fill(app.meta.report.firstClear, { n: app.meta.coins.first[tagOf(e)] }); for (let t = 0; t < app.meta.report.countDelayMs + 64; t += 16) step(16);
+          const go = $("p-stats").querySelector(".coin").classList.contains("go") === !app.V.calm, sl = sheetClear(true);
+          startLevel(e.id); patient(winOf(e)); settleNow(); for (let t = 0; t < 12000 && !app.panel; t += 16) step(16);
+          ok(rib && go && sl === true && $("p-ribbon").hidden, "m3 (v4.3 fix): a first clear wears the ribbon '" + rb.textContent + "' and its coins burst" + (app.V.calm ? " (reduced motion: no burst)" : "") + "; a repeat clear has no ribbon (" + sl + ")"); }
+        // m4: the locked wall.
+        if (app.gal.length) { app.save.data.done[app.cfg.gallery.openAt] = 1; showScreen("gallery"); const lk = Array.from(document.querySelectorAll(".gal-tile.locked")), tg = lk.map((b) => b.querySelector(".tag")).find((t) => t && !t.hidden);
+          const pi = app.gal.findIndex((x, k) => x.L.kind === "painting" && lk.indexOf(x.node) >= 0), pc = pi >= 0 ? app.gal[pi].node.querySelector("canvas") : null;
+          let cols = 0; if (pc) { const q = document.createElement("canvas"); q.width = pc.width; q.height = pc.height; const g = q.getContext("2d", { willReadFrequently: true }); g.drawImage(pc, 0, 0); const d = g.getImageData(0, 0, q.width, q.height).data, set = new Set(); for (let i = 0; i < d.length; i += 4) set.add(d[i] + "," + d[i + 1] + "," + d[i + 2]); cols = set.size; }
+          ok(!!tg && Math.abs(+getComputedStyle(tg).opacity - 0.55) < 0.01 && (pi < 0 || cols === 2), "m4 (v4.3 fix): the locked wall's tags at 55%; a locked painting (" + (pi >= 0 ? app.gal[pi].id : "none") + ") is a two-tone stencil (" + cols + " colours)"); showScreen("title"); }
+        // m5: a fail sheet on a wide screen is its content's height.
+        if (jp && app.wide) { startLevel(jp.e.id); patient(jp.p.prefix); for (let t = 0; t < ST.tickCapMs && !app.panel; t += 16) step(16);
+          const card = $("panel").firstElementChild; for (const an of card.getAnimations()) an.finish(); const r = card.getBoundingClientRect(); let lo = 1e9, hi = 0; /* the sheet's slide-in landed */ for (const el of card.children) { const q = el.getBoundingClientRect(); if (el.hidden || !q.height) continue; lo = Math.min(lo, q.top); hi = Math.max(hi, q.bottom); }
+          const rb2 = $("rail").getBoundingClientRect().bottom, fl = $("panel").classList.contains("float"); // a sheet floating above the line (a short screen) is content-sized already
+          ok(app.panel === "fail" && (fl || (hi > lo && r.bottom <= Math.max(r.top + (hi - lo) + 60, rb2 + 1))) && sheetClear() === true, "m5 (v4.3 fix): the wide fail sheet is its content's height, down to the tray's foot at most (" + Math.round(r.height) + " px" + (fl ? ", floating above the line" : " for " + Math.round(hi - lo) + " px of content")  + ")"); }
+        app.save = scratch(); }
       // 14. Opaque sprite caches.
       const bad = app.V.checkSprites(); ok(!bad.length, "sprites: every opaque cache is opaque" + (bad.length ? " (" + bad.join(",") + ")" : ""));
     } catch (err) { ok(false, "selfTest threw: " + (err && err.message) + " " + (err && err.stack ? err.stack.split("\n")[1] : "")); }
