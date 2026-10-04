@@ -36,3 +36,31 @@ The rules engine batch (rules and meta only; levels are re-laid in R2). Source o
 ## State
 
 R1 complete. Next is R2 (re-lay 1-100); its to-do list is `tools/v5-r1-notes.md` §5.
+
+# R2: re-lay levels 1-100 and the 60 pictures (2026-10-04)
+
+Source: the rules review's "Confirmed", "The feature ladder", "Tags mean how many features a level uses", "Reuse map",
+"Build order", and `tools/v5-r1-notes.md` §5. Notes: `tools/v5-r2-notes.md`; per-level table `tools/v5-r2-relay.md`.
+
+## How to resume (R2)
+
+1. Read this section, then `tools/v5-r2-notes.md` (decisions so far) and `git log --oneline` (each piece is its own
+   commit "Sapper's Path v5 R2: <piece>").
+2. Take the first piece below that is not `done`. Bakes write to the scratchpad first (`--out DIR`) and are copied into
+   `levels/` only after their checks pass; never leave `levels/` half-written between commits.
+3. Checks as R1 (`tools/test.js`, `SP.selfTest()` under `?debug=1`, `tools/harness.mjs`), plus `tools/regrade.js`,
+   `tools/regrade.js --gallery` and, after the close-out, `tools/freeze.js --require`.
+
+## Pieces
+
+| # | Piece | State | Commit |
+|---|---|---|---|
+| 0 | Harness on R1's head before any change | done: all passed, 3:24 wall (no timeout; see notes §0) | (this file) |
+| 1 | Realms and tags in data (bake-config realms, tags.js realm-relative cycle, density rule, dealer settings) | todo | |
+| 2 | The re-lay tool (`tools/relay.js`: the slot map, board and deck edits) and the bake's `--relay` mode (kept deck first) | todo | |
+| 3 | Teaching levels 1, 2, 3, 25, 50, 75, 100 (teach-v4.js on the re-laid boards; coach lines) | todo | |
+| 4 | Siege bake 1-100 under v5 (scratch, checked, copied in) | todo | |
+| 5 | Gallery re-grade under v5, re-deal failures; side-quest slots and prizes; interim Gallery unlocks | todo | |
+| 6 | Lore swap (realm names and lore in config; no real-world history) | todo | |
+| 7 | Page: realms on the map, coach lines, texts (5 spaces, no kills) | todo | |
+| 8 | Close-out: `v5.relaid: true`, regrades 0, freeze snapshot, critic-v5 rules, tests, selfTest, harness, `?v=31`, SPEC, notes, screenshots | todo | |
