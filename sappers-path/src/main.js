@@ -100,7 +100,7 @@
   // v4.3: a level's fixed tag (Normal when a file has none) and its one stored winning order.
   const tagOf = (e) => (e && e.L && TAGS.indexOf(e.L.tag) >= 0 ? e.L.tag : "normal"), winOf = (e) => (e && e.L && e.L.win && e.L.win[tagOf(e)]) || "";
   const app = { cfg: null, levels: [], byId: new Map(), order: [], eras: [], save: null, entry: null, B: null, S: null, V: null, audio: null, sheets: null, gal: [], mats: null, palKey: "", galTiles: [],
-    clock: 0, lastT: 0, screen: "title", diff: "normal", speed: 1, cb: false, // diff: the playing level's tag (v4.3) ending: null, endAt: -1, panel: null, panelAt: 0, testing: false,
+    clock: 0, lastT: 0, screen: "title", diff: "normal", speed: 1, fastPaid: false, debugSpeed: DEBUG, cb: false, // diff: the playing level's tag (v4.3) ending: null, endAt: -1, panel: null, panelAt: 0, testing: false,
     toastT: -1e12, popK: 0, cards: [], nexts: [], slots: [], wide: false, glURL: [], manURL: [], nodes: [], lastW: 0, lastH: 0,
     coach: null, used: 0, cues: {}, paused: false, pauses: 0, upright: false, upPause: false, focusEl: null, pt: { x: 0, y: 0 }, T: null, tbuf: null, labFit: new Map(), verdict: [],
     et: 0, endT: -1, lineDirty: false, lineMoved: false, ord: [], slotPts: [], blockT: -1e12, refused: 0, march: false,
@@ -135,7 +135,7 @@
     H.power = () => { app.lineDirty = true; };
     try { app.V.calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { /* motion stays on */ }
     app.audio = Audio.create(app.cfg.audio);
-    setMuted(app.save.data.settings.muted, false); setSpeed(app.save.data.settings.speed, false); setCb(app.save.data.settings.cb, false);
+    setMuted(app.save.data.settings.muted, false); setSpeed(1, false); setCb(app.save.data.settings.cb, false); // v5 R1: speed is never saved
     paintWall(); chips(); icons(); buildTray(); buildLine(); buildPowers(); buildMap(); buildGallery(); wire();
     { const U = app.cfg.layout.upright, u = $("upright"); u.querySelector(".up-t").textContent = U.text; u.setAttribute("aria-label", U.text); }
     showScreen("title"); layout();
@@ -691,6 +691,7 @@
     app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.popK = 0; app.used = 0; app.march = false; app.blockT = -1e12; $("panel").hidden = true; $("stage-pic").hidden = true; hideToast();
     app.lockN = app.S.locked; app.unlockT = -1e12; app.flip.fill(false); app.reveals = 0; app.pairsOut = 0; landTiles();
     app.t0 = app.clock; app.report = null; app.pick = null; app.pwPop.fill(-1e12); app.carry = -1; renderPowers();
+    roundSpeed(); // v5 R1
     app.coached = !!coachSteps(e); // the coach's band is kept for the whole level, so the board never jumps when it goes
     placeSlots();
     if (!e.debug && !e.gallery) { app.save.data.last = e.id; writeSave(); }
@@ -703,7 +704,7 @@
     if (!app.S) return;
     if (!livesLeft()) { showScreen("title"); return; } // v4 M5: no lives left: home, where the refill time shows
     app.S.reset(); app.et = 0; app.t0 = app.clock; app.report = null; app.pick = null; app.pwPop.fill(-1e12); app.V.reset(); app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.popK = 0; app.used = 0; app.march = false; app.blockT = -1e12; $("panel").hidden = true; $("stage-pic").hidden = true; hideToast();
-    app.unlockT = -1e12; app.flip.fill(false); app.reveals = 0; app.pairsOut = 0; landTiles();
+    app.unlockT = -1e12; app.flip.fill(false); app.reveals = 0; app.pairsOut = 0; landTiles(); roundSpeed(); // v5 R1
     renderAll(); renderPowers(); coachStart();
   }
   const playNext = () => startLevel(Save.next(app.save.data, app.order));
@@ -1048,14 +1049,28 @@
   // v4 M5: a settings row (.set-row) also shows its value in words.
   const rowVal = (b, t) => { const v = b.querySelector(".sv"); if (v) v.textContent = t; };
   function setMuted(on, save) { Audio.setMuted(app.audio, on); togMute.forEach((b) => { b.setAttribute("aria-pressed", on ? "true" : "false"); rowVal(b, on ? "Off" : "On"); }); if (save) { app.save.data.settings.muted = !!on; writeSave(); } }
-  // The speed button cycles show.speeds (1x, 2x, 3x); anything else loads as the first one. Gold above 1x. The settings
-  // row shows it on the right, as its other rows do (Critics 2 fix, m7).
-  function setSpeed(k, save) {
-    const sp = app.cfg.show.speeds; app.speed = sp.indexOf(k) >= 0 ? k : sp[0];
-    togSpeed.forEach((b) => { const x = b.querySelector(".sv") || b; x.textContent = app.speed + "\u00d7"; b.classList.toggle("on", app.speed > sp[0]); b.setAttribute("aria-label", "Speed " + app.speed + "x (tap for " + sp[(sp.indexOf(app.speed) + 1) % sp.length] + "x)"); });
-    if (save) { app.save.data.settings.speed = app.speed; writeSave(); }
+  // v5 R1, speed (meta.speed): 1x by default. A player buys 2x for the current attempt (price coins; the sheet asks
+  // first), then the button toggles 1x and 2x free until Retry, a new level or leaving. Under ?debug=1 the button cycles
+  // debugSpeeds (1x, 2x, 3x) free. Nothing is saved. Gold above 1x; the settings row (debug only) shows it on the right.
+  const speeds = () => (app.debugSpeed ? app.meta.speed.debugSpeeds : app.fastPaid ? [1, app.meta.speed.x] : [1]);
+  function setSpeed(k) {
+    const sp = speeds(); app.speed = sp.indexOf(k) >= 0 ? k : 1;
+    togSpeed.forEach((b) => { const x = b.querySelector(".sv") || b; x.textContent = app.speed + "\u00d7"; b.classList.toggle("on", app.speed > 1); b.setAttribute("aria-label", "Speed " + app.speed + "x" + (sp.length > 1 ? " (tap for " + sp[(sp.indexOf(app.speed) + 1) % sp.length] + "x)" : " (tap to buy " + app.meta.speed.x + "x for this round)")); });
   }
-  const nextSpeed = () => { const sp = app.cfg.show.speeds; setSpeed(sp[(sp.indexOf(app.speed) + 1) % sp.length], true); };
+  function nextSpeed() {
+    const sp = speeds(); if (sp.length > 1) { setSpeed(sp[(sp.indexOf(app.speed) + 1) % sp.length]); return true; }
+    if (app.screen !== "play" || !app.S) return false;
+    const T = app.meta.speed; $("sb-title").textContent = T.say; $("sb-buy").querySelector(".pl").textContent = T.buy; $("sb-buy").querySelector(".cprice b").textContent = T.price; $("sb-no").textContent = T.no;
+    $("speedbuy").hidden = false; $("sb-buy").focus(); return true;
+  }
+  function buySpeed(yes) {
+    $("speedbuy").hidden = true; if (!yes || app.fastPaid) return false;
+    const T = app.meta.speed, r = Meta.spend(app.save.data, T.price);
+    if (!r.ok) { cue("blocked"); toast(fill(T.short, { price: T.price, have: app.save.data.coins | 0 }), true); return false; }
+    writeSave(); app.fastPaid = true; setSpeed(T.x); cue("coin"); toast(fill(T.bought, { price: T.price })); renderPowers(); return true;
+  }
+  // A new attempt (a level, Retry): back to 1x unless debugging; a bought 2x is spent.
+  function roundSpeed() { app.fastPaid = false; $("speedbuy").hidden = true; if (!app.debugSpeed) setSpeed(1); else setSpeed(app.speed); }
   // Colour-blind mode (v4 M1): the board's blocks and the queue tiles wear their material's mark. A toggle on the title
   // and the map, kept in the save.
   function setCb(on, save) {
@@ -1097,6 +1112,8 @@
     $("p-cont-buy").addEventListener("click", onContinue); // v5 R1
     togMute.forEach((b) => b.addEventListener("click", () => setMuted(!app.audio.muted, true)));
     togSpeed.forEach((b) => b.addEventListener("click", nextSpeed));
+    $("sb-buy").addEventListener("click", () => buySpeed(true)); $("sb-no").addEventListener("click", () => buySpeed(false)); // v5 R1
+    document.querySelector("#settings .tog-speed").hidden = !app.debugSpeed; // v5 R1: speed lives on the play screen (debug keeps the row)
     togCb.forEach((b) => b.addEventListener("click", () => setCb(!app.cb, true)));
     window.addEventListener("resize", layout);
     // A hidden tab can lose canvas backing stores: re-check every opaque cache when the page shows again, rebuild once.
@@ -1364,7 +1381,7 @@
       ok(app.paused && !$("upright").hidden && r.width >= innerWidth - 1 && r.height >= innerHeight - 1 && hitOK($("upright")) && uprightNeeded(innerWidth, innerHeight, coarse()), "upright: held sideways (" + innerWidth + "x" + innerHeight + ", touch) the upright card covers the screen and the game is paused");
       out.notes.upright = "held sideways: the card only (the game's checks run upright)"; out.ms = Math.round(performance.now() - T0); return out; }
     if (app.paused) resume();
-    const ST = app.cfg.selfTest, SH = app.cfg.show, SPD = SH.speeds;
+    const ST = app.cfg.selfTest, SH = app.cfg.show, SPD = app.meta.speed.debugSpeeds; // v5 R1: the debug speeds
     const scratch = () => Save.open(Save.memoryStore(), key, app.order, app.gal.map((e) => e.id), app.meta); // v4 M5: with meta (coins)
     app.testing = true; app.save = scratch(); setSpeed(SPD[0], false); setCb(false, false);
     // Patient play: tap, then the engine runs until nothing moves and the board lands (the skip path).
@@ -1699,15 +1716,24 @@
         showScreen("map"); const mb = document.querySelector("#map .tog-cb"), hit2 = hitOK(mb); mb.click(); showScreen("play");
         const off2 = app.V.studInfo();
         ok(hit2 && !app.cb && !off2.cb && off2.sum.every((h, m) => h === off.sum[m]) && !gl() && app.save.data.settings.cb === false, "colour-blind off again (the map's toggle): the studs are plain again, byte for byte"); }
-      // 17. Speed (v4 M1): the top bar's button cycles 1x, 2x, 3x and back to 1x through real clicks; its label, the pace
-      // and the save follow, and at 3x the engine really runs three times real time.
-      { startLevel(app.levels[0].id, "normal"); const b = document.querySelector("#top .tog-speed"), seen = [], hit = hitOK(b);
-        for (let k = 0; k < SPD.length; k++) { b.click(); seen.push([app.speed, b.textContent, paceNow() / SH.pace, app.save.data.settings.speed].join(":")); }
-        const want = SPD.map((_, k) => { const v = SPD[(k + 1) % SPD.length]; return [v, v + "×", v, v].join(":"); });
-        ok(hit && seen.join(" ") === want.join(" "), "speed: the button cycles " + seen.join(" ") + " (speed:label:pace:saved)");
+      // 17. Speed (v5 R1): under ?debug=1 the top bar's button cycles 1x, 2x, 3x and back through real clicks (nothing
+      // saved), and at 3x the engine really runs three times real time. Without debug (forced off here): 1x; a tap asks
+      // to buy 2x for the round; short of coins nothing is spent; bought, 2x and coins - price, then the button toggles
+      // 1x/2x free; Retry and a new level go back to 1x and the next 2x costs again.
+      { startLevel(app.levels[0].id, "normal"); const b = document.querySelector("#top .tog-speed"), seen = [], hit = hitOK(b), sv0 = app.save.data.settings.speed;
+        for (let k = 0; k < SPD.length; k++) { b.click(); seen.push([app.speed, b.textContent, paceNow() / SH.pace].join(":")); }
+        const want = SPD.map((_, k) => { const v = SPD[(k + 1) % SPD.length]; return [v, v + "×", v].join(":"); });
+        ok(hit && seen.join(" ") === want.join(" ") && app.save.data.settings.speed === sv0, "speed (debug): the button cycles " + seen.join(" ") + " (speed:label:pace); nothing saved");
         b.click(); b.click(); const et0 = app.et; for (let k = 0; k < 10; k++) step(16);
         ok(app.speed === SPD[2] && Math.abs(app.et - et0 - 160 * SPD[2] * SH.pace) < 1e-6, "speed: at " + app.speed + "x, 160 ms of real time moves the engine " + (app.et - et0) + " ms");
-        setSpeed(SPD[0], false); }
+        const T = app.meta.speed; app.debugSpeed = false;
+        try { startLevel(app.levels[0].id); const r1 = app.speed; app.save.data.coins = T.price - 1; b.click(); const asked = !$("speedbuy").hidden && hitOK($("sb-buy")) && $("sb-buy").querySelector(".cprice b").textContent === String(T.price);
+          $("sb-buy").click(); const poor = app.speed === 1 && (app.save.data.coins | 0) === T.price - 1 && $("speedbuy").hidden && !$("toast").hidden;
+          app.save.data.coins = T.price + 3; b.click(); $("sb-no").click(); const no = app.speed === 1 && (app.save.data.coins | 0) === T.price + 3;
+          b.click(); $("sb-buy").click(); const paid = app.speed === T.x && (app.save.data.coins | 0) === 3 && paceNow() / SH.pace === T.x;
+          b.click(); const t1 = app.speed; b.click(); const t2 = app.speed; retry(); const back = app.speed === 1 && !app.fastPaid; b.click(); const again = !$("speedbuy").hidden; $("sb-no").click();
+          ok(r1 === 1 && asked && poor && no && paid && t1 === 1 && t2 === T.x && back && again && (app.save.data.coins | 0) === 3, "speed (v5 R1): 1x; a tap asks to buy " + T.x + "x for " + T.price + "; short of coins nothing changes; Not now spends nothing; bought, " + T.x + "x and the coins drop; then the button toggles free; Retry is 1x again and the next one costs again"); }
+        finally { app.debugSpeed = DEBUG; setSpeed(SPD[0]); } }
       // 18. v4 M2 debug levels: every stored order wins on its tag (v4.3: Normal), played patiently through playCol; the
       // board matches the rules; none of it reaches the save's progress.
       { let wins = 0, total = 0; const done0 = JSON.stringify(app.save.data.done), last0 = app.save.data.last;
@@ -1907,7 +1933,7 @@
         { $("btn-settings").click(); const open = !$("settings").hidden && hitOK($("set-close")), m0 = app.audio.muted, mb = document.querySelector("#settings .tog-mute"); mb.click();
           const muted = app.audio.muted !== m0 && app.save.data.settings.muted === app.audio.muted && mb.querySelector(".sv").textContent === (app.audio.muted ? "Off" : "On"); mb.click();
           const sp0 = app.speed; document.querySelector("#settings .tog-speed").click(); const sp1 = app.speed, lab = document.querySelector("#settings .tog-speed .sv").textContent; setSpeed(SPD[0], false); $("set-close").click();
-          ok(open && muted && sp1 !== sp0 && lab === sp1 + "×" && $("settings").hidden && app.audio.muted === m0, "settings: the gear opens the sheet; sound and speed (" + lab + ") change and save through it, colour-blind is section 16; Done closes it"); }
+          ok(open && muted && sp1 !== sp0 && lab === sp1 + "×" && $("settings").hidden && app.audio.muted === m0, "settings: the gear opens the sheet; sound and (debug only, v5 R1) speed (" + lab + ") change through it, colour-blind is section 16; Done closes it"); }
         // The bar's geometry at this viewport.
         startLevel(app.levels[0].id, "normal");
         { const tileH = app.cards[0].getBoundingClientRect().height, rl = $("rail").getBoundingClientRect(), pw = $("powers").getBoundingClientRect(); let geo = true;

@@ -25,8 +25,8 @@ The rules engine batch (rules and meta only; levels are re-laid in R2). Source o
 | 3 | Hard locks: key lock and colour lock | done | 10c98ac |
 | 4 | Continue on a jam (250 coins, once per attempt, ad hook) | done | b5fa12d |
 | 5 | Quartermaster rework (any visible card straight out) | done | 60c6770 |
-| 6 | Volley power-up (clear one colour) | done | (this commit) |
-| 7 | Speed: 1x, 2x bought per round, 3x debug only | todo | |
+| 6 | Volley power-up (clear one colour) | done | 180e37c |
+| 7 | Speed: 1x, 2x bought per round, 3x debug only | done | (this commit) |
 | 8 | Power-up unlocks, free first use, tooltips | todo | |
 | 9 | Mystery blocks (hidden board pixels) | todo | |
 | 10 | Extreme tag (data, display, coins) | todo | |

@@ -577,3 +577,7 @@ body.wide .home-card { max-width: 760px; }
    to 4 px, so the full-screen boards draw at 8 px a cell. The home, map and Gallery (screens over #app, padded by --gut)
    keep theirs. */
 @media (max-width: 379px) { #app { padding-left: max(4px, env(safe-area-inset-left)); padding-right: max(4px, env(safe-area-inset-right)); } }
+
+/* v5 R1: the 2x speed sheet's price pill (the continue's style). */
+#sb-buy .cprice { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 1px 5px; border-radius: 999px; background: #fff3cf; color: var(--parch-ink); font-size: 22px; --ico: 18px; vertical-align: middle; }
+#sb-title { font-size: 24px; margin: 4px 0 12px; }

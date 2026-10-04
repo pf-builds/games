@@ -381,7 +381,7 @@ async function run() {
       R.requests = reqs.length; R.payloadBytes = bytes; R.external = ext;
       ok(ext.length === 0, tag + " no external requests (" + ext.join(", ") + ")");
 
-      // Mute, the speed (v4 M1: 1x, 2x, 3x) and colour-blind mode (the map's toggle) persist in the save; then a garbage
+      // Mute and colour-blind mode (the map's toggle) persist in the save (v5 R1: the speed, debug's 1x-3x, does not); then a garbage
       // save loads clean.
       if (!vp.iframe) {
         await ev(() => SP.load(1)); await tap("#top .tog-mute");
@@ -392,7 +392,7 @@ async function run() {
         await page.reload({ waitUntil: "load" }); await page.waitForFunction(() => window.SP, null, { timeout: 15000 });
         ok((await page.getAttribute("#top .tog-mute", "aria-pressed")) === "true", tag + " mute persists across a reload");
         s = await S();
-        ok(s.speed === 3 && (await page.textContent("#top .tog-speed")) === "3\u00d7" && s.cb === true && (await page.getAttribute("#settings .tog-cb", "aria-pressed")) === "true" && (await page.evaluate(() => document.body.classList.contains("cb"))), tag + " speed 3x and colour-blind marks persist across a reload");
+        ok(s.speed === 1 && (await page.textContent("#top .tog-speed")) === "1\u00d7" && s.cb === true && (await page.getAttribute("#settings .tog-cb", "aria-pressed")) === "true" && (await page.evaluate(() => document.body.classList.contains("cb"))), tag + " colour-blind marks persist across a reload; the speed is back to 1x (v5 R1: never saved)");
         await page.evaluate(() => localStorage.setItem("sappers-path.v3", '{"v":1,"done":{"e1-01":7,"e3-75":7,"x":9},"settings":{"diff":"nightmare","muted":"yes"},"last":"e3-75"}'));
         await page.reload({ waitUntil: "load" });
         await page.waitForFunction(() => window.SP, null, { timeout: 15000 });
