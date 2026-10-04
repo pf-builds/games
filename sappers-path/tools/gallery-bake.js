@@ -17,6 +17,10 @@
 // alone (one stored order win[tag], grade[tag]); the slot follows the tag (bake.curve.byTag); the report goes to
 // tools/v4.3-rebake.md. The pictures (the converter's boards) are unchanged; only the deals are new. A lost real-pace
 // replay is a duration miss; among candidates meeting every target the real pace nearest pace.aim is preferred.
+// v5 R2 (`--keep FILE`, the re-lay's Gallery pass): each picture's shipped deck from FILE is graded first under the v5
+// rules (5 spaces) and stands if it meets every target; else its squads are re-tuned (gen.tune from the kept plays and
+// columns); else it is dealt again as before. Among candidates meeting every target the kept deck comes first, then the
+// re-tuned, then a new deal (`deck` in the record). A picture whose converted board differs from FILE's is dealt again.
 "use strict";
 const fs = require("fs");
 const path = require("path");
@@ -58,6 +62,17 @@ function gradeLevel(L, rules, B, hint, seed, tag) {
   return { win, grade };
 }
 const fastBad = (g, B) => g.fast - g.rate >= B.fast.pts || (g.fast > B.fast.ratio * g.rate && g.fast - g.rate >= B.fast.minPts); // g: a tag's grade
+// The targets a candidate is measured on (v5 R2: shared by the picker and the kept-deck check in the workers).
+function targetsOf(B, b) {
+  const DU = B.duration, PC = DU.pace, fell = (c) => (PC && (!gt(c).pace || gt(c).pace.fell) ? 1 : 0), dm = (c) => (PC ? (fell(c) ? null : gt(c).pace.ms) : gt(c).ms), dmiss = (c) => { const ms = dm(c); return ms == null ? 1e9 : PC ? Math.max(0, PC.range[0] - ms, ms - PC.range[1]) : Math.max(0, ms - DU.maxMs); };
+  const wmiss = (c) => (gt(c).maxWait == null ? 1e9 : Math.max(0, gt(c).maxWait - B.maxWaitMs));
+  const fbad = (c) => (fastBad(gt(c), B) ? 1 : 0), tmiss = (c) => Math.max(0, (wn(c) || "").length - B.maxTaps);
+  const good = (c) => !c.miss && !dmiss(c) && !wmiss(c) && !fbad(c) && !tmiss(c);
+  const aim = (c) => (PC && PC.aim && !fell(c) ? Math.abs(gt(c).pace.ms - PC.aim) / PC.aimWeight : 0); // v4.3 pace.aim (aimWeight ms weigh as 1 point of rate)
+  const PN = B.penalty, pen = (c) => PN.band * c.miss + Math.min(dmiss(c), PN.fellMs || 1e9) / PN.durationMs + wmiss(c) / PN.waitMs + PN.fast * fbad(c) + tmiss(c);
+  return { PC, fell, dm, dmiss, wmiss, fbad, tmiss, good, aim, pen };
+}
+const DECKS = ["kept", "tuned", "dealt"], rankOf = (c) => DECKS.indexOf(c.deck || "dealt"); // v5 R2
 // The outline breach on the stored line: how many black squads, the tap that sends the first one, and where the
 // first black card sits at the start (its column and row, 0 = the front).
 function breachOf(L, inkId) {
@@ -75,6 +90,20 @@ function candidates(job, B, rules) {
   const L = { w: P.w, h: P.h, grid: P.grid, pic: true }, inkId = +Object.keys(P.pal).find((k) => P.pal[k].c === V.config().convert.ink) || 0;
   const D = Object.assign({}, B.deal, B.dealBy[b.sub] || {}, { maxTaps: B.maxTaps, time: rules.hard.time, maxWaitMs: B.maxWaitMs }, inkId ? { capOf: { [inkId]: B.capOf } } : {});
   const dealRules = Object.assign({}, rules.hard, { hold: B.deal.hold, archersKill: true });
+  const TT = targetsOf(B, b), grd = (cols, hint, seed, k, deck) => { const level = Object.assign({}, L, { cols }), g = gradeLevel(level, rules, B, hint, seed, tag); stats.grades++;
+    const rate = g.grade[tag].rate, miss = Math.max(0, b.band[0] - rate, rate - b.band[1]); return { k, seed, tag, level, win: g.win, grade: g.grade, miss: +miss.toFixed(4), taps: g.win[tag] ? g.win[tag].length : null, winnable: !!g.win[tag], deck }; };
+  const K = job.kept && JSON.stringify(job.kept.grid) === JSON.stringify(L.grid) ? job.kept : null; // v5 R2 --keep: the shipped deck on the same board
+  if (K) {
+    try {
+      const seed = seedOf(B, n, 0), c0 = grd(K.cols, K.hint, seed, -2, "kept"); out.push(c0);
+      if (c0.winnable && TT.good(c0)) return { n, b, plan: { pal: P.pal, stats: P.stats, inkId }, cands: out, stats };
+      const taps = require("./relay.js").toTaps(Object.assign({}, L, { cols: K.cols }), c0.win[tag] || K.hint), play = taps.map((t) => [t.card[0], t.card[1]]), colOf = taps.map((t) => t.col);
+      const T = Object.assign({}, B.tune, { seed: seed ^ 0x3c6ef372, maxTaps: B.maxTaps, maxWaitMs: B.maxWaitMs }, B.narrowFor.indexOf(b.sub) >= 0 ? { narrow: B.tune.narrow } : { narrow: null });
+      const res = G.tune(L, play, colOf, b.band[0], b.band[1], T, { normal: rules[tag], deal: Object.assign({}, dealRules, D) }); stats.evals += res.evals;
+      const c1 = grd(G.colsOf(res.play, res.colOf), G.orderOf(res.colOf), seed, -1, "tuned"); out.push(c1);
+      if (c1.winnable && TT.good(c1)) return { n, b, plan: { pal: P.pal, stats: P.stats, inkId }, cands: out, stats };
+    } catch (e) { out.push({ k: -1, fail: "kept deck: " + (e && e.message) }); }
+  }
   for (let k = 0; k < (B.candidates.perLevelBy[b.sub] || B.candidates.perLevel) + (B.extra | 0); k++) { // v4.3 --extra K: a fix-up run
     try {
       const seed = seedOf(B, n, k);
@@ -84,7 +113,7 @@ function candidates(job, B, rules) {
       const res = G.tune(L, dl.play, G.assign(dl.play, 0, seed), b.band[0], b.band[1], T, { normal: rules[tag], deal: dealRules }); stats.evals += res.evals; // v4.3: tuned on the tag's rules
       const level = Object.assign({}, L, { cols: G.colsOf(res.play, res.colOf) }), g = gradeLevel(level, rules, B, G.orderOf(res.colOf), seed, tag); stats.grades++;
       const rate = g.grade[tag].rate, miss = Math.max(0, b.band[0] - rate, rate - b.band[1]);
-      out.push({ k, seed, tag, level, win: g.win, grade: g.grade, miss: +miss.toFixed(4), taps: res.play.length, winnable: !!g.win[tag] });
+      out.push({ k, seed, tag, level, win: g.win, grade: g.grade, miss: +miss.toFixed(4), taps: res.play.length, winnable: !!g.win[tag], deck: "dealt" });
     } catch (e) { out.push({ k, fail: "error: " + (e && e.message) }); }
   }
   return { n, b, plan: { pal: P.pal, stats: P.stats, inkId }, cands: out, stats };
@@ -140,7 +169,8 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
     try { if (OUT) fs.mkdirSync(OUT, { recursive: true }); writeAtomic(outPath("levels/gallery.json"), JSON.stringify(out)); writeReport(out, B, log, kept); } catch (e) { console.log("gallery merge failed: " + e.message); process.exitCode = 1; }
     console.log(log.slice(-1)[0]); return;
   }
-  const jobs = kept.map((pic, i) => ({ n: i + 1, pic, tag: TG.tagOf(i + 1, B.tags, false) })).filter((j) => inRun(j.n)), threads = +arg("threads") || B.budget.threads || Math.max(2, os.cpus().length - 2); // v4.3 --threads N
+  const KEEP = arg("keep") ? new Map(JSON.parse(fs.readFileSync(path.resolve(arg("keep")), "utf8")).levels.map((l) => [l.n, { grid: l.grid, cols: l.cols, hint: l.win[l.tag] }])) : null; // v5 R2
+  const jobs = kept.map((pic, i) => ({ n: i + 1, pic, tag: TG.tagOf(i + 1, B.tags, false), kept: KEEP && KEEP.get(i + 1) })).filter((j) => inRun(j.n)), threads = +arg("threads") || B.budget.threads || Math.max(2, os.cpus().length - 2); // v4.3 --threads N
   say("gallery bake v" + B.version + ": " + kept.length + " pictures, " + jobs.length + " baked on " + threads + " threads" + (ONLY ? " (only " + ONLY.join("-") + ")" : ""));
   const results = await runPool(jobs, threads, B, rules, t0 + B.budget.wallSec * 1000, (d, t) => { if (d % 10 === 0 || d === t) console.log("  " + d + "/" + t + "  " + ((Date.now() - t0) / 1000).toFixed(1) + " s"); });
   const levels = [], fallbacks = [], DU = B.duration;
@@ -149,14 +179,10 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
     for (const c of cands) if (c.fail) say("picture " + r.n + " (" + pic.id + ") candidate " + c.k + ": " + c.fail);
     if (!r.b) { fallbacks.push({ n: r.n, why: "not converted" }); say("picture " + r.n + ": NOT CONVERTED"); continue; }
     const b = r.b, mid = (b.band[0] + b.band[1]) / 2;
-    // v4.3: every measure on the picture's tag; a lost real-pace replay is a duration miss.
-    const PC = DU.pace, fell = (c) => (PC && (!gt(c).pace || gt(c).pace.fell) ? 1 : 0), dm = (c) => (PC ? (fell(c) ? null : gt(c).pace.ms) : gt(c).ms), dmiss = (c) => { const ms = dm(c); return ms == null ? 1e9 : PC ? Math.max(0, PC.range[0] - ms, ms - PC.range[1]) : Math.max(0, ms - DU.maxMs); };
-    const wmiss = (c) => (gt(c).maxWait == null ? 1e9 : Math.max(0, gt(c).maxWait - B.maxWaitMs));
-    const fbad = (c) => (fastBad(gt(c), B) ? 1 : 0), tmiss = (c) => Math.max(0, (wn(c) || "").length - B.maxTaps);
-    const good = (c) => !c.miss && !dmiss(c) && !wmiss(c) && !fbad(c) && !tmiss(c);
-    const aim = (c) => (PC && PC.aim && !fell(c) ? Math.abs(gt(c).pace.ms - PC.aim) / PC.aimWeight : 0); // v4.3 pace.aim (aimWeight ms weigh as 1 point of rate)
-    const PN = B.penalty, pen = (c) => PN.band * c.miss + Math.min(dmiss(c), PN.fellMs || 1e9) / PN.durationMs + wmiss(c) / PN.waitMs + PN.fast * fbad(c) + tmiss(c);
-    ok.sort((p, q) => good(q) - good(p) || (good(p) ? 100 * Math.abs(gt(p).rate - mid) + aim(p) - 100 * Math.abs(gt(q).rate - mid) - aim(q) : pen(p) - pen(q)) || p.k - q.k);
+    // v4.3: every measure on the picture's tag; a lost real-pace replay is a duration miss. v5 R2: targetsOf; among
+    // candidates meeting every target the kept deck, then the re-tuned, then a new deal.
+    const { PC, fell, dm, dmiss, wmiss, fbad, tmiss, good, aim, pen } = targetsOf(B, b);
+    ok.sort((p, q) => good(q) - good(p) || (good(p) ? rankOf(p) - rankOf(q) || 100 * Math.abs(gt(p).rate - mid) + aim(p) - 100 * Math.abs(gt(q).rate - mid) - aim(q) : pen(p) - pen(q)) || p.k - q.k);
     const pickC = ok.find((c) => !levels.some((L) => nearDup(L, c.level, B.dedupe))) || null;
     if (!pickC) { fallbacks.push({ n: r.n, why: "no winnable candidate" }); say("picture " + r.n + " (" + pic.id + "): NO LEVEL"); continue; }
     let why = null;
@@ -171,8 +197,9 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
       why = w.join("; "); fallbacks.push({ n: r.n, why }); say("picture " + r.n + " (" + pic.id + "): fallback, " + why); }
     const credit = pic.kind === "painting" ? pic.artist + ", " + pic.date : pic.set === "Twemoji" ? "Twemoji (CC BY 4.0)" : pic.set === "Noto Emoji" ? "Noto Emoji (Apache 2.0)" : "Click it! Studios";
     const L = Object.assign({ id: "g-" + pic.id, n: r.n, gallery: true, title: pic.title, kind: pic.kind, src: pic.id, credit, tag: pickC.tag, band: b.sub, target: b.band, seed: pickC.seed },
-      pickC.level, { pal: r.plan.pal, win: pickC.win, grade: pickC.grade, inBand: !pickC.miss, convert: r.plan.stats }, why ? { fallback: why } : {});
+      pickC.level, { pal: r.plan.pal, win: pickC.win, grade: pickC.grade, inBand: !pickC.miss, convert: r.plan.stats }, KEEP ? { deck: pickC.deck } : {}, why ? { fallback: why } : {});
     L.breach = breachOf(L, r.plan.inkId);
+    if (CFG.gallery && CFG.gallery.quests) L.quest = require("./quests.js").questsOf(kept.length, CFG.gallery.quests, CFG.meta.powers)[r.n - 1]; // v5 R2: its side-quest slot and prize
     if (gt(pickC).pace && gt(pickC).pace.fell) say("picture " + r.n + " (" + pic.id + "): the real-pace replay lost; its patient time stands in");
     levels.push(L);
   }
@@ -189,14 +216,14 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
 
 // ---- report tables (v4.3: between the gallery markers in tools/v4.3-rebake.md) -------------------------------------
 function writeReport(out, B, log, kept) {
-  const file = outPath("tools/v4.3-rebake.md"), A = "<!-- gallery:start -->", Z = "<!-- gallery:end -->", L = out.levels, rows = [];
+  const file = outPath(arg("keep") ? "tools/v5-r2-relay.md" : "tools/v4.3-rebake.md"), A = "<!-- gallery:start -->", Z = "<!-- gallery:end -->", L = out.levels, rows = [];
   rows.push("### Bands (each picture's random-tap rate on its own tag)", "", "| Slot | Band | Levels | Tags E/N/H | In band | Rate min | median | max | Fast tapper median | Lookahead median |", "|---|---|---|---|---|---|---|---|---|---|");
   for (const sub of Object.keys(B.curve.bands)) { const ls = L.filter((l) => l.band === sub); if (!ls.length) continue; const rs = ls.map((l) => gt(l).rate), t = B.curve.bands[sub];
     rows.push(`| ${sub} | ${pct(t[0])}-${pct(t[1])} | ${ls.length} | ${TG.TAGS.map((x) => ls.filter((l) => l.tag === x).length).join("/")} | ${ls.filter((l) => l.inBand).length}/${ls.length} | ${pct(Math.min(...rs))} | ${pct(med(rs))} | ${pct(Math.max(...rs))} | ${pct(med(ls.map((l) => gt(l).fast)))} | ${pct(med(ls.map((l) => gt(l).greedy)))} |`); }
   rows.push("", "### Every level", "", "Every measure is on the picture's own tag (v4.3). Rate = the random-tap rate (" + B.grade.playouts + " games); lookahead = the one-move-lookahead player (" + B.grade.greedyPlayouts + "); fast = the fast tapper (" + B.fast.games + "); real pace = the stored order replayed tapping the moment a space is free, times " + (B.duration.pace ? B.duration.pace.factor : 1) + " (* the replay lost, patient time shown); thinking = the same replay waiting " + ((B.duration.pace && B.duration.pace.thinks) || []).map((x) => x / 1000).join(" / ") + " s after each tap, won (W) or lost (L); patient and longest wait = patient play on the stored line at 1x; ΔE = the smallest CIEDE2000 between two of its colours; breach = black squads, the tap that sends the first, where the first black card starts (column, row).", "",
-    "| # | Id | Title | Kind | Tag | Slot | Board | Colours | Min ΔE00 | Taps (cards) | Rate | Lookahead | Fast | Real pace | Thinking | Patient | Longest wait | Breach | Note |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|");
+    "| # | Id | Title | Kind | Tag | Slot | " + (arg("keep") ? "Deck | " : "") + "Board | Colours | Min ΔE00 | Taps (cards) | Rate | Lookahead | Fast | Real pace | Thinking | Patient | Longest wait | Breach | Note |", "|---|---|---|---|---|---|" + (arg("keep") ? "---|" : "") + "---|---|---|---|---|---|---|---|---|---|---|---|---|");
   for (const l of L) { const g = gt(l), br = l.breach;
-    rows.push(`| ${l.n} | ${l.src} | ${l.title} | ${l.kind} | ${l.tag} | ${l.band} | ${l.w}×${l.h} | ${l.convert.colours} | ${l.convert.minDE} | ${wn(l).length} (${l.grade.cards}) | ${pct(g.rate)} | ${pct(g.greedy)} | ${pct(g.fast)}${fastBad(g, B) ? " !" : ""} | ${g.pace ? secs(g.pace.ms) + (g.pace.fell ? " *" : "") : "-"} | ${g.thinks ? g.thinks.map((x) => (x ? "W" : "L")).join("") : "-"} | ${secs(g.ms)} | ${secs(g.maxWait)} | ${br ? br.squads + ", tap " + br.firstTap + ", " + (br.start ? br.start.join("/") : "-") : "-"} | ${l.fallback || ""} |`); }
+    rows.push(`| ${l.n} | ${l.src} | ${l.title} | ${l.kind} | ${l.tag} | ${l.band} | ${arg("keep") ? (l.deck || "-") + " | " : ""}${l.w}×${l.h} | ${l.convert.colours} | ${l.convert.minDE} | ${wn(l).length} (${l.grade.cards}) | ${pct(g.rate)} | ${pct(g.greedy)} | ${pct(g.fast)}${fastBad(g, B) ? " !" : ""} | ${g.pace ? secs(g.pace.ms) + (g.pace.fell ? " *" : "") : "-"} | ${g.thinks ? g.thinks.map((x) => (x ? "W" : "L")).join("") : "-"} | ${secs(g.ms)} | ${secs(g.maxWait)} | ${br ? br.squads + ", tap " + br.firstTap + ", " + (br.start ? br.start.join("/") : "-") : "-"} | ${l.fallback || ""} |`); }
   rows.push("", "### Bake log", "", "```", ...log, "```");
   const block = A + "\n" + rows.join("\n") + "\n" + Z;
   let text = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "# Sapper's Path v4.3 rebake\n\n" + A + "\n" + Z + "\n";

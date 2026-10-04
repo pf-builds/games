@@ -36,6 +36,14 @@
 // its median match against the era's earlier generated picks is variety.maxMedian or under; when none is, the least alike
 // of those meeting every target is picked and logged ("variety"). After the picks the bake reports each era's median over
 // every pair and its most alike pair, and logs VARIETY GATE FAILED for an era whose median is over variety.maxMedian.
+// v5 R2, the re-lay (`--relay`; tools/relay.js, bake-config relay): no schedule of twists and no new forts by default:
+// every slot takes the board relay.js gives it (a v4.3 board edited to its realm and tag) with its kept deck, and the
+// level is graded on its tag under the v5 rules. The kept deck stands if it meets every target; else the kept squads
+// are re-tuned (gen.tune from the kept plays and columns); else the board is dealt again (perLevel candidates); and only
+// if none of those meets every target are new forts of the realm's look drawn (edited the same way). Among candidates
+// meeting every target the kept deck comes first, then the re-tuned, the re-dealt and a new board (`deck` in the level
+// record, with `from`, the v4.3 level the board came from, and `edits`). A slot relay.js leaves empty gets a new board.
+// The report goes to tools/v5-r2-relay.md. Every other measure, pick rule and the second pass are as before.
 "use strict";
 const fs = require("fs");
 const path = require("path");
@@ -54,6 +62,7 @@ const OUT = arg("out") ? path.resolve(arg("out")) : null;
 const ONLY = arg("only") ? arg("only").split("-").map(Number) : null;
 const outPath = (rel) => (OUT ? path.join(OUT, path.basename(rel)) : path.join(ROOT, rel));
 const BOARD = ["w", "h", "grid", "pic", "gates", "towers", "pal", "scene", "style", "palette", "lock", "safeArchers"]; // v4.3 --boards: a level's board
+const RELAY = process.argv.includes("--relay"); // v5 R2
 const boardOf = (l) => { const b = {}; for (const k of Object.keys(l)) if (BOARD.indexOf(k) >= 0) b[k] = l[k]; return b; };
 
 // ---- shared by main and workers -------------------------------------------------------------------------------
@@ -126,15 +135,52 @@ const rushOf = (L, tag, C) => !!(C.deal.rushHard && tag === "hard" && L.towers &
 // patient >= pts, or fast over ratio x patient and at least minPts over it) is retuned (the picker prefers candidates that pass).
 const fastBad = (g, C) => g.fast != null && (g.fast - g.rate >= C.fast.pts || (g.fast > C.fast.ratio * g.rate && g.fast - g.rate >= C.fast.minPts));
 
+// The targets a level's candidate is measured on (shared by the picker and, v5 R2, the re-lay's workers): band, duration
+// (the real pace from pace.from, the boss its own range; patient limits before), dead time, the fast tapper, linked pairs
+// and the lookahead player on late hard slots. good(c): every target met; pen(c): the fallback's total miss.
+function targetsOf(n, C, b, tw) {
+  const DU = C.duration, PC = DU.pace, lateHard = b.kind === "late" && b.sub !== "relief";
+  const lookT0 = lateHard && C.lookahead ? C.lookahead[b.sub] : null, over = (c) => (lookT0 != null && gt(c).greedy > lookT0 ? 1 : 0);
+  const real = PC && n >= PC.from, dLim = n <= DU.earlyTo ? DU.early : real ? (b.sub === "boss" ? PC.boss : PC.range) : [0, DU.maxMs];
+  const fell = (c) => (real && (!gt(c).pace || gt(c).pace.fell) ? 1 : 0);
+  const dmiss = (c) => { if (fell(c)) return 1e9; const ms = real ? gt(c).pace.ms : gt(c).ms; return ms == null ? 1e9 : Math.max(0, dLim[0] - ms, ms - dLim[1]); };
+  const aim = (c) => (real && PC.aim && !fell(c) ? Math.abs(gt(c).pace.ms - PC.aim) : 0); // v4.3: among picks meeting every target, the real pace nearest pace.aim
+  const wmiss = (c) => { const w = gt(c).maxWait; return w == null ? 1e9 : Math.max(0, w - C.maxWaitMs); };
+  const fbad = (c) => (fastBad(gt(c), C) ? 1 : 0), twMiss = (c) => (c.pairs < tw.links ? 1 : 0);
+  const good = (c) => c.miss === 0 && !dmiss(c) && !wmiss(c) && !fbad(c) && !twMiss(c) && !over(c);
+  const PN = C.penalty, pen = (c) => PN.band * c.miss + Math.min(dmiss(c), PN.fellMs || 1e9) / PN.durationMs + wmiss(c) / PN.waitMs + PN.fast * fbad(c) + PN.pairs * twMiss(c) + (over(c) ? (gt(c).greedy - lookT0) / PN.lookahead : 0);
+  return { lookT0, over, real, dLim, fell, dmiss, aim, wmiss, fbad, twMiss, good, pen };
+}
+const DECKS = ["kept", "tuned", "dealt", "new board"], rankOf = (c) => DECKS.indexOf(c.deck || "dealt"); // v5 R2: the pick's preference among candidates meeting every target
+
 // All candidates for one generated level. Never throws: failures come back as {fail} entries.
-function candidates(n, C, rules, tw, tag, board) {
+// v5 R2 (--relay): kept {cols, links, hint} is the slot's kept deck on `board` (tried first, then re-tuned); realm: the
+// slot's realm (new forts take its edits, tools/relay.js freshEdits); new forts only if nothing on the board meets
+// every target.
+function candidates(n, C, rules, tw, tag, board, kept, realm) {
   const era = eraOf(n, C), b = bandOf(n, C, tag), [cmin, cmax] = coloursOf(n, C, b), out = [], stats = { forts: 0, deals: 0, evals: 0, grades: 0 };
   const D0 = Object.assign({}, C.deal, C.dealBy[b.kind] || {}, C.dealBy["era" + era] || {}, C.dealBy[b.sub] || {}, (C.dealByLevel || {})[n] || {}, { maxTaps: C.maxTaps, time: rules.hard.time, maxWaitMs: C.maxWaitMs, lockSpaces: rules.hard.lockSpaces }); // v4.3: dealBy.era<e>
   const per = ((C.candidates.perLevelBy && C.candidates.perLevelBy[b.sub]) || C.candidates.perLevel) + (C.extra | 0); // v4.2 --extra
+  const TT = targetsOf(n, C, b, tw), T0 = Object.assign({}, C.tune, { seed: seedOf(C, n, 0) ^ 0x3c6ef372, maxTaps: C.maxTaps, maxWaitMs: C.maxWaitMs }, b.kind === "late" && b.sub !== "relief" ? { narrow: C.tune.narrow } : { narrow: null });
+  const graded = (L, cols, links, hint, seed, k, deck, extra) => { const level = Object.assign({}, L, { cols }, links && links.length ? { links } : {}), g = gradeLevel(level, rules, C, hint, seed, n, tag); stats.grades++;
+    const rate = g.grade[tag].rate, miss = Math.max(0, b.band[0] - rate, rate - b.band[1]);
+    return Object.assign({ k, seed, tag, level, win: g.win, grade: g.grade, miss: +miss.toFixed(4), taps: g.win[tag] ? g.win[tag].length : null, pairs: (links || []).length, winnable: !!g.win[tag], deck }, extra || {}); };
+  if (kept && board) { // v5 R2: the kept deck as it is, then its squads re-tuned into the band
+    try {
+      const seed = seedOf(C, n, 0), c0 = graded(board, kept.cols, kept.links, kept.hint, seed, -2, "kept"); out.push(c0);
+      if (c0.winnable && TT.good(c0)) return { n, era, band: b, colours: [cmin, cmax], cands: out, stats };
+      const RLY = require("./relay.js"), taps = RLY.toTaps(Object.assign({}, board, { cols: kept.cols, links: kept.links }), c0.win[tag] || kept.hint);
+      const play = taps.map((t) => (t.part ? [t.card[0], t.card[1], t.part.card[0], t.part.card[1]] : [t.card[0], t.card[1]])), colOf = taps.map((t) => t.col);
+      const dealR = Object.assign({}, rules.hard, { hold: C.deal.hold, archersKill: true }, D0);
+      const res = G.tune(board, play, colOf, b.band[0], b.band[1], T0, { normal: rules[tag], deal: dealR }); stats.evals += res.evals;
+      const dk = G.deck(res.play, res.colOf);
+      if (!dk.bad) { const c1 = graded(board, dk.cols, dk.links, G.orderOf(res.colOf), seed, -1, "tuned", { tuneSteps: res.steps }); out.push(c1); if (c1.winnable && TT.good(c1)) return { n, era, band: b, colours: [cmin, cmax], cands: out, stats }; }
+    } catch (e) { out.push({ k: -1, fail: "kept deck: " + (e && e.message) }); }
+  }
   // v4.3 --boards: every candidate deals the level's own board; only when none of them deals (`fresh`) do `per` more
   // candidates draw new forts (the level is then marked newBoard).
   for (let k = 0, fresh = false; k < (board ? 2 : 1) * per; k++) {
-    if (board && k === per) { if (out.some((c) => c.level)) break; fresh = true; }
+    if (board && k === per) { if (realm ? out.some((c) => c.level && c.winnable && TT.good(c)) : out.some((c) => c.level)) break; fresh = true; } // v5 R2: new forts only if nothing on the board meets every target
     try {
       let L = null, seed = 0;
       if (board && !fresh) { seed = seedOf(C, n, k * 1000); L = JSON.parse(JSON.stringify(board)); }
@@ -148,6 +194,7 @@ function candidates(n, C, rules, tw, tag, board) {
         const nc = G.coloursOf(f).size; if (nc < cmin || nc > cmax) continue;
         if (era >= 2 && !(f.gates && f.gates.length)) continue; // every fort from Era 2 has a gate (v4 M3: so Era 3 keeps its moat)
         if (era >= 3 && !(f.towers && f.towers.length)) continue;
+        if (realm) require("./relay.js").freshEdits(f, realm, tag); // v5 R2: a new fort takes its realm's edits (drawbridges open, towers plain)
         delete f.roles; L = f; // v4.1: the picture's roles are the generator's business; pal (colours, names) ships
       }
       if (!L) { out.push({ k, fail: "no fort with " + cmin + "-" + cmax + " colours in " + C.candidates.fortTries + " seeds" }); continue; }
@@ -164,7 +211,7 @@ function candidates(n, C, rules, tw, tag, board) {
       const level = Object.assign({}, L, { cols: dk.cols }, dk.links.length ? { links: dk.links } : {});
       const g = gradeLevel(level, rules, C, G.orderOf(res.colOf), seed, n, tag); stats.grades++;
       const rate = g.grade[tag].rate, miss = Math.max(0, b.band[0] - rate, rate - b.band[1]);
-      out.push(Object.assign({ k, seed, tag, level, win: g.win, grade: g.grade, miss: +miss.toFixed(4), tuneSteps: res.steps, taps: res.play.length, pairs: dk.links.length, winnable: !!g.win[tag] }, D.rush ? { rush: true } : {}, board && fresh ? { newBoard: true } : {}));
+      out.push(Object.assign({ k, seed, tag, level, win: g.win, grade: g.grade, miss: +miss.toFixed(4), tuneSteps: res.steps, taps: res.play.length, pairs: dk.links.length, winnable: !!g.win[tag], deck: board && !fresh ? "dealt" : "new board" }, D.rush ? { rush: true } : {}, (board ? fresh : !!realm) ? { newBoard: true } : {}));
     } catch (e) { out.push({ k, fail: "error: " + (e && e.message) + (process.env.BAKE_STACK ? " " + e.stack : "") }); }
   }
   return { n, era, band: b, colours: [cmin, cmax], cands: out, stats };
@@ -207,7 +254,7 @@ function finish(task, C, rules) {
 if (!isMainThread) {
   const { job, C, rules } = workerData;
   let res;
-  try { res = job.kind === "finish" ? finish(job, C, rules) : candidates(job.n, C, rules, job.tw, job.tag, job.board); }
+  try { res = job.kind === "finish" ? finish(job, C, rules) : candidates(job.n, C, rules, job.tw, job.tag, job.board, job.kept, job.realm); }
   catch (e) { res = job.kind === "finish" ? { n: job.n, fail: "worker error: " + (e && e.message) } : { n: job.n, cands: [{ fail: "worker error: " + (e && e.message) }], stats: {} }; }
   parentPort.postMessage(res);
   return;
@@ -270,16 +317,25 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
     return;
   }
   const BOARDS = arg("boards") ? new Map(JSON.parse(fs.readFileSync(path.resolve(arg("boards")), "utf8")).levels.map((l) => [l.n, boardOf(l)])) : null;
-  const jobs = []; for (let n = 1; n <= C.levels; n++) if (!teachBy.has(n) && inRun(n)) jobs.push({ kind: "cand", n, tag: tagN(n), tw: twistsOf(n, C, teachBy), board: BOARDS && BOARDS.get(n) });
-  for (const j of jobs) if (j.board && !!j.board.lock !== !!j.tw.lock) { say("level " + j.n + ": the kept board's lock does not match the level's twists; a new fort is drawn"); j.board = null; }
-  say("bake v" + C.version + ": " + C.levels + " levels, " + jobs.length + " generated on " + threads + " threads" + (ONLY ? " (only " + ONLY.join("-") + ")" : "") + (BOARDS ? ", boards kept from " + arg("boards") + " (" + jobs.filter((j) => j.board).length + ")" : ""));
+  // v5 R2 --relay: the slot map (tools/relay.js) gives every generated slot its board, kept deck and twists.
+  const RLY = RELAY ? (() => { const RL = require("./relay.js"), S = RL.source(C, arg("src"), arg("srcTeach")); return new Map(RL.relay(S.SRC, S.TEACH, C, CFG).slots.map((x) => [x.n, x])); })() : null;
+  const jobs = []; for (let n = 1; n <= C.levels; n++) if (!teachBy.has(n) && inRun(n)) {
+    const x = RLY && RLY.get(n);
+    if (RLY && (!x || x.teaching)) { say("level " + n + ": the re-lay gives no generated slot here (a teaching level missing from the teaching file?)"); continue; }
+    if (x && x.tag !== tagN(n)) say("level " + n + ": the re-lay's tag " + x.tag + " is not the schedule's " + tagN(n));
+    jobs.push(x ? { kind: "cand", n, tag: tagN(n), tw: x.twists, board: x.level ? boardOf(x.level) : null, kept: x.level ? { cols: x.level.cols, links: x.level.links || [], hint: x.hint } : null, realm: x.realm, from: x.from, edits: x.edits }
+      : { kind: "cand", n, tag: tagN(n), tw: twistsOf(n, C, teachBy), board: BOARDS && BOARDS.get(n) });
+  }
+  for (const j of jobs) if (!RLY && j.board && !!j.board.lock !== !!j.tw.lock) { say("level " + j.n + ": the kept board's lock does not match the level's twists; a new fort is drawn"); j.board = null; }
+  say("bake v" + C.version + ": " + C.levels + " levels, " + jobs.length + " generated on " + threads + " threads" + (ONLY ? " (only " + ONLY.join("-") + ")" : "") + (BOARDS ? ", boards kept from " + arg("boards") + " (" + jobs.filter((j) => j.board).length + ")" : "") + (RLY ? ", re-laid from v4.3 (" + C.relay.src + "; " + jobs.filter((j) => j.kept).length + " kept decks)" : ""));
   const results = await runPool(jobs, threads, C, rules, deadline, (d, t) => { if (d % 10 === 0 || d === t) console.log("  " + d + "/" + t + " levels  " + ((Date.now() - t0) / 1000).toFixed(1) + " s"); });
   const byN = new Map(results.map((r) => [r.n, r]));
   const tot = { forts: 0, deals: 0, evals: 0, grades: 0 };
   for (const r of results) for (const k of Object.keys(tot)) tot[k] += (r.stats && r.stats[k]) || 0;
   const t1 = Date.now();
 
-  const levels = [], fallbacks = [], lookMiss = [], varMiss = [], paceFell = [], newBoards = [], pools = { 1: [], 2: [], 3: [], 4: [] }, DU = C.duration, VC = C.variety, maps = { 1: [], 2: [], 3: [], 4: [] };
+  const levels = [], fallbacks = [], lookMiss = [], varMiss = [], paceFell = [], newBoards = [], pools = {}, DU = C.duration, VC = C.variety, maps = {}, decks = {};
+  for (const e of Object.keys(C.eras)) if (C.eras[e].from) { pools[e] = []; maps[e] = []; } // v5 R2: one per realm
   // v4.2 --keep FILE: the levels outside --only come from FILE as they are, and count as earlier picks (variety, dedupe).
   const KEEP = arg("keep") && ONLY ? JSON.parse(fs.readFileSync(path.resolve(arg("keep")), "utf8")).levels.filter((l) => !inRun(l.n)) : [];
   for (const l of KEEP) { levels.push(l); if (l.source !== "teaching" && maps[l.era]) maps[l.era].push(VAR.mapOf(l, VC)); }
@@ -295,31 +351,23 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
       levels.push(Object.assign({ id, n, era, source: "teaching", name: T.name, teaches: T.teaches, hint: T.hint, tag, band: b.sub, target: b.band }, L, { win: g.win, grade: g.grade, exempt: "teaching" }));
       continue;
     }
-    const r = byN.get(n), cands = (r && r.cands) || [], ok = cands.filter((c) => c.level && c.winnable), tw = twistsOf(n, C, teachBy);
+    const job = jobs.find((j) => j.n === n), r = byN.get(n), cands = (r && r.cands) || [], ok = cands.filter((c) => c.level && c.winnable), tw = job ? job.tw : twistsOf(n, C, teachBy);
     for (const c of ok) pools[era].push({ n, k: c.k, seed: c.seed, band: b.sub, target: b.band, miss: c.miss, grade: c.grade, win: c.win, level: c.level });
     for (const c of cands) if (c.fail) say("level " + n + " candidate " + c.k + ": " + c.fail);
     const mid = (b.band[0] + b.band[1]) / 2;
-    const lateHard = b.kind === "late" && b.sub !== "relief";
     // Late hard slots: the lookahead player's target (C.lookahead). Duration (C.duration): the patient play-through on the
     // stored Normal line inside the level's limits. Dead time (C.maxWaitMs): its longest single tap. Fast tapper (C.fast).
     // v4.3: every measure on the level's tag (gt: the candidate's grade on it); a lost real-pace replay is a duration miss.
-    const lookT0 = lateHard && C.lookahead ? C.lookahead[b.sub] : null, over = (c) => (lookT0 != null && gt(c).greedy > lookT0 ? 1 : 0);
-    const PC = DU.pace, real = PC && n >= PC.from, dLim = n <= DU.earlyTo ? DU.early : real ? (b.sub === "boss" ? PC.boss : PC.range) : [0, DU.maxMs];
-    const fell = (c) => (real && (!gt(c).pace || gt(c).pace.fell) ? 1 : 0);
-    const dmiss = (c) => { if (fell(c)) return 1e9; const ms = real ? gt(c).pace.ms : gt(c).ms; return ms == null ? 1e9 : Math.max(0, dLim[0] - ms, ms - dLim[1]); };
-    const aim = (c) => (real && PC.aim && !fell(c) ? Math.abs(gt(c).pace.ms - PC.aim) : 0); // v4.3: among picks meeting every target, the real pace nearest pace.aim
-    const wmiss = (c) => { const w = gt(c).maxWait; return w == null ? 1e9 : Math.max(0, w - C.maxWaitMs); };
-    const fbad = (c) => (fastBad(gt(c), C) ? 1 : 0), twMiss = (c) => (c.pairs < tw.links ? 1 : 0);
+    // v5 R2: the targets are targetsOf's (the re-lay's workers use them too).
+    const PC = DU.pace, { lookT0, over, real, dLim, fell, dmiss, aim, wmiss, fbad, twMiss, good, pen } = targetsOf(n, C, b, tw);
     const aimW = PC && PC.aimWeight ? PC.aimWeight : 0; // pace.aimWeight: ms of real pace from pace.aim worth one point (1%) of rate from the band's middle
     const rob = (c) => (gt(c).thinks ? gt(c).thinks.length - gt(c).thinks.reduce((a, x) => a + x, 0) : 0); // v4.3: replays with thinking time that lose
-    ok.sort((p, q) => (p.miss > 0) - (q.miss > 0) || (dmiss(p) > 0) - (dmiss(q) > 0) || (wmiss(p) > 0) - (wmiss(q) > 0) || fbad(p) - fbad(q) || twMiss(p) - twMiss(q) || p.miss - q.miss || dmiss(p) - dmiss(q) || wmiss(p) - wmiss(q)
+    ok.sort((p, q) => (p.miss > 0) - (q.miss > 0) || (dmiss(p) > 0) - (dmiss(q) > 0) || (wmiss(p) > 0) - (wmiss(q) > 0) || fbad(p) - fbad(q) || twMiss(p) - twMiss(q) || (good(p) && good(q) ? rankOf(p) - rankOf(q) : 0) || p.miss - q.miss || dmiss(p) - dmiss(q) || wmiss(p) - wmiss(q)
       || over(p) - over(q) || (over(p) ? gt(p).greedy - gt(q).greedy : 0) || rob(p) - rob(q) || (100 * Math.abs(gt(p).rate - mid) + (aimW ? aim(p) / aimW : 0)) - (100 * Math.abs(gt(q).rate - mid) + (aimW ? aim(q) / aimW : 0)) || p.k - q.k);
-    const good = (c) => c.miss === 0 && !dmiss(c) && !wmiss(c) && !fbad(c) && !twMiss(c) && !over(c);
     const alike = (c) => { if (c.alike == null) { const m = VAR.mapOf(c.level, VC); c.map = m; c.alike = maps[era].length ? med(maps[era].map((q) => VAR.match(m, q))) : 0; } return c.alike; };
     // When no candidate meets every target, the fallback is the one that misses least overall (C.penalty: a band miss of
     // 1 point, 30 s of duration, 3 s of dead time, a fast-tapper flag, a missing pair or 25 points of lookahead over its
     // target each count about 1), so a few seconds over the time limit never outweighs a lookahead of 99%.
-    const PN = C.penalty, pen = (c) => PN.band * c.miss + Math.min(dmiss(c), PN.fellMs || 1e9) / PN.durationMs + wmiss(c) / PN.waitMs + PN.fast * fbad(c) + PN.pairs * twMiss(c) + (over(c) ? (gt(c).greedy - lookT0) / PN.lookahead : 0);
     let pickC = null, why = null;
     for (const c of ok) { if (!good(c)) break; if (alike(c) <= VC.maxMedian && !levels.some((L) => nearDup(L, c.level, C.dedupe.sameCells))) { pickC = c; break; } }
     if (!pickC) { const gv = ok.filter((c) => good(c) && !levels.some((L) => nearDup(L, c.level, C.dedupe.sameCells))).sort((p, q) => alike(p) - alike(q) || p.k - q.k);
@@ -347,7 +395,8 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
     const lookT = lookT0, look = gt(pickC).greedy;
     if (lookT != null && look > lookT) { lookMiss.push({ n, sub: b.sub, look }); say("level " + n + ": lookahead fallback, " + pct(look) + " over the " + pct(lookT) + " target (" + ok.filter((c) => c.miss === 0).length + " in-band candidates)"); }
     if (pickC.newBoard) { newBoards.push(n); say("level " + n + ": its kept board would not deal" + (pickC.rush ? " rushed (Hard, archers)" : "") + "; a new board at the same size"); }
-    levels.push(Object.assign({ id, n, era, source: "gen", seed: pickC.seed, tag, band: b.sub, target: b.band, twists: tw }, pickC.level, { win: pickC.win, grade: pickC.grade, inBand: pickC.miss === 0 }, pickC.rush ? { rush: true } : {}, why ? { fallback: why } : {}));
+    if (job && job.realm) decks[pickC.deck] = (decks[pickC.deck] || 0) + 1;
+    levels.push(Object.assign({ id, n, era, source: "gen", seed: pickC.seed, tag, band: b.sub, target: b.band, twists: tw }, job && job.realm ? { from: pickC.deck === "new board" ? null : job.from, edits: job.edits, deck: pickC.deck } : {}, pickC.level, { win: pickC.win, grade: pickC.grade, inBand: pickC.miss === 0 }, pickC.rush ? { rush: true } : {}, why ? { fallback: why } : {}));
     maps[era].push(pickC.map || VAR.mapOf(pickC.level, VC));
   }
   say("bake: " + levels.length + " levels picked in " + ((t1 - t0) / 1000).toFixed(1) + " s; forts " + tot.forts + ", deals " + tot.deals + ", tune evaluations " + tot.evals + ", full grades " + tot.grades + " (each on its level's tag)");
@@ -377,19 +426,20 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
   for (const e of Object.keys(variety)) { const v = variety[e]; say("bake: variety, era " + e + ": median match " + pct(v.median) + " over " + v.n + " generated pictures (gate " + pct(VC.maxMedian) + (v.median > VC.maxMedian ? ": VARIETY GATE FAILED" : "") + "), most alike " + v.worst.a + " and " + v.worst.b + " at " + pct(v.worst.m)); }
   say("bake: tags " + TG.TAGS.map((t) => t + " " + levels.filter((l) => l.tag === t).length).join(", ") + "; taps per level: max " + Math.max(...levels.map((l) => wn(l) ? wn(l).length : 0)) + " (cap " + C.maxTaps + "), median " + med(levels.map((l) => (wn(l) ? wn(l).length : 0))) + "; cards max " + Math.max(...levels.map((l) => l.grade.cards)));
   const out = { version: C.version, bake: { config: C.version, seed: C.seed, time: CFG.v3.time, forts: tot.forts, deals: tot.deals, tuneEvals: tot.evals, fullGrades: tot.grades, seconds: +secsAll.toFixed(1), fallbacks, lookaheadFallbacks: lookMiss, variety, varietyMisses: varMiss, paceFell, newBoards, run: ONLY ? jobs.map((j) => j.n) : undefined }, levels };
+  if (RLY) { out.bake.relay = { src: C.relay.src, dropped: C.relay.drop, decks }; say("bake: the re-lay's decks: " + DECKS.map((d) => d + " " + (decks[d] || 0)).join(", ") + " (generated slots)"); }
   try {
     if (OUT) fs.mkdirSync(OUT, { recursive: true });
     writeAtomic(outPath("levels/levels.json"), JSON.stringify(out));
-    for (const e of [1, 2, 3, 4]) if (!ONLY || pools[e].length) writeAtomic(outPath("levels/pool-e" + e + ".json"), JSON.stringify({ version: C.version, era: e, cands: pools[e] })); // v4.2: a partial run leaves the other eras' pools alone
+    for (const e of Object.keys(pools)) if (pools[e].length) writeAtomic(outPath("levels/pool-e" + e + ".json"), JSON.stringify({ version: C.version, era: +e, cands: pools[e] })); // v4.2: a partial run leaves the other eras' pools alone (v5 R2: and a realm with none)
   } catch (e) { say("bake: write failed: " + e.message); process.exitCode = 1; }
   try { writeReport(out, C, log); } catch (e) { say("bake: report tables failed: " + e.message); }
 })();
 
 // ---- report tables (between the markers in tools/v4.3-rebake.md) --------------------------------------------------
 function writeReport(out, C, log) {
-  const file = outPath("tools/v4.3-rebake.md"), A = "<!-- bake:start -->", Z = "<!-- bake:end -->";
+  const file = outPath(RELAY ? "tools/v5-r2-relay.md" : "tools/v4.3-rebake.md"), A = "<!-- bake:start -->", Z = "<!-- bake:end -->"; // v5 R2: the re-lay's own report
   const L = out.levels, rows = [], minDE = (l) => (l.palette ? l.palette.minDE : (() => { const s = new Set(); for (const row of l.grid) for (const ch of row) { const m = E.matOf(ch); if (m) s.add(m); } return PAL.minPair([...s]).min; })());
-  const twOf = (l) => { const t = []; if (l.gates && l.gates.length) t.push("gates " + l.gates.length); if (l.towers && l.towers.length) t.push("archers " + l.towers.length); const mc = l.cols.flat().filter((cd) => cd[2]).length; if (mc) t.push("? " + mc); if (l.links && l.links.length) t.push("linked " + l.links.length); if (l.lock) t.push("lock"); return t.join(", ") || "-"; };
+  const twOf = (l) => { const t = []; if (l.gates && l.gates.length) t.push("gates " + l.gates.length); if (l.towers && l.towers.length) t.push("archers " + l.towers.length); const mc = l.cols.flat().filter((cd) => cd[2]).length; if (mc) t.push("? " + mc); if (l.links && l.links.length) t.push("linked " + l.links.length); if (l.lock) t.push(l.lock.colour ? "colour lock " + l.lock.colour : "key lock"); if (l.grid.some((r) => r.indexOf("~") >= 0)) t.unshift("moat"); return t.join(", ") || "-"; };
   rows.push("### Bands (each level's random-tap rate on its own tag)", "", "| Band | Levels | Tags E/N/H | In band | Exempt (teaching) | Rate min | median | max |", "|---|---|---|---|---|---|---|---|");
   for (const kind of ["early", "saw0", "saw1", "saw2", "hard", "hardest", "relief", "boss"]) {
     const ls = L.filter((l) => l.band === kind); if (!ls.length) continue;
@@ -398,11 +448,11 @@ function writeReport(out, C, log) {
   }
   if (out.bake.variety) { rows.push("", "### Variety (picture cells matching within an era; gate " + pct(C.variety.maxMedian) + ")", "", "| Era | Generated pictures | Median match | 10th percentile | Most alike pair |", "|---|---|---|---|---|");
     for (const e of Object.keys(out.bake.variety)) { const v = out.bake.variety[e]; rows.push(`| ${e} | ${v.n} | ${pct(v.median)}${v.median > C.variety.maxMedian ? " (over)" : ""} | ${pct(v.p10)} | ${v.worst.a} and ${v.worst.b}, ${pct(v.worst.m)} |`); } }
-  rows.push("", "### Every level", "", "Every measure is on the level's own tag (v4.3: Easy 6 spaces, Normal 5, Hard 4 with archers lethal). Rate = the random-tap rate (" + C.grade.playouts + " games); lookahead = the one-move-lookahead player (" + C.grade.greedyPlayouts + "); fast = the fast tapper (" + C.fast.games + ", from level " + C.fast.from + "); ? planner = the sampling planner honest / all-seeing (" + C.mystery.games + " games); patient time and longest wait = patient play on the stored line at 1x; real pace = the stored order replayed tapping the moment a space is free, times " + (C.duration.pace ? C.duration.pace.factor : 1) + " (Peter's pace; * the replay lost, patient time shown); thinking = the same replay waiting " + ((C.duration.pace && C.duration.pace.thinks) || []).map((x) => x / 1000).join(" / ") + " s after each tap, won (W) or lost (L); R = dealt rushed (a Hard level with standing archers: its stored order also wins at real pace); taps = the stored order's taps (cards); ΔE = the smallest CIEDE2000 between two colours standing in the level.", "",
-    "| # | Era | Tag | Band | Twists | Board | Pixels | Colours | Min ΔE00 | Taps (cards) | Rate | Lookahead | Fast | ? planner | Real pace | Thinking | Patient | Longest wait | Note |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|");
+  rows.push("", "### Every level", "", (RELAY ? "v5 R2: from = the v4.3 level the board came from; deck = kept (as re-laid), tuned (the kept squads re-tuned), dealt (dealt again on the board) or new board; edits = tools/relay.js's. Every level has 5 spaces and archers never kill. " : "") + "Every measure is on the level's own tag (v4.3: Easy 6 spaces, Normal 5, Hard 4 with archers lethal). Rate = the random-tap rate (" + C.grade.playouts + " games); lookahead = the one-move-lookahead player (" + C.grade.greedyPlayouts + "); fast = the fast tapper (" + C.fast.games + ", from level " + C.fast.from + "); ? planner = the sampling planner honest / all-seeing (" + C.mystery.games + " games); patient time and longest wait = patient play on the stored line at 1x; real pace = the stored order replayed tapping the moment a space is free, times " + (C.duration.pace ? C.duration.pace.factor : 1) + " (Peter's pace; * the replay lost, patient time shown); thinking = the same replay waiting " + ((C.duration.pace && C.duration.pace.thinks) || []).map((x) => x / 1000).join(" / ") + " s after each tap, won (W) or lost (L); R = dealt rushed (a Hard level with standing archers: its stored order also wins at real pace); taps = the stored order's taps (cards); ΔE = the smallest CIEDE2000 between two colours standing in the level.", "",
+    "| # | Era | Tag | Band | " + (RELAY ? "From | Deck | Edits | " : "") + "Twists | Board | Pixels | Colours | Min ΔE00 | Taps (cards) | Rate | Lookahead | Fast | ? planner | Real pace | Thinking | Patient | Longest wait | Note |", "|---|---|---|---|" + (RELAY ? "---|---|---|" : "") + "---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|");
   for (const l of L) {
     const g = gt(l), m = g.mystery;
-    rows.push(`| ${l.n} | ${l.era} | ${l.tag} | ${l.band} | ${twOf(l)} | ${l.w}×${l.h} | ${l.grade.pixels} | ${l.grade.colours} | ${minDE(l) != null ? minDE(l).toFixed(1) : "-"} | ${wn(l) ? wn(l).length : "-"} (${l.grade.cards}) | ${pct(g.rate)} | ${pct(g.greedy)} | ${g.fast != null ? pct(g.fast) + (fastBad(g, C) ? " !" : "") : "-"} | ${m ? pct(m.honest) + " / " + pct(m.seeing) : "-"} | ${g.pace ? secs(g.pace.ms) + (g.pace.fell ? " *" : "") : "-"}${l.rush ? " R" : ""} | ${g.thinks ? g.thinks.map((x) => (x ? "W" : "L")).join("") : "-"} | ${secs(g.ms)} | ${secs(g.maxWait)} | ${l.exempt ? "teaching: " + l.teaches : (l.fallback || (l.inBand ? "" : "out of band")) + (out.bake.newBoards && out.bake.newBoards.indexOf(l.n) >= 0 ? (l.fallback ? "; " : "") + "new board" : "")} |`);
+    rows.push(`| ${l.n} | ${l.era} | ${l.tag} | ${l.band} | ${RELAY ? (l.from || "-") + " | " + (l.deck || (l.source === "teaching" ? "teaching" : "-")) + " | " + ((l.edits || []).join(", ") || "-") + " | " : ""}${twOf(l)} | ${l.w}×${l.h} | ${l.grade.pixels} | ${l.grade.colours} | ${minDE(l) != null ? minDE(l).toFixed(1) : "-"} | ${wn(l) ? wn(l).length : "-"} (${l.grade.cards}) | ${pct(g.rate)} | ${pct(g.greedy)} | ${g.fast != null ? pct(g.fast) + (fastBad(g, C) ? " !" : "") : "-"} | ${m ? pct(m.honest) + " / " + pct(m.seeing) : "-"} | ${g.pace ? secs(g.pace.ms) + (g.pace.fell ? " *" : "") : "-"}${l.rush ? " R" : ""} | ${g.thinks ? g.thinks.map((x) => (x ? "W" : "L")).join("") : "-"} | ${secs(g.ms)} | ${secs(g.maxWait)} | ${l.exempt ? "teaching: " + l.teaches : (l.fallback || (l.inBand ? "" : "out of band")) + (out.bake.newBoards && out.bake.newBoards.indexOf(l.n) >= 0 ? (l.fallback ? "; " : "") + "new board" : "")} |`);
   }
   rows.push("", "### Bake log", "", "```", ...log, "```");
   const block = A + "\n" + rows.join("\n") + "\n" + Z;

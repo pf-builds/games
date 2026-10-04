@@ -18,6 +18,12 @@
 // (win[tag]). `--boards FILE` keeps each level's board (grid, palette, gates, towers, lock) from FILE (the shipped
 // teaching.json): first the level as it ships (its deck too, seed pass 0) if it still passes every check under the v4.3
 // rules on its tag, else new deals on the kept board (KEEPTRIES seeds), else new forts (and says so).
+// v5 R2 (the re-lay): seven teaching levels, 1-3 as before and one milestone lesson opening each realm: 25 moats (The
+// Open Bridge: v4.3's Locked Bridge with its drawbridge opened), 50 gates and keys (The Locked Gate: v4.3's linked lesson
+// board, towers plain and links dropped), 75 linked squads (Linked Squads: All at Once with towers plain and the flags
+// and lock dropped), 100 mystery cards (Hidden Colours, as it was). `--boards FILE` takes tools/relay.js --teach-out's
+// file (each level keyed by its new slot, its order on its new tag); new forts take the realm's edits (relay.js
+// freshEdits). The new lessons' coach lines are written by hand in config.json teach (LESSON -1: no coach card).
 "use strict";
 const fs = require("fs"), path = require("path");
 const E = require("../src/engine.js"), G = require("./gen.js"), R = require("./grade.js"), TG = require("./tags.js");
@@ -40,9 +46,8 @@ const LESSON = {
   holding: (S, B, L) => { const f = front(S)[0]; return f && f[0] === 0 && S.reachable(f[1]) === 0 && f[1] !== E.GILT ? f[1] : 0; },
   overshoot: (S) => { const f = front(S).find(([, m, n]) => S.reachable(m) > 0 && n > S.reachable(m)); if (!f) return 0;
     S.play(f[0]); S.quiet(); for (let q = 0; q < S.cap; q++) if (S.spQ[q] && S.spW[q] > S.reachable(S.spM[q])) return f[1]; return 0; }, // its rest waits once the rest is eaten
-  gate: (S, B, L) => { const w = roleId(L, C.picture.roles.wood.name); return w && front(S).some(([, m]) => m === w) && S.reachable(w) > 0 && B.sapTotal[E.GILT] > 0 ? w : 0; },
-  archers: (S, B) => { const t = B.towers.length === 1 ? B.towers[0].m : 0; return t && front(S).some(([, m]) => m === t) && S.reachable(t) > 0 ? t : 0; },
-  mystery: () => -1, linked: () => -1, lock: () => -1, mixed: () => -1,
+  gate: (S, B) => (B.gateCells.length && B.sapTotal[E.GILT] > 0 ? -1 : 0), moat: (S, B) => (B.a0.indexOf(E.WATER) >= 0 ? -1 : 0), // v5 R2: hand-written coach lines
+  mystery: () => -1, linked: () => -1,
 };
 
 // gen: the era's generator params with these overrides; colours; deal: dealer overrides; lock; pairs: [[play index, ...]]
@@ -54,6 +59,7 @@ const LESSON = {
 // beta: the deck's column fill (gen.assign; 77's column by column, so the coach's follower, who taps the leftmost card it
 // may, meets the dealt order on a board this size).
 const TEACH42 = { w: [36, 36], h: [35, 35], k: 1.8 }, DEAL42 = { size: [40, 99], maxCard: 99, maxTaps: 40, shrink: 0.85, shrinks: 16, tries: 20 };
+const REALM = (n) => C.tags.realms.findIndex((r) => n >= r[0] && n <= r[1]) + 1; // v5 R2: the level's realm
 const SPECS = [
   { n: 1, era: 1, name: "Open Gate", teaches: "tray", hint: "Tap a squad. Its sappers come out at the bottom and each eats the nearest block of their colour.",
     gen: { w: [15, 15], h: [16, 16], watch: [1, 1], fg: [3, 3] }, colours: 4, deal: { size: [30, 60], maxCard: 60 }, minRate: 0.99, maxMs: 90000 },
@@ -61,20 +67,16 @@ const SPECS = [
     gen: { w: [16, 16], h: [17, 17], watch: [1, 1], fg: [3, 3] }, colours: 5, deal: { size: [24, 50], maxCard: 50, deep: 1, park: 1 }, minRate: 0.95, maxMs: 90000 },
   { n: 3, era: 1, name: "Woodpile", teaches: "overshoot", hint: "A squad bigger than what's open eats what it can reach. The rest wait, then finish the job.",
     gen: { w: [16, 16], h: [17, 17], watch: [1, 2], fg: [3, 3], first: ["tree", "thatch"] }, colours: 6, deal: { size: [24, 50], maxCard: 50 }, minRate: 0.95, maxMs: 90000 },
-  { n: 26, era: 2, name: "The Locked Bridge", teaches: "gate", hint: "The drawbridge is locked: dig out its gold key in the lodge, then send the Looters.",
+  { n: 25, era: 2, name: "The Open Bridge", teaches: "moat", hint: "Sappers can't cross water. The drawbridge is down: everything over the moat is reached across the bridge.",
     gen: Object.assign({}, TEACH42, { twoGates: 0 }), colours: 7, deal: DEAL42, minRate: 0.6, maxMs: 600000 },
-  { n: 35, era: 2, name: "Hidden Colours", teaches: "mystery", hint: "A ? squad hides its colour until it reaches the front. Its count always shows.",
+  { n: 50, era: 3, name: "The Locked Gate", teaches: "gate", hint: "A locked gate bars the way in. Dig out its gold key and send the Looters: the key opens the gate.",
+    gen: Object.assign({}, TEACH42, { towers: [2, 2] }), colours: 9, deal: DEAL42, minRate: 0.5, maxMs: 600000 },
+  { n: 75, era: 4, name: "Linked Squads", teaches: "linked", hint: "Linked squads go out together: both must be at the front, with 2 free spaces. Both spaces free once both squads have picked up their last blocks.",
+    gen: Object.assign({}, TEACH42, { w: [32, 32], h: [31, 31], k: 1.6, towersOut: [2, 2], towersIn: [2, 2] }), colours: 10, deal: Object.assign({}, DEAL42, { size: [70, 99], maxTaps: 30 }), beta: 1, pairs: [1], minRate: 0.15, maxMs: 600000 },
+  { n: 100, era: 2, name: "Hidden Colours", teaches: "mystery", hint: "A ? squad hides its colour until it reaches the front. Its count always shows.",
     gen: Object.assign({}, TEACH42, { twoGates: 0 }), colours: 7, deal: DEAL42, flags: [[0, 1], [2, 1], [4, 1]], minRate: 0.6, maxMs: 600000 },
-  { n: 51, era: 3, name: "The Corner Tower", teaches: "archers", hint: "Archers shoot anyone in their red ring. Take the tower first: here the archers only drive sappers back.", safeArchers: true,
-    gen: Object.assign({}, TEACH42, { moat: false, towers: [1, 1], keepH: [8, 11] }), colours: 7, deal: DEAL42, minRate: 0.6, maxMs: 600000 },
-  { n: 62, era: 3, name: "Linked Squads", teaches: "linked", hint: "Linked squads go out together: both must be at the front, with 2 free spaces. Both spaces free once both squads have picked up their last blocks.",
-    gen: Object.assign({}, TEACH42, { towers: [2, 2] }), colours: 9, deal: DEAL42, pairs: [1], minRate: 0.5, maxMs: 600000 },
-  { n: 76, era: 4, name: "The Locked Space", teaches: "lock", hint: "One space starts locked. Its key is a gold block on the board: dig it out and send the Looters.",
-    gen: Object.assign({}, TEACH42, { towersOut: [2, 2], towersIn: [0, 0] }), colours: 9, deal: DEAL42, lock: true, minRate: 0.5, maxMs: 600000 },
-  { n: 77, era: 4, name: "All at Once", teaches: "mixed", hint: "Gates, archers, ? squads, linked squads and a locked space, all in one castle.",
-    gen: Object.assign({}, TEACH42, { w: [32, 32], h: [31, 31], k: 1.6, towersOut: [2, 2], towersIn: [2, 2] }), colours: 10, deal: Object.assign({}, DEAL42, { size: [70, 99], maxTaps: 30 }), beta: 1, lock: true, pairs: [1], flags: [[2, 1], [4, 1]], minRate: 0.15, maxMs: 600000 },
 ];
-const DEAL = { hold: 4, size: [14, 36], deep: 0, finish: 0.4, maxCard: 60, maxCards: 120, tries: 14, maxTaps: 26, maxWaitMs: C.maxWaitMs, shrink: 0.5, shrinks: 5, park: 1, parkMax: C.deal.parkMax, noParkUnderArchers: true };
+const DEAL = { hold: 5, size: [14, 36], deep: 0, finish: 0.4, maxCard: 60, maxCards: 120, tries: 14, maxTaps: 26, maxWaitMs: C.maxWaitMs, shrink: 0.5, shrinks: 5, park: 1, parkMax: C.deal.parkMax, noParkUnderArchers: true };
 
 // The coach scripts (config.json teach), with "@" for the coach's card: the material id the lesson points at, which on a
 // picture depends on the level (ids go by population). The bake's teaching levels print theirs; config.json carries them.
@@ -83,12 +85,9 @@ const COACH = {
   2: [{ say: "{crew} is walled in. Send it anyway!", card: "@", until: ["wait", "reach:@"] }, { say: "Nothing in reach: they wait in a space.", line: true, if: "wait", until: "play" },
     { say: "If every space is stuck waiting, you lose.", line: true, until: "play" }],
   3: [{ say: "{n} {crew}, {reach} in reach: {go} go.", card: "@", if: "short:@", until: "used:@" }, { say: "The rest wait their turn. Break the wall!", line: true, if: "wait", until: "lineEmpty" }],
-  26: [{ say: "A locked gate! Dig out its gold key first.", card: "@", ring: "key", until: ["reach:14", "gate"] }, { say: "Send the Looters: the key opens the gate.", card: 14, ring: "key", if: "front:14", until: "gate" },
-    { say: "The gate is open. Raze the castle!", until: "play" }],
-  51: [{ say: "Archers shoot the red ring. Tower first!", card: "@", ring: "tower", until: "tower" }, { say: "Tower down: the ring is safe now.", until: "play" }],
 };
 const coachOf = (n, m) => (COACH[n] ? JSON.parse(JSON.stringify(COACH[n]).replace(/"@"/g, String(m)).replace(/:@/g, ":" + m)) : (CFG.teach || {})[idOf(n)] || null);
-const idOf = (n) => "e" + (n <= 25 ? 1 : n <= 50 ? 2 : n <= 75 ? 3 : 4) + "-" + String(n).padStart(2, "0");
+const idOf = (n) => "e" + REALM(n) + "-" + String(n).padStart(2, "0"); // v5 R2: the realm
 // The coach follower on the level's tag (v4.3; Normal before), with the page's coach machine (main.js cond/skipDead/coachStep, read at rest after each
 // patient tap): it taps the arrowed card (a card pointer, or a linked front card) when its tap is legal, else the first
 // legal column. Returns {won, saw (steps shown), steps}.
@@ -102,7 +101,7 @@ function follower(B, steps, rt) {
       case "gate": return B.gateCells.every((gc) => S.a[gc[0]] <= 0); case "tower": return S.standing === 0; case "reach": return S.reachable(m) > 0;
       case "used": return !!(used & (1 << m)); case "hit": return S.hits > 0; case "front": return frontOf(m) >= 0;
       case "short": { const j = frontOf(m); return j >= 0 && S.count(S.front(j)) > S.reachable(m); }
-      case "reveal": return reveals > 0; case "pair": return pairs > 0; case "unlock": return B.lockKey >= 0 && S.locked === 0; case "locked": return S.locked > 0;
+      case "reveal": return reveals > 0; case "pair": return pairs > 0; case "unlock": return (B.lockKey >= 0 || B.lockMat > 0) && S.locked === 0; case "locked": return S.locked > 0;
       case "hidden": { for (let j = 0; j < E.NCOL; j++) for (let d = 1; d < 3; d++) { const ci = S.card(j, d); if (ci >= 0 && S.hidden(ci)) return true; } return false; }
       case "linkedFront": { for (let j = 0; j < E.NCOL; j++) { const f = S.front(j); if (f >= 0 && S.partner(f) >= 0) return true; } return false; }
     } return false; };
@@ -138,7 +137,7 @@ function build(spec) {
   const D = Object.assign({}, DEAL, spec.deal || {}, { time: rules.hard.time, lockSpaces: rules.hard.lockSpaces });
   const why = {};
   if (KEEPL && KEEPL.get(spec.n)) { // v4.3 --boards: the shipped level as it is (board and deck), re-verified on its tag
-    const K = KEEPL.get(spec.n), lv = Object.assign({ n: spec.n, era: spec.era, name: spec.name, teaches: spec.teaches, tag: tagOf(spec.n), hint: spec.hint }, KEEP.get(spec.n), { cols: JSON.parse(JSON.stringify(K.cols)) }, K.links ? { links: K.links } : {}, spec.safeArchers ? { safeArchers: true } : {});
+    const K = KEEPL.get(spec.n), lv = Object.assign({ n: spec.n, era: REALM(spec.n), name: spec.name, teaches: spec.teaches, tag: tagOf(spec.n), hint: spec.hint }, KEEP.get(spec.n), { cols: JSON.parse(JSON.stringify(K.cols)) }, K.links ? { links: K.links } : {}, spec.safeArchers ? { safeArchers: true } : {});
     let coach = 0; try { const B = E.compile(lv); coach = LESSON[spec.teaches](E.sim(B, rules[tagOf(spec.n)]), B, lv); } catch (e) { coach = 0; }
     const v = coach ? verify(lv, coach, K.win && K.win[tagOf(spec.n)]) : { bad: "lesson" };
     if (!v.bad && !missOf(spec, v)) { lv.win = v.orders; return { lv, v, s: 0, coach, kept: true }; }
@@ -150,8 +149,10 @@ function build(spec) {
     const L = kept ? JSON.parse(JSON.stringify(KEEP.get(spec.n))) : G.fort(spec.era, seed, Object.assign({}, C.eras[spec.era].gen, { scene: "day" }, spec.gen, { colours: spec.colours }), C.picture); // v4.1 fix: lessons by day if (!L) continue;
     if (!L) continue;
     delete L.roles;
-    if ((spec.era === 2 || spec.era === 4) && !(L.gates && L.gates.length)) continue;
+    if (!kept && (spec.era === 2 || spec.era === 4) && !(L.gates && L.gates.length)) continue; // (v5 R2: a kept board may have opened its gates)
+    if (!kept) { const RL = require("./relay.js"), r = REALM(spec.n); if (r >= 3) RL.ED.dropTowers(L); if (r === 2) RL.ED.openGates(L, []); RL.prune(L, CFG.v3); } // v5 R2: the realm's edits on a new fort (a lesson keeps its gates from 50)
     if (spec.lock && !kept && !G.lockKey(L, seed)) continue;
+    if (spec.teaches === "gate" && !(L.gates && L.gates.length)) continue;
     let dl = null; for (let a = 0; a < 6 && !dl; a++) dl = G.deal(L, seed ^ Math.imul(a + 1, 0x27D4EB2F), D);
     if (!dl) continue;
     let play = dl.play.map((c) => c.slice()), okPairs = true;
@@ -169,7 +170,7 @@ function build(spec) {
       if (!got && !(play[0] && S0.reachable(play[0][0]) > 0 && play[0][1] > S0.reachable(play[0][0]))) continue; }
     const co = G.assign(play, spec.beta || 0, seed), dk = G.deck(play, co); if (dk.bad) continue;
     if (spec.pairs && dk.links.some(([a, b]) => Math.min(a[1], b[1]) !== 0 || Math.abs(a[1] - b[1]) !== 1)) continue; // the rod shows from the first tap
-    const lv = Object.assign({ n: spec.n, era: spec.era, name: spec.name, teaches: spec.teaches, tag: tagOf(spec.n), hint: spec.hint }, L, { cols: dk.cols }, dk.links.length ? { links: dk.links } : {}, spec.safeArchers ? { safeArchers: true } : {});
+    const lv = Object.assign({ n: spec.n, era: REALM(spec.n), name: spec.name, teaches: spec.teaches, tag: tagOf(spec.n), hint: spec.hint }, L, { cols: dk.cols }, dk.links.length ? { links: dk.links } : {}, spec.safeArchers ? { safeArchers: true } : {});
     let flagsOk = true;
     for (const [j, i] of spec.flags || []) { const cd = lv.cols[j][i]; if (!cd || dk.links.some((P) => P.some((q) => q[0] === j && q[1] === i))) { flagsOk = false; break; } cd[2] = E.MYSTERY; }
     if (!flagsOk) continue;
@@ -187,7 +188,7 @@ function build(spec) {
 
 const KEEPTRIES = 300; // v4.3 --boards: deal seeds tried on a kept board before new forts are drawn
 const levels = SPECS.map(build).sort((a, b) => a.lv.n - b.lv.n);
-const text = JSON.stringify({ version: 6, note: "Teaching levels (SPEC-v3 §5, SPEC-v4 §9 M3 and v4.1): castle pictures entered from the bottom, each with its lesson where the coach can point at it from the first tap. 1-3 the tray, the holding line, a squad bigger than its reach; 26 gate and key; 35 mystery cards; 51 archers; 62 linked squads; 76 the locked space; 77 everything at once. Built by tools/teach-v4.js. Legend in src/engine.js. v4.3: each plays on its fixed tag (tag; Easy or Normal) and stores one winning order on it (win[tag]); the boards are v4.2's (teach-v4.js --boards).", levels: levels.map((x) => x.lv) }, null, 1)
+const text = JSON.stringify({ version: 6, note: "Teaching levels (SPEC-v3 §5, SPEC-v4 §9 M3 and v4.1): castle pictures entered from the bottom, each with its lesson where the coach can point at it from the first tap. 1-3 the tray, the holding line, a squad bigger than its reach; v5 R2, one lesson opening each realm: 25 moats, 50 gates and keys, 75 linked squads, 100 mystery cards. Built by tools/teach-v4.js. Legend in src/engine.js. v4.3: each plays on its fixed tag (tag; Easy or Normal) and stores one winning order on it (win[tag]). v5 R2: the boards and decks are v4.3's teaching levels re-laid by tools/relay.js (teach-v4.js --boards on its --teach-out file).", levels: levels.map((x) => x.lv) }, null, 1)
   .replace(/\[\n\s+(\[[\d, ]+\]|[\d.]+|"[^"\n]*")(,\n\s+(\[[\d, ]+\]|[\d.]+|"[^"\n]*"))*\n\s+\]/g, (m) => "[" + m.slice(1, -1).trim().split(/,\n\s+/).join(", ") + "]") + "\n";
 if (process.argv.includes("--check")) { const same = fs.readFileSync(FILE, "utf8") === text; console.log(same ? "teaching.json matches a fresh build" : "teaching.json differs from a fresh build"); process.exitCode = same ? 0 : 1; }
 else { fs.writeFileSync(DEST, text); console.log("wrote " + DEST); }
