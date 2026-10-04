@@ -307,10 +307,11 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
   // (fix-up runs: --only N-N --keep FULL), the bake record's lists and the variety redone, written with the report.
   if (arg("merge")) {
     const files = arg("merge").split(",").map((f) => JSON.parse(fs.readFileSync(path.resolve(f), "utf8"))), out = files[0], fixed = [];
-    files.slice(1).forEach((F, k) => { const run = F.bake.run || []; for (const l of F.levels) { if (run.length && run.indexOf(l.n) < 0) continue; const i = out.levels.findIndex((x) => x.n === l.n); if (i >= 0) { out.levels[i] = l; fixed.push(l.n); } }
+    files.slice(1).forEach((F, k) => { const run = F.bake.run || []; for (const l of F.levels) { if (run.length && run.indexOf(l.n) < 0) continue; const i = out.levels.findIndex((x) => x.n === l.n); if (i >= 0) out.levels[i] = l; else out.levels.push(l); fixed.push(l.n); } // v5 R2: a level the full run missed goes in too
       for (const key of ["fallbacks", "lookaheadFallbacks", "varietyMisses", "paceFell", "newBoards"]) { const mine = (F.bake[key] || []).filter((x) => run.indexOf(typeof x === "number" ? x : x.n) >= 0);
         out.bake[key] = (out.bake[key] || []).filter((x) => run.indexOf(typeof x === "number" ? x : x.n) < 0).concat(mine); } });
-    out.bake.fixups = fixed; out.bake.variety = VAR.eraReport(out.levels, C.variety);
+    out.levels.sort((p, q) => p.n - q.n); out.bake.fixups = fixed; out.bake.variety = VAR.eraReport(out.levels, C.variety);
+    if (out.bake.relay) { const dk = {}; for (const l of out.levels) if (l.deck) dk[l.deck] = (dk[l.deck] || 0) + 1; out.bake.relay.decks = dk; } // v5 R2: the decks recounted
     for (const f of (arg("logs") || "").split(",").filter(Boolean)) for (const line of fs.readFileSync(path.resolve(f), "utf8").split("\n")) if (line && !/^ {2}/.test(line)) log.push(line);
     say("bake: merged fix-up level(s) " + fixed.join(", ") + " into " + arg("merge").split(",")[0] + "; fallbacks now " + out.bake.fallbacks.length + (out.bake.fallbacks.length ? " (" + out.bake.fallbacks.map((x) => x.n).join(", ") + ")" : ""));
     try { if (OUT) fs.mkdirSync(OUT, { recursive: true }); writeAtomic(outPath("levels/levels.json"), JSON.stringify(out)); writeReport(out, C, log); } catch (e) { say("bake merge failed: " + e.message); process.exitCode = 1; }
@@ -394,7 +395,7 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
     if (real && gt(pickC).pace && gt(pickC).pace.fell) { paceFell.push(n); say("level " + n + ": the real-pace replay lost; its patient time stands in"); }
     const lookT = lookT0, look = gt(pickC).greedy;
     if (lookT != null && look > lookT) { lookMiss.push({ n, sub: b.sub, look }); say("level " + n + ": lookahead fallback, " + pct(look) + " over the " + pct(lookT) + " target (" + ok.filter((c) => c.miss === 0).length + " in-band candidates)"); }
-    if (pickC.newBoard) { newBoards.push(n); say("level " + n + ": its kept board would not deal" + (pickC.rush ? " rushed (Hard, archers)" : "") + "; a new board at the same size"); }
+    if (pickC.newBoard) { newBoards.push(n); say("level " + n + (RLY ? (job && job.from ? ": no candidate on its kept board (" + job.from + ") met every target; a new board" : ": the re-lay has no board for this slot; a new board") : ": its kept board would not deal" + (pickC.rush ? " rushed (Hard, archers)" : "") + "; a new board at the same size")); }
     if (job && job.realm) decks[pickC.deck] = (decks[pickC.deck] || 0) + 1;
     levels.push(Object.assign({ id, n, era, source: "gen", seed: pickC.seed, tag, band: b.sub, target: b.band, twists: tw }, job && job.realm ? { from: pickC.deck === "new board" ? null : job.from, edits: job.edits, deck: pickC.deck } : {}, pickC.level, { win: pickC.win, grade: pickC.grade, inBand: pickC.miss === 0 }, pickC.rush ? { rush: true } : {}, why ? { fallback: why } : {}));
     maps[era].push(pickC.map || VAR.mapOf(pickC.level, VC));

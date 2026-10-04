@@ -551,8 +551,8 @@
 
   function renderTop() {
     const e = app.entry; if (!e) return;
-    $("lvl-num").textContent = e.debug ? app.cfg.layout.debugNum : e.n; $("lvl-name").textContent = e.gallery ? e.L.title : e.L.name || (app.eras[e.era - 1] ? app.eras[e.era - 1].name : "Era " + e.era);
-    $("btn-map").setAttribute("aria-label", e.gallery ? app.cfg.gallery.title : "Era map");
+    $("lvl-num").textContent = e.debug ? app.cfg.layout.debugNum : e.n; $("lvl-name").textContent = e.gallery ? e.L.title : e.L.name || (app.eras[e.era - 1] ? app.eras[e.era - 1].name : fill(app.cfg.layout.realmEye, { e: e.era }));
+    $("btn-map").setAttribute("aria-label", e.gallery ? app.cfg.gallery.title : app.cfg.layout.mapName); // v5 R2: realms (the journey map comes in R3)
     tagChip($("tag-chip"), app.diff); // v4.3: the level's tag (Normal unmarked)
     app.labFit.delete("name"); fitText($("lvl-name"), "name", app.cfg.layout.nameMinPx); // the room beside the number changes with its digits
   }
@@ -581,7 +581,7 @@
     }
     app.eras.forEach((er) => {
       const sec = document.createElement("section"); sec.className = "era";
-      sec.innerHTML = '<div class="eye"><span>Era ' + er.era + '</span><span class="cnt"></span></div><h3></h3><p></p><div class="rc"></div><div class="nodes"></div>';
+      sec.innerHTML = '<div class="eye"><span></span><span class="cnt"></span></div><h3></h3><p></p><div class="rc"></div><div class="nodes"></div>'; sec.querySelector(".eye span").textContent = fill(app.cfg.layout.realmEye, { e: er.era }); // v5 R2: a realm
       sec.querySelector("h3").textContent = er.name; sec.querySelector("p").textContent = er.note;
       const nodes = sec.querySelector(".nodes");
       for (const e of app.levels) {
@@ -614,13 +614,19 @@
   // locked picture is a padlocked silhouette (gallery.silhouette) and a tap on it shakes; every tile wears its tag.
   const galOpen = () => !!(app.cfg.gallery && app.save.data.done[app.cfg.gallery.openAt]);
   const galWon = () => app.gal.filter((e) => app.save.data.gal[e.id]).length;
-  const galIds = () => app.gal.map((e) => e.id), picOpen = (e) => Save.isOpen(app.save.data, galIds(), e.id, "gal", galOpen());
+  // v5 R2: the pictures are side quests (config gallery.quests, tools/quests.js): each opens once its quest's main level
+  // is cleared (save.js questOpen; past the last level, one at a time once all are cleared), shows its prize (a power-up
+  // icon) until its first clear, which adds the prize to the inventory with a toast.
+  const galIds = () => app.gal.map((e) => e.id), galAfter = () => app.gal.map((e) => (e.L.quest ? e.L.quest.after : 0)), picOpen = (e) => Save.questOpen(app.save.data, app.order, galIds(), galAfter(), e.id);
+  const galNext = () => Save.nextBy(app.save.data, galIds(), "gal", (id) => picOpen(app.byId.get(id)));
+  function questPrize(e) { const q = e.L.quest, k = q ? E.POWERS.indexOf(q.prize) : -1; if (k < 0 || !Meta.gift(app.save.data, q.prize)) return; toast(fill(app.cfg.gallery.quests.prizeText, { name: pwName(k) })); }
   function buildGallery() {
     const G = app.cfg.gallery, host = $("gal-grid"); if (!G || !host) return;
     $("gal-title").textContent = G.title; $("gal-credits").textContent = G.credits;
     for (const b of [$("btn-gallery"), $("map-gallery")]) { b.hidden = !app.gal.length; b.querySelector(".gt").textContent = G.btn; b.addEventListener("click", () => { if (galOpen()) showScreen("gallery"); else lockedTap(b); }); }
     for (const e of app.gal) {
-      const b = document.createElement("button"); b.className = "gal-tile"; b.innerHTML = '<canvas class="pix" aria-hidden="true"></canvas><span class="gn"></span><i class="tag"></i><span class="gp" aria-hidden="true"></span><span class="gk" aria-hidden="true"></span>';
+      const b = document.createElement("button"); b.className = "gal-tile"; b.innerHTML = '<canvas class="pix" aria-hidden="true"></canvas><span class="gn"></span><i class="tag"></i><span class="gp" aria-hidden="true"></span><span class="gk" aria-hidden="true"></span><i class="gq" aria-hidden="true"></i>';
+      const qk = e.L.quest ? E.POWERS.indexOf(e.L.quest.prize) : -1; if (qk >= 0) b.querySelector(".gq").style.backgroundImage = app.icoURL["p" + qk] || "none"; // v5 R2: the side quest's prize
       tagChip(b.querySelector(".tag"), tagOf(e)); b.classList.toggle("paint", e.L.kind === "painting");
       b.addEventListener("click", () => { if (picOpen(e)) startLevel(e.id); else lockedTap(b); });
       e.node = b; host.append(b);
@@ -658,12 +664,13 @@
   function renderGallery() {
     const G = app.cfg.gallery, d = app.save.data; if (!G) return;
     $("gal-count").textContent = G.count.replace("{n}", galWon()).replace("{t}", app.gal.length); reportCard($("gal-card"), app.gal);
-    const nx = app.byId.get(Save.next(d, galIds(), "gal", galOpen())); // Critics 2 fix (V2): the next picture (v4.3: the first open one not cleared) wears a gold frame and a Play chip
+    const nx = app.byId.get(galNext()); // Critics 2 fix (V2): the next picture (v4.3: the first open one not cleared) wears a gold frame and a Play chip
     for (const e of app.gal) {
       const b = e.node, won = !!d.gal[e.id], open = picOpen(e), key = won ? "c" : open ? "d" : "s", tg = (app.cfg.layout.tags || {})[tagOf(e)];
       b.classList.toggle("done", won); b.classList.toggle("next", e === nx); b.classList.toggle("locked", !open); b.setAttribute("aria-disabled", open ? "false" : "true");
       b.querySelector(".gn").textContent = won ? e.L.title : e.n; b.querySelector(".gp").textContent = e === nx ? G.playChip : ""; b.classList.toggle("hard", e === nx && (tagOf(e) === "hard" || tagOf(e) === "extreme")); // v4.3 fix (T1): a Hard next picture's Play chip goes red-gold
-      b.setAttribute("aria-label", (won ? e.L.title + ", cleared" : fill(e === nx ? G.nextAria : open ? G.tileAria : G.lockedAria, { n: e.n })) + (tg ? ", " + tg : ""));
+      const q = e.L.quest, qk = q ? E.POWERS.indexOf(q.prize) : -1, late = q && q.after > app.levels.length; b.classList.toggle("prize", qk >= 0 && !won); // v5 R2: the prize shows until the first clear
+      b.setAttribute("aria-label", (won ? e.L.title + ", cleared" : fill(e === nx ? G.nextAria : open ? G.tileAria : late ? G.quests.waitAria : G.lockedAria, { n: e.n, after: q ? q.after : "" })) + (tg ? ", " + tg : "") + (qk >= 0 && !won ? ", " + fill(G.quests.prizeAria, { name: pwName(qk) }) : ""));
       if (b.dataset.drawn !== key) { if (open) thumb(b.querySelector("canvas"), e.L, won); else silhouette(b.querySelector("canvas"), e.L); b.dataset.drawn = key; }
     }
   }
@@ -695,7 +702,8 @@
   }
   // The next Gallery picture to offer after e (v4.3): the first open one not yet cleared, else (every picture cleared) the
   // one after it.
-  function nextPicture(e) { const nx = app.byId.get(Save.next(app.save.data, galIds(), "gal", galOpen())); return nx && !app.save.data.gal[nx.id] ? nx : app.gal[(app.gal.indexOf(e) + 1) % app.gal.length]; }
+  // v5 R2: the first open side quest not cleared, or null (none open: the win sheet sends the player on to the next level).
+  function nextPicture() { const nx = app.byId.get(galNext()); return nx && !app.save.data.gal[nx.id] ? nx : null; }
 
   // ---- screens and levels --------------------------------------------------------------------------------------------
   function showScreen(name) {
@@ -796,7 +804,7 @@
     if (S.reason === "jam") { app.ending.squads = []; for (const s of S.order(app.ord)) { if (!S.stuck(s)) continue; app.ending.squads.push([S.spM[s], S.spW[s]]); const c = mat(S.spM[s]).crew; if (app.ending.crews.indexOf(c) < 0) app.ending.crews.push(c); } cue("jam"); }
     // v4.3: a level is cleared or not (first: its first clear).
     if (app.ending.won && app.entry.debug) app.ending.first = false;
-    else if (app.ending.won && app.entry.gallery) { app.ending.first = Save.record(app.save.data, app.entry.id, "gal"); writeSave(); }
+    else if (app.ending.won && app.entry.gallery) { app.ending.first = Save.record(app.save.data, app.entry.id, "gal"); if (app.ending.first) questPrize(app.entry); writeSave(); }
     else if (app.ending.won) { app.ending.first = Save.record(app.save.data, app.entry.id); app.save.data.last = Save.next(app.save.data, app.order); writeSave(); }
     // v4 M5: the report. A win of a siege level or a Gallery picture: real play time (app.clock: pauses excluded), taps,
     // coins (by the level's tag, more on its first clear), best time and taps. A fail with lives on costs one.
@@ -850,10 +858,10 @@
     $("p-title").textContent = e.won ? (gal ? G.winTitle : "Fort razed!") : "Assault failed"; tagChip($("p-tag"), app.diff); // v4.3: the level's tag
     if (e.won) { $("p-line").textContent = gal ? fill(e.first ? G.winLine : G.winLineAgain, { title: app.entry.L.title }) : "The goblin king flees. " + (app.entry.debug ? app.entry.L.name : "Level " + app.entry.n) + (e.first ? " cleared." : " cleared again."); $("p-line").removeAttribute("aria-label"); } else sheetLine(e);
     reportPic(e.won && gal);
-    const pp = $("p-primary"), nextE = e.won && !app.entry.debug ? (gal ? nextPicture(app.entry) : last ? null : app.byId.get(Save.next(app.save.data, app.order))) : null;
-    pp.querySelector(".pl").textContent = e.won ? (gal ? G.nextBtn : last ? "Era map" : "Next level") : "Retry"; playTag(pp, nextE); // v4.3 fix (T1): the next level's tag
+    const np = gal && e.won ? nextPicture() : null, pp = $("p-primary"), nextE = e.won && !app.entry.debug ? (np || (gal || !last ? app.byId.get(Save.next(app.save.data, app.order)) : null)) : null;
+    pp.querySelector(".pl").textContent = e.won ? (np ? G.nextBtn : gal || !last ? "Next level" : app.cfg.layout.mapName) : "Retry"; // v5 R2: a side quest won goes on to the next open one, else back to the journey playTag(pp, nextE); // v4.3 fix (T1): the next level's tag
     $("p-stats").querySelector(".coin").classList.remove("go");
-    $("p-secondary").textContent = e.won ? "Retry" : gal ? G.title : "Era map";
+    $("p-secondary").textContent = e.won ? "Retry" : gal ? G.title : app.cfg.layout.mapName;
     reportRows(e); // v4.3: no medals; the report's rows and the tag
     contOffer(e); // v5 R1: a jam's sheet offers the continue
     $("panel").hidden = false; placeSheet();
@@ -925,7 +933,7 @@
   }
   // A panel button ignores taps for show.panelGuardMs after the panel appears, so a thumb still tapping cards can't hit it.
   const panelLive = () => app.clock - app.panelAt >= app.cfg.show.panelGuardMs || app.testing;
-  function panelPrimary() { if (!app.panel || !panelLive()) return; if (app.panel === "win") { if (app.entry.gallery) startLevel(nextPicture(app.entry).id); else if (app.entry.debug || app.entry.idx === app.levels.length - 1) showScreen("map"); else playNext(); } else retry(); }
+  function panelPrimary() { if (!app.panel || !panelLive()) return; if (app.panel === "win") { if (app.entry.gallery) { const np = nextPicture(); startLevel(np ? np.id : Save.next(app.save.data, app.order)); } else if (app.entry.debug || app.entry.idx === app.levels.length - 1) showScreen("map"); else playNext(); } else retry(); }
   function panelSecondary() { if (!app.panel || !panelLive()) return; if (app.panel === "win") retry(); else showScreen(app.entry.gallery ? "gallery" : "map"); }
 
   // ---- teaching coach (config.teach) ---------------------------------------------------------------------------------
@@ -935,12 +943,23 @@
   // mystery (a hidden "?" tile in view), linked (a linked front card), lockSlot (the padlocked space) and the ring
   // lockKey (the space's key on the board); conditions reveal (a "?" turned over), pair (a linked pair went out), unlock
   // (the space opened), locked (it is still shut), hidden (a "?" is in view), linkedFront (a front card is linked).
+  // v5 R2: pointer power (a power-up id: its badge, on the level that unlocks it); any level may have coach lines (the
+  // first lock levels, 53 and 87, do).
   const coachSteps = (e) => { const st = e && ((app.cfg.teach || {})[e.id] || (e.L.hint ? [{ say: e.L.hint, until: "play" }] : null)); return st && st.length ? st : null; };
   function coachStart() {
     const steps = coachSteps(app.entry);
     app.coach = steps ? { steps, i: 0, at: 0 } : null;
     if (app.coach) skipDead();
     renderCoach();
+  }
+  // v5 R2, the moat lesson's ring: the middle of the ground run that crosses the water nearest the entry (an open
+  // drawbridge: open ground with water beside it), or -1 with no moat. Read once per level (coach renders only).
+  function bridgeOf(B) {
+    if (B.bridge != null) return B.bridge; B.bridge = -1; const w = B.w, a = B.a0;
+    for (let y = B.h - 1; y >= 0 && B.bridge < 0; y--) { let x0 = -1, x1 = -1;
+      for (let x = 1; x < w - 1; x++) { const c = y * w + x; if (a[c] === E.DIRT && (a[c - 1] === E.WATER || a[c + 1] === E.WATER)) { if (x0 < 0) x0 = x; x1 = x; } }
+      if (x0 >= 0) { let m = Math.round((x0 + x1) / 2); while (m < x1 && a[y * w + m] !== E.DIRT) m++; B.bridge = y * w + m; } }
+    return B.bridge;
   }
   function frontOf(m) { const S = app.S; for (let j = 0; j < E.NCOL; j++) { const f = S.front(j); if (f >= 0 && app.B.cardM[f] === m) return j; } return -1; }
   function cond(k) {
@@ -990,10 +1009,12 @@
     if (!el && st.mystery) el = hiddenTile();
     if (!el && st.linked) { const j = linkedFront(); if (j >= 0) el = app.cards[j]; }
     if (!el && st.lockSlot && S.locked > 0) el = app.slots[S.cap - 1];
+    if (!el && st.power) { const b = app.pws[E.POWERS.indexOf(st.power)]; if (b && !b.hidden) el = b; } // v5 R2: a power-up's badge (the level that unlocks it)
     if (!el && st.line) el = $("line");
     // A ring on the board: the first gate's key (or the gate once the key is gone), the first standing tower.
     if (st.ring === "key" || st.ring === "gate") { const k = 0, kc = V.keyC[k]; if (B.gateCells.length) { if (st.ring === "key" && kc >= 0 && S.a[kc] > 0) Object.assign(V.focus, { on: true, x: kc % B.w + 0.5, y: ((kc / B.w) | 0) + 0.5, r: 1.1 }); else Object.assign(V.focus, { on: true, x: V.gX[k], y: V.gY[k], r: 1.6 }); } }
     if (st.ring === "lockKey" && B.lockKey >= 0 && S.a[B.lockKey] > 0) Object.assign(V.focus, { on: true, x: B.lockKey % B.w + 0.5, y: ((B.lockKey / B.w) | 0) + 0.5, r: 1.1 });
+    if (st.ring === "moat") { const c = bridgeOf(B); if (c >= 0) Object.assign(V.focus, { on: true, x: c % B.w + 0.5, y: ((c / B.w) | 0) + 0.5, r: 1.8 }); } // v5 R2: the moat lesson's bridge
     if (st.ring === "tower") { for (let k = 0; k < B.towers.length; k++) if (S.standing & (1 << k)) { const T = B.towers[k]; Object.assign(V.focus, { on: true, x: T.cx + 0.5, y: T.cy + 0.5, r: Math.sqrt(T.size / Math.PI) + 0.9 }); break; } }
     txt.textContent = (app.coachMode === "top" && st.short ? st.short : st.say).replace(/\{n\}/g, cn).replace(/\{crew\}/g, cm ? mat(cm).crew : "").replace(/\{reach\}/g, cm ? S.reachable(cm) : 0).replace(/\{go\}/g, cm ? Math.min(cn, S.reachable(cm)) : 0);
     V.ringsLoud = st.ring === "tower"; // the lesson is the ring: every ring loud while it shows
@@ -1682,16 +1703,19 @@
           let jj = app.focusEl ? app.cards.indexOf(app.focusEl) : -1; if (jj < 0 || app.S.front(jj) < 0 || app.S.refused(jj)) jj = app.cards.findIndex((b, k) => app.S.front(k) >= 0 && !app.S.refused(k));
           playCol(jj); settleNow();
         }
-        ok(saw.size === steps.length && app.S.status === E.WON && !coachState().on, id + ": following the arrow shows all " + steps.length + " steps (" + Array.from(saw).join(",") + ") and wins");
+        const lesson = e.L.source === "teaching"; // v5 R2: a coached Hard level (the first locks) need not be won by the naive follower
+        ok(saw.size === steps.length && (app.S.status === E.WON || !lesson) && !coachState().on, id + ": following the arrow shows all " + steps.length + " steps (" + Array.from(saw).join(",") + ")" + (lesson ? " and wins" : ""));
         out.notes["coach_" + id] = Array.from(seen).join(",") + " / " + Array.from(saw).join(",");
       }
       if (app.byId.has("e1-02")) { const cm = app.cfg.teach["e1-02"][0].card; startLevel("e1-02", "normal"); playCol(frontOf(cm)); settleNow(); const cs = coachState(); ok(cs.i === 1 && app.focusEl === $("line"), "coach e1-02: the walled-in " + mat(cm).crew + " wait in their space, the arrow moves to the holding line"); }
-      if (app.byId.has("e3-51")) { startLevel("e3-51", "normal"); ok(app.V.focus.on && coachState().target && /card/.test(coachState().target), "coach e3-51: the tower wears the ring and the arrow points at its colour's card"); }
-      // v4 M3: the twists' lessons point at their twist from the first tap: a ? tile (35), a linked front card (62), the
-      // padlocked space with a ring on its key (76).
-      if (app.byId.has("e2-35")) { startLevel("e2-35", "normal"); const el = app.focusEl; ok(!!el && el.classList.contains("next") && el.classList.contains("mys"), "coach e2-35: the arrow points at a hidden ? squad (" + (el && el.className) + ")"); }
-      if (app.byId.has("e3-62")) { startLevel("e3-62", "normal"); const j = app.cards.indexOf(app.focusEl); ok(j >= 0 && app.S.partner(app.S.front(j)) >= 0 && app.rods.innerHTML.indexOf("<path") >= 0, "coach e3-62: the arrow points at a linked front card, its rod drawn"); }
-      if (app.byId.has("e4-76")) { startLevel("e4-76", "normal"); ok(app.focusEl === app.slots[app.S.cap - 1] && app.focusEl.classList.contains("locked") && app.V.focus.on && app.S.locked === 1, "coach e4-76: the arrow points at the padlocked space and the key wears the ring"); }
+      // v4 M3: the twists' lessons point at their twist from the first tap. v5 R2 (the re-laid lessons): the bridge over
+      // the moat wears the ring (25), a ? tile (100), a linked front card (75), the padlocked space with a ring on its key
+      // (87, the first key lock) or with its colour's card (53, the first colour lock).
+      if (app.byId.has("e2-25")) { startLevel("e2-25", "normal"); ok(app.V.focus.on && coachState().ring && app.B.a0[(Math.floor(app.V.focus.y) * app.B.w) + Math.floor(app.V.focus.x)] === E.DIRT, "coach e2-25: the bridge over the moat wears the ring"); }
+      if (app.byId.has("e5-100")) { startLevel("e5-100", "normal"); const el = app.focusEl; ok(!!el && el.classList.contains("next") && el.classList.contains("mys"), "coach e5-100: the arrow points at a hidden ? squad (" + (el && el.className) + ")"); }
+      if (app.byId.has("e4-75")) { startLevel("e4-75", "normal"); const j = app.cards.indexOf(app.focusEl); ok(j >= 0 && app.S.partner(app.S.front(j)) >= 0 && app.rods.innerHTML.indexOf("<path") >= 0, "coach e4-75: the arrow points at a linked front card, its rod drawn"); }
+      if (app.byId.has("e4-87")) { startLevel("e4-87", "normal"); ok(app.focusEl === app.slots[app.S.cap - 1] && app.focusEl.classList.contains("locked") && app.V.focus.on && app.S.locked === 1, "coach e4-87: the arrow points at the padlocked space and the key wears the ring"); }
+      if (app.byId.has("e3-53")) { startLevel("e3-53", "normal"); const st = app.cfg.teach["e3-53"][0], j = frontOf(st.card); ok(app.S.locked === 1 && app.B.lockMat === st.card && (j >= 0 ? app.focusEl === app.cards[j] : app.focusEl === app.slots[app.S.cap - 1]), "coach e3-53: a colour lock; the arrow points at its colour's card (or the padlocked space)"); }
       // 13b. Victory march: on a stored winning line the pace stays 1x until the tray empties, then plays at
       // show.victoryPace; the final state (board, every sapper's times, status) is identical to the same taps at 1x; with
       // 2x or 3x on, the faster pace stays.
@@ -1939,8 +1963,9 @@
           ok(!t1 || (t1.classList.contains("locked") && !t1.classList.contains("next") && shown(t1.querySelector(".gk")) && [...sil].every((c) => want.has(c)) && app.screen === s0 && (app.cues.blocked | 0) === k0 + 1 && !tiles[0].classList.contains("locked")), "gallery (v4.3): picture 1 is open, picture 2 a padlocked silhouette (" + [...sil].join(" ") + ") that a tap shakes and never starts"); }
         const e0 = app.gal[0], i0 = 0, pal0 = new Set(Object.values(e0.L.pal).map((q) => q.c.toLowerCase())), dim0 = px(tiles[i0].querySelector("canvas"));
         // Cleared: win a picture through its stored order; the save's gal holds it, the sheet offers the next picture.
+        Save.record(app.save.data, app.order[app.gal[1].L.quest.after - 1]); // v5 R2: picture 2's main level cleared, so its side quest is open
         startLevel(e0.id); patient(winOf(e0)); settleNow(); tick(9000);
-        const nx = nextPicture(e0);
+        const nx = nextPicture();
         ok(app.panel === "win" && $("p-title").textContent === GC.winTitle && $("p-primary").querySelector(".pl").textContent === GC.nextBtn && app.save.data.gal[e0.id] === 1 && !app.save.data.done[e0.id] && hitOK($("p-primary")), "gallery: a picture won goes in the save's gal (" + app.save.data.gal[e0.id] + "), the sheet says '" + $("p-title").textContent + "' and offers '" + $("p-primary").textContent + "'");
         { for (const an of $("panel").firstElementChild.getAnimations()) an.finish(); const pc = $("p-pic").firstElementChild, pr = pc.getBoundingClientRect(), cr = $("panel").firstElementChild.getBoundingClientRect(), cols = px(pc), cell = pr.height / (e0.L.h - 2), sc = sheetClear(true);
           out.notes.reportPic = Math.round(pr.width) + "x" + Math.round(pr.height) + " CSS px, " + cell.toFixed(2) + " a cell";
@@ -1951,7 +1976,9 @@
         $("p-primary").click(); ok(app.entry === nx && nx === app.gal[1] && app.screen === "play", "gallery: Next picture opens the next one, open now (" + nx.id + ")");
         $("btn-map").click(); const col = px(tiles[i0].querySelector("canvas"));
         ok(app.screen === "gallery" && tiles[i0].classList.contains("done") && tiles[i0].querySelector(".gn").textContent === e0.L.title && [...col].every((c) => pal0.has(c)) && ![...dim0].some((c) => pal0.has(c)), "gallery: the top bar's button goes back to the grid; the won picture shows in its own colours with its title (" + e0.L.title + "), the rest stay dimmed");
-        ok(tiles[1].classList.contains("next") && !tiles[1].classList.contains("locked") && (!tiles[2] || tiles[2].classList.contains("locked")), "gallery (v4.3): with picture 1 cleared, picture 2 opens with the gold frame and Play chip; picture 3 stays padlocked");
+        ok(tiles[1].classList.contains("next") && !tiles[1].classList.contains("locked") && (!tiles[2] || tiles[2].classList.contains("locked") === !picOpen(app.gal[2])), "gallery (v5 R2): with picture 1 cleared and picture 2's main level cleared, picture 2 is open with the gold frame and Play chip; picture 3 opens only with level " + (app.gal[2] ? app.gal[2].L.quest.after : "-"));
+        { const g1 = app.save.data.gal[app.gal[1].id]; app.save.data.gal[app.gal[1].id] = 1; const none = picOpen(app.gal[2]) || nextPicture() === null; if (!g1) delete app.save.data.gal[app.gal[1].id];
+          ok(none && app.gal.every((e) => e.L.quest && e.L.quest.after >= 1) && $("gal-grid").querySelectorAll(".gal-tile.prize").length === app.gal.filter((e) => !app.save.data.gal[e.id]).length, "gallery (v5 R2): every picture is a side quest with its prize shown until cleared; with no open quest left the win sheet goes on to the next level"); }
         const saved = JSON.stringify(Save.sanitize(JSON.parse(JSON.stringify(app.save.data)), app.order, app.gal.map((x) => x.id)).gal), junk = Save.sanitize({ gal: { [e0.id]: 99, nope: 1, [app.gal[1].id]: "x" } }, app.order, app.gal.map((x) => x.id)).gal;
         ok(saved === JSON.stringify(app.save.data.gal) && JSON.stringify(junk) === JSON.stringify({ [e0.id]: 1 }), "gallery: the save's gal reads back through sanitize; a cleared mask reads as cleared, unknown ids and non-numbers are dropped");
         showScreen("title");
@@ -2092,9 +2119,10 @@
         const nn = app.levels.find((e) => tagOf(e) === "normal"); startLevel(nn.id); const nr = $("tag-chip").hidden && app.S.cap === rulesOf("normal").hold;
         ok(hr && nr, "tags (v4.3): the top bar shows " + hn.id + "'s Hard tag (4 spaces) and nothing on " + nn.id + " (Normal, 5 spaces)");
         ok(app.save.data.v === Save.VERSION && Save.VERSION === 2 && !("diff" in app.save.data.settings) && !document.querySelector(".seg") && !$("p-medals"), "save (v4.3): format 2, no difficulty setting; no difficulty picker anywhere, no medals"); }
-      { const e = app.levels.find((x) => x.n >= 26 && tagOf(x) === "normal" && !x.L.links) || app.levels[30]; startLevel(e.id); const o = winOf(e); playCol(+o[0]);
-        const s0 = app.S.order(app.ord)[0]; let seen = null;
-        for (let t = 0; t < ST.tickCapMs && !seen && app.S.busy; t += 16) { step(16); if (!app.S.spQ[s0] && app.S.out > 0) seen = { out: app.S.out, live: app.V.live, slot: app.slots[s0].classList.contains("full"), ms: app.S.now }; }
+      { let e = null, seen = null; // v5 R2: the first Normal level from 26 whose first squad finishes on its own (a dealt squad may wait parked)
+        for (const x of app.levels.filter((x) => x.n >= 26 && tagOf(x) === "normal" && !x.L.links).slice(0, 8)) { if (seen) break; e = x; startLevel(e.id); const o = winOf(e); playCol(+o[0]);
+          const s0 = app.S.order(app.ord)[0];
+          for (let t = 0; t < ST.tickCapMs && !seen && app.S.busy; t += 16) { step(16); if (!app.S.spQ[s0] && app.S.out > 0) seen = { out: app.S.out, live: app.V.live, slot: app.slots[s0].classList.contains("full"), ms: app.S.now }; } }
         ok(!!seen && seen.live > 0 && !seen.slot, "pickup (v4.3): " + e.id + "'s first squad frees its space at its last pickup while " + (seen ? seen.out : "?") + " carriers still walk home (the space shows free, " + (seen ? seen.live : 0) + " runners drawn)");
         out.notes.pickup = e.id + (seen ? " at " + seen.ms + " ms, " + seen.out + " carrying" : ""); }
       // 27. v4.3 fix pass. T1: every Play wears the next level's tag (home, map, the report's Next, the Gallery's chip), a
@@ -2114,8 +2142,9 @@
         const ce = cr(easy), ch = hard ? cr(hard) : 0; if (!easy.closest("#app")) easy.remove();
         ok(ce >= 4.5 && ch >= 4.5, "m6 (v4.3 fix): the Easy pill " + ce.toFixed(2) + ":1, the Hard pill " + ch.toFixed(2) + ":1 (4.5 or more)");
         // m1: real ticks on a Normal level's first squad until its space frees with carriers out.
-        { const e = app.levels.find((x) => x.n >= 26 && tagOf(x) === "normal" && !x.L.links); startLevel(e.id); playCol(+winOf(e)[0]); let got = null;
-          for (let t = 0; t < ST.tickCapMs && !got && app.S.busy; t += 16) { step(16); if (app.S.lineLen === 0 && app.S.out > 0) got = { n: carrying(), r: $("line-cnt").lastElementChild }; }
+        { let got = null; // v5 R2: the first such level whose first squad finishes on its own
+          for (const e of app.levels.filter((x) => x.n >= 26 && tagOf(x) === "normal" && !x.L.links).slice(0, 8)) { if (got) break; startLevel(e.id); playCol(+winOf(e)[0]);
+            for (let t = 0; t < ST.tickCapMs && !got && app.S.busy; t += 16) { step(16); if (app.S.lineLen === 0 && app.S.out > 0) got = { n: carrying(), r: $("line-cnt").lastElementChild }; } }
           const shownN = got && !got.r.hidden ? +got.r.querySelector("b").textContent : -1; settleNow(); step(16);
           ok(!!got && got.n > 0 && shownN === got.n && $("line-cnt").lastElementChild.hidden, "m1 (v4.3 fix): with the space free and " + (got ? got.n : "?") + " carriers walking home the line head shows ↩" + shownN + "; at rest it goes"); }
         // m2: the toast on a refused linked tap (v4-all at load).

@@ -85,10 +85,22 @@
   }
   // The first open level (in order) not cleared, or the last level when every one is (field and gate as isOpen; null when
   // none is open, e.g. a Gallery still shut).
-  function next(data, order, field, gate) {
+  function next(data, order, field, gate) { return nextBy(data, order, field, (id) => isOpen(data, order, id, field, gate)); }
+  // v5 R2: the same with any openness test, open(id) (the Gallery's side quests use questOpen).
+  function nextBy(data, order, field, open) {
     const map = data[field || "done"] || {};
-    for (const id of order) if (!map[id] && isOpen(data, order, id, field, gate)) return id;
-    return order.length && isOpen(data, order, order[order.length - 1], field, gate) ? order[order.length - 1] : order.find((id) => isOpen(data, order, id, field, gate)) || null;
+    for (const id of order) if (!map[id] && open(id)) return id;
+    return order.length && open(order[order.length - 1]) ? order[order.length - 1] : order.find(open) || null;
+  }
+  // v5 R2, side quests: Gallery picture id (gal: the pictures' ids in order; after: each one's quest main level, numbered
+  // from 1 in `order`) is open when cleared, or once the main level numbered after is cleared. A quest past the last
+  // level waits for the whole campaign, then they open one at a time (the first at once, each next when the one before it
+  // is cleared): the long tail until R4 builds those levels.
+  function questOpen(data, order, gal, after, id) {
+    const i = gal.indexOf(id), done = data.done || {}, won = data.gal || {}; if (i < 0) return false; if (won[id]) return true;
+    const a = after[i] | 0; if (a >= 1 && a <= order.length) return !!done[order[a - 1]];
+    if (!order.every((x) => done[x])) return false;
+    return i === 0 || (after[i - 1] | 0) <= order.length || !!won[gal[i - 1]];
   }
 
   // In-memory storage: selfTest's scratch save, and the fallback when localStorage throws (private mode, blocked data).
@@ -104,5 +116,5 @@
     return { key, store, data, write() { try { store.setItem(key, JSON.stringify(this.data)); return true; } catch (e) { return false; } } };
   }
 
-  return { VERSION, fresh, sanitize, record, next, isOpen, memoryStore, open };
+  return { VERSION, fresh, sanitize, record, next, nextBy, isOpen, questOpen, memoryStore, open };
 });

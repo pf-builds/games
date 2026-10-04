@@ -333,7 +333,7 @@ const ARCH = (cols) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "
   eq([LEVELS.levels.length, LEVELS.levels.every((L, i) => L.n === i + 1)], [NL, true], "levels: " + NL + " levels baked, in order (v4 M3: the Siege to 100)");
   // v4 M3: every era present, Era 4 from 76; every stored Normal line inside the dead-time cap and the tap cap.
   const eras = [...new Set(LEVELS.levels.map((L) => L.era))], BC = require("./bake-config.json");
-  eq([eras.join(","), LEVELS.levels.filter((L) => L.n >= 76).every((L) => L.era === 4)], ["1,2,3,4", true], "levels: four eras, Era 4 from level 76");
+  eq(eras.join(","), "1,2,3,4,5", "levels (v5 R2): five realms, The Mistmoor from level 100 (each level's era is its realm: the tags check)");
   let dead = 0, longest = 0; for (const L of LEVELS.levels) { const ln = Gr.line(E.compile(L), RULES[L.tag], L.win[L.tag]); longest = Math.max(longest, ln.maxWait); if (ln.maxWait > BC.maxWaitMs || L.win[L.tag].length > BC.maxTaps) dead++; }
   eq(dead, 0, "levels: every stored line (on its tag) keeps every tap under " + BC.maxWaitMs / 1000 + " s (longest " + (longest / 1000).toFixed(1) + " s) and " + BC.maxTaps + " taps");
 }
@@ -1206,12 +1206,13 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
   const Meta = require("../src/meta.js");
   for (const ver of ["v3", "v4", "v4.1", "v4.2"]) {
     const raw = JSON.parse(require("fs").readFileSync(require("path").join(__dirname, "saves", ver + ".json"), "utf8")), sv = Save.sanitize(JSON.parse(JSON.stringify(raw)), order, gids, META);
-    const wonIds = Object.keys(raw.done).filter((id) => raw.done[id] & 7), galIds = Object.keys(raw.gal || {}).filter((id) => raw.gal[id] & 7 && gids.indexOf(id) >= 0);
-    const bestOk = Object.keys(raw.best || {}).every((id) => { const r = raw.best[id], m = (raw.done[id] || (raw.gal || {})[id]) | 0, b = sv.best[id], ms = [0, 1, 2].filter((k) => m & (1 << k) && r[k] > 0).map((k) => r[k]), tp = [0, 1, 2].filter((k) => m & (1 << k) && r[3 + k] > 0).map((k) => r[3 + k]);
+    // v5 R2: ids follow the slots; an old cleared id the re-laid campaign no longer has (e1-25) is dropped.
+    const wonIds = Object.keys(raw.done).filter((id) => raw.done[id] & 7 && order.indexOf(id) >= 0), galIds = Object.keys(raw.gal || {}).filter((id) => raw.gal[id] & 7 && gids.indexOf(id) >= 0);
+    const bestOk = Object.keys(raw.best || {}).filter((id) => order.indexOf(id) >= 0 || gids.indexOf(id) >= 0).every((id) => { const r = raw.best[id], m = (raw.done[id] || (raw.gal || {})[id]) | 0, b = sv.best[id], ms = [0, 1, 2].filter((k) => m & (1 << k) && r[k] > 0).map((k) => r[k]), tp = [0, 1, 2].filter((k) => m & (1 << k) && r[3 + k] > 0).map((k) => r[3 + k]);
       return b && b[0] === Math.min(...ms) && b[1] === Math.min(...tp) && b[2] === r[6]; });
     const keep = raw.coins == null ? META.coins.start : raw.coins;
     eq([sv.v, Object.keys(sv.done).sort(), Object.keys(sv.gal).sort(), Object.values(sv.done).concat(Object.values(sv.gal)).every((x) => x === 1), bestOk, sv.coins, sv.inv, sv.settings, sv.last, Save.next(sv, order)],
-      [2, wonIds.sort(), galIds.sort(), true, true, keep, Object.assign({ ladder: 0, quartermaster: 0, scout: 0, recall: 0 }, raw.inv || {}, { volley: 0 }), { muted: raw.settings.muted, speed: raw.settings.speed || (raw.settings.fast ? 2 : 1), cb: raw.settings.cb === true }, raw.last, order[wonIds.length] || order[order.length - 1]],
+      [2, wonIds.sort(), galIds.sort(), true, true, keep, Object.assign({ ladder: 0, quartermaster: 0, scout: 0, recall: 0 }, raw.inv || {}, { volley: 0 }), { muted: raw.settings.muted, speed: raw.settings.speed || (raw.settings.fast ? 2 : 1), cb: raw.settings.cb === true }, Save.isOpen(sv, order, raw.last) ? raw.last : null, order.find((id, i) => !sv.done[id] && (i === 0 || sv.done[order[i - 1]])) || order[order.length - 1]],
       "save v4.3: the " + ver + " save (" + wonIds.length + " levels, " + galIds.length + " pictures) migrates: cleared by id, bests the best, coins and settings kept, difficulty dropped");
     eq(Save.sanitize(JSON.parse(JSON.stringify(sv)), order, gids, META), sv, "save v4.3: the migrated " + ver + " save reads back unchanged (format 2)");
   }
@@ -1286,6 +1287,21 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   eq([Meta.isOpen(META, 4, 124), Meta.isOpen(META, 4, 125)], [false, true], "unlocks: the Volley is hidden at 124, open at 125");
   const R = Save.sanitize({ v: 2, got: { ladder: 1, scout: true, volley: 2, junk: 1 }, inv: {} }, [], [], META);
   eq(R.got, { ladder: 1 }, "unlocks (save): got keeps only 1s for known power-ups");
+}
+
+// ---- v5 R2: side quests (tools/quests.js, save.js questOpen and nextBy, meta.js gift) -------------------------------------------
+{
+  const Save = require("../src/save.js"), Meta = require("../src/meta.js"), QS = require("./quests.js"), GQ = require("../config.json").gallery.quests, P = META.powers;
+  const q = QS.questsOf(60, GQ, P), gaps = q.slice(1).map((x, i) => x.after - q[i].after), un = (id) => P.find((p) => p.id === id).unlockAt;
+  ok(q[0].after === GQ.first && gaps.every((g) => g >= 3 && g <= 5) && q.every((x) => un(x.prize) <= x.after + 1), "side quests: picture 1 after level " + GQ.first + ", then one every 3-5 main levels (to " + q[59].after + "); every prize is unlocked by its quest");
+  const vol = q.filter((x) => x.prize === GQ.rare), pastV = q.filter((x) => x.after + 1 >= un(GQ.rare));
+  ok(vol.every((x) => x.after + 1 >= un(GQ.rare)) && vol.length === Math.floor(pastV.length / GQ.volleyEvery) && q.filter((x) => x.after < 24).every((x) => x.prize === "ladder"), "side quests: the Volley only from " + un(GQ.rare) + " and rare (" + vol.length + " of " + pastV.length + "); before 25 every prize is a Ladder");
+  const order = ["a1", "a2", "a3"], gal = ["p1", "p2", "p3", "p4"], after = [1, 3, 5, 6], D = Save.fresh(META), open = () => gal.map((id) => Save.questOpen(D, order, gal, after, id));
+  const s0 = open(); D.done.a1 = 1; const s1 = open(); D.done.a3 = 1; const s2 = open(); D.done.a2 = 1; const s3 = open(); D.gal.p3 = 1; const s4 = open();
+  eq([s0, s1, s2, s3, s4, Save.nextBy(D, gal, "gal", (id) => Save.questOpen(D, order, gal, after, id))], [[false, false, false, false], [true, false, false, false], [true, true, false, false], [true, true, true, false], [true, true, true, true], "p1"],
+    "side quests: a picture opens once its main level is cleared (optional, never blocking); past the last level they open once all are cleared, one at a time; nextBy finds the first open one not cleared");
+  const G = Save.fresh(META); G.inv.recall = 98; eq([Meta.gift(G, "scout"), G.inv.scout, Meta.gift(G, "recall"), Meta.gift(G, "recall"), G.inv.recall, Meta.gift(G, "nope")], [true, 1, true, false, 99, false], "side quests: a prize adds one use (capped at 99; unknown ids refused)");
+  defer("side quests: every Gallery picture carries its quest", () => { const GL = require("../levels/gallery.json").levels; eq(GL.map((l) => l.quest), q, "side quests: levels/gallery.json carries each picture's quest {after, prize} as tools/quests.js deals them"); });
 }
 
 console.log(pass + " passed, " + fail + " failed");

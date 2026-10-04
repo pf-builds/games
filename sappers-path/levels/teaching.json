@@ -1,6 +1,6 @@
 {
  "version": 6,
- "note": "Teaching levels (SPEC-v3 §5, SPEC-v4 §9 M3 and v4.1): castle pictures entered from the bottom, each with its lesson where the coach can point at it from the first tap. 1-3 the tray, the holding line, a squad bigger than its reach; 26 gate and key; 35 mystery cards; 51 archers; 62 linked squads; 76 the locked space; 77 everything at once. Built by tools/teach-v4.js. Legend in src/engine.js. v4.3: each plays on its fixed tag (tag; Easy or Normal) and stores one winning order on it (win[tag]); the boards are v4.2's (teach-v4.js --boards).",
+ "note": "Teaching levels (SPEC-v3 §5, SPEC-v4 §9 M3 and v4.1): castle pictures entered from the bottom, each with its lesson where the coach can point at it from the first tap. 1-3 the tray, the holding line, a squad bigger than its reach; v5 R2, one lesson opening each realm: 25 moats, 50 gates and keys, 75 linked squads, 100 mystery cards. Built by tools/teach-v4.js. Legend in src/engine.js. v4.3: each plays on its fixed tag (tag; Easy or Normal) and stores one winning order on it (win[tag]). v5 R2: the boards and decks are v4.3's teaching levels re-laid by tools/relay.js (teach-v4.js --boards on its --teach-out file).",
  "levels": [
   {
    "n": 1,
@@ -221,22 +221,16 @@
    }
   },
   {
-   "n": 26,
+   "n": 25,
    "era": 2,
-   "name": "The Locked Bridge",
-   "teaches": "gate",
+   "name": "The Open Bridge",
+   "teaches": "moat",
    "tag": "easy",
-   "hint": "The drawbridge is locked: dig out its gold key in the lodge, then send the Looters.",
+   "hint": "Sappers can't cross water. The drawbridge is down: everything over the moat is reached across the bridge.",
    "w": 38,
    "h": 37,
-   "grid": [",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,", ",aaaffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,", ",aaafffffaaaaaaaaaaaaaaaaaaaaaaaaaaaa,", ",aaaffffffffaaaafffaaaaaaaaaaffffaaaa,", ",aaaffffffffaaafffffaaaaaaaaafffffffa,", ",aaaaffffffaaaffffffffaaaaaaaffffffff,", ",aaaaaaaaaaaafffcccccccaaaaafffffffff,", ",aaaaaaaaaaaafffcbbccbcaaaaaaaffffffa,", ",aaaaaaaaaaaaaaacbbbbbcaaaaaaaaaaaaaa,", ",aaaaaaaaaaaaaaacbbbbbcaaaaaaaaaaaaaa,", ",aaaaaaaaaaaaaaacbbcbbcaaaaaaaaaaaaaa,", ",aaaaaaaaaaaaaaacbbcbbcaaaaaaaaaaaaaa,", ",aaaaaaaaaaaaaaacbbbbbcaaaaaaaaaaaaaa,", ",aaaaaaaaaaaaaaacbbbbbcaaaaaaaaaaaaaa,", ",aaaaaaaaaaaaaaacbbbbbcaaaaaaaaaaaaaa,", ",aaaaaaaaaaacccccbbbbbccccaaaaaaaaaaa,", ",aaaaaaaacccceeeebbbbbeeeccccaaaaaaaa,", ",aaaaaaacceeeeeeeeeeeeeeeeeeccaaaaaaa,", ",aaaaaacceeeeeeeeeeeeeeeeeeeeccaaaaaa,", ",ccccccceeeeeeeeeeeeeeeeeeeeeecccccca,", ",bbccbbcebbeebbeebbeebbeebbeebbccbbca,", ",bbccbbeebbeebbeebbeebbeebbeebbccbbcc,", ",bbbbbbbbbbbbbccccbbbbbbbbbbbbbbbbbbb,", ",bbbbbbbbbbbbbccccbbbbbbbbbbbbbbbbbbb,", ",bbbbbbbbbbbbbccccbbbbbbbbbbbbbbbbbbb,", ",bbbbbbbbbbbbbccccbbbbbbbbbbbbbbbbbbb,", ",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,", "~~~~~~~~~~~~~~jjjj~~~~~~~~~~~~~~~~~~~~", "~~~~~~~~~~~~~~jjjj~~~~~~~~~~~~~~~~~~~~", "~~~~~~~~~~~~~~jjjj~~~~~~~~~~~~~~~~~~~~", ",ddddccbbbbbbbcccccdddddddddcbbbbcddd,", ",ddddcbbbbbbbbbcddddddddcccccbbbbcddd,", ",ddddccbbbbbbbccddddddddcbbbbcccccddd,", ",dddddcbbbbbbbcdddddddcccbbbbcccccddd,", ",dddddcbbbnbbbcdddddddcbbbbbbbbbbcddd,", ",dddddcbbbbbbbcdddddddcbbbbbbbbbbcddd,", ",,,,,,,,,,,,,,,,,,##,,,,,,,,,,,,,,,,,,"],
+   "grid": [",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,", ",aaaffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,", ",aaafffffaaaaaaaaaaaaaaaaaaaaaaaaaaaa,", ",aaaffffffffaaaafffaaaaaaaaaaffffaaaa,", ",aaaffffffffaaafffffaaaaaaaaafffffffa,", ",aaaaffffffaaaffffffffaaaaaaaffffffff,", ",aaaaaaaaaaaafffcccccccaaaaafffffffff,", ",aaaaaaaaaaaafffcbbccbcaaaaaaaffffffa,", ",aaaaaaaaaaaaaaacbbbbbcaaaaaaaaaaaaaa,", ",aaaaaaaaaaaaaaacbbbbbcaaaaaaaaaaaaaa,", ",aaaaaaaaaaaaaaacbbcbbcaaaaaaaaaaaaaa,", ",aaaaaaaaaaaaaaacbbcbbcaaaaaaaaaaaaaa,", ",aaaaaaaaaaaaaaacbbbbbcaaaaaaaaaaaaaa,", ",aaaaaaaaaaaaaaacbbbbbcaaaaaaaaaaaaaa,", ",aaaaaaaaaaaaaaacbbbbbcaaaaaaaaaaaaaa,", ",aaaaaaaaaaacccccbbbbbccccaaaaaaaaaaa,", ",aaaaaaaacccceeeebbbbbeeeccccaaaaaaaa,", ",aaaaaaacceeeeeeeeeeeeeeeeeeccaaaaaaa,", ",aaaaaacceeeeeeeeeeeeeeeeeeeeccaaaaaa,", ",ccccccceeeeeeeeeeeeeeeeeeeeeecccccca,", ",bbccbbcebbeebbeebbeebbeebbeebbccbbca,", ",bbccbbeebbeebbeebbeebbeebbeebbccbbcc,", ",bbbbbbbbbbbbbccccbbbbbbbbbbbbbbbbbbb,", ",bbbbbbbbbbbbbccccbbbbbbbbbbbbbbbbbbb,", ",bbbbbbbbbbbbbccccbbbbbbbbbbbbbbbbbbb,", ",bbbbbbbbbbbbbccccbbbbbbbbbbbbbbbbbbb,", ",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,", "~~~~~~~~~~~~~~,,,,~~~~~~~~~~~~~~~~~~~~", "~~~~~~~~~~~~~~,,,,~~~~~~~~~~~~~~~~~~~~", "~~~~~~~~~~~~~~,,,,~~~~~~~~~~~~~~~~~~~~", ",ddddccbbbbbbbcccccdddddddddcbbbbcddd,", ",ddddcbbbbbbbbbcddddddddcccccbbbbcddd,", ",ddddccbbbbbbbccddddddddcbbbbcccccddd,", ",dddddcbbbbbbbcdddddddcccbbbbcccccddd,", ",dddddcbbbbbbbcdddddddcbbbbbbbbbbcddd,", ",dddddcbbbbbbbcdddddddcbbbbbbbbbbcddd,", ",,,,,,,,,,,,,,,,,,##,,,,,,,,,,,,,,,,,,"],
    "pic": true,
-   "gates": [
-    {
-     "at": [14, 27],
-     "key": [10, 34]
-    }
-   ],
    "towers": [],
    "pal": {
     "1": {
@@ -268,11 +262,6 @@
      "c": "#e0fffc",
      "n": "cloud",
      "r": "cloud"
-    },
-    "10": {
-     "c": "#6b6f7c",
-     "n": "drawbridge",
-     "r": "iron"
     }
    },
    "scene": "day",
@@ -283,58 +272,307 @@
    },
    "cols": [
     [
-     [3, 42],
-     [4, 91],
-     [6, 12],
-     [1, 63],
-     [6, 9],
-     [6, 16],
-     [1, 63]
+     [3, 47],
+     [1, 39],
+     [4, 65],
+     [6, 27],
+     [2, 16],
+     [6, 36]
     ],
     [
-     [3, 8],
-     [5, 22],
-     [3, 25],
-     [6, 21],
-     [5, 31],
-     [3, 8],
-     [1, 63]
+     [1, 56],
+     [2, 40],
+     [2, 48],
+     [5, 8],
+     [3, 23],
+     [1, 41]
     ],
     [
-     [2, 62],
-     [5, 37],
-     [1, 42],
-     [1, 86],
-     [2, 14],
-     [6, 3]
+     [6, 8],
+     [2, 70],
+     [3, 46],
+     [3, 22],
+     [1, 74]
     ],
     [
-     [14, 1],
-     [1, 55],
-     [6, 12],
-     [2, 75],
-     [6, 2],
-     [1, 48]
-    ],
-    [
-     [3, 16],
-     [6, 12],
-     [2, 96],
-     [2, 39],
-     [3, 39],
+     [1, 50],
+     [2, 85],
+     [4, 26],
+     [1, 96],
      [2, 3]
+    ],
+    [
+     [6, 16],
+     [5, 38],
+     [5, 44],
+     [2, 28],
+     [1, 64]
     ]
    ],
    "win": {
-    "easy": "01234012340123401234012340123401"
+    "easy": "012340123401234012340123401"
    }
   },
   {
-   "n": 35,
-   "era": 2,
+   "n": 50,
+   "era": 3,
+   "name": "The Locked Gate",
+   "teaches": "gate",
+   "tag": "easy",
+   "hint": "A locked gate bars the way in. Dig out its gold key and send the Looters: the key opens the gate.",
+   "w": 38,
+   "h": 37,
+   "grid": [",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,", ",eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee,", ",eeeffffeeeeeeffffeeeeeeeeeeeeeeffeee,", ",eeffffffeeeeffffffeeeeffffeeeeffffee,", ",fffccccffffffffffffeccccfffeffffffff,", ",ffccggccfffffffffffccggccfffffffcccf,", ",eccggggccfffffffffccggggccfffffccgcc,", ",ecggggggceeeeeeeeecggggggcfeefccgggc,", ",eccaaaacccccccccccccaaaacceeeccggggg,", ",eecaaaaccaaccaaccaacaaaaceeeecgggggg,", ",cccaaaaaaaaaaaaaaaaaaaaaceeeeccddddd,", ",ddcadaaaaaaaaaaaaaaaaaaacbbeeecddddd,", ",dddddaaaaaaaaaaaaaaaaaaacbbbeecddcdd,", ",dddddaaaaaaaaaaaaaaaaaaccbbbeecddcdd,", ",ddcddaacaaacaaacaaacaaacbbbbbbcddddd,", ",ddcddaacaaacaaaaaaaaaaacbbbbbbcddddd,", ",dddddaaaaaaaaaaaaaaaaaaccccccccddddd,", ",dddddaaaaaaaaaaaaaaaaaacaaccaacddcdd,", ",dddddaaaaaaaaaaaaaaaaaaaaaaaaaaddcdd,", ",ddcddaaaaaaaaaaaaaaaaaaaaaaaaaaddddd,", ",ddcddaaaaaaacaaaaaaaaaaaaaaacaaddddd,", ",dddddaaaaaaacaaaaccaaaaaaaaacaaddddd,", ",dddddaaaaaaaaaaaccccaaaaaaaaaaaddddd,", ",dddddaaaaaaaaaaaccccaaaaaaaaaaaddddd,", ",dddddaaaaaaaaaaaccccaaaaaaaaaaaddddd,", ",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,", "~~~~~~~~~~~~~~~~~jjjj~~~~~~~~~~~~~~~~~", "~~~~~~~~~~~~~~~~~jjjj~~~~~~~~~~~~~~~~~", "~~~~~~~~~~~~~~~~~jjjj~~~~~~~~~~~~~~~~~", ",bccgggggccbbbbbccccccbbbbbbbbbbbbbbb,", ",ccgggggggccbbbbbbbbbbbbbbbbbbbbbbbbb,", ",cgggggggggcbbbbbbbbbbbbbbbbbbbbbbbbb,", ",cchhhhhhhccbbbbbbbbbbbbbbbbbbbcccbbb,", ",bchhhhhhhcbbbbbbbbbbbbbbbbbbbccgccbb,", ",bchhhnhhhcbbbbbbbbbbbbbbbbbbccgggccb,", ",bchhhhhhhcbbbbbbbbbbbbbbbbbbcggcggcb,", ",,,,,,,,,,,,,,,,,,##,,,,,,,,,,,,,,,,,,"],
+   "pic": true,
+   "gates": [
+    {
+     "at": [17, 26],
+     "key": [6, 34]
+    }
+   ],
+   "pal": {
+    "1": {
+     "c": "#a498a3",
+     "n": "stone",
+     "r": "stone"
+    },
+    "2": {
+     "c": "#48b03d",
+     "n": "grass",
+     "r": "grass"
+    },
+    "3": {
+     "c": "#1f1b24",
+     "n": "black",
+     "r": "ink"
+    },
+    "4": {
+     "c": "#465593",
+     "n": "slate",
+     "r": "slate"
+    },
+    "5": {
+     "c": "#2cb4e0",
+     "n": "sky",
+     "r": "sky"
+    },
+    "6": {
+     "c": "#e0fffc",
+     "n": "cloud",
+     "r": "cloud"
+    },
+    "7": {
+     "c": "#e14143",
+     "n": "roof",
+     "r": "roof"
+    },
+    "8": {
+     "c": "#6d3314",
+     "n": "timber",
+     "r": "wood"
+    },
+    "10": {
+     "c": "#6b6f7c",
+     "n": "drawbridge",
+     "r": "iron"
+    }
+   },
+   "scene": "day",
+   "style": "square-2t",
+   "palette": {
+    "minDE": 26,
+    "minFade": 21.2
+   },
+   "cols": [
+    [
+     [8, 27],
+     [2, 77],
+     [3, 11],
+     [4, 8],
+     [1, 59],
+     [3, 7],
+     [2, 14],
+     [3, 21]
+    ],
+    [
+     [2, 75],
+     [4, 87],
+     [2, 9],
+     [7, 7],
+     [6, 13],
+     [5, 71],
+     [6, 35],
+     [1, 56]
+    ],
+    [
+     [3, 35],
+     [7, 5],
+     [3, 5],
+     [7, 2],
+     [1, 76],
+     [3, 7],
+     [5, 11],
+     [6, 15]
+    ],
+    [
+     [7, 28],
+     [3, 31],
+     [7, 14],
+     [1, 81],
+     [3, 52],
+     [7, 4],
+     [7, 8]
+    ],
+    [
+     [14, 1],
+     [6, 6],
+     [4, 40],
+     [1, 62],
+     [6, 24],
+     [5, 30],
+     [5, 2]
+    ]
+   ],
+   "win": {
+    "easy": "01234012340123401234012340123401234012"
+   }
+  },
+  {
+   "n": 75,
+   "era": 4,
+   "name": "Linked Squads",
+   "teaches": "linked",
+   "tag": "easy",
+   "hint": "Linked squads go out together: both must be at the front, with 2 free spaces. Both spaces free once both squads have picked up their last blocks.",
+   "w": 34,
+   "h": 33,
+   "grid": [",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,", ",iiiiiibddbfffffffffffffddbbiiiii,", ",iiiihhbdddfffffffffffffdddbhhiii,", ",ihhhhhbdddffbffbffbffbfdddbhhhii,", ",hhhhhhbdbdfaaffaafbaabfdbdbhhhhi,", ",eeeeeebdbdaaaaaaaaaaaaadbdbeeeee,", ",eeeeeebdddaaaaaaaaaaaaadddbeeeee,", ",eeeeeebdddaaaaajjjjaaaadddbeeeee,", ",eeeeeebdddaaaaajjjjaaaadddbeeeee,", ",eeeeeebdddaaaaajjjjaaaadddbeeeee,", ",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,", ",ddbbccccccccbbbbbbbbccccccccbddb,", ",dddbccccccccbaabbaabccccccccbddd,", ",dddbbbbbbbbbbaaaaaabbbbbbbbbbddd,", ",dbdbaabbaabbaaaaaaabaabbaabbadbd,", ",dbdaaaaaaaaaaaanaaaaaaaaaaaaadbd,", ",dddaaaaaaaaaaaaaaaaaaaaaaaaaaddd,", ",dddbaaaaabaaaaaaaaaaabaaaaabaddd,", ",dddbaaaaabaaaaaaaaaaabaaaaabaddd,", ",dddaaaaaaaaaaaabbaaaaaaaaaaaaddd,", ",dddaaaaaaaaaaaabbaaaaaaaaaaaaddd,", ",dddaaaaaaaaaaaabbaaaaaaaaaaaaddd,", ",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,", "~~~~~~~~~~~~~~~jjjj~~~~~~~~~~~~~~~", "~~~~~~~~~~~~~~~jjjj~~~~~~~~~~~~~~~", "~~~~~~~~~~~~~~~jjjj~~~~~~~~~~~~~~~", ",cccbeeeebccccbbbbbbccbbggggbbccc,", ",cccbeeeebcccccccccccbbggggggbbcc,", ",cccbeeeebcccccccccccbggggggggbcc,", ",cccbbbbbbcccccccccccbbggggggbbcc,", ",ccccbggbcccccccccccccbggngggbccc,", ",ccccbggbcccccccccccccbggggggbccc,", ",,,,,,,,,,,,,,,,##,,,,,,,,,,,,,,,,"],
+   "pic": true,
+   "gates": [
+    {
+     "at": [15, 23],
+     "key": [25, 30]
+    },
+    {
+     "at": [16, 7],
+     "key": [16, 15]
+    }
+   ],
+   "pal": {
+    "1": {
+     "c": "#a498a3",
+     "n": "stone",
+     "r": "stone"
+    },
+    "2": {
+     "c": "#1f1b24",
+     "n": "black",
+     "r": "ink"
+    },
+    "3": {
+     "c": "#48b03d",
+     "n": "grass",
+     "r": "grass"
+    },
+    "4": {
+     "c": "#465593",
+     "n": "slate",
+     "r": "slate"
+    },
+    "5": {
+     "c": "#27664a",
+     "n": "forest",
+     "r": "tree"
+    },
+    "6": {
+     "c": "#eecca0",
+     "n": "ashlar",
+     "r": "ashlar"
+    },
+    "7": {
+     "c": "#6d3314",
+     "n": "timber",
+     "r": "wood"
+    },
+    "8": {
+     "c": "#e0fffc",
+     "n": "cloud",
+     "r": "cloud"
+    },
+    "9": {
+     "c": "#2cb4e0",
+     "n": "sky",
+     "r": "sky"
+    },
+    "10": {
+     "c": "#6b6f7c",
+     "n": "drawbridge",
+     "r": "iron"
+    }
+   },
+   "scene": "day",
+   "style": "concentric-4t",
+   "palette": {
+    "minDE": 26,
+    "minFade": 21.2
+   },
+   "cols": [
+    [
+     [3, 95],
+     [7, 39],
+     [2, 36],
+     [2, 7],
+     [5, 7],
+     [2, 3]
+    ],
+    [
+     [14, 2],
+     [4, 58],
+     [4, 29],
+     [5, 4],
+     [5, 1],
+     [1, 38],
+     [2, 10]
+    ],
+    [
+     [3, 4],
+     [4, 14],
+     [4, 7],
+     [3, 33],
+     [6, 23],
+     [2, 68]
+    ],
+    [
+     [2, 10],
+     [5, 46],
+     [1, 91],
+     [9, 22],
+     [5, 9]
+    ],
+    [
+     [1, 98],
+     [8, 22],
+     [1, 25],
+     [2, 2],
+     [6, 17]
+    ]
+   ],
+   "links": [
+    [
+     [0, 1],
+     [1, 0]
+    ]
+   ],
+   "win": {
+    "easy": "0000001111112222223333344444"
+   }
+  },
+  {
+   "n": 100,
+   "era": 5,
    "name": "Hidden Colours",
    "teaches": "mystery",
-   "tag": "normal",
+   "tag": "easy",
    "hint": "A ? squad hides its colour until it reaches the front. Its count always shows.",
    "w": 38,
    "h": 37,
@@ -429,547 +667,7 @@
     ]
    ],
    "win": {
-    "normal": "01234012340123401234012340"
-   }
-  },
-  {
-   "n": 51,
-   "era": 3,
-   "name": "The Corner Tower",
-   "teaches": "archers",
-   "tag": "easy",
-   "hint": "Archers shoot anyone in their red ring. Take the tower first: here the archers only drive sappers back.",
-   "w": 38,
-   "h": 37,
-   "grid": [",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,", ",bbbbbeeeeebbbbbbbbbbbbbbbbbbbbbbbbbb,", ",bbbeeeeeeebbeeebbbbbeeeebbbbbbbbbbbb,", ",beeeeeeeeebeeeeebbbeeeeeeeebbbbbbbbb,", ",beeeeeeeeebeeeeeeeebeeeeeeeebbbbbbbb,", ",bbbeeeeebbbeeeeeeeeeeeeeeeeebbbbbeee,", ",bbbbbbbbbbbeeeeeeeebbeeeeeebbbbbeeee,", ",bbbbbbbbbbbbbbeebbbbbbbbbbbbbeeeeeee,", ",bbbbbbbbbbbbbbbbbbbbbbbbbbbbbeeeeeee,", ",ddddddbbbbbbbbbbbbbbbbbbbbbbbeeeeeee,", ",ffddfdbbbbddddddddddddddddddddbbbbbb,", ",fffffdbbbbdaaddaaddaaddaaddaadbbbbbb,", ",fffffdbbbbdddaaaaaaaaaaaaaadddbbbbbb,", ",ffdffdbbbbdddaaaaaaaaaaaaaadddbbbbbb,", ",ffdffdbbbbdaaaaaaaaaaaaaaaaaadbbbbbb,", ",fffffdbbbbdaaaaaaaaaaaaaaaaaadbbbbbb,", ",fffffdccccdaadaaadaaadaaadaaadcccbbb,", ",fffffddddddaadaaaaaaaaaaadaaaddddddb,", ",ffdffaddaadaaaaaaaaaaaaaaaaaaaddaadd,", ",ffdffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,", ",fffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,", ",fffffaaaaaaadaaaaaaaaaaaaaaadaaaaaaa,", ",fffffaaaaaaadaaaaaaaaaaaaaaadaaaaaaa,", ",ffdffaaaaaaaaaaaaddaaaaaaaaaaaaaaaaa,", ",ffdffaaaaaaaaaaaddddaaaaaaaaaaaaaaaa,", ",fffffaaaaaaaaaaaddddaaaaaaaaaaaaaaaa,", ",fffffaaaaaaaaaaaddddaaaaaaaaaaaaaaaa,", ",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,", ",cccccccccccccccccccccccccccccccccccc,", ",cccccccccccccccccccccccccccccccccccc,", ",cccccccccccccccccccccccccccccccccccc,", ",cccccccccccccccccccccddddcccddddcccc,", ",cccccccccccccccccccccdaadcccdaadcccc,", ",cccccccccccccccccccdddaadddddaadddcc,", ",cccccccccccccccccccdaaaaaadaaaaaadcc,", ",cccccccccccccccccccdaaaaaadaaaaaadcc,", ",,,,,,,,,,,,,,,,,,##,,,,,,,,,,,,,,,,,,"],
-   "pic": true,
-   "gates": [],
-   "towers": [
-    {
-     "at": [2, 25],
-     "r": 8.8
-    }
-   ],
-   "pal": {
-    "1": {
-     "c": "#a498a3",
-     "n": "stone",
-     "r": "stone"
-    },
-    "2": {
-     "c": "#2cb4e0",
-     "n": "sky",
-     "r": "sky"
-    },
-    "3": {
-     "c": "#48b03d",
-     "n": "grass",
-     "r": "grass"
-    },
-    "4": {
-     "c": "#1f1b24",
-     "n": "black",
-     "r": "ink"
-    },
-    "5": {
-     "c": "#e0fffc",
-     "n": "cloud",
-     "r": "cloud"
-    },
-    "6": {
-     "c": "#465593",
-     "n": "slate",
-     "r": "slate"
-    }
-   },
-   "scene": "day",
-   "style": "round-1t",
-   "palette": {
-    "minDE": 26,
-    "minFade": 21.2
-   },
-   "cols": [
-    [
-     [4, 35],
-     [2, 28],
-     [5, 36],
-     [2, 29],
-     [5, 34],
-     [5, 3],
-     [2, 22]
-    ],
-    [
-     [6, 42],
-     [5, 48],
-     [6, 11],
-     [2, 25],
-     [2, 19],
-     [1, 51],
-     [2, 5]
-    ],
-    [
-     [2, 51],
-     [3, 51],
-     [2, 30],
-     [4, 24],
-     [3, 68],
-     [1, 47],
-     [1, 61]
-    ],
-    [
-     [2, 41],
-     [1, 33],
-     [4, 42],
-     [1, 90],
-     [5, 11],
-     [4, 12],
-     [1, 11]
-    ],
-    [
-     [6, 24],
-     [1, 11],
-     [3, 96],
-     [4, 13],
-     [3, 19],
-     [1, 86],
-     [4, 15]
-    ]
-   ],
-   "safeArchers": true,
-   "win": {
-    "easy": "01234012340123401234012340123401234"
-   }
-  },
-  {
-   "n": 62,
-   "era": 3,
-   "name": "Linked Squads",
-   "teaches": "linked",
-   "tag": "normal",
-   "hint": "Linked squads go out together: both must be at the front, with 2 free spaces. Both spaces free once both squads have picked up their last blocks.",
-   "w": 38,
-   "h": 37,
-   "grid": [",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,", ",eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee,", ",eeeffffeeeeeeffffeeeeeeeeeeeeeeffeee,", ",eeffffffeeeeffffffeeeeffffeeeeffffee,", ",fffccccffffffffffffeccccfffeffffffff,", ",ffccggccfffffffffffccggccfffffffcccf,", ",eccggggccfffffffffccggggccfffffccgcc,", ",ecggggggceeeeeeeeecggggggcfeefccgggc,", ",eccaaaacccccccccccccaaaacceeeccggggg,", ",eecaaaaccaaccaaccaacaaaaceeeecgggggg,", ",cccaaaaaaaaaaaaaaaaaaaaaceeeeccddddd,", ",ddcadaaaaaaaaaaaaaaaaaaacbbeeecddddd,", ",dddddaaaaaaaaaaaaaaaaaaacbbbeecddcdd,", ",dddddaaaaaaaaaaaaaaaaaaccbbbeecddcdd,", ",ddcddaacaaacaaacaaacaaacbbbbbbcddddd,", ",ddcddaacaaacaaaaaaaaaaacbbbbbbcddddd,", ",dddddaaaaaaaaaaaaaaaaaaccccccccddddd,", ",dddddaaaaaaaaaaaaaaaaaacaaccaacddcdd,", ",dddddaaaaaaaaaaaaaaaaaaaaaaaaaaddcdd,", ",ddcddaaaaaaaaaaaaaaaaaaaaaaaaaaddddd,", ",ddcddaaaaaaacaaaaaaaaaaaaaaacaaddddd,", ",dddddaaaaaaacaaaaccaaaaaaaaacaaddddd,", ",dddddaaaaaaaaaaaccccaaaaaaaaaaaddddd,", ",dddddaaaaaaaaaaaccccaaaaaaaaaaaddddd,", ",dddddaaaaaaaaaaaccccaaaaaaaaaaaddddd,", ",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,", "~~~~~~~~~~~~~~~~~jjjj~~~~~~~~~~~~~~~~~", "~~~~~~~~~~~~~~~~~jjjj~~~~~~~~~~~~~~~~~", "~~~~~~~~~~~~~~~~~jjjj~~~~~~~~~~~~~~~~~", ",bccgggggccbbbbbccccccbbbbbbbbbbbbbbb,", ",ccgggggggccbbbbbbbbbbbbbbbbbbbbbbbbb,", ",cgggggggggcbbbbbbbbbbbbbbbbbbbbbbbbb,", ",cchhhhhhhccbbbbbbbbbbbbbbbbbbbcccbbb,", ",bchhhhhhhcbbbbbbbbbbbbbbbbbbbccgccbb,", ",bchhhnhhhcbbbbbbbbbbbbbbbbbbccgggccb,", ",bchhhhhhhcbbbbbbbbbbbbbbbbbbcggcggcb,", ",,,,,,,,,,,,,,,,,,##,,,,,,,,,,,,,,,,,,"],
-   "pic": true,
-   "gates": [
-    {
-     "at": [17, 26],
-     "key": [6, 34]
-    }
-   ],
-   "towers": [
-    {
-     "at": [2, 23],
-     "r": 9
-    },
-    {
-     "at": [33, 23],
-     "r": 10.5
-    }
-   ],
-   "pal": {
-    "1": {
-     "c": "#a498a3",
-     "n": "stone",
-     "r": "stone"
-    },
-    "2": {
-     "c": "#48b03d",
-     "n": "grass",
-     "r": "grass"
-    },
-    "3": {
-     "c": "#1f1b24",
-     "n": "black",
-     "r": "ink"
-    },
-    "4": {
-     "c": "#465593",
-     "n": "slate",
-     "r": "slate"
-    },
-    "5": {
-     "c": "#2cb4e0",
-     "n": "sky",
-     "r": "sky"
-    },
-    "6": {
-     "c": "#e0fffc",
-     "n": "cloud",
-     "r": "cloud"
-    },
-    "7": {
-     "c": "#e14143",
-     "n": "roof",
-     "r": "roof"
-    },
-    "8": {
-     "c": "#6d3314",
-     "n": "timber",
-     "r": "wood"
-    },
-    "10": {
-     "c": "#6b6f7c",
-     "n": "drawbridge",
-     "r": "iron"
-    }
-   },
-   "scene": "day",
-   "style": "square-2t",
-   "palette": {
-    "minDE": 26,
-    "minFade": 21.2
-   },
-   "cols": [
-    [
-     [2, 88],
-     [14, 1],
-     [3, 12],
-     [7, 7],
-     [6, 15],
-     [1, 71],
-     [7, 35],
-     [6, 14],
-     [3, 5]
-    ],
-    [
-     [8, 27],
-     [4, 78],
-     [4, 40],
-     [3, 34],
-     [3, 33],
-     [5, 22],
-     [1, 62],
-     [5, 4]
-    ],
-    [
-     [2, 62],
-     [3, 5],
-     [6, 7],
-     [6, 14],
-     [5, 33],
-     [6, 40],
-     [6, 3],
-     [7, 7]
-    ],
-    [
-     [2, 5],
-     [7, 19],
-     [4, 17],
-     [1, 73],
-     [3, 9],
-     [5, 6],
-     [3, 27]
-    ],
-    [
-     [3, 35],
-     [1, 17],
-     [5, 49],
-     [1, 85],
-     [3, 9],
-     [2, 20],
-     [1, 26]
-    ]
-   ],
-   "links": [
-    [
-     [1, 0],
-     [0, 1]
-    ]
-   ],
-   "win": {
-    "normal": "01234012340123401234012340123401234012"
-   }
-  },
-  {
-   "n": 76,
-   "era": 4,
-   "name": "The Locked Space",
-   "teaches": "lock",
-   "tag": "easy",
-   "hint": "One space starts locked. Its key is a gold block on the board: dig it out and send the Looters.",
-   "w": 38,
-   "h": 37,
-   "grid": [",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,", ",cccccccccccccccccccccddddddccccccccc,", ",cccccccccccccccccccccdggggdccccccccc,", ",cccccccccccccccccccccdggggdccccccccc,", ",cccccccccccccccccccccdgddddccccccccc,", ",ccccccccccccccddddddddgdddddddcccccc,", ",ccccccccccbcccdffddffddffddffdddcccc,", ",cccccccccbbbccdffffffffffffffffdcccc,", ",ccccccccbbbbbcdffffffffffffffffdcccc,", ",cccccccbbbbbbbdffffffffffffffffdbccc,", ",bbbbbbbddddddddffffffffffffffffdbbbb,", ",bbbbbbbdaaddaadfaaffaaffaaffaafdbbbb,", ",bbbbbbbdaaaaaaaaaaaaaaaaaaaaaaddbbbb,", ",bbbbbbbdaaaaaaaaajjjjaaaaaaaaadbbbbb,", ",bbbbbbbdaaaaaaaaajjjjaaaaaaaaadbbbbb,", ",bbbbbbbdaaaaaaaaajjjjaaaaaaaaadbbbbb,", ",bbbbbbbdaaaaaaaaajjjjaaaaaaaaadbbbbb,", ",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,", ",eeeeedbbddddddddbbbbbbbbbbbbbbdeeeee,", ",eeeeedbbdaaddaadddbbbbbbbbbbbbdeeeee,", ",eedeeddddaaaaaaaaddddddddddddddeedee,", ",eedeeaddaaaaaaaaaaddaaddaaddaadeedee,", ",eeeeeaaaaaaanaaaaaaaaaaaaaaaaaaeeeee,", ",eeeeeaaaaaaaaaaaaaaaaaaaaaaaaaaeeeee,", ",eeeeeaaaaaaaddaaaaaaaaaaaaaaaaaeeeee,", ",eeeeeaaaaaaddddaaaaaaaaaaaaaaaaeeeee,", ",eeeeeaaaaaaddddaaaaaaaaaaanaaaaeeeee,", ",eeeeeaaaaaaddddaaaaaaaaaaaaaaaaeeeee,", ",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,", "~~~~~~~~~~~~jjjj~~~~~~~~~~~~~~~~~~~~~~", "~~~~~~~~~~~~jjjj~~~~~~~~~~~~~~~~~~~~~~", "~~~~~~~~~~~~jjjj~~~~~~~~~~~~~~~~~~~~~~", ",bdaaaaaaadddddddbbbbbbbdddbbbbbbbbbb,", ",bdaaaaaaadbbbbbbbbbbbbddhddbbbbbbbbb,", ",bdaaanaaadbbbbbbbbbbbddhhhddbbbbbbbb,", ",bdaaaaaaadbbbbbbbbbbbdhhdhhdbbbbbbbb,", ",,,,,,,,,,,,,,,,,,##,,,,,,,,,,,,,,,,,,"],
-   "pic": true,
-   "gates": [
-    {
-     "at": [12, 29],
-     "key": [6, 34]
-    },
-    {
-     "at": [18, 13],
-     "key": [13, 22]
-    }
-   ],
-   "towers": [
-    {
-     "at": [2, 26],
-     "r": 8.4
-    },
-    {
-     "at": [33, 26],
-     "r": 9
-    }
-   ],
-   "pal": {
-    "1": {
-     "c": "#a498a3",
-     "n": "stone",
-     "r": "stone"
-    },
-    "2": {
-     "c": "#48b03d",
-     "n": "grass",
-     "r": "grass"
-    },
-    "3": {
-     "c": "#2cb4e0",
-     "n": "sky",
-     "r": "sky"
-    },
-    "4": {
-     "c": "#1f1b24",
-     "n": "black",
-     "r": "ink"
-    },
-    "5": {
-     "c": "#465593",
-     "n": "slate",
-     "r": "slate"
-    },
-    "6": {
-     "c": "#eecca0",
-     "n": "ashlar",
-     "r": "ashlar"
-    },
-    "7": {
-     "c": "#b44092",
-     "n": "banner",
-     "r": "banner"
-    },
-    "8": {
-     "c": "#e14143",
-     "n": "roof",
-     "r": "roof"
-    },
-    "10": {
-     "c": "#6b6f7c",
-     "n": "drawbridge",
-     "r": "iron"
-    }
-   },
-   "scene": "day",
-   "style": "concentric-2t",
-   "palette": {
-    "minDE": 26,
-    "minFade": 21.2
-   },
-   "lock": {
-    "key": [27, 26]
-   },
-   "cols": [
-    [
-     [1, 23],
-     [4, 6],
-     [4, 49],
-     [7, 3],
-     [4, 25],
-     [2, 6],
-     [6, 28],
-     [3, 13]
-    ],
-    [
-     [2, 79],
-     [5, 81],
-     [4, 11],
-     [1, 85],
-     [2, 33],
-     [3, 56],
-     [1, 71]
-    ],
-    [
-     [8, 8],
-     [3, 56],
-     [4, 11],
-     [2, 90],
-     [7, 1],
-     [6, 23],
-     [6, 24]
-    ],
-    [
-     [4, 25],
-     [5, 15],
-     [14, 2],
-     [1, 64],
-     [4, 11],
-     [4, 6],
-     [4, 5]
-    ],
-    [
-     [14, 1],
-     [1, 59],
-     [7, 6],
-     [6, 5],
-     [4, 9],
-     [4, 4],
-     [3, 70]
-    ]
-   ],
-   "win": {
-    "easy": "012340123401234012340123401234012340"
-   }
-  },
-  {
-   "n": 77,
-   "era": 4,
-   "name": "All at Once",
-   "teaches": "mixed",
-   "tag": "normal",
-   "hint": "Gates, archers, ? squads, linked squads and a locked space, all in one castle.",
-   "w": 34,
-   "h": 33,
-   "grid": [",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,", ",iiiiiibddbfffffffffffffddbbiiiii,", ",iiiihhbdddfffffffffffffdddbhhiii,", ",ihhhhhbdddffbffbffbffbfdddbhhhii,", ",hhhhhhbdbdfaaffaafbaabfdbdbhhhhi,", ",eeeeeebdbdaaaaaaaaaaaaadbdbeeeee,", ",eeeeeebdddaaaaaaaaaaaaadddbeeeee,", ",eeeeeebdddaaaaajjjjaaaadddbeeeee,", ",eeeeeebdddaaaaajjjjaaaadddbeeeee,", ",eeeeeebdddaaaaajjjjaaaadddbeeeee,", ",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,", ",ddbbccccccccbbbbbbbbccccccccbddb,", ",dddbccccccccbaabbaabccccccccbddd,", ",dddbbbbbbbbbbaaaaaabbbbbbbbbbddd,", ",dbdbaabbaabbaaaaaaabaabbaabbadbd,", ",dbdaaaaaaaaaaaanaaaaaaaaaaaaadbd,", ",dddaaaaaaaaaaaaaaaaaaaaaaaaaaddd,", ",dddbaaaaabaaaaaaaaaaabaaaaabaddd,", ",dddbaaaaabaaaaaaaaaaabaaaaabaddd,", ",dddaaaaaaaaaaaabbaaaaaaaaaaaaddd,", ",dddaaaaaaaaaaaabbaaaaaaaaaaaaddd,", ",dddaaaaaaaaaaaabbaaaaaaaaaaaaddd,", ",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,", "~~~~~~~~~~~~~~~jjjj~~~~~~~~~~~~~~~", "~~~~~~~~~~~~~~~jjjj~~~~~~~~~~~~~~~", "~~~~~~~~~~~~~~~jjjj~~~~~~~~~~~~~~~", ",cccbeeeebccccbbbbbbccbbggggbbccc,", ",cccbeeeebcccccccccccbbggggggbbcc,", ",cccbeeeebcccccccccccbggggggggbcc,", ",cccbbbbbbcccccccccccbbggggggbbcc,", ",ccccbggbcccccccccccccbggngggbcnc,", ",ccccbggbcccccccccccccbggggggbccc,", ",,,,,,,,,,,,,,,,##,,,,,,,,,,,,,,,,"],
-   "pic": true,
-   "gates": [
-    {
-     "at": [15, 23],
-     "key": [25, 30]
-    },
-    {
-     "at": [16, 7],
-     "key": [16, 15]
-    }
-   ],
-   "towers": [
-    {
-     "at": [2, 20],
-     "r": 9.4
-    },
-    {
-     "at": [31, 20],
-     "r": 8.1
-    },
-    {
-     "at": [9, 8],
-     "r": 8.6
-    },
-    {
-     "at": [25, 8],
-     "r": 8.7
-    }
-   ],
-   "pal": {
-    "1": {
-     "c": "#a498a3",
-     "n": "stone",
-     "r": "stone"
-    },
-    "2": {
-     "c": "#1f1b24",
-     "n": "black",
-     "r": "ink"
-    },
-    "3": {
-     "c": "#48b03d",
-     "n": "grass",
-     "r": "grass"
-    },
-    "4": {
-     "c": "#465593",
-     "n": "slate",
-     "r": "slate"
-    },
-    "5": {
-     "c": "#27664a",
-     "n": "forest",
-     "r": "tree"
-    },
-    "6": {
-     "c": "#eecca0",
-     "n": "ashlar",
-     "r": "ashlar"
-    },
-    "7": {
-     "c": "#6d3314",
-     "n": "timber",
-     "r": "wood"
-    },
-    "8": {
-     "c": "#e0fffc",
-     "n": "cloud",
-     "r": "cloud"
-    },
-    "9": {
-     "c": "#2cb4e0",
-     "n": "sky",
-     "r": "sky"
-    },
-    "10": {
-     "c": "#6b6f7c",
-     "n": "drawbridge",
-     "r": "iron"
-    }
-   },
-   "scene": "day",
-   "style": "concentric-4t",
-   "palette": {
-    "minDE": 26,
-    "minFade": 21.2
-   },
-   "lock": {
-    "key": [31, 30]
-   },
-   "cols": [
-    [
-     [3, 95],
-     [7, 39],
-     [2, 36],
-     [2, 7],
-     [5, 7],
-     [2, 3]
-    ],
-    [
-     [14, 2],
-     [4, 58],
-     [4, 29],
-     [5, 4],
-     [5, 1],
-     [1, 38],
-     [2, 10]
-    ],
-    [
-     [3, 4],
-     [4, 14, 1],
-     [4, 7],
-     [3, 32],
-     [6, 23],
-     [2, 68]
-    ],
-    [
-     [2, 10],
-     [5, 46],
-     [1, 91],
-     [14, 1],
-     [9, 22],
-     [5, 9]
-    ],
-    [
-     [1, 98],
-     [8, 22, 1],
-     [1, 25],
-     [2, 2],
-     [6, 17]
-    ]
-   ],
-   "links": [
-    [
-     [0, 1],
-     [1, 0]
-    ]
-   ],
-   "win": {
-    "normal": "00000011111122222233333344444"
+    "easy": "01234012340123401234012340"
    }
   }
  ]

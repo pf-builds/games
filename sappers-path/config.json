@@ -34,7 +34,7 @@
       "rangeAlpha": 0.14
     }
   },
-  "v5": {"note": "v5 R1 switches. relaid: false until R2 re-lays levels 1-100 under the v5 rules; while false, the checks that replay the shipped levels' stored orders and grades (tools/test.js, SP.selfTest, the regrades) are reported as DEFERRED, since those orders were dealt under v4.3's rules (6/5/4 spaces, lethal Hard archers).", "relaid": false,
+  "v5": {"note": "v5 R1 switches. relaid: false until R2 re-lays levels 1-100 under the v5 rules; while false, the checks that replay the shipped levels' stored orders and grades (tools/test.js, SP.selfTest, the regrades) are reported as DEFERRED, since those orders were dealt under v4.3's rules (6/5/4 spaces, lethal Hard archers).", "relaid": true,
     "freeze": {"note": "v5 R1, the freeze test (tools/freeze.js): dir holds the frozen snapshot of shipped levels (frozen.json plus copies of the level files). After any engine change every level there must re-grade with 0 differences. Baselined at the end of R2 (tools/freeze.js --snapshot); until then the folder does not exist and the tool says so.", "dir": "levels/frozen"},
     "density": {"note": "v5 R2, tags by feature density (the rules review: Easy uses few or none of the unlocked features, Normal more, Hard a lot, Extreme most or all; tools/tags.js densityOK). unlock: the level each feature arrives at (the feature ladder: moats 25, gates and keys 50, linked squads 75, mystery cards 100, archer towers 125, mystery blocks 150); no level uses a feature before it. easyMax: the most features an Easy level uses (and no lock); normalMin: the fewest a Normal level uses once that many are unlocked (no lock); a Hard level uses every unlocked feature and, from lockFrom, a locked space. A realm's first level teaches its new feature on an Easy level and may keep older ones.", "unlock": {"moat": 25, "gate": 50, "linked": 75, "mystery": 100, "tower": 125, "hidden": 150}, "lockFrom": 50, "easyMax": 1, "normalMin": 2},
     "locks": {"note": "v5 R1: a locked holding space (a key lock or a colour lock; the level file says which) only on these tags, from this level on (tools/tags.js lockOK; R2 places them).", "from": 50, "tags": ["hard", "extreme"]}},
@@ -43,10 +43,11 @@
     "key": "sappers-path.v3"
   },
   "eras": [
-    {"era": 1, "name": "Palisade stockade", "note": "Log walls on an earth bank and ditch could go up in weeks, and forts like this were built for centuries."},
-    {"era": 2, "name": "Motte and bailey", "note": "The Normans raised hundreds of these after 1066: a timber tower on an earth mound over a fenced yard."},
-    {"era": 3, "name": "Stone keep", "note": "Stone replaced timber once a hold had to last. London's White Tower was begun about 1078."},
-    {"era": 4, "name": "Concentric castle", "note": "Walls within walls: Edward I's castles in Wales put a high inner curtain behind the outer one. Beaumaris was begun in 1295."}
+    {"era": 1, "name": "The Greenmarch", "note": "Meadows and timber stockades on earth banks, thrown up overnight by goblin raiders. The crown's trail starts here."},
+    {"era": 2, "name": "Fenwater Vale", "note": "Rivers and reed marsh. Every motte has a moat, but the goblins left the drawbridges down in the fog."},
+    {"era": 3, "name": "The Ironhollows", "note": "Stone keeps in iron-veined hills. The gates are locked here, and the goblins hide the gold keys in the walls."},
+    {"era": 4, "name": "Twinspire Reach", "note": "Walls within walls and twin towers on every hold. The goblin captains send their crews out two by two."},
+    {"era": 5, "name": "The Mistmoor", "note": "Fog lies thick on the fens. Squads march out of it unmarked: nobody knows their colour until they reach the front."}
   ],
   "board": {
     "yardRows": 3,
@@ -156,7 +157,7 @@
     "tags": {"easy": "Easy", "normal": "", "hard": "Hard", "extreme": "Extreme"},
     "fixNote": "v4.3 fix pass. carryAria: the line head's return count (sappers carrying blocks home after their space freed). toastGapPx: on a wide screen a toast in play sits this far above the side column's tray.",
     "carryAria": "{n} carrying blocks home", "toastGapPx": 10,
-    "linkedWord": "linked", "linkedAria": "linked with column {c}", "debugNum": "v4", "heldText": "done, holding for its partner", "lockedText": "Locked space: its key is on the board", "colourLockText": "Locked space: opens when a {crew} squad goes out",
+    "realmEye": "Realm {e}", "mapName": "Map", "linkedWord": "linked", "linkedAria": "linked with column {c}", "debugNum": "v4", "heldText": "done, holding for its partner", "lockedText": "Locked space: its key is on the board", "colourLockText": "Locked space: opens when a {crew} squad goes out",
     "mystery": {"c": "#2b3566", "tc": "#f3ead8", "q": "?"}, "rod": {"w": 8, "core": 5, "ink": "#221a26", "metal": "#b08f6a", "metal2": "#8f9db3", "lane": 2, "hi": "#f3e3c4", "rivet": 5, "stub": 10, "cap": 2.6}, "debugRow": "v4 twists",
     "fixNote": "Critics 1 fix. fade: the rows behind the front mix this share (t, per row) of the tray colour into their tile, in sRGB, never opacity (tools/fade.js: every faded tile stays ΔE00 20+ from every other colour it shows with); tray is the rail's stone (style.css --tray, set from here at boot); band (fix 2): row d sits on a band of the tray with this share of black mixed in (--band1, --band2), so the rows step back without touching the tile faces. minCellCss: the smallest board cell a coach band above the board may leave (else the coach sits in the top bar). hand: the coach's arrow; for a queue tile it comes in from the side at sideScale (its tip sideIn px inside the tile), for a space or the line from above (tip downIn px inside), and the line head's count steps aside by the arrow's half width (halfW) plus gap. rod: w, core and rivet (radius) in CSS px at a phone tile (52 px), scaled with the tile; partners two rows apart (and a partner below the visible rows: a stub of stub px and two dots) run down the gutter between their columns. mystery.c: the face-down card's back. jamChips: the most colour chips the jam sheet shows.",
     "fade": {"tray": "#ddd3c0", "t": [0, 0.1, 0.2], "band": [0, 0.06, 0.12]}, "minCellCss": 8, "coachTopMarginPx": 3, "hand": {"sideScale": 0.56, "sideIn": 5, "downIn": 4, "halfW": 17, "gap": 6}, "jamChips": 6,
@@ -264,20 +265,23 @@
               {"say": "If every space is stuck waiting, you lose.", "line": true, "until": "play"}],
     "e1-03": [{"say": "{n} {crew}, {reach} in reach: {go} go.", "card": 2, "if": "short:2", "until": "used:2"},
               {"say": "The rest wait their turn. Break the wall!", "line": true, "if": "wait", "until": "lineEmpty"}],
-    "e2-26": [{"say": "A locked gate! Dig out its gold key first.", "card": 2, "ring": "key", "until": ["reach:14", "gate"]},
-              {"say": "Send the Looters: the key opens the gate.", "card": 14, "ring": "key", "if": "front:14", "until": "gate"},
-              {"say": "The gate is open. Raze the castle!", "until": "play"}],
-    "e3-51": [{"say": "Archers shoot the red ring. Tower first!", "card": 6, "ring": "tower", "until": "tower"},
-              {"say": "Tower down: the ring is safe now.", "until": "play"}],
-    "e2-35": [{"say": "? squads hide their colour until the front.", "short": "? squads show at the front.", "mystery": true, "until": "reveal"},
-              {"say": "Turned over! The count always shows.", "short": "The count always shows.", "until": "play"}],
-    "e3-62": [{"say": "Linked: tap when both reach the front.", "short": "Linked: both at the front.", "linked": true, "if": "linkedFront", "until": "pair"},
+    "e2-25": [{"say": "Water! Sappers cross only at the bridge.", "short": "Sappers cross at the bridge.", "ring": "moat", "until": "play"},
+              {"say": "Blocks over the moat wait for a way in.", "short": "Over the moat? Find a way in.", "until": "play"},
+              {"say": "New power-up! The Quartermaster sends a squad.", "short": "New: the Quartermaster!", "power": "quartermaster", "until": "play"}],
+    "e3-50": [{"say": "A locked gate! Dig out its gold key first.", "short": "A locked gate: find its key.", "ring": "key", "until": ["reach:14", "gate"]},
+              {"say": "Send the Looters: the key opens the gate.", "short": "Looters open the gate.", "card": 14, "ring": "key", "if": "front:14", "until": "gate"},
+              {"say": "The gate is open. Raze the castle!", "short": "The gate is open!", "until": "play"},
+              {"say": "New power-up! Recall sends a stuck squad back.", "short": "New: Recall!", "power": "recall", "until": "play"}],
+    "e3-53": [{"say": "One space is locked. Its colour opens it!", "short": "Its colour opens the lock.", "card": 8, "lockSlot": true, "if": "locked", "until": "unlock"},
+              {"say": "Unlocked! Five spaces for your squads.", "short": "Unlocked! Five spaces.", "until": "play"}],
+    "e4-75": [{"say": "Linked: tap when both reach the front.", "short": "Linked: both at the front.", "linked": true, "if": "linkedFront", "until": "pair"},
               {"say": "Both spaces free once both last blocks go.", "short": "Free at both last blocks.", "line": true, "until": "play"}],
-    "e4-76": [{"say": "One space is locked. Its key is on the board.", "short": "A space is locked: find its key.", "lockSlot": true, "ring": "lockKey", "until": "play"},
+    "e4-87": [{"say": "One space is locked. Its key is on the board.", "short": "A space is locked: find its key.", "lockSlot": true, "ring": "lockKey", "until": "play"},
               {"say": "Dig to the key (dashed box): Looters!", "short": "Looters: dig to the key!", "card": 14, "ring": "lockKey", "if": "locked", "until": "unlock"},
               {"say": "Unlocked! One more space for your squads.", "short": "Unlocked! One more space.", "until": "play"}],
-    "e4-77": [{"say": "All at once. Linked: both at the front.", "short": "Linked: both at the front.", "linked": true, "if": "linkedFront", "until": "pair"},
-              {"say": "? squads turn at the front. Raze it all!", "short": "? squads turn at the front.", "until": "play"}]
+    "e5-100": [{"say": "? squads hide their colour until the front.", "short": "? squads show at the front.", "mystery": true, "until": "reveal"},
+               {"say": "Turned over! The count always shows.", "short": "The count always shows.", "until": "play"},
+               {"say": "New power-up! The Scout turns ? squads over.", "short": "New: the Scout!", "power": "scout", "until": "play"}]
   },
   "selfTest": {
     "minTapPx": 44,
@@ -302,15 +306,16 @@
   },
   "gallery": {
     "note": "v4 M4, the Gallery (levels/gallery.json). openAt: the siege level whose clear opens it (v4.3: its first picture; the rest one at a time, seqNote). Text: title, btn, count ({n} won of {t}), lockedHint (on the locked buttons), winTitle, winLine ({title}), nextBtn. credits: the plain-text credits line under the grid (no links; the full list is LICENSES.md). thumbPx: canvas px a cell in the grid's thumbnails; dim: the dark and light ends a picture's lightness is squeezed into until it is won.",
-    "openAt": "e1-25",
-    "title": "The Gallery", "btn": "Gallery", "count": "{n}/{t} cleared", "lockedHint": "Win level 25 to open",
+    "openAt": "e1-04",
+    "title": "The Gallery", "btn": "Gallery", "count": "{n}/{t} cleared", "lockedHint": "Win level 4 to open",
     "winTitle": "Picture complete!", "winLine": "{title} is in your Gallery now.", "winLineAgain": "{title}, cleared again.", "picAria": "{title}, finished", "nextBtn": "Next picture",
     "credits": "Pictures: Twemoji by Twitter, Inc and other contributors (CC BY 4.0); Noto Emoji by Google (Apache 2.0); paintings and prints from The Metropolitan Museum of Art Open Access (public domain); the rest are Click it! Studios originals.",
     "thumbPx": 3, "dim": ["#231e2a", "#6c6475"],
     "fix2Note": "Critics 2 fix (V2), the Gallery's payoff. A picture's first win says winLine (a repeat winLineAgain) and shows the finished picture above the report: reportCellPx CSS px a cell (whole device px), at most reportMaxPx tall, shrunk to the room on a small screen; under reportMinPx (a short landscape screen) it hangs over the razed board instead, at stageFrac of the board's frame (picAria its label). On the Gallery screen the first picture not yet cleared wears a gold frame and the playChip (nextAria; the others tileAria).",
     "reportCellPx": 4, "reportMaxPx": 136, "reportMinPx": 56, "stageFrac": 0.8, "playChip": "Play", "nextAria": "Picture {n}, play this one next", "tileAria": "Picture {n}, not cleared yet",
-    "seqNote": "v4.3: the pictures open one at a time: the first when openAt is cleared, each next when the one before it is cleared (save.js isOpen). A locked picture is a silhouette: its background cells (the colour its four corners share) in silhouette[1], the rest in silhouette[0], under a padlock; lockedAria is its label.",
-    "silhouette": ["#2b2533", "#625a6e"], "lockedAria": "Picture {n}, locked: clear the one before it"
+    "seqNote": "v4.3: the pictures open one at a time: the first when openAt is cleared, each next when the one before it is cleared (save.js isOpen). v5 R2: each opens when its side quest's main level is cleared (quests; save.js questOpen); openAt is the first quest's level. A locked picture is a silhouette: its background cells (the colour its four corners share) in silhouette[1], the rest in silhouette[0], under a padlock; lockedAria is its label.",
+    "silhouette": ["#2b2533", "#625a6e"], "lockedAria": "Picture {n}, a side quest: opens after level {after}",
+    "quests": {"note": "v5 R2, side quests (tools/quests.js; the rules review: a picture level every 3-5 main levels, optional, with a one-time power-up prize shown before playing). first: the main level picture 1 follows; gaps: the main levels between quests in turn; the prize: one use of a power-up the campaign has unlocked by then, in turn, except rare (the Volley), which comes on every volleyEvery-th quest once it is unlocked (125). Until R3's journey map, the Gallery screen stands in: a picture opens once its main level is cleared (quests past the last built level open one at a time once every level is cleared, the long tail), and its first clear adds the prize to the inventory. prizeText: the toast on that clear; prizeAria: the tile's prize words.", "first": 4, "gaps": [4, 3, 5, 4], "rare": "volley", "volleyEvery": 6, "prizeText": "Side quest prize: +1 {name}", "prizeAria": "prize: one {name}", "waitAria": "Picture {n}, a side quest past level {after}: opens once every level is cleared"}
   },
   "meta": {
     "note": "v4 M5, the meta layer (SPEC-v4 §9). lives: the lives system's switch (false on the web: plan Decision 2; turn it on for the app); livesMax, livesRefillMin (one life back per this many minutes, real time). coins: start (a new save's balance: enough to try each power-up once), win (coins per win by the level's tag; v4.3, by difficulty before) and first (added on the level's or picture's first clear; v4.3, a new medal before). pullDepth: how far behind the front the Quartermaster reaches (cards). powers: the four power-ups in engine order (engine.js PW), each with its price in coins and its uses per level (perLevel; the engine refuses past it).",
@@ -335,8 +340,8 @@
       "noScout": "No hidden squads to scout", "noRecall": "No squad is just waiting (none of its sappers out)", "noLadder": "The line can't take more spaces",
       "used": "{name}: {say}", "aria": "{name}: {say}. {state}", "owned": "{n} owned", "buy": "buy for {price} coins", "poor": "buy for {price} coins: you need {need} more", "need": "need {need}", "spent": "used up this level"},
     "report": {"time": "Time", "taps": "Taps", "coins": "Coins", "best": "Best {v}", "first": "First win", "newBest": "New best!", "firstClear": "First clear +{n}", "countMs": 900, "countDelayMs": 250},
-    "home": {"play": "Level {n}", "playGallery": "Play", "era": "Era {e} \u00b7 {name}", "progress": "{done}/{t} levels won", "coins": "{n} coins", "lives": "{n} lives", "livesFull": "Lives full",
-      "noLives": "Next life {t}", "noLivesToast": "No lives left: the next one comes in {t}", "lifeLost": "-1 life ({n} left)", "galTab": "Opens at 25",
+    "home": {"play": "Level {n}", "playGallery": "Play", "era": "Realm {e} \u00b7 {name}", "progress": "{done}/{t} levels won", "coins": "{n} coins", "lives": "{n} lives", "livesFull": "Lives full",
+      "noLives": "Next life {t}", "noLivesToast": "No lives left: the next one comes in {t}", "lifeLost": "-1 life ({n} left)", "galTab": "Opens at 4",
       "story": "Goblins stole the crown and walled themselves in. Tap a squad: its sappers run up, pull their colour off the fort and carry it home. Keep the holding line clear. Raze every block."},
     "eraCard": {"cleared": "{n}/{t} cleared", "coins": "{n} coins", "aria": "{n} of {t} cleared; {c} coins earned"}
   }
