@@ -581,3 +581,11 @@ body.wide .home-card { max-width: 760px; }
 /* v5 R1: the 2x speed sheet's price pill (the continue's style). */
 #sb-buy .cprice { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 1px 5px; border-radius: 999px; background: #fff3cf; color: var(--parch-ink); font-size: 22px; --ico: 18px; vertical-align: middle; }
 #sb-title { font-size: 24px; margin: 4px 0 12px; }
+/* v5 R1: a power-up's tip, a parchment bubble over its badge (an arrow at --ax); an unlock's intro wears a gold rim. */
+#pwtip { position: fixed; z-index: 60; max-width: min(300px, calc(100vw - 16px)); padding: 8px 12px 9px; border: 3px solid var(--ink); border-radius: 10px; background: var(--parch); color: var(--parch-ink);
+  box-shadow: 0 4px 0 rgba(0,0,0,.45); font-family: var(--px); line-height: 1.05; pointer-events: none; display: flex; flex-direction: column; gap: 3px; }
+#pwtip[hidden] { display: none; }
+#pwtip::after { content: ""; position: absolute; left: calc(var(--ax, 50%) - 8px); bottom: -11px; border: 8px solid transparent; border-top-color: var(--ink); border-bottom: 0; }
+#pwtip.below::after { bottom: auto; top: -11px; border: 8px solid transparent; border-bottom-color: var(--ink); border-top: 0; }
+#pwtip.intro { box-shadow: 0 0 0 3px var(--gold), 0 4px 0 rgba(0,0,0,.45); }
+#pwtip .tt-h { font-size: 22px; font-weight: 400; } #pwtip .tt-f { font-size: 18px; color: #2f7a46; } #pwtip .tt-f[hidden] { display: none; } #pwtip .tt-b { font-size: 18px; color: var(--parch-soft); }

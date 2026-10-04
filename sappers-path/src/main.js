@@ -100,7 +100,7 @@
   // v4.3: a level's fixed tag (Normal when a file has none) and its one stored winning order.
   const tagOf = (e) => (e && e.L && TAGS.indexOf(e.L.tag) >= 0 ? e.L.tag : "normal"), winOf = (e) => (e && e.L && e.L.win && e.L.win[tagOf(e)]) || "";
   const app = { cfg: null, levels: [], byId: new Map(), order: [], eras: [], save: null, entry: null, B: null, S: null, V: null, audio: null, sheets: null, gal: [], mats: null, palKey: "", galTiles: [],
-    clock: 0, lastT: 0, screen: "title", diff: "normal", speed: 1, fastPaid: false, debugSpeed: DEBUG, cb: false, // diff: the playing level's tag (v4.3) ending: null, endAt: -1, panel: null, panelAt: 0, testing: false,
+    clock: 0, lastT: 0, screen: "title", diff: "normal", speed: 1, fastPaid: false, debugSpeed: DEBUG, cb: false, allPw: false, tip: null, tipQ: [], tipHold: null, tipEat: -1, pwN: -1, // diff: the playing level's tag (v4.3) ending: null, endAt: -1, panel: null, panelAt: 0, testing: false,
     toastT: -1e12, popK: 0, cards: [], nexts: [], slots: [], wide: false, glURL: [], manURL: [], nodes: [], lastW: 0, lastH: 0,
     coach: null, used: 0, cues: {}, paused: false, pauses: 0, upright: false, upPause: false, focusEl: null, pt: { x: 0, y: 0 }, T: null, tbuf: null, labFit: new Map(), verdict: [],
     et: 0, endT: -1, lineDirty: false, lineMoved: false, ord: [], slotPts: [], blockT: -1e12, refused: 0, march: false,
@@ -172,7 +172,11 @@
     }
   }
   function storage() { try { const s = window.localStorage; s.getItem("sappers-path.probe"); return s; } catch (e) { return Save.memoryStore(); } }
-  const rulesOf = (d) => E.rulesOf(app.cfg.v3, d, app.meta); // v4 M5: with the power-ups' uses per level
+  // v4 M5: with the power-ups' uses per level; v5 R1: none for a power-up the campaign hasn't unlocked yet.
+  const rulesOf = (d) => { const r = E.rulesOf(app.cfg.v3, d, app.meta); if (r.powers) r.powers = r.powers.map((v, k) => (pwOpen(k) ? v : 0)); return r; };
+  // v5 R1, the campaign's reach: the number of the first open Siege level not cleared (one past the last when all are).
+  function reach() { const D = app.save.data, id = Save.next(D, app.order), e = app.byId.get(id); return !e ? 1 : D.done[id] ? e.n + 1 : e.n; }
+  const pwOpen = (k) => app.allPw || Meta.isOpen(app.meta, k, reach());
   const mat = (m) => (app.mats || app.cfg.v3.mats)[m] || { n: "?", c: "#888888", crew: "?" };
   const writeSave = () => { if (!app.testing) app.save.write(); };
 
@@ -437,6 +441,12 @@
       b.innerHTML = '<i class="pw-ic" aria-hidden="true"></i><b class="pw-n" aria-hidden="true"></b><span class="pw-tag" aria-hidden="true"><i class="ico ico-coin"></i><span></span></span><span class="pw-name" aria-hidden="true"></span><span class="pw-need" aria-hidden="true"></span>';
       b.querySelector(".pw-ic").style.backgroundImage = app.icoURL["p" + k] || "none"; b.querySelector(".pw-name").textContent = pwName(k);
       b.addEventListener("click", () => onPower(k)); host.append(b); app.pws.push(b);
+      // v5 R1: a long press (meta.tipHoldMs on the page clock, step()) or a hover shows the badge's tip; a press that showed
+      // it doesn't also use the badge.
+      b.addEventListener("pointerdown", () => { app.tipHold = { k, t0: app.clock }; });
+      for (const ev of ["pointerup", "pointercancel"]) b.addEventListener(ev, () => { app.tipHold = null; if (app.tip && !app.tip.intro && app.tip.held) hideTip(); });
+      b.addEventListener("pointerenter", (e) => { if (e.pointerType === "mouse") showTip(k, false); });
+      b.addEventListener("pointerleave", (e) => { app.tipHold = null; if (e.pointerType === "mouse" && app.tip && !app.tip.intro) hideTip(); });
     }
   }
   // Each badge's state: owned (a count), buy (a "+" and the price) or spent (this level's uses gone); the coins pill.
@@ -445,17 +455,38 @@
   function renderPowers() {
     const S = app.S, inv = app.save.data.inv, T = PWT(), pop = app.cfg.show.pwPopMs, have = app.save.data.coins | 0;
     $("pw-coins").querySelector("b").textContent = app.save.data.coins; $("pw-coins").setAttribute("aria-label", fill(app.meta.home.coins, { n: app.save.data.coins }));
+    let shownN = 0;
     app.pws.forEach((b, k) => {
+      b.hidden = !pwOpen(k); if (!b.hidden) shownN++; // v5 R1: hidden until the campaign unlocks it
       const P = Meta.powerOf(app.meta, k), n = inv[E.POWERS[k]] | 0, spent = !!S && S.used(k) >= S.limit(k), st = spent ? "spent" : n > 0 ? "own" : "buy", need = st === "buy" ? Math.max(0, P.price - have) : 0;
       b.className = "pw " + st + (need ? " poor" : "") + (app.pick && app.pick.k === k ? " picking" : "") + (app.clock - app.pwPop[k] < pop ? " pop" : "");
       b.querySelector(".pw-n").textContent = n > 0 ? n : "+"; b.querySelector(".pw-tag span").textContent = P.price; b.querySelector(".pw-need").textContent = need ? fill(T.need, { need }) : "";
-      b.setAttribute("aria-label", fill(T.aria, { name: P.name, say: P.say, state: spent ? T.spent : n > 0 ? fill(T.owned, { n }) : fill(need ? T.poor : T.buy, { price: P.price, need }) }));
+      b.setAttribute("aria-label", fill(T.aria, { name: P.name, say: P.say, state: spent ? T.spent : n > 0 ? fill(T.owned, { n }) : fill(need ? T.poor : T.buy, { price: P.price, need }) }) + " " + P.tip);
     });
+    if (shownN !== app.pwN) { app.pwN = shownN; if (app.screen === "play") sizePowers(); }
   }
   const livePlay = () => app.screen === "play" && app.S && app.S.status === E.PLAYING && !app.panel && !app.paused;
   function pwToast(key, o, bad) { toast(fill(PWT()[key], o), bad); }
   function pwShake(k) { const b = app.pws[k]; if (b && !app.V.calm && b.animate) b.animate(app.cfg.show.blockedShake.map((x) => ({ transform: "translateX(" + x + "px)" })), { duration: app.cfg.show.blockedShakeMs }); }
+  // v5 R1, the tips: one bubble over the badge, saying what the power-up does and when to use it; an unlock's intro adds
+  // "New: name" and "One free use" and stays meta.tipIntroMs (page clock) unless a tap anywhere takes it away; queued
+  // intros follow one by one.
+  function showTip(k, intro) {
+    const b = app.pws[k], t = $("pwtip"), P = Meta.powerOf(app.meta, k), M = app.meta; if (!b || b.hidden) return false;
+    t.querySelector(".tt-h").textContent = intro ? fill(M.newTitle, { name: P.name }) : P.name; t.querySelector(".tt-f").hidden = !intro; t.querySelector(".tt-f").textContent = M.free;
+    t.querySelector(".tt-b").textContent = P.tip; t.hidden = false; t.classList.toggle("intro", !!intro);
+    const r = b.getBoundingClientRect(), w = t.offsetWidth, h = t.offsetHeight, x = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2)), y = r.top - h - 10 >= 8 ? r.top - h - 10 : Math.min(innerHeight - h - 8, r.bottom + 10);
+    t.style.left = Math.round(x) + "px"; t.style.top = Math.round(y) + "px"; t.style.setProperty("--ax", Math.round(r.left + r.width / 2 - x) + "px"); t.classList.toggle("below", y > r.top);
+    app.tip = { k, intro: !!intro, held: false, until: intro ? app.clock + M.tipIntroMs : Infinity }; return true;
+  }
+  function hideTip() { $("pwtip").hidden = true; const was = app.tip; app.tip = null; if (was && was.intro && app.tipQ.length) showTip(app.tipQ.shift(), true); }
+  // Each frame (step): a held press long enough shows its tip; an intro's time runs out.
+  function tipStep() {
+    const H = app.tipHold; if (H && !app.tip && app.clock - H.t0 >= app.meta.tipHoldMs) { if (showTip(H.k, false)) { app.tip.held = true; app.tipEat = H.k; } }
+    if (app.tip && app.clock >= app.tip.until) hideTip();
+  }
   function onPower(k) {
+    if (app.tipEat === k) { app.tipEat = -1; return false; } // the press showed the tip
     if (!livePlay()) return false;
     const S = app.S, P = Meta.powerOf(app.meta, k), D = app.save.data, PW = E.PW;
     if (app.pick) { const was = app.pick.k; cancelPick(); if (was === k) return false; }
@@ -692,10 +723,13 @@
     app.lockN = app.S.locked; app.unlockT = -1e12; app.flip.fill(false); app.reveals = 0; app.pairsOut = 0; landTiles();
     app.t0 = app.clock; app.report = null; app.pick = null; app.pwPop.fill(-1e12); app.carry = -1; renderPowers();
     roundSpeed(); // v5 R1
+    // v5 R1: power-ups the campaign has just unlocked get their free use, and their tips show one by one.
+    app.tipQ = Meta.grant(app.save.data, app.meta, reach()); if (app.tipQ.length) writeSave(); if (app.tip) hideTip(); app.tipHold = null; app.tipEat = -1;
     app.coached = !!coachSteps(e); // the coach's band is kept for the whole level, so the board never jumps when it goes
     placeSlots();
     if (!e.debug && !e.gallery) { app.save.data.last = e.id; writeSave(); }
     renderAll(); fitLine(); showScreen("play"); coachStart(); // the line and tray take their size before the board is fitted to what is left
+    renderPowers(); if (app.tipQ.length) showTip(app.tipQ.shift(), true);
     return e;
   }
   // v4 M3: a tile's flip or shake from the last game lands at once when a level starts (a flip left mid-turn has no width).
@@ -1080,7 +1114,7 @@
   }
 
   function wire() {
-    document.addEventListener("pointerdown", () => { if (app.audio) Audio.unlock(app.audio); }, { capture: true });
+    document.addEventListener("pointerdown", () => { if (app.audio) Audio.unlock(app.audio); if (app.tip && app.tip.intro) hideTip(); }, { capture: true }); // v5 R1: a tap takes an unlock's tip away
     document.addEventListener("keydown", (ev) => {
       if (app.audio) Audio.unlock(app.audio);
       if (app.paused) { if (ev.key === " " || ev.key === "Enter") { ev.preventDefault(); resume(); } return; }
@@ -1264,6 +1298,7 @@
       else if (app.clock >= app.endAt) showPanel();
     }
     if (app.toastT > 0 && app.clock >= app.toastT) hideToast();
+    tipStep(); // v5 R1
   }
   // One rAF frame: real time in, sim time out (nothing moves while paused; the first frame after a resume is 16 ms).
   function advance(t) {
@@ -1382,8 +1417,9 @@
       out.notes.upright = "held sideways: the card only (the game's checks run upright)"; out.ms = Math.round(performance.now() - T0); return out; }
     if (app.paused) resume();
     const ST = app.cfg.selfTest, SH = app.cfg.show, SPD = app.meta.speed.debugSpeeds; // v5 R1: the debug speeds
-    const scratch = () => Save.open(Save.memoryStore(), key, app.order, app.gal.map((e) => e.id), app.meta); // v4 M5: with meta (coins)
-    app.testing = true; app.save = scratch(); setSpeed(SPD[0], false); setCb(false, false);
+    // v4 M5: with meta (coins); v5 R1: every power-up already unlocked (no free uses), so the older checks see plain badges
+    const scratch = () => { const sv = Save.open(Save.memoryStore(), key, app.order, app.gal.map((e) => e.id), app.meta); for (const id of E.POWERS) sv.data.got[id] = 1; return sv; };
+    app.testing = true; app.save = scratch(); setSpeed(SPD[0], false); setCb(false, false); app.allPw = true; // v5 R1: every power-up shown for the checks (the unlock checks use their own save)
     // Patient play: tap, then the engine runs until nothing moves and the board lands (the skip path).
     const patient = (ord) => { for (let i = 0; i < ord.length && app.S.status === E.PLAYING; i++) { if (!playCol(ord.charCodeAt(i) - 48)) return false; settleNow(); } return true; };
     // Real ticks until the engine is quiet (bounded); returns the ms ticked.
@@ -1979,6 +2015,22 @@
           const pk = Array.from(document.querySelectorAll("#tray .tile.pickable")), hid = pk.some((x) => x.classList.contains("mys")), j = app.cards.findIndex((c) => c.classList.contains("pickable")), m = j >= 0 ? app.B.cardM[app.S.front(j)] : 0;
           if (j >= 0) app.cards[j].click(); let cardsLeft = 0; for (let jj = 0; jj < E.NCOL; jj++) for (let d = 0, ci = app.S.card(jj, 0); ci >= 0; ci = app.S.card(jj, ++d)) if (app.B.cardM[ci] === m) cardsLeft++;
           ok(pk.length > 0 && !hid && j >= 0 && app.S.left[m] === 0 && cardsLeft === 0 && app.S.sappers(m) === 0 && inv().volley === 0 && app.S.used(PWK.VOLLEY) === 1 && !app.pick && hitOK(vb), "Volley through its badge: it asks (" + pk.length + " tiles glow, none hidden), a tap on a front tile clears its colour (" + mat(m).crew + ") from the board, the queue and the line; one spent"); }
+        // v5 R1, unlocks and tips: a fresh campaign shows the Ladder only, with its free use and its intro tip; at reach 25
+        // the Quartermaster appears with its free use and intro (once); the Gallery and debug levels follow the campaign;
+        // the engine allows a hidden power-up nothing; a long press shows a tip and doesn't use the badge.
+        { app.allPw = false; const sv = app.save; app.save = scratch(); app.save.data.got = {}; // a fresh campaign
+          try { startLevel(app.levels[0].id); const vis = () => app.pws.map((b) => (b.hidden ? 0 : 1)).join("");
+            const v1 = vis(), t1 = app.tip && app.tip.intro && app.tip.k === PWK.LADDER && !$("pwtip").hidden && $("pwtip").querySelector(".tt-b").textContent === Meta.powerOf(MT, 0).tip, i1 = inv().ladder, lim1 = app.S.limit(PWK.PULL);
+            ok(v1 === "10000" && t1 && i1 === 1 && app.save.data.got.ladder === 1 && lim1 === 0 && !app.S.canPower(PWK.VOLLEY, 1), "unlocks: a fresh campaign shows the Ladder only (" + v1 + "), its free use and its intro tip; the engine allows the hidden ones nothing");
+            for (let t = 0; t <= MT.tipIntroMs + 32; t += 16) step(16); const gone = !app.tip && $("pwtip").hidden;
+            for (let i = 0; i < 24; i++) Save.record(app.save.data, app.order[i]); startLevel(app.order[24]);
+            const v2 = vis(), t2 = app.tip && app.tip.intro && app.tip.k === PWK.PULL, i2 = inv().quartermaster; startLevel(app.order[24]); const again = !app.tip && inv().quartermaster === i2;
+            ok(gone && v2 === "11000" && t2 && i2 === 1 && again, "unlocks: the intro goes after " + MT.tipIntroMs + " ms; at level 25 the Quartermaster appears (" + v2 + ") with one free use and its intro, given once");
+            if (app.gal.length) { startLevel(app.gal[0].id); ok(vis() === "11000", "unlocks: a Gallery picture shows what the campaign has unlocked"); }
+            startLevel(app.order[24]); const b0 = app.pws[PWK.PULL], ev = (t) => b0.dispatchEvent(new PointerEvent(t, { bubbles: true, pointerType: "touch" }));
+            ev("pointerdown"); for (let t = 0; t < MT.tipHoldMs + 48; t += 16) step(16); const held = app.tip && app.tip.k === PWK.PULL && !app.tip.intro; ev("pointerup"); b0.click();
+            ok(held && !app.pick && inv().quartermaster === 1 && !app.tip, "tips: a long press shows the Quartermaster's tip; letting go hides it and the badge isn't used"); }
+          finally { app.save = sv; app.allPw = true; if (app.tip) hideTip(); app.tipQ = []; } }
         // Recall: a squad waiting stuck goes back to its column's front through a real tap on its space.
         { let got = null; for (const e of app.levels) { if (e.n < 16) continue; startLevel(e.id, "normal"); const tp = stageLine(1, 0); if (tp) { got = { e, tp }; break; } }
           if (ok(!!got, "Recall: found a level whose front can't reach a block (a squad that waits)")) {
@@ -2079,6 +2131,7 @@
     } catch (err) { ok(false, "selfTest threw: " + (err && err.message) + " " + (err && err.stack ? err.stack.split("\n")[1] : "")); }
     finally {
       for (const k of Object.keys(ST)) app.byId.delete("fx-" + k); // every fixture registered for the run
+      app.allPw = false; if (app.tip) hideTip(); app.tipQ = [];
       app.save = was.save; app.meta = was.meta; app.now = was.now; app.testing = false; setSpeed(was.speed, false); setCb(was.cb, false); app.diff = was.diff;
       if (was.entry) startLevel(was.entry.id, was.diff); showScreen(was.screen); renderAll();
     }
@@ -2112,7 +2165,8 @@
     clearPictures: (k) => { for (let i = 0; i < k && i < app.gal.length; i++) Save.record(app.save.data, app.gal[i].id, "gal"); writeSave(); if (app.screen === "gallery") renderGallery(); return Object.keys(app.save.data.gal).length; },
     unlockTo: (n) => { for (let i = 0; i < n && i < app.order.length; i++) Save.record(app.save.data, app.order[i]); app.save.data.last = Save.next(app.save.data, app.order); writeSave(); renderHome(); return Object.keys(app.save.data.done).length; },
     power: (k, a) => { const got = onPower(k); if (a == null || !app.pick) return got; return Array.isArray(a) ? pickTile(a[0], a[1]) : pickSlot(a); },
-    meta: () => ({ coins: app.save.data.coins, inv: Object.assign({}, app.save.data.inv), lives: Meta.lives(app.save.data, app.meta, app.now()), pick: app.pick ? app.pick.k : -1, rows: app.rows, report: app.report, used: app.S ? E.POWERS.map((k, i) => app.S.used(i)) : null }),
+    allPowers: (on) => { app.allPw = !!on; renderPowers(); return app.allPw; }, // v5 R1: every power-up shown whatever the campaign (tests)
+    meta: () => ({ coins: app.save.data.coins, got: Object.assign({}, app.save.data.got), tip: app.tip ? app.tip.k : -1, inv: Object.assign({}, app.save.data.inv), lives: Meta.lives(app.save.data, app.meta, app.now()), pick: app.pick ? app.pick.k : -1, rows: app.rows, report: app.report, used: app.S ? E.POWERS.map((k, i) => app.S.used(i)) : null }),
     setMeta: (o) => { Object.assign(app.save.data, o || {}); writeSave(); renderHome(); if (app.S) renderPowers(); return app.save.data.coins; },
     // Lives forced on (a copy of meta; debug screens only) with n left, the refill count started ago ms back; off restores.
     forceLives: (on, n, ago) => { app.meta = on ? Object.assign({}, app.cfg.meta, { lives: true }) : app.cfg.meta; if (on) app.save.data.lives = { n: n | 0, at: n < app.meta.livesMax ? Date.now() - (ago | 0) : 0 }; renderHome(); return Meta.lives(app.save.data, app.meta, app.now()); } };

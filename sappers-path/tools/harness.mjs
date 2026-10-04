@@ -180,17 +180,18 @@ async function run() {
       ok(st.fail.length === 0, tag + " selfTest: " + st.fail.join("; "));
       await ev(() => SP.load(1));
 
-      // v4 M5, the power-up bar through real taps: a Ladder bought and used on level 1 (one more space), a Quartermaster
-      // bought, asked for and applied to a real tile on level 40; every badge on screen.
+      // v4 M5, the power-up bar through real taps: v5 R1, the Ladder's free unlock use on level 1 (one more space); every
+      // power-up shown (SP.allPowers), a Quartermaster bought, asked for and applied to a real tile on level 40; every badge on screen.
       { await ev(() => SP.load(1)); const m0 = await ev(() => SP.meta()), cap0 = (await S()).cap;
         const onScreen = await ev(() => Array.from(document.querySelectorAll(".pw")).every((b) => { const r = b.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth; }));
-        await tap('.pw[data-k="0"]'); const m1 = await ev(() => SP.meta()); await tap('.pw[data-k="0"]'); const m2 = await ev(() => SP.meta()), s1 = await S();
-        ok(onScreen && m1.inv.ladder === 1 && m1.coins < m0.coins && m2.inv.ladder === 0 && s1.cap === cap0 + 1, tag + " power-up bar: every badge on screen; a real tap buys a Ladder (" + m0.coins + " -> " + m1.coins + " coins), a second uses it (" + cap0 + " -> " + s1.cap + " spaces)");
-        await ev(() => SP.load(40)); await tap('.pw[data-k="1"]'); await tap('.pw[data-k="1"]');
+        const shownK = await ev(() => Array.from(document.querySelectorAll(".pw")).map((b) => (b.hidden ? 0 : 1)).join(""));
+        await tap('.pw[data-k="0"]'); const m2 = await ev(() => SP.meta()), s1 = await S(); // v5 R1: the tap also takes the unlock tip away (a capture listener)
+        ok(onScreen && shownK === "10000" && m0.inv.ladder === 1 && m0.got.ladder === 1 && m2.inv.ladder === 0 && m2.coins === m0.coins && s1.cap === cap0 + 1, tag + " power-up bar (v5 R1): a fresh campaign shows the Ladder only (" + shownK + ") with its free use; a real tap uses it (" + cap0 + " -> " + s1.cap + " spaces, nothing spent)");
+        await ev(() => { SP.allPowers(true); SP.load(40); }); await tap('.pw[data-k="1"]'); await tap('.pw[data-k="1"]');
         const ask = await ev(() => document.querySelectorAll("#tray .tile.next.pickable").length); await tap("#tray .tile.next.pickable");
         const m3 = await ev(() => SP.meta()), s3 = await S();
         ok(ask > 0 && m3.inv.quartermaster === 0 && m3.used[1] === 1 && m3.pick === -1, tag + " power-up bar: a real tap buys a Quartermaster, a second asks (" + ask + " tiles glow), a real tap on a tile sends it out (v5 R1)");
-        await page.waitForTimeout(200); if (vp.shots === "375" || vp.shots === "iframe") await shot("power-bar"); await ev(() => SP.load(1)); }
+        await page.waitForTimeout(200); if (vp.shots === "375" || vp.shots === "iframe") await shot("power-bar"); await ev(() => { SP.allPowers(false); SP.load(1); }); }
       // A patient win through the cards: tap, then wait until every squad is home, then the next tap.
       const quiet = () => ev(() => { for (let i = 0; i < 6000 && SP.state().busy; i++) SP.tick(16); return SP.state(); });
       const win = await ev(() => SP.winOrder());

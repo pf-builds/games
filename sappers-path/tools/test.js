@@ -1208,5 +1208,18 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
 }
 
 if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " + deferred.length + " checks: " + deferred.join("; "));
+// ---- v5 R1: power-up unlocks (meta.js unlockAt, isOpen, grant; the save's got) ------------------------------------------------
+{
+  const Save = require("../src/save.js"), Meta = require("../src/meta.js");
+  eq([0, 1, 2, 3, 4].map((k) => Meta.unlockAt(META, k)), [1, 25, 100, 50, 125], "unlocks: Ladder 1, Quartermaster 25, Scout 100, Recall 50, Volley 125 (config)");
+  const D = Save.fresh(META);
+  eq([Meta.grant(D, META, 1), D.inv, D.got], [[0], { ladder: 1, quartermaster: 0, scout: 0, recall: 0, volley: 0 }, { ladder: 1 }], "unlocks: a new player at level 1 gets the Ladder and its free use");
+  eq([Meta.grant(D, META, 24), Meta.grant(D, META, 25), Meta.grant(D, META, 25), D.inv.quartermaster], [[], [1], [], 1], "unlocks: the Quartermaster opens at 25, its free use given once");
+  eq([Meta.grant(D, META, 200), D.inv], [[2, 3, 4], { ladder: 1, quartermaster: 1, scout: 1, recall: 1, volley: 1 }], "unlocks: past the campaign every one is open (Recall, Scout, Volley given once each)");
+  eq([Meta.isOpen(META, 4, 124), Meta.isOpen(META, 4, 125)], [false, true], "unlocks: the Volley is hidden at 124, open at 125");
+  const R = Save.sanitize({ v: 2, got: { ladder: 1, scout: true, volley: 2, junk: 1 }, inv: {} }, [], [], META);
+  eq(R.got, { ladder: 1 }, "unlocks (save): got keeps only 1s for known power-ups");
+}
+
 console.log(pass + " passed, " + fail + " failed");
 process.exitCode = fail ? 1 : 0;
