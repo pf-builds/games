@@ -589,6 +589,37 @@ const ROW6 = ["abcdef", "......", "..##.."]; // six colours, one pixel each, all
   F.revive(); eq([evs(F, E.EV.CLEAR).map(([c, m]) => m), F.lineLen, pat(F, 0)], [[3, 4, 5, 6, 2], 0, E.WON], "continue: every squad finishes in tap order (c, d, e, f, b), the line empties, and the level is won after");
 }
 
+// ---- v5 R1: mystery blocks (hidden board pixels) ---------------------------------------------------------------------------
+{
+  const G = [".......", ".aaaaa.", ".abbca.", ".aaaaa.", "...#..."], HID = [".......", ".?.?...", ".?.?...", ".......", "......."];
+  throws(() => E.compile(lv(G, null, { hidden: ["?......", ".......", ".......", ".......", "......."] })), "mystery blocks: a ? on open ground throws");
+  throws(() => E.compile(lv(G, null, { hidden: [".......", "......", ".......", ".......", "......."] })), "mystery blocks: a short row throws");
+  throws(() => E.compile(lv(G, null, { hidden: [".......", ".x.....", ".......", ".......", "......."] })), "mystery blocks: anything but ? and . throws");
+  throws(() => E.compile(lv(["......ggg", ".........", "aa.aa.aa.", ".........", "....##..."], null, { towers: [{ at: [7, 0], r: 3 }], hidden: ["......?..", ".........", ".........", ".........", "........."] })), "mystery blocks: a ? on a tower throws");
+  // (1,1), (1,2) and (3,1) are ring a's touching the open ground around the ring: exposed from the start. (3,2), a b inside
+  // the ring, is hidden. An a squad of 1 eats (3,3), the ring's cell nearest the camp: (3,2) touches the new ground and
+  // shows (SHOW, after the EAT).
+  const L = lv(G, [[[1, 1], [1, 11]], [[2, 2]], [[3, 1]], [], []], { hidden: HID }), B = E.compile(L), S = E.sim(B, N); S.logOn = true;
+  eq([B.nhid, S.hiddenCell(1 * 7 + 1), S.hiddenCell(2 * 7 + 1), S.hiddenCell(1 * 7 + 3), S.hiddenCell(2 * 7 + 3), S.hiddenLeft], [4, false, false, false, true, 1], "mystery blocks: three touch open ground from the start (shown); the b inside is hidden");
+  S.clearLog(); pat(S, 0); const typ = []; for (let i = 0; i < S.evLen; i += 3) typ.push(S.ev[i]);
+  eq([evs(S, E.EV.EAT).map(([c]) => xy(B, c)), evs(S, E.EV.SHOW), S.hiddenCell(2 * 7 + 3), S.hiddenCell(1 * 7 + 3), typ.indexOf(E.EV.EAT) < typ.indexOf(E.EV.SHOW)], [[[3, 3]], [[17, 2]], false, false, true], "mystery blocks: eating (3,3) exposes the b at (3,2) (SHOW 17 2, after the EAT)");
+  const R = Ref.game(L, N); const r0 = [R.hiddenCell(17), R.hiddenCell(10), R.hiddenCell(8)]; R.play(0); R.quiet();
+  eq([r0, R.hiddenCell(17), R.hiddenCell(10)], [[true, false, false], false, false], "mystery blocks (reference): the same");
+  // The picture's outer edge shows from the start (a pic board: x 1, y 1, x w-2, y h-2).
+  const P = E.compile(lv([",,,,,,,", ",aaaaa,", ",abbba,", ",aaaaa,", ",,,#,,,"].map((r, y) => (y === 4 ? ",,###,," : r)), null, { pic: true, hidden: [".......", ".?.?...", "...?...", ".......", "......."] }));
+  eq([P.nhid, P.hid0[1 * 7 + 1], P.hid0[2 * 7 + 3]], [1, 0, 1], "mystery blocks: on a picture, flags on the outer edge mean nothing; an inner one hides");
+  // A board's play never depends on the flags (information only): the same moves with and without them.
+  const A = E.sim(E.compile(lv(G, L.cols)), N), Z = E.sim(B, N); for (const j of [0, 0, 1, 2]) { A.play(j); A.quiet(); Z.play(j); Z.quiet(); }
+  eq([A.now, A.pixLeft, A.status], [Z.now, Z.pixLeft, Z.status], "mystery blocks: the flags change no rule");
+  // The lookahead player can't see where hidden colours are: two boards that differ only by swapping two hidden blocks'
+  // colours score every tap the same.
+  const G2 = [".........", ".aaaaaaa.", ".abcbcba.", ".aaaaaaa.", "....#...."], H2 = [".........", ".........", "..?????..", ".........", "........."];
+  const sw = G2.slice(); sw[2] = ".acbcbca.";
+  const C2 = [[[1, 16]], [[2, 3]], [[3, 2]], [], []], look = (g) => { const Sx = E.sim(E.compile(lv(g, C2, { hidden: H2 })), N), o = new Float64Array(5); Gr.look(Sx, new Int32Array(Sx.M.length), o); return Array.from(o); };
+  const l1 = look(G2), l2 = look(sw);
+  eq([JSON.stringify(l1) === JSON.stringify(l2), Gr.HIDE_SAMPLES], [true, 4], "mystery blocks: the lookahead's scores are the same whichever way the hidden colours lie (" + JSON.stringify(l1) + ")");
+}
+
 // ---- dealing mode (the dealer, M3) -------------------------------------------------------------------------------------------
 {
   const D = E.sim(E.compile(lv(RING)), hold(2), { deal: true });
@@ -627,6 +658,7 @@ function inject(L0, seed) {
       L.cols[ri(5)].push([E.GILT, 1]); L.lock = { key: [x, y] };
     }
   } else if (r() < 0.5) { const ms = []; L.cols.forEach((col) => col.forEach((cd) => { if (ms.indexOf(cd[0]) < 0) ms.push(cd[0]); })); if (ms.length) L.lock = { colour: ms[ri(ms.length)] }; } // v5 R1: a colour lock
+  if (r() < 0.5) { const B0 = E.compile(L); L.hidden = L.grid.map((row, y) => row.split("").map((ch, x) => { const c = y * L.w + x, m = B0.a0[c]; return m > 0 && m !== E.IRON && B0.keyOf[c] < 0 && c !== B0.lockKey && B0.towerOf[c] < 0 && r() < 0.3 ? "?" : "."; }).join("")); } // v5 R1: mystery blocks
   return L;
 }
 const DEBUG = require("../levels/debug-v4.json").levels;
@@ -658,7 +690,7 @@ const TWISTED = DEBUG.concat(LEVELS.levels.filter((l, k) => k % 2 === 1).map((l,
 
 // ---- differential on twisted levels: engine vs the reference, patient and rushed ------------------------------------------
 {
-  let games = 0, taps = 0, refused = 0, pops = 0, diffs = 0, pairs = 0, unlocks = 0, reveals = 0; const t0 = Date.now();
+  let games = 0, taps = 0, refused = 0, pops = 0, diffs = 0, pairs = 0, unlocks = 0, reveals = 0, hidChk = 0; const t0 = Date.now();
   const rline = (R) => R.spaces.map((s, k) => [k, s]).filter(([, s]) => s).sort((p, q) => p[1].seq - q[1].seq).map(([k, s]) => [s.m, s.wait + s.out, s.pair == null ? -1 : R.spaces[s.pair].seq]);
   const eline = (S) => S.order().map((s) => [S.spM[s], S.spW[s] + S.spO[s], S.spL[s] ? S.spQ[S.spL[s] - 1] : -1]);
   for (const L of TWISTED) {
@@ -684,6 +716,7 @@ const TWISTED = DEBUG.concat(LEVELS.levels.filter((l, k) => k % 2 === 1).map((l,
         else if (S.now !== R.now || S.open !== R.open || S.locked !== R.locked) bad = "clock or lock";
         else if (JSON.stringify(colsE) !== JSON.stringify(colsR)) bad = "columns";
         else if (JSON.stringify(hidE) !== JSON.stringify(hidR)) bad = "hidden cards";
+        else if (B.nhid) { let hc = 0; for (let c = 0; c < B.n; c++) if (S.hiddenCell(c) !== R.hiddenCell(c)) hc++; if (hc) bad = "hidden blocks (" + hc + ")"; else hidChk++; }
       }
       if (!bad) { S.quiet(); R.quiet(); const st = S.status === E.WON ? "won" : S.status === E.FAILED ? "failed" : "playing"; if (st !== R.status || S.reason !== R.reason || S.jamWhy !== R.jamWhy) bad = "final " + st + "/" + R.status; }
       pops += mine.length; games++;
@@ -691,7 +724,7 @@ const TWISTED = DEBUG.concat(LEVELS.levels.filter((l, k) => k % 2 === 1).map((l,
     }
   }
   eq(diffs, 0, "differential (twists): engine == reference on " + games + " games (" + taps + " taps, " + refused + " refused, " + pops + " pops; " + pairs + " pairs, " + unlocks + " unlocks, " + reveals + " reveals): pops and times, status, reason and jamWhy, spaces and pairs, columns, hidden cards, lock");
-  ok(pairs > 0 && unlocks > 0 && reveals > 0 && refused > 0, "differential (twists): the games exercise pairs, unlocks, reveals and refusals");
+  ok(pairs > 0 && unlocks > 0 && reveals > 0 && refused > 0 && hidChk > 0, "differential (twists): the games exercise pairs, unlocks, reveals, refusals and (v5 R1) mystery blocks (" + hidChk + " checks of every hidden block)");
   console.log("  differential (twists): " + games + " games in " + ((Date.now() - t0) / 1000).toFixed(1) + " s");
 }
 
@@ -1115,6 +1148,7 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
         else if (S.now !== R.now || S.open !== R.open || S.cap !== rules.hold + R.extra) bad = what + ": clock or spaces";
         else if (JSON.stringify(colsOf(S)) !== JSON.stringify(colsR)) bad = what + ": columns " + JSON.stringify(colsOf(S)) + " / " + JSON.stringify(colsR);
         else if (JSON.stringify(hidE) !== JSON.stringify(hidR)) bad = what + ": hidden cards";
+        else if (B.nhid) { let hc = 0; for (let c = 0; c < B.n; c++) if (S.hiddenCell(c) !== R.hiddenCell(c)) hc++; if (hc) bad = what + ": hidden blocks (" + hc + ")"; }
       }
       if (!bad) { S.quiet(); R.quiet(); restCheck(); const st = S.status === E.WON ? "won" : S.status === E.FAILED ? "failed" : "playing"; if (st !== R.status || S.reason !== R.reason) bad = "final " + st + "/" + R.status; }
       games++;

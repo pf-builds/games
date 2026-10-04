@@ -50,6 +50,7 @@
     "yardRows": 3,
     "maxCellCss": 22,
     "maxDpr": 3,
+    "hidden": {"note": "v5 R1, a mystery block on the board: a flat stud in c with a pixel ? (glyph rows, q its colour) filling size of the face; the same for every hidden block, so its colour never shows before it is exposed.", "c": "#3a3f63", "q": "#f3ead8", "size": 0.62, "glyph": ["###", "..#", ".##", "...", ".#."]},
     "stud": {"note": "v4 M1 flat stud: seam width in CSS px and its tone (the block's colour toward black), face corner radius (fraction of the face), a soft highlight band on the face's top (hi toward white, hiH of the face) and a faint foot (lo toward black, loH), and a small glint [x, y, w, h] as fractions of the face.", "seamCss": 1, "seam": -0.34, "radius": 0.22, "hi": 0.14, "hiH": 0.12, "lo": -0.07, "loH": 0.14, "glint": [0.14, 0.14, 0.28, 0.16], "glintAlpha": 0.5},
     "hi": 0.34,
     "lo": -0.3,
@@ -293,6 +294,7 @@
       "cols": [[[2, 1], [1, 16]], [[3, 1], [6, 1]], [[4, 1]], [[5, 1]], []], "links": [[[0, 1], [1, 1]]]},
     "lockJamLevel": {"name": "Lock jam check", "w": 9, "h": 5, "grid": [".........", ".aaaaaaa.", ".abcdena.", ".aaaaaaa.", "....#...."],
       "cols": [[[2, 1], [1, 16]], [[3, 1]], [[4, 1]], [[5, 1]], [[14, 1]]], "lock": {"key": [6, 2]}},
+    "hiddenLevel": {"name": "Mystery block check", "w": 9, "h": 5, "grid": [".........", ".aaaaaaa.", ".abcdefa.", ".aaaaaaa.", "....#...."], "hidden": [".........", "...?.....", "..?????..", ".........", "........."], "cols": [[[1, 16]], [[2, 1]], [[3, 1]], [[4, 1]], [[5, 1], [6, 1]]]},
     "colourLockLevel": {"name": "Colour lock check", "w": 9, "h": 5, "grid": [".........", ".aaaaaaa.", ".abcdefa.", ".aaaaaaa.", "....#...."], "cols": [[[1, 16]], [[2, 1]], [[3, 1]], [[4, 1]], [[5, 1], [6, 1]]], "lock": {"colour": 1}},
     "debugOrder": ["v4-mystery", "v4-linked", "v4-locked", "v4-all"]
   },

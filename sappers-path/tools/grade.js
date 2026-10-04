@@ -58,20 +58,41 @@ function view(S) {
 // sapper totals keep the real colour, which only matters to a Hard kill, and the player is graded on Normal.) With the
 // comparison flag mergeLeftovers off, nothing else in a one-tap trial reads a colour the player can't see: the new
 // front's colour never changes the outcome (a refusal and a jam depend only on free spaces and links).
+// v5 R1, mystery blocks: the player can't see a hidden block's colour either. While any block still shows "?", each tap
+// is scored as the mean over HIDE_SAMPLES (bake-config hiddenBlocks.samples) boards on which the hidden blocks' colours
+// are dealt again among them: the colours of every hidden block, sorted, then shuffled by a generator seeded from the
+// position's hash and the sample number. So the scores never depend on where the hidden colours really are, only on
+// what is countable (which colours are hidden, and how many of each). Writing S.a on hidden cells is safe: a hidden block
+// is never in reach (in reach means exposed), claimed, a gate, a key or a tower, and the per-colour counts don't change.
+const HIDE_SAMPLES = (() => { try { return require("./bake-config.json").hiddenBlocks.samples | 0; } catch (e) { return 0; } })() || 4;
 function look(S, buf, out) {
   const B = S.B; S.save(buf);
   let u = null;
-  for (let j = 0; j < E.NCOL; j++) {
-    out[j] = Infinity; if (!legal(S, j)) continue;
+  const H = []; if (B.nhid) for (let c = 0; c < B.n; c++) if (S.hiddenCell(c)) H.push(c);
+  const pal = H.map((c) => S.a[c]).sort((x, y) => x - y), perm = new Int32Array(H.length), seed = H.length ? S.hash() % 2147483647 : 0;
+  let deal = () => {}; // re-deals the hidden colours after each load (no-op without hidden blocks)
+  const one = (j) => { // the existing one-tap score of column j, on the board as it is dealt now
     const ci = S.front(j), p = S.partner(ci);
-    if (p < 0 || !S.hidden(p)) { S.play(j); S.quiet(); out[j] = score(S); S.load(buf); continue; }
+    if (p < 0 || !S.hidden(p)) { S.play(j); S.quiet(); const v = score(S); S.load(buf); deal(); return v; }
     if (!u) u = view(S).unseen;
     const real = B.cardM[p], k = B.cardN[p]; let sum = 0, wsum = 0;
     for (let pass = 0; pass < 2 && !wsum; pass++) for (let m = 1; m < E.NMAT; m++) {
       const wt = pass ? (S.left[m] > 0 ? 1 : 0) : u[m] >= k ? u[m] : 0; if (!wt || m === E.IRON) continue; // pass 1: any colour on the board
-      B.cardM[p] = m; S.play(j); S.quiet(); sum += wt * score(S); wsum += wt; S.load(buf); B.cardM[p] = real;
+      B.cardM[p] = m; S.play(j); S.quiet(); sum += wt * score(S); wsum += wt; S.load(buf); deal(); B.cardM[p] = real;
     }
-    out[j] = wsum ? sum / wsum : 1e6;
+    return wsum ? sum / wsum : 1e6;
+  };
+  for (let j = 0; j < E.NCOL; j++) {
+    out[j] = Infinity; if (!legal(S, j)) continue;
+    if (!H.length) { out[j] = one(j); continue; }
+    let sum = 0;
+    for (let k = 0; k < HIDE_SAMPLES; k++) {
+      const r = rng(seed ^ Math.imul(k + 1, 0x9E3779B1)); perm.set(pal);
+      for (let i = perm.length - 1; i > 0; i--) { const q = Math.floor(r() * (i + 1)), t = perm[i]; perm[i] = perm[q]; perm[q] = t; }
+      deal = () => { for (let i = 0; i < H.length; i++) S.a[H[i]] = perm[i]; }; deal();
+      sum += one(j);
+    }
+    deal = () => {}; S.load(buf); out[j] = sum / HIDE_SAMPLES;
   }
   return out;
 }
@@ -269,4 +290,4 @@ function pace(B, rules, order, thinkMs) {
   return { won: S.status === E.WON && i === order.length, ms: S.now, taps: i };
 }
 
-module.exports = { rate, greedy, orders, solve, narrow, line, fast, view, look, plan, pace, legal, rng };
+module.exports = { HIDE_SAMPLES, rate, greedy, orders, solve, narrow, line, fast, view, look, plan, pace, legal, rng };

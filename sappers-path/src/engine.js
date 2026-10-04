@@ -100,6 +100,10 @@
 //   and are paired. Refused (nothing changes) when the spaces aren't free. Not a play. Log: REVEAL for each hidden card
 //   that leaves and each hidden new front, POWER 1 a, TAP (TAP, LINK), UNLOCK (a colour lock), then the dispatch at that
 //   instant and the end checks. No jam test: like a tap, it may fill the line with a squad that can't reach.
+//   Mystery blocks (hidden: ["?" grid], from level 150 later): information only, no rule reads it. A flagged block is
+//   hidden until it is exposed: it touches connected ground (the moment a neighbour becomes connected ground, or at the
+//   start), or it sits on the picture's outer edge (shown from the start). Exposed, it shows for good (SHOW cell m, after
+//   the pop or gate that exposed it; at load nothing is logged). hiddenCell(c) says which still show "?".
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
@@ -236,6 +240,18 @@
       if (L.lock.key != null) { const k = cellAt(L.lock.key, "lock key"); if (a0[k] !== GILT || keyOf[k] >= 0) throw new Error("level: the lock's key is not a free gilt cell"); lockKey = k; }
       else { const m = L.lock.colour; if (!(Number.isInteger(m) && m >= 1 && m < NMAT && m !== IRON && cardM.indexOf(m) >= 0)) throw new Error("level: a colour lock's colour has no card"); lockMat = m; }
     }
+    // v5 R1, mystery blocks: hidden: [h strings of w chars], "?" a hidden block, "." not. Only on a plain material pixel
+    // (not iron, a key, the lock's key or a tower). A block on the picture's outer edge (a pic board: x 1 or w-2, y 1 or
+    // h-2; else the grid's border) shows from the start, so its flag means nothing.
+    const hid0 = new Uint8Array(n); let nhid = 0;
+    if (L.hidden != null) {
+      if (!Array.isArray(L.hidden) || L.hidden.length !== h) throw new Error("level: hidden must be " + h + " rows");
+      for (let y = 0; y < h; y++) { const r = L.hidden[y]; if (typeof r !== "string" || r.length !== w) throw new Error("level: hidden row " + y + " is not " + w + " wide");
+        for (let x = 0; x < w; x++) { const ch = r[x], c = y * w + x; if (ch === ".") continue; if (ch !== "?") throw new Error("level: hidden takes ? and . only");
+          if (!(a0[c] > 0) || a0[c] === IRON || keyOf[c] >= 0 || c === lockKey || towerOf[c] >= 0) throw new Error("level: a hidden flag on a non-plain cell at " + x + "," + y);
+          const edge = pic ? x <= 1 || y <= 1 || x >= w - 2 || y >= h - 2 : x === 0 || y === 0 || x === w - 1 || y === h - 1;
+          if (!edge) { hid0[c] = 1; nhid++; } } }
+    }
     const pix = new Int32Array(NMAT); for (let c = 0; c < n; c++) if (a0[c] > 0) pix[a0[c]]++;
     const hoff = new Int32Array(NMAT + 1); for (let m = 0; m < NMAT; m++) hoff[m + 1] = hoff[m] + (m === IRON ? 0 : pix[m]);
     // Zobrist keys for eaten cells (fixed-seed, so hashes are stable across runs).
@@ -245,7 +261,7 @@
     let pixTotal = 0; for (let m = 1; m < NMAT; m++) pixTotal += pix[m];
     return { w, h, n, a0, nb, rank, near, campRow, gateOf, keyOf, gateCells, towerOf, cover, towers, cardM: Int32Array.from(cardM), cardN: Int32Array.from(cardN),
       colStart, colLen, sapTotal, pix, hoff, Z1, Z2, pixTotal, ncards: cardM.length, safeArchers: L.safeArchers === true,
-      cardF: Int32Array.from(cardF), cardCol: Int32Array.from(cardCol), linkOf, links: Int32Array.from(links), nlinks: links.length >> 1, lockKey, lockMat, pic };
+      cardF: Int32Array.from(cardF), cardCol: Int32Array.from(cardCol), linkOf, links: Int32Array.from(links), nlinks: links.length >> 1, lockKey, lockMat, pic, hid0, nhid };
   }
 
   // Timing (config v3.time, whole ms of engine time; the page plays engine time at show.pace x real time). Every value
@@ -279,7 +295,7 @@
     const oA = at(n), oD = at(n), oK = at(n), oP = at(n), oH = at(B.hoff[NMAT]), oHL = at(NMAT), oLeft = at(NMAT), oSap = at(NMAT), oT = at(MAXTOWERS),
       oHead = at(NCOL), oSM = at(MAXLINE), oSW = at(MAXLINE), oSO = at(MAXLINE), oSF = at(MAXLINE), oSN = at(MAXLINE), oSQ = at(MAXLINE), oOrd = at(MAXLINE),
       oS = at(32), oQS = at(SMAX), oQC = at(SMAX), oQK = at(SMAX), oQ0 = at(SMAX), oQ1 = at(SMAX), oQ2 = at(SMAX), oET = at(EMAX), oEQ = at(EMAX), oEX = at(EMAX),
-      oGone = at(B.ncards + 1), oSL = at(MAXLINE), oSeq = at(B.ncards + 1), oPos = at(B.ncards + 1), oShown = at(B.ncards + 1), oCn = at(B.ncards + 1), oSC = at(MAXLINE), oCut = at(B.ncards + 1);
+      oGone = at(B.ncards + 1), oSL = at(MAXLINE), oSeq = at(B.ncards + 1), oPos = at(B.ncards + 1), oShown = at(B.ncards + 1), oCn = at(B.ncards + 1), oSC = at(MAXLINE), oCut = at(B.ncards + 1), oSeen = at(B.nhid ? n : 1);
     const M = new Int32Array(o), init = new Int32Array(o);
     const sub = (k, len) => M.subarray(k, k + len);
     const a = sub(oA, n), d = sub(oD, n), hk = sub(oK, n), hpos = sub(oP, n), heap = sub(oH, B.hoff[NMAT]);
@@ -298,12 +314,13 @@
     // card's count: a Recall rewrites it) and each space's card + 1 (0: none, e.g. dealing).
     const seq = sub(oSeq, B.ncards), pos = sub(oPos, B.ncards), shown = sub(oShown, B.ncards), cn = sub(oCn, B.ncards), spC = sub(oSC, MAXLINE);
     // v5 R1: cut (a card a Volley took out of the queue: its link is cut, so its partner plays alone); partnerOf honours it.
+    const seen = sub(oSeen, B.nhid ? n : 1); // v5 R1: a hidden block once exposed (its colour shows for good)
     const cut = sub(oCut, B.ncards), partnerOf = (ci) => { const p = linkOf[ci]; return p >= 0 && !cut[p] ? p : -1; };
     // Scalars in M[oS + k]. LOCK: spaces still locked (v4 M2); JAMK: why a jam happened (bits, see settle); v4 M5: XCAP
     // spaces added by Ladders, PWANY 1 once any power-up was used, USE..USE+3 the uses of each.
     const S_LEN = oS, S_PIX = oS + 1, S_STAND = oS + 2, S_STATUS = oS + 3, S_REASON = oS + 4, S_HITS = oS + 5, S_KILLS = oS + 6, S_Z1 = oS + 7, S_Z2 = oS + 8,
       S_PEAK = oS + 9, S_PLAYS = oS + 10, S_FAILM = oS + 11, S_NOW = oS + 12, S_SN = oS + 13, S_EL = oS + 14, S_ESEQ = oS + 15, S_ORD = oS + 16, S_TAPS = oS + 17, S_OUT = oS + 18, S_DISP = oS + 19,
-      S_LOCK = oS + 20, S_JAMK = oS + 21, S_XCAP = oS + 22, S_PWANY = oS + 23, S_USE = oS + 24, S_CONT = oS + 30;
+      S_LOCK = oS + 20, S_JAMK = oS + 21, S_XCAP = oS + 22, S_PWANY = oS + 23, S_USE = oS + 24, S_CONT = oS + 30, S_SHOWN = oS + 31;
     const CLAIMED = -2;
     const capNow = () => cap + M[S_XCAP]; // the line's spaces (Ladders included; locked ones too)
     const q = new Int32Array(n);
@@ -329,7 +346,9 @@
     }
     // A claimed pixel (a sapper is on its way) is out of the heap and stays out: touch leaves it alone.
     function touch(p, dist) {
-      const m = a[p]; if (m <= 0 || gateOf[p] >= 0 || hk[p] === CLAIMED) return;
+      const m = a[p]; if (m <= 0) return;
+      if (B.hid0[p] && !seen[p]) { seen[p] = 1; M[S_SHOWN]++; log(EV.SHOW, p, m); } // v5 R1: a mystery block touches connected ground: exposed
+      if (gateOf[p] >= 0 || hk[p] === CLAIMED) return;
       const key = dist * n + rank[p];
       if (hk[p] < 0) { hk[p] = key; const i = hlen[m]++; heap[hoff[m] + i] = p; up(m, i); } else if (key < hk[p]) { hk[p] = key; up(m, hpos[p]); }
     }
@@ -770,6 +789,9 @@
       // v5 R1. revive(): the continue on a jam (REFUSED when not offered: nothing changes); canRevive(): would it be taken;
       // revived: continues used this attempt.
       revive: () => revive(), canRevive: () => reviveOK(), get revived() { return M[S_CONT]; },
+      // v5 R1, mystery blocks: hiddenCell(c): a block still showing "?" (flagged, never exposed, standing); hiddenLeft: how
+      // many (the player can't count them by colour; the page must never show one's colour).
+      hiddenCell: (c) => B.nhid > 0 && c >= 0 && c < n && B.hid0[c] === 1 && !seen[c] && a[c] > 0, get hiddenLeft() { if (!B.nhid) return 0; let k = 0; for (let c = 0; c < n; c++) if (B.hid0[c] && !seen[c] && a[c] > 0) k++; return k; },
     };
   }
 

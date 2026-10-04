@@ -27,8 +27,8 @@ The rules engine batch (rules and meta only; levels are re-laid in R2). Source o
 | 5 | Quartermaster rework (any visible card straight out) | done | 60c6770 |
 | 6 | Volley power-up (clear one colour) | done | 180e37c |
 | 7 | Speed: 1x, 2x bought per round, 3x debug only | done | 507bff8 |
-| 8 | Power-up unlocks, free first use, tooltips | done | (this commit) |
-| 9 | Mystery blocks (hidden board pixels) | todo | |
+| 8 | Power-up unlocks, free first use, tooltips | done | fd15383 |
+| 9 | Mystery blocks (hidden board pixels) | done | (this commit) |
 | 10 | Extreme tag (data, display, coins) | todo | |
 | 11 | Freeze test (tool + fixture) | todo | |
 | 12 | SPEC-v4 §9 v5 R1 entry, `tools/v5-r1-notes.md`, cache tag `?v=30`, harness and selfTest pass | todo | |

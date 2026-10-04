@@ -1864,6 +1864,11 @@
         bt.click(); ok(!app.panel && $("panel").hidden && app.S.status === E.PLAYING && app.S.lineLen === 0 && (app.save.data.coins | 0) === 5 && app.S.revived === 1, "continue: paid, the sheet goes, the line is empty, " + C.price + " coins spent");
         patient("0"); settleNow(); ok(app.S.status === E.WON, "continue: play goes on and the level can be won");
         app.save.data.coins = 1000; jam(); ok(shown($("p-cont")) && app.S.revived === 0, "continue: a new attempt offers it again (one per attempt; the engine tests cover the second jam)"); }
+      // 22d. v5 R1, mystery blocks (selfTest.hiddenLevel): the board draws "?" exactly where the engine hides a block (a flag
+      // on a block touching open ground from the start means nothing); razing the a ring exposes them all, each once.
+      { const e = fx("hiddenLevel"); startLevel(e.id); const V = app.V, S = app.S, same = () => { for (let c = 0; c < app.B.n; c++) if (!!V.hid[c] !== S.hiddenCell(c)) return false; return true; };
+        const n0 = S.hiddenLeft, top = S.hiddenCell(1 * 9 + 3), s0 = same(); patient("0"); settleNow();
+        ok(n0 === 5 && !top && s0 && S.hiddenLeft === 0 && same() && app.V.checkSprites().indexOf("mystery") < 0, "mystery blocks: the board's ? blocks match the engine (5; the flagged ring block touching open ground shows), and razing the ring exposes them all"); }
       // 22b. v5 R1, the colour lock (selfTest.colourLockLevel): its socket shows the colour that opens it and says so; the
       // tap that sends a squad of that colour out opens it (one unlock cue).
       { const e = fx("colourLockLevel"), m = ST.colourLockLevel.lock.colour; startLevel(e.id); const S = app.S, last = app.slots[S.cap - 1], u0 = app.cues.unlock | 0;

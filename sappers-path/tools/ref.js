@@ -43,6 +43,8 @@
 // of m leaves its list (face up; its partner, if any, is no longer linked), every space of m is emptied at once (its
 // partner space plays on unpaired), and the sappers of m still walking out or back keep walking but no longer belong to
 // any space; a colour lock of m opens.
+// Mystery blocks (L.hidden, v5 R1): a "?" block shows "?" until it stands next to ground joined to the camp, or from the
+// start when it is on the picture's outer edge; then its colour shows for good (hiddenCell(c)).
 // pops: every popped pixel as [cell, time], in the order they popped.
 "use strict";
 const MATCH = { ".": 0, ",": -2, "~": -1, "#": -3 };
@@ -64,7 +66,9 @@ function load(L) {
   const cols = L.cols.map((c, j) => c.map((cd) => ({ m: cd[0], n: cd[1], mystery: cd[2] === 1, ci: ci++, partner: null, col: j, seen: false })));
   for (const P of L.links || []) { const a = cols[P[0][0]][P[0][1]], b = cols[P[1][0]][P[1][1]]; a.partner = b; b.partner = a; }
   const lockKey = L.lock && L.lock.key ? idx(L.lock.key) : -1, lockColour = L.lock && L.lock.colour ? L.lock.colour : 0;
-  return { w, h, g, campRow, gates, towers, cols, lockKey, lockColour };
+  // v5 R1, mystery blocks: the "?" cells of L.hidden, less those on the picture's outer edge (shown from the start).
+  const hid = new Set(); (L.hidden || []).forEach((r, y) => { for (let x = 0; x < w; x++) if (r[x] === "?" && !(L.pic ? x <= 1 || y <= 1 || x >= w - 2 || y >= h - 2 : x === 0 || y === 0 || x === w - 1 || y === h - 1)) hid.add(y * w + x); });
+  return { w, h, g, campRow, gates, towers, cols, lockKey, lockColour, hid };
 }
 
 function game(L, rules) {
@@ -79,6 +83,9 @@ function game(L, rules) {
   let extra = 0, revived = 0; const uses = [0, 0, 0, 0, 0], limits = rules.powers || [0, 0, 0, 0, 0], reach = rules.pullDepth == null ? 2 : rules.pullDepth;
   const seeFronts = () => { for (const c of cols) if (c.length) c[0].seen = true; };
   seeFronts();
+  // Mystery blocks: a "?" block is exposed for good once it stands next to ground connected to the camp.
+  const exposed = new Set(), expose = () => { if (!R.hid.size) return; const d = dist(); for (const c of R.hid) if (!exposed.has(c) && g[c] > 0 && DIRS.some(([dx, dy]) => { const e = at(c % w + dx, Math.floor(c / w) + dy); return e !== null && d[e] >= 0; })) exposed.add(c); };
+  const hiddenCell = (c) => R.hid.has(c) && !exposed.has(c) && g[c] > 0;
   const walk = (v) => v === 0 || v === -2 || v === -3;
   const at = (x, y) => (x < 0 || y < 0 || x >= w || y >= h ? null : y * w + x);
   function dist() {
@@ -149,6 +156,7 @@ function game(L, rules) {
       schedule(q.back, "home", { sapper: Object.assign({}, q, { hit: false }) });
       if (!left() && status === "playing") status = "won";
       if (!q.loose) { spaces[q.space].out--; freeIf(q.space); } // the block is picked up: the carrier no longer holds the space
+      expose();
     } else if (e.kind === "hit") {
       hitsN++; schedule(q.back, "home", { sapper: Object.assign({}, q, { hit: true }) });
     } else if (e.kind === "home") { // only a sapper sent back by an arrow rejoins its squad; a carrier is just home
@@ -167,6 +175,7 @@ function game(L, rules) {
     if (!fronts.length) fail("stuck");
     else if (fronts.every(refusedCard)) { fail("jam"); jamWhy = (free() > 0 ? 1 : 0) | (locked > 0 ? 2 : 0) | (fronts.some(buried) ? 4 : 0); }
   }
+  expose();
   function advanceTo(t) {
     for (let guard = 0; guard < 1e6; guard++) {
       if (!events.length) break;
@@ -226,7 +235,7 @@ function game(L, rules) {
       for (const c of cols) for (let i = c.length - 1; i >= 0; i--) if (c[i].m === m) { const cd = c[i]; c.splice(i, 1); cd.seen = true; if (cd.partner) { cd.partner.partner = null; cd.partner = null; } }
       for (const e of events) if (e.sapper && e.sapper.m === m && spaces[e.sapper.space] && spaces[e.sapper.space].m === m && (e.kind === "pop" || e.kind === "hit" || (e.kind === "home" && e.sapper.hit))) e.sapper.loose = true;
       spaces.forEach((sp, i) => { if (!sp || sp.m !== m) return; if (sp.pair != null && spaces[sp.pair]) { const o = sp.pair; spaces[o].pair = null; spaces[i] = null; freeIf(o); } else spaces[i] = null; });
-      sap[m] = 0; if (R.lockColour === m) locked = 0;
+      sap[m] = 0; if (R.lockColour === m) locked = 0; expose();
       uses[k]++; seeFronts(); dispatch(now); settle(); return;
     } else return "refused";
     uses[k]++; seeFronts(); settle();
@@ -247,9 +256,9 @@ function game(L, rules) {
     const near = nearOrder(), order = spaces.map((s, i) => [s, i]).filter(([s]) => s).sort((p, q) => p[0].seq - q[0].seq);
     for (const [s, i] of order) { let k = s.wait; s.wait = 0; for (const c of near) { if (k <= 0) break; if (g[c] === s.m && !isGate(c)) { remove(c); k--; } } freeIf(i); }
     if (!left()) status = "won";
-    dispatch(now); settle();
+    expose(); dispatch(now); settle();
   }
-  return { play, power, revive, advanceTo, quiet, hidden, get revived() { return revived; }, get cleared() { return clearedN; }, get status() { return status; }, get reason() { return reason; }, get now() { return now; }, get peak() { return peak; }, get extra() { return extra; },
+  return { play, power, revive, advanceTo, quiet, hidden, hiddenCell, get revived() { return revived; }, get cleared() { return clearedN; }, get status() { return status; }, get reason() { return reason; }, get now() { return now; }, get peak() { return peak; }, get extra() { return extra; },
     get hits() { return hitsN; }, get kills() { return killsN; }, get open() { return openN(); }, get locked() { return locked; }, get jamWhy() { return jamWhy; },
     spaces, pops, g, cols };
 }

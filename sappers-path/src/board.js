@@ -200,6 +200,16 @@
         x.fillStyle = shade(base, (j & 1 ? 1 : -1) * K.groundSpeck * (type === 3 ? 2.2 : 1)); x.fillRect(Math.round(px * (s - k)), Math.round(py * (s - k)), type === 3 ? k * 3 : k, k); }
       return c;
     }
+    // v5 R1: a mystery block's stud: the flat stud in board.hidden.c with a pixel "?" (board.hidden.q) on its face, the same
+    // for every hidden block whatever its colour.
+    function mysStud(s) {
+      const H = K.hidden, T = K.stud, c = mk(s, s), x = c.getContext("2d"), sw = Math.min(s >> 2, Math.max(1, Math.round(V.dpr * T.seamCss))), a = sw >> 1, f = s - sw;
+      x.fillStyle = toneHex(H.c, T.seam); x.fillRect(0, 0, s, s); rr(x, a, a, f, f, Math.max(0.5, f * T.radius)); x.fillStyle = H.c; x.fill();
+      x.save(); rr(x, a, a, f, f, Math.max(0.5, f * T.radius)); x.clip(); x.fillStyle = mixHex(H.c, T.hi); x.fillRect(a, a, f, Math.max(1, Math.round(f * T.hiH))); x.restore();
+      if (s >= 5) { const G = H.glyph, u = Math.max(1, Math.floor((f * H.size) / G.length)), gx = Math.round(a + (f - u * G[0].length) / 2), gy = Math.round(a + (f - u * G.length) / 2);
+        x.fillStyle = H.q; for (let r = 0; r < G.length; r++) for (let k = 0; k < G[r].length; k++) if (G[r][k] === "#") x.fillRect(gx + k * u, gy + r * u, u, u); }
+      return c;
+    }
     // v4.1: a water stud (the picture's moat): the flat stud in board.pic.water with a light wave across it; never a block.
     function waterStud(s) {
       const c = mk(s, s), x = c.getContext("2d"), P = K.pic, T = K.stud, sw = Math.min(s >> 2, Math.max(1, Math.round(V.dpr * T.seamCss))), a = sw >> 1, f = s - sw;
@@ -233,6 +243,7 @@
       const s = V.cs, ss = Math.max(6, Math.round(s * K.sapper.scale)), mb = Math.max(3, Math.round(s * K.sapper.carry)), as = Math.max(8, Math.round(s * K.archer.scale)), ls = Math.max(8, Math.round(s * K.lockScale));
       const S = { blk: [], tb: [], mini: [], sap: [], gnd: [], lock: [], ss, mb, as, ls, arch: null };
       for (let m = 1; m < E.NMAT; m++) { S.blk[m] = block(m, s); S.tb[m] = K.tones.map((k) => (k ? block(m, s, k) : S.blk[m])); S.mini[m] = block(m, mb, 0, 1); S.sap[m] = sapper(m, ss); }
+      S.blk[0] = mysStud(s); // v5 R1: a hidden block (and its pop): no colour of its own
       for (let t = 0; t < 4; t++) for (let v = 0; v < 2; v++) S.gnd[t * 2 + v] = ground(t, v, s);
       S.water = waterStud(s); S.entry = [0, 1, 2, 3].map((k) => entry(s, k));
       const A = K.archer; S.arch = figure(ARCH, { h: A.hood, s: A.skin, e: A.eye, b: A.body, w: A.bow, q: A.string, a: A.arrow }, as);
@@ -249,6 +260,7 @@
       const probe = (c, name) => { try { if (pc.width !== c.width || pc.height !== c.height) { pc.width = c.width; pc.height = c.height; } px.clearRect(0, 0, pc.width, pc.height); px.drawImage(c, 0, 0);
         const d = px.getImageData(0, 0, pc.width, pc.height).data; for (let i = 3; i < d.length; i += 4) if (d[i] !== 255) { bad.push(name); return; } } catch (e) { bad.push(name); } };
       for (let m = 1; m < E.NMAT; m++) { S.tb[m].forEach((c, v) => probe(c, "blk" + m + "." + v)); probe(S.mini[m], "mini" + m); }
+      probe(S.blk[0], "mystery");
       S.gnd.forEach((c, k) => probe(c, "gnd" + k));
       probe(S.water, "water"); S.entry.forEach((c, k) => probe(c, "entry" + k)); // v4.1 fix: the picture's caches too
       if (V.layer) probe(V.layer, "layer");
@@ -262,7 +274,7 @@
       V.B = B; V.S = S; V.w = B.w; V.h = B.h; V.n = B.n; V.pic = !!B.pic;
       const P = C.mats.map((m, k) => (pal && pal[k] ? pal[k].c : m ? m.c : FX.dustColor)), key = P.join();
       if (key !== V.palKey) { V.pal = P; V.palKey = key; for (let m = 1; m < E.NMAT; m++) if (m !== IRON) COL[m] = P[m]; V.sprites = null; }
-      if (!V.disp || V.disp.length < B.n) { V.disp = new Int8Array(B.n); V.dist = new Int16Array(B.n); V.q = new Int32Array(B.n); V.towerOfCell = new Int8Array(B.n); }
+      if (!V.disp || V.disp.length < B.n) { V.hid = new Uint8Array(B.n); V.disp = new Int8Array(B.n); V.dist = new Int16Array(B.n); V.q = new Int32Array(B.n); V.towerOfCell = new Int8Array(B.n); }
       if (V.idR.length < S.SMAX) V.idR = new Int32Array(S.SMAX);
       V.biteMs = S.T.biteMs; V.knockMs = S.T.knockMs;
       // v4.2: a route's points start at 2(w + h) + 8 a runner (any walk on these open boards) and a runner's arrays grow
@@ -354,7 +366,7 @@
     }
     function reset() {
       const B = V.B; if (!B) return;
-      V.disp.set(V.S.a.subarray(0, B.n)); V.dispVer++; V.haul.fill(0); V.lastPop = -1; V.left = V.S.pixLeft; V.t = V.S.now;
+      V.disp.set(V.S.a.subarray(0, B.n)); for (let c = 0; c < B.n; c++) V.hid[c] = V.S.hiddenCell(c) ? 1 : 0; V.dispVer++; V.haul.fill(0); V.lastPop = -1; V.left = V.S.pixLeft; V.t = V.S.now;
       V.rOn.fill(0); V.live = 0; V.rFreeN = 0; for (let i = RMAX - 1; i >= 0; i--) V.rFree[V.rFreeN++] = i; V.idR.fill(-1); V.stats.hits = 0; V.stats.dropped = 0;
       V.towerLeft.fill(0); for (let c = 0; c < B.n; c++) { const t = B.towerOf[c]; V.towerOfCell[c] = t; if (t >= 0 && t < MAXT && V.disp[c] > 0) V.towerLeft[t]++; }
       for (let k = 0; k < MAXG; k++) { const gc = B.gateCells[k]; V.gSt[k] = gc && gc.length && V.disp[gc[0]] > 0 ? 0 : 1; V.gT[k] = -1e12; }
@@ -384,6 +396,7 @@
     function paintCell(c) {
       if (!V.lg) return; // no layer until the first layout (a 0x0 frame); paintLayer redraws everything once it exists
       const S = V.sprites, cs = V.cs, bx = c % V.w, by = (c / V.w) | 0, x = CX(bx, by) * cs, y = CY(bx, by) * cs, v = V.disp[c];
+      if (v > 0 && V.hid[c]) { V.lg.drawImage(S.blk[0], x, y); return; } // v5 R1: a mystery block shows "?" only
       if (v > 0) { V.lg.drawImage(S.tb[v][V.tone[c]], x, y); const t = V.B.towerOf[c]; if (t >= 0 && !V.pic) rim(c, t, x, y); return; }
       if (V.pic && v === WATER) { V.lg.drawImage(S.water, x, y); return; } // v4.1: the moat is part of the picture
       V.lg.drawImage(V.pic && v === CAMP ? S.entry[(bx === V.cx0 ? 1 : 0) | (bx === V.cx1 ? 2 : 0)] : S.gnd[TYPE(v) * 2 + (hash(bx, by) & 1)], x, y);
@@ -575,7 +588,7 @@
     }
     // The fort's last fx.winFallN pixels fall and tumble instead of popping (the keep coming down).
     function eat(c, anim) {
-      const m = V.B.a0[c], fall = V.left <= FX.winFallN;
+      const m = V.hid[c] ? 0 : V.B.a0[c], fall = V.left <= FX.winFallN; V.hid[c] = 0; // v5 R1: a hidden block cleared unseen pops as "?"
       V.left--; popCell(c, m, anim, fall ? 1 : 0, 0);
       if (anim && V.hooks.pop) V.hooks.pop(c, m);
       if (anim && V.left <= 0) { const bx = c % V.w + 0.5, by = ((c / V.w) | 0) + 0.5; spawn(MX(bx, by), MY(bx, by), 0, FX.winDust >> 1, FX.dustSize * 1.4, FX.lift, FX.spread * 1.3); }
@@ -612,13 +625,14 @@
         else if (t === EV.LINK) { if (V.hooks.link) V.hooks.link(a, b); }
         else if (t === EV.UNLOCK) { V.lockOpen = true; if (anim && V.hooks.unlock) V.hooks.unlock(a); }
         else if (t === EV.POWER) { if (V.hooks.power) V.hooks.power(a, b); }
+        else if (t === EV.SHOW) { V.hid[a] = 0; paintCell(a); if (anim) { const bx = a % V.w + 0.5, by = ((a / V.w) | 0) + 0.5; spawn(MX(bx, by), MY(bx, by), 0, FX.dust, FX.dustSize, FX.lift * 0.3, FX.spread * 0.4); } if (V.hooks.show) V.hooks.show(a, b); } // v5 R1: a mystery block exposed
       }
       S.clearLog();
     }
     // The log overflowed (never at the configured sizes): rebuild the picture from the engine's state.
     function resync(S) {
       for (let i = 0; i < RMAX; i++) drop(i);
-      V.disp.set(S.a.subarray(0, V.n)); V.dispVer++; V.left = S.pixLeft;
+      V.disp.set(S.a.subarray(0, V.n)); for (let c = 0; c < V.n; c++) V.hid[c] = S.hiddenCell(c) ? 1 : 0; V.dispVer++; V.left = S.pixLeft;
       V.towerLeft.fill(0); for (let c = 0; c < V.n; c++) { const t = V.B.towerOf[c]; if (t >= 0 && t < MAXT && V.disp[c] > 0) V.towerLeft[t]++; }
       for (let k = 0; k < MAXG; k++) { const gc = V.B.gateCells[k]; V.gSt[k] = gc && gc.length && V.disp[gc[0]] > 0 ? 0 : 1; }
       V.lockOpen = !S.locked;
