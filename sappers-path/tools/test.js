@@ -1242,6 +1242,18 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
 }
 
 if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " + deferred.length + " checks: " + deferred.join("; "));
+// ---- v5 R1: the freeze test (tools/freeze.js) on its fixture snapshot -----------------------------------------------------
+{
+  const FZ = require("./freeze.js"), fs = require("fs"), os = require("os"), path = require("path"), fx = path.join(__dirname, "freeze-fixture");
+  const r0 = FZ.check(fx); eq([r0.ok, r0.files.map((f) => [f.levels, f.diffs])], [true, [[3, 0]]], "freeze: the fixture snapshot re-grades with 0 differences (" + (r0.files[0] || {}).checks + " checks)");
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "sp-freeze-")); fs.copyFileSync(path.join(fx, "frozen.json"), path.join(tmp, "frozen.json"));
+  const lv = JSON.parse(fs.readFileSync(path.join(fx, "levels.json"), "utf8")); lv.levels[1].grade.hard.ms += 1; fs.writeFileSync(path.join(tmp, "levels.json"), JSON.stringify(lv));
+  const r1 = FZ.check(tmp); eq([r1.ok, r1.files[0].diffs, /winning line/.test(r1.files[0].lines[0] || "")], [false, 1, true], "freeze: a stored grade off by 1 ms fails (" + (r1.files[0].lines[0] || "") + ")");
+  const v3 = JSON.parse(JSON.stringify(V3)); v3.time.tileMs += 1; const r2 = FZ.check(fx, v3);
+  ok(!r2.ok && r2.files[0].diffs >= 3, "freeze: a rule change (tileMs + 1) fails on every fixture level (" + r2.files[0].diffs + " differences)");
+  eq([FZ.check(path.join(tmp, "none")).missing], [true], "freeze: no snapshot reads as not baselined");
+  fs.rmSync(tmp, { recursive: true, force: true });
+}
 // ---- v5 R1: the Extreme tag (data and coins; R2 decides which levels wear it) -----------------------------------------------
 {
   const Meta = require("../src/meta.js"), TG = require("./tags.js");

@@ -1,0 +1,9 @@
+{
+ "note": "The freeze test's fixture snapshot (tools/freeze.js).",
+ "files": [
+  {
+   "file": "levels.json",
+   "kind": "siege"
+  }
+ ]
+}

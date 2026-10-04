@@ -1,0 +1,168 @@
+{
+ "note": "The freeze test's fixture boards (tools/freeze.js --make-fixture grades them into levels.json): a plain ring, a Hard level with a colour lock, and an Extreme level with mystery blocks and an archer tower.",
+ "levels": [
+  {
+   "id": "fx-ring",
+   "n": 1,
+   "tag": "normal",
+   "seed": 101,
+   "w": 7,
+   "h": 5,
+   "grid": [
+    ".......",
+    ".aaaaa.",
+    ".abbca.",
+    ".aaaaa.",
+    "...#..."
+   ],
+   "cols": [
+    [
+     [
+      1,
+      6
+     ],
+     [
+      1,
+      6
+     ]
+    ],
+    [
+     [
+      2,
+      2
+     ]
+    ],
+    [
+     [
+      3,
+      1
+     ]
+    ],
+    [],
+    []
+   ]
+  },
+  {
+   "id": "fx-lock",
+   "n": 60,
+   "tag": "hard",
+   "seed": 202,
+   "w": 9,
+   "h": 5,
+   "grid": [
+    ".........",
+    ".aaaaaaa.",
+    ".abcdefa.",
+    ".aaaaaaa.",
+    "....#...."
+   ],
+   "cols": [
+    [
+     [
+      1,
+      8
+     ],
+     [
+      2,
+      1
+     ]
+    ],
+    [
+     [
+      1,
+      8
+     ],
+     [
+      3,
+      1
+     ]
+    ],
+    [
+     [
+      4,
+      1
+     ]
+    ],
+    [
+     [
+      5,
+      1
+     ]
+    ],
+    [
+     [
+      6,
+      1
+     ]
+    ]
+   ],
+   "lock": {
+    "colour": 4
+   }
+  },
+  {
+   "id": "fx-hidden",
+   "n": 160,
+   "tag": "extreme",
+   "seed": 303,
+   "w": 9,
+   "h": 6,
+   "grid": [
+    "......ggg",
+    ".........",
+    "aaaaaaaa.",
+    "abbcbcba.",
+    ".........",
+    "....##..."
+   ],
+   "towers": [
+    {
+     "at": [
+      7,
+      0
+     ],
+     "r": 3
+    }
+   ],
+   "hidden": [
+    ".........",
+    ".........",
+    ".........",
+    ".??????..",
+    ".........",
+    "........."
+   ],
+   "cols": [
+    [
+     [
+      1,
+      9
+     ],
+     [
+      7,
+      3
+     ]
+    ],
+    [
+     [
+      2,
+      4
+     ]
+    ],
+    [
+     [
+      3,
+      2
+     ]
+    ],
+    [
+     [
+      1,
+      1
+     ]
+    ],
+    []
+   ]
+  }
+ ]
+}
