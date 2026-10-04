@@ -57,10 +57,16 @@ Source: the rules review's "Confirmed", "The feature ladder", "Tags mean how man
 |---|---|---|---|
 | 0 | Harness on R1's head before any change | done: all passed, 3:24 wall (no timeout; see notes §0) | (this file) |
 | 1 | Realms and tags in data (bake-config realms, tags.js realm-relative cycle, density rule, dealer settings) | done | (see git log) |
-| 2 | The re-lay tool (`tools/relay.js`: the slot map, board and deck edits) and the bake's `--relay` mode (kept deck first) | todo | |
-| 3 | Teaching levels 1, 2, 3, 25, 50, 75, 100 (teach-v4.js on the re-laid boards; coach lines) | todo | |
-| 4 | Siege bake 1-100 under v5 (scratch, checked, copied in) | todo | |
+| 2 | The re-lay tool (`tools/relay.js`: the slot map, board and deck edits) and the bake's `--relay` mode (kept deck first) | done (also gallery-bake `--keep`, quests.js, critic-v5) | e71ee6f |
+| 3 | Teaching levels 1, 2, 3, 25, 50, 75, 100 (teach-v4.js on the re-laid boards; coach lines) | built in scratch (`relay.js --teach-out` then `teach-v4.js --boards`), lands with 4 | |
+| 4 | Siege bake 1-100 under v5 (scratch, checked, copied in) | running: `bake.js --relay --teach SCRATCH/teach/teaching.json --out SCRATCH/bake1` | |
 | 5 | Gallery re-grade under v5, re-deal failures; side-quest slots and prizes; interim Gallery unlocks | todo | |
 | 6 | Lore swap (realm names and lore in config; no real-world history) | todo | |
 | 7 | Page: realms on the map, coach lines, texts (5 spaces, no kills) | todo | |
 | 8 | Close-out: `v5.relaid: true`, regrades 0, freeze snapshot, critic-v5 rules, tests, selfTest, harness, `?v=31`, SPEC, notes, screenshots | todo | |
+
+### Uncommitted page work (lands with the level files, since it names the new ids)
+config.json (realm lore, teach lines for e2-25/e3-50/e3-53/e4-75/e4-87/e5-100, gallery.quests, openAt e1-04, layout
+realmEye/mapName), main.js (realm labels, side-quest openness and prize, moat ring, power pointer, selfTest ids),
+save.js (questOpen, nextBy), meta.js (gift), style.css (.gq prize chip), index.html (Map label), test.js (realm and
+density tests, side-quest tests). If this is lost: redo from `tools/v5-r2-notes.md` once written; the tools are committed.
