@@ -1,11 +1,7 @@
 {
   "v3": {
     "note": "Sapper's Path v3 rules and palette (SPEC-v3). Holding spaces and archer lethality per difficulty (rules: turn these after playtest); MATS order is the material id (1-14) the grid letters a-n name. v4 M1 retuned the colours for distance (tools/palette.js, report in tools/v4-m1-palette.md): every pair of materials that stand together in a level is 25+ apart in CIEDE2000. Gilt (keys) is a dark old gold, and its blocks always carry a key glyph.",
-    "rules": {
-      "easy": {"hold": 6, "archersKill": false},
-      "normal": {"hold": 5, "archersKill": false},
-      "hard": {"hold": 4, "archersKill": true}
-    },
+    "rules": {"note": "v5 R1 (SPEC-v4 §9, the v5 R1 entry): every level has hold holding spaces, whatever its tag (v4.3 had Easy 6, Normal 5, Hard 4). Archers never kill on any level (archersKill is gone): a hit sapper is always knocked back and waits. The tag no longer changes any engine rule; it says how many features a level uses.", "hold": 5},
     "time": {"note": "Engine timing (SPEC-v3 §3, the dispatch model), whole ms of engine time. A sapper sent at a pixel pops it yardMs + tiles x tileMs + biteMs later (tiles = its walk distance + 1) and is home yardMs + tiles x carryMs after that; a space sends one sapper every staggerMs; an archer hit lands halfway out and the sapper is back knockMs plus the walk later. The ratios shape which pixels squads claim, so changing them needs a rebake. To slow or speed the whole game without changing any outcome, turn show.pace instead. v4 M3 (the swarm): staggerMs 120 -> 30 so a big squad pours out (55 sappers leave in 1.6 s, not 6.6 s), biteMs 180 -> 100 and yardMs 250 -> 200 (less standing per block); the walk (tileMs, carryMs) is Peter's and unchanged.", "tileMs": 80, "carryMs": 90, "yardMs": 200, "biteMs": 100, "staggerMs": 30, "knockMs": 300},
     "flags": {"note": "Comparison switch (SPEC-v3 §9, playtest 1). mergeLeftovers true: a tapped squad joins the space of its colour instead of taking its own (the old spam exploit). The bake assumes false.", "mergeLeftovers": false},
     "twists": {"note": "v4 M2 (SPEC-v4 §9). lockSpaces: how many of a lock level's last holding spaces start locked (never all of them), on every difficulty: Easy 6 -> 5 + lock, Normal 5 -> 4 + lock, Hard 4 -> 3 + lock. linkRowGap: E.check warns when linked partners are dealt more than this many rows apart.", "lockSpaces": 1, "linkRowGap": 2},
@@ -38,6 +34,7 @@
       "rangeAlpha": 0.14
     }
   },
+  "v5": {"note": "v5 R1 switches. relaid: false until R2 re-lays levels 1-100 under the v5 rules; while false, the checks that replay the shipped levels' stored orders and grades (tools/test.js, SP.selfTest, the regrades) are reported as DEFERRED, since those orders were dealt under v4.3's rules (6/5/4 spaces, lethal Hard archers).", "relaid": false},
   "version": 3,
   "save": {
     "key": "sappers-path.v3"

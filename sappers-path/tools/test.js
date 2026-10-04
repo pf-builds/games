@@ -239,11 +239,11 @@ const ARCH = (cols) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "
   pat(S, 0); eq([S.hits, S.kills, line(S)], [1, 0, [[1, 2]]], "archers (Easy): the hit sapper walks back to its space");
 }
 {
-  const S = E.sim(E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []])), H);
+  const S = E.sim(E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []])), hold(4, true));
   pat(S, 0); eq([S.kills, S.status, S.reason], [1, E.FAILED, "short"], "archers (Hard): the hit sapper dies, and the colour is short: fail");
-  const S2 = E.sim(E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []])), H);
+  const S2 = E.sim(E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []])), hold(4, true));
   pat(S2, 1); pat(S2, 0); eq([S2.kills, S2.status], [0, E.WON], "archers (Hard): the tower first wins");
-  const S3 = E.sim(E.compile(Object.assign(ARCH([[[1, 6]], [[7, 3]], [], [], []]), { safeArchers: true })), H);
+  const S3 = E.sim(E.compile(Object.assign(ARCH([[[1, 6]], [[7, 3]], [], [], []]), { safeArchers: true })), hold(4, true));
   pat(S3, 0); eq([S3.kills, S3.hits, S3.status], [0, 1, E.PLAYING], "archers (safeArchers, level 51): never kill, even on Hard");
 }
 
@@ -488,7 +488,7 @@ const ROW6 = ["abcdef", "......", "..##.."]; // six colours, one pixel each, all
   // sapper is shot dead on the way. Dead counts as finished: a's space holds for g, and both free once g is home. A spare a
   // sapper in column 2 keeps the colour from going short; it finishes once the tower is down.
   const L = lv(["......ggg", ".........", "......aa.", ".........", "....##..."], [[[7, 3]], [[1, 1]], [[1, 2]], [], []], { towers: [{ at: [7, 0], r: 3 }], links: [[[0, 0], [1, 0]]] });
-  const S = E.sim(E.compile(L), H); S.play(0, 0); S.advanceTo(600);
+  const S = E.sim(E.compile(L), hold(4, true)); S.play(0, 0); S.advanceTo(600);
   eq([S.kills, S.status, S.lineLen, S.held(1), S.spO[0] > 0], [1, E.PLAYING, 2, true, true], "coupled (Hard kill): a's sapper is killed; a counts as finished and holds for g, still working");
   S.quiet(); eq([S.lineLen, S.standing, S.status], [0, 0, E.PLAYING], "coupled (Hard kill): the tower falls, g is home: both spaces free");
   eq(pat(S, 2), E.WON, "coupled (Hard kill): the spare a squad finishes");
@@ -498,7 +498,7 @@ const ROW6 = ["abcdef", "......", "..##.."]; // six colours, one pixel each, all
 {
   const L = lv(["abn...", "......", "..##.."], [[[1, 1]], [[2, 1]], [[14, 1]], [], []], { lock: { key: [2, 0] } });
   const B = E.compile(L);
-  eq(["easy", "normal", "hard"].map((d) => { const S = E.sim(B, RULES[d]); return [S.cap, S.open, S.locked]; }), [[6, 5, 1], [5, 4, 1], [4, 3, 1]], "lock: Easy 5 of 6 spaces open, Normal 4 of 5, Hard 3 of 4");
+  eq(["easy", "normal", "hard"].map((d) => { const S = E.sim(B, RULES[d]); return [S.cap, S.open, S.locked]; }), [[5, 4, 1], [5, 4, 1], [5, 4, 1]], "lock (v5 R1): 4 of 5 spaces open on every tag");
   eq(E.sim(E.compile(lv(L.grid, L.cols)), N).open, 5, "lock: the same board without a lock opens every space");
   const S = E.sim(B, N); S.logOn = true; S.play(2, 0);
   const pop = S.q1[0];

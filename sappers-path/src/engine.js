@@ -696,7 +696,8 @@
   // The engine rules for one difficulty: config v3.rules[d] with v3.time (and the comparison flags) attached; v4 M2 the
   // locked spaces per lock (v3.twists.lockSpaces). v4 M5: with meta (config.meta, the page only), the power-ups' uses per
   // level (meta.powers[k].perLevel, in PW order) and the Quartermaster's reach (meta.pullDepth).
-  const rulesOf = (v3, d, meta) => Object.assign({}, v3.rules[d] || v3.rules.normal, { time: v3.time }, v3.flags || {}, v3.twists ? { lockSpaces: v3.twists.lockSpaces } : {},
+  // v5 R1: v3.rules.hold spaces on every level, whatever the tag d (an older config's per-tag rules still read).
+  const rulesOf = (v3, d, meta) => Object.assign({}, v3.rules.hold != null ? { hold: v3.rules.hold } : v3.rules[d] || v3.rules.normal, { time: v3.time }, v3.flags || {}, v3.twists ? { lockSpaces: v3.twists.lockSpaces } : {},
     meta && Array.isArray(meta.powers) ? { powers: POWERS.map((id) => { const p = meta.powers.find((q) => q && q.id === id); return p ? p.perLevel | 0 : 0; }), pullDepth: meta.pullDepth } : {});
   const gridOf = (w, h, a) => { const g = []; for (let y = 0; y < h; y++) { let s = ""; for (let x = 0; x < w; x++) s += chOf(a[y * w + x]); g.push(s); } return g; };
   // Level warnings (v4 M2): things compile accepts but a player would find hard to read. opts.linkRowGap (default 2):
