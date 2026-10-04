@@ -96,7 +96,7 @@
   const NS = window.SappersPath, E = NS.engine, Save = NS.save, Board = NS.board, Art = NS.art, Audio = NS.audio, Meta = NS.meta;
   const V_ = (document.currentScript && new URL(document.currentScript.src).searchParams.get("v")) || "1";
   const DEBUG = new URLSearchParams(location.search).get("debug") === "1";
-  const TAGS = ["easy", "normal", "hard"], $ = (id) => document.getElementById(id);
+  const TAGS = ["easy", "normal", "hard", "extreme"], $ = (id) => document.getElementById(id);
   // v4.3: a level's fixed tag (Normal when a file has none) and its one stored winning order.
   const tagOf = (e) => (e && e.L && TAGS.indexOf(e.L.tag) >= 0 ? e.L.tag : "normal"), winOf = (e) => (e && e.L && e.L.win && e.L.win[tagOf(e)]) || "";
   const app = { cfg: null, levels: [], byId: new Map(), order: [], eras: [], save: null, entry: null, B: null, S: null, V: null, audio: null, sheets: null, gal: [], mats: null, palKey: "", galTiles: [],
@@ -559,7 +559,7 @@
   // v4.3: a tag mark (layout.tags[tag]: its words, empty for Normal; class tag-<tag> colours it): hidden when empty.
   function tagChip(el, tag) { if (!el) return; const t = (tag && (app.cfg.layout.tags || {})[tag]) || ""; el.textContent = t; el.className = "tag" + (tag ? " tag-" + tag : ""); el.hidden = !t; }
   // v4.3 fix (T1): a Play button for level e (null: none) wears its tag pill, and a Hard level's the red-gold face.
-  function playTag(btn, e) { const tg = e ? tagOf(e) : null; tagChip(btn.querySelector(".tag"), tg); btn.classList.toggle("hard", tg === "hard"); }
+  function playTag(btn, e) { const tg = e ? tagOf(e) : null; tagChip(btn.querySelector(".tag"), tg); btn.classList.toggle("hard", tg === "hard" || tg === "extreme"); btn.classList.toggle("extreme", tg === "extreme"); } // v5 R1: Extreme wears Hard's warning face, darker
   function renderAll() { judge(); renderTop(); renderTray(); renderLine(); }
 
   // v4 M5: a report card for a set of levels (an era, or the Gallery): cleared and coins earned (v4.3: no medals).
@@ -662,7 +662,7 @@
     for (const e of app.gal) {
       const b = e.node, won = !!d.gal[e.id], open = picOpen(e), key = won ? "c" : open ? "d" : "s", tg = (app.cfg.layout.tags || {})[tagOf(e)];
       b.classList.toggle("done", won); b.classList.toggle("next", e === nx); b.classList.toggle("locked", !open); b.setAttribute("aria-disabled", open ? "false" : "true");
-      b.querySelector(".gn").textContent = won ? e.L.title : e.n; b.querySelector(".gp").textContent = e === nx ? G.playChip : ""; b.classList.toggle("hard", e === nx && tagOf(e) === "hard"); // v4.3 fix (T1): a Hard next picture's Play chip goes red-gold
+      b.querySelector(".gn").textContent = won ? e.L.title : e.n; b.querySelector(".gp").textContent = e === nx ? G.playChip : ""; b.classList.toggle("hard", e === nx && (tagOf(e) === "hard" || tagOf(e) === "extreme")); // v4.3 fix (T1): a Hard next picture's Play chip goes red-gold
       b.setAttribute("aria-label", (won ? e.L.title + ", cleared" : fill(e === nx ? G.nextAria : open ? G.tileAria : G.lockedAria, { n: e.n })) + (tg ? ", " + tg : ""));
       if (b.dataset.drawn !== key) { if (open) thumb(b.querySelector("canvas"), e.L, won); else silhouette(b.querySelector("canvas"), e.L); b.dataset.drawn = key; }
     }
@@ -1557,6 +1557,7 @@
       }
       // 6. An archer hit on a level of every tag (v5 R1: archers never kill; the hit sapper is sent back to its space).
       for (const d of TAGS) {
+        if (!app.levels.some((e) => tagOf(e) === d && e.L.towers && e.L.towers.length)) continue; // v5 R1: no Extreme levels until R2
         const lethal = false, pred = (S) => S.hits > 0 && S.status === E.PLAYING; let found = null;
         for (const e of app.levels) { if (tagOf(e) !== d || !(e.L.towers && e.L.towers.length)) continue; const o = search(e, d, pred, ST.searchTries, ST.searchSeed); if (o) { found = { e, o }; break; } }
         if (!ok(!!found, "archers " + d + ": found an order with a hit")) continue;
@@ -1869,6 +1870,12 @@
       { const e = fx("hiddenLevel"); startLevel(e.id); const V = app.V, S = app.S, same = () => { for (let c = 0; c < app.B.n; c++) if (!!V.hid[c] !== S.hiddenCell(c)) return false; return true; };
         const n0 = S.hiddenLeft, top = S.hiddenCell(1 * 9 + 3), s0 = same(); patient("0"); settleNow();
         ok(n0 === 5 && !top && s0 && S.hiddenLeft === 0 && same() && app.V.checkSprites().indexOf("mystery") < 0, "mystery blocks: the board's ? blocks match the engine (5; the flagged ring block touching open ground shows), and razing the ring exposes them all"); }
+      // 22e. v5 R1, the Extreme tag: its pill reads "Extreme" in light text on a deep purple (4.5:1 or more), and a Play for an
+      // Extreme level wears the warning face, darker than Hard's.
+      { const el = document.createElement("span"); document.body.append(el); tagChip(el, "extreme"); const cs = getComputedStyle(el), rgb = (v) => { const m = v.match(/\d+/g).map(Number); return "#" + m.slice(0, 3).map((x) => x.toString(16).padStart(2, "0")).join(""); };
+        const L1 = relLum(rgb(cs.color)), L2 = relLum(rgb(cs.backgroundColor)), cr = (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05); el.remove();
+        const pb = $("play-btn-test") || document.createElement("button"); pb.className = "primary"; pb.innerHTML = '<i class="tag"></i>'; playTag(pb, { L: { tag: "extreme" } });
+        ok(el.textContent === LY.tags.extreme && el.classList.contains("tag-extreme") && cr >= 4.5 && pb.classList.contains("hard") && pb.classList.contains("extreme"), "extreme: the pill reads '" + el.textContent + "' at " + cr.toFixed(2) + ":1; an Extreme Play wears the warning face"); }
       // 22b. v5 R1, the colour lock (selfTest.colourLockLevel): its socket shows the colour that opens it and says so; the
       // tap that sends a squad of that colour out opens it (one unlock cue).
       { const e = fx("colourLockLevel"), m = ST.colourLockLevel.lock.colour; startLevel(e.id); const S = app.S, last = app.slots[S.cap - 1], u0 = app.cues.unlock | 0;

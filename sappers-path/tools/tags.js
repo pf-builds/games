@@ -12,7 +12,7 @@
 // Locks live on Hard levels only, from a set level: lockOK(n, tag, L, K) with K = config.json v5.locks {from, tags}: a
 // level with a lock (key or colour) must be number from or later and carry one of K.tags; a level without one is fine.
 "use strict";
-const TAGS = ["easy", "normal", "hard"];
+const TAGS = ["easy", "normal", "hard", "extreme"]; // v5 R1: extreme (most or all of the unlocked features; R2 sets which levels)
 function tagOf(n, T, teaching) {
   const ends = T.ends || [];
   if (ends.indexOf(n) >= 0) return "hard";

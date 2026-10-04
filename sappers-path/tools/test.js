@@ -24,7 +24,7 @@ const defer = (name, fn) => { if (V5.relaid) fn(); else deferred.push(name); };
 function ok(cond, name) { if (cond) pass++; else { fail++; console.log("FAIL  " + name); } }
 function eq(a, b, name) { const A = JSON.stringify(a), B = JSON.stringify(b); ok(A === B, name + (A === B ? "" : "\n      got " + A + "\n     want " + B)); }
 function throws(fn, name) { let t = false; try { fn(); } catch (e) { t = true; } ok(t, name); }
-const RULES = { easy: E.rulesOf(V3, "easy"), normal: E.rulesOf(V3, "normal"), hard: E.rulesOf(V3, "hard") };
+const RULES = { easy: E.rulesOf(V3, "easy"), normal: E.rulesOf(V3, "normal"), hard: E.rulesOf(V3, "hard"), extreme: E.rulesOf(V3, "extreme") };
 const N = RULES.normal, EZ = RULES.easy, H = RULES.hard, TM = E.timeOf(V3.time);
 const hold = (k, kill) => Object.assign({}, N, { hold: k, archersKill: !!kill });
 const lv = (grid, cols, extra) => Object.assign({ w: grid[0].length, h: grid.length, grid, cols: cols || [[], [], [], [], []] }, extra || {});
@@ -1242,6 +1242,11 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
 }
 
 if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " + deferred.length + " checks: " + deferred.join("; "));
+// ---- v5 R1: the Extreme tag (data and coins; R2 decides which levels wear it) -----------------------------------------------
+{
+  const Meta = require("../src/meta.js"), TG = require("./tags.js");
+  eq([TG.TAGS, Meta.winCoins(META, "extreme", false), Meta.winCoins(META, "extreme", true), RULES.extreme.hold, require("../config.json").layout.tags.extreme], [["easy", "normal", "hard", "extreme"], 30, 90, 5, "Extreme"], "extreme: a fourth tag; a win pays 30 (+60 on the first clear); 5 spaces like every tag; its label");
+}
 // ---- v5 R1: power-up unlocks (meta.js unlockAt, isOpen, grant; the save's got) ------------------------------------------------
 {
   const Save = require("../src/save.js"), Meta = require("../src/meta.js");

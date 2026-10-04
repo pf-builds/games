@@ -67,12 +67,14 @@ button.big { min-height: 58px; font-size: 36px; width: 100%; }
 .tag { display: inline-block; font-family: var(--px); font-style: normal; font-weight: 400; line-height: 1; padding: 2px 5px 1px; border-radius: 4px; border: 2px solid var(--ink); text-transform: uppercase; letter-spacing: .5px; white-space: nowrap; }
 .tag[hidden] { display: none; }
 .tag-hard { background: #d42a2a; color: #fff6e8; box-shadow: inset 0 -2px 0 #8e1515; }
+.tag-extreme { background: #5b1f8f; color: #fff6e8; box-shadow: inset 0 -2px 0 #34105a, inset 0 0 0 1px #f0c040; } /* v5 R1 */
 .tag-easy { background: #1f7a6f; color: #effff9; box-shadow: inset 0 -2px 0 #14544c; } /* v4.3 fix (m6): 5:1 */
 /* v4.3 fix (T1): every Play wears the next level's tag on its corner; a Hard level's Play gets a red face inside its gold
    rim (Food Hunt marks a hard level's button the same way). */
 #btn-play, #map-play, #p-primary { position: relative; }
 #btn-play .tag, #map-play .tag, #p-primary .tag { position: absolute; z-index: 1; top: -11px; right: -8px; font-size: 16px; padding: 2px 5px 1px; }
 button.primary.hard { background: #e8553a; color: #fff6e8; text-shadow: 0 2px 0 rgba(34,26,38,.45); box-shadow: inset 0 0 0 3px var(--gold), inset 0 6px 0 #ff9a80, inset 0 -7px 0 #a8341f, 0 3px 0 rgba(0,0,0,.5); }
+button.primary.hard.extreme { background: #6d2aa8; box-shadow: inset 0 0 0 3px var(--gold), inset 0 6px 0 #a275d6, inset 0 -7px 0 #3f1270, 0 3px 0 rgba(0,0,0,.5); } /* v5 R1 */
 button.primary.hard:active:not(:disabled) { box-shadow: inset 0 0 0 3px var(--gold), inset 0 6px 0 #ff9a80, inset 0 -4px 0 #a8341f, 0 1px 0 rgba(0,0,0,.5); }
 
 /* Top bar: map, level number and era, the level's tag, retry, 2x, mute. */

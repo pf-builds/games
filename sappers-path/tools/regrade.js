@@ -20,7 +20,7 @@ const V3 = require("../config.json").v3;
 const LV = JSON.parse(require("fs").readFileSync(process.argv.indexOf("--levels") > 0 ? require("path").resolve(process.argv[process.argv.indexOf("--levels") + 1]) : require("path").join(__dirname, GAL ? "../levels/gallery.json" : "../levels/levels.json"), "utf8")).levels;
 
 const QUICK = process.argv.includes("--quick");
-const rules = { easy: E.rulesOf(V3, "easy"), normal: E.rulesOf(V3, "normal"), hard: E.rulesOf(V3, "hard") };
+const rules = { easy: E.rulesOf(V3, "easy"), normal: E.rulesOf(V3, "normal"), hard: E.rulesOf(V3, "hard"), extreme: E.rulesOf(V3, "extreme") }; // v5 R1: extreme
 // The bake's seeds: a generated level carries its candidate seed; a teaching level is graded with seedOf(C, n, 0).
 const seedOf = (n, k) => (C.seed ^ Math.imul(n + 1, 0x9E3779B1) ^ Math.imul(k + 7, 0x85EBCA77)) | 0;
 const t0 = Date.now();
