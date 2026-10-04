@@ -106,7 +106,8 @@
     },
     "capOf": [24, 48],
     "deal": {
-      "hold": 4,
+      "note": "v5 R2: hold 5, the spaces every picture plays on (v4.3 dealt on Hard's 4 so a deal won on every tag).",
+      "hold": 5,
       "size": [8, 30],
       "deep": 0.15,
       "finish": 0.3,

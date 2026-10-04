@@ -50,10 +50,13 @@ const coloursOf = (L) => { const s = new Set(); for (const row of L.grid) for (c
 // would fail later with no way back). A level with a lock deals with one open space fewer until its key pops.
 // v4 M4 (the Gallery): D.capOf (optional) {m: [first, rest]} caps colour m's first squad at `first` and every later one at
 // `rest` (the outline: a narrow first breach, then more black squads); with no capOf the deal is exactly as before.
-function deal(L, seed, D) {
-  const B = E.compile(Object.assign({ cols: [[], [], [], [], []] }, L)), r = rng(seed);
-  const S = E.sim(B, { hold: D.hold, archersKill: true, time: D.time }, { deal: true }), buf = new Int32Array(S.M.length), want = Math.max(1, D.best | 0), top = want > 1 ? new Int32Array(S.M.length) : null;
-  const S2 = D.rush ? E.sim(B, { hold: D.hold, archersKill: true, time: D.time }, { deal: true }) : null, rcap = 8 * (B.pixTotal + D.maxCards) + 64; // v4.3 D.rush
+// v5 R2: a colour lock ({colour: m}) opens when a squad of m goes out, which a deal can't count on: the dealer plays
+// with the lock left shut (one space fewer, the lock dropped), so every deal wins without it.
+const shut = (L, D) => (L.lock && L.lock.colour != null ? [Object.assign({}, L, { lock: null }), D.hold - (D.lockSpaces == null ? 1 : D.lockSpaces)] : [L, D.hold]);
+function deal(L0, seed, D) {
+  const [L, hold] = shut(L0, D), B = E.compile(Object.assign({ cols: [[], [], [], [], []] }, L)), r = rng(seed);
+  const S = E.sim(B, { hold, archersKill: true, time: D.time }, { deal: true }), buf = new Int32Array(S.M.length), want = Math.max(1, D.best | 0), top = want > 1 ? new Int32Array(S.M.length) : null;
+  const S2 = D.rush ? E.sim(B, { hold, archersKill: true, time: D.time }, { deal: true }) : null, rcap = 8 * (B.pixTotal + D.maxCards) + 64; // v4.3 D.rush
   const buf2 = S2 ? new Int32Array(S2.M.length) : null, tmp2 = S2 ? new Int32Array(S2.M.length) : null, top2 = S2 && top ? new Int32Array(S2.M.length) : null;
   const rushBad = (m, n) => { S2.playSquad(m, n); S2.save(tmp2); S2.quiet(); const bad = S2.status === E.FAILED; S2.load(tmp2); return bad || (!rushTo(S2, 1, rcap) && S2.status !== E.WON); };
   const un = new Int32Array(E.NMAT); for (let m = 1; m < E.NMAT; m++) if (m !== IRON) un[m] = B.pix[m];
@@ -90,9 +93,9 @@ function deal(L, seed, D) {
 function overPark(S, k) { for (let i = 0; i < E.MAXLINE; i++) if (S.spQ[i] && S.spW[i] > k) return true; return false; }
 // Patient replay of a dealt play (singles [m, n] and pairs [m, n, m2, n2]) under dealing rules (D: {hold, time}, archers
 // lethal): {won, ms, maxWait (the longest tap, from the tap until nothing moves)}.
-function dealLine(L, play, D) {
-  const B = E.compile(Object.assign({ cols: [[], [], [], [], []] }, L));
-  const S = E.sim(B, { hold: D.hold, archersKill: true, time: D.time, lockSpaces: D.lockSpaces }, { deal: true });
+function dealLine(L0, play, D) {
+  const [L, hold] = shut(L0, D), B = E.compile(Object.assign({ cols: [[], [], [], [], []] }, L));
+  const S = E.sim(B, { hold, archersKill: true, time: D.time, lockSpaces: D.lockSpaces }, { deal: true });
   let maxWait = 0;
   for (let i = 0; i < play.length && S.status === E.PLAYING; i++) {
     const p = play[i], t0 = S.now;
@@ -105,9 +108,9 @@ function dealLine(L, play, D) {
 // v4.3: run S (dealing mode) on until `need` spaces are free (true), or it stops (false). Bounded by cap events.
 function rushTo(S, need, cap) { for (let g = 0; g < cap && S.status === E.PLAYING && S.open - S.lineLen < need && S.busy; g++) S.advanceTo(S.nextAt); return S.status === E.PLAYING && S.open - S.lineLen >= need; }
 // v4.3: a play replayed rushed under dealing rules: each squad (a pair: both) tapped the moment its spaces are free.
-function rushLine(L, play, D) {
-  const B = E.compile(Object.assign({ cols: [[], [], [], [], []] }, L));
-  const S = E.sim(B, { hold: D.hold, archersKill: true, time: D.time, lockSpaces: D.lockSpaces }, { deal: true }), cap = 8 * (B.pixTotal + play.length) + 64;
+function rushLine(L0, play, D) {
+  const [L, hold] = shut(L0, D), B = E.compile(Object.assign({ cols: [[], [], [], [], []] }, L));
+  const S = E.sim(B, { hold, archersKill: true, time: D.time, lockSpaces: D.lockSpaces }, { deal: true }), cap = 8 * (B.pixTotal + play.length) + 64;
   for (let i = 0; i < play.length && S.status === E.PLAYING; i++) {
     const p = play[i]; if (!rushTo(S, p.length >= 4 ? 2 : 1, cap)) break;
     if (p.length >= 4) S.playPair(p[0], p[1], p[2], p[3]); else S.playSquad(p[0], p[1]);

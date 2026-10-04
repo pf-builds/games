@@ -382,17 +382,24 @@ const ARCH = (cols) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "
 }
 
 // ---- v4.3: one fixed tag per level (tools/tags.js; bake-config tags, gallery-config bake.tags) ------------------------------
+// v5 R2: the Siege's schedule runs per realm (bake-config tags.realms): every realm ends on a Hard level and opens with an
+// Easy teaching level; tags follow feature density (config.json v5.density, tools/tags.js densityOK). Deferred until the
+// re-lay ships (v5.relaid).
 {
-  const TG = require("./tags.js"), BC = require("./bake-config.json"), GB = require("./gallery-config.json").bake, GL = require("../levels/gallery.json").levels;
+  const TG = require("./tags.js"), BC = require("./bake-config.json"), GB = require("./gallery-config.json").bake, GL = require("../levels/gallery.json").levels, DN = V5.density;
   const mix = (ls) => TG.TAGS.map((t) => ls.filter((l) => l.tag === t).length);
-  eq([LEVELS.levels.every((l) => l.tag === TG.tagOf(l.n, BC.tags, l.source === "teaching")), GL.every((l) => l.tag === TG.tagOf(l.n, GB.tags, false))], [true, true], "tags: every level carries its schedule's tag");
-  const [e, n, h] = mix(LEVELS.levels), [ge, gn, gh] = mix(GL);
-  ok(Math.abs(e / 100 - 0.15) <= 0.03 && Math.abs(n / 100 - 0.6) <= 0.03 && Math.abs(h / 100 - 0.25) <= 0.03 && Math.abs(ge / 60 - 0.15) <= 0.05 && Math.abs(gn / 60 - 0.6) <= 0.05 && Math.abs(gh / 60 - 0.25) <= 0.05,
-    "tags: the mix is about 15% Easy, 60% Normal, 25% Hard (Siege " + [e, n, h].join("/") + ", Gallery " + [ge, gn, gh].join("/") + ")");
-  const ends = BC.tags.ends.map((x) => LEVELS.levels[x - 1].tag), after = BC.tags.ends.filter((x) => x < 100).map((x) => LEVELS.levels[x].tag);
-  const hards = LEVELS.levels.filter((l) => l.tag === "hard").map((l) => l.n), gaps = hards.slice(1).map((x, i) => x - hards[i]).filter((g) => g > 1);
-  eq([ends.every((t) => t === "hard"), after.every((t) => t === "easy"), LEVELS.levels.filter((l) => l.source === "teaching").every((l) => l.tag !== "hard"), Math.max(...gaps) <= 6, LEVELS.levels[50].safeArchers === true],
-    [true, true, true, true, true], "tags: every era ends on a Hard boss with an Easy level after it; teaching levels are Easy or Normal; Hard comes every 4-5 levels (longest gap " + Math.max(...gaps) + "); level 51 keeps safe archers");
+  defer("tags: the realm schedule, the mix, realm ends and openers, density", () => {
+    eq([LEVELS.levels.every((l) => l.tag === TG.tagOf(l.n, BC.tags, l.source === "teaching")), GL.every((l) => l.tag === TG.tagOf(l.n, GB.tags, false))], [true, true], "tags: every level carries its schedule's tag");
+    const [e, n, h] = mix(LEVELS.levels), [ge, gn, gh] = mix(GL);
+    ok(Math.abs(e / 100 - 0.15) <= 0.03 && Math.abs(n / 100 - 0.6) <= 0.03 && Math.abs(h / 100 - 0.25) <= 0.03 && Math.abs(ge / 60 - 0.15) <= 0.05 && Math.abs(gn / 60 - 0.6) <= 0.05 && Math.abs(gh / 60 - 0.25) <= 0.05,
+      "tags: the mix is about 15% Easy, 60% Normal, 25% Hard (Siege " + [e, n, h].join("/") + ", Gallery " + [ge, gn, gh].join("/") + ")");
+    const R = BC.tags.realms.filter((r) => r[0] <= LEVELS.levels.length), ends = R.filter((r) => r[1] <= LEVELS.levels.length).map((r) => LEVELS.levels[r[1] - 1].tag), opens = R.filter((r) => r[0] > 1).map((r) => LEVELS.levels[r[0] - 1]);
+    const hards = LEVELS.levels.filter((l) => l.tag === "hard").map((l) => l.n), gaps = hards.slice(1).map((x, i) => x - hards[i]).filter((g) => g > 1);
+    eq([ends.every((t) => t === "hard"), opens.every((l) => l.tag === "easy" && l.source === "teaching"), LEVELS.levels.filter((l) => l.source === "teaching").every((l) => l.tag !== "hard"), Math.max(...gaps) <= 6, LEVELS.levels.every((l) => l.era === BC.tags.realms.findIndex((r) => l.n >= r[0] && l.n <= r[1]) + 1)],
+      [true, true, true, true, true], "tags: every realm ends on a Hard level and opens with an Easy teaching level; teaching levels are Easy or Normal; Hard comes every 3-6 levels (longest gap " + Math.max(...gaps) + "); each level's era is its realm");
+    const bad = LEVELS.levels.filter((l) => !TG.densityOK(l.n, l.tag, l, DN, l.source === "teaching")).map((l) => l.n + " " + l.tag + " [" + TG.featuresOf(l).join(",") + (l.lock ? ",lock" : "") + "]");
+    eq(bad, [], "density (v5 R2): no feature before its milestone; Easy uses at most " + DN.easyMax + ", Normal at least " + DN.normalMin + " (once unlocked), Hard every unlocked feature and from " + DN.lockFrom + " the lock; teaching levels use their lesson");
+  });
 }
 
 // ==== v4 M2: the twists (mystery cards, linked squads, the locked space) =================================================
@@ -558,6 +565,15 @@ const ROW6 = ["abcdef", "......", "..##.."]; // six colours, one pixel each, all
   const TG = require("./tags.js"), K = V5.locks, Lk = { lock: { colour: 1 } };
   eq([TG.lockOK(49, "hard", Lk, K), TG.lockOK(50, "hard", Lk, K), TG.lockOK(60, "normal", Lk, K), TG.lockOK(60, "extreme", Lk, K), TG.lockOK(10, "easy", {}, K)], [false, true, false, true, true], "locks (v5 R1): from level 50, on Hard and Extreme only");
   defer("every shipped lock is on a Hard or Extreme level from 50", () => { const bad = LEVELS.levels.filter((l) => !TG.lockOK(l.n, l.tag, l, K)).map((l) => l.n); eq(bad, [], "locks (v5 R1): every shipped lock is on a Hard or Extreme level from 50"); });
+  // v5 R2: the realm schedule and the density rule on known cases.
+  const T5 = require("./bake-config.json").tags, tg = (n, t) => TG.tagOf(n, T5, !!t), D5 = V5.density;
+  eq([tg(1, 1), tg(4), tg(6), tg(11), tg(24), tg(25, 1), tg(26), tg(28), tg(33), tg(49), tg(50, 1), tg(53), tg(99), tg(100, 1)], ["easy", "normal", "hard", "easy", "hard", "easy", "normal", "hard", "easy", "hard", "easy", "hard", "hard", "easy"],
+    "tags (v5 R2): realm 1 keeps v4.3's cycle; each realm opens with an Easy lesson, restarts the cycle and ends Hard");
+  const bd = (rows, ex) => Object.assign({ grid: rows, cols: [[[1, 1]], [], [], [], []] }, ex || {}), moat = bd(["~~", ",,"]), gate = bd(["~j", ",,"], { gates: [{ at: [1, 0], key: [0, 1] }] });
+  eq([TG.featuresOf(bd([",,"])), TG.featuresOf(gate), TG.featuresOf(bd(["~~"], { links: [[[0, 0], [1, 0]]], cols: [[[1, 1, 1]], [], [], [], []] })), TG.unlockedAt(60, D5)], [[], ["moat", "gate"], ["moat", "linked", "mystery"], ["moat", "gate"]], "density (v5 R2): features read from the level; the ladder's features by level");
+  eq([TG.densityOK(10, "hard", bd([",,"]), D5), TG.densityOK(20, "easy", moat, D5), TG.densityOK(30, "hard", moat, D5), TG.densityOK(30, "normal", gate, D5), TG.densityOK(60, "easy", moat, D5), TG.densityOK(60, "easy", gate, D5),
+    TG.densityOK(60, "normal", gate, D5), TG.densityOK(60, "hard", gate, D5), TG.densityOK(60, "hard", Object.assign({}, gate, { lock: { colour: 1 } }), D5), TG.densityOK(60, "normal", Object.assign({}, gate, { lock: { colour: 1 } }), D5), TG.densityOK(50, "easy", gate, D5, true)],
+    [true, false, true, false, true, false, true, false, true, false, true], "density (v5 R2): nothing before its milestone; Easy at most one; Normal two once unlocked; Hard every one and the lock from 50; a lesson may keep older features");
 }
 
 // ---- v5 R1: the continue on a jam ----------------------------------------------------------------------------------------

@@ -11,9 +11,27 @@
 // v5 R1: the tag sets no engine rule (5 spaces everywhere, archers never kill); it says how many features a level uses.
 // Locks live on Hard levels only, from a set level: lockOK(n, tag, L, K) with K = config.json v5.locks {from, tags}: a
 // level with a lock (key or colour) must be number from or later and carry one of K.tags; a level without one is fine.
+// v5 R2 (the rules review's feature ladder): with T.realms ([[from, to], ...], the made-up realms) the schedule runs per
+// realm: every realm ends on a Hard level; its first level teaches the realm's new feature (a teaching level, `afterEnd`:
+// Easy); the cycle restarts after the opener (realm 1 keeps `from`, so levels 1-24 carry v4.3's tags). Without realms
+// (the Gallery) the v4.3 schedule stands.
+// v5 R2, tags by feature density (config.json v5.density; the rules review: "Easy uses few or none of them, Normal uses
+// more, Hard uses a lot"): featuresOf(L) lists the features a level uses (moat: water on the board; gate: a closed gate;
+// linked: a linked pair; mystery: a ? card; hidden: a mystery block; tower: an archer tower; lock: a locked space);
+// unlockedAt(n, D) the ladder's features open by level n; densityOK(n, tag, L, D, teaching) the rule: no feature before
+// its milestone; Easy at most D.easyMax of them and no lock; Normal at least min(D.normalMin, unlocked) and no lock; Hard
+// every unlocked feature, plus the lock from D.lockFrom; Extreme (from 125) as Hard. A teaching level (a realm's opener,
+// Easy) uses the newest feature it teaches, may keep older ones, and has no lock.
 "use strict";
 const TAGS = ["easy", "normal", "hard", "extreme"]; // v5 R1: extreme (most or all of the unlocked features; R2 sets which levels)
 function tagOf(n, T, teaching) {
+  const R = T.realms && T.realms.find((r) => n >= r[0] && n <= r[1]); // v5 R2: the realm's own schedule
+  if (R) {
+    if (teaching) return n < T.from ? T.first : n === R[0] ? T.afterEnd : T.teach;
+    if (n === R[1]) return "hard";
+    if (n < T.from) return T.first;
+    return T.cycle[(n - Math.max(T.from, R[0] + 1)) % T.cycle.length];
+  }
   const ends = T.ends || [];
   if (ends.indexOf(n) >= 0) return "hard";
   if (teaching) return n < T.from ? T.first : ends.indexOf(n - 1) >= 0 ? T.afterEnd : T.teach;
@@ -22,4 +40,24 @@ function tagOf(n, T, teaching) {
   return T.cycle[(n - T.from) % T.cycle.length];
 }
 const lockOK = (n, tag, L, K) => !(L && L.lock) || (n >= K.from && K.tags.indexOf(tag) >= 0);
-module.exports = { TAGS, tagOf, lockOK };
+const FEATS = ["moat", "gate", "linked", "mystery", "tower", "hidden"];
+function featuresOf(L) {
+  const f = [];
+  if (L.grid.some((r) => r.indexOf("~") >= 0)) f.push("moat");
+  if (L.gates && L.gates.length) f.push("gate");
+  if (L.links && L.links.length) f.push("linked");
+  if (L.cols.some((c) => c.some((cd) => cd[2]))) f.push("mystery");
+  if (L.towers && L.towers.length) f.push("tower");
+  if (L.hidden && L.hidden.some((r) => r.indexOf("?") >= 0)) f.push("hidden");
+  return f;
+}
+const unlockedAt = (n, D) => FEATS.filter((k) => D.unlock[k] != null && n >= D.unlock[k]);
+function densityOK(n, tag, L, D, teaching) {
+  const u = unlockedAt(n, D), f = featuresOf(L), lock = !!L.lock;
+  if (f.some((k) => u.indexOf(k) < 0)) return false; // never a feature before its milestone
+  if (teaching) { const nu = u.filter((k) => D.unlock[k] === Math.max(...u.map((q) => D.unlock[q]))); return !lock && nu.every((k) => f.indexOf(k) >= 0); }
+  if (tag === "easy") return f.length <= D.easyMax && !lock;
+  if (tag === "normal") return f.length >= Math.min(D.normalMin, u.length) && !lock;
+  return f.length === u.length && lock === (n >= D.lockFrom); // hard, extreme
+}
+module.exports = { TAGS, tagOf, lockOK, FEATS, featuresOf, unlockedAt, densityOK };

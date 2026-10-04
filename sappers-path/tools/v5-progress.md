@@ -56,7 +56,7 @@ Source: the rules review's "Confirmed", "The feature ladder", "Tags mean how man
 | # | Piece | State | Commit |
 |---|---|---|---|
 | 0 | Harness on R1's head before any change | done: all passed, 3:24 wall (no timeout; see notes §0) | (this file) |
-| 1 | Realms and tags in data (bake-config realms, tags.js realm-relative cycle, density rule, dealer settings) | todo | |
+| 1 | Realms and tags in data (bake-config realms, tags.js realm-relative cycle, density rule, dealer settings) | done | (see git log) |
 | 2 | The re-lay tool (`tools/relay.js`: the slot map, board and deck edits) and the bake's `--relay` mode (kept deck first) | todo | |
 | 3 | Teaching levels 1, 2, 3, 25, 50, 75, 100 (teach-v4.js on the re-laid boards; coach lines) | todo | |
 | 4 | Siege bake 1-100 under v5 (scratch, checked, copied in) | todo | |
