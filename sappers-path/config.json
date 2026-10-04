@@ -318,10 +318,11 @@
       {"id": "ladder", "name": "Ladder", "say": "+1 space this level", "price": 120, "perLevel": 1},
       {"id": "quartermaster", "name": "Quartermaster", "say": "send any squad in view straight out", "price": 80, "perLevel": 3},
       {"id": "scout", "name": "Scout", "say": "reveal every ? squad", "price": 60, "perLevel": 1},
-      {"id": "recall", "name": "Recall", "say": "send a waiting squad back", "price": 100, "perLevel": 2}
+      {"id": "recall", "name": "Recall", "say": "send a waiting squad back", "price": 100, "perLevel": 2},
+      {"id": "volley", "name": "Volley", "say": "a catapult volley clears one colour", "price": 750, "perLevel": 1}
     ],
     "textNote": "The page's words for the meta layer. power: the power-up bar's toasts ({name}, {price}, {have}, {n}, {say}). report: the level report's rows ({v} a value, {n} coins). home: the home screen ({n} a level, {done} levels won, {t} total, {t} a countdown in lives). eraCard: the map's report card per era (and the Gallery's).",
-    "power": {"pickPull": "Pick a squad to send out", "pickRecall": "Pick a waiting squad to recall",
+    "power": {"pickPull": "Pick a squad to send out", "pickVolley": "Pick a colour: tap one of its squads", "noVolley": "No colour to clear", "pickRecall": "Pick a waiting squad to recall",
       "bought": "{name} bought (-{price} coins)", "short": "{name} costs {price}: you have {have} coins", "full": "You can't carry more {name}s",
       "limit": "{name}: {n} per level", "noPull": "No free space: the Quartermaster needs one", "noPullLinked": "A linked squad needs its partner in view and 2 free spaces",
       "noScout": "No hidden squads to scout", "noRecall": "No squad is just waiting (none of its sappers out)", "noLadder": "The line can't take more spaces",

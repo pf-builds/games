@@ -121,7 +121,7 @@
   // finished on the spot), SHOW cell m (a mystery block exposed: its colour shows for good).
   const EV = { TAP: 1, DISP: 2, EAT: 3, GATE: 4, TOWER: 5, HIT: 6, KILL: 7, HOME: 8, FREE: 9, REVEAL: 10, LINK: 11, UNLOCK: 12, POWER: 13, CLEAR: 14, CONT: 15, SHOW: 16 };
   // v4 M5: the power-ups, by k.
-  const PW = { LADDER: 0, PULL: 1, SCOUT: 2, RECALL: 3 }, NPW = 4, POWERS = ["ladder", "quartermaster", "scout", "recall"];
+  const PW = { LADDER: 0, PULL: 1, SCOUT: 2, RECALL: 3, VOLLEY: 4 }, NPW = 5, POWERS = ["ladder", "quartermaster", "scout", "recall", "volley"]; // v5 R1: VOLLEY
   const CODE = { ".": GRASS, ",": DIRT, "~": WATER, "#": CAMP };
   const matOf = (ch) => { const k = ch.charCodeAt(0) - 96; return k >= 1 && k <= 14 ? k : 0; };
   const chOf = (v) => (v > 0 ? String.fromCharCode(96 + v) : v === GRASS ? "." : v === DIRT ? "," : v === WATER ? "~" : "#");
@@ -279,7 +279,7 @@
     const oA = at(n), oD = at(n), oK = at(n), oP = at(n), oH = at(B.hoff[NMAT]), oHL = at(NMAT), oLeft = at(NMAT), oSap = at(NMAT), oT = at(MAXTOWERS),
       oHead = at(NCOL), oSM = at(MAXLINE), oSW = at(MAXLINE), oSO = at(MAXLINE), oSF = at(MAXLINE), oSN = at(MAXLINE), oSQ = at(MAXLINE), oOrd = at(MAXLINE),
       oS = at(32), oQS = at(SMAX), oQC = at(SMAX), oQK = at(SMAX), oQ0 = at(SMAX), oQ1 = at(SMAX), oQ2 = at(SMAX), oET = at(EMAX), oEQ = at(EMAX), oEX = at(EMAX),
-      oGone = at(B.ncards + 1), oSL = at(MAXLINE), oSeq = at(B.ncards + 1), oPos = at(B.ncards + 1), oShown = at(B.ncards + 1), oCn = at(B.ncards + 1), oSC = at(MAXLINE);
+      oGone = at(B.ncards + 1), oSL = at(MAXLINE), oSeq = at(B.ncards + 1), oPos = at(B.ncards + 1), oShown = at(B.ncards + 1), oCn = at(B.ncards + 1), oSC = at(MAXLINE), oCut = at(B.ncards + 1);
     const M = new Int32Array(o), init = new Int32Array(o);
     const sub = (k, len) => M.subarray(k, k + len);
     const a = sub(oA, n), d = sub(oD, n), hk = sub(oK, n), hpos = sub(oP, n), heap = sub(oH, B.hoff[NMAT]);
@@ -297,6 +297,8 @@
     // played and pulled cards), pos (a card's slot in its column), shown (a card seen face up: it stays revealed), cn (a
     // card's count: a Recall rewrites it) and each space's card + 1 (0: none, e.g. dealing).
     const seq = sub(oSeq, B.ncards), pos = sub(oPos, B.ncards), shown = sub(oShown, B.ncards), cn = sub(oCn, B.ncards), spC = sub(oSC, MAXLINE);
+    // v5 R1: cut (a card a Volley took out of the queue: its link is cut, so its partner plays alone); partnerOf honours it.
+    const cut = sub(oCut, B.ncards), partnerOf = (ci) => { const p = linkOf[ci]; return p >= 0 && !cut[p] ? p : -1; };
     // Scalars in M[oS + k]. LOCK: spaces still locked (v4 M2); JAMK: why a jam happened (bits, see settle); v4 M5: XCAP
     // spaces added by Ladders, PWANY 1 once any power-up was used, USE..USE+3 the uses of each.
     const S_LEN = oS, S_PIX = oS + 1, S_STAND = oS + 2, S_STATUS = oS + 3, S_REASON = oS + 4, S_HITS = oS + 5, S_KILLS = oS + 6, S_Z1 = oS + 7, S_Z2 = oS + 8,
@@ -457,7 +459,7 @@
         if (m > 0) { eatCell(c, id); sap[m]--; }
         push(q2[id], id * 4 + 2);
         if (M[S_PIX] === 0 && M[S_STATUS] === PLAYING) M[S_STATUS] = WON;
-        spO[s]--; freeIf(s); // v4.3: the squad's space frees once its last block is picked up
+        if (qK[id] !== 4) { spO[s]--; freeIf(s); } // v4.3: the squad's space frees once its last block is picked up (v5 R1: a walker a Volley cut loose holds none)
       } else if (type === 1) { // an arrow: the sapper is knocked back to its space (v5 R1: on every level, never killed)
         const s = qS[id], m = spM[s]; M[S_HITS]++;
         if (qK[id] === 3) { // dealing mode only: any hit fails the deal (the dealer deals hit-free)
@@ -482,7 +484,7 @@
     }
     // Would a tap on card ci (a front card) be refused, and why: 0 no; 1 no open free space; 2 a linked card with fewer
     // than 2 (v4 M2); 3 a linked card whose partner is not the front of its column (v4.3).
-    const whyAt = (ci) => { const p = linkOf[ci]; if (p < 0) return blocked(B.cardM[ci]) ? 1 : 0; if (frontAt(B.cardCol[p]) !== p) return 3; return M[S_LEN] + 2 > capNow() - M[S_LOCK] ? 2 : 0; };
+    const whyAt = (ci) => { const p = partnerOf(ci); if (p < 0) return blocked(B.cardM[ci]) ? 1 : 0; if (frontAt(B.cardCol[p]) !== p) return 3; return M[S_LEN] + 2 > capNow() - M[S_LOCK] ? 2 : 0; };
     const refusedAt = (ci) => whyAt(ci) !== 0;
     // A mystery card is hidden while it is still in its column behind the front (v4 M2) and has never been seen face up
     // (v4 M5: a card pushed back by a Quartermaster, or put back by a Recall, stays revealed).
@@ -570,7 +572,7 @@
     function play(col, t) {
       if (M[S_STATUS] !== PLAYING || col < 0 || col >= NCOL || heads[col] >= B.colLen[col]) return NOPLAY;
       if (t != null) { advanceTo(t); if (M[S_STATUS] !== PLAYING) return NOPLAY; }
-      const ci = frontAt(col), p = linkOf[ci];
+      const ci = frontAt(col), p = partnerOf(ci);
       if (!deal && refusedAt(ci)) return REFUSED;
       advanceHead(col);
       if (p < 0) return tap(B.cardM[ci], cn[ci], null, ci);
@@ -605,10 +607,11 @@
       if (k === PW.SCOUT) { for (let ci = 0; ci < B.ncards; ci++) if (hiddenAt(ci)) return true; return false; }
       if (k === PW.PULL) { // v5 R1: a card in view goes straight out; it needs a free open space (a linked one: 2, partner in view)
         if (!(a >= 0 && a < B.ncards) || !inView(a)) return false;
-        const p = linkOf[a]; if (p >= 0 && !inView(p)) return false;
+        const p = partnerOf(a); if (p >= 0 && !inView(p)) return false;
         return M[S_LEN] + (p >= 0 ? 2 : 1) <= capNow() - M[S_LOCK];
       }
       if (k === PW.RECALL) return a >= 0 && a < capNow() && spQ[a] !== 0 && spL[a] === 0 && spO[a] === 0 && spW[a] > 0 && spC[a] > 0;
+      if (k === PW.VOLLEY) return Number.isInteger(a) && a >= 1 && a < NMAT && a !== IRON && (left[a] > 0 || sap[a] > 0); // v5 R1: a colour still on the board or in play
       return false;
     }
     // Apply power k (argument a) at time t (the clock first runs to t). Returns the status (PLAYING), NOPLAY (the game is
@@ -620,7 +623,7 @@
       M[S_USE + k]++; M[S_PWANY] = 1;
       if (k === PW.LADDER) { M[S_XCAP]++; log(EV.POWER, k, capNow() - M[S_LOCK] - 1); }
       else if (k === PW.PULL) { // v5 R1: a (and its partner) leave their columns and take the lowest free spaces, as a tap would
-        const p = linkOf[a]; leave(a); if (p >= 0) leave(p);
+        const p = partnerOf(a); leave(a); if (p >= 0) leave(p);
         log(EV.POWER, k, a);
         const s1 = place(B.cardM[a], cn[a], a); log(EV.TAP, s1, B.cardM[a]);
         if (p >= 0) { const s2 = place(B.cardM[p], cn[p], p); log(EV.TAP, s2, B.cardM[p]); spL[s1] = s2 + 1; spL[s2] = s1 + 1; log(EV.LINK, s1, s2); opened(B.cardM[p]); }
@@ -628,7 +631,8 @@
       } else if (k === PW.SCOUT) {
         let n = 0; for (let ci = 0; ci < B.ncards; ci++) if (hiddenAt(ci)) { shown[ci] = 1; n++; log(EV.REVEAL, ci, B.cardCol[ci]); }
         log(EV.POWER, k, n);
-      } else { // Recall: the card goes back to its column's front with the sappers waiting (a played card: swapped into the
+      } else if (k === PW.VOLLEY) volley(a);
+      else { // Recall: the card goes back to its column's front with the sappers waiting (a played card: swapped into the
         // slot before the head; v5 R1, a card a Quartermaster took from behind the front: moved up to the head, back in line)
         const ci = spC[a] - 1, j = B.cardCol[ci], s0 = B.colStart[j];
         if (pos[ci] < heads[j]) { const h = heads[j] - 1, q = seq[s0 + h]; seq[s0 + pos[ci]] = q; pos[q] = pos[ci]; seq[s0 + h] = ci; pos[ci] = h; heads[j] = h; }
@@ -641,6 +645,25 @@
       return M[S_STATUS];
     }
 
+    // ---- v5 R1, the Volley (power 4, a = a colour m) -------------------------------------------------------------------
+    // POWER 4 m; every standing block of m goes (CLEAR, in B.near order; a claimed one too, so its walker arrives at
+    // nothing); every card of m leaves its column (REVEAL if hidden; its partner's link is cut, the partner plays alone);
+    // every squad of m leaves the line: its waiting sappers go, its walkers (out to a block, or hit and walking back) are
+    // cut loose (qK 4: they walk home on their own clock and belong to no space), its space frees at once (FREE; a pair's
+    // other squad plays on alone); a colour lock of m opens; then the dispatch at that instant and the end checks.
+    function volley(m) {
+      log(EV.POWER, PW.VOLLEY, m);
+      for (let i = 0; i < n; i++) { const c = B.near[i]; if (a[c] === m && gateOf[c] < 0) { if (hk[c] >= 0) removeAt(m, hpos[c]); eatCell(c, m, EV.CLEAR); } }
+      for (let ci = 0; ci < B.ncards; ci++) {
+        if (B.cardM[ci] !== m || gone[ci] || pos[ci] < heads[B.cardCol[ci]]) continue; // in a column still
+        cut[ci] = 1; leave(ci);
+      }
+      const len = M[S_ORD], sq = []; for (let k = 0; k < len; k++) if (spM[ord[k]] === m) sq.push(ord[k]);
+      for (let id = 0; id < M[S_SN]; id++) { const s = qS[id]; if (spM[s] !== m || sq.indexOf(s) < 0) continue; if ((qK[id] === 1 && q1[id] > M[S_NOW]) || (qK[id] === 2 && q2[id] > M[S_NOW])) qK[id] = 4; }
+      for (const s of sq) { const p = spL[s] - 1; if (p >= 0) { spL[p] = 0; spL[s] = 0; } spW[s] = 0; spO[s] = 0; release(s); if (p >= 0) freeIf(p); }
+      sap[m] = 0; opened(m); dispatch(M[S_NOW]);
+    }
+
     // ---- v5 R1, the continue -----------------------------------------------------------------------------------------
     // Remove a standing pixel at once (a continue or a Volley): out of its heap if it is in reach, then gone like a pop.
     function clearCell(c) { const m = a[c]; if (hk[c] >= 0) removeAt(m, hpos[c]); eatCell(c, m, EV.CLEAR); sap[m]--; }
@@ -649,7 +672,7 @@
     function reviveOK() {
       if (M[S_STATUS] !== FAILED || M[S_REASON] !== JAM || deal || M[S_CONT] >= contLim) return false;
       const open = capNow() - M[S_LOCK];
-      for (let j = 0; j < NCOL; j++) { const ci = frontAt(j); if (ci < 0) continue; const p = linkOf[ci]; if (p < 0 ? open >= 1 : frontAt(B.cardCol[p]) === p && open >= 2) return true; }
+      for (let j = 0; j < NCOL; j++) { const ci = frontAt(j); if (ci < 0) continue; const p = partnerOf(ci); if (p < 0 ? open >= 1 : frontAt(B.cardCol[p]) === p && open >= 2) return true; }
       return false;
     }
     // The continue (at the jam's instant; it takes no time): play resumes, and every squad in the line finishes on the
@@ -735,7 +758,7 @@
       // with fewer than 2, 3 a linked card whose partner is not a front card). holding(s): sappers of space s walking out
       // or back (the space holds while any are, or any wait).
       why(j) { return heads[j] < B.colLen[j] ? whyAt(frontAt(j)) : 0; },
-      hidden: (ci) => ci >= 0 && ci < B.ncards && hiddenAt(ci), partner: (ci) => (ci >= 0 && ci < B.ncards ? linkOf[ci] : -1), held: (s) => heldAt(s),
+      hidden: (ci) => ci >= 0 && ci < B.ncards && hiddenAt(ci), partner: (ci) => (ci >= 0 && ci < B.ncards ? partnerOf(ci) : -1), held: (s) => heldAt(s), cut,
       // Reachable, unclaimed pixels of m right now (tools and UI; not on the hot path).
       reachable(m) { return m > 0 && m < NMAT ? hlen[m] : 0; },
       // v4 M5. power(k, a, t): use power-up k (PW) on a (a card for the Quartermaster, a space for Recall). canPower(k, a):

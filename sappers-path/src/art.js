@@ -260,7 +260,7 @@
 
   // ---- v4 M5: power-up and meta icons ---------------------------------------------------------------------------------
   // Power-ups on a 20 × 20 logical grid: 0 a siege ladder, 1 the quartermaster's crate under a gold arrow (bring a squad
-  // forward), 2 the scout's spyglass, 3 the recall (a gold arrow turning back over a helmet). Small icons, 12 × 12: coin,
+  // forward), 2 the scout's spyglass, 3 the recall (a gold arrow turning back over a helmet), 4 (v5 R1) the Volley's catapult. Small icons, 12 × 12: coin,
   // heart, castle (the siege's progress). Ink outlines throughout; transparent around the shape. The page turns them into
   // image URLs once at boot.
   const PWN = 20;
@@ -284,9 +284,13 @@
       along(P, pts.slice(0, 11), () => 1, g2); along(P, pts.slice(19), () => 2.3, A.timber[0]);
       for (const i of [10, 19]) disc(P, Math.round(pts[i][0]), Math.round(pts[i][1]), Math.round(r(i / 30)), g0);
       const e = pts[30]; disc(P, Math.round(e[0]), Math.round(e[1]), 2, A.ice[1]); P.p(Math.round(e[0]) - 1, Math.round(e[1]) - 1, "#ffffff");
-    } else glyph(P, recallRows(n), 0, 0, { h: g0, A: g1, a: g2, S: A.crew[0][0], D: A.crew[0][1], L: A.crew[0][2], K: A.iron[0] }, ink);
+    } else if (k === 3) glyph(P, recallRows(n), 0, 0, { h: g0, A: g1, a: g2, S: A.crew[0][0], D: A.crew[0][1], L: A.crew[0][2], K: A.iron[0] }, ink);
+    else glyph(P, CATAPULT, 1, 1, { T: A.timber[0], l: A.timber[2], t: A.timber[1], S: A.stone[0], s: A.stone[1], F: A.flame[1], f: A.flame[0], W: A.iron[0], k: A.iron[1] }, ink); // v5 R1: the Volley
     return c;
   }
+  // v5 R1, the Volley's catapult: a timber frame on two iron wheels, its arm flung up to the left, a flaming stone leaving
+  // the cup (top left, clear of the badge's count on the top right).
+  const CATAPULT = ["..ff..............", ".fFFf.............", ".FSSF.............", ".SssSS............", ".SsssS............", "..SsS.TT..........", "......TlT.........", ".......TlT........", "........TlT.......", ".........TlT......", "..........TlT.....", "......tt...TlT....", ".....tllt...TlT...", "...TTTlltTTTTTlT..", "..TTTTTTTTTTTTTT..", "...WW.........WW..", "..WkkW.......WkkW.", "...WW.........WW.."];
   // Critics 2 fix (m3): Recall is a gold arrow turning back (a ↶: up from the squad, over, and down to the left) over a
   // sapper's steel helmet, so it reads as "send a squad back" at 34 px (it was an ivory horn). Rows of glyph() keys:
   // h/A/a the arrow's lit, mid and shaded gold, L/S/D the helmet's light, steel and dark band, K its brim.
@@ -310,8 +314,8 @@
     glyph(P, SMALL[name], 0, 0, { "#": A.ink, k: A.ink, G: g1, W: "#fff7d0", d: g2, R: "#d8322e", S: sb, L: sd, ...(name === "heart" ? { d: "#8f1d1a", W: "#ffb3a8" } : {}), ...(name === "castle" ? { d: A.timber[1], W: sl } : {}) });
     return c;
   }
-  // Every icon as one logical canvas (keyed p0-p3, coin, heart, castle).
-  function icons(A) { const o = {}; for (let k = 0; k < 4; k++) o["p" + k] = powerIcon(A, k); for (const name of Object.keys(SMALL)) o[name] = smallIcon(A, name); return o; }
+  // Every icon as one logical canvas (keyed p0-p4, coin, heart, castle).
+  function icons(A) { const o = {}; for (let k = 0; k < 5; k++) o["p" + k] = powerIcon(A, k); for (const name of Object.keys(SMALL)) o[name] = smallIcon(A, name); return o; }
 
   // ---- scenes (logical canvases; the page scales them with image-rendering: pixelated) ---------------------------------
   function sky(P, A, hFrac, night) {

@@ -917,7 +917,7 @@ function balanced(S) {
 }
 const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0, ci = S.card(j, 0); ci >= 0; ci = S.card(j, ++d)) o.push([ci, S.count(ci)]); return o; });
 {
-  eq([PN.powers, PN.pullDepth, E.POWERS, N.powers === undefined], [[1, 3, 1, 2], 2, ["ladder", "quartermaster", "scout", "recall"], true], "powers: config meta gives the uses per level (Ladder 1, Quartermaster 3, Scout 1, Recall 2) and the reach; rules without meta allow none");
+  eq([PN.powers, PN.pullDepth, E.POWERS, N.powers === undefined], [[1, 3, 1, 2, 1], 2, ["ladder", "quartermaster", "scout", "recall", "volley"], true], "powers: config meta gives the uses per level (Ladder 1, Quartermaster 3, Scout 1, Recall 2, Volley 1) and the reach; rules without meta allow none");
   const S0 = E.sim(E.compile(lv(RING, [[[2, 1]], [], [], [], []])), N);
   eq([0, 1, 2, 3].map((k) => [S0.canPower(k, 0), S0.power(k, 0)]), [[false, E.REFUSED], [false, E.REFUSED], [false, E.REFUSED], [false, E.REFUSED]], "powers: with no uses allowed (the grader's rules) every power-up is refused");
 }
@@ -1010,10 +1010,46 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
   eq([M2.stuck(0), M2.power(PW.RECALL, 0), colsOf(M2)[0].map((c) => c[0]), M2.hidden(1), M2.gone[1]], [true, E.PLAYING, [1, 0, 2], false, 0], "recall (v5 R1): a card the Quartermaster sent out from 1 back goes back to its column's front, face up");
   ok(balanced(M2) === true, "recall (v5 R1): balance holds after pull and recall (" + balanced(M2) + ")");
 }
+// ---- v5 R1: the Volley (power 4 on a colour) ----------------------------------------------------------------------------------
+{
+  const VR = phold(5, [0, 0, 0, 0, 1]);
+  // b (2 pixels, walled in) waits stuck; the Volley on b clears (3,2) then (2,2) (nearest the entry (3,4) first), frees
+  // its space and leaves no b sapper anywhere; a and c then win.
+  const L = lv(RING, [[[2, 2]], [[1, 12]], [[3, 1]], [], []]), B = E.compile(L), S = E.sim(B, VR); S.logOn = true; pat(S, 0);
+  eq([S.canPower(PW.VOLLEY, 10), S.canPower(PW.VOLLEY, 5), S.canPower(PW.VOLLEY, 2)], [false, false, true], "volley: iron and a colour not in play are refused; b can go");
+  S.clearLog(); const r = S.power(PW.VOLLEY, 2);
+  eq([r, evs(S, E.EV.POWER), evs(S, E.EV.CLEAR).map(([c, m]) => [xy(B, c), m]), evs(S, E.EV.FREE), S.lineLen, S.left[2], S.sappers(2), S.plays], [E.PLAYING, [[4, 2]], [[[3, 2], 2], [[2, 2], 2]], [[0, 2]], 0, 0, 0, 1], "volley: POWER 4 b, both b pixels cleared nearest the entry first, its space freed at once, no b left; not a play");
+  ok(balanced(S) === true, "volley: balance holds (" + balanced(S) + ")");
+  eq([pat(S, 1), pat(S, 2), S.canPower(PW.VOLLEY, 1)], [E.PLAYING, E.WON, false], "volley: a and c finish the level");
+  const R = Ref.game(L, VR); R.play(0); R.quiet(); eq([R.power(PW.VOLLEY, 5), R.power(PW.VOLLEY, 2), R.g[2 * 7 + 2], R.g[2 * 7 + 3], R.spaces.filter(Boolean).length], ["refused", undefined, -2, -2, 0], "volley (reference): the same");
+  // Cards of the colour leave the queue, wherever they are; a hidden one is revealed as it goes; a partner's link is cut.
+  const Q = E.sim(E.compile(lv(ROW6, [[[1, 1], [2, 1, 1], [3, 1]], [[4, 1], [2, 0 + 1]], [[5, 1]], [[6, 1]], []], { links: [[[0, 2], [1, 1]]] })), VR); Q.logOn = true;
+  // b cards: col 0 #1 (hidden), col 1 #1 (linked to c). Volley b.
+  Q.power(PW.VOLLEY, 2);
+  eq([colsOf(Q).slice(0, 2).map((c) => c.map((x) => x[0])), evs(Q, E.EV.REVEAL), Q.partner(2), Q.cut[4]], [[[0, 2], [3]], [[1, 0]], -1, 1], "volley: both b cards leave their columns (the hidden one revealed); c's partner was b, so c plays alone");
+  pat(Q, 0); eq([Q.why(0), pat(Q, 0), Q.lineLen], [0, E.PLAYING, 0], "volley: c, once linked, is tapped alone");
+  // Walkers cut loose: a squad mid-walk loses its claimed block; the walker walks home on its own, holding no space.
+  const W = E.sim(E.compile(lv(ROW6, [[[1, 1]], [[2, 1]], [[3, 1]], [[4, 1]], [[5, 1], [6, 1]]])), VR); W.play(0, 0); W.advanceTo(10);
+  eq([W.lineLen, W.out, W.qK[0]], [1, 1, 1], "volley: a's sapper is walking out to its block");
+  W.power(PW.VOLLEY, 1); eq([W.lineLen, W.out, W.qK[0], W.left[1], W.open - W.lineLen], [0, 1, 4, 0, 5], "volley: a's block is cleared, its space free at once, its walker cut loose (still out)");
+  W.play(1); eq([W.spM[0], W.lineLen], [2, 1], "volley: the freed space takes the next squad at once");
+  W.quiet(); eq([W.out, W.lineLen, W.left[2]], [0, 0, 0], "volley: the cut-loose walker comes home touching no space; b finishes");
+  // A linked pair in the line: the Volley on one colour frees its space; the other plays on unpaired.
+  const P = E.sim(E.compile(lv(RING, [[[2, 2]], [[3, 1]], [[1, 12]], [], []], { links: [[[0, 0], [1, 0]]] })), VR); pat(P, 0);
+  eq([P.lineLen, P.spL[0] > 0], [2, true], "volley: b and c (linked) wait in the line");
+  P.power(PW.VOLLEY, 2); eq([P.lineLen, P.spL[1], P.spM[1], P.stuck(1)], [1, 0, 3, true], "volley: b's space frees; c stays, unpaired");
+  eq([pat(P, 2), P.status], [E.WON, E.WON], "volley: a razes the ring and c finishes");
+  // A colour lock of the volleyed colour opens.
+  const CL = E.sim(E.compile(lv(ROW6, [[[1, 1]], [[2, 1]], [], [], []], { lock: { colour: 2 } })), VR); CL.power(PW.VOLLEY, 2);
+  eq([CL.locked, CL.open], [0, 5], "volley: a colour lock of the volleyed colour opens (no squad of it is left to open it)");
+  // A gilt Volley removes keys: the gate opens.
+  const G = E.sim(E.compile(lv(["ajjjb", "jjjjj", ".....", "n.##."], [[[14, 1]], [[1, 1]], [[2, 1]], [], []], { gates: [{ at: [1, 0], key: [0, 3] }] })), VR);
+  G.power(PW.VOLLEY, 14); eq([G.left[10], G.left[14]], [0, 0], "volley: on gilt, the key goes and its gate opens");
+}
 // ---- every operation: dealing, game over, determinism ------------------------------------------------------------------------
 {
   const D = E.sim(E.compile(lv(RING)), PN, { deal: true }); D.playSquad(2, 1);
-  eq([0, 1, 2, 3].map((k) => D.power(k, 0)), [E.NOPLAY, E.NOPLAY, E.NOPLAY, E.NOPLAY], "powers: dealing mode never takes one (NOPLAY)");
+  eq([0, 1, 2, 3, 4].map((k) => D.power(k, 0)), [E.NOPLAY, E.NOPLAY, E.NOPLAY, E.NOPLAY, E.NOPLAY], "powers: dealing mode never takes one (NOPLAY)");
   const W = E.sim(E.compile(lv(ROW6, [[[1, 1]], [[2, 1]], [[3, 1]], [[4, 1]], [[5, 1], [6, 1]]])), PN); for (const j of [0, 1, 2, 3, 4, 4]) pat(W, j);
   eq([W.status, W.power(PW.LADDER)], [E.WON, E.NOPLAY], "powers: none once the level is over");
   // Without a power used, rules with power-ups allowed play every stored order identically (hash, clock, state) to the
@@ -1028,10 +1064,10 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
 }
 // ---- differential with power-ups: engine vs the reference, random taps and power-ups, patient and rushed ----------------------
 {
-  let games = 0, ops = 0, taken = [0, 0, 0, 0], refusedP = 0, diffs = 0, rests = 0, hangs = 0, unbal = 0, dry = 0, revs = 0, revNo = 0; const t0 = Date.now();
+  let games = 0, ops = 0, taken = [0, 0, 0, 0, 0], refusedP = 0, diffs = 0, rests = 0, hangs = 0, unbal = 0, dry = 0, revs = 0, revNo = 0; const t0 = Date.now();
   const rline = (R) => R.spaces.map((s, k) => [k, s]).filter(([, s]) => s).sort((p, q) => p[1].seq - q[1].seq).map(([k, s]) => [k, s.m, s.wait, s.out, s.pair == null ? -1 : s.pair]);
   const eline = (S) => S.order().map((s) => [s, S.spM[s], S.spW[s], S.spO[s], S.spL[s] - 1]);
-  const lim = [2, 4, 2, 3];
+  const lim = [2, 4, 2, 3, 2];
   const SET = TWISTED.filter((L, k) => k < 4 || k % 3 === 0);
   for (const L of SET) {
     const B = E.compile(L);
@@ -1044,7 +1080,8 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
         if (rushed) t += Math.floor(r() * 1500);
         let a1, a2, what;
         if (usePower) {
-          const k = Math.floor(r() * 4); let a = 0;
+          const k = Math.floor(r() * (r() < 0.25 ? 5 : 4)); let a = 0; // v5 R1: a Volley now and then
+          if (k === PW.VOLLEY) { const o = S.order(), f = S.front(Math.floor(r() * 5)); a = r() < 0.5 && o.length ? S.spM[o[Math.floor(r() * o.length)]] : r() < 0.8 && f >= 0 ? B.cardM[f] : 1 + Math.floor(r() * 14); }
           if (k === PW.PULL) { const j = Math.floor(r() * 5), d = Math.floor(r() * 4), c = S.card(j, d); a = c >= 0 ? c : Math.floor(r() * B.ncards); }
           else if (k === PW.RECALL) { const o = S.order(); a = o.length && r() < 0.8 ? o[Math.floor(r() * o.length)] : Math.floor(r() * 8); }
           if (rushed) { S.advanceTo(t); R.advanceTo(t); }
@@ -1084,8 +1121,8 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
       if (bad) { diffs++; if (diffs <= 4) console.log("  diff: " + (L.id || "injected " + B.n) + " " + dn + (rushed ? " rushed" : " patient") + ": " + bad); }
     }
   }
-  eq(diffs, 0, "differential (power-ups): engine == reference on " + games + " games, " + ops + " taps and power-ups (taken: Ladder " + taken[0] + ", Quartermaster " + taken[1] + ", Scout " + taken[2] + ", Recall " + taken[3] + "; " + refusedP + " refused): acceptance, status, spaces, columns and counts, hidden cards, clock");
-  ok(taken.every((k) => k > 0) && refusedP > 0, "differential (power-ups): every power-up is taken and refused in the run");
+  eq(diffs, 0, "differential (power-ups): engine == reference on " + games + " games, " + ops + " taps and power-ups (taken: Ladder " + taken[0] + ", Quartermaster " + taken[1] + ", Scout " + taken[2] + ", Recall " + taken[3] + ", Volley " + taken[4] + "; " + refusedP + " refused): acceptance, status, spaces, columns and counts, hidden cards, clock");
+  ok(taken.every((k) => k > 0) && taken[4] >= 20 && refusedP > 0, "differential (power-ups): every power-up is taken (the Volley " + taken[4] + " times) and refused in the run");
   ok(revs > 0 && revNo > 0, "differential (v5 R1 continue): continues taken (" + revs + ") and refused (" + revNo + ") in the run, engine == reference");
   eq([dry, hangs, unbal], [0, 0, 0], "power-ups: canPower always agrees with power(); " + rests + " rest states all have a legal tap or are over; every patient rest state keeps each colour's sappers equal to its pixels");
   console.log("  differential (power-ups): " + games + " games, " + ops + " operations (taken " + taken.join("/") + ", " + refusedP + " refused) in " + ((Date.now() - t0) / 1000).toFixed(1) + " s");
@@ -1124,7 +1161,7 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
       return b && b[0] === Math.min(...ms) && b[1] === Math.min(...tp) && b[2] === r[6]; });
     const keep = raw.coins == null ? META.coins.start : raw.coins;
     eq([sv.v, Object.keys(sv.done).sort(), Object.keys(sv.gal).sort(), Object.values(sv.done).concat(Object.values(sv.gal)).every((x) => x === 1), bestOk, sv.coins, sv.inv, sv.settings, sv.last, Save.next(sv, order)],
-      [2, wonIds.sort(), galIds.sort(), true, true, keep, raw.inv || { ladder: 0, quartermaster: 0, scout: 0, recall: 0 }, { muted: raw.settings.muted, speed: raw.settings.speed || (raw.settings.fast ? 2 : 1), cb: raw.settings.cb === true }, raw.last, order[wonIds.length] || order[order.length - 1]],
+      [2, wonIds.sort(), galIds.sort(), true, true, keep, Object.assign({ ladder: 0, quartermaster: 0, scout: 0, recall: 0 }, raw.inv || {}, { volley: 0 }), { muted: raw.settings.muted, speed: raw.settings.speed || (raw.settings.fast ? 2 : 1), cb: raw.settings.cb === true }, raw.last, order[wonIds.length] || order[order.length - 1]],
       "save v4.3: the " + ver + " save (" + wonIds.length + " levels, " + galIds.length + " pictures) migrates: cleared by id, bests the best, coins and settings kept, difficulty dropped");
     eq(Save.sanitize(JSON.parse(JSON.stringify(sv)), order, gids, META), sv, "save v4.3: the migrated " + ver + " save reads back unchanged (format 2)");
   }
@@ -1133,16 +1170,16 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
 // ---- v4 M5, the meta layer (src/meta.js) and its save fields ----------------------------------------------------------------
 {
   const Save = require("../src/save.js"), Meta = require("../src/meta.js"), order = LEVELS.levels.map((l) => l.id), gids = require("../levels/gallery.json").levels.map((l) => l.id);
-  const prices = META.powers.map((p) => p.price), total = prices.reduce((a, b) => a + b, 0);
+  const prices = META.powers.map((p) => p.price), total = prices.slice(0, 4).reduce((a, b) => a + b, 0); // v5 R1: the Volley (rare, costly) is not one of them
   const f = Save.fresh(META);
-  eq([f.coins, f.inv, f.best, f.lives], [META.coins.start, { ladder: 0, quartermaster: 0, scout: 0, recall: 0 }, {}, { n: META.livesMax, at: 0 }], "meta save: a new save starts with " + META.coins.start + " coins, no power-ups, no best results, full lives");
-  ok(META.coins.start >= total && META.lives === false, "meta: the starting balance (" + META.coins.start + ") buys each power-up once (" + total + "); lives are off on the web");
+  eq([f.coins, f.inv, f.best, f.lives], [META.coins.start, { ladder: 0, quartermaster: 0, scout: 0, recall: 0, volley: 0 }, {}, { n: META.livesMax, at: 0 }], "meta save: a new save starts with " + META.coins.start + " coins, no power-ups, no best results, full lives");
+  ok(META.coins.start >= total && META.lives === false, "meta: the starting balance (" + META.coins.start + ") buys each of the four everyday power-ups once (" + total + "; the Volley is " + prices[4] + "); lives are off on the web");
   // Old saves: no coins field -> the starting balance; junk is clamped or dropped.
   const old = Save.sanitize({ done: { [order[0]]: 2 }, settings: { speed: 2 } }, order, gids, META);
   eq([old.coins, old.inv.ladder, old.best, old.lives.n], [META.coins.start, 0, {}, META.livesMax], "meta save: a save from before M5 loads with the starting balance, an empty inventory, no best results and full lives");
   const junk = Save.sanitize({ done: { [order[0]]: 3, [order[1]]: 1 }, gal: { [gids[0]]: 4 }, coins: 2.6e9, inv: { ladder: 3.4, scout: -2, recall: 1e9, quartermaster: "9" },
     best: { [order[0]]: [9000, 12000, 7000, 20, 30, 40, 55], [order[1]]: [1, 2, 3, 4, 5, 6, 7], [gids[0]]: [0, 0, 4e6, 0, 0, 2000, 1], nope: [1, 1, 1, 1, 1, 1, 1], [order[2]]: [5, 5, 5, 5, 5, 5, 5] }, lives: { n: 40, at: -3 } }, order, gids, META);
-  eq([junk.coins, junk.inv, junk.best, junk.lives], [Meta.MAXCOINS, { ladder: 3, quartermaster: 0, scout: 0, recall: 99 },
+  eq([junk.coins, junk.inv, junk.best, junk.lives], [Meta.MAXCOINS, { ladder: 3, quartermaster: 0, scout: 0, recall: 99, volley: 0 },
     { [order[0]]: [9000, 20, 55], [order[1]]: [1, 4, 7], [gids[0]]: [Meta.MAXMS, Meta.MAXTAPS, 1] }, { n: META.livesMax, at: 0 }],
     "meta save: coins and inventory clamped; a format-1 best keeps the best over the difficulties won (clamped), unknown or unwon levels dropped; lives clamped");
   const j2 = Save.sanitize({ v: 2, done: { [order[0]]: 1, [order[1]]: 1 }, best: { [order[0]]: [9000, 20, 55, 99], [order[1]]: [-4, 1e9, "x"], [order[3]]: [1, 1, 1] } }, order, gids, META);

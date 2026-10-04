@@ -146,7 +146,7 @@ body.wide.coached #coach-dock { display: block; }
    light disc with its pixel icon, a bubble (the count owned, or a green "+") and, to buy, the price on a pill. Bigger
    than the tiles and the only round shapes in a level. A badge waiting for its target glows; the tiles or spaces it can
    take wear .pickable. */
-#powers { flex: none; display: grid; grid-template-columns: auto repeat(4, minmax(0, 1fr)); align-items: center; align-content: center; justify-items: center; column-gap: 4px; height: var(--pw-h);
+#powers { flex: none; display: grid; grid-template-columns: auto repeat(var(--pw-n, 5), minmax(0, 1fr)); align-items: center; align-content: center; justify-items: center; column-gap: 4px; height: var(--pw-h);
   margin: 0 0 max(8px, env(safe-area-inset-bottom)); padding: 0 6px; border: 3px solid var(--ink); border-radius: 12px; background: var(--pw-band); box-shadow: inset 0 3px 0 rgba(255,255,255,.12), 0 4px 0 rgba(0,0,0,.45); }
 .pill { display: inline-flex; align-items: center; gap: 5px; height: var(--pill-h); padding: 0 11px 0 5px; border-radius: calc(var(--pill-h) / 2); border: 3px solid var(--ink); background: var(--parch); color: var(--parch-ink);
   font-family: var(--px); font-size: var(--pill-fs); line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; box-shadow: inset 0 -3px 0 var(--parch-edge), 0 3px 0 rgba(0,0,0,.4); }
@@ -405,7 +405,7 @@ body.wide { --tile-h: 74px; --tile-n: 54px; --tile-gap: 8px; --gl-s: 18px; --slo
 /* v4 M5: on wide screens the bar fills the side column's foot under the rail (no bare brick): a header with the coins,
    then the four badges with their names, in a row, or 2 x 2 with bigger badges once the foot is tall (main.js:
    #powers.grid, from layout.pwGrid). */
-body.wide #powers { flex: 1 1 0; height: auto; min-height: var(--pw-h); overflow: hidden; margin: 12px 0 0; padding: 10px 12px 14px; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: auto 1fr; row-gap: 6px; align-content: center;
+body.wide #powers { flex: 1 1 0; height: auto; min-height: var(--pw-h); overflow: hidden; margin: 12px 0 0; padding: 10px 12px 14px; grid-template-columns: repeat(var(--pw-n, 5), minmax(0, 1fr)); grid-template-rows: auto 1fr; row-gap: 6px; align-content: center;
   border-radius: 12px; background: var(--tray); box-shadow: inset 0 3px 0 var(--tray-hi), inset 0 -4px 0 var(--tray-edge), 0 4px 0 rgba(0,0,0,.45); }
 body.wide #pw-coins { grid-column: 1 / -1; justify-self: start; }
 body.wide .pw { width: var(--pw-d); flex: none; margin-bottom: 26px; }
@@ -413,7 +413,7 @@ body.wide .pw .pw-name { display: block; position: absolute; left: 50%; top: cal
 body.wide .pw.poor .pw-name { display: none; }
 body.wide .pw.poor .pw-need { display: block; position: absolute; left: 50%; top: calc(100% + 12px); transform: translateX(-50%); font-family: var(--px); font-size: 19px; line-height: 1; color: var(--pw-poor-ink); white-space: nowrap; }
 body.wide.short .pw .pw-name, body.wide.short .pw.poor .pw-need { display: none; }
-body.wide #powers.grid { --pw-b: 32px; --pw-bfs: 26px; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto 1fr 1fr; row-gap: 8px; }
+body.wide #powers.grid { --pw-b: 32px; --pw-bfs: 26px; grid-template-columns: repeat(var(--pw-c, 3), minmax(0, 1fr)); grid-template-rows: auto 1fr 1fr; row-gap: 8px; }
 body.wide #line-head { font-size: 20px; }
 body.wide .sheet .sheetcard { max-width: none; border: 3px solid var(--ink); border-radius: 12px; }
 body.wide .sheet:not(.float) .sheetcard { border-radius: 10px 10px 12px 12px; }
@@ -429,12 +429,12 @@ body.wide #map-play { display: block; max-width: 420px; margin: 0 auto; }
   #top { height: 40px; } button.round { width: 38px; height: 38px; min-height: 38px; } #lvl-num { font-size: 19px; } #lvl-name { font-size: 20px; }
   body.wide #app { padding-top: 4px; padding-bottom: 4px; column-gap: 12px; } body.wide #top { padding: 6px 8px 4px; } body.wide #rail { gap: 6px; padding: 6px var(--tray-pad) var(--tray-pad); }
   body.wide { --tile-h: 46px; --tile-n: 34px; --tile-gap: 5px; --gl-s: 13px; --slot-h: 40px; --slot-n: 30px; --man: 14px; --ch-s: 11px; --bd: 13px; --lk-s: 12px; --out-n: 11px; --coach-h: 40px; --coach-fs: 19px; --pw-h: 60px; --pw-d: 50px; --pw-b: 20px; --pw-bfs: 17px; --tray-pad: 8px; }
-  body.wide #powers { margin-top: 6px; padding: 4px 8px; grid-template-columns: auto repeat(4, minmax(0, 1fr)); grid-template-rows: 1fr; align-content: center; }
+  body.wide #powers { margin-top: 6px; padding: 4px 8px; grid-template-columns: auto repeat(var(--pw-n, 5), minmax(0, 1fr)); grid-template-rows: 1fr; align-content: center; }
   body.wide #pw-coins { grid-column: auto; --pill-h: 28px; --pill-fs: 18px; --ico: 16px; }
   body.wide .pw { margin-bottom: 0; }
-  body.wide #powers.grid { --pw-b: 22px; --pw-bfs: 18px; grid-template-columns: auto repeat(2, minmax(0, 1fr)); grid-template-rows: 1fr 1fr; row-gap: 8px; } /* m5: 2 x 2 (main.js sizePowers) */
+  body.wide #powers.grid { --pw-b: 22px; --pw-bfs: 18px; grid-template-columns: auto repeat(var(--pw-c, 3), minmax(0, 1fr)); grid-template-rows: 1fr 1fr; row-gap: 8px; } /* m5: 2 x 2 (main.js sizePowers) */
   body.wide #powers.grid #pw-coins { grid-row: 1 / 3; }
-  body.wide #powers.head { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: auto 1fr; row-gap: 8px; } body.wide #powers.head #pw-coins { grid-column: 1 / -1; justify-self: start; }
+  body.wide #powers.head { grid-template-columns: repeat(var(--pw-n, 5), minmax(0, 1fr)); grid-template-rows: auto 1fr; row-gap: 8px; } body.wide #powers.head #pw-coins { grid-column: 1 / -1; justify-self: start; }
   body.wide #lvl-name { font-size: 18px; } body.wide #tag-chip { font-size: 13px; } body.wide #line-head { font-size: 15px; }
   button.big { min-height: 48px; font-size: 30px; }
 }

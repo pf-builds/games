@@ -8,7 +8,7 @@
 // v4 M4: gal {id: mask}, the Gallery's pictures won, a bit per difficulty like done. Every Gallery picture is open once
 // the Gallery is (the page decides that from done), so a mask is kept for any Gallery id the page has, clamped to the
 // three bits; unknown ids and non-numbers are dropped. A save from before M4 loads with an empty gal.
-// v4 M5 (the meta layer, src/meta.js): coins (a whole number 0-9,999,999), inv {ladder, quartermaster, scout, recall}
+// v4 M5 (the meta layer, src/meta.js): coins (a whole number 0-9,999,999), inv {ladder, quartermaster, scout, recall, volley (v5 R1)}
 // (each 0-99), best {id: [ms easy, ms normal, ms hard, taps easy, taps normal, taps hard, coins earned]} (whole numbers,
 // ms 0-3,600,000 and taps 0-999 with 0 = none, kept only for a difficulty the level or picture was won on; ids the page
 // has), and lives {n, at} (n 0-livesMax, at a time in ms or 0). meta (config.meta) gives a new save its coins
@@ -32,11 +32,11 @@
   const VERSION = 2, ALL = 7; // format 1's done masks: a bit per difficulty (1 easy, 2 normal, 4 hard)
 
   const MAXSPEED = 3;
-  const MAXCOINS = 9999999, MAXINV = 99, MAXMS = 3600000, MAXTAPS = 999, POWERS = ["ladder", "quartermaster", "scout", "recall"];
+  const MAXCOINS = 9999999, MAXINV = 99, MAXMS = 3600000, MAXTAPS = 999, POWERS = ["ladder", "quartermaster", "scout", "recall", "volley"]; // v5 R1: volley
   const whole = (v, hi) => (typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.min(hi, Math.round(v))) : 0);
   const startCoins = (meta) => whole(meta && meta.coins && meta.coins.start, MAXCOINS), maxLives = (meta) => Math.max(1, Math.min(99, (meta && meta.livesMax) | 0 || 5));
   function fresh(meta) { return { v: VERSION, done: {}, gal: {}, settings: { muted: false, speed: 1, cb: false }, last: null,
-    coins: startCoins(meta), inv: { ladder: 0, quartermaster: 0, scout: 0, recall: 0 }, best: {}, lives: { n: maxLives(meta), at: 0 } }; }
+    coins: startCoins(meta), inv: { ladder: 0, quartermaster: 0, scout: 0, recall: 0, volley: 0 }, best: {}, lives: { n: maxLives(meta), at: 0 } }; }
   const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
   const isObj = (o) => !!o && typeof o === "object" && !Array.isArray(o);
 

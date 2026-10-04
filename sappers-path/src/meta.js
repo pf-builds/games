@@ -16,7 +16,7 @@
   else (root.SappersPath = root.SappersPath || {}).meta = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
-  const DIFFS = ["easy", "normal", "hard"], POWERS = ["ladder", "quartermaster", "scout", "recall"];
+  const DIFFS = ["easy", "normal", "hard"], POWERS = ["ladder", "quartermaster", "scout", "recall", "volley"]; // v5 R1: volley
   const MAXCOINS = 9999999, MAXINV = 99, MAXMS = 3600000, MAXTAPS = 999, BEST = 3; // v4.3: best = [ms, taps, coins]
   const clampInt = (v, lo, hi) => (Number.isFinite(v) ? Math.max(lo, Math.min(hi, Math.round(v))) : lo);
   const powerOf = (meta, k) => (meta && Array.isArray(meta.powers) ? meta.powers.find((p) => p && p.id === POWERS[k]) : null) || { id: POWERS[k], price: 0, perLevel: 0 };

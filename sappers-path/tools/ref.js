@@ -38,6 +38,11 @@
 // its list, turns face up and takes the lowest empty open space, as a tap's squad would; a linked card takes its partner
 // along (the partner within the same reach in its own list), needs 2 empty open spaces, and the two are a pair. Refused
 // without the spaces. A Recall later puts its card back at the front of the list it came from.
+// Volley (power 4, a = a colour m; v5 R1): refused unless m (any card colour but iron) still has a pixel standing or a
+// sapper in play. Every pixel of m goes (gates and the lock open for keys, as for a pop; claimed ones too), every card
+// of m leaves its list (face up; its partner, if any, is no longer linked), every space of m is emptied at once (its
+// partner space plays on unpaired), and the sappers of m still walking out or back keep walking but no longer belong to
+// any space; a colour lock of m opens.
 // pops: every popped pixel as [cell, time], in the order they popped.
 "use strict";
 const MATCH = { ".": 0, ",": -2, "~": -1, "#": -3 };
@@ -71,7 +76,7 @@ function game(L, rules) {
   const claimed = new Set(), pops = [];
   let status = "playing", reason = "", jamWhy = 0, now = 0, seq = 0, taps = 0, peak = 0, hitsN = 0, killsN = 0;
   let locked = R.lockKey >= 0 || R.lockColour ? Math.max(0, Math.min(rules.hold - 1, rules.lockSpaces == null ? 1 : rules.lockSpaces)) : 0;
-  let extra = 0, revived = 0; const uses = [0, 0, 0, 0], limits = rules.powers || [0, 0, 0, 0], reach = rules.pullDepth == null ? 2 : rules.pullDepth;
+  let extra = 0, revived = 0; const uses = [0, 0, 0, 0, 0], limits = rules.powers || [0, 0, 0, 0, 0], reach = rules.pullDepth == null ? 2 : rules.pullDepth;
   const seeFronts = () => { for (const c of cols) if (c.length) c[0].seen = true; };
   seeFronts();
   const walk = (v) => v === 0 || v === -2 || v === -3;
@@ -143,11 +148,11 @@ function game(L, rules) {
         if (q.cell === R.lockKey) locked = 0; }
       schedule(q.back, "home", { sapper: Object.assign({}, q, { hit: false }) });
       if (!left() && status === "playing") status = "won";
-      spaces[q.space].out--; freeIf(q.space); // the block is picked up: the carrier no longer holds the space
+      if (!q.loose) { spaces[q.space].out--; freeIf(q.space); } // the block is picked up: the carrier no longer holds the space
     } else if (e.kind === "hit") {
       hitsN++; schedule(q.back, "home", { sapper: Object.assign({}, q, { hit: true }) });
     } else if (e.kind === "home") { // only a sapper sent back by an arrow rejoins its squad; a carrier is just home
-      if (q.hit) { const s = spaces[q.space]; s.out--; s.wait++; freeIf(q.space); }
+      if (q.hit && !q.loose) { const s = spaces[q.space]; s.out--; s.wait++; freeIf(q.space); }
     }
   }
   const need = (cd) => (cd.partner ? 2 : 1);
@@ -215,6 +220,14 @@ function game(L, rules) {
     } else if (k === 3) {
       const s = spaces[a]; if (!s || s.pair != null || s.out > 0 || s.wait === 0 || !s.card) return "refused";
       s.card.n = s.wait; cols[s.card.col].unshift(s.card); spaces[a] = null;
+    } else if (k === 4) { // v5 R1, the Volley on colour a
+      const m = a; if (!(Number.isInteger(m) && m >= 1 && m < 15 && m !== IRON) || (!left(m) && !(sap[m] > 0))) return "refused";
+      g.forEach((v, c) => { if (v === m && !isGate(c)) { g[c] = -2; claimed.delete(c); clearedN++; for (const G of R.gates) if (G.key === c) for (const gc of G.cells) g[gc] = -2; if (c === R.lockKey) locked = 0; } });
+      for (const c of cols) for (let i = c.length - 1; i >= 0; i--) if (c[i].m === m) { const cd = c[i]; c.splice(i, 1); cd.seen = true; if (cd.partner) { cd.partner.partner = null; cd.partner = null; } }
+      for (const e of events) if (e.sapper && e.sapper.m === m && spaces[e.sapper.space] && spaces[e.sapper.space].m === m && (e.kind === "pop" || e.kind === "hit" || (e.kind === "home" && e.sapper.hit))) e.sapper.loose = true;
+      spaces.forEach((sp, i) => { if (!sp || sp.m !== m) return; if (sp.pair != null && spaces[sp.pair]) { const o = sp.pair; spaces[o].pair = null; spaces[i] = null; freeIf(o); } else spaces[i] = null; });
+      sap[m] = 0; if (R.lockColour === m) locked = 0;
+      uses[k]++; seeFronts(); dispatch(now); settle(); return;
     } else return "refused";
     uses[k]++; seeFronts(); settle();
   }

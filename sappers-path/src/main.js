@@ -465,17 +465,21 @@
       if (!r.ok) { pwShake(k); cue("blocked"); pwToast(r.full ? "full" : "short", { name: P.name, price: r.price, have: D.coins }, true); renderPowers(); return false; }
       writeSave(); app.pwPop[k] = app.clock; cue("coin"); pwToast("bought", { name: P.name, price: r.price }); renderPowers(); return true;
     }
-    if (k === PW.PULL || k === PW.RECALL) { // ask for a target
-      if (!pickTargets(k).length) { pwShake(k); cue("blocked"); pwToast(k === PW.RECALL ? "noRecall" : pullWhy(), null, true); return false; }
-      app.pick = { k }; pwToast(k === PW.PULL ? "pickPull" : "pickRecall"); renderPowers(); markPick(); return true;
+    if (k === PW.PULL || k === PW.RECALL || k === PW.VOLLEY) { // ask for a target (v5 R1: the Volley asks for a colour)
+      if (!pickTargets(k).length) { pwShake(k); cue("blocked"); pwToast(k === PW.RECALL ? "noRecall" : k === PW.VOLLEY ? "noVolley" : pullWhy(), null, true); return false; }
+      app.pick = { k }; pwToast(k === PW.PULL ? "pickPull" : k === PW.VOLLEY ? "pickVolley" : "pickRecall"); renderPowers(); markPick(); return true;
     }
     return applyPower(k, 0);
   }
   // Why no tile can go out (v5 R1): no free space at all, or only linked squads in view whose partners aren't (or 2 spaces).
   function pullWhy() { const S = app.S; return S.open - S.lineLen > 0 ? "noPullLinked" : "noPull"; }
-  // The Quartermaster's tiles (j, d, card) in the visible rows, or Recall's spaces, that the engine would take now.
+  // The Quartermaster's tiles (j, d, card) in the visible rows, or Recall's spaces ([i]), that the engine would take now.
+  // v5 R1, the Volley: a colour, picked by one of its face-up tiles in the visible rows ([j, d, card]) or its squads in
+  // the line ([-1, i]); a hidden tile never offers its colour.
   function pickTargets(k) {
     const S = app.S, out = [];
+    if (k === E.PW.VOLLEY) { for (let j = 0; j < E.NCOL; j++) for (let d = 0; d < app.rows; d++) { const ci = S.card(j, d); if (ci >= 0 && !S.hidden(ci) && S.canPower(k, app.B.cardM[ci])) out.push([j, d, ci]); }
+      for (let i = 0; i < S.cap; i++) if (S.spQ[i] && S.canPower(k, S.spM[i])) out.push([-1, i]); return out; }
     // v5 R1: the rows behind the front, and a linked front card (it can't be tapped alone while its partner is buried)
     if (k === E.PW.PULL) { for (let j = 0; j < E.NCOL; j++) for (let d = 0; d < app.rows && d <= S.pullDepth; d++) { const ci = S.card(j, d); if (ci >= 0 && (d > 0 || S.partner(ci) >= 0) && S.canPower(k, ci)) out.push([j, d, ci]); } }
     else for (let i = 0; i < S.cap; i++) if (S.canPower(k, i)) out.push([i]);
@@ -484,7 +488,7 @@
   // Use power k on a (the engine refuses: nothing spent, the reason); taken: one spent, the show and the bar update.
   function applyPower(k, a) {
     const S = app.S, P = Meta.powerOf(app.meta, k), r = S.power(k, a);
-    if (r !== E.PLAYING && r !== E.WON && r !== E.FAILED) { pwShake(k); cue("blocked"); pwToast(k === E.PW.LADDER ? "noLadder" : k === E.PW.SCOUT ? "noScout" : k === E.PW.RECALL ? "noRecall" : pullWhy(), null, true); return false; }
+    if (r !== E.PLAYING && r !== E.WON && r !== E.FAILED) { pwShake(k); cue("blocked"); pwToast(k === E.PW.LADDER ? "noLadder" : k === E.PW.SCOUT ? "noScout" : k === E.PW.RECALL ? "noRecall" : k === E.PW.VOLLEY ? "noVolley" : pullWhy(), null, true); return false; }
     Meta.take(app.save.data, k); writeSave(); app.pwPop[k] = app.clock; app.pick = null;
     app.V.sync(S, true); cue("power"); pwToast("used", { name: P.name, say: P.say });
     app.march = false; marchCheck(); ended();
@@ -497,13 +501,22 @@
   function markPick() {
     const k = app.pick ? app.pick.k : -1, T = k >= 0 && app.S && livePlay() ? pickTargets(k) : [];
     if (k >= 0 && !T.length) { app.pick = null; renderPowers(); }
-    for (let j = 0; j < E.NCOL; j++) for (let d = 1; d <= app.nexts[j].length; d++) { const x = app.nexts[j][d - 1], on = k === E.PW.PULL && T.some((t) => t[0] === j && t[1] === d); x.classList.toggle("pickable", on); if (on) { x.setAttribute("role", "button"); x.removeAttribute("aria-hidden"); x.setAttribute("aria-label", fill(PWT().pickPull, {})); } else { x.removeAttribute("role"); x.setAttribute("aria-hidden", "true"); x.removeAttribute("aria-label"); } }
-    for (let j = 0; j < E.NCOL; j++) app.cards[j].classList.toggle("pickable", k === E.PW.PULL && T.some((t) => t[0] === j && t[1] === 0)); // v5 R1: a linked front
-    app.slots.forEach((q, i) => q.classList.toggle("pickable", k === E.PW.RECALL && T.some((t) => t[0] === i)));
+    const tiles = k === E.PW.PULL || k === E.PW.VOLLEY;
+    for (let j = 0; j < E.NCOL; j++) for (let d = 1; d <= app.nexts[j].length; d++) { const x = app.nexts[j][d - 1], on = tiles && T.some((t) => t[0] === j && t[1] === d); x.classList.toggle("pickable", on); if (on) { x.setAttribute("role", "button"); x.removeAttribute("aria-hidden"); x.setAttribute("aria-label", fill(PWT()[k === E.PW.VOLLEY ? "pickVolley" : "pickPull"], {})); } else { x.removeAttribute("role"); x.setAttribute("aria-hidden", "true"); x.removeAttribute("aria-label"); } }
+    for (let j = 0; j < E.NCOL; j++) app.cards[j].classList.toggle("pickable", tiles && T.some((t) => t[0] === j && t[1] === 0)); // v5 R1: a linked front (Quartermaster), any face-up front (Volley)
+    app.slots.forEach((q, i) => q.classList.toggle("pickable", (k === E.PW.RECALL && T.some((t) => t[0] === i)) || (k === E.PW.VOLLEY && T.some((t) => t[0] === -1 && t[1] === i))));
     document.body.classList.toggle("picking", k >= 0 && T.length > 0);
   }
-  function pickTile(j, d) { if (!app.pick || app.pick.k !== E.PW.PULL || !livePlay()) return false; const ci = app.S.card(j, d); return ci >= 0 && app.S.canPower(E.PW.PULL, ci) ? applyPower(E.PW.PULL, ci) : false; }
-  function pickSlot(i) { if (!app.pick || app.pick.k !== E.PW.RECALL || !livePlay()) return false; return app.S.canPower(E.PW.RECALL, i) ? applyPower(E.PW.RECALL, i) : false; }
+  function pickTile(j, d) {
+    if (!app.pick || !livePlay()) return false; const ci = app.S.card(j, d); if (ci < 0) return false;
+    if (app.pick.k === E.PW.VOLLEY) { const m = app.B.cardM[ci]; return !app.S.hidden(ci) && app.S.canPower(E.PW.VOLLEY, m) ? applyPower(E.PW.VOLLEY, m) : false; } // v5 R1
+    return app.pick.k === E.PW.PULL && app.S.canPower(E.PW.PULL, ci) ? applyPower(E.PW.PULL, ci) : false;
+  }
+  function pickSlot(i) {
+    if (!app.pick || !livePlay()) return false;
+    if (app.pick.k === E.PW.VOLLEY) return app.S.spQ[i] && app.S.canPower(E.PW.VOLLEY, app.S.spM[i]) ? applyPower(E.PW.VOLLEY, app.S.spM[i]) : false; // v5 R1
+    return app.pick.k === E.PW.RECALL && app.S.canPower(E.PW.RECALL, i) ? applyPower(E.PW.RECALL, i) : false;
+  }
 
   function renderTop() {
     const e = app.entry; if (!e) return;
@@ -705,7 +718,7 @@
   function playCol(col) {
     const S = app.S;
     if (app.screen !== "play" || !S || S.status !== E.PLAYING || app.panel || !(col >= 0 && col < E.NCOL) || S.front(col) < 0) return false;
-    if (app.pick) { if (app.pick.k === E.PW.PULL && app.cards[col].classList.contains("pickable")) return applyPower(E.PW.PULL, S.front(col)); cancelPick(); return false; } // v5 R1: a linked front is a Quartermaster target; any other front cancels the ask
+    if (app.pick) { if (app.cards[col].classList.contains("pickable")) return pickTile(col, 0); cancelPick(); return false; } // v5 R1: a linked front is a Quartermaster target; any other front cancels the ask
     const m = app.B.cardM[S.front(col)], line0 = S.lineLen, got = S.play(col);
     if (got === E.REFUSED) { refusedTap(col); return false; }
     if (got === E.NOPLAY) return false;
@@ -1160,16 +1173,18 @@
   // padding, gaps and the coins pill are read from the page.
   function sizePowers() {
     const P = $("powers"), F = app.cfg.layout.pwFit, wideFoot = app.wide && !document.body.classList.contains("short");
+    const n = Math.max(1, app.pws.filter((b) => !b.hidden).length), c2 = Math.ceil(n / 2); // v5 R1: the badges shown (1-5); a 2-row grid's columns
+    P.style.setProperty("--pw-n", n); P.style.setProperty("--pw-c", c2);
     P.classList.remove("grid", "head"); P.style.removeProperty("--pw-d"); if (!app.wide) return;
     if (!wideFoot) {
       const cs = getComputedStyle(P), px = (k) => parseFloat(cs[k]) || 0, gx = px("columnGap"), co = $("pw-coins"), h = P.clientHeight - px("paddingTop") - px("paddingBottom"), w = P.clientWidth - px("paddingLeft") - px("paddingRight");
-      const fits = [["", Math.min(h, (w - co.offsetWidth - 4 * gx) / 4)], ["head", Math.min(h - co.offsetHeight - F.rowGap, (w - 3 * gx) / 4)], ["grid", Math.min((h - F.rowGap) / 2, (w - co.offsetWidth - 2 * gx) / 2)]];
+      const fits = [["", Math.min(h, (w - co.offsetWidth - n * gx) / n)], ["head", Math.min(h - co.offsetHeight - F.rowGap, (w - (n - 1) * gx) / n)], ["grid", Math.min((h - F.rowGap) / 2, (w - co.offsetWidth - c2 * gx) / c2)]];
       let best = fits[0]; for (const q of fits) if (q[1] > best[1] + 1) best = q;
       if (best[0]) P.classList.add(best[0]); P.style.setProperty("--pw-d", Math.floor(Math.min(F.max, best[1])) + "px");
       return;
     }
     const h = P.clientHeight, w = P.clientWidth - F.padX, fix = F.padTop + F.head + F.padBottom;
-    const row = Math.min(w / 4 - F.gapX, h - fix - F.name), grid = Math.min(w / 2 - F.gapX, (h - fix - F.rowGap) / 2 - F.name), two = h >= app.cfg.layout.pwGrid && grid > row;
+    const row = Math.min(w / n - F.gapX, h - fix - F.name), grid = Math.min(w / c2 - F.gapX, (h - fix - F.rowGap) / 2 - F.name), two = n > 1 && h >= app.cfg.layout.pwGrid && grid > row;
     P.classList.toggle("grid", two); P.style.setProperty("--pw-d", Math.floor(Math.max(F.min, Math.min(F.max, two ? grid : row))) + "px");
   }
   // Critics 1 fix: the win / fail sheet never slices the holding line. A fail sheet starts under the line (its text steps
@@ -1900,10 +1915,10 @@
           const wideOK = !app.wide || pw.top >= rl.bottom - 0.5, tallOK = app.wide || pw.top >= rl.bottom - 0.5;
           out.notes.powerBar = Math.round(app.pws[0].getBoundingClientRect().width) + " px badges (tiles " + Math.round(tileH) + " px), bar " + Math.round(pw.height) + " px, " + app.rows + " queue rows" + ($("powers").classList.contains("grid") ? ", 2x2" : "");
           if (app.wide && !document.body.classList.contains("short")) { const sd = $("side").getBoundingClientRect(), used = $("top").getBoundingClientRect().height + rl.height + pw.height; out.notes.powerBarBlank = (100 * Math.max(0, 1 - used / sd.height)).toFixed(1) + "% of the side column not covered"; }
-          ok(geo && wideOK && tallOK && (innerHeight > LY.shortRowsMaxH || app.rows === LY.queueRowsShort), "power-up bar: four round badges (" + out.notes.powerBar + "), each bigger than a tile and " + ST.minTapPx + " px or more, hittable and on screen, under the queue" + (innerHeight <= LY.shortRowsMaxH ? "; a short frame shows " + LY.queueRowsShort + " rows" : "")); }
+          ok(geo && wideOK && tallOK && (innerHeight > LY.shortRowsMaxH || app.rows === LY.queueRowsShort), "power-up bar: " + app.pws.filter((q) => !q.hidden).length + " round badges (" + out.notes.powerBar + "), each bigger than a tile and " + ST.minTapPx + " px or more, hittable and on screen, under the queue" + (innerHeight <= LY.shortRowsMaxH ? "; a short frame shows " + LY.queueRowsShort + " rows" : "")); }
         // Buying, then the Ladder.
         { const c0 = coins(), P = Meta.powerOf(MT, PWK.LADDER), b = app.pws[PWK.LADDER];
-          ok(app.pws.every((q) => q.classList.contains("buy") && !q.classList.contains("poor") && q.querySelector(".pw-n").textContent === "+" && !q.disabled) && b.querySelector(".pw-tag span").textContent === String(P.price), "power-ups: none owned: every badge shows a green + and its price (no disabled button)");
+          ok(app.pws.every((q) => q.hidden || (q.classList.contains("buy") && q.classList.contains("poor") === Meta.powerOf(MT, +q.dataset.k).price > c0 && q.querySelector(".pw-n").textContent === "+" && !q.disabled)) && b.querySelector(".pw-tag span").textContent === String(P.price), "power-ups: none owned: every badge shows a + and its price, muted only when the price is over the coins (v5 R1: the Volley's " + Meta.powerOf(MT, 4).price + "); no disabled button");
           b.click(); const bought = coins() === c0 - P.price && inv().ladder === 1 && b.classList.contains("own") && b.querySelector(".pw-n").textContent === "1";
           const cap0 = app.S.cap; b.click();
           ok(bought && app.S.cap === cap0 + 1 && app.S.extra === 1 && inv().ladder === 0 && b.classList.contains("spent") && app.slots.filter((q) => !q.hidden).length === app.S.cap, "Ladder through its badge: bought (" + c0 + " -> " + (c0 - P.price) + " coins), then used: " + app.S.cap + " spaces show; one spent");
@@ -1932,6 +1947,12 @@
           const el = Array.from(document.querySelectorAll("#tray .tile.next.pickable.mys"))[0], j = el ? app.nexts.findIndex((nx) => nx.indexOf(el) >= 0) : -1, ci = el ? app.S.card(j, app.nexts[j].indexOf(el) + 1) : -1; if (el) el.click();
           const sq = app.S.order().find((q) => app.S.spM[q] === app.B.cardM[ci]);
           ok(!!el && !app.S.hidden(ci) && sq != null && app.slots[sq].style.getPropertyValue("--mc") === mat(app.B.cardM[ci]).c, "Quartermaster on a ? tile (v5 R1): it goes out revealed, its space in its colour"); }
+        // v5 R1, the Volley: the badge asks for a colour (face-up tiles and squads glow, never a hidden tile); a real tap
+        // on a front tile clears that colour from the board, the queue and the line; one spent.
+        { const e = app.byId.get(ST.queueLevel) || app.levels[39]; startLevel(e.id); inv().volley = 1; renderPowers(); const vb = app.pws[PWK.VOLLEY]; vb.click();
+          const pk = Array.from(document.querySelectorAll("#tray .tile.pickable")), hid = pk.some((x) => x.classList.contains("mys")), j = app.cards.findIndex((c) => c.classList.contains("pickable")), m = j >= 0 ? app.B.cardM[app.S.front(j)] : 0;
+          if (j >= 0) app.cards[j].click(); let cardsLeft = 0; for (let jj = 0; jj < E.NCOL; jj++) for (let d = 0, ci = app.S.card(jj, 0); ci >= 0; ci = app.S.card(jj, ++d)) if (app.B.cardM[ci] === m) cardsLeft++;
+          ok(pk.length > 0 && !hid && j >= 0 && app.S.left[m] === 0 && cardsLeft === 0 && app.S.sappers(m) === 0 && inv().volley === 0 && app.S.used(PWK.VOLLEY) === 1 && !app.pick && hitOK(vb), "Volley through its badge: it asks (" + pk.length + " tiles glow, none hidden), a tap on a front tile clears its colour (" + mat(m).crew + ") from the board, the queue and the line; one spent"); }
         // Recall: a squad waiting stuck goes back to its column's front through a real tap on its space.
         { let got = null; for (const e of app.levels) { if (e.n < 16) continue; startLevel(e.id, "normal"); const tp = stageLine(1, 0); if (tp) { got = { e, tp }; break; } }
           if (ok(!!got, "Recall: found a level whose front can't reach a block (a squad that waits)")) {
