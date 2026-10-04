@@ -90,6 +90,10 @@
 //   Archers never kill: a hit sapper always walks back to its space and waits (the short fail, rules.archersKill and
 //   safeArchers are gone; a level's safeArchers is accepted and ignored). Dealing mode still fails a deal at any hit
 //   (reason "hit"), so the dealer deals hit-free.
+//   Locks (Hard levels from level 50, data-driven: the level file says which): lock: {key: [x, y]} is v4 M2's key lock
+//   (the locked space opens when its gilt key pops); lock: {colour: m} is a colour lock, which opens the moment a squad of
+//   colour m takes a space (a tap, either squad of a pair, a Quartermaster), logged UNLOCK -1 m after the TAP (a pair:
+//   after LINK). Either way rules.lockSpaces (1) of the 5 spaces start locked, always the last.
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
@@ -211,9 +215,14 @@
       if (linkOf[a] >= 0 || linkOf[b] >= 0) throw new Error("level: link " + k + " reuses a linked card");
       linkOf[a] = b; linkOf[b] = a; links.push(a, b);
     });
-    // Locked space (v4 M2): its key is a gilt cell that is not a gate's key.
-    let lockKey = -1;
-    if (L.lock != null) { const k = cellAt(L.lock.key, "lock key"); if (a0[k] !== GILT || keyOf[k] >= 0) throw new Error("level: the lock's key is not a free gilt cell"); lockKey = k; }
+    // Locked space (v4 M2): its key is a gilt cell that is not a gate's key. v5 R1: or a colour lock, {colour: m}, a card
+    // colour of this deck (never iron); exactly one of key and colour.
+    let lockKey = -1, lockMat = 0;
+    if (L.lock != null) {
+      if ((L.lock.key != null) === (L.lock.colour != null)) throw new Error("level: a lock has a key or a colour, not both or neither");
+      if (L.lock.key != null) { const k = cellAt(L.lock.key, "lock key"); if (a0[k] !== GILT || keyOf[k] >= 0) throw new Error("level: the lock's key is not a free gilt cell"); lockKey = k; }
+      else { const m = L.lock.colour; if (!(Number.isInteger(m) && m >= 1 && m < NMAT && m !== IRON && cardM.indexOf(m) >= 0)) throw new Error("level: a colour lock's colour has no card"); lockMat = m; }
+    }
     const pix = new Int32Array(NMAT); for (let c = 0; c < n; c++) if (a0[c] > 0) pix[a0[c]]++;
     const hoff = new Int32Array(NMAT + 1); for (let m = 0; m < NMAT; m++) hoff[m + 1] = hoff[m] + (m === IRON ? 0 : pix[m]);
     // Zobrist keys for eaten cells (fixed-seed, so hashes are stable across runs).
@@ -223,7 +232,7 @@
     let pixTotal = 0; for (let m = 1; m < NMAT; m++) pixTotal += pix[m];
     return { w, h, n, a0, nb, rank, campRow, gateOf, keyOf, gateCells, towerOf, cover, towers, cardM: Int32Array.from(cardM), cardN: Int32Array.from(cardN),
       colStart, colLen, sapTotal, pix, hoff, Z1, Z2, pixTotal, ncards: cardM.length, safeArchers: L.safeArchers === true,
-      cardF: Int32Array.from(cardF), cardCol: Int32Array.from(cardCol), linkOf, links: Int32Array.from(links), nlinks: links.length >> 1, lockKey, pic };
+      cardF: Int32Array.from(cardF), cardCol: Int32Array.from(cardCol), linkOf, links: Int32Array.from(links), nlinks: links.length >> 1, lockKey, lockMat, pic };
   }
 
   // Timing (config v3.time, whole ms of engine time; the page plays engine time at show.pace x real time). Every value
@@ -243,7 +252,7 @@
     const cap = Math.max(1, Math.min(MAXLINE, rules.hold | 0)), deal = !!(opts && opts.deal), nt = B.towers.length; // v5 R1: archers never kill
     const merge = rules.mergeLeftovers === true, T = timeOf(rules.time);
     // Locked spaces (v4 M2): rules.lockSpaces (default 1) of the line's last spaces, never all of them.
-    const lockN = B.lockKey >= 0 ? Math.max(0, Math.min(cap - 1, rules.lockSpaces == null ? 1 : rules.lockSpaces | 0)) : 0;
+    const lockN = B.lockKey >= 0 || B.lockMat > 0 ? Math.max(0, Math.min(cap - 1, rules.lockSpaces == null ? 1 : rules.lockSpaces | 0)) : 0;
     // v4 M5: uses of each power-up a level allows (rules.powers[k], 0-99; none without it), and how far back the
     // Quartermaster reaches (rules.pullDepth, cards behind the front, default 2).
     const pwLim = new Int32Array(NPW); for (let k = 0; k < NPW; k++) pwLim[k] = rules.powers ? Math.max(0, Math.min(99, rules.powers[k] | 0)) : 0;
@@ -513,10 +522,12 @@
         if (M[S_LEN] >= capNow() - M[S_LOCK]) { fail(OVERFLOW, m); log(EV.TAP, -1, m); return M[S_STATUS]; }
         s = place(m, cnt, ci == null ? -1 : ci);
       }
-      log(EV.TAP, s, m);
+      log(EV.TAP, s, m); opened(m);
       dispatch(M[S_NOW]); settle();
       return M[S_STATUS];
     }
+    // v5 R1: a colour lock opens the moment a squad of its colour is sent out (takes a space). Event UNLOCK -1 m.
+    function opened(m) { if (m === B.lockMat && M[S_LOCK] > 0) { M[S_LOCK] = 0; log(EV.UNLOCK, -1, m); } }
     // A linked pair (v4 M2) takes two spaces at the same moment: m1's squad first, then m2's. One play. Fewer than 2 open
     // free spaces: overflow (dealing mode only; play() refuses first).
     function pair(m1, n1, m2, n2, t, c1, c2) {
@@ -526,7 +537,7 @@
       if (M[S_LEN] + 2 > capNow() - M[S_LOCK]) { fail(OVERFLOW, m1); log(EV.TAP, -1, m1); return M[S_STATUS]; }
       const s1 = place(m1, n1, c1 == null ? -1 : c1); log(EV.TAP, s1, m1);
       const s2 = place(m2, n2, c2 == null ? -1 : c2); log(EV.TAP, s2, m2);
-      spL[s1] = s2 + 1; spL[s2] = s1 + 1; log(EV.LINK, s1, s2);
+      spL[s1] = s2 + 1; spL[s2] = s1 + 1; log(EV.LINK, s1, s2); opened(m1); opened(m2);
       dispatch(M[S_NOW]); settle();
       return M[S_STATUS];
     }
@@ -671,7 +682,7 @@
       // (see settle). card(j, d): the d-th card still in column j (0 = the front), past pulled partners, or -1.
       // refused(j): would a tap on column j's front card be refused now. hidden(ci): is card ci a mystery the player
       // can't see yet. partner(ci): its linked card or -1. held(s): a finished linked squad holding its space.
-      get open() { return capNow() - M[S_LOCK]; }, get locked() { return M[S_LOCK]; }, get jamWhy() { return M[S_JAMK]; },
+      get open() { return capNow() - M[S_LOCK]; }, get locked() { return M[S_LOCK]; }, get jamWhy() { return M[S_JAMK]; }, get lockMat() { return B.lockMat; },
       card(j, d) { const s0 = B.colStart[j], len = B.colLen[j]; for (let h = heads[j], k = 0; h < len; h++) { const c = seq[s0 + h]; if (gone[c]) continue; if (k++ === d) return c; } return -1; },
       refused(j) { return heads[j] < B.colLen[j] && refusedAt(frontAt(j)); },
       // v4.3: why a tap on column j's front would be refused (0 not refused or no card, 1 no free space, 2 a linked card

@@ -28,6 +28,7 @@
 // A linked front whose partner is buried counts as refused at rest, and the jam's jamWhy adds 4.
 // v5 R1 (SPEC-v4 §9, the v5 R1 entry, from the rules text): rules.hold spaces on every level. Archers never kill: an
 // arrow always sends its sapper back to its space to wait, on every level (no short fail).
+// A colour lock (lock: {colour: m}) keeps its spaces shut until a squad of colour m takes a space (a tap or a pair).
 // pops: every popped pixel as [cell, time], in the order they popped.
 "use strict";
 const MATCH = { ".": 0, ",": -2, "~": -1, "#": -3 };
@@ -48,8 +49,8 @@ function load(L) {
   let ci = 0;
   const cols = L.cols.map((c, j) => c.map((cd) => ({ m: cd[0], n: cd[1], mystery: cd[2] === 1, ci: ci++, partner: null, col: j, seen: false })));
   for (const P of L.links || []) { const a = cols[P[0][0]][P[0][1]], b = cols[P[1][0]][P[1][1]]; a.partner = b; b.partner = a; }
-  const lockKey = L.lock ? idx(L.lock.key) : -1;
-  return { w, h, g, campRow, gates, towers, cols, lockKey };
+  const lockKey = L.lock && L.lock.key ? idx(L.lock.key) : -1, lockColour = L.lock && L.lock.colour ? L.lock.colour : 0;
+  return { w, h, g, campRow, gates, towers, cols, lockKey, lockColour };
 }
 
 function game(L, rules) {
@@ -60,7 +61,7 @@ function game(L, rules) {
   const events = [];           // {t, seq, kind: "pop" | "hit" | "home" | "wake", sapper?, space?}
   const claimed = new Set(), pops = [];
   let status = "playing", reason = "", jamWhy = 0, now = 0, seq = 0, taps = 0, peak = 0, hitsN = 0, killsN = 0;
-  let locked = R.lockKey >= 0 ? Math.max(0, Math.min(rules.hold - 1, rules.lockSpaces == null ? 1 : rules.lockSpaces)) : 0;
+  let locked = R.lockKey >= 0 || R.lockColour ? Math.max(0, Math.min(rules.hold - 1, rules.lockSpaces == null ? 1 : rules.lockSpaces)) : 0;
   let extra = 0; const uses = [0, 0, 0, 0], limits = rules.powers || [0, 0, 0, 0], reach = rules.pullDepth == null ? 2 : rules.pullDepth;
   const seeFronts = () => { for (const c of cols) if (c.length) c[0].seen = true; };
   seeFronts();
@@ -176,6 +177,7 @@ function game(L, rules) {
     cols[j].shift();
     const i = take(cd);
     if (cd.partner) { const pc = cols.find((c) => c.includes(cd.partner)); pc.splice(pc.indexOf(cd.partner), 1); cd.partner.seen = true; const k = take(cd.partner); spaces[i].pair = k; spaces[k].pair = i; }
+    if (R.lockColour && (cd.m === R.lockColour || (cd.partner && cd.partner.m === R.lockColour))) locked = 0;
     peak = Math.max(peak, used());
     seeFronts(); dispatch(now); settle();
   }

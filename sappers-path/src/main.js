@@ -394,11 +394,12 @@
       s.hidden = i >= S.cap;
       const shut = i < S.cap && i >= S.open, opening = !shut && popping && i < S.cap && i >= S.cap - app.lockN;
       s.classList.toggle("locked", shut); s.classList.toggle("unlocking", opening);
+      const cl = shut && S.lockMat > 0; s.classList.toggle("clock", cl); if (cl) s.style.setProperty("--lc", mat(S.lockMat).c); // v5 R1: a colour lock shows its colour
       if (i < S.cap && S.spQ[i]) { const m = S.spM[i], w = S.spW[i], o = S.spO[i], st = S.stuck(i), lk = S.spL[i] !== 0, held = S.held(i); s.classList.add("full"); s.classList.toggle("work", o > 0); s.classList.toggle("stuck", st); s.classList.toggle("linked", lk); s.classList.toggle("held", held); paintMat(s, m); s.querySelector("b").textContent = w || "";
         s.querySelector(".out").textContent = o > 0 ? o : "";
         const men = s.querySelector(".men"); men.style.backgroundImage = app.manURL[m]; men.style.width = "calc(var(--man) * " + Math.min(w, L.sapperIcons) + ")";
         s.setAttribute("aria-label", mat(m).crew + ", " + w + " waiting" + (o ? ", " + o + " out" : "") + (st ? ", stuck: nothing in reach" : "") + (lk ? ", " + L.linkedWord : "") + (held ? ", " + L.heldText : "")); }
-      else { s.classList.remove("full", "work", "stuck", "linked", "held"); s.style.removeProperty("--mc"); s.querySelector("b").textContent = ""; s.querySelector(".out").textContent = ""; s.querySelector(".men").style.width = "0"; s.setAttribute("aria-label", shut ? L.lockedText : "Empty space"); }
+      else { s.classList.remove("full", "work", "stuck", "linked", "held"); s.style.removeProperty("--mc"); s.querySelector("b").textContent = ""; s.querySelector(".out").textContent = ""; s.querySelector(".men").style.width = "0"; s.setAttribute("aria-label", shut ? (S.lockMat > 0 ? fill(L.colourLockText, { crew: mat(S.lockMat).crew }) : L.lockedText) : "Empty space"); }
       s.classList.toggle("last", i === free && li.near); // one space left and the rest stuck: the last free space pulses
     });
     sendable(); markPick();
@@ -885,7 +886,7 @@
       case "short": { const j = frontOf(m); return j >= 0 && B.cardN[S.front(j)] > S.reachable(m); }
       case "reveal": return app.reveals > 0;
       case "pair": return app.pairsOut > 0;
-      case "unlock": return B.lockKey >= 0 && S.locked === 0;
+      case "unlock": return (B.lockKey >= 0 || B.lockMat > 0) && S.locked === 0;
       case "locked": return S.locked > 0;
       case "hidden": return hiddenTile() !== null;
       case "linkedFront": return linkedFront() >= 0;
@@ -1748,6 +1749,12 @@
         const pl = $("p-line").getAttribute("aria-label") || "", tx = $("p-line").textContent, want = k === "linkJamLevel" ? pl.indexOf(re) === 0 && tx.indexOf(re) === 0 : pl.slice(-re.length) === re && tx.slice(-re.length) === re;
         ok(app.S.status === E.FAILED && app.S.reason === "jam" && app.panel === "fail" && want && chipCheck() === true, k + ": at rest every front card is refused: the sheet says why (" + tx + " / " + pl + ")");
         startLevel(e.id, "normal"); patient(win); settleNow(); ok(app.S.status === E.WON, k + ": the right order wins"); }
+      // 22b. v5 R1, the colour lock (selfTest.colourLockLevel): its socket shows the colour that opens it and says so; the
+      // tap that sends a squad of that colour out opens it (one unlock cue).
+      { const e = fx("colourLockLevel"), m = ST.colourLockLevel.lock.colour; startLevel(e.id); const S = app.S, last = app.slots[S.cap - 1], u0 = app.cues.unlock | 0;
+        ok(S.locked === 1 && last.classList.contains("locked") && last.classList.contains("clock") && last.style.getPropertyValue("--lc") === mat(m).c && last.getAttribute("aria-label") === fill(LY.colourLockText, { crew: mat(m).crew }) && !app.V.fxInfo().lockKey, "colour lock: the locked space shows its colour and names the crew; no key on the board");
+        const j = app.cards.findIndex((b, k) => S.front(k) >= 0 && app.B.cardM[S.front(k)] === m); playCol(j); step(16);
+        ok(app.S.locked === 0 && (app.cues.unlock | 0) === u0 + 1 && !last.classList.contains("locked") && !last.classList.contains("clock"), "colour lock: its colour's tap opens it (one unlock cue)"); }
       // 23. Critics 1 fix: the rods on the debug levels along their stored orders (every rod on its two tiles, never over a
       // third); B1: a linked pair leaving and then at rest, and a full line of big squads rushed out, with every count
       // clear of every badge.
@@ -1984,7 +1991,7 @@
       const bad = app.V.checkSprites(); ok(!bad.length, "sprites: every opaque cache is opaque" + (bad.length ? " (" + bad.join(",") + ")" : ""));
     } catch (err) { ok(false, "selfTest threw: " + (err && err.message) + " " + (err && err.stack ? err.stack.split("\n")[1] : "")); }
     finally {
-      app.byId.delete("fx-jamLevel"); app.byId.delete("fx-stuckLevel"); app.byId.delete("fx-linkJamLevel"); app.byId.delete("fx-lockJamLevel");
+      for (const k of Object.keys(ST)) app.byId.delete("fx-" + k); // every fixture registered for the run
       app.save = was.save; app.meta = was.meta; app.now = was.now; app.testing = false; setSpeed(was.speed, false); setCb(was.cb, false); app.diff = was.diff;
       if (was.entry) startLevel(was.entry.id, was.diff); showScreen(was.screen); renderAll();
     }

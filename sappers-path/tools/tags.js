@@ -8,6 +8,9 @@
 //   tagOf(n, T, teaching) -> "easy" | "normal" | "hard"
 // The bands follow the tag (bake config curve.byTag): a Hard level takes its section's hardest band, an Easy one the
 // gentlest, so the tag a player reads is the difficulty the grader measured (on the tag's own rules).
+// v5 R1: the tag sets no engine rule (5 spaces everywhere, archers never kill); it says how many features a level uses.
+// Locks live on Hard levels only, from a set level: lockOK(n, tag, L, K) with K = config.json v5.locks {from, tags}: a
+// level with a lock (key or colour) must be number from or later and carry one of K.tags; a level without one is fine.
 "use strict";
 const TAGS = ["easy", "normal", "hard"];
 function tagOf(n, T, teaching) {
@@ -18,4 +21,5 @@ function tagOf(n, T, teaching) {
   if (n < T.from) return T.first;
   return T.cycle[(n - T.from) % T.cycle.length];
 }
-module.exports = { TAGS, tagOf };
+const lockOK = (n, tag, L, K) => !(L && L.lock) || (n >= K.from && K.tags.indexOf(tag) >= 0);
+module.exports = { TAGS, tagOf, lockOK };

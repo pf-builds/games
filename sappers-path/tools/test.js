@@ -17,6 +17,10 @@ const V3 = require("../config.json").v3;
 const LEVELS = require("../levels/levels.json");
 
 let pass = 0, fail = 0;
+// v5 R1: checks that replay the shipped levels' stored orders and grades, or hold them to the v5 placement rules, wait for
+// R2's re-lay (config.json v5.relaid). Until then they are listed as DEFERRED, not run.
+const V5 = require("../config.json").v5, deferred = [];
+const defer = (name, fn) => { if (V5.relaid) fn(); else deferred.push(name); };
 function ok(cond, name) { if (cond) pass++; else { fail++; console.log("FAIL  " + name); } }
 function eq(a, b, name) { const A = JSON.stringify(a), B = JSON.stringify(b); ok(A === B, name + (A === B ? "" : "\n      got " + A + "\n     want " + B)); }
 function throws(fn, name) { let t = false; try { fn(); } catch (e) { t = true; } ok(t, name); }
@@ -520,6 +524,42 @@ const ROW6 = ["abcdef", "......", "..##.."]; // six colours, one pixel each, all
   eq([J.status, J.reason, J.jamWhy, J.spQ[2], J.lineLen, J.open], [E.FAILED, "jam", 2, 0, 2, 2], "lock: two stuck squads fill the two open spaces; the locked one stays empty; jam, jamWhy 2");
 }
 
+// ---- v5 R1: the colour lock -----------------------------------------------------------------------------------------------
+{
+  throws(() => E.compile(lv(["abn...", "......", "..##.."], [[[1, 1]], [[2, 1]], [[14, 1]], [], []], { lock: { key: [2, 0], colour: 1 } })), "colour lock: a key and a colour throws");
+  throws(() => E.compile(lv(["abn...", "......", "..##.."], [[[1, 1]], [[2, 1]], [[14, 1]], [], []], { lock: { colour: 3 } })), "colour lock: a colour with no card throws");
+  throws(() => E.compile(lv(["abn...", "......", "..##.."], [[[1, 1]], [[2, 1]], [[14, 1]], [], []], { lock: { colour: 10 } })), "colour lock: iron throws");
+  throws(() => E.compile(lv(["abn...", "......", "..##.."], [[[1, 1]], [[2, 1]], [[14, 1]], [], []], { lock: {} })), "colour lock: neither key nor colour throws");
+  // Three open-ground colours, b locked: 3 spaces, 2 open. a and c take the two; b is refused (no open space). Once a's
+  // space frees, b's tap takes a space and the lock opens at that tap (UNLOCK -1 2, after the TAP).
+  const L = lv(["abc...", "......", "..##.."], [[[1, 1]], [[2, 1]], [[3, 1]], [], []], { lock: { colour: 2 } }), B = E.compile(L);
+  const S = E.sim(B, hold(3)); S.logOn = true;
+  eq([S.cap, S.open, S.locked, S.lockMat], [3, 2, 1, 2], "colour lock: 2 of 3 spaces open, locked for colour 2");
+  S.play(0, 0); S.play(2, 0); eq([S.play(1, 0), S.locked], [E.REFUSED, 1], "colour lock: no open space: the b tap is refused and the lock holds");
+  S.advanceTo(S.q1[0]); S.clearLog(); eq(S.play(1), E.PLAYING, "colour lock: a space frees; the b tap is taken");
+  const typ = []; for (let i = 0; i < S.evLen; i += 3) typ.push(S.ev[i]);
+  eq([S.open, S.locked, evs(S, E.EV.UNLOCK), typ.indexOf(E.EV.TAP) < typ.indexOf(E.EV.UNLOCK)], [3, 0, [[-1, 2]], true], "colour lock: opens the moment the b squad takes a space (UNLOCK -1 2 after the TAP)");
+  eq(pat(S, 0), E.WON, "colour lock: the level plays on and wins");
+  // A linked pair whose partner is the lock's colour opens it (after LINK).
+  const P = E.sim(E.compile(Object.assign({}, L, { links: [[[0, 0], [1, 0]]] })), hold(3)); P.logOn = true; P.play(0, 0);
+  const t2 = []; for (let i = 0; i < P.evLen; i += 3) t2.push(P.ev[i]);
+  eq([P.locked, P.open, t2.indexOf(E.EV.LINK) < t2.indexOf(E.EV.UNLOCK)], [0, 3, true], "colour lock: a pair whose partner is colour 2 opens it, after LINK");
+  // The reference agrees.
+  const R = Ref.game(L, hold(3)); R.play(0, 0); R.play(2, 0); const r1 = R.play(1, 0); R.advanceTo(S.q1[0]); R.play(1);
+  eq([r1, R.locked, R.open], ["refused", 0, 3], "colour lock (reference): refused while full, opens on the b squad");
+  // A key lock at rest that nothing can open jams with jamWhy 2; so does a colour lock whose colour waits behind.
+  const J = E.sim(E.compile(lv(["aab...", "......", "..##.."], [[[4, 1], [2, 1]], [[5, 1]], [[1, 2]], [], []], { lock: { colour: 2 } })), hold(3));
+  pat(J, 0); pat(J, 1);
+  eq([J.status, J.reason, J.jamWhy & 2], [E.FAILED, "jam", 2], "colour lock: two stuck squads fill the open spaces, b waits behind one: jam, jamWhy 2");
+}
+
+// v5 R1: locks only on Hard (and Extreme) levels from level 50 (config v5.locks, tools/tags.js lockOK).
+{
+  const TG = require("./tags.js"), K = V5.locks, Lk = { lock: { colour: 1 } };
+  eq([TG.lockOK(49, "hard", Lk, K), TG.lockOK(50, "hard", Lk, K), TG.lockOK(60, "normal", Lk, K), TG.lockOK(60, "extreme", Lk, K), TG.lockOK(10, "easy", {}, K)], [false, true, false, true, true], "locks (v5 R1): from level 50, on Hard and Extreme only");
+  defer("every shipped lock is on a Hard or Extreme level from 50", () => { const bad = LEVELS.levels.filter((l) => !TG.lockOK(l.n, l.tag, l, K)).map((l) => l.n); eq(bad, [], "locks (v5 R1): every shipped lock is on a Hard or Extreme level from 50"); });
+}
+
 // ---- dealing mode (the dealer, M3) -------------------------------------------------------------------------------------------
 {
   const D = E.sim(E.compile(lv(RING)), hold(2), { deal: true });
@@ -557,7 +597,7 @@ function inject(L0, seed) {
       const col = L.cols.find((cl) => cl.some((cd) => cd[0] === m && cd[1] > 1)); col.find((cd) => cd[0] === m && cd[1] > 1)[1]--;
       L.cols[ri(5)].push([E.GILT, 1]); L.lock = { key: [x, y] };
     }
-  }
+  } else if (r() < 0.5) { const ms = []; L.cols.forEach((col) => col.forEach((cd) => { if (ms.indexOf(cd[0]) < 0) ms.push(cd[0]); })); if (ms.length) L.lock = { colour: ms[ri(ms.length)] }; } // v5 R1: a colour lock
   return L;
 }
 const DEBUG = require("../levels/debug-v4.json").levels;
@@ -1087,5 +1127,6 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
   eq([Meta.clock(81234), Meta.clock(59001, true), Meta.clock(3723000)], ["1:21", "1:00", "1:02:03"], "meta: times read m:ss (h:mm:ss past an hour)");
 }
 
+if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " + deferred.length + " checks: " + deferred.join("; "));
 console.log(pass + " passed, " + fail + " failed");
 process.exitCode = fail ? 1 : 0;
