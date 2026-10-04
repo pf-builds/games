@@ -941,36 +941,40 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
   for (const j of [3, 4, 0, 1]) K.play(j, 0);
   eq([K.lineLen, K.spQ[5], K.open - K.lineLen, K.play(2, 0), K.spQ[4] > 0, K.spQ[5]], [4, 0, 1, E.PLAYING, true, 0], "ladder with the lock: squads fill spaces 0-4; the locked space 5 stays empty");
 }
-// ---- Quartermaster ----------------------------------------------------------------------------------------------------------
+// ---- Quartermaster (v5 R1: a card in view goes straight out into a free space) ------------------------------------------------
 {
-  // Column 0: a (flagged: a first card's flag means nothing), b (?), c, d. Column 1: e. Column 2: f.
+  // Column 0: a, b (?), c, d (all one pixel, all in reach). Column 1: e. Column 2: f.
   const L = lv(ROW6, [[[1, 1, 1], [2, 1, 1], [3, 1], [4, 1]], [[5, 1]], [[6, 1]], [], []]);
   const S = E.sim(E.compile(L), PN); S.logOn = true;
-  eq([S.hidden(1), S.canPower(PW.PULL, 0), S.canPower(PW.PULL, 3), S.canPower(PW.PULL, 2)], [true, false, false, true], "pull: the front can't be pulled, nor a card 3 back (reach 2); 2 back can");
-  const r = S.power(PW.PULL, 1);
-  eq([r, colsOf(S)[0].map((c) => c[0]), S.hidden(1), S.hidden(0), evs(S, E.EV.REVEAL), evs(S, E.EV.POWER)], [E.PLAYING, [1, 0, 2, 3], false, false, [[1, 0]], [[1, 1]]], "pull: the hidden b steps to the front, revealed (REVEAL, POWER 1 b); a steps back and stays face up");
-  S.clearLog(); eq([S.canPower(PW.PULL, 3), S.power(PW.PULL, 2)], [false, E.PLAYING], "pull: d is now 3 back (refused); c, 2 back, is taken");
-  eq([colsOf(S)[0].map((c) => c[0]), evs(S, E.EV.REVEAL), S.used(PW.PULL)], [[2, 1, 0, 3], [], 2], "pull: c to the front; the cards it passes step back one; no reveal for a face-up card");
-  pat(S, 0); eq([S.card(0, 0), S.canPower(PW.PULL, 2), S.power(PW.PULL, 2)], [1, false, E.REFUSED], "pull: a played card can't be pulled");
-  S.power(PW.PULL, 3); const b0 = S.save(); eq([S.card(0, 0), S.used(PW.PULL), S.canPower(PW.PULL, 0), S.power(PW.PULL, 0)], [3, 3, false, E.REFUSED], "pull: a fourth is refused (3 a level)"); ok(same(b0, S.save()), "pull: the refusal changes nothing");
-  // v4.3: a linked card pulled to the front waits for its partner; the Quartermaster may pull the partner forward too, and
-  // then one tap sends both; a gone partner can't be pulled.
-  const P = E.sim(E.compile(lv(ROW6, [[[1, 1], [2, 1]], [[3, 1], [4, 1]], [[6, 1]], [], []], { links: [[[0, 1], [1, 1]]] })), PN);
-  P.power(PW.PULL, 1); const w1 = P.why(0); P.power(PW.PULL, 3);
-  eq([P.card(0, 0), P.card(1, 0), P.partner(1), w1, P.why(0), P.play(0), P.lineLen, P.gone[3], P.canPower(PW.PULL, 3)], [1, 3, 3, 3, 0, E.PLAYING, 2, 1, false], "pull (v4.3): a linked card pulled to the front waits for its partner (why 3); pulling the partner to its front too, one tap sends both; the gone partner can't be pulled");
-  // v4.3: a pull that would bury the partner of another linked front (pairs y-x and z-w, z pulled ahead of y) leaves both
-  // fronts waiting for buried partners: at rest that would jam, so it is refused; the reference agrees.
-  { const X = lv(ROW6, [[[1, 1], [2, 1]], [[3, 1], [4, 1]], [], [], []], { links: [[[0, 0], [1, 0]], [[0, 1], [1, 1]]] }), XR = phold(2);
-    const XS = E.sim(E.compile(X), XR), XF = Ref.game(X, XR), b0 = XS.save();
-    eq([XS.power(PW.PULL, 1), same(b0, XS.save()), XF.power(PW.PULL, 1), XS.play(0), XS.lineLen], [E.REFUSED, true, "refused", E.PLAYING, 2], "pull (v4.3): a pull that would leave every linked front waiting for a buried partner is refused at rest (engine and reference); the pair then goes"); }
-  // At rest, a pull that would leave every front refused (a linked card with one space free) is refused; while squads are
-  // still moving the same pull is taken (the line is judged when it comes to rest).
-  const J = lv(RING, [[[2, 1]], [[1, 12], [3, 1]], [[1, 1]], [[2, 1]], []], { links: [[[1, 1], [2, 0]]] });
-  const R1 = E.sim(E.compile(J), phold(3)); pat(R1, 0); pat(R1, 3);
-  eq([R1.status, R1.open - R1.lineLen, R1.refused(1), R1.refused(2), R1.canPower(PW.PULL, 2)], [E.PLAYING, 1, false, true, false], "pull at rest: one space free, the pull would front a linked card beside its linked partner: refused (it would jam)");
-  const b1 = R1.save(); eq(R1.power(PW.PULL, 2), E.REFUSED, "pull at rest: power() refuses it"); ok(same(b1, R1.save()), "pull at rest: nothing changes");
-  const R2 = E.sim(E.compile(lv(RING, J.cols.slice(0, 4).concat([[[1, 12]]]), { links: J.links })), phold(4)); R2.play(4, 0); R2.play(0, 0); R2.play(3, 0);
-  eq([R2.busy, R2.open - R2.lineLen, R2.power(PW.PULL, 2)], [true, 1, E.PLAYING], "pull mid-show: the same kind of pull is taken while a squad is still out");
+  eq([S.hidden(1), S.canPower(PW.PULL, 3), S.canPower(PW.PULL, 2), S.canPower(PW.PULL, 0)], [true, false, true, true], "pull: a card 3 back is out of reach (2); 2 back and the front itself are in view");
+  const r = S.power(PW.PULL, 1), typ = []; for (let i = 0; i < S.evLen; i += 3) typ.push(S.ev[i]);
+  eq([r, colsOf(S)[0].map((c) => c[0]), S.order().map((q) => [q, S.spM[q]]), evs(S, E.EV.REVEAL), evs(S, E.EV.POWER), evs(S, E.EV.TAP), S.plays, S.used(PW.PULL)],
+    [E.PLAYING, [0, 2, 3], [[0, 2]], [[1, 0]], [[1, 1]], [[0, 2]], 0, 1], "pull: the hidden b goes straight out, revealed (REVEAL, POWER 1 b, TAP 0 b); the cards behind it close up; not a play");
+  eq([typ.indexOf(E.EV.REVEAL) < typ.indexOf(E.EV.POWER), typ.indexOf(E.EV.POWER) < typ.indexOf(E.EV.TAP), typ.indexOf(E.EV.DISP) > typ.indexOf(E.EV.TAP)], [true, true, true], "pull: log order REVEAL, POWER, TAP, then the dispatch at that instant");
+  S.quiet(); eq([S.lineLen, S.left[2]], [0, 0], "pull: its squad dispatches like any (b eaten, the space free)");
+  // The front: a pulled front card is sent like a tap (the next card becomes the front).
+  eq([S.power(PW.PULL, 0), S.card(0, 0), S.lineLen], [E.PLAYING, 2, 1], "pull: the front card goes out too; c is the front");
+  pat(S, 1); eq([S.used(PW.PULL), S.canPower(PW.PULL, 2), S.power(PW.PULL, 2)], [2, true, E.PLAYING], "pull: a third use (3 a level)");
+  const b0 = S.save(); eq([S.canPower(PW.PULL, 3), S.power(PW.PULL, 3)], [false, E.REFUSED], "pull: a fourth is refused"); ok(same(b0, S.save()), "pull: the refusal changes nothing");
+  // No free open space: refused at no cost.
+  const F = E.sim(E.compile(lv(ROW6, [[[1, 1], [2, 1]], [[3, 1]], [[4, 1]], [], []])), phold(2)); F.play(1, 0); F.play(2, 0);
+  const fb = F.save(); eq([F.open - F.lineLen, F.canPower(PW.PULL, 1), F.power(PW.PULL, 1), same(fb, F.save()), F.used(PW.PULL)], [0, false, E.REFUSED, true, 0], "pull: no free space: refused, nothing changes, no use spent");
+  // A linked card goes with its partner (in view in its own column, front included): 2 spaces, the pulled card first, paired.
+  const P = E.sim(E.compile(lv(ROW6, [[[1, 1], [2, 1]], [[3, 1], [4, 1], [5, 1]], [[6, 1]], [], []], { links: [[[0, 1], [1, 1]]] })), PN); P.logOn = true;
+  eq([P.why(0), P.canPower(PW.PULL, 1), P.canPower(PW.PULL, 3)], [0, true, true], "pull (linked): b and its partner d are both in view (1 back each)");
+  P.power(PW.PULL, 3);
+  eq([P.order().map((q) => [q, P.spM[q]]), evs(P, E.EV.LINK), P.spL[0], P.spL[1], colsOf(P).slice(0, 2).map((c) => c.map((x) => x[0]))], [[[0, 4], [1, 2]], [[0, 1]], 2, 1, [[0], [2, 4]]], "pull (linked): d (pulled) takes space 0, its partner b space 1, paired (LINK 0 1); both columns close up");
+  const P2 = E.sim(E.compile(lv(ROW6, [[[1, 1], [2, 1]], [[3, 1], [4, 1], [5, 1]], [[6, 1]], [], []], { links: [[[0, 1], [1, 2]]] })), phold(5));
+  eq([P2.canPower(PW.PULL, 1), P2.canPower(PW.PULL, 4)], [true, true], "pull (linked): a partner 2 back is in view");
+  const P3 = E.sim(E.compile(lv(ROW6, [[[1, 1], [2, 1]], [[3, 1], [4, 1], [5, 1], [6, 1]], [], [], []], { links: [[[0, 1], [1, 3]]] })), PN);
+  eq([P3.canPower(PW.PULL, 1), P3.canPower(PW.PULL, 5)], [false, false], "pull (linked): a partner 3 back is out of view: refused either way");
+  const P4 = E.sim(E.compile(lv(ROW6, [[[1, 1], [2, 1]], [[3, 1], [4, 1]], [[6, 1]], [[5, 1]], []], { links: [[[0, 1], [1, 1]]] })), phold(3)); P4.play(2, 0); P4.play(3, 0);
+  eq([P4.open - P4.lineLen, P4.canPower(PW.PULL, 1)], [1, false], "pull (linked): one free space: refused (a pair needs 2)");
+  // A colour lock opens when a pulled card of its colour goes out.
+  const CL = E.sim(E.compile(lv(ROW6, [[[1, 1], [2, 1]], [[3, 1]], [], [], []], { lock: { colour: 2 } })), PN); CL.power(PW.PULL, 1);
+  eq([CL.locked, CL.open], [0, 5], "pull: a colour lock opens when its colour goes out by a Quartermaster");
+  // The reference agrees on the same moves.
+  const RF = Ref.game(L, PN); eq([RF.power(PW.PULL, 3), RF.power(PW.PULL, 1), RF.spaces.filter(Boolean).map((q) => q.m), RF.cols[0].map((c) => c.ci)], ["refused", undefined, [2], [0, 2, 3]], "pull (reference): out of reach refused; b goes straight out");
 }
 // ---- Scout ------------------------------------------------------------------------------------------------------------------
 {
@@ -1001,8 +1005,10 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
   const U = E.sim(E.compile(lv(RING, [[[2, 1]], [[2, 1]], [[2, 1]], [[1, 12]], []])), PN); pat(U, 0); pat(U, 1); pat(U, 2);
   eq([U.power(PW.RECALL, 0), U.power(PW.RECALL, 1), U.canPower(PW.RECALL, 2), U.power(PW.RECALL, 2), U.used(PW.RECALL)], [E.PLAYING, E.PLAYING, false, E.REFUSED, 2], "recall: a third is refused (2 a level)");
   // A recalled mystery card is at its column's front, so it is face up; pulled back behind a new front it stays face up.
-  const M2 = E.sim(E.compile(lv(RING, [[[1, 12], [2, 2, 1], [3, 1]], [], [], [], []])), PN); M2.power(PW.PULL, 1); pat(M2, 0);
-  eq([M2.power(PW.RECALL, 0), M2.power(PW.PULL, 2), M2.card(0, 1), M2.hidden(1)], [E.PLAYING, E.PLAYING, 1, false], "recall: a card once face up stays face up when another is pulled in front of it");
+  // v5 R1: a hidden card a Quartermaster sent out (from behind the front), recalled, goes back to its column's front face up.
+  const M2 = E.sim(E.compile(lv(RING, [[[1, 12], [2, 2, 1], [3, 1]], [], [], [], []])), PN); M2.power(PW.PULL, 1); M2.quiet();
+  eq([M2.stuck(0), M2.power(PW.RECALL, 0), colsOf(M2)[0].map((c) => c[0]), M2.hidden(1), M2.gone[1]], [true, E.PLAYING, [1, 0, 2], false, 0], "recall (v5 R1): a card the Quartermaster sent out from 1 back goes back to its column's front, face up");
+  ok(balanced(M2) === true, "recall (v5 R1): balance holds after pull and recall (" + balanced(M2) + ")");
 }
 // ---- every operation: dealing, game over, determinism ------------------------------------------------------------------------
 {
@@ -1039,7 +1045,7 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
         let a1, a2, what;
         if (usePower) {
           const k = Math.floor(r() * 4); let a = 0;
-          if (k === PW.PULL) { const j = Math.floor(r() * 5), d = 1 + Math.floor(r() * 3), c = S.card(j, d); a = c >= 0 ? c : Math.floor(r() * B.ncards); }
+          if (k === PW.PULL) { const j = Math.floor(r() * 5), d = Math.floor(r() * 4), c = S.card(j, d); a = c >= 0 ? c : Math.floor(r() * B.ncards); }
           else if (k === PW.RECALL) { const o = S.order(); a = o.length && r() < 0.8 ? o[Math.floor(r() * o.length)] : Math.floor(r() * 8); }
           if (rushed) { S.advanceTo(t); R.advanceTo(t); }
           const can = S.canPower(k, a);

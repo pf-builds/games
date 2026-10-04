@@ -69,9 +69,7 @@
 //   counts are per card in the state (cn), and a card once seen face up stays revealed (shown); with no power used the
 //   game plays exactly as before.
 //   Ladder (k 0): one more open space for this level (the line's maximum is MAXLINE, 8). Locked spaces stay the last ones.
-//   Quartermaster (k 1, a = a card): a card still in its column, behind the front and at most rules.pullDepth (2) cards
-//     back, moves to the front; the cards it passes step back one. A hidden card is revealed. At rest, refused if no
-//     front card's tap would then be taken (it would jam the line).
+//   Quartermaster (k 1, a = a card): v5 R1, see the v5 R1 note (it sends the card straight out).
 //   Scout (k 2): every hidden card is revealed. Refused when none is hidden.
 //   Recall (k 3, a = a space): a squad with sappers waiting, none out and no partner goes back to the front of the
 //     column it was tapped from as a card of the sappers still waiting; its space frees at once.
@@ -94,6 +92,14 @@
 //   (the locked space opens when its gilt key pops); lock: {colour: m} is a colour lock, which opens the moment a squad of
 //   colour m takes a space (a tap, either squad of a pair, a Quartermaster), logged UNLOCK -1 m after the TAP (a pair:
 //   after LINK). Either way rules.lockSpaces (1) of the 5 spaces start locked, always the last.
+//   Continue (revive(), rules.continues per attempt; the page charges coins): see revive().
+//   Quartermaster (power 1, a = a card): a card in view (still in its column, at most rules.pullDepth (2) cards behind
+//   the front; the front itself counts) goes straight out: it leaves its column (the cards behind close up; hidden: it is
+//   revealed) and its squad takes the lowest free open space, as a tap's would. A linked card goes with its partner, which
+//   must be in view in its own column too; the two need 2 free open spaces, take the two lowest (the pulled card first)
+//   and are paired. Refused (nothing changes) when the spaces aren't free. Not a play. Log: REVEAL for each hidden card
+//   that leaves and each hidden new front, POWER 1 a, TAP (TAP, LINK), UNLOCK (a colour lock), then the dispatch at that
+//   instant and the end checks. No jam test: like a tap, it may fill the line with a squad that can't reach.
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
@@ -585,6 +591,11 @@
     // ---- v4 M5, power-ups ------------------------------------------------------------------------------------------
     // Cards still in column j ahead of card ci (ci in the column, behind the front): its depth (0 = the front).
     function depthOf(ci) { const j = B.cardCol[ci], s0 = B.colStart[j]; let k = 0; for (let h = heads[j]; h < pos[ci]; h++) if (!gone[seq[s0 + h]]) k++; return k; }
+    // v5 R1: card ci is still in its column at most pullDepth cards behind the front (the front is depth 0).
+    const inView = (ci) => !gone[ci] && pos[ci] >= heads[B.cardCol[ci]] && depthOf(ci) <= pullDepth;
+    // Card ci leaves its column now (v5 R1 Quartermaster): revealed if hidden, the cards behind close up (the front: the
+    // column's head moves on, and a hidden new front turns over).
+    function leave(ci) { const j = B.cardCol[ci]; if (hiddenAt(ci)) log(EV.REVEAL, ci, j); shown[ci] = 1; if (frontAt(j) === ci) advanceHead(j); else gone[ci] = 1; }
     // Would power k with argument a be taken now (uses left aside)? Ladder: the line is under MAXLINE. Quartermaster: a is
     // a card still in its column, 1..pullDepth behind the front; at rest, some front card (with a in front) can be
     // tapped. Scout: a card is hidden. Recall: space a holds an unlinked squad (from a card) with sappers waiting and
@@ -592,16 +603,10 @@
     function powerOK(k, a) {
       if (k === PW.LADDER) return capNow() < MAXLINE;
       if (k === PW.SCOUT) { for (let ci = 0; ci < B.ncards; ci++) if (hiddenAt(ci)) return true; return false; }
-      if (k === PW.PULL) {
-        if (!(a >= 0 && a < B.ncards) || gone[a]) return false;
-        const j = B.cardCol[a]; if (pos[a] <= heads[j] || depthOf(a) > pullDepth) return false;
-        if (M[S_EL] > 0) return true;
-        // At rest: refused when every front card would be refused after the pull (v4.3: on the columns as they would be,
-        // a at column j's front and the card it passes no longer a front, so a linked front whose partner is passed waits).
-        const fr = (p) => p === a || (B.cardCol[p] !== j && frontAt(B.cardCol[p]) === p), no = (ci) => { const p = linkOf[ci]; return p < 0 ? blocked(B.cardM[ci]) : !fr(p) || M[S_LEN] + 2 > capNow() - M[S_LOCK]; };
-        if (!no(a)) return true;
-        for (let c = 0; c < NCOL; c++) if (c !== j && heads[c] < B.colLen[c] && !no(frontAt(c))) return true;
-        return false; // at rest, every front would be refused: the pull would jam the line
+      if (k === PW.PULL) { // v5 R1: a card in view goes straight out; it needs a free open space (a linked one: 2, partner in view)
+        if (!(a >= 0 && a < B.ncards) || !inView(a)) return false;
+        const p = linkOf[a]; if (p >= 0 && !inView(p)) return false;
+        return M[S_LEN] + (p >= 0 ? 2 : 1) <= capNow() - M[S_LOCK];
       }
       if (k === PW.RECALL) return a >= 0 && a < capNow() && spQ[a] !== 0 && spL[a] === 0 && spO[a] === 0 && spW[a] > 0 && spC[a] > 0;
       return false;
@@ -614,18 +619,21 @@
       if (M[S_USE + k] >= pwLim[k] || !powerOK(k, a)) return REFUSED;
       M[S_USE + k]++; M[S_PWANY] = 1;
       if (k === PW.LADDER) { M[S_XCAP]++; log(EV.POWER, k, capNow() - M[S_LOCK] - 1); }
-      else if (k === PW.PULL) { // a steps to the front; the cards it passes step back one
-        const j = B.cardCol[a], s0 = B.colStart[j], h = heads[j], hid = hiddenAt(a);
-        for (let i = pos[a]; i > h; i--) { const c = seq[s0 + i - 1]; seq[s0 + i] = c; pos[c] = i; }
-        seq[s0 + h] = a; pos[a] = h; shown[a] = 1;
-        if (hid) log(EV.REVEAL, a, j);
+      else if (k === PW.PULL) { // v5 R1: a (and its partner) leave their columns and take the lowest free spaces, as a tap would
+        const p = linkOf[a]; leave(a); if (p >= 0) leave(p);
         log(EV.POWER, k, a);
+        const s1 = place(B.cardM[a], cn[a], a); log(EV.TAP, s1, B.cardM[a]);
+        if (p >= 0) { const s2 = place(B.cardM[p], cn[p], p); log(EV.TAP, s2, B.cardM[p]); spL[s1] = s2 + 1; spL[s2] = s1 + 1; log(EV.LINK, s1, s2); opened(B.cardM[p]); }
+        opened(B.cardM[a]); dispatch(M[S_NOW]);
       } else if (k === PW.SCOUT) {
         let n = 0; for (let ci = 0; ci < B.ncards; ci++) if (hiddenAt(ci)) { shown[ci] = 1; n++; log(EV.REVEAL, ci, B.cardCol[ci]); }
         log(EV.POWER, k, n);
-      } else { // Recall: the card goes back to its column's front (swapped into the slot before the head) with the sappers waiting
-        const ci = spC[a] - 1, j = B.cardCol[ci], s0 = B.colStart[j], h = heads[j] - 1, q = seq[s0 + h];
-        seq[s0 + pos[ci]] = q; pos[q] = pos[ci]; seq[s0 + h] = ci; pos[ci] = h; heads[j] = h;
+      } else { // Recall: the card goes back to its column's front with the sappers waiting (a played card: swapped into the
+        // slot before the head; v5 R1, a card a Quartermaster took from behind the front: moved up to the head, back in line)
+        const ci = spC[a] - 1, j = B.cardCol[ci], s0 = B.colStart[j];
+        if (pos[ci] < heads[j]) { const h = heads[j] - 1, q = seq[s0 + h]; seq[s0 + pos[ci]] = q; pos[q] = pos[ci]; seq[s0 + h] = ci; pos[ci] = h; heads[j] = h; }
+        else { const h = heads[j]; for (let i = pos[ci]; i > h; i--) { const c = seq[s0 + i - 1]; seq[s0 + i] = c; pos[c] = i; } seq[s0 + h] = ci; pos[ci] = h; }
+        gone[ci] = 0; // back in its column (a card taken from behind the front was marked gone)
         cn[ci] = spW[a]; shown[ci] = 1; spW[a] = 0;
         log(EV.POWER, k, a); release(a);
       }

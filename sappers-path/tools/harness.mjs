@@ -189,7 +189,7 @@ async function run() {
         await ev(() => SP.load(40)); await tap('.pw[data-k="1"]'); await tap('.pw[data-k="1"]');
         const ask = await ev(() => document.querySelectorAll("#tray .tile.next.pickable").length); await tap("#tray .tile.next.pickable");
         const m3 = await ev(() => SP.meta()), s3 = await S();
-        ok(ask > 0 && m3.inv.quartermaster === 0 && m3.used[1] === 1 && m3.pick === -1, tag + " power-up bar: a real tap buys a Quartermaster, a second asks (" + ask + " tiles glow), a real tap on a tile brings it forward");
+        ok(ask > 0 && m3.inv.quartermaster === 0 && m3.used[1] === 1 && m3.pick === -1, tag + " power-up bar: a real tap buys a Quartermaster, a second asks (" + ask + " tiles glow), a real tap on a tile sends it out (v5 R1)");
         await page.waitForTimeout(200); if (vp.shots === "375" || vp.shots === "iframe") await shot("power-bar"); await ev(() => SP.load(1)); }
       // A patient win through the cards: tap, then wait until every squad is home, then the next tap.
       const quiet = () => ev(() => { for (let i = 0; i < 6000 && SP.state().busy; i++) SP.tick(16); return SP.state(); });

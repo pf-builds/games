@@ -316,14 +316,14 @@
     "cont": {"note": "v5 R1, the continue on a jam (SPEC-v4 §9, the v5 R1 entry; engine revive()): offered on a jam's sheet when the engine would take it, once per attempt (perLevel; Retry gives a fresh one), for price coins. Every stuck squad finishes on the spot and play goes on. say: the offer's line; btn: its button; poor: the line when coins are short ({need}); short: the toast on a tap then; ad: the label for a future rewarded-ad button (main.js AD HOOK; no ad code yet).", "price": 250, "perLevel": 1, "say": "Every stuck squad finishes on the spot", "btn": "Continue", "poor": "You need {need} more coins", "short": "A continue costs {price}: you have {have} coins", "ad": "Watch an ad to continue"},
     "powers": [
       {"id": "ladder", "name": "Ladder", "say": "+1 space this level", "price": 120, "perLevel": 1},
-      {"id": "quartermaster", "name": "Quartermaster", "say": "bring a squad forward", "price": 80, "perLevel": 3},
+      {"id": "quartermaster", "name": "Quartermaster", "say": "send any squad in view straight out", "price": 80, "perLevel": 3},
       {"id": "scout", "name": "Scout", "say": "reveal every ? squad", "price": 60, "perLevel": 1},
       {"id": "recall", "name": "Recall", "say": "send a waiting squad back", "price": 100, "perLevel": 2}
     ],
     "textNote": "The page's words for the meta layer. power: the power-up bar's toasts ({name}, {price}, {have}, {n}, {say}). report: the level report's rows ({v} a value, {n} coins). home: the home screen ({n} a level, {done} levels won, {t} total, {t} a countdown in lives). eraCard: the map's report card per era (and the Gallery's).",
-    "power": {"pickPull": "Pick a squad to bring forward", "pickRecall": "Pick a waiting squad to recall",
+    "power": {"pickPull": "Pick a squad to send out", "pickRecall": "Pick a waiting squad to recall",
       "bought": "{name} bought (-{price} coins)", "short": "{name} costs {price}: you have {have} coins", "full": "You can't carry more {name}s",
-      "limit": "{name}: {n} per level", "noPull": "No squad behind the front can come forward", "noPullJam": "Bringing that squad forward would jam the line",
+      "limit": "{name}: {n} per level", "noPull": "No free space: the Quartermaster needs one", "noPullLinked": "A linked squad needs its partner in view and 2 free spaces",
       "noScout": "No hidden squads to scout", "noRecall": "No squad is just waiting (none of its sappers out)", "noLadder": "The line can't take more spaces",
       "used": "{name}: {say}", "aria": "{name}: {say}. {state}", "owned": "{n} owned", "buy": "buy for {price} coins", "poor": "buy for {price} coins: you need {need} more", "need": "need {need}", "spent": "used up this level"},
     "report": {"time": "Time", "taps": "Taps", "coins": "Coins", "best": "Best {v}", "first": "First win", "newBest": "New best!", "firstClear": "First clear +{n}", "countMs": 900, "countDelayMs": 250},

@@ -174,7 +174,7 @@ body.wide.coached #coach-dock { display: block; }
 .pw.picking { box-shadow: 0 0 0 4px var(--glow), 0 0 16px 4px rgba(255,243,168,.8), inset 0 -5px 0 var(--pw-disc-lo); animation: coachglow .9s ease-in-out infinite; }
 .pw.pop .pw-ic { animation: pwpop .42s cubic-bezier(.3,1.6,.5,1); }
 @keyframes pwpop { 0% { transform: translate(-50%, -50%) scale(1.35); } 100% { transform: translate(-50%, -50%) scale(1); } }
-.tile.next.pickable, .slot.pickable { cursor: pointer; outline: 3px dashed var(--gold-lo); outline-offset: 2px; animation: pickglow .8s ease-in-out infinite; }
+.tile.next.pickable, .tile.card.pickable, .slot.pickable { cursor: pointer; outline: 3px dashed var(--gold-lo); outline-offset: 2px; animation: pickglow .8s ease-in-out infinite; }
 @keyframes pickglow { 50% { outline-color: var(--gold-hi); box-shadow: 0 0 0 3px var(--glow), 0 0 12px 3px rgba(255,243,168,.75); } }
 /* Short frames: the queue's third row goes (main.js marks it .off) so the bar fits under the queue; its tray band too. */
 .next.off { display: none; }
@@ -572,7 +572,7 @@ body.wide .gal-tile canvas { max-height: 120px; }
   .home h1 { position: absolute; left: calc(var(--gut) + 58px); top: max(14px, env(safe-area-inset-top)); margin: 0; font-size: 32px; white-space: nowrap; } /* in the top row beside the gear, clear of the keep */
 }
 body.wide .home-card { max-width: 760px; }
-@media (prefers-reduced-motion: reduce) { .pw.picking, .pw.pop .pw-ic, .tile.next.pickable, .slot.pickable, .gal-tile.next { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .pw.picking, .pw.pop .pw-ic, .tile.next.pickable, .tile.card.pickable, .slot.pickable, .gal-tile.next { animation: none; } }
 /* v4.3 fix (n1, carried from v4.2): a phone under 380 CSS px wide (360-wide Android) trims the play screen's side gutter
    to 4 px, so the full-screen boards draw at 8 px a cell. The home, map and Gallery (screens over #app, padded by --gut)
    keep theirs. */

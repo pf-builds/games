@@ -17,7 +17,7 @@
 // v4 M5 (SPEC-v4 §9, the power-ups, from the rules text): power(k, a, t) -> undefined (taken), "refused" or nothing (the
 // game is over). Each level allows rules.powers[k] uses. A card seen at the front of its list stays face up. Ladder (0):
 // one more space, at most 8 in the line. Quartermaster (1, a = a card's file index): a card 1..rules.pullDepth (2) places
-// behind the front of its list moves to the front; at rest, refused if every front card would then be refused. Scout
+// behind the front of its list moves to the front (v5 R1: see below, it now goes straight out). Scout
 // (2): every hidden card turns face up; refused if none is hidden. Recall (3, a = a space): an unlinked squad with
 // sappers waiting and none out goes back to the front of the list it was tapped from, as a card of the sappers waiting,
 // and its space is free.
@@ -34,6 +34,10 @@
 // Then play goes on: for each squad in the line, in the order they were tapped, as many of its colour's standing pixels
 // as it has sappers waiting are removed, nearest the entry square first (the squared distance from the middle of the
 // camp's run, measured in half cells, then the usual tie-break), and its space empties (a pair once both are done).
+// Quartermaster (v5 R1): a card at most rules.pullDepth places behind the front of its list (the front itself too) leaves
+// its list, turns face up and takes the lowest empty open space, as a tap's squad would; a linked card takes its partner
+// along (the partner within the same reach in its own list), needs 2 empty open spaces, and the two are a pair. Refused
+// without the spaces. A Recall later puts its card back at the front of the list it came from.
 // pops: every popped pixel as [cell, time], in the order they popped.
 "use strict";
 const MATCH = { ".": 0, ",": -2, "~": -1, "#": -3 };
@@ -193,14 +197,17 @@ function game(L, rules) {
     if (t != null) { advanceTo(t); if (status !== "playing") return; }
     if (!(uses[k] < limits[k])) return "refused";
     if (k === 0) { if (rules.hold + extra >= 8) return "refused"; extra++; }
-    else if (k === 1) {
-      const c = cols.find((q) => q.some((cd) => cd.ci === a)), i = c ? c.findIndex((cd) => cd.ci === a) : -1;
-      if (i < 1 || i > reach) return "refused";
-      if (!events.length) { // at rest: refused if every front would then be refused
-        const trial = cols.map((q) => (q === c ? [c[i]].concat(c.filter((x, k) => k !== i)) : q)), fr = trial.map((q) => q[0]).filter(Boolean);
-        const bur = (cd) => !!cd.partner && !trial.some((q) => q[0] === cd.partner);
-        if (fr.every((cd) => bur(cd) || need(cd) > free())) return "refused"; }
-      const [cd] = c.splice(i, 1); c.unshift(cd);
+    else if (k === 1) { // v5 R1: a card within reach of its list's front (the front included) goes straight into a space
+      const where = (ci) => { const c = cols.find((q) => q.some((cd) => cd.ci === ci)); return c ? [c, c.findIndex((cd) => cd.ci === ci)] : [null, -1]; };
+      const [c, i] = where(a); if (!c || i > reach) return "refused";
+      const cd = c[i], pd = cd.partner; let pc = null, pi = -1;
+      if (pd) { [pc, pi] = where(pd.ci); if (!pc || pi > reach) return "refused"; }
+      if (free() < (pd ? 2 : 1)) return "refused";
+      c.splice(i, 1); cd.seen = true; if (pd) { pc.splice(pc.indexOf(pd), 1); pd.seen = true; }
+      const s1 = take(cd); if (pd) { const s2 = take(pd); spaces[s1].pair = s2; spaces[s2].pair = s1; }
+      peak = Math.max(peak, used());
+      if (R.lockColour && (cd.m === R.lockColour || (pd && pd.m === R.lockColour))) locked = 0;
+      uses[k]++; seeFronts(); dispatch(now); settle(); return;
     } else if (k === 2) {
       const hid = []; for (const c of cols) c.forEach((cd, i) => { if (i > 0 && cd.mystery && !cd.seen) hid.push(cd); });
       if (!hid.length) return "refused";

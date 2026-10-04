@@ -471,13 +471,13 @@
     }
     return applyPower(k, 0);
   }
-  // Why no tile can be pulled: one could if the line weren't at rest with every front refused (it would jam), or none
-  // is in reach at all.
-  function pullWhy() { const S = app.S; for (let j = 0; j < E.NCOL; j++) for (let d = 1; d < app.rows && d <= S.pullDepth; d++) { const ci = S.card(j, d); if (ci >= 0) return "noPullJam"; } return "noPull"; }
+  // Why no tile can go out (v5 R1): no free space at all, or only linked squads in view whose partners aren't (or 2 spaces).
+  function pullWhy() { const S = app.S; return S.open - S.lineLen > 0 ? "noPullLinked" : "noPull"; }
   // The Quartermaster's tiles (j, d, card) in the visible rows, or Recall's spaces, that the engine would take now.
   function pickTargets(k) {
     const S = app.S, out = [];
-    if (k === E.PW.PULL) { for (let j = 0; j < E.NCOL; j++) for (let d = 1; d < app.rows && d <= S.pullDepth; d++) { const ci = S.card(j, d); if (ci >= 0 && S.canPower(k, ci)) out.push([j, d, ci]); } }
+    // v5 R1: the rows behind the front, and a linked front card (it can't be tapped alone while its partner is buried)
+    if (k === E.PW.PULL) { for (let j = 0; j < E.NCOL; j++) for (let d = 0; d < app.rows && d <= S.pullDepth; d++) { const ci = S.card(j, d); if (ci >= 0 && (d > 0 || S.partner(ci) >= 0) && S.canPower(k, ci)) out.push([j, d, ci]); } }
     else for (let i = 0; i < S.cap; i++) if (S.canPower(k, i)) out.push([i]);
     return out;
   }
@@ -498,6 +498,7 @@
     const k = app.pick ? app.pick.k : -1, T = k >= 0 && app.S && livePlay() ? pickTargets(k) : [];
     if (k >= 0 && !T.length) { app.pick = null; renderPowers(); }
     for (let j = 0; j < E.NCOL; j++) for (let d = 1; d <= app.nexts[j].length; d++) { const x = app.nexts[j][d - 1], on = k === E.PW.PULL && T.some((t) => t[0] === j && t[1] === d); x.classList.toggle("pickable", on); if (on) { x.setAttribute("role", "button"); x.removeAttribute("aria-hidden"); x.setAttribute("aria-label", fill(PWT().pickPull, {})); } else { x.removeAttribute("role"); x.setAttribute("aria-hidden", "true"); x.removeAttribute("aria-label"); } }
+    for (let j = 0; j < E.NCOL; j++) app.cards[j].classList.toggle("pickable", k === E.PW.PULL && T.some((t) => t[0] === j && t[1] === 0)); // v5 R1: a linked front
     app.slots.forEach((q, i) => q.classList.toggle("pickable", k === E.PW.RECALL && T.some((t) => t[0] === i)));
     document.body.classList.toggle("picking", k >= 0 && T.length > 0);
   }
@@ -704,7 +705,7 @@
   function playCol(col) {
     const S = app.S;
     if (app.screen !== "play" || !S || S.status !== E.PLAYING || app.panel || !(col >= 0 && col < E.NCOL) || S.front(col) < 0) return false;
-    if (app.pick) { cancelPick(); return false; } // v4 M5: a front card can't be a target: the tap cancels the ask
+    if (app.pick) { if (app.pick.k === E.PW.PULL && app.cards[col].classList.contains("pickable")) return applyPower(E.PW.PULL, S.front(col)); cancelPick(); return false; } // v5 R1: a linked front is a Quartermaster target; any other front cancels the ask
     const m = app.B.cardM[S.front(col)], line0 = S.lineLen, got = S.play(col);
     if (got === E.REFUSED) { refusedTap(col); return false; }
     if (got === E.NOPLAY) return false;
@@ -1924,11 +1925,13 @@
           qb.click(); const cancelled = !app.pick && !document.querySelector(".pickable") && inv().quartermaster === 2;
           qb.click(); const el = document.querySelector("#tray .tile.next.pickable"), j = el ? app.nexts.findIndex((nx) => nx.indexOf(el) >= 0) : -1, d = j >= 0 ? app.nexts[j].indexOf(el) + 1 : 0, ci = j >= 0 ? app.S.card(j, d) : -1;
           if (el) el.click();
-          ok(asking && cancelled && ci >= 0 && app.S.front(j) === ci && app.cards[j].querySelector(".n").textContent === String(app.S.count(ci)) && app.cards[j].style.getPropertyValue("--mc") === mat(app.B.cardM[ci]).c && inv().quartermaster === 1 && !app.pick && !document.querySelector(".pickable"),
-            "Quartermaster through its badge: it asks (" + pk.length + " tiles glow), a second tap cancels (nothing spent), then a tap on a tile (column " + j + ", row " + (d + 1) + ") brings it to the front; one spent"); }
+          const sq = app.S.order().find((q) => app.S.spM[q] === app.B.cardM[ci]);
+          ok(asking && cancelled && ci >= 0 && app.S.lineLen === 1 && sq != null && app.slots[sq].classList.contains("full") && app.S.card(j, d) !== ci && inv().quartermaster === 1 && !app.pick && !document.querySelector(".pickable"),
+            "Quartermaster through its badge (v5 R1): it asks (" + pk.length + " tiles glow), a second tap cancels (nothing spent), then a tap on a tile (column " + j + ", row " + (d + 1) + ") sends that squad straight into a space; one spent"); }
         if (app.byId.has("v4-mystery")) { startLevel("v4-mystery", "normal"); inv().quartermaster = 1; renderPowers(); app.pws[PWK.PULL].click();
           const el = Array.from(document.querySelectorAll("#tray .tile.next.pickable.mys"))[0], j = el ? app.nexts.findIndex((nx) => nx.indexOf(el) >= 0) : -1, ci = el ? app.S.card(j, app.nexts[j].indexOf(el) + 1) : -1; if (el) el.click();
-          ok(!!el && app.S.front(j) === ci && !app.S.hidden(ci) && !app.cards[j].classList.contains("mys") && app.cards[j].style.getPropertyValue("--mc") === mat(app.B.cardM[ci]).c, "Quartermaster on a ? tile: it comes to the front face up, in its colour"); }
+          const sq = app.S.order().find((q) => app.S.spM[q] === app.B.cardM[ci]);
+          ok(!!el && !app.S.hidden(ci) && sq != null && app.slots[sq].style.getPropertyValue("--mc") === mat(app.B.cardM[ci]).c, "Quartermaster on a ? tile (v5 R1): it goes out revealed, its space in its colour"); }
         // Recall: a squad waiting stuck goes back to its column's front through a real tap on its space.
         { let got = null; for (const e of app.levels) { if (e.n < 16) continue; startLevel(e.id, "normal"); const tp = stageLine(1, 0); if (tp) { got = { e, tp }; break; } }
           if (ok(!!got, "Recall: found a level whose front can't reach a block (a squad that waits)")) {
