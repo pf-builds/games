@@ -1,6 +1,6 @@
 {
  "version": 1,
- "note": "Sapper's Path v4 M4, the Gallery's pictures: every candidate with its source, author, license and date (generated ones: model, prompt and seed). keep false: dropped, with why. The converter reads file (tools/gallery-src.py writes it from raw); kind picks the converter's settings (tools/gallery-config.json convert.kinds), and a line may override mask, crop [x0, y0, x1, y1] (fractions), box [columns, rows], bg, outline, colours. The Gallery shows the kept pictures in the order of `order`.",
+ "note": "Sapper's Path v4 M4, the Gallery's pictures: every candidate with its source, author, license and date (generated ones: model, prompt and seed). keep false: dropped, with why. The converter reads file (tools/gallery-src.py writes it from raw); kind picks the converter's settings (tools/gallery-config.json convert.kinds), and a line may override mask, crop [x0, y0, x1, y1] (fractions), box [columns, rows], bg, outline, colours. The Gallery shows the kept pictures in the order of `order`. v4.4a: candidate \"v4.4a\" marks the pictures offered for Gallery 61-100 (the new pictures of our own and the 28 M4 spares, which keep their M4 why); Peter picks 40 from tools/shots-v4.4/candidates-sheet.png.",
  "order": [
   "tw-1f355",
   "ours-g01",
@@ -134,7 +134,8 @@
    "raw": "tw-1f366.png",
    "file": "tools/gallery-src/tw-1f366.png",
    "keep": false,
-   "why": "the cone merges into the swirl at board size (one cream blob)"
+   "why": "the cone merges into the swirl at board size (one cream blob)",
+   "candidate": "v4.4a"
   },
   {
    "id": "tw-1f951",
@@ -164,7 +165,8 @@
    "raw": "tw-1f34d.png",
    "file": "tools/gallery-src/tw-1f34d.png",
    "keep": false,
-   "why": "spare: reads, but plainer than the fruit already kept"
+   "why": "spare: reads, but plainer than the fruit already kept",
+   "candidate": "v4.4a"
   },
   {
    "id": "tw-1f438",
@@ -306,7 +308,8 @@
    "raw": "tw-1f48e.png",
    "file": "tools/gallery-src/tw-1f48e.png",
    "keep": false,
-   "why": "spare: three flat colours, too plain"
+   "why": "spare: three flat colours, too plain",
+   "candidate": "v4.4a"
   },
   {
    "id": "tw-1f680",
@@ -336,7 +339,8 @@
    "raw": "tw-1f47b.png",
    "file": "tools/gallery-src/tw-1f47b.png",
    "keep": false,
-   "why": "spare: reads; one ghost is enough (ours-g09 is kept)"
+   "why": "spare: reads; one ghost is enough (ours-g09 is kept)",
+   "candidate": "v4.4a"
   },
   {
    "id": "tw-1f383",
@@ -366,7 +370,8 @@
    "raw": "tw-1f422.png",
    "file": "tools/gallery-src/tw-1f422.png",
    "keep": false,
-   "why": "spare: short and plain (3 colours)"
+   "why": "spare: short and plain (3 colours)",
+   "candidate": "v4.4a"
   },
   {
    "id": "tw-1f40c",
@@ -382,7 +387,8 @@
    "raw": "tw-1f40c.png",
    "file": "tools/gallery-src/tw-1f40c.png",
    "keep": false,
-   "why": "spare: reads; room for the paintings and ours"
+   "why": "spare: reads; room for the paintings and ours",
+   "candidate": "v4.4a"
   },
   {
    "id": "noto-1f354",
@@ -501,7 +507,8 @@
    "raw": "noto-1f433.png",
    "file": "tools/gallery-src/noto-1f433.png",
    "keep": false,
-   "why": "spare: reads, but the spout and eye get lost"
+   "why": "spare: reads, but the spout and eye get lost",
+   "candidate": "v4.4a"
   },
   {
    "id": "noto-1f437",
@@ -555,7 +562,8 @@
    "raw": "noto-1f425.png",
    "file": "tools/gallery-src/noto-1f425.png",
    "keep": false,
-   "why": "spare: three colours, a plain yellow blob"
+   "why": "spare: three colours, a plain yellow blob",
+   "candidate": "v4.4a"
   },
   {
    "id": "noto-1f432",
@@ -596,7 +604,8 @@
    "raw": "noto-1f916.png",
    "file": "tools/gallery-src/noto-1f916.png",
    "keep": false,
-   "why": "the eyes are lost at board size"
+   "why": "the eyes are lost at board size",
+   "candidate": "v4.4a"
   },
   {
    "id": "noto-1f47d",
@@ -650,7 +659,8 @@
    "raw": "noto-1f335.png",
    "file": "tools/gallery-src/noto-1f335.png",
    "keep": false,
-   "why": "spare: reads; plainer than the kept plants"
+   "why": "spare: reads; plainer than the kept plants",
+   "candidate": "v4.4a"
   },
   {
    "id": "noto-1f6e1",
@@ -665,7 +675,8 @@
    "raw": "noto-1f6e1.png",
    "file": "tools/gallery-src/noto-1f6e1.png",
    "keep": false,
-   "why": "spare: plain grey shield"
+   "why": "spare: plain grey shield",
+   "candidate": "v4.4a"
   },
   {
    "id": "noto-2694",
@@ -680,7 +691,8 @@
    "raw": "noto-2694.png",
    "file": "tools/gallery-src/noto-2694.png",
    "keep": false,
-   "why": "spare: reads; thin blades take most of the board as background"
+   "why": "spare: reads; thin blades take most of the board as background",
+   "candidate": "v4.4a"
   },
   {
    "id": "noto-1f3c6",
@@ -709,7 +721,8 @@
    "raw": "noto-1f388.png",
    "file": "tools/gallery-src/noto-1f388.png",
    "keep": false,
-   "why": "spare: a plain red balloon"
+   "why": "spare: a plain red balloon",
+   "candidate": "v4.4a"
   },
   {
    "id": "met-45434",
@@ -780,7 +793,8 @@
     0.99
    ],
    "keep": false,
-   "why": "the flower heads turn into one olive blob at 40 cells"
+   "why": "the flower heads turn into one olive blob at 40 cells",
+   "candidate": "v4.4a"
   },
   {
    "id": "met-436535",
@@ -885,7 +899,8 @@
    "raw": "met-436533.jpg",
    "file": "tools/gallery-src/met-436533.png",
    "keep": false,
-   "why": "reads only as a brown patch"
+   "why": "reads only as a brown patch",
+   "candidate": "v4.4a"
   },
   {
    "id": "met-438822",
@@ -904,7 +919,8 @@
    "raw": "met-438822.jpg",
    "file": "tools/gallery-src/met-438822.png",
    "keep": false,
-   "why": "too dark: the lion and the jungle merge"
+   "why": "too dark: the lion and the jungle merge",
+   "candidate": "v4.4a"
   },
   {
    "id": "met-11122",
@@ -929,7 +945,8 @@
     0.97
    ],
    "keep": false,
-   "why": "too dark: the boat is a small patch"
+   "why": "too dark: the boat is a small patch",
+   "candidate": "v4.4a"
   },
   {
    "id": "met-435882",
@@ -971,7 +988,8 @@
     0.98
    ],
    "keep": false,
-   "why": "the waterfall's lines turn to noise"
+   "why": "the waterfall's lines turn to noise",
+   "candidate": "v4.4a"
   },
   {
    "id": "met-56942",
@@ -990,7 +1008,8 @@
    "raw": "met-56942.jpg",
    "file": "tools/gallery-src/met-56942.png",
    "keep": false,
-   "why": "too narrow for the board (14 columns)"
+   "why": "too narrow for the board (14 columns)",
+   "candidate": "v4.4a"
   },
   {
    "id": "met-437999",
@@ -1009,7 +1028,8 @@
    "raw": "met-437999.jpg",
    "file": "tools/gallery-src/met-437999.png",
    "keep": false,
-   "why": "Critics 2: muddy at 42 cells (dark ground, the teapot hard to find) and its navy and slate queue tiles fade together (ΔE00 12.0); Trophy took its slot (33)"
+   "why": "Critics 2: muddy at 42 cells (dark ground, the teapot hard to find) and its navy and slate queue tiles fade together (ΔE00 12.0); Trophy took its slot (33)",
+   "candidate": "v4.4a"
   },
   {
    "id": "met-56727",
@@ -1034,7 +1054,8 @@
     0.97
    ],
    "keep": false,
-   "why": "the fisherman and the rock are lost; a wash of blue"
+   "why": "the fisherman and the rock are lost; a wash of blue",
+   "candidate": "v4.4a"
   },
   {
    "id": "met-36499",
@@ -1059,7 +1080,8 @@
     0.97
    ],
    "keep": false,
-   "why": "the tree is lost in the sky"
+   "why": "the tree is lost in the sky",
+   "candidate": "v4.4a"
   },
   {
    "id": "met-56988",
@@ -1084,7 +1106,8 @@
     0.97
    ],
    "keep": false,
-   "why": "the wind and the travellers are lost"
+   "why": "the wind and the travellers are lost",
+   "candidate": "v4.4a"
   },
   {
    "id": "met-56915",
@@ -1109,7 +1132,8 @@
     0.97
    ],
    "keep": false,
-   "why": "snow on sand: almost nothing reads"
+   "why": "snow on sand: almost nothing reads",
+   "candidate": "v4.4a"
   },
   {
    "id": "ours-g01",
@@ -1168,7 +1192,8 @@
     0.94
    ],
    "keep": false,
-   "why": "the dragon is tiny in its frame"
+   "why": "the dragon is tiny in its frame",
+   "candidate": "v4.4a"
   },
   {
    "id": "ours-g04",
@@ -1204,7 +1229,8 @@
    "raw": "g05.png",
    "file": "tools/gallery-src/ours-g05.png",
    "keep": false,
-   "why": "the knight and the snail merge into brown and grey"
+   "why": "the knight and the snail merge into brown and grey",
+   "candidate": "v4.4a"
   },
   {
    "id": "ours-g06",
@@ -1359,7 +1385,8 @@
    "raw": "g14.png",
    "file": "tools/gallery-src/ours-g14.png",
    "keep": false,
-   "why": "the lute is lost; a brown bear shape"
+   "why": "the lute is lost; a brown bear shape",
+   "candidate": "v4.4a"
   },
   {
    "id": "ours-g15",
@@ -1412,7 +1439,8 @@
    "raw": "g17.png",
    "file": "tools/gallery-src/ours-g17.png",
    "keep": false,
-   "why": "the hedgehog reads as a brown blob"
+   "why": "the hedgehog reads as a brown blob",
+   "candidate": "v4.4a"
   },
   {
    "id": "ours-g18",
