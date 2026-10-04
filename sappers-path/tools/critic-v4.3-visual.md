@@ -119,3 +119,47 @@ HEAD `08fbc65` (branch `sappers-path`, `?v=28`), my own server on :8493. 2026-10
 | MINOR | m5: the 1280 fail sheet is 512 px with about 250 px blank. | Content-sized, like the win sheet. |
 | MINOR | m6: the Easy pill is 3.17:1 at 12–13 px. | `#1f7a6f` (5.0:1). |
 | MINOR | n1 (carried): 360-wide phones at 7.5 px. | A 4 px side gutter below 380 px. |
+
+---
+
+## Re-check (after fix pass)
+
+HEAD `fdef7d9` (branch `sappers-path`, `?v=29`), my own server on :8493. 2026-10-03.
+
+**How I checked:**
+- `SP.selfTest()`: 508 pass, 0 fail. 0 console errors or warnings.
+- Probe: `tools/shots-v4.3-critic/recheck.mjs`, results in `recheck/recheck.json`.
+- Screenshots: `recheck/`, with sheet `recheck/sheets/r1.png`.
+
+| Item | Status | Evidence |
+|---|---|---|
+| **T1** tag on every Play | **Fixed** | See T1 note below. |
+| **m1** return count | **Fixed** | The line head reads "Squads out … 5 free ↩14" while 14 carriers walk home (level 27). The count drops as they arrive (↩12 by the screenshot, `sheets/r2-head.png`). |
+| **m2** 1280 toast | **Fixed** | The toast sits above the side column's tray, 126 px from the tapped card (was about 809), at 20 px (`1280-toast.png`). |
+| **m3** report beat | **Fixed** | See m3 note below. |
+| **m4** locked Gallery wall | **Fixed** | Locked tiles' tags are at 0.55 opacity. Paintings show a two-tone stencil instead of a blank tile: Red Fuji, the next picture, reads as a dim landscape (`375-gallery.png`). |
+| **m5** 1280 fail sheet | **Fixed** | 520×237, content-sized (was 512 tall) (`1280-fail.png`). |
+| **m6** Easy contrast | **Fixed** | Easy face `rgb(31,122,111)` = `#1f7a6f`, 5.0:1. |
+| **n1** 360-wide phones | **Fixed** | 360×640 and 360×740: levels 27, 64 and 100 at 8.0 px, Pizza at 8.5–9 px (`360x640-l64.png`). |
+
+**T1 note.** Every Play now carries the tag:
+- **Home:** a new save shows "▶ Level 1" with a 16 px EASY pill on the gold face. With level 6 (Hard) next it shows "▶ Level 6" with a HARD pill on a red-gold face (`#e8553a` inside the gold rim) (`375-home-hard.png`).
+- **Map:** "Play level 6", red-gold with a HARD pill (`375-map-hard.png`).
+- **Report:** "Next level", red-gold with a HARD pill after level 5 (`375-report-next-hard.png`); EASY after level 1.
+- **Gallery:** the next tile carries a HARD pill and a red "Play" chip.
+
+Hard reads as a clear warning without alarm.
+
+**m3 note.**
+- A first clear of level 1 shows the "First clear +10" ribbon (red-gold) and 8 coins bursting from the Coins cell (`coinfly`) (`375-first-clear.png`, `1280-first-clear.png`).
+- **Under `prefers-reduced-motion`:** the ribbon shows with no animation, and the burst coins have no animation and opacity 0.
+
+**Observation, not counted:** mid-burst, the flying coins pass over the end of the sheet's subtitle ("…cleared again.") for a moment (`375-report-next-hard.png`). It's transient. If wanted, start the burst under the subtitle line, or clip it to the stat cells.
+
+**Final counts:**
+- 0 blocking, 0 major, 0 minor open from this report.
+- v4.2's carried minors (fill gaps on some boards, the iframe at 7.5 px, the Era 4 silhouette, levels 1–25 width on short phones, landscape paintings letterboxed) were not re-judged.
+
+**Portal verdict:**
+- **CrazyGames: accept.**
+- **Poki: would not reject on sight.** Tags are on every entry point, and the report has its beat back.
