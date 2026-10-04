@@ -111,7 +111,9 @@
   // front, or it left hidden as a partner), LINK space space (a linked pair took these two spaces; after both TAPs),
   // UNLOCK cell 0 (the locked space opened: its key popped). v4 M5: POWER k a (power-up k used: Ladder a = the new open
   // space, Quartermaster a = the card pulled, Scout a = how many cards it revealed, Recall a = the space it freed).
-  const EV = { TAP: 1, DISP: 2, EAT: 3, GATE: 4, TOWER: 5, HIT: 6, KILL: 7, HOME: 8, FREE: 9, REVEAL: 10, LINK: 11, UNLOCK: 12, POWER: 13 };
+  // v5 R1: CLEAR cell m (a block removed by a continue or a Volley, nobody's pop), CONT n 0 (a continue: n squads
+  // finished on the spot), SHOW cell m (a mystery block exposed: its colour shows for good).
+  const EV = { TAP: 1, DISP: 2, EAT: 3, GATE: 4, TOWER: 5, HIT: 6, KILL: 7, HOME: 8, FREE: 9, REVEAL: 10, LINK: 11, UNLOCK: 12, POWER: 13, CLEAR: 14, CONT: 15, SHOW: 16 };
   // v4 M5: the power-ups, by k.
   const PW = { LADDER: 0, PULL: 1, SCOUT: 2, RECALL: 3 }, NPW = 4, POWERS = ["ladder", "quartermaster", "scout", "recall"];
   const CODE = { ".": GRASS, ",": DIRT, "~": WATER, "#": CAMP };
@@ -164,6 +166,11 @@
       return Math.abs(py - campRow) - Math.abs(qy - campRow) || px - qx || py - qy;
     });
     const rank = new Int32Array(n); order.forEach((c, i) => { rank[c] = i; });
+    // v5 R1, the clear order (a continue's pick): nearest the entry first, by the squared straight-line distance from the
+    // camp run's middle on the camp row, (2x - (x0 + x1))^2 + (2(y - campRow))^2, then the tie-break rank.
+    let cx0 = -1, cx1 = -1; for (let x = 0; x < w; x++) if (a0[campRow * w + x] === CAMP) { if (cx0 < 0) cx0 = x; cx1 = x; }
+    const d2 = (c) => { const dx = 2 * (c % w) - cx0 - cx1, dy = 2 * (((c / w) | 0) - campRow); return dx * dx + dy * dy; };
+    const near = Int32Array.from(Array.from({ length: n }, (_, c) => c).sort((p, q) => d2(p) - d2(q) || rank[p] - rank[q]));
     const cellAt = (p, what) => { const x = p && p[0] | 0, y = p && p[1] | 0; if (!Array.isArray(p) || x < 0 || y < 0 || x >= w || y >= h) throw new Error("level: bad " + what + " cell"); return y * w + x; };
 
     // Gates and keys.
@@ -230,7 +237,7 @@
     const rnd = () => { s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return t ^ (t >>> 14); };
     for (let c = 0; c < n; c++) { Z1[c] = rnd(); Z2[c] = rnd(); }
     let pixTotal = 0; for (let m = 1; m < NMAT; m++) pixTotal += pix[m];
-    return { w, h, n, a0, nb, rank, campRow, gateOf, keyOf, gateCells, towerOf, cover, towers, cardM: Int32Array.from(cardM), cardN: Int32Array.from(cardN),
+    return { w, h, n, a0, nb, rank, near, campRow, gateOf, keyOf, gateCells, towerOf, cover, towers, cardM: Int32Array.from(cardM), cardN: Int32Array.from(cardN),
       colStart, colLen, sapTotal, pix, hoff, Z1, Z2, pixTotal, ncards: cardM.length, safeArchers: L.safeArchers === true,
       cardF: Int32Array.from(cardF), cardCol: Int32Array.from(cardCol), linkOf, links: Int32Array.from(links), nlinks: links.length >> 1, lockKey, lockMat, pic };
   }
@@ -257,6 +264,7 @@
     // Quartermaster reaches (rules.pullDepth, cards behind the front, default 2).
     const pwLim = new Int32Array(NPW); for (let k = 0; k < NPW; k++) pwLim[k] = rules.powers ? Math.max(0, Math.min(99, rules.powers[k] | 0)) : 0;
     const pullDepth = Math.max(1, Math.min(64, rules.pullDepth == null ? 2 : rules.pullDepth | 0));
+    const contLim = Math.max(0, Math.min(9, rules.continues | 0)); // v5 R1: continues allowed per attempt (none without it)
     // Sappers are numbered per game: every dispatch is one pixel popped or one archer hit (at most one per squad, then
     // it is wary), so pixels + squads bounds them. Pending events: one per sapper in flight, plus a wake per space.
     const SQ = deal ? 4096 : B.ncards + 8, SMAX = B.pixTotal + SQ + 8, EMAX = SMAX + 4 * MAXLINE + 8;
@@ -287,7 +295,7 @@
     // spaces added by Ladders, PWANY 1 once any power-up was used, USE..USE+3 the uses of each.
     const S_LEN = oS, S_PIX = oS + 1, S_STAND = oS + 2, S_STATUS = oS + 3, S_REASON = oS + 4, S_HITS = oS + 5, S_KILLS = oS + 6, S_Z1 = oS + 7, S_Z2 = oS + 8,
       S_PEAK = oS + 9, S_PLAYS = oS + 10, S_FAILM = oS + 11, S_NOW = oS + 12, S_SN = oS + 13, S_EL = oS + 14, S_ESEQ = oS + 15, S_ORD = oS + 16, S_TAPS = oS + 17, S_OUT = oS + 18, S_DISP = oS + 19,
-      S_LOCK = oS + 20, S_JAMK = oS + 21, S_XCAP = oS + 22, S_PWANY = oS + 23, S_USE = oS + 24;
+      S_LOCK = oS + 20, S_JAMK = oS + 21, S_XCAP = oS + 22, S_PWANY = oS + 23, S_USE = oS + 24, S_CONT = oS + 30;
     const CLAIMED = -2;
     const capNow = () => cap + M[S_XCAP]; // the line's spaces (Ladders included; locked ones too)
     const q = new Int32Array(n);
@@ -372,9 +380,10 @@
     }
 
     // ---- the rules -------------------------------------------------------------------------------------------------
-    function eatCell(c, id) {
+    // A pixel goes (popped by sapper id, or v5 R1 cleared: how = EV.CLEAR, id = its colour); keys, towers and the lock as one.
+    function eatCell(c, id, how) {
       const m = a[c];
-      a[c] = DIRT; hk[c] = -1; left[m]--; M[S_PIX]--; M[S_Z1] ^= B.Z1[c]; M[S_Z2] ^= B.Z2[c]; log(EV.EAT, c, id);
+      a[c] = DIRT; hk[c] = -1; left[m]--; M[S_PIX]--; M[S_Z1] ^= B.Z1[c]; M[S_Z2] ^= B.Z2[c]; log(how || EV.EAT, c, id);
       const t = towerOf[c]; if (t >= 0 && --tleft[t] === 0) { M[S_STAND] &= ~(1 << t); log(EV.TOWER, t, 0); }
       if (c === B.lockKey && M[S_LOCK] > 0) { M[S_LOCK] = 0; log(EV.UNLOCK, c, 0); } // v4 M2: the locked space opens
       const g = keyOf[c];
@@ -624,6 +633,35 @@
       return M[S_STATUS];
     }
 
+    // ---- v5 R1, the continue -----------------------------------------------------------------------------------------
+    // Remove a standing pixel at once (a continue or a Volley): out of its heap if it is in reach, then gone like a pop.
+    function clearCell(c) { const m = a[c]; if (hk[c] >= 0) removeAt(m, hpos[c]); eatCell(c, m, EV.CLEAR); sap[m]--; }
+    // Would a continue be taken now: the level failed jammed, a continue is left this attempt, and on the empty line it
+    // leaves some front card's tap would be taken (unlinked: an open space; linked: its partner a front and 2 open).
+    function reviveOK() {
+      if (M[S_STATUS] !== FAILED || M[S_REASON] !== JAM || deal || M[S_CONT] >= contLim) return false;
+      const open = capNow() - M[S_LOCK];
+      for (let j = 0; j < NCOL; j++) { const ci = frontAt(j); if (ci < 0) continue; const p = linkOf[ci]; if (p < 0 ? open >= 1 : frontAt(B.cardCol[p]) === p && open >= 2) return true; }
+      return false;
+    }
+    // The continue (at the jam's instant; it takes no time): play resumes, and every squad in the line finishes on the
+    // spot, in tap order: its waiting sappers' worth of its colour's standing pixels are removed (CLEAR), reachable or
+    // not, nearest the entry first (B.near), then its space frees (a linked pair: when both are done). CONT n 0 first.
+    function revive() {
+      if (!reviveOK()) return M[S_STATUS] === FAILED ? REFUSED : NOPLAY;
+      M[S_STATUS] = PLAYING; M[S_REASON] = 0; M[S_FAILM] = 0; M[S_JAMK] = 0; M[S_CONT]++;
+      const len = M[S_ORD], sq = []; for (let k = 0; k < len; k++) sq.push(ord[k]);
+      log(EV.CONT, len, 0);
+      for (const s of sq) {
+        const m = spM[s]; let k = spW[s]; spW[s] = 0;
+        for (let i = 0; i < n && k > 0; i++) { const c = B.near[i]; if (a[c] === m && gateOf[c] < 0) { clearCell(c); k--; } }
+        freeIf(s);
+      }
+      if (M[S_PIX] === 0) M[S_STATUS] = WON;
+      dispatch(M[S_NOW]); settle();
+      return M[S_STATUS];
+    }
+
     // Initial state.
     a.set(B.a0); d.fill(-1); hk.fill(-1); hpos.fill(-1);
     for (let m = 0; m < NMAT; m++) left[m] = B.pix[m];
@@ -698,6 +736,9 @@
       power: (k, a, t) => power(k, a, t), canPower: (k, a) => M[S_STATUS] === PLAYING && !deal && k >= 0 && k < NPW && M[S_USE + k] < pwLim[k] && powerOK(k, a),
       used: (k) => (k >= 0 && k < NPW ? M[S_USE + k] : 0), limit: (k) => (k >= 0 && k < NPW ? pwLim[k] : 0), count: (ci) => (ci >= 0 && ci < B.ncards ? cn[ci] : 0),
       get extra() { return M[S_XCAP]; }, get pullDepth() { return pullDepth; },
+      // v5 R1. revive(): the continue on a jam (REFUSED when not offered: nothing changes); canRevive(): would it be taken;
+      // revived: continues used this attempt.
+      revive: () => revive(), canRevive: () => reviveOK(), get revived() { return M[S_CONT]; },
     };
   }
 
@@ -713,7 +754,8 @@
   // level (meta.powers[k].perLevel, in PW order) and the Quartermaster's reach (meta.pullDepth).
   // v5 R1: v3.rules.hold spaces on every level, whatever the tag d (an older config's per-tag rules still read).
   const rulesOf = (v3, d, meta) => Object.assign({}, v3.rules.hold != null ? { hold: v3.rules.hold } : v3.rules[d] || v3.rules.normal, { time: v3.time }, v3.flags || {}, v3.twists ? { lockSpaces: v3.twists.lockSpaces } : {},
-    meta && Array.isArray(meta.powers) ? { powers: POWERS.map((id) => { const p = meta.powers.find((q) => q && q.id === id); return p ? p.perLevel | 0 : 0; }), pullDepth: meta.pullDepth } : {});
+    meta && Array.isArray(meta.powers) ? { powers: POWERS.map((id) => { const p = meta.powers.find((q) => q && q.id === id); return p ? p.perLevel | 0 : 0; }), pullDepth: meta.pullDepth } : {},
+    meta && meta.cont ? { continues: meta.cont.perLevel | 0 } : {}); // v5 R1: continues per attempt (the page only)
   const gridOf = (w, h, a) => { const g = []; for (let y = 0; y < h; y++) { let s = ""; for (let x = 0; x < w; x++) s += chOf(a[y * w + x]); g.push(s); } return g; };
   // Level warnings (v4 M2): things compile accepts but a player would find hard to read. opts.linkRowGap (default 2):
   // linked partners dealt more than this many rows apart; partners not in neighbouring columns (the rod would cross a

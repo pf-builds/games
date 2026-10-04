@@ -22,8 +22,8 @@ The rules engine batch (rules and meta only; levels are re-laid in R2). Source o
 | 0 | Deferral switch (`v5.relaid`), this file | done | with 1 |
 | 1 | 5 holding spaces on every level | done | 1b115ed |
 | 2 | Archers never kill (no short fail, no kill path) | done | fe49b1e |
-| 3 | Hard locks: key lock and colour lock | done | (this commit) |
-| 4 | Continue on a jam (250 coins, once per attempt, ad hook) | todo | |
+| 3 | Hard locks: key lock and colour lock | done | 10c98ac |
+| 4 | Continue on a jam (250 coins, once per attempt, ad hook) | done | (this commit) |
 | 5 | Quartermaster rework (any visible card straight out) | todo | |
 | 6 | Volley power-up (clear one colour) | todo | |
 | 7 | Speed: 1x, 2x bought per round, 3x debug only | todo | |

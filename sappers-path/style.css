@@ -339,6 +339,18 @@ body.cb .chip .gl { display: inline-block; }
 #p-stats .st.coin.go .burst i:nth-child(2n) { animation-delay: .06s; } #p-stats .st.coin.go .burst i:nth-child(3n) { animation-delay: .12s; }
 @keyframes coinfly { 0% { transform: translate(0, 0) scale(.6); opacity: 1; } 70% { opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(1.1); opacity: 0; } }
 .row { display: flex; gap: 10px; }
+/* v5 R1, the continue on a jam's sheet: a green button with a gold rim and its price on a coin pill, its line under it;
+   short of coins it is muted (.poor) and the line says how many more are needed. */
+#p-cont { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: -4px 0 10px; }
+#p-cont[hidden] { display: none; }
+.cont-buy { display: inline-flex; align-items: center; gap: 10px; min-height: 46px; padding: 4px 10px 4px 16px; background: #3f8f5a; color: #fff6e8; text-shadow: 0 2px 0 rgba(34,26,38,.4);
+  box-shadow: inset 0 0 0 3px var(--gold), inset 0 5px 0 #6cc488, inset 0 -6px 0 #24643a, 0 3px 0 rgba(0,0,0,.5); font-size: 26px; }
+.cont-buy .cprice { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 1px 5px; border-radius: 999px; background: #fff3cf; color: var(--parch-ink); text-shadow: none; font-size: 22px; --ico: 18px; }
+.cont-buy.poor { background: #8c8478; box-shadow: inset 0 0 0 3px #b9ab8c, inset 0 5px 0 #a69e90, inset 0 -6px 0 #6b645a, 0 3px 0 rgba(0,0,0,.5); }
+.cont-buy.poor .cprice { background: #ffd9d0; color: #b0301c; }
+.cont-say { font-family: var(--px); font-size: 18px; line-height: 1; color: var(--parch-soft); }
+.cont-buy.poor + .cont-say { color: #b0301c; }
+.sheet.tight #p-cont { margin: -2px 0 6px; } .sheet.tight .cont-buy { min-height: 40px; font-size: 22px; } .sheet.tight .cont-say { font-size: 16px; }
 .row button { flex: 1; min-width: 0; padding: 0 8px; }
 
 /* Title (v4 M5: the home screen, below): the painted scene fills the screen. */

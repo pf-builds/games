@@ -597,7 +597,7 @@
       for (let j = 0; j + 2 < len; j += 3) {
         const t = ev[j], a = ev[j + 1], b = ev[j + 2];
         if (t === EV.DISP) { runner(S, a); if (V.hooks.move) V.hooks.move(); }
-        else if (t === EV.EAT) eat(a, anim);
+        else if (t === EV.EAT || t === EV.CLEAR) eat(a, anim); // v5 R1: CLEAR, a block a continue or a Volley removed
         else if (t === EV.GATE) gate(a, anim);
         else if (t === EV.HIT || t === EV.KILL) {
           const i = V.idR[a], kill = t === EV.KILL; V.stats.hits++; if (i >= 0 && V.rTw[i] < MAXT) V.ringHitT[V.rTw[i]] = V.fxT;

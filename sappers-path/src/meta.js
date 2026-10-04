@@ -43,6 +43,8 @@
     data.coins = have - price; data.inv[POWERS[k]] = inv + 1;
     return { ok: true, price, short: 0 };
   }
+  // v5 R1: spend price coins (a continue, 2x speed): {ok, price, short (coins missing when not ok)}; nothing spent when short.
+  function spend(data, price) { price = clampInt(price, 0, MAXCOINS); const have = data.coins | 0; if (have < price) return { ok: false, price, short: price - have }; data.coins = have - price; return { ok: true, price, short: 0 }; }
   // One of power k used (call after the engine took it). False when there was none.
   function take(data, k) { const n = data.inv[POWERS[k]] | 0; if (n <= 0) return false; data.inv[POWERS[k]] = n - 1; return true; }
 
@@ -68,5 +70,5 @@
   // m:ss (or h:mm:ss) for a time in ms, rounded up to the second for countdowns (up) or down for results.
   function clock(ms, up) { const t = Math.max(0, up ? Math.ceil(ms / 1000) : Math.floor(ms / 1000)), h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60; return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(s).padStart(2, "0"); }
 
-  return { DIFFS, POWERS, MAXCOINS, MAXINV, MAXMS, MAXTAPS, BEST, winCoins, recordWin, bestOf, buy, take, lives, loseLife, canStart, clock, powerOf };
+  return { DIFFS, POWERS, MAXCOINS, MAXINV, MAXMS, MAXTAPS, BEST, winCoins, recordWin, bestOf, buy, spend, take, lives, loseLife, canStart, clock, powerOf };
 });

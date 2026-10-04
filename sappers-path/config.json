@@ -313,6 +313,7 @@
     "lives": false, "livesMax": 5, "livesRefillMin": 20,
     "coins": {"start": 400, "win": {"easy": 5, "normal": 10, "hard": 20}, "first": {"easy": 10, "normal": 20, "hard": 40}},
     "pullDepth": 2,
+    "cont": {"note": "v5 R1, the continue on a jam (SPEC-v4 §9, the v5 R1 entry; engine revive()): offered on a jam's sheet when the engine would take it, once per attempt (perLevel; Retry gives a fresh one), for price coins. Every stuck squad finishes on the spot and play goes on. say: the offer's line; btn: its button; poor: the line when coins are short ({need}); short: the toast on a tap then; ad: the label for a future rewarded-ad button (main.js AD HOOK; no ad code yet).", "price": 250, "perLevel": 1, "say": "Every stuck squad finishes on the spot", "btn": "Continue", "poor": "You need {need} more coins", "short": "A continue costs {price}: you have {have} coins", "ad": "Watch an ad to continue"},
     "powers": [
       {"id": "ladder", "name": "Ladder", "say": "+1 space this level", "price": 120, "perLevel": 1},
       {"id": "quartermaster", "name": "Quartermaster", "say": "bring a squad forward", "price": 80, "perLevel": 3},

@@ -806,9 +806,33 @@
     $("p-stats").querySelector(".coin").classList.remove("go");
     $("p-secondary").textContent = e.won ? "Retry" : gal ? G.title : "Era map";
     reportRows(e); // v4.3: no medals; the report's rows and the tag
+    contOffer(e); // v5 R1: a jam's sheet offers the continue
     $("panel").hidden = false; placeSheet();
     cue(e.won ? "chime" : "bad"); if (e.won && e.first) cue("star", 2);
     judge(); renderTray(); renderLine();
+  }
+  // v5 R1, the continue on a jam (engine revive(); meta.cont): offered on the jam's sheet when the engine would take it
+  // (once per attempt), for meta.cont.price coins. Short of coins the button is muted and its line says how many more;
+  // a tap then shakes it and toasts, spending nothing. Paid: every stuck squad finishes on the spot and play goes on.
+  function contOffer(e) {
+    const C = app.meta.cont, box = $("p-cont"), on = !!C && !e.won && e.reason === "jam" && app.S.canRevive(); box.hidden = !on; if (!on) return;
+    const have = app.save.data.coins | 0, poor = have < C.price, bt = $("p-cont-buy"), say = poor ? fill(C.poor, { need: C.price - have }) : C.say;
+    bt.querySelector(".pl").textContent = C.btn; bt.querySelector(".cprice b").textContent = C.price; bt.classList.toggle("poor", poor);
+    box.querySelector(".cont-say").textContent = say; bt.setAttribute("aria-label", C.btn + ", " + C.price + " coins: " + say);
+    $("p-cont-ad").hidden = true; // AD HOOK (v5 R1): show it, labelled C.ad, once a rewarded-ad SDK is wired; its reward calls contRun()
+  }
+  function onContinue() {
+    if (app.panel !== "fail" || !panelLive() || !app.S.canRevive()) return false;
+    const C = app.meta.cont, r = Meta.spend(app.save.data, C.price);
+    if (!r.ok) { const b = $("p-cont-buy"); if (!app.V.calm && b.animate) b.animate(app.cfg.show.blockedShake.map((x) => ({ transform: "translateX(" + x + "px)" })), { duration: app.cfg.show.blockedShakeMs }); cue("blocked"); toast(fill(C.short, { price: C.price, have: app.save.data.coins | 0 }), true); return false; }
+    writeSave(); return contRun();
+  }
+  // The continue itself (paid, or AD HOOK: a rewarded ad's reward, free): the engine finishes every stuck squad, the sheet goes.
+  function contRun() {
+    if (app.S.revive() === E.REFUSED) return false;
+    app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.report = null; $("panel").hidden = true; $("p-cont").hidden = true; hideToast();
+    app.V.sync(app.S, true); cue("unlock"); renderAll(); renderPowers(); coachStep();
+    return true;
   }
   // v4 M5, the level report on the win sheet: time, taps and coins (counting up in step()), with the best time and taps
   // underneath ("New best!" when beaten; the first win shows none); a fail with lives on adds the life it cost.
@@ -1056,6 +1080,7 @@
     $("map-play").addEventListener("click", playNext);
     $("p-primary").addEventListener("click", panelPrimary);
     $("p-secondary").addEventListener("click", panelSecondary);
+    $("p-cont-buy").addEventListener("click", onContinue); // v5 R1
     togMute.forEach((b) => b.addEventListener("click", () => setMuted(!app.audio.muted, true)));
     togSpeed.forEach((b) => b.addEventListener("click", nextSpeed));
     togCb.forEach((b) => b.addEventListener("click", () => setCb(!app.cb, true)));
@@ -1749,6 +1774,18 @@
         const pl = $("p-line").getAttribute("aria-label") || "", tx = $("p-line").textContent, want = k === "linkJamLevel" ? pl.indexOf(re) === 0 && tx.indexOf(re) === 0 : pl.slice(-re.length) === re && tx.slice(-re.length) === re;
         ok(app.S.status === E.FAILED && app.S.reason === "jam" && app.panel === "fail" && want && chipCheck() === true, k + ": at rest every front card is refused: the sheet says why (" + tx + " / " + pl + ")");
         startLevel(e.id, "normal"); patient(win); settleNow(); ok(app.S.status === E.WON, k + ": the right order wins"); }
+      // 22c. v5 R1, the continue (selfTest.jamLevel jammed): the jam's sheet offers it with its price; short of coins it is
+      // muted, says how many more, and a tap spends nothing; paid, the sheet goes, every stuck squad finishes, the coins
+      // drop by the price and play goes on to the win; the next attempt offers it again, the same attempt never twice.
+      { const e = fx("jamLevel"), C = app.meta.cont, jam = () => { startLevel(e.id); patient("12340"); settleNow(); for (let t = 0; t < ST.tickCapMs && !app.panel; t += 16) step(16); };
+        app.save.data.coins = C.price - 1; jam(); const bt = $("p-cont-buy");
+        ok(app.panel === "fail" && shown($("p-cont")) && hitOK(bt) && bt.classList.contains("poor") && bt.querySelector(".cprice b").textContent === String(C.price) && $("p-cont").querySelector(".cont-say").textContent === fill(C.poor, { need: 1 }) && $("p-cont-ad").hidden, "continue: the jam's sheet offers it for " + C.price + "; one coin short it is muted and says so; the ad button stays hidden (AD HOOK)");
+        app.clock += 1000; bt.click(); ok(app.panel === "fail" && app.S.status === E.FAILED && (app.save.data.coins | 0) === C.price - 1 && !$("toast").hidden, "continue: short of coins a tap spends nothing and toasts");
+        app.save.data.coins = C.price + 5; jam(); app.clock += 1000;
+        ok(!bt.classList.contains("poor") && $("p-cont").querySelector(".cont-say").textContent === C.say, "continue: with the coins it reads '" + C.say + "'");
+        bt.click(); ok(!app.panel && $("panel").hidden && app.S.status === E.PLAYING && app.S.lineLen === 0 && (app.save.data.coins | 0) === 5 && app.S.revived === 1, "continue: paid, the sheet goes, the line is empty, " + C.price + " coins spent");
+        patient("0"); settleNow(); ok(app.S.status === E.WON, "continue: play goes on and the level can be won");
+        app.save.data.coins = 1000; jam(); ok(shown($("p-cont")) && app.S.revived === 0, "continue: a new attempt offers it again (one per attempt; the engine tests cover the second jam)"); }
       // 22b. v5 R1, the colour lock (selfTest.colourLockLevel): its socket shows the colour that opens it and says so; the
       // tap that sends a squad of that colour out opens it (one unlock cue).
       { const e = fx("colourLockLevel"), m = ST.colourLockLevel.lock.colour; startLevel(e.id); const S = app.S, last = app.slots[S.cap - 1], u0 = app.cues.unlock | 0;

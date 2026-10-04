@@ -29,6 +29,11 @@
 // v5 R1 (SPEC-v4 §9, the v5 R1 entry, from the rules text): rules.hold spaces on every level. Archers never kill: an
 // arrow always sends its sapper back to its space to wait, on every level (no short fail).
 // A colour lock (lock: {colour: m}) keeps its spaces shut until a squad of colour m takes a space (a tap or a pair).
+// The continue (revive(), rules.continues per attempt): offered only when the game failed jammed and, with the line
+// emptied, some front card could be tapped (unlinked: a space open; linked: its partner at a front and 2 spaces open).
+// Then play goes on: for each squad in the line, in the order they were tapped, as many of its colour's standing pixels
+// as it has sappers waiting are removed, nearest the entry square first (the squared distance from the middle of the
+// camp's run, measured in half cells, then the usual tie-break), and its space empties (a pair once both are done).
 // pops: every popped pixel as [cell, time], in the order they popped.
 "use strict";
 const MATCH = { ".": 0, ",": -2, "~": -1, "#": -3 };
@@ -62,7 +67,7 @@ function game(L, rules) {
   const claimed = new Set(), pops = [];
   let status = "playing", reason = "", jamWhy = 0, now = 0, seq = 0, taps = 0, peak = 0, hitsN = 0, killsN = 0;
   let locked = R.lockKey >= 0 || R.lockColour ? Math.max(0, Math.min(rules.hold - 1, rules.lockSpaces == null ? 1 : rules.lockSpaces)) : 0;
-  let extra = 0; const uses = [0, 0, 0, 0], limits = rules.powers || [0, 0, 0, 0], reach = rules.pullDepth == null ? 2 : rules.pullDepth;
+  let extra = 0, revived = 0; const uses = [0, 0, 0, 0], limits = rules.powers || [0, 0, 0, 0], reach = rules.pullDepth == null ? 2 : rules.pullDepth;
   const seeFronts = () => { for (const c of cols) if (c.length) c[0].seen = true; };
   seeFronts();
   const walk = (v) => v === 0 || v === -2 || v === -3;
@@ -206,7 +211,25 @@ function game(L, rules) {
     } else return "refused";
     uses[k]++; seeFronts(); settle();
   }
-  return { play, power, advanceTo, quiet, hidden, get status() { return status; }, get reason() { return reason; }, get now() { return now; }, get peak() { return peak; }, get extra() { return extra; },
+  // A pixel goes without a sapper (the continue): as a pop would, its gate or lock opens; nobody carries it.
+  let clearedN = 0;
+  function remove(c) { const m = g[c]; g[c] = -2; sap[m]--; clearedN++; for (const G of R.gates) if (G.key === c) for (const gc of G.cells) g[gc] = -2; if (c === R.lockKey) locked = 0; }
+  function nearOrder() {
+    const camp = []; g.forEach((v, i) => { if (v === -3 && Math.floor(i / w) === R.campRow) camp.push(i % w); });
+    const mid2 = Math.min(...camp) + Math.max(...camp), key = (c) => { const x = c % w, y = Math.floor(c / w); return [(2 * x - mid2) ** 2 + (2 * (y - R.campRow)) ** 2, Math.abs(y - R.campRow), x, y]; };
+    return g.map((_, c) => c).sort((p, q) => { const a = key(p), b = key(q); for (let i = 0; i < 4; i++) if (a[i] !== b[i]) return a[i] - b[i]; return 0; });
+  }
+  function revive() {
+    if (status !== "failed" || reason !== "jam" || revived >= (rules.continues || 0)) return "refused";
+    const open = openN(), ok = cols.some((c) => c.length && (c[0].partner ? !buried(c[0]) && open >= 2 : open >= 1));
+    if (!ok) return "refused";
+    status = "playing"; reason = ""; jamWhy = 0; revived++;
+    const near = nearOrder(), order = spaces.map((s, i) => [s, i]).filter(([s]) => s).sort((p, q) => p[0].seq - q[0].seq);
+    for (const [s, i] of order) { let k = s.wait; s.wait = 0; for (const c of near) { if (k <= 0) break; if (g[c] === s.m && !isGate(c)) { remove(c); k--; } } freeIf(i); }
+    if (!left()) status = "won";
+    dispatch(now); settle();
+  }
+  return { play, power, revive, advanceTo, quiet, hidden, get revived() { return revived; }, get cleared() { return clearedN; }, get status() { return status; }, get reason() { return reason; }, get now() { return now; }, get peak() { return peak; }, get extra() { return extra; },
     get hits() { return hitsN; }, get kills() { return killsN; }, get open() { return openN(); }, get locked() { return locked; }, get jamWhy() { return jamWhy; },
     spaces, pops, g, cols };
 }

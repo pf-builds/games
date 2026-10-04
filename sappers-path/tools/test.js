@@ -560,6 +560,35 @@ const ROW6 = ["abcdef", "......", "..##.."]; // six colours, one pixel each, all
   defer("every shipped lock is on a Hard or Extreme level from 50", () => { const bad = LEVELS.levels.filter((l) => !TG.lockOK(l.n, l.tag, l, K)).map((l) => l.n); eq(bad, [], "locks (v5 R1): every shipped lock is on a Hard or Extreme level from 50"); });
 }
 
+// ---- v5 R1: the continue on a jam ----------------------------------------------------------------------------------------
+{
+  // b (5 pixels in a row at y 2, x 2-6) inside an a ring; the camp at (4,5). One space: the b squad of 2 is stuck, so the
+  // line jams. The continue removes its 2 b pixels nearest the entry: (4,2) (d2 36), then (3,2) (d2 40, ties (5,2) and
+  // goes first on the lower x), and frees the space. The next b squad (3) jams again; a second continue is refused.
+  const G = [".........", ".aaaaaaa.", ".abbbbba.", ".aaaaaaa.", ".........", "....#...."];
+  const C1 = Object.assign({}, hold(1), { continues: 1 }), L = lv(G, [[[2, 2], [2, 3], [1, 16]], [], [], [], []]), B = E.compile(L);
+  const S = E.sim(B, C1); S.logOn = true;
+  eq([S.canRevive(), S.revive()], [false, E.NOPLAY], "continue: nothing to continue while playing");
+  pat(S, 0); eq([S.status, S.reason, S.canRevive()], [E.FAILED, "jam", true], "continue: one stuck b squad jams the one space; a continue is offered");
+  const buf = S.save(); eq(E.sim(B, hold(1)).canRevive(), false, "continue: rules without continues allow none");
+  S.clearLog(); eq(S.revive(), E.PLAYING, "continue: taken; play resumes");
+  eq([evs(S, E.EV.CONT), evs(S, E.EV.CLEAR).map(([c, m]) => [xy(B, c), m]), evs(S, E.EV.FREE), S.lineLen, S.pixLeft, S.sappers(2), S.revived], [[[1, 0]], [[[4, 2], 2], [[3, 2], 2]], [[0, 2]], 0, 19, 3, 1], "continue: CONT, the 2 b pixels nearest the entry cleared ((4,2), then (3,2)), the space frees; b keeps 3 sappers for 3 pixels");
+  pat(S, 0); eq([S.status, S.reason, S.canRevive(), S.revive()], [E.FAILED, "jam", false, E.REFUSED], "continue: the next jam gets none (one per attempt)");
+  const S2 = E.sim(B, C1); pat(S2, 0); const b0 = S2.save(); S2.revive(); S2.load(b0);
+  const R = Ref.game(L, C1); R.play(0); R.quiet(); eq([R.revive(), R.status, R.g[2 * 9 + 4], R.g[2 * 9 + 3], R.g[2 * 9 + 5]], [undefined, "playing", -2, -2, 2], "continue (reference): the same two pixels go");
+  eq(same(buf, b0), true, "continue: the jam is the same state either way (determinism)");
+  // A continue that would leave no front card to tap is refused, nothing changes: one space and the next front a linked
+  // card (it needs 2).
+  const J = E.sim(E.compile(lv(G, [[[2, 2], [1, 16]], [[1, 3]], [], [], []], { links: [[[0, 1], [1, 0]]] })), C1);
+  pat(J, 0); const jb = J.save();
+  eq([J.status, J.canRevive(), J.revive(), same(J.save(), jb)], [E.FAILED, false, E.REFUSED, true], "continue: refused when no front card could go afterwards (a linked front needs 2 spaces); nothing changes");
+  // A full line of five stuck squads: one continue finishes all five (tap order), and the a ring is then won.
+  const F = E.sim(E.compile(lv([".........", ".aaaaaaa.", ".abcdefa.", ".aaaaaaa.", "....#...."], [[[2, 1], [1, 16]], [[3, 1]], [[4, 1]], [[5, 1]], [[6, 1]]])), Object.assign({}, N, { continues: 1 }));
+  for (const c of "12340") pat(F, +c); F.logOn = true; F.clearLog();
+  eq([F.status, F.reason], [E.FAILED, "jam"], "continue: five stuck squads jam the line");
+  F.revive(); eq([evs(F, E.EV.CLEAR).map(([c, m]) => m), F.lineLen, pat(F, 0)], [[3, 4, 5, 6, 2], 0, E.WON], "continue: every squad finishes in tap order (c, d, e, f, b), the line empties, and the level is won after");
+}
+
 // ---- dealing mode (the dealer, M3) -------------------------------------------------------------------------------------------
 {
   const D = E.sim(E.compile(lv(RING)), hold(2), { deal: true });
@@ -993,7 +1022,7 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
 }
 // ---- differential with power-ups: engine vs the reference, random taps and power-ups, patient and rushed ----------------------
 {
-  let games = 0, ops = 0, taken = [0, 0, 0, 0], refusedP = 0, diffs = 0, rests = 0, hangs = 0, unbal = 0, dry = 0; const t0 = Date.now();
+  let games = 0, ops = 0, taken = [0, 0, 0, 0], refusedP = 0, diffs = 0, rests = 0, hangs = 0, unbal = 0, dry = 0, revs = 0, revNo = 0; const t0 = Date.now();
   const rline = (R) => R.spaces.map((s, k) => [k, s]).filter(([, s]) => s).sort((p, q) => p[1].seq - q[1].seq).map(([k, s]) => [k, s.m, s.wait, s.out, s.pair == null ? -1 : s.pair]);
   const eline = (S) => S.order().map((s) => [s, S.spM[s], S.spW[s], S.spO[s], S.spL[s] - 1]);
   const lim = [2, 4, 2, 3];
@@ -1001,7 +1030,7 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
   for (const L of SET) {
     const B = E.compile(L);
     for (const dn of ["normal", "hard", "easy"]) for (const rushed of [false, true]) {
-      const rules = Object.assign({}, PR[dn], { powers: lim }), S = E.sim(B, rules), R = Ref.game(L, rules), r = Gr.rng(B.n * 17 + (rushed ? 9 : 2) + dn.length);
+      const rules = Object.assign({}, PR[dn], { powers: lim, continues: 1 }), S = E.sim(B, rules), R = Ref.game(L, rules), r = Gr.rng(B.n * 17 + (rushed ? 9 : 2) + dn.length);
       let t = 0, bad = null;
       const restCheck = () => { if (S.busy || S.status !== E.PLAYING) return; rests++; let legal = 0; for (let j = 0; j < 5; j++) if (Gr.legal(S, j)) legal++; if (!legal) hangs++; if (!rushed && balanced(S) !== true) unbal++; };
       for (let g = 0; g <= 8 * B.ncards + 60 && S.status === E.PLAYING && !bad; g++) {
@@ -1027,10 +1056,17 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
           if ((a1 === E.REFUSED) !== (a2 === "refused")) { bad = what + ": refusal " + a1 + "/" + a2; break; }
         }
         ops++; restCheck();
+        if (S.status === E.FAILED && S.reason === "jam" && !bad) { // v5 R1: the continue, on both
+          const can = S.canRevive(), v1 = S.revive(), v2 = R.revive();
+          if (can !== (v1 !== E.REFUSED)) dry++;
+          if ((v1 === E.REFUSED) !== (v2 === "refused")) bad = "revive: " + v1 + "/" + v2; else if (v1 === E.REFUSED) revNo++; else revs++;
+          if (!rushed) { S.quiet(); R.quiet(); }
+        }
         const st = S.status === E.WON ? "won" : S.status === E.FAILED ? "failed" : "playing";
         const colsR = R.cols.map((c) => c.map((cd) => [cd.ci, cd.n]));
         const hidE = [], hidR = []; for (let ci = 0; ci < B.ncards; ci++) { if (S.hidden(ci)) hidE.push(ci); if (R.hidden(ci)) hidR.push(ci); }
-        if (JSON.stringify(R.pops.length) !== JSON.stringify(B.pixTotal - S.pixLeft - (B.pix[E.IRON] - S.left[E.IRON]))) bad = what + ": pops";
+        if (bad) break;
+        if (R.pops.length + R.cleared !== B.pixTotal - S.pixLeft - (B.pix[E.IRON] - S.left[E.IRON])) bad = what + ": pops";
         else if (st !== R.status || (st === "failed" && S.reason !== R.reason)) bad = what + ": status " + st + "/" + R.status + " " + S.reason + "/" + R.reason;
         else if (JSON.stringify(eline(S)) !== JSON.stringify(rline(R))) bad = what + ": spaces " + JSON.stringify(eline(S)) + " / " + JSON.stringify(rline(R));
         else if (S.now !== R.now || S.open !== R.open || S.cap !== rules.hold + R.extra) bad = what + ": clock or spaces";
@@ -1044,6 +1080,7 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
   }
   eq(diffs, 0, "differential (power-ups): engine == reference on " + games + " games, " + ops + " taps and power-ups (taken: Ladder " + taken[0] + ", Quartermaster " + taken[1] + ", Scout " + taken[2] + ", Recall " + taken[3] + "; " + refusedP + " refused): acceptance, status, spaces, columns and counts, hidden cards, clock");
   ok(taken.every((k) => k > 0) && refusedP > 0, "differential (power-ups): every power-up is taken and refused in the run");
+  ok(revs > 0 && revNo > 0, "differential (v5 R1 continue): continues taken (" + revs + ") and refused (" + revNo + ") in the run, engine == reference");
   eq([dry, hangs, unbal], [0, 0, 0], "power-ups: canPower always agrees with power(); " + rests + " rest states all have a legal tap or are over; every patient rest state keeps each colour's sappers equal to its pixels");
   console.log("  differential (power-ups): " + games + " games, " + ops + " operations (taken " + taken.join("/") + ", " + refusedP + " refused) in " + ((Date.now() - t0) / 1000).toFixed(1) + " s");
 }
