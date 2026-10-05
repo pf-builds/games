@@ -113,3 +113,71 @@ Screens: `tools/shots-v5-r3/` (gitignored, like every shots folder; `tools/shots
   water where the painted road already reads as a crossing; worth a look on a real phone.
 - The quest prize bubble on a node near the column edge (quest 19 on sheet 10, x 659) picks the left side; the locked
   prize icon on that node's corner sits close to the column's edge.
+
+## 6. Fix pass after the critics (2026-10-04)
+
+One fix pass on `tools/critic-v5-r3-functional.md` (1 blocker, 1 major, 3 minor) and `tools/critic-v5-r3-visual.md` (6
+should-fix, 8 nits). Checklist: `tools/v5-progress.md` piece 3. Shots: `tools/shots-v5-r3/` (`fix-*`, see the script's
+header), re-shot with the builder screens.
+
+1. **Long tail (blocker).** The 7x5 grid of 30 px thumbnails is gone. The wash now holds the latest `map.tail.show` (3)
+   cleared long-tail pictures in one row of 44 px frames (a won quest's purple frame) and, past three, a parchment chip
+   "N pictures" (44 px tall) that opens a sheet (`#tailsheet`, the settings sheet's modal) of all of them as 56 px tiles;
+   a tile closes the sheet and plays that picture; Done, the backdrop or Escape close it. Measured: every target 44 px
+   (row and chip) or 56 px (sheet), all hittable at 375x812 and 1280x720. The block is 144 x 94 CSS px, clear of the
+   Goblin King, the fog label and the road.
+2. **Old saves by slot (major; Peter's call).** `save.js` `bySlot`: before sanitizing, a `done` or `best` key, or `last`,
+   that the page does not have and reads "e<era>-<n>" moves to the page's level in slot n; a key the page has wins over a
+   renamed one. Level ids carry the campaign slot as their number (e1-25 is slot 25), so n is read off the id; the brief's
+   (e-1)*25+i formula would have mapped e2-50 to 75, so I used the id's own number. Only four ids moved in R2 (v4.3's
+   e1-25, e2-50, e3-75, e4-100 are e2-25, e3-50, e4-75, e5-100). First-clear coins read `done`, so a migrated level never
+   pays twice; `got`, coins, gal (picture ids never changed) and eggs need nothing. Tests: the shipped v3, v4, v4.1, v4.2
+   saves now keep every cleared level (v4.2: all 100, last e5-100, the map centres on the fog); a built v4.3-shaped save
+   (format 2, 100 cleared, pictures 1-25) loads with 100 cleared, bests and last moved, picture 25 and the long tail open,
+   and `record` on the four renamed levels returns false (no first clear left).
+3. **All cleared.** `mapPic()`: with every level cleared, the long tail's next picture, else (new) the open side quest
+   nearest the end; null once every picture is cleared too (`allDone`). Then the map's Play is hidden and `#jr-end` shows
+   "Every level and picture cleared. Tap any of them to play it again." (phone foot bar and desktop card); the card reads
+   "All cleared!" with no tag and no side quest row. While pictures remain the card names "Picture N" (it said "Side quest
+   N" over "Play picture N" before, and the quest row repeated it). "The road goes on" stays as the R4 teaser. The home's
+   Play still reads "Level 100" (the brief kept the home).
+4. **Next-up quest.** `journey.js nearQuest`: the open, unwon campaign quest whose main level is nearest the current level
+   (ties: the lower picture). The desktop card's quest button, its tap and the gold ring on the map use it; the win sheet's
+   "Next picture" keeps the first open one by number (unchanged flow). Realm 3, 1-55 cleared and pictures 1-3: picture 13
+   (after 52, Ladder), not picture 4.
+5. **Spacing.** Quest 15 moved to open ground left of the road between 59 and 60 (385,1020; detour from road sample 27 by
+   level 59); test.js asserts every pair of levels, quests, eggs and the long-tail node (in world coordinates, so across
+   sheet joins too) at least 48 CSS px apart at 375 wide. Closest now 54.3 (levels 46 and 47); nothing else was under.
+6. **Collisions.** Realm 4's open banner covered sheet 10's woodpile egg and sat on the Level 75 label: both sheet 10 eggs
+   moved up-left (grass 100,1045; woodpile 250,975), and realms 3 and 4's banners sit 22 sheet px lower
+   (`map.bannerDy`), measured clear of level 50, the Level 75 label and level 74 when open. The side picker
+   (`journey.js side`) now scores by how deep other nodes and eggs reach into the box, plus the route (the sheet's road
+   samples, `route.underW` either side, counted once at half weight) and the realm banners (this sheet's and the one
+   above's, `map.bannerPx`); bubbles may also go below ("s", new `.bz-s`), the current label above or below (`.up`,
+   `.dn`) when neither side is clear. Quest 20's bubble now sits below it, off the walked route 80-81; quest 14's goes
+   above, off level 56. An audit across 15 save states (0-100 cleared, no pictures, every banner opened) at 375 and 1280:
+   0 bubble or banner overlaps with nodes, quests or eggs; two labels graze a neighbour's 44 px button box (56 over 55,
+   60 px²; 86 over 85, 145 px², the badge edge, not its number); the bubbles of quests 14 and 19 and the fog picture's
+   still touch 1-5 road samples at a corner (each has no side fully clear of the road on a 360-wide column). selfTest now
+   checks the 74-cleared state: no bubble or the label covers another node by more than 8x8 px.
+7. **Quest 23** moved off the painted tower onto the painted spur by 92 (668,930; detour from road sample 37).
+8. **Play bar tag** sits inside the button after its words (20 px), on the phone bar and the desktop card.
+9. **Nits fixed:** tag pills under nodes 12 -> 14 px; a won quest keeps its purple frame (rounded square, the level's
+   green check) instead of turning into a gold square (the long-tail row and sheet use the same frame). **Skipped (LATER
+   or design calls):** the Goblin King art (7), a prize bubble on every open quest (9: a design call; the gold ring marks
+   the next one), desktop cards top-aligned (10), crossfade ghosting at Ironhollows seams (11: art), bridge density on
+   sheets 5-6 (12), realm 5 a single level (13: R4 builds 101+).
+
+Layout edits are recorded in `tools/map-gen/plan.json` `manual` (with a `why`, which `assemble.py` now skips), so a
+re-assemble keeps them. The critics' 62 PNGs are not committed (gitignored); their reports and `notes.json` are.
+
+Checks (after the fixes): `tools/test.js` **461 passed, 0 failed** (6 new: slot migration on a v4.3-shaped save, the
+shipped v4.2 save and the id-wins rule; the nearest open quest; the side picker on route, banner and edge; tap targets
+48+ CSS px apart, closest 54.3). `SP.selfTest()` under `?debug=1`: **525 (375x812) and 527 (1280x720) passed, 0 failed**
+(new: the tail row, chip and sheet sizes and hits, a sheet tile plays, the all-cleared state, the nearest quest with its
+ring, no bubble or label over another node at 74 cleared). At 375x812 with deviceScaleFactor 1 one colour-blind stud check
+fails on this head and on 565bb48 alike (pixel sampling at 1x); the critic and the harness run 3x and pass. `tools/harness.mjs`:
+**all passed**, 0 console messages. `tools/freeze.js --require`: PASS; `tools/regrade.js` 555 checks and `--gallery` 360
+checks, 0 differences. `./tools/critic-v5/run.sh`: 5,412 games, 0 mismatches, known-answer boards wrong 0, real pace
+160/160. `tools/shots-v5-r3.mjs`: 0 console messages; map open 61-63 ms; phone scroll at 4x CPU median 16.7 ms, max 16.8.
+Cache tag `?v=33` (the font's URL in style.css too: a mismatched tag left the preload unused, which the harness caught).

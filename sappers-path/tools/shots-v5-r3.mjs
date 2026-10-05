@@ -8,6 +8,16 @@
 //   realm-3        levels 1-55 cleared, three pictures won: realm 3 (The Ironhollows), level 56 current.
 //   all-clear      every level and pictures 1-25 cleared: the fog's next-picture node (26) and the Goblin King.
 //   home           the home screen (mid-campaign).
+// v5 R3 fix pass (fix-*): one shot per fix, same two viewports:
+//   fix-all-clear       every level and all 60 pictures cleared: no Play, the end line; the desktop card agrees.
+//   fix-tail-row        every level and pictures 1-40 cleared: the fog node, the latest 3 won in one row, the chip.
+//   fix-tail-sheet      the chip tapped: the sheet of all 15 cleared long-tail pictures (44+ px tiles).
+//   fix-sheet8-60       levels 1-74 cleared, no pictures: quest 15 moved off level 60 (sheet 8).
+//   fix-banner-r4       levels 1-74 cleared, realm 4's banner tapped open (clear of the eggs and the Level 75 label).
+//   fix-cur-81          levels 1-80 cleared: quest 20's bubble clear of the route between 80 and 81.
+//   fix-quest-23        levels 1-92 cleared: quest 23 off the painted tower, on the spur by 92.
+//   fix-playbar         levels 1-5 cleared: the Play bar's tag inside the button.
+//   fix-nextup          levels 1-55 cleared, pictures 1-3: the next-up card's side quest is the nearest open one (13).
 // Measurements to tools/shots-v5-r3/notes.json: SP.map() per state, the map's open time to its first sheet drawn, and
 // scroll frame times on the phone at 4x CPU throttling (a programmatic scroll of 40 px a frame for 150 frames).
 // The debug row (?debug=1, for SP) is hidden in the screens. Exit 1 on any console error or warning.
@@ -55,6 +65,23 @@ try {
     { const { ctx, page } = await fresh(); await open(page, () => {}); const egg = '.egg[data-id="s1-0"]'; await toMid(page, egg); await page.waitForTimeout(150); await drawn(page); await snap(page, "egg-before");
       const c0 = await ev(page, () => SP.meta().coins), l = page.locator(egg); if (vp.ctx.hasTouch) await l.tap(); else await l.click(); await page.waitForTimeout(220); await snap(page, "egg-pop");
       await page.waitForTimeout(1300); await snap(page, "egg-after"); N.egg = { paid: (await ev(page, () => SP.meta().coins)) - c0, label: await l.getAttribute("aria-label"), coinsShown: await page.textContent("#map-coins b") }; await ctx.close(); }
+    // v5 R3 fix pass: one shot per fix (the header lists them); `at`: a node to bring to the middle, `tap`: a real tap first.
+    const fixes = [
+      ["fix-all-clear", () => { SP.unlockTo(100); SP.clearPictures(60); }],
+      ["fix-tail-row", () => { SP.unlockTo(100); SP.clearPictures(40); }],
+      ["fix-tail-sheet", () => { SP.unlockTo(100); SP.clearPictures(40); }, null, ".tchip"],
+      ["fix-sheet8-60", () => SP.unlockTo(74), '.mn[data-n="60"]'],
+      ["fix-banner-r4", () => SP.unlockTo(74), '.jr-sheet[data-sheet="10"] .bn', '.jr-sheet[data-sheet="10"] .bn'],
+      ["fix-cur-81", () => SP.unlockTo(80)],
+      ["fix-quest-23", () => SP.unlockTo(92), '.jr-sheet[data-sheet="12"] .qn'],
+      ["fix-playbar", () => SP.unlockTo(5)],
+      ["fix-nextup", () => { SP.unlockTo(55); SP.clearPictures(3); }]];
+    for (const [name, setup, at, tap] of fixes) { const { ctx, page } = await fresh(); await open(page, setup); if (at) { await toMid(page, at); await page.waitForTimeout(150); await drawn(page); }
+      if (tap) { const l = page.locator(tap).first(); if (vp.ctx.hasTouch) await l.tap(); else await l.click(); await page.waitForTimeout(350); }
+      N[name] = await ev(page, () => ({ play: document.getElementById("map-play").hidden ? null : document.getElementById("map-play").textContent, end: document.getElementById("jr-end").hidden ? null : document.getElementById("jr-end").textContent,
+        card: document.getElementById("jr-n-name").textContent, quest: document.getElementById("jr-quest").hidden ? null : document.getElementById("jr-quest").textContent,
+        tiles: Array.from(document.querySelectorAll("#jr .th, #jr .tchip, #ts-grid .ts-tile")).filter((b) => b.getBoundingClientRect().width > 0).map((b) => Math.round(Math.min(b.getBoundingClientRect().width, b.getBoundingClientRect().height))) }));
+      await snap(page, name); await ctx.close(); }
     // The home, mid-campaign.
     { const { ctx, page } = await fresh(); await ev(page, () => { SP.unlockTo(30); SP.screen("title"); }); await page.waitForTimeout(400); await snap(page, "home"); await ctx.close(); }
     // Scroll frame times on the phone, CPU throttled 4x: a programmatic scroll down the map, 40 px a frame.

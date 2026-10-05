@@ -121,14 +121,17 @@ Each row is its own commit "Sapper's Path v5 R3 fix: <what>". Notes: `tools/v5-r
 
 | # | Fix | State | Commit |
 |---|---|---|---|
-| 3.0 | Critic reports committed, this checklist | done | (with 3.2) |
-| 3.2 | Old saves keep levels by slot number (v4.3's e1-25, e2-50, e3-75, e4-100); tests on v4.2 and a v4.3-shaped save | done: test.js 458/0 | (this commit) |
-| 3.1 | Long tail: fog node, one short row of the latest won pictures, a "N pictures" chip opening a sheet of 44+ px tiles | todo | |
-| 3.3 | All-cleared state: map Play, phone bar and desktop card agree | todo | |
-| 3.4 | Desktop next-up quest: the open, unwon quest nearest the current level | todo | |
-| 3.5 | Tap-target spacing: Q15 off level 60, a test (48+ css px at 375 between every pair), fix what it finds | todo | |
-| 3.6 | Collisions: realm 4 banner vs egg and label; bubbles avoid route, cleared nodes, banners | todo | |
-| 3.7 | Q23 off the painted tower | todo | |
-| 3.8 | Play bar tag inside the button | todo | |
-| 3.9 | Cheap nits; skipped list in notes | todo | |
-| 3.10 | Close-out: `?v=33`, checks, shots `tools/shots-v5-r3/` + fix shots, notes §6, SPEC-v4 §9 | todo | |
+| 3.0 | Critic reports committed, this checklist | done | b190c9a |
+| 3.2 | Old saves keep levels by slot number (v4.3's e1-25, e2-50, e3-75, e4-100); tests on v4.2 and a v4.3-shaped save | done: test.js 458/0 | b190c9a |
+| 3.1 | Long tail: fog node, one short row of the latest won pictures, a "N pictures" chip opening a sheet of 44+ px tiles | done: row of 3 at 44 px + chip, sheet of 56 px tiles; selfTest checks size and hits | see git log (fix: long tail, all cleared, ...) |
+| 3.3 | All-cleared state: map Play, phone bar and desktop card agree | done: Play hidden, end line, card 'All cleared!'; 'Picture N' while pictures remain | see git log (fix: long tail, all cleared, ...) |
+| 3.4 | Desktop next-up quest: the open, unwon quest nearest the current level | done: journey.js nearQuest; card, its tap and the gold ring | see git log (fix: long tail, all cleared, ...) |
+| 3.5 | Tap-target spacing: Q15 off level 60, a test (48+ css px at 375 between every pair), fix what it finds | done: Q15 moved; test closest 54.3 px (46-47); none else under | 6a80e4f + test in fix commit |
+| 3.6 | Collisions: realm 4 banner vs egg and label; bubbles avoid route, cleared nodes, banners | done: eggs moved, banners 3-4 +22, side picker weighs route and banners, bubbles below, label above/below; audit 0 overlaps | 6a80e4f + fix commit |
+| 3.7 | Q23 off the painted tower | done: on the spur by 92 | 6a80e4f |
+| 3.8 | Play bar tag inside the button | done | see git log (fix: long tail, all cleared, ...) |
+| 3.9 | Cheap nits; skipped list in notes | done: tags 14 px, won quests keep purple; skipped list in notes §6 and LATER | see git log (fix: long tail, all cleared, ...) |
+| 3.10 | Close-out: `?v=33`, checks, shots `tools/shots-v5-r3/` + fix shots, notes §6, SPEC-v4 §9 | done: tests 461/0, selfTest 525/527 0 fail, harness all passed, freeze PASS, regrades 0/0, critic-v5 0 mismatches, shots 0 console | (this commit) |
+
+### State (piece 3)
+Fix pass done; every brief item fixed, the skipped visual nits are in `tools/v5-r3-notes.md` §6 and LATER. Next: a critic re-check of the map, then a real-phone pass.

@@ -278,7 +278,16 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - Easter eggs pay 331 coins in all and are tappable from the first visit (a player can scroll up and collect them on day one); a gate (only eggs in realms reached) is a one-line change if the economy wants it.
 - The desktop realm card follows the current node's realm; it could follow the realm under the view while scrolling (a cheap rAF-throttled scroll read).
 - The home's Play still reads the next level when every level is cleared; it could offer the fog's next picture as the map's Play does.
-- The long-tail thumbnails grow to 7 rows with all 35 pictures won; a stack with a count, or R4's real map above the fog, would keep the top tidy.
+- (Done in the R3 fix pass: the latest three in one row and a chip opening a sheet of all of them.)
 - A small tag mark on locked nodes (Hard ahead) if playtests ask for it; R3 shows tags on cleared and open nodes only.
 - R4's realms: the Mistmoor's fog sheet becomes a middle sheet, so the wash, the fog band and the Goblin King move to the new top (`map.tail`).
 - Lore beyond one line per realm: a small scroll per sheet (the mockup's "secrets" could carry a line each).
+
+## From the v5 R3 fix pass (2026-10-04; skipped visual nits)
+- The Goblin King is a flat glyph at the top of a painted map; a painted or pixel-art king (and his flag clear of the column edge) would make the climax land.
+- Every open side quest shows a PRIZE bubble (up to 18 at once when a player skips quests); showing it only on the gold-ringed one, or shrinking the others, would cut the clutter.
+- Desktop cards are top-aligned with empty brick under them on a 720 screen; centring them, or a third card, would balance it.
+- Faint crossfade ghosting at the Ironhollows seams 8/9 and 9/10 (art; a re-assemble with a narrower blend there).
+- Three bridges within about 300 CSS px around levels 41-45 on sheets 5-6; one could go.
+- Realm 5 is one level until R4 ("1/1 cleared").
+- The quests 14 and 19 bubbles still touch the road at a corner on a 360-wide column; a smaller bubble (icon only) would clear it.
