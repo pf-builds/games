@@ -135,3 +135,33 @@ Each row is its own commit "Sapper's Path v5 R3 fix: <what>". Notes: `tools/v5-r
 
 ### State (piece 3)
 Fix pass done; every brief item fixed, the skipped visual nits are in `tools/v5-r3-notes.md` §6 and LATER. Next: a critic re-check of the map, then a real-phone pass.
+
+# R4a + R4b: castle levels 101-200 in four new realms (2026-10-05, overnight)
+
+Source: the orchestrator's R4 brief (2026-10-05), the rules review's "The feature ladder", "Tags mean how many features a
+level uses", "Confirmed", "Build order"; `tools/v5-r2-notes.md` (slot map, density rule, locks, dealer, teaching).
+Notes: `tools/v5-r4-notes.md`. Boards: `tools/shots-v5-r4/boards/`. Another builder owns `map/`, `src/journey.js`, the
+map code in `src/main.js` and config.json `map` (R4 map art, separate worktree): never edit those here.
+
+## How to resume (R4)
+
+1. Read this section, then `tools/v5-r4-notes.md` and `git log --oneline` (each piece: "Sapper's Path v5 R4a: <piece>"
+   or "... R4b: <piece>").
+2. Take the first row below that is not `done`. Bakes write to the scratchpad (`--out DIR`) and are copied into `levels/`
+   only after their checks pass.
+3. Freeze: levels 1-100 and the 60 pictures never change; eras 1-4 castles stay byte-identical (`tools/freeze.js`
+   checks both). `node tools/freeze.js --require`, `tools/regrade.js`, `--gallery` 0 differences at the end.
+4. Stop rule: if after the generators and a 10-level trial bake the invariants can't hold, write the problem in the
+   notes and stop.
+
+| # | Piece | State | Commit |
+|---|---|---|---|
+| a0 | Castle freeze fixture (eras 1-4 hashes) in freeze.js, before any castle.js change | done: 283 cases, 0 null; freeze --require PASS | (this commit) |
+| a1 | Generators eras 5-8 (castle.js), realm scenes and roles (bake-config picture), lava liquid on the board | todo | |
+| a2 | Realms 6-8 in data (config eras, bake-config eras/realms/tags), contact sheet `tools/shots-v5-r4/boards/`, looked at | todo | |
+| b1 | Bake planner for 101-200 (feature plan by tag, Extreme, hidden blocks, colour/key locks, boss 200) and density rule | todo | |
+| b2 | Trial bake of 10 levels; stop-rule check | todo | |
+| b3 | Teaching levels 125 (towers) and 150 (mystery blocks), coach lines | todo | |
+| b4 | Full bake 101-200 (scratch, checked, copied in) | todo | |
+| b5 | Side quests 26-50 open off the new levels; tests (density, milestones, tags, teaching, quests) | todo | |
+| b6 | Page checks (selfTest, map with levels past its spots), critic-v5, harness, `?v=35`, SPEC, notes, LATER | todo | |

@@ -12,6 +12,11 @@
 //   ~/.local/opt/node/bin/node tools/freeze.js --make-fixture   rebuild tools/freeze-fixture from its source.json (three
 //                                                               small hand boards graded with this engine)
 // R1 has no baseline yet: the shipped levels were dealt under v4.3's rules and are re-laid in R2, which snapshots them.
+// v5 R4, the castle freeze: new realms extend tools/castle.js, and eras 1-4 must paint exactly what they painted before
+// (a rebake or a new candidate of an old realm would otherwise drift). castles.json in the snapshot folder holds a SHA-1
+// per case (CASES: every era 1-4 generator at its sample colours over 40 seeds, fewer colours, each scene forced, the boss
+// and the teaching sizes) of castle()'s whole output; the default run checks it too.
+//   ~/.local/opt/node/bin/node tools/freeze.js --castles-snapshot   write castles.json (once, before castle.js changes)
 "use strict";
 const fs = require("fs"), path = require("path");
 const E = require("../src/engine.js"), R = require("./grade.js"), { regrade } = require("./regrade.js");
@@ -31,7 +36,32 @@ function check(dir, v3) {
   }
   return { ok: files.every((f) => !f.diffs) && files.length > 0, missing: false, files };
 }
-module.exports = { check };
+// v5 R4: the castle cases (era, seed, P) and their hashes; checkCastles(dir) -> {ok, missing, cases, diffs, lines}.
+function castleCases() {
+  const out = [], P0 = (e, o) => Object.assign({}, BC.eras[e].gen, { colours: BC.picture.eras[e].sample || 8 }, o || {});
+  const T42 = { w: [36, 36], h: [35, 35], k: 1.8 };
+  for (let e = 1; e <= 4; e++) {
+    for (let k = 0; k < 40; k++) out.push([e, 1000 * e + k, P0(e)]);
+    for (let k = 0; k < 10; k++) out.push([e, 1000 * e + 50 + k, P0(e, { colours: (BC.picture.eras[e].sample || 8) - 2 })]);
+    for (const sc of Object.keys(BC.picture.eras[e].scenes || {})) for (let k = 0; k < 3; k++) out.push([e, 1000 * e + 70 + k, P0(e, { scene: sc })]);
+    if (e >= 2) for (let k = 0; k < 4; k++) out.push([e, 1000 * e + 80 + k, P0(e, Object.assign({}, T42, { scene: "day", colours: 8 }))]);
+  }
+  for (let k = 0; k < 10; k++) out.push([4, 4090 + k, P0(4, Object.assign({}, BC.boss.gen, { colours: 12 }))]);
+  for (let k = 0; k < 4; k++) out.push([3, 3095 + k, P0(3, { moat: false, towers: [1, 1] })]);
+  for (let k = 0; k < 6; k++) out.push([1, 1095 + k, P0(1, { w: [15, 16], h: [16, 17], watch: [1, 2], fg: [3, 3] })]);
+  return out;
+}
+function castleHashes() {
+  const K = require("./castle.js"), crypto = require("crypto");
+  return castleCases().map(([e, seed, P]) => { let L = null; try { L = K.castle(e, seed, P, BC.picture); } catch (err) { L = { error: err.message }; } return crypto.createHash("sha1").update(JSON.stringify(L)).digest("hex").slice(0, 16); });
+}
+function checkCastles(dir) {
+  const f = path.join(dir, "castles.json"); if (!fs.existsSync(f)) return { ok: false, missing: true, cases: 0, diffs: 0, lines: [] };
+  const want = JSON.parse(fs.readFileSync(f, "utf8")).hashes, now = castleHashes(), cs = castleCases(), lines = [];
+  for (let i = 0; i < Math.max(want.length, now.length); i++) if (want[i] !== now[i]) lines.push("DIFF castle case " + i + " (era " + (cs[i] || [])[0] + ", seed " + (cs[i] || [])[1] + "): stored " + want[i] + ", now " + now[i]);
+  return { ok: !lines.length, missing: false, cases: now.length, diffs: lines.length, lines };
+}
+module.exports = { check, checkCastles, castleHashes };
 
 // The fixture: grade each hand board of source.json as the bake stores grades (on its tag; seed from the file).
 function makeFixture(dir) {
@@ -52,6 +82,7 @@ function makeFixture(dir) {
 if (require.main === module) {
   const V5 = CFG.v5.freeze, dir = path.resolve(ROOT, arg("--dir") || V5.dir);
   if (process.argv.includes("--make-fixture")) { const fx = path.join(__dirname, "freeze-fixture"); console.log("fixture: " + makeFixture(fx) + " levels graded into " + path.relative(ROOT, fx)); process.exit(0); }
+  if (process.argv.includes("--castles-snapshot")) { const h = castleHashes(); fs.mkdirSync(dir, { recursive: true }); fs.writeFileSync(path.join(dir, "castles.json"), JSON.stringify({ note: "v5 R4: castle() hashes for eras 1-4 (tools/freeze.js castleCases); never edit by hand.", made: new Date().toISOString().slice(0, 10), hashes: h }, null, 0) + "\n"); console.log("castles: " + h.length + " case hashes written to " + path.relative(ROOT, dir)); process.exit(0); }
   if (process.argv.includes("--snapshot")) {
     fs.mkdirSync(dir, { recursive: true });
     for (const f of ["levels.json", "gallery.json"]) fs.copyFileSync(path.join(ROOT, "levels", f), path.join(dir, f));
@@ -62,6 +93,9 @@ if (require.main === module) {
   if (r.missing) { console.log("freeze: no snapshot at " + path.relative(ROOT, dir) + " (not baselined yet: R2 runs --snapshot once it ships the re-laid levels)"); process.exitCode = process.argv.includes("--require") ? 1 : 0; }
   else {
     for (const f of r.files) { for (const l of f.lines) console.log(f.file + ": " + l); console.log("freeze: " + f.file + " " + f.levels + " levels, " + f.checks + " checks, " + f.diffs + " differences"); }
-    console.log("freeze: " + (r.ok ? "PASS" : "FAIL") + " (" + ((Date.now() - t0) / 1000).toFixed(1) + " s)"); process.exitCode = r.ok ? 0 : 1;
+    const kc = checkCastles(dir); for (const l of kc.lines) console.log(l); // v5 R4: the castle freeze
+    console.log(kc.missing ? "freeze: no castle hashes (castles.json) in the snapshot" : "freeze: castles (eras 1-4) " + kc.cases + " cases, " + kc.diffs + " differences");
+    const ok = r.ok && (kc.ok || (kc.missing && !process.argv.includes("--require")));
+    console.log("freeze: " + (ok ? "PASS" : "FAIL") + " (" + ((Date.now() - t0) / 1000).toFixed(1) + " s)"); process.exitCode = ok ? 0 : 1;
   }
 }
