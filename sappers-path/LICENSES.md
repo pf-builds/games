@@ -8,6 +8,7 @@
 | All sound (clinks, thunks, bleat, sizzle, rubble ticks, lever, chest, fanfare, UI) | Synthesized at runtime via WebAudio from recipes in `config.json` (`src/audio.js`) | Original work, Peter Frutchey | 2026-09-27 |
 | Arcade thumbnail (`thumb.jpg`) | Screenshot of the game itself | Original work, Peter Frutchey | 2026-09-29 |
 | Levels | Generated and solver-verified by `tools/`, hand-ordered | Original work, Peter Frutchey | 2026-09-27 |
+| Journey map art (`map/sheet-01.jpg` to `sheet-13.jpg`) | Generated locally on the studio Mac with Stable Diffusion XL base 1.0 (stabilityai/stable-diffusion-xl-base-1.0), img2img over layout guides drawn in code (`tools/map-gen/`; prompts, seeds and strengths in its README) | CreativeML OpenRAIL++-M (model); outputs may be used commercially. AI-generated images may not be copyrightable | generated 2026-10-04 |
 | Display font: Jersey 10 (`fonts/Jersey10-Regular.ttf`, headings, buttons and numbers). Copyright 2023 The Soft Type Project Authors, designer Sarah Cadigan-Fried | https://raw.githubusercontent.com/google/fonts/main/ofl/jersey10/Jersey10-Regular.ttf (license: https://raw.githubusercontent.com/google/fonts/main/ofl/jersey10/OFL.txt, shipped as `fonts/OFL.txt`) | SIL Open Font License 1.1 | 2026-09-27 |
 | Body font | System font stack, no files shipped | n/a | 2026-09-27 |
 

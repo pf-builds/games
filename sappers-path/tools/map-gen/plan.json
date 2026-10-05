@@ -11,14 +11,23 @@
     "contactWidth": 300,
     "seamCrop": 200
   },
-  "assemble": { "restoreHold": 60, "restoreBand": 160, "roadMatch": 40, "roadNudge": 16, "nodeNudge": 22, "nudgeMinPx": 30,
-                "darkLum": 80, "eggRoadGap": 45, "eggNodeGap": 60, "eggEggGap": 140, "jpegMax": 88, "jpegMin": 70, "maxKB": 340,
-                "seamsQuantize": false },
+  "assemble": { "restoreHold": 80, "restoreBand": 170, "roadMatch": 40, "roadNudge": 16, "nodeNudge": 22, "nudgeMinPx": 30,
+                "darkLum": 80, "calmPct": 35, "busyPct": 75, "eggRoadGap": 45, "eggNodeGap": 60, "eggEggGap": 140, "jpegMax": 94, "jpegMin": 70, "maxKB": 340,
+                "seamsQuantize": true },
+  "retouch": { "about": "rectangles [x0, y0, x1, y1] blurred smooth in a painting (fake lettering, stray marks)", "12": [[600, 1276, 712, 1298]] },
+  "roadEnd": { "about": "the top sheet: the painted road turns into the fog off-centre, so no top restore; its centreline above cutAbove is these points, the last one the exit",
+               "13": { "cutAbove": 260, "points": [[480, 250], [492, 212], [503, 180], [515, 148]] } },
+  "edgeMirror": { "about": "px of a painted paper-edge line to replace with a mirror of the next strip in, left and right", "6": 22, "7": 20, "10": 22 },
+  "manual": {
+    "about": "hand fixes after the eye check (contact.png): sheet -> [{list, i, fields to set}]",
+    "6": [ { "list": "eggs", "i": 0, "kind": "mushrooms", "x": 515, "y": 350 }, { "list": "eggs", "i": 1, "kind": "fish", "x": 440, "y": 785 } ],
+    "12": [ { "list": "eggs", "i": 1, "kind": "grass", "x": 640, "y": 780 } ]
+  },
   "model": {
     "id": "stabilityai/stable-diffusion-xl-base-1.0",
     "steps": 40,
     "guidance": 7.0,
-    "baseStrength": 0.88, "roadStrength": 0.5
+    "baseStrength": 0.82, "roadStrength": 0.52
   },
   "stylePrefix": "hand-drawn fantasy tabletop rpg map on aged parchment, top-down, ink linework with soft watercolor wash, muted earthy palette, ",
   "roadPhrase": "a winding dirt road from bottom to top, ",
@@ -42,7 +51,7 @@
     },
     {
       "realm": 3, "name": "The Ironhollows",
-      "prompt": "grey stone hills and rocky crags fill the page edge to edge, a winding dirt road from bottom to top, small square stone keeps, dark pine trees, rusty red veins in the rock",
+      "prompt": "seen from directly above, grey granite hills and dark slate crags fill the page edge to edge, a winding dirt road from bottom to top, small square stone keeps, dark pine woods, muted grey green",
       "base": [[128, 132, 100], [110, 114, 96]],
       "features": { "pines": 4, "hills": 9, "crag": 5, "keep": 2, "river": 0 },
       "eggs": ["raven", "glint", "mushrooms"],
@@ -59,13 +68,14 @@
     },
     {
       "realm": 5, "name": "The Mistmoor",
-      "prompt": "misty grey green fens and moor fill the page edge to edge, a winding dirt road from bottom to top, dark still pools, reeds, dead trees, the upper half fades into thick pale fog",
+      "prompt": "grey green fen marsh with dark still pools and reed beds fills the page edge to edge, a winding dirt road from bottom to top, wisps of pale fog drift over the upper half of the page",
+      "baseStrength": 0.75,
       "base": [[112, 122, 98], [94, 108, 92]],
       "features": { "marsh": 3, "pond": 3, "deadtrees": 3 },
       "eggs": ["wisp", "fish"],
       "scatter": { "trees": 10, "tufts": 900 },
       "fogFrom": 0.62,
-      "goblinKing": [470, 170],
+      "goblinKing": [640, 175],
       "sheets": [ { "levels": [100, 100] } ]
     }
   ]

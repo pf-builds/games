@@ -18,7 +18,7 @@ realm = [r for r in P["realms"] for _ in r["sheets"]][sheet - 1]
 prompt = P["stylePrefix"] + realm["prompt"]
 if mode == "base":                                # no road in the land pass: the road is ours, laid on in pass 2
     prompt = prompt.replace(P["roadPhrase"], "")
-    strength = float(sys.argv[4]) if len(sys.argv) > 4 else M["baseStrength"]
+    strength = float(sys.argv[4]) if len(sys.argv) > 4 else realm.get("baseStrength", M["baseStrength"])
     init = Image.open(G / f"base-{sheet:02d}.png").convert("RGB")
     name = f"base-{sheet:02d}-s{seed}-st{round(strength * 100)}.png"
 else:

@@ -1,0 +1,18 @@
+/Users/peter/local-ai/.venv/lib/python3.12/site-packages/diffusers/utils/deprecation_utils.py:23: FutureWarning: `torch_dtype` is deprecated and will be removed in version 1.0.0. Please use `dtype` instead.
+  deprecate("torch_dtype", "1.0.0", _TORCH_DTYPE_DEPRECATION_MESSAGE)
+Loading pipeline components...:   0%|          | 0/7 [00:00<?, ?it/s]
+Loading weights:   0%|          | 0/517 [00:00<?, ?it/s][ALoading weights: 100%|██████████| 517/517 [00:00<00:00, 25575.33it/s]
+Loading pipeline components...:  29%|██▊       | 2/7 [00:00<00:00, 19.96it/s]
+Loading weights:   0%|          | 0/196 [00:00<?, ?it/s][ALoading weights: 100%|██████████| 196/196 [00:00<00:00, 13509.78it/s]
+Loading pipeline components...:  57%|█████▋    | 4/7 [00:00<00:00, 15.11it/s]Loading pipeline components...: 100%|██████████| 7/7 [00:00<00:00, 24.30it/s]
+loaded in 1.9s
+There are modules in AutoencoderKL that should be kept in float32: []. Casting directly with `to()` can lead to inconsistent results; set `torch_dtype` in `from_pretrained()` instead to keep these modules in float32.
+There are modules in AutoencoderKL that should be kept in float32: []. Casting directly with `to()` can lead to inconsistent results; set `torch_dtype` in `from_pretrained()` instead to keep these modules in float32.
+  0%|          | 0/22 [00:00<?, ?it/s] 14%|█▎        | 3/22 [00:00<00:00, 26.09it/s] 27%|██▋       | 6/22 [00:00<00:01,  9.88it/s] 36%|███▋      | 8/22 [00:01<00:03,  3.82it/s] 41%|████      | 9/22 [00:02<00:04,  3.14it/s] 45%|████▌     | 10/22 [00:02<00:04,  2.69it/s] 50%|█████     | 11/22 [00:03<00:04,  2.42it/s] 55%|█████▍    | 12/22 [00:03<00:04,  2.23it/s] 59%|█████▉    | 13/22 [00:04<00:04,  2.11it/s] 64%|██████▎   | 14/22 [00:04<00:03,  2.02it/s] 68%|██████▊   | 15/22 [00:05<00:03,  1.96it/s] 73%|███████▎  | 16/22 [00:06<00:03,  1.92it/s] 77%|███████▋  | 17/22 [00:06<00:02,  1.89it/s] 82%|████████▏ | 18/22 [00:07<00:02,  1.87it/s] 86%|████████▋ | 19/22 [00:07<00:01,  1.86it/s] 91%|█████████ | 20/22 [00:08<00:01,  1.84it/s] 95%|█████████▌| 21/22 [00:08<00:00,  1.84it/s]100%|██████████| 22/22 [00:09<00:00,  1.83it/s]100%|██████████| 22/22 [00:09<00:00,  2.36it/s]
+/Users/peter/local-ai/.venv/lib/python3.12/site-packages/diffusers/pipelines/stable_diffusion_xl/pipeline_stable_diffusion_xl_img2img.py:896: FutureWarning: `upcast_vae` is deprecated and will be removed in version 1.0.0. `upcast_vae` is deprecated. Please use `pipe.vae.to(torch.float32)`. For more details, please refer to: https://github.com/huggingface/diffusers/pull/12619#issue-3606633695.
+  deprecate(
+There are modules in AutoencoderKL that should be kept in float32: []. Casting directly with `to()` can lead to inconsistent results; set `torch_dtype` in `from_pretrained()` instead to keep these modules in float32.
+There are modules in AutoencoderKL that should be kept in float32: []. Casting directly with `to()` can lead to inconsistent results; set `torch_dtype` in `from_pretrained()` instead to keep these modules in float32.
+saved /Users/peter/local-ai/outputs/sapper-v5-map/sheet-01-s71-st55-bs61-st82.png mode road sheet 1 realm 1 seed 71 strength 0.55 steps 40 guidance 7.0 gen 14.3s total 16.2s
+prompt: hand-drawn fantasy tabletop rpg map on aged parchment, top-down, ink linework with soft watercolor wash, muted earthy palette, green meadows fill the page edge to edge, a winding dirt road from bottom to top, a meandering river with a bridge, forest of tiny inked trees, small wooden palisade forts, farms
+after: System-wide memory free percentage: 65% | swap total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)

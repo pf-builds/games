@@ -87,14 +87,18 @@ Two pieces: (1) the map ART (13 painted sheets, layout, tools), (2) the map SCRE
 
 | # | Step | State | Commit |
 |---|---|---|---|
-| 1a | Plan (`tools/map-gen/plan.json`: sheet split, realm palettes, prompts), guide generator (`guide.py`), painter (`paint.py`) | in progress | |
-| 1b | Sheet 1 strength tuning (stop rule: road must stay on the guide, look must match seed 61) | todo | |
-| 1c | Sheets 2-13 painted and picked (2-4 candidates each) | todo | |
-| 1d | `assemble.py`: JPEGs with baked seam crossfade, `map/layout.json` (nodes nudged onto the painted road, eggs, Goblin King), `contact.png`, `contact-seams.png` | todo | |
-| 1e | LICENSES.md row, README, freeze check | todo | |
+| 1a | Plan (`tools/map-gen/plan.json`: sheet split, realm palettes, prompts), guide generator (`guide.py`), painter (`paint.py`) | done | 102cd30 |
+| 1b | Sheet 1 strength tuning (stop rule: road must stay on the guide, look must match seed 61) | done: one pass failed the look; two passes (land 0.82, road 0.52) pass both; see map-gen README | (with 1d) |
+| 1c | Sheets 2-13 painted and picked (2-6 land and 2 road candidates each) | done | (with 1d) |
+| 1d | `assemble.py`: JPEGs with baked seam crossfade, `map/layout.json` (nodes nudged onto the painted road, eggs, Goblin King), `contact.png`, `contact-seams.png` | done | (this commit) |
+| 1e | LICENSES.md row, README, freeze check (`freeze.js --require` PASS, 0 differences) | done | (this commit) |
 
 ## Piece 2: map screen (next brief, not started)
 
 | # | Step | State | Commit |
 |---|---|---|---|
 | 2 | The map screen in place of the level grid and Gallery (see `tools/v5-r2-notes.md` §10) | todo | |
+
+Notes for piece 2: `map/layout.json` is the contract (sheet pixels, draw sheet k+1 over sheet k at `step` px up; each
+sheet's `road` is the painted centreline for route dashes; `quests[].branch` is where the detour leaves the road, and the
+painted spur is often missing, so draw the detour). Egg coins (10-15) are not in the art data; put them in config.json.

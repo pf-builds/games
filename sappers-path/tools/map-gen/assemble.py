@@ -1,13 +1,13 @@
 # Sapper's Path v5 map: picked paintings -> game sheets, layout and contact sheets.
 # Usage: /Users/peter/local-ai/.venv/bin/python assemble.py      (reads picks.json, guide-layout.json, plan.json)
 # Writes: ../../map/sheet-NN.jpg, ../../map/layout.json, ./contact.png, ./contact-seams.png, ./fidelity.json
-#  1. edge restore: the top and bottom bands go back toward the coded road over the land painting, so the road meets
+#  1. edge restore: the coded road is laid back over the painting in the top and bottom bands, so the road meets
 #     every seam at the centre (the painting can drift a few px there)
 #  2. seam crossfade baked into each sheet's bottom `overlap` rows (draw later sheets over earlier ones: no mask needed)
 #  3. nodes and the road centreline nudged onto the painted road; eggs found by colour on painted features
 import json, math, pathlib, random, io
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 from scipy import ndimage as ndi
 
 HERE = pathlib.Path(__file__).resolve().parent; GAME = HERE.parent.parent
@@ -23,11 +23,18 @@ f32 = lambda im: np.asarray(im.convert("RGB"), np.float32)
 sheets, fid = [], {}
 for i in range(N):
     pk = PICK[str(i + 1)]
-    paint = f32(Image.open(C / pk["sheet"]))
-    comp = Image.open(C / pk["base"]).convert("RGBA"); comp.alpha_composite(Image.open(G / f"road-{i + 1:02d}.png").convert("RGBA"))
-    comp = f32(comp)
+    src = Image.open(C / pk["sheet"]).convert("RGB")
+    for box in P["retouch"].get(str(i + 1), []): src.paste(src.crop(box).filter(ImageFilter.GaussianBlur(6)), box[:2])
+    E = P["edgeMirror"].get(str(i + 1), 0)
+    if E:
+        a = np.asarray(src).copy(); a[:, :E] = a[:, 2 * E - 1:E - 1:-1]; a[:, W - E:] = a[:, W - E - 1:W - 2 * E - 1:-1]
+        src = Image.fromarray(a)
+    paint = f32(src)
+    comp = src.convert("RGBA"); comp.alpha_composite(Image.open(G / f"road-{i + 1:02d}.png").convert("RGBA"))
+    comp = f32(comp)                              # the painting with the coded road laid back on top
     d = np.minimum(np.arange(H), H - 1 - np.arange(H)).astype(np.float32)        # distance from the nearer edge
     w = (1 - ss((d - A["restoreHold"]) / (A["restoreBand"] - A["restoreHold"])))[:, None, None]
+    if str(i + 1) in P["roadEnd"]: w[:H // 2] = 0                    # the road ends in the fog: no top restore
     out = paint * (1 - w) + comp * w
     road = np.array(GL["sheets"][i]["road"], np.float32)
     inner = road[(road[:, 1] > OV + A["restoreBand"]) & (road[:, 1] < H - OV - A["restoreBand"])]
@@ -39,7 +46,7 @@ for i in range(N):
 # ---- 2. bake the seam crossfade into each sheet's bottom rows (sheet k+1 drawn over sheet k)
 final = [s.copy() for s in sheets]
 for k in range(1, N):
-    t = ss(1 - np.arange(OV, dtype=np.float32) / (OV - 1))[:, None, None]     # 0 at row H-OV, 1 at the bottom row
+    t = ss(np.arange(OV, dtype=np.float32) / (OV - 1))[:, None, None]         # 0 at row H-OV, 1 at the bottom row
     final[k][H - OV:] = sheets[k][H - OV:] * (1 - t) + sheets[k - 1][:OV] * t
 
 # ---- 3. nudge nodes and the road centreline onto the painted road; eggs by colour
@@ -69,13 +76,15 @@ for i in range(N):
     for k in range(1, len(road) - 1):            # light smoothing of the nudged centreline (the ends stay at the seams)
         if OV + 20 < road[k][1] < H - OV - 20:
             road[k] = [round((road[k - 1][j] + 2 * road[k][j] + road[k + 1][j]) / 4) for j in (0, 1)]
+    RE = P["roadEnd"].get(str(i + 1))
+    if RE: road = [p for p in road if p[1] >= RE["cutAbove"]] + RE["points"]
     lv = []
     for n in g["levels"]:
         x, y, ok = nudge(mask, n["x"], n["y"], A["nodeNudge"])
         if not ok: flags.append(f"sheet {i + 1} level {n['n']}: no painted road within {A['nodeNudge']} px, kept the guide spot")
         lv.append({"n": n["n"], "x": round(x), "y": round(y)})
     rec = {"sheet": i + 1, "file": f"sheet-{i + 1:02d}.jpg", "realm": g["realm"], "realmName": REALMS[g["realm"]]["name"],
-           "levels": lv, "quests": [dict(q) for q in g["quests"]], "entry": g["entry"], "exit": g["exit"], "road": road}
+           "levels": lv, "quests": [dict(q) for q in g["quests"]], "entry": g["entry"], "exit": road[-1] if RE else g["exit"], "road": road}
     # eggs: colour masks on the painted sheet
     r_, g_, b_ = img[..., 0], img[..., 1], img[..., 2]; lum = img.mean(2); sat = img.max(2) - img.min(2)
     water = (b_ > r_ + 22) & (g_ > r_ + 22)
@@ -91,14 +100,17 @@ for i in range(N):
     d_water_in = ndi.distance_transform_edt(water); d_water = ndi.distance_transform_edt(~water)
     d_dark = ndi.distance_transform_edt(~dark); dens = ndi.uniform_filter(dark.astype(np.float32), 41)
     d_rock_in = ndi.distance_transform_edt(rock)
+    gy_, gx_ = np.gradient(lum); busy = ndi.uniform_filter(np.hypot(gx_, gy_), 31)   # ink density: trees, rocks, huts
+    calm, crowd = busy < np.percentile(busy, A["calmPct"]), busy > np.percentile(busy, A["busyPct"])
+    d_crowd = ndi.distance_transform_edt(~crowd)
     yy, xx = np.mgrid[0:H, 0:W]
     ok = (yy > OV + 40) & (yy < H - OV - 40) & (xx > 40) & (xx < W - 40) & (d_road > A["eggRoadGap"])
     for n in lv + rec["quests"]: ok &= np.hypot(xx - n["x"], yy - n["y"]) > A["eggNodeGap"]
     if "goblinKing" in g: ok &= np.hypot(xx - g["goblinKing"][0], yy - g["goblinKing"][1]) > 90
     HOSTS = {"fish": d_water_in >= 8, "wisp": (d_water_in >= 6) | fog, "reeds": ~water & (d_water < 14) & (d_water > 3),
-             "woodpile": ~dark & (d_dark > 4) & (d_dark < 14) & (dens > 0.25), "mushrooms": ~dark & (d_dark > 3) & (d_dark < 12) & (dens > 0.2),
+             "woodpile": calm & (d_crowd > 6) & (d_crowd < 24) & (d_water > 30), "mushrooms": calm & (d_crowd > 4) & (d_crowd < 20) & (d_water > 30),
              "raven": d_rock_in >= 5, "glint": d_rock_in >= 4,
-             "grass": ~water & ~dark & ~rock & (d_dark > 25) & (d_water > 25)}
+             "grass": calm & ~water & (d_crowd > 30) & (d_water > 25)}
     rnd = random.Random(500 + i); eggs = []
     for e in g["eggs"]:
         kind = e["kind"]
@@ -140,17 +152,21 @@ def marks(dr, s, ox=0, oy=0):
         for n in rec["eggs"]: X, Y = (n["x"] + ox) * s, (n["y"] + t0 + oy) * s; dr.rectangle([X - 3, Y - 3, X + 3, Y + 3], fill=(230, 40, 40), outline=(255, 255, 255))
         if "goblinKing" in rec:
             X, Y = rec["goblinKing"]["x"] * s, (rec["goblinKing"]["y"] + t0) * s; dr.polygon([(X, Y - 7), (X - 6, Y + 5), (X + 6, Y + 5)], fill=(0, 0, 0))
+MARKS = [(240, 190, 40), (150, 80, 220), (230, 40, 40), (255, 255, 255), (0, 0, 0), (255, 0, 0)]
+def qsave(img, path):                             # 256-colour PNG that keeps the marker colours exact
+    if not A["seamsQuantize"]: img.save(path, optimize=True); return
+    pal = Image.new("P", (1, 1)); pal.putpalette(img.quantize(256 - len(MARKS)).getpalette()[:(256 - len(MARKS)) * 3] + [v for c in MARKS for v in c])
+    img.quantize(palette=pal, dither=Image.Dither.NONE).save(path, optimize=True)
 cw = P["out"]["contactWidth"]; s = cw / W
 contact = tall.resize((cw, round(HT * s)), Image.LANCZOS); dr = ImageDraw.Draw(contact)
 for k in range(1, N): y = (HT - k * STEP - OV / 2) * s; dr.line([(0, y), (6, y)], fill=(255, 0, 0), width=2); dr.line([(cw - 7, y), (cw, y)], fill=(255, 0, 0), width=2)
-marks(dr, s); contact.save(HERE / "contact.png", optimize=True)
+marks(dr, s); qsave(contact, HERE / "contact.png")
 cr = P["out"]["seamCrop"]; seams = Image.new("RGB", (W, (N - 1) * (2 * cr + 8)), (255, 255, 255))
 for k in range(1, N):
     yc = round(HT - k * STEP - OV / 2); crop = tall.crop((0, yc - cr, W, yc + cr)); d2 = ImageDraw.Draw(crop)
     d2.line([(0, cr), (10, cr)], fill=(255, 0, 0), width=2); d2.line([(W - 11, cr), (W, cr)], fill=(255, 0, 0), width=2)
     seams.paste(crop, (0, (k - 1) * (2 * cr + 8)))
-seams = seams.quantize(256, dither=Image.Dither.NONE) if A["seamsQuantize"] else seams
-seams.save(HERE / "contact-seams.png", optimize=True)
+qsave(seams, HERE / "contact-seams.png")
 json.dump({"fidelity": fid, "jpeg": {k: {"quality": q, "kb": round(b / 1024)} for k, (q, b) in sizes.items()},
            "totalKB": round(sum(b for _, b in sizes.values()) / 1024), "flags": flags}, open(HERE / "fidelity.json", "w"), indent=1)
 print("fidelity", {k: v["onRoad"] for k, v in fid.items()})

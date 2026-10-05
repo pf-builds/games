@@ -1,0 +1,116 @@
+{
+ "fidelity": {
+  "1": {
+   "roadSamples": 109,
+   "onRoad": 0.927
+  },
+  "2": {
+   "roadSamples": 106,
+   "onRoad": 0.943
+  },
+  "3": {
+   "roadSamples": 128,
+   "onRoad": 0.789
+  },
+  "4": {
+   "roadSamples": 112,
+   "onRoad": 0.875
+  },
+  "5": {
+   "roadSamples": 101,
+   "onRoad": 0.881
+  },
+  "6": {
+   "roadSamples": 121,
+   "onRoad": 0.901
+  },
+  "7": {
+   "roadSamples": 107,
+   "onRoad": 0.953
+  },
+  "8": {
+   "roadSamples": 133,
+   "onRoad": 0.917
+  },
+  "9": {
+   "roadSamples": 127,
+   "onRoad": 0.89
+  },
+  "10": {
+   "roadSamples": 113,
+   "onRoad": 0.956
+  },
+  "11": {
+   "roadSamples": 113,
+   "onRoad": 0.956
+  },
+  "12": {
+   "roadSamples": 136,
+   "onRoad": 0.875
+  },
+  "13": {
+   "roadSamples": 115,
+   "onRoad": 0.852
+  }
+ },
+ "jpeg": {
+  "1": {
+   "quality": 94,
+   "kb": 283
+  },
+  "2": {
+   "quality": 94,
+   "kb": 265
+  },
+  "3": {
+   "quality": 94,
+   "kb": 272
+  },
+  "4": {
+   "quality": 94,
+   "kb": 277
+  },
+  "5": {
+   "quality": 94,
+   "kb": 275
+  },
+  "6": {
+   "quality": 94,
+   "kb": 251
+  },
+  "7": {
+   "quality": 94,
+   "kb": 305
+  },
+  "8": {
+   "quality": 94,
+   "kb": 312
+  },
+  "9": {
+   "quality": 94,
+   "kb": 294
+  },
+  "10": {
+   "quality": 94,
+   "kb": 295
+  },
+  "11": {
+   "quality": 94,
+   "kb": 300
+  },
+  "12": {
+   "quality": 94,
+   "kb": 269
+  },
+  "13": {
+   "quality": 94,
+   "kb": 272
+  }
+ },
+ "totalKB": 3670,
+ "flags": [
+  "sheet 6: egg fish found no painted host, placed as grass",
+  "sheet 12: egg raven found no painted host, placed as grass",
+  "sheet 13: egg fish found no painted host, placed as grass"
+ ]
+}

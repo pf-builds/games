@@ -1,0 +1,54 @@
+{
+ "1": {
+  "base": "base-01-s61-st82.png",
+  "sheet": "sheet-01-s72-st52-bs61-st82.png"
+ },
+ "2": {
+  "base": "base-02-s61-st82.png",
+  "sheet": "sheet-02-s72-st52-bs61-st82.png"
+ },
+ "3": {
+  "base": "base-03-s61-st82.png",
+  "sheet": "sheet-03-s72-st52-bs61-st82.png"
+ },
+ "4": {
+  "base": "base-04-s61-st82.png",
+  "sheet": "sheet-04-s72-st52-bs61-st82.png"
+ },
+ "5": {
+  "base": "base-05-s61-st82.png",
+  "sheet": "sheet-05-s72-st52-bs61-st82.png"
+ },
+ "6": {
+  "base": "base-06-s62-st82.png",
+  "sheet": "sheet-06-s72-st52-bs62-st82.png"
+ },
+ "7": {
+  "base": "base-07-s64-st82.png",
+  "sheet": "sheet-07-s71-st52-bs64-st82.png"
+ },
+ "8": {
+  "base": "base-08-s64-st82.png",
+  "sheet": "sheet-08-s71-st52-bs64-st82.png"
+ },
+ "9": {
+  "base": "base-09-s64-st82.png",
+  "sheet": "sheet-09-s71-st52-bs64-st82.png"
+ },
+ "10": {
+  "base": "base-10-s62-st82.png",
+  "sheet": "sheet-10-s71-st52-bs62-st82.png"
+ },
+ "11": {
+  "base": "base-11-s61-st82.png",
+  "sheet": "sheet-11-s71-st52-bs61-st82.png"
+ },
+ "12": {
+  "base": "base-12-s61-st82.png",
+  "sheet": "sheet-12-s72-st52-bs61-st82.png"
+ },
+ "13": {
+  "base": "base-13-s62-st82.png",
+  "sheet": "sheet-13-s72-st52-bs62-st82.png"
+ }
+}
