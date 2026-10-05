@@ -164,4 +164,9 @@ map code in `src/main.js` and config.json `map` (R4 map art, separate worktree):
 | b3 | Teaching levels 125 (towers) and 150 (mystery blocks), coach lines | done (teach-v4.js --add; 1-100 byte-identical in teaching.json; config teach e6-125, e7-150) | (this commit) |
 | b4 | Full bake 101-200 (scratch, checked, copied in) | done: full run + 3 fix-up runs merged; 0 fallbacks; regrade 0 (200 levels); real pace median 227 s | (this commit) |
 | b5 | Side quests 26-50 open off the new levels; tests (density, milestones, tags, teaching, quests) | done: test.js 564/0; critic-v5 0 mismatches; freeze PASS | (this commit) |
-| b6 | Page checks (selfTest, map with levels past its spots), critic-v5, harness, `?v=35`, SPEC, notes, LATER | todo | |
+| b6 | Page checks (selfTest, map with levels past its spots), critic-v5, harness, `?v=35`, SPEC, notes, LATER | done: selfTest 697/2 and harness pass except the map's own checks (notes §7, for the map builder); critic 0; freeze PASS | (this commit) |
+
+### State (R4)
+R4a and R4b complete: levels 101-200 baked and checked. Open: the journey map has no spots for 101-200 (the other
+builder's R4 map); until it merges, `src/main.js` scrollMap (line 698) throws on a save past 100 and selfTest's map checks
+fail (`tools/v5-r4-notes.md` §7). Then critics and Peter's playtest of 101-200.
