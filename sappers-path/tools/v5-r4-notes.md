@@ -133,6 +133,9 @@ needed no change). test.js checks both, and the old-save tests now expect level 
 
 ## 7. For the R4 map builder (exactly where the map meets levels past 100)
 
+**Resolved by the R4 merge (§9):** the map lane's frontier code gives every level 1-200 a spot; scrollMap no longer throws
+and selfTest's map checks pass on saves past 100.
+
 The map has spots for levels 1-100 only, so levels 101-200 have no `e.node`, `e.sheet` or `e.px`:
 1. **Player-facing crash:** `src/main.js` line 698, `scrollMap()`: `worldY(e.sheet, e.px[1])` throws `Cannot read properties
    of undefined (reading '1')` when the focus is a level without a spot (any save with 1-100 cleared, opening the map).
@@ -248,3 +251,45 @@ Nothing in map code, `map/` or `src/journey.js` was changed here.
 | 198 | e8-198 | easy | throne-0t (throneDusk) |  | 231 s | 50 |
 | 199 | e8-199 | hard | throne-2t (throne) | moat, gate, linked, tower, hidden, key lock | 228 s | 52 |
 | 200 | e8-200 | extreme | throne-moat-4t (throneNight) | moat, gate, linked, mystery, tower, hidden, colour lock | 263 s | 50 |
+
+## 9. The R4 merge (map lane into levels lane, 2026-10-05)
+
+Merged `sappers-path-map` (R4c, HEAD ffaafd1) into `sappers-path` (HEAD 32633b5); both branch from abbeccb. Nobody was
+around: every call below is mine.
+
+- **Merge commit ade64f0.** Conflicts: `tools/test.js` (two hunks: I took the map lane's map-layout and summit checks, which
+  are the tight versions §7.3 asked for: spots for 1-200 on 25 sheets, every built level has one, 8 realm banners, the
+  frontier at 100, 107, 200 and 0); `LATER.md` and `tools/v5-progress.md` (both lanes' sections kept; I dropped R4c's
+  "realms 6-8 need real lore" line, since config `eras` 6-8 come from this lane). `config.json` (eras from here, `map`
+  from there) and `src/main.js` (map code from there, the lava and the 150 ring from here) merged on their own.
+- **Real data against the layout** (checked in Node): levels.json `n` = 1..200 in order; every level's `era` equals its
+  layout sheet's realm (level 100 is `e5-100`, realm 5, matching the layout's 100-124); every level has a spot; quests
+  1-50 each join the road (their `branch`) between their `after` level and the next; the long tail's spot is past level
+  200 on sheet 25. Nothing to fix: the cloned levels the map lane tested with had the same numbers and realms.
+- **Cache tag ?v=36** (cf3c442): index.html's ten tags and style.css's font URL; above 35 (levels) and 34 (map).
+- **`tools/shots-v5-r3.mjs`**: its all-clear states hard-coded `unlockTo(100)` and pictures 1-25/40 (the long tail began
+  at 26); with 200 levels its `.tchip` state timed out. Now `unlockTo(1e3)` (every level) and pictures 50/55/59.
+- **New `tools/shots-v5-r4-merged.mjs`**: the brief's states on the real levels into `tools/shots-v5-r4/merged/` (phone
+  3x and desktop): fresh, cur-110, cur-130, cur-160, cur-190, summit, all-200 (picture 51 in the fog), lesson-125 and
+  lesson-150 in play (coach up). 0 console messages. Looked at: the realm card reads "Realm 6 of 8" with lore, lava and
+  the tower ring in 125, the hidden blocks in 150, the king beside 200, "The road goes on" above it.
+
+Checks after the merge (all on port 8491):
+
+| Check | Result |
+|---|---|
+| `tools/test.js` | 565 passed, 0 failed |
+| `tools/freeze.js --require` | PASS: levels 1-100 555 checks, gallery 360, castles 283 cases, 0 differences |
+| `tools/regrade.js` / `--gallery` | 0 differences (200 levels, 1155 checks) / 0 (60, 360) |
+| `tools/critic-v5/run.sh` | 0 mismatching games of 8,712; tags 0 problems; known answers 0 wrong; real pace 260/260 identical (diff-result.json only changed its ms; restored) |
+| `SP.selfTest()` (`?debug=1`, map opened first) | 375x812 3x: 756/0 on a fresh save, past 150 (155 cleared, 30 pictures) and all 200 cleared; 1280x720: 758/0 on the same three; 0 console |
+| `tools/shots-v5-r4-map.mjs` | selfTest 756/758 0 fail, 0 console; one named-state overlap: `today-tail` (now "1-100 cleared": level 101's label touches node 102 on the phone, pre-existing in R4c's own audit as "100: label x 102"); audit 100-200: 28 grazes phone, 8 desktop (LATER) |
+| `tools/shots-v5-r3.mjs` | 0 console (after the fix above) |
+| `tools/harness.mjs` | all passed, 0 console messages (4:04 wall) |
+
+Payload (portal cap 20 MB applies to the build players get):
+- **To reach play** (fresh load, title, a real tap on Play into level 1): 15 files, **1.72 MB** uncompressed (levels.json
+  723 KB, main.js 286 KB, gallery.json 168 KB). Map sheets load lazily (251-312 KB each, the ones in view). The harness's
+  whole-run figure (title, map, play, gallery) is 3.14-3.40 MB.
+- **Portal build** (game folder without `tools/` and `levels/pool-*.json`, tracked files): **9.87 MB**. Without `tools/`
+  only: 12.46 MB. The whole folder with `tools/`: 21.53 MB (over 20 MB, but `tools/` never ships).

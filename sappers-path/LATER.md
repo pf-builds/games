@@ -307,3 +307,6 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - Labels of the current level still graze a neighbouring node in about 20 of the 101 states past 99 (the same rate as R3's 1-99 under the same audit); two states (171, 188) have a quest bubble touching the current label. A smaller label, or labels that may sit diagonally, would clear most.
 - The Goblin King is an ink-and-wash SVG now; a painted sprite or a short animation (he flees when 200 is won) would make the boss land harder.
 - Egg coins on the map are now 647 in all (50 eggs), gated by realm.
+
+## From the v5 R4 merge (2026-10-05)
+- On the real levels the map's overlap audit (every current level 100-200) counts 28 label grazes on the phone and 8 on desktop (R4c's clones: about 20). The first a player meets is level 101's label touching node 102 on a 375 phone, which `tools/shots-v5-r4-map.mjs` now reports as a failure of its `today-tail` state (that state meant "the long tail at 101" before the merge). A smaller label, or a side picker that may set it diagonally, would clear most.

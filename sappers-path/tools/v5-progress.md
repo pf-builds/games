@@ -200,3 +200,20 @@ Dev server: port 8495 (never 8491, the other builder's).
 
 ### State (R4c)
 Done. Next: merge into `sappers-path` with levels 101-200 (merge notes: `tools/v5-r4c-notes.md` §5), then critics on the new realms.
+
+# R4 merge: the map lane (R4c) into the levels lane (R4a + R4b) (2026-10-05)
+
+Merge of `sappers-path-map` into `sappers-path` in the worktree `repos/games-sappers-path/`. Notes: `tools/v5-r4-notes.md`
+§9. Shots: `tools/shots-v5-r4/merged/` (gitignored; `tools/shots-v5-r4-merged.mjs` remakes them).
+
+| # | Step | State | Commit |
+|---|---|---|---|
+| m1 | `git merge sappers-path-map`: conflicts in test.js (map lane's checks kept), LATER and this file (both kept); config.json and main.js auto-merged | done | ade64f0 |
+| m2 | Real data against the layout: levels.json `n` 1..200 in order, `era` = layout realm for all 200, every level has a spot, quests 1-50 branch between their level and the next, the long tail above 200 on sheet 25 | done: 0 mismatches, nothing to fix | (no change) |
+| m3 | Cache tag `?v=36` in index.html (10) and style.css's font URL (1) | done | cf3c442 |
+| m4 | Checks: test.js, freeze, regrades, critic-v5, selfTest (3 saves x 2 viewports), both map screens scripts, harness | done: 565/0, PASS, 0/0, 0 mismatches, 756/758 0 fail, 0 console, all passed | (close-out) |
+| m5 | Screens: fresh, 110, 130, 160, 190, summit, all 200 + tail, lessons 125 and 150 in play | done | (close-out) |
+| m6 | Payload, notes, SPEC §9 | done: play 1.72 MB, portal build 9.87 MB | (close-out) |
+
+### State (R4 merge)
+Merged and green. Next: critics on realms 5-8 and the new map, then Peter's playtest of 101-200.
