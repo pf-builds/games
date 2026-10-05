@@ -7,12 +7,16 @@ src/*.js with the versioned getJSON("x.json?v=" + V_) calls turned into plain pa
 levels/gallery.json, the font and map/ (layout.json and the painted sheets, v5 R3). Also writes <out>/wrap.html, an artifact-style wrapper page for the smoke test
 (tools/playtest-smoke.mjs); wrap.html is not published.
 
-  python3 tools/playtest-bundle.py <git-ref> <out-dir> [title]     e.g. HEAD /tmp/sp-bundle "Sapper's Path v4.1 Playtest"
+  python3 tools/playtest-bundle.py <git-ref> <out-dir> [title] [--jump 101,125,150,175,200]
+
+--jump (v5 R4, playtest only, never shipped): exposes window.SP without ?debug=1 and adds src/playtest.js, a small
+"Jump" chip that marks every level before the chosen one cleared (SP.unlockTo) and reloads, so a playtest can start
+deep in the campaign. The artifact can't take ?debug=1 and a phone has no console.
 
 Publish: the Artifact tool with url = the playtest artifact, file_path = <out>/index.html, root = <out>, and files for
 every path printed below except index.html and wrap.html.
 """
-import os, re, subprocess, sys
+import json, os, re, subprocess, sys
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 GAME = "sappers-path"
@@ -36,7 +40,21 @@ def write(out, path, data):
         f.write(data if isinstance(data, bytes) else data.encode("utf-8"))
 
 
-def main(ref, out, new_title=None):
+JUMP_JS = """// Playtest only (tools/playtest-bundle.py --jump): jump to a level by marking every level before it cleared.
+(function () {
+  var stops = %s, b = document.createElement("button"), m = document.createElement("div");
+  b.textContent = "Jump"; b.setAttribute("aria-label", "Playtest: jump to a level");
+  b.style.cssText = "position:fixed;left:0;top:38%%;z-index:9999;font:12px system-ui,sans-serif;writing-mode:vertical-rl;padding:10px 3px;border-radius:0 10px 10px 0;border:2px solid #221a26;border-left:0;background:#ffe27a;color:#221a26;opacity:.8";
+  m.style.cssText = "position:fixed;left:30px;top:30%%;z-index:9999;display:none;gap:6px;flex-wrap:wrap;justify-content:center;max-width:92vw;background:#2e2935;padding:8px;border-radius:12px;border:2px solid #221a26";
+  stops.forEach(function (n) { var x = document.createElement("button"); x.textContent = n; x.style.cssText = "font:16px system-ui,sans-serif;min-width:52px;min-height:44px;border-radius:10px;border:2px solid #221a26;background:#f4ead2";
+    x.onclick = function () { if (!window.SP || !window.SP.unlockTo) return; window.SP.unlockTo(n - 1); location.reload(); }; m.appendChild(x); });
+  b.onclick = function () { m.style.display = m.style.display === "flex" ? "none" : "flex"; };
+  document.body.appendChild(m); document.body.appendChild(b);
+})();
+"""
+
+
+def main(ref, out, new_title=None, jump=None):
     html = re.sub(r"\?v=\d+", "", show(ref, "index.html"))
     title = re.search(r"<title>.*?</title>\s*", html, re.S)
     if not title:
@@ -49,11 +67,23 @@ def main(ref, out, new_title=None):
 
     write(out, "style.css", re.sub(r"\?v=\d+", "", show(ref, "style.css")))
 
+    if jump:
+        html = open(os.path.join(out, "index.html"), encoding="utf-8").read()
+        html = html.replace('<script src="src/main.js"></script>', '<script src="src/main.js"></script>\n<script src="src/playtest.js"></script>')
+        if "src/playtest.js" not in html:
+            sys.exit("--jump: no main.js script tag to follow")
+        write(out, "index.html", html)
+        write(out, "src/playtest.js", JUMP_JS % json.dumps(jump))
+
     pat = re.compile(r'("[^"]+\.json)\?v=" \+ V_')
     for name in ls_src(ref):
         js, n = pat.subn(r'\1"', show(ref, "src/" + name))
         js, m = re.subn(r' \+ "\?v=" \+ V_', "", js)  # v5 R3: the map sheets' image URLs
         n += m
+        if jump and name == "main.js":
+            js, k = re.subn(r"if \(DEBUG\) window\.SP = SP;", "window.SP = SP; // playtest bundle (--jump)", js)
+            if k != 1:
+                sys.exit("--jump: main.js SP facade line not found")
         if re.search(r'\?v=" \+ V_', js):
             sys.exit(f"src/{name}: a versioned call the pattern missed")
         write(out, "src/" + name, js)
@@ -74,6 +104,9 @@ def main(ref, out, new_title=None):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) not in (3, 4):
+    args, jump = sys.argv[1:], None
+    if "--jump" in args:
+        i = args.index("--jump"); jump = [int(x) for x in args[i + 1].split(",")]; del args[i:i + 2]
+    if len(args) not in (2, 3):
         sys.exit(__doc__)
-    main(sys.argv[1], sys.argv[2], sys.argv[3] if len(sys.argv) == 4 else None)
+    main(args[0], args[1], args[2] if len(args) == 3 else None, jump)
