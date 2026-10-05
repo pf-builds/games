@@ -4,7 +4,7 @@
 Reads every file from a git ref (never the live working tree, which a builder may be editing) and writes
 <out>/: index.html with no doctype/html/head/body wrappers, <title> first and no ?v= tags; style.css with no ?v=;
 src/*.js with the versioned getJSON("x.json?v=" + V_) calls turned into plain paths; config.json, levels/levels.json,
-levels/gallery.json and the font. Also writes <out>/wrap.html, an artifact-style wrapper page for the smoke test
+levels/gallery.json, the font and map/ (layout.json and the painted sheets, v5 R3). Also writes <out>/wrap.html, an artifact-style wrapper page for the smoke test
 (tools/playtest-smoke.mjs); wrap.html is not published.
 
   python3 tools/playtest-bundle.py <git-ref> <out-dir> [title]     e.g. HEAD /tmp/sp-bundle "Sapper's Path v4.1 Playtest"
@@ -24,9 +24,9 @@ def show(ref, path, binary=False):
     return out if binary else out.decode("utf-8")
 
 
-def ls_src(ref):
-    out = subprocess.run(["git", "-C", REPO, "ls-tree", "--name-only", f"{ref}:{GAME}/src"], capture_output=True, check=True)
-    return [n for n in out.stdout.decode().split() if n.endswith(".js")]
+def ls_src(ref, folder="src", ext=(".js",)):
+    out = subprocess.run(["git", "-C", REPO, "ls-tree", "--name-only", f"{ref}:{GAME}/{folder}"], capture_output=True, check=True)
+    return [n for n in out.stdout.decode().split() if n.endswith(ext)]
 
 
 def write(out, path, data):
@@ -52,6 +52,8 @@ def main(ref, out, new_title=None):
     pat = re.compile(r'("[^"]+\.json)\?v=" \+ V_')
     for name in ls_src(ref):
         js, n = pat.subn(r'\1"', show(ref, "src/" + name))
+        js, m = re.subn(r' \+ "\?v=" \+ V_', "", js)  # v5 R3: the map sheets' image URLs
+        n += m
         if re.search(r'\?v=" \+ V_', js):
             sys.exit(f"src/{name}: a versioned call the pattern missed")
         write(out, "src/" + name, js)
@@ -60,6 +62,8 @@ def main(ref, out, new_title=None):
 
     for path in COPY:
         write(out, path, show(ref, path, binary=True))
+    for name in ls_src(ref, "map", (".json", ".jpg")):  # v5 R3: the journey map's layout and painted sheets
+        write(out, "map/" + name, show(ref, "map/" + name, binary=True))
 
     body = open(os.path.join(out, "index.html"), encoding="utf-8").read()
     write(out, "wrap.html", "<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\"></head><body>\n" + body + "\n</body></html>\n")
