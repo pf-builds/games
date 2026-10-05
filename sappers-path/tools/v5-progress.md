@@ -67,3 +67,34 @@ Source: the rules review's "Confirmed", "The feature ladder", "Tags mean how man
 
 ### State
 R2 complete. Levels, teaching, Gallery and page work landed together; close-out checks all pass (see `tools/v5-r2-notes.md` §8). Next is R3 (the journey map; `tools/v5-r2-notes.md` §10).
+
+# R3: the journey map (2026-10-04)
+
+Source: the rules review's "Refinement round 2" (map art) and "The feature ladder" (realms), Peter's pick of style B
+(painted parchment, seed 61; `game-research/sappers-path-v4/map-mockups/README.md`), `tools/v5-r2-notes.md` §4, §5, §10.
+Two pieces: (1) the map ART (13 painted sheets, layout, tools), (2) the map SCREEN in the game (next, separate brief).
+
+## How to resume (R3)
+
+1. Read this section, then `tools/map-gen/README.md` (prompts, seeds, strength, how to add a realm) and
+   `git log --oneline` (each piece is its own commit "Sapper's Path v5 R3: <piece>").
+2. Piece 1 runs SDXL base 1.0 locally, ONE image per run (`tools/map-gen/paint.py`), never in parallel with another
+   generation; check `memory_pressure` and `sysctl vm.swapusage` between runs. Full-size candidates live in
+   `/Users/peter/local-ai/outputs/sapper-v5-map/` (not in git).
+3. No change to `src/`, `levels/`, `config.json` level data or the engine in piece 1; `tools/freeze.js --require` must pass.
+
+## Piece 1: map art (sub-steps)
+
+| # | Step | State | Commit |
+|---|---|---|---|
+| 1a | Plan (`tools/map-gen/plan.json`: sheet split, realm palettes, prompts), guide generator (`guide.py`), painter (`paint.py`) | in progress | |
+| 1b | Sheet 1 strength tuning (stop rule: road must stay on the guide, look must match seed 61) | todo | |
+| 1c | Sheets 2-13 painted and picked (2-4 candidates each) | todo | |
+| 1d | `assemble.py`: JPEGs with baked seam crossfade, `map/layout.json` (nodes nudged onto the painted road, eggs, Goblin King), `contact.png`, `contact-seams.png` | todo | |
+| 1e | LICENSES.md row, README, freeze check | todo | |
+
+## Piece 2: map screen (next brief, not started)
+
+| # | Step | State | Commit |
+|---|---|---|---|
+| 2 | The map screen in place of the level grid and Gallery (see `tools/v5-r2-notes.md` §10) | todo | |

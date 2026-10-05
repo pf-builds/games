@@ -1,0 +1,72 @@
+{
+  "about": "Sapper's Path v5 journey map: every tunable number for guide.py, paint.py and assemble.py. Sheets read bottom to top; sheet 1 is the bottom of realm 1.",
+  "sheet": { "w": 768, "h": 1344, "overlap": 80, "roadX": 384, "seamStraight": 70, "stopMargin": 70 },
+  "road": { "width": 30, "edge": 4, "spurWidth": 28, "spurLen": 120, "spurClear": 38, "colors": [[88, 68, 44], [178, 160, 116], [192, 176, 132]], "fogThin": 0.8, "swing": [130, 240], "bends": [3, 4] },
+  "blend": 150,
+  "scatter": { "trees": 0, "tufts": 0 },
+  "out": {
+    "candidates": "/Users/peter/local-ai/outputs/sapper-v5-map",
+    "guides": "/Users/peter/local-ai/outputs/sapper-v5-map/guides",
+    "jpegQuality": 82,
+    "contactWidth": 300,
+    "seamCrop": 200
+  },
+  "assemble": { "restoreHold": 60, "restoreBand": 160, "roadMatch": 40, "roadNudge": 16, "nodeNudge": 22, "nudgeMinPx": 30,
+                "darkLum": 80, "eggRoadGap": 45, "eggNodeGap": 60, "eggEggGap": 140, "jpegMax": 88, "jpegMin": 70, "maxKB": 340,
+                "seamsQuantize": false },
+  "model": {
+    "id": "stabilityai/stable-diffusion-xl-base-1.0",
+    "steps": 40,
+    "guidance": 7.0,
+    "baseStrength": 0.88, "roadStrength": 0.5
+  },
+  "stylePrefix": "hand-drawn fantasy tabletop rpg map on aged parchment, top-down, ink linework with soft watercolor wash, muted earthy palette, ",
+  "roadPhrase": "a winding dirt road from bottom to top, ",
+  "neg": "text, letters, words, writing, labels, lettering, typography, numbers, signature, calligraphy, stamp, watermark, legend, title, compass rose, frame, border, photo, 3d render, cgi, perspective view, isometric, horizon, sky, people, modern, glossy, cartoon, anime, blurry, low quality",
+  "realms": [
+    {
+      "realm": 1, "name": "The Greenmarch",
+      "prompt": "green meadows fill the page edge to edge, a winding dirt road from bottom to top, a meandering river with a bridge, forest of tiny inked trees, small wooden palisade forts, farms",
+      "base": [[138, 150, 78], [112, 132, 70]],
+      "features": { "forest": 5, "river": 1, "farm": 3, "stockade": 2, "pond": 1 },
+      "eggs": ["woodpile", "grass", "fish"],
+      "sheets": [ { "levels": [1, 8] }, { "levels": [9, 16] }, { "levels": [17, 24] } ]
+    },
+    {
+      "realm": 2, "name": "Fenwater Vale",
+      "prompt": "river valley with green reed marsh and still pools fills the page edge to edge, a winding dirt road from bottom to top, small earth mounds with wooden towers ringed by moats, willow trees",
+      "base": [[120, 138, 82], [96, 120, 84]],
+      "features": { "forest": 3, "river": 2, "marsh": 4, "motte": 2, "pond": 2 },
+      "eggs": ["fish", "reeds", "mushrooms"],
+      "sheets": [ { "levels": [25, 32] }, { "levels": [33, 40] }, { "levels": [41, 49] } ]
+    },
+    {
+      "realm": 3, "name": "The Ironhollows",
+      "prompt": "grey stone hills and rocky crags fill the page edge to edge, a winding dirt road from bottom to top, small square stone keeps, dark pine trees, rusty red veins in the rock",
+      "base": [[128, 132, 100], [110, 114, 96]],
+      "features": { "pines": 4, "hills": 9, "crag": 5, "keep": 2, "river": 0 },
+      "eggs": ["raven", "glint", "mushrooms"],
+      "scatter": { "trees": 50, "tufts": 400, "tree": "pine" },
+      "sheets": [ { "levels": [50, 58] }, { "levels": [59, 66] }, { "levels": [67, 74] } ]
+    },
+    {
+      "realm": 4, "name": "Twinspire Reach",
+      "prompt": "rolling golden green high ground fills the page edge to edge, a winding dirt road from bottom to top, walled stone castles with twin round towers, hedgerows, groves of trees, fields",
+      "base": [[156, 152, 84], [132, 140, 76]],
+      "features": { "forest": 3, "farm": 3, "hold": 2, "hills": 2, "river": 1 },
+      "eggs": ["grass", "woodpile", "raven"],
+      "sheets": [ { "levels": [75, 82] }, { "levels": [83, 90] }, { "levels": [91, 99] } ]
+    },
+    {
+      "realm": 5, "name": "The Mistmoor",
+      "prompt": "misty grey green fens and moor fill the page edge to edge, a winding dirt road from bottom to top, dark still pools, reeds, dead trees, the upper half fades into thick pale fog",
+      "base": [[112, 122, 98], [94, 108, 92]],
+      "features": { "marsh": 3, "pond": 3, "deadtrees": 3 },
+      "eggs": ["wisp", "fish"],
+      "scatter": { "trees": 10, "tufts": 900 },
+      "fogFrom": 0.62,
+      "goblinKing": [470, 170],
+      "sheets": [ { "levels": [100, 100] } ]
+    }
+  ]
+}
