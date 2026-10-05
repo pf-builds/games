@@ -1,0 +1,890 @@
+{
+ "phone": {
+  "fresh": {
+   "counts": {
+    "node": 100,
+    "curlabel": 1,
+    "quest": 25,
+    "qicon": 25,
+    "egg": 26,
+    "banner": 5,
+    "fog": 1
+   },
+   "hits": [],
+   "edge": [],
+   "fs": {
+    "nodeNum": "27px \"Jersey 10\" c=rgb(34, 26, 38) bg=rgba(0, 0, 0, 0)",
+    "tag": "12px \"Jersey 10\" c=rgb(239, 255, 249) bg=rgb(31, 122, 111)",
+    "cur": "22px \"Jersey 10\" c=rgb(255, 226, 122) bg=rgba(20, 16, 28, 0.9)",
+    "curTag": "15px \"Jersey 10\" c=rgb(239, 255, 249) bg=rgb(31, 122, 111)",
+    "banner": "25px \"Jersey 10\" c=rgb(107, 42, 36) bg=rgba(0, 0, 0, 0)",
+    "bannerI": "15px \"Jersey 10\" c=rgb(90, 78, 60) bg=rgba(0, 0, 0, 0)",
+    "lore": "16px \"Jersey 10\" c=rgb(58, 48, 39) bg=rgba(0, 0, 0, 0)",
+    "prize": "13px \"Jersey 10\" c=rgb(42, 36, 48) bg=rgb(251, 245, 230)",
+    "fog": "20px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)",
+    "title": "30px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)"
+   },
+   "locked": {
+    "bg": "rgb(90, 84, 99)",
+    "color": "rgb(34, 26, 38)",
+    "border": "rgb(34, 26, 38)",
+    "shadow": "rgb(59, 51, 66) 0px -4px 0px 0px inset, rgba(0, 0, 0, 0.45) 0px 3px 0px 0px",
+    "filter": "none",
+    "opacity": "1"
+   },
+   "map": {
+    "sheets": 13,
+    "loaded": 4,
+    "k": 0.4883,
+    "colW": 375,
+    "cards": false,
+    "scrollTop": 7394,
+    "height": 669,
+    "world": 8063,
+    "focus": "e1-01",
+    "eggs": 0,
+    "tail": null
+   }
+  },
+  "quest": {
+   "counts": {
+    "node": 100,
+    "tag": 4,
+    "curlabel": 1,
+    "quest": 25,
+    "prize": 1,
+    "qicon": 24,
+    "egg": 26,
+    "banner": 5,
+    "fog": 1
+   },
+   "hits": [],
+   "edge": [],
+   "fs": {
+    "nodeNum": "21px \"Jersey 10\" c=rgb(34, 26, 38) bg=rgba(0, 0, 0, 0)",
+    "tag": "12px \"Jersey 10\" c=rgb(239, 255, 249) bg=rgb(31, 122, 111)",
+    "cur": "22px \"Jersey 10\" c=rgb(255, 226, 122) bg=rgba(20, 16, 28, 0.9)",
+    "curTag": "15px \"Jersey 10\" c=rgb(255, 226, 122) bg=rgba(0, 0, 0, 0)",
+    "banner": "25px \"Jersey 10\" c=rgb(107, 42, 36) bg=rgba(0, 0, 0, 0)",
+    "bannerI": "15px \"Jersey 10\" c=rgb(90, 78, 60) bg=rgba(0, 0, 0, 0)",
+    "lore": "16px \"Jersey 10\" c=rgb(58, 48, 39) bg=rgba(0, 0, 0, 0)",
+    "prize": "13px \"Jersey 10\" c=rgb(42, 36, 48) bg=rgb(251, 245, 230)",
+    "fog": "20px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)",
+    "title": "30px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)"
+   },
+   "locked": {
+    "bg": "rgb(90, 84, 99)",
+    "color": "rgb(34, 26, 38)",
+    "border": "rgb(34, 26, 38)",
+    "shadow": "rgb(59, 51, 66) 0px -4px 0px 0px inset, rgba(0, 0, 0, 0.45) 0px 3px 0px 0px",
+    "filter": "none",
+    "opacity": "1"
+   },
+   "map": {
+    "sheets": 13,
+    "loaded": 4,
+    "k": 0.4883,
+    "colW": 375,
+    "cards": false,
+    "scrollTop": 7221,
+    "height": 669,
+    "world": 8063,
+    "focus": "e1-07",
+    "eggs": 0,
+    "tail": null
+   }
+  },
+  "cur31": {
+   "counts": {
+    "node": 100,
+    "tag": 12,
+    "curlabel": 1,
+    "quest": 25,
+    "prize": 1,
+    "qicon": 18,
+    "egg": 26,
+    "banner": 5,
+    "fog": 1
+   },
+   "hits": [],
+   "edge": [],
+   "fs": {
+    "nodeNum": "21px \"Jersey 10\" c=rgb(34, 26, 38) bg=rgba(0, 0, 0, 0)",
+    "tag": "12px \"Jersey 10\" c=rgb(239, 255, 249) bg=rgb(31, 122, 111)",
+    "cur": "22px \"Jersey 10\" c=rgb(255, 226, 122) bg=rgba(20, 16, 28, 0.9)",
+    "curTag": "15px \"Jersey 10\" c=rgb(255, 226, 122) bg=rgba(0, 0, 0, 0)",
+    "banner": "25px \"Jersey 10\" c=rgb(107, 42, 36) bg=rgba(0, 0, 0, 0)",
+    "bannerI": "15px \"Jersey 10\" c=rgb(90, 78, 60) bg=rgba(0, 0, 0, 0)",
+    "lore": "16px \"Jersey 10\" c=rgb(58, 48, 39) bg=rgba(0, 0, 0, 0)",
+    "prize": "13px \"Jersey 10\" c=rgb(42, 36, 48) bg=rgb(251, 245, 230)",
+    "fog": "20px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)",
+    "title": "30px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)"
+   },
+   "locked": {
+    "bg": "rgb(90, 84, 99)",
+    "color": "rgb(34, 26, 38)",
+    "border": "rgb(34, 26, 38)",
+    "shadow": "rgb(59, 51, 66) 0px -4px 0px 0px inset, rgba(0, 0, 0, 0.45) 0px 3px 0px 0px",
+    "filter": "none",
+    "opacity": "1"
+   },
+   "map": {
+    "sheets": 13,
+    "loaded": 7,
+    "k": 0.4883,
+    "colW": 375,
+    "cards": false,
+    "scrollTop": 5380,
+    "height": 669,
+    "world": 8063,
+    "focus": "e2-31",
+    "eggs": 0,
+    "tail": null
+   }
+  },
+  "cur56": {
+   "counts": {
+    "node": 100,
+    "tag": 21,
+    "curlabel": 1,
+    "quest": 25,
+    "prize": 1,
+    "qicon": 12,
+    "egg": 26,
+    "banner": 5,
+    "fog": 1
+   },
+   "hits": [],
+   "edge": [],
+   "fs": {
+    "nodeNum": "21px \"Jersey 10\" c=rgb(34, 26, 38) bg=rgba(0, 0, 0, 0)",
+    "tag": "12px \"Jersey 10\" c=rgb(239, 255, 249) bg=rgb(31, 122, 111)",
+    "cur": "22px \"Jersey 10\" c=rgb(255, 226, 122) bg=rgba(20, 16, 28, 0.9)",
+    "curTag": "15px \"Jersey 10\" c=rgb(255, 226, 122) bg=rgba(0, 0, 0, 0)",
+    "banner": "25px \"Jersey 10\" c=rgb(107, 42, 36) bg=rgba(0, 0, 0, 0)",
+    "bannerI": "15px \"Jersey 10\" c=rgb(90, 78, 60) bg=rgba(0, 0, 0, 0)",
+    "lore": "16px \"Jersey 10\" c=rgb(58, 48, 39) bg=rgba(0, 0, 0, 0)",
+    "prize": "13px \"Jersey 10\" c=rgb(42, 36, 48) bg=rgb(251, 245, 230)",
+    "fog": "20px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)",
+    "title": "30px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)"
+   },
+   "locked": {
+    "bg": "rgb(90, 84, 99)",
+    "color": "rgb(34, 26, 38)",
+    "border": "rgb(34, 26, 38)",
+    "shadow": "rgb(59, 51, 66) 0px -4px 0px 0px inset, rgba(0, 0, 0, 0.45) 0px 3px 0px 0px",
+    "filter": "none",
+    "opacity": "1"
+   },
+   "map": {
+    "sheets": 13,
+    "loaded": 7,
+    "k": 0.4883,
+    "colW": 375,
+    "cards": false,
+    "scrollTop": 3556,
+    "height": 669,
+    "world": 8063,
+    "focus": "e3-56",
+    "eggs": 0,
+    "tail": null
+   }
+  },
+  "cur81": {
+   "counts": {
+    "node": 100,
+    "tag": 30,
+    "curlabel": 1,
+    "quest": 25,
+    "prize": 2,
+    "qicon": 5,
+    "egg": 26,
+    "banner": 5,
+    "fog": 1
+   },
+   "hits": [],
+   "edge": [],
+   "fs": {
+    "nodeNum": "21px \"Jersey 10\" c=rgb(34, 26, 38) bg=rgba(0, 0, 0, 0)",
+    "tag": "12px \"Jersey 10\" c=rgb(239, 255, 249) bg=rgb(31, 122, 111)",
+    "cur": "22px \"Jersey 10\" c=rgb(255, 226, 122) bg=rgba(20, 16, 28, 0.9)",
+    "curTag": "15px \"Jersey 10\" c=rgb(255, 226, 122) bg=rgba(0, 0, 0, 0)",
+    "banner": "25px \"Jersey 10\" c=rgb(107, 42, 36) bg=rgba(0, 0, 0, 0)",
+    "bannerI": "15px \"Jersey 10\" c=rgb(90, 78, 60) bg=rgba(0, 0, 0, 0)",
+    "lore": "16px \"Jersey 10\" c=rgb(58, 48, 39) bg=rgba(0, 0, 0, 0)",
+    "prize": "13px \"Jersey 10\" c=rgb(42, 36, 48) bg=rgb(251, 245, 230)",
+    "fog": "20px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)",
+    "title": "30px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)"
+   },
+   "locked": {
+    "bg": "rgb(90, 84, 99)",
+    "color": "rgb(34, 26, 38)",
+    "border": "rgb(34, 26, 38)",
+    "shadow": "rgb(59, 51, 66) 0px -4px 0px 0px inset, rgba(0, 0, 0, 0.45) 0px 3px 0px 0px",
+    "filter": "none",
+    "opacity": "1"
+   },
+   "map": {
+    "sheets": 13,
+    "loaded": 6,
+    "k": 0.4883,
+    "colW": 375,
+    "cards": false,
+    "scrollTop": 1611,
+    "height": 669,
+    "world": 8063,
+    "focus": "e4-81",
+    "eggs": 0,
+    "tail": null
+   }
+  },
+  "cur100": {
+   "counts": {
+    "node": 100,
+    "tag": 37,
+    "curlabel": 1,
+    "quest": 25,
+    "qicon": 1,
+    "egg": 26,
+    "banner": 5,
+    "fog": 1
+   },
+   "hits": [],
+   "edge": [],
+   "fs": {
+    "nodeNum": "21px \"Jersey 10\" c=rgb(34, 26, 38) bg=rgba(0, 0, 0, 0)",
+    "tag": "12px \"Jersey 10\" c=rgb(239, 255, 249) bg=rgb(31, 122, 111)",
+    "cur": "22px \"Jersey 10\" c=rgb(255, 226, 122) bg=rgba(20, 16, 28, 0.9)",
+    "curTag": "15px \"Jersey 10\" c=rgb(239, 255, 249) bg=rgb(31, 122, 111)",
+    "banner": "25px \"Jersey 10\" c=rgb(107, 42, 36) bg=rgba(0, 0, 0, 0)",
+    "bannerI": "15px \"Jersey 10\" c=rgb(90, 78, 60) bg=rgba(0, 0, 0, 0)",
+    "lore": "16px \"Jersey 10\" c=rgb(58, 48, 39) bg=rgba(0, 0, 0, 0)",
+    "prize": "13px \"Jersey 10\" c=rgb(42, 36, 48) bg=rgb(251, 245, 230)",
+    "fog": "20px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)",
+    "title": "30px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)"
+   },
+   "locked": null,
+   "map": {
+    "sheets": 13,
+    "loaded": 4,
+    "k": 0.4883,
+    "colW": 375,
+    "cards": false,
+    "scrollTop": 116,
+    "height": 669,
+    "world": 8063,
+    "focus": "e5-100",
+    "eggs": 0,
+    "tail": null
+   }
+  },
+  "top-100clear": {
+   "counts": {
+    "node": 100,
+    "tag": 38,
+    "quest": 26,
+    "prize": 1,
+    "egg": 26,
+    "banner": 5,
+    "fog": 1
+   },
+   "hits": [],
+   "edge": [],
+   "fs": {
+    "nodeNum": "21px \"Jersey 10\" c=rgb(34, 26, 38) bg=rgba(0, 0, 0, 0)",
+    "tag": "12px \"Jersey 10\" c=rgb(239, 255, 249) bg=rgb(31, 122, 111)",
+    "banner": "25px \"Jersey 10\" c=rgb(107, 42, 36) bg=rgba(0, 0, 0, 0)",
+    "bannerI": "15px \"Jersey 10\" c=rgb(90, 78, 60) bg=rgba(0, 0, 0, 0)",
+    "lore": "16px \"Jersey 10\" c=rgb(58, 48, 39) bg=rgba(0, 0, 0, 0)",
+    "prize": "13px \"Jersey 10\" c=rgb(42, 36, 48) bg=rgb(251, 245, 230)",
+    "fog": "20px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)",
+    "title": "30px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)"
+   },
+   "locked": null,
+   "map": {
+    "sheets": 13,
+    "loaded": 4,
+    "k": 0.4883,
+    "colW": 375,
+    "cards": false,
+    "scrollTop": 0,
+    "height": 669,
+    "world": 8063,
+    "focus": "tail",
+    "eggs": 0,
+    "tail": "g-met-436528"
+   }
+  },
+  "top-tail-mid": {
+   "counts": {
+    "node": 100,
+    "tag": 38,
+    "quest": 26,
+    "prize": 1,
+    "egg": 26,
+    "banner": 5,
+    "fog": 1,
+    "thumb": 15
+   },
+   "hits": [],
+   "edge": [],
+   "fs": {
+    "nodeNum": "21px \"Jersey 10\" c=rgb(34, 26, 38) bg=rgba(0, 0, 0, 0)",
+    "tag": "12px \"Jersey 10\" c=rgb(239, 255, 249) bg=rgb(31, 122, 111)",
+    "banner": "25px \"Jersey 10\" c=rgb(107, 42, 36) bg=rgba(0, 0, 0, 0)",
+    "bannerI": "15px \"Jersey 10\" c=rgb(90, 78, 60) bg=rgba(0, 0, 0, 0)",
+    "lore": "16px \"Jersey 10\" c=rgb(58, 48, 39) bg=rgba(0, 0, 0, 0)",
+    "prize": "13px \"Jersey 10\" c=rgb(42, 36, 48) bg=rgb(251, 245, 230)",
+    "fog": "20px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)",
+    "title": "30px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)"
+   },
+   "locked": null,
+   "map": {
+    "sheets": 13,
+    "loaded": 4,
+    "k": 0.4883,
+    "colW": 375,
+    "cards": false,
+    "scrollTop": 0,
+    "height": 669,
+    "world": 8063,
+    "focus": "tail",
+    "eggs": 0,
+    "tail": "g-ours-g16"
+   }
+  },
+  "top-tail-all": {
+   "counts": {
+    "node": 100,
+    "tag": 38,
+    "quest": 25,
+    "egg": 26,
+    "banner": 5,
+    "fog": 1,
+    "thumb": 35
+   },
+   "hits": [],
+   "edge": [],
+   "fs": {
+    "nodeNum": "21px \"Jersey 10\" c=rgb(34, 26, 38) bg=rgba(0, 0, 0, 0)",
+    "tag": "12px \"Jersey 10\" c=rgb(239, 255, 249) bg=rgb(31, 122, 111)",
+    "banner": "25px \"Jersey 10\" c=rgb(107, 42, 36) bg=rgba(0, 0, 0, 0)",
+    "bannerI": "15px \"Jersey 10\" c=rgb(90, 78, 60) bg=rgba(0, 0, 0, 0)",
+    "lore": "16px \"Jersey 10\" c=rgb(58, 48, 39) bg=rgba(0, 0, 0, 0)",
+    "prize": "13px \"Jersey 10\" c=rgb(42, 36, 48) bg=rgb(251, 245, 230)",
+    "fog": "20px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)",
+    "title": "30px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)"
+   },
+   "locked": null,
+   "map": {
+    "sheets": 13,
+    "loaded": 4,
+    "k": 0.4883,
+    "colW": 375,
+    "cards": false,
+    "scrollTop": 0,
+    "height": 669,
+    "world": 8063,
+    "focus": "tail",
+    "eggs": 0,
+    "tail": null
+   }
+  },
+  "banner": {
+   "counts": {
+    "node": 100,
+    "tag": 28,
+    "curlabel": 1,
+    "quest": 25,
+    "prize": 18,
+    "qicon": 7,
+    "egg": 26,
+    "banner": 5,
+    "fog": 1
+   },
+   "hits": [
+    "node[Level 56, cleared] x prize[Picture 14, not cleared yet, Hard, prize: one Quartermaster] 4x34",
+    "curlabel[jr-cur east] x egg[Something hides here: a woodpile] 44x10",
+    "egg[Something hides here: a rustling tuft] x banner[Realm 4, Twinspire Reach: show its story] 2x14",
+    "egg[Something hides here: a woodpile] x banner[Realm 4, Twinspire Reach: show its story] 44x25"
+   ],
+   "edge": [],
+   "fs": {
+    "nodeNum": "21px \"Jersey 10\" c=rgb(34, 26, 38) bg=rgba(0, 0, 0, 0)",
+    "tag": "12px \"Jersey 10\" c=rgb(239, 255, 249) bg=rgb(31, 122, 111)",
+    "cur": "22px \"Jersey 10\" c=rgb(255, 226, 122) bg=rgba(20, 16, 28, 0.9)",
+    "curTag": "15px \"Jersey 10\" c=rgb(239, 255, 249) bg=rgb(31, 122, 111)",
+    "banner": "25px \"Jersey 10\" c=rgb(107, 42, 36) bg=rgba(0, 0, 0, 0)",
+    "bannerI": "15px \"Jersey 10\" c=rgb(90, 78, 60) bg=rgba(0, 0, 0, 0)",
+    "lore": "16px \"Jersey 10\" c=rgb(58, 48, 39) bg=rgba(0, 0, 0, 0)",
+    "prize": "13px \"Jersey 10\" c=rgb(42, 36, 48) bg=rgb(251, 245, 230)",
+    "fog": "20px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)",
+    "title": "30px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)"
+   },
+   "locked": {
+    "bg": "rgb(90, 84, 99)",
+    "color": "rgb(34, 26, 38)",
+    "border": "rgb(34, 26, 38)",
+    "shadow": "rgb(59, 51, 66) 0px -4px 0px 0px inset, rgba(0, 0, 0, 0.45) 0px 3px 0px 0px",
+    "filter": "none",
+    "opacity": "1"
+   },
+   "map": {
+    "sheets": 13,
+    "loaded": 7,
+    "k": 0.4883,
+    "colW": 375,
+    "cards": false,
+    "scrollTop": 2079,
+    "height": 669,
+    "world": 8063,
+    "focus": "e4-75",
+    "eggs": 0,
+    "tail": null
+   }
+  }
+ },
+ "desk": {
+  "fresh": {
+   "counts": {
+    "node": 100,
+    "curlabel": 1,
+    "quest": 25,
+    "qicon": 25,
+    "egg": 26,
+    "banner": 5,
+    "fog": 1
+   },
+   "hits": [],
+   "edge": [],
+   "fs": {
+    "nodeNum": "27px \"Jersey 10\" c=rgb(34, 26, 38) bg=rgba(0, 0, 0, 0)",
+    "tag": "12px \"Jersey 10\" c=rgb(239, 255, 249) bg=rgb(31, 122, 111)",
+    "cur": "22px \"Jersey 10\" c=rgb(255, 226, 122) bg=rgba(20, 16, 28, 0.9)",
+    "curTag": "15px \"Jersey 10\" c=rgb(239, 255, 249) bg=rgb(31, 122, 111)",
+    "banner": "25px \"Jersey 10\" c=rgb(107, 42, 36) bg=rgba(0, 0, 0, 0)",
+    "bannerI": "15px \"Jersey 10\" c=rgb(90, 78, 60) bg=rgba(0, 0, 0, 0)",
+    "lore": "16px \"Jersey 10\" c=rgb(58, 48, 39) bg=rgba(0, 0, 0, 0)",
+    "prize": "13px \"Jersey 10\" c=rgb(42, 36, 48) bg=rgb(251, 245, 230)",
+    "fog": "20px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)",
+    "title": "30px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)"
+   },
+   "locked": {
+    "bg": "rgb(90, 84, 99)",
+    "color": "rgb(34, 26, 38)",
+    "border": "rgb(34, 26, 38)",
+    "shadow": "rgb(59, 51, 66) 0px -4px 0px 0px inset, rgba(0, 0, 0, 0.45) 0px 3px 0px 0px",
+    "filter": "none",
+    "opacity": "1"
+   },
+   "map": {
+    "sheets": 13,
+    "loaded": 3,
+    "k": 0.5599,
+    "colW": 430,
+    "cards": true,
+    "scrollTop": 8585,
+    "height": 660,
+    "world": 9245,
+    "focus": "e1-01",
+    "eggs": 0,
+    "tail": null
+   }
+  },
+  "quest": {
+   "counts": {
+    "node": 100,
+    "tag": 4,
+    "curlabel": 1,
+    "quest": 25,
+    "prize": 1,
+    "qicon": 24,
+    "egg": 26,
+    "banner": 5,
+    "fog": 1
+   },
+   "hits": [],
+   "edge": [],
+   "fs": {
+    "nodeNum": "21px \"Jersey 10\" c=rgb(34, 26, 38) bg=rgba(0, 0, 0, 0)",
+    "tag": "12px \"Jersey 10\" c=rgb(239, 255, 249) bg=rgb(31, 122, 111)",
+    "cur": "22px \"Jersey 10\" c=rgb(255, 226, 122) bg=rgba(20, 16, 28, 0.9)",
+    "curTag": "15px \"Jersey 10\" c=rgb(255, 226, 122) bg=rgba(0, 0, 0, 0)",
+    "banner": "25px \"Jersey 10\" c=rgb(107, 42, 36) bg=rgba(0, 0, 0, 0)",
+    "bannerI": "15px \"Jersey 10\" c=rgb(90, 78, 60) bg=rgba(0, 0, 0, 0)",
+    "lore": "16px \"Jersey 10\" c=rgb(58, 48, 39) bg=rgba(0, 0, 0, 0)",
+    "prize": "13px \"Jersey 10\" c=rgb(42, 36, 48) bg=rgb(251, 245, 230)",
+    "fog": "20px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)",
+    "title": "30px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)"
+   },
+   "locked": {
+    "bg": "rgb(90, 84, 99)",
+    "color": "rgb(34, 26, 38)",
+    "border": "rgb(34, 26, 38)",
+    "shadow": "rgb(59, 51, 66) 0px -4px 0px 0px inset, rgba(0, 0, 0, 0.45) 0px 3px 0px 0px",
+    "filter": "none",
+    "opacity": "1"
+   },
+   "map": {
+    "sheets": 13,
+    "loaded": 4,
+    "k": 0.5599,
+    "colW": 430,
+    "cards": true,
+    "scrollTop": 8345,
+    "height": 660,
+    "world": 9245,
+    "focus": "e1-07",
+    "eggs": 0,
+    "tail": null
+   }
+  },
+  "cur31": {
+   "counts": {
+    "node": 100,
+    "tag": 12,
+    "curlabel": 1,
+    "quest": 25,
+    "prize": 1,
+    "qicon": 18,
+    "egg": 26,
+    "banner": 5,
+    "fog": 1
+   },
+   "hits": [],
+   "edge": [],
+   "fs": {
+    "nodeNum": "21px \"Jersey 10\" c=rgb(34, 26, 38) bg=rgba(0, 0, 0, 0)",
+    "tag": "12px \"Jersey 10\" c=rgb(239, 255, 249) bg=rgb(31, 122, 111)",
+    "cur": "22px \"Jersey 10\" c=rgb(255, 226, 122) bg=rgba(20, 16, 28, 0.9)",
+    "curTag": "15px \"Jersey 10\" c=rgb(255, 226, 122) bg=rgba(0, 0, 0, 0)",
+    "banner": "25px \"Jersey 10\" c=rgb(107, 42, 36) bg=rgba(0, 0, 0, 0)",
+    "bannerI": "15px \"Jersey 10\" c=rgb(90, 78, 60) bg=rgba(0, 0, 0, 0)",
+    "lore": "16px \"Jersey 10\" c=rgb(58, 48, 39) bg=rgba(0, 0, 0, 0)",
+    "prize": "13px \"Jersey 10\" c=rgb(42, 36, 48) bg=rgb(251, 245, 230)",
+    "fog": "20px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)",
+    "title": "30px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)"
+   },
+   "locked": {
+    "bg": "rgb(90, 84, 99)",
+    "color": "rgb(34, 26, 38)",
+    "border": "rgb(34, 26, 38)",
+    "shadow": "rgb(59, 51, 66) 0px -4px 0px 0px inset, rgba(0, 0, 0, 0.45) 0px 3px 0px 0px",
+    "filter": "none",
+    "opacity": "1"
+   },
+   "map": {
+    "sheets": 13,
+    "loaded": 6,
+    "k": 0.5599,
+    "colW": 430,
+    "cards": true,
+    "scrollTop": 6233,
+    "height": 660,
+    "world": 9245,
+    "focus": "e2-31",
+    "eggs": 0,
+    "tail": null
+   }
+  },
+  "cur56": {
+   "counts": {
+    "node": 100,
+    "tag": 21,
+    "curlabel": 1,
+    "quest": 25,
+    "prize": 1,
+    "qicon": 12,
+    "egg": 26,
+    "banner": 5,
+    "fog": 1
+   },
+   "hits": [],
+   "edge": [],
+   "fs": {
+    "nodeNum": "21px \"Jersey 10\" c=rgb(34, 26, 38) bg=rgba(0, 0, 0, 0)",
+    "tag": "12px \"Jersey 10\" c=rgb(239, 255, 249) bg=rgb(31, 122, 111)",
+    "cur": "22px \"Jersey 10\" c=rgb(255, 226, 122) bg=rgba(20, 16, 28, 0.9)",
+    "curTag": "15px \"Jersey 10\" c=rgb(255, 226, 122) bg=rgba(0, 0, 0, 0)",
+    "banner": "25px \"Jersey 10\" c=rgb(107, 42, 36) bg=rgba(0, 0, 0, 0)",
+    "bannerI": "15px \"Jersey 10\" c=rgb(90, 78, 60) bg=rgba(0, 0, 0, 0)",
+    "lore": "16px \"Jersey 10\" c=rgb(58, 48, 39) bg=rgba(0, 0, 0, 0)",
+    "prize": "13px \"Jersey 10\" c=rgb(42, 36, 48) bg=rgb(251, 245, 230)",
+    "fog": "20px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)",
+    "title": "30px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)"
+   },
+   "locked": {
+    "bg": "rgb(90, 84, 99)",
+    "color": "rgb(34, 26, 38)",
+    "border": "rgb(34, 26, 38)",
+    "shadow": "rgb(59, 51, 66) 0px -4px 0px 0px inset, rgba(0, 0, 0, 0.45) 0px 3px 0px 0px",
+    "filter": "none",
+    "opacity": "1"
+   },
+   "map": {
+    "sheets": 13,
+    "loaded": 6,
+    "k": 0.5599,
+    "colW": 430,
+    "cards": true,
+    "scrollTop": 4142,
+    "height": 660,
+    "world": 9245,
+    "focus": "e3-56",
+    "eggs": 0,
+    "tail": null
+   }
+  },
+  "cur81": {
+   "counts": {
+    "node": 100,
+    "tag": 30,
+    "curlabel": 1,
+    "quest": 25,
+    "prize": 2,
+    "qicon": 5,
+    "egg": 26,
+    "banner": 5,
+    "fog": 1
+   },
+   "hits": [],
+   "edge": [],
+   "fs": {
+    "nodeNum": "21px \"Jersey 10\" c=rgb(34, 26, 38) bg=rgba(0, 0, 0, 0)",
+    "tag": "12px \"Jersey 10\" c=rgb(239, 255, 249) bg=rgb(31, 122, 111)",
+    "cur": "22px \"Jersey 10\" c=rgb(255, 226, 122) bg=rgba(20, 16, 28, 0.9)",
+    "curTag": "15px \"Jersey 10\" c=rgb(255, 226, 122) bg=rgba(0, 0, 0, 0)",
+    "banner": "25px \"Jersey 10\" c=rgb(107, 42, 36) bg=rgba(0, 0, 0, 0)",
+    "bannerI": "15px \"Jersey 10\" c=rgb(90, 78, 60) bg=rgba(0, 0, 0, 0)",
+    "lore": "16px \"Jersey 10\" c=rgb(58, 48, 39) bg=rgba(0, 0, 0, 0)",
+    "prize": "13px \"Jersey 10\" c=rgb(42, 36, 48) bg=rgb(251, 245, 230)",
+    "fog": "20px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)",
+    "title": "30px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)"
+   },
+   "locked": {
+    "bg": "rgb(90, 84, 99)",
+    "color": "rgb(34, 26, 38)",
+    "border": "rgb(34, 26, 38)",
+    "shadow": "rgb(59, 51, 66) 0px -4px 0px 0px inset, rgba(0, 0, 0, 0.45) 0px 3px 0px 0px",
+    "filter": "none",
+    "opacity": "1"
+   },
+   "map": {
+    "sheets": 13,
+    "loaded": 6,
+    "k": 0.5599,
+    "colW": 430,
+    "cards": true,
+    "scrollTop": 1912,
+    "height": 660,
+    "world": 9245,
+    "focus": "e4-81",
+    "eggs": 0,
+    "tail": null
+   }
+  },
+  "cur100": {
+   "counts": {
+    "node": 100,
+    "tag": 37,
+    "curlabel": 1,
+    "quest": 25,
+    "qicon": 1,
+    "egg": 26,
+    "banner": 5,
+    "fog": 1
+   },
+   "hits": [],
+   "edge": [],
+   "fs": {
+    "nodeNum": "21px \"Jersey 10\" c=rgb(34, 26, 38) bg=rgba(0, 0, 0, 0)",
+    "tag": "12px \"Jersey 10\" c=rgb(239, 255, 249) bg=rgb(31, 122, 111)",
+    "cur": "22px \"Jersey 10\" c=rgb(255, 226, 122) bg=rgba(20, 16, 28, 0.9)",
+    "curTag": "15px \"Jersey 10\" c=rgb(239, 255, 249) bg=rgb(31, 122, 111)",
+    "banner": "25px \"Jersey 10\" c=rgb(107, 42, 36) bg=rgba(0, 0, 0, 0)",
+    "bannerI": "15px \"Jersey 10\" c=rgb(90, 78, 60) bg=rgba(0, 0, 0, 0)",
+    "lore": "16px \"Jersey 10\" c=rgb(58, 48, 39) bg=rgba(0, 0, 0, 0)",
+    "prize": "13px \"Jersey 10\" c=rgb(42, 36, 48) bg=rgb(251, 245, 230)",
+    "fog": "20px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)",
+    "title": "30px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)"
+   },
+   "locked": null,
+   "map": {
+    "sheets": 13,
+    "loaded": 4,
+    "k": 0.5599,
+    "colW": 430,
+    "cards": true,
+    "scrollTop": 197,
+    "height": 660,
+    "world": 9245,
+    "focus": "e5-100",
+    "eggs": 0,
+    "tail": null
+   }
+  },
+  "top-100clear": {
+   "counts": {
+    "node": 100,
+    "tag": 38,
+    "quest": 26,
+    "prize": 1,
+    "egg": 26,
+    "banner": 5,
+    "fog": 1
+   },
+   "hits": [],
+   "edge": [],
+   "fs": {
+    "nodeNum": "21px \"Jersey 10\" c=rgb(34, 26, 38) bg=rgba(0, 0, 0, 0)",
+    "tag": "12px \"Jersey 10\" c=rgb(239, 255, 249) bg=rgb(31, 122, 111)",
+    "banner": "25px \"Jersey 10\" c=rgb(107, 42, 36) bg=rgba(0, 0, 0, 0)",
+    "bannerI": "15px \"Jersey 10\" c=rgb(90, 78, 60) bg=rgba(0, 0, 0, 0)",
+    "lore": "16px \"Jersey 10\" c=rgb(58, 48, 39) bg=rgba(0, 0, 0, 0)",
+    "prize": "13px \"Jersey 10\" c=rgb(42, 36, 48) bg=rgb(251, 245, 230)",
+    "fog": "20px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)",
+    "title": "30px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)"
+   },
+   "locked": null,
+   "map": {
+    "sheets": 13,
+    "loaded": 3,
+    "k": 0.5599,
+    "colW": 430,
+    "cards": true,
+    "scrollTop": 0,
+    "height": 660,
+    "world": 9245,
+    "focus": "tail",
+    "eggs": 0,
+    "tail": "g-met-436528"
+   }
+  },
+  "top-tail-mid": {
+   "counts": {
+    "node": 100,
+    "tag": 38,
+    "quest": 26,
+    "prize": 1,
+    "egg": 26,
+    "banner": 5,
+    "fog": 1,
+    "thumb": 15
+   },
+   "hits": [],
+   "edge": [],
+   "fs": {
+    "nodeNum": "21px \"Jersey 10\" c=rgb(34, 26, 38) bg=rgba(0, 0, 0, 0)",
+    "tag": "12px \"Jersey 10\" c=rgb(239, 255, 249) bg=rgb(31, 122, 111)",
+    "banner": "25px \"Jersey 10\" c=rgb(107, 42, 36) bg=rgba(0, 0, 0, 0)",
+    "bannerI": "15px \"Jersey 10\" c=rgb(90, 78, 60) bg=rgba(0, 0, 0, 0)",
+    "lore": "16px \"Jersey 10\" c=rgb(58, 48, 39) bg=rgba(0, 0, 0, 0)",
+    "prize": "13px \"Jersey 10\" c=rgb(42, 36, 48) bg=rgb(251, 245, 230)",
+    "fog": "20px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)",
+    "title": "30px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)"
+   },
+   "locked": null,
+   "map": {
+    "sheets": 13,
+    "loaded": 3,
+    "k": 0.5599,
+    "colW": 430,
+    "cards": true,
+    "scrollTop": 0,
+    "height": 660,
+    "world": 9245,
+    "focus": "tail",
+    "eggs": 0,
+    "tail": "g-ours-g16"
+   }
+  },
+  "top-tail-all": {
+   "counts": {
+    "node": 100,
+    "tag": 38,
+    "quest": 25,
+    "egg": 26,
+    "banner": 5,
+    "fog": 1,
+    "thumb": 35
+   },
+   "hits": [],
+   "edge": [],
+   "fs": {
+    "nodeNum": "21px \"Jersey 10\" c=rgb(34, 26, 38) bg=rgba(0, 0, 0, 0)",
+    "tag": "12px \"Jersey 10\" c=rgb(239, 255, 249) bg=rgb(31, 122, 111)",
+    "banner": "25px \"Jersey 10\" c=rgb(107, 42, 36) bg=rgba(0, 0, 0, 0)",
+    "bannerI": "15px \"Jersey 10\" c=rgb(90, 78, 60) bg=rgba(0, 0, 0, 0)",
+    "lore": "16px \"Jersey 10\" c=rgb(58, 48, 39) bg=rgba(0, 0, 0, 0)",
+    "prize": "13px \"Jersey 10\" c=rgb(42, 36, 48) bg=rgb(251, 245, 230)",
+    "fog": "20px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)",
+    "title": "30px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)"
+   },
+   "locked": null,
+   "map": {
+    "sheets": 13,
+    "loaded": 3,
+    "k": 0.5599,
+    "colW": 430,
+    "cards": true,
+    "scrollTop": 0,
+    "height": 660,
+    "world": 9245,
+    "focus": "tail",
+    "eggs": 0,
+    "tail": null
+   }
+  },
+  "banner": {
+   "counts": {
+    "node": 100,
+    "tag": 28,
+    "curlabel": 1,
+    "quest": 25,
+    "prize": 18,
+    "qicon": 7,
+    "egg": 26,
+    "banner": 5,
+    "fog": 1
+   },
+   "hits": [
+    "curlabel[jr-cur east] x egg[Something hides here: a woodpile] 44x6",
+    "egg[Something hides here: a woodpile] x banner[Realm 4, Twinspire Reach: show its story] 44x19"
+   ],
+   "edge": [],
+   "fs": {
+    "nodeNum": "21px \"Jersey 10\" c=rgb(34, 26, 38) bg=rgba(0, 0, 0, 0)",
+    "tag": "12px \"Jersey 10\" c=rgb(239, 255, 249) bg=rgb(31, 122, 111)",
+    "cur": "22px \"Jersey 10\" c=rgb(255, 226, 122) bg=rgba(20, 16, 28, 0.9)",
+    "curTag": "15px \"Jersey 10\" c=rgb(239, 255, 249) bg=rgb(31, 122, 111)",
+    "banner": "25px \"Jersey 10\" c=rgb(107, 42, 36) bg=rgba(0, 0, 0, 0)",
+    "bannerI": "15px \"Jersey 10\" c=rgb(90, 78, 60) bg=rgba(0, 0, 0, 0)",
+    "lore": "16px \"Jersey 10\" c=rgb(58, 48, 39) bg=rgba(0, 0, 0, 0)",
+    "prize": "13px \"Jersey 10\" c=rgb(42, 36, 48) bg=rgb(251, 245, 230)",
+    "fog": "20px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)",
+    "title": "30px \"Jersey 10\" c=rgb(243, 234, 216) bg=rgba(0, 0, 0, 0)"
+   },
+   "locked": {
+    "bg": "rgb(90, 84, 99)",
+    "color": "rgb(34, 26, 38)",
+    "border": "rgb(34, 26, 38)",
+    "shadow": "rgb(59, 51, 66) 0px -4px 0px 0px inset, rgba(0, 0, 0, 0.45) 0px 3px 0px 0px",
+    "filter": "none",
+    "opacity": "1"
+   },
+   "map": {
+    "sheets": 13,
+    "loaded": 6,
+    "k": 0.5599,
+    "colW": 430,
+    "cards": true,
+    "scrollTop": 2448,
+    "height": 660,
+    "world": 9245,
+    "focus": "e4-75",
+    "eggs": 0,
+    "tail": null
+   }
+  }
+ }
+}

@@ -112,3 +112,23 @@ painted spur is often missing, so draw the detour). Egg coins (10-15) are not in
 
 ### State
 R3 complete (art and screen). Next: critics on the map, then a real-phone pass; R4 builds levels 101-240 and their realms (LATER).
+
+## Piece 3: critic fixes (2026-10-04)
+
+Source: `tools/critic-v5-r3-functional.md`, `tools/critic-v5-r3-visual.md` (shots in `tools/critic-v5-r3-visual/`, PNGs
+not committed) and the orchestrator's fix brief (Peter's call on old saves: map cleared levels by slot number). One fix pass.
+Each row is its own commit "Sapper's Path v5 R3 fix: <what>". Notes: `tools/v5-r3-notes.md` §6.
+
+| # | Fix | State | Commit |
+|---|---|---|---|
+| 3.0 | Critic reports committed, this checklist | done | (with 3.2) |
+| 3.2 | Old saves keep levels by slot number (v4.3's e1-25, e2-50, e3-75, e4-100); tests on v4.2 and a v4.3-shaped save | done: test.js 458/0 | (this commit) |
+| 3.1 | Long tail: fog node, one short row of the latest won pictures, a "N pictures" chip opening a sheet of 44+ px tiles | todo | |
+| 3.3 | All-cleared state: map Play, phone bar and desktop card agree | todo | |
+| 3.4 | Desktop next-up quest: the open, unwon quest nearest the current level | todo | |
+| 3.5 | Tap-target spacing: Q15 off level 60, a test (48+ css px at 375 between every pair), fix what it finds | todo | |
+| 3.6 | Collisions: realm 4 banner vs egg and label; bubbles avoid route, cleared nodes, banners | todo | |
+| 3.7 | Q23 off the painted tower | todo | |
+| 3.8 | Play bar tag inside the button | todo | |
+| 3.9 | Cheap nits; skipped list in notes | todo | |
+| 3.10 | Close-out: `?v=33`, checks, shots `tools/shots-v5-r3/` + fix shots, notes §6, SPEC-v4 §9 | todo | |

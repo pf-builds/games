@@ -1203,16 +1203,16 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
   // Every shipped save shape (format 1: v3, v4, v4.1, v4.2), as each version's own code wrote it (tools/saves/make.js):
   // a mask with any difficulty bit becomes cleared, a best row keeps the fastest time and the fewest taps over the
   // difficulties won, coins/inventory/lives/settings kept, the difficulty dropped; it reads back unchanged.
-  const Meta = require("../src/meta.js");
+  const Meta = require("../src/meta.js"), slotId = (id) => (order.indexOf(id) >= 0 ? id : order.find((x) => /^e\d+-\d+$/.test(id) && +x.split("-")[1] === +id.split("-")[1]) || null);
   for (const ver of ["v3", "v4", "v4.1", "v4.2"]) {
     const raw = JSON.parse(require("fs").readFileSync(require("path").join(__dirname, "saves", ver + ".json"), "utf8")), sv = Save.sanitize(JSON.parse(JSON.stringify(raw)), order, gids, META);
-    // v5 R2: ids follow the slots; an old cleared id the re-laid campaign no longer has (e1-25) is dropped.
-    const wonIds = Object.keys(raw.done).filter((id) => raw.done[id] & 7 && order.indexOf(id) >= 0), galIds = Object.keys(raw.gal || {}).filter((id) => raw.gal[id] & 7 && gids.indexOf(id) >= 0);
-    const bestOk = Object.keys(raw.best || {}).filter((id) => order.indexOf(id) >= 0 || gids.indexOf(id) >= 0).every((id) => { const r = raw.best[id], m = (raw.done[id] || (raw.gal || {})[id]) | 0, b = sv.best[id], ms = [0, 1, 2].filter((k) => m & (1 << k) && r[k] > 0).map((k) => r[k]), tp = [0, 1, 2].filter((k) => m & (1 << k) && r[3 + k] > 0).map((k) => r[3 + k]);
+    // v5 R2 renamed four slots (e1-25 is e2-25 now); v5 R3 fix: an old id the page no longer has counts as the level in its slot.
+    const wonIds = Object.keys(raw.done).filter((id) => raw.done[id] & 7).map(slotId).filter(Boolean), galIds = Object.keys(raw.gal || {}).filter((id) => raw.gal[id] & 7 && gids.indexOf(id) >= 0);
+    const bestOk = Object.keys(raw.best || {}).filter((id) => slotId(id) || gids.indexOf(id) >= 0).every((id) => { const r = raw.best[id], m = (raw.done[id] || (raw.gal || {})[id]) | 0, b = sv.best[slotId(id) || id], ms = [0, 1, 2].filter((k) => m & (1 << k) && r[k] > 0).map((k) => r[k]), tp = [0, 1, 2].filter((k) => m & (1 << k) && r[3 + k] > 0).map((k) => r[3 + k]);
       return b && b[0] === Math.min(...ms) && b[1] === Math.min(...tp) && b[2] === r[6]; });
     const keep = raw.coins == null ? META.coins.start : raw.coins;
     eq([sv.v, Object.keys(sv.done).sort(), Object.keys(sv.gal).sort(), Object.values(sv.done).concat(Object.values(sv.gal)).every((x) => x === 1), bestOk, sv.coins, sv.inv, sv.settings, sv.last, Save.next(sv, order)],
-      [2, wonIds.sort(), galIds.sort(), true, true, keep, Object.assign({ ladder: 0, quartermaster: 0, scout: 0, recall: 0 }, raw.inv || {}, { volley: 0 }), { muted: raw.settings.muted, speed: raw.settings.speed || (raw.settings.fast ? 2 : 1), cb: raw.settings.cb === true }, Save.isOpen(sv, order, raw.last) ? raw.last : null, order.find((id, i) => !sv.done[id] && (i === 0 || sv.done[order[i - 1]])) || order[order.length - 1]],
+      [2, wonIds.sort(), galIds.sort(), true, true, keep, Object.assign({ ladder: 0, quartermaster: 0, scout: 0, recall: 0 }, raw.inv || {}, { volley: 0 }), { muted: raw.settings.muted, speed: raw.settings.speed || (raw.settings.fast ? 2 : 1), cb: raw.settings.cb === true }, Save.isOpen(sv, order, slotId(raw.last)) ? slotId(raw.last) : null, order.find((id, i) => !sv.done[id] && (i === 0 || sv.done[order[i - 1]])) || order[order.length - 1]],
       "save v4.3: the " + ver + " save (" + wonIds.length + " levels, " + galIds.length + " pictures) migrates: cleared by id, bests the best, coins and settings kept, difficulty dropped");
     eq(Save.sanitize(JSON.parse(JSON.stringify(sv)), order, gids, META), sv, "save v4.3: the migrated " + ver + " save reads back unchanged (format 2)");
   }
@@ -1339,6 +1339,20 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   ok(far.every((d) => d >= 60), "map bridges: " + MC.bridges.length + " on real road samples, each at least 60 sheet px from every node (closest " + Math.round(Math.min(...far)) + ")");
   const top = LAY.sheets[LAY.sheets.length - 1], firsts = LAY.sheets.filter((s, k) => k === 0 || LAY.sheets[k - 1].realm !== s.realm).map((s) => s.sheet);
   ok(MC.tail.at > 0 && MC.tail.at < top.road.length && top.goblinKing && firsts.length === require("../config.json").eras.length, "map: the long-tail node sits on the top sheet's road (sample " + MC.tail.at + "); one realm banner per realm (sheets " + firsts.join(", ") + ")");
+  // v5 R3 fix, old saves by slot (Peter's call): a v4.3 save (format 2, v4.3's ids: e1-25, e2-50, e3-75, e4-100 sat at
+  // the end of their eras) with all 100 cleared and pictures 1-25 won loads with all 100 cleared, picture 25 and the long
+  // tail open, its bests and last moved to the renamed ids, and no first clear left to pay on the four renamed levels.
+  const v43 = Array.from({ length: 100 }, (_, i) => "e" + Math.ceil((i + 1) / 25) + "-" + String(i + 1).padStart(2, "0")), ren = v43.filter((id) => order.indexOf(id) < 0);
+  const raw43 = { v: 2, done: {}, gal: {}, settings: { muted: false, speed: 1, cb: false }, last: "e4-100", coins: 900, inv: {}, best: {}, lives: { n: 5, at: 0 } };
+  v43.forEach((id, i) => { raw43.done[id] = 1; raw43.best[id] = [30000 + i, 20 + (i % 9), 45]; }); gids.slice(0, 25).forEach((id) => { raw43.gal[id] = 1; raw43.best[id] = [40000, 30, 60]; });
+  const m43 = Save.sanitize(JSON.parse(JSON.stringify(raw43)), order, gids, META), t43 = J.tail(m43, order, gids, after), news = ren.map((id) => order[+id.split("-")[1] - 1]);
+  eq([ren, news, Object.keys(m43.done).length, news.map((id) => m43.done[id]), news.map((id) => m43.best[id]), m43.last, Save.next(m43, order), J.focus(m43, order), Save.questOpen(m43, order, gids, after, gids[24]), t43.next, news.map((id) => Save.record(m43, id))],
+    [["e1-25", "e2-50", "e3-75", "e4-100"], ["e2-25", "e3-50", "e4-75", "e5-100"], 100, [1, 1, 1, 1], ren.map((id) => raw43.best[id]), "e5-100", order[99], "tail", true, t43.ids[0], [false, false, false, false]],
+    "old saves by slot: a v4.3 save's e1-25, e2-50, e3-75, e4-100 load as e2-25, e3-50, e4-75, e5-100 (cleared, bests, last); all 100 cleared, picture 25 open, the long tail's first node open; no first clear left to pay");
+  const v42 = Save.sanitize(JSON.parse(require("fs").readFileSync(require("path").join(__dirname, "saves", "v4.2.json"), "utf8")), order, gids, META);
+  eq([Object.keys(v42.done).length, v42.last, J.focus(v42, order), news.map((id) => Save.record(v42, id))], [100, "e5-100", "tail", [false, false, false, false]], "old saves by slot: the shipped v4.2 save (format 1) keeps all 100 cleared; last moves to e5-100; the map centres on the fog node");
+  const both = Save.sanitize({ v: 2, done: { "e1-25": 1, "e2-25": 1, "e9-999": 1, x: 1 }, best: { "e1-25": [9, 9, 9], "e2-25": [1, 2, 3] } }, order, gids, META);
+  eq([Object.keys(both.done).sort(), both.best["e2-25"], Save.sanitize(m43, order, gids, META)], [["e2-25"], [1, 2, 3], m43], "old saves by slot: an id the page has wins over a renamed one; ids with no slot are dropped; a migrated save reads back unchanged");
 }
 
 console.log(pass + " passed, " + fail + " failed");

@@ -26,6 +26,11 @@
 // fastest time, the fewest taps, the coins] over the difficulties it was won on; settings.diff (and v3's fast, read as
 // speed 2) are dropped; coins, inventory, lives and the other settings are kept. Sanitized and clamped as before; the
 // next write stores format 2.
+// v5 R3 fix (Peter's call, 2026-10-04): old saves keep their levels by slot number. A level id is "e<era>-<n>", n its
+// slot in the campaign; R2's re-lay moved four slots into the next era (v4.3's e1-25, e2-50, e3-75, e4-100 are e2-25,
+// e3-50, e4-75, e5-100 now). On load, a done, best or last id the page no longer has counts as the level in its slot n
+// (an id the page has wins over a renamed one), so a migrated level is cleared once and its first-clear coins never pay
+// again.
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
@@ -48,10 +53,19 @@
   // lives). Unknown ids are dropped. v4.3: format 1 (any raw.v but 2) is migrated as the header says.
   const cleared = (o, id) => own(o, id) && typeof o[id] === "number" && isFinite(o[id]) && ((o[id] | 0) & ALL) !== 0;
   const least = (a) => { let m = 0; for (const v of a) if (v > 0 && (!m || v < m)) m = v; return m; }; // the smallest nonzero (0: none)
+  // v5 R3 fix: a level id's slot number (0: not a level id), and the save's keys moved onto the page's ids by slot.
+  const slotOf = (id) => { const m = /^e\d{1,2}-(\d{1,4})$/.exec(id); return m ? +m[1] : 0; };
+  function bySlot(o, order) {
+    if (!isObj(o)) return {}; const has = new Set(order || []), at = new Map(); for (const id of has) if (slotOf(id)) at.set(slotOf(id), id);
+    const r = {}; for (const k of Object.keys(o)) if (has.has(k) || !at.has(slotOf(k))) r[k] = o[k];
+    for (const k of Object.keys(o)) { const t = !has.has(k) && at.get(slotOf(k)); if (t && !own(r, t)) r[t] = o[k]; }
+    return r;
+  }
   function sanitize(raw, order, gal, meta) {
     const s = fresh(meta);
     if (!isObj(raw)) return s;
     try {
+      raw = Object.assign({}, raw, { done: bySlot(raw.done, order), best: bySlot(raw.best, order) }); if (typeof raw.last === "string") raw.last = Object.keys(bySlot({ [raw.last]: 1 }, order))[0];
       const v1 = raw.v !== VERSION, d = isObj(raw.done) ? raw.done : {}, g = isObj(raw.gal) ? raw.gal : {}, mask = {};
       for (const id of order || []) if (cleared(d, id)) { s.done[id] = 1; mask[id] = v1 ? (d[id] | 0) & ALL : ALL; }
       for (const id of gal || []) if (cleared(g, id)) { s.gal[id] = 1; mask[id] = v1 ? (g[id] | 0) & ALL : ALL; }
