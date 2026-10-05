@@ -150,7 +150,7 @@
       focus: { on: false, x: 0, y: 0, r: 1 },
       gob: { on: false, t0: 0, x: 0, y: 0, done: false },
       hooks: { pop: null, deposit: null, gate: null, tower: null, shot: null, hit: null, collapse: null, tap: null, free: null, move: null, reveal: null, link: null, unlock: null, power: null },
-      lockKey: -1, lockOpen: true, pal: null, palKey: "", pic: false, towerTop: new Float32Array(MAXT),
+      lockKey: -1, lockOpen: true, pal: null, palKey: "", liquid: null, pic: false, towerTop: new Float32Array(MAXT),
       // Critics 1 fix: rings (V.hot from the page, the loud mask worked out per board change, each ring's ease) and bins.
       hot: 0, ringsLoud: false, hotVer: -1, hotFor: -1, hotMask: 0, shootM: 0, ringA: new Float32Array(MAXT), ringHitT: new Float64Array(MAXT).fill(-1e12), binT: new Float64Array(E.NMAT).fill(-1e12),
     };
@@ -212,7 +212,7 @@
     }
     // v4.1: a water stud (the picture's moat): the flat stud in board.pic.water with a light wave across it; never a block.
     function waterStud(s) {
-      const c = mk(s, s), x = c.getContext("2d"), P = K.pic, T = K.stud, sw = Math.min(s >> 2, Math.max(1, Math.round(V.dpr * T.seamCss))), a = sw >> 1, f = s - sw;
+      const c = mk(s, s), x = c.getContext("2d"), P = V.liquid || K.pic, T = K.stud, sw = Math.min(s >> 2, Math.max(1, Math.round(V.dpr * T.seamCss))), a = sw >> 1, f = s - sw; // v5 R4: a lava moat in its own colours
       x.fillStyle = toneHex(P.water, T.seam); x.fillRect(0, 0, s, s); rr(x, a, a, f, f, Math.max(0.5, f * T.radius)); x.fillStyle = P.water; x.fill();
       if (s >= 5) { x.strokeStyle = P.wave; x.lineWidth = Math.max(1, Math.round(s * 0.09)); x.beginPath(); x.moveTo(a + f * 0.18, a + f * 0.58); x.quadraticCurveTo(a + f * 0.34, a + f * 0.38, a + f * 0.5, a + f * 0.56); x.quadraticCurveTo(a + f * 0.66, a + f * 0.74, a + f * 0.82, a + f * 0.52); x.stroke(); }
       return c;
@@ -270,10 +270,11 @@
     // ---- level and layout -------------------------------------------------------------------------------------------
     // pal (v4 M4, optional): the level's own colours, {id: {c}}; other ids keep config's. A new palette drops the sprite
     // caches (the page's layout() rebuilds them before the next draw).
-    function setLevel(B, S, pal) {
+    // v5 R4: liquid (optional), the level's moat drawn as another liquid (config board.pic.liquids, e.g. lava).
+    function setLevel(B, S, pal, liquid) {
       V.B = B; V.S = S; V.w = B.w; V.h = B.h; V.n = B.n; V.pic = !!B.pic;
-      const P = C.mats.map((m, k) => (pal && pal[k] ? pal[k].c : m ? m.c : FX.dustColor)), key = P.join();
-      if (key !== V.palKey) { V.pal = P; V.palKey = key; for (let m = 1; m < E.NMAT; m++) if (m !== IRON) COL[m] = P[m]; V.sprites = null; }
+      const lq = (liquid && K.pic.liquids && K.pic.liquids[liquid]) || null, P = C.mats.map((m, k) => (pal && pal[k] ? pal[k].c : m ? m.c : FX.dustColor)), key = P.join() + (lq ? "|" + liquid : "");
+      if (key !== V.palKey) { V.pal = P; V.palKey = key; V.liquid = lq; for (let m = 1; m < E.NMAT; m++) if (m !== IRON) COL[m] = P[m]; V.sprites = null; }
       if (!V.disp || V.disp.length < B.n) { V.hid = new Uint8Array(B.n); V.disp = new Int8Array(B.n); V.dist = new Int16Array(B.n); V.q = new Int32Array(B.n); V.towerOfCell = new Int8Array(B.n); }
       if (V.idR.length < S.SMAX) V.idR = new Int32Array(S.SMAX);
       V.biteMs = S.T.biteMs; V.knockMs = S.T.knockMs;

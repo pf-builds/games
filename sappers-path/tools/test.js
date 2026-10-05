@@ -1338,7 +1338,7 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   const far = MC.bridges.map(([sh, i]) => { const S = LAY.sheets[sh - 1], p = S && S.road[i]; if (!p || i < 2 || i > S.road.length - 3) return -1; return Math.min(...S.levels.concat(S.quests).map((n) => Math.hypot(n.x - p[0], n.y - p[1]))); });
   ok(far.every((d) => d >= 60), "map bridges: " + MC.bridges.length + " on real road samples, each at least 60 sheet px from every node (closest " + Math.round(Math.min(...far)) + ")");
   const top = LAY.sheets[LAY.sheets.length - 1], firsts = LAY.sheets.filter((s, k) => k === 0 || LAY.sheets[k - 1].realm !== s.realm).map((s) => s.sheet);
-  ok(MC.tail.at > 0 && MC.tail.at < top.road.length && top.goblinKing && firsts.length === require("../config.json").eras.length, "map: the long-tail node sits on the top sheet's road (sample " + MC.tail.at + "); one realm banner per realm (sheets " + firsts.join(", ") + ")");
+  ok(MC.tail.at > 0 && MC.tail.at < top.road.length && top.goblinKing && firsts.length === new Set(LAY.sheets.map((s) => s.realm)).size && firsts.length <= require("../config.json").eras.length, "map: the long-tail node sits on the top sheet's road (sample " + MC.tail.at + "); one realm banner per realm the sheets reach (sheets " + firsts.join(", ") + "; v5 R4: config names " + require("../config.json").eras.length + " realms, the R4 map adds the sheets for the rest)");
   // v5 R3 fix: the next-up quest is the open, unwon one nearest the current level; the side picker keeps a bubble off the
   // route and off a banner, not just off nodes.
   const NQ = Save.fresh(META); for (let i = 0; i < 55; i++) NQ.done[order[i]] = 1; for (let i = 0; i < 3; i++) NQ.gal[gids[i]] = 1;

@@ -63,7 +63,7 @@ if (require.main !== module) return;
 if (process.argv.includes("--scenes")) {
   const PIC = require("./pic.js"), Q = require("./bake-config.json").picture, gilt = V3.mats[require("../src/engine.js").GILT].c; let bad = 0;
   for (const [k, S] of Object.entries(Q.scenes)) for (const e of S.eras) {
-    const roles = ["ink", "gilt"].concat(Q.eras[e].must, Q.eras[e].opt).filter((x, i, a) => a.indexOf(x) === i && (S.drop || []).indexOf(x) < 0);
+    const roles = ["ink", "gilt"].concat(Q.eras[e].must, Q.eras[e].opt, Q.eras[e].extra || []).filter((x, i, a) => a.indexOf(x) === i && (S.drop || []).indexOf(x) < 0);
     const col = (x) => (x === "ink" ? Q.ink : x === "gilt" ? gilt : (S.c && S.c[x]) || Q.roles[x].c[0]), nm = (x) => (x === "gilt" ? "gilt" : (S.n && S.n[x]) || Q.roles[x].name);
     let w = null; for (let a = 0; a < roles.length; a++) for (let b = a + 1; b < roles.length; b++) { const d = PIC.de(col(roles[a]), col(roles[b])), f = PIC.fadeGap(col(roles[a]), col(roles[b])), s = Math.min(d - Q.minDE, f - Q.fadeDE); if (!w || s < w.s) w = { s, d, f, p: roles[a] + "/" + roles[b] }; }
     const names = roles.map(nm), dup = names.filter((x, i) => names.indexOf(x) !== i), ok = w.s >= 0 && !dup.length; if (!ok) bad++;

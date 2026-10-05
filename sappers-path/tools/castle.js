@@ -357,7 +357,272 @@ function era4(r, P, has, S) {
   sky(C, r, S, Math.floor(ph * 0.2), has, pick(r, [-1, 1]));
   return { C, gates, towers, style: fam + (inner ? "-moat" : "") + "-" + towers.length + "t" };
 }
-const ERAS = { 1: era1, 2: era2, 3: era3, 4: era4 };
+// ---- v5 R4: the realms 5-8 (levels 100-200) -------------------------------------------------------------------------------
+// Same picture style (full board, bold outline, 1-cell frame, entry at the bottom) with each realm's own look. Their props
+// are small pixel drawings (ART: rows of role letters at one unit a letter, drawn sz(1) cells a letter), so nothing the
+// eras 1-4 draw (PROPS, foreground) changes. Every new painter takes the features the level's plan asks for:
+//   P.moat (false: no water; the bank path still runs under the fort), P.gates (0: the bridge over the moat is open ground,
+//   a causeway; 1: a drawbridge, its key in a lodge in front; 2: and a portcullis in the fort's door, its key in a wall),
+//   P.towers ([a, b] archer towers, or 0: none; slate, each its own 4-connected group standing on the bank path),
+//   P.range (their reach), P.liquid ("lava": the moat is drawn as lava; tools/castle.js only records it on the level).
+// The picture's roles keep their keys (sky, cloud, grass, ...); the realm's scenes rename and recolour them (picture.scenes:
+// fog and mist, ash and embers, moss and glowcaps, gold and scrap), so the colour gate and palette check work unchanged.
+const ART = {
+  reeds: { rows: ["w.w", "t.t", "ttt"], need: ["tree", "wood"] },
+  rush: { rows: ["t.w.", "t.t.", "tttt"], need: ["tree", "wood"] },
+  willow: { rows: [".tt.", "tttt", "t.tt"], need: ["tree"] },
+  rocks: { rows: [".s.", "sss"], need: ["stone"] },
+  pole: { rows: ["wb", "wb", "w."], need: ["wood", "banner"] },
+  stack: { rows: [".h.", "hhh", "hhh"], need: ["thatch"] },
+  boat: { rows: ["w...", "wwww"], need: ["wood"] },
+  lavarock: { rows: [".r.", "srs"], need: ["stone", "roof"] },
+  vent: { rows: [".h.", ".g.", "ggg"], need: ["thatch", "grass"] },
+  spire: { rows: [".s.", ".s.", "sss"], need: ["stone"] },
+  brazier: { rows: ["hrh", ".s.", "sss"], need: ["thatch", "roof", "stone"] },
+  shroom: { rows: ["bbb", ".s.", ".s."], need: ["banner", "stone"] },
+  shrooms: { rows: ["bb.b", "s..s", "s.ss"], need: ["banner", "stone"] },
+  fern: { rows: ["g.g", ".gg", "ggg"], need: ["grass"] },
+  stump: { rows: [".t.", "www"], need: ["wood", "tree"] },
+  lantern: { rows: [".h", "wh", "w."], need: ["wood", "thatch"] },
+  spikes: { rows: ["w.w", "w.w", "www"], need: ["wood"] },
+  scrap: { rows: [".a..", "swaw"], need: ["stone", "wood", "ashlar"] },
+  hoard: { rows: [".h.", "hhh"], need: ["thatch"] },
+  gtent: { rows: [".r.", "rrr", "rkr"], need: ["roof"] },
+};
+const ARTKEY = { w: "wood", t: "tree", s: "stone", b: "banner", h: "thatch", r: "roof", e: "earth", g: "grass", a: "ashlar", k: "ink", c: "cloud" };
+// Draw an ART drawing with its bottom row on yBase and its left column x0, each letter u x u cells (subjects).
+function art(C, kind, x0, yBase, u) {
+  const rows = ART[kind].rows, h = rows.length;
+  for (let y = 0; y < h; y++) for (let x = 0; x < rows[y].length; x++) { const ch = rows[y][x]; if (ch !== ".") C.rect(x0 + x * u, yBase - (h - 1 - y) * u - u + 1, x0 + x * u + u - 1, yBase - (h - 1 - y) * u, ARTKEY[ch], 1); }
+}
+// Pools of water in the foreground (rows y0..y1, never within 2 cells of the sides or of the entry's middle columns, so the
+// frame's walk round the picture and the entry stay open): n flat ellipses.
+function pools(C, r, y0, y1, n) {
+  const mid = (C.pw - 1) / 2;
+  for (let k = 0; k < n; k++) { const rx = ri(r, sz(1.5), sz(3)), cx = ri(r, rx + 2, C.pw - 3 - rx), cy = ri(r, y0 + 1, Math.max(y0 + 1, y1 - 1)); if (Math.abs(cx - mid) < rx + sz(2)) continue;
+    C.blob(cx + 0.5, cy + 0.5, rx, Math.max(1, sz(0.6)), "~", 0, (v, x, y) => v === "grass" && x > 1 && x < C.pw - 2 && y >= y0 && y <= y1 && !C.sub(x, y)); }
+}
+// The realm's foreground and moat (shared by eras 5-8): the foreground (grass with the realm's props, F.kinds, and with a
+// gate the lodge holding its key), the moat with its bridge (a drawbridge when P.gates, else open ground: a causeway) and
+// the bank path, or with P.moat false the bank path alone. Returns {bank (the bank path's row), gates, key (the lodge's key
+// when it has no drawbridge to open), bx (the bridge's middle)}.
+function front(C, r, P, has, S, F) {
+  const mid = (C.pw - 1) / 2, fgH = ri(r, P.fg[0], P.fg[1]), yFg = C.ph - fgH, wet = P.moat !== false, yM = wet ? yFg - P.moatH : yFg, bw = par(sz(2.5), C.pw), u = sz(1), gates = [];
+  C.rect(0, yFg, C.pw - 1, C.ph - 1, "grass", 0);
+  const taken = [], free = (x0, x1) => x0 >= 0 && x1 < C.pw && !taken.some(([a, b]) => x1 >= a - 1 && x0 <= b + 1) && !(x1 >= mid - 1.5 && x0 <= mid + 1.5);
+  let key = null;
+  if (P.gates > 0) { const w = sz(4), lh = sz(2); for (let t = 0; t < 8 && !key; t++) { const side = r() < 0.5 ? -1 : 1, x0 = side < 0 ? Math.round(mid) - sz(3) - w - ri(r, 0, sz(3)) : Math.round(mid) + sz(3) + ri(r, 0, sz(3)); if (free(x0 - 1, x0 + w)) { key = lodge(C, x0, C.ph - 1, w, lh, F.lodge, F.lodgeRoof, fgH - lh); taken.push([x0 - 1, x0 + w]); } } }
+  const kinds = F.kinds.filter((k) => ART[k].need.every(has) && ART[k].rows.length * u <= fgH);
+  const n = kinds.length ? ri(r, P.props[0], P.props[1]) : 0;
+  for (let k = 0, placed = 0; k < 6 * n && placed < n; k++) { const kind = kinds[ri(r, 0, kinds.length - 1)], w = ART[kind].rows[0].length * u, x0 = ri(r, 0, C.pw - w); if (!free(x0, x0 + w - 1)) continue; art(C, kind, x0, C.ph - 1, u); taken.push([x0, x0 + w - 1]); placed++; }
+  if (F.pools) pools(C, r, yFg, C.ph - 2, ri(r, F.pools[0], F.pools[1]));
+  const bx = mid + 0.5 + ri(r, -sz(2), sz(2));
+  if (wet) { const g = moat(C, yM, yFg - 1, bx, bw); if (P.gates > 0 && key) { g.key = key; gates.push(g); key = null; } else for (let y = yM; y < yFg; y++) for (let x = 0; x < C.pw; x++) if (C.get(x, y) === "iron") C.set(x, y, ",", 0); }
+  else C.rect(0, yM - 1, C.pw - 1, yM - 1, ",", 0);
+  return { bank: yM - 1, gates, key, bx };
+}
+// Archer towers (slate) standing on the bank path: at each spot in turn (left columns), h tall, until n are up; each one is
+// kept clear of the others (its own 4-connected group). roof: a cone (a role) or null; lean: the crooked shift a row
+// (era 8). Returns the towers ({at, r}).
+function archers(C, r, spots, n, tw, hOf, bank, P, roof, lean) {
+  const out = [];
+  for (let i = 0; i < spots.length && out.length < n; i++) { const tx = spots[i], h2 = hOf(i); const ms = lean ? lean * Math.floor((h2 - 1) / sz(3)) : 0, xa = tx + Math.min(0, ms), xb = tx + tw - 1 + Math.max(0, ms);
+    if (xa < 0 || xb >= C.pw || !clearOf(C, xa, xb, bank - h2, bank - 1, "slate")) continue;
+    if (lean) { for (let y = bank - 1, k = 0; y >= bank - h2; y--, k++) { const dx = lean * Math.floor(k / sz(3)); C.rect(tx + dx, y, tx + dx + tw - 1, y, "slate", 1); if (k % sz(3) === sz(1.5) && k < h2 - sz(1)) C.set(tx + dx + ((tw - 1) >> 1), y, "ink", 1); }
+      const dx = lean * Math.floor((h2 - 1) / sz(3)); merlons(C, tx + dx, tx + dx + tw - 1, bank - h2, "slate"); }
+    else tower(C, tx, tw, bank - h2, bank - 1, "slate", { roof, slits: true });
+    out.push({ at: [tx + 1, bank - 2], r: +(P.range[0] + r() * (P.range[1] - P.range[0])).toFixed(1) }); }
+  return out;
+}
+// Mist banks: n long flat ellipses of `role` (mist, ash, ...) across the background between rows y0 and y1 (onto sky,
+// distant hills and trees: background only).
+function banks(C, r, n, y0, y1, role) { for (let k = 0; k < n; k++) C.blob(ri(r, 0, C.pw - 1) + 0.5, ri(r, y0, Math.max(y0, y1)) + 0.5, ri(r, sz(4), sz(9)), Math.max(1, sz(0.7)), role, 0, (v, x, y) => !C.sub(x, y) && (v === "sky" || v === "tree" || v === "grass" || v === "stone" || v === "earth")); }
+// A thatched hut on row yBase: walls (w x hh, `walls`), a door (ink) and a pitched roof of `roof` overhanging a cell each
+// side; style "cone" draws a pointed roof, "low" a flat-topped one.
+function hut(C, x0, w, yBase, hh, walls, roof, style) {
+  C.rect(x0, yBase - hh + 1, x0 + w - 1, yBase, walls, 1);
+  const rh = style === "low" ? sz(1.5) : Math.ceil((w + 2) / 2), o = 1;
+  for (let k = 0; k < rh; k++) { const a = x0 - o + (style === "low" ? (k >> 1) : k), b = x0 + w - 1 + o - (style === "low" ? (k >> 1) : k); if (a > b) break; C.rect(a, yBase - hh - k, b, yBase - hh - k, roof, 1); }
+  const dw = Math.max(1, sz(1)), dx = x0 + ((w - dw) >> 1); C.rect(dx, yBase - Math.min(hh - 1, sz(1.5)) + 1, dx + dw - 1, yBase, "ink", 1);
+  return yBase - hh - rh + 1; // its top row
+}
+
+// Era 5, The Mistmoor: a fort on stilts over the fen. From the bottom: the fen (reeds, pools, a lodge), the moat and its
+// causeway or drawbridge, the bank path, the stilts in a reed bed, the timber platform, and on it the long hall and huts
+// under reed thatch, a watchtower with a pennant and a low fence of stakes; behind, fog over distant willows and banks of
+// mist. Archer towers are watch huts on tall legs at the platform's ends. A second gate is the hall's door (its key in the
+// platform). Layout varies: the platform's span (full or narrower), the hall's place, one or two huts, the tower's side.
+function era5(r, P, has, S) {
+  const pw = ri(r, P.w[0], P.w[1]), ph = ri(r, P.h[0], P.h[1]), C = canvas(pw, ph), u = sz(1);
+  const F = front(C, r, P, has, S, { lodge: has("earth") ? "earth" : "wood", lodgeRoof: has("thatch") ? "thatch" : null, kinds: ["reeds", "rush", "willow", "rocks", "pole", "stack", "boat"], pools: P.pools });
+  const bank = F.bank, gates = F.gates, stH = ri(r, P.stiltH[0], P.stiltH[1]), plB = bank - stH, plTop = plB - u + 1, base = plTop - 1;
+  const span = pick(r, P.spans), cw = span >= 1 ? pw : Math.max(sz(14), Math.round(pw * span)), cx0 = span >= 1 ? 0 : ri(r, 1, pw - 1 - cw), cx1 = cx0 + cw - 1, ccx = (cx0 + cx1) / 2;
+  const horizonY = plTop - ri(r, sz(2), sz(5));
+  if (has("tree")) horizon(C, r, horizonY, "tree", false); else C.rect(0, horizonY, pw - 1, bank - 1, "grass", 0);
+  if (has("cloud")) banks(C, r, ri(r, P.mist[0], P.mist[1]), Math.round(ph * 0.12), horizonY + sz(1), "cloud");
+  // The stilts in the mist under the platform (reeds at their feet), a cross beam; the platform on them.
+  C.rect(cx0, plB + 1, cx1, bank - 1, has("cloud") ? "cloud" : has("tree") ? "tree" : "grass", 1); // mist under the platform (a subject: no outline inside it)
+  if (has("tree") && has("cloud")) for (let x = cx0; x <= cx1; x++) { const t = ri(r, 0, sz(1.5)); if (t) C.rect(x, bank - t, x, bank - 1, "tree", 1); } // reeds at its foot
+  const gap = ri(r, sz(3), sz(4)), st0 = cx0 + (span >= 1 ? sz(1) : 0), legs = [];
+  for (let x = st0; x <= cx1 - u + 1; x += gap) { C.rect(x, plB + 1, x + u - 1, bank - 1, "wood", 1); legs.push(x); }
+  if (legs.length > 2) { const y = plB + 1 + ri(r, sz(1), stH - sz(3)); C.rect(legs[0], y, legs[legs.length - 1] + u - 1, y, "wood", 1); } // a cross beam
+  C.rect(cx0, plTop, cx1, plB, "wood", 1);
+  // On the platform: the long hall (daub walls, reed thatch), a watchtower on the wider side, huts where they fit; then the
+  // fence of stakes in front of their feet (a gap at the hall's door).
+  const walls = has("earth") ? "earth" : "wood", thatch = has("thatch") ? "thatch" : walls, used = [], fits = (a, b) => a >= cx0 + sz(3) && b <= cx1 - sz(3) && !used.some(([p, q]) => b >= p - 1 && a <= q + 1);
+  const hw = Math.min(cw - sz(8), ri(r, P.hallW[0], P.hallW[1])) | 1, hx = Math.round(Math.max(cx0 + sz(3), Math.min(cx1 - sz(3) - hw + 1, ccx - hw / 2 + pick(r, [-1, 0, 1]) * Math.round(cw * 0.12))));
+  const roomTop = P.skyMin + sz(1), cone = Math.ceil((hw + 2) / 2), hh = Math.max(sz(1.5), Math.min(ri(r, sz(2.5), sz(3.5)), base - roomTop - cone));
+  hut(C, hx, hw, base, hh, walls, thatch, "cone"); used.push([hx - 1, hx + hw]);
+  if (hh >= sz(2.5)) slits(C, hx + 1, hx + hw - 2, base - hh + sz(1), false);
+  const doorX = hx + ((hw - u) >> 1), left = hx - cx0 > cx1 - (hx + hw), wtw = sz(2);
+  for (let t = 0; t < 6; t++) { const wx = left ? ri(r, cx0 + sz(3), hx - wtw - sz(1)) : ri(r, hx + hw + sz(1), cx1 - sz(3) - wtw); if (!fits(wx - 1, wx + wtw)) continue;
+    tower(C, wx, wtw, Math.max(roomTop + sz(2), base - ri(r, P.watchH[0], P.watchH[1])), base, "wood", { roof: thatch, flag: has("banner") && "banner", slits: true }); used.push([wx - 1, wx + wtw]); break; }
+  for (let k = 0, n = ri(r, 1, 3), t = 0; k < n && t < 12; t++) { const w = (ri(r, sz(3), sz(4)) | 1), x0 = ri(r, cx0 + sz(3), cx1 - sz(3) - w); if (!fits(x0 - 1, x0 + w)) continue; hut(C, x0, w, base, ri(r, sz(1.5), sz(2)), walls, thatch, "cone"); used.push([x0 - 1, x0 + w]); k++; }
+  const sh = sz(1.5); for (let x = cx0; x <= cx1; x++) if (x < doorX - 1 || x > doorX + u) { const v = C.get(x, base); if (!C.sub(x, base) || v === "ink") C.rect(x, base - sh + 1 + ((((x - cx0) / u) | 0) & 1) * u, x, base, "wood", 1); }
+  // A second gate: the hall's door, its key in the platform away from the door.
+  if (P.gates > 1 && gates.length) { const dy0 = base - sz(1.5) + 1; C.rect(doorX, dy0, doorX + u - 1, base, "iron", 1); const kx = doorX + (r() < 0.5 ? -1 : 1) * ri(r, sz(3), sz(6)); if (kx > cx0 && kx < cx1) { C.set(kx, plB, "gilt", 1); gates.push({ at: [doorX, dy0], key: [kx, plB] }); } else C.rect(doorX, dy0, doorX + u - 1, base, "ink", 1); }
+  // Watch huts on tall legs (the archer towers): at the platform's ends (or just outside a narrow one), then beside the hall.
+  const tw = 2 * sz(1.5) - 1, nT = P.towers ? ri(r, P.towers[0], P.towers[1]) : 0;
+  const spots = (span >= 1 ? [0, pw - tw] : [cx0 - tw - 1, cx1 + 2]).concat([hx - tw - 1, hx + hw + 1]);
+  const towers = archers(C, r, spots, nT, tw, (i) => stH + u + (i < 2 ? ri(r, sz(3), sz(5)) : sz(2)), bank, P, thatch, 0);
+  sky(C, r, S, Math.floor(ph * 0.25), has, left ? 1 : -1);
+  return { C, gates, towers, style: (span < 1 ? "narrow-" : "") + "hall" + used.length + "-" + towers.length + "t" };
+}
+
+// Era 6, Emberwatch Crags: a basalt fort on volcanic heights. The moat is a lava channel (P.liquid "lava") with a basalt
+// causeway or an iron drawbridge; above the bank path a rock plinth (scoria), the basalt curtain with ember-lit windows and
+// a gatehouse, the keep (square, tall or twin) with sharp battlements; behind it jagged crags and a volcano with a glowing
+// crater and a lava flow, under an ember sky with ash clouds. Archer towers stand at the curtain's ends and by the gate.
+function era6(r, P, has, S) {
+  const pw = ri(r, P.w[0], P.w[1]), ph = ri(r, P.h[0], P.h[1]), C = canvas(pw, ph), mid = (pw - 1) / 2, u = sz(1);
+  const F = front(C, r, P, has, S, { lodge: "stone", lodgeRoof: has("roof") ? "roof" : null, kinds: ["lavarock", "vent", "spire", "rocks", "brazier"], pools: null });
+  const bank = F.bank, gates = F.gates, plH = ri(r, P.plinth[0], P.plinth[1]), cH = ri(r, P.curtainH[0], P.curtainH[1]), cBase = bank - plH, cTop = cBase - cH + 1;
+  const body = has("stone") ? "stone" : "earth", glow = has("thatch") ? "thatch" : "ink";
+  // The volcano (left or right, behind), crags along the horizon, ash clouds.
+  const vSide = pick(r, [-1, 1]), vx = vSide < 0 ? ri(r, sz(3), Math.round(pw * 0.25)) : ri(r, Math.round(pw * 0.75), pw - 1 - sz(3)), vTop = ri(r, P.skyMin + sz(1), Math.round(ph * 0.2));
+  const rock = "grass"; // the ash and rock of the heights
+  for (let y = vTop; y < cTop; y++) { const hw = Math.round(sz(1.5) + (y - vTop) * 0.9); C.rect(vx - hw, y, vx + hw, y, rock, 1); } // the volcano (a subject: outlined against the sky)
+  if (has("thatch")) C.rect(vx - sz(1), vTop, vx + sz(1), vTop + 1, "thatch", 1);
+  if (has("roof")) { let x = vx; for (let y = vTop + 2; y < cTop; y++) { x += (r() < 0.5 ? 0 : vSide < 0 ? 1 : -1); C.rect(x, y, x + u - 1, y, "roof", 1); } }
+  for (let k = 0, n = ri(r, 2, 4); k < n; k++) { const px = ri(r, 0, pw - 1), h = ri(r, sz(2), sz(5)); for (let j = 0; j <= h; j++) for (let x = px - Math.round((h - j) * 0.7); x <= px + Math.round((h - j) * 0.7); x++) if (skyish(C.get(x, cTop - j))) C.set(x, cTop - j, rock, 0); } // crags
+  C.rect(0, cTop, pw - 1, bank - 1, rock, 0);
+  if (has("cloud")) { banks(C, r, ri(r, 1, 3), sz(1), vTop + sz(2), "cloud"); C.blob(vx + 0.5, vTop - sz(1.5), sz(2.5), sz(1.2), "cloud", 0, skyish); }
+  // The plinth of rock the fort stands on (the bank path's row stays open in front).
+  const span = pick(r, P.spans), cw = span >= 1 ? pw : Math.max(sz(15), Math.round(pw * span)), cx0 = span >= 1 ? 0 : ri(r, 1, pw - 1 - cw), cx1 = cx0 + cw - 1, ccx = (cx0 + cx1) / 2;
+  C.rect(cx0, cBase + 1, cx1, bank - 1, rock, 1);
+  for (let x = cx0; x <= cx1; x += ri(r, sz(2), sz(4))) C.set(x, cBase + 1 + ri(r, 0, Math.max(0, plH - 2)), "ink", 1);
+  // The keep behind the curtain, then the curtain, its ember windows and the gatehouse.
+  const ks = pick(r, ["square", "tall", "twin"]), gw = par(sz(4.5), pw), gx = Math.max(cx0 + sz(3), Math.min(cx1 - sz(3) - gw, Math.round(ccx - (gw - 1) / 2) + pick(r, [-1, 0, 1]) * Math.round(cw * 0.15))), gcx = gx + (gw - 1) / 2;
+  const kwr = ri(r, P.keepW[0], P.keepW[1]) - (ks === "tall" ? sz(2) : 0), kw = Math.min(cw - sz(4), kwr - ((kwr + pw) & 1)), up = ks === "tall" ? sz(2) : 0;
+  const kh = Math.max(sz(4), Math.min(ri(r, P.keepH[0], P.keepH[1]) + up, cTop - sz(2) - P.skyMin - up)), kTop = cTop - kh;
+  const kcx = Math.max(cx0 + kw / 2 + 1, Math.min(cx1 - kw / 2 - 1, ccx - vSide * ri(r, Math.round(cw * 0.1), Math.round(cw * 0.22)))); // away from the volcano
+  keep(C, ks, kcx, ks === "twin" ? Math.min(cw - sz(4), kw + sz(3)) : kw, kTop, cTop, body, null, has("banner") && "banner");
+  for (let y = kTop + sz(2); y < cTop - u; y += sz(3)) for (let x = Math.round(kcx - kw / 2) + sz(1); x < Math.round(kcx + kw / 2) - u; x += sz(2.5)) if (C.get(x, y) === body) C.rect(x, y, x + u - 1, y + u - 1, glow, 1);
+  curtain(C, cx0, cx1, cTop, cBase, body, 0);
+  for (let x = cx0 + sz(2); x < cx1 - u; x += ri(r, sz(3), sz(4))) if (Math.abs(x - gcx) > gw / 2 + u) C.rect(x, cTop + u, x + u - 1, cTop + u + sz(1.5) - 1, glow, 1);
+  C.rect(gx, cTop - u, gx + gw - 1, cBase, body, 1); merlons(C, gx, gx + gw - 1, cTop - u, body); arch(C, gcx, gw - 2 * u, cBase, sz(2.5));
+  if (P.gates > 1 && gates.length) { const ay = cBase - sz(2.5) + 1; C.rect(Math.round(gcx - (gw - 2 * u - 1) / 2), ay, Math.round(gcx - (gw - 2 * u - 1) / 2) + gw - 2 * u - 1, cBase, "iron", 1); const kx = gx + (r() < 0.5 ? -sz(3) : gw + sz(2)), ky = cTop + sz(3);
+    if (kx > cx0 && kx < cx1 && C.get(kx, ky) === body) { C.set(kx, ky, "gilt", 1); gates.push({ at: [Math.round(gcx - (gw - 2 * u - 1) / 2), ay], key: [kx, ky] }); } else C.rect(Math.round(gcx - (gw - 2 * u - 1) / 2), ay, Math.round(gcx - (gw - 2 * u - 1) / 2) + gw - 2 * u - 1, cBase, "ink", 1); }
+  const tw = 2 * sz(1.5) - 1, nT = P.towers ? ri(r, P.towers[0], P.towers[1]) : 0, spots = (span >= 1 ? [0, pw - tw] : [cx0, cx1 - tw + 1]).concat([gx - tw - 1, gx + gw + 1]);
+  const towers = archers(C, r, spots, nT, tw, (i) => plH + cH + (i < 2 ? ri(r, sz(2), sz(4)) : sz(1)), bank, P, null, 0);
+  sky(C, r, S, Math.floor(ph * 0.2), has, -vSide);
+  return { C, gates, towers, style: ks + (span < 1 ? "-narrow" : "") + (vSide < 0 ? "-vl" : "-vr") + "-" + towers.length + "t" };
+}
+
+// Era 7, The Shrouded Weald: a stronghold of living wood in an enchanted forest by moonlight. Behind: great trees (trunks
+// and canopies) under a night sky with the moon and stars; in the middle a vast hollow tree grown into a keep (flared
+// roots, glowing windows, leaf-roofed turrets on its branches) inside a palisade of living stakes wrapped in vines; glowing
+// mushrooms in front and on the walls. The moat is a forest stream. Archer towers are barkwood towers with leafy cones.
+function era7(r, P, has, S) {
+  const pw = ri(r, P.w[0], P.w[1]), ph = ri(r, P.h[0], P.h[1]), C = canvas(pw, ph), mid = (pw - 1) / 2, u = sz(1);
+  const F = front(C, r, P, has, S, { lodge: has("wood") ? "wood" : "stone", lodgeRoof: has("roof") ? "roof" : null, kinds: ["shroom", "shrooms", "fern", "stump", "lantern", "rocks"], pools: P.pools });
+  const bank = F.bank, gates = F.gates, wood = has("wood") ? "wood" : "stone", leaf = has("tree") ? "tree" : "grass", glow = has("thatch") ? "thatch" : "ink", roofR = has("roof") ? "roof" : leaf;
+  // The forest behind: rounded canopies on the horizon, a few dark trunks under them.
+  const fy = ri(r, Math.round(ph * 0.35), Math.round(ph * 0.5)); horizon(C, r, fy, leaf, false);
+  for (let k = 0, n = ri(r, 2, 4); k < n; k++) { const x = ri(r, 1, pw - 1 - u); C.rect(x, fy + ri(r, 0, sz(2)), x + u - 1, bank - 1, wood, 0); }
+  // The great tree: a trunk kw wide from the bank path up, flared roots, a crown of overlapping canopies, vines, glowing
+  // windows and a door between two lanterns, glowcaps at its roots.
+  const kw0 = ri(r, P.keepW[0], P.keepW[1]), kw = kw0 - ((kw0 + pw) & 1), kcx = mid + pick(r, [-1, 0, 1]) * Math.round(pw * 0.16), kx0 = Math.round(kcx - (kw - 1) / 2), kx1 = kx0 + kw - 1;
+  const kTop = ri(r, P.skyMin + sz(3), Math.round(ph * 0.28));
+  for (let k = 0, n = ri(r, 3, 4); k < n; k++) C.blob(kcx + (k - (n - 1) / 2) * sz(3.2) + ri(r, -1, 1) + 0.5, kTop - ri(r, 0, sz(1.5)) + 0.5, ri(r, sz(3), sz(4.5)), ri(r, sz(2), sz(2.8)), leaf, 1);
+  C.rect(kx0, kTop, kx1, bank - 1, wood, 1);
+  for (let k = 1; k <= sz(2); k++) { C.rect(kx0 - k, bank - 1 - sz(2) + k, kx0 - 1, bank - 1, wood, 1); C.rect(kx1 + 1, bank - 1 - sz(2) + k, kx1 + k, bank - 1, wood, 1); }
+  // Branches each side with a pod house on the end (a leaf roof, a glowing window).
+  const pods = [];
+  for (const side of [-1, 1]) for (let lv = 0; lv < ri(r, 1, 2); lv++) { const by = kTop + sz(2.5) + lv * sz(3.5) + ri(r, 0, sz(0.5)), len = ri(r, sz(4), sz(6)), bx0 = side < 0 ? Math.max(sz(1), kx0 - len) : kx1 + 1, bx1 = side < 0 ? kx0 - 1 : Math.min(pw - 1 - sz(1), kx1 + len);
+    if (bx1 - bx0 < sz(3) || by > bank - sz(4)) continue;
+    C.rect(bx0, by, bx1, by + u - 1, wood, 1); const hw = sz(2.5) | 1, hx = side < 0 ? bx0 : bx1 - hw + 1; C.rect(hx, by - sz(2), hx + hw - 1, by - 1, wood, 1);
+    for (let k = 0; k < Math.ceil((hw + 2) / 2); k++) C.rect(hx - 1 + k, by - sz(2) - 1 - k, hx + hw - k, by - sz(2) - 1 - k, roofR, 1);
+    C.rect(hx + (hw >> 1), by - sz(1.5), hx + (hw >> 1), by - sz(1.5) + u - 1, glow, 1); pods.push(hx); }
+  for (let y = kTop + sz(2); y < bank - sz(5); y += sz(3)) { const x = ri(r, kx0 + sz(1), kx1 - sz(2)); C.rect(x, y, x + u - 1, y + u - 1, glow, 1); }
+  if (has("grass")) for (let k = 0, n = ri(r, 2, 4); k < n; k++) { const x = ri(r, kx0, kx1), y0 = kTop - ri(r, 0, sz(1)), y1 = y0 + ri(r, sz(3), sz(7)); C.rect(x, y0, x, y1, "grass", 1); }
+  const dw = sz(2), dx0 = Math.round(kcx - dw / 2); arch(C, dx0 + (dw - 1) / 2, dw, bank - 1, sz(3));
+  if (has("thatch")) for (const x of [dx0 - sz(1), dx0 + dw]) C.set(x, bank - sz(2.5), "thatch", 1);
+  if (has("banner") && has("stone")) for (const x of [kx0 - sz(2) - 1, kx1 + 2]) if (x > 0 && x + 3 < pw) art(C, "shroom", x, bank - 1, 1);
+  // The palisade of living stakes left and right of the tree, vines on it, glowcaps on its top.
+  const pH = ri(r, P.palH[0], P.palH[1]), pTop = bank - pH;
+  for (const [a, b] of [[0, kx0 - sz(3) - 1], [kx1 + sz(3) + 1, pw - 1]]) if (b - a >= sz(2)) { stakes(C, a, b, pTop, bank - 1, wood);
+    if (has("grass")) for (let x = a; x <= b; x++) if (r() < 0.3) { const y0 = pTop + ri(r, u, pH - u); C.rect(x, y0, x, Math.min(bank - 1, y0 + u), "grass", 1); }
+    if (has("banner") && has("stone") && b - a > sz(4)) art(C, "shroom", ri(r, a, b - 3), pTop - 1, 1); }
+  if (P.gates > 1 && gates.length) { const ay = bank - sz(3); C.rect(dx0, ay, dx0 + dw - 1, bank - 1, "iron", 1); const kx = Math.round(kcx) + (r() < 0.5 ? -1 : 1) * ri(r, sz(1), Math.max(sz(1), (kw >> 1) - sz(1))), ky = kTop + sz(1);
+    if (C.get(kx, ky) === wood) { C.set(kx, ky, "gilt", 1); gates.push({ at: [dx0, ay], key: [kx, ky] }); } else C.rect(dx0, ay, dx0 + dw - 1, bank - 1, "ink", 1); }
+  const tw = 2 * sz(1.5) - 1, nT = P.towers ? ri(r, P.towers[0], P.towers[1]) : 0, spots = [0, pw - tw, kx0 - sz(3) - tw - 1, kx1 + sz(3) + 2];
+  const towers = archers(C, r, spots, nT, tw, (i) => pH + (i < 2 ? ri(r, sz(3), sz(5)) : sz(2)), bank, P, leaf, 0);
+  sky(C, r, S, Math.floor(ph * 0.25), has, kcx < mid ? 1 : -1);
+  return { C, gates, towers, style: (kcx < mid - 1 ? "left" : kcx > mid + 1 ? "right" : "mid") + "-tree" + pods.length + "-" + towers.length + "t" };
+}
+
+// Era 8, The Goblin King's Throne: the goblin capital, a crooked fortress of mismatched stone and scrap. A muck moat, a
+// curtain whose battlements go up and down, patched with odd stone (ashlar) and scrap plates (planks), crooked towers that
+// lean, spikes and goblin banners; the throne keep in the middle, tallest, with the gold crown on top; a storm sky. The boss
+// (P.inner): a second, inner moat with its own drawbridge in front of the throne keep.
+function era8(r, P, has, S) {
+  const pw = ri(r, P.w[0], P.w[1]), ph = ri(r, P.h[0], P.h[1]), C = canvas(pw, ph), mid = (pw - 1) / 2, u = sz(1);
+  const F = front(C, r, P, has, S, { lodge: has("wood") ? "wood" : "stone", lodgeRoof: has("roof") ? "roof" : null, kinds: ["spikes", "scrap", "hoard", "gtent", "pole", "rocks"], pools: null });
+  const bank = F.bank, gates = F.gates, body = has("stone") ? "stone" : "ashlar", patch = has("ashlar") ? "ashlar" : body, plank = has("wood") ? "wood" : body;
+  const cH = ri(r, P.curtainH[0], P.curtainH[1]), cTop = bank - cH;
+  if (r() < P.horizon) horizon(C, r, cTop - ri(r, sz(1), sz(3)), has("grass") ? "grass" : body, true);
+  // The throne keep (tall, the crown on top) and two crooked side keeps, drawn first (the curtain stands in front). The
+  // boss's inner moat runs over the curtain's battlements and the gatehouse's.
+  let bank2 = cTop - 1;
+  const inner = P.inner && cTop - sz(3) - 1 - P.moatH - sz(4) >= P.skyMin + (has("thatch") ? sz(2) : 0) + sz(1);
+  if (inner) { const y1 = cTop - sz(3) - 1, y0 = y1 - P.moatH + 1; const g2 = moat(C, y0, y1, mid + 0.5, par(sz(2.5), pw)); bank2 = y0 - 1; g2.key = null; gates.push(g2); }
+  const kw0 = ri(r, P.keepW[0], P.keepW[1]), kw = kw0 - ((kw0 + pw) & 1), kcx = mid + (inner ? 0 : pick(r, [-1, 0, 1]) * sz(2)), crownH = has("thatch") ? sz(2) : 0;
+  const kTop = Math.max(P.skyMin + crownH + sz(1), (inner ? bank2 : cTop) - ri(r, P.keepH[0], P.keepH[1]));
+  keep(C, "square", kcx, kw, kTop, (inner ? bank2 - 1 : cTop), body, null, null);
+  if (crownH) { const cx0 = Math.round(kcx - sz(2.5)), cx1 = Math.round(kcx + sz(2.5)); C.rect(cx0, kTop - sz(1) - u, cx1, kTop - sz(1) - 1 + u - u, "thatch", 1); for (let x = cx0; x <= cx1; x += sz(1.25)) C.rect(x, kTop - sz(1) - crownH, x, kTop - sz(1) - u, "thatch", 1); }
+  for (let k = 0, n = ri(r, 2, 4); k < n; k++) { const pwid = ri(r, sz(1.5), sz(3)), px = ri(r, Math.round(kcx - kw / 2) + 1, Math.round(kcx + kw / 2) - pwid - 1), py = ri(r, kTop + sz(2), (inner ? bank2 : cTop) - sz(2)); C.rect(px, py, px + pwid - 1, py + pwid - 1, patch, 1); }
+  const kdw = sz(2), kdx = Math.round(kcx - kdw / 2); arch(C, kdx + (kdw - 1) / 2, kdw, (inner ? bank2 - 1 : cTop - 1), sz(2));
+  // The throne room's window: a tall arch in the keep's face with the gold throne inside it.
+  if (has("thatch")) { const ww = sz(3) + 1, wx = Math.round(kcx - (ww - 1) / 2), wy1 = Math.min(kTop + sz(6), (inner ? bank2 : cTop) - sz(1)), wy0 = kTop + sz(2); if (wy1 - wy0 >= sz(2.5)) { C.rect(wx, wy0, wx + ww - 1, wy1, "ink", 1); C.rect(wx + 1, wy0 + 1, wx + ww - 2, wy1, "thatch", 1); C.rect(wx + 2, wy0 + 3, wx + ww - 3, wy1 - 1, "ink", 1); } }
+  // Two crooked side towers (odd stone when the level has it) leaning out, red spiked roofs, goblin banners.
+  const side2 = has("ashlar") ? "ashlar" : body;
+  for (const side of [-1, 1]) { const sw = ri(r, sz(3), sz(4.5)), sx = side < 0 ? Math.round(kcx - kw / 2) - sw - ri(r, sz(1), sz(2)) : Math.round(kcx + kw / 2) + ri(r, sz(1), sz(2)), st = ri(r, kTop + sz(1), kTop + sz(5)), lean = side * pick(r, [1, 1, 0]);
+    if (sx < 1 || sx + sw > pw - 2) continue; const yb = inner ? bank2 - 1 : cTop - 1, shift = (k) => lean * Math.floor(k / sz(3));
+    for (let y = yb, k = 0; y >= st; y--, k++) C.rect(sx + shift(k), y, sx + shift(k) + sw - 1, y, side2, 1);
+    const dx = shift(yb - st); slits(C, sx + dx, sx + dx + sw - 1, st + sz(1.5), true);
+    if (has("roof")) { const rh = Math.ceil((sw + 2) / 2); for (let k = 0; k < rh; k++) C.rect(sx + dx - 1 + k + (k > rh / 2 ? lean : 0), st - 1 - k, sx + dx + sw - k + (k > rh / 2 ? lean : 0), st - 1 - k, "roof", 1); if (has("banner")) flagOn(C, sx + dx + (sw >> 1) + lean, st - 1 - rh, "banner"); }
+    else for (let x = sx + dx; x < sx + dx + sw; x += u * 2) C.rect(x, st - ri(r, 1, sz(1)), x + u - 1, st - 1, side2, 1); }
+  // The curtain: uneven battlements, patches, plank plates and spikes; the gatehouse in the middle.
+  const gw = par(sz(4.5), pw), gx = Math.round(mid - (gw - 1) / 2) + (inner ? 0 : pick(r, [-1, 0, 1]) * sz(2)), gcx = gx + (gw - 1) / 2;
+  C.rect(0, cTop, pw - 1, bank - 1, body, 1);
+  for (let x = 0; x < pw; x += u) { const t = ri(r, 0, 2); if (t) C.rect(x, cTop - t, x + u - 1, cTop - 1, body, 1); }
+  for (let k = 0, n = ri(r, 3, 6); k < n; k++) { const pw2 = ri(r, sz(1.5), sz(3)), px = ri(r, 0, pw - pw2), py = ri(r, cTop + u, bank - 1 - pw2); if (Math.abs(px + pw2 / 2 - gcx) < gw) continue; C.rect(px, py, px + pw2 - 1, py + Math.min(pw2, sz(1.5)) - 1, r() < 0.5 ? patch : plank, 1); }
+  for (let x = sz(2); x < pw - u; x += ri(r, sz(3), sz(5))) if (Math.abs(x - gcx) > gw / 2 + u) C.rect(x, cTop + sz(1.5), x + u - 1, cTop + sz(2.5) - 1, "ink", 1);
+  C.rect(gx, cTop - sz(1.5), gx + gw - 1, bank - 1, body, 1); merlons(C, gx, gx + gw - 1, cTop - sz(1.5), body); arch(C, gcx, gw - 2 * u, bank - 1, sz(2.5));
+  const tw = 2 * sz(1.5) - 1, nT = P.towers ? ri(r, P.towers[0], P.towers[1]) : 0, spots = [0, pw - tw - 1, gx - tw - 2, gx + gw + 2, sz(8), pw - sz(8) - tw];
+  const towers = archers(C, r, spots, nT, tw, (i) => cH + (inner ? sz(1) : i < 2 ? ri(r, sz(3), sz(5)) : sz(2)), bank, P, null, pick(r, [1, -1]));
+  // The second gate: the inner moat's drawbridge (its key in the curtain), else a portcullis in the throne keep's door;
+  // the key goes in the curtain's face (after the towers, which may stand there), the first plain wall cell from a seeded
+  // side of the gatehouse.
+  const ky = cTop + Math.min(sz(3), cH >> 1), dir = r() < 0.5 ? -1 : 1; let kx = -1;
+  for (let k = sz(2); k < pw && kx < 0; k++) for (const x of [Math.round(gcx) + dir * k, Math.round(gcx) - dir * k]) if (kx < 0 && x > 0 && x < pw - 1 && C.get(x, ky) === body && C.get(x, ky - 1) === body && C.get(x, ky + 1) === body) kx = x;
+  if (kx >= 0 && inner && gates.length && !gates[gates.length - 1].key) { C.set(kx, ky, "gilt", 1); gates[gates.length - 1].key = [kx, ky]; }
+  else if (kx >= 0 && !inner && P.gates > 1 && gates.length) { const yb = cTop - 1, ay = yb - sz(2) + 1; C.rect(kdx, ay, kdx + kdw - 1, yb, "iron", 1); C.set(kx, ky, "gilt", 1); gates.push({ at: [kdx, ay], key: [kx, ky] }); }
+  sky(C, r, S, Math.floor(ph * 0.2), has, pick(r, [-1, 1]));
+  return { C, gates: gates.filter((g) => g.key), towers, style: (inner ? "throne-moat" : "throne") + "-" + towers.length + "t" };
+}
+const ERAS = { 1: era1, 2: era2, 3: era3, 4: era4, 5: era5, 6: era6, 7: era7, 8: era8 }; // v5 R4: 5-8
 
 // ---- scenes, roles, colours, the board --------------------------------------------------------------------------------
 // The scene: P.scene if given, else a weighted pick among the era's scenes (picture.eras[e].scenes).
@@ -370,13 +635,14 @@ function sceneOf(era, P, Q, r) {
 // scene may drop roles (no clouds at dawn on stone castles, in winter). Gilt counts as a colour (its keys have cards); iron
 // and water never do.
 function rolesFor(era, P, Q, r, drop) {
-  const E2 = Q.eras[era], want = E2.must.filter((k) => drop.indexOf(k) < 0), opt = E2.opt.filter((k) => drop.indexOf(k) < 0);
+  const E2 = Q.eras[era], want = E2.must.concat(P.must || []).filter((k, i, a) => drop.indexOf(k) < 0 && a.indexOf(k) === i), opt = E2.opt.filter((k) => drop.indexOf(k) < 0 && want.indexOf(k) < 0); // v5 R4: P.must
   for (let i = opt.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [opt[i], opt[j]] = [opt[j], opt[i]]; }
   const first = (P.first || E2.first || []).filter((k) => opt.indexOf(k) >= 0); for (const k of first.reverse()) { opt.splice(opt.indexOf(k), 1); opt.unshift(k); }
   for (const k of opt) { if (want.length >= P.colours) break; want.push(k); }
   return want;
 }
 function castle(era, seed, P, Q) {
+  if (era >= 5) P = Object.assign({}, P, { must: (P.towers ? ["slate"] : []).concat(P.gates || P.inner ? ["gilt"] : []) }); // v5 R4: the plan's roles
   const r = rng(seed), scene = sceneOf(era, P, Q, r), SC = Q.scenes[scene] || {}, S = { moon: !!SC.moon, pine: !!SC.pine || r() < (P.pine || 0) };
   let want; try { want = rolesFor(era, P, Q, r, SC.drop || []); } catch (e) { return null; }
   const has = (k) => want.indexOf(k) >= 0;
@@ -401,14 +667,16 @@ function castle(era, seed, P, Q) {
   L.gates = gates.filter((g) => g.key).map((g) => ({ at: mv(g.at), key: mv(g.key) }));
   L.towers = towers.map((t) => ({ at: mv(t.at), r: t.r }));
   L.pal = pal; L.roles = used.concat(cnt.gilt ? ["gilt"] : []); L.scene = scene; L.style = res.style; L.palette = { minDE: +md.toFixed(1), minFade: +mf.toFixed(1) };
-  try { E.compile(Object.assign({ cols: [[], [], [], [], []] }, L)); } catch (e) { return null; }
+  if (P.liquid && cnt["~"]) L.liquid = P.liquid; // v5 R4: the moat is lava (the page draws it so)
+  try { E.compile(Object.assign({ cols: [[], [], [], [], []] }, L)); } catch (e) { if (process.env.CASTLE_DEBUG) console.log("castle: " + e.message); return null; }
   return L;
 }
 
 module.exports = { castle, canvas, ERAS };
 
 // ~/.local/opt/node/bin/node tools/castle.js --sheet OUT.png [--era E] [--n N] [--px 6] [--colours K] [--scene S]   a
-//   contact sheet of freshly generated castles; --levels FILE [--cols 10] draws that file's boards instead.
+//   contact sheet of freshly generated castles; --levels FILE [--cols 10] draws that file's boards instead. v5 R4, eras 5-8:
+//   --moat 0, --gates N (default 1), --towers A-B (default 2-3; 0 none), --inner (the boss's inner moat) set the plan.
 if (require.main === module) {
   const fs = require("fs"), path = require("path"), CV = require("./convert.js"), C = JSON.parse(fs.readFileSync(path.join(__dirname, "bake-config.json"), "utf8"));
   const arg = (k, d) => { const i = process.argv.indexOf("--" + k); return i > 0 ? process.argv[i + 1] : d; };
@@ -416,6 +684,7 @@ if (require.main === module) {
   if (arg("levels")) boards.push(...JSON.parse(fs.readFileSync(path.resolve(arg("levels")), "utf8")).levels);
   else for (const e of eras) for (let k = 0; k < n; k++) {
     const P = Object.assign({}, C.eras[e].gen, { colours: +arg("colours", C.picture.eras[e].sample || 8) }, arg("scene") ? { scene: arg("scene") } : {});
+    if (e >= 5) Object.assign(P, { moat: arg("moat") !== "0", gates: +arg("gates", 1), towers: arg("towers") === "0" ? 0 : (arg("towers") || "2-3").split("-").map(Number) }, arg("inner") ? { inner: true } : {}); // v5 R4: the plan's features
     let L = null; for (let t = 0; t < 40 && !L; t++) L = castle(e, 1000 * e + 37 * k + t, P, C.picture);
     if (!L) { console.log("era " + e + " #" + k + ": none"); continue; }
     boards.push(L); console.log("era " + e + " #" + k + ": " + L.w + "x" + L.h + " " + L.scene + " " + L.style + " colours " + L.roles.length + " minDE " + L.palette.minDE + " faded " + L.palette.minFade + " gates " + L.gates.length + " towers " + L.towers.length);

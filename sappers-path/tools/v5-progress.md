@@ -157,8 +157,8 @@ map code in `src/main.js` and config.json `map` (R4 map art, separate worktree):
 | # | Piece | State | Commit |
 |---|---|---|---|
 | a0 | Castle freeze fixture (eras 1-4 hashes) in freeze.js, before any castle.js change | done: 283 cases, 0 null; freeze --require PASS | (this commit) |
-| a1 | Generators eras 5-8 (castle.js), realm scenes and roles (bake-config picture), lava liquid on the board | todo | |
-| a2 | Realms 6-8 in data (config eras, bake-config eras/realms/tags), contact sheet `tools/shots-v5-r4/boards/`, looked at | todo | |
+| a1 | Generators eras 5-8 (castle.js), realm scenes and roles (bake-config picture), lava liquid on the board | done: 12 scenes pass palette --scenes; castles 1-4 0 differences | (this commit) |
+| a2 | Realms 6-8 in data (config eras, bake-config eras/realms/tags), contact sheet `tools/shots-v5-r4/boards/`, looked at | done (names, lore, gen; realm samples sheets realm5-8-samples.png looked at; tags in b1) | (this commit) |
 | b1 | Bake planner for 101-200 (feature plan by tag, Extreme, hidden blocks, colour/key locks, boss 200) and density rule | todo | |
 | b2 | Trial bake of 10 levels; stop-rule check | todo | |
 | b3 | Teaching levels 125 (towers) and 150 (mystery blocks), coach lines | todo | |
