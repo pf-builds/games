@@ -2,8 +2,14 @@
 // spaces on every tag (rules.hold); archers never kill (a hit always knocks back; no short); a lock is a key lock or a colour
 // lock (opens the moment a squad of its colour takes a space, UNLOCK logged after that tap's TAP events); the Quartermaster
 // sends any card in view (the front plus pullDepth behind) straight out into the lowest free open space, a linked card
-// with its partner in view and 2 free spaces, no jam test, not a play. Not modelled here (no generator reaches them in the
-// shipped levels, and tools/ref.js and tools/test.js cover them): the Volley, the continue, mystery blocks.
+// with its partner in view and 2 free spaces, no jam test, not a play. Not modelled here (tools/ref.js and tools/test.js
+// cover it): the continue.
+// v5 R4 fix (the functional critic's m2), written from SPEC-v4 §9's v5 R1 entry: mystery blocks (a "?" off the picture's
+// outer two rings shows "?" until it is 4-adjacent to connected ground, checked at load (no log) and whenever ground grows,
+// SHOW cell m; never in reach) and the Volley (power 4, a = a colour m: taken when m is 1-14, not 10, with a pixel standing
+// or a sapper in play; every standing pixel of m cleared in the clear order (CLEAR, then TOWER, UNLOCK, GATE as a pop), its
+// cards leave their columns in file order and are cut (a partner plays alone), its squads leave the line (waiting sappers
+// gone, walkers cut loose: they arrive at nothing), each space freed at once, a colour lock of m opens).
 // Critic v4.3 (from critic-v4.1): SPEC-v4 §9 v4.3. A space frees when its squad has no sapper waiting, walking out or walking
 // back (a carrier leaves its squad at its pop; a Hard kill leaves at once); linked pairs hold until both are done. A linked tap
 // is legal only when its partner is its own column's front (why 3, checked before why 2); jamWhy bit 4. Quartermaster's jam
@@ -41,6 +47,10 @@ export function compile(L) { if (L.ring) throw new Error('ring levels are retire
   const cards = [], cols = [];
   L.cols.forEach((col, ci) => { cols.push(col.map((cd, i) => { const id = cards.length; cards.push({ id, m: cd[0], n: cd[1], f: cd[2] || 0, col: ci, idx: i, partner: -1 }); return id; })); });
   for (const [[c1, i1], [c2, i2]] of (L.links || [])) { const A = cols[c1][i1], B = cols[c2][i2]; cards[A].partner = B; cards[B].partner = A; }
+  const hid = new Uint8Array(n); if (L.hidden) for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const edge = L.pic ? x <= 1 || y <= 1 || x >= w - 2 || y >= h - 2 : x === 0 || y === 0 || x === w - 1 || y === h - 1; if (L.hidden[y][x] === '?' && !edge && a0[y * w + x] > 0) hid[y * w + x] = 1; } // v5 R4 fix: mystery blocks
+  let cx0 = w, cx1 = -1; for (let x = 0; x < w; x++) if (a0[campRow * w + x] === CAMP) { cx0 = Math.min(cx0, x); cx1 = Math.max(cx1, x); }
+  const clearRank = Array.from({ length: n }, (_, c) => c).sort((p, q) => { const d2 = (c) => (2 * (c % w) - (cx0 + cx1)) ** 2 + (2 * (((c / w) | 0) - campRow)) ** 2; return d2(p) - d2(q) || cmp(tie2(p), tie2(q)); }); // the clear order
+  function tie2(c) { return [Math.abs(((c / w) | 0) - campRow), c % w, (c / w) | 0]; }
   const lockKey = L.lock && L.lock.key ? L.lock.key[1] * w + L.lock.key[0] : -1, lockMat = L.lock && L.lock.colour != null ? L.lock.colour : 0; // v5: key or colour
   // tie-break key per cell: siege [|y - campRow|, x, y]; ring levels (SPEC-v4 M4) [layer, pos, side]
   const tie = new Array(n);
@@ -49,7 +59,7 @@ export function compile(L) { if (L.ring) throw new Error('ring levels are retire
     const a = Math.min(x, y, w - 1 - x, h - 1 - y), x1 = w - 1 - a, y1 = h - 1 - a; let side, pos;
     if (y === a && x < x1) { side = 0; pos = x - a; } else if (x === x1 && y < y1) { side = 1; pos = y - a; } else if (y === y1 && x > a) { side = 2; pos = x1 - x; } else if (x === a && y > a) { side = 3; pos = y1 - y; } else { side = 0; pos = 0; }
     tie[c] = [a, pos, side]; }
-  return { w, h, n, a0, campRow, gates, towers, isTower, cards, cols, lockKey, lockMat, safe: !!L.safeArchers, ring: !!L.ring, tie };
+  return { w, h, n, a0, campRow, gates, towers, isTower, cards, cols, lockKey, lockMat, safe: !!L.safeArchers, ring: !!L.ring, tie, hid, clearRank };
 }
 
 class Heap { constructor() { this.a = []; }
@@ -62,8 +72,8 @@ const lt = (x, y) => x.t < y.t || (x.t === y.t && x.seq < y.seq);
 export class Game {
   // rules: {hold, archersKill, lockSpaces, powers?: [4], pullDepth?}
   constructor(C, rules, time) {
-    this.C = C; this.T = time; this.hold = rules.hold; this.lethal = false; this.powers = rules.powers || [0, 0, 0, 0]; this.pullDepth = rules.pullDepth ?? 2; // v5: archers never kill
-    const n = C.n; this.a = Int16Array.from(C.a0); this.used = [0, 0, 0, 0, 0];
+    this.C = C; this.T = time; this.hold = rules.hold; this.lethal = false; this.powers = rules.powers || [0, 0, 0, 0, 0]; this.pullDepth = rules.pullDepth ?? 2; // v5: archers never kill
+    const n = C.n; this.a = Int16Array.from(C.a0); this.used = [0, 0, 0, 0, 0, 0];
     this.cols = C.cols.map((c) => c.slice()); this.revealed = new Uint8Array(C.cards.length); this.cn = C.cards.map((c) => c.n);
     this.locked = C.lockKey >= 0 || C.lockMat > 0 ? Math.min(rules.lockSpaces ?? 1, this.hold - 1) : 0;
     this.spaces = new Array(this.hold).fill(-1); this.squads = []; this.claimed = new Uint8Array(n);
@@ -74,8 +84,16 @@ export class Game {
     this.pixLeft = this.standing.reduce((s, v) => s + v, 0);
     this.q = new Heap(); this.seq = 0; this.now = 0; this.status = PLAYING; this.reason = ''; this.plays = 0; this.peak = 0; this.placeSeq = 0;
     this.log = []; this.dirty = true; this.dist = new Int32Array(n); this.jamWhy = 0; this.winAt = -1; this.hits = 0; this.kills = 0;
+    this.shown = new Uint8Array(n); this.unseen = []; for (let c = 0; c < n; c++) if (C.hid[c]) this.unseen.push(c); this.expose(false); // at load: nothing logged
     this.revealFronts(); this.checkRest();
   }
+  // Mystery blocks: a still-hidden standing block 4-adjacent to connected ground (dist >= 0) shows for good (SHOW cell m).
+  expose(log) { if (!this.unseen.length) return; if (this.dirty) this.bfs(); const { w, h } = this.C, keep = [];
+    for (const c of this.unseen) { if (this.a[c] <= 0) continue; const x = c % w, y = (c / w) | 0; let on = false;
+      for (const k of [x > 0 ? c - 1 : -1, x < w - 1 ? c + 1 : -1, y > 0 ? c - w : -1, y < h - 1 ? c + w : -1]) if (k >= 0 && this.dist[k] >= 0) on = true;
+      if (on) { this.shown[c] = 1; if (log) this.ev('SHOW', { c, m: this.a[c] }); } else keep.push(c); }
+    this.unseen = keep; }
+  hiddenCell(c) { return this.C.hid[c] && !this.shown[c] && this.a[c] > 0; }
   ev(e, x) { this.log.push(Object.assign({ t: this.now, e }, x)); }
   // -- board --
   covered(c) { if (this.C.isTower[c]) return false; const { w } = this.C; for (let k = 0; k < this.C.towers.length; k++) { const t = this.C.towers[k]; if (!this.towerLeft[k]) continue;
@@ -89,7 +107,7 @@ export class Game {
     for (const k of [x > 0 ? c - 1 : -1, x < w - 1 ? c + 1 : -1, y > 0 ? c - w : -1, y < h - 1 ? c + w : -1]) if (k >= 0 && this.dist[k] >= 0 && (best < 0 || this.dist[k] < best)) best = this.dist[k];
     return best; }
   target(m, wary) { if (this.dirty) this.bfs(); const tie = this.C.tie; let best = -1, bd = 0;
-    for (const c of this.pix[m]) { if (this.a[c] !== m || this.claimed[c] || this.gateCell[c]) continue; const d = this.pdist(c); if (d < 0) continue; if (wary && this.covered(c)) continue;
+    for (const c of this.pix[m]) { if (this.a[c] !== m || this.claimed[c] || this.gateCell[c] || this.hiddenCell(c)) continue; const d = this.pdist(c); if (d < 0) continue; if (wary && this.covered(c)) continue;
       if (best < 0 || d < bd || (d === bd && cmp(tie[c], tie[best]) < 0)) { best = c; bd = d; } }
     return best < 0 ? null : { c: best, d: bd }; }
   // -- tray --
@@ -128,6 +146,7 @@ export class Game {
       if (cd.partner >= 0) { if (!this.inView(cd.partner)) return no('partnerOutOfView'); return this.free() >= 2 ? 0 : no('noTwoSpaces'); }
       return this.free() >= 1 ? 0 : no('noSpace'); }
     if (k === 2) { for (let id = 0; id < this.C.cards.length; id++) if (this.hidden(id)) return 0; return no('noneHidden'); }
+    if (k === 4) { const m = a; if (!(Number.isInteger(m) && m >= 1 && m <= 14 && m !== IRON)) return no('badColour'); return this.standing[m] > 0 || this.sappersOf(m) > 0 ? 0 : no('noneLeft'); } // v5 R4 fix: the Volley
     if (k === 3) { if (!(a >= 0 && a < this.spaces.length)) return no('badSpace'); const si = this.spaces[a]; if (si < 0) return no('emptySpace'); const s = this.squads[si];
       if (s.partner >= 0) return no('linked'); if (s.out > 0) return no('sappersOut'); if (s.waiting <= 0 || s.done) return no('noneWaiting'); return 0; }
     return no('badK'); }
@@ -142,9 +161,28 @@ export class Game {
       const s1 = put(a), s2 = pid >= 0 ? put(pid) : null; if (s2) { s1.partner = s2.id; s2.partner = s1.id; } this.colourOpen(s1); if (s2) this.colourOpen(s2); this.peak = Math.max(this.peak, this.spaces.filter((v) => v >= 0).length);
       this.dispatch(); }
     else if (k === 2) { const hid = []; for (let id = 0; id < this.C.cards.length; id++) if (this.hidden(id)) hid.push(id); for (const id of hid) this.seen(id); this.ev('POWER', { k, a: hid.length }); }
+    else if (k === 4) this.volley(a);
     else if (k === 3) { const s = this.squads[this.spaces[a]]; this.cn[s.card] = s.waiting; s.waiting = 0; s.done = true; s.recalled = true; this.cols[s.col].unshift(s.card); this.spaces[a] = -1;
       this.ev('POWER', { k, a }); this.ev('FREE', { sp: a, m: s.m }); }
     this.checkRest(); return 0; }
+  // The Volley on colour m (SPEC-v4 §9 v5 R1): POWER 4 m, its pixels cleared in the clear order, its cards out of the
+  // columns (cut), its squads out of the line, its sappers 0, a colour lock of m open; then the dispatch (in power()).
+  removeCell(c, how) { const m = this.a[c]; this.a[c] = DIRT; this.claimed[c] = 0; this.standing[m]--; this.pixLeft--; this.dirty = true; this.ev(how, { c, m });
+    if (this.C.isTower[c]) this.C.towers.forEach((tw, k) => { if (tw.cells.includes(c)) { this.towerLeft[k]--; if (!this.towerLeft[k]) this.ev('TOWER', { k }); } });
+    if (c === this.C.lockKey && this.locked) { this.locked = 0; this.ev('UNLOCK', {}); }
+    if (this.gateOfKey.has(c)) { for (const g of this.C.gates[this.gateOfKey.get(c)].cells) if (this.a[g] > 0) { this.standing[this.a[g]]--; this.a[g] = DIRT; this.pixLeft--; } this.ev('GATE', {}); }
+    this.expose(true); }
+  volley(m) { this.ev('POWER', { k: 4, a: m });
+    for (const c of this.C.clearRank) if (this.a[c] === m && !this.gateCell[c]) this.removeCell(c, 'CLEAR');
+    for (let col = 0; col < 5; col++) for (const id of this.cols[col].slice()) { const cd = this.C.cards[id]; if (cd.m !== m) continue; const list = this.cols[col], wasFront = list[0] === id; this.seen(id); list.splice(list.indexOf(id), 1);
+      if (wasFront) { const f = this.front(col); if (f >= 0) this.seen(f); } if (cd.partner >= 0) { this.C.cards[cd.partner].partner = -1; cd.partner = -1; } this.cn[id] = 0; }
+    for (const s of this.squads.slice().sort((x, y) => x.ord - y.ord)) { if (s.m !== m || s.space < 0 || this.spaces[s.space] !== s.id) continue; s.waiting = 0; s.cut = true; s.done = true; s.enRoute = 0; s.out = 0;
+      const p = s.partner >= 0 ? this.squads[s.partner] : null; if (p) { p.partner = -1; s.partner = -1; } this.spaces[s.space] = -1; this.ev('FREE', { sp: s.space, m }); s.space = -1;
+      if (p && p.done && p.space >= 0 && this.spaces[p.space] === p.id) { this.spaces[p.space] = -1; this.ev('FREE', { sp: p.space, m: p.m }); } } // its partner, done and held only by the link, frees with it
+    for (const s of this.squads) if (s.partner >= 0 && this.squads[s.partner].cut) s.partner = -1;
+    if (this.locked && this.C.lockMat === m) { this.locked = 0; this.ev('UNLOCK', { m }); }
+    if (this.pixLeft === 0 && this.status === PLAYING) { this.status = WON; this.winAt = this.now; }
+    if (this.status === PLAYING) this.dispatch(); }
   // -- time --
   sched(t, type, data) { this.q.push({ t, seq: this.seq++, type, ...data }); }
   dispatch() { const T = this.T, t = this.now;
@@ -162,11 +200,14 @@ export class Game {
     for (const s of this.squads) if (s.m === m && !s.recalled) k += s.waiting + s.enRoute; return k; }
   handle(ev) { const T = this.T, s = ev.s !== undefined ? this.squads[ev.s] : null; // HOME of a carrier has no squad
     if (ev.type === 'WAKE') return;
+    if (ev.type === 'POP' && s.cut) { this.sched(this.now + T.yardMs + ev.tiles * T.carryMs, 'HOME', { carrier: 1 }); return; } // v5 R4 fix: a walker the Volley cut loose arrives at nothing and walks home
+    if ((ev.type === 'HIT' || ev.type === 'BACK') && s.cut) return;
     if (ev.type === 'POP') { const c = ev.c, m = this.a[c]; this.a[c] = DIRT; this.claimed[c] = 0; this.standing[m]--; this.pixLeft--; this.dirty = true; s.enRoute--;
       this.ev('EAT', { c, m });
       if (this.C.isTower[c]) this.C.towers.forEach((tw, k) => { if (tw.cells.includes(c)) { this.towerLeft[k]--; if (!this.towerLeft[k]) this.ev('TOWER', { k }); } });
       if (c === this.C.lockKey && this.locked) { this.locked = 0; this.ev('UNLOCK', {}); }
       if (this.gateOfKey.has(c)) { for (const g of this.C.gates[this.gateOfKey.get(c)].cells) if (this.a[g] > 0) { this.standing[this.a[g]]--; this.a[g] = DIRT; this.pixLeft--; } this.ev('GATE', {}); }
+      this.expose(true);
       this.sched(this.now + T.yardMs + ev.tiles * T.carryMs, 'HOME', { carrier: 1 });
       s.out--; this.finish(s);
       if (this.pixLeft === 0 && this.status === PLAYING) { this.status = WON; this.winAt = this.now; }
