@@ -1059,7 +1059,7 @@
   // lockKey (the space's key on the board); conditions reveal (a "?" turned over), pair (a linked pair went out), unlock
   // (the space opened), locked (it is still shut), hidden (a "?" is in view), linkedFront (a front card is linked).
   // v5 R2: pointer power (a power-up id: its badge, on the level that unlocks it); any level may have coach lines (the
-  // first lock levels, 53 and 87, do).
+  // first lock levels, 53 and 87, do). v5 R4: ring hidden (the mystery block still showing "?" nearest the entry).
   const coachSteps = (e) => { const st = e && ((app.cfg.teach || {})[e.id] || (e.L.hint ? [{ say: e.L.hint, until: "play" }] : null)); return st && st.length ? st : null; };
   function coachStart() {
     const steps = coachSteps(app.entry);
@@ -1130,6 +1130,8 @@
     if (st.ring === "key" || st.ring === "gate") { const k = 0, kc = V.keyC[k]; if (B.gateCells.length) { if (st.ring === "key" && kc >= 0 && S.a[kc] > 0) Object.assign(V.focus, { on: true, x: kc % B.w + 0.5, y: ((kc / B.w) | 0) + 0.5, r: 1.1 }); else Object.assign(V.focus, { on: true, x: V.gX[k], y: V.gY[k], r: 1.6 }); } }
     if (st.ring === "lockKey" && B.lockKey >= 0 && S.a[B.lockKey] > 0) Object.assign(V.focus, { on: true, x: B.lockKey % B.w + 0.5, y: ((B.lockKey / B.w) | 0) + 0.5, r: 1.1 });
     if (st.ring === "moat") { const c = bridgeOf(B); if (c >= 0) Object.assign(V.focus, { on: true, x: c % B.w + 0.5, y: ((c / B.w) | 0) + 0.5, r: 1.8 }); } // v5 R2: the moat lesson's bridge
+    if (st.ring === "hidden") { let bc = -1, bd = Infinity; const mx = B.w / 2; for (let k = 0; k < B.n; k++) if (S.hiddenCell(k)) { const d = (k % B.w + 0.5 - mx) ** 2 + (((k / B.w) | 0) - B.campRow) ** 2; if (d < bd) { bd = d; bc = k; } } // v5 R4: the mystery block nearest the entry
+      if (bc >= 0) Object.assign(V.focus, { on: true, x: bc % B.w + 0.5, y: ((bc / B.w) | 0) + 0.5, r: 1.3 }); }
     if (st.ring === "tower") { for (let k = 0; k < B.towers.length; k++) if (S.standing & (1 << k)) { const T = B.towers[k]; Object.assign(V.focus, { on: true, x: T.cx + 0.5, y: T.cy + 0.5, r: Math.sqrt(T.size / Math.PI) + 0.9 }); break; } }
     txt.textContent = (app.coachMode === "top" && st.short ? st.short : st.say).replace(/\{n\}/g, cn).replace(/\{crew\}/g, cm ? mat(cm).crew : "").replace(/\{reach\}/g, cm ? S.reachable(cm) : 0).replace(/\{go\}/g, cm ? Math.min(cn, S.reachable(cm)) : 0);
     V.ringsLoud = st.ring === "tower"; // the lesson is the ring: every ring loud while it shows

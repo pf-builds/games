@@ -288,7 +288,7 @@
     "e6-125": [{"say": "Archers shoot inside the red ring. Tower first!", "short": "Tower first!", "card": 6, "ring": "tower", "until": "tower"},
                {"say": "Tower down: the ring is safe now.", "short": "The ring is safe now.", "until": "play"},
                {"say": "New power-up! The Volley clears one colour.", "short": "New: the Volley!", "power": "volley", "until": "play"}],
-    "e7-150": [{"say": "? blocks hide their colour until dug beside.", "short": "? blocks show when dug beside.", "until": "play"},
+    "e7-150": [{"say": "? blocks hide their colour until dug beside.", "short": "? blocks show when dug beside.", "ring": "hidden", "until": "play"},
                {"say": "Dig next to a ? and its colour shows for good.", "short": "Dug beside, it shows.", "until": "play"}]
   },
   "selfTest": {

@@ -297,6 +297,5 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - The goblin capital (realm 8) reads as one grey mass at a glance; more contrast inside the fortress (darker courses, a scrap-iron gate, more banners) would help.
 - Realm 5's fen forts all centre their hall; a two-level platform or a hall at one end would vary them more.
 - Lava moats draw in the board only; the map thumbnails, the report picture and the share card still draw water blue (they never show a Siege moat today).
-- Mystery blocks are dark "?" studs: a coach ring on the first one in lesson 150 (a ring kind for hidden blocks) would point at them.
 - The boss (200) gets the realm's normal scenes; a fixed night scene with the crown lit would mark it.
 - Contact sheets of the four realms' generator samples and of the baked 101-200 boards live in tools/shots-v5-r4/boards/ (gitignored like every shots folder).
