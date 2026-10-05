@@ -291,3 +291,12 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - Three bridges within about 300 CSS px around levels 41-45 on sheets 5-6; one could go.
 - Realm 5 is one level until R4 ("1/1 cleared").
 - The quests 14 and 19 bubbles still touch the road at a corner on a 360-wide column; a smaller bubble (icon only) would clear it.
+
+## From v5 R4c (the map for levels 101-200, 2026-10-05)
+- The summit fortress is drawn in perspective with a horizon behind it (every SDXL seed did that); the fog and wash cover the horizon. A top-down fortress would need inpainting or a hand-drawn overlay.
+- Sheets 20 and 21 have pale streams near their tops and corners that read a little like road forks.
+- The Mistmoor's road runs on painted causeways between channels and the Weald's streams run beside the road, so neither realm got bridges; a stone bridge on sheet 16 was skipped because the lava crosses the road right at a level node.
+- Labels of the current level still graze a neighbouring node in about 20 of the 101 states past 99 (the same rate as R3's 1-99 under the same audit); two states (171, 188) have a quest bubble touching the current label. A smaller label, or labels that may sit diagonally, would clear most.
+- The Goblin King is an ink-and-wash SVG now; a painted sprite or a short animation (he flees when 200 is won) would make the boss land harder.
+- Realms 6-8 need real lore in config `eras` (the other builder's); the map falls back to the layout's realm name with no lore.
+- Egg coins on the map are now 647 in all (50 eggs), gated by realm.

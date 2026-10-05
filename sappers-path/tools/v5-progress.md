@@ -153,12 +153,15 @@ Dev server: port 8495 (never 8491, the other builder's).
 
 | # | Step | State | Commit |
 |---|---|---|---|
-| c1 | Plan: realms 5-8 sheets (13 regenerated + 14-25), stops, fog and Goblin King on the top sheet, new feature drawers (lava, basalt, giant trees, glades, goblin huts, crooked fortress), new egg kinds, candidate dirs, guides | | |
-| c2 | Paint: sheet 13 (no fog), 14-15 Mistmoor; stop-rule check on the first new sheet (road held? parchment look?) | | |
-| c3 | Paint: 16-18 Emberwatch Crags | | |
-| c4 | Paint: 19-21 Shrouded Weald | | |
-| c5 | Paint: 22-25 Goblin King's Throne (fortress summit, fog on top) | | |
-| c6 | Assemble: layout.json 25 sheets, eggs, manual fixes, bridges (water and lava), contact-r4 + seams-r4, sizes | | |
-| c7 | Code: frontier (nodes only for existing levels, fog/tail after the last one, sheets past it not built), eggReached (no levels = not reached), new eggs and the Goblin King sprite, banners 6-8, tests both states | | |
-| c8 | Checks: test.js, freeze, selfTest 375x812@3 and 1280x720, harness on 8495; shots `tools/shots-v5-r4-map/` (both states) | | |
-| c9 | Notes `tools/v5-r4c-notes.md`, merge notes, this table | | |
+| c1 | Plan: realms 5-8 sheets (13 regenerated + 14-25), stops, fog and Goblin King on the top sheet, new feature drawers, new egg kinds, candidate dirs, guides | done | 10e028a |
+| c2 | Paint: sheet 13 (no fog), 14-15 Mistmoor; stop-rule check on the first new sheet | done: road held (s72); fen prompt changed to moorland | b6bfcfb |
+| c3 | Paint: 16-18 Emberwatch Crags | done: perspective peaks fixed by prompt + negExtra | b6bfcfb |
+| c4 | Paint: 19-21 Shrouded Weald | done: canopy-from-above prompt; road held on a busy forest | b6bfcfb |
+| c5 | Paint: 22-25 Goblin King's Throne (fortress summit, fog on top) | done: summit kept in perspective (all seeds) | b6bfcfb |
+| c6 | Assemble: layout.json 25 sheets, eggs, manual fixes, bridges, contact-r4 + seams-r4, sizes | done: sheets 1-12 byte-identical; 6.95 MB map | b6bfcfb, f423bbb |
+| c7 | Code: frontier, eggReached (no levels = not reached), new eggs and king, banners 6-8, tests both states | done | de30444 |
+| c8 | Checks: test.js, freeze, selfTest 375x812@3 and 1280x720, harness on 8495; shots `tools/shots-v5-r4-map/` (both states) | done: 462/0, PASS, 527/529 (today) and 727/729 (fake 200) 0 fail, harness all passed, shots 0 console | (close-out) |
+| c9 | Notes `tools/v5-r4c-notes.md`, merge notes, this table | done | (close-out) |
+
+### State (R4c)
+Done. Next: merge into `sappers-path` with levels 101-200 (merge notes: `tools/v5-r4c-notes.md` §5), then critics on the new realms.

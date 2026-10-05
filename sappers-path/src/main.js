@@ -100,6 +100,10 @@
 // Past level 100 the road fades into fog; once 1-100 are cleared one next-picture node opens there (the long tail), the
 // cleared ones beside it. Opening the map puts the current node about map.curAt down. Wide screens add a realm card and
 // a next-up card. Pure parts in journey.js. A side quest won still offers the next open one, else the next level.
+// v5 R4c: map/layout.json now holds 25 sheets (levels 1-200, realms 1-8) ahead of the levels. The map is built up to the
+// frontier (the first level not built yet, or the summit's long-tail spot): nodes only for built levels, side quests only
+// once their main level exists, eggs, bridges and banners only below the frontier's fog; the long tail's node waits at the
+// frontier; the Goblin King stands at the summit by level 200 once it is built.
 (function () {
   "use strict";
   const NS = window.SappersPath, E = NS.engine, Save = NS.save, Board = NS.board, Art = NS.art, Audio = NS.audio, Meta = NS.meta;
@@ -2124,7 +2128,8 @@
         ok(saved === JSON.stringify(app.save.data.gal) && JSON.stringify(junk) === JSON.stringify({ [e0.id]: 1 }), "map quests: the save's gal reads back through sanitize; a cleared mask reads as cleared, unknown ids and non-numbers are dropped");
         showScreen("title");
       }
-      // 24b. v5 R3, the journey map: its parts (13 sheets, a node for every level, 25 quests, 26 eggs, a banner a realm,
+      // 24b. v5 R3, the journey map: its parts (v5 R4c: the sheets up to the frontier, a node for every level and none past,
+      // the quests whose main level exists, the eggs below the fog, a banner a realm with levels,
       // the bridges), lazy sheets, the current node about map.curAt down with its label, locked and cleared taps, the
       // route cut at the current node, a banner's lore, the debug row; an egg paying once; the long tail in the fog.
       if (app.jr) { const J = app.jr, MC = app.cfg.map, MT = MC.text, sc = $("jr"), coins = () => app.save.data.coins;
