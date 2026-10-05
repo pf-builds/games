@@ -5,25 +5,35 @@
   "blend": 150,
   "scatter": { "trees": 0, "tufts": 0 },
   "out": {
-    "candidates": "/Users/peter/local-ai/outputs/sapper-v5-map",
-    "guides": "/Users/peter/local-ai/outputs/sapper-v5-map/guides",
+    "candidates": "/Users/peter/local-ai/outputs/sapper-v5-map-r4",
+    "guides": "/Users/peter/local-ai/outputs/sapper-v5-map-r4/guides",
+    "frozen": { "about": "v5 R4c: sheets 1..upTo were painted and assembled in R3; their picks and guides stay in the R3 folders, so a re-assemble leaves their JPEGs byte-identical",
+                "upTo": 12, "candidates": "/Users/peter/local-ai/outputs/sapper-v5-map", "guides": "/Users/peter/local-ai/outputs/sapper-v5-map/guides" },
+    "contact": "contact-r4.png",
+    "contactSeams": "contact-seams-r4.png",
     "jpegQuality": 82,
-    "contactWidth": 300,
-    "seamCrop": 200
+    "contactWidth": 240,
+    "seamCrop": 120
   },
   "assemble": { "restoreHold": 80, "restoreBand": 170, "roadMatch": 40, "roadNudge": 16, "nodeNudge": 22, "nudgeMinPx": 30,
                 "darkLum": 80, "calmPct": 35, "busyPct": 75, "eggRoadGap": 45, "eggNodeGap": 60, "eggEggGap": 140, "jpegMax": 94, "jpegMin": 70, "maxKB": 340,
                 "seamsQuantize": true },
   "retouch": { "about": "rectangles [x0, y0, x1, y1] blurred smooth in a painting (fake lettering, stray marks)", "12": [[600, 1276, 712, 1298]] },
-  "roadEnd": { "about": "the top sheet: the painted road turns into the fog off-centre, so no top restore; its centreline above cutAbove is these points, the last one the exit",
-               "13": { "cutAbove": 260, "points": [[480, 250], [492, 212], [503, 180], [515, 148]] } },
+  "roadEnd": { "about": "a top sheet whose painted road turns into the fog off-centre: no top restore; its centreline above cutAbove is these points, the last one the exit (R3's sheet 13 had one; v5 R4c repainted it)" },
   "edgeMirror": { "about": "px of a painted paper-edge line to replace with a mirror of the next strip in, left and right", "6": 22, "7": 20, "10": 22 },
   "manual": {
     "about": "hand fixes after the eye check (contact.png): sheet -> [{list, i, fields to set}]",
     "6": [ { "list": "eggs", "i": 0, "kind": "mushrooms", "x": 515, "y": 350 }, { "list": "eggs", "i": 1, "kind": "fish", "x": 440, "y": 785 } ],
     "8": [ { "list": "quests", "i": 0, "x": 385, "y": 1020, "branch": [518, 1101], "why": "v5 R3 fix: off level 60's bend (centres were 34 css px apart at 375)" } ],
     "10": [ { "list": "eggs", "i": 0, "x": 100, "y": 1045, "why": "v5 R3 fix: out from under realm 4's open banner" }, { "list": "eggs", "i": 1, "x": 250, "y": 975, "why": "v5 R3 fix: out from under realm 4's open banner" } ],
-    "12": [ { "list": "eggs", "i": 1, "kind": "grass", "x": 640, "y": 780 }, { "list": "quests", "i": 0, "x": 668, "y": 930, "branch": [595, 1012], "why": "v5 R3 fix: off the painted tower, onto the spur by 92" } ]
+    "12": [ { "list": "eggs", "i": 1, "kind": "grass", "x": 640, "y": 780 }, { "list": "quests", "i": 0, "x": 668, "y": 930, "branch": [595, 1012], "why": "v5 R3 fix: off the painted tower, onto the spur by 92" } ],
+    "13": [ { "list": "eggs", "i": 0, "kind": "wisp", "x": 120, "y": 950, "why": "v5 R4c: the Mistmoor's grey water has no colour host; on the pool left of 100" },
+            { "list": "eggs", "i": 1, "kind": "fish", "x": 660, "y": 420, "why": "v5 R4c: in the channel right of the road" } ],
+    "14": [ { "list": "eggs", "i": 0, "kind": "fish", "x": 150, "y": 230, "why": "v5 R4c: in the top-left pool" },
+            { "list": "eggs", "i": 1, "kind": "reeds", "x": 240, "y": 760, "why": "v5 R4c: on the mid-left pool's edge" } ],
+    "15": [ { "list": "eggs", "i": 0, "kind": "reeds", "x": 90, "y": 900, "why": "v5 R4c: on the lower-left channel's edge" },
+            { "list": "eggs", "i": 1, "kind": "wisp", "x": 690, "y": 420, "why": "v5 R4c: over the right channel" } ],
+    "21": [ { "list": "eggs", "i": 1, "x": 110, "y": 190, "why": "v5 R4c: in from the sheet's edge" } ]
   },
   "model": {
     "id": "stabilityai/stable-diffusion-xl-base-1.0",
@@ -70,15 +80,46 @@
     },
     {
       "realm": 5, "name": "The Mistmoor",
-      "prompt": "grey green fen marsh with dark still pools and reed beds fills the page edge to edge, a winding dirt road from bottom to top, wisps of pale fog drift over the upper half of the page",
-      "baseStrength": 0.75,
+      "prompt": "grey green moorland of tussock grass fills the page edge to edge, a winding dirt road from bottom to top, many small dark still pools, reed beds, scattered dead trees, low wisps of pale mist",
+      "baseStrength": 0.8,
       "base": [[112, 122, 98], [94, 108, 92]],
-      "features": { "marsh": 3, "pond": 3, "deadtrees": 3 },
-      "eggs": ["wisp", "fish"],
+      "features": { "marsh": 6, "pond": 4, "deadtrees": 5 },
+      "eggs": ["wisp", "fish", "reeds"],
       "scatter": { "trees": 10, "tufts": 900 },
-      "fogFrom": 0.62,
-      "goblinKing": [640, 175],
-      "sheets": [ { "levels": [100, 100] } ]
+      "sheets": [ { "levels": [100, 107] }, { "levels": [108, 116] }, { "levels": [117, 124] } ]
+    },
+    {
+      "realm": 6, "name": "Emberwatch Crags",
+      "prompt": "seen from directly above, a dark grey volcanic plateau of cracked basalt slabs fills the page edge to edge, a winding dirt road from bottom to top, glowing orange lava rivers, ash fields, round cinder cones with glowing craters, small dark stone watchtowers",
+      "negExtra": ", mountains, peaks, spires, cliffs, side view",
+      "base": [[112, 98, 84], [92, 82, 74]],
+      "features": { "lava": 1, "cone": 2, "basalt": 4, "crag": 4, "hills": 3, "watch": 2 },
+      "eggs": ["bubble", "ember", "raven"],
+      "scatter": { "trees": 0, "tufts": 250 },
+      "sheets": [ { "levels": [125, 132] }, { "levels": [133, 140] }, { "levels": [141, 149] } ]
+    },
+    {
+      "realm": 7, "name": "The Shrouded Weald",
+      "prompt": "seen from directly above, an enchanted forest canopy of round green treetops fills the page edge to edge, a winding dirt road from bottom to top, small round moonlit clearings, rings of tiny glowing blue mushrooms, a winding stream, map of the woods",
+      "negExtra": ", tree trunks, side view, landscape, scenery",
+      "base": [[74, 104, 84], [60, 90, 82]],
+      "features": { "river": 1, "glade": 3, "giant": 13, "ring": 2 },
+      "eggs": ["glowcap", "owl", "wisp"],
+      "scatter": { "trees": 60, "tufts": 300 },
+      "sheets": [ { "levels": [150, 157] }, { "levels": [158, 165] }, { "levels": [166, 174] } ]
+    },
+    {
+      "realm": 8, "name": "The Goblin King's Throne",
+      "prompt": "seen from directly above, dusty brown scrubland fills the page edge to edge, a winding dirt road from bottom to top, clusters of small round goblin huts, rings of spiked wooden palisades, thorny scrub bushes, campfires, scattered boulders",
+      "negExtra": ", cliffs, canyon, mountains, side view, towers",
+      "base": [[136, 114, 84], [114, 98, 76]],
+      "features": { "huts": 5, "palisade": 3, "crag": 3, "deadtrees": 3 },
+      "eggs": ["lookout", "glint", "raven"],
+      "scatter": { "trees": 0, "tufts": 500 },
+      "sheets": [ { "levels": [175, 182] }, { "levels": [183, 190] }, { "levels": [191, 197] },
+                  { "levels": [198, 200], "about": "the summit: the fortress, level 200 and the Goblin King, then the long tail's node in the fog",
+                    "tail": true, "tailFog": 250, "fogFrom": 0.62, "stopTop": 0.6, "fortress": [0, 0, 150], "goblinKing": [0, 0],
+                    "prompt": "seen from directly above, dusty brown scrubland, a winding dirt road from bottom to top, a great crooked dark goblin fortress with round spiked towers seen from above, small round goblin huts, thick pale fog drifts over the top of the page" } ]
     }
   ]
 }

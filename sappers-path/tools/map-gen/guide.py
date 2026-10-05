@@ -2,6 +2,9 @@
 # The road is placed here, so node, quest and egg spots are known before any painting.
 # Usage: /Users/peter/local-ai/.venv/bin/python guide.py            (all sheets)
 # Writes: <out.guides>/sheet-NN.png, <out.guides>/tall-preview.png, ./guide-layout.json
+# v5 R4c: sheet-level keys for the top sheet (fogFrom, stopTop, tail: the long tail's own stop after the last level,
+# fortress [x, y, r]: the Goblin King's fortress, goblinKing [x, y]; 0 0 = beside the last level, worked out here), new
+# realm features (lava, cone, basalt, watch, giant, glade, ring, huts, palisade, fortress) and each river's road crossing.
 import json, math, pathlib, random
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
@@ -82,14 +85,17 @@ for i, (realm, sh) in enumerate(SHEETS):
     for L in range(a, b + 1):
         stops.append(("level", L))
         if L in QUESTS: stops.append(("quest", L))
+    if sh.get("tail"): stops.append(("tail", b))   # v5 R4c: the long tail's node, spaced like any other stop
     ylo = t0 + H - OV - M                         # lowest stop row
-    yhi = t0 + OV + M if "fogFrom" not in realm else t0 + int(H * (1 - realm.get("stopTop", 0.45)))
+    yhi = t0 + OV + M if "fogFrom" not in sh else t0 + int(H * (1 - sh.get("stopTop", 0.45)))
     s0, s1 = arc_at_row(ylo), arc_at_row(yhi)
     rec = {"sheet": i + 1, "realm": realm["realm"], "levels": [], "quests": [], "eggs": []}
     for j, (kind, L) in enumerate(stops):
         p, tan, k = at_arc(s0 + (s1 - s0) * (j + 0.5) / len(stops))
         if kind == "level":
             rec["levels"].append({"n": L, "x": round(float(p[0])), "y": round(float(p[1] - t0))}); continue
+        if kind == "tail":
+            rec["tail"] = {"x": round(float(p[0])), "y": round(float(p[1] - t0)), "fog": sh.get("tailFog", 0)}; continue
         nrm = np.array([-tan[1], tan[0]]); best = None
         skip = np.abs(seg - seg[k]) < 90
         for sgn in (1, -1):
@@ -107,7 +113,23 @@ for i, (realm, sh) in enumerate(SHEETS):
     sa, sb = arc_at_row(t0 + H), arc_at_row(t0)    # the road's centreline in this sheet, every ~12 px of arc
     rec["road"] = [[round(float(q[0]), 1), round(float(q[1] - t0), 1)] for q in (at_arc(s)[0] for s in np.arange(sa, sb, 12))] + [[RX, 0]]
     layout["sheets"].append(rec)
-NODES = [(n["x"], n["y"] + top(r["sheet"] - 1)) for r in layout["sheets"] for n in r["levels"] + r["quests"]]
+NODES = [(n["x"], n["y"] + top(r["sheet"] - 1)) for r in layout["sheets"] for n in r["levels"] + r["quests"] + ([r["tail"]] if "tail" in r else [])]
+for i, (realm, sh) in enumerate(SHEETS):          # v5 R4c: the summit's fortress and king, beside the last level, away from the road
+    if "fortress" not in sh: continue
+    rec, t0 = layout["sheets"][i], top(i); L = rec["levels"][-1]; fx, fy, fr = sh["fortress"]
+    if not fx:                                    # the biggest clear disc (up to fr) near the last level: off the road, nodes and edges
+        best = None
+        for cy in range(380, L["y"] + 1, 10):
+            for cx in range(120, W - 119, 10):
+                r = min(fr, road_dist((cx, t0 + cy)) - 34, cx - 12, W - 12 - cx, min(math.hypot(cx - nx, t0 + cy - ny) for nx, ny in NODES) - 64)
+                sc = r - 0.25 * math.hypot(cx - L["x"], cy - L["y"])
+                if r >= 0.75 * fr and (best is None or sc > best[0]): best = (sc, cx, cy, r)
+        _, fx, fy, fr = best
+    sh["fortress"] = [fx, fy, round(fr)]
+    kx, ky = sh.get("goblinKing", [0, 0])
+    if not kx:                                    # the king between the last level and the fortress gate
+        d = math.hypot(fx - L["x"], fy - L["y"]); kx, ky = round(L["x"] + (fx - L["x"]) * 62 / d), round(L["y"] + (fy - L["y"]) * 62 / d)
+    sh["goblinKing"] = [kx, ky]
 
 # ---- base colour field (realm palettes blended across realm borders), then features
 yy = np.arange(HT, dtype=np.float32)
@@ -151,17 +173,19 @@ def blob(cx, cy, r, rnd, n=14):
     return [(cx + math.cos(a) * r * rnd.uniform(0.7, 1.15), cy + math.sin(a) * r * rnd.uniform(0.7, 1.15))
             for a in [k * 2 * math.pi / n for k in range(n)]]
 
-def river(t0, rnd, width):
-    for _ in range(80):                           # a bank-to-bank river; keeps clear of nodes
+RIVER = {"river": [(84, 70, 48), (70, 140, 132), (96, 162, 150)], "lava": [(52, 40, 34), (198, 86, 36), (244, 164, 66)]}
+def river(t0, rnd, width, kind="river"):
+    for _ in range(80):                           # a bank-to-bank river (or lava); keeps clear of nodes
         ya, yb = rnd.uniform(t0 + 250, t0 + H - 250), rnd.uniform(t0 + 250, t0 + H - 250)
         pts = [(-60, ya), (W * 0.3, ya + rnd.uniform(-180, 180)), (W * 0.7, yb + rnd.uniform(-180, 180)), (W + 60, yb)]
         line = catmull(pts, 30)
         if min(math.hypot(x - nx, y - ny) for x, y in line[::3] for nx, ny in NODES) < 70: continue
         if min(math.hypot(x - c[0], y - c[1]) for x, y in line[::3] for c in clears) < 80: continue
-        dr.line([tuple(p) for p in line], fill=(84, 70, 48), width=width + 10, joint="curve")
-        dr.line([tuple(p) for p in line], fill=(70, 140, 132), width=width, joint="curve")
-        dr.line([tuple(p) for p in line], fill=(96, 162, 150), width=max(4, width // 3), joint="curve")
-        feats.append({"t": "river", "x": float(line[len(line) // 2][0]), "y": float(line[len(line) // 2][1]), "r": 0, "line": line})
+        c = RIVER[kind]
+        dr.line([tuple(p) for p in line], fill=c[0], width=width + 10, joint="curve")
+        dr.line([tuple(p) for p in line], fill=c[1], width=width, joint="curve")
+        dr.line([tuple(p) for p in line], fill=c[2], width=max(4, width // 3), joint="curve")
+        feats.append({"t": "river", "kind": kind, "x": float(line[len(line) // 2][0]), "y": float(line[len(line) // 2][1]), "r": 0, "line": line})
         return
 
 DRAW = {}
@@ -259,13 +283,85 @@ def _(f, rnd):
         x = f["x"] + k * r * .35
         dr.ellipse([x - 11, f["y"] - 11, x + 11, f["y"] + 11], fill=(170, 166, 156), outline=INK, width=3)
 
+# v5 R4c: the new realms' features (Emberwatch Crags, the Shrouded Weald, the Goblin King's Throne)
+@draw("cone")
+def _(f, rnd):                                    # a cinder cone: ash slopes, a glowing crater, lava runs
+    r = f["r"]
+    dr.polygon(blob(f["x"], f["y"], r, rnd, 11), fill=jitter((84, 74, 68), rnd, 6), outline=INK)
+    dr.ellipse([f["x"] - r * .38, f["y"] - r * .3, f["x"] + r * .38, f["y"] + r * .3], fill=(206, 92, 38), outline=(40, 30, 26), width=3)
+    dr.ellipse([f["x"] - r * .18, f["y"] - r * .13, f["x"] + r * .18, f["y"] + r * .13], fill=(246, 176, 72))
+    for _ in range(3):
+        a = rnd.uniform(0, 6.283); dr.line([(f["x"] + math.cos(a) * r * .38, f["y"] + math.sin(a) * r * .3), (f["x"] + math.cos(a) * r * .9, f["y"] + math.sin(a) * r * .8)], fill=(200, 84, 34), width=4)
+@draw("basalt")
+def _(f, rnd):                                    # a field of basalt columns: dark hexagons
+    for _ in range(int(f["r"] * f["r"] / 90)):
+        a, d = rnd.uniform(0, 6.283), f["r"] * math.sqrt(rnd.random()); x, y, s = f["x"] + math.cos(a) * d, f["y"] + math.sin(a) * d * .8, rnd.uniform(7, 11)
+        if road_dist((x, y)) < 26: continue
+        dr.polygon([(x + s * math.cos(k * 1.047), y + s * math.sin(k * 1.047)) for k in range(6)], fill=jitter((70, 66, 64), rnd, 8), outline=INK)
+@draw("watch")
+def _(f, rnd):                                    # a dark stone watchtower with an ember-lit top
+    s = f["r"] * .4
+    dr.ellipse([f["x"] - s, f["y"] - s, f["x"] + s, f["y"] + s], fill=(92, 86, 82), outline=INK, width=3)
+    dr.ellipse([f["x"] - s * .5, f["y"] - s * .5, f["x"] + s * .5, f["y"] + s * .5], fill=(214, 120, 52), outline=INK, width=2)
+@draw("giant")
+def _(f, rnd):                                    # giant trees: big round canopies with inked swirls
+    for _ in range(max(1, int(f["r"] / 26))):
+        a, d = rnd.uniform(0, 6.283), f["r"] * .6 * math.sqrt(rnd.random()); x, y, s = f["x"] + math.cos(a) * d, f["y"] + math.sin(a) * d * .8, rnd.uniform(24, 38)
+        if road_dist((x, y)) < s + 18: continue
+        dr.ellipse([x - s + 4, y - s + 8, x + s + 4, y + s + 8], fill=(36, 54, 46))
+        dr.ellipse([x - s, y - s, x + s, y + s], fill=jitter((52, 84, 62), rnd, 10), outline=INK, width=3)
+        for k in range(3): dr.arc([x - s * (.75 - k * .2), y - s * (.75 - k * .2), x + s * (.6 - k * .2), y + s * (.5 - k * .2)], 200, 320, fill=(34, 52, 40), width=2)
+@draw("glade")
+def _(f, rnd):                                    # a moonlit glade: pale silver-green grass, ringed with ink stones
+    dr.polygon(blob(f["x"], f["y"], f["r"] * .8, rnd), fill=(150, 176, 150), outline=(70, 90, 70))
+    for k in range(10):
+        a = k * .628; x, y = f["x"] + math.cos(a) * f["r"] * .8, f["y"] + math.sin(a) * f["r"] * .8
+        dr.ellipse([x - 3, y - 3, x + 3, y + 3], fill=(196, 206, 196), outline=INK)
+@draw("ring")
+def _(f, rnd):                                    # a ring of glowing blue mushrooms
+    r = f["r"] * .6
+    dr.ellipse([f["x"] - r * 1.3, f["y"] - r * 1.3, f["x"] + r * 1.3, f["y"] + r * 1.3], fill=(70, 120, 120))
+    for k in range(12):
+        a = k * .5236; x, y = f["x"] + math.cos(a) * r, f["y"] + math.sin(a) * r
+        dr.ellipse([x - 6, y - 4, x + 6, y + 4], fill=(120, 214, 230), outline=INK)
+@draw("huts")
+def _(f, rnd):                                    # a goblin village: crooked round huts with spiky roofs, a cook fire
+    for _ in range(int(f["r"] / 9)):
+        a, d = rnd.uniform(0, 6.283), f["r"] * .85 * math.sqrt(rnd.random()); x, y, s = f["x"] + math.cos(a) * d, f["y"] + math.sin(a) * d * .8, rnd.uniform(12, 18)
+        if road_dist((x, y)) < s + 20: continue
+        dr.ellipse([x - s, y - s * .9, x + s, y + s * .9], fill=jitter((128, 96, 60), rnd, 10), outline=INK, width=2)
+        for k in range(6): b = k * 1.047 + rnd.uniform(-.2, .2); dr.line([(x, y), (x + math.cos(b) * s * 1.25, y + math.sin(b) * s * 1.15)], fill=(70, 52, 34), width=2)
+    dr.ellipse([f["x"] - 7, f["y"] - 7, f["x"] + 7, f["y"] + 7], fill=(226, 120, 44), outline=INK, width=2)
+@draw("palisade")
+def _(f, rnd):                                    # a spiked palisade ring with stakes pointing out
+    r = f["r"] * .8
+    dr.ellipse([f["x"] - r, f["y"] - r, f["x"] + r, f["y"] + r], fill=(140, 116, 80), outline=(80, 58, 36), width=6)
+    for k in range(24):
+        a = k * 6.283 / 24; x, y = f["x"] + math.cos(a) * r, f["y"] + math.sin(a) * r
+        dr.line([(x, y), (x + math.cos(a) * 12, y + math.sin(a) * 12)], fill=INK, width=3)
+    dr.ellipse([f["x"] - 13, f["y"] - 11, f["x"] + 13, f["y"] + 11], fill=(118, 88, 56), outline=INK, width=2)
+def fortress(x, y, r, rnd):                       # the Goblin King's crooked fortress: dark walls, leaning towers, spikes
+    pts = blob(x, y, r, rnd, 9)
+    dr.polygon(pts, fill=(78, 70, 66), outline=INK, width=5)
+    dr.polygon(blob(x, y, r * .82, rnd, 9), fill=(112, 98, 84), outline=(50, 42, 38), width=3)
+    for (px, py) in pts[::2]:
+        s = rnd.uniform(16, 22); dr.ellipse([px - s, py - s, px + s, py + s], fill=(84, 76, 72), outline=INK, width=3)
+        for k in range(7): b = k * .898; dr.line([(px + math.cos(b) * s, py + math.sin(b) * s), (px + math.cos(b) * (s + 9), py + math.sin(b) * (s + 9))], fill=INK, width=2)
+    k_ = r * .32; dr.polygon([(x - k_, y - k_ * .8), (x + k_ * .9, y - k_), (x + k_, y + k_ * .9), (x - k_ * .8, y + k_)], fill=(64, 58, 56), outline=INK, width=4)
+    dr.ellipse([x - k_ * .45, y - k_ * .45, x + k_ * .45, y + k_ * .45], fill=(150, 40, 30), outline=INK, width=2)
+
 SIZES = {"forest": (70, 120), "pines": (60, 110), "deadtrees": (40, 70), "farm": (60, 80), "stockade": (40, 50),
          "motte": (44, 54), "marsh": (70, 120), "pond": (36, 60), "hills": (80, 130), "crag": (45, 75),
-         "keep": (40, 50), "hold": (52, 62)}
-ORDER = ["marsh", "pond", "farm", "hills", "crag", "forest", "pines", "deadtrees", "stockade", "motte", "keep", "hold"]
-for i, (realm, _) in enumerate(SHEETS):
+         "keep": (40, 50), "hold": (52, 62), "cone": (55, 75), "basalt": (60, 90), "watch": (40, 48), "giant": (80, 130),
+         "glade": (50, 70), "ring": (34, 44), "huts": (60, 85), "palisade": (44, 54)}
+ORDER = ["marsh", "pond", "farm", "glade", "hills", "crag", "cone", "basalt", "forest", "pines", "giant", "deadtrees", "stockade", "motte",
+         "keep", "hold", "watch", "ring", "huts", "palisade"]
+for i, (realm, sh) in enumerate(SHEETS):
     t0, frnd = top(i), random.Random(1000 + i)
+    if "fortress" in sh:                          # v5 R4c: the fortress first, so nothing else lands on it
+        fx, fy, fr = sh["fortress"]; fortress(fx, t0 + fy, fr, frnd); feats.append({"t": "fortress", "x": fx, "y": t0 + fy, "r": fr, "sheet": i})
     for _ in range(realm["features"].get("river", 0)): river(t0, frnd, frnd.randint(32, 44))
+    for _ in range(realm["features"].get("lava", 0)): river(t0, frnd, frnd.randint(28, 38), "lava")
     for kind in ORDER:
         for _ in range(realm["features"].get(kind, 0)):
             f = place(kind, frnd.randint(*SIZES[kind]), t0, frnd)
@@ -282,9 +378,9 @@ for i, (realm, _) in enumerate(SHEETS):
 
 # ---- the Mistmoor fog: a fade to pale mist toward the top of its sheet (fog alpha kept to thin the road too)
 arr = np.asarray(im, np.float32); fog = np.zeros((HT, W, 1), np.float32)
-for i, (realm, _) in enumerate(SHEETS):
-    if "fogFrom" not in realm: continue
-    t0 = top(i); fy = t0 + int(H * (1 - realm["fogFrom"]))
+for i, (realm, sh) in enumerate(SHEETS):
+    if "fogFrom" not in sh: continue
+    t0 = top(i); fy = t0 + int(H * (1 - sh["fogFrom"]))
     a = np.clip((fy - yy) / (fy - t0), 0, 1)[:, None] ** 0.8
     fog = np.maximum(fog, np.clip(a[:, :, None] * (0.75 + 0.5 * lowfreq(HT, W, 64, 9)[..., None]), 0, 0.96))
 arr = arr * (1 - fog) + np.array([226, 224, 214], np.float32) * fog
@@ -312,15 +408,17 @@ im = base.copy(); im.alpha_composite(road) if im.mode == "RGBA" else im.paste(ro
 
 # ---- eggs: two per sheet on plausible features, off the road and outside the seam bands
 HOST = {"woodpile": ["forest", "pines"], "mushrooms": ["forest", "pines"], "fish": ["river", "pond"], "reeds": ["marsh"],
-        "raven": ["hills", "crag", "deadtrees"], "glint": ["crag", "hills"], "wisp": ["pond", "marsh", "deadtrees"], "grass": []}
+        "raven": ["hills", "crag", "deadtrees"], "glint": ["crag", "hills"], "wisp": ["pond", "marsh", "deadtrees", "glade"], "grass": [],
+        "bubble": ["river"], "ember": ["cone", "basalt", "crag"], "glowcap": ["giant", "ring"], "owl": ["giant"], "lookout": ["huts", "palisade", "hills"]}
 def egg_spot(kind, i, rnd):
     t0 = top(i); lo, hi = t0 + OV + 40, t0 + H - OV - 40
     ok = lambda p: lo <= p[1] <= hi and 40 <= p[0] <= W - 40 and road_dist(p) > 46 and \
         all(math.hypot(p[0] - nx, p[1] - ny) > 70 for nx, ny in NODES)
-    for f in [f for f in feats if f["t"] in HOST[kind] and f.get("sheet", -1) == i or (f["t"] == "river" and "river" in HOST[kind] and t0 <= f["y"] <= t0 + H)]:
+    for f in [f for f in feats if f["t"] in HOST[kind] and f.get("sheet", -1) == i or (f["t"] == "river" and "river" in HOST[kind] and t0 <= f["y"] <= t0 + H
+              and (f.get("kind") == "lava") == (kind == "bubble"))]:
         cands = [tuple(p) for p in f["line"][::4]] if f["t"] == "river" else \
-            [(f["x"] + math.cos(a) * f["r"] * (0 if kind in ("fish", "reeds", "glint", "wisp") else 1.05),
-              f["y"] + math.sin(a) * f["r"] * (0 if kind in ("fish", "reeds", "glint", "wisp") else .85)) for a in np.linspace(0, 6.28, 16)]
+            [(f["x"] + math.cos(a) * f["r"] * (0 if kind in ("fish", "reeds", "glint", "wisp", "ember") else 1.05),
+              f["y"] + math.sin(a) * f["r"] * (0 if kind in ("fish", "reeds", "glint", "wisp", "ember") else .85)) for a in np.linspace(0, 6.28, 16)]
         rnd.shuffle(cands)
         for p in cands:
             if ok(p): return p
@@ -334,7 +432,14 @@ for i, (realm, sh) in enumerate(SHEETS):
         p = egg_spot(kind, i, ernd)
         if p is None: kind, p = "grass", egg_spot("grass", i, ernd)
         rec["eggs"].append({"kind": kind, "x": round(p[0]), "y": round(p[1] - top(i))})
-    if "goblinKing" in realm: rec["goblinKing"] = realm["goblinKing"]
+    if "goblinKing" in sh: rec["goblinKing"] = sh["goblinKing"]
+    if "fortress" in sh: rec["fortress"] = sh["fortress"]
+    rec["crossings"], t0 = [], top(i)             # v5 R4c: where each river or lava flow crosses the road (bridge hints)
+    for f in feats:
+        if f["t"] != "river": continue
+        for p in f["line"][::2]:
+            if t0 + OV < p[1] < t0 + H - OV and road_dist(p) < 14 and all(math.hypot(p[0] - c[0], p[1] - t0 - c[1]) > 60 for c in rec["crossings"]):
+                rec["crossings"].append([round(float(p[0])), round(float(p[1] - t0)), f.get("kind", "river")])
 
 for i in range(N):                                # base (pass 1), road layer (pass 2), both (one-pass guide)
     box = (0, top(i), W, top(i) + H)

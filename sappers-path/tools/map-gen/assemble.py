@@ -5,6 +5,9 @@
 #     every seam at the centre (the painting can drift a few px there)
 #  2. seam crossfade baked into each sheet's bottom `overlap` rows (draw later sheets over earlier ones: no mask needed)
 #  3. nodes and the road centreline nudged onto the painted road; eggs found by colour on painted features
+# v5 R4c: sheets 1..out.frozen.upTo keep R3's candidates, guides and guide layout (guide-layout-r3.json), so their JPEGs and
+# layout come out byte-identical; the top sheet carries the long tail's spot, the fortress and the king; each river or lava
+# crossing becomes a bridge hint (fidelity.json "bridges": [sheet, road sample, kind]); contact sheets are contact-r4*.
 import json, math, pathlib, random, io
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
@@ -16,6 +19,10 @@ A = P["assemble"]; W, H, OV = P["sheet"]["w"], P["sheet"]["h"], P["sheet"]["over
 G, C = pathlib.Path(P["out"]["guides"]), pathlib.Path(P["out"]["candidates"])
 MAP = GAME / "map"; MAP.mkdir(exist_ok=True)
 N = len(GL["sheets"]); REALMS = {r["realm"]: r for r in P["realms"]}
+FZ = P["out"].get("frozen", {"upTo": 0}); GL3 = json.load(open(HERE / "guide-layout-r3.json")) if FZ["upTo"] else None
+GS = [GL3["sheets"][i] if i < FZ["upTo"] else GL["sheets"][i] for i in range(N)]   # each sheet's guide record
+cdir = lambda i: pathlib.Path(FZ["candidates"]) if i < FZ["upTo"] else C            # where sheet i's picks live
+gdir = lambda i: pathlib.Path(FZ["guides"]) if i < FZ["upTo"] else G
 def ss(t): t = np.clip(t, 0, 1); return t * t * (3 - 2 * t)
 f32 = lambda im: np.asarray(im.convert("RGB"), np.float32)
 
@@ -23,20 +30,20 @@ f32 = lambda im: np.asarray(im.convert("RGB"), np.float32)
 sheets, fid = [], {}
 for i in range(N):
     pk = PICK[str(i + 1)]
-    src = Image.open(C / pk["sheet"]).convert("RGB")
+    src = Image.open(cdir(i) / pk["sheet"]).convert("RGB")
     for box in P["retouch"].get(str(i + 1), []): src.paste(src.crop(box).filter(ImageFilter.GaussianBlur(6)), box[:2])
     E = P["edgeMirror"].get(str(i + 1), 0)
     if E:
         a = np.asarray(src).copy(); a[:, :E] = a[:, 2 * E - 1:E - 1:-1]; a[:, W - E:] = a[:, W - E - 1:W - 2 * E - 1:-1]
         src = Image.fromarray(a)
     paint = f32(src)
-    comp = src.convert("RGBA"); comp.alpha_composite(Image.open(G / f"road-{i + 1:02d}.png").convert("RGBA"))
+    comp = src.convert("RGBA"); comp.alpha_composite(Image.open(gdir(i) / f"road-{i + 1:02d}.png").convert("RGBA"))
     comp = f32(comp)                              # the painting with the coded road laid back on top
     d = np.minimum(np.arange(H), H - 1 - np.arange(H)).astype(np.float32)        # distance from the nearer edge
     w = (1 - ss((d - A["restoreHold"]) / (A["restoreBand"] - A["restoreHold"])))[:, None, None]
     if str(i + 1) in P["roadEnd"]: w[:H // 2] = 0                    # the road ends in the fog: no top restore
     out = paint * (1 - w) + comp * w
-    road = np.array(GL["sheets"][i]["road"], np.float32)
+    road = np.array(GS[i]["road"], np.float32)
     inner = road[(road[:, 1] > OV + A["restoreBand"]) & (road[:, 1] < H - OV - A["restoreBand"])]
     xi, yi = inner[:, 0].astype(int).clip(0, W - 1), inner[:, 1].astype(int).clip(0, H - 1)
     dist = np.linalg.norm(paint[yi, xi] - comp[yi, xi], axis=1)
@@ -65,9 +72,9 @@ layout = {"about": "Sapper's Path v5 journey map. Sheets read bottom to top; she
                    "(origin top-left of each sheet). Draw sheet k+1 over sheet k, its top edge `step` px above sheet k's: "
                    "the bottom `overlap` rows of each sheet already hold the crossfade.",
           "w": W, "h": H, "overlap": OV, "step": STEP, "sheets": []}
-flags = []
+flags, bridges = [], []
 for i in range(N):
-    g = GL["sheets"][i]; img = final[i]; rr = np.array(g["road"], np.float32)
+    g = GS[i]; img = final[i]; rr = np.array(g["road"], np.float32)
     mask, col = roadness(img, rr)
     road = []
     for x, y in g["road"]:
@@ -89,6 +96,8 @@ for i in range(N):
     r_, g_, b_ = img[..., 0], img[..., 1], img[..., 2]; lum = img.mean(2); sat = img.max(2) - img.min(2)
     water = (b_ > r_ + 22) & (g_ > r_ + 22)
     water = ndi.binary_opening(water, iterations=3)
+    lava = ndi.binary_opening((r_ > 170) & (r_ > g_ + 50) & (g_ > b_ + 10), iterations=2)   # v5 R4c: glowing lava
+    d_lava_in = ndi.distance_transform_edt(lava); d_lava = ndi.distance_transform_edt(~lava)
     dark = (lum < A["darkLum"]) & ~water
     dark = ndi.binary_opening(dark, iterations=2)
     rock = (sat < 28) & (lum > 90) & (lum < 175) & ~water
@@ -107,10 +116,14 @@ for i in range(N):
     ok = (yy > OV + 40) & (yy < H - OV - 40) & (xx > 40) & (xx < W - 40) & (d_road > A["eggRoadGap"])
     for n in lv + rec["quests"]: ok &= np.hypot(xx - n["x"], yy - n["y"]) > A["eggNodeGap"]
     if "goblinKing" in g: ok &= np.hypot(xx - g["goblinKing"][0], yy - g["goblinKing"][1]) > 90
+    if "tail" in g: ok &= (np.hypot(xx - g["tail"]["x"], yy - g["tail"]["y"]) > A["eggNodeGap"]) & (yy > g["tail"]["y"])   # nothing in the fog
     HOSTS = {"fish": d_water_in >= 8, "wisp": (d_water_in >= 6) | fog, "reeds": ~water & (d_water < 14) & (d_water > 3),
              "woodpile": calm & (d_crowd > 6) & (d_crowd < 24) & (d_water > 30), "mushrooms": calm & (d_crowd > 4) & (d_crowd < 20) & (d_water > 30),
              "raven": d_rock_in >= 5, "glint": d_rock_in >= 4,
-             "grass": calm & ~water & (d_crowd > 30) & (d_water > 25)}
+             "grass": calm & ~water & (d_crowd > 30) & (d_water > 25),
+             "bubble": d_lava_in >= 6, "ember": ~lava & (d_lava > 14) & (d_lava < 70) & ~water,
+             "glowcap": calm & (d_crowd > 4) & (d_crowd < 20) & (d_water > 30), "owl": crowd & (lum < 120) & ~water,
+             "lookout": calm & (d_crowd > 6) & (d_crowd < 24) & (d_water > 30)}
     rnd = random.Random(500 + i); eggs = []
     for e in g["eggs"]:
         kind = e["kind"]
@@ -125,6 +138,11 @@ for i in range(N):
         eggs.append({"kind": k, "x": int(xs[j]), "y": int(ys[j])})
     rec["eggs"] = eggs
     if "goblinKing" in g: rec["goblinKing"] = {"x": g["goblinKing"][0], "y": g["goblinKing"][1]}
+    if "tail" in g:                               # v5 R4c: the long tail's node, nudged onto the painted road like a level
+        x, y, _ = nudge(mask, g["tail"]["x"], g["tail"]["y"], A["nodeNudge"]); rec["tail"] = {"x": round(x), "y": round(y), "fog": g["tail"].get("fog", 0)}
+    if "fortress" in g: rec["fortress"] = {"x": g["fortress"][0], "y": g["fortress"][1], "r": g["fortress"][2]}
+    for x, y, kind in g.get("crossings", []):      # v5 R4c: bridge hints, checked by eye before they go in config map.bridges
+        k = int(np.argmin([(p[0] - x) ** 2 + (p[1] - y) ** 2 for p in road])); bridges.append([i + 1, k, kind])
     for o in P.get("manual", {}).get(str(i + 1), []):   # hand fixes after the eye check: {"list": "eggs", "i": 0, "x": .., "y": ..}
         rec[o["list"]][o["i"]].update({k: v for k, v in o.items() if k not in ("list", "i", "why")})
     layout["sheets"].append(rec)
@@ -150,6 +168,7 @@ def marks(dr, s, ox=0, oy=0):
         for n in rec["levels"]: X, Y = (n["x"] + ox) * s, (n["y"] + t0 + oy) * s; dr.ellipse([X - 4, Y - 4, X + 4, Y + 4], fill=(240, 190, 40), outline=(0, 0, 0))
         for n in rec["quests"]: X, Y = (n["x"] + ox) * s, (n["y"] + t0 + oy) * s; dr.ellipse([X - 5, Y - 5, X + 5, Y + 5], fill=(150, 80, 220), outline=(0, 0, 0))
         for n in rec["eggs"]: X, Y = (n["x"] + ox) * s, (n["y"] + t0 + oy) * s; dr.rectangle([X - 3, Y - 3, X + 3, Y + 3], fill=(230, 40, 40), outline=(255, 255, 255))
+        if "tail" in rec: X, Y = rec["tail"]["x"] * s, (rec["tail"]["y"] + t0) * s; dr.rectangle([X - 5, Y - 5, X + 5, Y + 5], fill=(150, 80, 220), outline=(255, 255, 255))
         if "goblinKing" in rec:
             X, Y = rec["goblinKing"]["x"] * s, (rec["goblinKing"]["y"] + t0) * s; dr.polygon([(X, Y - 7), (X - 6, Y + 5), (X + 6, Y + 5)], fill=(0, 0, 0))
 MARKS = [(240, 190, 40), (150, 80, 220), (230, 40, 40), (255, 255, 255), (0, 0, 0), (255, 0, 0)]
@@ -160,15 +179,15 @@ def qsave(img, path):                             # 256-colour PNG that keeps th
 cw = P["out"]["contactWidth"]; s = cw / W
 contact = tall.resize((cw, round(HT * s)), Image.LANCZOS); dr = ImageDraw.Draw(contact)
 for k in range(1, N): y = (HT - k * STEP - OV / 2) * s; dr.line([(0, y), (6, y)], fill=(255, 0, 0), width=2); dr.line([(cw - 7, y), (cw, y)], fill=(255, 0, 0), width=2)
-marks(dr, s); qsave(contact, HERE / "contact.png")
+marks(dr, s); qsave(contact, HERE / P["out"].get("contact", "contact.png"))
 cr = P["out"]["seamCrop"]; seams = Image.new("RGB", (W, (N - 1) * (2 * cr + 8)), (255, 255, 255))
 for k in range(1, N):
     yc = round(HT - k * STEP - OV / 2); crop = tall.crop((0, yc - cr, W, yc + cr)); d2 = ImageDraw.Draw(crop)
     d2.line([(0, cr), (10, cr)], fill=(255, 0, 0), width=2); d2.line([(W - 11, cr), (W, cr)], fill=(255, 0, 0), width=2)
     seams.paste(crop, (0, (k - 1) * (2 * cr + 8)))
-qsave(seams, HERE / "contact-seams.png")
+qsave(seams, HERE / P["out"].get("contactSeams", "contact-seams.png"))
 json.dump({"fidelity": fid, "jpeg": {k: {"quality": q, "kb": round(b / 1024)} for k, (q, b) in sizes.items()},
-           "totalKB": round(sum(b for _, b in sizes.values()) / 1024), "flags": flags}, open(HERE / "fidelity.json", "w"), indent=1)
+           "totalKB": round(sum(b for _, b in sizes.values()) / 1024), "flags": flags, "bridges": bridges}, open(HERE / "fidelity.json", "w"), indent=1)
 print("fidelity", {k: v["onRoad"] for k, v in fid.items()})
 print("jpeg", {k: f"q{q} {b // 1024}KB" for k, (q, b) in sizes.items()}, "total", sum(b for _, b in sizes.values()) // 1024, "KB")
 print("\n".join(flags) or "no flags")

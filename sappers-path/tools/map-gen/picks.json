@@ -48,7 +48,55 @@
   "sheet": "sheet-12-s72-st52-bs61-st82.png"
  },
  "13": {
-  "base": "base-13-s62-st82.png",
-  "sheet": "sheet-13-s72-st52-bs62-st82.png"
+  "base": "base-13-s63-st80.png",
+  "sheet": "sheet-13-s72-st52-bs63-st80.png"
+ },
+ "14": {
+  "base": "base-14-s65-st80.png",
+  "sheet": "sheet-14-s72-st52-bs65-st80.png"
+ },
+ "15": {
+  "base": "base-15-s63-st80.png",
+  "sheet": "sheet-15-s72-st52-bs63-st80.png"
+ },
+ "16": {
+  "base": "base-16-s61-st82.png",
+  "sheet": "sheet-16-s72-st52-bs61-st82.png"
+ },
+ "17": {
+  "base": "base-17-s63-st82.png",
+  "sheet": "sheet-17-s72-st52-bs63-st82.png"
+ },
+ "18": {
+  "base": "base-18-s63-st82.png",
+  "sheet": "sheet-18-s72-st52-bs63-st82.png"
+ },
+ "19": {
+  "base": "base-19-s63-st82.png",
+  "sheet": "sheet-19-s72-st52-bs63-st82.png"
+ },
+ "20": {
+  "base": "base-20-s63-st82.png",
+  "sheet": "sheet-20-s72-st52-bs63-st82.png"
+ },
+ "21": {
+  "base": "base-21-s63-st82.png",
+  "sheet": "sheet-21-s72-st52-bs63-st82.png"
+ },
+ "22": {
+  "base": "base-22-s63-st82.png",
+  "sheet": "sheet-22-s72-st52-bs63-st82.png"
+ },
+ "23": {
+  "base": "base-23-s61-st82.png",
+  "sheet": "sheet-23-s71-st52-bs61-st82.png"
+ },
+ "24": {
+  "base": "base-24-s63-st82.png",
+  "sheet": "sheet-24-s72-st52-bs63-st82.png"
+ },
+ "25": {
+  "base": "base-25-s61-st82.png",
+  "sheet": "sheet-25-s72-st52-bs61-st82.png"
  }
 }

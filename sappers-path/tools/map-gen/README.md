@@ -1,6 +1,6 @@
 # Journey map art (v5 R3, piece 1)
 
-Thirteen painted parchment sheets, read bottom to top, in the style Peter picked on 2026-10-04 (style B, seed 61:
+Twenty-five painted parchment sheets (13 in R3, sheet 13 repainted and 14-25 added in v5 R4c), read bottom to top, in the style Peter picked on 2026-10-04 (style B, seed 61:
 `game-research/sappers-path-v4/map-mockups/README.md`). The road is placed in code, so every node, quest and egg spot is
 known before anything is painted. No text in the art.
 
@@ -85,6 +85,47 @@ SDXL runs in all: 77 logged in `logs/` (sheet-1 tuning included; 76 images, one 
 3. For each new sheet: `./run.sh base <n> <seed>` two or three times, pick the land by eye; then
    `./run.sh road <n> <seed> <outputs>/base-NN-sSEED-st82.png` once or twice, pick by eye. Check `memory_pressure` between
    runs (run.sh logs it); never run alongside another session's generation.
-4. Add the picks to `picks.json`, run `python assemble.py`, look at `contact.png` and `contact-seams.png`, fix any egg or
+4. Add the picks to `picks.json`, run `python assemble.py`, look at the contact sheets (`plan.json` `out.contact`), fix any egg or
    node by hand in `plan.json` `manual`, and re-run.
 5. The old top sheet's upper edge (the Mistmoor fog) will need repainting once a realm sits above it.
+
+## v5 R4c: realms 5-8, levels 100-200 (2026-10-05)
+
+Sheet 13 was repainted (no fog: the road now runs on at x = 384) and sheets 14-25 added, same two-pass pipeline, SDXL base
+1.0 only, one image a run (69 runs, `logs/`, memory 65-85% free, swap 0 throughout). Candidates and guides:
+`/Users/peter/local-ai/outputs/sapper-v5-map-r4/`. Sheets 1-12 keep R3's picks, guides and guide records (`plan.json`
+`out.frozen`, `guide-layout-r3.json`), so `assemble.py` writes them byte-identical (md5 checked) and their layout records
+unchanged. Contact sheets: `contact-r4.png`, `contact-seams-r4.png` (R3's `contact*.png` removed; they showed 13 sheets).
+
+What changed in the tools: sheet-level keys for the top sheet (`tail`: the long tail's own stop, spaced like a level;
+`tailFog`: the row the map screen's fog is full at; `fogFrom`, `stopTop`; `fortress` placed automatically as the biggest
+clear disc near level 200; `goblinKing` between level 200 and the fortress gate; a sheet `prompt`); a realm `negExtra`
+(added to the negative prompt); new feature drawers (lava, cone, basalt, watch, giant, glade, ring, huts, palisade,
+fortress); each river or lava flow's road crossing written as a bridge hint; egg colour hosts for the new kinds (bubble on
+lava, ember near lava, glowcap, owl in dense canopy, lookout beside huts).
+
+Prompt lessons: "crags" and "fortress with towers" pull SDXL into perspective peaks and horizons; "seen from directly
+above ... plateau of cracked basalt slabs" plus `negExtra` "mountains, peaks, spires, cliffs, side view" fixed the Crags. The
+forest needed "canopy of round green treetops ... map of the woods" and "tree trunks, side view" in the negative; the first
+two forest lands were side-on scenes. The fen needed "moorland of tussock grass ... many small dark still pools" (the fen
+prompt made one big lake). The summit stays a perspective fortress (every seed drew one), like R3's castles on sheet 12; its
+horizon sits under the map screen's fog.
+
+| Sheet | Realm | Levels | Quests (picture after level) | Land pick | Road pick | Road fidelity | JPEG | Notes |
+|---|---|---|---|---|---|---|---|---|
+| 13 | 5 The Mistmoor | 100-107 | 25/100, 26/104, 27/107 | `base-13-s63-st80` (6) | s72 (2) | 0.826 | 277 KB | repainted; fen prompt lands rejected (one lake, text, frame) |
+| 14 | 5 | 108-116 | 28/112, 29/116 | `base-14-s65-st80` (2) | s72 | 0.793 | 289 KB | |
+| 15 | 5 | 117-124 | 30/120, 31/123 | `base-15-s63-st80` (2) | s72 | 0.826 | 264 KB | s65 had a frame edge |
+| 16 | 6 Emberwatch Crags | 125-132 | 32/128, 33/132 | `base-16-s61-st82` (4) | s72 | 0.680 | 256 KB | 3 perspective/frame lands rejected; pale road on dark rock reads low |
+| 17 | 6 | 133-140 | 34/136, 35/139 | `base-17-s63-st82` (2) | s72 | 0.863 | 272 KB | |
+| 18 | 6 | 141-149 | 36/144, 37/148 | `base-18-s63-st82` (2) | s72 | 0.685 | 259 KB | |
+| 19 | 7 The Shrouded Weald | 150-157 | 38/152, 39/155 | `base-19-s63-st82` (4) | s72 (2) | 0.829 | 299 KB | first two side-on forests rejected |
+| 20 | 7 | 158-165 | 40/160, 41/164 | `base-20-s63-st82` (2) | s72 | 0.964 | 296 KB | a pale stream near the top reads like a fork |
+| 21 | 7 | 166-174 | 42/168, 43/171 | `base-21-s63-st82` (2) | s72 | 0.861 | 300 KB | |
+| 22 | 8 The Goblin King's Throne | 175-182 | 44/176, 45/180 | `base-22-s63-st82` (4) | s72 | 0.941 | 286 KB | badlands prompt lands were perspective cliffs |
+| 23 | 8 | 183-190 | 46/184, 47/187 | `base-23-s61-st82` (2) | s71 (3) | 0.969 | 291 KB | road s72 broke mid-sheet (levels 185-186 off road) |
+| 24 | 8 | 191-197 | 48/192, 49/196 | `base-24-s63-st82` (2) | s72 (2) | 0.797 | 286 KB | |
+| 25 | 8 (summit) | 198-200 + the long tail | 50/200 | `base-25-s61-st82` (6) | s72 (4) | 0.695 | 277 KB | fortress left of 200; above the tail the painted road turns right, under the fog |
+
+Map art total 7,057 KB (25 sheets). Bridges by eye on lava (stone): see config `map.bridges`; the Mistmoor's road runs on
+causeways and the Weald's streams run beside the road, so neither got bridges.
