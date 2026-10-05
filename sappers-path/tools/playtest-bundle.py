@@ -96,7 +96,11 @@ def main(ref, out, new_title=None, jump=None):
     for name in ls_src(ref, "map", (".json", ".jpg")):  # v5 R3: the journey map's layout and painted sheets
         write(out, "map/" + name, show(ref, "map/" + name, binary=True))
     for name in ls_src(ref, "audio", (".m4a",)):  # v5.2: the music (main.js adds ?v= to its URLs; stripped above)
-        write(out, "audio/" + name, show(ref, "audio/" + name, binary=True))
+        # The artifact host serves .mp4 but not .m4a (same MP4 container), so the bundle renames them and config follows.
+        write(out, "audio/" + name[:-4] + ".mp4", show(ref, "audio/" + name, binary=True))
+    cfg = os.path.join(out, "config.json")
+    text = open(cfg, encoding="utf-8").read()
+    write(out, "config.json", re.sub(r'(audio/[^"]+)\.m4a"', r'\1.mp4"', text))
 
     body = open(os.path.join(out, "index.html"), encoding="utf-8").read()
     write(out, "wrap.html", "<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\"></head><body>\n" + body + "\n</body></html>\n")
