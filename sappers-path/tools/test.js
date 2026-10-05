@@ -1339,6 +1339,20 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   ok(far.every((d) => d >= 60), "map bridges: " + MC.bridges.length + " on real road samples, each at least 60 sheet px from every node (closest " + Math.round(Math.min(...far)) + ")");
   const top = LAY.sheets[LAY.sheets.length - 1], firsts = LAY.sheets.filter((s, k) => k === 0 || LAY.sheets[k - 1].realm !== s.realm).map((s) => s.sheet);
   ok(MC.tail.at > 0 && MC.tail.at < top.road.length && top.goblinKing && firsts.length === require("../config.json").eras.length, "map: the long-tail node sits on the top sheet's road (sample " + MC.tail.at + "); one realm banner per realm (sheets " + firsts.join(", ") + ")");
+  // v5 R3 fix: the next-up quest is the open, unwon one nearest the current level; the side picker keeps a bubble off the
+  // route and off a banner, not just off nodes.
+  const NQ = Save.fresh(META); for (let i = 0; i < 55; i++) NQ.done[order[i]] = 1; for (let i = 0; i < 3; i++) NQ.gal[gids[i]] = 1;
+  const nq = J.nearQuest(NQ, order, gids, after, 56), nqWant = gids.filter((id, i) => after[i] <= 55 && !NQ.gal[id]).pop();
+  eq([nq, J.nearQuest(NQ, order, gids, after, 56, nqWant) !== nqWant, J.nearQuest(Save.fresh(META), order, gids, after, 1)], [nqWant, true, null], "map next-up quest: with 1-55 cleared and pictures 1-3 won, the open quest nearest level 56 (picture " + (gids.indexOf(nqWant) + 1) + "), not picture 4; skip leaves it out; none open, none");
+  const road = [[100, 0], [100, 50], [100, 100], [100, 150], [100, 200]];
+  eq([J.side([60, 100], [], 30, 20, 10, 400, ["e", "w"], road, 8, []), J.side([60, 100], [], 30, 20, 10, 400, ["e", "w"], [], 8, []), J.side([200, 100], [], 30, 20, 10, 400, ["e", "n", "s"], [], 8, [[205, 60, 300, 100]]), J.side([390, 100], [], 30, 20, 10, 400, ["e", "w"], [], 8, [])],
+    ["w", "e", "s", "w"], "map side picker: a bubble leaves the side the route runs through, keeps its first side when nothing is in the way, avoids a banner box, never leaves the sheet");
+  // v5 R3 fix: every two tap targets (levels, side quests, eggs, the long tail's node), across sheets too, are at least
+  // 48 CSS px apart, centre to centre, on a 375-wide phone (their discs are 44).
+  const kp = 375 / LAY.w, tg = LAY.sheets.flatMap((S, si) => { const wy = (y) => (LAY.sheets.length - 1 - si) * LAY.step + y, o = S.levels.map((p) => ["level " + p.n, p.x, wy(p.y)]).concat(S.quests.map((q) => ["quest " + q.q, q.x, wy(q.y)]), S.eggs.map((g, i) => ["egg " + J.eggId(S.sheet, i), g.x, wy(g.y)]));
+    if (si === LAY.sheets.length - 1) o.push(["the long tail", S.road[MC.tail.at][0], wy(S.road[MC.tail.at][1])]); return o; });
+  let close = [Infinity, ""]; for (let i = 0; i < tg.length; i++) for (let j = i + 1; j < tg.length; j++) { const d = Math.hypot(tg[i][1] - tg[j][1], tg[i][2] - tg[j][2]) * kp; if (d < close[0]) close = [d, tg[i][0] + " and " + tg[j][0]]; }
+  ok(close[0] >= 48, "map spacing: " + tg.length + " tap targets, every pair at least 48 CSS px apart at 375 wide (closest " + close[0].toFixed(1) + ", " + close[1] + ")");
   // v5 R3 fix, old saves by slot (Peter's call): a v4.3 save (format 2, v4.3's ids: e1-25, e2-50, e3-75, e4-100 sat at
   // the end of their eras) with all 100 cleared and pictures 1-25 won loads with all 100 cleared, picture 25 and the long
   // tail open, its bests and last moved to the renamed ids, and no first clear left to pay on the four renamed levels.

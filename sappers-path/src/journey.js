@@ -35,6 +35,13 @@
     const next = ids.find((id) => !(data.gal || {})[id] && Save.questOpen(data, order, gal, after, id)) || null;
     return { ids, next, won };
   }
+  // v5 R3 fix: the open side quest not won whose main level is nearest level number `at` (ties: the lower picture), or null.
+  // Only the campaign's quests (the long tail has its own node); skip: an id to leave out.
+  function nearQuest(data, order, gal, after, at, skip) {
+    let best = null, bd = Infinity;
+    for (let i = 0; i < gal.length; i++) { const a = after[i] | 0, id = gal[i]; if (a < 1 || a > order.length || id === skip || (data.gal || {})[id] || !Save.questOpen(data, order, gal, after, id)) continue; const d = Math.abs(at - a); if (d < bd) { bd = d; best = id; } }
+    return best;
+  }
   // The node the map centres on: the next level not cleared, or (every level cleared) the long tail's node, "tail".
   const focus = (data, order) => { const n = order.find((id, i) => !data.done[id] && Save.isOpen(data, order, id)); return n || (order.length ? "tail" : null); };
 
@@ -49,12 +56,20 @@
   function heading(road, i, k) { const a = road[Math.max(0, i - k)], b = road[Math.min(road.length - 1, i + k)]; return (Math.atan2(b[1] - a[1], b[0] - a[0]) * 180) / Math.PI; }
 
   // Which side of point p a box w x h (sheet px) set gap px off it should go: the first of `sides` ("e" right, "w" left,
-  // "n" above) whose box covers the fewest other things (pts: [x, y, r]) and stays on the sheet (W wide).
-  function side(p, pts, w, h, gap, W, sides) {
+  // "n" above, "s" below) whose box covers least (v5 R3 fix: by how deep things reach into it, so a bare graze loses to a
+  // covered node). pts: [x, y, r], other nodes and eggs; road: the sheet's road samples (the route, rw px either side of
+  // its centreline; it counts as one thing, at half a node's weight); boxes: [x0, y0, x1, y1], banners. Off the sheet (W
+  // wide) costs more than anything.
+  const sdBox = (x, y, x0, y0, x1, y1) => { const dx = Math.max(x0 - x, 0, x - x1), dy = Math.max(y0 - y, 0, y - y1); return dx || dy ? Math.hypot(dx, dy) : -Math.min(x - x0, x1 - x, y - y0, y1 - y); };
+  function side(p, pts, w, h, gap, W, sides, road, rw, boxes) {
     let best = sides[0], bs = Infinity;
     for (const s of sides) {
-      const x0 = s === "e" ? p[0] + gap : s === "w" ? p[0] - gap - w : p[0] - w / 2, y0 = s === "n" ? p[1] - gap - h : p[1] - h / 2; let sc = x0 < 0 || x0 + w > W ? 4 : 0;
-      for (const q of pts) if (!(q[0] === p[0] && q[1] === p[1]) && q[0] > x0 - q[2] && q[0] < x0 + w + q[2] && q[1] > y0 - q[2] && q[1] < y0 + h + q[2]) sc++;
+      const x0 = s === "e" ? p[0] + gap : s === "w" ? p[0] - gap - w : p[0] - w / 2, y0 = s === "n" ? p[1] - gap - h : s === "s" ? p[1] + gap : p[1] - h / 2, x1 = x0 + w, y1 = y0 + h;
+      let sc = x0 < 0 || x1 > W ? 1e4 : 0, rd = 0;
+      for (const q of pts) if (!(q[0] === p[0] && q[1] === p[1])) sc += Math.max(0, q[2] - sdBox(q[0], q[1], x0, y0, x1, y1));
+      for (const q of road || []) rd = Math.max(rd, rw - sdBox(q[0], q[1], x0, y0, x1, y1));
+      for (const b of boxes || []) { const ox = Math.min(x1, b[2]) - Math.max(x0, b[0]), oy = Math.min(y1, b[3]) - Math.max(y0, b[1]); if (ox > 0 && oy > 0) sc += Math.min(ox, oy); }
+      sc += rd / 2;
       if (sc < bs) { bs = sc; best = s; }
     }
     return best;
@@ -128,5 +143,5 @@
     '<path d="M12 4l2-6 3 4 2-6 2 6 3-4 2 6z" fill="#f2c230" stroke="#221a26" stroke-width="1.2"/><circle cx="15.5" cy="12" r="1.6" fill="#ff4a3a"/><circle cx="22.5" cy="12" r="1.6" fill="#ff4a3a"/></g>';
   const flag = () => '<g transform="scale(2)"><path d="M0 0v46" stroke="#1e1620" stroke-width="2.4"/><path d="M1 2h22l-5 7 5 7-4 1 3 6H1z" fill="#8a1f19" stroke="#1e1620" stroke-width="1.6"/><circle cx="11" cy="11" r="3.4" fill="#f3ead8" stroke="#1e1620" stroke-width="1.2"/><circle cx="11" cy="11" r="1.2" fill="#1e1620"/></g>';
 
-  return { nodeState, questState, tail, focus, nearest, pathD, split, heading, side, eggId, eggCoins, bridge, detour, stone, egg, EGG_KINDS, king, flag };
+  return { nodeState, questState, tail, nearQuest, focus, nearest, pathD, split, heading, side, eggId, eggCoins, bridge, detour, stone, egg, EGG_KINDS, king, flag };
 });

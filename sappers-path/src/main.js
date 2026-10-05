@@ -610,6 +610,7 @@
     if (!LAY || !Array.isArray(LAY.sheets)) return; // no layout: the map is the foot's Play alone
     const R = M.route, nS = LAY.sheets.length, W = LAY.w, H = LAY.h, byN = new Map(app.levels.map((e) => [e.n, e])), world = $("jr-world");
     const J = (app.jr = { sheets: [], quests: [], eggs: [], tail: null, k: 0, colW: 0, cut: "", io: null, label: null });
+    const bannerAt = (re) => M.bannerY + ((M.bannerDy || [])[re - 1] | 0); // v5 R3 fix: a realm's banner can sit a little lower or higher (sheet px)
     const qOf = (q) => app.gal[q - 1] || null, tailE = () => app.gal.filter((e) => e.L.quest && e.L.quest.after > app.order.length);
     LAY.sheets.forEach((S, si) => {
       const top = si === nS - 1, el = document.createElement("div"); el.className = "jr-sheet"; el.style.zIndex = si + 1; el.dataset.sheet = S.sheet;
@@ -649,19 +650,22 @@
         b.innerHTML = '<span class="bt"><i></i><b></b></span><span class="lore"></span>'; b.querySelector("i").textContent = fill(T.realm, { e: S.realm }); b.querySelector("b").textContent = er.name; b.querySelector(".lore").textContent = er.note;
         b.setAttribute("aria-label", fill(T.bannerAria, { e: S.realm, name: er.name })); b.setAttribute("aria-expanded", "false");
         b.addEventListener("click", () => { const on = !b.classList.contains("open"); b.classList.toggle("open", on); b.setAttribute("aria-expanded", on ? "true" : "false"); });
-        at(b, W / 2, M.bannerY).classList.remove("east", "west"); }
+        at(b, W / 2, bannerAt(S.realm)).classList.remove("east", "west"); }
       // The top sheet: the fog over the road past the last level, its one next-picture node and the cleared ones.
       if (top) { const F = M.tail, p = S.road[Math.min(S.road.length - 1, F.at)], lab = document.createElement("div"); lab.className = "fogl"; lab.textContent = T.fog; at(lab, F.labelAt[0], F.labelAt[1]).classList.remove("east", "west");
         const b = document.createElement("button"); b.className = "qn tailn"; b.hidden = true; b.innerHTML = '<span class="qf"><canvas class="pix" aria-hidden="true"></canvas><i class="qi" aria-hidden="true"></i></span><span class="prz" aria-hidden="true"><span class="pz-t"></span><span class="pz-r"><i class="pi"></i>+1</span></span>';
         b.querySelector(".pz-t").textContent = T.prize; at(b, p[0], p[1]).classList.add("bz-e");
-        const th = document.createElement("div"); th.className = "thumbs"; th.style.left = pct(F.thumbsAt[0], W); th.style.top = pct(F.thumbsAt[1], H); th.style.setProperty("--row", F.thumbsRow); lay.append(th);
+        const th = document.createElement("div"); th.className = "thumbs"; th.style.left = pct(F.thumbsAt[0], W); th.style.top = pct(F.thumbsAt[1], H); th.style.setProperty("--row", F.show); lay.append(th);
         J.tail = { b, th, p, ri: Math.min(S.road.length - 1, F.at), e: null, key: "", list: tailE() };
         b.addEventListener("click", () => { const t = J.tail.e; if (t && picOpen(t)) startLevel(t.id); else lockedTap(b); }); }
-      // v5 R3: the label and prize bubble sides, away from the sheet's other buttons (judged on the narrowest phone).
-      { const kf = M.fitK, r = M.nodeR / kf, pts = S.levels.map((P) => [P.x, P.y, r]).concat(S.quests.map((Q) => [Q.x, Q.y, r]), S.eggs.map((G) => [G.x, G.y, r]), [W / 2 - 110, W / 2, W / 2 + 110].map((x) => [x, M.bannerY, r * 1.4]));
-        const lw = M.labelPx[0] / kf, lh = M.labelPx[1] / kf, pw = M.prizePx[0] / kf, ph = M.prizePx[1] / kf;
-        for (const P of S.levels) { const e = byN.get(P.n); if (e) e.side = JN.side([P.x, P.y], pts, lw, lh, 30 / kf, W, P.x > M.rightEdge ? ["w", "e"] : ["e", "w"]); }
-        for (const Q of S.quests) { const e = qOf(Q.q); if (e && e.node) e.node.classList.add("bz-" + JN.side([Q.x, Q.y], pts, pw, ph, 28 / kf, W, Q.x > M.rightEdge ? ["w", "n", "e"] : ["e", "n", "w"])); } }
+      // v5 R3: the label and prize bubble sides, away from the sheet's other buttons (judged on the narrowest phone). v5 R3
+      // fix: also away from the route and the realm banners (this sheet's and the one above's, which reaches down onto it).
+      { const kf = M.fitK, r = M.nodeR / kf, pts = S.levels.map((P) => [P.x, P.y, r]).concat(S.quests.map((Q) => [Q.x, Q.y, r]), S.eggs.map((G) => [G.x, G.y, r]));
+        const bw = Math.min(0.76 * W, M.bannerPx[0] / kf) / 2, bh = M.bannerPx[1] / kf / 2, bx = [];
+        for (const [k, dy] of [[si, 0], [si + 1, -LAY.step]]) { const T2 = LAY.sheets[k]; if (T2 && (k === 0 || LAY.sheets[k - 1].realm !== T2.realm)) { const y = bannerAt(T2.realm) + dy; bx.push([W / 2 - bw, y - bh, W / 2 + bw, y + bh]); } }
+        const lw = M.labelPx[0] / kf, lh = M.labelPx[1] / kf, pw = M.prizePx[0] / kf, ph = M.prizePx[1] / kf, rw = M.route.underW;
+        for (const P of S.levels) { const e = byN.get(P.n); if (e) e.side = JN.side([P.x, P.y], pts, lw, lh, 30 / kf, W, P.x > M.rightEdge ? ["w", "e", "n", "s"] : ["e", "w", "n", "s"], S.road, rw, bx); }
+        for (const Q of S.quests) { const e = qOf(Q.q); if (e && e.node) e.node.classList.add("bz-" + JN.side([Q.x, Q.y], pts, pw, ph, 28 / kf, W, Q.x > M.rightEdge ? ["w", "n", "s", "e"] : ["e", "n", "s", "w"], S.road, rw, bx)); } }
       const sh = { S, el, img, svg, lay, top, loaded: false, cut: null, u: svg.querySelector(".rw-u"), w: svg.querySelector(".rw-w"), a: svg.querySelector(".rw-a") };
       el.append(img, svg, lay); world.append(el); J.sheets.push(sh);
     });
@@ -670,7 +674,7 @@
     const load = (sh) => { if (sh.loaded) return; sh.loaded = true; sh.img.src = "map/" + sh.S.file + "?v=" + V_; };
     if (window.IntersectionObserver) { J.io = new IntersectionObserver((es) => { for (const q of es) if (q.isIntersecting) { const sh = J.sheets[+q.target.dataset.sheet - 1]; load(sh); J.io.unobserve(q.target); } }, { root: $("jr"), rootMargin: M.lazyMarginPx + "px 0px" }); for (const sh of J.sheets) J.io.observe(sh.el); }
     else for (const sh of J.sheets) load(sh);
-    $("jr-quest").addEventListener("click", () => { const nx = nextPicture(); if (nx) startLevel(nx.id); else lockedTap($("jr-quest")); });
+    $("jr-quest").addEventListener("click", () => { const te = mapPic(), nx = nearQ(te ? te.id : null); if (nx) startLevel(nx.id); else lockedTap($("jr-quest")); }); // v5 R3 fix: the card's quest
   }
   // The column's size: the screen's width up to map.colMaxPx, or colWidePx between the cards once the screen is
   // map.cardsMinW wide; sheets are placed in CSS px from it (k = column / sheet width). Keeps the world point at the
@@ -697,7 +701,9 @@
   function renderMap() {
     const d = app.save.data, M = app.cfg.map, T = M.text, J = app.jr, next = Save.next(d, app.order), tags = app.cfg.layout.tags || {};
     $("map-coins").querySelector("b").textContent = d.coins; $("map-coins").setAttribute("aria-label", fill(app.meta.home.coins, { n: d.coins }));
-    const ne = app.byId.get(next), te = mapPic(), mp = $("map-play"); mp.querySelector(".pl").textContent = te ? fill(M.text.playPic, { n: te.n }) : ne ? "Play level " + ne.n : "Play"; playTag(mp, te || ne);
+    // v5 R3 fix: with every level and every picture cleared the map's Play gives way to a line (any node plays again).
+    const ne = app.byId.get(next), te = mapPic(), end = !te && allDone(), mp = $("map-play"); mp.hidden = end; $("jr-end").hidden = !end; $("jr-end").textContent = T.endHint;
+    mp.querySelector(".pl").textContent = te ? fill(T.playPic, { n: te.n }) : ne ? "Play level " + ne.n : "Play"; playTag(mp, end ? null : te || ne);
     if (!J) return;
     // Levels: done (a check), the current one (a glow and the label), open, locked (dim; a tap shakes).
     const f = JN.focus(d, app.order), fe = f && f !== "tail" ? app.byId.get(f) : null;
@@ -706,18 +712,21 @@
       if (b.dataset.st !== st) { b.dataset.st = st; b.classList.remove("done", "cur", "open", "locked"); b.classList.add(st); b.setAttribute("aria-disabled", st === "locked" ? "true" : "false"); }
       b.setAttribute("aria-label", "Level " + e.n + (tg ? ", " + tg : "") + (st === "done" ? ", cleared" : st === "locked" ? ", locked" : st === "cur" ? ", play this one next" : ""));
     }
-    const L = J.label; if (fe && fe.node) { L.firstChild.textContent = fill(T.cur, { n: fe.n }); tagChip(L.querySelector(".tag"), tagOf(fe)); L.className = "jr-cur" + (fe.side === "w" ? " east" : ""); L.style.left = fe.node.style.left; L.style.top = fe.node.style.top; if (L.parentNode !== fe.node.parentNode) fe.node.parentNode.append(L); } else L.remove();
+    const L = J.label; if (fe && fe.node) { L.firstChild.textContent = fill(T.cur, { n: fe.n }); tagChip(L.querySelector(".tag"), tagOf(fe)); L.className = "jr-cur" + (fe.side === "w" ? " east" : fe.side === "n" ? " up" : fe.side === "s" ? " dn" : ""); L.style.left = fe.node.style.left; L.style.top = fe.node.style.top; if (L.parentNode !== fe.node.parentNode) fe.node.parentNode.append(L); } else L.remove(); // v5 R3 fix: the label can sit above or below its node
     // The route: walked to the current node, the rest ahead (only the sheet the cut is on, and those whose side flipped, change).
     const cs = fe ? fe.sheet : J.sheets.length - 1, ci = fe ? fe.ri : J.tail.ri;
     J.sheets.forEach((sh, i) => { const key = i < cs ? "w" : i > cs ? "a" : "c" + ci; if (sh.cut === key) return; sh.cut = key;
       const [w, a] = JN.split(sh.S.road, i < cs ? sh.S.road.length : i > cs ? -1 : ci); sh.w.setAttribute("d", w); sh.u.setAttribute("d", w); sh.a.setAttribute("d", a); });
     // Side quests 1-25: locked (dim, its prize icon), open (bright, the prize bubble), won (its finished picture).
-    const QT = app.cfg.gallery, nx = nextPicture();
+    const QT = app.cfg.gallery, nx = te || nearQ(); // v5 R3 fix: the gold ring marks the picture Play starts, else the next-up card's quest
     for (const q of J.quests) quest(q.e, q.b, q.g, nx, QT, false);
     // The long tail: one next-picture node once every level is cleared; the cleared ones beside it, to play again.
     const t = J.tail; if (t) { const tl = JN.tail(d, app.order, galIds(), galAfter()), te = tl.next ? app.byId.get(tl.next) : null; t.e = te; t.b.hidden = !te; if (te) { t.b.dataset.id = te.id; quest(te, t.b, null, nx, QT, true); }
-      const key = tl.won.join(); if (key !== t.key) { t.key = key; t.th.textContent = "";
-        for (const id of tl.won) { const e = app.byId.get(id), b = document.createElement("button"); b.className = "th"; b.dataset.id = id; b.innerHTML = '<canvas class="pix" aria-hidden="true"></canvas>'; thumb(b.firstChild, e.L, true, 1); b.setAttribute("aria-label", fill(T.thumbAria, { name: e.L.title })); b.addEventListener("click", () => startLevel(id)); t.th.append(b); } } }
+      // v5 R3 fix: the latest map.tail.show of them (44 px each) and, past that, a chip that opens all of them in a sheet.
+      const key = tl.won.join(); if (key !== t.key) { t.key = key; t.th.textContent = ""; t.won = tl.won;
+        for (const id of tl.won.slice(-M.tail.show)) t.th.append(tailTile(id, "th"));
+        if (tl.won.length > M.tail.show) { const c = document.createElement("button"); c.className = "tchip"; c.innerHTML = '<i class="qi" aria-hidden="true"></i><span></span>'; c.lastChild.textContent = fill(T.tailChip, { n: tl.won.length });
+          c.setAttribute("aria-label", fill(T.tailChipAria, { n: tl.won.length })); c.addEventListener("click", () => openTail(true)); t.th.append(c); } } }
     for (const g of J.eggs) eggLook(g);
     mapCards(fe || app.levels[app.levels.length - 1]);
   }
@@ -746,8 +755,19 @@
     $("map-coins").querySelector("b").textContent = app.save.data.coins; $("map-coins").setAttribute("aria-label", fill(app.meta.home.coins, { n: app.save.data.coins }));
     mapCards(null); return paid;
   }
-  // v5 R3: with every level cleared, the long tail's next picture (the map's Play starts it), else null.
-  function mapPic() { if (!app.order.every((id) => app.save.data.done[id])) return null; const t = JN.tail(app.save.data, app.order, galIds(), galAfter()); return t.next ? app.byId.get(t.next) : null; }
+  // v5 R3: with every level cleared, the picture the map's Play starts: the long tail's next, else (v5 R3 fix) the open
+  // side quest nearest the end; null while a level is left, or once every picture is cleared too (allDone).
+  const levelsDone = () => app.order.every((id) => app.save.data.done[id]);
+  function mapPic() { const d = app.save.data; if (!levelsDone()) return null; const t = JN.tail(d, app.order, galIds(), galAfter()), id = t.next || JN.nearQuest(d, app.order, galIds(), galAfter(), app.order.length + 1); return id ? app.byId.get(id) : null; }
+  const allDone = () => levelsDone() && !mapPic();
+  // v5 R3 fix: the open side quest not won nearest the current level (the next-up card's and the gold ring's), or null.
+  function nearQ(skip) { const d = app.save.data, f = JN.focus(d, app.order), at = f && f !== "tail" ? app.byId.get(f).n : app.order.length + 1, id = JN.nearQuest(d, app.order, galIds(), galAfter(), at, skip); return id ? app.byId.get(id) : null; }
+  // v5 R3 fix: a cleared long-tail picture as a button (cls "th" on the map, "ts-tile" in the sheet); a tap plays it again.
+  function tailTile(id, cls) { const e = app.byId.get(id), b = document.createElement("button"); b.className = cls; b.dataset.id = id; b.innerHTML = '<canvas class="pix" aria-hidden="true"></canvas>'; thumb(b.firstChild, e.L, true, 1);
+    b.setAttribute("aria-label", fill(app.cfg.map.text.thumbAria, { name: e.L.title })); b.addEventListener("click", () => { openTail(false); startLevel(id); }); return b; }
+  // The sheet of every cleared long-tail picture (the chip opens it; Done, the backdrop, Escape or a tile close it).
+  function openTail(on) { const ts = $("tailsheet"); if (on) { const g = $("ts-grid"), won = (app.jr && app.jr.tail && app.jr.tail.won) || []; $("ts-title").textContent = fill(app.cfg.map.text.tailTitle, { n: won.length }); g.textContent = ""; for (const id of won) g.append(tailTile(id, "ts-tile")); }
+    ts.hidden = !on; if (on) $("ts-close").focus(); }
   // The desktop cards: the current realm (its lore, cleared and coins, side quests and secrets found there) and next up
   // (the next level with its tag, Play, the next open side quest). e: the current level (null: keep the realm shown).
   function mapCards(e) {
@@ -756,8 +776,10 @@
     const ls = app.levels.filter((x) => x.era === re), won = ls.filter((x) => d.done[x.id]).length; reportCard($("jr-rc"), ls); $("jr-r-bar").style.width = (ls.length ? (100 * won) / ls.length : 0) + "%";
     const ss = J.sheets.map((sh, i) => (sh.S.realm === re ? i : -1)).filter((i) => i >= 0), qs = J.quests.filter((q) => ss.indexOf(q.sheet) >= 0), gs = J.eggs.filter((g) => ss.indexOf(g.sheet) >= 0);
     $("jr-q-v").textContent = qs.filter((q) => d.gal[q.e.id]).length + " / " + qs.length; $("jr-e-v").textContent = gs.filter((g) => d.eggs && d.eggs[g.id]).length + " / " + gs.length;
-    const ne = app.byId.get(Save.next(d, app.order)), te = mapPic(), all = !ne || d.done[ne.id]; $("jr-n-name").firstChild.textContent = te ? fill(T.sideQuest, { n: te.n }) : all ? T.allClear : fill(T.cur, { n: ne.n }); tagChip($("jr-n-name").querySelector(".tag"), te ? tagOf(te) : all ? null : tagOf(ne));
-    const nx = nextPicture(), qk = nx && nx.L.quest ? E.POWERS.indexOf(nx.L.quest.prize) : -1, qb = $("jr-quest");
+    // v5 R3 fix: past the last level the card names the picture Play starts; with every picture cleared too, "all cleared"
+    // and no Play; the side quest under it is the open one nearest the current level (never the one Play starts).
+    const ne = app.byId.get(Save.next(d, app.order)), te = mapPic(), end = !te && allDone(); $("jr-n-name").firstChild.textContent = te ? fill(T.picture, { n: te.n }) : end || !ne ? T.allClear : fill(T.cur, { n: ne.n }); tagChip($("jr-n-name").querySelector(".tag"), te ? tagOf(te) : end || !ne ? null : tagOf(ne));
+    const nx = nearQ(te ? te.id : null), qk = nx && nx.L.quest ? E.POWERS.indexOf(nx.L.quest.prize) : -1, qb = $("jr-quest"); qb.hidden = end;
     qb.querySelector("b").textContent = nx ? fill(T.sideQuest, { n: nx.n }) : T.questNone; qb.querySelector(".sq-t > span").textContent = nx && qk >= 0 ? fill(T.questLine, { name: pwName(qk) }) : "";
     qb.classList.toggle("none", !nx); qb.setAttribute("aria-disabled", nx ? "false" : "true"); qb.setAttribute("aria-label", nx ? fill(T.sideQuest, { n: nx.n }) + (qk >= 0 ? ": " + fill(T.questLine, { name: pwName(qk) }) : "") : T.questNone);
   }
@@ -800,7 +822,7 @@
   function showScreen(name) {
     if (name === "gallery") name = "map"; // v5 R3: the Gallery is the journey map now
     if (name !== "play") { app.pick = null; document.body.classList.remove("picking"); }
-    $("settings").hidden = true;
+    $("settings").hidden = true; $("tailsheet").hidden = true;
     app.screen = name;
     $("title").hidden = name !== "title"; $("map").hidden = name !== "map";
     if (name === "title") renderHome();
@@ -1229,6 +1251,7 @@
       if (app.audio) Audio.unlock(app.audio);
       if (app.paused) { if (ev.key === " " || ev.key === "Enter") { ev.preventDefault(); resume(); } return; }
       if (!$("settings").hidden) { if (ev.key === "Escape") openSettings(false); return; }
+      if (!$("tailsheet").hidden) { if (ev.key === "Escape") openTail(false); return; } // v5 R3 fix
       if (ev.key === "Escape" && app.pick) { cancelPick(); return; }
       if (app.screen !== "play") return;
       if (ev.key >= "1" && ev.key <= "5") playCol(+ev.key - 1);
@@ -1247,6 +1270,7 @@
     $("btn-retry").addEventListener("click", retry);
     $("btn-map").addEventListener("click", () => showScreen("map"));
     $("map-set").addEventListener("click", () => openSettings(true)); // v5 R3: the map's gear
+    $("ts-close").addEventListener("click", () => openTail(false)); $("tailsheet").addEventListener("click", (ev) => { if (ev.target === $("tailsheet")) openTail(false); }); // v5 R3 fix: the long tail's sheet
     $("btn-play").addEventListener("click", playNext);
     $("btn-tomap").addEventListener("click", () => showScreen("map"));
     $("btn-home").addEventListener("click", () => showScreen("title"));
@@ -2110,7 +2134,30 @@
           tb.click(); const first = app.entry; patient(winOf(first)); settleNow(); tick(9000); $("btn-map").click();
           const th = t.th.querySelector(".th"); jrTo(t.th);
           ok(first.id === T0.ids[0] && app.save.data.gal[first.id] === 1 && t.e && t.e.id === T0.ids[1] && t.th.children.length === 1 && th.dataset.id === first.id && hitOK(th), "map long tail: picture " + first.n + " won, the node moves on to picture " + (t.e ? t.e.n : "?") + "; the won one waits beside it to replay");
-          th.click(); ok(app.entry === first && app.screen === "play", "map long tail: a tap on a cleared picture's thumbnail plays it again"); }
+          th.click(); ok(app.entry === first && app.screen === "play", "map long tail: a tap on a cleared picture's thumbnail plays it again");
+          // v5 R3 fix: past map.tail.show won, the row keeps the latest few (44 px) and a chip opens a sheet of all of them.
+          const K = MC.tail.show; for (let i = 0; i < K + 1; i++) Save.record(app.save.data, T0.ids[1 + i], "gal"); showScreen("map");
+          const won = JN.tail(app.save.data, app.order, galIds(), galAfter()).won, row = Array.from(t.th.querySelectorAll(".th")), chip = t.th.querySelector(".tchip"); jrTo(t.th);
+          const big = (el) => { const r = el.getBoundingClientRect(); return r.width >= 44 && r.height >= 44; };
+          ok(row.length === K && row.map((b) => b.dataset.id).join() === won.slice(-K).join() && row.every((b) => big(b) && hitOK(b)) && chip && big(chip) && hitOK(chip) && chip.textContent === fill(MT.tailChip, { n: won.length }),
+            "map long tail (v5 R3 fix): " + won.length + " won: the latest " + K + " in one row and the chip '" + (chip ? chip.textContent : "") + "', every one 44+ px and hittable");
+          chip.click(); const tiles = Array.from(document.querySelectorAll("#ts-grid .ts-tile"));
+          ok(!$("tailsheet").hidden && tiles.length === won.length && tiles.every((b) => big(b) && hitOK(b)) && hitOK($("ts-close")), "map long tail (v5 R3 fix): the chip opens a sheet of all " + tiles.length + " cleared pictures, each 44+ px and hittable");
+          tiles[0].click(); ok($("tailsheet").hidden && app.entry === app.byId.get(won[0]) && app.screen === "play", "map long tail (v5 R3 fix): a tile in the sheet closes it and plays that picture again");
+          // v5 R3 fix: everything cleared: no Play, the end line in its place, and (wide) the card says so with no side quest.
+          for (const e of app.gal) Save.record(app.save.data, e.id, "gal"); showScreen("map");
+          ok($("map-play").hidden && shown($("jr-end")) && $("jr-end").textContent === MT.endHint && t.b.hidden && !mapPic() && (!$("map").classList.contains("cards") || ($("jr-n-name").textContent === MT.allClear && $("jr-quest").hidden)),
+            "map (v5 R3 fix): with every level and picture cleared, Play gives way to '" + $("jr-end").textContent + "'" + ($("map").classList.contains("cards") ? " and the card reads '" + $("jr-n-name").textContent + "'" : "")); }
+        // v5 R3 fix: the next-up quest is the open one nearest the current level, and wears the gold ring; with levels 1-74
+        // cleared and no pictures, no prize bubble or label covers another node, side quest or egg.
+        { app.save = scratch(); for (let i = 0; i < 55; i++) Save.record(app.save.data, app.order[i]); for (let i = 0; i < 3; i++) Save.record(app.save.data, app.gal[i].id, "gal"); showScreen("map");
+          const nq = nearQ(), want = app.gal.filter((e) => e.L.quest.after <= 55 && !app.save.data.gal[e.id]).pop();
+          ok(nq === want && nq.node.classList.contains("next") && $("jr-quest").querySelector("b").textContent === fill(MT.sideQuest, { n: nq.n }), "map (v5 R3 fix): the next-up side quest is the open one nearest level 56 (picture " + (nq ? nq.n : "?") + "), gold-ringed");
+          for (let i = 55; i < 74; i++) Save.record(app.save.data, app.order[i]); showScreen("map");
+          const tg = Array.from(document.querySelectorAll("#jr .mn, #jr .qn:not([hidden]), #jr .egg")), bad = [];
+          for (const el of Array.from(document.querySelectorAll("#jr .qn.open .prz")).concat([J.label])) { if (!shown(el)) continue; const r = el.getBoundingClientRect(), own = el.closest(".qn, .mn");
+            for (const x of tg) if (x !== own && !x.contains(el) && over(r, x.getBoundingClientRect())) { const o = over(r, x.getBoundingClientRect()).split("x"); if (o[0] * o[1] > 64) bad.push((own ? own.dataset.id : "label") + " x " + (x.dataset.id || x.dataset.n)); } }
+          ok(!bad.length, "map (v5 R3 fix): no prize bubble or the current label covers another node, quest or egg (" + (bad.join(", ") || "none") + ")"); }
         app.save = scratch(); J.colW = 0; showScreen("title"); }
       // 25. v4 M5, the meta layer. The home: one tap on Play opens the right level (a new save: level 1; mid-campaign: the
       // first level not won), with the progress, the coins and (lives off) no heart; the tabs; the settings sheet. The

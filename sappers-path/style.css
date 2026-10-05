@@ -16,7 +16,7 @@
    v4 Critics 2 fix: the coach wraps to two lines in the top bar; the Gallery win's framed picture (#p-pic, #stage-pic);
    the Gallery's next tile (gold frame, Play chip); a buy short of coins (.pw.poor); 44 px badges in small frames; the
    landscape bar's .head and .grid; the home's era chip on the river; era report cards as a band. */
-@font-face { font-family: "Jersey 10"; src: url("fonts/Jersey10-Regular.ttf?v=32") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Jersey 10"; src: url("fonts/Jersey10-Regular.ttf?v=33") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
 :root { --bg: #2e2935; --ink: #221a26; --cream: #f3ead8; --cream-soft: #cfc4d6;
   --tray: #ddd3c0; --tray-hi: #ece5d6; --tray-edge: #c4b89e; --tray-ink: #3a3027; --tray-soft: #6b5c47; --socket: #c3b697; --socket-lo: #a99a7b;
   --band1: #d0c6b4; --band2: #c2baa9; /* the rows' tray bands, set from layout.fade.band at boot */
@@ -558,11 +558,12 @@ body.wide .home-card { max-width: 760px; }
 .mn .ck { display: none; position: absolute; right: 1px; top: 0; width: 17px; height: 17px; border-radius: 50%; border: 2px solid var(--ink);
   background: #3fbf5a center / 11px 11px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.5 5.2l2.4 2.4 4.6-5' fill='none' stroke='%23fff' stroke-width='2'/%3E%3C/svg%3E"); }
 .mn.done .ck { display: block; }
-.mn .tag { position: absolute; left: 50%; top: 37px; transform: translateX(-50%); font-size: 12px; padding: 1px 3px 0; border-width: 1.5px; }
+.mn .tag { position: absolute; left: 50%; top: 37px; transform: translateX(-50%); font-size: 14px; padding: 1px 3px 0; border-width: 1.5px; } /* v5 R3 fix: 12 px was hard to read at 375 */
 .mn.cur .tag, .mn.locked .tag { display: none; }
 .jr-cur { z-index: 3; display: flex; align-items: center; gap: 6px; height: 30px; margin: -15px 0 0 30px; padding: 0 9px; border-radius: 8px; background: rgba(20,16,28,.9); box-shadow: 0 0 0 2px var(--ink);
   font-family: var(--px); font-size: 22px; line-height: 1; color: var(--gold-hi); white-space: nowrap; pointer-events: none !important; }
 .jr-cur.east { margin-left: -30px; transform: translateX(-100%); }
+.jr-cur.up { margin: 0; transform: translate(-50%, calc(-100% - 30px)); } .jr-cur.dn { margin: 0; transform: translate(-50%, 30px); } /* v5 R3 fix: when neither side is clear */
 .jr-cur .tag { font-size: 15px; padding: 1px 4px 0; }
 /* Side quests: a picture node, its prize bubble while open, its prize icon (dim, padlocked) while locked, its picture once won. */
 .qn { width: 44px; height: 44px; margin: -22px 0 0 -22px; z-index: 1; }
@@ -570,7 +571,10 @@ body.wide .home-card { max-width: 760px; }
   background: #8263ad; box-shadow: inset 0 -4px 0 #5a3f80, 0 3px 0 rgba(0,0,0,.45); }
 .qn .qi { width: 19px; height: 17px; background: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 14' shape-rendering='crispEdges'%3E%3Crect width='16' height='14' fill='%23221a26'/%3E%3Crect x='1' y='1' width='14' height='12' fill='%23f2c230'/%3E%3Crect x='3' y='3' width='10' height='8' fill='%237ec8e8'/%3E%3Cpath d='M3 11V8l3-3 2 2 1-1 4 3v2z' fill='%234f9a3c'/%3E%3Crect x='9' y='4' width='2' height='2' fill='%23ffe27a'/%3E%3C/svg%3E"); }
 .qn canvas { display: none; }
-.qn.won .qf { width: 42px; height: 42px; margin: -21px 0 0 -21px; padding: 3px; border-radius: 6px; background: var(--gold-lo); box-shadow: inset 0 0 0 2px var(--gold-hi), 0 3px 0 rgba(0,0,0,.45); }
+/* v5 R3 fix: a won quest keeps its purple (a quest, cleared: its picture in a rounded frame with the level's green check). */
+.qn.won .qf { width: 42px; height: 42px; margin: -21px 0 0 -21px; padding: 3px; border-radius: 12px; background: #8263ad; box-shadow: inset 0 -3px 0 #5a3f80, 0 3px 0 rgba(0,0,0,.45); }
+.qn.won::after { content: ""; position: absolute; right: -2px; top: -3px; width: 17px; height: 17px; border-radius: 50%; border: 2px solid var(--ink); box-sizing: border-box;
+  background: #3fbf5a center / 11px 11px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.5 5.2l2.4 2.4 4.6-5' fill='none' stroke='%23fff' stroke-width='2'/%3E%3C/svg%3E"); }
 .qn.won canvas { display: block; width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; background: #1a1620; border-radius: 2px; }
 .qn.won .qi { display: none; }
 .qn.locked .qf { background: #5d5566; box-shadow: inset 0 -4px 0 #3f3947, 0 3px 0 rgba(0,0,0,.45); } .qn.locked .qi { opacity: .45; }
@@ -583,6 +587,7 @@ body.wide .home-card { max-width: 760px; }
 .qn.bz-n .prz { left: 50%; bottom: calc(100% + 5px); margin-left: -30px; } .qn.bz-n .prz::after { left: 50%; bottom: -10px; margin-left: -6px; border-top: 7px solid var(--ink); border-bottom: 0; }
 .qn.bz-e .prz { left: calc(100% + 6px); top: 50%; margin-top: -26px; } .qn.bz-e .prz::after { left: -10px; top: 50%; margin-top: -6px; border-right: 7px solid var(--ink); border-left: 0; }
 .qn.bz-w .prz { right: calc(100% + 6px); top: 50%; margin-top: -26px; } .qn.bz-w .prz::after { right: -10px; top: 50%; margin-top: -6px; border-left: 7px solid var(--ink); border-right: 0; }
+.qn.bz-s .prz { left: 50%; top: calc(100% + 5px); margin-left: -30px; } .qn.bz-s .prz::after { left: 50%; top: -10px; margin-left: -6px; border-bottom: 7px solid var(--ink); border-top: 0; } /* v5 R3 fix: below */
 .qn.open .prz { display: block; }
 .qn .pz-r { display: flex; align-items: center; justify-content: center; gap: 2px; font-size: 20px; margin-top: 1px; }
 .qn .pi { flex: none; width: 21px; height: 21px; background: center / contain no-repeat; image-rendering: pixelated; }
@@ -590,9 +595,18 @@ body.wide .home-card { max-width: 760px; }
 /* The fog's words and, in the wash, the cleared long-tail pictures to play again. */
 .fogl { transform: translate(-50%, -50%); font-family: var(--px); font-size: 20px; line-height: 1; color: #f3ead8; white-space: nowrap; pointer-events: none !important;
   text-shadow: 0 2px 0 var(--ink), 2px 0 0 var(--ink), -2px 0 0 var(--ink), 0 -2px 0 var(--ink); }
-.thumbs { display: flex; flex-wrap: wrap; gap: 3px; width: calc(var(--row, 5) * 33px); pointer-events: none !important; }
-.thumbs .th { pointer-events: auto; width: 30px; height: 30px; padding: 2px; border: 2px solid var(--ink) !important; border-radius: 4px !important; background: var(--gold-lo) !important; }
-.thumbs canvas { display: block; width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; background: #1a1620; }
+/* v5 R3 fix: the latest few in one row of 44 px frames (a won quest's look), and past that a parchment chip that opens a
+   sheet of all of them (44+ px tiles). */
+.thumbs { display: flex; flex-wrap: wrap; gap: 6px; width: calc(var(--row, 3) * 50px - 6px); pointer-events: none !important; }
+.thumbs .th, .ts-tile { pointer-events: auto; width: 44px; height: 44px; padding: 3px; border: 3px solid var(--ink) !important; border-radius: 12px !important; background: #8263ad !important; box-shadow: inset 0 -3px 0 #5a3f80, 0 3px 0 rgba(0,0,0,.45) !important; }
+.thumbs canvas, .ts-tile canvas { display: block; width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; background: #1a1620; border-radius: 6px; }
+.jr-lay .tchip { pointer-events: auto; flex-basis: 100%; height: 44px; display: flex; align-items: center; justify-content: center; gap: 6px; border: 3px solid var(--ink); border-radius: 9px; background: var(--parch);
+  box-shadow: inset 0 -3px 0 var(--parch-edge), 0 3px 0 rgba(0,0,0,.35); color: var(--parch-ink); font-size: 20px; line-height: 1; white-space: nowrap; }
+.tchip .qi { flex: none; width: 19px; height: 17px; background: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 14' shape-rendering='crispEdges'%3E%3Crect width='16' height='14' fill='%23221a26'/%3E%3Crect x='1' y='1' width='14' height='12' fill='%23f2c230'/%3E%3Crect x='3' y='3' width='10' height='8' fill='%237ec8e8'/%3E%3Cpath d='M3 11V8l3-3 2 2 1-1 4 3v2z' fill='%234f9a3c'/%3E%3Crect x='9' y='4' width='2' height='2' fill='%23ffe27a'/%3E%3C/svg%3E"); }
+#tailsheet .sheetcard { max-width: 420px; }
+#ts-title { font-size: 34px; }
+#ts-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-height: min(62vh, 520px); overflow-y: auto; margin: 6px 0 12px; padding: 4px 2px 6px; }
+.ts-tile { width: 56px; height: 56px; min-height: 0; flex: none; }
 /* Easter eggs: ink sprites; a found one keeps its new look (and its little loop of life). */
 .egg { width: 44px; height: 44px; margin: -22px 0 0 -22px; }
 .egg svg { display: block; width: 100%; height: 100%; overflow: visible; }
@@ -624,8 +638,12 @@ body.wide .home-card { max-width: 760px; }
 /* Play: a foot bar on a phone; on a wide screen the next-up card holds it, with the next side quest; the realm card. */
 .jr-card { display: none; }
 #map:not(.cards) #jr-next { display: block; flex: none; padding: 10px var(--gut) max(12px, env(safe-area-inset-bottom)); border-top: 3px solid var(--ink); background: var(--bg) var(--wall, none) repeat; background-size: var(--wall-size, auto); }
-#map:not(.cards) #jr-next > :not(#map-play) { display: none; }
-#map-play { width: 100%; }
+#map:not(.cards) #jr-next > :not(#map-play):not(#jr-end) { display: none; }
+/* v5 R3 fix: the tag sits inside Play, after its words (the mockup's "Play Level 6 HARD"), not on its corner. */
+#map-play { width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; }
+#map-play[hidden], #jr-end[hidden], #jr-quest[hidden] { display: none !important; }
+#map-play .tag { position: static; flex: none; font-size: 20px; padding: 3px 6px 2px; }
+#jr-end { margin: 0; min-height: 58px; display: flex; align-items: center; justify-content: center; text-align: center; font-family: var(--px); font-size: 22px; line-height: 1.05; color: var(--gold-hi); text-shadow: 0 2px 0 var(--ink); }
 #map.cards .jr-card { display: block; position: absolute; top: 18px; width: var(--card-w, 290px); padding: 16px 18px 18px; border-radius: 12px; border: 3px solid var(--ink); background: rgba(20,16,28,.82); box-shadow: 0 5px 0 rgba(0,0,0,.4); font-family: var(--px); }
 #map.cards #jr-realm { right: calc(50% + var(--jr-w) / 2 + 3px + var(--card-gap)); }
 #map.cards #jr-next { left: calc(50% + var(--jr-w) / 2 + 3px + var(--card-gap)); }
