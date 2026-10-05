@@ -25,7 +25,7 @@ function match(a, b) { let k = 0; for (let i = 0; i < a.length; i++) if (a[i] ==
 const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length ? q[(q.length - 1) >> 1] : null; };
 function eraReport(levels, V, layoutOnly) {
   const out = {};
-  for (const e of [1, 2, 3, 4]) {
+  for (const e of [...new Set(levels.map((l) => l.era))].sort((a, b) => a - b)) { // v5 R4: every realm present
     const ls = levels.filter((l) => l.era === e && !l.exempt && l.source !== "teaching"), maps = ls.map((l) => mapOf(l, V, layoutOnly)), ms = []; let worst = null;
     for (let a = 0; a < ls.length; a++) for (let b = a + 1; b < ls.length; b++) { const m = match(maps[a], maps[b]); ms.push(m); if (!worst || m > worst.m) worst = { a: ls[a].n, b: ls[b].n, m: +m.toFixed(3) }; }
     if (!ms.length) continue;

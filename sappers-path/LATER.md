@@ -291,3 +291,12 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - Three bridges within about 300 CSS px around levels 41-45 on sheets 5-6; one could go.
 - Realm 5 is one level until R4 ("1/1 cleared").
 - The quests 14 and 19 bubbles still touch the road at a corner on a 360-wide column; a smaller bubble (icon only) would clear it.
+
+## From v5 R4 (levels 101-200, 2026-10-05)
+- Level 100 still wears v4.3's moated motte (frozen); the Mistmoor's stilt forts start at 101. A Mistmoor look for 100 would need Peter's OK to break the freeze for one level.
+- The goblin capital (realm 8) reads as one grey mass at a glance; more contrast inside the fortress (darker courses, a scrap-iron gate, more banners) would help.
+- Realm 5's fen forts all centre their hall; a two-level platform or a hall at one end would vary them more.
+- Lava moats draw in the board only; the map thumbnails, the report picture and the share card still draw water blue (they never show a Siege moat today).
+- Mystery blocks are dark "?" studs: a coach ring on the first one in lesson 150 (a ring kind for hidden blocks) would point at them.
+- The boss (200) gets the realm's normal scenes; a fixed night scene with the crown lit would mark it.
+- Contact sheets of the four realms' generator samples and of the baked 101-200 boards live in tools/shots-v5-r4/boards/ (gitignored like every shots folder).

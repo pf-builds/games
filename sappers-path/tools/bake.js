@@ -63,7 +63,8 @@ const TG = require("./tags.js");
 const ROOT = path.join(__dirname, "..");
 const arg = (k) => { const i = process.argv.indexOf("--" + k); return i > 0 && process.argv[i + 1] ? process.argv[i + 1] : null; };
 const OUT = arg("out") ? path.resolve(arg("out")) : null;
-const ONLY = arg("only") ? arg("only").split("-").map(Number) : null;
+const ONLY = arg("only") ? arg("only").split("-").map(Number) : arg("list") ? [Math.min(...arg("list").split(",").map(Number)), Math.max(...arg("list").split(",").map(Number))] : null;
+const LIST = arg("list") ? arg("list").split(",").map(Number) : null; // v5 R4 --list N,N,...: a fix-up run of just those levels
 const outPath = (rel) => (OUT ? path.join(OUT, path.basename(rel)) : path.join(ROOT, rel));
 const BOARD = ["w", "h", "grid", "pic", "gates", "towers", "pal", "scene", "style", "palette", "lock", "safeArchers"]; // v4.3 --boards: a level's board
 const RELAY = process.argv.includes("--relay"); // v5 R2
@@ -217,12 +218,12 @@ function candidates(n, C, rules, tw, tag, board, kept, realm) {
         const f = G.fort(era, seed, P, C.picture); stats.forts++;
         if (!f) continue;
         if ((tw.lock === true || tw.lock === "key") && !G.lockKey(f, seed)) continue;
-        if (tw.lock === "colour") f.lock = { colour: [...G.coloursOf(f)].sort((a, b) => a - b)[0] }; // v5 R4: a stand-in (the dealer plays it shut); the colour is set from the deal
         const nc = G.coloursOf(f).size; if (nc < cmin || nc > cmax) continue;
         if (tw.plan) { // v5 R4: the fort carries what its plan asks, and nothing it doesn't
           const wet = f.grid.some((row) => row.indexOf("~") >= 0), ng = (f.gates || []).length, nt = (f.towers || []).length;
           if (wet !== tw.moat || (tw.gates ? ng < 1 : ng > 0) || (tw.towers ? nt < 1 : nt > 0)) continue;
           if (tw.hidden && !G.hide(f, seed, C.plan.hidden)) continue;
+          if (tw.lock === "colour") f.lock = { colour: [...G.coloursOf(f)].sort((a, b) => a - b)[0] }; // a stand-in (the dealer plays it shut); the colour is set from the deal
         } else {
         if (era >= 2 && !(f.gates && f.gates.length)) continue; // every fort from Era 2 has a gate (v4 M3: so Era 3 keeps its moat)
         if (era >= 3 && !(f.towers && f.towers.length)) continue;
@@ -232,15 +233,17 @@ function candidates(n, C, rules, tw, tag, board, kept, realm) {
       }
       if (!L) { out.push({ k, fail: "no fort with " + cmin + "-" + cmax + " colours in " + C.candidates.fortTries + " seeds" }); continue; }
       const D = Object.assign({}, D0, rushOf(L, tag, C) ? { rush: true } : {}), dealRules = Object.assign({}, rules.hard, { hold: C.deal.hold, archersKill: true }, D.rush ? { rush: true } : {});
-      let dl = null;
+      let dl = null; const tr = process.env.BAKE_TRACE ? (s) => console.log("  trace " + n + "/" + k + " " + s + " " + ((Date.now() - tr0) / 1000).toFixed(1) + " s") : null, tr0 = Date.now(); // v5 R4: BAKE_TRACE=1 times each stage
       for (let a = 0; a < D.attempts && !dl; a++) { dl = G.deal(L, seed ^ Math.imul(a + 1, 0x27D4EB2F), D); stats.deals++; }
+      if (tr) tr("deal " + (dl ? dl.play.length + " squads" : "none"));
       if (!dl) { out.push({ k, seed, fail: "no deal in " + D.attempts + " attempts" }); continue; }
       const play = tw.links ? G.linkUp(L, dl.play, tw.links, seed, D) : dl.play;
       if (tw.lock === "colour") { const first = new Map(); play.forEach((p, i) => { for (const m of p.length >= 4 ? [p[0], p[2]] : [p[0]]) if (!first.has(m) && m !== E.GILT) first.set(m, i); }); // v5 R4: the colour whose first squad comes nearest relay.lockAt of the order
         const want = C.relay.lockAt * play.length, best = [...first].sort((p, q) => Math.abs(p[1] - want) - Math.abs(q[1] - want) || p[1] - q[1])[0]; if (best) L.lock = { colour: best[0] }; }
       const T = Object.assign({}, C.tune, { seed: seed ^ 0x3c6ef372, maxTaps: C.maxTaps, maxWaitMs: C.maxWaitMs }, b.kind === "late" && b.sub !== "relief" ? { narrow: C.tune.narrow } : { narrow: null });
-      const res = G.tune(L, play, G.assign(play, 0, seed), b.band[0], b.band[1], T, { normal: rules[tag], deal: dealRules }); // v4.3: tuned on the tag's rules
-      stats.evals += res.evals;
+      const Lt = L.hidden ? Object.assign({}, L, { hidden: undefined }) : L; // v5 R4: tuned all-seeing (the lookahead with mystery blocks samples 4 boards a tap, too slow to hill-climb; seeing more only makes it stronger, so the honest grade below stays at or under the target)
+      const res = G.tune(Lt, play, G.assign(play, 0, seed), b.band[0], b.band[1], T, { normal: rules[tag], deal: dealRules }); // v4.3: tuned on the tag's rules
+      stats.evals += res.evals; if (tr) tr("tune " + res.evals + " evals");
       const dk = G.deck(res.play, res.colOf);
       if (dk.bad) { out.push({ k, seed, fail: "a linked partner more than a row from its card" }); continue; }
       const level = Object.assign({}, L, { cols: dk.cols }, dk.links.length ? { links: dk.links } : {});
@@ -330,13 +333,14 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
   let C, CFG, TEACH;
   try {
     C = JSON.parse(fs.readFileSync(arg("config") ? path.resolve(arg("config")) : path.join(__dirname, "bake-config.json"), "utf8")); C.extra = +arg("extra") || 0; // v4.2: --extra K more candidates a level (a fix-up run)
+    if (process.argv.includes("--r4fix")) { Object.assign(C.candidates.perLevelBy, C.r4fix.perLevelBy); Object.assign(C.tune.narrow, C.r4fix.narrow); } // v5 R4: the fix-up's lighter search
     CFG = JSON.parse(fs.readFileSync(path.join(ROOT, "config.json"), "utf8"));
     TEACH = JSON.parse(fs.readFileSync(arg("teach") ? path.resolve(arg("teach")) : path.join(ROOT, "levels/teaching.json"), "utf8")).levels;
   } catch (e) { console.log("bake: cannot read config: " + e.message); process.exitCode = 1; return; }
-  const rules = { easy: E.rulesOf(CFG.v3, "easy"), normal: E.rulesOf(CFG.v3, "normal"), hard: E.rulesOf(CFG.v3, "hard") }, deadline = t0 + C.budget.wallSec * 1000;
+  const rules = { easy: E.rulesOf(CFG.v3, "easy"), normal: E.rulesOf(CFG.v3, "normal"), hard: E.rulesOf(CFG.v3, "hard"), extreme: E.rulesOf(CFG.v3, "extreme") }, deadline = t0 + C.budget.wallSec * 1000;
   const threads = +arg("threads") || C.budget.threads || Math.max(2, os.cpus().length - 2); // v4.3 --threads N
   const teachBy = new Map(TEACH.map((L) => [L.n, L]));
-  const inRun = (n) => !ONLY || (n >= ONLY[0] && n <= (ONLY[1] || ONLY[0]));
+  const inRun = (n) => (LIST ? LIST.indexOf(n) >= 0 : !ONLY || (n >= ONLY[0] && n <= (ONLY[1] || ONLY[0])));
   const tagN = (n) => TG.tagOf(n, C.tags, teachBy.has(n)); // v4.3: the level's fixed tag
   // v4.3 --merge FULL,FIX1,... [--logs LOG,...]: no bake; FULL's levels with each fix-up run's levels (by n) in their place
   // (fix-up runs: --only N-N --keep FULL), the bake record's lists and the variety redone, written with the report.
@@ -380,7 +384,7 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
     if (!inRun(n)) continue;
     const tag = tagN(n), b = bandOf(n, C, tag), era = eraOf(n, C), id = "e" + era + "-" + String(n).padStart(2, "0");
     if (teachBy.has(n)) {
-      const T = teachBy.get(n), L = Object.assign({ w: T.w, h: T.h, grid: T.grid }, T.pic ? { pic: true } : {}, { gates: T.gates || [], towers: T.towers || [], cols: T.cols }, T.links ? { links: T.links } : {}, T.lock ? { lock: T.lock } : {}, T.safeArchers ? { safeArchers: true } : {}, T.pal ? { pal: T.pal } : {}, T.palette ? { palette: T.palette } : {});
+      const T = teachBy.get(n), L = Object.assign({ w: T.w, h: T.h, grid: T.grid }, T.pic ? { pic: true } : {}, { gates: T.gates || [], towers: T.towers || [], cols: T.cols }, T.links ? { links: T.links } : {}, T.lock ? { lock: T.lock } : {}, T.safeArchers ? { safeArchers: true } : {}, T.pal ? { pal: T.pal } : {}, T.palette ? { palette: T.palette } : {}, T.hidden ? { hidden: T.hidden } : {}, T.liquid ? { liquid: T.liquid } : {}); // v5 R4: mystery blocks, a lava moat
       if (T.tag && T.tag !== tag) say("level " + n + ": the teaching file's tag " + T.tag + " is not the schedule's " + tag);
       let g; try { g = gradeLevel(L, rules, C, T.win || null, seedOf(C, n, 0), n, tag); } catch (e) { say("level " + n + ": teaching level failed to grade: " + e.message); continue; }
       if (!g.win[tag]) say("level " + n + ": teaching level NOT winnable on its tag (" + tag + ")");
@@ -461,7 +465,7 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
   const variety = VAR.eraReport(levels, VC);
   for (const e of Object.keys(variety)) { const v = variety[e]; say("bake: variety, era " + e + ": median match " + pct(v.median) + " over " + v.n + " generated pictures (gate " + pct(VC.maxMedian) + (v.median > VC.maxMedian ? ": VARIETY GATE FAILED" : "") + "), most alike " + v.worst.a + " and " + v.worst.b + " at " + pct(v.worst.m)); }
   say("bake: tags " + TG.TAGS.map((t) => t + " " + levels.filter((l) => l.tag === t).length).join(", ") + "; taps per level: max " + Math.max(...levels.map((l) => wn(l) ? wn(l).length : 0)) + " (cap " + C.maxTaps + "), median " + med(levels.map((l) => (wn(l) ? wn(l).length : 0))) + "; cards max " + Math.max(...levels.map((l) => l.grade.cards)));
-  const out = { version: C.version, bake: { config: C.version, seed: C.seed, time: CFG.v3.time, forts: tot.forts, deals: tot.deals, tuneEvals: tot.evals, fullGrades: tot.grades, seconds: +secsAll.toFixed(1), fallbacks, lookaheadFallbacks: lookMiss, variety, varietyMisses: varMiss, paceFell, newBoards, run: ONLY ? jobs.map((j) => j.n) : undefined }, levels };
+  const out = { version: C.version, bake: { config: C.version, seed: C.seed, time: CFG.v3.time, forts: tot.forts, deals: tot.deals, tuneEvals: tot.evals, fullGrades: tot.grades, seconds: +secsAll.toFixed(1), fallbacks, lookaheadFallbacks: lookMiss, variety, varietyMisses: varMiss, paceFell, newBoards, run: ONLY ? levels.filter((l) => inRun(l.n)).map((l) => l.n) : undefined }, levels };
   if (RLY) { out.bake.relay = { src: C.relay.src, dropped: C.relay.drop, decks }; say("bake: the re-lay's decks: " + DECKS.map((d) => d + " " + (decks[d] || 0)).join(", ") + " (generated slots)"); }
   try {
     if (OUT) fs.mkdirSync(OUT, { recursive: true });

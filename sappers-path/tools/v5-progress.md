@@ -162,6 +162,6 @@ map code in `src/main.js` and config.json `map` (R4 map art, separate worktree):
 | b1 | Bake planner for 101-200 (feature plan by tag, Extreme, hidden blocks, colour/key locks, boss 200) and density rule | done (bake.js planOf, gen.js hide, tags.js cycles + Hard/Extreme density, critic-v5 tag formula) | (this commit) |
 | b2 | Trial bake of 10 levels; stop-rule check | done: 101-110 all in band, 0 fallbacks, real pace 217-242 s, taps <= 52, longest tap 15.0 s; stop rule not hit | (this commit) |
 | b3 | Teaching levels 125 (towers) and 150 (mystery blocks), coach lines | done (teach-v4.js --add; 1-100 byte-identical in teaching.json; config teach e6-125, e7-150) | (this commit) |
-| b4 | Full bake 101-200 (scratch, checked, copied in) | running (scratchpad r4/full; tests wait for it) | |
-| b5 | Side quests 26-50 open off the new levels; tests (density, milestones, tags, teaching, quests) | todo | |
+| b4 | Full bake 101-200 (scratch, checked, copied in) | done: full run + 3 fix-up runs merged; 0 fallbacks; regrade 0 (200 levels); real pace median 227 s | (this commit) |
+| b5 | Side quests 26-50 open off the new levels; tests (density, milestones, tags, teaching, quests) | done: test.js 564/0; critic-v5 0 mismatches; freeze PASS | (this commit) |
 | b6 | Page checks (selfTest, map with levels past its spots), critic-v5, harness, `?v=35`, SPEC, notes, LATER | todo | |

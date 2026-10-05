@@ -676,7 +676,7 @@ function inject(L0, seed) {
   L.links = links;
   if (r() < 0.6) {
     const B = E.compile(L), cells = [];
-    for (let c = 0; c < B.n; c++) { const m = B.a0[c]; if (m > 0 && m !== E.IRON && m !== E.GILT && B.towerOf[c] < 0 && L.cols.some((col) => col.some((cd) => cd[0] === m && cd[1] > 1))) cells.push(c); }
+    for (let c = 0; c < B.n; c++) { const m = B.a0[c]; if (m > 0 && m !== E.IRON && m !== E.GILT && B.towerOf[c] < 0 && !(B.hid0 && B.hid0[c]) && L.cols.some((col) => col.some((cd) => cd[0] === m && cd[1] > 1))) cells.push(c); }
     if (cells.length) {
       const c = cells[ri(cells.length)], x = c % B.w, y = (c / B.w) | 0, m = B.a0[c];
       L.grid[y] = L.grid[y].slice(0, x) + "n" + L.grid[y].slice(x + 1);
@@ -963,7 +963,7 @@ const CV = require("./convert.js"), GCFG = require("./gallery-config.json"), PAL
 
 // ==== v4 M5: power-ups (engine operations at the clock; SPEC-v4 §9) ========================================================
 const META = require("../config.json").meta;
-const PR = { easy: E.rulesOf(V3, "easy", META), normal: E.rulesOf(V3, "normal", META), hard: E.rulesOf(V3, "hard", META) }, PN = PR.normal, PW = E.PW;
+const PR = { easy: E.rulesOf(V3, "easy", META), normal: E.rulesOf(V3, "normal", META), hard: E.rulesOf(V3, "hard", META), extreme: E.rulesOf(V3, "extreme", META) }, PN = PR.normal, PW = E.PW;
 const phold = (k, powers) => Object.assign({}, PN, { hold: k }, powers ? { powers } : {});
 // At rest: every colour's sappers (cards still in a column, by their counts now, plus the sappers waiting in the line)
 // equal S.sappers(m), and with no Hard kill they equal its pixels still standing.
