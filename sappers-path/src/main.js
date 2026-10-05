@@ -100,6 +100,10 @@
 // Past level 100 the road fades into fog; once 1-100 are cleared one next-picture node opens there (the long tail), the
 // cleared ones beside it. Opening the map puts the current node about map.curAt down. Wide screens add a realm card and
 // a next-up card. Pure parts in journey.js. A side quest won still offers the next open one, else the next level.
+// v5 R4c: map/layout.json now holds 25 sheets (levels 1-200, realms 1-8) ahead of the levels. The map is built up to the
+// frontier (the first level not built yet, or the summit's long-tail spot): nodes only for built levels, side quests only
+// once their main level exists, eggs, bridges and banners only below the frontier's fog; the long tail's node waits at the
+// frontier; the Goblin King stands at the summit by level 200 once it is built.
 (function () {
   "use strict";
   const NS = window.SappersPath, E = NS.engine, Save = NS.save, Board = NS.board, Art = NS.art, Audio = NS.audio, Meta = NS.meta;
@@ -590,6 +594,12 @@
   // percent of the sheet (levels, side quests, eggs, the realm's banner). All of it is built once; renderMap only switches
   // classes, labels and the route's two path strings per sheet, and nothing runs on scroll. The current node's label moves
   // into its sheet. Phone: Play in a foot bar; wide (config map.cardsMinW): a realm card and a next-up card beside the column.
+  // v5 R4c: layout.json holds sheets for levels 1-200 before they all exist. The map is built up to the frontier (journey.js
+  // frontier: the spot of the first level not built, or the top sheet's long-tail spot once every spot's level is): sheets
+  // past it are not built, a node only for a level that exists, a side quest only once its main level does (later ones are
+  // the long tail), an egg or bridge only below the frontier's fog, a banner only for a realm with a level. The fog, its
+  // label, the long tail's node (at the frontier) and the cleared pictures sit there; the Goblin King stands at the summit
+  // beside level 200 once it is built, else in the fog as a teaser.
   const JN = NS.journey, svgNS = "http://www.w3.org/2000/svg", pct = (v, t) => (100 * v) / t + "%";
   // v5 R2: the pictures are side quests (config gallery.quests, tools/quests.js): each opens once its quest's main level
   // is cleared (save.js questOpen; past the last level, one at a time once all are cleared), shows its prize (a power-up
@@ -608,26 +618,36 @@
       for (const e of app.debug) { const b = document.createElement("button"); b.className = "dbg-node"; b.dataset.id = e.id; b.textContent = e.id.replace(/^v4-/, ""); b.setAttribute("aria-label", e.L.name || e.id); b.addEventListener("click", () => startLevel(e.id)); e.node = b; row.append(b); }
     }
     if (!LAY || !Array.isArray(LAY.sheets)) return; // no layout: the map is the foot's Play alone
-    const R = M.route, nS = LAY.sheets.length, W = LAY.w, H = LAY.h, byN = new Map(app.levels.map((e) => [e.n, e])), world = $("jr-world");
-    const J = (app.jr = { sheets: [], quests: [], eggs: [], tail: null, k: 0, colW: 0, cut: "", io: null, label: null });
+    const R = M.route, W = LAY.w, H = LAY.h, byN = new Map(app.levels.map((e) => [e.n, e])), world = $("jr-world"), F_ = M.tail;
+    const last = app.levels.length ? app.levels[app.levels.length - 1].n : 0, fr = JN.frontier(LAY, last, F_.room), nS = fr.n;
+    const fogAt = fr.fog || Math.max(0, fr.y - F_.ramp), fogTo = fr.fog ? fr.fog + F_.tailClear : fr.y + F_.below, fogged = (si, y) => si > fr.si || (si === fr.si && y < fogTo); // in the fog: past the frontier
+    const kingAt = (() => { const g = LAY.sheets.findIndex((S) => S.goblinKing && S.levels.length && byN.has(S.levels[S.levels.length - 1].n)); return g >= 0 && g < nS ? { si: g, x: LAY.sheets[g].goblinKing.x, y: LAY.sheets[g].goblinKing.y } : { si: fr.top, x: F_.kingAt[0], y: F_.kingAt[1], teaser: true }; })();
+    const J = (app.jr = { sheets: [], quests: [], eggs: [], tail: null, k: 0, colW: 0, cut: "", io: null, label: null, fr, king: kingAt });
     const bannerAt = (re) => M.bannerY + ((M.bannerDy || [])[re - 1] | 0); // v5 R3 fix: a realm's banner can sit a little lower or higher (sheet px)
     const qOf = (q) => app.gal[q - 1] || null, tailE = () => app.gal.filter((e) => e.L.quest && e.L.quest.after > app.order.length);
-    LAY.sheets.forEach((S, si) => {
-      const top = si === nS - 1, el = document.createElement("div"); el.className = "jr-sheet"; el.style.zIndex = si + 1; el.dataset.sheet = S.sheet;
+    LAY.sheets.slice(0, nS).forEach((S0, si) => {
+      const top = si === fr.top, front = si === fr.si, el = document.createElement("div");
+      // v5 R4c: the frontier sheet's road stops a little way into the fog.
+      const S = front ? Object.assign({}, S0, { road: S0.road.slice(0, Math.min(S0.road.length, JN.nearest(S0.road, fr.x, fr.y) + F_.roadOn + 1)) }) : S0; el.className = "jr-sheet"; el.style.zIndex = si + 1; el.dataset.sheet = S.sheet;
       const img = document.createElement("img"); img.className = "jr-img"; img.alt = ""; img.decoding = "async"; img.draggable = false;
       let s = "";
-      if (top) { const F = M.tail; s += '<defs><linearGradient id="jr-fade" gradientUnits="userSpaceOnUse" x1="0" y1="' + F.fadeFrom + '" x2="0" y2="' + F.fadeTo + '"><stop offset="0" stop-color="#2a1c12" stop-opacity=".55"/><stop offset="1" stop-color="#2a1c12" stop-opacity="0"/></linearGradient>' +
+      // v5 R4c: the fog over the road past the frontier (pale mist, full from fogAt up, clear by fogTo) and, on the top
+      // sheet, the dark wash behind the long tail's pictures and the king's teaser.
+      if (front || top) { s += '<defs>' + (front ? '<linearGradient id="jr-fade" gradientUnits="userSpaceOnUse" x1="0" y1="' + (fr.y + F_.fadeBelow) + '" x2="0" y2="' + (fr.y - F_.fadeAbove) + '"><stop offset="0" stop-color="#2a1c12" stop-opacity=".55"/><stop offset="1" stop-color="#2a1c12" stop-opacity="0"/></linearGradient>' +
+        '<linearGradient id="jr-mist" gradientUnits="userSpaceOnUse" x1="0" y1="' + fogTo + '" x2="0" y2="' + Math.min(fogAt, fogTo - 1) + '"><stop offset="0" stop-color="#e6e8de" stop-opacity="0"/><stop offset="1" stop-color="#e6e8de" stop-opacity="' + F_.mist + '"/></linearGradient>' : "") +
         '<linearGradient id="jr-wash" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1e1620" stop-opacity=".92"/><stop offset=".55" stop-color="#1e1620" stop-opacity=".6"/><stop offset="1" stop-color="#1e1620" stop-opacity="0"/></linearGradient>' +
         '<radialGradient id="jr-fog"><stop offset="0" stop-color="#e6e8de" stop-opacity=".8"/><stop offset="1" stop-color="#e6e8de" stop-opacity="0"/></radialGradient></defs>'; }
       s += '<path class="rw-u" fill="none" stroke="#fbf5e6" stroke-opacity=".5" stroke-width="' + R.underW + '" stroke-linecap="round" stroke-linejoin="round"/>';
-      s += '<path class="rw-a" fill="none" stroke="' + (top ? "url(#jr-fade)" : "#2a1c12") + '" stroke-opacity="' + (top ? 1 : 0.55) + '" stroke-width="' + R.aheadW + '" stroke-dasharray="' + R.aheadDash + '" stroke-linecap="round"/>';
+      s += '<path class="rw-a" fill="none" stroke="' + (front ? "url(#jr-fade)" : "#2a1c12") + '" stroke-opacity="' + (front ? 1 : 0.55) + '" stroke-width="' + R.aheadW + '" stroke-dasharray="' + R.aheadDash + '" stroke-linecap="round"/>';
       s += '<path class="rw-w" fill="none" stroke="#8a2b16" stroke-width="' + R.walkedW + '" stroke-dasharray="' + R.walkedDash + '" stroke-linecap="round"/>';
-      for (const [bs, i] of M.bridges) if (bs === S.sheet && S.road[i]) s += JN.bridge(S.road[i][0], S.road[i][1], JN.heading(S.road, i, 3), M.bridgeLen, M.bridgeW);
-      for (const Q of S.quests) { const dt = JN.detour(Q.branch, [Q.x, Q.y], M.stoneGap, M.stoneSkip[0], M.stoneSkip[1]);
+      for (const [bs, i, bk] of M.bridges) if (bs === S.sheet && S.road[i] && !fogged(si, S.road[i][1])) s += JN.bridge(S.road[i][0], S.road[i][1], JN.heading(S.road, i, 3), M.bridgeLen, M.bridgeW, bk);
+      for (const Q of S.quests) { if (!qOf(Q.q) || Q.after > app.order.length) continue; const dt = JN.detour(Q.branch, [Q.x, Q.y], M.stoneGap, M.stoneSkip[0], M.stoneSkip[1]);
         s += '<g class="dt" data-q="' + Q.q + '"><path d="' + dt.d + '" fill="none" stroke="#2a1c12" stroke-opacity=".7" stroke-width="4" stroke-dasharray="3 9" stroke-linecap="round"/>' + dt.stones.map(JN.stone).join("") + "</g>"; }
-      if (top) { const F = M.tail, gk = S.goblinKing || { x: W * 0.8, y: 170 }; s += '<rect width="' + W + '" height="' + F.washTo + '" fill="url(#jr-wash)"/>';
-        for (const [x, dy, rx, ry] of [[150, -30, 260, 80], [470, 10, 300, 90], [690, -50, 220, 70], [330, 70, 240, 60]]) s += '<ellipse cx="' + x + '" cy="' + (F.fogY + dy) + '" rx="' + rx + '" ry="' + ry + '" fill="url(#jr-fog)"/>';
-        s += '<g transform="translate(' + gk.x + " " + (gk.y + 60) + ')">' + JN.king() + '</g><g transform="translate(' + (gk.x + 70) + " " + (gk.y - 70) + ')">' + JN.flag() + "</g>"; }
+      if (front) { s += '<rect width="' + W + '" height="' + fogTo + '" fill="url(#jr-mist)"/>'; // the mist, with puffs along its edge
+        for (const [x, dy, rx, ry] of F_.puffs) s += '<ellipse cx="' + x + '" cy="' + (fogAt + (fogTo - fogAt) * 0.35 + dy) + '" rx="' + rx + '" ry="' + ry + '" fill="url(#jr-fog)"/>'; }
+      else if (si > fr.si) s += '<rect width="' + W + '" height="' + H + '" fill="#e6e8de" fill-opacity="' + F_.mist + '"/>'; // a headroom sheet: all fog
+      if (top) s += '<rect width="' + W + '" height="' + Math.min(F_.washTo, Math.max(F_.washMin, fogAt)) + '" fill="url(#jr-wash)"/>';
+      if (kingAt.si === si) s += '<g transform="translate(' + kingAt.x + " " + kingAt.y + ')">' + JN.king() + '</g><g transform="translate(' + (kingAt.x + F_.flagAt[0]) + " " + (kingAt.y + F_.flagAt[1]) + ')">' + JN.flag() + "</g>";
       const svg = document.createElementNS(svgNS, "svg"); svg.setAttribute("class", "jr-ov"); svg.setAttribute("viewBox", "0 0 " + W + " " + H); svg.setAttribute("preserveAspectRatio", "none"); svg.setAttribute("aria-hidden", "true"); svg.innerHTML = s;
       const lay = document.createElement("div"); lay.className = "jr-lay";
       const at = (b, x, y) => { b.style.left = pct(x, W); b.style.top = pct(y, H); if (x > M.rightEdge) b.classList.add("east"); else if (x < W - M.rightEdge) b.classList.add("west"); lay.append(b); return b; };
@@ -637,38 +657,45 @@
         b.addEventListener("click", () => { if (Save.isOpen(app.save.data, app.order, e.id)) startLevel(e.id); else lockedTap(b); });
         e.node = at(b, P.x, P.y); e.sheet = si; e.ri = JN.nearest(S.road, P.x, P.y); e.px = [P.x, P.y]; }
       // Side quests: a picture node off the road (the detour drawn above), its prize until the first clear.
-      for (const Q of S.quests) { const e = qOf(Q.q); if (!e) continue; const g = svg.querySelector('.dt[data-q="' + Q.q + '"]');
+      for (const Q of S.quests) { const e = qOf(Q.q); if (!e || Q.after > app.order.length) continue; const g = svg.querySelector('.dt[data-q="' + Q.q + '"]'); // v5 R4c: past the last level it is the long tail's
         const b = document.createElement("button"); b.className = "qn"; b.dataset.id = e.id; b.innerHTML = '<span class="qf"><canvas class="pix" aria-hidden="true"></canvas><i class="qi" aria-hidden="true"></i></span><i class="qp" aria-hidden="true"></i><span class="prz" aria-hidden="true"><span class="pz-t"></span><span class="pz-r"><i class="pi"></i>+1</span></span>';
         const qk = e.L.quest ? E.POWERS.indexOf(e.L.quest.prize) : -1; for (const el2 of b.querySelectorAll(".pi, .qp")) el2.style.backgroundImage = (qk >= 0 && app.icoURL["p" + qk]) || "none"; b.querySelector(".pz-t").textContent = T.prize;
         b.addEventListener("click", () => { if (picOpen(e)) startLevel(e.id); else lockedTap(b); });
         e.node = at(b, Q.x, Q.y); J.quests.push({ e, b, g, sheet: si }); }
       // Easter eggs: an ink sprite that turns into its found look (and pays) on the first tap.
-      S.eggs.forEach((G, i) => { const id = JN.eggId(S.sheet, i), b = document.createElement("button"); b.className = "egg k-" + G.kind; b.dataset.id = id;
+      S.eggs.forEach((G, i) => { if (fogged(si, G.y)) return; const id = JN.eggId(S.sheet, i), b = document.createElement("button"); b.className = "egg k-" + G.kind; b.dataset.id = id;
         const g = { id, kind: G.kind, coins: JN.eggCoins(M, S.sheet, i), b, sheet: si, found: null }; b.addEventListener("click", () => eggTap(g)); at(b, G.x, G.y); J.eggs.push(g); });
       // A realm's banner on its first sheet (its lore on a tap).
-      if (si === 0 || LAY.sheets[si - 1].realm !== S.realm) { const er = app.eras[S.realm - 1] || { era: S.realm, name: S.realmName, note: "" }, b = document.createElement("button"); b.className = "bn";
+      if ((si === 0 || LAY.sheets[si - 1].realm !== S.realm) && app.levels.some((e) => e.era === S.realm) && !fogged(si, bannerAt(S.realm))) { const er = app.eras[S.realm - 1] || { era: S.realm, name: S.realmName, note: "" }, b = document.createElement("button"); b.className = "bn";
         b.innerHTML = '<span class="bt"><i></i><b></b></span><span class="lore"></span>'; b.querySelector("i").textContent = fill(T.realm, { e: S.realm }); b.querySelector("b").textContent = er.name; b.querySelector(".lore").textContent = er.note;
         b.setAttribute("aria-label", fill(T.bannerAria, { e: S.realm, name: er.name })); b.setAttribute("aria-expanded", "false");
         b.addEventListener("click", () => { const on = !b.classList.contains("open"); b.classList.toggle("open", on); b.setAttribute("aria-expanded", on ? "true" : "false"); });
         at(b, W / 2, bannerAt(S.realm)).classList.remove("east", "west"); }
       // The top sheet: the fog over the road past the last level, its one next-picture node and the cleared ones.
-      if (top) { const F = M.tail, p = S.road[Math.min(S.road.length - 1, F.at)], lab = document.createElement("div"); lab.className = "fogl"; lab.textContent = T.fog; at(lab, F.labelAt[0], F.labelAt[1]).classList.remove("east", "west");
+      // v5 R4c: the frontier's node sits at the frontier (the first missing level's spot, or the summit's long-tail spot);
+      // its label above it; the cleared pictures at the top sheet's top left.
+      if (front) { const F = M.tail, p = [fr.x, fr.y], lab = document.createElement("div"); lab.className = "fogl"; lab.textContent = T.fog; at(lab, Math.max(F.labelX[0], Math.min(F.labelX[1], fr.x)), Math.max(F.labelMinY, fr.y - F.labelDy)).classList.remove("east", "west");
         const b = document.createElement("button"); b.className = "qn tailn"; b.hidden = true; b.innerHTML = '<span class="qf"><canvas class="pix" aria-hidden="true"></canvas><i class="qi" aria-hidden="true"></i></span><span class="prz" aria-hidden="true"><span class="pz-t"></span><span class="pz-r"><i class="pi"></i>+1</span></span>';
         b.querySelector(".pz-t").textContent = T.prize; at(b, p[0], p[1]).classList.add("bz-e");
         const th = document.createElement("div"); th.className = "thumbs"; th.style.left = pct(F.thumbsAt[0], W); th.style.top = pct(F.thumbsAt[1], H); th.style.setProperty("--row", F.show); lay.append(th);
-        J.tail = { b, th, p, ri: Math.min(S.road.length - 1, F.at), e: null, key: "", list: tailE() };
+        J.tail = { b, th, p, si, ri: JN.nearest(S.road, fr.x, fr.y), e: null, key: "", list: tailE() };
         b.addEventListener("click", () => { const t = J.tail.e; if (t && picOpen(t)) startLevel(t.id); else lockedTap(b); }); }
       // v5 R3: the label and prize bubble sides, away from the sheet's other buttons (judged on the narrowest phone). v5 R3
       // fix: also away from the route and the realm banners (this sheet's and the one above's, which reaches down onto it).
-      { const kf = M.fitK, r = M.nodeR / kf, pts = S.levels.map((P) => [P.x, P.y, r]).concat(S.quests.map((Q) => [Q.x, Q.y, r]), S.eggs.map((G) => [G.x, G.y, r]));
+      { const kf = M.fitK, r = M.nodeR / kf, pts = S.levels.filter((P) => byN.has(P.n)).map((P) => [P.x, P.y, r]).concat(S.quests.filter((Q) => Q.after <= app.order.length).map((Q) => [Q.x, Q.y, r]), S.eggs.filter((G) => !fogged(si, G.y)).map((G) => [G.x, G.y, r]));
         const bw = Math.min(0.76 * W, M.bannerPx[0] / kf) / 2, bh = M.bannerPx[1] / kf / 2, bx = [];
-        for (const [k, dy] of [[si, 0], [si + 1, -LAY.step]]) { const T2 = LAY.sheets[k]; if (T2 && (k === 0 || LAY.sheets[k - 1].realm !== T2.realm)) { const y = bannerAt(T2.realm) + dy; bx.push([W / 2 - bw, y - bh, W / 2 + bw, y + bh]); } }
+        for (const [k, dy] of [[si, 0], [si + 1, -LAY.step]]) { const T2 = LAY.sheets[k]; if (T2 && k < nS && (k === 0 || LAY.sheets[k - 1].realm !== T2.realm)) { const y = bannerAt(T2.realm) + dy; bx.push([W / 2 - bw, y - bh, W / 2 + bw, y + bh]); } }
+        if (kingAt.si === si && !kingAt.teaser) bx.push([kingAt.x - F_.kingBox[0] / 2, kingAt.y - F_.kingBox[1], kingAt.x + F_.kingBox[0] / 2, kingAt.y]); // v5 R4c: labels keep off the king
         const lw = M.labelPx[0] / kf, lh = M.labelPx[1] / kf, pw = M.prizePx[0] / kf, ph = M.prizePx[1] / kf, rw = M.route.underW;
-        for (const P of S.levels) { const e = byN.get(P.n); if (e) e.side = JN.side([P.x, P.y], pts, lw, lh, 30 / kf, W, P.x > M.rightEdge ? ["w", "e", "n", "s"] : ["e", "w", "n", "s"], S.road, rw, bx); }
-        for (const Q of S.quests) { const e = qOf(Q.q); if (e && e.node) e.node.classList.add("bz-" + JN.side([Q.x, Q.y], pts, pw, ph, 28 / kf, W, Q.x > M.rightEdge ? ["w", "n", "s", "e"] : ["e", "n", "s", "w"], S.road, rw, bx)); } }
-      const sh = { S, el, img, svg, lay, top, loaded: false, cut: null, u: svg.querySelector(".rw-u"), w: svg.querySelector(".rw-w"), a: svg.querySelector(".rw-a") };
+        // v5 R4c: the long tail's node and its bubble (always east) count too; the quests' bubbles are placed first (off
+        // each other too) and the level labels then keep off them.
+        if (front) { pts.push([fr.x, fr.y, r]); bx.push(JN.sideBox([fr.x, fr.y], "e", pw, ph, 28 / kf)); }
+        for (const Q of S.quests) { const e = qOf(Q.q); if (e && e.node) { const sd = JN.side([Q.x, Q.y], pts, pw, ph, 28 / kf, W, Q.x > M.rightEdge ? ["w", "n", "s", "e"] : ["e", "n", "s", "w"], S.road, rw, bx); e.node.classList.add("bz-" + sd); bx.push(JN.sideBox([Q.x, Q.y], sd, pw, ph, 28 / kf)); } }
+        for (const P of S.levels) { const e = byN.get(P.n); if (e) e.side = JN.side([P.x, P.y], pts, lw, lh, 30 / kf, W, P.x > M.rightEdge ? ["w", "e", "n", "s"] : ["e", "w", "n", "s"], S.road, rw, bx); } }
+      const sh = { S, el, img, svg, lay, top, front, loaded: false, cut: null, u: svg.querySelector(".rw-u"), w: svg.querySelector(".rw-w"), a: svg.querySelector(".rw-a") };
       el.append(img, svg, lay); world.append(el); J.sheets.push(sh);
     });
+    if (fr.top !== fr.si) J.sheets[fr.top].lay.append(J.tail.th); // v5 R4c: a headroom sheet over the frontier holds the cleared pictures
     J.label = document.createElement("div"); J.label.className = "jr-cur"; J.label.setAttribute("aria-hidden", "true"); J.label.innerHTML = "<span></span><i class=\"tag\"></i>";
     // Lazy sheets: an image loads once its sheet is within lazyMarginPx of the scroller's view (all at once without the API).
     const load = (sh) => { if (sh.loaded) return; sh.loaded = true; sh.img.src = "map/" + sh.S.file + "?v=" + V_; };
@@ -683,7 +710,7 @@
     const J = app.jr, M = app.cfg.map, mp = $("map"), cards = window.innerWidth >= M.cardsMinW; mp.classList.toggle("cards", cards);
     if (!J) return false;
     const LAY = app.lay, colW = Math.round(cards ? M.colWidePx : Math.min(window.innerWidth, M.colMaxPx)); if (colW === J.colW) return false;
-    const sc = $("jr"), mid = J.k ? (sc.scrollTop + sc.clientHeight / 2) / J.k : -1, k = colW / LAY.w, n = LAY.sheets.length;
+    const sc = $("jr"), mid = J.k ? (sc.scrollTop + sc.clientHeight / 2) / J.k : -1, k = colW / LAY.w, n = J.sheets.length; // v5 R4c: the sheets built
     J.colW = colW; J.k = k; const r = mp.style; r.setProperty("--jr-w", colW + "px"); r.setProperty("--card-w", M.cardPx + "px"); r.setProperty("--card-gap", M.cardGapPx + "px");
     $("jr-world").style.height = (LAY.step * (n - 1) + LAY.h) * k + "px";
     J.sheets.forEach((sh, i) => { sh.el.style.top = (n - 1 - i) * LAY.step * k + "px"; sh.el.style.height = LAY.h * k + "px"; });
@@ -691,11 +718,11 @@
     return true;
   }
   // A world point (sheet si, sheet px y) in the scroller's CSS px.
-  const worldY = (si, y) => ((app.lay.sheets.length - 1 - si) * app.lay.step + y) * app.jr.k;
+  const worldY = (si, y) => ((app.jr.sheets.length - 1 - si) * app.lay.step + y) * app.jr.k;
   // Scroll so the current node (the next level, or the long tail's fog node) sits map.curAt of the way down.
   function scrollMap() {
     const J = app.jr; if (!J || !J.k) return; const f = JN.focus(app.save.data, app.order), e = f && f !== "tail" ? app.byId.get(f) : null, sc = $("jr");
-    const y = e ? worldY(e.sheet, e.px[1]) : worldY(J.sheets.length - 1, J.tail.p[1]);
+    const y = e ? worldY(e.sheet, e.px[1]) : worldY(J.tail.si, J.tail.p[1]);
     sc.scrollTop = Math.max(0, Math.min($("jr-world").offsetHeight - sc.clientHeight, y - app.cfg.map.curAt * sc.clientHeight)); // the story and credits under the first sheet stay below the fold
   }
   function renderMap() {
@@ -714,7 +741,7 @@
     }
     const L = J.label; if (fe && fe.node) { L.firstChild.textContent = fill(T.cur, { n: fe.n }); tagChip(L.querySelector(".tag"), tagOf(fe)); L.className = "jr-cur" + (fe.side === "w" ? " east" : fe.side === "n" ? " up" : fe.side === "s" ? " dn" : ""); L.style.left = fe.node.style.left; L.style.top = fe.node.style.top; if (L.parentNode !== fe.node.parentNode) fe.node.parentNode.append(L); } else L.remove(); // v5 R3 fix: the label can sit above or below its node
     // The route: walked to the current node, the rest ahead (only the sheet the cut is on, and those whose side flipped, change).
-    const cs = fe ? fe.sheet : J.sheets.length - 1, ci = fe ? fe.ri : J.tail.ri;
+    const cs = fe ? fe.sheet : J.tail.si, ci = fe ? fe.ri : J.tail.ri;
     J.sheets.forEach((sh, i) => { const key = i < cs ? "w" : i > cs ? "a" : "c" + ci; if (sh.cut === key) return; sh.cut = key;
       const [w, a] = JN.split(sh.S.road, i < cs ? sh.S.road.length : i > cs ? -1 : ci); sh.w.setAttribute("d", w); sh.u.setAttribute("d", w); sh.a.setAttribute("d", a); });
     // Side quests 1-25: locked (dim, its prize icon), open (bright, the prize bubble), won (its finished picture).
@@ -746,8 +773,8 @@
     g.b.setAttribute("aria-label", fill(found ? app.cfg.map.text.eggFoundAria : app.cfg.map.text.eggAria, { name: nm }));
   }
   // v5 R3 (Peter 10/5): an egg shows (and pays) only once the player has reached its realm, i.e. its realm's first level
-  // is open; a realm with no levels counts as reached.
-  function eggReached(g) { const re = app.jr.sheets[g.sheet].S.realm, f = app.levels.find((e) => e.era === re); return !f || Save.isOpen(app.save.data, app.order, f.id); }
+  // is open; v5 R4c: a realm with no levels yet counts as not reached.
+  function eggReached(g) { const re = app.jr.sheets[g.sheet].S.realm, f = app.levels.find((e) => e.era === re); return !!f && Save.isOpen(app.save.data, app.order, f.id); }
   // An egg's tap: the first pays its coins once (meta.js egg) and turns it into its found look with a coin pop; later taps
   // only wiggle it.
   function eggTap(g) {
@@ -2097,19 +2124,28 @@
           "map quests: the top bar's button goes back to the map; the won node shows the finished picture in its own colours (" + col.size + "), no prize bubble");
         { const inv1 = app.save.data.inv[pz] | 0; jrTo(q0); q0.click(); const re = app.entry === e0 && app.screen === "play"; patient(winOf(e0)); settleNow(); tick(9000);
           ok(re && app.panel === "win" && (app.save.data.inv[pz] | 0) === inv1, "map quests: a tap on the won node plays it again; a second win pays no prize"); }
-        ok(app.jr.quests.length === Math.min(25, app.gal.length) && app.jr.quests.every((q) => q.g && q.g.querySelectorAll("ellipse").length >= 1 && q.g.getAttribute("class").indexOf(JN.questState(app.save.data, app.order, galIds(), galAfter(), q.e.id)) > 0),
+        ok(app.jr.quests.length === app.gal.filter((e) => e.L.quest && e.L.quest.after <= app.order.length).length && app.jr.quests.every((q) => q.g && q.g.querySelectorAll("ellipse").length >= 1 && q.g.getAttribute("class").indexOf(JN.questState(app.save.data, app.order, galIds(), galAfter(), q.e.id)) > 0),
           "map quests: every side quest on the map has its stepping-stone detour drawn from the road, marked with its state");
         const saved = JSON.stringify(Save.sanitize(JSON.parse(JSON.stringify(app.save.data)), app.order, app.gal.map((x) => x.id)).gal), junk = Save.sanitize({ gal: { [e0.id]: 99, nope: 1, [app.gal[1].id]: "x" } }, app.order, app.gal.map((x) => x.id)).gal;
         ok(saved === JSON.stringify(app.save.data.gal) && JSON.stringify(junk) === JSON.stringify({ [e0.id]: 1 }), "map quests: the save's gal reads back through sanitize; a cleared mask reads as cleared, unknown ids and non-numbers are dropped");
         showScreen("title");
       }
-      // 24b. v5 R3, the journey map: its parts (13 sheets, a node for every level, 25 quests, 26 eggs, a banner a realm,
+      // 24b. v5 R3, the journey map: its parts (v5 R4c: the sheets up to the frontier, a node for every level and none past,
+      // the quests whose main level exists, the eggs below the fog, a banner a realm with levels,
       // the bridges), lazy sheets, the current node about map.curAt down with its label, locked and cleared taps, the
       // route cut at the current node, a banner's lore, the debug row; an egg paying once; the long tail in the fog.
       if (app.jr) { const J = app.jr, MC = app.cfg.map, MT = MC.text, sc = $("jr"), coins = () => app.save.data.coins;
         app.save = scratch(); J.colW = 0; showScreen("map");
-        ok(J.sheets.length === app.lay.sheets.length && app.levels.every((e) => e.node && e.node.classList.contains("mn")) && J.quests.length === 25 && J.eggs.length === 26 && document.querySelectorAll("#jr .bn").length === app.eras.length && document.querySelectorAll("#jr .br").length === MC.bridges.length,
-          "map: " + J.sheets.length + " sheets, a node for each of " + app.levels.length + " levels, " + J.quests.length + " side quests, " + J.eggs.length + " eggs, a banner for each of " + app.eras.length + " realms, " + MC.bridges.length + " bridges");
+        // v5 R4c: built up to the frontier (the first level not built, else the summit's long-tail spot): what the layout
+        // holds past it, and quests past the last level, are not built; eggs and bridges in its fog neither.
+        { const fr = J.fr, LS = app.lay.sheets, fogTo = fr.fog ? fr.fog + MC.tail.tailClear : fr.y + MC.tail.below, clear = (si, y) => si < fr.si || (si === fr.si && y >= fogTo), nq = app.gal.filter((e) => e.L.quest && e.L.quest.after <= app.order.length).length;
+          const ne = LS.slice(0, fr.n).reduce((a, S, si) => a + S.eggs.filter((G) => clear(si, G.y)).length, 0), nb = MC.bridges.filter(([bs, i]) => bs <= fr.n && LS[bs - 1].road[i] && clear(bs - 1, LS[bs - 1].road[i][1])).length, nr = new Set(app.levels.map((e) => e.era)).size;
+          const spots = LS.flatMap((S) => S.levels).filter((v) => v.n > app.levels.length).length;
+          ok(J.sheets.length === fr.n && app.levels.every((e) => e.node && e.node.classList.contains("mn")) && document.querySelectorAll("#jr .mn").length === app.levels.length && J.quests.length === nq && J.eggs.length === ne && document.querySelectorAll("#jr .bn").length === nr && document.querySelectorAll("#jr .br").length === nb,
+            "map: " + J.sheets.length + " of " + LS.length + " sheets built (up to the frontier on sheet " + (fr.si + 1) + "), a node for each of " + app.levels.length + " levels and none for the " + spots + " spots ahead, " + J.quests.length + " side quests, " + J.eggs.length + " eggs, a banner for each of " + nr + " realms, " + nb + " bridges");
+          const tb = J.tail.b, kg = document.querySelectorAll("#jr .jr-sheet")[J.king.si];
+          ok(Math.abs(parseFloat(tb.style.left) - (100 * fr.x) / app.lay.w) < 0.01 && Math.abs(parseFloat(tb.style.top) - (100 * fr.y) / app.lay.h) < 0.01 && J.tail.si === fr.si && !!kg && !!J.king.teaser === !(LS[J.king.si] && LS[J.king.si].goblinKing && app.levels.some((e) => e.n === LS[J.king.si].levels[LS[J.king.si].levels.length - 1].n)),
+            "map: the long tail's node waits at the frontier (" + fr.x + ", " + fr.y + " on sheet " + (fr.si + 1) + "); the Goblin King " + (J.king.teaser ? "waits in the fog" : "stands at the summit by level " + LS[J.king.si].levels[LS[J.king.si].levels.length - 1].n)); }
         ok(J.sheets.filter((h) => h.loaded).length < J.sheets.length && J.sheets.every((h) => h.loaded === !!h.img.getAttribute("src")), "map: sheets load as they near the view, not all at once (" + J.sheets.filter((h) => h.loaded).length + " of " + J.sheets.length + " requested so far)");
         // Mid-campaign (40 cleared): the current node about curAt down the scroller, its label beside it, in its sheet.
         for (let i = 0; i < 40; i++) Save.record(app.save.data, app.order[i]); showScreen("map");
@@ -2130,7 +2166,7 @@
           ok(hit && c1 - c0 === g.coins && g.coins >= 10 && g.coins <= 15 && c2 === c1 && g.b.classList.contains("found") && g.b.innerHTML !== svg0 && $("map-coins").textContent === String(c1) && reread[g.id] === 1 && g.b.getAttribute("aria-label").indexOf(MT.eggs[g.kind][1]) > 0,
             "map eggs: " + g.id + " (" + g.kind + ") pays " + (c1 - c0) + " coins once (a second tap " + (c2 - c1) + "), turns into " + MT.eggs[g.kind][1] + ", the top bar's coins follow, the save keeps it"); }
         // v5 R3 (Peter 10/5): an egg shows only once its realm is reached (its realm's first level open); a hidden one never pays.
-        { const wrong = J.eggs.filter((g) => { const re = J.sheets[g.sheet].S.realm, f = app.levels.find((e) => e.era === re); return g.b.hidden === (!f || Save.isOpen(app.save.data, app.order, f.id)); });
+        { const wrong = J.eggs.filter((g) => { const re = J.sheets[g.sheet].S.realm, f = app.levels.find((e) => e.era === re); return g.b.hidden === (!!f && Save.isOpen(app.save.data, app.order, f.id)); }); // v5 R4c: a realm with no levels is not reached
           const hid = J.eggs.find((g) => g.b.hidden), c0 = coins(); if (hid) eggTap(hid);
           ok(!wrong.length && coins() === c0 && (!hid || !(app.save.data.eggs || {})[hid.id]), "map eggs: shown only in reached realms (" + J.eggs.filter((g) => !g.b.hidden).length + " of " + J.eggs.length + " shown; wrong: " + (wrong.map((g) => g.id).join(", ") || "none") + "), a hidden one pays nothing"); }
         ok(J.eggs.every((g) => g.b.querySelector("svg") && g.b.getAttribute("aria-label")) && app.levels.every((e) => e.node.tagName === "BUTTON" && e.node.getAttribute("aria-label")) && J.quests.every((q) => q.b.tagName === "BUTTON" && q.b.getAttribute("aria-label")),

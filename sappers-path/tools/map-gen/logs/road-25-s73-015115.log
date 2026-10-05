@@ -1,0 +1,23 @@
+/Users/peter/local-ai/.venv/lib/python3.12/site-packages/diffusers/utils/deprecation_utils.py:23: FutureWarning: `torch_dtype` is deprecated and will be removed in version 1.0.0. Please use `dtype` instead.
+  deprecate("torch_dtype", "1.0.0", _TORCH_DTYPE_DEPRECATION_MESSAGE)
+Loading pipeline components...:   0%|          | 0/7 [00:00<?, ?it/s]
+Loading weights:   0%|          | 0/196 [00:00<?, ?it/s][ALoading weights: 100%|██████████| 196/196 [00:00<00:00, 9160.11it/s]
+
+Loading weights:   0%|          | 0/517 [00:00<?, ?it/s][ALoading weights: 100%|██████████| 517/517 [00:00<00:00, 8089.26it/s]
+Loading pipeline components...:  29%|██▊       | 2/7 [00:00<00:00, 13.16it/s]Loading pipeline components...:  57%|█████▋    | 4/7 [00:00<00:00, 12.87it/s]Loading pipeline components...: 100%|██████████| 7/7 [00:00<00:00, 20.49it/s]
+loaded in 2.5s
+[transformers] Token indices sequence length is longer than the specified maximum sequence length for this model (78 > 77). Running this sequence through the model will result in indexing errors
+[transformers] Ignoring clean_up_tokenization_spaces=True for BPE tokenizer CLIPTokenizer. The clean_up_tokenization post-processing step is designed for WordPiece tokenizers and is destructive for BPE (it strips spaces before punctuation). Set clean_up_tokenization_spaces=False to suppress this warning, or set clean_up_tokenization_spaces_for_bpe_even_though_it_will_corrupt_output=True to force cleanup anyway.
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: ['of the page']
+[transformers] Token indices sequence length is longer than the specified maximum sequence length for this model (78 > 77). Running this sequence through the model will result in indexing errors
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: ['of the page']
+There are modules in AutoencoderKL that should be kept in float32: []. Casting directly with `to()` can lead to inconsistent results; set `torch_dtype` in `from_pretrained()` instead to keep these modules in float32.
+There are modules in AutoencoderKL that should be kept in float32: []. Casting directly with `to()` can lead to inconsistent results; set `torch_dtype` in `from_pretrained()` instead to keep these modules in float32.
+  0%|          | 0/19 [00:00<?, ?it/s] 11%|█         | 2/19 [00:00<00:00, 18.53it/s] 32%|███▏      | 6/19 [00:00<00:01, 10.33it/s] 42%|████▏     | 8/19 [00:01<00:02,  3.95it/s] 47%|████▋     | 9/19 [00:02<00:03,  3.20it/s] 53%|█████▎    | 10/19 [00:02<00:03,  2.72it/s] 58%|█████▊    | 11/19 [00:03<00:03,  2.38it/s] 63%|██████▎   | 12/19 [00:03<00:03,  2.13it/s] 68%|██████▊   | 13/19 [00:04<00:03,  1.95it/s] 74%|███████▎  | 14/19 [00:05<00:02,  1.80it/s] 79%|███████▉  | 15/19 [00:05<00:02,  1.69it/s] 84%|████████▍ | 16/19 [00:06<00:01,  1.62it/s] 89%|████████▉ | 17/19 [00:07<00:01,  1.55it/s] 95%|█████████▍| 18/19 [00:08<00:00,  1.52it/s]100%|██████████| 19/19 [00:08<00:00,  1.49it/s]100%|██████████| 19/19 [00:08<00:00,  2.18it/s]
+/Users/peter/local-ai/.venv/lib/python3.12/site-packages/diffusers/pipelines/stable_diffusion_xl/pipeline_stable_diffusion_xl_img2img.py:896: FutureWarning: `upcast_vae` is deprecated and will be removed in version 1.0.0. `upcast_vae` is deprecated. Please use `pipe.vae.to(torch.float32)`. For more details, please refer to: https://github.com/huggingface/diffusers/pull/12619#issue-3606633695.
+  deprecate(
+There are modules in AutoencoderKL that should be kept in float32: []. Casting directly with `to()` can lead to inconsistent results; set `torch_dtype` in `from_pretrained()` instead to keep these modules in float32.
+There are modules in AutoencoderKL that should be kept in float32: []. Casting directly with `to()` can lead to inconsistent results; set `torch_dtype` in `from_pretrained()` instead to keep these modules in float32.
+saved /Users/peter/local-ai/outputs/sapper-v5-map-r4/sheet-25-s73-st48-bs61-st82.png mode road sheet 25 realm 8 seed 73 strength 0.48 steps 40 guidance 7.0 gen 14.6s total 17.1s
+prompt: hand-drawn fantasy tabletop rpg map on aged parchment, top-down, ink linework with soft watercolor wash, muted earthy palette, seen from directly above, dusty brown scrubland, a winding dirt road from bottom to top, a great crooked dark goblin fortress with round spiked towers seen from above, small round goblin huts, thick pale fog drifts over the top of the page
+after: System-wide memory free percentage: 68% | swap total = 0.00M  used = 0.00M  free = 0.00M  (encrypted)

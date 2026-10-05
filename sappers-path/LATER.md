@@ -299,3 +299,11 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - Lava moats draw in the board only; the map thumbnails, the report picture and the share card still draw water blue (they never show a Siege moat today).
 - The boss (200) gets the realm's normal scenes; a fixed night scene with the crown lit would mark it.
 - Contact sheets of the four realms' generator samples and of the baked 101-200 boards live in tools/shots-v5-r4/boards/ (gitignored like every shots folder).
+
+## From v5 R4c (the map for levels 101-200, 2026-10-05)
+- The summit fortress is drawn in perspective with a horizon behind it (every SDXL seed did that); the fog and wash cover the horizon. A top-down fortress would need inpainting or a hand-drawn overlay.
+- Sheets 20 and 21 have pale streams near their tops and corners that read a little like road forks.
+- The Mistmoor's road runs on painted causeways between channels and the Weald's streams run beside the road, so neither realm got bridges; a stone bridge on sheet 16 was skipped because the lava crosses the road right at a level node.
+- Labels of the current level still graze a neighbouring node in about 20 of the 101 states past 99 (the same rate as R3's 1-99 under the same audit); two states (171, 188) have a quest bubble touching the current label. A smaller label, or labels that may sit diagonally, would clear most.
+- The Goblin King is an ink-and-wash SVG now; a painted sprite or a short animation (he flees when 200 is won) would make the boss land harder.
+- Egg coins on the map are now 647 in all (50 eggs), gated by realm.

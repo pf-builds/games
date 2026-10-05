@@ -1350,14 +1350,21 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   // The layout and config agree: every level 1-100 has one spot, in order; quests 1-25 sit after their main levels with
   // their prizes; two eggs a sheet, each a known kind paying 10-15; bridges on real road samples, clear of every node.
   const lv = LAY.sheets.flatMap((s) => s.levels.map((l) => l.n)), qv = LAY.sheets.flatMap((s) => s.quests);
-  eq([lv.length <= order.length, lv.every((n, i) => n === i + 1), LAY.sheets.length, LAY.step, LAY.overlap], [true, true, 13, 1264, 80], "map layout: levels 1-" + lv.length + " have one spot each, in order, on 13 sheets 1264 px apart" + (lv.length < order.length ? " (v5 R4: " + (lv.length + 1) + "-" + order.length + " wait for the R4 map's sheets)" : ""));
+  // v5 R4c: the layout runs ahead of the levels (spots for 1-200 on 25 sheets while levels.json may hold fewer); every
+  // built level has its spot.
+  eq([lv.length, lv.every((n, i) => n === i + 1), LEVELS.levels.every((l) => lv.indexOf(+l.n) >= 0), LAY.sheets.length, LAY.step, LAY.overlap], [200, true, true, 25, 1264, 80], "map layout: spots for levels 1-200, in order, on 25 sheets 1264 px apart; each of the " + order.length + " built levels has one");
   eq(qv.map((q) => [q.q, q.id, q.after, q.prize]), GL.slice(0, qv.length).map((l, i) => [i + 1, l.id, l.quest.after, l.quest.prize]), "map layout: side quests 1-" + qv.length + " match levels/gallery.json (ids, main levels, prizes)");
   const eggs = LAY.sheets.flatMap((s) => s.eggs.map((e, i) => ({ s: s.sheet, i, kind: e.kind, c: J.eggCoins(MC, s.sheet, i) })));
   ok(LAY.sheets.every((s) => s.eggs.length === 2) && eggs.every((e) => J.EGG_KINDS.indexOf(e.kind) >= 0 && e.c >= 10 && e.c <= 15 && MC.text.eggs[e.kind]), "map eggs: two a sheet (" + eggs.length + "), each a drawn kind with names, paying 10-15 coins (" + eggs.reduce((a, e) => a + e.c, 0) + " in all)");
   const far = MC.bridges.map(([sh, i]) => { const S = LAY.sheets[sh - 1], p = S && S.road[i]; if (!p || i < 2 || i > S.road.length - 3) return -1; return Math.min(...S.levels.concat(S.quests).map((n) => Math.hypot(n.x - p[0], n.y - p[1]))); });
   ok(far.every((d) => d >= 60), "map bridges: " + MC.bridges.length + " on real road samples, each at least 60 sheet px from every node (closest " + Math.round(Math.min(...far)) + ")");
-  const top = LAY.sheets[LAY.sheets.length - 1], firsts = LAY.sheets.filter((s, k) => k === 0 || LAY.sheets[k - 1].realm !== s.realm).map((s) => s.sheet);
-  ok(MC.tail.at > 0 && MC.tail.at < top.road.length && top.goblinKing && firsts.length === new Set(LAY.sheets.map((s) => s.realm)).size && firsts.length <= require("../config.json").eras.length, "map: the long-tail node sits on the top sheet's road (sample " + MC.tail.at + "); one realm banner per realm the sheets reach (sheets " + firsts.join(", ") + "; v5 R4: config names " + require("../config.json").eras.length + " realms, the R4 map adds the sheets for the rest)");
+  const top = LAY.sheets[LAY.sheets.length - 1], firsts = LAY.sheets.filter((s, k) => k === 0 || LAY.sheets[k - 1].realm !== s.realm).map((s) => s.sheet), L200 = top.levels[top.levels.length - 1];
+  ok(top.tail && top.tail.y < L200.y && top.goblinKing && Math.hypot(top.goblinKing.x - L200.x, top.goblinKing.y - L200.y) < 100 && L200.n === 200 && firsts.length === 8, "map: the top sheet holds level 200 with the Goblin King beside it and the long tail's spot above; one realm banner spot per realm (first sheets " + firsts.join(", ") + ")");
+  // v5 R4c, the frontier: with 1-100 built it is level 101's spot (sheet 13); with 107, 108's (sheet 14, its bottom); with
+  // all 200, the summit's long-tail spot; with none, level 1's. Sheets past it are not built (n).
+  const fr = (n) => { const f = J.frontier(LAY, n, MC.tail.room); return [f.si + 1, f.tail, f.n, f.x, f.y]; }, s101 = LAY.sheets.flatMap((S) => S.levels).find((v) => v.n === 101);
+  eq([fr(100), fr(107)[0], fr(200), fr(0)[0], J.frontier({ sheets: [] }, 5, 420)], [[13, false, 13, s101.x, s101.y], 14, [25, true, 25, top.tail.x, top.tail.y], 1, null],
+    "map frontier: 1-100 built: level 101's spot on sheet 13 (13 sheets built); 1-107: sheet 14; 1-200: the summit's long-tail spot (25 sheets); none: sheet 1; no layout: none");
   // v5 R3 fix: the next-up quest is the open, unwon one nearest the current level; the side picker keeps a bubble off the
   // route and off a banner, not just off nodes.
   const NQ = Save.fresh(META); for (let i = 0; i < 55; i++) NQ.done[order[i]] = 1; for (let i = 0; i < 3; i++) NQ.gal[gids[i]] = 1;
@@ -1369,7 +1376,7 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   // v5 R3 fix: every two tap targets (levels, side quests, eggs, the long tail's node), across sheets too, are at least
   // 48 CSS px apart, centre to centre, on a 375-wide phone (their discs are 44).
   const kp = 375 / LAY.w, tg = LAY.sheets.flatMap((S, si) => { const wy = (y) => (LAY.sheets.length - 1 - si) * LAY.step + y, o = S.levels.map((p) => ["level " + p.n, p.x, wy(p.y)]).concat(S.quests.map((q) => ["quest " + q.q, q.x, wy(q.y)]), S.eggs.map((g, i) => ["egg " + J.eggId(S.sheet, i), g.x, wy(g.y)]));
-    if (si === LAY.sheets.length - 1) o.push(["the long tail", S.road[MC.tail.at][0], wy(S.road[MC.tail.at][1])]); return o; });
+    if (S.tail) o.push(["the long tail", S.tail.x, wy(S.tail.y)]); return o; });
   let close = [Infinity, ""]; for (let i = 0; i < tg.length; i++) for (let j = i + 1; j < tg.length; j++) { const d = Math.hypot(tg[i][1] - tg[j][1], tg[i][2] - tg[j][2]) * kp; if (d < close[0]) close = [d, tg[i][0] + " and " + tg[j][0]]; }
   ok(close[0] >= 48, "map spacing: " + tg.length + " tap targets, every pair at least 48 CSS px apart at 375 wide (closest " + close[0].toFixed(1) + ", " + close[1] + ")");
   // v5 R3 fix, old saves by slot (Peter's call): a v4.3 save (format 2, v4.3's ids: e1-25, e2-50, e3-75, e4-100 sat at

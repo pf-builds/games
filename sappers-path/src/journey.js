@@ -11,6 +11,10 @@
 //   (meta.js egg).
 //   Sprites: SVG markup in sheet pixels for the plank bridges, the stepping-stone detours, the eggs (a look before and
 //   after each kind's tap) and the Goblin King with his banner.
+// v5 R4c: the map holds sheets for levels 1-200 (realms 1-8) before those levels exist. frontier() finds where the built
+//   campaign stops: the spot of the first missing level (or, with every spot's level built, the top sheet's long-tail
+//   spot); the map builds sheets up to it, nodes only for levels that exist, and its fog sits there. Five new egg kinds
+//   (a lava bubble, an ember sprite, a glowcap, an owl, a goblin lookout), stone bridges over lava, a fuller Goblin King.
 (function (root, factory) {
   if (typeof module === "object" && module.exports) module.exports = factory(require("./save.js"));
   else (root.SappersPath = root.SappersPath || {}).journey = factory(root.SappersPath.save);
@@ -45,6 +49,17 @@
   // The node the map centres on: the next level not cleared, or (every level cleared) the long tail's node, "tail".
   const focus = (data, order) => { const n = order.find((id, i) => !data.done[id] && Save.isOpen(data, order, id)); return n || (order.length ? "tail" : null); };
 
+  // v5 R4c: where the built campaign stops (n: the last level built, 1..n contiguous): {si: its sheet (0-based), x, y,
+  // fog: the row the fog is full at (0: work it out), tail: true at the top sheet's own long-tail spot, top: the topmost
+  // sheet to build (one past si when the spot sits within `room` sheet px of its sheet's top), n: sheets to build}.
+  function frontier(lay, n, room) {
+    const S = (lay && lay.sheets) || []; let f = null;
+    for (let i = 0; i < S.length && !f; i++) { const p = (S[i].levels || []).find((v) => v.n === n + 1); if (p) f = { si: i, x: p.x, y: p.y, fog: 0, tail: false }; }
+    if (!f && S.length) { const i = S.length - 1, t = S[i].tail, r = S[i].road || [[lay.w / 2, 0]], q = r[Math.max(0, r.length - 12)]; f = t ? { si: i, x: t.x, y: t.y, fog: t.fog | 0, tail: true } : { si: i, x: q[0], y: q[1], fog: 0, tail: true }; }
+    if (!f) return null;
+    f.top = f.y < room && f.si < S.length - 1 ? f.si + 1 : f.si; f.n = f.top + 1; return f;
+  }
+
   // ---- the route ------------------------------------------------------------------------------------------------------
   // The road sample nearest (x, y) (bounded by the road's length).
   function nearest(road, x, y) { let b = 0, bd = Infinity; for (let i = 0; i < road.length; i++) { const d = (road[i][0] - x) ** 2 + (road[i][1] - y) ** 2; if (d < bd) { bd = d; b = i; } } return b; }
@@ -61,10 +76,12 @@
   // its centreline; it counts as one thing, at half a node's weight); boxes: [x0, y0, x1, y1], banners. Off the sheet (W
   // wide) costs more than anything.
   const sdBox = (x, y, x0, y0, x1, y1) => { const dx = Math.max(x0 - x, 0, x - x1), dy = Math.max(y0 - y, 0, y - y1); return dx || dy ? Math.hypot(dx, dy) : -Math.min(x - x0, x1 - x, y - y0, y1 - y); };
+  // v5 R4c: the box [x0, y0, x1, y1] a w x h thing set gap px off p on side s takes (so a bubble's box can steer a label).
+  function sideBox(p, s, w, h, gap) { const x0 = s === "e" ? p[0] + gap : s === "w" ? p[0] - gap - w : p[0] - w / 2, y0 = s === "n" ? p[1] - gap - h : s === "s" ? p[1] + gap : p[1] - h / 2; return [x0, y0, x0 + w, y0 + h]; }
   function side(p, pts, w, h, gap, W, sides, road, rw, boxes) {
     let best = sides[0], bs = Infinity;
     for (const s of sides) {
-      const x0 = s === "e" ? p[0] + gap : s === "w" ? p[0] - gap - w : p[0] - w / 2, y0 = s === "n" ? p[1] - gap - h : s === "s" ? p[1] + gap : p[1] - h / 2, x1 = x0 + w, y1 = y0 + h;
+      const [x0, y0, x1, y1] = sideBox(p, s, w, h, gap);
       let sc = x0 < 0 || x1 > W ? 1e4 : 0, rd = 0;
       for (const q of pts) if (!(q[0] === p[0] && q[1] === p[1])) sc += Math.max(0, q[2] - sdBox(q[0], q[1], x0, y0, x1, y1));
       for (const q of road || []) rd = Math.max(rd, rw - sdBox(q[0], q[1], x0, y0, x1, y1));
@@ -81,12 +98,14 @@
   function eggCoins(M, sheet, i) { const row = (M && M.eggCoins && M.eggCoins[sheet - 1]) || [], v = row[i]; return Number.isFinite(v) ? Math.max(0, Math.min(999, Math.round(v))) : 0; }
 
   // ---- sprites (SVG markup; sheet px) -----------------------------------------------------------------------------------
-  // A plank bridge centred on (x, y), its length along the heading ang (degrees), w wide across the road.
-  function bridge(x, y, ang, len, w) {
-    const h = len / 2, v = w / 2; let s = '<g class="br" transform="translate(' + r1(x) + " " + r1(y) + ") rotate(" + r1(ang) + ')">';
+  // A plank bridge centred on (x, y), its length along the heading ang (degrees), w wide across the road. v5 R4c: kind
+  // "stone" is a grey stone arch (over lava): blocks instead of planks.
+  function bridge(x, y, ang, len, w, kind) {
+    const h = len / 2, v = w / 2, stn = kind === "stone"; let s = '<g class="br' + (stn ? " stone" : "") + '" transform="translate(' + r1(x) + " " + r1(y) + ") rotate(" + r1(ang) + ')">';
     s += '<rect x="' + r1(-h) + '" y="' + r1(-v + 3) + '" width="' + r1(len) + '" height="' + r1(w) + '" fill="rgba(0,0,0,.28)"/>';
-    s += '<rect x="' + r1(-h) + '" y="' + r1(-v) + '" width="' + r1(len) + '" height="' + r1(w) + '" fill="#a87a46" stroke="' + INK + '" stroke-width="3"/>';
-    let p = ""; for (let t = -h + 9; t < h - 4; t += 10) p += "M" + r1(t) + " " + r1(-v) + "v" + r1(w);
+    s += '<rect x="' + r1(-h) + '" y="' + r1(-v) + '" width="' + r1(len) + '" height="' + r1(w) + '" fill="' + (stn ? "#9a948a" : "#a87a46") + '" stroke="' + INK + '" stroke-width="3"/>';
+    let p = ""; if (stn) for (let t = -h + 13, k = 0; t < h - 4; t += 13, k++) p += "M" + r1(t) + " " + r1(-v) + "v" + r1(v) + "M" + r1(t - 6.5) + " 0v" + r1(v) + "M" + r1(-h) + " 0h" + r1(len);
+    else for (let t = -h + 9; t < h - 4; t += 10) p += "M" + r1(t) + " " + r1(-v) + "v" + r1(w);
     s += '<path d="' + p + '" stroke="' + INK + '" stroke-width="2.4" fill="none"/>';
     s += '<path d="M' + r1(-h - 5) + " " + r1(-v - 3) + "h" + r1(len + 10) + "M" + r1(-h - 5) + " " + r1(v + 3) + "h" + r1(len + 10) + '" stroke="' + INK + '" stroke-width="5" stroke-linecap="round"/>';
     return s + "</g>";
@@ -135,13 +154,46 @@
     wisp: [
       '<g opacity=".55"><path d="M0 -14c6 6 9 11 6 17-2 4-10 4-12 0-3-6 2-9 6-17z" fill="#cfe9dc" stroke="' + INK + '" stroke-width="1.4"/></g>',
       '<g class="bob"><ellipse cx="0" cy="2" rx="16" ry="16" fill="#9ff0d0" opacity=".3"/><path d="M0 -18c8 8 12 14 8 22-3 5-13 5-16 0-4-8 2-12 8-22z" fill="#7fe8c4" stroke="' + INK + '" stroke-width="1.6"/><path d="M0 -6c3 4 5 7 3 10-1 2-5 2-6 0-1-3 1-5 3-10z" fill="#e8fff6"/><circle cx="-3" cy="2" r="1.4" fill="' + INK + '"/><circle cx="3" cy="2" r="1.4" fill="' + INK + '"/></g>'] };
+  // v5 R4c, the new realms' eggs: a crust bubble on lava that pops into a lava salamander; a dim spark that becomes an
+  // ember sprite; a closed blue cap that opens into a glowing glowcap cluster; two eyes in a hollow that become an owl; a
+  // rickety lookout post whose goblin pops up waving.
+  Object.assign(EGGS, {
+    bubble: [
+      '<g ' + st + ' stroke-width="1.6"><ellipse cx="0" cy="8" rx="18" ry="7" fill="#d9562a"/><path class="glow" d="M-12 8q12-4 24 0" stroke="#ffd27a" stroke-width="2.4" fill="none"/><circle cx="-2" cy="2" r="8" fill="#5a3a2e"/><path d="M-6 -1l3 3 3-4" stroke="#f08a24" stroke-width="1.6" fill="none"/></g>',
+      '<g ' + st + ' stroke-width="1.6"><ellipse cx="0" cy="10" rx="18" ry="6" fill="#d9562a"/><path d="M-12 10q12-4 24 0" stroke="#ffd27a" stroke-width="2.4" fill="none"/>' +
+        '<g class="bob"><path d="M-16 2c4-6 10-6 14-3 4-4 12-4 16 1-3 4-8 6-14 5-6 2-12 1-16-3z" fill="#f08a24"/><path d="M14 0l7-4M-16 2l-6 3" stroke-width="2.4"/><circle cx="9" cy="-2" r="1.5" fill="' + INK + '" stroke="none"/><path d="M-4 -2l2-4 2 4M2 -3l2-4 2 4" fill="#ffd27a" stroke-width="1.2"/></g>' +
+        '<path class="spk" d="M-14 -12v5M-16.5 -9.5h5M15 -14v5M12.5 -11.5h5" stroke="#ffd27a" stroke-width="2"/></g>'],
+    ember: [
+      '<g class="tw"><circle cx="0" cy="2" r="9" fill="#f08a24" opacity=".35"/><circle cx="0" cy="2" r="4" fill="#ffd27a" stroke="' + INK + '" stroke-width="1.4"/></g><path d="M-14 14c4-3 24-3 28 0" stroke="' + INK + '" stroke-width="1.6" fill="#5d5852"/>',
+      '<path d="M-14 16c4-3 24-3 28 0" stroke="' + INK + '" stroke-width="1.6" fill="#5d5852"/><g class="bob"><ellipse cx="0" cy="0" rx="17" ry="17" fill="#f08a24" opacity=".28"/>' +
+        '<path d="M0 -19c7 7 11 13 8 20-2 5-14 5-16 0-3-7 1-11 4-16 1 3 2 5 4 6z" fill="#f08a24" stroke="' + INK + '" stroke-width="1.6"/><path d="M0 -6c3 4 5 7 3 10-1 2-5 2-6 0-1-3 1-5 3-10z" fill="#ffe27a"/>' +
+        '<circle cx="-3" cy="1" r="1.4" fill="' + INK + '"/><circle cx="3" cy="1" r="1.4" fill="' + INK + '"/><path d="M-9 4l-6-4M9 4l6-4" stroke="' + INK + '" stroke-width="1.6"/></g>'],
+    glowcap: [
+      '<g ' + st + ' stroke-width="1.6"><path d="M-3 13v-9h6v9z" fill="#dfe8e6"/><path d="M-9 5c0-10 18-10 18 0z" fill="#4a6f8a"/><path d="M9 13v-5h4v5z" fill="#dfe8e6"/><path d="M6 8c0-6 10-6 10 0z" fill="#4a6f8a"/></g>',
+      '<g class="glow"><ellipse cx="0" cy="4" rx="22" ry="14" fill="#9ff0ff" opacity=".35"/></g><g ' + st + ' stroke-width="1.5">' + [[-12, 10, 7], [0, 6, 10], [12, 10, 7], [-6, 14, 5], [7, 15, 5]].map((p) => '<path d="M' + (p[0] - 2) + " " + (p[1] + 4) + "v-" + (p[2] * 0.7) + "h4v" + (p[2] * 0.7) + 'z" fill="#e8fbff"/><path d="M' + (p[0] - p[2]) + " " + (p[1] - p[2] * 0.6) + "c0-" + p[2] + " " + 2 * p[2] + "-" + p[2] + " " + 2 * p[2] + ' 0z" fill="#6fe0ff"/>').join("") + '</g><path class="spk" d="M-16 -12v5M-18.5 -9.5h5M16 -16v5M13.5 -13.5h5M2 -20v4M0 -18h4" stroke="#e8fbff" stroke-width="2"/>'],
+    owl: [
+      '<g ' + st + ' stroke-width="1.8"><ellipse cx="0" cy="2" rx="16" ry="14" fill="#3c5a44"/><ellipse cx="0" cy="3" rx="8" ry="9" fill="#1e1620"/></g><g class="tw"><circle cx="-3" cy="1" r="1.8" fill="#f2c230"/><circle cx="3" cy="1" r="1.8" fill="#f2c230"/></g>',
+      '<g ' + st + ' stroke-width="1.8"><path d="M-18 14h36" stroke="#5a3f2a" stroke-width="5" stroke-linecap="round"/><g class="flap"><path d="M-11 12c-4-8-3-20 0-24l4 4h14l4-4c3 4 4 16 0 24z" fill="#8a6a48"/>' +
+        '<circle cx="-5" cy="-2" r="5" fill="#f3ead8"/><circle cx="5" cy="-2" r="5" fill="#f3ead8"/><circle cx="-5" cy="-2" r="2.2" fill="#f2c230" stroke-width="1"/><circle cx="5" cy="-2" r="2.2" fill="#f2c230" stroke-width="1"/><path d="M-2 3l2 3 2-3z" fill="#f2c230" stroke-width="1"/><path d="M-6 8q6 3 12 0" fill="none" stroke-width="1.2"/></g></g>'],
+    lookout: [
+      '<g ' + st + ' stroke-width="1.8"><path d="M-10 16l3-22M10 16l-3-22M-9 6h18M-8 -2l16 8" stroke="#6b4a2a" stroke-width="3"/><path d="M-12 -6h24l-3-6h-18z" fill="#8a6a48"/></g><path d="M-3 -9h6" stroke="#79b04a" stroke-width="3"/>',
+      '<g ' + st + ' stroke-width="1.8"><path d="M-10 16l3-22M10 16l-3-22M-9 6h18M-8 -2l16 8" stroke="#6b4a2a" stroke-width="3"/><path d="M-12 -6h24l-3-6h-18z" fill="#8a6a48"/>' +
+        '<g class="bob"><path d="M-14 -22l6 4M14 -22l-6 4" stroke="#5c8a2e" stroke-width="3.6" stroke-linecap="round"/><ellipse cx="0" cy="-18" rx="8" ry="7" fill="#79b04a"/><circle cx="-3" cy="-19" r="1.5" fill="' + INK + '" stroke="none"/><circle cx="3" cy="-19" r="1.5" fill="' + INK + '" stroke="none"/><path d="M-3 -14q3 2 6 0" fill="none" stroke-width="1.3"/>' +
+        '<path d="M8 -14l9-12" stroke="#5c8a2e" stroke-width="3" stroke-linecap="round"/><path d="M15 -27l7 3-3 3z" fill="#8a1f19" stroke-width="1.2"/></g></g>'] });
   const egg = (kind, found) => (EGGS[kind] || EGGS.grass)[found ? 1 : 0];
   const EGG_KINDS = Object.keys(EGGS);
 
-  // The Goblin King (about 80 x 100 sheet px, his feet at 0 0) and his banner (a pole 90 tall).
-  const king = () => '<g transform="scale(2.1) translate(-19 -46)"><g fill="#1e1620" stroke="#1e1620" stroke-linejoin="round"><path d="M10 14c0-7 4-10 9-10s9 3 9 10v4c5 2 9 6 10 14l-6-2 2 12-6-3-2 7h-14l-2-7-6 3 2-12-6 2c1-8 5-12 10-14z"/><path d="M3 6l-6 2 6 3zM35 6l6 2-6 3z"/></g>' +
-    '<path d="M12 4l2-6 3 4 2-6 2 6 3-4 2 6z" fill="#f2c230" stroke="#221a26" stroke-width="1.2"/><circle cx="15.5" cy="12" r="1.6" fill="#ff4a3a"/><circle cx="22.5" cy="12" r="1.6" fill="#ff4a3a"/></g>';
+  // The Goblin King (about 90 x 110 sheet px, his feet at 0 0) and his banner (a pole 90 tall). v5 R4c: drawn in the
+  // map's ink and wash (green skin, long ears, a gold crown, a red cloak with a ragged hem, a crooked sceptre) instead of
+  // the flat silhouette.
+  const king = () => '<g transform="scale(2.1) translate(-21 -50)" stroke="' + INK + '" stroke-linejoin="round" stroke-linecap="round"><ellipse cx="21" cy="49" rx="17" ry="3.5" fill="rgba(0,0,0,.3)" stroke="none"/>' +
+    '<path d="M7 47l2-16c1-7 5-11 12-11s11 4 12 11l2 16-4-3-3 4-3-4-4 4-4-4-3 4-3-4z" fill="#8a1f19" stroke-width="1.6"/><path d="M14 22c2 6 12 6 14 0" fill="none" stroke="#f2c230" stroke-width="2"/>' +
+    '<path d="M17 30h8v10h-8z" fill="#4f6b2c" stroke-width="1.2"/><path d="M17 47v-5M25 47v-5" stroke-width="3" stroke="#4f6b2c"/><path d="M14 48h5M23 48h5" stroke-width="2.4"/>' +
+    '<path d="M36 46l-2-26" stroke="#6b4a2a" stroke-width="2.4"/><path d="M34 20l-3-4 3-3 3 3z" fill="#4fc3e8" stroke-width="1.2"/><path d="M34 32c-3-2-5 0-7 1" fill="none" stroke="#79b04a" stroke-width="3"/>' +
+    '<path d="M4 6l9 5-1 4zM38 6l-9 5 1 4z" fill="#79b04a" stroke-width="1.4"/><ellipse cx="21" cy="13" rx="9" ry="8.5" fill="#79b04a" stroke-width="1.6"/><path d="M17 17q4 3 8 0" fill="none" stroke-width="1.3"/><path d="M18 18l1 2 1-2M22 18l1 2 1-2" fill="#f3ead8" stroke-width=".8"/>' +
+    '<circle cx="17.5" cy="12" r="1.9" fill="#ffd27a" stroke-width="1"/><circle cx="24.5" cy="12" r="1.9" fill="#ffd27a" stroke-width="1"/><circle cx="17.5" cy="12" r=".8" fill="' + INK + '" stroke="none"/><circle cx="24.5" cy="12" r=".8" fill="' + INK + '" stroke="none"/>' +
+    '<path d="M13 7l1-8 3 4 2-6 2 6 2-6 2 6 3-4 1 8z" fill="#f2c230" stroke-width="1.3"/><circle cx="21" cy="3" r="1.3" fill="#c8402c" stroke-width=".8"/></g>';
   const flag = () => '<g transform="scale(2)"><path d="M0 0v46" stroke="#1e1620" stroke-width="2.4"/><path d="M1 2h22l-5 7 5 7-4 1 3 6H1z" fill="#8a1f19" stroke="#1e1620" stroke-width="1.6"/><circle cx="11" cy="11" r="3.4" fill="#f3ead8" stroke="#1e1620" stroke-width="1.2"/><circle cx="11" cy="11" r="1.2" fill="#1e1620"/></g>';
 
-  return { nodeState, questState, tail, nearQuest, focus, nearest, pathD, split, heading, side, eggId, eggCoins, bridge, detour, stone, egg, EGG_KINDS, king, flag };
+  return { nodeState, questState, tail, nearQuest, focus, frontier, nearest, pathD, split, heading, side, sideBox, eggId, eggCoins, bridge, detour, stone, egg, EGG_KINDS, king, flag };
 });

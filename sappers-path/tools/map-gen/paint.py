@@ -2,8 +2,8 @@
 # Based on /Users/peter/local-ai/sdxl_base.py. Two passes per sheet:
 #   base: the coded biome guide (no road) at high strength -> the painted land in the seed-61 parchment style
 #   road: that painting with the coded road layer laid on top, at low strength -> the road painted in, where we put it
-# Usage: /Users/peter/local-ai/.venv/bin/python paint.py base <sheet 1-13> <seed> [strength]
-#        /Users/peter/local-ai/.venv/bin/python paint.py road <sheet 1-13> <seed> <base.png> [strength]
+# Usage: /Users/peter/local-ai/.venv/bin/python paint.py base <sheet 1-25> <seed> [strength]
+#        /Users/peter/local-ai/.venv/bin/python paint.py road <sheet 1-25> <seed> <base.png> [strength]
 import os, sys, time, json, pathlib
 os.environ.setdefault("HF_HUB_CACHE", "/Users/peter/local-ai/hf-cache/hub")
 import torch
@@ -14,8 +14,8 @@ HERE = pathlib.Path(__file__).resolve().parent
 P = json.load(open(HERE / "plan.json")); M = P["model"]
 G, OUT = pathlib.Path(P["out"]["guides"]), pathlib.Path(P["out"]["candidates"]); OUT.mkdir(parents=True, exist_ok=True)
 mode, sheet, seed = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
-realm = [r for r in P["realms"] for _ in r["sheets"]][sheet - 1]
-prompt = P["stylePrefix"] + realm["prompt"]
+realm, sh = [(r, s) for r in P["realms"] for s in r["sheets"]][sheet - 1]
+prompt = P["stylePrefix"] + sh.get("prompt", realm["prompt"])   # v5 R4c: a sheet can carry its own prompt (the summit)
 if mode == "base":                                # no road in the land pass: the road is ours, laid on in pass 2
     prompt = prompt.replace(P["roadPhrase"], "")
     strength = float(sys.argv[4]) if len(sys.argv) > 4 else realm.get("baseStrength", M["baseStrength"])
@@ -34,7 +34,8 @@ pipe = StableDiffusionXLImg2ImgPipeline.from_pretrained(M["id"], torch_dtype=tor
 pipe.vae.enable_slicing(); pipe.vae.enable_tiling()
 t1 = time.time(); print(f"loaded in {t1 - t0:.1f}s", flush=True)
 g = torch.Generator(device="cpu").manual_seed(seed)
-im = pipe(prompt=prompt, negative_prompt=P["neg"], image=init, strength=strength, num_inference_steps=M["steps"],
+neg = P["neg"] + realm.get("negExtra", "")         # v5 R4c: a realm can add to the negative prompt (perspective peaks)
+im = pipe(prompt=prompt, negative_prompt=neg, image=init, strength=strength, num_inference_steps=M["steps"],
           guidance_scale=M["guidance"], generator=g).images[0]
 p = OUT / name; im.save(p)
 print(f"saved {p} mode {mode} sheet {sheet} realm {realm['realm']} seed {seed} strength {strength} steps {M['steps']} "

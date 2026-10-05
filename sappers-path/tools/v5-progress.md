@@ -170,3 +170,33 @@ map code in `src/main.js` and config.json `map` (R4 map art, separate worktree):
 R4a and R4b complete: levels 101-200 baked and checked. Open: the journey map has no spots for 101-200 (the other
 builder's R4 map); until it merges, `src/main.js` scrollMap (line 698) throws on a save past 100 and selfTest's map checks
 fail (`tools/v5-r4-notes.md` §7). Then critics and Peter's playtest of 101-200.
+
+# R4c: the journey map's art and layout for levels 101-200 (2026-10-05, overnight)
+
+Brief: the orchestrator's R4c brief of 2026-10-05 (worktree `repos/games-sappers-path-map/`, branch `sappers-path-map`).
+Another builder bakes levels 101-200 on branch `sappers-path`; this branch touches only `map/`, `tools/map-gen/`,
+`src/journey.js`, the journey-map parts of `src/main.js` and `style.css`, `config.json` `map`, map tests and selfTest,
+and notes. Notes: `tools/v5-r4c-notes.md`. Candidates (not in git): `/Users/peter/local-ai/outputs/sapper-v5-map-r4/`.
+Dev server: port 8495 (never 8491, the other builder's).
+
+## How to resume (R4c)
+
+1. Read this table; take the first row not `done`.
+2. Art runs: `tools/map-gen/run.sh` (one SDXL base 1.0 image a run, memory logged); check `ps` for another session's
+   generation first; picks go in `tools/map-gen/picks.json`; `python assemble.py` rebuilds `map/`.
+3. Sheets 1-12 must stay byte-identical (md5 before/after assemble); levels never change (`freeze.js --require`).
+
+| # | Step | State | Commit |
+|---|---|---|---|
+| c1 | Plan: realms 5-8 sheets (13 regenerated + 14-25), stops, fog and Goblin King on the top sheet, new feature drawers, new egg kinds, candidate dirs, guides | done | 10e028a |
+| c2 | Paint: sheet 13 (no fog), 14-15 Mistmoor; stop-rule check on the first new sheet | done: road held (s72); fen prompt changed to moorland | b6bfcfb |
+| c3 | Paint: 16-18 Emberwatch Crags | done: perspective peaks fixed by prompt + negExtra | b6bfcfb |
+| c4 | Paint: 19-21 Shrouded Weald | done: canopy-from-above prompt; road held on a busy forest | b6bfcfb |
+| c5 | Paint: 22-25 Goblin King's Throne (fortress summit, fog on top) | done: summit kept in perspective (all seeds) | b6bfcfb |
+| c6 | Assemble: layout.json 25 sheets, eggs, manual fixes, bridges, contact-r4 + seams-r4, sizes | done: sheets 1-12 byte-identical; 6.95 MB map | b6bfcfb, f423bbb |
+| c7 | Code: frontier, eggReached (no levels = not reached), new eggs and king, banners 6-8, tests both states | done | de30444 |
+| c8 | Checks: test.js, freeze, selfTest 375x812@3 and 1280x720, harness on 8495; shots `tools/shots-v5-r4-map/` (both states) | done: 462/0, PASS, 527/529 (today) and 727/729 (fake 200) 0 fail, harness all passed, shots 0 console | (close-out) |
+| c9 | Notes `tools/v5-r4c-notes.md`, merge notes, this table | done | (close-out) |
+
+### State (R4c)
+Done. Next: merge into `sappers-path` with levels 101-200 (merge notes: `tools/v5-r4c-notes.md` §5), then critics on the new realms.
