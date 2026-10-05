@@ -50,7 +50,55 @@
   },
   "13": {
    "roadSamples": 115,
-   "onRoad": 0.852
+   "onRoad": 0.826
+  },
+  "14": {
+   "roadSamples": 145,
+   "onRoad": 0.793
+  },
+  "15": {
+   "roadSamples": 138,
+   "onRoad": 0.826
+  },
+  "16": {
+   "roadSamples": 128,
+   "onRoad": 0.68
+  },
+  "17": {
+   "roadSamples": 139,
+   "onRoad": 0.863
+  },
+  "18": {
+   "roadSamples": 143,
+   "onRoad": 0.685
+  },
+  "19": {
+   "roadSamples": 111,
+   "onRoad": 0.829
+  },
+  "20": {
+   "roadSamples": 139,
+   "onRoad": 0.964
+  },
+  "21": {
+   "roadSamples": 108,
+   "onRoad": 0.861
+  },
+  "22": {
+   "roadSamples": 101,
+   "onRoad": 0.941
+  },
+  "23": {
+   "roadSamples": 96,
+   "onRoad": 0.969
+  },
+  "24": {
+   "roadSamples": 138,
+   "onRoad": 0.797
+  },
+  "25": {
+   "roadSamples": 105,
+   "onRoad": 0.695
   }
  },
  "jpeg": {
@@ -104,13 +152,106 @@
   },
   "13": {
    "quality": 94,
-   "kb": 272
+   "kb": 278
+  },
+  "14": {
+   "quality": 94,
+   "kb": 290
+  },
+  "15": {
+   "quality": 94,
+   "kb": 265
+  },
+  "16": {
+   "quality": 94,
+   "kb": 256
+  },
+  "17": {
+   "quality": 94,
+   "kb": 273
+  },
+  "18": {
+   "quality": 94,
+   "kb": 260
+  },
+  "19": {
+   "quality": 94,
+   "kb": 299
+  },
+  "20": {
+   "quality": 94,
+   "kb": 296
+  },
+  "21": {
+   "quality": 94,
+   "kb": 300
+  },
+  "22": {
+   "quality": 94,
+   "kb": 286
+  },
+  "23": {
+   "quality": 94,
+   "kb": 292
+  },
+  "24": {
+   "quality": 94,
+   "kb": 286
+  },
+  "25": {
+   "quality": 94,
+   "kb": 278
   }
  },
- "totalKB": 3670,
+ "totalKB": 7057,
  "flags": [
   "sheet 6: egg fish found no painted host, placed as grass",
   "sheet 12: egg raven found no painted host, placed as grass",
-  "sheet 13: egg fish found no painted host, placed as grass"
+  "sheet 13: egg wisp found no painted host, placed as grass",
+  "sheet 13: egg fish found no painted host, placed as grass",
+  "sheet 14: egg fish found no painted host, placed as grass",
+  "sheet 14: egg reeds found no painted host, placed as grass",
+  "sheet 15: egg reeds found no painted host, placed as grass",
+  "sheet 15: egg wisp found no painted host, placed as grass",
+  "sheet 22: egg glint found no painted host, placed as grass",
+  "sheet 24: egg raven found no painted host, placed as grass",
+  "sheet 25: egg glint found no painted host, placed as grass"
+ ],
+ "bridges": [
+  [
+   16,
+   29,
+   "lava"
+  ],
+  [
+   17,
+   46,
+   "lava"
+  ],
+  [
+   18,
+   59,
+   "lava"
+  ],
+  [
+   19,
+   113,
+   "river"
+  ],
+  [
+   20,
+   72,
+   "river"
+  ],
+  [
+   20,
+   77,
+   "river"
+  ],
+  [
+   21,
+   54,
+   "river"
+  ]
  ]
 }
