@@ -447,46 +447,130 @@ function hut(C, x0, w, yBase, hh, walls, roof, style) {
   return yBase - hh - rh + 1; // its top row
 }
 
-// Era 5, The Mistmoor: a fort on stilts over the fen. From the bottom: the fen (reeds, pools, a lodge), the moat and its
-// causeway or drawbridge, the bank path, the stilts in a reed bed, the timber platform, and on it the long hall and huts
-// under reed thatch, a watchtower with a pennant and a low fence of stakes; behind, fog over distant willows and banks of
-// mist. Archer towers are watch huts on tall legs at the platform's ends. A second gate is the hall's door (its key in the
-// platform). Layout varies: the platform's span (full or narrower), the hall's place, one or two huts, the tower's side.
+// v5 R4 fix (the visual critic's S1): the Mistmoor's fog. A willow: a crown (w wide, its rows a third of h) with fronds
+// hanging from it nearly to its feet on row yBase, every other column (s: a subject, else background).
+function willow(C, r, cx, yBase, w, h, role, s) {
+  const ry = Math.max(1, h * 0.35), cy = yBase - h + ry;
+  C.blob(cx + 0.5, cy, w / 2, ry, role, s);
+  for (let x = Math.round(cx - w / 2) + 1; x <= Math.round(cx + w / 2) - 1; x += 2) C.rect(x, Math.round(cy), x, yBase - ri(r, 0, Math.max(0, Math.round(h * 0.3))), role, s);
+}
+// The fog fen behind every Mistmoor fort: no sun (at night a hazy moon), the fen (grass) from the willow line wY down to the
+// bank path, far willows along that line, then banks of mist (cloud) across the willows and low over the fen. All of it is
+// background, drawn before the fort, so the fog is the picture's backdrop and never lies over a block of the fort.
+function fogFen(C, r, P, has, S, wY, bank) {
+  C.rect(0, wY, C.pw - 1, bank - 1, "grass", 0);
+  if (has("tree")) for (let x = ri(r, -sz(2), sz(2)); x < C.pw + sz(2); x += ri(r, sz(4), sz(7))) willow(C, r, x, wY + ri(r, 0, sz(1)), ri(r, sz(3), sz(5)), ri(r, sz(3), sz(5.5)), "tree", 0);
+  if (!has("cloud")) return;
+  if (S.moon) C.blob((r() < 0.5 ? sz(4) : C.pw - sz(4)) + 0.5, sz(3.5), sz(1.7), sz(1.7), "cloud", 0, (v) => v === "sky");
+  const bg = (v, x, y) => !C.sub(x, y) && (v === "sky" || v === "tree" || v === "grass");
+  for (let k = 0, n = ri(r, P.mist[0], P.mist[1]); k < n; k++) { const cx = ri(r, 0, C.pw - 1) + 0.5, cy = wY - ri(r, -sz(0.5), sz(2)) + 0.5, rx = ri(r, sz(7), sz(13)); // a bank of mist: a long low drift, a smaller one on its back
+    C.blob(cx, cy, rx, sz(0.9), "cloud", 0, bg); C.blob(cx + ri(r, -sz(2), sz(2)), cy - sz(0.9), rx * 0.55, sz(0.6), "cloud", 0, bg); }
+  C.blob(ri(r, 0, C.pw - 1) + 0.5, bank - sz(0.75) + 0.5, ri(r, sz(10), sz(16)), sz(0.75), "cloud", 0, bg); // low over the fen at the fort's feet
+}
+// A second gate in a fort's door (P.gates > 1 behind a drawbridge): an iron door x0..x0+w-1 standing on row yb, its key a
+// gilt cell of `body` (all four sides `body`) found from a seeded spot in the box bx0..bx1, by0..by1; with no such cell the
+// door stays an open doorway (ink).
+function door2(C, r, P, gates, x0, w, yb, h, body, bx0, bx1, by0, by1) {
+  if (!(P.gates > 1 && gates.length)) return;
+  const y0 = yb - h + 1, same = (x, y) => C.get(x, y) === body && C.sub(x, y); let key = null;
+  for (let t = 0; t < 60 && !key; t++) { const x = ri(r, Math.max(1, bx0), Math.min(C.pw - 2, bx1)), y = ri(r, Math.max(1, by0), Math.max(by0, by1)); if ((x < x0 - 1 || x > x0 + w) && same(x, y) && same(x - 1, y) && same(x + 1, y) && same(x, y - 1) && same(x, y + 1)) key = [x, y]; }
+  if (!key) return C.rect(x0, y0, x0 + w - 1, yb, "ink", 1);
+  C.rect(x0, y0, x0 + w - 1, yb, "iron", 1); C.set(key[0], key[1], "gilt", 1); gates.push({ at: [x0, y0], key });
+}
+
+// Era 5, The Mistmoor: forts of the fog fens. Behind every one the fog fen (fogFen: no sun, far willows, mist banks); in
+// front the fen (reeds, still pools of mire, a lodge), the moat (a mire: P.liquid) and its causeway or drawbridge, the bank
+// path. Five fort families (P.families, the visual critic's S2): a stilt hall (a timber platform on stilts, the long hall
+// and huts under reed thatch, a watchtower), a causeway fort (a stone footing and a stake wall, a thatched gate tower, round
+// huts peeking over), a reed palisade (a tall fence of bundled reeds bound with timber, a longhouse roof and a watch
+// platform behind), a sunken tower (a leaning stone tower going down into the mist, a timber hoarding, a hut on legs by a
+// plank walk) and an island hold (an earth mound out of the fen, a hall in a ring of stakes on top, willows each side).
+// Archer towers are watch huts on tall legs (none in 101-124: towers come at 125). A second gate is the main door.
 function era5(r, P, has, S) {
-  const pw = ri(r, P.w[0], P.w[1]), ph = ri(r, P.h[0], P.h[1]), C = canvas(pw, ph), u = sz(1);
-  const F = front(C, r, P, has, S, { lodge: has("earth") ? "earth" : "wood", lodgeRoof: has("thatch") ? "thatch" : null, kinds: ["reeds", "rush", "willow", "rocks", "pole", "stack", "boat"], pools: P.pools });
-  const bank = F.bank, gates = F.gates, stH = ri(r, P.stiltH[0], P.stiltH[1]), plB = bank - stH, plTop = plB - u + 1, base = plTop - 1;
-  const span = pick(r, P.spans), cw = span >= 1 ? pw : Math.max(sz(14), Math.round(pw * span)), cx0 = span >= 1 ? 0 : ri(r, 1, pw - 1 - cw), cx1 = cx0 + cw - 1, ccx = (cx0 + cx1) / 2;
-  const horizonY = plTop - ri(r, sz(2), sz(5));
-  if (has("tree")) horizon(C, r, horizonY, "tree", false); else C.rect(0, horizonY, pw - 1, bank - 1, "grass", 0);
-  if (has("cloud")) banks(C, r, ri(r, P.mist[0], P.mist[1]), Math.round(ph * 0.12), horizonY + sz(1), "cloud");
-  // The stilts in the mist under the platform (reeds at their feet), a cross beam; the platform on them.
-  C.rect(cx0, plB + 1, cx1, bank - 1, has("cloud") ? "cloud" : has("tree") ? "tree" : "grass", 1); // mist under the platform (a subject: no outline inside it)
-  if (has("tree") && has("cloud")) for (let x = cx0; x <= cx1; x++) { const t = ri(r, 0, sz(1.5)); if (t) C.rect(x, bank - t, x, bank - 1, "tree", 1); } // reeds at its foot
-  const gap = ri(r, sz(3), sz(4)), st0 = cx0 + (span >= 1 ? sz(1) : 0), legs = [];
-  for (let x = st0; x <= cx1 - u + 1; x += gap) { C.rect(x, plB + 1, x + u - 1, bank - 1, "wood", 1); legs.push(x); }
-  if (legs.length > 2) { const y = plB + 1 + ri(r, sz(1), stH - sz(3)); C.rect(legs[0], y, legs[legs.length - 1] + u - 1, y, "wood", 1); } // a cross beam
-  C.rect(cx0, plTop, cx1, plB, "wood", 1);
-  // On the platform: the long hall (daub walls, reed thatch), a watchtower on the wider side, huts where they fit; then the
-  // fence of stakes in front of their feet (a gap at the hall's door).
-  const walls = has("earth") ? "earth" : "wood", thatch = has("thatch") ? "thatch" : walls, used = [], fits = (a, b) => a >= cx0 + sz(3) && b <= cx1 - sz(3) && !used.some(([p, q]) => b >= p - 1 && a <= q + 1);
-  const hw = Math.min(cw - sz(8), ri(r, P.hallW[0], P.hallW[1])) | 1, hx = Math.round(Math.max(cx0 + sz(3), Math.min(cx1 - sz(3) - hw + 1, ccx - hw / 2 + pick(r, [-1, 0, 1]) * Math.round(cw * 0.12))));
-  const roomTop = P.skyMin + sz(1), cone = Math.ceil((hw + 2) / 2), hh = Math.max(sz(1.5), Math.min(ri(r, sz(2.5), sz(3.5)), base - roomTop - cone));
-  hut(C, hx, hw, base, hh, walls, thatch, "cone"); used.push([hx - 1, hx + hw]);
-  if (hh >= sz(2.5)) slits(C, hx + 1, hx + hw - 2, base - hh + sz(1), false);
-  const doorX = hx + ((hw - u) >> 1), left = hx - cx0 > cx1 - (hx + hw), wtw = sz(2);
-  for (let t = 0; t < 6; t++) { const wx = left ? ri(r, cx0 + sz(3), hx - wtw - sz(1)) : ri(r, hx + hw + sz(1), cx1 - sz(3) - wtw); if (!fits(wx - 1, wx + wtw)) continue;
-    tower(C, wx, wtw, Math.max(roomTop + sz(2), base - ri(r, P.watchH[0], P.watchH[1])), base, "wood", { roof: thatch, flag: has("banner") && "banner", slits: true }); used.push([wx - 1, wx + wtw]); break; }
-  for (let k = 0, n = ri(r, 1, 3), t = 0; k < n && t < 12; t++) { const w = (ri(r, sz(3), sz(4)) | 1), x0 = ri(r, cx0 + sz(3), cx1 - sz(3) - w); if (!fits(x0 - 1, x0 + w)) continue; hut(C, x0, w, base, ri(r, sz(1.5), sz(2)), walls, thatch, "cone"); used.push([x0 - 1, x0 + w]); k++; }
-  const sh = sz(1.5); for (let x = cx0; x <= cx1; x++) if (x < doorX - 1 || x > doorX + u) { const v = C.get(x, base); if (!C.sub(x, base) || v === "ink") C.rect(x, base - sh + 1 + ((((x - cx0) / u) | 0) & 1) * u, x, base, "wood", 1); }
-  // A second gate: the hall's door, its key in the platform away from the door.
-  if (P.gates > 1 && gates.length) { const dy0 = base - sz(1.5) + 1; C.rect(doorX, dy0, doorX + u - 1, base, "iron", 1); const kx = doorX + (r() < 0.5 ? -1 : 1) * ri(r, sz(3), sz(6)); if (kx > cx0 && kx < cx1) { C.set(kx, plB, "gilt", 1); gates.push({ at: [doorX, dy0], key: [kx, plB] }); } else C.rect(doorX, dy0, doorX + u - 1, base, "ink", 1); }
-  // Watch huts on tall legs (the archer towers): at the platform's ends (or just outside a narrow one), then beside the hall.
+  const pw = ri(r, P.w[0], P.w[1]), ph = ri(r, P.h[0], P.h[1]), C = canvas(pw, ph), u = sz(1), mid = (pw - 1) / 2;
+  const F = front(C, r, P, has, S, { lodge: has("earth") ? "earth" : "wood", lodgeRoof: has("thatch") ? "thatch" : null, kinds: ["reeds", "rush", "reeds", "rocks", "pole", "stack", "boat"], pools: P.pools });
+  const bank = F.bank, gates = F.gates, fam = pick(r, P.families), walls = has("earth") ? "earth" : "wood", thatch = has("thatch") ? "thatch" : walls, top = P.skyMin + sz(1);
+  const wY = ri(r, Math.round(ph * P.willowY[0]), Math.round(ph * P.willowY[1]));
+  fogFen(C, r, P, has, S, wY, bank);
+  let style = fam, spots = [0, pw - (2 * sz(1.5) - 1)];
+  if (fam === "stilt") {
+    const stH = ri(r, P.stiltH[0], P.stiltH[1]), plB = bank - stH, plTop = plB - u + 1, base = plTop - 1;
+    const span = pick(r, P.spans), cw = span >= 1 ? pw : Math.max(sz(14), Math.round(pw * span)), cx0 = span >= 1 ? 0 : ri(r, 1, pw - 1 - cw), cx1 = cx0 + cw - 1, ccx = (cx0 + cx1) / 2;
+    const gap = ri(r, sz(3), sz(4)), st0 = cx0 + (span >= 1 ? sz(1) : 0), legs = [];
+    for (let x = st0; x <= cx1 - u + 1; x += gap) { C.rect(x, plB + 1, x + u - 1, bank - 1, "wood", 1); legs.push(x); }
+    if (legs.length > 2) { const y = plB + 1 + ri(r, sz(1), stH - sz(3)); C.rect(legs[0], y, legs[legs.length - 1] + u - 1, y, "wood", 1); } // a cross beam
+    if (has("tree")) for (const x of legs) for (const dx of [-1, u]) if (r() < 0.6) C.rect(x + dx, bank - ri(r, 1, sz(1)), x + dx, bank - 1, "tree", 1); // reeds at the legs' feet
+    C.rect(cx0, plTop, cx1, plB, "wood", 1);
+    const used = [], fits = (a, b) => a >= cx0 + sz(3) && b <= cx1 - sz(3) && !used.some(([p, q]) => b >= p - 1 && a <= q + 1);
+    const hw = Math.min(cw - sz(8), ri(r, P.hallW[0], P.hallW[1])) | 1, hx = Math.round(Math.max(cx0 + sz(3), Math.min(cx1 - sz(3) - hw + 1, ccx - hw / 2 + pick(r, [-1, 0, 1]) * Math.round(cw * 0.12))));
+    const cone = Math.ceil((hw + 2) / 2), hh = Math.max(sz(1.5), Math.min(ri(r, sz(2.5), sz(3.5)), base - top - cone));
+    hut(C, hx, hw, base, hh, walls, thatch, "cone"); used.push([hx - 1, hx + hw]);
+    if (hh >= sz(2.5)) slits(C, hx + 1, hx + hw - 2, base - hh + sz(1), false);
+    const doorX = hx + ((hw - u) >> 1), left = hx - cx0 > cx1 - (hx + hw), wtw = sz(2);
+    for (let t = 0; t < 6; t++) { const wx = left ? ri(r, cx0 + sz(3), hx - wtw - sz(1)) : ri(r, hx + hw + sz(1), cx1 - sz(3) - wtw); if (!fits(wx - 1, wx + wtw)) continue;
+      tower(C, wx, wtw, Math.max(top + sz(2), base - ri(r, P.watchH[0], P.watchH[1])), base, "wood", { roof: thatch, flag: has("banner") && "banner", slits: true }); used.push([wx - 1, wx + wtw]); break; }
+    for (let k = 0, n = ri(r, 1, 3), t = 0; k < n && t < 12; t++) { const w = (ri(r, sz(3), sz(4)) | 1), x0 = ri(r, cx0 + sz(3), cx1 - sz(3) - w); if (!fits(x0 - 1, x0 + w)) continue; hut(C, x0, w, base, ri(r, sz(1.5), sz(2)), walls, thatch, "cone"); used.push([x0 - 1, x0 + w]); k++; }
+    const sh = sz(1.5); for (let x = cx0; x <= cx1; x++) if (x < doorX - 1 || x > doorX + u) { const v = C.get(x, base); if (!C.sub(x, base) || v === "ink") C.rect(x, base - sh + 1 + ((((x - cx0) / u) | 0) & 1) * u, x, base, "wood", 1); }
+    door2(C, r, P, gates, doorX, u, base, sz(1.5), "wood", cx0 + sz(1), cx1 - sz(1), plTop, plB);
+    spots = (span >= 1 ? [0, pw - (2 * sz(1.5) - 1)] : [cx0 - 2 * sz(1.5), cx1 + 2]);
+    style = (span < 1 ? "narrow-" : "") + "stilt" + used.length;
+  } else if (fam === "causeway") {
+    // A stone footing and a stake wall across the fort's span, a thatched gate tower over the bridge, round huts behind.
+    const span = pick(r, P.spans), cw = span >= 1 ? pw : Math.max(sz(16), Math.round(pw * span)), cx0 = span >= 1 ? 0 : ri(r, 1, pw - 1 - cw), cx1 = cx0 + cw - 1;
+    const wH = ri(r, P.palH[0], P.palH[1]), wTop = bank - wH, foot = has("stone") ? "stone" : walls, fH = sz(2);
+    for (let k = 0, n = ri(r, 2, 4), t = 0; k < n && t < 20; t++) { const w = (ri(r, sz(4), sz(6)) | 1), x0 = ri(r, cx0 + sz(1), cx1 - sz(1) - w); if (x0 < cx0) continue; const yb = wTop + sz(1), hh = ri(r, sz(1.5), sz(3));
+      if (C.sub(x0, yb) || C.sub(x0 + w - 1, yb)) continue; hut(C, x0, w, yb, hh, walls, thatch, "cone"); k++; }
+    stakes(C, cx0, cx1, wTop, bank - fH - 1, "wood"); C.rect(cx0, bank - fH, cx1, bank - 1, foot, 1);
+    for (let x = cx0 + sz(1); x < cx1; x += sz(3)) C.set(x, bank - fH + ((x / sz(3)) & 1), "ink", 1); // the footing's joints
+    const gw = par(sz(5), pw), gx = Math.max(cx0 + sz(2), Math.min(cx1 - sz(2) - gw + 1, Math.round(F.bx - gw / 2))), gTop = Math.max(top + sz(3), wTop - ri(r, sz(3), sz(5)));
+    tower(C, gx, gw, gTop, bank - 1, "wood", { roof: thatch, flag: has("banner") && "banner", slits: true });
+    const dw = sz(2), dx = gx + ((gw - dw) >> 1); arch(C, dx + (dw - 1) / 2, dw, bank - 1, sz(2.5));
+    door2(C, r, P, gates, dx, dw, bank - 1, sz(2.5), foot, cx0 + sz(1), cx1 - sz(1), bank - fH + 1, bank - 2);
+    spots = [cx0, cx1 - (2 * sz(1.5) - 1) + 1];
+    style = (span < 1 ? "narrow-" : "") + "causeway";
+  } else if (fam === "palisade") {
+    // A tall fence of bundled reeds (the reeds' colour, bound with timber), a longhouse's roof and a watch platform behind.
+    const pH = ri(r, P.palH[0], P.palH[1]) + sz(1), pTop = bank - pH, reed = has("tree") ? "tree" : "wood", band = reed === "wood" ? walls : "wood";
+    const lw = ri(r, sz(10), sz(14)), lx = Math.round(mid - lw / 2) + pick(r, [-1, 1]) * ri(r, 0, sz(4)), lTop = pTop - ri(r, sz(2), sz(4));
+    for (let k = 0, rh = sz(4); k < rh; k++) C.rect(lx + rh - 1 - k, lTop + k - sz(1), lx + lw - rh + k, lTop + k - sz(1), thatch, 1); // the longhouse's roof over the fence
+    const wx = lx + lw + sz(2) < pw - sz(4) ? lx + lw + sz(2) : lx - sz(6), wTop = Math.max(top + sz(2), pTop - ri(r, sz(5), sz(8)));
+    if (wx > sz(1)) { C.rect(wx, wTop + sz(2), wx + u - 1, pTop, "wood", 1); C.rect(wx + sz(3), wTop + sz(2), wx + sz(3) + u - 1, pTop, "wood", 1); C.rect(wx - u, wTop + sz(1), wx + sz(4) + u - 1, wTop + sz(2) - 1, "wood", 1); hut(C, wx, sz(4), wTop, sz(1), walls, thatch, "low"); }
+    for (let x = 0; x < pw; x++) { const tip = (((x / u) | 0) % 3 === 1) ? 0 : u; C.rect(x, pTop + tip, x, bank - 1, reed, 1); }
+    for (const y of [pTop + sz(2), bank - sz(2)]) for (let x = 0; x < pw; x++) if (((x / u) | 0) % 4 !== 3) C.set(x, y, band, 1); // the bindings
+    const gw = par(sz(4), pw), gx = Math.max(sz(2), Math.min(pw - sz(2) - gw, Math.round(F.bx - gw / 2)));
+    C.rect(gx - u, pTop - sz(1), gx + gw + u - 1, pTop, "wood", 1); C.rect(gx - u, pTop, gx - 1, bank - 1, "wood", 1); C.rect(gx + gw, pTop, gx + gw + u - 1, bank - 1, "wood", 1); arch(C, gx + (gw - 1) / 2, gw, bank - 1, pH - sz(2));
+    door2(C, r, P, gates, gx, gw, bank - 1, sz(2.5), reed, 1, pw - 2, pTop + sz(3), bank - sz(3));
+    style = "palisade";
+  } else if (fam === "sunken") {
+    // A leaning stone tower sinking into the fen: a ruined crown, a timber hoarding, slits.
+    const body = has("stone") ? "stone" : walls, tw = ri(r, sz(7), sz(10)), side = pick(r, [-1, 1]), tx = Math.round(mid - tw / 2) + side * ri(r, sz(2), sz(6)), tTop = ri(r, top + sz(1), top + sz(4)), lean = pick(r, [-1, 1]);
+    const sh = (y) => lean * Math.floor((bank - 1 - y) / sz(3));
+    for (let y = tTop; y < bank; y++) C.rect(tx + sh(y), y, tx + sh(y) + tw - 1, y, body, 1);
+    for (let x = 0; x < tw; x += u) { const t = ri(r, 0, 2) * u; if (t) C.rect(tx + sh(tTop) + x, tTop - t, tx + sh(tTop) + x + u - 1, tTop - 1, body, 1); } // the ruined crown
+    const hy = tTop + sz(2); C.rect(tx + sh(hy) - u, hy, tx + sh(hy) + tw + u - 1, hy + sz(1.5) - 1, "wood", 1); // the hoarding
+    for (let y = hy + sz(3); y < bank - sz(4); y += sz(3.5)) { const x = tx + sh(y) + ((tw - u) >> 1); C.rect(x, y, x + u - 1, y + sz(1.5) - 1, "ink", 1); }
+    const dw = sz(2), dx = tx + sh(bank - 1) + ((tw - dw) >> 1); arch(C, dx + (dw - 1) / 2, dw, bank - 1, sz(3));
+    door2(C, r, P, gates, dx, dw, bank - 1, sz(3), body, tx + sh(bank - 1), tx + sh(bank - 1) + tw - 1, bank - sz(8), bank - sz(4));
+    // A hut on legs on the other side, a plank walk to the tower.
+    const hw = (ri(r, sz(4), sz(5)) | 1), hx = side > 0 ? ri(r, sz(2), Math.max(sz(2), tx - hw - sz(4))) : ri(r, Math.min(pw - sz(2) - hw, tx + tw + sz(4)), pw - sz(2) - hw), hy0 = bank - ri(r, sz(4), sz(6));
+    if (hx > 0 && hx + hw < pw) { C.rect(hx + u, hy0 + 1, hx + sz(2) - 1, bank - 1, "wood", 1); C.rect(hx + hw - sz(2), hy0 + 1, hx + hw - u - 1, bank - 1, "wood", 1); hut(C, hx, hw, hy0, sz(2), walls, thatch, "cone");
+      const a = side > 0 ? hx + hw : tx + sh(hy0) + tw, b = side > 0 ? tx + sh(hy0) - 1 : hx - 1; if (b > a) C.rect(a, hy0, b, hy0, "wood", 1); }
+    style = "sunken";
+  } else {
+    // An island hold: an earth mound out of the fen, a hall in a ring of stakes on top, willows each side.
+    const mw = ri(r, sz(9), sz(12)), mh = ri(r, sz(5), sz(7)), mx = mid + pick(r, [-1, 0, 1]) * ri(r, 0, sz(4)), mound = "grass";
+    C.blob(mx + 0.5, bank, mw, mh, mound, 1, (v, x, y) => y < bank);
+    const mTop = bank - mh, hw = (ri(r, sz(5), sz(6)) | 1), hx = Math.round(mx - hw / 2), base = mTop + sz(1);
+    stakes(C, Math.round(mx - mw * 0.55), Math.round(mx + mw * 0.55), mTop - sz(1), mTop + sz(1), "wood");
+    hut(C, hx, hw, base - sz(1), ri(r, sz(2), sz(3)), walls === "earth" ? "wood" : walls, thatch, "cone");
+    for (const s of [-1, 1]) { const x = Math.round(mx + s * (mw + ri(r, sz(2), sz(4)))); if (x > sz(2) && x < pw - sz(2) && has("tree")) willow(C, r, x, bank - 1, ri(r, sz(4), sz(6)), ri(r, sz(7), sz(9)), "tree", 1); }
+    const dw = sz(2), dx = Math.round(mx - dw / 2); arch(C, dx + (dw - 1) / 2, dw, bank - 1, sz(2.5));
+    door2(C, r, P, gates, dx, dw, bank - 1, sz(2.5), mound, Math.round(mx - mw * 0.6), Math.round(mx + mw * 0.6), bank - mh + sz(2), bank - sz(2));
+    style = "island";
+  }
   const tw = 2 * sz(1.5) - 1, nT = P.towers ? ri(r, P.towers[0], P.towers[1]) : 0;
-  const spots = (span >= 1 ? [0, pw - tw] : [cx0 - tw - 1, cx1 + 2]).concat([hx - tw - 1, hx + hw + 1]);
-  const towers = archers(C, r, spots, nT, tw, (i) => stH + u + (i < 2 ? ri(r, sz(3), sz(5)) : sz(2)), bank, P, thatch, 0);
-  sky(C, r, S, Math.floor(ph * 0.25), has, left ? 1 : -1);
-  return { C, gates, towers, style: (span < 1 ? "narrow-" : "") + "hall" + used.length + "-" + towers.length + "t" };
+  const towers = archers(C, r, spots, nT, tw, () => ri(r, sz(6), sz(9)), bank, P, thatch, 0);
+  return { C, gates, towers, style: style + "-" + towers.length + "t" };
 }
 
 // Era 6, Emberwatch Crags: a basalt fort on volcanic heights. The moat is a lava channel (P.liquid "lava") with a basalt
@@ -572,6 +656,81 @@ function era7(r, P, has, S) {
   return { C, gates, towers, style: (kcx < mid - 1 ? "left" : kcx > mid + 1 ? "right" : "mid") + "-tree" + pods.length + "-" + towers.length + "t" };
 }
 
+// v5 R4 fix (the visual critic's S3, S4): the Goblin King on his throne, one cell a letter (h gold, b goblin green, k ink,
+// r goblin red): his crown, his face (eyes and grin), his red cloak with a gold clasp and green hands, the gold throne round
+// him. 11 x 9 cells. Drawn by the boss (P.king) in the throne keep's hall.
+const KING = ["...h.h.h...", "...hhhhh...", "hh.bbbbb.hh", "hh.bkbkb.hh", "hh.bkkkb.hh", "hhrrrbrrrhh", "hrrbrhrbrrh", "hrrrrrrrrrh", "hhhhhhhhhhh"];
+// A leaning block x0..x0+w-1 from yTop down to yBase, shifted `lean` a column every sz(3) rows going up (crooked towers).
+function leanRect(C, x0, w, yTop, yBase, lean, role) { for (let y = yBase, k = 0; y >= yTop; y--, k++) C.rect(x0 + lean * Math.floor(k / sz(3)), y, x0 + lean * Math.floor(k / sz(3)) + w - 1, y, role, 1); return lean * Math.floor((yBase - yTop) / sz(3)); }
+// A spiked red roof (or with no roof role, ragged battlements) on a block x0..x0+w-1 whose top row is yTop, a goblin banner
+// on its point.
+function spikeRoof(C, r, has, x0, w, yTop, side2) {
+  if (has("roof")) { const rh = Math.ceil((w + 2) / 2); for (let k = 0; k < rh; k++) C.rect(x0 - 1 + k, yTop - 1 - k, x0 + w - k, yTop - 1 - k, "roof", 1); if (has("banner")) flagOn(C, x0 + (w >> 1), yTop - 1 - rh, "banner"); return rh; }
+  for (let x = x0; x < x0 + w; x += sz(1) * 2) C.rect(x, yTop - ri(r, 1, sz(1)), x + sz(1) - 1, yTop - 1, side2, 1); return sz(1);
+}
+// The four other fortress families of The Goblin King's Throne (era8 draws the throne hall, and the boss): crooked keeps
+// (two or three leaning keeps of odd heights joined by sagging plank bridges over a low wall), a scrap-wall camp (a low
+// wall of planks and patches under spikes, goblin tents, a bonfire and a lookout behind), a cliff citadel (a crag of muck
+// on one side with a citadel on its top and a plank stair up its face, the wall on the other side) and the gate approach
+// (one huge gatehouse between two drum towers, banners down its face, the throne keep's crown peeking over it). Each puts
+// its door over the bridge; a second gate is an iron door there, its key in the wall.
+function era8b(fam, r, P, has, S, C, F, body, patch, plank) {
+  const pw = C.pw, ph = C.ph, mid = (pw - 1) / 2, u = sz(1), bank = F.bank, gates = F.gates, top = P.skyMin + sz(1), side2 = has("ashlar") ? "ashlar" : body;
+  const gw = par(sz(4.5), pw), gx = Math.max(sz(3), Math.min(pw - sz(3) - gw, Math.round(F.bx - (gw - 1) / 2))), gcx = gx + (gw - 1) / 2;
+  let wTop = bank - ri(r, P.curtainH[0], P.curtainH[1]), doorH = sz(2.5), spots = [0, pw - (2 * sz(1.5) - 1) - 1, sz(8), pw - sz(8) - (2 * sz(1.5) - 1)];
+  const patches = (x0, x1, y0, y1, n) => { for (let k = 0; k < n; k++) { const w = ri(r, sz(1.5), sz(3)), x = ri(r, x0, Math.max(x0, x1 - w)), y = ri(r, y0, Math.max(y0, y1 - w)); if (Math.abs(x + w / 2 - gcx) < gw) continue; C.rect(x, y, x + w - 1, y + Math.min(w, sz(1.5)) - 1, r() < 0.5 ? patch : plank, 1); } };
+  const wall = (x0, x1) => { C.rect(x0, wTop, x1, bank - 1, body, 1); for (let x = x0; x <= x1; x += u) { const t = ri(r, 0, 2); if (t) C.rect(x, wTop - t, Math.min(x1, x + u - 1), wTop - 1, body, 1); } patches(x0, x1, wTop + u, bank - 1, ri(r, 2, 4)); };
+  if (fam === "crooked") {
+    wTop = bank - ri(r, sz(2.5), sz(3.5));
+    const n = ri(r, 2, 3), slot = pw / n, keeps = [];
+    for (let i = 0; i < n; i++) { const w = ri(r, sz(5), sz(7)), x0 = Math.round(slot * i + (slot - w) / 2) + ri(r, -sz(1), sz(1)), kTop = ri(r, top + sz(2), wTop - sz(8)), lean = pick(r, [-1, 1, 0]);
+      const dx = leanRect(C, x0, w, kTop, wTop - 1, lean, i === 1 ? body : side2); slits(C, x0 + dx, x0 + dx + w - 1, kTop + sz(2), true); if (wTop - kTop > sz(10)) slits(C, x0 + dx, x0 + dx + w - 1, kTop + sz(6), false);
+      spikeRoof(C, r, has, x0 + dx, w, kTop, side2); patches(x0, x0 + w, kTop + sz(3), wTop - sz(2), 1); keeps.push([x0, w, kTop, dx]); }
+    for (let i = 0; i + 1 < keeps.length; i++) { const [a, aw] = keeps[i], [b] = keeps[i + 1], y = Math.max(keeps[i][2], keeps[i + 1][2]) + sz(4); for (let x = a + aw; x < b; x++) { const sag = Math.round(Math.sin(((x - a - aw) / Math.max(1, b - a - aw)) * Math.PI) * 1.5); if (!C.sub(x, y + sag)) C.rect(x, y + sag, x, y + sag + u - 1, plank, 1); } }
+    wall(0, pw - 1);
+  } else if (fam === "camp") {
+    wTop = bank - sz(2.5);
+    const tr = has("roof") ? "roof" : side2;
+    for (let k = 0, n = ri(r, 2, 3), t = 0; k < n && t < 30; t++) { const w = (ri(r, sz(6), sz(8)) | 1), x = ri(r, 0, pw - w); if (C.sub(x, wTop - 1) || C.sub(x + w - 1, wTop - 1) || C.sub(x + (w >> 1), wTop - 1) || C.sub(x + (w >> 1), wTop - (w >> 1))) continue;
+      tent(C, x + (w >> 1), wTop - 1, w, tr); C.rect(x + (w >> 1) - (u >> 1), wTop - sz(2), x + (w >> 1) - (u >> 1) + u - 1, wTop - 1, "ink", 1); k++; } // big goblin tents, their doors open
+    const lx = r() < 0.5 ? ri(r, sz(1), sz(4)) : ri(r, pw - sz(7), pw - sz(5)), lTop = ri(r, top + sz(2), top + sz(5)); // the lookout on stilts
+    if (!C.sub(lx, lTop + sz(3)) && !C.sub(lx + sz(4), lTop + sz(3))) { C.rect(lx, lTop + sz(3), lx + u - 1, wTop - 1, plank, 1); C.rect(lx + sz(4), lTop + sz(3), lx + sz(4) + u - 1, wTop - 1, plank, 1); C.rect(lx - u, lTop + sz(2), lx + sz(5) - 1, lTop + sz(3) - 1, plank, 1); hut(C, lx, sz(5), lTop + sz(2) - 1, sz(1.5), side2, has("roof") ? "roof" : plank, "low"); }
+    if (has("thatch")) { const fx = Math.round(mid + pick(r, [-1, 1]) * ri(r, sz(4), sz(7))), fw = sz(3) | 1; C.rect(fx - sz(2), wTop - u, fx + sz(2), wTop - 1, plank, 1); tent(C, fx, wTop - u - 1, fw + 2, "thatch"); if (has("roof")) tent(C, fx, wTop - u - 1, fw - 2, "roof"); } // the bonfire: gold flames round a red heart
+    if (has("banner")) for (let k = 0, n = ri(r, 2, 3); k < n; k++) { const x = ri(r, sz(2), pw - sz(4)); if (!C.sub(x, wTop - sz(5)) && !C.sub(x + sz(2), wTop - sz(5))) { C.rect(x, wTop - sz(5), x, wTop - 1, plank, 1); C.rect(x + 1, wTop - sz(5), x + sz(2), wTop - sz(3.5), "banner", 1); } }
+    C.rect(0, wTop, pw - 1, bank - 1, plank, 1); patches(0, pw - 1, wTop + u, bank - 1, ri(r, 3, 5));
+    for (let x = 0; x < pw; x += sz(2)) C.rect(x, wTop - sz(1), x, wTop - 1, "ink", 1); // the spikes on its top
+  } else if (fam === "cliff") {
+    const side = pick(r, [-1, 1]), cw = ri(r, Math.round(pw * 0.45), Math.round(pw * 0.55)), crag = has("grass") ? "grass" : side2, cTop = ri(r, top + sz(5), top + sz(7)), keepR = has("ashlar") ? "ashlar" : body;
+    // The crag: a jagged slope widening down to the bank path.
+    for (let y = cTop, jag = 0; y < bank; y++) { if (((y - cTop) % sz(1.5)) === 0) jag = ri(r, -sz(1), sz(1)); const w = Math.min(pw - sz(8), Math.round(cw * 0.5 + (y - cTop) * 0.55) + jag); if (side < 0) C.rect(0, y, w - 1, y, crag, 1); else C.rect(pw - w, y, pw - 1, y, crag, 1); }
+    const kw = ri(r, sz(5), sz(6)), kx = side < 0 ? ri(r, sz(2), Math.max(sz(2), Math.round(cw * 0.5) - kw - sz(2))) : pw - ri(r, sz(2), Math.max(sz(2), Math.round(cw * 0.5) - kw - sz(2))) - kw, kTop = Math.max(top + sz(1), cTop - ri(r, sz(4), sz(6)));
+    C.rect(kx, kTop, kx + kw - 1, cTop - 1, keepR, 1); merlons(C, kx, kx + kw - 1, kTop, keepR); slits(C, kx, kx + kw - 1, kTop + sz(1.5), true);
+    for (const tx of [kx - sz(1), kx + kw - sz(2) + sz(1)]) { const t2 = sz(2); C.rect(tx, kTop - sz(2), tx + t2 - 1, cTop - 1, keepR, 1); spikeRoof(C, r, has, tx, t2, kTop - sz(2), side2); }
+    for (let y = cTop + sz(1), k = 0; y < bank - sz(2); y += sz(2), k++) { const x = side < 0 ? sz(2) + (k % 2) * sz(4) : pw - sz(2) - sz(4) - (k % 2) * sz(4); C.rect(x, y, x + sz(4) - 1, y, plank, 1); } // the plank stair up its face
+    const x0 = side < 0 ? cw - sz(2) : 0, x1 = side < 0 ? pw - 1 : pw - cw + sz(2) - 1; wall(x0, x1);
+    spots = side < 0 ? [pw - (2 * sz(1.5) - 1) - 1, Math.round(cw * 0.3), pw - sz(8) - (2 * sz(1.5) - 1)] : [0, pw - Math.round(cw * 0.3) - (2 * sz(1.5) - 1), sz(8)];
+  } else { // the gate approach
+    const kw = ri(r, sz(5), sz(7)), kTop = ri(r, top + sz(1), top + sz(3)), crownH = has("thatch") ? sz(2) : 0;
+    C.rect(Math.round(mid - kw / 2), kTop + crownH + sz(1), Math.round(mid + kw / 2), bank - sz(6), body, 1); // the throne keep behind
+    if (crownH) { const c0 = Math.round(mid - sz(2.5)), c1 = Math.round(mid + sz(2.5)); C.rect(c0, kTop + crownH, c1, kTop + crownH + u - 1, "thatch", 1); for (let x = c0; x <= c1; x += sz(1.25)) C.rect(x, kTop, x, kTop + crownH, "thatch", 1); }
+    const bw = ri(r, sz(10), sz(12)), bx0 = Math.round(gcx - bw / 2), gTop = ri(r, top + sz(6), top + sz(8)), dt = sz(4);
+    wall(0, pw - 1);
+    C.rect(bx0, gTop, bx0 + bw - 1, bank - 1, side2, 1); merlons(C, bx0, bx0 + bw - 1, gTop, side2);
+    for (const tx of [bx0 - dt, bx0 + bw]) { C.rect(tx, gTop - sz(2), tx + dt - 1, bank - 1, body, 1); slits(C, tx, tx + dt - 1, gTop, true); spikeRoof(C, r, has, tx, dt, gTop - sz(2), side2); }
+    if (has("banner")) for (const x of [bx0 + sz(1), bx0 + bw - sz(2)]) C.rect(x, gTop + sz(1), x + u - 1, gTop + sz(5), "banner", 1);
+    C.rect(bx0 + sz(3), gTop + sz(1), bx0 + bw - sz(3) - 1, gTop + sz(1.5), "ink", 1);
+    doorH = sz(4); arch(C, gcx, gw, bank - 1, doorH);
+    spots = [0, pw - (2 * sz(1.5) - 1) - 1, bx0 - dt - (2 * sz(1.5) - 1) - 2, bx0 + bw + dt + 2];
+  }
+  if (fam !== "gate") { C.rect(gx, wTop - sz(1.5), gx + gw - 1, bank - 1, body, 1); merlons(C, gx, gx + gw - 1, wTop - sz(1.5), body); arch(C, gcx, gw - 2 * u, bank - 1, doorH); }
+  const dw = fam === "gate" ? gw : gw - 2 * u, dx = Math.round(gcx - (dw - 1) / 2);
+  door2(C, r, P, gates, dx, dw, bank - 1, doorH, fam === "camp" ? plank : body, sz(1), pw - sz(2), wTop + u, bank - 2);
+  const tw = 2 * sz(1.5) - 1, nT = P.towers ? ri(r, P.towers[0], P.towers[1]) : 0;
+  const towers = archers(C, r, spots, nT, tw, (i) => bank - wTop + (i < 2 ? ri(r, sz(3), sz(5)) : sz(2)), bank, P, null, pick(r, [1, -1]));
+  sky(C, r, S, Math.floor(ph * 0.2), has, pick(r, [-1, 1]));
+  return { C, gates, towers, style: fam + "-" + towers.length + "t" };
+}
+
 // Era 8, The Goblin King's Throne: the goblin capital, a crooked fortress of mismatched stone and scrap. A muck moat, a
 // curtain whose battlements go up and down, patched with odd stone (ashlar) and scrap plates (planks), crooked towers that
 // lean, spikes and goblin banners; the throne keep in the middle, tallest, with the gold crown on top; a storm sky. The boss
@@ -582,11 +741,13 @@ function era8(r, P, has, S) {
   const bank = F.bank, gates = F.gates, body = has("stone") ? "stone" : "ashlar", patch = has("ashlar") ? "ashlar" : body, plank = has("wood") ? "wood" : body;
   const cH = ri(r, P.curtainH[0], P.curtainH[1]), cTop = bank - cH;
   if (r() < P.horizon) horizon(C, r, cTop - ri(r, sz(1), sz(3)), has("grass") ? "grass" : body, true);
+  const fam = P.inner ? "throne" : P.family || pick(r, P.families || ["throne"]); // v5 R4 fix (S3): five fortress families
+  if (fam !== "throne") return era8b(fam, r, P, has, S, C, F, body, patch, plank);
   // The throne keep (tall, the crown on top) and two crooked side keeps, drawn first (the curtain stands in front). The
   // boss's inner moat runs over the curtain's battlements and the gatehouse's.
   let bank2 = cTop - 1;
-  const inner = P.inner && cTop - sz(3) - 1 - P.moatH - sz(4) >= P.skyMin + (has("thatch") ? sz(2) : 0) + sz(1);
-  if (inner) { const y1 = cTop - sz(3) - 1, y0 = y1 - P.moatH + 1; const g2 = moat(C, y0, y1, mid + 0.5, par(sz(2.5), pw)); bank2 = y0 - 1; g2.key = null; gates.push(g2); }
+  const ig = P.innerGap != null ? P.innerGap : sz(3), inner = P.inner && cTop - ig - 1 - P.moatH - sz(4) >= P.skyMin + (has("thatch") ? sz(2) : 0) + sz(1);
+  if (inner) { const y1 = cTop - ig - 1, y0 = y1 - P.moatH + 1; const g2 = moat(C, y0, y1, mid + 0.5, par(sz(2.5), pw)); bank2 = y0 - 1; g2.key = null; gates.push(g2); }
   const kw0 = ri(r, P.keepW[0], P.keepW[1]), kw = kw0 - ((kw0 + pw) & 1), kcx = mid + (inner ? 0 : pick(r, [-1, 0, 1]) * sz(2)), crownH = has("thatch") ? sz(2) : 0;
   const kTop = Math.max(P.skyMin + crownH + sz(1), (inner ? bank2 : cTop) - ri(r, P.keepH[0], P.keepH[1]));
   keep(C, "square", kcx, kw, kTop, (inner ? bank2 - 1 : cTop), body, null, null);
@@ -594,7 +755,11 @@ function era8(r, P, has, S) {
   for (let k = 0, n = ri(r, 2, 4); k < n; k++) { const pwid = ri(r, sz(1.5), sz(3)), px = ri(r, Math.round(kcx - kw / 2) + 1, Math.round(kcx + kw / 2) - pwid - 1), py = ri(r, kTop + sz(2), (inner ? bank2 : cTop) - sz(2)); C.rect(px, py, px + pwid - 1, py + pwid - 1, patch, 1); }
   const kdw = sz(2), kdx = Math.round(kcx - kdw / 2); arch(C, kdx + (kdw - 1) / 2, kdw, (inner ? bank2 - 1 : cTop - 1), sz(2));
   // The throne room's window: a tall arch in the keep's face with the gold throne inside it.
-  if (has("thatch")) { const ww = sz(3) + 1, wx = Math.round(kcx - (ww - 1) / 2), wy1 = Math.min(kTop + sz(6), (inner ? bank2 : cTop) - sz(1)), wy0 = kTop + sz(2); if (wy1 - wy0 >= sz(2.5)) { C.rect(wx, wy0, wx + ww - 1, wy1, "ink", 1); C.rect(wx + 1, wy0 + 1, wx + ww - 2, wy1, "thatch", 1); C.rect(wx + 2, wy0 + 3, wx + ww - 3, wy1 - 1, "ink", 1); } }
+  const kgH = KING.length + 1, kgW = KING[0].length + 2, kgB = (inner ? bank2 : cTop) - 1, kgx = Math.round(kcx - (kgW - 1) / 2);
+  if (P.king && has("thatch") && has("banner") && has("roof") && kgB - kgH + 1 >= kTop + 1) { // v5 R4 fix (S4): the boss's hall (its door), the Goblin King on his throne in it
+    C.rect(kgx, kgB - kgH + 1, kgx + kgW - 1, kgB, "ink", 1); const KK = { h: "thatch", b: "banner", k: "ink", r: "roof" };
+    KING.forEach((row, y) => { for (let x = 0; x < row.length; x++) if (row[x] !== ".") C.set(kgx + 1 + x, kgB - KING.length + 1 + y, KK[row[x]], 1); });
+  } else if (has("thatch")) { const ww = sz(3) + 1, wx = Math.round(kcx - (ww - 1) / 2), wy1 = Math.min(kTop + sz(6), (inner ? bank2 : cTop) - sz(1)), wy0 = kTop + sz(2); if (wy1 - wy0 >= sz(2.5)) { C.rect(wx, wy0, wx + ww - 1, wy1, "ink", 1); C.rect(wx + 1, wy0 + 1, wx + ww - 2, wy1, "thatch", 1); C.rect(wx + 2, wy0 + 3, wx + ww - 3, wy1 - 1, "ink", 1); } }
   // Two crooked side towers (odd stone when the level has it) leaning out, red spiked roofs, goblin banners.
   const side2 = has("ashlar") ? "ashlar" : body;
   for (const side of [-1, 1]) { const sw = ri(r, sz(3), sz(4.5)), sx = side < 0 ? Math.round(kcx - kw / 2) - sw - ri(r, sz(1), sz(2)) : Math.round(kcx + kw / 2) + ri(r, sz(1), sz(2)), st = ri(r, kTop + sz(1), kTop + sz(5)), lean = side * pick(r, [1, 1, 0]);
@@ -620,7 +785,7 @@ function era8(r, P, has, S) {
   if (kx >= 0 && inner && gates.length && !gates[gates.length - 1].key) { C.set(kx, ky, "gilt", 1); gates[gates.length - 1].key = [kx, ky]; }
   else if (kx >= 0 && !inner && P.gates > 1 && gates.length) { const yb = cTop - 1, ay = yb - sz(2) + 1; C.rect(kdx, ay, kdx + kdw - 1, yb, "iron", 1); C.set(kx, ky, "gilt", 1); gates.push({ at: [kdx, ay], key: [kx, ky] }); }
   sky(C, r, S, Math.floor(ph * 0.2), has, pick(r, [-1, 1]));
-  return { C, gates: gates.filter((g) => g.key), towers, style: (inner ? "throne-moat" : "throne") + "-" + towers.length + "t" };
+  return { C, gates: gates.filter((g) => g.key), towers, style: (inner ? "throne-moat" : "throne") + (P.king ? "-king" : "") + "-" + towers.length + "t" };
 }
 const ERAS = { 1: era1, 2: era2, 3: era3, 4: era4, 5: era5, 6: era6, 7: era7, 8: era8 }; // v5 R4: 5-8
 
@@ -684,6 +849,8 @@ if (require.main === module) {
   if (arg("levels")) boards.push(...JSON.parse(fs.readFileSync(path.resolve(arg("levels")), "utf8")).levels);
   else for (const e of eras) for (let k = 0; k < n; k++) {
     const P = Object.assign({}, C.eras[e].gen, { colours: +arg("colours", C.picture.eras[e].sample || 8) }, arg("scene") ? { scene: arg("scene") } : {});
+    if (arg("family")) P.family = arg("family"); // v5 R4 fix: one family only; --boss N: that boss's own picture (bake-config bosses)
+    if (arg("boss")) Object.assign(P, C.bosses[arg("boss")].gen);
     if (e >= 5) Object.assign(P, { moat: arg("moat") !== "0", gates: +arg("gates", 1), towers: arg("towers") === "0" ? 0 : (arg("towers") || "2-3").split("-").map(Number) }, arg("inner") ? { inner: true } : {}); // v5 R4: the plan's features
     let L = null; for (let t = 0; t < 40 && !L; t++) L = castle(e, 1000 * e + 37 * k + t, P, C.picture);
     if (!L) { console.log("era " + e + " #" + k + ": none"); continue; }

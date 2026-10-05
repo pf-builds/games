@@ -268,12 +268,17 @@ function hide(L, seed, H) {
   const ok = new Uint8Array(w * h); let n = 0;
   for (let y = 2; y < yb; y++) for (let x = 2; x < w - 2; x++) { const c = y * w + x, m = a0[c];
     if (!(m > 0) || m === IRON || B.keyOf[c] >= 0 || c === B.lockKey || B.towerOf[c] >= 0) continue;
+    if (H.skip && L.pal && L.pal[m] && H.skip.indexOf(L.pal[m].r) >= 0) continue; // v5 R4 fix: never the sky, the outline or the boss's king (roles in H.skip)
     let bad = false; for (let k = 0; k < 4 && !bad; k++) { const e = B.nb[c * 4 + k]; if (e >= 0 && (open(e) || a0[e] === IRON)) bad = true; }
     if (!bad) { ok[c] = 1; n++; } }
   const want = Math.round(n * (H.share[0] + r() * (H.share[1] - H.share[0]))), hid = new Uint8Array(w * h), cells = []; for (let c = 0; c < w * h; c++) if (ok[c]) cells.push(c);
   let got = 0;
   for (let t = 0; t < 400 && got < want && cells.length; t++) { const c0 = cells[Math.floor(r() * cells.length)], cx = c0 % w, cy = (c0 / w) | 0, rx = H.rx[0] + r() * (H.rx[1] - H.rx[0]), ry = H.ry[0] + r() * (H.ry[1] - H.ry[0]);
     for (let y = Math.max(0, Math.floor(cy - ry)); y <= Math.min(h - 1, Math.ceil(cy + ry)); y++) for (let x = Math.max(0, Math.floor(cx - rx)); x <= Math.min(w - 1, Math.ceil(cx + rx)); x++) { const c = y * w + x, dx = (x - cx) / rx, dy = (y - cy) / ry; if (ok[c] && !hid[c] && dx * dx + dy * dy <= 1 && got < want) { hid[c] = 1; got++; } } }
+  if (H.maxGroup) { // v5 R4 fix (the visual critic's S3): no big flat "?" mass; a 4-connected group past maxGroup cells keeps its first maxGroup (breadth first) and the rest show
+    const seen = new Uint8Array(w * h), q = new Int32Array(w * h);
+    for (let c0 = 0; c0 < w * h; c0++) { if (!hid[c0] || seen[c0]) continue; let qh = 0, qt = 0, k = 0; q[qt++] = c0; seen[c0] = 1;
+      while (qh < qt) { const c = q[qh++]; if (++k > H.maxGroup) { hid[c] = 0; got--; } for (let j = 0; j < 4; j++) { const e = B.nb[c * 4 + j]; if (e >= 0 && hid[e] && !seen[e]) { seen[e] = 1; q[qt++] = e; } } } } }
   if (got < H.min) return false;
   L.hidden = []; for (let y = 0; y < h; y++) { let s = ""; for (let x = 0; x < w; x++) s += hid[y * w + x] ? "?" : "."; L.hidden.push(s); }
   return true;
