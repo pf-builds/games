@@ -135,3 +135,30 @@ Each row is its own commit "Sapper's Path v5 R3 fix: <what>". Notes: `tools/v5-r
 
 ### State (piece 3)
 Fix pass done; every brief item fixed, the skipped visual nits are in `tools/v5-r3-notes.md` §6 and LATER. Next: a critic re-check of the map, then a real-phone pass.
+
+# R4c: the journey map's art and layout for levels 101-200 (2026-10-05, overnight)
+
+Brief: the orchestrator's R4c brief of 2026-10-05 (worktree `repos/games-sappers-path-map/`, branch `sappers-path-map`).
+Another builder bakes levels 101-200 on branch `sappers-path`; this branch touches only `map/`, `tools/map-gen/`,
+`src/journey.js`, the journey-map parts of `src/main.js` and `style.css`, `config.json` `map`, map tests and selfTest,
+and notes. Notes: `tools/v5-r4c-notes.md`. Candidates (not in git): `/Users/peter/local-ai/outputs/sapper-v5-map-r4/`.
+Dev server: port 8495 (never 8491, the other builder's).
+
+## How to resume (R4c)
+
+1. Read this table; take the first row not `done`.
+2. Art runs: `tools/map-gen/run.sh` (one SDXL base 1.0 image a run, memory logged); check `ps` for another session's
+   generation first; picks go in `tools/map-gen/picks.json`; `python assemble.py` rebuilds `map/`.
+3. Sheets 1-12 must stay byte-identical (md5 before/after assemble); levels never change (`freeze.js --require`).
+
+| # | Step | State | Commit |
+|---|---|---|---|
+| c1 | Plan: realms 5-8 sheets (13 regenerated + 14-25), stops, fog and Goblin King on the top sheet, new feature drawers (lava, basalt, giant trees, glades, goblin huts, crooked fortress), new egg kinds, candidate dirs, guides | | |
+| c2 | Paint: sheet 13 (no fog), 14-15 Mistmoor; stop-rule check on the first new sheet (road held? parchment look?) | | |
+| c3 | Paint: 16-18 Emberwatch Crags | | |
+| c4 | Paint: 19-21 Shrouded Weald | | |
+| c5 | Paint: 22-25 Goblin King's Throne (fortress summit, fog on top) | | |
+| c6 | Assemble: layout.json 25 sheets, eggs, manual fixes, bridges (water and lava), contact-r4 + seams-r4, sizes | | |
+| c7 | Code: frontier (nodes only for existing levels, fog/tail after the last one, sheets past it not built), eggReached (no levels = not reached), new eggs and the Goblin King sprite, banners 6-8, tests both states | | |
+| c8 | Checks: test.js, freeze, selfTest 375x812@3 and 1280x720, harness on 8495; shots `tools/shots-v5-r4-map/` (both states) | | |
+| c9 | Notes `tools/v5-r4c-notes.md`, merge notes, this table | | |
