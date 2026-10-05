@@ -727,7 +727,7 @@
         for (const id of tl.won.slice(-M.tail.show)) t.th.append(tailTile(id, "th"));
         if (tl.won.length > M.tail.show) { const c = document.createElement("button"); c.className = "tchip"; c.innerHTML = '<i class="qi" aria-hidden="true"></i><span></span>'; c.lastChild.textContent = fill(T.tailChip, { n: tl.won.length });
           c.setAttribute("aria-label", fill(T.tailChipAria, { n: tl.won.length })); c.addEventListener("click", () => openTail(true)); t.th.append(c); } } }
-    for (const g of J.eggs) eggLook(g);
+    for (const g of J.eggs) { g.b.hidden = !eggReached(g); eggLook(g); } // v5 R3 (Peter 10/5): a realm's eggs hide until the player reaches it
     mapCards(fe || app.levels[app.levels.length - 1]);
   }
   // A side-quest node's look: the picture icon (or, won, its finished picture), the prize while not won, its label.
@@ -745,9 +745,13 @@
     g.found = found; g.b.classList.toggle("found", found); g.b.innerHTML = '<svg viewBox="-24 -24 48 48" aria-hidden="true">' + JN.egg(g.kind, found) + "</svg>";
     g.b.setAttribute("aria-label", fill(found ? app.cfg.map.text.eggFoundAria : app.cfg.map.text.eggAria, { name: nm }));
   }
+  // v5 R3 (Peter 10/5): an egg shows (and pays) only once the player has reached its realm, i.e. its realm's first level
+  // is open; a realm with no levels counts as reached.
+  function eggReached(g) { const re = app.jr.sheets[g.sheet].S.realm, f = app.levels.find((e) => e.era === re); return !f || Save.isOpen(app.save.data, app.order, f.id); }
   // An egg's tap: the first pays its coins once (meta.js egg) and turns it into its found look with a coin pop; later taps
   // only wiggle it.
   function eggTap(g) {
+    if (!eggReached(g)) return 0;
     const paid = Meta.egg(app.save.data, g.id, g.coins); if (!app.V.calm && g.b.animate) g.b.animate([{ transform: "scale(1)" }, { transform: "scale(" + (paid ? 1.35 : 1.12) + ")" }, { transform: "scale(1)" }], { duration: paid ? 420 : 220 });
     if (!paid) return 0;
     writeSave(); cue("coin"); eggLook(g);
@@ -2123,6 +2127,10 @@
           const reread = Save.sanitize(JSON.parse(JSON.stringify(app.save.data)), app.order, galIds(), app.meta).eggs;
           ok(hit && c1 - c0 === g.coins && g.coins >= 10 && g.coins <= 15 && c2 === c1 && g.b.classList.contains("found") && g.b.innerHTML !== svg0 && $("map-coins").textContent === String(c1) && reread[g.id] === 1 && g.b.getAttribute("aria-label").indexOf(MT.eggs[g.kind][1]) > 0,
             "map eggs: " + g.id + " (" + g.kind + ") pays " + (c1 - c0) + " coins once (a second tap " + (c2 - c1) + "), turns into " + MT.eggs[g.kind][1] + ", the top bar's coins follow, the save keeps it"); }
+        // v5 R3 (Peter 10/5): an egg shows only once its realm is reached (its realm's first level open); a hidden one never pays.
+        { const wrong = J.eggs.filter((g) => { const re = J.sheets[g.sheet].S.realm, f = app.levels.find((e) => e.era === re); return g.b.hidden === (!f || Save.isOpen(app.save.data, app.order, f.id)); });
+          const hid = J.eggs.find((g) => g.b.hidden), c0 = coins(); if (hid) eggTap(hid);
+          ok(!wrong.length && coins() === c0 && (!hid || !(app.save.data.eggs || {})[hid.id]), "map eggs: shown only in reached realms (" + J.eggs.filter((g) => !g.b.hidden).length + " of " + J.eggs.length + " shown; wrong: " + (wrong.map((g) => g.id).join(", ") || "none") + "), a hidden one pays nothing"); }
         ok(J.eggs.every((g) => g.b.querySelector("svg") && g.b.getAttribute("aria-label")) && app.levels.every((e) => e.node.tagName === "BUTTON" && e.node.getAttribute("aria-label")) && J.quests.every((q) => q.b.tagName === "BUTTON" && q.b.getAttribute("aria-label")),
           "map a11y: every level, side quest and egg is a button with a label");
         // The long tail: before every level is cleared the fog holds no node; after, one next picture, then the next.
@@ -2154,7 +2162,7 @@
           const nq = nearQ(), want = app.gal.filter((e) => e.L.quest.after <= 55 && !app.save.data.gal[e.id]).pop();
           ok(nq === want && nq.node.classList.contains("next") && $("jr-quest").querySelector("b").textContent === fill(MT.sideQuest, { n: nq.n }), "map (v5 R3 fix): the next-up side quest is the open one nearest level 56 (picture " + (nq ? nq.n : "?") + "), gold-ringed");
           for (let i = 55; i < 74; i++) Save.record(app.save.data, app.order[i]); showScreen("map");
-          const tg = Array.from(document.querySelectorAll("#jr .mn, #jr .qn:not([hidden]), #jr .egg")), bad = [];
+          const tg = Array.from(document.querySelectorAll("#jr .mn, #jr .qn:not([hidden]), #jr .egg:not([hidden])")), bad = [];
           for (const el of Array.from(document.querySelectorAll("#jr .qn.open .prz")).concat([J.label])) { if (!shown(el)) continue; const r = el.getBoundingClientRect(), own = el.closest(".qn, .mn");
             for (const x of tg) if (x !== own && !x.contains(el) && over(r, x.getBoundingClientRect())) { const o = over(r, x.getBoundingClientRect()).split("x"); if (o[0] * o[1] > 64) bad.push((own ? own.dataset.id : "label") + " x " + (x.dataset.id || x.dataset.n)); } }
           ok(!bad.length, "map (v5 R3 fix): no prize bubble or the current label covers another node, quest or egg (" + (bad.join(", ") || "none") + ")"); }
