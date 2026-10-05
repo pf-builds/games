@@ -16,7 +16,7 @@
    v4 Critics 2 fix: the coach wraps to two lines in the top bar; the Gallery win's framed picture (#p-pic, #stage-pic);
    the Gallery's next tile (gold frame, Play chip); a buy short of coins (.pw.poor); 44 px badges in small frames; the
    landscape bar's .head and .grid; the home's era chip on the river; era report cards as a band. */
-@font-face { font-family: "Jersey 10"; src: url("fonts/Jersey10-Regular.ttf?v=36") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Jersey 10"; src: url("fonts/Jersey10-Regular.ttf?v=37") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
 :root { --bg: #2e2935; --ink: #221a26; --cream: #f3ead8; --cream-soft: #cfc4d6;
   --tray: #ddd3c0; --tray-hi: #ece5d6; --tray-edge: #c4b89e; --tray-ink: #3a3027; --tray-soft: #6b5c47; --socket: #c3b697; --socket-lo: #a99a7b;
   --band1: #d0c6b4; --band2: #c2baa9; /* the rows' tray bands, set from layout.fade.band at boot */
@@ -332,6 +332,18 @@ body.cb .chip .gl { display: inline-block; }
 #p-ribbon { position: relative; z-index: 2; align-self: center; margin: -4px 0 8px; padding: 3px 14px 2px; font-family: var(--px); font-size: 20px; line-height: 1; color: #fff6e8; background: #e8553a;
   border: 2px solid var(--ink); border-radius: 4px; box-shadow: inset 0 0 0 2px var(--gold), 0 3px 0 rgba(0,0,0,.35); transform: rotate(-3deg); text-shadow: 0 2px 0 rgba(34,26,38,.45); animation: ribbon .45s cubic-bezier(.3,1.6,.5,1) .35s both; }
 #p-ribbon[hidden] { display: none; }
+/* v5 R4 fix (S4): the boss's win, the Goblin King's crown recovered: it stamps in over the title with a ring of gold rays
+   bursting out (reduced motion: the crown just shows). */
+#p-crown { position: relative; align-self: center; width: 92px; height: 66px; margin: -6px 0 2px; animation: crownIn .6s cubic-bezier(.3,1.6,.5,1) .15s both; }
+#p-crown[hidden] { display: none; }
+#p-crown svg { position: relative; z-index: 1; width: 100%; height: 100%; filter: drop-shadow(0 3px 0 rgba(0,0,0,.35)); }
+#p-crown .rays { position: absolute; left: 50%; top: 50%; }
+#p-crown .rays i { position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; background: #ffd723; border: 2px solid #1f1b24; transform: rotate(calc(var(--k) * 30deg)) translateY(0) scale(.4); opacity: 0; animation: crownRay 1.1s ease-out .45s both; }
+#p-crown .rays i:nth-child(1) { --k: 0; } #p-crown .rays i:nth-child(2) { --k: 1; } #p-crown .rays i:nth-child(3) { --k: 2; } #p-crown .rays i:nth-child(4) { --k: 3; } #p-crown .rays i:nth-child(5) { --k: 4; } #p-crown .rays i:nth-child(6) { --k: 5; }
+#p-crown .rays i:nth-child(7) { --k: 6; } #p-crown .rays i:nth-child(8) { --k: 7; } #p-crown .rays i:nth-child(9) { --k: 8; } #p-crown .rays i:nth-child(10) { --k: 9; } #p-crown .rays i:nth-child(11) { --k: 10; } #p-crown .rays i:nth-child(12) { --k: 11; }
+@keyframes crownIn { 0% { transform: translateY(-40px) scale(2.4) rotate(-14deg); opacity: 0; } 100% { transform: none; opacity: 1; } }
+@keyframes crownRay { 0% { opacity: 1; transform: rotate(calc(var(--k) * 30deg)) translateY(-10px) scale(1); } 100% { opacity: 0; transform: rotate(calc(var(--k) * 30deg)) translateY(-120px) scale(.6); } }
+.sheet.tight #p-crown { width: 70px; height: 50px; margin: -4px 0 0; }
 @keyframes ribbon { 0% { transform: rotate(-12deg) scale(2); opacity: 0; } 100% { transform: rotate(-3deg); opacity: 1; } }
 #p-stats .st.coin { position: relative; }
 #p-stats .burst { position: absolute; left: 50%; top: 45%; width: 0; height: 0; pointer-events: none; }
@@ -420,6 +432,7 @@ body.wide .sheet:not(.float) .sheetcard { border-radius: 10px 10px 12px 12px; }
   #rail { margin: 3px 0 max(4px, env(safe-area-inset-bottom)); border-width: 2px; border-radius: 10px; } #frame { padding: 4px; }
   #line-head { font-size: 14px; } #lvl-name { font-size: 17px; } #tag-chip { font-size: 12px; } }
 @media (prefers-reduced-motion: reduce) { #hand svg, .coach-on, .slot.last, .slot.work .men, #line-wrap.full.danger #line, #p-ribbon, #p-stats .st.coin.go .burst i { animation: none; } }
+@media (prefers-reduced-motion: reduce) { #p-crown { animation: none; } #p-crown .rays { display: none; } }
 
 
 /* ---- v4 M5: the home screen ---------------------------------------------------------------------------------------------
@@ -554,7 +567,7 @@ body.wide .home-card { max-width: 760px; }
 .mn.cur::before { content: ""; position: absolute; left: 50%; top: 50%; width: 66px; height: 66px; margin: -33px 0 0 -33px; border-radius: 50%;
   background: radial-gradient(circle, rgba(255,243,168,.95) 50%, rgba(255,243,168,.5) 62%, rgba(255,243,168,0) 72%); animation: jrglow 1.6s ease-in-out infinite; }
 @keyframes jrglow { 50% { transform: scale(1.14); opacity: .7; } }
-.mn.locked .bd { background: #5a5463; box-shadow: inset 0 -4px 0 #3b3342, 0 3px 0 rgba(0,0,0,.45); } .mn.locked .bd b { color: #b3abbe; }
+.mn.locked .bd { background: #736c7e; box-shadow: inset 0 -4px 0 #4a4252, 0 0 0 2px rgba(236,226,200,.55), 0 3px 0 rgba(0,0,0,.45); } .mn.locked .bd b { color: #d6cfe0; } /* v5 R4 fix (N1): a lighter disc and a pale rim, so a locked node reads on the dark Crags and Mistmoor sheets */
 .mn .ck { display: none; position: absolute; right: 1px; top: 0; width: 17px; height: 17px; border-radius: 50%; border: 2px solid var(--ink);
   background: #3fbf5a center / 11px 11px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.5 5.2l2.4 2.4 4.6-5' fill='none' stroke='%23fff' stroke-width='2'/%3E%3C/svg%3E"); }
 .mn.done .ck { display: block; }
@@ -564,6 +577,12 @@ body.wide .home-card { max-width: 760px; }
   font-family: var(--px); font-size: 22px; line-height: 1; color: var(--gold-hi); white-space: nowrap; pointer-events: none !important; }
 .jr-cur.east { margin-left: -30px; transform: translateX(-100%); }
 .jr-cur.up { margin: 0; transform: translate(-50%, calc(-100% - 30px)); } .jr-cur.dn { margin: 0; transform: translate(-50%, 30px); } /* v5 R3 fix: when neither side is clear */
+/* v5 R4 fix (S5): the corners, when no side is clear (main.js fitLabel measures them). */
+.jr-cur.ne { margin: 0; transform: translate(10px, calc(-100% - 22px)); } .jr-cur.nw { margin: 0; transform: translate(calc(-100% - 10px), calc(-100% - 22px)); }
+.jr-cur.se { margin: 0; transform: translate(10px, 22px); } .jr-cur.sw { margin: 0; transform: translate(calc(-100% - 10px), 22px); }
+.jr-cur.up.far { transform: translate(-50%, calc(-100% - 56px)); } .jr-cur.dn.far { transform: translate(-50%, 56px); }
+.jr-cur.ne.far { transform: translate(10px, calc(-100% - 48px)); } .jr-cur.nw.far { transform: translate(calc(-100% - 10px), calc(-100% - 48px)); }
+.jr-cur.se.far { transform: translate(10px, 48px); } .jr-cur.sw.far { transform: translate(calc(-100% - 10px), 48px); }
 .jr-cur .tag { font-size: 15px; padding: 1px 4px 0; }
 /* Side quests: a picture node, its prize bubble while open, its prize icon (dim, padlocked) while locked, its picture once won. */
 .qn { width: 44px; height: 44px; margin: -22px 0 0 -22px; z-index: 1; }

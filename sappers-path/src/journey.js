@@ -186,7 +186,7 @@
   // The Goblin King (about 90 x 110 sheet px, his feet at 0 0) and his banner (a pole 90 tall). v5 R4c: drawn in the
   // map's ink and wash (green skin, long ears, a gold crown, a red cloak with a ragged hem, a crooked sceptre) instead of
   // the flat silhouette.
-  const king = () => '<g transform="scale(2.1) translate(-21 -50)" stroke="' + INK + '" stroke-linejoin="round" stroke-linecap="round"><ellipse cx="21" cy="49" rx="17" ry="3.5" fill="rgba(0,0,0,.3)" stroke="none"/>' +
+  const king = (k) => '<g transform="scale(' + (k || 2.1) + ') translate(-21 -50)" stroke="' + INK + '" stroke-linejoin="round" stroke-linecap="round"><ellipse cx="21" cy="49" rx="17" ry="3.5" fill="rgba(0,0,0,.3)" stroke="none"/>' +
     '<path d="M7 47l2-16c1-7 5-11 12-11s11 4 12 11l2 16-4-3-3 4-3-4-4 4-4-4-3 4-3-4z" fill="#8a1f19" stroke-width="1.6"/><path d="M14 22c2 6 12 6 14 0" fill="none" stroke="#f2c230" stroke-width="2"/>' +
     '<path d="M17 30h8v10h-8z" fill="#4f6b2c" stroke-width="1.2"/><path d="M17 47v-5M25 47v-5" stroke-width="3" stroke="#4f6b2c"/><path d="M14 48h5M23 48h5" stroke-width="2.4"/>' +
     '<path d="M36 46l-2-26" stroke="#6b4a2a" stroke-width="2.4"/><path d="M34 20l-3-4 3-3 3 3z" fill="#4fc3e8" stroke-width="1.2"/><path d="M34 32c-3-2-5 0-7 1" fill="none" stroke="#79b04a" stroke-width="3"/>' +

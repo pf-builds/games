@@ -163,7 +163,7 @@
     for (const L of list) {
       try { E.compile(L); } catch (e) { continue; }
       const id = String(L.id); if (app.byId.has(id)) continue;
-      const entry = { L, id, n: L.n | 0, era: L.era | 0, idx: app.levels.length, node: null };
+      const entry = { L, id, n: L.n | 0, era: L.era | 0, idx: app.levels.length, node: null, boss: (app.cfg.boss || {})[id] || null }; // v5 R4 fix (S4): a boss's name and lines (config boss)
       app.levels.push(entry); app.byId.set(id, entry); app.order.push(id);
     }
   }
@@ -566,7 +566,7 @@
 
   function renderTop() {
     const e = app.entry; if (!e) return;
-    $("lvl-num").textContent = e.debug ? app.cfg.layout.debugNum : e.n; $("lvl-name").textContent = e.gallery ? e.L.title : e.L.name || (app.eras[e.era - 1] ? app.eras[e.era - 1].name : fill(app.cfg.layout.realmEye, { e: e.era }));
+    $("lvl-num").textContent = e.debug ? app.cfg.layout.debugNum : e.n; $("lvl-name").textContent = e.gallery ? e.L.title : e.boss ? e.boss.name : e.L.name || (app.eras[e.era - 1] ? app.eras[e.era - 1].name : fill(app.cfg.layout.realmEye, { e: e.era }));
     $("btn-map").setAttribute("aria-label", app.cfg.layout.mapName); // v5 R3: side quests live on the map too
     tagChip($("tag-chip"), app.diff); // v4.3: the level's tag (Normal unmarked)
     app.labFit.delete("name"); fitText($("lvl-name"), "name", app.cfg.layout.nameMinPx); // the room beside the number changes with its digits
@@ -647,7 +647,7 @@
         for (const [x, dy, rx, ry] of F_.puffs) s += '<ellipse cx="' + x + '" cy="' + (fogAt + (fogTo - fogAt) * 0.35 + dy) + '" rx="' + rx + '" ry="' + ry + '" fill="url(#jr-fog)"/>'; }
       else if (si > fr.si) s += '<rect width="' + W + '" height="' + H + '" fill="#e6e8de" fill-opacity="' + F_.mist + '"/>'; // a headroom sheet: all fog
       if (top) s += '<rect width="' + W + '" height="' + Math.min(F_.washTo, Math.max(F_.washMin, fogAt)) + '" fill="url(#jr-wash)"/>';
-      if (kingAt.si === si) s += '<g transform="translate(' + kingAt.x + " " + kingAt.y + ')">' + JN.king() + '</g><g transform="translate(' + (kingAt.x + F_.flagAt[0]) + " " + (kingAt.y + F_.flagAt[1]) + ')">' + JN.flag() + "</g>";
+      if (kingAt.si === si) s += '<g class="kg" transform="translate(' + kingAt.x + " " + kingAt.y + ')">' + JN.king(F_.kingScale) + '</g><g transform="translate(' + (kingAt.x + F_.flagAt[0]) + " " + (kingAt.y + F_.flagAt[1]) + ')">' + JN.flag() + "</g>";
       const svg = document.createElementNS(svgNS, "svg"); svg.setAttribute("class", "jr-ov"); svg.setAttribute("viewBox", "0 0 " + W + " " + H); svg.setAttribute("preserveAspectRatio", "none"); svg.setAttribute("aria-hidden", "true"); svg.innerHTML = s;
       const lay = document.createElement("div"); lay.className = "jr-lay";
       const at = (b, x, y) => { b.style.left = pct(x, W); b.style.top = pct(y, H); if (x > M.rightEdge) b.classList.add("east"); else if (x < W - M.rightEdge) b.classList.add("west"); lay.append(b); return b; };
@@ -706,6 +706,24 @@
   // The column's size: the screen's width up to map.colMaxPx, or colWidePx between the cards once the screen is
   // map.cardsMinW wide; sheets are placed in CSS px from it (k = column / sheet width). Keeps the world point at the
   // view's middle where it was. Returns true when the size changed.
+  // v5 R4 fix (the visual critic's S5): the current node's label takes the side (its picked side first, then west, east,
+  // above, below, the four corners, then those above and below a little farther out) whose box covers the least of the other nodes, eggs, open prize bubbles, banners and
+  // the Goblin King, measured on the page as laid out (on a render or a resize only, never per frame), and never past the
+  // map column's edges. With the map hidden (nothing laid out) the picked side stays.
+  const LSIDES = ["", "east", "up", "dn", "ne", "nw", "se", "sw", "up far", "dn far", "ne far", "nw far", "se far", "sw far"];
+  function fitLabel() {
+    const J = app.jr, L = J && J.label, own = J && J.labelOf; if (!L || !own || !L.parentNode || !L.offsetWidth) return;
+    const col = $("jr").getBoundingClientRect(), o = own.getBoundingClientRect(), cx = o.left + o.width / 2, cy = o.top + o.height / 2, near = [];
+    for (const x of document.querySelectorAll("#jr .mn, #jr .qn:not([hidden]), #jr .egg:not([hidden]), #jr .bn, #jr .qn.open .prz, #jr .kg")) {
+      if (x === own || x.contains(L) || own.contains(x)) continue; const r = x.getBoundingClientRect(); if (r.width && Math.abs(r.left + r.width / 2 - cx) < 320 && Math.abs(r.top + r.height / 2 - cy) < 160) near.push(r); }
+    const first = L.dataset.side0.replace("jr-cur", "").trim(), order = [first].concat(LSIDES.filter((k) => k !== first)), T = app.cfg.map.text, full = fill(T.cur, { n: J.labelN }); let best = first, bc = false, bs = Infinity;
+    for (const cmp of [false, true]) { L.firstChild.textContent = cmp ? fill(T.curShort, { n: J.labelN }) : full; // then the short label ("{n}"), only if it covers less
+      for (const k of order) { L.className = "jr-cur" + (k ? " " + k : ""); const r = L.getBoundingClientRect(); let sc = (r.left < col.left || r.right > col.right ? 1e6 : 0) + (cmp ? 0.5 : 0);
+        for (const q of near) { const w = Math.min(r.right, q.right) - Math.max(r.left, q.left), h = Math.min(r.bottom, q.bottom) - Math.max(r.top, q.top); if (w > 0 && h > 0) sc += w * h; }
+        if (sc < bs) { bs = sc; best = k; bc = cmp; } if (bs === 0) break; }
+      if (bs < 1) break; }
+    L.className = "jr-cur" + (best ? " " + best : ""); L.firstChild.textContent = bc ? fill(T.curShort, { n: J.labelN }) : full;
+  }
   function layoutMap() {
     const J = app.jr, M = app.cfg.map, mp = $("map"), cards = window.innerWidth >= M.cardsMinW; mp.classList.toggle("cards", cards);
     if (!J) return false;
@@ -730,7 +748,7 @@
     $("map-coins").querySelector("b").textContent = d.coins; $("map-coins").setAttribute("aria-label", fill(app.meta.home.coins, { n: d.coins }));
     // v5 R3 fix: with every level and every picture cleared the map's Play gives way to a line (any node plays again).
     const ne = app.byId.get(next), te = mapPic(), end = !te && allDone(), mp = $("map-play"); mp.hidden = end; $("jr-end").hidden = !end; $("jr-end").textContent = T.endHint;
-    mp.querySelector(".pl").textContent = te ? fill(T.playPic, { n: te.n }) : ne ? "Play level " + ne.n : "Play"; playTag(mp, end ? null : te || ne);
+    mp.querySelector(".pl").textContent = te ? fill(T.playPic, { n: te.n }) : ne && ne.boss ? ne.boss.play : ne ? "Play level " + ne.n : "Play"; playTag(mp, end ? null : te || ne);
     if (!J) return;
     // Levels: done (a check), the current one (a glow and the label), open, locked (dim; a tap shakes).
     const f = JN.focus(d, app.order), fe = f && f !== "tail" ? app.byId.get(f) : null;
@@ -739,7 +757,7 @@
       if (b.dataset.st !== st) { b.dataset.st = st; b.classList.remove("done", "cur", "open", "locked"); b.classList.add(st); b.setAttribute("aria-disabled", st === "locked" ? "true" : "false"); }
       b.setAttribute("aria-label", "Level " + e.n + (tg ? ", " + tg : "") + (st === "done" ? ", cleared" : st === "locked" ? ", locked" : st === "cur" ? ", play this one next" : ""));
     }
-    const L = J.label; if (fe && fe.node) { L.firstChild.textContent = fill(T.cur, { n: fe.n }); tagChip(L.querySelector(".tag"), tagOf(fe)); L.className = "jr-cur" + (fe.side === "w" ? " east" : fe.side === "n" ? " up" : fe.side === "s" ? " dn" : ""); L.style.left = fe.node.style.left; L.style.top = fe.node.style.top; if (L.parentNode !== fe.node.parentNode) fe.node.parentNode.append(L); } else L.remove(); // v5 R3 fix: the label can sit above or below its node
+    const L = J.label; if (fe && fe.node) { L.firstChild.textContent = fill(T.cur, { n: fe.n }); tagChip(L.querySelector(".tag"), tagOf(fe)); L.className = "jr-cur" + (fe.side === "w" ? " east" : fe.side === "n" ? " up" : fe.side === "s" ? " dn" : ""); L.style.left = fe.node.style.left; L.style.top = fe.node.style.top; if (L.parentNode !== fe.node.parentNode) fe.node.parentNode.append(L); J.labelOf = fe.node; J.labelN = fe.n; L.dataset.side0 = L.className; } else { J.labelOf = null; L.remove(); } // v5 R3 fix: the label can sit above or below its node
     // The route: walked to the current node, the rest ahead (only the sheet the cut is on, and those whose side flipped, change).
     const cs = fe ? fe.sheet : J.tail.si, ci = fe ? fe.ri : J.tail.ri;
     J.sheets.forEach((sh, i) => { const key = i < cs ? "w" : i > cs ? "a" : "c" + ci; if (sh.cut === key) return; sh.cut = key;
@@ -755,6 +773,7 @@
         if (tl.won.length > M.tail.show) { const c = document.createElement("button"); c.className = "tchip"; c.innerHTML = '<i class="qi" aria-hidden="true"></i><span></span>'; c.lastChild.textContent = fill(T.tailChip, { n: tl.won.length });
           c.setAttribute("aria-label", fill(T.tailChipAria, { n: tl.won.length })); c.addEventListener("click", () => openTail(true)); t.th.append(c); } } }
     for (const g of J.eggs) { g.b.hidden = !eggReached(g); eggLook(g); } // v5 R3 (Peter 10/5): a realm's eggs hide until the player reaches it
+    fitLabel(); // v5 R4 fix (S5): once the quests' bubbles and the eggs show
     mapCards(fe || app.levels[app.levels.length - 1]);
   }
   // A side-quest node's look: the picture icon (or, won, its finished picture), the prize while not won, its label.
@@ -809,7 +828,7 @@
     $("jr-q-v").textContent = qs.filter((q) => d.gal[q.e.id]).length + " / " + qs.length; $("jr-e-v").textContent = gs.filter((g) => d.eggs && d.eggs[g.id]).length + " / " + gs.length;
     // v5 R3 fix: past the last level the card names the picture Play starts; with every picture cleared too, "all cleared"
     // and no Play; the side quest under it is the open one nearest the current level (never the one Play starts).
-    const ne = app.byId.get(Save.next(d, app.order)), te = mapPic(), end = !te && allDone(); $("jr-n-name").firstChild.textContent = te ? fill(T.picture, { n: te.n }) : end || !ne ? T.allClear : fill(T.cur, { n: ne.n }); tagChip($("jr-n-name").querySelector(".tag"), te ? tagOf(te) : end || !ne ? null : tagOf(ne));
+    const ne = app.byId.get(Save.next(d, app.order)), te = mapPic(), end = !te && allDone(); $("jr-n-name").firstChild.textContent = te ? fill(T.picture, { n: te.n }) : end || !ne ? T.allClear : ne.boss ? ne.boss.card : fill(T.cur, { n: ne.n }); tagChip($("jr-n-name").querySelector(".tag"), te ? tagOf(te) : end || !ne ? null : tagOf(ne));
     const nx = nearQ(te ? te.id : null), qk = nx && nx.L.quest ? E.POWERS.indexOf(nx.L.quest.prize) : -1, qb = $("jr-quest"); qb.hidden = end;
     qb.querySelector("b").textContent = nx ? fill(T.sideQuest, { n: nx.n }) : T.questNone; qb.querySelector(".sq-t > span").textContent = nx && qk >= 0 ? fill(T.questLine, { name: pwName(qk) }) : "";
     qb.classList.toggle("none", !nx); qb.setAttribute("aria-disabled", nx ? "false" : "true"); qb.setAttribute("aria-label", nx ? fill(T.sideQuest, { n: nx.n }) + (qk >= 0 ? ": " + fill(T.questLine, { name: pwName(qk) }) : "") : T.questNone);
@@ -828,7 +847,7 @@
   // The lives pill and, with none left, Play's countdown (the text changes once a second; written only then).
   function livesPill() {
     const H = app.meta.home, L = Meta.lives(app.save.data, app.meta, app.now()), pill = $("home-lives"), ne = app.byId.get(Save.next(app.save.data, app.order));
-    const cd = L.nextMs > 0 ? Meta.clock(L.nextMs, true) : "", txt = L.on ? L.n + (cd ? " · " + cd : "") : "", play = L.on && L.n <= 0 ? fill(H.noLives, { t: cd }) : fill(H.play, { n: ne ? ne.n : 1 });
+    const cd = L.nextMs > 0 ? Meta.clock(L.nextMs, true) : "", txt = L.on ? L.n + (cd ? " · " + cd : "") : "", play = L.on && L.n <= 0 ? fill(H.noLives, { t: cd }) : ne && ne.boss ? ne.boss.play : fill(H.play, { n: ne ? ne.n : 1 });
     if (txt + play === app.lifeTxt) return; app.lifeTxt = txt + play;
     pill.hidden = !L.on; pill.querySelector("b").textContent = txt; pill.setAttribute("aria-label", L.on ? (L.n >= L.max ? H.livesFull : fill(H.lives, { n: L.n }) + (cd ? ", " + fill(H.noLives, { t: cd }) : "")) : "");
     $("play-lab").textContent = play; $("btn-play").classList.toggle("wait", L.on && L.n <= 0); playTag($("btn-play"), L.on && L.n <= 0 ? null : ne);
@@ -997,8 +1016,10 @@
     const e = app.ending; if (!e) return;
     app.panel = e.won ? "win" : "fail"; app.panelAt = app.clock; renderCoach();
     const last = app.entry.debug || app.entry.idx === app.levels.length - 1, G = app.cfg.gallery, gal = !!app.entry.gallery;
-    $("p-title").textContent = e.won ? (gal ? G.winTitle : "Fort razed!") : "Assault failed"; tagChip($("p-tag"), app.diff); // v4.3: the level's tag
-    if (e.won) { $("p-line").textContent = gal ? fill(e.first ? G.winLine : G.winLineAgain, { title: app.entry.L.title }) : "The goblin king flees. " + (app.entry.debug ? app.entry.L.name : "Level " + app.entry.n) + (e.first ? " cleared." : " cleared again."); $("p-line").removeAttribute("aria-label"); } else sheetLine(e);
+    const BS = e.won && !gal && app.entry.boss; // v5 R4 fix (S4): the boss's own win title, line and the crown recovered
+    $("p-title").textContent = e.won ? (gal ? G.winTitle : BS ? BS.winTitle : "Fort razed!") : "Assault failed"; tagChip($("p-tag"), app.diff); // v4.3: the level's tag
+    $("p-crown").hidden = !BS; $("panel").classList.toggle("boss", !!BS); if (BS) $("p-crown").setAttribute("aria-label", BS.crownAria);
+    if (e.won) { $("p-line").textContent = BS ? (e.first ? BS.win : BS.winAgain) : gal ? fill(e.first ? G.winLine : G.winLineAgain, { title: app.entry.L.title }) : "The goblin king flees. " + (app.entry.debug ? app.entry.L.name : "Level " + app.entry.n) + (e.first ? " cleared." : " cleared again."); $("p-line").removeAttribute("aria-label"); } else sheetLine(e);
     reportPic(e.won && gal);
     const np = gal && e.won ? nextPicture() : null, pp = $("p-primary"), nextE = e.won && !app.entry.debug ? (np || (gal || !last ? app.byId.get(Save.next(app.save.data, app.order)) : null)) : null;
     pp.querySelector(".pl").textContent = e.won ? (np ? G.nextBtn : gal || !last ? "Next level" : app.cfg.layout.mapName) : "Retry"; // v5 R2: a side quest won goes on to the next open one, else back to the journey playTag(pp, nextE); // v4.3 fix (T1): the next level's tag
@@ -1007,7 +1028,7 @@
     reportRows(e); // v4.3: no medals; the report's rows and the tag
     contOffer(e); // v5 R1: a jam's sheet offers the continue
     $("panel").hidden = false; placeSheet();
-    cue(e.won ? "chime" : "bad"); if (e.won && e.first) cue("star", 2);
+    cue(e.won ? "chime" : "bad"); if (e.won && e.first) cue("star", 2); if (BS) cue("star", BS.stars);
     judge(); renderTray(); renderLine();
   }
   // v5 R1, the continue on a jam (engine revive(); meta.cont): offered on the jam's sheet when the engine would take it
@@ -1159,6 +1180,7 @@
     if (st.ring === "moat") { const c = bridgeOf(B); if (c >= 0) Object.assign(V.focus, { on: true, x: c % B.w + 0.5, y: ((c / B.w) | 0) + 0.5, r: 1.8 }); } // v5 R2: the moat lesson's bridge
     if (st.ring === "hidden") { let bc = -1, bd = Infinity; const mx = B.w / 2; for (let k = 0; k < B.n; k++) if (S.hiddenCell(k)) { const d = (k % B.w + 0.5 - mx) ** 2 + (((k / B.w) | 0) - B.campRow) ** 2; if (d < bd) { bd = d; bc = k; } } // v5 R4: the mystery block nearest the entry
       if (bc >= 0) Object.assign(V.focus, { on: true, x: bc % B.w + 0.5, y: ((bc / B.w) | 0) + 0.5, r: 1.3 }); }
+    if (Array.isArray(st.ring)) { const c = st.ring[1] * B.w + st.ring[0]; if (S.a[c] > 0) Object.assign(V.focus, { on: true, x: st.ring[0] + 0.5, y: st.ring[1] + 0.5, r: st.r || 2 }); } // v5 R4 fix (S4): a ring on a board cell [x, y] (the boss's king)
     if (st.ring === "tower") { for (let k = 0; k < B.towers.length; k++) if (S.standing & (1 << k)) { const T = B.towers[k]; Object.assign(V.focus, { on: true, x: T.cx + 0.5, y: T.cy + 0.5, r: Math.sqrt(T.size / Math.PI) + 0.9 }); break; } }
     txt.textContent = (app.coachMode === "top" && st.short ? st.short : st.say).replace(/\{n\}/g, cn).replace(/\{crew\}/g, cm ? mat(cm).crew : "").replace(/\{reach\}/g, cm ? S.reachable(cm) : 0).replace(/\{go\}/g, cm ? Math.min(cn, S.reachable(cm)) : 0);
     V.ringsLoud = st.ring === "tower"; // the lesson is the ring: every ring loud while it shows
@@ -1338,7 +1360,7 @@
     if (app.wide) { const rw = short ? L.railShortPx : Math.round(Math.min(L.railWidePx, Math.max(L.railMinPx, W * L.railFrac))); r.setProperty("--rail-w", rw + "px"); r.setProperty("--wide-gap", (short ? L.gapShortPx : L.gapWidePx) + "px"); }
     app.labFit.clear();
     if (app.screen === "title") paintTitle();
-    if (app.screen === "map") layoutMap(); else if (app.jr) app.jr.colW = 0; // v5 R3: the map's column (laid out again when it shows)
+    if (app.screen === "map") { layoutMap(); fitLabel(); } else if (app.jr) app.jr.colW = 0; // v5 R3: the map's column (laid out again when it shows)
     if (app.S) fitLine();
     fitBoard();
     if (app.S) { renderTop(); renderTray(); placeSlots(); }
@@ -1833,6 +1855,13 @@
         for (const id of [resolve(64), resolve(100), (app.gal.find((e) => e.L.kind === "painting") || app.gal[0] || {}).id].filter(Boolean)) {
           startLevel(id, "normal"); const c = $("board"), up = Math.abs(c.width / c.height - app.B.w / (app.B.h + app.V.Y)) < 0.01; if (!up) turned.push(id); }
         ok(!turned.length, "upright: boards are never turned: the canvas has the board's own shape here (" + (turned.join(", ") || "64, 100 and a painting") + ")"); }
+      // v5 R4 fix (S4, m3): a boss's moment (config boss): its name in the top bar and, on the win, its own title and line
+      // under the crown and its rays; the sheet's buttons stay hittable.
+      for (const id of Object.keys(app.cfg.boss || {})) { const e = app.byId.get(id), BS = app.cfg.boss[id]; if (id === "note" || !ok(!!e, "boss " + id + ": the level exists")) continue;
+        startLevel(id); const nm = $("lvl-name").textContent; patient(winOf(e)); settleNow(); tick(9000); const ln = $("p-line").textContent;
+        ok(nm === BS.name && app.panel === "win" && $("p-title").textContent === BS.winTitle && (ln === BS.win || ln === BS.winAgain) && shown($("p-crown")) && hitOK($("p-primary")) && hitOK($("p-secondary")),
+          "boss " + id + ": the top bar reads '" + nm + "'; the win sheet '" + $("p-title").textContent + "', '" + ln + "', the crown shown, its buttons hittable");
+        startLevel(app.levels[0].id); ok($("p-crown").hidden || $("panel").hidden, "boss " + id + ": the crown is the boss's alone"); }
       // 13. The teaching coach: each script shows its first line and its arrow at load, only moves forward on the stored
       // order (played patiently), and is gone at the win; a player who follows the arrow sees every step.
       for (const id of Object.keys(app.cfg.teach || {})) {
