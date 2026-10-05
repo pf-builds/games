@@ -6,7 +6,7 @@
 //   portal shape: every request same-origin (no external requests), payload bytes, load-to-gameplay time and clicks
 //   (the title's Play is the one click), no page scrollbars on the title, map and level, primary buttons hittable;
 //   SP.selfTest(); level 1's coach line and arrow; a patient win on level 1 through the card buttons (tap, then wait
-//   until every squad is home), the goblin, the win panel, Next reaches level 2; a jam loss through the cards (v3.1: a
+//   until every squad is home), the goblin, the win panel, v5.1: its main button goes back to the map (level 2's node current and in view) and the map's Play reaches level 2; a jam loss through the cards (v3.1: a
 //   patient order that fills every space with squads that can't reach), the sheet naming the crews, one Retry tap
 //   restarts; a full line (v3.1): every front card wears the lock, a real tap on one is refused (nothing changes, the
 //   toast), and plays once a squad is home; stuck and working squads; the near-jam warning; the victory march; live frame times with three rapid taps on levels 65 and 70 at 1x and 3x, and the draw cost; the Era 3
@@ -206,9 +206,14 @@ async function run() {
       s = await ev(() => SP.tick(3000));
       ok(s.panel === "win" && (await L("#p-title").textContent()) === "Fort razed!", tag + " win panel");
       await page.waitForTimeout(400);
+      // v5.1 (playtesters, 2026-10-06): a win goes back to the map, not into the next level; the map's Play goes on.
+      const lab = (await L("#p-primary .pl").textContent()), x2 = await ev(() => document.getElementById("p-x2").hidden);
       await tap("#p-primary");
+      s = await S(); const mp = await ev(() => { const m = SP.map(), n = document.querySelector('#jr .mn[data-n="2"]'), q = document.getElementById("jr").getBoundingClientRect(), r = n ? n.getBoundingClientRect() : null; return { m, cur: !!n && n.classList.contains("cur"), inView: !!r && r.top >= q.top && r.bottom <= q.bottom }; });
+      ok(lab === "Back to map" && x2 && s.screen === "map" && mp.cur && mp.inView && (await hit("#map-play")) && (await noScroll()), tag + " the win's '" + lab + "' goes back to the map: level 2 current and in view (scroll " + (mp.m && mp.m.scrollTop) + "), no x2 button (ad hook off)");
+      await tap("#map-play");
       s = await S();
-      ok(s.n === 2 && s.status === "playing" && s.panel === null, tag + " Next level loads level 2");
+      ok(s.n === 2 && s.status === "playing" && s.panel === null, tag + " the map's Play loads level 2");
 
       // A jam loss through the cards (v3.1): a patient order that fills every space with squads that can't reach a block.
       const plan = await ev(() => { for (let n = 46; n <= 75; n++) { SP.load(n); const p = SP.lossPlan(); if (p) return Object.assign({ n }, p); } return null; });

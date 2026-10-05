@@ -1409,5 +1409,18 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   eq([Object.keys(both.done).sort(), both.best["e2-25"], Save.sanitize(m43, order, gids, META)], [["e2-25"], [1, 2, 3], m43], "old saves by slot: an id the page has wins over a renamed one; ids with no slot are dropped; a migrated save reads back unchanged");
 }
 
+// ---- v5.1: a win goes back to the map; the x2 reward's AD HOOK (meta.js double; config meta.double, off) -------------------
+{
+  const Meta = require("../src/meta.js"), CFG = require("../config.json"), src = require("fs").readFileSync(require("path").join(__dirname, "..", "src", "main.js"), "utf8");
+  const d = { coins: 100 }, r = { coins: 30 }, a = Meta.double(d, r), c1 = d.coins, b = Meta.double(d, r), big = { coins: Meta.MAXCOINS - 10 }, rb = { coins: 30 };
+  eq([a, c1, r.dbl, b, d.coins, Meta.double({ coins: 5 }, { coins: 0 }), Meta.double({ coins: 5 }, null), Meta.double(big, rb), big.coins, Meta.double(big, rb)], [30, 130, 30, 0, 130, 0, 0, 10, Meta.MAXCOINS, 0],
+    "x2 reward (v5.1): double pays a win's coins once more, once per win (the report remembers it); nothing to double pays nothing; the balance stays capped");
+  eq([CFG.meta.double.on, typeof CFG.meta.double.btn, typeof CFG.meta.double.toast, CFG.layout.toMap, CFG.gallery.nextBtn], [false, "string", "string", "Back to map", undefined],
+    "x2 reward (v5.1): its switch is off (no ad SDK, nothing shows); the win sheet's way back reads 'Back to map'; the old 'Next picture' label is gone");
+  const body = (name) => { const i = src.indexOf("function " + name + "("); return i < 0 ? "" : src.slice(i, src.indexOf("\n", i)); }, pp = body("panelPrimary"), ps = body("panelSecondary");
+  ok(/"win"\) toMap\(\); else retry\(\)/.test(pp) && /"win"\) retry\(\); else toMap\(\)/.test(ps) && !/startLevel|playNext/.test(pp + ps) && /D\.on !== true/.test(body("onDouble")) && /D\.on === true/.test(src.slice(src.indexOf("function x2Offer("), src.indexOf("function onDouble("))),
+    "win flow (v5.1): the win sheet's main button goes to the map (never into a level), its second retries; a fail's main retries, its second goes to the map; the x2 button and its tap need meta.double.on");
+}
+
 console.log(pass + " passed, " + fail + " failed");
 process.exitCode = fail ? 1 : 0;

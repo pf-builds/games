@@ -605,7 +605,7 @@
   // is cleared (save.js questOpen; past the last level, one at a time once all are cleared), shows its prize (a power-up
   // icon) until its first clear, which adds the prize to the inventory with a toast.
   const galIds = () => app.gal.map((e) => e.id), galAfter = () => app.gal.map((e) => (e.L.quest ? e.L.quest.after : 0)), picOpen = (e) => Save.questOpen(app.save.data, app.order, galIds(), galAfter(), e.id);
-  const galNext = () => Save.nextBy(app.save.data, galIds(), "gal", (id) => picOpen(app.byId.get(id)));
+  const openQs = () => { const ids = galIds(), af = galAfter(); return app.gal.filter((e) => Save.questOpen(app.save.data, app.order, ids, af, e.id)); }; // v5.1: the side quests open now
   function questPrize(e) { const q = e.L.quest, k = q ? E.POWERS.indexOf(q.prize) : -1; if (k < 0 || !Meta.gift(app.save.data, q.prize)) return; toast(fill(app.cfg.gallery.quests.prizeText, { name: pwName(k) })); }
   // A locked node (or button) shakes and says "blocked" (reduced motion: no shake).
   function lockedTap(b) { if (!app.V.calm && b.animate) b.animate(app.cfg.show.blockedShake.map((x) => ({ transform: "translateX(" + x + "px)" })), { duration: app.cfg.show.blockedShakeMs }); cue("blocked"); }
@@ -865,8 +865,6 @@
       g.fillRect(x * k, y * k, k, k);
     }
   }
-  // v5 R2: the first open side quest not cleared, or null (none open: the win sheet sends the player on to the next level).
-  function nextPicture() { const nx = app.byId.get(galNext()); return nx && !app.save.data.gal[nx.id] ? nx : null; }
 
   // ---- screens and levels --------------------------------------------------------------------------------------------
   function showScreen(name) {
@@ -964,6 +962,7 @@
     app.ending = { won: S.status === E.WON, reason: S.reason, m: S.failMat, crews: [], why: S.status === E.FAILED && S.reason === "jam" ? S.jamWhy : 0 }; app.endT = app.clock;
     if (S.reason === "jam") { app.ending.squads = []; for (const s of S.order(app.ord)) { if (!S.stuck(s)) continue; app.ending.squads.push([S.spM[s], S.spW[s]]); const c = mat(S.spM[s]).crew; if (app.ending.crews.indexOf(c) < 0) app.ending.crews.push(c); } cue("jam"); }
     // v4.3: a level is cleared or not (first: its first clear).
+    const q0 = app.ending.won && !app.entry.debug ? openQs() : null; // v5.1: the side quests open before this win (toMap pulses the ones it opens)
     if (app.ending.won && app.entry.debug) app.ending.first = false;
     else if (app.ending.won && app.entry.gallery) { app.ending.first = Save.record(app.save.data, app.entry.id, "gal"); if (app.ending.first) questPrize(app.entry); writeSave(); }
     else if (app.ending.won) { app.ending.first = Save.record(app.save.data, app.entry.id); app.save.data.last = Save.next(app.save.data, app.order); writeSave(); }
@@ -972,6 +971,7 @@
     const e = app.entry, rewarded = !e.debug && (e.gallery || e.idx >= 0);
     if (app.ending.won && rewarded) { app.report = Meta.recordWin(app.save.data, app.meta, e.id, app.diff, app.clock - app.t0, S.plays, app.ending.first); writeSave(); }
     else if (!app.ending.won && rewarded && app.meta.lives) { app.report = { lives: Meta.loseLife(app.save.data, app.meta, app.now()) }; writeSave(); }
+    app.fresh = q0 ? openQs().filter((e) => q0.indexOf(e) < 0) : null;
     app.pick = null; renderPowers();
     judge(); renderTray(); renderLine();
   }
@@ -1015,18 +1015,20 @@
   function showPanel() {
     const e = app.ending; if (!e) return;
     app.panel = e.won ? "win" : "fail"; app.panelAt = app.clock; renderCoach();
-    const last = app.entry.debug || app.entry.idx === app.levels.length - 1, G = app.cfg.gallery, gal = !!app.entry.gallery;
+    const G = app.cfg.gallery, gal = !!app.entry.gallery, toMapT = app.cfg.layout.toMap;
     const BS = e.won && !gal && app.entry.boss; // v5 R4 fix (S4): the boss's own win title, line and the crown recovered
     $("p-title").textContent = e.won ? (gal ? G.winTitle : BS ? BS.winTitle : "Fort razed!") : "Assault failed"; tagChip($("p-tag"), app.diff); // v4.3: the level's tag
     $("p-crown").hidden = !BS; $("panel").classList.toggle("boss", !!BS); if (BS) $("p-crown").setAttribute("aria-label", BS.crownAria);
     if (e.won) { $("p-line").textContent = BS ? (e.first ? BS.win : BS.winAgain) : gal ? fill(e.first ? G.winLine : G.winLineAgain, { title: app.entry.L.title }) : "The goblin king flees. " + (app.entry.debug ? app.entry.L.name : "Level " + app.entry.n) + (e.first ? " cleared." : " cleared again."); $("p-line").removeAttribute("aria-label"); } else sheetLine(e);
     reportPic(e.won && gal);
-    const np = gal && e.won ? nextPicture() : null, pp = $("p-primary"), nextE = e.won && !app.entry.debug ? (np || (gal || !last ? app.byId.get(Save.next(app.save.data, app.order)) : null)) : null;
-    pp.querySelector(".pl").textContent = e.won ? (np ? G.nextBtn : gal || !last ? "Next level" : app.cfg.layout.mapName) : "Retry"; // v5 R2: a side quest won goes on to the next open one, else back to the journey playTag(pp, nextE); // v4.3 fix (T1): the next level's tag
+    // v5.1 (playtesters, 2026-10-06): every win (a level, a side quest, the boss) goes back to the journey map, where the
+    // next node, a side quest just opened and the eggs in reach show (layout.toMap); a fail's main button is Retry.
+    const pp = $("p-primary"); pp.querySelector(".pl").textContent = e.won ? toMapT : "Retry"; playTag(pp, null);
     $("p-stats").querySelector(".coin").classList.remove("go");
-    $("p-secondary").textContent = e.won ? "Retry" : app.cfg.layout.mapName;
+    $("p-secondary").textContent = e.won ? "Retry" : toMapT; // v5.1: the fail sheet's way out reads the same
     reportRows(e); // v4.3: no medals; the report's rows and the tag
     contOffer(e); // v5 R1: a jam's sheet offers the continue
+    x2Offer(e); // v5.1 AD HOOK: the x2 reward (off)
     $("panel").hidden = false; placeSheet();
     cue(e.won ? "chime" : "bad"); if (e.won && e.first) cue("star", 2); if (BS) cue("star", BS.stars);
     judge(); renderTray(); renderLine();
@@ -1053,6 +1055,23 @@
     app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.report = null; $("panel").hidden = true; $("p-cont").hidden = true; hideToast();
     app.V.sync(app.S, true); cue("unlock"); renderAll(); renderPowers(); coachStep();
     return true;
+  }
+  // v5.1 AD HOOK, the x2 reward (config meta.double; its switch on is false until a rewarded-ad SDK is wired, so the button
+  // never shows yet). On a win that paid coins the button pays them once more after a rewarded ad (Meta.double: once per
+  // win; Retry's next win offers it again); the count on the sheet goes up to the doubled sum.
+  function x2Offer(e) {
+    const D = app.meta.double, R = app.report, b = $("p-x2"), on = !!D && D.on === true && e.won && !!R && R.coins > 0 && !R.dbl; b.hidden = !on; if (!on) return;
+    b.querySelector(".pl").textContent = D.btn; b.querySelector(".x2-say").textContent = D.ad; b.setAttribute("aria-label", D.btn + ": " + D.ad);
+  }
+  function onDouble() { const D = app.meta.double; if (app.panel !== "win" || !panelLive() || !D || D.on !== true || $("p-x2").hidden) return 0; return adReward(x2Run); }
+  // AD HOOK: the rewarded ad. No SDK yet: this stub grants at once (reachable only with meta.double.on, as in selfTest). An
+  // SDK shows its ad here and calls grant() from its reward callback (a skipped ad grants nothing).
+  function adReward(grant) { return grant(); }
+  function x2Run() {
+    const R = app.report, n = Meta.double(app.save.data, R); if (!n) return 0;
+    writeSave(); $("p-x2").hidden = true; cue("coin"); toast(fill(app.meta.double.toast, { n }));
+    const st = $("p-stats"), al = st.getAttribute("aria-label"); if (al) st.setAttribute("aria-label", al.replace(/\+\d+$/, "+" + (R.coins + n)));
+    return n;
   }
   // v4 M5, the level report on the win sheet: time, taps and coins (counting up in step()), with the best time and taps
   // underneath ("New best!" when beaten; the first win shows none); a fail with lives on adds the life it cost.
@@ -1091,13 +1110,25 @@
   // The coins count up on the sim clock (meta.report: countDelayMs, then countMs); a coin cue when they start.
   function countCoins() {
     const R = app.report, T = app.meta.report; if (!R || R.coins == null || app.panel !== "win") return;
-    const k = Math.max(0, Math.min(1, (app.clock - app.panelAt - T.countDelayMs) / T.countMs)), txt = "+" + Math.round(R.coins * k);
+    const k = Math.max(0, Math.min(1, (app.clock - app.panelAt - T.countDelayMs) / T.countMs)), txt = "+" + Math.round((R.coins + (R.dbl | 0)) * k); // v5.1: a doubled reward counts on to its sum
     if (txt !== app.countTxt) { if (app.countTxt === "+0" && k > 0) { cue("coin"); if (!app.V.calm) $("p-stats").querySelector(".coin").classList.add("go"); } app.countTxt = txt; $("p-coins").textContent = txt; } // v4.3 fix (m3): the coins burst as they start
   }
   // A panel button ignores taps for show.panelGuardMs after the panel appears, so a thumb still tapping cards can't hit it.
   const panelLive = () => app.clock - app.panelAt >= app.cfg.show.panelGuardMs || app.testing;
-  function panelPrimary() { if (!app.panel || !panelLive()) return; if (app.panel === "win") { if (app.entry.gallery) { const np = nextPicture(); startLevel(np ? np.id : Save.next(app.save.data, app.order)); } else if (app.entry.debug || app.entry.idx === app.levels.length - 1) showScreen("map"); else playNext(); } else retry(); }
-  function panelSecondary() { if (!app.panel || !panelLive()) return; if (app.panel === "win") retry(); else showScreen("map"); }
+  // v5.1: a win's main button and a fail's second go back to the map (toMap); Retry is the other.
+  function panelPrimary() { if (!app.panel || !panelLive()) return; if (app.panel === "win") toMap(); else retry(); }
+  function panelSecondary() { if (!app.panel || !panelLive()) return; if (app.panel === "win") retry(); else toMap(); }
+  // The map, scrolled to the current node (showScreen: map.curAt down); after a win the node just opened and any side quest
+  // that win opened (app.fresh) pulse (config map.fresh; none under reduced motion).
+  function toMap() { const q = app.fresh; app.fresh = null; showScreen("map"); return freshPulse(q); }
+  function freshPulse(qs) {
+    const F = app.cfg.map.fresh, J = app.jr; if (!F || !J || app.V.calm) return 0;
+    const f = JN.focus(app.save.data, app.order), fe = f && f !== "tail" ? app.byId.get(f) : null, tb = J.tail && !J.tail.b.hidden ? J.tail.b : null, els = [fe ? fe.node : tb];
+    for (const e of qs || []) els.push(e.node && e.node.isConnected ? e.node : J.tail && J.tail.e === e ? tb : null);
+    const k = []; for (let i = 0; i < F.pulses; i++) k.push({ transform: "scale(1)" }, { transform: "scale(" + F.scale + ")" }); k.push({ transform: "scale(1)" });
+    let n = 0; for (const b of els) { const el = b && b.querySelector(".bd, .qf"); if (el && el.animate) { el.animate(k, { duration: F.ms, easing: "ease-in-out" }); n++; } }
+    return n;
+  }
 
   // ---- teaching coach (config.teach) ---------------------------------------------------------------------------------
   // One line over the board and a bouncing arrow on the thing to tap: a front card, a card behind one, the holding line,
@@ -1333,6 +1364,7 @@
     $("p-primary").addEventListener("click", panelPrimary);
     $("p-secondary").addEventListener("click", panelSecondary);
     $("p-cont-buy").addEventListener("click", onContinue); // v5 R1
+    $("p-x2").addEventListener("click", onDouble); // v5.1 AD HOOK (off)
     togMute.forEach((b) => b.addEventListener("click", () => setMuted(!app.audio.muted, true)));
     togSpeed.forEach((b) => b.addEventListener("click", nextSpeed));
     $("sb-buy").addEventListener("click", () => buySpeed(true)); $("sb-no").addEventListener("click", () => buySpeed(false)); // v5 R1
@@ -1727,6 +1759,7 @@
         ok(chipsOK === true, "jam: the sheet shows one colour chip with its count per jammed squad, no crew names (" + chipsOK + ")");
         const sl = sheetClear(); ok(sl === true, "jam: the fail sheet leaves the jammed line in view (" + sl + ")");
         out.notes.jam = jp.e.id + " '" + jp.p.prefix + "' (sheet after " + (at ? Math.round(at.ms) : "?") + " ms)";
+        { const lb = $("p-secondary").textContent, hit = hitOK($("p-secondary")), x2 = $("p-x2").hidden; $("p-secondary").click(); ok(lb === LY.toMap && hit && x2 && app.screen === "map", "v5.1: the fail sheet's second button reads '" + lb + "' like the win's and goes back to the map; Retry stays its main button"); }
       }
       { const e = app.byId.get(ST.overlapLevel) || app.levels[app.levels.length - 1]; startLevel(e.id, "normal"); fillLine(); step(16); step(16);
         const liveBefore = app.V.live; retry();
@@ -1829,10 +1862,18 @@
       step(16); const kf = app.V.fxInfo();
       ok(falls > 0 && kf.keep && kf.shaking && app.V.gob.on && gobBusy === false && (app.cues.collapse | 0) === col0 + 1 && (app.cues.fanfare | 0) > 0, "win: the last blocks fall, the keep comes down once every sapper is home, one collapse, the fanfare");
       tick(8000);
-      ok(app.panel === "win" && hitOK($("p-primary")), "hit: the win panel's Next");
+      ok(app.panel === "win" && hitOK($("p-primary")) && $("p-primary").querySelector(".pl").textContent === LY.toMap, "hit: the win panel's '" + LY.toMap + "'");
       { const w = sheetClear(true); ok(w === true, "win: the sheet covers the whole holding line or none of it (" + w + ")"); }
       { const t0 = tagOf(app.levels[0]), want = (LY.tags || {})[t0] || "";
         ok(!document.querySelector(".medal") && !$("p-medals") && $("p-tag").textContent === want && $("p-tag").hidden === !want && $("p-tag").classList.contains("tag-" + t0) && /cleared\.$/.test($("p-line").textContent), "win (v4.3): the report shows the level's tag (" + (want || "Normal, unmarked") + ") and no medals; '" + $("p-line").textContent + "'"); }
+      // v5.1 (playtesters, 2026-10-06): the win sheet's main button goes back to the journey map, not on to the next level:
+      // the map opens with the next level's node (the current one) in view and pulsing (none under reduced motion); the
+      // AD HOOK's x2 button is not rendered (config meta.double.on is false).
+      { const x2off = app.meta.double.on === false && $("p-x2").hidden && !shown($("p-x2")); $("p-primary").click();
+        const f = JN.focus(app.save.data, app.order), ne = f && f !== "tail" ? app.byId.get(f) : null, nd = ne ? ne.node : app.jr.tail && !app.jr.tail.b.hidden ? app.jr.tail.b : null, q = $("jr").getBoundingClientRect(), r = nd ? nd.getBoundingClientRect() : null; // the next level, or (all cleared) the long tail's node
+        const inView = !!r && r.top >= q.top && r.bottom <= q.bottom && r.left >= q.left && r.right <= q.right, pulse = !!nd && nd.querySelector(".bd, .qf").getAnimations().length > 0;
+        ok(x2off && app.screen === "map" && !!nd && (!ne || nd.classList.contains("cur")) && inView && (app.V.calm ? !pulse : pulse) && hitOK($("map-play")),
+          "v5.1: off, the x2 button is not rendered; the win's '" + LY.toMap + "' opens the map with the next node (" + (ne ? "level " + ne.n : f) + ") in view" + (app.V.calm ? " (reduced motion: no pulse)" : ", pulsing") + "; map Play hittable"); }
       // 12. Pause: nothing moves and the sheet takes the tap; one tap resumes with no jump in time and no card played.
       startLevel(app.levels[0].id, "normal");
       pause(); const pc = app.clock; advance(1000); advance(1600);
@@ -1861,6 +1902,7 @@
         startLevel(id); const nm = $("lvl-name").textContent; patient(winOf(e)); settleNow(); tick(9000); const ln = $("p-line").textContent;
         ok(nm === BS.name && app.panel === "win" && $("p-title").textContent === BS.winTitle && (ln === BS.win || ln === BS.winAgain) && shown($("p-crown")) && hitOK($("p-primary")) && hitOK($("p-secondary")),
           "boss " + id + ": the top bar reads '" + nm + "'; the win sheet '" + $("p-title").textContent + "', '" + ln + "', the crown shown, its buttons hittable");
+        { const lb = $("p-primary").querySelector(".pl").textContent; $("p-primary").click(); ok(lb === LY.toMap && app.screen === "map", "v5.1: the boss's win ('" + BS.winTitle + "') goes back to the map like every win ('" + lb + "')"); }
         startLevel(app.levels[0].id); ok($("p-crown").hidden || $("panel").hidden, "boss " + id + ": the crown is the boss's alone"); }
       // 13. The teaching coach: each script shows its first line and its arrow at load, only moves forward on the stored
       // order (played patiently), and is gone at the win; a player who follows the arrow sees every step.
@@ -2129,7 +2171,13 @@
         { const k0 = app.cues.blocked | 0; jrTo(q0); q0.click();
           ok(q0.classList.contains("locked") && q0.getAttribute("aria-disabled") === "true" && shown(q0.querySelector(".qp")) && !shown(q0.querySelector(".prz")) && app.screen === "map" && (app.cues.blocked | 0) === k0 + 1 && q0.getAttribute("aria-label").indexOf(fill(GC.lockedAria, { n: 1, after: a0 })) === 0,
             "map quests: on a new save picture 1's node is locked with its prize icon; a tap shakes and starts nothing ('" + q0.getAttribute("aria-label") + "')"); }
-        for (let i = 0; i < a0; i++) Save.record(app.save.data, app.order[i]); showScreen("map");
+        // v5.1: level a0 won through play; its sheet's main button goes back to the map, where picture 1 has just opened:
+        // its node and prize bubble in view, pulsing (none under reduced motion).
+        for (let i = 0; i < a0 - 1; i++) Save.record(app.save.data, app.order[i]);
+        { const la = app.byId.get(app.order[a0 - 1]); startLevel(la.id); patient(winOf(la)); settleNow(); tick(9000); const pw = app.panel === "win"; $("p-primary").click();
+          const q = $("jr").getBoundingClientRect(), r = q0.getBoundingClientRect(), pr = q0.querySelector(".prz").getBoundingClientRect(), pulse = q0.querySelector(".qf").getAnimations().length > 0;
+          ok(pw && app.screen === "map" && q0.classList.contains("open") && r.top >= q.top && r.bottom <= q.bottom && pr.top >= q.top && pr.bottom <= q.bottom && (app.V.calm ? !pulse : pulse),
+            "v5.1: winning level " + a0 + " and going back to the map shows picture 1 just opened, its node and prize bubble in view" + (app.V.calm ? " (reduced motion: no pulse)" : ", pulsing")); }
         { const prz = q0.querySelector(".prz"); jrTo(q0);
           ok(q0.classList.contains("open") && q0.classList.contains("next") && shown(prz) && prz.querySelector(".pi").style.backgroundImage.indexOf("url(") === 0 && hitOK(q0) && q0.getAttribute("aria-label").indexOf(fill(GC.nextAria, { n: 1 })) === 0 && app.gal[1].node.classList.contains("locked"),
             "map quests: with level " + a0 + " cleared picture 1 opens (gold ring, prize bubble, hittable); picture 2 stays locked"); }
@@ -2138,8 +2186,7 @@
         Save.record(app.save.data, app.order[app.gal[1].L.quest.after - 1]);
         const pz = e0.L.quest.prize, inv0 = app.save.data.inv[pz] | 0;
         startLevel(e0.id); patient(winOf(e0)); settleNow(); const tx0 = $("toast").textContent; tick(9000);
-        const nx = nextPicture();
-        ok(app.panel === "win" && $("p-title").textContent === GC.winTitle && $("p-primary").querySelector(".pl").textContent === GC.nextBtn && app.save.data.gal[e0.id] === 1 && !app.save.data.done[e0.id] && hitOK($("p-primary")) && (app.save.data.inv[pz] | 0) === inv0 + 1 && tx0 === fill(GC.quests.prizeText, { name: pwName(E.POWERS.indexOf(pz)) }),
+        ok(app.panel === "win" && $("p-title").textContent === GC.winTitle && $("p-primary").querySelector(".pl").textContent === LY.toMap && app.save.data.gal[e0.id] === 1 && !app.save.data.done[e0.id] && hitOK($("p-primary")) && (app.save.data.inv[pz] | 0) === inv0 + 1 && tx0 === fill(GC.quests.prizeText, { name: pwName(E.POWERS.indexOf(pz)) }),
           "map quests: a picture won goes in the save's gal, pays its prize (+1 " + pz + ", toast '" + tx0 + "'), the sheet says '" + $("p-title").textContent + "' and offers '" + $("p-primary").textContent + "'");
         { for (const an of $("panel").firstElementChild.getAnimations()) an.finish(); const pc = $("p-pic").firstElementChild, pr = pc.getBoundingClientRect(), cr = $("panel").firstElementChild.getBoundingClientRect(), cols = px(pc), cell = pr.height / (e0.L.h - 2), sc = sheetClear(true);
           out.notes.reportPic = Math.round(pr.width) + "x" + Math.round(pr.height) + " CSS px, " + cell.toFixed(2) + " a cell";
@@ -2147,8 +2194,8 @@
           if (onStage) out.notes.reportPic = "over the board, " + Math.round(spr.width) + "x" + Math.round(spr.height) + " CSS px";
           ok((shown($("p-pic")) ? pr.top >= cr.top && pr.bottom <= cr.bottom : onStage && spr.left >= fr.left && spr.right <= fr.right && spr.top >= fr.top && spr.bottom <= fr.bottom) && $("p-line").textContent === fill(GC.winLine, { title: e0.L.title }) && [...scol].every((c) => pal0.has(c)) && scol.size === pal0.size && cr.top >= -0.5 && cr.bottom <= innerHeight + 0.5 && sc === true && hitOK($("p-primary")) && hitOK($("p-secondary")),
             "gallery (Critics 2 fix, V2): the win shows the finished picture (" + out.notes.reportPic + ", all " + scol.size + " of its colours) on the sheet (or over the razed board where the sheet has no room), and the sheet fits the screen; '" + $("p-line").textContent + "' (" + sc + ")"); }
-        $("p-primary").click(); ok(app.entry === nx && nx === app.gal[1] && app.screen === "play", "map quests: Next picture opens the next one, open now (" + nx.id + ")");
-        $("btn-map").click(); const col = px(q0.querySelector("canvas"));
+        $("p-primary").click(); ok(app.screen === "map" && q0.classList.contains("won") && app.gal[1].node.classList.contains("open"), "v5.1: a side quest's win goes back to the map too (not on to picture 2): picture 1 shows won, picture 2 waits open");
+        startLevel(app.gal[1].id); $("btn-map").click(); const col = px(q0.querySelector("canvas"));
         ok(app.screen === "map" && q0.classList.contains("won") && !shown(q0.querySelector(".prz")) && shown(q0.querySelector("canvas")) && [...col].every((c) => pal0.has(c)) && q0.getAttribute("aria-label").indexOf(e0.L.title + ", cleared") === 0,
           "map quests: the top bar's button goes back to the map; the won node shows the finished picture in its own colours (" + col.size + "), no prize bubble");
         { const inv1 = app.save.data.inv[pz] | 0; jrTo(q0); q0.click(); const re = app.entry === e0 && app.screen === "play"; patient(winOf(e0)); settleNow(); tick(9000);
@@ -2341,7 +2388,19 @@
           const firstEm = $("p-stats").children[0].querySelector("em").textContent; startLevel(e.id); patient(o.slice(0, -1)); tick(2000); playCol(+o[o.length - 1]); settleNow(); for (let t = 0; t < 12000 && !app.panel; t += 16) step(16);
           const R2 = app.report, b = Meta.bestOf(app.save.data, e.id);
           ok(R2.coins === Meta.winCoins(MT, "hard", false) && R2.newMs && !R2.newTaps && $("p-stats").children[0].querySelector("em").textContent === MT.report.newBest && $("p-stats").children[1].querySelector("em").textContent === fill(MT.report.best, { v: R.taps }) && b[0] === R2.ms && b[1] === R.taps && firstEm === MT.report.first && $("p-stats").children[2].querySelector("em").textContent === "",
-            "report (again): +" + R2.coins + " (no first-clear bonus); faster: '" + MT.report.newBest + "'; taps tied: '" + $("p-stats").children[1].querySelector("em").textContent + "'; the save keeps the best of each"); }
+            "report (again): +" + R2.coins + " (no first-clear bonus); faster: '" + MT.report.newBest + "'; taps tied: '" + $("p-stats").children[1].querySelector("em").textContent + "'; the save keeps the best of each");
+          // v5.1 AD HOOK, the x2 reward. Off (config meta.double.on false) the win sheet renders no x2 button. Switched on (a
+          // copy of meta, this test only) a paid win shows it, hittable; a tap goes through adReward's stub and pays the
+          // level's coins once more (the count runs on to the doubled sum); a second tap or call pays nothing; Retry's next
+          // win offers it again.
+          { const off = app.meta.double.on === false && $("p-x2").hidden && !shown($("p-x2")), m0 = app.meta, bt = $("p-x2"), win = () => { patient(o.slice(0, -1)); tick(2000); playCol(+o[o.length - 1]); settleNow(); for (let t = 0; t < 12000 && !app.panel; t += 16) step(16); };
+            app.meta = Object.assign({}, m0, { double: Object.assign({}, m0.double, { on: true }) });
+            try { startLevel(e.id); win(); const R4 = app.report, c0 = coins(), on = shown(bt) && hitOK(bt) && bt.querySelector(".pl").textContent === m0.double.btn && sheetClear(true) === true;
+              bt.click(); const c1 = coins(), gone = bt.hidden, tx1 = tx(), again = onDouble(); bt.click(); for (let t = 0; t < MT.report.countDelayMs + MT.report.countMs + 48; t += 16) step(16);
+              const tw = $("p-coins").textContent; retry(); win(); const re = shown(bt);
+              ok(off && on && c1 === c0 + R4.coins && R4.dbl === R4.coins && gone && again === 0 && coins() === c1 + app.report.coins && tw === "+" + 2 * R4.coins && tx1 === fill(m0.double.toast, { n: R4.coins }) && re,
+                "v5.1 AD HOOK: off, no x2 button; on (test only), the win shows '" + m0.double.btn + "', a tap pays +" + R4.coins + " once more (count " + tw + ", toast '" + tx1 + "'), a second pays nothing; Retry's win offers it again"); }
+            finally { app.meta = m0; } } }
         if (app.byId.has("v4-linked")) { const c0 = coins(); startLevel("v4-linked"); patient(winOf(app.entry)); settleNow(); for (let t = 0; t < 12000 && !app.panel; t += 16) step(16); ok(app.panel === "win" && coins() === c0 && $("p-stats").hidden, "report: a debug level earns nothing and shows no report rows"); }
         if (app.gal.length) { const g = app.gal[0], c0 = coins(); startLevel(g.id); patient(winOf(g)); settleNow(); for (let t = 0; t < 12000 && !app.panel; t += 16) step(16);
           ok(app.panel === "win" && coins() === c0 + Meta.winCoins(MT, tagOf(g), true) && !$("p-stats").hidden && Meta.bestOf(app.save.data, g.id)[1] === app.report.taps, "report: a Gallery picture gets the same report (+" + app.report.coins + " coins, best kept per picture)"); }

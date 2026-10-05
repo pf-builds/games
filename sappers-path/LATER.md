@@ -324,3 +324,8 @@ Fixed: S1-S7, m2, m3, N1, N2 (`tools/v5-r4-notes.md` §10). Parked:
 - The desktop next-up card's Play wraps to two lines (every level, the boss too); a smaller label or a wider card.
 - A towers' "ember accent" in their own colour: no further colour fits the gate on 10-12-colour boards; a lit slit drawn by the board (not a block colour) would do it.
 
+
+## From v5.1 (a win goes back to the map, 2026-10-06)
+- selfTest under reduced motion (`prefers-reduced-motion: reduce`) fails 3 checks that existed before v5.1 (gate show, refused shake, win collapse): they expect a shake that calm mode leaves out. Make those checks calm-aware, as the newer ones are.
+- On a 1280x720 desktop, the side quest that a mid-campaign win opens (e.g. level 40's) sits near the bottom edge of the map column. It is in view, but a scroll that also frames the just-opened quest would show it better.
+- When a rewarded-ad SDK is wired: point `adReward` at it for both the x2 reward and the continue (`#p-cont-ad`), and switch `meta.double.on` on.

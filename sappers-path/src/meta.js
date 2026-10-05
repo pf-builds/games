@@ -60,6 +60,9 @@
   // v5 R3, an easter egg on the journey map: the first tap of egg id pays coins (sanity-capped) and marks it found in the
   // save; any later tap pays nothing. Returns the coins paid.
   function egg(data, id, coins) { data.eggs = data.eggs || {}; if (data.eggs[id] === 1) return 0; const n = clampInt(coins, 0, 999); data.eggs[id] = 1; data.coins = clampInt((data.coins | 0) + n, 0, MAXCOINS); return n; }
+  // v5.1, the x2 reward (meta.double; AD HOOK, off until a rewarded ad is wired): pays a win's coins (report from
+  // recordWin) once more, once per win (report.dbl marks it). Returns the coins added (0: already doubled, or none to double).
+  function double(data, report) { if (!report || report.dbl || !(report.coins > 0)) return 0; const was = data.coins | 0; data.coins = clampInt(was + report.coins, 0, MAXCOINS); report.dbl = data.coins - was; return report.dbl; }
   function take(data, k) { const n = data.inv[POWERS[k]] | 0; if (n <= 0) return false; data.inv[POWERS[k]] = n - 1; return true; }
 
   // Lives at time now (refilled lazily into data.lives): {on, n, max, nextMs (ms to the next life; 0 when full)}.
@@ -84,5 +87,5 @@
   // m:ss (or h:mm:ss) for a time in ms, rounded up to the second for countdowns (up) or down for results.
   function clock(ms, up) { const t = Math.max(0, up ? Math.ceil(ms / 1000) : Math.floor(ms / 1000)), h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60; return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(s).padStart(2, "0"); }
 
-  return { DIFFS, POWERS, MAXCOINS, MAXINV, MAXMS, MAXTAPS, BEST, winCoins, recordWin, bestOf, buy, spend, take, gift, egg, unlockAt, isOpen, grant, lives, loseLife, canStart, clock, powerOf };
+  return { DIFFS, POWERS, MAXCOINS, MAXINV, MAXMS, MAXTAPS, BEST, winCoins, recordWin, bestOf, buy, spend, take, gift, egg, double, unlockAt, isOpen, grant, lives, loseLife, canStart, clock, powerOf };
 });
