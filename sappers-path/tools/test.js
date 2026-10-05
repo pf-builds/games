@@ -333,7 +333,7 @@ const ARCH = (cols) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "
   eq([LEVELS.levels.length, LEVELS.levels.every((L, i) => L.n === i + 1)], [NL, true], "levels: " + NL + " levels baked, in order (v4 M3: the Siege to 100)");
   // v4 M3: every era present, Era 4 from 76; every stored Normal line inside the dead-time cap and the tap cap.
   const eras = [...new Set(LEVELS.levels.map((L) => L.era))], BC = require("./bake-config.json");
-  eq(eras.join(","), "1,2,3,4,5", "levels (v5 R2): five realms, The Mistmoor from level 100 (each level's era is its realm: the tags check)");
+  eq(eras.join(","), "1,2,3,4,5,6,7,8", "levels (v5 R4): eight realms, The Mistmoor from 100, Emberwatch Crags 125, The Shrouded Weald 150, The Goblin King's Throne 175-200 (each level's era is its realm: the tags check)");
   let dead = 0, longest = 0; for (const L of LEVELS.levels) { const ln = Gr.line(E.compile(L), RULES[L.tag], L.win[L.tag]); longest = Math.max(longest, ln.maxWait); if (ln.maxWait > BC.maxWaitMs || L.win[L.tag].length > BC.maxTaps) dead++; }
   eq(dead, 0, "levels: every stored line (on its tag) keeps every tap under " + BC.maxWaitMs / 1000 + " s (longest " + (longest / 1000).toFixed(1) + " s) and " + BC.maxTaps + " taps");
 }
@@ -359,7 +359,7 @@ const ARCH = (cols) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "
 // generated pictures, the median share of sampled picture cells whose colours match is variety.maxMedian or under.
 {
   const VAR = require("./variety.js"), VC = require("./bake-config.json").variety, R = VAR.eraReport(LEVELS.levels, VC);
-  ok(Object.keys(R).length === 4 && Object.values(R).every((v) => v.median <= VC.maxMedian), "variety: every era's median picture-cell match is " + VC.maxMedian + " or under (" + Object.keys(R).map((e) => "era " + e + " " + R[e].median).join(", ") + ")");
+  ok(Object.keys(R).length === 8 && Object.values(R).every((v) => v.median <= VC.maxMedian), "variety: every era's median picture-cell match is " + VC.maxMedian + " or under (" + Object.keys(R).map((e) => "era " + e + " " + R[e].median).join(", ") + ")");
 }
 
 // ---- v4.2: full-screen boards from level 26, real pace ------------------------------------------------------------------
@@ -368,7 +368,7 @@ const ARCH = (cols) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "
 // sooner than thinkMs after the tap before.
 {
   const BC = require("./bake-config.json"), PC = BC.duration.pace, R2 = require("./grade.js"), N2 = E.rulesOf(V3, "normal"), bad = [];
-  for (const L of LEVELS.levels) { if (L.n < PC.from || L.source === "teaching") continue; const g = Object.assign({}, BC.eras[L.era].gen, L.n === BC.boss.n ? BC.boss.gen : {}); if (L.w !== g.w[1] + 2 || L.h !== g.h[1] + 2) bad.push(L.id + " " + L.w + "x" + L.h); }
+  for (const L of LEVELS.levels) { if (L.n < PC.from || L.source === "teaching") continue; const g = Object.assign({}, BC.eras[L.era].gen, L.n === BC.boss.n ? BC.boss.gen : {}, BC.bosses && BC.bosses[L.n] ? BC.bosses[L.n].gen : {}); if (L.w !== g.w[1] + 2 || L.h !== g.h[1] + 2) bad.push(L.id + " " + L.w + "x" + L.h); }
   eq(bad, [], "v4.2: every generated level from " + PC.from + " is its era's full-screen board (" + (BC.eras[4].gen.w[1] + 2) + "x" + (BC.eras[4].gen.h[1] + 2) + ")");
   const L = LEVELS.levels.find((l) => l.n >= PC.from && l.source !== "teaching" && l.tag === "normal"), B = E.compile(L), o = L.win.normal, p0 = R2.pace(B, N2, o, 0), pl = R2.line(B, N2, o), pt = R2.pace(B, N2, o, 20000);
   ok(p0.won && p0.taps === o.length && p0.ms <= pl.ms, "pace: " + L.id + "'s stored Normal order replayed at real pace wins in " + o.length + " taps, no slower than patient play (" + p0.ms + " <= " + pl.ms + " ms)");
@@ -377,8 +377,8 @@ const ARCH = (cols) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "
   // v4.3: every level's real pace on its own tag; a Hard level whose archers stand was dealt rushed, so its stored order
   // also wins at real pace (a Hard kill leaves its colour short).
   const lost = LEVELS.levels.filter((l) => l.n >= PC.from && l.grade[l.tag].pace && l.grade[l.tag].pace.fell).map((l) => l.id);
-  const rushed = LEVELS.levels.filter((l) => l.tag === "hard" && l.towers && l.towers.length && !l.safeArchers && l.source !== "teaching");
-  eq([lost, rushed.filter((l) => !l.rush || !R2.pace(E.compile(l), RULES.hard, l.win.hard, 0).won).map((l) => l.id)], [[], []], "v4.3 pace: every level's stored order wins at real pace on its tag; the " + rushed.length + " Hard levels with archers were dealt rushed and win at real pace");
+  const rushed = LEVELS.levels.filter((l) => l.rush); // v5 R2: rushHard is off (archers never kill), so no level is dealt rushed now
+  eq([lost, rushed.filter((l) => !R2.pace(E.compile(l), RULES[l.tag], l.win[l.tag], 0).won).map((l) => l.id)], [[], []], "v4.3 pace: every level's stored order wins at real pace on its tag (" + rushed.length + " dealt rushed)");
 }
 
 // ---- v4.3: one fixed tag per level (tools/tags.js; bake-config tags, gallery-config bake.tags) ------------------------------
@@ -390,15 +390,25 @@ const ARCH = (cols) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "
   const mix = (ls) => TG.TAGS.map((t) => ls.filter((l) => l.tag === t).length);
   defer("tags: the realm schedule, the mix, realm ends and openers, density", () => {
     eq([LEVELS.levels.every((l) => l.tag === TG.tagOf(l.n, BC.tags, l.source === "teaching")), GL.every((l) => l.tag === TG.tagOf(l.n, GB.tags, false))], [true, true], "tags: every level carries its schedule's tag");
-    const [e, n, h] = mix(LEVELS.levels), [ge, gn, gh] = mix(GL);
+    const [e, n, h] = mix(LEVELS.levels.slice(0, 100)), [ge, gn, gh] = mix(GL); // v5 R4: the 1-100 mix as shipped (101-200 below)
     ok(Math.abs(e / 100 - 0.15) <= 0.03 && Math.abs(n / 100 - 0.6) <= 0.03 && Math.abs(h / 100 - 0.25) <= 0.03 && Math.abs(ge / 60 - 0.15) <= 0.05 && Math.abs(gn / 60 - 0.6) <= 0.05 && Math.abs(gh / 60 - 0.25) <= 0.05,
       "tags: the mix is about 15% Easy, 60% Normal, 25% Hard (Siege " + [e, n, h].join("/") + ", Gallery " + [ge, gn, gh].join("/") + ")");
-    const R = BC.tags.realms.filter((r) => r[0] <= LEVELS.levels.length), ends = R.filter((r) => r[1] <= LEVELS.levels.length).map((r) => LEVELS.levels[r[1] - 1].tag), opens = R.filter((r) => r[0] > 1).map((r) => LEVELS.levels[r[0] - 1]);
-    const hards = LEVELS.levels.filter((l) => l.tag === "hard").map((l) => l.n), gaps = hards.slice(1).map((x, i) => x - hards[i]).filter((g) => g > 1);
-    eq([ends.every((t) => t === "hard"), opens.every((l) => l.tag === "easy" && l.source === "teaching"), LEVELS.levels.filter((l) => l.source === "teaching").every((l) => l.tag !== "hard"), Math.max(...gaps) <= 6, LEVELS.levels.every((l) => l.era === BC.tags.realms.findIndex((r) => l.n >= r[0] && l.n <= r[1]) + 1)],
-      [true, true, true, true, true], "tags: every realm ends on a Hard level and opens with an Easy teaching level; teaching levels are Easy or Normal; Hard comes every 3-6 levels (longest gap " + Math.max(...gaps) + "); each level's era is its realm");
+    const R = BC.tags.realms.filter((r) => r[0] <= LEVELS.levels.length), ends = R.filter((r) => r[1] <= LEVELS.levels.length).map((r) => LEVELS.levels[r[1] - 1].tag), opens = R.filter((r) => r[0] > 1 && r[0] <= 150).map((r) => LEVELS.levels[r[0] - 1]); // v5 R4: 175 opens on the cycle (no new feature)
+    const hards = LEVELS.levels.filter((l) => l.tag === "hard" || l.tag === "extreme").map((l) => l.n), gaps = hards.slice(1).map((x, i) => x - hards[i]).filter((g) => g > 1);
+    eq([ends.every((t) => t === "hard" || t === "extreme"), opens.every((l) => l.tag === "easy" && l.source === "teaching"), LEVELS.levels.filter((l) => l.source === "teaching").every((l) => l.tag !== "hard"), Math.max(...gaps) <= 6, LEVELS.levels.every((l) => l.era === BC.tags.realms.findIndex((r) => l.n >= r[0] && l.n <= r[1]) + 1)],
+      [true, true, true, true, true], "tags: every realm ends on a Hard (from 149 Extreme) level and opens with an Easy teaching level (to 150); teaching levels are Easy or Normal; Hard or Extreme comes every 3-6 levels (longest gap " + Math.max(...gaps) + "); each level's era is its realm");
     const bad = LEVELS.levels.filter((l) => !TG.densityOK(l.n, l.tag, l, DN, l.source === "teaching")).map((l) => l.n + " " + l.tag + " [" + TG.featuresOf(l).join(",") + (l.lock ? ",lock" : "") + "]");
-    eq(bad, [], "density (v5 R2): no feature before its milestone; Easy uses at most " + DN.easyMax + ", Normal at least " + DN.normalMin + " (once unlocked), Hard every unlocked feature and from " + DN.lockFrom + " the lock; teaching levels use their lesson");
+    eq(bad, [], "density (v5 R2): no feature before its milestone; Easy uses at most " + DN.easyMax + ", Normal at least " + DN.normalMin + " (once unlocked), Hard every unlocked feature and from " + DN.lockFrom + " the lock (v5 R4: from " + DN.extremeFrom + " all but " + DN.hardSlack + "), Extreme every one and the lock; teaching levels use their lesson");
+    // v5 R4: levels 101-200 by realm: the ladder's features arrive at their milestones (towers 125, mystery blocks 150) and
+    // every realm uses them; Extreme only from 125; a couple of Easy breathers a realm; 200 is the boss, Extreme.
+    const rs = [[101, 124], [125, 149], [150, 174], [175, 200]].map(([a, b]) => LEVELS.levels.filter((l) => l.n >= a && l.n <= b)), cnt = (ls, t) => ls.filter((l) => l.tag === t).length, use = (ls, k) => ls.filter((l) => TG.featuresOf(l).indexOf(k) >= 0).map((l) => l.n);
+    eq([use(rs[0], "tower").length, use(rs[0].concat(rs[1]), "hidden").length, cnt(rs[0], "extreme"), rs.map((ls) => cnt(ls, "easy") >= 2), use(rs[1], "tower").length > 12, use(rs[2], "hidden").length > 12, use(rs[3], "hidden").length > 12, use(rs[3], "tower").length > 12, rs.slice(1).map((ls) => cnt(ls, "extreme") >= 3), LEVELS.levels[199].tag],
+      [0, 0, 0, [true, true, true, true], true, true, true, true, [true, true, true], "extreme"], "density (v5 R4): no tower before 125, no mystery block before 150, no Extreme before 125; 2+ Easy a realm; towers and mystery blocks used through their realms; 3+ Extreme a realm from 125; 200 Extreme (mixes " + rs.map((ls) => TG.TAGS.map((t) => cnt(ls, t)).join("/")).join(", ") + ")");
+    // v5 R4: the two new lessons, Easy, with their coach (config.json teach): 125 towers (the coach card is the tower's
+    // colour, then the Volley's badge), 150 mystery blocks.
+    const T1 = LEVELS.levels[124], T2 = LEVELS.levels[149], CT = require("../config.json").teach, c1 = CT[T1.id] || [], c2 = CT[T2.id] || [];
+    eq([T1.id, T1.source, T1.teaches, T1.tag, c1.length > 1 && c1[0].card === E.compile(T1).towers[0].m && c1[0].ring === "tower", c1.some((s) => s.power === "volley"), T2.id, T2.source, T2.teaches, T2.tag, c2.length > 1, TG.featuresOf(T2).indexOf("hidden") >= 0 && E.compile(T2).nhid > 0],
+      ["e6-125", "teaching", "tower", "easy", true, true, "e7-150", "teaching", "hidden", "easy", true, true], "teaching (v5 R4): 125 teaches archer towers (coach card the tower's colour, its ring, then the Volley's badge) and 150 mystery blocks, both Easy");
   });
 }
 
@@ -1302,6 +1312,15 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
     "side quests: a picture opens once its main level is cleared (optional, never blocking); past the last level they open once all are cleared, one at a time; nextBy finds the first open one not cleared");
   const G = Save.fresh(META); G.inv.recall = 98; eq([Meta.gift(G, "scout"), G.inv.scout, Meta.gift(G, "recall"), Meta.gift(G, "recall"), G.inv.recall, Meta.gift(G, "nope")], [true, 1, true, false, 99, false], "side quests: a prize adds one use (capped at 99; unknown ids refused)");
   defer("side quests: every Gallery picture carries its quest", () => { const GL = require("../levels/gallery.json").levels; eq(GL.map((l) => l.quest), q, "side quests: levels/gallery.json carries each picture's quest {after, prize} as tools/quests.js deals them"); });
+  // v5 R4: pictures 26-50 sit after levels 104-200, which now exist; they open off them one by one. 51-60 (after 203-240)
+  // are the long tail: they wait until all 200 levels are cleared, then open one at a time.
+  const GL4 = require("../levels/gallery.json").levels, ord = LEVELS.levels.map((l) => l.id), gid = GL4.map((l) => l.id), aft = GL4.map((l) => l.quest.after), R4 = Save.fresh(META), qo = (i) => Save.questOpen(R4, ord, gid, aft, gid[i]);
+  for (let i = 0; i < 100; i++) R4.done[ord[i]] = 1;
+  const mid = gid.map((id, i) => i).filter((i) => aft[i] > 100 && aft[i] <= ord.length), tailI = gid.map((id, i) => i).filter((i) => aft[i] > ord.length), r0 = mid.map(qo);
+  for (let i = 100; i < 150; i++) R4.done[ord[i]] = 1; const r1 = mid.map(qo), t1 = tailI.map(qo); for (const id of ord) R4.done[id] = 1; const r2 = mid.map(qo), t2 = tailI.map(qo);
+  eq([mid.map((i) => i + 1), [aft[mid[0]], aft[mid[mid.length - 1]]], r0.some(Boolean), r1.filter(Boolean).length, mid.filter((i) => aft[i] <= 150).length, t1.some(Boolean), r2.every(Boolean), tailI.map((i) => i + 1), t2],
+    [Array.from({ length: 25 }, (_, k) => k + 26), [104, 200], false, mid.filter((i) => aft[i] <= 150).length, mid.filter((i) => aft[i] <= 150).length, false, true, Array.from({ length: 10 }, (_, k) => k + 51), [true].concat(Array(9).fill(false))],
+    "side quests (v5 R4): pictures 26-50 open off levels 104-200 as each is cleared (shut with 1-100 cleared, open through 150 with 1-150); 51-60 are the long tail: shut until all 200 are cleared, then one at a time");
 }
 
 // ---- v5 R3: the journey map (src/journey.js; meta.js egg; the save's eggs; config map against map/layout.json) -----------------
@@ -1324,14 +1343,14 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   // The long tail: nothing until all levels are cleared; then one node, the first picture past the last level, then the next.
   const T = Save.fresh(META), t0 = J.tail(T, order, gids, after); for (const id of order) T.done[id] = 1; const t1 = J.tail(T, order, gids, after);
   T.gal[t1.next] = 1; const t2 = J.tail(T, order, gids, after);
-  eq([t0.ids.length, t0.next, t1.next, t2.next, t2.won, J.focus(T, order)], [gids.length - 25, null, t0.ids[0], t0.ids[1], [t0.ids[0]], "tail"], "map long tail: " + t0.ids.length + " pictures past level " + order.length + "; none open until every level is cleared, then one at a time; the won ones are kept for replay; the map centres on the fog node");
+  eq([t0.ids.length, t0.next, t1.next, t2.next, t2.won, J.focus(T, order)], [after.filter((a) => a > order.length).length, null, t0.ids[0], t0.ids[1], [t0.ids[0]], "tail"], "map long tail: " + t0.ids.length + " pictures past level " + order.length + "; none open until every level is cleared, then one at a time; the won ones are kept for replay; the map centres on the fog node");
   // The route: walked and ahead share the cut sample.
   const R = [[0, 10], [1, 9], [2, 8], [3, 7]], sp = J.split(R, 2);
   eq([sp, J.split(R, -1)[0], J.split(R, 3)[1], J.nearest(R, 2.2, 7.9)], [["M0 10L1 9L2 8", "M2 8L3 7"], "", "", 2], "map route: the road splits at the current node's sample (walked, ahead); nearest finds the sample");
   // The layout and config agree: every level 1-100 has one spot, in order; quests 1-25 sit after their main levels with
   // their prizes; two eggs a sheet, each a known kind paying 10-15; bridges on real road samples, clear of every node.
   const lv = LAY.sheets.flatMap((s) => s.levels.map((l) => l.n)), qv = LAY.sheets.flatMap((s) => s.quests);
-  eq([lv.length, lv.every((n, i) => n === i + 1), LAY.sheets.length, LAY.step, LAY.overlap], [order.length, true, 13, 1264, 80], "map layout: every level 1-" + order.length + " has one spot, in order, on 13 sheets 1264 px apart");
+  eq([lv.length <= order.length, lv.every((n, i) => n === i + 1), LAY.sheets.length, LAY.step, LAY.overlap], [true, true, 13, 1264, 80], "map layout: levels 1-" + lv.length + " have one spot each, in order, on 13 sheets 1264 px apart" + (lv.length < order.length ? " (v5 R4: " + (lv.length + 1) + "-" + order.length + " wait for the R4 map's sheets)" : ""));
   eq(qv.map((q) => [q.q, q.id, q.after, q.prize]), GL.slice(0, qv.length).map((l, i) => [i + 1, l.id, l.quest.after, l.quest.prize]), "map layout: side quests 1-" + qv.length + " match levels/gallery.json (ids, main levels, prizes)");
   const eggs = LAY.sheets.flatMap((s) => s.eggs.map((e, i) => ({ s: s.sheet, i, kind: e.kind, c: J.eggCoins(MC, s.sheet, i) })));
   ok(LAY.sheets.every((s) => s.eggs.length === 2) && eggs.every((e) => J.EGG_KINDS.indexOf(e.kind) >= 0 && e.c >= 10 && e.c <= 15 && MC.text.eggs[e.kind]), "map eggs: two a sheet (" + eggs.length + "), each a drawn kind with names, paying 10-15 coins (" + eggs.reduce((a, e) => a + e.c, 0) + " in all)");
@@ -1361,10 +1380,10 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   v43.forEach((id, i) => { raw43.done[id] = 1; raw43.best[id] = [30000 + i, 20 + (i % 9), 45]; }); gids.slice(0, 25).forEach((id) => { raw43.gal[id] = 1; raw43.best[id] = [40000, 30, 60]; });
   const m43 = Save.sanitize(JSON.parse(JSON.stringify(raw43)), order, gids, META), t43 = J.tail(m43, order, gids, after), news = ren.map((id) => order[+id.split("-")[1] - 1]);
   eq([ren, news, Object.keys(m43.done).length, news.map((id) => m43.done[id]), news.map((id) => m43.best[id]), m43.last, Save.next(m43, order), J.focus(m43, order), Save.questOpen(m43, order, gids, after, gids[24]), t43.next, news.map((id) => Save.record(m43, id))],
-    [["e1-25", "e2-50", "e3-75", "e4-100"], ["e2-25", "e3-50", "e4-75", "e5-100"], 100, [1, 1, 1, 1], ren.map((id) => raw43.best[id]), "e5-100", order[99], "tail", true, t43.ids[0], [false, false, false, false]],
-    "old saves by slot: a v4.3 save's e1-25, e2-50, e3-75, e4-100 load as e2-25, e3-50, e4-75, e5-100 (cleared, bests, last); all 100 cleared, picture 25 open, the long tail's first node open; no first clear left to pay");
+    [["e1-25", "e2-50", "e3-75", "e4-100"], ["e2-25", "e3-50", "e4-75", "e5-100"], 100, [1, 1, 1, 1], ren.map((id) => raw43.best[id]), "e5-100", order[100], order[100], true, null, [false, false, false, false]],
+    "old saves by slot: a v4.3 save's e1-25, e2-50, e3-75, e4-100 load as e2-25, e3-50, e4-75, e5-100 (cleared, bests, last); all 100 cleared, picture 25 open; v5 R4: level 101 is next (the long tail waits for 200); no first clear left to pay");
   const v42 = Save.sanitize(JSON.parse(require("fs").readFileSync(require("path").join(__dirname, "saves", "v4.2.json"), "utf8")), order, gids, META);
-  eq([Object.keys(v42.done).length, v42.last, J.focus(v42, order), news.map((id) => Save.record(v42, id))], [100, "e5-100", "tail", [false, false, false, false]], "old saves by slot: the shipped v4.2 save (format 1) keeps all 100 cleared; last moves to e5-100; the map centres on the fog node");
+  eq([Object.keys(v42.done).length, v42.last, J.focus(v42, order), news.map((id) => Save.record(v42, id))], [100, "e5-100", order[100], [false, false, false, false]], "old saves by slot: the shipped v4.2 save (format 1) keeps all 100 cleared; last moves to e5-100; the map centres on level 101 (v5 R4)");
   const both = Save.sanitize({ v: 2, done: { "e1-25": 1, "e2-25": 1, "e9-999": 1, x: 1 }, best: { "e1-25": [9, 9, 9], "e2-25": [1, 2, 3] } }, order, gids, META);
   eq([Object.keys(both.done).sort(), both.best["e2-25"], Save.sanitize(m43, order, gids, META)], [["e2-25"], [1, 2, 3], m43], "old saves by slot: an id the page has wins over a renamed one; ids with no slot are dropped; a migrated save reads back unchanged");
 }

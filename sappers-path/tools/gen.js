@@ -255,4 +255,27 @@ function deck(play, colOf) {
 const colsOf = (play, colOf) => deck(play, colOf).cols;
 const orderOf = (colOf) => colOf.join("");
 
-module.exports = { fort, deal, dealLine, rushLine, linkUp, lockKey, assign, tune, deck, colsOf, orderOf, coloursOf };
+// v5 R4, mystery blocks (bake-config plan.hidden H): blobs of hidden blocks over the castle (the picture above its lowest
+// bank path, never the foreground), only where a "?" may sit (a plain block: not iron, a gate's key, the lock's key or a
+// tower), never on the picture's outer edge and never beside open ground at load (so every one starts as "?"). Blobs
+// (radii H.rx x H.ry cells, seeded centres on eligible blocks) are added until a share in H.share of the eligible blocks
+// is hidden. Sets L.hidden (h strings of w: "?" or "."); false (L untouched) when fewer than H.min could be hidden.
+function hide(L, seed, H) {
+  const B = E.compile(Object.assign({ cols: [[], [], [], [], []] }, L)), r = rng(seed ^ 0x7f4a7c15), w = B.w, h = B.h, a0 = B.a0;
+  const open = (c) => a0[c] === GRASS || a0[c] === DIRT || a0[c] === CAMP;
+  let yb = -1; for (let y = h - 2; y >= 1 && yb < 0; y--) { let all = true; for (let x = 1; x < w - 1 && all; x++) if (a0[y * w + x] > 0) all = false; if (all && y < B.campRow - 1) yb = y; }
+  if (yb < 4) return false;
+  const ok = new Uint8Array(w * h); let n = 0;
+  for (let y = 2; y < yb; y++) for (let x = 2; x < w - 2; x++) { const c = y * w + x, m = a0[c];
+    if (!(m > 0) || m === IRON || B.keyOf[c] >= 0 || c === B.lockKey || B.towerOf[c] >= 0) continue;
+    let bad = false; for (let k = 0; k < 4 && !bad; k++) { const e = B.nb[c * 4 + k]; if (e >= 0 && (open(e) || a0[e] === IRON)) bad = true; }
+    if (!bad) { ok[c] = 1; n++; } }
+  const want = Math.round(n * (H.share[0] + r() * (H.share[1] - H.share[0]))), hid = new Uint8Array(w * h), cells = []; for (let c = 0; c < w * h; c++) if (ok[c]) cells.push(c);
+  let got = 0;
+  for (let t = 0; t < 400 && got < want && cells.length; t++) { const c0 = cells[Math.floor(r() * cells.length)], cx = c0 % w, cy = (c0 / w) | 0, rx = H.rx[0] + r() * (H.rx[1] - H.rx[0]), ry = H.ry[0] + r() * (H.ry[1] - H.ry[0]);
+    for (let y = Math.max(0, Math.floor(cy - ry)); y <= Math.min(h - 1, Math.ceil(cy + ry)); y++) for (let x = Math.max(0, Math.floor(cx - rx)); x <= Math.min(w - 1, Math.ceil(cx + rx)); x++) { const c = y * w + x, dx = (x - cx) / rx, dy = (y - cy) / ry; if (ok[c] && !hid[c] && dx * dx + dy * dy <= 1 && got < want) { hid[c] = 1; got++; } } }
+  if (got < H.min) return false;
+  L.hidden = []; for (let y = 0; y < h; y++) { let s = ""; for (let x = 0; x < w; x++) s += hid[y * w + x] ? "?" : "."; L.hidden.push(s); }
+  return true;
+}
+module.exports = { fort, deal, dealLine, rushLine, linkUp, lockKey, assign, tune, deck, colsOf, orderOf, coloursOf, hide };

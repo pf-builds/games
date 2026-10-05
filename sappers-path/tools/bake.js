@@ -44,6 +44,10 @@
 // meeting every target the kept deck comes first, then the re-tuned, the re-dealt and a new board (`deck` in the level
 // record, with `from`, the v4.3 level the board came from, and `edits`). A slot relay.js leaves empty gets a new board.
 // The report goes to tools/v5-r2-relay.md. Every other measure, pick rule and the second pass are as before.
+// v5 R4 (levels from bake-config plan.from): each generated level's features come from its plan (planOf: tag, ladder and
+// seeded draws), its fort from its realm's painter with those features (moat, gates, towers, the boss's inner moat), then
+// mystery blocks (gen.js hide) and the lock (a key dug in, or a colour set from the dealt order); a fort that doesn't carry
+// exactly what its plan asks is skipped. `--report FILE` writes the report tables there.
 "use strict";
 const fs = require("fs");
 const path = require("path");
@@ -83,7 +87,8 @@ function bandOf(n, C, tag) {
 }
 const gt = (o) => o.grade[o.tag], wn = (o) => o.win[o.tag]; // v4.3: a level's (or candidate's) grade and order on its tag
 function coloursOf(n, C, b) {
-  if (b.sub === "boss") return C.boss.colours;
+  if (b.sub === "boss") return bossOf(n, C).colours;
+  if (C.plan && n >= C.plan.from) return C.plan.colours[eraOf(n, C)] || [5, 5]; // v5 R4: the realm's range (its plan decides the rest)
   if (b.sub === "relief") return C.reliefColours;
   if (b.sub === "saw" + (C.curve.mid.saw.length - 1)) return C.sawLowColours;
   for (const [a, z, lo, hi] of C.colours) if (n >= a && n <= z) return [lo, hi];
@@ -111,6 +116,27 @@ function twistsOf(n, C, teachBy) {
     }
   }
   return out;
+}
+
+// v5 R4, the plan (bake-config plan; levels from plan.from): the features a generated level uses, from its tag and the
+// feature ladder (config.json v5.density), every draw fixed by the level number (hash01). Returns the twists-like record
+// the candidates read: {plan: true, feats, moat, gates, towers ([a, b] or 0), hidden, mystery (cards), links (pairs),
+// lock (false, "key" or "colour"), inner (the boss's inner moat)}.
+const bossOf = (n, C) => (C.bosses && C.bosses[n]) || C.boss; // v5 R4: per-level bosses (200), else the old boss (99)
+function planOf(n, C, tag, D) {
+  const PL = C.plan, TG2 = require("./tags.js"), u = TG2.unlockedAt(n, D), h = (k) => hash01(n, 300 + k), boss = C.bosses && C.bosses[n];
+  const pickOf = (list, k) => list[Math.floor(h(k) * list.length) % list.length];
+  let f;
+  if (boss || tag === "extreme") f = u.slice();
+  else if (tag === "hard") { f = u.slice(); if (n >= PL.hardFrom && h(1) < PL.hardDrop) { const can = ["linked", "mystery", "tower", "hidden", "gate"].filter((k) => f.indexOf(k) >= 0); if (can.length) f.splice(f.indexOf(pickOf(can, 2)), 1); } }
+  else if (tag === "normal") { const k = Math.min(u.length - 1, Math.max(Math.min(D.normalMin, u.length), PL.normal[0] + (h(3) < PL.normalMore ? 1 : 0))), sh = u.slice();
+    for (let i = sh.length - 1; i > 0; i--) { const j = Math.floor(h(10 + i) * (i + 1)); [sh[i], sh[j]] = [sh[j], sh[i]]; }
+    f = sh.slice(0, k); if (f.indexOf("gate") >= 0 && f.indexOf("moat") < 0) f[f.indexOf("gate")] = "moat"; }
+  else { const can = ["moat", "linked", "mystery", "tower", "hidden"].filter((k) => u.indexOf(k) >= 0); f = h(4) < PL.easyNone || !can.length ? [] : [pickOf(can, 5)]; }
+  const has = (k) => f.indexOf(k) >= 0, hardish = tag === "hard" || tag === "extreme" || !!boss, T = C.twists, r = (k, lo, hi) => lo + Math.floor(h(k) * (hi - lo + 1));
+  return { plan: true, feats: f, moat: has("moat"), gates: has("gate") ? (boss ? 2 : hardish && h(6) < PL.twoGates ? 2 : 1) : 0, towers: has("tower") ? (boss && boss.towers) || PL.towers[tag] : 0, hidden: has("hidden"),
+    mystery: has("mystery") ? (boss ? r(7, boss.cards[0], boss.cards[1]) : r(7, T.mystery.cards[0], T.mystery.cards[1])) : 0, links: has("linked") ? (boss ? r(8, boss.pairs[0], boss.pairs[1]) : r(8, T.links.pairs[0], T.links.pairs[1])) : 0,
+    lock: hardish && n >= D.lockFrom ? (h(9) < PL.keyLock ? "key" : "colour") : false, inner: !!(boss && boss.gen && boss.gen.inner) };
 }
 
 // Grade a finished level on its tag (v4.3; every difficulty before); `hint` is a known winning order (tried first; an
@@ -186,14 +212,21 @@ function candidates(n, C, rules, tw, tag, board, kept, realm) {
       if (board && !fresh) { seed = seedOf(C, n, k * 1000); L = JSON.parse(JSON.stringify(board)); }
       for (let t = 0; t < C.candidates.fortTries && !L; t++) {
         seed = seedOf(C, n, k * 1000 + t);
-        const P = Object.assign({}, C.eras[era].gen, b.sub === "boss" ? C.boss.gen : {}, { colours: cmin + (Math.abs(seed) % (cmax - cmin + 1)) }), g0 = C.genBy && C.genBy[b.sub] && C.genBy[b.sub].scale, sc = g0 && typeof g0 === "object" ? g0[era] : g0;
+        const P = Object.assign({}, C.eras[era].gen, b.sub === "boss" ? bossOf(n, C).gen : {}, { colours: cmin + (Math.abs(seed) % (cmax - cmin + 1)) }, tw.plan ? { moat: tw.moat, gates: tw.gates, towers: tw.towers, inner: tw.inner } : {}), g0 = C.genBy && C.genBy[b.sub] && C.genBy[b.sub].scale, sc = g0 && typeof g0 === "object" ? g0[era] : g0;
         if (sc) { P.w = P.w.map((v) => Math.round(v * sc)); P.h = P.h.map((v) => Math.round(v * sc)); } // genBy: a slot's boards scaled (reliefs are smaller, and quicker)
         const f = G.fort(era, seed, P, C.picture); stats.forts++;
         if (!f) continue;
-        if (tw.lock && !G.lockKey(f, seed)) continue;
+        if ((tw.lock === true || tw.lock === "key") && !G.lockKey(f, seed)) continue;
+        if (tw.lock === "colour") f.lock = { colour: [...G.coloursOf(f)].sort((a, b) => a - b)[0] }; // v5 R4: a stand-in (the dealer plays it shut); the colour is set from the deal
         const nc = G.coloursOf(f).size; if (nc < cmin || nc > cmax) continue;
+        if (tw.plan) { // v5 R4: the fort carries what its plan asks, and nothing it doesn't
+          const wet = f.grid.some((row) => row.indexOf("~") >= 0), ng = (f.gates || []).length, nt = (f.towers || []).length;
+          if (wet !== tw.moat || (tw.gates ? ng < 1 : ng > 0) || (tw.towers ? nt < 1 : nt > 0)) continue;
+          if (tw.hidden && !G.hide(f, seed, C.plan.hidden)) continue;
+        } else {
         if (era >= 2 && !(f.gates && f.gates.length)) continue; // every fort from Era 2 has a gate (v4 M3: so Era 3 keeps its moat)
         if (era >= 3 && !(f.towers && f.towers.length)) continue;
+        }
         if (realm) require("./relay.js").freshEdits(f, realm, tag); // v5 R2: a new fort takes its realm's edits (drawbridges open, towers plain)
         delete f.roles; L = f; // v4.1: the picture's roles are the generator's business; pal (colours, names) ships
       }
@@ -203,6 +236,8 @@ function candidates(n, C, rules, tw, tag, board, kept, realm) {
       for (let a = 0; a < D.attempts && !dl; a++) { dl = G.deal(L, seed ^ Math.imul(a + 1, 0x27D4EB2F), D); stats.deals++; }
       if (!dl) { out.push({ k, seed, fail: "no deal in " + D.attempts + " attempts" }); continue; }
       const play = tw.links ? G.linkUp(L, dl.play, tw.links, seed, D) : dl.play;
+      if (tw.lock === "colour") { const first = new Map(); play.forEach((p, i) => { for (const m of p.length >= 4 ? [p[0], p[2]] : [p[0]]) if (!first.has(m) && m !== E.GILT) first.set(m, i); }); // v5 R4: the colour whose first squad comes nearest relay.lockAt of the order
+        const want = C.relay.lockAt * play.length, best = [...first].sort((p, q) => Math.abs(p[1] - want) - Math.abs(q[1] - want) || p[1] - q[1])[0]; if (best) L.lock = { colour: best[0] }; }
       const T = Object.assign({}, C.tune, { seed: seed ^ 0x3c6ef372, maxTaps: C.maxTaps, maxWaitMs: C.maxWaitMs }, b.kind === "late" && b.sub !== "relief" ? { narrow: C.tune.narrow } : { narrow: null });
       const res = G.tune(L, play, G.assign(play, 0, seed), b.band[0], b.band[1], T, { normal: rules[tag], deal: dealRules }); // v4.3: tuned on the tag's rules
       stats.evals += res.evals;
@@ -325,7 +360,7 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
     if (RLY && (!x || x.teaching)) { say("level " + n + ": the re-lay gives no generated slot here (a teaching level missing from the teaching file?)"); continue; }
     if (x && x.tag !== tagN(n)) say("level " + n + ": the re-lay's tag " + x.tag + " is not the schedule's " + tagN(n));
     jobs.push(x ? { kind: "cand", n, tag: tagN(n), tw: x.twists, board: x.level ? boardOf(x.level) : null, kept: x.level ? { cols: x.level.cols, links: x.level.links || [], hint: x.hint } : null, realm: x.realm, from: x.from, edits: x.edits }
-      : { kind: "cand", n, tag: tagN(n), tw: twistsOf(n, C, teachBy), board: BOARDS && BOARDS.get(n) });
+      : { kind: "cand", n, tag: tagN(n), tw: C.plan && n >= C.plan.from ? planOf(n, C, tagN(n), CFG.v5.density) : twistsOf(n, C, teachBy), board: BOARDS && BOARDS.get(n) }); // v5 R4: the plan
   }
   for (const j of jobs) if (!RLY && j.board && !!j.board.lock !== !!j.tw.lock) { say("level " + j.n + ": the kept board's lock does not match the level's twists; a new fort is drawn"); j.board = null; }
   say("bake v" + C.version + ": " + C.levels + " levels, " + jobs.length + " generated on " + threads + " threads" + (ONLY ? " (only " + ONLY.join("-") + ")" : "") + (BOARDS ? ", boards kept from " + arg("boards") + " (" + jobs.filter((j) => j.board).length + ")" : "") + (RLY ? ", re-laid from v4.3 (" + C.relay.src + "; " + jobs.filter((j) => j.kept).length + " kept decks)" : ""));
@@ -403,7 +438,7 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
   say("bake: " + levels.length + " levels picked in " + ((t1 - t0) / 1000).toFixed(1) + " s; forts " + tot.forts + ", deals " + tot.deals + ", tune evaluations " + tot.evals + ", full grades " + tot.grades + " (each on its level's tag)");
 
   // Second pass: order counts and safe taps (report only), the mystery flags and their planner measures.
-  const fin = levels.filter((l) => inRun(l.n)).map((l) => ({ kind: "finish", n: l.n, tag: l.tag, L: { w: l.w, h: l.h, grid: l.grid, pic: l.pic, gates: l.gates, towers: l.towers, cols: l.cols, links: l.links, lock: l.lock, safeArchers: l.safeArchers, win: l.win }, want: l.twists ? l.twists.mystery : 0, seed: l.seed || seedOf(C, l.n, 0) }));
+  const fin = levels.filter((l) => inRun(l.n)).map((l) => ({ kind: "finish", n: l.n, tag: l.tag, L: { w: l.w, h: l.h, grid: l.grid, pic: l.pic, gates: l.gates, towers: l.towers, cols: l.cols, links: l.links, lock: l.lock, safeArchers: l.safeArchers, hidden: l.hidden, win: l.win }, want: l.twists ? l.twists.mystery : 0, seed: l.seed || seedOf(C, l.n, 0) }));
   const done = await runPool(fin, threads, C, rules, Date.now() + C.budget.finishSec * 1000, (d, t) => { if (d % 20 === 0 || d === t) console.log("  finish " + d + "/" + t + "  " + ((Date.now() - t0) / 1000).toFixed(1) + " s"); });
   for (const f of done) {
     const l = levels.find((x) => x.n === f.n); if (!l) continue;
@@ -438,7 +473,7 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
 
 // ---- report tables (between the markers in tools/v4.3-rebake.md) --------------------------------------------------
 function writeReport(out, C, log) {
-  const file = outPath(RELAY ? "tools/v5-r2-relay.md" : "tools/v4.3-rebake.md"), A = "<!-- bake:start -->", Z = "<!-- bake:end -->"; // v5 R2: the re-lay's own report
+  const file = arg("report") ? path.resolve(arg("report")) : outPath(RELAY ? "tools/v5-r2-relay.md" : "tools/v4.3-rebake.md"), A = "<!-- bake:start -->", Z = "<!-- bake:end -->"; // v5 R2: the re-lay's own report; v5 R4: --report FILE
   const L = out.levels, rows = [], minDE = (l) => (l.palette ? l.palette.minDE : (() => { const s = new Set(); for (const row of l.grid) for (const ch of row) { const m = E.matOf(ch); if (m) s.add(m); } return PAL.minPair([...s]).min; })());
   const twOf = (l) => { const t = []; if (l.gates && l.gates.length) t.push("gates " + l.gates.length); if (l.towers && l.towers.length) t.push("archers " + l.towers.length); const mc = l.cols.flat().filter((cd) => cd[2]).length; if (mc) t.push("? " + mc); if (l.links && l.links.length) t.push("linked " + l.links.length); if (l.lock) t.push(l.lock.colour ? "colour lock " + l.lock.colour : "key lock"); if (l.grid.some((r) => r.indexOf("~") >= 0)) t.unshift("moat"); return t.join(", ") || "-"; };
   rows.push("### Bands (each level's random-tap rate on its own tag)", "", "| Band | Levels | Tags E/N/H | In band | Exempt (teaching) | Rate min | median | max |", "|---|---|---|---|---|---|---|---|");

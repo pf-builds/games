@@ -84,13 +84,13 @@ function choose(want, fixed, P, seed) {
 }
 
 // A level drawn as flat studs (a face and a darker seam) at px pixels a cell, RGB; open ground, the entry and water in
-// the frame colours (P.show: {ground, camp, water, iron}).
+// the frame colours (P.show: {ground, camp, water, iron}). v5 R4: a mystery block in P.show.hidden, a lava moat in P.show.lava.
 function render(L, px, P) {
   const S = P || {}, rgbOf = (hx) => { const v = parseInt(hx.slice(1), 16); return [(v >> 16) & 255, (v >> 8) & 255, v & 255]; };
   const W = L.w * px, H = L.h * px, rgb = new Uint8Array(W * H * 3), mats = require("../config.json").v3.mats;
   for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) {
     const ch = L.grid[y][x], m = E.matOf(ch), stud = m > 0 || ch === "~";
-    const hx = m ? (L.pal && L.pal[m] ? L.pal[m].c : m === E.IRON ? S.iron || mats[m].c : mats[m].c) : ch === "~" ? (L.liquid && S[L.liquid]) || S.water || "#3f7fcf" : ch === "#" ? S.camp || "#7d6c55" : S.ground || "#5e5448";
+    const hx = m && L.hidden && L.hidden[y][x] === "?" && S.hidden ? S.hidden : m ? (L.pal && L.pal[m] ? L.pal[m].c : m === E.IRON ? S.iron || mats[m].c : mats[m].c) : ch === "~" ? (L.liquid && S[L.liquid]) || S.water || "#3f7fcf" : ch === "#" ? S.camp || "#7d6c55" : S.ground || "#5e5448";
     const c = rgbOf(hx), s = c.map((v) => v * 0.68);
     for (let j = 0; j < px; j++) for (let i = 0; i < px; i++) { const edge = stud && px >= 4 && (i === 0 || j === 0), o = ((y * px + j) * W + x * px + i) * 3, v = edge ? s : c; rgb[o] = v[0]; rgb[o + 1] = v[1]; rgb[o + 2] = v[2]; }
     if (m === E.GILT && px >= 6) { const o = ((y * px + (px >> 1)) * W + x * px + (px >> 1)) * 3; rgb[o] = 40; rgb[o + 1] = 26; rgb[o + 2] = 8; }

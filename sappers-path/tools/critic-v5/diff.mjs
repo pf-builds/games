@@ -1,5 +1,6 @@
 // Critic v5 diff (from v4.3): rules from the v5 R1 entry (rules.mjs); the tag formula is the v5 R2 entry's realm schedule
-// (bake-config tags.realms; the Gallery keeps v4.3's); every lock on a Hard level from 50; no level uses a feature before
+// (bake-config tags.realms; the Gallery keeps v4.3's; v5 R4: realms 6-8 with their own cycles and end tags, tags.cycles);
+// every lock on a Hard or Extreme level from 50; no level uses a feature before (v5 R4: mystery blocks too)
 // its milestone (config v5.density.unlock). Debug levels are not in the v5 campaign's checks (they play Normal).
 // Critic v4.3 diff (from v4.1): every level on its own tag only (SPEC-v4 v4.3), tag formula and cross-buried pairs checked
 // against the level files, a refused tap in a stored order is a mismatch, maxWait includes the winning tap to everyone home.
@@ -47,15 +48,15 @@ const mism = [], gradeBad = [], fmt = [], park = []; const t0 = Date.now();
 for (const L of levels) { const pr = picProblems(L); if (pr.length) fmt.push({ id: L.id, pr: pr.slice(0, 4) }); }
 const TS = require(path.join(root, 'tools/bake-config.json')).tags, TG = require(path.join(root, 'tools/gallery-config.json')).bake.tags;
 const tagOf = (n, T, teaching) => { const R = T.realms && T.realms.find((r) => n >= r[0] && n <= r[1]); // v5 R2: per realm (opener Easy lesson, end Hard, cycle restarts after the opener; realm 1 from T.from)
-  if (R) { if (teaching) return n < T.from ? T.first : n === R[0] ? T.afterEnd : T.teach; if (n === R[1]) return 'hard'; if (n < T.from) return T.first; return T.cycle[(n - Math.max(T.from, R[0] + 1)) % T.cycle.length]; }
+  if (R) { if (teaching) return n < T.from ? T.first : n === R[0] ? T.afterEnd : T.teach; const Y = T.cycles && T.cycles[R[0]]; if (Y) return n === R[1] ? Y.end : Y.cycle[(n - Y.start) % Y.cycle.length]; /* v5 R4: a realm's own cycle and end tag */ if (n === R[1]) return 'hard'; if (n < T.from) return T.first; return T.cycle[(n - Math.max(T.from, R[0] + 1)) % T.cycle.length]; }
   if (T.ends.includes(n)) return 'hard'; if (teaching) return n < T.from ? T.first : T.ends.includes(n - 1) ? T.afterEnd : T.teach; if (T.ends.includes(n - 1)) return T.afterEnd; if (n < T.from) return T.first; return T.cycle[(n - T.from) % T.cycle.length]; };
 const tagBad = [], tagCount = {}, crossBuried = [];
 for (const L of levels) { if (L.set === 'debug') { if (L.tag !== 'normal') tagBad.push(`${L.id} ${L.tag} (debug levels are normal)`); continue; }
   const want = L.set === 'gallery' ? tagOf(L.n, TG, false) : tagOf(L.n, TS, L.source === 'teaching'); tagCount[L.set + ':' + L.tag] = (tagCount[L.set + ':' + L.tag] || 0) + 1; if (want !== L.tag) tagBad.push(`${L.id} n${L.n} tag ${L.tag}, formula ${want}`);
-  if (!L.win || Object.keys(L.win).join() !== L.tag || !L.grade || !L.grade[L.tag]) tagBad.push(`${L.id}: win/grade keys ${L.win && Object.keys(L.win)} / ${L.grade && Object.keys(L.grade).filter((k) => ['easy', 'normal', 'hard'].includes(k))}`); }
+  if (!L.win || Object.keys(L.win).join() !== L.tag || !L.grade || !L.grade[L.tag]) tagBad.push(`${L.id}: win/grade keys ${L.win && Object.keys(L.win)} / ${L.grade && Object.keys(L.grade).filter((k) => ['easy', 'normal', 'hard', 'extreme'].includes(k))}`); }
 const UN = cfg.v5.density.unlock, early = []; // v5 R2: no feature before its milestone; locks only on Hard from 50
-for (const L of levels) { if (L.set !== 'siege') continue; const f = []; if (L.grid.some((r) => r.includes('~'))) f.push('moat'); if ((L.gates || []).length) f.push('gate'); if ((L.links || []).length) f.push('linked'); if (L.cols.some((c) => c.some((cd) => cd[2]))) f.push('mystery'); if ((L.towers || []).length) f.push('tower');
-  for (const k of f) if (L.n < UN[k]) early.push(`${L.id} ${k} before ${UN[k]}`); if (L.lock && !(L.tag === 'hard' && L.n >= cfg.v5.locks.from)) early.push(`${L.id} lock on ${L.tag} at ${L.n}`); }
+for (const L of levels) { if (L.set !== 'siege') continue; const f = []; if (L.grid.some((r) => r.includes('~'))) f.push('moat'); if ((L.gates || []).length) f.push('gate'); if ((L.links || []).length) f.push('linked'); if (L.cols.some((c) => c.some((cd) => cd[2]))) f.push('mystery'); if ((L.towers || []).length) f.push('tower'); if ((L.hidden || []).some((r) => r.includes('?'))) f.push('hidden'); // v5 R4
+  for (const k of f) if (L.n < UN[k]) early.push(`${L.id} ${k} before ${UN[k]}`); if (L.lock && !((L.tag === 'hard' || L.tag === 'extreme') && L.n >= cfg.v5.locks.from)) early.push(`${L.id} lock on ${L.tag} at ${L.n}`); }
 for (const L of levels) { const ln = L.links || []; for (let i = 0; i < ln.length; i++) for (let j = i + 1; j < ln.length; j++) { const A = ln[i], B = ln[j];
   // cross-buried: in one column a card of A is ahead of a card of B, and in another column a card of B is ahead of a card of A
   const ahead = (X, Y) => X.some(([c1, i1]) => Y.some(([c2, i2]) => c1 === c2 && i1 < i2)); if (ahead(A, B) && ahead(B, A)) crossBuried.push(`${L.id} pairs ${JSON.stringify(A)} ${JSON.stringify(B)}`); } }

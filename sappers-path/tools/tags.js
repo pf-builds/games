@@ -22,12 +22,17 @@
 // its milestone; Easy at most D.easyMax of them and no lock; Normal at least min(D.normalMin, unlocked) and no lock; Hard
 // every unlocked feature, plus the lock from D.lockFrom; Extreme (from 125) as Hard. A teaching level (a realm's opener,
 // Easy) uses the newest feature it teaches, may keep older ones, and has no lock.
+// v5 R4: from D.extremeFrom (125, where Extreme appears) Hard uses all but at most D.hardSlack (1) of the unlocked features
+// and the lock; Extreme uses every one and the lock. T.cycles (keyed by a realm's first level): that realm's own cycle from
+// its start, and its end tag (realms 6-8 end Extreme).
 "use strict";
 const TAGS = ["easy", "normal", "hard", "extreme"]; // v5 R1: extreme (most or all of the unlocked features; R2 sets which levels)
 function tagOf(n, T, teaching) {
   const R = T.realms && T.realms.find((r) => n >= r[0] && n <= r[1]); // v5 R2: the realm's own schedule
   if (R) {
     if (teaching) return n < T.from ? T.first : n === R[0] ? T.afterEnd : T.teach;
+    const Y = T.cycles && T.cycles[R[0]]; // v5 R4: the realm's own cycle and end tag
+    if (Y) return n === R[1] ? Y.end : Y.cycle[(n - Y.start) % Y.cycle.length];
     if (n === R[1]) return "hard";
     if (n < T.from) return T.first;
     return T.cycle[(n - Math.max(T.from, R[0] + 1)) % T.cycle.length];
@@ -58,6 +63,7 @@ function densityOK(n, tag, L, D, teaching) {
   if (teaching) { const nu = u.filter((k) => D.unlock[k] === Math.max(...u.map((q) => D.unlock[q]))); return !lock && nu.every((k) => f.indexOf(k) >= 0); }
   if (tag === "easy") return f.length <= D.easyMax && !lock;
   if (tag === "normal") return f.length >= Math.min(D.normalMin, u.length) && !lock;
-  return f.length === u.length && lock === (n >= D.lockFrom); // hard, extreme
+  if (tag === "hard" && D.extremeFrom != null && n >= D.extremeFrom) return f.length >= u.length - D.hardSlack && lock; // v5 R4: Hard uses all but hardSlack
+  return f.length === u.length && lock === (n >= D.lockFrom); // hard (before extremeFrom), extreme
 }
 module.exports = { TAGS, tagOf, lockOK, FEATS, featuresOf, unlockedAt, densityOK };

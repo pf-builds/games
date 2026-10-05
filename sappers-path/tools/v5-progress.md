@@ -159,9 +159,9 @@ map code in `src/main.js` and config.json `map` (R4 map art, separate worktree):
 | a0 | Castle freeze fixture (eras 1-4 hashes) in freeze.js, before any castle.js change | done: 283 cases, 0 null; freeze --require PASS | (this commit) |
 | a1 | Generators eras 5-8 (castle.js), realm scenes and roles (bake-config picture), lava liquid on the board | done: 12 scenes pass palette --scenes; castles 1-4 0 differences | (this commit) |
 | a2 | Realms 6-8 in data (config eras, bake-config eras/realms/tags), contact sheet `tools/shots-v5-r4/boards/`, looked at | done (names, lore, gen; realm samples sheets realm5-8-samples.png looked at; tags in b1) | (this commit) |
-| b1 | Bake planner for 101-200 (feature plan by tag, Extreme, hidden blocks, colour/key locks, boss 200) and density rule | todo | |
-| b2 | Trial bake of 10 levels; stop-rule check | todo | |
-| b3 | Teaching levels 125 (towers) and 150 (mystery blocks), coach lines | todo | |
-| b4 | Full bake 101-200 (scratch, checked, copied in) | todo | |
+| b1 | Bake planner for 101-200 (feature plan by tag, Extreme, hidden blocks, colour/key locks, boss 200) and density rule | done (bake.js planOf, gen.js hide, tags.js cycles + Hard/Extreme density, critic-v5 tag formula) | (this commit) |
+| b2 | Trial bake of 10 levels; stop-rule check | done: 101-110 all in band, 0 fallbacks, real pace 217-242 s, taps <= 52, longest tap 15.0 s; stop rule not hit | (this commit) |
+| b3 | Teaching levels 125 (towers) and 150 (mystery blocks), coach lines | done (teach-v4.js --add; 1-100 byte-identical in teaching.json; config teach e6-125, e7-150) | (this commit) |
+| b4 | Full bake 101-200 (scratch, checked, copied in) | running (scratchpad r4/full; tests wait for it) | |
 | b5 | Side quests 26-50 open off the new levels; tests (density, milestones, tags, teaching, quests) | todo | |
 | b6 | Page checks (selfTest, map with levels past its spots), critic-v5, harness, `?v=35`, SPEC, notes, LATER | todo | |

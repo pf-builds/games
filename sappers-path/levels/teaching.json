@@ -669,6 +669,245 @@
    "win": {
     "easy": "01234012340123401234012340"
    }
+  },
+  {
+   "n": 125,
+   "era": 6,
+   "name": "The Archer Tower",
+   "teaches": "tower",
+   "tag": "easy",
+   "hint": "Archers shoot every sapper sent into their ring. A hit sapper is knocked back and waits. Knock the tower down and the ring is safe.",
+   "w": 38,
+   "h": 37,
+   "grid": [",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,", ",dddddddddddddddeeeeddddddddddddddddd,", ",ddeeeeeeeeddddeeeeeeeeddddeeeedddddd,", ",eeeeeeeeeeedddeeeeeeeeedddeeeggggddd,", ",eeeeeeeeeeedddeeeeeeeeedddeeggggggdd,", ",eeeeeeeeeeddddddeeeeeedddeeegggggged,", ",eecccccccccddddcccccccccccceggggggdd,", ",dccbgggggbccdddcaaccaaccaacccgggggdd,", ",ccbbgggggbbccddcaaaaaaaaaaaacgggeddd,", ",ffbbfbhhbbbbccdcaaaaaaaaaaaaceeeeeee,", ",fffffbhhbbbbbcccaaaaaaaaaaaacdddeddd,", ",fffffbhhbbbbbbccaaaaaaaaaaaacddddddd,", ",ffcffbbhhbbbbbbcaacaaacaaaaacddddddd,", ",ffcffbbbhhbbbbbcaacaaaaaaaaacccccccd,", ",fffffabbaabbaabbaaaaaaaaaaaaaaccaacc,", ",fffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,", ",fffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,", ",ffcffgaaaggaaaaggaaaaaaaaaaaaaaaggaa,", ",ffcffgaaaggaaaaggaaaaaaaaaaaaaaaggaa,", ",fffffgaaaggaaaaggaaaaaccaaaaaaaaggaa,", ",fffffaaaaaaaaaaaaaaaaccccaaaaaaaaaaa,", ",fffffaaaaaaaaaaaaaaaaccccaaaaaaaaaaa,", ",ffcffaaaaaaaaaaaaaaaaccccaaaaaaaaaaa,", ",ffcffaaaaaaaaaaaaaaaaccccaaaaaaaaaaa,", ",fffffbbcbbbbbbbbbbcbbbbbbbcbbbbbcbbb,", ",fffffbbbbbbbcbbbbbbbbbcbbbbbbbbbbbbb,", ",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,", "~~~~~~~~~~~~~~~~~~~,,,,~~~~~~~~~~~~~~~", "~~~~~~~~~~~~~~~~~~~,,,,~~~~~~~~~~~~~~~", "~~~~~~~~~~~~~~~~~~~,,,,~~~~~~~~~~~~~~~", ",bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,", ",bbbbbccccbbbbbbbbbbbbbbbbbccccbbbbbb,", ",bbbbbcaacbbbbbbbbbbbbbbbbbcaacbbbbbb,", ",bbbcccaacccbbbbbbbbbbbbbcccaacccbbbb,", ",bbbcaaaaaacbbbbbbbbbbbbbcaaaaaacbbbb,", ",bbbcaaaaaacbbbbbbbbbbbbbcaaaaaacbbbb,", ",,,,,,,,,,,,,,,,,,##,,,,,,,,,,,,,,,,,,"],
+   "pic": true,
+   "gates": [],
+   "towers": [
+    {
+     "at": [2, 24],
+     "r": 9.9
+    }
+   ],
+   "pal": {
+    "1": {
+     "c": "#61488e",
+     "n": "basalt",
+     "r": "stone"
+    },
+    "2": {
+     "c": "#948886",
+     "n": "ash",
+     "r": "grass"
+    },
+    "3": {
+     "c": "#1f1b24",
+     "n": "black",
+     "r": "ink"
+    },
+    "4": {
+     "c": "#802235",
+     "n": "ember sky",
+     "r": "sky"
+    },
+    "5": {
+     "c": "#ede8e5",
+     "n": "ash cloud",
+     "r": "cloud"
+    },
+    "6": {
+     "c": "#2a7cf4",
+     "n": "obsidian",
+     "r": "slate"
+    },
+    "7": {
+     "c": "#ffd63e",
+     "n": "embers",
+     "r": "thatch"
+    },
+    "8": {
+     "c": "#ef5a2a",
+     "n": "molten rock",
+     "r": "roof"
+    }
+   },
+   "scene": "ember",
+   "style": "square-vl-1t",
+   "palette": {
+    "minDE": 25.6,
+    "minFade": 20.8
+   },
+   "liquid": "lava",
+   "cols": [
+    [
+     [2, 85],
+     [4, 55],
+     [4, 20],
+     [5, 51],
+     [5, 35],
+     [1, 99],
+     [7, 30],
+     [5, 5]
+    ],
+    [
+     [6, 46],
+     [3, 44],
+     [4, 11],
+     [4, 7],
+     [3, 4],
+     [1, 71],
+     [1, 22],
+     [3, 36]
+    ],
+    [
+     [6, 22],
+     [1, 52],
+     [2, 76],
+     [8, 5],
+     [8, 5],
+     [4, 3],
+     [1, 4]
+    ],
+    [
+     [2, 33],
+     [7, 11],
+     [4, 9],
+     [7, 20],
+     [1, 53],
+     [5, 10],
+     [4, 1]
+    ],
+    [
+     [6, 9],
+     [3, 11],
+     [2, 34],
+     [3, 34],
+     [4, 8],
+     [1, 67],
+     [2, 28]
+    ]
+   ],
+   "win": {
+    "easy": "0123401234012340123401234012340123401"
+   }
+  },
+  {
+   "n": 150,
+   "era": 7,
+   "name": "Hidden Blocks",
+   "teaches": "hidden",
+   "tag": "easy",
+   "hint": "A ? block hides its colour until a block beside it is dug out. Then it shows for good.",
+   "w": 38,
+   "h": 37,
+   "grid": [",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,", ",eeegeeeeeeeeegeeeeeeeeeeeeeeeeeeeeee,", ",eeeeeeeeeeeeeeeeeeeegeegeeeeeeeeeeee,", ",eeeggggeeeeecccccccccccceeeeeeeeeege,", ",eeggggcccccccbbbbbbbbbbcceeeeeeegege,", ",eegggccbbbbbbbbbbbbbbbbbcceeeeeeeeee,", ",eegggcbbbbbbbbbbbbbbbbbbbcccceegeeee,", ",eeggccbbbbbbbbbbbbbbbbbbbbbbcceeeeee,", ",eeeccbbbbbbbbbbbbbbbbbbbbbbbbcccceee,", ",eeccbbbbbbbbbbbbbbbdbdbbbbbbbbcbccee,", ",eccbbbbbbbbbbbbbbbbdbdbbbbbbbbbbbccb,", ",ccbbbbbbbbbbbdaaaaadddabbbbbbbbbbbcc,", ",cbbbbbbbbbbbbdaaaaadddabbbbbbbbbbbbc,", ",ccaaaaabbbbbbdaaaaadddabbbbbcaaaaacc,", ",bcaafaaccccccdaaaaadddaccccccaafaacb,", ",ccaafaacbbbecdaaffaaddacbeeccaafaacb,", ",aaaaaaaccccccdaaffaaddacccccaaaaaacb,", ",aaaaaaaaaaaaadaaaaaaddaaaaaaaaaaaacc,", ",aaaaaaaaaaaaadaaaaaaddaaaaaadaaaaaaa,", ",aaaaaaaacccccdaaaaaaddacccccdaaaaaaa,", ",aaaaaaaacbbacdaaaaaaddacbbbcdadaaaaa,", ",aaaaaaaacbbccdfaaccdfdaccbbcaadaaaaa,", ",aaaaaaaaccccaaaaccccaaaaccccaadaaaaa,", ",aaaaaaaahhhaaaaaccccaaaahhhcaaaaaaaa,", ",aaaaaaaaciaaaaaaccccaaaaaiccaaaaaaaa,", ",aaaaaaaaciaaaaaaccccaaaaaiacaaaaaaaa,", ",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,", "~~~~~~~~~~~~~~,,,,~~~~~~~~~~~~~~~~~~~~", "~~~~~~~~~~~~~~,,,,~~~~~~~~~~~~~~~~~~~~", "~~~~~~~~~~~~~~,,,,~~~~~~~~~~~~~~~~~~~~", ",dcffcdddddddcffcddddddddddddcffcdddd,", ",ccffcdddddcccffcddddddddddcccffcdddd,", ",aaffcdddddcaaffcddddddddddcaaffcdddd,", ",aaffcdddddcaaffcddddddddddcaaffcdddd,", ",aacccdddddcaacccddddddddddcaacccdddd,", ",aacdddddddcaacddddddddddddcaacdddddd,", ",,,,,,,,,,,,,,,,,,##,,,,,,,,,,,,,,,,,,"],
+   "pic": true,
+   "gates": [],
+   "towers": [],
+   "pal": {
+    "1": {
+     "c": "#804a2f",
+     "n": "living wood",
+     "r": "wood"
+    },
+    "2": {
+     "c": "#1f5a3c",
+     "n": "canopy",
+     "r": "tree"
+    },
+    "3": {
+     "c": "#1f1b24",
+     "n": "black",
+     "r": "ink"
+    },
+    "4": {
+     "c": "#5ea635",
+     "n": "moss",
+     "r": "grass"
+    },
+    "5": {
+     "c": "#2a0e95",
+     "n": "night sky",
+     "r": "sky"
+    },
+    "6": {
+     "c": "#f2ee8a",
+     "n": "lantern glow",
+     "r": "thatch"
+    },
+    "7": {
+     "c": "#e4fbff",
+     "n": "moonlight",
+     "r": "cloud"
+    },
+    "8": {
+     "c": "#e349af",
+     "n": "glowcaps",
+     "r": "banner"
+    },
+    "9": {
+     "c": "#b1a9cd",
+     "n": "pale stone",
+     "r": "stone"
+    }
+   },
+   "scene": "moonlit",
+   "style": "mid-tree2-0t",
+   "palette": {
+    "minDE": 26,
+    "minFade": 21
+   },
+   "hidden": ["......................................", "......................................", ".............?????....................", "............???????...................", "..?????......?????....................", "..??????......???..............?????..", "..??????.....................???????..", "..??????.....................???????..", "..?????......................???????..", ".............................???????..", ".............................???????..", ".....???.......................?????..", "..?????????...........................", "..??????????..........................", "..??????????..........................", "..??????????..........................", "..?????????...........................", "..?????...............................", "......................................", "..???????.............................", "..????????............................", "..?????????...........................", "..?????????...........................", "..??????????..........................", "..?????????...........................", "......................................", "......................................", "......................................", "......................................", "......................................", "......................................", "......................................", "......................................", "......................................", "......................................", "......................................", "......................................"],
+   "cols": [
+    [
+     [3, 38],
+     [3, 18],
+     [3, 21],
+     [1, 51],
+     [5, 35],
+     [2, 70],
+     [2, 52],
+     [5, 48]
+    ],
+    [
+     [1, 62],
+     [3, 11],
+     [1, 69],
+     [7, 7],
+     [4, 13],
+     [4, 3],
+     [6, 6]
+    ],
+    [
+     [3, 39],
+     [7, 5],
+     [1, 47],
+     [5, 57],
+     [1, 68],
+     [3, 15],
+     [3, 11]
+    ],
+    [
+     [4, 58],
+     [7, 5],
+     [9, 4],
+     [7, 7],
+     [4, 12],
+     [1, 28],
+     [2, 10]
+    ],
+    [
+     [2, 13],
+     [8, 6],
+     [4, 86],
+     [6, 28],
+     [3, 32],
+     [2, 75],
+     [3, 6]
+    ]
+   ],
+   "win": {
+    "easy": "012340123401234012340123401234012340"
+   }
   }
  ]
 }

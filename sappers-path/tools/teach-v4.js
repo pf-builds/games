@@ -48,6 +48,9 @@ const LESSON = {
     S.play(f[0]); S.quiet(); for (let q = 0; q < S.cap; q++) if (S.spQ[q] && S.spW[q] > S.reachable(S.spM[q])) return f[1]; return 0; }, // its rest waits once the rest is eaten
   gate: (S, B) => (B.gateCells.length && B.sapTotal[E.GILT] > 0 ? -1 : 0), moat: (S, B) => (B.a0.indexOf(E.WATER) >= 0 ? -1 : 0), // v5 R2: hand-written coach lines
   mystery: () => -1, linked: () => -1,
+  // v5 R4: the tower lesson points at the tower's colour (it must be a front card from the first tap); mystery blocks are
+  // hand-written lines (no card).
+  tower: (S, B) => { const m = B.towers.length ? B.towers[0].m : 0; return m && front(S).some(([, mm]) => mm === m) ? m : 0; }, hidden: (S, B) => (B.nhid ? -1 : 0),
 };
 
 // gen: the era's generator params with these overrides; colours; deal: dealer overrides; lock; pairs: [[play index, ...]]
@@ -75,6 +78,13 @@ const SPECS = [
     gen: Object.assign({}, TEACH42, { w: [32, 32], h: [31, 31], k: 1.6, towersOut: [2, 2], towersIn: [2, 2] }), colours: 10, deal: Object.assign({}, DEAL42, { size: [70, 99], maxTaps: 30 }), beta: 1, pairs: [1], minRate: 0.15, maxMs: 600000 },
   { n: 100, era: 2, name: "Hidden Colours", teaches: "mystery", hint: "A ? squad hides its colour until it reaches the front. Its count always shows.",
     gen: Object.assign({}, TEACH42, { twoGates: 0 }), colours: 7, deal: DEAL42, flags: [[0, 1], [2, 1], [4, 1]], minRate: 0.6, maxMs: 600000 },
+  // v5 R4: the lessons opening Emberwatch Crags (archer towers; archers only knock sappers back) and The Shrouded Weald
+  // (mystery blocks), on their realms' boards with the plan's features set by hand: a lava moat with an open causeway and
+  // one tower; a forest stream with an open bridge and a share of the castle hidden.
+  { n: 125, era: 6, name: "The Archer Tower", teaches: "tower", hint: "Archers shoot every sapper sent into their ring. A hit sapper is knocked back and waits. Knock the tower down and the ring is safe.",
+    gen: Object.assign({}, TEACH42, { scene: "ember", moat: true, gates: 0, towers: [1, 1] }), colours: 8, deal: DEAL42, minRate: 0.5, maxMs: 600000 },
+  { n: 150, era: 7, name: "Hidden Blocks", teaches: "hidden", hint: "A ? block hides its colour until a block beside it is dug out. Then it shows for good.",
+    gen: Object.assign({}, TEACH42, { scene: "moonlit", moat: true, gates: 0, towers: 0 }), colours: 9, deal: DEAL42, hidden: true, minRate: 0.5, maxMs: 600000 },
 ];
 const DEAL = { hold: 5, size: [14, 36], deep: 0, finish: 0.4, maxCard: 60, maxCards: 120, tries: 14, maxTaps: 26, maxWaitMs: C.maxWaitMs, shrink: 0.5, shrinks: 5, park: 1, parkMax: C.deal.parkMax, noParkUnderArchers: true };
 
@@ -85,6 +95,8 @@ const COACH = {
   2: [{ say: "{crew} is walled in. Send it anyway!", card: "@", until: ["wait", "reach:@"] }, { say: "Nothing in reach: they wait in a space.", line: true, if: "wait", until: "play" },
     { say: "If every space is stuck waiting, you lose.", line: true, until: "play" }],
   3: [{ say: "{n} {crew}, {reach} in reach: {go} go.", card: "@", if: "short:@", until: "used:@" }, { say: "The rest wait their turn. Break the wall!", line: true, if: "wait", until: "lineEmpty" }],
+  125: [{ say: "Archers shoot inside the red ring. Tower first!", short: "Tower first!", card: "@", ring: "tower", until: "tower" }, { say: "Tower down: the ring is safe now.", short: "The ring is safe now.", until: "play" },
+    { say: "New power-up! The Volley clears one colour.", short: "New: the Volley!", power: "volley", until: "play" }], // v5 R4
 };
 const coachOf = (n, m) => (COACH[n] ? JSON.parse(JSON.stringify(COACH[n]).replace(/"@"/g, String(m)).replace(/:@/g, ":" + m)) : (CFG.teach || {})[idOf(n)] || null);
 const idOf = (n) => "e" + REALM(n) + "-" + String(n).padStart(2, "0"); // v5 R2: the realm
@@ -150,7 +162,9 @@ function build(spec) {
     if (!L) continue;
     delete L.roles;
     if (!kept && (spec.era === 2 || spec.era === 4) && !(L.gates && L.gates.length)) continue; // (v5 R2: a kept board may have opened its gates)
-    if (!kept) { const RL = require("./relay.js"), r = REALM(spec.n); if (r >= 3) RL.ED.dropTowers(L); if (r === 2) RL.ED.openGates(L, []); RL.prune(L, CFG.v3); } // v5 R2: the realm's edits on a new fort (a lesson keeps its gates from 50)
+    if (!kept && spec.era <= 4) { const RL = require("./relay.js"), r = REALM(spec.n); if (r >= 3) RL.ED.dropTowers(L); if (r === 2) RL.ED.openGates(L, []); RL.prune(L, CFG.v3); } // v5 R2: the realm's edits on a new fort (a lesson keeps its gates from 50)
+    if (!kept && spec.teaches === "tower" && !(L.towers && L.towers.length)) continue; // v5 R4
+    if (!kept && spec.hidden && !G.hide(L, seed, C.plan.hidden)) continue;
     if (spec.lock && !kept && !G.lockKey(L, seed)) continue;
     if (spec.teaches === "gate" && !(L.gates && L.gates.length)) continue;
     let dl = null; for (let a = 0; a < 6 && !dl; a++) dl = G.deal(L, seed ^ Math.imul(a + 1, 0x27D4EB2F), D);
@@ -187,12 +201,15 @@ function build(spec) {
 }
 
 const KEEPTRIES = 300; // v4.3 --boards: deal seeds tried on a kept board before new forts are drawn
-const levels = SPECS.map(build).sort((a, b) => a.lv.n - b.lv.n);
+// v5 R4 --add N,N: build only those lessons; every other level is kept from levels/teaching.json exactly as it is.
+const ADDI = process.argv.indexOf("--add"), ADD = ADDI > 0 ? process.argv[ADDI + 1].split(",").map(Number) : null;
+const OLD = ADD ? JSON.parse(fs.readFileSync(FILE, "utf8")).levels.filter((l) => ADD.indexOf(l.n) < 0) : [];
+const levels = OLD.map((lv) => ({ lv, v: { orders: lv.win, rate: 0, ms: 0, maxWait: 0 }, s: -1, coach: 0, kept: true, old: true })).concat(SPECS.filter((s) => !ADD || ADD.indexOf(s.n) >= 0).map(build)).sort((a, b) => a.lv.n - b.lv.n);
 const text = JSON.stringify({ version: 6, note: "Teaching levels (SPEC-v3 §5, SPEC-v4 §9 M3 and v4.1): castle pictures entered from the bottom, each with its lesson where the coach can point at it from the first tap. 1-3 the tray, the holding line, a squad bigger than its reach; v5 R2, one lesson opening each realm: 25 moats, 50 gates and keys, 75 linked squads, 100 mystery cards. Built by tools/teach-v4.js. Legend in src/engine.js. v4.3: each plays on its fixed tag (tag; Easy or Normal) and stores one winning order on it (win[tag]). v5 R2: the boards and decks are v4.3's teaching levels re-laid by tools/relay.js (teach-v4.js --boards on its --teach-out file).", levels: levels.map((x) => x.lv) }, null, 1)
   .replace(/\[\n\s+(\[[\d, ]+\]|[\d.]+|"[^"\n]*")(,\n\s+(\[[\d, ]+\]|[\d.]+|"[^"\n]*"))*\n\s+\]/g, (m) => "[" + m.slice(1, -1).trim().split(/,\n\s+/).join(", ") + "]") + "\n";
 if (process.argv.includes("--check")) { const same = fs.readFileSync(FILE, "utf8") === text; console.log(same ? "teaching.json matches a fresh build" : "teaching.json differs from a fresh build"); process.exitCode = same ? 0 : 1; }
 else { fs.writeFileSync(DEST, text); console.log("wrote " + DEST); }
-{ const bad = levels.filter((x) => COACH[x.lv.n] && JSON.stringify((CFG.teach || {})[idOf(x.lv.n)]) !== JSON.stringify(x.v.coach)).map((x) => idOf(x.lv.n)); console.log(bad.length ? "config.json teach differs for " + bad.join(", ") + ": paste the lines below" : "config.json teach matches this build's coach cards"); }
-console.log("config.json teach (the coach's cards for this build):\n" + levels.filter((x) => COACH[x.lv.n]).map((x) => '    "' + idOf(x.lv.n) + '": ' + JSON.stringify(x.v.coach)).join(",\n"));
+{ const bad = levels.filter((x) => !x.old && COACH[x.lv.n] && JSON.stringify((CFG.teach || {})[idOf(x.lv.n)]) !== JSON.stringify(x.v.coach)).map((x) => idOf(x.lv.n)); console.log(bad.length ? "config.json teach differs for " + bad.join(", ") + ": paste the lines below" : "config.json teach matches this build's coach cards"); }
+console.log("config.json teach (the coach's cards for this build):\n" + levels.filter((x) => !x.old && COACH[x.lv.n]).map((x) => '    "' + idOf(x.lv.n) + '": ' + JSON.stringify(x.v.coach)).join(",\n"));
 const x0 = (n) => levels.find((x) => x.lv.n === n).kept;
-for (const { lv, v, s, coach } of levels) console.log(String(lv.n).padStart(3) + " " + lv.name.padEnd(18) + lv.w + "x" + lv.h + " seed pass " + s + (KEEP ? (s === 0 ? " (shipped deck)" : x0(lv.n) ? " (kept board)" : " (NEW board)") : "") + ", cards " + lv.cols.flat().length + ", tag " + lv.tag + ", taps " + v.orders[lv.tag].length + ", random " + (100 * v.rate).toFixed(1) + "%, " + Math.round(v.ms / 1000) + " s, longest tap " + (v.maxWait / 1000).toFixed(1) + " s, coach card " + (coach > 0 ? coach + " (" + (lv.pal[coach] ? lv.pal[coach].n : coach === E.GILT ? "gilt" : "?") + ")" : "-") + (lv.links ? ", links " + JSON.stringify(lv.links) : "") + (lv.lock ? ", lock " + JSON.stringify(lv.lock.key) : ""));
+for (const { lv, v, s, coach } of levels.filter((x) => !x.old)) console.log(String(lv.n).padStart(3) + " " + lv.name.padEnd(18) + lv.w + "x" + lv.h + " seed pass " + s + (KEEP ? (s === 0 ? " (shipped deck)" : x0(lv.n) ? " (kept board)" : " (NEW board)") : "") + ", cards " + lv.cols.flat().length + ", tag " + lv.tag + ", taps " + v.orders[lv.tag].length + ", random " + (100 * v.rate).toFixed(1) + "%, " + Math.round(v.ms / 1000) + " s, longest tap " + (v.maxWait / 1000).toFixed(1) + " s, coach card " + (coach > 0 ? coach + " (" + (lv.pal[coach] ? lv.pal[coach].n : coach === E.GILT ? "gilt" : "?") + ")" : "-") + (lv.links ? ", links " + JSON.stringify(lv.links) : "") + (lv.lock ? ", lock " + JSON.stringify(lv.lock.key) : ""));
