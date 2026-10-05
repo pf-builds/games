@@ -126,7 +126,7 @@ for i in range(N):
     rec["eggs"] = eggs
     if "goblinKing" in g: rec["goblinKing"] = {"x": g["goblinKing"][0], "y": g["goblinKing"][1]}
     for o in P.get("manual", {}).get(str(i + 1), []):   # hand fixes after the eye check: {"list": "eggs", "i": 0, "x": .., "y": ..}
-        rec[o["list"]][o["i"]].update({k: v for k, v in o.items() if k not in ("list", "i")})
+        rec[o["list"]][o["i"]].update({k: v for k, v in o.items() if k not in ("list", "i", "why")})
     layout["sheets"].append(rec)
 
 # ---- JPEGs (quality stepped down until the file fits the size cap)

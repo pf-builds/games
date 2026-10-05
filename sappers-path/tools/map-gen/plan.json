@@ -21,7 +21,9 @@
   "manual": {
     "about": "hand fixes after the eye check (contact.png): sheet -> [{list, i, fields to set}]",
     "6": [ { "list": "eggs", "i": 0, "kind": "mushrooms", "x": 515, "y": 350 }, { "list": "eggs", "i": 1, "kind": "fish", "x": 440, "y": 785 } ],
-    "12": [ { "list": "eggs", "i": 1, "kind": "grass", "x": 640, "y": 780 } ]
+    "8": [ { "list": "quests", "i": 0, "x": 385, "y": 1020, "branch": [518, 1101], "why": "v5 R3 fix: off level 60's bend (centres were 34 css px apart at 375)" } ],
+    "10": [ { "list": "eggs", "i": 0, "x": 100, "y": 1045, "why": "v5 R3 fix: out from under realm 4's open banner" }, { "list": "eggs", "i": 1, "x": 250, "y": 975, "why": "v5 R3 fix: out from under realm 4's open banner" } ],
+    "12": [ { "list": "eggs", "i": 1, "kind": "grass", "x": 640, "y": 780 }, { "list": "quests", "i": 0, "x": 668, "y": 930, "branch": [595, 1012], "why": "v5 R3 fix: off the painted tower, onto the spur by 92" } ]
   },
   "model": {
     "id": "stabilityai/stable-diffusion-xl-base-1.0",
