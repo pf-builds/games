@@ -293,3 +293,113 @@ Payload (portal cap 20 MB applies to the build players get):
   whole-run figure (title, map, play, gallery) is 3.14-3.40 MB.
 - **Portal build** (game folder without `tools/` and `levels/pool-*.json`, tracked files): **9.87 MB**. Without `tools/`
   only: 12.46 MB. The whole folder with `tools/`: 21.53 MB (over 20 MB, but `tools/` never ships).
+
+
+## 10. The R4 fix pass (2026-10-05, the critics' one fix pass)
+
+Source: `tools/critic-v5-r4-visual.md` (0 blockers, 7 should-fix, 8 nits) and `tools/critic-v5-r4-functional.md` (PASS, 4
+minors), the orchestrator's fix brief. Checklist: `tools/v5-progress.md` "R4 fixes". Shots: `tools/shots-v5-r4/fixes/`
+(gitignored; `tools/shots-v5-r4-fixes.mjs` remakes them; contact sheets in `fixes/boards/`). Port 8491 was held by another
+session's server (serving `repos/`, not mine to stop), so this pass served the worktree on 8497.
+
+| # | Fix | What changed |
+|---|---|---|
+| S1 | Mistmoor fog | `castle.js fogFen`: no sun (a hazy moon at night), the fen from a willow line down, far willows (crowns with hanging fronds), mist banks across the willows and low at the fort's feet, all background (never over a block). New scene palettes (fen: grey-green fog `#99c0b7`, mist `#fef7f9`; fenDusk: mauve fog; fenNight: dark teal fog), searched under the colour gate (every pair 25+ ΔE00, 20+ faded; `palette.js --scenes` ok). Realm 5 never has towers, so its scenes drop `slate` from `extra`. The moat is a still dark mire: `liquid: "mire"` (config `board.pic.liquids.mire`, `#2b4a48` with a faint wave), like the Crags' lava. |
+| S2 | Mistmoor variety | Five families (`gen.families`): stilt hall, causeway fort (stone footing, stake wall, thatched gate tower, roundhouses), reed palisade (bundled reeds bound with timber, a longhouse roof, a watch platform), sunken tower (a leaning stone tower, ruined crown, hoarding, a hut on legs by a plank walk), island hold (a mound, a hall in a ring of stakes, willows). Re-baked 101-124: causeway 5, stilt 6, sunken 6, palisade 6, island 1; fen 17, fenNight 5, fenDusk 2. Variety median 27.9% (was 30.0%); by layout alone 35.7%. |
+| S3 | Throne variety, "?" blobs | Four more families beside the throne hall (`era8b`): crooked keeps (two or three leaning keeps, sagging plank bridges), scrap-wall camp (big goblin tents, a bonfire, a lookout on stilts, banners), cliff citadel (a jagged crag with a citadel and a plank stair), the gate approach (one huge gatehouse between drum towers, banners, the crown peeking over). 175-200: crooked 8, camp 6, cliff 6, throne 5 (200 included), gate 1. Variety median 22.9% (was 30.7%). Mystery blocks (`gen.js hide`, `plan.hidden`): only on the fortress walls (never sky, clouds, the outline, gold, banners or red roofs, `skip`), blobs 2-4 x 1.5-3, share 14-22%, and no 4-connected group over 28 cells (`maxGroup`). 150-174 keep their R4 blocks. |
+| S4, m3 | The boss | 200 re-baked as the throne hall with the Goblin King drawn in it (`castle.js KING`, 11 x 9 cells: crown, green face, red cloak, gold throne; the hall is the keep's door; never hidden). Config `boss["e8-200"]`: the top bar's name "The Goblin King's Hall", Play "Face the King" (map and title), the desktop card "200: The Goblin King", the win sheet "Crown taken!" / "The Goblin King is off his throne. His crown is ours!" (again: "...flees his throne again."), a pixel crown that stamps in with a ring of 12 gold rays (reduced motion: shown still), three more star cues. Intro: a coach line (`teach["e8-200"]`) with a new ring kind, a board cell `[x, y]` (the king's face). No rule changed. |
+| S5 | Phone map labels | `main.js fitLabel`: after the map renders (and on a resize), the current label tries its picked side, then west, east, above, below, the four corners, then above and below farther out, and as a last resort the short label "{n}" (`map.text.curShort`), measuring the real boxes of nodes, shown quests, eggs, open prize bubbles, banners and the king; the least contact wins. `tools/label-audit.mjs` (the critic's rule: any contact, every current level 99-200, phone and desktop): 0 contact in all 204 states (was 25 phone, 12 desktop). No spot moved, so the tap-spacing test is untouched. |
+| S6 | Towers vs water | Each realm 6-8 scene's tower colour (`slate`) is a stone grey searched under the colour gate and 25+ ΔE00 from the water (`#3477d6`), the lava (`#e8551f`) and the "?" stud (Crags: grey-green basalt `#5b6754`, `#4f5936`, `#546649`; Weald: `#868181`, `#8a818e`, `#925470`; Throne: `#90727e`, `#567e7d`, `#849086`), with a few roles nudged 2-16 ΔE to make room. 125-174 repainted in place (`tools/repaint.js`; lesson 125 with `--scene ember`, and `levels/teaching.json` to match); 175-200 from the bake. Smallest tower-to-water/lava gap now 25.3 (was 3.6). No frozen level has towers. The "ember accent" is the red range ring (no new colour fits the gate). |
+| S7 | Realm 8 banner | The banner's name wraps (balanced) instead of an ellipsis; at 360 wide it fits whole on one line under REALM 8. |
+| m2 | Critic covers the Volley and "?" blocks | `tools/critic-v5/rules.mjs` (from SPEC-v4 §9 v5 R1): mystery-block exposure (SHOW), the clear order, the Volley (clears, cards cut, squads out, walkers cut loose then home, a link-held partner freed, lock). `diff.mjs`: Volley ops among the power ops, CLEAR and SHOW compared (each instant's SHOWs as a set, the m1 gap), hiddenCell per cell. 8,712 games, 0 mismatches; 3,512 Volleys taken, 27,944 SHOWs, 591,233 CLEARs. |
+| N1 | Locked nodes on dark sheets | A lighter disc (`#736c7e`), lighter numerals and a pale rim. |
+| N2 | The king on the map | Drawn 3x his art (`map.tail.kingScale`, was 2.1), flag and label box scaled with him. |
+
+### The re-bake (101-124, 175-200)
+
+Bake to the scratchpad: `bake.js --list 101..124,175..200 --keep levels.json --out DIR --r4fix` (14 min, 16 threads), then
+two lookahead fix-ups (176, 179, 182, 188, 190, 194 with `--extra 8`; 190 again with `--extra 22`), merged (`--merge`,
+report `tools/v5-r4-bake.md`), invariants checked in Node, then copied in. Levels 1-100 and every other level byte-identical
+(150 of 200 unchanged). Invariants on all 50: wins on its tag with its stored order and no power-ups, 5 spaces, longest wait
+15.0 s at most, taps 55 at most, every level in band, 0 fallbacks (lookahead max 25%), tags and density as before (test.js),
+every Hard and Extreme level locked, lessons 125 and 150 untouched (but 125's tower colour). Real pace: realm 5 median 232 s
+(208-274), realm 8 median 227 s (196-259), the boss 259 s; 101-200 overall median 226 s (3:46). Every board looked at
+(`fixes/boards/rebake-101-124.png`, `rebake-175-200.png`) and in the game (`fixes/*-mist-*`, `*-throne-*`, `*-boss-*`).
+
+| # | Tag | Board (scene) | Features | Run | Real pace | Longest wait | Taps | Lookahead |
+|---|---|---|---|---|---|---|---|---|
+| 101 | normal | causeway-0t (fen) | linked, mystery | full run, dealt new | 208 s | 15.0 s | 42 | 2% |
+| 102 | hard | narrow-stilt1-0t (fen) | moat, gate, linked, mystery, key lock | full run, dealt new | 237 s | 15.0 s | 41 | 14% |
+| 103 | normal | sunken-0t (fen) | moat, mystery | full run, dealt new | 236 s | 15.0 s | 46 | 23% |
+| 104 | normal | sunken-0t (fenNight) | moat, gate, mystery | full run, dealt new | 222 s | 15.0 s | 55 | 3% |
+| 105 | hard | palisade-0t (fen) | moat, gate, linked, mystery, colour lock | full run, dealt new | 225 s | 14.7 s | 42 | 25% |
+| 106 | easy | causeway-0t (fenNight) | linked | full run, dealt new | 249 s | 15.0 s | 45 | 99% |
+| 107 | normal | island-0t (fenNight) | moat, gate, linked | full run, dealt new | 242 s | 14.7 s | 43 | 0% |
+| 108 | hard | palisade-0t (fen) | moat, gate, linked, mystery, key lock | full run, dealt new | 215 s | 15.0 s | 38 | 15% |
+| 109 | normal | sunken-0t (fen) | moat, linked, mystery | full run, dealt new | 274 s | 14.9 s | 53 | 12% |
+| 110 | normal | narrow-causeway-0t (fen) | moat, linked, mystery | full run, dealt new | 249 s | 15.0 s | 51 | 21% |
+| 111 | hard | sunken-0t (fen) | moat, gate, linked, mystery, colour lock | full run, dealt new | 231 s | 15.0 s | 40 | 0% |
+| 112 | normal | causeway-0t (fen) | linked, mystery | full run, dealt new | 232 s | 14.9 s | 43 | 6% |
+| 113 | normal | palisade-0t (fenNight) | moat, linked, mystery | full run, dealt new | 224 s | 14.9 s | 50 | 14% |
+| 114 | hard | palisade-0t (fen) | moat, gate, linked, mystery, colour lock | full run, dealt new | 223 s | 15.0 s | 42 | 5% |
+| 115 | easy | stilt2-0t (fen) | moat | full run, dealt new | 246 s | 14.9 s | 51 | 72% |
+| 116 | normal | narrow-stilt1-0t (fenDusk) | moat, mystery | full run, dealt new | 272 s | 15.0 s | 50 | 11% |
+| 117 | hard | narrow-stilt1-0t (fenNight) | moat, gate, linked, mystery, colour lock | full run, dealt new | 212 s | 15.0 s | 43 | 9% |
+| 118 | normal | sunken-0t (fen) | linked, mystery | full run, dealt new | 242 s | 14.5 s | 41 | 10% |
+| 119 | normal | palisade-0t (fen) | moat, gate, mystery | full run, dealt new | 225 s | 14.9 s | 53 | 9% |
+| 120 | hard | stilt2-0t (fen) | moat, gate, linked, mystery, colour lock | full run, dealt new | 233 s | 15.0 s | 42 | 4% |
+| 121 | normal | sunken-0t (fen) | moat, gate | full run, dealt new | 219 s | 15.0 s | 53 | 7% |
+| 122 | normal | causeway-0t (fen) | moat, linked | full run, dealt new | 228 s | 14.9 s | 49 | 14% |
+| 123 | hard | palisade-0t (fenDusk) | moat, gate, linked, mystery, colour lock | full run, dealt new | 232 s | 15.0 s | 51 | 5% |
+| 124 | hard | narrow-stilt1-0t (fen) | moat, gate, linked, mystery, key lock | full run, dealt new | 245 s | 14.9 s | 49 | 6% |
+| 175 | hard | crooked-2t (throneDusk) | moat, gate, linked, tower, hidden, colour lock | full run, dealt new | 223 s | 14.9 s | 50 | 25% |
+| 176 | extreme | throne-3t (throne) | moat, gate, linked, mystery, tower, hidden, key lock | fix-up, dealt new | 218 s | 14.8 s | 45 | 8% |
+| 177 | normal | throne-0t (throne) | linked, mystery, hidden | full run, dealt new | 252 s | 15.0 s | 54 | 21% |
+| 178 | hard | camp-2t (throneDusk) | moat, linked, mystery, tower, hidden, colour lock | full run, dealt new | 228 s | 15.0 s | 51 | 14% |
+| 179 | extreme | camp-2t (throneNight) | moat, gate, linked, mystery, tower, hidden, key lock | fix-up, dealt new | 254 s | 14.8 s | 53 | 18% |
+| 180 | easy | gate-0t (throneDusk) |  | full run, dealt new | 221 s | 15.0 s | 49 | 100% |
+| 181 | hard | cliff-3t (throneNight) | moat, linked, mystery, tower, hidden, key lock | full run, dealt new | 238 s | 14.8 s | 55 | 11% |
+| 182 | normal | crooked-1t (throne) | moat, linked, tower | fix-up, dealt new | 199 s | 14.9 s | 55 | 12% |
+| 183 | extreme | cliff-3t (throne) | moat, gate, linked, mystery, tower, hidden, key lock | full run, dealt new | 196 s | 14.8 s | 43 | 7% |
+| 184 | hard | throne-3t (throne) | moat, gate, linked, mystery, tower, hidden, colour lock | full run, dealt new | 234 s | 14.8 s | 55 | 13% |
+| 185 | extreme | camp-2t (throneDusk) | moat, gate, linked, mystery, tower, hidden, colour lock | full run, dealt new | 199 s | 15.0 s | 45 | 19% |
+| 186 | normal | camp-0t (throne) | moat, linked, hidden | full run, dealt new | 240 s | 15.0 s | 50 | 15% |
+| 187 | hard | cliff-2t (throneNight) | moat, linked, mystery, tower, hidden, colour lock | full run, dealt new | 242 s | 15.0 s | 47 | 8% |
+| 188 | extreme | crooked-2t (throneDusk) | moat, gate, linked, mystery, tower, hidden, colour lock | fix-up, dealt new | 236 s | 15.0 s | 52 | 15% |
+| 189 | easy | cliff-0t (throne) |  | full run, dealt new | 224 s | 15.0 s | 53 | 90% |
+| 190 | hard | crooked-2t (throne) | moat, gate, linked, mystery, tower, key lock | fix-up, dealt new | 219 s | 14.9 s | 54 | 23% |
+| 191 | normal | cliff-0t (throneDusk) | moat, gate, mystery | full run, dealt new | 224 s | 15.0 s | 51 | 17% |
+| 192 | extreme | crooked-2t (throneNight) | moat, gate, linked, mystery, tower, hidden, colour lock | full run, dealt new | 231 s | 15.0 s | 53 | 9% |
+| 193 | hard | camp-2t (throneNight) | moat, gate, linked, mystery, tower, hidden, key lock | full run, dealt new | 231 s | 14.9 s | 48 | 8% |
+| 194 | extreme | throne-3t (throneDusk) | moat, gate, linked, mystery, tower, hidden, colour lock | fix-up, dealt new | 226 s | 15.0 s | 49 | 23% |
+| 195 | normal | crooked-0t (throneNight) | moat, hidden | full run, dealt new | 212 s | 14.9 s | 45 | 6% |
+| 196 | hard | crooked-0t (throneDusk) | moat, gate, linked, mystery, hidden, key lock | full run, dealt new | 227 s | 14.9 s | 50 | 2% |
+| 197 | extreme | camp-2t (throneNight) | moat, gate, linked, mystery, tower, hidden, colour lock | full run, dealt new | 246 s | 14.9 s | 54 | 19% |
+| 198 | easy | crooked-0t (throne) |  | full run, dealt new | 217 s | 14.9 s | 55 | 83% |
+| 199 | hard | cliff-2t (throne) | moat, gate, linked, tower, hidden, key lock | full run, dealt new | 257 s | 15.0 s | 55 | 6% |
+| 200 | extreme | throne-moat-king-4t (throneDusk) | moat, gate, linked, mystery, tower, hidden, colour lock | full run, dealt new | 259 s | 15.0 s | 44 | 0% |
+
+### Skipped (in LATER)
+
+- N3 (perspective art on the summit and sheets 23-24), N4 (the summit's flat fog band), N7 (the grass egg glyph): map art,
+  a repaint job.
+- N5 (archer sprites small, range rings noisy on 3-tower boards, 125's ring clipped at the board's edge), N6 ("?" studs the
+  same in every realm): board rendering; N6 is softer now the blocks keep off the sky.
+- N8 (rushed mid-play shots): not a defect.
+- m4 (2.6 MB of `levels/pool-e2..e4.json` in the game folder): the portal build already leaves them out.
+- The desktop next-up card's Play wraps to two lines for every level (pre-existing), the boss's too.
+- Island holds and the gate approach came up once each in the bake (families are drawn per seed; the variety gate picks the
+  least alike candidate, not a family quota).
+
+### Checks at the end
+
+| Check | Result |
+|---|---|
+| `tools/test.js` | 566 passed, 0 failed (new: the realms, mystery-block, tower-colour and boss test) |
+| `tools/freeze.js --require` | PASS: levels 1-100 555 checks, gallery 360, castles (eras 1-4) 283 cases, 0 differences |
+| `tools/regrade.js` / `--gallery` | 0 differences (200 levels, 1155 checks) / 0 (60, 360) |
+| `tools/critic-v5/run.sh` | 0 mismatching games of 8,712 (Volley and "?" blocks now modelled); ladder 0, tags 0, known answers 0 wrong, real pace 260/260 identical (`diff-result.json` changed only `ms`: restored) |
+| `SP.selfTest()` (`?debug=1`, map opened first) | 375x812 3x: 765/0 on a fresh save, past 150 (155 cleared, 30 pictures) and all 200; 1280x720: 767/0 on the same three; 0 console (new: the boss's name, win sheet and crown) |
+| `tools/label-audit.mjs` | 0 contact, 204 states (99-200, phone and desktop), 0 console |
+| `tools/shots-v5-r4-fixes.mjs` | 0 console; realm 8 banner whole at 360 wide |
+| `tools/harness.mjs` (run last) | all passed, 0 console messages |

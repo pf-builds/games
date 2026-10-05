@@ -228,15 +228,18 @@ R4 fix: <what>". Frozen: levels 1-100, the 60 pictures, castles eras 1-4 (`node 
 
 | # | Fix | State | Commit |
 |---|---|---|---|
-| f0 | Critic reports committed, this checklist | done | (with f7) |
-| f7 | S7 realm 8 banner: a long name wraps on the phone (no ellipsis) | done (CSS); shot at 360 wide pending | (this commit) |
-| f6 | S6 archer towers: a stone-grey per scene in realms 6-8, 25+ ΔE00 from water, lava and every role; levels 125-174 repainted | | |
-| f1 | S1 Mistmoor fog: fog skies (no sun), mist banks, willows, reeds, still dark water (a `mire` liquid), dusk and night misty | | |
-| f2 | S2 Mistmoor variety: five fort families (stilt hall, causeway fort, reed palisade, sunken tower, island hold) | | |
-| f3 | S3 Throne variety: five fortress families; mystery blocks capped and spread (no big flat "?" masses) | | |
-| f3b | Re-bake 101-124 and 175-200 to scratch, checks, copy in; contact sheets looked at | | |
-| f4 | S4 + m3 the boss: name, Goblin King on the board, intro line, win line and celebration | | |
-| f5 | S5 phone map labels: 189, 131, 159, 106, 110 and the audit to 0 contact (phone and desktop, 100-200) | | |
-| f8 | m2 critic-v5 models the Volley and mystery blocks; 0 mismatches | | |
-| f9 | Cheap nits (N1 locked-node contrast on dark sheets, ...); skipped ones in notes and LATER | | |
-| f10 | Close-out: `?v=37`, every check, shots, notes §10, SPEC-v4 §9, LATER | | |
+| f0 | Critic reports committed, this checklist | done | cbf795b |
+| f7 | S7 realm 8 banner: a long name wraps on the phone (no ellipsis) | done: whole at 360 wide (`fixes/phone360-banner-realm8.png`) | cbf795b |
+| f6 | S6 archer towers: a stone-grey per scene in realms 6-8, 25+ ΔE00 from water, lava and every role; levels 125-174 repainted | done: smallest gap 25.3 (was 3.6); lesson 125 and teaching.json too | 75cb1ef, b4a2245 |
+| f1 | S1 Mistmoor fog: fog skies (no sun), mist banks, willows, reeds, still dark water (a `mire` liquid), dusk and night misty | done | 75cb1ef |
+| f2 | S2 Mistmoor variety: five fort families (stilt hall, causeway fort, reed palisade, sunken tower, island hold) | done: variety 27.9% | 75cb1ef |
+| f3 | S3 Throne variety: five fortress families; mystery blocks capped and spread (no big flat "?" masses) | done: variety 22.9%; groups <= 28, off sky and outline | 75cb1ef |
+| f3b | Re-bake 101-124 and 175-200 to scratch, checks, copy in; contact sheets looked at | done: 0 fallbacks, median 226 s (101-200) | b4a2245 |
+| f4 | S4 + m3 the boss: name, Goblin King on the board, intro line, win line and celebration | done | b4a2245, 9d4a7e8 |
+| f5 | S5 phone map labels: 189, 131, 159, 106, 110 and the audit to 0 contact (phone and desktop, 100-200) | done: `tools/label-audit.mjs` 0 contact in 204 states | 9d4a7e8 |
+| f8 | m2 critic-v5 models the Volley and mystery blocks; 0 mismatches | done: 8,712 games, 0 | dbe3057 |
+| f9 | Cheap nits (N1 locked-node contrast on dark sheets, ...); skipped ones in notes and LATER | done: N1, N2; N3-N8 and m4 in LATER | 9d4a7e8 |
+| f10 | Close-out: `?v=37`, every check, shots, notes §10, SPEC-v4 §9, LATER | done | (close-out) |
+
+### State (R4 fixes)
+Every brief item fixed; nits N3-N8 and m4 parked in LATER. Next: Peter's playtest of 101-200.

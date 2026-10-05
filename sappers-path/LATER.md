@@ -310,3 +310,17 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 
 ## From the v5 R4 merge (2026-10-05)
 - On the real levels the map's overlap audit (every current level 100-200) counts 28 label grazes on the phone and 8 on desktop (R4c's clones: about 20). The first a player meets is level 101's label touching node 102 on a 375 phone, which `tools/shots-v5-r4-map.mjs` now reports as a failure of its `today-tail` state (that state meant "the long tail at 101" before the merge). A smaller label, or a side picker that may set it diagonally, would clear most.
+
+## From the R4 critics (parked by the R4 fix pass, 2026-10-05)
+
+Fixed: S1-S7, m2, m3, N1, N2 (`tools/v5-r4-notes.md` §10). Parked:
+- N3: perspective art on a top-down map (the summit fortress, the goblin huts and lookout on sheets 23-24; the painted road above 200 runs up while the dashed path turns right). A repaint of sheets 23-25.
+- N4: the summit's fog reads as a flat grey band under the header; paint mist into the sheet or feather the wash.
+- N5: archer sprites are small (13 x 15 CSS px) and three-tower rings overlap into noise; lesson 125's ring is clipped at the board's left edge. A bigger archer and ring culling by importance.
+- N6: "?" studs are one navy in every realm, close to the realm 7 and 8 skies; a per-realm tint (they keep off the sky now, so it matters less).
+- N7: the grass egg glyph reads as lettering; redraw it.
+- m4: 2.6 MB of `levels/pool-e2..e4.json` sit in the game folder; move bake pools under `tools/` (the portal build already leaves them out).
+- Families per realm are drawn per seed, so the island hold and the gate approach came up once each; a family quota in the bake's picker would even them out.
+- The desktop next-up card's Play wraps to two lines (every level, the boss too); a smaller label or a wider card.
+- A towers' "ember accent" in their own colour: no further colour fits the gate on 10-12-colour boards; a lit slit drawn by the board (not a block colour) would do it.
+
