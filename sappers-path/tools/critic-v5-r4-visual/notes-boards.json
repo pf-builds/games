@@ -1,0 +1,221 @@
+{
+ "notes": {
+  "phone-b101": {
+   "id": "e5-101",
+   "tag": "normal",
+   "cap": 5
+  },
+  "phone-b106": {
+   "id": "e5-106",
+   "tag": "easy",
+   "cap": 5
+  },
+  "phone-b113": {
+   "id": "e5-113",
+   "tag": "normal",
+   "cap": 5
+  },
+  "phone-b120": {
+   "id": "e5-120",
+   "tag": "hard",
+   "cap": 5
+  },
+  "phone-b128": {
+   "id": "e6-128",
+   "tag": "normal",
+   "cap": 5
+  },
+  "phone-b133": {
+   "id": "e6-133",
+   "tag": "hard",
+   "cap": 5
+  },
+  "phone-b141": {
+   "id": "e6-141",
+   "tag": "normal",
+   "cap": 5
+  },
+  "phone-b147": {
+   "id": "e6-147",
+   "tag": "extreme",
+   "cap": 5
+  },
+  "phone-b153": {
+   "id": "e7-153",
+   "tag": "extreme",
+   "cap": 5
+  },
+  "phone-b160": {
+   "id": "e7-160",
+   "tag": "hard",
+   "cap": 5
+  },
+  "phone-b167": {
+   "id": "e7-167",
+   "tag": "easy",
+   "cap": 5
+  },
+  "phone-b172": {
+   "id": "e7-172",
+   "tag": "hard",
+   "cap": 5
+  },
+  "phone-b178": {
+   "id": "e8-178",
+   "tag": "hard",
+   "cap": 5
+  },
+  "phone-b185": {
+   "id": "e8-185",
+   "tag": "extreme",
+   "cap": 5
+  },
+  "phone-b192": {
+   "id": "e8-192",
+   "tag": "extreme",
+   "cap": 5
+  },
+  "phone-b197": {
+   "id": "e8-197",
+   "tag": "extreme",
+   "cap": 5
+  },
+  "phone-b200": {
+   "id": "e8-200",
+   "tag": "extreme",
+   "cap": 5
+  },
+  "phone-b125": {
+   "id": "e6-125",
+   "tag": "easy",
+   "cap": 5
+  },
+  "phone-b150": {
+   "id": "e7-150",
+   "tag": "easy",
+   "cap": 5
+  },
+  "phone-hit133": null,
+  "phone-hit160": null,
+  "phone-hit200": null,
+  "phone-win": {
+   "status": "won",
+   "panel": "win"
+  },
+  "phone-lose": {
+   "n": 101,
+   "status": "failed",
+   "reason": "jam",
+   "panel": "fail"
+  },
+  "desk-b101": {
+   "id": "e5-101",
+   "tag": "normal",
+   "cap": 5
+  },
+  "desk-b106": {
+   "id": "e5-106",
+   "tag": "easy",
+   "cap": 5
+  },
+  "desk-b113": {
+   "id": "e5-113",
+   "tag": "normal",
+   "cap": 5
+  },
+  "desk-b120": {
+   "id": "e5-120",
+   "tag": "hard",
+   "cap": 5
+  },
+  "desk-b128": {
+   "id": "e6-128",
+   "tag": "normal",
+   "cap": 5
+  },
+  "desk-b133": {
+   "id": "e6-133",
+   "tag": "hard",
+   "cap": 5
+  },
+  "desk-b141": {
+   "id": "e6-141",
+   "tag": "normal",
+   "cap": 5
+  },
+  "desk-b147": {
+   "id": "e6-147",
+   "tag": "extreme",
+   "cap": 5
+  },
+  "desk-b153": {
+   "id": "e7-153",
+   "tag": "extreme",
+   "cap": 5
+  },
+  "desk-b160": {
+   "id": "e7-160",
+   "tag": "hard",
+   "cap": 5
+  },
+  "desk-b167": {
+   "id": "e7-167",
+   "tag": "easy",
+   "cap": 5
+  },
+  "desk-b172": {
+   "id": "e7-172",
+   "tag": "hard",
+   "cap": 5
+  },
+  "desk-b178": {
+   "id": "e8-178",
+   "tag": "hard",
+   "cap": 5
+  },
+  "desk-b185": {
+   "id": "e8-185",
+   "tag": "extreme",
+   "cap": 5
+  },
+  "desk-b192": {
+   "id": "e8-192",
+   "tag": "extreme",
+   "cap": 5
+  },
+  "desk-b197": {
+   "id": "e8-197",
+   "tag": "extreme",
+   "cap": 5
+  },
+  "desk-b200": {
+   "id": "e8-200",
+   "tag": "extreme",
+   "cap": 5
+  },
+  "desk-b125": {
+   "id": "e6-125",
+   "tag": "easy",
+   "cap": 5
+  },
+  "desk-b150": {
+   "id": "e7-150",
+   "tag": "easy",
+   "cap": 5
+  },
+  "desk-hit133": null,
+  "desk-hit160": null,
+  "desk-hit200": null,
+  "desk-win": {
+   "status": "won",
+   "panel": "win"
+  },
+  "desk-lose": {
+   "n": 101,
+   "status": "failed",
+   "reason": "jam",
+   "panel": "fail"
+  }
+ },
+ "log": []
+}

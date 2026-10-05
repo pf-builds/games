@@ -217,3 +217,26 @@ Merge of `sappers-path-map` into `sappers-path` in the worktree `repos/games-sap
 
 ### State (R4 merge)
 Merged and green. Next: critics on realms 5-8 and the new map, then Peter's playtest of 101-200.
+
+# R4 fixes: the critics' one fix pass on levels 101-200 (2026-10-05)
+
+Source: `tools/critic-v5-r4-functional.md` (PASS, 4 minors), `tools/critic-v5-r4-visual.md` (0 blockers, 7 should-fix,
+8 nits; shots in `tools/critic-v5-r4-visual/`, PNGs not committed) and the orchestrator's fix brief. Notes:
+`tools/v5-r4-notes.md` §10. Shots: `tools/shots-v5-r4/fixes/` (gitignored). Each row is its own commit "Sapper's Path v5
+R4 fix: <what>". Frozen: levels 1-100, the 60 pictures, castles eras 1-4 (`node tools/freeze.js --require`). Levels
+101-124 and 175-200 are re-baked to a scratch dir first and copied in after their checks.
+
+| # | Fix | State | Commit |
+|---|---|---|---|
+| f0 | Critic reports committed, this checklist | done | (with f7) |
+| f7 | S7 realm 8 banner: a long name wraps on the phone (no ellipsis) | done (CSS); shot at 360 wide pending | (this commit) |
+| f6 | S6 archer towers: a stone-grey per scene in realms 6-8, 25+ ΔE00 from water, lava and every role; levels 125-174 repainted | | |
+| f1 | S1 Mistmoor fog: fog skies (no sun), mist banks, willows, reeds, still dark water (a `mire` liquid), dusk and night misty | | |
+| f2 | S2 Mistmoor variety: five fort families (stilt hall, causeway fort, reed palisade, sunken tower, island hold) | | |
+| f3 | S3 Throne variety: five fortress families; mystery blocks capped and spread (no big flat "?" masses) | | |
+| f3b | Re-bake 101-124 and 175-200 to scratch, checks, copy in; contact sheets looked at | | |
+| f4 | S4 + m3 the boss: name, Goblin King on the board, intro line, win line and celebration | | |
+| f5 | S5 phone map labels: 189, 131, 159, 106, 110 and the audit to 0 contact (phone and desktop, 100-200) | | |
+| f8 | m2 critic-v5 models the Volley and mystery blocks; 0 mismatches | | |
+| f9 | Cheap nits (N1 locked-node contrast on dark sheets, ...); skipped ones in notes and LATER | | |
+| f10 | Close-out: `?v=37`, every check, shots, notes §10, SPEC-v4 §9, LATER | | |
