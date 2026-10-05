@@ -409,6 +409,20 @@ const ARCH = (cols) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "
     const T1 = LEVELS.levels[124], T2 = LEVELS.levels[149], CT = require("../config.json").teach, c1 = CT[T1.id] || [], c2 = CT[T2.id] || [];
     eq([T1.id, T1.source, T1.teaches, T1.tag, c1.length > 1 && c1[0].card === E.compile(T1).towers[0].m && c1[0].ring === "tower", c1.some((s) => s.power === "volley"), T2.id, T2.source, T2.teaches, T2.tag, c2.length > 1, TG.featuresOf(T2).indexOf("hidden") >= 0 && E.compile(T2).nhid > 0],
       ["e6-125", "teaching", "tower", "easy", true, true, "e7-150", "teaching", "hidden", "easy", true, true], "teaching (v5 R4): 125 teaches archer towers (coach card the tower's colour, its ring, then the Volley's badge) and 150 mystery blocks, both Easy");
+    // v5 R4 fix (the critics' S1-S6): the Mistmoor's moats are still mire and its scenes have no sun; realm 5 and realm 8
+    // boards come from five families each; realm 8's mystery blocks keep off the sky, clouds, outline, gold, banners and
+    // red roofs, none in a group over plan.hidden.maxGroup; every archer tower's colour is 25+ CIEDE2000 from the water and
+    // the lava; 200 is the boss: its config moment, the king drawn in its hall and its intro ring on his face.
+    const PIC2 = require("./pic.js"), Q2 = BC.picture, HB = BC.plan.hidden, fam = (ls) => [...new Set(ls.map((l) => (l.style || "").replace(/^narrow-/, "").replace(/[0-9]*-.*$/, "").replace(/[0-9]+$/, "")))].sort();
+    const r5 = rs[0].filter((l) => l.source !== "teaching"), r8 = rs[3], wet5 = r5.filter((l) => l.grid.some((r) => r.indexOf("~") >= 0));
+    const hidBad = []; for (const L of r8) if (L.hidden) { const B = E.compile(L), w = B.w, seen = new Uint8Array(B.n);
+      for (let c = 0; c < B.n; c++) { if (B.hid0[c] && HB.skip.indexOf(L.pal[B.a0[c]].r) >= 0) hidBad.push(L.n + " role " + L.pal[B.a0[c]].r);
+        if (!B.hid0[c] || seen[c]) continue; let k = 0; const st = [c]; seen[c] = 1; while (st.length) { const q = st.pop(); k++; for (const e of [q - 1, q + 1, q - w, q + w]) if (e >= 0 && e < B.n && Math.abs((e % w) - (q % w)) <= 1 && B.hid0[e] && !seen[e]) { seen[e] = 1; st.push(e); } } if (k > HB.maxGroup) hidBad.push(L.n + " group " + k); } }
+    let twMin = 99; for (const L of LEVELS.levels) if (L.n >= 125 && L.towers && L.towers.length) for (const k of Object.keys(L.pal)) if (L.pal[k].r === "slate") for (const wc of [Q2.show.water, Q2.show.lava]) twMin = Math.min(twMin, PIC2.de(L.pal[k].c, wc));
+    const BL = LEVELS.levels[199], BS = (require("../config.json").boss || {})[BL.id], BT = CT[BL.id] || [], ring = BT[0] && BT[0].ring, rc = Array.isArray(ring) ? E.matOf(BL.grid[ring[1]][ring[0]]) : 0;
+    eq([wet5.every((l) => l.liquid === "mire"), ["fen", "fenDusk", "fenNight"].every((k) => !!(Q2.scenes[k] && Q2.scenes[k].n.sky.indexOf("fog") >= 0)), fam(r5).length >= 4, fam(r8).length >= 4, hidBad.slice(0, 4), twMin >= 25,
+      !!BS && !!BS.name && !!BS.win, /king/.test(BL.style), Array.isArray(ring) && !!BL.pal[rc] && BL.pal[rc].r === "banner"],
+      [true, true, true, true, [], true, true, true, true], "realms (v5 R4 fix): Mistmoor moats are mire under fog skies; realm 5 families " + fam(r5).join("/") + ", realm 8 " + fam(r8).join("/") + "; realm 8 mystery blocks off the sky, outline and colours, groups of " + HB.maxGroup + " at most; towers " + twMin.toFixed(1) + "+ ΔE00 from water and lava; 200 the boss (name, the king in his hall, the intro ring on his face)");
   });
 }
 

@@ -695,7 +695,7 @@
      "r": "stone"
     },
     "2": {
-     "c": "#948886",
+     "c": "#9a8889",
      "n": "ash",
      "r": "grass"
     },
@@ -715,7 +715,7 @@
      "r": "cloud"
     },
     "6": {
-     "c": "#2a7cf4",
+     "c": "#5b6754",
      "n": "obsidian",
      "r": "slate"
     },
@@ -734,7 +734,7 @@
    "style": "square-vl-1t",
    "palette": {
     "minDE": 25.6,
-    "minFade": 20.8
+    "minFade": 20.5
    },
    "liquid": "lava",
    "cols": [
