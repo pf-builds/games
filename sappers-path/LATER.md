@@ -273,3 +273,12 @@ Every MAJOR from both reports, plus functional minors 2 (win wait) and 4 (landsc
 - The archer-hit harness screen is skipped while no level has towers (they return at 125).
 - Old saves keep cleared ids by slot, so a v4.3 player's progress now points at the re-laid levels in those slots; a save note or a one-time "the campaign was rebuilt" toast could explain it.
 - The interim Gallery screen: R3's journey map replaces it with side-quest nodes (prize on the node); the prize toast and grant move with it.
+
+## From v5 R3 (the journey map, 2026-10-04)
+- Easter eggs pay 331 coins in all and are tappable from the first visit (a player can scroll up and collect them on day one); a gate (only eggs in realms reached) is a one-line change if the economy wants it.
+- The desktop realm card follows the current node's realm; it could follow the realm under the view while scrolling (a cheap rAF-throttled scroll read).
+- The home's Play still reads the next level when every level is cleared; it could offer the fog's next picture as the map's Play does.
+- The long-tail thumbnails grow to 7 rows with all 35 pictures won; a stack with a count, or R4's real map above the fog, would keep the top tidy.
+- A small tag mark on locked nodes (Hard ahead) if playtests ask for it; R3 shows tags on cleared and open nodes only.
+- R4's realms: the Mistmoor's fog sheet becomes a middle sheet, so the wash, the fog band and the Goblin King move to the new top (`map.tail`).
+- Lore beyond one line per realm: a small scroll per sheet (the mockup's "secrets" could carry a line each).

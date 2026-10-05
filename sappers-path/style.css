@@ -580,9 +580,9 @@ body.wide .home-card { max-width: 760px; }
 .qn .prz { display: none; position: absolute; width: 60px; padding: 3px 0 4px; border-radius: 9px; border: 3px solid var(--ink); background: var(--parch); color: var(--parch-ink);
   box-shadow: inset 0 -3px 0 var(--parch-edge), 0 3px 0 rgba(0,0,0,.35); font-family: var(--px); font-size: 13px; line-height: 1; text-align: center; text-transform: uppercase; }
 .qn .prz::after { content: ""; position: absolute; border: 6px solid transparent; }
-.qn.pn .prz { left: 50%; bottom: calc(100% + 5px); margin-left: -30px; } .qn.pn .prz::after { left: 50%; bottom: -10px; margin-left: -6px; border-top: 7px solid var(--ink); border-bottom: 0; }
-.qn.pe .prz { left: calc(100% + 6px); top: 50%; margin-top: -26px; } .qn.pe .prz::after { left: -10px; top: 50%; margin-top: -6px; border-right: 7px solid var(--ink); border-left: 0; }
-.qn.pw .prz { right: calc(100% + 6px); top: 50%; margin-top: -26px; } .qn.pw .prz::after { right: -10px; top: 50%; margin-top: -6px; border-left: 7px solid var(--ink); border-right: 0; }
+.qn.bz-n .prz { left: 50%; bottom: calc(100% + 5px); margin-left: -30px; } .qn.bz-n .prz::after { left: 50%; bottom: -10px; margin-left: -6px; border-top: 7px solid var(--ink); border-bottom: 0; }
+.qn.bz-e .prz { left: calc(100% + 6px); top: 50%; margin-top: -26px; } .qn.bz-e .prz::after { left: -10px; top: 50%; margin-top: -6px; border-right: 7px solid var(--ink); border-left: 0; }
+.qn.bz-w .prz { right: calc(100% + 6px); top: 50%; margin-top: -26px; } .qn.bz-w .prz::after { right: -10px; top: 50%; margin-top: -6px; border-left: 7px solid var(--ink); border-right: 0; }
 .qn.open .prz { display: block; }
 .qn .pz-r { display: flex; align-items: center; justify-content: center; gap: 2px; font-size: 20px; margin-top: 1px; }
 .qn .pi { flex: none; width: 21px; height: 21px; background: center / contain no-repeat; image-rendering: pixelated; }

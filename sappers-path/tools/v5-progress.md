@@ -103,9 +103,12 @@ Resume: take the first row not `done`; notes go in `tools/v5-r3-notes.md`. Never
 |---|---|---|---|
 | 2a | Pure map logic `src/journey.js` (node and quest states, long tail, route split, sprites), save `eggs`, `Meta.egg`, config `map` (bridges found by eye, egg coins, texts), node tests | done: test.js 455/0 | (with 2b) |
 | 2b | The map screen: 13 sheets lazy-loaded, per-sheet SVG overlay (route, detours, bridges, eggs, banners, fog and Goblin King), node buttons, desktop cards, foot Play; Gallery screen and tab gone; `?v=32` | done; selfTest through the map 519-521/0 at 4 viewports; freeze PASS | (this commit) |
-| 2c | selfTest (done with 2b) and harness through the map (quests, eggs, long tail, scroll, lazy load, debug row) | harness todo | |
-| 2d | Screens `tools/shots-v5-r3/` (phone 3x, desktop), notes, SPEC-v4 §9, LATER, close-out checks | todo | |
+| 2c | selfTest (done with 2b) and harness through the map (quests, eggs, long tail, scroll, lazy load, debug row) | done: harness all passed, 3:25 | (with 2d) |
+| 2d | Screens `tools/shots-v5-r3/` (phone 3x, desktop), notes, SPEC-v4 §9, LATER, close-out checks | done: tests 455/0, freeze PASS, regrades 0/0 | (this commit) |
 
 Notes for piece 2: `map/layout.json` is the contract (sheet pixels, draw sheet k+1 over sheet k at `step` px up; each
 sheet's `road` is the painted centreline for route dashes; `quests[].branch` is where the detour leaves the road, and the
 painted spur is often missing, so draw the detour). Egg coins (10-15) are not in the art data; they are in config.json `map`.
+
+### State
+R3 complete (art and screen). Next: critics on the map, then a real-phone pass; R4 builds levels 101-240 and their realms (LATER).

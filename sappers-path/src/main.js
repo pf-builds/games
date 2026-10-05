@@ -653,7 +653,7 @@
       // The top sheet: the fog over the road past the last level, its one next-picture node and the cleared ones.
       if (top) { const F = M.tail, p = S.road[Math.min(S.road.length - 1, F.at)], lab = document.createElement("div"); lab.className = "fogl"; lab.textContent = T.fog; at(lab, F.labelAt[0], F.labelAt[1]).classList.remove("east", "west");
         const b = document.createElement("button"); b.className = "qn tailn"; b.hidden = true; b.innerHTML = '<span class="qf"><canvas class="pix" aria-hidden="true"></canvas><i class="qi" aria-hidden="true"></i></span><span class="prz" aria-hidden="true"><span class="pz-t"></span><span class="pz-r"><i class="pi"></i>+1</span></span>';
-        b.querySelector(".pz-t").textContent = T.prize; at(b, p[0], p[1]).classList.add("pe");
+        b.querySelector(".pz-t").textContent = T.prize; at(b, p[0], p[1]).classList.add("bz-e");
         const th = document.createElement("div"); th.className = "thumbs"; th.style.left = pct(F.thumbsAt[0], W); th.style.top = pct(F.thumbsAt[1], H); th.style.setProperty("--row", F.thumbsRow); lay.append(th);
         J.tail = { b, th, p, ri: Math.min(S.road.length - 1, F.at), e: null, key: "", list: tailE() };
         b.addEventListener("click", () => { const t = J.tail.e; if (t && picOpen(t)) startLevel(t.id); else lockedTap(b); }); }
@@ -661,7 +661,7 @@
       { const kf = M.fitK, r = M.nodeR / kf, pts = S.levels.map((P) => [P.x, P.y, r]).concat(S.quests.map((Q) => [Q.x, Q.y, r]), S.eggs.map((G) => [G.x, G.y, r]), [W / 2 - 110, W / 2, W / 2 + 110].map((x) => [x, M.bannerY, r * 1.4]));
         const lw = M.labelPx[0] / kf, lh = M.labelPx[1] / kf, pw = M.prizePx[0] / kf, ph = M.prizePx[1] / kf;
         for (const P of S.levels) { const e = byN.get(P.n); if (e) e.side = JN.side([P.x, P.y], pts, lw, lh, 30 / kf, W, P.x > M.rightEdge ? ["w", "e"] : ["e", "w"]); }
-        for (const Q of S.quests) { const e = qOf(Q.q); if (e && e.node) e.node.classList.add("p" + JN.side([Q.x, Q.y], pts, pw, ph, 28 / kf, W, Q.x > M.rightEdge ? ["w", "n", "e"] : ["e", "n", "w"])); } }
+        for (const Q of S.quests) { const e = qOf(Q.q); if (e && e.node) e.node.classList.add("bz-" + JN.side([Q.x, Q.y], pts, pw, ph, 28 / kf, W, Q.x > M.rightEdge ? ["w", "n", "e"] : ["e", "n", "w"])); } }
       const sh = { S, el, img, svg, lay, top, loaded: false, cut: null, u: svg.querySelector(".rw-u"), w: svg.querySelector(".rw-w"), a: svg.querySelector(".rw-a") };
       el.append(img, svg, lay); world.append(el); J.sheets.push(sh);
     });

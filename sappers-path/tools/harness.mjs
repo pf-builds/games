@@ -27,6 +27,9 @@
 // tap opens the Gallery, a real tap on a painting's tile plays it (a real card tap, sappers in from the board's edges),
 // the top bar's button goes back to the grid; every Gallery board keeps 8 CSS px a cell or more (the smallest reported,
 // with a screen). Output to tools/shots-v4-m4/harness/.
+// v5 R3 (the journey map): the Gallery block goes through the map: sheets lazy at open, a locked side quest's node
+// stays on the map, an open one plays its picture by a real tap, the top bar's button returns to the map, an egg pays
+// once by real taps; colour-blind marks through the map's gear (the settings sheet).
 // v4 Critics 2 fix: six viewports (375x667 and 414x736 added); the coach's checks per viewport are selfTest's.
 // v4.3: no difficulty picker (SP.load plays a level on its own tag); a format-1 save migrates to format 2 by level id.
 // v4.3 fix: a seventh viewport, 360x740 (a 360-wide Android phone: the play screen's 4 px gutter gives 8 px cells).
@@ -331,30 +334,29 @@ async function run() {
       { await ev(() => SP.screen("title")); await page.waitForTimeout(150); await tap("#btn-settings"); const open = await L("#settings").isVisible();
         if (vp.shots === "375") await shot("settings");
         await tap("#set-close"); ok(open && !(await L("#settings").isVisible()), tag + " home: the gear opens the settings sheet and Done closes it"); }
-      // v4 M4, the Gallery: locked on the map until level 25 is won; then a real tap opens it and a real tap on a painting
-      // plays it; every Gallery board's cell size.
+      // v5 R3, the journey map (the Gallery screen is gone): sheets load lazily; a side quest's node is locked until its
+      // main level is cleared (a real tap stays on the map), then a real tap on it plays the picture; the top bar's button
+      // goes back to the map; an egg pays once by real taps; every Gallery board keeps its cell size.
       {
-        await ev(() => { SP.screen("map"); document.getElementById("map").scrollTop = 0; });
-        ok(await ev(() => document.getElementById("map-gallery").classList.contains("locked")), tag + " the map's Gallery button is padlocked before level 25 is won");
-        await L("#map-gallery").click({ force: true, timeout: 5000 }); s = await S(); ok(s.screen === "map", tag + " a tap on the locked (aria-disabled) Gallery button stays on the map");
-        ok(await ev(() => SP.unlockGallery()), tag + " level 25 won: the Gallery opens");
-        await ev(() => SP.screen("map")); await tap("#map-gallery"); s = await S();
-        const nt = await ev(() => document.querySelectorAll("#gal-grid .gal-tile").length);
-        ok(s.screen === "gallery" && nt === (await ev(() => SP.gallery().length)) && (await noScroll()), tag + " a real tap opens the Gallery: " + nt + " pictures, no page scrollbars");
-        if (vp.shots === "375" || vp.shots === "1280") await shot("gallery");
-        const gi = await ev(() => SP.gallery().findIndex((id) => /^g-met-/.test(id)));
-        // v4.3: the pictures open in order; the painting's tile is padlocked (a tap stays on the Gallery) until the ones
-        // before it are cleared. v5 R2: until its side quest's main level is cleared.
-        await ev((i) => document.querySelectorAll("#gal-grid .gal-tile")[i].scrollIntoView({ block: "center" }), gi);
-        await L(`#gal-grid .gal-tile:nth-child(${gi + 1})`).click({ force: true, timeout: 5000 }); s = await S(); ok(s.screen === "gallery", tag + " v4.3: a tap on a padlocked picture stays on the Gallery");
-        await ev((i) => { SP.clearPictures(i); SP.unlockTo(SP.quest(SP.gallery()[i]).after); SP.screen("gallery"); document.querySelectorAll("#gal-grid .gal-tile")[i].scrollIntoView({ block: "center" }); }, gi);
-        await tap(`#gal-grid .gal-tile:nth-child(${gi + 1})`); s = await S();
-        ok(s.screen === "play" && /^g-met-/.test(s.id) && s.cs / (vp.dpr || 1) >= (vp.minCell || MIN_CELL) && (await noScroll()), tag + " a real tap on a painting's tile plays it (" + s.id + ", " + (s.cs / (vp.dpr || 1)).toFixed(2) + " CSS px a cell)");
+        await ev(() => SP.screen("map")); await page.waitForTimeout(150);
+        const m0 = await ev(() => SP.map()); R.map = m0;
+        ok(m0 && m0.loaded < m0.sheets && !(await ev(() => !!document.getElementById("map-gallery") || !!document.getElementById("gallery"))) && (await noScroll()), tag + " map: no Gallery screen or button; " + (m0 && m0.loaded) + " of " + (m0 && m0.sheets) + " sheets requested at open; no page scrollbars");
+        const toMid = (sel) => ev((q) => { const el = document.querySelector(q), sc = document.getElementById("jr"); sc.scrollTop += el.getBoundingClientRect().top + el.offsetHeight / 2 - sc.getBoundingClientRect().top - sc.clientHeight / 2; }, sel);
+        const gi = await ev(() => SP.gallery().findIndex((id, i) => i < 25 && /^g-met-/.test(id))), gid = await ev((i) => SP.gallery()[i], gi), sel = `.qn[data-id="${gid}"]`;
+        await toMid(sel); await L(sel).click({ force: true, timeout: 5000 }); s = await S(); ok(s.screen === "map", tag + " a real tap on a locked side quest (" + gid + ") stays on the map");
+        await ev((i) => { SP.unlockTo(SP.quest(SP.gallery()[i]).after); SP.screen("map"); }, gi); await toMid(sel); await page.waitForTimeout(100);
+        ok(await hit(sel), tag + " the open side quest's node is hittable"); if (vp.shots === "375" || vp.shots === "1280") await shot("map-quest");
+        await tap(sel); s = await S();
+        ok(s.screen === "play" && s.id === gid && s.cs / (vp.dpr || 1) >= (vp.minCell || MIN_CELL) && (await noScroll()), tag + " a real tap on the painting's node plays it (" + s.id + ", " + (s.cs / (vp.dpr || 1)).toFixed(2) + " CSS px a cell)");
         const gc = await ev(() => SP.state().fronts.findIndex((f) => f && SP.reachable(f.mat) > 0)); await tap(`.card[data-col="${gc}"]`);
         await ev(() => SP.tick(700)); const sd = await ev(() => SP.entry()); s = await S();
         ok(s.plays === 1 && sd.live > 0 && sd.crate === sd.live && sd.entry === sd.live, tag + " v4.1: a real card tap sends a squad out of its crate and up through the entry square at the bottom (" + JSON.stringify(sd) + ")");
         await shot("gallery-level-mid");
-        await tap("#btn-map"); s = await S(); ok(s.screen === "gallery", tag + " the top bar's button goes back to the Gallery");
+        await tap("#btn-map"); s = await S(); ok(s.screen === "map", tag + " the top bar's button goes back to the map");
+        // An egg by real taps: the first pays, the second doesn't.
+        const egg = '.egg[data-id="s1-0"]'; await toMid(egg); await page.waitForTimeout(80);
+        const c0 = await ev(() => SP.meta().coins); await tap(egg); const c1 = await ev(() => SP.meta().coins); await page.waitForTimeout(150); await tap(egg); const c2 = await ev(() => SP.meta().coins);
+        ok(c1 - c0 >= 10 && c1 - c0 <= 15 && c2 === c1 && (await ev((q) => document.querySelector(q).classList.contains("found"), egg)), tag + " a real tap on an egg pays " + (c1 - c0) + " coins once (a second tap " + (c2 - c1) + ")");
         const gcells = await ev(() => { let w = null; for (const id of SP.gallery()) { const st = SP.load(id), px = +(st.cs / devicePixelRatio).toFixed(2); if (!w || px < w.px) w = { id, px, turned: document.body.classList.contains("turned") }; } return w; });
         R.galleryMinCell = gcells;
         ok(gcells.px >= (vp.minCell || MIN_CELL), tag + " every Gallery board keeps " + (vp.minCell || MIN_CELL) + " CSS px a cell or more (smallest " + JSON.stringify(gcells) + ")");
@@ -390,8 +392,8 @@ async function run() {
         await ev(() => SP.load(1)); await tap("#top .tog-mute");
         await tap("#top .tog-speed"); await tap("#top .tog-speed");
         ok((await L("#top .tog-speed").textContent()) === "3\u00d7" && (await S()).speed === 3, tag + " the speed button cycles to 3x");
-        await tap("#btn-map"); await tap("#map .tog-cb");
-        ok((await S()).cb === true && (await L("#map .tog-cb").getAttribute("aria-pressed")) === "true", tag + " the map's toggle turns colour-blind marks on");
+        await tap("#btn-map"); await tap("#map-set"); await tap("#settings .tog-cb"); await tap("#set-close"); // v5 R3: the map's gear
+        ok((await S()).cb === true && (await L("#settings .tog-cb").getAttribute("aria-pressed")) === "true", tag + " the map's gear opens the settings sheet, whose toggle turns colour-blind marks on");
         await page.reload({ waitUntil: "load" }); await page.waitForFunction(() => window.SP, null, { timeout: 15000 });
         ok((await page.getAttribute("#top .tog-mute", "aria-pressed")) === "true", tag + " mute persists across a reload");
         s = await S();
