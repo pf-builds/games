@@ -93,12 +93,19 @@ Two pieces: (1) the map ART (13 painted sheets, layout, tools), (2) the map SCRE
 | 1d | `assemble.py`: JPEGs with baked seam crossfade, `map/layout.json` (nodes nudged onto the painted road, eggs, Goblin King), `contact.png`, `contact-seams.png` | done | (this commit) |
 | 1e | LICENSES.md row, README, freeze check (`freeze.js --require` PASS, 0 differences) | done | (this commit) |
 
-## Piece 2: map screen (next brief, not started)
+## Piece 2: map screen (sub-steps; brief 2026-10-04, Peter's calls in it)
+
+Resume: take the first row not `done`; notes go in `tools/v5-r3-notes.md`. Never touch `levels/` or the engine:
+`tools/freeze.js --require` must stay at 0 differences. Dev server as R1 (port 8491). Each row is its own commit
+"Sapper's Path v5 R3: <piece>".
 
 | # | Step | State | Commit |
 |---|---|---|---|
-| 2 | The map screen in place of the level grid and Gallery (see `tools/v5-r2-notes.md` §10) | todo | |
+| 2a | Pure map logic `src/journey.js` (node and quest states, long tail, route split, sprites), save `eggs`, `Meta.egg`, config `map` (bridges found by eye, egg coins, texts), node tests | done: test.js 455/0 | (with 2b) |
+| 2b | The map screen: 13 sheets lazy-loaded, per-sheet SVG overlay (route, detours, bridges, eggs, banners, fog and Goblin King), node buttons, desktop cards, foot Play; Gallery screen and tab gone; `?v=32` | done; selfTest through the map 519-521/0 at 4 viewports; freeze PASS | (this commit) |
+| 2c | selfTest (done with 2b) and harness through the map (quests, eggs, long tail, scroll, lazy load, debug row) | harness todo | |
+| 2d | Screens `tools/shots-v5-r3/` (phone 3x, desktop), notes, SPEC-v4 §9, LATER, close-out checks | todo | |
 
 Notes for piece 2: `map/layout.json` is the contract (sheet pixels, draw sheet k+1 over sheet k at `step` px up; each
 sheet's `road` is the painted centreline for route dashes; `quests[].branch` is where the detour leaves the road, and the
-painted spur is often missing, so draw the detour). Egg coins (10-15) are not in the art data; put them in config.json.
+painted spur is often missing, so draw the detour). Egg coins (10-15) are not in the art data; they are in config.json `map`.

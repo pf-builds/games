@@ -10,6 +10,8 @@
 // three bits; unknown ids and non-numbers are dropped. A save from before M4 loads with an empty gal.
 // v4 M5 (the meta layer, src/meta.js): coins (a whole number 0-9,999,999), inv {ladder, quartermaster, scout, recall, volley (v5 R1)};
 // v5 R1: got {id: 1} for each power-up unlocked (its one free use given; anything but 1 dropped)
+// v5 R3: eggs {id: 1}, the journey map's easter eggs found (ids "s<sheet>-<i>"; anything else dropped, at most 256); a
+// save from before R3 loads with none found.
 // (each 0-99), best {id: [ms easy, ms normal, ms hard, taps easy, taps normal, taps hard, coins earned]} (whole numbers,
 // ms 0-3,600,000 and taps 0-999 with 0 = none, kept only for a difficulty the level or picture was won on; ids the page
 // has), and lives {n, at} (n 0-livesMax, at a time in ms or 0). meta (config.meta) gives a new save its coins
@@ -37,7 +39,8 @@
   const whole = (v, hi) => (typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.min(hi, Math.round(v))) : 0);
   const startCoins = (meta) => whole(meta && meta.coins && meta.coins.start, MAXCOINS), maxLives = (meta) => Math.max(1, Math.min(99, (meta && meta.livesMax) | 0 || 5));
   function fresh(meta) { return { v: VERSION, done: {}, gal: {}, settings: { muted: false, speed: 1, cb: false }, last: null,
-    coins: startCoins(meta), inv: { ladder: 0, quartermaster: 0, scout: 0, recall: 0, volley: 0 }, got: {}, best: {}, lives: { n: maxLives(meta), at: 0 } }; }
+    coins: startCoins(meta), inv: { ladder: 0, quartermaster: 0, scout: 0, recall: 0, volley: 0 }, got: {}, best: {}, lives: { n: maxLives(meta), at: 0 }, eggs: {} }; }
+  const EGG = /^s\d{1,3}-\d{1,2}$/, MAXEGGS = 256; // v5 R3: the journey map's easter eggs found, by id (journey.js eggId)
   const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
   const isObj = (o) => !!o && typeof o === "object" && !Array.isArray(o);
 
@@ -70,6 +73,7 @@
       }
       const lv = isObj(raw.lives) ? raw.lives : null;
       if (lv) { s.lives.n = Math.min(maxLives(meta), whole(lv.n, 99)); s.lives.at = whole(lv.at, 8.64e15); }
+      const eg = isObj(raw.eggs) ? raw.eggs : {}; for (const k of Object.keys(eg).slice(0, MAXEGGS)) if (EGG.test(k) && eg[k] === 1) s.eggs[k] = 1; // v5 R3
       return s;
     } catch (e) { return fresh(meta); }
   }

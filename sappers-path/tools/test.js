@@ -1304,5 +1304,42 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   defer("side quests: every Gallery picture carries its quest", () => { const GL = require("../levels/gallery.json").levels; eq(GL.map((l) => l.quest), q, "side quests: levels/gallery.json carries each picture's quest {after, prize} as tools/quests.js deals them"); });
 }
 
+// ---- v5 R3: the journey map (src/journey.js; meta.js egg; the save's eggs; config map against map/layout.json) -----------------
+{
+  const Save = require("../src/save.js"), Meta = require("../src/meta.js"), J = require("../src/journey.js"), LAY = require("../map/layout.json"), MC = require("../config.json").map;
+  const GL = require("../levels/gallery.json").levels, order = LEVELS.levels.map((l) => l.id), gids = GL.map((l) => l.id), after = GL.map((l) => (l.quest ? l.quest.after : 0));
+  // Eggs pay once: the first tap pays its coins and marks it found; a second pays nothing; the save keeps them.
+  const D = Save.fresh(META), c0 = D.coins, p1 = Meta.egg(D, "s1-0", 12), p2 = Meta.egg(D, "s1-0", 12), p3 = Meta.egg(D, "s1-1", 5000);
+  eq([p1, p2, p3, D.coins - c0, D.eggs], [12, 0, 999, 12 + 999, { "s1-0": 1, "s1-1": 1 }], "eggs: an egg pays its coins on the first tap only (capped at 999 a tap) and is marked found");
+  eq([Save.sanitize({ v: 2, eggs: { "s1-0": 1, "s13-1": 1, "s2-0": 2, "x": 1, "s1-1": true } }, order, gids, META).eggs, Save.sanitize({ v: 2, coins: 50 }, order, gids, META).eggs, Save.fresh(META).eggs],
+    [{ "s1-0": 1, "s13-1": 1 }, {}, {}], "eggs (save): found eggs read back; junk ids and values are dropped; an old save (no field) and a new one have none found");
+  // Nodes: level 1 is next on a new save; a cleared level is done and the next one current; the rest locked.
+  const N = Save.fresh(META), st = () => order.slice(0, 5).map((id) => J.nodeState(N, order, id, Save.next(N, order)));
+  const s0 = st(); for (let i = 0; i < 3; i++) N.done[order[i]] = 1; const s1 = st();
+  eq([s0, s1, J.focus(N, order)], [["cur", "locked", "locked", "locked", "locked"], ["done", "done", "done", "cur", "locked"], order[3]], "map nodes: a new save's level 1 is current; with 1-3 cleared, 4 is current and 5 locked; the map centres on 4");
+  // Quest nodes: a quest is locked until its main level is cleared, then open (never blocking), won once cleared.
+  const Q = Save.fresh(META), q0 = gids[0], a0 = after[0], qs = () => J.questState(Q, order, gids, after, q0);
+  const k0 = qs(); for (let i = 0; i < a0 - 1; i++) Q.done[order[i]] = 1; const k1 = qs(); Q.done[order[a0 - 1]] = 1; const k2 = qs(), k3 = J.questState(Q, order, gids, after, gids[1]); Q.gal[q0] = 1; const k4 = qs();
+  eq([k0, k1, k2, k3, k4, J.nodeState(Q, order, order[a0], Save.next(Q, order))], ["locked", "locked", "open", "locked", "won", "cur"], "map quest nodes: picture 1 opens once level " + a0 + " is cleared (not before), picture 2 stays shut, a win marks it won; the campaign's next level is current either way");
+  // The long tail: nothing until all levels are cleared; then one node, the first picture past the last level, then the next.
+  const T = Save.fresh(META), t0 = J.tail(T, order, gids, after); for (const id of order) T.done[id] = 1; const t1 = J.tail(T, order, gids, after);
+  T.gal[t1.next] = 1; const t2 = J.tail(T, order, gids, after);
+  eq([t0.ids.length, t0.next, t1.next, t2.next, t2.won, J.focus(T, order)], [gids.length - 25, null, t0.ids[0], t0.ids[1], [t0.ids[0]], "tail"], "map long tail: " + t0.ids.length + " pictures past level " + order.length + "; none open until every level is cleared, then one at a time; the won ones are kept for replay; the map centres on the fog node");
+  // The route: walked and ahead share the cut sample.
+  const R = [[0, 10], [1, 9], [2, 8], [3, 7]], sp = J.split(R, 2);
+  eq([sp, J.split(R, -1)[0], J.split(R, 3)[1], J.nearest(R, 2.2, 7.9)], [["M0 10L1 9L2 8", "M2 8L3 7"], "", "", 2], "map route: the road splits at the current node's sample (walked, ahead); nearest finds the sample");
+  // The layout and config agree: every level 1-100 has one spot, in order; quests 1-25 sit after their main levels with
+  // their prizes; two eggs a sheet, each a known kind paying 10-15; bridges on real road samples, clear of every node.
+  const lv = LAY.sheets.flatMap((s) => s.levels.map((l) => l.n)), qv = LAY.sheets.flatMap((s) => s.quests);
+  eq([lv.length, lv.every((n, i) => n === i + 1), LAY.sheets.length, LAY.step, LAY.overlap], [order.length, true, 13, 1264, 80], "map layout: every level 1-" + order.length + " has one spot, in order, on 13 sheets 1264 px apart");
+  eq(qv.map((q) => [q.q, q.id, q.after, q.prize]), GL.slice(0, qv.length).map((l, i) => [i + 1, l.id, l.quest.after, l.quest.prize]), "map layout: side quests 1-" + qv.length + " match levels/gallery.json (ids, main levels, prizes)");
+  const eggs = LAY.sheets.flatMap((s) => s.eggs.map((e, i) => ({ s: s.sheet, i, kind: e.kind, c: J.eggCoins(MC, s.sheet, i) })));
+  ok(LAY.sheets.every((s) => s.eggs.length === 2) && eggs.every((e) => J.EGG_KINDS.indexOf(e.kind) >= 0 && e.c >= 10 && e.c <= 15 && MC.text.eggs[e.kind]), "map eggs: two a sheet (" + eggs.length + "), each a drawn kind with names, paying 10-15 coins (" + eggs.reduce((a, e) => a + e.c, 0) + " in all)");
+  const far = MC.bridges.map(([sh, i]) => { const S = LAY.sheets[sh - 1], p = S && S.road[i]; if (!p || i < 2 || i > S.road.length - 3) return -1; return Math.min(...S.levels.concat(S.quests).map((n) => Math.hypot(n.x - p[0], n.y - p[1]))); });
+  ok(far.every((d) => d >= 60), "map bridges: " + MC.bridges.length + " on real road samples, each at least 60 sheet px from every node (closest " + Math.round(Math.min(...far)) + ")");
+  const top = LAY.sheets[LAY.sheets.length - 1], firsts = LAY.sheets.filter((s, k) => k === 0 || LAY.sheets[k - 1].realm !== s.realm).map((s) => s.sheet);
+  ok(MC.tail.at > 0 && MC.tail.at < top.road.length && top.goblinKing && firsts.length === require("../config.json").eras.length, "map: the long-tail node sits on the top sheet's road (sample " + MC.tail.at + "); one realm banner per realm (sheets " + firsts.join(", ") + ")");
+}
+
 console.log(pass + " passed, " + fail + " failed");
 process.exitCode = fail ? 1 : 0;

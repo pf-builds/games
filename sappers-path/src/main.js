@@ -91,6 +91,15 @@
 // space freed; a win's coins burst from their cell and a first clear wears a ribbon (reduced motion: none of it moves);
 // on a wide screen a toast sits over the side column's tray and a fail sheet is its content's height; locked paintings
 // get a two-tone silhouette and every locked tile's tag is dimmed.
+// v5 R3 (the journey map; SPEC-v4 §9, the v5 R3 entry): the map screen replaces the level grid and the Gallery screen.
+// Thirteen painted sheets (map/layout.json) stack bottom to top in one scroller, each image loaded as it nears the view;
+// over each, an SVG in sheet pixels (the route walked in red dashes to the current node and faint ahead, plank bridges,
+// stepping-stone detours to the side quests, the fog and the Goblin King on the top sheet) and a layer of buttons: the
+// levels (cleared, current with its label, locked: a tap shakes), the side quests (prize until the first clear, then the
+// finished picture, tap to replay), easter eggs (pay coins once: save eggs, meta.js egg), realm banners (lore on a tap).
+// Past level 100 the road fades into fog; once 1-100 are cleared one next-picture node opens there (the long tail), the
+// cleared ones beside it. Opening the map puts the current node about map.curAt down. Wide screens add a realm card and
+// a next-up card. Pure parts in journey.js. A side quest won still offers the next open one, else the next level.
 (function () {
   "use strict";
   const NS = window.SappersPath, E = NS.engine, Save = NS.save, Board = NS.board, Art = NS.art, Audio = NS.audio, Meta = NS.meta;
@@ -109,6 +118,7 @@
     li: { stuck: 0, work: 0, occ: 0, free: 0, near: false, full: false, danger: false },
     // v4 M5: config.meta (selfTest swaps in a copy), the lives clock (real time), the queue rows shown, the level's start
     // on app.clock, the win's report, a power-up waiting for its target (pick: {k}), the bar's badges, the icons' URLs.
+    lay: null, jr: null, // v5 R3: map/layout.json and the journey map's built parts
     meta: null, now: () => Date.now(), rows: 3, t0: 0, report: null, pick: null, pws: [], icoURL: {}, pwPop: [-1e12, -1e12, -1e12, -1e12], lifeTxt: "", countTxt: "", carry: -1 };
   const togMute = Array.from(document.querySelectorAll(".tog-mute")), togSpeed = Array.from(document.querySelectorAll(".tog-speed")), togCb = Array.from(document.querySelectorAll(".tog-cb"));
 
@@ -120,7 +130,8 @@
       app.cfg = cfg; indexLevels(lv);
     } catch (e) { $("load-msg").textContent = "Couldn't load the siege. Reload to try again."; return; }
     if (DEBUG) { try { indexDebug(await getJSON("levels/debug-v4.json?v=" + V_)); } catch (e) { /* no debug row */ } }
-    try { indexGallery(await getJSON("levels/gallery.json?v=" + V_)); } catch (e) { /* no Gallery: its buttons stay hidden */ }
+    try { indexGallery(await getJSON("levels/gallery.json?v=" + V_)); } catch (e) { /* no side quests */ }
+    try { app.lay = await getJSON("map/layout.json?v=" + V_); } catch (e) { app.lay = null; /* no journey map: its Play still works */ }
     if (!app.levels.length) { $("load-msg").textContent = "No levels found."; return; }
     app.meta = app.cfg.meta; app.save = Save.open(storage(), app.cfg.save.key, app.order, app.gal.map((e) => e.id), app.meta); app.mats = app.cfg.v3.mats;
     app.sheets = Art.sources(app.cfg.art); fades();
@@ -136,7 +147,7 @@
     try { app.V.calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { /* motion stays on */ }
     app.audio = Audio.create(app.cfg.audio);
     setMuted(app.save.data.settings.muted, false); setSpeed(1, false); setCb(app.save.data.settings.cb, false); // v5 R1: speed is never saved
-    paintWall(); chips(); icons(); buildTray(); buildLine(); buildPowers(); buildMap(); buildGallery(); wire();
+    paintWall(); chips(); icons(); buildTray(); buildLine(); buildPowers(); buildMap(); wire();
     { const U = app.cfg.layout.upright, u = $("upright"); u.querySelector(".up-t").textContent = U.text; u.setAttribute("aria-label", U.text); }
     showScreen("title"); layout();
     if (DEBUG) window.SP = SP;
@@ -552,7 +563,7 @@
   function renderTop() {
     const e = app.entry; if (!e) return;
     $("lvl-num").textContent = e.debug ? app.cfg.layout.debugNum : e.n; $("lvl-name").textContent = e.gallery ? e.L.title : e.L.name || (app.eras[e.era - 1] ? app.eras[e.era - 1].name : fill(app.cfg.layout.realmEye, { e: e.era }));
-    $("btn-map").setAttribute("aria-label", e.gallery ? app.cfg.gallery.title : app.cfg.layout.mapName); // v5 R2: realms (the journey map comes in R3)
+    $("btn-map").setAttribute("aria-label", app.cfg.layout.mapName); // v5 R3: side quests live on the map too
     tagChip($("tag-chip"), app.diff); // v4.3: the level's tag (Normal unmarked)
     app.labFit.delete("name"); fitText($("lvl-name"), "name", app.cfg.layout.nameMinPx); // the room beside the number changes with its digits
   }
@@ -562,7 +573,7 @@
   function playTag(btn, e) { const tg = e ? tagOf(e) : null; tagChip(btn.querySelector(".tag"), tg); btn.classList.toggle("hard", tg === "hard" || tg === "extreme"); btn.classList.toggle("extreme", tg === "extreme"); } // v5 R1: Extreme wears Hard's warning face, darker
   function renderAll() { judge(); renderTop(); renderTray(); renderLine(); }
 
-  // v4 M5: a report card for a set of levels (an era, or the Gallery): cleared and coins earned (v4.3: no medals).
+  // v4 M5: a report card for a set of levels (a realm): cleared and coins earned (v4.3: no medals).
   function reportCard(el, list) {
     if (!el) return;
     const C = app.meta.eraCard, gal = list.length && list[0].gallery, map = gal ? app.save.data.gal : app.save.data.done; let won = 0, coins = 0;
@@ -571,79 +582,189 @@
     el.querySelector(".rc-n").textContent = fill(C.cleared, { n: won, t: list.length }); el.querySelector(".rc-c b").textContent = coins;
     el.setAttribute("role", "img"); el.setAttribute("aria-label", fill(C.aria, { n: won, t: list.length, c: coins }));
   }
-  function buildMap() {
-    const host = $("eras"); app.eras = app.cfg.eras || []; $("map-story").textContent = app.meta.home.story;
-    if (app.debug.length) { // ?debug=1: the v4 twists' debug levels, one button each (never in the play order)
-      const sec = document.createElement("section"); sec.className = "era dbg";
-      sec.innerHTML = '<div class="eye"><span></span><span class="cnt">debug</span></div><div class="nodes"></div>'; sec.querySelector(".eye span").textContent = app.cfg.layout.debugRow;
-      for (const e of app.debug) { const b = document.createElement("button"); b.className = "node dbg-node"; b.dataset.id = e.id; b.textContent = e.id.replace(/^v4-/, ""); b.setAttribute("aria-label", e.L.name || e.id); b.addEventListener("click", () => startLevel(e.id)); e.node = b; sec.querySelector(".nodes").append(b); }
-      host.append(sec);
-    }
-    app.eras.forEach((er) => {
-      const sec = document.createElement("section"); sec.className = "era";
-      sec.innerHTML = '<div class="eye"><span></span><span class="cnt"></span></div><h3></h3><p></p><div class="rc"></div><div class="nodes"></div>'; sec.querySelector(".eye span").textContent = fill(app.cfg.layout.realmEye, { e: er.era }); // v5 R2: a realm
-      sec.querySelector("h3").textContent = er.name; sec.querySelector("p").textContent = er.note;
-      const nodes = sec.querySelector(".nodes");
-      for (const e of app.levels) {
-        if (e.era !== er.era) continue;
-        const b = document.createElement("button"); b.className = "node"; b.innerHTML = e.n + '<i class="tag"></i>'; tagChip(b.querySelector("i"), tagOf(e)); // v4.3: its tag
-        b.addEventListener("click", () => { if (Save.isOpen(app.save.data, app.order, e.id)) startLevel(e.id); });
-        e.node = b; nodes.append(b);
-      }
-      er.sec = sec; host.append(sec);
-    });
-  }
-  function renderMap() {
-    const d = app.save.data, next = Save.next(d, app.order); let won = 0;
-    for (const e of app.levels) {
-      const m = !!d.done[e.id], open = Save.isOpen(d, app.order, e.id), tg = (app.cfg.layout.tags || {})[tagOf(e)]; if (m) won++;
-      e.node.className = "node" + (m ? " done" : open ? "" : " locked") + (e.id === next && !m ? " next" : "");
-      e.node.disabled = !open;
-      e.node.setAttribute("aria-label", "Level " + e.n + (tg ? ", " + tg : "") + (m ? ", cleared" : open ? "" : ", locked"));
-    }
-    app.eras.forEach((er) => { const ls = app.levels.filter((e) => e.era === er.era); er.sec.querySelector(".cnt").textContent = ls.filter((e) => d.done[e.id]).length + "/" + ls.length; reportCard(er.sec.querySelector(".rc"), ls); });
-    $("map-count").textContent = won + "/" + app.levels.length;
-    const ne = app.byId.get(next), mp = $("map-play"); mp.querySelector(".pl").textContent = ne ? "Play level " + ne.n : "Play"; playTag(mp, ne);
-  }
 
-  // ---- the Gallery (v4 M4) -------------------------------------------------------------------------------------------
-  // The Gallery is open once siege level gallery.openAt is cleared. Its buttons (title, map) say so while locked; the
-  // screen is a grid of every picture: dimmed (its cells' lightness squeezed into gallery.dim, no colour) until it is won,
-  // then in its colours with its title. Thumbnails are drawn when the grid renders. v4.3: the pictures open one at a time
-  // (save.js isOpen, field "gal": the first when the Gallery opens, each next when the one before it is cleared); a
-  // locked picture is a padlocked silhouette (gallery.silhouette) and a tap on it shakes; every tile wears its tag.
-  const galOpen = () => !!(app.cfg.gallery && app.save.data.done[app.cfg.gallery.openAt]);
-  const galWon = () => app.gal.filter((e) => app.save.data.gal[e.id]).length;
+  // ---- the journey map (v5 R3; config map, map/layout.json, src/journey.js) -------------------------------------------
+  // One scroller (#jr) holds the 13 painted sheets, bottom to top, scaled to the column (k CSS px a sheet px). Each sheet
+  // is a box with its image (loaded once it nears the view: an IntersectionObserver on the scroller), one SVG in sheet
+  // pixels (the route, detours, bridges, and on the top sheet the fog and the Goblin King) and a layer of buttons placed in
+  // percent of the sheet (levels, side quests, eggs, the realm's banner). All of it is built once; renderMap only switches
+  // classes, labels and the route's two path strings per sheet, and nothing runs on scroll. The current node's label moves
+  // into its sheet. Phone: Play in a foot bar; wide (config map.cardsMinW): a realm card and a next-up card beside the column.
+  const JN = NS.journey, svgNS = "http://www.w3.org/2000/svg", pct = (v, t) => (100 * v) / t + "%";
   // v5 R2: the pictures are side quests (config gallery.quests, tools/quests.js): each opens once its quest's main level
   // is cleared (save.js questOpen; past the last level, one at a time once all are cleared), shows its prize (a power-up
   // icon) until its first clear, which adds the prize to the inventory with a toast.
   const galIds = () => app.gal.map((e) => e.id), galAfter = () => app.gal.map((e) => (e.L.quest ? e.L.quest.after : 0)), picOpen = (e) => Save.questOpen(app.save.data, app.order, galIds(), galAfter(), e.id);
   const galNext = () => Save.nextBy(app.save.data, galIds(), "gal", (id) => picOpen(app.byId.get(id)));
   function questPrize(e) { const q = e.L.quest, k = q ? E.POWERS.indexOf(q.prize) : -1; if (k < 0 || !Meta.gift(app.save.data, q.prize)) return; toast(fill(app.cfg.gallery.quests.prizeText, { name: pwName(k) })); }
-  function buildGallery() {
-    const G = app.cfg.gallery, host = $("gal-grid"); if (!G || !host) return;
-    $("gal-title").textContent = G.title; $("gal-credits").textContent = G.credits;
-    for (const b of [$("btn-gallery"), $("map-gallery")]) { b.hidden = !app.gal.length; b.querySelector(".gt").textContent = G.btn; b.addEventListener("click", () => { if (galOpen()) showScreen("gallery"); else lockedTap(b); }); }
-    for (const e of app.gal) {
-      const b = document.createElement("button"); b.className = "gal-tile"; b.innerHTML = '<canvas class="pix" aria-hidden="true"></canvas><span class="gn"></span><i class="tag"></i><span class="gp" aria-hidden="true"></span><span class="gk" aria-hidden="true"></span><i class="gq" aria-hidden="true"></i>';
-      const qk = e.L.quest ? E.POWERS.indexOf(e.L.quest.prize) : -1; if (qk >= 0) b.querySelector(".gq").style.backgroundImage = app.icoURL["p" + qk] || "none"; // v5 R2: the side quest's prize
-      tagChip(b.querySelector(".tag"), tagOf(e)); b.classList.toggle("paint", e.L.kind === "painting");
-      b.addEventListener("click", () => { if (picOpen(e)) startLevel(e.id); else lockedTap(b); });
-      e.node = b; host.append(b);
-    }
-  }
-  // A locked Gallery button shakes (its hint is already on it).
+  // A locked node (or button) shakes and says "blocked" (reduced motion: no shake).
   function lockedTap(b) { if (!app.V.calm && b.animate) b.animate(app.cfg.show.blockedShake.map((x) => ({ transform: "translateX(" + x + "px)" })), { duration: app.cfg.show.blockedShakeMs }); cue("blocked"); }
-  // The title's and the map's Gallery buttons: locked with the hint, or open with the count.
-  function renderGalButtons() {
-    const G = app.cfg.gallery; if (!G) return; const open = galOpen(), sub = open ? G.count.replace("{n}", galWon()).replace("{t}", app.gal.length) : G.lockedHint;
-    for (const b of [$("btn-gallery"), $("map-gallery")]) { b.classList.toggle("locked", !open); b.setAttribute("aria-disabled", open ? "false" : "true"); b.querySelector(".gs").textContent = sub; b.setAttribute("aria-label", G.btn + ": " + sub); }
-    if (!open) $("btn-gallery").querySelector(".gs").textContent = app.meta.home.galTab; // v4 M5: the home's tab is narrow
+  function buildMap() {
+    const M = app.cfg.map, T = M.text, LAY = app.lay; app.eras = app.cfg.eras || [];
+    $("map-title").textContent = M.title; $("map-story").textContent = app.meta.home.story; $("map-credits").textContent = app.cfg.gallery.credits;
+    $("jr-n-eye").textContent = T.nextUp; $("jr-q-k").textContent = T.quests; $("jr-e-k").textContent = T.secrets;
+    if (app.debug.length) { // ?debug=1: the v4 twists' debug levels, one button each (never in the play order)
+      const row = $("jr-dbg"); row.hidden = false; row.innerHTML = '<span class="dbg-l"></span>'; row.firstChild.textContent = app.cfg.layout.debugRow;
+      for (const e of app.debug) { const b = document.createElement("button"); b.className = "dbg-node"; b.dataset.id = e.id; b.textContent = e.id.replace(/^v4-/, ""); b.setAttribute("aria-label", e.L.name || e.id); b.addEventListener("click", () => startLevel(e.id)); e.node = b; row.append(b); }
+    }
+    if (!LAY || !Array.isArray(LAY.sheets)) return; // no layout: the map is the foot's Play alone
+    const R = M.route, nS = LAY.sheets.length, W = LAY.w, H = LAY.h, byN = new Map(app.levels.map((e) => [e.n, e])), world = $("jr-world");
+    const J = (app.jr = { sheets: [], quests: [], eggs: [], tail: null, k: 0, colW: 0, cut: "", io: null, label: null });
+    const qOf = (q) => app.gal[q - 1] || null, tailE = () => app.gal.filter((e) => e.L.quest && e.L.quest.after > app.order.length);
+    LAY.sheets.forEach((S, si) => {
+      const top = si === nS - 1, el = document.createElement("div"); el.className = "jr-sheet"; el.style.zIndex = si + 1; el.dataset.sheet = S.sheet;
+      const img = document.createElement("img"); img.className = "jr-img"; img.alt = ""; img.decoding = "async"; img.draggable = false;
+      let s = "";
+      if (top) { const F = M.tail; s += '<defs><linearGradient id="jr-fade" gradientUnits="userSpaceOnUse" x1="0" y1="' + F.fadeFrom + '" x2="0" y2="' + F.fadeTo + '"><stop offset="0" stop-color="#2a1c12" stop-opacity=".55"/><stop offset="1" stop-color="#2a1c12" stop-opacity="0"/></linearGradient>' +
+        '<linearGradient id="jr-wash" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1e1620" stop-opacity=".92"/><stop offset=".55" stop-color="#1e1620" stop-opacity=".6"/><stop offset="1" stop-color="#1e1620" stop-opacity="0"/></linearGradient>' +
+        '<radialGradient id="jr-fog"><stop offset="0" stop-color="#e6e8de" stop-opacity=".8"/><stop offset="1" stop-color="#e6e8de" stop-opacity="0"/></radialGradient></defs>'; }
+      s += '<path class="rw-u" fill="none" stroke="#fbf5e6" stroke-opacity=".5" stroke-width="' + R.underW + '" stroke-linecap="round" stroke-linejoin="round"/>';
+      s += '<path class="rw-a" fill="none" stroke="' + (top ? "url(#jr-fade)" : "#2a1c12") + '" stroke-opacity="' + (top ? 1 : 0.55) + '" stroke-width="' + R.aheadW + '" stroke-dasharray="' + R.aheadDash + '" stroke-linecap="round"/>';
+      s += '<path class="rw-w" fill="none" stroke="#8a2b16" stroke-width="' + R.walkedW + '" stroke-dasharray="' + R.walkedDash + '" stroke-linecap="round"/>';
+      for (const [bs, i] of M.bridges) if (bs === S.sheet && S.road[i]) s += JN.bridge(S.road[i][0], S.road[i][1], JN.heading(S.road, i, 3), M.bridgeLen, M.bridgeW);
+      for (const Q of S.quests) { const dt = JN.detour(Q.branch, [Q.x, Q.y], M.stoneGap, M.stoneSkip[0], M.stoneSkip[1]);
+        s += '<g class="dt" data-q="' + Q.q + '"><path d="' + dt.d + '" fill="none" stroke="#2a1c12" stroke-opacity=".7" stroke-width="4" stroke-dasharray="3 9" stroke-linecap="round"/>' + dt.stones.map(JN.stone).join("") + "</g>"; }
+      if (top) { const F = M.tail, gk = S.goblinKing || { x: W * 0.8, y: 170 }; s += '<rect width="' + W + '" height="' + F.washTo + '" fill="url(#jr-wash)"/>';
+        for (const [x, dy, rx, ry] of [[150, -30, 260, 80], [470, 10, 300, 90], [690, -50, 220, 70], [330, 70, 240, 60]]) s += '<ellipse cx="' + x + '" cy="' + (F.fogY + dy) + '" rx="' + rx + '" ry="' + ry + '" fill="url(#jr-fog)"/>';
+        s += '<g transform="translate(' + gk.x + " " + (gk.y + 60) + ')">' + JN.king() + '</g><g transform="translate(' + (gk.x + 70) + " " + (gk.y - 70) + ')">' + JN.flag() + "</g>"; }
+      const svg = document.createElementNS(svgNS, "svg"); svg.setAttribute("class", "jr-ov"); svg.setAttribute("viewBox", "0 0 " + W + " " + H); svg.setAttribute("preserveAspectRatio", "none"); svg.setAttribute("aria-hidden", "true"); svg.innerHTML = s;
+      const lay = document.createElement("div"); lay.className = "jr-lay";
+      const at = (b, x, y) => { b.style.left = pct(x, W); b.style.top = pct(y, H); if (x > M.rightEdge) b.classList.add("east"); else if (x < W - M.rightEdge) b.classList.add("west"); lay.append(b); return b; };
+      // Levels: a badge with its number, a check when cleared, its tag; the road sample it sits on cuts the route.
+      for (const P of S.levels) { const e = byN.get(P.n); if (!e) continue;
+        const b = document.createElement("button"); b.className = "mn"; b.dataset.n = e.n; b.innerHTML = '<span class="bd"><b></b></span><i class="ck" aria-hidden="true"></i><i class="tag"></i>'; b.querySelector("b").textContent = e.n; tagChip(b.querySelector(".tag"), tagOf(e));
+        b.addEventListener("click", () => { if (Save.isOpen(app.save.data, app.order, e.id)) startLevel(e.id); else lockedTap(b); });
+        e.node = at(b, P.x, P.y); e.sheet = si; e.ri = JN.nearest(S.road, P.x, P.y); e.px = [P.x, P.y]; }
+      // Side quests: a picture node off the road (the detour drawn above), its prize until the first clear.
+      for (const Q of S.quests) { const e = qOf(Q.q); if (!e) continue; const g = svg.querySelector('.dt[data-q="' + Q.q + '"]');
+        const b = document.createElement("button"); b.className = "qn"; b.dataset.id = e.id; b.innerHTML = '<span class="qf"><canvas class="pix" aria-hidden="true"></canvas><i class="qi" aria-hidden="true"></i></span><i class="qp" aria-hidden="true"></i><span class="prz" aria-hidden="true"><span class="pz-t"></span><span class="pz-r"><i class="pi"></i>+1</span></span>';
+        const qk = e.L.quest ? E.POWERS.indexOf(e.L.quest.prize) : -1; for (const el2 of b.querySelectorAll(".pi, .qp")) el2.style.backgroundImage = (qk >= 0 && app.icoURL["p" + qk]) || "none"; b.querySelector(".pz-t").textContent = T.prize;
+        b.addEventListener("click", () => { if (picOpen(e)) startLevel(e.id); else lockedTap(b); });
+        e.node = at(b, Q.x, Q.y); J.quests.push({ e, b, g, sheet: si }); }
+      // Easter eggs: an ink sprite that turns into its found look (and pays) on the first tap.
+      S.eggs.forEach((G, i) => { const id = JN.eggId(S.sheet, i), b = document.createElement("button"); b.className = "egg k-" + G.kind; b.dataset.id = id;
+        const g = { id, kind: G.kind, coins: JN.eggCoins(M, S.sheet, i), b, sheet: si, found: null }; b.addEventListener("click", () => eggTap(g)); at(b, G.x, G.y); J.eggs.push(g); });
+      // A realm's banner on its first sheet (its lore on a tap).
+      if (si === 0 || LAY.sheets[si - 1].realm !== S.realm) { const er = app.eras[S.realm - 1] || { era: S.realm, name: S.realmName, note: "" }, b = document.createElement("button"); b.className = "bn";
+        b.innerHTML = '<span class="bt"><i></i><b></b></span><span class="lore"></span>'; b.querySelector("i").textContent = fill(T.realm, { e: S.realm }); b.querySelector("b").textContent = er.name; b.querySelector(".lore").textContent = er.note;
+        b.setAttribute("aria-label", fill(T.bannerAria, { e: S.realm, name: er.name })); b.setAttribute("aria-expanded", "false");
+        b.addEventListener("click", () => { const on = !b.classList.contains("open"); b.classList.toggle("open", on); b.setAttribute("aria-expanded", on ? "true" : "false"); });
+        at(b, W / 2, M.bannerY).classList.remove("east", "west"); }
+      // The top sheet: the fog over the road past the last level, its one next-picture node and the cleared ones.
+      if (top) { const F = M.tail, p = S.road[Math.min(S.road.length - 1, F.at)], lab = document.createElement("div"); lab.className = "fogl"; lab.textContent = T.fog; at(lab, F.labelAt[0], F.labelAt[1]).classList.remove("east", "west");
+        const b = document.createElement("button"); b.className = "qn tailn"; b.hidden = true; b.innerHTML = '<span class="qf"><canvas class="pix" aria-hidden="true"></canvas><i class="qi" aria-hidden="true"></i></span><span class="prz" aria-hidden="true"><span class="pz-t"></span><span class="pz-r"><i class="pi"></i>+1</span></span>';
+        b.querySelector(".pz-t").textContent = T.prize; at(b, p[0], p[1]).classList.add("pe");
+        const th = document.createElement("div"); th.className = "thumbs"; th.style.left = pct(F.thumbsAt[0], W); th.style.top = pct(F.thumbsAt[1], H); th.style.setProperty("--row", F.thumbsRow); lay.append(th);
+        J.tail = { b, th, p, ri: Math.min(S.road.length - 1, F.at), e: null, key: "", list: tailE() };
+        b.addEventListener("click", () => { const t = J.tail.e; if (t && picOpen(t)) startLevel(t.id); else lockedTap(b); }); }
+      // v5 R3: the label and prize bubble sides, away from the sheet's other buttons (judged on the narrowest phone).
+      { const kf = M.fitK, r = M.nodeR / kf, pts = S.levels.map((P) => [P.x, P.y, r]).concat(S.quests.map((Q) => [Q.x, Q.y, r]), S.eggs.map((G) => [G.x, G.y, r]), [W / 2 - 110, W / 2, W / 2 + 110].map((x) => [x, M.bannerY, r * 1.4]));
+        const lw = M.labelPx[0] / kf, lh = M.labelPx[1] / kf, pw = M.prizePx[0] / kf, ph = M.prizePx[1] / kf;
+        for (const P of S.levels) { const e = byN.get(P.n); if (e) e.side = JN.side([P.x, P.y], pts, lw, lh, 30 / kf, W, P.x > M.rightEdge ? ["w", "e"] : ["e", "w"]); }
+        for (const Q of S.quests) { const e = qOf(Q.q); if (e && e.node) e.node.classList.add("p" + JN.side([Q.x, Q.y], pts, pw, ph, 28 / kf, W, Q.x > M.rightEdge ? ["w", "n", "e"] : ["e", "n", "w"])); } }
+      const sh = { S, el, img, svg, lay, top, loaded: false, cut: null, u: svg.querySelector(".rw-u"), w: svg.querySelector(".rw-w"), a: svg.querySelector(".rw-a") };
+      el.append(img, svg, lay); world.append(el); J.sheets.push(sh);
+    });
+    J.label = document.createElement("div"); J.label.className = "jr-cur"; J.label.setAttribute("aria-hidden", "true"); J.label.innerHTML = "<span></span><i class=\"tag\"></i>";
+    // Lazy sheets: an image loads once its sheet is within lazyMarginPx of the scroller's view (all at once without the API).
+    const load = (sh) => { if (sh.loaded) return; sh.loaded = true; sh.img.src = "map/" + sh.S.file + "?v=" + V_; };
+    if (window.IntersectionObserver) { J.io = new IntersectionObserver((es) => { for (const q of es) if (q.isIntersecting) { const sh = J.sheets[+q.target.dataset.sheet - 1]; load(sh); J.io.unobserve(q.target); } }, { root: $("jr"), rootMargin: M.lazyMarginPx + "px 0px" }); for (const sh of J.sheets) J.io.observe(sh.el); }
+    else for (const sh of J.sheets) load(sh);
+    $("jr-quest").addEventListener("click", () => { const nx = nextPicture(); if (nx) startLevel(nx.id); else lockedTap($("jr-quest")); });
+  }
+  // The column's size: the screen's width up to map.colMaxPx, or colWidePx between the cards once the screen is
+  // map.cardsMinW wide; sheets are placed in CSS px from it (k = column / sheet width). Keeps the world point at the
+  // view's middle where it was. Returns true when the size changed.
+  function layoutMap() {
+    const J = app.jr, M = app.cfg.map, mp = $("map"), cards = window.innerWidth >= M.cardsMinW; mp.classList.toggle("cards", cards);
+    if (!J) return false;
+    const LAY = app.lay, colW = Math.round(cards ? M.colWidePx : Math.min(window.innerWidth, M.colMaxPx)); if (colW === J.colW) return false;
+    const sc = $("jr"), mid = J.k ? (sc.scrollTop + sc.clientHeight / 2) / J.k : -1, k = colW / LAY.w, n = LAY.sheets.length;
+    J.colW = colW; J.k = k; const r = mp.style; r.setProperty("--jr-w", colW + "px"); r.setProperty("--card-w", M.cardPx + "px"); r.setProperty("--card-gap", M.cardGapPx + "px");
+    $("jr-world").style.height = (LAY.step * (n - 1) + LAY.h) * k + "px";
+    J.sheets.forEach((sh, i) => { sh.el.style.top = (n - 1 - i) * LAY.step * k + "px"; sh.el.style.height = LAY.h * k + "px"; });
+    if (mid >= 0) sc.scrollTop = mid * k - sc.clientHeight / 2;
+    return true;
+  }
+  // A world point (sheet si, sheet px y) in the scroller's CSS px.
+  const worldY = (si, y) => ((app.lay.sheets.length - 1 - si) * app.lay.step + y) * app.jr.k;
+  // Scroll so the current node (the next level, or the long tail's fog node) sits map.curAt of the way down.
+  function scrollMap() {
+    const J = app.jr; if (!J || !J.k) return; const f = JN.focus(app.save.data, app.order), e = f && f !== "tail" ? app.byId.get(f) : null, sc = $("jr");
+    const y = e ? worldY(e.sheet, e.px[1]) : worldY(J.sheets.length - 1, J.tail.p[1]);
+    sc.scrollTop = Math.max(0, Math.min($("jr-world").offsetHeight - sc.clientHeight, y - app.cfg.map.curAt * sc.clientHeight)); // the story and credits under the first sheet stay below the fold
+  }
+  function renderMap() {
+    const d = app.save.data, M = app.cfg.map, T = M.text, J = app.jr, next = Save.next(d, app.order), tags = app.cfg.layout.tags || {};
+    $("map-coins").querySelector("b").textContent = d.coins; $("map-coins").setAttribute("aria-label", fill(app.meta.home.coins, { n: d.coins }));
+    const ne = app.byId.get(next), te = mapPic(), mp = $("map-play"); mp.querySelector(".pl").textContent = te ? fill(M.text.playPic, { n: te.n }) : ne ? "Play level " + ne.n : "Play"; playTag(mp, te || ne);
+    if (!J) return;
+    // Levels: done (a check), the current one (a glow and the label), open, locked (dim; a tap shakes).
+    const f = JN.focus(d, app.order), fe = f && f !== "tail" ? app.byId.get(f) : null;
+    for (const e of app.levels) {
+      if (!e.node) continue; const st = JN.nodeState(d, app.order, e.id, next), b = e.node, tg = tags[tagOf(e)];
+      if (b.dataset.st !== st) { b.dataset.st = st; b.classList.remove("done", "cur", "open", "locked"); b.classList.add(st); b.setAttribute("aria-disabled", st === "locked" ? "true" : "false"); }
+      b.setAttribute("aria-label", "Level " + e.n + (tg ? ", " + tg : "") + (st === "done" ? ", cleared" : st === "locked" ? ", locked" : st === "cur" ? ", play this one next" : ""));
+    }
+    const L = J.label; if (fe && fe.node) { L.firstChild.textContent = fill(T.cur, { n: fe.n }); tagChip(L.querySelector(".tag"), tagOf(fe)); L.className = "jr-cur" + (fe.side === "w" ? " east" : ""); L.style.left = fe.node.style.left; L.style.top = fe.node.style.top; if (L.parentNode !== fe.node.parentNode) fe.node.parentNode.append(L); } else L.remove();
+    // The route: walked to the current node, the rest ahead (only the sheet the cut is on, and those whose side flipped, change).
+    const cs = fe ? fe.sheet : J.sheets.length - 1, ci = fe ? fe.ri : J.tail.ri;
+    J.sheets.forEach((sh, i) => { const key = i < cs ? "w" : i > cs ? "a" : "c" + ci; if (sh.cut === key) return; sh.cut = key;
+      const [w, a] = JN.split(sh.S.road, i < cs ? sh.S.road.length : i > cs ? -1 : ci); sh.w.setAttribute("d", w); sh.u.setAttribute("d", w); sh.a.setAttribute("d", a); });
+    // Side quests 1-25: locked (dim, its prize icon), open (bright, the prize bubble), won (its finished picture).
+    const QT = app.cfg.gallery, nx = nextPicture();
+    for (const q of J.quests) quest(q.e, q.b, q.g, nx, QT, false);
+    // The long tail: one next-picture node once every level is cleared; the cleared ones beside it, to play again.
+    const t = J.tail; if (t) { const tl = JN.tail(d, app.order, galIds(), galAfter()), te = tl.next ? app.byId.get(tl.next) : null; t.e = te; t.b.hidden = !te; if (te) { t.b.dataset.id = te.id; quest(te, t.b, null, nx, QT, true); }
+      const key = tl.won.join(); if (key !== t.key) { t.key = key; t.th.textContent = "";
+        for (const id of tl.won) { const e = app.byId.get(id), b = document.createElement("button"); b.className = "th"; b.dataset.id = id; b.innerHTML = '<canvas class="pix" aria-hidden="true"></canvas>'; thumb(b.firstChild, e.L, true, 1); b.setAttribute("aria-label", fill(T.thumbAria, { name: e.L.title })); b.addEventListener("click", () => startLevel(id)); t.th.append(b); } } }
+    for (const g of J.eggs) eggLook(g);
+    mapCards(fe || app.levels[app.levels.length - 1]);
+  }
+  // A side-quest node's look: the picture icon (or, won, its finished picture), the prize while not won, its label.
+  function quest(e, b, g, nx, QT, tail) {
+    const st = JN.questState(app.save.data, app.order, galIds(), galAfter(), e.id), q = e.L.quest, qk = q ? E.POWERS.indexOf(q.prize) : -1, tg = (app.cfg.layout.tags || {})[tagOf(e)];
+    if (b.dataset.st !== st || b.dataset.id !== e.id || b.dataset.drawn !== e.id + st) { b.dataset.st = st; b.dataset.drawn = e.id + st; b.classList.remove("won", "open", "locked"); b.classList.add(st); if (g) g.setAttribute("class", "dt " + st);
+      if (st === "won") thumb(b.querySelector("canvas"), e.L, true, 1); if (tail && qk >= 0) b.querySelector(".pi").style.backgroundImage = app.icoURL["p" + qk] || "none"; }
+    b.classList.toggle("next", e === nx); b.setAttribute("aria-disabled", st === "locked" ? "true" : "false");
+    const late = q && q.after > app.order.length, base = st === "won" ? e.L.title + ", cleared" : tail ? fill(app.cfg.map.text.tailAria, { n: e.n }) : fill(e === nx ? QT.nextAria : st === "open" ? QT.tileAria : late ? QT.quests.waitAria : QT.lockedAria, { n: e.n, after: q ? q.after : "" });
+    b.setAttribute("aria-label", base + (tg ? ", " + tg : "") + (qk >= 0 && st !== "won" ? ", " + fill(QT.quests.prizeAria, { name: pwName(qk) }) : ""));
+  }
+  // An egg's look (drawn again only when it is found or forgotten) and its label.
+  function eggLook(g) {
+    const found = app.save.data.eggs && app.save.data.eggs[g.id] === 1, nm = (app.cfg.map.text.eggs[g.kind] || ["?", "?"])[found ? 1 : 0]; if (g.found === found) return;
+    g.found = found; g.b.classList.toggle("found", found); g.b.innerHTML = '<svg viewBox="-24 -24 48 48" aria-hidden="true">' + JN.egg(g.kind, found) + "</svg>";
+    g.b.setAttribute("aria-label", fill(found ? app.cfg.map.text.eggFoundAria : app.cfg.map.text.eggAria, { name: nm }));
+  }
+  // An egg's tap: the first pays its coins once (meta.js egg) and turns it into its found look with a coin pop; later taps
+  // only wiggle it.
+  function eggTap(g) {
+    const paid = Meta.egg(app.save.data, g.id, g.coins); if (!app.V.calm && g.b.animate) g.b.animate([{ transform: "scale(1)" }, { transform: "scale(" + (paid ? 1.35 : 1.12) + ")" }, { transform: "scale(1)" }], { duration: paid ? 420 : 220 });
+    if (!paid) return 0;
+    writeSave(); cue("coin"); eggLook(g);
+    const p = document.createElement("span"); p.className = "coinpop"; p.setAttribute("aria-hidden", "true"); p.textContent = fill(app.cfg.map.text.pop, { n: paid }); g.b.append(p); p.addEventListener("animationend", () => p.remove());
+    $("map-coins").querySelector("b").textContent = app.save.data.coins; $("map-coins").setAttribute("aria-label", fill(app.meta.home.coins, { n: app.save.data.coins }));
+    mapCards(null); return paid;
+  }
+  // v5 R3: with every level cleared, the long tail's next picture (the map's Play starts it), else null.
+  function mapPic() { if (!app.order.every((id) => app.save.data.done[id])) return null; const t = JN.tail(app.save.data, app.order, galIds(), galAfter()); return t.next ? app.byId.get(t.next) : null; }
+  // The desktop cards: the current realm (its lore, cleared and coins, side quests and secrets found there) and next up
+  // (the next level with its tag, Play, the next open side quest). e: the current level (null: keep the realm shown).
+  function mapCards(e) {
+    const J = app.jr, M = app.cfg.map, T = M.text, d = app.save.data; if (e) J.realm = e.era; const re = J.realm || 1, er = app.eras[re - 1] || { name: "", note: "" };
+    $("jr-r-eye").textContent = fill(T.realmOf, { e: re, t: app.eras.length }); $("jr-r-name").textContent = er.name; $("jr-r-note").textContent = er.note;
+    const ls = app.levels.filter((x) => x.era === re), won = ls.filter((x) => d.done[x.id]).length; reportCard($("jr-rc"), ls); $("jr-r-bar").style.width = (ls.length ? (100 * won) / ls.length : 0) + "%";
+    const ss = J.sheets.map((sh, i) => (sh.S.realm === re ? i : -1)).filter((i) => i >= 0), qs = J.quests.filter((q) => ss.indexOf(q.sheet) >= 0), gs = J.eggs.filter((g) => ss.indexOf(g.sheet) >= 0);
+    $("jr-q-v").textContent = qs.filter((q) => d.gal[q.e.id]).length + " / " + qs.length; $("jr-e-v").textContent = gs.filter((g) => d.eggs && d.eggs[g.id]).length + " / " + gs.length;
+    const ne = app.byId.get(Save.next(d, app.order)), te = mapPic(), all = !ne || d.done[ne.id]; $("jr-n-name").firstChild.textContent = te ? fill(T.sideQuest, { n: te.n }) : all ? T.allClear : fill(T.cur, { n: ne.n }); tagChip($("jr-n-name").querySelector(".tag"), te ? tagOf(te) : all ? null : tagOf(ne));
+    const nx = nextPicture(), qk = nx && nx.L.quest ? E.POWERS.indexOf(nx.L.quest.prize) : -1, qb = $("jr-quest");
+    qb.querySelector("b").textContent = nx ? fill(T.sideQuest, { n: nx.n }) : T.questNone; qb.querySelector(".sq-t > span").textContent = nx && qk >= 0 ? fill(T.questLine, { name: pwName(qk) }) : "";
+    qb.classList.toggle("none", !nx); qb.setAttribute("aria-disabled", nx ? "false" : "true"); qb.setAttribute("aria-label", nx ? fill(T.sideQuest, { n: nx.n }) + (qk >= 0 ? ": " + fill(T.questLine, { name: pwName(qk) }) : "") : T.questNone);
   }
   // ---- the home screen (v4 M5) -----------------------------------------------------------------------------------------
   // The title scene with its top row (settings, the siege's progress, coins, lives only when meta.lives is on), the
   // logo, the next level's era and one Play button labelled with the next level (one tap to play; v4.3 no difficulty), and
-  // the tab bar (Siege map, Home, Gallery).
+  // the tab bar (v5 R3: the map and Home; the Gallery is the map now).
   function renderHome() {
     const H = app.meta.home, d = app.save.data, ne = app.byId.get(Save.next(d, app.order)), won = app.levels.filter((e) => d.done[e.id]).length, er = ne && app.eras[ne.era - 1];
     $("home-prog").querySelector("b").textContent = won + "/" + app.levels.length; $("home-prog").setAttribute("aria-label", fill(H.progress, { done: won, t: app.levels.length }));
@@ -654,42 +775,14 @@
   // The lives pill and, with none left, Play's countdown (the text changes once a second; written only then).
   function livesPill() {
     const H = app.meta.home, L = Meta.lives(app.save.data, app.meta, app.now()), pill = $("home-lives"), ne = app.byId.get(Save.next(app.save.data, app.order));
-    const cd = L.nextMs > 0 ? Meta.clock(L.nextMs, true) : "", txt = L.on ? L.n + (cd ? " \u00b7 " + cd : "") : "", play = L.on && L.n <= 0 ? fill(H.noLives, { t: cd }) : fill(H.play, { n: ne ? ne.n : 1 });
+    const cd = L.nextMs > 0 ? Meta.clock(L.nextMs, true) : "", txt = L.on ? L.n + (cd ? " · " + cd : "") : "", play = L.on && L.n <= 0 ? fill(H.noLives, { t: cd }) : fill(H.play, { n: ne ? ne.n : 1 });
     if (txt + play === app.lifeTxt) return; app.lifeTxt = txt + play;
     pill.hidden = !L.on; pill.querySelector("b").textContent = txt; pill.setAttribute("aria-label", L.on ? (L.n >= L.max ? H.livesFull : fill(H.lives, { n: L.n }) + (cd ? ", " + fill(H.noLives, { t: cd }) : "")) : "");
     $("play-lab").textContent = play; $("btn-play").classList.toggle("wait", L.on && L.n <= 0); playTag($("btn-play"), L.on && L.n <= 0 ? null : ne);
     $("btn-play").setAttribute("aria-label", play + (ne && !(L.on && L.n <= 0) && app.cfg.layout.tags[tagOf(ne)] ? ", " + app.cfg.layout.tags[tagOf(ne)] : ""));
   }
   function openSettings(on) { $("settings").hidden = !on; if (on) $("set-close").focus(); }
-  function renderGallery() {
-    const G = app.cfg.gallery, d = app.save.data; if (!G) return;
-    $("gal-count").textContent = G.count.replace("{n}", galWon()).replace("{t}", app.gal.length); reportCard($("gal-card"), app.gal);
-    const nx = app.byId.get(galNext()); // Critics 2 fix (V2): the next picture (v4.3: the first open one not cleared) wears a gold frame and a Play chip
-    for (const e of app.gal) {
-      const b = e.node, won = !!d.gal[e.id], open = picOpen(e), key = won ? "c" : open ? "d" : "s", tg = (app.cfg.layout.tags || {})[tagOf(e)];
-      b.classList.toggle("done", won); b.classList.toggle("next", e === nx); b.classList.toggle("locked", !open); b.setAttribute("aria-disabled", open ? "false" : "true");
-      b.querySelector(".gn").textContent = won ? e.L.title : e.n; b.querySelector(".gp").textContent = e === nx ? G.playChip : ""; b.classList.toggle("hard", e === nx && (tagOf(e) === "hard" || tagOf(e) === "extreme")); // v4.3 fix (T1): a Hard next picture's Play chip goes red-gold
-      const q = e.L.quest, qk = q ? E.POWERS.indexOf(q.prize) : -1, late = q && q.after > app.levels.length; b.classList.toggle("prize", qk >= 0 && !won); // v5 R2: the prize shows until the first clear
-      b.setAttribute("aria-label", (won ? e.L.title + ", cleared" : fill(e === nx ? G.nextAria : open ? G.tileAria : late ? G.quests.waitAria : G.lockedAria, { n: e.n, after: q ? q.after : "" })) + (tg ? ", " + tg : "") + (qk >= 0 && !won ? ", " + fill(G.quests.prizeAria, { name: pwName(qk) }) : ""));
-      if (b.dataset.drawn !== key) { if (open) thumb(b.querySelector("canvas"), e.L, won); else silhouette(b.querySelector("canvas"), e.L); b.dataset.drawn = key; }
-    }
-  }
-  // v4.3, a locked picture's silhouette: at gallery.thumbPx a cell (the ring left out), the cells of its background (the
-  // colour of its corners, when they agree) in gallery.silhouette[1] and every other cell in silhouette[0]: its shape only.
-  // v4.3 fix (m4): a picture with no plain background (a painting) is split at its median lightness instead, the lighter
-  // half light and the darker half dark: a two-tone stencil of it (the median colour itself goes to whichever side leaves
-  // the split nearer half and half).
-  function silhouette(c, L) {
-    const k = app.cfg.gallery.thumbPx, w = L.w - 2, h = L.h - 2, [fg, bg] = app.cfg.gallery.silhouette, at = (x, y) => L.grid[y + 1][x + 1];
-    const cs = [at(0, 0), at(w - 1, 0), at(0, h - 1), at(w - 1, h - 1)], back = cs.every((q) => q === cs[0]) ? cs[0] : null;
-    const lum = (ch) => { const p = L.pal[E.matOf(ch)], v = p ? parseInt(p.c.slice(1), 16) : 0; return 0.299 * ((v >> 16) & 255) + 0.587 * ((v >> 8) & 255) + 0.114 * (v & 255); };
-    let cut = 0, eq = false; if (back === null) { const ls = []; for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) ls.push(lum(at(x, y))); ls.sort((p, q) => p - q); cut = ls[ls.length >> 1];
-      let gt = 0, ge = 0; for (const v of ls) { if (v > cut) gt++; if (v >= cut) ge++; } eq = Math.abs(ge - ls.length / 2) < Math.abs(gt - ls.length / 2); }
-    const light = (ch) => { const v = lum(ch); return eq ? v >= cut : v > cut; };
-    c.width = w * k; c.height = h * k; const g = c.getContext("2d");
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { g.fillStyle = (back === null ? light(at(x, y)) : at(x, y) === back) ? bg : fg; g.fillRect(x * k, y * k, k, k); }
-  }
-  // A picture's thumbnail: gallery.thumbPx (or kp) canvas px a cell, the ring left out; dimmed (lightness only) until won.
+  // A picture's thumbnail: gallery.thumbPx (or kp) canvas px a cell, the ring left out; dimmed (lightness only) unless colour.
   function thumb(c, L, colour, kp) {
     const k = kp || app.cfg.gallery.thumbPx, w = L.w - 2, h = L.h - 2, [lo, hi] = app.cfg.gallery.dim.map((x) => parseInt(x.slice(1), 16));
     c.width = w * k; c.height = h * k; const g = c.getContext("2d");
@@ -700,22 +793,18 @@
       g.fillRect(x * k, y * k, k, k);
     }
   }
-  // The next Gallery picture to offer after e (v4.3): the first open one not yet cleared, else (every picture cleared) the
-  // one after it.
   // v5 R2: the first open side quest not cleared, or null (none open: the win sheet sends the player on to the next level).
   function nextPicture() { const nx = app.byId.get(galNext()); return nx && !app.save.data.gal[nx.id] ? nx : null; }
 
   // ---- screens and levels --------------------------------------------------------------------------------------------
   function showScreen(name) {
-    if (name === "gallery" && !galOpen()) name = "title";
+    if (name === "gallery") name = "map"; // v5 R3: the Gallery is the journey map now
     if (name !== "play") { app.pick = null; document.body.classList.remove("picking"); }
     $("settings").hidden = true;
     app.screen = name;
-    $("title").hidden = name !== "title"; $("map").hidden = name !== "map"; $("gallery").hidden = name !== "gallery";
-    if (name === "title" || name === "map") renderGalButtons();
+    $("title").hidden = name !== "title"; $("map").hidden = name !== "map";
     if (name === "title") renderHome();
-    if (name === "gallery") { renderGallery(); const nx = document.querySelector("#gal-grid .gal-tile.next"); if (nx && nx.scrollIntoView) nx.scrollIntoView({ block: "nearest" }); }
-    if (name === "map") { renderMap(); const ne = app.byId.get(Save.next(app.save.data, app.order)); if (ne && ne.node && ne.node.scrollIntoView) ne.node.scrollIntoView({ block: "center" }); }
+    if (name === "map") { layoutMap(); renderMap(); scrollMap(); } // v5 R3: the current node about map.curAt down the view
     if (name === "title") paintTitle();
     if (name === "play") fitBoard();
     if (name !== "play") { $("pause").hidden = true; if (app.paused && !document.hidden) resume(); }
@@ -861,7 +950,7 @@
     const np = gal && e.won ? nextPicture() : null, pp = $("p-primary"), nextE = e.won && !app.entry.debug ? (np || (gal || !last ? app.byId.get(Save.next(app.save.data, app.order)) : null)) : null;
     pp.querySelector(".pl").textContent = e.won ? (np ? G.nextBtn : gal || !last ? "Next level" : app.cfg.layout.mapName) : "Retry"; // v5 R2: a side quest won goes on to the next open one, else back to the journey playTag(pp, nextE); // v4.3 fix (T1): the next level's tag
     $("p-stats").querySelector(".coin").classList.remove("go");
-    $("p-secondary").textContent = e.won ? "Retry" : gal ? G.title : app.cfg.layout.mapName;
+    $("p-secondary").textContent = e.won ? "Retry" : app.cfg.layout.mapName;
     reportRows(e); // v4.3: no medals; the report's rows and the tag
     contOffer(e); // v5 R1: a jam's sheet offers the continue
     $("panel").hidden = false; placeSheet();
@@ -934,7 +1023,7 @@
   // A panel button ignores taps for show.panelGuardMs after the panel appears, so a thumb still tapping cards can't hit it.
   const panelLive = () => app.clock - app.panelAt >= app.cfg.show.panelGuardMs || app.testing;
   function panelPrimary() { if (!app.panel || !panelLive()) return; if (app.panel === "win") { if (app.entry.gallery) { const np = nextPicture(); startLevel(np ? np.id : Save.next(app.save.data, app.order)); } else if (app.entry.debug || app.entry.idx === app.levels.length - 1) showScreen("map"); else playNext(); } else retry(); }
-  function panelSecondary() { if (!app.panel || !panelLive()) return; if (app.panel === "win") retry(); else showScreen(app.entry.gallery ? "gallery" : "map"); }
+  function panelSecondary() { if (!app.panel || !panelLive()) return; if (app.panel === "win") retry(); else showScreen("map"); }
 
   // ---- teaching coach (config.teach) ---------------------------------------------------------------------------------
   // One line over the board and a bouncing arrow on the thing to tap: a front card, a card behind one, the holding line,
@@ -1156,12 +1245,12 @@
     window.addEventListener("focus", () => { if (app.screen !== "play") resume(); });
     document.addEventListener("visibilitychange", () => { if (document.hidden) pause(); else if (app.screen !== "play") resume(); });
     $("btn-retry").addEventListener("click", retry);
-    $("btn-map").addEventListener("click", () => showScreen(app.entry && app.entry.gallery ? "gallery" : "map"));
-    $("gal-back").addEventListener("click", () => showScreen("title"));
+    $("btn-map").addEventListener("click", () => showScreen("map"));
+    $("map-set").addEventListener("click", () => openSettings(true)); // v5 R3: the map's gear
     $("btn-play").addEventListener("click", playNext);
     $("btn-tomap").addEventListener("click", () => showScreen("map"));
     $("btn-home").addEventListener("click", () => showScreen("title"));
-    $("map-play").addEventListener("click", playNext);
+    $("map-play").addEventListener("click", () => { const te = mapPic(); if (te) startLevel(te.id); else playNext(); }); // v5 R3: past the last level, the fog's next picture
     $("p-primary").addEventListener("click", panelPrimary);
     $("p-secondary").addEventListener("click", panelSecondary);
     $("p-cont-buy").addEventListener("click", onContinue); // v5 R1
@@ -1192,6 +1281,7 @@
     if (app.wide) { const rw = short ? L.railShortPx : Math.round(Math.min(L.railWidePx, Math.max(L.railMinPx, W * L.railFrac))); r.setProperty("--rail-w", rw + "px"); r.setProperty("--wide-gap", (short ? L.gapShortPx : L.gapWidePx) + "px"); }
     app.labFit.clear();
     if (app.screen === "title") paintTitle();
+    if (app.screen === "map") layoutMap(); else if (app.jr) app.jr.colW = 0; // v5 R3: the map's column (laid out again when it shows)
     if (app.S) fitLine();
     fitBoard();
     if (app.S) { renderTop(); renderTray(); placeSlots(); }
@@ -1453,6 +1543,8 @@
     const glyph = (el) => { const r = document.createRange(); r.selectNodeContents(el); return r.getBoundingClientRect(); };
     const over = (a, b) => { const x = Math.min(a.right, b.right) - Math.max(a.left, b.left), y = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top); return x > 0.5 && y > 0.5 ? Math.round(x) + "x" + Math.round(y) : 0; };
     const shown = (el) => { if (!el) return false; const c = getComputedStyle(el), r = el.getBoundingClientRect(); return c.display !== "none" && c.visibility !== "hidden" && r.width > 0 && r.height > 0; };
+    // v5 R3: scroll the journey map so el sits mid-view (a node off screen can't be hit).
+    const jrTo = (el) => { const sc = $("jr"), r = el.getBoundingClientRect(), q = sc.getBoundingClientRect(); sc.scrollTop += r.top + r.height / 2 - (q.top + q.height / 2); };
     // The jam sheet's chips: one per jammed squad (up to layout.jamChips) in its colour with its count; no crew name shows.
     const chipCheck = () => { const cs = Array.from($("p-line").querySelectorAll(".chip")), want = ((app.ending && app.ending.squads) || []).slice(0, LY.jamChips);
       if (cs.length !== want.length) return cs.length + " chips for " + want.length + " squads";
@@ -1774,9 +1866,9 @@
         ok(saved && reread, "colour-blind: the save keeps it and reads it back (sanitized)");
         const junk = Save.sanitize({ settings: { cb: "yes", speed: 7, fast: true } }, app.order), junk2 = Save.sanitize({ settings: { cb: true, speed: 3 } }, app.order);
         ok(junk.settings.cb === false && junk.settings.speed === 2 && junk2.settings.cb === true && junk2.settings.speed === 3, "save: a bad colour-blind value loads off; a bad speed falls back (the old 2x flag loads as 2); good values load as saved");
-        showScreen("map"); const mb = document.querySelector("#map .tog-cb"), hit2 = hitOK(mb); mb.click(); showScreen("play");
+        showScreen("map"); const hit2 = hitOK($("map-set")); $("map-set").click(); const mb = document.querySelector("#settings .tog-cb"); mb.click(); $("set-close").click(); showScreen("play"); // v5 R3: the map's gear
         const off2 = app.V.studInfo();
-        ok(hit2 && !app.cb && !off2.cb && off2.sum.every((h, m) => h === off.sum[m]) && !gl() && app.save.data.settings.cb === false, "colour-blind off again (the map's toggle): the studs are plain again, byte for byte"); }
+        ok(hit2 && !app.cb && !off2.cb && off2.sum.every((h, m) => h === off.sum[m]) && !gl() && app.save.data.settings.cb === false, "colour-blind off again (the map's gear, the settings sheet): the studs are plain again, byte for byte"); }
       // 17. Speed (v5 R1): under ?debug=1 the top bar's button cycles 1x, 2x, 3x and back through real clicks (nothing
       // saved), and at 3x the engine really runs three times real time. Without debug (forced off here): 1x; a tap asks
       // to buy 2x for the round; short of coins nothing is spent; bought, 2x and coins - price, then the button toggles
@@ -1943,46 +2035,83 @@
           const o = winOf(e); playCol(+o[0]); let seen = { live: 0 }; for (let t = 0; t < 1200; t += 16) { step(16); const q = app.V.entryInfo(); if (q.live > seen.live) seen = q; }
           ok(seen.live > 0 && seen.yard === seen.live && seen.crate === seen.live && seen.entry === seen.live && app.S.status === E.PLAYING, e.id + ": v4.1, the first squad's sappers leave their crate in the yard and come up through the entry square at the bottom (" + JSON.stringify(seen) + ")");
           settleNow(); const sl = app.slots.find((q) => q.classList.contains("full")); ok(!sl || sl.getAttribute("aria-label").toLowerCase().indexOf(P[app.S.spM[+app.slots.indexOf(sl)]].n) === 0, e.id + ": a space reads its colour's name (" + (sl ? sl.getAttribute("aria-label") : "no squad waiting") + ")"); }
-        // Locked: a fresh save. Both buttons show the padlock and the hint; a tap on either never opens the Gallery.
-        app.save.data.done = {}; app.save.data.gal = {}; showScreen("title");
-        const gb = $("btn-gallery"), mg = $("map-gallery");
-        ok(!galOpen() && gb.classList.contains("locked") && gb.getAttribute("aria-disabled") === "true" && gb.querySelector(".gs").textContent === app.meta.home.galTab && mg.querySelector(".gs").textContent === GC.lockedHint && hitOK(gb), "gallery: locked before level " + GC.openAt + " is won; the home's Gallery tab shows the padlock and '" + gb.querySelector(".gs").textContent + "', the map's button the hint");
-        gb.click(); const s1 = app.screen; showScreen("map"); const mh = hitOK(mg); mg.click(); const s2 = app.screen; showScreen("gallery"); const s3 = app.screen;
-        ok(s1 === "title" && s2 === "map" && s3 === "title" && mg.classList.contains("locked") && mh, "gallery: while locked, the title's and the map's buttons (hittable, padlocked) don't open it, nor does asking for the screen (" + [s1, s2, s3].join(", ") + ")");
-        // Open: win the opening level. The buttons show the count; the screen shows every picture, dimmed.
-        Save.record(app.save.data, GC.openAt); showScreen("title");
-        ok(galOpen() && !gb.classList.contains("locked") && gb.querySelector(".gs").textContent === GC.count.replace("{n}", 0).replace("{t}", app.gal.length), "gallery: open once level " + GC.openAt + " is won; the button counts " + gb.querySelector(".gs").textContent);
-        gb.click(); const tiles = Array.from(document.querySelectorAll("#gal-grid .gal-tile"));
-        ok(app.screen === "gallery" && tiles.length === app.gal.length && !tiles.some((t) => t.classList.contains("done")) && $("gal-credits").textContent === GC.credits && !document.querySelector("#gallery a") && hitOK(tiles[0]), "gallery: the title's button opens the grid of " + tiles.length + " pictures, none cleared, the credits line in plain text (no links)");
-        { const nxt = tiles.filter((t) => t.classList.contains("next")), chip = tiles[0].querySelector(".gp");
-          ok(nxt.length === 1 && nxt[0] === tiles[0] && chip.textContent === GC.playChip && shown(chip) && getComputedStyle(tiles[0]).borderTopColor !== getComputedStyle(tiles[1]).borderTopColor && tiles[0].getAttribute("aria-label").indexOf(fill(GC.nextAria, { n: app.gal[0].n })) === 0, "gallery (Critics 2 fix, V2): the first picture not yet cleared, and only it, wears the gold frame and the '" + chip.textContent + "' chip"); }
         const px = (c) => { const q = document.createElement("canvas"); q.width = c.width; q.height = c.height; const g = q.getContext("2d", { willReadFrequently: true }); g.drawImage(c, 0, 0); const d = g.getImageData(0, 0, c.width, c.height).data, s = new Set(); for (let i = 0; i < d.length; i += 4) s.add("#" + [d[i], d[i + 1], d[i + 2]].map((v) => v.toString(16).padStart(2, "0")).join("")); return s; };
-        // v4.3: only the first picture is open; the second is a padlocked silhouette (two colours, gallery.silhouette) that
-        // a tap shakes and never starts.
-        { const t1 = tiles[1], sil = t1 ? px(t1.querySelector("canvas")) : new Set(), want = new Set(GC.silhouette.map((c) => c.toLowerCase())), s0 = app.screen, k0 = app.cues.blocked | 0; if (t1) t1.click();
-          ok(!t1 || (t1.classList.contains("locked") && !t1.classList.contains("next") && shown(t1.querySelector(".gk")) && [...sil].every((c) => want.has(c)) && app.screen === s0 && (app.cues.blocked | 0) === k0 + 1 && !tiles[0].classList.contains("locked")), "gallery (v4.3): picture 1 is open, picture 2 a padlocked silhouette (" + [...sil].join(" ") + ") that a tap shakes and never starts"); }
-        const e0 = app.gal[0], i0 = 0, pal0 = new Set(Object.values(e0.L.pal).map((q) => q.c.toLowerCase())), dim0 = px(tiles[i0].querySelector("canvas"));
-        // Cleared: win a picture through its stored order; the save's gal holds it, the sheet offers the next picture.
-        Save.record(app.save.data, app.order[app.gal[1].L.quest.after - 1]); // v5 R2: picture 2's main level cleared, so its side quest is open
-        startLevel(e0.id); patient(winOf(e0)); settleNow(); tick(9000);
+        // v5 R3, the side quests on the journey map. A new save: picture 1's node is locked (its prize icon on it), a tap
+        // shakes and starts nothing; once its main level is cleared it opens (gold ring, prize bubble) and a tap plays it.
+        app.save.data.done = {}; app.save.data.gal = {}; showScreen("map");
+        const e0 = app.gal[0], q0 = e0.node, a0 = e0.L.quest.after, pal0 = new Set(Object.values(e0.L.pal).map((q) => q.c.toLowerCase()));
+        { const k0 = app.cues.blocked | 0; jrTo(q0); q0.click();
+          ok(q0.classList.contains("locked") && q0.getAttribute("aria-disabled") === "true" && shown(q0.querySelector(".qp")) && !shown(q0.querySelector(".prz")) && app.screen === "map" && (app.cues.blocked | 0) === k0 + 1 && q0.getAttribute("aria-label").indexOf(fill(GC.lockedAria, { n: 1, after: a0 })) === 0,
+            "map quests: on a new save picture 1's node is locked with its prize icon; a tap shakes and starts nothing ('" + q0.getAttribute("aria-label") + "')"); }
+        for (let i = 0; i < a0; i++) Save.record(app.save.data, app.order[i]); showScreen("map");
+        { const prz = q0.querySelector(".prz"); jrTo(q0);
+          ok(q0.classList.contains("open") && q0.classList.contains("next") && shown(prz) && prz.querySelector(".pi").style.backgroundImage.indexOf("url(") === 0 && hitOK(q0) && q0.getAttribute("aria-label").indexOf(fill(GC.nextAria, { n: 1 })) === 0 && app.gal[1].node.classList.contains("locked"),
+            "map quests: with level " + a0 + " cleared picture 1 opens (gold ring, prize bubble, hittable); picture 2 stays locked"); }
+        q0.click(); ok(app.screen === "play" && app.entry === e0, "map quests: a tap on the open node plays picture 1");
+        // Won (picture 2's main level cleared too): the save's gal, the prize paid once with its toast, the sheet's next picture.
+        Save.record(app.save.data, app.order[app.gal[1].L.quest.after - 1]);
+        const pz = e0.L.quest.prize, inv0 = app.save.data.inv[pz] | 0;
+        startLevel(e0.id); patient(winOf(e0)); settleNow(); const tx0 = $("toast").textContent; tick(9000);
         const nx = nextPicture();
-        ok(app.panel === "win" && $("p-title").textContent === GC.winTitle && $("p-primary").querySelector(".pl").textContent === GC.nextBtn && app.save.data.gal[e0.id] === 1 && !app.save.data.done[e0.id] && hitOK($("p-primary")), "gallery: a picture won goes in the save's gal (" + app.save.data.gal[e0.id] + "), the sheet says '" + $("p-title").textContent + "' and offers '" + $("p-primary").textContent + "'");
+        ok(app.panel === "win" && $("p-title").textContent === GC.winTitle && $("p-primary").querySelector(".pl").textContent === GC.nextBtn && app.save.data.gal[e0.id] === 1 && !app.save.data.done[e0.id] && hitOK($("p-primary")) && (app.save.data.inv[pz] | 0) === inv0 + 1 && tx0 === fill(GC.quests.prizeText, { name: pwName(E.POWERS.indexOf(pz)) }),
+          "map quests: a picture won goes in the save's gal, pays its prize (+1 " + pz + ", toast '" + tx0 + "'), the sheet says '" + $("p-title").textContent + "' and offers '" + $("p-primary").textContent + "'");
         { for (const an of $("panel").firstElementChild.getAnimations()) an.finish(); const pc = $("p-pic").firstElementChild, pr = pc.getBoundingClientRect(), cr = $("panel").firstElementChild.getBoundingClientRect(), cols = px(pc), cell = pr.height / (e0.L.h - 2), sc = sheetClear(true);
           out.notes.reportPic = Math.round(pr.width) + "x" + Math.round(pr.height) + " CSS px, " + cell.toFixed(2) + " a cell";
           const sp = $("stage-pic"), onStage = !shown($("p-pic")) && shown(sp), spr = sp.firstElementChild.getBoundingClientRect(), fr = $("frame").getBoundingClientRect(), scol = onStage ? px(sp.firstElementChild) : cols;
           if (onStage) out.notes.reportPic = "over the board, " + Math.round(spr.width) + "x" + Math.round(spr.height) + " CSS px";
           ok((shown($("p-pic")) ? pr.top >= cr.top && pr.bottom <= cr.bottom : onStage && spr.left >= fr.left && spr.right <= fr.right && spr.top >= fr.top && spr.bottom <= fr.bottom) && $("p-line").textContent === fill(GC.winLine, { title: e0.L.title }) && [...scol].every((c) => pal0.has(c)) && scol.size === pal0.size && cr.top >= -0.5 && cr.bottom <= innerHeight + 0.5 && sc === true && hitOK($("p-primary")) && hitOK($("p-secondary")),
             "gallery (Critics 2 fix, V2): the win shows the finished picture (" + out.notes.reportPic + ", all " + scol.size + " of its colours) on the sheet (or over the razed board where the sheet has no room), and the sheet fits the screen; '" + $("p-line").textContent + "' (" + sc + ")"); }
-        $("p-primary").click(); ok(app.entry === nx && nx === app.gal[1] && app.screen === "play", "gallery: Next picture opens the next one, open now (" + nx.id + ")");
-        $("btn-map").click(); const col = px(tiles[i0].querySelector("canvas"));
-        ok(app.screen === "gallery" && tiles[i0].classList.contains("done") && tiles[i0].querySelector(".gn").textContent === e0.L.title && [...col].every((c) => pal0.has(c)) && ![...dim0].some((c) => pal0.has(c)), "gallery: the top bar's button goes back to the grid; the won picture shows in its own colours with its title (" + e0.L.title + "), the rest stay dimmed");
-        ok(tiles[1].classList.contains("next") && !tiles[1].classList.contains("locked") && (!tiles[2] || tiles[2].classList.contains("locked") === !picOpen(app.gal[2])), "gallery (v5 R2): with picture 1 cleared and picture 2's main level cleared, picture 2 is open with the gold frame and Play chip; picture 3 opens only with level " + (app.gal[2] ? app.gal[2].L.quest.after : "-"));
-        { const g1 = app.save.data.gal[app.gal[1].id]; app.save.data.gal[app.gal[1].id] = 1; const none = picOpen(app.gal[2]) || nextPicture() === null; if (!g1) delete app.save.data.gal[app.gal[1].id];
-          ok(none && app.gal.every((e) => e.L.quest && e.L.quest.after >= 1) && $("gal-grid").querySelectorAll(".gal-tile.prize").length === app.gal.filter((e) => !app.save.data.gal[e.id]).length, "gallery (v5 R2): every picture is a side quest with its prize shown until cleared; with no open quest left the win sheet goes on to the next level"); }
+        $("p-primary").click(); ok(app.entry === nx && nx === app.gal[1] && app.screen === "play", "map quests: Next picture opens the next one, open now (" + nx.id + ")");
+        $("btn-map").click(); const col = px(q0.querySelector("canvas"));
+        ok(app.screen === "map" && q0.classList.contains("won") && !shown(q0.querySelector(".prz")) && shown(q0.querySelector("canvas")) && [...col].every((c) => pal0.has(c)) && q0.getAttribute("aria-label").indexOf(e0.L.title + ", cleared") === 0,
+          "map quests: the top bar's button goes back to the map; the won node shows the finished picture in its own colours (" + col.size + "), no prize bubble");
+        { const inv1 = app.save.data.inv[pz] | 0; jrTo(q0); q0.click(); const re = app.entry === e0 && app.screen === "play"; patient(winOf(e0)); settleNow(); tick(9000);
+          ok(re && app.panel === "win" && (app.save.data.inv[pz] | 0) === inv1, "map quests: a tap on the won node plays it again; a second win pays no prize"); }
+        ok(app.jr.quests.length === Math.min(25, app.gal.length) && app.jr.quests.every((q) => q.g && q.g.querySelectorAll("ellipse").length >= 1 && q.g.getAttribute("class").indexOf(JN.questState(app.save.data, app.order, galIds(), galAfter(), q.e.id)) > 0),
+          "map quests: every side quest on the map has its stepping-stone detour drawn from the road, marked with its state");
         const saved = JSON.stringify(Save.sanitize(JSON.parse(JSON.stringify(app.save.data)), app.order, app.gal.map((x) => x.id)).gal), junk = Save.sanitize({ gal: { [e0.id]: 99, nope: 1, [app.gal[1].id]: "x" } }, app.order, app.gal.map((x) => x.id)).gal;
-        ok(saved === JSON.stringify(app.save.data.gal) && JSON.stringify(junk) === JSON.stringify({ [e0.id]: 1 }), "gallery: the save's gal reads back through sanitize; a cleared mask reads as cleared, unknown ids and non-numbers are dropped");
+        ok(saved === JSON.stringify(app.save.data.gal) && JSON.stringify(junk) === JSON.stringify({ [e0.id]: 1 }), "map quests: the save's gal reads back through sanitize; a cleared mask reads as cleared, unknown ids and non-numbers are dropped");
         showScreen("title");
       }
+      // 24b. v5 R3, the journey map: its parts (13 sheets, a node for every level, 25 quests, 26 eggs, a banner a realm,
+      // the bridges), lazy sheets, the current node about map.curAt down with its label, locked and cleared taps, the
+      // route cut at the current node, a banner's lore, the debug row; an egg paying once; the long tail in the fog.
+      if (app.jr) { const J = app.jr, MC = app.cfg.map, MT = MC.text, sc = $("jr"), coins = () => app.save.data.coins;
+        app.save = scratch(); J.colW = 0; showScreen("map");
+        ok(J.sheets.length === app.lay.sheets.length && app.levels.every((e) => e.node && e.node.classList.contains("mn")) && J.quests.length === 25 && J.eggs.length === 26 && document.querySelectorAll("#jr .bn").length === app.eras.length && document.querySelectorAll("#jr .br").length === MC.bridges.length,
+          "map: " + J.sheets.length + " sheets, a node for each of " + app.levels.length + " levels, " + J.quests.length + " side quests, " + J.eggs.length + " eggs, a banner for each of " + app.eras.length + " realms, " + MC.bridges.length + " bridges");
+        ok(J.sheets.filter((h) => h.loaded).length < J.sheets.length && J.sheets.every((h) => h.loaded === !!h.img.getAttribute("src")), "map: sheets load as they near the view, not all at once (" + J.sheets.filter((h) => h.loaded).length + " of " + J.sheets.length + " requested so far)");
+        // Mid-campaign (40 cleared): the current node about curAt down the scroller, its label beside it, in its sheet.
+        for (let i = 0; i < 40; i++) Save.record(app.save.data, app.order[i]); showScreen("map");
+        { const e = app.byId.get(Save.next(app.save.data, app.order)), r = e.node.getBoundingClientRect(), s = sc.getBoundingClientRect(), at = (r.top + r.height / 2 - s.top) / s.height, L = J.label;
+          ok(e.node.classList.contains("cur") && Math.abs(at - MC.curAt) < 0.02 && L.parentNode === e.node.parentNode && L.firstChild.textContent === fill(MT.cur, { n: e.n }) && hitOK(e.node) && !over(L.getBoundingClientRect(), r),
+            "map: level " + e.n + " is current, " + Math.round(at * 100) + "% down the view (map.curAt " + MC.curAt + "), labelled '" + L.textContent + "' beside it, hittable"); out.notes.mapAt = +at.toFixed(3);
+          const cs = e.sheet, w = J.sheets.map((h) => [!!h.w.getAttribute("d"), !!h.a.getAttribute("d")]);
+          ok(w.every((q, i) => (i < cs ? q[0] && !q[1] : i > cs ? !q[0] && q[1] : q[0] && q[1])), "map: the route is walked (red) up to level " + e.n + " on sheet " + (cs + 1) + " and faint ahead of it");
+          const lk = app.byId.get(app.order[45]), k0 = app.cues.blocked | 0; jrTo(lk.node); lk.node.click(); const s1 = app.screen;
+          const dn = app.levels[10]; jrTo(dn.node); dn.node.click();
+          ok(lk.node.classList.contains("locked") && s1 === "map" && (app.cues.blocked | 0) === k0 + 1 && app.entry === dn && app.screen === "play", "map: a locked node (" + lk.n + ") shakes and starts nothing; a cleared one (" + dn.n + ") plays again"); }
+        showScreen("map"); { const bn = document.querySelector("#jr .bn"), lo = bn.querySelector(".lore"); jrTo(bn); const h0 = shown(lo); bn.click(); const h1 = shown(lo); bn.click();
+          ok(!h0 && h1 && !shown(lo) && lo.textContent === app.eras[0].note && hitOK(bn), "map: a realm's banner shows its lore on a tap and hides it on the next"); }
+        if (app.debug.length) ok(!$("jr-dbg").hidden && $("jr-dbg").querySelectorAll(".dbg-node").length === app.debug.length && hitOK($("jr-dbg").querySelector(".dbg-node")), "map (?debug=1): the debug row holds the " + app.debug.length + " v4 twists' levels");
+        // An egg: the first tap pays its coins (the top bar's count too) and turns it; a second pays nothing; the save keeps it.
+        { const g = J.eggs[0], c0 = coins(); jrTo(g.b); const hit = hitOK(g.b), svg0 = g.b.innerHTML; g.b.click(); const c1 = coins(); g.b.click(); const c2 = coins();
+          const reread = Save.sanitize(JSON.parse(JSON.stringify(app.save.data)), app.order, galIds(), app.meta).eggs;
+          ok(hit && c1 - c0 === g.coins && g.coins >= 10 && g.coins <= 15 && c2 === c1 && g.b.classList.contains("found") && g.b.innerHTML !== svg0 && $("map-coins").textContent === String(c1) && reread[g.id] === 1 && g.b.getAttribute("aria-label").indexOf(MT.eggs[g.kind][1]) > 0,
+            "map eggs: " + g.id + " (" + g.kind + ") pays " + (c1 - c0) + " coins once (a second tap " + (c2 - c1) + "), turns into " + MT.eggs[g.kind][1] + ", the top bar's coins follow, the save keeps it"); }
+        ok(J.eggs.every((g) => g.b.querySelector("svg") && g.b.getAttribute("aria-label")) && app.levels.every((e) => e.node.tagName === "BUTTON" && e.node.getAttribute("aria-label")) && J.quests.every((q) => q.b.tagName === "BUTTON" && q.b.getAttribute("aria-label")),
+          "map a11y: every level, side quest and egg is a button with a label");
+        // The long tail: before every level is cleared the fog holds no node; after, one next picture, then the next.
+        { const t = J.tail, fogShown = shown(document.querySelector("#jr .fogl")); ok(t.b.hidden && fogShown && !mapPic(), "map long tail: the road fades into fog ('" + MT.fog + "'); no node there before every level is cleared");
+          for (const id of app.order) Save.record(app.save.data, id); for (let i = 0; i < 25; i++) Save.record(app.save.data, app.gal[i].id, "gal"); showScreen("map");
+          const T0 = JN.tail(app.save.data, app.order, galIds(), galAfter()), tb = t.b, r = tb.getBoundingClientRect(), s = sc.getBoundingClientRect(), at = (r.top + r.height / 2 - s.top) / s.height;
+          ok(!tb.hidden && t.e && t.e.id === T0.ids[0] && hitOK(tb) && (Math.abs(at - MC.curAt) < 0.02 || sc.scrollTop === 0) && $("map-play").querySelector(".pl").textContent === fill(MT.playPic, { n: t.e.n }) && !t.th.children.length,
+            "map long tail: with 1-" + app.levels.length + " cleared one node opens in the fog (picture " + (t.e ? t.e.n : "?") + "), " + Math.round(at * 100) + "% down (or the map's top); Play reads '" + $("map-play").textContent + "'");
+          tb.click(); const first = app.entry; patient(winOf(first)); settleNow(); tick(9000); $("btn-map").click();
+          const th = t.th.querySelector(".th"); jrTo(t.th);
+          ok(first.id === T0.ids[0] && app.save.data.gal[first.id] === 1 && t.e && t.e.id === T0.ids[1] && t.th.children.length === 1 && th.dataset.id === first.id && hitOK(th), "map long tail: picture " + first.n + " won, the node moves on to picture " + (t.e ? t.e.n : "?") + "; the won one waits beside it to replay");
+          th.click(); ok(app.entry === first && app.screen === "play", "map long tail: a tap on a cleared picture's thumbnail plays it again"); }
+        app.save = scratch(); J.colW = 0; showScreen("title"); }
       // 25. v4 M5, the meta layer. The home: one tap on Play opens the right level (a new save: level 1; mid-campaign: the
       // first level not won), with the progress, the coins and (lives off) no heart; the tabs; the settings sheet. The
       // power-up bar through its real badges: round, bigger than a tile, hittable, inside the screen; buying (the price
@@ -2003,8 +2132,8 @@
           if (over(ch, document.querySelector(".home h1").getBoundingClientRect())) hits.push("h1");
           ok(Math.abs((ch.top + ch.bottom) / 2 - ry) < 1 && !hits.length && ch.left >= -0.5 && ch.right <= innerWidth + 0.5, "home (Critics 2 fix, m6): the era chip lies on the river at the castle's foot (centre " + Math.round((ch.top + ch.bottom) / 2) + ", river " + Math.round(ry) + "), so the crew (on the grass, 13 scene px under the river) stands clear; clear of the logo, the pills and the buttons (" + hits.join(", ") + ")"); }
         $("btn-play").click(); ok(app.screen === "play" && app.entry === ne, "home (mid-campaign): one tap on Play opens level " + ne.n);
-        showScreen("title"); const tabsHit = hitOK($("btn-tomap")) && hitOK($("tab-home")) && hitOK($("btn-gallery")); $("btn-tomap").click(); const t1 = app.screen; $("btn-home").click(); const t2 = app.screen; $("tab-home").click(); const t3 = app.screen;
-        ok(tabsHit && t1 === "map" && t2 === "title" && t3 === "title" && $("map-story").textContent === HT.story, "home tabs: Siege map opens the map (the story is there now), back reaches Home; every tab is hittable");
+        showScreen("title"); const tabsHit = hitOK($("btn-tomap")) && hitOK($("tab-home")) && !$("btn-gallery") && document.querySelectorAll(".tabs .tab").length === 2; $("btn-tomap").click(); const t1 = app.screen; $("btn-home").click(); const t2 = app.screen; $("tab-home").click(); const t3 = app.screen;
+        ok(tabsHit && t1 === "map" && t2 === "title" && t3 === "title" && $("map-story").textContent === HT.story, "home tabs (v5 R3: Map and Home; the Gallery is the map): Map opens the map (the story is at its foot), back reaches Home; every tab is hittable");
         { $("btn-settings").click(); const open = !$("settings").hidden && hitOK($("set-close")), m0 = app.audio.muted, mb = document.querySelector("#settings .tog-mute"); mb.click();
           const muted = app.audio.muted !== m0 && app.save.data.settings.muted === app.audio.muted && mb.querySelector(".sv").textContent === (app.audio.muted ? "Off" : "On"); mb.click();
           const sp0 = app.speed; document.querySelector("#settings .tog-speed").click(); const sp1 = app.speed, lab = document.querySelector("#settings .tog-speed .sv").textContent; setSpeed(SPD[0], false); $("set-close").click();
@@ -2094,8 +2223,8 @@
         if (app.byId.has("v4-linked")) { const c0 = coins(); startLevel("v4-linked"); patient(winOf(app.entry)); settleNow(); for (let t = 0; t < 12000 && !app.panel; t += 16) step(16); ok(app.panel === "win" && coins() === c0 && $("p-stats").hidden, "report: a debug level earns nothing and shows no report rows"); }
         if (app.gal.length) { const g = app.gal[0], c0 = coins(); startLevel(g.id); patient(winOf(g)); settleNow(); for (let t = 0; t < 12000 && !app.panel; t += 16) step(16);
           ok(app.panel === "win" && coins() === c0 + Meta.winCoins(MT, tagOf(g), true) && !$("p-stats").hidden && Meta.bestOf(app.save.data, g.id)[1] === app.report.taps, "report: a Gallery picture gets the same report (+" + app.report.coins + " coins, best kept per picture)"); }
-        { showScreen("map"); const er = app.eras[0], rc = er.sec.querySelector(".rc"), ls = app.levels.filter((e) => e.era === 1), won = ls.filter((e) => app.save.data.done[e.id]).length, cs = ls.reduce((a, e) => a + Meta.bestOf(app.save.data, e.id)[2], 0);
-          ok(rc.querySelector(".rc-n").textContent === fill(MT.eraCard.cleared, { n: won, t: ls.length }) && rc.querySelector(".rc-c b").textContent === String(cs) && !rc.querySelector(".rc-m"), "map: Era 1's report card: " + rc.querySelector(".rc-n").textContent + ", no medals (v4.3), " + rc.querySelector(".rc-c b").textContent + " coins"); }
+        { showScreen("map"); const re = app.jr ? app.jr.realm : 1, rc = $("jr-rc"), ls = app.levels.filter((e) => e.era === re), won = ls.filter((e) => app.save.data.done[e.id]).length, cs = ls.reduce((a, e) => a + Meta.bestOf(app.save.data, e.id)[2], 0);
+          ok(rc.querySelector(".rc-n").textContent === fill(MT.eraCard.cleared, { n: won, t: ls.length }) && rc.querySelector(".rc-c b").textContent === String(cs) && !rc.querySelector(".rc-m"), "map (v5 R3, the realm card): realm " + re + "'s report: " + rc.querySelector(".rc-n").textContent + ", no medals (v4.3), " + rc.querySelector(".rc-c b").textContent + " coins"); }
         // Lives, forced on in a scratch copy of meta with a test clock.
         { let T = 1.8e12; const per = MT.livesRefillMin * 60000; app.meta = Object.assign({}, MT, { lives: true }); app.now = () => T; app.save = scratch(); showScreen("title");
           ok(!$("home-lives").hidden && $("home-lives").textContent === String(app.meta.livesMax) && hitOK($("btn-play")), "lives on (a scratch copy of meta): the home shows " + app.meta.livesMax + " lives");
@@ -2114,7 +2243,7 @@
       // and the sheet waits until every sapper is home.
       { showScreen("map"); const bad = app.levels.filter((e) => { const i = e.node.querySelector(".tag"), t = (LY.tags || {})[tagOf(e)] || ""; return i.textContent !== t || i.hidden !== !t || !i.classList.contains("tag-" + tagOf(e)); }).map((e) => e.id);
         const hn = app.levels.find((e) => tagOf(e) === "hard"), en = app.levels.find((e) => tagOf(e) === "easy"), hc = hn && getComputedStyle(hn.node.querySelector(".tag")).backgroundColor, ec = en && getComputedStyle(en.node.querySelector(".tag")).backgroundColor;
-        ok(!bad.length && hn && en && hc !== ec && shown(hn.node.querySelector(".tag")), "tags (v4.3): every map button wears its level's tag (Hard " + hc + ", Easy " + ec + ", Normal unmarked)" + (bad.length ? " (" + bad.slice(0, 5).join(",") + ")" : ""));
+        ok(!bad.length && hn && en && hc !== ec && hn.node.querySelector(".tag").textContent === LY.tags.hard, "tags (v4.3): every map button wears its level's tag (Hard " + hc + ", Easy " + ec + ", Normal unmarked)" + (bad.length ? " (" + bad.slice(0, 5).join(",") + ")" : ""));
         startLevel(hn.id); const hk = $("tag-chip"), hr = shown(hk) && hk.textContent === LY.tags.hard && hk.classList.contains("tag-hard") && app.S.cap === rulesOf("hard").hold;
         const nn = app.levels.find((e) => tagOf(e) === "normal"); startLevel(nn.id); const nr = $("tag-chip").hidden && app.S.cap === rulesOf("normal").hold;
         ok(hr && nr, "tags (v4.3): the top bar shows " + hn.id + "'s Hard tag (4 spaces) and nothing on " + nn.id + " (Normal, 5 spaces)");
@@ -2157,11 +2286,9 @@
           const go = $("p-stats").querySelector(".coin").classList.contains("go") === !app.V.calm, sl = sheetClear(true);
           startLevel(e.id); patient(winOf(e)); settleNow(); for (let t = 0; t < 12000 && !app.panel; t += 16) step(16);
           ok(rib && go && sl === true && $("p-ribbon").hidden, "m3 (v4.3 fix): a first clear wears the ribbon '" + rb.textContent + "' and its coins burst" + (app.V.calm ? " (reduced motion: no burst)" : "") + "; a repeat clear has no ribbon (" + sl + ")"); }
-        // m4: the locked wall.
-        if (app.gal.length) { app.save.data.done[app.cfg.gallery.openAt] = 1; showScreen("gallery"); const lk = Array.from(document.querySelectorAll(".gal-tile.locked")), tg = lk.map((b) => b.querySelector(".tag")).find((t) => t && !t.hidden);
-          const pi = app.gal.findIndex((x, k) => x.L.kind === "painting" && lk.indexOf(x.node) >= 0), pc = pi >= 0 ? app.gal[pi].node.querySelector("canvas") : null;
-          let cols = 0; if (pc) { const q = document.createElement("canvas"); q.width = pc.width; q.height = pc.height; const g = q.getContext("2d", { willReadFrequently: true }); g.drawImage(pc, 0, 0); const d = g.getImageData(0, 0, q.width, q.height).data, set = new Set(); for (let i = 0; i < d.length; i += 4) set.add(d[i] + "," + d[i + 1] + "," + d[i + 2]); cols = set.size; }
-          ok(!!tg && Math.abs(+getComputedStyle(tg).opacity - 0.55) < 0.01 && (pi < 0 || cols === 2), "m4 (v4.3 fix): the locked wall's tags at 55%; a locked painting (" + (pi >= 0 ? app.gal[pi].id : "none") + ") is a two-tone stencil (" + cols + " colours)"); showScreen("title"); }
+        // m4 (v5 R3): the locked wall is gone with the Gallery; a locked level node hides its tag, an open one shows it.
+        { app.save = scratch(); for (let i = 0; i < 6; i++) Save.record(app.save.data, app.order[i]); showScreen("map"); const open = app.levels.slice(0, 6).filter((e) => tagOf(e) !== "normal"), lk = app.levels.slice(8).find((e) => tagOf(e) !== "normal");
+          ok(open.length && open.every((e) => shown(e.node.querySelector(".tag"))) && lk && !shown(lk.node.querySelector(".tag")), "m4 (v5 R3): cleared nodes wear their tags (" + open.map((e) => e.n).join(", ") + "); a locked one (" + lk.n + ") keeps quiet"); showScreen("title"); }
         // m5: a fail sheet on a wide screen is its content's height.
         if (jp && app.wide) { startLevel(jp.e.id); patient(jp.p.prefix); for (let t = 0; t < ST.tickCapMs && !app.panel; t += 16) step(16);
           const card = $("panel").firstElementChild; for (const an of card.getAnimations()) an.finish(); const r = card.getBoundingClientRect(); let lo = 1e9, hi = 0; /* the sheet's slide-in landed */ for (const el of card.children) { const q = el.getBoundingClientRect(); if (el.hidden || !q.height) continue; lo = Math.min(lo, q.top); hi = Math.max(hi, q.bottom); }
@@ -2197,14 +2324,15 @@
     // Cost of n board draws right now (ms): the harness calls it mid-show.
     perf: (n) => { const k = Math.max(1, Math.min(500, n | 0 || 60)); let max = 0; const t0 = performance.now(); for (let i = 0; i < k; i++) { const a = performance.now(); app.V.draw(); max = Math.max(max, performance.now() - a); } return { mean: +((performance.now() - t0) / k).toFixed(3), max: +max.toFixed(3), runners: app.V.live }; },
     sprites: () => app.V.checkSprites(),
-    // v4 M4: win siege levels 1 to gallery.openAt in the live save (the harness opens the Gallery this way); the ids of
-    // the Gallery's pictures; the board's runners by entry edge.
-    unlockGallery: () => { const k = app.order.indexOf(app.cfg.gallery.openAt); for (let i = 0; i <= k; i++) Save.record(app.save.data, app.order[i]); writeSave(); renderGalButtons(); return galOpen(); },
+    // v4 M4: the side quests' (Gallery pictures') ids; the board's runners by entry edge. v5 R3: map() reads the journey
+    // map (sheets requested, the scroll, the current node, eggs found) for the harness and the screens.
+    map: () => { const J = app.jr; if (!J) return null; const sc = $("jr"), f = JN.focus(app.save.data, app.order);
+      return { sheets: J.sheets.length, loaded: J.sheets.filter((h) => h.loaded).length, k: +J.k.toFixed(4), colW: J.colW, cards: $("map").classList.contains("cards"), scrollTop: Math.round(sc.scrollTop), height: sc.clientHeight, world: $("jr-world").offsetHeight, focus: f, eggs: Object.keys(app.save.data.eggs || {}).length, tail: J.tail && J.tail.e ? J.tail.e.id : null }; },
     gallery: () => app.gal.map((e) => e.id), entry: () => app.V.entryInfo(),
     // v4 M5: win siege levels 1..n (normal) in the live save (screens for the harness and the critics); a power-up through
     // its badge (k), and for the Quartermaster or Recall a target (the tile [j, d] or the space); the meta state.
     // v4.3: clearPictures(k): clear the Gallery's first k pictures in the live save (the screens' sequential Gallery).
-    clearPictures: (k) => { for (let i = 0; i < k && i < app.gal.length; i++) Save.record(app.save.data, app.gal[i].id, "gal"); writeSave(); if (app.screen === "gallery") renderGallery(); return Object.keys(app.save.data.gal).length; },
+    clearPictures: (k) => { for (let i = 0; i < k && i < app.gal.length; i++) Save.record(app.save.data, app.gal[i].id, "gal"); writeSave(); if (app.screen === "map") renderMap(); return Object.keys(app.save.data.gal).length; },
     quest: (id) => { const e = app.byId.get(id); return e && e.L.quest ? Object.assign({ open: picOpen(e) }, e.L.quest) : null; }, // v5 R2: a picture's side quest
     unlockTo: (n) => { for (let i = 0; i < n && i < app.order.length; i++) Save.record(app.save.data, app.order[i]); app.save.data.last = Save.next(app.save.data, app.order); writeSave(); renderHome(); return Object.keys(app.save.data.done).length; },
     power: (k, a) => { const got = onPower(k); if (a == null || !app.pick) return got; return Array.isArray(a) ? pickTile(a[0], a[1]) : pickSlot(a); },

@@ -8,8 +8,8 @@
 <title>Sapper's Path</title>
 <meta name="description" content="Goblins stole the crown and walled themselves in. Tap a squad: its sappers run up, pull their colour off the fort and carry it home. Keep the holding line clear and raze every block.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%232e2935'/><rect x='14' y='14' width='22' height='22' rx='5' fill='%23ff8c1a'/><rect x='39' y='14' width='22' height='22' rx='5' fill='%23e6262e'/><rect x='64' y='14' width='22' height='22' rx='5' fill='%23ffe21f'/><rect x='14' y='39' width='22' height='22' rx='5' fill='%232f62ff'/><rect x='64' y='39' width='22' height='22' rx='5' fill='%239ee52a'/><rect x='14' y='64' width='22' height='22' rx='5' fill='%238f45ff'/><rect x='39' y='64' width='22' height='22' rx='5' fill='%230fb5a6'/><rect x='64' y='64' width='22' height='22' rx='5' fill='%23ff3fa4'/></svg>">
-<link rel="preload" href="fonts/Jersey10-Regular.ttf?v=31" as="font" type="font/ttf" crossorigin>
-<link rel="stylesheet" href="style.css?v=31">
+<link rel="preload" href="fonts/Jersey10-Regular.ttf?v=32" as="font" type="font/ttf" crossorigin>
+<link rel="stylesheet" href="style.css?v=32">
 </head>
 <body>
 <div id="app">
@@ -67,9 +67,8 @@
         <p id="load-msg" class="small"></p>
       </div>
       <nav class="tabs" aria-label="Screens">
-        <button id="btn-tomap" class="tab"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span class="tl">Siege map</span></button>
+        <button id="btn-tomap" class="tab"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span class="tl">Map</span></button>
         <button id="tab-home" class="tab on" aria-current="page"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M3 11l9-7 9 7v10h-6v-6H9v6H3z" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg><span class="tl">Home</span></button>
-        <button id="btn-gallery" class="tab gal-btn" hidden><svg class="gi" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M5 18l5-6 3 3 2-2 4 5z" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1.8" fill="currentColor"/></svg><svg class="gk" viewBox="0 0 12 12" width="22" height="22" aria-hidden="true"><path d="M4 5.5V4a2 2 0 0 1 4 0v1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="2.5" y="5.5" width="7" height="5" rx="1" fill="currentColor"/></svg><span class="gl"><span class="gt">Gallery</span><span class="gs"></span></span></button>
       </nav>
     </div>
   </section>
@@ -91,35 +90,31 @@
       <div class="row"><button id="sb-buy" class="primary"><span class="pl"></span> <span class="cprice"><i class="ico" aria-hidden="true"></i><b></b></span></button><button id="sb-no"></button></div>
     </div>
   </div>
-  <section id="map" class="screen" hidden>
+  <section id="map" class="screen" hidden><!-- v5 R3: the journey map (main.js buildMap); replaces the level grid and the Gallery -->
     <div class="map-top">
-      <button id="btn-home" class="round" aria-label="Title"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-      <h2>The Siege</h2>
-      <span id="map-count"></span>
-      <button class="round tog tog-cb" aria-pressed="false" aria-label="Colour-blind marks"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2" fill="currentColor"/><rect x="13" y="3" width="8" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="3" y="13" width="8" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13" y="13" width="8" height="8" rx="2" fill="currentColor"/><path d="M5 9l4-4M15 19l4-4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg></button>
-      <button class="round tog tog-mute" aria-label="Mute sound" aria-pressed="false"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="waves" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="cross" d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+      <button id="btn-home" class="round" aria-label="Home"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <h2 id="map-title">The Journey</h2>
+      <span id="map-coins" class="pill coins" role="img"><i class="ico ico-coin" aria-hidden="true"></i><b></b></span>
+      <button id="map-set" class="round" aria-label="Settings"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M10.3 2h3.4l.5 2.6 1.7.8 2.3-1.4 2.4 2.4-1.4 2.3.8 1.7 2.6.5v3.4l-2.6.5-.8 1.7 1.4 2.3-2.4 2.4-2.3-1.4-1.7.8-.5 2.6h-3.4l-.5-2.6-1.7-.8-2.3 1.4-2.4-2.4 1.4-2.3-.8-1.7L2 13.7v-3.4l2.6-.5.8-1.7L4 5.8l2.4-2.4 2.3 1.4 1.7-.8z" fill="currentColor"/><circle cx="12" cy="12" r="3.6" fill="var(--stone)" stroke="var(--ink)" stroke-width="1.6"/></svg></button>
     </div>
-    <p id="map-story" class="story"></p>
-    <div id="eras"></div>
-    <div class="map-foot"><div class="row"><button id="map-play" class="primary big"><span class="pl">Play</span><i class="tag" hidden></i></button><button id="map-gallery" class="gal-btn" hidden><svg class="gi" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M5 18l5-6 3 3 2-2 4 5z" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1.8" fill="currentColor"/></svg><svg class="gk" viewBox="0 0 12 12" width="16" height="16" aria-hidden="true"><path d="M4 5.5V4a2 2 0 0 1 4 0v1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="2.5" y="5.5" width="7" height="5" rx="1" fill="currentColor"/></svg><span class="gl"><span class="gt">Gallery</span><span class="gs"></span></span></button></div></div>
-  </section>
-  <section id="gallery" class="screen" hidden>
-    <div class="map-top">
-      <button id="gal-back" class="round" aria-label="Title"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-      <h2 id="gal-title">The Gallery</h2>
-      <span id="gal-count"></span>
+    <div id="jr-dbg" hidden></div>
+    <div id="jr-body">
+      <aside id="jr-realm" class="jr-card"><div id="jr-r-eye" class="ey"></div><h3 id="jr-r-name"></h3><p id="jr-r-note"></p><div id="jr-rc" class="rc"></div><div class="bar"><span id="jr-r-bar"></span></div>
+        <div class="kv"><span id="jr-q-k"></span><b id="jr-q-v"></b></div><div class="kv"><span id="jr-e-k"></span><b id="jr-e-v"></b></div></aside>
+      <div id="jr" tabindex="-1"><div id="jr-world"></div><div id="jr-start"><p id="map-story" class="story"></p><p id="map-credits"></p></div></div>
+      <div id="jr-next" class="jr-card"><div id="jr-n-eye" class="ey"></div><h3 id="jr-n-name"><span></span><i class="tag" hidden></i></h3>
+        <button id="map-play" class="primary big"><span class="pl">Play</span><i class="tag" hidden></i></button>
+        <button id="jr-quest" class="sq"><i class="sq-ic" aria-hidden="true"></i><span class="sq-t"><b></b><span></span></span></button></div>
     </div>
-    <div id="gal-card" class="rc"></div>
-    <div id="gal-grid"></div>
-    <p id="gal-credits"></p>
   </section>
 </div>
-<script src="src/engine.js?v=31"></script>
-<script src="src/save.js?v=31"></script>
-<script src="src/meta.js?v=31"></script>
-<script src="src/art.js?v=31"></script>
-<script src="src/audio.js?v=31"></script>
-<script src="src/board.js?v=31"></script>
-<script src="src/main.js?v=31"></script>
+<script src="src/engine.js?v=32"></script>
+<script src="src/save.js?v=32"></script>
+<script src="src/journey.js?v=32"></script>
+<script src="src/meta.js?v=32"></script>
+<script src="src/art.js?v=32"></script>
+<script src="src/audio.js?v=32"></script>
+<script src="src/board.js?v=32"></script>
+<script src="src/main.js?v=32"></script>
 </body>
 </html>
