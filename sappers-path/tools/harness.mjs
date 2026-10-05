@@ -50,6 +50,10 @@
 // strips (six frames 300 ms apart, stitched): a first squad still working while a second heads out, and level 3's
 // "only what can reach goes, then the next round"; 812×375 an Era 3 board; the iframe mid-level.
 //
+// v5.2 (music): no audio request and no audio context before the first tap; after it level 1 plays the play loop; each
+// loop's seam in the browser's decoder (SP.musicCheck, at 375); music and effects persist apart across reloads and the
+// quick mute reads "mixed" with one off.
+//
 //   export PATH="$HOME/.local/opt/node/bin:$PATH"
 //   PLAYWRIGHT_MODULE=$(npm root -g)/playwright/index.mjs node tools/harness.mjs [--url http://127.0.0.1:8491/sappers-path/] [--out tools/shots-v3.1]
 //
@@ -164,8 +168,13 @@ async function run() {
       // v4 M5, the home: Play reads the next level; the settings sheet opens and closes by real taps.
       { const lab = await L("#play-lab").textContent(), coins = await L("#home-coins").textContent();
         ok(lab === "Level 1" && /^\d+$/.test(coins) && !(await L("#home-lives").isVisible()), tag + " home: Play reads '" + lab + "', " + coins + " coins, no lives pill"); }
+      // v5.2: no music is fetched before the first tap (the bytes to the title stay as they were); after it, the play loop.
+      { await page.waitForTimeout(300); const au = reqs.filter((u) => /\/audio\//.test(u)), mu = await ev(() => SP.music()); R.bytesBeforeTap = bytes;
+        ok(au.length === 0 && mu.fetches === 0 && mu.ctx === "none", tag + " music (v5.2): nothing fetched and no audio context before the first tap (" + au.length + " audio requests, " + bytes + " bytes so far)"); }
       await tap("#btn-play"); let clicks = 1;
       await F.waitForFunction(() => SP.state().screen === "play", null, { timeout: 5000 });
+      { const okM = await F.waitForFunction(() => SP.music().cur === "play", null, { timeout: 15000 }).then(() => true, () => false), mu = await ev(() => SP.music());
+        ok(okM && mu.ctx === "running" && mu.firstFetchAt >= mu.unlockAt, tag + " music (v5.2): the first tap starts the context and level 1 plays the play loop (" + JSON.stringify({ ctx: mu.ctx, cur: mu.cur, loaded: mu.loaded }) + ")"); }
       R.loadToGameplayMs = Date.now() - t0; R.clicksToGameplay = clicks;
       let s = await S();
       ok(s.screen === "play" && s.n === 1 && s.status === "playing", tag + " title Play reaches level 1 in one tap (" + s.screen + " " + s.n + ")");
@@ -181,6 +190,12 @@ async function run() {
       const st = await ev(() => SP.selfTest());
       R.selfTest = { pass: st.pass, fail: st.fail, ms: st.ms, notes: st.notes };
       ok(st.fail.length === 0, tag + " selfTest: " + st.fail.join("; "));
+      // v5.2: each loop's seam in the browser's own decoder (offline contexts at 44.1 and 48 kHz, and the page's buffers):
+      // the loop matches itself one period on to codec noise (under -12 dB), while 37 samples off does not; the step
+      // across loopEnd -> loopStart is no bigger than the steps around it. Once, at 375.
+      if (vp.shots === "375") { const mc = await ev(() => SP.musicCheck()); R.musicSeams = mc;
+        const rows = Object.entries(mc || {}).flatMap(([k, o]) => Object.entries(o).map(([w, r]) => [k + "@" + w, r]));
+        ok(rows.length >= 6 && rows.every(([, r]) => r.db < -12 && r.off > -6 && r.jump <= r.near), tag + " music (v5.2): every loop seam holds in the browser's decoder (" + rows.map(([k, r]) => k + " " + r.db + " dB (off " + r.off + "), step " + r.jump + "/" + r.near).join("; ") + ")"); }
       await ev(() => SP.load(1));
 
       // v4 M5, the power-up bar through real taps: v5 R1, the Ladder's free unlock use on level 1 (one more space); every
@@ -400,7 +415,14 @@ async function run() {
         await tap("#btn-map"); await tap("#map-set"); await tap("#settings .tog-cb"); await tap("#set-close"); // v5 R3: the map's gear
         ok((await S()).cb === true && (await L("#settings .tog-cb").getAttribute("aria-pressed")) === "true", tag + " the map's gear opens the settings sheet, whose toggle turns colour-blind marks on");
         await page.reload({ waitUntil: "load" }); await page.waitForFunction(() => window.SP, null, { timeout: 15000 });
-        ok((await page.getAttribute("#top .tog-mute", "aria-pressed")) === "true", tag + " mute persists across a reload");
+        ok((await page.getAttribute("#top .tog-mute", "aria-pressed")) === "true" && (await page.getAttribute("#settings .tog-music", "aria-pressed")) === "false" && (await page.getAttribute("#settings .tog-sfx", "aria-pressed")) === "false", tag + " mute persists across a reload (v5.2: both music and effects off)");
+        // v5.2: music on alone through the settings row: the quick mute reads mixed, and that persists too.
+        await tap("#btn-settings"); await tap("#settings .tog-music"); await tap("#set-close");
+        await page.reload({ waitUntil: "load" }); await page.waitForFunction(() => window.SP, null, { timeout: 15000 });
+        { const m = await ev(() => SP.music()); ok(m.music === true && m.sfx === false && (await page.getAttribute("#top .tog-mute", "aria-pressed")) === "mixed" && (await page.textContent("#settings .tog-music .sv")) === "On" && (await page.textContent("#settings .tog-sfx .sv")) === "Off", tag + " music on, effects off persists across a reload; the quick mute reads mixed (v5.2)"); }
+        await ev(() => SP.load(1)); await tap("#top .tog-mute"); await tap("#top .tog-mute"); // both off, then both on
+        { const m = await ev(() => SP.music()); ok(m.music && m.sfx && (await page.getAttribute("#top .tog-mute", "aria-pressed")) === "false", tag + " the quick mute from mixed: both off, then both on (v5.2)"); }
+        await tap("#top .tog-mute"); // back to both off for the checks below
         s = await S();
         ok(s.speed === 1 && (await page.textContent("#top .tog-speed")) === "1\u00d7" && s.cb === true && (await page.getAttribute("#settings .tog-cb", "aria-pressed")) === "true" && (await page.evaluate(() => document.body.classList.contains("cb"))), tag + " colour-blind marks persist across a reload; the speed is back to 1x (v5 R1: never saved)");
         await page.evaluate(() => localStorage.setItem("sappers-path.v3", '{"v":1,"done":{"e1-01":7,"e3-74":7,"x":9},"settings":{"diff":"nightmare","muted":"yes"},"last":"e3-74"}'));
@@ -471,7 +493,7 @@ async function run() {
 
 run().then(() => {
   writeFileSync(resolve(OUT, "harness-report.json"), JSON.stringify(report, null, 1));
-  const brief = {}; for (const [k, R] of Object.entries(report.runs)) brief[k] = { selfTest: R.selfTest && R.selfTest.pass + " pass, " + R.selfTest.fail.length + " fail", titleReadyMs: R.titleReadyMs, loadToGameplayMs: R.loadToGameplayMs, clicks: R.clicksToGameplay, cells: R.minCellCss, galleryCell: R.galleryMinCell, frames: R.frames, draw: R.midShow && R.midShow.perf, shots: R.shots, pause: R.pause, requests: R.requests, payloadBytes: R.payloadBytes };
+  const brief = {}; for (const [k, R] of Object.entries(report.runs)) brief[k] = { selfTest: R.selfTest && R.selfTest.pass + " pass, " + R.selfTest.fail.length + " fail", titleReadyMs: R.titleReadyMs, loadToGameplayMs: R.loadToGameplayMs, clicks: R.clicksToGameplay, cells: R.minCellCss, galleryCell: R.galleryMinCell, frames: R.frames, draw: R.midShow && R.midShow.perf, shots: R.shots, pause: R.pause, requests: R.requests, payloadBytes: R.payloadBytes, bytesBeforeTap: R.bytesBeforeTap };
   console.log(JSON.stringify({ runs: brief, hidden: report.hidden, console: report.console }, null, 1));
   console.log(report.fails.length ? "HARNESS: " + report.fails.length + " failure(s)" : "HARNESS: all passed");
   clearTimeout(wall); process.exit(report.fails.length ? 1 : 0);

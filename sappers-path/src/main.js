@@ -104,6 +104,10 @@
 // frontier (the first level not built yet, or the summit's long-tail spot): nodes only for built levels, side quests only
 // once their main level exists, eggs, bridges and banners only below the frontier's fog; the long tail's node waits at the
 // frontier; the Goblin King stands at the summit by level 200 once it is built.
+// v5.2 (SPEC-v4 §9, tools/v5-2-music-notes.md): music (audio.js). showScreen asks for the screen's track (music():
+// home and map the theme, a level or side quest the play loop, realm 8's levels the boss loop); a win's sheet plays the
+// jingle over the ducked loop. Settings has Music and Sound effects apart (saved: settings.music, settings.sfx); the quick
+// mute buttons (top bar, Paused sheet) turn both off, or both on when both are off, and read "mixed" when one is off.
 (function () {
   "use strict";
   const NS = window.SappersPath, E = NS.engine, Save = NS.save, Board = NS.board, Art = NS.art, Audio = NS.audio, Meta = NS.meta;
@@ -124,7 +128,7 @@
     // on app.clock, the win's report, a power-up waiting for its target (pick: {k}), the bar's badges, the icons' URLs.
     lay: null, jr: null, // v5 R3: map/layout.json and the journey map's built parts
     meta: null, now: () => Date.now(), rows: 3, t0: 0, report: null, pick: null, pws: [], icoURL: {}, pwPop: [-1e12, -1e12, -1e12, -1e12], lifeTxt: "", countTxt: "", carry: -1 };
-  const togMute = Array.from(document.querySelectorAll(".tog-mute")), togSpeed = Array.from(document.querySelectorAll(".tog-speed")), togCb = Array.from(document.querySelectorAll(".tog-cb"));
+  const togMute = Array.from(document.querySelectorAll(".tog-mute")), togMusic = Array.from(document.querySelectorAll(".tog-music")), togSfx = Array.from(document.querySelectorAll(".tog-sfx")), togSpeed = Array.from(document.querySelectorAll(".tog-speed")), togCb = Array.from(document.querySelectorAll(".tog-cb"));
 
   // ---- boot --------------------------------------------------------------------------------------------------------
   function getJSON(u) { return fetch(u, { cache: "no-cache" }).then((r) => { if (!r.ok) throw new Error(u + " " + r.status); return r.json(); }); }
@@ -149,8 +153,8 @@
     H.unlock = () => { app.unlockT = app.clock; cue("unlock"); app.lineDirty = true; };
     H.power = () => { app.lineDirty = true; };
     try { app.V.calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { /* motion stays on */ }
-    app.audio = Audio.create(app.cfg.audio);
-    setMuted(app.save.data.settings.muted, false); setSpeed(1, false); setCb(app.save.data.settings.cb, false); // v5 R1: speed is never saved
+    app.audio = Audio.create(app.cfg.audio, (f) => f + "?v=" + V_); // v5.2: the music files carry the cache tag
+    setSound(app.save.data.settings.sfx, app.save.data.settings.music, false); setSpeed(1, false); setCb(app.save.data.settings.cb, false); // v5 R1: speed is never saved
     paintWall(); chips(); icons(); buildTray(); buildLine(); buildPowers(); buildMap(); wire();
     { const U = app.cfg.layout.upright, u = $("upright"); u.querySelector(".up-t").textContent = U.text; u.setAttribute("aria-label", U.text); }
     showScreen("title"); layout();
@@ -871,7 +875,7 @@
     if (name === "gallery") name = "map"; // v5 R3: the Gallery is the journey map now
     if (name !== "play") { app.pick = null; document.body.classList.remove("picking"); }
     $("settings").hidden = true; $("tailsheet").hidden = true;
-    app.screen = name;
+    app.screen = name; music();
     $("title").hidden = name !== "title"; $("map").hidden = name !== "map";
     if (name === "title") renderHome();
     if (name === "map") { layoutMap(); renderMap(); scrollMap(); } // v5 R3: the current node about map.curAt down the view
@@ -1030,7 +1034,7 @@
     contOffer(e); // v5 R1: a jam's sheet offers the continue
     x2Offer(e); // v5.1 AD HOOK: the x2 reward (off)
     $("panel").hidden = false; placeSheet();
-    cue(e.won ? "chime" : "bad"); if (e.won && e.first) cue("star", 2); if (BS) cue("star", BS.stars);
+    cue(e.won ? "chime" : "bad"); if (e.won && e.first) cue("star", 2); if (BS) cue("star", BS.stars); if (e.won) jingle(); // v5.2
     judge(); renderTray(); renderLine();
   }
   // v5 R1, the continue on a jam (engine revive(); meta.cont): offered on the jam's sheet when the engine would take it
@@ -1275,6 +1279,10 @@
   }
   function hideToast() { $("toast").hidden = true; app.toastT = -1e12; }
   function cue(name, arg) { app.cues[name] = (app.cues[name] | 0) + 1; if (app.audio && !app.testing) Audio.cue(app.audio, name, arg, app.clock); }
+  // v5.2: the screen's music track (asked for on every showScreen; the same track carries on), and the win's jingle
+  // (counted in app.cues like a cue; not played while selfTest runs).
+  function music() { if (app.audio) Audio.want(app.audio, Audio.pick(app.cfg.audio.music, app.screen, app.screen === "play" ? app.entry : null)); }
+  function jingle() { app.cues.jingle = (app.cues.jingle | 0) + 1; if (app.audio && !app.testing) Audio.jingle(app.audio); }
   function onPop() { cue("pop", app.popK++ % 12); }
   // Pause (portal shape): on window blur or a hidden tab the clock stops and the audio context suspends. In a level the
   // Paused sheet covers everything and takes the tap that resumes, so the tap that brings a player back never plays a
@@ -1300,7 +1308,16 @@
   }
   // v4 M5: a settings row (.set-row) also shows its value in words.
   const rowVal = (b, t) => { const v = b.querySelector(".sv"); if (v) v.textContent = t; };
-  function setMuted(on, save) { Audio.setMuted(app.audio, on); togMute.forEach((b) => { b.setAttribute("aria-pressed", on ? "true" : "false"); rowVal(b, on ? "Off" : "On"); }); if (save) { app.save.data.settings.muted = !!on; writeSave(); } }
+  // v5.2: effects and music switch apart (the settings rows; saved). The quick mute buttons read pressed when both are off
+  // and "mixed" when one is; settings.muted is kept as both off (an older page reads it).
+  function setSound(sfx, music, save) {
+    Audio.setSfx(app.audio, sfx); Audio.setMusic(app.audio, music); const A = app.audio, st = Audio.state(A);
+    togMute.forEach((b) => b.setAttribute("aria-pressed", st === "off" ? "true" : st === "mixed" ? "mixed" : "false"));
+    togMusic.forEach((b) => { b.setAttribute("aria-pressed", A.music ? "true" : "false"); rowVal(b, A.music ? "On" : "Off"); });
+    togSfx.forEach((b) => { b.setAttribute("aria-pressed", A.sfx ? "true" : "false"); rowVal(b, A.sfx ? "On" : "Off"); });
+    if (save) { const S = app.save.data.settings; S.sfx = A.sfx; S.music = A.music; S.muted = A.muted; writeSave(); }
+  }
+  const quickMute = () => { const q = Audio.quick(app.audio); setSound(q.sfx, q.music, true); };
   // v5 R1, speed (meta.speed): 1x by default. A player buys 2x for the current attempt (price coins; the sheet asks
   // first), then the button toggles 1x and 2x free until Retry, a new level or leaving. Under ?debug=1 the button cycles
   // debugSpeeds (1x, 2x, 3x) free. Nothing is saved. Gold above 1x; the settings row (debug only) shows it on the right.
@@ -1333,6 +1350,7 @@
 
   function wire() {
     document.addEventListener("pointerdown", () => { if (app.audio) Audio.unlock(app.audio); if (app.tip && app.tip.intro) hideTip(); }, { capture: true }); // v5 R1: a tap takes an unlock's tip away
+    document.addEventListener("click", () => { if (app.audio) Audio.unlock(app.audio); }, { capture: true }); // v5.2: a touch's activation lands on its click (Chrome)
     document.addEventListener("keydown", (ev) => {
       if (app.audio) Audio.unlock(app.audio);
       if (app.paused) { if (ev.key === " " || ev.key === "Enter") { ev.preventDefault(); resume(); } return; }
@@ -1365,7 +1383,9 @@
     $("p-secondary").addEventListener("click", panelSecondary);
     $("p-cont-buy").addEventListener("click", onContinue); // v5 R1
     $("p-x2").addEventListener("click", onDouble); // v5.1 AD HOOK (off)
-    togMute.forEach((b) => b.addEventListener("click", () => setMuted(!app.audio.muted, true)));
+    togMute.forEach((b) => b.addEventListener("click", quickMute));
+    togMusic.forEach((b) => b.addEventListener("click", () => setSound(app.audio.sfx, !app.audio.music, true))); // v5.2
+    togSfx.forEach((b) => b.addEventListener("click", () => setSound(!app.audio.sfx, app.audio.music, true)));
     togSpeed.forEach((b) => b.addEventListener("click", nextSpeed));
     $("sb-buy").addEventListener("click", () => buySpeed(true)); $("sb-no").addEventListener("click", () => buySpeed(false)); // v5 R1
     document.querySelector("#settings .tog-speed").hidden = !app.debugSpeed; // v5 R1: speed lives on the play screen (debug keeps the row)
@@ -1629,7 +1649,7 @@
   function selfTest() {
     const T0 = performance.now(), out = { pass: 0, fail: [], notes: {}, ms: 0 };
     const ok = (c, m) => { if (c) out.pass++; else out.fail.push(m); return !!c; };
-    const was = { save: app.save, screen: app.screen, entry: app.entry, diff: app.diff, speed: app.speed, cb: app.cb, meta: app.meta, now: app.now };
+    const was = { save: app.save, screen: app.screen, entry: app.entry, diff: app.diff, speed: app.speed, cb: app.cb, meta: app.meta, now: app.now, sfx: app.audio.sfx, music: app.audio.music };
     const key = app.cfg.save.key, snap = (() => { try { return was.save.store.getItem(key); } catch (e) { return "?"; } })();
     // v4.2 fix: a phone held sideways shows only the upright card, so that is all there is to check here; the game's own
     // checks run on an upright screen.
@@ -1641,7 +1661,7 @@
     const ST = app.cfg.selfTest, SH = app.cfg.show, SPD = app.meta.speed.debugSpeeds; // v5 R1: the debug speeds
     // v4 M5: with meta (coins); v5 R1: every power-up already unlocked (no free uses), so the older checks see plain badges
     const scratch = () => { const sv = Save.open(Save.memoryStore(), key, app.order, app.gal.map((e) => e.id), app.meta); for (const id of E.POWERS) sv.data.got[id] = 1; return sv; };
-    app.testing = true; app.save = scratch(); setSpeed(SPD[0], false); setCb(false, false); app.allPw = true; // v5 R1: every power-up shown for the checks (the unlock checks use their own save)
+    app.testing = true; Audio.hushed(app.audio, true); app.save = scratch(); setSpeed(SPD[0], false); setCb(false, false); app.allPw = true; // v5 R1: every power-up shown for the checks (the unlock checks use their own save)
     // Patient play: tap, then the engine runs until nothing moves and the board lands (the skip path).
     const patient = (ord) => { for (let i = 0; i < ord.length && app.S.status === E.PLAYING; i++) { if (!playCol(ord.charCodeAt(i) - 48)) return false; settleNow(); } return true; };
     // Real ticks until the engine is quiet (bounded); returns the ms ticked.
@@ -1856,13 +1876,14 @@
       // 11. The win on ticks: the last blocks fall; the keep comes down only once every sapper is home; the report shows
       // the level's tag and no medals (v4.3).
       delete app.save.data.done[app.levels[0].id];
-      const w1 = winOf(app.levels[0]), col0 = app.cues.collapse | 0; let falls = 0, gobBusy = null;
+      const w1 = winOf(app.levels[0]), col0 = app.cues.collapse | 0, jg0 = app.cues.jingle | 0; let falls = 0, gobBusy = null;
       patient(w1.slice(0, -1)); playCol(w1.charCodeAt(w1.length - 1) - 48);
       for (let t = 0; t < ST.tickCapMs && !app.V.gob.on; t += 16) { step(16); falls = Math.max(falls, app.V.fxInfo().falls); if (app.V.gob.on) gobBusy = app.S.busy; }
       step(16); const kf = app.V.fxInfo();
       ok(falls > 0 && kf.keep && kf.shaking && app.V.gob.on && gobBusy === false && (app.cues.collapse | 0) === col0 + 1 && (app.cues.fanfare | 0) > 0, "win: the last blocks fall, the keep comes down once every sapper is home, one collapse, the fanfare");
       tick(8000);
       ok(app.panel === "win" && hitOK($("p-primary")) && $("p-primary").querySelector(".pl").textContent === LY.toMap, "hit: the win panel's '" + LY.toMap + "'");
+      ok((app.cues.jingle | 0) === jg0 + 1, "music (v5.2): the win sheet plays the jingle once (" + ((app.cues.jingle | 0) - jg0) + ")");
       { const w = sheetClear(true); ok(w === true, "win: the sheet covers the whole holding line or none of it (" + w + ")"); }
       { const t0 = tagOf(app.levels[0]), want = (LY.tags || {})[t0] || "";
         ok(!document.querySelector(".medal") && !$("p-medals") && $("p-tag").textContent === want && $("p-tag").hidden === !want && $("p-tag").classList.contains("tag-" + t0) && /cleared\.$/.test($("p-line").textContent), "win (v4.3): the report shows the level's tag (" + (want || "Normal, unmarked") + ") and no medals; '" + $("p-line").textContent + "'"); }
@@ -2303,10 +2324,19 @@
         $("btn-play").click(); ok(app.screen === "play" && app.entry === ne, "home (mid-campaign): one tap on Play opens level " + ne.n);
         showScreen("title"); const tabsHit = hitOK($("btn-tomap")) && hitOK($("tab-home")) && !$("btn-gallery") && document.querySelectorAll(".tabs .tab").length === 2; $("btn-tomap").click(); const t1 = app.screen; $("btn-home").click(); const t2 = app.screen; $("tab-home").click(); const t3 = app.screen;
         ok(tabsHit && t1 === "map" && t2 === "title" && t3 === "title" && $("map-story").textContent === HT.story, "home tabs (v5 R3: Map and Home; the Gallery is the map): Map opens the map (the story is at its foot), back reaches Home; every tab is hittable");
-        { $("btn-settings").click(); const open = !$("settings").hidden && hitOK($("set-close")), m0 = app.audio.muted, mb = document.querySelector("#settings .tog-mute"); mb.click();
-          const muted = app.audio.muted !== m0 && app.save.data.settings.muted === app.audio.muted && mb.querySelector(".sv").textContent === (app.audio.muted ? "Off" : "On"); mb.click();
-          const sp0 = app.speed; document.querySelector("#settings .tog-speed").click(); const sp1 = app.speed, lab = document.querySelector("#settings .tog-speed .sv").textContent; setSpeed(SPD[0], false); $("set-close").click();
-          ok(open && muted && sp1 !== sp0 && lab === sp1 + "×" && $("settings").hidden && app.audio.muted === m0, "settings: the gear opens the sheet; sound and (debug only, v5 R1) speed (" + lab + ") change through it, colour-blind is section 16; Done closes it"); }
+        { $("btn-settings").click(); const open = !$("settings").hidden && hitOK($("set-close")), A = app.audio, s0 = [A.sfx, A.music], SS = () => app.save.data.settings;
+          // v5.2: Music and Sound effects apart; the quick mute buttons (top bar, Paused sheet) mute both and read "mixed" with one off.
+          const mr = document.querySelector("#settings .tog-music"), fr = document.querySelector("#settings .tog-sfx"), qm = document.querySelector("#top .tog-mute"), pm = document.querySelector("#pause .tog-mute"), qp = () => qm.getAttribute("aria-pressed") + "/" + pm.getAttribute("aria-pressed"), sv = (b) => b.querySelector(".sv").textContent;
+          setSound(true, true, false); const hitRows = hitOK(mr) && hitOK(fr) && !document.querySelector("#settings .tog-mute");
+          mr.click(); const a1 = !A.music && A.sfx && SS().music === false && SS().sfx === true && SS().muted === false && sv(mr) === "Off" && sv(fr) === "On" && mr.getAttribute("aria-pressed") === "false" && qp() === "mixed/mixed";
+          fr.click(); const a2 = !A.music && !A.sfx && A.muted && SS().muted === true && sv(fr) === "Off" && qp() === "true/true";
+          mr.click(); const a3 = A.music && !A.sfx && SS().music === true && qp() === "mixed/mixed";
+          qm.click(); const a4 = !A.music && !A.sfx && SS().music === false && SS().sfx === false && qp() === "true/true" && sv(mr) === "Off" && sv(fr) === "Off";
+          pm.click(); const a5 = A.music && A.sfx && SS().music && SS().sfx && !SS().muted && qp() === "false/false" && sv(mr) === "On";
+          fr.click(); qm.click(); const a6 = !A.music && !A.sfx && qp() === "true/true"; qm.click(); // one off, then a quick mute: both off; the next: both on
+          const a7 = A.music && A.sfx;
+          const sp0 = app.speed; document.querySelector("#settings .tog-speed").click(); const sp1 = app.speed, lab = document.querySelector("#settings .tog-speed .sv").textContent; setSpeed(SPD[0], false); $("set-close").click(); setSound(s0[0], s0[1], false);
+          ok(open && hitRows && a1 && a2 && a3 && a4 && a5 && a6 && a7 && sp1 !== sp0 && lab === sp1 + "×" && $("settings").hidden, "settings (v5.2): the gear opens the sheet; Music and Sound effects switch apart (each row reads On/Off and is saved: " + [a1, a2, a3].map(Number).join("") + "); the quick mute buttons read mixed with one off and pressed with both (" + [a4, a5, a6, a7].map(Number).join("") + "): a quick mute turns both off, the next both on; (debug only, v5 R1) speed (" + lab + "); colour-blind is section 16; Done closes it"); }
         // The bar's geometry at this viewport.
         startLevel(app.levels[0].id, "normal");
         { const tileH = app.cards[0].getBoundingClientRect().height, rl = $("rail").getBoundingClientRect(), pw = $("powers").getBoundingClientRect(); let geo = true;
@@ -2476,6 +2506,28 @@
           const rb2 = $("rail").getBoundingClientRect().bottom, fl = $("panel").classList.contains("float"); // a sheet floating above the line (a short screen) is content-sized already
           ok(app.panel === "fail" && (fl || (hi > lo && r.bottom <= Math.max(r.top + (hi - lo) + 60, rb2 + 1))) && sheetClear() === true, "m5 (v4.3 fix): the wide fail sheet is its content's height, down to the tray's foot at most (" + Math.round(r.height) + " px" + (fl ? ", floating above the line" : " for " + Math.round(hi - lo) + " px of content")  + ")"); }
         app.save = scratch(); }
+      // v5.2, music: no context and no fetch before a gesture; the track per screen and realm; the crossfade, the jingle's
+      // duck and the switches on an offline context (silent, no fetch: its buffers are made here).
+      { const MU = app.cfg.audio.music, A = app.audio, fresh = Audio.create(app.cfg.audio, (f) => f); Audio.want(fresh, "theme"); Audio.kick(fresh);
+        ok(fresh.ctx === null && fresh.fetches === 0 && fresh.want === "theme" && !Object.keys(fresh.loading).length && (A.ctx ? A.firstFetchAt < 0 || A.firstFetchAt >= A.unlockAt : A.fetches === 0 && A.firstFetchAt < 0) && A.hush,
+          "music (v5.2): no context and no fetch before a gesture (a fresh player waits on the theme); here " + (A.ctx ? "the context is " + A.ctx.state + " since the first gesture, its first fetch " + (A.firstFetchAt < 0 ? "not yet" : Math.round(A.firstFetchAt - A.unlockAt) + " ms after it") : "no gesture yet: no context, nothing fetched") + "; selfTest runs hushed");
+        const at = (n) => app.levels.find((e) => e.n === n), pk = [];
+        showScreen("title"); pk.push(A.want); showScreen("map"); pk.push(A.want);
+        for (const n of [1, 174, 175, 200]) { const e = at(n); if (e) startLevel(e.id); pk.push(e ? A.want : "none"); }
+        if (app.gal[0]) { startLevel(app.gal[0].id); pk.push(A.want); } showScreen("map"); pk.push(A.want);
+        ok(pk.join(",") === "theme,theme,play,play,boss,boss,play,theme", "music (v5.2): home and map the theme; levels 1 and 174 the play loop; realm 8's 175 and 200 the boss loop; a side quest the play loop; back on the map the theme (" + pk.join(",") + ")");
+        const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+        if (OAC) { const X = Audio.create(app.cfg.audio, (f) => f), oc = new OAC(2, 4410, 44100); Audio.attach(X, oc);
+          for (const k of Object.keys(MU.tracks)) X.bufs[k] = oc.createBuffer(2, 4410, 44100);
+          Audio.want(X, "theme"); const c1 = X.cur && X.cur.name, src1 = X.cur && X.cur.src; Audio.want(X, "theme"); const kept = X.cur && X.cur.src === src1 && X.switches === 0;
+          Audio.want(X, "play"); const c2 = X.cur && X.cur.name, sw = X.switches, lp = X.cur && X.cur.src.loop && X.cur.src.loopStart === MU.tracks.play.loopStart && X.cur.src.loopEnd === MU.tracks.play.loopEnd;
+          const j = Audio.jingle(X); Audio.setMusic(X, false); const off = X.cur === null && !X.music && X.sfx && Audio.state(X) === "mixed";
+          Audio.want(X, "boss"); const held = X.cur === null && X.want === "boss"; Audio.setMusic(X, true); const c3 = X.cur && X.cur.name;
+          Audio.setSfx(X, false); const fx = !X.sfx && X.music && X.out.gain.value === 0 && X.cur && Audio.state(X) === "mixed"; Audio.setMuted(X, true); const all = X.muted && !X.cur;
+          ok(c1 === "theme" && kept && c2 === "play" && sw === 1 && lp && j && X.ducked >= 0 && off && held && c3 === "boss" && fx && all && X.fetches === 0,
+            "music (v5.2, offline context): a track starts, asking again keeps it, a new one crossfades in (looping between its loop points); the jingle ducks it; Music off stops it and a wanted track waits; on starts it; effects off leaves the music; both off stops it (" + [c1, c2, c3].join(",") + ")"); }
+        else ok(true, "music (v5.2): no OfflineAudioContext here, the offline checks skipped");
+        showScreen("title"); }
       // 14. Opaque sprite caches.
       const bad = app.V.checkSprites(); ok(!bad.length, "sprites: every opaque cache is opaque" + (bad.length ? " (" + bad.join(",") + ")" : ""));
     } catch (err) { ok(false, "selfTest threw: " + (err && err.message) + " " + (err && err.stack ? err.stack.split("\n")[1] : "")); }
@@ -2483,6 +2535,7 @@
       for (const k of Object.keys(ST)) app.byId.delete("fx-" + k); // every fixture registered for the run
       app.allPw = false; if (app.tip) hideTip(); app.tipQ = [];
       app.save = was.save; app.meta = was.meta; app.now = was.now; app.testing = false; setSpeed(was.speed, false); setCb(was.cb, false); app.diff = was.diff;
+      setSound(was.sfx, was.music, false); Audio.hushed(app.audio, false); // v5.2
       if (was.entry) startLevel(was.entry.id, was.diff); showScreen(was.screen); renderAll();
     }
     let snap2 = "?"; try { snap2 = was.save.store.getItem(key); } catch (e) { /* stays "?" */ }
@@ -2505,6 +2558,15 @@
     // Cost of n board draws right now (ms): the harness calls it mid-show.
     perf: (n) => { const k = Math.max(1, Math.min(500, n | 0 || 60)); let max = 0; const t0 = performance.now(); for (let i = 0; i < k; i++) { const a = performance.now(); app.V.draw(); max = Math.max(max, performance.now() - a); } return { mean: +((performance.now() - t0) / k).toFixed(3), max: +max.toFixed(3), runners: app.V.live }; },
     sprites: () => app.V.checkSprites(),
+    // v5.2: the music's state; musicCheck() fetches and decodes every loop on offline contexts at 44.1 and 48 kHz (and
+    // reads the page's own decoded buffers where loaded) and returns each seam (Audio.seam: the loop against itself one
+    // period on, in dB; the same 37 samples off; the step across loopEnd -> loopStart against the 10 ms around it).
+    music: () => Audio.info(app.audio),
+    musicCheck: async () => { const M = app.cfg.audio.music, OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext, out = {}; if (!OAC) return null;
+      for (const k of Object.keys(M.tracks)) { const T = M.tracks[k]; if (T.loopEnd == null) continue; const ab = await (await fetch(T.file + "?v=" + V_)).arrayBuffer(); out[k] = {};
+        for (const sr of [44100, 48000]) { const b = await new OAC(2, 1, sr).decodeAudioData(ab.slice(0)); out[k][sr] = Audio.seam(b, T); }
+        if (app.audio.bufs[k]) out[k].live = Audio.seam(app.audio.bufs[k], T); }
+      return out; },
     // v4 M4: the side quests' (Gallery pictures') ids; the board's runners by entry edge. v5 R3: map() reads the journey
     // map (sheets requested, the scroll, the current node, eggs found) for the harness and the screens.
     map: () => { const J = app.jr; if (!J) return null; const sc = $("jr"), f = JN.focus(app.save.data, app.order);

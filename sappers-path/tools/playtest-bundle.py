@@ -4,7 +4,8 @@
 Reads every file from a git ref (never the live working tree, which a builder may be editing) and writes
 <out>/: index.html with no doctype/html/head/body wrappers, <title> first and no ?v= tags; style.css with no ?v=;
 src/*.js with the versioned getJSON("x.json?v=" + V_) calls turned into plain paths; config.json, levels/levels.json,
-levels/gallery.json, the font and map/ (layout.json and the painted sheets, v5 R3). Also writes <out>/wrap.html, an artifact-style wrapper page for the smoke test
+levels/gallery.json, the font, map/ (layout.json and the painted sheets, v5 R3) and audio/ (the music, v5.2: its
+URLs lose their ?v= with the others). Also writes <out>/wrap.html, an artifact-style wrapper page for the smoke test
 (tools/playtest-smoke.mjs); wrap.html is not published.
 
   python3 tools/playtest-bundle.py <git-ref> <out-dir> [title] [--jump 101,125,150,175,200]
@@ -14,7 +15,7 @@ levels/gallery.json, the font and map/ (layout.json and the painted sheets, v5 R
 deep in the campaign. The artifact can't take ?debug=1 and a phone has no console.
 
 Publish: the Artifact tool with url = the playtest artifact, file_path = <out>/index.html, root = <out>, and files for
-every path printed below except index.html and wrap.html.
+every path printed below except index.html and wrap.html (audio/*.m4a: contentType audio/mp4).
 """
 import json, os, re, subprocess, sys
 
@@ -94,6 +95,8 @@ def main(ref, out, new_title=None, jump=None):
         write(out, path, show(ref, path, binary=True))
     for name in ls_src(ref, "map", (".json", ".jpg")):  # v5 R3: the journey map's layout and painted sheets
         write(out, "map/" + name, show(ref, "map/" + name, binary=True))
+    for name in ls_src(ref, "audio", (".m4a",)):  # v5.2: the music (main.js adds ?v= to its URLs; stripped above)
+        write(out, "audio/" + name, show(ref, "audio/" + name, binary=True))
 
     body = open(os.path.join(out, "index.html"), encoding="utf-8").read()
     write(out, "wrap.html", "<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\"></head><body>\n" + body + "\n</body></html>\n")

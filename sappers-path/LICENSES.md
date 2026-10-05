@@ -6,13 +6,17 @@
 |---|---|---|---|
 | All art (materials, crews, goblin, keep, title, banner and map scenes, icons, UI) | Procedural pixel art drawn in code (`src/art.js`, `src/board.js`) | Original work, Peter Frutchey | 2026-09-27 |
 | All sound (clinks, thunks, bleat, sizzle, rubble ticks, lever, chest, fanfare, UI) | Synthesized at runtime via WebAudio from recipes in `config.json` (`src/audio.js`) | Original work, Peter Frutchey | 2026-09-27 |
+| Music, map and home loop (`audio/theme.m4a`): "JRPG Theme [Loop Ready]" by Juhani Junkala | https://opengameart.org/content/jrpg-trailer-theme (re-encoded to AAC, padded for gapless looping by `tools/music-encode.py`) | CC0 1.0 (public domain) | 2026-10-06 |
+| Music, level and side quest loop (`audio/play.m4a`): "Calm2 - Childhood Friends" (JRPG Pack 4 Calm) by Juhani Junkala | https://opengameart.org/content/jrpg-pack-4-calm (re-encoded to AAC, padded for gapless looping, a 6 ms ramp smooths the loop seam) | CC0 1.0 (public domain) | 2026-10-06 |
+| Music, Goblin King's Throne loop, levels 175-200 (`audio/boss.m4a`): "Evil4 - Witch's Lair" (JRPG Pack 3 Evil) by Juhani Junkala | https://opengameart.org/content/jrpg-pack-3-evil (re-encoded to AAC, padded for gapless looping) | CC0 1.0 (public domain) | 2026-10-06 |
+| Win jingle (`audio/jingle-pizzi10.m4a`, plays; spares `audio/jingle-pizzi15.m4a`, `audio/jingle-steel10.m4a`): Music Jingles by Kenney (kenney.nl), `jingles_PIZZI10.ogg`, `jingles_PIZZI15.ogg`, `jingles_STEEL10.ogg` | https://kenney.nl/assets/music-jingles (License.txt in the pack; re-encoded to AAC) | CC0 1.0 (public domain) | 2026-10-06 |
 | Arcade thumbnail (`thumb.jpg`) | Painted card art generated locally on the studio Mac with Stable Diffusion XL base 1.0, text-to-image (`/Users/peter/local-ai/sapper_card.py`, variant a, seed 23, 1152x640, cut to 800x450) | CreativeML OpenRAIL++-M (model); outputs may be used commercially. AI-generated images may not be copyrightable | generated 2026-10-06 |
 | Levels | Generated and solver-verified by `tools/`, hand-ordered | Original work, Peter Frutchey | 2026-09-27 |
 | Journey map art (`map/sheet-01.jpg` to `sheet-25.jpg`) | Generated locally on the studio Mac with Stable Diffusion XL base 1.0 (stabilityai/stable-diffusion-xl-base-1.0), img2img over layout guides drawn in code (`tools/map-gen/`; prompts, seeds and strengths in its README) | CreativeML OpenRAIL++-M (model); outputs may be used commercially. AI-generated images may not be copyrightable | generated 2026-10-04 |
 | Display font: Jersey 10 (`fonts/Jersey10-Regular.ttf`, headings, buttons and numbers). Copyright 2023 The Soft Type Project Authors, designer Sarah Cadigan-Fried | https://raw.githubusercontent.com/google/fonts/main/ofl/jersey10/Jersey10-Regular.ttf (license: https://raw.githubusercontent.com/google/fonts/main/ofl/jersey10/OFL.txt, shipped as `fonts/OFL.txt`) | SIL Open Font License 1.1 | 2026-09-27 |
 | Body font | System font stack, no files shipped | n/a | 2026-09-27 |
 
-Third-party assets: the Jersey 10 font above, unmodified, with its license file beside it, and (v4 M4) the Gallery's pictures below. Any asset added later needs a row here before it lands.
+Third-party assets: the Jersey 10 font above, unmodified, with its license file beside it, (v4 M4) the Gallery's pictures below, and (v5.2) the music and jingle above, all CC0 (credit given anyway). Any asset added later needs a row here before it lands.
 
 ## The Gallery's pictures (v4 M4)
 

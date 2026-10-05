@@ -329,3 +329,10 @@ Fixed: S1-S7, m2, m3, N1, N2 (`tools/v5-r4-notes.md` §10). Parked:
 - selfTest under reduced motion (`prefers-reduced-motion: reduce`) fails 3 checks that existed before v5.1 (gate show, refused shake, win collapse): they expect a shake that calm mode leaves out. Make those checks calm-aware, as the newer ones are.
 - On a 1280x720 desktop, the side quest that a mid-campaign win opens (e.g. level 40's) sits near the bottom edge of the map column. It is in view, but a scroll that also frames the just-opened quest would show it better.
 - When a rewarded-ad SDK is wired: point `adReward` at it for both the x2 reward and the continue (`#p-cont-ad`), and switch `meta.double.on` on.
+
+## From v5.2 (music, 2026-10-06)
+- The brief asked for a 2-5 s win jingle; every Kenney jingle runs under 1.6 s (the pick is 0.83 s). If the win wants a longer cue, a CC0 "victory" sting from the same composer (Juhani Junkala) would match the soundtrack better than any Kenney set.
+- Credit Juhani Junkala and Kenney in the map's plain-text credits (`gallery.credits`). Not required (CC0), but polite.
+- A track per realm (the rest of Junkala's JRPG packs) once playtesters have heard the three loops.
+- iOS plays Web Audio through the ringer switch (silent mode mutes it), same as the effects already do. `navigator.audioSession.type = "playback"` (iOS 17+) would override that; only if players ask.
+- A volume slider per bus instead of on/off rows.

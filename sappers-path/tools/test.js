@@ -1205,7 +1205,7 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
 // ---- the page's save (v4 M1 settings: speed replaces the 2x flag, colour-blind marks; v4.3 format 2, progress by id) --------
 {
   const Save = require("../src/save.js"), order = LEVELS.levels.map((l) => l.id), set = (raw) => Save.sanitize({ settings: raw }, order).settings;
-  eq(Save.fresh().settings, { muted: false, speed: 1, cb: false }, "save: a fresh save plays at 1x with colour-blind marks off (v4.3: no difficulty setting)");
+  eq(Save.fresh().settings, { muted: false, music: true, sfx: true, speed: 1, cb: false }, "save: a fresh save plays at 1x with colour-blind marks off (v4.3: no difficulty setting), music and sound effects on (v5.2)");
   eq([set({ speed: 3, cb: true }).speed, set({ speed: 3, cb: true }).cb], [3, true], "save: speed 3 and colour-blind on load as saved");
   eq([set({ fast: true }).speed, set({ fast: false }).speed, set({ speed: 2.5 }).speed, set({ speed: 9 }).speed, set({ speed: "3" }).speed], [2, 1, 1, 1, 1], "save: the old 2x flag loads as 2; a bad speed loads as 1");
   eq([set({ cb: "yes" }).cb, set({ cb: 1 }).cb, set({}).cb, "diff" in set({ diff: "hard" })], [false, false, false, false], "save: colour-blind is on only for a strict true; the difficulty setting is dropped");
@@ -1236,7 +1236,7 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
       return b && b[0] === Math.min(...ms) && b[1] === Math.min(...tp) && b[2] === r[6]; });
     const keep = raw.coins == null ? META.coins.start : raw.coins;
     eq([sv.v, Object.keys(sv.done).sort(), Object.keys(sv.gal).sort(), Object.values(sv.done).concat(Object.values(sv.gal)).every((x) => x === 1), bestOk, sv.coins, sv.inv, sv.settings, sv.last, Save.next(sv, order)],
-      [2, wonIds.sort(), galIds.sort(), true, true, keep, Object.assign({ ladder: 0, quartermaster: 0, scout: 0, recall: 0 }, raw.inv || {}, { volley: 0 }), { muted: raw.settings.muted, speed: raw.settings.speed || (raw.settings.fast ? 2 : 1), cb: raw.settings.cb === true }, Save.isOpen(sv, order, slotId(raw.last)) ? slotId(raw.last) : null, order.find((id, i) => !sv.done[id] && (i === 0 || sv.done[order[i - 1]])) || order[order.length - 1]],
+      [2, wonIds.sort(), galIds.sort(), true, true, keep, Object.assign({ ladder: 0, quartermaster: 0, scout: 0, recall: 0 }, raw.inv || {}, { volley: 0 }), { muted: raw.settings.muted, music: !raw.settings.muted, sfx: !raw.settings.muted, speed: raw.settings.speed || (raw.settings.fast ? 2 : 1), cb: raw.settings.cb === true }, Save.isOpen(sv, order, slotId(raw.last)) ? slotId(raw.last) : null, order.find((id, i) => !sv.done[id] && (i === 0 || sv.done[order[i - 1]])) || order[order.length - 1]],
       "save v4.3: the " + ver + " save (" + wonIds.length + " levels, " + galIds.length + " pictures) migrates: cleared by id, bests the best, coins and settings kept, difficulty dropped");
     eq(Save.sanitize(JSON.parse(JSON.stringify(sv)), order, gids, META), sv, "save v4.3: the migrated " + ver + " save reads back unchanged (format 2)");
   }
@@ -1420,6 +1420,48 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   const body = (name) => { const i = src.indexOf("function " + name + "("); return i < 0 ? "" : src.slice(i, src.indexOf("\n", i)); }, pp = body("panelPrimary"), ps = body("panelSecondary");
   ok(/"win"\) toMap\(\); else retry\(\)/.test(pp) && /"win"\) retry\(\); else toMap\(\)/.test(ps) && !/startLevel|playNext/.test(pp + ps) && /D\.on !== true/.test(body("onDouble")) && /D\.on === true/.test(src.slice(src.indexOf("function x2Offer("), src.indexOf("function onDouble("))),
     "win flow (v5.1): the win sheet's main button goes to the map (never into a level), its second retries; a fail's main retries, its second goes to the map; the x2 button and its tap need meta.double.on");
+}
+
+// ---- v5.2: music (src/audio.js pick and the switches; config audio.music; the save's music and sfx) --------------------
+{
+  const Audio = require("../src/audio.js"), Save = require("../src/save.js"), CFG = require("../config.json"), fs = require("fs"), path = require("path");
+  const M = CFG.audio.music, order = LEVELS.levels.map((l) => l.id), lvl = (n) => { const L = LEVELS.levels.find((x) => x.n === n); return { era: L.era, n }; };
+  // The track per screen and realm.
+  eq([Audio.pick(M, "title", null), Audio.pick(M, "map", null), Audio.pick(M, "map", lvl(180)), Audio.pick(M, "play", lvl(1)), Audio.pick(M, "play", lvl(174)), Audio.pick(M, "play", lvl(175)), Audio.pick(M, "play", lvl(200)),
+    Audio.pick(M, "play", { era: 0, gallery: true }), Audio.pick(M, "play", { era: 8, gallery: true }), Audio.pick(M, "play", { era: 0, debug: true }), Audio.pick(M, "play", null), Audio.pick(M, "nowhere", null), Audio.pick(null, "play", lvl(1))],
+    ["theme", "theme", "theme", "play", "play", "boss", "boss", "play", "play", "play", "play", null, null],
+    "music (v5.2): home and map the theme; a level the play loop, realm 8 (175-200, era " + lvl(175).era + ") the boss loop; side quests and debug levels the play loop; no music config, no track");
+  ok(LEVELS.levels.filter((L) => Audio.pick(M, "play", { era: L.era }) === "boss").map((L) => L.n).join() === Array.from({ length: 26 }, (_, i) => 175 + i).join(), "music (v5.2): exactly levels 175-200 play the boss loop");
+  // The switches, on a page with no context (Node): independent; the quick mute turns both off, or both on when both are off.
+  const A = Audio.create(CFG.audio, (f) => f + "?v=1"), st = () => [A.sfx, A.music, A.muted, Audio.state(A)];
+  const r0 = st(); Audio.setMusic(A, false); const r1 = st(); Audio.setSfx(A, false); const r2 = st(); Audio.setMusic(A, true); const r3 = st();
+  const q1 = Audio.quick(A); Audio.setSfx(A, q1.sfx); Audio.setMusic(A, q1.music); const r4 = st(); const q2 = Audio.quick(A); Audio.setMuted(A, !q2.sfx); const r5 = st();
+  eq([r0, r1, r2, r3, q1, r4, q2, r5], [[true, true, false, "on"], [true, false, false, "mixed"], [false, false, true, "off"], [false, true, false, "mixed"], { sfx: false, music: false }, [false, false, true, "off"], { sfx: true, music: true }, [true, true, false, "on"]],
+    "music (v5.2): music and effects switch apart (muted only when both are off; state mixed with one off); a quick mute with anything on turns both off, with both off turns both on");
+  Audio.want(A, "theme"); Audio.kick(A); Audio.unlock(A);
+  eq([A.ctx, A.fetches, A.want, A.url("audio/x.m4a"), Audio.jingle(A)], [null, 0, "theme", "audio/x.m4a?v=1", false], "music (v5.2): with no gesture (no context) a wanted track is only remembered: nothing is fetched, the jingle does nothing; the page's cache tag goes on the file");
+  // Effects off: a cue is counted but never reaches the synth (a fake running context records any node made).
+  const made = []; const node = () => new Proxy({}, { get: (o, k) => (k in o ? o[k] : (o[k] = typeof k === "string" && /^(connect|start|stop|setValueAtTime|exponentialRampToValueAtTime|linearRampToValueAtTime|cancelScheduledValues)$/.test(k) ? () => node() : node())) });
+  const B = Audio.create(CFG.audio); B.ctx = { state: "running", currentTime: 0, sampleRate: 44100, createGain: () => (made.push("g"), node()), createOscillator: () => (made.push("o"), node()), createBufferSource: () => (made.push("b"), node()), createBiquadFilter: () => (made.push("f"), node()) }; B.out = node();
+  Audio.setSfx(B, false); const c1 = Audio.cue(B, "ui", 0, 0), n1 = made.length; Audio.setSfx(B, true); const c2 = Audio.cue(B, "ui", 0, 1000);
+  eq([c1, n1, B.counts.ui, c2, made.length > 0], [false, 0, 2, true, true], "music (v5.2): with effects off a cue is counted but makes no sound; on, it plays");
+  // The save: music and sfx strict booleans; a save from before v5.2 loads both as the opposite of its muted flag.
+  const set = (raw) => Save.sanitize({ settings: raw }, order).settings, ms = (o) => [o.music, o.sfx, o.muted];
+  eq([ms(set({})), ms(set({ muted: true })), ms(set({ muted: false })), ms(set({ muted: "yes" })), ms(set({ music: false, sfx: true })), ms(set({ music: true, sfx: false, muted: true })), ms(set({ music: false, sfx: false })), ms(set({ music: "no", sfx: 0, muted: true }))],
+    [[true, true, false], [false, false, true], [true, true, false], [true, true, false], [false, true, false], [true, false, false], [false, false, true], [false, false, true]],
+    "save (v5.2): music and sound effects saved apart (strict booleans); an older save's muted flag sets both; muted is kept as both off");
+  const sv = Save.sanitize({ v: 2, settings: { music: false, sfx: true, speed: 1, cb: true } }, order); eq(Save.sanitize(JSON.parse(JSON.stringify(sv)), order).settings, sv.settings, "save (v5.2): the settings read back unchanged");
+  // Config and files: the loops' points, the volumes, every file on disk; the jingle and order name tracks.
+  const T = M.tracks, loops = ["theme", "play", "boss"], sizes = Object.values(T).map((t) => { try { return fs.statSync(path.join(__dirname, "..", t.file)).size; } catch (e) { return 0; } });
+  ok(loops.every((k) => T[k] && T[k].loopStart > 0 && T[k].loopEnd - T[k].loopStart > 30 && T[k].gain > 0 && T[k].gain <= 2) && T[M.jingle] && T[M.jingle].loopEnd == null && M.order.every((k) => T[k]) && Object.values(M.screens).concat(M.bossTrack).every((k) => T[k]) && sizes.every((b) => b > 1000),
+    "music (v5.2): config's three loops have loop points and gains, the jingle is a one-shot, every screen, the boss and the fetch order name a track, every file is in audio/ (" + sizes.map((b) => Math.round(b / 1024) + " KB").join(", ") + ")");
+  ok(M.volume >= 0.35 && M.volume <= 0.45 && M.volume < CFG.audio.volume && M.fadeMs >= 600 && M.fadeMs <= 1000 && M.duck.gain < 1 && M.bossRealms.join() === "8", "music (v5.2): the music bus (" + M.volume + ") sits under the effects (" + CFG.audio.volume + "); the crossfade is " + M.fadeMs + " ms; the boss realm is 8");
+  ok(sizes.reduce((a, b) => a + b, 0) < 4.2e6, "music (v5.2): the audio folder is under ~4 MB (" + (sizes.reduce((a, b) => a + b, 0) / 1e6).toFixed(2) + " MB for the files config names)");
+  // Source checks: the music runs on the audio clock (no timers); every ?v= in index.html and the font URL is the same tag.
+  const asrc = fs.readFileSync(path.join(__dirname, "..", "src", "audio.js"), "utf8"), html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8"), css = fs.readFileSync(path.join(__dirname, "..", "style.css"), "utf8");
+  const tags = (html + css).match(/\?v=\d+/g) || [];
+  ok(!/setTimeout|setInterval/.test(asrc) && tags.length >= 10 && tags.every((t) => t === tags[0]) && /fonts\/Jersey10-Regular\.ttf\?v=/.test(css), "music (v5.2): audio.js uses no timers; one cache tag (" + tags[0] + ") across index.html and the font URL (" + tags.length + " uses)");
+  ok(/class="set-row tog tog-music"/.test(html) && /class="set-row tog tog-sfx"/.test(html) && !/set-row tog tog-mute/.test(html) && (html.match(/class="round tog tog-mute"/g) || []).length === 2, "music (v5.2): settings has a Music row and a Sound effects row; the top bar and the Paused sheet keep their quick mute buttons");
 }
 
 console.log(pass + " passed, " + fail + " failed");

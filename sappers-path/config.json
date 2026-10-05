@@ -209,7 +209,25 @@
       "coin": [{"w": "square", "f": 1568, "d": 0.05, "g": 0.06, "lp": 4200}, {"w": "sine", "f": 2093, "d": 0.16, "g": 0.1, "at": 0.05}]
     },
     "work": ["clink", "thunk", "bleat", "sizzle"],
-    "workAfter": ["clink", "thunk", "munch", null]
+    "workAfter": ["clink", "thunk", "munch", null],
+    "music": {
+      "note": "v5.2 (SPEC-v4 §9, tools/v5-2-music-notes.md): one soundtrack by one composer (Juhani Junkala, CC0) and a Kenney win jingle (CC0), AAC in audio/, made by tools/music-encode.py (which prints loopStart, loopEnd and gain). volume: the music bus, under the effects' audio.volume. Each loop is its whole source file (whole bars); its file holds the loop's last 0.25 s before it and its first 0.5 s after, so loopStart/loopEnd (seconds of the file) loop exactly even if a decoder keeps the AAC priming. gain evens the loops to about the same loudness. screens: the track per screen; a main level in a bossRealms realm plays bossTrack. jingle: the track the win plays once, the loop ducked to duck.gain of its level for it (in over inMs, back up over outMs, holdMs after it ends). To swap the jingle, point tracks.win.file at audio/jingle-pizzi15.m4a or audio/jingle-steel10.m4a (both shipped). order: the background fetches, one at a time, after the first tap. fadeMs: the crossfade; toggleMs: the Music switch's fade.",
+      "volume": 0.4,
+      "fadeMs": 800,
+      "toggleMs": 150,
+      "screens": {"title": "theme", "map": "theme", "play": "play"},
+      "bossRealms": [8],
+      "bossTrack": "boss",
+      "jingle": "win",
+      "duck": {"gain": 0.25, "inMs": 120, "holdMs": 250, "outMs": 1500},
+      "order": ["theme", "play", "win", "boss"],
+      "tracks": {
+        "theme": {"file": "audio/theme.m4a", "loopStart": 0.25, "loopEnd": 99.735692, "gain": 0.47, "src": "JRPG Theme [Loop Ready], Juhani Junkala"},
+        "play": {"file": "audio/play.m4a", "loopStart": 0.25, "loopEnd": 103.107143, "gain": 1.2, "src": "Calm2 - Childhood Friends (JRPG Pack 4 Calm), Juhani Junkala"},
+        "boss": {"file": "audio/boss.m4a", "loopStart": 0.25, "loopEnd": 80.25, "gain": 0.5, "src": "Evil4 - Witch's Lair (JRPG Pack 3 Evil), Juhani Junkala"},
+        "win": {"file": "audio/jingle-pizzi10.m4a", "gain": 0.8, "src": "Kenney Music Jingles, Pizzicato jingles/jingles_PIZZI10.ogg"}
+      }
+    }
   },
   "art": {
     "ink": "#221a26",

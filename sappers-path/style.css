@@ -16,7 +16,7 @@
    v4 Critics 2 fix: the coach wraps to two lines in the top bar; the Gallery win's framed picture (#p-pic, #stage-pic);
    the Gallery's next tile (gold frame, Play chip); a buy short of coins (.pw.poor); 44 px badges in small frames; the
    landscape bar's .head and .grid; the home's era chip on the river; era report cards as a band. */
-@font-face { font-family: "Jersey 10"; src: url("fonts/Jersey10-Regular.ttf?v=38") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Jersey 10"; src: url("fonts/Jersey10-Regular.ttf?v=39") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
 :root { --bg: #2e2935; --ink: #221a26; --cream: #f3ead8; --cream-soft: #cfc4d6;
   --tray: #ddd3c0; --tray-hi: #ece5d6; --tray-edge: #c4b89e; --tray-ink: #3a3027; --tray-soft: #6b5c47; --socket: #c3b697; --socket-lo: #a99a7b;
   --band1: #d0c6b4; --band2: #c2baa9; /* the rows' tray bands, set from layout.fade.band at boot */
@@ -61,6 +61,12 @@ button.big { min-height: 58px; font-size: 36px; width: 100%; }
 .tog-mute .cross { display: none; }
 .tog-mute[aria-pressed="true"] .cross { display: inline; }
 .tog-mute[aria-pressed="true"] .waves { display: none; }
+/* v5.2: music and effects switch apart. The quick mute buttons are "mixed" when only one is off (one wave shows); the
+   settings rows are pressed when on, and wear a cross (effects) or a slash (music) when off. */
+.tog-mute[aria-pressed="mixed"] .w2 { display: none; }
+.tog-music .cross, .tog-sfx .cross { display: none; }
+.tog-music[aria-pressed="false"] .cross, .tog-sfx[aria-pressed="false"] .cross { display: inline; }
+.tog-sfx[aria-pressed="false"] .waves { display: none; }
 
 /* v4.3: no difficulty picker. A level's tag (config layout.tags): Hard a strong warning red, Easy a calm teal, Normal
    unmarked. On the map's buttons, the Gallery's tiles, the top bar and the report. */

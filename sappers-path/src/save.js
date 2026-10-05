@@ -31,6 +31,8 @@
 // e3-50, e4-75, e5-100 now). On load, a done, best or last id the page no longer has counts as the level in its slot n
 // (an id the page has wins over a renamed one), so a migrated level is cleared once and its first-clear coins never pay
 // again.
+// v5.2: settings.music and settings.sfx, music and sound effects switched apart (strict booleans, on by default). A save
+// from before v5.2 has neither: both load as the opposite of its muted flag. muted is kept as both off.
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
@@ -43,7 +45,7 @@
   const MAXCOINS = 9999999, MAXINV = 99, MAXMS = 3600000, MAXTAPS = 999, POWERS = ["ladder", "quartermaster", "scout", "recall", "volley"]; // v5 R1: volley
   const whole = (v, hi) => (typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.min(hi, Math.round(v))) : 0);
   const startCoins = (meta) => whole(meta && meta.coins && meta.coins.start, MAXCOINS), maxLives = (meta) => Math.max(1, Math.min(99, (meta && meta.livesMax) | 0 || 5));
-  function fresh(meta) { return { v: VERSION, done: {}, gal: {}, settings: { muted: false, speed: 1, cb: false }, last: null,
+  function fresh(meta) { return { v: VERSION, done: {}, gal: {}, settings: { muted: false, music: true, sfx: true, speed: 1, cb: false }, last: null,
     coins: startCoins(meta), inv: { ladder: 0, quartermaster: 0, scout: 0, recall: 0, volley: 0 }, got: {}, best: {}, lives: { n: maxLives(meta), at: 0 }, eggs: {} }; }
   const EGG = /^s\d{1,3}-\d{1,2}$/, MAXEGGS = 256; // v5 R3: the journey map's easter eggs found, by id (journey.js eggId)
   const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
@@ -70,7 +72,8 @@
       for (const id of order || []) if (cleared(d, id)) { s.done[id] = 1; mask[id] = v1 ? (d[id] | 0) & ALL : ALL; }
       for (const id of gal || []) if (cleared(g, id)) { s.gal[id] = 1; mask[id] = v1 ? (g[id] | 0) & ALL : ALL; }
       const set = isObj(raw.settings) ? raw.settings : {};
-      s.settings.muted = set.muted === true; s.settings.cb = set.cb === true;
+      const on = set.muted !== true; s.settings.music = typeof set.music === "boolean" ? set.music : on; s.settings.sfx = typeof set.sfx === "boolean" ? set.sfx : on; // v5.2
+      s.settings.muted = !s.settings.music && !s.settings.sfx; s.settings.cb = set.cb === true;
       s.settings.speed = Number.isInteger(set.speed) && set.speed >= 1 && set.speed <= MAXSPEED ? set.speed : set.fast === true ? 2 : 1;
       if (typeof raw.last === "string" && isOpen(s, order || [], raw.last)) s.last = raw.last;
       // v4 M5: coins (an old save without the field keeps the starting balance), the inventory, best results, lives.
