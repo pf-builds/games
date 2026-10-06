@@ -127,7 +127,7 @@
     toastT: -1e12, popK: 0, cards: [], nexts: [], slots: [], wide: false, glURL: [], manURL: [], nodes: [],
     coach: null, used: 0, cues: {}, paused: false, pauses: 0, upright: false, upPause: false, focusEl: null, pt: { x: 0, y: 0 }, T: null, tbuf: null, labFit: new Map(), verdict: [],
     et: 0, endT: -1, lineDirty: false, lineMoved: false, ord: [], slotPts: [], blockT: -1e12, refused: 0, march: false,
-    debug: [], flip: [false, false, false, false, false], rods: null, unlockT: -1e12, lockN: 0, reveals: 0, pairsOut: 0,
+    debug: [], flip: [false, false, false, false, false], rods: null, unlockT: -1e12, lockN: 0, lockWas: [false, false], lockSock: [-1, -1], slotUnT: new Array(8).fill(-1e12), reveals: 0, pairsOut: 0, // v6: each lock shut and its socket at the last render; when each socket opened
     fadeC: null, coached: false, coachMode: "", handKind: "", meas: null,
     li: { stuck: 0, work: 0, occ: 0, free: 0, near: false, full: false, danger: false },
     // v4 M5: config.meta (selfTest swaps in a copy), the lives clock (real time), the queue rows shown, the level's start
@@ -418,18 +418,23 @@
     if (li.work) cnt += (cnt ? " · " : "") + li.work + " " + L.workWord;
     if (li.free) cnt += (cnt ? " · " : "") + li.free + " " + L.freeWord;
     $("line-cnt").firstElementChild.textContent = cnt; retCount();
-    let free = -1; for (let i = 0; i < S.open; i++) if (!S.spQ[i]) { free = free < 0 ? i : free; }
-    const popping = app.clock - app.unlockT < app.cfg.show.unlockMs;
+    let free = -1; for (let i = 0; i < S.cap; i++) if (!S.spQ[i] && !S.shutAt(i)) { free = free < 0 ? i : free; } // v6: a shut space may sit among open ones
+    // v6, two locks: each shut socket shows its own lock (S.shutAt: the lock + 1); a lock that has opened since the last
+    // render pops the padlock of the socket it held then (app.lockSock) for show.unlockMs. (A Ladder moves shut sockets
+    // up one; no lock opened, so nothing pops.)
+    for (let k = 0; k < app.B.nlocks; k++) { const sh = S.lockShut(k); if (app.lockWas[k] && !sh && app.lockSock[k] >= 0) app.slotUnT[app.lockSock[k]] = app.clock; app.lockWas[k] = sh; }
+    app.lockSock.fill(-1);
     app.slots.forEach((s, i) => {
       s.hidden = i >= S.cap;
-      const shut = i < S.cap && i >= S.open, opening = !shut && popping && i < S.cap && i >= S.cap - app.lockN;
+      const sk = i < S.cap ? S.shutAt(i) : 0, shut = sk > 0; if (shut) app.lockSock[sk - 1] = i;
+      const opening = !shut && i < S.cap && app.clock - app.slotUnT[i] < app.cfg.show.unlockMs;
       s.classList.toggle("locked", shut); s.classList.toggle("unlocking", opening);
-      const cl = shut && S.lockMat > 0; s.classList.toggle("clock", cl); if (cl) s.style.setProperty("--lc", mat(S.lockMat).c); // v5 R1: a colour lock shows its colour
+      const lm = shut ? app.B.lockM[sk - 1] : 0, cl = lm > 0; s.classList.toggle("clock", cl); if (cl) s.style.setProperty("--lc", mat(lm).c); // v5 R1: a colour lock shows its colour
       if (i < S.cap && S.spQ[i]) { const m = S.spM[i], w = S.spW[i], o = S.spO[i], st = S.stuck(i), lk = S.spL[i] !== 0, held = S.held(i); s.classList.add("full"); s.classList.toggle("work", o > 0); s.classList.toggle("stuck", st); s.classList.toggle("linked", lk); s.classList.toggle("held", held); paintMat(s, m); s.querySelector("b").textContent = w || "";
         s.querySelector(".out").textContent = o > 0 ? o : "";
         const men = s.querySelector(".men"); men.style.backgroundImage = app.manURL[m]; men.style.width = "calc(var(--man) * " + Math.min(w, L.sapperIcons) + ")";
         s.setAttribute("aria-label", mat(m).crew + ", " + w + " waiting" + (o ? ", " + o + " out" : "") + (st ? ", stuck: nothing in reach" : "") + (lk ? ", " + L.linkedWord : "") + (held ? ", " + L.heldText : "")); }
-      else { s.classList.remove("full", "work", "stuck", "linked", "held"); s.style.removeProperty("--mc"); s.querySelector("b").textContent = ""; s.querySelector(".out").textContent = ""; s.querySelector(".men").style.width = "0"; s.setAttribute("aria-label", shut ? (S.lockMat > 0 ? fill(L.colourLockText, { crew: mat(S.lockMat).crew }) : L.lockedText) : "Empty space"); }
+      else { s.classList.remove("full", "work", "stuck", "linked", "held"); s.style.removeProperty("--mc"); s.querySelector("b").textContent = ""; s.querySelector(".out").textContent = ""; s.querySelector(".men").style.width = "0"; s.setAttribute("aria-label", shut ? (lm > 0 ? fill(L.colourLockText, { crew: mat(lm).crew }) : L.lockedText) : "Empty space"); }
       s.classList.toggle("last", i === free && li.near); // one space left and the rest stuck: the last free space pulses
     });
     sendable(); markPick();
@@ -979,7 +984,7 @@
     app.entry = e; app.B = E.compile(e.L); app.S = E.sim(app.B, rulesOf(app.diff)); app.S.logOn = true; app.et = 0;
     app.V.setLevel(app.B, app.S, e.L.pal, e.L.liquid, e.L.shade, e.L.hideC ? { c: e.L.hideC, q: e.L.hideQ } : null); usePalette(e); // Land 1 fix (B1): a land level's mystery fill // lands foundation: shade, the level's shade rows (none: drawn as before) // v5 R4: liquid (a lava moat) // v4 M4: the level's colours before anything is painted
     app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.popK = 0; app.used = 0; app.march = false; app.blockT = -1e12; $("panel").hidden = true; $("stage-pic").hidden = true; hideToast();
-    app.lockN = app.S.locked; app.unlockT = -1e12; app.flip.fill(false); app.reveals = 0; app.pairsOut = 0; landTiles();
+    app.lockN = app.S.locked; app.unlockT = -1e12; app.lockWas.fill(false); app.lockSock.fill(-1); app.slotUnT.fill(-1e12); app.flip.fill(false); app.reveals = 0; app.pairsOut = 0; landTiles();
     app.t0 = app.clock; app.report = null; app.pick = null; app.pwPop.fill(-1e12); app.carry = -1; renderPowers();
     roundSpeed(); // v5 R1
     // v5 R1: power-ups the campaign has just unlocked get their free use, and their tips show one by one.
@@ -989,6 +994,7 @@
     if (!e.debug && !e.gallery) { app.save.data.last = e.id; writeSave(); }
     renderAll(); fitLine(); showScreen("play"); coachStart(); // the line and tray take their size before the board is fitted to what is left
     renderPowers(); if (app.tipQ.length) showTip(app.tipQ.shift(), true);
+    if (app.B.kill) toast(app.cfg.layout.killToast, true); // v6: a killing-tower level says so as it starts
     return e;
   }
   // v4 M3: a tile's flip or shake from the last game lands at once when a level starts (a flip left mid-turn has no width).
@@ -997,7 +1003,7 @@
     if (!app.S) return;
     if (!livesLeft()) { showScreen("title"); return; } // v4 M5: no lives left: home, where the refill time shows
     app.S.reset(); app.et = 0; app.t0 = app.clock; app.report = null; app.pick = null; app.pwPop.fill(-1e12); app.V.reset(); app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.popK = 0; app.used = 0; app.march = false; app.blockT = -1e12; $("panel").hidden = true; $("stage-pic").hidden = true; hideToast();
-    app.unlockT = -1e12; app.flip.fill(false); app.reveals = 0; app.pairsOut = 0; landTiles(); roundSpeed(); // v5 R1
+    app.unlockT = -1e12; app.lockWas.fill(false); app.lockSock.fill(-1); app.slotUnT.fill(-1e12); app.flip.fill(false); app.reveals = 0; app.pairsOut = 0; landTiles(); roundSpeed(); // v5 R1
     renderAll(); renderPowers(); coachStart();
   }
   const playNext = () => startLevel(Save.next(app.save.data, app.order));
@@ -1088,7 +1094,7 @@
     // v4 M2: a jam where a linked card needed 2 spaces says so; one with a space still locked adds that it never opened.
     // v4.3: a jam where linked fronts wait for buried partners (jamWhy bit 4) says that first.
     const L = app.cfg.layout, jam = e.why & 4 ? L.jamBuriedText + (c.length ? ", and " + names + " can't reach a block." : ".") : e.why & 1 ? L.jamLinkedText + (c.length ? ", and " + names + " can't reach a block." : ".") : "Line jammed: " + names + " can't reach a block." + (e.why & 2 ? " " + L.jamLockText : "");
-    return { stuck: "Out of squads, and the waiting sappers can't reach their colour.",
+    return { stuck: "Out of squads, and the waiting sappers can't reach their colour.", short: fill(L.shortText, { crew: who }), // v6: a killing tower left a colour short
       jam }[e.reason] || "The assault failed.";
   }
   // The fail sheet's line as the player sees the squads: each jammed squad a chip in its colour with its count (a short
@@ -1102,6 +1108,7 @@
     if (e.reason === "jam" && e.why & 4) { add(L.jamBuriedText); if (n) { add(", and "); chips(); add(" can't reach a block."); } else add("."); }
     else if (e.reason === "jam" && e.why & 1) { add(L.jamLinkedText); if (n) { add(", and "); chips(); add(" can't reach a block."); } else add("."); }
     else if (e.reason === "jam") { add("Line jammed: "); if (n) chips(); else add("the squads"); add(" can't reach a block." + (e.why & 2 ? " " + L.jamLockText : "")); }
+    else if (e.reason === "short" && e.m) { add(L.shortPre); chip(e.m, 0); add(L.shortPost); } // v6: the colour's chip, no count; Retry only (no continue)
     else add(reasonText(e));
   }
   // Lands foundation: the end of the castle story on the boss's first win (config lands.epilogue): on into the first land
@@ -1301,7 +1308,7 @@
     if (!el && st.next) { for (let j = 0; j < E.NCOL && !el; j++) if (!app.nexts[j][0].classList.contains("none")) el = app.nexts[j][0]; }
     if (!el && st.mystery) el = hiddenTile();
     if (!el && st.linked) { const j = linkedFront(); if (j >= 0) el = app.cards[j]; }
-    if (!el && st.lockSlot && S.locked > 0) el = app.slots[S.cap - 1];
+    if (!el && st.lockSlot && S.locked > 0) { let i = S.cap - 1; while (i > 0 && !S.shutAt(i)) i--; el = app.slots[i]; } // v6: the last shut space
     if (!el && st.power) { const b = app.pws[E.POWERS.indexOf(st.power)]; if (b && !b.hidden) el = b; } // v5 R2: a power-up's badge (the level that unlocks it)
     if (!el && st.line) el = $("line");
     // A ring on the board: the first gate's key (or the gate once the key is gone), the first standing tower.
@@ -2275,6 +2282,39 @@
         ok(S.locked === 1 && last.classList.contains("locked") && last.classList.contains("clock") && last.style.getPropertyValue("--lc") === mat(m).c && last.getAttribute("aria-label") === fill(LY.colourLockText, { crew: mat(m).crew }) && !app.V.fxInfo().lockKey, "colour lock: the locked space shows its colour and names the crew; no key on the board");
         const j = app.cards.findIndex((b, k) => S.front(k) >= 0 && app.B.cardM[S.front(k)] === m); playCol(j); step(16);
         ok(app.S.locked === 0 && (app.cues.unlock | 0) === u0 + 1 && !last.classList.contains("locked") && !last.classList.contains("clock"), "colour lock: its colour's tap opens it (one unlock cue)"); }
+      // 22f. Campaign v6, killing towers (the debug level v6-kill): the level warns as it starts (layout.killToast); a game
+      // that walks a sapper into a ring: a doomed runner, the arrow strikes, the label rises, the engine kills and the
+      // colour is short; the sheet names the colour (shortText; its chip, no count), offers no continue, and Retry starts
+      // over; the stored order wins with nobody shot.
+      { const e = app.byId.get("v6-kill");
+        if (ok(!!e && e.L.kill === true, "kill (v6): v6-kill is loaded")) {
+          startLevel(e.id); ok(!$("toast").hidden && $("toast").textContent === LY.killToast, "kill (v6): the level starts with the warning toast ('" + $("toast").textContent + "')");
+          const o = search(e, "normal", (S) => S.status === E.FAILED && S.reason === "short", ST.searchTries, ST.searchSeed);
+          if (ok(!!o, "kill (v6): found a game that ends short")) {
+            startLevel(e.id); patient(o.slice(0, -1)); playCol(o.charCodeAt(o.length - 1) - 48);
+            let live = 0, struck = null; for (let t = 0; t < ST.tickCapMs && !struck; t += 16) { step(16); const h = app.V.hitInfo(); if (h.live) live = h.kind; if (h.struck) struck = h; }
+            ok(live === 2 && !!struck && struck.label && app.S.kills === 1 && app.S.status === E.FAILED, "kill (v6): a doomed runner, the arrow strikes, the label rises; the engine kills (" + JSON.stringify(struck) + ")");
+            for (let t = 0; t < ST.tickCapMs && !app.panel; t += 16) step(16);
+            const m = app.S.failMat, pl = $("p-line");
+            ok(app.panel === "fail" && app.S.reason === "short" && pl.getAttribute("aria-label") === fill(LY.shortText, { crew: mat(m).crew }) && pl.textContent === LY.shortPre + LY.shortPost && !!pl.querySelector(".chip") && $("p-cont").hidden && $("p-primary").querySelector(".pl").textContent === "Retry",
+              "kill (v6): the short sheet names the colour ('" + pl.getAttribute("aria-label") + "'), shows its chip, offers no continue; Retry is the main button");
+            retry(); ok(app.S.status === E.PLAYING && app.S.plays === 0 && app.S.kills === 0 && !app.panel && $("panel").hidden, "kill (v6): Retry starts the level again");
+            patient(winOf(e)); settleNow(); ok(app.S.status === E.WON && app.S.kills === 0 && app.S.hits === 0, "kill (v6): the stored order wins with nobody shot");
+            out.notes.kill = e.id + " short '" + o + "'"; } } }
+      // 22g. Campaign v6, two locks (the debug level v6-locks): two padlocked sockets, the left in its colour (lock 0, a
+      // colour lock) and the right the key's (lock 1, its key wearing the brackets). Along the stored order each opens on
+      // its own: its own socket pops (the other stays shut), one unlock cue each; the level wins.
+      { const e = app.byId.get("v6-locks");
+        if (ok(!!e && e.L.locks && e.L.locks.length === 2, "two locks (v6): v6-locks is loaded")) {
+          startLevel(e.id); const S = app.S, a = app.slots[S.cap - 2], b = app.slots[S.cap - 1], m = e.L.locks[0].colour, u0 = app.cues.unlock | 0, lk = /\blocked\b/;
+          ok(S.open === S.cap - 2 && lk.test(a.className) && a.classList.contains("clock") && a.style.getPropertyValue("--lc") === mat(m).c && a.getAttribute("aria-label") === fill(LY.colourLockText, { crew: mat(m).crew }) && lk.test(b.className) && !b.classList.contains("clock") && b.getAttribute("aria-label") === LY.lockedText && app.V.fxInfo().lockKeys === 1,
+            "two locks (v6): two padlocked sockets (" + S.open + " of " + S.cap + " open), the colour's on the left and the key's on the right; the key wears its brackets");
+          const seen = [], o = winOf(e); let was = app.S.locked;
+          const look = () => { if (app.S.locked < was) seen.push({ a: a.className, b: b.className, cue: (app.cues.unlock | 0) - u0, keys: app.V.fxInfo().lockKeys }); was = app.S.locked; };
+          for (let i = 0; i < o.length && app.S.status === E.PLAYING; i++) { playCol(+o[i]); step(16); look(); for (let t = 0; t < ST.tickCapMs && app.S.busy; t += 16) { step(16); look(); } }
+          ok(seen.length === 2 && /unlocking/.test(seen[0].b) && lk.test(seen[0].a) && seen[0].cue === 1 && seen[0].keys === 0 && /unlocking/.test(seen[1].a) && !lk.test(seen[1].a) && !/unlocking/.test(seen[1].b) && seen[1].cue === 2,
+            "two locks (v6): the key opens its own socket (the colour's stays shut), then the colour opens the left one; one unlock cue each (" + JSON.stringify(seen) + ")");
+          settleNow(); ok(app.S.status === E.WON, "two locks (v6): the stored order wins"); } }
       // 23. Critics 1 fix: the rods on the debug levels along their stored orders (every rod on its two tiles, never over a
       // third); B1: a linked pair leaving and then at rest, and a full line of big squads rushed out, with every count
       // clear of every badge.
