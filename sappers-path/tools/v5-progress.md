@@ -292,9 +292,14 @@ Demo land "Moat Test" (never shipped) on a scratch game copy; shots in `tools/sh
 | M1 | Ring builder `tools/moat.js` (subject, path, ring, edge ways, cuts, pockets, water colour) | done | e1b9163 |
 | M2 | Plan and density: `moat` a board feature (`tags.js BOARD`, `cant`), amount = opening set; profile + `plan.moat` numbers | done | e1b9163 |
 | M3 | Bake: `FEATURES.moat`, the opening-set ladder, the pick prefers the planned set; key on a mystery block fixed | done | e1b9163 |
-| M3b | The path only behind a cut, kept 3 cells off edge ways (`edgeKeep`): a full path let one edge block open the whole outline (Stacks of Wheat Extreme 11.5% vs 0-6%); report shows a stepped-down set | done | (path commit) |
+| M3b | The path only behind a cut, kept 3 cells off edge ways (`edgeKeep`): a full path let one edge block open the whole outline (Stacks of Wheat Extreme 11.5% vs 0-6%); report shows a stepped-down set | done | 4359d0b |
 | M4 | Factory: `land.js` asks each picture first, shades zeroed on changed cells, the moat gate, the report column | done | e1b9163 |
 | M5 | Tests: ring off the subject with a bank, path shut, reach, openings, edge, colour, plan/density, fixture bake | done | e1b9163 |
-| M6 | Demo land (8 test paintings, moats on) to a passing check, installed on a copy, copy checks, shots + contact sheet | done: every gate PASS on the first fresh bake (6 ringed, 2 can't; median 216 s); copy: test.js 616/0, regrades 0/0, freeze PASS, critic-v5 0 of 9,042, selfTest 799/801 0 failed, 0 console | (docs commit) |
-| M7 | Notes, SPEC-v4 §9, runbook (how a land turns moats on), LATER | done | (docs commit) |
-| M8 | Branch checks: test.js, freeze, regrades, critic-v5, selfTest x2, harness last | BRANCH_STATE | |
+| M6 | Demo land (8 test paintings, moats on) to a passing check, installed on a copy, copy checks, shots + contact sheet | done: every gate PASS on the first fresh bake (6 ringed, 2 can't; median 216 s); copy: test.js 616/0, regrades 0/0, freeze PASS, critic-v5 0 of 9,042, selfTest 799/801 0 failed, 0 console | 1d6d3d3 |
+| M7 | Notes, SPEC-v4 §9, runbook (how a land turns moats on), LATER | done | 1d6d3d3 |
+| M8 | Branch checks: test.js, freeze, regrades, critic-v5, selfTest x2, harness last | done: test.js 615/0; freeze --require PASS (1-200, 60 pictures, 283 castle cases, 0); regrades 0 of 1,155 and 0 of 360; critic-v5 0 mismatching games of 8,712, tags 0, known answers 0 wrong; selfTest 781/0 (375x812@3x), 783/0 (1280x720), 0 console; harness all passed, 0 console | (this commit) |
+
+### State (organic moats)
+Built, demoed and checked; the live game is unchanged (no land installed, no shipped file touched). Next: Land 2
+lists `"moat"` in its features (`tools/land-runbook.md` §1) and picks pictures that carry a ring
+(`tools/feature-moats-notes.md` §7).

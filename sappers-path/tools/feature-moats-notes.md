@@ -180,6 +180,10 @@ without a ring) were tried at 204 and dropped for Stacks of Wheat.
 
 ## 8. Checks
 
-On the branch (no land installed; the live game): see the progress table's last row (M8) for the final run.
+On the branch (no land installed; the live game), final run: `tools/test.js` 615 passed, 0 failed; `freeze.js
+--require` PASS (levels 1-200, pictures 1-60, 283 castle cases, 0 differences); `regrade.js` 0 of 1,155 and `--gallery`
+0 of 360; `critic-v5/run.sh` 0 mismatching games of 8,712, tags 0 problems, known answers 0 wrong, real pace 260/260
+identical (`diff-result.json` changed only its ms: restored); `SP.selfTest()` 781 passed at 375x812@3x and 783 at
+1280x720, 0 failed, 0 console messages; `tools/harness.mjs` (run last) all passed, 0 console messages.
 `tools/test.js` adds 5 checks (the ring, the edge, colour and reach, tags and plan, the fixture bake; the extension
 point check now names the hazard as the feature with no builder).
