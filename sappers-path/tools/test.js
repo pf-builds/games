@@ -1603,7 +1603,7 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   }
   // Config insertion keeps the file as it is apart from the land and its egg rows.
   { const t = fs.readFileSync(path.join(__dirname, "../config.json"), "utf8"), a = LND.addToConfig(t, { k: 9, name: "T" }, [[10, 11], [12, 13]]), c = JSON.parse(a);
-    eq([c.lands.list.slice(-1)[0].name, c.map.eggCoins.length - CFG.map.eggCoins.length, a.replace(/\n      \{"k":9,"name":"T"\}/, "").replace(", [10,11], [12,13]", "") === t], ["T", 2, true], "lands (install): the land goes into config lands.list and a row per new sheet into map.eggCoins, nothing else changes"); }
+    eq([c.lands.list.slice(-1)[0].name, c.map.eggCoins.length - CFG.map.eggCoins.length, a.replace(/,?\n      \{"k":9,"name":"T"\}/, "").replace(", [10,11], [12,13]", "") === t], ["T", 2, true], "lands (install): the land goes into config lands.list and a row per new sheet into map.eggCoins, nothing else changes"); }
   // The freeze: the shipped campaign and pictures are the snapshot's, byte for byte, whatever lands follow them.
   { const dir = path.join(__dirname, "..", CFG.v5.freeze.dir), FL = JSON.parse(fs.readFileSync(path.join(dir, "levels.json"), "utf8")).levels, FG = JSON.parse(fs.readFileSync(path.join(dir, "gallery.json"), "utf8")).levels, G2 = require("../levels/gallery.json").levels;
     eq([FL.length >= 200, FL.every((l, i) => JSON.stringify(l) === JSON.stringify(LEVELS_ALL.levels[i])), FG.length, FG.every((l, i) => JSON.stringify(l) === JSON.stringify(G2[i]))], [true, true, 60, true], "freeze: levels 1-" + FL.length + " and pictures 1-60 in the game are the frozen snapshot's, byte for byte"); }
