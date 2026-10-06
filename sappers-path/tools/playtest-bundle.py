@@ -4,7 +4,7 @@
 Reads every file from a git ref (never the live working tree, which a builder may be editing) and writes
 <out>/: index.html with no doctype/html/head/body wrappers, <title> first and no ?v= tags; style.css with no ?v=;
 src/*.js with the versioned getJSON("x.json?v=" + V_) calls turned into plain paths; config.json, levels/levels.json,
-levels/gallery.json, the font, map/ (layout.json and the painted sheets, v5 R3), art/ (the home's painting, v5.3) and
+levels/gallery.json, the font, map/ (layout.json and the painted sheets, v5 R3; a land's sheets are WebP), art/ (the home's painting, v5.3) and
 audio/ (the music, v5.2: its URLs lose their ?v= with the others). Also writes <out>/wrap.html, an artifact-style wrapper page for the smoke test
 (tools/playtest-smoke.mjs); wrap.html is not published.
 
@@ -93,7 +93,7 @@ def main(ref, out, new_title=None, jump=None):
 
     for path in COPY:
         write(out, path, show(ref, path, binary=True))
-    for name in ls_src(ref, "map", (".json", ".jpg")):  # v5 R3: the journey map's layout and painted sheets
+    for name in ls_src(ref, "map", (".json", ".jpg", ".webp")):  # v5 R3: the journey map's layout and painted sheets (lands: WebP)
         write(out, "map/" + name, show(ref, "map/" + name, binary=True))
     for name in ls_src(ref, "art", (".jpg",)):  # v5.3: the home's painting (index.html's <picture>; ?v= stripped above)
         write(out, "art/" + name, show(ref, "art/" + name, binary=True))
