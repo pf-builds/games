@@ -1,6 +1,6 @@
 # Campaign Challenge Mode (v6 lane A): the difficulty curve for levels 1-200
 
-Status: PROPOSED 2026-10-06; Peter's three calls answered (below); curve OK pending.
+Status: APPROVED by Peter 2026-10-06 (with the archer gradient). Re-deal starts after the pin rule lands.
 
 ## Why (playtesters, via Peter, 2026-10-06)
 - Removing the killing archer towers removed the only real challenge; 1-200 now feel very easy.
