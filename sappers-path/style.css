@@ -458,6 +458,14 @@ body.wide .sheet:not(.float) .sheetcard { border-radius: 10px 10px 12px 12px; }
   #rail { margin-bottom: 3px; } #powers { border-width: 2px; border-radius: 10px; margin-bottom: max(4px, env(safe-area-inset-bottom)); } #pw-coins { --pill-h: 28px; --pill-fs: 18px; --ico: 16px; }
   #rail { margin: 3px 0 max(4px, env(safe-area-inset-bottom)); border-width: 2px; border-radius: 10px; } #frame { padding: 4px; }
   #line-head { font-size: 14px; } #lvl-name { font-size: 17px; } #tag-chip { font-size: 12px; } }
+/* Land 1: body.tight (main.js fitBoard): a portrait phone above the short rules (375x667) whose board would still fall
+   under layout.minCellCss with two queue rows takes the same compact play chrome, so a 46-row picture keeps 8 px cells. */
+body.tight:not(.wide) #top { height: 38px; } body.tight:not(.wide) #top button.round { width: 36px; height: 36px; min-height: 36px; } body.tight:not(.wide) #lvl-num { font-size: 18px; }
+body.tight:not(.wide) { --tile-h: 38px; --tile-n: 28px; --tile-gap: 4px; --gl-s: 11px; --slot-h: 36px; --slot-n: 26px; --man: 13px; --ch-s: 10px; --bd: 12px; --lk-s: 11px; --out-n: 11px; --coach-h: 40px; --coach-fs: 19px; --tray-pad: 4px; }
+body.tight.rows2:not(.wide) { --pw-h: 46px; --pw-d: 44px; --pw-b: 18px; --pw-bfs: 15px; }
+body.tight:not(.wide) #powers { border-width: 2px; border-radius: 10px; margin-bottom: max(4px, env(safe-area-inset-bottom)); } body.tight:not(.wide) #pw-coins { --pill-h: 28px; --pill-fs: 18px; --ico: 16px; }
+body.tight:not(.wide) #rail { margin: 3px 0 max(4px, env(safe-area-inset-bottom)); border-width: 2px; border-radius: 10px; } body.tight:not(.wide) #frame { padding: 4px; }
+body.tight:not(.wide) #line-head { font-size: 14px; } body.tight:not(.wide) #lvl-name { font-size: 17px; } body.tight:not(.wide) #tag-chip { font-size: 12px; }
 @media (prefers-reduced-motion: reduce) { #hand svg, .coach-on, .slot.last, .slot.work .men, #line-wrap.full.danger #line, #p-ribbon, #p-stats .st.coin.go .burst i { animation: none; } }
 @media (prefers-reduced-motion: reduce) { #p-crown { animation: none; } #p-crown .rays { display: none; } }
 

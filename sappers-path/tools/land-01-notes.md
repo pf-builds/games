@@ -238,7 +238,15 @@ history (`git show 35dcf90~1:sappers-path/map/sheet-25.jpg`); `retouch-25.py ORI
   answers 0 wrong, real pace 322/322 identical (`diff-result.json` committed with the new counts).
 - `SP.selfTest()` under `?debug=1` (`tools/selftest-lands.mjs`): 893 passed at 375x812@3x, 895 at 1280x720, 0 failed,
   0 console messages.
-- `tools/harness.mjs` (last): __HARNESS__
+- `tools/harness.mjs` (last): all passed, 0 console messages (4:46). Its first run failed one check: at 375x667 the
+  side quest Suido Bridge (31x45, 10 colours) drew 7 CSS px a cell (gate 8). Measured on every board: at 375x667 34 Land
+  1 levels and 5 side quests drew 7-7.5 px, and so did castle level 200 (7.5; the harness only measures levels 1-100 and
+  the Gallery). 360x640 already gets 8 px from the short-phone rules (`@media (max-height: 640px)`), but 375x667 is just
+  above them and keeps the full chrome. Fix (page, `src/main.js fitBoard` + `style.css`): a portrait phone whose board
+  would still fall under `layout.minCellCss` with two queue rows sets `body.tight` and takes the same compact play chrome
+  (top bar 38 px, line, tray, power bar), only on the play screen and only for those boards. Measured after: every board
+  (castle and land) 8 px or more at 375x667, 360x640, 375x812, 414x736 and 360x740; selfTest 893/0 at 360x640@3x too.
+  Screens: `shots-land-01/phone667-206-mid.png`.
 - Shots (`tools/shots-land-01/`, gitignored; `tools/shots-land-01.mjs` remakes them, 0 console messages): phone (375x812
   @3x) and desktop (1280x720) each: `map-201`, `map-join-200-201`, `map-225-quest` (side quest 66 open with its ladder),
   `map-eggs-before` / `-after` (sheet 26's kitten and yarn), `201-start`, `206-mid` (Hard: mystery blocks, ? cards,
@@ -254,6 +262,8 @@ history (`git show 35dcf90~1:sappers-path/map/sheet-25.jpg`); `retouch-25.py ORI
 3. 16 picture slots reordered (same 50 pictures); the few-colour ones are the Easy breathers.
 4. Mystery-block gap rule and narrowing below the ceiling: two small bake changes, default for every later land.
 5. Real-pace median 243 s, not 225: the locked levels play long. Within the gate.
+5b. The compact play chrome at 375x667 for boards that would fall under 8 px (§8): a small page change, so the land's
+   46-row pictures (and castle level 200) keep the 8 px cell the harness requires.
 6. Eggs drawn (kitten, yarn, butterfly), not the fallback kinds.
 7. Sheet 25: 2D retouch of rows 0-340, and its route above 200 moved onto the painted road (layout data only).
 8. AI pictures' `url` holds a source line (the licence gate needs one; LICENSES.md's wording for our own pictures).

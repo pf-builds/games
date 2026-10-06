@@ -326,5 +326,9 @@ Wandering Gallery). Inputs: `game-research/sappers-path-v4/lands/01-kitten-fores
 | K4 | Full bake 201-250 + 12 side quests, fix-ups, check PASS | done: 1 full run + 6 fix-up runs (16 pictures reordered); 0 fallbacks; median pace 243 s; check PASS | (scratch; installed in K6) |
 | K5 | Sheet 25 retouch (top band); sheet 25's route above 200 on the painted road | done | 35dcf90, 9521c22 |
 | K6 | Install; cache tag `?v=44` | done: test.js 616/0, freeze PASS (1-200 frozen; 201-250 not yet), regrades 0 of 1,455 and 0 of 432 | (this commit) |
-| K7 | Checks: test.js, freeze, regrades, critic-v5, selfTest x2, harness last | | |
-| K8 | Shots, notes, playtest bundle + smoke | | |
+| K7 | Checks: test.js, freeze, regrades, critic-v5, selfTest x2, harness last | done: 616/0; PASS; 0 of 1,455 and 0 of 432; 0 of 10,758 games; 893/895 (and 893 at 360x640) 0 failed; harness all passed after the 375x667 compact-chrome fix; 0 console | (this commit) |
+| K8 | Shots, notes, playtest bundle + smoke | done: shots `tools/shots-land-01/`; notes `tools/land-01-notes.md`; bundle in the session scratchpad (`sp-bundle-land1`), smoke OK | (this commit) |
+
+### State (Land 1)
+Built, installed and checked on the branch; not pushed. Next: the functional and visual critics on 201-250 (notes §9 lists
+what to look at), one fix pass, then `freeze.js --snapshot` so 201-250 and pictures 61-72 join the frozen set.

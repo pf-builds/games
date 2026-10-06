@@ -1539,6 +1539,7 @@
     // rows, with the compact bar). Two rows also take a smaller gap round the frame (stageGapPx[2]).
     // Critics 2 fix (V1): a coached level tries, in order, three rows with the coach's band above the board, two rows with
     // the band, then the top bar (three rows again when the board keeps minCellCss with them); every try keeps minCellCss.
+    BD.classList.remove("tight"); // Land 1: measured with the full chrome first (below)
     let mode = app.coached && app.screen === "play" ? (app.wide ? "side" : "above") : "";
     const res = coachH() + 6, room = () => [st.clientWidth - G[0], st.clientHeight - (app.rows < L.queueRows ? G[2] : G[1])];
     const cellAt = (cut) => { const [a, b] = room(); return app.V.fitCs(a, b - cut, dpr); }, rowsTo = (k) => { if (app.rows !== k) { setRows(k); renderTray(); } };
@@ -1547,6 +1548,9 @@
       if (mode === "above" && !(three && cellAt(res) >= L.minCellCss)) { rowsTo(L.queueRowsShort); if (cellAt(res) < L.minCellCss) { mode = "top"; if (three) rowsTo(L.queueRows); } }
       else if (!three) rowsTo(L.queueRowsShort);
     } else if (mode === "above" && cellAt(res) < L.minCellCss) mode = "top";
+    // Land 1: a portrait phone too tall for the short rules (375x667) whose board still falls under minCellCss with two
+    // rows (the lands' 46-row pictures) takes the short phone's compact chrome (style.css body.tight), as 360x640 does.
+    if (!app.wide && app.screen === "play" && cellAt(mode === "above" ? res : 0) < L.minCellCss) { BD.classList.add("tight"); if (mode === "above" && cellAt(res) < L.minCellCss) mode = "top"; }
     const [w, h0] = room();
     app.coachMode = mode; BD.classList.toggle("coached", !!mode); BD.classList.toggle("coach-above", mode === "above"); BD.classList.toggle("coach-top", mode === "top");
     const h = h0 - (mode === "above" ? res : 0);
