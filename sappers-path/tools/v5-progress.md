@@ -354,3 +354,26 @@ game at `/sappers-path/`). 201-250 are NOT added to the frozen set (the orchestr
 ### State (Land 1 fixes)
 Casual Land 1 installed and checked on the branch; not pushed; 201-250 not frozen (the orchestrator decides). The harder
 profile and its tooling are documented for the campaign rebalance (notes §10.2, §10.6).
+
+# Campaign v6 lane A (Campaign Challenge Mode), 2026-10-06
+
+Worktree `repos/games-sappers-campaign/` (branch `campaign-v6`), game in `sappers-path/`. Never push. Lane B works in
+`repos/games-sappers-path/` in parallel: keep page edits small. Curve: `tools/campaign-v6-curve.md`; rules: SPEC-v4 §9
+"Campaign v6 stage 1"; notes: `tools/campaign-v6-notes.md`.
+
+## How to resume
+
+1. Read this table, then the notes' newest section and the SPEC entry.
+2. Dev server: `nohup python3 /Users/peter/Documents/Claude/.claude/serve.py 8496 /Users/peter/Documents/Claude/business/D-click-it-studios/repos/games-sappers-campaign/sappers-path > /dev/null 2>&1 &` (game at the root).
+3. Checks: `node tools/test.js`; `node tools/freeze.js --require`; `node tools/regrade.js` and `--gallery`;
+   `zsh tools/critic-v5/run.sh`; `node tools/debug-v4.js --check`; with `PLAYWRIGHT_MODULE=$(npm root -g)/playwright/index.mjs`:
+   `node tools/selftest-lands.mjs --url http://127.0.0.1:8496/`, `node tools/shots-campaign-v6.mjs`, `node tools/harness.mjs --url http://127.0.0.1:8496/`.
+
+| # | Piece | State | Commit |
+|---|---|---|---|
+| A1 | Stage 1 engine + ref: `kill: true` (short fail), `locks: [a, b]` | done: test.js 647/0 | 60fe16c |
+| A2 | Stage 1 tooling: dealer, bake, tags, careful games by range (32 for 150-200), critic-v5 | done: freeze PASS; regrades 0/1,605, 0/432; critic 0 of 10,824 | a563ee2 |
+| A3 | Stage 1 debug levels v6-kill, v6-locks | done: `--check` matches | eb721b0 |
+| A4 | Stage 1 page: kill toast + doomed runner, short sheet (Retry only), a socket per lock, `?v=46` | done: selfTest 911/0, 913/0; real taps 14/14; 0 console | 73f8c32 |
+| A5 | Stage 1 docs: SPEC §9 entry, notes §1, this table | done | (this commit) |
+| A6 | Stage 2: re-deal 1-200 on the curve (after Peter OKs it) | todo: see notes §1.4 | |
