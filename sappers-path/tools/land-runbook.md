@@ -34,14 +34,17 @@ tools/lands/_gallery/             the Wandering Gallery, shared by every land
 
 - `k` is the land's number (Land 1 = levels 201-250, era 9, ids `e9-201`...). Levels always start right after the game's
   last level; sheets after its last sheet; side-quest pictures after its last picture.
-- `features`: the deck features its levels may use (`linked`, `mystery`, `hidden`, `lock`). A later board feature (moat
-  rings from 251, the Extreme-only hazard from 351) is added as one builder in `tools/land-bake.js` `FEATURES` plus its
-  share in the profile; until then the plan refuses an unknown name.
+- `features`: the features its levels may use: deck features `linked`, `mystery`, `hidden`, `lock`, and board feature
+  `moat` (organic moats, from Land 2: a ring of water round each picture's subject with 1 or 2 ways in;
+  `tools/feature-moats-notes.md`). Add `"moat"` to turn moats on; Land 1 leaves it out. A later board feature (the
+  Extreme-only hazard from 351) is added as one builder in `tools/land-bake.js` `FEATURES` plus its share in the
+  profile; until then the plan refuses an unknown name.
 - `profile`: merged over `tools/land-config.json` `profile` (so only what changes goes here). Raise it land by land:
   more `?` cards, more hidden blocks, more links, more Hard and Extreme, lower bands. Keys: `tags` (shares, breathers per
   50, run [shortest, longest], end), `features` (per feature: share and its amount: `mystery.cards`, `hidden.of`,
-  `linked.pairs`, `lock.key`), `bands` (Normal random-tap win rate per tag), `lookahead` (ceiling per tag), `pace` (range,
-  aim in ms).
+  `linked.pairs`, `lock.key`; `moat`: `share`, `ways` [lo, hi], the opening sets the tags pick from, 0 front+far,
+  1 left+right, 2 front, 3 far, and `liquids`, the water colours tried in turn, default `[null, "mire"]`), `bands`
+  (Normal random-tap win rate per tag), `lookahead` (ceiling per tag), `pace` (range, aim in ms).
 - `eggs`: kinds from `src/journey.js` EGGS (2 per sheet, used in turn).
 - `shade`: true to shade within a colour (`tools/shade.js`); good for paintings and soft AI art.
 - `map.templates`: 2 layout-shaped entries, one per sheet: `{road, entry, exit, levels: [{x, y}] (8 spots in road order),
@@ -69,7 +72,7 @@ Options: `--game DIR` (another game copy, for trials), `--gallery DIR`, `--threa
 | prep | `../src/*.png`, `_gallery/src/*.png` | `tools/land-src.py`: paintings 160 px long side, ours 256, emoji as they are |
 | convert | `boards.json` | the max phone board (42 x 46 with the frame, 40 x 43 picture with 8+ colours, landscape capped by width), a painting's chroma stepped up to 5 colours, then the shade step |
 | sheet | `contact.png` | source / flat / shaded per picture, with size, colours and shades: the visual critic's pick sheet |
-| bake | `bake/m-<n>.json`, `bake/s-<n>.json`, `state.json` (tags, plan) | worker threads; about 1-3 min a level wall clock on 16 threads, Hard and Extreme longest |
+| bake | `bake/m-<n>.json`, `bake/s-<n>.json`, `state.json` (tags, plan; with moats, `moat`: which pictures can carry a ring and why not) | worker threads; about 1-3 min a level wall clock on 16 threads, Hard and Extreme longest |
 | map | `map.json` | entries A, B, A', B', A, B, A' (7 for 50 levels: 8 spots a sheet), side quests on template spots (else made spots), egg coins |
 | assemble | `out/levels.json`, `out/gallery.json`, `out/land.json`, `out/licences.md` | the records exactly as they will ship |
 | check | `report.md` | every gate below; a per-level table and the shares the land reached |
@@ -81,8 +84,9 @@ no power-up; at most 5 spaces in use; longest tap 15 s or less; 55 taps or fewer
 quests 120-300 s) and the land's median in 200-250 s; no fallback picks; the profile (tags, density floor, features per
 level rising with the tag, Hard/Extreme runs, the end); shade colours on their floors (14 from other squads, 12 from
 faded cards); side quests every 3-5 levels, all slots filled, plain boards; a re-grade with the grader's own counts at 0
-differences; a spot for every level and side quest, sheets alternating file and mirror, nodes 48 CSS px apart at 375 px;
-a licence and source for every picture.
+differences; with moats, water and path only off each picture's subject, every block reachable from the frame once dug
+and 1 or 2 ways in (and no water in a land without moats); a spot for every level and side quest, sheets alternating
+file and mirror, nodes 48 CSS px apart at 375 px; a licence and source for every picture.
 
 A failing level: `bake --only N-N --extra 6` first; if a picture can't meet the pace (small landscape boards play short),
 swap it or crop it taller (a crop is a new picture) in `pictures/manifest.json`, then `convert --force` and re-bake it.
@@ -103,6 +107,10 @@ adds the land to `config.json` `lands.list` and a row per new sheet to `map.eggC
 
 ## 5. Things to know
 
+- Moats (a land listing `moat`): a picture carries a ring when it has one subject on a plain backdrop with a few cells
+  of room round it, touching at most two edges, and no colour close to the water (else the next liquid). One that
+  can't is baked without one (`cant` on the level; the bake prints why). Put ring-carrying pictures on the land's
+  Extreme spots. About three in four Kitten Forest-style AI pictures carry one; paintings far fewer.
 - Only one land touches `levels/`, `config.json` and `map/layout.json` at a time. The next land's prep, convert, sheet and
   map can run while this one bakes.
 - Pace follows board area. A 42 x 28 landscape board plays about 120-200 s even with small squads; a portrait or square

@@ -345,9 +345,16 @@ Fixed: S1-S7, m2, m3, N1, N2 (`tools/v5-r4-notes.md` §10). Parked:
 - Shorter codes if players type them by hand: best times in tenths of a second, or a "progress only" code without best rows (~60% shorter).
 
 ## Lands foundation (2026-10-06)
-- The later feature drops (decided schedule, Peter): organic moat rings round a picture's subject with 1-2 openings from level 251; an Extreme-only hazard from 351 where a sapper sent at a covered block is lost (the level lost if a colour can no longer finish; the stored order never triggers it). Each is a builder in `tools/land-bake.js FEATURES`, its share in the land profile, its engine rule and its critic-v5 model.
+- The later feature drops (decided schedule, Peter): organic moat rings (built 2026-10-06, `tools/feature-moats-notes.md`); an Extreme-only hazard from 351 where a sapper sent at a covered block is lost (the level lost if a colour can no longer finish; the stored order never triggers it). Each is a builder in `tools/land-bake.js FEATURES`, its share in the land profile, its engine rule and its critic-v5 model.
 - `tools/map-gen/assemble.py --land`: assemble a land's 2 sheets as WebP with no baked crossfade and write the 2 layout templates (`map/templates.json`) the factory reads; today a land's map stage has to write them by hand or copy the castle's (`fromLayout`).
 - Fix-up bakes of one level use one thread (the candidates run in turn in one worker): shard a level's candidates across workers for `--list`/`--only` runs.
 - A portrait-crop helper for wide pictures (pace follows board area: a 42 x 28 board plays 120-200 s), proposing a 4:5 crop round the subject for the picture stage.
 - The Gallery tile and the map's won-picture thumbnails (`main.js thumb`) could draw shaded pictures in their shades too.
 - The land's own banner art on its first sheet (today the realm banner style serves every land).
+
+## Feature: organic moats (2026-10-06)
+- A joined-channel draw for water (no seam between neighbouring water studs, rounded only on the outer corners) would make a ring read as one curved channel. It would change every castle moat too, so it wants Peter's eye first.
+- The ring's first moat level could be the land's first level (a `lead` flag on a profile feature), so a land's twist shows at once; today the moat goes to Extreme, Hard, then Normal levels by share.
+- A teaching coach line for the first ring ("Dig through a gap in the water"), if playtesters miss the ways in.
+- `map-gen`/picture stage: score each candidate picture for moats (`tools/moat.js subjectOf`, `ringOf`) on the contact sheet, so the pick can favour pictures that carry a ring for a moat land's Extreme spots.
+- A seeded `gap` per level (1.5 or 2.5) for variety in how far the ring stands off the subject.

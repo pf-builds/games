@@ -273,3 +273,28 @@ Gallery). Notes: `tools/lands-foundation-notes.md`. Runbook for the factory loop
 Foundation built and checked; the live game is unchanged until a land is installed (except the play screen's gear).
 Next: the factory loop builds Land 1 (`tools/land-runbook.md`); its profile, map templates and the Wandering Gallery
 list are its first decisions (`tools/lands-foundation-notes.md` §10).
+
+# Feature: organic moats (2026-10-06)
+
+Source: the orchestrator's feature brief of 2026-10-06 (Peter's call: "dynamic moats like earlier levels, but ... around
+an image organically with 1 or 2 openings"; first used by Land 2, 251-300). Notes: `tools/feature-moats-notes.md`.
+Demo land "Moat Test" (never shipped) on a scratch game copy; shots in `tools/shots-moats/` (gitignored; remade by
+`tools/shots-moats.mjs`). Dev server 8494 for the branch (serves the worktree), 8496 for the demo copy.
+
+## How to resume (organic moats)
+
+1. Read this table, then `tools/feature-moats-notes.md`; `git log --oneline` ("Sapper's Path feature: organic moats: ...").
+2. Take the first row not `done`. Frozen: levels 1-200 and pictures 1-60 (`freeze.js --require`). No land is installed
+   on the branch, so the live game must not change.
+
+| # | Piece | State | Commit |
+|---|---|---|---|
+| M1 | Ring builder `tools/moat.js` (subject, path, ring, edge ways, cuts, pockets, water colour) | done | e1b9163 |
+| M2 | Plan and density: `moat` a board feature (`tags.js BOARD`, `cant`), amount = opening set; profile + `plan.moat` numbers | done | e1b9163 |
+| M3 | Bake: `FEATURES.moat`, the opening-set ladder, the pick prefers the planned set; key on a mystery block fixed | done | e1b9163 |
+| M3b | The path only behind a cut, kept 3 cells off edge ways (`edgeKeep`): a full path let one edge block open the whole outline (Stacks of Wheat Extreme 11.5% vs 0-6%); report shows a stepped-down set | done | (path commit) |
+| M4 | Factory: `land.js` asks each picture first, shades zeroed on changed cells, the moat gate, the report column | done | e1b9163 |
+| M5 | Tests: ring off the subject with a bank, path shut, reach, openings, edge, colour, plan/density, fixture bake | done | e1b9163 |
+| M6 | Demo land (8 test paintings, moats on) to a passing check, installed on a copy, copy checks, shots + contact sheet | done: every gate PASS on the first fresh bake (6 ringed, 2 can't; median 216 s); copy: test.js 616/0, regrades 0/0, freeze PASS, critic-v5 0 of 9,042, selfTest 799/801 0 failed, 0 console | (docs commit) |
+| M7 | Notes, SPEC-v4 §9, runbook (how a land turns moats on), LATER | done | (docs commit) |
+| M8 | Branch checks: test.js, freeze, regrades, critic-v5, selfTest x2, harness last | BRANCH_STATE | |
