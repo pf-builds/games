@@ -58,6 +58,12 @@
 // stands to the face of its pixel, and carries its block back the same way into that crate. (v4 M4's ring entry is
 // retired.) v4.1 fix (the visual critic's m1): the entry square is a timber gate, a lintel across its cells and a post at
 // each end (board.pic.entry timber), with a dirt path (entry.path, pathRows of the yard) from it down to the crates.
+// Lands foundation, shading within a colour (SPEC-v4 §9; game-research/sappers-path-v4/pd-art-test/shading): a level may
+// carry shade rows (setLevel's shade: a digit per cell, 0 its colour, 1 lighter, 2 darker, 3 and 4 a second step) and
+// its palette sh lists ([lighter, darker, lighter2, darker2] hex, null where none). Then a block's tone is its shade
+// digit and S.tb[m] holds the base and each shade's stud (same seam, highlight, foot and colour-blind mark as the base);
+// pops fall in the cell's shade. Every other sprite (cards, bins, crumbs, helmets, mystery blocks) keeps the base colour,
+// and the engine never reads shade. A level without shade rows draws exactly as before (the lit/shade tones, off).
 (function (root, factory) {
   (root.SappersPath = root.SappersPath || {}).board = factory(root.SappersPath.engine);
 })(window, function (E) {
@@ -135,7 +141,7 @@
     const C = cfg.v3, K = cfg.board, SH = cfg.show, FX = cfg.fx, g = canvas.getContext("2d", { alpha: false });
     const V = {
       canvas, g, cfg, B: null, S: null, w: 0, h: 0, n: 0, cs: 0, dpr: 1, Y: K.yardRows | 0, calm: false, cb: false, mats: [], nextPile: 0,
-      disp: null, dist: null, q: null, tone: null, deco: null, idleC: [], layer: null, lg: null, sprites: null, piles: [], pileOf: new Int16Array(E.NMAT).fill(-1),
+      disp: null, dist: null, q: null, tone: null, deco: null, shade: null, shPal: [], shK: "", idleC: [], layer: null, lg: null, sprites: null, piles: [], pileOf: new Int16Array(E.NMAT).fill(-1),
       haul: new Int32Array(E.NMAT), total: new Int32Array(E.NMAT), towerLeft: new Int32Array(MAXT), towerOfCell: null,
       clock: 0, speed: 1, fxT: 0, rebuilds: 0, lastPop: -1, pileDirty: true, font: "", seed: 12345,
       // show: runners (a pool of show.maxRunners) keyed by the engine's sapper ids
@@ -178,8 +184,8 @@
     // K.stud.seamCss CSS px wide between neighbours (half from each block), a soft highlight along the face's top and a
     // faint foot. No mark inside, except in colour-blind mode (V.cb), and always on the iron gate (bars) and gilt keys.
     // seamPx: the seam in device px (mini blocks pass 1).
-    function block(m, s, k, seamPx) {
-      const c = mk(s, s), x = c.getContext("2d"), base = k ? toneHex(V.pal[m], k) : V.pal[m], dark = lum(V.pal[m]) < 0.3, T = K.stud;
+    function block(m, s, k, seamPx, over) { // over (lands foundation): a shade's own colour for the face
+      const c = mk(s, s), x = c.getContext("2d"), base = over || (k ? toneHex(V.pal[m], k) : V.pal[m]), dark = lum(V.pal[m]) < 0.3, T = K.stud;
       const sw = Math.min(s >> 2, seamPx || Math.max(1, Math.round(V.dpr * T.seamCss))), a = sw >> 1, f = s - sw, r = Math.max(0.5, f * T.radius);
       x.fillStyle = toneHex(base, T.seam); x.fillRect(0, 0, s, s);
       rr(x, a, a, f, f, r); x.fillStyle = base; x.fill();
@@ -242,7 +248,7 @@
     function buildSprites() {
       const s = V.cs, ss = Math.max(6, Math.round(s * K.sapper.scale)), mb = Math.max(3, Math.round(s * K.sapper.carry)), as = Math.max(8, Math.round(s * K.archer.scale)), ls = Math.max(8, Math.round(s * K.lockScale));
       const S = { blk: [], tb: [], mini: [], sap: [], gnd: [], lock: [], ss, mb, as, ls, arch: null };
-      for (let m = 1; m < E.NMAT; m++) { S.blk[m] = block(m, s); S.tb[m] = K.tones.map((k) => (k ? block(m, s, k) : S.blk[m])); S.mini[m] = block(m, mb, 0, 1); S.sap[m] = sapper(m, ss); }
+      for (let m = 1; m < E.NMAT; m++) { S.blk[m] = block(m, s); S.tb[m] = V.shPal[m] ? [S.blk[m]].concat(V.shPal[m].map((h) => (h ? block(m, s, 0, 0, h) : S.blk[m]))) : K.tones.map((k) => (k ? block(m, s, k) : S.blk[m])); S.mini[m] = block(m, mb, 0, 1); S.sap[m] = sapper(m, ss); }
       S.blk[0] = mysStud(s); // v5 R1: a hidden block (and its pop): no colour of its own
       for (let t = 0; t < 4; t++) for (let v = 0; v < 2; v++) S.gnd[t * 2 + v] = ground(t, v, s);
       S.water = waterStud(s); S.entry = [0, 1, 2, 3].map((k) => entry(s, k));
@@ -271,7 +277,10 @@
     // pal (v4 M4, optional): the level's own colours, {id: {c}}; other ids keep config's. A new palette drops the sprite
     // caches (the page's layout() rebuilds them before the next draw).
     // v5 R4: liquid (optional), the level's moat drawn as another liquid (config board.pic.liquids, e.g. lava).
-    function setLevel(B, S, pal, liquid) {
+    function setLevel(B, S, pal, liquid, shade) {
+      // Lands foundation: the shade rows (null: none) and each colour's shade studs; a change of shade colours drops the sprites.
+      let shK = ""; V.shade = shade || null; if (pal) for (const k in pal) if (pal[k] && pal[k].sh) shK += k + ":" + pal[k].sh.join() + ";";
+      if (shK !== V.shK) { V.shK = shK; V.shPal = []; if (shK) for (const k in pal) if (pal[k] && pal[k].sh) V.shPal[+k] = pal[k].sh; V.sprites = null; }
       V.B = B; V.S = S; V.w = B.w; V.h = B.h; V.n = B.n; V.pic = !!B.pic;
       const lq = (liquid && K.pic.liquids && K.pic.liquids[liquid]) || null, P = C.mats.map((m, k) => (pal && pal[k] ? pal[k].c : m ? m.c : FX.dustColor)), key = P.join() + (lq ? "|" + liquid : "");
       if (key !== V.palKey) { V.pal = P; V.palKey = key; V.liquid = lq; for (let m = 1; m < E.NMAT; m++) if (m !== IRON) COL[m] = P[m]; V.sprites = null; }
@@ -309,6 +318,7 @@
     // right edge), 3 alt (the running bond inside a mass), 0 base.
     function tones(B) {
       const a = B.a0, nb = B.nb, w = B.w;
+      if (V.shade) { for (let c = 0; c < B.n; c++) { const r = V.shade[(c / w) | 0]; V.tone[c] = a[c] > 0 && r ? +r.charAt(c % w) || 0 : 0; } return; } // lands foundation: the level's shade digits
       for (let c = 0; c < B.n; c++) {
         const v = a[c]; if (v <= 0) { V.tone[c] = 0; continue; }
         const same = (k) => { const e = nb[c * 4 + k]; return e >= 0 && a[e] === v; }, x = c % w, y = (c / w) | 0;
@@ -774,7 +784,7 @@
       // A delayed pop (the gate's bars crumbling in turn) holds the block in place until its turn.
       for (let k = 0; k < POPS; k++) {
         const kind = V.popK[k], dur = kind ? FX.fallMs : SH.popMs, a = (ft - V.popT[k]) / dur; if (a >= 1 || a < -20) continue;
-        const c = V.popC[k], bx = c % V.w, by = (c / V.w) | 0, x = (CX(bx, by) + 0.5) * cs, y = (CY(bx, by) + 0.5) * cs, img = S.blk[V.popM[k]];
+        const c = V.popC[k], bx = c % V.w, by = (c / V.w) | 0, x = (CX(bx, by) + 0.5) * cs, y = (CY(bx, by) + 0.5) * cs, img = V.shade ? S.tb[V.popM[k]][V.tone[c]] || S.blk[V.popM[k]] : S.blk[V.popM[k]]; // lands foundation: a pop in its shade
         if (a < 0) { gx.drawImage(img, x - cs / 2, y - cs / 2); continue; }
         if (!kind) { const sc = 1 + SH.popSwell * a, sz = cs * sc; gx.globalAlpha = 1 - a; gx.drawImage(img, x - sz / 2, y - sz / 2 - a * cs * 0.6, sz, sz); continue; }
         gx.save(); gx.globalAlpha = 1 - a * a; gx.translate(x, y + a * a * cs * FX.fallCells); gx.rotate(((c & 1) ? 1 : -1) * a * FX.fallTurn); const sz = cs * (1 - 0.25 * a); gx.drawImage(img, -sz / 2, -sz / 2, sz, sz); gx.restore();

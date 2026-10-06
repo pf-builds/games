@@ -15,8 +15,8 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://pf-builds.github.io/games/sappers-path/thumb.jpg">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%232e2935'/><rect x='14' y='14' width='22' height='22' rx='5' fill='%23ff8c1a'/><rect x='39' y='14' width='22' height='22' rx='5' fill='%23e6262e'/><rect x='64' y='14' width='22' height='22' rx='5' fill='%23ffe21f'/><rect x='14' y='39' width='22' height='22' rx='5' fill='%232f62ff'/><rect x='64' y='39' width='22' height='22' rx='5' fill='%239ee52a'/><rect x='14' y='64' width='22' height='22' rx='5' fill='%238f45ff'/><rect x='39' y='64' width='22' height='22' rx='5' fill='%230fb5a6'/><rect x='64' y='64' width='22' height='22' rx='5' fill='%23ff3fa4'/></svg>">
-<link rel="preload" href="fonts/Jersey10-Regular.ttf?v=41" as="font" type="font/ttf" crossorigin>
-<link rel="stylesheet" href="style.css?v=41">
+<link rel="preload" href="fonts/Jersey10-Regular.ttf?v=42" as="font" type="font/ttf" crossorigin>
+<link rel="stylesheet" href="style.css?v=42">
 </head>
 <body>
 <div id="app">
@@ -33,7 +33,7 @@
         <div id="lvl"><span id="lvl-num"></span><span class="lvl-txt"><span id="lvl-name"></span><span id="tag-chip" class="tag" hidden></span></span></div>
         <button id="btn-retry" class="round" aria-label="Retry"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M5 12a7 7 0 1 0 2.1-5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M4 3.5v5h5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <button class="round tog tog-speed" aria-label="Speed 1x">1&times;</button>
-        <button class="round tog tog-mute" aria-label="Mute sound" aria-pressed="false"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="waves" d="M16 9a4 4 0 0 1 0 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="waves w2" d="M18.5 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="cross" d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+        <button id="btn-pset" class="round" aria-label="Settings"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M10.3 2h3.4l.5 2.6 1.7.8 2.3-1.4 2.4 2.4-1.4 2.3.8 1.7 2.6.5v3.4l-2.6.5-.8 1.7 1.4 2.3-2.4 2.4-2.3-1.4-1.7.8-.5 2.6h-3.4l-.5-2.6-1.7-.8-2.3 1.4-2.4-2.4 1.4-2.3-.8-1.7L2 13.7v-3.4l2.6-.5.8-1.7L4 5.8l2.4-2.4 2.3 1.4 1.7-.8z" fill="currentColor"/><circle cx="12" cy="12" r="3.6" fill="var(--stone)" stroke="var(--ink)" stroke-width="1.6"/></svg></button>
       </header>
       <div id="rail">
         <div id="coach-dock" aria-hidden="true"></div>
@@ -62,7 +62,7 @@
     <span class="pz-set"><button class="round tog tog-cb" aria-pressed="false" aria-label="Colour-blind marks"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2" fill="currentColor"/><rect x="13" y="3" width="8" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="3" y="13" width="8" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13" y="13" width="8" height="8" rx="2" fill="currentColor"/><path d="M5 9l4-4M15 19l4-4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg></button><button class="round tog tog-mute" aria-label="Mute sound" aria-pressed="false"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="waves" d="M16 9a4 4 0 0 1 0 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="waves w2" d="M18.5 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="cross" d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></span></div>
   <section id="title" class="screen home">
     <!-- v5.3: the painted siege (art/, tools/home-art.py): the tall crop on an upright screen, the whole painting otherwise; main.js fitTitle centres the castle -->
-    <picture id="title-art" aria-hidden="true"><source media="(orientation: portrait)" srcset="art/home-tall.jpg?v=41" width="1080" height="1920"><img src="art/home-wide.jpg?v=41" alt="" width="1920" height="1097" fetchpriority="high"></picture>
+    <picture id="title-art" aria-hidden="true"><source media="(orientation: portrait)" srcset="art/home-tall.jpg?v=42" width="1080" height="1920"><img src="art/home-wide.jpg?v=42" alt="" width="1920" height="1097" fetchpriority="high"></picture>
     <div class="home-card">
       <div class="home-top">
         <button id="btn-settings" class="round" aria-label="Settings"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M10.3 2h3.4l.5 2.6 1.7.8 2.3-1.4 2.4 2.4-1.4 2.3.8 1.7 2.6.5v3.4l-2.6.5-.8 1.7 1.4 2.3-2.4 2.4-2.3-1.4-1.7.8-.5 2.6h-3.4l-.5-2.6-1.7-.8-2.3 1.4-2.4-2.4 1.4-2.3-.8-1.7L2 13.7v-3.4l2.6-.5.8-1.7L4 5.8l2.4-2.4 2.3 1.4 1.7-.8z" fill="currentColor"/><circle cx="12" cy="12" r="3.6" fill="var(--stone)" stroke="var(--ink)" stroke-width="1.6"/></svg></button>
@@ -155,13 +155,13 @@
     </div>
   </section>
 </div>
-<script src="src/engine.js?v=41"></script>
-<script src="src/save.js?v=41"></script>
-<script src="src/journey.js?v=41"></script>
-<script src="src/meta.js?v=41"></script>
-<script src="src/art.js?v=41"></script>
-<script src="src/audio.js?v=41"></script>
-<script src="src/board.js?v=41"></script>
-<script src="src/main.js?v=41"></script>
+<script src="src/engine.js?v=42"></script>
+<script src="src/save.js?v=42"></script>
+<script src="src/journey.js?v=42"></script>
+<script src="src/meta.js?v=42"></script>
+<script src="src/art.js?v=42"></script>
+<script src="src/audio.js?v=42"></script>
+<script src="src/board.js?v=42"></script>
+<script src="src/main.js?v=42"></script>
 </body>
 </html>

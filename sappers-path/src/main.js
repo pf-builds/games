@@ -134,7 +134,7 @@
     // on app.clock, the win's report, a power-up waiting for its target (pick: {k}), the bar's badges, the icons' URLs.
     lay: null, jr: null, // v5 R3: map/layout.json and the journey map's built parts
     meta: null, now: () => Date.now(), rows: 3, t0: 0, report: null, pick: null, pws: [], icoURL: {}, pwPop: [-1e12, -1e12, -1e12, -1e12], lifeTxt: "", countTxt: "", carry: -1,
-    hold: -1, loadR: null, clipFake: null }; // v5.4: the reset hold's start on app.clock (-1: none); a load's decoded code; selfTest's clipboard
+    hold: -1, loadR: null, clipFake: null, held: false }; // lands foundation: held, Settings open over a level // v5.4: the reset hold's start on app.clock (-1: none); a load's decoded code; selfTest's clipboard
   const togMute = Array.from(document.querySelectorAll(".tog-mute")), togMusic = Array.from(document.querySelectorAll(".tog-music")), togSfx = Array.from(document.querySelectorAll(".tog-sfx")), togSpeed = Array.from(document.querySelectorAll(".tog-speed")), togCb = Array.from(document.querySelectorAll(".tog-cb"));
 
   // ---- boot --------------------------------------------------------------------------------------------------------
@@ -146,7 +146,7 @@
     } catch (e) { $("load-msg").textContent = "Couldn't load the siege. Reload to try again."; return; }
     if (DEBUG) { try { indexDebug(await getJSON("levels/debug-v4.json?v=" + V_)); } catch (e) { /* no debug row */ } }
     try { indexGallery(await getJSON("levels/gallery.json?v=" + V_)); } catch (e) { /* no side quests */ }
-    try { app.lay = await getJSON("map/layout.json?v=" + V_); } catch (e) { app.lay = null; /* no journey map: its Play still works */ }
+    try { app.lay = NS.journey.layoutOf(await getJSON("map/layout.json?v=" + V_)); } catch (e) { app.lay = null; /* no journey map: its Play still works */ } // lands foundation: mirrored entries resolved
     if (!app.levels.length) { $("load-msg").textContent = "No levels found."; return; }
     app.meta = app.cfg.meta; app.save = Save.open(storage(), app.cfg.save.key, app.order, app.gal.map((e) => e.id), app.meta); app.mats = app.cfg.v3.mats;
     app.sheets = Art.sources(app.cfg.art); fades();
@@ -491,7 +491,7 @@
     });
     if (shownN !== app.pwN) { app.pwN = shownN; if (app.screen === "play") sizePowers(); }
   }
-  const livePlay = () => app.screen === "play" && app.S && app.S.status === E.PLAYING && !app.panel && !app.paused;
+  const livePlay = () => app.screen === "play" && app.S && app.S.status === E.PLAYING && !app.panel && !app.paused && !app.held; // lands foundation: held under Settings
   function pwToast(key, o, bad) { toast(fill(PWT()[key], o), bad); }
   function pwShake(k) { const b = app.pws[k]; if (b && !app.V.calm && b.animate) b.animate(app.cfg.show.blockedShake.map((x) => ({ transform: "translateX(" + x + "px)" })), { duration: app.cfg.show.blockedShakeMs }); }
   // v5 R1, the tips: one bubble over the badge, saying what the power-up does and when to use it; an unlock's intro adds
@@ -577,7 +577,7 @@
 
   function renderTop() {
     const e = app.entry; if (!e) return;
-    $("lvl-num").textContent = e.debug ? app.cfg.layout.debugNum : e.n; $("lvl-name").textContent = e.gallery ? e.L.title : e.boss ? e.boss.name : e.L.name || (app.eras[e.era - 1] ? app.eras[e.era - 1].name : fill(app.cfg.layout.realmEye, { e: e.era }));
+    $("lvl-num").textContent = e.debug ? app.cfg.layout.debugNum : e.n; $("lvl-name").textContent = e.gallery ? e.L.title : e.boss ? e.boss.name : e.L.name || (app.eras[e.era - 1] ? app.eras[e.era - 1].name : realmEye(e.era, "top"));
     $("btn-map").setAttribute("aria-label", app.cfg.layout.mapName); // v5 R3: side quests live on the map too
     tagChip($("tag-chip"), app.diff); // v4.3: the level's tag (Normal unmarked)
     app.labFit.delete("name"); fitText($("lvl-name"), "name", app.cfg.layout.nameMinPx); // the room beside the number changes with its digits
@@ -612,16 +612,30 @@
   // label, the long tail's node (at the frontier) and the cleared pictures sit there; the Goblin King stands at the summit
   // beside level 200 once it is built, else in the fog as a teaser.
   const JN = NS.journey, svgNS = "http://www.w3.org/2000/svg", pct = (v, t) => (100 * v) / t + "%";
+  // Lands foundation (config lands): the castle realms, then one era per built land ({era, name, note: its lore, land: k}).
+  const landsCfg = () => app.cfg.lands || { castleEnd: 200, castleRealms: 8, list: [], text: {} }, lastN = () => (app.levels.length ? app.levels[app.levels.length - 1].n : 0);
+  function erasOf() { const LC = landsCfg(), base = (app.cfg.eras || []).slice(0, LC.castleRealms); return base.concat((LC.list || []).map((d) => ({ era: LC.castleRealms + d.k, name: d.name, note: d.lore, land: d.k }))); }
+  // A realm's words (kind: eye, the banner's; of, the realm card's; home, the home's line; aria, the banner's label; top,
+  // the top bar's fallback): a castle realm fills its own text ({e}, {t} the castle realms, {name}); a land, lands.text
+  // ({k} its number, {t} the lands built, {name}), so a land says Land where a realm says Realm.
+  function realmEye(era, kind, name) {
+    const LC = landsCfg(), k = era - LC.castleRealms, T = app.cfg.map.text;
+    if (k < 1) return fill({ eye: T.realm, of: T.realmOf, home: app.meta.home.era, aria: T.bannerAria, top: app.cfg.layout.realmEye }[kind], { e: era, t: LC.castleRealms, name });
+    const LT = LC.text || {}; return fill({ eye: LT.eye, of: LT.of, home: LT.home, aria: LT.bannerAria, top: LT.eye }[kind] || LT.eye, { k, t: (LC.list || []).length, name });
+  }
+  // A picture's side-quest level as the map reads it: a land's own as stored; the castle Gallery's long tail (past
+  // castleEnd) moved past the last built land (journey.js tailAfter); 0: no quest.
+  const questAt = (e) => (e.L.quest ? (e.L.land ? e.L.quest.after : JN.tailAfter(e.L.quest.after, landsCfg().castleEnd, lastN())) : 0);
   // v5 R2: the pictures are side quests (config gallery.quests, tools/quests.js): each opens once its quest's main level
   // is cleared (save.js questOpen; past the last level, one at a time once all are cleared), shows its prize (a power-up
   // icon) until its first clear, which adds the prize to the inventory with a toast.
-  const galIds = () => app.gal.map((e) => e.id), galAfter = () => app.gal.map((e) => (e.L.quest ? e.L.quest.after : 0)), picOpen = (e) => Save.questOpen(app.save.data, app.order, galIds(), galAfter(), e.id);
+  const galIds = () => app.gal.map((e) => e.id), galAfter = () => app.gal.map(questAt), picOpen = (e) => Save.questOpen(app.save.data, app.order, galIds(), galAfter(), e.id); // lands foundation: galAfter keeps the long tail past the last land (journey.js tailAfter)
   const openQs = () => { const ids = galIds(), af = galAfter(); return app.gal.filter((e) => Save.questOpen(app.save.data, app.order, ids, af, e.id)); }; // v5.1: the side quests open now
   function questPrize(e) { const q = e.L.quest, k = q ? E.POWERS.indexOf(q.prize) : -1; if (k < 0 || !Meta.gift(app.save.data, q.prize)) return; toast(fill(app.cfg.gallery.quests.prizeText, { name: pwName(k) })); }
   // A locked node (or button) shakes and says "blocked" (reduced motion: no shake).
   function lockedTap(b) { if (!app.V.calm && b.animate) b.animate(app.cfg.show.blockedShake.map((x) => ({ transform: "translateX(" + x + "px)" })), { duration: app.cfg.show.blockedShakeMs }); cue("blocked"); }
   function buildMap() {
-    const M = app.cfg.map, T = M.text, LAY = app.lay; app.eras = app.cfg.eras || [];
+    const M = app.cfg.map, T = M.text, LAY = app.lay; app.eras = erasOf();
     $("map-title").textContent = M.title; $("map-story").textContent = app.meta.home.story; $("map-credits").textContent = app.cfg.gallery.credits;
     $("jr-n-eye").textContent = T.nextUp; $("jr-q-k").textContent = T.quests; $("jr-e-k").textContent = T.secrets;
     if (app.debug.length) { // ?debug=1: the v4 twists' debug levels, one button each (never in the play order)
@@ -635,12 +649,12 @@
     const kingAt = (() => { const g = LAY.sheets.findIndex((S) => S.goblinKing && S.levels.length && byN.has(S.levels[S.levels.length - 1].n)); return g >= 0 && g < nS ? { si: g, x: LAY.sheets[g].goblinKing.x, y: LAY.sheets[g].goblinKing.y } : { si: fr.top, x: F_.kingAt[0], y: F_.kingAt[1], teaser: true }; })();
     const J = (app.jr = { sheets: [], quests: [], eggs: [], tail: null, k: 0, colW: 0, cut: "", io: null, label: null, fr, king: kingAt });
     const bannerAt = (re) => M.bannerY + ((M.bannerDy || [])[re - 1] | 0); // v5 R3 fix: a realm's banner can sit a little lower or higher (sheet px)
-    const qOf = (q) => app.gal[q - 1] || null, tailE = () => app.gal.filter((e) => e.L.quest && e.L.quest.after > app.order.length);
+    const qOf = (q) => app.gal[q - 1] || null, tailE = () => app.gal.filter((e) => e.L.quest && questAt(e) > app.order.length);
     LAY.sheets.slice(0, nS).forEach((S0, si) => {
       const top = si === fr.top, front = si === fr.si, el = document.createElement("div");
       // v5 R4c: the frontier sheet's road stops a little way into the fog.
-      const S = front ? Object.assign({}, S0, { road: S0.road.slice(0, Math.min(S0.road.length, JN.nearest(S0.road, fr.x, fr.y) + F_.roadOn + 1)) }) : S0; el.className = "jr-sheet"; el.style.zIndex = si + 1; el.dataset.sheet = S.sheet;
-      const img = document.createElement("img"); img.className = "jr-img"; img.alt = ""; img.decoding = "async"; img.draggable = false;
+      const S = front ? Object.assign({}, S0, { road: S0.road.slice(0, Math.min(S0.road.length, JN.nearest(S0.road, fr.x, fr.y) + F_.roadOn + 1)) }) : S0; el.className = "jr-sheet" + (S0.mirror ? " mir" : "") + (S0.fade ? " fade" : ""); el.style.zIndex = si + 1; el.dataset.sheet = S.sheet; // lands foundation: a mirrored sheet flips its image; fade: the seam crossfades on the page
+      const img = document.createElement("img"); img.className = "jr-img"; img.alt = ""; img.decoding = "async"; img.draggable = false; if (S0.fade) img.style.setProperty("--jr-fade", pct(LAY.overlap, H));
       let s = "";
       // v5 R4c: the fog over the road past the frontier (pale mist, full from fogAt up, clear by fogTo) and, on the top
       // sheet, the dark wash behind the long tail's pictures and the king's teaser.
@@ -651,7 +665,7 @@
       s += '<path class="rw-u" fill="none" stroke="#fbf5e6" stroke-opacity=".5" stroke-width="' + R.underW + '" stroke-linecap="round" stroke-linejoin="round"/>';
       s += '<path class="rw-a" fill="none" stroke="' + (front ? "url(#jr-fade)" : "#2a1c12") + '" stroke-opacity="' + (front ? 1 : 0.55) + '" stroke-width="' + R.aheadW + '" stroke-dasharray="' + R.aheadDash + '" stroke-linecap="round"/>';
       s += '<path class="rw-w" fill="none" stroke="#8a2b16" stroke-width="' + R.walkedW + '" stroke-dasharray="' + R.walkedDash + '" stroke-linecap="round"/>';
-      for (const [bs, i, bk] of M.bridges) if (bs === S.sheet && S.road[i] && !fogged(si, S.road[i][1])) s += JN.bridge(S.road[i][0], S.road[i][1], JN.heading(S.road, i, 3), M.bridgeLen, M.bridgeW, bk);
+      for (const [bs, i, bk] of M.bridges.concat((S.bridges || []).map((b) => [S.sheet, b[0], b[1]]))) if (bs === S.sheet && S.road[i] && !fogged(si, S.road[i][1])) s += JN.bridge(S.road[i][0], S.road[i][1], JN.heading(S.road, i, 3), M.bridgeLen, M.bridgeW, bk); // lands foundation: a land entry carries its bridges (road samples)
       for (const Q of S.quests) { if (!qOf(Q.q) || Q.after > app.order.length) continue; const dt = JN.detour(Q.branch, [Q.x, Q.y], M.stoneGap, M.stoneSkip[0], M.stoneSkip[1]);
         s += '<g class="dt" data-q="' + Q.q + '"><path d="' + dt.d + '" fill="none" stroke="#2a1c12" stroke-opacity=".7" stroke-width="4" stroke-dasharray="3 9" stroke-linecap="round"/>' + dt.stones.map(JN.stone).join("") + "</g>"; }
       if (front) { s += '<rect width="' + W + '" height="' + fogTo + '" fill="url(#jr-mist)"/>'; // the mist, with puffs along its edge
@@ -678,8 +692,8 @@
         const g = { id, kind: G.kind, coins: JN.eggCoins(M, S.sheet, i), b, sheet: si, found: null }; b.addEventListener("click", () => eggTap(g)); at(b, G.x, G.y); J.eggs.push(g); });
       // A realm's banner on its first sheet (its lore on a tap).
       if ((si === 0 || LAY.sheets[si - 1].realm !== S.realm) && app.levels.some((e) => e.era === S.realm) && !fogged(si, bannerAt(S.realm))) { const er = app.eras[S.realm - 1] || { era: S.realm, name: S.realmName, note: "" }, b = document.createElement("button"); b.className = "bn";
-        b.innerHTML = '<span class="bt"><i></i><b></b></span><span class="lore"></span>'; b.querySelector("i").textContent = fill(T.realm, { e: S.realm }); b.querySelector("b").textContent = er.name; b.querySelector(".lore").textContent = er.note;
-        b.setAttribute("aria-label", fill(T.bannerAria, { e: S.realm, name: er.name })); b.setAttribute("aria-expanded", "false");
+        b.innerHTML = '<span class="bt"><i></i><b></b></span><span class="lore"></span>'; b.querySelector("i").textContent = realmEye(S.realm, "eye"); b.querySelector("b").textContent = er.name; b.querySelector(".lore").textContent = er.note;
+        b.setAttribute("aria-label", realmEye(S.realm, "aria", er.name)); b.setAttribute("aria-expanded", "false");
         b.addEventListener("click", () => { const on = !b.classList.contains("open"); b.classList.toggle("open", on); b.setAttribute("aria-expanded", on ? "true" : "false"); });
         at(b, W / 2, bannerAt(S.realm)).classList.remove("east", "west"); }
       // The top sheet: the fog over the road past the last level, its one next-picture node and the cleared ones.
@@ -793,7 +807,7 @@
     if (b.dataset.st !== st || b.dataset.id !== e.id || b.dataset.drawn !== e.id + st) { b.dataset.st = st; b.dataset.drawn = e.id + st; b.classList.remove("won", "open", "locked"); b.classList.add(st); if (g) g.setAttribute("class", "dt " + st);
       if (st === "won") thumb(b.querySelector("canvas"), e.L, true, 1); if (tail && qk >= 0) b.querySelector(".pi").style.backgroundImage = app.icoURL["p" + qk] || "none"; }
     b.classList.toggle("next", e === nx); b.setAttribute("aria-disabled", st === "locked" ? "true" : "false");
-    const late = q && q.after > app.order.length, base = st === "won" ? e.L.title + ", cleared" : tail ? fill(app.cfg.map.text.tailAria, { n: e.n }) : fill(e === nx ? QT.nextAria : st === "open" ? QT.tileAria : late ? QT.quests.waitAria : QT.lockedAria, { n: e.n, after: q ? q.after : "" });
+    const late = q && questAt(e) > app.order.length, base = st === "won" ? e.L.title + ", cleared" : tail ? fill(app.cfg.map.text.tailAria, { n: e.n }) : fill(e === nx ? QT.nextAria : st === "open" ? QT.tileAria : late ? QT.quests.waitAria : QT.lockedAria, { n: e.n, after: q ? q.after : "" });
     b.setAttribute("aria-label", base + (tg ? ", " + tg : "") + (qk >= 0 && st !== "won" ? ", " + fill(QT.quests.prizeAria, { name: pwName(qk) }) : ""));
   }
   // An egg's look (drawn again only when it is found or forgotten) and its label.
@@ -833,7 +847,7 @@
   // (the next level with its tag, Play, the next open side quest). e: the current level (null: keep the realm shown).
   function mapCards(e) {
     const J = app.jr, M = app.cfg.map, T = M.text, d = app.save.data; if (e) J.realm = e.era; const re = J.realm || 1, er = app.eras[re - 1] || { name: "", note: "" };
-    $("jr-r-eye").textContent = fill(T.realmOf, { e: re, t: app.eras.length }); $("jr-r-name").textContent = er.name; $("jr-r-note").textContent = er.note;
+    $("jr-r-eye").textContent = realmEye(re, "of"); $("jr-r-name").textContent = er.name; $("jr-r-note").textContent = er.note;
     const ls = app.levels.filter((x) => x.era === re), won = ls.filter((x) => d.done[x.id]).length; reportCard($("jr-rc"), ls); $("jr-r-bar").style.width = (ls.length ? (100 * won) / ls.length : 0) + "%";
     const ss = J.sheets.map((sh, i) => (sh.S.realm === re ? i : -1)).filter((i) => i >= 0), qs = J.quests.filter((q) => ss.indexOf(q.sheet) >= 0), gs = J.eggs.filter((g) => ss.indexOf(g.sheet) >= 0);
     $("jr-q-v").textContent = qs.filter((q) => d.gal[q.e.id]).length + " / " + qs.length; $("jr-e-v").textContent = gs.filter((g) => d.eggs && d.eggs[g.id]).length + " / " + gs.length;
@@ -852,7 +866,7 @@
     const H = app.meta.home, d = app.save.data, ne = app.byId.get(Save.next(d, app.order)), won = app.levels.filter((e) => d.done[e.id]).length, er = ne && app.eras[ne.era - 1];
     $("home-prog").querySelector("b").textContent = won + "/" + app.levels.length; $("home-prog").setAttribute("aria-label", fill(H.progress, { done: won, t: app.levels.length }));
     $("home-coins").querySelector("b").textContent = d.coins; $("home-coins").setAttribute("aria-label", fill(H.coins, { n: d.coins }));
-    $("home-era").textContent = er ? fill(H.era, { e: er.era, name: er.name }) : "";
+    $("home-era").textContent = er ? realmEye(er.era, "home", er.name) : "";
     app.lifeTxt = ""; livesPill();
   }
   // The lives pill and, with none left, Play's countdown (the text changes once a second; written only then).
@@ -864,12 +878,16 @@
     $("play-lab").textContent = play; $("btn-play").classList.toggle("wait", L.on && L.n <= 0); playTag($("btn-play"), L.on && L.n <= 0 ? null : ne);
     $("btn-play").setAttribute("aria-label", play + (ne && !(L.on && L.n <= 0) && app.cfg.layout.tags[tagOf(ne)] ? ", " + app.cfg.layout.tags[tagOf(ne)] : ""));
   }
-  function openSettings(on) { holdStop(); for (const k of SUBS) $(k).hidden = true; $("settings").hidden = !on; if (on) $("set-close").focus(); }
+  function openSettings(on) { holdStop(); for (const k of SUBS) $(k).hidden = true; $("settings").hidden = !on; heldPlay(); if (on) $("set-close").focus(); }
+  // Lands foundation (Peter, 2026-10-06): the play screen's gear opens Settings over the level; while it (or a sheet it
+  // opens) shows, the level holds still (app.held: the engine and the show stop; the app clock runs on, so the reset's
+  // press-and-hold still fills), and closing it plays on with no jump. The Paused sheet keeps its own quick toggles.
+  function heldPlay() { app.held = app.screen === "play" && (!$("settings").hidden || subOpen()); }
   // ---- v5.4: reset and the save code -----------------------------------------------------------------------------------
   // Each sheet (reset, the code, a load) takes Settings' place over the home or the map; closing one goes back to Settings.
   const SUBS = ["resetsheet", "codesheet", "loadsheet"], RT = () => app.cfg.reset.text, CT = () => app.cfg.saveCode.text, codeOn = () => !!(app.cfg.saveCode && app.cfg.saveCode.on);
   const subOpen = () => SUBS.find((k) => !$(k).hidden) || null, plural = (w, n) => fill(w[n === 1 ? 0 : 1], { n });
-  function openSub(id, el) { holdStop(); for (const k of SUBS) $(k).hidden = k !== id; $("settings").hidden = !!id; (id ? el : $("set-close")).focus(); }
+  function openSub(id, el) { holdStop(); for (const k of SUBS) $(k).hidden = k !== id; $("settings").hidden = !!id; heldPlay(); (id ? el : $("set-close")).focus(); }
   // The words (boot): rows, sheets; the code's rows and the reset sheet's "copy it first" only when saveCode is on.
   function progressText() {
     const R = RT(), C = CT(), on = codeOn();
@@ -937,7 +955,7 @@
     if (name === "gallery") name = "map"; // v5 R3: the Gallery is the journey map now
     if (name !== "play") { app.pick = null; document.body.classList.remove("picking"); }
     $("settings").hidden = true; $("tailsheet").hidden = true; holdStop(); for (const k of SUBS) $(k).hidden = true; // v5.4: its sheets too
-    app.screen = name; music();
+    app.screen = name; app.held = false; music(); // lands foundation: no Settings over a new screen
     $("title").hidden = name !== "title"; $("map").hidden = name !== "map";
     if (name === "title") renderHome();
     if (name === "map") { layoutMap(); renderMap(); scrollMap(); } // v5 R3: the current node about map.curAt down the view
@@ -951,7 +969,7 @@
     if (!livesLeft()) return null; // v4 M5: lives on and none left: no level starts (the toast says when the next comes)
     app.diff = tagOf(e); // v4.3: every level plays on its own tag
     app.entry = e; app.B = E.compile(e.L); app.S = E.sim(app.B, rulesOf(app.diff)); app.S.logOn = true; app.et = 0;
-    app.V.setLevel(app.B, app.S, e.L.pal, e.L.liquid); usePalette(e); // v5 R4: liquid (a lava moat) // v4 M4: the level's colours before anything is painted
+    app.V.setLevel(app.B, app.S, e.L.pal, e.L.liquid, e.L.shade); usePalette(e); // lands foundation: shade, the level's shade rows (none: drawn as before) // v5 R4: liquid (a lava moat) // v4 M4: the level's colours before anything is painted
     app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.popK = 0; app.used = 0; app.march = false; app.blockT = -1e12; $("panel").hidden = true; $("stage-pic").hidden = true; hideToast();
     app.lockN = app.S.locked; app.unlockT = -1e12; app.flip.fill(false); app.reveals = 0; app.pairsOut = 0; landTiles();
     app.t0 = app.clock; app.report = null; app.pick = null; app.pwPop.fill(-1e12); app.carry = -1; renderPowers();
@@ -1078,6 +1096,9 @@
     else if (e.reason === "jam") { add("Line jammed: "); if (n) chips(); else add("the squads"); add(" can't reach a block." + (e.why & 2 ? " " + L.jamLockText : "")); }
     else add(reasonText(e));
   }
+  // Lands foundation: the end of the castle story on the boss's first win (config lands.epilogue): on into the first land
+  // when one is built, else into the mist.
+  function epilogue() { const LC = landsCfg(), P = LC.epilogue || {}, d = (LC.list || [])[0]; return d ? fill(P.first || "", { name: d.name }) : P.none || ""; }
   function showPanel() {
     const e = app.ending; if (!e) return;
     app.panel = e.won ? "win" : "fail"; app.panelAt = app.clock; renderCoach();
@@ -1085,7 +1106,7 @@
     const BS = e.won && !gal && app.entry.boss; // v5 R4 fix (S4): the boss's own win title, line and the crown recovered
     $("p-title").textContent = e.won ? (gal ? G.winTitle : BS ? BS.winTitle : "Fort razed!") : "Assault failed"; tagChip($("p-tag"), app.diff); // v4.3: the level's tag
     $("p-crown").hidden = !BS; $("panel").classList.toggle("boss", !!BS); if (BS) $("p-crown").setAttribute("aria-label", BS.crownAria);
-    if (e.won) { $("p-line").textContent = BS ? (e.first ? BS.win : BS.winAgain) : gal ? fill(e.first ? G.winLine : G.winLineAgain, { title: app.entry.L.title }) : "The goblin king flees. " + (app.entry.debug ? app.entry.L.name : "Level " + app.entry.n) + (e.first ? " cleared." : " cleared again."); $("p-line").removeAttribute("aria-label"); } else sheetLine(e);
+    if (e.won) { $("p-line").textContent = BS ? (e.first ? BS.win + " " + epilogue() : BS.winAgain) : gal ? fill(e.first ? G.winLine : G.winLineAgain, { title: app.entry.L.title }) : "The goblin king flees. " + (app.entry.debug ? app.entry.L.name : "Level " + app.entry.n) + (e.first ? " cleared." : " cleared again."); $("p-line").removeAttribute("aria-label"); } else sheetLine(e);
     reportPic(e.won && gal);
     // v5.1 (playtesters, 2026-10-06): every win (a level, a side quest, the boss) goes back to the journey map, where the
     // next node, a side quest just opened and the eggs in reach show (layout.toMap); a fail's main button is Retry.
@@ -1205,7 +1226,10 @@
   // (the space opened), locked (it is still shut), hidden (a "?" is in view), linkedFront (a front card is linked).
   // v5 R2: pointer power (a power-up id: its badge, on the level that unlocks it); any level may have coach lines (the
   // first lock levels, 53 and 87, do). v5 R4: ring hidden (the mystery block still showing "?" nearest the entry).
-  const coachSteps = (e) => { const st = e && ((app.cfg.teach || {})[e.id] || (e.L.hint ? [{ say: e.L.hint, until: "play" }] : null)); return st && st.length ? st : null; };
+  // Lands foundation: a shaded level (shade rows) with no script of its own says lands.shadeTip until the player has
+  // cleared a shaded level or picture (worked out from the save, so it needs no field of its own).
+  const shadeTip = (e) => { if (!e || !e.L.shade) return null; const d = app.save.data, won = (x) => x.L.shade && (x.gallery ? d.gal[x.id] : d.done[x.id]); return app.levels.some(won) || app.gal.some(won) ? null : landsCfg().shadeTip || null; };
+  const coachSteps = (e) => { const st = e && ((app.cfg.teach || {})[e.id] || (e.L.hint ? [{ say: e.L.hint, until: "play" }] : null) || shadeTip(e)); return st && st.length ? st : null; };
   function coachStart() {
     const steps = coachSteps(app.entry);
     app.coach = steps ? { steps, i: 0, at: 0 } : null;
@@ -1428,7 +1452,7 @@
     $("board").addEventListener("pointerdown", skip);
     $("pause").addEventListener("click", resume);
     document.querySelector("#pause .pz-set").addEventListener("click", (ev) => ev.stopPropagation()); // its toggles don't resume
-    $("btn-settings").addEventListener("click", () => openSettings(true)); $("set-close").addEventListener("click", () => openSettings(false));
+    $("btn-settings").addEventListener("click", () => openSettings(true)); $("btn-pset").addEventListener("click", () => openSettings(true)); $("set-close").addEventListener("click", () => openSettings(false)); // lands foundation: btn-pset, the play screen's gear
     $("settings").addEventListener("click", (ev) => { if (ev.target === $("settings")) openSettings(false); }); // the backdrop closes it
     $("tab-home").addEventListener("click", () => showScreen("title"));
     window.addEventListener("blur", pause);
@@ -1610,6 +1634,7 @@
     V.clock = app.clock;
     if (app.screen === "title" && app.meta.lives) livesPill(); // v4 M5: the refill countdown (a DOM write only when it changes)
     if (app.hold >= 0) holdStep(); // v5.4: the reset hold
+    if (app.held) return; // lands foundation: Settings open over a level holds it still
     if (app.screen !== "play" && app.toastT > 0 && app.clock >= app.toastT) hideToast(); // v5.4: a toast over the home or map goes too
     if (app.screen !== "play" || !app.B) return;
     if (app.panel === "win") countCoins();
@@ -2311,7 +2336,7 @@
           "map quests: the top bar's button goes back to the map; the won node shows the finished picture in its own colours (" + col.size + "), no prize bubble");
         { const inv1 = app.save.data.inv[pz] | 0; jrTo(q0); q0.click(); const re = app.entry === e0 && app.screen === "play"; patient(winOf(e0)); settleNow(); tick(9000);
           ok(re && app.panel === "win" && (app.save.data.inv[pz] | 0) === inv1, "map quests: a tap on the won node plays it again; a second win pays no prize"); }
-        ok(app.jr.quests.length === app.gal.filter((e) => e.L.quest && e.L.quest.after <= app.order.length).length && app.jr.quests.every((q) => q.g && q.g.querySelectorAll("ellipse").length >= 1 && q.g.getAttribute("class").indexOf(JN.questState(app.save.data, app.order, galIds(), galAfter(), q.e.id)) > 0),
+        ok(app.jr.quests.length === app.gal.filter((e) => e.L.quest && questAt(e) <= app.order.length).length && app.jr.quests.every((q) => q.g && q.g.querySelectorAll("ellipse").length >= 1 && q.g.getAttribute("class").indexOf(JN.questState(app.save.data, app.order, galIds(), galAfter(), q.e.id)) > 0),
           "map quests: every side quest on the map has its stepping-stone detour drawn from the road, marked with its state");
         const saved = JSON.stringify(Save.sanitize(JSON.parse(JSON.stringify(app.save.data)), app.order, app.gal.map((x) => x.id)).gal), junk = Save.sanitize({ gal: { [e0.id]: 99, nope: 1, [app.gal[1].id]: "x" } }, app.order, app.gal.map((x) => x.id)).gal;
         ok(saved === JSON.stringify(app.save.data.gal) && JSON.stringify(junk) === JSON.stringify({ [e0.id]: 1 }), "map quests: the save's gal reads back through sanitize; a cleared mask reads as cleared, unknown ids and non-numbers are dropped");
@@ -2325,7 +2350,7 @@
         app.save = scratch(); J.colW = 0; showScreen("map");
         // v5 R4c: built up to the frontier (the first level not built, else the summit's long-tail spot): what the layout
         // holds past it, and quests past the last level, are not built; eggs and bridges in its fog neither.
-        { const fr = J.fr, LS = app.lay.sheets, fogTo = fr.fog ? fr.fog + MC.tail.tailClear : fr.y + MC.tail.below, clear = (si, y) => si < fr.si || (si === fr.si && y >= fogTo), nq = app.gal.filter((e) => e.L.quest && e.L.quest.after <= app.order.length).length;
+        { const fr = J.fr, LS = app.lay.sheets, fogTo = fr.fog ? fr.fog + MC.tail.tailClear : fr.y + MC.tail.below, clear = (si, y) => si < fr.si || (si === fr.si && y >= fogTo), nq = app.gal.filter((e) => e.L.quest && questAt(e) <= app.order.length).length;
           const ne = LS.slice(0, fr.n).reduce((a, S, si) => a + S.eggs.filter((G) => clear(si, G.y)).length, 0), nb = MC.bridges.filter(([bs, i]) => bs <= fr.n && LS[bs - 1].road[i] && clear(bs - 1, LS[bs - 1].road[i][1])).length, nr = new Set(app.levels.map((e) => e.era)).size;
           const spots = LS.flatMap((S) => S.levels).filter((v) => v.n > app.levels.length).length;
           ok(J.sheets.length === fr.n && app.levels.every((e) => e.node && e.node.classList.contains("mn")) && document.querySelectorAll("#jr .mn").length === app.levels.length && J.quests.length === nq && J.eggs.length === ne && document.querySelectorAll("#jr .bn").length === nr && document.querySelectorAll("#jr .br").length === nb,
@@ -2424,8 +2449,8 @@
         showScreen("title"); const tabsHit = hitOK($("btn-tomap")) && hitOK($("tab-home")) && !$("btn-gallery") && document.querySelectorAll(".tabs .tab").length === 2; $("btn-tomap").click(); const t1 = app.screen; $("btn-home").click(); const t2 = app.screen; $("tab-home").click(); const t3 = app.screen;
         ok(tabsHit && t1 === "map" && t2 === "title" && t3 === "title" && $("map-story").textContent === HT.story, "home tabs (v5 R3: Map and Home; the Gallery is the map): Map opens the map (the story is at its foot), back reaches Home; every tab is hittable");
         { $("btn-settings").click(); const open = !$("settings").hidden && hitOK($("set-close")), A = app.audio, s0 = [A.sfx, A.music], SS = () => app.save.data.settings;
-          // v5.2: Music and Sound effects apart; the quick mute buttons (top bar, Paused sheet) mute both and read "mixed" with one off.
-          const mr = document.querySelector("#settings .tog-music"), fr = document.querySelector("#settings .tog-sfx"), qm = document.querySelector("#top .tog-mute"), pm = document.querySelector("#pause .tog-mute"), qp = () => qm.getAttribute("aria-pressed") + "/" + pm.getAttribute("aria-pressed"), sv = (b) => b.querySelector(".sv").textContent;
+          // v5.2: Music and Sound effects apart; the quick mute button (the Paused sheet's) mutes both and read "mixed" with one off.
+          const mr = document.querySelector("#settings .tog-music"), fr = document.querySelector("#settings .tog-sfx"), pm = document.querySelector("#pause .tog-mute"), qm = pm, qp = () => pm.getAttribute("aria-pressed") + "/" + pm.getAttribute("aria-pressed"), sv = (b) => b.querySelector(".sv").textContent; // lands foundation: the play screen's quick mute became its gear; the Paused sheet's stays
           setSound(true, true, false); const hitRows = hitOK(mr) && hitOK(fr) && !document.querySelector("#settings .tog-mute");
           mr.click(); const a1 = !A.music && A.sfx && SS().music === false && SS().sfx === true && SS().muted === false && sv(mr) === "Off" && sv(fr) === "On" && mr.getAttribute("aria-pressed") === "false" && qp() === "mixed/mixed";
           fr.click(); const a2 = !A.music && !A.sfx && A.muted && SS().muted === true && sv(fr) === "Off" && qp() === "true/true";
@@ -2435,7 +2460,17 @@
           fr.click(); qm.click(); const a6 = !A.music && !A.sfx && qp() === "true/true"; qm.click(); // one off, then a quick mute: both off; the next: both on
           const a7 = A.music && A.sfx;
           const sp0 = app.speed; document.querySelector("#settings .tog-speed").click(); const sp1 = app.speed, lab = document.querySelector("#settings .tog-speed .sv").textContent; setSpeed(SPD[0], false); $("set-close").click(); setSound(s0[0], s0[1], false);
-          ok(open && hitRows && a1 && a2 && a3 && a4 && a5 && a6 && a7 && sp1 !== sp0 && lab === sp1 + "×" && $("settings").hidden, "settings (v5.2): the gear opens the sheet; Music and Sound effects switch apart (each row reads On/Off and is saved: " + [a1, a2, a3].map(Number).join("") + "); the quick mute buttons read mixed with one off and pressed with both (" + [a4, a5, a6, a7].map(Number).join("") + "): a quick mute turns both off, the next both on; (debug only, v5 R1) speed (" + lab + "); colour-blind is section 16; Done closes it"); }
+          ok(open && hitRows && a1 && a2 && a3 && a4 && a5 && a6 && a7 && sp1 !== sp0 && lab === sp1 + "×" && $("settings").hidden, "settings (v5.2; open, rows, closed: " + [open, hitRows, $("settings").hidden].map(Number).join("") + "): the gear opens the sheet; Music and Sound effects switch apart (each row reads On/Off and is saved: " + [a1, a2, a3].map(Number).join("") + "); the Paused sheet's quick mute reads mixed with one off and pressed with both (" + [a4, a5, a6, a7].map(Number).join("") + "): a quick mute turns both off, the next both on; (debug only, v5 R1) speed (" + lab + "); colour-blind is section 16; Done closes it"); }
+        // Lands foundation (Peter, 2026-10-06): the play screen's gear (in the top bar, where the quick mute was) opens
+        // Settings over the level and holds it still (the engine's time stands while it shows; the app clock runs on);
+        // Done plays on with no jump. The bar still fits the screen and the gear is as big as the bar's other buttons.
+        { startLevel(app.levels[0].id, "normal"); const g = $("btn-pset"), r = g.getBoundingClientRect(), rr = $("btn-retry").getBoundingClientRect(), hit = hitOK(g), tp = $("top");
+          const fits = Array.from(tp.querySelectorAll("button")).every((b) => b.getBoundingClientRect().right <= innerWidth + 0.5) && tp.scrollWidth <= tp.clientWidth + 1 && r.width >= rr.width - 0.5;
+          playCol(+winOf(app.entry)[0]); step(16); g.click(); const et0 = app.et, c0 = app.clock, live0 = livePlay(); for (let t = 0; t < 400; t += 16) step(16);
+          const held = app.held && app.et === et0 && app.clock > c0 && !$("settings").hidden && !live0;
+          $("set-close").click(); step(16); const on = !app.held && $("settings").hidden && app.et > et0 && app.et - et0 <= 16 * paceNow() + 0.5 && livePlay();
+          out.notes.playGear = Math.round(r.width) + " px";
+          ok(hit && fits && held && on, "play gear (lands foundation; hit, fits, held, on: " + [hit, fits, held, on].map(Number).join("") + "): the top bar's gear (" + Math.round(r.width) + " px, as big as Retry; the bar fits " + innerWidth + " px) opens Settings and holds the level still (engine time stood " + 400 + " ms while the app clock ran), and Done plays on with no jump"); }
         // The bar's geometry at this viewport.
         startLevel(app.levels[0].id, "normal");
         { const tileH = app.cards[0].getBoundingClientRect().height, rl = $("rail").getBoundingClientRect(), pw = $("powers").getBoundingClientRect(); let geo = true;
@@ -2681,6 +2716,30 @@
           "save code (v5.4, from the map's gear): Copy shows the code (" + code.length + " characters) with its length and summary and copies it (" + +cpOK + "); a refused clipboard leaves the box selected (" + +byHand + "); after a reset, Load refuses a changed character, a truncated code, other text and a newer code (" + refused.map((x) => !!x).join(",") + "); the code (wrapped) previews '" + lsay + "' and what it replaces; applying restores the save exactly (" + +restored + ")");
         app.save = scratch(); showScreen("title");
       }
+      // 13z. Lands foundation, shading within a colour: a shaded twin of picture 1 (shade rows on its biggest colour, a
+      // lighter top half and a darker bottom half, two shade colours; registered for the run) compiles to the same board,
+      // draws each block in its shade (tones = its digits; the shade studs differ from the base and are opaque), says
+      // lands.shadeTip on a save with no shaded clear, and wins on the stored order with the board matching the engine;
+      // picture 1 itself then draws as before (no shade rows, every tone stud the base's).
+      if (app.gal.length) {
+        const e0 = app.gal[0], L0 = e0.L, cnt = {}; for (const r of L0.grid) for (const ch of r) { const m = E.matOf(ch); if (m > 0) cnt[m] = (cnt[m] | 0) + 1; }
+        const m0 = +Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a] || a - b)[0], pal = JSON.parse(JSON.stringify(L0.pal)), c0 = pal[m0].c, MX = ST.shadeMix;
+        pal[m0].sh = [mixHex(c0, "#ffffff", MX[0]), mixHex(c0, "#000000", MX[1]), null, null];
+        const shade = L0.grid.map((r, y) => r.split("").map((ch) => (E.matOf(ch) === m0 ? (y < L0.h / 2 ? "1" : "2") : "0")).join(""));
+        const e = { L: Object.assign({}, L0, { pal, shade, quest: undefined }), id: "fx-shade", n: 0, era: 1, idx: -1, node: null }; app.byId.set(e.id, e);
+        const Bf = E.compile(L0), Bs = E.compile(e.L), sameB = Bf.n === Bs.n && Bf.ncards === Bs.ncards && Array.from(Bf.a0).join() === Array.from(Bs.a0).join();
+        app.save = scratch(); startLevel(e.id); step(16); const Vb = app.V, S = Vb.sprites, tb = S && S.tb[m0], a0 = app.B.a0, w = app.B.w;
+        let toneOK = true; for (let c = 0; c < app.B.n && toneOK; c++) if (Vb.tone[c] !== (a0[c] > 0 ? +shade[(c / w) | 0][c % w] : 0)) toneOK = false;
+        const mid = (cv) => { const g = cv.getContext("2d", { willReadFrequently: true }), d = g.getImageData(cv.width >> 1, cv.height >> 1, 1, 1).data; return "#" + [d[0], d[1], d[2]].map((v) => v.toString(16).padStart(2, "0")).join(""); };
+        const studs = !!tb && tb.length === 5 && tb[1] !== tb[0] && tb[2] !== tb[0] && tb[3] === tb[0] && mid(tb[1]) === pal[m0].sh[0] && mid(tb[2]) === pal[m0].sh[1] && mid(tb[0]) === c0.toLowerCase();
+        const tip = coachState().text, tipOK = tip.indexOf(app.cfg.lands.shadeTip[0].say) >= 0 || tip.indexOf(app.cfg.lands.shadeTip[0].short) >= 0;
+        const won = patient(winOf(e)); settleNow();
+        ok(sameB && toneOK && studs && !Vb.checkSprites().length && tipOK && won && app.S.status === E.WON && dispMatches() && allHome(),
+          "shading (lands foundation): a shaded twin of " + e0.id + " compiles to the same board (" + +sameB + "), draws each block in its shade digit (" + +toneOK + ") with lighter and darker studs in the shade colours (" + +studs + "), says the shade tip ('" + tip + "'), and wins on the stored order");
+        startLevel(e0.id); step(16); const S2 = app.V.sprites;
+        ok(app.V.shade === null && S2.tb[m0].every((q) => q === S2.blk[m0]) && !app.coach, "shading: picture 1 itself draws as before (no shade rows, every tone stud the base, no shade tip)");
+        app.byId.delete(e.id); app.save = scratch();
+      }
       // 14. Opaque sprite caches.
       const bad = app.V.checkSprites(); ok(!bad.length, "sprites: every opaque cache is opaque" + (bad.length ? " (" + bad.join(",") + ")" : ""));
     } catch (err) { ok(false, "selfTest threw: " + (err && err.message) + " " + (err && err.stack ? err.stack.split("\n")[1] : "")); }
@@ -2699,7 +2758,7 @@
   // v4.3: load(id) plays the level on its own tag (a second argument is ignored: no difficulty picker).
   const SP = { play: playCol, state, load: (id) => { startLevel(resolve(id)); return state(); }, retry: () => { retry(); return state(); }, tick,
     solve: (nodes) => solveHere(nodes), selfTest, coach: coachState, cues: () => Object.assign({}, app.cues), fx: () => app.V.fxInfo(), hits: () => app.V.hitInfo(), runners: () => app.V.runners(),
-    paused: () => app.paused, upright: () => ({ on: app.upright, needed: uprightNeeded(innerWidth, innerHeight, coarse()), coarse: coarse() }), pause: () => { pause(); return app.paused; }, resume: () => { resume(); return app.paused; }, winOrder: () => (app.entry ? winOf(app.entry) : null),
+    paused: () => app.paused, held: () => app.held, upright: () => ({ on: app.upright, needed: uprightNeeded(innerWidth, innerHeight, coarse()), coarse: coarse() }), pause: () => { pause(); return app.paused; }, resume: () => { resume(); return app.paused; }, winOrder: () => (app.entry ? winOf(app.entry) : null),
     lossPlan: (id) => { const e = app.byId.get(resolve(id)) || app.entry; return e ? jamPlan(e, tagOf(e)) : null; }, hitPlan: (id) => { const e = app.byId.get(resolve(id)), T = app.cfg.selfTest; return e ? search(e, tagOf(e), (S) => S.hits > 0, T.searchTries, T.searchSeed) : null; }, settle: () => { settleNow(); return state(); }, reachable: (m) => (app.S ? app.S.reachable(m) : 0),
     // Screens for the harness: fill the line with rushed taps; stage k stuck and w working squads on level n (or the first
     // level from n whose fronts allow it). Both return the state plus the taps made.

@@ -15,6 +15,13 @@
 //   campaign stops: the spot of the first missing level (or, with every spot's level built, the top sheet's long-tail
 //   spot); the map builds sheets up to it, nodes only for levels that exist, and its fog sits there. Five new egg kinds
 //   (a lava bubble, an ember sprite, a glowcap, an owl, a goblin lookout), stone bridges over lava, a fuller Goblin King.
+// Lands foundation (SPEC-v4 §9, the lands foundation entry): past level 200 the map grows a land of 50 levels at a time,
+//   from 2 painted sheets per land used over and over. A layout entry may name the same `file` as another with
+//   `mirror: true`: layoutOf() mirrors everything on it about the sheet's middle (x -> w - x: levels, quests and their
+//   branch, road, eggs, entry, exit, the long-tail spot, the king and the fortress), so the page only flips the image;
+//   bridges sit on road samples, so they follow the mirrored road. landOf(): the built land holding a level. The long
+//   tail (the castle Gallery's pictures 51-60, quests past level 200) stays past the last built level: tailAfter() moves
+//   such a quest's level on by however far the lands reach past castleEnd (a land's own side quests never move).
 (function (root, factory) {
   if (typeof module === "object" && module.exports) module.exports = factory(require("./save.js"));
   else (root.SappersPath = root.SappersPath || {}).journey = factory(root.SappersPath.save);
@@ -59,6 +66,25 @@
     if (!f) return null;
     f.top = f.y < room && f.si < S.length - 1 ? f.si + 1 : f.si; f.n = f.top + 1; return f;
   }
+
+  // ---- lands (the lands foundation) ------------------------------------------------------------------------------------
+  // A point [x, y, ...] or {x, y, ...} mirrored about the middle of a sheet W wide (a fresh copy; branch too).
+  const mx = (W, p) => (Array.isArray(p) ? [W - p[0]].concat(p.slice(1)) : Object.assign({}, p, { x: W - p.x }, Array.isArray(p.branch) ? { branch: mx(W, p.branch) } : {}));
+  // A layout entry as drawn: its own coordinates, or (mirror: true) every one of them mirrored. Never changes S.
+  function mirrorSheet(S, W) {
+    if (!S || !S.mirror) return S; const o = Object.assign({}, S), map = (k, f) => { if (Array.isArray(S[k])) o[k] = S[k].map(f); };
+    map("levels", (p) => mx(W, p)); map("quests", (p) => mx(W, p)); map("eggs", (p) => mx(W, p)); map("road", (p) => mx(W, p));
+    for (const k of ["entry", "exit"]) if (Array.isArray(S[k])) o[k] = mx(W, S[k]);
+    for (const k of ["tail", "goblinKing", "fortress"]) if (S[k]) o[k] = mx(W, S[k]);
+    return o;
+  }
+  // The layout with its mirrored entries resolved (the same object when none is mirrored).
+  function layoutOf(lay) { if (!lay || !Array.isArray(lay.sheets) || !lay.sheets.some((S) => S && S.mirror)) return lay; return Object.assign({}, lay, { sheets: lay.sheets.map((S) => mirrorSheet(S, lay.w)) }); }
+  // The built land holding level n (L: config lands), or null.
+  const landOf = (L, n) => ((L && L.list) || []).find((d) => n >= d.from && n <= d.to) || null;
+  // A long-tail quest's main level as the map reads it: past `end` (castleEnd) it moves on by how far the levels reach
+  // past end (last: the last level built), so it stays past the last built land. A quest at or before end never moves.
+  const tailAfter = (after, end, last) => (after > end && last > end ? after + (last - end) : after);
 
   // ---- the route ------------------------------------------------------------------------------------------------------
   // The road sample nearest (x, y) (bounded by the road's length).
@@ -195,5 +221,5 @@
     '<path d="M13 7l1-8 3 4 2-6 2 6 2-6 2 6 3-4 1 8z" fill="#f2c230" stroke-width="1.3"/><circle cx="21" cy="3" r="1.3" fill="#c8402c" stroke-width=".8"/></g>';
   const flag = () => '<g transform="scale(2)"><path d="M0 0v46" stroke="#1e1620" stroke-width="2.4"/><path d="M1 2h22l-5 7 5 7-4 1 3 6H1z" fill="#8a1f19" stroke="#1e1620" stroke-width="1.6"/><circle cx="11" cy="11" r="3.4" fill="#f3ead8" stroke="#1e1620" stroke-width="1.2"/><circle cx="11" cy="11" r="1.2" fill="#1e1620"/></g>';
 
-  return { nodeState, questState, tail, nearQuest, focus, frontier, nearest, pathD, split, heading, side, sideBox, eggId, eggCoins, bridge, detour, stone, egg, EGG_KINDS, king, flag };
+  return { nodeState, questState, tail, nearQuest, focus, frontier, mirrorSheet, layoutOf, landOf, tailAfter, nearest, pathD, split, heading, side, sideBox, eggId, eggCoins, bridge, detour, stone, egg, EGG_KINDS, king, flag };
 });
