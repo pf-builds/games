@@ -110,6 +110,10 @@
 // mute buttons (top bar, Paused sheet) turn both off, or both on when both are off, and read "mixed" when one is off.
 // v5.3 (SPEC-v4 §9, tools/v5-3-home-notes.md): the home is a painted siege (art/, a <picture>) sized to #title's own box
 // with the castle centred (fitTitle, config title.art), not a pixel scene sized to the window; the realm line sits over Play.
+// v5.4 (SPEC-v4 §9, tools/v5-4-notes.md): Settings gains Copy save code and Load save code (config saveCode.on; save.js
+// encode, decode) and, at its foot apart from Done, Reset progress (config reset; save.js reset): a sheet that says what
+// goes and a press-and-hold button whose fill runs on app.clock (step's holdStep, never a timer). Each sheet takes
+// Settings' place and goes back to it. After a reset or a load: the home, with a toast over the screens (#toast.over).
 (function () {
   "use strict";
   const NS = window.SappersPath, E = NS.engine, Save = NS.save, Board = NS.board, Art = NS.art, Audio = NS.audio, Meta = NS.meta;
@@ -129,7 +133,8 @@
     // v4 M5: config.meta (selfTest swaps in a copy), the lives clock (real time), the queue rows shown, the level's start
     // on app.clock, the win's report, a power-up waiting for its target (pick: {k}), the bar's badges, the icons' URLs.
     lay: null, jr: null, // v5 R3: map/layout.json and the journey map's built parts
-    meta: null, now: () => Date.now(), rows: 3, t0: 0, report: null, pick: null, pws: [], icoURL: {}, pwPop: [-1e12, -1e12, -1e12, -1e12], lifeTxt: "", countTxt: "", carry: -1 };
+    meta: null, now: () => Date.now(), rows: 3, t0: 0, report: null, pick: null, pws: [], icoURL: {}, pwPop: [-1e12, -1e12, -1e12, -1e12], lifeTxt: "", countTxt: "", carry: -1,
+    hold: -1, loadR: null, clipFake: null }; // v5.4: the reset hold's start on app.clock (-1: none); a load's decoded code; selfTest's clipboard
   const togMute = Array.from(document.querySelectorAll(".tog-mute")), togMusic = Array.from(document.querySelectorAll(".tog-music")), togSfx = Array.from(document.querySelectorAll(".tog-sfx")), togSpeed = Array.from(document.querySelectorAll(".tog-speed")), togCb = Array.from(document.querySelectorAll(".tog-cb"));
 
   // ---- boot --------------------------------------------------------------------------------------------------------
@@ -157,7 +162,7 @@
     try { app.V.calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { /* motion stays on */ }
     app.audio = Audio.create(app.cfg.audio, (f) => f + "?v=" + V_); // v5.2: the music files carry the cache tag
     setSound(app.save.data.settings.sfx, app.save.data.settings.music, false); setSpeed(1, false); setCb(app.save.data.settings.cb, false); // v5 R1: speed is never saved
-    paintWall(); chips(); icons(); buildTray(); buildLine(); buildPowers(); buildMap(); wire(); wireTitleArt();
+    paintWall(); chips(); icons(); buildTray(); buildLine(); buildPowers(); buildMap(); progressText(); wire(); wireTitleArt();
     { const U = app.cfg.layout.upright, u = $("upright"); u.querySelector(".up-t").textContent = U.text; u.setAttribute("aria-label", U.text); }
     showScreen("title"); layout();
     if (DEBUG) window.SP = SP;
@@ -859,7 +864,62 @@
     $("play-lab").textContent = play; $("btn-play").classList.toggle("wait", L.on && L.n <= 0); playTag($("btn-play"), L.on && L.n <= 0 ? null : ne);
     $("btn-play").setAttribute("aria-label", play + (ne && !(L.on && L.n <= 0) && app.cfg.layout.tags[tagOf(ne)] ? ", " + app.cfg.layout.tags[tagOf(ne)] : ""));
   }
-  function openSettings(on) { $("settings").hidden = !on; if (on) $("set-close").focus(); }
+  function openSettings(on) { holdStop(); for (const k of SUBS) $(k).hidden = true; $("settings").hidden = !on; if (on) $("set-close").focus(); }
+  // ---- v5.4: reset and the save code -----------------------------------------------------------------------------------
+  // Each sheet (reset, the code, a load) takes Settings' place over the home or the map; closing one goes back to Settings.
+  const SUBS = ["resetsheet", "codesheet", "loadsheet"], RT = () => app.cfg.reset.text, CT = () => app.cfg.saveCode.text, codeOn = () => !!(app.cfg.saveCode && app.cfg.saveCode.on);
+  const subOpen = () => SUBS.find((k) => !$(k).hidden) || null, plural = (w, n) => fill(w[n === 1 ? 0 : 1], { n });
+  function openSub(id, el) { holdStop(); for (const k of SUBS) $(k).hidden = k !== id; $("settings").hidden = !!id; (id ? el : $("set-close")).focus(); }
+  // The words (boot): rows, sheets; the code's rows and the reset sheet's "copy it first" only when saveCode is on.
+  function progressText() {
+    const R = RT(), C = CT(), on = codeOn();
+    $("set-reset").querySelector(".sl").textContent = R.row; $("set-copy").querySelector(".sl").textContent = C.copyRow; $("set-load").querySelector(".sl").textContent = C.loadRow; $("set-copy").hidden = $("set-load").hidden = !on;
+    $("rs-title").textContent = R.title; $("rs-lose").textContent = R.lose; $("rs-keep").textContent = R.keep; $("rs-first").textContent = R.copyFirst; $("rs-first").hidden = !on;
+    $("rs-hold").setAttribute("aria-label", R.aria); $("rs-hold").querySelector(".hl").textContent = R.hold; $("rs-cancel").textContent = R.cancel;
+    $("cs-title").textContent = C.copyTitle; $("cs-help").textContent = C.copyHelp; $("cs-copy").textContent = C.copyAgain; $("cs-close").textContent = C.done;
+    $("ls-title").textContent = C.loadTitle; $("ls-help").textContent = C.loadHelp; $("ls-code").placeholder = C.placeholder; $("ls-apply").textContent = C.apply; $("ls-cancel").textContent = C.cancel;
+  }
+  // A save's progress in words: the next level (or every level won), coins, side quests won, eggs found.
+  function summary(d) {
+    const C = CT(), e = app.byId.get(Save.next(d, app.order)), all = app.levels.every((x) => d.done[x.id]), q = Object.keys(d.gal || {}).length, eg = Object.keys(d.eggs || {}).length;
+    const o = { n: e ? e.n : 1, c: plural(C.coins, d.coins | 0), q: plural(C.quests, q), e: eg ? plural(C.eggs, eg) : "" };
+    return fill(all ? C.summaryEnd : C.summary, o);
+  }
+  // Reset: the sheet opens on Cancel. A press (pointer, or Space or Enter held) starts the hold on app.clock; step() fills
+  // the bar (holdStep) and resets at reset.holdMs; letting go, leaving, a blur or any sheet change before then stops it.
+  function openReset() { openSub("resetsheet", $("rs-cancel")); }
+  function holdStart() { if (app.hold >= 0 || $("resetsheet").hidden) return; app.hold = app.clock; $("rs-hold").classList.add("on"); $("rs-hold").querySelector(".hl").textContent = RT().holding; }
+  function holdStop() { if (app.hold < 0) return; app.hold = -1; const b = $("rs-hold"); b.classList.remove("on"); b.querySelector(".fill").style.transform = ""; b.querySelector(".hl").textContent = RT().hold; }
+  function holdStep() { const f = Math.min(1, (app.clock - app.hold) / app.cfg.reset.holdMs); $("rs-hold").querySelector(".fill").style.transform = "scaleX(" + f.toFixed(3) + ")"; if (f >= 1) resetNow(); }
+  // The one way progress is reset (save.js reset: preferences kept, written, the cloud hook told). selfTest runs it on
+  // its scratch save, so the write stays in memory.
+  function resetNow() { holdStop(); Save.reset(app.save, app.meta); progressSwapped(); toast(RT().toast); }
+  function progressSwapped() { openSettings(false); app.tipQ = []; if (app.tip) hideTip(); app.loadR = null; showScreen("title"); }
+  // Copy: the code (save.js encode) in a selectable box with its length, copied at once; where the Clipboard API is
+  // missing or refused (an iframe, older Safari), execCommand on the selected box, else the box stays selected to copy by hand.
+  function openCopy() {
+    const C = CT(), code = Save.encode(app.save.data, galIds()); $("cs-code").value = code; $("cs-len").textContent = fill(C.len, { len: code.length }); $("cs-sum").textContent = summary(app.save.data);
+    $("cs-status").textContent = ""; openSub("codesheet", $("cs-close")); copyCode();
+  }
+  function copyCode() {
+    const ta = $("cs-code"), C = CT(), st = $("cs-status"), said = (ok) => { st.textContent = ok ? C.copied : C.copyFail; st.className = ok ? "ok" : "bad"; if (!ok && !$("codesheet").hidden) { ta.focus(); ta.select(); } return ok; };
+    const byHand = () => { let ok = false; try { ta.focus(); ta.select(); ta.setSelectionRange(0, ta.value.length); ok = !app.testing && document.execCommand("copy"); } catch (e) { ok = false; } return said(ok); };
+    const w = app.clipFake || (!app.testing && navigator.clipboard && navigator.clipboard.writeText ? (t) => navigator.clipboard.writeText(t) : null);
+    if (!w) return byHand();
+    let r; try { r = w(ta.value); } catch (e) { return byHand(); }
+    if (r && typeof r.then === "function") { r.then(() => said(true), byHand); return null; } // the answer comes later
+    return r === false ? byHand() : said(true);
+  }
+  // Load: every change to the box is read (save.js decode; the device's preferences kept); a good code shows what it
+  // holds and what it replaces, and only then can it be applied.
+  function openLoad() { $("ls-code").value = ""; loadCheck(); openSub("loadsheet", $("ls-code")); }
+  function loadCheck() {
+    const C = CT(), r = Save.decode($("ls-code").value, app.order, galIds(), app.meta, app.save.data.settings, app.cfg.saveCode.maxPaste), m = $("ls-msg");
+    app.loadR = r.ok ? r : null; m.textContent = r.ok ? summary(r.data) : C.err[r.err] || ""; m.className = "sub-sum" + (r.ok ? " good" : m.textContent ? " bad" : "");
+    $("ls-warn").textContent = r.ok ? fill(C.replaces, { now: summary(app.save.data) }) : ""; $("ls-warn").hidden = !r.ok; $("ls-apply").disabled = !r.ok;
+    return r;
+  }
+  function loadApply() { const r = app.loadR; if (!r || !codeOn()) return false; const sum = summary(r.data); app.save.data = r.data; writeSave(); progressSwapped(); toast(fill(CT().toast, { sum })); return true; }
   // A picture's thumbnail: gallery.thumbPx (or kp) canvas px a cell, the ring left out; dimmed (lightness only) unless colour.
   function thumb(c, L, colour, kp) {
     const k = kp || app.cfg.gallery.thumbPx, w = L.w - 2, h = L.h - 2, [lo, hi] = app.cfg.gallery.dim.map((x) => parseInt(x.slice(1), 16));
@@ -876,7 +936,7 @@
   function showScreen(name) {
     if (name === "gallery") name = "map"; // v5 R3: the Gallery is the journey map now
     if (name !== "play") { app.pick = null; document.body.classList.remove("picking"); }
-    $("settings").hidden = true; $("tailsheet").hidden = true;
+    $("settings").hidden = true; $("tailsheet").hidden = true; holdStop(); for (const k of SUBS) $(k).hidden = true; // v5.4: its sheets too
     app.screen = name; music();
     $("title").hidden = name !== "title"; $("map").hidden = name !== "map";
     if (name === "title") renderHome();
@@ -1275,7 +1335,7 @@
   // v4.3 fix (m2): on a wide screen a toast in play sits just above the side column's tray (by the cards and the line it is
   // about), as wide as the tray at most; elsewhere at the board's foot, as before.
   function placeToast() {
-    const t = $("toast"), side = app.wide && app.screen === "play"; t.classList.toggle("side", side);
+    const t = $("toast"), side = app.wide && app.screen === "play"; t.classList.toggle("side", side); t.classList.toggle("over", app.screen !== "play"); // v5.4: over the home and map
     if (!side) { t.style.left = ""; t.style.top = ""; t.style.maxWidth = ""; return; }
     const r = $("tray").getBoundingClientRect(); t.style.left = r.left + r.width / 2 + "px"; t.style.top = r.top - app.cfg.layout.toastGapPx + "px"; t.style.maxWidth = r.width + "px";
   }
@@ -1291,7 +1351,7 @@
   // card; on the title and map the game just resumes when focus returns. No timers are involved.
   function pause() {
     if (app.paused || !app.cfg) return;
-    app.paused = true; app.pauses++; if (app.audio) Audio.suspend(app.audio);
+    app.paused = true; app.pauses++; if (app.audio) Audio.suspend(app.audio); holdStop(); // v5.4: a blur lets go of the reset hold
     if (app.screen === "play") $("pause").hidden = false;
   }
   function resume() {
@@ -1356,6 +1416,7 @@
     document.addEventListener("keydown", (ev) => {
       if (app.audio) Audio.unlock(app.audio);
       if (app.paused) { if (ev.key === " " || ev.key === "Enter") { ev.preventDefault(); resume(); } return; }
+      if (subOpen()) { if (ev.key === "Escape") openSub(null); return; } // v5.4: back to Settings
       if (!$("settings").hidden) { if (ev.key === "Escape") openSettings(false); return; }
       if (!$("tailsheet").hidden) { if (ev.key === "Escape") openTail(false); return; } // v5 R3 fix
       if (ev.key === "Escape" && app.pick) { cancelPick(); return; }
@@ -1392,6 +1453,18 @@
     $("sb-buy").addEventListener("click", () => buySpeed(true)); $("sb-no").addEventListener("click", () => buySpeed(false)); // v5 R1
     document.querySelector("#settings .tog-speed").hidden = !app.debugSpeed; // v5 R1: speed lives on the play screen (debug keeps the row)
     togCb.forEach((b) => b.addEventListener("click", () => setCb(!app.cb, true)));
+    // v5.4: reset and the save code. The hold button acts on press and release only (its click does nothing).
+    $("set-reset").addEventListener("click", openReset); $("set-copy").addEventListener("click", openCopy); $("set-load").addEventListener("click", openLoad);
+    const hb = $("rs-hold");
+    hb.addEventListener("pointerdown", (ev) => { if (ev.button > 0) return; ev.preventDefault(); holdStart(); });
+    for (const k of ["pointerup", "pointercancel", "pointerleave", "lostpointercapture"]) hb.addEventListener(k, holdStop);
+    hb.addEventListener("keydown", (ev) => { if (ev.key === " " || ev.key === "Enter") { ev.preventDefault(); if (!ev.repeat) holdStart(); } });
+    hb.addEventListener("keyup", (ev) => { if (ev.key === " " || ev.key === "Enter") { ev.preventDefault(); holdStop(); } });
+    hb.addEventListener("blur", holdStop); hb.addEventListener("contextmenu", (ev) => ev.preventDefault());
+    $("rs-cancel").addEventListener("click", () => openSub(null));
+    $("cs-copy").addEventListener("click", copyCode); $("cs-close").addEventListener("click", () => openSub(null)); $("cs-code").addEventListener("focus", () => $("cs-code").select());
+    $("ls-code").addEventListener("input", loadCheck); $("ls-apply").addEventListener("click", loadApply); $("ls-cancel").addEventListener("click", () => openSub(null));
+    for (const k of SUBS) $(k).addEventListener("click", (ev) => { if (ev.target === $(k)) openSub(null); }); // the backdrop: back to Settings
     window.addEventListener("resize", layout);
     // A hidden tab can lose canvas backing stores: re-check every opaque cache when the page shows again, rebuild once.
     const recheck = () => { if (document.hidden || !app.V || !app.V.sprites) return; if (app.V.checkSprites().length) { app.V.buildSprites(); app.V.paintLayer(); } };
@@ -1536,6 +1609,8 @@
     const V = app.V; if (!V) return;
     V.clock = app.clock;
     if (app.screen === "title" && app.meta.lives) livesPill(); // v4 M5: the refill countdown (a DOM write only when it changes)
+    if (app.hold >= 0) holdStep(); // v5.4: the reset hold
+    if (app.screen !== "play" && app.toastT > 0 && app.clock >= app.toastT) hideToast(); // v5.4: a toast over the home or map goes too
     if (app.screen !== "play" || !app.B) return;
     if (app.panel === "win") countCoins();
     for (let k = 0; k < app.pwPop.length; k++) if (app.pwPop[k] > 0 && app.clock - app.pwPop[k] >= app.cfg.show.pwPopMs && app.clock - app.pwPop[k] < app.cfg.show.pwPopMs + dt) renderPowers(); // a badge's pop ends
@@ -2552,12 +2627,66 @@
             "music (v5.2, offline context): a track starts, asking again keeps it, a new one crossfades in (looping between its loop points); the jingle ducks it; Music off stops it and a wanted track waits; on starts it; effects off leaves the music; both off stops it (" + [c1, c2, c3].join(",") + ")"); }
         else ok(true, "music (v5.2): no OfflineAudioContext here, the offline checks skipped");
         showScreen("title"); }
+      // 26. v5.4: reset and the save code, through the real buttons on scratch saves. Settings: the code's rows (only with
+      // saveCode on) and, after Done, Reset progress; each row hittable and minTapPx tall, the card inside the screen or
+      // scrolling inside itself. Reset: Cancel changes nothing; a hold let go early changes nothing and empties its fill;
+      // a full hold (a pointer, then Space held) clears the progress, keeps the preferences and lands on the home at level 1
+      // with the toast over it. Copy then load: the code in its box with its length (the clipboard faked; refused: the box
+      // selected to copy by hand), a reset, the code pasted back: a changed character, a truncated code and other text are
+      // refused (apply disabled); the code itself shows what it holds and what it replaces, and applying restores the save.
+      if (app.gal.length >= 2) {
+        const RS = app.cfg.reset, RTx = RS.text, CTx = app.cfg.saveCode.text, HT = app.meta.home, card = $("settings").querySelector(".sheetcard"), hb = $("rs-hold"), fl = hb.querySelector(".fill");
+        const canon = (o) => (Array.isArray(o) ? "[" + o.map(canon).join() + "]" : o && typeof o === "object" ? "{" + Object.keys(o).sort().map((k) => JSON.stringify(k) + ":" + canon(o[k])).join() + "}" : JSON.stringify(o));
+        const mkProg = () => { app.save = scratch(); const d = app.save.data; for (let i = 0; i < 6; i++) Save.record(d, app.order[i]); d.best[app.order[0]] = [41234, 17, 30]; Save.record(d, app.gal[0].id, "gal"); Save.record(d, app.gal[1].id, "gal");
+          d.coins = 999; d.inv.ladder = 4; d.eggs["s1-0"] = 1; d.last = app.order[5]; d.settings.music = false; d.settings.cb = true; return canon(d); };
+        const into = (el) => { const r = el.getBoundingClientRect(), q = card.getBoundingClientRect(); if (r.top < q.top) card.scrollTop -= q.top - r.top; else if (r.bottom > q.bottom) card.scrollTop += r.bottom - q.bottom; return el; };
+        const pe = (el, k) => el.dispatchEvent(new PointerEvent(k, { bubbles: true, button: 0, pointerId: 1, isPrimary: true })), ke = (el, k) => el.dispatchEvent(new KeyboardEvent(k, { key: " ", bubbles: true, cancelable: true }));
+        const holdFor = (ms) => { let t = 0; while (app.hold >= 0 && t < ms) { step(16); t += 16; } return t; };
+        const wiped = (d) => !Object.keys(d.done).length && !Object.keys(d.gal).length && !Object.keys(d.eggs).length && !Object.keys(d.best).length && d.coins === app.meta.coins.start && d.inv.ladder === 0 && !Object.keys(d.got).length;
+        const kept = (d) => d.settings.music === false && d.settings.cb === true && d.settings.sfx === true;
+        const home1 = () => app.screen === "title" && $("play-lab").textContent === fill(HT.play, { n: app.levels[0].n }) && $("home-coins").textContent === String(app.meta.coins.start);
+        // Settings.
+        const p0 = mkProg(); showScreen("title"); $("btn-settings").click(); card.scrollTop = 0;
+        const cr = card.getBoundingClientRect(), rows = ["set-music", "set-copy", "set-load", "set-close", "set-reset"].map((k) => (k === "set-music" ? document.querySelector("#settings .tog-music") : $(k)));
+        const inScreen = cr.top >= -0.5 && cr.left >= -0.5 && cr.bottom <= innerHeight + 0.5 && cr.right <= innerWidth + 0.5, scrolls = card.scrollHeight > card.clientHeight + 1;
+        const rowsOK = rows.every((el) => !el.hidden && hitOK(into(el)) && el.getBoundingClientRect().height >= ST.minTapPx - 0.5), lastRow = card.lastElementChild === $("set-reset") && $("set-reset").previousElementSibling.contains($("set-close"));
+        app.cfg.saveCode.on = false; progressText(); const offRows = $("set-copy").hidden && $("set-load").hidden && $("rs-first").hidden && !$("set-reset").hidden; app.cfg.saveCode.on = true; progressText();
+        ok(inScreen && rowsOK && lastRow && offRows, "settings (v5.4): Copy save code, Load save code, Done, then Reset progress last (a quiet row after Done); every row hittable and " + ST.minTapPx + " px tall or more; the card inside the " + innerWidth + "x" + innerHeight + " screen" + (scrolls ? ", scrolling inside itself" : "") + "; with saveCode off only Reset shows");
+        out.notes.settingsCard = Math.round(cr.height) + " px tall" + (scrolls ? ", scrolls " + (card.scrollHeight - card.clientHeight) + " px" : "");
+        // Reset: Cancel, an early let-go, a full hold by pointer, then by Space.
+        card.scrollTop = 0; into($("set-reset")).click(); const say = $("resetsheet").textContent;
+        const rsOpen = !$("resetsheet").hidden && $("settings").hidden && document.activeElement === $("rs-cancel") && hitOK(hb) && hitOK($("rs-cancel")) && hb.getBoundingClientRect().height >= ST.minTapPx && [RTx.lose, RTx.keep, RTx.copyFirst, RTx.hold].every((x) => say.indexOf(x) >= 0);
+        $("rs-cancel").click(); const c1 = $("resetsheet").hidden && !$("settings").hidden && canon(app.save.data) === p0;
+        $("set-reset").click(); pe(hb, "pointerdown"); holdFor(RS.holdMs * 0.6); const midFill = parseFloat((/scaleX\(([\d.]+)\)/.exec(fl.style.transform) || [0, 0])[1]), midLab = hb.textContent === RTx.holding; pe(hb, "pointerup");
+        const c2 = canon(app.save.data) === p0 && app.hold < 0 && fl.style.transform === "" && !$("resetsheet").hidden && hb.textContent === RTx.hold && midFill > 0.5 && midFill < 0.7 && midLab;
+        pe(hb, "pointerdown"); const tFull = holdFor(RS.holdMs * 2); pe(hb, "pointerup");
+        const d1 = app.save.data, ts = getComputedStyle($("toast")), c3 = wiped(d1) && kept(d1) && home1() && $("resetsheet").hidden && $("settings").hidden && !$("toast").hidden && $("toast").textContent === RTx.toast && ts.position === "fixed" && +ts.zIndex > 10 && Math.abs(tFull - RS.holdMs) <= 32;
+        mkProg(); showScreen("title"); $("btn-settings").click(); $("set-reset").click(); hb.focus(); ke(hb, "keydown"); const tKey = holdFor(RS.holdMs * 2); ke(hb, "keyup");
+        const c4 = wiped(app.save.data) && kept(app.save.data) && home1() && Math.abs(tKey - RS.holdMs) <= 32;
+        ok(rsOpen && c1 && c2 && c3 && c4, "reset (v5.4): its sheet says what goes and what stays and opens on Cancel; Cancel changes nothing (" + +c1 + "); let go at 60% (fill " + midFill.toFixed(2) + "): nothing changes, the fill empties (" + +c2 + "); a " + tFull + " ms pointer hold (" + +c3 + ") and a " + tKey + " ms Space hold (" + +c4 + ") reset: no levels, side quests, eggs or bests, " + app.meta.coins.start + " coins, music off and colour-blind on kept, the home at level 1 with the toast over it");
+        // Copy then load.
+        const p1 = mkProg(), d0 = JSON.parse(JSON.stringify(app.save.data)); let clip = null; app.clipFake = (t) => { clip = t; return true; };
+        showScreen("map"); $("map-set").click(); into($("set-copy")).click(); const code = $("cs-code").value;
+        const cpOK = !$("codesheet").hidden && clip === code && code.indexOf(Save.CODE) === 0 && $("cs-len").textContent === fill(CTx.len, { len: code.length }) && $("cs-status").textContent === CTx.copied && $("cs-sum").textContent === summary(d0) && hitOK($("cs-copy")) && hitOK($("cs-close"));
+        app.clipFake = () => false; $("cs-copy").click(); const ta0 = $("cs-code"), byHand = $("cs-status").textContent === CTx.copyFail && document.activeElement === ta0 && ta0.selectionEnd - ta0.selectionStart === code.length; app.clipFake = null;
+        $("cs-close").click(); const backSet = !$("settings").hidden && $("codesheet").hidden;
+        $("set-reset").click(); pe(hb, "pointerdown"); holdFor(RS.holdMs * 2); pe(hb, "pointerup"); const gone = wiped(app.save.data);
+        $("btn-settings").click(); into($("set-load")).click(); const ta = $("ls-code"), put = (v) => { ta.value = v; ta.dispatchEvent(new Event("input", { bubbles: true })); return $("ls-apply").disabled ? $("ls-msg").textContent : "ok"; };
+        const lOpen = !$("loadsheet").hidden && document.activeElement === ta && $("ls-apply").disabled && $("ls-warn").hidden;
+        const refused = [put(code.slice(0, 20) + (code[20] === "A" ? "B" : "A") + code.slice(21)), put(code.slice(0, -3)), put("hello"), put(code.replace(/^SP1\./, "SP9."))];
+        const good = put("\n" + code.slice(0, 60) + "\n" + code.slice(60) + " "), sumNew = summary(d0), lsay = $("ls-msg").textContent, warn = $("ls-warn").textContent;
+        $("ls-apply").click(); const d2 = app.save.data;
+        const restored = canon(d2) === p1 && app.screen === "title" && $("toast").textContent === fill(CTx.toast, { sum: sumNew }) && $("play-lab").textContent === fill(HT.play, { n: app.levels[6].n }) && $("loadsheet").hidden;
+        ok(cpOK && byHand && backSet && gone && lOpen && refused.join("|") === [CTx.err.broken, CTx.err.broken, CTx.err.prefix, CTx.err.newer].join("|") && good === "ok" && lsay === sumNew && warn === fill(CTx.replaces, { now: summary(Save.fresh(app.meta)) }) && restored,
+          "save code (v5.4, from the map's gear): Copy shows the code (" + code.length + " characters) with its length and summary and copies it (" + +cpOK + "); a refused clipboard leaves the box selected (" + +byHand + "); after a reset, Load refuses a changed character, a truncated code, other text and a newer code (" + refused.map((x) => !!x).join(",") + "); the code (wrapped) previews '" + lsay + "' and what it replaces; applying restores the save exactly (" + +restored + ")");
+        app.save = scratch(); showScreen("title");
+      }
       // 14. Opaque sprite caches.
       const bad = app.V.checkSprites(); ok(!bad.length, "sprites: every opaque cache is opaque" + (bad.length ? " (" + bad.join(",") + ")" : ""));
     } catch (err) { ok(false, "selfTest threw: " + (err && err.message) + " " + (err && err.stack ? err.stack.split("\n")[1] : "")); }
     finally {
       for (const k of Object.keys(ST)) app.byId.delete("fx-" + k); // every fixture registered for the run
-      app.allPw = false; if (app.tip) hideTip(); app.tipQ = [];
+      app.allPw = false; if (app.tip) hideTip(); app.tipQ = []; app.clipFake = null; holdStop(); // v5.4
       app.save = was.save; app.meta = was.meta; app.now = was.now; app.testing = false; setSpeed(was.speed, false); setCb(was.cb, false); app.diff = was.diff;
       setSound(was.sfx, was.music, false); Audio.hushed(app.audio, false); // v5.2
       if (was.entry) startLevel(was.entry.id, was.diff); showScreen(was.screen); renderAll();
@@ -2601,7 +2730,8 @@
     // v4.3: clearPictures(k): clear the Gallery's first k pictures in the live save (the screens' sequential Gallery).
     clearPictures: (k) => { for (let i = 0; i < k && i < app.gal.length; i++) Save.record(app.save.data, app.gal[i].id, "gal"); writeSave(); if (app.screen === "map") renderMap(); return Object.keys(app.save.data.gal).length; },
     quest: (id) => { const e = app.byId.get(id); return e && e.L.quest ? Object.assign({ open: picOpen(e) }, e.L.quest) : null; }, // v5 R2: a picture's side quest
-    homeArt: () => { fitTitle(); return homeArt(); }, // v5.3: the home painting's fit (which image, the castle's offset from the box's centre)
+    homeArt: () => { fitTitle(); return homeArt(); },
+    code: () => Save.encode(app.save.data, galIds()), // v5.4: the live save's code (shots, the harness) // v5.3: the home painting's fit (which image, the castle's offset from the box's centre)
     unlockTo: (n) => { for (let i = 0; i < n && i < app.order.length; i++) Save.record(app.save.data, app.order[i]); app.save.data.last = Save.next(app.save.data, app.order); writeSave(); renderHome(); return Object.keys(app.save.data.done).length; },
     power: (k, a) => { const got = onPower(k); if (a == null || !app.pick) return got; return Array.isArray(a) ? pickTile(a[0], a[1]) : pickSlot(a); },
     allPowers: (on) => { app.allPw = !!on; renderPowers(); return app.allPw; }, // v5 R1: every power-up shown whatever the campaign (tests)

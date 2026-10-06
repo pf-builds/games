@@ -7,9 +7,16 @@
 <meta name="theme-color" content="#2e2935">
 <title>Sapper's Path</title>
 <meta name="description" content="Goblins stole the crown and walled themselves in. Tap a squad: its sappers run up, pull their colour off the fort and carry it home. Keep the holding line clear and raze every block.">
+<meta property="og:title" content="Sapper's Path">
+<meta property="og:description" content="Goblins stole the crown and walled themselves in. Tap a squad: its sappers run up, pull their colour off the fort and carry it home. Keep the holding line clear and raze every block.">
+<meta property="og:image" content="https://pf-builds.github.io/games/sappers-path/thumb.jpg">
+<meta property="og:image:width" content="800">
+<meta property="og:image:height" content="450">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://pf-builds.github.io/games/sappers-path/thumb.jpg">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%232e2935'/><rect x='14' y='14' width='22' height='22' rx='5' fill='%23ff8c1a'/><rect x='39' y='14' width='22' height='22' rx='5' fill='%23e6262e'/><rect x='64' y='14' width='22' height='22' rx='5' fill='%23ffe21f'/><rect x='14' y='39' width='22' height='22' rx='5' fill='%232f62ff'/><rect x='64' y='39' width='22' height='22' rx='5' fill='%239ee52a'/><rect x='14' y='64' width='22' height='22' rx='5' fill='%238f45ff'/><rect x='39' y='64' width='22' height='22' rx='5' fill='%230fb5a6'/><rect x='64' y='64' width='22' height='22' rx='5' fill='%23ff3fa4'/></svg>">
-<link rel="preload" href="fonts/Jersey10-Regular.ttf?v=40" as="font" type="font/ttf" crossorigin>
-<link rel="stylesheet" href="style.css?v=40">
+<link rel="preload" href="fonts/Jersey10-Regular.ttf?v=41" as="font" type="font/ttf" crossorigin>
+<link rel="stylesheet" href="style.css?v=41">
 </head>
 <body>
 <div id="app">
@@ -55,7 +62,7 @@
     <span class="pz-set"><button class="round tog tog-cb" aria-pressed="false" aria-label="Colour-blind marks"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2" fill="currentColor"/><rect x="13" y="3" width="8" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="3" y="13" width="8" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13" y="13" width="8" height="8" rx="2" fill="currentColor"/><path d="M5 9l4-4M15 19l4-4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg></button><button class="round tog tog-mute" aria-label="Mute sound" aria-pressed="false"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="waves" d="M16 9a4 4 0 0 1 0 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="waves w2" d="M18.5 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="cross" d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></span></div>
   <section id="title" class="screen home">
     <!-- v5.3: the painted siege (art/, tools/home-art.py): the tall crop on an upright screen, the whole painting otherwise; main.js fitTitle centres the castle -->
-    <picture id="title-art" aria-hidden="true"><source media="(orientation: portrait)" srcset="art/home-tall.jpg?v=40" width="1080" height="1920"><img src="art/home-wide.jpg?v=40" alt="" width="1920" height="1097" fetchpriority="high"></picture>
+    <picture id="title-art" aria-hidden="true"><source media="(orientation: portrait)" srcset="art/home-tall.jpg?v=41" width="1080" height="1920"><img src="art/home-wide.jpg?v=41" alt="" width="1920" height="1097" fetchpriority="high"></picture>
     <div class="home-card">
       <div class="home-top">
         <button id="btn-settings" class="round" aria-label="Settings"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M10.3 2h3.4l.5 2.6 1.7.8 2.3-1.4 2.4 2.4-1.4 2.3.8 1.7 2.6.5v3.4l-2.6.5-.8 1.7 1.4 2.3-2.4 2.4-2.3-1.4-1.7.8-.5 2.6h-3.4l-.5-2.6-1.7-.8-2.3 1.4-2.4-2.4 1.4-2.3-.8-1.7L2 13.7v-3.4l2.6-.5.8-1.7L4 5.8l2.4-2.4 2.3 1.4 1.7-.8z" fill="currentColor"/><circle cx="12" cy="12" r="3.6" fill="var(--stone)" stroke="var(--ink)" stroke-width="1.6"/></svg></button>
@@ -83,8 +90,41 @@
         <button class="set-row tog tog-sfx" aria-pressed="true" aria-label="Sound effects"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="waves" d="M16 9a4 4 0 0 1 0 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="waves w2" d="M18.5 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="cross" d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="sl">Sound effects</span><span class="sv"></span></button>
         <button class="set-row tog-speed" aria-label="Speed 1x"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 5l9 7-9 7zM12 5l9 7-9 7z" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg><span class="sl">Speed</span><span class="sv">1&times;</span></button>
         <button class="set-row tog tog-cb" aria-pressed="false" aria-label="Colour-blind marks"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2" fill="currentColor"/><rect x="13" y="3" width="8" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="3" y="13" width="8" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13" y="13" width="8" height="8" rx="2" fill="currentColor"/><path d="M5 9l4-4M15 19l4-4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg><span class="sl">Colour-blind marks</span><span class="sv"></span></button>
+        <!-- v5.4: the save code (config saveCode.on; main.js openCopy, openLoad) -->
+        <button id="set-copy" class="set-row set-act"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M5 16V5a2 2 0 0 1 2-2h9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><span class="sl">Copy save code</span></button>
+        <button id="set-load" class="set-row set-act"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 3v11M7 9.5l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><span class="sl">Load save code</span></button>
       </div>
       <div class="row"><button id="set-close" class="primary">Done</button></div>
+      <!-- v5.4: a quiet danger row at the foot, apart from Done (main.js openReset) -->
+      <button id="set-reset" class="set-reset"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M5 12a7 7 0 1 0 2.1-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M4 3.5v5h5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="sl">Reset progress</span></button>
+    </div>
+  </div>
+  <div id="resetsheet" class="modal" role="alertdialog" aria-modal="true" aria-labelledby="rs-title" aria-describedby="rs-lose" hidden><!-- v5.4: reset progress, press and hold -->
+    <div class="sheetcard panel">
+      <div id="rs-title" class="p-title"></div>
+      <p id="rs-lose" class="sub-p"></p><p id="rs-keep" class="sub-p"></p><p id="rs-first" class="sub-p"></p>
+      <button id="rs-hold" class="hold"><span class="fill" aria-hidden="true"></span><span class="hl"></span></button>
+      <div class="row"><button id="rs-cancel" class="primary"></button></div>
+    </div>
+  </div>
+  <div id="codesheet" class="modal" role="dialog" aria-modal="true" aria-labelledby="cs-title" hidden><!-- v5.4: the save code, copied -->
+    <div class="sheetcard panel">
+      <div id="cs-title" class="p-title"></div>
+      <p id="cs-sum" class="sub-sum"></p>
+      <textarea id="cs-code" class="code" readonly rows="4" spellcheck="false" autocomplete="off" aria-label="Save code"></textarea>
+      <p class="sub-meta"><span id="cs-len"></span><span id="cs-status" role="status"></span></p>
+      <p id="cs-help" class="sub-p"></p>
+      <div class="row"><button id="cs-copy"></button><button id="cs-close" class="primary"></button></div>
+    </div>
+  </div>
+  <div id="loadsheet" class="modal" role="dialog" aria-modal="true" aria-labelledby="ls-title" hidden><!-- v5.4: load a save code -->
+    <div class="sheetcard panel">
+      <div id="ls-title" class="p-title"></div>
+      <p id="ls-help" class="sub-p"></p>
+      <textarea id="ls-code" class="code" rows="4" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Save code" aria-describedby="ls-msg"></textarea>
+      <p id="ls-msg" class="sub-sum" role="status"></p>
+      <p id="ls-warn" class="sub-p" hidden></p>
+      <div class="row"><button id="ls-apply" class="primary" disabled></button><button id="ls-cancel"></button></div>
     </div>
   </div>
   <div id="tailsheet" class="modal" role="dialog" aria-modal="true" aria-labelledby="ts-title" hidden><!-- v5 R3 fix: every cleared picture past the road, to play again -->
@@ -115,13 +155,13 @@
     </div>
   </section>
 </div>
-<script src="src/engine.js?v=40"></script>
-<script src="src/save.js?v=40"></script>
-<script src="src/journey.js?v=40"></script>
-<script src="src/meta.js?v=40"></script>
-<script src="src/art.js?v=40"></script>
-<script src="src/audio.js?v=40"></script>
-<script src="src/board.js?v=40"></script>
-<script src="src/main.js?v=40"></script>
+<script src="src/engine.js?v=41"></script>
+<script src="src/save.js?v=41"></script>
+<script src="src/journey.js?v=41"></script>
+<script src="src/meta.js?v=41"></script>
+<script src="src/art.js?v=41"></script>
+<script src="src/audio.js?v=41"></script>
+<script src="src/board.js?v=41"></script>
+<script src="src/main.js?v=41"></script>
 </body>
 </html>

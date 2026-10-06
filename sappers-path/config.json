@@ -393,5 +393,15 @@
       "noLives": "Next life {t}", "noLivesToast": "No lives left: the next one comes in {t}", "lifeLost": "-1 life ({n} left)",
       "story": "Goblins stole the crown and walled themselves in. Tap a squad: its sappers run up, pull their colour off the fort and carry it home. Keep the holding line clear. Raze every block."},
     "eraCard": {"cleared": "{n}/{t} cleared", "coins": "{n} coins", "aria": "{n} of {t} cleared; {c} coins earned"}
-  }
+  },
+  "reset": {"note": "v5.4 (SPEC-v4 §9, tools/v5-4-notes.md): Settings' last row, Reset progress (on in every build). Its sheet says what goes and takes a press and hold of holdMs (mouse, touch, or Space or Enter held) with a fill that runs on the game clock; letting go early empties the fill. save.js reset keeps the preferences and calls the cloud hook. Then the home at level 1 with the toast.",
+    "holdMs": 1500,
+    "text": {"row": "Reset progress", "title": "Reset progress?", "lose": "This wipes your progress on this device: every level won, your coins, power-ups, side quests, easter eggs and best times. You start again at level 1.", "keep": "Music, Sound effects and Colour-blind marks stay as they are.", "copyFirst": "Want it back later? Copy your save code first.", "hold": "Hold to reset", "holding": "Keep holding\u2026", "aria": "Reset progress: press and hold", "cancel": "Cancel", "toast": "Progress reset. Back to level 1."}},
+  "saveCode": {"note": "v5.4: Settings' Copy save code and Load save code rows (save.js encode, decode: SP1. + base64url + CRC-32). on: the switch for this build (the pf-builds web build: true). portalOn: what the portal build (CrazyGames, its own cloud save; not made yet) sets on to; reset stays on there. maxPaste: the most characters a pasted code is read to. summary fills in {n} the next level, {c} the coins, {q} the side quests won and {e} the easter eggs found (none: left out), each from its [one, more] words; len {len} the code's length; replaces {now} this device's summary; toast {sum} the loaded one; err: what decode() found wrong.",
+    "on": true, "portalOn": false, "maxPaste": 20000,
+    "text": {"copyRow": "Copy save code", "loadRow": "Load save code", "copyTitle": "Your save code", "copyHelp": "Paste it into Load save code on another device or browser to carry on there.", "len": "{len} characters",
+      "copied": "Copied to the clipboard.", "copyFail": "Couldn't copy here. Select the code and copy it.", "copyAgain": "Copy", "done": "Done",
+      "loadTitle": "Load a save code", "loadHelp": "Paste a save code from Copy save code.", "placeholder": "SP1.\u2026", "summary": "Level {n}, {c}, {q}{e}", "summaryEnd": "Every level won, {c}, {q}{e}", "coins": ["{n} coin", "{n} coins"], "quests": ["{n} side quest", "{n} side quests"], "eggs": [", {n} easter egg", ", {n} easter eggs"],
+      "replaces": "Loading replaces the progress on this device ({now}). Your sound and colour-blind settings stay.", "apply": "Replace", "cancel": "Cancel", "toast": "Save code loaded: {sum}.",
+      "err": {"empty": "", "prefix": "That isn't a Sapper's Path save code (it starts with SP1.).", "newer": "That code is from a newer version of the game. Reload this page and try again.", "broken": "That code has a typo or a missing piece. Copy the whole code again.", "body": "That code can't be read. Copy the whole code again."}}}
 }

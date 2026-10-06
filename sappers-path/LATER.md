@@ -336,3 +336,10 @@ Fixed: S1-S7, m2, m3, N1, N2 (`tools/v5-r4-notes.md` §10). Parked:
 - A track per realm (the rest of Junkala's JRPG packs) once playtesters have heard the three loops.
 - iOS plays Web Audio through the ringer switch (silent mode mutes it), same as the effects already do. `navigator.audioSession.type = "playback"` (iOS 17+) would override that; only if players ask.
 - A volume slider per bus instead of on/off rows.
+
+## v5.4 (reset and the save code)
+- A QR code of the save code on the Copy sheet, so a phone can scan it from a desktop (needs a small QR encoder, about 4 KB).
+- A "Share" button on the Copy sheet (`navigator.share`) on phones, next to Copy.
+- If coins ever cost real money: sign codes (a server key) or turn codes off; the CRC only catches typos.
+- The portal build's cloud save: set `Save.cloud.reset` and read/write the cloud copy (CrazyGames SDK data module).
+- Shorter codes if players type them by hand: best times in tenths of a second, or a "progress only" code without best rows (~60% shorter).

@@ -17,13 +17,14 @@
    the Gallery's next tile (gold frame, Play chip); a buy short of coins (.pw.poor); 44 px badges in small frames; the
    landscape bar's .head and .grid; the home's era chip on the river; era report cards as a band.
    v5.3: the home's painted siege (#title-art, a <picture>) and the realm line over Play. */
-@font-face { font-family: "Jersey 10"; src: url("fonts/Jersey10-Regular.ttf?v=40") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Jersey 10"; src: url("fonts/Jersey10-Regular.ttf?v=41") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
 :root { --bg: #2e2935; --ink: #221a26; --cream: #f3ead8; --cream-soft: #cfc4d6;
   --tray: #ddd3c0; --tray-hi: #ece5d6; --tray-edge: #c4b89e; --tray-ink: #3a3027; --tray-soft: #6b5c47; --socket: #c3b697; --socket-lo: #a99a7b;
   --band1: #d0c6b4; --band2: #c2baa9; /* the rows' tray bands, set from layout.fade.band at boot */
   --tray-full: #93540a; --tray-bad: #b3301c; --tray-march: #7a5a06; --lock-socket: #3b3342; --mys-dot: rgba(242,194,48,.34); --mys-rim: rgba(242,194,48,.55);
   --stone: #a2a5b0; --stone-hi: #cdd0d8; --stone-lo: #666a77; --gold: #f2c230; --gold-hi: #ffe27a; --gold-lo: #b8860b; --gold-dark: #7a5a06;
   --parch: #fbf5e6; --parch-edge: #e3d3ad; --parch-ink: #2a2430; --parch-soft: #5a4e3c;
+  --danger: #b3301c; --danger-fill: #6e1a0e; --danger-ink: #a3271a; /* v5.4: Reset progress */
   --glow: #fff3a8; --flash: #ff5a3c; --pill: rgba(20,16,28,.78); --off: #544e5c;
   --wood: #e8cf9e; --wood-mid: #b98d52; --wood-lo: #7a5a33;
   --px: "Jersey 10", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -492,6 +493,39 @@ body.wide .sheet:not(.float) .sheetcard { border-radius: 10px 10px 12px 12px; }
 .set-row .sl { flex: 1; } .set-row .sv { font-size: 20px; color: var(--parch-soft); }
 
 .set-row[aria-pressed="true"] .sv { color: var(--ink); }
+/* v5.4: a sheet taller than the screen scrolls inside itself (Settings on a 360x640 phone or a short window). The save
+   code's two rows sit under the toggles; Reset progress is a quiet danger line at the card's foot, under Done and apart
+   from it (a rule between). Its sheet's hold button fills left to right on the game clock (main.js holdStep); letting
+   go empties it. */
+.modal .sheetcard { max-height: 100%; overflow-y: auto; overscroll-behavior: contain; }
+.set-row.set-act { font-size: 22px; }
+.set-reset { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 44px; margin-top: 14px; padding: 0 12px; font-size: 21px;
+  background: transparent; color: var(--danger-ink); border: 2px solid transparent; border-top: 2px solid var(--parch-edge); border-radius: 0 0 6px 6px; box-shadow: none; }
+.set-reset:active:not(:disabled) { transform: none; box-shadow: none; background: rgba(163,39,26,.08); }
+.set-reset:focus-visible { border-color: var(--danger-ink); }
+.sub-p { margin: 0 0 10px; font-family: var(--px); font-size: 21px; line-height: 1.05; color: var(--parch-soft); text-align: left; }
+.sub-p[hidden], .sub-sum:empty { display: none; }
+.sub-sum { margin: 0 0 8px; font-family: var(--px); font-size: 22px; line-height: 1.05; color: var(--parch-ink); }
+.sub-sum.bad { color: var(--danger-ink); } .sub-sum.good { color: #24643a; }
+.sub-meta { display: flex; justify-content: space-between; gap: 8px; margin: 4px 0 8px; font-family: var(--px); font-size: 18px; line-height: 1; color: var(--parch-soft); }
+.sub-meta .bad { color: var(--danger-ink); } .sub-meta .ok { color: #24643a; }
+textarea.code { display: block; width: 100%; resize: none; margin: 0; padding: 7px 8px; border: 2px solid var(--parch-soft); border-radius: 6px; background: #fff; color: var(--parch-ink);
+  font: 14px/1.25 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; word-break: break-all; -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+textarea.code:focus { outline: 3px solid var(--gold-lo); outline-offset: 1px; }
+.modal button:disabled { opacity: .55; }
+.hold { position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; width: 100%; min-height: 54px; margin: 4px 0 10px; font-size: 26px;
+  background: var(--danger); color: #fff6e8; text-shadow: 0 2px 0 rgba(34,26,38,.4); touch-action: none; -webkit-touch-callout: none;
+  box-shadow: inset 0 3px 0 #e2735d, inset 0 -5px 0 #74190c, 0 3px 0 rgba(0,0,0,.5); }
+.hold .fill { position: absolute; inset: 0; background: var(--danger-fill); transform: scaleX(0); transform-origin: left center; transition: transform .2s ease-out; }
+.hold.on .fill { transition: none; }
+.hold .hl { position: relative; }
+/* A short, wide window (a desktop window 375 tall): Settings' rows go two to a line so the sheet fits without scrolling. */
+@media (max-height: 480px) and (min-width: 600px) {
+  #settings .sheetcard { max-width: 620px; padding-top: 6px; } #settings .p-title { font-size: 32px; margin: 0; }
+  #settings .set-rows { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 8px; margin: 4px 0 8px; } #settings .set-row { min-height: 44px; font-size: 21px; }
+  #settings .row button { min-height: 44px; } #settings .set-reset { margin-top: 8px; }
+}
+#toast.over { position: fixed; top: calc(max(14px, env(safe-area-inset-top)) + 118px); bottom: auto; z-index: 45; }
 #pause .pz-set { display: flex; gap: 10px; margin-top: 18px; }
 /* The level report on the win sheet: time, taps and coins, each with its best (or "New best!") underneath. */
 /* Critics 2 fix (V2): a Gallery win's finished picture, in its colours on a gilt frame, above the report (main.js sizes it). */

@@ -33,6 +33,19 @@
 // again.
 // v5.2: settings.music and settings.sfx, music and sound effects switched apart (strict booleans, on by default). A save
 // from before v5.2 has neither: both load as the opposite of its muted flag. muted is kept as both off.
+// v5.4 (SPEC-v4 §9, tools/v5-4-notes.md): reset and the save code.
+//   reset(sv, meta): the progress cleared to a fresh save, the player's preferences (settings: music, sfx, muted, cb,
+//   speed) kept; written at once, then the CLOUD HOOK (cloud.reset) is told so a portal build's cloud copy goes too.
+//   The save code: CODE ("SP1.") + base64url(body + its CRC-32, 4 bytes big-endian). The body is unsigned LEB128
+//   varints: the save's format v; coins (format 1: + 1, 0 for an old save with none); the inventory (a count, then each in POWERS order); got (a bit per power-up);
+//   the cleared levels (a count, then each by slot number as a step from the one before, in slot order, with its best
+//   row: format 2 [ms, taps, coins]; format 1 its mask, then [ms E, N, H, taps E, N, H, coins]); the cleared pictures
+//   the same, by their place in the Gallery's order (from 1); the eggs found (a count, then sheet and i each); last (its
+//   slot, 0: none); lives n (format 1: + 1 as coins) and at. Preferences are not in it: a load keeps the device's. decode() checks the prefix,
+//   that the text is canonical base64url (so no character can change unseen), the checksum, and that the body reads to
+//   its end exactly, then builds a raw save that goes through sanitize() like any stored one: clamped, unknown slots and
+//   pictures dropped, an older format migrated, levels kept by slot (the v5 R3 rule). The checksum catches typing and
+//   copying mistakes, not cheating (coins are free; a code edited on purpose still only loads what sanitize allows).
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
@@ -137,5 +150,69 @@
     return { key, store, data, write() { try { store.setItem(key, JSON.stringify(this.data)); return true; } catch (e) { return false; } } };
   }
 
-  return { VERSION, fresh, sanitize, record, next, nextBy, isOpen, questOpen, memoryStore, open };
+  // ---- v5.4: reset and the save code ----------------------------------------------------------------------------------
+  // CLOUD HOOK (v5.4, not built): a portal build with its own cloud save (CrazyGames) sets cloud.reset(key) to clear the
+  // cloud copy; reset() calls it after the local write. null on the web build.
+  const cloud = { reset: null };
+  // d's progress replaced by from's, d's preferences kept (a new object; neither is changed).
+  function withPrefs(from, d) { const s = Object.assign({}, from); s.settings = Object.assign({}, d && d.settings ? d.settings : from.settings); return s; }
+  // Clear sv's progress (a fresh save, preferences kept) and write it. Returns whether the local write took.
+  function reset(sv, meta) {
+    sv.data = withPrefs(fresh(meta), sv.data); const w = sv.write();
+    if (typeof cloud.reset === "function") { try { cloud.reset(sv.key); } catch (e) { /* the local reset stands */ } }
+    return w;
+  }
+  const CODE = "SP1.", B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_", ROW = [7, 3]; // a best row's length: format 1, 2
+  let crcT = null;
+  function crc32(b, n) { if (!crcT) { crcT = new Int32Array(256); for (let i = 0; i < 256; i++) { let c = i; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; crcT[i] = c; } }
+    let c = -1; for (let i = 0; i < n; i++) c = crcT[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ -1) >>> 0; }
+  function b64(b) { let s = ""; for (let i = 0; i < b.length; i += 3) { const n = (b[i] << 16) | ((b[i + 1] | 0) << 8) | (b[i + 2] | 0), k = Math.min(3, b.length - i) + 1; for (let j = 0; j < k; j++) s += B64[(n >> (18 - 6 * j)) & 63]; } return s; }
+  function unb64(s) { // null on any character outside base64url or an impossible length
+    if (s.length % 4 === 1) return null; const out = new Uint8Array(Math.floor((s.length * 3) / 4)); let o = 0, acc = 0, bits = 0;
+    for (let i = 0; i < s.length; i++) { const v = B64.indexOf(s[i]); if (v < 0) return null; acc = ((acc << 6) | v) & 0xffffff; bits += 6; if (bits >= 8) { bits -= 8; out[o++] = (acc >> bits) & 255; } }
+    return out;
+  }
+  // The save code of data (a sanitized save; format 1 shapes are written too, so tests can make an older page's code).
+  // gal: the Gallery's ids in order (a level goes by the slot number in its id).
+  function encode(data, gal) {
+    const b = [], put = (v) => { v = whole(v, 9007199254740991); while (v >= 128) { b.push((v % 128) | 128); v = Math.floor(v / 128); } b.push(v); };
+    const v1 = data.v !== VERSION, rl = ROW[v1 ? 0 : 1], row = (id) => { const r = isObj(data.best) && Array.isArray(data.best[id]) ? data.best[id] : []; for (let k = 0; k < rl; k++) put(r[k]); };
+    const opt = (has, v) => put(has ? whole(v, MAXCOINS * 1e9) + 1 : 0); // format 1: a field an old save may lack (0: none)
+    put(v1 ? 1 : VERSION); if (v1) opt(own(data, "coins"), data.coins); else put(data.coins); put(POWERS.length); for (const k of POWERS) put(data.inv && data.inv[k]);
+    let g = 0; POWERS.forEach((k, i) => { if (data.got && data.got[k] === 1) g += 1 << i; }); put(g);
+    const done = Object.keys(data.done || {}).map((id) => [slotOf(id), id]).filter((x) => x[0] > 0).sort((p, q) => p[0] - q[0]);
+    put(done.length); let at = 0; for (const [s, id] of done) { put(s - at); at = s; if (v1) put(data.done[id]); row(id); }
+    const pics = (gal || []).map((id, i) => [i + 1, id]).filter((x) => own(data.gal || {}, x[1]));
+    put(pics.length); at = 0; for (const [s, id] of pics) { put(s - at); at = s; if (v1) put(data.gal[id]); row(id); }
+    const eggs = Object.keys(data.eggs || {}).filter((k) => EGG.test(k)); put(eggs.length); for (const k of eggs) { const m = /^s(\d+)-(\d+)$/.exec(k); put(+m[1]); put(+m[2]); }
+    put(typeof data.last === "string" ? slotOf(data.last) : 0); if (v1) opt(isObj(data.lives), data.lives && data.lives.n); else put(data.lives && data.lives.n); put(data.lives && data.lives.at);
+    const c = crc32(b, b.length); b.push(c >>> 24, (c >>> 16) & 255, (c >>> 8) & 255, c & 255);
+    return CODE + b64(b);
+  }
+  // Read a pasted code: {ok: true, data (sanitized, the device's preferences from prefs), v} or {ok: false, err}: "empty",
+  // "prefix" (not a save code), "newer" (a later code format), "broken" (a changed, missing or extra character), "body"
+  // (a checksum that matches a body this page can't read). Whitespace anywhere is ignored (codes get wrapped). Never throws.
+  function decode(text, order, gal, meta, prefs, maxLen) {
+    try {
+      const t = String(text == null ? "" : text).slice(0, maxLen || 20000).replace(/\s+/g, ""); if (!t) return { ok: false, err: "empty" };
+      const m = /^SP(\d+)\.(.*)$/i.exec(t); if (!m) return { ok: false, err: "prefix" }; if (+m[1] !== 1) return { ok: false, err: +m[1] > 1 ? "newer" : "prefix" };
+      const b = unb64(m[2]); if (!b || b.length < 5 || b64(b) !== m[2]) return { ok: false, err: "broken" };
+      const n = b.length - 4, c = ((b[n] << 24) | (b[n + 1] << 16) | (b[n + 2] << 8) | b[n + 3]) >>> 0; if (crc32(b, n) !== c) return { ok: false, err: "broken" };
+      let p = 0; const get = () => { let v = 0, f = 1; for (let k = 0; k < 8; k++) { if (p >= n) throw new Error("short"); const x = b[p++]; v += (x & 127) * f; if (x < 128) return v; f *= 128; } throw new Error("long"); };
+      const v = get(); if (v !== 1 && v !== VERSION) return { ok: false, err: "body" };
+      const raw = { v, inv: {}, got: {}, done: {}, gal: {}, best: {}, eggs: {} }, rl = ROW[v === 1 ? 0 : 1], bySl = new Map(), opt = (f) => { const x = get(); if (v !== 1) f(x); else if (x) f(x - 1); };
+      opt((x) => { raw.coins = x; });
+      for (const id of order || []) if (slotOf(id)) bySl.set(slotOf(id), id);
+      const ni = get(); for (let i = 0; i < ni; i++) { const x = get(); if (i < POWERS.length) raw.inv[POWERS[i]] = x; }
+      const g = get(); POWERS.forEach((k, i) => { if (Math.floor(g / 2 ** i) % 2) raw.got[k] = 1; });
+      const entries = (into, name) => { const cnt = get(); let at = 0; for (let i = 0; i < cnt; i++) { at += get(); const id = name(at), mk = v === 1 ? get() : 1, r = []; for (let k = 0; k < rl; k++) r.push(get()); if (id) { into[id] = mk; raw.best[id] = r; } } };
+      entries(raw.done, (s) => bySl.get(s) || "e0-" + s); entries(raw.gal, (s) => (gal || [])[s - 1] || null);
+      const ne = get(); for (let i = 0; i < ne; i++) { const sh = get(), k = get(); raw.eggs["s" + sh + "-" + k] = 1; }
+      const ls = get(); if (ls) raw.last = bySl.get(ls) || "e0-" + ls; let ln = -1; opt((x) => { ln = x; }); const la = get(); if (ln >= 0) raw.lives = { n: ln, at: la };
+      if (p !== n) return { ok: false, err: "body" };
+      return { ok: true, v, data: withPrefs(sanitize(raw, order, gal, meta), prefs ? { settings: prefs } : null) };
+    } catch (e) { return { ok: false, err: "body" }; }
+  }
+
+  return { VERSION, fresh, sanitize, record, next, nextBy, isOpen, questOpen, memoryStore, open, reset, cloud, withPrefs, encode, decode, CODE };
 });

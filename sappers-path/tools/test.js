@@ -1464,5 +1464,75 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   ok(/class="set-row tog tog-music"/.test(html) && /class="set-row tog tog-sfx"/.test(html) && !/set-row tog tog-mute/.test(html) && (html.match(/class="round tog tog-mute"/g) || []).length === 2, "music (v5.2): settings has a Music row and a Sound effects row; the top bar and the Paused sheet keep their quick mute buttons");
 }
 
+// ---- v5.4: reset and the save code (save.js reset, encode, decode; config reset, saveCode) -------------------------------
+{
+  const Save = require("../src/save.js"), CFG = require("../config.json"), zlib = require("zlib"), fs = require("fs"), path = require("path");
+  const order = LEVELS.levels.map((l) => l.id), gids = require("../levels/gallery.json").levels.map((l) => l.id), J = (o) => JSON.stringify(o);
+  // A mid-game save: levels 1-90 cleared with best rows, 12 side quests, eggs, power-ups, last at 90; preferences off/on.
+  let r = 12345; const rnd = (k) => { r = (r * 1103515245 + 12345) % 2147483648; return Math.floor((r / 2147483648) * k); };
+  const mid = Save.fresh(META); mid.coins = 218; mid.inv = { ladder: 2, quartermaster: 1, scout: 0, recall: 3, volley: 1 }; mid.got = { ladder: 1, quartermaster: 1, scout: 1, recall: 1 };
+  for (let i = 0; i < 90; i++) { mid.done[order[i]] = 1; mid.best[order[i]] = [15000 + rnd(90000), 8 + rnd(40), 30 + rnd(200)]; }
+  for (let i = 0; i < 12; i++) { mid.gal[gids[i]] = 1; mid.best[gids[i]] = [20000 + rnd(60000), 10 + rnd(30), 40 + rnd(100)]; }
+  for (let s = 1; s <= 10; s++) mid.eggs["s" + s + "-" + (s % 2)] = 1; mid.last = order[89]; mid.settings = { muted: false, music: false, sfx: true, speed: 1, cb: true };
+  const sv = Save.sanitize(JSON.parse(J(mid)), order, gids, META), code = Save.encode(sv, gids), back = Save.decode(code, order, gids, META, sv.settings);
+  ok(J(sv) === J(mid), "save code: the mid-game fixture is a sanitized save");
+  eq([code.slice(0, 4), /^SP1\.[A-Za-z0-9_-]+$/.test(code), back.ok, J(back.data) === J(sv), Save.encode(back.data, gids) === code], ["SP1.", true, true, true, true], "save code: a mid-game save (level 91, 90 levels with bests, 12 side quests, 10 eggs, power-ups) round-trips exactly through the code (" + code.length + " characters)");
+  ok(code.length <= 1100, "save code: a mid-game code stays short (" + code.length + " characters; limit 1100)");
+  const f0 = Save.fresh(META), fc = Save.encode(f0, gids); eq([fc.length <= 40, J(Save.decode(fc, order, gids, META, f0.settings).data) === J(f0)], [true, true], "save code: a new save's code is " + fc.length + " characters and round-trips");
+  // Every Gallery picture and every level cleared (the longest code a player can have today).
+  const full = Save.fresh(META); for (const id of order) { full.done[id] = 1; full.best[id] = [600000, 120, 999]; } for (const id of gids) { full.gal[id] = 1; full.best[id] = [600000, 120, 999]; }
+  const fullC = Save.encode(full, gids); ok(J(Save.decode(fullC, order, gids, META, full.settings).data) === J(full), "save code: every level and picture cleared round-trips (" + fullC.length + " characters)");
+  // The body is base64url as Node writes it, with a CRC-32 Node agrees with.
+  const raw = Buffer.from(code.slice(4), "base64url"), body = raw.subarray(0, raw.length - 4);
+  eq([raw.toString("base64url") === code.slice(4), raw.readUInt32BE(raw.length - 4) === zlib.crc32(body)], [true, true], "save code: canonical base64url; the last 4 bytes are the body's CRC-32 (zlib agrees)");
+  // The checksum catches mistakes: every single-character change to the body, a truncation, an extra character.
+  const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"; let caught = 0, tried = 0;
+  for (let i = 4; i < code.length; i++) { const c2 = code.slice(0, i) + B64[(B64.indexOf(code[i]) + 1 + rnd(63)) % 64] + code.slice(i + 1); tried++; if (!Save.decode(c2, order, gids, META).ok) caught++; }
+  eq([caught, tried], [tried, tried], "save code: every changed character is rejected (" + caught + "/" + tried + ")");
+  const cuts = [1, 2, 3, 5, 40, code.length - 10].map((k) => Save.decode(code.slice(0, code.length - k), order, gids, META));
+  eq(cuts.map((x) => x.ok + ":" + x.err), cuts.map(() => "false:broken"), "save code: a truncated code (1, 2, 3, 5, 40 characters short; just the start) is rejected as broken");
+  eq([Save.decode(code + "A", order, gids, META).ok, Save.decode(code.slice(0, 10) + code.slice(11), order, gids, META).ok, Save.decode(code.replace("SP1.", "SP2."), order, gids, META).err, Save.decode("hello", order, gids, META).err, Save.decode("", order, gids, META).err, Save.decode(null, order, gids, META).err, Save.decode({}, order, gids, META).err],
+    [false, false, "newer", "prefix", "empty", "empty", "prefix"], "save code: an extra or a dropped character is rejected; SP2. is a newer code; other text is not a code; empty and junk inputs never throw");
+  const wrapped = "  " + code.slice(0, 50) + "\n" + code.slice(50, 300) + " \r\n" + code.slice(300) + "\n"; ok(Save.decode(wrapped, order, gids, META, sv.settings).ok && J(Save.decode(wrapped, order, gids, META, sv.settings).data) === J(sv), "save code: line breaks and spaces (a wrapped paste) are ignored");
+  ok(!Save.decode(code, order, gids, META, null, 100).ok, "save code: a paste is read to maxPaste characters at most (a 100-character cap rejects it)");
+  // A hostile code, hand-made with a valid checksum: huge numbers, slots and pictures the page doesn't have, junk eggs, a
+  // last level that isn't open, unknown power-up slots; and bodies of the wrong shape (an unknown format, a body that ends
+  // mid-field, bytes after its end, a varint that never ends). Every value comes out clamped as sanitize allows.
+  const vint = (v) => { const o = []; while (v >= 128) { o.push((v % 128) | 128); v = Math.floor(v / 128); } o.push(v); return o; };
+  const mk = (vals, extra) => { const b = Buffer.from(vals.flatMap(vint).concat(extra || [])), c = Buffer.alloc(4); c.writeUInt32BE(zlib.crc32(b)); return "SP1." + Buffer.concat([b, c]).toString("base64url"); };
+  const H = [2, 9e15, 7, 500, 1e12, 300, 200, 120, 5, 2 ** 40, 255, // v, coins, 7 inventory counts (two past POWERS), got with stray bits
+    3, 1, 9e9, 9e9, 9e9, 9998, 5, 5, 5, 7, 1, 1, 1, // three levels: slot 1 (huge best), slot 9999 (none), slot 10006
+    2, 1, 1, 1, 1, 400, 2, 2, 2, // pictures: 1 and 401 (none)
+    3, 1, 0, 5000, 1, 1, 777, // eggs: s1-0, s5000-1, s1-777
+    150, 77, 8.64e15 + 5]; // last at slot 150 (not open), lives 77, a time past the cap
+  const hz = Save.decode(mk(H), order, gids, META, sv.settings), hd = hz.data;
+  eq([hz.ok, hd.coins, hd.inv, hd.got, Object.keys(hd.done), hd.best[order[0]], Object.keys(hd.gal), Object.keys(hd.eggs), hd.last, hd.lives.n <= META.livesMax, hd.lives.at, hd.settings, J(Save.sanitize(JSON.parse(J(hd)), order, gids, META)) === J(hd)],
+    [true, 9999999, { ladder: 99, quartermaster: 99, scout: 99, recall: 99, volley: 99 }, { ladder: 1, quartermaster: 1, scout: 1, recall: 1, volley: 1 }, [order[0]], [3600000, 999, 9999999], [gids[0]], ["s1-0"], null, true, 8.64e15, sv.settings, true],
+    "save code: a hostile code (9e15 coins, inventory 500 and 1e12, unknown slots and pictures, junk eggs, a locked last level) loads clamped: coins and counts at their caps, only ids the page has, last dropped, the device's preferences kept");
+  const shapes = [mk([7, 0]), mk(H.slice(0, 20)), mk(H, [0]), mk([2], [255, 255, 255, 255, 255, 255, 255, 255, 255]), mk([2, 5, 0, 0, 0, 1e6])];
+  eq(shapes.map((c) => { const x = Save.decode(c, order, gids, META); return x.ok + ":" + x.err; }), ["false:body", "false:body", "false:body", "false:body", "false:body"], "save code: wrong shapes with a good checksum (format 7, a body cut mid-field, a byte past the end, an endless varint, a count past the body) are refused, never thrown");
+  // An older page's code: the shipped v4.2 save (format 1: difficulty masks, old ids like e1-25, 7-number best rows), made
+  // into a code, loads exactly as that save loads from storage (migrated by id and slot, bests folded).
+  for (const ver of ["v3", "v4.2"]) {
+    const old = JSON.parse(fs.readFileSync(path.join(__dirname, "saves", ver + ".json"), "utf8")), want = Save.sanitize(JSON.parse(J(old)), order, gids, META), oc = Save.encode(old, gids), got = Save.decode(oc, order, gids, META, want.settings);
+    eq([oc.slice(0, 4), got.ok, got.v, J(got.data) === J(want), Object.keys(got.data.done).length], ["SP1.", true, 1, true, Object.keys(want.done).length], "save code: an older page's code (the " + ver + " save, format 1) migrates the way the stored save does (" + Object.keys(want.done).length + " levels, last " + want.last + ")");
+  }
+  // Reset: progress gone, preferences kept, written once, the cloud hook told.
+  const store = Save.memoryStore(), key = CFG.save.key, h = Save.open(store, key, order, gids, META); h.data = JSON.parse(J(sv)); h.write();
+  let told = null; Save.cloud.reset = (k) => { told = k; }; const w = Save.reset(h, META); Save.cloud.reset = null;
+  const re = Save.open(store, key, order, gids, META).data, fr = Save.fresh(META);
+  eq([w, told, re.settings, J(Object.assign({}, re, { settings: null })) === J(Object.assign({}, fr, { settings: null })), Save.next(re, order), re.coins, Object.keys(re.gal).length + Object.keys(re.eggs).length + Object.keys(re.best).length],
+    [true, key, sv.settings, true, order[0], META.coins.start, 0], "reset: levels, coins, power-ups, side quests, eggs and bests back to a new save (level 1, " + META.coins.start + " coins); music off, effects on, colour-blind on kept; written; the cloud hook told with the key");
+  Save.cloud.reset = () => { throw new Error("cloud down"); }; const h2 = Save.open(Save.memoryStore(), key, order, gids, META); h2.data.coins = 5; const w2 = Save.reset(h2, META); Save.cloud.reset = null;
+  eq([w2, h2.data.coins], [true, META.coins.start], "reset: a failing cloud hook never undoes the local reset");
+  // Config: the switches and the words the page reads.
+  const SC = CFG.saveCode, RS = CFG.reset;
+  ok(SC.on === true && SC.portalOn === false && SC.maxPaste >= 4 * fullC.length && RS.holdMs >= 1000 && RS.holdMs <= 2500 && ["empty", "prefix", "newer", "broken", "body"].every((k) => typeof SC.text.err[k] === "string") && /level/i.test(RS.text.lose) && /coins/.test(RS.text.lose) && /power-ups/.test(RS.text.lose) && /side quests/.test(RS.text.lose) && /easter eggs/.test(RS.text.lose) && /Music/.test(RS.text.keep),
+    "config (v5.4): saveCode on for the web build (portalOn false for the portal), maxPaste " + SC.maxPaste + " fits 4 full codes; reset holds " + RS.holdMs + " ms and says what goes (levels, coins, power-ups, side quests, eggs) and what stays");
+  const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+  ok(/id="set-copy"/.test(html) && /id="set-load"/.test(html) && /id="set-reset"/.test(html) && html.indexOf('id="set-close"') < html.indexOf('id="set-reset"') && /<meta property="og:image" content="https:\/\/pf-builds\.github\.io\/games\/sappers-path\/thumb\.jpg">/.test(html) && /<meta name="twitter:card" content="summary_large_image">/.test(html),
+    "index (v5.4): Settings has Copy and Load save code and, after Done, Reset progress; the share card points at the arcade's thumb.jpg");
+}
+
 console.log(pass + " passed, " + fail + " failed");
 process.exitCode = fail ? 1 : 0;
