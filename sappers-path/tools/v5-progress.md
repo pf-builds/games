@@ -332,3 +332,25 @@ Wandering Gallery). Inputs: `game-research/sappers-path-v4/lands/01-kitten-fores
 ### State (Land 1)
 Built, installed and checked on the branch; not pushed. Next: the functional and visual critics on 201-250 (notes §9 lists
 what to look at), one fix pass, then `freeze.js --snapshot` so 201-250 and pictures 61-72 join the frozen set.
+
+# Land 1 fixes (2026-10-06, the one fix pass after the Land 1 critics)
+
+Source: the orchestrator's fix brief (Peter asleep), `tools/critic-land-01-functional.md` (0 blockers, 2 majors, 7 minors)
+and `tools/critic-land-01-visual.md` (2 blockers, 5 should-fix, 6 nits). Notes: `tools/land-01-notes.md` §10. Shots:
+`tools/shots-land-01/fixes/` (gitignored; `tools/shots-land-01-fixes.mjs` remakes them). Dev server 8494 (worktree root,
+game at `/sappers-path/`). 201-250 are NOT added to the frozen set (the orchestrator decides after review).
+
+| # | Fix | State | Commit |
+|---|---|---|---|
+| F1 | M1: careful player and steady-rhythm replay in the grader; harder profile baked and measured (careful 0.32/0.23/0.18 vs 151-200's 0.71/0.46/0.58), then, on Peter's direction change, replaced by a casual profile (E18/N26/H6/X0, light features, no locks, generous bands); thinking replays all won (m2), steady wait between taps <= 15 s (m3) | done: casual land installed; harder land measured, not installed (notes §10.0-10.2) | 390911c, (fix commits) |
+| F2 | B1 mystery fill per level, 20+ CIEDE2000 from its picture (land levels only) | done: 11 levels, fills 22-32 | (fix commits) |
+| F3 | B2 + S1 + S2: 7 swaps from spares, the 50 re-laid for variety | done (notes §10.3) | (fix commits) |
+| F4 | S3 mystery blocks off the subject's face (faceOf) | done | 390911c |
+| F5 | M2 calm land words ("Picture done", "A little stuck") | done | (fix commits) |
+| F6 | m5 the long tail kept open for saves from before the lands | done | (fix commits) |
+| F7 | S4 eggs per sheet repeat; S5 short quest titles; m4 44 px play-bar taps; m7 SPEC-v4 §9 Land 1 entry | done | (fix commits) |
+| F8 | Checks: land check, test.js, freeze, regrades, critic-v5, selfTest x3, harness last; bundle | done: PASS; 618/0; PASS; 0 of 1,605 and 0 of 432; 0 of 10,758 games; 900/902/900, 0 messages; harness all passed; bundle smoke (notes §10.8) | (fix commits) |
+
+### State (Land 1 fixes)
+Casual Land 1 installed and checked on the branch; not pushed; 201-250 not frozen (the orchestrator decides). The harder
+profile and its tooling are documented for the campaign rebalance (notes §10.2, §10.6).

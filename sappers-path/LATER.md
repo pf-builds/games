@@ -358,3 +358,30 @@ Fixed: S1-S7, m2, m3, N1, N2 (`tools/v5-r4-notes.md` §10). Parked:
 - A teaching coach line for the first ring ("Dig through a gap in the water"), if playtesters miss the ways in.
 - `map-gen`/picture stage: score each candidate picture for moats (`tools/moat.js subjectOf`, `ringOf`) on the contact sheet, so the pick can favour pictures that carry a ring for a moat land's Extreme spots.
 - A seeded `gap` per level (1.5 or 2.5) for variety in how far the ring stands off the subject.
+
+## Land 1 fix pass (2026-10-06; parked from the Land 1 critics)
+- The map's story line still reads the castle's ("Goblins stole the crown ...") while the player is in a land: show the
+  land's lore there (the functional critic's M2 note; the brief scoped M2 to the win and fail sheets). The Zen-mode split
+  may change where it shows anyway.
+- Egg drawings (the visual critic's N3): the butterfly at rest reads as a yellow leaf or a flame, the unrolled yarn as a
+  pink worm; the kitten and the fish read well.
+- Sheet 25's retouched top (N1): a soft cream road with no dark ink edge and airbrushed haze; fine at phone size, retouched
+  on a desktop crop. An image-model repaint of rows 0-340 when the GPU is free.
+- `levels/levels.json` grows about 260 KB a land and is fetched before the home shows (the functional critic's m6):
+  split it per land (load a land's levels when the map reaches it) before Land 3 or 4.
+- 320x568 boards draw at 6.5-7 CSS px a cell (N5, castle and lands alike; below the 360x640 gate).
+- Weak reads kept (N4): Tiger cub (stripes read as spots), Upside down, Fish dream, Scruff carry, Signpost nap. "Yes"
+  spares still unused: kf26 Long sweater, kf66 Lotus pad, kf09 Flower pot, kf22 Bubble bath, kf19 Tiny box.
+- Mystery fills: a land level's fill changes with its picture (slate, plum, green, grey, raspberry). If players miss
+  them, a shared hatched "?" texture on every fill would make mystery blocks one look across levels.
+- An honest careful player (sees only what a player sees: ? cards and mystery blocks hidden, as grade.js look does) would
+  measure what the ? cards and mystery blocks cost a planner; the critic's careful player sees everything, so features
+  that only hide information don't move it.
+- The save code does not carry `tail`/`lands` (the long tail kept open): a code loaded on a new device works the kept
+  tail out again from the castle rule, so a player with the castle cleared gets picture 51 open there.
+- The steady-rhythm replay's end (the last tap to the win, every squad still working) runs 11-24 s on most levels; it is
+  reported per level (`grade.steady.end`), not gated (gating it would mean small last squads on every level).
+- For the campaign rebalance (Challenge Mode): the harder Land 1 bake shows the levers (notes §10.2): gate the careful
+  player per tag (`careful`, `carefulTune`), the obvious player (`obvious`), more candidates sharded over the threads
+  (`--shard`, `--reuse`), deal depth alternated (`deepAlt`); ? cards and mystery blocks don't move an all-seeing
+  planner, the deal does.

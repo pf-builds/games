@@ -5,6 +5,10 @@ Land 1 brief of 2026-10-06 (Peter asleep; every call below is mine and written d
 `tools/land-runbook.md`. Resume table: `tools/v5-progress.md`, "Land 1 Kitten Forest". Inputs: the picks and the map
 from `game-research/sappers-path-v4/lands/01-kitten-forest/` (README and `map/README.md`).
 
+**Update (fix pass, same day): §10.** After the critics, Land 1 was re-baked twice: first harder, then, on Peter's direction
+change (the picture lands become a relaxed mode; difficulty goes to the castle campaign), as a casual land. §1-§9 below
+describe the first install; §10 the land as it now stands.
+
 **Result.** Kitten Forest is installed on the branch: levels 201-250 (era 9), 12 Wandering Gallery side quests (pictures
 61-72), map sheets 26-32 from the land's 2 WebP sheets (A, B, A', B', A, B, A'), three new egg kinds, castle sheet 25's
 top retouched. Every land.js gate passed (0 fallbacks, median real pace 243 s). On the branch: test.js 616/0, freeze PASS
@@ -274,3 +278,255 @@ history (`git show 35dcf90~1:sappers-path/map/sheet-25.jpg`); `retouch-25.py ORI
 9. For the visual critic: mystery blocks on dark pictures (the black kitten at 206, the navy xylophone at 250) are close
    in tone to the picture's dark squads; the shade tip on 201 is pre-empted by a power-up tip when a save jumps straight
    to 201 (a jumped save has seen no tips); the Wandering Gallery is now empty for Land 2.
+
+## 10. The fix pass after the critics (2026-10-06, morning)
+
+The one fix pass on the functional critic's report (`tools/critic-land-01-functional.md`: 0 blockers, 2 majors, 7 minors)
+and the visual critic's (`tools/critic-land-01-visual.md`: 2 blockers, 5 should-fix, 6 nits). Peter asleep: every call is
+mine and written here. Checklist: `tools/v5-progress.md`, "Land 1 fixes". Shots: `tools/shots-land-01/fixes/`
+(gitignored; `tools/shots-land-01-fixes.mjs` remakes them).
+
+### 10.0 Direction change mid-pass: Land 1 is now a casual land
+
+The brief's first item was M1 (make Land 1 harder than 151-200 for a player who plans). Partway through, the coordinator
+passed on Peter's new direction: **the picture lands become a separate, relaxed "Zen" mode open from the start, and the
+200-level castle campaign becomes "Campaign Challenge Mode", where difficulty goes up** (another chat rebalances 1-200).
+For Land 1 that meant: drop the harder profile and its "careful player below 151-200" targets, use a casual profile
+(mostly Easy and Normal, light features, no or very few locks, no Extreme, generous bands), keep every invariant, keep the
+new grader tooling for the campaign rebalance, and still fix the steady-pace losses and the long idle waits. Everything
+else in the brief stands. No Zen-mode UI was built and no data moved; Land 1 is a self-contained casual land on this
+branch.
+
+So §10.1 is the casual land as installed, and §10.2 records the harder profile I had baked and measured before the
+change (it is not installed; the tooling it proved is).
+
+### 10.1 The casual Land 1 (installed)
+
+- **Tags E18/N26/H6/X0.** Pairs of Normals, an Easy breather after each, a lone Hard every 7-10 levels (212, 222, 229,
+  236, 243, 250), ending on a Hard at 250:
+  `nnEnnEnnEnnHEnnEnnEnnHEnEnEnHEnEnEnHEnEnEnHEnEnEnH`. `land-plan.js landTags` now spreads a casual land's few Hards
+  evenly (only when there are fewer Hard runs than segments; every profile with more Hards lays out exactly as before:
+  the default profile's layout is unchanged).
+- **Light features.** ? cards (2-3) on 4 Easy, 13 Normal and all 6 Hard levels (23); linked squads (1-2 pairs) on 4, 10
+  and 4 (18); mystery blocks on 8 Normals and 3 Hards (11), 14-24% of the picture, off the subject's face; no locks.
+  Features per level: Easy 0.44, Normal 1.19, Hard 2.17. Per-tag shares are a new profile key (`features.<f>.by`, the
+  levels with the fewest features first, so ? cards fill the Easy levels that have no link).
+- **Generous bands, no ceilings.** Random-tap win rate bands Easy 45-80%, Normal 20-50%, Hard 6-20%; no lookahead or
+  careful-player ceilings (the profile sets them to null). Both are still graded per level (`grade.greedy`,
+  `grade.careful`, `grade.obvious`), so the campaign rebalance can read them.
+- **Rhythm (the functional critic's m2, m3).** Every level now stores `grade.steady`, the stored order tapped at a
+  steady 1 s rhythm (bake-config `duration.pace.steady`): every thinking replay (1, 2 and 4 s) must win, which fixes the
+  232/247 kind of loss on every level, and the longest wait between two taps must be 15 s or less. Measured: every level's
+  thinking replays win, the longest wait between taps is 14.3 s. **The end is not capped:** from the last tap to the
+  win is 11-24 s on the steady replay (43 levels over 15 s), because at a 1 s rhythm several squads are still digging
+  when the last card goes out; it is watching squads finish, not a wait for a legal tap. Capping it would mean tiny last
+  squads on every level, so it is reported (`grade.steady.end`) and parked in LATER.
+- **Invariants:** every stored order wins on its tag with no power-up, at most 5 spaces, longest tap 14.3-15.0 s, 42-55
+  taps, real pace 201-265 s with the land's median 232 s (3:52; the 200-250 s gate). Land check PASS.
+- **Measured with the functional critic's own players** (`players.mjs`, 400 random games and the 3-taps-ahead careful
+  player on 6 seeds a level):
+
+| 201-250 | Levels | Random-tap win, mean / median | Careful player (3 taps) |
+|---|---|---|---|
+| Easy | 18 | 65.7% / 63.0% | 1.00 |
+| Normal | 26 | 39.3% / 39.3% | 1.00 |
+| Hard | 6 | 10.5% / 10.3% | 0.78 |
+| All | 50 | 45.3% / 42.5% | 0.97 |
+
+  For comparison, the land as the critics saw it: random 4.2% mean, careful 0.79; castle 151-200: 6.9%, 0.61. Land 1 is
+  now a relaxed land, as Peter asked.
+- **The pictures for these tags** (all 50 re-placed): the few-colour boards on the Easy levels, the busiest on the Hards
+  (Skateboard, Rainbow slide, Calico stretch, Blueberry bucket, Dragonfly ride, Xylophone at 250). No two neighbours
+  share a category, a ground colour family or a coat; no orange cat within two levels of another; near-repeat ideas 10+
+  levels apart (§10.3).
+- **Bake:** 8 candidates a level (10 a Hard), up to 96 deal attempts each, sharded over the threads (§10.6): 48 of 50 met
+  every target in one 5.5-minute run, 209 and 221 in a second run with 16 more candidates each.
+
+### 10.2 The harder profile I baked before the change (measured, not installed)
+
+For the record, and for the campaign rebalance, which will use the same tooling. Profile: E4/N14/H18/X14 (runs split by a
+Normal dip), ? cards (3-6) on every Normal, Hard and Extreme level, links on 39 levels, mystery blocks on 29, a lock on
+every Hard and Extreme; careful-player ceilings 0.75/0.625/0.5 (16 games) with the bake narrowing toward 0.625/0.5/0.44,
+an obvious-player ceiling (one tap deep, 30 games: 0.8/0.6/0.6), lookahead ceilings 0.3/0.2/0.15. It passed the land check
+and every game check (test.js 618/0, freeze, regrades, critic-v5 0 mismatches, selfTest x3, harness). With the functional
+critic's own players (6 seeds a level, 400 random games):
+
+| Careful player, 3 taps ahead | Normal | Hard | Extreme | All | Random-tap mean / median |
+|---|---|---|---|---|---|
+| 151-200 (castle) | 0.71 | 0.46 | 0.58 | 0.61 | 6.88% / 1.50% |
+| Land 1 as the critics saw it | 0.88 | 0.67 | 0.69 | 0.79 | 4.19% / 0.75% |
+| Land 1, harder profile | 0.32 | 0.23 | 0.18 | 0.30 | 4.04% / 0.50% |
+
+The one-move greedy (the critic's m1 player) won no level more than 14 of 30. What it took, worth knowing for the castle:
+- The careful player sees everything (it plays the engine), so ? cards and mystery blocks don't move it at all; removing a
+  level's ? cards, mystery blocks or even its lock left its rate unchanged on every level I tried. Difficulty for it
+  comes from the deal: which squads must wait, in which order, behind which cards.
+- Candidates are bimodal (most at 1.0, about a quarter low); the gate plus more candidates and a careful-narrowing stage
+  (card moves only) find the low ones. 3-4 linked pairs kept Hard levels out of their random-tap band, so pairs stayed 1-3.
+- A full harder land cost about 50 minutes of bake on 16 threads once the candidates were sharded (§10.6).
+
+### 10.3 Pictures: the swaps and the variety check (B2, S1, S2)
+
+Out (7): 227 Stuck up a tree (kf25) and 237 Leaf surfing (kf39), the two that didn't read as kittens at phone size;
+249 Green-eyed face (kf07, the near-repeat of Big blue bow and the second full-board orange face with the Lynx); 236 Leaf
+on face (kf21, a third ginger front face); 247 Serval (kf91, the spotted wild kitten beside the Ocelot); and, during the
+harder bakes, Conductor (kf33, no deal in about 1,900 attempts under the harder profile) and Fox friend (kf67, dealt
+rarely and failed every slot). In (7 "yes" spares): kf77 Robin friend, kf13 Daisy crown, kf41 Tennis, kf16 Dandelion
+sneeze, kf94 Maine Coon, kf74 Leaf umbrella, kf43 Goalie. Tried and dropped: kf82 Watermelon (deals about 1 in 30, failed
+its slots) and kf66 Lotus pad (a white kitten with a pink flower would have sat 6 levels from Glowing flower).
+
+The variety check (scratch `variety2.js` over picks.json's categories, a coat per picture and each prompt's ground colour
+family) on the installed order: no neighbours share a category, ground family or coat; no orange cat within two levels
+of another; orange or ginger in 241-249: 3 of 9 (was 7). The pairs the critic named, now: 244/249 and 245/249 and
+242/247 and 236 are gone (one of each pair is out); 241 Soccer kick / 243 Rainbow slide: now 208 and 222. Watch-list
+pairs and their distance: Ocelot 249 / Lynx 205 (44), Tiger cub 234 / Lynx 205 (29), Maine Coon 223 / Lynx 205 (18,
+tufted ears), Big yawn 246 / Big blue bow 226 (20, ginger faces), Teacup 201 / Big blue bow 226 (25), Mirror lion 218 /
+Lion cub 242 (24), Daisy crown 245 / Tennis 235 (10, cream kittens), Goalie 221 / Soccer kick 208 (13), Leaf umbrella 247 /
+Robin friend 214 (33, grey kittens), Bath time 248 / Heart curl 220 (28) and Scruff carry 207 / Heart curl (13, moms).
+Categories: forest 9, sport 8, species 8, cute 6, joke 6, music 5, funny 5, mom 3.
+
+### 10.4 Mystery-block fill (B1)
+
+A land level's mystery blocks now draw in their own fill, chosen at assemble from `land-config plan.hidden.fills` (castle
+slate `#3a3f63`, plum `#6b4c8a`, forest green `#2e6b2e`, grey lavender `#8f8a9e`, raspberry `#9b2f6b`): the first that
+stands 22 CIEDE2000 from every colour and shade of the picture, else the farthest. The level stores `hideC` and `hideQ`
+(the "?" colour: cream on the dark fills, ink on the grey). `board.js setLevel` takes it (`hide`) and rebuilds the stud;
+a level without one (every castle level) draws in `board.hidden`'s slate exactly as before. The land check and test.js
+fail any fill under 20 (the floor between two squads). Installed: 11 levels with mystery blocks, fills 22-32 from their
+pictures (plum 6, slate 3, green 1, raspberry 1, for Leaf umbrella, where none of the first four reached 20). selfTest
+reads the drawn stud's pixel on a land level and a castle level. Shots: `fixes/mystery-fills.png`, the contact sheets.
+(The finale's navy picture no longer has mystery blocks in the casual land; under the harder profile it took green, 28.)
+
+### 10.5 Mystery blocks off faces (S3)
+
+`land-bake.js faceOf` (land-config `plan.hidden.face`): the picture's subject (moat.js `subjectOf`, read loosely), its top
+half and every cell whose 3 x 3 holds 3 or more colours (eyes, nose, mouth), grown by a cell, is off limits to `hidePic`.
+On the 50 boards it covers 14-63% of the picture (most about a third), so the share asked of the eligible blocks went up
+(`of` 0.25-0.40) to keep 14-24% of the picture hidden. Faces read in every shot; on a tall-hat picture (Too-big hat) the
+muzzle under the brim can still take a blob.
+
+### 10.6 Tooling (kept for the campaign rebalance)
+
+- `tools/grade.js careful(B, rules, n, seed, depth)`: the critic's careful player. Graded on every land level as
+  `grade.careful` (16 games, 3 taps; bake-config `grade.careful`) and `grade.obvious` (30 games, 1 tap; the critic's m1
+  player); `pace()` also returns the longest gap between taps and the end, graded as `grade.steady` at 1 s. regrade.js
+  checks all three where a level stores them (castle levels don't).
+- Profile keys: `careful`, `carefulTune` (the narrowing target, so the gate can move without re-making candidates),
+  `obvious` (per-tag ceilings, null for none), `features.<f>.by`, `features.mystery.rows`, `bake` (merged over
+  land-config's bake for that land: candidates, deal attempts, deepAlt, careWeight).
+- `gen.js carefulStage` narrows the careful player by card moves; `dealBy[tag].deepAlt` alternates deal depth by
+  candidate; `careWeight` leans the pick under the careful ceiling.
+- `land.js bake --shard S` shares each level's candidates over the threads and runs the picks (with their ? card
+  measure) on the threads too; each level's candidates are kept in `scratch/cands/m-<n>.json` (keyed to the picture,
+  plan and targets) and `--reuse` takes them back, so more candidates or a changed gate re-pick without re-making the
+  old ones. `install --replace` swaps an installed land for a new bake (text-exact: removing Land 1 from config.json and
+  LICENSES.md gives back the pre-install files byte for byte). `landTags` splits a run longer than the profile allows
+  with a Normal and spreads a casual land's few Hards.
+
+### 10.7 Page fixes
+
+- **Words (M2):** a land level wins with "Picture done" and "Kitten Forest, level N, all dug out." (again: "dug out
+  again.") and fails with "A little stuck" (config `lands.text`; calm, for the relaxed lands); a side quest keeps the
+  Gallery's "Picture complete!" and fails with "A little stuck"; castle levels keep "Fort razed!" and "Assault failed".
+  The map's story line still reads the castle's (LATER).
+- **The long tail (m5):** a save from before the lands keeps the long-tail picture it had open. On load, a save without
+  the new `lands` flag works out the castle rule over the castle alone (levels 1-200, the pictures' own quest levels);
+  any tail picture that rule opens and the save hasn't won goes into `save.tail`, and `save.js questOpen` keeps it open
+  wherever the tail now sits. The flag means a player who reaches 200 later waits past the lands as designed. A new
+  save gets the flag at its first write. Not in the save code (LATER). test.js and selfTest check it (picture 52 open, 53
+  still waiting).
+- **Eggs (S4):** `land.json eggTurns` gives each repeat of a sheet its own two eggs, kind and spot (sheet pixels, on
+  painted features: toadstool caps, glades, the stream, the flower bush): 26 kitten, yarn; 27 fish, butterfly; 28 owl,
+  fairy ring; 29 frog in the reeds, kitten; 30 yarn, butterfly; 31 fish (the far bend), glowcaps; 32 kitten, hare. All 14
+  now show (sheet 32's both sit under the frontier). Tiles: `fixes/egg-s*.png`.
+- **Short quest titles (S5):** a Wandering Gallery picture may carry `short` (manifest); the play bar shows it, the win
+  sheet keeps the full title: Poppy Field, Suido Bridge, Watering Can, Lake Hakone, Two Sisters, The Asakusa Cat, Blue
+  Armchair, Carp in the Weeds. selfTest checks every short title fits whole.
+- **Play-bar taps (m4):** round buttons sit 8 px apart (no box gives up 2 px to its neighbour) and, on a 38 px bar, reach
+  7 px under their face: every one takes a 44 x 44 tap at 360x640, measured as the critic did (selfTest, every size).
+- SPEC-v4 §9 has the Land 1 entry (m7). Cache tag `?v=45`.
+
+### 10.8 Checks (final, casual land installed)
+
+Land check PASS (every gate; median 232 s). test.js 618 passed, 0 failed. freeze.js --require PASS (1-200, pictures 1-60,
+283 castle cases). regrade.js 0 differences of 1,605 checks (250 levels); --gallery 0 of 432 (72 pictures). critic-v5:
+0 mismatching games of 10,758, 0 grade mismatches, tags 0 problems, known answers 0 wrong, real pace and thinks 322/322
+identical (diff-result.json committed: the counts changed with the levels). selfTest 900/0 at 375x812@3, 902/0 at
+1280x720, 900/0 at 360x640@3, 0 console messages. Harness all passed, 0 console messages (a first run failed one
+frame-time check at 1280x720 on castle level 100, p95 33 ms, while my difficulty players and another session's image
+job loaded the CPU; re-run on a quiet machine: all passed). 201-250 are NOT in the frozen set.
+
+### 10.9 Calls I made
+
+1. The casual profile's numbers (E18/N26/H6, bands, feature shares, no locks) are mine within the coordinator's outline.
+2. `landTags` spreads a casual land's Hards (a small change that leaves every existing layout as it was).
+3. Seven pictures swapped (§10.3), two more tried and dropped; the 50 re-laid for the casual tags.
+4. The win and fail words: "Picture done", "..., all dug out.", "A little stuck".
+5. The steady replay's end is reported, not capped (§10.1).
+6. Five mystery fills, picked per level; a raspberry added when Leaf umbrella cleared none of the first four.
+7. The harder bake's tooling kept and documented; the harder land itself is not installed.
+
+### 10.10 Left (LATER.md, "Land 1 fix pass")
+
+The map's story line in a land; egg drawings (butterfly at rest, unrolled yarn); sheet 25's retouch at desktop size;
+levels.json split per land before Land 3-4; 320x568 cells; weak reads kept (Tiger cub, Upside down, Fish dream, Scruff
+carry, Signpost nap); the save code and the kept tail; the steady replay's end; an honest careful player.
+
+### 10.11 The levels (casual, installed)
+
+Rate: random-tap win rate on the tag. Lookahead: the one-move-lookahead player. Careful: the careful player (16 games, 3
+taps ahead). Steady: the stored order at a 1 s rhythm, its longest wait between taps and from the last tap to the end.
+Fill: the mystery-block fill and its distance (CIEDE2000) from the picture.
+
+| Level | Picture | Tag | Features | ? cards | Links | Hidden | Rate | Lookahead | Careful | Real pace | Longest tap | Steady gap / end | Taps | Fill |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 201 | Teacup kitten (kf01) | normal | 1 | 2 | - | - | 33.00% | 1 | 1 | 251 s | 14.9 s | 10.9 / 22.4 s | 52 | - |
+| 202 | Red guitar (kf30) | normal | 1 | 2 | - | - | 42.75% | 0.96 | 1 | 247 s | 15.0 s | 13.3 / 20.0 s | 49 | - |
+| 203 | Paper bag (kf14) | easy | 0 | - | - | - | 59.75% | 1 | 1 | 217 s | 14.9 s | 8.9 / 12.6 s | 52 | - |
+| 204 | Heart balloon (kf10) | normal | 1 | 2 | - | - | 43.75% | 0.99 | 1 | 222 s | 14.9 s | 7.1 / 18.2 s | 48 | - |
+| 205 | Lynx kitten (kf87) | normal | 1 | - | 1 | - | 40.00% | 0.96 | 1 | 222 s | 14.8 s | 10.7 / 18.0 s | 48 | - |
+| 206 | Firefly (kf61) | easy | 1 | - | 1 | - | 62.25% | 1 | 1 | 251 s | 14.5 s | 10.6 / 20.7 s | 49 | - |
+| 207 | Scruff carry (kf96) | normal | 1 | - | - | 17% | 38.75% | 0.99 | 1 | 235 s | 14.9 s | 7.6 / 14.0 s | 51 | #6b4c8a (24) |
+| 208 | Soccer kick (kf36) | normal | 1 | - | - | 24% | 41.75% | 1 | 1 | 249 s | 14.8 s | 13.9 / 16.1 s | 51 | #6b4c8a (23) |
+| 209 | Fish dream (kf54) | easy | 0 | - | - | - | 67.75% | 1 | 0.938 | 217 s | 14.8 s | 5.8 / 13.6 s | 54 | - |
+| 210 | Snow leopard cub (kf85) | normal | 2 | 2 | - | 18% | 32.50% | 1 | 1 | 203 s | 14.3 s | 8.1 / 19.1 s | 51 | #6b4c8a (24) |
+| 211 | Mushroom house (kf60) | normal | 1 | 2 | - | - | 33.25% | 1 | 1 | 223 s | 14.9 s | 9.5 / 19.2 s | 50 | - |
+| 212 | Skateboard (kf38) | hard | 2 | 3 | - | 17% | 10.75% | 0.21 | 0 | 264 s | 14.8 s | 11.1 / 17.6 s | 55 | #3a3f63 (22) |
+| 213 | Staring contest (kf56) | easy | 1 | 2 | - | - | 68.50% | 1 | 1 | 245 s | 14.5 s | 12.4 / 15.0 s | 50 | - |
+| 214 | Robin friend (kf77) | normal | 1 | 2 | - | - | 35.25% | 0.98 | 1 | 260 s | 15.0 s | 8.8 / 21.2 s | 53 | - |
+| 215 | Apple weights (kf45) | normal | 2 | - | 1 | 16% | 41.75% | 0.89 | 1 | 251 s | 14.5 s | 10.5 / 19.7 s | 52 | #6b4c8a (23) |
+| 216 | Too-big hat (kf15) | easy | 1 | 2 | - | - | 61.75% | 1 | 1 | 223 s | 14.7 s | 12.0 / 20.2 s | 50 | - |
+| 217 | Strawberry hug (kf08) | normal | 2 | 2 | - | 17% | 40.25% | 1 | 1 | 223 s | 14.3 s | 7.4 / 23.0 s | 55 | #3a3f63 (32) |
+| 218 | Mirror lion (kf55) | normal | 1 | 2 | - | - | 46.00% | 1 | 1 | 232 s | 14.8 s | 7.9 / 18.8 s | 50 | - |
+| 219 | Kite flying (kf47) | easy | 1 | - | 1 | - | 78.00% | 1 | 1 | 255 s | 15.0 s | 14.3 / 18.1 s | 47 | - |
+| 220 | Heart curl (kf100) | normal | 1 | - | 1 | - | 29.00% | 0.92 | 1 | 221 s | 14.8 s | 7.3 / 17.5 s | 52 | - |
+| 221 | Goalie (kf43) | normal | 1 | 2 | - | - | 38.50% | 1 | 1 | 221 s | 14.9 s | 7.8 / 23.3 s | 49 | - |
+| 222 | Rainbow slide (kf72) | hard | 2 | 3 | - | 19% | 9.00% | 0.45 | 1 | 222 s | 14.5 s | 8.6 / 17.3 s | 51 | #3a3f63 (26) |
+| 223 | Maine Coon (kf94) | easy | 0 | - | - | - | 66.50% | 1 | 1 | 219 s | 14.6 s | 11.1 / 11.4 s | 50 | - |
+| 224 | Cucumber fright (kf51) | normal | 1 | 2 | - | - | 35.50% | 1 | 1 | 224 s | 14.3 s | 7.6 / 16.3 s | 55 | - |
+| 225 | Upside down (kf20) | easy | 1 | 2 | - | - | 66.75% | 1 | 1 | 233 s | 14.7 s | 9.1 / 20.9 s | 52 | - |
+| 226 | Big blue bow (kf03) | normal | 1 | - | 1 | - | 39.50% | 1 | 1 | 239 s | 14.8 s | 7.4 / 17.0 s | 50 | - |
+| 227 | Glowing flower (kf62) | easy | 0 | - | - | - | 58.75% | 1 | 1 | 246 s | 14.9 s | 12.0 / 23.7 s | 44 | - |
+| 228 | Bread face (kf52) | normal | 1 | - | - | 16% | 39.25% | 1 | 1 | 219 s | 14.5 s | 8.6 / 17.1 s | 46 | #6b4c8a (28) |
+| 229 | Calico stretch (kf95) | hard | 3 | 3 | 2 | 18% | 14.00% | 0.34 | 1 | 265 s | 14.6 s | 10.9 / 21.4 s | 50 | #6b4c8a (22) |
+| 230 | Marching drum (kf27) | easy | 1 | 2 | - | - | 67.00% | 1 | 1 | 254 s | 15.0 s | 7.9 / 21.8 s | 53 | - |
+| 231 | Blanket bundle (kf06) | normal | 2 | - | 1 | 14% | 37.75% | 1 | 1 | 233 s | 15.0 s | 9.3 / 16.3 s | 53 | #2e6b2e (26) |
+| 232 | Tuba (kf28) | easy | 1 | - | 1 | - | 77.50% | 1 | 1 | 253 s | 15.0 s | 10.7 / 16.6 s | 51 | - |
+| 233 | Dandelion sneeze (kf16) | normal | 1 | - | 1 | - | 46.50% | 0.99 | 1 | 225 s | 14.8 s | 7.5 / 14.6 s | 55 | - |
+| 234 | Tiger cub (kf84) | easy | 0 | - | - | - | 61.50% | 1 | 1 | 235 s | 14.6 s | 10.0 / 23.3 s | 51 | - |
+| 235 | Tennis (kf41) | normal | 1 | 2 | - | - | 41.00% | 0.98 | 1 | 229 s | 14.9 s | 6.0 / 21.0 s | 52 | - |
+| 236 | Blueberry bucket (kf76) | hard | 2 | 3 | 2 | - | 14.25% | 0.4 | 1 | 238 s | 14.9 s | 8.6 / 18.9 s | 52 | - |
+| 237 | Siamese (kf92) | easy | 0 | - | - | - | 63.25% | 1 | 1 | 246 s | 14.9 s | 8.6 / 15.1 s | 49 | - |
+| 238 | Skiing (kf44) | normal | 1 | 2 | - | - | 39.25% | 0.98 | 1 | 244 s | 14.8 s | 14.2 / 22.1 s | 52 | - |
+| 239 | Violin (kf29) | easy | 0 | - | - | - | 74.75% | 1 | 1 | 231 s | 15.0 s | 8.8 / 17.7 s | 55 | - |
+| 240 | Signpost nap (kf50) | normal | 1 | - | 1 | - | 27.50% | 0.89 | 0.938 | 226 s | 14.8 s | 6.3 / 14.5 s | 52 | - |
+| 241 | Pumpkin peek (kf80) | easy | 1 | - | 1 | - | 76.00% | 1 | 1 | 221 s | 14.7 s | 8.7 / 21.3 s | 42 | - |
+| 242 | Lion cub (kf83) | normal | 1 | - | 1 | - | 42.50% | 1 | 1 | 232 s | 14.9 s | 13.3 / 21.1 s | 46 | - |
+| 243 | Dragonfly ride (kf73) | hard | 2 | 3 | 2 | - | 16.00% | 0.56 | 1 | 227 s | 15.0 s | 7.1 / 15.3 s | 50 | - |
+| 244 | Slam dunk (kf37) | easy | 0 | - | - | - | 56.75% | 1 | 1 | 258 s | 14.9 s | 7.3 / 22.0 s | 47 | - |
+| 245 | Daisy crown (kf13) | normal | 1 | - | 1 | - | 38.50% | 0.89 | 1 | 261 s | 14.7 s | 10.8 / 16.8 s | 52 | - |
+| 246 | Big yawn (kf23) | easy | 0 | - | - | - | 62.75% | 0.78 | 1 | 232 s | 15.0 s | 7.8 / 15.9 s | 52 | - |
+| 247 | Leaf umbrella (kf74) | normal | 2 | - | 1 | 18% | 40.25% | 0.94 | 1 | 201 s | 14.5 s | 6.1 / 19.0 s | 50 | #9b2f6b (24) |
+| 248 | Bath time (kf99) | easy | 0 | - | - | - | 69.00% | 1 | 1 | 232 s | 14.9 s | 9.2 / 19.8 s | 50 | - |
+| 249 | Ocelot kitten (kf89) | normal | 1 | 2 | - | - | 41.75% | 0.93 | 1 | 233 s | 14.8 s | 7.3 / 14.2 s | 52 | - |
+| 250 | Xylophone (kf34) | hard | 2 | 3 | 2 | - | 9.75% | 0.06 | 0.625 | 225 s | 14.3 s | 8.6 / 18.0 s | 54 | - |
