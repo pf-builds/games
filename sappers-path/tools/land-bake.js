@@ -59,15 +59,18 @@ const FEATURES = {
 // Mystery blocks on a picture (gen.js hide is for castles: it needs open ground above the fort): blobs over plain blocks
 // (not iron, gilt, a key or the lock's key; not ink or a masked picture's background) that start out of reach (no open
 // ground beside them), until a share in H.share of those is hidden; no 4-connected group past H.maxGroup. Sets L.hidden
-// (h strings of w: "?" or "."); false (L untouched) when fewer than H.min could be hidden.
+// (h strings of w: "?" or "."); false (L untouched) when fewer than H.min could be hidden. Land 1: H.gap keeps a blob's
+// cells that many cells from every earlier blob, so blobs never merge into a group the cap then trims and the share
+// asked is the share hidden (without it 0.3 of the eligible blocks came out about 15% of the picture; with gap 1, 26%).
 function hidePic(L, seed, H, skipIds) {
   const B = E.compile(Object.assign({ cols: [[], [], [], [], []] }, L)), r = R.rng(seed ^ 0x7f4a7c15), w = B.w, h = B.h, a0 = B.a0;
   const open = (c) => !(a0[c] > 0), ok = new Uint8Array(w * h), cells = [];
   for (let c = 0; c < w * h; c++) { const m = a0[c]; if (!(m > 0) || m === E.IRON || m === E.GILT || B.keyOf[c] >= 0 || c === B.lockKey || (skipIds && skipIds.indexOf(m) >= 0)) continue;
     let bad = false; for (let k = 0; k < 4 && !bad; k++) { const e = B.nb[c * 4 + k]; if (e < 0 || open(e)) bad = true; } if (!bad) { ok[c] = 1; cells.push(c); } }
-  const want = Math.round(cells.length * (H.share[0] + r() * (H.share[1] - H.share[0]))), hid = new Uint8Array(w * h); let got = 0;
+  const want = Math.round(cells.length * (H.share[0] + r() * (H.share[1] - H.share[0]))), hid = new Uint16Array(w * h); let got = 0;
   for (let t = 0; t < 400 && got < want && cells.length; t++) { const c0 = cells[Math.floor(r() * cells.length)], cx = c0 % w, cy = (c0 / w) | 0, rx = H.rx[0] + r() * (H.rx[1] - H.rx[0]), ry = H.ry[0] + r() * (H.ry[1] - H.ry[0]);
-    for (let y = Math.max(0, Math.floor(cy - ry)); y <= Math.min(h - 1, Math.ceil(cy + ry)); y++) for (let x = Math.max(0, Math.floor(cx - rx)); x <= Math.min(w - 1, Math.ceil(cx + rx)); x++) { const c = y * w + x, dx = (x - cx) / rx, dy = (y - cy) / ry; if (ok[c] && !hid[c] && dx * dx + dy * dy <= 1 && got < want) { hid[c] = 1; got++; } } }
+    const t1 = t + 1, near = (c) => { if (!H.gap) return false; const x0 = c % w, y0 = (c / w) | 0; for (let y = Math.max(0, y0 - H.gap); y <= Math.min(h - 1, y0 + H.gap); y++) for (let x = Math.max(0, x0 - H.gap); x <= Math.min(w - 1, x0 + H.gap); x++) { const e = y * w + x; if (hid[e] && hid[e] !== t1) return true; } return false; };
+    for (let y = Math.max(0, Math.floor(cy - ry)); y <= Math.min(h - 1, Math.ceil(cy + ry)); y++) for (let x = Math.max(0, Math.floor(cx - rx)); x <= Math.min(w - 1, Math.ceil(cx + rx)); x++) { const c = y * w + x, dx = (x - cx) / rx, dy = (y - cy) / ry; if (ok[c] && !hid[c] && dx * dx + dy * dy <= 1 && got < want && !near(c)) { hid[c] = t1; got++; } } }
   if (H.maxGroup) { const seen = new Uint8Array(w * h), q = new Int32Array(w * h);
     for (let c0 = 0; c0 < w * h; c0++) { if (!hid[c0] || seen[c0]) continue; let qh = 0, qt = 0, k = 0; q[qt++] = c0; seen[c0] = 1;
       while (qh < qt) { const c = q[qh++]; if (++k > H.maxGroup) { hid[c] = 0; got--; } for (let j = 0; j < 4; j++) { const e = B.nb[c * 4 + j]; if (e >= 0 && hid[e] && !seen[e]) { seen[e] = 1; q[qt++] = e; } } } } }
