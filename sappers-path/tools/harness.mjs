@@ -412,20 +412,23 @@ async function run() {
       // Mute and colour-blind mode (the map's toggle) persist in the save (v5 R1: the speed, debug's 1x-3x, does not); then a garbage
       // save loads clean.
       if (!vp.iframe) {
-        await ev(() => SP.load(1)); await tap("#top .tog-mute");
+        // Lands foundation (Peter, 2026-10-06): the play screen's gear opens Settings (the level holds still under it); the
+        // quick mute lives on the Paused sheet. Mute both through the gear's sheet, mid-level.
+        await ev(() => SP.load(1)); await tap("#btn-pset"); ok(!(await page.isHidden("#settings")) && (await ev(() => SP.held())), tag + " the play screen's gear opens Settings and holds the level");
+        await tap("#settings .tog-music"); await tap("#settings .tog-sfx"); await tap("#set-close"); ok(!(await ev(() => SP.held())), tag + " Done plays the level on");
         await tap("#top .tog-speed"); await tap("#top .tog-speed");
         ok((await L("#top .tog-speed").textContent()) === "3\u00d7" && (await S()).speed === 3, tag + " the speed button cycles to 3x");
         await tap("#btn-map"); await tap("#map-set"); await tap("#settings .tog-cb"); await tap("#set-close"); // v5 R3: the map's gear
         ok((await S()).cb === true && (await L("#settings .tog-cb").getAttribute("aria-pressed")) === "true", tag + " the map's gear opens the settings sheet, whose toggle turns colour-blind marks on");
         await page.reload({ waitUntil: "load" }); await page.waitForFunction(() => window.SP, null, { timeout: 15000 });
-        ok((await page.getAttribute("#top .tog-mute", "aria-pressed")) === "true" && (await page.getAttribute("#settings .tog-music", "aria-pressed")) === "false" && (await page.getAttribute("#settings .tog-sfx", "aria-pressed")) === "false", tag + " mute persists across a reload (v5.2: both music and effects off)");
+        ok((await page.getAttribute("#pause .tog-mute", "aria-pressed")) === "true" && (await page.getAttribute("#settings .tog-music", "aria-pressed")) === "false" && (await page.getAttribute("#settings .tog-sfx", "aria-pressed")) === "false", tag + " mute persists across a reload (v5.2: both music and effects off)");
         // v5.2: music on alone through the settings row: the quick mute reads mixed, and that persists too.
         await tap("#btn-settings"); await tap("#settings .tog-music"); await tap("#set-close");
         await page.reload({ waitUntil: "load" }); await page.waitForFunction(() => window.SP, null, { timeout: 15000 });
-        { const m = await ev(() => SP.music()); ok(m.music === true && m.sfx === false && (await page.getAttribute("#top .tog-mute", "aria-pressed")) === "mixed" && (await page.textContent("#settings .tog-music .sv")) === "On" && (await page.textContent("#settings .tog-sfx .sv")) === "Off", tag + " music on, effects off persists across a reload; the quick mute reads mixed (v5.2)"); }
-        await ev(() => SP.load(1)); await tap("#top .tog-mute"); await tap("#top .tog-mute"); // both off, then both on
-        { const m = await ev(() => SP.music()); ok(m.music && m.sfx && (await page.getAttribute("#top .tog-mute", "aria-pressed")) === "false", tag + " the quick mute from mixed: both off, then both on (v5.2)"); }
-        await tap("#top .tog-mute"); // back to both off for the checks below
+        { const m = await ev(() => SP.music()); ok(m.music === true && m.sfx === false && (await page.getAttribute("#pause .tog-mute", "aria-pressed")) === "mixed" && (await page.textContent("#settings .tog-music .sv")) === "On" && (await page.textContent("#settings .tog-sfx .sv")) === "Off", tag + " music on, effects off persists across a reload; the quick mute reads mixed (v5.2)"); }
+        await ev(() => SP.load(1)); await ev(() => SP.pause()); await tap("#pause .tog-mute"); await tap("#pause .tog-mute"); // both off, then both on (the Paused sheet's quick mute)
+        { const m = await ev(() => SP.music()); ok(m.music && m.sfx && (await page.getAttribute("#pause .tog-mute", "aria-pressed")) === "false", tag + " the Paused sheet's quick mute from mixed: both off, then both on (v5.2)"); }
+        await tap("#pause .tog-mute"); await ev(() => SP.resume()); // back to both off for the checks below
         s = await S();
         ok(s.speed === 1 && (await page.textContent("#top .tog-speed")) === "1\u00d7" && s.cb === true && (await page.getAttribute("#settings .tog-cb", "aria-pressed")) === "true" && (await page.evaluate(() => document.body.classList.contains("cb"))), tag + " colour-blind marks persist across a reload; the speed is back to 1x (v5 R1: never saved)");
         await page.evaluate(() => localStorage.setItem("sappers-path.v3", '{"v":1,"done":{"e1-01":7,"e3-74":7,"x":9},"settings":{"diff":"nightmare","muted":"yes"},"last":"e3-74"}'));

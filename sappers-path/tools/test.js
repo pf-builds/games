@@ -14,7 +14,10 @@ const E = require("../src/engine.js");
 const Ref = require("./ref.js");
 const Gr = require("./grade.js");
 const V3 = require("../config.json").v3;
-const LEVELS = require("../levels/levels.json");
+// Lands foundation: LEVELS is the castle campaign (1-200: levels without a land); the lands past it are checked in
+// their own section at the end, and so are the side quests and map sheets they add.
+const LEVELS_ALL = require("../levels/levels.json"), LEVELS = Object.assign({}, LEVELS_ALL, { levels: LEVELS_ALL.levels.filter((l) => !l.land) });
+const castleGal = () => require("../levels/gallery.json").levels.filter((l) => !l.land), castleLay = () => { const L = require("../map/layout.json"); return Object.assign({}, L, { sheets: L.sheets.filter((S) => !S.land) }); };
 
 let pass = 0, fail = 0;
 // v5 R1: checks that replay the shipped levels' stored orders and grades, or hold them to the v5 placement rules, wait for
@@ -386,7 +389,7 @@ const ARCH = (cols) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "
 // Easy teaching level; tags follow feature density (config.json v5.density, tools/tags.js densityOK). Deferred until the
 // re-lay ships (v5.relaid).
 {
-  const TG = require("./tags.js"), BC = require("./bake-config.json"), GB = require("./gallery-config.json").bake, GL = require("../levels/gallery.json").levels, DN = V5.density;
+  const TG = require("./tags.js"), BC = require("./bake-config.json"), GB = require("./gallery-config.json").bake, GL = castleGal(), DN = V5.density;
   const mix = (ls) => TG.TAGS.map((t) => ls.filter((l) => l.tag === t).length);
   defer("tags: the realm schedule, the mix, realm ends and openers, density", () => {
     eq([LEVELS.levels.every((l) => l.tag === TG.tagOf(l.n, BC.tags, l.source === "teaching")), GL.every((l) => l.tag === TG.tagOf(l.n, GB.tags, false))], [true, true], "tags: every level carries its schedule's tag");
@@ -928,7 +931,7 @@ const CV = require("./convert.js"), GCFG = require("./gallery-config.json"), PAL
 
 // ---- v4 M4: the Gallery file's invariants ------------------------------------------------------------------------------
 {
-  const GF = require("../levels/gallery.json"), GL = GF.levels, MAN = require("../levels/gallery-manifest.json"), GB = GCFG.bake, LIC = require("fs").readFileSync(require("path").join(__dirname, "../LICENSES.md"), "utf8");
+  const GF = require("../levels/gallery.json"), GL = castleGal(), MAN = require("../levels/gallery-manifest.json"), GB = GCFG.bake, LIC = require("fs").readFileSync(require("path").join(__dirname, "../LICENSES.md"), "utf8");
   const kept = MAN.order.filter((id) => (MAN.pictures.find((p) => p.id === id) || {}).keep !== false);
   eq([GL.length, GL.map((L) => L.src).join(), GL.every((L, i) => L.n === i + 1 && L.id === "g-" + L.src)], [kept.length, kept.join(), true], "gallery: one level per kept picture, in the manifest's order, ids g-<picture>");
   let bad = [], wins = 0, dead = 0, taps = 0, over = 0, ms = [], dmin = 99, dminFade = 99, band = 0;
@@ -1325,10 +1328,10 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   eq([s0, s1, s2, s3, s4, Save.nextBy(D, gal, "gal", (id) => Save.questOpen(D, order, gal, after, id))], [[false, false, false, false], [true, false, false, false], [true, true, false, false], [true, true, true, false], [true, true, true, true], "p1"],
     "side quests: a picture opens once its main level is cleared (optional, never blocking); past the last level they open once all are cleared, one at a time; nextBy finds the first open one not cleared");
   const G = Save.fresh(META); G.inv.recall = 98; eq([Meta.gift(G, "scout"), G.inv.scout, Meta.gift(G, "recall"), Meta.gift(G, "recall"), G.inv.recall, Meta.gift(G, "nope")], [true, 1, true, false, 99, false], "side quests: a prize adds one use (capped at 99; unknown ids refused)");
-  defer("side quests: every Gallery picture carries its quest", () => { const GL = require("../levels/gallery.json").levels; eq(GL.map((l) => l.quest), q, "side quests: levels/gallery.json carries each picture's quest {after, prize} as tools/quests.js deals them"); });
+  defer("side quests: every Gallery picture carries its quest", () => { const GL = castleGal(); eq(GL.map((l) => l.quest), q, "side quests: levels/gallery.json carries each picture's quest {after, prize} as tools/quests.js deals them"); });
   // v5 R4: pictures 26-50 sit after levels 104-200, which now exist; they open off them one by one. 51-60 (after 203-240)
   // are the long tail: they wait until all 200 levels are cleared, then open one at a time.
-  const GL4 = require("../levels/gallery.json").levels, ord = LEVELS.levels.map((l) => l.id), gid = GL4.map((l) => l.id), aft = GL4.map((l) => l.quest.after), R4 = Save.fresh(META), qo = (i) => Save.questOpen(R4, ord, gid, aft, gid[i]);
+  const GL4 = castleGal(), ord = LEVELS.levels.map((l) => l.id), gid = GL4.map((l) => l.id), aft = GL4.map((l) => l.quest.after), R4 = Save.fresh(META), qo = (i) => Save.questOpen(R4, ord, gid, aft, gid[i]);
   for (let i = 0; i < 100; i++) R4.done[ord[i]] = 1;
   const mid = gid.map((id, i) => i).filter((i) => aft[i] > 100 && aft[i] <= ord.length), tailI = gid.map((id, i) => i).filter((i) => aft[i] > ord.length), r0 = mid.map(qo);
   for (let i = 100; i < 150; i++) R4.done[ord[i]] = 1; const r1 = mid.map(qo), t1 = tailI.map(qo); for (const id of ord) R4.done[id] = 1; const r2 = mid.map(qo), t2 = tailI.map(qo);
@@ -1339,8 +1342,8 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
 
 // ---- v5 R3: the journey map (src/journey.js; meta.js egg; the save's eggs; config map against map/layout.json) -----------------
 {
-  const Save = require("../src/save.js"), Meta = require("../src/meta.js"), J = require("../src/journey.js"), LAY = require("../map/layout.json"), MC = require("../config.json").map;
-  const GL = require("../levels/gallery.json").levels, order = LEVELS.levels.map((l) => l.id), gids = GL.map((l) => l.id), after = GL.map((l) => (l.quest ? l.quest.after : 0));
+  const Save = require("../src/save.js"), Meta = require("../src/meta.js"), J = require("../src/journey.js"), LAY = castleLay(), MC = require("../config.json").map;
+  const GL = castleGal(), order = LEVELS.levels.map((l) => l.id), gids = GL.map((l) => l.id), after = GL.map((l) => (l.quest ? l.quest.after : 0));
   // Eggs pay once: the first tap pays its coins and marks it found; a second pays nothing; the save keeps them.
   const D = Save.fresh(META), c0 = D.coins, p1 = Meta.egg(D, "s1-0", 12), p2 = Meta.egg(D, "s1-0", 12), p3 = Meta.egg(D, "s1-1", 5000);
   eq([p1, p2, p3, D.coins - c0, D.eggs], [12, 0, 999, 12 + 999, { "s1-0": 1, "s1-1": 1 }], "eggs: an egg pays its coins on the first tap only (capped at 999 a tap) and is marked found");
@@ -1461,7 +1464,8 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   const asrc = fs.readFileSync(path.join(__dirname, "..", "src", "audio.js"), "utf8"), html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8"), css = fs.readFileSync(path.join(__dirname, "..", "style.css"), "utf8");
   const tags = (html + css).match(/\?v=\d+/g) || [];
   ok(!/setTimeout|setInterval/.test(asrc) && tags.length >= 10 && tags.every((t) => t === tags[0]) && /fonts\/Jersey10-Regular\.ttf\?v=/.test(css), "music (v5.2): audio.js uses no timers; one cache tag (" + tags[0] + ") across index.html and the font URL (" + tags.length + " uses)");
-  ok(/class="set-row tog tog-music"/.test(html) && /class="set-row tog tog-sfx"/.test(html) && !/set-row tog tog-mute/.test(html) && (html.match(/class="round tog tog-mute"/g) || []).length === 2, "music (v5.2): settings has a Music row and a Sound effects row; the top bar and the Paused sheet keep their quick mute buttons");
+  ok(/class="set-row tog tog-music"/.test(html) && /class="set-row tog tog-sfx"/.test(html) && !/set-row tog tog-mute/.test(html) && (html.match(/class="round tog tog-mute"/g) || []).length === 1 && /<header id="top">[\s\S]*id="btn-pset"[\s\S]*<\/header>/.test(html) && !/<header id="top">(?:(?!<\/header>)[\s\S])*tog-mute/.test(html),
+    "music (v5.2): settings has a Music row and a Sound effects row; the Paused sheet keeps its quick mute button; lands foundation: the top bar has the gear (btn-pset) where its quick mute was");
 }
 
 // ---- v5.4: reset and the save code (save.js reset, encode, decode; config reset, saveCode) -------------------------------
@@ -1532,6 +1536,86 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
   ok(/id="set-copy"/.test(html) && /id="set-load"/.test(html) && /id="set-reset"/.test(html) && html.indexOf('id="set-close"') < html.indexOf('id="set-reset"') && /<meta property="og:image" content="https:\/\/pf-builds\.github\.io\/games\/sappers-path\/thumb\.jpg">/.test(html) && /<meta name="twitter:card" content="summary_large_image">/.test(html),
     "index (v5.4): Settings has Copy and Load save code and, after Done, Reset progress; the share card points at the arcade's thumb.jpg");
+}
+
+// ---- lands foundation (SPEC-v4 §9, the lands foundation entry; tools/lands-foundation-notes.md) ---------------------------
+{
+  const fs = require("fs"), path = require("path"), os = require("os"), CFG = require("../config.json"), LC = CFG.lands, J = require("../src/journey.js"), TG = require("./tags.js");
+  const LP = require("./land-plan.js"), LB = require("./land-bake.js"), SH = require("./shade.js"), QS = require("./quests.js"), LND = require("./land.js"), LCF = require("./land-config.json"), D5 = CFG.v5.density;
+  // Config: the lands block, and every built land in it against the levels, the layout and its own land.json.
+  ok(LC.castleEnd === 200 && LC.castleRealms === CFG.eras.length && LC.perLand === 50 && ["eye", "of", "home", "bannerAria"].every((k) => /\{k\}/.test(LC.text[k])) && /\{name\}/.test(LC.epilogue.first) && LC.epilogue.none && LC.shadeTip[0].say && LC.shadeTip[0].short && Array.isArray(LC.list),
+    "lands (config): the castle story ends at " + LC.castleEnd + " after " + LC.castleRealms + " realms; lands of " + LC.perLand + "; Land words, the epilogue and the shade tip; " + LC.list.length + " built");
+  // Mirror math: a mirrored entry has every x at w - x (levels, quests and their branch, eggs, road, entry, exit, tail);
+  // twice is the entry itself; an unmirrored entry and a layout with none come back as the same object.
+  const S0 = { sheet: 26, file: "a.webp", levels: [{ n: 201, x: 100, y: 900 }], quests: [{ q: 61, x: 600, y: 500, branch: [400, 520] }], eggs: [{ kind: "grass", x: 50, y: 60 }], road: [[384, 1344], [300, 700], [384, 0]], entry: [384, 1344], exit: [384, 0], tail: { x: 200, y: 80, fog: 0 } };
+  const M1 = J.mirrorSheet(Object.assign({}, S0, { mirror: true }), 768), M2 = J.mirrorSheet(Object.assign({}, M1, { mirror: true }), 768), Lm = { w: 768, sheets: [S0] };
+  eq([M1.levels[0].x, M1.quests[0].x, M1.quests[0].branch, M1.eggs[0].x, M1.road.map((p) => p[0]), M1.entry, M1.exit, M1.tail.x, M1.levels[0].y, JSON.stringify(Object.assign({}, M2, { mirror: undefined })) === JSON.stringify(Object.assign({}, S0, { mirror: undefined })), J.mirrorSheet(S0, 768) === S0, J.layoutOf(Lm) === Lm, J.layoutOf({ w: 768, sheets: [S0, Object.assign({}, S0, { mirror: true })] }).sheets[1].levels[0].x, S0.levels[0].x],
+    [668, 168, [368, 520], 718, [384, 468, 384], [384, 1344], [384, 0], 568, 900, true, true, true, 668, 100], "lands (map): a mirrored entry's marks sit at 768 - x (the road still meets x = 384), y unchanged; mirrored twice it is itself; nothing else is touched");
+  // The long tail moves past the last land: castle pictures 26-50 keep their levels, 51-60 (past 200) move on by however
+  // far the lands reach; a land's own quests never move; with the castle alone nothing changes.
+  const GL = castleGal(), aft = GL.map((l) => l.quest.after), sh = (last) => aft.map((a) => J.tailAfter(a, LC.castleEnd, last));
+  const order250 = Array.from({ length: 250 }, (_, i) => "x" + i), gid = GL.map((l) => l.id).concat(["w1", "w2"]), af250 = sh(250).concat([204, 208]), T0 = require("../src/save.js").fresh(META);
+  for (const id of order250) T0.done[id] = 1; const tl = J.tail(T0, order250, gid, af250);
+  eq([sh(200).join() === aft.join(), sh(250).slice(25, 50).join() === aft.slice(25, 50).join(), sh(250).slice(50).map((a, i) => a - aft[50 + i]), tl.ids.length, tl.ids[0] === GL[50].id, J.landOf({ list: [{ k: 1, from: 201, to: 250 }] }, 230).k, J.landOf({ list: [] }, 230)],
+    [true, true, Array(10).fill(50), 10, true, 1, null], "lands (long tail): with 200 levels nothing moves; with a land to 250, pictures 26-50 stay, 51-60 move on 50 levels and stay the long tail (the land's own side quests are not in it)");
+  // Tags and plan from the default profile (a 50-level land): the shares, the breathers, runs no longer than the
+  // profile's, Easy after every run, the end; every level within the density floor; features per level rise with the
+  // tag; each feature on its share; a harder profile asks for more.
+  const P = LP.profileOf({}, { profile: LCF.profile }), tags = LP.landTags(50, P.tags, 50), cnt = (t) => tags.filter((x) => x === t).length, plan = LP.landPlan(tags, { features: ["linked", "mystery", "hidden", "lock"] }, P, 201, D5);
+  const runs = []; let rn = 0; tags.forEach((t, i) => { if (t === "hard" || t === "extreme") rn++; else { if (rn) runs.push(rn); rn = 0; } if (t === "easy" && i && tags[i - 1] !== "hard" && tags[i - 1] !== "extreme") runs.push(-1); });
+  const stand = plan.map((p) => ({ grid: ["."], cols: [p.mystery ? [[1, 1, 1]] : [[1, 1]]], links: p.links ? [[[0, 0], [1, 0]]] : null, hidden: p.hidden ? ["?"] : null, lock: p.lock ? { colour: 1 } : null }));
+  const feats = (i) => TG.featuresOf(stand[i]).length + (stand[i].lock ? 1 : 0), meanOf = (t) => { const ix = tags.map((x, i) => (x === t ? i : -1)).filter((i) => i >= 0); return ix.reduce((a, i) => a + feats(i), 0) / ix.length; };
+  const share = (k) => plan.filter((p) => (k === "lock" ? p.lock : p.feats.indexOf(k) >= 0)).length / 50, hard = LP.profileOf({ profile: { features: { mystery: { share: 0.9 } }, tags: { shares: { easy: 0.1, normal: 0.2, hard: 0.4, extreme: 0.3 } } } }, { profile: LCF.profile });
+  const tagsH = LP.landTags(50, hard.tags, 50), planH = LP.landPlan(tagsH, { features: ["linked", "mystery", "hidden", "lock"] }, hard, 201, D5);
+  eq([cnt("easy") >= P.tags.breathers, Math.abs(cnt("normal") - 50 * P.tags.shares.normal) <= 1, Math.abs(cnt("hard") - 50 * P.tags.shares.hard) <= 1, Math.abs(cnt("extreme") - 50 * P.tags.shares.extreme) <= 1, Math.max(...runs) <= P.tags.run[1], runs.indexOf(-1) < 0, tags[49], tags[0],
+    plan.every((p, i) => TG.landDensityOK(tags[i], stand[i], ["linked", "mystery", "hidden", "lock"], D5)), ["easy", "normal", "hard", "extreme"].map(meanOf).every((v, i, a) => !i || v >= a[i - 1]), ["mystery", "hidden", "linked", "lock"].every((k) => share(k) >= P.features[k].share - 0.011),
+    planH.filter((p) => p.feats.indexOf("mystery") >= 0).length > plan.filter((p) => p.feats.indexOf("mystery") >= 0).length, tagsH.filter((t) => t === "hard" || t === "extreme").length > tags.filter((t) => t === "hard" || t === "extreme").length, LP.landTags(10, P.tags, 50).filter((t) => t === "easy").length >= 1],
+    [true, true, true, true, true, true, P.tags.end, "normal", true, true, true, true, true, true], "lands (profile): tags " + tags.map((t) => t[0] + (t === "extreme" ? "x" : "")).join("") + " (E" + cnt("easy") + "/N" + cnt("normal") + "/H" + cnt("hard") + "/X" + cnt("extreme") + ", runs " + runs.join(",") + "); every plan within the density floor; features per level rise with the tag (" + ["easy", "normal", "hard", "extreme"].map((t) => meanOf(t).toFixed(1)).join("/") + "); each feature on its share; a harder profile asks for more");
+  throws(() => LP.landPlan(tags, { features: ["moatRing"] }, P, 1, D5), "lands (extension point): a feature with no builder yet (a moat ring) is refused by the plan");
+  ok(["hidden", "lock", "linked", "mystery"].every((k) => typeof LB.FEATURES[k] === "function"), "lands (extension point): tools/land-bake.js FEATURES builds every deck feature a profile names");
+  // A land's side quests (the Wandering Gallery): every 3-5 levels inside the land, prizes on in turn after the castle's 60.
+  const lq = QS.landQuestsOf({ from: 201, to: 250 }, CFG.gallery.quests, META.powers, 60, 99), all = QS.questsOf(72, CFG.gallery.quests, META.powers), lg = lq.slice(1).map((q, i) => q.after - lq[i].after);
+  eq([lq.length, lq[0].after, lg.every((g) => g >= 3 && g <= 5), lq[lq.length - 1].after <= 250, lq.map((q) => q.prize).join() === all.slice(60).map((q) => q.prize).join()], [12, 204, true, true, true], "lands (side quests): 12 in a 50-level land, from 204, every 3-5 levels, inside it; prizes continue the castle's turn (" + lq.map((q) => q.prize[0]).join("") + ")");
+  // Shading on a hand image: a two-colour painting whose halves each run dark to light gets shades on both colours that
+  // keep the floors, digits that follow the light, and the same board and grid as the flat plan; a shade set onto
+  // another colour fails the check.
+  const w = 40, h = 24, rgba = new Uint8Array(w * h * 4); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const b = x % 20, t = b < 7 ? 0.8 : b < 14 ? 0.9 : 1, o = (y * w + x) * 4; if (x < 20) rgba.set([40 * t, 90 * t, 210 * t, 255], o); else rgba.set([235 * t, 190 * t, 50 * t, 255], o); }
+  const CC = require("./gallery-config.json").convert, op = { kind: "painting", box: [20, 12] }, PL0 = CV.plan({ w, h, rgba }, op, CC), sd = SH.shadeOf({ w, h, rgba }, PL0, op, CC);
+  const chk = sd && SH.checkLevel(Object.assign({ w: PL0.w, h: PL0.h, grid: PL0.grid }, sd), CC), Bf = E.compile(Object.assign({ cols: [[], [], [], [], []] }, PL0)), Bs = E.compile(Object.assign({ cols: [[], [], [], [], []], shade: sd && sd.shade }, PL0, { pal: sd && sd.pal }));
+  const bad = sd && JSON.parse(JSON.stringify(sd.pal)), ids = Object.keys(PL0.pal); if (bad) bad[ids[0]].sh = [PL0.pal[ids[1]].c, null, null, null];
+  eq([!!sd, sd && sd.stats.shades >= 2, chk && chk.ok, sd && sd.shade.length === PL0.h && sd.shade.every((r) => r.length === PL0.w && r[0] === "0"), Array.from(Bf.a0).join() === Array.from(Bs.a0).join(), sd && sd.shade[3].slice(1, 4) === "222" && sd.shade[3].slice(8, 11) === "111" && sd.stats.shades === 4, bad && SH.checkLevel(Object.assign({ w: PL0.w, h: PL0.h, grid: PL0.grid, pal: bad }), CC).ok],
+    [true, true, true, true, true, true, false], "lands (shading): a two-colour hand painting (each colour in three bands of light) gets " + (sd ? sd.stats.shades : 0) + " shades (closest other colour " + (sd ? sd.stats.minOther : "-") + ", faded " + (sd ? sd.stats.minFaded : "-") + "), digits darker then lighter where the light runs, the frame 0, the same board; a shade on another colour fails the floors");
+  // The land bake on a fixture: a small picture baked as a Hard level with linked pairs, ? cards, mystery blocks and a
+  // colour lock under a quick trial config (2 candidates, no lookahead narrowing). Whatever the targets say, a pick
+  // always: wins on its stored order with no power-up, 5 spaces, under the tap and wait caps, carries what its plan
+  // asked, and re-grades with 0 differences.
+  {
+    const pw = 20, ph = 22, img = new Uint8Array(pw * ph * 4), cols5 = [[200, 40, 40], [40, 160, 60], [40, 70, 200], [230, 200, 40], [120, 60, 150]];
+    for (let y = 0; y < ph; y++) for (let x = 0; x < pw; x++) img.set(cols5[(((x / 4) | 0) + ((y / 6) | 0)) % 5].concat([255]), (y * pw + x) * 4);
+    const PB = CV.plan({ w: pw, h: ph, rgba: img }, { kind: "painting", box: [pw, ph], chroma: 1 }, CC), tmp = path.join(os.tmpdir(), "sp-land-config-" + process.pid + ".json");
+    const trial = JSON.parse(JSON.stringify(LCF)); trial.bake.candidates = { perLevel: 2, perLevelBy: {} }; trial.bake.narrowFor = []; trial.plan.hidden.min = 4; fs.writeFileSync(tmp, JSON.stringify(trial)); const was = process.env.LAND_CONFIG; process.env.LAND_CONFIG = tmp;
+    const pl = { feats: ["linked", "mystery", "hidden"], mystery: 2, links: 1, hidden: 0.1, lock: "colour" }, t0 = Date.now();
+    const r = LB.bakeOne({ n: 9001, tag: "hard", plan: pl, band: P.bands.hard, look: null, pace: P.pace, board: { w: PB.w, h: PB.h, grid: PB.grid, pal: PB.pal } });
+    if (was === undefined) delete process.env.LAND_CONFIG; else process.env.LAND_CONFIG = was; fs.unlinkSync(tmp);
+    const L = r.level, rt = E.rulesOf(V3, "hard"), lnF = L && Gr.line(E.compile(L), rt, L.win.hard), rg = L && require("./regrade.js").regrade([Object.assign({ n: 9001, tag: "hard", seed: r.seed }, L)], LB.configs(false).B, V3, false);
+    eq([!r.fail, L && E.replay(E.compile(L), rt, L.win.hard).status === E.WON, !rt.powers, lnF && lnF.peak <= 5, L && L.win.hard.length <= LCF.bake.maxTaps && lnF.maxWait <= LCF.bake.maxWaitMs, L && !!(L.links && L.links.length), L && L.cols.flat().filter((c) => c[2]).length >= 2, L && !!(L.hidden && L.hidden.some((x) => x.indexOf("?") >= 0)), L && !!(L.lock && L.lock.colour), rg && rg.diffs],
+      [true, true, true, true, true, true, true, true, true, 0], "lands (bake fixture): a " + PB.w + "x" + PB.h + " Hard picture with linked pairs, ? cards, mystery blocks and a colour lock: wins on its stored order with no power-up, 5 spaces, under the caps, carries its plan, re-grades with 0 differences (" + ((Date.now() - t0) / 1000).toFixed(1) + " s" + (r.fail ? ", " + r.fail : "") + ")");
+  }
+  // Config insertion keeps the file as it is apart from the land and its egg rows.
+  { const t = fs.readFileSync(path.join(__dirname, "../config.json"), "utf8"), a = LND.addToConfig(t, { k: 9, name: "T" }, [[10, 11], [12, 13]]), c = JSON.parse(a);
+    eq([c.lands.list.slice(-1)[0].name, c.map.eggCoins.length - CFG.map.eggCoins.length, a.replace(/\n      \{"k":9,"name":"T"\}/, "").replace(", [10,11], [12,13]", "") === t], ["T", 2, true], "lands (install): the land goes into config lands.list and a row per new sheet into map.eggCoins, nothing else changes"); }
+  // The freeze: the shipped campaign and pictures are the snapshot's, byte for byte, whatever lands follow them.
+  { const dir = path.join(__dirname, "..", CFG.v5.freeze.dir), FL = JSON.parse(fs.readFileSync(path.join(dir, "levels.json"), "utf8")).levels, FG = JSON.parse(fs.readFileSync(path.join(dir, "gallery.json"), "utf8")).levels, G2 = require("../levels/gallery.json").levels;
+    eq([FL.length >= 200, FL.every((l, i) => JSON.stringify(l) === JSON.stringify(LEVELS_ALL.levels[i])), FG.length, FG.every((l, i) => JSON.stringify(l) === JSON.stringify(G2[i]))], [true, true, 60, true], "freeze: levels 1-" + FL.length + " and pictures 1-60 in the game are the frozen snapshot's, byte for byte"); }
+  // Every built land: its levels, side quests and sheets.
+  for (const d of LC.list) {
+    const LV = LEVELS_ALL.levels.filter((l) => l.land === d.k), GV = require("../levels/gallery.json").levels.filter((l) => l.land === d.k), lj = JSON.parse(fs.readFileSync(path.join(__dirname, "lands", d.slug, "land.json"), "utf8")), PP = LP.profileOf(lj, LCF), era = LC.castleRealms + d.k;
+    const SS = require("../map/layout.json").sheets.filter((S) => S.land === d.k), BC = require("./bake-config.json"), GB = require("./gallery-config.json").bake;
+    const bad = LV.filter((L, i) => L.n !== d.from + i || L.era !== era || L.id !== "e" + era + "-" + L.n || E.replay(E.compile(L), E.rulesOf(V3, L.tag), L.win[L.tag]).status !== E.WON || L.win[L.tag].length > LCF.bake.maxTaps || L.grade[L.tag].maxWait > LCF.bake.maxWaitMs || (L.shade && !SH.checkLevel(L, CC).ok)).map((L) => L.id);
+    const rg = require("./regrade.js").regrade(LV, BC, V3, true), rs = require("./regrade.js").regrade(GV, GB, V3, true), pc = LP.planCheck(LV, lj, PP, D5, LC.perLand);
+    eq([LV.length, d.to - d.from + 1, bad, pc, rg.diffs + rs.diffs, SS.length && SS[0].sheet === d.sheets[0] && SS[SS.length - 1].sheet === d.sheets[1], SS.every((S, e) => S.file === d.files[e % 2] && !!S.mirror === (Math.floor(e / 2) % 2 === 1) && S.realm === era), GV.every((g) => g.wander && g.quest.after >= d.from && g.quest.after <= d.to)],
+      [d.to - d.from + 1, LV.length, [], [], 0, true, true, true], "land " + d.k + " (" + d.name + ", " + d.from + "-" + d.to + "): levels in order, each winning on its stored order under the caps, shades on their floors, its profile kept, re-grades 0, sheets " + d.sheets.join("-") + " alternating file and mirror, " + GV.length + " Wandering Gallery side quests inside it");
+  }
 }
 
 console.log(pass + " passed, " + fail + " failed");
