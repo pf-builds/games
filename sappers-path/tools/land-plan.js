@@ -16,7 +16,9 @@
 // landPlan(tags, land, P, seed): each level's plan {feats, mystery (cards), links (pairs), hidden (share or 0), lock
 //   (false, "key", "colour")}. Each feature goes to round(share x N) levels: every Extreme level first (Extreme uses
 //   every feature and the lock), then Hard, Normal and Easy in a seeded order (an Easy level takes at most
-//   v5.density.easyMax). Amounts rise with the tag (an Extreme level takes the top of each range).
+//   v5.density.easyMax). Amounts rise with the tag (an Extreme level takes the top of each range). Land 1 fix: a feature
+//   with by ({tag: share}) goes to round(by[tag] x that tag's levels) of each tag instead (every Extreme still), the
+//   levels with the fewest features so far first (seeded order among equals), so one feature fills the gaps another left.
 // planCheck(levels, land, P, D): the land against its profile and the density rule (tools/tags.js landDensityOK):
 //   [problems]. Extension point: a feature outside DECK and BOARD (a later board feature such as the Extreme hazard)
 //   needs a builder in tools/land-bake.js FEATURES before a land may list it; landPlan and planCheck refuse it until then.
@@ -42,7 +44,10 @@ function landTags(N, T, perLand) {
   for (let i = 0; i < x; i++) runs[S - 1 - (i % S)].x++; // the Extremes from the last run back: later peaks are higher
   for (let i = 0; i < h; i++) { let b = 0; for (let k = 1; k < S; k++) if (runs[k].h + runs[k].x < runs[b].h + runs[b].x) b = k; runs[b].h++; } // the Hards evening the runs out
   for (let i = 0; i < n; i++) lead[i % S]++;
-  const out = []; for (let s = 0; s < S; s++) { for (let i = 0; i < lead[s]; i++) out.push("normal"); for (let i = 0; i < runs[s].h; i++) out.push("hard"); for (let i = 0; i < runs[s].x; i++) out.push("extreme"); if (s < S - 1) out.push("easy"); }
+  // Land 1 fix: a run longer than T.run[1] takes one of its lead's Normals into its Hards (a dip before the climb goes on),
+  // its first part k Hards so both parts fit (only where the run would break the profile's longest anyway).
+  const out = []; for (let s = 0; s < S; s++) { const R = runs[s], long = R.h + R.x > T.run[1] && lead[s] > 1 && R.h > 0, k = long ? Math.min(R.h, Math.max(Math.ceil(R.h / 2), R.h + R.x - T.run[1])) : R.h;
+    for (let i = 0; i < lead[s] - (long ? 1 : 0); i++) out.push("normal"); for (let i = 0; i < k; i++) out.push("hard"); if (long) out.push("normal"); for (let i = k; i < R.h; i++) out.push("hard"); for (let i = 0; i < R.x; i++) out.push("extreme"); if (s < S - 1) out.push("easy"); }
   if (out[out.length - 1] !== T.end) { const j = out.lastIndexOf(T.end); if (j >= 0) { out.splice(j, 1); out.push(T.end); } else out[out.length - 1] = T.end; }
   return out;
 }
@@ -53,6 +58,8 @@ function landPlan(tags, land, P, seed, D, can) {
   if (can) for (const f of Object.keys(can)) if (feats.indexOf(f) >= 0) plan.forEach((p, i) => { if (!can[f][i]) p.cant = (p.cant || []).concat(f); });
   const order = (k) => tags.map((t, i) => i).sort((a, b) => RANK[tags[b]] - RANK[tags[a]] || hash01(seed + a, k) - hash01(seed + b, k));
   deck.forEach((f, fi) => { const F = P.features[f] || { share: 0 }, want = Math.round(F.share * N); let got = 0;
+    if (F.by) { for (const t of ["extreme", "hard", "normal", "easy"]) { const ls = order(fi + 1).filter((i) => tags[i] === t).sort((a, b) => plan[a].feats.length - plan[b].feats.length), wt = t === "extreme" ? ls.length : Math.round((F.by[t] || 0) * ls.length); let k = 0; // Land 1 fix: per-tag shares, the fewest features first
+      for (const i of ls) { if (k >= wt) break; if ((plan[i].cant || []).indexOf(f) >= 0) continue; if (t === "easy" && plan[i].feats.length >= D.easyMax) continue; plan[i].feats.push(f); k++; } } return; }
     for (const i of order(fi + 1)) { const t = tags[i]; if ((plan[i].cant || []).indexOf(f) >= 0) continue; if (t !== "extreme" && got >= want) continue; if (t === "easy" && plan[i].feats.length >= D.easyMax) continue; plan[i].feats.push(f); got++; } });
   if (feats.indexOf("lock") >= 0) { const L = P.features.lock || { share: 0, key: 0 }, want = Math.round(L.share * N); let got = 0;
     for (const i of order(99)) { const t = tags[i]; if (t !== "extreme" && (got >= want || t !== "hard")) continue; plan[i].lock = hash01(seed + i, 98) < L.key ? "key" : "colour"; got++; } }

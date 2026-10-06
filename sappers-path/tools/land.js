@@ -2,7 +2,9 @@
 // tools/land-runbook.md). One land folder in, one checked land out, ready to copy into the game:
 //   ~/.local/opt/node/bin/node tools/land.js LAND_DIR [STEP ...] [--game DIR] [--gallery DIR] [--threads N]
 //                                            [--only A-B | --list N,N,...] [--extra K] [--force]
-//   ~/.local/opt/node/bin/node tools/land.js LAND_DIR install [--game DIR]
+//   ~/.local/opt/node/bin/node tools/land.js LAND_DIR install [--game DIR] [--replace]
+// Land 1 fix pass: a land already installed (the game's last land) is planned and checked as if it weren't (context
+// reads it out of the game), and install --replace swaps the installed land for this bake (removeFromConfig).
 // LAND_DIR: land.json (k, slug, name, lore, count, source, features, eggs, shade, profile, raw, main, map) and
 // pictures/manifest.json (id, title, artist, date, kind, licence, url, file, crop?, chroma?). Side quests come from the
 // Wandering Gallery (--gallery, default tools/lands/_gallery: gallery.json {raw}, manifest.json), in its order, the
@@ -19,9 +21,13 @@
 //             tools/moat.js) first asks each main picture whether it can carry a ring with the gentlest opening set its
 //             profile allows (state.json moat: [{n, ok, why}]; every level can step down to it); the plan skips those that
 //             can't.
-//   map       the layout entries from the land's 2 sheet templates, alternately mirrored -> scratch/map.json
+//   map       the layout entries from the land's 2 sheet templates, alternately mirrored -> scratch/map.json (Land 1 fix:
+//             land.json eggTurns [per template [per repeat [[kind, x, y], [kind, x, y]]]], each repeat of a sheet its own
+//             egg kinds and spots in the template's pixels, so a found egg is not the same egg two sheets on; without it
+//             entry e takes kinds eggs[2e], eggs[2e + 1] on the template's spots, as before)
 //   assemble  the level records, the side-quest records, the config entry, the egg coins and the licence lines ->
-//             scratch/out/
+//             scratch/out/ (Land 1 fix: a gallery picture's short, the play bar's title when the full one won't fit;
+//             a level with mystery blocks, its fill hideC and ? colour hideQ, land-config plan.hidden fills)
 //   check     every gate (below) -> scratch/report.md and scratch/state.json {ok}
 //   install   (only after a passing check; never part of the default run) appends the land to the game: levels,
 //             gallery, layout, sheets, config (lands.list, map.eggCoins) and LICENSES.md, each file written whole only
@@ -63,10 +69,15 @@ function context(dir) {
   const levels = readJ(path.join(GAME, "levels/levels.json")), gallery = readJ(path.join(GAME, "levels/gallery.json")), layout = readJ(path.join(GAME, "map/layout.json"));
   const gman = fs.existsSync(path.join(GAL, "manifest.json")) ? readJ(path.join(GAL, "manifest.json")) : [], gcfg = fs.existsSync(path.join(GAL, "gallery.json")) ? readJ(path.join(GAL, "gallery.json")) : {};
   const LCF = CFG.lands, P = LP.profileOf(land, LC), count = land.count || LCF.perLand;
+  // Land 1 fix pass: a land already installed (the game's last; a fix pass re-bakes it) is read out of the game first, so
+  // the land is planned against the game without it (its side-quest pictures free again); install --replace puts it back.
+  const installed = (LCF.list || []).find((d) => d.k === land.k) || null;
+  if (installed) { if ((LCF.list || []).some((d) => d.k > land.k)) throw new Error("land " + land.k + " is installed and a later land follows it");
+    levels.levels = levels.levels.filter((l) => l.land !== land.k); gallery.levels = gallery.levels.filter((l) => l.land !== land.k); layout.sheets = layout.sheets.filter((S) => S.land !== land.k); }
   // Where it goes: the level after the game's last, the sheet after its last, the picture after its last.
   const state = fs.existsSync(path.join(S, "state.json")) ? readJ(path.join(S, "state.json")) : {};
   const from = state.from || levels.levels[levels.levels.length - 1].n + 1, sheet0 = state.sheet0 || layout.sheets.length + 1, gal0 = state.gal0 != null ? state.gal0 : gallery.levels.length;
-  return { LAND, GAME, GAL, S, land, man, CFG, LC, LCF, P, levels, gallery, layout, gman, gcfg, count, from, to: from + count - 1, sheet0, gal0, era: LCF.castleRealms + land.k, state };
+  return { LAND, GAME, GAL, S, land, man, CFG, LC, LCF, P, levels, gallery, layout, gman, gcfg, count, from, to: from + count - 1, sheet0, gal0, era: LCF.castleRealms + land.k, state, installed };
 }
 const saveState = (X, extra) => { X.state = Object.assign({}, X.state, { from: X.from, to: X.to, sheet0: X.sheet0, gal0: X.gal0 }, extra || {}); writeJ(path.join(X.S, "state.json"), X.state, true); };
 // The land's main pictures in level order, and its side quests: the next Wandering Gallery pictures no land has used.
@@ -122,7 +133,7 @@ async function bake(X) {
   saveState(X, moat ? { tags, plan, moat } : { tags, plan }); if (moat) console.log("bake: " + moat.filter((m) => m.ok).length + " of " + moat.length + " pictures can carry a moat" + moat.filter((m) => !m.ok).map((m) => "; " + m.n + " can't: " + m.why).join(""));
   const only = opt("only") ? opt("only").split("-").map(Number) : null, list = opt("list") ? opt("list").split(",").map(Number) : null, dir = path.join(X.S, "bake");
   const inRun = (n) => (list ? list.indexOf(n) >= 0 : !only || (n >= only[0] && n <= (only[1] || only[0]))), want = (f, n) => (flag("force") || only || list ? inRun(n) : !fs.existsSync(f)), jobs = [];
-  b.main.forEach((e, i) => { const f = path.join(dir, "m-" + e.n + ".json"); if (want(f, e.n)) jobs.push({ file: f, job: { n: e.n, tag: tags[i], plan: plan[i], band: X.P.bands[tags[i]], look: X.P.lookahead[tags[i]] != null ? X.P.lookahead[tags[i]] : null, pace: X.P.pace, board: e.board, extra: +opt("extra") || 0, liquids, moatLo } }); });
+  b.main.forEach((e, i) => { const f = path.join(dir, "m-" + e.n + ".json"); if (want(f, e.n)) jobs.push({ file: f, job: { n: e.n, tag: tags[i], plan: plan[i], band: X.P.bands[tags[i]], look: X.P.lookahead[tags[i]] != null ? X.P.lookahead[tags[i]] : null, care: (X.P.careful || {})[tags[i]] != null ? X.P.careful[tags[i]] : null, mysRows: (X.P.features.mystery || {}).rows || null, over: X.P.bake || null, pace: X.P.pace, board: e.board, extra: +opt("extra") || 0, liquids, moatLo } }); });
   b.side.forEach((e, i) => { const n = X.gal0 + i + 1, tag = BK.sideCycle[(X.gal0 + i) % BK.sideCycle.length], f = path.join(dir, "s-" + n + ".json"); if (!only && !list && (flag("force") || !fs.existsSync(f))) jobs.push({ file: f, job: { n: 100000 + n, side: true, tag, band: BK.sideBands[tag], look: null, pace: BK.sidePace, board: e.board } }); });
   if (!jobs.length) { console.log("bake: every level kept (scratch/bake)"); return; }
   const threads = +opt("threads") || LB.threadsOf(BK), t0 = Date.now(); console.log("bake: " + jobs.length + " levels on " + threads + " threads (" + quests.length + " side quests in the land)");
@@ -147,7 +158,7 @@ function map(X) {
   for (let e = 0; n <= X.to && e < MC.maxSheets; e++) {
     const t = T[e % 2], mirror = Math.floor(e / 2) % 2 === 1, spots = t.levels.slice(0, Math.min((X.land.map || {}).perSheet || t.levels.length, X.to - n + 1));
     const S = { sheet: X.sheet0 + e, file: t.file, realm: X.era, realmName: X.land.name, land: X.land.k, levels: spots.map((p) => ({ n: n++, x: p.x, y: p.y })), quests: [], entry: t.entry, exit: t.exit, road: t.road,
-      eggs: t.eggs.map((g, i) => ({ kind: X.land.eggs[(2 * e + i) % X.land.eggs.length], x: g.x, y: g.y })), bridges: t.bridges || [] };
+      eggs: ((X.land.eggTurns || [])[e % 2] || [])[Math.floor(e / 2)] ? X.land.eggTurns[e % 2][Math.floor(e / 2)].map(([kind, x, y]) => ({ kind, x, y })) : t.eggs.map((g, i) => ({ kind: X.land.eggs[(2 * e + i) % X.land.eggs.length], x: g.x, y: g.y })), bridges: t.bridges || [] }; // Land 1 fix: eggTurns, each repeat of a sheet its own eggs
     if (mirror) S.mirror = true; if (MC.fade) S.fade = true;
     if (n > X.to && spots.length < t.levels.length) { const p = t.levels[spots.length]; S.tail = { x: p.x, y: p.y, fog: 0 }; } // the land's frontier: the first spot past its last level
     entries.push(S);
@@ -175,16 +186,21 @@ function map(X) {
 // The converted board's shade rows, 0 on every cell the bake changed (organic moats: the ring's water and path; a key
 // dug in), since a shade belongs to the colour the picture drew there.
 const dry = (shade, grid, base) => shade.map((r, y) => r.split("").map((d, x) => (grid[y][x] !== base[y][x] ? "0" : d)).join(""));
+// Land 1 fix (the visual critic's B1): a level's mystery-block fill (land-config plan.hidden fills, fillDE): its nearest
+// CIEDE2000 to every colour and shade of the picture (fillGap), and the first fill at fillDE[0] or more, else the farthest.
+const PALM = require("./palette.js");
+const fillGap = (c, pal) => { let m = Infinity; const a = PALM.lab(c); for (const k of Object.keys(pal)) for (const h of [pal[k].c].concat(pal[k].sh || [])) if (h) m = Math.min(m, PALM.de00(a, PALM.lab(h))); return m; };
+const fillOf = (pal, H) => { const g = H.fills.map((f) => fillGap(f.c, pal)), i = g.findIndex((v) => v >= H.fillDE[0]); return H.fills[i >= 0 ? i : g.indexOf(Math.max(...g))]; };
 const creditOf = (p) => (p.artist ? p.artist + (p.date ? ", " + p.date : "") : p.credit || "Click it! Studios");
 function assemble(X) {
   const b = readJ(path.join(X.S, "boards.json")), mp = readJ(path.join(X.S, "map.json")), { main, side, quests } = picturesOf(X), out = path.join(X.S, "out"), bad = [];
   const rec = (r) => { if (!r || r.fail) bad.push(r ? r.n + ": " + r.fail : "missing"); return r && !r.fail ? r : null; };
   const levels = b.main.map((e, i) => { const r = rec(readJ(path.join(X.S, "bake", "m-" + e.n + ".json"))); if (!r) return null; const p = main[i], B = e.board, L = r.level;
     return Object.assign({ id: "e" + X.era + "-" + e.n, n: e.n, era: X.era, land: X.land.k, source: "land", title: p.title, kind: p.kind || "painting", src: p.id, credit: creditOf(p), tag: r.tag, band: r.tag, target: X.P.bands[r.tag], seed: r.seed,
-      w: L.w, h: L.h, grid: L.grid, pic: true, pal: B.pal }, L.liquid ? { liquid: L.liquid } : {}, B.shade ? { shade: dry(B.shade, L.grid, B.grid) } : {}, L.hidden ? { hidden: L.hidden } : {}, L.lock ? { lock: L.lock } : {}, { cols: L.cols }, L.links ? { links: L.links } : {},
+      w: L.w, h: L.h, grid: L.grid, pic: true, pal: B.pal }, L.liquid ? { liquid: L.liquid } : {}, B.shade ? { shade: dry(B.shade, L.grid, B.grid) } : {}, L.hidden ? { hidden: L.hidden } : {}, L.hidden && X.LC.plan.hidden.fills ? (({ c, q }) => ({ hideC: c, hideQ: q }))(fillOf(B.pal, X.LC.plan.hidden)) : {}, L.lock ? { lock: L.lock } : {}, { cols: L.cols }, L.links ? { links: L.links } : {},
       { win: L.win, grade: L.grade, inBand: r.inBand, convert: B.stats, feats: r.plan.feats.concat(r.plan.lock ? ["lock"] : []) }, r.plan.cant ? { cant: r.plan.cant } : {}, r.mystery ? { mystery: r.mystery } : {}, r.fallback ? { fallback: r.fallback } : {}); });
   const pics = b.side.map((e, i) => { const r = rec(readJ(path.join(X.S, "bake", "s-" + (X.gal0 + i + 1) + ".json"))); if (!r) return null; const p = side[i], B = e.board, L = r.level;
-    return Object.assign({ id: "g-w-" + p.id, n: X.gal0 + i + 1, gallery: true, wander: true, land: X.land.k, title: p.title, kind: p.kind || "painting", src: p.id, credit: creditOf(p), tag: r.tag, band: r.tag, target: X.LC.bake.sideBands[r.tag], seed: r.seed,
+    return Object.assign({ id: "g-w-" + p.id, n: X.gal0 + i + 1, gallery: true, wander: true, land: X.land.k, title: p.title }, p.short ? { short: p.short } : {}, { kind: p.kind || "painting", src: p.id, credit: creditOf(p), tag: r.tag, band: r.tag, target: X.LC.bake.sideBands[r.tag], seed: r.seed,
       w: L.w, h: L.h, grid: L.grid, pic: true, cols: L.cols, pal: B.pal }, B.shade ? { shade: B.shade } : {}, { win: L.win, grade: L.grade, inBand: r.inBand, convert: B.stats, quest: quests[i] }, r.fallback ? { fallback: r.fallback } : {}); });
   const S = mp.entries, entry = { k: X.land.k, slug: X.land.slug, name: X.land.name, lore: X.land.lore, from: X.from, to: X.to, source: X.land.source, features: X.land.features, eggs: X.land.eggs, sheets: [S[0].sheet, S[S.length - 1].sheet], files: X.land.map.files };
   const lic = ["", "### Land " + X.land.k + ": " + X.land.name + " (levels " + X.from + "-" + X.to + ")", "", "| Level | Picture | Artist | Licence | Source |", "|---|---|---|---|---|"]
@@ -212,6 +228,7 @@ function check(X) {
   gate("the land's median real pace in " + X.LC.checks.paceMedian.map((v) => v / 1000).join("-") + " s", pm >= X.LC.checks.paceMedian[0] && pm <= X.LC.checks.paceMedian[1] ? [] : ["median " + Math.round(pm / 1000) + " s"], "median " + Math.round(pm / 1000) + " s");
   gate("no fallback picks (band, pace, taps, wait, fast tapper, pairs, lookahead)", LV.concat(GV).filter((L) => L.fallback).map((L) => L.id + ": " + L.fallback));
   gate("the profile: tags, density, runs, the end (land-plan planCheck)", LP.planCheck(LV, X.land, X.P, X.CFG.v5.density, X.LCF.perLand));
+  const HF = X.LC.plan.hidden; gate("mystery blocks: each level's fill " + (HF.fillDE ? HF.fillDE[1] : 0) + "+ (CIEDE2000) from every colour and shade of its picture", each(LV.filter((L) => L.hidden), (L) => (!L.hideC ? (HF.fills ? "no fill" : null) : fillGap(L.hideC, L.pal) >= HF.fillDE[1] ? null : "fill " + L.hideC + " " + fillGap(L.hideC, L.pal).toFixed(1))), LV.filter((L) => L.hidden).map((L) => L.n + " " + (L.hideC ? fillGap(L.hideC, L.pal).toFixed(0) : "-")).join(", ")); // Land 1 fix (B1)
   gate("shading: every shade colour on its floors (" + C.shade.floor + " from other squads, " + C.shade.fadedFloor + " from faded cards)", each(LV.concat(GV).filter((L) => L.shade), (L) => { const r = SH.checkLevel(L, C); return r.ok ? null : r.bad.join("; "); }));
   // Organic moats: water and path only off the picture's subject (worked out again from the converted board), every
   // block reachable from the frame once dug, 1 or 2 ways in (the bake's count); none in a land without moats.
@@ -260,13 +277,26 @@ function addToConfig(text, entry, rows) {
   t = t.slice(0, ec) + rows.map((r) => ", " + JSON.stringify(r)).join("") + t.slice(ec);
   JSON.parse(t); return t;
 }
+// Land 1 fix pass: the land's own entry out of lands.list and its sheets' rows (from sheet0) out of map.eggCoins, by text
+// (the hand layout stays), and its table out of LICENSES.md: the game as it was before the land was installed.
+function removeFromConfig(text, k, sheet0) {
+  const span = (t, at) => { let d = 0; for (let i = at; i < t.length; i++) { if (t[i] === "[") d++; else if (t[i] === "]" && !--d) return i; } throw new Error("config: unbalanced list"); };
+  const li = text.indexOf('"list": [', text.indexOf('"lands": {')), lo = li + '"list": '.length, lc = span(text, lo), list = JSON.parse(text.slice(lo, lc + 1));
+  const keep = list.filter((d) => d.k !== k); let t = text.slice(0, lo) + (keep.length ? "[\n      " + keep.map((d) => JSON.stringify(d)).join(",\n      ") + "]" : "[]") + text.slice(lc + 1);
+  const ei = t.indexOf('"eggCoins": ['), eo = ei + '"eggCoins": '.length, ec = span(t, eo); let d = 0, rows = 0, cut = -1;
+  for (let i = eo; i <= ec && cut < 0; i++) { if (t[i] === "[" && ++d === 2 && rows === sheet0 - 1) cut = i; else if (t[i] === "]" && d-- === 2) rows++; }
+  if (cut >= 0) { let j = cut - 1; while (j > eo && /[\s,]/.test(t[j])) j--; t = t.slice(0, j + 1) + t.slice(ec); }
+  JSON.parse(t); return t;
+}
+const removeLicences = (text, k) => { const i = text.indexOf("\n### Land " + k + ": "); if (i < 0) return text; const j = text.indexOf("\n### ", i + 5); return text.slice(0, i) + (j < 0 ? "" : text.slice(j)); };
 function install(X) {
   const st = X.state; if (!st.ok) throw new Error("install: the land has no passing check (run the check step)");
   const out = path.join(X.S, "out"), LV = readJ(path.join(out, "levels.json")), GV = readJ(path.join(out, "gallery.json")), LJ = readJ(path.join(out, "land.json")), G = X.GAME;
-  if ((X.LCF.list || []).some((d) => d.k === X.land.k)) throw new Error("install: land " + X.land.k + " is already in the game");
+  if (X.installed && !flag("replace")) throw new Error("install: land " + X.land.k + " is already in the game (install --replace puts this bake in its place)");
   if (X.levels.levels[X.levels.levels.length - 1].n !== X.from - 1 || X.layout.sheets.length !== X.sheet0 - 1 || X.gallery.levels.length !== X.gal0) throw new Error("install: the game moved on since this land was planned (levels, sheets or pictures); plan it again with --force");
   const lv = Object.assign({}, X.levels, { levels: X.levels.levels.concat(LV) }), gl = Object.assign({}, X.gallery, { levels: X.gallery.levels.concat(GV) }), lay = Object.assign({}, X.layout, { sheets: X.layout.sheets.concat(LJ.layout) });
-  const cfg = addToConfig(fs.readFileSync(path.join(G, "config.json"), "utf8"), LJ.entry, LJ.eggCoins), lic = fs.readFileSync(path.join(G, "LICENSES.md"), "utf8") + fs.readFileSync(path.join(out, "licences.md"), "utf8");
+  const base = (t) => (X.installed ? removeFromConfig(t, X.land.k, X.sheet0) : t), lics = (t) => (X.installed ? removeLicences(t, X.land.k) : t);
+  const cfg = addToConfig(base(fs.readFileSync(path.join(G, "config.json"), "utf8")), LJ.entry, LJ.eggCoins), lic = lics(fs.readFileSync(path.join(G, "LICENSES.md"), "utf8")) + fs.readFileSync(path.join(out, "licences.md"), "utf8");
   const writes = [["levels/levels.json", JSON.stringify(lv)], ["levels/gallery.json", JSON.stringify(gl)], ["map/layout.json", JSON.stringify(lay)], ["config.json", cfg], ["LICENSES.md", lic]];
   for (const [f, t] of writes) fs.writeFileSync(path.join(G, f + ".tmp"), t);
   for (const f of X.land.map.files) fs.copyFileSync(path.join(X.LAND, "map", f), path.join(G, "map", f));
@@ -290,4 +320,4 @@ if (require.main === module) {
     } catch (e) { console.log("land: " + e.message); process.exitCode = 1; }
   })();
 }
-module.exports = { context, picturesOf, boardOf, templatesOf, addToConfig };
+module.exports = { context, picturesOf, boardOf, templatesOf, addToConfig, removeFromConfig, removeLicences, fillGap, fillOf };

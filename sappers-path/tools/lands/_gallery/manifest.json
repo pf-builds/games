@@ -2,6 +2,7 @@
  {
   "id": "poppy-field-giverny",
   "title": "Poppy Field (Giverny)",
+  "short": "Poppy Field",
   "artist": "Claude Monet",
   "date": "1890-91",
   "museum": "Art Institute of Chicago",
@@ -15,6 +16,7 @@
  {
   "id": "suido-bridge-carp-streamer",
   "title": "Suido Bridge and Surugadai (the carp streamer)",
+  "short": "Suido Bridge",
   "artist": "Utagawa Hiroshige",
   "date": "1857",
   "museum": "Art Institute of Chicago",
@@ -34,6 +36,7 @@
  {
   "id": "girl-with-a-watering-can",
   "title": "A Girl with a Watering Can",
+  "short": "Watering Can",
   "artist": "Pierre-Auguste Renoir",
   "date": "1876",
   "museum": "National Gallery of Art",
@@ -47,6 +50,7 @@
  {
   "id": "hakone-view-of-the-lake",
   "title": "Hakone: View of the Lake",
+  "short": "Lake Hakone",
   "artist": "Utagawa Hiroshige",
   "date": "c. 1833-34",
   "museum": "Art Institute of Chicago",
@@ -66,6 +70,7 @@
  {
   "id": "two-sisters-on-the-terrace",
   "title": "Two Sisters (On the Terrace)",
+  "short": "Two Sisters",
   "artist": "Pierre-Auguste Renoir",
   "date": "1881",
   "museum": "Art Institute of Chicago",
@@ -98,6 +103,7 @@
  {
   "id": "asakusa-ricefields-the-cat",
   "title": "Asakusa Ricefields and Torinomachi Festival (the cat)",
+  "short": "The Asakusa Cat",
   "artist": "Utagawa Hiroshige",
   "date": "1857",
   "museum": "Art Institute of Chicago",
@@ -117,6 +123,7 @@
  {
   "id": "little-girl-in-a-blue-armchair",
   "title": "Little Girl in a Blue Armchair",
+  "short": "Blue Armchair",
   "artist": "Mary Cassatt",
   "date": "1878",
   "museum": "National Gallery of Art",
@@ -162,6 +169,7 @@
  {
   "id": "carp-swimming-by-water-weeds",
   "title": "Carp Swimming by Water Weeds",
+  "short": "Carp in the Weeds",
   "artist": "Katsushika Hokusai",
   "date": "1831",
   "museum": "Cleveland Museum of Art",

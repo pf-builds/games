@@ -9,6 +9,7 @@
 //   fast(B, rules, n, seed, gapMs)     v4 M2: the fast tapper's win rate (taps whenever a tap is legal, never waits for rest)
 //   view(S) / look(S, ...)             v4 M2: what the player can see of the tray, and the lookahead player's scores
 //   plan(B, rules, n, seed, k, seeing) v4 M3: the sampling planner's win rate, honest about mystery cards or all-seeing
+//   careful(B, rules, n, seed, depth)  Land 1 fix: the careful player's win rate (thinks depth taps ahead at rest)
 //   pace(B, rules, order, thinkMs)     v4.2: the real-pace replay of a winning order: {won, ms, taps} (below)
 // v4 M2: every player picks only among legal taps (a front card whose tap would not be refused: a free space, or 2 for a
 // linked card), so a stored order never holds a refused tap. On a level without links a patient player never meets a
@@ -271,23 +272,50 @@ function plan(B, rules, n, seed, k, seeing) {
   return wins / n;
 }
 
+// Land 1 fix (the functional critic's M1), the careful player: a planner who thinks depth taps ahead at rest. At each
+// turn it tries every legal tap, then every legal tap after it, depth taps deep (each run patiently to rest), and scores
+// a line a win (best), a fail (worst) or the blocks still standing at its end (fewer is better); it plays the best first
+// tap (seeded ties). It plays on the engine itself, so it sees every hidden card and block: the critic's player, the
+// measure that a playtester who plans two or three taps ahead finds a level easy. Returns its win rate over n games.
+// Bounded: turns by the deck, the search by 5^depth taps a turn.
+function careful(B, rules, n, seed, depth) {
+  const S = E.sim(B, rules), D = Math.max(1, depth | 0), bufs = Array.from({ length: D + 1 }, () => new Int32Array(S.M.length)), pick = new Int32Array(E.NCOL);
+  const val = (d) => { if (S.status === E.WON) return 1e9; if (S.status === E.FAILED) return -1e9; if (!d) return -S.pixLeft; const buf = bufs[d]; S.save(buf); let best = -Infinity;
+    for (let j = 0; j < E.NCOL && best < 1e9; j++) { if (!legal(S, j)) continue; S.play(j); S.quiet(); const v = val(d - 1); S.load(buf); if (v > best) best = v; } return best === -Infinity ? -1e9 : best; };
+  let wins = 0;
+  for (let k = 0; k < n; k++) {
+    S.reset(); const r = rng((seed | 0) + k * 7907);
+    for (let guard = 0; guard <= B.ncards && S.status === E.PLAYING; guard++) {
+      S.save(bufs[0]); let best = -Infinity, np = 0;
+      for (let j = 0; j < E.NCOL; j++) { if (!legal(S, j)) continue; S.play(j); S.quiet(); const v = val(D - 1); S.load(bufs[0]); if (v > best + 1e-9) { best = v; np = 0; pick[np++] = j; } else if (Math.abs(v - best) < 1e-9) pick[np++] = j; }
+      if (!np) break;
+      S.play(pick[Math.floor(r() * np)]); S.quiet();
+    }
+    if (S.status === E.WON) wins++;
+  }
+  return wins / n;
+}
+
 // v4.2, the real-pace player (Peter's pace, not the patient grader's): the stored order replayed, each next card tapped the
 // moment its tap is legal (a free space, the tap not refused), and never sooner than thinkMs of engine time after the tap
 // before (the player's own thinking, calibrated against Peter's times: tools/v4.2-notes.md). Returns {won, ms, taps};
 // won false when the early taps lose the level or leave the next tap refused at rest (the caller falls back to the
 // patient time and logs it). Bounded: every pass taps a card or moves to the next event.
+// Land 1 fix (the functional critic's m3): it also returns gap, the longest time between two taps (engine ms: the wait for
+// the next tap to be legal, plus thinkMs), and end, from the last tap to the end; the Land 1 bake gates them on the steady
+// replay (thinkMs bake-config duration.pace.steady, a 1 s rhythm).
 function pace(B, rules, order, thinkMs) {
   const S = E.sim(B, rules), cap = 8 * (B.pixTotal + B.ncards) + 64, think = Math.max(0, thinkMs | 0);
-  let i = 0, t = 0;
+  let i = 0, t = 0, last = 0, gap = 0;
   for (let guard = 0; guard < cap && S.status === E.PLAYING && i < order.length; guard++) {
     S.advanceTo(t); if (S.status !== E.PLAYING) break;
     const j = order.charCodeAt(i) - 48;
-    if (legal(S, j)) { S.play(j); i++; t = S.now + think; continue; }
+    if (legal(S, j)) { if (i && S.now - last > gap) gap = S.now - last; S.play(j); last = S.now; i++; t = S.now + think; continue; }
     if (!S.busy || S.nextAt < 0) break; // at rest with the next tap refused: the replay is stuck
     t = Math.max(t, S.nextAt);
   }
   S.quiet();
-  return { won: S.status === E.WON && i === order.length, ms: S.now, taps: i };
+  return { won: S.status === E.WON && i === order.length, ms: S.now, taps: i, gap, end: S.now - last };
 }
 
-module.exports = { HIDE_SAMPLES, rate, greedy, orders, solve, narrow, line, fast, view, look, plan, pace, legal, rng };
+module.exports = { HIDE_SAMPLES, rate, greedy, orders, solve, narrow, line, fast, view, look, plan, careful, pace, legal, rng };

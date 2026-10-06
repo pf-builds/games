@@ -166,7 +166,8 @@ function assign(play, beta, seed) {
 // two, or merge two same-colour cards adjacent in `play` (resizing; kept only if `play` still wins under the dealing
 // rules, and v4 M3 within the dead-time cap T.maxWaitMs). A pair (v4 M3) moves with its tapped card and never splits or
 // merges; a move that leaves a partner more than a row from its card (deck) is skipped. T: {stages, seed, margin,
-// colMin, colMax, resize, split, minCard, maxCard, maxTaps, maxWaitMs}; rules: {normal, deal}.
+// colMin, colMax, resize, split, minCard, maxCard, maxTaps, maxWaitMs}; rules: {normal, deal}. After the stages, T.narrow
+// (optional) narrows the one-move-lookahead player and, Land 1 fix, T.careful (optional) the careful player (carefulStage).
 // Returns {play, colOf, rate, steps, evals}.
 function tune(L, play, colOf, lo, hi, T, rules) {
   let res = { play, colOf, rate: 0, steps: 0, evals: 0 };
@@ -175,7 +176,29 @@ function tune(L, play, colOf, lo, hi, T, rules) {
     res = { play: r.play, colOf: r.colOf, rate: r.rate, steps: res.steps + r.steps, evals: res.evals + r.evals };
   });
   if (T.narrow) { const r = narrowStage(L, res.play, res.colOf, lo, hi, Object.assign({}, T, T.narrow, { seed: (T.seed + 7919) | 0 }), rules); res = Object.assign(r, { steps: res.steps + r.steps, evals: res.evals + r.evals }); }
+  if (T.careful) { const r = carefulStage(L, res.play, res.colOf, lo, hi, Object.assign({}, T, T.careful, { seed: (T.seed + 15485863) | 0 }), rules); res = r.rate == null ? Object.assign(res, { evals: res.evals + r.evals }) : Object.assign(r, { steps: res.steps + r.steps, evals: res.evals + r.evals }); }
   return res;
+}
+// Land 1 fix (the functional critic's M1): hill-climb the careful player's win rate (grade.js careful: T.games games,
+// T.depth taps ahead) down by card moves (so the dealt order stays a winner), keeping the Normal random-tap rate in band
+// and the one-move-lookahead player at or under T.look, until it reaches T.stopAt. Its games use their own seeds, so
+// the grade's careful sample is a fresh one. T: {playouts, greedyPlayouts, games, depth, steps, stopAt, look}.
+function carefulStage(L, play, colOf, lo, hi, T, rules) {
+  const R = require("./grade.js"), r = rng(T.seed ^ 0x2f8b9a31);
+  let evals = 0;
+  const lo2 = lo > 0 ? lo + T.margin : 0, hi2 = hi < 1 ? hi - T.margin : 1;
+  const score = (co) => { const B = build(L, play, co); if (!B) return null; evals++; const x = R.rate(B, rules.normal, T.playouts, T.seed); if (x < lo2 || x > hi2) return null;
+    if (T.look != null && R.greedy(B, rules.normal, T.greedyPlayouts, T.seed) > T.look) return null; return { rate: x, c: R.careful(B, rules.normal, T.games, T.seed ^ 0x5851f42d, T.depth) }; };
+  let cur = score(colOf), step = 0; const c0 = cur ? cur.c : null;
+  if (!cur) return { play, colOf, rate: null, careful: null, steps: 0, evals };
+  for (; step < T.steps && cur.c > (T.stopAt || 0); step++) {
+    const i = Math.floor(r() * play.length), j = Math.floor(r() * 5); if (j === colOf[i]) continue;
+    const co = colOf.slice(); co[i] = j;
+    const c = [0, 0, 0, 0, 0]; for (const x of co) c[x]++; if (Math.min(...c) < T.colMin || Math.max(...c) > T.colMax) continue;
+    const s = score(co); if (!s) continue;
+    if (s.c < cur.c || (s.c === cur.c && r() < 0.3)) { colOf = co; cur = s; }
+  }
+  return { play, colOf, rate: cur.rate, careful: cur.c, careful0: c0, steps: step, evals };
 }
 // The level with its deck (null when a partner can't sit within a row of its card).
 function build(L, play, colOf) { const d = deck(play, colOf); if (d.bad) return null; return E.compile(Object.assign({}, L, d.links.length ? d : { cols: d.cols })); }
