@@ -169,6 +169,9 @@ async function run() {
       { const lab = await L("#play-lab").textContent(), coins = await L("#home-coins").textContent();
         ok(lab === "Level 1" && /^\d+$/.test(coins) && !(await L("#home-lives").isVisible()), tag + " home: Play reads '" + lab + "', " + coins + " coins, no lives pill"); }
       // v5.2: no music is fetched before the first tap (the bytes to the title stay as they were); after it, the play loop.
+      // v5.3: the home's painting loads and fades in (one image: the tall crop on an upright screen, else the wide), then the bytes.
+      { const on = await F.waitForFunction(() => document.querySelector("#title-art.on"), null, { timeout: 15000 }).then(() => true, () => false), arts = reqs.filter((u) => /\/art\//.test(u)).map((u) => u.replace(/^.*\/art\//, ""));
+        ok(on && arts.length === 1 && (vp.height > vp.width ? /home-tall/ : /home-wide/).test(arts[0]), tag + " home (v5.3): the painting loads and fades in, one image fetched (" + arts.join(", ") + ")"); R.homeArt = arts; }
       { await page.waitForTimeout(300); const au = reqs.filter((u) => /\/audio\//.test(u)), mu = await ev(() => SP.music()); R.bytesBeforeTap = bytes;
         ok(au.length === 0 && mu.fetches === 0 && mu.ctx === "none", tag + " music (v5.2): nothing fetched and no audio context before the first tap (" + au.length + " audio requests, " + bytes + " bytes so far)"); }
       await tap("#btn-play"); let clicks = 1;
@@ -467,6 +470,21 @@ async function run() {
         await ctx.close();
       }
     }
+    // v5.3: the home's painting across the window widths (config title.art.widths) at a phone height (touch) and a desktop
+    // height, and phones held sideways: the castle's centre stays within title.art.maxOff of the home box's centre, the
+    // painting covers the box (never the window: the old scene drifted right on a medium-wide window's phone column).
+    { const A = JSON.parse(readFileSync(resolve(here, "../config.json"), "utf8")).title.art, rows = []; report.homeSweep = rows;
+      for (const [h, touch, ws] of [[812, true, A.widths], [800, false, A.widths], [375, true, [568, 667, 740, 844, 896, 932]]]) {
+        const ctx = await browser.newContext({ viewport: { width: ws[0], height: h }, deviceScaleFactor: 2, hasTouch: touch, isMobile: touch }), page = await ctx.newPage();
+        page.on("console", (m) => { if (m.type() === "error" || m.type() === "warning") report.console.push("home sweep " + m.type() + ": " + m.text()); });
+        page.on("pageerror", (e) => report.console.push("home sweep pageerror: " + e.message));
+        await page.goto(URL_ + "?debug=1", { waitUntil: "load" }); await page.waitForFunction(() => window.SP && document.querySelector("#title-art.on"), null, { timeout: 15000 });
+        for (const w of ws) { await page.setViewportSize({ width: w, height: h }); await page.waitForTimeout(200);
+          await page.waitForFunction(() => { const i = document.querySelector("#title-art img"); return i.complete && i.naturalWidth > 0; }, null, { timeout: 10000 });
+          const g = await page.evaluate(() => Object.assign(SP.homeArt(), { box: document.getElementById("title").getBoundingClientRect().toJSON(), art: document.getElementById("title-art").getBoundingClientRect().toJSON() }));
+          rows.push(w + "x" + h + " " + g.k + " " + (g.off * 100).toFixed(1) + "%");
+          ok(Math.abs(g.off) <= A.maxOff && Math.abs(g.art.width - g.box.width) < 0.5 && Math.abs(g.art.height - g.box.height) < 0.5, "home (v5.3) " + w + "x" + h + ": the " + g.k + " painting covers the home's " + Math.round(g.box.width) + "x" + Math.round(g.box.height) + " box, the castle " + (g.off * 100).toFixed(1) + "% off its centre (limit " + A.maxOff * 100 + "%)"); }
+        await ctx.close(); } }
     // Hidden-tab load: rAF never fires, document.hidden is true; everything must still run on SP.tick.
     const ctx = await browser.newContext({ viewport: { width: 375, height: 812 }, deviceScaleFactor: 2 });
     await ctx.addInitScript(() => {
@@ -493,8 +511,8 @@ async function run() {
 
 run().then(() => {
   writeFileSync(resolve(OUT, "harness-report.json"), JSON.stringify(report, null, 1));
-  const brief = {}; for (const [k, R] of Object.entries(report.runs)) brief[k] = { selfTest: R.selfTest && R.selfTest.pass + " pass, " + R.selfTest.fail.length + " fail", titleReadyMs: R.titleReadyMs, loadToGameplayMs: R.loadToGameplayMs, clicks: R.clicksToGameplay, cells: R.minCellCss, galleryCell: R.galleryMinCell, frames: R.frames, draw: R.midShow && R.midShow.perf, shots: R.shots, pause: R.pause, requests: R.requests, payloadBytes: R.payloadBytes, bytesBeforeTap: R.bytesBeforeTap };
-  console.log(JSON.stringify({ runs: brief, hidden: report.hidden, console: report.console }, null, 1));
+  const brief = {}; for (const [k, R] of Object.entries(report.runs)) brief[k] = { selfTest: R.selfTest && R.selfTest.pass + " pass, " + R.selfTest.fail.length + " fail", titleReadyMs: R.titleReadyMs, loadToGameplayMs: R.loadToGameplayMs, clicks: R.clicksToGameplay, cells: R.minCellCss, galleryCell: R.galleryMinCell, frames: R.frames, draw: R.midShow && R.midShow.perf, shots: R.shots, pause: R.pause, requests: R.requests, payloadBytes: R.payloadBytes, bytesBeforeTap: R.bytesBeforeTap, homeArt: R.homeArt };
+  console.log(JSON.stringify({ runs: brief, homeSweep: report.homeSweep, hidden: report.hidden, console: report.console }, null, 1));
   console.log(report.fails.length ? "HARNESS: " + report.fails.length + " failure(s)" : "HARNESS: all passed");
   clearTimeout(wall); process.exit(report.fails.length ? 1 : 0);
 }).catch((e) => { console.error("harness crashed: " + (e && e.stack || e)); clearTimeout(wall); process.exit(2); });

@@ -4,8 +4,8 @@
 Reads every file from a git ref (never the live working tree, which a builder may be editing) and writes
 <out>/: index.html with no doctype/html/head/body wrappers, <title> first and no ?v= tags; style.css with no ?v=;
 src/*.js with the versioned getJSON("x.json?v=" + V_) calls turned into plain paths; config.json, levels/levels.json,
-levels/gallery.json, the font, map/ (layout.json and the painted sheets, v5 R3) and audio/ (the music, v5.2: its
-URLs lose their ?v= with the others). Also writes <out>/wrap.html, an artifact-style wrapper page for the smoke test
+levels/gallery.json, the font, map/ (layout.json and the painted sheets, v5 R3), art/ (the home's painting, v5.3) and
+audio/ (the music, v5.2: its URLs lose their ?v= with the others). Also writes <out>/wrap.html, an artifact-style wrapper page for the smoke test
 (tools/playtest-smoke.mjs); wrap.html is not published.
 
   python3 tools/playtest-bundle.py <git-ref> <out-dir> [title] [--jump 101,125,150,175,200]
@@ -95,6 +95,8 @@ def main(ref, out, new_title=None, jump=None):
         write(out, path, show(ref, path, binary=True))
     for name in ls_src(ref, "map", (".json", ".jpg")):  # v5 R3: the journey map's layout and painted sheets
         write(out, "map/" + name, show(ref, "map/" + name, binary=True))
+    for name in ls_src(ref, "art", (".jpg",)):  # v5.3: the home's painting (index.html's <picture>; ?v= stripped above)
+        write(out, "art/" + name, show(ref, "art/" + name, binary=True))
     for name in ls_src(ref, "audio", (".m4a",)):  # v5.2: the music (main.js adds ?v= to its URLs; stripped above)
         # The artifact host serves .mp4 but not .m4a (same MP4 container), so the bundle renames them and config follows.
         write(out, "audio/" + name[:-4] + ".mp4", show(ref, "audio/" + name, binary=True))
