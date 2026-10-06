@@ -206,6 +206,27 @@
       '<g ' + st + ' stroke-width="1.8"><path d="M-10 16l3-22M10 16l-3-22M-9 6h18M-8 -2l16 8" stroke="#6b4a2a" stroke-width="3"/><path d="M-12 -6h24l-3-6h-18z" fill="#8a6a48"/>' +
         '<g class="bob"><path d="M-14 -22l6 4M14 -22l-6 4" stroke="#5c8a2e" stroke-width="3.6" stroke-linecap="round"/><ellipse cx="0" cy="-18" rx="8" ry="7" fill="#79b04a"/><circle cx="-3" cy="-19" r="1.5" fill="' + INK + '" stroke="none"/><circle cx="3" cy="-19" r="1.5" fill="' + INK + '" stroke="none"/><path d="M-3 -14q3 2 6 0" fill="none" stroke-width="1.3"/>' +
         '<path d="M8 -14l9-12" stroke="#5c8a2e" stroke-width="3" stroke-linecap="round"/><path d="M15 -27l7 3-3 3z" fill="#8a1f19" stroke-width="1.2"/></g></g>'] });
+  // Land 1, Kitten Forest (tools/land-01-notes.md): a ginger kitten asleep in a curl that wakes, sits up and waves; a ball
+  // of yarn that unrolls across the glade; a butterfly resting on a flower that opens its wings and flies up.
+  const GN = "#e8964f", fur = (d) => '<path d="' + d + '" fill="none" stroke-width="5.2" stroke-linecap="round"/><path d="' + d + '" fill="none" stroke="' + GN + '" stroke-width="2.6" stroke-linecap="round"/>';
+  const bloom = (x, y, k) => '<g ' + st + ' stroke-width="1.4"><path d="M' + x + " " + (y + 15 * k) + "v-" + 13 * k + '" stroke="#4d6b2a" stroke-width="2.4"/><path d="M' + x + " " + (y + 10 * k) + "c-" + 6 * k + "-1-" + 8 * k + "-5-" + 8 * k + "-7 " + 4 * k + " 0 " + 7 * k + " 2 " + 8 * k + ' 7z" fill="#79b04a"/>' +
+    [0, 72, 144, 216, 288].map((a) => '<circle cx="' + r1(x + Math.cos((a - 90) * Math.PI / 180) * 4.4 * k) + '" cy="' + r1(y + Math.sin((a - 90) * Math.PI / 180) * 4.4 * k) + '" r="' + r1(3.4 * k) + '" fill="#f2c230"/>').join("") + '<circle cx="' + x + '" cy="' + y + '" r="' + r1(2.6 * k) + '" fill="#c8402c"/></g>';
+  Object.assign(EGGS, {
+    kitten: [
+      '<g ' + st + ' stroke-width="1.6">' + fur("M15 6c5 6-2 12-12 10") + '<ellipse cx="2" cy="7" rx="14" ry="8" fill="' + GN + '"/><path d="M3 0v5M8 0v6M13 2v4" stroke-width="1.4"/><path d="M-15 -1l-1-8 6 4zM-8 -4l2-7 4 6z" fill="' + GN + '"/><circle cx="-9" cy="3" r="7.5" fill="' + GN + '"/>' +
+        '<path d="M-13 3q1.5 1.6 3 0M-8 3q1.5 1.6 3 0" fill="none" stroke-width="1.3"/><circle cx="-9.5" cy="6.4" r="1.1" fill="#d9567a" stroke="none"/><path class="tw" d="M3 -12h5l-5 5h5M10 -19h4l-4 4h4" fill="none" stroke-width="1.6"/></g>',
+      '<g ' + st + ' stroke-width="1.6">' + fur("M8 13c10 0 12-10 6-14") + '<path d="M-9 15c-2-10 2-17 9-17s11 7 9 17z" fill="' + GN + '"/><path d="M-4 15c-1-6 1-9 4-9s5 3 4 9z" fill="#f6dcb8" stroke="none"/><path d="M-9 -9l-1-10 7 5zM9 -9l1-10-7 5z" fill="' + GN + '"/><ellipse cx="0" cy="-8" rx="9.5" ry="8" fill="' + GN + '"/>' +
+        '<path d="M-2 -15v3M2 -15v3" stroke-width="1.3"/><circle cx="-3.5" cy="-9" r="1.6" fill="' + INK + '" stroke="none"/><circle cx="3.5" cy="-9" r="1.6" fill="' + INK + '" stroke="none"/><path d="M-1 -5.6h2l-1 1.3z" fill="#d9567a" stroke-width=".8"/><path d="M-2.5 -3.4q1.2 1 2.5 0q1.3 1 2.5 0M-6 -5h-6M-6 -3.5l-5 2M6 -5h6M6 -3.5l5 2" fill="none" stroke-width="1"/>' +
+        '<g class="bob">' + fur("M-8 3c-6-2-8-8-7-12") + '<circle cx="-15" cy="-11" r="3.2" fill="' + GN + '"/></g><path class="tw" d="M13 -17c0-3 4-3 4 0 0-3 4-3 4 0 0 3-4 5-4 6 0-1-4-3-4-6z" fill="#e05a9a" stroke-width="1.2"/></g>'],
+    yarn: [
+      '<g ' + st + ' stroke-width="1.6"><path d="M9 12c6 3 10 1 13-3" fill="none" stroke="#e05a5a" stroke-width="2.2" stroke-linecap="round"/><circle cx="0" cy="4" r="11" fill="#e05a5a"/>' +
+        '<path d="M-9 -1c6 2 12 8 14 14M-5 -5.5c7 2 12 8 14 13M-10.5 6c5 0 9 4 11 8.5M-1 -7c5 4 9 9 10 15" fill="none" stroke="#9a2a36" stroke-width="1.4"/><path d="M-7 10c3-8 9-12 16-12" fill="none" stroke="#f6b0a8" stroke-width="1.4"/></g>',
+      '<path d="M-21 12c4-7 8 2 12-3s6-9 10-3 4 7 9 3" fill="none" stroke="' + INK + '" stroke-width="4.4" stroke-linecap="round"/><path d="M-21 12c4-7 8 2 12-3s6-9 10-3 4 7 9 3" fill="none" stroke="#e05a5a" stroke-width="2.2" stroke-linecap="round"/>' +
+        '<g class="bob" ' + st + ' stroke-width="1.6"><circle cx="15" cy="7" r="7" fill="#e05a5a"/><path d="M10 4c4 1 7 5 8 9M12 1c4 2 7 5 8 9" fill="none" stroke="#9a2a36" stroke-width="1.3"/></g><path class="spk" d="M-8 -6l3 3M-2 -10v4M5 -8l-2 3" stroke="' + INK + '" stroke-width="1.6" stroke-linecap="round"/>'],
+    butterfly: [
+      bloom(0, 4, 1) + '<g ' + st + ' stroke-width="1.4"><path d="M0 -1c-1-9 3-17 11-19 1 7-3 15-11 19z" fill="#f08a24"/><path d="M0 -1c2-5 6-7 10-6-1 4-5 6-10 6z" fill="#f2c230"/><circle cx="6" cy="-12" r="1.5" fill="#fff3a8" stroke="none"/><path d="M-1 0l-3-8" stroke-width="2.2"/><path d="M-4 -8l-4-5M-4 -8l0-6" fill="none" stroke-width="1.1"/></g>',
+      bloom(0, 8, 0.8) + '<g class="flap" ' + st + ' stroke-width="1.4"><path d="M0 -14c-4-8-14-10-15-4-1 5 6 8 15 4zM0 -14c4-8 14-10 15-4 1 5-6 8-15 4z" fill="#f08a24"/><path d="M0 -13c-3 4-10 7-9 10 2 2 7-2 9-8zM0 -13c3 4 10 7 9 10-2 2-7-2-9-8z" fill="#f2c230"/>' +
+        '<circle cx="-9" cy="-16" r="1.6" fill="#fff3a8" stroke="none"/><circle cx="9" cy="-16" r="1.6" fill="#fff3a8" stroke="none"/><path d="M0 -20v12" stroke-width="2.4"/><path d="M0 -20l-3-5M0 -20l3-5" fill="none" stroke-width="1.2"/></g><path class="spk" d="M-17 -2v4M-19 0h4M17 -4v4M15 -2h4" stroke="#fff3a8" stroke-width="2"/>'] });
   const egg = (kind, found) => (EGGS[kind] || EGGS.grass)[found ? 1 : 0];
   const EGG_KINDS = Object.keys(EGGS);
 
