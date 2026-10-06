@@ -226,7 +226,7 @@ const RING = [".......", ".aaaaa.", ".abbca.", ".aaaaa.", "...#..."];
 // ---- archers ---------------------------------------------------------------------------------------------------------
 // Tower g (centroid (7,0), range 3). a pixels by claim order: (4,2) walk 1, (3,2) and (6,2) walk 2 (lower x first),
 // (7,2) walk 3, then (1,2), (0,2). (6,2) and (7,2) are covered.
-const ARCH = (cols) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "....##..."], cols, { towers: [{ at: [7, 0], r: 3 }] });
+const ARCH = (cols, extra) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "....##..."], cols, Object.assign({ towers: [{ at: [7, 0], r: 3 }] }, extra || {})); // v6: extra (kill)
 {
   const S = E.sim(E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []])), N);
   eq([S.covered(2 * 9 + 7), S.covered(2 * 9 + 6), S.covered(2 * 9 + 3), S.covered(7)], [true, true, false, false], "archers: range covers nearby pixels; tower pixels are never covered");
@@ -601,6 +601,77 @@ const ROW6 = ["abcdef", "......", "..##.."]; // six colours, one pixel each, all
   eq([TG.densityOK(10, "hard", bd([",,"]), D5), TG.densityOK(20, "easy", moat, D5), TG.densityOK(30, "hard", moat, D5), TG.densityOK(30, "normal", gate, D5), TG.densityOK(60, "easy", moat, D5), TG.densityOK(60, "easy", gate, D5),
     TG.densityOK(60, "normal", gate, D5), TG.densityOK(60, "hard", gate, D5), TG.densityOK(60, "hard", Object.assign({}, gate, { lock: { colour: 1 } }), D5), TG.densityOK(60, "normal", Object.assign({}, gate, { lock: { colour: 1 } }), D5), TG.densityOK(50, "easy", gate, D5, true)],
     [true, false, true, false, true, false, true, false, true, false, true], "density (v5 R2): nothing before its milestone; Easy at most one; Normal two once unlocked; Hard every one and the lock from 50; a lesson may keep older features");
+}
+
+// ---- Campaign v6 stage 1: killing towers (level kill: true) ------------------------------------------------------------------
+{
+  throws(() => E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []], { kill: 1 })), "kill (v6): kill must be true or false");
+  throws(() => E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []], { kill: true, safeArchers: true })), "kill (v6): kill with safeArchers (retired) throws");
+  eq([E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []])).kill, E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []], { kill: false })).kill, E.compile(lv(["a.", "##"], [[[1, 1]], [], [], [], []], { kill: true })).kill], [false, false, true], "kill (v6): read from the level (no towers is fine)");
+  // Exact deck: the a squad's third sapper walks at (6,2), inside the ring, and is shot dead: a has 5 sappers for 6 blocks.
+  const K = (cols) => ARCH(cols, { kill: true });
+  const S = E.sim(E.compile(K([[[1, 6]], [[7, 3]], [], [], []])), N); S.logOn = true; pat(S, 0);
+  eq([S.hits, S.kills, S.status, S.reason, S.failMat, evs(S, E.EV.KILL).length, evs(S, E.EV.HIT).length], [1, 1, E.FAILED, "short", 1, 1, 0], "kill (v6): the hit sapper dies (KILL, no HIT); its colour has 5 sappers for 6 blocks: the level fails short");
+  const R0 = Ref.game(K([[[1, 6]], [[7, 3]], [], [], []]), N); R0.play(0); R0.quiet();
+  eq([R0.hits, R0.kills, R0.status, R0.reason], [1, 1, "failed", "short"], "kill (v6, reference): dies, short");
+  // The tower first: nobody is hit, the level wins as before.
+  const W = E.sim(E.compile(K([[[1, 6]], [[7, 3]], [], [], []])), N); pat(W, 1); eq([pat(W, 0), W.hits, W.kills], [E.WON, 0, 0], "kill (v6): the tower first: no kill, won");
+  // A spare sapper keeps the colour whole: a 3 (two eat, the third dies), a 4 behind it. The dead sapper is finished, so
+  // the squad's space frees once the other two pick up; the level goes on and wins once the tower is down.
+  const P = E.sim(E.compile(K([[[1, 3]], [[7, 3]], [[1, 4]], [], []])), N); pat(P, 0);
+  eq([P.kills, P.status, P.lineLen, P.sappers(1), P.left[1]], [1, E.PLAYING, 0, 4, 4], "kill (v6): a spare a: one dies, 4 sappers for 4 blocks, the squad's space is free");
+  pat(P, 1); eq([pat(P, 2), P.kills], [E.WON, 1], "kill (v6): the tower falls, the spare a squad finishes: won");
+  const RP = Ref.game(K([[[1, 3]], [[7, 3]], [[1, 4]], [], []]), N); for (const j of [0, 1, 2]) { RP.play(j); RP.quiet(); }
+  eq([RP.kills, RP.status], [1, "won"], "kill (v6, reference): the same game");
+  // Without the flag the same game knocks back (v5 R1), on every tag.
+  const B0 = E.sim(E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []])), H); pat(B0, 0); eq([B0.hits, B0.kills, B0.status], [1, 0, E.PLAYING], "kill (v6): a level without kill knocks back (as v5 R1)");
+  // Dealing mode: any hit still fails the deal "hit", kill level or not.
+  const D = E.sim(E.compile(K([[], [], [], [], []])), N, { deal: true }); D.playSquad(1, 6); D.quiet();
+  eq([D.status, D.reason], [E.FAILED, "hit"], "kill (v6, dealing mode): a hit fails the deal (hit)");
+  // Coupled freeing with a kill (v4.3's case, restored): g (tower) linked to a; both a blocks in the ring, so a's one sapper
+  // dies on the way. Dead counts as finished: a's space holds for g, both free once g is done; the spare a finishes.
+  const LL = lv(["......ggg", ".........", "......aa.", ".........", "....##..."], [[[7, 3]], [[1, 1]], [[1, 2]], [], []], { towers: [{ at: [7, 0], r: 3 }], links: [[[0, 0], [1, 0]]], kill: true });
+  const C = E.sim(E.compile(LL), N); C.play(0, 0); C.advanceTo(600);
+  eq([C.kills, C.status, C.lineLen, C.held(1), C.spO[0] > 0], [1, E.PLAYING, 2, true, true], "kill (v6, coupled): a's sapper is killed; a counts as finished and holds for g, still working");
+  C.quiet(); eq([C.lineLen, C.standing, C.status], [0, 0, E.PLAYING], "kill (v6, coupled): the tower falls, g is done: both spaces free");
+  eq(pat(C, 2), E.WON, "kill (v6, coupled): the spare a squad finishes");
+}
+
+// ---- Campaign v6 stage 1: two locks (level locks: [lock, lock]) ------------------------------------------------------------
+{
+  const G2 = ["......", "aaabbb", "......", "cn....", "......", "..##.."], C2 = [[[14, 1]], [[1, 3]], [[2, 3]], [[3, 1]], []];
+  throws(() => E.compile(lv(G2, C2, { lock: { colour: 3 }, locks: [{ key: [1, 3] }] })), "locks (v6): lock and locks both throws");
+  throws(() => E.compile(lv(G2, C2, { locks: [] })), "locks (v6): an empty list throws");
+  throws(() => E.compile(lv(G2, C2, { locks: [{ colour: 1 }, { colour: 2 }, { colour: 3 }] })), "locks (v6): three throws");
+  throws(() => E.compile(lv(G2, C2, { locks: [{ colour: 1 }, { colour: 1 }] })), "locks (v6): two on one colour throws");
+  throws(() => E.compile(lv(G2, C2, { locks: [{ key: [1, 3] }, { key: [1, 3] }] })), "locks (v6): two on one key throws");
+  // One lock as a list plays exactly as lock: {...} (every event, on a game that opens it).
+  const run = (L) => { const S = E.sim(E.compile(L), hold(4)); S.logOn = true; for (const j of [0, 1, 2, 3]) S.play(j, 0); S.quiet(); return [S.status, S.now, Array.from(S.ev.subarray(0, S.evLen)).join()]; };
+  eq(run(lv(G2, C2, { locks: [{ key: [1, 3] }] })), run(lv(G2, C2, { lock: { key: [1, 3] } })), "locks (v6): locks: [one] is lock: one, event for event");
+  const B = E.compile(lv(G2, C2, { locks: [{ colour: 3 }, { key: [1, 3] }] }));
+  eq([B.nlocks, Array.from(B.lockK), Array.from(B.lockM), B.lockKey, B.lockMat, B.lockOf[3 * 6 + 1]], [2, [-1, 19], [3, 0], -1, 3, 1], "locks (v6): compile lists each lock's key and colour (lockKey/lockMat are lock 0's)");
+  // 4 spaces, 2 open: space 2 is lock 0's (colour c), space 3 lock 1's (the key). The Looters and a take 0 and 1. The key
+  // pops first: lock 1 opens alone, space 3 is open while space 2 stays shut.
+  const S = E.sim(B, hold(4)); S.logOn = true;
+  eq([S.cap, S.open, S.locked, [0, 1, 2, 3].map(S.shutAt), S.lockShut(0), S.lockShut(1)], [4, 2, 2, [0, 0, 1, 2], true, true], "locks (v6): 2 of 4 open; the last two shut, lock 0 left of lock 1");
+  S.play(0, 0); S.play(1, 0); S.advanceTo(S.q1[0]);
+  eq([S.open, S.locked, [0, 1, 2, 3].map(S.shutAt), evs(S, E.EV.UNLOCK), S.lockShut(0), S.lockShut(1)], [3, 1, [0, 0, 1, 0], [[19, 0]], true, false], "locks (v6): the key pops: lock 1 opens its own space (3); lock 0's space 2 stays shut");
+  // b takes the free space 0 (the Looters' block is picked up); c takes the lowest space that is neither held nor shut
+  // (3), then its colour opens lock 0 (UNLOCK -1 3 after the TAP).
+  S.clearLog(); S.play(2); S.play(3);
+  const typ = []; for (let i = 0; i < S.evLen; i += 3) typ.push(S.ev[i]);
+  eq([evs(S, E.EV.TAP), evs(S, E.EV.UNLOCK), typ.lastIndexOf(E.EV.TAP) < typ.indexOf(E.EV.UNLOCK), S.open, S.locked, [0, 1, 2, 3].map(S.shutAt)], [[[0, 2], [3, 3]], [[-1, 3]], true, 4, 0, [0, 0, 0, 0]], "locks (v6): c takes space 3 past the shut space 2, then opens lock 0");
+  S.quiet(); eq(S.status, E.WON, "locks (v6): the level wins");
+  const R = Ref.game(lv(G2, C2, { locks: [{ colour: 3 }, { key: [1, 3] }] }), hold(4)); R.play(0, 0); R.play(1, 0); R.advanceTo(540);
+  const r1 = [R.open, R.locked]; R.play(2); R.play(3); const r2 = [R.open, R.locked, R.spaces.map((x, i) => (x ? i : -1)).filter((i) => i >= 0)]; R.quiet();
+  eq([r1, r2, R.status], [[3, 1], [4, 0, [0, 1, 3]], "won"], "locks (v6, reference): the same spaces");
+  // A pair whose two squads are both lock colours opens both, the tapped squad's lock first.
+  const P = E.sim(E.compile(lv(["abc...", "......", "..##.."], [[[1, 1]], [[2, 1]], [[3, 1]], [], []], { locks: [{ colour: 2 }, { colour: 1 }], links: [[[0, 0], [1, 0]]] })), hold(5)); P.logOn = true; P.play(0, 0);
+  eq([evs(P, E.EV.UNLOCK), P.locked, P.open], [[[-1, 1], [-1, 2]], 0, 5], "locks (v6): a pair of both lock colours opens both (a's lock, then b's)");
+  // At rest with a lock still shut and no tap: jam, jamWhy 2.
+  const J = E.sim(E.compile(lv(["aab...", "......", "..##.."], [[[4, 1], [2, 1]], [[5, 1]], [[1, 2]], [[6, 1]], []], { locks: [{ colour: 2 }, { colour: 6 }] })), hold(4));
+  pat(J, 0); pat(J, 1);
+  eq([J.status, J.reason, J.jamWhy & 2, J.locked], [E.FAILED, "jam", 2, 2], "locks (v6): two stuck squads fill the 2 open spaces with both locks shut: jam, jamWhy 2");
 }
 
 // ---- v5 R1: the continue on a jam ----------------------------------------------------------------------------------------

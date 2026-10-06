@@ -104,6 +104,21 @@
 //   hidden until it is exposed: it touches connected ground (the moment a neighbour becomes connected ground, or at the
 //   start), or it sits on the picture's outer edge (shown from the start). Exposed, it shows for good (SHOW cell m, after
 //   the pop or gate that exposed it; at load nothing is logged). hiddenCell(c) says which still show "?".
+// Campaign v6 stage 1 (SPEC-v4 §9, the "Campaign v6 stage 1" entry). Two level fields, backward compatible: a level
+//   without them parses and plays exactly as before.
+//   kill: true (killing towers): an archer hit kills the sapper instead of knocking it back (KILL sapper mat at the hit;
+//   the squad is wary from the send, as before). A killed sapper is finished: it no longer holds its space. If its colour
+//   is then left with fewer sappers (on cards, waiting or out) than its standing blocks, the level fails "short" (SHORT,
+//   failMat the colour). The baker decides which levels kill and stores the flag; no rule reads the tag. safeArchers is
+//   retired: still accepted and ignored, but a level with both kill and safeArchers throws.
+//   locks: [lock, lock?] (two locks; lock: {...} is still one lock, the same as locks: [{...}]; both throws). Each lock
+//   is a key lock {key: [x, y]} or a colour lock {colour: m} as before; two locks never share a key cell or a colour.
+//   Each lock shuts rules.lockSpaces (1) spaces, at most cap - 1 in all, the line's last ones at the start: lock 0 the
+//   leftmost, lock 1 to its right. Each opens on its own key or colour (UNLOCK as before; a pair can open two colour
+//   locks, its tapped squad's first). A shut space keeps its place: if lock 1 opens first, lock 0's space stays shut
+//   with an open space after it. A squad takes the lowest free space that is not shut. A Ladder adds its space just
+//   before the run of shut spaces at the line's end (none: at the end), so with one lock everything (space numbers too)
+//   is as before. shutAt(s) says which lock (+1) shuts space s, 0 none.
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
@@ -111,10 +126,12 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
   const GRASS = 0, WATER = -1, DIRT = -2, CAMP = -3;
-  const NCOL = 5, NMAT = 15, IRON = 10, GILT = 14, MAXCELLS = 4096, MAXTOWERS = 8, MAXLINE = 8, MYSTERY = 1;
+  const NCOL = 5, NMAT = 15, IRON = 10, GILT = 14, MAXCELLS = 4096, MAXTOWERS = 8, MAXLINE = 8, MYSTERY = 1, MAXLOCKS = 2;
   const PLAYING = 0, WON = 1, FAILED = -1, NOPLAY = -2, REFUSED = -3;
-  const OVERFLOW = 1, HIT = 2, STUCK = 3, JAM = 4; // OVERFLOW and HIT: dealing mode only (v3.1; v5 R1 the short fail is gone)
-  const REASONS = ["", "overflow", "hit", "stuck", "jam"];
+  const OVERFLOW = 1, HIT = 2, STUCK = 3, JAM = 4, SHORT = 5; // OVERFLOW and HIT: dealing mode only (v3.1); v6: SHORT, a killing tower's
+  const REASONS = ["", "overflow", "hit", "stuck", "jam", "short"];
+  // v6: a level's locks as a list (lock: one, locks: one or two, neither: none).
+  const locksOf = (L) => (L && L.locks != null ? L.locks : L && L.lock != null ? [L.lock] : []);
   // Event log (optional, S.logOn; the page's show reads it): [type, a, b] triples. TAP space mat (space -1: dealing overflow),
   // DISP sapper space, EAT cell sapper (the pixel pops), GATE gate 0, TOWER tower 0, HIT sapper mat (sent back), KILL
   // sapper mat, HOME sapper space, FREE space mat. v4 M2: REVEAL card column (a mystery card is revealed: it reached the
@@ -234,12 +251,19 @@
     });
     // Locked space (v4 M2): its key is a gilt cell that is not a gate's key. v5 R1: or a colour lock, {colour: m}, a card
     // colour of this deck (never iron); exactly one of key and colour.
-    let lockKey = -1, lockMat = 0;
-    if (L.lock != null) {
-      if ((L.lock.key != null) === (L.lock.colour != null)) throw new Error("level: a lock has a key or a colour, not both or neither");
-      if (L.lock.key != null) { const k = cellAt(L.lock.key, "lock key"); if (a0[k] !== GILT || keyOf[k] >= 0) throw new Error("level: the lock's key is not a free gilt cell"); lockKey = k; }
-      else { const m = L.lock.colour; if (!(Number.isInteger(m) && m >= 1 && m < NMAT && m !== IRON && cardM.indexOf(m) >= 0)) throw new Error("level: a colour lock's colour has no card"); lockMat = m; }
-    }
+    // v6: locks: [one or two locks] in place of lock (never both); each as above, no two on one key or colour. lockK/lockM:
+    // each lock's key cell (-1) and colour (0); lockOf[c]: the lock whose key cell c is (-1); lockKey/lockMat: lock 0's.
+    if (L.lock != null && L.locks != null) throw new Error("level: lock and locks both given");
+    if (L.locks != null && !(Array.isArray(L.locks) && L.locks.length >= 1 && L.locks.length <= MAXLOCKS)) throw new Error("level: locks must be a list of 1 to " + MAXLOCKS);
+    if (L.kill != null && typeof L.kill !== "boolean") throw new Error("level: kill must be true or false");
+    if (L.kill === true && L.safeArchers === true) throw new Error("level: kill and safeArchers both given (safeArchers is retired)");
+    const lockList = locksOf(L), nlocks = lockList.length, lockK = new Int32Array(MAXLOCKS).fill(-1), lockM = new Int32Array(MAXLOCKS), lockOf = new Int8Array(n).fill(-1);
+    lockList.forEach((lk, i) => {
+      if (!lk || (lk.key != null) === (lk.colour != null)) throw new Error("level: a lock has a key or a colour, not both or neither");
+      if (lk.key != null) { const k = cellAt(lk.key, "lock key"); if (a0[k] !== GILT || keyOf[k] >= 0 || lockOf[k] >= 0) throw new Error("level: the lock's key is not a free gilt cell"); lockK[i] = k; lockOf[k] = i; }
+      else { const m = lk.colour; if (!(Number.isInteger(m) && m >= 1 && m < NMAT && m !== IRON && cardM.indexOf(m) >= 0) || lockM.indexOf(m) >= 0) throw new Error("level: a colour lock's colour has no card (or another lock has it)"); lockM[i] = m; }
+    });
+    const lockKey = lockK[0], lockMat = lockM[0];
     // v5 R1, mystery blocks: hidden: [h strings of w chars], "?" a hidden block, "." not. Only on a plain material pixel
     // (not iron, a key, the lock's key or a tower). A block on the picture's outer edge (a pic board: x 1 or w-2, y 1 or
     // h-2; else the grid's border) shows from the start, so its flag means nothing.
@@ -248,7 +272,7 @@
       if (!Array.isArray(L.hidden) || L.hidden.length !== h) throw new Error("level: hidden must be " + h + " rows");
       for (let y = 0; y < h; y++) { const r = L.hidden[y]; if (typeof r !== "string" || r.length !== w) throw new Error("level: hidden row " + y + " is not " + w + " wide");
         for (let x = 0; x < w; x++) { const ch = r[x], c = y * w + x; if (ch === ".") continue; if (ch !== "?") throw new Error("level: hidden takes ? and . only");
-          if (!(a0[c] > 0) || a0[c] === IRON || keyOf[c] >= 0 || c === lockKey || towerOf[c] >= 0) throw new Error("level: a hidden flag on a non-plain cell at " + x + "," + y);
+          if (!(a0[c] > 0) || a0[c] === IRON || keyOf[c] >= 0 || lockOf[c] >= 0 || towerOf[c] >= 0) throw new Error("level: a hidden flag on a non-plain cell at " + x + "," + y);
           const edge = pic ? x <= 1 || y <= 1 || x >= w - 2 || y >= h - 2 : x === 0 || y === 0 || x === w - 1 || y === h - 1;
           if (!edge) { hid0[c] = 1; nhid++; } } }
     }
@@ -260,8 +284,8 @@
     for (let c = 0; c < n; c++) { Z1[c] = rnd(); Z2[c] = rnd(); }
     let pixTotal = 0; for (let m = 1; m < NMAT; m++) pixTotal += pix[m];
     return { w, h, n, a0, nb, rank, near, campRow, gateOf, keyOf, gateCells, towerOf, cover, towers, cardM: Int32Array.from(cardM), cardN: Int32Array.from(cardN),
-      colStart, colLen, sapTotal, pix, hoff, Z1, Z2, pixTotal, ncards: cardM.length, safeArchers: L.safeArchers === true,
-      cardF: Int32Array.from(cardF), cardCol: Int32Array.from(cardCol), linkOf, links: Int32Array.from(links), nlinks: links.length >> 1, lockKey, lockMat, pic, hid0, nhid };
+      colStart, colLen, sapTotal, pix, hoff, Z1, Z2, pixTotal, ncards: cardM.length, safeArchers: L.safeArchers === true, kill: L.kill === true,
+      cardF: Int32Array.from(cardF), cardCol: Int32Array.from(cardCol), linkOf, links: Int32Array.from(links), nlinks: links.length >> 1, lockKey, lockMat, nlocks, lockK, lockM, lockOf, pic, hid0, nhid };
   }
 
   // Timing (config v3.time, whole ms of engine time; the page plays engine time at show.pace x real time). Every value
@@ -279,9 +303,11 @@
   function sim(B, rules, opts) {
     const n = B.n, nb = B.nb, rank = B.rank, cover = B.cover, towerOf = B.towerOf, keyOf = B.keyOf, gateOf = B.gateOf, hoff = B.hoff, linkOf = B.linkOf;
     const cap = Math.max(1, Math.min(MAXLINE, rules.hold | 0)), deal = !!(opts && opts.deal), nt = B.towers.length; // v5 R1: archers never kill
+    const lethal = B.kill; // v6: a killing-tower level (its own flag; dealing mode kills on every level and fails the deal)
     const merge = rules.mergeLeftovers === true, T = timeOf(rules.time);
-    // Locked spaces (v4 M2): rules.lockSpaces (default 1) of the line's last spaces, never all of them.
-    const lockN = B.lockKey >= 0 || B.lockMat > 0 ? Math.max(0, Math.min(cap - 1, rules.lockSpaces == null ? 1 : rules.lockSpaces | 0)) : 0;
+    // Locked spaces (v4 M2): rules.lockSpaces (default 1) of the line's last spaces, never all of them. v6: per lock (lock 0
+    // takes the first of them, lock 1 the rest); a lock left with no space starts open.
+    const lockPer = Math.max(0, rules.lockSpaces == null ? 1 : rules.lockSpaces | 0), lockN = B.nlocks ? Math.max(0, Math.min(cap - 1, lockPer * B.nlocks)) : 0;
     // v4 M5: uses of each power-up a level allows (rules.powers[k], 0-99; none without it), and how far back the
     // Quartermaster reaches (rules.pullDepth, cards behind the front, default 2).
     const pwLim = new Int32Array(NPW); for (let k = 0; k < NPW; k++) pwLim[k] = rules.powers ? Math.max(0, Math.min(99, rules.powers[k] | 0)) : 0;
@@ -295,7 +321,8 @@
     const oA = at(n), oD = at(n), oK = at(n), oP = at(n), oH = at(B.hoff[NMAT]), oHL = at(NMAT), oLeft = at(NMAT), oSap = at(NMAT), oT = at(MAXTOWERS),
       oHead = at(NCOL), oSM = at(MAXLINE), oSW = at(MAXLINE), oSO = at(MAXLINE), oSF = at(MAXLINE), oSN = at(MAXLINE), oSQ = at(MAXLINE), oOrd = at(MAXLINE),
       oS = at(32), oQS = at(SMAX), oQC = at(SMAX), oQK = at(SMAX), oQ0 = at(SMAX), oQ1 = at(SMAX), oQ2 = at(SMAX), oET = at(EMAX), oEQ = at(EMAX), oEX = at(EMAX),
-      oGone = at(B.ncards + 1), oSL = at(MAXLINE), oSeq = at(B.ncards + 1), oPos = at(B.ncards + 1), oShown = at(B.ncards + 1), oCn = at(B.ncards + 1), oSC = at(MAXLINE), oCut = at(B.ncards + 1), oSeen = at(B.nhid ? n : 1);
+      oGone = at(B.ncards + 1), oSL = at(MAXLINE), oSeq = at(B.ncards + 1), oPos = at(B.ncards + 1), oShown = at(B.ncards + 1), oCn = at(B.ncards + 1), oSC = at(MAXLINE), oCut = at(B.ncards + 1), oSeen = at(B.nhid ? n : 1),
+      oOwn = at(MAXLINE), oLkS = at(MAXLOCKS); // v6: each space's lock + 1 while shut (0 open); each lock shut (1) or open
     const M = new Int32Array(o), init = new Int32Array(o);
     const sub = (k, len) => M.subarray(k, k + len);
     const a = sub(oA, n), d = sub(oD, n), hk = sub(oK, n), hpos = sub(oP, n), heap = sub(oH, B.hoff[NMAT]);
@@ -315,6 +342,7 @@
     const seq = sub(oSeq, B.ncards), pos = sub(oPos, B.ncards), shown = sub(oShown, B.ncards), cn = sub(oCn, B.ncards), spC = sub(oSC, MAXLINE);
     // v5 R1: cut (a card a Volley took out of the queue: its link is cut, so its partner plays alone); partnerOf honours it.
     const seen = sub(oSeen, B.nhid ? n : 1); // v5 R1: a hidden block once exposed (its colour shows for good)
+    const own = sub(oOwn, MAXLINE), lkShut = sub(oLkS, MAXLOCKS); // v6, two locks
     const cut = sub(oCut, B.ncards), partnerOf = (ci) => { const p = linkOf[ci]; return p >= 0 && !cut[p] ? p : -1; };
     // Scalars in M[oS + k]. LOCK: spaces still locked (v4 M2); JAMK: why a jam happened (bits, see settle); v4 M5: XCAP
     // spaces added by Ladders, PWANY 1 once any power-up was used, USE..USE+3 the uses of each.
@@ -412,7 +440,7 @@
       const m = a[c];
       a[c] = DIRT; hk[c] = -1; left[m]--; M[S_PIX]--; M[S_Z1] ^= B.Z1[c]; M[S_Z2] ^= B.Z2[c]; log(how || EV.EAT, c, id);
       const t = towerOf[c]; if (t >= 0 && --tleft[t] === 0) { M[S_STAND] &= ~(1 << t); log(EV.TOWER, t, 0); }
-      if (c === B.lockKey && M[S_LOCK] > 0) { M[S_LOCK] = 0; log(EV.UNLOCK, c, 0); } // v4 M2: the locked space opens
+      if (B.lockOf[c] >= 0) openLock(B.lockOf[c], c, 0); // v4 M2: the locked space opens (v6: its own lock's)
       const g = keyOf[c];
       if (g >= 0) {
         const cells = B.gateCells[g];
@@ -422,6 +450,8 @@
       }
       relax(c);
     }
+    // v6: lock k opens (its key popped, or its colour went out): its spaces are ordinary ones from now. UNLOCK a b.
+    function openLock(k, a, b) { if (!lkShut[k]) return; lkShut[k] = 0; for (let s = 0; s < MAXLINE; s++) if (own[s] === k + 1) { own[s] = 0; M[S_LOCK]--; } log(EV.UNLOCK, a, b); }
     function fail(r, m) { M[S_STATUS] = FAILED; M[S_REASON] = r; M[S_FAILM] = m; }
     // Send one sapper of space s at pixel c at time t. Covered (and the squad not yet wary): an archer hit, the pixel
     // is not claimed, and the squad turns wary. Otherwise the pixel is claimed and pops when the sapper gets there.
@@ -433,7 +463,7 @@
       qS[id] = s; qC[id] = c; q0[id] = t; spW[s]--; spO[s]++; M[S_OUT]++;
       if (hit) {
         const half = (tiles + 1) >> 1; spF[s] |= 1;
-        qK[id] = deal ? 3 : 2; q1[id] = t + T.yardMs + half * T.tileMs; q2[id] = q1[id] + T.knockMs + T.yardMs + half * T.tileMs;
+        qK[id] = deal || lethal ? 3 : 2; q1[id] = t + T.yardMs + half * T.tileMs; q2[id] = q1[id] + T.knockMs + T.yardMs + half * T.tileMs;
         push(q1[id], id * 4 + 1);
       } else {
         removeAt(m, hpos[c]); hk[c] = CLAIMED;
@@ -479,11 +509,12 @@
         push(q2[id], id * 4 + 2);
         if (M[S_PIX] === 0 && M[S_STATUS] === PLAYING) M[S_STATUS] = WON;
         if (qK[id] !== 4) { spO[s]--; freeIf(s); } // v4.3: the squad's space frees once its last block is picked up (v5 R1: a walker a Volley cut loose holds none)
-      } else if (type === 1) { // an arrow: the sapper is knocked back to its space (v5 R1: on every level, never killed)
+      } else if (type === 1) { // an arrow: the sapper is knocked back to its space (v5 R1), or killed (v6, a kill level)
         const s = qS[id], m = spM[s]; M[S_HITS]++;
-        if (qK[id] === 3) { // dealing mode only: any hit fails the deal (the dealer deals hit-free)
+        if (qK[id] === 3) { // killed: dealing mode fails the deal at any hit (the dealer deals hit-free); v6, a kill level
+          // fails short when the colour has fewer sappers left than standing blocks. The dead sapper is finished.
           M[S_KILLS]++; sap[m]--; spO[s]--; M[S_OUT]--; log(EV.KILL, id, m);
-          if (M[S_STATUS] === PLAYING) fail(HIT, m);
+          if (M[S_STATUS] === PLAYING && (deal || sap[m] < left[m])) fail(deal ? HIT : SHORT, m);
           freeIf(s);
         } else { log(EV.HIT, id, m); push(q2[id], id * 4 + 2); }
       } else if (type === 2) { // home: a hit sapper rejoins its squad (Easy, Normal); a carrier is just home (v4.3: its
@@ -539,9 +570,9 @@
       for (let guard = 0; guard < 4 * EMAX + 4 * SMAX && M[S_EL] > 0; guard++) { const te = eT[0]; M[S_NOW] = te; advanceTo(te); }
       return M[S_NOW];
     }
-    // A squad takes the lowest free space (while the lock holds, the free spaces are all below the locked ones).
+    // A squad takes the lowest free space that is not shut (v6: with two locks a shut space may sit among open ones).
     function place(m, cnt, ci) {
-      let s = 0; while (s < capNow() && spQ[s] !== 0) s++;
+      let s = 0; while (s < capNow() && (spQ[s] !== 0 || own[s] !== 0)) s++;
       spM[s] = m; spW[s] = cnt; spO[s] = 0; spF[s] = 0; spN[s] = M[S_NOW]; spQ[s] = ++M[S_TAPS]; spL[s] = 0; spC[s] = ci + 1; ord[M[S_ORD]++] = s;
       M[S_LEN]++; if (M[S_LEN] > M[S_PEAK]) M[S_PEAK] = M[S_LEN];
       return s;
@@ -563,7 +594,7 @@
       return M[S_STATUS];
     }
     // v5 R1: a colour lock opens the moment a squad of its colour is sent out (takes a space). Event UNLOCK -1 m.
-    function opened(m) { if (m === B.lockMat && M[S_LOCK] > 0) { M[S_LOCK] = 0; log(EV.UNLOCK, -1, m); } }
+    function opened(m) { for (let k = 0; k < B.nlocks; k++) if (B.lockM[k] === m) openLock(k, -1, m); } // v6: its own lock
     // A linked pair (v4 M2) takes two spaces at the same moment: m1's squad first, then m2's. One play. Fewer than 2 open
     // free spaces: overflow (dealing mode only; play() refuses first).
     function pair(m1, n1, m2, n2, t, c1, c2) {
@@ -640,7 +671,10 @@
       if (t != null) { advanceTo(t); if (M[S_STATUS] !== PLAYING) return NOPLAY; }
       if (M[S_USE + k] >= pwLim[k] || !powerOK(k, a)) return REFUSED;
       M[S_USE + k]++; M[S_PWANY] = 1;
-      if (k === PW.LADDER) { M[S_XCAP]++; log(EV.POWER, k, capNow() - M[S_LOCK] - 1); }
+      if (k === PW.LADDER) { // the new space goes just before the run of shut spaces at the line's end (v6: they move up one)
+        let e = capNow() - 1; while (e >= 0 && own[e]) e--;
+        for (let s = capNow() - 1; s > e; s--) { own[s + 1] = own[s]; own[s] = 0; }
+        M[S_XCAP]++; log(EV.POWER, k, e + 1); }
       else if (k === PW.PULL) { // v5 R1: a (and its partner) leave their columns and take the lowest free spaces, as a tap would
         const p = partnerOf(a); leave(a); if (p >= 0) leave(p);
         log(EV.POWER, k, a);
@@ -678,7 +712,7 @@
         cut[ci] = 1; leave(ci);
       }
       const len = M[S_ORD], sq = []; for (let k = 0; k < len; k++) if (spM[ord[k]] === m) sq.push(ord[k]);
-      for (let id = 0; id < M[S_SN]; id++) { const s = qS[id]; if (spM[s] !== m || sq.indexOf(s) < 0) continue; if ((qK[id] === 1 && q1[id] > M[S_NOW]) || (qK[id] === 2 && q2[id] > M[S_NOW])) qK[id] = 4; }
+      for (let id = 0; id < M[S_SN]; id++) { const s = qS[id]; if (spM[s] !== m || sq.indexOf(s) < 0) continue; if (((qK[id] === 1 || qK[id] === 3) && q1[id] > M[S_NOW]) || (qK[id] === 2 && q2[id] > M[S_NOW])) qK[id] = 4; } // v6: a doomed walker is cut loose too (its arrow then only knocks it back)
       for (const s of sq) { const p = spL[s] - 1; if (p >= 0) { spL[p] = 0; spL[s] = 0; } spW[s] = 0; spO[s] = 0; release(s); if (p >= 0) freeIf(p); }
       sap[m] = 0; opened(m); dispatch(M[S_NOW]);
     }
@@ -718,6 +752,7 @@
     for (let m = 0; m < NMAT; m++) sap[m] = deal ? 1 << 24 : B.sapTotal[m];
     for (let t = 0; t < nt; t++) { tleft[t] = B.towers[t].size; M[S_STAND] |= 1 << t; }
     M[S_PIX] = B.pixTotal; M[S_LOCK] = lockN;
+    for (let i = 0; i < lockN; i++) { const k = Math.min(B.nlocks - 1, (i / Math.max(1, lockPer)) | 0); own[cap - lockN + i] = k + 1; lkShut[k] = 1; } // v6: lock 0 leftmost
     for (let ci = 0; ci < B.ncards; ci++) { seq[ci] = ci; pos[ci] = ci - B.colStart[B.cardCol[ci]]; cn[ci] = B.cardN[ci]; }
     for (let j = 0; j < NCOL; j++) if (B.colLen[j]) shown[B.colStart[j]] = 1; // the fronts are face up from the start
     { let qh = 0, qt = 0; for (let c = 0; c < n; c++) if (a[c] === CAMP) { d[c] = 0; q[qt++] = c; }
@@ -771,6 +806,8 @@
       // refused(j): would a tap on column j's front card be refused now. hidden(ci): is card ci a mystery the player
       // can't see yet. partner(ci): its linked card or -1. held(s): a finished linked squad holding its space.
       get open() { return capNow() - M[S_LOCK]; }, get locked() { return M[S_LOCK]; }, get jamWhy() { return M[S_JAMK]; }, get lockMat() { return B.lockMat; },
+      // v6: shutAt(s): the lock (+1) that shuts space s, 0 none; lockShut(k): is lock k still shut.
+      shutAt: (s) => (s >= 0 && s < MAXLINE ? own[s] : 0), lockShut: (k) => k >= 0 && k < MAXLOCKS && lkShut[k] === 1,
       card(j, d) { const s0 = B.colStart[j], len = B.colLen[j]; for (let h = heads[j], k = 0; h < len; h++) { const c = seq[s0 + h]; if (gone[c]) continue; if (k++ === d) return c; } return -1; },
       refused(j) { return heads[j] < B.colLen[j] && refusedAt(frontAt(j)); },
       // v4.3: why a tap on column j's front would be refused (0 not refused or no card, 1 no free space, 2 a linked card
@@ -824,5 +861,5 @@
     return out;
   }
 
-  return { compile, sim, replay, rulesOf, timeOf, gridOf, chOf, matOf, check, GRASS, WATER, DIRT, CAMP, NCOL, NMAT, IRON, GILT, MYSTERY, PLAYING, WON, FAILED, NOPLAY, REFUSED, EV, REASONS, PW, POWERS, MAXLINE };
+  return { compile, sim, replay, rulesOf, timeOf, gridOf, chOf, matOf, check, locksOf, MAXLOCKS, GRASS, WATER, DIRT, CAMP, NCOL, NMAT, IRON, GILT, MYSTERY, PLAYING, WON, FAILED, NOPLAY, REFUSED, EV, REASONS, PW, POWERS, MAXLINE };
 });
