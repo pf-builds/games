@@ -1,0 +1,4 @@
+{
+ "note": "The Wandering Gallery (Peter, 2026-10-06): the side quests past level 200 are famous public-domain art off every land's theme, one shared list across all lands, used in order. manifest.json lists the pictures (id, title, artist, date, kind, licence, url, file, crop?, chroma?), each OK'd for download by Peter first; raw: where the downloaded files sit (outside the repo); src/: the 160 px sources tools/land-src.py makes (in the repo). tools/land.js takes each land's side-quest pictures from here, the next ones no land has used (gallery.json pictures with wander: true).",
+ "raw": "/Users/peter/local-ai/outputs/lands/_gallery"
+}

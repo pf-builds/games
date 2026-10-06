@@ -146,7 +146,9 @@ function hexOfLab(L) {
 
 // ---- the plan --------------------------------------------------------------------------------------------------------
 // src: {rgba, w, h}; opt: the manifest line (mask, crop, box, bg, outline, colours, margin); C: gallery-config convert.
-function plan(src0, opt, C) {
+// Steps 1-2 (the lands foundation shares them with tools/shade.js): the cropped source, its subject mask and the fit
+// (scale, the picture's pw x ph cells with margin mg, the subject box's top left bx0, by0 in source px).
+function fit(src0, opt, C) {
   const kind = opt.kind || "emoji", K = Object.assign({}, C.kinds[kind] || {}, opt), mode = K.mask || "alpha";
   // 1. Crop.
   let src = src0;
@@ -159,6 +161,10 @@ function plan(src0, opt, C) {
   if (bx1 < 0) throw new Error("convert: empty subject");
   const masked = mode !== "none", mg = masked ? K.margin : 0, [BW, BH] = K.box, sw = bx1 - bx0 + 1, sh = by1 - by0 + 1;
   const scale = Math.min((BW - 2 * mg) / sw, (BH - 2 * mg) / sh), cw = Math.max(1, Math.round(sw * scale)), ch = Math.max(1, Math.round(sh * scale)), pw = cw + 2 * mg, ph = ch + 2 * mg;
+  return { K, mode, src, mask, masked, mg, scale, pw, ph, bx0, by0 };
+}
+function plan(src0, opt, C) {
+  const { K, mode, src, mask, masked, mg, scale, pw, ph, bx0, by0 } = fit(src0, opt, C);
   // 3. The palette: the ink and (masked) the background pinned, then the subject's clusters (select).
   const cols = kmeans(src, mask, C.k0, C.seed), max = K.colours || C.maxColours, minDE = K.minDE || C.minDE, fadeDE = K.fadeDE != null ? K.fadeDE : C.fadeDE;
   if (K.chroma) for (const c of cols) { c.lab[1] *= K.chroma; c.lab[2] *= K.chroma; } // a kind's chroma boost (paintings), before the choice
@@ -276,7 +282,7 @@ const config = () => JSON.parse(fs.readFileSync(path.join(__dirname, "gallery-co
 const manifest = () => JSON.parse(fs.readFileSync(path.join(ROOT, "levels/gallery-manifest.json"), "utf8"));
 const planOf = (pic, C) => Object.assign(plan(load(pic.file), pic, C.convert), { title: pic.title, src: pic.id, kind: pic.kind });
 
-module.exports = { plan, planOf, decode, encode, render, nameAll, load, config, manifest, hexOfLab };
+module.exports = { plan, planOf, fit, decode, encode, render, nameAll, load, config, manifest, hexOfLab };
 
 if (require.main === module) {
   const arg = (k) => { const i = process.argv.indexOf("--" + k); return i > 0 ? process.argv[i + 1] : null; };

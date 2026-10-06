@@ -66,4 +66,19 @@ function densityOK(n, tag, L, D, teaching) {
   if (tag === "hard" && D.extremeFrom != null && n >= D.extremeFrom) return f.length >= u.length - D.hardSlack && lock; // v5 R4: Hard uses all but hardSlack
   return f.length === u.length && lock === (n >= D.lockFrom); // hard (before extremeFrom), extreme
 }
-module.exports = { TAGS, tagOf, lockOK, FEATS, featuresOf, unlockedAt, densityOK };
+// Lands foundation: past 200 a land's levels are pictures and use only the deck features (linked, mystery, hidden; the
+// lock on Hard and Extreme) the land lists in features; how often each comes is the land's profile (tools/land-plan.js,
+// data per land). landDensityOK(tag, L, feats, D) is the per-level floor of the density rule (D: config.json
+// v5.density): nothing outside feats and nothing a picture can't carry (moat, gate, tower); Easy at most easyMax
+// features and no lock; Normal no lock; Extreme every feature (and the lock where feats has it); Hard anything between.
+// land-plan.js planCheck adds the land-level part: features per level never fall as the tag rises.
+const DECK = ["linked", "mystery", "hidden"];
+function landDensityOK(tag, L, feats, D) {
+  const u = DECK.filter((k) => (feats || []).indexOf(k) >= 0), f = featuresOf(L), lock = !!L.lock, canLock = (feats || []).indexOf("lock") >= 0;
+  if (f.some((k) => u.indexOf(k) < 0) || (lock && !canLock)) return false;
+  if (tag === "easy") return f.length <= D.easyMax && !lock;
+  if (tag === "normal") return !lock;
+  if (tag === "extreme") return f.length === u.length && lock === canLock;
+  return tag === "hard";
+}
+module.exports = { TAGS, tagOf, lockOK, FEATS, featuresOf, unlockedAt, densityOK, DECK, landDensityOK };

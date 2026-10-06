@@ -24,7 +24,17 @@ function questsOf(n, Q, powers) {
   }
   return out;
 }
-module.exports = { questsOf };
+// Lands foundation: a land's side quests (its own bonus pictures). Picture i of the land follows main level
+// land.from - 1 + Q.first, then each next one Q.gaps in turn after the one before (3-5), while it stays within the land;
+// i0: the pictures in the Gallery before the land's (its prizes go on in the same turn as questsOf's).
+//   landQuestsOf(land, Q, powers, i0, max) -> [{after, prize}] (at most max)
+function landQuestsOf(land, Q, powers, i0, max) {
+  const afters = []; let after = land.from - 1 + Q.first;
+  for (let i = 0; after <= land.to && afters.length < max && i < 1000; i++) { afters.push(after); after += Q.gaps[i % Q.gaps.length]; }
+  const P = questsOf(i0 + afters.length, Q, powers);
+  return afters.map((a, k) => ({ after: a, prize: P[i0 + k].prize }));
+}
+module.exports = { questsOf, landQuestsOf };
 
 if (require.main === module) {
   const CFG = require("../config.json"), file = path.join(__dirname, "../levels/gallery.json"), F = JSON.parse(fs.readFileSync(file, "utf8"));

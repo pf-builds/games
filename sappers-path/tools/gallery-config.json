@@ -77,7 +77,10 @@
     "bgGap": 6,
     "fadeDE": 20,
     "nudge": 4,
-    "nudges": 4
+    "nudges": 4,
+    "shade": {"note": "Lands foundation, shading within a colour (tools/shade.js; the test that set these: game-research/sappers-path-v4/pd-art-test/shading, 20 paintings, shade-config.json). A cell's shade digit: its source lightness (the pixels voting for its own colour) minus the median of its colour's cells; >= t lighter, <= -t darker (levels 2: past t2 a second step). median: 3x3 same-colour median passes; minRegion: a smaller run of one shade goes back to the base. A shade colour: the base moved stepMax L* (x step2 for the second step), chroma -chroma lighter, +chroma darker. Floors (CIEDE2000): floor from every other colour's base and shades, margin more from those than from its own base, fadedFloor from every other colour's faded queue card (layout.fade), groundFloor from the frame's ground (or no nearer than its base); a failing shade steps in 1 L* to stepMin, then is dropped. Only levels whose land asks for it carry shade (tools/land.js); levels 1-200 and the Gallery have none.",
+      "t": 3, "t2": 11, "levels": 1, "median": 1, "minRegion": 3, "stepMax": 12, "stepMin": 5, "step2": 1.8, "chroma": 0.08,
+      "floor": 14, "margin": 4, "fadedFloor": 12, "groundFloor": 10, "ground": ["#5e5448", "#3f4a36", "#6e6150"]}
   },
   "bake": {
     "version": 4,

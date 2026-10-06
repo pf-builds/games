@@ -1,0 +1,270 @@
+{
+ "version": 1,
+ "note": "Sapper's Path lands foundation (tools/land.js, tools/land-plan.js, tools/land-bake.js; tools/land-runbook.md): how a land's pictures become levels past 200. profile: the default difficulty profile; each land's land.json profile is merged over it (land-plan.js profileOf), so a later land asks for more without code. The grader's counts (grade, fast, the real pace's factor and thinking replays) are NOT here: land-bake.js takes them from tools/bake-config.json for main levels and tools/gallery-config.json bake for side quests, so tools/regrade.js and tools/freeze.js re-grade a banked land with 0 differences.",
+ "seed": 20261006,
+ "box": {
+  "note": "The max phone board (game-research/sappers-path-v4/pd-art-test/README.md: the 360x640 phone at 8 CSS px a cell): a picture of box cells inside the 1-cell frame (42 x 46 with it), many (8 or more colours, a 4-row yard) one row less; a landscape picture is capped by the width.",
+  "box": [
+   40,
+   44
+  ],
+  "many": [
+   40,
+   43
+  ],
+  "manyAt": 8
+ },
+ "convert": {
+  "note": "tools/land.js convert: a painting under minColours colours at its chroma is converted again at each of chromaSteps in turn until it has them (the pd-art-test's rule); the most colours wins.",
+  "minColours": 5,
+  "chromaSteps": [
+   1.7,
+   2.0,
+   2.4,
+   2.8
+  ]
+ },
+ "profile": {
+  "note": "The default land profile (tools/land-plan.js). tags: shares of Easy, Normal, Hard and Extreme; breathers, the fewest Easy levels per 50; run, the shortest and longest run of Hard and Extreme levels before a breather; end, the land's last tag. features: per deck feature its share of the land's levels and its amount (mystery: ? cards per level; hidden of: the share of the picture's eligible blocks hidden; linked pairs; lock: share of levels with a locked space, Extreme first then Hard, and key, the share of those that are key locks). bands: the Normal random-tap win-rate band per tag; lookahead: the one-move-lookahead player's ceiling per tag; pace: each level's real-pace range and the aim (the land's median), ms. Raise a later land's profile in its land.json (more ?, more hidden, more links, more Hard and Extreme, lower bands).",
+  "tags": {
+   "shares": {
+    "easy": 0.1,
+    "normal": 0.4,
+    "hard": 0.3,
+    "extreme": 0.2
+   },
+   "breathers": 5,
+   "run": [
+    2,
+    5
+   ],
+   "end": "extreme"
+  },
+  "features": {
+   "mystery": {
+    "share": 0.6,
+    "cards": [
+     2,
+     4
+    ]
+   },
+   "hidden": {
+    "share": 0.5,
+    "of": [
+     0.08,
+     0.16
+    ]
+   },
+   "linked": {
+    "share": 0.6,
+    "pairs": [
+     1,
+     2
+    ]
+   },
+   "lock": {
+    "share": 0.5,
+    "key": 0.3
+   }
+  },
+  "bands": {
+   "easy": [
+    0.25,
+    0.6
+   ],
+   "normal": [
+    0.05,
+    0.2
+   ],
+   "hard": [
+    0,
+    0.1
+   ],
+   "extreme": [
+    0,
+    0.06
+   ]
+  },
+  "lookahead": {
+   "hard": 0.3,
+   "extreme": 0.25
+  },
+  "pace": {
+   "range": [
+    150000,
+    300000
+   ],
+   "aim": 225000
+  }
+ },
+ "plan": {
+  "note": "tools/land-bake.js, how a planned feature is built. lock: a key lock (a gilt key block dug in near the gate, gen.js lockKey) only when the gilt stands keyDE (CIEDE2000) from every picture colour, else it is built as a colour lock (the colour whose first squad comes nearest lockAt of the dealt order). hidden (hidePic): blobs over plain blocks that start out of reach, radii rx x ry cells, at least min hidden, no 4-connected group over maxGroup; never the ink or a masked picture's background.",
+  "keyDE": 20,
+  "lockAt": 0.35,
+  "hidden": {
+   "rx": [
+    2,
+    4
+   ],
+   "ry": [
+    1.5,
+    3
+   ],
+   "min": 20,
+   "maxGroup": 24
+  }
+ },
+ "bake": {
+  "note": "Per level: candidates (perLevel, perLevelBy[tag]; --extra K adds K), each a deal under the dealing rules (deal + dealBy[tag], 5 spaces; squads of 20-50 on a board of deal.sizeRef cells (frame included), scaled with the board's cells, so a small landscape board deals smaller squads and a full portrait board bigger ones, near the pace aim inside the 55-tap cap; the outline's squads capped by capOf on masked pictures), linked pairs joined, tuned into the tag's band (the profile's bands; narrowFor tags also narrow the one-move-lookahead player to tune.narrow.stopAt) and graded on its tag. A pick meets every target: in band, real pace in the profile's range (aimWeight ms from its aim weigh as 1 point of rate), longest single tap maxWaitMs or less, maxTaps or fewer taps, the fast tapper not much better than patient play, the planned linked pairs, the lookahead at or under the profile's ceiling; else the least total miss (penalty), logged as a fallback. Side quests (the Wandering Gallery, no deck features) take sideBands in turn of sideCycle. dedupe: two picks this alike are near-duplicates. budget: threads (0: CPUs - 2) and the wall-clock cap.",
+  "sideBands": {
+   "easy": [
+    0.62,
+    0.85
+   ],
+   "normal": [
+    0.3,
+    0.64
+   ],
+   "hard": [
+    0.1,
+    0.3
+   ],
+   "extreme": [
+    0.1,
+    0.3
+   ]
+  },
+  "sideCycle": [
+   "normal",
+   "easy",
+   "normal",
+   "hard"
+  ],
+  "sidePace": {
+   "range": [
+    120000,
+    300000
+   ],
+   "aim": 200000
+  },
+  "aimWeight": 5000,
+  "narrowFor": [
+   "hard",
+   "extreme"
+  ],
+  "maxTaps": 55,
+  "maxWaitMs": 15000,
+  "capOf": [
+   24,
+   48
+  ],
+  "deal": {
+   "hold": 5,
+   "size": [
+    20,
+    50
+   ],
+   "deep": 0.15,
+   "finish": 0.3,
+   "maxCard": 99,
+   "maxCards": 240,
+   "tries": 20,
+   "attempts": 32,
+   "shrink": 0.85,
+   "shrinks": 16,
+   "park": 2,
+   "parkMax": 6,
+   "noParkUnderArchers": true,
+   "sizeRef": 1400
+  },
+  "dealBy": {
+   "easy": {
+    "deep": 0.08
+   },
+   "hard": {
+    "deep": 0.18
+   },
+   "extreme": {
+    "deep": 0.18
+   }
+  },
+  "tune": {
+   "stages": [
+    {
+     "playouts": 64,
+     "steps": 700
+    },
+    {
+     "playouts": 256,
+     "steps": 200
+    }
+   ],
+   "narrow": {
+    "playouts": 256,
+    "greedyPlayouts": 96,
+    "steps": 300,
+    "stopAt": 0.3,
+    "margin": 0.005
+   },
+   "margin": 0.02,
+   "colMin": 1,
+   "colMax": 30,
+   "resize": 0.25,
+   "split": 0.5,
+   "minCard": 6,
+   "maxCard": 99
+  },
+  "mystery": {
+   "rows": [
+    1,
+    2
+   ],
+   "games": 16,
+   "samples": 4,
+   "maxGap": 0.2,
+   "tries": 4
+  },
+  "candidates": {
+   "perLevel": 6,
+   "perLevelBy": {
+    "hard": 8,
+    "extreme": 8
+   }
+  },
+  "dedupe": 0.9,
+  "penalty": {
+   "band": 100,
+   "durationMs": 30000,
+   "fellMs": 120000,
+   "waitMs": 3000,
+   "fast": 1,
+   "pairs": 1,
+   "lookahead": 0.25
+  },
+  "budget": {
+   "threads": 0,
+   "wallSec": 21600
+  }
+ },
+ "map": {
+  "note": "tools/land.js map: a land's layout entries. Its 2 sheet templates (layout-shaped: file, road, level spots in road order, quest spots with branch, eggs, bridges as [road sample, kind]) are used in turn, A, B, then mirrored, A', B', then A, B again, until every level has a spot (at most maxSheets entries). Side quests go on a template's quest spot on the sheet holding their main level when one is free (the one nearest it along the road), else at a made spot questOff sheet px off the road beside the level, on the side with more room. eggCoins: each egg's coins, drawn in [lo, hi] from the land's seed (config.json map.eggCoins gets a row per new sheet). fade: new entries crossfade on the page (style.css .jr-sheet.fade), since a sheet's baked crossfade only fits the sheet it was painted over.",
+  "maxSheets": 9,
+  "questOff": 120,
+  "eggCoins": [
+   10,
+   15
+  ],
+  "fade": true
+ },
+ "checks": {
+  "note": "tools/land.js check: the gates a land must pass before --install copies it into levels/, map/ and config.json (with the profile's own: tags, density, runs, pace). quests [lo, hi]: main levels between side quests; paceMedian [lo, hi]: the land's median real pace, ms.",
+  "quests": [
+   3,
+   5
+  ],
+  "paceMedian": [
+   200000,
+   250000
+  ]
+ }
+}
