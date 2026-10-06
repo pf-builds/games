@@ -56,7 +56,8 @@ function view(S) {
 // front card whose partner is still hidden. That tap is scored from the view: the mean of its outcome with the partner
 // played as each colour it could be (every colour with at least the partner's count unseen), weighted by the unseen
 // count of that colour. (The trial swaps the card's colour in B for the one trial and puts it back; the sim's per-colour
-// sapper totals keep the real colour, which only matters to a Hard kill, and the player is graded on Normal.) With the
+// sapper totals keep the real colour, which only matters to a kill (v6, a killing-tower level): there the trial colour's
+// squad counts against that colour's own total, which the deal sums to its blocks, so a kill still reads short.) With the
 // comparison flag mergeLeftovers off, nothing else in a one-tap trial reads a colour the player can't see: the new
 // front's colour never changes the outcome (a refusal and a jam depend only on free spaces and links).
 // v5 R1, mystery blocks: the player can't see a hidden block's colour either. While any block still shows "?", each tap
@@ -277,7 +278,7 @@ function plan(B, rules, n, seed, k, seeing) {
 // a line a win (best), a fail (worst) or the blocks still standing at its end (fewer is better); it plays the best first
 // tap (seeded ties). It plays on the engine itself, so it sees every hidden card and block: the critic's player, the
 // measure that a playtester who plans two or three taps ahead finds a level easy. Returns its win rate over n games.
-// Bounded: turns by the deck, the search by 5^depth taps a turn.
+// Bounded: turns by the deck, the search by 5^depth taps a turn. v6: a kill fails short like any fail, so it scores worst.
 function careful(B, rules, n, seed, depth) {
   const S = E.sim(B, rules), D = Math.max(1, depth | 0), bufs = Array.from({ length: D + 1 }, () => new Int32Array(S.M.length)), pick = new Int32Array(E.NCOL);
   const val = (d) => { if (S.status === E.WON) return 1e9; if (S.status === E.FAILED) return -1e9; if (!d) return -S.pixLeft; const buf = bufs[d]; S.save(buf); let best = -Infinity;
@@ -318,4 +319,8 @@ function pace(B, rules, order, thinkMs) {
   return { won: S.status === E.WON && i === order.length, ms: S.now, taps: i, gap, end: S.now - last };
 }
 
-module.exports = { HIDE_SAMPLES, rate, greedy, orders, solve, narrow, line, fast, view, look, plan, careful, pace, legal, rng };
+// Campaign v6: the careful player's games for level n: CG.games (bake-config grade.careful), or the games of the last
+// CG.byRange entry {from, to (optional), games} that holds n (32 from 150 to 200, so stage 2 can gate on it).
+const carefulGames = (CG, n) => { let g = CG.games; for (const r of CG.byRange || []) if (n >= r.from && (r.to == null || n <= r.to)) g = r.games; return g; };
+
+module.exports = { carefulGames, HIDE_SAMPLES, rate, greedy, orders, solve, narrow, line, fast, view, look, plan, careful, pace, legal, rng };

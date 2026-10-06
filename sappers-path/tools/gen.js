@@ -51,8 +51,10 @@ const coloursOf = (L) => { const s = new Set(); for (const row of L.grid) for (c
 // v4 M4 (the Gallery): D.capOf (optional) {m: [first, rest]} caps colour m's first squad at `first` and every later one at
 // `rest` (the outline: a narrow first breach, then more black squads); with no capOf the deal is exactly as before.
 // v5 R2: a colour lock ({colour: m}) opens when a squad of m goes out, which a deal can't count on: the dealer plays
-// with the lock left shut (one space fewer, the lock dropped), so every deal wins without it.
-const shut = (L, D) => (L.lock && L.lock.colour != null ? [Object.assign({}, L, { lock: null }), D.hold - (D.lockSpaces == null ? 1 : D.lockSpaces)] : [L, D.hold]);
+// with the lock left shut (one space fewer, the lock dropped), so every deal wins without it. v6: with two locks each
+// colour lock is dropped that way (a space fewer each); a key lock stays and opens when its key pops, as before.
+const shut = (L, D) => { const ks = E.locksOf(L), keys = ks.filter((k) => k.colour == null), cl = ks.length - keys.length; if (!cl) return [L, D.hold];
+  return [Object.assign({}, L, { lock: null, locks: keys.length ? keys : null }), D.hold - cl * (D.lockSpaces == null ? 1 : D.lockSpaces)]; };
 function deal(L0, seed, D) {
   const [L, hold] = shut(L0, D), B = E.compile(Object.assign({ cols: [[], [], [], [], []] }, L)), r = rng(seed);
   const S = E.sim(B, { hold, archersKill: true, time: D.time }, { deal: true }), buf = new Int32Array(S.M.length), want = Math.max(1, D.best | 0), top = want > 1 ? new Int32Array(S.M.length) : null;
@@ -290,7 +292,7 @@ function hide(L, seed, H) {
   if (yb < 4) return false;
   const ok = new Uint8Array(w * h); let n = 0;
   for (let y = 2; y < yb; y++) for (let x = 2; x < w - 2; x++) { const c = y * w + x, m = a0[c];
-    if (!(m > 0) || m === IRON || B.keyOf[c] >= 0 || c === B.lockKey || B.towerOf[c] >= 0) continue;
+    if (!(m > 0) || m === IRON || B.keyOf[c] >= 0 || B.lockOf[c] >= 0 || B.towerOf[c] >= 0) continue; // v6: any lock's key
     if (H.skip && L.pal && L.pal[m] && H.skip.indexOf(L.pal[m].r) >= 0) continue; // v5 R4 fix: never the sky, the outline or the boss's king (roles in H.skip)
     let bad = false; for (let k = 0; k < 4 && !bad; k++) { const e = B.nb[c * 4 + k]; if (e >= 0 && (open(e) || a0[e] === IRON)) bad = true; }
     if (!bad) { ok[c] = 1; n++; } }

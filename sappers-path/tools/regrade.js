@@ -7,7 +7,8 @@
 // factor), when the file stores it. v4.3: every level is graded on its own tag only (L.tag; grade[tag], win[tag]); the
 // lookahead, dead time, real pace, fast tapper and the thinking replays (duration.pace.thinks) on it. Land 1 fix: the
 // careful player (grade.careful, bake-config grade.careful's games and depth; grade.obvious, grade.obvious's) and the steady replay (grade.steady, its
-// longest wait between taps and to the end at duration.pace.steady), when the file stores them (land levels).
+// longest wait between taps and to the end at duration.pace.steady), when the file stores them (land levels). Campaign v6:
+// the careful player's games by level (grade.js carefulGames: grade.careful.byRange, 32 from 150 to 200).
 //   ~/.local/opt/node/bin/node tools/regrade.js [--quick] [--levels FILE]   (--quick: rates only, no lookahead player;
 //   --levels: another levels file, e.g. a trial bake's)
 //   ~/.local/opt/node/bin/node tools/regrade.js --gallery [--levels FILE]   v4 M4: levels/gallery.json (or FILE) with the
@@ -40,7 +41,7 @@ function regrade(LV, C, V3, quick) {
     if (g.thinks) { const th = C.duration.pace.thinks.map((x) => (R.pace(B, rt, L.win[d], x).won ? 1 : 0)); checks++; if (JSON.stringify(th) !== JSON.stringify(g.thinks)) say(L, d, "thinking replays", g.thinks, th); }
     if (g.steady) { const st = R.pace(B, rt, L.win[d], C.duration.pace.steady), now = st.won ? { gap: st.gap, end: st.end } : { lost: 1 }; checks++; if (JSON.stringify(now) !== JSON.stringify(g.steady)) say(L, d, "steady replay", g.steady, now); } // Land 1 fix
     if (!quick && g.obvious != null && C.grade.obvious) { const ov = +R.careful(B, rt, C.grade.obvious.games, seed ^ 0x1b873593, C.grade.obvious.depth).toFixed(3); checks++; if (ov !== g.obvious) say(L, d, "obvious player", g.obvious, ov); } // Land 1 fix
-    if (!quick && g.careful != null && C.grade.careful) { const cr = +R.careful(B, rt, C.grade.careful.games, seed ^ 0x6c8e9cf5, C.grade.careful.depth).toFixed(3); checks++; if (cr !== g.careful) say(L, d, "careful player", g.careful, cr); } // Land 1 fix
+    if (!quick && g.careful != null && C.grade.careful) { const cr = +R.careful(B, rt, R.carefulGames(C.grade.careful, L.n), seed ^ 0x6c8e9cf5, C.grade.careful.depth).toFixed(3); checks++; if (cr !== g.careful) say(L, d, "careful player", g.careful, cr); } // Land 1 fix
     if (!quick && g.fast != null) { const fr = +R.fast(B, rt, C.fast.games, seed ^ 0x1f123bb5, C.fast.gapMs).toFixed(4); checks++; if (fr !== g.fast) say(L, d, "fast tapper", g.fast, fr); }
   }
   return { checks, diffs, lines };

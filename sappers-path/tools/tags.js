@@ -44,7 +44,8 @@ function tagOf(n, T, teaching) {
   if (n < T.from) return T.first;
   return T.cycle[(n - T.from) % T.cycle.length];
 }
-const lockOK = (n, tag, L, K) => !(L && L.lock) || (n >= K.from && K.tags.indexOf(tag) >= 0);
+const hasLock = (L) => !!(L && (L.lock || L.locks)); // v6: lock (one) or locks (one or two)
+const lockOK = (n, tag, L, K) => !hasLock(L) || (n >= K.from && K.tags.indexOf(tag) >= 0);
 const FEATS = ["moat", "gate", "linked", "mystery", "tower", "hidden"];
 function featuresOf(L) {
   const f = [];
@@ -58,7 +59,7 @@ function featuresOf(L) {
 }
 const unlockedAt = (n, D) => FEATS.filter((k) => D.unlock[k] != null && n >= D.unlock[k]);
 function densityOK(n, tag, L, D, teaching) {
-  const u = unlockedAt(n, D), f = featuresOf(L), lock = !!L.lock;
+  const u = unlockedAt(n, D), f = featuresOf(L), lock = hasLock(L);
   if (f.some((k) => u.indexOf(k) < 0)) return false; // never a feature before its milestone
   if (teaching) { const nu = u.filter((k) => D.unlock[k] === Math.max(...u.map((q) => D.unlock[q]))); return !lock && nu.every((k) => f.indexOf(k) >= 0); }
   if (tag === "easy") return f.length <= D.easyMax && !lock;
@@ -78,11 +79,11 @@ function densityOK(n, tag, L, D, teaching) {
 const DECK = ["linked", "mystery", "hidden"], BOARD = ["moat"];
 function landDensityOK(tag, L, feats, D) {
   feats = (feats || []).filter((k) => (L.cant || []).indexOf(k) < 0);
-  const u = DECK.concat(BOARD).filter((k) => feats.indexOf(k) >= 0), f = featuresOf(L), lock = !!L.lock, canLock = feats.indexOf("lock") >= 0;
+  const u = DECK.concat(BOARD).filter((k) => feats.indexOf(k) >= 0), f = featuresOf(L), lock = hasLock(L), canLock = feats.indexOf("lock") >= 0;
   if (f.some((k) => u.indexOf(k) < 0) || (lock && !canLock)) return false;
   if (tag === "easy") return f.length <= D.easyMax && !lock;
   if (tag === "normal") return !lock;
   if (tag === "extreme") return f.length === u.length && lock === canLock;
   return tag === "hard";
 }
-module.exports = { TAGS, tagOf, lockOK, FEATS, featuresOf, unlockedAt, densityOK, DECK, BOARD, landDensityOK };
+module.exports = { TAGS, tagOf, hasLock, lockOK, FEATS, featuresOf, unlockedAt, densityOK, DECK, BOARD, landDensityOK };

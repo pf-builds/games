@@ -70,7 +70,7 @@ const FEATURES = {
 function hidePic(L, seed, H, skipIds, face) {
   const B = E.compile(Object.assign({ cols: [[], [], [], [], []] }, L)), r = R.rng(seed ^ 0x7f4a7c15), w = B.w, h = B.h, a0 = B.a0;
   const open = (c) => !(a0[c] > 0), ok = new Uint8Array(w * h), cells = [];
-  for (let c = 0; c < w * h; c++) { const m = a0[c]; if (!(m > 0) || m === E.IRON || m === E.GILT || B.keyOf[c] >= 0 || c === B.lockKey || (skipIds && skipIds.indexOf(m) >= 0) || (face && face[c])) continue;
+  for (let c = 0; c < w * h; c++) { const m = a0[c]; if (!(m > 0) || m === E.IRON || m === E.GILT || B.keyOf[c] >= 0 || B.lockOf[c] >= 0 || (skipIds && skipIds.indexOf(m) >= 0) || (face && face[c])) continue;
     let bad = false; for (let k = 0; k < 4 && !bad; k++) { const e = B.nb[c * 4 + k]; if (e < 0 || open(e)) bad = true; } if (!bad) { ok[c] = 1; cells.push(c); } }
   const want = Math.round(cells.length * (H.share[0] + r() * (H.share[1] - H.share[0]))), hid = new Uint16Array(w * h); let got = 0;
   for (let t = 0; t < 400 && got < want && cells.length; t++) { const c0 = cells[Math.floor(r() * cells.length)], cx = c0 % w, cy = (c0 / w) | 0, rx = H.rx[0] + r() * (H.rx[1] - H.rx[0]), ry = H.ry[0] + r() * (H.ry[1] - H.ry[0]);

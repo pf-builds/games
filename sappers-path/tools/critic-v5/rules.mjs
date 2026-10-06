@@ -20,6 +20,10 @@
 // SPEC-v4 §9 (M1-M5 incl. the Critics 1 fix-pass rules text, M4 ring levels and M5 power-ups), config.json numbers and the
 // level-format comment at the top of src/engine.js. Extends tools/critic-v4-1/rules.mjs (whose open readings are now fixed
 // by SPEC-v4's Critics 1 entry: wary at the send, walk back yard + half x tileMs, disc inclusive).
+// Campaign v6 stage 1 (written from SPEC-v4 §9's "Campaign v6 stage 1" entry): a level's kill: true makes an arrow kill
+// (KILL; the dead sapper is finished; its colour with fewer sappers than standing blocks fails "short"); locks: [one or
+// two] (lock: one), each shutting its own space of the line's last ones (lock 0 the left), opening on its own key or
+// colour; a squad takes the lowest space neither held nor shut; a Ladder's space goes in before the shut run at the end.
 export const GRASS = -1, DIRT = -2, CAMP = -3, WATER = -4, IRON = 10, GILT = 14, MAXLINE = 8;
 const WALK = (v) => v === GRASS || v === DIRT || v === CAMP;
 export const PLAYING = 0, WON = 1, FAILED = -1, NOPLAY = -2, REFUSED = -3;
@@ -51,7 +55,7 @@ export function compile(L) { if (L.ring) throw new Error('ring levels are retire
   let cx0 = w, cx1 = -1; for (let x = 0; x < w; x++) if (a0[campRow * w + x] === CAMP) { cx0 = Math.min(cx0, x); cx1 = Math.max(cx1, x); }
   const clearRank = Array.from({ length: n }, (_, c) => c).sort((p, q) => { const d2 = (c) => (2 * (c % w) - (cx0 + cx1)) ** 2 + (2 * (((c / w) | 0) - campRow)) ** 2; return d2(p) - d2(q) || cmp(tie2(p), tie2(q)); }); // the clear order
   function tie2(c) { return [Math.abs(((c / w) | 0) - campRow), c % w, (c / w) | 0]; }
-  const lockKey = L.lock && L.lock.key ? L.lock.key[1] * w + L.lock.key[0] : -1, lockMat = L.lock && L.lock.colour != null ? L.lock.colour : 0; // v5: key or colour
+  const locks = (L.locks || (L.lock ? [L.lock] : [])).map((lk) => ({ key: lk.key ? lk.key[1] * w + lk.key[0] : -1, mat: lk.colour != null ? lk.colour : 0 })); // v5: key or colour; v6: one or two
   // tie-break key per cell: siege [|y - campRow|, x, y]; ring levels (SPEC-v4 M4) [layer, pos, side]
   const tie = new Array(n);
   for (let c = 0; c < n; c++) { const x = c % w, y = (c / w) | 0;
@@ -59,7 +63,7 @@ export function compile(L) { if (L.ring) throw new Error('ring levels are retire
     const a = Math.min(x, y, w - 1 - x, h - 1 - y), x1 = w - 1 - a, y1 = h - 1 - a; let side, pos;
     if (y === a && x < x1) { side = 0; pos = x - a; } else if (x === x1 && y < y1) { side = 1; pos = y - a; } else if (y === y1 && x > a) { side = 2; pos = x1 - x; } else if (x === a && y > a) { side = 3; pos = y1 - y; } else { side = 0; pos = 0; }
     tie[c] = [a, pos, side]; }
-  return { w, h, n, a0, campRow, gates, towers, isTower, cards, cols, lockKey, lockMat, safe: !!L.safeArchers, ring: !!L.ring, tie, hid, clearRank };
+  return { w, h, n, a0, campRow, gates, towers, isTower, cards, cols, locks, kill: L.kill === true, safe: !!L.safeArchers, ring: !!L.ring, tie, hid, clearRank };
 }
 
 class Heap { constructor() { this.a = []; }
@@ -72,10 +76,11 @@ const lt = (x, y) => x.t < y.t || (x.t === y.t && x.seq < y.seq);
 export class Game {
   // rules: {hold, archersKill, lockSpaces, powers?: [4], pullDepth?}
   constructor(C, rules, time) {
-    this.C = C; this.T = time; this.hold = rules.hold; this.lethal = false; this.powers = rules.powers || [0, 0, 0, 0, 0]; this.pullDepth = rules.pullDepth ?? 2; // v5: archers never kill
+    this.C = C; this.T = time; this.hold = rules.hold; this.lethal = C.kill; this.powers = rules.powers || [0, 0, 0, 0, 0]; this.pullDepth = rules.pullDepth ?? 2; // v5: archers never kill
     const n = C.n; this.a = Int16Array.from(C.a0); this.used = [0, 0, 0, 0, 0, 0];
     this.cols = C.cols.map((c) => c.slice()); this.revealed = new Uint8Array(C.cards.length); this.cn = C.cards.map((c) => c.n);
-    this.locked = C.lockKey >= 0 || C.lockMat > 0 ? Math.min(rules.lockSpaces ?? 1, this.hold - 1) : 0;
+    const per = rules.lockSpaces ?? 1, nShut = C.locks.length ? Math.min(per * C.locks.length, this.hold - 1) : 0; // v6: shut[i] = the lock keeping space i shut (-1 none)
+    this.shut = new Array(this.hold).fill(-1); for (let i = 0; i < nShut; i++) this.shut[this.hold - nShut + i] = Math.min(C.locks.length - 1, Math.floor(i / Math.max(1, per)));
     this.spaces = new Array(this.hold).fill(-1); this.squads = []; this.claimed = new Uint8Array(n);
     this.towerLeft = C.towers.map((t) => t.cells.length);
     this.gateOfKey = new Map(C.gates.map((g, i) => [g.key, i])); this.gateCell = new Uint8Array(n); C.gates.forEach((g) => g.cells.forEach((c) => (this.gateCell[c] = 1)));
@@ -115,8 +120,12 @@ export class Game {
   seen(id) { if (this.revealed[id]) return; this.revealed[id] = 1; const cd = this.C.cards[id]; if (cd.f) this.ev('REVEAL', { id, col: cd.col }); }
   revealFronts() { for (let col = 0; col < 5; col++) { const id = this.front(col); if (id >= 0) this.seen(id); } }
   hidden(id) { const cd = this.C.cards[id]; return !!cd.f && !this.revealed[id] && this.cols[cd.col].includes(id) && this.front(cd.col) !== id; }
+  get locked() { return this.shut.filter((k) => k >= 0).length; }
+  unlock(k, x) { if (!this.shut.includes(k)) return; this.shut = this.shut.map((v) => (v === k ? -1 : v)); this.ev('UNLOCK', x); }
+  keyGone(c) { this.C.locks.forEach((lk, k) => { if (lk.key === c) this.unlock(k, {}); }); }
+  firstFree() { for (let i = 0; i < this.spaces.length; i++) if (this.spaces[i] < 0 && this.shut[i] < 0) return i; return -1; }
   open() { return this.hold - this.locked; }
-  free() { let f = 0; for (let i = 0; i < this.open(); i++) if (this.spaces[i] < 0) f++; return f; }
+  free() { let f = 0; for (let i = 0; i < this.spaces.length; i++) if (this.spaces[i] < 0 && this.shut[i] < 0) f++; return f; }
   needOf(id) { return id < 0 ? 99 : this.C.cards[id].partner >= 0 ? 2 : 1; }
   need(col) { return this.needOf(this.front(col)); }
   // why a front card's tap is refused, judged on given fronts (fr[col] = card or -1): 0 legal/no card, 1 no free space, 2 linked with < 2, 3 partner not a front
@@ -125,7 +134,7 @@ export class Game {
   fronts() { return [0, 1, 2, 3, 4].map((c) => this.front(c)); }
   whyCol(col) { return this.whyOf(this.front(col), this.fronts()); }
   legal(col) { return this.front(col) >= 0 && this.whyCol(col) === 0; }
-  place(id) { let sp = -1; for (let i = 0; i < this.open(); i++) if (this.spaces[i] < 0) { sp = i; break; }
+  place(id) { const sp = this.firstFree();
     const cd = this.C.cards[id], n = this.cn[id], s = { id: this.squads.length, card: id, m: cd.m, n, waiting: n, out: 0, wary: false, last: -1e9, ord: this.placeSeq++, space: sp, partner: -1, done: false, enRoute: 0, col: cd.col };
     this.squads.push(s); this.spaces[sp] = s.id; const col = this.cols[cd.col]; col.splice(col.indexOf(id), 1); return s; }
   play(col, t) {
@@ -137,7 +146,7 @@ export class Game {
     this.colourOpen(s1); if (s2) this.colourOpen(s2);
     this.plays++; this.peak = Math.max(this.peak, this.spaces.filter((v) => v >= 0).length);
     this.dispatch(); this.checkRest(); return 0; }
-  colourOpen(s) { if (this.locked && this.C.lockMat > 0 && s.m === this.C.lockMat) { this.locked = 0; this.ev('UNLOCK', { m: s.m }); } } // v5: a colour lock
+  colourOpen(s) { this.C.locks.forEach((lk, k) => { if (lk.mat > 0 && lk.mat === s.m) this.unlock(k, { m: s.m }); }); } // v5: a colour lock (v6: its own)
   inView(id) { const cd = this.C.cards[id]; if (!cd) return false; const p = this.cols[cd.col].indexOf(id); return p >= 0 && p <= this.pullDepth; }
   // -- power-ups (SPEC-v4 §9 M5; v5 R1's Quartermaster) --
   canPower(k, a) { const no = (w) => { this.why = w; return REFUSED; }; this.why = ''; if (this.status !== PLAYING) { this.why = 'noplay'; return NOPLAY; } if (this.used[k] >= (this.powers[k] || 0)) return no('perLevel');
@@ -151,11 +160,11 @@ export class Game {
       if (s.partner >= 0) return no('linked'); if (s.out > 0) return no('sappersOut'); if (s.waiting <= 0 || s.done) return no('noneWaiting'); return 0; }
     return no('badK'); }
   power(k, a, t) { if (t !== undefined) this.advanceTo(t); const r = this.canPower(k, a); if (r !== 0) return r; this.used[k]++;
-    if (k === 0) { const s = this.open(); this.spaces.splice(s, 0, -1); this.hold++; this.ev('POWER', { k, a: s }); }
+    if (k === 0) { let s = this.spaces.length; while (s > 0 && this.shut[s - 1] >= 0) s--; this.spaces.splice(s, 0, -1); this.shut.splice(s, 0, -1); this.hold++; this.ev('POWER', { k, a: s }); }
     else if (k === 1) { const cd = this.C.cards[a], pid = cd.partner; // v5: the card leaves its column (revealed as it goes), then its partner; POWER; then they take spaces like a tap
       const leave = (id) => { const c = this.C.cards[id], wasFront = this.front(c.col) === id; this.seen(id); const col = this.cols[c.col]; col.splice(col.indexOf(id), 1); if (wasFront) { const f = this.front(c.col); if (f >= 0) this.seen(f); } };
       leave(a); if (pid >= 0) leave(pid); this.ev('POWER', { k, a });
-      const put = (id) => { let sp = -1; for (let i = 0; i < this.open(); i++) if (this.spaces[i] < 0) { sp = i; break; } const c = this.C.cards[id], n = this.cn[id];
+      const put = (id) => { const sp = this.firstFree(); const c = this.C.cards[id], n = this.cn[id];
         const s = { id: this.squads.length, card: id, m: c.m, n, waiting: n, out: 0, wary: false, last: -1e9, ord: this.placeSeq++, space: sp, partner: -1, done: false, enRoute: 0, col: c.col };
         this.squads.push(s); this.spaces[sp] = s.id; this.ev('TAP', { m: s.m, n: s.n, sp }); return s; };
       const s1 = put(a), s2 = pid >= 0 ? put(pid) : null; if (s2) { s1.partner = s2.id; s2.partner = s1.id; } this.colourOpen(s1); if (s2) this.colourOpen(s2); this.peak = Math.max(this.peak, this.spaces.filter((v) => v >= 0).length);
@@ -169,7 +178,7 @@ export class Game {
   // columns (cut), its squads out of the line, its sappers 0, a colour lock of m open; then the dispatch (in power()).
   removeCell(c, how) { const m = this.a[c]; this.a[c] = DIRT; this.claimed[c] = 0; this.standing[m]--; this.pixLeft--; this.dirty = true; this.ev(how, { c, m });
     if (this.C.isTower[c]) this.C.towers.forEach((tw, k) => { if (tw.cells.includes(c)) { this.towerLeft[k]--; if (!this.towerLeft[k]) this.ev('TOWER', { k }); } });
-    if (c === this.C.lockKey && this.locked) { this.locked = 0; this.ev('UNLOCK', {}); }
+    this.keyGone(c);
     if (this.gateOfKey.has(c)) { for (const g of this.C.gates[this.gateOfKey.get(c)].cells) if (this.a[g] > 0) { this.standing[this.a[g]]--; this.a[g] = DIRT; this.pixLeft--; } this.ev('GATE', {}); }
     this.expose(true); }
   volley(m) { this.ev('POWER', { k: 4, a: m });
@@ -180,7 +189,7 @@ export class Game {
       const p = s.partner >= 0 ? this.squads[s.partner] : null; if (p) { p.partner = -1; s.partner = -1; } this.spaces[s.space] = -1; this.ev('FREE', { sp: s.space, m }); s.space = -1;
       if (p && p.done && p.space >= 0 && this.spaces[p.space] === p.id) { this.spaces[p.space] = -1; this.ev('FREE', { sp: p.space, m: p.m }); } } // its partner, done and held only by the link, frees with it
     for (const s of this.squads) if (s.partner >= 0 && this.squads[s.partner].cut) s.partner = -1;
-    if (this.locked && this.C.lockMat === m) { this.locked = 0; this.ev('UNLOCK', { m }); }
+    this.C.locks.forEach((lk, k) => { if (lk.mat === m) this.unlock(k, { m }); });
     if (this.pixLeft === 0 && this.status === PLAYING) { this.status = WON; this.winAt = this.now; }
     if (this.status === PLAYING) this.dispatch(); }
   // -- time --
@@ -205,7 +214,7 @@ export class Game {
     if (ev.type === 'POP') { const c = ev.c, m = this.a[c]; this.a[c] = DIRT; this.claimed[c] = 0; this.standing[m]--; this.pixLeft--; this.dirty = true; s.enRoute--;
       this.ev('EAT', { c, m });
       if (this.C.isTower[c]) this.C.towers.forEach((tw, k) => { if (tw.cells.includes(c)) { this.towerLeft[k]--; if (!this.towerLeft[k]) this.ev('TOWER', { k }); } });
-      if (c === this.C.lockKey && this.locked) { this.locked = 0; this.ev('UNLOCK', {}); }
+      this.keyGone(c);
       if (this.gateOfKey.has(c)) { for (const g of this.C.gates[this.gateOfKey.get(c)].cells) if (this.a[g] > 0) { this.standing[this.a[g]]--; this.a[g] = DIRT; this.pixLeft--; } this.ev('GATE', {}); }
       this.expose(true);
       this.sched(this.now + T.yardMs + ev.tiles * T.carryMs, 'HOME', { carrier: 1 });
