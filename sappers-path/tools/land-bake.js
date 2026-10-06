@@ -11,8 +11,10 @@
 //      subject with the plan's openings, Land 2 on; mystery blocks: hidePic; the lock: a key block dug in, gen.js lockKey,
 //      when the gilt clears the picture's colours, else a colour lock set from the deal), deal (gen.js deal, the dealing
 //      rules: 5 spaces), link pairs (linkUp), tune into the tag's band (gen.js tune, all-seeing past mystery blocks as
-//      bake.js does), deck, grade on the tag (gradeLevel: a stored winning order, rate, lookahead, real pace and
-//      thinking replays, fast tapper; no power-ups in any of it).
+//      bake.js does; the one-move-lookahead player is narrowed toward the tag's ceiling for the narrowFor tags and, Land 1
+//      on, for any tag the land's profile gives a ceiling, as the castle's Normal levels had one), deck, grade on the tag
+//      (gradeLevel: a stored winning order, rate, lookahead, real pace and thinking replays, fast tapper; no power-ups in
+//      any of it).
 //   3. The pick: every target met (band, real pace in range, the longest tap, the taps, the fast tapper, the pairs, the
 //      lookahead ceiling), nearest the band's middle and the pace aim; else the least total miss, logged as a fallback.
 //   4. ? cards (mystify, as bake.js's: placed in the rows behind the front, measured by the sampling planner).
@@ -154,7 +156,7 @@ function bakeOne(job) {
       const play = P.links ? G.linkUp(L, dl.play, P.links, seed, D0) : dl.play;
       if (ctx.lock === "colour") { const first = new Map(); play.forEach((p, i) => { for (const m of p.length >= 4 ? [p[0], p[2]] : [p[0]]) if (!first.has(m) && m !== E.GILT) first.set(m, i); });
         const want = PL.lockAt * play.length, best = [...first].sort((p, q) => Math.abs(p[1] - want) - Math.abs(q[1] - want) || p[1] - q[1])[0]; if (best) L.lock = { colour: best[0] }; }
-      const T = Object.assign({}, B.tune, { seed: seed ^ 0x3c6ef372, maxTaps: B.maxTaps, maxWaitMs: B.maxWaitMs }, B.narrowFor.indexOf(tag) >= 0 ? { narrow: Object.assign({}, B.tune.narrow, job.look != null ? { stopAt: job.look } : {}) } : { narrow: null });
+      const T = Object.assign({}, B.tune, { seed: seed ^ 0x3c6ef372, maxTaps: B.maxTaps, maxWaitMs: B.maxWaitMs }, B.narrowFor.indexOf(tag) >= 0 || job.look != null ? { narrow: Object.assign({}, B.tune.narrow, job.look != null ? { stopAt: job.look } : {}) } : { narrow: null });
       const Lt = L.hidden ? Object.assign({}, L, { hidden: undefined }) : L; // tuned all-seeing (bake.js: the honest grade below stays at or under the target)
       const res = G.tune(Lt, play, G.assign(play, 0, seed), band[0], band[1], T, { normal: rules[tag], deal: Object.assign({}, dealRules, D0) }); stats.evals += res.evals;
       const dk = G.deck(res.play, res.colOf); if (dk.bad) { out.push({ k, seed, fail: "a linked partner more than a row from its card" }); continue; }
