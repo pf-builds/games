@@ -1331,7 +1331,14 @@
   function panelSecondary() { if (!app.panel || !panelLive()) return; if (app.panel === "win") retry(); else toMap(); }
   // The map, scrolled to the current node (showScreen: map.curAt down); after a win the node just opened and any side quest
   // that win opened (app.fresh) pulse (config map.fresh; none under reduced motion).
-  function toMap() { const q = app.fresh; app.fresh = null; showScreen("map"); return freshPulse(q); }
+  // v6: a side quest that win opened is scrolled into view when its node or prize bubble sits past the view's edge (a
+  // short screen); the current node is one step up the road from it, so on most screens both show.
+  function toMap() { const q = app.fresh; app.fresh = null; showScreen("map"); questsInView(q); return freshPulse(q); }
+  function questsInView(qs) {
+    const sc = $("jr"), v = sc.getBoundingClientRect();
+    for (const e of qs || []) { if (!e.node || !e.node.isConnected) continue; const r = e.node.getBoundingClientRect(), p = e.node.querySelector(".prz"), pr = p ? p.getBoundingClientRect() : r, lo = Math.max(r.bottom, pr.bottom) - v.bottom + 12, hi = v.top - Math.min(r.top, pr.top) + 12;
+      if (lo > 0) sc.scrollTop += lo; else if (hi > 0) sc.scrollTop -= hi; } // the quest just opened wins over the current node on a very short view (812x375)
+  }
   function freshPulse(qs) {
     const F = app.cfg.map.fresh, J = app.jr; if (!F || !J || app.V.calm) return 0;
     const f = focusOf(), fe = f && f !== "tail" ? app.byId.get(f) : null, tb = J.tail && !J.tail.b.hidden ? J.tail.b : null, els = [fe ? fe.node : tb];
@@ -1871,7 +1878,7 @@
       refused: app.refused, march: app.march, pace: app.cfg ? paceNow() : 1, li: S ? Object.assign({}, readLine()) : null,
       open: S ? S.open : null, locked: S ? S.locked : 0, links: B ? B.nlinks : 0, hidden: S ? Array.from({ length: B.ncards }, (_, c) => S.hidden(c)).filter(Boolean).length : 0, debug: !!(app.entry && app.entry.debug), w: B ? B.w : 0, h: B ? B.h : 0 };
   }
-  const resolve = (id) => (typeof id === "number" ? (app.levels.find((e) => e.n === id) || {}).id : id);
+  const resolve = (id) => (typeof id === "number" ? ((app.modes ? app.modes.campaign.levels : app.levels).find((e) => e.n === id) || {}).id : id); // v6: a number is always a Campaign level
   const hitOK = (el) => { if (!el) return false; const r = el.getBoundingClientRect(); if (!(r.width > 0 && r.height > 0)) return false; const t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!t && (t === el || el.contains(t)); };
   const dispMatches = () => { const S = app.S, V = app.V; for (let c = 0; c < app.B.n; c++) if ((V.disp[c] > 0) !== (S.a[c] > 0)) return false; return true; };
   function tick(ms) { let left = Math.max(0, Math.min(600000, +ms || 0)); while (left > 0) { const d = Math.min(16, left); step(d); left -= d; } if (app.screen === "play" && app.V) app.V.draw(); return state(); }
@@ -2975,7 +2982,7 @@
     finally {
       for (const k of Object.keys(ST)) app.byId.delete("fx-" + k); // every fixture registered for the run
       app.allPw = false; if (app.tip) hideTip(); app.tipQ = []; app.clipFake = null; holdStop(); // v5.4
-      if (zenOn()) { useMode("campaign"); app.modes.zen.save = was.zsave; } app.save = was.save; app.meta = was.meta; app.now = was.now; app.testing = false; if (was.mode) useMode(was.mode); // v6 setSpeed(was.speed, false); setCb(was.cb, false); app.diff = was.diff;
+      if (zenOn()) { useMode("campaign"); app.modes.zen.save = was.zsave; } app.save = was.save; app.meta = was.meta; app.now = was.now; app.testing = false; if (was.mode) useMode(was.mode); setSpeed(was.speed, false); setCb(was.cb, false); app.diff = was.diff; // v6: both saves and the mode back
       setSound(was.sfx, was.music, false); Audio.hushed(app.audio, false); // v5.2
       if (was.entry) startLevel(was.entry.id, was.diff); showScreen(was.screen); renderAll();
     }
@@ -3013,7 +3020,7 @@
     // map (sheets requested, the scroll, the current node, eggs found) for the harness and the screens.
     map: () => { const J = app.jr; if (!J) return null; const sc = $("jr"), f = JN.focus(app.save.data, app.order);
       return { sheets: J.sheets.length, loaded: J.sheets.filter((h) => h.loaded).length, k: +J.k.toFixed(4), colW: J.colW, cards: $("map").classList.contains("cards"), scrollTop: Math.round(sc.scrollTop), height: sc.clientHeight, world: $("jr-world").offsetHeight, focus: f, eggs: Object.keys(app.save.data.eggs || {}).length, tail: J.tail && J.tail.e ? J.tail.e.id : null }; },
-    gallery: () => app.gal.map((e) => e.id), entry: () => app.V.entryInfo(),
+    gallery: () => app.gal.map((e) => e.id), zen: () => (zenOn() ? app.modes.zen.levels.concat(app.modes.zen.gal).map((e) => e.id) : []), mode: () => app.mode, entry: () => app.V.entryInfo(),
     // v4 M5: win siege levels 1..n (normal) in the live save (screens for the harness and the critics); a power-up through
     // its badge (k), and for the Quartermaster or Recall a target (the tile [j, d] or the space); the meta state.
     // v4.3: clearPictures(k): clear the Gallery's first k pictures in the live save (the screens' sequential Gallery).

@@ -119,3 +119,24 @@ adds the land to `config.json` `lands.list` and a row per new sheet to `map.eggC
   do per land.
 - A land's sheets are its 2 files used over and over; the map shows them mirrored every other pair. The castle's summit
   sheet (25) has fog painted at its top: the first land's bottom crossfade sits over it.
+
+## 6. Zen (v6 lane B): a land is a Zen world
+
+From v6 every land plays in **Zen mode**, not after level 200 of the campaign (`tools/zen-mode-notes.md`). The land is
+still built and installed exactly as above (levels.json, gallery.json, layout.json, config `lands.list`); the page leaves
+every land out of the Campaign and plays it in Zen. To show a newly installed land in Zen, append one world to
+`levels/zen.json` `worlds`:
+
+```json
+{"k": 3, "land": 2, "era": 10, "name": "Snack Galaxy", "lore": "One calm line: no goblins, forts or assaults."}
+```
+
+- `k` is the world's place on the Zen map (World 1 The Gallery, World 2 Kitten Forest, then each land in order);
+  `land` the land's `k`; `era` = 8 + land (`castleRealms + land`). Its levels, side quests, sheets, eggs (Zen ids
+  `z<world>-<sheet in the world>-<i>`) and egg coins come from the land's own data. Its first level is open from the start.
+- Use a casual profile (Kitten Forest's, `tools/lands/01-kitten-forest/land.json`): mostly Easy and Normal, a few Hard, no
+  Extreme, no locks.
+- Words: a Zen level wins "Picture done" / "{title}, all dug out." and fails "A little stuck" (config `zen.text`); `lands.text`
+  is no longer shown.
+- Checks as §4, plus test.js's and selfTest's Zen sections (they read every world). A world of pictures the game already
+  has (World 1) is made with `tools/zen-world.js` and lives in zen.json itself (`map.sheets` reuses castle sheets mirrored).

@@ -176,8 +176,9 @@ async function run() {
         ok(au.length === 0 && mu.fetches === 0 && mu.ctx === "none", tag + " music (v5.2): nothing fetched and no audio context before the first tap (" + au.length + " audio requests, " + bytes + " bytes so far)"); }
       await tap("#btn-play"); let clicks = 1;
       await F.waitForFunction(() => SP.state().screen === "play", null, { timeout: 5000 });
-      { const okM = await F.waitForFunction(() => SP.music().cur === "play", null, { timeout: 15000 }).then(() => true, () => false), mu = await ev(() => SP.music());
-        ok(okM && mu.ctx === "running" && mu.firstFetchAt >= mu.unlockAt, tag + " music (v5.2): the first tap starts the context and level 1 plays the play loop (" + JSON.stringify({ ctx: mu.ctx, cur: mu.cur, loaded: mu.loaded }) + ")"); }
+      { const lt = (await ev(() => SP.zen().length)) ? "theme" : "play"; // v6: the Campaign carries the map's theme into its levels
+        const okM = await F.waitForFunction((t) => SP.music().cur === t, lt, { timeout: 15000 }).then(() => true, () => false), mu = await ev(() => SP.music());
+        ok(okM && mu.ctx === "running" && mu.firstFetchAt >= mu.unlockAt, tag + " music (v5.2, v6): the first tap starts the context and level 1 plays the " + lt + " loop (" + JSON.stringify({ ctx: mu.ctx, cur: mu.cur, loaded: mu.loaded }) + ")"); }
       R.loadToGameplayMs = Date.now() - t0; R.clicksToGameplay = clicks;
       let s = await S();
       ok(s.screen === "play" && s.n === 1 && s.status === "playing", tag + " title Play reaches level 1 in one tap (" + s.screen + " " + s.n + ")");
@@ -365,7 +366,7 @@ async function run() {
         const m0 = await ev(() => SP.map()); R.map = m0;
         ok(m0 && m0.loaded < m0.sheets && !(await ev(() => !!document.getElementById("map-gallery") || !!document.getElementById("gallery"))) && (await noScroll()), tag + " map: no Gallery screen or button; " + (m0 && m0.loaded) + " of " + (m0 && m0.sheets) + " sheets requested at open; no page scrollbars");
         const toMid = (sel) => ev((q) => { const el = document.querySelector(q), sc = document.getElementById("jr"); sc.scrollTop += el.getBoundingClientRect().top + el.offsetHeight / 2 - sc.getBoundingClientRect().top - sc.clientHeight / 2; }, sel);
-        const gi = await ev(() => SP.gallery().findIndex((id, i) => i < 25 && /^g-met-/.test(id))), gid = await ev((i) => SP.gallery()[i], gi), sel = `.qn[data-id="${gid}"]`;
+        const gi = await ev(() => { const g = SP.gallery(), m = g.findIndex((id, i) => i < 25 && /^g-met-/.test(id)); return m >= 0 ? m : g.findIndex((id) => SP.quest(id) && SP.quest(id).after <= 200); }), gid = await ev((i) => SP.gallery()[i], gi), sel = `.qn[data-id="${gid}"]`; // v6: the paintings are Zen's; any campaign picture
         await toMid(sel); await L(sel).click({ force: true, timeout: 5000 }); s = await S(); ok(s.screen === "map", tag + " a real tap on a locked side quest (" + gid + ") stays on the map");
         await ev((i) => { SP.unlockTo(SP.quest(SP.gallery()[i]).after); SP.screen("map"); }, gi); await toMid(sel); await page.waitForTimeout(100);
         ok(await hit(sel), tag + " the open side quest's node is hittable"); if (vp.shots === "375" || vp.shots === "1280") await shot("map-quest");
@@ -386,6 +387,9 @@ async function run() {
         await ev((id) => SP.load(id), gcells.id); await page.waitForTimeout(300); await shot("gallery-smallest-cell");
         ok(await noScroll(), tag + " the smallest Gallery board: no scrollbars");
       }
+      // v6 lane B: every Zen board (World 1, Kitten Forest and its side quests) keeps the cell size too; then back to the Campaign.
+      { const zc = await ev(() => { let w = null; for (const id of SP.zen()) { const st = SP.load(id), px = +(st.cs / devicePixelRatio).toFixed(2); if (!w || px < w.px) w = { id, px }; } SP.load(1); return w; });
+        R.zenMinCell = zc; if (zc) ok(zc.px >= (vp.minCell || MIN_CELL) && (await ev(() => SP.mode())) === "campaign", tag + " every Zen board keeps " + (vp.minCell || MIN_CELL) + " CSS px a cell or more (smallest " + JSON.stringify(zc) + ")"); }
 
       // Screens for the critics (portrait phone): the gate teach, an archer hit mid-animation, the win's collapse and goblin.
       if (vp.shots === "375") {
@@ -488,6 +492,23 @@ async function run() {
           rows.push(w + "x" + h + " " + g.k + " " + (g.off * 100).toFixed(1) + "%");
           ok(Math.abs(g.off) <= A.maxOff && Math.abs(g.art.width - g.box.width) < 0.5 && Math.abs(g.art.height - g.box.height) < 0.5, "home (v5.3) " + w + "x" + h + ": the " + g.k + " painting covers the home's " + Math.round(g.box.width) + "x" + Math.round(g.box.height) + " box, the castle " + (g.off * 100).toFixed(1) + "% off its centre (limit " + A.maxOff * 100 + "%)"); }
         await ctx.close(); } }
+    // v6 lane B (Zen mode): a v5-era save (format 2, with a Kitten Forest level, a World 1 picture, a Wandering Gallery
+    // picture and a Kitten Forest egg) seeded before the page loads; the first v6 load moves them to Zen once, the home
+    // shows both cards, a real tap on each plays that mode's next level, and the Campaign save keeps everything it had.
+    { const ctx = await browser.newContext({ viewport: { width: 375, height: 812 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
+      await ctx.addInitScript(() => { if (sessionStorage.getItem("seeded")) return; sessionStorage.setItem("seeded", "1"); localStorage.setItem("sappers-path.v3", JSON.stringify({ v: 2, done: { "e1-01": 1, "e1-02": 1, "e1-03": 1, "e9-201": 1 }, gal: { "g-tw-1f355": 1, "g-w-poppy-field-giverny": 1 }, eggs: { "s26-0": 1, "s1-0": 1 }, best: { "e9-201": [200000, 50, 30] }, coins: 777, inv: { ladder: 2 }, got: { ladder: 1 }, settings: { music: false, sfx: true, cb: false, speed: 1 }, last: "e1-04", lands: 1 })); });
+      const page = await ctx.newPage(), tag = "v6 old save";
+      page.on("console", (m) => { if (m.type() === "error" || m.type() === "warning") report.console.push(tag + " " + m.type() + ": " + m.text()); });
+      page.on("pageerror", (e) => report.console.push(tag + " pageerror: " + e.message));
+      await page.goto(URL_ + "?debug=1", { waitUntil: "load" }); await page.waitForFunction(() => window.SP, null, { timeout: 15000 });
+      const h = await page.evaluate(() => { const z = JSON.parse(localStorage.getItem("sappers-path.zen.v1") || "null"), c = JSON.parse(localStorage.getItem("sappers-path.v3")); return { z, c, camp: document.getElementById("home-camp").textContent, zen: document.getElementById("home-zen").textContent, cards: [...document.querySelectorAll("#home-modes .mode-card")].filter((b) => !b.hidden).length, tabs: document.querySelectorAll(".tabs .tab").length }; });
+      ok(h.z && h.z.moved === 1 && h.z.done["z1-3"] === 1 && h.z.done["e9-201"] === 1 && h.z.gal["g-w-poppy-field-giverny"] === 1 && h.z.eggs["z2-1-0"] === 1 && !("coins" in h.z) && h.c.done["e9-201"] === 1 && h.c.gal["g-tw-1f355"] === 1 && h.c.coins === 777 && h.cards === 2 && h.tabs === 2 && /^3 of /.test(h.zen) && h.camp === "Fort 4 of 200",
+        tag + ": the first v6 load moves Zen's part once (World 1's Pizza Slice, 201, picture 61, Kitten Forest's egg), the Campaign save keeps all of it and the wallet (777 coins); the home shows 2 cards ('" + h.camp + "', '" + h.zen + "') and 2 tabs");
+      await page.click("#btn-zen"); await page.waitForFunction(() => SP.state().screen === "play", null, { timeout: 5000 }); const zs = await page.evaluate(() => SP.state());
+      await page.click("#btn-map"); await page.click("#btn-home"); await page.click("#btn-play"); await page.waitForFunction(() => SP.state().screen === "play", null, { timeout: 5000 }); const cs = await page.evaluate(() => SP.state());
+      await page.reload({ waitUntil: "load" }); await page.waitForFunction(() => window.SP, null, { timeout: 15000 }); const again = await page.evaluate(() => { const z = JSON.parse(localStorage.getItem("sappers-path.zen.v1")); return { n: Object.keys(z.done).length, mode: z.mode, coins: JSON.parse(localStorage.getItem("sappers-path.v3")).coins }; });
+      ok(zs.id === "z1-1" && cs.id === "e1-04" && again.n === 2 && again.mode === "campaign" && again.coins === 777, tag + ": a real tap on Zen's card plays " + zs.id + ", on the Campaign's plays " + cs.id + "; a reload keeps Zen (" + again.n + " cleared, the move not run again), the last mode (" + again.mode + ") and the wallet");
+      await ctx.close(); }
     // Hidden-tab load: rAF never fires, document.hidden is true; everything must still run on SP.tick.
     const ctx = await browser.newContext({ viewport: { width: 375, height: 812 }, deviceScaleFactor: 2 });
     await ctx.addInitScript(() => {

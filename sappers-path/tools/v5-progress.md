@@ -354,3 +354,28 @@ game at `/sappers-path/`). 201-250 are NOT added to the frozen set (the orchestr
 ### State (Land 1 fixes)
 Casual Land 1 installed and checked on the branch; not pushed; 201-250 not frozen (the orchestrator decides). The harder
 profile and its tooling are documented for the campaign rebalance (notes §10.2, §10.6).
+
+# v6 lane B: Campaign and Zen modes (2026-10-06)
+
+Source: the orchestrator's lane B brief (2026-10-06) and `game-research/sappers-path-v4/v6-plan.md` "Lane B: UX approved"
+(Peter's calls) and Step 0. Notes: `tools/zen-mode-notes.md`. Shots: `tools/shots-zen/` (gitignored; `tools/shots-zen.mjs`).
+Dev server 8495 (worktree root). Lane A (campaign-v6) owns levels 1-200, the campaign quest list and its prizes;
+levels.json, gallery.json and layout.json are untouched here.
+
+## How to resume (v6 lane B)
+
+1. Read this table, then `tools/zen-mode-notes.md`; `git log --oneline` ("Sapper's Path v6 lane B: ...").
+2. Take the first row not `done`.
+
+| # | Piece | State | Commit |
+|---|---|---|---|
+| B1 | Zen World 1 data: the 36 re-dealt on the casual profile (`tools/zen-world.js`, `levels/zen.json`) | done: check PASS first run, 0 fallbacks, median 197 s, re-grade 0 of 324 | f1fc68b |
+| B2 | Modes on the page: home cards, map chip, per-mode map, Zen save + shared wallet, one-time move, SP2, reset per mode, Zen words, music per mode | done | 6fd91dd |
+| B3 | Checks: selfTest Zen section, test.js Zen section; quiet win beat in Zen; playtest `--jump z<k>:<n>`; bundle ships zen.json | done | 38d1163 |
+| B4 | Home card faces, `regrade.js --zen`, `tools/shots-zen.mjs`, cache tag `?v=46` | done | b32d92c |
+| B5 | A fresh quest scrolled into view on short screens; harness v6 block (old save -> both modes), Zen cell sizes; SP.zen/SP.mode | done | (this commit) |
+| B6 | Notes, runbook §6, SPEC-v4 §9 entry, LATER | done | (this commit) |
+| B9 | Final checks | see State | (this commit) |
+
+### State (v6 lane B)
+Built and checked on the branch; not pushed. Next: one critic round on both modes, one fix pass, then lane E merges lane A.
