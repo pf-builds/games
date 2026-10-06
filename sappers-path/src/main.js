@@ -882,7 +882,7 @@
   // Lands foundation (Peter, 2026-10-06): the play screen's gear opens Settings over the level; while it (or a sheet it
   // opens) shows, the level holds still (app.held: the engine and the show stop; the app clock runs on, so the reset's
   // press-and-hold still fills), and closing it plays on with no jump. The Paused sheet keeps its own quick toggles.
-  function heldPlay() { app.held = app.screen === "play" && (!$("settings").hidden || subOpen()); }
+  function heldPlay() { app.held = app.screen === "play" && (!$("settings").hidden || subOpen()); document.body.classList.toggle("held", app.held); } // a power-up tip waits under Settings (style.css body.held)
   // ---- v5.4: reset and the save code -----------------------------------------------------------------------------------
   // Each sheet (reset, the code, a load) takes Settings' place over the home or the map; closing one goes back to Settings.
   const SUBS = ["resetsheet", "codesheet", "loadsheet"], RT = () => app.cfg.reset.text, CT = () => app.cfg.saveCode.text, codeOn = () => !!(app.cfg.saveCode && app.cfg.saveCode.on);
@@ -955,7 +955,7 @@
     if (name === "gallery") name = "map"; // v5 R3: the Gallery is the journey map now
     if (name !== "play") { app.pick = null; document.body.classList.remove("picking"); }
     $("settings").hidden = true; $("tailsheet").hidden = true; holdStop(); for (const k of SUBS) $(k).hidden = true; // v5.4: its sheets too
-    app.screen = name; app.held = false; music(); // lands foundation: no Settings over a new screen
+    app.screen = name; app.held = false; document.body.classList.remove("held"); music(); // lands foundation: no Settings over a new screen
     $("title").hidden = name !== "title"; $("map").hidden = name !== "map";
     if (name === "title") renderHome();
     if (name === "map") { layoutMap(); renderMap(); scrollMap(); } // v5 R3: the current node about map.curAt down the view

@@ -267,7 +267,7 @@ Gallery). Notes: `tools/lands-foundation-notes.md`. Runbook for the factory loop
 | L6 | The play screen's gear (Settings over a level, held still) | done | (see git log) |
 | L7 | Tests (lands section, castle-scoped views), freeze snapshot 1-200, `?v=42` | done | c8d61a6 |
 | L8 | Demo land (10 levels, scratch) + shots, selfTest/test/critic/freeze on a copy with it installed | done: every gate PASS, median pace 208 s; copy checks all green | (docs commit) |
-| L9 | Checks on the branch (test.js, freeze, regrades, critic-v5, selfTest x2, harness), notes, SPEC §9, runbook | done (harness: see State) | (docs commit) |
+| L9 | Checks on the branch (test.js, freeze, regrades, critic-v5, selfTest x2, harness), notes, SPEC §9, runbook | done: test.js 611/0; freeze PASS (200 + 60 + 283 castle cases, 0); regrades 0/0; critic-v5 0 of 8,712 games; selfTest 781/0 (375x812@3), 783/0 (1280x720), 781/0 (360x640@3); harness all passed, 0 console | d073545 + last |
 
 ### State (lands foundation)
 Foundation built and checked; the live game is unchanged until a land is installed (except the play screen's gear).

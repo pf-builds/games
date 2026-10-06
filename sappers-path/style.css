@@ -55,6 +55,7 @@ button.primary:active:not(:disabled) { box-shadow: inset 0 3px 0 var(--gold-hi),
 button.round { width: 42px; height: 42px; min-height: 42px; padding: 0; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex: none; }
 /* Lands foundation: the play bar's buttons answer 4 px round their face, so a 36-38 px button on a short phone still
    takes a 44 px tap (the bar's 6 px gaps share 2 px between neighbours). */
+body.held #pwtip { visibility: hidden; } /* lands foundation: a power-up tip waits while Settings is open over a level */
 #top { position: relative; z-index: 4; } #top button.round { position: relative; } #top button.round::after { content: ""; position: absolute; inset: -7px; } /* 4 px past the 3 px border; #top over the stage's top edge (sheets, modals, the pause and the screens stay above it) */
 button.big { min-height: 58px; font-size: 36px; width: 100%; }
 .panel { background: var(--parch); color: var(--parch-ink); border: 3px solid var(--ink); border-radius: 8px;
