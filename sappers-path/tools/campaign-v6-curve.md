@@ -14,12 +14,12 @@ Careful player (3 taps ahead, all-seeing, 16 games) mean win rate by realm: 1.00
 124 of 200 levels at 0.9 or more. Tags didn't track it (realm 7 Extreme 0.85 > its Normal 0.68).
 
 ## Peter's calls (2026-10-06)
-1. Kill rule: towers kill on Hard and Extreme, knock back on Normal (as v4.3); from 150 every tower kills.
+1. Archer gradient (revised later on 10/6): Normal knocks back, Hard PINS (the hit sapper is out of play until its tower falls, then rejoins; still winnable), Extreme KILLS (the short fail). Replaces the earlier "kill on H/X, all kill from 150".
 2. Tower boards: restore the v4.3 towers on chosen levels in realms 3-4, add new tower pixels in realm 5. Ids stay.
 3. Spaces: Extreme levels from 150 carry 2 locks (start with 3 of 5 open).
 
 ## Tag mix (E / N / H / X)
-| Realm | Levels | Today | Proposed | Killing-tower levels |
+| Realm | Levels | Today | Proposed | Tower levels |
 |---|---|---|---|---|
 | 1 Greenmarch | 1-24 | 5/14/5/0 | 6/14/3/1 | 0 |
 | 2 Fenwater | 25-49 | 3/16/6/0 | 4/12/6/3 | 0 |
@@ -34,7 +34,7 @@ Careful player (3 taps ahead, all-seeing, 16 games) mean win rate by realm: 1.00
 Totals 26/73/61/40. Levels 1-8 stay a gentle tutorial. Sawtooth per realm: Normal lead, a Hard run to an Extreme peak, an Easy breather right after the peak; each realm ends on its hardest level.
 
 ## Features per level
-- Easy: at most 1 feature, no lock, no killing tower. Normal: 1-2, no lock (towers knock back before 150). Hard: 2-3 + lock + killing towers. Extreme: everything unlocked + lock (2 locks from 150) + killing towers.
+- Easy: at most 1 feature, no lock, no tower hazard beyond knock back. Normal: 1-2, no lock, towers knock back. Hard: 2-3 + lock, towers pin. Extreme: everything unlocked + lock (2 locks from 150), towers kill.
 - Amounts: linked pairs (from 75) N 1-2, H 2-3, X 3-4; ? cards (from 100) N 3-4, H 4-6, X 6-8; mystery blocks (from 150) H 15-25%, X 25-35% of the buried picture; more, smaller squads where the 55-tap cap allows (mostly realms 1-2).
 - Feature ladder otherwise unchanged: moats 25, gates and locks 50, linked 75, ? cards 100, mystery blocks 150; towers now from about 60.
 
