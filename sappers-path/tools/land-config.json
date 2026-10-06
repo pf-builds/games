@@ -25,7 +25,7 @@
   ]
  },
  "profile": {
-  "note": "The default land profile (tools/land-plan.js). tags: shares of Easy, Normal, Hard and Extreme; breathers, the fewest Easy levels per 50; run, the shortest and longest run of Hard and Extreme levels before a breather; end, the land's last tag. features: per deck feature its share of the land's levels and its amount (mystery: ? cards per level; hidden of: the share of the picture's eligible blocks hidden; linked pairs; lock: share of levels with a locked space, Extreme first then Hard, and key, the share of those that are key locks). bands: the Normal random-tap win-rate band per tag; lookahead: the one-move-lookahead player's ceiling per tag; pace: each level's real-pace range and the aim (the land's median), ms. Raise a later land's profile in its land.json (more ?, more hidden, more links, more Hard and Extreme, lower bands).",
+  "note": "The default land profile (tools/land-plan.js). tags: shares of Easy, Normal, Hard and Extreme; breathers, the fewest Easy levels per 50; run, the shortest and longest run of Hard and Extreme levels before a breather; end, the land's last tag. features: per deck feature its share of the land's levels and its amount (mystery: ? cards per level; hidden of: the share of the picture's eligible blocks hidden; linked pairs; lock: share of levels with a locked space, Extreme first then Hard, and key, the share of those that are key locks; moat, a board feature only for a land that lists it (organic moats, Land 2 on): share, ways [lo, hi], the openings as indexes into plan.moat.ways (gentlest first; the tag picks within the range, Extreme the top), and liquids, the water colours tried in turn (null: plain water; else a config.json board.pic.liquids name) when a picture colour sits too near the water). bands: the Normal random-tap win-rate band per tag; lookahead: the one-move-lookahead player's ceiling per tag; pace: each level's real-pace range and the aim (the land's median), ms. Raise a later land's profile in its land.json (more ?, more hidden, more links, more Hard and Extreme, lower bands).",
   "tags": {
    "shares": {
     "easy": 0.1,
@@ -65,6 +65,17 @@
    "lock": {
     "share": 0.5,
     "key": 0.3
+   },
+   "moat": {
+    "share": 0.5,
+    "ways": [
+     0,
+     3
+    ],
+    "liquids": [
+     null,
+     "mire"
+    ]
    }
   },
   "bands": {
@@ -98,7 +109,7 @@
   }
  },
  "plan": {
-  "note": "tools/land-bake.js, how a planned feature is built. lock: a key lock (a gilt key block dug in near the gate, gen.js lockKey) only when the gilt stands keyDE (CIEDE2000) from every picture colour, else it is built as a colour lock (the colour whose first squad comes nearest lockAt of the dealt order). hidden (hidePic): blobs over plain blocks that start out of reach, radii rx x ry cells, at least min hidden, no 4-connected group over maxGroup; never the ink or a masked picture's background.",
+  "note": "tools/land-bake.js, how a planned feature is built. lock: a key lock (a gilt key block dug in near the gate, gen.js lockKey) only when the gilt stands keyDE (CIEDE2000) from every picture colour, else it is built as a colour lock (the colour whose first squad comes nearest lockAt of the dealt order). hidden (hidePic): blobs over plain blocks that start out of reach, radii rx x ry cells, at least min hidden, no 4-connected group over maxGroup; never the ink or a masked picture's background. moat (organic moats, tools/moat.js; SPEC-v4 §9, the organic moats entry): ways, the opening sets by index (front: the ring nearest the entry; far: farthest from it; left, right); a level planned at index k tries k, k-1 ... 0 in turn over its candidates (a far or side opening can walk a sapper past the 15 s cap, measured), and the pick takes the planned set whenever it meets every target. The path: the bank is open ground (as a castle's bank path), so once a way in is dug the subject's whole outline opens. The subject: the border-connected background taken off (a masked picture's bg, else each set of the top bgTop colours on the picture's outer ring with bgMin of it or more), its biggest 8-connected part and parts of partOf of it, closed by a disc of close cells, holes filled; kept by share - contactWeight x contact, within subject [lo, hi] of the picture and maxContact of its edge. The bank: grown by gap (a disc), at least one cell. The ring: width studs outside it; squeezed onto the edge where the bank meets it, stopping only where the subject does (an edge opening; two with merge or fewer edge cells between are one; maxEdge at most). A face is served by an opening within serve of its best cell, else cut there within open of one of the pick best cells, apart cells from any other, maxWays openings in all. Pockets of pond cells or fewer become water; at least minRing cells of water. waterDE [base, shade]: the water's colour at least this far (CIEDE2000) from every picture colour and shade, else the next liquid.",
   "keyDE": 20,
   "lockAt": 0.35,
   "hidden": {
@@ -112,6 +123,49 @@
    ],
    "min": 20,
    "maxGroup": 24
+  },
+  "moat": {
+   "ways": [
+    [
+     "front",
+     "far"
+    ],
+    [
+     "left",
+     "right"
+    ],
+    [
+     "front"
+    ],
+    [
+     "far"
+    ]
+   ],
+   "bgTop": 3,
+   "bgMin": 0.1,
+   "partOf": 0.25,
+   "close": 3,
+   "subject": [
+    0.08,
+    0.6
+   ],
+   "maxContact": 0.4,
+   "contactWeight": 1,
+   "gap": 1.5,
+   "width": 1,
+   "merge": 10,
+   "maxEdge": 2,
+   "open": 1.5,
+   "pick": 4,
+   "apart": 8,
+   "serve": 8,
+   "maxWays": 2,
+   "pond": 4,
+   "minRing": 24,
+   "waterDE": [
+    20,
+    14
+   ]
   }
  },
  "bake": {

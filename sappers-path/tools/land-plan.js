@@ -18,8 +18,13 @@
 //   every feature and the lock), then Hard, Normal and Easy in a seeded order (an Easy level takes at most
 //   v5.density.easyMax). Amounts rise with the tag (an Extreme level takes the top of each range).
 // planCheck(levels, land, P, D): the land against its profile and the density rule (tools/tags.js landDensityOK):
-//   [problems]. Extension point: a feature outside DECK (a later board feature such as a moat ring or a hazard) needs a
-//   builder in tools/land-bake.js FEATURES before a land may list it; landPlan and planCheck refuse it until then.
+//   [problems]. Extension point: a feature outside DECK and BOARD (a later board feature such as the Extreme hazard)
+//   needs a builder in tools/land-bake.js FEATURES before a land may list it; landPlan and planCheck refuse it until then.
+// Organic moats (SPEC-v4 §9, the organic moats entry; tools/moat.js): moat is a BOARD feature. Its amount is ways, an
+//   index into land-config plan.moat.ways (the openings, gentlest first: front and far, left and right, front, far), so
+//   Easy gets the gentlest and Extreme the hardest. can (optional, landPlan's last argument): {moat: [bool per level]},
+//   whether each level's picture can carry a ring (tools/land.js bake works it out); a level that can't is skipped for
+//   that feature, Extreme too (its plan says cant: ["moat"], and the density rule reads the land without it there).
 "use strict";
 const TG = require("./tags.js");
 const RANK = { easy: 0, normal: 1, hard: 2, extreme: 3 };
@@ -42,18 +47,20 @@ function landTags(N, T, perLand) {
   return out;
 }
 
-function landPlan(tags, land, P, seed, D) {
+function landPlan(tags, land, P, seed, D, can) {
   const N = tags.length, feats = land.features || [], deck = feats.filter((f) => f !== "lock"), plan = tags.map((t) => ({ feats: [], mystery: 0, links: 0, hidden: 0, lock: false, tag: t }));
-  for (const f of deck) if (TG.DECK.indexOf(f) < 0) throw new Error("land feature " + f + " has no builder yet (tools/land-bake.js FEATURES)");
+  for (const f of deck) if (TG.DECK.indexOf(f) < 0 && TG.BOARD.indexOf(f) < 0) throw new Error("land feature " + f + " has no builder yet (tools/land-bake.js FEATURES)");
+  if (can) for (const f of Object.keys(can)) if (feats.indexOf(f) >= 0) plan.forEach((p, i) => { if (!can[f][i]) p.cant = (p.cant || []).concat(f); });
   const order = (k) => tags.map((t, i) => i).sort((a, b) => RANK[tags[b]] - RANK[tags[a]] || hash01(seed + a, k) - hash01(seed + b, k));
   deck.forEach((f, fi) => { const F = P.features[f] || { share: 0 }, want = Math.round(F.share * N); let got = 0;
-    for (const i of order(fi + 1)) { const t = tags[i]; if (t !== "extreme" && got >= want) continue; if (t === "easy" && plan[i].feats.length >= D.easyMax) continue; plan[i].feats.push(f); got++; } });
+    for (const i of order(fi + 1)) { const t = tags[i]; if ((plan[i].cant || []).indexOf(f) >= 0) continue; if (t !== "extreme" && got >= want) continue; if (t === "easy" && plan[i].feats.length >= D.easyMax) continue; plan[i].feats.push(f); got++; } });
   if (feats.indexOf("lock") >= 0) { const L = P.features.lock || { share: 0, key: 0 }, want = Math.round(L.share * N); let got = 0;
     for (const i of order(99)) { const t = tags[i]; if (t !== "extreme" && (got >= want || t !== "hard")) continue; plan[i].lock = hash01(seed + i, 98) < L.key ? "key" : "colour"; got++; } }
   plan.forEach((p, i) => { const tt = (RANK[p.tag] + hash01(seed + i, 50)) / 4, amt = (r) => r[0] + Math.min(r[1] - r[0], Math.floor(tt * (r[1] - r[0] + 1)));
     if (p.feats.indexOf("mystery") >= 0) p.mystery = amt(P.features.mystery.cards);
     if (p.feats.indexOf("linked") >= 0) p.links = amt(P.features.linked.pairs);
-    if (p.feats.indexOf("hidden") >= 0) { const r = P.features.hidden.of; p.hidden = +(r[0] + tt * (r[1] - r[0])).toFixed(3); } });
+    if (p.feats.indexOf("hidden") >= 0) { const r = P.features.hidden.of; p.hidden = +(r[0] + tt * (r[1] - r[0])).toFixed(3); }
+    if (p.feats.indexOf("moat") >= 0) p.moat = amt(P.features.moat.ways); });
   return plan;
 }
 
@@ -72,6 +79,6 @@ function planCheck(levels, land, P, D, perLand) {
 // The shares a finished land reached, per feature and tag (for the report).
 function sharesOf(levels) {
   const N = levels.length || 1, c = (f) => +(levels.filter(f).length / N).toFixed(2), u = (k) => (l) => TG.featuresOf(l).indexOf(k) >= 0;
-  return { easy: c((l) => l.tag === "easy"), normal: c((l) => l.tag === "normal"), hard: c((l) => l.tag === "hard"), extreme: c((l) => l.tag === "extreme"), mystery: c(u("mystery")), hidden: c(u("hidden")), linked: c(u("linked")), lock: c((l) => !!l.lock) };
+  return { easy: c((l) => l.tag === "easy"), normal: c((l) => l.tag === "normal"), hard: c((l) => l.tag === "hard"), extreme: c((l) => l.tag === "extreme"), mystery: c(u("mystery")), hidden: c(u("hidden")), linked: c(u("linked")), lock: c((l) => !!l.lock), moat: c(u("moat")) };
 }
 module.exports = { RANK, merge, profileOf, landTags, landPlan, planCheck, sharesOf };

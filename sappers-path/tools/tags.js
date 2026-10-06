@@ -72,13 +72,17 @@ function densityOK(n, tag, L, D, teaching) {
 // v5.density): nothing outside feats and nothing a picture can't carry (moat, gate, tower); Easy at most easyMax
 // features and no lock; Normal no lock; Extreme every feature (and the lock where feats has it); Hard anything between.
 // land-plan.js planCheck adds the land-level part: features per level never fall as the tag rises.
-const DECK = ["linked", "mystery", "hidden"];
+// Organic moats (tools/moat.js; SPEC-v4 §9, the organic moats entry): BOARD, the board features a land may list (moat: a
+// ring of water round the picture's subject, counted by featuresOf as any water). A level whose picture can't carry one
+// says so in L.cant (["moat"]): for it the land's features are read without it, so its Extreme uses every one it can.
+const DECK = ["linked", "mystery", "hidden"], BOARD = ["moat"];
 function landDensityOK(tag, L, feats, D) {
-  const u = DECK.filter((k) => (feats || []).indexOf(k) >= 0), f = featuresOf(L), lock = !!L.lock, canLock = (feats || []).indexOf("lock") >= 0;
+  feats = (feats || []).filter((k) => (L.cant || []).indexOf(k) < 0);
+  const u = DECK.concat(BOARD).filter((k) => feats.indexOf(k) >= 0), f = featuresOf(L), lock = !!L.lock, canLock = feats.indexOf("lock") >= 0;
   if (f.some((k) => u.indexOf(k) < 0) || (lock && !canLock)) return false;
   if (tag === "easy") return f.length <= D.easyMax && !lock;
   if (tag === "normal") return !lock;
   if (tag === "extreme") return f.length === u.length && lock === canLock;
   return tag === "hard";
 }
-module.exports = { TAGS, tagOf, lockOK, FEATS, featuresOf, unlockedAt, densityOK, DECK, landDensityOK };
+module.exports = { TAGS, tagOf, lockOK, FEATS, featuresOf, unlockedAt, densityOK, DECK, BOARD, landDensityOK };

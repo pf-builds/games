@@ -15,7 +15,10 @@
 //             (tools/shade.js) -> scratch/boards.json
 //   sheet     the contact sheet (tools/land-sheet.py) -> scratch/contact.png
 //   bake      the tags and the plan from the land's profile (tools/land-plan.js), every main level and side quest
-//             (tools/land-bake.js, worker threads) -> scratch/bake/*.json
+//             (tools/land-bake.js, worker threads) -> scratch/bake/*.json. A land listing moat (organic moats,
+//             tools/moat.js) first asks each main picture whether it can carry a ring with the gentlest opening set its
+//             profile allows (state.json moat: [{n, ok, why}]; every level can step down to it); the plan skips those that
+//             can't.
 //   map       the layout entries from the land's 2 sheet templates, alternately mirrored -> scratch/map.json
 //   assemble  the level records, the side-quest records, the config entry, the egg coins and the licence lines ->
 //             scratch/out/
@@ -29,7 +32,8 @@
 // planCheck); every shade colour against its floors (shade.js checkLevel); side quests every checks.quests levels, plain
 // boards; a re-grade of every record with the grader's own counts (tools/regrade.js) with 0 differences; a spot for every
 // level and side quest, sheets alternating file and mirror, 48 CSS px between nodes at a 375 px phone; a licence and
-// source for every picture.
+// source for every picture. A land with moats (organic moats): every ring is water only where the picture's subject is
+// not, leaves every block reachable from the frame once dug, and has the 1 or 2 openings its bake reports.
 "use strict";
 const fs = require("fs");
 const path = require("path");
@@ -44,6 +48,7 @@ const TG = require("./tags.js");
 const Q = require("./quests.js");
 const JN = require("../src/journey.js");
 const { regrade } = require("./regrade.js");
+const MO = require("./moat.js");
 
 const ROOT = path.join(__dirname, "..");
 const argv = process.argv.slice(2), flag = (k) => argv.indexOf("--" + k) >= 0, opt = (k) => { const i = argv.indexOf("--" + k); return i >= 0 ? argv[i + 1] : null; };
@@ -105,12 +110,19 @@ function sheet(X) {
 }
 
 // ---- bake ------------------------------------------------------------------------------------------------------------------
+// Organic moats: can each main picture carry a ring with the gentlest opening set the profile allows (the bake steps
+// every level down to it when its planned set won't deal)?
+function moatCan(X, b) {
+  const MC = X.LC.plan.moat, F = X.P.features.moat || {}, lo = (F.ways || [0])[0];
+  return b.main.map((e) => { const R = MO.ringOf(e.board, MC, MC.ways[lo], 0, null, F.liquids); return { n: e.n, ok: !!R.cells, why: R.cells ? null : R.why }; });
+}
 async function bake(X) {
-  const b = readJ(path.join(X.S, "boards.json")), { quests } = picturesOf(X), tags = LP.landTags(X.count, X.P.tags, X.LCF.perLand), D = X.CFG.v5.density, plan = LP.landPlan(tags, X.land, X.P, X.from, D), BK = X.LC.bake;
-  saveState(X, { tags, plan });
+  const b = readJ(path.join(X.S, "boards.json")), { quests } = picturesOf(X), tags = LP.landTags(X.count, X.P.tags, X.LCF.perLand), D = X.CFG.v5.density, BK = X.LC.bake;
+  const moat = (X.land.features || []).indexOf("moat") >= 0 ? moatCan(X, b) : null, plan = LP.landPlan(tags, X.land, X.P, X.from, D, moat ? { moat: moat.map((m) => m.ok) } : null), liquids = moat ? (X.P.features.moat || {}).liquids : undefined, moatLo = moat ? ((X.P.features.moat || {}).ways || [0])[0] : 0;
+  saveState(X, moat ? { tags, plan, moat } : { tags, plan }); if (moat) console.log("bake: " + moat.filter((m) => m.ok).length + " of " + moat.length + " pictures can carry a moat" + moat.filter((m) => !m.ok).map((m) => "; " + m.n + " can't: " + m.why).join(""));
   const only = opt("only") ? opt("only").split("-").map(Number) : null, list = opt("list") ? opt("list").split(",").map(Number) : null, dir = path.join(X.S, "bake");
   const inRun = (n) => (list ? list.indexOf(n) >= 0 : !only || (n >= only[0] && n <= (only[1] || only[0]))), want = (f, n) => (flag("force") || only || list ? inRun(n) : !fs.existsSync(f)), jobs = [];
-  b.main.forEach((e, i) => { const f = path.join(dir, "m-" + e.n + ".json"); if (want(f, e.n)) jobs.push({ file: f, job: { n: e.n, tag: tags[i], plan: plan[i], band: X.P.bands[tags[i]], look: X.P.lookahead[tags[i]] != null ? X.P.lookahead[tags[i]] : null, pace: X.P.pace, board: e.board, extra: +opt("extra") || 0 } }); });
+  b.main.forEach((e, i) => { const f = path.join(dir, "m-" + e.n + ".json"); if (want(f, e.n)) jobs.push({ file: f, job: { n: e.n, tag: tags[i], plan: plan[i], band: X.P.bands[tags[i]], look: X.P.lookahead[tags[i]] != null ? X.P.lookahead[tags[i]] : null, pace: X.P.pace, board: e.board, extra: +opt("extra") || 0, liquids, moatLo } }); });
   b.side.forEach((e, i) => { const n = X.gal0 + i + 1, tag = BK.sideCycle[(X.gal0 + i) % BK.sideCycle.length], f = path.join(dir, "s-" + n + ".json"); if (!only && !list && (flag("force") || !fs.existsSync(f))) jobs.push({ file: f, job: { n: 100000 + n, side: true, tag, band: BK.sideBands[tag], look: null, pace: BK.sidePace, board: e.board } }); });
   if (!jobs.length) { console.log("bake: every level kept (scratch/bake)"); return; }
   const threads = +opt("threads") || LB.threadsOf(BK), t0 = Date.now(); console.log("bake: " + jobs.length + " levels on " + threads + " threads (" + quests.length + " side quests in the land)");
@@ -160,14 +172,17 @@ function map(X) {
 }
 
 // ---- assemble ---------------------------------------------------------------------------------------------------------------
+// The converted board's shade rows, 0 on every cell the bake changed (organic moats: the ring's water and path; a key
+// dug in), since a shade belongs to the colour the picture drew there.
+const dry = (shade, grid, base) => shade.map((r, y) => r.split("").map((d, x) => (grid[y][x] !== base[y][x] ? "0" : d)).join(""));
 const creditOf = (p) => (p.artist ? p.artist + (p.date ? ", " + p.date : "") : p.credit || "Click it! Studios");
 function assemble(X) {
   const b = readJ(path.join(X.S, "boards.json")), mp = readJ(path.join(X.S, "map.json")), { main, side, quests } = picturesOf(X), out = path.join(X.S, "out"), bad = [];
   const rec = (r) => { if (!r || r.fail) bad.push(r ? r.n + ": " + r.fail : "missing"); return r && !r.fail ? r : null; };
   const levels = b.main.map((e, i) => { const r = rec(readJ(path.join(X.S, "bake", "m-" + e.n + ".json"))); if (!r) return null; const p = main[i], B = e.board, L = r.level;
     return Object.assign({ id: "e" + X.era + "-" + e.n, n: e.n, era: X.era, land: X.land.k, source: "land", title: p.title, kind: p.kind || "painting", src: p.id, credit: creditOf(p), tag: r.tag, band: r.tag, target: X.P.bands[r.tag], seed: r.seed,
-      w: L.w, h: L.h, grid: L.grid, pic: true, pal: B.pal }, B.shade ? { shade: B.shade } : {}, L.hidden ? { hidden: L.hidden } : {}, L.lock ? { lock: L.lock } : {}, { cols: L.cols }, L.links ? { links: L.links } : {},
-      { win: L.win, grade: L.grade, inBand: r.inBand, convert: B.stats, feats: r.plan.feats.concat(r.plan.lock ? ["lock"] : []) }, r.mystery ? { mystery: r.mystery } : {}, r.fallback ? { fallback: r.fallback } : {}); });
+      w: L.w, h: L.h, grid: L.grid, pic: true, pal: B.pal }, L.liquid ? { liquid: L.liquid } : {}, B.shade ? { shade: dry(B.shade, L.grid, B.grid) } : {}, L.hidden ? { hidden: L.hidden } : {}, L.lock ? { lock: L.lock } : {}, { cols: L.cols }, L.links ? { links: L.links } : {},
+      { win: L.win, grade: L.grade, inBand: r.inBand, convert: B.stats, feats: r.plan.feats.concat(r.plan.lock ? ["lock"] : []) }, r.plan.cant ? { cant: r.plan.cant } : {}, r.mystery ? { mystery: r.mystery } : {}, r.fallback ? { fallback: r.fallback } : {}); });
   const pics = b.side.map((e, i) => { const r = rec(readJ(path.join(X.S, "bake", "s-" + (X.gal0 + i + 1) + ".json"))); if (!r) return null; const p = side[i], B = e.board, L = r.level;
     return Object.assign({ id: "g-w-" + p.id, n: X.gal0 + i + 1, gallery: true, wander: true, land: X.land.k, title: p.title, kind: p.kind || "painting", src: p.id, credit: creditOf(p), tag: r.tag, band: r.tag, target: X.LC.bake.sideBands[r.tag], seed: r.seed,
       w: L.w, h: L.h, grid: L.grid, pic: true, cols: L.cols, pal: B.pal }, B.shade ? { shade: B.shade } : {}, { win: L.win, grade: L.grade, inBand: r.inBand, convert: B.stats, quest: quests[i] }, r.fallback ? { fallback: r.fallback } : {}); });
@@ -198,9 +213,17 @@ function check(X) {
   gate("no fallback picks (band, pace, taps, wait, fast tapper, pairs, lookahead)", LV.concat(GV).filter((L) => L.fallback).map((L) => L.id + ": " + L.fallback));
   gate("the profile: tags, density, runs, the end (land-plan planCheck)", LP.planCheck(LV, X.land, X.P, X.CFG.v5.density, X.LCF.perLand));
   gate("shading: every shade colour on its floors (" + C.shade.floor + " from other squads, " + C.shade.fadedFloor + " from faded cards)", each(LV.concat(GV).filter((L) => L.shade), (L) => { const r = SH.checkLevel(L, C); return r.ok ? null : r.bad.join("; "); }));
+  // Organic moats: water and path only off the picture's subject (worked out again from the converted board), every
+  // block reachable from the frame once dug, 1 or 2 ways in (the bake's count); none in a land without moats.
+  const MC = X.LC.plan.moat, hasMoat = (X.land.features || []).indexOf("moat") >= 0, BD = readJ(path.join(X.S, "boards.json")), ringOf = {}, moatBad = [];
+  LV.forEach((L, i) => { const B = BD.main[i].board, wet = [], dug = []; for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) { const v = L.grid[y][x]; if ((v === "~" || v === ",") && B.grid[y][x] !== v) (v === "~" ? wet : dug).push(y * L.w + x); }
+    if (!wet.length && !dug.length) return; if (!hasMoat) { moatBad.push(L.id + ": water or path in a land without moats"); return; }
+    const S = MO.subjectOf(B, MC), f = path.join(X.S, "bake", "m-" + L.n + ".json"), r = fs.existsSync(f) ? readJ(f).moat : null; ringOf[L.n] = Object.assign({ water: wet.length }, r || {});
+    if (!S.sub || wet.concat(dug).some((c) => S.sub[c])) moatBad.push(L.id + ": water or path on the subject"); if (!MO.reach(L)) moatBad.push(L.id + ": a block shut in by water"); if (!r || r.ways < 1 || r.ways > 2) moatBad.push(L.id + ": " + (r ? r.ways : "no") + " openings"); });
+  gate("organic moats: water and path only off the subject, every block reachable from the frame once dug, 1 or 2 ways in", moatBad, hasMoat ? Object.keys(ringOf).length + " of " + LV.length + " levels ringed" + (X.state.moat ? ", " + X.state.moat.filter((m) => !m.ok).length + " pictures can't carry one" : "") : "no moats in this land");
   const qa = GV.map((g) => g.quest.after).sort((a, b) => a - b), gaps = qa.slice(1).map((a, i) => a - qa[i]), QC = X.LC.checks.quests;
   const slots = Q.landQuestsOf({ from: X.from, to: X.to }, X.CFG.gallery.quests, X.CFG.meta.powers, X.gal0, 1e9).length;
-  gate("side quests every " + QC.join("-") + " levels, inside the land, plain picture boards (" + GV.length + " of " + slots + " slots filled from the Wandering Gallery)", (GV.length < slots ? ["only " + GV.length + " of " + slots + " side quests: the Wandering Gallery is short"] : []).concat(gaps.some((g) => g < QC[0] || g > QC[1]) || qa[0] < X.from || qa[qa.length - 1] > X.to ? ["afters " + qa.join(",")] : []).concat(each(GV, (L) => (L.links || L.lock || L.hidden || L.cols.some((c) => c.some((cd) => cd[2])) ? "not a plain board" : null))));
+  gate("side quests every " + QC.join("-") + " levels, inside the land, plain picture boards (" + GV.length + " of " + slots + " slots filled from the Wandering Gallery)", (GV.length < slots ? ["only " + GV.length + " of " + slots + " side quests: the Wandering Gallery is short"] : []).concat(gaps.some((g) => g < QC[0] || g > QC[1]) || qa[0] < X.from || qa[qa.length - 1] > X.to ? ["afters " + qa.join(",")] : []).concat(each(GV, (L) => (L.links || L.lock || L.hidden || L.grid.some((r) => r.indexOf("~") >= 0) || L.cols.some((c) => c.some((cd) => cd[2])) ? "not a plain board" : null))));
   const rg = regrade(LV, BC, V3, false), rs = regrade(GV, GB, V3, false); gate("re-grade with the grader's own counts: 0 differences (" + (rg.checks + rs.checks) + " checks)", rg.lines.concat(rs.lines));
   // The map: a spot each, the sheets alternating file and mirror, 48 CSS px between nodes at 375 px.
   const S = LJ.layout, k375 = 375 / X.layout.w, mapBad = [], ns = S.flatMap((s) => s.levels.map((p) => p.n));
@@ -218,7 +241,7 @@ function check(X) {
     "## Gates", "", "| Gate | | Detail |", "|---|---|---|"].concat(gates.map((g) => "| " + g.name + " | " + (g.ok ? "pass" : "FAIL") + " | " + (g.ok ? g.info : g.bad.slice(0, 6).join("; ") + (g.bad.length > 6 ? " (+" + (g.bad.length - 6) + ")" : "")) + " |"),
     ["", "## Profile reached", "", "Shares of the land's levels: " + Object.entries(sh).map(([k, v]) => k + " " + v).join(", ") + ". Targets: tags " + JSON.stringify(X.P.tags.shares) + "; features " + Object.entries(X.P.features).map(([k, v]) => k + " " + v.share).join(", ") + ".", "",
       "## Levels", "", "| Level | Picture | Board | Colours | Shades | Tag | Features | Rate (band) | Lookahead | Real pace | Longest tap | Taps | Note |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|"],
-    LV.map((L) => { const g = L.grade[L.tag]; return "| " + L.n + " | " + L.title + " | " + L.w + "x" + L.h + " | " + L.convert.colours + " | " + (L.shade ? Object.values(L.pal).reduce((a, p) => a + (p.sh || []).filter(Boolean).length, 0) : "-") + " | " + L.tag + " | " + (L.feats.join(", ") || "-") + (L.cols.flat().filter((c) => c[2]).length ? " (" + L.cols.flat().filter((c) => c[2]).length + " ?)" : "") + " | " + (100 * g.rate).toFixed(1) + "% (" + L.target.map((v) => 100 * v).join("-") + ") | " + g.greedy + " | " + Math.round(g.pace.ms / 1000) + " s | " + (g.maxWait / 1000).toFixed(1) + " s | " + L.win[L.tag].length + " | " + (L.fallback || "") + " |"; }),
+    LV.map((L) => { const g = L.grade[L.tag]; return "| " + L.n + " | " + L.title + " | " + L.w + "x" + L.h + " | " + L.convert.colours + " | " + (L.shade ? Object.values(L.pal).reduce((a, p) => a + (p.sh || []).filter(Boolean).length, 0) : "-") + " | " + L.tag + " | " + (L.feats.join(", ") || "-") + (ringOf[L.n] ? " (ring " + ringOf[L.n].water + ", " + ringOf[L.n].ways + " way" + (ringOf[L.n].ways === 1 ? "" : "s") + (ringOf[L.n].liquid ? ", " + ringOf[L.n].liquid : "") + ")" : "") + (L.cant ? " (no moat: can't carry one)" : "") + (L.cols.flat().filter((c) => c[2]).length ? " (" + L.cols.flat().filter((c) => c[2]).length + " ?)" : "") + " | " + (100 * g.rate).toFixed(1) + "% (" + L.target.map((v) => 100 * v).join("-") + ") | " + g.greedy + " | " + Math.round(g.pace.ms / 1000) + " s | " + (g.maxWait / 1000).toFixed(1) + " s | " + L.win[L.tag].length + " | " + (L.fallback || "") + " |"; }),
     ["", "## Side quests (the Wandering Gallery)", "", "| Picture | Title | After level | Prize | Tag | Real pace | Taps |", "|---|---|---|---|---|---|---|"],
     GV.map((L) => "| " + L.n + " | " + L.title + " | " + L.quest.after + " | " + L.quest.prize + " | " + L.tag + " | " + Math.round(L.grade[L.tag].pace.ms / 1000) + " s | " + L.win[L.tag].length + " |"));
   fs.writeFileSync(path.join(X.S, "report.md"), rows.join("\n") + "\n"); saveState(X, { ok, checked: new Date().toISOString() });

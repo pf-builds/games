@@ -7,7 +7,8 @@
 //   1. The plan (tools/land-plan.js landPlan, from the land's profile; given in the job): which deck features it uses
 //      and how much of each. FEATURES builds each one on a candidate (extension point: a later board feature, a moat
 //      ring or a hazard, is one more entry here plus its share in the profile).
-//   2. Candidates: build the board features (mystery blocks: hidePic; the lock: a key block dug in, gen.js lockKey,
+//   2. Candidates: build the board features (organic moats first: tools/moat.js, a ring of water round the picture's
+//      subject with the plan's openings, Land 2 on; mystery blocks: hidePic; the lock: a key block dug in, gen.js lockKey,
 //      when the gilt clears the picture's colours, else a colour lock set from the deal), deal (gen.js deal, the dealing
 //      rules: 5 spaces), link pairs (linkUp), tune into the tag's band (gen.js tune, all-seeing past mystery blocks as
 //      bake.js does), deck, grade on the tag (gradeLevel: a stored winning order, rate, lookahead, real pace and
@@ -25,6 +26,7 @@ const E = require("../src/engine.js");
 const G = require("./gen.js");
 const R = require("./grade.js");
 const PAL = require("./palette.js");
+const MO = require("./moat.js");
 
 const hash01 = (n, k) => { let t = Math.imul(n + 0x3c6e, 0x9E3779B1) ^ Math.imul(k + 11, 0x85EBCA77); t ^= t >>> 15; t = Math.imul(t, 0x2c1b3c6d); t ^= t >>> 12; return (t >>> 0) / 4294967296; };
 const seedOf = (B, n, k) => (B.seed ^ Math.imul(n + 1, 0x9E3779B1) ^ Math.imul(k + 7, 0x85EBCA77)) | 0;
@@ -43,9 +45,15 @@ function configs(side) {
 // when it can't be built (the candidate is dropped). Deck features (linked pairs, ? cards) are built in the deal and
 // after the pick. Extension point (later feature drops): a new board feature is one entry here, its share in the land's
 // profile and its name in the land's features (tools/land-plan.js refuses a name with no entry).
+// moat (organic moats; SPEC-v4 §9, the organic moats entry): the ring tools/moat.js lays round the picture's subject, its
+// openings from plan.moat.ways[ctx.ways] (bakeOne steps a level's candidates down from the planned index P.moat to
+// job.moatLo in turn: a far or side way in can walk a sapper past the 15 s cap), its water colour from the profile's
+// liquids (job.liquids); the subject is worked out once a level (ctx.sub). False when the picture can't carry it.
 const FEATURES = {
+  moat: (L, P, seed, ctx) => { const MC = ctx.PL.moat; if (!ctx.sub) ctx.sub = MO.subjectOf(ctx.board, MC); const R = MO.ringOf(ctx.board, MC, MC.ways[ctx.ways], seed, ctx.sub, ctx.liquids); if (!R.cells) { ctx.why = R.why; return false; } MO.apply(L, R); ctx.moat = R; return true; },
   hidden: (L, P, seed, ctx) => hidePic(L, seed, Object.assign({}, ctx.PL.hidden, { share: [P.hidden, P.hidden] }), ctx.skipIds),
-  lock: (L, P, seed, ctx) => { let k = P.lock; if (k === "key" && !(ctx.giltOK && G.lockKey(L, seed))) k = "colour"; if (k === "colour") L.lock = { colour: [...G.coloursOf(L)].sort((a, b) => a - b)[0] }; ctx.lock = k; return true; }, // a colour lock's stand-in (the dealer plays it shut); its colour is set from the deal
+  lock: (L, P, seed, ctx) => { let k = P.lock; if (k === "key" && !(ctx.giltOK && G.lockKey(L, seed))) k = "colour"; if (k === "colour") L.lock = { colour: [...G.coloursOf(L)].sort((a, b) => a - b)[0] }; ctx.lock = k;
+    if (k === "key" && L.hidden) { const [x, y] = L.lock.key; L.hidden = L.hidden.slice(); L.hidden[y] = L.hidden[y].slice(0, x) + "." + L.hidden[y].slice(x + 1); } return true; }, // a colour lock's stand-in (the dealer plays it shut); its colour is set from the deal. Organic moats pass: a key dug in on a mystery block drops the block's flag (the engine takes no flag on a key; the candidate used to be lost)
   linked: () => true, mystery: () => true };
 
 // Mystery blocks on a picture (gen.js hide is for castles: it needs open ground above the fort): blobs over plain blocks
@@ -120,20 +128,22 @@ function mystify(L, want, M, rt, seed) {
 // One level, start to finish. job: {n, tag, side, plan (land-plan.js landPlan's; a side quest: none), band ([lo, hi]),
 // look (the lookahead ceiling or null), pace ({range, aim}), board ({w, h, grid, pal, ink?: the ink's id, bg?: the
 // background's id}), extra}. Returns {n, tag, plan, seed, level (the picked board and deck with win and grade), inBand,
-// fallback, mystery, cands (summary), stats} or {n, fail}.
+// fallback, mystery, moat ({set, drop, water, path, edge, cuts, ways, liquid} or null), cands (summary), stats} or {n,
+// fail}. Organic moats: job.liquids, the profile's moat liquids; job.moatLo, the gentlest opening set it allows.
 function bakeOne(job) {
   const { LC, B } = configs(job.side), CFG = require("../config.json"), rules = { easy: E.rulesOf(CFG.v3, "easy"), normal: E.rulesOf(CFG.v3, "normal"), hard: E.rulesOf(CFG.v3, "hard"), extreme: E.rulesOf(CFG.v3, "extreme") };
   const { n, tag, band } = job, PL = LC.plan, P = job.plan || { feats: [], mystery: 0, links: 0, hidden: 0, lock: false };
   for (const f of P.feats.concat(P.lock ? ["lock"] : [])) if (!FEATURES[f]) return { n, fail: "feature " + f + " has no builder" };
   const TT = targetsOf(B, band, job.pace, job.look, P), out = [], stats = { deals: 0, evals: 0, grades: 0 }, ink = job.board.ink || 0;
-  const ctx = { PL, skipIds: [job.board.ink, job.board.bg].filter(Boolean), giltOK: Object.keys(job.board.pal).every((k) => PAL.de00(PAL.lab(job.board.pal[k].c), PAL.lab(CFG.v3.mats[E.GILT].c)) >= PL.keyDE), lock: false };
+  const ctx = { PL, board: job.board, liquids: job.liquids, skipIds: [job.board.ink, job.board.bg].filter(Boolean), giltOK: Object.keys(job.board.pal).every((k) => PAL.de00(PAL.lab(job.board.pal[k].c), PAL.lab(CFG.v3.mats[E.GILT].c)) >= PL.keyDE), lock: false };
   const D0 = Object.assign({}, B.deal, B.dealBy[tag] || {}, { maxTaps: B.maxTaps, time: rules.hard.time, maxWaitMs: B.maxWaitMs, lockSpaces: rules.hard.lockSpaces }, ink ? { capOf: { [ink]: B.capOf } } : {});
   if (B.deal.sizeRef) { const k = (job.board.w * job.board.h) / B.deal.sizeRef; D0.size = D0.size.map((v) => Math.max(1, Math.min(B.deal.maxCard, Math.round(v * k)))); } // squads scale with the board
   const dealRules = Object.assign({}, rules.hard, { hold: B.deal.hold, archersKill: true });
   const per = ((B.candidates.perLevelBy || {})[tag] || B.candidates.perLevel) + (job.extra | 0);
   for (let k = 0; k < per; k++) {
     try {
-      const seed = seedOf(B, n, k), L = JSON.parse(JSON.stringify({ w: job.board.w, h: job.board.h, grid: job.board.grid, pic: true })); ctx.lock = false;
+      const seed = seedOf(B, n, k), L = JSON.parse(JSON.stringify({ w: job.board.w, h: job.board.h, grid: job.board.grid, pic: true })); ctx.lock = false; ctx.moat = null; ctx.ways = P.moat - (k % ((P.moat | 0) - (job.moatLo | 0) + 1));
+      if (P.feats.indexOf("moat") >= 0 && !FEATURES.moat(L, P, seed, ctx)) { out.push({ k, fail: "no moat: " + ctx.why }); continue; }
       if (P.hidden && !FEATURES.hidden(L, P, seed, ctx)) { out.push({ k, fail: "no room for mystery blocks" }); continue; }
       if (P.lock) FEATURES.lock(L, P, seed, ctx);
       let dl = null; for (let a = 0; a < D0.attempts && !dl; a++) { dl = G.deal(L, seed ^ Math.imul(a + 1, 0x27D4EB2F), D0); stats.deals++; }
@@ -147,15 +157,16 @@ function bakeOne(job) {
       const dk = G.deck(res.play, res.colOf); if (dk.bad) { out.push({ k, seed, fail: "a linked partner more than a row from its card" }); continue; }
       const level = Object.assign({}, L, { cols: dk.cols }, dk.links.length ? { links: dk.links } : {}), g = gradeLevel(level, rules, B, G.orderOf(res.colOf), seed, tag); stats.grades++;
       const rate = g.grade[tag].rate, miss = Math.max(0, band[0] - rate, rate - band[1]);
-      out.push({ k, seed, tag, level, win: g.win, grade: g.grade, miss: +miss.toFixed(4), pairs: dk.links.length, lock: ctx.lock, winnable: !!g.win[tag] });
+      out.push({ k, seed, tag, level, win: g.win, grade: g.grade, miss: +miss.toFixed(4), pairs: dk.links.length, lock: ctx.lock, winnable: !!g.win[tag], moat: ctx.moat ? { set: ctx.ways, drop: P.moat - ctx.ways, water: ctx.moat.cells.length, path: ctx.moat.ground.length, edge: ctx.moat.edge, cuts: ctx.moat.cuts.length, ways: ctx.moat.ways, liquid: ctx.moat.liquid } : null });
     } catch (e) { out.push({ k, fail: "error: " + (e && e.message) }); }
   }
   const okc = out.filter((c) => c.level && c.winnable), mid = (band[0] + band[1]) / 2;
   if (!okc.length) return { n, fail: "no winnable candidate (" + out.map((c) => c.fail || "lost").slice(0, 4).join("; ") + ")", stats };
-  okc.sort((p, q) => TT.good(q) - TT.good(p) || (TT.good(p) ? 100 * Math.abs(gt(p).rate - mid) + TT.aim(p) - 100 * Math.abs(gt(q).rate - mid) - TT.aim(q) : TT.pen(p) - TT.pen(q)) || p.k - q.k);
+  const drop = (c) => (c.moat ? c.moat.drop : 0); // organic moats: the planned opening set first among the good picks
+  okc.sort((p, q) => TT.good(q) - TT.good(p) || (TT.good(p) ? drop(p) - drop(q) : 0) || (TT.good(p) ? 100 * Math.abs(gt(p).rate - mid) + TT.aim(p) - 100 * Math.abs(gt(q).rate - mid) - TT.aim(q) : TT.pen(p) - TT.pen(q)) || p.k - q.k);
   const pk = okc[0]; let level = Object.assign({}, pk.level, { win: pk.win, grade: pk.grade }), mys = null;
   if (P.mystery) { const r = mystify(level, P.mystery, B.mystery, rules[tag], pk.seed); level = Object.assign({}, r.level, { win: pk.win, grade: pk.grade }); mys = r.m; }
-  return { n, tag, plan: P, seed: pk.seed, level, inBand: !pk.miss, fallback: TT.good(pk) ? null : TT.why(pk), mystery: mys, cands: { tried: out.length, winnable: okc.length, good: okc.filter(TT.good).length, fails: out.filter((c) => c.fail).map((c) => c.fail).slice(0, 3) }, stats };
+  return { n, tag, plan: P, seed: pk.seed, level, inBand: !pk.miss, fallback: TT.good(pk) ? null : TT.why(pk), mystery: mys, moat: pk.moat, cands: { tried: out.length, winnable: okc.length, good: okc.filter(TT.good).length, fails: out.filter((c) => c.fail).map((c) => c.fail).slice(0, 3) }, stats };
 }
 
 // Workers, one level each, at most `threads` at once; onDone(done, total) after each.
