@@ -2465,12 +2465,14 @@
         // Settings over the level and holds it still (the engine's time stands while it shows; the app clock runs on);
         // Done plays on with no jump. The bar still fits the screen and the gear is as big as the bar's other buttons.
         { startLevel(app.levels[0].id, "normal"); const g = $("btn-pset"), r = g.getBoundingClientRect(), rr = $("btn-retry").getBoundingClientRect(), hit = hitOK(g), tp = $("top");
-          const fits = Array.from(tp.querySelectorAll("button")).every((b) => b.getBoundingClientRect().right <= innerWidth + 0.5) && tp.scrollWidth <= tp.clientWidth + 1 && r.width >= rr.width - 0.5;
+          const kids = Array.from(tp.children).map((b) => b.getBoundingClientRect()), fits = kids.every((q, i) => q.left >= -0.5 && q.right <= innerWidth + 0.5 && kids.every((z, j) => j <= i || z.left >= q.right - 0.5)) && r.width >= rr.width - 0.5; // in the screen, side by side (the tap areas' 4 px past the faces don't count)
+          const at = (x, y) => { const t = document.elementFromPoint(x, y); return !!t && (t === g || g.contains(t)); }, cy = r.top + r.height / 2, cx = r.left + r.width / 2, pad = (ST.minTapPx - r.width) / 2 - 0.5; // the tap area reaches minTapPx (style.css: 4 px round the face)
+          const tapOK = r.width >= ST.minTapPx || (at(cx, Math.max(0.5, r.top - pad)) && at(cx, r.bottom + pad) && at(Math.min(innerWidth - 0.5, r.right + pad), cy) && at(r.left - pad / 2, cy)); // the screen's edge bounds it; the left neighbour shares the gap
           playCol(+winOf(app.entry)[0]); step(16); g.click(); const et0 = app.et, c0 = app.clock, live0 = livePlay(); for (let t = 0; t < 400; t += 16) step(16);
           const held = app.held && app.et === et0 && app.clock > c0 && !$("settings").hidden && !live0;
           $("set-close").click(); step(16); const on = !app.held && $("settings").hidden && app.et > et0 && app.et - et0 <= 16 * paceNow() + 0.5 && livePlay();
           out.notes.playGear = Math.round(r.width) + " px";
-          ok(hit && fits && held && on, "play gear (lands foundation; hit, fits, held, on: " + [hit, fits, held, on].map(Number).join("") + "): the top bar's gear (" + Math.round(r.width) + " px, as big as Retry; the bar fits " + innerWidth + " px) opens Settings and holds the level still (engine time stood " + 400 + " ms while the app clock ran), and Done plays on with no jump"); }
+          ok(hit && fits && tapOK && held && on, "play gear (lands foundation; hit, fits, tap, held, on: " + [hit, fits, tapOK, held, on].map(Number).join("") + "): the top bar's gear (" + Math.round(r.width) + " px, as big as Retry, taking a " + ST.minTapPx + " px tap; the bar fits " + innerWidth + " px) opens Settings and holds the level still (engine time stood " + 400 + " ms while the app clock ran), and Done plays on with no jump"); }
         // The bar's geometry at this viewport.
         startLevel(app.levels[0].id, "normal");
         { const tileH = app.cards[0].getBoundingClientRect().height, rl = $("rail").getBoundingClientRect(), pw = $("powers").getBoundingClientRect(); let geo = true;

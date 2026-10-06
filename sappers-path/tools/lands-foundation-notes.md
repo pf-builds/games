@@ -126,9 +126,10 @@ insertion keeps config.json's layout) and the licence table, and refuses a land 
 The top bar's quick mute is now a gear (`#btn-pset`) that opens the same Settings sheet as the home and the map (Music,
 Sound effects, Colour-blind marks, Speed in debug, save code, Reset). While it or one of its sheets shows, the level
 holds still (`app.held`: the engine and the show stop, the app clock runs so the reset's hold still fills); Done plays
-on with no jump. The Paused sheet keeps its quick toggles. Same size as Retry (42 px at 375 wide, 38 px on short
-frames, as the bar's other buttons); the bar fits 360 px. selfTest and the harness use the gear and the Paused sheet's
-quick mute now.
+on with no jump. The Paused sheet keeps its quick toggles. Same face as Retry (42 px at 375 wide, 36 px at 360x640,
+as the bar's other buttons); every play-bar button now takes its tap 4 px past its face (`#top button.round::after`,
+the bar stacked over the stage's top edge), so a 36 px face takes a 44 px tap; the bar fits 360 px (selfTest at
+360x640@3x: 781 passed, 0 failed). selfTest and the harness use the gear and the Paused sheet's quick mute now.
 
 ## 8. Checks (final run)
 

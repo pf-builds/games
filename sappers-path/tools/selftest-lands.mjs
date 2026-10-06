@@ -1,11 +1,12 @@
 // Sapper's Path lands foundation: SP.selfTest() under ?debug=1 at a 375x812 phone (3x, touch) and a 1280x720 desktop, with
 // every console message kept. Used on the branch (no land) and on a game copy with a land installed (--url).
-//   PLAYWRIGHT_MODULE=$(npm root -g)/playwright/index.mjs node tools/selftest-lands.mjs [--url http://127.0.0.1:8494/sappers-path/]
+//   PLAYWRIGHT_MODULE=$(npm root -g)/playwright/index.mjs node tools/selftest-lands.mjs [--url http://127.0.0.1:8494/sappers-path/] [--small]
 const arg = (k, d) => { const i = process.argv.indexOf("--" + k); return i > 0 ? process.argv[i + 1] : d; };
 const URL_ = arg("url", "http://127.0.0.1:8494/sappers-path/");
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE);
 const b = await chromium.launch(), log = []; let bad = 0;
-for (const [w, h, dpr, touch] of [[375, 812, 3, true], [1280, 720, 1, false]]) {
+const VPS = process.argv.includes("--small") ? [[360, 640, 3, true]] : [[375, 812, 3, true], [1280, 720, 1, false]]; // --small: the 360x640 phone (the play bar's tightest fit)
+for (const [w, h, dpr, touch] of VPS) {
   const ctx = await b.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: dpr, hasTouch: touch, isMobile: touch }), p = await ctx.newPage(), tag = w + "x" + h + "@" + dpr;
   p.on("console", (m) => log.push(tag + " " + m.type() + ": " + m.text())); p.on("pageerror", (e) => log.push(tag + " pageerror: " + e.message));
   await p.goto(URL_ + "?debug=1"); await p.waitForFunction(() => window.SP, null, { timeout: 20000 });
