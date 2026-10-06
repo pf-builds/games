@@ -776,7 +776,19 @@ function inject(L0, seed) {
   return L;
 }
 const DEBUG = require("../levels/debug-v4.json").levels;
-const TWISTED = DEBUG.concat(LEVELS.levels.filter((l, k) => k % 2 === 1).map((l, k) => inject(l, 7001 + k)));
+// Campaign v6 stage 1: inject6(L, seed): a copy of a baked level made deadly (kill: true, when it has towers) and/or given
+// two locks (its own lock, or a colour lock, beside a colour lock of another card colour, in a random order).
+function inject6(L0, seed, kill, two) {
+  const L = JSON.parse(JSON.stringify(L0)), r = Gr.rng(seed); delete L.win; delete L.grade;
+  if (kill) L.kill = true;
+  if (two) { const ms = []; L.cols.forEach((col) => col.forEach((cd) => { if (ms.indexOf(cd[0]) < 0 && cd[0] !== E.GILT && !(L.lock && L.lock.colour === cd[0])) ms.push(cd[0]); }));
+    const a = L.lock || { colour: ms.splice(Math.floor(r() * ms.length), 1)[0] }, b = { colour: ms[Math.floor(r() * ms.length)] };
+    delete L.lock; L.locks = r() < 0.5 ? [a, b] : [b, a]; }
+  return L;
+}
+const V6 = LEVELS.levels.filter((l) => l.towers && l.towers.length).filter((l, k) => k % 9 === 2).map((l, k) => inject6(l, 9101 + k, true, k % 2 === 0))
+  .concat(LEVELS.levels.filter((l) => l.n >= 50 && !(l.towers && l.towers.length)).filter((l, k) => k % 12 === 5).map((l, k) => inject6(l, 9301 + k, false, true)));
+const TWISTED = DEBUG.concat(LEVELS.levels.filter((l, k) => k % 2 === 1).map((l, k) => inject(l, 7001 + k)), V6);
 {
   let rests = 0, hangs = 0, games = 0, fails = { jam: 0, stuck: 0, short: 0 }, jam1 = 0, jam2 = 0;
   for (const L of TWISTED) {
@@ -800,6 +812,7 @@ const TWISTED = DEBUG.concat(LEVELS.levels.filter((l, k) => k % 2 === 1).map((l,
   eq(hangs, 0, "no hang: " + rests + " rest states in " + games + " random games on " + TWISTED.length + " twisted levels: every one is a win, a fail, or has a legal tap");
   ok(jam1 > 0 && jam2 > 0, "no hang: the games include jams where a linked card needed 2 spaces (" + jam1 + ") and jams with a space still locked (" + jam2 + "); fails " + JSON.stringify(fails));
   eq(TWISTED.slice(DEBUG.length).filter((L) => E.check(L).some((w) => /rows apart/.test(w))).length, 0, "inject: the random links keep to 2 rows apart");
+  ok(fails.short > 0, "no hang (v6): the killing-tower levels (" + TWISTED.filter((L) => L.kill).length + ") fail short in the run (" + fails.short + " games); two-lock levels: " + TWISTED.filter((L) => L.locks && L.locks.length === 2).length);
 }
 
 // ---- differential on twisted levels: engine vs the reference, patient and rushed ------------------------------------------
