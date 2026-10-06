@@ -1,84 +1,85 @@
 {
- "ms": 145520,
- "levels": 264,
+ "ms": 178461,
+ "levels": 326,
  "cov": {
   "why": {
-   "1:notInColumn": 2066,
-   "4:perLevel": 11183,
-   "0:perLevel": 11150,
-   "3:emptySpace": 5577,
-   "2:noneHidden": 11861,
-   "3:badSpace": 1639,
-   "4:noneLeft": 224,
-   "3:sappersOut": 2985,
-   "1:noSpace": 2127,
-   "4:badColour": 47,
-   "1:perLevel": 2764,
-   "1:tooDeep": 2319,
-   "3:perLevel": 2113,
-   "3:linked": 129,
-   "1:partnerOutOfView": 31,
-   "1:noTwoSpaces": 82,
-   "2:perLevel": 2394
+   "1:notInColumn": 2715,
+   "4:perLevel": 14945,
+   "0:perLevel": 14836,
+   "3:emptySpace": 7288,
+   "2:noneHidden": 15542,
+   "3:badSpace": 2217,
+   "4:noneLeft": 303,
+   "3:sappersOut": 3805,
+   "1:noSpace": 2732,
+   "4:badColour": 87,
+   "1:perLevel": 3851,
+   "1:tooDeep": 3055,
+   "3:perLevel": 2893,
+   "3:linked": 148,
+   "1:partnerOutOfView": 44,
+   "1:noTwoSpaces": 105,
+   "2:perLevel": 3290
   },
-  "endNoplay": 21120,
+  "endNoplay": 26075,
   "endNoplayBad": 0,
-  "games": 8712,
+  "games": 10758,
   "byKind": {
-   "stored": 264,
-   "patient": 2112,
-   "rushed": 2112,
-   "patient+power": 2112,
-   "rushed+power": 2112
+   "stored": 326,
+   "patient": 2608,
+   "rushed": 2608,
+   "patient+power": 2608,
+   "rushed+power": 2608
   },
   "ops": {
    "taken": [
-    3495,
-    5796,
-    670,
-    2413,
-    3512
+    4366,
+    7539,
+    874,
+    3159,
+    4355
    ],
    "refused": [
-    11150,
-    9389,
-    14255,
-    12443,
-    11454
+    14836,
+    12502,
+    18832,
+    16351,
+    15335
    ],
    "noplay": [
+    5,
     4,
-    2,
     1,
-    11,
-    8
+    12,
+    9
    ]
   },
-  "shows": 27944,
-  "clears": 591233,
-  "refusedChecked": 58717,
+  "shows": 105049,
+  "clears": 791570,
+  "refusedChecked": 77887,
   "refusedChanged": 0,
   "canPowerDisagree": 0,
-  "hiddenChecks": 7984605,
+  "hiddenChecks": 10724826,
   "outcomes": {
-   "1/": 3602,
-   "-1/jam": 5110
+   "1/": 4353,
+   "-1/jam": 6404,
+   "0/": 1
   },
   "jamWhy": {
-   "0": 3747,
-   "1": 12,
-   "2": 890,
-   "3": 1,
-   "4": 234,
-   "6": 226
+   "0": 4623,
+   "1": 33,
+   "2": 1140,
+   "3": 2,
+   "4": 310,
+   "6": 296
   },
   "killGames": 0,
-  "unlockGames": 1226,
+  "unlockGames": 1730,
   "maxWait": {
-   "n": 260,
+   "n": 322,
    "diff": []
   },
-  "gradeChecks": 260
+  "gradeChecks": 322
  },
  "gradeBad": [],
  "fmt": [],
@@ -1306,6 +1307,10 @@
   "e8-200 extreme before tap 13: 3 squads waiting, biggest 6",
   "e8-200 extreme before tap 14: 3 squads waiting, biggest 6",
   "e8-200 extreme before tap 15: 3 squads waiting, biggest 6",
+  "e9-209 hard before tap 17: 2 squads waiting, biggest 9",
+  "e9-209 hard before tap 18: 3 squads waiting, biggest 11",
+  "e9-224 normal before tap 17: 1 squads waiting, biggest 11",
+  "e9-246 hard before tap 5: 1 squads waiting, biggest 9",
   "v4-linked normal before tap 3: 1 squads waiting, biggest 7",
   "v4-linked normal before tap 4: 2 squads waiting, biggest 7",
   "g-met-436528 normal before tap 9: 3 squads waiting, biggest 6",
@@ -1326,7 +1331,20 @@
   "g-ours-g20 normal before tap 18: 3 squads waiting, biggest 6",
   "g-ours-g20 normal before tap 19: 3 squads waiting, biggest 6",
   "g-ours-g20 normal before tap 20: 3 squads waiting, biggest 6",
-  "g-ours-g20 normal before tap 21: 3 squads waiting, biggest 6"
+  "g-ours-g20 normal before tap 21: 3 squads waiting, biggest 6",
+  "g-w-poppy-field-giverny normal before tap 20: 1 squads waiting, biggest 11",
+  "g-w-poppy-field-giverny normal before tap 21: 1 squads waiting, biggest 11",
+  "g-w-poppy-field-giverny normal before tap 22: 1 squads waiting, biggest 11",
+  "g-w-poppy-field-giverny normal before tap 23: 1 squads waiting, biggest 9",
+  "g-w-poppy-field-giverny normal before tap 24: 1 squads waiting, biggest 8",
+  "g-w-poppy-field-giverny normal before tap 25: 1 squads waiting, biggest 8",
+  "g-w-poppy-field-giverny normal before tap 26: 1 squads waiting, biggest 8",
+  "g-w-poppy-field-giverny normal before tap 27: 1 squads waiting, biggest 8",
+  "g-w-poppy-field-giverny normal before tap 28: 1 squads waiting, biggest 8",
+  "g-w-poppy-field-giverny normal before tap 29: 1 squads waiting, biggest 8",
+  "g-w-poppy-field-giverny normal before tap 30: 1 squads waiting, biggest 8",
+  "g-w-poppy-field-giverny normal before tap 31: 1 squads waiting, biggest 8",
+  "g-w-poppy-field-giverny normal before tap 32: 1 squads waiting, biggest 8"
  ],
  "tagBad": [],
  "crossBuried": [],
