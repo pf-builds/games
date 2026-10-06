@@ -1,0 +1,22 @@
+{
+ "k": 1,
+ "slug": "01-kitten-forest",
+ "name": "Kitten Forest",
+ "lore": "Past the Goblin King's throne the road runs on into a lantern-lit wood of giant toadstools, where kittens nap, play and make mischief in every glade.",
+ "count": 50,
+ "source": "ai",
+ "sourceNote": "FLUX.1 [schnell] by Black Forest Labs (Apache-2.0), 4-bit GGUF, run on the studio's Mac; 103 candidates, 50 picks and 27 spares (game-research/sappers-path-v4/lands/01-kitten-forest/README.md). Each picture's file is the subject-cropped 160 px source with its fixed chroma (that README's hand-off warning), so convert gives back exactly the boards the picks were judged on.",
+ "features": ["linked", "mystery", "hidden", "lock"],
+ "eggs": ["kitten", "yarn", "fish", "butterfly"],
+ "shade": true,
+ "raw": "/Users/peter/local-ai/outputs/lands/01-kitten-forest",
+ "profile": {
+  "note": "Land 1 (tools/land-01-notes.md §2): clearly harder than levels 101-200 on average. Tags E4/N21/H17/X8 in a sawtooth of five runs (Normal lead, Hard run, Extreme peak, Easy breather; runs of 5, the later peaks with 2 Extremes), ending Extreme at 250. Features: ? cards on 40% (2-4 each), mystery blocks on 30% (15-30% of the picture's buried blocks), linked squads on 36%, a lock on every Hard and Extreme level (colour, or key where the gilt clears the picture). Bands and lookahead ceilings below the castle's 151-200 (Normal 0-10%, Hard and Extreme 0-5%, lookahead 0.25).",
+  "tags": {"shares": {"easy": 0.08, "normal": 0.42, "hard": 0.34, "extreme": 0.16}, "breathers": 4, "run": [3, 5], "end": "extreme"},
+  "features": {"mystery": {"share": 0.4, "cards": [2, 4]}, "hidden": {"share": 0.3, "of": [0.15, 0.3]}, "linked": {"share": 0.36, "pairs": [1, 2]}, "lock": {"share": 0.5, "key": 0.3}},
+  "bands": {"easy": [0.2, 0.45], "normal": [0.02, 0.07], "hard": [0, 0.03], "extreme": [0, 0.02]},
+  "lookahead": {"hard": 0.15, "extreme": 0.12}
+ },
+ "main": ["kf01", "kf15", "kf80", "kf83", "kf27", "kf51", "kf10", "kf37", "kf62", "kf29", "kf20", "kf85", "kf99", "kf47", "kf23", "kf28", "kf14", "kf36", "kf92", "kf61", "kf55", "kf44", "kf67", "kf96", "kf54", "kf84", "kf56", "kf08", "kf30", "kf52", "kf45", "kf25", "kf38", "kf60", "kf95", "kf21", "kf39", "kf100", "kf06", "kf33", "kf50", "kf89", "kf72", "kf03", "kf87", "kf73", "kf91", "kf76", "kf07", "kf34"],
+ "map": {"files": ["land-01-a.webp", "land-01-b.webp"], "templates": "map/templates.json"}
+}

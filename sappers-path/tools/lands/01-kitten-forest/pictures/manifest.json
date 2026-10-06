@@ -1,0 +1,1465 @@
+[
+ {
+  "id": "kf01",
+  "title": "Teacup kitten",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 1001; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf01-s1001.png",
+  "chroma": 2.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute ginger kitten sitting inside a big white teacup with red polka dots, simple plain teal background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 1001,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf01-s1001.png"
+ },
+ {
+  "id": "kf15",
+  "title": "Too-big hat",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2015; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf15-s2015.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute tiny grey kitten wearing a huge black top hat that slips down over its eyes, simple plain golden yellow background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2015,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/kf15-s2015.png"
+ },
+ {
+  "id": "kf80",
+  "title": "Pumpkin peek",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2080; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf80-s2080.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute black kitten peeking out of a big orange pumpkin, simple plain teal background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2080,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf80-s2080.png"
+ },
+ {
+  "id": "kf83",
+  "title": "Lion cub",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2083; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf83-s2083.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute fluffy lion cub chasing its own tail, simple plain sky blue background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2083,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf83-s2083.png"
+ },
+ {
+  "id": "kf27",
+  "title": "Marching drum",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2027; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf27-s2027.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute ginger kitten banging a big red marching drum with two drumsticks, simple plain yellow background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2027,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf27-s2027.png"
+ },
+ {
+  "id": "kf51",
+  "title": "Cucumber fright",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2051; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf51-s2051.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute black kitten leaping straight up in fright at a green cucumber lying behind it, simple plain orange background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2051,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf51-s2051.png"
+ },
+ {
+  "id": "kf10",
+  "title": "Heart balloon",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2010; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf10-s2010.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute white kitten with a black patch over one eye holding the string of a big red heart-shaped balloon, simple plain teal background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2010,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/kf10-s2010.png"
+ },
+ {
+  "id": "kf37",
+  "title": "Slam dunk",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2037; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf37-s2037.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute black kitten jumping to dunk an orange basketball into a hoop, simple plain purple background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2037,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/kf37-s2037.png"
+ },
+ {
+  "id": "kf62",
+  "title": "Glowing flower",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2062; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf62-s2062.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute white kitten sniffing a big glowing magenta flower, simple plain navy night background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2062,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf62-s2062.png"
+ },
+ {
+  "id": "kf29",
+  "title": "Violin",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2029; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf29-s2029.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute siamese kitten playing a brown violin with its eyes closed, simple plain dusky purple background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2029,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/kf29-s2029.png"
+ },
+ {
+  "id": "kf20",
+  "title": "Upside down",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2020; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf20-s2020.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute grey tabby kitten hanging upside down from a tree branch by its back paws with a surprised face, simple plain mint background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2020,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/kf20-s2020.png"
+ },
+ {
+  "id": "kf85",
+  "title": "Snow leopard cub",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2085; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf85-s2085.png",
+  "chroma": 1.7,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute fluffy grey snow leopard cub with dark rosette spots and a huge fluffy tail, simple plain icy blue background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2085,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf85-s2085.png"
+ },
+ {
+  "id": "kf99",
+  "title": "Bath time",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2099; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf99-s2099.png",
+  "chroma": 2.8,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a white mother cat licking and washing a small black kitten's head, simple plain coral pink background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2099,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf99-s2099.png"
+ },
+ {
+  "id": "kf47",
+  "title": "Kite flying",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2047; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf47-s2047.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute grey and white kitten flying a big red diamond kite, simple plain orange sunset sky background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2047,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/kf47-s2047.png"
+ },
+ {
+  "id": "kf23",
+  "title": "Big yawn",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2023; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf23-s2023.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "close-up of a cute ginger and white kitten doing a huge yawn with its pink mouth wide open, simple plain navy blue background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2023,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf23-s2023.png"
+ },
+ {
+  "id": "kf28",
+  "title": "Tuba",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2028; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf28-s2028.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute tiny grey kitten playing a giant shiny gold tuba with its cheeks puffed out, simple plain dark red background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2028,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf28-s2028.png"
+ },
+ {
+  "id": "kf14",
+  "title": "Paper bag",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2014; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf14-s2014.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute grey kitten stuck in a brown paper bag with only its head and front paws poking out, simple plain coral background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2014,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf14-s2014.png"
+ },
+ {
+  "id": "kf36",
+  "title": "Soccer kick",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2036; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf36-s2036.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute ginger kitten kicking a black and white soccer ball, simple plain green grass and pale blue sky background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2036,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf36-s2036.png"
+ },
+ {
+  "id": "kf92",
+  "title": "Siamese",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2092; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf92-s2092.png",
+  "chroma": 2.8,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute siamese kitten with a dark brown face and ears and bright blue eyes, sitting tall and elegant, simple plain mint background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2092,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/kf92-s2092.png"
+ },
+ {
+  "id": "kf61",
+  "title": "Firefly",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2061; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf61-s2061.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute calico kitten reaching up with one paw toward a big glowing green firefly, simple plain dark teal night background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2061,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/kf61-s2061.png"
+ },
+ {
+  "id": "kf55",
+  "title": "Mirror lion",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2055; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf55-s2055.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a small ginger kitten looking into a round mirror and seeing a big proud lion looking back, simple plain purple background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2055,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf55-s2055.png"
+ },
+ {
+  "id": "kf44",
+  "title": "Skiing",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2044; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf44-s2044.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute ginger and white kitten in a blue woolly hat skiing down a snowy hill, simple plain pale blue sky background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2044,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf44-s2044.png"
+ },
+ {
+  "id": "kf67",
+  "title": "Fox friend",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2067; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf67-s2067.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute little red fox cub and a cute grey kitten sitting side by side as best friends, simple plain cream background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2067,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf67-s2067.png"
+ },
+ {
+  "id": "kf96",
+  "title": "Scruff carry",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2096; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf96-s2096.png",
+  "chroma": 2.8,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a grey mother cat gently carrying a tiny grey and white kitten in her mouth by the scruff, simple plain pale green background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2096,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf96-s2096.png"
+ },
+ {
+  "id": "kf54",
+  "title": "Fish dream",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2054; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf54-s2054.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute grey kitten asleep with a big round thought bubble above its head showing a blue fish, simple plain lavender background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2054,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf54-s2054.png"
+ },
+ {
+  "id": "kf84",
+  "title": "Tiger cub",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2084; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf84-s2084.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute orange tiger cub with bold black stripes peeking through big green leaves, simple plain pale yellow background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2084,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf84-s2084.png"
+ },
+ {
+  "id": "kf56",
+  "title": "Staring contest",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2056; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf56-s2056.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute siamese kitten and a round brown owl having a staring contest with huge wide eyes, simple plain dark blue night background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2056,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf56-s2056.png"
+ },
+ {
+  "id": "kf08",
+  "title": "Strawberry hug",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2008; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf08-s2008.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute brown tabby kitten hugging a giant red strawberry, simple plain light blue background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2008,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf08-s2008.png"
+ },
+ {
+  "id": "kf30",
+  "title": "Red guitar",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2030; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf30-s2030.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute black kitten playing a bright red electric guitar, simple plain lime green background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2030,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf30-s2030.png"
+ },
+ {
+  "id": "kf52",
+  "title": "Bread face",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2052; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf52-s2052.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute grey tabby kitten with its face poking through the middle of a slice of bread, simple plain blue background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2052,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf52-s2052.png"
+ },
+ {
+  "id": "kf45",
+  "title": "Apple weights",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2045; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf45-s2045.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute orange kitten proudly lifting a little barbell with a red apple on each end, simple plain lilac background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2045,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf45-s2045.png"
+ },
+ {
+  "id": "kf25",
+  "title": "Stuck up a tree",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2025; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf25-s2025.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute tuxedo kitten clinging halfway up a tree trunk with all four paws and a worried face, simple plain orange sunset background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2025,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/kf25-s2025.png"
+ },
+ {
+  "id": "kf38",
+  "title": "Skateboard",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2038; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf38-s2038.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute grey tabby kitten riding a red skateboard, simple plain turquoise background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2038,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf38-s2038.png"
+ },
+ {
+  "id": "kf60",
+  "title": "Mushroom house",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2060; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf60-s2060.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a red mushroom house with white spots and a round blue door, a cute ginger kitten sitting in the doorway, simple plain light green background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2060,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/kf60-s2060.png"
+ },
+ {
+  "id": "kf95",
+  "title": "Calico stretch",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2095; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf95-s2095.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute calico kitten with orange, black and white patches stretching with its back arched high, simple plain lavender background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2095,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf95-s2095.png"
+ },
+ {
+  "id": "kf21",
+  "title": "Leaf on face",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2021; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf21-s2021.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute brown tabby kitten with a big red autumn leaf stuck on its face, simple plain turquoise background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2021,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf21-s2021.png"
+ },
+ {
+  "id": "kf39",
+  "title": "Leaf surfing",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2039; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf39-s2039.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute brown and white kitten surfing on a big green leaf on a curling blue wave, simple plain pale yellow sky background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2039,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf39-s2039.png"
+ },
+ {
+  "id": "kf100",
+  "title": "Heart curl",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2100; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf100-s2100.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a calico mother cat and her calico kitten curled up asleep together in the shape of a heart, simple plain lilac background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2100,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf100-s2100.png"
+ },
+ {
+  "id": "kf06",
+  "title": "Blanket bundle",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2006; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf06-s2006.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute tuxedo kitten wrapped snugly in a red knitted blanket with only its face showing, simple plain sky blue background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2006,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf06-s2006.png"
+ },
+ {
+  "id": "kf33",
+  "title": "Conductor",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2033; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf33-s2033.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute tuxedo kitten conductor in a red bow tie waving a baton with both paws raised, simple plain teal background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2033,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/kf33-s2033.png"
+ },
+ {
+  "id": "kf50",
+  "title": "Signpost nap",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2050; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf50-s2050.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute calico kitten fast asleep draped over a blank wooden arrow signpost in the forest, simple plain mint background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2050,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/kf50-s2050.png"
+ },
+ {
+  "id": "kf89",
+  "title": "Ocelot kitten",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2089; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf89-s2089.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute ocelot kitten with bold dark spots and stripes sitting on a mossy rock, simple plain teal background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2089,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf89-s2089.png"
+ },
+ {
+  "id": "kf72",
+  "title": "Rainbow slide",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2072; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf72-s2072.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute ginger kitten sliding down a bright rainbow, simple plain pale blue background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2072,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf72-s2072.png"
+ },
+ {
+  "id": "kf03",
+  "title": "Big blue bow",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2003; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf03-s2003.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute fluffy calico kitten wearing a big blue bow tied at its neck, simple plain butter yellow background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2003,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf03-s2003.png"
+ },
+ {
+  "id": "kf87",
+  "title": "Lynx kitten",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2087; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf87-s2087.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "close-up of a cute lynx kitten with tall black ear tufts and fluffy cheek fur, simple plain dark green forest background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2087,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf87-s2087.png"
+ },
+ {
+  "id": "kf73",
+  "title": "Dragonfly ride",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2073; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf73-s2073.png",
+  "chroma": 1.7,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute tiny white kitten riding on the back of a big blue dragonfly, simple plain pale yellow background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2073,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf73-s2073.png"
+ },
+ {
+  "id": "kf91",
+  "title": "Serval kitten",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2091; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf91-s2091.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute serval kitten with huge ears and black spots peeking over tall grass, simple plain orange background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2091,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf91-s2091.png"
+ },
+ {
+  "id": "kf76",
+  "title": "Blueberry bucket",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2076; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf76-s2076.png",
+  "chroma": 1.7,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute grey tabby kitten sitting in a wooden bucket full of blueberries, simple plain pink background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2076,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf76-s2076.png"
+ },
+ {
+  "id": "kf07",
+  "title": "Green-eyed face",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2007; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf07-s2007.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "close-up of a cute ginger kitten face with huge green eyes and a pink nose, simple plain purple background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2007,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf07-s2007.png"
+ },
+ {
+  "id": "kf34",
+  "title": "Xylophone",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2034; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf34-s2034.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute calico kitten playing a rainbow coloured xylophone with two mallets, simple plain navy background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2034,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf34-s2034.png"
+ },
+ {
+  "id": "kf04",
+  "title": "Crescent moon nap",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2004; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf04-s2004.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute grey kitten sleeping on a big yellow crescent moon, simple plain dark navy night background with a few white stars, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2004,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf04-s2004.png"
+ },
+ {
+  "id": "kf05",
+  "title": "Paw wave",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2005; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf05-s2005.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute black kitten with big green eyes sitting up and waving one paw hello, simple plain coral pink background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2005,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/kf05-s2005.png"
+ },
+ {
+  "id": "kf09",
+  "title": "Flower pot",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2009; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf09-s2009.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute grey tabby kitten sitting in a terracotta flower pot between big green leaves, simple plain pale yellow background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2009,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/kf09-s2009.png"
+ },
+ {
+  "id": "kf13",
+  "title": "Daisy crown",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2013; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf13-s2013.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute cream kitten wearing a crown of white daisies, simple plain dark green background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2013,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf13-s2013.png"
+ },
+ {
+  "id": "kf16",
+  "title": "Dandelion sneeze",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2016; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf16-s2016.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute calico kitten sneezing at a big round white dandelion puff, eyes squeezed shut, simple plain sky blue background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2016,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf16-s2016.png"
+ },
+ {
+  "id": "kf17",
+  "title": "Puddle surprise",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2017; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf17-s2017.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute black kitten jumping back in surprise at its own reflection in a blue puddle, simple plain light green background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2017,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf17-s2017.png"
+ },
+ {
+  "id": "kf19",
+  "title": "Tiny box",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2019; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf19-s2019.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a chubby white and orange kitten squeezed into a tiny cardboard box that is much too small, simple plain pink background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2019,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf19-s2019.png"
+ },
+ {
+  "id": "kf22",
+  "title": "Bubble bath",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2022; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf22-s2022.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a grumpy wet grey kitten sitting in a wooden tub full of white soap bubbles, simple plain lavender background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2022,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf22-s2022.png"
+ },
+ {
+  "id": "kf24",
+  "title": "Butterfly nose",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2024; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf24-s2024.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute cross-eyed grey kitten staring at an orange butterfly sitting on its nose, simple plain lilac background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2024,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf24-s2024.png"
+ },
+ {
+  "id": "kf26",
+  "title": "Long sweater",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2026; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf26-s2026.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute grey kitten wearing a green knitted sweater that is far too long, the sleeves dragging on the ground, simple plain light pink background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2026,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/kf26-s2026.png"
+ },
+ {
+  "id": "kf40",
+  "title": "Ice skating",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2040; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf40-s2040.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute white kitten in a red scarf ice skating on a frozen pond, simple plain dark blue night background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2040,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/kf40-s2040.png"
+ },
+ {
+  "id": "kf41",
+  "title": "Tennis",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2041; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf41-s2041.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute cream kitten swinging a tennis racket at a yellow tennis ball, simple plain light purple background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2041,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf41-s2041.png"
+ },
+ {
+  "id": "kf43",
+  "title": "Goalie",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2043; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf43-s2043.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute tuxedo kitten goalie in a yellow jersey and big orange gloves diving to save a soccer ball, simple plain green background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2043,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf43-s2043.png"
+ },
+ {
+  "id": "kf58",
+  "title": "Moon silhouette",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2058; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf58-s2058.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "the black silhouette of a kitten on a curved tree branch in front of a huge glowing yellow full moon, simple plain deep blue night sky background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2058,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf58-s2058.png"
+ },
+ {
+  "id": "kf59",
+  "title": "Glow mushroom",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2059; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf59-s2059.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute grey kitten looking up at a giant glowing blue mushroom, simple plain dark purple night background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2059,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/kf59-s2059.png"
+ },
+ {
+  "id": "kf63",
+  "title": "Log leap",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2063; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf63-s2063.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute brown tabby kitten leaping over a mossy green log, simple plain sky blue background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2063,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf63-s2063.png"
+ },
+ {
+  "id": "kf66",
+  "title": "Lotus pad",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2066; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf66-s2066.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute white kitten sitting on a big green lily pad next to a pink lotus flower, simple plain dark teal water background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2066,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf66-s2066.png"
+ },
+ {
+  "id": "kf69",
+  "title": "Snail ride",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2069; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf69-s2069.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute white kitten riding on the back of a big snail with a spiral orange shell, simple plain mint green background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2069,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf69-s2069.png"
+ },
+ {
+  "id": "kf74",
+  "title": "Leaf umbrella",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2074; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf74-s2074.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute grey kitten holding a big green leaf over its head as an umbrella in the rain, simple plain blue rainy background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2074,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/kf74-s2074.png"
+ },
+ {
+  "id": "kf75",
+  "title": "Sunflower perch",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2075; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf75-s2075.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute ginger kitten sitting on top of a giant yellow sunflower, simple plain sky blue background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2075,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/kf75-s2075.png"
+ },
+ {
+  "id": "kf77",
+  "title": "Robin friend",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2077; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf77-s2077.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute grey kitten and a little red robin sitting together on a branch, simple plain pale blue background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2077,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf77-s2077.png"
+ },
+ {
+  "id": "kf79",
+  "title": "Snowman",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2079; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf79-s2079.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute brown tabby kitten next to a small snowman with an orange carrot nose, simple plain dark blue night background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2079,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf79-s2079.png"
+ },
+ {
+  "id": "kf81",
+  "title": "Kitten knight",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2081; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf81-s2081.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute ginger kitten knight in shiny silver armour holding a round blue shield, simple plain red background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2081,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/kf81-s2081.png"
+ },
+ {
+  "id": "kf82",
+  "title": "Watermelon",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2082; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf82-s2082.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute grey tabby kitten eating a big slice of watermelon, simple plain sky blue background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2082,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf82-s2082.png"
+ },
+ {
+  "id": "kf86",
+  "title": "Cheetah cub",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2086; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf86-s2086.png",
+  "chroma": 1.7,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute cheetah cub with black spots and black tear lines running fast, simple plain light green background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2086,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf86-s2086.png"
+ },
+ {
+  "id": "kf94",
+  "title": "Maine Coon",
+  "artist": "Click it! Studios",
+  "date": "2026-10-05",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2094; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf94-s2094.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute big fluffy brown tabby Maine Coon kitten with tufted ears and a huge bushy tail, simple plain golden yellow background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2094,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/kf94-s2094.png"
+ },
+ {
+  "id": "kf101",
+  "title": "Tiger walk",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 2101; prompt in tools/lands/01-kitten-forest/pictures/manifest.json",
+  "file": "src/kf101-s2101.png",
+  "chroma": 1.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a mother tiger and her small cub walking side by side, simple plain pale blue background, cute whimsical storybook style, flat vector illustration, bold simple shapes, thick dark outline, limited palette of 6 colours, high contrast, centered subject, no text",
+  "seed": 2101,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/kf101-s2101.png"
+ }
+]
