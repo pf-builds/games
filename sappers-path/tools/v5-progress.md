@@ -243,3 +243,33 @@ R4 fix: <what>". Frozen: levels 1-100, the 60 pictures, castles eras 1-4 (`node 
 
 ### State (R4 fixes)
 Every brief item fixed; nits N3-N8 and m4 parked in LATER. Next: Peter's playtest of 101-200.
+
+# Lands foundation: levels past 200, built 50 at a time (2026-10-06)
+
+Source: the orchestrator's foundation brief (2026-10-06) and `game-research/sappers-path-v4/land-factory.md` Step 0, with
+Peter's scope notes of 2026-10-06 (difficulty data-driven per land; the play screen's gear; side quests from the Wandering
+Gallery). Notes: `tools/lands-foundation-notes.md`. Runbook for the factory loop: `tools/land-runbook.md`. Demo land
+(never shipped): scratch copy, shots in `tools/shots-lands-foundation/` (gitignored). Dev server 8494 (8491 was taken).
+
+## How to resume (lands foundation)
+
+1. Read this table, then `tools/lands-foundation-notes.md`; `git log --oneline` ("Sapper's Path lands foundation: ...").
+2. Take the first row not `done`. Frozen: levels 1-200 and pictures 1-60 (`freeze.js --require`; the snapshot now holds
+   1-200). The live game must look and play as before until a land is installed.
+
+| # | Piece | State | Commit |
+|---|---|---|---|
+| L1 | Lands in data: config `lands`, realm words past 200 (Land k), epilogue on the boss's first win, era per land | done | (see git log) |
+| L2 | Shading: `tools/shade.js` (port of the test, 20/20 identical), `convert.shade`, board draw, shade tip, selfTest twin | done | (see git log) |
+| L3 | Map: `mirror` entries (journey.js layoutOf), WebP sheets, page crossfade (`fade`), bridges per entry, long tail past the last land (tailAfter) | done | (see git log) |
+| L4 | Land profile (data per land: tag mix, feature shares, bands), land bake (`tools/land-bake.js`), side quests (`quests.js landQuestsOf`) | done | (see git log) |
+| L5 | Factory: `tools/land.js` (prep, convert, sheet, bake, map, assemble, check, install), `land-src.py`, `land-sheet.py`, `land-config.json`, Wandering Gallery folder | done | (see git log) |
+| L6 | The play screen's gear (Settings over a level, held still) | done | (see git log) |
+| L7 | Tests (lands section, castle-scoped views), freeze snapshot 1-200, `?v=42` | done | c8d61a6 |
+| L8 | Demo land (10 levels, scratch) + shots, selfTest/test/critic/freeze on a copy with it installed | done: every gate PASS, median pace 208 s; copy checks all green | (docs commit) |
+| L9 | Checks on the branch (test.js, freeze, regrades, critic-v5, selfTest x2, harness), notes, SPEC §9, runbook | done (harness: see State) | (docs commit) |
+
+### State (lands foundation)
+Foundation built and checked; the live game is unchanged until a land is installed (except the play screen's gear).
+Next: the factory loop builds Land 1 (`tools/land-runbook.md`); its profile, map templates and the Wandering Gallery
+list are its first decisions (`tools/lands-foundation-notes.md` §10).
