@@ -17,7 +17,7 @@
    the Gallery's next tile (gold frame, Play chip); a buy short of coins (.pw.poor); 44 px badges in small frames; the
    landscape bar's .head and .grid; the home's era chip on the river; era report cards as a band.
    v5.3: the home's painted siege (#title-art, a <picture>) and the realm line over Play. */
-@font-face { font-family: "Jersey 10"; src: url("fonts/Jersey10-Regular.ttf?v=44") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Jersey 10"; src: url("fonts/Jersey10-Regular.ttf?v=45") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
 :root { --bg: #2e2935; --ink: #221a26; --cream: #f3ead8; --cream-soft: #cfc4d6;
   --tray: #ddd3c0; --tray-hi: #ece5d6; --tray-edge: #c4b89e; --tray-ink: #3a3027; --tray-soft: #6b5c47; --socket: #c3b697; --socket-lo: #a99a7b;
   --band1: #d0c6b4; --band2: #c2baa9; /* the rows' tray bands, set from layout.fade.band at boot */
@@ -57,6 +57,12 @@ button.round { width: 42px; height: 42px; min-height: 42px; padding: 0; border-r
    takes a 44 px tap (the bar's 6 px gaps share 2 px between neighbours). */
 body.held #pwtip { visibility: hidden; } /* lands foundation: a power-up tip waits while Settings is open over a level */
 #top { position: relative; z-index: 4; } #top button.round { position: relative; } #top button.round::after { content: ""; position: absolute; inset: -7px; } /* 4 px past the 3 px border; #top over the stage's top edge (sheets, modals, the pause and the screens stay above it) */
+/* Land 1 fix (the functional critic's m4): neighbouring round buttons sit 8 px apart, so no tap box gives up 2 px to the
+   next one; where the bar is 38 px high (short portrait, body.tight) a 36 px button sits 1 px under the screen's top and
+   its box reaches 7 px under it instead of 4, so it is still 44 px tall. */
+#top button.round + button.round { margin-left: 2px; }
+@media (max-height: 640px) and (max-width: 700px) { #top button.round::after { bottom: -10px; } }
+body.tight:not(.wide) #top button.round::after { bottom: -10px; }
 button.big { min-height: 58px; font-size: 36px; width: 100%; }
 .panel { background: var(--parch); color: var(--parch-ink); border: 3px solid var(--ink); border-radius: 8px;
   box-shadow: inset 0 0 0 3px var(--parch-edge), 0 5px 0 rgba(0,0,0,.45); }

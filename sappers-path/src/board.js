@@ -156,7 +156,7 @@
       focus: { on: false, x: 0, y: 0, r: 1 },
       gob: { on: false, t0: 0, x: 0, y: 0, done: false },
       hooks: { pop: null, deposit: null, gate: null, tower: null, shot: null, hit: null, collapse: null, tap: null, free: null, move: null, reveal: null, link: null, unlock: null, power: null },
-      lockKey: -1, lockOpen: true, pal: null, palKey: "", liquid: null, pic: false, towerTop: new Float32Array(MAXT),
+      lockKey: -1, lockOpen: true, pal: null, palKey: "", hide: null, hideKey: "", liquid: null, pic: false, towerTop: new Float32Array(MAXT),
       // Critics 1 fix: rings (V.hot from the page, the loud mask worked out per board change, each ring's ease) and bins.
       hot: 0, ringsLoud: false, hotVer: -1, hotFor: -1, hotMask: 0, shootM: 0, ringA: new Float32Array(MAXT), ringHitT: new Float64Array(MAXT).fill(-1e12), binT: new Float64Array(E.NMAT).fill(-1e12),
     };
@@ -207,9 +207,9 @@
       return c;
     }
     // v5 R1: a mystery block's stud: the flat stud in board.hidden.c with a pixel "?" (board.hidden.q) on its face, the same
-    // for every hidden block whatever its colour.
+    // for every hidden block whatever its colour. Land 1 fix (B1): a land level's own fill and ? colour (setLevel's hide).
     function mysStud(s) {
-      const H = K.hidden, T = K.stud, c = mk(s, s), x = c.getContext("2d"), sw = Math.min(s >> 2, Math.max(1, Math.round(V.dpr * T.seamCss))), a = sw >> 1, f = s - sw;
+      const H = V.hide ? Object.assign({}, K.hidden, V.hide) : K.hidden, T = K.stud, c = mk(s, s), x = c.getContext("2d"), sw = Math.min(s >> 2, Math.max(1, Math.round(V.dpr * T.seamCss))), a = sw >> 1, f = s - sw;
       x.fillStyle = toneHex(H.c, T.seam); x.fillRect(0, 0, s, s); rr(x, a, a, f, f, Math.max(0.5, f * T.radius)); x.fillStyle = H.c; x.fill();
       x.save(); rr(x, a, a, f, f, Math.max(0.5, f * T.radius)); x.clip(); x.fillStyle = mixHex(H.c, T.hi); x.fillRect(a, a, f, Math.max(1, Math.round(f * T.hiH))); x.restore();
       if (s >= 5) { const G = H.glyph, u = Math.max(1, Math.floor((f * H.size) / G.length)), gx = Math.round(a + (f - u * G[0].length) / 2), gy = Math.round(a + (f - u * G.length) / 2);
@@ -277,7 +277,10 @@
     // pal (v4 M4, optional): the level's own colours, {id: {c}}; other ids keep config's. A new palette drops the sprite
     // caches (the page's layout() rebuilds them before the next draw).
     // v5 R4: liquid (optional), the level's moat drawn as another liquid (config board.pic.liquids, e.g. lava).
-    function setLevel(B, S, pal, liquid, shade) {
+    // Land 1 fix (the visual critic's B1): hide (optional), {c, q}, the level's mystery-block fill and its ? colour (a land
+    // level's, chosen 20+ CIEDE2000 from its picture by tools/land.js); none: config board.hidden's, as before.
+    function setLevel(B, S, pal, liquid, shade, hide) {
+      const hk = hide ? hide.c + hide.q : ""; if (hk !== V.hideKey) { V.hideKey = hk; V.hide = hide || null; V.sprites = null; }
       // Lands foundation: the shade rows (null: none) and each colour's shade studs; a change of shade colours drops the sprites.
       let shK = ""; V.shade = shade || null; if (pal) for (const k in pal) if (pal[k] && pal[k].sh) shK += k + ":" + pal[k].sh.join() + ";";
       if (shK !== V.shK) { V.shK = shK; V.shPal = []; if (shK) for (const k in pal) if (pal[k] && pal[k].sh) V.shPal[+k] = pal[k].sh; V.sprites = null; }
@@ -897,6 +900,13 @@
       for (let i = 0; i < RMAX; i++) { if (!V.rOn[i]) continue; bySpace[V.rS[i] & 7]++; if (V.rK[i] === 1) { eat++; if (V.t >= V.rT1[i]) carrying++; } else hit++; }
       return { live: V.live, eat, carrying, hit, bySpace, dropped: V.stats.dropped, cap: RMAX };
     }
+    // Land 1 fix (B1), for selfTest: the mystery stud's fill as configured (c) and as drawn (px: its face left of the "?").
+    function hideInfo() {
+      const S = V.sprites, c0 = (V.hide || K.hidden).c; if (!S || !S.blk[0]) return { c: c0, px: null };
+      const cv = S.blk[0], s = cv.width, sw = Math.min(s >> 2, Math.max(1, Math.round(V.dpr * K.stud.seamCss))), a = sw >> 1, f = s - sw, pc = mk(s, s), px = pc.getContext("2d", { willReadFrequently: true });
+      px.drawImage(cv, 0, 0); const d = px.getImageData(Math.round(a + 0.15 * f), s >> 1, 1, 1).data;
+      return { c: c0, px: "#" + [d[0], d[1], d[2]].map((v) => v.toString(16).padStart(2, "0")).join("") };
+    }
     // Block caches for selfTest (v4 M1): per material, a checksum of its stud and how many of its pixels are exactly its
     // mark's ink (the gate's bars, the key's glyph, or the colour-blind mark). Read through one scratch canvas.
     function studInfo() {
@@ -923,7 +933,7 @@
     // A material's mark alone (transparent around it, drawn in ink): the queue tiles' glyph in colour-blind mode.
     function glyph(m, px, ink) { const c = mk(px, px); mark(c.getContext("2d"), m, px, ink, K); return c; }
 
-    Object.assign(V, { setLevel, reset, layout, fitCs, hotNow, sync, setSlots, update, goblin, draw, checkSprites, buildSprites, paintLayer, shake, cssAt, hitInfo, fxInfo, runners, entryInfo, setCb, glyph, studInfo,
+    Object.assign(V, { setLevel, reset, layout, fitCs, hotNow, sync, setSlots, update, goblin, draw, checkSprites, buildSprites, paintLayer, shake, cssAt, hitInfo, fxInfo, runners, entryInfo, setCb, glyph, studInfo, hideInfo,
       man: (m, px) => sapper(m, px) });
     return V;
   }

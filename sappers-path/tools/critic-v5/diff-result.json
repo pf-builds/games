@@ -1,27 +1,27 @@
 {
- "ms": 178461,
+ "ms": 196865,
  "levels": 326,
  "cov": {
   "why": {
-   "1:notInColumn": 2715,
-   "4:perLevel": 14945,
-   "0:perLevel": 14836,
-   "3:emptySpace": 7288,
-   "2:noneHidden": 15542,
-   "3:badSpace": 2217,
-   "4:noneLeft": 303,
-   "3:sappersOut": 3805,
-   "1:noSpace": 2732,
-   "4:badColour": 87,
-   "1:perLevel": 3851,
-   "1:tooDeep": 3055,
-   "3:perLevel": 2893,
-   "3:linked": 148,
-   "1:partnerOutOfView": 44,
-   "1:noTwoSpaces": 105,
-   "2:perLevel": 3290
+   "1:notInColumn": 2733,
+   "4:perLevel": 15413,
+   "0:perLevel": 15510,
+   "3:emptySpace": 7761,
+   "2:noneHidden": 16031,
+   "3:badSpace": 2368,
+   "4:noneLeft": 323,
+   "3:sappersOut": 4048,
+   "1:noSpace": 2741,
+   "4:badColour": 79,
+   "1:perLevel": 4223,
+   "1:tooDeep": 3076,
+   "3:perLevel": 2799,
+   "3:linked": 162,
+   "1:partnerOutOfView": 42,
+   "1:noTwoSpaces": 104,
+   "2:perLevel": 3580
   },
-  "endNoplay": 26075,
+  "endNoplay": 26080,
   "endNoplayBad": 0,
   "games": 10758,
   "byKind": {
@@ -33,48 +33,49 @@
   },
   "ops": {
    "taken": [
-    4366,
-    7539,
-    874,
-    3159,
-    4355
+    4420,
+    7784,
+    895,
+    3086,
+    4435
    ],
    "refused": [
-    14836,
-    12502,
-    18832,
-    16351,
-    15335
+    15510,
+    12919,
+    19611,
+    17138,
+    15815
    ],
    "noplay": [
     5,
-    4,
+    3,
     1,
     12,
-    9
+    8
    ]
   },
-  "shows": 105049,
-  "clears": 791570,
-  "refusedChecked": 77887,
+  "shows": 94677,
+  "clears": 798192,
+  "refusedChecked": 81022,
   "refusedChanged": 0,
   "canPowerDisagree": 0,
-  "hiddenChecks": 10724826,
+  "hiddenChecks": 11273752,
   "outcomes": {
-   "1/": 4353,
-   "-1/jam": 6404,
+   "1/": 4909,
+   "-1/jam": 5848,
    "0/": 1
   },
   "jamWhy": {
-   "0": 4623,
-   "1": 33,
-   "2": 1140,
-   "3": 2,
-   "4": 310,
-   "6": 296
+   "0": 4382,
+   "1": 14,
+   "2": 890,
+   "3": 1,
+   "4": 329,
+   "5": 6,
+   "6": 226
   },
   "killGames": 0,
-  "unlockGames": 1730,
+  "unlockGames": 1226,
   "maxWait": {
    "n": 322,
    "diff": []
@@ -1307,10 +1308,6 @@
   "e8-200 extreme before tap 13: 3 squads waiting, biggest 6",
   "e8-200 extreme before tap 14: 3 squads waiting, biggest 6",
   "e8-200 extreme before tap 15: 3 squads waiting, biggest 6",
-  "e9-209 hard before tap 17: 2 squads waiting, biggest 9",
-  "e9-209 hard before tap 18: 3 squads waiting, biggest 11",
-  "e9-224 normal before tap 17: 1 squads waiting, biggest 11",
-  "e9-246 hard before tap 5: 1 squads waiting, biggest 9",
   "v4-linked normal before tap 3: 1 squads waiting, biggest 7",
   "v4-linked normal before tap 4: 2 squads waiting, biggest 7",
   "g-met-436528 normal before tap 9: 3 squads waiting, biggest 6",

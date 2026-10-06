@@ -42,7 +42,8 @@ function landTags(N, T, perLand) {
   let n = N - e - x - h; while (n < 0 && h > (T.end === "hard" ? 1 : 0)) { h--; n++; } while (n < 0 && x > (T.end === "extreme" ? 1 : 0)) { x--; n++; } while (n < 0 && e > 1) { e--; n++; }
   const S = e + 1, runs = Array.from({ length: S }, () => ({ h: 0, x: 0 })), lead = new Array(S).fill(0);
   for (let i = 0; i < x; i++) runs[S - 1 - (i % S)].x++; // the Extremes from the last run back: later peaks are higher
-  for (let i = 0; i < h; i++) { let b = 0; for (let k = 1; k < S; k++) if (runs[k].h + runs[k].x < runs[b].h + runs[b].x) b = k; runs[b].h++; } // the Hards evening the runs out
+  if (!x && h && h < S) for (let i = 0; i < h; i++) runs[S - 1 - Math.floor((i * S) / h)].h++; // Land 1 fix (a casual land: fewer Hards than runs): spread evenly, the last run first
+  else for (let i = 0; i < h; i++) { let b = 0; for (let k = 1; k < S; k++) if (runs[k].h + runs[k].x < runs[b].h + runs[b].x) b = k; runs[b].h++; } // the Hards evening the runs out
   for (let i = 0; i < n; i++) lead[i % S]++;
   // Land 1 fix: a run longer than T.run[1] takes one of its lead's Normals into its Hards (a dip before the climb goes on),
   // its first part k Hards so both parts fit (only where the run would break the profile's longest anyway).

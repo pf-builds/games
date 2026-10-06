@@ -31,6 +31,9 @@
 // e3-50, e4-75, e5-100 now). On load, a done, best or last id the page no longer has counts as the level in its slot n
 // (an id the page has wins over a renamed one), so a migrated level is cleared once and its first-clear coins never pay
 // again.
+// Land 1 fix (the functional critic's m5): tail {id: 1}, long-tail pictures a save had open before the lands moved the
+// long tail past them (questOpen keeps them open), and lands (1: the page has read this save with lands built, so its
+// tail is final); both optional, kept on load (tail only for pictures the page has), not in the save code.
 // v5.2: settings.music and settings.sfx, music and sound effects switched apart (strict booleans, on by default). A save
 // from before v5.2 has neither: both load as the opposite of its muted flag. muted is kept as both off.
 // v5.4 (SPEC-v4 §9, tools/v5-4-notes.md): reset and the save code.
@@ -104,6 +107,7 @@
       const lv = isObj(raw.lives) ? raw.lives : null;
       if (lv) { s.lives.n = Math.min(maxLives(meta), whole(lv.n, 99)); s.lives.at = whole(lv.at, 8.64e15); }
       const eg = isObj(raw.eggs) ? raw.eggs : {}; for (const k of Object.keys(eg).slice(0, MAXEGGS)) if (EGG.test(k) && eg[k] === 1) s.eggs[k] = 1; // v5 R3
+      if (isObj(raw.tail)) { s.tail = {}; for (const id of gal || []) if (raw.tail[id] === 1) s.tail[id] = 1; } if (raw.lands === 1) s.lands = 1; // Land 1 fix: the long tail kept open
       return s;
     } catch (e) { return fresh(meta); }
   }
@@ -131,7 +135,7 @@
   // level waits for the whole campaign, then they open one at a time (the first at once, each next when the one before it
   // is cleared): the long tail until R4 builds those levels.
   function questOpen(data, order, gal, after, id) {
-    const i = gal.indexOf(id), done = data.done || {}, won = data.gal || {}; if (i < 0) return false; if (won[id]) return true;
+    const i = gal.indexOf(id), done = data.done || {}, won = data.gal || {}; if (i < 0) return false; if (won[id] || (data.tail || {})[id] === 1) return true; // Land 1 fix: a long-tail picture kept open
     const a = after[i] | 0; if (a >= 1 && a <= order.length) return !!done[order[a - 1]];
     if (!order.every((x) => done[x])) return false;
     return i === 0 || (after[i - 1] | 0) <= order.length || !!won[gal[i - 1]];

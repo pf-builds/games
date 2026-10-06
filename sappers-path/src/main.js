@@ -148,7 +148,7 @@
     try { indexGallery(await getJSON("levels/gallery.json?v=" + V_)); } catch (e) { /* no side quests */ }
     try { app.lay = NS.journey.layoutOf(await getJSON("map/layout.json?v=" + V_)); } catch (e) { app.lay = null; /* no journey map: its Play still works */ } // lands foundation: mirrored entries resolved
     if (!app.levels.length) { $("load-msg").textContent = "No levels found."; return; }
-    app.meta = app.cfg.meta; app.save = Save.open(storage(), app.cfg.save.key, app.order, app.gal.map((e) => e.id), app.meta); app.mats = app.cfg.v3.mats;
+    app.meta = app.cfg.meta; app.save = Save.open(storage(), app.cfg.save.key, app.order, app.gal.map((e) => e.id), app.meta); app.mats = app.cfg.v3.mats; keepTail(); // Land 1 fix (m5)
     app.sheets = Art.sources(app.cfg.art); fades();
     app.V = Board.create($("board"), app.cfg, app.sheets);
     const H = app.V.hooks;
@@ -577,7 +577,7 @@
 
   function renderTop() {
     const e = app.entry; if (!e) return;
-    $("lvl-num").textContent = e.debug ? app.cfg.layout.debugNum : e.n; $("lvl-name").textContent = e.gallery ? e.L.title : e.boss ? e.boss.name : e.L.name || e.L.title || (app.eras[e.era - 1] ? app.eras[e.era - 1].name : realmEye(e.era, "top")); // lands foundation: a land level shows its picture's title
+    $("lvl-num").textContent = e.debug ? app.cfg.layout.debugNum : e.n; $("lvl-name").textContent = e.gallery ? e.L.short || e.L.title : e.boss ? e.boss.name : e.L.name || e.L.title || (app.eras[e.era - 1] ? app.eras[e.era - 1].name : realmEye(e.era, "top")); // lands foundation: a land level shows its picture's title; Land 1 fix: a side quest its short title (the win sheet keeps the full one)
     $("btn-map").setAttribute("aria-label", app.cfg.layout.mapName); // v5 R3: side quests live on the map too
     tagChip($("tag-chip"), app.diff); // v4.3: the level's tag (Normal unmarked)
     app.labFit.delete("name"); fitText($("lvl-name"), "name", app.cfg.layout.nameMinPx); // the room beside the number changes with its digits
@@ -631,6 +631,14 @@
   // icon) until its first clear, which adds the prize to the inventory with a toast.
   const galIds = () => app.gal.map((e) => e.id), galAfter = () => app.gal.map(questAt), picOpen = (e) => Save.questOpen(app.save.data, app.order, galIds(), galAfter(), e.id); // lands foundation: galAfter keeps the long tail past the last land (journey.js tailAfter)
   const openQs = () => { const ids = galIds(), af = galAfter(); return app.gal.filter((e) => Save.questOpen(app.save.data, app.order, ids, af, e.id)); }; // v5.1: the side quests open now
+  // Land 1 fix (the functional critic's m5): a save from before the lands (no lands flag) keeps the long-tail pictures it
+  // had open. tailKept(d): the castle Gallery's rule over the castle alone (its levels, the pictures' own quest levels),
+  // the tail pictures it opens and d has not won; keepTail() stores them once in the save's tail (save.js questOpen keeps
+  // them open wherever the long tail now sits) and sets the flag, so a player who reaches 200 later waits past the lands.
+  // Before a save's first write its progress is empty, so the flag can wait for that write.
+  function tailKept(d) { const cast = app.levels.filter((e) => !e.L.land).map((e) => e.id), cg = app.gal.filter((e) => !e.L.land), ids = cg.map((e) => e.id), af = cg.map((e) => (e.L.quest ? e.L.quest.after | 0 : 0)), keep = {};
+    cg.forEach((e, i) => { if (af[i] > cast.length && !(d.gal || {})[e.id] && Save.questOpen(d, cast, ids, af, e.id)) keep[e.id] = 1; }); return keep; }
+  function keepTail() { const d = app.save.data; if (d.lands === 1) return; const k = tailKept(d); d.lands = 1; if (Object.keys(k).length) { d.tail = Object.assign({}, d.tail, k); app.save.write(); } } // a new save keeps the flag from its first write
   function questPrize(e) { const q = e.L.quest, k = q ? E.POWERS.indexOf(q.prize) : -1; if (k < 0 || !Meta.gift(app.save.data, q.prize)) return; toast(fill(app.cfg.gallery.quests.prizeText, { name: pwName(k) })); }
   // A locked node (or button) shakes and says "blocked" (reduced motion: no shake).
   function lockedTap(b) { if (!app.V.calm && b.animate) b.animate(app.cfg.show.blockedShake.map((x) => ({ transform: "translateX(" + x + "px)" })), { duration: app.cfg.show.blockedShakeMs }); cue("blocked"); }
@@ -969,7 +977,7 @@
     if (!livesLeft()) return null; // v4 M5: lives on and none left: no level starts (the toast says when the next comes)
     app.diff = tagOf(e); // v4.3: every level plays on its own tag
     app.entry = e; app.B = E.compile(e.L); app.S = E.sim(app.B, rulesOf(app.diff)); app.S.logOn = true; app.et = 0;
-    app.V.setLevel(app.B, app.S, e.L.pal, e.L.liquid, e.L.shade); usePalette(e); // lands foundation: shade, the level's shade rows (none: drawn as before) // v5 R4: liquid (a lava moat) // v4 M4: the level's colours before anything is painted
+    app.V.setLevel(app.B, app.S, e.L.pal, e.L.liquid, e.L.shade, e.L.hideC ? { c: e.L.hideC, q: e.L.hideQ } : null); usePalette(e); // Land 1 fix (B1): a land level's mystery fill // lands foundation: shade, the level's shade rows (none: drawn as before) // v5 R4: liquid (a lava moat) // v4 M4: the level's colours before anything is painted
     app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.popK = 0; app.used = 0; app.march = false; app.blockT = -1e12; $("panel").hidden = true; $("stage-pic").hidden = true; hideToast();
     app.lockN = app.S.locked; app.unlockT = -1e12; app.flip.fill(false); app.reveals = 0; app.pairsOut = 0; landTiles();
     app.t0 = app.clock; app.report = null; app.pick = null; app.pwPop.fill(-1e12); app.carry = -1; renderPowers();
@@ -1104,9 +1112,10 @@
     app.panel = e.won ? "win" : "fail"; app.panelAt = app.clock; renderCoach();
     const G = app.cfg.gallery, gal = !!app.entry.gallery, toMapT = app.cfg.layout.toMap;
     const BS = e.won && !gal && app.entry.boss; // v5 R4 fix (S4): the boss's own win title, line and the crown recovered
-    $("p-title").textContent = e.won ? (gal ? G.winTitle : BS ? BS.winTitle : "Fort razed!") : "Assault failed"; tagChip($("p-tag"), app.diff); // v4.3: the level's tag
+    const LD = app.entry.L.land ? JN.landOf(landsCfg(), app.entry.n) || (landsCfg().list || []).find((d) => d.k === app.entry.L.land) : null, LT = LD ? landsCfg().text || {} : null; // Land 1 fix (M2): a land's picture levels and side quests win and fail in the land's words, not the castle's
+    $("p-title").textContent = e.won ? (gal ? G.winTitle : BS ? BS.winTitle : LT ? LT.winTitle : "Fort razed!") : LT ? LT.failTitle : "Assault failed"; tagChip($("p-tag"), app.diff); // v4.3: the level's tag
     $("p-crown").hidden = !BS; $("panel").classList.toggle("boss", !!BS); if (BS) $("p-crown").setAttribute("aria-label", BS.crownAria);
-    if (e.won) { $("p-line").textContent = BS ? (e.first ? BS.win + " " + epilogue() : BS.winAgain) : gal ? fill(e.first ? G.winLine : G.winLineAgain, { title: app.entry.L.title }) : "The goblin king flees. " + (app.entry.debug ? app.entry.L.name : "Level " + app.entry.n) + (e.first ? " cleared." : " cleared again."); $("p-line").removeAttribute("aria-label"); } else sheetLine(e);
+    if (e.won) { $("p-line").textContent = BS ? (e.first ? BS.win + " " + epilogue() : BS.winAgain) : gal ? fill(e.first ? G.winLine : G.winLineAgain, { title: app.entry.L.title }) : LT ? fill(e.first ? LT.winLine : LT.winLineAgain, { name: LD.name, n: app.entry.n }) : "The goblin king flees. " + (app.entry.debug ? app.entry.L.name : "Level " + app.entry.n) + (e.first ? " cleared." : " cleared again."); $("p-line").removeAttribute("aria-label"); } else sheetLine(e);
     reportPic(e.won && gal);
     // v5.1 (playtesters, 2026-10-06): every win (a level, a side quest, the boss) goes back to the journey map, where the
     // next node, a side quest just opened and the eggs in reach show (layout.toMap); a fail's main button is Retry.
@@ -2477,6 +2486,14 @@
           $("set-close").click(); step(16); const on = !app.held && $("settings").hidden && app.et > et0 && app.et - et0 <= 16 * paceNow() + 0.5 && livePlay();
           out.notes.playGear = Math.round(r.width) + " px";
           ok(hit && fits && tapOK && held && on, "play gear (lands foundation; hit, fits, tap, held, on: " + [hit, fits, tapOK, held, on].map(Number).join("") + "): the top bar's gear (" + Math.round(r.width) + " px, as big as Retry, taking a " + ST.minTapPx + " px tap; the bar fits " + innerWidth + " px) opens Settings and holds the level still (engine time stood " + 400 + " ms while the app clock ran), and Done plays on with no jump"); }
+        // Land 1 fix (the functional critic's m4): every round button in the play bar takes a full minTapPx square tap,
+        // measured as the critic did (elementFromPoint walking out from its centre, the screen's edge included).
+        { startLevel(app.levels[0].id, "normal"); const bad = [], sizes = [];
+          for (const b of Array.from(document.querySelectorAll("#top button.round"))) { if (!shown(b)) continue; const r = b.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+            const on = (x, y) => { const t = x >= 0 && y >= 0 && x < innerWidth && y < innerHeight ? document.elementFromPoint(x, y) : null; return !!t && (t === b || b.contains(t)); };
+            const reach = (dx, dy) => { let d = 0; while (d < 40 && on(cx + (d + 1) * dx, cy + (d + 1) * dy)) d++; return d; }, w = reach(-1, 0) + reach(1, 0) + 1, h = reach(0, -1) + reach(0, 1) + 1;
+            sizes.push(w + "x" + h); if (w < ST.minTapPx || h < ST.minTapPx) bad.push((b.id || b.className) + " " + w + "x" + h); }
+          ok(sizes.length >= 3 && !bad.length, "play bar (Land 1 fix, m4): every round button takes a " + ST.minTapPx + " px square tap from its centre out at " + innerWidth + "x" + innerHeight + " (" + sizes.join(", ") + (bad.length ? "; short: " + bad.join(", ") : "") + ")"); }
         // The bar's geometry at this viewport.
         startLevel(app.levels[0].id, "normal");
         { const tileH = app.cards[0].getBoundingClientRect().height, rl = $("rail").getBoundingClientRect(), pw = $("powers").getBoundingClientRect(); let geo = true;
@@ -2746,6 +2763,27 @@
         ok(app.V.shade === null && S2.tb[m0].every((q) => q === S2.blk[m0]) && !app.coach, "shading: picture 1 itself draws as before (no shade rows, every tone stud the base, no shade tip)");
         app.byId.delete(e.id); app.save = scratch();
       }
+      // 13zz. Land 1 fix. M2: a land level wins and fails in the land's words (config lands.text), a castle level keeps the
+      // castle's. B1: a land level's mystery blocks draw in its own fill (hideC), 20+ CIEDE2000 from its picture, a castle
+      // level's in board.hidden's. S5: a side quest with a short title shows it whole in the play bar. m5: a save from
+      // before the lands keeps the long-tail picture it had open (tailKept), a save with the lands flag does not.
+      { const LT = landsCfg().text || {}, le = app.levels.find((x) => x.L.land && x.L.hidden), lf = app.levels.find((x) => x.L.land);
+        if (ok(!!le && !!lf && !!LT.winTitle && !!LT.failTitle, "Land 1 fix: a land level with mystery blocks, and the land's win and fail words")) {
+          app.save = scratch(); startLevel(lf.id); const won = patient(winOf(lf)); settleNow(); tick(9000); const LD = JN.landOf(landsCfg(), lf.n);
+          ok(won && app.panel === "win" && $("p-title").textContent === LT.winTitle && $("p-line").textContent === fill(LT.winLine, { name: LD.name, n: lf.n }), "land win (M2): " + lf.n + "'s sheet reads '" + $("p-title").textContent + "', '" + $("p-line").textContent + "'");
+          const jp = jamPlan(lf, tagOf(lf)); startLevel(lf.id); if (jp) { patient(jp.prefix); for (let t = 0; t < ST.tickCapMs && !app.panel; t += 16) step(16); }
+          ok(!!jp && app.panel === "fail" && $("p-title").textContent === LT.failTitle, "land fail (M2): " + lf.n + "'s jam sheet reads '" + $("p-title").textContent + "', not the castle's");
+          const ce = app.levels.find((x) => !x.L.land && !x.boss && x.L.hidden), dE = (a, b) => { const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)); return Math.max(...p(a).map((v, i) => Math.abs(v - p(b)[i]))); };
+          startLevel(le.id); step(16); const fl = app.V.hideInfo(); startLevel(ce.id); step(16); const fc = app.V.hideInfo();
+          ok(fl.c === le.L.hideC && dE(fl.px, le.L.hideC) <= 2 && fc.c === app.cfg.board.hidden.c && dE(fc.px, app.cfg.board.hidden.c) <= 2, "mystery fill (B1): " + le.n + "'s hidden blocks draw in its own " + le.L.hideC + " (" + fl.px + "), castle " + ce.n + "'s in " + app.cfg.board.hidden.c + " (" + fc.px + ")"); }
+        const sq = app.gal.filter((x) => x.L.short), cut = [];
+        for (const x of sq) { startLevel(x.id); const nm = $("lvl-name"); if (nm.textContent !== x.L.short || nm.scrollWidth > nm.clientWidth + 1) cut.push(x.n + " '" + nm.textContent + "' " + nm.scrollWidth + "/" + nm.clientWidth); }
+        ok(!cut.length, "side quest titles (S5): " + sq.length + " pictures show their short title whole in the play bar at " + innerWidth + " px" + (cut.length ? " (" + cut.join("; ") + ")" : ""));
+        const tl = app.gal.filter((x) => !x.L.land && x.L.quest && x.L.quest.after > landsCfg().castleEnd);
+        if (tl.length > 1 && lf) { const d = scratch().data; for (const x of app.levels) if (!x.L.land) d.done[x.id] = 1; d.gal[tl[0].id] = 1; const k = tailKept(d);
+          ok(k[tl[1].id] === 1 && Object.keys(k).length === 1 && !Save.questOpen(d, app.order, galIds(), galAfter(), tl[1].id) && Save.questOpen(Object.assign({}, d, { tail: k }), app.order, galIds(), galAfter(), tl[1].id),
+            "long tail kept (m5): a save from before the lands with the castle cleared and " + tl[0].n + " won keeps " + tl[1].n + " open (it would have waited past " + lastN() + ")"); }
+        app.save = scratch(); }
       // 14. Opaque sprite caches.
       const bad = app.V.checkSprites(); ok(!bad.length, "sprites: every opaque cache is opaque" + (bad.length ? " (" + bad.join(",") + ")" : ""));
     } catch (err) { ok(false, "selfTest threw: " + (err && err.message) + " " + (err && err.stack ? err.stack.split("\n")[1] : "")); }

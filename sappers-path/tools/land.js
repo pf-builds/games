@@ -1,7 +1,7 @@
 // Sapper's Path lands foundation: the land factory (SPEC-v4 §9, the lands foundation entry; how to run it:
 // tools/land-runbook.md). One land folder in, one checked land out, ready to copy into the game:
 //   ~/.local/opt/node/bin/node tools/land.js LAND_DIR [STEP ...] [--game DIR] [--gallery DIR] [--threads N]
-//                                            [--only A-B | --list N,N,...] [--extra K] [--force]
+//                                            [--only A-B | --list N,N,...] [--extra K] [--shard S [--reuse]] [--force]
 //   ~/.local/opt/node/bin/node tools/land.js LAND_DIR install [--game DIR] [--replace]
 // Land 1 fix pass: a land already installed (the game's last land) is planned and checked as if it weren't (context
 // reads it out of the game), and install --replace swaps the installed land for this bake (removeFromConfig).
@@ -133,11 +133,26 @@ async function bake(X) {
   saveState(X, moat ? { tags, plan, moat } : { tags, plan }); if (moat) console.log("bake: " + moat.filter((m) => m.ok).length + " of " + moat.length + " pictures can carry a moat" + moat.filter((m) => !m.ok).map((m) => "; " + m.n + " can't: " + m.why).join(""));
   const only = opt("only") ? opt("only").split("-").map(Number) : null, list = opt("list") ? opt("list").split(",").map(Number) : null, dir = path.join(X.S, "bake");
   const inRun = (n) => (list ? list.indexOf(n) >= 0 : !only || (n >= only[0] && n <= (only[1] || only[0]))), want = (f, n) => (flag("force") || only || list ? inRun(n) : !fs.existsSync(f)), jobs = [];
-  b.main.forEach((e, i) => { const f = path.join(dir, "m-" + e.n + ".json"); if (want(f, e.n)) jobs.push({ file: f, job: { n: e.n, tag: tags[i], plan: plan[i], band: X.P.bands[tags[i]], look: X.P.lookahead[tags[i]] != null ? X.P.lookahead[tags[i]] : null, care: (X.P.careful || {})[tags[i]] != null ? X.P.careful[tags[i]] : null, mysRows: (X.P.features.mystery || {}).rows || null, over: X.P.bake || null, pace: X.P.pace, board: e.board, extra: +opt("extra") || 0, liquids, moatLo } }); });
+  b.main.forEach((e, i) => { const f = path.join(dir, "m-" + e.n + ".json"); if (want(f, e.n)) jobs.push({ file: f, job: { n: e.n, tag: tags[i], plan: plan[i], band: X.P.bands[tags[i]], look: X.P.lookahead[tags[i]] != null ? X.P.lookahead[tags[i]] : null, care: (X.P.careful || {})[tags[i]] != null ? X.P.careful[tags[i]] : null, careTune: (X.P.carefulTune || X.P.careful || {})[tags[i]] != null ? (X.P.carefulTune || X.P.careful)[tags[i]] : null, mysRows: (X.P.features.mystery || {}).rows || null, over: X.P.bake || null, obv: (X.P.obvious || {})[tags[i]] != null ? X.P.obvious[tags[i]] : null, pace: X.P.pace, board: e.board, extra: +opt("extra") || 0, liquids, moatLo } }); });
   b.side.forEach((e, i) => { const n = X.gal0 + i + 1, tag = BK.sideCycle[(X.gal0 + i) % BK.sideCycle.length], f = path.join(dir, "s-" + n + ".json"); if (!only && !list && (flag("force") || !fs.existsSync(f))) jobs.push({ file: f, job: { n: 100000 + n, side: true, tag, band: BK.sideBands[tag], look: null, pace: BK.sidePace, board: e.board } }); });
   if (!jobs.length) { console.log("bake: every level kept (scratch/bake)"); return; }
   const threads = +opt("threads") || LB.threadsOf(BK), t0 = Date.now(); console.log("bake: " + jobs.length + " levels on " + threads + " threads (" + quests.length + " side quests in the land)");
-  const res = await LB.runPool(jobs.map((j) => j.job), threads, t0 + BK.budget.wallSec * 1000, (d, t) => { if (d % 5 === 0 || d === t) console.log("  " + d + "/" + t + "  " + ((Date.now() - t0) / 1000).toFixed(0) + " s"); });
+  // Land 1 fix: --shard S shares each main level's candidates out S at a time (a fix-up of a few levels uses every thread),
+  // then picks each level in this thread once its shards are in.
+  // With --shard, each level's candidates are also kept in scratch/cands/m-<n>.json; --reuse takes them back (only the
+  // candidates past them are made, e.g. with --extra), so a change of the pick's gates or a few more candidates re-picks
+  // without making the old ones again.
+  const S = +opt("shard") || 0, BM = LP.merge(BK, X.P.bake || {}), parts = [], CD = path.join(X.S, "cands"), keyOf = (j) => require("crypto").createHash("sha1").update(JSON.stringify([j.board.grid, j.board.pal, j.plan, j.band, j.look, j.careTune, j.over, j.mysRows])).digest("hex"); // a cache is reused only for the same picture, plan and targets
+  const cache = jobs.map((j) => { const f = path.join(CD, "m-" + j.job.n + ".json"), c = S && flag("reuse") && !j.job.side && fs.existsSync(f) ? readJ(f) : null; return c && c.key === keyOf(j.job) ? c.outs : []; });
+  if (S) jobs.forEach((j, i) => { if (j.job.side) { parts.push({ i, job: j.job }); return; } const per = ((BM.candidates.perLevelBy || {})[j.job.tag] || BM.candidates.perLevel) + (j.job.extra | 0), k0 = cache[i].length ? cache[i][cache[i].length - 1].k + 1 : 0; for (let k = k0; k < per; k += S) parts.push({ i, job: Object.assign({}, j.job, { ks: [k, Math.min(per, k + S)] }) }); });
+  if (S) console.log("bake: " + parts.length + " candidate shards of " + S + (flag("reuse") ? " (" + cache.reduce((a, c) => a + c.length, 0) + " candidates reused)" : ""));
+  const runJobs = S ? parts.map((q) => q.job) : jobs.map((j) => j.job);
+  let res = await LB.runPool(runJobs, threads, t0 + BK.budget.wallSec * 1000, (d, t) => { if (d % 5 === 0 || d === t) console.log("  " + d + "/" + t + "  " + ((Date.now() - t0) / 1000).toFixed(0) + " s"); });
+  if (S) { const got = jobs.map(() => []); res.forEach((r, q) => got[parts[q].i].push(r)); // the picks (? cards measured per level) run on the threads too
+    const picks = jobs.map((j, i) => { const rs = got[i]; if (j.job.side || rs.some((r) => r.fail)) return null; const st = { deals: 0, evals: 0, grades: 0 }; for (const r of rs) for (const k in st) st[k] += r.stats[k] | 0;
+      const outs = cache[i].concat(rs.flatMap((r) => r.out)).sort((a, b) => a.k - b.k); writeJ(path.join(CD, "m-" + j.job.n + ".json"), { key: keyOf(j.job), outs }); return Object.assign({}, j.job, { outs, stats: st }); }), pj = picks.filter(Boolean);
+    const pr = await LB.runPool(pj, threads, Infinity, (d, t) => { if (d % 10 === 0 || d === t) console.log("  picks " + d + "/" + t + "  " + ((Date.now() - t0) / 1000).toFixed(0) + " s"); });
+    res = jobs.map((j, i) => (picks[i] ? pr[pj.indexOf(picks[i])] : j.job.side ? got[i][0] : got[i].find((r) => r.fail))); }
   res.forEach((r, i) => { writeJ(jobs[i].file, r); const n = jobs[i].job.side ? "side " + (jobs[i].job.n - 100000) : jobs[i].job.n; console.log("  " + n + " " + jobs[i].job.tag + ": " + (r.fail ? "FAIL " + r.fail : (r.fallback ? "fallback (" + r.fallback + ")" : "ok") + ", " + Math.round(r.level.grade[r.tag].pace.ms / 1000) + " s, " + r.level.win[r.tag].length + " taps")); });
 }
 
@@ -308,7 +323,7 @@ function install(X) {
 if (require.main === module) {
   (async () => {
     const dir = argv[0]; if (!dir || dir.startsWith("--")) { console.log("usage: node tools/land.js LAND_DIR [prep|convert|sheet|bake|map|assemble|check|install ...] [--game DIR] [--gallery DIR] [--threads N] [--only A-B] [--extra K] [--force]"); process.exitCode = 2; return; }
-    const asked = argv.slice(1).filter((a, i, A) => !a.startsWith("--") && !(i > 0 && A[i - 1].startsWith("--") && ["game", "gallery", "threads", "only", "list", "extra"].indexOf(A[i - 1].slice(2)) >= 0));
+    const asked = argv.slice(1).filter((a, i, A) => !a.startsWith("--") && !(i > 0 && A[i - 1].startsWith("--") && ["game", "gallery", "threads", "only", "list", "extra", "shard"].indexOf(A[i - 1].slice(2)) >= 0));
     const steps = asked.length ? asked : STEPS; let X = context(dir); fs.mkdirSync(X.S, { recursive: true }); saveState(X);
     try {
       for (const s of steps) {

@@ -1558,6 +1558,11 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   for (const id of order250) T0.done[id] = 1; const tl = J.tail(T0, order250, gid, af250);
   eq([sh(200).join() === aft.join(), sh(250).slice(25, 50).join() === aft.slice(25, 50).join(), sh(250).slice(50).map((a, i) => a - aft[50 + i]), tl.ids.length, tl.ids[0] === GL[50].id, J.landOf({ list: [{ k: 1, from: 201, to: 250 }] }, 230).k, J.landOf({ list: [] }, 230)],
     [true, true, Array(10).fill(50), 10, true, 1, null], "lands (long tail): with 200 levels nothing moves; with a land to 250, pictures 26-50 stay, 51-60 move on 50 levels and stay the long tail (the land's own side quests are not in it)");
+  // Land 1 fix (the functional critic's m5): a long-tail picture a save had open (save tail) stays open wherever the long
+  // tail now sits, the next one still waits; sanitize keeps tail (pictures the page has, value 1) and the lands flag.
+  { const SV = require("../src/save.js"), T1 = SV.fresh(META); for (const id of order250.slice(0, 200)) T1.done[id] = 1; T1.gal[GL[50].id] = 1; const q = (k) => SV.questOpen(T1, order250, gid, af250, GL[k].id);
+    const before = q(51); T1.tail = { [GL[51].id]: 1 }; const kept = [q(51), q(52)], sz = SV.sanitize({ v: 2, tail: { [GL[51].id]: 1, bogus: 1, [GL[52].id]: 2 }, lands: 1 }, order250, gid, META);
+    eq([before, kept, sz.tail, sz.lands, SV.sanitize({ v: 2 }, order250, gid, META).tail === undefined], [false, [true, false], { [GL[51].id]: 1 }, 1, true], "lands (long tail kept): picture 52, open before the land, stays open past it (save tail) while 53 waits; sanitize keeps tail and the lands flag, drops unknown ids"); }
   // Tags and plan from the default profile (a 50-level land): the shares, the breathers, runs no longer than the
   // profile's, Easy after every run, the end; every level within the density floor; features per level rise with the
   // tag; each feature on its share; a harder profile asks for more.
@@ -1660,6 +1665,11 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
     const rg = require("./regrade.js").regrade(LV, BC, V3, true), rs = require("./regrade.js").regrade(GV, GB, V3, true), pc = LP.planCheck(LV, lj, PP, D5, LC.perLand);
     eq([LV.length, d.to - d.from + 1, bad, pc, rg.diffs + rs.diffs, SS.length && SS[0].sheet === d.sheets[0] && SS[SS.length - 1].sheet === d.sheets[1], SS.every((S, e) => S.file === d.files[e % 2] && !!S.mirror === (Math.floor(e / 2) % 2 === 1) && S.realm === era), GV.every((g) => g.wander && g.quest.after >= d.from && g.quest.after <= d.to)],
       [d.to - d.from + 1, LV.length, [], [], 0, true, true, true], "land " + d.k + " (" + d.name + ", " + d.from + "-" + d.to + "): levels in order, each winning on its stored order under the caps, shades on their floors, its profile kept, re-grades 0, sheets " + d.sheets.join("-") + " alternating file and mirror, " + GV.length + " Wandering Gallery side quests inside it");
+    // Land 1 fix (the visual critic's B1): a land level with mystery blocks draws them in its own fill, fillDE[1] or more
+    // (CIEDE2000) from every colour and shade of its picture.
+    { const PM = require("./palette.js"), HF = LCF.plan.hidden, gap = (c, pal) => Math.min(...Object.values(pal).flatMap((q) => [q.c].concat(q.sh || []).filter(Boolean)).map((h) => PM.de00(PM.lab(c), PM.lab(h)))), hl = LV.filter((L) => L.hidden);
+      const low = hl.filter((L) => !L.hideC || gap(L.hideC, L.pal) < HF.fillDE[1]).map((L) => L.n + " " + (L.hideC ? gap(L.hideC, L.pal).toFixed(1) : "no fill"));
+      eq(low, [], "land " + d.k + " (mystery fill): every one of its " + hl.length + " levels with mystery blocks draws them " + HF.fillDE[1] + "+ from its picture (nearest " + (hl.length ? Math.min(...hl.map((L) => (L.hideC ? gap(L.hideC, L.pal) : 0))).toFixed(1) : "-") + ")"); }
   }
 }
 

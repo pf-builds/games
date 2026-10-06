@@ -98,6 +98,9 @@ function faceOf(L, F, MC) {
   return m;
 }
 
+// Land 1 fix (the functional critic's m1): the obvious player's win rate, the careful player one tap deep (bake-config
+// grade.obvious games and depth; regrade.js reads it the same way).
+const obviousOf = (Bc, rt, B, seed) => +R.careful(Bc, rt, B.grade.obvious.games, seed ^ 0x1b873593, B.grade.obvious.depth).toFixed(3);
 // Grade a level on its tag (as bake.js gradeLevel and tools/regrade.js read it).
 function gradeLevel(L, rules, B, hint, seed, tag) {
   const Bc = E.compile(L), win = {}, grade = { cards: Bc.ncards, pixels: Bc.pixTotal, colours: G.coloursOf(L).size }, rt = rules[tag];
@@ -111,11 +114,12 @@ function gradeLevel(L, rules, B, hint, seed, tag) {
     if (PC.steady != null) { const st = R.pace(Bc, rt, win[tag], PC.steady); g.steady = st.won ? { gap: st.gap, end: st.end } : { lost: 1 }; } } // Land 1 fix (m2, m3): the stored order at a steady rhythm, its longest wait between taps and to the end
   g.fast = +R.fast(Bc, rt, B.fast.games, seed ^ 0x1f123bb5, B.fast.gapMs).toFixed(4);
   const CG = B.grade.careful; if (CG) g.careful = +R.careful(Bc, rt, CG.games, seed ^ 0x6c8e9cf5, CG.depth).toFixed(3); // Land 1 fix: the careful player (bake-config grade.careful; main levels only)
+  if (B.grade.obvious) g.obvious = obviousOf(Bc, rt, B, seed); // Land 1 fix (m1): the obvious player
   return { win, grade };
 }
 const fastBad = (g, B) => g.fast != null && (g.fast - g.rate >= B.fast.pts || (g.fast > B.fast.ratio * g.rate && g.fast - g.rate >= B.fast.minPts));
 // The targets (band: [lo, hi]; P: the plan). good(c): every one met; pen(c): the fallback's total miss.
-function targetsOf(B, band, PC, look, P, care) { // PC: {range, aim}; look: the lookahead ceiling (null: none); care: the careful player's ceiling (null: none)
+function targetsOf(B, band, PC, look, P, care, obv) { // PC: {range, aim}; look: the lookahead ceiling (null: none); care: the careful player's ceiling (null: none); obv: the obvious player's (null: none)
   const fell = (c) => (!gt(c).pace || gt(c).pace.fell ? 1 : 0), dmiss = (c) => (fell(c) ? 1e9 : Math.max(0, PC.range[0] - gt(c).pace.ms, gt(c).pace.ms - PC.range[1]));
   const wmiss = (c) => (gt(c).maxWait == null ? 1e9 : Math.max(0, gt(c).maxWait - B.maxWaitMs)), tmiss = (c) => Math.max(0, (wn(c) || "").length - B.maxTaps);
   const fbad = (c) => (fastBad(gt(c), B) ? 1 : 0), pmiss = (c) => (c.pairs < P.links ? 1 : 0), over = (c) => (look != null && gt(c).greedy > look ? gt(c).greedy - look : 0);
@@ -123,12 +127,13 @@ function targetsOf(B, band, PC, look, P, care) { // PC: {range, aim}; look: the 
   // Land 1 fix (the functional critic's m2, m3): with a steady replay graded, every thinking replay wins and the steady one
   // never waits longer than maxWaitMs between two taps (the end, every squad working, is reported, not gated).
   const sbad = (c) => (gt(c).steady ? ((gt(c).thinks || []).some((v) => !v) || !!gt(c).steady.lost || gt(c).steady.gap > B.maxWaitMs ? 1 : 0) : 0);
-  const good = (c) => !c.miss && !dmiss(c) && !wmiss(c) && !tmiss(c) && !fbad(c) && !pmiss(c) && !over(c) && !cover(c) && !sbad(c);
+  const obad = (c) => (obv != null && gt(c).obvious != null && gt(c).obvious > obv ? 1 : 0);
+  const good = (c) => !c.miss && !dmiss(c) && !wmiss(c) && !tmiss(c) && !fbad(c) && !pmiss(c) && !over(c) && !cover(c) && !sbad(c) && !obad(c);
   const aim = (c) => (fell(c) ? 0 : Math.abs(gt(c).pace.ms - PC.aim) / B.aimWeight);
-  const PN = B.penalty, pen = (c) => PN.band * c.miss + Math.min(dmiss(c), PN.fellMs) / PN.durationMs + wmiss(c) / PN.waitMs + tmiss(c) + PN.fast * fbad(c) + PN.pairs * pmiss(c) + over(c) / PN.lookahead + cover(c) / PN.careful + (PN.steady || 1) * sbad(c);
+  const PN = B.penalty, pen = (c) => PN.band * c.miss + Math.min(dmiss(c), PN.fellMs) / PN.durationMs + wmiss(c) / PN.waitMs + tmiss(c) + PN.fast * fbad(c) + PN.pairs * pmiss(c) + over(c) / PN.lookahead + cover(c) / PN.careful + (PN.steady || 1) * sbad(c) + obad(c);
   const why = (c) => { const w = []; if (c.miss) w.push("out of band: " + (100 * gt(c).rate).toFixed(1) + "% vs " + band.map((x) => (100 * x).toFixed(0)).join("-") + "%"); if (fell(c)) w.push("the real-pace replay lost");
     else if (dmiss(c)) w.push("real pace " + Math.round(gt(c).pace.ms / 1000) + " s outside " + PC.range.map((x) => x / 1000).join("-") + " s"); if (wmiss(c)) w.push("longest tap " + (gt(c).maxWait / 1000).toFixed(1) + " s");
-    if (tmiss(c)) w.push("taps " + wn(c).length); if (fbad(c)) w.push("fast tapper"); if (pmiss(c)) w.push("pairs " + c.pairs + " of " + P.links); if (over(c)) w.push("lookahead " + gt(c).greedy); if (cover(c)) w.push("careful " + gt(c).careful); if (sbad(c)) w.push("steady rhythm " + JSON.stringify([gt(c).thinks, gt(c).steady])); return w.join("; "); };
+    if (tmiss(c)) w.push("taps " + wn(c).length); if (fbad(c)) w.push("fast tapper"); if (pmiss(c)) w.push("pairs " + c.pairs + " of " + P.links); if (over(c)) w.push("lookahead " + gt(c).greedy); if (cover(c)) w.push("careful " + gt(c).careful); if (sbad(c)) w.push("steady rhythm " + JSON.stringify([gt(c).thinks, gt(c).steady])); if (obad(c)) w.push("obvious player " + gt(c).obvious); return w.join("; "); };
   return { good, pen, aim, why };
 }
 
@@ -153,6 +158,9 @@ function mystify(L, want, M, rt, seed) {
   return best || { level: L, m: null };
 }
 
+// Land 1 fix: a level's candidates may be shared out (job.ks: [k0, k1), that shard's candidates come back as {n, part, out,
+// stats}) and picked once they are all in (job.outs: every shard's candidates in k order; the pick runs in the caller's
+// thread). Candidate k depends only on the job and k, so a sharded bake picks exactly what one worker would.
 // One level, start to finish. job: {n, tag, side, plan (land-plan.js landPlan's; a side quest: none), band ([lo, hi]),
 // look (the lookahead ceiling or null), pace ({range, aim}), board ({w, h, grid, pal, ink?: the ink's id, bg?: the
 // background's id}), extra}. Returns {n, tag, plan, seed, level (the picked board and deck with win and grade), inBand,
@@ -163,13 +171,13 @@ function bakeOne(job) {
     CFG = require("../config.json"), rules = { easy: E.rulesOf(CFG.v3, "easy"), normal: E.rulesOf(CFG.v3, "normal"), hard: E.rulesOf(CFG.v3, "hard"), extreme: E.rulesOf(CFG.v3, "extreme") };
   const { n, tag, band } = job, PL = LC.plan, P = job.plan || { feats: [], mystery: 0, links: 0, hidden: 0, lock: false };
   for (const f of P.feats.concat(P.lock ? ["lock"] : [])) if (!FEATURES[f]) return { n, fail: "feature " + f + " has no builder" };
-  const TT = targetsOf(B, band, job.pace, job.look, P, job.care), out = [], stats = { deals: 0, evals: 0, grades: 0 }, ink = job.board.ink || 0;
+  const TT = targetsOf(B, band, job.pace, job.look, P, job.care, job.obv), out = [], stats = { deals: 0, evals: 0, grades: 0 }, ink = job.board.ink || 0;
   const ctx = { PL, board: job.board, liquids: job.liquids, skipIds: [job.board.ink, job.board.bg].filter(Boolean), giltOK: Object.keys(job.board.pal).every((k) => PAL.de00(PAL.lab(job.board.pal[k].c), PAL.lab(CFG.v3.mats[E.GILT].c)) >= PL.keyDE), lock: false };
   const D0 = Object.assign({}, B.deal, B.dealBy[tag] || {}, { maxTaps: B.maxTaps, time: rules.hard.time, maxWaitMs: B.maxWaitMs, lockSpaces: rules.hard.lockSpaces }, ink ? { capOf: { [ink]: B.capOf } } : {});
   if (B.deal.sizeRef) { const k = (job.board.w * job.board.h) / B.deal.sizeRef; D0.size = D0.size.map((v) => Math.max(1, Math.min(B.deal.maxCard, Math.round(v * k)))); } // squads scale with the board
   const dealRules = Object.assign({}, rules.hard, { hold: B.deal.hold, archersKill: true });
-  const per = ((B.candidates.perLevelBy || {})[tag] || B.candidates.perLevel) + (job.extra | 0);
-  for (let k = 0; k < per; k++) {
+  const per = ((B.candidates.perLevelBy || {})[tag] || B.candidates.perLevel) + (job.extra | 0), ks = job.ks || [0, per]; // Land 1 fix: job.ks, a shard [k0, k1) of the candidates; job.outs, the shards' candidates to pick from
+  for (let k = ks[0]; k < ks[1] && !job.outs; k++) {
     const t0 = Date.now(); if (D0.deepAlt) D0.deep = D0.deepAlt[k % D0.deepAlt.length]; // Land 1 fix: candidates alternate how deep the deal buries
     try {
       const seed = seedOf(B, n, k), L = JSON.parse(JSON.stringify({ w: job.board.w, h: job.board.h, grid: job.board.grid, pic: true })); ctx.lock = false; ctx.moat = null; ctx.ways = P.moat - (k % ((P.moat | 0) - (job.moatLo | 0) + 1));
@@ -182,7 +190,7 @@ function bakeOne(job) {
       if (ctx.lock === "colour") { const first = new Map(); play.forEach((p, i) => { for (const m of p.length >= 4 ? [p[0], p[2]] : [p[0]]) if (!first.has(m) && m !== E.GILT) first.set(m, i); });
         const want = PL.lockAt * play.length, best = [...first].sort((p, q) => Math.abs(p[1] - want) - Math.abs(q[1] - want) || p[1] - q[1])[0]; if (best) L.lock = { colour: best[0] }; }
       const T = Object.assign({}, B.tune, { seed: seed ^ 0x3c6ef372, maxTaps: B.maxTaps, maxWaitMs: B.maxWaitMs }, B.narrowFor.indexOf(tag) >= 0 || job.look != null ? { narrow: Object.assign({}, B.tune.narrow, job.look != null ? { stopAt: +(job.look * (B.tune.narrow.under || 1)).toFixed(3) } : {}) } : { narrow: null },
-        { careful: job.care != null && B.tune.careful ? Object.assign({}, B.tune.careful, { stopAt: +(job.care * (B.tune.careful.under || 1)).toFixed(3), look: job.look }) : null }); // Land 1 fix: the careful player narrowed toward under its ceiling
+        { careful: job.care != null && B.tune.careful ? Object.assign({}, B.tune.careful, { stopAt: +((job.careTune != null ? job.careTune : job.care) * (B.tune.careful.under || 1)).toFixed(3), look: job.look }) : null }); // Land 1 fix: the careful player narrowed toward under its ceiling (careTune: the profile's carefulTune, else its careful)
       const Lt = L.hidden ? Object.assign({}, L, { hidden: undefined }) : L; // tuned all-seeing (bake.js: the honest grade below stays at or under the target)
       const res = G.tune(Lt, play, G.assign(play, 0, seed), band[0], band[1], T, { normal: rules[tag], deal: Object.assign({}, dealRules, D0) }); stats.evals += res.evals;
       const dk = G.deck(res.play, res.colOf); if (dk.bad) { out.push({ k, seed, fail: "a linked partner more than a row from its card" }); continue; }
@@ -191,6 +199,9 @@ function bakeOne(job) {
       out.push({ k, seed, tag, level, win: g.win, grade: g.grade, miss: +miss.toFixed(4), tuned: { careful0: res.careful0, careful: res.careful, steps: res.steps, deep: D0.deep, ms: Date.now() - t0 }, pairs: dk.links.length, lock: ctx.lock, winnable: !!g.win[tag], moat: ctx.moat ? { set: ctx.ways, drop: P.moat - ctx.ways, water: ctx.moat.cells.length, path: ctx.moat.ground.length, edge: ctx.moat.edge, cuts: ctx.moat.cuts.length, ways: ctx.moat.ways, liquid: ctx.moat.liquid } : null });
     } catch (e) { out.push({ k, fail: "error: " + (e && e.message) }); }
   }
+  if (job.ks) return { n, part: true, out, stats };
+  if (job.outs) { out.push(...job.outs); if (job.stats) Object.assign(stats, job.stats); }
+  if (B.grade.obvious) for (const c of out) if (c.level && c.winnable && gt(c).obvious == null) gt(c).obvious = obviousOf(E.compile(c.level), rules[tag], B, c.seed); // a cached candidate graded before the obvious player
   const okc = out.filter((c) => c.level && c.winnable), mid = (band[0] + band[1]) / 2;
   if (!okc.length) return { n, fail: "no winnable candidate (" + out.map((c) => c.fail || "lost").slice(0, 4).join("; ") + ")", stats };
   const drop = (c) => (c.moat ? c.moat.drop : 0); // organic moats: the planned opening set first among the good picks
@@ -199,7 +210,7 @@ function bakeOne(job) {
   const pk = okc[0]; let level = Object.assign({}, pk.level, { win: pk.win, grade: pk.grade }), mys = null;
   if (P.mystery) { const r = mystify(level, P.mystery, job.mysRows ? Object.assign({}, B.mystery, { rows: job.mysRows }) : B.mystery, rules[tag], pk.seed); level = Object.assign({}, r.level, { win: pk.win, grade: pk.grade }); mys = r.m; } // Land 1 fix: the profile's rows
   return { n, tag, plan: P, seed: pk.seed, level, inBand: !pk.miss, fallback: TT.good(pk) ? null : TT.why(pk), mystery: mys, moat: pk.moat, cands: { tried: out.length, winnable: okc.length, good: okc.filter(TT.good).length, fails: out.filter((c) => c.fail).map((c) => c.fail).slice(0, 3),
-    list: out.map((c) => (c.level ? { k: c.k, rate: gt(c).rate, greedy: gt(c).greedy, careful: gt(c).careful, steady: gt(c).steady, pace: gt(c).pace ? gt(c).pace.ms : null, wait: gt(c).maxWait, taps: (wn(c) || "").length, pairs: c.pairs, tuned: c.tuned, good: c.winnable && TT.good(c), why: c.winnable ? TT.why(c) : "lost" } : { k: c.k, fail: c.fail })) }, stats }; // Land 1 fix: every candidate's measures (scratch only)
+    list: out.map((c) => (c.level ? { k: c.k, rate: gt(c).rate, greedy: gt(c).greedy, careful: gt(c).careful, obvious: gt(c).obvious, steady: gt(c).steady, pace: gt(c).pace ? gt(c).pace.ms : null, wait: gt(c).maxWait, taps: (wn(c) || "").length, pairs: c.pairs, tuned: c.tuned, good: c.winnable && TT.good(c), why: c.winnable ? TT.why(c) : "lost" } : { k: c.k, fail: c.fail })) }, stats }; // Land 1 fix: every candidate's measures (scratch only)
 }
 
 // Workers, one level each, at most `threads` at once; onDone(done, total) after each.
