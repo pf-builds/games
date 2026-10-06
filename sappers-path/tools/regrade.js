@@ -12,6 +12,7 @@
 //   --levels: another levels file, e.g. a trial bake's)
 //   ~/.local/opt/node/bin/node tools/regrade.js --gallery [--levels FILE]   v4 M4: levels/gallery.json (or FILE) with the
 //   Gallery bake's own counts (tools/gallery-config.json bake: grade, fast; every level has a fast-tapper grade)
+//   ~/.local/opt/node/bin/node tools/regrade.js --zen     v6 lane B: levels/zen.json (Zen World 1, made by tools/zen-world.js)
 // Exit 1 when anything differs. v5 R1: require("./regrade.js").regrade(LV, C, V3, quick) is the same run as a function
 // (tools/freeze.js uses it).
 "use strict";
@@ -51,7 +52,8 @@ if (require.main === module) {
   const GAL = process.argv.includes("--gallery");
   const C = GAL ? require("./gallery-config.json").bake : require("./bake-config.json");
   const V3 = require("../config.json").v3;
-  const LV = JSON.parse(fs.readFileSync(process.argv.indexOf("--levels") > 0 ? path.resolve(process.argv[process.argv.indexOf("--levels") + 1]) : path.join(__dirname, GAL ? "../levels/gallery.json" : "../levels/levels.json"), "utf8")).levels;
+  const ZEN = process.argv.includes("--zen"); // v6 lane B: levels/zen.json's own records (Zen World 1), with the main levels' counts
+  const LV = JSON.parse(fs.readFileSync(process.argv.indexOf("--levels") > 0 ? path.resolve(process.argv[process.argv.indexOf("--levels") + 1]) : path.join(__dirname, ZEN ? "../levels/zen.json" : GAL ? "../levels/gallery.json" : "../levels/levels.json"), "utf8")).levels;
   const t0 = Date.now(), r = regrade(LV, C, V3, process.argv.includes("--quick"));
   for (const l of r.lines) console.log(l);
   console.log(LV.length + " levels, " + r.checks + " checks, " + r.diffs + " differences (" + ((Date.now() - t0) / 1000).toFixed(1) + " s)");
