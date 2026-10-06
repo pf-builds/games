@@ -303,3 +303,28 @@ Demo land "Moat Test" (never shipped) on a scratch game copy; shots in `tools/sh
 Built, demoed and checked; the live game is unchanged (no land installed, no shipped file touched). Next: Land 2
 lists `"moat"` in its features (`tools/land-runbook.md` §1) and picks pictures that carry a ring
 (`tools/feature-moats-notes.md` §7).
+
+# Land 1 Kitten Forest: bake and install (2026-10-06, overnight)
+
+Source: the orchestrator's Land 1 stages 4-5 brief (2026-10-06) and `game-research/sappers-path-v4/land-factory.md` (Peter's
+calls: difficulty climbs past 200 with a sawtooth; Land 1 uses the deck features only, no moats; side quests are the
+Wandering Gallery). Inputs: `game-research/sappers-path-v4/lands/01-kitten-forest/` (picks, map). Procedure:
+`tools/land-runbook.md`. Notes: `tools/land-01-notes.md`. Shots: `tools/shots-land-01/` (gitignored). Dev server 8494.
+
+## How to resume (Land 1)
+
+1. Read this table, then `tools/land-01-notes.md`; `git log --oneline` ("Sapper's Path Land 1 Kitten Forest: ...").
+2. Take the first row not `done`. The land's scratch (`tools/lands/01-kitten-forest/scratch/`, gitignored) keeps every
+   bake; `tools/land.js tools/lands/01-kitten-forest` resumes. Frozen: levels 1-200 and pictures 1-60
+   (`freeze.js --require`); 201-250 join the frozen set only after the critics.
+
+| # | Piece | State | Commit |
+|---|---|---|---|
+| K1 | Land folder (land.json, manifest, sources, map sheets, templates); Wandering Gallery's first 12 pictures | done: boards identical to the judged ones (50/50 picks, 12/12 gallery) | 0c54c06 |
+| K2 | Egg kinds kitten, yarn, butterfly (journey.js, config names) | done | a9ac01f |
+| K3 | Difficulty profile (land.json) and trial bake; mystery-block gap rule | in progress | d0fea6d |
+| K4 | Full bake 201-250 + 12 side quests, fix-ups, check PASS | | |
+| K5 | Sheet 25 retouch (top band) | | |
+| K6 | Install; cache tag `?v=44` | | |
+| K7 | Checks: test.js, freeze, regrades, critic-v5, selfTest x2, harness last | | |
+| K8 | Shots, notes, playtest bundle + smoke | | |
