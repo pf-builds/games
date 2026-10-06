@@ -15,8 +15,9 @@
    frames (max-height 640) show two queue rows (body.rows2) so the bar fits. Sizes are the --pw-* variables.
    v4 Critics 2 fix: the coach wraps to two lines in the top bar; the Gallery win's framed picture (#p-pic, #stage-pic);
    the Gallery's next tile (gold frame, Play chip); a buy short of coins (.pw.poor); 44 px badges in small frames; the
-   landscape bar's .head and .grid; the home's era chip on the river; era report cards as a band. */
-@font-face { font-family: "Jersey 10"; src: url("fonts/Jersey10-Regular.ttf?v=39") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+   landscape bar's .head and .grid; the home's era chip on the river; era report cards as a band.
+   v5.3: the home's painted siege (#title-art, a <picture>) and the realm line over Play. */
+@font-face { font-family: "Jersey 10"; src: url("fonts/Jersey10-Regular.ttf?v=40") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
 :root { --bg: #2e2935; --ink: #221a26; --cream: #f3ead8; --cream-soft: #cfc4d6;
   --tray: #ddd3c0; --tray-hi: #ece5d6; --tray-edge: #c4b89e; --tray-ink: #3a3027; --tray-soft: #6b5c47; --socket: #c3b697; --socket-lo: #a99a7b;
   --band1: #d0c6b4; --band2: #c2baa9; /* the rows' tray bands, set from layout.fade.band at boot */
@@ -384,8 +385,17 @@ body.cb .chip .gl { display: inline-block; }
 .screen::-webkit-scrollbar { display: none; }
 .screen > * { image-rendering: auto; }
 .screen[hidden] { display: none !important; }
-#title { padding: 0; overflow: hidden; background: #8fd0f2; }
-#title-art { position: absolute; left: 0; top: 0; display: block; }
+/* v5.3: the home is a painted siege (art/, a <picture>) covering #title's own box (main.js fitTitle sets --art-x so the
+   castle sits at the box's centre), fading in over the painting's own sky-to-field colours; a light shade at the top
+   (the pills, the logo) and a deeper one at the foot (the realm line, Play, the tabs). */
+#title { padding: 0; overflow: hidden; background: linear-gradient(#8e8d84, #6c624a 50%, #534a34); }
+#title-art { position: absolute; inset: 0; display: block; }
+#title-art img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: var(--art-x, 50%) var(--art-y, 30%); opacity: 0; transition: opacity .6s ease-out; }
+#title-art.on img { opacity: 1; }
+#title-art::before, #title-art::after { content: ""; position: absolute; left: 0; right: 0; pointer-events: none; }
+#title-art::before { top: 0; height: 30%; background: linear-gradient(rgba(20,16,28,.5), rgba(20,16,28,.18) 55%, rgba(20,16,28,0)); }
+#title-art::after { bottom: 0; height: 42%; background: linear-gradient(rgba(20,16,28,0), rgba(20,16,28,.32) 50%, rgba(20,16,28,.6)); }
+@media (prefers-reduced-motion: reduce) { #title-art img { transition: none; } }
 .small { font-size: 16px !important; }
 
 /* Wide screens (desktop, landscape phones): the board takes the full height on the left; the controls, the level's name,
@@ -457,9 +467,9 @@ body.wide .sheet:not(.float) .sheetcard { border-radius: 10px 10px 12px 12px; }
 .home h1 { margin: 16px 0 0; text-align: center; font-family: var(--px); font-weight: 400; font-size: 58px; line-height: 1; letter-spacing: 1px; color: var(--gold);
   text-shadow: -3px 0 0 var(--ink), 3px 0 0 var(--ink), 0 -3px 0 var(--ink), 0 3px 0 var(--ink), -3px -3px 0 var(--ink), 3px -3px 0 var(--ink), -3px 3px 0 var(--ink), 3px 3px 0 var(--ink), 0 7px 0 var(--ink); }
 .home-foot { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 0 0 14px; }
-/* Critics 2 fix (m6): the era chip lies on the river at the castle's foot (main.js sets --river-y from the scene), clear of
-   the crew on the grass and the keep. */
-#home-era { position: absolute; left: 50%; top: var(--river-y, 50%); z-index: 1; transform: translate(-50%, -50%); margin: 0; padding: 3px 12px 4px; border-radius: 6px; border: 2px solid var(--ink); background: var(--bg); color: var(--gold-hi); font-family: var(--px); font-size: 20px; line-height: 1; white-space: nowrap; }
+/* v5.3: the realm line sits over Play on a solid chip (it lay on the pixel scene's river, Critics 2 fix m6, until the
+   painting replaced the scene). */
+#home-era { margin: 0; padding: 3px 12px 4px; border-radius: 6px; border: 2px solid var(--ink); background: var(--bg); color: var(--gold-hi); font-family: var(--px); font-size: 22px; line-height: 1; white-space: nowrap; box-shadow: 0 3px 0 rgba(0,0,0,.45); }
 #home-era:empty { display: none; }
 #btn-play.play { width: 70%; min-height: var(--play-h); height: var(--play-h); display: flex; align-items: center; justify-content: center; gap: 10px; border-radius: 14px; font-size: 40px; line-height: 1; }
 #btn-play.wait { background: var(--stone); box-shadow: inset 0 3px 0 var(--stone-hi), inset 0 -5px 0 var(--stone-lo), 0 3px 0 rgba(0,0,0,.5); font-size: 28px; }

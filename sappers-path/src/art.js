@@ -7,7 +7,7 @@
 //            raised, struck) and the crowned goblin (0-3 walk, 4-5 taunt)
 //   icons    12×12 badge icons: pickaxe, axe, goat, torch, lever (the board badges and the crew cards share them)
 //   chrome   the crack overlay (X) a tile shows before it pops, and the dark brick texture behind the page (wall)
-//   scenes   the title castle, the portrait battlements banner and the world-map strips, painted into logical-size
+//   scenes   the portrait battlements banner and the world-map strips, painted into logical-size
 //            canvases the page scales with image-rendering: pixelated
 //   board    (v2) the castle picture: world-aligned material textures with battlements, tower caps and gatehouse arches
 //            from the level's art metadata, decor, the siege camp's trodden earth, tents and standard, big levers and
@@ -332,32 +332,7 @@
   function sprite(P, S, who, frame, x, y, flip) { const g = P.g; g.save(); if (flip) { g.translate(x + G, y); g.scale(-1, 1); g.drawImage(S["s" + who], frame * G, 0, G, G, 0, 0, G, G); } else g.drawImage(S["s" + who], frame * G, 0, G, G, x, y, G, G); g.restore(); }
   function tiles(P, src, x, y, w, h) { for (let yy = y; yy < y + h; yy += G) for (let xx = x; xx < x + w; xx += G) P.g.drawImage(src, xx, yy); }
 
-  // Title: sky, hills, the goblins' castle (stone curtain, towers, a keep with a timber gate and a goblin flag), a hedge,
-  // an iced moat, and the four crews on the green in front. f: the taunting goblin's frame (0/1).
-  // baseFrac: where the castle's foot sits (a fraction of the height), so a tall full-screen canvas keeps the castle in
-  // the middle with sky above for the logo and green below.
-  function title(c, A, S, f, baseFrac) {
-    const P = pen(c), W = P.w, H = P.h, base = Math.max(96, Math.min(H - 30, Math.round(H * (baseFrac || 1) - (baseFrac ? 0 : 30))));
-    P.g.imageSmoothingEnabled = false;
-    sky(P, A, Math.min(1, (base - 24) / H), false);
-    disc(P, W - 24, 18, 8, A.sun); cloud(P, A, 14, 14); cloud(P, A, W * 0.52, 8);
-    for (let x = 0; x < W; x++) { const h1 = base - 30 + Math.round(5 * Math.sin(x / 13) + 3 * Math.sin(x / 5.3)); P.r(x, h1, 1, H - h1, A.hills[1]); const h2 = base - 18 + Math.round(4 * Math.sin(x / 9 + 2)); P.r(x, h2, 1, H - h2, A.hills[0]); }
-    const cx = W >> 1;
-    bricks(P, A, cx - 58, base - 26, 116, 26); merlons(P, A, cx - 58, base - 31, 116);
-    for (const tx of [cx - 70, cx + 50]) { P.r(tx - 1, base - 45, 22, 45, A.ink); bricks(P, A, tx, base - 44, 20, 44); merlons(P, A, tx, base - 49, 20); P.r(tx + 9, base - 34, 2, 6, A.ink); }
-    P.r(cx - 19, base - 63, 38, 63, A.ink); bricks(P, A, cx - 18, base - 62, 36, 62, A.keep); merlons(P, A, cx - 18, base - 67, 36, A.keep);
-    P.r(cx - 3, base - 50, 2, 7, A.ink); P.r(cx + 3, base - 50, 2, 7, A.ink);
-    P.r(cx - 9, base - 22, 18, 22, A.ink); tiles(P, S.m10, cx - 8, base - 21, 16, 21); P.r(cx - 8, base - 21, 16, 1, A.timber[3]);
-    P.r(cx + 12, base - 86, 1, 20, A.ink); P.r(cx + 13, base - 86, 11, 7, A.flag[0]); P.r(cx + 13, base - 80, 11, 1, A.flag[1]); P.p(cx + 16, base - 84, A.flag[2]); P.p(cx + 20, base - 84, A.flag[2]);
-    sprite(P, S, 4, WORK + (f & 1), cx - 8, base - 82, false);
-    for (let x = 0; x < W; x += G) { P.g.drawImage(S.m21, x, base - 10, G, 10); }
-    P.r(0, base, W, 9, A.moat[0]); for (let x = (f & 1) * 2; x < W; x += 9) P.r(x, base + 3, 3, 1, A.moat[2]);
-    for (let k = 0; k < 3; k++) { const ix = 10 + k * ((W - 30) / 3) + ((noise(k + 5) * 12) | 0); P.r(ix, base + 1, 14, 7, A.ink); P.r(ix + 1, base + 2, 12, 5, A.ice[0]); P.r(ix + 2, base + 2, 5, 1, A.ice[2]); }
-    tiles(P, S.q0, 0, base + 9, W, H - base - 9);
-    const gap = Math.min(W, 170) / 5, x0 = (W - Math.min(W, 170)) / 2, cy = Math.min(H - 19, base + 13);
-    for (let i = 0; i < 4; i++) sprite(P, S, i, i === 1 ? WORK : 0, Math.round(x0 + gap * (i + 1) - 8), cy, i >= 2);
-    return { base, river: 9 }; // Critics 2 fix (m6): where the river runs (logical px), for the home's era chip
-  }
+  // v5.3: the title's pixel scene (title()) is gone: the home shows a painting (art/, main.js fitTitle).
 
   // Portrait banner above the board: sky (night in World 4), a crenellated wall along the bottom, a torch, and the
   // crowned goblin on the battlements, taunting (f 0/1).
@@ -703,5 +678,5 @@
     }
   }
 
-  return { G, MATS, WALK, WORK, FRAMES, SHEET_PROBE, noise, mk, up, icon, icons, sources, title, banner, worldStrip, wall, u32, textures, levelInfo, compose, moatFrame, flagArt, chipArt };
+  return { G, MATS, WALK, WORK, FRAMES, SHEET_PROBE, noise, mk, up, icon, icons, sources, banner, worldStrip, wall, u32, textures, levelInfo, compose, moatFrame, flagArt, chipArt };
 });

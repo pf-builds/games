@@ -168,7 +168,10 @@
     "queueRowsShort": 2, "shortRowsMaxH": 640, "stageGapPx": [14, 16, 6], "pwGrid": 250, "pwFit": {"padX": 24, "padTop": 10, "head": 38, "padBottom": 14, "name": 30, "rowGap": 8, "gapX": 14, "min": 84, "max": 112},
     "fix2Note": "Critics 2 fix. coachTopFontPx: the coach in the top bar (only where neither three nor two queue rows leave the board minCellCss with the band above it) steps its font from the first to the second, one line, then two. rod.lane and rod.metal2 (m9): two rods down one gutter over the same rows take a lane each, lane px either side of its middle (scaled with the tile, never past the tiles' edges), the second in metal2.",
     "coachTopFontPx": [19, 13]},
-  "title": {"artW": 125, "artH": 190, "artMin": 2, "artMax": 5, "baseFrac": 0.58, "baseFracWide": 0.56, "wallArtPx": 3},
+  "title": {"wallArtPx": 3,
+    "artNote": "v5.3: the home's painted siege (art/, tools/home-art.py; index.html's <picture> shows tall on an upright screen, wide otherwise). Per image: its pixel size and the castle's (the keep's) centre as a fraction of its width; main.js fitTitle covers #title's own box with it and slides it so the castle sits as near the box's centre as the cover allows. posY: the vertical object-position (0 top) where the box crops height (keeps the sky). maxOff: the selfTest's and harness's limit on the castle's distance from the box centre, a share of the box width. widths: the window widths the harness sweeps that limit across.",
+    "art": {"wide": {"w": 1920, "h": 1097, "castleX": 0.5789}, "tall": {"w": 1080, "h": 1920, "castleX": 0.5}, "posY": 0.3, "maxOff": 0.1,
+      "widths": [320, 375, 414, 600, 768, 1024, 1143, 1280, 1366, 1920]}},
   "audio": {
     "volume": 0.5,
     "tickGapMs": 22,

@@ -108,6 +108,8 @@
 // home and map the theme, a level or side quest the play loop, realm 8's levels the boss loop); a win's sheet plays the
 // jingle over the ducked loop. Settings has Music and Sound effects apart (saved: settings.music, settings.sfx); the quick
 // mute buttons (top bar, Paused sheet) turn both off, or both on when both are off, and read "mixed" when one is off.
+// v5.3 (SPEC-v4 §9, tools/v5-3-home-notes.md): the home is a painted siege (art/, a <picture>) sized to #title's own box
+// with the castle centred (fitTitle, config title.art), not a pixel scene sized to the window; the realm line sits over Play.
 (function () {
   "use strict";
   const NS = window.SappersPath, E = NS.engine, Save = NS.save, Board = NS.board, Art = NS.art, Audio = NS.audio, Meta = NS.meta;
@@ -118,7 +120,7 @@
   const tagOf = (e) => (e && e.L && TAGS.indexOf(e.L.tag) >= 0 ? e.L.tag : "normal"), winOf = (e) => (e && e.L && e.L.win && e.L.win[tagOf(e)]) || "";
   const app = { cfg: null, levels: [], byId: new Map(), order: [], eras: [], save: null, entry: null, B: null, S: null, V: null, audio: null, sheets: null, gal: [], mats: null, palKey: "", galTiles: [],
     clock: 0, lastT: 0, screen: "title", diff: "normal", speed: 1, fastPaid: false, debugSpeed: DEBUG, cb: false, allPw: false, tip: null, tipQ: [], tipHold: null, tipEat: -1, pwN: -1, // diff: the playing level's tag (v4.3) ending: null, endAt: -1, panel: null, panelAt: 0, testing: false,
-    toastT: -1e12, popK: 0, cards: [], nexts: [], slots: [], wide: false, glURL: [], manURL: [], nodes: [], lastW: 0, lastH: 0,
+    toastT: -1e12, popK: 0, cards: [], nexts: [], slots: [], wide: false, glURL: [], manURL: [], nodes: [],
     coach: null, used: 0, cues: {}, paused: false, pauses: 0, upright: false, upPause: false, focusEl: null, pt: { x: 0, y: 0 }, T: null, tbuf: null, labFit: new Map(), verdict: [],
     et: 0, endT: -1, lineDirty: false, lineMoved: false, ord: [], slotPts: [], blockT: -1e12, refused: 0, march: false,
     debug: [], flip: [false, false, false, false, false], rods: null, unlockT: -1e12, lockN: 0, reveals: 0, pairsOut: 0,
@@ -155,7 +157,7 @@
     try { app.V.calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { /* motion stays on */ }
     app.audio = Audio.create(app.cfg.audio, (f) => f + "?v=" + V_); // v5.2: the music files carry the cache tag
     setSound(app.save.data.settings.sfx, app.save.data.settings.music, false); setSpeed(1, false); setCb(app.save.data.settings.cb, false); // v5 R1: speed is never saved
-    paintWall(); chips(); icons(); buildTray(); buildLine(); buildPowers(); buildMap(); wire();
+    paintWall(); chips(); icons(); buildTray(); buildLine(); buildPowers(); buildMap(); wire(); wireTitleArt();
     { const U = app.cfg.layout.upright, u = $("upright"); u.querySelector(".up-t").textContent = U.text; u.setAttribute("aria-label", U.text); }
     showScreen("title"); layout();
     if (DEBUG) window.SP = SP;
@@ -879,7 +881,7 @@
     $("title").hidden = name !== "title"; $("map").hidden = name !== "map";
     if (name === "title") renderHome();
     if (name === "map") { layoutMap(); renderMap(); scrollMap(); } // v5 R3: the current node about map.curAt down the view
-    if (name === "title") paintTitle();
+    if (name === "title") fitTitle();
     if (name === "play") fitBoard();
     if (name !== "play") { $("pause").hidden = true; if (app.paused && !document.hidden) resume(); }
     renderCoach();
@@ -1411,7 +1413,7 @@
     const r = document.documentElement.style;
     if (app.wide) { const rw = short ? L.railShortPx : Math.round(Math.min(L.railWidePx, Math.max(L.railMinPx, W * L.railFrac))); r.setProperty("--rail-w", rw + "px"); r.setProperty("--wide-gap", (short ? L.gapShortPx : L.gapWidePx) + "px"); }
     app.labFit.clear();
-    if (app.screen === "title") paintTitle();
+    if (app.screen === "title") fitTitle();
     if (app.screen === "map") { layoutMap(); fitLabel(); } else if (app.jr) app.jr.colW = 0; // v5 R3: the map's column (laid out again when it shows)
     if (app.S) fitLine();
     fitBoard();
@@ -1505,14 +1507,27 @@
     if (hh <= room) { st.top = lw.bottom + gap - A.top + "px"; if (app.wide) st.bottom = A.bottom - Math.min(foot, Math.max(lw.bottom + gap + hh, rl.bottom)) + "px"; return; } // v4.3 fix (m5): wide: its content's height (down to the tray's foot, so no queue row peeks out under it)
     P.classList.add("float"); st.top = "auto"; st.bottom = A.bottom - lw.top + gap + "px";
   }
-  function paintTitle() {
+  // v5.3: the home's painting (index.html's <picture>: art/home-tall.jpg on an upright screen, home-wide.jpg otherwise)
+  // covers #title's own box, never the window (the old pixel scene was sized to the window, so on a medium-wide window,
+  // where the home is a phone-width column, the castle drifted right and was cut off). --art-x slides the image so the
+  // castle sits as near the box's centre as the cover allows (config title.art).
+  function homeArt() {
+    const T = app.cfg.title.art, img = $("title-art").querySelector("img"), b = $("title").getBoundingClientRect(), src = img.currentSrc || "";
+    const k = /home-tall/.test(src) ? "tall" : /home-wide/.test(src) ? "wide" : window.matchMedia("(orientation: portrait)").matches ? "tall" : "wide", A = T[k];
+    const s = Math.max(b.width / A.w, b.height / A.h), rw = A.w * s, slack = b.width - rw, off = Math.max(slack, Math.min(0, b.width / 2 - A.castleX * rw));
+    const castle = b.left + off + A.castleX * rw, cx = b.left + b.width / 2;
+    return { k, px: slack < -0.5 ? off / slack : 0.5, py: T.posY, castle, cx, w: b.width, h: b.height, off: b.width ? (castle - cx) / b.width : 0, loaded: img.complete && img.naturalWidth > 0, on: $("title-art").classList.contains("on") };
+  }
+  function fitTitle() {
     if (!app.cfg) return;
-    const c = $("title-art"), T = app.cfg.title, W = window.innerWidth, H = window.innerHeight;
-    if (W === app.lastW && H === app.lastH && c.width > 1) return;
-    app.lastW = W; app.lastH = H;
-    const a = Math.max(T.artMin, Math.min(T.artMax, Math.floor(Math.min(W / T.artW, H / T.artH)))), w = Math.ceil(W / a), h = Math.ceil(H / a);
-    c.width = w; c.height = h; c.style.width = w * a + "px"; c.style.height = h * a + "px";
-    try { const g = Art.title(c, app.cfg.art, app.sheets, 0, W > H ? T.baseFracWide : T.baseFrac); $("title").style.setProperty("--river-y", (g.base + g.river / 2) * a + "px"); } catch (e) { /* sky colour stays */ }
+    const g = homeArt(), st = $("title-art").style;
+    st.setProperty("--art-x", (g.px * 100).toFixed(2) + "%"); st.setProperty("--art-y", g.py * 100 + "%");
+  }
+  // Fades the painting in once it has loaded (again after an orientation change swaps the source); the sky colours wait under it.
+  function wireTitleArt() {
+    const el = $("title-art"), img = el.querySelector("img"), on = () => { el.classList.add("on"); if (app.screen === "title") fitTitle(); };
+    img.addEventListener("load", on);
+    if (img.complete && img.naturalWidth > 0) on();
   }
 
   // ---- frame loop -----------------------------------------------------------------------------------------------------
@@ -2318,9 +2333,18 @@
         for (let i = 0; i < 40; i++) Save.record(app.save.data, app.order[i]);
         showScreen("title"); const ne = app.byId.get(Save.next(app.save.data, app.order));
         ok($("play-lab").textContent === fill(HT.play, { n: ne.n }) && $("home-prog").textContent === "40/" + app.levels.length && $("home-era").textContent === fill(HT.era, { e: ne.era, name: app.eras[ne.era - 1].name }), "home (mid-campaign): Play reads '" + $("play-lab").textContent + "', progress " + $("home-prog").textContent + ", " + $("home-era").textContent);
-        { app.lastW = 0; paintTitle(); const ch = $("home-era").getBoundingClientRect(), ry = $("title").getBoundingClientRect().top + (parseFloat(getComputedStyle($("title")).getPropertyValue("--river-y")) || -1e9), hits = ["btn-play", "play-lab", "home-prog", "home-coins", "btn-settings"].filter((id) => over(ch, $(id).getBoundingClientRect()));
+        // v5.3: the realm line sits over Play, clear of the logo, the pills and the buttons and inside the home; it and the
+        // pills hold WCAG AA (4.5:1) over any part of the painting (a translucent backing judged on white, the worst
+        // case); the painting covers #title's own box (not the window) with the castle's centre within title.art.maxOff
+        // of the box's centre (the harness sweeps the window widths).
+        { fitTitle(); const TA = app.cfg.title.art, bx = $("title").getBoundingClientRect(), ch = $("home-era").getBoundingClientRect(), hits = ["btn-play", "play-lab", "home-prog", "home-coins", "btn-settings"].filter((id) => over(ch, $(id).getBoundingClientRect()));
           if (over(ch, document.querySelector(".home h1").getBoundingClientRect())) hits.push("h1");
-          ok(Math.abs((ch.top + ch.bottom) / 2 - ry) < 1 && !hits.length && ch.left >= -0.5 && ch.right <= innerWidth + 0.5, "home (Critics 2 fix, m6): the era chip lies on the river at the castle's foot (centre " + Math.round((ch.top + ch.bottom) / 2) + ", river " + Math.round(ry) + "), so the crew (on the grass, 13 scene px under the river) stands clear; clear of the logo, the pills and the buttons (" + hits.join(", ") + ")"); }
+          const nums = (v) => v.match(/[\d.]+/g).map(Number), hex = (m) => "#" + m.slice(0, 3).map((x) => Math.round(x).toString(16).padStart(2, "0")).join(""), onWhite = (c) => c.slice(0, 3).map((x) => (c.length > 3 ? c[3] : 1) * x + (1 - (c.length > 3 ? c[3] : 1)) * 255);
+          const cr = (el) => { const c = getComputedStyle(el), L1 = relLum(hex(nums(c.color))), L2 = relLum(hex(onWhite(nums(c.backgroundColor)))); return (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05); };
+          const crs = ["home-era", "home-prog", "home-coins"].map((id) => cr($(id))), g = homeArt(), ar = $("title-art").getBoundingClientRect();
+          ok(!hits.length && ch.left >= bx.left - 0.5 && ch.right <= bx.right + 0.5 && crs.every((x) => x >= 4.5), "home (v5.3): the realm line sits over Play, clear of the logo, the pills and the buttons (" + hits.join(", ") + "); realm line and pills at " + crs.map((x) => x.toFixed(1)).join(", ") + ":1 (4.5 or more)");
+          ok(Math.abs(ar.left - bx.left) < 0.5 && Math.abs(ar.width - bx.width) < 0.5 && Math.abs(ar.height - bx.height) < 0.5 && Math.abs(g.off) <= TA.maxOff && getComputedStyle($("title-art")).getPropertyValue("--art-x").trim() === (g.px * 100).toFixed(2) + "%",
+            "home (v5.3): the painting (" + g.k + ") covers the home's own box (" + Math.round(g.w) + "x" + Math.round(g.h) + ", window " + innerWidth + "x" + innerHeight + ") with the castle's centre " + (g.off * 100).toFixed(1) + "% of its width off the box's centre (limit " + TA.maxOff * 100 + "%)"); }
         $("btn-play").click(); ok(app.screen === "play" && app.entry === ne, "home (mid-campaign): one tap on Play opens level " + ne.n);
         showScreen("title"); const tabsHit = hitOK($("btn-tomap")) && hitOK($("tab-home")) && !$("btn-gallery") && document.querySelectorAll(".tabs .tab").length === 2; $("btn-tomap").click(); const t1 = app.screen; $("btn-home").click(); const t2 = app.screen; $("tab-home").click(); const t3 = app.screen;
         ok(tabsHit && t1 === "map" && t2 === "title" && t3 === "title" && $("map-story").textContent === HT.story, "home tabs (v5 R3: Map and Home; the Gallery is the map): Map opens the map (the story is at its foot), back reaches Home; every tab is hittable");
@@ -2577,6 +2601,7 @@
     // v4.3: clearPictures(k): clear the Gallery's first k pictures in the live save (the screens' sequential Gallery).
     clearPictures: (k) => { for (let i = 0; i < k && i < app.gal.length; i++) Save.record(app.save.data, app.gal[i].id, "gal"); writeSave(); if (app.screen === "map") renderMap(); return Object.keys(app.save.data.gal).length; },
     quest: (id) => { const e = app.byId.get(id); return e && e.L.quest ? Object.assign({ open: picOpen(e) }, e.L.quest) : null; }, // v5 R2: a picture's side quest
+    homeArt: () => { fitTitle(); return homeArt(); }, // v5.3: the home painting's fit (which image, the castle's offset from the box's centre)
     unlockTo: (n) => { for (let i = 0; i < n && i < app.order.length; i++) Save.record(app.save.data, app.order[i]); app.save.data.last = Save.next(app.save.data, app.order); writeSave(); renderHome(); return Object.keys(app.save.data.done).length; },
     power: (k, a) => { const got = onPower(k); if (a == null || !app.pick) return got; return Array.isArray(a) ? pickTile(a[0], a[1]) : pickSlot(a); },
     allPowers: (on) => { app.allPw = !!on; renderPowers(); return app.allPw; }, // v5 R1: every power-up shown whatever the campaign (tests)
