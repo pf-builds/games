@@ -14,23 +14,25 @@
 //     (openings where the subject meets the picture's edge), cuts ([cell] where the ring was opened), ways (edge +
 //     cuts), liquid (null: plain water), subject, contact, set} or {why}
 //     The bank: the subject grown by a disc of MC.gap cells, smoothed once by majority (never thinner than one cell
-//     round the subject). It is a path of open ground, as a castle's bank path (tools/castle.js): once a way in is dug
-//     the subject's whole outline opens (with the bank left as picture the inside opened a cell at a time through the
-//     gap, and no deal fitted the 15 s and 55-tap caps: measured on 9 Kitten Forest boards and the demo's paintings).
-//     The path never joins the frame before anything is dug. The ring: the cells outside the bank touching it 8-way, a
-//     channel one stud wide whose steps share an edge, so it follows the outline as a curve (MC.width 2: a second row
-//     outside it). Where the bank runs into the picture's edge the ring squeezes through on the bank's own edge cells;
-//     it stops only where the subject itself meets the edge, and the subject is dug from the frame there: each such
-//     stretch is an opening (two with MC.merge or fewer edge cells between are one: the notch between stays picture and
-//     its short arc goes dry; at most MC.maxEdge). Water and path only ever replace cells outside the subject. ways
-//     (the plan's faces: front, the ring nearest the entry; far, farthest from it; left; right) opens the ring for each
-//     face no opening serves yet (one within MC.serve of the face's best cell; the edge stretches count), MC.maxWays in
-//     all: a gap of open ground through it within MC.open of one of the MC.pick best crossing cells for the face
-//     (seeded), MC.apart cells from every other opening and clear of the picture's edge. Then every cell left must be
-//     reachable 4-way from the frame once dug (a pocket of MC.pond cells or fewer outside the subject becomes water; a
-//     bigger one, or any of the subject, fails) and there must be MC.minRing cells of water at least. Its colour: the
-//     first of liquids (default [null]; null is plain water, else a config board.pic.liquids name) that stands
-//     MC.waterDE [base, shade] from every picture colour and shade, else it fails.
+//     round the subject). The ring: the cells outside the bank touching it 8-way, a channel one stud wide whose steps
+//     share an edge, so it follows the outline as a curve (MC.width 2: a second row outside it). Where the bank runs
+//     into the picture's edge the ring squeezes through on the bank's own edge cells; it stops only where the subject
+//     itself meets the edge, and the subject is dug from the frame there: each such stretch is a way in (two with
+//     MC.merge or fewer edge cells between are one: the notch between stays picture and its short arc goes dry; at most
+//     MC.maxEdge). ways (the plan's faces: front, the ring nearest the entry; far, farthest from it; left; right) opens
+//     the ring for each face no way in serves yet (one within MC.serve of the face's best cell; the edge stretches
+//     count), MC.maxWays in all: a gap of open ground through it within MC.open of one of the MC.pick best crossing
+//     cells for the face (seeded), MC.apart cells from every other way in and clear of the picture's edge. The path:
+//     when the ring has a cut, the bank is open ground, as a castle's bank path (tools/castle.js), so once a cut is dug
+//     through the subject's whole outline opens (with the bank left as picture the inside opened a cell at a time
+//     through the gap and no deal fitted the 15 s and 55-tap caps on most boards, measured); bank cells within
+//     MC.edgeKeep of an edge way in stay picture (else digging one edge block opened the whole outline and the level
+//     played far too easy, measured), and with no cut the whole bank does. The path never joins the frame before
+//     anything is dug. Water and path only ever replace cells outside the subject. Every cell left must be reachable
+//     4-way from the frame once dug (a pocket of MC.pond cells or fewer outside the subject becomes water; a bigger
+//     one, or any of the subject, fails) and there must be MC.minRing cells of water at least. Its colour: the first of
+//     liquids (default [null]; null is plain water, else a config board.pic.liquids name) that stands MC.waterDE [base,
+//     shade] from every picture colour and shade, else it fails.
 //   apply(L, R) -> L with the ring's cells turned to water ("~"), its path to open ground (",") and R.liquid set.
 //   reach(L) -> true when every non-water cell of a picture board is reachable 4-way from its frame through non-water.
 // Deterministic (the seed only picks among a face's best cells); bounded loops; never throws on a well-formed board.
@@ -150,7 +152,13 @@ function ringOf(B, MC, ways, seed, S0, liquids) {
   for (let c = 0; c < n; c++) if (at(c) && !water[c] && !ok[c]) { pocket.push(c); if (sub[c]) bad = true; }
   if (bad || pocket.length > MC.pond) return { why: "the ring shuts in " + pocket.length + " cells" + (bad ? " of the subject" : "") };
   for (const c of pocket) water[c] = 1;
-  const cells = [], ground = []; for (let c = 0; c < n; c++) { if (water[c]) cells.push(c); else if (cutC[c] || (bank[c] && !sub[c] && !keep[c])) ground.push(c); }
+  // The path: the bank, when the ring has a cut (a gap through water then opens the subject's whole outline); bank cells
+  // within MC.edgeKeep of an edge way in stay picture, and with no cut the whole bank does (the subject is dug from its
+  // edge, as any picture is).
+  const isBank = (c) => bank[c] && !sub[c] && !keep[c] && !water[c], land = new Uint8Array(n);
+  const nearEdgeWay = (c) => runs.some((r) => r.some((o) => Math.max(Math.abs(xy(c)[0] - xy(o)[0]), Math.abs(xy(c)[1] - xy(o)[1])) <= MC.edgeKeep));
+  if (cuts.length) for (let c = 0; c < n; c++) if (isBank(c) && !nearEdgeWay(c)) land[c] = 1;
+  const cells = [], ground = []; for (let c = 0; c < n; c++) { if (water[c]) cells.push(c); else if (cutC[c] || land[c]) ground.push(c); }
   if (cells.length < MC.minRing) return { why: "a ring of " + cells.length + " cells (" + MC.minRing + " at least)" };
   // The path (the bank and the cuts: open ground, as a castle's bank path) must not join the frame before anything is dug.
   const path = new Uint8Array(n); for (const c of ground) path[c] = 1;

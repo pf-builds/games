@@ -13,8 +13,9 @@ for (const [w, h, dpr, touch, nm] of [[375, 812, 3, true, "phone"], [1280, 720, 
   p.on("console", (m) => log.push(tag + " " + m.type() + ": " + m.text())); p.on("pageerror", (e) => log.push(tag + " pageerror: " + e.message));
   await p.goto(URL_ + "?debug=1"); await p.waitForFunction(() => window.SP && document.fonts.status === "loaded", null, { timeout: 20000 });
   await p.evaluate(() => { localStorage.clear(); SP.unlockTo(1e3); });
-  const play = async (n, taps, ms, k) => { const r = await p.evaluate(([n, taps, ms]) => { const s0 = SP.load(n); const o = SP.winOrder() || ""; for (let i = 0; i < taps && i < o.length; i++) { SP.play(+o[i]); SP.tick(ms); } return { id: s0.id, order: o.length, title: (document.getElementById("t-name") || {}).textContent }; }, [n, taps, ms]); await p.waitForTimeout(500); await p.screenshot({ path: OUT + "/" + nm + "-" + k + ".png" }); notes.push(tag + " " + k + ": " + JSON.stringify(r)); };
-  for (const n of nm === "phone" ? LV : LV.slice(0, 1)) { await play(n, 0, 0, n + "-start"); await play(n, 8, 2600, n + "-mid"); }
+  // taps of the stored order played patiently (each settles), then one more and ms of play: sappers on the move.
+  const play = async (n, taps, ms, k) => { const r = await p.evaluate(([n, taps, ms]) => { const s0 = SP.load(n); const o = SP.winOrder() || ""; let i = 0; for (; i < taps && i < o.length; i++) { SP.play(+o[i]); SP.settle(); } if (ms && i < o.length) { SP.play(+o[i]); SP.tick(ms); } return { id: s0.id, order: o.length }; }, [n, taps, ms]); await p.waitForTimeout(500); await p.screenshot({ path: OUT + "/" + nm + "-" + k + ".png" }); notes.push(tag + " " + k + ": " + JSON.stringify(r)); };
+  for (const n of nm === "phone" ? LV : LV.slice(0, 1)) { await play(n, 0, 0, n + "-start"); await play(n, 14, 1800, n + "-mid"); }
   await ctx.close();
 }
 await b.close();
