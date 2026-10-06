@@ -322,9 +322,9 @@ Wandering Gallery). Inputs: `game-research/sappers-path-v4/lands/01-kitten-fores
 |---|---|---|---|
 | K1 | Land folder (land.json, manifest, sources, map sheets, templates); Wandering Gallery's first 12 pictures | done: boards identical to the judged ones (50/50 picks, 12/12 gallery) | 0c54c06 |
 | K2 | Egg kinds kitten, yarn, butterfly (journey.js, config names) | done | a9ac01f |
-| K3 | Difficulty profile (land.json) and trial bake; mystery-block gap rule | in progress | d0fea6d |
-| K4 | Full bake 201-250 + 12 side quests, fix-ups, check PASS | | |
-| K5 | Sheet 25 retouch (top band) | | |
-| K6 | Install; cache tag `?v=44` | | |
+| K3 | Difficulty profile (land.json) and trial bake; mystery-block gap rule; narrowing toward any ceiling, under it | done: E4/N21/H17/X8; bands N 1-7%, H/X 0-1%; ceilings 0.30/0.15/0.10 | d0fea6d, 0368913, 8a563b0 |
+| K4 | Full bake 201-250 + 12 side quests, fix-ups, check PASS | done: 1 full run + 6 fix-up runs (16 pictures reordered); 0 fallbacks; median pace 243 s; check PASS | (scratch; installed in K6) |
+| K5 | Sheet 25 retouch (top band); sheet 25's route above 200 on the painted road | done | 35dcf90, 9521c22 |
+| K6 | Install; cache tag `?v=44` | done: test.js 616/0, freeze PASS (1-200 frozen; 201-250 not yet), regrades 0 of 1,455 and 0 of 432 | (this commit) |
 | K7 | Checks: test.js, freeze, regrades, critic-v5, selfTest x2, harness last | | |
 | K8 | Shots, notes, playtest bundle + smoke | | |
