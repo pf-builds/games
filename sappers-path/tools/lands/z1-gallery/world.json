@@ -1,0 +1,195 @@
+{
+ "k": 1,
+ "slug": "z1-gallery",
+ "name": "The Gallery",
+ "lore": "A quiet gallery at the start of the road: fruit, sweets, animals and old paintings, each one dug out a block at a time.",
+ "era": 101,
+ "count": 36,
+ "features": [
+  "linked",
+  "mystery",
+  "hidden"
+ ],
+ "profile": {
+  "note": "World 1, casual: Kitten Forest’s casual profile (tools/land-01-notes.md §10.1) on 36 levels: about 13 Easy, 19 Normal, 4 lone Hards, ending on a Hard; light features (? cards, a few linked pairs and mystery blocks), no locks, no Extreme, generous random-tap bands, no lookahead or careful ceilings. The boards are the Gallery’s own (36 x 41 class, smaller than a land’s max phone board), so the pace aim is the Gallery’s side-quest aim, 200 s.",
+  "tags": {
+   "shares": {
+    "easy": 0.36,
+    "normal": 0.52,
+    "hard": 0.12,
+    "extreme": 0
+   },
+   "breathers": 5,
+   "run": [
+    1,
+    3
+   ],
+   "end": "hard"
+  },
+  "features": {
+   "mystery": {
+    "share": 0.5,
+    "by": {
+     "easy": 0.2,
+     "normal": 0.5,
+     "hard": 1
+    },
+    "cards": [
+     2,
+     3
+    ]
+   },
+   "hidden": {
+    "share": 0.22,
+    "by": {
+     "easy": 0,
+     "normal": 0.3,
+     "hard": 0.5
+    },
+    "of": [
+     0.25,
+     0.4
+    ]
+   },
+   "linked": {
+    "share": 0.36,
+    "by": {
+     "easy": 0.2,
+     "normal": 0.4,
+     "hard": 0.67
+    },
+    "pairs": [
+     1,
+     2
+    ]
+   },
+   "lock": {
+    "share": 0,
+    "key": 0
+   }
+  },
+  "bands": {
+   "easy": [
+    0.45,
+    0.8
+   ],
+   "normal": [
+    0.2,
+    0.5
+   ],
+   "hard": [
+    0.06,
+    0.2
+   ]
+  },
+  "lookahead": {
+   "normal": null,
+   "hard": null,
+   "extreme": null
+  },
+  "pace": {
+   "aim": 200000
+  },
+  "bake": {
+   "candidates": {
+    "perLevel": 8,
+    "perLevelBy": {
+     "easy": 8,
+     "hard": 10
+    }
+   },
+   "deal": {
+    "attempts": 96
+   }
+  }
+ },
+ "pace": {
+  "range": [
+   150000,
+   300000
+  ]
+ },
+ "paceMedian": [
+  180000,
+  250000
+ ],
+ "from": {
+  "file": "levels/gallery.json",
+  "ids": [
+   "g-tw-1f355",
+   "g-noto-1f431",
+   "g-tw-1f98a",
+   "g-met-57007",
+   "g-noto-1f352",
+   "g-tw-1f43c",
+   "g-noto-1f344",
+   "g-tw-1f349",
+   "g-met-45434",
+   "g-noto-1f354",
+   "g-tw-1f427",
+   "g-noto-1f436",
+   "g-tw-1f353",
+   "g-met-436535",
+   "g-noto-1f32e",
+   "g-tw-1f419",
+   "g-noto-1f981",
+   "g-tw-1f369",
+   "g-met-436528",
+   "g-noto-1f41d",
+   "g-tw-1f980",
+   "g-noto-1f9c1",
+   "g-noto-1f3c6",
+   "g-noto-1f989",
+   "g-tw-1f951",
+   "g-noto-1f437",
+   "g-met-436534",
+   "g-tw-1f438",
+   "g-noto-1f36d",
+   "g-met-436530",
+   "g-noto-1f47d",
+   "g-tw-1f680",
+   "g-noto-1f308",
+   "g-tw-1f383",
+   "g-met-435882",
+   "g-noto-1f33b"
+  ]
+ },
+ "main": [
+  "g-met-57007",
+  "g-tw-1f43c",
+  "g-tw-1f355",
+  "g-noto-1f344",
+  "g-tw-1f349",
+  "g-noto-1f431",
+  "g-noto-1f354",
+  "g-tw-1f353",
+  "g-tw-1f98a",
+  "g-met-436535",
+  "g-noto-1f32e",
+  "g-tw-1f369",
+  "g-noto-1f352",
+  "g-met-436528",
+  "g-noto-1f9c1",
+  "g-met-45434",
+  "g-noto-1f3c6",
+  "g-tw-1f427",
+  "g-noto-1f989",
+  "g-noto-1f36d",
+  "g-noto-1f436",
+  "g-tw-1f951",
+  "g-tw-1f419",
+  "g-met-436534",
+  "g-noto-1f981",
+  "g-tw-1f438",
+  "g-noto-1f41d",
+  "g-met-436530",
+  "g-noto-1f308",
+  "g-tw-1f980",
+  "g-tw-1f680",
+  "g-noto-1f437",
+  "g-tw-1f383",
+  "g-noto-1f47d",
+  "g-noto-1f33b",
+  "g-met-435882"
+ ]
+}
