@@ -252,7 +252,11 @@ history (`git show 35dcf90~1:sappers-path/map/sheet-25.jpg`); `retouch-25.py ORI
   `map-eggs-before` / `-after` (sheet 26's kitten and yarn), `201-start`, `206-mid` (Hard: mystery blocks, ? cards,
   links, colour lock, shading), `250-start` / `250-mid` (the Extreme finale), `quest-mid` (Poppy Field); plus
   `sheet25-before-after.png`.
-- Playtest bundle: __BUNDLE__
+- Playtest bundle: `python3 tools/playtest-bundle.py f934733 <scratchpad>/sp-bundle-land1 "Sapper's Path Land 1 Playtest"
+  --jump 4,101,175,200,201,225,250` (14 MB; the bundler now carries `map/*.webp`). Smoke: `playtest-smoke.mjs` OK at
+  375x812 and 1280x720; Jump to 201, 225 and 250 then the map (both WebP sheets 200, 7 sheets drawn), the home's
+  "Land 1 · Kitten Forest" with Level 250 Extreme, 250 played, side quest 66 loaded; 0 console errors, 0 failed requests.
+  Not published (the orchestrator's).
 
 ## 9. Calls I made (Peter asleep) and things for the critics
 
