@@ -1673,5 +1673,60 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   }
 }
 
+// ==== v6 lane B: Zen mode (levels/zen.json; tools/zen-mode-notes.md) ======================================================
+// The world list and its data, World 1's records against the land gates (they are re-graded with 0 differences), the
+// openness rule (every world's first level open), the Zen save (sanitize, the wallet accessors, the write), the one-time
+// move on every save shape, SP2 round trips, SP1 still read, egg ids apart from the castle's.
+{
+  const fs = require("fs"), path = require("path"), S = require("../src/save.js"), Z = JSON.parse(fs.readFileSync(path.join(__dirname, "../levels/zen.json"), "utf8")), CFG = require("../config.json");
+  const ALLG = require("../levels/gallery.json").levels, LAY = require("../map/layout.json"), BC = require("./bake-config.json"), LP = require("./land-plan.js");
+  const W1 = Z.levels.filter((L) => L.world === 1), took = new Set(W1.map((L) => L.from)), wl = JSON.parse(fs.readFileSync(path.join(__dirname, "lands/z1-gallery/world.json"), "utf8"));
+  eq([Z.worlds.map((w) => [w.k, w.name, !!w.land]), W1.length, W1.every((L, i) => L.id === "z1-" + (i + 1) && L.n === i + 1 && L.era === Z.worlds[0].era && ALLG.some((g) => g.id === L.from && g.title === L.title && g.credit === L.credit && !g.land)), took.size],
+    [[[1, "The Gallery", false], [2, "Kitten Forest", true]], 36, true, 36], "zen.json: World 1 The Gallery (36 records z1-1..z1-36, each a castle Gallery picture with its title and credit), World 2 Kitten Forest (land 1)");
+  const pinned = ["Goblin's Lunch", "Sir Whiskers", "Night Watch", "Frog Prince", "Duck Knight", "Crown Too Big", "Cake Castle", "Mimic", "Melon Catapult", "Happy Potion", "Iron Pig", "Mushroom House", "The Sapper", "Hatchling", "Plumed Helm", "Sheep Knight", "Sword in the Stone", "Party Slime", "Wise Old Owl", "Goblin King's Hoard", "Unicorn", "Castle", "Dragon", "Crown"];
+  const stay = ALLG.filter((g) => g.n <= 60 && !took.has(g.id)).map((g) => g.title).sort();
+  eq(stay, pinned.slice().sort(), "zen World 1 (Step 0, Peter 10/6): the campaign keeps exactly the 24 on-theme pictures; the other 36 are World 1's");
+  { const rg = require("./regrade.js").regrade(W1, BC, V3, true), bad = W1.filter((L) => E.replay(E.compile(L), E.rulesOf(V3, L.tag), L.win[L.tag]).status !== E.WON || L.win[L.tag].length > 55 || L.grade[L.tag].maxWait > 15000 || L.lock || L.tag === "extreme" || L.fallback || !L.grade[L.tag].steady || L.grade[L.tag].steady.gap > 15000).map((L) => L.id);
+    const P = LP.profileOf(wl, require("./land-config.json")), pc = LP.planCheck(W1, wl, P, CFG.v5.density, CFG.lands.perLand), sh = LP.sharesOf(W1);
+    eq([bad, rg.diffs, pc, sh.extreme, sh.lock, sh.easy + sh.normal >= 0.85], [[], 0, [], 0, 0, true], "zen World 1: every level wins on its stored order, at most 55 taps, no wait over 15 s (steady too), no lock, no Extreme, no fallback; re-grade 0 differences; the casual profile (Easy " + sh.easy + ", Normal " + sh.normal + ", Hard " + sh.hard + ")"); }
+  // The page's Zen order: World 1 then World 2, each world's first open.
+  const KF = LEVELS_ALL.levels.filter((l) => l.land === 1).map((l) => l.id), order = W1.map((L) => L.id).concat(KF); order.starts = new Set([order[0], KF[0]]);
+  const gz = ALLG.filter((g) => g.land === 1).map((g) => g.id), fresh = S.zenFresh();
+  eq([S.isOpen(fresh, order, order[0]), S.isOpen(fresh, order, order[1]), S.isOpen(fresh, order, KF[0]), S.isOpen(fresh, order, KF[1]), S.isOpen({ done: { [KF[0]]: 1 } }, order, KF[1]), S.isOpen({ gal: {} }, order, KF[0], "gal")],
+    [true, false, true, false, true, false], "zen openness: every world's first level open from the start, the rest one by one (a picture's openness is its own)");
+  // The Zen save: sanitize keeps only Zen ids and ZEGG eggs; the wallet's fields read and write the Campaign data; the Zen key never holds them.
+  const raw = { v: 1, done: { [order[0]]: 1, "e1-01": 1, nope: 1, [KF[3]]: 2 }, gal: { [gz[0]]: 1, "g-tw-1f355": 1 }, eggs: { "z2-1-0": 1, "s26-0": 1, "z1-99999-0": 1 }, best: { [order[0]]: [5000, 30, 12], "e1-01": [1, 1, 1] }, last: KF[1], moved: 1, mode: "zen", coins: 99 };
+  const zs = S.zenSanitize(raw, order, gz);
+  eq([Object.keys(zs.done), Object.keys(zs.gal), Object.keys(zs.eggs), zs.best, zs.last, zs.moved, zs.mode, "coins" in zs], [[order[0]], [gz[0]], ["z2-1-0"], { [order[0]]: [5000, 30, 12] }, null, 1, "zen", false], "zen save: sanitize keeps Zen clears, pictures, z-eggs and bests only; a last not open is dropped; the wallet is never its own");
+  { const camp = S.fresh(CFG.meta), m = S.memoryStore(), cs = { write() { m.setItem("c", JSON.stringify(camp)); return true; } }, zv = S.openZen(m, "z", order, gz, () => camp, () => cs);
+    zv.data.coins += 50; zv.data.inv.ladder = 3; S.record(zv.data, order[0]); zv.write(); const back = JSON.parse(m.getItem("z"));
+    eq([camp.coins, camp.inv.ladder, "coins" in back, back.done[order[0]], JSON.parse(m.getItem("c")).coins, S.openZen({ getItem: () => { throw 1; }, setItem: () => { throw 1; } }, "z", order, gz, () => camp, null).data.moved], [CFG.meta.coins.start + 50, 3, false, 1, CFG.meta.coins.start + 50, 0], "zen save: the wallet writes through to the Campaign save (shared coins and power-ups), the Zen key holds progress only; a blocked store opens fresh"); }
+  // The one-time move on each shape: fresh, format 1 (v3/v4 masks), format 2, a renamed slot (v5 R3), twice.
+  const SH = LAY.sheets.filter((s) => s.land === 1), spec = { pics: W1.map((L) => [L.from, L.id]), levels: KF, quests: gz, eggs: SH.flatMap((s, i) => s.eggs.map((g, j) => ["s" + s.sheet + "-" + j, "z2-" + (i + 1) + "-" + j])) };
+  const ALLO = LEVELS_ALL.levels.map((l) => l.id), ALLGI = ALLG.map((g) => g.id), mv = (rawC) => { const c = S.sanitize(rawC, ALLO, ALLGI, CFG.meta), z = S.zenFresh(); const n = S.zenMove(c, z, spec); return { c, z, n }; };
+  { const a = mv(null), b = mv({ done: { [KF[0]]: 7, "e1-01": 1 }, gal: { [W1[2].from]: 1, [gz[1]]: 4 }, eggs: { "s27-1": 1 } }), c = mv({ v: 2, done: { [KF[0]]: 1, [KF[1]]: 1 }, best: { [KF[1]]: [9, 8, 7] }, gal: { [W1[0].from]: 1 }, last: KF[1] });
+    const twice = JSON.stringify(c.z), n2 = S.zenMove(c.c, c.z, spec);
+    eq([a.n, Object.keys(a.z.done).length, a.z.moved, b.n, Object.keys(b.z.done).sort(), Object.keys(b.z.gal), Object.keys(b.z.eggs), b.c.done[KF[0]], b.c.gal[gz[1]], c.n, c.z.best[KF[1]], c.z.last, n2, JSON.stringify(c.z) === twice],
+      [0, 0, 1, 4, [KF[0], W1[2].id].sort(), [gz[1]], ["z2-2-1"], 1, 1, 3, [9, 8, 7], KF[1], 0, true], "zen move: a fresh save moves nothing (flag set); a format-1 save's land level, World 1 picture, Wandering picture and Kitten Forest egg move; a format-2 save's bests and last move; nothing leaves the Campaign save; twice is once"); }
+  // SP2 round trip and SP1 still read; egg ids never collide.
+  { const zl = W1.map((L, i) => ({ id: L.id, w: 1, n: i + 1 })).concat(KF.map((id, i) => ({ id, w: 2, n: i + 1 }))), Zc = { order, gal: gz, zl };
+    const c = S.sanitize({ v: 2, done: { "e1-01": 1, "e1-02": 1 }, gal: { [ALLGI[1]]: 1 }, coins: 1234, eggs: { "s1-0": 1 }, last: "e1-03" }, ALLO, ALLGI, CFG.meta), z = S.zenFresh();
+    S.record(z, order[4]); S.record(z, KF[9]); z.best[KF[9]] = [1e5, 50, 25]; z.gal[gz[2]] = 1; z.eggs["z2-3-1"] = 1; z.last = KF[9];
+    const code = S.encode2(c, z, ALLGI, zl), r = S.decodeAny(code, ALLO, ALLGI, CFG.meta, null, 20000, Zc), r1 = S.decodeAny(S.encode(c, ALLGI), ALLO, ALLGI, CFG.meta, null, 20000, Zc), old = S.decode(code, ALLO, ALLGI, CFG.meta);
+    const bent = code.slice(0, 30) + (code[30] === "A" ? "B" : "A") + code.slice(31);
+    eq([code.slice(0, 4), r.ok, r.code, r.data.coins, Object.keys(r.data.done), r.data.last, Object.keys(r.zen.done), r.zen.best[KF[9]], Object.keys(r.zen.gal), Object.keys(r.zen.eggs), r.zen.last, r1.ok, r1.code, r1.zen, old.err, S.decodeAny(bent, ALLO, ALLGI, CFG.meta, null, 20000, Zc).err],
+      ["SP2.", true, 2, 1234, ["e1-01", "e1-02"], "e1-03", [order[4], KF[9]], [1e5, 50, 25], [gz[2]], ["z2-3-1"], KF[9], true, 1, null, "newer", "broken"], "save code: SP2 carries the Campaign, the wallet and Zen and reads back the same; SP1 still loads (Campaign only); decode() alone calls SP2 newer; a changed character is caught"); }
+  { const zeggs = SH.flatMap((s, i) => s.eggs.map((g, j) => "z2-" + (i + 1) + "-" + j)).concat([0, 1, 2, 3, 4].flatMap((i) => [0, 1].map((j) => "z1-" + (i + 1) + "-" + j)));
+    eq([zeggs.every((k) => !/^s\d{1,3}-\d{1,2}$/.test(k)), Object.keys(S.sanitize({ eggs: { "z2-1-0": 1, "s3-1": 1 } }, ALLO, ALLGI, CFG.meta).eggs), Object.keys(S.zenSanitize({ eggs: { "z2-1-0": 1, "s3-1": 1 } }, order, gz).eggs)], [true, ["s3-1"], ["z2-1-0"]], "zen eggs: ids z<world>-<sheet>-<i> never match a castle egg id; each save keeps only its own kind"); }
+  // World 1's map: castle sheets reused mirrored (no new image), every level on a spot, the road meeting x = 384 at each join.
+  { const ms = Z.worlds[0].map.sheets, spots = ms.reduce((a, m) => a + m.levels[1] - m.levels[0] + 1, 0), rj = ms.every((m) => { const r = LAY.sheets[m.from - 1].road; return m.mirror && Math.abs(LAY.w - r[0][0] - 384) <= 1 && Math.abs(LAY.w - r[r.length - 1][0] - 384) <= 1 && LAY.sheets[m.from - 1].levels.length >= m.levels[1] - m.levels[0] + 1 && !LAY.sheets[m.from - 1].land; });
+    eq([spots, ms[0].levels[0], ms[ms.length - 1].levels[1], rj, fs.readdirSync(path.join(__dirname, "../map")).filter((f) => /zen/i.test(f)).length], [36, 1, 36, true, 0], "zen World 1 map: " + ms.length + " castle sheets reused mirrored (no new image), 36 spots in order, the road at x = 384 top and bottom"); }
+  // Config: Zen's words have no goblins, forts or assaults; music per mode.
+  { const txt = JSON.stringify(Object.assign({}, CFG.zen.text, { reset: { zenTitle: CFG.zen.text.reset.zenTitle, zenLose: CFG.zen.text.reset.zenLose, zenKeep: CFG.zen.text.reset.zenKeep, zenToast: CFG.zen.text.reset.zenToast }, campLine: "", campDone: "" })) + JSON.stringify(Z.worlds.map((w) => w.name + w.lore));
+    const A = require("../src/audio.js"), M = CFG.audio.music, lv8 = { era: 8 }, lv1 = { era: 1 }, gq = { gallery: true };
+    eq([/goblin|fort\b|forts|assault|siege|raze|throne/i.test(txt), A.pick(M, "map", null, "campaign"), A.pick(M, "play", lv1, "campaign"), A.pick(M, "play", gq, "campaign"), A.pick(M, "play", lv8, "campaign"), A.pick(M, "map", null, "zen"), A.pick(M, "play", lv1, "zen"), A.pick(M, "title", null, "zen"), A.pick(M, "play", lv1), A.pick(M, "play", lv8)],
+      [false, "theme", "theme", "theme", "boss", "play", "play", "theme", "play", "boss"], "zen words: no goblin, fort or assault in Zen's text or world lore; music per mode (Campaign the theme in its levels, realm 8 the boss loop; Zen the calm loop; no mode: as v5.2)"); }
+}
+
 console.log(pass + " passed, " + fail + " failed");
 process.exitCode = fail ? 1 : 0;

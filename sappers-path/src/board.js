@@ -666,8 +666,8 @@
     }
     // The win: the goblins' keep stands where the last pixel went and comes down (it sinks into its own dust with a shake
     // and the collapse), the crowned goblin scrambles out of the rubble and flees off the top of the board.
-    function goblin(on) {
-      V.gob.on = !!on; V.gob.done = false; V.gob.t0 = V.clock; const c = V.lastPop >= 0 ? V.lastPop : (V.n >> 1); V.gob.x = (c % V.w) + 0.5; V.gob.y = Math.max(((c / V.w) | 0) + 0.5, SH.keepScale * 0.62);
+    function goblin(on, quiet) { // v6 lane B: quiet (a Zen win): the same beat (dust, shake, timing) with no keep and no goblin
+      V.gob.on = !!on; V.gob.quiet = !!quiet; V.gob.done = false; V.gob.t0 = V.clock; const c = V.lastPop >= 0 ? V.lastPop : (V.n >> 1); V.gob.x = (c % V.w) + 0.5; V.gob.y = Math.max(((c / V.w) | 0) + 0.5, SH.keepScale * 0.62);
       if (!on) return;
       shake(FX.winShake[0], FX.winShake[1]); spawn(MX(V.gob.x, V.gob.y + SH.keepScale * 0.35), MY(V.gob.x, V.gob.y + SH.keepScale * 0.35), 0, FX.winDust, FX.dustSize * 1.7, FX.lift, FX.spread * 1.8);
       if (V.hooks.collapse) V.hooks.collapse();
@@ -852,7 +852,7 @@
         gx.fillStyle = V.label.kill ? K.labelKill : K.labelHit; gx.fillText(V.label.text, x, y); gx.globalAlpha = 1;
       }
       // The goblin king: a startled hop on the spot where the last pixel went (taunt frames), then he runs off the top.
-      if (V.gob.on && sheets) {
+      if (V.gob.on && sheets && !V.gob.quiet) {
         const a = (V.clock - V.gob.t0) / SH.goblinMs, GS = 16, sz = Math.round(cs * SH.goblinScale), stand = SH.goblinStand, ka = a / SH.keepFrac;
         if (ka < 1) { // the keep sinks into the ground (clipped at its foot), wobbling
           const kp = S.keep, kw = kp.width, kh = kp.height, cx = MX(V.gob.x, V.gob.y) * cs, foot = MY(V.gob.x, V.gob.y) * cs + kh * 0.45;

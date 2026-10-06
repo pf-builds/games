@@ -1780,7 +1780,7 @@
     app.lineMoved = false;
     // The sheet waits until every sapper is home (v4.3: no cap; a board tap still skips the show).
     if (app.ending && !app.panel && !S.busy) {
-      if (app.ending.won) { if (!V.gob.on) { V.goblin(true); cue("fanfare"); } else if (V.gob.done) showPanel(); }
+      if (app.ending.won) { if (!V.gob.on) { V.goblin(true, app.entry.mode === "zen"); cue("fanfare"); } else if (V.gob.done) showPanel(); } // v6: no goblin in Zen (quiet)
       else if (app.endAt < 0) { app.endAt = app.clock + app.cfg.show.panelMs; V.shake(app.cfg.fx.failShake[0], app.cfg.fx.failShake[1]); }
       else if (app.clock >= app.endAt) showPanel();
     }
@@ -2906,6 +2906,69 @@
           ok(k[tl[1].id] === 1 && Object.keys(k).length === 1 && shut === !zenOn() && Save.questOpen(Object.assign({}, d, { tail: k }), app.order, galIds(), galAfter(), tl[1].id),
             "long tail kept (m5): a save from before the lands with the castle cleared and " + tl[0].n + " won keeps " + tl[1].n + " open (" + (zenOn() ? "v6: the campaign's tail sits at 200 again, so it is open anyway" : "it would have waited past " + lastN()) + ")"); }
         app.save = scratch(); }
+      // 13z. v6 lane B, Zen mode (tools/zen-mode-notes.md): the worlds; every Zen level's stored order; every world's
+      // first level open and the rest one by one; egg ids apart from the castle's; the shared wallet; Zen's words and music;
+      // the home's cards, the map's chip and the two maps; the move, SP2, SP1 and the reset per mode.
+      if (zenOn()) { const Z = app.modes.zen, C = app.modes.campaign, ZX = ZT(), W = Z.worlds, bad = (t) => /goblin|fort|assault|siege|raze|castle|throne/i.test(t || "");
+        const w1 = Z.levels.filter((e) => e.world === 1), w2 = Z.levels.filter((e) => e.world === 2), q2 = Z.gal.filter((e) => e.world === 2), LA = app.allLevels.filter((e) => e.L.land === 1).map((e) => e.id), GA = app.allGal.filter((e) => e.L.land === 1).map((e) => e.id);
+        ok(W.length >= 2 && W[0].k === 1 && W[1].k === 2 && w1.length === 36 && w1.every((e, i) => e.id === "z1-" + (i + 1) && e.L.from && !C.gal.some((g) => g.id === e.L.from)) && w2.map((e) => e.id).join() === LA.join() && q2.map((e) => e.id).join() === GA.join() && q2.length === 12 && !C.levels.some((e) => e.L.land) && C.levels.length === 200,
+          "zen worlds (v6): World 1 " + W[0].name + " " + w1.length + " levels (z1-1..z1-36, their Gallery pictures out of the campaign), World 2 " + W[1].name + " " + w2.length + " levels (201-250) and " + q2.length + " side quests; the campaign 1-" + C.levels.length);
+        let zw = 0; for (const e of Z.levels) { startLevel(e.id); const good = patient(winOf(e)); settleNow(); if (good && app.S.status === E.WON && app.mode === "zen") zw++; }
+        ok(zw === Z.levels.length, "zen: every Zen level's stored order wins played patiently through play() on its tag, in Zen (" + zw + "/" + Z.levels.length + ")"); out.notes.zenWins = zw + "/" + Z.levels.length;
+        app.save = scratch(); useMode("zen"); app.save = scratchZen(); const zd = app.save.data, open = (id) => Save.isOpen(zd, Z.order, id);
+        ok(open(w1[0].id) && !open(w1[1].id) && open(w2[0].id) && !open(w2[1].id) && W.every((w) => open(Z.levels.find((e) => e.world === w.k).id)) && nextOf() === w1[0].id, "zen: on a fresh save every world's first level is open (World 1's " + w1[0].id + ", World 2's " + w2[0].id + "), the next ones locked; Play starts World 1");
+        Save.record(zd, w2[0].id); zd.last = w2[0].id; ok(open(w2[1].id) && !open(w1[1].id) && nextOf() === w2[1].id, "zen: inside a world they open one by one; after a World 2 win, Play goes on in World 2 (" + nextOf() + ")");
+        showScreen("map"); const zn = (e) => e.node && e.node.isConnected, eggIds = app.jr.eggs.map((g) => g.id);
+        ok(app.mapOf === "zen" && zn(w1[0]) && zn(w2[0]) && w1[0].node.classList.contains("open") && w1[1].node.classList.contains("locked") && w2[1].node.classList.contains("cur") && w1[0].node.querySelector("b").textContent === "1" && w2[0].node.querySelector("b").textContent === "1" && !document.querySelector("#jr .kg") && $("map-mode").querySelector('[data-mode="zen"]').getAttribute("aria-pressed") === "true",
+          "zen map: one journey for both worlds (" + app.jr.sheets.length + " sheets), each world's levels numbered from 1, World 2's next level current, no Goblin King, the chip on Zen");
+        ok(eggIds.length && eggIds.every((k) => /^z\d+-\d+-\d+$/.test(k) && !/^s\d+-\d+$/.test(k)) && new Set(eggIds).size === eggIds.length, "zen eggs: " + eggIds.length + " ids of their own (" + eggIds[0] + " ... " + eggIds[eggIds.length - 1] + "), none a castle s<sheet>-<i>");
+        const zText = [$("map-story").textContent, $("map-title").textContent, document.querySelector("#jr .fogl").textContent, $("map-play").textContent].concat([...document.querySelectorAll("#jr .bn")].map((b) => b.textContent + b.getAttribute("aria-label")));
+        ok(!zText.some(bad), "zen words: no goblin, fort or assault on the Zen map (story, fog, Play, banners: " + zText.filter(bad).join(" | ") + ")");
+        // The shared wallet: a Zen win pays into the Campaign save's coins; the Zen key never stores them.
+        { const c0 = csave().data.coins, e = w1[0]; startLevel(e.id); patient(winOf(e)); settleNow(); tick(9000);
+          ok(app.panel === "win" && csave().data.coins > c0 && app.save.data.coins === csave().data.coins && !("coins" in JSON.parse(JSON.stringify(app.save.data))) && app.save.data.done[e.id] === 1 && !csave().data.done[e.id], "shared wallet (v6): a Zen win pays " + (csave().data.coins - c0) + " coins into the one wallet (the Campaign save); the Zen save holds only Zen progress");
+          ok($("p-title").textContent === ZX.winTitle && $("p-line").textContent === fill(ZX.winLine, { title: e.L.title }) && $("p-pic").dataset.on === "1", "zen win: '" + $("p-title").textContent + "', '" + $("p-line").textContent + "' with the finished picture");
+          ok(app.V.gob.quiet === true, "zen win: the win's beat plays with no keep and no goblin (board goblin quiet)");
+          const jp = jamPlan(w2[2], tagOf(w2[2])); startLevel(w2[2].id); if (jp) { patient(jp.prefix); for (let t = 0; t < ST.tickCapMs && !app.panel; t += 16) step(16); }
+          ok(!!jp && app.panel === "fail" && $("p-title").textContent === ZX.failTitle && $("p-line").textContent.indexOf(ZX.failLine) > 0 && !bad($("p-title").textContent + $("p-line").textContent + $("p-line").getAttribute("aria-label")), "zen fail: '" + $("p-title").textContent + "', '" + $("p-line").textContent + "' (no assault)");
+          const MU = app.audio; startLevel(w1[0].id); const zp = MU.want; showScreen("map"); const zm = MU.want; startLevel(C.levels[0].id); const cp = MU.want; showScreen("map"); const cm = MU.want;
+          ok(zp === "play" && zm === "play" && cp === "theme" && cm === "theme", "music per mode (v6): Zen map and levels the calm loop (" + zm + ", " + zp + "), Campaign map and levels the theme (" + cm + ", " + cp + ")"); }
+        // The home: two cards; the last mode played is lit; a card plays its mode's next level; the map opens in the last mode.
+        { app.save = scratch(); useMode("zen"); app.save = scratchZen(); useMode("campaign"); showScreen("title"); const bp = $("btn-play"), bz = $("btn-zen");
+          const two = hitOK(bp) && hitOK(bz) && bp.classList.contains("last") && !bz.classList.contains("last") && $("home-camp").textContent === fill(ZX.campLine, { n: 1, t: 200 }) && $("home-zen").textContent === fill(ZX.zenLine, { n: 0, t: Z.levels.length + Z.gal.length }) && document.querySelectorAll(".tabs .tab").length === 2;
+          bz.click(); const zs = app.screen === "play" && app.entry === w1[0] && app.mode === "zen"; showScreen("title"); const lit = bz.classList.contains("last") && !bp.classList.contains("last"); $("btn-tomap").click(); const zmap = app.screen === "map" && app.mapOf === "zen";
+          $("map-mode").querySelector('[data-mode="campaign"]').click(); const cmap = app.mode === "campaign" && app.mapOf === "campaign" && app.jr.sheets.length === C.lay.sheets.length && C.levels[0].node.isConnected; bp.click(); const cs = app.entry === C.levels[0] && app.mode === "campaign";
+          ok(two && zs && lit && zmap && cmap && cs, "home (v6): two mode cards (Campaign '" + $("home-camp").textContent + "', Zen '" + $("home-zen").textContent + "'), two tabs; Zen's card plays World 1's first level and is lit after (" + +zs + +lit + "); the Map tab opens the last mode (" + +zmap + "); the chip switches the map (" + +cmap + "); Campaign's card plays level 1 (" + +cs + ")"); }
+        // The one-time move (save.js zenMove) on a pre-v6 save: a format-1 save (v3/v4) and a format-2 one; twice is once.
+        { const spec = moveSpec(), g0 = w1[0].L.from, g5 = w1[5].L.from, sh = Z.lay.sheets.find((S) => S.castleSheet), eg = "s" + sh.castleSheet + "-0", zeg = sh.eggKey + "-0";
+          const old2 = Save.sanitize({ v: 2, done: { "e1-01": 1, [LA[0]]: 1, [LA[1]]: 1 }, gal: { [g0]: 1, [g5]: 1, [GA[0]]: 1 }, best: { [LA[0]]: [90000, 40, 30], [g0]: [80000, 33, 20] }, eggs: { [eg]: 1, "s1-0": 1 }, last: LA[1], coins: 777 }, app.allOrder, app.allGal.map((e) => e.id), app.meta);
+          const z1 = Save.zenFresh(), n1 = Save.zenMove(old2, z1, spec), j1 = JSON.stringify(z1), n2 = Save.zenMove(old2, z1, spec);
+          const want = z1.done[w1[0].id] === 1 && z1.done[w1[5].id] === 1 && z1.done[LA[0]] === 1 && z1.done[LA[1]] === 1 && z1.gal[GA[0]] === 1 && z1.eggs[zeg] === 1 && Object.keys(z1.eggs).length === 1 && JSON.stringify(z1.best[LA[0]]) === "[90000,40,30]" && !z1.best[w1[0].id] && z1.last === LA[1] && z1.moved === 1;
+          const kept = old2.done[LA[0]] === 1 && old2.gal[g0] === 1 && old2.eggs[eg] === 1 && old2.coins === 777;
+          const old1 = Save.sanitize({ done: { [LA[2]]: 3 }, gal: { [g0]: 2 }, settings: { diff: "normal" } }, app.allOrder, app.allGal.map((e) => e.id), app.meta), z2 = Save.zenFresh(); Save.zenMove(old1, z2, spec);
+          const z3 = Save.zenFresh(); Save.zenMove(Save.fresh(app.meta), z3, spec);
+          ok(want && n1 === 6 && n2 === 0 && JSON.stringify(z1) === j1 && kept && z2.done[LA[2]] === 1 && z2.done[w1[0].id] === 1 && !Object.keys(z3.done).length && z3.moved === 1,
+            "move (v6): a v4.3+ save's 2 Gallery pictures go to World 1, 201-202 and picture 61 to World 2 (bests kept for the same deals), Kitten Forest's egg " + eg + " to " + zeg + " (" + n1 + " moved; again: " + n2 + "); nothing leaves the Campaign save; a format-1 save moves too; a fresh save moves nothing");
+          const thr = { getItem: () => { throw new Error("blocked"); }, setItem: () => { throw new Error("blocked"); }, removeItem: () => {} }, zb = Save.openZen(thr, "k", Z.order, Z.gal.map((e) => e.id), () => old2, null), mem = Save.openZen(Save.memoryStore(), "k", Z.order, Z.gal.map((e) => e.id), () => old2, null);
+          zb.data.done[w1[0].id] = 1; mem.data.coins = 5;
+          ok(!zb.data.moved && zb.write() === false && mem.write() === true && old2.coins === 5 && Save.zenSanitize(JSON.parse(mem.store.getItem("k")), Z.order, []).done && !("coins" in JSON.parse(mem.store.getItem("k"))), "move (v6): a blocked store opens a fresh Zen save and a write says so without throwing; the memory store works, the wallet writes through"); }
+        // The save code: SP2 carries both modes; an SP1 code loads as the Campaign and its Zen-bound progress moves.
+        { app.save = scratch(); useMode("zen"); app.save = scratchZen(); const zz = app.save.data; Save.record(zz, w1[2].id); Save.record(zz, w2[4].id); zz.best[w2[4].id] = [123456, 44, 31]; Save.record(zz, q2[0].id, "gal"); zz.eggs[Z.lay.sheets[6].eggKey + "-1"] = 1; zz.last = w2[4].id; useMode("campaign"); Save.record(app.save.data, C.order[0]); app.save.data.coins = 4321;
+          const code = codeNow(), r = Save.decodeAny(code, app.allOrder, app.allGal.map((e) => e.id), app.meta, null, 20000, { order: Z.order, gal: Z.gal.map((e) => e.id), zl: Z.info }), zr = r.zen || {};
+          const same = r.ok && r.code === 2 && r.data.coins === 4321 && r.data.done[C.order[0]] === 1 && JSON.stringify(Object.keys(zr.done).sort()) === JSON.stringify([w1[2].id, w2[4].id].sort()) && zr.gal[q2[0].id] === 1 && JSON.stringify(zr.best[w2[4].id]) === "[123456,44,31]" && Object.keys(zr.eggs).join() === Object.keys(zz.eggs).join() && zr.last === w2[4].id;
+          const sp1 = Save.encode(Save.sanitize({ v: 2, done: { [LA[0]]: 1, "e1-01": 1 }, gal: { [w1[1].L.from]: 1, [GA[1]]: 1 }, coins: 99 }, app.allOrder, app.allGal.map((e) => e.id), app.meta), app.allGal.map((e) => e.id));
+          showScreen("title"); $("btn-settings").click(); $("set-load").click(); $("ls-code").value = sp1; $("ls-code").dispatchEvent(new Event("input", { bubbles: true })); const prev = $("ls-msg").textContent; $("ls-apply").click();
+          const zl = zsave().data, l1 = csave().data.done["e1-01"] === 1 && csave().data.coins === 99 && zl.done[LA[0]] === 1 && zl.done[w1[1].id] === 1 && zl.gal[GA[1]] === 1 && !zl.done[w2[4].id] && zl.moved === 1;
+          ok(same && code.indexOf(Save.CODE2) === 0 && l1 && prev.indexOf("Zen") > 0, "save code (v6): SP2 (" + code.length + " characters) carries the Campaign, the wallet and Zen (clears, a side quest, a best, an egg, last) and reads back the same; an SP1 code loads as the Campaign and moves its 201 and its pictures to Zen ('" + prev + "')"); }
+        // Reset per mode: Zen's clears Zen only (the wallet and the Campaign stay); the Campaign's keeps Zen.
+        { app.save = scratch(); useMode("zen"); app.save = scratchZen(); Save.record(app.save.data, w1[0].id); useMode("campaign"); Save.record(app.save.data, C.order[0]); app.save.data.coins = 555;
+          showScreen("title"); $("btn-settings").click(); $("set-reset").click(); const rs = $("rs-mode"), cOn = !rs.hidden && rs.children[0].getAttribute("aria-checked") === "true" && $("rs-lose").textContent === ZX.reset.campLose; rs.children[1].click();
+          const zSay = $("rs-lose").textContent === ZX.reset.zenLose && $("rs-title").textContent === ZX.reset.zenTitle && !bad($("resetsheet").textContent); const hb = $("rs-hold"); hb.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, pointerId: 1, isPrimary: true })); for (let t = 0; t < app.cfg.reset.holdMs * 2 && app.hold >= 0; t += 16) step(16);
+          const zr = !Object.keys(zsave().data.done).length && zsave().data.moved === 1 && csave().data.done[C.order[0]] === 1 && csave().data.coins === 555 && $("toast").textContent === ZX.reset.zenToast;
+          Save.record(zsave().data, w1[0].id); $("btn-settings").click(); $("set-reset").click(); hb.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, pointerId: 1, isPrimary: true })); for (let t = 0; t < app.cfg.reset.holdMs * 2 && app.hold >= 0; t += 16) step(16);
+          const cr = !Object.keys(csave().data.done).length && csave().data.coins === app.meta.coins.start && zsave().data.done[w1[0].id] === 1;
+          ok(cOn && zSay && zr && cr, "reset (v6): the sheet asks which mode (" + +cOn + +zSay + "); Zen's reset clears Zen only, coins and the Campaign kept (" + +zr + "); the Campaign's resets the Campaign and the wallet, Zen kept (" + +cr + ")"); }
+        useMode("campaign"); app.save = scratch(); showScreen("title"); }
       // 14. Opaque sprite caches.
       const bad = app.V.checkSprites(); ok(!bad.length, "sprites: every opaque cache is opaque" + (bad.length ? " (" + bad.join(",") + ")" : ""));
     } catch (err) { ok(false, "selfTest threw: " + (err && err.message) + " " + (err && err.stack ? err.stack.split("\n")[1] : "")); }
@@ -2958,7 +3021,9 @@
     quest: (id) => { const e = app.byId.get(id); return e && e.L.quest ? Object.assign({ open: picOpen(e) }, e.L.quest) : null; }, // v5 R2: a picture's side quest
     homeArt: () => { fitTitle(); return homeArt(); },
     code: () => codeNow(), // v5.4: the live save's code (shots, the harness) // v5.3: the home painting's fit (which image, the castle's offset from the box's centre)
-    unlockTo: (n) => { for (let i = 0; i < n && i < app.order.length; i++) Save.record(app.save.data, app.order[i]); app.save.data.last = Save.next(app.save.data, app.order); writeSave(); renderHome(); return Object.keys(app.save.data.done).length; },
+    // v6 lane B: zenTo(k, n): Zen world k's first n levels cleared (the playtest's Zen jump), Zen the mode played last.
+    zenTo: (k, n) => { if (!zenOn()) return 0; useMode("zen"); const ls = app.levels.filter((e) => e.world === k); for (let i = 0; i < n && i < ls.length; i++) Save.record(app.save.data, ls[i].id); app.save.data.last = (ls[Math.min(n, ls.length - 1)] || ls[0]).id; writeSave(); renderHome(); return Object.keys(app.save.data.done).length; },
+    unlockTo: (n) => { if (zenOn()) useMode("campaign"); for (let i = 0; i < n && i < app.order.length; i++) Save.record(app.save.data, app.order[i]); app.save.data.last = Save.next(app.save.data, app.order); writeSave(); renderHome(); return Object.keys(app.save.data.done).length; },
     power: (k, a) => { const got = onPower(k); if (a == null || !app.pick) return got; return Array.isArray(a) ? pickTile(a[0], a[1]) : pickSlot(a); },
     allPowers: (on) => { app.allPw = !!on; renderPowers(); return app.allPw; }, // v5 R1: every power-up shown whatever the campaign (tests)
     meta: () => ({ coins: app.save.data.coins, got: Object.assign({}, app.save.data.got), tip: app.tip ? app.tip.k : -1, inv: Object.assign({}, app.save.data.inv), lives: Meta.lives(app.save.data, app.meta, app.now()), pick: app.pick ? app.pick.k : -1, rows: app.rows, report: app.report, used: app.S ? E.POWERS.map((k, i) => app.S.used(i)) : null }),

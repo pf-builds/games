@@ -8,11 +8,12 @@ levels/gallery.json, the font, map/ (layout.json and the painted sheets, v5 R3; 
 audio/ (the music, v5.2: its URLs lose their ?v= with the others). Also writes <out>/wrap.html, an artifact-style wrapper page for the smoke test
 (tools/playtest-smoke.mjs); wrap.html is not published.
 
-  python3 tools/playtest-bundle.py <git-ref> <out-dir> [title] [--jump 101,125,150,175,200]
+  python3 tools/playtest-bundle.py <git-ref> <out-dir> [title] [--jump 101,125,150,175,200,z1:1,z1:20,z2:1,z2:25]
 
 --jump (v5 R4, playtest only, never shipped): exposes window.SP without ?debug=1 and adds src/playtest.js, a small
 "Jump" chip that marks every level before the chosen one cleared (SP.unlockTo) and reloads, so a playtest can start
-deep in the campaign. The artifact can't take ?debug=1 and a phone has no console.
+deep in the campaign. The artifact can't take ?debug=1 and a phone has no console. v6 lane B: a stop "z<k>:<n>" jumps into Zen
+world k at its level n (SP.zenTo: the world's levels before n cleared, Zen the mode played last); its chip reads "Z<k>.<n>".
 
 Publish: the Artifact tool with url = the playtest artifact, file_path = <out>/index.html, root = <out>, and files for
 every path printed below except index.html and wrap.html (audio/*.m4a: contentType audio/mp4).
@@ -21,7 +22,7 @@ import json, os, re, subprocess, sys
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 GAME = "sappers-path"
-COPY = ["config.json", "levels/levels.json", "levels/gallery.json", "fonts/Jersey10-Regular.ttf"]
+COPY = ["config.json", "levels/levels.json", "levels/gallery.json", "levels/zen.json", "fonts/Jersey10-Regular.ttf"]  # v6 lane B: zen.json
 
 
 def show(ref, path, binary=False):
@@ -47,8 +48,8 @@ JUMP_JS = """// Playtest only (tools/playtest-bundle.py --jump): jump to a level
   b.textContent = "Jump"; b.setAttribute("aria-label", "Playtest: jump to a level");
   b.style.cssText = "position:fixed;left:0;top:38%%;z-index:9999;font:12px system-ui,sans-serif;writing-mode:vertical-rl;padding:10px 3px;border-radius:0 10px 10px 0;border:2px solid #221a26;border-left:0;background:#ffe27a;color:#221a26;opacity:.8";
   m.style.cssText = "position:fixed;left:30px;top:30%%;z-index:9999;display:none;gap:6px;flex-wrap:wrap;justify-content:center;max-width:92vw;background:#2e2935;padding:8px;border-radius:12px;border:2px solid #221a26";
-  stops.forEach(function (n) { var x = document.createElement("button"); x.textContent = n; x.style.cssText = "font:16px system-ui,sans-serif;min-width:52px;min-height:44px;border-radius:10px;border:2px solid #221a26;background:#f4ead2";
-    x.onclick = function () { if (!window.SP || !window.SP.unlockTo) return; window.SP.unlockTo(n - 1); location.reload(); }; m.appendChild(x); });
+  stops.forEach(function (n) { var x = document.createElement("button"), z = /^z(\\d+):(\\d+)$/.exec(String(n)); x.textContent = z ? "Z" + z[1] + "." + z[2] : n; x.style.cssText = "font:16px system-ui,sans-serif;min-width:52px;min-height:44px;border-radius:10px;border:2px solid #221a26;background:" + (z ? "#cfe9dc" : "#f4ead2");
+    x.onclick = function () { if (!window.SP || !window.SP.unlockTo) return; if (z) window.SP.zenTo(+z[1], +z[2] - 1); else window.SP.unlockTo(n - 1); location.reload(); }; m.appendChild(x); });
   b.onclick = function () { m.style.display = m.style.display === "flex" ? "none" : "flex"; };
   document.body.appendChild(m); document.body.appendChild(b);
 })();
@@ -115,7 +116,7 @@ def main(ref, out, new_title=None, jump=None):
 if __name__ == "__main__":
     args, jump = sys.argv[1:], None
     if "--jump" in args:
-        i = args.index("--jump"); jump = [int(x) for x in args[i + 1].split(",")]; del args[i:i + 2]
+        i = args.index("--jump"); jump = [x if x.startswith("z") else int(x) for x in args[i + 1].split(",")]; del args[i:i + 2]
     if len(args) not in (2, 3):
         sys.exit(__doc__)
     main(args[0], args[1], args[2] if len(args) == 3 else None, jump)
