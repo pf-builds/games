@@ -73,7 +73,11 @@
       <h1>Sapper's Path</h1>
       <div class="home-foot">
         <p id="home-era"></p>
-        <button id="btn-play" class="primary play"><svg viewBox="0 0 12 12" width="22" height="22" aria-hidden="true"><path d="M3 1.5l7 4.5-7 4.5z" fill="currentColor" stroke="var(--ink)" stroke-width="1.2" stroke-linejoin="round"/></svg><i id="play-tag" class="tag" hidden></i><span id="play-lab">Play</span></button>
+        <!-- v6 lane B: one card per mode (main.js renderHome); a tap plays that mode's next level; the last mode played is lit -->
+        <div id="home-modes">
+          <button id="btn-play" class="primary play mode-card" data-mode="campaign"><span class="mc-n"></span><span id="home-camp" class="mc-l"></span><span class="mc-go"><svg viewBox="0 0 12 12" width="18" height="18" aria-hidden="true"><path d="M3 1.5l7 4.5-7 4.5z" fill="currentColor" stroke="var(--ink)" stroke-width="1.2" stroke-linejoin="round"/></svg><span id="play-lab">Play</span></span><i id="play-tag" class="tag" hidden></i></button>
+          <button id="btn-zen" class="primary play mode-card zen" data-mode="zen" hidden><span class="mc-n"></span><span id="home-zen" class="mc-l"></span><span class="mc-go"><svg viewBox="0 0 12 12" width="18" height="18" aria-hidden="true"><path d="M3 1.5l7 4.5-7 4.5z" fill="currentColor" stroke="var(--ink)" stroke-width="1.2" stroke-linejoin="round"/></svg><span id="zen-lab">Play</span></span><i class="tag" hidden></i></button>
+        </div>
         <p id="load-msg" class="small"></p>
       </div>
       <nav class="tabs" aria-label="Screens">
@@ -102,6 +106,7 @@
   <div id="resetsheet" class="modal" role="alertdialog" aria-modal="true" aria-labelledby="rs-title" aria-describedby="rs-lose" hidden><!-- v5.4: reset progress, press and hold -->
     <div class="sheetcard panel">
       <div id="rs-title" class="p-title"></div>
+      <div id="rs-mode" class="mseg" role="radiogroup" hidden><button role="radio" data-mode="campaign" aria-checked="true"></button><button role="radio" data-mode="zen" aria-checked="false"></button></div><!-- v6 lane B: which mode's progress goes -->
       <p id="rs-lose" class="sub-p"></p><p id="rs-keep" class="sub-p"></p><p id="rs-first" class="sub-p"></p>
       <button id="rs-hold" class="hold"><span class="fill" aria-hidden="true"></span><span class="hl"></span></button>
       <div class="row"><button id="rs-cancel" class="primary"></button></div>
@@ -140,7 +145,8 @@
   <section id="map" class="screen" hidden><!-- v5 R3: the journey map (main.js buildMap); replaces the level grid and the Gallery -->
     <div class="map-top">
       <button id="btn-home" class="round" aria-label="Home"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-      <h2 id="map-title">The Journey</h2>
+      <h2 id="map-title" class="vh">The Journey</h2>
+      <div id="map-mode" role="group" aria-label="Mode"><button data-mode="campaign" aria-pressed="true">Campaign</button><button data-mode="zen" aria-pressed="false">Zen</button></div><!-- v6 lane B: the mode chip -->
       <span id="map-coins" class="pill coins" role="img"><i class="ico ico-coin" aria-hidden="true"></i><b></b></span>
       <button id="map-set" class="round" aria-label="Settings"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M10.3 2h3.4l.5 2.6 1.7.8 2.3-1.4 2.4 2.4-1.4 2.3.8 1.7 2.6.5v3.4l-2.6.5-.8 1.7 1.4 2.3-2.4 2.4-2.3-1.4-1.7.8-.5 2.6h-3.4l-.5-2.6-1.7-.8-2.3 1.4-2.4-2.4 1.4-2.3-.8-1.7L2 13.7v-3.4l2.6-.5.8-1.7L4 5.8l2.4-2.4 2.3 1.4 1.7-.8z" fill="currentColor"/><circle cx="12" cy="12" r="3.6" fill="var(--stone)" stroke="var(--ink)" stroke-width="1.6"/></svg></button>
     </div>

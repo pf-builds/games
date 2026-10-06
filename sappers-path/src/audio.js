@@ -108,10 +108,13 @@
   // The track for a screen: music.screens (title and map: the theme; play: the play loop), and a main-campaign level in a
   // realm of music.bossRealms takes music.bossTrack (the Goblin King's Throne, 175-200). Side quests and debug levels
   // keep the play loop. entry: the page's level entry ({era, gallery, debug}) or null.
-  function pick(M, screen, entry) {
+  // v6 lane B (Peter, 2026-10-06): music per mode (music.modes[mode][screen] over music.screens): the Campaign keeps the
+  // map's theme on the map and carries it into its levels and side quests (the Goblin King's realm still takes the boss
+  // loop); Zen plays the calm level loop on its map and in its levels. The home keeps music.screens.title.
+  function pick(M, screen, entry, mode) {
     if (!M) return null;
-    const t = M.screens[screen] || null;
-    if (t !== M.screens.play || !entry || entry.gallery || entry.debug) return t;
+    const S = (mode && M.modes && M.modes[mode]) || {}, t = (S[screen] !== undefined ? S[screen] : M.screens[screen]) || null;
+    if (screen !== "play" || !entry || entry.gallery || entry.debug || mode === "zen" || (!mode && t !== M.screens.play)) return t;
     return (M.bossRealms || []).indexOf(entry.era | 0) >= 0 ? M.bossTrack : t;
   }
   // Ask for a track (null: silence). Fades the old one out and the new one in when its buffer is ready; else fetches it

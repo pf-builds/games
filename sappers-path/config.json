@@ -219,6 +219,8 @@
       "fadeMs": 800,
       "toggleMs": 150,
       "screens": {"title": "theme", "map": "theme", "play": "play"},
+      "modesNote": "v6 lane B (Peter, 2026-10-06; audio.js pick): the track per mode and screen, over screens. The Campaign keeps the theme on its map and in its levels and side quests (realm 8 still takes bossTrack); Zen plays the calm level loop on its map and in its levels. The home keeps screens.title.",
+      "modes": {"campaign": {"map": "theme", "play": "theme"}, "zen": {"map": "play", "play": "play"}},
       "bossRealms": [8],
       "bossTrack": "boss",
       "jingle": "win",
@@ -412,5 +414,15 @@
       "copied": "Copied to the clipboard.", "copyFail": "Couldn't copy here. Select the code and copy it.", "copyAgain": "Copy", "done": "Done",
       "loadTitle": "Load a save code", "loadHelp": "Paste a save code from Copy save code.", "placeholder": "SP1.\u2026", "summary": "Level {n}, {c}, {q}{e}", "summaryEnd": "Every level won, {c}, {q}{e}", "coins": ["{n} coin", "{n} coins"], "quests": ["{n} side quest", "{n} side quests"], "eggs": [", {n} easter egg", ", {n} easter eggs"],
       "replaces": "Loading replaces the progress on this device ({now}). Your sound and colour-blind settings stay.", "apply": "Replace", "cancel": "Cancel", "toast": "Save code loaded: {sum}.",
-      "err": {"empty": "", "prefix": "That isn't a Sapper's Path save code (it starts with SP1.).", "newer": "That code is from a newer version of the game. Reload this page and try again.", "broken": "That code has a typo or a missing piece. Copy the whole code again.", "body": "That code can't be read. Copy the whole code again."}}}
+      "err": {"empty": "", "prefix": "That isn't a Sapper's Path save code (it starts with SP1.).", "newer": "That code is from a newer version of the game. Reload this page and try again.", "broken": "That code has a typo or a missing piece. Copy the whole code again.", "body": "That code can't be read. Copy the whole code again."}}},
+  "zen": {
+    "note": "v6 lane B (tools/zen-mode-notes.md; SPEC-v4 §9, the v6 lane B entry): Zen mode, the relaxed picture worlds of levels/zen.json, open from the start beside the Campaign. save.key: Zen progress (save.js openZen; the coins, power-ups and settings stay in config save.key, the shared wallet). text: every word Zen shows where the Campaign shows its own (no goblins, forts or assaults): the mode names (campaign, zen); the home cards' lines (campLine {n} the next level, {t} its levels; campDone; zenLine {n} pictures done of {t}, side quests included) and Zen's Play (homePlay {w} its world, {n} the level in it); the map's title, story, fog and Play (playMap); a world's banner and card words (eye, of, home, bannerAria: {k} the world, {t} the worlds, {name}); the win and fail sheets (winTitle, winLine and winLineAgain with {title}, failTitle, failLine, said after the jam's reason); powerTips (a power-up's tip in Zen, by id, where the Campaign's names the fort); codeZen (the save code's summary, after the Campaign's: {n} of {t} pictures); reset (the reset sheet's choice, which, and each mode's words and toast).",
+    "save": {"key": "sappers-path.zen.v1"},
+    "text": {"campaign": "Campaign", "zen": "Zen", "campLine": "Fort {n} of {t}", "campDone": "All {t} forts razed", "zenLine": "{n} of {t} pictures", "homePlay": "World {w} · {n}",
+      "mapTitle": "Zen", "story": "A quiet road of pictures. Tap a squad: its sappers dig their colour out of the picture and carry it home. No rush, no foes: every world's first picture is open from the start.", "fog": "More worlds on the way", "playMap": "Play level {n}",
+      "eye": "World {k}", "of": "World {k} of {t}", "home": "World {k} · {name}", "bannerAria": "World {k}, {name}: show its story",
+      "winTitle": "Picture done", "winLine": "{title}, all dug out.", "winLineAgain": "{title}, dug out again.", "failTitle": "A little stuck", "failLine": "Have another look.",
+      "powerTips": {"volley": "A volley clears one colour from the picture, the queue and the line. Use it when nothing else will free the line."},
+      "codeZen": "; Zen: {n} of {t} pictures",
+      "reset": {"which": "Which progress?", "campTitle": "Reset the Campaign?", "zenTitle": "Reset Zen?", "campLose": "This wipes your Campaign on this device: every level won, your coins, power-ups, side quests, easter eggs and best times. You start again at level 1. Your Zen pictures stay.", "zenLose": "This wipes your Zen progress on this device: every picture done, its easter eggs and best times. You start each world again from its first picture.", "zenKeep": "Your coins, power-ups and Campaign stay, and so do Music, Sound effects and Colour-blind marks.", "zenAria": "Reset Zen: press and hold", "campToast": "Campaign reset. Back to level 1.", "zenToast": "Zen reset. Every world starts again."}}}
 }
