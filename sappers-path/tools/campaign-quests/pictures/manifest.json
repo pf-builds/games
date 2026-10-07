@@ -74,7 +74,8 @@
   "size": [
    1024,
    1024
-  ]
+  ],
+  "dropped": "Campaign v6 fix pass: out of the campaign, broke the ink-outline rule, pipes did not read (S4); replaced by cq36 in its slot; id g-ours-cq42 never reused"
  },
  {
   "id": "cq08",
@@ -342,7 +343,8 @@
   "size": [
    1024,
    1024
-  ]
+  ],
+  "dropped": "Campaign v6 fix pass: out of the campaign, broke the ink-outline rule, read as tomatoes (S4); replaced by cq27 in its slot; id g-ours-cq30 never reused"
  },
  {
   "id": "cq13",
@@ -361,7 +363,8 @@
   "size": [
    1024,
    1024
-  ]
+  ],
+  "dropped": "Campaign v6 fix pass: out of the campaign, read as a penguin (visual critic S3); replaced by cq14 in its slot; id g-ours-cq13 never reused"
  },
  {
   "id": "cq01",
@@ -516,7 +519,7 @@
    1024,
    1024
   ],
-  "spare": true
+  "note": "Campaign v6 fix pass: the spare in for cq13 Raven Messenger (read as a penguin), place 35"
  },
  {
   "id": "cq16",
@@ -557,5 +560,45 @@
    1024
   ],
   "spare": true
+ },
+ {
+  "id": "cq27",
+  "title": "Castle Guard",
+  "group": "soldier",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7027; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq27-s7027.png",
+  "raw": "raw/cq27-s7027.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of a castle guard in a red tunic and round helmet fast asleep standing up, leaning on his long pike, a little Z bubble, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid lavender background, no text, no shadow",
+  "seed": 7027,
+  "size": [
+   832,
+   1216
+  ],
+  "note": "Campaign v6 fix pass: lane C's 'maybe' (Asleep on Duty: the sleep does not read, the guard does), retitled; in for cq30 Shield Wall, place 37"
+ },
+ {
+  "id": "cq36",
+  "title": "Royal Roast",
+  "group": "castle",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7036; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq36-s7036.png",
+  "raw": "raw/cq36-s7036.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of a round castle cook in a white apron and chef's hat proudly carrying a big roast turkey on a silver platter, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid pale green background, no text, no shadow",
+  "seed": 7036,
+  "size": [
+   1024,
+   1024
+  ],
+  "note": "Campaign v6 fix pass: lane C's 'maybe' (the cook melts into the ground, the roast on its platter reads); in for cq42 Bagpipes, place 4"
  }
 ]

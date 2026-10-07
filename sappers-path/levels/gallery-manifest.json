@@ -5,7 +5,7 @@
   "ours-g01",
   "ours-cq17",
   "ours-g12",
-  "ours-cq42",
+  "ours-cq36",
   "ours-g21",
   "ours-cq20",
   "ours-g15",
@@ -36,9 +36,9 @@
   "tw-1f3f0",
   "ours-cq18",
   "ours-g18",
-  "ours-cq13",
+  "ours-cq14",
   "ours-g16",
-  "ours-cq30",
+  "ours-cq27",
   "noto-1f432",
   "ours-cq01",
   "ours-g22",
@@ -2122,6 +2122,72 @@
    "file": "tools/campaign-quests/src/cq10.png",
    "bake": "tools/quest-bake.js",
    "group": "creature"
+  },
+  {
+   "id": "ours-cq36",
+   "title": "Royal Roast",
+   "kind": "outlined",
+   "set": "Click it! Studios (generated locally)",
+   "author": "Click it! Studios",
+   "license": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+   "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+   "prompt": "simple cute flat cartoon icon of a round castle cook in a white apron and chef's hat proudly carrying a big roast turkey on a silver platter, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid pale green background, no text, no shadow",
+   "seed": 7036,
+   "size": [
+    1024,
+    1024
+   ],
+   "steps": 4,
+   "guidance": 0,
+   "generated": "2026-10-06",
+   "raw": "clean/cq36-s7036.png",
+   "file": "tools/campaign-quests/src/cq36.png",
+   "bake": "tools/quest-bake.js",
+   "group": "castle"
+  },
+  {
+   "id": "ours-cq14",
+   "title": "Baby Phoenix",
+   "kind": "outlined",
+   "set": "Click it! Studios (generated locally)",
+   "author": "Click it! Studios",
+   "license": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+   "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+   "prompt": "simple cute flat cartoon icon of a cute baby phoenix bird with flame orange, red and yellow feathers, wings spread wide, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid navy blue background, no text, no shadow",
+   "seed": 7014,
+   "size": [
+    1024,
+    1024
+   ],
+   "steps": 4,
+   "guidance": 0,
+   "generated": "2026-10-06",
+   "raw": "clean/cq14-s7014.png",
+   "file": "tools/campaign-quests/src/cq14.png",
+   "bake": "tools/quest-bake.js",
+   "group": "creature"
+  },
+  {
+   "id": "ours-cq27",
+   "title": "Castle Guard",
+   "kind": "outlined",
+   "set": "Click it! Studios (generated locally)",
+   "author": "Click it! Studios",
+   "license": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+   "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+   "prompt": "simple cute flat cartoon icon of a castle guard in a red tunic and round helmet fast asleep standing up, leaning on his long pike, a little Z bubble, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid lavender background, no text, no shadow",
+   "seed": 7027,
+   "size": [
+    832,
+    1216
+   ],
+   "steps": 4,
+   "guidance": 0,
+   "generated": "2026-10-06",
+   "raw": "clean/cq27-s7027.png",
+   "file": "tools/campaign-quests/src/cq27.png",
+   "bake": "tools/quest-bake.js",
+   "group": "soldier"
   }
  ]
 }
