@@ -215,6 +215,8 @@
   function encode(data, gal) { const w = writer(); campBody(data, gal, w.put); return seal(w.b, CODE); }
   // v6: the SP2 code of both modes. cdata: the Campaign save's data; zdata: the Zen save's; gal: every gallery.json id in
   // order; zl: the Zen levels [{id, w (its world), n (its number in the world)}].
+  // Merge pass: gal is the append-only PLACE REGISTRY (levels/places.json: the 72 v5.4 places, then every later picture
+  // appended), never gallery.json's order, so a code survives any reordering of gallery.json.
   function encode2(cdata, zdata, gal, zl) {
     const w = writer(), put = w.put, at = new Map(zl.map((x) => [x.id, x])), row = (id) => { const r = isObj(zdata.best) && Array.isArray(zdata.best[id]) ? zdata.best[id] : []; for (let k = 0; k < 3; k++) put(r[k]); };
     campBody(cdata, gal, put); put(ZVERSION);
@@ -245,24 +247,29 @@
   // v6: decodeAny(text, order, gal, meta, prefs, maxLen, Z) also reads SP2 (Z: {order, gal, zl} of the Zen mode): {ok,
   // code (1 or 2), data (the Campaign), zen (the Zen data, sanitized; null for an SP1 code)}. decode() stays SP1 only.
   function decode(text, order, gal, meta, prefs, maxLen) { const r = decodeAny(text, order, gal, meta, prefs, maxLen, null); return r.ok && r.code !== 1 ? { ok: false, err: "newer" } : r; }
-  function decodeAny(text, order, gal, meta, prefs, maxLen, Z) {
+  // Merge pass: places (optional) is the place registry the code's picture numbers are read through (SP1: its first 72
+  // are v5.4's Gallery order, so an SP1 code made on v5.4 credits the right ids whatever gallery.json holds now; SP2: the
+  // whole registry); gal stays the current Gallery's ids, what sanitize keeps. The result also carries raw (the Campaign
+  // part before sanitize), so the Zen move can read pictures the current Gallery no longer has.
+  function decodeAny(text, order, gal, meta, prefs, maxLen, Z, places) {
+    const P = places || gal;
     try {
       const t = String(text == null ? "" : text).slice(0, maxLen || 20000).replace(/\s+/g, ""); if (!t) return { ok: false, err: "empty" };
       const m = /^SP(\d+)\.(.*)$/i.exec(t); if (!m) return { ok: false, err: "prefix" }; const cv = +m[1]; if (cv !== 1 && !(cv === 2 && Z)) return { ok: false, err: cv > 1 ? "newer" : "prefix" };
       const b = unb64(m[2]); if (!b || b.length < 5 || b64(b) !== m[2]) return { ok: false, err: "broken" };
       const n = b.length - 4, c = ((b[n] << 24) | (b[n + 1] << 16) | (b[n + 2] << 8) | b[n + 3]) >>> 0; if (crc32(b, n) !== c) return { ok: false, err: "broken" };
       let p = 0; const get = () => { let v = 0, f = 1; for (let k = 0; k < 8; k++) { if (p >= n) throw new Error("short"); const x = b[p++]; v += (x & 127) * f; if (x < 128) return v; f *= 128; } throw new Error("long"); };
-      const raw = campRead(get, order, gal); if (!raw) return { ok: false, err: "body" };
+      const raw = campRead(get, order, P); if (!raw) return { ok: false, err: "body" };
       let zraw = null;
       if (cv === 2) { if (get() !== ZVERSION) return { ok: false, err: "body" }; const byWN = new Map(Z.zl.map((x) => [x.w + "," + x.n, x.id])), row = () => [get(), get(), get()];
         zraw = { v: ZVERSION, done: {}, gal: {}, eggs: {}, best: {}, moved: 1 };
         const nd = get(); for (let i = 0; i < nd; i++) { const id = byWN.get(get() + "," + get()), r = row(); if (id) { zraw.done[id] = 1; zraw.best[id] = r; } }
-        const ng = get(); for (let i = 0; i < ng; i++) { const id = (gal || [])[get() - 1], r = row(); if (id) { zraw.gal[id] = 1; zraw.best[id] = r; } }
+        const ng = get(); for (let i = 0; i < ng; i++) { const id = (P || [])[get() - 1], r = row(); if (id) { zraw.gal[id] = 1; zraw.best[id] = r; } }
         const ne = get(); for (let i = 0; i < ne; i++) zraw.eggs["z" + get() + "-" + get() + "-" + get()] = 1;
         const lw = get(), lnn = get(); if (lw) zraw.last = byWN.get(lw + "," + lnn) || null; }
       if (p !== n) return { ok: false, err: "body" };
-      const data = withPrefs(sanitize(raw, order, gal, meta), prefs ? { settings: prefs } : null);
-      return { ok: true, v: raw.v, code: cv, data, zen: zraw ? zenSanitize(zraw, Z.order, Z.gal) : null };
+      const raw0 = JSON.parse(JSON.stringify(raw)), data = withPrefs(sanitize(raw, order, gal, meta), prefs ? { settings: prefs } : null);
+      return { ok: true, v: raw.v, code: cv, data, raw: raw0, zen: zraw ? zenSanitize(zraw, Z.order, Z.gal) : null };
     } catch (e) { return { ok: false, err: "body" }; }
   }
 
@@ -292,16 +299,21 @@
       write() { let ok = true; try { store.setItem(key, JSON.stringify(this.data)); } catch (e) { ok = false; } const c = campSave && campSave(); return (c ? c.write() : true) && ok; } };
   }
   // The one-time move (header). Returns how many entries it added.
+  // Merge pass: camp may be the RAW stored save (rawOf, before sanitize drops what the current Gallery no longer has) as
+  // well as a sanitized one; anything not an object reads as empty, a best row is copied only from a format-2 save (a
+  // format-1 row is per difficulty), and nothing throws.
   function zenMove(camp, zen, spec) {
-    let n = 0; const cd = (camp && camp.done) || {}, cg = (camp && camp.gal) || {}, cb = (camp && camp.best) || {}, ce = (camp && camp.eggs) || {};
-    const set = (map, id) => { if (map[id] !== 1) { map[id] = 1; n++; } }, best = (id) => { if (Array.isArray(cb[id]) && !zen.best[id]) zen.best[id] = cb[id].slice(0, 3); };
+    let n = 0; const ob = (o) => (isObj(o) ? o : {}), c = ob(camp), cd = ob(c.done), cg = ob(c.gal), cb = c.v === VERSION ? ob(c.best) : {}, ce = ob(c.eggs);
+    const set = (map, id) => { if (map[id] !== 1) { map[id] = 1; n++; } }, best = (id) => { const r = cb[id]; if (Array.isArray(r) && !zen.best[id]) zen.best[id] = [whole(r[0], MAXMS), whole(r[1], MAXTAPS), whole(r[2], MAXCOINS)]; };
     for (const [g, z] of spec.pics || []) if (cleared(cg, g)) set(zen.done, z);
     for (const id of spec.levels || []) if (cleared(cd, id)) { set(zen.done, id); best(id); }
     for (const id of spec.quests || []) if (cleared(cg, id)) { set(zen.gal, id); best(id); }
     for (const [c, z] of spec.eggs || []) if (ce[c] === 1) set(zen.eggs, z);
-    if (!zen.last && camp && (spec.levels || []).indexOf(camp.last) >= 0) zen.last = camp.last;
+    if (!zen.last && (spec.levels || []).indexOf(c.last) >= 0) zen.last = c.last;
     zen.moved = 1; return n;
   }
+  // Merge pass: the stored save as it is (parsed, not sanitized), or null.
+  function rawOf(store, key) { try { const t = store.getItem(key); const o = t ? JSON.parse(t) : null; return isObj(o) ? o : null; } catch (e) { return null; } }
   // v6 fix pass: the Campaign's progress cleared with the SHARED WALLET kept (coins, inv, got, lives) and the preferences;
   // the cloud hook is not told (only a full reset clears a portal's cloud copy). A full reset is reset() plus resetZen().
   function resetCampaign(sv, meta) { const w = sv.data, s = withPrefs(fresh(meta), w); for (const k of ["coins", "inv", "got", "lives"]) s[k] = JSON.parse(JSON.stringify(w[k])); sv.data = s; return sv.write(); }
@@ -309,5 +321,5 @@
   function resetZen(sv) { const d = zenFresh(); d.moved = 1; d.mode = sv.data.mode; sv.data = zenView(d, sv.wallet); return sv.write(); }
 
   return { VERSION, fresh, sanitize, record, next, nextBy, isOpen, questOpen, memoryStore, open, reset, cloud, withPrefs, encode, decode, CODE,
-    ZVERSION, CODE2, resetCampaign, zenFresh, zenSanitize, zenView, openZen, zenMove, resetZen, encode2, decodeAny }; // v6 lane B
+    ZVERSION, CODE2, rawOf, resetCampaign, zenFresh, zenSanitize, zenView, openZen, zenMove, resetZen, encode2, decodeAny }; // v6 lane B
 });

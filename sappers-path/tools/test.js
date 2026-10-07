@@ -1737,5 +1737,46 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
       [false, "theme", "theme", "theme", "boss", "play", "play", "theme", "play", "boss"], "zen words: no goblin, fort or assault in Zen's text or world lore; music per mode (Campaign the theme in its levels, realm 8 the boss loop; Zen the calm loop; no mode: as v5.2)"); }
 }
 
+// ==== v6 lane B, merge pass: saves survive lane A's merge (tools/zen-mode-notes.md §7) ====================================
+// Fixture: lane A's gallery.json (campaign-v6-quests: the 24 kept + 26 new campaign pictures, the 36 gone, the Wandering
+// Gallery at places 51-62), copied into tools/fixtures/lane-a-gallery.json. levels/places.json: the save codes' append-only
+// picture places (v5.4's 72 first).
+{
+  const fs = require("fs"), path = require("path"), S = require("../src/save.js"), JN = require("../src/journey.js"), CFG = require("../config.json");
+  const PL = JSON.parse(fs.readFileSync(path.join(__dirname, "../levels/places.json"), "utf8")), places = PL.places, v5 = places.slice(0, PL.v5);
+  const LA = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/lane-a-gallery.json"), "utf8")).levels, LAI = LA.map((g) => g.id);
+  const CUR = require("../levels/gallery.json").levels, CURI = CUR.map((g) => g.id), FROZ = JSON.parse(fs.readFileSync(path.join(__dirname, "../levels/frozen/gallery.json"), "utf8")).levels.map((g) => g.id);
+  const Z = JSON.parse(fs.readFileSync(path.join(__dirname, "../levels/zen.json"), "utf8")), W1 = Z.levels.filter((L) => L.world === 1), LAY = require("../map/layout.json");
+  const ALLO = LEVELS_ALL.levels.map((l) => l.id), KF = LEVELS_ALL.levels.filter((l) => l.land === 1).map((l) => l.id);
+  eq([PL.v5, v5.length, JSON.stringify(v5) === JSON.stringify(FROZ.concat(CUR.filter((g) => g.land === 1).map((g) => g.id))), new Set(places).size === places.length, CURI.every((id) => places.includes(id)), LAI.every((id) => places.includes(id)), W1.every((L) => v5.includes(L.from))],
+    [72, 72, true, true, true, true, true], "places.json: the first 72 are v5.4's Gallery order (the frozen 60, then the Wandering Gallery), no id twice, every picture of this branch and of lane A's gallery.json has a place, every World 1 source among v5's");
+  // The page's move spec (main.js moveSpec) on lane A's data.
+  const spec = { pics: W1.map((L) => [L.from, L.id]), levels: KF, quests: LA.filter((g) => g.land === 1).map((g) => g.id), eggs: LAY.sheets.filter((x) => x.land === 1).flatMap((x, i) => x.eggs.map((g, j) => ["s" + x.sheet + "-" + j, "z2-" + (i + 1) + "-" + j])) };
+  const pic = (t) => W1.find((L) => L.title === t), pizza = pic("Pizza Slice"), fox = pic("Fox"), kept = "g-ours-g01", poppy = "g-w-poppy-field-giverny";
+  const raw = { v: 2, done: { "e1-01": 1, "e1-02": 1, "e1-03": 1, [KF[0]]: 1, [KF[1]]: 1 }, gal: { [pizza.from]: 1, [fox.from]: 1, [kept]: 1, [poppy]: 1 }, best: { [KF[0]]: [210000, 50, 30], [kept]: [90000, 40, 20] }, eggs: { "s26-0": 1, "s1-0": 1 }, coins: 640, last: "e1-04", lands: 1 };
+  // The page on lane A's build: the Campaign save sanitized against lane A's Gallery (the 36 dropped), the move from the raw save.
+  const store = S.memoryStore(); store.setItem("k", JSON.stringify(raw)); const camp = S.open(store, "k", ALLO, LAI, CFG.meta).data, zen = S.zenFresh(); S.zenMove(S.rawOf(store, "k"), zen, spec); S.zenMove(camp, zen, spec);
+  const zenOnly = S.zenFresh(); S.zenMove(camp, zenOnly, spec);
+  eq([Object.keys(camp.gal).sort(), Object.keys(camp.done).length, camp.coins, Object.keys(zen.done).sort(), Object.keys(zen.gal), Object.keys(zen.eggs), zen.best[KF[0]], !!zenOnly.done[pizza.id]],
+    [[kept, poppy].sort(), 5, 640, [pizza.id, fox.id, KF[0], KF[1]].sort(), [poppy], ["z2-1-0"], [210000, 50, 30], false],
+    "merge: on lane A's build an old v5 save keeps its campaign clears (" + kept + ", 1-3) and wallet; the move reads the raw save, so Pizza Slice and Fox (gone from gallery.json) land in World 1 (" + pizza.id + ", " + fox.id + "), 201-202 and picture 61 in Zen (the sanitized save alone would have lost the two)");
+  // SP1: a code made on v5.4 (pictures by v5.4 place) read on lane A's build through places.json.
+  const v54 = S.sanitize(raw, ALLO, v5, CFG.meta), sp1 = S.encode(v54, v5), Zc = { order: W1.map((L) => L.id).concat(KF), gal: spec.quests, zl: W1.map((L, i) => ({ id: L.id, w: 1, n: i + 1 })).concat(KF.map((id, i) => ({ id, w: 2, n: i + 1 }))) };
+  const r1 = S.decodeAny(sp1, ALLO, LAI, CFG.meta, null, 20000, Zc, places), bad = S.decodeAny(sp1, ALLO, LAI, CFG.meta, null, 20000, Zc), z1 = S.zenFresh(); S.zenMove(r1.raw, z1, spec); S.zenMove(r1.data, z1, spec);
+  eq([r1.ok, r1.code, Object.keys(r1.raw.gal).sort(), Object.keys(r1.data.gal).sort(), Object.keys(z1.done).sort(), Object.keys(z1.gal), JSON.stringify(Object.keys(bad.data.gal).sort()) === JSON.stringify([kept, poppy].sort())],
+    [true, 1, [pizza.from, fox.from, kept, poppy].sort(), [kept, poppy].sort(), [pizza.id, fox.id, KF[0], KF[1]].sort(), [poppy], false],
+    "merge: an SP1 code made on v5.4 decodes on lane A's build to the right pictures (through places.json; read by lane A's order it would credit the wrong ones), the Campaign keeps " + kept + " and picture 61, the 36's go to World 1");
+  // SP2 round trips under both Gallery orders (this branch's and lane A's): places.json, not gallery.json, numbers the pictures.
+  const zz = S.zenFresh(); S.record(zz, pizza.id); S.record(zz, KF[4]); zz.gal[poppy] = 1; zz.best[KF[4]] = [111, 22, 3]; zz.last = KF[4];
+  const cB = S.sanitize(raw, ALLO, CURI, CFG.meta), cA = S.sanitize(raw, ALLO, LAI, CFG.meta), codeB = S.encode2(cB, zz, places, Zc.zl), codeA = S.encode2(cA, zz, places, Zc.zl);
+  const rd = (code, gal) => { const r = S.decodeAny(code, ALLO, gal, CFG.meta, null, 20000, Zc, places); return [Object.keys(r.data.gal).sort(), Object.keys(r.zen.done).sort(), Object.keys(r.zen.gal), r.zen.best[KF[4]], r.zen.last]; };
+  eq([rd(codeB, CURI), rd(codeB, LAI), rd(codeA, LAI)], [[Object.keys(cB.gal).sort(), [pizza.id, KF[4]].sort(), [poppy], [111, 22, 3], KF[4]], [[kept, poppy].sort(), [pizza.id, KF[4]].sort(), [poppy], [111, 22, 3], KF[4]], [[kept, poppy].sort(), [pizza.id, KF[4]].sort(), [poppy], [111, 22, 3], KF[4]]],
+    "merge: SP2 round-trips on this branch's Gallery order and on lane A's, and a code made here loads there (the pictures numbered by places.json)");
+  // Zero tail: lane A's campaign has no picture past 200; journey.js and questOpen handle it.
+  const cg = LA.filter((g) => !g.land), ids = cg.map((g) => g.id), af = cg.map((g) => g.quest.after), order = ALLO.filter((id) => !LEVELS_ALL.levels.find((l) => l.id === id).land), all = { done: Object.fromEntries(order.map((id) => [id, 1])), gal: {} };
+  const t0 = JN.tail(all, order, ids, af), nq = JN.nearQuest(all, order, ids, af, order.length + 1);
+  eq([cg.length, af.every((a) => a >= 1 && a <= 200), t0.ids.length, t0.next, ids.every((id) => S.questOpen(all, order, ids, af, id)), !!nq], [50, true, 0, null, true, true], "merge: lane A's campaign (50 side quests, none past 200) has no long tail: journey.js tail is empty, every quest opens once its level is cleared");
+}
+
 console.log(pass + " passed, " + fail + " failed");
 process.exitCode = fail ? 1 : 0;

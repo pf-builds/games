@@ -148,6 +148,7 @@
     try { indexGallery(await getJSON("levels/gallery.json?v=" + V_)); } catch (e) { /* no side quests */ }
     let raw = null; try { raw = await getJSON("map/layout.json?v=" + V_); } catch (e) { raw = null; /* no journey map: its Play still works */ }
     let zen = null; try { zen = await getJSON("levels/zen.json?v=" + V_); } catch (e) { zen = null; /* no Zen mode: the campaign alone */ }
+    try { const P = await getJSON("levels/places.json?v=" + V_); app.places = Array.isArray(P.places) ? P.places.map(String) : null; } catch (e) { app.places = null; /* the save codes fall back to gallery.json's order */ }
     if (!app.levels.length) { $("load-msg").textContent = "No levels found."; return; }
     modes(raw, zen); // v6 lane B: the two modes' levels, pictures and maps
     app.meta = app.cfg.meta; app.mats = app.cfg.v3.mats;
@@ -247,7 +248,7 @@
   // The Zen save (its own key), its wallet the Campaign save's data; on the first load the one-time move (save.js zenMove).
   function openZenSave(store) {
     if (!zenOn()) return; const Z = app.modes.zen; Z.save = Save.openZen(store, app.cfg.zen.save.key, Z.order, Z.gal.map((e) => e.id), () => csave().data, csave);
-    if (!Z.save.data.moved) { Save.zenMove(csave().data, Z.save.data, moveSpec()); try { Z.save.store.setItem(Z.save.key, JSON.stringify(Z.save.data)); } catch (e) { /* written with the next save */ } }
+    if (!Z.save.data.moved) { const sp = moveSpec(); Save.zenMove(Save.rawOf(store, app.cfg.save.key), Z.save.data, sp); Save.zenMove(csave().data, Z.save.data, sp); try { Z.save.store.setItem(Z.save.key, JSON.stringify(Z.save.data)); } catch (e) { /* written with the next save */ } } // merge pass: the raw stored save first (sanitize drops the 36 once they leave gallery.json), then the sanitized one (renamed slots)
   }
   // What the move carries (save.js zenMove): World 1's pictures by their Gallery source, a land world's levels and side
   // quests by id, its eggs from the castle sheet ids they had.
@@ -769,7 +770,7 @@
       for (const [bs, i, bk] of (zen ? [] : M.bridges).concat((S.bridges || []).map((b) => [S.sheet, b[0], b[1]]))) if (bs === S.sheet && S.road[i] && !fogged(si, S.road[i][1])) s += JN.bridge(S.road[i][0], S.road[i][1], JN.heading(S.road, i, 3), M.bridgeLen, M.bridgeW, bk); // lands foundation: a land entry carries its bridges (road samples); v6: a Zen sheet only its own
       for (const Q of S.quests) { if (!qOf(Q.q) || !byN.has(Q.after)) continue; const dt = JN.detour(Q.branch, [Q.x, Q.y], M.stoneGap, M.stoneSkip[0], M.stoneSkip[1]);
         s += '<g class="dt" data-q="' + Q.q + '"><path d="' + dt.d + '" fill="none" stroke="#2a1c12" stroke-opacity=".7" stroke-width="4" stroke-dasharray="3 9" stroke-linecap="round"/>' + dt.stones.map(JN.stone).join("") + "</g>"; }
-      if (front && ends && endP) { const dt = JN.detour([endP.x, endP.y], [fr.x, fr.y], M.stoneGap, M.stoneSkip[0], M.stoneSkip[1]); // fix pass (M4): no mist; the long tail's pictures (if any) are a stepping-stone path off the last level, shown once they open
+      if (front && ends && endP && tailE().length) { const dt = JN.detour([endP.x, endP.y], [fr.x, fr.y], M.stoneGap, M.stoneSkip[0], M.stoneSkip[1]); // fix pass (M4): no mist; the long tail's pictures (if any) are a stepping-stone path off the last level, shown once they open
         s += '<g class="dt tl" style="display:none"><path d="' + dt.d + '" fill="none" stroke="#2a1c12" stroke-opacity=".7" stroke-width="4" stroke-dasharray="3 9" stroke-linecap="round"/>' + dt.stones.map(JN.stone).join("") + "</g>"; }
       else if (front) { s += '<rect width="' + W + '" height="' + fogTo + '" fill="url(#jr-mist)"/>'; // the mist, with puffs along its edge
         for (const [x, dy, rx, ry] of F_.puffs) s += '<ellipse cx="' + x + '" cy="' + (fogAt + (fogTo - fogAt) * 0.35 + dy) + '" rx="' + rx + '" ry="' + ry + '" fill="url(#jr-fog)"/>'; }
@@ -1058,8 +1059,8 @@
   // holds and what it replaces, and only then can it be applied.
   function openLoad() { $("ls-code").value = ""; loadCheck(); openSub("loadsheet", $("ls-code")); }
   function loadCheck() {
-    const C = CT(), Z = app.modes.zen, r = Save.decodeAny($("ls-code").value, app.allOrder, app.allGal.map((e) => e.id), app.meta, csave().data.settings, app.cfg.saveCode.maxPaste, Z ? { order: Z.order, gal: Z.gal.map((e) => e.id), zl: Z.info } : null), m = $("ls-msg");
-    if (r.ok && Z && !r.zen) { const zd = Save.zenFresh(); Save.zenMove(r.data, zd, moveSpec()); r.zen = zd; } // v6: an SP1 code loads as the Campaign, its Zen-bound progress moved
+    const C = CT(), Z = app.modes.zen, r = Save.decodeAny($("ls-code").value, app.allOrder, app.allGal.map((e) => e.id), app.meta, csave().data.settings, app.cfg.saveCode.maxPaste, Z ? { order: Z.order, gal: Z.gal.map((e) => e.id), zl: Z.info } : null, placesNow()), m = $("ls-msg");
+    if (r.ok && Z && !r.zen) { const zd = Save.zenFresh(), sp = moveSpec(); Save.zenMove(r.raw, zd, sp); Save.zenMove(r.data, zd, sp); r.zen = zd; } // v6: an SP1 code loads as the Campaign, its Zen-bound progress moved (merge pass: from the code's raw pictures, read through v5.4's places)
     app.loadR = r.ok ? r : null; m.textContent = r.ok ? summary(r.data, r.zen || undefined) : C.err[r.err] || ""; m.className = "sub-sum" + (r.ok ? " good" : m.textContent ? " bad" : "");
     $("ls-warn").textContent = r.ok ? fill(C.replaces, { now: summary(csave().data, zenOn() ? zsave().data : undefined) }) : ""; $("ls-warn").hidden = !r.ok; $("ls-apply").disabled = !r.ok;
     return r;
@@ -1068,7 +1069,10 @@
     if (r.zen && zenOn()) { const z = zsave(); r.zen.mode = z.data.mode; r.zen.moved = 1; z.data = Save.zenView(r.zen, z.wallet); } // v6: both modes from the code (SP1: the Zen part moved from it)
     writeSave(); if (app.testing) { /* scratch saves stay in memory */ } else if (zenOn()) { csave().write(); zsave().write(); } progressSwapped(); toast(fill(CT().toast, { sum })); return true; }
   // v6: the save code of this device: SP2 (both modes and the wallet) when Zen is on, else SP1.
-  const codeNow = () => (zenOn() ? Save.encode2(csave().data, zsave().data, app.allGal.map((e) => e.id), app.modes.zen.info) : Save.encode(app.save.data, galIds()));
+  const codeNow = () => (zenOn() ? Save.encode2(csave().data, zsave().data, placesNow(), app.modes.zen.info) : Save.encode(app.save.data, galIds()));
+  // Merge pass: the save codes' picture places (levels/places.json, append-only), any picture missing from it appended in
+  // gallery.json order (test.js fails while one is missing, so this is a safety net only).
+  function placesNow() { const P = (app.places || []).slice(), have = new Set(P); for (const e of app.allGal) if (!have.has(e.id)) P.push(e.id); return P; }
   // A picture's thumbnail: gallery.thumbPx (or kp) canvas px a cell, the ring left out; dimmed (lightness only) unless colour.
   function thumb(c, L, colour, kp) {
     const k = kp || app.cfg.gallery.thumbPx, w = L.w - 2, h = L.h - 2, [lo, hi] = app.cfg.gallery.dim.map((x) => parseInt(x.slice(1), 16));
@@ -2543,9 +2547,12 @@
           "map a11y: every level, side quest and egg is a button with a label");
         // The long tail: before every level is cleared the fog holds no node; after, one next picture, then the next.
         { const t = J.tail, fogShown = shown(document.querySelector("#jr .fogl")), FS = J.sheets[J.fr.si].S, rEnd = FS.road[FS.road.length - 1], p200 = FS.levels.find((v) => v.n === app.levels[app.levels.length - 1].n);
-          if (zenOn()) ok(!document.querySelector("#jr .fogl") && !!p200 && Math.hypot(rEnd[0] - p200.x, rEnd[1] - p200.y) < 30 && !!t.g && t.g.style.display === "none" && t.b.hidden && !mapPic(), "map end (v6 fix pass, M4): the Campaign's road stops at level " + p200.n + " by the Goblin King: no fog label, no road on, the long tail's path hidden until a picture there opens");
+          if (zenOn()) ok(!document.querySelector("#jr .fogl") && !!p200 && Math.hypot(rEnd[0] - p200.x, rEnd[1] - p200.y) < 30 && (t.list.length ? !!t.g && t.g.style.display === "none" : !t.g && !document.querySelector("#jr .dt.tl")) && t.b.hidden && !mapPic(), "map end (v6 fix pass, M4): the Campaign's road stops at level " + p200.n + " by the Goblin King: no fog label, no road on, the long tail's path hidden until a picture there opens");
           else ok(t.b.hidden && fogShown && !mapPic(), "map long tail: the road fades into fog ('" + MT.fog + "'); no node there before every level is cleared");
           for (const id of app.order) Save.record(app.save.data, id); for (const g of app.gal) if (questAt(g) <= app.order.length) Save.record(app.save.data, g.id, "gal"); showScreen("map"); // v6: every quest before the tail (the campaign keeps 24 pictures on this branch)
+          // Merge pass: a campaign with no long tail (lane A's) has nothing more to check here: no node, no stones, no fog.
+          if (!JN.tail(app.save.data, app.order, galIds(), galAfter()).ids.length) ok(t.b.hidden && !mapPic() && !document.querySelector("#jr .dt.tl") && !shown(document.querySelector("#jr .fogl")), "map long tail (merge pass): none past the last level: no node, no stepping stones, no fog");
+          else {
           const T0 = JN.tail(app.save.data, app.order, galIds(), galAfter()), tb = t.b, r = tb.getBoundingClientRect(), s = sc.getBoundingClientRect(), at = (r.top + r.height / 2 - s.top) / s.height;
           ok(!tb.hidden && t.e && t.e.id === T0.ids[0] && hitOK(tb) && (!t.g || t.g.style.display === "") && (Math.abs(at - MC.curAt) < 0.02 || sc.scrollTop === 0) && $("map-play").querySelector(".pl").textContent === fill(MT.playPic, { n: t.e.n }) && !t.th.children.length,
             "map long tail: with 1-" + app.levels.length + " cleared one node opens in the fog (picture " + (t.e ? t.e.n : "?") + "), " + Math.round(at * 100) + "% down (or the map's top); Play reads '" + $("map-play").textContent + "'");
@@ -2562,6 +2569,7 @@
           chip.click(); const tiles = Array.from(document.querySelectorAll("#ts-grid .ts-tile"));
           ok(!$("tailsheet").hidden && tiles.length === won.length && tiles.every((b) => big(b) && hitOK(b)) && hitOK($("ts-close")), "map long tail (v5 R3 fix): the chip opens a sheet of all " + tiles.length + " cleared pictures, each 44+ px and hittable");
           tiles[0].click(); ok($("tailsheet").hidden && app.entry === app.byId.get(won[0]) && app.screen === "play", "map long tail (v5 R3 fix): a tile in the sheet closes it and plays that picture again");
+          }
           // v5 R3 fix: everything cleared: no Play, the end line in its place, and (wide) the card says so with no side quest.
           for (const e of app.gal) Save.record(app.save.data, e.id, "gal"); showScreen("map");
           ok($("map-play").hidden && shown($("jr-end")) && $("jr-end").textContent === MT.endHint && t.b.hidden && !mapPic() && (!$("map").classList.contains("cards") || ($("jr-n-name").textContent === MT.allClear && $("jr-quest").hidden)),
@@ -2989,11 +2997,11 @@
           ok(beforeQ && afterQ && sc && pline.indexOf(fill(app.cfg.gallery.quests.prizeText, { name: pwName(pz) })) > 0 && !shown($("pwtip")), "power-ups (v6 fix pass): the reach both modes share opens the Quartermaster for a Zen-only player at 24 pictures (" + +beforeQ + +afterQ + "); a power-up owned shows its badge (" + +sc + "); a Zen side quest's sheet names its prize ('" + pline + "'), no tip over the sheet"); }
         // The one-time move (save.js zenMove) on a pre-v6 save: a format-1 save (v3/v4) and a format-2 one; twice is once.
         { const spec = moveSpec(), g0 = w1[0].L.from, g5 = w1[5].L.from, sh = Z.lay.sheets.find((S) => S.castleSheet), eg = "s" + sh.castleSheet + "-0", zeg = sh.eggKey + "-0";
-          const old2 = Save.sanitize({ v: 2, done: { "e1-01": 1, [LA[0]]: 1, [LA[1]]: 1 }, gal: { [g0]: 1, [g5]: 1, [GA[0]]: 1 }, best: { [LA[0]]: [90000, 40, 30], [g0]: [80000, 33, 20] }, eggs: { [eg]: 1, "s1-0": 1 }, last: LA[1], coins: 777 }, app.allOrder, app.allGal.map((e) => e.id), app.meta);
-          const z1 = Save.zenFresh(), n1 = Save.zenMove(old2, z1, spec), j1 = JSON.stringify(z1), n2 = Save.zenMove(old2, z1, spec);
+          const raw2 = { v: 2, done: { "e1-01": 1, [LA[0]]: 1, [LA[1]]: 1 }, gal: { [g0]: 1, [g5]: 1, [GA[0]]: 1 }, best: { [LA[0]]: [90000, 40, 30], [g0]: [80000, 33, 20] }, eggs: { [eg]: 1, "s1-0": 1 }, last: LA[1], coins: 777 }, old2 = Save.sanitize(JSON.parse(JSON.stringify(raw2)), app.allOrder, app.allGal.map((e) => e.id), app.meta); // merge pass: the move reads the raw save (the page's rawOf), the Campaign keeps the sanitized one
+          const z1 = Save.zenFresh(), n1 = Save.zenMove(raw2, z1, spec) + Save.zenMove(old2, z1, spec), j1 = JSON.stringify(z1), n2 = Save.zenMove(raw2, z1, spec) + Save.zenMove(old2, z1, spec);
           const want = z1.done[w1[0].id] === 1 && z1.done[w1[5].id] === 1 && z1.done[LA[0]] === 1 && z1.done[LA[1]] === 1 && z1.gal[GA[0]] === 1 && z1.eggs[zeg] === 1 && Object.keys(z1.eggs).length === 1 && JSON.stringify(z1.best[LA[0]]) === "[90000,40,30]" && !z1.best[w1[0].id] && z1.last === LA[1] && z1.moved === 1;
-          const kept = old2.done[LA[0]] === 1 && old2.gal[g0] === 1 && old2.eggs[eg] === 1 && old2.coins === 777;
-          const old1 = Save.sanitize({ done: { [LA[2]]: 3 }, gal: { [g0]: 2 }, settings: { diff: "normal" } }, app.allOrder, app.allGal.map((e) => e.id), app.meta), z2 = Save.zenFresh(); Save.zenMove(old1, z2, spec);
+          const kept = old2.done[LA[0]] === 1 && (old2.gal[g0] === 1) === app.allGal.some((e) => e.id === g0) && old2.eggs[eg] === 1 && old2.coins === 777 && raw2.gal[g0] === 1; // merge pass: the Campaign keeps a picture only while gallery.json has it
+          const raw1 = { done: { [LA[2]]: 3 }, gal: { [g0]: 2 }, settings: { diff: "normal" } }, old1 = Save.sanitize(JSON.parse(JSON.stringify(raw1)), app.allOrder, app.allGal.map((e) => e.id), app.meta), z2 = Save.zenFresh(); Save.zenMove(raw1, z2, spec); Save.zenMove(old1, z2, spec);
           const z3 = Save.zenFresh(); Save.zenMove(Save.fresh(app.meta), z3, spec);
           ok(want && n1 === 6 && n2 === 0 && JSON.stringify(z1) === j1 && kept && z2.done[LA[2]] === 1 && z2.done[w1[0].id] === 1 && !Object.keys(z3.done).length && z3.moved === 1,
             "move (v6): a v4.3+ save's 2 Gallery pictures go to World 1, 201-202 and picture 61 to World 2 (bests kept for the same deals), Kitten Forest's egg " + eg + " to " + zeg + " (" + n1 + " moved; again: " + n2 + "); nothing leaves the Campaign save; a format-1 save moves too; a fresh save moves nothing");
@@ -3002,9 +3010,9 @@
           ok(!zb.data.moved && zb.write() === false && mem.write() === true && old2.coins === 5 && Save.zenSanitize(JSON.parse(mem.store.getItem("k")), Z.order, []).done && !("coins" in JSON.parse(mem.store.getItem("k"))), "move (v6): a blocked store opens a fresh Zen save and a write says so without throwing; the memory store works, the wallet writes through"); }
         // The save code: SP2 carries both modes; an SP1 code loads as the Campaign and its Zen-bound progress moves.
         { app.save = scratch(); useMode("zen"); app.save = scratchZen(); const zz = app.save.data; Save.record(zz, w1[2].id); Save.record(zz, w2[4].id); zz.best[w2[4].id] = [123456, 44, 31]; Save.record(zz, q2[0].id, "gal"); zz.eggs[Z.lay.sheets[6].eggKey + "-1"] = 1; zz.last = w2[4].id; useMode("campaign"); Save.record(app.save.data, C.order[0]); app.save.data.coins = 4321;
-          const code = codeNow(), r = Save.decodeAny(code, app.allOrder, app.allGal.map((e) => e.id), app.meta, null, 20000, { order: Z.order, gal: Z.gal.map((e) => e.id), zl: Z.info }), zr = r.zen || {};
+          const code = codeNow(), r = Save.decodeAny(code, app.allOrder, app.allGal.map((e) => e.id), app.meta, null, 20000, { order: Z.order, gal: Z.gal.map((e) => e.id), zl: Z.info }, placesNow()), zr = r.zen || {};
           const same = r.ok && r.code === 2 && r.data.coins === 4321 && r.data.done[C.order[0]] === 1 && JSON.stringify(Object.keys(zr.done).sort()) === JSON.stringify([w1[2].id, w2[4].id].sort()) && zr.gal[q2[0].id] === 1 && JSON.stringify(zr.best[w2[4].id]) === "[123456,44,31]" && Object.keys(zr.eggs).join() === Object.keys(zz.eggs).join() && zr.last === w2[4].id;
-          const sp1 = Save.encode(Save.sanitize({ v: 2, done: { [LA[0]]: 1, "e1-01": 1 }, gal: { [w1[1].L.from]: 1, [GA[1]]: 1 }, coins: 99 }, app.allOrder, app.allGal.map((e) => e.id), app.meta), app.allGal.map((e) => e.id));
+          const v5 = placesNow().slice(0, 72), sp1 = Save.encode(Save.sanitize({ v: 2, done: { [LA[0]]: 1, "e1-01": 1 }, gal: { [w1[1].L.from]: 1, [GA[1]]: 1 }, coins: 99 }, app.allOrder, v5, app.meta), v5); // merge pass: a code as v5.4 made it (pictures by v5.4 place)
           showScreen("title"); $("btn-settings").click(); $("set-load").click(); $("ls-code").value = sp1; $("ls-code").dispatchEvent(new Event("input", { bubbles: true })); const prev = $("ls-msg").textContent; $("ls-apply").click();
           const zl = zsave().data, l1 = csave().data.done["e1-01"] === 1 && csave().data.coins === 99 && zl.done[LA[0]] === 1 && zl.done[w1[1].id] === 1 && zl.gal[GA[1]] === 1 && !zl.done[w2[4].id] && zl.moved === 1;
           ok(same && code.indexOf(Save.CODE2) === 0 && l1 && prev.indexOf("Zen") > 0, "save code (v6): SP2 (" + code.length + " characters) carries the Campaign, the wallet and Zen (clears, a side quest, a best, an egg, last) and reads back the same; an SP1 code loads as the Campaign and moves its 201 and its pictures to Zen ('" + prev + "')"); }

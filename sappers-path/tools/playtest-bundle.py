@@ -22,7 +22,7 @@ import json, os, re, subprocess, sys
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 GAME = "sappers-path"
-COPY = ["config.json", "levels/levels.json", "levels/gallery.json", "levels/zen.json", "fonts/Jersey10-Regular.ttf"]  # v6 lane B: zen.json
+COPY = ["config.json", "levels/levels.json", "levels/gallery.json", "levels/zen.json", "levels/places.json", "fonts/Jersey10-Regular.ttf"]  # v6 lane B: zen.json
 
 
 def show(ref, path, binary=False):

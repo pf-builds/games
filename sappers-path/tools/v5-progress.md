@@ -383,6 +383,9 @@ levels.json, gallery.json and layout.json are untouched here.
 | C4 | Fix pass: Campaign map ends at 200 (no fog, tail path); reset Campaign / Zen / Everything; 44 px bar buttons; cache `?v=47` | done | (fix commits) |
 | C9 | Fix pass checks | done: test.js 630/0; regrades 0 of 1,605, 0 of 432, 0 of 324 (--zen); freeze PASS; critic-v5 0 mismatching games of 10,758, tags 0, known answers 0 wrong; selfTest 774/0 (375x812@3), 776/0 (1280x720), 774/0 (360x640@3); harness all passed, 0 console; shots retaken (375, 320, 1280). Pre-existing, not lane B: at 812x375 with DPR 1 and no touch (not a harness viewport) the colour-blind toggle check fails identically on 7e38fce | (fix commits) |
 
+| M1 | Merge pass: the move reads the raw save (rawOf, decodeAny raw); levels/places.json (v5.4's 72 + lane A's 26, append-only) for SP1 and SP2; zero-tail map and selfTest; test.js "merge:" on lane A's gallery fixture; lane E checklist (notes §7.2) | done: see M9 | (merge commit) |
+| M9 | Merge pass checks | done: test.js 635/0 (5 "merge:" checks on lane A's gallery fixture); regrades 0 of 1,605, 432, 324; freeze PASS; critic-v5 0 mismatching games of 10,758; selfTest 774/0, 776/0, 774/0; harness all passed, 0 console; page smoke on a copy with lane A's gallery.json + layout.json: the old save moved, no fog or tail stones, 0 console. Cache `?v=48` | (merge commit) |
+
 ### State (v6 lane B)
 Built, critiqued (`tools/critic-zen-functional.md`, `tools/critic-zen-visual.md`) and fixed on the branch; not pushed.
 Next: lane E merges lane A.

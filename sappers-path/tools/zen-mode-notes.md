@@ -136,6 +136,47 @@ then an entry with `map.sheets` (existing sheets reused; no new image bytes).
 - config.json: both lanes edited it; mine are the new `zen` section and `audio.music.modes` (text-local, easy to merge).
 - The epilogue: the campaign's boss now says `lands.epilogue.none`; lane A owns campaign texts and may reword it.
 
+### 7.1 Merge pass: saves that survive lane A (2026-10-06)
+
+Lane A (campaign-v6-quests, 25cbd94..f4b4a60) removes the 36 from gallery.json, adds 26 new campaign quests (`g-ours-cq*`,
+no id reused), moves the Wandering Gallery (n 61-72) to file places 51-62 and leaves the campaign with no long tail.
+
+- **The move reads the raw save.** `save.js rawOf` gives the stored Campaign save as parsed, before `sanitize` (which keeps
+  only ids gallery.json still has). At boot the move runs on the raw save, then on the sanitized one (renamed slots).
+  The same for a loaded code: `decodeAny` returns `raw` (the code's Campaign part before sanitize). The memory-store
+  fallback has no stored save, so nothing to move. `zenMove` takes any shape (non-objects read empty, best rows only from
+  a format-2 save, never throws).
+- **`levels/places.json`, the save codes' picture places.** Append-only: the 72 v5.4 places first (byte-for-byte
+  gallery.json's order at b22e863, the frozen 60 then the Wandering Gallery, and identical to lane A's `quests.json
+  v5Places`: checked), then lane A's 26 new ids appended in lane A's gallery.json order. SP1 codes decode through it (so a
+  v5.4 code's place 1 is Pizza Slice, not whatever sits first now); SP2 encodes and decodes pictures by it (SP2 never
+  shipped, so its numbering changed on this branch only). The page appends any gallery id the registry lacks, in
+  gallery.json order, as a safety net; test.js fails while one is missing.
+- **No long tail:** with no picture past 200, the Campaign map draws no stepping stones, no fog, no node (`tailE()` empty);
+  selfTest's long-tail block checks that case and skips the rest.
+- **Proof against lane A's data** (test.js, "merge:"): `tools/fixtures/lane-a-gallery.json` is lane A's gallery.json. An old
+  v5 save (two of the 36, a kept picture, picture 61, 201-202, a Kitten Forest egg) loaded on lane A's Gallery: the 36's
+  clears land in World 1, the Campaign keeps its own, 61 lands in Zen; an SP1 code made on v5.4 decodes to the right ids
+  under lane A's order (read by gallery order it would credit the wrong pictures); SP2 round-trips under both orders and
+  a code made here loads there; lane A's campaign has 0 tail pictures. Also smoke-run in the page on a copy of this branch
+  with lane A's gallery.json and layout.json: the old save moved (z1-3, z1-9, 201, picture 61, the egg), no fog, no tail
+  stones, 0 console messages.
+
+### 7.2 Lane E merge checklist
+
+1. Merge campaign-v6 / campaign-v6-quests into sappers-path. Take lane A's `levels/gallery.json`, `levels/levels.json`
+   1-200, `map/layout.json` and its main.js selfTest edits for the empty long tail (v5.1's "next node after the win" and
+   the long-tail block); keep this lane's `levels/zen.json`, `levels/places.json`, `src/save.js`, the `zen` config
+   section and every lane B edit in main.js. Where both edited the same selfTest line, keep both behaviours.
+2. `levels/places.json`: already holds lane A's 26 ids. If lane A's final gallery.json has any id not in it (a swap from
+   the spares), **append** it at the end; never reorder or remove (test.js "places.json" fails until it is there).
+3. test.js "zen World 1 (Step 0)" asserts the campaign keeps exactly the 24 kept pictures among gallery n <= 60: change it
+   to the 24 plus lane A's 26 (or drop it in favour of lane A's own list check). Then re-point the "merge:" fixture tests
+   at the real gallery.json (they should pass unchanged; the fixture can stay as the record of lane A's order).
+4. Run test.js, freeze (re-take the baseline at ship), regrades (levels, `--gallery`, `--zen`), critic-v5, selfTest at
+   375x812, 1280x720 and 360x640, harness last (its v6 old-save block seeds two of the 36: they must arrive in Zen).
+5. Seed a real v5.4 save and an SP1 code from the live game on the merged build; check Zen's card counts them.
+
 ## 8. Calls I made
 
 1. World 1's median pace gate 180-250 s (land gate 200-250): the Gallery's boards are smaller; median 197 s.
