@@ -31,7 +31,7 @@ Careful player (3 taps ahead, all-seeing, 16 games) mean win rate by realm: 1.00
 | 8 Throne | 175-190 | | 1/3/6/6 | most |
 | Final stretch | 191-199 | | 0/0/2/7 | all |
 | Boss | 200 | | X | yes |
-Totals 26/73/61/40. Levels 1-8 stay a gentle tutorial. Sawtooth per realm: Normal lead, a Hard run to an Extreme peak, an Easy breather right after the peak; each realm ends on its hardest level.
+Totals 25/72/61/42 (corrected 10/7: the rows were approved as written; the totals first quoted, 26/73/61/40, were an addition error). Levels 1-8 stay a gentle tutorial. Sawtooth per realm: Normal lead, a Hard run to an Extreme peak, an Easy breather right after the peak; each realm ends on its hardest level.
 
 ## Features per level
 - Easy: at most 1 feature, no lock, no tower hazard beyond knock back. Normal: 1-2, no lock, towers knock back. Hard: 2-3 + lock, towers pin. Extreme: everything unlocked + lock (2 locks from 150), towers kill.
