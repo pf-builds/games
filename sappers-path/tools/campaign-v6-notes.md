@@ -89,3 +89,71 @@ Rules, page and tooling only. No shipped level carries the new fields; `levels/l
   150).
 - Debug levels stay re-solvable: `node tools/debug-v4.js --check` (6 levels match); `--add-v6` rebuilds the two v6 ones
   from the current `levels/levels.json` (it would change if 96 or 125 change).
+
+## 2. Stage 1b: the archer gradient (Normal knock back, Hard pin, Extreme kill), 2026-10-06
+
+Peter changed the rule mid-lane: the gradient applies at every level range and replaces "every tower kills from 150".
+Rules as built: SPEC-v4 §9, "Campaign v6 stage 1b". Field `archers: "pin" | "kill"`; stage 1's `kill: true` now throws
+(no shipped level used it).
+
+| Piece | Commit |
+|---|---|
+| Engine + reference + known answers + differentials | 02d94a0 |
+| Tooling (bake, grader notes, critic-v5 pins, debug v6-pin) | 140e6df |
+| Page (pinned look, calm toast, jam sheet names pins, selfTest, real-tap run), `?v=47` | 8a073ba |
+
+### 2.1 Decisions
+
+- **Which tower pins:** the lowest-numbered standing tower whose ring covers the target, fixed at the send. That's
+  deterministic and needs no geometry. The board draws that tower's archer shooting (`pinBy`), not the first ring the
+  route crosses.
+- **The target goes back unclaimed** (as for every hit), so another squad can take it.
+- **Released:** it walks back to its space from where it lies (yard + half its walk, no knock pause), rejoins the
+  waiting sappers and dispatches normally (still wary). That's the knocked-back path the engine already had, so a
+  release is a scheduled home event. Releases go in send order, logged right after the tower's TOWER.
+- **A pin whose tower fell before the arrow landed** is a plain knock back. Otherwise it could never be released.
+- **Jam detection:** a pinned sapper isn't an event, so the clock rests with it pinned. At rest nothing can fell a
+  tower, so "every front refused" is a jam, a loss, and that's correct. It covers the self-locking case, where the tower
+  can only be reached through blocks the pinned squad holds. `stuck(s)` is false for a squad with anyone pinned (it has
+  one out). jamWhy bit 8 marks pins at the jam, and the sheet names those squads.
+- **Volley / continue:** a pinned sapper of the Volley's colour is cut loose (REL -1) and walks home. The continue
+  treats pinned sappers as part of the stuck squad: their blocks are cleared too, and they are cut loose first. Both are
+  deterministic and the reference models them. The critic models the Volley (it never modelled the continue).
+- **Dealing:** unchanged and hit-free, so stored orders on pin levels never meet an arrow and never depend on a release
+  (no luck). Pin difficulty shows up in the graders (random, lookahead, careful), which play the engine with pins.
+- **Toast:** calm (the toast's normal style), where kill's is red.
+
+### 2.2 Measurements
+
+- test.js 663/0. New known answers: pinned at rest (holds its space, not stuck, no event), release time = tower fall,
+  walk back = knock walk without the pause, win; a knock back when the tower fell first; a pin jam (jamWhy 8) and the
+  reference agreeing; the continue clearing waiting + pinned blocks; the Volley cutting a pin loose; dealing mode. The
+  differentials now inject 4 pin and 2 kill levels (plus the debug levels).
+- Freeze PASS; regrade 0 of 1,605, gallery 0 of 432; critic-v5 0 of 10,857 games (pin games 23, jams with bit 8).
+- selfTest 919/0 and 921/0; real-tap run (`tools/shots-campaign-v6.mjs`, port 8497) 22/22 ok, 0 console messages.
+- Careful player (32 games, depth 3) on 10 Hard levels 125-200 with towers, current decks:
+
+| Level | Knock back | Pin | Kill |
+|---|---|---|---|
+| 127 | 0.938 | 0 | 0.094 |
+| 133 | 1 | 1 | 0.75 |
+| 136 | 1 | 1 | 0.219 |
+| 142 | 0.813 | 0.813 | 0.156 |
+| 145 | 1 | 0 | 0.375 |
+| 151 | 1 | 0.969 | 0.938 |
+| 156 | 0.063 | 0 | 0.156 |
+| 160 | 0.781 | 0.469 | 0.219 |
+| 165 | 0.406 | 0.719 | 0.469 |
+| 172 | 1 | 0.969 | 1 |
+| Mean | 0.800 | 0.594 | 0.438 |
+
+  Pin is harsher than knock back on average and on 6 of 10 (equal on 3). It isn't monotone: on 165 pinning helps (a
+  pinned sapper stays out of a second round that would have jammed), and on 127 and 145 pin is harsher than kill (a
+  pin can hold a space into a jam, while a kill frees it). So stage 2 should gate each level on its measured rate.
+
+### 2.3 For stage 2
+
+- Set `archers` per level from the tag: Hard "pin", Extreme "kill", Normal none. This replaces §1.4's "every tower
+  kills from 150".
+- selfTest §6 (archers per tag): Hard levels pin (a hit leaves play going, so its search still works, but its "knocked
+  back runner" check must accept the pinned kind 3). Extreme levels kill (v4.3's lethal branch).

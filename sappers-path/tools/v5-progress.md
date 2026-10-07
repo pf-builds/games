@@ -367,7 +367,7 @@ Worktree `repos/games-sappers-campaign/` (branch `campaign-v6`), game in `sapper
 2. Dev server: `nohup python3 /Users/peter/Documents/Claude/.claude/serve.py 8496 /Users/peter/Documents/Claude/business/D-click-it-studios/repos/games-sappers-campaign/sappers-path > /dev/null 2>&1 &` (game at the root).
 3. Checks: `node tools/test.js`; `node tools/freeze.js --require`; `node tools/regrade.js` and `--gallery`;
    `zsh tools/critic-v5/run.sh`; `node tools/debug-v4.js --check`; with `PLAYWRIGHT_MODULE=$(npm root -g)/playwright/index.mjs`:
-   `node tools/selftest-lands.mjs --url http://127.0.0.1:8496/`, `node tools/shots-campaign-v6.mjs`, `node tools/harness.mjs --url http://127.0.0.1:8496/`.
+   `node tools/selftest-lands.mjs --url http://127.0.0.1:8497/`, `node tools/shots-campaign-v6.mjs`, `node tools/harness.mjs --url http://127.0.0.1:8497/`.
 
 | # | Piece | State | Commit |
 |---|---|---|---|
@@ -376,4 +376,8 @@ Worktree `repos/games-sappers-campaign/` (branch `campaign-v6`), game in `sapper
 | A3 | Stage 1 debug levels v6-kill, v6-locks | done: `--check` matches | eb721b0 |
 | A4 | Stage 1 page: kill toast + doomed runner, short sheet (Retry only), a socket per lock, `?v=46` | done: selfTest 911/0, 913/0; real taps 14/14; 0 console | 73f8c32 |
 | A5 | Stage 1 docs: SPEC §9 entry, notes §1, this table | done | (this commit) |
-| A6 | Stage 2: re-deal 1-200 on the curve (after Peter OKs it) | todo: see notes §1.4 | |
+| A6 | Stage 1b: the archer gradient (`archers: pin \| kill`; pins), engine + ref + tests | done: test.js 663/0 | 02d94a0 |
+| A7 | Stage 1b tooling + debug v6-pin | done: freeze PASS; regrades 0/1,605, 0/432; critic 0 of 10,857 | 140e6df |
+| A8 | Stage 1b page, `?v=47` | done: selfTest 919/0, 921/0; real taps 22/22 (port 8497); 0 console | 8a073ba |
+| A9 | Stage 1b docs: SPEC §9 1b entry, notes §2, this table | done | (this commit) |
+| A10 | Stage 2: re-deal 1-200 on the curve | todo: see notes §1.4 and §2.3 | |
