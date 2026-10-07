@@ -135,6 +135,7 @@ async function stitch(page, bufs, file) {
 async function run() {
   const { chromium } = await loadPlaywright();
   const browser = await chromium.launch();
+  { const nc = browser.newContext.bind(browser); browser.newContext = async (o) => { const c = await nc(o); await c.addInitScript(() => { try { localStorage.setItem("sappers-path.tour.v1", "1"); } catch (e) { /* no store */ } }); return c; }; } // v6 lane B part 2: every profile has seen the tour's first-launch offer (SP.selfTest checks the offer itself)
   try {
     for (const vp of VIEWPORTS) {
       const R = (report.runs[vp.name] = {}), tag = vp.name;

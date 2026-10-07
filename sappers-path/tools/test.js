@@ -1728,5 +1728,43 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
       [false, "theme", "theme", "theme", "boss", "play", "play", "theme", "play", "boss"], "zen words: no goblin, fort or assault in Zen's text or world lore; music per mode (Campaign the theme in its levels, realm 8 the boss loop; Zen the calm loop; no mode: as v5.2)"); }
 }
 
+// ==== v6 lane B part 2: the intro tour (levels/tutorial.json, src/tutorial.js; tools/tutorial-notes.md) ======================
+// Every practice fort is a valid small picture board whose cards match its blocks colour by colour and whose stored order
+// wins; none is a campaign, teaching or Zen level; fort 4 (Don't jam) really jams on its stored player order with every
+// space held by a squad that can't reach, and wins on its second script's order; fort 5 has hidden blocks off the edge
+// (shown by the engine once ground reaches them) and a ? card behind a front; fort 6 shows 3 or more shades of one
+// colour with one card for all of it; fort 7's practice stock is real power-ups. Coach pointers name a colour on the
+// fort, every when-word is one the page reads, and the words have no em dash or exclamation mark.
+{
+  const fs = require("fs"), path = require("path"), CFG = require("../config.json"), TU = JSON.parse(fs.readFileSync(path.join(__dirname, "../levels/tutorial.json"), "utf8"));
+  const ST = TU.steps, R = E.rulesOf(V3, "normal"), WORDS = ["never", "play", "used", "wait", "lineEmpty", "full", "reveal", "shown", "pick", "power", "clear", "won", "jammed"];
+  const others = new Set(LEVELS_ALL.levels.map((l) => l.id).concat(require("../levels/teaching.json").levels.map((l) => l.id), require("../levels/zen.json").levels.map((l) => l.id), require("../levels/gallery.json").levels.map((l) => l.id)));
+  const words = (w) => String(w).split("|").every((a) => a.split("&").every((x) => WORDS.indexOf(x.split(":")[0]) >= 0));
+  eq([ST.length, CFG.tutorial.file, [CFG.save.key, CFG.zen.save.key].indexOf(CFG.tutorial.key)], [8, "levels/tutorial.json", -1], "tour: 8 practice forts (the 9th step is the closing card), its own seen-flag key apart from both saves");
+  for (const st of ST) {
+    const L = Object.assign({ id: st.id }, st.board), B = E.compile(L), sums = [];
+    for (let m = 1; m < E.NMAT; m++) if (B.pix[m] !== B.sapTotal[m]) sums.push(m);
+    const S = E.replay(B, R, L.win.normal), cols = new Set(); for (let i = 0; i < B.ncards; i++) cols.add(B.cardM[i]);
+    const ptr = [].concat(st.coach, st.coach2 || []).every((c) => (c.card == null || cols.has(c.card)) && words(c.go) && c.say.length <= 56 && (!c.short || c.short.length <= 26));
+    ok(L.pic === true && B.w * B.h <= 81 && !others.has(st.id) && !sums.length && !E.check(L).length && S.status === E.WON && ptr && words(st.done) && (!!st.final || st.say.length > 0),
+      "tour " + st.id + " (" + st.name + "): a " + B.w + "x" + B.h + " picture board of its own, cards = blocks per colour" + (sums.length ? " (not " + sums + ")" : "") + ", its order " + L.win.normal + " wins (" + S.now + " ms patient), coach pointers and words valid");
+  }
+  { const st = ST.find((s) => s.board.jam), B = E.compile(st.board), S = E.replay(B, R, st.board.jam), stuck = S.order().every((s) => S.stuck(s));
+    const J = E.sim(B, R), tapsBlue = st.board.jam.split("").every((ch) => { const m = B.cardM[J.front(+ch)]; J.play(+ch); J.quiet(); return m === st.coach[0].card; }); // every tap on the colour the coach points at
+    eq([S.status, S.reason, S.lineLen, S.open, stuck, tapsBlue, !!st.coach2, !!st.jamNote, st.done], [E.FAILED, "jam", 5, 5, true, true, true, true, "won"], "tour " + st.id + ": the player's own taps (" + st.board.jam + ") fill all 5 spaces with squads that can't reach and the line jams (the real fail); a second script and its note for the Retry; done on the win"); }
+  { const st = ST.find((s) => s.board.hidden), B = E.compile(st.board), S = E.sim(B, R), h0 = S.hiddenLeft, my = st.board.cols.some((c) => c.slice(1).some((cd) => cd[2] === 1));
+    S.logOn = true; const shownAt = new Map(), early = []; let k = 0; for (const ch of st.board.win.normal) { S.play(+ch); S.quiet(); }
+    for (let i = 0; i < S.evLen; i += 3, k++) { const t = S.ev[i], c = S.ev[i + 1]; if (t === E.EV.SHOW) shownAt.set(c, k); else if (t === E.EV.EAT && B.hid0[c] && !(shownAt.get(c) < k)) early.push(c); }
+    eq([h0 > 0, B.nhid, my, shownAt.size, early.length, S.status], [true, h0, true, h0, 0, E.WON], "tour " + st.id + ": " + h0 + " hidden blocks, all off the picture's edge, a ? card behind a front; on the stored order every one shows its colour before it is dug (the engine's rule: shown once open ground from the camp touches it)"); }
+  { const st = ST.find((s) => s.board.shade), L = st.board, B = E.compile(L), tones = {};
+    for (let c = 0; c < B.n; c++) { const m = B.a0[c]; if (m > 0) (tones[m] = tones[m] || new Set()).add(L.shade[(c / B.w) | 0][c % B.w]); }
+    const m = +Object.keys(tones).find((k) => tones[k].size >= 3), P = L.pal[m], cards = L.cols.flat().filter((cd) => cd[0] === m);
+    eq([!!m, [...tones[m]].sort().join(""), !!(P && P.sh && P.sh[0] && P.sh[1]), cards.length, cards[0][1] === B.pix[m]], [true, "012", true, 1, true], "tour " + st.id + ": " + (P ? P.n : "?") + " in 3 shades (base, lighter, darker, each with its colour) and one card for every block of it"); }
+  { const ids = CFG.meta.powers.map((p) => p.id), pw = ST.filter((s) => s.powers);
+    eq(pw.map((s) => [s.id, s.powers.every((id) => ids.indexOf(id) >= 0)]), [["tut-7", true]], "tour: the practice power-ups are real ones (" + pw.map((s) => s.powers.join("+")) + "), only on fort 7"); }
+  { const text = JSON.stringify([TU.offer, TU.ui, TU.close, ST.map((s) => [s.name, s.say, s.more, s.jamNote, s.coach, s.coach2])]);
+    eq([/—|–/.test(text), /!/.test(text)], [false, false], "tour: its words have no em or en dash and no exclamation mark"); }
+}
+
 console.log(pass + " passed, " + fail + " failed");
 process.exitCode = fail ? 1 : 0;

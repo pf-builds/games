@@ -22,7 +22,7 @@ import json, os, re, subprocess, sys
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 GAME = "sappers-path"
-COPY = ["config.json", "levels/levels.json", "levels/gallery.json", "levels/zen.json", "fonts/Jersey10-Regular.ttf"]  # v6 lane B: zen.json
+COPY = ["config.json", "levels/levels.json", "levels/gallery.json", "levels/zen.json", "levels/tutorial.json", "fonts/Jersey10-Regular.ttf"]  # v6 lane B: zen.json; part 2: tutorial.json
 
 
 def show(ref, path, binary=False):
@@ -68,6 +68,8 @@ def main(ref, out, new_title=None, jump=None):
     write(out, "index.html", t + "\n" + html)
 
     write(out, "style.css", re.sub(r"\?v=\d+", "", show(ref, "style.css")))
+    if "tutorial.css" in html:  # v6 lane B part 2: the intro tour's styles
+        write(out, "tutorial.css", re.sub(r"\?v=\d+", "", show(ref, "tutorial.css")))
 
     if jump:
         html = open(os.path.join(out, "index.html"), encoding="utf-8").read()
