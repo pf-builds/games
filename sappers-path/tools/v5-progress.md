@@ -384,4 +384,11 @@ Worktree `repos/games-sappers-campaign/` (branch `campaign-v6`), game in `sapper
 | A11 | Stage 2 bake: `node tools/campaign-v6.js bake --threads 14` (scratch in `tools/campaign-v6-scratch/`, gitignored; `--reuse` keeps candidates; `--list N,N --extra K` for fix-ups), then `install`, then `measure` | done: bakes 1-5, 0 fallbacks; 188/189 swapped; keepOnly towers on 7 killing levels | af0fe4c |
 | A12 | Stage 2 page + critic (`?v=48`, coach check, overlap 63, critic-v5 cut-loose walk) | done: selfTest 932/0, 934/0; critic 0 of 10,857 | 318a045 |
 | A13 | Stage 2 checks + docs (SPEC §9 stage 2, notes §3, after table), harness first-Hard lookup, shots-campaign-v6-s2 | done: test.js 663/0, regrades 0/0, freeze PASS, harness all passed, real taps 26/26, 0 console | (this commit) |
+| A15 | Merge `campaign-v6-quests` into `campaign-v6` (docs both sides, test.js both sides' checks, critic result regenerated), `?v=49` | done: test.js 665/0; regrades 0/2,205 and 0/372; freeze PASS; critic 0 of 10,527; selfTest 916/0, 918/0; harness all passed; real taps (cq06, 64/66/159/200) all ok; 0 console | (merge commit) |
 | A14 | After the quests merge: re-take the freeze snapshot (`tools/freeze.js --snapshot`), drop `v5.freeze.lift` | todo (orchestrator) | |
+
+## Campaign v6 lane A, the side quests (branch `campaign-v6-quests`, worktree `repos/games-sappers-campaign-quests/`)
+
+| # | Piece | State | Commit |
+|---|---|---|---|
+| AQ1 | The 50 on-theme side quests (24 kept + 26 new, `tools/quest-bake.js`), map ids, manifest, LICENSES; tests, critic and selfTest for the empty long tail | done: quest-bake check PASS; test.js 665/0; regrades 0/1,605 and 0/372; freeze PASS; critic 0 of 10,527; selfTest 903/0, 905/0; real taps 16/16; 0 console. Notes §4 | see git log |

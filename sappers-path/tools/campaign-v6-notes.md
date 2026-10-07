@@ -314,3 +314,174 @@ the font preload warning a ?v bump would have caused was caught here (style.css'
   the old Hards, though the careful player finds them much harder.
 - The coach on 64 and 66 shows over the toast; their wording is new.
 - Realm 7's hard plateau without breathers (157-166).
+
+## 4. The on-theme side quests (lane A, quests), 2026-10-06
+
+Branch `campaign-v6-quests` (worktree `repos/games-sappers-campaign-quests/`, cut from `campaign-v6` at 285b8a5); the
+orchestrator merges it into `campaign-v6`. This section is separate from §3 (the re-deal) so the two merge cleanly.
+Source: `game-research/sappers-path-v4/v6-plan.md` Step 0 (Peter OK 2026-10-06), lane C's hand-off
+(`game-research/sappers-path-v4/lands/campaign-quests/README.md`, `picks.json`). SPEC-v4 §9 "Campaign v6: the on-theme
+side quests". Tool: `tools/quest-bake.js`; data: `tools/campaign-quests/`.
+
+### 4.1 What shipped
+
+- `levels/gallery.json`: the campaign's side quests are exactly 50, places 1-50: the 24 kept (stored levels byte for
+  byte; only `n` and `quest` change) and lane C's 26 picks as new ids `g-ours-cq<NN>` (never an old id). The 36 that
+  move to Zen World 1 left the file (their manifest and LICENSES.md lines stay for lane B). The Wandering Gallery's 12
+  records are untouched (their `n` stays 61-72: land-config sideCycle and critic-v5 read it); they now sit in places
+  51-62 of the file, and their map spots' `q` follow the places (51-62), since the page finds a quest's picture by
+  place (`app.gal[q - 1]`).
+- `map/layout.json`: quests 1-50 keep their spots, slots (after) and prizes; only their `id` changes. Wander spots' `q`
+  renumbered as above. Nothing else in the map.
+- `levels/gallery-manifest.json`: `order` = the 50; 26 new lines (kind `outlined`, source `tools/campaign-quests/src`).
+- `LICENSES.md`: a "Campaign v6 side quests" section, one line per new picture (between `campaign-quests` markers).
+- `tools/gallery-config.json`: `convert.kinds.outlined` (lane C's entry). Boards: `tools/land.js boardOf` from the stored
+  160 px sources, shaded; all 26 grids, palettes, shade rows and rings identical to lane C's `boards/` (26/26; lane C's
+  `handoff.js` against this worktree: 29/29).
+- Prizes: `tools/quests.js` unchanged; the 50 slots carry the same afters and prizes as v5's places 1-50 (ladder 18,
+  quartermaster 14, recall 9, scout 6, volley 3 at 148, 171, 196). Shown on the node before playing (unchanged page).
+
+### 4.2 Decisions (mine, inside the brief)
+
+- **Order** (`quests.json order`): kept and new alternate (new runs of 2 at 24-25 and 3 at 47-49), no two neighbours of
+  one theme group (goblin 9, creature 16, knight 10, castle 8, siege 3, soldier 4), kept Easy pictures early, kept Hard
+  ones one per realm from realm 2, the Goblin King's Hoard last (after 200). Goblin's Lunch stays picture 1 (the selfTest's
+  shading fixture needs an unshaded picture 1). Lane C's simple-to-busy order roughly kept for the new ones. Found by a
+  small swap search, then tags set by hand so no two Hard quests sit side by side.
+- **Titles**: lane C's, with 5 retitled where Flux drew something else: cq20 Trusty Steed (a real horse, not a hobby
+  horse), cq38 The Jester (standing), cq01 Apple Goblin (holds the apples), cq21 Round Shield (no reflection), cq10
+  Birthday Dragon. Every new title fits the play bar whole at 360 and 375 px (17 and 20 px type), so none needs `short`.
+- **Tags** of the 26 new: Normal 17, Hard 7 (one a realm from realm 3, 45 and 48 in realm 8), Easy 2 (10, 25). All 50:
+  Easy 6, Normal 30, Hard 14; no Extreme.
+- **Features** (`quests.json ladder`, `density`, `deck`, `amounts`): a feature only when the quest's main level is at or
+  past its first level (the quest opens once that level is cleared): moats 25, the lock 53 (the campaign's first lock
+  coach, not 50: a quest after 50-52 would show a lock before it is taught), linked 75, ? cards 100, mystery blocks 150;
+  no archers. Easy at most 1 feature, Normal 2, Hard 3 plus a colour lock (colour locks only). The moat (lane C's ring,
+  opening set 0, Hard 1) first, then deck features: Normal in turn by its count among the new quests, Hard newest first.
+  Result: moat 23 (4 mire), linked 8, ? cards 10, mystery blocks 3, lock 7; realm 1 quests plain.
+- **Mystery blocks only on Hard, with a looser face rule** (`quests.json landConfig`, merged over land-config for the bake
+  via LAND_CONFIG): the default face rule reads every cell beside the ink outline as face detail (3 colours in a 3x3) and
+  left 0 room on all 5 planned pictures ("no room for mystery blocks"). With detail 5, top 0.3, pad 1 and 16% of eligible
+  blocks, the 3 Hard quests hide 28-47 blocks; the 2 Normal ones that had planned them take ? cards or links instead.
+- **Bands** by tag and the main level: Easy 62-85%; Normal 46-64% (to 49), 30-48% (50-124), 20-40% (125+); Hard 10-30%,
+  5-20% from 125 (random-tap, as the castle Gallery's). Pace 150-300 s, aim 200 s (the castle Gallery's). Every new quest
+  baked by `land-bake.js bakeOne` as a side quest (gallery-config's grader, so `regrade.js --gallery` re-grades it),
+  seed `300000 + cq number` (stable whatever its place). 26/26 good on the first pick, 0 fallbacks.
+- **Kept levels unchanged**: none of the 24 needs a feature its slot requires (features are allowed, never required), so
+  no re-deal.
+
+### 4.3 Saves (checked, not changed)
+
+- The stored save keys pictures by **id**: `gal: {id: mask}`, `best`, `tail: {id: 1}`. Quest slots are not stored
+  (questOpen works them out from the list and each picture's `after`). So the 24 kept keep their clears, the 26 new ids
+  can't inherit anyone's clear, and an old clear never credits a new picture.
+- **But `Save.sanitize` keeps only ids in the current Gallery list**: a v5 save's clears of the 36 that left are dropped on
+  the first load of this branch. Lane B's one-time move (`zenMoved`) must read them from the raw save before sanitize
+  (or sanitize against the Zen ids too).
+- **The SP1 save code keys pictures by place** (`encode`/`decode`: "pictures by Gallery place"). An SP1 code made on
+  v5.4 decoded here credits whatever now sits in that place (v5 place 1 Pizza Slice would credit Goblin's Lunch). I did
+  not change it (lane B's SP2). Lane B's SP1 decode must map places through the v5.4 list: `quests.json v5Places` (the 72
+  ids in v5 order) is there for it.
+
+### 4.4 The long tail
+
+v5's long tail was pictures 51-60 (after 203-240). 6 of them are among the 24 kept (Plumed Helm, Sheep Knight, Sword in
+the Stone, Party Slime, Wise Old Owl, the Hoard) and now sit inside 4-200; the other 4 (Rainbow, Jack-o'-Lantern, Apples
+and Primroses, Sunflower) go to Zen. So the campaign has **no long tail**: `journey.js tail` returns no ids, the fog node
+never shows. The mechanism is untouched (lane B/E's call). Tests: test.js runs the long tail's checks on v5's shape (the
+50 plus 10 stand-ins after 203-240, `tailGal`) and adds "the castle has no long tail"; the selfTest's long-tail block
+checks the empty case when there is nothing past the last level, and v5.1's "next node after the win" accepts no node
+when every level is cleared and nothing waits in the fog (2 small selfTest edits in main.js, nothing else in the page).
+With nothing past the last level, the fog node simply stays hidden.
+
+### 4.5 Other files touched
+
+- `tools/test.js`: tags read quests.json (new) or the frozen tag (kept); the mix over 50; the Gallery invariants allow a
+  new quest's planned features and the outlined kind's floors (minDE 20, faded 16); quests = questsOf(50); the long tail
+  on stand-ins; the freeze line split: levels 1-200 byte for byte as before, pictures: the 24 kept byte for byte but n and
+  quest, the 26 ids new.
+- `tools/critic-v5/diff.mjs`: a campaign quest's tag is its quests.json plan or the frozen one.
+- `tools/harness.mjs`: the "locked quest among the first 25" now looks for a painting or a new quest (no painting left).
+- No cache-tag bump (lane E bumps at ship; serve.py sends no-store). `levels/levels.json`, `src/engine.js`,
+  `tools/ref.js` and the map code untouched.
+
+### 4.6 Measurements
+
+- `tools/quest-bake.js check`: PASS, 9 gates (real pace median 195 s, 160-263 s; taps 34-55; longest tap <= 15 s; 23 of
+  26 ringed; re-grade 0 of 300 checks).
+- test.js 665/0; `regrade.js` 0 differences of 1,605 checks (250 levels); `regrade.js --gallery` 0 differences of 372 checks (62 pictures); `freeze.js
+  --require` PASS (1,155 + 360 checks, 283 castle cases); critic-v5 0 mismatching games of 10,527, 0 grade mismatches,
+  tag problems 0, known answers 0 wrong, real pace 312/312.
+- selfTest 903/0 (375x812@3) and 905/0 (1280x720), 0 console messages. Before: 919/0 and 921/0; the drop is the long-tail
+  block (16 checks) becoming one check.
+- Real browser (`tools/shots-campaign-quests.mjs`, port 8511): 16/16 ok at 1280x720 and 375x812: realms 1, 4 and 8 show 6,
+  6 and 7 quest nodes, each with its prize icon and words, the open ones with the prize bubble; cq06 Goblin Soup (moat,
+  linked; 47 real taps) and cq12 Spell-Book Cat (Hard: moat, ? cards, linked, colour lock; 37 real taps) played from
+  their nodes to "Picture complete!", the prize toast ("Side quest prize: +1 Ladder" / "+1 Scout") and +1 once; Back to
+  map shows the node won; a replay pays nothing. 0 console messages. Contact sheet: `tools/shots-campaign-v6/quests-50.jpg`.
+
+### 4.7 The 50
+
+| # | Id | Title | After | Prize | Tag | Kept/new | Features | Rate | Real pace | Taps |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | g-ours-g01 | Goblin's Lunch | 4 | ladder | easy | kept | - | 0.685 | 200 s | 44 |
+| 2 | g-ours-cq17 | Tree Giant | 8 | ladder | normal | new | - | 0.5425 | 225 s | 51 |
+| 3 | g-ours-g12 | Duck Knight | 11 | ladder | normal | kept | - | 0.7225 | 195 s | 50 |
+| 4 | g-ours-cq42 | Bagpipes | 16 | ladder | normal | new | - | 0.5475 | 218 s | 53 |
+| 5 | g-ours-g21 | Party Slime | 20 | ladder | normal | kept | - | 0.7175 | 177 s | 34 |
+| 6 | g-ours-cq20 | Trusty Steed | 24 | quartermaster | normal | new | - | 0.54 | 205 s | 49 |
+| 7 | g-ours-g15 | Happy Potion | 27 | ladder | normal | kept | - | 0.685 | 203 s | 34 |
+| 8 | g-ours-cq08 | Baby Griffin | 32 | quartermaster | normal | new | moat | 0.6 | 166 s | 39 |
+| 9 | g-ours-g23 | Sheep Knight | 36 | ladder | easy | kept | - | 0.69 | 195 s | 40 |
+| 10 | g-ours-cq33 | Siege Tower | 40 | quartermaster | easy | new | moat | 0.7775 | 160 s | 42 |
+| 11 | g-ours-g13 | Mimic | 43 | ladder | hard | kept | - | 0.24 | 178 s | 43 |
+| 12 | g-ours-cq37 | The Forge | 48 | quartermaster | normal | new | moat | 0.5125 | 181 s | 48 |
+| 13 | g-ours-g02 | Sir Whiskers | 52 | ladder | normal | kept | - | 0.605 | 203 s | 45 |
+| 14 | g-ours-cq28 | Big Bow | 56 | quartermaster | hard | new | moat, lock | 0.1625 | 198 s | 50 |
+| 15 | g-ours-g11 | Melon Catapult | 59 | recall | normal | kept | - | 0.6025 | 194 s | 40 |
+| 16 | g-ours-cq21 | Round Shield | 64 | ladder | normal | new | moat (mire) | 0.3575 | 200 s | 45 |
+| 17 | g-ours-g06 | Wise Old Owl | 68 | quartermaster | hard | kept | - | 0.13 | 194 s | 41 |
+| 18 | g-ours-cq02 | Helmet Bed | 72 | recall | normal | new | moat | 0.335 | 191 s | 49 |
+| 19 | g-tw-1f451 | Crown | 75 | ladder | easy | kept | - | 0.6475 | 247 s | 55 |
+| 20 | g-ours-cq34 | Ballista | 80 | quartermaster | hard | new | moat, linked, lock | 0.23 | 195 s | 45 |
+| 21 | g-ours-g19 | Hatchling | 84 | recall | normal | kept | - | 0.59 | 178 s | 50 |
+| 22 | g-ours-cq06 | Goblin Soup | 88 | ladder | normal | new | moat, linked | 0.4 | 177 s | 47 |
+| 23 | g-ours-g09 | Night Watch | 91 | quartermaster | hard | kept | - | 0.2075 | 200 s | 48 |
+| 24 | g-ours-cq24 | The Charge | 96 | recall | normal | new | moat, linked | 0.41 | 208 s | 44 |
+| 25 | g-ours-cq29 | Drummer Boy | 100 | ladder | easy | new | moat (mire) | 0.7275 | 194 s | 44 |
+| 26 | g-ours-g10 | Crown Too Big | 104 | quartermaster | normal | kept | - | 0.535 | 195 s | 48 |
+| 27 | g-ours-cq12 | Spell-Book Cat | 107 | scout | hard | new | moat, mystery, linked, lock | 0.1525 | 216 s | 37 |
+| 28 | g-ours-g08 | Iron Pig | 112 | recall | easy | kept | - | 0.7125 | 205 s | 44 |
+| 29 | g-ours-cq38 | The Jester | 116 | ladder | normal | new | moat, linked | 0.375 | 189 s | 46 |
+| 30 | g-tw-1f984 | Unicorn | 120 | quartermaster | hard | kept | - | 0.225 | 195 s | 55 |
+| 31 | g-ours-cq25 | Sun Shield | 123 | scout | normal | new | moat, mystery (mire) | 0.3975 | 190 s | 39 |
+| 32 | g-tw-1f3f0 | Castle | 128 | recall | normal | kept | - | 0.465 | 217 s | 47 |
+| 33 | g-ours-cq18 | Dragon Picnic | 132 | ladder | hard | new | moat, mystery, linked, lock | 0.17 | 189 s | 43 |
+| 34 | g-ours-g18 | The Sapper | 136 | quartermaster | normal | kept | - | 0.5125 | 195 s | 47 |
+| 35 | g-ours-cq13 | Raven Messenger | 139 | scout | normal | new | moat, mystery | 0.305 | 180 s | 52 |
+| 36 | g-ours-g16 | Mushroom House | 144 | recall | hard | kept | - | 0.2925 | 175 s | 44 |
+| 37 | g-ours-cq30 | Shield Wall | 148 | volley | normal | new | moat, linked | 0.2775 | 164 s | 44 |
+| 38 | g-noto-1f432 | Dragon | 152 | ladder | normal | kept | - | 0.5675 | 199 s | 51 |
+| 39 | g-ours-cq01 | Apple Goblin | 155 | quartermaster | hard | new | moat, hidden, mystery, lock | 0.1825 | 193 s | 55 |
+| 40 | g-ours-g22 | Plumed Helm | 160 | scout | normal | kept | - | 0.45 | 191 s | 39 |
+| 41 | g-ours-cq09 | Bridge Troll | 164 | recall | normal | new | moat, linked | 0.3475 | 229 s | 52 |
+| 42 | g-ours-g07 | Cake Castle | 168 | ladder | hard | kept | - | 0.205 | 186 s | 43 |
+| 43 | g-ours-cq11 | Knitting Dragon | 171 | volley | normal | new | moat, mystery | 0.3025 | 263 s | 47 |
+| 44 | g-ours-g20 | Sword in the Stone | 176 | quartermaster | normal | kept | - | 0.3875 | 196 s | 43 |
+| 45 | g-ours-cq04 | War Drum | 180 | scout | hard | new | moat, hidden, mystery, lock | 0.125 | 203 s | 48 |
+| 46 | g-ours-g04 | Frog Prince | 184 | recall | normal | kept | - | 0.3175 | 206 s | 45 |
+| 47 | g-ours-cq26 | Bullseye | 187 | ladder | normal | new | moat, mystery | 0.285 | 190 s | 48 |
+| 48 | g-ours-cq03 | The Big Key | 192 | quartermaster | hard | new | moat, hidden, mystery, lock (mire) | 0.095 | 205 s | 49 |
+| 49 | g-ours-cq10 | Birthday Dragon | 196 | volley | normal | new | moat, mystery | 0.33 | 190 s | 39 |
+| 50 | g-ours-g24 | Goblin King's Hoard | 200 | scout | hard | kept | - | 0.1625 | 172 s | 40 |
+
+### 4.8 For lane B and E
+
+- Lane B's migration: read the 36's clears (ids in `quests.json v5Places` not in the 50) from the raw save before
+  `sanitize` drops them; SP1 codes decode pictures by v5 place through `v5Places`.
+- The wander pictures sit in places 51-62 with `n` 61-72; if lane B moves them to Zen, the castle file ends at 50.
+- `tools/land.js` reads `gal0 = gallery.levels.length` for a new land's side-quest numbering when its scratch state has
+  none: a land planned on this branch would number its side quests from 63, which collides with the wander pictures' n 63-72. Land 1 itself is unaffected (installed); lane B/D should number Zen worlds' quests in their own files.
+- Weak picks lane C flagged and kept: Apple Goblin, Baby Griffin, Bridge Troll, Birthday Dragon, Trusty Steed, Round
+  Shield. Spares (cq14 Baby Phoenix, cq16 Cheeky Gargoyle, cq35 Party Cannon) are in the manifest with `spare: true`; a
+  swap is one line in quests.json and `quest-bake.js convert bake --only cqNN install check`.

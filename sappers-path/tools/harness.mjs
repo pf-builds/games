@@ -365,7 +365,7 @@ async function run() {
         const m0 = await ev(() => SP.map()); R.map = m0;
         ok(m0 && m0.loaded < m0.sheets && !(await ev(() => !!document.getElementById("map-gallery") || !!document.getElementById("gallery"))) && (await noScroll()), tag + " map: no Gallery screen or button; " + (m0 && m0.loaded) + " of " + (m0 && m0.sheets) + " sheets requested at open; no page scrollbars");
         const toMid = (sel) => ev((q) => { const el = document.querySelector(q), sc = document.getElementById("jr"); sc.scrollTop += el.getBoundingClientRect().top + el.offsetHeight / 2 - sc.getBoundingClientRect().top - sc.clientHeight / 2; }, sel);
-        const gi = await ev(() => SP.gallery().findIndex((id, i) => i < 25 && /^g-met-/.test(id))), gid = await ev((i) => SP.gallery()[i], gi), sel = `.qn[data-id="${gid}"]`;
+        const gi = await ev(() => SP.gallery().findIndex((id, i) => i < 25 && /^g-(met-|ours-cq)/.test(id))), gid = await ev((i) => SP.gallery()[i], gi), sel = `.qn[data-id="${gid}"]`;
         await toMid(sel); await L(sel).click({ force: true, timeout: 5000 }); s = await S(); ok(s.screen === "map", tag + " a real tap on a locked side quest (" + gid + ") stays on the map");
         await ev((i) => { SP.unlockTo(SP.quest(SP.gallery()[i]).after); SP.screen("map"); }, gi); await toMid(sel); await page.waitForTimeout(100);
         ok(await hit(sel), tag + " the open side quest's node is hittable"); if (vp.shots === "375" || vp.shots === "1280") await shot("map-quest");
