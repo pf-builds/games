@@ -1,25 +1,25 @@
 {
- "ms": 170107,
+ "ms": 166495,
  "levels": 319,
  "cov": {
   "why": {
-   "1:notInColumn": 2302,
-   "4:perLevel": 13830,
-   "0:perLevel": 13961,
-   "3:emptySpace": 6803,
-   "2:noneHidden": 14097,
-   "3:badSpace": 2072,
+   "1:notInColumn": 2287,
+   "4:perLevel": 13741,
+   "0:perLevel": 13890,
+   "3:emptySpace": 6788,
+   "2:noneHidden": 14005,
+   "3:badSpace": 2067,
    "4:noneLeft": 262,
-   "3:sappersOut": 3984,
-   "1:noSpace": 2638,
-   "4:badColour": 81,
-   "1:perLevel": 3564,
-   "3:perLevel": 2404,
-   "1:tooDeep": 2857,
-   "3:linked": 140,
+   "3:sappersOut": 3973,
+   "1:noSpace": 2634,
+   "4:badColour": 83,
+   "1:perLevel": 3518,
+   "3:perLevel": 2362,
+   "1:tooDeep": 2861,
+   "3:linked": 141,
    "1:noTwoSpaces": 123,
-   "1:partnerOutOfView": 52,
-   "2:perLevel": 3687
+   "1:partnerOutOfView": 51,
+   "2:perLevel": 3682
   },
   "endNoplay": 25515,
   "endNoplayBad": 0,
@@ -33,18 +33,18 @@
   },
   "ops": {
    "taken": [
-    4281,
-    7174,
-    939,
-    2880,
-    4208
+    4273,
+    7151,
+    941,
+    2861,
+    4201
    ],
    "refused": [
-    13961,
-    11536,
-    17784,
-    15403,
-    14173
+    13890,
+    11474,
+    17687,
+    15331,
+    14086
    ],
    "noplay": [
     5,
@@ -55,22 +55,22 @@
    ]
   },
   "shows": 84402,
-  "clears": 700101,
-  "refusedChecked": 72902,
+  "clears": 696486,
+  "refusedChecked": 72513,
   "refusedChanged": 0,
   "canPowerDisagree": 0,
-  "hiddenChecks": 10101968,
+  "hiddenChecks": 10031291,
   "outcomes": {
-   "1/": 3993,
-   "-1/jam": 6102,
+   "1/": 3980,
+   "-1/jam": 6115,
    "0/": 4,
    "-1/short": 428
   },
   "jamWhy": {
-   "0": 3910,
+   "0": 3918,
    "1": 30,
    "2": 1139,
-   "4": 242,
+   "4": 247,
    "5": 6,
    "6": 295,
    "8": 338,
