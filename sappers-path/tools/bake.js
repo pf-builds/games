@@ -66,7 +66,7 @@ const OUT = arg("out") ? path.resolve(arg("out")) : null;
 const ONLY = arg("only") ? arg("only").split("-").map(Number) : arg("list") ? [Math.min(...arg("list").split(",").map(Number)), Math.max(...arg("list").split(",").map(Number))] : null;
 const LIST = arg("list") ? arg("list").split(",").map(Number) : null; // v5 R4 --list N,N,...: a fix-up run of just those levels
 const outPath = (rel) => (OUT ? path.join(OUT, path.basename(rel)) : path.join(ROOT, rel));
-const BOARD = ["w", "h", "grid", "pic", "gates", "towers", "pal", "scene", "style", "palette", "lock", "locks", "kill", "safeArchers"]; // v6: locks, kill // v4.3 --boards: a level's board
+const BOARD = ["w", "h", "grid", "pic", "gates", "towers", "pal", "scene", "style", "palette", "lock", "locks", "archers", "safeArchers"]; // v6: locks, archers // v4.3 --boards: a level's board
 const RELAY = process.argv.includes("--relay"); // v5 R2
 const boardOf = (l) => { const b = {}; for (const k of Object.keys(l)) if (BOARD.indexOf(k) >= 0) b[k] = l[k]; return b; };
 
@@ -158,8 +158,9 @@ function gradeLevel(L, rules, C, hint, seed, n, tag) {
   return { win, grade };
 }
 // v4.3: a Hard level whose archers stand is dealt rushed (gen.js D.rush): its stored order wins at real pace too. v6: the
-// level's own kill flag decides (a killing-tower level), not its tag; deal.rushHard stays the switch (false since v5 R1).
-const rushOf = (L, tag, C) => !!(C.deal.rushHard && L.kill === true && L.towers && L.towers.length);
+// level's own archers decide (pin or kill: a hit costs the player), not its tag; deal.rushHard stays the switch (false
+// since v5 R1).
+const rushOf = (L, tag, C) => !!(C.deal.rushHard && L.archers && L.towers && L.towers.length);
 // The fast tapper's check (config fast) on a tag's grade g: a level much easier tapped fast than patiently (fast -
 // patient >= pts, or fast over ratio x patient and at least minPts over it) is retuned (the picker prefers candidates that pass).
 const fastBad = (g, C) => g.fast != null && (g.fast - g.rate >= C.fast.pts || (g.fast > C.fast.ratio * g.rate && g.fast - g.rate >= C.fast.minPts));
@@ -386,7 +387,7 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
     if (!inRun(n)) continue;
     const tag = tagN(n), b = bandOf(n, C, tag), era = eraOf(n, C), id = "e" + era + "-" + String(n).padStart(2, "0");
     if (teachBy.has(n)) {
-      const T = teachBy.get(n), L = Object.assign({ w: T.w, h: T.h, grid: T.grid }, T.pic ? { pic: true } : {}, { gates: T.gates || [], towers: T.towers || [], cols: T.cols }, T.links ? { links: T.links } : {}, T.lock ? { lock: T.lock } : {}, T.locks ? { locks: T.locks } : {}, T.kill ? { kill: true } : {}, T.safeArchers ? { safeArchers: true } : {}, T.pal ? { pal: T.pal } : {}, T.palette ? { palette: T.palette } : {}, T.hidden ? { hidden: T.hidden } : {}, T.liquid ? { liquid: T.liquid } : {}); // v5 R4: mystery blocks, a lava moat
+      const T = teachBy.get(n), L = Object.assign({ w: T.w, h: T.h, grid: T.grid }, T.pic ? { pic: true } : {}, { gates: T.gates || [], towers: T.towers || [], cols: T.cols }, T.links ? { links: T.links } : {}, T.lock ? { lock: T.lock } : {}, T.locks ? { locks: T.locks } : {}, T.archers ? { archers: T.archers } : {}, T.safeArchers ? { safeArchers: true } : {}, T.pal ? { pal: T.pal } : {}, T.palette ? { palette: T.palette } : {}, T.hidden ? { hidden: T.hidden } : {}, T.liquid ? { liquid: T.liquid } : {}); // v5 R4: mystery blocks, a lava moat
       if (T.tag && T.tag !== tag) say("level " + n + ": the teaching file's tag " + T.tag + " is not the schedule's " + tag);
       let g; try { g = gradeLevel(L, rules, C, T.win || null, seedOf(C, n, 0), n, tag); } catch (e) { say("level " + n + ": teaching level failed to grade: " + e.message); continue; }
       if (!g.win[tag]) say("level " + n + ": teaching level NOT winnable on its tag (" + tag + ")");
@@ -444,7 +445,7 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
   say("bake: " + levels.length + " levels picked in " + ((t1 - t0) / 1000).toFixed(1) + " s; forts " + tot.forts + ", deals " + tot.deals + ", tune evaluations " + tot.evals + ", full grades " + tot.grades + " (each on its level's tag)");
 
   // Second pass: order counts and safe taps (report only), the mystery flags and their planner measures.
-  const fin = levels.filter((l) => inRun(l.n)).map((l) => ({ kind: "finish", n: l.n, tag: l.tag, L: { w: l.w, h: l.h, grid: l.grid, pic: l.pic, gates: l.gates, towers: l.towers, cols: l.cols, links: l.links, lock: l.lock, locks: l.locks, kill: l.kill, safeArchers: l.safeArchers, hidden: l.hidden, win: l.win }, want: l.twists ? l.twists.mystery : 0, seed: l.seed || seedOf(C, l.n, 0) }));
+  const fin = levels.filter((l) => inRun(l.n)).map((l) => ({ kind: "finish", n: l.n, tag: l.tag, L: { w: l.w, h: l.h, grid: l.grid, pic: l.pic, gates: l.gates, towers: l.towers, cols: l.cols, links: l.links, lock: l.lock, locks: l.locks, archers: l.archers, safeArchers: l.safeArchers, hidden: l.hidden, win: l.win }, want: l.twists ? l.twists.mystery : 0, seed: l.seed || seedOf(C, l.n, 0) }));
   const done = await runPool(fin, threads, C, rules, Date.now() + C.budget.finishSec * 1000, (d, t) => { if (d % 20 === 0 || d === t) console.log("  finish " + d + "/" + t + "  " + ((Date.now() - t0) / 1000).toFixed(1) + " s"); });
   for (const f of done) {
     const l = levels.find((x) => x.n === f.n); if (!l) continue;

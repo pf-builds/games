@@ -22,7 +22,7 @@ const tagged = (f, s) => require(path.join(root, f)).levels.map((l) => Object.as
 const levels = [...tagged('levels/levels.json', 'siege'), ...tagged('levels/debug-v4.json', 'debug'), ...tagged('levels/gallery.json', 'gallery')].filter((l) => (!only || only.split(',').includes(l.id)) && (!set || l.set === set));
 const DIFFS = ['easy', 'normal', 'hard'], NAME = {}; for (const k in E.EV) NAME[E.EV[k]] = k;
 const rng = (seed) => () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
-const KEEP = new Set(['EAT', 'FREE', 'REVEAL', 'POWER', 'UNLOCK', 'KILL', 'GATE', 'TOWER', 'CLEAR', 'SHOW']); // v5 R4 fix: the Volley's CLEARs and mystery blocks' SHOWs
+const KEEP = new Set(['EAT', 'FREE', 'REVEAL', 'POWER', 'UNLOCK', 'KILL', 'GATE', 'TOWER', 'CLEAR', 'SHOW', 'PIN', 'REL']); // v6 1b: PIN, REL // v5 R4 fix: the Volley's CLEARs and mystery blocks' SHOWs
 function engine(L, d) {
   const C = E.compile(L), S = E.sim(C, E.rulesOf(cfg.v3, d, cfg.meta)); S.logOn = true; const evs = [];
   const drain = () => { if (S.evLost) evs.push([S.now, 'LOST']); for (let i = 0; i + 2 < S.evLen; i += 3) { const n = NAME[S.ev[i]]; if (KEEP.has(n)) evs.push(norm(S.now, n, S.ev[i + 1], S.ev[i + 2])); } S.clearLog(); };
@@ -71,7 +71,7 @@ function finish(kind, L, d, M, G, ops, issues) { cov.games++; for (const e of G.
   if (L.hidden) for (let c = 0; c < M.C.n; c++) if (!!M.G.hiddenCell(c) !== !!G.S.hiddenCell(c)) { issues.push(`hiddenCell(${c}) mine ${!!M.G.hiddenCell(c)} game ${!!G.S.hiddenCell(c)}`); break; } // v5 R4 fix
   if (kind.includes('power') && G.status !== PLAYING) for (let k = 0; k < 5; k++) { const rg = G.power(k, 0), rm = M.power(k, 0); cov.endNoplay++; if (rg.r !== NOPLAY || rm.r !== NOPLAY || rg.same !== true) { cov.endNoplayBad++; issues.push(`power ${k} after the end: game ${rg.r} (unchanged ${rg.same}) mine ${rm.r}`); } } cov.byKind[kind] = (cov.byKind[kind] || 0) + 1;
   const o = `${G.status}/${G.reason}`; cov.outcomes[o] = (cov.outcomes[o] || 0) + 1; if (G.reason === 'jam') cov.jamWhy[G.jamWhy] = (cov.jamWhy[G.jamWhy] || 0) + 1;
-  if (M.G.kills) cov.killGames++; if (M.G.log.some((e) => e.e === 'UNLOCK')) cov.unlockGames++;
+  if (M.G.kills) cov.killGames++; if (M.G.log.some((e) => e.e === 'PIN')) cov.pinGames = (cov.pinGames || 0) + 1; if (M.G.log.some((e) => e.e === 'UNLOCK')) cov.unlockGames++;
   if (M.status !== G.status || M.reason !== G.reason) issues.push(`status mine ${M.status}/${M.reason} game ${G.status}/${G.reason}`);
   if (G.reason === 'jam' && M.jamWhy !== G.jamWhy) issues.push(`jamWhy mine ${M.jamWhy} game ${G.jamWhy}`);
   const canon = (l) => l.map((e, i) => [e, i]).sort((x, y) => x[0][0] - y[0][0] || (key(x[0]) < key(y[0]) ? -1 : key(x[0]) > key(y[0]) ? 1 : 0)).map((x) => x[0]);
@@ -123,7 +123,7 @@ console.log('tags (formula from SPEC v4.3 + configs):', JSON.stringify(tagCount)
 console.log('picture-format problems (levels):', fmt.length, JSON.stringify(fmt.slice(0, 5)));
 console.log('park limits along stored orders (at rest: <= 2 squads waiting, none over parkMax 6, none while a tower stands):', park.length, 'rest states over;', JSON.stringify(park.slice(0, 8)));
 console.log('my refusal reasons:', JSON.stringify(cov.why), '| power after the end: NOPLAY checks', cov.endNoplay, 'bad', cov.endNoplayBad);
-console.log('outcomes', JSON.stringify(cov.outcomes), 'jamWhy', JSON.stringify(cov.jamWhy), 'killGames', cov.killGames, 'unlockGames', cov.unlockGames, 'hidden checks', cov.hiddenChecks);
+console.log('outcomes', JSON.stringify(cov.outcomes), 'jamWhy', JSON.stringify(cov.jamWhy), 'killGames', cov.killGames, 'pinGames', cov.pinGames || 0, 'unlockGames', cov.unlockGames, 'hidden checks', cov.hiddenChecks);
 for (const g of gradeBad.slice(0, 6)) console.log('GRADE', g.id, g.d, g.bad.join('; '));
 const byKind = {}; for (const m of mism) byKind[m.kind] = (byKind[m.kind] || 0) + 1; console.log('mismatches by kind', JSON.stringify(byKind));
 for (const m of mism.slice(0, +arg('show', 8))) console.log(`MISMATCH ${m.kind} ${m.id} ${m.d} ops[${m.ops.slice(0, 300)}]\n   ${m.issues.slice(0, 3).join('\n   ').slice(0, 900)}`);

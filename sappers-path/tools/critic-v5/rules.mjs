@@ -24,6 +24,11 @@
 // (KILL; the dead sapper is finished; its colour with fewer sappers than standing blocks fails "short"); locks: [one or
 // two] (lock: one), each shutting its own space of the line's last ones (lock 0 the left), opening on its own key or
 // colour; a squad takes the lowest space neither held nor shut; a Ladder's space goes in before the shut run at the end.
+// Stage 1b (the same entry, amended): archers: "kill" (as above) | "pin": the shooter is the lowest-numbered standing tower
+// whose ring holds the target at the send; at the hit (PIN) the sapper lies pinned, still out for its squad, no event;
+// when its shooter's last block goes (after TOWER) the ones it pinned are released in send order (REL) and walk back
+// (yard + ceil(tiles/2) x tile), then wait again; a Volley of its squad's colour cuts a pinned one loose (REL) before the
+// spaces free. jamWhy bit 8 while anyone is pinned.
 export const GRASS = -1, DIRT = -2, CAMP = -3, WATER = -4, IRON = 10, GILT = 14, MAXLINE = 8;
 const WALK = (v) => v === GRASS || v === DIRT || v === CAMP;
 export const PLAYING = 0, WON = 1, FAILED = -1, NOPLAY = -2, REFUSED = -3;
@@ -63,7 +68,7 @@ export function compile(L) { if (L.ring) throw new Error('ring levels are retire
     const a = Math.min(x, y, w - 1 - x, h - 1 - y), x1 = w - 1 - a, y1 = h - 1 - a; let side, pos;
     if (y === a && x < x1) { side = 0; pos = x - a; } else if (x === x1 && y < y1) { side = 1; pos = y - a; } else if (y === y1 && x > a) { side = 2; pos = x1 - x; } else if (x === a && y > a) { side = 3; pos = y1 - y; } else { side = 0; pos = 0; }
     tie[c] = [a, pos, side]; }
-  return { w, h, n, a0, campRow, gates, towers, isTower, cards, cols, locks, kill: L.kill === true, safe: !!L.safeArchers, ring: !!L.ring, tie, hid, clearRank };
+  return { w, h, n, a0, campRow, gates, towers, isTower, cards, cols, locks, kill: L.archers === 'kill', pin: L.archers === 'pin', safe: !!L.safeArchers, ring: !!L.ring, tie, hid, clearRank };
 }
 
 class Heap { constructor() { this.a = []; }
@@ -88,7 +93,7 @@ export class Game {
     for (let i = 0; i < n; i++) if (this.a[i] > 0) { this.standing[this.a[i]]++; this.pix[this.a[i]].push(i); }
     this.pixLeft = this.standing.reduce((s, v) => s + v, 0);
     this.q = new Heap(); this.seq = 0; this.now = 0; this.status = PLAYING; this.reason = ''; this.plays = 0; this.peak = 0; this.placeSeq = 0;
-    this.log = []; this.dirty = true; this.dist = new Int32Array(n); this.jamWhy = 0; this.winAt = -1; this.hits = 0; this.kills = 0;
+    this.log = []; this.dirty = true; this.dist = new Int32Array(n); this.jamWhy = 0; this.winAt = -1; this.hits = 0; this.kills = 0; this.pins = []; this.sent = 0;
     this.shown = new Uint8Array(n); this.unseen = []; for (let c = 0; c < n; c++) if (C.hid[c]) this.unseen.push(c); this.expose(false); // at load: nothing logged
     this.revealFronts(); this.checkRest();
   }
@@ -177,7 +182,7 @@ export class Game {
   // The Volley on colour m (SPEC-v4 §9 v5 R1): POWER 4 m, its pixels cleared in the clear order, its cards out of the
   // columns (cut), its squads out of the line, its sappers 0, a colour lock of m open; then the dispatch (in power()).
   removeCell(c, how) { const m = this.a[c]; this.a[c] = DIRT; this.claimed[c] = 0; this.standing[m]--; this.pixLeft--; this.dirty = true; this.ev(how, { c, m });
-    if (this.C.isTower[c]) this.C.towers.forEach((tw, k) => { if (tw.cells.includes(c)) { this.towerLeft[k]--; if (!this.towerLeft[k]) this.ev('TOWER', { k }); } });
+    if (this.C.isTower[c]) this.C.towers.forEach((tw, k) => { if (tw.cells.includes(c)) { this.towerLeft[k]--; if (!this.towerLeft[k]) { this.ev('TOWER', { k }); this.unpinTower(k); } } });
     this.keyGone(c);
     if (this.gateOfKey.has(c)) { for (const g of this.C.gates[this.gateOfKey.get(c)].cells) if (this.a[g] > 0) { this.standing[this.a[g]]--; this.a[g] = DIRT; this.pixLeft--; } this.ev('GATE', {}); }
     this.expose(true); }
@@ -185,6 +190,7 @@ export class Game {
     for (const c of this.C.clearRank) if (this.a[c] === m && !this.gateCell[c]) this.removeCell(c, 'CLEAR');
     for (let col = 0; col < 5; col++) for (const id of this.cols[col].slice()) { const cd = this.C.cards[id]; if (cd.m !== m) continue; const list = this.cols[col], wasFront = list[0] === id; this.seen(id); list.splice(list.indexOf(id), 1);
       if (wasFront) { const f = this.front(col); if (f >= 0) this.seen(f); } if (cd.partner >= 0) { this.C.cards[cd.partner].partner = -1; cd.partner = -1; } this.cn[id] = 0; }
+    for (const p of this.pins.slice().sort((a, b) => a.sid - b.sid)) { const q = this.squads[p.s]; if (q.m !== m || q.space < 0 || this.spaces[q.space] !== q.id) continue; this.pins.splice(this.pins.indexOf(p), 1); q.pinned--; this.ev('REL', {}); } // 1b: cut loose
     for (const s of this.squads.slice().sort((x, y) => x.ord - y.ord)) { if (s.m !== m || s.space < 0 || this.spaces[s.space] !== s.id) continue; s.waiting = 0; s.cut = true; s.done = true; s.enRoute = 0; s.out = 0;
       const p = s.partner >= 0 ? this.squads[s.partner] : null; if (p) { p.partner = -1; s.partner = -1; } this.spaces[s.space] = -1; this.ev('FREE', { sp: s.space, m }); s.space = -1;
       if (p && p.done && p.space >= 0 && this.spaces[p.space] === p.id) { this.spaces[p.space] = -1; this.ev('FREE', { sp: p.space, m: p.m }); } } // its partner, done and held only by the link, frees with it
@@ -198,22 +204,27 @@ export class Game {
     const live = this.squads.filter((s) => s.space >= 0 && !s.done).sort((x, y) => x.ord - y.ord);
     for (const s of live) { if (s.waiting <= 0 || t < s.last + T.staggerMs) continue; const tg = this.target(s.m, s.wary); if (!tg) continue;
       s.waiting--; s.out++; s.last = t; const tiles = tg.d + 1;
-      if (this.covered(tg.c)) { s.wary = true; this.sched(t + T.yardMs + Math.ceil(tiles / 2) * T.tileMs, 'HIT', { s: s.id, tiles, c: tg.c }); }
+      const sid = this.sent++;
+      if (this.covered(tg.c)) { s.wary = true; const tw = this.C.pin ? this.shooter(tg.c) : -1; this.sched(t + T.yardMs + Math.ceil(tiles / 2) * T.tileMs, 'HIT', { s: s.id, tiles, c: tg.c, tw, sid }); }
       else { this.claimed[tg.c] = 1; s.enRoute++; this.sched(t + T.yardMs + tiles * T.tileMs + T.biteMs, 'POP', { s: s.id, c: tg.c, tiles }); }
       if (s.waiting > 0) this.sched(t + T.staggerMs, 'WAKE', {}); } }
+  shooter(c) { const { w } = this.C; return this.C.towers.findIndex((t, k) => this.towerLeft[k] && ((c % w) - t.cx) ** 2 + (((c / w) | 0) - t.cy) ** 2 <= t.r * t.r); }
+  // 1b: tower k fell: the sappers it pinned walk back, in send order.
+  unpinTower(k) { const T = this.T; for (const p of this.pins.filter((q) => q.tw === k).sort((a, b) => a.sid - b.sid)) { this.pins.splice(this.pins.indexOf(p), 1); const s = this.squads[p.s]; s.pinned--; this.ev('REL', {});
+      s.enRoute++; this.sched(this.now + T.yardMs + Math.ceil(p.tiles / 2) * T.tileMs, 'BACK', { s: s.id }); } }
   finish(s) { if (s.done || s.waiting > 0 || s.out > 0) return; s.done = true;
     const p = s.partner >= 0 ? this.squads[s.partner] : null; if (p && !p.done) return;
     const list = p ? [s, p].sort((x, y) => x.ord - y.ord) : [s];
     for (const q of list) { this.spaces[q.space] = -1; this.ev('FREE', { sp: q.space, m: q.m }); } }
   sappersOf(m) { let k = 0; for (let col = 0; col < 5; col++) for (const id of this.cols[col]) if (this.C.cards[id].m === m) k += this.cn[id];
-    for (const s of this.squads) if (s.m === m && !s.recalled) k += s.waiting + s.enRoute; return k; }
+    for (const s of this.squads) if (s.m === m && !s.recalled) k += s.waiting + s.enRoute + (s.pinned || 0); return k; }
   handle(ev) { const T = this.T, s = ev.s !== undefined ? this.squads[ev.s] : null; // HOME of a carrier has no squad
     if (ev.type === 'WAKE') return;
     if (ev.type === 'POP' && s.cut) { this.sched(this.now + T.yardMs + ev.tiles * T.carryMs, 'HOME', { carrier: 1 }); return; } // v5 R4 fix: a walker the Volley cut loose arrives at nothing and walks home
     if ((ev.type === 'HIT' || ev.type === 'BACK') && s.cut) return;
     if (ev.type === 'POP') { const c = ev.c, m = this.a[c]; this.a[c] = DIRT; this.claimed[c] = 0; this.standing[m]--; this.pixLeft--; this.dirty = true; s.enRoute--;
       this.ev('EAT', { c, m });
-      if (this.C.isTower[c]) this.C.towers.forEach((tw, k) => { if (tw.cells.includes(c)) { this.towerLeft[k]--; if (!this.towerLeft[k]) this.ev('TOWER', { k }); } });
+      if (this.C.isTower[c]) this.C.towers.forEach((tw, k) => { if (tw.cells.includes(c)) { this.towerLeft[k]--; if (!this.towerLeft[k]) { this.ev('TOWER', { k }); this.unpinTower(k); } } });
       this.keyGone(c);
       if (this.gateOfKey.has(c)) { for (const g of this.C.gates[this.gateOfKey.get(c)].cells) if (this.a[g] > 0) { this.standing[this.a[g]]--; this.a[g] = DIRT; this.pixLeft--; } this.ev('GATE', {}); }
       this.expose(true);
@@ -226,6 +237,7 @@ export class Game {
       if (this.lethal) { s.out--; this.kills++; this.ev('KILL', { m: s.m });
         if (this.status === PLAYING && this.sappersOf(s.m) < this.standing[s.m]) { this.status = FAILED; this.reason = 'short'; }
         this.finish(s); }
+      else if (this.C.pin && ev.tw >= 0 && this.towerLeft[ev.tw]) { this.ev('PIN', { m: s.m }); s.pinned = (s.pinned || 0) + 1; this.pins.push({ s: s.id, tiles: ev.tiles, tw: ev.tw, sid: ev.sid }); }
       else { this.ev('HIT', { m: s.m }); const half = Math.ceil(ev.tiles / 2); s.enRoute++; this.sched(this.now + T.knockMs + T.yardMs + half * T.tileMs, 'BACK', { s: s.id }); }
       return; }
     if (ev.type === 'BACK') { s.out--; s.enRoute--; s.waiting++; return; } }
@@ -240,6 +252,6 @@ export class Game {
     let cards = 0; for (let col = 0; col < 5; col++) cards += this.cols[col].length;
     if (!cards) { this.status = FAILED; this.reason = 'stuck'; return; }
     let any = false; for (let col = 0; col < 5; col++) if (this.legal(col)) any = true;
-    if (!any) { this.status = FAILED; this.reason = 'jam'; this.jamWhy = (this.free() > 0 ? 1 : 0) | (this.locked > 0 ? 2 : 0) | ([0, 1, 2, 3, 4].some((c) => this.whyCol(c) === 3) ? 4 : 0); } }
+    if (!any) { this.status = FAILED; this.reason = 'jam'; this.jamWhy = (this.free() > 0 ? 1 : 0) | (this.locked > 0 ? 2 : 0) | ([0, 1, 2, 3, 4].some((c) => this.whyCol(c) === 3) ? 4 : 0) | (this.pins.length ? 8 : 0); } }
 }
 const cmp = (a, b) => { for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] - b[i]; return 0; };

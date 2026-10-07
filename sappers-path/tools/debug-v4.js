@@ -17,7 +17,8 @@
 //   ~/.local/opt/node/bin/node tools/debug-v4.js --add-v6   Campaign v6 stage 1: build the two v6 debug levels from the
 //                                                           shipped levels/levels.json and add them (or replace them) at
 //                                                           the end of the file; the four v4 levels are re-solved as usual.
-//   v6-kill: level 125's board and deck (the archer tower's lesson) with kill: true. v6-locks: level 96's board and deck
+//   v6-kill: level 125's board and deck (the archer tower's lesson) with archers: "kill"; v6-pin (stage 1b): the same with
+//   archers: "pin". v6-locks: level 96's board and deck
 //   with two locks: a colour lock (lock 0, the left socket; the colour whose first squad comes nearest 40% of 96's stored
 //   order) and 96's own key lock (lock 1). Both solved and verified like the rest (their orders never meet a kill).
 "use strict";
@@ -107,13 +108,14 @@ function solveAll(L) {
 function v6(LS) {
   const by = (n) => LS.find((l) => l.n === n);
   const base = (src, id, name, hint) => Object.assign(copy(Object.assign({ w: src.w, h: src.h, grid: src.grid }, src.pic ? { pic: true } : {}, { gates: src.gates || [], towers: src.towers || [], cols: src.cols }, src.pal ? { pal: src.pal } : {}, src.links ? { links: src.links } : {})), { id, name, hint, from: src.id });
-  const k = by(125), K = Object.assign(base(k, "v6-kill", "Deadly archers", "Archers kill here: a sapper they hit is lost. Tower first."), { kill: true });
+  const k = by(125), K = Object.assign(base(k, "v6-kill", "Deadly archers", "Archers kill here: a sapper they hit is lost. Tower first."), { archers: "kill" });
+  const P = Object.assign(base(k, "v6-pin", "Pinning archers", "Archers pin here: a sapper they hit lies still until its tower falls."), { archers: "pin" });
   const l = by(96), Lk = base(l, "v6-locks", "Two locks", "Two spaces are locked: one opens with its key, one with its colour."), o = l.win[l.tag];
   const B = E.compile(Object.assign({}, Lk, { lock: l.lock })), S = E.sim(B, rules.normal), first = new Map();
   for (let i = 0; i < o.length; i++) { const ci = S.front(+o[i]), p = S.partner(ci); for (const c of p >= 0 ? [ci, p] : [ci]) { const m = B.cardM[c]; if (m !== E.GILT && !first.has(m)) first.set(m, i); } S.play(+o[i]); S.quiet(); }
   const want = 0.4 * o.length, m = [...first].sort((p, q) => Math.abs(p[1] - want) - Math.abs(q[1] - want) || p[1] - q[1])[0][0];
   Lk.locks = [{ colour: m }, copy(l.lock)];
-  return [solveAll(K), solveAll(Lk)];
+  return [solveAll(K), solveAll(P), solveAll(Lk)];
 }
 
 function all() {
@@ -126,11 +128,11 @@ function all() {
 }
 
 const FILE = JSON.parse(fs.readFileSync(OUT, "utf8")), ADD6 = process.argv.includes("--add-v6");
-let levels = RB > 0 ? all() : FILE.levels.map((L) => solveAll(copy(L)));
+let levels = RB > 0 ? all() : FILE.levels.filter((L) => !(ADD6 && /^v6-/.test(L.id))).map((L) => solveAll(copy(L))); // --add-v6 builds the v6 ones afresh
 if (ADD6) { const nu = v6(require("../levels/levels.json").levels); levels = levels.filter((L) => !nu.some((x) => x.id === L.id)).concat(nu); }
-const text = JSON.stringify({ version: 2, note: "Sapper's Path v4 M2 debug levels (tools/debug-v4.js): one per twist and one with all three, copied from the v3 bake's levels (M3 re-solved their stored orders under the v4 timing; v4.3 re-solved them on the Normal tag under the v4.3 rules; campaign v6 stage 1 added v6-kill and v6-locks with --add-v6). Loaded only under ?debug=1; never in the save's progress.", levels }, null, 0).replace(/\{"id"/g, "\n{\"id\"") + "\n";
+const text = JSON.stringify({ version: 2, note: "Sapper's Path v4 M2 debug levels (tools/debug-v4.js): one per twist and one with all three, copied from the v3 bake's levels (M3 re-solved their stored orders under the v4 timing; v4.3 re-solved them on the Normal tag under the v4.3 rules; campaign v6 stage 1 added v6-kill, v6-pin and v6-locks with --add-v6). Loaded only under ?debug=1; never in the save's progress.", levels }, null, 0).replace(/\{"id"/g, "\n{\"id\"") + "\n";
 if (process.argv.includes("--check")) {
   const same = fs.existsSync(OUT) && fs.readFileSync(OUT, "utf8") === text;
   console.log(same ? "debug-v4.json matches a fresh " + (RB > 0 ? "build" : "re-solve") : "debug-v4.json differs from a fresh " + (RB > 0 ? "build" : "re-solve")); process.exitCode = same ? 0 : 1;
 } else { const oi = process.argv.indexOf("--out"), dest = oi > 0 ? path.resolve(process.argv[oi + 1], "debug-v4.json") : OUT; fs.writeFileSync(dest, text); console.log("wrote " + dest); }
-for (const L of levels) console.log(L.id.padEnd(11) + " from " + L.from + ", " + L.cols.reduce((a, c) => a + c.length, 0) + " cards, links " + (L.links || []).length + (L.lock ? ", lock key " + JSON.stringify(L.lock.key) : "") + (L.locks ? ", locks " + JSON.stringify(L.locks) : "") + (L.kill ? ", kill" : "") + "; tag " + L.tag + ", taps " + L.win[TAG].length);
+for (const L of levels) console.log(L.id.padEnd(11) + " from " + L.from + ", " + L.cols.reduce((a, c) => a + c.length, 0) + " cards, links " + (L.links || []).length + (L.lock ? ", lock key " + JSON.stringify(L.lock.key) : "") + (L.locks ? ", locks " + JSON.stringify(L.locks) : "") + (L.archers ? ", archers " + L.archers : "") + "; tag " + L.tag + ", taps " + L.win[TAG].length);
