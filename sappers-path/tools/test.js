@@ -1746,15 +1746,15 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
 // fort, every when-word is one the page reads, and the words have no em dash or exclamation mark.
 {
   const fs = require("fs"), path = require("path"), CFG = require("../config.json"), TU = JSON.parse(fs.readFileSync(path.join(__dirname, "../levels/tutorial.json"), "utf8"));
-  const ST = TU.steps, R = E.rulesOf(V3, "normal"), WORDS = ["never", "play", "used", "wait", "lineEmpty", "full", "reveal", "shown", "pick", "power", "clear", "won", "jammed"];
+  const ST = TU.steps, R = E.rulesOf(V3, "normal"), WORDS = ["never", "play", "used", "wait", "lineEmpty", "full", "reveal", "shown", "pick", "power", "canRecall", "clear", "won", "jammed"];
   const others = new Set(LEVELS_ALL.levels.map((l) => l.id).concat(require("../levels/teaching.json").levels.map((l) => l.id), require("../levels/zen.json").levels.map((l) => l.id), require("../levels/gallery.json").levels.map((l) => l.id)));
-  const words = (w) => String(w).split("|").every((a) => a.split("&").every((x) => WORDS.indexOf(x.split(":")[0]) >= 0));
+  const words = (w) => String(w).split("|").every((a) => a.split("&").every((x) => WORDS.indexOf(x.replace(/^!/, "").split(":")[0]) >= 0));
   eq([ST.length, CFG.tutorial.file, [CFG.save.key, CFG.zen.save.key].indexOf(CFG.tutorial.key)], [8, "levels/tutorial.json", -1], "tour: 8 practice forts (the 9th step is the closing card), its own seen-flag key apart from both saves");
   for (const st of ST) {
     const L = Object.assign({ id: st.id }, st.board), B = E.compile(L), sums = [];
     for (let m = 1; m < E.NMAT; m++) if (B.pix[m] !== B.sapTotal[m]) sums.push(m);
     const S = E.replay(B, R, L.win.normal), cols = new Set(); for (let i = 0; i < B.ncards; i++) cols.add(B.cardM[i]);
-    const ptr = [].concat(st.coach, st.coach2 || []).every((c) => (c.card == null || cols.has(c.card)) && words(c.go) && c.say.length <= 56 && (!c.short || c.short.length <= 26));
+    const ptr = [].concat(st.coach, st.coach2 || []).every((c) => (c.card == null || cols.has(c.card)) && words(c.go) && (!c.skip || words(c.skip)) && c.say.length <= 56 && (!c.short || c.short.length <= 26));
     ok(L.pic === true && B.w * B.h <= 81 && !others.has(st.id) && !sums.length && !E.check(L).length && S.status === E.WON && ptr && words(st.done) && (!!st.final || st.say.length > 0),
       "tour " + st.id + " (" + st.name + "): a " + B.w + "x" + B.h + " picture board of its own, cards = blocks per colour" + (sums.length ? " (not " + sums + ")" : "") + ", its order " + L.win.normal + " wins (" + S.now + " ms patient), coach pointers and words valid");
   }
@@ -1771,8 +1771,8 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
     eq([!!m, [...tones[m]].sort().join(""), !!(P && P.sh && P.sh[0] && P.sh[1]), cards.length, cards[0][1] === B.pix[m]], [true, "012", true, 1, true], "tour " + st.id + ": " + (P ? P.n : "?") + " in 3 shades (base, lighter, darker, each with its colour) and one card for every block of it"); }
   { const ids = CFG.meta.powers.map((p) => p.id), pw = ST.filter((s) => s.powers);
     eq(pw.map((s) => [s.id, s.powers.every((id) => ids.indexOf(id) >= 0)]), [["tut-7", true]], "tour: the practice power-ups are real ones (" + pw.map((s) => s.powers.join("+")) + "), only on fort 7"); }
-  { const text = JSON.stringify([TU.offer, TU.ui, TU.close, ST.map((s) => [s.name, s.say, s.more, s.jamNote, s.coach, s.coach2])]);
-    eq([/—|–/.test(text), /!/.test(text)], [false, false], "tour: its words have no em or en dash and no exclamation mark"); }
+  { const text = JSON.stringify([TU.offer, TU.ui, TU.close, ST.map((s) => [s.name, s.say, s.more, s.jamNote, [].concat(s.coach, s.coach2 || []).map((c) => [c.say, c.short])])]); // the words shown (a when-word's "!" is not one)
+    eq([/—|–/.test(text), /!/.test(text), TU.offer.say], [false, false, "Learn in a couple of minutes on a tiny practice fort. Nothing to lose."], "tour: its words have no em or en dash and no exclamation mark; the offer is Peter's line"); }
 }
 
 console.log(pass + " passed, " + fail + " failed");

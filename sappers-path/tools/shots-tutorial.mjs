@@ -3,7 +3,7 @@
 // then every step through real clicks on the tray's cards, the power-up badges, the line's spaces and the tour's own
 // buttons: each fort at its first coach line, after its first tap, its done card (fort 4: the jam's real sheet and the
 // second script after Retry; fort 8: the real win sheet), the closing card, the Campaign map it opens, and Settings with
-// How to play. Times each step on the game clock (the 60 seconds) and keeps the console (0 messages expected).
+// How to play. Times each step on the game clock (the offer says "a couple of minutes") and keeps the console (0 messages expected).
 //   PLAYWRIGHT_MODULE=$(npm root -g)/playwright/index.mjs node tools/shots-tutorial.mjs [--url http://127.0.0.1:8498/sappers-path/]
 import { mkdirSync, writeFileSync } from "node:fs"; import { dirname, resolve } from "node:path"; import { fileURLToPath } from "node:url";
 const arg = (k, d) => { const i = process.argv.indexOf("--" + k); return i > 0 ? process.argv[i + 1] : d; };

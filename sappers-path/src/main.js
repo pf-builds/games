@@ -1446,6 +1446,7 @@
     if (!el && st.linked) { const j = linkedFront(); if (j >= 0) el = app.cards[j]; }
     if (!el && st.lockSlot && S.locked > 0) el = app.slots[S.cap - 1];
     if (!el && st.power) { const b = app.pws[E.POWERS.indexOf(st.power)]; if (b && !b.hidden) el = b; } // v5 R2: a power-up's badge (the level that unlocks it)
+    if (!el && st.slot) el = app.slots.find((q) => q.classList.contains("pickable")) || null; // v6 lane B part 2: the space a power-up can take (the tour's Recall)
     if (!el && st.line) el = $("line");
     // A ring on the board: the first gate's key (or the gate once the key is gone), the first standing tower.
     if (st.ring === "key" || st.ring === "gate") { const k = 0, kc = V.keyC[k]; if (B.gateCells.length) { if (st.ring === "key" && kc >= 0 && S.a[kc] > 0) Object.assign(V.focus, { on: true, x: kc % B.w + 0.5, y: ((kc / B.w) | 0) + 0.5, r: 1.1 }); else Object.assign(V.focus, { on: true, x: V.gX[k], y: V.gY[k], r: 1.6 }); } }
@@ -1494,6 +1495,7 @@
     else if (el && el.classList.contains("slot")) {
       const r = el.getBoundingClientRect(), head = $("line-head").getBoundingClientRect(); x = r.left + r.width / 2; y = r.top + H.downIn; kind = "slot";
       const shift = head.right - (x - H.halfW) + H.gap; if (shift > 0) $("line-cnt").style.setProperty("--cnt-shift", Math.ceil(shift) + "px");
+    } else if (el && el.classList.contains("pw") && app.tut && app.tut.on) { const r = el.getBoundingClientRect(); x = r.left + r.width / 2; y = r.top + H.downIn; kind = "badge"; // v6 lane B part 2: the tour's arrow on a badge, from above
     } else if (el && el.id === "line") {
       const a = $("line-lab").getBoundingClientRect(), b = $("line-cnt").getBoundingClientRect(), r = el.getBoundingClientRect(), right = b.width ? b.left : r.right;
       if (right - a.right < 2 * (H.halfW + H.gap)) { hand.hidden = true; app.handKind = "none"; return; }

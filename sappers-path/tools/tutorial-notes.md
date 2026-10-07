@@ -7,7 +7,7 @@ remakes them, with step timings in its `notes.txt`). Dev server 8498 (worktree r
 
 ## 1. What the player sees
 
-- **First launch:** over the home, "New here?" / "Learn in 60 seconds on a tiny practice fort. Nothing to lose." with
+- **First launch:** over the home, "New here?" / "Learn in a couple of minutes on a tiny practice fort. Nothing to lose." with
   Show me and Skip, and a foot line: "It's in Settings > How to play any time." Escape is Skip. Offered once per launch,
   only while the seen flag is unset and the player has cleared nothing in either mode (an updating player with progress
   is not new; `config tutorial.offerIfProgress`). A level started some other way while it shows (automation) hides it,
@@ -29,12 +29,15 @@ remakes them, with step timings in its `notes.txt`). Dev server 8498 (worktree r
      ("That's a jam. Tap Retry and open the wall first."), Retry and Skip tour (no Map, no paid continue). Retry is the
      game's own: one tap restarts this fort, now with a second script (tap blue to bring red up, tap red, send the rest).
      Done on the win. A player who taps red early simply wins; the done card says the same lesson.
-  5. Hidden things: a ? card behind the first red; tapping red turns it over at the front. Ten ? blocks inside the
-     fort show their colour as red is dug away (ring on the ? block nearest the entry). Done when both have happened.
+  5. Hidden things: a ? card behind the first red; tapping red turns it over at the front, and the coach (arrow on red)
+     says to tap red again. Ten ? blocks inside the fort show their colour as red is dug away; then the ringed line about
+     ? blocks, which stays up (dwellMs) before the done card. Done when both have happened.
   6. Shades: one orange fort in light (#ffbc46), mid (#ff9900) and dark (#dc7700): Kitten Forest's own orange and its
      shades, the ones Peter read as brown. One orange card of 31 clears all of it.
-  7. Power-ups: yellow is walled in and waits; a practice Recall (tap it, then the waiting squad) sends it back to the
-     front; a practice Ladder adds a sixth space. The done card adds a line each for Quartermaster, Scout and Volley.
+  7. Power-ups: yellow is walled in and waits; a practice Recall (arrow on its badge; then the arrow on the waiting
+     squad's own space) sends it back to the front; a practice Ladder (arrow on its badge) adds a sixth space. The done
+     card adds a line each for Quartermaster, Scout and Volley. Green first (the wall already open): the yellow and Recall
+     lines pass by (`skip`: nothing waits) and the Ladder's comes up; done after the Ladder or the win.
   8. Clear the fort: three colours, a wall, no pointer. The game's real win sheet: "Fort razed!", the line "The goblin
      king flees. Practice fort cleared." (the castle's words with "Practice fort" for the level), no coins, report or
      ribbon, Next and Skip tour.
@@ -42,8 +45,23 @@ remakes them, with step timings in its `notes.txt`). Dev server 8498 (worktree r
      get hard, with the Goblin King at the top.") or Zen ("Pictures to dig out at your own pace."; hidden when the build
      has no Zen), each opening that mode's map (the map's own mode switch, `switchMode`), and Not now (home).
 - **Skip tour** on every step (top bar, done card, the real sheet's second button), no confirm: home at once.
-- **Length:** the shots script, tapping as soon as the squads are home, takes 50-51 s of game clock for the eight forts
-  (3.6, 2.4, 4.5, 11.4, 4.2, 3.4, 3.6, 16.8 s) plus reading time.
+- **Length:** the shots script, tapping as soon as the squads are home, takes 53 s of game clock for the eight forts
+  (3.6, 2.3, 4.5, 11.4, 5.1, 3.3, 5.1, 16.8 s). With reading (about 25 coach lines, 7 done cards, about 230 words) and
+  a first-timer's pauses, an estimated 2.5 to 3.5 minutes: hence Peter's offer line "a couple of minutes".
+
+## 1b. Fix pass (the critic's report, tools/critic-tutorial.md)
+
+- M1: fort 5's second line instructs ("It turned over. Now tap red again to dig in.", arrow on red) until a ? block
+  shows. Every done card now also waits until the coach line showing has been up `dwellMs` (2,500 ms) or the player
+  has tapped since, so the ringed ? block line is read.
+- M2: a `slot` pointer (main.js renderCoach): the arrow on the space a picked power-up can take, from above.
+- m1: a coach line's `skip` (when-words, a leading `!` negates; new word `canRecall`) passes it by when it no longer
+  fits; fort 7's yellow and Recall lines skip once green has opened the wall.
+- m2: under a done card, Retry (top bar, R) and the card keys do nothing (capture listeners; Retry dimmed).
+- m4: the arrow comes down onto a power-up badge during the tour (main.js placeHand, gated on the tour).
+- m5: `config tutorial.maxCellCss` (56) replaces board.maxCellCss (22) while the tour runs, restored after: the forts
+  fill the board's room (1280x720: 504x560 px, was about 208x230; 375x812: 351x390).
+- Peter's copy: the offer reads "Learn in a couple of minutes on a tiny practice fort. Nothing to lose."
 
 ## 2. The hidden-block rule as implemented (engine.js, v5 R1)
 
@@ -64,7 +82,7 @@ words (`go`, `done`; `|` any, `&` all): play, used:m, wait, lineEmpty, full, rev
 won, jammed, never. Parsed once at load into arrays; read each frame with no allocation.
 
 `config.json` `tutorial` (a new top-level key before `selfTest`): `key` (`sappers-path.tour.v1`), `file`, `doneMs`,
-`offerIfProgress`. Zero new image bytes (the ? icon is inline SVG).
+`dwellMs`, `maxCellCss`, `offerIfProgress`. Zero new image bytes (the ? icon is inline SVG).
 
 ## 4. How it is isolated (src/tutorial.js)
 
@@ -89,12 +107,14 @@ won, jammed, never. Parsed once at load into arrays; read each frame with no all
 Everything else is in new files: `src/tutorial.js`, `tutorial.css`, `levels/tutorial.json`, `tools/shots-tutorial.mjs`,
 this file.
 
-- `src/main.js` (5 one-line hunks, no reformatting):
+- `src/main.js` (7 one-line hunks, no reformatting; 6 and 7 from the fix pass):
   1. boot, after `showScreen("title"); layout();`: `if (NS.tutorial) app.tut = NS.tutorial.init({ app, $, v: V_, getJSON, storage, startLevel, showScreen, retry, switchMode, renderCoach, csave, zsave, zenOn, SP });`
   2. step(), after `V.clock = app.clock;`: `if (app.tut) app.tut.step();`
   3. showPanel(), last line: `if (app.tut) app.tut.panel(e);`
   4. coachSteps: `(app.cfg.teach || {})[e.id] || e.L.coach || (e.L.hint ...` (a practice fort's own script)
   5. selfTest, first line in its `try {`: `if (app.tut) app.tut.selfTest(ok, out);`
+  6. renderCoach, after the `st.power` pointer: `if (!el && st.slot) el = app.slots.find((q) => q.classList.contains("pickable")) || null;`
+  7. placeHand, a branch before the `#line` one: a `.pw` badge gets the arrow from above while `app.tut.on`.
 - `index.html`: `<link rel="stylesheet" href="tutorial.css?v=47">` after style.css's link and
   `<script src="src/tutorial.js?v=47"></script>` before main.js's; the cache tag 46 -> 47 on every `?v=` (a separate
   commit; the fix pass will bump too: take the higher number and bump once more at the merge).

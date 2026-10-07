@@ -6,6 +6,9 @@
 .tut-skip { flex: none; min-height: 44px; min-width: 44px; padding: 0 10px; font-size: 21px; line-height: 1; white-space: nowrap; }
 body.tut #btn-map, body.tut #top .tog-speed, body.tut #set-tour, body.tut #set-copy, body.tut #set-load, body.tut #set-reset, body.tut-nopw #powers { display: none; }
 
+/* Under a done card the fort holds: Retry rests (tutorial.js also ignores it and the R and card keys). */
+body.tut-carded #btn-retry { opacity: .4; pointer-events: none; }
+
 /* The offer and the closing card: the game's modal sheet. */
 .tut-modal .sheetcard { max-width: 400px; }
 .tut-modal .p-title { font-size: 40px; }

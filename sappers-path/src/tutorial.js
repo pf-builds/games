@@ -18,14 +18,15 @@
   function init(P) {
     const app = P.app, $ = P.$, E = NS.engine, C = app.cfg.tutorial;
     if (!C || !C.file) return null;
-    const T = { data: null, store: P.storage(), seen: false, on: false, k: -1, st: null, e: null, at: 0, doneAt: -1, card: false, closing: false,
+    const T = { data: null, store: P.storage(), seen: false, on: false, k: -1, st: null, e: null, at: 0, doneAt: -1, card: false, closing: false, lineAt: 0, linePlays: 0, cell: 0,
       jammed: false, lastNow: 0, hid0: 0, real: null, offerOn: false, offered: false, el: {} };
     try { T.seen = T.store.getItem(C.key) === "1"; } catch (e) { T.seen = false; }
 
     // ---- data ------------------------------------------------------------------------------------------------------
     // A "when" string: any of "|", all of "&", each "word" or "word:n". Parsed once into [[{k, m}]], read every frame.
-    const parse = (s) => String(s || "never").split("|").map((a) => a.split("&").map((w) => { const [k, m] = w.split(":"); return { k, m: m | 0 }; }));
-    const coachOf = (list) => (list || []).map((s) => Object.assign({ until: "tut" }, s, { _go: parse(s.go) })); // until "tut": main.js never moves it on
+    // A leading "!" negates a word. Fix pass: a line's skip (same words) passes it by when it no longer fits the board.
+    const parse = (s) => String(s || "never").split("|").map((a) => a.split("&").map((w) => { const n = w.charAt(0) === "!", [k, m] = (n ? w.slice(1) : w).split(":"); return { k, m: m | 0, n }; }));
+    const coachOf = (list) => (list || []).map((s) => Object.assign({ until: "tut" }, s, { _go: parse(s.go), _skip: s.skip ? parse(s.skip) : null })); // until "tut": main.js never moves it on
     function prep(d) {
       d.steps.forEach((st, i) => {
         st.c1 = coachOf(st.coach); st.c2 = st.coach2 ? coachOf(st.coach2) : null; st.doneP = parse(st.done);
@@ -72,6 +73,9 @@
         const t = ev.target, pri = $("p-primary").contains(t), sec = $("p-secondary").contains(t);
         if (sec) { ev.stopPropagation(); finish("title"); } else if (pri && app.panel === "win") { ev.stopPropagation(); next(); }
       }, true);
+      // Fix pass m2: under a done card the fort holds: no Retry (top bar or R) and no card keys reset or play it.
+      window.addEventListener("keydown", (ev) => { if (T.card && /^[rR1-5 ]$/.test(ev.key)) { ev.stopPropagation(); ev.preventDefault(); } }, true);
+      window.addEventListener("click", (ev) => { if (T.card && $("btn-retry").contains(ev.target)) { ev.stopPropagation(); ev.preventDefault(); } }, true);
       document.addEventListener("keydown", (ev) => { if (ev.key !== "Escape") return; if (T.offerOn) { hideOffer(); setSeen(); } else if (T.closing) finish("title"); });
       window.addEventListener("resize", () => { if (T.card) placeCard(); });
     }
@@ -101,6 +105,7 @@
       if (!T.data || T.on) return false;
       hideOffer(); T.el.close.hidden = true; T.closing = false;
       T.real = { save: app.save, meta: app.meta }; app.save = practice();
+      T.cell = app.cfg.board.maxCellCss; if (C.maxCellCss) app.cfg.board.maxCellCss = C.maxCellCss; // fix pass m5: the small forts fill the board's room
       for (const st of T.data.steps) { app.byId.set(st.id, st.entry); st.meta = metaFor(T.real.meta, st.powers); }
       T.on = true; document.body.classList.add("tut"); $("top").insertBefore(T.el.skip, $("lvl"));
       return load(0);
@@ -113,7 +118,7 @@
       if (!P.startLevel(st.id)) return false;
       fresh(); return true;
     }
-    function fresh() { T.at = 0; T.doneAt = -1; T.lastNow = 0; T.hid0 = app.S ? app.S.hiddenLeft : 0; }
+    function fresh() { T.at = 0; T.doneAt = -1; T.lastNow = 0; T.hid0 = app.S ? app.S.hiddenLeft : 0; T.lineAt = app.clock; T.linePlays = 0; }
     function next() {
       if (!T.on) return false;
       if (T.k + 1 < T.data.steps.length) return load(T.k + 1);
@@ -128,7 +133,7 @@
     function restore() {
       const note = document.querySelector("#panel .tut-note"); if (note) note.remove();
       if (!T.on) return; T.on = false; document.body.classList.remove("tut", "tut-nopw"); T.el.skip.remove();
-      app.save = T.real.save; app.meta = T.real.meta; T.real = null;
+      app.save = T.real.save; app.meta = T.real.meta; T.real = null; app.cfg.board.maxCellCss = T.cell;
       for (const st of T.data.steps) app.byId.delete(st.id);
     }
     // Skip (any step, no confirm), Not now, or a mode chosen on the closing card. Route: "title", "campaign" or "zen".
@@ -142,9 +147,11 @@
     // ---- every frame (main.js step) -----------------------------------------------------------------------------------
     // The words: play (a tap since the line showed), used:m, wait, lineEmpty, full, reveal, shown, pick:k, power:k,
     // clear:m, won, jammed (a jam this step). No allocation.
-    function test(p) {
+    function test(p) { return p.n ? !word(p) : word(p); }
+    function word(p) {
       const S = app.S;
       switch (p.k) {
+        case "canRecall": for (let s = 0; s < S.cap; s++) if (S.canPower(E.PW.RECALL, s)) return true; return false;
         case "play": return S.plays > T.at;
         case "used": return (app.used & (1 << p.m)) !== 0;
         case "wait": for (let s = 0; s < S.cap; s++) if (S.spQ[s] && S.spW[s] > S.reachable(S.spM[s])) return true; return false;
@@ -168,23 +175,25 @@
       const S = app.S; if (!S || app.held) return;
       if (S.now < T.lastNow) { fresh(); T.hid0 = S.hiddenLeft; } // a Retry (S.reset): the coach starts over too (main.js coachStart)
       T.lastNow = S.now;
-      const co = app.coach;
-      if (co && co.i < co.steps.length && holds(co.steps[co.i]._go)) { co.i++; T.at = S.plays; P.renderCoach(); }
+      const co = app.coach; let moved = false;
+      for (let g = 0; co && g < 8 && co.i < co.steps.length; g++) { const st = co.steps[co.i]; if (!(holds(st._go) || (st._skip && holds(st._skip)))) break; co.i++; T.at = S.plays; moved = true; }
+      if (moved) { T.lineAt = app.clock; T.linePlays = S.plays; P.renderCoach(); }
       if (T.card || T.st.final) return;
       if (T.doneAt < 0 && holds(T.st.doneP)) T.doneAt = app.clock + C.doneMs;
-      if (T.doneAt >= 0 && app.clock >= T.doneAt && app.panel !== "fail") showCard();
+      // The card waits doneMs after the goal, and until the coach line now showing has had dwellMs or a tap (fix pass M1)
+      if (T.doneAt >= 0 && app.clock >= T.doneAt && (app.clock - T.lineAt >= C.dwellMs || S.plays > T.linePlays) && app.panel !== "fail") showCard();
     }
 
     // ---- the done card ------------------------------------------------------------------------------------------------
     function showCard() {
-      const st = T.st, U = T.data.ui, cd = T.el.card; T.card = true;
+      const st = T.st, U = T.data.ui, cd = T.el.card; T.card = true; document.body.classList.add("tut-carded"); // Retry rests under the card (fix pass m2)
       app.coach = null; app.pick = null; P.renderCoach(); document.body.classList.remove("picking"); $("toast").hidden = true; $("pwtip").hidden = true; app.tip = null; // the card is the only word now
       cd.querySelector(".tut-of").textContent = U.of.replace("{i}", T.k + 1).replace("{n}", T.data.steps.length + 1);
       cd.querySelector(".tut-say").textContent = st.say;
       const ul = cd.querySelector(".tut-more"); ul.textContent = ""; for (const t of st.more || []) { const li = document.createElement("li"); li.textContent = t; ul.append(li); } ul.hidden = !(st.more && st.more.length);
       cd.hidden = false; placeCard(); cd.querySelector(".tut-next").focus();
     }
-    function hideCard() { T.card = false; if (T.el.card) T.el.card.hidden = true; }
+    function hideCard() { T.card = false; document.body.classList.remove("tut-carded"); if (T.el.card) T.el.card.hidden = true; }
     // Over the rail and the power-up bar (portrait: the bottom of the screen; wide: the side column under the top bar).
     function placeCard() {
       const a = $("rail").getBoundingClientRect(), q = $("powers").getBoundingClientRect(), b = q.height > 0 ? q : a, cd = T.el.card, top = Math.min(a.top, b.top), bot = Math.max(a.bottom, b.bottom); // no bar (a step without practice power-ups): the rail alone
@@ -210,7 +219,7 @@
     // ---- selfTest (main.js SP.selfTest calls this first, on its scratch saves) --------------------------------------------
     function selfTest(ok, out) {
       if (!ok(!!T.data, "tour: levels/tutorial.json loaded")) return;
-      const was = { store: T.store, seen: T.seen, offered: T.offered, allPw: app.allPw }, mem = {}, store = { getItem: (k) => (k in mem ? mem[k] : null), setItem: (k, v) => { mem[k] = String(v); } };
+      const was = { store: T.store, seen: T.seen, offered: T.offered, allPw: app.allPw, cell: app.cfg.board.maxCellCss }, mem = {}, store = { getItem: (k) => (k in mem ? mem[k] : null), setItem: (k, v) => { mem[k] = String(v); } };
       let real = "?"; try { real = localStorage.getItem(C.key); } catch (e) { /* stays "?" */ }
       const big = (el) => { const r = el.getBoundingClientRect(); return r.width >= 44 && r.height >= 44; };
       const hit = (el) => { const r = el.getBoundingClientRect(); if (!(r.width > 0)) return false; const t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!t && (t === el || el.contains(t)); };
@@ -238,12 +247,19 @@
             ok(/jammed/.test(words) && T.jammed && retryOK && !app.panel && app.S.plays === 0 && c2.on && c2.text.indexOf(st.coach2[0].say.slice(0, 10)) === 0, "tour: step 4 jams on the player's own taps (" + words + "), Retry and Skip tour on the sheet, one tap retries this step with the second coach script"); }
           if (st.powers) { // Power-ups: yellow waits, a practice Recall on its space, a practice Ladder
             const bad = app.pws.filter((b, i) => !b.hidden !== st.powers.includes(E.POWERS[i])).length;
-            play("1"); const s = app.S.order([])[0]; P.SP.power(3, s); P.SP.settle(); P.SP.power(0); P.SP.settle();
-            ok(!bad && app.S.used(3) === 1 && app.S.used(0) === 1 && app.S.cap === 6, "tour: the practice Recall and Ladder (only their badges shown) work on fort 7"); }
+            play("1"); P.SP.tick(16); const cb = P.SP.coach(), s = app.S.order([])[0]; P.SP.power(3); P.SP.tick(16); const cs = P.SP.coach(), slotOK = app.focusEl === app.slots[s] && cs.kind === "slot";
+            app.slots[s].click(); P.SP.settle(); P.SP.tick(16); const cl2 = P.SP.coach(); P.SP.power(0); P.SP.settle();
+            ok(!bad && cb.kind === "badge" && cb.hand && slotOK && cl2.kind === "badge" && app.S.used(3) === 1 && app.S.used(0) === 1 && app.S.cap === 6, "tour: on fort 7 (only the practice badges shown) the arrow is on the Recall badge, then on the waiting squad's own space (" + cs.kind + "), then on the Ladder; both work"); }
+          else if (st.board.hidden) { // Hidden things: after the red tap the coach keeps an arrow until a ? block shows; the ring line stays readable
+            play("0"); P.SP.tick(32); const c2 = P.SP.coach(); play("1"); P.SP.tick(32); const c3 = P.SP.coach(); P.SP.tick(C.doneMs + 200); const held = !T.card; play("023"); // red, then red again as told, then the rest
+            ok(c2.hand && c2.kind === "side" && c2.text.indexOf(st.coach[1].say.slice(0, 12)) === 0 && c3.ring && c3.text.indexOf(st.coach[2].say.slice(0, 12)) === 0 && held, "tour: fort 5 points at red again after the ? squad turns over, then rings a ? block with its line, which stays up past doneMs (dwellMs " + C.dwellMs + ")"); }
           else play(L.win.normal);
           until(() => (st.final ? app.panel === "win" : T.card), 30000);
           if (st.final) { const w = $("p-title").textContent + " / " + $("p-line").textContent; seen.push(w); ok($("p-line").textContent === T.data.ui.winLine && $("p-primary").textContent.indexOf(T.data.ui.next) >= 0 && $("p-stats").hidden && hit($("p-primary")), "tour: the last fort's win sheet has the game's title, the practice line and Next, no coins (" + w + ")"); $("p-primary").click(); }
-          else { const cd = T.el.card, nx = cd.querySelector(".tut-next"); seen.push(st.id); ok(!cd.hidden && hit(nx) && big(nx) && hit(cd.querySelector(".tut-skip2")) && cd.scrollHeight <= cd.clientHeight + 1, "tour: " + st.id + " ends on its done card (Next and Skip tour hittable, the text fits)"); nx.click(); }
+          else { const cd = T.el.card, nx = cd.querySelector(".tut-next"); seen.push(st.id);
+            if (k === 0) { const p0 = app.S.plays, n0 = app.S.now; window.dispatchEvent(new KeyboardEvent("keydown", { key: "r", bubbles: true })); $("btn-retry").click(); document.dispatchEvent(new KeyboardEvent("keydown", { key: "r", bubbles: true }));
+              const cell = app.V.cs / Math.min(app.cfg.board.maxDpr, window.devicePixelRatio || 1); out.notes.tourCell = cell.toFixed(1) + " CSS px a cell";
+              ok(app.S.plays === p0 && app.S.now >= n0 && T.card && cell > 22, "tour: under a done card R and Retry leave the fort alone; the forts draw at " + cell.toFixed(1) + " CSS px a cell (the game's cap is 22)"); } ok(!cd.hidden && hit(nx) && big(nx) && hit(cd.querySelector(".tut-skip2")) && cd.scrollHeight <= cd.clientHeight + 1, "tour: " + st.id + " ends on its done card (Next and Skip tour hittable, the text fits)"); nx.click(); }
         }
         const cl = T.el.close, mb = Array.from(cl.querySelectorAll(".tut-mode")).filter((b) => !b.hidden);
         ok(!cl.hidden && mb.length === (P.zenOn() ? 2 : 1) && mb.every((b) => hit(b) && big(b)) && mem[C.key] === "1" && !app.save.practice && !document.body.classList.contains("tut"), "tour: finished, the closing card offers " + mb.length + " modes, the flag is set and the real save is back");
@@ -252,7 +268,10 @@
         // Settings > How to play replays it; Skip tour on a step, no confirm: home, the flag, the save untouched.
         P.showScreen("title"); $("btn-settings").click(); const row = T.el.row, rowOK = hit(row) && big(row); row.click();
         const r1 = T.on && app.entry && app.entry.id === "tut-1" && $("settings").hidden; play("0"); T.el.skip.click();
-        ok(rowOK && r1 && app.screen === "title" && !T.on && snap() === s0, "tour: Settings > How to play replays it from fort 1; Skip tour goes home at once, the saves untouched");
+        ok(rowOK && r1 && app.screen === "title" && !T.on && snap() === s0 && app.cfg.board.maxCellCss === was.cell, "tour: Settings > How to play replays it from fort 1; Skip tour goes home at once, the saves and the board's cell cap untouched");
+        // Fort 7 green first: the Recall lines pass by (nothing waits), the Ladder's comes up.
+        start(); load(6); play("0"); play("1"); P.SP.tick(32); const g7 = P.SP.coach(); T.el.skip.click();
+        ok(g7.text.indexOf(T.data.steps[6].coach[3].say.slice(0, 15)) === 0 && g7.kind === "badge", "tour: fort 7 with green first skips the Recall lines (nothing waits) and points at the Ladder (" + g7.text + ")");
         out.notes.tour = seen.join(", ");
       } finally {
         if (T.on || T.closing) finish("title");
