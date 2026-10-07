@@ -32,6 +32,16 @@
         "minDE": 20,
         "fadeDE": 0,
         "fadeFloor": 16
+      },
+      "outlined": {
+        "note": "Campaign v6 side quests (Peter's ink-outline rule, 2026-10-06: one solid black line round the whole shape, no broken bits of black inside): the 'ours' look (a flood mask and a 1-cell ink outline) at the max phone box with a 5-cell margin, so an organic moat ring has room, and the land floors (minDE 20, no fade drop, the fade-floor lift to 16). Sources are cleaned of Flux's line art first (game-research/sappers-path-v4/lands/campaign-quests/scripts/clean.py); tools/quest-bake.js converts them through tools/land.js boardOf.",
+        "mask": "flood",
+        "box": [40, 44],
+        "outline": 1,
+        "margin": 5,
+        "minDE": 20,
+        "fadeDE": 0,
+        "fadeFloor": 16
       }
     },
     "bgs": ["#8ecdf2", "#f7df86", "#a8e6b0", "#f6b8cf", "#c9b8f0", "#f3ead8", "#4f8fd6", "#5fae5f", "#a066c8", "#e2745a", "#3e9c9a"],

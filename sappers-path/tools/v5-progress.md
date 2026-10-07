@@ -386,3 +386,14 @@ levels.json, gallery.json and layout.json are untouched here.
 ### State (v6 lane B)
 Built, critiqued (`tools/critic-zen-functional.md`, `tools/critic-zen-visual.md`) and fixed on the branch; not pushed.
 Next: lane E merges lane A.
+
+# v6 lane D: Zen World 3 Snack Galaxy (2026-10-06, stopped by Peter)
+
+Stopped mid-bake: lane C does the ink-outline rework of Snack Galaxy and Dino Valley. Nothing installed; the branch plays
+as 22aaf40. Kept: the `outlined` converter kind, `land.js` `quests: "none"` and the `zen` install step. Notes and what
+the run learned: `tools/land-02-notes.md` (including the one-line page change the zen step needs).
+
+| # | Piece | State | Commit |
+|---|---|---|---|
+| D1 | `outlined` kind in gallery-config (lane A's exact text); land.js no-side-quest land and `zen` step; notes | done: dry conversion OK, test.js 630/0 | (this commit) |
+| D2 | Install World 3 | waits for lane C's reworked boards | |

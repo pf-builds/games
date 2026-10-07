@@ -5,7 +5,8 @@
 //   ~/.local/opt/node/bin/node tools/land.js LAND_DIR install [--game DIR] [--replace]
 // Land 1 fix pass: a land already installed (the game's last land) is planned and checked as if it weren't (context
 // reads it out of the game), and install --replace swaps the installed land for this bake (removeFromConfig).
-// LAND_DIR: land.json (k, slug, name, lore, count, source, features, eggs, shade, profile, raw, main, map) and
+// LAND_DIR: land.json (k, slug, name, lore, count, source, features, eggs, shade, profile, raw, main, map; v6 lane D: quests
+// "none", no side quests, the check's side-quest gate passing with none) and
 // pictures/manifest.json (id, title, artist, date, kind, licence, url, file, crop?, chroma?). Side quests come from the
 // Wandering Gallery (--gallery, default tools/lands/_gallery: gallery.json {raw}, manifest.json), in its order, the
 // next pictures no land has used yet. --game: the game the land goes into (default this one; the levels, gallery,
@@ -29,6 +30,8 @@
 //             scratch/out/ (Land 1 fix: a gallery picture's short, the play bar's title when the full one won't fit;
 //             a level with mystery blocks, its fill hideC and ? colour hideQ, land-config plan.hidden fills)
 //   check     every gate (below) -> scratch/report.md and scratch/state.json {ok}
+//   zen       (v6 lane D; after a passing check, never part of the default run) the land as a Zen world, into levels/zen.json
+//             only (land.json zen.k; zenInstall below): the shared levels, gallery, layout and config files are not touched
 //   install   (only after a passing check; never part of the default run) appends the land to the game: levels,
 //             gallery, layout, sheets, config (lands.list, map.eggCoins) and LICENSES.md, each file written whole only
 //             after every write is ready. A land already in the game's config is refused.
@@ -85,7 +88,7 @@ function picturesOf(X) {
   const ids = X.land.main || X.man.map((p) => p.id), main = ids.slice(0, X.count).map((id) => { const p = X.man.find((q) => q.id === id); if (!p) throw new Error("picture " + id + " is not in the land's manifest"); return p; });
   if (main.length < X.count) throw new Error("the land has " + main.length + " pictures for " + X.count + " levels");
   const used = new Set(X.gallery.levels.filter((l) => l.wander).map((l) => l.src)), quests = Q.landQuestsOf({ from: X.from, to: X.to }, X.CFG.gallery.quests, X.CFG.meta.powers, X.gal0, 1e9);
-  const free = X.gman.filter((p) => !used.has(p.id)), side = free.slice(0, quests.length);
+  const free = X.gman.filter((p) => !used.has(p.id)), side = X.land.quests === "none" ? [] : free.slice(0, quests.length); // v6 lane D: land.json quests "none", a land with no side quests (the Wandering Gallery is used up)
   return { main, side, quests: quests.slice(0, side.length) };
 }
 
@@ -255,7 +258,7 @@ function check(X) {
   gate("organic moats: water and path only off the subject, every block reachable from the frame once dug, 1 or 2 ways in", moatBad, hasMoat ? Object.keys(ringOf).length + " of " + LV.length + " levels ringed" + (X.state.moat ? ", " + X.state.moat.filter((m) => !m.ok).length + " pictures can't carry one" : "") : "no moats in this land");
   const qa = GV.map((g) => g.quest.after).sort((a, b) => a - b), gaps = qa.slice(1).map((a, i) => a - qa[i]), QC = X.LC.checks.quests;
   const slots = Q.landQuestsOf({ from: X.from, to: X.to }, X.CFG.gallery.quests, X.CFG.meta.powers, X.gal0, 1e9).length;
-  gate("side quests every " + QC.join("-") + " levels, inside the land, plain picture boards (" + GV.length + " of " + slots + " slots filled from the Wandering Gallery)", (GV.length < slots ? ["only " + GV.length + " of " + slots + " side quests: the Wandering Gallery is short"] : []).concat(gaps.some((g) => g < QC[0] || g > QC[1]) || qa[0] < X.from || qa[qa.length - 1] > X.to ? ["afters " + qa.join(",")] : []).concat(each(GV, (L) => (L.links || L.lock || L.hidden || L.grid.some((r) => r.indexOf("~") >= 0) || L.cols.some((c) => c.some((cd) => cd[2])) ? "not a plain board" : null))));
+  gate("side quests every " + QC.join("-") + " levels, inside the land, plain picture boards (" + GV.length + " of " + slots + " slots filled from the Wandering Gallery)", (GV.length < slots && X.land.quests !== "none" ? ["only " + GV.length + " of " + slots + " side quests: the Wandering Gallery is short"] : []).concat(gaps.some((g) => g < QC[0] || g > QC[1]) || qa[0] < X.from || qa[qa.length - 1] > X.to ? ["afters " + qa.join(",")] : []).concat(each(GV, (L) => (L.links || L.lock || L.hidden || L.grid.some((r) => r.indexOf("~") >= 0) || L.cols.some((c) => c.some((cd) => cd[2])) ? "not a plain board" : null))));
   const rg = regrade(LV, BC, V3, false), rs = regrade(GV, GB, V3, false); gate("re-grade with the grader's own counts: 0 differences (" + (rg.checks + rs.checks) + " checks)", rg.lines.concat(rs.lines));
   // The map: a spot each, the sheets alternating file and mirror, 48 CSS px between nodes at 375 px.
   const S = LJ.layout, k375 = 375 / X.layout.w, mapBad = [], ns = S.flatMap((s) => s.levels.map((p) => p.n));
@@ -319,6 +322,24 @@ function install(X) {
   console.log("install: land " + X.land.k + " (" + X.land.name + ", levels " + X.from + "-" + X.to + ", " + GV.length + " side quests, sheets " + LJ.entry.sheets.join("-") + ") written into " + G);
 }
 
+// v6 lane D: a land installed as a Zen world, into levels/zen.json only (levels.json, gallery.json, layout.json and config.json
+// stay as they are: lane A owns them). land.json zen: {k} (its place on the Zen map). The records keep their numbers (n, so no
+// two worlds share one on the map) with ids z<k>-<i> and world k, no land; the world entry carries its sheets as layout
+// entries (map.layout, each with its egg coins) and the sheets are copied into map/; the licence table goes into LICENSES.md.
+// A world already there is replaced (its records, entry and licence table).
+function zenInstall(X) {
+  const st = X.state; if (!st.ok) throw new Error("zen: the land has no passing check (run the check step)"); const ZK = (X.land.zen || {}).k; if (!ZK) throw new Error("zen: land.json has no zen.k");
+  const out = path.join(X.S, "out"), LV = readJ(path.join(out, "levels.json")), LJ = readJ(path.join(out, "land.json")), G = X.GAME, f = path.join(G, "levels/zen.json"), Z = readJ(f);
+  const recs = LV.map((L, i) => { const o = Object.assign({ id: "z" + ZK + "-" + (i + 1), n: L.n, era: L.era, world: ZK }, L, { id: "z" + ZK + "-" + (i + 1), world: ZK }); delete o.land; return o; });
+  const layout = LJ.layout.map((S, e) => { const o = Object.assign({}, S, { eggCoins: LJ.eggCoins[e] }); delete o.sheet; delete o.land; return o; });
+  const W = { k: ZK, name: X.land.name, lore: X.land.lore, era: X.era, map: { note: "v6 lane D: Land " + X.land.k + " (" + X.land.slug + ") as Zen World " + ZK + ", its own sheets (tools/land.js zen).", layout } };
+  Z.worlds = Z.worlds.filter((w) => w.k !== ZK).concat(W).sort((a, b) => a.k - b.k); Z.levels = (Z.levels || []).filter((L) => L.world !== ZK).concat(recs).sort((a, b) => a.world - b.world || a.n - b.n);
+  const head = "### Zen World " + ZK + ": " + X.land.name, lic = removeLicences(fs.readFileSync(path.join(G, "LICENSES.md"), "utf8").replace("\n### Zen World " + ZK + ": ", "\n### Land " + X.land.k + ": "), X.land.k).trimEnd() + "\n" + fs.readFileSync(path.join(out, "licences.md"), "utf8").replace(/### Land \d+: [^\n]*/, head + " (Land " + X.land.k + ", levels " + X.from + "-" + X.to + " in the land factory's numbering)");
+  for (const fl of X.land.map.files) fs.copyFileSync(path.join(X.LAND, "map", fl), path.join(G, "map", fl));
+  fs.writeFileSync(f + ".tmp", JSON.stringify(Z) + "\n"); fs.writeFileSync(path.join(G, "LICENSES.md.tmp"), lic); fs.renameSync(f + ".tmp", f); fs.renameSync(path.join(G, "LICENSES.md.tmp"), path.join(G, "LICENSES.md"));
+  console.log("zen: land " + X.land.k + " (" + X.land.name + ") as Zen World " + ZK + ": " + recs.length + " levels, " + layout.length + " sheets (" + X.land.map.files.join(", ") + ") written into levels/zen.json");
+}
+
 // ---- main -------------------------------------------------------------------------------------------------------------------
 if (require.main === module) {
   (async () => {
@@ -329,7 +350,7 @@ if (require.main === module) {
       for (const s of steps) {
         console.log("== " + s); X = context(dir);
         if (s === "prep") prep(X); else if (s === "convert") convert(X); else if (s === "sheet") sheet(X); else if (s === "bake") await bake(X); else if (s === "map") map(X);
-        else if (s === "assemble") { const bad = assemble(X); if (bad.length) { process.exitCode = 1; break; } } else if (s === "check") { if (!check(X)) process.exitCode = 1; } else if (s === "install") install(X);
+        else if (s === "assemble") { const bad = assemble(X); if (bad.length) { process.exitCode = 1; break; } } else if (s === "check") { if (!check(X)) process.exitCode = 1; } else if (s === "install") install(X); else if (s === "zen") zenInstall(X);
         else throw new Error("no step " + s);
       }
     } catch (e) { console.log("land: " + e.message); process.exitCode = 1; }
