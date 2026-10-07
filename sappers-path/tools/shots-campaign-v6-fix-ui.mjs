@@ -18,7 +18,7 @@ const ROOT = resolve(here, ".."), LV = JSON.parse(readFileSync(resolve(ROOT, "le
 const byN = (n) => LV.find((l) => l.n === n), ids = LV.filter((l) => l.n <= 200).map((l) => l.id);
 const require = createRequire(import.meta.url), E = require("../src/engine.js"), R = require("./grade.js");
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE);
-const QUESTS = PHASE === "after" ? ["cq14", "cq27", "cq36"] : ["cq13", "cq30", "cq42"];
+const QUESTS = arg("quests", "") ? arg("quests").split(",") : PHASE === "after" ? ["cq14", "cq27", "cq44"] : ["cq13", "cq30", "cq42"]; // roast redo: cq44 for cq36
 const b = await chromium.launch(), log = [], rows = [], meas = {}; let bad = 0;
 const check = (c, m) => { if (!c) bad++; rows.push((c ? "ok   " : "FAIL ") + m); };
 const overlap = (a, z) => (a && z ? Math.max(0, Math.min(a.x + a.w, z.x + z.w) - Math.max(a.x, z.x)) * Math.max(0, Math.min(a.y + a.h, z.y + z.h) - Math.max(a.y, z.y)) : 0);

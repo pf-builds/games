@@ -5,7 +5,7 @@
   "ours-g01",
   "ours-cq17",
   "ours-g12",
-  "ours-cq36",
+  "ours-cq44",
   "ours-g21",
   "ours-cq20",
   "ours-g15",
@@ -2188,6 +2188,28 @@
    "file": "tools/campaign-quests/src/cq27.png",
    "bake": "tools/quest-bake.js",
    "group": "soldier"
+  },
+  {
+   "id": "ours-cq44",
+   "title": "Giant Drumstick",
+   "kind": "outlined",
+   "set": "Click it! Studios (generated locally)",
+   "author": "Click it! Studios",
+   "license": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+   "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+   "prompt": "simple cute flat cartoon icon of a giant golden-brown roast chicken drumstick with a cream bone end, glossy and chunky, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid lavender background, no text, no shadow",
+   "seed": 7044,
+   "size": [
+    1024,
+    1024
+   ],
+   "steps": 4,
+   "guidance": 0,
+   "generated": "2026-10-07",
+   "raw": "clean/cq44-s7044.png",
+   "file": "tools/campaign-quests/src/cq44.png",
+   "bake": "tools/quest-bake.js",
+   "group": "castle"
   }
  ]
 }

@@ -100,7 +100,7 @@ The campaign's side quests from v6 (`levels/gallery.json` pictures 1-50; the num
 | # | Picture | Source | Author | License | Date |
 |---|---|---|---|---|---|
 | 2 | `ours-cq17` Tree Giant | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7017; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-06 |
-| 4 | `ours-cq36` Royal Roast | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7036; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-06 |
+| 4 | `ours-cq44` Giant Drumstick | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7044; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-07 |
 | 6 | `ours-cq20` Trusty Steed | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7020; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-06 |
 | 8 | `ours-cq08` Baby Griffin | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7008; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-06 |
 | 10 | `ours-cq33` Siege Tower | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7033; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-06 |

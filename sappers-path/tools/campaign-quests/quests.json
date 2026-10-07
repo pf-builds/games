@@ -6,7 +6,7 @@
   {"id": "g-ours-g01", "group": "goblin"},
   {"pic": "cq17", "group": "creature", "tag": "normal"},
   {"id": "g-ours-g12", "group": "knight"},
-  {"pic": "cq36", "group": "castle", "tag": "normal"},
+  {"pic": "cq44", "group": "castle", "tag": "normal"},
   {"id": "g-ours-g21", "group": "creature"},
   {"pic": "cq20", "group": "knight", "tag": "normal"},
   {"id": "g-ours-g15", "group": "castle"},

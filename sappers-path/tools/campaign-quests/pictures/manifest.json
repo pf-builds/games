@@ -599,6 +599,28 @@
    1024,
    1024
   ],
-  "note": "Campaign v6 fix pass: lane C's 'maybe' (the cook melts into the ground, the roast on its platter reads); in for cq42 Bagpipes, place 4"
+  "note": "Campaign v6 fix pass: lane C's 'maybe' (the cook melts into the ground, the roast on its platter reads); in for cq42 Bagpipes, place 4",
+  "dropped": "Campaign v6 roast redo (Peter, 2026-10-07): out of the campaign, read as a grey and white lump at play size; replaced by cq44 Giant Drumstick at place 4; id g-ours-cq36 never reused"
+ },
+ {
+  "id": "cq44",
+  "title": "Giant Drumstick",
+  "group": "castle",
+  "artist": "Click it! Studios",
+  "date": "2026-10-07",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7044; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq44-s7044.png",
+  "raw": "raw/cq44-s7044.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of a giant golden-brown roast chicken drumstick with a cream bone end, glossy and chunky, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid lavender background, no text, no shadow",
+  "seed": 7044,
+  "size": [
+   1024,
+   1024
+  ],
+  "short": "Drumstick",
+  "note": "Campaign v6 roast redo: lane C's pick (picks.json roastRedo), in for cq36 Royal Roast, place 4"
  }
 ]
