@@ -1935,20 +1935,25 @@
         tickQuiet(ST.tickCapMs); step(1500);
         ok(gc.every((c) => app.V.disp[c] <= 0 && app.S.a[c] === E.DIRT) && app.V.fxInfo().falls === 0, "gate show: the gate is open ground once its show ends");
       }
-      // 6. An archer hit on a level of every tag (v5 R1: archers never kill; the hit sapper is sent back to its space).
+      // 6. An archer hit on a level of every tag (campaign v6 stage 2, the archer gradient by tag: Easy and Normal knock
+      // back, the hit sapper is sent back to its space; Hard pins it until its tower falls; Extreme kills it, and the level
+      // fails short unless a spare sapper of its colour is left). Each tag's first level with towers that has such a game.
       for (const d of TAGS) {
-        if (!app.levels.some((e) => tagOf(e) === d && e.L.towers && e.L.towers.length)) continue; // v5 R1: no Extreme levels until R2
-        const lethal = false, pred = (S) => S.hits > 0 && S.status === E.PLAYING; let found = null;
-        for (const e of app.levels) { if (tagOf(e) !== d || !(e.L.towers && e.L.towers.length)) continue; const o = search(e, d, pred, ST.searchTries, ST.searchSeed); if (o) { found = { e, o }; break; } }
+        if (!app.levels.some((e) => tagOf(e) === d && e.L.towers && e.L.towers.length)) continue;
+        let found = null;
+        for (const e of app.levels) { if (tagOf(e) !== d || !(e.L.towers && e.L.towers.length)) continue; const kd = e.L.archers || "knock";
+          const pred = kd === "kill" ? (S) => S.kills > 0 : kd === "pin" ? (S) => S.pins > 0 && S.status === E.PLAYING : (S) => S.hits > 0 && S.status === E.PLAYING; const o = search(e, d, pred, ST.searchTries, ST.searchSeed); if (o) { found = { e, o, kd }; break; } }
         if (!ok(!!found, "archers " + d + ": found an order with a hit")) continue;
+        const kd = found.kd, lethal = kd === "kill", want = lethal ? 2 : kd === "pin" ? 3 : 1;
         startLevel(found.e.id); patient(found.o.slice(0, -1)); playCol(found.o.charCodeAt(found.o.length - 1) - 48);
         let arrow = false, struck = null, live = 0;
         for (let t = 0; t < ST.tickCapMs && !struck; t += 16) { step(16); const h = app.V.hitInfo(); if (h.live) live = h.kind; if (h.arrows) arrow = true; if (h.struck) struck = h; }
-        ok(live === (lethal ? 2 : 1) && arrow && !!struck && struck.label, "archers " + d + ": a " + (lethal ? "doomed" : "knocked-back") + " runner, the arrow flies and strikes, the label rises (" + JSON.stringify(struck) + ")");
-        ok(lethal ? app.S.kills > 0 : app.S.hits > 0 && app.S.kills === 0, "archers " + d + ": the engine records the " + (lethal ? "kill" : "hit") + " when the arrow lands");
-        { const j = app.cards.findIndex((b, k) => app.S.front(k) >= 0), p0 = app.S.plays, busy = app.S.busy;
+        ok(live === want && arrow && !!struck && struck.label, "archers " + d + " (" + kd + "): a " + (lethal ? "doomed" : kd === "pin" ? "pinned" : "knocked-back") + " runner, the arrow flies and strikes, the label rises (" + JSON.stringify(struck) + ")");
+        ok(lethal ? app.S.kills > 0 : kd === "pin" ? app.S.pins > 0 && app.S.kills === 0 : app.S.hits > 0 && app.S.kills === 0 && app.S.pins === 0, "archers " + d + ": the engine records the " + (lethal ? "kill" : kd === "pin" ? "pin" : "hit") + " when the arrow lands");
+        if (!lethal || app.S.status === E.PLAYING) { const j = app.cards.findIndex((b, k) => app.S.front(k) >= 0), p0 = app.S.plays, busy = app.S.busy;
           ok(busy && (j < 0 || app.S.lineLen >= app.S.cap || (playCol(j) && app.S.plays === p0 + 1)), "archers " + d + ": a tap mid-show still plays (input never waits on the show)"); }
-        out.notes["archer_" + d] = found.e.id + " '" + found.o + "'";
+        else { ok(app.S.status === E.FAILED && app.S.reason === "short", "archers " + d + ": the kill leaves the colour short: the assault fails"); const busy = app.S.busy || app.V.live > 0; retry(); ok(busy && app.S.plays === 0 && app.V.live === 0 && app.S.status === E.PLAYING, "archers " + d + ": Retry mid-show restarts at once"); }
+        out.notes["archer_" + d] = found.e.id + " " + kd + " '" + found.o + "'";
       }
       // 7. Every space taken (rushed taps, squads out): each front card is marked blocked and the head says to wait. A tap
       // on one is refused: engine state, tray, line and board byte-identical; the card shakes, the toast, one blocked

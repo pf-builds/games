@@ -380,4 +380,6 @@ Worktree `repos/games-sappers-campaign/` (branch `campaign-v6`), game in `sapper
 | A7 | Stage 1b tooling + debug v6-pin | done: freeze PASS; regrades 0/1,605, 0/432; critic 0 of 10,857 | 140e6df |
 | A8 | Stage 1b page, `?v=47` | done: selfTest 919/0, 921/0; real taps 22/22 (port 8497); 0 console | 8a073ba |
 | A9 | Stage 1b docs: SPEC §9 1b entry, notes §2, this table | done | (this commit) |
-| A10 | Stage 2: re-deal 1-200 on the curve | todo: see notes §1.4 and §2.3 | |
+| A10 | Stage 2 tooling: `tools/campaign-v6.js` (plan, bake, install, measure), `tools/campaign-v6-bake.js` (worker), bake-config `tags.v6` + `v6`, config v5.density (towers from 60, v6 rule), tags.js densityV6, gen.js (hide gap, rushOpen), test.js / critic-v5 / selfTest §6 | in progress | |
+| A11 | Stage 2 bake: `node tools/campaign-v6.js bake --threads 14` (scratch in `tools/campaign-v6-scratch/`, gitignored; `--reuse` keeps candidates; `--list N,N --extra K` for fix-ups), then `install`, then `measure` | bake1 186 levels / 50 fallbacks; bake2 (--reuse, pace range 160-330, mystery blocks only where a board carries them) 48; bake3 (--extra 16 on those, keepOnly towers on 7 killing levels, 240 deal attempts) 12 left: 52, 70, 131, 146, 152, 176, 180, 189, 191, 192, 194, 199 | |
+| A12 | Stage 2 checks + docs (SPEC §9 stage 2, notes §3, after table `tools/campaign-v6-baseline-after.jsonl`) | todo | |

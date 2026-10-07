@@ -1,7 +1,8 @@
 // Critic v5 diff (from v4.3): rules from the v5 R1 entry (rules.mjs); the tag formula is the v5 R2 entry's realm schedule
 // (bake-config tags.realms; the Gallery keeps v4.3's; v5 R4: realms 6-8 with their own cycles and end tags, tags.cycles);
 // every lock on a Hard or Extreme level from 50; no level uses a feature before (v5 R4: mystery blocks too)
-// its milestone (config v5.density.unlock). Debug levels are not in the v5 campaign's checks (they play Normal).
+// its milestone (config v5.density.unlock; campaign v6 stage 2: towers from 60). Debug levels are not in the v5 campaign's
+// checks (they play Normal). Campaign v6 stage 2: levels 1-200 wear bake-config tags.v6 (one letter a level).
 // Critic v4.3 diff (from v4.1): every level on its own tag only (SPEC-v4 v4.3), tag formula and cross-buried pairs checked
 // against the level files, a refused tap in a stored order is a mismatch, maxWait includes the winning tap to everyone home.
 // Critic v4.1 diff (from v4-2): strict same-instant event order (SPEC-v4 Critics 2 fix S1), picture-format check of every
@@ -47,7 +48,8 @@ const cov = { why: {}, endNoplay: 0, endNoplayBad: 0, games: 0, byKind: {}, ops:
 const mism = [], gradeBad = [], fmt = [], park = []; const t0 = Date.now();
 for (const L of levels) { const pr = picProblems(L); if (pr.length) fmt.push({ id: L.id, pr: pr.slice(0, 4) }); }
 const TS = require(path.join(root, 'tools/bake-config.json')).tags, TG = require(path.join(root, 'tools/gallery-config.json')).bake.tags;
-const tagOf = (n, T, teaching) => { const R = T.realms && T.realms.find((r) => n >= r[0] && n <= r[1]); // v5 R2: per realm (opener Easy lesson, end Hard, cycle restarts after the opener; realm 1 from T.from)
+const tagOf = (n, T, teaching) => { if (T.v6 && n >= 1 && n <= T.v6.length) return { E: 'easy', N: 'normal', H: 'hard', X: 'extreme' }[T.v6[n - 1]]; // campaign v6 stage 2: tags.v6, one letter a level from 1 (the curve's tags, teaching levels included)
+  const R = T.realms && T.realms.find((r) => n >= r[0] && n <= r[1]); // v5 R2: per realm (opener Easy lesson, end Hard, cycle restarts after the opener; realm 1 from T.from)
   if (R) { if (teaching) return n < T.from ? T.first : n === R[0] ? T.afterEnd : T.teach; const Y = T.cycles && T.cycles[R[0]]; if (Y) return n === R[1] ? Y.end : Y.cycle[(n - Y.start) % Y.cycle.length]; /* v5 R4: a realm's own cycle and end tag */ if (n === R[1]) return 'hard'; if (n < T.from) return T.first; return T.cycle[(n - Math.max(T.from, R[0] + 1)) % T.cycle.length]; }
   if (T.ends.includes(n)) return 'hard'; if (teaching) return n < T.from ? T.first : T.ends.includes(n - 1) ? T.afterEnd : T.teach; if (T.ends.includes(n - 1)) return T.afterEnd; if (n < T.from) return T.first; return T.cycle[(n - T.from) % T.cycle.length]; };
 // Lands foundation: a land's level wears its land's profile tag (tools/land-plan.js landTags on its land.json), a
