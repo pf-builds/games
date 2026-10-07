@@ -742,3 +742,25 @@ Extreme check now wants the skull.
 - Still open from the visual critic, not in this brief: S1 (painted tower colours 104, 117, 198: the other builder's),
   m3 (the short sheet's black chip), m4 (coach and toast say the same on 64 and 66 at phone), m6 cq12 Spell-Book Cat,
   the weaker pictures cq26, cq21, cq02 (Peter's call), and cq11 Knitting Dragon's IP closeness (Peter's call).
+
+### 6.6 The roast redo (Peter, 2026-10-07)
+
+Peter: "have lane C make a new roast picture, keep knitting dragon". Place 4 (after 16, realm 1, Normal, Ladder) takes lane
+C's **cq44 Giant Drumstick** (`picks.json roastRedo`; spare cq46 Feast Platter unused), short title "Drumstick", id
+g-ours-cq44; **cq36 Royal Roast retires** (`dropped` in `tools/campaign-quests/pictures/manifest.json`; g-ours-cq36 never
+reused). cq11 Knitting Dragon stays.
+- Board identical to lane C's (grid, palette); the 25 other boards unchanged. Baked by `quest-bake.js` on the slot: Normal,
+  no features (no deck features; the ring is possible, 126 cells, but the slot is before the moat ladder at 25, so no
+  moat: my call, as Bagpipes and Royal Roast had none), rate 0.5825 in 0.46-0.64, real pace 209 s, 51 taps, first pick.
+- gallery.json: only place 4 changed. LICENSES.md, gallery-manifest and the map's quest id follow (install).
+- `quest-bake.js` gate fix: "26 new ids never used before" read the freeze snapshot, which since a70710c holds the new
+  quests; it now means not one of v5's 72 ids (`v5Places`) and not a retired picture, and a new quest already in the
+  snapshot must match it (all but n and quest).
+- Freeze snapshot re-taken after the swap (`tools/freeze.js --snapshot`, Peter's OK): only `levels/frozen/gallery.json`
+  changed (place 4), now byte-identical to `levels/gallery.json`.
+- Checks: test.js 665/0 (its kept-picture and freeze blocks pass); `regrade.js --gallery` 0 of 372; `regrade.js` 0 of 2,405;
+  `freeze.js --require` PASS on the new snapshot (2,405 + 372 checks, castles 283); critic-v5 0 mismatching games of
+  10,527, known answers 0 wrong, real pace 312/312; quest-bake check PASS; real taps (`shots-campaign-v6-fix-ui.mjs after`):
+  cq44 won from its map node by 51 real taps at 1280x720, 375x812 and 400x600, "Picture complete!", +1 Ladder, node won,
+  and a replay pays nothing (375x812 and 1280x720); 0 console messages. Cache tag `?v=52`. Contact sheet
+  `tools/shots-campaign-v6/quests-50.jpg` regenerated (gitignored).
