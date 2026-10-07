@@ -3,7 +3,7 @@
 // kept castle pictures (their stored levels kept) and 26 new outlined pictures (lane C, game-research/sappers-path-v4/lands/
 // campaign-quests), laid out by tools/campaign-quests/quests.json. The 36 that leave (Zen World 1) and the Wandering
 // Gallery's 12 (Kitten Forest's side quests) are not baked here: the 36 leave levels/gallery.json, the 12 keep their records
-// with their picture numbers closed up behind the 50.
+// (n 61-72 too) in places 51-62 behind the 50, and their map spots' q follow the places.
 //   ~/.local/opt/node/bin/node tools/quest-bake.js [STEP ...] [--only cq01,cq02] [--extra K] [--threads N] [--force]
 // Steps (default prep convert bake check; install is never part of the default run):
 //   prep     the 160 px sources (tools/land-src.py, kind outlined) from quests.json raw -> tools/campaign-quests/src/
@@ -106,9 +106,9 @@ function install(X) {
     const p = X.pics.find((q) => q.pos === i + 1), f = path.join(S, "bake", p.pic + ".json"), r = fs.existsSync(f) ? readJ(f) : null;
     if (!r || r.fail) { bad.push(p.pic + ": " + (r ? r.fail : "not baked")); return null; } return recordOf(X, p, BD[p.pic].board, r); });
   if (bad.length) { console.log("install: refused: " + bad.join("; ")); return false; }
-  const wander = GF.levels.filter((l) => l.wander), renum = new Map(), levels = castle.concat(wander.map((l, k) => { renum.set(l.n, castle.length + k + 1); return Object.assign({}, l, { n: castle.length + k + 1 }); }));
+  const wander = GF.levels.filter((l) => l.wander), levels = castle.concat(wander), renum = new Map(wander.map((l, k) => [GF.levels.indexOf(l) + 1, castle.length + k + 1])); // the Wandering Gallery's records untouched (their n too: land-config sideCycle and the critic read it); only their place in the file moves
   // The map: quests 1-50 keep their spots and slots (the same after and prize), now holding these pictures; the Wandering
-  // Gallery's spots follow their pictures' new numbers.
+  // Gallery's spots follow their pictures' new places in the file (the page finds a quest's picture by place, app.gal[q - 1]).
   const LAY = readJ(path.join(ROOT, "map/layout.json")); let qi = 0;
   for (const sh of LAY.sheets) for (const q of sh.quests || []) { if (sh.land) { q.q = renum.get(q.q) || q.q; continue; } const l = levels[q.q - 1]; if (!l || l.wander || q.after !== l.quest.after || q.prize !== l.quest.prize) { bad.push("map quest " + q.q); continue; } q.id = l.id; qi++; }
   if (bad.length || qi !== castle.length) { console.log("install: refused: the map's quests " + qi + " of " + castle.length + (bad.length ? "; " + bad.join("; ") : "")); return false; }
@@ -122,8 +122,8 @@ function install(X) {
     "| # | Picture | Source | Author | License | Date |", "|---|---|---|---|---|---|"].concat(X.pics.map((p) => "| " + p.pos + " | `ours-" + p.pic + "` " + p.m.title + " | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed " + p.m.seed + "; prompt in tools/campaign-quests/pictures/manifest.json | " + p.m.artist + " | " + p.m.licence + " | generated " + p.m.date + " |"), [Z]).join("\n");
   lic = lic.indexOf(A) >= 0 ? lic.slice(0, lic.indexOf(A)) + sec + lic.slice(lic.indexOf(Z) + Z.length) : lic.replace(/\n### Land 1:/, "\n" + sec + "\n\n### Land 1:");
   writeJ(path.join(ROOT, "levels/gallery.json"), Object.assign({}, GF, { levels }));
-  fs.writeFileSync(path.join(ROOT, "map/layout.json"), JSON.stringify(LAY, null, 1) + "\n"); writeJ(path.join(ROOT, "levels/gallery-manifest.json"), MAN, true); fs.writeFileSync(LF, lic);
-  console.log("install: " + castle.length + " campaign quests (" + X.pics.length + " new) and " + wander.length + " Wandering Gallery pictures (now " + (castle.length + 1) + "-" + levels.length + ") written");
+  fs.writeFileSync(path.join(ROOT, "map/layout.json"), JSON.stringify(LAY)); writeJ(path.join(ROOT, "levels/gallery-manifest.json"), MAN, true); fs.writeFileSync(LF, lic);
+  console.log("install: " + castle.length + " campaign quests (" + X.pics.length + " new) and " + wander.length + " Wandering Gallery pictures (now in places " + (castle.length + 1) + "-" + levels.length + ", records unchanged) written");
   return true;
 }
 
