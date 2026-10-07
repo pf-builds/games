@@ -395,3 +395,11 @@ Worktree `repos/games-sappers-campaign/` (branch `campaign-v6`), game in `sapper
 | # | Piece | State | Commit |
 |---|---|---|---|
 | AQ1 | The 50 on-theme side quests (24 kept + 26 new, `tools/quest-bake.js`), map ids, manifest, LICENSES; tests, critic and selfTest for the empty long tail | done: quest-bake check PASS; test.js 665/0; regrades 0/1,605 and 0/372; freeze PASS; critic 0 of 10,527; selfTest 903/0, 905/0; real taps 16/16; 0 console. Notes §4 | see git log |
+
+## Campaign v6 lane A, the fix pass: page and quests (branch `campaign-v6-ui`, worktree `repos/games-sappers-campaign-ui/`)
+
+| # | Piece | State | Commit |
+|---|---|---|---|
+| AF1 | Page: pinned marker + head count, start toasts at the board's foot, quiet ring halo, key socket mark, Extreme pill and Play, selfTest +4, `?v=50` | done | see git log |
+| AF2 | Quests: cq14, cq27, cq36 in places 35, 37, 4 (for cq13, cq30, cq42) | done: quest-bake check PASS | see git log |
+| AF3 | Checks + docs (SPEC §9 fix pass, notes §6, `tools/shots-campaign-v6-fix.mjs`, before/after shots, quests-50.jpg) | done (numbers in notes §6.4) | see git log |

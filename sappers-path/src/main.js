@@ -124,12 +124,12 @@
   const tagOf = (e) => (e && e.L && TAGS.indexOf(e.L.tag) >= 0 ? e.L.tag : "normal"), winOf = (e) => (e && e.L && e.L.win && e.L.win[tagOf(e)]) || "";
   const app = { cfg: null, levels: [], byId: new Map(), order: [], eras: [], save: null, entry: null, B: null, S: null, V: null, audio: null, sheets: null, gal: [], mats: null, palKey: "", galTiles: [],
     clock: 0, lastT: 0, screen: "title", diff: "normal", speed: 1, fastPaid: false, debugSpeed: DEBUG, cb: false, allPw: false, tip: null, tipQ: [], tipHold: null, tipEat: -1, pwN: -1, // diff: the playing level's tag (v4.3) ending: null, endAt: -1, panel: null, panelAt: 0, testing: false,
-    toastT: -1e12, popK: 0, cards: [], nexts: [], slots: [], wide: false, glURL: [], manURL: [], nodes: [],
+    toastT: -1e12, toastBoard: false, popK: 0, cards: [], nexts: [], slots: [], wide: false, glURL: [], manURL: [], nodes: [],
     coach: null, used: 0, cues: {}, paused: false, pauses: 0, upright: false, upPause: false, focusEl: null, pt: { x: 0, y: 0 }, T: null, tbuf: null, labFit: new Map(), verdict: [],
     et: 0, endT: -1, lineDirty: false, lineMoved: false, ord: [], slotPts: [], blockT: -1e12, refused: 0, march: false,
     debug: [], flip: [false, false, false, false, false], rods: null, unlockT: -1e12, lockN: 0, lockWas: [false, false], lockSock: [-1, -1], slotUnT: new Array(8).fill(-1e12), reveals: 0, pairsOut: 0, // v6: each lock shut and its socket at the last render; when each socket opened
     fadeC: null, coached: false, coachMode: "", handKind: "", meas: null,
-    li: { stuck: 0, work: 0, occ: 0, free: 0, near: false, full: false, danger: false },
+    li: { stuck: 0, work: 0, pin: 0, occ: 0, free: 0, near: false, full: false, danger: false },
     // v4 M5: config.meta (selfTest swaps in a copy), the lives clock (real time), the queue rows shown, the level's start
     // on app.clock, the win's report, a power-up waiting for its target (pick: {k}), the bar's badges, the icons' URLs.
     lay: null, jr: null, // v5 R3: map/layout.json and the journey map's built parts
@@ -152,8 +152,8 @@
     app.sheets = Art.sources(app.cfg.art); fades();
     app.V = Board.create($("board"), app.cfg, app.sheets);
     const H = app.V.hooks;
-    H.pop = onPop; H.deposit = () => cue("haul"); H.gate = () => cue("gate"); H.tower = () => cue("tower"); H.shot = () => cue("arrow");
-    H.hit = (k) => cue(k === 2 ? "fall" : "thud"); H.collapse = () => cue("collapse");
+    H.pop = onPop; H.deposit = () => cue("haul"); H.gate = () => cue("gate"); H.tower = () => { cue("tower"); app.lineMoved = true; }; H.shot = () => cue("arrow");
+    H.hit = (k) => { cue(k === 2 ? "fall" : "thud"); app.lineMoved = true; }; H.collapse = () => cue("collapse"); // v6 fix: a pin shows on its space at once
     H.tap = () => { app.lineDirty = true; }; H.free = () => { app.lineDirty = true; }; H.move = () => { app.lineMoved = true; };
     H.reveal = (ci, j) => { if (app.S && app.S.front(j) === ci) { app.flip[j] = true; cue("flip"); } app.reveals++; app.lineDirty = true; };
     H.link = () => { app.pairsOut++; app.lineDirty = true; };
@@ -396,9 +396,10 @@
   }
   // The line at a glance (into app.li, no allocation): squads stuck (nothing they can reach, all home), working (sappers
   // out), free spaces; near = one space left and every other squad but one stuck; danger = full and at most one working.
+  // Campaign v6 fix: pinned = a squad with a sapper pinned by an archer (counted apart from working, never stuck).
   function readLine() {
-    const S = app.S, li = app.li; li.stuck = 0; li.work = 0; li.occ = 0;
-    for (let i = 0; i < S.cap; i++) { if (!S.spQ[i]) continue; li.occ++; if (S.stuck(i)) li.stuck++; else if (S.spO[i] > 0) li.work++; }
+    const S = app.S, li = app.li; li.stuck = 0; li.work = 0; li.pin = 0; li.occ = 0;
+    for (let i = 0; i < S.cap; i++) { if (!S.spQ[i]) continue; li.occ++; if (S.stuck(i)) li.stuck++; else if (S.pinned(i) > 0) li.pin++; else if (S.spO[i] > 0) li.work++; }
     const live = S.status === E.PLAYING && !app.panel;
     li.free = S.open - li.occ; li.full = live && li.free === 0; li.danger = li.full && li.stuck >= li.occ - 1;
     li.near = live && li.free === 1 && li.occ > 0 && li.stuck >= li.occ - 1;
@@ -415,6 +416,7 @@
     wrap.classList.toggle("full", li.full); wrap.classList.toggle("danger", li.danger); wrap.classList.toggle("near", li.near && !li.full); wrap.classList.toggle("march", march);
     $("line-lab").textContent = march ? L.marchText.replace("{x}", Math.max(app.speed, app.cfg.show.victoryPace)) : li.full ? L.fullText : li.near ? L.nearText : L.lineText; // the pace in use
     let cnt = li.stuck ? li.stuck + " " + L.stuckWord : "";
+    if (li.pin) cnt += (cnt ? " · " : "") + li.pin + " " + L.pinnedWord; // v6 fix: "1 pinned"
     if (li.work) cnt += (cnt ? " · " : "") + li.work + " " + L.workWord;
     if (li.free) cnt += (cnt ? " · " : "") + li.free + " " + L.freeWord;
     $("line-cnt").firstElementChild.textContent = cnt; retCount();
@@ -430,11 +432,12 @@
       const opening = !shut && i < S.cap && app.clock - app.slotUnT[i] < app.cfg.show.unlockMs;
       s.classList.toggle("locked", shut); s.classList.toggle("unlocking", opening);
       const lm = shut ? app.B.lockM[sk - 1] : 0, cl = lm > 0; s.classList.toggle("clock", cl); if (cl) s.style.setProperty("--lc", mat(lm).c); // v5 R1: a colour lock shows its colour
-      if (i < S.cap && S.spQ[i]) { const m = S.spM[i], w = S.spW[i], o = S.spO[i], st = S.stuck(i), lk = S.spL[i] !== 0, held = S.held(i); s.classList.add("full"); s.classList.toggle("work", o > 0); s.classList.toggle("stuck", st); s.classList.toggle("linked", lk); s.classList.toggle("held", held); paintMat(s, m); s.querySelector("b").textContent = w || "";
-        s.querySelector(".out").textContent = o > 0 ? o : "";
+      s.classList.toggle("klock", shut && !cl); // Campaign v6 fix (visual critic m2): a key lock's socket shows the gilt key that opens it
+      if (i < S.cap && S.spQ[i]) { const m = S.spM[i], w = S.spW[i], o = S.spO[i], st = S.stuck(i), lk = S.spL[i] !== 0, held = S.held(i), pn = S.pinned(i); s.classList.add("full"); s.classList.toggle("work", o > pn); s.classList.toggle("pinned", pn > 0); s.classList.toggle("stuck", st); s.classList.toggle("linked", lk); s.classList.toggle("held", held); paintMat(s, m); s.querySelector("b").textContent = w || ""; // v6 fix: a pinned squad wears the red arrow badge with its count pinned (not the working rim unless others walk)
+        s.querySelector(".out").textContent = pn > 0 ? pn : o > 0 ? o : "";
         const men = s.querySelector(".men"); men.style.backgroundImage = app.manURL[m]; men.style.width = "calc(var(--man) * " + Math.min(w, L.sapperIcons) + ")";
         s.setAttribute("aria-label", mat(m).crew + ", " + w + " waiting" + (o ? ", " + o + " out" : "") + (st ? ", stuck: nothing in reach" : "") + (lk ? ", " + L.linkedWord : "") + (held ? ", " + L.heldText : "") + (S.pinned(i) ? ", " + S.pinned(i) + " " + L.pinnedWord : "")); }
-      else { s.classList.remove("full", "work", "stuck", "linked", "held"); s.style.removeProperty("--mc"); s.querySelector("b").textContent = ""; s.querySelector(".out").textContent = ""; s.querySelector(".men").style.width = "0"; s.setAttribute("aria-label", shut ? (lm > 0 ? fill(L.colourLockText, { crew: mat(lm).crew }) : L.lockedText) : "Empty space"); }
+      else { s.classList.remove("full", "work", "stuck", "linked", "held", "pinned"); s.style.removeProperty("--mc"); s.querySelector("b").textContent = ""; s.querySelector(".out").textContent = ""; s.querySelector(".men").style.width = "0"; s.setAttribute("aria-label", shut ? (lm > 0 ? fill(L.colourLockText, { crew: mat(lm).crew }) : L.lockedText) : "Empty space"); }
       s.classList.toggle("last", i === free && li.near); // one space left and the rest stuck: the last free space pulses
     });
     sendable(); markPick();
@@ -994,7 +997,7 @@
     if (!e.debug && !e.gallery) { app.save.data.last = e.id; writeSave(); }
     renderAll(); fitLine(); showScreen("play"); coachStart(); // the line and tray take their size before the board is fitted to what is left
     renderPowers(); if (app.tipQ.length) showTip(app.tipQ.shift(), true);
-    if (app.B.kill) toast(app.cfg.layout.killToast, true); else if (app.B.pin) toast(app.cfg.layout.pinToast); // v6: a killing (red) or pinning (calm) level says so as it starts
+    if (app.B.kill) toast(app.cfg.layout.killToast, true, true); else if (app.B.pin) toast(app.cfg.layout.pinToast, false, true); // v6: a killing (red) or pinning (calm) level says so as it starts
     return e;
   }
   // v4 M3: a tile's flip or shake from the last game lands at once when a level starts (a flip left mid-turn has no width).
@@ -1371,11 +1374,13 @@
     target: app.focusEl ? app.focusEl.id || app.focusEl.className : null, ring: app.V.focus.on, oneLine: !t.classList.contains("two"), fits: t.scrollWidth <= t.clientWidth && t.scrollHeight <= t.clientHeight }; };
 
   // ---- toasts, audio, toggles ----------------------------------------------------------------------------------------
-  function toast(text, bad) { const t = $("toast"); t.textContent = text; t.classList.toggle("bad", !!bad); t.hidden = false; placeToast(); app.toastT = app.clock + app.cfg.show.toastMs; }
+  function toast(text, bad, board) { const t = $("toast"); t.textContent = text; t.classList.toggle("bad", !!bad); t.hidden = false; app.toastBoard = !!board; placeToast(); app.toastT = app.clock + app.cfg.show.toastMs; }
   // v4.3 fix (m2): on a wide screen a toast in play sits just above the side column's tray (by the cards and the line it is
-  // about), as wide as the tray at most; elsewhere at the board's foot, as before.
+  // about), as wide as the tray at most; elsewhere at the board's foot, as before. Campaign v6 fix (visual critic S5): a
+  // level's start toast (board: the pin and kill warnings, about the board's towers) always sits at the board's foot, so on
+  // a wide screen it never covers the line or the cards as the level opens.
   function placeToast() {
-    const t = $("toast"), side = app.wide && app.screen === "play"; t.classList.toggle("side", side); t.classList.toggle("over", app.screen !== "play"); // v5.4: over the home and map
+    const t = $("toast"), side = app.wide && app.screen === "play" && !app.toastBoard; t.classList.toggle("side", side); t.classList.toggle("over", app.screen !== "play"); // v5.4: over the home and map
     if (!side) { t.style.left = ""; t.style.top = ""; t.style.maxWidth = ""; return; }
     const r = $("tray").getBoundingClientRect(); t.style.left = r.left + r.width / 2 + "px"; t.style.top = r.top - app.cfg.layout.toastGapPx + "px"; t.style.maxWidth = r.width + "px";
   }
@@ -2278,12 +2283,13 @@
       { const e = fx("hiddenLevel"); startLevel(e.id); const V = app.V, S = app.S, same = () => { for (let c = 0; c < app.B.n; c++) if (!!V.hid[c] !== S.hiddenCell(c)) return false; return true; };
         const n0 = S.hiddenLeft, top = S.hiddenCell(1 * 9 + 3), s0 = same(); patient("0"); settleNow();
         ok(n0 === 5 && !top && s0 && S.hiddenLeft === 0 && same() && app.V.checkSprites().indexOf("mystery") < 0, "mystery blocks: the board's ? blocks match the engine (5; the flagged ring block touching open ground shows), and razing the ring exposes them all"); }
-      // 22e. v5 R1, the Extreme tag: its pill reads "Extreme" in light text on a deep purple (4.5:1 or more), and a Play for an
-      // Extreme level wears the warning face, darker than Hard's.
+      // 22e. v5 R1, the Extreme tag: its pill reads "Extreme" (4.5:1 or more; v6 fix: gold on near-black with a red rim and a
+      // skull ahead of the word, so it reads harder than Hard's red), and a Play for an Extreme level wears the warning face,
+      // darker than Hard's.
       { const el = document.createElement("span"); document.body.append(el); tagChip(el, "extreme"); const cs = getComputedStyle(el), rgb = (v) => { const m = v.match(/\d+/g).map(Number); return "#" + m.slice(0, 3).map((x) => x.toString(16).padStart(2, "0")).join(""); };
-        const L1 = relLum(rgb(cs.color)), L2 = relLum(rgb(cs.backgroundColor)), cr = (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05); el.remove();
+        const L1 = relLum(rgb(cs.color)), L2 = relLum(rgb(cs.backgroundColor)), cr = (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05), sk = getComputedStyle(el, "::before").backgroundImage !== "none"; el.remove();
         const pb = $("play-btn-test") || document.createElement("button"); pb.className = "primary"; pb.innerHTML = '<i class="tag"></i>'; playTag(pb, { L: { tag: "extreme" } });
-        ok(el.textContent === LY.tags.extreme && el.classList.contains("tag-extreme") && cr >= 4.5 && pb.classList.contains("hard") && pb.classList.contains("extreme"), "extreme: the pill reads '" + el.textContent + "' at " + cr.toFixed(2) + ":1; an Extreme Play wears the warning face"); }
+        ok(el.textContent === LY.tags.extreme && el.classList.contains("tag-extreme") && cr >= 4.5 && sk && pb.classList.contains("hard") && pb.classList.contains("extreme"), "extreme: the pill reads '" + el.textContent + "' at " + cr.toFixed(2) + ":1 with its skull; an Extreme Play wears the warning face"); }
       // 22b. v5 R1, the colour lock (selfTest.colourLockLevel): its socket shows the colour that opens it and says so; the
       // tap that sends a squad of that colour out opens it (one unlock cue).
       { const e = fx("colourLockLevel"), m = ST.colourLockLevel.lock.colour; startLevel(e.id); const S = app.S, last = app.slots[S.cap - 1], u0 = app.cues.unlock | 0;
@@ -2316,6 +2322,8 @@
       { const e = app.byId.get("v6-pin");
         if (ok(!!e && e.L.archers === "pin", "pin (v6 1b): v6-pin is loaded")) {
           startLevel(e.id); ok(!$("toast").hidden && $("toast").textContent === LY.pinToast && !$("toast").classList.contains("bad"), "pin (v6 1b): the level starts with the calm toast ('" + $("toast").textContent + "')");
+          { const t = $("toast").getBoundingClientRect(), lw = $("line-wrap").getBoundingClientRect(), tr = $("tray").getBoundingClientRect(), cut = (a, z) => Math.max(0, Math.min(a.right, z.right) - Math.max(a.left, z.left)) * Math.max(0, Math.min(a.bottom, z.bottom) - Math.max(a.top, z.top));
+            ok(!$("toast").classList.contains("side") && cut(t, lw) + cut(t, tr) === 0, "start toast (v6 fix): at the board's foot, clear of the line and the cards (" + Math.round(cut(t, lw) + cut(t, tr)) + " px² over them)"); }
           const o = search(e, "normal", (S) => S.pins > 0 && S.status === E.PLAYING, ST.searchTries, ST.searchSeed);
           if (ok(!!o, "pin (v6 1b): found a game with a pinned sapper")) {
             startLevel(e.id); patient(o.slice(0, -1)); playCol(o.charCodeAt(o.length - 1) - 48);
@@ -2323,10 +2331,14 @@
             for (let t = 0; t < ST.tickCapMs && app.S.busy; t += 16) step(16);
             const S = app.S, sp = S.order().find((x) => S.pinned(x) > 0), lab = sp != null ? app.slots[sp].getAttribute("aria-label") : "";
             ok(!!struck && struck.label && S.pins === 1 && S.status === E.PLAYING && app.V.hitInfo().kind === 3 && sp != null && lab.indexOf("1 " + LY.pinnedWord) > 0, "pin (v6 1b): the runner lies pinned (the arrow struck, the label rose); the engine pins, play goes on; the space reads '" + lab + "'");
+            { const q = sp != null ? app.slots[sp] : null, bd = q && q.querySelector(".out"), r = bd && bd.getBoundingClientRect(), head = $("line-cnt").textContent;
+              ok(!!q && q.classList.contains("pinned") && !q.classList.contains("stuck") && bd.textContent === "1" && r.height >= 8 && getComputedStyle(bd, "::before").backgroundImage !== "none" && head.indexOf("1 " + LY.pinnedWord) >= 0 && readLine().pin === 1,
+                "pinned space (v6 fix): hatched red with the arrow badge '" + (bd ? bd.textContent : "") + "' (" + (r ? r.width.toFixed(1) + "x" + r.height.toFixed(1) : "-") + " px); the head reads '" + head + "'"); }
             const rest = solveHere(); let up = null;
             if (ok(!!rest, "pin (v6 1b): a winning continuation from the pinned state")) {
               for (let i = 0; i < rest.length && app.S.status === E.PLAYING; i++) { playCol(+rest[i]); for (let t = 0; t < ST.tickCapMs && app.S.busy; t += 16) { step(16); if (!up && app.S.pins === 0) up = app.V.hitInfo(); } }
-              settleNow(); ok(!!up && up.kind === 4 && app.S.status === E.WON, "pin (v6 1b): the tower falls, the pinned sapper gets up and walks back (" + JSON.stringify(up) + "); the level wins"); } }
+              settleNow(); ok(!!up && up.kind === 4 && app.S.status === E.WON, "pin (v6 1b): the tower falls, the pinned sapper gets up and walks back (" + JSON.stringify(up) + "); the level wins");
+              ok(!app.slots.some((q) => q.classList.contains("pinned")) && $("line-cnt").textContent.indexOf(LY.pinnedWord) < 0, "pinned space (v6 fix): the marker and the head's count clear once the sapper is released"); } }
           const j = search(e, "normal", (S) => S.status === E.FAILED && S.reason === "jam" && (S.jamWhy & 8) > 0, ST.searchTries, ST.searchSeed);
           if (ok(!!j, "pin (v6 1b): found a jam with a pinned squad")) {
             startLevel(e.id); patient(j); settleNow(); for (let t = 0; t < ST.tickCapMs && !app.panel; t += 16) step(16);
@@ -2341,6 +2353,7 @@
           startLevel(e.id); const S = app.S, a = app.slots[S.cap - 2], b = app.slots[S.cap - 1], m = e.L.locks[0].colour, u0 = app.cues.unlock | 0, lk = /\blocked\b/;
           ok(S.open === S.cap - 2 && lk.test(a.className) && a.classList.contains("clock") && a.style.getPropertyValue("--lc") === mat(m).c && a.getAttribute("aria-label") === fill(LY.colourLockText, { crew: mat(m).crew }) && lk.test(b.className) && !b.classList.contains("clock") && b.getAttribute("aria-label") === LY.lockedText && app.V.fxInfo().lockKeys === 1,
             "two locks (v6): two padlocked sockets (" + S.open + " of " + S.cap + " open), the colour's on the left and the key's on the right; the key wears its brackets");
+          { const k = getComputedStyle(b, "::after"); ok(b.classList.contains("klock") && !a.classList.contains("klock") && k.content !== "none" && k.backgroundImage !== "none" && parseFloat(k.width) >= 8, "two locks (v6 fix): the key's socket shows the gilt key beside its padlock (" + parseFloat(k.width).toFixed(1) + " px); the colour's shows its colour"); }
           const seen = [], o = winOf(e); let was = app.S.locked;
           const look = () => { if (app.S.locked < was) seen.push({ a: a.className, b: b.className, cue: (app.cues.unlock | 0) - u0, keys: app.V.fxInfo().lockKeys }); was = app.S.locked; };
           for (let i = 0; i < o.length && app.S.status === E.PLAYING; i++) { playCol(+o[i]); step(16); look(); for (let t = 0; t < ST.tickCapMs && app.S.busy; t += 16) { step(16); look(); } }
