@@ -306,7 +306,7 @@
               {"say": "Send the Looters: the key opens the gate.", "short": "Looters open the gate.", "card": 14, "ring": "key", "if": "front:14", "until": "gate"},
               {"say": "The gate is open. Raze the castle!", "short": "The gate is open!", "until": "play"},
               {"say": "New power-up! Recall sends a stuck squad back.", "short": "New: Recall!", "power": "recall", "until": "play"}],
-    "e3-53": [{"say": "One space is locked. Its colour opens it!", "short": "Its colour opens the lock.", "card": 8, "lockSlot": true, "if": "locked", "until": "unlock"},
+    "e3-53": [{"say": "One space is locked. Its colour opens it!", "short": "Its colour opens the lock.", "card": 9, "lockSlot": true, "if": "locked", "until": "unlock"},
               {"say": "Unlocked! Five spaces for your squads.", "short": "Unlocked! Five spaces.", "until": "play"}],
     "e3-64": [{"say": "Archer towers are back! Here a hit pins your sapper until its tower falls.", "short": "Archers pin here: tower first!", "card": 4, "ring": "tower", "until": "play"}],
     "e3-66": [{"say": "Deadly archers: bring their tower down before anyone walks into the ring.", "short": "Deadly archers: tower first!", "ring": "tower", "until": "play"}],

@@ -153,7 +153,7 @@ function install(P) {
       out.push(ordered(Object.assign({}, lv, { tag: p.tag, band: p.tag, target: V.bands[p.tag], v6: { keep: p.keep }, win: g.win, grade: g.grade, exempt: p.keep === "teaching" ? "teaching" : "tutorial" }))); continue; }
     L = baseLevels().find((x) => x.n === p.n); // provenance (from, edits) as before the re-deal
     const f = path.join(SCR, "picks", "n-" + L.n + ".json"); if (!fs.existsSync(f)) { miss.push(L.n + ": no pick"); out.push(L); continue; }
-    const r = readJ(f); if (r.fail) { miss.push(L.n + ": " + r.fail); out.push(L); continue; }
+    const r = readJ(f); if (r.fail || r.tag !== p.tag) { miss.push(L.n + ": " + (r.fail || "its pick is " + r.tag + ", the plan " + p.tag)); out.push(L); continue; }
     const lv = r.level, rec = { id: L.id, n: L.n, era: L.era, source: "gen", seed: r.seed, tag: p.tag, band: p.tag, target: p.band, v6: { feats: p.feats, links: p.plan.links, mystery: p.plan.mystery, hidden: p.plan.hidden, locks: p.plan.locks, care: p.care, cards: r.mystery ? r.mystery.cards : 0 },
       from: L.from, edits: (L.edits || []).concat(p.edits).length ? (L.edits || []).concat(p.edits) : undefined, deck: r.deck };
     for (const k of BOARD.concat(["lock", "locks", "archers", "hidden", "cols", "links", "win", "grade"])) if (lv[k] !== undefined) rec[k] = lv[k];
@@ -184,8 +184,8 @@ function measure() {
     if (!A.length && !Bw.length) continue;
     const bp = Bw.map((l) => { const g = l.grade[l.tag]; return g.pace ? g.pace.ms : g.ms; });
     lines.push(`| ${e} | ${t} | ${Bw.length} / ${A.length} | ${f2(mean(Bb.map((b) => b.careful)))} / ${f2(mean(A.map((r) => r.careful)))} | ${f2(mean(Bb.map((b) => b.obvious)))} / ${f2(mean(A.map((r) => r.obvious)))} | ${f2(med(Bw.map((l) => 100 * l.grade[l.tag].rate)))}% / ${f2(med(A.map((r) => 100 * r.rate)))}% | ${Math.round(med(bp) / 1000)} / ${Math.round(med(A.map((r) => r.pace)) / 1000)} | ${med(Bw.map((l) => l.win[l.tag].length))} / ${med(A.map((r) => r.taps))} |`); }
-  const pay = CFG.meta && CFG.meta.coins && CFG.meta.coins.win, coins = (ls) => ls.reduce((a, l) => a + ((pay && pay[l.tag]) || 0), 0);
-  lines.push("", "Coins a full first clear of 1-200 earns (meta.coins.win by tag): before " + coins(was) + ", after " + coins(now) + ".");
+  const MC = CFG.meta.coins, coins = (ls) => ls.reduce((a, l) => a + (MC.win[l.tag] | 0) + (MC.first[l.tag] | 0), 0);
+  lines.push("", "Coins a full first clear of 1-200 earns (meta.coins win + first, by tag): before " + coins(was) + ", after " + coins(now) + ".");
   console.log(lines.join("\n")); void bBy;
   return lines.join("\n");
 }

@@ -806,6 +806,7 @@ function inject(L0, seed) {
     used.add(j + "," + i); used.add(k + "," + q); links.push(r() < 0.5 ? [[j, i], [k, q]] : [[k, q], [j, i]]);
   }
   L.links = links;
+  if (L.locks) { L.lock = L.locks[0]; delete L.locks; } // campaign v6: a level with two locks keeps its first here (the two-lock levels are injected below)
   if (r() < 0.6) {
     const B = E.compile(L), cells = [];
     for (let c = 0; c < B.n; c++) { const m = B.a0[c]; if (m > 0 && m !== E.IRON && m !== E.GILT && B.towerOf[c] < 0 && !(B.hid0 && B.hid0[c]) && L.cols.some((col) => col.some((cd) => cd[0] === m && cd[1] > 1))) cells.push(c); }
@@ -825,7 +826,7 @@ const DEBUG = require("../levels/debug-v4.json").levels;
 function inject6(L0, seed, kill, two) { // kill: "kill" or "pin" (stage 1b), or nothing
   const L = JSON.parse(JSON.stringify(L0)), r = Gr.rng(seed); delete L.win; delete L.grade;
   if (kill) L.archers = kill;
-  if (two) { const ms = []; L.cols.forEach((col) => col.forEach((cd) => { if (ms.indexOf(cd[0]) < 0 && cd[0] !== E.GILT && !(L.lock && L.lock.colour === cd[0])) ms.push(cd[0]); }));
+  if (two && !L.locks) { const ms = []; L.cols.forEach((col) => col.forEach((cd) => { if (ms.indexOf(cd[0]) < 0 && cd[0] !== E.GILT && !(L.lock && L.lock.colour === cd[0])) ms.push(cd[0]); }));
     const a = L.lock || { colour: ms.splice(Math.floor(r() * ms.length), 1)[0] }, b = { colour: ms[Math.floor(r() * ms.length)] };
     delete L.lock; L.locks = r() < 0.5 ? [a, b] : [b, a]; }
   return L;
