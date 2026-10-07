@@ -172,8 +172,9 @@
     { const U = app.cfg.layout.upright, u = $("upright"); u.querySelector(".up-t").textContent = U.text; u.setAttribute("aria-label", U.text); }
     showScreen("title"); layout();
     if (NS.tutorial) app.tut = NS.tutorial.init({ app, $, v: V_, getJSON, storage, startLevel, showScreen, retry, switchMode, renderCoach, csave, zsave, zenOn, SP }); // v6 lane B part 2: the intro tour (src/tutorial.js)
-    if (DEBUG) window.SP = SP;
     requestAnimationFrame(frame);
+    if (app.tut && app.tut.ready) await app.tut.ready; // fix pass: the tour's data in before SP (and its selfTest) is handed out
+    if (DEBUG) window.SP = SP;
   }
   // levels.json: {levels: [...]} in play order. A level that fails to compile is skipped, never fatal.
   function indexLevels(lv) {
@@ -853,8 +854,17 @@
       if (bs < 1) break; }
     L.className = "jr-cur" + (best ? " " + best : ""); L.firstChild.textContent = bc ? fill(T.curShort, { n: J.labelN }) : full;
   }
+  // Fix pass (Peter's desktop playtest): the side cards only when both fit whole beside the column, worked out from the
+  // map's real width (the column, its rims, a gap and a card each side, and an edge margin) and, once drawn, its height
+  // (fitCards); else the one column with the Play bar at its foot. No state in between.
+  const cardsRoom = () => { const M = app.cfg.map, w = $("map").clientWidth || window.innerWidth; return !app.cardsShort && w >= M.colWidePx + 6 + 2 * (M.cardGapPx + M.cardPx + (M.cardEdgePx | 0)); };
+  function fitCards() {
+    const mp = $("map"); if (!mp.classList.contains("cards") || app.screen !== "map") return false;
+    const b = $("jr-body").getBoundingClientRect(), j = $("jr").getBoundingClientRect(), bad = ["jr-realm", "jr-next"].some((id) => { const r = $(id).getBoundingClientRect(); return r.top < b.top - 0.5 || r.bottom > b.bottom + 0.5 || r.left < 0 || r.right > window.innerWidth || (r.right > j.left + 0.5 && r.left < j.right - 0.5); });
+    if (!bad) return false; app.cardsShort = true; layoutMap(); scrollMap(); return true;
+  }
   function layoutMap() {
-    const J = app.jr, M = app.cfg.map, mp = $("map"), cards = window.innerWidth >= M.cardsMinW; mp.classList.toggle("cards", cards);
+    const J = app.jr, M = app.cfg.map, mp = $("map"), cards = cardsRoom(); mp.classList.toggle("cards", cards);
     if (!J) return false;
     const LAY = app.lay, colW = Math.round(cards ? M.colWidePx : Math.min(window.innerWidth, M.colMaxPx)); if (colW === J.colW) return false;
     const sc = $("jr"), mid = J.k ? (sc.scrollTop + sc.clientHeight / 2) / J.k : -1, k = colW / LAY.w, n = J.sheets.length; // v5 R4c: the sheets built
@@ -904,6 +914,7 @@
     for (const g of J.eggs) { g.b.hidden = !eggReached(g); eggLook(g); } // v5 R3 (Peter 10/5): a realm's eggs hide until the player reaches it
     fitLabel(); // v5 R4 fix (S5): once the quests' bubbles and the eggs show
     mapCards(fe || app.levels[app.levels.length - 1]);
+    if (fitCards()) renderMap(); // fix pass: a card that doesn't fit whole sends the map to one column (once: cardsShort holds until a resize)
   }
   // A side-quest node's look: the picture icon (or, won, its finished picture), the prize while not won, its label.
   function quest(e, b, g, nx, QT, tail) {
@@ -1671,7 +1682,8 @@
     if (app.wide) { const rw = short ? L.railShortPx : Math.round(Math.min(L.railWidePx, Math.max(L.railMinPx, W * L.railFrac))); r.setProperty("--rail-w", rw + "px"); r.setProperty("--wide-gap", (short ? L.gapShortPx : L.gapWidePx) + "px"); }
     app.labFit.clear();
     if (app.screen === "title") fitTitle();
-    if (app.screen === "map") { layoutMap(); fitLabel(); } else if (app.jr) app.jr.colW = 0; // v5 R3: the map's column (laid out again when it shows)
+    app.cardsShort = false; // fix pass: a resize asks again whether the side cards fit
+    if (app.screen === "map") { layoutMap(); renderMap(); fitLabel(); } else if (app.jr) app.jr.colW = 0; // v5 R3: the map's column (laid out again when it shows)
     if (app.S) fitLine();
     fitBoard();
     if (app.S) { renderTop(); renderTray(); placeSlots(); }

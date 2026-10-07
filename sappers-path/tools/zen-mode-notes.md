@@ -231,3 +231,22 @@ on Kitten Forest's sheets (the mirrored castle sheets read as the Campaign map).
 - **Tap sizes (m7, MINOR-3):** the home's gear and the map bar's Back and gear are 44 x 44 at every size.
 - **Tips (m8):** a power-up's tip is put away when a win or fail sheet opens, so it never covers the finished picture.
 - Skipped as briefed: m4 (mirrored sheets accepted), m5 (the painted home stays).
+
+## 11. Fix pass: the map's width and the tour's load (2026-10-07)
+
+- **Side cards only with room (Peter's desktop playtest).** The home and the map sat in `#app`'s 560 px column until the
+  wide play layout switched on (aspect and width), while the map's side cards switched on at a fixed 1,100 px window:
+  between the two the cards were clipped behind the map and the top bar shrank to 560. Now `#title` and `#map` always
+  fill the window (`position: fixed; inset: 0`), and the cards show only when the map's real width holds the column
+  (430 + 6), a gap and a card each side and a 16 px edge (`map.cardEdgePx`: 1,096 px), and both cards fit its height
+  (`fitCards`, after a render; a resize asks again). Otherwise one column with the Play bar at its foot.
+- **Sweep** (`tools/sweep-map.mjs`, sheets in `tools/shots-zen/sweep/`): widths 700-1,700 by 50 at heights 720, 900 and
+  1,300, DPR 1, no touch, the window resized in place, both modes: every card hidden or whole in the window and clear of
+  the column, the top bar the window's width, Play hittable, the home filling the window with both cards hittable.
+  126 checks, 0 failures (cards from 1,100 px). The same sweep on e8210a6: 120 failures (top bar 560, home in a column,
+  Play clipped at 1,300 x 1,100-1,250).
+- **The tour at 1280x720.** `selftest-lands.mjs` calls `SP.selfTest()` the moment `window.SP` exists; the tour fetched
+  `levels/tutorial.json` without boot waiting for it, so on the slower first desktop load the check ran first (not a
+  merge loss: hooks, config and index.html were intact). `tutorial.js` now returns its load as `ready`, and boot awaits it
+  before handing out `SP` (a failed load still resolves: no tour). selfTest 805/0 at 1280x720; Settings > How to play
+  starts the tour there (shot `tools/shots-zen/sweep/how-to-play-1280.png`).

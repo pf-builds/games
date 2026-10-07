@@ -386,6 +386,8 @@ levels.json, gallery.json and layout.json are untouched here.
 | M1 | Merge pass: the move reads the raw save (rawOf, decodeAny raw); levels/places.json (v5.4's 72 + lane A's 26, append-only) for SP1 and SP2; zero-tail map and selfTest; test.js "merge:" on lane A's gallery fixture; lane E checklist (notes §7.2) | done: see M9 | (merge commit) |
 | M9 | Merge pass checks | done: test.js 635/0 (5 "merge:" checks on lane A's gallery fixture); regrades 0 of 1,605, 432, 324; freeze PASS; critic-v5 0 mismatching games of 10,758; selfTest 774/0, 776/0, 774/0; harness all passed, 0 console; page smoke on a copy with lane A's gallery.json + layout.json: the old save moved, no fog or tail stones, 0 console. Cache `?v=48` | (merge commit) |
 
+| W1 | Fix pass: home and map fill the window, side cards only with room (cardsRoom, fitCards), sweep 126/0 (tools/sweep-map.mjs); the tour's data awaited before SP (1280x720 selfTest 805/0); cache ?v=50 | done: test.js 649/0; regrades 0 of 1,605, 432, 324; freeze PASS; critic-v5 0 of 10,758; selfTest 803/805/803, 0 failed; harness all passed, 0 console | (this commit) |
+
 ### State (v6 lane B)
 Built, critiqued (`tools/critic-zen-functional.md`, `tools/critic-zen-visual.md`) and fixed on the branch; not pushed.
 Next: lane E merges lane A.

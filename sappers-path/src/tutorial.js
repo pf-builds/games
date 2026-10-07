@@ -282,7 +282,9 @@
     }
 
     const V_ = P.v; // the cache tag, named as main.js names it (tools/playtest-bundle.py strips the versioned call)
-    P.getJSON(C.file + "?v=" + V_).then((d) => { T.data = prep(d); build(); offerMaybe(); }).catch(() => { /* no tour: the game plays on */ });
-    return { step, panel, selfTest, start, offer: offerMaybe, get on() { return T.on; }, get card() { return T.card; }, get k() { return T.k; }, get seen() { return T.seen; } };
+    // Fix pass (the 1280x720 selfTest race): the load is a promise main.js boot awaits before it hands out window.SP, so a
+    // test that runs the moment SP exists always finds the tour's data (a failed load still resolves: no tour).
+    const ready = P.getJSON(C.file + "?v=" + V_).then((d) => { T.data = prep(d); build(); offerMaybe(); }).catch(() => { /* no tour: the game plays on */ });
+    return { ready, step, panel, selfTest, start, offer: offerMaybe, get on() { return T.on; }, get card() { return T.card; }, get k() { return T.k; }, get seen() { return T.seen; } };
   }
 })(typeof globalThis !== "undefined" ? globalThis : this);
