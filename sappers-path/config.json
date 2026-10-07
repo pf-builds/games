@@ -323,6 +323,8 @@
                {"say": "Dig next to a ? and its colour shows for good.", "short": "Dug beside, it shows.", "until": "play"}],
     "e8-200": [{"say": "The Goblin King sits in his hall. Dig him off his throne!", "short": "Dig out the Goblin King!", "ring": [21, 15], "r": 3.5, "until": "play"}]
   },
+  "tutorial": {"note": "v6 lane B part 2, the intro tutorial (src/tutorial.js, levels/tutorial.json, tutorial.css; tools/tutorial-notes.md). key: its own localStorage key, the one save write (1: seen, set when the tour is finished or skipped; outside both modes' saves, so no reset clears it). file: the practice forts and every word. doneMs: game-clock ms from a step's goal to its done card (the player sees the result land); dwellMs: the card also waits until the coach line showing has been up this long or the player has tapped since (fix pass M1). maxCellCss: board.maxCellCss while the tour runs (its 9-wide forts fill the board's room; restored after). offerIfProgress: false offers the tour on first launch only to a player with nothing cleared in either mode.",
+    "key": "sappers-path.tour.v1", "file": "levels/tutorial.json", "doneMs": 900, "dwellMs": 2500, "maxCellCss": 56, "offerIfProgress": false},
   "selfTest": {
     "shadeNote": "Lands foundation: selfTest's shaded twin of picture 1 gives its biggest colour a lighter and a darker shade, the colour mixed this share toward white and toward black (test colours only).", "shadeMix": [0.35, 0.3],
     "minTapPx": 44,

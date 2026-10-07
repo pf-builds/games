@@ -392,5 +392,17 @@ Fixed: S1-S7, m2, m3, N1, N2 (`tools/v5-r4-notes.md` §10). Parked:
 - The map's realm card on desktop shows the focus level's world, even when the view sits in another world.
 - The SP2 code encodes pictures by their place in gallery.json, like SP1; lane A's rewrite of gallery.json moves those places (a code made before the merge reads differently after). Give pictures stable numbers in the code at the merge.
 - The campaign's boss epilogue reads `lands.epilogue.none` now; lane A may want campaign-only words.
+
+## v6 lane B part 2 (the intro tour, 2026-10-06)
+
+- The tour is not offered to a player who has already cleared a level in either mode (`config tutorial.offerIfProgress`
+  false); they find it in Settings > How to play. Flip it if every player should see "New here?" once after the update.
+- The seen flag is its own localStorage key: a save code carries no preferences, so a player moving devices sees the
+  offer again on a new device that has no progress there.
+- A power-up badge pointer glows but gets no arrow (as on levels 25, 50, 100: `placeHand` has no badge case); an arrow
+  from above on the badge would help step 7.
+- The practice forts are small (9x6 to 9x8) and sit small in a desktop window; a larger cell cap for tour boards would
+  make the sappers easier to watch there.
+- A real-tap playthrough in the harness (it checks the tour only through SP.selfTest's DOM clicks today).
 - World 1 shares Kitten Forest's two painted sheets (Peter's call, zero bytes); a pair of its own (a gallery or garden) from lane C would set it apart for real. The warm `tint` is a stopgap.
 - Zen-only players reach the Scout (100) and the Volley (125) only through prizes or the Campaign (98 Zen pictures give reach 99); revisit the mapping when Zen has more worlds.

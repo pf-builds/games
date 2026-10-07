@@ -171,6 +171,7 @@
     paintWall(); chips(); icons(); buildTray(); buildLine(); buildPowers(); buildMap(); progressText(); wire(); wireTitleArt();
     { const U = app.cfg.layout.upright, u = $("upright"); u.querySelector(".up-t").textContent = U.text; u.setAttribute("aria-label", U.text); }
     showScreen("title"); layout();
+    if (NS.tutorial) app.tut = NS.tutorial.init({ app, $, v: V_, getJSON, storage, startLevel, showScreen, retry, switchMode, renderCoach, csave, zsave, zenOn, SP }); // v6 lane B part 2: the intro tour (src/tutorial.js)
     if (DEBUG) window.SP = SP;
     requestAnimationFrame(frame);
   }
@@ -1266,6 +1267,7 @@
     $("panel").hidden = false; placeSheet();
     cue(e.won ? "chime" : "bad"); if (e.won && e.first) cue("star", 2); if (BS) cue("star", BS.stars); if (e.won) jingle(); // v5.2
     judge(); renderTray(); renderLine();
+    if (app.tut) app.tut.panel(e); // v6 lane B part 2: a practice fort's sheet (src/tutorial.js)
   }
   // v5 R1, the continue on a jam (engine revive(); meta.cont): offered on the jam's sheet when the engine would take it
   // (once per attempt), for meta.cont.price coins. Short of coins the button is muted and its line says how many more;
@@ -1383,7 +1385,7 @@
   // Lands foundation: a shaded level (shade rows) with no script of its own says lands.shadeTip until the player has
   // cleared a shaded level or picture (worked out from the save, so it needs no field of its own).
   const shadeTip = (e) => { if (!e || !e.L.shade) return null; const d = app.save.data, won = (x) => x.L.shade && (x.gallery ? d.gal[x.id] : d.done[x.id]); return app.levels.some(won) || app.gal.some(won) ? null : landsCfg().shadeTip || null; };
-  const coachSteps = (e) => { const st = e && ((app.cfg.teach || {})[e.id] || (e.L.hint ? [{ say: e.L.hint, until: "play" }] : null) || shadeTip(e)); return st && st.length ? st : null; };
+  const coachSteps = (e) => { const st = e && ((app.cfg.teach || {})[e.id] || e.L.coach || (e.L.hint ? [{ say: e.L.hint, until: "play" }] : null) || shadeTip(e)); return st && st.length ? st : null; };
   function coachStart() {
     const steps = coachSteps(app.entry);
     app.coach = steps ? { steps, i: 0, at: 0 } : null;
@@ -1448,6 +1450,7 @@
     if (!el && st.linked) { const j = linkedFront(); if (j >= 0) el = app.cards[j]; }
     if (!el && st.lockSlot && S.locked > 0) el = app.slots[S.cap - 1];
     if (!el && st.power) { const b = app.pws[E.POWERS.indexOf(st.power)]; if (b && !b.hidden) el = b; } // v5 R2: a power-up's badge (the level that unlocks it)
+    if (!el && st.slot) el = app.slots.find((q) => q.classList.contains("pickable")) || null; // v6 lane B part 2: the space a power-up can take (the tour's Recall)
     if (!el && st.line) el = $("line");
     // A ring on the board: the first gate's key (or the gate once the key is gone), the first standing tower.
     if (st.ring === "key" || st.ring === "gate") { const k = 0, kc = V.keyC[k]; if (B.gateCells.length) { if (st.ring === "key" && kc >= 0 && S.a[kc] > 0) Object.assign(V.focus, { on: true, x: kc % B.w + 0.5, y: ((kc / B.w) | 0) + 0.5, r: 1.1 }); else Object.assign(V.focus, { on: true, x: V.gX[k], y: V.gY[k], r: 1.6 }); } }
@@ -1496,6 +1499,7 @@
     else if (el && el.classList.contains("slot")) {
       const r = el.getBoundingClientRect(), head = $("line-head").getBoundingClientRect(); x = r.left + r.width / 2; y = r.top + H.downIn; kind = "slot";
       const shift = head.right - (x - H.halfW) + H.gap; if (shift > 0) $("line-cnt").style.setProperty("--cnt-shift", Math.ceil(shift) + "px");
+    } else if (el && el.classList.contains("pw") && app.tut && app.tut.on) { const r = el.getBoundingClientRect(); x = r.left + r.width / 2; y = r.top + H.downIn; kind = "badge"; // v6 lane B part 2: the tour's arrow on a badge, from above
     } else if (el && el.id === "line") {
       const a = $("line-lab").getBoundingClientRect(), b = $("line-cnt").getBoundingClientRect(), r = el.getBoundingClientRect(), right = b.width ? b.left : r.right;
       if (right - a.right < 2 * (H.halfW + H.gap)) { hand.hidden = true; app.handKind = "none"; return; }
@@ -1792,6 +1796,7 @@
     app.clock += dt;
     const V = app.V; if (!V) return;
     V.clock = app.clock;
+    if (app.tut) app.tut.step(); // v6 lane B part 2: the tour's steps and done cards (src/tutorial.js)
     if (app.screen === "title" && app.meta.lives) livesPill(); // v4 M5: the refill countdown (a DOM write only when it changes)
     if (app.hold >= 0) holdStep(); // v5.4: the reset hold
     if (app.held) return; // lands foundation: Settings open over a level holds it still
@@ -1996,6 +2001,7 @@
         for (let i = 1; i < 32; i++) { const [x, y] = at(i / 32); const hit = T.find((b) => own.indexOf(b) < 0 && inT(x, y, b, 3)); if (hit) return "a rod crosses a third tile at " + Math.round(x) + "," + Math.round(y); } }
       return true; };
     try {
+      if (app.tut) app.tut.selfTest(ok, out); // v6 lane B part 2: the intro tour first, so its offer never covers the home's checks
       // 1. Stored winning orders, every level on its own tag (v4.3: one order each), played patiently through the play
       // entry point.
       let wins = 0, total = 0;
