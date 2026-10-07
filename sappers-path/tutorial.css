@@ -1,0 +1,39 @@
+/* Sapper's Path v6 lane B part 2: the intro tour (src/tutorial.js; tools/tutorial-notes.md). Built on style.css's tokens
+   and pieces (.modal, .sheetcard, .panel, .p-title, .p-line, button.primary), so it reads as the game's own sheets. */
+
+/* While the tour runs: Skip tour takes the map button's place in the top bar; the speed button (a coin purchase), the
+   save code, reset and How to play rows in Settings are out of the way; a step with no practice power-up has no bar. */
+.tut-skip { flex: none; min-height: 44px; min-width: 44px; padding: 0 10px; font-size: 21px; line-height: 1; white-space: nowrap; }
+body.tut #btn-map, body.tut #top .tog-speed, body.tut #set-tour, body.tut #set-copy, body.tut #set-load, body.tut #set-reset, body.tut-nopw #powers { display: none; }
+
+/* The offer and the closing card: the game's modal sheet. */
+.tut-modal .sheetcard { max-width: 400px; }
+.tut-modal .p-title { font-size: 40px; }
+.tut-modal .p-line { margin: 2px 4px 12px; color: var(--parch-ink); }
+.tut-modal .row { display: flex; gap: 10px; }
+.tut-modal .row button { flex: 1; min-height: 52px; }
+.tut-foot { margin: 10px 0 0; font-family: var(--px); font-size: 18px; line-height: 1.05; color: var(--parch-soft); }
+.tut-modes { display: flex; flex-direction: column; gap: 10px; margin: 0 0 10px; }
+.tut-mode { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-height: 64px; padding: 8px 14px 10px; text-align: left; }
+.tut-mode b { font-weight: 400; font-size: 28px; line-height: 1; }
+.tut-mode span { font-size: 19px; line-height: 1.05; }
+.tut-mode.zen { background: var(--stone-hi); box-shadow: inset 0 3px 0 #e6e8ee, inset 0 -5px 0 var(--stone-lo), 0 3px 0 rgba(0,0,0,.5); }
+.tut-mode[hidden] { display: none; }
+.tut-later { width: 100%; min-height: 48px; font-size: 22px; }
+
+/* The done card: a parchment sheet over the rail and the power-up bar (placed in px by tutorial.js placeCard). */
+.tut-card { position: fixed; z-index: 9; display: flex; flex-direction: column; justify-content: center; gap: 8px; padding: 10px 14px 12px; overflow-y: auto; overscroll-behavior: contain;
+  text-align: center; animation: sheetin .22s cubic-bezier(.3,1.4,.5,1); }
+.tut-card[hidden] { display: none; }
+.tut-of { font-family: var(--px); font-size: 18px; line-height: 1; color: var(--parch-soft); text-transform: uppercase; letter-spacing: .5px; }
+.tut-say { margin: 0; font-family: var(--px); font-size: 23px; line-height: 1.05; color: var(--parch-ink); }
+.tut-more { margin: 0; padding: 0; list-style: none; font-family: var(--px); font-size: 20px; line-height: 1.05; color: var(--parch-soft); }
+.tut-more li { margin: 3px 0; }
+.tut-more[hidden] { display: none; }
+.tut-card .row { display: flex; gap: 10px; margin-top: 4px; }
+.tut-card .row button { flex: 1; min-height: 48px; }
+.tut-card .tut-next { flex: 1.4; }
+.tut-card.tight { justify-content: flex-start; gap: 5px; padding: 7px 12px 9px; } .tut-card.tight .tut-say { font-size: 20px; } .tut-card.tight .tut-more { font-size: 18px; } .tut-card.tight .row button { min-height: 44px; font-size: 22px; }
+
+/* Under the jam's own words on the fail sheet. */
+.tut-note { margin: -6px 0 10px; font-family: var(--px); font-size: 20px; line-height: 1.05; color: var(--parch-ink); }
