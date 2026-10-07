@@ -334,7 +334,7 @@
     "maxMs": 18000,
     "tickSample": ["e1-01", "e2-26", "e3-51", "e3-65"],
     "tickCapMs": 90000,
-    "overlapLevel": "e3-65",
+    "overlapLevel": "e3-63",
     "queueLevel": "e2-40",
     "jamLevel": {"name": "Jam check", "w": 9, "h": 5, "grid": [".........", ".aaaaaaa.", ".abcdefa.", ".aaaaaaa.", "....#...."],
       "cols": [[[2, 1], [1, 16]], [[3, 1]], [[4, 1]], [[5, 1]], [[6, 1]]]},

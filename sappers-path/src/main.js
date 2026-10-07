@@ -2085,7 +2085,9 @@
           playCol(jj); settleNow();
         }
         const lesson = e.L.source === "teaching"; // v5 R2: a coached Hard level (the first locks) need not be won by the naive follower
-        ok(saw.size === steps.length && (app.S.status === E.WON || !lesson) && !coachState().on, id + ": following the arrow shows all " + steps.length + " steps (" + Array.from(saw).join(",") + ")" + (lesson ? " and wins" : ""));
+        // Campaign v6 stage 2: the coached Hard and Extreme levels (53, 64, 66, 87) are dealt to the curve's careful ceilings,
+        // so a naive follower can jam before a later step comes up; on them the stored order shows every step instead.
+        ok((lesson ? saw.size === steps.length && app.S.status === E.WON : seen.size === steps.length) && !coachState().on, id + ": " + (lesson ? "following the arrow" : "the stored order") + " shows all " + steps.length + " steps (" + Array.from(lesson ? saw : seen).join(",") + ")" + (lesson ? " and wins" : ""));
         out.notes["coach_" + id] = Array.from(seen).join(",") + " / " + Array.from(saw).join(",");
       }
       if (app.byId.has("e1-02")) { const cm = app.cfg.teach["e1-02"][0].card; startLevel("e1-02", "normal"); playCol(frontOf(cm)); settleNow(); const cs = coachState(); ok(cs.i === 1 && app.focusEl === $("line"), "coach e1-02: the walled-in " + mat(cm).crew + " wait in their space, the arrow moves to the holding line"); }
