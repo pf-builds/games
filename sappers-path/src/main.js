@@ -433,7 +433,7 @@
       if (i < S.cap && S.spQ[i]) { const m = S.spM[i], w = S.spW[i], o = S.spO[i], st = S.stuck(i), lk = S.spL[i] !== 0, held = S.held(i); s.classList.add("full"); s.classList.toggle("work", o > 0); s.classList.toggle("stuck", st); s.classList.toggle("linked", lk); s.classList.toggle("held", held); paintMat(s, m); s.querySelector("b").textContent = w || "";
         s.querySelector(".out").textContent = o > 0 ? o : "";
         const men = s.querySelector(".men"); men.style.backgroundImage = app.manURL[m]; men.style.width = "calc(var(--man) * " + Math.min(w, L.sapperIcons) + ")";
-        s.setAttribute("aria-label", mat(m).crew + ", " + w + " waiting" + (o ? ", " + o + " out" : "") + (st ? ", stuck: nothing in reach" : "") + (lk ? ", " + L.linkedWord : "") + (held ? ", " + L.heldText : "")); }
+        s.setAttribute("aria-label", mat(m).crew + ", " + w + " waiting" + (o ? ", " + o + " out" : "") + (st ? ", stuck: nothing in reach" : "") + (lk ? ", " + L.linkedWord : "") + (held ? ", " + L.heldText : "") + (S.pinned(i) ? ", " + S.pinned(i) + " " + L.pinnedWord : "")); }
       else { s.classList.remove("full", "work", "stuck", "linked", "held"); s.style.removeProperty("--mc"); s.querySelector("b").textContent = ""; s.querySelector(".out").textContent = ""; s.querySelector(".men").style.width = "0"; s.setAttribute("aria-label", shut ? (lm > 0 ? fill(L.colourLockText, { crew: mat(lm).crew }) : L.lockedText) : "Empty space"); }
       s.classList.toggle("last", i === free && li.near); // one space left and the rest stuck: the last free space pulses
     });
@@ -994,7 +994,7 @@
     if (!e.debug && !e.gallery) { app.save.data.last = e.id; writeSave(); }
     renderAll(); fitLine(); showScreen("play"); coachStart(); // the line and tray take their size before the board is fitted to what is left
     renderPowers(); if (app.tipQ.length) showTip(app.tipQ.shift(), true);
-    if (app.B.kill) toast(app.cfg.layout.killToast, true); // v6: a killing-tower level says so as it starts
+    if (app.B.kill) toast(app.cfg.layout.killToast, true); else if (app.B.pin) toast(app.cfg.layout.pinToast); // v6: a killing (red) or pinning (calm) level says so as it starts
     return e;
   }
   // v4 M3: a tile's flip or shake from the last game lands at once when a level starts (a flip left mid-turn has no width).
@@ -1058,7 +1058,7 @@
   function ended() {
     const S = app.S; if (app.ending || S.status === E.PLAYING) return;
     app.ending = { won: S.status === E.WON, reason: S.reason, m: S.failMat, crews: [], why: S.status === E.FAILED && S.reason === "jam" ? S.jamWhy : 0 }; app.endT = app.clock;
-    if (S.reason === "jam") { app.ending.squads = []; for (const s of S.order(app.ord)) { if (!S.stuck(s)) continue; app.ending.squads.push([S.spM[s], S.spW[s]]); const c = mat(S.spM[s]).crew; if (app.ending.crews.indexOf(c) < 0) app.ending.crews.push(c); } cue("jam"); }
+    if (S.reason === "jam") { app.ending.squads = []; for (const s of S.order(app.ord)) { if (!S.stuck(s) && !S.pinned(s)) continue; app.ending.squads.push([S.spM[s], S.spW[s] + S.pinned(s)]); /* v6 1b: a pinned squad is named too */ const c = mat(S.spM[s]).crew; if (app.ending.crews.indexOf(c) < 0) app.ending.crews.push(c); } cue("jam"); }
     // v4.3: a level is cleared or not (first: its first clear).
     const q0 = app.ending.won && !app.entry.debug ? openQs() : null; // v5.1: the side quests open before this win (toMap pulses the ones it opens)
     if (app.ending.won && app.entry.debug) app.ending.first = false;
@@ -1093,7 +1093,7 @@
     const names = c.length > k ? c.slice(0, k).join(", ") + " and " + (c.length - k) + " more" : c.length > 1 ? c.slice(0, -1).join(", ") + " and " + c[c.length - 1] : c[0] || "the squads";
     // v4 M2: a jam where a linked card needed 2 spaces says so; one with a space still locked adds that it never opened.
     // v4.3: a jam where linked fronts wait for buried partners (jamWhy bit 4) says that first.
-    const L = app.cfg.layout, jam = e.why & 4 ? L.jamBuriedText + (c.length ? ", and " + names + " can't reach a block." : ".") : e.why & 1 ? L.jamLinkedText + (c.length ? ", and " + names + " can't reach a block." : ".") : "Line jammed: " + names + " can't reach a block." + (e.why & 2 ? " " + L.jamLockText : "");
+    const L = app.cfg.layout, jam = e.why & 4 ? L.jamBuriedText + (c.length ? ", and " + names + " can't reach a block." : ".") : e.why & 1 ? L.jamLinkedText + (c.length ? ", and " + names + " can't reach a block." : ".") : "Line jammed: " + names + " can't reach a block." + (e.why & 2 ? " " + L.jamLockText : "") + (e.why & 8 ? " " + L.jamPinText : ""); // v6 1b
     return { stuck: "Out of squads, and the waiting sappers can't reach their colour.", short: fill(L.shortText, { crew: who }), // v6: a killing tower left a colour short
       jam }[e.reason] || "The assault failed.";
   }
@@ -1107,7 +1107,7 @@
     const n = (e.squads || []).length;
     if (e.reason === "jam" && e.why & 4) { add(L.jamBuriedText); if (n) { add(", and "); chips(); add(" can't reach a block."); } else add("."); }
     else if (e.reason === "jam" && e.why & 1) { add(L.jamLinkedText); if (n) { add(", and "); chips(); add(" can't reach a block."); } else add("."); }
-    else if (e.reason === "jam") { add("Line jammed: "); if (n) chips(); else add("the squads"); add(" can't reach a block." + (e.why & 2 ? " " + L.jamLockText : "")); }
+    else if (e.reason === "jam") { add("Line jammed: "); if (n) chips(); else add("the squads"); add(" can't reach a block." + (e.why & 2 ? " " + L.jamLockText : "") + (e.why & 8 ? " " + L.jamPinText : "")); }
     else if (e.reason === "short" && e.m) { add(L.shortPre); chip(e.m, 0); add(L.shortPost); } // v6: the colour's chip, no count; Retry only (no continue)
     else add(reasonText(e));
   }
@@ -2287,7 +2287,7 @@
       // colour is short; the sheet names the colour (shortText; its chip, no count), offers no continue, and Retry starts
       // over; the stored order wins with nobody shot.
       { const e = app.byId.get("v6-kill");
-        if (ok(!!e && e.L.kill === true, "kill (v6): v6-kill is loaded")) {
+        if (ok(!!e && e.L.archers === "kill", "kill (v6): v6-kill is loaded")) {
           startLevel(e.id); ok(!$("toast").hidden && $("toast").textContent === LY.killToast, "kill (v6): the level starts with the warning toast ('" + $("toast").textContent + "')");
           const o = search(e, "normal", (S) => S.status === E.FAILED && S.reason === "short", ST.searchTries, ST.searchSeed);
           if (ok(!!o, "kill (v6): found a game that ends short")) {
@@ -2301,6 +2301,30 @@
             retry(); ok(app.S.status === E.PLAYING && app.S.plays === 0 && app.S.kills === 0 && !app.panel && $("panel").hidden, "kill (v6): Retry starts the level again");
             patient(winOf(e)); settleNow(); ok(app.S.status === E.WON && app.S.kills === 0 && app.S.hits === 0, "kill (v6): the stored order wins with nobody shot");
             out.notes.kill = e.id + " short '" + o + "'"; } } }
+      // 22h. Campaign v6 1b, pinning towers (the debug level v6-pin): the calm toast; a game that walks a sapper into a ring:
+      // the arrow strikes and the runner lies pinned with the label, the engine pins (nothing fails, its space is held, the
+      // space says so); from there a winning continuation: the tower falls, the pinned sapper gets up and walks back, the
+      // level wins. A jam with a pinned squad names it (its chip, the pin line, jamWhy 8).
+      { const e = app.byId.get("v6-pin");
+        if (ok(!!e && e.L.archers === "pin", "pin (v6 1b): v6-pin is loaded")) {
+          startLevel(e.id); ok(!$("toast").hidden && $("toast").textContent === LY.pinToast && !$("toast").classList.contains("bad"), "pin (v6 1b): the level starts with the calm toast ('" + $("toast").textContent + "')");
+          const o = search(e, "normal", (S) => S.pins > 0 && S.status === E.PLAYING, ST.searchTries, ST.searchSeed);
+          if (ok(!!o, "pin (v6 1b): found a game with a pinned sapper")) {
+            startLevel(e.id); patient(o.slice(0, -1)); playCol(o.charCodeAt(o.length - 1) - 48);
+            let struck = null; for (let t = 0; t < ST.tickCapMs && !struck; t += 16) { step(16); const h = app.V.hitInfo(); if (h.struck && h.kind === 3) struck = h; }
+            for (let t = 0; t < ST.tickCapMs && app.S.busy; t += 16) step(16);
+            const S = app.S, sp = S.order().find((x) => S.pinned(x) > 0), lab = sp != null ? app.slots[sp].getAttribute("aria-label") : "";
+            ok(!!struck && struck.label && S.pins === 1 && S.status === E.PLAYING && app.V.hitInfo().kind === 3 && sp != null && lab.indexOf("1 " + LY.pinnedWord) > 0, "pin (v6 1b): the runner lies pinned (the arrow struck, the label rose); the engine pins, play goes on; the space reads '" + lab + "'");
+            const rest = solveHere(); let up = null;
+            if (ok(!!rest, "pin (v6 1b): a winning continuation from the pinned state")) {
+              for (let i = 0; i < rest.length && app.S.status === E.PLAYING; i++) { playCol(+rest[i]); for (let t = 0; t < ST.tickCapMs && app.S.busy; t += 16) { step(16); if (!up && app.S.pins === 0) up = app.V.hitInfo(); } }
+              settleNow(); ok(!!up && up.kind === 4 && app.S.status === E.WON, "pin (v6 1b): the tower falls, the pinned sapper gets up and walks back (" + JSON.stringify(up) + "); the level wins"); } }
+          const j = search(e, "normal", (S) => S.status === E.FAILED && S.reason === "jam" && (S.jamWhy & 8) > 0, ST.searchTries, ST.searchSeed);
+          if (ok(!!j, "pin (v6 1b): found a jam with a pinned squad")) {
+            startLevel(e.id); patient(j); settleNow(); for (let t = 0; t < ST.tickCapMs && !app.panel; t += 16) step(16);
+            const pl = $("p-line"), aria = pl.getAttribute("aria-label") || "";
+            ok(app.panel === "fail" && aria.slice(-LY.jamPinText.length) === LY.jamPinText && pl.textContent.slice(-LY.jamPinText.length) === LY.jamPinText && pl.querySelectorAll(".chip").length >= 1 && app.ending.squads.some(([m, k]) => k > 0), "pin (v6 1b): the jam sheet names the pinned squad ('" + aria + "')");
+            out.notes.pin = e.id + " pinned '" + o + "', jam '" + j + "'"; } } }
       // 22g. Campaign v6, two locks (the debug level v6-locks): two padlocked sockets, the left in its colour (lock 0, a
       // colour lock) and the right the key's (lock 1, its key wearing the brackets). Along the stored order each opens on
       // its own: its own socket pops (the other stays shut), one unlock cue each; the level wins.

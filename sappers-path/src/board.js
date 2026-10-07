@@ -16,7 +16,9 @@
 // in the socket colour (board.lockKey), so it reads as a space key, not a gate key (a full ring in the gate's tint).
 // The page plays the padlock and the cue; sync() passes REVEAL, LINK and UNLOCK to the page's hooks (v4 M5: and POWER).
 // Campaign v6: a level with two locks marks each key lock's gilt block the same way while that lock is shut (V.lockShutM,
-// a bit per lock); a killed sapper (a killing-tower level) falls where the arrow met it and the label says so.
+// a bit per lock); a killed sapper (a killing-tower level) falls where the arrow met it and the label says so. Stage
+// 1b, a pinning level: the sapper lies where the arrow met it, the arrow still in it (kinds 5 and 6, its shooter the
+// engine's pinBy), until REL; then (kind 7) it walks back along its route from there to its space.
 //
 // Surface and scenery (v3 fix pass). Each block can take one of four tones of its colour (base, lit, shade, alt), picked
 // once per level from the fort's shape (a region's top or left edge lit, its bottom or right edge shaded, a running bond
@@ -157,7 +159,7 @@
       label: { t: -1e12, x: 0, y: 0, kill: false, text: "", w: 0 },
       focus: { on: false, x: 0, y: 0, r: 1 },
       gob: { on: false, t0: 0, x: 0, y: 0, done: false },
-      hooks: { pop: null, deposit: null, gate: null, tower: null, shot: null, hit: null, collapse: null, tap: null, free: null, move: null, reveal: null, link: null, unlock: null, power: null },
+      hooks: { pop: null, deposit: null, gate: null, tower: null, shot: null, hit: null, release: null, collapse: null, tap: null, free: null, move: null, reveal: null, link: null, unlock: null, power: null },
       lockKey: -1, lockShutM: 0, pal: null, palKey: "", hide: null, hideKey: "", liquid: null, pic: false, towerTop: new Float32Array(MAXT),
       // Critics 1 fix: rings (V.hot from the page, the loud mask worked out per board change, each ring's ease) and bins.
       hot: 0, ringsLoud: false, hotVer: -1, hotFor: -1, hotMask: 0, shootM: 0, ringA: new Float32Array(MAXT), ringHitT: new Float64Array(MAXT).fill(-1e12), binT: new Float64Array(E.NMAT).fill(-1e12),
@@ -569,7 +571,7 @@
       // A hit: it stops where its route first enters a standing ring (or at the pixel's face); the arrow meets it there.
       const pts = V.rPts[i], cum = V.rCum[i], np = V.rNp[i], w = V.w; let dH = cum[np - 1], tw = lowBit(coverNow(c));
       for (let q = 1; q < np; q++) { const px = Math.floor(pts[q * 2]), py = Math.floor(pts[q * 2 + 1]); if (px < 0 || py < 0 || px >= w || py >= V.h) continue; const m = coverNow(py * w + px); if (m) { dH = Math.max(0, cum[q] - 0.45); tw = lowBit(m); break; } }
-      V.rHitD[i] = dH; V.rTw[i] = Math.max(0, tw); V.rBx[i] = pts[0]; V.rBy[i] = pts[1];
+      V.rHitD[i] = dH; V.rTw[i] = k === 5 || k === 6 ? Math.max(0, S.pinBy(id)) : Math.max(0, tw); V.rBx[i] = pts[0]; V.rBy[i] = pts[1]; // 1b: a pin's arrow comes from its shooter
       V.rAim[i] = Math.max(1, Math.min(SH.arrowMs, V.rT1[i] - V.rT0[i]));
       along(i, dH, pos); V.rHx[i] = pos[0]; V.rHy[i] = pos[1];
       return i;
@@ -631,13 +633,15 @@
         if (t === EV.DISP) { runner(S, a); if (V.hooks.move) V.hooks.move(); }
         else if (t === EV.EAT || t === EV.CLEAR) eat(a, anim); // v5 R1: CLEAR, a block a continue or a Volley removed
         else if (t === EV.GATE) gate(a, anim);
-        else if (t === EV.HIT || t === EV.KILL) {
-          const i = V.idR[a], kill = t === EV.KILL; V.stats.hits++; if (i >= 0 && V.rTw[i] < MAXT) V.ringHitT[V.rTw[i]] = V.fxT;
-          if (anim && V.hooks.hit) V.hooks.hit(kill ? 2 : 1);
+        else if (t === EV.HIT || t === EV.KILL || t === EV.PIN) {
+          const i = V.idR[a], kill = t === EV.KILL, pin = t === EV.PIN; V.stats.hits++; if (i >= 0 && V.rTw[i] < MAXT) V.ringHitT[V.rTw[i]] = V.fxT;
+          if (anim && V.hooks.hit) V.hooks.hit(kill ? 2 : pin ? 3 : 1);
+          if (t === EV.HIT && i >= 0 && V.rK[i] === 5) V.rK[i] = 2; // 1b: its shooter fell first (or a Volley cut it loose): a plain knock back
           const hx = i >= 0 ? V.rHx[i] : (S.qC[a] % V.w) + 0.5, hy = i >= 0 ? V.rHy[i] : ((S.qC[a] / V.w) | 0) + 0.5;
-          if (anim) { V.label.t = V.fxT; V.label.x = hx; V.label.y = hy; V.label.kill = kill; V.label.text = (kill ? SH.killText : SH.hitText).replace("{n}", 1); V.label.w = 0; spawn(MX(hx, hy), MY(hx, hy), 0, FX.dust + 2, FX.dustSize, FX.lift * 0.5, FX.spread * 0.6); }
+          if (anim) { V.label.t = V.fxT; V.label.x = hx; V.label.y = hy; V.label.kill = kill; V.label.text = (kill ? SH.killText : pin ? SH.pinText : SH.hitText).replace("{n}", 1); V.label.w = 0; spawn(MX(hx, hy), MY(hx, hy), 0, FX.dust + 2, FX.dustSize, FX.lift * 0.5, FX.spread * 0.6); }
           if (kill && i >= 0) { if (anim) V.rDie[i] = V.fxT; else drop(i); }
-        } else if (t === EV.HOME) { if (S.qK[a] === 1) deposit(S.spM[S.qS[a]]); const i = V.idR[a]; if (i >= 0) drop(i); if (V.hooks.move) V.hooks.move(); }
+        } else if (t === EV.REL) { const i = V.idR[a]; if (i >= 0) { V.rK[i] = 7; V.rT1[i] = S.q1[a]; V.rT2[i] = S.q2[a]; } if (V.hooks.release) V.hooks.release(a, b); } // 1b: up and walking back
+        else if (t === EV.HOME) { if (S.qK[a] === 1) deposit(S.spM[S.qS[a]]); const i = V.idR[a]; if (i >= 0) drop(i); if (V.hooks.move) V.hooks.move(); }
         else if (t === EV.TAP) { if (V.hooks.tap) V.hooks.tap(a, b); }
         else if (t === EV.FREE) { if (V.hooks.free) V.hooks.free(a, b); }
         else if (t === EV.REVEAL) { if (V.hooks.reveal) V.hooks.reveal(a, b); }
@@ -656,7 +660,7 @@
       for (let k = 0; k < MAXG; k++) { const gc = V.B.gateCells[k]; V.gSt[k] = gc && gc.length && V.disp[gc[0]] > 0 ? 0 : 1; }
       V.lockShutM = shutMask(S);
       for (let m = 1; m < E.NMAT; m++) { V.haul[m] = Math.max(0, V.total[m] - S.left[m]); if (V.haul[m] > 0) claim(m); }
-      for (let id = 0; id < S.sent; id++) { if (S.q2[id] <= S.now || (S.qK[id] === 3 && S.q1[id] <= S.now)) continue; if (S.qK[id] === 1 && S.q1[id] <= S.now) V.haul[S.spM[S.qS[id]]]--; runner(S, id); }
+      for (let id = 0; id < S.sent; id++) { if ((S.qK[id] !== 6 && S.q2[id] <= S.now) || (S.qK[id] === 3 && S.q1[id] <= S.now)) continue; if (S.qK[id] === 1 && S.q1[id] <= S.now) V.haul[S.spM[S.qS[id]]]--; runner(S, id); }
       paintLayer();
     }
     function update(dt, speed) {
@@ -724,9 +728,10 @@
           return;
         }
       } else {
-        const dH = V.rHitD[i], back = Math.max(0, dH - SH.knockCells), tk = t1 + V.knockMs;
-        if (t < t1) d = ((t - t0) / Math.max(1, t1 - t0)) * dH;
-        else if (V.rK[i] === 3) d = dH;
+        const dH = V.rHitD[i], back = Math.max(0, dH - SH.knockCells), tk = t1 + V.knockMs, rk = V.rK[i];
+        if (rk === 7) d = dH * (1 - Math.max(0, Math.min(1, (t - t1) / Math.max(1, t2 - t1)))); // 1b: released, back from where it lay
+        else if (t < t1) d = ((t - t0) / Math.max(1, t1 - t0)) * dH;
+        else if (rk === 3 || rk === 5 || rk === 6) d = dH; // killed, or pinned (1b)
         else if (t < tk) { const u = (t - t1) / Math.max(1, V.knockMs); d = dH - SH.knockCells * (1 - (1 - u) * (1 - u)); }
         else d = back * (1 - Math.min(1, (t - tk) / Math.max(1, t2 - tk)));
       }
@@ -823,6 +828,10 @@
           const hit = t >= t1, f = ((t / SH.stepMs + i) | 0) & 1;
           let y = MY(pos[0], pos[1]) * cs - ss / 2 - (hit ? 0 : f * cs * SH.bob);
           if (!hit && t >= t1 - V.rAim[i]) { shooting |= 1 << V.rTw[i]; arrow(i, (t - (t1 - V.rAim[i])) / V.rAim[i]); }
+          if (k === 7) { gx.drawImage(S.sap[V.rM[i]], f * ss, 0, ss, ss, x, MY(pos[0], pos[1]) * cs - ss / 2 - f * cs * SH.bob, ss, ss); continue; } // 1b: released, walking back
+          if ((k === 5 || k === 6) && hit) { // 1b: pinned: lying where it fell, the arrow still in it
+            gx.save(); gx.translate(x + ss / 2, y + ss * 0.9); gx.rotate(Math.PI / 2); gx.drawImage(S.sap[V.rM[i]], 0, 0, ss, ss, -ss / 2, -ss * 0.9, ss, ss); gx.restore(); arrow(i, 1); continue;
+          }
           if (k === 3 && hit) { // falls over and fades
             const u = V.rDie[i] >= 0 ? (ft - V.rDie[i]) / SH.hitFallMs : 0;
             gx.save(); gx.globalAlpha = Math.max(0, Math.min(1, (1 - u) * 2.5)); gx.translate(x + ss / 2, y + ss * 0.9); gx.rotate(Math.min(1, u * 3) * Math.PI / 2); gx.drawImage(S.sap[V.rM[i]], 0, 0, ss, ss, -ss / 2, -ss * 0.9, ss, ss); gx.restore(); continue;
@@ -889,7 +898,7 @@
     function hitInfo() {
       let live = 0, arrows = 0, struck = 0, kind = 0; const t = V.t;
       for (let i = 0; i < RMAX; i++) { if (!V.rOn[i] || V.rK[i] === 1) continue; live++; kind = V.rK[i]; if (t >= V.rT1[i]) struck++; else if (t >= V.rT1[i] - V.rAim[i]) arrows++; }
-      return { live, arrows, struck, kind: kind === 3 ? 2 : kind === 2 ? 1 : 0, label: V.fxT - V.label.t < SH.labelMs };
+      return { live, arrows, struck, kind: kind === 3 ? 2 : kind === 2 ? 1 : kind === 5 || kind === 6 ? 3 : kind === 7 ? 4 : 0, label: V.fxT - V.label.t < SH.labelMs };
     }
     // v4.1: where live runners came from (selfTest and the harness): {live, yard (the route starts in the yard below the
     // board), crate (it starts on its colour's crate), entry (its first board cell is an entry square, the camp)}.
