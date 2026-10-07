@@ -603,13 +603,14 @@ const ROW6 = ["abcdef", "......", "..##.."]; // six colours, one pixel each, all
     [true, false, true, false, true, false, true, false, true, false, true], "density (v5 R2): nothing before its milestone; Easy at most one; Normal two once unlocked; Hard every one and the lock from 50; a lesson may keep older features");
 }
 
-// ---- Campaign v6 stage 1: killing towers (level kill: true) ------------------------------------------------------------------
+// ---- Campaign v6 stage 1: killing towers (level archers: "kill"; stage 1b replaced kill: true) --------------------------------
 {
-  throws(() => E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []], { kill: 1 })), "kill (v6): kill must be true or false");
-  throws(() => E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []], { kill: true, safeArchers: true })), "kill (v6): kill with safeArchers (retired) throws");
-  eq([E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []])).kill, E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []], { kill: false })).kill, E.compile(lv(["a.", "##"], [[[1, 1]], [], [], [], []], { kill: true })).kill], [false, false, true], "kill (v6): read from the level (no towers is fine)");
+  throws(() => E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []], { kill: true })), "archers (v6 1b): the stage-1 field kill throws (archers replaces it)");
+  throws(() => E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []], { archers: "knock" })), "archers (v6 1b): only pin or kill");
+  throws(() => E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []], { archers: "pin", safeArchers: true })), "archers (v6 1b): archers with safeArchers (retired) throws");
+  eq([E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []])).kill, E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []], { archers: "pin" })).kill, E.compile(lv(["a.", "##"], [[[1, 1]], [], [], [], []], { archers: "kill" })).kill], [false, false, true], "kill (v6): read from the level (no towers is fine)");
   // Exact deck: the a squad's third sapper walks at (6,2), inside the ring, and is shot dead: a has 5 sappers for 6 blocks.
-  const K = (cols) => ARCH(cols, { kill: true });
+  const K = (cols) => ARCH(cols, { archers: "kill" });
   const S = E.sim(E.compile(K([[[1, 6]], [[7, 3]], [], [], []])), N); S.logOn = true; pat(S, 0);
   eq([S.hits, S.kills, S.status, S.reason, S.failMat, evs(S, E.EV.KILL).length, evs(S, E.EV.HIT).length], [1, 1, E.FAILED, "short", 1, 1, 0], "kill (v6): the hit sapper dies (KILL, no HIT); its colour has 5 sappers for 6 blocks: the level fails short");
   const R0 = Ref.game(K([[[1, 6]], [[7, 3]], [], [], []]), N); R0.play(0); R0.quiet();
@@ -630,11 +631,49 @@ const ROW6 = ["abcdef", "......", "..##.."]; // six colours, one pixel each, all
   eq([D.status, D.reason], [E.FAILED, "hit"], "kill (v6, dealing mode): a hit fails the deal (hit)");
   // Coupled freeing with a kill (v4.3's case, restored): g (tower) linked to a; both a blocks in the ring, so a's one sapper
   // dies on the way. Dead counts as finished: a's space holds for g, both free once g is done; the spare a finishes.
-  const LL = lv(["......ggg", ".........", "......aa.", ".........", "....##..."], [[[7, 3]], [[1, 1]], [[1, 2]], [], []], { towers: [{ at: [7, 0], r: 3 }], links: [[[0, 0], [1, 0]]], kill: true });
+  const LL = lv(["......ggg", ".........", "......aa.", ".........", "....##..."], [[[7, 3]], [[1, 1]], [[1, 2]], [], []], { towers: [{ at: [7, 0], r: 3 }], links: [[[0, 0], [1, 0]]], archers: "kill" });
   const C = E.sim(E.compile(LL), N); C.play(0, 0); C.advanceTo(600);
   eq([C.kills, C.status, C.lineLen, C.held(1), C.spO[0] > 0], [1, E.PLAYING, 2, true, true], "kill (v6, coupled): a's sapper is killed; a counts as finished and holds for g, still working");
   C.quiet(); eq([C.lineLen, C.standing, C.status], [0, 0, E.PLAYING], "kill (v6, coupled): the tower falls, g is done: both spaces free");
   eq(pat(C, 2), E.WON, "kill (v6, coupled): the spare a squad finishes");
+}
+
+// ---- Campaign v6 stage 1b: pinning towers (level archers: "pin") -------------------------------------------------------------
+{
+  const P = (cols) => ARCH(cols, { archers: "pin" });
+  eq([E.compile(P([[[1, 6]], [[7, 3]], [], [], []])).pin, E.compile(P([[[1, 6]], [[7, 3]], [], [], []])).kill], [true, false], "pin (v6 1b): read from the level");
+  // The a squad's third sapper walks at (6,2) and is pinned there by tower 0 (PIN at the hit). It still counts as out:
+  // the squad holds its space with 1 waiting (wary) and 1 pinned; at rest it is no event, not stuck, nothing fails.
+  const S = E.sim(E.compile(P([[[1, 6]], [[7, 3]], [], [], []])), N); S.logOn = true; pat(S, 0);
+  const pin = evs(S, E.EV.PIN), id = pin.length ? pin[0][0] : -1, sp = S.order()[0];
+  eq([S.status, S.hits, S.kills, S.pins, pin.length, evs(S, E.EV.HIT).length, S.spW[sp], S.spO[sp], S.pinned(sp), S.busy, S.stuck(sp), S.pinBy(id), S.out], [E.PLAYING, 1, 0, 1, 1, 0, 1, 1, 1, false, false, 0, 1], "pin (v6 1b): the hit sapper lies pinned (PIN); its squad holds its space, 1 waiting and 1 pinned; at rest, not stuck");
+  // The tower's last block goes: REL (sapper, tower 0) at that instant, and it walks back as a knocked-back sapper would
+  // (yard + half the walk, no knock pause), rejoins and the squad finishes.
+  const Kb = E.sim(E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []])), N); pat(Kb, 0); const walk = Kb.q2[id] - Kb.q1[id] - TM.knockMs;
+  S.clearLog(); S.play(1); let tf = -1; for (let t = S.now; t < S.now + 30000 && tf < 0; t += 10) { S.advanceTo(t); if (evs(S, E.EV.TOWER).length) tf = S.now; }
+  const rel = evs(S, E.EV.REL), typ = []; for (let i = 0; i < S.evLen; i += 3) typ.push(S.ev[i]);
+  eq([rel, S.pins, S.q1[id], S.q2[id] - S.q1[id], typ.indexOf(E.EV.TOWER) < typ.indexOf(E.EV.REL)], [[[id, 0]], 0, tf, walk, true], "pin (v6 1b): the tower falls: REL after TOWER, released at that instant, home after the walk back (" + walk + " ms)");
+  S.quiet(); eq([S.status, S.kills], [E.WON, 0], "pin (v6 1b): released, it rejoins; the level wins");
+  const R1 = Ref.game(P([[[1, 6]], [[7, 3]], [], [], []]), N); R1.play(0); R1.quiet(); const r1 = [R1.pins, R1.status]; R1.play(1); R1.quiet();
+  eq([r1, R1.pins, R1.status, R1.now], [[1, "playing"], 0, "won", S.now], "pin (v6 1b, reference): pinned, released, won at the same time");
+  // A tower already down when the arrow lands: only knocked back (HIT, no PIN).
+  const X = E.sim(E.compile(P([[[1, 6]], [[7, 3]], [], [], []])), N); X.logOn = true; X.play(1, 0); X.play(0, 500); X.quiet();
+  eq([X.hits, evs(X, E.EV.PIN).length, evs(X, E.EV.HIT).length, X.status], [1, 0, 1, E.WON], "pin (v6 1b): the shooter fell before the arrow landed: a plain knock back");
+  // One space: the pinned squad holds it, the tower card can't go out: a jam (bit 8), the squad not stuck. A legitimate loss.
+  const J = E.sim(E.compile(P([[[1, 6]], [[7, 3]], [], [], []])), hold(1)); pat(J, 0);
+  eq([J.status, J.reason, J.jamWhy, J.stuck(0), J.pins], [E.FAILED, "jam", 8, false, 1], "pin (v6 1b): a line held by a pinned squad with the tower's card refused: jam, jamWhy 8");
+  const RJ = Ref.game(P([[[1, 6]], [[7, 3]], [], [], []]), hold(1)); RJ.play(0); RJ.quiet();
+  eq([RJ.status, RJ.reason, RJ.jamWhy, RJ.pins], ["failed", "jam", 8, 1], "pin (v6 1b, reference): the same jam");
+  // The continue finishes the pinned squad: its waiting and pinned sappers' worth of a blocks cleared, the pinned one cut
+  // loose (REL id -1), the space free; the tower then goes out and the level wins.
+  const C = E.sim(E.compile(P([[[1, 6]], [[7, 3]], [], [], []])), Object.assign({}, hold(1), { continues: 1 })); C.logOn = true; pat(C, 0); C.clearLog();
+  eq([C.revive(), evs(C, E.EV.REL).length && evs(C, E.EV.REL)[0][1], evs(C, E.EV.CLEAR).length, C.pins, C.lineLen], [E.PLAYING, -1, 2, 0, 0], "pin (v6 1b): the continue clears 2 blocks (1 waiting + 1 pinned), cuts the pinned sapper loose, frees the space");
+  eq(pat(C, 1), E.WON, "pin (v6 1b): after the continue the tower goes out and the level wins");
+  const RC = Ref.game(P([[[1, 6]], [[7, 3]], [], [], []]), Object.assign({}, hold(1), { continues: 1 })); RC.play(0); RC.quiet(); RC.revive(); RC.play(1); RC.quiet();
+  eq([RC.status, RC.cleared, RC.now], ["won", 2, C.now], "pin (v6 1b, reference): the same continue");
+  // Dealing mode: any hit still fails the deal.
+  const D = E.sim(E.compile(P([[], [], [], [], []])), N, { deal: true }); D.playSquad(1, 6); D.quiet();
+  eq([D.status, D.reason], [E.FAILED, "hit"], "pin (v6 1b, dealing mode): a hit fails the deal");
 }
 
 // ---- Campaign v6 stage 1: two locks (level locks: [lock, lock]) ------------------------------------------------------------
@@ -778,15 +817,15 @@ function inject(L0, seed) {
 const DEBUG = require("../levels/debug-v4.json").levels;
 // Campaign v6 stage 1: inject6(L, seed): a copy of a baked level made deadly (kill: true, when it has towers) and/or given
 // two locks (its own lock, or a colour lock, beside a colour lock of another card colour, in a random order).
-function inject6(L0, seed, kill, two) {
+function inject6(L0, seed, kill, two) { // kill: "kill" or "pin" (stage 1b), or nothing
   const L = JSON.parse(JSON.stringify(L0)), r = Gr.rng(seed); delete L.win; delete L.grade;
-  if (kill) L.kill = true;
+  if (kill) L.archers = kill;
   if (two) { const ms = []; L.cols.forEach((col) => col.forEach((cd) => { if (ms.indexOf(cd[0]) < 0 && cd[0] !== E.GILT && !(L.lock && L.lock.colour === cd[0])) ms.push(cd[0]); }));
     const a = L.lock || { colour: ms.splice(Math.floor(r() * ms.length), 1)[0] }, b = { colour: ms[Math.floor(r() * ms.length)] };
     delete L.lock; L.locks = r() < 0.5 ? [a, b] : [b, a]; }
   return L;
 }
-const V6 = LEVELS.levels.filter((l) => l.towers && l.towers.length).filter((l, k) => k % 9 === 2).map((l, k) => inject6(l, 9101 + k, true, k % 2 === 0))
+const V6 = LEVELS.levels.filter((l) => l.towers && l.towers.length).filter((l, k) => k % 9 === 2).map((l, k) => inject6(l, 9101 + k, k % 3 === 1 ? "kill" : "pin", k % 2 === 0))
   .concat(LEVELS.levels.filter((l) => l.n >= 50 && !(l.towers && l.towers.length)).filter((l, k) => k % 12 === 5).map((l, k) => inject6(l, 9301 + k, false, true)));
 const TWISTED = DEBUG.concat(LEVELS.levels.filter((l, k) => k % 2 === 1).map((l, k) => inject(l, 7001 + k)), V6);
 {
@@ -812,7 +851,7 @@ const TWISTED = DEBUG.concat(LEVELS.levels.filter((l, k) => k % 2 === 1).map((l,
   eq(hangs, 0, "no hang: " + rests + " rest states in " + games + " random games on " + TWISTED.length + " twisted levels: every one is a win, a fail, or has a legal tap");
   ok(jam1 > 0 && jam2 > 0, "no hang: the games include jams where a linked card needed 2 spaces (" + jam1 + ") and jams with a space still locked (" + jam2 + "); fails " + JSON.stringify(fails));
   eq(TWISTED.slice(DEBUG.length).filter((L) => E.check(L).some((w) => /rows apart/.test(w))).length, 0, "inject: the random links keep to 2 rows apart");
-  ok(fails.short > 0, "no hang (v6): the killing-tower levels (" + TWISTED.filter((L) => L.kill).length + ") fail short in the run (" + fails.short + " games); two-lock levels: " + TWISTED.filter((L) => L.locks && L.locks.length === 2).length);
+  ok(fails.short > 0, "no hang (v6): the killing-tower levels (" + TWISTED.filter((L) => L.archers === "kill").length + ") fail short in the run (" + fails.short + " games); two-lock levels: " + TWISTED.filter((L) => L.locks && L.locks.length === 2).length);
 }
 
 // ---- differential on twisted levels: engine vs the reference, patient and rushed ------------------------------------------
@@ -1205,6 +1244,15 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
   // A gilt Volley removes keys: the gate opens.
   const G = E.sim(E.compile(lv(["ajjjb", "jjjjj", ".....", "n.##."], [[[14, 1]], [[1, 1]], [[2, 1]], [], []], { gates: [{ at: [1, 0], key: [0, 3] }] })), VR);
   G.power(PW.VOLLEY, 14); eq([G.left[10], G.left[14]], [0, 0], "volley: on gilt, the key goes and its gate opens");
+}
+// v6 1b: a Volley of a pinned squad's colour cuts the pinned sapper loose (REL id -1); its squad leaves the line.
+{
+  const L = ARCH([[[1, 6]], [[7, 3]], [], [], []], { archers: "pin" }), S = E.sim(E.compile(L), phold(5, [0, 0, 0, 0, 1])); S.logOn = true; pat(S, 0); S.clearLog();
+  const r = S.power(PW.VOLLEY, 1), rel = evs(S, E.EV.REL);
+  eq([r, rel.length, rel.length && rel[0][1], S.pins, S.lineLen, S.left[1]], [E.PLAYING, 1, -1, 0, 0, 0], "volley (v6 1b): the pinned a sapper is cut loose (REL -1), the a squad leaves the line, every a block goes");
+  S.quiet(); eq(pat(S, 1), E.WON, "volley (v6 1b): the tower goes out and the level wins");
+  const R = Ref.game(L, phold(5, [0, 0, 0, 0, 1])); R.play(0); R.quiet(); R.power(4, 1); R.quiet(); R.play(1); R.quiet();
+  eq([R.status, R.pins, R.now], ["won", 0, S.now], "volley (v6 1b, reference): the same game");
 }
 // ---- every operation: dealing, game over, determinism ------------------------------------------------------------------------
 {

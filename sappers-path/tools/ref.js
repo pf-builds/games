@@ -51,6 +51,14 @@
 // spaces of the line) until its own key pops or its own colour goes out. A shut space stays where it is when the other
 // opens; squads take the lowest space that is neither held nor shut; a Ladder's new space goes just before the shut
 // spaces at the end of the line. A doomed sapper the Volley cuts loose is only knocked back by its arrow.
+// Stage 1b: archers: "pin" | "kill" replaces kill: true. On a pin level the sapper an arrow hits lies where it fell until
+// the tower that shot it falls: that is the lowest-numbered tower still standing whose ring holds its target when it set
+// out. Lying there it still belongs to its squad (the squad is not done, its space stays held) but it is not moving, so
+// a rest with no tap left is a jam (jamWhy 8 when anyone is pinned). When that tower's last block goes, its pinned
+// sappers (in the order they set out) walk back to their spaces from where they lie (yard plus half the walk) and wait
+// again. If the tower was already down when the arrow landed, it is a plain knock back. A Volley of its colour or a
+// continue finishing its squad sends a pinned sapper home on the same walk, no longer part of any squad; the continue
+// clears a block for each of the squad's pinned sappers as well as for each waiting one.
 // pops: every popped pixel as [cell, time], in the order they popped.
 "use strict";
 const MATCH = { ".": 0, ",": -2, "~": -1, "#": -3 };
@@ -74,7 +82,7 @@ function load(L) {
   const locks = (L.locks || (L.lock ? [L.lock] : [])).map((lk) => ({ key: lk.key ? idx(lk.key) : -1, colour: lk.colour || 0 })); // v6: one or two
   // v5 R1, mystery blocks: the "?" cells of L.hidden, less those on the picture's outer edge (shown from the start).
   const hid = new Set(); (L.hidden || []).forEach((r, y) => { for (let x = 0; x < w; x++) if (r[x] === "?" && !(L.pic ? x <= 1 || y <= 1 || x >= w - 2 || y >= h - 2 : x === 0 || y === 0 || x === w - 1 || y === h - 1)) hid.add(y * w + x); });
-  return { w, h, g, campRow, gates, towers, cols, locks, kill: L.kill === true, hid };
+  return { w, h, g, campRow, gates, towers, cols, locks, kill: L.archers === "kill", pin: L.archers === "pin", hid };
 }
 
 function game(L, rules) {
@@ -84,7 +92,8 @@ function game(L, rules) {
                                // out (v4.3): sappers walking out to a pixel or back after an arrow (carriers don't count)
   const events = [];           // {t, seq, kind: "pop" | "hit" | "home" | "wake", sapper?, space?}
   const claimed = new Set(), pops = [];
-  let status = "playing", reason = "", jamWhy = 0, now = 0, seq = 0, taps = 0, peak = 0, hitsN = 0, killsN = 0;
+  let status = "playing", reason = "", jamWhy = 0, now = 0, seq = 0, taps = 0, peak = 0, hitsN = 0, killsN = 0, sentN = 0;
+  const pinned = [], fallen = R.towers.map(() => false); // stage 1b: sappers lying pinned; towers already down
   // v6: shutBy[i] = the lock that keeps space i shut (null: none). The line's last spaces start shut, lock 0's first.
   const per = rules.lockSpaces == null ? 1 : rules.lockSpaces, nShut = R.locks.length ? Math.max(0, Math.min(rules.hold - 1, per * R.locks.length)) : 0, shutBy = [];
   for (let i = 0; i < rules.hold; i++) shutBy.push(i >= rules.hold - nShut ? Math.min(R.locks.length - 1, Math.floor((i - rules.hold + nShut) / Math.max(1, per))) : null);
@@ -138,11 +147,13 @@ function game(L, rules) {
     const o = spaces[s.pair]; if (o && !done(o)) return;
     spaces[s.pair] = null; spaces[i] = null;
   }
+  const standingT = (k) => R.towers[k].cells.some((tc) => g[tc] > 0);
   function send(i, c, tiles, t) {
-    const s = spaces[i]; s.wait--; s.out++;
+    const s = spaces[i], sid = sentN++; s.wait--; s.out++;
     if (!s.wary && covered(c)) {
-      s.wary = true; const half = Math.ceil(tiles / 2), hitT = t + Tm.yardMs + half * Tm.tileMs;
-      schedule(hitT, "hit", { sapper: { space: i, m: s.m, back: hitT + Tm.knockMs + Tm.yardMs + half * Tm.tileMs } });
+      s.wary = true; const half = Math.ceil(tiles / 2), hitT = t + Tm.yardMs + half * Tm.tileMs, x = c % w, y = Math.floor(c / w);
+      const tower = R.towers.findIndex((T, k) => standingT(k) && (x - T.cx) ** 2 + (y - T.cy) ** 2 <= T.r * T.r);
+      schedule(hitT, "hit", { sapper: { space: i, m: s.m, sid, tower, walk: Tm.yardMs + half * Tm.tileMs, back: hitT + Tm.knockMs + Tm.yardMs + half * Tm.tileMs } });
     } else {
       claimed.add(c); const popT = t + Tm.yardMs + tiles * Tm.tileMs + Tm.biteMs;
       schedule(popT, "pop", { sapper: { space: i, m: s.m, cell: c, back: popT + Tm.yardMs + tiles * Tm.carryMs } });
@@ -164,7 +175,7 @@ function game(L, rules) {
     if (e.kind === "pop") {
       if (g[q.cell] > 0) { const m = g[q.cell]; g[q.cell] = -2; claimed.delete(q.cell); pops.push([q.cell, e.t]); sap[m]--;
         for (const G of R.gates) if (G.key === q.cell) for (const gc of G.cells) g[gc] = -2;
-        keyPopped(q.cell); }
+        keyPopped(q.cell); fell(); }
       schedule(q.back, "home", { sapper: Object.assign({}, q, { hit: false }) });
       if (!left() && status === "playing") status = "won";
       if (!q.loose) { spaces[q.space].out--; freeIf(q.space); } // the block is picked up: the carrier no longer holds the space
@@ -172,11 +183,20 @@ function game(L, rules) {
     } else if (e.kind === "hit") {
       hitsN++;
       if (R.kill && !q.loose) { killsN++; sap[q.m]--; spaces[q.space].out--; if (status === "playing" && sap[q.m] < left(q.m)) fail("short"); freeIf(q.space); } // v6: dead
+      else if (R.pin && !q.loose && standingT(q.tower)) pinned.push(q); // 1b: lies there until its tower falls
       else schedule(q.back, "home", { sapper: Object.assign({}, q, { hit: true }) });
     } else if (e.kind === "home") { // only a sapper sent back by an arrow rejoins its squad; a carrier is just home
       if (q.hit && !q.loose) { const s = spaces[q.space]; s.out--; s.wait++; freeIf(q.space); }
     }
   }
+  // 1b: a tower whose last block just went lets its pinned sappers walk back, in the order they set out (loose: they go home
+  // and belong to no squad).
+  const homeFrom = (q, loose) => schedule(now + q.walk, "home", { sapper: Object.assign({}, q, { hit: true, loose: !!q.loose || loose }) });
+  function fell() {
+    R.towers.forEach((T, k) => { if (fallen[k] || standingT(k)) return; fallen[k] = true;
+      for (const q of pinned.filter((p) => p.tower === k).sort((a, b) => a.sid - b.sid)) { pinned.splice(pinned.indexOf(q), 1); homeFrom(q, false); } });
+  }
+  function cutPinned(pred) { for (const q of pinned.filter(pred).sort((a, b) => a.sid - b.sid)) { pinned.splice(pinned.indexOf(q), 1); if (spaces[q.space]) spaces[q.space].out--; homeFrom(q, true); } }
   const need = (cd) => (cd.partner ? 2 : 1);
   // A linked card's partner must be the front of the list it is in (v4.3).
   const buried = (cd) => !!cd.partner && !cols.some((c) => c[0] === cd.partner);
@@ -187,7 +207,7 @@ function game(L, rules) {
     if (events.length) return;
     const fronts = cols.map((c) => c[0]).filter(Boolean);
     if (!fronts.length) fail("stuck");
-    else if (fronts.every(refusedCard)) { fail("jam"); jamWhy = (free() > 0 ? 1 : 0) | (lockedN() > 0 ? 2 : 0) | (fronts.some(buried) ? 4 : 0); }
+    else if (fronts.every(refusedCard)) { fail("jam"); jamWhy = (free() > 0 ? 1 : 0) | (lockedN() > 0 ? 2 : 0) | (fronts.some(buried) ? 4 : 0) | (pinned.length ? 8 : 0); }
   }
   expose();
   function advanceTo(t) {
@@ -245,9 +265,10 @@ function game(L, rules) {
       s.card.n = s.wait; cols[s.card.col].unshift(s.card); spaces[a] = null;
     } else if (k === 4) { // v5 R1, the Volley on colour a
       const m = a; if (!(Number.isInteger(m) && m >= 1 && m < 15 && m !== IRON) || (!left(m) && !(sap[m] > 0))) return "refused";
-      g.forEach((v, c) => { if (v === m && !isGate(c)) { g[c] = -2; claimed.delete(c); clearedN++; for (const G of R.gates) if (G.key === c) for (const gc of G.cells) g[gc] = -2; keyPopped(c); } });
+      for (const c of nearOrder()) if (g[c] === m && !isGate(c)) { g[c] = -2; claimed.delete(c); clearedN++; for (const G of R.gates) if (G.key === c) for (const gc of G.cells) g[gc] = -2; keyPopped(c); fell(); } // nearest the entry first (1b: a tower's fall frees its pins in that order)
       for (const c of cols) for (let i = c.length - 1; i >= 0; i--) if (c[i].m === m) { const cd = c[i]; c.splice(i, 1); cd.seen = true; if (cd.partner) { cd.partner.partner = null; cd.partner = null; } }
       for (const e of events) if (e.sapper && e.sapper.m === m && spaces[e.sapper.space] && spaces[e.sapper.space].m === m && (e.kind === "pop" || e.kind === "hit" || (e.kind === "home" && e.sapper.hit))) e.sapper.loose = true;
+      cutPinned((q) => spaces[q.space] && spaces[q.space].m === m); // 1b: its pinned sappers walk home, no longer a squad's
       spaces.forEach((sp, i) => { if (!sp || sp.m !== m) return; if (sp.pair != null && spaces[sp.pair]) { const o = sp.pair; spaces[o].pair = null; spaces[i] = null; freeIf(o); } else spaces[i] = null; });
       sap[m] = 0; colourOut(m); expose();
       uses[k]++; seeFronts(); dispatch(now); settle(); return;
@@ -256,7 +277,7 @@ function game(L, rules) {
   }
   // A pixel goes without a sapper (the continue): as a pop would, its gate or lock opens; nobody carries it.
   let clearedN = 0;
-  function remove(c) { const m = g[c]; g[c] = -2; sap[m]--; clearedN++; for (const G of R.gates) if (G.key === c) for (const gc of G.cells) g[gc] = -2; keyPopped(c); }
+  function remove(c) { const m = g[c]; g[c] = -2; sap[m]--; clearedN++; for (const G of R.gates) if (G.key === c) for (const gc of G.cells) g[gc] = -2; keyPopped(c); fell(); }
   function nearOrder() {
     const camp = []; g.forEach((v, i) => { if (v === -3 && Math.floor(i / w) === R.campRow) camp.push(i % w); });
     const mid2 = Math.min(...camp) + Math.max(...camp), key = (c) => { const x = c % w, y = Math.floor(c / w); return [(2 * x - mid2) ** 2 + (2 * (y - R.campRow)) ** 2, Math.abs(y - R.campRow), x, y]; };
@@ -268,12 +289,12 @@ function game(L, rules) {
     if (!ok) return "refused";
     status = "playing"; reason = ""; jamWhy = 0; revived++;
     const near = nearOrder(), order = spaces.map((s, i) => [s, i]).filter(([s]) => s).sort((p, q) => p[0].seq - q[0].seq);
-    for (const [s, i] of order) { let k = s.wait; s.wait = 0; for (const c of near) { if (k <= 0) break; if (g[c] === s.m && !isGate(c)) { remove(c); k--; } } freeIf(i); }
+    for (const [s, i] of order) { let k = s.wait + pinned.filter((q) => q.space === i).length; s.wait = 0; cutPinned((q) => q.space === i); for (const c of near) { if (k <= 0) break; if (g[c] === s.m && !isGate(c)) { remove(c); k--; } } freeIf(i); }
     if (!left()) status = "won";
     expose(); dispatch(now); settle();
   }
   return { play, power, revive, advanceTo, quiet, hidden, hiddenCell, get revived() { return revived; }, get cleared() { return clearedN; }, get status() { return status; }, get reason() { return reason; }, get now() { return now; }, get peak() { return peak; }, get extra() { return extra; },
-    get hits() { return hitsN; }, get kills() { return killsN; }, get open() { return openN(); }, get locked() { return lockedN(); }, get jamWhy() { return jamWhy; },
+    get hits() { return hitsN; }, get kills() { return killsN; }, get pins() { return pinned.length; }, get open() { return openN(); }, get locked() { return lockedN(); }, get jamWhy() { return jamWhy; },
     spaces, pops, g, cols };
 }
 
