@@ -162,7 +162,7 @@
       hooks: { pop: null, deposit: null, gate: null, tower: null, shot: null, hit: null, release: null, collapse: null, tap: null, free: null, move: null, reveal: null, link: null, unlock: null, power: null },
       lockKey: -1, lockShutM: 0, pal: null, palKey: "", hide: null, hideKey: "", liquid: null, pic: false, towerTop: new Float32Array(MAXT),
       // Critics 1 fix: rings (V.hot from the page, the loud mask worked out per board change, each ring's ease) and bins.
-      hot: 0, ringsLoud: false, hotVer: -1, hotFor: -1, hotMask: 0, shootM: 0, ringA: new Float32Array(MAXT), ringHitT: new Float64Array(MAXT).fill(-1e12), binT: new Float64Array(E.NMAT).fill(-1e12),
+      rq: null, hot: 0, ringsLoud: false, hotVer: -1, hotFor: -1, hotMask: 0, shootM: 0, ringA: new Float32Array(MAXT), ringHitT: new Float64Array(MAXT).fill(-1e12), binT: new Float64Array(E.NMAT).fill(-1e12),
     };
     const RMAX = Math.max(8, Math.min(1024, SH.maxRunners | 0));
     V.rOn = new Int8Array(RMAX); V.rId = new Int32Array(RMAX); V.rK = new Int8Array(RMAX); V.rS = new Int8Array(RMAX); V.rM = new Int8Array(RMAX); V.rC = new Int32Array(RMAX);
@@ -284,6 +284,7 @@
     // Land 1 fix (the visual critic's B1): hide (optional), {c, q}, the level's mystery-block fill and its ? colour (a land
     // level's, chosen 20+ CIEDE2000 from its picture by tools/land.js); none: config board.hidden's, as before.
     function setLevel(B, S, pal, liquid, shade, hide) {
+      V.rq = ringQuiet(K.ring); // Campaign v6 fix: the quiet ring's look, read once a level (style.css --ring-*)
       const hk = hide ? hide.c + hide.q : ""; if (hk !== V.hideKey) { V.hideKey = hk; V.hide = hide || null; V.sprites = null; }
       // Lands foundation: the shade rows (null: none) and each colour's shade studs; a change of shade colours drops the sprites.
       let shK = ""; V.shade = shade || null; if (pal) for (const k in pal) if (pal[k] && pal[k].sh) shK += k + ":" + pal[k].sh.join() + ";";
@@ -693,6 +694,13 @@
 
     // ---- drawing ----------------------------------------------------------------------------------------------------
     const dash = [0, 0], NODASH = [];
+    // Campaign v6 fix (visual critic m1, rings vanishing at 375 px on busy art): the quiet ring is a red dash --ring-w CSS
+    // px wide at --ring-a over a dark halo (--ring-halo, --ring-halo-w px at --ring-halo-a) that lifts it off any pixel art.
+    // The numbers are page presentation in style.css :root (config board.ring's quietW and quietA when they are absent).
+    function ringQuiet(RG) {
+      const cs = typeof getComputedStyle === "function" ? getComputedStyle(document.documentElement) : null, n = (k, d) => { const v = cs ? parseFloat(cs.getPropertyValue(k)) : NaN; return isFinite(v) ? v : d; };
+      return { w: n("--ring-w", RG.quietW), a: n("--ring-a", RG.quietA), hw: n("--ring-halo-w", 0), ha: n("--ring-halo-a", 0), hc: (cs && cs.getPropertyValue("--ring-halo").trim()) || K.towerWall };
+    }
     // Critics 1 fix: does tower k's ring matter now? Its archer is shooting or just hit someone, the coach points at a
     // tower, or a colour the player can send now (V.hot) has a block in reach inside the ring (worked out once per board
     // change or page mask, into V.hotMask; allocation-free).
@@ -789,7 +797,9 @@
         for (let k = 0; k < T.length && k < MAXT; k++) {
           let al = 1; if (V.towerLeft[k] <= 0) { al = 1 - (ft - V.tFallT[k]) / FX.towerFallMs; if (!(al > 0)) continue; }
           const a = V.ringA[k], rx = MX(T[k].cx + 0.5, T[k].cy + 0.5) * cs, ry = MY(T[k].cx + 0.5, T[k].cy + 0.5) * cs, rr = T[k].r * cs;
-          if (a < 1) { gx.globalAlpha = al * (1 - a) * RG.quietA; gx.lineWidth = Math.max(1, V.dpr * RG.quietW); dash[0] = V.dpr * RG.quietDash[0]; dash[1] = V.dpr * RG.quietDash[1]; gx.setLineDash(dash); gx.beginPath(); gx.arc(rx, ry, rr, 0, Math.PI * 2); gx.stroke(); }
+          if (a < 1) { const q = al * (1 - a), RQ = V.rq; dash[0] = V.dpr * RG.quietDash[0]; dash[1] = V.dpr * RG.quietDash[1]; gx.setLineDash(dash);
+            if (RQ.ha > 0) { gx.globalAlpha = q * RQ.ha; gx.strokeStyle = RQ.hc; gx.lineWidth = V.dpr * RQ.hw; gx.beginPath(); gx.arc(rx, ry, rr, 0, Math.PI * 2); gx.stroke(); gx.strokeStyle = K.rangeStroke; }
+            gx.globalAlpha = q * RQ.a; gx.lineWidth = Math.max(1, V.dpr * RQ.w); gx.beginPath(); gx.arc(rx, ry, rr, 0, Math.PI * 2); gx.stroke(); }
           if (a > 0) { gx.globalAlpha = al * a; gx.lineWidth = Math.max(1, cs * K.rangeW); dash[0] = cs * K.rangeDash[0]; dash[1] = cs * K.rangeDash[1]; gx.setLineDash(dash); gx.beginPath(); gx.arc(rx, ry, rr, 0, Math.PI * 2); gx.stroke(); }
         }
         gx.restore();
