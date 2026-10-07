@@ -485,3 +485,106 @@ With nothing past the last level, the fog node simply stays hidden.
 - Weak picks lane C flagged and kept: Apple Goblin, Baby Griffin, Bridge Troll, Birthday Dragon, Trusty Steed, Round
   Shield. Spares (cq14 Baby Phoenix, cq16 Cheeky Gargoyle, cq35 Party Cannon) are in the manifest with `spare: true`; a
   swap is one line in quests.json and `quest-bake.js convert bake --only cqNN install check`.
+
+## 6. The fix pass after the critic round: page and quests (lane A), 2026-10-07
+
+Branch `campaign-v6-ui` (worktree `repos/games-sappers-campaign-ui/`, cut from `campaign-v6` at 2474574); a parallel
+builder owns the levels, engine and configs in `repos/games-sappers-campaign/`. This section is separate from §5 so the
+two merge cleanly. Sources: `tools/critic-campaign-v6-visual.md` (S2-S5, m1, m2, m5) and the functional critic's minors
+(on the other branch). SPEC-v4 §9 "Campaign v6 fix pass (page and quests)". Untouched here: `levels/levels.json`, the
+engine, `tools/ref.js`, the bake configs and `config.json`.
+
+### 6.1 What shipped
+
+| Fix | How | Files |
+|---|---|---|
+| S2 pinned in the line | A squad with a pinned sapper takes class `pinned`: red hatch at 45° (stuck's is 135°), a red rim, and its top-left badge turns into a red arrow badge with the number pinned (the walking triangle and gold rim stay only if others still walk). The head counts it apart: "1 stuck · 1 pinned · 3 free" (`readLine` li.pin; config's existing `pinnedWord`). `H.hit` and `H.tower` mark the line moved, so the badge lands with the arrow and clears with the tower. | main.js, style.css |
+| S5 start toast over the line | `toast(text, bad, board)`: the pin and kill start toasts pass `board`, so on a wide screen they sit at the board's foot (as on a phone) instead of over the side column's tray, where they covered the line and the cards. Refusal toasts keep their tray spot (v4.3 m2). | main.js |
+| S3, S4 three quest pictures | cq13 Raven Messenger, cq30 Shield Wall and cq42 Bagpipes out; cq14 Baby Phoenix, cq27 Castle Guard and cq36 Royal Roast in, on the same slots (6.2). | quests.json, pictures/manifest.json, gallery.json, map/layout.json, gallery-manifest.json, LICENSES.md, campaign-quests/src |
+| m1 range rings | The quiet ring is a red dash 2 CSS px at 0.8 over a dark halo 4 px at 0.4, so it lifts off busy pixel art at 375 px; still a dash, so no block is hidden. The loud ring is unchanged. | board.js, style.css |
+| m2 key socket | A key lock's socket (`klock`) moves its padlock left and shows the board's key block beside it: gilt, the key etched in, the dashed cream square the key wears on the board. A colour lock's socket already shows its colour. | main.js, style.css |
+| m5 Extreme reads harder | The Extreme pill is gold on near-black with a red inner rim and a gold skull ahead of the word (map, play bar, every Play); an Extreme Play's face is blood red, darker than Hard's. | style.css |
+| cq11 Knitting Dragon | Not acted on (the no-IP call is Peter's): an orange upright dragon near a well-known starter-monster silhouette. Flagged for him. | - |
+
+Cache tag `?v=50` (index.html and style.css's font URL). selfTest: +4 checks (the start toast clear of the line and
+cards; the pinned space's class, badge and head words; the marker clearing on release; the key socket's mark) and the
+Extreme check now wants the skull.
+
+### 6.2 Decisions (mine, inside the brief)
+
+- **The ring numbers live in style.css `:root`** (`--ring-w`, `--ring-a`, `--ring-halo`, `--ring-halo-w`, `--ring-halo-a`),
+  read once a level by board.js `ringQuiet` (config `board.ring.quietW`/`quietA` when absent). config.json is the other
+  builder's in this pass; **at merge, moving these five into `config.json board.ring` is a one-line change** if the
+  orchestrator prefers them there (the code then reads `K.ring` directly).
+- **The pinned badge shows the pinned count, not the out count.** A pinned squad whose other sappers still walk keeps the
+  gold working rim as well; the head counts it as pinned (a squad is pinned, working or stuck, never two).
+- **Which pictures.** Of lane C's three spares only cq14 Baby Phoenix passes the ink-outline rule: cq16 Cheeky Gargoyle has
+  isolated black specks in its base and its wall merges into it; cq35 Party Cannon's wheels are a checker of black spokes
+  and tan (the broken-black look the critic faulted in cq30), and its outline vanishes on the slate ground. So two come
+  from lane C's "maybe" list, as the brief allows: **cq27** (lane C's "Asleep on Duty": the sleep doesn't read, the guard
+  does, so retitled **Castle Guard**; solid black outline, ring 112) and **cq36 Royal Roast** (the cook melts into the
+  ground; the roast on its silver platter reads; solid outline). Lane C's other options failed on reading or on the floors:
+  cq22 Fanfare, cq23 Brave Sir Squeak and cq41 The Squire miss the faded floor (15.6, 14.9, 13.4 < 16); cq05 Slingshot
+  reads close to a well-known green film sage (IP); cq07, cq31, cq32 don't read.
+- **Layout (no two neighbours of one group).** Slot 4 (after 16, between knight and creature) takes the castle-life Royal
+  Roast; slot 35 (after 139, between goblin and castle) the creature Baby Phoenix; slot 37 (after 148, between castle and
+  creature) the soldier Castle Guard. Groups per slot unchanged (castle, creature, soldier), so the 50's group counts are
+  the same.
+- **Same slot, same rules.** Each bakes on its slot with `quest-bake.js` (planOf: the slot's ladder, the tag's density and
+  deck, the band by `after`), seed 300000 + cq number. Tags stay Normal; prizes stay (ladder 16, scout 139, volley 148).
+  Features: Royal Roast none (the slot is before moats, as Bagpipes); Castle Guard moat + linked (as Shield Wall);
+  Baby Phoenix ? cards + linked: its slate ground can't carry a ring (lane C), so the slot's moat goes to the next deck
+  feature, still Normal's two. The Raven had moat + ? cards.
+- **Ids:** g-ours-cq14, g-ours-cq27, g-ours-cq36 are new; g-ours-cq13/30/42 are retired, never reused. Their manifest
+  lines stay (marked `dropped` in `tools/campaign-quests/pictures/manifest.json`), their sources stay, and LICENSES.md's
+  section is rewritten by install (the three new lines in their places).
+- **Saves:** no save can hold a clear of the three dropped ids except a test save of this unreleased branch; `sanitize`
+  drops it. Nothing to migrate.
+
+### 6.3 Measurements
+
+- Boards: the three converted from the stored sources are identical to lane C's shaded boards (grid and palette); the 23
+  other boards in the scratch are byte-identical before and after `convert --force`.
+- Bake (first pick each, 0 fallbacks): 4 cq36 Normal [] rate 0.5575 in 0.46-0.64, real pace 264 s, 49 taps; 35 cq14
+  Normal [mystery, linked] 0.32 in 0.2-0.4, 172 s, 38 taps; 37 cq27 Normal [moat, linked] 0.265 in 0.2-0.4, 161 s, 35 taps.
+- gallery.json: exactly the three records at places 4, 35 and 37 changed; the 47 others and the Wandering Gallery's 12
+  byte-identical.
+- `quest-bake.js check` PASS (9 gates; taps 34-55, pace 160-264 s, median 195 s; 22 of 26 ringed).
+- The start toast's overlap with the line and the cards, before -> after: 1280x720 17,157 px² on 64 and on 157 -> 0;
+  375x812 and 400x600 0 -> 0.
+- The pinned badge, before -> after (css px): 12.4x17 triangle "1" -> 25.6x17 red arrow badge at 1280; 11.8x14 -> 22.1x14 at
+  375; 11.4x12 -> 19.8x12 at 400x600. The key socket's mark: 27, 22 and 16 px square at the three sizes.
+
+### 6.4 Checks
+
+- `tools/test.js` 665 passed, 0 failed. `tools/regrade.js --gallery` 0 differences of 372 checks (62 pictures);
+  `tools/regrade.js` 0 of 2,205 (250 levels); `levels/levels.json` unchanged. `tools/freeze.js --require` PASS (levels
+  1,155 checks incl. 201-250 byte-identical, gallery 360, castles 283; the Wandering Gallery's 12 records unchanged).
+- critic-v5 (`tools/critic-v5/run.sh`): 0 mismatching games of 10,527 (319 levels), grade, tag and format problems 0,
+  known answers 0 wrong, real pace 312/312. Its `diff-result.json` is not committed here (it only reorders; the merge
+  regenerates it).
+- selfTest (`tools/selftest-lands.mjs --url http://127.0.0.1:8473/`): 920/0 at 375x812 3x, 922/0 at 1280x720, 0 console
+  messages (was 916/918: +4 checks).
+- Harness (`tools/harness.mjs`): all passed; selfTest 920/0 at 375x812, 375x667, 414x736, 360x740, the 400x600 iframe
+  and the hidden tab, 922/0 at 812x375 and 1280x720; 0 console messages.
+- Real taps (`tools/shots-campaign-v6-fix.mjs after`, port 8473): 48/48 at 1280x720 mouse, 375x812 3x touch and 400x600,
+  0 console messages: 64 and 157 opened from their map nodes; 64's start toast 0 px² over the line and cards at all three
+  sizes (before: 17,157 px² at 1280x720); a pin by 11 real taps, the pinned space hatched with the arrow badge, the head
+  "1 stuck · 1 pinned · 3 free"; the tower falls, the marker and count clear, 39 more taps win; 157's toast 0 px²
+  (before 17,157 at 1280), the key socket's mark (27, 22, 16 px), 44 real taps open each socket and win; cq14, cq27 and
+  cq36 won from their map nodes by 38, 35 and 49 real taps ("Picture complete!", the prize +1 once), their nodes then show
+  won. The before run (`before`, the base at 2474574 served from a git archive): 37/39, the two desktop toast overlaps.
+- Shots (gitignored as every `tools/shots-*/`): `tools/shots-campaign-v6-fix/before/` and `after/` (64 start, pinned,
+  pinned line, released; 157 start, line, chip, unlocks; 74 and 91 rings; map realms 7 and 8; quests), each with run.json;
+  `tools/shots-campaign-v6/quests-50.jpg` (`python3 tools/quest-sheet.py`), the 50 with the three new.
+
+### 6.5 For the merge and the critics
+
+- **Touches outside this lane's usual files:** `map/layout.json` (quest-bake install: three quest ids) and
+  `index.html` (the cache tag, `?v=50`). Nothing in config.json; if the other builder also bumps to `?v=50`, the lines
+  are identical.
+- **SPEC-v4 §9 and v5-progress.md** get appends at their ends; if the other branch appends too, keep both (order free).
+- The five ring numbers sit in style.css (6.2); move to `config.json board.ring` at merge if preferred.
+- Still open from the visual critic, not in this brief: S1 (painted tower colours 104, 117, 198: the other builder's),
+  m3 (the short sheet's black chip), m4 (coach and toast say the same on 64 and 66 at phone), m6 cq12 Spell-Book Cat,
+  the weaker pictures cq26, cq21, cq02 (Peter's call), and cq11 Knitting Dragon's IP closeness (Peter's call).
