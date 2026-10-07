@@ -389,9 +389,6 @@ Fixed: S1-S7, m2, m3, N1, N2 (`tools/v5-r4-notes.md` §10). Parked:
 ## v6 lane B (Campaign and Zen modes, 2026-10-06)
 
 - World 1's first level is Red Fuji (a landscape painting with a link) because the plan fills Normal slots in Gallery order; a simple emoji with no feature as Zen's very first picture may welcome better (reorder in `tools/lands/z1-gallery/world.json` main and re-bake that slot).
-- World 1 reuses castle sheets 1-5 mirrored: their painted side-quest spurs lead to nothing in Zen, and the fifth sheet holds only 4 levels (its top half is empty road before Kitten Forest). Lane C can paint a pair of calm gallery sheets later.
-- Power-ups in Zen unlock by the Campaign's reach; a Zen-only player has the Ladder and side-quest prizes. Consider Zen unlocks of its own (e.g. by pictures done).
-- The castle progress pill is hidden on the home when Zen exists; the cards carry progress. A coins-only top row could tighten.
 - The map's realm card on desktop shows the focus level's world, even when the view sits in another world.
 - The SP2 code encodes pictures by their place in gallery.json, like SP1; lane A's rewrite of gallery.json moves those places (a code made before the merge reads differently after). Give pictures stable numbers in the code at the merge.
 - The campaign's boss epilogue reads `lands.epilogue.none` now; lane A may want campaign-only words.
@@ -407,3 +404,5 @@ Fixed: S1-S7, m2, m3, N1, N2 (`tools/v5-r4-notes.md` §10). Parked:
 - The practice forts are small (9x6 to 9x8) and sit small in a desktop window; a larger cell cap for tour boards would
   make the sappers easier to watch there.
 - A real-tap playthrough in the harness (it checks the tour only through SP.selfTest's DOM clicks today).
+- World 1 shares Kitten Forest's two painted sheets (Peter's call, zero bytes); a pair of its own (a gallery or garden) from lane C would set it apart for real. The warm `tint` is a stopgap.
+- Zen-only players reach the Scout (100) and the Volley (125) only through prizes or the Campaign (98 Zen pictures give reach 99); revisit the mapping when Zen has more worlds.

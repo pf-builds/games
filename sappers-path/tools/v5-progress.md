@@ -377,5 +377,12 @@ levels.json, gallery.json and layout.json are untouched here.
 | B6 | Notes, runbook §6, SPEC-v4 §9 entry, LATER | done | (this commit) |
 | B9 | Final checks | see State | (this commit) |
 
+| C1 | Fix pass: power-ups by either mode (combined reach, owned shown, prize named), tips off the sheets | done | (fix commits) |
+| C2 | Fix pass: home cards (both gold, Continue ring, own place line and tag), Zen "Picture n" words, board and Volley labels | done | (fix commits) |
+| C3 | Fix pass: World 1 on Kitten Forest's sheets (B' A' B A' B, tint, fade), eggs on spur tips, 8/7/7/7/7 spots | done | (fix commits) |
+| C4 | Fix pass: Campaign map ends at 200 (no fog, tail path); reset Campaign / Zen / Everything; 44 px bar buttons; cache `?v=47` | done | (fix commits) |
+| C9 | Fix pass checks | done: test.js 630/0; regrades 0 of 1,605, 0 of 432, 0 of 324 (--zen); freeze PASS; critic-v5 0 mismatching games of 10,758, tags 0, known answers 0 wrong; selfTest 774/0 (375x812@3), 776/0 (1280x720), 774/0 (360x640@3); harness all passed, 0 console; shots retaken (375, 320, 1280). Pre-existing, not lane B: at 812x375 with DPR 1 and no touch (not a harness viewport) the colour-blind toggle check fails identically on 7e38fce | (fix commits) |
+
 ### State (v6 lane B)
-Built and checked on the branch; not pushed. Next: one critic round on both modes, one fix pass, then lane E merges lane A.
+Built, critiqued (`tools/critic-zen-functional.md`, `tools/critic-zen-visual.md`) and fixed on the branch; not pushed.
+Next: lane E merges lane A.

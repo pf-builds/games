@@ -139,4 +139,4 @@ every land out of the Campaign and plays it in Zen. To show a newly installed la
 - Words: a Zen level wins "Picture done" / "{title}, all dug out." and fails "A little stuck" (config `zen.text`); `lands.text`
   is no longer shown.
 - Checks as §4, plus test.js's and selfTest's Zen sections (they read every world). A world of pictures the game already
-  has (World 1) is made with `tools/zen-world.js` and lives in zen.json itself (`map.sheets` reuses castle sheets mirrored).
+  has (World 1) is made with `tools/zen-world.js` and lives in zen.json itself (`map.sheets` reuses existing sheets, e.g. World 1 Kitten Forest's in its own turn and tint, eggs on the spur tips).
