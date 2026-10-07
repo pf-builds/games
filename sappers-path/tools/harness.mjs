@@ -501,11 +501,12 @@ async function run() {
     await page.goto(URL_ + "?debug=1", { waitUntil: "load" });
     await page.waitForFunction(() => window.SP, null, { timeout: 15000, polling: 100 }); // rAF is held here, so poll by time (M4: boot awaits one more fetch)
     const st = await page.evaluate(() => SP.selfTest());
-    const won = await page.evaluate(() => { SP.load(10); /* v4.3: level 10 is a Hard level */ for (const c of SP.winOrder()) { SP.play(+c); for (let i = 0; i < 6000 && SP.state().busy; i++) SP.tick(16); } return SP.tick(9000); });
+    const HN = JSON.parse(readFileSync(new URL("./bake-config.json", import.meta.url), "utf8")).tags.v6.indexOf("H") + 1 || 10; // campaign v6 stage 2: the first Hard level (11), from tags.v6 (v4.3: 10)
+    const won = await page.evaluate((n) => { SP.load(n); for (const c of SP.winOrder()) { SP.play(+c); for (let i = 0; i < 6000 && SP.state().busy; i++) SP.tick(16); } return SP.tick(9000); }, HN);
     const spr = await page.evaluate(() => SP.sprites());
     report.hidden = { selfTest: { pass: st.pass, fail: st.fail, ms: st.ms }, panel: won.panel, sprites: spr };
     ok(st.fail.length === 0, "hidden selfTest: " + st.fail.join("; "));
-    ok(won.status === "won" && won.panel === "win" && won.tag === "hard", "hidden: level 10 (Hard) won patiently and its panel shown on SP.tick alone");
+    ok(won.status === "won" && won.panel === "win" && won.tag === "hard", "hidden: level " + HN + " (Hard) won patiently and its panel shown on SP.tick alone");
     ok(spr.length === 0, "hidden: sprite caches opaque (" + spr.join(",") + ")");
     await ctx.close();
   } finally { await browser.close(); }

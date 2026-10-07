@@ -18,7 +18,10 @@ const { chromium } = await import(process.env.PLAYWRIGHT_MODULE);
 const b = await chromium.launch(), log = [], rows = []; let bad = 0;
 const check = (c, m) => { if (!c) bad++; rows.push((c ? "ok   " : "FAIL ") + m); };
 for (const [w, h, dpr, touch, nm] of [[1280, 720, 1, false, "desktop"], [375, 812, 3, true, "phone"]]) {
-  const ctx = await b.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: dpr, hasTouch: touch, isMobile: touch }), p = await ctx.newPage(), tag = w + "x" + h;
+  const ctx = await b.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: dpr, hasTouch: touch, isMobile: touch }), tag = w + "x" + h;
+  // Before the page's scripts: a save with every level before ?n= cleared (one load a level, so the font preload is used).
+  await ctx.addInitScript(([key, all]) => { const n = +new URLSearchParams(location.search).get("n"); if (n > 0) { const d = {}; for (const id of all.slice(0, n - 1)) d[id] = 1; localStorage.setItem(key, JSON.stringify({ v: 2, done: d })); } }, [CFG.save.key, ids]);
+  const p = await ctx.newPage();
   p.on("console", (m) => log.push(tag + " " + m.type() + ": " + m.text())); p.on("pageerror", (e) => log.push(tag + " pageerror: " + e.message));
   const tapEl = async (sel) => { const L = p.locator(sel).first(); await L.scrollIntoViewIfNeeded(); const box = await L.boundingBox(); if (touch) await p.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2); else await p.mouse.click(box.x + box.width / 2, box.y + box.height / 2); await p.waitForTimeout(60); };
   const card = (j) => tapEl('button.card[data-col="' + j + '"]');
@@ -28,10 +31,8 @@ for (const [w, h, dpr, touch, nm] of [[1280, 720, 1, false, "desktop"], [375, 81
   const toPanel = () => p.evaluate(() => { for (let i = 0; i < 1500 && !SP.state().panel; i++) SP.tick(40); return SP.state(); });
   // A save that has cleared every level before n (the save's done map, by id), then the map, then the level's node.
   const open = async (n) => {
-    const L = byN(n), done = {}; for (const id of ids.slice(0, n - 1)) done[id] = 1;
-    await p.goto(URL_ + "?debug=1"); await p.waitForFunction(() => window.SP && document.fonts.status === "loaded", null, { timeout: 20000 });
-    await p.evaluate(([d, key]) => { const raw = JSON.parse(localStorage.getItem(key) || '{"v": 2}'); raw.done = Object.assign({}, d); localStorage.setItem(key, JSON.stringify(raw)); }, [done, CFG.save.key]);
-    await p.reload(); await p.waitForFunction(() => window.SP && document.fonts.status === "loaded", null, { timeout: 20000 });
+    const L = byN(n);
+    await p.goto(URL_ + "?debug=1&n=" + n); await p.waitForFunction(() => window.SP && document.fonts.status === "loaded", null, { timeout: 20000 });
     await p.evaluate(() => SP.screen("map")); await p.waitForTimeout(500);
     const sel = 'button.mn[data-n="' + n + '"]', node = await p.locator(sel).count();
     if (node) await tapEl(sel); await p.waitForTimeout(300);
