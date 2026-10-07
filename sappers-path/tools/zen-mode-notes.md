@@ -21,8 +21,8 @@ game at `/sappers-path/`).
   failed"; a side quest wins "Picture complete!" and fails "Assault failed". The boss's first win now says the road
   ends at the throne (`lands.epilogue.none`): the lands are Zen's.
 - **Zen:** one journey of worlds from the same map code. World 1 The Gallery (36 pictures, no side quests) at the bottom
-  on castle sheets 1-5 mirrored, World 2 Kitten Forest (201-250 and its 12 Wandering Gallery side quests) above on its
-  own sheets. Every world's first level is open from the start; inside a world they open one by one. A world's levels
+  on reused sheets (§10), World 2 Kitten Forest (201-250 and its 12 Wandering Gallery side quests) above on its
+  own sheets (fix pass: World 1 now reuses Kitten Forest's two sheets in a turn of its own, see §10). Every world's first level is open from the start; inside a world they open one by one. A world's levels
   are numbered from 1 on the map, the play bar and Play. Banners say "World k", the realm card "World k of t". No Goblin
   King, a calm story line, "More worlds on the way" in the fog. Every Zen level and side quest wins "Picture done" with
   "{title}, all dug out." (the finished picture on the report) and fails "A little stuck", the jam's reason, then "Have
@@ -38,7 +38,7 @@ game at `/sappers-path/`).
 - `levels/zen.json` (one line, 118 KB): `worlds` (in order, bottom of the Zen map to top) and `levels` (World 1's 36
   records). A world: `k`, `name`, `lore`, `era`, then either `land: k` (its levels are `levels.json`'s with that land,
   its side quests `gallery.json`'s, its sheets `map/layout.json`'s, all as `tools/land.js install` put them) or
-  `map.sheets: [{from, mirror, levels: [first, last]}]` (castle sheet `from`'s painting, road, eggs and level spots,
+  `map.sheets: [{from, mirror, fade, tint, levels: [first, last], spots, eggsAt, eggKinds}]` (layout sheet `from`'s painting, road and level spots,
   its levels on that sheet's spots in road order). Zen ids `z<k>-<n>` (`bySlot`'s `/^e\d{1,2}-(\d{1,4})$/` can't match
   them). World 1's era is 101 (`100 + k` for a world of its own; a land world keeps its land's era, 8 + land).
 - `tools/lands/z1-gallery/world.json`: World 1's bake input (profile, source ids, the level order `plan` chose).
@@ -77,7 +77,7 @@ regenerate with `zen-world.js ... check`).
   zen.json: trivial and keyed to my own file, as the brief allowed). So on this branch the campaign shows 24 side
   quests (Step 0's keepers) plus nothing for the 36 slots until lane A's 26 arrive.
 - Egg ids: castle `s<sheet>-<i>` (unchanged); Zen `z<world>-<sheet in its world>-<i>`, coins from the sheet's own
-  config `map.eggCoins` row (the castle sheet it reuses, or the land sheet's).
+  config `map.eggCoins` row (the sheet it reuses).
 - Power-ups unlock by the Campaign's reach in either mode (the wallet is shared); a Zen-only player has the Ladder
   (unlocks at 1) and whatever Zen side quests give. A call, §8.
 - A side quest a win just opened is scrolled into view on a short screen (`questsInView`), keeping the current node in
@@ -116,7 +116,7 @@ regenerate with `zen-world.js ... check`).
 3. Checks: test.js (its Zen section reads every world), selfTest (its Zen section plays every Zen level's stored order),
    regrades, freeze, critic-v5, harness. Bump the cache tag.
 A world of pictures the game already has: a `world.json` and `tools/zen-world.js` (plan, bake, assemble, check, install),
-then an entry with `map.sheets` (castle sheets reused mirrored; no new image bytes).
+then an entry with `map.sheets` (existing sheets reused; no new image bytes).
 
 ## 7. What lane E must do at merge (campaign-v6 into sappers-path)
 
@@ -141,14 +141,52 @@ then an entry with `map.sheets` (castle sheets reused mirrored; no new image byt
 1. World 1's median pace gate 180-250 s (land gate 200-250): the Gallery's boards are smaller; median 197 s.
 2. Hid the 36 from the campaign on this branch (keyed to zen.json `from`), rather than showing duplicates.
 3. Kept the boss loop in realm 8 under "Campaign carries the map track into its levels".
-4. Power-ups unlock by the Campaign's reach in Zen too.
+4. Power-ups: superseded by the fix pass (§10): one reach for both modes, owned ones always shown.
 5. Zen level numbers count from 1 in each world; World 2 shows 1-50 (ids stay e9-201..).
-6. The castle progress pill on the home is hidden when Zen exists; the cards carry progress.
-7. World 1's map: castle sheets 1-5 mirrored (8, 8, 8, 8, 4 levels); their painted quest spurs stay (no nodes on them);
-   eggs keep each sheet's own kinds and spots; config bridges follow the mirrored road.
+6. The castle progress pill and the realm banner on the home are hidden when Zen exists; the cards carry both.
+7. World 1's map: superseded by the fix pass (§10): Kitten Forest's sheets, eggs on the spur tips.
 8. SP1 load replaces Zen with what the move derives from the code (a load replaces the device's progress).
 9. The Zen fail line keeps the jam's reason (chips) and adds "Have another look." after it.
 
 ## 9. Checks (final)
 
-See `tools/v5-progress.md`, "v6 lane B", row B9 for the numbers of the final run.
+See `tools/v5-progress.md`, "v6 lane B", rows B9 and C9 for the numbers of the final runs.
+
+## 10. Fix pass after the critics (2026-10-06; `tools/critic-zen-functional.md`, `tools/critic-zen-visual.md`)
+
+Peter's two calls during the pass: both home cards gold, the last played marked by something other than colour; World 1
+on Kitten Forest's sheets (the mirrored castle sheets read as the Campaign map).
+
+- **Power-ups (functional MAJOR-1):** one reach for both modes: the Campaign's reach (its first open level not cleared)
+  plus every Zen picture done (main levels and side quests), against the same `unlockAt` numbers. A Zen-only player opens
+  the Ladder at once, the Quartermaster at 24 pictures, the Recall at 49; the Scout (100) and the Volley (125) need some
+  Campaign too, or a Zen prize: **any power-up the player owns shows its badge** (and keeps it for the level once its last
+  one is used), so no prize lands in a hidden slot. A Zen side quest's win sheet names its prize ("..., all dug out. Side
+  quest prize: +1 Volley"). Calls: the mapping (one picture = one level of reach) is mine; selfTest checks the
+  Quartermaster opening at 24 Zen pictures with nothing in the Campaign.
+- **Home cards (visual M1, m1, m2; Peter):** both cards gold from the first launch. The mode played last wears a cream
+  ring, sits 3 px higher and carries a "Continue" chip on its top edge. Each card holds its own place line (Campaign: "Realm
+  2 · Fenwater Vale"; Zen: "World 1 · The Gallery"), its progress, and Play with its tag inline (a long label puts the tag on
+  the line below). A Hard level no longer turns the card red; its tag says Hard. The realm banner over the cards shows only
+  when Zen doesn't exist.
+- **World 1's map (visual M2, M3; Peter):** Kitten Forest's sheets `land-01-b`, `-a` in the turn B', A', B, A', B (World 2
+  starts on A, so the join never shows one sheet twice; no two neighbours share a file), crossfaded seams like Land 1's, and
+  a light warm tint (`tint`, a CSS filter) so World 1 reads apart from World 2. Zero new image bytes. 36 levels: 8 on the
+  first sheet, 7 on each other (spot 5 skipped: measured, it leaves no gap wider than a sheet join), so level 36 sits at
+  the top of the last sheet and World 2's banner follows at once (no empty road, no orphan fork). Every sheet's two eggs
+  sit on its painted side-quest spurs' tips (`eggsAt: "quests"`, the same spots World 2's side quests use), kinds
+  butterfly, mushrooms, owl, glint, yarn, grass, glowcap, wisp, kitten, butterfly: every spur leads to something.
+- **Campaign end (visual M4):** with Zen on, the Campaign map's road stops at level 200 by the Goblin King: no mist, no
+  puffs, no "The road goes on". The castle Gallery's long-tail pictures (6 on this branch) open as before once 1-200 are
+  cleared; their node keeps its spot and a stepping-stone path from 200 to it shows only then. Mode-scoped (`ends` in
+  buildMap). **For lane A/E:** if lane A keeps a long tail, it shows this way; if it drops it, nothing past 200 shows at
+  all. The painted fog at sheet 25's top stays (art).
+- **Words (m3, MINOR-1):** a Zen stop is a picture everywhere: node labels and the current-node label "Picture n", Play
+  "Play picture n", the home "Picture n"; a Zen side quest is "Side quest n" (numbered in its world). The board's label in
+  Zen is "The picture"; the Volley badge's label uses Zen's tip.
+- **Reset (MINOR-2, m6):** three choices, Campaign, Zen and Everything. A single mode's reset never touches the shared wallet
+  (`save.js resetCampaign` keeps coins, power-ups, unlocks and lives); Everything is v5.4's full wipe of both modes and the
+  wallet (the only one that tells the cloud hook). The choice has room above and below it; it fits 320 px.
+- **Tap sizes (m7, MINOR-3):** the home's gear and the map bar's Back and gear are 44 x 44 at every size.
+- **Tips (m8):** a power-up's tip is put away when a win or fail sheet opens, so it never covers the finished picture.
+- Skipped as briefed: m4 (mirrored sheets accepted), m5 (the painted home stays).
