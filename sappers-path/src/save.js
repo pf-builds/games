@@ -302,9 +302,12 @@
     if (!zen.last && camp && (spec.levels || []).indexOf(camp.last) >= 0) zen.last = camp.last;
     zen.moved = 1; return n;
   }
+  // v6 fix pass: the Campaign's progress cleared with the SHARED WALLET kept (coins, inv, got, lives) and the preferences;
+  // the cloud hook is not told (only a full reset clears a portal's cloud copy). A full reset is reset() plus resetZen().
+  function resetCampaign(sv, meta) { const w = sv.data, s = withPrefs(fresh(meta), w); for (const k of ["coins", "inv", "got", "lives"]) s[k] = JSON.parse(JSON.stringify(w[k])); sv.data = s; return sv.write(); }
   // Zen reset: Zen progress cleared (the move's flag and the mode kept), the wallet and the Campaign untouched.
   function resetZen(sv) { const d = zenFresh(); d.moved = 1; d.mode = sv.data.mode; sv.data = zenView(d, sv.wallet); return sv.write(); }
 
   return { VERSION, fresh, sanitize, record, next, nextBy, isOpen, questOpen, memoryStore, open, reset, cloud, withPrefs, encode, decode, CODE,
-    ZVERSION, CODE2, zenFresh, zenSanitize, zenView, openZen, zenMove, resetZen, encode2, decodeAny }; // v6 lane B
+    ZVERSION, CODE2, resetCampaign, zenFresh, zenSanitize, zenView, openZen, zenMove, resetZen, encode2, decodeAny }; // v6 lane B
 });
