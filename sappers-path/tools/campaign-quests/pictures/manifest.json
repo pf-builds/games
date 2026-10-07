@@ -1,0 +1,561 @@
+[
+ {
+  "id": "cq33",
+  "title": "Siege Tower",
+  "group": "siege",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7033; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq33-s7033.png",
+  "raw": "raw/cq33-s7033.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of a tall wooden siege tower on four big wheels with a little flag on top, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid light lilac background, no text, no shadow",
+  "seed": 7033,
+  "size": [
+   832,
+   1216
+  ]
+ },
+ {
+  "id": "cq20",
+  "title": "Trusty Steed",
+  "laneC": "Hobby Horse",
+  "group": "knight",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7020; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq20-s7020.png",
+  "raw": "raw/cq20-s7020.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of a little knight charging bravely on a wooden stick hobby horse, holding a long striped lance, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid mint green background, no text, no shadow",
+  "seed": 7020,
+  "size": [
+   832,
+   1216
+  ]
+ },
+ {
+  "id": "cq17",
+  "title": "Tree Giant",
+  "group": "creature",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7017; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq17-s7017.png",
+  "raw": "raw/cq17-s7017.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of a friendly walking tree giant with a smiling face in its brown trunk and a bird nest in its green leafy branches, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid pale pink background, no text, no shadow",
+  "seed": 7017,
+  "size": [
+   832,
+   1216
+  ]
+ },
+ {
+  "id": "cq42",
+  "title": "Bagpipes",
+  "group": "castle",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7042; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq42-s7042.png",
+  "raw": "raw/cq42-s7042.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of a castle bard with a red beard and a green tartan kilt playing big red bagpipes, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid peach background, no text, no shadow",
+  "seed": 7042,
+  "size": [
+   1024,
+   1024
+  ]
+ },
+ {
+  "id": "cq08",
+  "title": "Baby Griffin",
+  "group": "creature",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7008; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq08-s7008.png",
+  "raw": "raw/cq08-s7008.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of a cute baby griffin with a golden lion body and a white eagle head and white wings, sitting proudly, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid lavender background, no text, no shadow",
+  "seed": 7008,
+  "size": [
+   1024,
+   1024
+  ]
+ },
+ {
+  "id": "cq37",
+  "title": "The Forge",
+  "group": "castle",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7037; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq37-s7037.png",
+  "raw": "raw/cq37-s7037.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of a blacksmith with a big brown apron hammering a glowing orange sword on a black anvil, sparks flying, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid deep purple background, no text, no shadow",
+  "seed": 7037,
+  "size": [
+   1024,
+   1024
+  ]
+ },
+ {
+  "id": "cq28",
+  "title": "Big Bow",
+  "group": "soldier",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7028; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq28-s7028.png",
+  "raw": "raw/cq28-s7028.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of a very small archer struggling to hold a giant wooden bow three times taller than himself, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid mint green background, no text, no shadow",
+  "seed": 7028,
+  "size": [
+   832,
+   1216
+  ]
+ },
+ {
+  "id": "cq21",
+  "title": "Round Shield",
+  "laneC": "Shiny Shield",
+  "group": "knight",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7021; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq21-s7021.png",
+  "raw": "raw/cq21-s7021.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of a vain knight admiring his own reflection in his big shiny round golden shield, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid peach background, no text, no shadow",
+  "seed": 7021,
+  "size": [
+   1024,
+   1024
+  ]
+ },
+ {
+  "id": "cq02",
+  "title": "Helmet Bed",
+  "group": "goblin",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7002; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq02-s7002.png",
+  "raw": "raw/cq02-s7002.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of a tiny green goblin fast asleep curled up inside an upside-down silver knight's helmet like a little bed, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid pale pink background, no text, no shadow",
+  "seed": 7002,
+  "size": [
+   1024,
+   1024
+  ]
+ },
+ {
+  "id": "cq34",
+  "title": "Ballista",
+  "group": "siege",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7034; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq34-s7034.png",
+  "raw": "raw/cq34-s7034.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of a big wooden ballista crossbow on wheels loaded with a giant arrow, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid mint green background, no text, no shadow",
+  "seed": 7034,
+  "size": [
+   1024,
+   1024
+  ]
+ },
+ {
+  "id": "cq06",
+  "title": "Goblin Soup",
+  "group": "goblin",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7006; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq06-s7006.png",
+  "raw": "raw/cq06-s7006.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of a green goblin stirring a big black cauldron of bubbling purple soup with a long wooden spoon, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid peach background, no text, no shadow",
+  "seed": 7006,
+  "size": [
+   1024,
+   1024
+  ]
+ },
+ {
+  "id": "cq24",
+  "title": "The Charge",
+  "group": "knight",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7024; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq24-s7024.png",
+  "raw": "raw/cq24-s7024.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of a knight in silver armour riding a brown horse with a red and gold blanket, lance raised high, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid light lilac background, no text, no shadow",
+  "seed": 7024,
+  "size": [
+   1024,
+   1024
+  ]
+ },
+ {
+  "id": "cq29",
+  "title": "Drummer Boy",
+  "group": "soldier",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7029; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq29-s7029.png",
+  "raw": "raw/cq29-s7029.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of a young soldier in a red coat and tall hat marching and playing a blue and gold drum, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid pale green background, no text, no shadow",
+  "seed": 7029,
+  "size": [
+   832,
+   1216
+  ]
+ },
+ {
+  "id": "cq25",
+  "title": "Sun Shield",
+  "group": "knight",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7025; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq25-s7025.png",
+  "raw": "raw/cq25-s7025.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of a brave lady knight in silver armour with a long orange braid holding a big blue shield with a yellow sun on it, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid pale pink background, no text, no shadow",
+  "seed": 7025,
+  "size": [
+   832,
+   1216
+  ]
+ },
+ {
+  "id": "cq12",
+  "title": "Spell-Book Cat",
+  "group": "creature",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7012; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq12-s7012.png",
+  "raw": "raw/cq12-s7012.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of a black cat familiar wearing a tiny purple wizard hat sitting on top of a big red spell book, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid butter yellow background, no text, no shadow",
+  "seed": 7012,
+  "size": [
+   1024,
+   1024
+  ]
+ },
+ {
+  "id": "cq38",
+  "title": "The Jester",
+  "laneC": "Jester Handstand",
+  "group": "castle",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7038; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq38-s7038.png",
+  "raw": "raw/cq38-s7038.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of a jester in a red and yellow diamond suit and a three-pointed hat with bells doing a handstand, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid light lilac background, no text, no shadow",
+  "seed": 7038,
+  "size": [
+   832,
+   1216
+  ]
+ },
+ {
+  "id": "cq18",
+  "title": "Dragon Picnic",
+  "group": "creature",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7018; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq18-s7018.png",
+  "raw": "raw/cq18-s7018.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of a small knight in silver armour and a chubby green dragon sharing a picnic on a red checked blanket, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid butter yellow background, no text, no shadow",
+  "seed": 7018,
+  "size": [
+   1024,
+   1024
+  ]
+ },
+ {
+  "id": "cq30",
+  "title": "Shield Wall",
+  "group": "soldier",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7030; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq30-s7030.png",
+  "raw": "raw/cq30-s7030.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of three little soldiers standing in a row behind big round shields, one red, one yellow, one green, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid peach background, no text, no shadow",
+  "seed": 7030,
+  "size": [
+   1024,
+   1024
+  ]
+ },
+ {
+  "id": "cq13",
+  "title": "Raven Messenger",
+  "group": "creature",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7013; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq13-s7013.png",
+  "raw": "raw/cq13-s7013.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of a glossy black raven holding a rolled-up cream scroll with a red wax seal in its beak, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid pale pink background, no text, no shadow",
+  "seed": 7013,
+  "size": [
+   1024,
+   1024
+  ]
+ },
+ {
+  "id": "cq01",
+  "title": "Apple Goblin",
+  "laneC": "Goblin Juggler",
+  "group": "goblin",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7001; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq01-s7001.png",
+  "raw": "raw/cq01-s7001.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of a little green goblin juggling three red apples with a big toothy grin, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid pale yellow background, no text, no shadow",
+  "seed": 7001,
+  "size": [
+   1024,
+   1024
+  ]
+ },
+ {
+  "id": "cq09",
+  "title": "Bridge Troll",
+  "group": "creature",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7009; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq09-s7009.png",
+  "raw": "raw/cq09-s7009.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of a big friendly grey stone troll with a mossy head peeking out from under a little brown wooden bridge, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid mint green background, no text, no shadow",
+  "seed": 7009,
+  "size": [
+   1024,
+   1024
+  ]
+ },
+ {
+  "id": "cq26",
+  "title": "Bullseye",
+  "group": "soldier",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7026; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq26-s7026.png",
+  "raw": "raw/cq26-s7026.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of a little archer in a green hood next to a round red and white target with an arrow right in the bullseye, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid pale yellow background, no text, no shadow",
+  "seed": 7026,
+  "size": [
+   1024,
+   1024
+  ]
+ },
+ {
+  "id": "cq11",
+  "title": "Knitting Dragon",
+  "group": "creature",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7011; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq11-s7011.png",
+  "raw": "raw/cq11-s7011.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of a cute orange dragon knitting a long green and yellow striped scarf with two needles, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid light lilac background, no text, no shadow",
+  "seed": 7011,
+  "size": [
+   1024,
+   1024
+  ]
+ },
+ {
+  "id": "cq04",
+  "title": "War Drum",
+  "group": "goblin",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7004; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq04-s7004.png",
+  "raw": "raw/cq04-s7004.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of a green goblin in a brown tunic banging a big red war drum with two sticks, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid butter yellow background, no text, no shadow",
+  "seed": 7004,
+  "size": [
+   1024,
+   1024
+  ]
+ },
+ {
+  "id": "cq10",
+  "title": "Birthday Dragon",
+  "laneC": "Birthday Breath",
+  "group": "creature",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7010; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq10-s7010.png",
+  "raw": "raw/cq10-s7010.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of a chubby red dragon blowing out the candles on a pink birthday cake and setting them all into one big flame, surprised face, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid pale green background, no text, no shadow",
+  "seed": 7010,
+  "size": [
+   1024,
+   1024
+  ]
+ },
+ {
+  "id": "cq03",
+  "title": "The Big Key",
+  "group": "goblin",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7003; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq03-s7003.png",
+  "raw": "raw/cq03-s7003.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of a sneaky green goblin tiptoeing away carrying a huge golden key bigger than himself, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid light lilac background, no text, no shadow",
+  "seed": 7003,
+  "size": [
+   1024,
+   1024
+  ]
+ },
+ {
+  "id": "cq14",
+  "title": "Baby Phoenix",
+  "group": "creature",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7014; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq14-s7014.png",
+  "raw": "raw/cq14-s7014.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of a cute baby phoenix bird with flame orange, red and yellow feathers, wings spread wide, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid navy blue background, no text, no shadow",
+  "seed": 7014,
+  "size": [
+   1024,
+   1024
+  ],
+  "spare": true
+ },
+ {
+  "id": "cq16",
+  "title": "Cheeky Gargoyle",
+  "group": "creature",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7016; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq16-s7016.png",
+  "raw": "raw/cq16-s7016.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of a little grey stone gargoyle with bat wings perched on a castle wall corner, sticking out a pink tongue, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid peach background, no text, no shadow",
+  "seed": 7016,
+  "size": [
+   1024,
+   1024
+  ],
+  "spare": true
+ },
+ {
+  "id": "cq35",
+  "title": "Party Cannon",
+  "group": "siege",
+  "artist": "Click it! Studios",
+  "date": "2026-10-06",
+  "kind": "outlined",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7035; prompt in tools/campaign-quests/pictures/manifest.json",
+  "file": "clean/cq35-s7035.png",
+  "raw": "raw/cq35-s7035.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "simple cute flat cartoon icon of a little bronze cannon on wooden wheels firing a burst of colourful confetti and streamers, chunky shapes, thick bold black outlines, few flat solid colors, minimal detail, centered with clear empty space all around it, whole figure in frame, plain solid navy blue background, no text, no shadow",
+  "seed": 7035,
+  "size": [
+   1024,
+   1024
+  ],
+  "spare": true
+ }
+]
