@@ -418,6 +418,14 @@ const ARCH = (cols, extra) => lv(["......ggg", ".........", "aa.aa.aa.", "......
     const towersBy = rs.map((ls) => use(ls, "tower").length), late = LV2.filter((l) => l.n >= 191);
     eq([use(LV2.filter((l) => l.n < DN.unlock.tower), "tower"), towersBy.slice(0, 3).every((k) => k >= 2 && k <= 4), towersBy[3] >= 10 && towersBy[3] <= 14, towersBy[4] >= 12 && towersBy[4] <= 17, towersBy[5] > rs[5].length / 2, late.every(tw), use(LV2.filter((l) => l.n < 150), "hidden"), archBad, lockBad, LEVELS.levels[199].tag],
       [[], true, true, true, true, true, [], [], [], "extreme"], "density (v6): no tower before " + DN.unlock.tower + ", towers by realm 3-8 " + towersBy.join("/") + " (191-200 all), no mystery block before 150; archers by tag where towers stand; a lock on every Hard and Extreme from 50, two on Extreme from " + BC.v6.twoLocksFrom + "; 200 Extreme");
+    // Campaign v6 fix pass (the functional critic's B1, S1, S3): every level from 9 stores the best-of gate's two runs
+    // (grade.deep: the careful player 1, 2 and 3 taps deep, 32 games each, on two seeds), and each run's best sits under its
+    // ceiling (bake-config v6.care: none on Easy, none on 1-8, the tutorial) and over its floor (v6.floor: 11); a level
+    // the re-deal could not bring inside is logged in v6.misses, and only those may be outside.
+    const VC6 = BC.v6, careOf6 = (n, t) => { if (n === 200) return VC6.care.boss; const i = VC6.care.ranges.findIndex(([a, b]) => n >= a && n <= b); return i >= 0 ? VC6.care[t][i] : null; };
+    const gateOut = LV2.filter((l) => { const g = l.grade[l.tag], c = careOf6(l.n, l.tag), f = (VC6.floor || {})[l.n]; if (l.n < VC6.care.ranges[0][0]) return false; if (!g.deep || g.deep.a.length !== 3 || g.deep.b.length !== 3) return true;
+      const b = [Math.max(...g.deep.a), Math.max(...g.deep.b)]; return (c != null && Math.max(...b) > c) || (f != null && Math.min(...b) < f); }).map((l) => l.n);
+    eq([gateOut, LV2.filter((l) => l.n >= VC6.care.ranges[0][0]).every((l) => l.grade[l.tag].deep)], [(VC6.misses || []).map((m) => m.n), true], "gate (v6 fix pass): levels " + VC6.care.ranges[0][0] + "-200 store the best-of gate's two runs; each run's best is under its ceiling and over its floor (outside, logged in v6.misses: " + (gateOut.join(", ") || "none") + ")");
     // v5 R4: the two new lessons, Easy, with their coach (config.json teach): 125 towers (the coach card is the tower's
     // colour, then the Volley's badge), 150 mystery blocks.
     const T1 = LEVELS.levels[124], T2 = LEVELS.levels[149], CT = require("../config.json").teach, c1 = CT[T1.id] || [], c2 = CT[T2.id] || [];

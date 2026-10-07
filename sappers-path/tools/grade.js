@@ -10,6 +10,7 @@
 //   view(S) / look(S, ...)             v4 M2: what the player can see of the tray, and the lookahead player's scores
 //   plan(B, rules, n, seed, k, seeing) v4 M3: the sampling planner's win rate, honest about mystery cards or all-seeing
 //   careful(B, rules, n, seed, depth)  Land 1 fix: the careful player's win rate (thinks depth taps ahead at rest)
+//   deep(B, rules, n, seed, depths, cap) campaign v6 fix pass: the careful player at each depth, [rate, ...] (the best-of gate)
 //   pace(B, rules, order, thinkMs)     v4.2: the real-pace replay of a winning order: {won, ms, taps} (below)
 // v4 M2: every player picks only among legal taps (a front card whose tap would not be refused: a free space, or 2 for a
 // linked card), so a stored order never holds a refused tap. On a level without links a patient player never meets a
@@ -319,8 +320,14 @@ function pace(B, rules, order, thinkMs) {
   return { won: S.status === E.WON && i === order.length, ms: S.now, taps: i, gap, end: S.now - last };
 }
 
+// Campaign v6 fix pass (the functional critic's B1): the careful player is not monotone in its depth (a 1-deep player can
+// win every game where the 3-deep one wins none), so a level's difficulty is the BEST of the careful players at each of
+// `depths` (bake-config grade.deep: 1, 2 and 3 taps), n games each on the same seed. Returns their rates (3 places) in
+// depth order; cap (optional, the tuner's early out): stop once one rate is over it, so the list may be shorter.
+function deep(B, rules, n, seed, depths, cap) { const out = []; for (const d of depths) { const r = +careful(B, rules, n, seed, d).toFixed(3); out.push(r); if (cap != null && r > cap) break; } return out; }
+
 // Campaign v6: the careful player's games for level n: CG.games (bake-config grade.careful), or the games of the last
 // CG.byRange entry {from, to (optional), games} that holds n (32 from 150 to 200, so stage 2 can gate on it).
 const carefulGames = (CG, n) => { let g = CG.games; for (const r of CG.byRange || []) if (n >= r.from && (r.to == null || n <= r.to)) g = r.games; return g; };
 
-module.exports = { carefulGames, HIDE_SAMPLES, rate, greedy, orders, solve, narrow, line, fast, view, look, plan, careful, pace, legal, rng };
+module.exports = { carefulGames, deep, HIDE_SAMPLES, rate, greedy, orders, solve, narrow, line, fast, view, look, plan, careful, pace, legal, rng };

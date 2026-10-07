@@ -197,20 +197,23 @@ function tune(L, play, colOf, lo, hi, T, rules) {
 // T.depth taps ahead) down by card moves (so the dealt order stays a winner), keeping the Normal random-tap rate in band
 // and the one-move-lookahead player at or under T.look, until it reaches T.stopAt. Its games use their own seeds, so
 // the grade's careful sample is a fresh one. T: {playouts, greedyPlayouts, games, depth, steps, stopAt, look}.
+// Campaign v6 fix pass (the functional critic's B1): T.depths (optional) climbs the best of the careful players at those
+// depths instead (grade.js deep, its early out at the current best, so a worse move stops after its first rate over it);
+// T.window [lo, hi] (optional, a level with a floor) climbs toward the window's middle and stops inside it.
 function carefulStage(L, play, colOf, lo, hi, T, rules) {
   const R = require("./grade.js"), r = rng(T.seed ^ 0x2f8b9a31);
   let evals = 0;
-  const lo2 = lo > 0 ? lo + T.margin : 0, hi2 = hi < 1 ? hi - T.margin : 1;
-  const score = (co) => { const B = build(L, play, co); if (!B) return null; evals++; const x = R.rate(B, rules.normal, T.playouts, T.seed); if (x < lo2 || x > hi2) return null;
-    if (T.look != null && R.greedy(B, rules.normal, T.greedyPlayouts, T.seed) > T.look) return null; return { rate: x, c: R.careful(B, rules.normal, T.games, T.seed ^ 0x5851f42d, T.depth) }; };
+  const lo2 = lo > 0 ? lo + T.margin : 0, hi2 = hi < 1 ? hi - T.margin : 1, W = T.window, mid = W ? (W[0] + W[1]) / 2 : 0, off = (s) => (W ? Math.abs(s.c - mid) : s.c);
+  const score = (co, cap) => { const B = build(L, play, co); if (!B) return null; evals++; const x = R.rate(B, rules.normal, T.playouts, T.seed); if (x < lo2 || x > hi2) return null;
+    if (T.look != null && R.greedy(B, rules.normal, T.greedyPlayouts, T.seed) > T.look) return null; return { rate: x, c: T.depths ? Math.max(...R.deep(B, rules.normal, T.games, T.seed ^ 0x5851f42d, T.depths, W ? null : cap)) : R.careful(B, rules.normal, T.games, T.seed ^ 0x5851f42d, T.depth) }; };
   let cur = score(colOf), step = 0; const c0 = cur ? cur.c : null;
   if (!cur) return { play, colOf, rate: null, careful: null, steps: 0, evals };
-  for (; step < T.steps && cur.c > (T.stopAt || 0); step++) {
+  for (; step < T.steps && (W ? cur.c < W[0] || cur.c > W[1] : cur.c > (T.stopAt || 0)); step++) {
     const i = Math.floor(r() * play.length), j = Math.floor(r() * 5); if (j === colOf[i]) continue;
     const co = colOf.slice(); co[i] = j;
     const c = [0, 0, 0, 0, 0]; for (const x of co) c[x]++; if (Math.min(...c) < T.colMin || Math.max(...c) > T.colMax) continue;
-    const s = score(co); if (!s) continue;
-    if (s.c < cur.c || (s.c === cur.c && r() < 0.3)) { colOf = co; cur = s; }
+    const s = score(co, cur.c); if (!s) continue;
+    if (off(s) < off(cur) || (off(s) === off(cur) && r() < 0.3)) { colOf = co; cur = s; }
   }
   return { play, colOf, rate: cur.rate, careful: cur.c, careful0: c0, steps: step, evals };
 }

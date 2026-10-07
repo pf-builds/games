@@ -13,13 +13,18 @@
 //      bake.js does.
 //   3. The grade on the tag (gradeV6: what tools/regrade.js checks on a castle level: rate, the stored line, lookahead, real
 //      pace, thinking replays, the steady replay, the fast tapper from fast.from, the careful player with its games by
-//      range, the obvious player). The stored order must win with no power-up and no arrow landing (line.hits 0).
+//      range, the obvious player; fix pass: the best-of gate's two runs, grade.deep). The stored order must win with no
+//      power-up and no arrow landing (line.hits 0).
 //   4. The pick: every target met (band, careful ceiling, pace, longest tap, taps, fast tapper, pairs, steady replay, no
 //      arrow) nearest the band's middle, the pace aim and (careWeight) the lowest careful rate; else the least total miss,
 //      named as a fallback. Then the ? cards (land-bake.js mystify, the same rule).
+// Fix pass (the functional critic's B1 and S1; SPEC-v4 §9, "Campaign v6 fix pass (difficulty)"): the ceiling gates the
+// BEST of the careful players 1, 2 and 3 taps deep (bake-config grade.deep, 32 games each), on the level's grade seed and
+// on a second, independent one; both runs must be under it (and over v6.floor where a level has one). The tuner climbs
+// the same best-of (v6.tune.careful.depths), and the pick leans to the lowest mean of the two runs.
 // Candidate k depends only on the job and k, so candidates can be shared out over threads (job.ks) and picked once all
 // are in (job.outs), and kept between runs (tools/campaign-v6.js --reuse).
-//   require("./campaign-v6-bake.js"): {bakeOne, gradeV6, runPool, rulesV6}
+//   require("./campaign-v6-bake.js"): {bakeOne, gradeV6, runPool, rulesV6, deepOf, bestOf, regate}
 "use strict";
 const { Worker, isMainThread, parentPort, workerData } = require("worker_threads");
 const E = require("../src/engine.js");
@@ -28,6 +33,10 @@ const R = require("./grade.js");
 
 const gt = (o) => o.grade[o.tag], wn = (o) => o.win[o.tag];
 const seedOf = (C, n, k) => (C.seed ^ Math.imul(n + 1, 0x9E3779B1) ^ Math.imul(k + 7, 0x85EBCA77)) | 0; // bake.js seedOf (regrade.js reads teaching levels with k 0)
+// Fix pass: the best-of gate's two runs (bake-config grade.deep): the careful player at each depth over its games, on the
+// grade seed (a, the careful player's own) and a second seed (b); bestOf: each run's best, [a, b]; regrade.js re-runs both.
+const deepOf = (B, rt, C, seed) => ({ a: R.deep(B, rt, C.grade.deep.games, seed ^ 0x6c8e9cf5, C.grade.deep.depths), b: R.deep(B, rt, C.grade.deep.games, seed ^ 0x7f4a7c15, C.grade.deep.depths) });
+const bestOf = (g) => (g && g.deep ? [Math.max(...g.deep.a), Math.max(...g.deep.b)] : null);
 const rulesV6 = (CFG) => ({ easy: E.rulesOf(CFG.v3, "easy"), normal: E.rulesOf(CFG.v3, "normal"), hard: E.rulesOf(CFG.v3, "hard"), extreme: E.rulesOf(CFG.v3, "extreme") });
 
 // Grade a castle level on its tag, every measure regrade.js checks (C: bake-config). hint: a known winning order.
@@ -44,6 +53,7 @@ function gradeV6(L, rules, C, hint, seed, n, tag) {
   if (n >= C.fast.from) g.fast = +R.fast(B, rt, C.fast.games, seed ^ 0x1f123bb5, C.fast.gapMs).toFixed(4);
   g.careful = +R.careful(B, rt, R.carefulGames(CG, n), seed ^ 0x6c8e9cf5, CG.depth).toFixed(3);
   g.obvious = +R.careful(B, rt, OB.games, seed ^ 0x1b873593, OB.depth).toFixed(3);
+  if (C.grade.deep) g.deep = deepOf(B, rt, C, seed);
   return { win, grade, hits: line && line.won ? line.hits : null };
 }
 const fastBad = (g, C) => g.fast != null && (g.fast - g.rate >= C.fast.pts || (g.fast > C.fast.ratio * g.rate && g.fast - g.rate >= C.fast.minPts));
@@ -53,16 +63,17 @@ function targetsOf(C, V, job) {
   const fell = (c) => (!gt(c).pace || gt(c).pace.fell ? 1 : 0), dmiss = (c) => (fell(c) ? 1e9 : Math.max(0, PC.range[0] - gt(c).pace.ms, gt(c).pace.ms - PC.range[1]));
   const wmiss = (c) => (gt(c).maxWait == null ? 1e9 : Math.max(0, gt(c).maxWait - C.maxWaitMs)), tmiss = (c) => Math.max(0, (wn(c) || "").length - C.maxTaps);
   const fbad = (c) => (fastBad(gt(c), C) ? 1 : 0), pmiss = (c) => (c.pairs < P.links ? 1 : 0), hbad = (c) => (c.hits ? 1 : 0);
-  const cover = (c) => (care != null && gt(c).careful > care ? gt(c).careful - care : 0);
+  const bo = (c) => bestOf(gt(c)) || [gt(c).careful, gt(c).careful], fl = job.floor; // fix pass: both runs' best under the ceiling, both over the floor
+  const cover = (c) => { const b = bo(c), hi = Math.max(b[0], b[1]), lo = Math.min(b[0], b[1]); return (care != null && hi > care ? hi - care : 0) + (fl != null && lo < fl ? fl - lo : 0); };
   const sbad = (c) => ((gt(c).thinks || []).some((v) => !v) || !gt(c).steady || !!gt(c).steady.lost || gt(c).steady.gap > C.maxWaitMs ? 1 : 0);
-  const good = (c) => !c.miss && !dmiss(c) && !wmiss(c) && !tmiss(c) && !fbad(c) && !pmiss(c) && !cover(c) && !sbad(c) && !hbad(c);
+  const rest = (c) => !c.miss && !dmiss(c) && !wmiss(c) && !tmiss(c) && !fbad(c) && !pmiss(c) && !sbad(c) && !hbad(c), good = (c) => rest(c) && !cover(c); // rest: every target but the careful gate
   const aim = (c) => (fell(c) || PC.aim == null ? 0 : Math.abs(gt(c).pace.ms - PC.aim) / V.aimWeight);
   const PN = V.penalty, pen = (c) => PN.band * c.miss + Math.min(dmiss(c), PN.fellMs) / PN.durationMs + wmiss(c) / PN.waitMs + tmiss(c) + PN.fast * fbad(c) + PN.pairs * pmiss(c) + cover(c) / PN.careful + PN.steady * sbad(c) + PN.hits * hbad(c);
   const why = (c) => { const w = []; if (c.miss) w.push("rate " + (100 * gt(c).rate).toFixed(2) + "% vs " + band.map((x) => (100 * x).toFixed(0)).join("-") + "%"); if (fell(c)) w.push("the real-pace replay lost");
     else if (dmiss(c)) w.push("real pace " + Math.round(gt(c).pace.ms / 1000) + " s outside " + PC.range.map((x) => x / 1000).join("-") + " s"); if (wmiss(c)) w.push("longest tap " + (gt(c).maxWait / 1000).toFixed(1) + " s");
-    if (tmiss(c)) w.push("taps " + wn(c).length); if (fbad(c)) w.push("fast tapper " + gt(c).fast); if (pmiss(c)) w.push("pairs " + c.pairs + " of " + P.links); if (cover(c)) w.push("careful " + gt(c).careful + " over " + care);
+    if (tmiss(c)) w.push("taps " + wn(c).length); if (fbad(c)) w.push("fast tapper " + gt(c).fast); if (pmiss(c)) w.push("pairs " + c.pairs + " of " + P.links); if (cover(c)) w.push("best-of " + bo(c).join("/") + " outside " + (fl != null ? fl + "-" : "") + care);
     if (sbad(c)) w.push("steady " + JSON.stringify([gt(c).thinks, gt(c).steady])); if (hbad(c)) w.push("the stored order meets an arrow"); return w.join("; "); };
-  return { good, pen, aim, why, cover };
+  return { good, rest, pen, aim, why, cover, bo };
 }
 
 // The order's replays on a level (L without its deck, play the dealt plays): real pace, each thinking time, the steady
@@ -127,7 +138,7 @@ function bakeOne(job) {
         continue;
       }
       const seed = seedOf(C, n, k + 1), D = Object.assign({}, D0, arch && V.deal.rush[k % V.deal.rush.length] ? { rush: true, rushOpen: V.deal.rushOpen || false } : {}); // v6.deal.rush: candidate k on a level with pinning or killing archers is dealt rushed when rush[k mod length] if (D.deepAlt) D.deep = D.deepAlt[k % D.deepAlt.length]; if (D.sizeAlt) D.size = D.sizeAlt[k % D.sizeAlt.length];
-      const more = k >= base; if (more && V.deal.extraDeep) D.deep = Math.min(0.9, D.deep + V.deal.extraDeep); // v6: a fix-up's extra candidates (k past the tag's count) bury deeper and narrow longer
+      const more = k - (job.k0 | 0) >= base; // fix pass: --from K starts a level's new candidates at K (fresh seeds), counted from there if (more && V.deal.extraDeep) D.deep = Math.min(0.9, D.deep + V.deal.extraDeep); // v6: a fix-up's extra candidates (k past the tag's count) bury deeper and narrow longer
       let L = JSON.parse(JSON.stringify(job.board)); delete L.hidden; delete L.lock; delete L.locks;
       if (P.hidden) { const H = Object.assign({}, C.plan.hidden, V.hidden, { share: P.hidden }); if (!G.hide(L, seed, H)) { out.push({ k, fail: "no room for mystery blocks" }); continue; } }
       const Ld = withLocks(L, P.locks.map((kd, i) => (kd === "key" ? P.keyLock : { colour: 100 + i }))); // stand-ins: gen.js shut drops every colour lock (a space fewer each) before the deal compiles, so their colours never matter
@@ -143,7 +154,8 @@ function bakeOne(job) {
       if (!play) { out.push({ k, seed, fail: why }); continue; }
       L = Lk;
       const T = Object.assign({}, C.tune, V.tune.base, arch ? V.tune.rushed : {}, { seed: seed ^ 0x3c6ef372, maxTaps: C.maxTaps, maxWaitMs: C.maxWaitMs, narrow: null }, // v6.tune.rushed: card moves only on a level with pinning or killing archers, so the play the replays passed is the play stored
-        { careful: job.care != null ? Object.assign({}, V.tune.careful, more && V.tune.careful.extraSteps ? { steps: V.tune.careful.extraSteps } : {}, { games: R.carefulGames(V.tune.careful, n), stopAt: +((job.careTune != null ? job.careTune : job.care) * V.tune.careful.under).toFixed(3) }) : null });
+        { careful: job.care != null ? Object.assign({}, V.tune.careful, more && V.tune.careful.extraSteps ? { steps: V.tune.careful.extraSteps } : {}, { games: R.carefulGames(V.tune.careful, n), stopAt: +((job.careTune != null ? job.careTune : job.care) * V.tune.careful.under).toFixed(3) },
+          job.floor != null ? { window: [job.floor * V.tune.careful.floorOver, job.care * V.tune.careful.floorUnder] } : {}) : null }); // fix pass: a floor level climbs into [floor x floorOver, ceiling x floorUnder]
       const Lt = L.hidden ? Object.assign({}, L, { hidden: undefined }) : L; // tuned all-seeing (bake.js: the honest grade can only be lower)
       const res = G.tune(Lt, play, G.assign(play, 0, seed), band[0], band[1], T, { normal: rt, deal: Object.assign({}, dealRules, D) }); stats.evals += res.evals;
       const dk = G.deck(res.play, res.colOf); if (dk.bad) { out.push({ k, seed, fail: "a linked partner more than a row from its card" }); continue; }
@@ -153,15 +165,37 @@ function bakeOne(job) {
   }
   if (job.ks) return { n, part: true, out, stats };
   if (job.outs) { out.push(...job.outs); if (job.stats) Object.assign(stats, job.stats); }
+  return pickOf(job, out, stats);
+}
+// The pick of a level's graded candidates (out), then its ? cards. Fix pass: among good picks the lean is the mean of the
+// best-of gate's two runs (a floor level: its distance from the middle of floor and ceiling).
+function pickOf(job, out, stats) {
+  const C = require("./bake-config.json"), V = C.v6, CFG = require("../config.json"), rules = rulesV6(CFG), { n, tag, band } = job, P = job.plan, rt = rules[tag], TT = targetsOf(C, V, job);
   const okc = out.filter((c) => c.level && c.winnable), mid = (band[0] + band[1]) / 2;
   if (!okc.length) return { n, fail: "no winnable candidate (" + out.map((c) => c.fail || "lost").slice(0, 4).join("; ") + ")", stats };
-  const cw = (c) => (job.care != null ? V.careWeight * gt(c).careful : 0), kept = (c) => (c.deck === "kept" ? -V.keptBonus : 0);
+  const lean = job.floor != null ? (job.floor + job.care) / 2 : job.care != null && V.lean && V.lean[tag] != null ? V.lean[tag] * job.care : null; // fix pass: a floor level leans to the middle of floor and ceiling, a tag in v6.lean to that share of its ceiling, the rest to the lowest
+  const bm = (c) => { const b = TT.bo(c); return (b[0] + b[1]) / 2; }, cw = (c) => (job.care == null ? 0 : V.careWeight * (lean != null ? Math.abs(bm(c) - lean) : bm(c))), kept = (c) => (c.deck === "kept" ? -V.keptBonus : 0);
   okc.sort((p, q) => TT.good(q) - TT.good(p) || (TT.good(p) ? 100 * Math.abs(gt(p).rate - mid) + TT.aim(p) + cw(p) + kept(p) - 100 * Math.abs(gt(q).rate - mid) - TT.aim(q) - cw(q) - kept(q) : TT.pen(p) - TT.pen(q)) || p.k - q.k);
   const pk = okc[0]; let level = Object.assign({}, pk.level), mys = null;
   if (P.mystery) { const r = mystify(level, P.mystery, Object.assign({}, C.mystery, V.mystery || {}), rt, pk.seed); level = r.level; mys = r.m; }
   return { n, tag, seed: pk.seed, deck: pk.deck, level: Object.assign(level, { win: pk.win, grade: pk.grade }), inBand: !pk.miss, fallback: TT.good(pk) ? null : TT.why(pk), mystery: mys,
     cands: { tried: out.length, winnable: okc.length, good: okc.filter(TT.good).length, fails: out.filter((c) => c.fail).map((c) => c.fail).slice(0, 3),
-      list: out.map((c) => (c.level ? { k: c.k, deck: c.deck, rate: gt(c).rate, careful: gt(c).careful, obvious: gt(c).obvious, pace: gt(c).pace ? gt(c).pace.ms : null, wait: gt(c).maxWait, taps: (wn(c) || "").length, pairs: c.pairs, tuned: c.tuned, good: c.winnable && TT.good(c), why: c.winnable ? TT.why(c) : "lost" } : { k: c.k, fail: c.fail })) }, stats };
+      list: out.map((c) => (c.level ? { k: c.k, deck: c.deck, rate: gt(c).rate, careful: gt(c).careful, obvious: gt(c).obvious, best: bestOf(gt(c)), pace: gt(c).pace ? gt(c).pace.ms : null, wait: gt(c).maxWait, taps: (wn(c) || "").length, pairs: c.pairs, tuned: c.tuned, good: c.winnable && TT.good(c), why: c.winnable ? TT.why(c) : "lost" } : { k: c.k, fail: c.fail })) }, stats };
+}
+
+// Fix pass: one level on the best-of gate. job: the bake job plus pick (its installed pick) and cands (its cached graded
+// candidates). The pick graded on the gate's two runs stays when it passes ({n, keep, pick}); else every cached candidate
+// that meets every other target is graded the same and the level picked again ({n, pick} or {n, again} when none passes);
+// job.repick: picked again even when the pick passes (more candidates came in).
+function regate(job) {
+  const C = require("./bake-config.json"), V = C.v6, CFG = require("../config.json"), rt = rulesV6(CFG)[job.tag], TT = targetsOf(C, V, job), pk = job.pick, g = pk.level.grade[job.tag];
+  if (!g.deep) g.deep = deepOf(E.compile(pk.level), rt, C, pk.seed);
+  if (!TT.cover({ tag: job.tag, grade: pk.level.grade }) && !job.repick) return { n: job.n, keep: true, pick: pk };
+  const cs = (job.cands || []).filter((c) => c.level && c.winnable && TT.rest(c)); let graded = 0;
+  for (const c of cs) { const gc = c.grade[job.tag]; if (!gc.deep) { gc.deep = deepOf(E.compile(c.level), rt, C, c.seed); graded++; } }
+  const best = cs.map((c) => ({ k: c.k, best: bestOf(c.grade[job.tag]) })).sort((p, q) => Math.max(...p.best) - Math.max(...q.best)).slice(0, 3);
+  if (!cs.some(TT.good)) return { n: job.n, again: true, was: bestOf(g), tried: cs.length, best };
+  return Object.assign(pickOf(job, cs, { regated: graded }), { n: job.n, was: bestOf(g), tried: cs.length });
 }
 
 // Workers, one job each, at most `threads` at once; onDone(done, total) after each.
@@ -185,6 +219,7 @@ function runPool(jobs, threads, deadline, onDone) {
 }
 
 if (!isMainThread) {
-  let res; try { res = bakeOne(workerData.job); } catch (e) { res = { n: workerData.job.n, fail: "worker error: " + (e && e.message) }; }
+  const J = workerData.job; let res; // op "deep": a level's best-of gate runs (the fix pass's measure); "regate"; else a bake job
+  try { res = J.op === "deep" ? { n: J.n, deep: deepOf(E.compile(J.level), rulesV6(require("../config.json"))[J.tag], require("./bake-config.json"), J.seed) } : J.op === "regate" ? regate(J) : bakeOne(J); } catch (e) { res = { n: workerData.job.n, fail: "worker error: " + (e && e.message) }; }
   parentPort.postMessage(res);
-} else module.exports = { VERSION: 1, replaysOK, bakeOne, gradeV6, runPool, rulesV6, seedOf, mystify, lockColours, withLocks }; // VERSION: bump when a candidate would come out differently (the scratch cache keys on it)
+} else module.exports = { VERSION: 2, replaysOK, bakeOne, gradeV6, runPool, rulesV6, seedOf, mystify, lockColours, withLocks, deepOf, bestOf, targetsOf }; // VERSION 2: the fix pass's best-of gate // VERSION: bump when a candidate would come out differently (the scratch cache keys on it)
