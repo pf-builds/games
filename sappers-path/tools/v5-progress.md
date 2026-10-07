@@ -385,10 +385,11 @@ Worktree `repos/games-sappers-campaign/` (branch `campaign-v6`), game in `sapper
 | A12 | Stage 2 page + critic (`?v=48`, coach check, overlap 63, critic-v5 cut-loose walk) | done: selfTest 932/0, 934/0; critic 0 of 10,857 | 318a045 |
 | A13 | Stage 2 checks + docs (SPEC §9 stage 2, notes §3, after table), harness first-Hard lookup, shots-campaign-v6-s2 | done: test.js 663/0, regrades 0/0, freeze PASS, harness all passed, real taps 26/26, 0 console | (this commit) |
 | A15 | Merge `campaign-v6-quests` into `campaign-v6` (docs both sides, test.js both sides' checks, critic result regenerated), `?v=49` | done: test.js 665/0; regrades 0/2,205 and 0/372; freeze PASS; critic 0 of 10,527; selfTest 916/0, 918/0; harness all passed; real taps (cq06, 64/66/159/200) all ok; 0 console | (merge commit) |
-| A14 | After the quests merge: re-take the freeze snapshot (`tools/freeze.js --snapshot`), drop `v5.freeze.lift` | todo (orchestrator) | |
+| A14 | After the quests merge: re-take the freeze snapshot (`tools/freeze.js --snapshot`), drop `v5.freeze.lift` | done on the merged tree: freeze PASS (2,405 + 372 checks, castles 283); test.js 665/0; regrades 0/2,405, 0/372 | a70710c |
 | A16 | Fix pass (difficulty) tooling: the best-of gate (`grade.deep`, two seeds, 32 games, depths 1-3), regrade check, tuner + pick on it, `regate` step, `deep [--salt K]` step, floor (11), no ceilings 1-8, stone towers (104/117 -> 106/116), test.js gate check, `shots-campaign-v6-fix.mjs` | done | d57338c |
 | A17 | Fix pass data: 85 re-dealt (5 bakes, 1,220 new candidates, regate re-picks), 0 outside the gate, coach 157 + 125, 53's card | done: test.js 666/0; regrades 0/2,405 and 0/372; freeze PASS; critic 0 of 10,527; selfTest 923/0, 925/0; harness all passed; real taps 52/52; 0 console | 66593df |
 | A18 | Fix pass docs: SPEC §9 "Campaign v6 fix pass (difficulty)", notes §5, this table, LATER | done | (this commit) |
+| A19 | Merge `campaign-v6-ui` (page + quests half) into `campaign-v6`, `?v=51` (orchestrator) | done: critic-v5 0 of 10,527 (result committed 1b4dbe2); selfTest 927/0, 929/0; harness all passed; real taps 48/48 (`shots-campaign-v6-fix-ui.mjs after`: 64 pin + release, 157 sockets with the toast clear, cq14/27/36) and 52/52 (`shots-campaign-v6-fix.mjs`, incl. 200); 0 console | 68362fb |
 
 ## Campaign v6 lane A, the side quests (branch `campaign-v6-quests`, worktree `repos/games-sappers-campaign-quests/`)
 

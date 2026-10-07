@@ -627,6 +627,19 @@ the toasts and the 64, 66, 125 and 157 coach lines), 0 console messages.
 - The stone towers: 106 grey, 116 and 198 pale blue-grey (shots in `tools/shots-campaign-v6-fix/`).
 - 157's coach line shows over the kill toast at the start, as 66's does.
 
+### 5.7 Addendum: the merged tree and the freeze (2026-10-07)
+
+On `campaign-v6` after the merge of `campaign-v6-ui` (68362fb, `?v=51`): critic-v5 0 mismatching games of 10,527, grade
+mismatches 0 of 312, known answers 0 wrong, real pace 312/312 (result committed, 1b4dbe2); selfTest 927/0 (375x812) and
+929/0 (1280x720), 0 console; harness all passed (927/929 at every viewport); real taps 48/48 with the UI branch's script
+(64: pinned marker and badge, release when the tower falls, the win; 157: toast 0 px over the line, both sockets open, the
+win; cq14, cq27, cq36 won from their nodes, prize once) and 52/52 with `shots-campaign-v6-fix.mjs` (200 included), 0
+console. No merge breakage found. One oddity for lane B: the UI script reads the line head after the release as
+"4 working · 1 free9" (a count digit run into the head's text in textContent; on screen it may be a separate element).
+Then the freeze: `tools/freeze.js --snapshot` (levels 1-250, 62 pictures), `v5.freeze.lift` and its note dropped, test.js's
+freeze block back to byte for byte against the snapshot (the side quests' kept-picture check folds into it): freeze PASS
+(2,405 + 372 checks, castles 283), test.js 665/0, regrades 0 of 2,405 and 0 of 372 (a70710c).
+
 ## 6. The fix pass after the critic round: page and quests (lane A), 2026-10-07
 
 Branch `campaign-v6-ui` (worktree `repos/games-sappers-campaign-ui/`, cut from `campaign-v6` at 2474574); a parallel
