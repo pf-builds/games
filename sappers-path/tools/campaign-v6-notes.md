@@ -157,3 +157,160 @@ Rules as built: SPEC-v4 §9, "Campaign v6 stage 1b". Field `archers: "pin" | "ki
   kills from 150".
 - selfTest §6 (archers per tag): Hard levels pin (a hit leaves play going, so its search still works, but its "knocked
   back runner" check must accept the pinned kind 3). Extreme levels kill (v4.3's lethal branch).
+
+## 3. Stage 2: the re-deal of 1-200 on the approved curve, 2026-10-06/07
+
+Every level of 1-200 re-tagged and (outside the lessons and the 4-8 tutorial) dealt again on its kept board, graded with its
+archers rule on, and installed with 0 fallbacks. Rules as built: SPEC-v4 §9, "Campaign v6 stage 2: the re-deal". Tooling:
+`tools/campaign-v6.js` (plan, bake, install, measure), `tools/campaign-v6-bake.js` (the worker); every number in
+`tools/bake-config.json` (`tags.v6`, `v6`) and `config.json` (`v5.density` v6 rule, towers from 60, `v5.freeze.lift`).
+
+### 3.1 What shipped
+
+| Piece | Commit |
+|---|---|
+| Tooling (WIP), tags.v6, v6 config, density rule, gen.js knobs, selfTest §6, critic-v5 tags, test.js, freeze lift | 4a27166 |
+| Bake data: levels 1-200, coach card on 53, after baseline | af0fe4c |
+| Page + critic: `?v=48`, selfTest coach check, overlap level 63, critic-v5 cut-loose walk | 318a045 |
+| Docs, harness first-Hard lookup, shots-campaign-v6-s2 | (this commit) |
+
+### 3.2 The tags (bake-config `tags.v6`, one letter a level)
+
+Counts per realm exactly the curve's: 6/14/3/1, 4/12/6/3, 3/11/8/3, 3/10/8/4, 3/9/9/4, 3/8/9/5, 2/5/10/8, 1/3/6/6, 191-199
+0/0/2/7, 200 X (totals 26/73/61/40). Laid out by a small solver (scratchpad, not shipped) under the boards' constraints and
+then fixed as data:
+- a key-lock board (its gilt key is a board pixel) is Hard or Extreme; Easy needs a board with at most one feature (no gate);
+  Extreme from 50 needs a gate (from 125 towers too); 53 stays the first colour lock and 87 the first key lock (their coach
+  lines); teaching levels stay Easy; 1-8 stay a gentle tutorial (decks kept: 1-3 lessons, 4-8 kept and re-graded);
+- the sawtooth: a Normal lead, a Hard run, an Extreme peak, an Easy breather after it, each realm ending Extreme. Realm 7
+  can't give every peak a breather (2 Easy, 8 Extreme, and its gate-and-tower boards come at most two in a row), so its
+  middle is a hard plateau (157-166: H X X H X X H X X) before the 167 breather. 175 opens on a Normal then 176 X (a key
+  board). The longest gap between Hard/Extreme levels is 7 (58-63), so test.js's v5 "every 3-6" check reads 7.
+- **Swap (logged, `v6.swaps`):** 188 N and 189 H traded tags. 189's open board (no moat or gate) kept the careful player at
+  0.69 or more over 28 Hard candidates (ceiling 0.15); 188's moat, gate and tower carry the Hard (pin + lock): 188 H careful
+  0.094, 189 N 0.219 (ceiling 0.35).
+
+### 3.3 Decisions (mine, inside the brief)
+
+- **Archers only where towers stand.** `archers` is set on Hard (pin) and Extreme (kill) levels that have towers; a Hard or
+  Extreme without towers carries no field. The page shows the pin/kill toast from the field, so a tower-less level saying
+  "Deadly archers" would be wrong. test.js checks the rule both ways.
+- **The density rule reads every feature, board and deck** (`tags.js densityV6`, config `v5.density.v6`): Easy 0-1, no lock;
+  Normal 1-2 (at least what is unlocked), no lock; Hard 2-3 + lock from 50; Extreme every unlocked feature + lock, towers
+  optional before `towerFull` 125 (the curve's own counts put 3 towers in realms 4 and 5 against 4 Extremes). A board's moat,
+  gate and towers count first and the deck (linked pairs, ? cards, mystery blocks) fills up to the tag's top in a seeded
+  order. So a Hard in realms 6-8 on a moat + gate + tower board uses no deck features: the curve's 2-3 is a cap, and the
+  difficulty comes from the deal. Normal never draws mystery blocks.
+- **Towers.** Restored from the v4.3 boards (git `0a08325`): 64 (H, 2 towers: the first tower and first pin, coach line "Archer
+  towers are back! Here a hit pins your sapper until its tower falls."), 66 (X, 3: the first kill, coach line "Deadly archers:
+  bring their tower down before anyone walks into the ring."), 74 (X), 80 (H), 82 (X), 91 (X). 97 (v4.3's 4 towers) would not
+  deal patiently at all (0 of 40) and 60 can't carry one on a Normal (moat + gate + tower is 3 features), so the first tower
+  is 64. Painted (`paintTower`): 104, 115, 117 (realm 5) and 191, 195, 196, 198 (so every one of 191-199 has towers): a 5-wide
+  slate tower on the bank path at the frame, 14 rows, merlons, slits, one solid ink outline where it meets the picture, range
+  9.5; its colour the nearest (CIEDE2000) to the scene's slate that clears every board colour by 25 / faded 20 and water, lava,
+  mire and the mystery slate by 25 (realm 5's fen palettes push it to violet: 104 #c74fc0, 115 #938b9e, 117 #bf87fb; realm 8
+  stays slate-grey/teal). From 125 a Normal or Easy level's towers turn plain (187 keeps them, a knock-back Normal); 154 and
+  172 (Hard) turned plain to land realm 7 at 14.
+- **keepOnly (partial tower drops), 7 killing levels.** On a killing level the stored order must win replayed at real pace,
+  with thinking time and at the steady rhythm (the invariants). With all their towers no deal of 82, 138, 139, 165, 179, 183
+  or 200 survived that (each tower subset measured over 30 deals); they keep the subset that does (82 [2], 138 [1], 139 [0],
+  165 [1], 179 [1], 183 [0, 2], 200 [1, 3]); the rest turn plain as v5 did. Logged in `v6.towers.keepOnly`.
+- **Rushed dealing came back as half the candidates** (`v6.deal.rush [true, false]`, `rushOpen "both"`: the rushed
+  simulations play the colour locks shut and open). Rushed deals rarely exist on killing boards, so every deal's order is
+  also checked before the tuning (`replaysOK`: real pace, 1/2/4 s thinking, the 1 s steady rhythm), up to `attempts` deals a
+  candidate, and the tuner only moves cards on an archer level (`v6.tune.rushed`), so the checked play is the stored play.
+  gen.js also gained `towerFirst` and `rushSafe` (tried; neither raised the yield, left off).
+- **Locks.** From 50 every Hard and Extreme: the board's key lock if it has one, else a colour lock (the colour whose first
+  squad comes nearest 0.3 of the order); Extreme from 150 adds a colour lock (0.55): [key, colour] or [colour, colour]; two
+  locks first at 157.
+- **Mystery blocks** (from 150, Hard 15-25%, Extreme 25-35%): read as a share of the buried castle blocks a mystery block may
+  sit on (gen.js hide's own measure, with plan.hidden's skip roles and group cap, and a new `gap` so the share asked is the
+  share hidden). That is 4-14% of all the picture's blocks. Boards with no bank path above the fort (177's kind) can't carry
+  them; the plan then picks another deck feature (180).
+- **? cards** need rows 1-4 behind the front for 6-8 (mystify keeps two of a column a row apart). The honest-vs-seeing gap
+  rule (0.2) cut 13 levels below their planned count: 108 4/6, 116 4/5, 138 4/6, 148 5/7, 160 4/7, 164 5/6, 165 5/7, 174 6/7,
+  176 5/6, 183 5/6, 189 2/3, 191 6/8, 199 5/7. Kept: the gap rule is the luck guard.
+- **Pace.** Realm medians are the curve's gate (200-250 s from realm 2); a single level may run 160-345 s (a locked, pinned or
+  killing level runs long). Realm 1 keeps short boards (30-120 s).
+- **More, smaller squads** in realms 1-2 (`v6.deal.byRealm`: squads of 10-30 and 40-80): realm 1's taps median 12 -> 19,
+  realm 2's 44 -> 51.
+- **Freeze.** `config.json v5.freeze.lift [1, 200]` (Peter's one-time lift): test.js compares the rest of the snapshot and the
+  Gallery byte for byte; the snapshot is not re-taken (after the quests merge).
+
+### 3.4 Measurements (before: git 285b8a5 and `campaign-v6-baseline-before.jsonl`; after: `campaign-v6-baseline-after.jsonl`)
+
+| Realm | Tag | n before / after | Careful before / after | Obvious before / after | Random tap median before / after | Pace median s before / after | Taps median before / after |
+|---|---|---|---|---|---|---|---|
+| 1 | all | 24 / 24 | 1.00 / 0.64 | 1.00 / 0.62 | 100.00% / 12.75% | 35 / 46 | 12 / 19 |
+| 1 | easy | 5 / 6 | 1.00 / 1.00 | 1.00 / 1.00 | 100.00% / 100.00% | 32 / 32 | 12 / 12 |
+| 1 | normal | 14 / 14 | 1.00 / 0.65 | 1.00 / 0.61 | 95.50% / 12.25% | 36 / 46 | 12 / 19 |
+| 1 | hard | 5 / 3 | 1.00 / 0.06 | 1.00 / 0.08 | 100.00% / 0.75% | 37 / 56 | 13 / 28 |
+| 1 | extreme | 0 / 1 | - / 0.19 | - / 0.23 | -% / 0.00% | 0 / 54 | null / 29 |
+| 2 | all | 25 / 25 | 0.99 / 0.46 | 0.86 / 0.34 | 55.00% / 5.50% | 214 / 228 | 44 / 51 |
+| 2 | easy | 3 / 4 | 1.00 / 0.98 | 1.00 / 0.96 | 73.00% / 46.25% | 212 / 201 | 38 / 46 |
+| 2 | normal | 16 / 12 | 0.99 / 0.48 | 0.93 / 0.20 | 55.25% / 7.00% | 214 / 224 | 43 / 49 |
+| 2 | hard | 6 / 6 | 0.98 / 0.18 | 0.61 / 0.21 | 37.25% / 1.50% | 213 / 235 | 45 / 49 |
+| 2 | extreme | 0 / 3 | - / 0.25 | - / 0.37 | -% / 0.25% | 0 / 222 | null / 54 |
+| 3 | all | 25 / 25 | 0.87 / 0.35 | 0.48 / 0.34 | 2.50% / 3.50% | 223 / 231 | 53 / 50 |
+| 3 | easy | 3 / 3 | 1.00 / 1.00 | 1.00 / 1.00 | 49.00% / 41.25% | 211 / 211 | 44 / 44 |
+| 3 | normal | 16 / 11 | 0.90 / 0.36 | 0.42 / 0.42 | 2.50% / 7.00% | 222 / 224 | 54 / 52 |
+| 3 | hard | 6 / 8 | 0.71 / 0.20 | 0.37 / 0.10 | 0.00% / 0.75% | 223 / 233 | 48 / 50 |
+| 3 | extreme | 0 / 3 | - / 0.08 | - / 0.01 | -% / 0.00% | 0 / 227 | null / 51 |
+| 4 | all | 25 / 25 | 0.84 / 0.35 | 0.55 / 0.20 | 2.50% / 2.25% | 222 / 222 | 50 / 48 |
+| 4 | easy | 3 / 3 | 0.98 / 1.00 | 0.97 / 1.00 | 47.50% / 41.25% | 204 / 178 | 47 / 41 |
+| 4 | normal | 16 / 10 | 0.83 / 0.42 | 0.43 / 0.14 | 2.50% / 4.00% | 219 / 209 | 52 / 46 |
+| 4 | hard | 6 / 8 | 0.80 / 0.19 | 0.64 / 0.08 | 0.25% / 0.75% | 226 / 222 | 42 / 49 |
+| 4 | extreme | 0 / 4 | - / 0.02 | - / 0.00 | -% / 0.00% | 0 / 250 | null / 48 |
+| 5 | all | 25 / 25 | 0.76 / 0.32 | 0.45 / 0.37 | 3.25% / 2.75% | 232 / 231 | 45 / 45 |
+| 5 | easy | 3 / 3 | 1.00 / 1.00 | 0.80 / 1.00 | 42.75% / 51.00% | 246 / 226 | 45 / 44 |
+| 5 | normal | 13 / 9 | 0.72 / 0.32 | 0.36 / 0.30 | 4.00% / 7.50% | 232 / 231 | 50 / 47 |
+| 5 | hard | 9 / 9 | 0.74 / 0.17 | 0.45 / 0.27 | 1.50% / 1.00% | 231 / 231 | 42 / 45 |
+| 5 | extreme | 0 / 4 | - / 0.14 | - / 0.31 | -% / 0.25% | 0 / 219 | null / 48 |
+| 6 | all | 25 / 25 | 0.60 / 0.24 | 0.29 / 0.43 | 2.50% / 2.00% | 224 / 227 | 53 / 50 |
+| 6 | easy | 3 / 3 | 1.00 / 1.00 | 1.00 / 1.00 | 46.00% / 45.50% | 228 / 210 | 45 / 45 |
+| 6 | normal | 8 / 8 | 0.38 / 0.32 | 0.08 / 0.58 | 3.75% / 9.25% | 224 / 228 | 55 / 49 |
+| 6 | hard | 10 / 9 | 0.75 / 0.05 | 0.26 / 0.24 | 2.00% / 1.50% | 221 / 227 | 51 / 51 |
+| 6 | extreme | 4 / 5 | 0.38 / 0.01 | 0.29 / 0.18 | 0.75% / 0.00% | 225 / 226 | 53 / 46 |
+| 7 | all | 25 / 25 | 0.75 / 0.15 | 0.45 / 0.33 | 1.25% / 1.00% | 225 / 225 | 52 / 48 |
+| 7 | easy | 3 / 2 | 1.00 / 1.00 | 0.88 / 1.00 | 49.25% / 50.50% | 225 / 174 | 48 / 36 |
+| 7 | normal | 6 / 5 | 0.68 / 0.21 | 0.37 / 0.53 | 4.00% / 11.00% | 225 / 233 | 50 / 48 |
+| 7 | hard | 10 / 10 | 0.66 / 0.05 | 0.38 / 0.17 | 0.25% / 1.00% | 225 / 225 | 54 / 50 |
+| 7 | extreme | 6 / 8 | 0.85 / 0.02 | 0.44 / 0.25 | 1.00% / 0.25% | 224 / 223 | 51 / 48 |
+| 8 | all | 26 / 26 | 0.54 / 0.08 | 0.38 / 0.26 | 1.75% / 0.50% | 227 / 234 | 51 / 50 |
+| 8 | easy | 3 / 1 | 1.00 / 1.00 | 0.83 / 1.00 | 48.25% / 43.25% | 221 / 231 | 53 / 51 |
+| 8 | normal | 5 / 3 | 0.79 / 0.21 | 0.43 / 0.46 | 5.25% / 7.75% | 224 / 221 | 51 / 51 |
+| 8 | hard | 9 / 8 | 0.30 / 0.04 | 0.36 / 0.15 | 0.50% / 1.50% | 231 / 226 | 51 / 51 |
+| 8 | extreme | 9 / 14 | 0.49 / 0.00 | 0.22 / 0.22 | 0.75% / 0.00% | 231 / 261 | 49 / 50 |
+
+Coins a full first clear of 1-200 earns (meta.coins win + first, by tag): before 8580, after 9975.
+
+Every careful ceiling is met on its stored grade (16 games before 150, 32 from 150; 200: 0 of 32). Random-tap bands met
+on every dealt level. Realm pace medians 46 s (realm 1), then 228, 231, 222, 231, 227, 225, 234 s. Taps at most 55, longest
+wait 15 s or less, peak 5 spaces, every stored order wins with no arrow landing and no power-up, every steady and thinking
+replay wins (checked on the installed file). Coins a first clear of 1-200 earns (win + first): 8,580 -> 9,975.
+
+Bake history: bake1 (all 186 dealt levels, 2,073 candidates, 85 min on 14 threads, 50 fallbacks), bake2 (`--reuse`, the
+pace range and mystery-block fix, 48), bake3 (`--extra 16` on those, keepOnly, 240 deal attempts: 12), bake4 (`--extra 48`
+on 13 incl. the swap: 1), bake5 (176, 400 attempts, `--extra 64`: 0). Candidates are cached per level in
+`tools/campaign-v6-scratch/cands/` (gitignored).
+
+### 3.5 Checks
+
+test.js 663/0; regrade 0 differences of 2,205 (250 levels), `--gallery` 0 of 432 (72); freeze PASS (snapshot 1,155 + 360 checks,
+castles 283); 201-250 byte-identical to 285b8a5 and gallery.json unchanged; critic-v5 0 mismatching games of 10,857 (421
+kill games, 461 pin games), known answers 0 wrong, real pace 322/322; `debug-v4.js --check` matches; selfTest 932/0
+(375x812) and 934/0 (1280x720), 0 console messages; the stage 1 real-tap run 22/22; `tools/shots-campaign-v6-s2.mjs` 26/26 at
+1280x720 and 375x812 (64, 66, 159, 200 opened from their map nodes; a pin, a kill and its short sheet, the stored orders by
+real taps, two sockets on 159); harness all passed (selfTest 932/0 at 375x812, 375x667, 414x736, 360x740 and the 400x600
+iframe, 934/0 at 812x375 and 1280x720, the hidden-tab run 932/0 and a win on level 11, the first Hard), 0 console messages;
+the font preload warning a ?v bump would have caused was caught here (style.css's font URL bumped with index.html).
+
+### 3.6 For the critics
+
+- The 191-199 run, 176 and 200 sit at or near 0 for the careful player: they are close to walls for a planning player
+  (the curve's "almost requiring gold"). Their random-tap rates are 0-0.25%.
+- Realm 5's painted towers are violet, not slate: worth a visual look (104, 115, 117).
+- Hard levels in realms 6-8 on full boards use no deck features (the 2-3 cap); a playtester may read them as plainer than
+  the old Hards, though the careful player finds them much harder.
+- The coach on 64 and 66 shows over the toast; their wording is new.
+- Realm 7's hard plateau without breathers (157-166).

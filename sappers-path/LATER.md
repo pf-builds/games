@@ -385,3 +385,12 @@ Fixed: S1-S7, m2, m3, N1, N2 (`tools/v5-r4-notes.md` §10). Parked:
   player per tag (`careful`, `carefulTune`), the obvious player (`obvious`), more candidates sharded over the threads
   (`--shard`, `--reuse`), deal depth alternated (`deepAlt`); ? cards and mystery blocks don't move an all-seeing
   planner, the deal does.
+
+## Campaign v6 stage 2 (the re-deal, 2026-10-07)
+- Lesson 125 still teaches towers although they now arrive at 64; its coach could become a Volley lesson.
+- Realm 5's painted towers came out violet (the fen palettes leave no slate-like colour clear); a palette pass could recolour one fen role to free a slate.
+- Killing towers rarely allow a deal that survives real pace: seven levels keep a subset (keepOnly). A "wary" real-pace measure (tap when the next squad's target is clear) would let every tower stand.
+- The ? card gap rule (0.2) leaves 13 levels under their planned count; mystify could try other rows or more tries.
+- Mystery blocks read as a share of the hideable buried blocks (4-14% of a picture); a larger share needs the skip roles or group cap relaxed (a visual call).
+- Hard levels on full boards in realms 6-8 use no deck features under the curve's 2-3 cap; if playtesters find them plain, Peter may want the cap read as a minimum.
+
