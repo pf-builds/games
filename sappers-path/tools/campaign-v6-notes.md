@@ -177,7 +177,7 @@ archers rule on, and installed with 0 fallbacks. Rules as built: SPEC-v4 §9, "C
 ### 3.2 The tags (bake-config `tags.v6`, one letter a level)
 
 Counts per realm exactly the curve's: 6/14/3/1, 4/12/6/3, 3/11/8/3, 3/10/8/4, 3/9/9/4, 3/8/9/5, 2/5/10/8, 1/3/6/6, 191-199
-0/0/2/7, 200 X (totals 26/73/61/40). Laid out by a small solver (scratchpad, not shipped) under the boards' constraints and
+0/0/2/7, 200 X (totals 25/72/61/42; corrected in the fix pass, 2026-10-07: the critic's M2). Laid out by a small solver (scratchpad, not shipped) under the boards' constraints and
 then fixed as data:
 - a key-lock board (its gilt key is a board pixel) is Hard or Extreme; Easy needs a board with at most one feature (no gate);
   Extreme from 50 needs a gate (from 125 towers too); 53 stays the first colour lock and 87 the first key lock (their coach
@@ -485,3 +485,144 @@ With nothing past the last level, the fog node simply stays hidden.
 - Weak picks lane C flagged and kept: Apple Goblin, Baby Griffin, Bridge Troll, Birthday Dragon, Trusty Steed, Round
   Shield. Spares (cq14 Baby Phoenix, cq16 Cheeky Gargoyle, cq35 Party Cannon) are in the manifest with `spare: true`; a
   swap is one line in quests.json and `quest-bake.js convert bake --only cqNN install check`.
+
+## 5. Fix pass (difficulty), 2026-10-07
+
+The one fix pass after the critic round, the difficulty half (the functional critic's B1, S1, S2, S3, M1-M4; the visual
+critic's SHOULD-FIX 1). A parallel builder owns the page UI and three quest pictures (branch `campaign-v6-ui`); nothing
+here touches `src/`, `style.css` or `gallery.json`. Rules as built: SPEC-v4 §9, "Campaign v6 fix pass (difficulty)".
+
+### 5.1 What shipped
+
+| Piece | Commit |
+|---|---|
+| Tooling: the best-of gate, tuner and pick on it, regate, floor, stone towers, test.js check, real-tap script | d57338c |
+| Data: levels 1-200 (85 re-dealt), coach lines (157, 125, 53's card), before table and after baseline | 66593df |
+| Docs: SPEC §9 entry, this section, the lane A checklist, LATER | (this commit) |
+
+### 5.2 The gate (B1, S1)
+
+- **A level's difficulty is the best of three careful players**, 1, 2 and 3 taps deep (`tools/grade.js deep`), 32 games
+  each at every level (bake-config `grade.deep`). The 3-deep player alone was not monotone: on 176, 185 and 192 the 1-deep
+  player won 32 of 32 while it won none.
+- **Two runs, both under the ceiling.** Run a on the level's grade seed (the careful player's own, so from 150 its 3-deep
+  rate is the old `careful`), run b on a second, independent seed. Stored per level as `grade.<tag>.deep {a: [d1, d2, d3],
+  b: [d1, d2, d3]}`; `tools/campaign-v6-bake.js deepOf` makes them and `tools/regrade.js` re-runs both (seeds: the grade
+  seed xor 0x6c8e9cf5 and xor 0x7f4a7c15). Both runs' best must sit at or under the level's ceiling (`v6.care`, the
+  curve's table, unchanged) and, where a level has one, at or over its floor.
+- **Levels 1-8: no ceilings** (the gentle tutorial, per the curve): `v6.care.ranges` starts at 9. 4, 5, 7 and 8 read over
+  the old Normal ceiling (0.75) and stay as they are, logged here.
+- **11 gets a floor** (`v6.floor` {11: 0.2}): the first Hard right after the tutorial is a step up, not a wall. Its two
+  runs: 0.25 / 0.438 (was 0.031 / 0.094 at a4c2fbe).
+- **test.js** checks every level from 9 stores both runs and sits inside its ceiling and floor (`v6.misses` would log a
+  level that couldn't; none is needed).
+
+### 5.3 Decisions (mine, inside the brief)
+
+- **The tuner climbs the same best-of** (`v6.tune.careful.depths` [1, 2, 3]; gen.js carefulStage: the best of the three,
+  stopping a move's measure at its first rate over the current best). A floor level climbs into a window instead
+  ([floor x 1.5, ceiling x 0.8], so 11 aims 0.3-0.4).
+- **Regate before re-dealing.** `campaign-v6.js regate` grades every installed pick on the gate (kept when it passes,
+  its runs stored), else re-picks among the level's cached stage 2 candidates graded the same. Only the levels no cached
+  candidate could carry were dealt again (`bake --from K`: candidates from K, fresh seeds). Five bakes, 1,220 new
+  candidates on 16 threads; the cached and new candidates of a level pooled at the end (`regate --cands a,b --repick`).
+- **The pick's lean.** `careWeight` 20 -> 60 on the mean of the two runs' best: lowest for Hard and Extreme; Normal leans
+  to 0.6 of its ceiling (`v6.lean.normal`), so a Normal stays the sawtooth's lead and not a wall (133 N had been picked at
+  0.06 against 0.5); 11 leans to the middle of floor and ceiling.
+- **A robustness round past the brief.** After install I ran the gate on fresh seeds (`deep --salt K`: every level's seed
+  xor K). Levels with a fresh run outside got more candidates and a re-pick (two rounds: 20 levels, then 8, then 9).
+  That re-dealt ten levels that passed the two stored runs (14, 21, 55, 57, 59, 89, 120, 124, 145, 197). The salts used to
+  choose (1234567, 7654321, 31337, 271828) are not the ones reported in §5.4.
+- **Every other invariant as stage 2**: stored power-up-free, arrow-free order on the tag, 5 spaces, no wait over 15 s,
+  55 taps max, pace band, steady and thinking replays, archers by tag where towers stand, locks, feature ladder and
+  density. 0 fallbacks installed. No tag swaps were needed; nothing loosened.
+- **Tower colours (visual SHOULD-FIX 1).** A painted tower is stone now (`v6.towers.stone`: OKLCH chroma at most 0.03 at
+  any hue but pink, else at most 0.10 with hue 20-255; never pink, magenta or violet), still the nearest to the scene's
+  slate that clears every board colour by 25 / faded 20. 115 (#938b9e), 191 and 196 (#319287) and 195 (#838f85) keep
+  their colours. 198 turns pale blue-grey (#b1d2f4, its only stone that clears). The fenNight boards of 104 and 117 have
+  no stone that clears (the nearest is a cyan at chroma 0.11), so their towers moved: 106 (Hard, fenNight, grey #9e9cb0)
+  and 116 (Hard, fenDusk, pale blue-grey #86b3be, the add entry's own chroma cap 0.05). Realm 5 keeps 3 tower levels, all
+  pinning now (117 was its one kill). 104 and 117 re-dealt without towers.
+- **Coach (S2, M1).** 157, the first two-lock level: "Two spaces are locked. One opens with its key, one with its colour."
+  (short "Two locks: a key and a colour."; the arrow on the last shut socket, the ring on the key), then "Both unlocked!
+  Five spaces for your squads." 125, the first knock-back tower: "Archers shoot in the red ring and knock sappers back.
+  Tower first!" (short "Archers knock back: tower first!"). 53's coach card follows its re-dealt lock colour (install).
+  Config only; no page code.
+- **Stale text (M2, M3).** Notes §3.2 and the SPEC stage 2 entry now say 25/72/61/42; `config.json v5.density.note` says
+  towers come from 60 under v6.
+- **Realm 7's plateau (M4).** 157-166 (H X X H X X H X X) has no breather. That is Peter's approved curve; left as it is.
+
+### 5.4 Measurements (before: the levels at a4c2fbe, `tools/campaign-v6-fix-before.jsonl`; after: the stored runs)
+
+| Realm | Tag | n | Best-of mean before / after | Outside the gate before / after | Ceiling |
+|---|---|---|---|---|---|
+| 1 | all | 24 | 0.72 / 0.62 | 6 / 0 |  |
+| 1 | easy | 6 | 1.00 / 1.00 | 0 / 0 | none |
+| 1 | normal | 14 | 0.76 / 0.57 | 5 / 0 | 0.75 |
+| 1 | hard | 3 | 0.12 / 0.21 | 1 / 0 | 0.5 |
+| 1 | extreme | 1 | 0.16 / 0.16 | 0 / 0 | 0.35 |
+| 2 | all | 25 | 0.57 / 0.44 | 8 / 0 |  |
+| 2 | easy | 4 | 1.00 / 1.00 | 0 / 0 | none |
+| 2 | normal | 12 | 0.57 / 0.50 | 3 / 0 | 0.75 |
+| 2 | hard | 6 | 0.34 / 0.12 | 3 / 0 | 0.5 |
+| 2 | extreme | 3 | 0.50 / 0.08 | 2 / 0 | 0.35 |
+| 3 | all | 25 | 0.49 / 0.33 | 10 / 0 |  |
+| 3 | easy | 3 | 1.00 / 1.00 | 0 / 0 | none |
+| 3 | normal | 11 | 0.62 / 0.37 | 7 / 0 | 0.6 |
+| 3 | hard | 8 | 0.24 / 0.12 | 3 / 0 | 0.4 |
+| 3 | extreme | 3 | 0.13 / 0.06 | 0 / 0 | 0.25 |
+| 4 | all | 25 | 0.43 / 0.32 | 8 / 0 |  |
+| 4 | easy | 3 | 1.00 / 1.00 | 0 / 0 | none |
+| 4 | normal | 10 | 0.53 / 0.39 | 5 / 0 | 0.6 |
+| 4 | hard | 8 | 0.30 / 0.13 | 3 / 0 | 0.4 |
+| 4 | extreme | 4 | 0.02 / 0.02 | 0 / 0 | 0.25 |
+| 5 | all | 25 | 0.54 / 0.25 | 11 / 0 |  |
+| 5 | easy | 3 | 1.00 / 1.00 | 0 / 0 | none |
+| 5 | normal | 9 | 0.58 / 0.27 | 5 / 0 | 0.6 |
+| 5 | hard | 9 | 0.42 / 0.09 | 4 / 0 | 0.4 |
+| 5 | extreme | 4 | 0.36 / 0.03 | 2 / 0 | 0.25 |
+| 6 | all | 25 | 0.50 / 0.22 | 11 / 0 |  |
+| 6 | easy | 3 | 1.00 / 1.00 | 0 / 0 | none |
+| 6 | normal | 8 | 0.69 / 0.29 | 6 / 0 | 0.5 |
+| 6 | hard | 9 | 0.33 / 0.02 | 4 / 0 | 0.3 |
+| 6 | extreme | 5 | 0.17 / 0.02 | 1 / 0 | 0.2 |
+| 7 | all | 25 | 0.38 / 0.14 | 9 / 0 |  |
+| 7 | easy | 2 | 1.00 / 1.00 | 0 / 0 | none |
+| 7 | normal | 5 | 0.67 / 0.25 | 4 / 0 | 0.4 |
+| 7 | hard | 10 | 0.19 / 0.03 | 2 / 0 | 0.2 |
+| 7 | extreme | 8 | 0.27 / 0.00 | 3 / 0 | 0.1 |
+| 8 | all | 26 | 0.27 / 0.06 | 10 / 0 |  |
+| 8 | easy | 1 | 1.00 / 1.00 | 0 / 0 | none |
+| 8 | normal | 3 | 0.47 / 0.10 | 2 / 0 | 0.35 |
+| 8 | hard | 8 | 0.17 / 0.01 | 4 / 0 | 0.15/0.06 |
+| 8 | extreme | 14 | 0.23 / 0.01 | 4 / 0 | 0.08/0.06/0 |
+
+Outside the gate before (73): 9n 10n 11h 13n 19n 20n 27n 29n 30h 37h 38h 39e 43n 45e 53h 56h 60n 61n 62n 63n 65h 68n 69n 70n 76n 77n 79n 80h 85n 87h 88h 94n 105h 108e 110n 111n 113n 114h 115h 116h 117e 119n 122n 126n 128n 130n 132n 133n 134h 135h 141n 142h 143e 146h 152n 162e 165e 168n 169n 170n 171h 172h 174e 175n 176e 177h 178h 181h 185e 189n 190e 192e 198h; after (0): none.
+
+85 levels re-dealt (deck changed): the 73 outside, 104 and 106 (tower moved), and the ten from the robustness round.
+Pace medians by realm 43 s, then 229, 241, 222, 232, 236, 225, 231 s (curve 200-250 from realm 2). Coins for a first
+clear of 1-200: 9,975 (unchanged). The full stage 2 table (careful, obvious, random tap, pace, taps) is what
+`node tools/campaign-v6.js measure` prints, with the gate table under it; rows in `campaign-v6-baseline-after.jsonl`.
+
+**Fresh seeds** (salts 99991 and 424242, never used to choose): 15 of 684 runs (2.2%) fall outside, each by one or two
+games of 32: 11 (floor: 0.188, 0.156, 0.188 vs 0.2), 76 N 0.625, 94 N 0.625 / 0.656 (0.6), 127 N 0.531 twice (0.5),
+131 N 0.531 (0.5), 146 H 0.313 (0.3), 152 N 0.406 twice (0.4), 169 N 0.438 (0.4), 184 X 0.125 (0.08), 190 X 0.094 (0.08).
+94, 127 and 68 had four rounds of candidates; their boards don't deal much lower (best candidates 0.41-0.5). Binomial
+noise at 32 games is about ±0.09 near 0.5, so a level near its ceiling reads over on some seed; 64-game runs would halve it.
+
+### 5.5 Checks
+
+test.js 666/0; regrade 0 differences of 2,405 (250 levels, the two runs included), `--gallery` 0 of 372 (62);
+freeze PASS (levels 1,155 + gallery 360 checks, castles 283; snapshot not re-taken); 201-250 and gallery.json byte for byte
+unchanged; critic-v5 0 mismatching games of 10,527, grade mismatches 0 of 312, known answers 0 wrong, real pace 312/312;
+`debug-v4.js --check` matches; selfTest 923/0 (375x812) and 925/0 (1280x720), 0 console messages; harness all passed
+(selfTest 923/925 at every viewport, the first Hard won); `tools/shots-campaign-v6-fix.mjs` 52/52 at 1280x720 and 375x812
+(11, 64, 66, 104, 106, 116, 125, 157, 176, 198, 200 opened from their map nodes, stored orders by real taps, nobody hit;
+the toasts and the 64, 66, 125 and 157 coach lines), 0 console messages.
+
+### 5.6 For the critics
+
+- Hards and Extremes from realm 6 sit near 0 for the three heuristic players (they lean lowest). The honest planner
+  (`grade.plan`) still wins many of them; the gate is the critic's B1 player set, not a human model.
+- The stone towers: 106 grey, 116 and 198 pale blue-grey (shots in `tools/shots-campaign-v6-fix/`).
+- 157's coach line shows over the kill toast at the start, as 66's does.

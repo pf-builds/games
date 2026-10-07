@@ -386,6 +386,9 @@ Worktree `repos/games-sappers-campaign/` (branch `campaign-v6`), game in `sapper
 | A13 | Stage 2 checks + docs (SPEC §9 stage 2, notes §3, after table), harness first-Hard lookup, shots-campaign-v6-s2 | done: test.js 663/0, regrades 0/0, freeze PASS, harness all passed, real taps 26/26, 0 console | (this commit) |
 | A15 | Merge `campaign-v6-quests` into `campaign-v6` (docs both sides, test.js both sides' checks, critic result regenerated), `?v=49` | done: test.js 665/0; regrades 0/2,205 and 0/372; freeze PASS; critic 0 of 10,527; selfTest 916/0, 918/0; harness all passed; real taps (cq06, 64/66/159/200) all ok; 0 console | (merge commit) |
 | A14 | After the quests merge: re-take the freeze snapshot (`tools/freeze.js --snapshot`), drop `v5.freeze.lift` | todo (orchestrator) | |
+| A16 | Fix pass (difficulty) tooling: the best-of gate (`grade.deep`, two seeds, 32 games, depths 1-3), regrade check, tuner + pick on it, `regate` step, `deep [--salt K]` step, floor (11), no ceilings 1-8, stone towers (104/117 -> 106/116), test.js gate check, `shots-campaign-v6-fix.mjs` | done | d57338c |
+| A17 | Fix pass data: 85 re-dealt (5 bakes, 1,220 new candidates, regate re-picks), 0 outside the gate, coach 157 + 125, 53's card | done: test.js 666/0; regrades 0/2,405 and 0/372; freeze PASS; critic 0 of 10,527; selfTest 923/0, 925/0; harness all passed; real taps 52/52; 0 console | 66593df |
+| A18 | Fix pass docs: SPEC §9 "Campaign v6 fix pass (difficulty)", notes §5, this table, LATER | done | (this commit) |
 
 ## Campaign v6 lane A, the side quests (branch `campaign-v6-quests`, worktree `repos/games-sappers-campaign-quests/`)
 
