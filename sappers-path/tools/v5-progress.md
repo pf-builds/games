@@ -381,3 +381,9 @@ Worktree `repos/games-sappers-campaign/` (branch `campaign-v6`), game in `sapper
 | A8 | Stage 1b page, `?v=47` | done: selfTest 919/0, 921/0; real taps 22/22 (port 8497); 0 console | 8a073ba |
 | A9 | Stage 1b docs: SPEC §9 1b entry, notes §2, this table | done | (this commit) |
 | A10 | Stage 2: re-deal 1-200 on the curve | todo: see notes §1.4 and §2.3 | |
+
+## Campaign v6 lane A, the side quests (branch `campaign-v6-quests`, worktree `repos/games-sappers-campaign-quests/`)
+
+| # | Piece | State | Commit |
+|---|---|---|---|
+| AQ1 | The 50 on-theme side quests (24 kept + 26 new, `tools/quest-bake.js`), map ids, manifest, LICENSES; tests, critic and selfTest for the empty long tail | done: quest-bake check PASS; test.js 665/0; regrades 0/1,605 and 0/372; freeze PASS; critic 0 of 10,527; selfTest 903/0, 905/0; real taps 16/16; 0 console. Notes §4 | see git log |
