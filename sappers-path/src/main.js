@@ -2028,8 +2028,9 @@
       { const x2off = app.meta.double.on === false && $("p-x2").hidden && !shown($("p-x2")); $("p-primary").click();
         const f = JN.focus(app.save.data, app.order), ne = f && f !== "tail" ? app.byId.get(f) : null, nd = ne ? ne.node : app.jr.tail && !app.jr.tail.b.hidden ? app.jr.tail.b : null, q = $("jr").getBoundingClientRect(), r = nd ? nd.getBoundingClientRect() : null; // the next level, or (all cleared) the long tail's node
         const inView = !!r && r.top >= q.top && r.bottom <= q.bottom && r.left >= q.left && r.right <= q.right, pulse = !!nd && nd.querySelector(".bd, .qf").getAnimations().length > 0;
-        ok(x2off && app.screen === "map" && !!nd && (!ne || nd.classList.contains("cur")) && inView && (app.V.calm ? !pulse : pulse) && hitOK($("map-play")),
-          "v5.1: off, the x2 button is not rendered; the win's '" + LY.toMap + "' opens the map with the next node (" + (ne ? "level " + ne.n : f) + ") in view" + (app.V.calm ? " (reduced motion: no pulse)" : ", pulsing") + "; map Play hittable"); }
+        const noTail = f === "tail" && !nd; // campaign v6: every level cleared and no long-tail picture (the castle has none): no next node to show
+        ok(x2off && app.screen === "map" && (noTail || (!!nd && (!ne || nd.classList.contains("cur")) && inView && (app.V.calm ? !pulse : pulse))) && hitOK($("map-play")),
+          "v5.1: off, the x2 button is not rendered; the win's '" + LY.toMap + "' opens the map with the next node (" + (ne ? "level " + ne.n : noTail ? "none: every level cleared, no long tail" : f) + ") in view" + (app.V.calm ? " (reduced motion: no pulse)" : ", pulsing") + "; map Play hittable"); }
       // 12. Pause: nothing moves and the sheet takes the tap; one tap resumes with no jump in time and no card played.
       startLevel(app.levels[0].id, "normal");
       pause(); const pc = app.clock; advance(1000); advance(1600);
@@ -2464,6 +2465,7 @@
         { const t = J.tail, fogShown = shown(document.querySelector("#jr .fogl")); ok(t.b.hidden && fogShown && !mapPic(), "map long tail: the road fades into fog ('" + MT.fog + "'); no node there before every level is cleared");
           for (const id of app.order) Save.record(app.save.data, id); for (let i = 0; i < 25; i++) Save.record(app.save.data, app.gal[i].id, "gal"); showScreen("map");
           const T0 = JN.tail(app.save.data, app.order, galIds(), galAfter()), tb = t.b, r = tb.getBoundingClientRect(), s = sc.getBoundingClientRect(), at = (r.top + r.height / 2 - s.top) / s.height;
+          if (!T0.ids.length) ok(tb.hidden && !t.e && !t.th.children.length, "map long tail (campaign v6): no picture past the last level in this build; with every level cleared the fog holds no node"); else { // campaign v6: the 50 side quests all sit by level 200
           ok(!tb.hidden && t.e && t.e.id === T0.ids[0] && hitOK(tb) && (Math.abs(at - MC.curAt) < 0.02 || sc.scrollTop === 0) && $("map-play").querySelector(".pl").textContent === fill(MT.playPic, { n: t.e.n }) && !t.th.children.length,
             "map long tail: with 1-" + app.levels.length + " cleared one node opens in the fog (picture " + (t.e ? t.e.n : "?") + "), " + Math.round(at * 100) + "% down (or the map's top); Play reads '" + $("map-play").textContent + "'");
           tb.click(); const first = app.entry; patient(winOf(first)); settleNow(); tick(9000); $("btn-map").click();
@@ -2478,7 +2480,7 @@
             "map long tail (v5 R3 fix): " + won.length + " won: the latest " + K + " in one row and the chip '" + (chip ? chip.textContent : "") + "', every one 44+ px and hittable");
           chip.click(); const tiles = Array.from(document.querySelectorAll("#ts-grid .ts-tile"));
           ok(!$("tailsheet").hidden && tiles.length === won.length && tiles.every((b) => big(b) && hitOK(b)) && hitOK($("ts-close")), "map long tail (v5 R3 fix): the chip opens a sheet of all " + tiles.length + " cleared pictures, each 44+ px and hittable");
-          tiles[0].click(); ok($("tailsheet").hidden && app.entry === app.byId.get(won[0]) && app.screen === "play", "map long tail (v5 R3 fix): a tile in the sheet closes it and plays that picture again");
+          tiles[0].click(); ok($("tailsheet").hidden && app.entry === app.byId.get(won[0]) && app.screen === "play", "map long tail (v5 R3 fix): a tile in the sheet closes it and plays that picture again"); }
           // v5 R3 fix: everything cleared: no Play, the end line in its place, and (wide) the card says so with no side quest.
           for (const e of app.gal) Save.record(app.save.data, e.id, "gal"); showScreen("map");
           ok($("map-play").hidden && shown($("jr-end")) && $("jr-end").textContent === MT.endHint && t.b.hidden && !mapPic() && (!$("map").classList.contains("cards") || ($("jr-n-name").textContent === MT.allClear && $("jr-quest").hidden)),

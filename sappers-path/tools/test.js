@@ -19,6 +19,11 @@ const V3 = require("../config.json").v3;
 const LEVELS_ALL = require("../levels/levels.json"), LEVELS = Object.assign({}, LEVELS_ALL, { levels: LEVELS_ALL.levels.filter((l) => !l.land) });
 const castleGal = () => require("../levels/gallery.json").levels.filter((l) => !l.land), castleLay = () => { const L = require("../map/layout.json"); return Object.assign({}, L, { sheets: L.sheets.filter((S) => !S.land) }); };
 
+// Campaign v6 (the on-theme side quests, tools/quest-bake.js): the campaign's 50 side quests all sit by level 200, so the
+// castle has no long tail. The long tail's mechanism (journey.js tail, tailAfter, save tail) is still checked on v5's shape:
+// the 50 plus 10 stand-in pictures after levels 203-240 (tools/quests.js's slots 51-60).
+const tailGal = () => { const G = castleGal(), C = require("../config.json"); return G.concat(require("./quests.js").questsOf(60, C.gallery.quests, C.meta.powers).slice(G.length).map((q, k) => ({ id: "v5-tail-" + (G.length + k + 1), quest: q }))); };
+
 let pass = 0, fail = 0;
 // v5 R1: checks that replay the shipped levels' stored orders and grades, or hold them to the v5 placement rules, wait for
 // R2's re-lay (config.json v5.relaid). Until then they are listed as DEFERRED, not run.
@@ -392,9 +397,10 @@ const ARCH = (cols, extra) => lv(["......ggg", ".........", "aa.aa.aa.", "......
   const TG = require("./tags.js"), BC = require("./bake-config.json"), GB = require("./gallery-config.json").bake, GL = castleGal(), DN = V5.density;
   const mix = (ls) => TG.TAGS.map((t) => ls.filter((l) => l.tag === t).length);
   defer("tags: the realm schedule, the mix, realm ends and openers, density", () => {
-    eq([LEVELS.levels.every((l) => l.tag === TG.tagOf(l.n, BC.tags, l.source === "teaching")), GL.every((l) => l.tag === TG.tagOf(l.n, GB.tags, false))], [true, true], "tags: every level carries its schedule's tag");
+    const QJ = require("./campaign-quests/quests.json"), FG = require("fs").existsSync(require("path").join(__dirname, "..", V5.freeze.dir, "gallery.json")) ? require("../" + V5.freeze.dir + "/gallery.json").levels : []; // campaign v6: a side quest's tag is its quests.json plan (new) or its shipped tag (kept)
+    eq([LEVELS.levels.every((l) => l.tag === TG.tagOf(l.n, BC.tags, l.source === "teaching")), GL.every((l, i) => l.tag === (QJ.order[i].tag || (FG.find((g) => g.id === l.id) || {}).tag))], [true, true], "tags: every level carries its schedule's tag; every side quest its quests.json tag (campaign v6; kept pictures their shipped one)");
     const [e, n, h] = mix(LEVELS.levels.slice(0, 100)), [ge, gn, gh] = mix(GL); // v5 R4: the 1-100 mix as shipped (101-200 below)
-    ok(Math.abs(e / 100 - 0.15) <= 0.03 && Math.abs(n / 100 - 0.6) <= 0.03 && Math.abs(h / 100 - 0.25) <= 0.03 && Math.abs(ge / 60 - 0.15) <= 0.05 && Math.abs(gn / 60 - 0.6) <= 0.05 && Math.abs(gh / 60 - 0.25) <= 0.05,
+    ok(Math.abs(e / 100 - 0.15) <= 0.03 && Math.abs(n / 100 - 0.6) <= 0.03 && Math.abs(h / 100 - 0.25) <= 0.03 && Math.abs(ge / GL.length - 0.15) <= 0.05 && Math.abs(gn / GL.length - 0.6) <= 0.05 && Math.abs(gh / GL.length - 0.25) <= 0.05,
       "tags: the mix is about 15% Easy, 60% Normal, 25% Hard (Siege " + [e, n, h].join("/") + ", Gallery " + [ge, gn, gh].join("/") + ")");
     const R = BC.tags.realms.filter((r) => r[0] <= LEVELS.levels.length), ends = R.filter((r) => r[1] <= LEVELS.levels.length).map((r) => LEVELS.levels[r[1] - 1].tag), opens = R.filter((r) => r[0] > 1 && r[0] <= 150).map((r) => LEVELS.levels[r[0] - 1]); // v5 R4: 175 opens on the cycle (no new feature)
     const hards = LEVELS.levels.filter((l) => l.tag === "hard" || l.tag === "extreme").map((l) => l.n), gaps = hards.slice(1).map((x, i) => x - hards[i]).filter((g) => g > 1);
@@ -1063,7 +1069,7 @@ const CV = require("./convert.js"), GCFG = require("./gallery-config.json"), PAL
   for (const L of GL) {
     const B = E.compile(L), used = new Set(); for (const row of L.grid) for (const ch of row) { const m = E.matOf(ch); if (m) used.add(m); }
     const ids = Object.keys(L.pal).map(Number).sort((a, b) => a - b), pic = MAN.pictures.find((p) => p.id === L.src);
-    if (!B.pic || E.check(L).length || L.links || L.lock || (L.gates && L.gates.length) || (L.towers && L.towers.length) || L.cols.some((c) => c.some((cd) => cd[2]))) bad.push(L.id + ": not a plain picture board");
+    if (!B.pic || E.check(L).length || (L.gates && L.gates.length) || (L.towers && L.towers.length) || (pic.kind !== "outlined" && (L.links || L.lock || L.cols.some((c) => c.some((cd) => cd[2]))))) bad.push(L.id + ": not a plain picture board"); // campaign v6: a new (outlined) quest may carry its slot's features (tools/quest-bake.js gates)
     if (ids.join() !== [...used].sort((a, b) => a - b).join() || ids.some((m) => m === E.IRON || m === E.GILT)) bad.push(L.id + ": palette ids " + ids + " vs grid " + [...used]);
     for (let m = 1; m < E.NMAT; m++) if (B.sapTotal[m] !== B.pix[m]) bad.push(L.id + ": colour " + m + " has " + B.sapTotal[m] + " sappers for " + B.pix[m] + " pixels");
     const d = L.tag, g = L.grade[d] || {}; // v4.3: one fixed tag, one stored order
@@ -1072,13 +1078,13 @@ const CV = require("./convert.js"), GCFG = require("./gallery-config.json"), PAL
     if (g.rate >= L.target[0] && g.rate <= L.target[1]) band++;
     const hx = ids.map((m) => L.pal[m].c); let lmin = 99, fmin = 99;
     for (let a = 0; a < hx.length; a++) for (let b = a + 1; b < hx.length; b++) { lmin = Math.min(lmin, PAL.de00(PAL.lab(hx[a]), PAL.lab(hx[b]))); for (let d = 1; d < T.length; d++) fmin = Math.min(fmin, PAL.de00(PAL.lab(fadeHex(hx[a], T[d])), PAL.lab(hx[b])), PAL.de00(PAL.lab(fadeHex(hx[b], T[d])), PAL.lab(hx[a]))); }
-    const want = pic.kind === "painting" ? GCFG.convert.kinds.painting.minDE : GCFG.convert.minDE; if (lmin < want) bad.push(L.id + ": colours only " + lmin.toFixed(1) + " apart"); dmin = Math.min(dmin, lmin);
-    if (pic.kind !== "painting") { dminFade = Math.min(dminFade, fmin); if (fmin < GCFG.convert.fadeDE) bad.push(L.id + ": a faded tile only " + fmin.toFixed(1) + " from a front colour"); }
+    const KD = GCFG.convert.kinds[pic.kind] || {}, want = KD.minDE || GCFG.convert.minDE, fwant = KD.fadeDE === 0 ? KD.fadeFloor : GCFG.convert.fadeDE; if (lmin < want) bad.push(L.id + ": colours only " + lmin.toFixed(1) + " apart"); dmin = Math.min(dmin, lmin);
+    if (pic.kind !== "painting") { dminFade = Math.min(dminFade, fmin); if (fmin < fwant) bad.push(L.id + ": a faded tile only " + fmin.toFixed(1) + " from a front colour"); }
     if (!pic.license || !(pic.url || (pic.prompt && pic.seed != null && pic.model)) || !(pic.fetched || pic.generated) || LIC.indexOf(pic.id) < 0) bad.push(L.id + ": manifest or LICENSES.md line missing");
   }
   for (let i = 0; i < GL.length; i++) for (let j = i + 1; j < GL.length; j++) { const A = GL[i], Bq = GL[j]; if (A.w !== Bq.w || A.h !== Bq.h) continue; let same = 0; for (let y = 0; y < A.h; y++) for (let x = 0; x < A.w; x++) if (A.grid[y][x] === Bq.grid[y][x]) same++; if (same / (A.w * A.h) >= GB.dedupe) bad.push(A.id + " and " + Bq.id + " are near-duplicates"); }
   ms.sort((a, b) => a - b);
-  eq(bad, [], "gallery: every level is a plain picture board whose palette is exactly its colours (never 10 or 14), sappers sum to pixels, stored orders win on each picture's tag, colours " + GCFG.convert.minDE + " apart (paintings " + GCFG.convert.kinds.painting.minDE + "; smallest " + dmin.toFixed(1) + "), faded tiles " + GCFG.convert.fadeDE + " apart (not paintings; smallest " + dminFade.toFixed(1) + "), a manifest and LICENSES.md line each, no near-duplicates");
+  eq(bad, [], "gallery: every level is a picture board (plain, but a campaign v6 outlined quest's planned features) whose palette is exactly its colours (never 10 or 14), sappers sum to pixels, stored orders win on each picture's tag, colours " + GCFG.convert.minDE + " apart (paintings and outlined " + GCFG.convert.kinds.painting.minDE + "; smallest " + dmin.toFixed(1) + "), faded tiles " + GCFG.convert.fadeDE + " apart (outlined " + GCFG.convert.kinds.outlined.fadeFloor + "; not paintings; smallest " + dminFade.toFixed(1) + "), a manifest and LICENSES.md line each, no near-duplicates");
   eq([wins, dead, taps, over, band], [GL.length, 0, 0, 0, GL.length], "gallery: " + wins + " stored orders win; every stored line under " + GB.maxWaitMs / 1000 + " s a tap, " + GB.maxTaps + " taps and " + (GB.duration.pace ? GB.duration.pace.range[1] / 1000 + " s of real pace; patient" : GB.duration.maxMs / 1000 + " s") + " (median " + (ms[(ms.length - 1) >> 1] / 1000).toFixed(0) + " s, max " + (ms[ms.length - 1] / 1000).toFixed(0) + " s); every level in its Normal band");
   // Engine vs the slow reference on the Gallery's picture boards: Normal patient and rushed on every level, Easy and Hard
   // patient on every fourth.
@@ -1460,22 +1466,23 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   eq([s0, s1, s2, s3, s4, Save.nextBy(D, gal, "gal", (id) => Save.questOpen(D, order, gal, after, id))], [[false, false, false, false], [true, false, false, false], [true, true, false, false], [true, true, true, false], [true, true, true, true], "p1"],
     "side quests: a picture opens once its main level is cleared (optional, never blocking); past the last level they open once all are cleared, one at a time; nextBy finds the first open one not cleared");
   const G = Save.fresh(META); G.inv.recall = 98; eq([Meta.gift(G, "scout"), G.inv.scout, Meta.gift(G, "recall"), Meta.gift(G, "recall"), G.inv.recall, Meta.gift(G, "nope")], [true, 1, true, false, 99, false], "side quests: a prize adds one use (capped at 99; unknown ids refused)");
-  defer("side quests: every Gallery picture carries its quest", () => { const GL = castleGal(); eq(GL.map((l) => l.quest), q, "side quests: levels/gallery.json carries each picture's quest {after, prize} as tools/quests.js deals them"); });
+  defer("side quests: every Gallery picture carries its quest", () => { const GL = castleGal(); eq(GL.map((l) => l.quest), q.slice(0, GL.length), "side quests: levels/gallery.json carries each picture's quest {after, prize} as tools/quests.js deals them (campaign v6: " + GL.length + ")"); });
   // v5 R4: pictures 26-50 sit after levels 104-200, which now exist; they open off them one by one. 51-60 (after 203-240)
   // are the long tail: they wait until all 200 levels are cleared, then open one at a time.
-  const GL4 = castleGal(), ord = LEVELS.levels.map((l) => l.id), gid = GL4.map((l) => l.id), aft = GL4.map((l) => l.quest.after), R4 = Save.fresh(META), qo = (i) => Save.questOpen(R4, ord, gid, aft, gid[i]);
+  const GL4 = tailGal(), ord = LEVELS.levels.map((l) => l.id), gid = GL4.map((l) => l.id), aft = GL4.map((l) => l.quest.after), R4 = Save.fresh(META), qo = (i) => Save.questOpen(R4, ord, gid, aft, gid[i]);
   for (let i = 0; i < 100; i++) R4.done[ord[i]] = 1;
   const mid = gid.map((id, i) => i).filter((i) => aft[i] > 100 && aft[i] <= ord.length), tailI = gid.map((id, i) => i).filter((i) => aft[i] > ord.length), r0 = mid.map(qo);
   for (let i = 100; i < 150; i++) R4.done[ord[i]] = 1; const r1 = mid.map(qo), t1 = tailI.map(qo); for (const id of ord) R4.done[id] = 1; const r2 = mid.map(qo), t2 = tailI.map(qo);
   eq([mid.map((i) => i + 1), [aft[mid[0]], aft[mid[mid.length - 1]]], r0.some(Boolean), r1.filter(Boolean).length, mid.filter((i) => aft[i] <= 150).length, t1.some(Boolean), r2.every(Boolean), tailI.map((i) => i + 1), t2],
     [Array.from({ length: 25 }, (_, k) => k + 26), [104, 200], false, mid.filter((i) => aft[i] <= 150).length, mid.filter((i) => aft[i] <= 150).length, false, true, Array.from({ length: 10 }, (_, k) => k + 51), [true].concat(Array(9).fill(false))],
-    "side quests (v5 R4): pictures 26-50 open off levels 104-200 as each is cleared (shut with 1-100 cleared, open through 150 with 1-150); 51-60 are the long tail: shut until all 200 are cleared, then one at a time");
+    "side quests (v5 R4): pictures 26-50 open off levels 104-200 as each is cleared (shut with 1-100 cleared, open through 150 with 1-150); 51-60 (v6: stand-ins) are the long tail: shut until all 200 are cleared, then one at a time");
+  eq([castleGal().length, castleGal().filter((l) => l.quest.after > 200).length], [50, 0], "side quests (campaign v6): 50, every one after a level by 200: the castle has no long tail");
 }
 
 // ---- v5 R3: the journey map (src/journey.js; meta.js egg; the save's eggs; config map against map/layout.json) -----------------
 {
   const Save = require("../src/save.js"), Meta = require("../src/meta.js"), J = require("../src/journey.js"), LAY = castleLay(), MC = require("../config.json").map;
-  const GL = castleGal(), order = LEVELS.levels.map((l) => l.id), gids = GL.map((l) => l.id), after = GL.map((l) => (l.quest ? l.quest.after : 0));
+  const GL = tailGal(), order = LEVELS.levels.map((l) => l.id), gids = GL.map((l) => l.id), after = GL.map((l) => (l.quest ? l.quest.after : 0)); // campaign v6: v5's shape (the long tail's stand-ins)
   // Eggs pay once: the first tap pays its coins and marks it found; a second pays nothing; the save keeps them.
   const D = Save.fresh(META), c0 = D.coins, p1 = Meta.egg(D, "s1-0", 12), p2 = Meta.egg(D, "s1-0", 12), p3 = Meta.egg(D, "s1-1", 5000);
   eq([p1, p2, p3, D.coins - c0, D.eggs], [12, 0, 999, 12 + 999, { "s1-0": 1, "s1-1": 1 }], "eggs: an egg pays its coins on the first tap only (capped at 999 a tap) and is marked found");
@@ -1685,7 +1692,7 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
     [668, 168, [368, 520], 718, [384, 468, 384], [384, 1344], [384, 0], 568, 900, true, true, true, 668, 100], "lands (map): a mirrored entry's marks sit at 768 - x (the road still meets x = 384), y unchanged; mirrored twice it is itself; nothing else is touched");
   // The long tail moves past the last land: castle pictures 26-50 keep their levels, 51-60 (past 200) move on by however
   // far the lands reach; a land's own quests never move; with the castle alone nothing changes.
-  const GL = castleGal(), aft = GL.map((l) => l.quest.after), sh = (last) => aft.map((a) => J.tailAfter(a, LC.castleEnd, last));
+  const GL = tailGal(), aft = GL.map((l) => l.quest.after), sh = (last) => aft.map((a) => J.tailAfter(a, LC.castleEnd, last)); // campaign v6: v5's shape
   const order250 = Array.from({ length: 250 }, (_, i) => "x" + i), gid = GL.map((l) => l.id).concat(["w1", "w2"]), af250 = sh(250).concat([204, 208]), T0 = require("../src/save.js").fresh(META);
   for (const id of order250) T0.done[id] = 1; const tl = J.tail(T0, order250, gid, af250);
   eq([sh(200).join() === aft.join(), sh(250).slice(25, 50).join() === aft.slice(25, 50).join(), sh(250).slice(50).map((a, i) => a - aft[50 + i]), tl.ids.length, tl.ids[0] === GL[50].id, J.landOf({ list: [{ k: 1, from: 201, to: 250 }] }, 230).k, J.landOf({ list: [] }, 230)],
@@ -1788,7 +1795,11 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
     eq([c.lands.list.slice(-1)[0].name, c.map.eggCoins.length - CFG.map.eggCoins.length, a.replace(/,?\n      \{"k":9,"name":"T"\}/, "").replace(", [10,11], [12,13]", "") === t], ["T", 2, true], "lands (install): the land goes into config lands.list and a row per new sheet into map.eggCoins, nothing else changes"); }
   // The freeze: the shipped campaign and pictures are the snapshot's, byte for byte, whatever lands follow them.
   { const dir = path.join(__dirname, "..", CFG.v5.freeze.dir), FL = JSON.parse(fs.readFileSync(path.join(dir, "levels.json"), "utf8")).levels, FG = JSON.parse(fs.readFileSync(path.join(dir, "gallery.json"), "utf8")).levels, G2 = require("../levels/gallery.json").levels;
-    eq([FL.length >= 200, FL.every((l, i) => JSON.stringify(l) === JSON.stringify(LEVELS_ALL.levels[i])), FG.length, FG.every((l, i) => JSON.stringify(l) === JSON.stringify(G2[i]))], [true, true, 60, true], "freeze: levels 1-" + FL.length + " and pictures 1-60 in the game are the frozen snapshot's, byte for byte"); }
+    eq([FL.length >= 200, FL.every((l, i) => JSON.stringify(l) === JSON.stringify(LEVELS_ALL.levels[i])), FG.length], [true, true, 60], "freeze: levels 1-" + FL.length + " in the game are the frozen snapshot's, byte for byte");
+    // Campaign v6 (Peter lifted the freeze once for the re-release): the side quests are re-laid; a picture the campaign kept
+    // is the snapshot's byte for byte but its place and slot (n, quest); no new id reuses one.
+    const strip = (l) => JSON.stringify(Object.assign({}, l, { n: 0, quest: 0 })), FGi = new Map(FG.map((l) => [l.id, l])), kept = G2.filter((l) => FGi.has(l.id));
+    eq([kept.length, kept.every((l) => strip(l) === strip(FGi.get(l.id))), G2.filter((l) => !FGi.has(l.id) && !l.wander).map((l) => /^g-ours-cq\d+$/.test(l.id)).filter(Boolean).length], [24, true, 26], "freeze (campaign v6): the 24 kept castle pictures are the snapshot's but their place and slot (n, quest); the 26 new ids are new"); }
   // Every built land: its levels, side quests and sheets.
   for (const d of LC.list) {
     const LV = LEVELS_ALL.levels.filter((l) => l.land === d.k), GV = require("../levels/gallery.json").levels.filter((l) => l.land === d.k), lj = JSON.parse(fs.readFileSync(path.join(__dirname, "lands", d.slug, "land.json"), "utf8")), PP = LP.profileOf(lj, LCF), era = LC.castleRealms + d.k;

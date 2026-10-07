@@ -55,9 +55,13 @@ const tagOf = (n, T, teaching) => { const R = T.realms && T.realms.find((r) => n
 const LP = require(path.join(root, 'tools/land-plan.js')), LCF = require(path.join(root, 'tools/land-config.json')), landTags = {};
 const landTag = (L) => { const d = ((cfg.lands || {}).list || []).find((x) => x.k === L.land); if (!d) return 'no land ' + L.land; if (L.wander) return LCF.bake.sideCycle[(L.n - 1) % LCF.bake.sideCycle.length];
   if (!landTags[d.k]) { const lj = JSON.parse(fs.readFileSync(path.join(root, 'tools/lands', d.slug, 'land.json'), 'utf8')); landTags[d.k] = LP.landTags(d.to - d.from + 1, LP.profileOf(lj, LCF).tags, cfg.lands.perLand); } return landTags[d.k][L.n - d.from]; };
+// Campaign v6 (tools/quest-bake.js): a campaign side quest wears its tools/campaign-quests/quests.json tag (a new picture) or
+// its shipped one (kept: the frozen snapshot's).
+const QJ = require(path.join(root, 'tools/campaign-quests/quests.json')), FZG = new Map(JSON.parse(fs.readFileSync(path.join(root, cfg.v5.freeze.dir, 'gallery.json'), 'utf8')).levels.map((l) => [l.id, l.tag]));
+const questTag = (L) => (QJ.order[L.n - 1] || {}).tag || FZG.get(L.id) || 'unplanned';
 const tagBad = [], tagCount = {}, crossBuried = [];
 for (const L of levels) { if (L.set === 'debug') { if (L.tag !== 'normal') tagBad.push(`${L.id} ${L.tag} (debug levels are normal)`); continue; }
-  const want = L.land ? landTag(L) : L.set === 'gallery' ? tagOf(L.n, TG, false) : tagOf(L.n, TS, L.source === 'teaching'); tagCount[L.set + ':' + L.tag] = (tagCount[L.set + ':' + L.tag] || 0) + 1; if (want !== L.tag) tagBad.push(`${L.id} n${L.n} tag ${L.tag}, formula ${want}`);
+  const want = L.land ? landTag(L) : L.set === 'gallery' ? questTag(L) : tagOf(L.n, TS, L.source === 'teaching'); tagCount[L.set + ':' + L.tag] = (tagCount[L.set + ':' + L.tag] || 0) + 1; if (want !== L.tag) tagBad.push(`${L.id} n${L.n} tag ${L.tag}, formula ${want}`);
   if (!L.win || Object.keys(L.win).join() !== L.tag || !L.grade || !L.grade[L.tag]) tagBad.push(`${L.id}: win/grade keys ${L.win && Object.keys(L.win)} / ${L.grade && Object.keys(L.grade).filter((k) => ['easy', 'normal', 'hard', 'extreme'].includes(k))}`); }
 const UN = cfg.v5.density.unlock, early = []; // v5 R2: no feature before its milestone; locks only on Hard from 50
 for (const L of levels) { if (L.set !== 'siege') continue; const f = []; if (L.grid.some((r) => r.includes('~'))) f.push('moat'); if ((L.gates || []).length) f.push('gate'); if ((L.links || []).length) f.push('linked'); if (L.cols.some((c) => c.some((cd) => cd[2]))) f.push('mystery'); if ((L.towers || []).length) f.push('tower'); if ((L.hidden || []).some((r) => r.includes('?'))) f.push('hidden'); // v5 R4
