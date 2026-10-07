@@ -19,7 +19,10 @@ for (const vp of [{ width: 375, height: 812, touch: true, dpr: 3 }, { width: 128
   page.on("response", (r) => { if (r.status() >= 400) fails.push(r.status() + " " + r.url()); });
   await page.goto(url, { waitUntil: "load" });
   await page.waitForTimeout(1200);
-  const play = page.locator("button:visible", { hasText: /play|level/i }).first();
+  const skip = page.locator("#tut-offer button:visible", { hasText: /^skip$/i }).first(); // v6: the intro tour's first-launch offer
+  const offered = (await skip.count()) > 0;
+  if (offered) { if (vp.touch) await skip.tap(); else await skip.click(); await page.waitForTimeout(300); }
+  const play =page.locator("button:visible", { hasText: /play|level/i }).first();
   const playText = (await play.count()) ? (await play.innerText()).replace(/\s+/g, " ").trim() : "(none)";
   if (await play.count()) { if (vp.touch) await play.tap(); else await play.click(); }
   await page.waitForTimeout(800);

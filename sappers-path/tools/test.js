@@ -1737,7 +1737,7 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
       [false, "theme", "theme", "theme", "boss", "play", "play", "theme", "play", "boss"], "zen words: no goblin, fort or assault in Zen's text or world lore; music per mode (Campaign the theme in its levels, realm 8 the boss loop; Zen the calm loop; no mode: as v5.2)"); }
 }
 
-// ==== v6 lane B, merge pass: saves survive lane A's merge (tools/zen-mode-notes.md §7) =============================}
+// ==== v6 lane B, merge pass: saves survive lane A's merge (tools/zen-mode-notes.md §7) ====================================
 // Fixture: lane A's gallery.json (campaign-v6-quests: the 24 kept + 26 new campaign pictures, the 36 gone, the Wandering
 // Gallery at places 51-62), copied into tools/fixtures/lane-a-gallery.json. levels/places.json: the save codes' append-only
 // picture places (v5.4's 72 first).
@@ -1776,7 +1776,7 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   const cg = LA.filter((g) => !g.land), ids = cg.map((g) => g.id), af = cg.map((g) => g.quest.after), order = ALLO.filter((id) => !LEVELS_ALL.levels.find((l) => l.id === id).land), all = { done: Object.fromEntries(order.map((id) => [id, 1])), gal: {} };
   const t0 = JN.tail(all, order, ids, af), nq = JN.nearQuest(all, order, ids, af, order.length + 1);
   eq([cg.length, af.every((a) => a >= 1 && a <= 200), t0.ids.length, t0.next, ids.every((id) => S.questOpen(all, order, ids, af, id)), !!nq], [50, true, 0, null, true, true], "merge: lane A's campaign (50 side quests, none past 200) has no long tail: journey.js tail is empty, every quest opens once its level is cleared");
-=======
+}
 // ==== v6 lane B part 2: the intro tour (levels/tutorial.json, src/tutorial.js; tools/tutorial-notes.md) ======================
 // Every practice fort is a valid small picture board whose cards match its blocks colour by colour and whose stored order
 // wins; none is a campaign, teaching or Zen level; fort 4 (Don't jam) really jams on its stored player order with every
