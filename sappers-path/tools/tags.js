@@ -27,7 +27,11 @@
 // its start, and its end tag (realms 6-8 end Extreme).
 "use strict";
 const TAGS = ["easy", "normal", "hard", "extreme"]; // v5 R1: extreme (most or all of the unlocked features; R2 sets which levels)
+// Campaign v6 stage 2 (bake-config tags.v6, one letter a level from 1: E, N, H, X): the approved curve's tags for the
+// levels it covers, teaching levels included (they stay Easy); past its end the schedule below.
+const V6TAG = { E: "easy", N: "normal", H: "hard", X: "extreme" };
 function tagOf(n, T, teaching) {
+  if (T.v6 && n >= 1 && n <= T.v6.length) return V6TAG[T.v6[n - 1]];
   const R = T.realms && T.realms.find((r) => n >= r[0] && n <= r[1]); // v5 R2: the realm's own schedule
   if (R) {
     if (teaching) return n < T.from ? T.first : n === R[0] ? T.afterEnd : T.teach;
@@ -44,7 +48,8 @@ function tagOf(n, T, teaching) {
   if (n < T.from) return T.first;
   return T.cycle[(n - T.from) % T.cycle.length];
 }
-const lockOK = (n, tag, L, K) => !(L && L.lock) || (n >= K.from && K.tags.indexOf(tag) >= 0);
+const hasLock = (L) => !!(L && (L.lock || L.locks)); // v6: lock (one) or locks (one or two)
+const lockOK = (n, tag, L, K) => !hasLock(L) || (n >= K.from && K.tags.indexOf(tag) >= 0);
 const FEATS = ["moat", "gate", "linked", "mystery", "tower", "hidden"];
 function featuresOf(L) {
   const f = [];
@@ -57,8 +62,24 @@ function featuresOf(L) {
   return f;
 }
 const unlockedAt = (n, D) => FEATS.filter((k) => D.unlock[k] != null && n >= D.unlock[k]);
+// Campaign v6 stage 2 (config.json v5.density.v6, levels from..to; the approved curve): every feature counts, the board's
+// (moat, gate, towers) and the deck's (linked, mystery, hidden); nothing before its milestone (towers from unlock.tower,
+// 60); Easy at most easy[1] and no lock; Normal between normal[0] (at most what is unlocked) and normal[1], no lock; Hard
+// between hard[0] (at most what is unlocked) and hard[1], and the lock from lockFrom; Extreme every unlocked feature
+// (towers only from towerFull: before it they come on a few levels) and the lock from lockFrom. A teaching level: no lock.
+function densityV6(n, tag, L, D, teaching) {
+  const u = unlockedAt(n, D), f = featuresOf(L), lock = hasLock(L), W = D.v6;
+  if (f.some((k) => u.indexOf(k) < 0)) return false;
+  if (teaching) return !lock; // the lessons keep their boards (125's towers come after the first towers at 60 now)
+  const inR = (r) => f.length >= Math.min(r[0], u.length) && f.length <= r[1];
+  if (tag === "easy") return inR(W.easy) && !lock;
+  if (tag === "normal") return inR(W.normal) && !lock;
+  if (tag === "hard") return inR(W.hard) && lock === (n >= D.lockFrom);
+  return u.every((k) => f.indexOf(k) >= 0 || (k === "tower" && n < D.towerFull)) && lock === (n >= D.lockFrom);
+}
 function densityOK(n, tag, L, D, teaching) {
-  const u = unlockedAt(n, D), f = featuresOf(L), lock = !!L.lock;
+  if (D.v6 && n >= D.v6.from && n <= D.v6.to) return densityV6(n, tag, L, D, teaching); // v6: the curve's rule on 1-200
+  const u = unlockedAt(n, D), f = featuresOf(L), lock = hasLock(L);
   if (f.some((k) => u.indexOf(k) < 0)) return false; // never a feature before its milestone
   if (teaching) { const nu = u.filter((k) => D.unlock[k] === Math.max(...u.map((q) => D.unlock[q]))); return !lock && nu.every((k) => f.indexOf(k) >= 0); }
   if (tag === "easy") return f.length <= D.easyMax && !lock;
@@ -78,11 +99,11 @@ function densityOK(n, tag, L, D, teaching) {
 const DECK = ["linked", "mystery", "hidden"], BOARD = ["moat"];
 function landDensityOK(tag, L, feats, D) {
   feats = (feats || []).filter((k) => (L.cant || []).indexOf(k) < 0);
-  const u = DECK.concat(BOARD).filter((k) => feats.indexOf(k) >= 0), f = featuresOf(L), lock = !!L.lock, canLock = feats.indexOf("lock") >= 0;
+  const u = DECK.concat(BOARD).filter((k) => feats.indexOf(k) >= 0), f = featuresOf(L), lock = hasLock(L), canLock = feats.indexOf("lock") >= 0;
   if (f.some((k) => u.indexOf(k) < 0) || (lock && !canLock)) return false;
   if (tag === "easy") return f.length <= D.easyMax && !lock;
   if (tag === "normal") return !lock;
   if (tag === "extreme") return f.length === u.length && lock === canLock;
   return tag === "hard";
 }
-module.exports = { TAGS, tagOf, lockOK, FEATS, featuresOf, unlockedAt, densityOK, DECK, BOARD, landDensityOK };
+module.exports = { TAGS, tagOf, hasLock, lockOK, FEATS, featuresOf, unlockedAt, densityOK, densityV6, DECK, BOARD, landDensityOK };

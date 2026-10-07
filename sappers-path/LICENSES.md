@@ -92,6 +92,41 @@ Sixty pictures, one per Gallery level (`levels/gallery.json`), converted to boar
 | 59 | `ours-g06` Wise Old Owl | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 106; prompt in levels/gallery-manifest.json | Click it! Studios | Original work (model: Apache 2.0) | generated 2026-09-30 |
 | 60 | `ours-g24` Goblin King's Hoard | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 124; prompt in levels/gallery-manifest.json | Click it! Studios | Original work (model: Apache 2.0) | generated 2026-09-30 |
 
+<!-- campaign-quests:start -->
+### Campaign v6 side quests: 26 new pictures (2026-10-06)
+
+The campaign's side quests from v6 (`levels/gallery.json` pictures 1-50; the numbers in the Gallery table above are the v5 places). 24 of the pictures above stay; these 26 are new. Generated on the studio's own Mac with FLUX.1 [schnell] by Black Forest Labs (Apache 2.0; city96's 4-bit GGUF), cleaned of the model's line art and converted with one solid ink outline. Original work, Click it! Studios. Every prompt and seed is in `tools/campaign-quests/pictures/manifest.json` and `levels/gallery-manifest.json`.
+
+| # | Picture | Source | Author | License | Date |
+|---|---|---|---|---|---|
+| 2 | `ours-cq17` Tree Giant | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7017; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-06 |
+| 4 | `ours-cq44` Giant Drumstick | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7044; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-07 |
+| 6 | `ours-cq20` Trusty Steed | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7020; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-06 |
+| 8 | `ours-cq08` Baby Griffin | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7008; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-06 |
+| 10 | `ours-cq33` Siege Tower | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7033; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-06 |
+| 12 | `ours-cq37` The Forge | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7037; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-06 |
+| 14 | `ours-cq28` Big Bow | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7028; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-06 |
+| 16 | `ours-cq21` Round Shield | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7021; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-06 |
+| 18 | `ours-cq02` Helmet Bed | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7002; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-06 |
+| 20 | `ours-cq34` Ballista | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7034; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-06 |
+| 22 | `ours-cq06` Goblin Soup | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7006; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-06 |
+| 24 | `ours-cq24` The Charge | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7024; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-06 |
+| 25 | `ours-cq29` Drummer Boy | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7029; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-06 |
+| 27 | `ours-cq12` Spell-Book Cat | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7012; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-06 |
+| 29 | `ours-cq38` The Jester | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7038; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-06 |
+| 31 | `ours-cq25` Sun Shield | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7025; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-06 |
+| 33 | `ours-cq18` Dragon Picnic | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7018; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-06 |
+| 35 | `ours-cq14` Baby Phoenix | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7014; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-06 |
+| 37 | `ours-cq27` Castle Guard | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7027; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-06 |
+| 39 | `ours-cq01` Apple Goblin | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7001; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-06 |
+| 41 | `ours-cq09` Bridge Troll | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7009; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-06 |
+| 43 | `ours-cq11` Knitting Dragon | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7011; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-06 |
+| 45 | `ours-cq04` War Drum | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7004; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-06 |
+| 47 | `ours-cq26` Bullseye | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7026; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-06 |
+| 48 | `ours-cq03` The Big Key | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7003; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-06 |
+| 49 | `ours-cq10` Birthday Dragon | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7010; prompt in tools/campaign-quests/pictures/manifest.json | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | generated 2026-10-06 |
+<!-- campaign-quests:end -->
+
 ### Land 1: Kitten Forest (levels 201-250)
 
 | Level | Picture | Artist | Licence | Source |

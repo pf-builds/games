@@ -355,6 +355,57 @@ game at `/sappers-path/`). 201-250 are NOT added to the frozen set (the orchestr
 Casual Land 1 installed and checked on the branch; not pushed; 201-250 not frozen (the orchestrator decides). The harder
 profile and its tooling are documented for the campaign rebalance (notes §10.2, §10.6).
 
+# Campaign v6 lane A (Campaign Challenge Mode), 2026-10-06
+
+Worktree `repos/games-sappers-campaign/` (branch `campaign-v6`), game in `sappers-path/`. Never push. Lane B works in
+`repos/games-sappers-path/` in parallel: keep page edits small. Curve: `tools/campaign-v6-curve.md`; rules: SPEC-v4 §9
+"Campaign v6 stage 1"; notes: `tools/campaign-v6-notes.md`.
+
+## How to resume
+
+1. Read this table, then the notes' newest section and the SPEC entry.
+2. Dev server: `nohup python3 /Users/peter/Documents/Claude/.claude/serve.py 8496 /Users/peter/Documents/Claude/business/D-click-it-studios/repos/games-sappers-campaign/sappers-path > /dev/null 2>&1 &` (game at the root).
+3. Checks: `node tools/test.js`; `node tools/freeze.js --require`; `node tools/regrade.js` and `--gallery`;
+   `zsh tools/critic-v5/run.sh`; `node tools/debug-v4.js --check`; with `PLAYWRIGHT_MODULE=$(npm root -g)/playwright/index.mjs`:
+   `node tools/selftest-lands.mjs --url http://127.0.0.1:8497/`, `node tools/shots-campaign-v6.mjs`, `node tools/harness.mjs --url http://127.0.0.1:8497/`.
+
+| # | Piece | State | Commit |
+|---|---|---|---|
+| A1 | Stage 1 engine + ref: `kill: true` (short fail), `locks: [a, b]` | done: test.js 647/0 | 60fe16c |
+| A2 | Stage 1 tooling: dealer, bake, tags, careful games by range (32 for 150-200), critic-v5 | done: freeze PASS; regrades 0/1,605, 0/432; critic 0 of 10,824 | a563ee2 |
+| A3 | Stage 1 debug levels v6-kill, v6-locks | done: `--check` matches | eb721b0 |
+| A4 | Stage 1 page: kill toast + doomed runner, short sheet (Retry only), a socket per lock, `?v=46` | done: selfTest 911/0, 913/0; real taps 14/14; 0 console | 73f8c32 |
+| A5 | Stage 1 docs: SPEC §9 entry, notes §1, this table | done | (this commit) |
+| A6 | Stage 1b: the archer gradient (`archers: pin \| kill`; pins), engine + ref + tests | done: test.js 663/0 | 02d94a0 |
+| A7 | Stage 1b tooling + debug v6-pin | done: freeze PASS; regrades 0/1,605, 0/432; critic 0 of 10,857 | 140e6df |
+| A8 | Stage 1b page, `?v=47` | done: selfTest 919/0, 921/0; real taps 22/22 (port 8497); 0 console | 8a073ba |
+| A9 | Stage 1b docs: SPEC §9 1b entry, notes §2, this table | done | (this commit) |
+| A10 | Stage 2 tooling: `tools/campaign-v6.js` (plan, bake, install, measure), `tools/campaign-v6-bake.js` (worker), bake-config `tags.v6` + `v6`, config v5.density (towers from 60, v6 rule), tags.js densityV6, gen.js (hide gap, rushOpen), test.js / critic-v5 / selfTest §6 | in progress | |
+| A11 | Stage 2 bake: `node tools/campaign-v6.js bake --threads 14` (scratch in `tools/campaign-v6-scratch/`, gitignored; `--reuse` keeps candidates; `--list N,N --extra K` for fix-ups), then `install`, then `measure` | done: bakes 1-5, 0 fallbacks; 188/189 swapped; keepOnly towers on 7 killing levels | af0fe4c |
+| A12 | Stage 2 page + critic (`?v=48`, coach check, overlap 63, critic-v5 cut-loose walk) | done: selfTest 932/0, 934/0; critic 0 of 10,857 | 318a045 |
+| A13 | Stage 2 checks + docs (SPEC §9 stage 2, notes §3, after table), harness first-Hard lookup, shots-campaign-v6-s2 | done: test.js 663/0, regrades 0/0, freeze PASS, harness all passed, real taps 26/26, 0 console | (this commit) |
+| A15 | Merge `campaign-v6-quests` into `campaign-v6` (docs both sides, test.js both sides' checks, critic result regenerated), `?v=49` | done: test.js 665/0; regrades 0/2,205 and 0/372; freeze PASS; critic 0 of 10,527; selfTest 916/0, 918/0; harness all passed; real taps (cq06, 64/66/159/200) all ok; 0 console | (merge commit) |
+| A14 | After the quests merge: re-take the freeze snapshot (`tools/freeze.js --snapshot`), drop `v5.freeze.lift` | done on the merged tree: freeze PASS (2,405 + 372 checks, castles 283); test.js 665/0; regrades 0/2,405, 0/372 | a70710c |
+| A16 | Fix pass (difficulty) tooling: the best-of gate (`grade.deep`, two seeds, 32 games, depths 1-3), regrade check, tuner + pick on it, `regate` step, `deep [--salt K]` step, floor (11), no ceilings 1-8, stone towers (104/117 -> 106/116), test.js gate check, `shots-campaign-v6-fix.mjs` | done | d57338c |
+| A17 | Fix pass data: 85 re-dealt (5 bakes, 1,220 new candidates, regate re-picks), 0 outside the gate, coach 157 + 125, 53's card | done: test.js 666/0; regrades 0/2,405 and 0/372; freeze PASS; critic 0 of 10,527; selfTest 923/0, 925/0; harness all passed; real taps 52/52; 0 console | 66593df |
+| A18 | Fix pass docs: SPEC §9 "Campaign v6 fix pass (difficulty)", notes §5, this table, LATER | done | (this commit) |
+| A19 | Merge `campaign-v6-ui` (page + quests half) into `campaign-v6`, `?v=51` (orchestrator) | done: critic-v5 0 of 10,527 (result committed 1b4dbe2); selfTest 927/0, 929/0; harness all passed; real taps 48/48 (`shots-campaign-v6-fix-ui.mjs after`: 64 pin + release, 157 sockets with the toast clear, cq14/27/36) and 52/52 (`shots-campaign-v6-fix.mjs`, incl. 200); 0 console | 68362fb |
+
+## Campaign v6 lane A, the side quests (branch `campaign-v6-quests`, worktree `repos/games-sappers-campaign-quests/`)
+
+| # | Piece | State | Commit |
+|---|---|---|---|
+| AQ1 | The 50 on-theme side quests (24 kept + 26 new, `tools/quest-bake.js`), map ids, manifest, LICENSES; tests, critic and selfTest for the empty long tail | done: quest-bake check PASS; test.js 665/0; regrades 0/1,605 and 0/372; freeze PASS; critic 0 of 10,527; selfTest 903/0, 905/0; real taps 16/16; 0 console. Notes §4 | see git log |
+
+## Campaign v6 lane A, the fix pass: page and quests (branch `campaign-v6-ui`, worktree `repos/games-sappers-campaign-ui/`)
+
+| # | Piece | State | Commit |
+|---|---|---|---|
+| AF1 | Page: pinned marker + head count, start toasts at the board's foot, quiet ring halo, key socket mark, Extreme pill and Play, selfTest +4, `?v=50` | done | see git log |
+| AF2 | Quests: cq14, cq27, cq36 in places 35, 37, 4 (for cq13, cq30, cq42) | done: quest-bake check PASS | see git log |
+| AF3 | Checks + docs (SPEC §9 fix pass, notes §6, `tools/shots-campaign-v6-fix.mjs`, before/after shots, quests-50.jpg) | done (numbers in notes §6.4) | see git log |
+| AF4 | Roast redo: cq44 Giant Drumstick at place 4 for cq36, quest-bake new-id gate reads v5Places + retired ids, freeze snapshot re-taken, `?v=52` | done: test.js 665/0; regrades 0/2,405, 0/372; freeze PASS; critic 0 of 10,527; real taps ok; 0 console. Notes §6.6 | see git log |
+
 # v6 lane B: Campaign and Zen modes (2026-10-06)
 
 Source: the orchestrator's lane B brief (2026-10-06) and `game-research/sappers-path-v4/v6-plan.md` "Lane B: UX approved"
@@ -402,3 +453,12 @@ the run learned: `tools/land-02-notes.md` (including the one-line page change th
 |---|---|---|---|
 | D1 | `outlined` kind in gallery-config (lane A's exact text); land.js no-side-quest land and `zen` step; notes | done: dry conversion OK, test.js 630/0 | (this commit) |
 | D2 | Install World 3 | waits for lane C's reworked boards | |
+
+# v6 merge (lane E, 2026-10-07): campaign-v6 into sappers-path
+
+| # | Piece | State | Commit |
+|---|---|---|---|
+| E1 | Merge ff6fe07 into c71a5ef; conflicts resolved (tools/zen-mode-notes.md §12); cache ?v=53 | done | (merge commit) |
+| E2 | places.json + cq44, cq14, cq27; freeze snapshot re-taken with zen.json; tests for the merged data (50 campaign pictures, merge proofs on the real gallery) | done | (merge commit) |
+| E9 | Checks on the merged tree | see notes §12 and the merge commit message | (merge commit) |
+

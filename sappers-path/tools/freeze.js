@@ -7,7 +7,7 @@
 //   ~/.local/opt/node/bin/node tools/freeze.js                 the snapshot named by config.json v5.freeze.dir
 //   ~/.local/opt/node/bin/node tools/freeze.js --dir DIR        another snapshot (the test runs tools/freeze-fixture)
 //   ~/.local/opt/node/bin/node tools/freeze.js --require        a missing snapshot is a failure (from R2 on)
-//   ~/.local/opt/node/bin/node tools/freeze.js --snapshot       copy levels/levels.json and levels/gallery.json into the
+//   ~/.local/opt/node/bin/node tools/freeze.js --snapshot       copy levels/levels.json, levels/gallery.json (v6: and levels/zen.json) into the
 //                                                               configured folder (R2 baselines with this, once)
 //   ~/.local/opt/node/bin/node tools/freeze.js --make-fixture   rebuild tools/freeze-fixture from its source.json (three
 //                                                               small hand boards graded with this engine)
@@ -85,8 +85,10 @@ if (require.main === module) {
   if (process.argv.includes("--castles-snapshot")) { const h = castleHashes(); fs.mkdirSync(dir, { recursive: true }); fs.writeFileSync(path.join(dir, "castles.json"), JSON.stringify({ note: "v5 R4: castle() hashes for eras 1-4 (tools/freeze.js castleCases); never edit by hand.", made: new Date().toISOString().slice(0, 10), hashes: h }, null, 0) + "\n"); console.log("castles: " + h.length + " case hashes written to " + path.relative(ROOT, dir)); process.exit(0); }
   if (process.argv.includes("--snapshot")) {
     fs.mkdirSync(dir, { recursive: true });
-    for (const f of ["levels.json", "gallery.json"]) fs.copyFileSync(path.join(ROOT, "levels", f), path.join(dir, f));
-    fs.writeFileSync(path.join(dir, "frozen.json"), JSON.stringify({ note: "Shipped levels frozen by tools/freeze.js --snapshot; never edit by hand.", made: new Date().toISOString().slice(0, 10), files: [{ file: "levels.json", kind: "siege" }, { file: "gallery.json", kind: "gallery" }] }, null, 1) + "\n");
+    // v6 (the merge): Zen World 1's own records (levels/zen.json, graded with the main levels' counts) are frozen too.
+    const zen = fs.existsSync(path.join(ROOT, "levels/zen.json")), list = ["levels.json", "gallery.json"].concat(zen ? ["zen.json"] : []);
+    for (const f of list) fs.copyFileSync(path.join(ROOT, "levels", f), path.join(dir, f));
+    fs.writeFileSync(path.join(dir, "frozen.json"), JSON.stringify({ note: "Shipped levels frozen by tools/freeze.js --snapshot; never edit by hand.", made: new Date().toISOString().slice(0, 10), files: [{ file: "levels.json", kind: "siege" }, { file: "gallery.json", kind: "gallery" }].concat(zen ? [{ file: "zen.json", kind: "siege" }] : []) }, null, 1) + "\n");
     console.log("snapshot written to " + path.relative(ROOT, dir)); process.exit(0);
   }
   const t0 = Date.now(), r = check(dir);

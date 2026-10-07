@@ -367,7 +367,7 @@ async function run() {
         const m0 = await ev(() => SP.map()); R.map = m0;
         ok(m0 && m0.loaded < m0.sheets && !(await ev(() => !!document.getElementById("map-gallery") || !!document.getElementById("gallery"))) && (await noScroll()), tag + " map: no Gallery screen or button; " + (m0 && m0.loaded) + " of " + (m0 && m0.sheets) + " sheets requested at open; no page scrollbars");
         const toMid = (sel) => ev((q) => { const el = document.querySelector(q), sc = document.getElementById("jr"); sc.scrollTop += el.getBoundingClientRect().top + el.offsetHeight / 2 - sc.getBoundingClientRect().top - sc.clientHeight / 2; }, sel);
-        const gi = await ev(() => { const g = SP.gallery(), m = g.findIndex((id, i) => i < 25 && /^g-met-/.test(id)); return m >= 0 ? m : g.findIndex((id) => SP.quest(id) && SP.quest(id).after <= 200); }), gid = await ev((i) => SP.gallery()[i], gi), sel = `.qn[data-id="${gid}"]`; // v6: the paintings are Zen's; any campaign picture
+        const gi = await ev(() => { const g = SP.gallery(), m = g.findIndex((id, i) => i < 25 && /^g-(met-|ours-cq)/.test(id)); return m >= 0 ? m : g.findIndex((id) => SP.quest(id) && SP.quest(id).after <= 200); }), gid = await ev((i) => SP.gallery()[i], gi), sel = `.qn[data-id="${gid}"]`; // campaign v6 / Zen: a new campaign picture (the paintings are Zen's)
         await toMid(sel); await L(sel).click({ force: true, timeout: 5000 }); s = await S(); ok(s.screen === "map", tag + " a real tap on a locked side quest (" + gid + ") stays on the map");
         await ev((i) => { SP.unlockTo(SP.quest(SP.gallery()[i]).after); SP.screen("map"); }, gi); await toMid(sel); await page.waitForTimeout(100);
         ok(await hit(sel), tag + " the open side quest's node is hittable"); if (vp.shots === "375" || vp.shots === "1280") await shot("map-quest");
@@ -523,11 +523,12 @@ async function run() {
     await page.goto(URL_ + "?debug=1", { waitUntil: "load" });
     await page.waitForFunction(() => window.SP, null, { timeout: 15000, polling: 100 }); // rAF is held here, so poll by time (M4: boot awaits one more fetch)
     const st = await page.evaluate(() => SP.selfTest());
-    const won = await page.evaluate(() => { SP.load(10); /* v4.3: level 10 is a Hard level */ for (const c of SP.winOrder()) { SP.play(+c); for (let i = 0; i < 6000 && SP.state().busy; i++) SP.tick(16); } return SP.tick(9000); });
+    const HN = JSON.parse(readFileSync(new URL("./bake-config.json", import.meta.url), "utf8")).tags.v6.indexOf("H") + 1 || 10; // campaign v6 stage 2: the first Hard level (11), from tags.v6 (v4.3: 10)
+    const won = await page.evaluate((n) => { SP.load(n); for (const c of SP.winOrder()) { SP.play(+c); for (let i = 0; i < 6000 && SP.state().busy; i++) SP.tick(16); } return SP.tick(9000); }, HN);
     const spr = await page.evaluate(() => SP.sprites());
     report.hidden = { selfTest: { pass: st.pass, fail: st.fail, ms: st.ms }, panel: won.panel, sprites: spr };
     ok(st.fail.length === 0, "hidden selfTest: " + st.fail.join("; "));
-    ok(won.status === "won" && won.panel === "win" && won.tag === "hard", "hidden: level 10 (Hard) won patiently and its panel shown on SP.tick alone");
+    ok(won.status === "won" && won.panel === "win" && won.tag === "hard", "hidden: level " + HN + " (Hard) won patiently and its panel shown on SP.tick alone");
     ok(spr.length === 0, "hidden: sprite caches opaque (" + spr.join(",") + ")");
     await ctx.close();
   } finally { await browser.close(); }

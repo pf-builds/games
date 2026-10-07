@@ -1,7 +1,8 @@
 // Critic v5 diff (from v4.3): rules from the v5 R1 entry (rules.mjs); the tag formula is the v5 R2 entry's realm schedule
 // (bake-config tags.realms; the Gallery keeps v4.3's; v5 R4: realms 6-8 with their own cycles and end tags, tags.cycles);
 // every lock on a Hard or Extreme level from 50; no level uses a feature before (v5 R4: mystery blocks too)
-// its milestone (config v5.density.unlock). Debug levels are not in the v5 campaign's checks (they play Normal).
+// its milestone (config v5.density.unlock; campaign v6 stage 2: towers from 60). Debug levels are not in the v5 campaign's
+// checks (they play Normal). Campaign v6 stage 2: levels 1-200 wear bake-config tags.v6 (one letter a level).
 // Critic v4.3 diff (from v4.1): every level on its own tag only (SPEC-v4 v4.3), tag formula and cross-buried pairs checked
 // against the level files, a refused tap in a stored order is a mismatch, maxWait includes the winning tap to everyone home.
 // Critic v4.1 diff (from v4-2): strict same-instant event order (SPEC-v4 Critics 2 fix S1), picture-format check of every
@@ -22,7 +23,7 @@ const tagged = (f, s) => require(path.join(root, f)).levels.map((l) => Object.as
 const levels = [...tagged('levels/levels.json', 'siege'), ...tagged('levels/debug-v4.json', 'debug'), ...tagged('levels/gallery.json', 'gallery')].filter((l) => (!only || only.split(',').includes(l.id)) && (!set || l.set === set));
 const DIFFS = ['easy', 'normal', 'hard'], NAME = {}; for (const k in E.EV) NAME[E.EV[k]] = k;
 const rng = (seed) => () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
-const KEEP = new Set(['EAT', 'FREE', 'REVEAL', 'POWER', 'UNLOCK', 'KILL', 'GATE', 'TOWER', 'CLEAR', 'SHOW']); // v5 R4 fix: the Volley's CLEARs and mystery blocks' SHOWs
+const KEEP = new Set(['EAT', 'FREE', 'REVEAL', 'POWER', 'UNLOCK', 'KILL', 'GATE', 'TOWER', 'CLEAR', 'SHOW', 'PIN', 'REL']); // v6 1b: PIN, REL // v5 R4 fix: the Volley's CLEARs and mystery blocks' SHOWs
 function engine(L, d) {
   const C = E.compile(L), S = E.sim(C, E.rulesOf(cfg.v3, d, cfg.meta)); S.logOn = true; const evs = [];
   const drain = () => { if (S.evLost) evs.push([S.now, 'LOST']); for (let i = 0; i + 2 < S.evLen; i += 3) { const n = NAME[S.ev[i]]; if (KEEP.has(n)) evs.push(norm(S.now, n, S.ev[i + 1], S.ev[i + 2])); } S.clearLog(); };
@@ -47,7 +48,8 @@ const cov = { why: {}, endNoplay: 0, endNoplayBad: 0, games: 0, byKind: {}, ops:
 const mism = [], gradeBad = [], fmt = [], park = []; const t0 = Date.now();
 for (const L of levels) { const pr = picProblems(L); if (pr.length) fmt.push({ id: L.id, pr: pr.slice(0, 4) }); }
 const TS = require(path.join(root, 'tools/bake-config.json')).tags, TG = require(path.join(root, 'tools/gallery-config.json')).bake.tags;
-const tagOf = (n, T, teaching) => { const R = T.realms && T.realms.find((r) => n >= r[0] && n <= r[1]); // v5 R2: per realm (opener Easy lesson, end Hard, cycle restarts after the opener; realm 1 from T.from)
+const tagOf = (n, T, teaching) => { if (T.v6 && n >= 1 && n <= T.v6.length) return { E: 'easy', N: 'normal', H: 'hard', X: 'extreme' }[T.v6[n - 1]]; // campaign v6 stage 2: tags.v6, one letter a level from 1 (the curve's tags, teaching levels included)
+  const R = T.realms && T.realms.find((r) => n >= r[0] && n <= r[1]); // v5 R2: per realm (opener Easy lesson, end Hard, cycle restarts after the opener; realm 1 from T.from)
   if (R) { if (teaching) return n < T.from ? T.first : n === R[0] ? T.afterEnd : T.teach; const Y = T.cycles && T.cycles[R[0]]; if (Y) return n === R[1] ? Y.end : Y.cycle[(n - Y.start) % Y.cycle.length]; /* v5 R4: a realm's own cycle and end tag */ if (n === R[1]) return 'hard'; if (n < T.from) return T.first; return T.cycle[(n - Math.max(T.from, R[0] + 1)) % T.cycle.length]; }
   if (T.ends.includes(n)) return 'hard'; if (teaching) return n < T.from ? T.first : T.ends.includes(n - 1) ? T.afterEnd : T.teach; if (T.ends.includes(n - 1)) return T.afterEnd; if (n < T.from) return T.first; return T.cycle[(n - T.from) % T.cycle.length]; };
 // Lands foundation: a land's level wears its land's profile tag (tools/land-plan.js landTags on its land.json), a
@@ -55,13 +57,17 @@ const tagOf = (n, T, teaching) => { const R = T.realms && T.realms.find((r) => n
 const LP = require(path.join(root, 'tools/land-plan.js')), LCF = require(path.join(root, 'tools/land-config.json')), landTags = {};
 const landTag = (L) => { const d = ((cfg.lands || {}).list || []).find((x) => x.k === L.land); if (!d) return 'no land ' + L.land; if (L.wander) return LCF.bake.sideCycle[(L.n - 1) % LCF.bake.sideCycle.length];
   if (!landTags[d.k]) { const lj = JSON.parse(fs.readFileSync(path.join(root, 'tools/lands', d.slug, 'land.json'), 'utf8')); landTags[d.k] = LP.landTags(d.to - d.from + 1, LP.profileOf(lj, LCF).tags, cfg.lands.perLand); } return landTags[d.k][L.n - d.from]; };
+// Campaign v6 (tools/quest-bake.js): a campaign side quest wears its tools/campaign-quests/quests.json tag (a new picture) or
+// its shipped one (kept: the frozen snapshot's).
+const QJ = require(path.join(root, 'tools/campaign-quests/quests.json')), FZG = new Map(JSON.parse(fs.readFileSync(path.join(root, cfg.v5.freeze.dir, 'gallery.json'), 'utf8')).levels.map((l) => [l.id, l.tag]));
+const questTag = (L) => (QJ.order[L.n - 1] || {}).tag || FZG.get(L.id) || 'unplanned';
 const tagBad = [], tagCount = {}, crossBuried = [];
 for (const L of levels) { if (L.set === 'debug') { if (L.tag !== 'normal') tagBad.push(`${L.id} ${L.tag} (debug levels are normal)`); continue; }
-  const want = L.land ? landTag(L) : L.set === 'gallery' ? tagOf(L.n, TG, false) : tagOf(L.n, TS, L.source === 'teaching'); tagCount[L.set + ':' + L.tag] = (tagCount[L.set + ':' + L.tag] || 0) + 1; if (want !== L.tag) tagBad.push(`${L.id} n${L.n} tag ${L.tag}, formula ${want}`);
+  const want = L.land ? landTag(L) : L.set === 'gallery' ? questTag(L) : tagOf(L.n, TS, L.source === 'teaching'); tagCount[L.set + ':' + L.tag] = (tagCount[L.set + ':' + L.tag] || 0) + 1; if (want !== L.tag) tagBad.push(`${L.id} n${L.n} tag ${L.tag}, formula ${want}`);
   if (!L.win || Object.keys(L.win).join() !== L.tag || !L.grade || !L.grade[L.tag]) tagBad.push(`${L.id}: win/grade keys ${L.win && Object.keys(L.win)} / ${L.grade && Object.keys(L.grade).filter((k) => ['easy', 'normal', 'hard', 'extreme'].includes(k))}`); }
 const UN = cfg.v5.density.unlock, early = []; // v5 R2: no feature before its milestone; locks only on Hard from 50
 for (const L of levels) { if (L.set !== 'siege') continue; const f = []; if (L.grid.some((r) => r.includes('~'))) f.push('moat'); if ((L.gates || []).length) f.push('gate'); if ((L.links || []).length) f.push('linked'); if (L.cols.some((c) => c.some((cd) => cd[2]))) f.push('mystery'); if ((L.towers || []).length) f.push('tower'); if ((L.hidden || []).some((r) => r.includes('?'))) f.push('hidden'); // v5 R4
-  for (const k of f) if (L.n < UN[k]) early.push(`${L.id} ${k} before ${UN[k]}`); if (L.lock && !((L.tag === 'hard' || L.tag === 'extreme') && L.n >= cfg.v5.locks.from)) early.push(`${L.id} lock on ${L.tag} at ${L.n}`); }
+  for (const k of f) if (L.n < UN[k]) early.push(`${L.id} ${k} before ${UN[k]}`); if ((L.lock || L.locks) && !((L.tag === 'hard' || L.tag === 'extreme') && L.n >= cfg.v5.locks.from)) early.push(`${L.id} lock on ${L.tag} at ${L.n}`); }
 for (const L of levels) { const ln = L.links || []; for (let i = 0; i < ln.length; i++) for (let j = i + 1; j < ln.length; j++) { const A = ln[i], B = ln[j];
   // cross-buried: in one column a card of A is ahead of a card of B, and in another column a card of B is ahead of a card of A
   const ahead = (X, Y) => X.some(([c1, i1]) => Y.some(([c2, i2]) => c1 === c2 && i1 < i2)); if (ahead(A, B) && ahead(B, A)) crossBuried.push(`${L.id} pairs ${JSON.stringify(A)} ${JSON.stringify(B)}`); } }
@@ -71,7 +77,7 @@ function finish(kind, L, d, M, G, ops, issues) { cov.games++; for (const e of G.
   if (L.hidden) for (let c = 0; c < M.C.n; c++) if (!!M.G.hiddenCell(c) !== !!G.S.hiddenCell(c)) { issues.push(`hiddenCell(${c}) mine ${!!M.G.hiddenCell(c)} game ${!!G.S.hiddenCell(c)}`); break; } // v5 R4 fix
   if (kind.includes('power') && G.status !== PLAYING) for (let k = 0; k < 5; k++) { const rg = G.power(k, 0), rm = M.power(k, 0); cov.endNoplay++; if (rg.r !== NOPLAY || rm.r !== NOPLAY || rg.same !== true) { cov.endNoplayBad++; issues.push(`power ${k} after the end: game ${rg.r} (unchanged ${rg.same}) mine ${rm.r}`); } } cov.byKind[kind] = (cov.byKind[kind] || 0) + 1;
   const o = `${G.status}/${G.reason}`; cov.outcomes[o] = (cov.outcomes[o] || 0) + 1; if (G.reason === 'jam') cov.jamWhy[G.jamWhy] = (cov.jamWhy[G.jamWhy] || 0) + 1;
-  if (M.G.kills) cov.killGames++; if (M.G.log.some((e) => e.e === 'UNLOCK')) cov.unlockGames++;
+  if (M.G.kills) cov.killGames++; if (M.G.log.some((e) => e.e === 'PIN')) cov.pinGames = (cov.pinGames || 0) + 1; if (M.G.log.some((e) => e.e === 'UNLOCK')) cov.unlockGames++;
   if (M.status !== G.status || M.reason !== G.reason) issues.push(`status mine ${M.status}/${M.reason} game ${G.status}/${G.reason}`);
   if (G.reason === 'jam' && M.jamWhy !== G.jamWhy) issues.push(`jamWhy mine ${M.jamWhy} game ${G.jamWhy}`);
   const canon = (l) => l.map((e, i) => [e, i]).sort((x, y) => x[0][0] - y[0][0] || (key(x[0]) < key(y[0]) ? -1 : key(x[0]) > key(y[0]) ? 1 : 0)).map((x) => x[0]);
@@ -123,7 +129,7 @@ console.log('tags (formula from SPEC v4.3 + configs):', JSON.stringify(tagCount)
 console.log('picture-format problems (levels):', fmt.length, JSON.stringify(fmt.slice(0, 5)));
 console.log('park limits along stored orders (at rest: <= 2 squads waiting, none over parkMax 6, none while a tower stands):', park.length, 'rest states over;', JSON.stringify(park.slice(0, 8)));
 console.log('my refusal reasons:', JSON.stringify(cov.why), '| power after the end: NOPLAY checks', cov.endNoplay, 'bad', cov.endNoplayBad);
-console.log('outcomes', JSON.stringify(cov.outcomes), 'jamWhy', JSON.stringify(cov.jamWhy), 'killGames', cov.killGames, 'unlockGames', cov.unlockGames, 'hidden checks', cov.hiddenChecks);
+console.log('outcomes', JSON.stringify(cov.outcomes), 'jamWhy', JSON.stringify(cov.jamWhy), 'killGames', cov.killGames, 'pinGames', cov.pinGames || 0, 'unlockGames', cov.unlockGames, 'hidden checks', cov.hiddenChecks);
 for (const g of gradeBad.slice(0, 6)) console.log('GRADE', g.id, g.d, g.bad.join('; '));
 const byKind = {}; for (const m of mism) byKind[m.kind] = (byKind[m.kind] || 0) + 1; console.log('mismatches by kind', JSON.stringify(byKind));
 for (const m of mism.slice(0, +arg('show', 8))) console.log(`MISMATCH ${m.kind} ${m.id} ${m.d} ops[${m.ops.slice(0, 300)}]\n   ${m.issues.slice(0, 3).join('\n   ').slice(0, 900)}`);

@@ -17,11 +17,11 @@
    the Gallery's next tile (gold frame, Play chip); a buy short of coins (.pw.poor); 44 px badges in small frames; the
    landscape bar's .head and .grid; the home's era chip on the river; era report cards as a band.
    v5.3: the home's painted siege (#title-art, a <picture>) and the realm line over Play. */
-@font-face { font-family: "Jersey 10"; src: url("fonts/Jersey10-Regular.ttf?v=50") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Jersey 10"; src: url("fonts/Jersey10-Regular.ttf?v=53") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
 :root { --bg: #2e2935; --ink: #221a26; --cream: #f3ead8; --cream-soft: #cfc4d6;
   --tray: #ddd3c0; --tray-hi: #ece5d6; --tray-edge: #c4b89e; --tray-ink: #3a3027; --tray-soft: #6b5c47; --socket: #c3b697; --socket-lo: #a99a7b;
   --band1: #d0c6b4; --band2: #c2baa9; /* the rows' tray bands, set from layout.fade.band at boot */
-  --tray-full: #93540a; --tray-bad: #b3301c; --tray-march: #7a5a06; --lock-socket: #3b3342; --mys-dot: rgba(242,194,48,.34); --mys-rim: rgba(242,194,48,.55);
+  --tray-full: #93540a; --tray-bad: #b3301c; --tray-march: #7a5a06; --lock-socket: #3b3342; --ring-w: 2; --ring-a: .8; --ring-halo: #141a33; --ring-halo-w: 4; --ring-halo-a: .4; --key-gilt: #c9a020; --pin-rim: #c2321f; --pin-hatch: rgba(178,36,26,.42); --pin-badge: #b3241a; --mys-dot: rgba(242,194,48,.34); --mys-rim: rgba(242,194,48,.55);
   --stone: #a2a5b0; --stone-hi: #cdd0d8; --stone-lo: #666a77; --gold: #f2c230; --gold-hi: #ffe27a; --gold-lo: #b8860b; --gold-dark: #7a5a06;
   --parch: #fbf5e6; --parch-edge: #e3d3ad; --parch-ink: #2a2430; --parch-soft: #5a4e3c;
   --danger: #b3301c; --danger-fill: #6e1a0e; --danger-ink: #a3271a; /* v5.4: Reset progress */
@@ -85,14 +85,17 @@ button.big { min-height: 58px; font-size: 36px; width: 100%; }
 .tag { display: inline-block; font-family: var(--px); font-style: normal; font-weight: 400; line-height: 1; padding: 2px 5px 1px; border-radius: 4px; border: 2px solid var(--ink); text-transform: uppercase; letter-spacing: .5px; white-space: nowrap; }
 .tag[hidden] { display: none; }
 .tag-hard { background: #d42a2a; color: #fff6e8; box-shadow: inset 0 -2px 0 #8e1515; }
-.tag-extreme { background: #5b1f8f; color: #fff6e8; box-shadow: inset 0 -2px 0 #34105a, inset 0 0 0 1px #f0c040; } /* v5 R1 */
+/* Campaign v6 fix (visual critic m5): Extreme reads harder than Hard's red at a glance: a near-black pill with a red
+   inner rim, gold type and a gold skull ahead of the word, on the map, the play bar and every Play. */
+.tag-extreme { background: #1d0a10; color: #ffd23f; box-shadow: inset 0 0 0 1.5px #e0322b, inset 0 -3px 0 #5e0a0d; } /* v5 R1 */
+.tag-extreme::before { content: ""; display: inline-block; width: .9em; height: .9em; margin: 0 .22em -.06em -.05em; vertical-align: baseline; background: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M6 .8C3.1.8 1.2 2.8 1.2 5.3c0 1.6.8 2.8 2.1 3.4v2.5h5.4V8.7c1.3-.6 2.1-1.8 2.1-3.4C10.8 2.8 8.9.8 6 .8z' fill='%23ffd23f'/%3E%3Ccircle cx='4.1' cy='5.6' r='1.3' fill='%231d0a10'/%3E%3Ccircle cx='7.9' cy='5.6' r='1.3' fill='%231d0a10'/%3E%3Cpath d='M5.1 11.2V9.4M6.9 11.2V9.4' stroke='%231d0a10' stroke-width='.9'/%3E%3C/svg%3E"); }
 .tag-easy { background: #1f7a6f; color: #effff9; box-shadow: inset 0 -2px 0 #14544c; } /* v4.3 fix (m6): 5:1 */
 /* v4.3 fix (T1): every Play wears the next level's tag on its corner; a Hard level's Play gets a red face inside its gold
    rim (Food Hunt marks a hard level's button the same way). */
 #btn-play, #map-play, #p-primary { position: relative; }
 #btn-play .tag, #map-play .tag, #p-primary .tag { position: absolute; z-index: 1; top: -11px; right: -8px; font-size: 16px; padding: 2px 5px 1px; }
 button.primary.hard { background: #e8553a; color: #fff6e8; text-shadow: 0 2px 0 rgba(34,26,38,.45); box-shadow: inset 0 0 0 3px var(--gold), inset 0 6px 0 #ff9a80, inset 0 -7px 0 #a8341f, 0 3px 0 rgba(0,0,0,.5); }
-button.primary.hard.extreme { background: #6d2aa8; box-shadow: inset 0 0 0 3px var(--gold), inset 0 6px 0 #a275d6, inset 0 -7px 0 #3f1270, 0 3px 0 rgba(0,0,0,.5); } /* v5 R1 */
+button.primary.hard.extreme { background: #9e1418; box-shadow: inset 0 0 0 3px var(--gold), inset 0 6px 0 #d8473a, inset 0 -7px 0 #4e070b, 0 3px 0 rgba(0,0,0,.5); } /* v5 R1; v6 fix: blood red, darker than Hard's */
 button.primary.hard:active:not(:disabled) { box-shadow: inset 0 0 0 3px var(--gold), inset 0 6px 0 #ff9a80, inset 0 -4px 0 #a8341f, 0 1px 0 rgba(0,0,0,.5); }
 
 /* Top bar: map, level number and era, the level's tag, retry, 2x, mute. */
@@ -246,6 +249,13 @@ body.rows2:not(.wide) #rail { margin-bottom: 3px; } body.rows2:not(.wide) #pw-co
 .slot .out:empty { display: none; }
 .slot.work { box-shadow: inset 0 3px 0 rgba(255,255,255,.34), inset 0 -5px 0 rgba(0,0,0,.26), 0 0 0 3px rgba(255,226,122,.75); }
 .slot.work .men { animation: menstep .36s steps(1) infinite; }
+/* Campaign v6 fix (visual critic S2): a squad with a sapper pinned by an archer is hatched red the other way from stuck,
+   rimmed red, and its badge turns into a red arrow badge with the number pinned (main.js renderLine; the head counts it
+   "1 pinned"). It all clears the moment the tower falls and the sapper gets up. */
+.slot.pinned { border-color: var(--pin-rim); }
+.slot.pinned::before { content: ""; position: absolute; inset: 0; border-radius: 6px; background: repeating-linear-gradient(45deg, var(--pin-hatch) 0 5px, transparent 5px 10px); }
+.slot.pinned .out { background: var(--pin-badge); color: #fff6e8; box-shadow: 0 0 0 1.5px #221a26; padding: 1px 3px 0 2px; gap: 2px; }
+.slot.pinned .out::before { width: .95em; height: .95em; border: 0; background: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3.6 8.4L10.2 1.8' stroke='%23fff6e8' stroke-width='1.6' stroke-linecap='round'/%3E%3Cpath d='M1.2 10.8l1.1-4.6 3.5 3.5z' fill='%23fff6e8'/%3E%3Cpath d='M8 1.2v2.8h2.8' fill='none' stroke='%23fff6e8' stroke-width='1.3'/%3E%3C/svg%3E"); }
 @keyframes menstep { 50% { transform: translateY(-2px); } }
 /* v3.1: a stuck squad (nothing it can reach, every sapper home) is hatched dark with a lock; its count stays readable.
    Its figures go (they add nothing the hatch and the lock don't say); a linked space shows its chain there instead. */
@@ -268,6 +278,12 @@ body.rows2:not(.wide) #rail { margin-bottom: 3px; } body.rows2:not(.wide) #pw-co
 /* v5 R1: a colour lock's socket shows the colour that opens it (a band of it under the dark hatch, the padlock over it). */
 .slot.locked.clock { background: repeating-linear-gradient(135deg, rgba(20,16,28,.55) 0 5px, rgba(20,16,28,.15) 5px 10px), var(--lc); border-color: var(--cream); }
 .slot.unlocking .pad { animation: padpop .7s ease-out both; }
+/* Campaign v6 fix (visual critic m2): a key lock's socket shows what opens it, as a colour lock's shows its colour: the
+   padlock moves left and the board's own key block sits beside it (gilt, the key etched in, the dashed cream square the key
+   wears on the board), so each socket pairs with its key or its colour at a glance, with one lock or two. */
+.slot.locked.klock .pad { left: 33%; }
+.slot.locked.klock::after { content: ""; position: absolute; left: 70%; top: 50%; width: calc(var(--slot-h) * .44); height: calc(var(--slot-h) * .44); transform: translate(-50%, -50%); border-radius: 3px;
+  background: var(--key-gilt) center / 80% no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Ccircle cx='3.6' cy='6' r='2.1' fill='none' stroke='%23221a26' stroke-width='1.5'/%3E%3Cpath d='M5.7 6h5.3M8.4 6v2.2M10.3 6v2.8' fill='none' stroke='%23221a26' stroke-width='1.5'/%3E%3C/svg%3E"); outline: 2px dashed var(--cream); outline-offset: 1px; box-shadow: inset 0 -2px 0 rgba(0,0,0,.3); }
 @keyframes padpop { 0% { transform: translate(-50%, -50%); opacity: 1; } 30% { transform: translate(-50%, -62%) scale(1.25) rotate(-10deg); opacity: 1; } 100% { transform: translate(-50%, -150%) scale(.7) rotate(28deg); opacity: 0; } }
 .slot .lk, .tile .ch { display: none; position: relative; z-index: 1; border-radius: 4px; background: #221a26 center / 82% no-repeat;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Crect x='1' y='4' width='7' height='5' rx='2.5' fill='none' stroke='%23efe2c8' stroke-width='1.6'/%3E%3Crect x='6' y='5' width='7' height='5' rx='2.5' fill='none' stroke='%23b9a48a' stroke-width='1.6'/%3E%3C/svg%3E"); }

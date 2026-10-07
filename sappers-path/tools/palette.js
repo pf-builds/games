@@ -57,7 +57,7 @@ function minPair(mats, pal) {
   for (let i = 0; i < mats.length; i++) for (let j = i + 1; j < mats.length; j++) { const d = de00(lab(P[mats[i]]), lab(P[mats[j]])); if (d < min) { min = d; at = [mats[i], mats[j]]; } }
   return { min: at ? min : null, at };
 }
-module.exports = { lab, de00, minPair }; // (set first: --scenes requires tools/pic.js, which requires this file)
+module.exports = { lab, de00, minPair, okHex }; // v6: okHex for a painted tower's colour. (set first: --scenes requires tools/pic.js, which requires this file)
 if (require.main !== module) return;
 
 if (process.argv.includes("--scenes")) {

@@ -15,6 +15,10 @@
 // The locked space's key (v4 M2): the gilt block that opens the holding line's locked space wears a pulsing dashed square
 // in the socket colour (board.lockKey), so it reads as a space key, not a gate key (a full ring in the gate's tint).
 // The page plays the padlock and the cue; sync() passes REVEAL, LINK and UNLOCK to the page's hooks (v4 M5: and POWER).
+// Campaign v6: a level with two locks marks each key lock's gilt block the same way while that lock is shut (V.lockShutM,
+// a bit per lock); a killed sapper (a killing-tower level) falls where the arrow met it and the label says so. Stage
+// 1b, a pinning level: the sapper lies where the arrow met it, the arrow still in it (kinds 5 and 6, its shooter the
+// engine's pinBy), until REL; then (kind 7) it walks back along its route from there to its space.
 //
 // Surface and scenery (v3 fix pass). Each block can take one of four tones of its colour (base, lit, shade, alt), picked
 // once per level from the fort's shape (a region's top or left edge lit, its bottom or right edge shaded, a running bond
@@ -155,10 +159,10 @@
       label: { t: -1e12, x: 0, y: 0, kill: false, text: "", w: 0 },
       focus: { on: false, x: 0, y: 0, r: 1 },
       gob: { on: false, t0: 0, x: 0, y: 0, done: false },
-      hooks: { pop: null, deposit: null, gate: null, tower: null, shot: null, hit: null, collapse: null, tap: null, free: null, move: null, reveal: null, link: null, unlock: null, power: null },
-      lockKey: -1, lockOpen: true, pal: null, palKey: "", hide: null, hideKey: "", liquid: null, pic: false, towerTop: new Float32Array(MAXT),
+      hooks: { pop: null, deposit: null, gate: null, tower: null, shot: null, hit: null, release: null, collapse: null, tap: null, free: null, move: null, reveal: null, link: null, unlock: null, power: null },
+      lockKey: -1, lockShutM: 0, pal: null, palKey: "", hide: null, hideKey: "", liquid: null, pic: false, towerTop: new Float32Array(MAXT),
       // Critics 1 fix: rings (V.hot from the page, the loud mask worked out per board change, each ring's ease) and bins.
-      hot: 0, ringsLoud: false, hotVer: -1, hotFor: -1, hotMask: 0, shootM: 0, ringA: new Float32Array(MAXT), ringHitT: new Float64Array(MAXT).fill(-1e12), binT: new Float64Array(E.NMAT).fill(-1e12),
+      rq: null, hot: 0, ringsLoud: false, hotVer: -1, hotFor: -1, hotMask: 0, shootM: 0, ringA: new Float32Array(MAXT), ringHitT: new Float64Array(MAXT).fill(-1e12), binT: new Float64Array(E.NMAT).fill(-1e12),
     };
     const RMAX = Math.max(8, Math.min(1024, SH.maxRunners | 0));
     V.rOn = new Int8Array(RMAX); V.rId = new Int32Array(RMAX); V.rK = new Int8Array(RMAX); V.rS = new Int8Array(RMAX); V.rM = new Int8Array(RMAX); V.rC = new Int32Array(RMAX);
@@ -280,6 +284,7 @@
     // Land 1 fix (the visual critic's B1): hide (optional), {c, q}, the level's mystery-block fill and its ? colour (a land
     // level's, chosen 20+ CIEDE2000 from its picture by tools/land.js); none: config board.hidden's, as before.
     function setLevel(B, S, pal, liquid, shade, hide) {
+      V.rq = ringQuiet(K.ring); // Campaign v6 fix: the quiet ring's look, read once a level (style.css --ring-*)
       const hk = hide ? hide.c + hide.q : ""; if (hk !== V.hideKey) { V.hideKey = hk; V.hide = hide || null; V.sprites = null; }
       // Lands foundation: the shade rows (null: none) and each colour's shade studs; a change of shade colours drops the sprites.
       let shK = ""; V.shade = shade || null; if (pal) for (const k in pal) if (pal[k] && pal[k].sh) shK += k + ":" + pal[k].sh.join() + ";";
@@ -378,13 +383,16 @@
       V.piles.forEach((p, k) => { const row = two && k >= per ? 1 : 0, j = row ? k - per : k, inRow = row ? np - per : per;
         p.x = ((j + 0.5 + (per - inRow) / 2) * V.w) / per; p.y = V.h + ((row + 0.5) * V.Y) / (two ? 2 : 1); p.row = row; });
     }
+    // v6: the locks still shut (a bit per lock), and how many key-lock keys wear their brackets now (selfTest).
+    function shutMask(S) { let m = 0; for (let k = 0; k < S.B.nlocks; k++) if (S.lockShut(k)) m |= 1 << k; return m; }
+    function keyShown() { let n = 0; if (V.B) for (let k = 0; k < V.B.nlocks; k++) { const kc = V.B.lockK[k]; if (kc >= 0 && V.lockShutM & (1 << k) && V.disp[kc] > 0) n++; } return n; }
     function reset() {
       const B = V.B; if (!B) return;
       V.disp.set(V.S.a.subarray(0, B.n)); for (let c = 0; c < B.n; c++) V.hid[c] = V.S.hiddenCell(c) ? 1 : 0; V.dispVer++; V.haul.fill(0); V.lastPop = -1; V.left = V.S.pixLeft; V.t = V.S.now;
       V.rOn.fill(0); V.live = 0; V.rFreeN = 0; for (let i = RMAX - 1; i >= 0; i--) V.rFree[V.rFreeN++] = i; V.idR.fill(-1); V.stats.hits = 0; V.stats.dropped = 0;
       V.towerLeft.fill(0); for (let c = 0; c < B.n; c++) { const t = B.towerOf[c]; V.towerOfCell[c] = t; if (t >= 0 && t < MAXT && V.disp[c] > 0) V.towerLeft[t]++; }
       for (let k = 0; k < MAXG; k++) { const gc = B.gateCells[k]; V.gSt[k] = gc && gc.length && V.disp[gc[0]] > 0 ? 0 : 1; V.gT[k] = -1e12; }
-      V.tFallT.fill(-1e12); V.shT = -1e12; V.label.t = -1e12; V.gob.on = false; V.gob.done = false; V.lockOpen = !V.S.locked;
+      V.tFallT.fill(-1e12); V.shT = -1e12; V.label.t = -1e12; V.gob.on = false; V.gob.done = false; V.lockShutM = shutMask(V.S);
       V.pileOf.fill(-1); V.nextPile = 0; for (const p of V.piles) p.m = 0;
       V.popT.fill(-1e12); V.pT.fill(-1e12); V.binT.fill(-1e12); V.ringHitT.fill(-1e12); V.shootM = 0; V.hotVer = -1;
       for (let k = 0; k < MAXT; k++) V.ringA[k] = k < B.towers.length && hotNow(k) ? 1 : 0;
@@ -564,7 +572,7 @@
       // A hit: it stops where its route first enters a standing ring (or at the pixel's face); the arrow meets it there.
       const pts = V.rPts[i], cum = V.rCum[i], np = V.rNp[i], w = V.w; let dH = cum[np - 1], tw = lowBit(coverNow(c));
       for (let q = 1; q < np; q++) { const px = Math.floor(pts[q * 2]), py = Math.floor(pts[q * 2 + 1]); if (px < 0 || py < 0 || px >= w || py >= V.h) continue; const m = coverNow(py * w + px); if (m) { dH = Math.max(0, cum[q] - 0.45); tw = lowBit(m); break; } }
-      V.rHitD[i] = dH; V.rTw[i] = Math.max(0, tw); V.rBx[i] = pts[0]; V.rBy[i] = pts[1];
+      V.rHitD[i] = dH; V.rTw[i] = k === 5 || k === 6 ? Math.max(0, S.pinBy(id)) : Math.max(0, tw); V.rBx[i] = pts[0]; V.rBy[i] = pts[1]; // 1b: a pin's arrow comes from its shooter
       V.rAim[i] = Math.max(1, Math.min(SH.arrowMs, V.rT1[i] - V.rT0[i]));
       along(i, dH, pos); V.rHx[i] = pos[0]; V.rHy[i] = pos[1];
       return i;
@@ -626,18 +634,20 @@
         if (t === EV.DISP) { runner(S, a); if (V.hooks.move) V.hooks.move(); }
         else if (t === EV.EAT || t === EV.CLEAR) eat(a, anim); // v5 R1: CLEAR, a block a continue or a Volley removed
         else if (t === EV.GATE) gate(a, anim);
-        else if (t === EV.HIT || t === EV.KILL) {
-          const i = V.idR[a], kill = t === EV.KILL; V.stats.hits++; if (i >= 0 && V.rTw[i] < MAXT) V.ringHitT[V.rTw[i]] = V.fxT;
-          if (anim && V.hooks.hit) V.hooks.hit(kill ? 2 : 1);
+        else if (t === EV.HIT || t === EV.KILL || t === EV.PIN) {
+          const i = V.idR[a], kill = t === EV.KILL, pin = t === EV.PIN; V.stats.hits++; if (i >= 0 && V.rTw[i] < MAXT) V.ringHitT[V.rTw[i]] = V.fxT;
+          if (anim && V.hooks.hit) V.hooks.hit(kill ? 2 : pin ? 3 : 1);
+          if (t === EV.HIT && i >= 0 && V.rK[i] === 5) V.rK[i] = 2; // 1b: its shooter fell first (or a Volley cut it loose): a plain knock back
           const hx = i >= 0 ? V.rHx[i] : (S.qC[a] % V.w) + 0.5, hy = i >= 0 ? V.rHy[i] : ((S.qC[a] / V.w) | 0) + 0.5;
-          if (anim) { V.label.t = V.fxT; V.label.x = hx; V.label.y = hy; V.label.kill = kill; V.label.text = (kill ? SH.killText : SH.hitText).replace("{n}", 1); V.label.w = 0; spawn(MX(hx, hy), MY(hx, hy), 0, FX.dust + 2, FX.dustSize, FX.lift * 0.5, FX.spread * 0.6); }
+          if (anim) { V.label.t = V.fxT; V.label.x = hx; V.label.y = hy; V.label.kill = kill; V.label.text = (kill ? SH.killText : pin ? SH.pinText : SH.hitText).replace("{n}", 1); V.label.w = 0; spawn(MX(hx, hy), MY(hx, hy), 0, FX.dust + 2, FX.dustSize, FX.lift * 0.5, FX.spread * 0.6); }
           if (kill && i >= 0) { if (anim) V.rDie[i] = V.fxT; else drop(i); }
-        } else if (t === EV.HOME) { if (S.qK[a] === 1) deposit(S.spM[S.qS[a]]); const i = V.idR[a]; if (i >= 0) drop(i); if (V.hooks.move) V.hooks.move(); }
+        } else if (t === EV.REL) { const i = V.idR[a]; if (i >= 0) { V.rK[i] = 7; V.rT1[i] = S.q1[a]; V.rT2[i] = S.q2[a]; } if (V.hooks.release) V.hooks.release(a, b); } // 1b: up and walking back
+        else if (t === EV.HOME) { if (S.qK[a] === 1) deposit(S.spM[S.qS[a]]); const i = V.idR[a]; if (i >= 0) drop(i); if (V.hooks.move) V.hooks.move(); }
         else if (t === EV.TAP) { if (V.hooks.tap) V.hooks.tap(a, b); }
         else if (t === EV.FREE) { if (V.hooks.free) V.hooks.free(a, b); }
         else if (t === EV.REVEAL) { if (V.hooks.reveal) V.hooks.reveal(a, b); }
         else if (t === EV.LINK) { if (V.hooks.link) V.hooks.link(a, b); }
-        else if (t === EV.UNLOCK) { V.lockOpen = true; if (anim && V.hooks.unlock) V.hooks.unlock(a); }
+        else if (t === EV.UNLOCK) { const k = a >= 0 ? V.B.lockOf[a] : V.B.lockM.indexOf(b); if (k >= 0) V.lockShutM &= ~(1 << k); if (anim && V.hooks.unlock) V.hooks.unlock(a, b); } // v6: its own lock
         else if (t === EV.POWER) { if (V.hooks.power) V.hooks.power(a, b); }
         else if (t === EV.SHOW) { V.hid[a] = 0; paintCell(a); if (anim) { const bx = a % V.w + 0.5, by = ((a / V.w) | 0) + 0.5; spawn(MX(bx, by), MY(bx, by), 0, FX.dust, FX.dustSize, FX.lift * 0.3, FX.spread * 0.4); } if (V.hooks.show) V.hooks.show(a, b); } // v5 R1: a mystery block exposed
       }
@@ -649,9 +659,9 @@
       V.disp.set(S.a.subarray(0, V.n)); for (let c = 0; c < V.n; c++) V.hid[c] = S.hiddenCell(c) ? 1 : 0; V.dispVer++; V.left = S.pixLeft;
       V.towerLeft.fill(0); for (let c = 0; c < V.n; c++) { const t = V.B.towerOf[c]; if (t >= 0 && t < MAXT && V.disp[c] > 0) V.towerLeft[t]++; }
       for (let k = 0; k < MAXG; k++) { const gc = V.B.gateCells[k]; V.gSt[k] = gc && gc.length && V.disp[gc[0]] > 0 ? 0 : 1; }
-      V.lockOpen = !S.locked;
+      V.lockShutM = shutMask(S);
       for (let m = 1; m < E.NMAT; m++) { V.haul[m] = Math.max(0, V.total[m] - S.left[m]); if (V.haul[m] > 0) claim(m); }
-      for (let id = 0; id < S.sent; id++) { if (S.q2[id] <= S.now || (S.qK[id] === 3 && S.q1[id] <= S.now)) continue; if (S.qK[id] === 1 && S.q1[id] <= S.now) V.haul[S.spM[S.qS[id]]]--; runner(S, id); }
+      for (let id = 0; id < S.sent; id++) { if ((S.qK[id] !== 6 && S.q2[id] <= S.now) || (S.qK[id] === 3 && S.q1[id] <= S.now)) continue; if (S.qK[id] === 1 && S.q1[id] <= S.now) V.haul[S.spM[S.qS[id]]]--; runner(S, id); }
       paintLayer();
     }
     function update(dt, speed) {
@@ -684,6 +694,13 @@
 
     // ---- drawing ----------------------------------------------------------------------------------------------------
     const dash = [0, 0], NODASH = [];
+    // Campaign v6 fix (visual critic m1, rings vanishing at 375 px on busy art): the quiet ring is a red dash --ring-w CSS
+    // px wide at --ring-a over a dark halo (--ring-halo, --ring-halo-w px at --ring-halo-a) that lifts it off any pixel art.
+    // The numbers are page presentation in style.css :root (config board.ring's quietW and quietA when they are absent).
+    function ringQuiet(RG) {
+      const cs = typeof getComputedStyle === "function" ? getComputedStyle(document.documentElement) : null, n = (k, d) => { const v = cs ? parseFloat(cs.getPropertyValue(k)) : NaN; return isFinite(v) ? v : d; };
+      return { w: n("--ring-w", RG.quietW), a: n("--ring-a", RG.quietA), hw: n("--ring-halo-w", 0), ha: n("--ring-halo-a", 0), hc: (cs && cs.getPropertyValue("--ring-halo").trim()) || K.towerWall };
+    }
     // Critics 1 fix: does tower k's ring matter now? Its archer is shooting or just hit someone, the coach points at a
     // tower, or a colour the player can send now (V.hot) has a block in reach inside the ring (worked out once per board
     // change or page mask, into V.hotMask; allocation-free).
@@ -719,9 +736,10 @@
           return;
         }
       } else {
-        const dH = V.rHitD[i], back = Math.max(0, dH - SH.knockCells), tk = t1 + V.knockMs;
-        if (t < t1) d = ((t - t0) / Math.max(1, t1 - t0)) * dH;
-        else if (V.rK[i] === 3) d = dH;
+        const dH = V.rHitD[i], back = Math.max(0, dH - SH.knockCells), tk = t1 + V.knockMs, rk = V.rK[i];
+        if (rk === 7) d = dH * (1 - Math.max(0, Math.min(1, (t - t1) / Math.max(1, t2 - t1)))); // 1b: released, back from where it lay
+        else if (t < t1) d = ((t - t0) / Math.max(1, t1 - t0)) * dH;
+        else if (rk === 3 || rk === 5 || rk === 6) d = dH; // killed, or pinned (1b)
         else if (t < tk) { const u = (t - t1) / Math.max(1, V.knockMs); d = dH - SH.knockCells * (1 - (1 - u) * (1 - u)); }
         else d = back * (1 - Math.min(1, (t - tk) / Math.max(1, t2 - tk)));
       }
@@ -763,9 +781,10 @@
         }
       }
       // The locked space's key: a dashed square in the socket colour (the locked space's own dash), pulsing while the
-      // space is locked.
-      if (V.lockKey >= 0 && !V.lockOpen && V.disp[V.lockKey] > 0) {
-        const LK = K.lockKey, kc = V.lockKey, x = CX(kc % V.w, (kc / V.w) | 0) * cs, y = CY(kc % V.w, (kc / V.w) | 0) * cs, lw = Math.max(1.5, cs * LK.w), o = lw / 2 + cs * LK.out;
+      // space is locked (v6: each key lock's own key while that lock is shut).
+      for (let k = 0; k < V.B.nlocks; k++) {
+        const kc = V.B.lockK[k]; if (kc < 0 || !(V.lockShutM & (1 << k)) || V.disp[kc] <= 0) continue;
+        const LK = K.lockKey, x = CX(kc % V.w, (kc / V.w) | 0) * cs, y = CY(kc % V.w, (kc / V.w) | 0) * cs, lw = Math.max(1.5, cs * LK.w), o = lw / 2 + cs * LK.out;
         dash[0] = Math.max(1.5, cs * LK.dash[0]); dash[1] = Math.max(1, cs * LK.dash[1]);
         gx.globalAlpha = 0.6 + 0.4 * Math.sin(ft / 170); gx.lineWidth = lw; gx.strokeStyle = LK.tint; gx.lineCap = "butt"; gx.setLineDash(dash); gx.lineDashOffset = 0;
         gx.strokeRect(x - o, y - o, cs + 2 * o, cs + 2 * o); gx.setLineDash(NODASH); gx.globalAlpha = 1;
@@ -778,7 +797,9 @@
         for (let k = 0; k < T.length && k < MAXT; k++) {
           let al = 1; if (V.towerLeft[k] <= 0) { al = 1 - (ft - V.tFallT[k]) / FX.towerFallMs; if (!(al > 0)) continue; }
           const a = V.ringA[k], rx = MX(T[k].cx + 0.5, T[k].cy + 0.5) * cs, ry = MY(T[k].cx + 0.5, T[k].cy + 0.5) * cs, rr = T[k].r * cs;
-          if (a < 1) { gx.globalAlpha = al * (1 - a) * RG.quietA; gx.lineWidth = Math.max(1, V.dpr * RG.quietW); dash[0] = V.dpr * RG.quietDash[0]; dash[1] = V.dpr * RG.quietDash[1]; gx.setLineDash(dash); gx.beginPath(); gx.arc(rx, ry, rr, 0, Math.PI * 2); gx.stroke(); }
+          if (a < 1) { const q = al * (1 - a), RQ = V.rq; dash[0] = V.dpr * RG.quietDash[0]; dash[1] = V.dpr * RG.quietDash[1]; gx.setLineDash(dash);
+            if (RQ.ha > 0) { gx.globalAlpha = q * RQ.ha; gx.strokeStyle = RQ.hc; gx.lineWidth = V.dpr * RQ.hw; gx.beginPath(); gx.arc(rx, ry, rr, 0, Math.PI * 2); gx.stroke(); gx.strokeStyle = K.rangeStroke; }
+            gx.globalAlpha = q * RQ.a; gx.lineWidth = Math.max(1, V.dpr * RQ.w); gx.beginPath(); gx.arc(rx, ry, rr, 0, Math.PI * 2); gx.stroke(); }
           if (a > 0) { gx.globalAlpha = al * a; gx.lineWidth = Math.max(1, cs * K.rangeW); dash[0] = cs * K.rangeDash[0]; dash[1] = cs * K.rangeDash[1]; gx.setLineDash(dash); gx.beginPath(); gx.arc(rx, ry, rr, 0, Math.PI * 2); gx.stroke(); }
         }
         gx.restore();
@@ -817,6 +838,10 @@
           const hit = t >= t1, f = ((t / SH.stepMs + i) | 0) & 1;
           let y = MY(pos[0], pos[1]) * cs - ss / 2 - (hit ? 0 : f * cs * SH.bob);
           if (!hit && t >= t1 - V.rAim[i]) { shooting |= 1 << V.rTw[i]; arrow(i, (t - (t1 - V.rAim[i])) / V.rAim[i]); }
+          if (k === 7) { gx.drawImage(S.sap[V.rM[i]], f * ss, 0, ss, ss, x, MY(pos[0], pos[1]) * cs - ss / 2 - f * cs * SH.bob, ss, ss); continue; } // 1b: released, walking back
+          if ((k === 5 || k === 6) && hit) { // 1b: pinned: lying where it fell, the arrow still in it
+            gx.save(); gx.translate(x + ss / 2, y + ss * 0.9); gx.rotate(Math.PI / 2); gx.drawImage(S.sap[V.rM[i]], 0, 0, ss, ss, -ss / 2, -ss * 0.9, ss, ss); gx.restore(); arrow(i, 1); continue;
+          }
           if (k === 3 && hit) { // falls over and fades
             const u = V.rDie[i] >= 0 ? (ft - V.rDie[i]) / SH.hitFallMs : 0;
             gx.save(); gx.globalAlpha = Math.max(0, Math.min(1, (1 - u) * 2.5)); gx.translate(x + ss / 2, y + ss * 0.9); gx.rotate(Math.min(1, u * 3) * Math.PI / 2); gx.drawImage(S.sap[V.rM[i]], 0, 0, ss, ss, -ss / 2, -ss * 0.9, ss, ss); gx.restore(); continue;
@@ -883,7 +908,7 @@
     function hitInfo() {
       let live = 0, arrows = 0, struck = 0, kind = 0; const t = V.t;
       for (let i = 0; i < RMAX; i++) { if (!V.rOn[i] || V.rK[i] === 1) continue; live++; kind = V.rK[i]; if (t >= V.rT1[i]) struck++; else if (t >= V.rT1[i] - V.rAim[i]) arrows++; }
-      return { live, arrows, struck, kind: kind === 3 ? 2 : kind === 2 ? 1 : 0, label: V.fxT - V.label.t < SH.labelMs };
+      return { live, arrows, struck, kind: kind === 3 ? 2 : kind === 2 ? 1 : kind === 5 || kind === 6 ? 3 : kind === 7 ? 4 : 0, label: V.fxT - V.label.t < SH.labelMs };
     }
     // v4.1: where live runners came from (selfTest and the harness): {live, yard (the route starts in the yard below the
     // board), crate (it starts on its colour's crate), entry (its first board cell is an entry square, the camp)}.
@@ -925,7 +950,7 @@
       let pops = 0, falls = 0, parts = 0; const ft = V.fxT;
       for (let k = 0; k < POPS; k++) { const a = (ft - V.popT[k]) / (V.popK[k] ? FX.fallMs : SH.popMs); if (a < 1 && a > -20) { pops++; if (V.popK[k]) falls++; } }
       for (let k = 0; k < PARTS; k++) { const a = (ft - V.pT[k]) / V.pL[k]; if (a >= 0 && a < 1) parts++; }
-      return { pops, falls, parts, shaking: (ft - V.shT) / V.shMs < 1, keep: V.gob.on && (V.clock - V.gob.t0) / (SH.goblinMs * SH.keepFrac) < 1, gates: Array.from(V.gSt.subarray(0, V.B ? V.B.gateCells.length : 0)), lockKey: V.lockKey >= 0 && !V.lockOpen && V.disp[V.lockKey] > 0, lockFalling: V.B ? V.B.gateCells.some((_, k) => V.gSt[k] === 1 && ft - V.gT[k] < FX.lockFallMs) : false };
+      return { pops, falls, parts, shaking: (ft - V.shT) / V.shMs < 1, keep: V.gob.on && (V.clock - V.gob.t0) / (SH.goblinMs * SH.keepFrac) < 1, gates: Array.from(V.gSt.subarray(0, V.B ? V.B.gateCells.length : 0)), lockKey: keyShown() > 0, lockKeys: keyShown(), lockFalling: V.B ? V.B.gateCells.some((_, k) => V.gSt[k] === 1 && ft - V.gT[k] < FX.lockFallMs) : false };
     }
 
     // Colour-blind mode (v4 M1): every block wears its material's mark. Rebuilds the caches and repaints (a settings tap).

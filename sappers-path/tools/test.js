@@ -19,6 +19,11 @@ const V3 = require("../config.json").v3;
 const LEVELS_ALL = require("../levels/levels.json"), LEVELS = Object.assign({}, LEVELS_ALL, { levels: LEVELS_ALL.levels.filter((l) => !l.land) });
 const castleGal = () => require("../levels/gallery.json").levels.filter((l) => !l.land), castleLay = () => { const L = require("../map/layout.json"); return Object.assign({}, L, { sheets: L.sheets.filter((S) => !S.land) }); };
 
+// Campaign v6 (the on-theme side quests, tools/quest-bake.js): the campaign's 50 side quests all sit by level 200, so the
+// castle has no long tail. The long tail's mechanism (journey.js tail, tailAfter, save tail) is still checked on v5's shape:
+// the 50 plus 10 stand-in pictures after levels 203-240 (tools/quests.js's slots 51-60).
+const tailGal = () => { const G = castleGal(), C = require("../config.json"); return G.concat(require("./quests.js").questsOf(60, C.gallery.quests, C.meta.powers).slice(G.length).map((q, k) => ({ id: "v5-tail-" + (G.length + k + 1), quest: q }))); };
+
 let pass = 0, fail = 0;
 // v5 R1: checks that replay the shipped levels' stored orders and grades, or hold them to the v5 placement rules, wait for
 // R2's re-lay (config.json v5.relaid). Until then they are listed as DEFERRED, not run.
@@ -226,7 +231,7 @@ const RING = [".......", ".aaaaa.", ".abbca.", ".aaaaa.", "...#..."];
 // ---- archers ---------------------------------------------------------------------------------------------------------
 // Tower g (centroid (7,0), range 3). a pixels by claim order: (4,2) walk 1, (3,2) and (6,2) walk 2 (lower x first),
 // (7,2) walk 3, then (1,2), (0,2). (6,2) and (7,2) are covered.
-const ARCH = (cols) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "....##..."], cols, { towers: [{ at: [7, 0], r: 3 }] });
+const ARCH = (cols, extra) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "....##..."], cols, Object.assign({ towers: [{ at: [7, 0], r: 3 }] }, extra || {})); // v6: extra (kill)
 {
   const S = E.sim(E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []])), N);
   eq([S.covered(2 * 9 + 7), S.covered(2 * 9 + 6), S.covered(2 * 9 + 3), S.covered(7)], [true, true, false, false], "archers: range covers nearby pixels; tower pixels are never covered");
@@ -392,21 +397,35 @@ const ARCH = (cols) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "
   const TG = require("./tags.js"), BC = require("./bake-config.json"), GB = require("./gallery-config.json").bake, GL = castleGal(), DN = V5.density;
   const mix = (ls) => TG.TAGS.map((t) => ls.filter((l) => l.tag === t).length);
   defer("tags: the realm schedule, the mix, realm ends and openers, density", () => {
-    eq([LEVELS.levels.every((l) => l.tag === TG.tagOf(l.n, BC.tags, l.source === "teaching")), GL.every((l) => l.tag === TG.tagOf(l.n, GB.tags, false))], [true, true], "tags: every level carries its schedule's tag");
-    const [e, n, h] = mix(LEVELS.levels.slice(0, 100)), [ge, gn, gh] = mix(GL); // v5 R4: the 1-100 mix as shipped (101-200 below)
-    ok(Math.abs(e / 100 - 0.15) <= 0.03 && Math.abs(n / 100 - 0.6) <= 0.03 && Math.abs(h / 100 - 0.25) <= 0.03 && Math.abs(ge / 60 - 0.15) <= 0.05 && Math.abs(gn / 60 - 0.6) <= 0.05 && Math.abs(gh / 60 - 0.25) <= 0.05,
-      "tags: the mix is about 15% Easy, 60% Normal, 25% Hard (Siege " + [e, n, h].join("/") + ", Gallery " + [ge, gn, gh].join("/") + ")");
+    const QJ = require("./campaign-quests/quests.json"), FG = require("fs").existsSync(require("path").join(__dirname, "..", V5.freeze.dir, "gallery.json")) ? require("../" + V5.freeze.dir + "/gallery.json").levels : []; // campaign v6: a side quest's tag is its quests.json plan (new) or its shipped tag (kept)
+    eq([LEVELS.levels.every((l) => l.tag === TG.tagOf(l.n, BC.tags, l.source === "teaching")), GL.every((l, i) => l.tag === (QJ.order[i].tag || (FG.find((g) => g.id === l.id) || {}).tag))], [true, true], "tags: every level carries its schedule's tag; every side quest its quests.json tag (campaign v6; kept pictures their shipped one)");
+    const [ge, gn, gh] = mix(GL), VC = BC.v6.counts, got = Object.keys(VC).map((k) => mix(LEVELS.levels.filter((l) => l.n >= VC[k][0] && l.n <= VC[k][1])).join("/")); // campaign v6 stage 2: the curve's mix per realm
+    ok(got.every((g, i) => g === Object.values(VC)[i][2]) && LEVELS.levels.filter((l) => l.n <= 200).length === 200 && Math.abs(ge / GL.length - 0.15) <= 0.05 && Math.abs(gn / GL.length - 0.6) <= 0.05 && Math.abs(gh / GL.length - 0.25) <= 0.05,
+      "tags: 1-200 carry the approved curve's E/N/H/X per realm (" + got.join(", ") + "); the side quests about 15% Easy, 60% Normal, 25% Hard (" + [ge, gn, gh].join("/") + ")");
     const R = BC.tags.realms.filter((r) => r[0] <= LEVELS.levels.length), ends = R.filter((r) => r[1] <= LEVELS.levels.length).map((r) => LEVELS.levels[r[1] - 1].tag), opens = R.filter((r) => r[0] > 1 && r[0] <= 150).map((r) => LEVELS.levels[r[0] - 1]); // v5 R4: 175 opens on the cycle (no new feature)
     const hards = LEVELS.levels.filter((l) => l.tag === "hard" || l.tag === "extreme").map((l) => l.n), gaps = hards.slice(1).map((x, i) => x - hards[i]).filter((g) => g > 1);
-    eq([ends.every((t) => t === "hard" || t === "extreme"), opens.every((l) => l.tag === "easy" && l.source === "teaching"), LEVELS.levels.filter((l) => l.source === "teaching").every((l) => l.tag !== "hard"), Math.max(...gaps) <= 6, LEVELS.levels.every((l) => l.era === BC.tags.realms.findIndex((r) => l.n >= r[0] && l.n <= r[1]) + 1)],
-      [true, true, true, true, true], "tags: every realm ends on a Hard (from 149 Extreme) level and opens with an Easy teaching level (to 150); teaching levels are Easy or Normal; Hard or Extreme comes every 3-6 levels (longest gap " + Math.max(...gaps) + "); each level's era is its realm");
+    eq([ends.every((t) => t === "hard" || t === "extreme"), opens.every((l) => l.tag === "easy" && l.source === "teaching"), LEVELS.levels.filter((l) => l.source === "teaching").every((l) => l.tag !== "hard"), Math.max(...gaps) <= 7, LEVELS.levels.every((l) => l.era === BC.tags.realms.findIndex((r) => l.n >= r[0] && l.n <= r[1]) + 1)],
+      [true, true, true, true, true], "tags: every realm ends on a Hard (v6: an Extreme) level and opens with an Easy teaching level (to 150); teaching levels are Easy or Normal; Hard or Extreme comes at least every 7 levels (v6: the curve's sawtooth; longest gap " + Math.max(...gaps) + "); each level's era is its realm");
     const bad = LEVELS.levels.filter((l) => !TG.densityOK(l.n, l.tag, l, DN, l.source === "teaching")).map((l) => l.n + " " + l.tag + " [" + TG.featuresOf(l).join(",") + (l.lock ? ",lock" : "") + "]");
     eq(bad, [], "density (v5 R2): no feature before its milestone; Easy uses at most " + DN.easyMax + ", Normal at least " + DN.normalMin + " (once unlocked), Hard every unlocked feature and from " + DN.lockFrom + " the lock (v5 R4: from " + DN.extremeFrom + " all but " + DN.hardSlack + "), Extreme every one and the lock; teaching levels use their lesson");
-    // v5 R4: levels 101-200 by realm: the ladder's features arrive at their milestones (towers 125, mystery blocks 150) and
-    // every realm uses them; Extreme only from 125; a couple of Easy breathers a realm; 200 is the boss, Extreme.
-    const rs = [[101, 124], [125, 149], [150, 174], [175, 200]].map(([a, b]) => LEVELS.levels.filter((l) => l.n >= a && l.n <= b)), cnt = (ls, t) => ls.filter((l) => l.tag === t).length, use = (ls, k) => ls.filter((l) => TG.featuresOf(l).indexOf(k) >= 0).map((l) => l.n);
-    eq([use(rs[0], "tower").length, use(rs[0].concat(rs[1]), "hidden").length, cnt(rs[0], "extreme"), rs.map((ls) => cnt(ls, "easy") >= 2), use(rs[1], "tower").length > 12, use(rs[2], "hidden").length > 12, use(rs[3], "hidden").length > 12, use(rs[3], "tower").length > 12, rs.slice(1).map((ls) => cnt(ls, "extreme") >= 3), LEVELS.levels[199].tag],
-      [0, 0, 0, [true, true, true, true], true, true, true, true, [true, true, true], "extreme"], "density (v5 R4): no tower before 125, no mystery block before 150, no Extreme before 125; 2+ Easy a realm; towers and mystery blocks used through their realms; 3+ Extreme a realm from 125; 200 Extreme (mixes " + rs.map((ls) => TG.TAGS.map((t) => cnt(ls, t)).join("/")).join(", ") + ")");
+    // Campaign v6 stage 2 (the approved curve): archer towers from 60, on a few levels a realm until 125 (realms 3-5: 3
+    // each), then about 12 in realm 6, about 14 in realm 7, most of realm 8 and every one of 191-200; mystery blocks from
+    // 150; archers by tag where towers stand (Easy and Normal knock back, Hard pin, Extreme kill); locks on every Hard and
+    // Extreme from 50 and none before, two on every Extreme from 150; 200 is the boss, Extreme.
+    const rs = [[50, 74], [75, 99], [100, 124], [125, 149], [150, 174], [175, 200]].map(([a, b]) => LEVELS.levels.filter((l) => l.n >= a && l.n <= b)), use = (ls, k) => ls.filter((l) => TG.featuresOf(l).indexOf(k) >= 0).map((l) => l.n);
+    const LV2 = LEVELS.levels.filter((l) => l.n <= 200), tw = (l) => !!(l.towers && l.towers.length), hard = (l) => l.tag === "hard" || l.tag === "extreme", nl = (l) => E.locksOf(l).length;
+    const archBad = LV2.filter((l) => (l.archers || null) !== (tw(l) && l.tag === "hard" ? "pin" : tw(l) && l.tag === "extreme" ? "kill" : null)).map((l) => l.n), lockBad = LV2.filter((l) => nl(l) !== (l.n >= 50 && hard(l) ? (l.tag === "extreme" && l.n >= BC.v6.twoLocksFrom ? 2 : 1) : 0)).map((l) => l.n);
+    const towersBy = rs.map((ls) => use(ls, "tower").length), late = LV2.filter((l) => l.n >= 191);
+    eq([use(LV2.filter((l) => l.n < DN.unlock.tower), "tower"), towersBy.slice(0, 3).every((k) => k >= 2 && k <= 4), towersBy[3] >= 10 && towersBy[3] <= 14, towersBy[4] >= 12 && towersBy[4] <= 17, towersBy[5] > rs[5].length / 2, late.every(tw), use(LV2.filter((l) => l.n < 150), "hidden"), archBad, lockBad, LEVELS.levels[199].tag],
+      [[], true, true, true, true, true, [], [], [], "extreme"], "density (v6): no tower before " + DN.unlock.tower + ", towers by realm 3-8 " + towersBy.join("/") + " (191-200 all), no mystery block before 150; archers by tag where towers stand; a lock on every Hard and Extreme from 50, two on Extreme from " + BC.v6.twoLocksFrom + "; 200 Extreme");
+    // Campaign v6 fix pass (the functional critic's B1, S1, S3): every level from 9 stores the best-of gate's two runs
+    // (grade.deep: the careful player 1, 2 and 3 taps deep, 32 games each, on two seeds), and each run's best sits under its
+    // ceiling (bake-config v6.care: none on Easy, none on 1-8, the tutorial) and over its floor (v6.floor: 11); a level
+    // the re-deal could not bring inside is logged in v6.misses, and only those may be outside.
+    const VC6 = BC.v6, careOf6 = (n, t) => { if (n === 200) return VC6.care.boss; const i = VC6.care.ranges.findIndex(([a, b]) => n >= a && n <= b); return i >= 0 ? VC6.care[t][i] : null; };
+    const gateOut = LV2.filter((l) => { const g = l.grade[l.tag], c = careOf6(l.n, l.tag), f = (VC6.floor || {})[l.n]; if (l.n < VC6.care.ranges[0][0]) return false; if (!g.deep || g.deep.a.length !== 3 || g.deep.b.length !== 3) return true;
+      const b = [Math.max(...g.deep.a), Math.max(...g.deep.b)]; return (c != null && Math.max(...b) > c) || (f != null && Math.min(...b) < f); }).map((l) => l.n);
+    eq([gateOut, LV2.filter((l) => l.n >= VC6.care.ranges[0][0]).every((l) => l.grade[l.tag].deep)], [(VC6.misses || []).map((m) => m.n), true], "gate (v6 fix pass): levels " + VC6.care.ranges[0][0] + "-200 store the best-of gate's two runs; each run's best is under its ceiling and over its floor (outside, logged in v6.misses: " + (gateOut.join(", ") || "none") + ")");
     // v5 R4: the two new lessons, Easy, with their coach (config.json teach): 125 towers (the coach card is the tower's
     // colour, then the Volley's badge), 150 mystery blocks.
     const T1 = LEVELS.levels[124], T2 = LEVELS.levels[149], CT = require("../config.json").teach, c1 = CT[T1.id] || [], c2 = CT[T2.id] || [];
@@ -417,7 +436,7 @@ const ARCH = (cols) => lv(["......ggg", ".........", "aa.aa.aa.", ".........", "
     // red roofs, none in a group over plan.hidden.maxGroup; every archer tower's colour is 25+ CIEDE2000 from the water and
     // the lava; 200 is the boss: its config moment, the king drawn in its hall and its intro ring on his face.
     const PIC2 = require("./pic.js"), Q2 = BC.picture, HB = BC.plan.hidden, fam = (ls) => [...new Set(ls.map((l) => (l.style || "").replace(/^narrow-/, "").replace(/[0-9]*-.*$/, "").replace(/[0-9]+$/, "")))].sort();
-    const r5 = rs[0].filter((l) => l.source !== "teaching"), r8 = rs[3], wet5 = r5.filter((l) => l.grid.some((r) => r.indexOf("~") >= 0));
+    const r5 = rs[2].filter((l) => l.n > 100 && l.source !== "teaching"), r8 = rs[5], wet5 = r5.filter((l) => l.grid.some((r) => r.indexOf("~") >= 0));
     const hidBad = []; for (const L of r8) if (L.hidden) { const B = E.compile(L), w = B.w, seen = new Uint8Array(B.n);
       for (let c = 0; c < B.n; c++) { if (B.hid0[c] && HB.skip.indexOf(L.pal[B.a0[c]].r) >= 0) hidBad.push(L.n + " role " + L.pal[B.a0[c]].r);
         if (!B.hid0[c] || seen[c]) continue; let k = 0; const st = [c]; seen[c] = 1; while (st.length) { const q = st.pop(); k++; for (const e of [q - 1, q + 1, q - w, q + w]) if (e >= 0 && e < B.n && Math.abs((e % w) - (q % w)) <= 1 && B.hid0[e] && !seen[e]) { seen[e] = 1; st.push(e); } } if (k > HB.maxGroup) hidBad.push(L.n + " group " + k); } }
@@ -593,14 +612,124 @@ const ROW6 = ["abcdef", "......", "..##.."]; // six colours, one pixel each, all
   eq([TG.lockOK(49, "hard", Lk, K), TG.lockOK(50, "hard", Lk, K), TG.lockOK(60, "normal", Lk, K), TG.lockOK(60, "extreme", Lk, K), TG.lockOK(10, "easy", {}, K)], [false, true, false, true, true], "locks (v5 R1): from level 50, on Hard and Extreme only");
   defer("every shipped lock is on a Hard or Extreme level from 50", () => { const bad = LEVELS.levels.filter((l) => !TG.lockOK(l.n, l.tag, l, K)).map((l) => l.n); eq(bad, [], "locks (v5 R1): every shipped lock is on a Hard or Extreme level from 50"); });
   // v5 R2: the realm schedule and the density rule on known cases.
-  const T5 = require("./bake-config.json").tags, tg = (n, t) => TG.tagOf(n, T5, !!t), D5 = V5.density;
+  const T5 = Object.assign({}, require("./bake-config.json").tags, { v6: undefined }), tg = (n, t) => TG.tagOf(n, T5, !!t), D5 = V5.density; // the v5 schedule (campaign v6 stage 2: 1-200 read tags.v6, checked above)
   eq([tg(1, 1), tg(4), tg(6), tg(11), tg(24), tg(25, 1), tg(26), tg(28), tg(33), tg(49), tg(50, 1), tg(53), tg(99), tg(100, 1)], ["easy", "normal", "hard", "easy", "hard", "easy", "normal", "hard", "easy", "hard", "easy", "hard", "hard", "easy"],
     "tags (v5 R2): realm 1 keeps v4.3's cycle; each realm opens with an Easy lesson, restarts the cycle and ends Hard");
   const bd = (rows, ex) => Object.assign({ grid: rows, cols: [[[1, 1]], [], [], [], []] }, ex || {}), moat = bd(["~~", ",,"]), gate = bd(["~j", ",,"], { gates: [{ at: [1, 0], key: [0, 1] }] });
-  eq([TG.featuresOf(bd([",,"])), TG.featuresOf(gate), TG.featuresOf(bd(["~~"], { links: [[[0, 0], [1, 0]]], cols: [[[1, 1, 1]], [], [], [], []] })), TG.unlockedAt(60, D5)], [[], ["moat", "gate"], ["moat", "linked", "mystery"], ["moat", "gate"]], "density (v5 R2): features read from the level; the ladder's features by level");
+  eq([TG.featuresOf(bd([",,"])), TG.featuresOf(gate), TG.featuresOf(bd(["~~"], { links: [[[0, 0], [1, 0]]], cols: [[[1, 1, 1]], [], [], [], []] })), TG.unlockedAt(60, D5)], [[], ["moat", "gate"], ["moat", "linked", "mystery"], ["moat", "gate", "tower"]], "density (v5 R2): features read from the level; the ladder's features by level (v6: towers from 60)");
   eq([TG.densityOK(10, "hard", bd([",,"]), D5), TG.densityOK(20, "easy", moat, D5), TG.densityOK(30, "hard", moat, D5), TG.densityOK(30, "normal", gate, D5), TG.densityOK(60, "easy", moat, D5), TG.densityOK(60, "easy", gate, D5),
     TG.densityOK(60, "normal", gate, D5), TG.densityOK(60, "hard", gate, D5), TG.densityOK(60, "hard", Object.assign({}, gate, { lock: { colour: 1 } }), D5), TG.densityOK(60, "normal", Object.assign({}, gate, { lock: { colour: 1 } }), D5), TG.densityOK(50, "easy", gate, D5, true)],
     [true, false, true, false, true, false, true, false, true, false, true], "density (v5 R2): nothing before its milestone; Easy at most one; Normal two once unlocked; Hard every one and the lock from 50; a lesson may keep older features");
+}
+
+// ---- Campaign v6 stage 1: killing towers (level archers: "kill"; stage 1b replaced kill: true) --------------------------------
+{
+  throws(() => E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []], { kill: true })), "archers (v6 1b): the stage-1 field kill throws (archers replaces it)");
+  throws(() => E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []], { archers: "knock" })), "archers (v6 1b): only pin or kill");
+  throws(() => E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []], { archers: "pin", safeArchers: true })), "archers (v6 1b): archers with safeArchers (retired) throws");
+  eq([E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []])).kill, E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []], { archers: "pin" })).kill, E.compile(lv(["a.", "##"], [[[1, 1]], [], [], [], []], { archers: "kill" })).kill], [false, false, true], "kill (v6): read from the level (no towers is fine)");
+  // Exact deck: the a squad's third sapper walks at (6,2), inside the ring, and is shot dead: a has 5 sappers for 6 blocks.
+  const K = (cols) => ARCH(cols, { archers: "kill" });
+  const S = E.sim(E.compile(K([[[1, 6]], [[7, 3]], [], [], []])), N); S.logOn = true; pat(S, 0);
+  eq([S.hits, S.kills, S.status, S.reason, S.failMat, evs(S, E.EV.KILL).length, evs(S, E.EV.HIT).length], [1, 1, E.FAILED, "short", 1, 1, 0], "kill (v6): the hit sapper dies (KILL, no HIT); its colour has 5 sappers for 6 blocks: the level fails short");
+  const R0 = Ref.game(K([[[1, 6]], [[7, 3]], [], [], []]), N); R0.play(0); R0.quiet();
+  eq([R0.hits, R0.kills, R0.status, R0.reason], [1, 1, "failed", "short"], "kill (v6, reference): dies, short");
+  // The tower first: nobody is hit, the level wins as before.
+  const W = E.sim(E.compile(K([[[1, 6]], [[7, 3]], [], [], []])), N); pat(W, 1); eq([pat(W, 0), W.hits, W.kills], [E.WON, 0, 0], "kill (v6): the tower first: no kill, won");
+  // A spare sapper keeps the colour whole: a 3 (two eat, the third dies), a 4 behind it. The dead sapper is finished, so
+  // the squad's space frees once the other two pick up; the level goes on and wins once the tower is down.
+  const P = E.sim(E.compile(K([[[1, 3]], [[7, 3]], [[1, 4]], [], []])), N); pat(P, 0);
+  eq([P.kills, P.status, P.lineLen, P.sappers(1), P.left[1]], [1, E.PLAYING, 0, 4, 4], "kill (v6): a spare a: one dies, 4 sappers for 4 blocks, the squad's space is free");
+  pat(P, 1); eq([pat(P, 2), P.kills], [E.WON, 1], "kill (v6): the tower falls, the spare a squad finishes: won");
+  const RP = Ref.game(K([[[1, 3]], [[7, 3]], [[1, 4]], [], []]), N); for (const j of [0, 1, 2]) { RP.play(j); RP.quiet(); }
+  eq([RP.kills, RP.status], [1, "won"], "kill (v6, reference): the same game");
+  // Without the flag the same game knocks back (v5 R1), on every tag.
+  const B0 = E.sim(E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []])), H); pat(B0, 0); eq([B0.hits, B0.kills, B0.status], [1, 0, E.PLAYING], "kill (v6): a level without kill knocks back (as v5 R1)");
+  // Dealing mode: any hit still fails the deal "hit", kill level or not.
+  const D = E.sim(E.compile(K([[], [], [], [], []])), N, { deal: true }); D.playSquad(1, 6); D.quiet();
+  eq([D.status, D.reason], [E.FAILED, "hit"], "kill (v6, dealing mode): a hit fails the deal (hit)");
+  // Coupled freeing with a kill (v4.3's case, restored): g (tower) linked to a; both a blocks in the ring, so a's one sapper
+  // dies on the way. Dead counts as finished: a's space holds for g, both free once g is done; the spare a finishes.
+  const LL = lv(["......ggg", ".........", "......aa.", ".........", "....##..."], [[[7, 3]], [[1, 1]], [[1, 2]], [], []], { towers: [{ at: [7, 0], r: 3 }], links: [[[0, 0], [1, 0]]], archers: "kill" });
+  const C = E.sim(E.compile(LL), N); C.play(0, 0); C.advanceTo(600);
+  eq([C.kills, C.status, C.lineLen, C.held(1), C.spO[0] > 0], [1, E.PLAYING, 2, true, true], "kill (v6, coupled): a's sapper is killed; a counts as finished and holds for g, still working");
+  C.quiet(); eq([C.lineLen, C.standing, C.status], [0, 0, E.PLAYING], "kill (v6, coupled): the tower falls, g is done: both spaces free");
+  eq(pat(C, 2), E.WON, "kill (v6, coupled): the spare a squad finishes");
+}
+
+// ---- Campaign v6 stage 1b: pinning towers (level archers: "pin") -------------------------------------------------------------
+{
+  const P = (cols) => ARCH(cols, { archers: "pin" });
+  eq([E.compile(P([[[1, 6]], [[7, 3]], [], [], []])).pin, E.compile(P([[[1, 6]], [[7, 3]], [], [], []])).kill], [true, false], "pin (v6 1b): read from the level");
+  // The a squad's third sapper walks at (6,2) and is pinned there by tower 0 (PIN at the hit). It still counts as out:
+  // the squad holds its space with 1 waiting (wary) and 1 pinned; at rest it is no event, not stuck, nothing fails.
+  const S = E.sim(E.compile(P([[[1, 6]], [[7, 3]], [], [], []])), N); S.logOn = true; pat(S, 0);
+  const pin = evs(S, E.EV.PIN), id = pin.length ? pin[0][0] : -1, sp = S.order()[0];
+  eq([S.status, S.hits, S.kills, S.pins, pin.length, evs(S, E.EV.HIT).length, S.spW[sp], S.spO[sp], S.pinned(sp), S.busy, S.stuck(sp), S.pinBy(id), S.out], [E.PLAYING, 1, 0, 1, 1, 0, 1, 1, 1, false, false, 0, 1], "pin (v6 1b): the hit sapper lies pinned (PIN); its squad holds its space, 1 waiting and 1 pinned; at rest, not stuck");
+  // The tower's last block goes: REL (sapper, tower 0) at that instant, and it walks back as a knocked-back sapper would
+  // (yard + half the walk, no knock pause), rejoins and the squad finishes.
+  const Kb = E.sim(E.compile(ARCH([[[1, 6]], [[7, 3]], [], [], []])), N); pat(Kb, 0); const walk = Kb.q2[id] - Kb.q1[id] - TM.knockMs;
+  S.clearLog(); S.play(1); let tf = -1; for (let t = S.now; t < S.now + 30000 && tf < 0; t += 10) { S.advanceTo(t); if (evs(S, E.EV.TOWER).length) tf = S.now; }
+  const rel = evs(S, E.EV.REL), typ = []; for (let i = 0; i < S.evLen; i += 3) typ.push(S.ev[i]);
+  eq([rel, S.pins, S.q1[id], S.q2[id] - S.q1[id], typ.indexOf(E.EV.TOWER) < typ.indexOf(E.EV.REL)], [[[id, 0]], 0, tf, walk, true], "pin (v6 1b): the tower falls: REL after TOWER, released at that instant, home after the walk back (" + walk + " ms)");
+  S.quiet(); eq([S.status, S.kills], [E.WON, 0], "pin (v6 1b): released, it rejoins; the level wins");
+  const R1 = Ref.game(P([[[1, 6]], [[7, 3]], [], [], []]), N); R1.play(0); R1.quiet(); const r1 = [R1.pins, R1.status]; R1.play(1); R1.quiet();
+  eq([r1, R1.pins, R1.status, R1.now], [[1, "playing"], 0, "won", S.now], "pin (v6 1b, reference): pinned, released, won at the same time");
+  // A tower already down when the arrow lands: only knocked back (HIT, no PIN).
+  const X = E.sim(E.compile(P([[[1, 6]], [[7, 3]], [], [], []])), N); X.logOn = true; X.play(1, 0); X.play(0, 500); X.quiet();
+  eq([X.hits, evs(X, E.EV.PIN).length, evs(X, E.EV.HIT).length, X.status], [1, 0, 1, E.WON], "pin (v6 1b): the shooter fell before the arrow landed: a plain knock back");
+  // One space: the pinned squad holds it, the tower card can't go out: a jam (bit 8), the squad not stuck. A legitimate loss.
+  const J = E.sim(E.compile(P([[[1, 6]], [[7, 3]], [], [], []])), hold(1)); pat(J, 0);
+  eq([J.status, J.reason, J.jamWhy, J.stuck(0), J.pins], [E.FAILED, "jam", 8, false, 1], "pin (v6 1b): a line held by a pinned squad with the tower's card refused: jam, jamWhy 8");
+  const RJ = Ref.game(P([[[1, 6]], [[7, 3]], [], [], []]), hold(1)); RJ.play(0); RJ.quiet();
+  eq([RJ.status, RJ.reason, RJ.jamWhy, RJ.pins], ["failed", "jam", 8, 1], "pin (v6 1b, reference): the same jam");
+  // The continue finishes the pinned squad: its waiting and pinned sappers' worth of a blocks cleared, the pinned one cut
+  // loose (REL id -1), the space free; the tower then goes out and the level wins.
+  const C = E.sim(E.compile(P([[[1, 6]], [[7, 3]], [], [], []])), Object.assign({}, hold(1), { continues: 1 })); C.logOn = true; pat(C, 0); C.clearLog();
+  eq([C.revive(), evs(C, E.EV.REL).length && evs(C, E.EV.REL)[0][1], evs(C, E.EV.CLEAR).length, C.pins, C.lineLen], [E.PLAYING, -1, 2, 0, 0], "pin (v6 1b): the continue clears 2 blocks (1 waiting + 1 pinned), cuts the pinned sapper loose, frees the space");
+  eq(pat(C, 1), E.WON, "pin (v6 1b): after the continue the tower goes out and the level wins");
+  const RC = Ref.game(P([[[1, 6]], [[7, 3]], [], [], []]), Object.assign({}, hold(1), { continues: 1 })); RC.play(0); RC.quiet(); RC.revive(); RC.play(1); RC.quiet();
+  eq([RC.status, RC.cleared, RC.now], ["won", 2, C.now], "pin (v6 1b, reference): the same continue");
+  // Dealing mode: any hit still fails the deal.
+  const D = E.sim(E.compile(P([[], [], [], [], []])), N, { deal: true }); D.playSquad(1, 6); D.quiet();
+  eq([D.status, D.reason], [E.FAILED, "hit"], "pin (v6 1b, dealing mode): a hit fails the deal");
+}
+
+// ---- Campaign v6 stage 1: two locks (level locks: [lock, lock]) ------------------------------------------------------------
+{
+  const G2 = ["......", "aaabbb", "......", "cn....", "......", "..##.."], C2 = [[[14, 1]], [[1, 3]], [[2, 3]], [[3, 1]], []];
+  throws(() => E.compile(lv(G2, C2, { lock: { colour: 3 }, locks: [{ key: [1, 3] }] })), "locks (v6): lock and locks both throws");
+  throws(() => E.compile(lv(G2, C2, { locks: [] })), "locks (v6): an empty list throws");
+  throws(() => E.compile(lv(G2, C2, { locks: [{ colour: 1 }, { colour: 2 }, { colour: 3 }] })), "locks (v6): three throws");
+  throws(() => E.compile(lv(G2, C2, { locks: [{ colour: 1 }, { colour: 1 }] })), "locks (v6): two on one colour throws");
+  throws(() => E.compile(lv(G2, C2, { locks: [{ key: [1, 3] }, { key: [1, 3] }] })), "locks (v6): two on one key throws");
+  // One lock as a list plays exactly as lock: {...} (every event, on a game that opens it).
+  const run = (L) => { const S = E.sim(E.compile(L), hold(4)); S.logOn = true; for (const j of [0, 1, 2, 3]) S.play(j, 0); S.quiet(); return [S.status, S.now, Array.from(S.ev.subarray(0, S.evLen)).join()]; };
+  eq(run(lv(G2, C2, { locks: [{ key: [1, 3] }] })), run(lv(G2, C2, { lock: { key: [1, 3] } })), "locks (v6): locks: [one] is lock: one, event for event");
+  const B = E.compile(lv(G2, C2, { locks: [{ colour: 3 }, { key: [1, 3] }] }));
+  eq([B.nlocks, Array.from(B.lockK), Array.from(B.lockM), B.lockKey, B.lockMat, B.lockOf[3 * 6 + 1]], [2, [-1, 19], [3, 0], -1, 3, 1], "locks (v6): compile lists each lock's key and colour (lockKey/lockMat are lock 0's)");
+  // 4 spaces, 2 open: space 2 is lock 0's (colour c), space 3 lock 1's (the key). The Looters and a take 0 and 1. The key
+  // pops first: lock 1 opens alone, space 3 is open while space 2 stays shut.
+  const S = E.sim(B, hold(4)); S.logOn = true;
+  eq([S.cap, S.open, S.locked, [0, 1, 2, 3].map(S.shutAt), S.lockShut(0), S.lockShut(1)], [4, 2, 2, [0, 0, 1, 2], true, true], "locks (v6): 2 of 4 open; the last two shut, lock 0 left of lock 1");
+  S.play(0, 0); S.play(1, 0); S.advanceTo(S.q1[0]);
+  eq([S.open, S.locked, [0, 1, 2, 3].map(S.shutAt), evs(S, E.EV.UNLOCK), S.lockShut(0), S.lockShut(1)], [3, 1, [0, 0, 1, 0], [[19, 0]], true, false], "locks (v6): the key pops: lock 1 opens its own space (3); lock 0's space 2 stays shut");
+  // b takes the free space 0 (the Looters' block is picked up); c takes the lowest space that is neither held nor shut
+  // (3), then its colour opens lock 0 (UNLOCK -1 3 after the TAP).
+  S.clearLog(); S.play(2); S.play(3);
+  const typ = []; for (let i = 0; i < S.evLen; i += 3) typ.push(S.ev[i]);
+  eq([evs(S, E.EV.TAP), evs(S, E.EV.UNLOCK), typ.lastIndexOf(E.EV.TAP) < typ.indexOf(E.EV.UNLOCK), S.open, S.locked, [0, 1, 2, 3].map(S.shutAt)], [[[0, 2], [3, 3]], [[-1, 3]], true, 4, 0, [0, 0, 0, 0]], "locks (v6): c takes space 3 past the shut space 2, then opens lock 0");
+  S.quiet(); eq(S.status, E.WON, "locks (v6): the level wins");
+  const R = Ref.game(lv(G2, C2, { locks: [{ colour: 3 }, { key: [1, 3] }] }), hold(4)); R.play(0, 0); R.play(1, 0); R.advanceTo(540);
+  const r1 = [R.open, R.locked]; R.play(2); R.play(3); const r2 = [R.open, R.locked, R.spaces.map((x, i) => (x ? i : -1)).filter((i) => i >= 0)]; R.quiet();
+  eq([r1, r2, R.status], [[3, 1], [4, 0, [0, 1, 3]], "won"], "locks (v6, reference): the same spaces");
+  // A pair whose two squads are both lock colours opens both, the tapped squad's lock first.
+  const P = E.sim(E.compile(lv(["abc...", "......", "..##.."], [[[1, 1]], [[2, 1]], [[3, 1]], [], []], { locks: [{ colour: 2 }, { colour: 1 }], links: [[[0, 0], [1, 0]]] })), hold(5)); P.logOn = true; P.play(0, 0);
+  eq([evs(P, E.EV.UNLOCK), P.locked, P.open], [[[-1, 1], [-1, 2]], 0, 5], "locks (v6): a pair of both lock colours opens both (a's lock, then b's)");
+  // At rest with a lock still shut and no tap: jam, jamWhy 2.
+  const J = E.sim(E.compile(lv(["aab...", "......", "..##.."], [[[4, 1], [2, 1]], [[5, 1]], [[1, 2]], [[6, 1]], []], { locks: [{ colour: 2 }, { colour: 6 }] })), hold(4));
+  pat(J, 0); pat(J, 1);
+  eq([J.status, J.reason, J.jamWhy & 2, J.locked], [E.FAILED, "jam", 2, 2], "locks (v6): two stuck squads fill the 2 open spaces with both locks shut: jam, jamWhy 2");
 }
 
 // ---- v5 R1: the continue on a jam ----------------------------------------------------------------------------------------
@@ -691,6 +820,7 @@ function inject(L0, seed) {
     used.add(j + "," + i); used.add(k + "," + q); links.push(r() < 0.5 ? [[j, i], [k, q]] : [[k, q], [j, i]]);
   }
   L.links = links;
+  if (L.locks) { L.lock = L.locks[0]; delete L.locks; } // campaign v6: a level with two locks keeps its first here (the two-lock levels are injected below)
   if (r() < 0.6) {
     const B = E.compile(L), cells = [];
     for (let c = 0; c < B.n; c++) { const m = B.a0[c]; if (m > 0 && m !== E.IRON && m !== E.GILT && B.towerOf[c] < 0 && !(B.hid0 && B.hid0[c]) && L.cols.some((col) => col.some((cd) => cd[0] === m && cd[1] > 1))) cells.push(c); }
@@ -705,7 +835,19 @@ function inject(L0, seed) {
   return L;
 }
 const DEBUG = require("../levels/debug-v4.json").levels;
-const TWISTED = DEBUG.concat(LEVELS.levels.filter((l, k) => k % 2 === 1).map((l, k) => inject(l, 7001 + k)));
+// Campaign v6 stage 1: inject6(L, seed): a copy of a baked level made deadly (kill: true, when it has towers) and/or given
+// two locks (its own lock, or a colour lock, beside a colour lock of another card colour, in a random order).
+function inject6(L0, seed, kill, two) { // kill: "kill" or "pin" (stage 1b), or nothing
+  const L = JSON.parse(JSON.stringify(L0)), r = Gr.rng(seed); delete L.win; delete L.grade;
+  if (kill) L.archers = kill;
+  if (two && !L.locks) { const ms = []; L.cols.forEach((col) => col.forEach((cd) => { if (ms.indexOf(cd[0]) < 0 && cd[0] !== E.GILT && !(L.lock && L.lock.colour === cd[0])) ms.push(cd[0]); }));
+    const a = L.lock || { colour: ms.splice(Math.floor(r() * ms.length), 1)[0] }, b = { colour: ms[Math.floor(r() * ms.length)] };
+    delete L.lock; L.locks = r() < 0.5 ? [a, b] : [b, a]; }
+  return L;
+}
+const V6 = LEVELS.levels.filter((l) => l.towers && l.towers.length).filter((l, k) => k % 9 === 2).map((l, k) => inject6(l, 9101 + k, k % 3 === 1 ? "kill" : "pin", k % 2 === 0))
+  .concat(LEVELS.levels.filter((l) => l.n >= 50 && !(l.towers && l.towers.length)).filter((l, k) => k % 12 === 5).map((l, k) => inject6(l, 9301 + k, false, true)));
+const TWISTED = DEBUG.concat(LEVELS.levels.filter((l, k) => k % 2 === 1).map((l, k) => inject(l, 7001 + k)), V6);
 {
   let rests = 0, hangs = 0, games = 0, fails = { jam: 0, stuck: 0, short: 0 }, jam1 = 0, jam2 = 0;
   for (const L of TWISTED) {
@@ -729,6 +871,7 @@ const TWISTED = DEBUG.concat(LEVELS.levels.filter((l, k) => k % 2 === 1).map((l,
   eq(hangs, 0, "no hang: " + rests + " rest states in " + games + " random games on " + TWISTED.length + " twisted levels: every one is a win, a fail, or has a legal tap");
   ok(jam1 > 0 && jam2 > 0, "no hang: the games include jams where a linked card needed 2 spaces (" + jam1 + ") and jams with a space still locked (" + jam2 + "); fails " + JSON.stringify(fails));
   eq(TWISTED.slice(DEBUG.length).filter((L) => E.check(L).some((w) => /rows apart/.test(w))).length, 0, "inject: the random links keep to 2 rows apart");
+  ok(fails.short > 0, "no hang (v6): the killing-tower levels (" + TWISTED.filter((L) => L.archers === "kill").length + ") fail short in the run (" + fails.short + " games); two-lock levels: " + TWISTED.filter((L) => L.locks && L.locks.length === 2).length);
 }
 
 // ---- differential on twisted levels: engine vs the reference, patient and rushed ------------------------------------------
@@ -940,7 +1083,7 @@ const CV = require("./convert.js"), GCFG = require("./gallery-config.json"), PAL
   for (const L of GL) {
     const B = E.compile(L), used = new Set(); for (const row of L.grid) for (const ch of row) { const m = E.matOf(ch); if (m) used.add(m); }
     const ids = Object.keys(L.pal).map(Number).sort((a, b) => a - b), pic = MAN.pictures.find((p) => p.id === L.src);
-    if (!B.pic || E.check(L).length || L.links || L.lock || (L.gates && L.gates.length) || (L.towers && L.towers.length) || L.cols.some((c) => c.some((cd) => cd[2]))) bad.push(L.id + ": not a plain picture board");
+    if (!B.pic || E.check(L).length || (L.gates && L.gates.length) || (L.towers && L.towers.length) || (pic.kind !== "outlined" && (L.links || L.lock || L.cols.some((c) => c.some((cd) => cd[2]))))) bad.push(L.id + ": not a plain picture board"); // campaign v6: a new (outlined) quest may carry its slot's features (tools/quest-bake.js gates)
     if (ids.join() !== [...used].sort((a, b) => a - b).join() || ids.some((m) => m === E.IRON || m === E.GILT)) bad.push(L.id + ": palette ids " + ids + " vs grid " + [...used]);
     for (let m = 1; m < E.NMAT; m++) if (B.sapTotal[m] !== B.pix[m]) bad.push(L.id + ": colour " + m + " has " + B.sapTotal[m] + " sappers for " + B.pix[m] + " pixels");
     const d = L.tag, g = L.grade[d] || {}; // v4.3: one fixed tag, one stored order
@@ -949,13 +1092,13 @@ const CV = require("./convert.js"), GCFG = require("./gallery-config.json"), PAL
     if (g.rate >= L.target[0] && g.rate <= L.target[1]) band++;
     const hx = ids.map((m) => L.pal[m].c); let lmin = 99, fmin = 99;
     for (let a = 0; a < hx.length; a++) for (let b = a + 1; b < hx.length; b++) { lmin = Math.min(lmin, PAL.de00(PAL.lab(hx[a]), PAL.lab(hx[b]))); for (let d = 1; d < T.length; d++) fmin = Math.min(fmin, PAL.de00(PAL.lab(fadeHex(hx[a], T[d])), PAL.lab(hx[b])), PAL.de00(PAL.lab(fadeHex(hx[b], T[d])), PAL.lab(hx[a]))); }
-    const want = pic.kind === "painting" ? GCFG.convert.kinds.painting.minDE : GCFG.convert.minDE; if (lmin < want) bad.push(L.id + ": colours only " + lmin.toFixed(1) + " apart"); dmin = Math.min(dmin, lmin);
-    if (pic.kind !== "painting") { dminFade = Math.min(dminFade, fmin); if (fmin < GCFG.convert.fadeDE) bad.push(L.id + ": a faded tile only " + fmin.toFixed(1) + " from a front colour"); }
+    const KD = GCFG.convert.kinds[pic.kind] || {}, want = KD.minDE || GCFG.convert.minDE, fwant = KD.fadeDE === 0 ? KD.fadeFloor : GCFG.convert.fadeDE; if (lmin < want) bad.push(L.id + ": colours only " + lmin.toFixed(1) + " apart"); dmin = Math.min(dmin, lmin);
+    if (pic.kind !== "painting") { dminFade = Math.min(dminFade, fmin); if (fmin < fwant) bad.push(L.id + ": a faded tile only " + fmin.toFixed(1) + " from a front colour"); }
     if (!pic.license || !(pic.url || (pic.prompt && pic.seed != null && pic.model)) || !(pic.fetched || pic.generated) || LIC.indexOf(pic.id) < 0) bad.push(L.id + ": manifest or LICENSES.md line missing");
   }
   for (let i = 0; i < GL.length; i++) for (let j = i + 1; j < GL.length; j++) { const A = GL[i], Bq = GL[j]; if (A.w !== Bq.w || A.h !== Bq.h) continue; let same = 0; for (let y = 0; y < A.h; y++) for (let x = 0; x < A.w; x++) if (A.grid[y][x] === Bq.grid[y][x]) same++; if (same / (A.w * A.h) >= GB.dedupe) bad.push(A.id + " and " + Bq.id + " are near-duplicates"); }
   ms.sort((a, b) => a - b);
-  eq(bad, [], "gallery: every level is a plain picture board whose palette is exactly its colours (never 10 or 14), sappers sum to pixels, stored orders win on each picture's tag, colours " + GCFG.convert.minDE + " apart (paintings " + GCFG.convert.kinds.painting.minDE + "; smallest " + dmin.toFixed(1) + "), faded tiles " + GCFG.convert.fadeDE + " apart (not paintings; smallest " + dminFade.toFixed(1) + "), a manifest and LICENSES.md line each, no near-duplicates");
+  eq(bad, [], "gallery: every level is a picture board (plain, but a campaign v6 outlined quest's planned features) whose palette is exactly its colours (never 10 or 14), sappers sum to pixels, stored orders win on each picture's tag, colours " + GCFG.convert.minDE + " apart (paintings and outlined " + GCFG.convert.kinds.painting.minDE + "; smallest " + dmin.toFixed(1) + "), faded tiles " + GCFG.convert.fadeDE + " apart (outlined " + GCFG.convert.kinds.outlined.fadeFloor + "; not paintings; smallest " + dminFade.toFixed(1) + "), a manifest and LICENSES.md line each, no near-duplicates");
   eq([wins, dead, taps, over, band], [GL.length, 0, 0, 0, GL.length], "gallery: " + wins + " stored orders win; every stored line under " + GB.maxWaitMs / 1000 + " s a tap, " + GB.maxTaps + " taps and " + (GB.duration.pace ? GB.duration.pace.range[1] / 1000 + " s of real pace; patient" : GB.duration.maxMs / 1000 + " s") + " (median " + (ms[(ms.length - 1) >> 1] / 1000).toFixed(0) + " s, max " + (ms[ms.length - 1] / 1000).toFixed(0) + " s); every level in its Normal band");
   // Engine vs the slow reference on the Gallery's picture boards: Normal patient and rushed on every level, Easy and Hard
   // patient on every fourth.
@@ -1121,6 +1264,15 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
   // A gilt Volley removes keys: the gate opens.
   const G = E.sim(E.compile(lv(["ajjjb", "jjjjj", ".....", "n.##."], [[[14, 1]], [[1, 1]], [[2, 1]], [], []], { gates: [{ at: [1, 0], key: [0, 3] }] })), VR);
   G.power(PW.VOLLEY, 14); eq([G.left[10], G.left[14]], [0, 0], "volley: on gilt, the key goes and its gate opens");
+}
+// v6 1b: a Volley of a pinned squad's colour cuts the pinned sapper loose (REL id -1); its squad leaves the line.
+{
+  const L = ARCH([[[1, 6]], [[7, 3]], [], [], []], { archers: "pin" }), S = E.sim(E.compile(L), phold(5, [0, 0, 0, 0, 1])); S.logOn = true; pat(S, 0); S.clearLog();
+  const r = S.power(PW.VOLLEY, 1), rel = evs(S, E.EV.REL);
+  eq([r, rel.length, rel.length && rel[0][1], S.pins, S.lineLen, S.left[1]], [E.PLAYING, 1, -1, 0, 0, 0], "volley (v6 1b): the pinned a sapper is cut loose (REL -1), the a squad leaves the line, every a block goes");
+  S.quiet(); eq(pat(S, 1), E.WON, "volley (v6 1b): the tower goes out and the level wins");
+  const R = Ref.game(L, phold(5, [0, 0, 0, 0, 1])); R.play(0); R.quiet(); R.power(4, 1); R.quiet(); R.play(1); R.quiet();
+  eq([R.status, R.pins, R.now], ["won", 0, S.now], "volley (v6 1b, reference): the same game");
 }
 // ---- every operation: dealing, game over, determinism ------------------------------------------------------------------------
 {
@@ -1328,22 +1480,23 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   eq([s0, s1, s2, s3, s4, Save.nextBy(D, gal, "gal", (id) => Save.questOpen(D, order, gal, after, id))], [[false, false, false, false], [true, false, false, false], [true, true, false, false], [true, true, true, false], [true, true, true, true], "p1"],
     "side quests: a picture opens once its main level is cleared (optional, never blocking); past the last level they open once all are cleared, one at a time; nextBy finds the first open one not cleared");
   const G = Save.fresh(META); G.inv.recall = 98; eq([Meta.gift(G, "scout"), G.inv.scout, Meta.gift(G, "recall"), Meta.gift(G, "recall"), G.inv.recall, Meta.gift(G, "nope")], [true, 1, true, false, 99, false], "side quests: a prize adds one use (capped at 99; unknown ids refused)");
-  defer("side quests: every Gallery picture carries its quest", () => { const GL = castleGal(); eq(GL.map((l) => l.quest), q, "side quests: levels/gallery.json carries each picture's quest {after, prize} as tools/quests.js deals them"); });
+  defer("side quests: every Gallery picture carries its quest", () => { const GL = castleGal(); eq(GL.map((l) => l.quest), q.slice(0, GL.length), "side quests: levels/gallery.json carries each picture's quest {after, prize} as tools/quests.js deals them (campaign v6: " + GL.length + ")"); });
   // v5 R4: pictures 26-50 sit after levels 104-200, which now exist; they open off them one by one. 51-60 (after 203-240)
   // are the long tail: they wait until all 200 levels are cleared, then open one at a time.
-  const GL4 = castleGal(), ord = LEVELS.levels.map((l) => l.id), gid = GL4.map((l) => l.id), aft = GL4.map((l) => l.quest.after), R4 = Save.fresh(META), qo = (i) => Save.questOpen(R4, ord, gid, aft, gid[i]);
+  const GL4 = tailGal(), ord = LEVELS.levels.map((l) => l.id), gid = GL4.map((l) => l.id), aft = GL4.map((l) => l.quest.after), R4 = Save.fresh(META), qo = (i) => Save.questOpen(R4, ord, gid, aft, gid[i]);
   for (let i = 0; i < 100; i++) R4.done[ord[i]] = 1;
   const mid = gid.map((id, i) => i).filter((i) => aft[i] > 100 && aft[i] <= ord.length), tailI = gid.map((id, i) => i).filter((i) => aft[i] > ord.length), r0 = mid.map(qo);
   for (let i = 100; i < 150; i++) R4.done[ord[i]] = 1; const r1 = mid.map(qo), t1 = tailI.map(qo); for (const id of ord) R4.done[id] = 1; const r2 = mid.map(qo), t2 = tailI.map(qo);
   eq([mid.map((i) => i + 1), [aft[mid[0]], aft[mid[mid.length - 1]]], r0.some(Boolean), r1.filter(Boolean).length, mid.filter((i) => aft[i] <= 150).length, t1.some(Boolean), r2.every(Boolean), tailI.map((i) => i + 1), t2],
     [Array.from({ length: 25 }, (_, k) => k + 26), [104, 200], false, mid.filter((i) => aft[i] <= 150).length, mid.filter((i) => aft[i] <= 150).length, false, true, Array.from({ length: 10 }, (_, k) => k + 51), [true].concat(Array(9).fill(false))],
-    "side quests (v5 R4): pictures 26-50 open off levels 104-200 as each is cleared (shut with 1-100 cleared, open through 150 with 1-150); 51-60 are the long tail: shut until all 200 are cleared, then one at a time");
+    "side quests (v5 R4): pictures 26-50 open off levels 104-200 as each is cleared (shut with 1-100 cleared, open through 150 with 1-150); 51-60 (v6: stand-ins) are the long tail: shut until all 200 are cleared, then one at a time");
+  eq([castleGal().length, castleGal().filter((l) => l.quest.after > 200).length], [50, 0], "side quests (campaign v6): 50, every one after a level by 200: the castle has no long tail");
 }
 
 // ---- v5 R3: the journey map (src/journey.js; meta.js egg; the save's eggs; config map against map/layout.json) -----------------
 {
   const Save = require("../src/save.js"), Meta = require("../src/meta.js"), J = require("../src/journey.js"), LAY = castleLay(), MC = require("../config.json").map;
-  const GL = castleGal(), order = LEVELS.levels.map((l) => l.id), gids = GL.map((l) => l.id), after = GL.map((l) => (l.quest ? l.quest.after : 0));
+  const GL = tailGal(), order = LEVELS.levels.map((l) => l.id), gids = GL.map((l) => l.id), after = GL.map((l) => (l.quest ? l.quest.after : 0)); // campaign v6: v5's shape (the long tail's stand-ins)
   // Eggs pay once: the first tap pays its coins and marks it found; a second pays nothing; the save keeps them.
   const D = Save.fresh(META), c0 = D.coins, p1 = Meta.egg(D, "s1-0", 12), p2 = Meta.egg(D, "s1-0", 12), p3 = Meta.egg(D, "s1-1", 5000);
   eq([p1, p2, p3, D.coins - c0, D.eggs], [12, 0, 999, 12 + 999, { "s1-0": 1, "s1-1": 1 }], "eggs: an egg pays its coins on the first tap only (capped at 999 a tap) and is marked found");
@@ -1553,7 +1706,7 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
     [668, 168, [368, 520], 718, [384, 468, 384], [384, 1344], [384, 0], 568, 900, true, true, true, 668, 100], "lands (map): a mirrored entry's marks sit at 768 - x (the road still meets x = 384), y unchanged; mirrored twice it is itself; nothing else is touched");
   // The long tail moves past the last land: castle pictures 26-50 keep their levels, 51-60 (past 200) move on by however
   // far the lands reach; a land's own quests never move; with the castle alone nothing changes.
-  const GL = castleGal(), aft = GL.map((l) => l.quest.after), sh = (last) => aft.map((a) => J.tailAfter(a, LC.castleEnd, last));
+  const GL = tailGal(), aft = GL.map((l) => l.quest.after), sh = (last) => aft.map((a) => J.tailAfter(a, LC.castleEnd, last)); // campaign v6: v5's shape
   const order250 = Array.from({ length: 250 }, (_, i) => "x" + i), gid = GL.map((l) => l.id).concat(["w1", "w2"]), af250 = sh(250).concat([204, 208]), T0 = require("../src/save.js").fresh(META);
   for (const id of order250) T0.done[id] = 1; const tl = J.tail(T0, order250, gid, af250);
   eq([sh(200).join() === aft.join(), sh(250).slice(25, 50).join() === aft.slice(25, 50).join(), sh(250).slice(50).map((a, i) => a - aft[50 + i]), tl.ids.length, tl.ids[0] === GL[50].id, J.landOf({ list: [{ k: 1, from: 201, to: 250 }] }, 230).k, J.landOf({ list: [] }, 230)],
@@ -1656,7 +1809,9 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
     eq([c.lands.list.slice(-1)[0].name, c.map.eggCoins.length - CFG.map.eggCoins.length, a.replace(/,?\n      \{"k":9,"name":"T"\}/, "").replace(", [10,11], [12,13]", "") === t], ["T", 2, true], "lands (install): the land goes into config lands.list and a row per new sheet into map.eggCoins, nothing else changes"); }
   // The freeze: the shipped campaign and pictures are the snapshot's, byte for byte, whatever lands follow them.
   { const dir = path.join(__dirname, "..", CFG.v5.freeze.dir), FL = JSON.parse(fs.readFileSync(path.join(dir, "levels.json"), "utf8")).levels, FG = JSON.parse(fs.readFileSync(path.join(dir, "gallery.json"), "utf8")).levels, G2 = require("../levels/gallery.json").levels;
-    eq([FL.length >= 200, FL.every((l, i) => JSON.stringify(l) === JSON.stringify(LEVELS_ALL.levels[i])), FG.length, FG.every((l, i) => JSON.stringify(l) === JSON.stringify(G2[i]))], [true, true, 60, true], "freeze: levels 1-" + FL.length + " and pictures 1-60 in the game are the frozen snapshot's, byte for byte"); }
+    // Campaign v6: the snapshot was re-taken after the fix-pass merge (2026-10-07; the one-time lift for the re-deal and the
+    // side quests is gone), so every level and picture is the snapshot's byte for byte again.
+    eq([FL.length >= 250, FL.every((l, i) => JSON.stringify(l) === JSON.stringify(LEVELS_ALL.levels[i])), FG.length, FG.every((l, i) => JSON.stringify(l) === JSON.stringify(G2[i]))], [true, true, 62, true], "freeze: levels 1-" + FL.length + " and pictures 1-" + FG.length + " (the 50 side quests and 12 wander pictures) in the game are the frozen snapshot's, byte for byte"); }
   // Every built land: its levels, side quests and sheets.
   for (const d of LC.list) {
     const LV = LEVELS_ALL.levels.filter((l) => l.land === d.k), GV = require("../levels/gallery.json").levels.filter((l) => l.land === d.k), lj = JSON.parse(fs.readFileSync(path.join(__dirname, "lands", d.slug, "land.json"), "utf8")), PP = LP.profileOf(lj, LCF), era = LC.castleRealms + d.k;
@@ -1681,11 +1836,11 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   const fs = require("fs"), path = require("path"), S = require("../src/save.js"), Z = JSON.parse(fs.readFileSync(path.join(__dirname, "../levels/zen.json"), "utf8")), CFG = require("../config.json");
   const ALLG = require("../levels/gallery.json").levels, LAY = require("../map/layout.json"), BC = require("./bake-config.json"), LP = require("./land-plan.js");
   const W1 = Z.levels.filter((L) => L.world === 1), took = new Set(W1.map((L) => L.from)), wl = JSON.parse(fs.readFileSync(path.join(__dirname, "lands/z1-gallery/world.json"), "utf8"));
-  eq([Z.worlds.map((w) => [w.k, w.name, !!w.land]), W1.length, W1.every((L, i) => L.id === "z1-" + (i + 1) && L.n === i + 1 && L.era === Z.worlds[0].era && ALLG.some((g) => g.id === L.from && g.title === L.title && g.credit === L.credit && !g.land)), took.size],
-    [[[1, "The Gallery", false], [2, "Kitten Forest", true]], 36, true, 36], "zen.json: World 1 The Gallery (36 records z1-1..z1-36, each a castle Gallery picture with its title and credit), World 2 Kitten Forest (land 1)");
+  eq([Z.worlds.map((w) => [w.k, w.name, !!w.land]), W1.length, W1.every((L, i) => L.id === "z1-" + (i + 1) && L.n === i + 1 && L.era === Z.worlds[0].era && require("./campaign-quests/quests.json").v5Places.includes(L.from) && !ALLG.some((g) => g.id === L.from) && !!L.title && !!L.credit), took.size],
+    [[[1, "The Gallery", false], [2, "Kitten Forest", true]], 36, true, 36], "zen.json: World 1 The Gallery (36 records z1-1..z1-36, each one of v5.4's castle Gallery pictures, gone from the campaign's gallery.json, with its title and credit), World 2 Kitten Forest (land 1)"); // v6 merge: the 36 left gallery.json
   const pinned = ["Goblin's Lunch", "Sir Whiskers", "Night Watch", "Frog Prince", "Duck Knight", "Crown Too Big", "Cake Castle", "Mimic", "Melon Catapult", "Happy Potion", "Iron Pig", "Mushroom House", "The Sapper", "Hatchling", "Plumed Helm", "Sheep Knight", "Sword in the Stone", "Party Slime", "Wise Old Owl", "Goblin King's Hoard", "Unicorn", "Castle", "Dragon", "Crown"];
-  const stay = ALLG.filter((g) => g.n <= 60 && !took.has(g.id)).map((g) => g.title).sort();
-  eq(stay, pinned.slice().sort(), "zen World 1 (Step 0, Peter 10/6): the campaign keeps exactly the 24 on-theme pictures; the other 36 are World 1's");
+  const camp = ALLG.filter((g) => !g.land), stay = camp.filter((g) => !/^g-ours-cq/.test(g.id)).map((g) => g.title).sort(); // v6 merge: lane A's 50
+  eq([stay, camp.length, camp.filter((g) => /^g-ours-cq/.test(g.id)).length, camp.some((g) => took.has(g.id))], [pinned.slice().sort(), 50, 26, false], "zen World 1 (Step 0, Peter 10/6; v6 merge): the campaign's 50 side quests are the 24 on-theme pictures kept and lane A's 26 new ones; the other 36 are World 1's only");
   { const rg = require("./regrade.js").regrade(W1, BC, V3, true), bad = W1.filter((L) => E.replay(E.compile(L), E.rulesOf(V3, L.tag), L.win[L.tag]).status !== E.WON || L.win[L.tag].length > 55 || L.grade[L.tag].maxWait > 15000 || L.lock || L.tag === "extreme" || L.fallback || !L.grade[L.tag].steady || L.grade[L.tag].steady.gap > 15000).map((L) => L.id);
     const P = LP.profileOf(wl, require("./land-config.json")), pc = LP.planCheck(W1, wl, P, CFG.v5.density, CFG.lands.perLand), sh = LP.sharesOf(W1);
     eq([bad, rg.diffs, pc, sh.extreme, sh.lock, sh.easy + sh.normal >= 0.85], [[], 0, [], 0, 0, true], "zen World 1: every level wins on its stored order, at most 55 taps, no wait over 15 s (steady too), no lock, no Extreme, no fallback; re-grade 0 differences; the casual profile (Easy " + sh.easy + ", Normal " + sh.normal + ", Hard " + sh.hard + ")"); }
@@ -1703,7 +1858,7 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
     eq([camp.coins, camp.inv.ladder, "coins" in back, back.done[order[0]], JSON.parse(m.getItem("c")).coins, S.openZen({ getItem: () => { throw 1; }, setItem: () => { throw 1; } }, "z", order, gz, () => camp, null).data.moved], [CFG.meta.coins.start + 50, 3, false, 1, CFG.meta.coins.start + 50, 0], "zen save: the wallet writes through to the Campaign save (shared coins and power-ups), the Zen key holds progress only; a blocked store opens fresh"); }
   // The one-time move on each shape: fresh, format 1 (v3/v4 masks), format 2, a renamed slot (v5 R3), twice.
   const SH = LAY.sheets.filter((s) => s.land === 1), spec = { pics: W1.map((L) => [L.from, L.id]), levels: KF, quests: gz, eggs: SH.flatMap((s, i) => s.eggs.map((g, j) => ["s" + s.sheet + "-" + j, "z2-" + (i + 1) + "-" + j])) };
-  const ALLO = LEVELS_ALL.levels.map((l) => l.id), ALLGI = ALLG.map((g) => g.id), mv = (rawC) => { const c = S.sanitize(rawC, ALLO, ALLGI, CFG.meta), z = S.zenFresh(); const n = S.zenMove(c, z, spec); return { c, z, n }; };
+  const ALLO = LEVELS_ALL.levels.map((l) => l.id), ALLGI = ALLG.map((g) => g.id), mv = (rawC) => { const c = S.sanitize(rawC, ALLO, ALLGI, CFG.meta), z = S.zenFresh(); const n = S.zenMove(rawC, z, spec) + S.zenMove(c, z, spec); return { c, z, n }; }; // as the page: the raw save first (the 36 left gallery.json), then the sanitized one
   { const a = mv(null), b = mv({ done: { [KF[0]]: 7, "e1-01": 1 }, gal: { [W1[2].from]: 1, [gz[1]]: 4 }, eggs: { "s27-1": 1 } }), c = mv({ v: 2, done: { [KF[0]]: 1, [KF[1]]: 1 }, best: { [KF[1]]: [9, 8, 7] }, gal: { [W1[0].from]: 1 }, last: KF[1] });
     const twice = JSON.stringify(c.z), n2 = S.zenMove(c.c, c.z, spec);
     eq([a.n, Object.keys(a.z.done).length, a.z.moved, b.n, Object.keys(b.z.done).sort(), Object.keys(b.z.gal), Object.keys(b.z.eggs), b.c.done[KF[0]], b.c.gal[gz[1]], c.n, c.z.best[KF[1]], c.z.last, n2, JSON.stringify(c.z) === twice],
@@ -1744,11 +1899,13 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
 {
   const fs = require("fs"), path = require("path"), S = require("../src/save.js"), JN = require("../src/journey.js"), CFG = require("../config.json");
   const PL = JSON.parse(fs.readFileSync(path.join(__dirname, "../levels/places.json"), "utf8")), places = PL.places, v5 = places.slice(0, PL.v5);
-  const LA = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/lane-a-gallery.json"), "utf8")).levels, LAI = LA.map((g) => g.id);
+  // v6 merge: the same proof on lane A's gallery at f4b4a60 (the fixture) and on the merged tree's own gallery.json.
+  for (const [where, LA] of [["lane A at f4b4a60", JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/lane-a-gallery.json"), "utf8")).levels], ["the merged gallery.json", require("../levels/gallery.json").levels]]) {
+  const LAI = LA.map((g) => g.id), tag = (t) => t + " (" + where + ")";
   const CUR = require("../levels/gallery.json").levels, CURI = CUR.map((g) => g.id), FROZ = JSON.parse(fs.readFileSync(path.join(__dirname, "../levels/frozen/gallery.json"), "utf8")).levels.map((g) => g.id);
   const Z = JSON.parse(fs.readFileSync(path.join(__dirname, "../levels/zen.json"), "utf8")), W1 = Z.levels.filter((L) => L.world === 1), LAY = require("../map/layout.json");
   const ALLO = LEVELS_ALL.levels.map((l) => l.id), KF = LEVELS_ALL.levels.filter((l) => l.land === 1).map((l) => l.id);
-  eq([PL.v5, v5.length, JSON.stringify(v5) === JSON.stringify(FROZ.concat(CUR.filter((g) => g.land === 1).map((g) => g.id))), new Set(places).size === places.length, CURI.every((id) => places.includes(id)), LAI.every((id) => places.includes(id)), W1.every((L) => v5.includes(L.from))],
+  eq([PL.v5, v5.length, JSON.stringify(v5) === JSON.stringify(require("./campaign-quests/quests.json").v5Places), new Set(places).size === places.length, CURI.every((id) => places.includes(id)), LAI.every((id) => places.includes(id)), W1.every((L) => v5.includes(L.from))],
     [72, 72, true, true, true, true, true], "places.json: the first 72 are v5.4's Gallery order (the frozen 60, then the Wandering Gallery), no id twice, every picture of this branch and of lane A's gallery.json has a place, every World 1 source among v5's");
   // The page's move spec (main.js moveSpec) on lane A's data.
   const spec = { pics: W1.map((L) => [L.from, L.id]), levels: KF, quests: LA.filter((g) => g.land === 1).map((g) => g.id), eggs: LAY.sheets.filter((x) => x.land === 1).flatMap((x, i) => x.eggs.map((g, j) => ["s" + x.sheet + "-" + j, "z2-" + (i + 1) + "-" + j])) };
@@ -1759,23 +1916,23 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   const zenOnly = S.zenFresh(); S.zenMove(camp, zenOnly, spec);
   eq([Object.keys(camp.gal).sort(), Object.keys(camp.done).length, camp.coins, Object.keys(zen.done).sort(), Object.keys(zen.gal), Object.keys(zen.eggs), zen.best[KF[0]], !!zenOnly.done[pizza.id]],
     [[kept, poppy].sort(), 5, 640, [pizza.id, fox.id, KF[0], KF[1]].sort(), [poppy], ["z2-1-0"], [210000, 50, 30], false],
-    "merge: on lane A's build an old v5 save keeps its campaign clears (" + kept + ", 1-3) and wallet; the move reads the raw save, so Pizza Slice and Fox (gone from gallery.json) land in World 1 (" + pizza.id + ", " + fox.id + "), 201-202 and picture 61 in Zen (the sanitized save alone would have lost the two)");
+    tag("merge: on lane A's build an old v5 save keeps its campaign clears (") + kept + ", 1-3) and wallet; the move reads the raw save, so Pizza Slice and Fox (gone from gallery.json) land in World 1 (" + pizza.id + ", " + fox.id + "), 201-202 and picture 61 in Zen (the sanitized save alone would have lost the two)");
   // SP1: a code made on v5.4 (pictures by v5.4 place) read on lane A's build through places.json.
   const v54 = S.sanitize(raw, ALLO, v5, CFG.meta), sp1 = S.encode(v54, v5), Zc = { order: W1.map((L) => L.id).concat(KF), gal: spec.quests, zl: W1.map((L, i) => ({ id: L.id, w: 1, n: i + 1 })).concat(KF.map((id, i) => ({ id, w: 2, n: i + 1 }))) };
   const r1 = S.decodeAny(sp1, ALLO, LAI, CFG.meta, null, 20000, Zc, places), bad = S.decodeAny(sp1, ALLO, LAI, CFG.meta, null, 20000, Zc), z1 = S.zenFresh(); S.zenMove(r1.raw, z1, spec); S.zenMove(r1.data, z1, spec);
   eq([r1.ok, r1.code, Object.keys(r1.raw.gal).sort(), Object.keys(r1.data.gal).sort(), Object.keys(z1.done).sort(), Object.keys(z1.gal), JSON.stringify(Object.keys(bad.data.gal).sort()) === JSON.stringify([kept, poppy].sort())],
     [true, 1, [pizza.from, fox.from, kept, poppy].sort(), [kept, poppy].sort(), [pizza.id, fox.id, KF[0], KF[1]].sort(), [poppy], false],
-    "merge: an SP1 code made on v5.4 decodes on lane A's build to the right pictures (through places.json; read by lane A's order it would credit the wrong ones), the Campaign keeps " + kept + " and picture 61, the 36's go to World 1");
+    tag("merge: an SP1 code made on v5.4 decodes on lane A's build to the right pictures (through places.json; read by lane A's order it would credit the wrong ones), the Campaign keeps ") + kept + " and picture 61, the 36's go to World 1");
   // SP2 round trips under both Gallery orders (this branch's and lane A's): places.json, not gallery.json, numbers the pictures.
   const zz = S.zenFresh(); S.record(zz, pizza.id); S.record(zz, KF[4]); zz.gal[poppy] = 1; zz.best[KF[4]] = [111, 22, 3]; zz.last = KF[4];
   const cB = S.sanitize(raw, ALLO, CURI, CFG.meta), cA = S.sanitize(raw, ALLO, LAI, CFG.meta), codeB = S.encode2(cB, zz, places, Zc.zl), codeA = S.encode2(cA, zz, places, Zc.zl);
   const rd = (code, gal) => { const r = S.decodeAny(code, ALLO, gal, CFG.meta, null, 20000, Zc, places); return [Object.keys(r.data.gal).sort(), Object.keys(r.zen.done).sort(), Object.keys(r.zen.gal), r.zen.best[KF[4]], r.zen.last]; };
   eq([rd(codeB, CURI), rd(codeB, LAI), rd(codeA, LAI)], [[Object.keys(cB.gal).sort(), [pizza.id, KF[4]].sort(), [poppy], [111, 22, 3], KF[4]], [[kept, poppy].sort(), [pizza.id, KF[4]].sort(), [poppy], [111, 22, 3], KF[4]], [[kept, poppy].sort(), [pizza.id, KF[4]].sort(), [poppy], [111, 22, 3], KF[4]]],
-    "merge: SP2 round-trips on this branch's Gallery order and on lane A's, and a code made here loads there (the pictures numbered by places.json)");
+    tag("merge: SP2 round-trips on this branch's Gallery order and on lane A's, and a code made here loads there (the pictures numbered by places.json)"));
   // Zero tail: lane A's campaign has no picture past 200; journey.js and questOpen handle it.
   const cg = LA.filter((g) => !g.land), ids = cg.map((g) => g.id), af = cg.map((g) => g.quest.after), order = ALLO.filter((id) => !LEVELS_ALL.levels.find((l) => l.id === id).land), all = { done: Object.fromEntries(order.map((id) => [id, 1])), gal: {} };
   const t0 = JN.tail(all, order, ids, af), nq = JN.nearQuest(all, order, ids, af, order.length + 1);
-  eq([cg.length, af.every((a) => a >= 1 && a <= 200), t0.ids.length, t0.next, ids.every((id) => S.questOpen(all, order, ids, af, id)), !!nq], [50, true, 0, null, true, true], "merge: lane A's campaign (50 side quests, none past 200) has no long tail: journey.js tail is empty, every quest opens once its level is cleared");
+  eq([cg.length, af.every((a) => a >= 1 && a <= 200), t0.ids.length, t0.next, ids.every((id) => S.questOpen(all, order, ids, af, id)), !!nq], [50, true, 0, null, true, true], tag("merge: lane A's campaign (50 side quests, none past 200) has no long tail: journey.js tail is empty, every quest opens once its level is cleared"));
 }
 // ==== v6 lane B part 2: the intro tour (levels/tutorial.json, src/tutorial.js; tools/tutorial-notes.md) ======================
 // Every practice fort is a valid small picture board whose cards match its blocks colour by colour and whose stored order
@@ -1813,6 +1970,7 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
     eq(pw.map((s) => [s.id, s.powers.every((id) => ids.indexOf(id) >= 0)]), [["tut-7", true]], "tour: the practice power-ups are real ones (" + pw.map((s) => s.powers.join("+")) + "), only on fort 7"); }
   { const text = JSON.stringify([TU.offer, TU.ui, TU.close, ST.map((s) => [s.name, s.say, s.more, s.jamNote, [].concat(s.coach, s.coach2 || []).map((c) => [c.say, c.short])])]); // the words shown (a when-word's "!" is not one)
     eq([/—|–/.test(text), /!/.test(text), TU.offer.say], [false, false, "Learn in a couple of minutes on a tiny practice fort. Nothing to lose."], "tour: its words have no em or en dash and no exclamation mark; the offer is Peter's line"); }
+  }
 }
 
 console.log(pass + " passed, " + fail + " failed");

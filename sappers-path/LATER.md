@@ -386,6 +386,24 @@ Fixed: S1-S7, m2, m3, N1, N2 (`tools/v5-r4-notes.md` §10). Parked:
   (`--shard`, `--reuse`), deal depth alternated (`deepAlt`); ? cards and mystery blocks don't move an all-seeing
   planner, the deal does.
 
+## Campaign v6 stage 2 (the re-deal, 2026-10-07)
+- Lesson 125 still teaches towers although they now arrive at 64; its coach could become a Volley lesson.
+- Realm 5's painted towers came out violet (the fen palettes leave no slate-like colour clear); a palette pass could recolour one fen role to free a slate. (Fix pass: towers are stone now, 104's and 117's moved to 106 and 116; see below.)
+- Killing towers rarely allow a deal that survives real pace: seven levels keep a subset (keepOnly). A "wary" real-pace measure (tap when the next squad's target is clear) would let every tower stand.
+- The ? card gap rule (0.2) leaves 13 levels under their planned count; mystify could try other rows or more tries.
+- Mystery blocks read as a share of the hideable buried blocks (4-14% of a picture); a larger share needs the skip roles or group cap relaxed (a visual call).
+- Hard levels on full boards in realms 6-8 use no deck features under the curve's 2-3 cap; if playtesters find them plain, Peter may want the cap read as a minimum.
+
+
+## Campaign v6 fix pass (difficulty, 2026-10-07)
+- Realm 5 has no killing level now: the fenNight boards of 104 and 117 leave no stone colour clear (only a cyan), so their towers moved to 106 and 116 (both Hard, pinning). A palette pass on the fenNight scene (one role recoloured) would let 117 carry a killing stone tower again.
+- 198's only stone that clears is a pale blue-grey; the throne palette (purple sky, red roof) crowds the greys. Same palette pass.
+- The gate's players are heuristics (1, 2 and 3 taps deep, all-seeing). The critic's honest planner (`grade.plan`) wins many levels they call walls; a planner-based gate would track a thinking human more closely. Costlier per candidate.
+- The gate's runs are 32 games each: on a fresh seed a handful of levels near their ceiling read a game or two over (notes §5.4). 64-game runs would halve that noise at twice the bake cost.
+- The 157 coach says "Two spaces are locked" until both open; a step for "one open, one to go" needs a coach condition for a single lock opening (page code).
+- Short fails (a kill) offer Retry only, so coins can't rescue the commonest late-game loss (functional critic, economy note). A paid "replace the shot sapper" continue would close it.
+- Hard and Extreme picks lean to the lowest best-of, so realms 6-8 Hards sit near 0 for the heuristic players like the Extremes; if playtesters feel no step from Hard to Extreme there, give Hard a lean (v6.lean.hard) the way Normal has one.
+
 ## v6 lane B (Campaign and Zen modes, 2026-10-06)
 
 - World 1's first level is Red Fuji (a landscape painting with a link) because the plan fills Normal slots in Gallery order; a simple emoji with no feature as Zen's very first picture may welcome better (reorder in `tools/lands/z1-gallery/world.json` main and re-bake that slot).

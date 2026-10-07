@@ -250,3 +250,34 @@ on Kitten Forest's sheets (the mirrored castle sheets read as the Campaign map).
   merge loss: hooks, config and index.html were intact). `tutorial.js` now returns its load as `ready`, and boot awaits it
   before handing out `SP` (a failed load still resolves: no tour). selfTest 805/0 at 1280x720; Settings > How to play
   starts the tour there (shot `tools/shots-zen/sweep/how-to-play-1280.png`).
+
+## 12. The v6 merge (lane E, 2026-10-07): campaign-v6 (ff6fe07) into sappers-path (c71a5ef)
+
+- **Conflicts:** cache tags in index.html and style.css (both took `?v=53`, the tour's stylesheet and script kept);
+  `main.js reasonText` (lane A's `short` reason for a killing tower kept, Zen's calm fallback kept); main.js's long-tail
+  selfTest block (lane B's version, which already skips the empty tail; lane A's "next node after the win" edit sits
+  elsewhere and merged clean); harness.mjs's side-quest pick (lane A's `g-ours-cq` pattern with lane B's fallback); LATER,
+  SPEC-v4 §9 and v5-progress (both sides kept, lane A's first). levels.json, gallery.json, layout.json, levels/frozen,
+  config.json and test.js merged clean (lane A's data).
+- **Ids:** places.json appended cq44 (Giant Drumstick, place 4), cq14 (Baby Phoenix, 35), cq27 (Castle Guard, 37); the
+  retired cq42, cq36, cq13 and cq30 keep their registry places, never used. 101 places; every gallery id has one.
+- **Zen and lane A's rules:** no Zen level carries `archers`, `lock`/`locks`, towers or an Extreme tag (98 checked), so
+  pins, kills, double locks and the skull never reach Zen. Kitten Forest 201-250 are byte-identical to lane B's.
+- **The hide-36** (`modes()`, keyed to zen.json `from`) is now a no-op: none of the 36 is in gallery.json. Kept as a guard.
+- **Freeze:** re-snapshotted after the merge: levels.json (1-250), gallery.json (50 campaign + 12 Wandering Gallery) and,
+  new, zen.json (World 1's 36): Zen's shipped levels never change either (`freeze.js --snapshot` copies it, kind siege).
+- **Tests:** "campaign keeps exactly 24" is now "the 24 kept + lane A's 26 = 50, none of the 36"; World 1's records are
+  checked against lane A's `quests.json v5Places`; the zen move test moves from the raw save as the page does; the
+  "merge:" proofs run on both lane A's f4b4a60 fixture and the merged gallery.json (old v5 save, SP1 v5.4 code, SP2 round
+  trip, zero tail).
+- **Level 64's line head ("4 working · 1 free9"):** not a display bug. `#line-cnt` holds two spans, the count line and the
+  carriers badge (a return icon and its number, its own aria-label); a script reading `textContent` runs them together.
+  On screen it reads "2 working · 3 free · ↺ 36" (shot `tools/shots-zen/l64-phone.png`).
+- **Checks on the merged tree:** test.js 701/0; regrades 0 differences (2,405 level checks, 372 gallery, 324 `--zen`); freeze
+  --require PASS on the new snapshot (levels, gallery, zen, 283 castle cases); critic-v5 0 mismatching games of 10,527, tags
+  and ladder 0 problems, known answers 0 wrong, real pace 312/312; selfTest 866/0 (375x812@3), 868/0 (1280x720), 866/0
+  (360x640@3); sweep-map 126 checks, 0 failures; harness all passed; 0 console messages.
+- **Payload:** every tracked file outside tools/ 18.98 MB (under CrazyGames' 20 MB); of it levels/frozen 1.36 MB, the
+  bake pools and gallery manifest 2.70 MB and docs 0.32 MB are never loaded by the page: a portal build can leave them
+  out (about 14.6 MB).
+

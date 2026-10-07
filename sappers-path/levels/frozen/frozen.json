@@ -1,6 +1,6 @@
 {
  "note": "Shipped levels frozen by tools/freeze.js --snapshot; never edit by hand.",
- "made": "2026-10-06",
+ "made": "2026-10-07",
  "files": [
   {
    "file": "levels.json",
@@ -9,6 +9,10 @@
   {
    "file": "gallery.json",
    "kind": "gallery"
+  },
+  {
+   "file": "zen.json",
+   "kind": "siege"
   }
  ]
 }

@@ -22,6 +22,13 @@
 //   player, no thinking time) beside the patient one, and a squad whose rushed tap fails (run to rest with no more taps,
 //   or before the next space frees) is dealt again smaller, then another colour is tried, as the dead-time cap does.
 //   rushLine(L, play, D)       -> {won, ms}: a play replayed that way under dealing rules (linkUp and the tuner check it).
+// Campaign v6, D.rushOpen: the rushed simulation plays with every colour lock open (D.hold spaces), as a quick player has
+//   once the lock's colour goes out, where the patient deal plays them shut (a deal never leans on one); "both": two rushed
+//   simulations, shut and open, and each must win (the real game is shut until the colour goes out, then open).
+// Campaign v6, D.towerFirst: while a tower stands, a squad of a tower's colour that can reach is tried first (so a deal on a
+//   level with killing archers fells its towers early, and an order tapped quickly meets no arrow); D.rushSafe (with D.rush):
+//   while a tower stands, the colours whose next target is clear of every ring in the rushed simulations as well are tried
+//   first (the rushed simulation waits at the moment the next squad would go, so its targets are the quick player's).
 "use strict";
 const E = require("../src/engine.js");
 const { rng } = require("./grade.js");
@@ -51,21 +58,27 @@ const coloursOf = (L) => { const s = new Set(); for (const row of L.grid) for (c
 // v4 M4 (the Gallery): D.capOf (optional) {m: [first, rest]} caps colour m's first squad at `first` and every later one at
 // `rest` (the outline: a narrow first breach, then more black squads); with no capOf the deal is exactly as before.
 // v5 R2: a colour lock ({colour: m}) opens when a squad of m goes out, which a deal can't count on: the dealer plays
-// with the lock left shut (one space fewer, the lock dropped), so every deal wins without it.
-const shut = (L, D) => (L.lock && L.lock.colour != null ? [Object.assign({}, L, { lock: null }), D.hold - (D.lockSpaces == null ? 1 : D.lockSpaces)] : [L, D.hold]);
+// with the lock left shut (one space fewer, the lock dropped), so every deal wins without it. v6: with two locks each
+// colour lock is dropped that way (a space fewer each); a key lock stays and opens when its key pops, as before.
+const shut = (L, D) => { const ks = E.locksOf(L), keys = ks.filter((k) => k.colour == null), cl = ks.length - keys.length; if (!cl) return [L, D.hold];
+  return [Object.assign({}, L, { lock: null, locks: keys.length ? keys : null }), D.hold - cl * (D.lockSpaces == null ? 1 : D.lockSpaces)]; };
 function deal(L0, seed, D) {
   const [L, hold] = shut(L0, D), B = E.compile(Object.assign({ cols: [[], [], [], [], []] }, L)), r = rng(seed);
   const S = E.sim(B, { hold, archersKill: true, time: D.time }, { deal: true }), buf = new Int32Array(S.M.length), want = Math.max(1, D.best | 0), top = want > 1 ? new Int32Array(S.M.length) : null;
-  const S2 = D.rush ? E.sim(B, { hold, archersKill: true, time: D.time }, { deal: true }) : null, rcap = 8 * (B.pixTotal + D.maxCards) + 64; // v4.3 D.rush
-  const buf2 = S2 ? new Int32Array(S2.M.length) : null, tmp2 = S2 ? new Int32Array(S2.M.length) : null, top2 = S2 && top ? new Int32Array(S2.M.length) : null;
-  const rushBad = (m, n) => { S2.playSquad(m, n); S2.save(tmp2); S2.quiet(); const bad = S2.status === E.FAILED; S2.load(tmp2); return bad || (!rushTo(S2, 1, rcap) && S2.status !== E.WON); };
+  // v4.3 D.rush: the rushed simulations (v6 D.rushOpen: with the colour locks open, or "both": shut and open, each its own sim)
+  const RS = !D.rush ? [] : (D.rushOpen === "both" ? [hold, D.hold] : [D.rushOpen ? D.hold : hold]).map((h) => { const X = E.sim(B, { hold: h, archersKill: true, time: D.time }, { deal: true }); return { S: X, buf: new Int32Array(X.M.length), tmp: new Int32Array(X.M.length), top: top ? new Int32Array(X.M.length) : null }; });
+  const S2 = RS.length ? RS[0].S : null, rcap = 8 * (B.pixTotal + D.maxCards) + 64;
+  const rushBad = (m, n) => RS.some((x) => { x.S.playSquad(m, n); x.S.save(x.tmp); x.S.quiet(); const bad = x.S.status === E.FAILED; x.S.load(x.tmp); return bad || (!rushTo(x.S, 1, rcap) && x.S.status !== E.WON); });
   const un = new Int32Array(E.NMAT); for (let m = 1; m < E.NMAT; m++) if (m !== IRON) un[m] = B.pix[m];
+  const TM = new Set(B.towers.map((t) => t.m));
   const play = [], cap = D.maxWaitMs || 0, dealt = new Int32Array(E.NMAT);
   let maxWait = 0;
   for (let guard = 0; guard < D.maxCards && S.pixLeft > 0; guard++) {
     const reach = [], deep = [];
     for (let m = 1; m < E.NMAT; m++) { if (!un[m]) continue; const t = S.target(m); if (t >= 0 && !S.covered(t)) reach.push(m); else deep.push(m); }
     const opts = [], park = (D.park == null || S.lineLen < D.park) && !(D.noParkUnderArchers && S.standing);
+    if (D.towerFirst && S.standing) { const tw = reach.filter((m) => TM.has(m)); opts.push(...shuffle(r, tw)); } // v6 D.towerFirst: while a tower stands, its colour goes first when it can reach
+    if (D.rushSafe && RS.length && S.standing) { const safe = reach.filter((m) => RS.every((x) => { const t = x.S.target(m); return t >= 0 && !x.S.covered(t); })); opts.push(...shuffle(r, safe)); } // v6 D.rushSafe: colours whose target is clear in the rushed simulations too, first
     if (park && deep.length && r() < D.deep) opts.push(...shuffle(r, deep));
     opts.push(...shuffle(r, reach)); if (park) opts.push(...shuffle(r, deep));
     let done = false, got = 0, bm = 0, bn = 0, bw = 0;
@@ -75,15 +88,15 @@ function deal(L0, seed, D) {
       if (un[m] <= D.maxCard && r() < D.finish) n = un[m];
       if (D.capOf) n = Math.min(n, D.capOf[m] ? (dealt[m] ? D.capOf[m][1] : D.capOf[m][0]) : n); // v4 M4 (the Gallery): the outline's squads
       for (let s = 0; s <= (D.shrinks || 0) && !done && n > 0; s++) {
-        S.save(buf); if (S2) S2.save(buf2); const t0 = S.now, l0 = S.lineLen;
+        S.save(buf); for (const x of RS) x.S.save(x.buf); const t0 = S.now, l0 = S.lineLen;
         S.playSquad(m, n); S.quiet();
         const wait = S.now - t0;
-        if (S.status === E.FAILED || (cap && wait > cap) || (D.noParkUnderArchers && S.standing && S.lineLen > l0) || (D.park != null && S.lineLen > Math.max(l0, D.park)) || (D.parkMax && overPark(S, D.parkMax)) || (S2 && rushBad(m, n))) { S.load(buf); if (S2) S2.load(buf2); n = Math.floor(n * (D.shrink || 0.6)); continue; }
-        if (want > 1) { got++; if (n > bn) { bn = n; bm = m; bw = wait; S.save(top); if (S2) S2.save(top2); } S.load(buf); if (S2) S2.load(buf2); break; } // v4.2 D.best: the biggest of the first `best` squads that fit
+        if (S.status === E.FAILED || (cap && wait > cap) || (D.noParkUnderArchers && S.standing && S.lineLen > l0) || (D.park != null && S.lineLen > Math.max(l0, D.park)) || (D.parkMax && overPark(S, D.parkMax)) || (S2 && rushBad(m, n))) { S.load(buf); for (const x of RS) x.S.load(x.buf); n = Math.floor(n * (D.shrink || 0.6)); continue; }
+        if (want > 1) { got++; if (n > bn) { bn = n; bm = m; bw = wait; S.save(top); for (const x of RS) x.S.save(x.top); } S.load(buf); for (const x of RS) x.S.load(x.buf); break; } // v4.2 D.best: the biggest of the first `best` squads that fit
         un[m] -= n; play.push([m, n]); done = true; dealt[m]++; if (wait > maxWait) maxWait = wait;
       }
     }
-    if (!done && bn > 0) { S.load(top); if (S2) S2.load(top2); un[bm] -= bn; play.push([bm, bn]); done = true; dealt[bm]++; if (bw > maxWait) maxWait = bw; }
+    if (!done && bn > 0) { S.load(top); for (const x of RS) x.S.load(x.top); un[bm] -= bn; play.push([bm, bn]); done = true; dealt[bm]++; if (bw > maxWait) maxWait = bw; }
     if (!done || (D.maxTaps && play.length > D.maxTaps)) return null;
   }
   return S.pixLeft === 0 ? { play, peak: S.peak, maxWait } : null;
@@ -109,8 +122,9 @@ function dealLine(L0, play, D) {
 function rushTo(S, need, cap) { for (let g = 0; g < cap && S.status === E.PLAYING && S.open - S.lineLen < need && S.busy; g++) S.advanceTo(S.nextAt); return S.status === E.PLAYING && S.open - S.lineLen >= need; }
 // v4.3: a play replayed rushed under dealing rules: each squad (a pair: both) tapped the moment its spaces are free.
 function rushLine(L0, play, D) {
+  if (D.rushOpen === "both") { const a = rushLine(L0, play, Object.assign({}, D, { rushOpen: false })); return a.won ? rushLine(L0, play, Object.assign({}, D, { rushOpen: true })) : a; } // v6: shut and open
   const [L, hold] = shut(L0, D), B = E.compile(Object.assign({ cols: [[], [], [], [], []] }, L));
-  const S = E.sim(B, { hold, archersKill: true, time: D.time, lockSpaces: D.lockSpaces }, { deal: true }), cap = 8 * (B.pixTotal + play.length) + 64;
+  const S = E.sim(B, { hold: D.rushOpen ? D.hold : hold, archersKill: true, time: D.time, lockSpaces: D.lockSpaces }, { deal: true }), cap = 8 * (B.pixTotal + play.length) + 64;
   for (let i = 0; i < play.length && S.status === E.PLAYING; i++) {
     const p = play[i]; if (!rushTo(S, p.length >= 4 ? 2 : 1, cap)) break;
     if (p.length >= 4) S.playPair(p[0], p[1], p[2], p[3]); else S.playSquad(p[0], p[1]);
@@ -183,20 +197,23 @@ function tune(L, play, colOf, lo, hi, T, rules) {
 // T.depth taps ahead) down by card moves (so the dealt order stays a winner), keeping the Normal random-tap rate in band
 // and the one-move-lookahead player at or under T.look, until it reaches T.stopAt. Its games use their own seeds, so
 // the grade's careful sample is a fresh one. T: {playouts, greedyPlayouts, games, depth, steps, stopAt, look}.
+// Campaign v6 fix pass (the functional critic's B1): T.depths (optional) climbs the best of the careful players at those
+// depths instead (grade.js deep, its early out at the current best, so a worse move stops after its first rate over it);
+// T.window [lo, hi] (optional, a level with a floor) climbs toward the window's middle and stops inside it.
 function carefulStage(L, play, colOf, lo, hi, T, rules) {
   const R = require("./grade.js"), r = rng(T.seed ^ 0x2f8b9a31);
   let evals = 0;
-  const lo2 = lo > 0 ? lo + T.margin : 0, hi2 = hi < 1 ? hi - T.margin : 1;
-  const score = (co) => { const B = build(L, play, co); if (!B) return null; evals++; const x = R.rate(B, rules.normal, T.playouts, T.seed); if (x < lo2 || x > hi2) return null;
-    if (T.look != null && R.greedy(B, rules.normal, T.greedyPlayouts, T.seed) > T.look) return null; return { rate: x, c: R.careful(B, rules.normal, T.games, T.seed ^ 0x5851f42d, T.depth) }; };
+  const lo2 = lo > 0 ? lo + T.margin : 0, hi2 = hi < 1 ? hi - T.margin : 1, W = T.window, mid = W ? (W[0] + W[1]) / 2 : 0, off = (s) => (W ? Math.abs(s.c - mid) : s.c);
+  const score = (co, cap) => { const B = build(L, play, co); if (!B) return null; evals++; const x = R.rate(B, rules.normal, T.playouts, T.seed); if (x < lo2 || x > hi2) return null;
+    if (T.look != null && R.greedy(B, rules.normal, T.greedyPlayouts, T.seed) > T.look) return null; return { rate: x, c: T.depths ? Math.max(...R.deep(B, rules.normal, T.games, T.seed ^ 0x5851f42d, T.depths, W ? null : cap)) : R.careful(B, rules.normal, T.games, T.seed ^ 0x5851f42d, T.depth) }; };
   let cur = score(colOf), step = 0; const c0 = cur ? cur.c : null;
   if (!cur) return { play, colOf, rate: null, careful: null, steps: 0, evals };
-  for (; step < T.steps && cur.c > (T.stopAt || 0); step++) {
+  for (; step < T.steps && (W ? cur.c < W[0] || cur.c > W[1] : cur.c > (T.stopAt || 0)); step++) {
     const i = Math.floor(r() * play.length), j = Math.floor(r() * 5); if (j === colOf[i]) continue;
     const co = colOf.slice(); co[i] = j;
     const c = [0, 0, 0, 0, 0]; for (const x of co) c[x]++; if (Math.min(...c) < T.colMin || Math.max(...c) > T.colMax) continue;
-    const s = score(co); if (!s) continue;
-    if (s.c < cur.c || (s.c === cur.c && r() < 0.3)) { colOf = co; cur = s; }
+    const s = score(co, cur.c); if (!s) continue;
+    if (off(s) < off(cur) || (off(s) === off(cur) && r() < 0.3)) { colOf = co; cur = s; }
   }
   return { play, colOf, rate: cur.rate, careful: cur.c, careful0: c0, steps: step, evals };
 }
@@ -290,14 +307,17 @@ function hide(L, seed, H) {
   if (yb < 4) return false;
   const ok = new Uint8Array(w * h); let n = 0;
   for (let y = 2; y < yb; y++) for (let x = 2; x < w - 2; x++) { const c = y * w + x, m = a0[c];
-    if (!(m > 0) || m === IRON || B.keyOf[c] >= 0 || c === B.lockKey || B.towerOf[c] >= 0) continue;
+    if (!(m > 0) || m === IRON || B.keyOf[c] >= 0 || B.lockOf[c] >= 0 || B.towerOf[c] >= 0) continue; // v6: any lock's key
     if (H.skip && L.pal && L.pal[m] && H.skip.indexOf(L.pal[m].r) >= 0) continue; // v5 R4 fix: never the sky, the outline or the boss's king (roles in H.skip)
     let bad = false; for (let k = 0; k < 4 && !bad; k++) { const e = B.nb[c * 4 + k]; if (e >= 0 && (open(e) || a0[e] === IRON)) bad = true; }
     if (!bad) { ok[c] = 1; n++; } }
-  const want = Math.round(n * (H.share[0] + r() * (H.share[1] - H.share[0]))), hid = new Uint8Array(w * h), cells = []; for (let c = 0; c < w * h; c++) if (ok[c]) cells.push(c);
+  const want = Math.round(n * (H.share[0] + r() * (H.share[1] - H.share[0]))), hid = new Uint16Array(w * h), cells = []; for (let c = 0; c < w * h; c++) if (ok[c]) cells.push(c);
   let got = 0;
+  // Campaign v6: H.gap (optional, as land-bake.js hidePic) keeps a blob's cells that many cells from every earlier blob, so
+  // blobs never merge into a group maxGroup then trims and the share asked is the share hidden. Without it, as before.
   for (let t = 0; t < 400 && got < want && cells.length; t++) { const c0 = cells[Math.floor(r() * cells.length)], cx = c0 % w, cy = (c0 / w) | 0, rx = H.rx[0] + r() * (H.rx[1] - H.rx[0]), ry = H.ry[0] + r() * (H.ry[1] - H.ry[0]);
-    for (let y = Math.max(0, Math.floor(cy - ry)); y <= Math.min(h - 1, Math.ceil(cy + ry)); y++) for (let x = Math.max(0, Math.floor(cx - rx)); x <= Math.min(w - 1, Math.ceil(cx + rx)); x++) { const c = y * w + x, dx = (x - cx) / rx, dy = (y - cy) / ry; if (ok[c] && !hid[c] && dx * dx + dy * dy <= 1 && got < want) { hid[c] = 1; got++; } } }
+    const t1 = t + 1, near = (c) => { if (!H.gap) return false; const x0 = c % w, y0 = (c / w) | 0; for (let y = Math.max(0, y0 - H.gap); y <= Math.min(h - 1, y0 + H.gap); y++) for (let x = Math.max(0, x0 - H.gap); x <= Math.min(w - 1, x0 + H.gap); x++) { const e = y * w + x; if (hid[e] && hid[e] !== t1) return true; } return false; };
+    for (let y = Math.max(0, Math.floor(cy - ry)); y <= Math.min(h - 1, Math.ceil(cy + ry)); y++) for (let x = Math.max(0, Math.floor(cx - rx)); x <= Math.min(w - 1, Math.ceil(cx + rx)); x++) { const c = y * w + x, dx = (x - cx) / rx, dy = (y - cy) / ry; if (ok[c] && !hid[c] && dx * dx + dy * dy <= 1 && got < want && !near(c)) { hid[c] = t1; got++; } } }
   if (H.maxGroup) { // v5 R4 fix (the visual critic's S3): no big flat "?" mass; a 4-connected group past maxGroup cells keeps its first maxGroup (breadth first) and the rest show
     const seen = new Uint8Array(w * h), q = new Int32Array(w * h);
     for (let c0 = 0; c0 < w * h; c0++) { if (!hid[c0] || seen[c0]) continue; let qh = 0, qt = 0, k = 0; q[qt++] = c0; seen[c0] = 1;
