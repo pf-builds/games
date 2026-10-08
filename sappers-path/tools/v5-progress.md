@@ -453,6 +453,7 @@ the run learned: `tools/land-02-notes.md` (including the one-line page change th
 |---|---|---|---|
 | D1 | `outlined` kind in gallery-config (lane A's exact text); land.js no-side-quest land and `zen` step; notes | done: dry conversion OK, test.js 630/0 | (this commit) |
 | D2 | Install World 3 | waits for lane C's reworked boards | |
+| D3 | `land.js boardOf` keeps a lifted dark ground's id: convert.js `plan().ids` {ink, bg}, boardOf and shadeOf by id; test "lands (dark ground, D3)" | done: test.js 702/0; regrades 0 of 2,405 and 0 of 324 (--zen); freeze PASS (2,405 / 372 / 324, castles 283); kf34 room 29 at 0.45 (was 363 on the ground); lifted inks no longer shaded (17 KF, 4 SG boards differ from lane C's boards-ink by the ink's `sh` only). Notes: land-02-notes.md point 2 | (this commit) |
 
 # v6 merge (lane E, 2026-10-07): campaign-v6 into sappers-path
 

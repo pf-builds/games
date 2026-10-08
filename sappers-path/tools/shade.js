@@ -47,7 +47,7 @@ function shadeOf(src0, P, opt, C) {
   const F = V.fit(src0, opt, C), { src, mask, scale, pw, ph, mg, bx0, by0, K } = F, ch = K.chroma || 1;
   if (pw !== P.w - 2 || ph !== P.h - 2) throw new Error("shade: the plan's board is not this picture's fit");
   const ids = Object.keys(P.pal).map(Number), plab = {}; for (const id of ids) plab[id] = PAL.lab(P.pal[id].c);
-  const skip = new Set(ids.filter((id) => P.pal[id].c === C.ink || (P.stats && P.stats.bg && P.pal[id].c === P.stats.bg))); // the ink and the background
+  const skip = new Set(ids.filter((id) => (P.ids ? id === P.ids.ink || id === P.ids.bg : P.pal[id].c === C.ink || (P.stats && P.stats.bg && P.pal[id].c === P.stats.bg)))); // the ink and the background (v6 lane D3: by the plan's ids, a lifted one too)
   const idAt = (x, y) => E.matOf(P.grid[y + 1][x + 1]), ground = SC.ground.map((g) => PAL.lab(g));
   // 1. Each cell's lightness.
   const ox = bx0 - mg / scale, oy = by0 - mg / scale, Lc = new Float64Array(pw * ph), memo = new Map();

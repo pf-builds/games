@@ -1759,6 +1759,21 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
     eq([!r.fail, L && E.replay(E.compile(L), rt, L.win.hard).status === E.WON, !rt.powers, lnF && lnF.peak <= 5, L && L.win.hard.length <= LCF.bake.maxTaps && lnF.maxWait <= LCF.bake.maxWaitMs, L && !!(L.links && L.links.length), L && L.cols.flat().filter((c) => c[2]).length >= 2, L && !!(L.hidden && L.hidden.some((x) => x.indexOf("?") >= 0)), L && !!(L.lock && L.lock.colour), rg && rg.diffs],
       [true, true, true, true, true, true, true, true, true, 0], "lands (bake fixture): a " + PB.w + "x" + PB.h + " Hard picture with linked pairs, ? cards, mystery blocks and a colour lock: wins on its stored order with no power-up, 5 spaces, under the caps, carries its plan, re-grades with 0 differences (" + ((Date.now() - t0) / 1000).toFixed(1) + " s" + (r.fail ? ", " + r.fail : "") + ")");
   }
+  // v6 lane D3: a dark ground the fade-floor lift moves off its colour (navy to slate, as Kitten Forest 250's) keeps its
+  // id. A 24 x 24 hand picture (a yellow and orange disc on kf34's navy) through land.js boardOf, kind outlined: the
+  // board's bg is the ground (the frame's inside corner) though no palette colour is stats.bg any more, and mystery
+  // blocks at a 0.45 share stay off it (by colour match the ground would be lost and they would cover it). The same
+  // picture on a pale ground, and a painting (no ground), keep the colour match's ink and bg exactly.
+  {
+    const disc = (g) => { const w = 24, rgba = new Uint8Array(w * w * 4); for (let y = 0; y < w; y++) for (let x = 0; x < w; x++) { const r = (x - 11.5) ** 2 + (y - 11.5) ** 2; rgba.set((r < 30 ? [250, 215, 60] : r < 64 ? [240, 130, 50] : g).concat([255]), (y * w + x) * 4); } return CV.encode(w, w, rgba.filter((_, i) => i % 4 !== 3)); };
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "sp-d3-")); fs.writeFileSync(path.join(dir, "navy.png"), disc([67, 80, 116])); fs.writeFileSync(path.join(dir, "pale.png"), disc([243, 234, 216])); fs.writeFileSync(path.join(dir, "paint.png"), disc([60, 140, 90]));
+    const bo = (id, kind) => LND.boardOf({ LC: LCF }, { id, kind }, dir, false), Bn = bo("navy", "outlined"), Bp = bo("pale", "outlined"), Bq = bo("paint", "painting"); fs.rmSync(dir, { recursive: true, force: true });
+    const byColour = (B) => [+Object.keys(B.pal).find((k) => B.pal[k].c === GCFG.convert.ink) || 0, B.stats.bg ? +Object.keys(B.pal).find((k) => B.pal[k].c === B.stats.bg) || 0 : 0]; // the old boardOf
+    const H = Object.assign({}, LCF.plan.hidden, { share: [0.45, 0.45], min: 0 }), face = LB.faceOf(Bn, LCF.plan.hidden.face, LCF.plan.moat), hid = (skip) => { const X = { w: Bn.w, h: Bn.h, grid: Bn.grid, pal: Bn.pal }; LB.hidePic(X, 11, H, skip, face); let on = 0, all = 0; if (X.hidden) X.hidden.forEach((r, y) => { for (let x = 0; x < r.length; x++) if (r[x] === "?") { all++; if (E.matOf(Bn.grid[y][x]) === Bn.bg) on++; } }); return [all, on]; };
+    const fixed = hid([Bn.ink, Bn.bg]), lost = hid([byColour(Bn)[0], byColour(Bn)[1]].filter(Boolean));
+    eq([Bn.bg > 0, Bn.bg === E.matOf(Bn.grid[1][1]), (Bn.pal[Bn.bg] || {}).c !== Bn.stats.bg, byColour(Bn)[1], Bn.ink === byColour(Bn)[0], fixed[0] > 0, fixed[1], lost[1] > 0, [Bp.ink, Bp.bg].join() === byColour(Bp).join() && Bp.bg === E.matOf(Bp.grid[1][1]), [Bq.ink, Bq.bg].join() === byColour(Bq).join() && Bq.bg === 0],
+      [true, true, true, 0, true, true, 0, true, true, true], "lands (dark ground, D3): a navy ground lifted to " + (Bn.pal[Bn.bg] || {}).c + " (stats.bg " + Bn.stats.bg + ") keeps its id " + Bn.bg + " on a " + Bn.w + "x" + Bn.h + " outlined board; mystery blocks at 0.45: " + fixed[0] + ", none on the ground (by colour match " + lost[1] + " of " + lost[0] + " would be); a pale ground and a painting keep the colour match's ink and bg");
+  }
   // Organic moats (SPEC-v4 §9, the organic moats entry; tools/moat.js). Hand boards: a framed picture of one background
   // colour with a subject drawn in it. The ring: water only off the subject, at least one cell of bank between (8-way),
   // the bank a path of open ground (off the subject, not joined to the frame before anything is dug), every cell left

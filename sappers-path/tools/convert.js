@@ -7,7 +7,8 @@
 //
 // Input: a PNG (8-bit RGBA or RGB, not interlaced; tools/gallery-src.py writes the sources so) under tools/gallery-src/.
 // Output plan: {w, h, grid (the picture inside a 1-cell ring of camp), ring: true, pal: {id: {c, n}}, subject cells,
-// stats: {colours, minDE, cells, outline}}. The page draws pal instead of v3.mats for the level; ids 10 (iron gates) and
+// ids: {ink, bg} (a masked picture's pinned colours by id, 0 when unused; step 7 may move their colours, so match by id),
+// stats: {colours, minDE, cells, outline, bg (the ground's colour before step 7)}}. The page draws pal instead of v3.mats for the level; ids 10 (iron gates) and
 // 14 (gilt keys) are never used by a picture, so they keep their meaning.
 // Steps:
 //   1. Crop (the manifest's crop, fractions of the image) and mask the subject: alpha (emoji: alpha >= alphaMin), flood
@@ -193,9 +194,9 @@ function plan(src0, opt, C) {
     if (res.fadeBad && n < C.nudges) { const L = c.lab.slice(); L[0] = Math.max(4, Math.min(97, L[0] + (L[0] >= o.lab[0] ? C.nudge : -C.nudge))); c.lab = PAL.lab(hexOfLab(L)); c.hex = null; moved.set(c, n + 1); continue; }
     pal.splice(j, 1);
   }
-  const { W, H, grid, out, used, outlineN } = res;
+  const { W, H, grid, out, used, outlineN, ids } = res;
   const lifted = K.fadeFloor ? lift(out, used, res.pop, K.fadeFloor, minDE, C) : null; // 7. paintings: display lightness only
-  return { w: W, h: H, grid, pic: true, pal: out, stats: { colours: used.length, minDE: +(lifted ? lifted.minDE : res.minDE).toFixed(1), minFade: +(lifted ? lifted.minFade : res.minFade).toFixed(1), cells: pw * ph, outline: outlineN, bg: masked ? bgHex : null } };
+  return { w: W, h: H, grid, pic: true, pal: out, ids, stats: { colours: used.length, minDE: +(lifted ? lifted.minDE : res.minDE).toFixed(1), minFade: +(lifted ? lifted.minFade : res.minFade).toFixed(1), cells: pw * ph, outline: outlineN, bg: masked ? bgHex : null } };
 }
 // 7. Critics 2 fix (a kind's fadeFloor; paintings 16): the cells are final, so this moves only the colours shown. While
 // the picture's smallest faded pair is under the floor, each colour of that pair may move its lightness nudge L* away
@@ -258,7 +259,8 @@ function cellsOf(src, mask, pal, bg, ink, K, C, F) {
   const labs = hexes.map((h) => PAL.lab(h)); let minDE = 100, minFade = 100, worst = Infinity, pair = [], fadeBad = false;
   for (let a = 0; a < labs.length; a++) for (let b = a + 1; b < labs.length; b++) { const d = de(labs[a], labs[b]), f = fadeGap(hexes[a], hexes[b]), m = Math.min(d - F.minDE, F.fadeDE ? f - F.fadeDE : Infinity);
     minDE = Math.min(minDE, d); minFade = Math.min(minFade, f); if (m < worst) { worst = m; pair = [used[a], used[b]]; fadeBad = d >= F.minDE; } }
-  return { W, H, grid, out, used, outlineN, pop, minDE, minFade, worst: labs.length > 1 ? worst : 0, pair, fadeBad };
+  const ids = { ink: masked ? idOf[pal.indexOf(ink)] : 0, bg: masked ? idOf[pal.indexOf(bg)] : 0 }; // v6 lane D3: the pins' ids (0: unused), which a lift may have moved off their colours
+  return { W, H, grid, out, used, outlineN, pop, minDE, minFade, worst: labs.length > 1 ? worst : 0, pair, fadeBad, ids };
 }
 // A name per colour, all different: the colours in order of how near their best match is, each taking the nearest
 // name in C.names (CIEDE2000) not already taken.

@@ -37,6 +37,23 @@ World 3 after lane C delivers.
    land on the ground, and an ink check counts the whole outline as stray ink. It affected 12 of 50 picks (sg02, sg36,
    sg58, sg75, sg104, sg114 and other night grounds). Worth a fix in `boardOf`: match the lifted ground, or carry its
    id from `convert.js`.
+   **Fixed (D3, 2026-10-07):** the root is convert.js step 7 (the fade-floor `lift`), which moves a colour's display
+   lightness after the cells are final, so the pinned ground (and sometimes the ink) no longer matches `stats.bg` /
+   `convert.ink`. `plan()` now returns `ids: {ink, bg}` (the pins' material ids, 0 when unused), and `land.js boardOf`
+   and `shade.js shadeOf` take them by id. Re-measured at 0.45 (median of 5 seeds, live hidePic + faceOf on the board):
+   kf34 Xylophone 29 (colour match 363), sg36 24 (235), sg58 0 (306), sg75 39 (312), sg104 100 (508), sg114 55 (394);
+   sg02 was never lost on its current board (purple ground found, 63 either way), and sg48 is the sixth lost ground.
+   The same lift moves the ink on 17 Kitten Forest and 6 Snack Galaxy outlined boards; by id they now skip it too, which
+   lowers 8 Kitten Forest picks' room (kf54 28 to 24, kf56 21 to 19, kf100 98 to 61, kf20 32 to 30, kf62 41 to 37, kf95
+   33 to 29, kf92 89 to 88, kf37 58 to 57; none newly under 24). Shipped data unchanged (every installed record's
+   `convert.bg` is in its palette), but five shipped Campaign v6 quests have a lifted ink (cq09, cq12, cq14, cq24, cq34:
+   black #110c17 / #17131c), so a re-bake of them through boardOf would now keep mystery blocks off the outline and
+   give different levels. Their data is not touched. Shading: shadeOf skipped the ink by colour too, so on those
+   lifted-ink boards it shaded the outline into three blacks (`sh` on the ink id). By id it no longer does: 17 Kitten
+   Forest boards (kf03 kf09 kf16 kf20 kf23 kf24 kf28 kf37 kf38 kf45 kf54 kf56 kf62 kf74 kf92 kf95 kf100) and 4 Snack
+   Galaxy boards (sg36 sg42 sg92 sg103) now convert with a solid black outline, grids unchanged, so lane C's
+   `boards-ink/` and its `handoff-ink.js` 77/77 no longer match on those 17 (the install takes boardOf's output).
+   Test: `tools/test.js` "lands (dark ground, D3)".
 3. **Pace:** sg33 Egg choir (42x28 outlined) baked at 142 s on a Normal slot, under the 150 s floor. Boards of about
    1,100 cells and up met the pace (sg78 at 24x46 baked 234 s). sg69 Ice cream wizard (29x46) needed 16 extra
    candidates to reach 152 s.

@@ -424,3 +424,11 @@ Fixed: S1-S7, m2, m3, N1, N2 (`tools/v5-r4-notes.md` §10). Parked:
 - A real-tap playthrough in the harness (it checks the tour only through SP.selfTest's DOM clicks today).
 - World 1 shares Kitten Forest's two painted sheets (Peter's call, zero bytes); a pair of its own (a gallery or garden) from lane C would set it apart for real. The warm `tint` is a stopgap.
 - Zen-only players reach the Scout (100) and the Volley (125) only through prizes or the Campaign (98 Zen pictures give reach 99); revisit the mapping when Zen has more worlds.
+
+## v6 lane D3 (the lifted-ground fix, 2026-10-07)
+
+- `tools/zen-world.js boardOf(L)` and `tools/gallery-bake.js` still find the ink and ground by colour from a stored
+  record (`convert.bg`, `convert.ink`), and a record keeps no ids. Fine for every installed record today; a future Zen
+  world or Gallery bake from boards with a lifted ink (the five Campaign v6 quests cq09, cq12, cq14, cq24, cq34) or a
+  lifted ground would lose them. Either store the ids in a record (a data change, so with a freeze re-snapshot) or match
+  the nearest palette colour within the lift's reach.

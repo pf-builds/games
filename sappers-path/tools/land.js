@@ -106,7 +106,7 @@ function boardOf(X, pic, srcDir, shade) {
   const tryOpt = (chroma) => { let o = Object.assign({}, base, { box: BX.box }, chroma ? { chroma } : {}), P = V.plan(src, o, C); if (P.stats.colours >= BX.manyAt) { o = Object.assign({}, o, { box: BX.many }); P = V.plan(src, o, C); } return { o, P }; };
   let best = tryOpt(pic.chroma || null);
   if (!pic.chroma && base.kind === "painting") for (const ch of CV.chromaSteps) { if (best.P.stats.colours >= CV.minColours) break; const t = tryOpt(ch); if (t.P.stats.colours > best.P.stats.colours) best = t; }
-  const { o, P } = best, ink = +Object.keys(P.pal).find((k) => P.pal[k].c === C.ink) || 0, bg = P.stats.bg ? +Object.keys(P.pal).find((k) => P.pal[k].c === P.stats.bg) || 0 : 0;
+  const { o, P } = best, { ink, bg } = P.ids; // v6 lane D3: by id from the converter, since the fade-floor lift can move a dark ground (navy to slate) or the ink off its colour
   const b = { w: P.w, h: P.h, grid: P.grid, pal: P.pal, stats: P.stats, ink, bg, opt: { box: o.box, crop: o.crop, chroma: o.chroma || (C.kinds[o.kind] || {}).chroma || null } };
   if (shade) { const s = SH.shadeOf(src, P, o, C); if (s) Object.assign(b, { pal: s.pal, shade: s.shade, shadeStats: s.stats }); }
   return b;
