@@ -1,0 +1,1208 @@
+[
+ {
+  "id": "sg239",
+  "title": "Kitten flag",
+  "artist": "Click it! Studios",
+  "date": "2026-10-07",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3239; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg239.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute orange kitten astronaut planting a fish-shaped flag on top of a big grey moon, dark navy starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3239,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg239-s3239.png"
+ },
+ {
+  "id": "sg327",
+  "title": "Boba moon",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3327; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg327.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big round bubble tea moon with black tapioca pearls as craters and a cute alien sipping through a straw, dark teal starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3327,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg327-s3327.png"
+ },
+ {
+  "id": "sg272",
+  "title": "Lollipop black hole",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3272; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg272.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big spiral lollipop swirling like a black hole, pulling in little candy stars, dark indigo starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3272,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg272-s3272.png"
+ },
+ {
+  "id": "sg262",
+  "title": "Crater golf",
+  "artist": "Click it! Studios",
+  "date": "2026-10-07",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3262; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg262.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute lemon astronaut putting a little moon into a crater on a big grey moon, dark teal starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3262,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg262-s3262.png"
+ },
+ {
+  "id": "sg279",
+  "title": "First footprint",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3279; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg279.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute blueberry astronaut taking its first step on a red planet, leaving a big footprint, dark indigo starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3279,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg279-s3279.png"
+ },
+ {
+  "id": "sg332",
+  "title": "Moon phases cookie",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3332; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg332.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute alien taking bites out of a round cookie moon so it looks like a crescent, crumbs floating, dark navy starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3332,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg332-s3332.png"
+ },
+ {
+  "id": "sg250",
+  "title": "Kitten and the laser",
+  "artist": "Click it! Studios",
+  "date": "2026-10-07",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3250; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg250.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute white kitten astronaut chasing a red laser dot across the surface of a big purple moon, black starry sky with a big swirling purple galaxy, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3250,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg250-s3250.png"
+ },
+ {
+  "id": "sg337",
+  "title": "Planet bath",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3337; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg337.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute blue planet having a bubble bath in a giant teacup, a rubber duck floating beside it, magenta and purple nebula sky with stars, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3337,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg337-s3337.png"
+ },
+ {
+  "id": "sg281",
+  "title": "Chili launch",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3281; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg281.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a giant red chili pepper rocket launching from a green planet in a huge burst of orange fire, deep purple starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3281,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/sg281-s3281.png"
+ },
+ {
+  "id": "sg240",
+  "title": "Kitten and the yarn planet",
+  "artist": "Click it! Studios",
+  "date": "2026-10-07",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3240; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg240.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute grey kitten batting at a giant planet made of a ball of red yarn, the yarn unrolling into space, deep purple starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3240,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg240-s3240.png"
+ },
+ {
+  "id": "sg339",
+  "title": "Gravity spill",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3339; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg339.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute pancake stack floating upward off a plate on a moon, a cute astronaut reaching up to grab it, dark navy starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3339,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/sg339-s3339.png"
+ },
+ {
+  "id": "sg292",
+  "title": "Pineapple station",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3292; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg292.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big pineapple space station with round windows, a little rocket docking at its leafy top, a planet behind, black starry sky with a big swirling purple galaxy, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3292,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/sg292-s3292.png"
+ },
+ {
+  "id": "sg241",
+  "title": "Kitten rocket box",
+  "artist": "Click it! Studios",
+  "date": "2026-10-07",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3241; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg241.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute white kitten flying a cardboard box rocket with orange flames past a big yellow ringed planet, dark indigo starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3241,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg241-s3241.png"
+ },
+ {
+  "id": "sg333",
+  "title": "Sun with sunglasses",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3333; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg333.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute smiling sun wearing sunglasses, roasting a marshmallow on a long stick over a little planet, orange and pink alien sunset sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3333,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg333-s3333.png"
+ },
+ {
+  "id": "sg237",
+  "title": "Popcorn eruption",
+  "artist": "Click it! Studios",
+  "date": "2026-10-07",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3237; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg237.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big volcano on a purple planet erupting fluffy white popcorn into the sky, a little alien catching it in a bucket, magenta and purple nebula sky with stars, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3237,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg237-s3237.png"
+ },
+ {
+  "id": "sg245",
+  "title": "Kitten UFO fishing",
+  "artist": "Click it! Studios",
+  "date": "2026-10-07",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3245; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg245.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute grey kitten in a flying saucer fishing with a rod, an orange fish rising out of a teal planet's ocean, magenta and purple nebula sky with stars, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3245,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg245-s3245.png"
+ },
+ {
+  "id": "sg295",
+  "title": "Melon colony",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3295; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg295.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big watermelon moon with domed houses built into its green rind and a little rocket landing, dark navy starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3295,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg295-s3295.png"
+ },
+ {
+  "id": "sg265",
+  "title": "Donut ring",
+  "artist": "Click it! Studios",
+  "date": "2026-10-07",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3265; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg265.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a huge planet wearing a giant pink frosted donut as its ring, a little red rocket flying through the hole, dark navy starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3265,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg265-s3265.png"
+ },
+ {
+  "id": "sg304",
+  "title": "Planet garden",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3304; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg304.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big strawberry gardener watering a little planet that is growing flowers on top, pale green alien sky with two moons, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3304,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg304-s3304.png"
+ },
+ {
+  "id": "sg278",
+  "title": "Cupcake rocket hug",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3278; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg278.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute cupcake hugging a little smiling rocket on the launch pad of a candy planet, magenta and purple nebula sky with stars, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3278,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/sg278-s3278.png"
+ },
+ {
+  "id": "sg283",
+  "title": "Pizza mothership",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3283; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg283.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a huge pizza mothership flying over a big green planet, little pepperoni ships around it, dark navy starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3283,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg283-s3283.png"
+ },
+ {
+  "id": "sg247",
+  "title": "Kittens' planet tea party",
+  "artist": "Click it! Studios",
+  "date": "2026-10-07",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3247; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg247.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "two big cute kittens having a tea party with cookies on a little round pink planet, dark indigo starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3247,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg247-s3247.png"
+ },
+ {
+  "id": "sg303",
+  "title": "Rocket repair",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3303; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg303.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cookie astronaut fixing a red rocket with a giant wrench on a moon while a little alien hands it a bolt, deep purple starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3303,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg303-s3303.png"
+ },
+ {
+  "id": "sg326",
+  "title": "Milkshake planet",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3326; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg326.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a huge pink milkshake planet with a bendy straw sticking out like an antenna and a cherry on top, dark navy starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3326,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg326-s3326.png"
+ },
+ {
+  "id": "sg310",
+  "title": "Pizza delivery",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3310; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg310.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big pizza delivery rocket handing a pizza box to a cute alien standing on a little planet, deep purple starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3310,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg310-s3310.png"
+ },
+ {
+  "id": "sg320",
+  "title": "Stegosaurus moon",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3320; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg320.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute orange stegosaurus asleep curled around a small grey moon, its back plates like mountains, dark navy starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3320,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg320-s3320.png"
+ },
+ {
+  "id": "sg275",
+  "title": "Moon picnic",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3275; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg275.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute apple and a big cute pear having a picnic on a red blanket on a grey moon, a planet rising behind, dark navy starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3275,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg275-s3275.png"
+ },
+ {
+  "id": "sg316",
+  "title": "Asteroid farm",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3316; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg316.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute carrot farmer pulling a giant carrot out of the soil of a little asteroid, orange and pink alien sunset sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3316,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg316-s3316.png"
+ },
+ {
+  "id": "sg248",
+  "title": "Kitten vs. alien mouse",
+  "artist": "Click it! Studios",
+  "date": "2026-10-07",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3248; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg248.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute orange kitten astronaut peeking at a little green alien mouse hiding behind a cheese moon, dark navy starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3248,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg248-s3248.png"
+ },
+ {
+  "id": "sg325",
+  "title": "Soda rocket",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3325; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg325.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big red soda can rocket blasting off from a moon in a huge fizzy foam of bubbles, deep purple starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3325,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/sg325-s3325.png"
+ },
+ {
+  "id": "sg317",
+  "title": "Cookie moon bite",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3317; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg317.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute alien taking a huge bite out of a chocolate chip cookie moon, magenta and purple nebula sky with stars, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3317,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg317-s3317.png"
+ },
+ {
+  "id": "sg252",
+  "title": "Moon drum",
+  "artist": "Click it! Studios",
+  "date": "2026-10-07",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3252; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg252.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute strawberry drumming on a big round grey moon like a drum, little stars bouncing, dark navy starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3252,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg252-s3252.png"
+ },
+ {
+  "id": "sg263",
+  "title": "Planet weightlifting",
+  "artist": "Click it! Studios",
+  "date": "2026-10-07",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3263; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg263.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big strong walnut astronaut lifting a barbell with two planets as the weights on a moon, orange and pink alien sunset sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3263,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg263-s3263.png"
+ },
+ {
+  "id": "sg319",
+  "title": "Dino astronaut",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3319; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg319.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute green T-rex astronaut with tiny arms trying to plant a flag on a red planet, the flag just out of reach, deep purple starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3319,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg319-s3319.png"
+ },
+ {
+  "id": "sg255",
+  "title": "Saxophone sunrise",
+  "artist": "Click it! Studios",
+  "date": "2026-10-07",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3255; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg255.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big purple eggplant playing a golden saxophone on a hill of an alien planet as a big sun rises, orange and pink alien sunset sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3255,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg255-s3255.png"
+ },
+ {
+  "id": "sg234",
+  "title": "Rocket out of gas",
+  "artist": "Click it! Studios",
+  "date": "2026-10-07",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3234; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg234.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big burger rocket stalled in space with a little puff of smoke, a cute fries astronaut pushing it toward a planet, dark navy starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3234,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg234-s3234.png"
+ },
+ {
+  "id": "sg291",
+  "title": "Taco rover",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3291; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg291.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute taco driving a lunar rover with cheese wheels across a grey moon, kicking up dust, dark indigo starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3291,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg291-s3291.png"
+ },
+ {
+  "id": "sg340",
+  "title": "Moon cheese grater",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3340; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg340.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute mouse astronaut grating a cheese moon with a giant grater, cheese shreds floating like stars, dark indigo starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3340,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg340-s3340.png"
+ },
+ {
+  "id": "sg307",
+  "title": "Alien bakery",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3307; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg307.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute purple alien baker pulling a tray of star-shaped cookies out of an oven on a little planet, magenta and purple nebula sky with stars, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3307,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg307-s3307.png"
+ },
+ {
+  "id": "sg299",
+  "title": "Space high five",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3299; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg299.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cheese square and a big cracker astronaut giving a high five in front of a huge planet, black starry sky with a big swirling purple galaxy, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3299,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg299-s3299.png"
+ },
+ {
+  "id": "sg328",
+  "title": "Juice box shuttle",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3328; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg328.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big orange juice box space shuttle with its straw as an antenna flying past a green planet, dark indigo starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3328,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg328-s3328.png"
+ },
+ {
+  "id": "sg232",
+  "title": "Milk planet spill",
+  "artist": "Click it! Studios",
+  "date": "2026-10-07",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3232; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg232.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a giant glass of milk tipping over in space and pouring a white river onto a big chocolate cookie planet, magenta and purple nebula sky with stars, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3232,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg232-s3232.png"
+ },
+ {
+  "id": "sg269",
+  "title": "Burger planet",
+  "artist": "Click it! Studios",
+  "date": "2026-10-07",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3269; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg269.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a huge hamburger planet with its layers as continents, a little rocket landing on the bun, deep purple starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3269,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg269-s3269.png"
+ },
+ {
+  "id": "sg277",
+  "title": "Planet sleepover",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3277; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg277.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute mochi tucked into bed on top of a little ringed planet with a crescent moon nightlight, black starry sky with a big swirling purple galaxy, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3277,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg277-s3277.png"
+ },
+ {
+  "id": "sg314",
+  "title": "Planet painting",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3314; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg314.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute cherry painter painting stripes onto a big round planet with a giant brush, black starry sky with a big swirling purple galaxy, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3314,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg314-s3314.png"
+ },
+ {
+  "id": "sg231",
+  "title": "Donut abduction",
+  "artist": "Click it! Studios",
+  "date": "2026-10-07",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3231; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg231.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big pink donut flying saucer beaming up a surprised cow-spotted marshmallow from a green planet, dark indigo starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3231,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/sg231-s3231.png"
+ },
+ {
+  "id": "sg285",
+  "title": "Cake volcano",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3285; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg285.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a planet made of chocolate cake erupting a big fountain of strawberry jam, a little rocket escaping, magenta and purple nebula sky with stars, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3285,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg285-s3285.png"
+ },
+ {
+  "id": "sg330",
+  "title": "Lemonade waterfall",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3330; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg330.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big lemonade waterfall pouring off the edge of a yellow planet into space, a cute lemon in a boat at the top, black starry sky with a big swirling purple galaxy, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3330,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg330-s3330.png"
+ },
+ {
+  "id": "sg257",
+  "title": "Planet soccer kick",
+  "artist": "Click it! Studios",
+  "date": "2026-10-07",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3257; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg257.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute orange astronaut kicking a small blue planet like a soccer ball toward a ring-shaped goal, deep purple starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3257,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg257-s3257.png"
+ },
+ {
+  "id": "sg282",
+  "title": "Broccoli mech",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3282; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg282.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a giant broccoli robot with glowing eyes stomping across a rocky orange planet, orange and pink alien sunset sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3282,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/sg282-s3282.png"
+ },
+ {
+  "id": "sg233",
+  "title": "Wrong landing",
+  "artist": "Click it! Studios",
+  "date": "2026-10-07",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3233; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg233.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big taco astronaut climbing out of its rocket into a planet made of ice cream, its boot sinking into a pink scoop, orange and pink alien sunset sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3233,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg233-s3233.png"
+ },
+ {
+  "id": "sg238",
+  "title": "Hot dog in a hurry",
+  "artist": "Click it! Studios",
+  "date": "2026-10-07",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3238; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg238.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big hot dog rocket zooming past a ringed planet so fast that its mustard flames curl behind it, dark indigo starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3238,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg238-s3238.png"
+ },
+ {
+  "id": "sg243",
+  "title": "Kitten catches a star",
+  "artist": "Click it! Studios",
+  "date": "2026-10-07",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3243; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg243.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute black kitten in a space helmet leaping to catch a falling yellow star above a green planet, dark teal starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3243,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/sg243-s3243.png"
+ },
+ {
+  "id": "sg244",
+  "title": "Kitten milk river",
+  "artist": "Click it! Studios",
+  "date": "2026-10-07",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3244; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg244.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute tabby kitten astronaut lapping from a river of milk flowing across a big blue moon, black starry sky with a big swirling purple galaxy, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3244,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg244-s3244.png"
+ },
+ {
+  "id": "sg258",
+  "title": "Asteroid surfing",
+  "artist": "Click it! Studios",
+  "date": "2026-10-07",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3258; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg258.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute hot dog surfing a wave of purple space dust past a huge yellow planet, dark navy starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3258,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg258-s3258.png"
+ },
+ {
+  "id": "sg260",
+  "title": "Zero-g basketball",
+  "artist": "Click it! Studios",
+  "date": "2026-10-07",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3260; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg260.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute potato astronaut slam-dunking an orange planet into a hoop on a space station, black starry sky with a big swirling purple galaxy, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3260,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg260-s3260.png"
+ },
+ {
+  "id": "sg264",
+  "title": "Comet bowling",
+  "artist": "Click it! Studios",
+  "date": "2026-10-07",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3264; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg264.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute cherry rolling a glowing comet toward a row of giant candy bowling pins on a moon, deep purple starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3264,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg264-s3264.png"
+ },
+ {
+  "id": "sg266",
+  "title": "Egg sun sunrise",
+  "artist": "Click it! Studios",
+  "date": "2026-10-07",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3266; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg266.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a giant fried egg rising like the sun over the horizon of a dark blue planet, magenta and purple nebula sky with stars, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3266,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg266-s3266.png"
+ },
+ {
+  "id": "sg284",
+  "title": "Sushi space battle",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3284; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg284.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "two big sushi starships, a salmon nigiri and a cucumber roll, firing lasers at each other above a planet, black starry sky with a big swirling purple galaxy, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3284,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg284-s3284.png"
+ },
+ {
+  "id": "sg290",
+  "title": "Gumball satellite",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3290; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg290.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big gumball machine satellite with solar panels orbiting a pink planet, dropping colourful gumballs, magenta and purple nebula sky with stars, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3290,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg290-s3290.png"
+ },
+ {
+  "id": "sg294",
+  "title": "Bubble tea saucer",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3294; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg294.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big bubble tea cup flying saucer beaming a cute alien down onto a little green planet, deep purple starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3294,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg294-s3294.png"
+ },
+ {
+  "id": "sg296",
+  "title": "Coffee cup UFO",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3296; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg296.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big coffee cup flying saucer with steam jets hovering over a moon, a cute alien peeking out, orange and pink alien sunset sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3296,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg296-s3296.png"
+ },
+ {
+  "id": "sg308",
+  "title": "Lost in space",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3308; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg308.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute lost donut astronaut reading a giant map while floating past three planets, black starry sky with a big swirling purple galaxy, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3308,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg308-s3308.png"
+ },
+ {
+  "id": "sg311",
+  "title": "Moon lemonade stand",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3311; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg311.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute lemon running a lemonade stand on a grey moon, a little alien buying a cup, orange and pink alien sunset sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3311,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg311-s3311.png"
+ },
+ {
+  "id": "sg331",
+  "title": "Saturn's hula hoop",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3331; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg331.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute ringed planet with a happy face and little arms, spinning its ring like a hula hoop, deep purple starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3331,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg331-s3331.png"
+ },
+ {
+  "id": "sg336",
+  "title": "Alien pet rock",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3336; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg336.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big cute alien walking a little grey moon on a leash across a pink planet, black starry sky with a big swirling purple galaxy, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3336,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg336-s3336.png"
+ },
+ {
+  "id": "sg338",
+  "title": "Space traffic jam",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 3338; prompt in tools/lands/02-snack-galaxy/pictures/manifest.json",
+  "file": "fullsrc/sg338.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "three big cute food rockets, a carrot, a hot dog and a banana, stuck in a traffic jam beside a giant traffic light planet, deep purple starry sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, a few big simple four-point stars, limited palette of 6 colours, high contrast, no text",
+  "seed": 3338,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sg338-s3338.png"
+ }
+]

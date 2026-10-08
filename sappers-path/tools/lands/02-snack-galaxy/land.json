@@ -1,0 +1,292 @@
+{
+ "k": 2,
+ "slug": "02-snack-galaxy",
+ "name": "Snack Galaxy",
+ "lore": "The road drifts up into a starry sky of donut planets and cheese moons, where snacks, kittens and the odd dinosaur float by at their own pace.",
+ "count": 50,
+ "source": "ai",
+ "sourceNote": "FLUX.1 [schnell] by Black Forest Labs (Apache-2.0), 4-bit GGUF, run on the studio's Mac; lane C's 112 full story scenes, 50 picks and 17 spares (game-research/sappers-path-v4/lands/02-snack-galaxy/README.md, 'Full story scenes'; picks-full.json). Kind painting (no outline: the other half of the ink-outline rule), thin line art stripped; each file is the whole stripped picture, converted by land.js boardOf with its chroma steps.",
+ "features": [
+  "linked",
+  "mystery",
+  "hidden",
+  "moat"
+ ],
+ "eggs": [
+  "glowcap",
+  "wisp",
+  "glint",
+  "ember",
+  "bubble"
+ ],
+ "shade": true,
+ "raw": "/Users/peter/local-ai/outputs/lands/02-snack-galaxy",
+ "quests": "none",
+ "zen": {
+  "k": 3,
+  "note": "v6 lane D7: Snack Galaxy plays as Zen World 3 (tools/land.js ... zen writes levels/zen.json only; levels.json, gallery.json, layout.json and config.json are not touched)."
+ },
+ "profile": {
+  "note": "Zen World 3, casual (v6 lane D7, 2026-10-08): Kitten Forest's casual profile as it ships (tools/lands/01-kitten-forest/land.json, carefulFloor included): tags E18/N26/H6/X0 ending on a Hard, light deck features, no locks, no archers, generous bands, no lookahead or careful ceilings. Plus organic moats (they arrive at Snack Galaxy), gentle only: a ring on a fifth of the Easy, two fifths of the Normal and two thirds of the Hard levels, always 2 ways in (opening set 0 front+far or 1 left+right), on pictures that can carry one. The 50 are lane C's full story scenes (painting kind, 42x42); the order is lane D's (tools/land-02-notes.md).",
+  "tags": {
+   "shares": {
+    "easy": 0.36,
+    "normal": 0.52,
+    "hard": 0.12,
+    "extreme": 0
+   },
+   "breathers": 5,
+   "run": [
+    1,
+    3
+   ],
+   "end": "hard"
+  },
+  "features": {
+   "mystery": {
+    "share": 0.5,
+    "by": {
+     "easy": 0.2,
+     "normal": 0.5,
+     "hard": 1
+    },
+    "cards": [
+     2,
+     3
+    ]
+   },
+   "hidden": {
+    "share": 0.22,
+    "by": {
+     "easy": 0,
+     "normal": 0.3,
+     "hard": 0.5
+    },
+    "of": [
+     0.25,
+     0.4
+    ]
+   },
+   "linked": {
+    "share": 0.36,
+    "by": {
+     "easy": 0.2,
+     "normal": 0.4,
+     "hard": 0.67
+    },
+    "pairs": [
+     1,
+     2
+    ]
+   },
+   "lock": {
+    "share": 0,
+    "key": 0
+   },
+   "moat": {
+    "share": 0.4,
+    "by": {
+     "easy": 0.2,
+     "normal": 0.4,
+     "hard": 0.67
+    },
+    "ways": [
+     0,
+     1
+    ],
+    "liquids": [
+     null,
+     "mire"
+    ]
+   }
+  },
+  "bands": {
+   "easy": [
+    0.45,
+    0.8
+   ],
+   "normal": [
+    0.2,
+    0.5
+   ],
+   "hard": [
+    0.06,
+    0.2
+   ]
+  },
+  "lookahead": {
+   "normal": null,
+   "hard": null,
+   "extreme": null
+  },
+  "carefulFloor": {
+   "easy": 0.5,
+   "normal": 0.5
+  },
+  "pace": {
+   "aim": 225000
+  },
+  "bake": {
+   "candidates": {
+    "perLevel": 8,
+    "perLevelBy": {
+     "easy": 8,
+     "hard": 10
+    }
+   },
+   "deal": {
+    "attempts": 96
+   }
+  }
+ },
+ "main": [
+  "sg239",
+  "sg237",
+  "sg281",
+  "sg326",
+  "sg299",
+  "sg265",
+  "sg340",
+  "sg255",
+  "sg303",
+  "sg248",
+  "sg319",
+  "sg330",
+  "sg295",
+  "sg275",
+  "sg310",
+  "sg272",
+  "sg263",
+  "sg245",
+  "sg320",
+  "sg232",
+  "sg328",
+  "sg269",
+  "sg292",
+  "sg304",
+  "sg332",
+  "sg278",
+  "sg247",
+  "sg257",
+  "sg314",
+  "sg333",
+  "sg252",
+  "sg327",
+  "sg234",
+  "sg240",
+  "sg283",
+  "sg277",
+  "sg262",
+  "sg317",
+  "sg241",
+  "sg285",
+  "sg337",
+  "sg291",
+  "sg231",
+  "sg279",
+  "sg316",
+  "sg250",
+  "sg325",
+  "sg339",
+  "sg307",
+  "sg282"
+ ],
+ "map": {
+  "files": [
+   "land-02-a.webp",
+   "land-02-b.webp"
+  ],
+  "templates": "map/templates.json"
+ },
+ "eggTurns": [
+  [
+   [
+    [
+     "glowcap",
+     694,
+     748
+    ],
+    [
+     "wisp",
+     393,
+     300
+    ]
+   ],
+   [
+    [
+     "bubble",
+     694,
+     748
+    ],
+    [
+     "glowcap",
+     393,
+     300
+    ]
+   ],
+   [
+    [
+     "ember",
+     694,
+     748
+    ],
+    [
+     "bubble",
+     393,
+     300
+    ]
+   ],
+   [
+    [
+     "glint",
+     694,
+     748
+    ],
+    [
+     "ember",
+     393,
+     300
+    ]
+   ]
+  ],
+  [
+   [
+    [
+     "glint",
+     198,
+     934
+    ],
+    [
+     "ember",
+     391,
+     309
+    ]
+   ],
+   [
+    [
+     "wisp",
+     198,
+     934
+    ],
+    [
+     "glint",
+     391,
+     309
+    ]
+   ],
+   [
+    [
+     "glowcap",
+     198,
+     934
+    ],
+    [
+     "wisp",
+     391,
+     309
+    ]
+   ]
+  ]
+ ],
+ "eggNote": "Eggs on the painted side-quest spurs' tips (World 1's rule, eggsAt quests: the land has no side quests, so no spur leads nowhere): eggTurns puts each sheet's 2 eggs on its template's 2 quest spots, kinds glowcap, wisp, glint, ember, bubble in turn (the map README's donut, alien, star and comet aren't drawn)."
+}
