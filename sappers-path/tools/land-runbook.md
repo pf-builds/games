@@ -62,6 +62,7 @@ $N tools/land.js tools/lands/01-kitten-forest bake --list 212,230 --extra 6  # r
 $N tools/land.js tools/lands/01-kitten-forest convert sheet --force           # after a picture or crop change
 $N tools/land.js tools/lands/01-kitten-forest check
 $N tools/land.js tools/lands/01-kitten-forest install                         # only after check passes
+$N tools/land.js tools/lands/01-kitten-forest assemble check reinstall --keep 203,205  # an installed land re-dealt in place: only its main records in levels.json change, the kept ones byte for byte (tools/land-01-ink-notes.md §5)
 ```
 
 Options: `--game DIR` (another game copy, for trials), `--gallery DIR`, `--threads N`, `--force` (redo a step's work),

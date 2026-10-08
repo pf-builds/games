@@ -3,6 +3,7 @@
 //   ~/.local/opt/node/bin/node tools/land.js LAND_DIR [STEP ...] [--game DIR] [--gallery DIR] [--threads N]
 //                                            [--only A-B | --list N,N,...] [--extra K] [--shard S [--reuse]] [--force]
 //   ~/.local/opt/node/bin/node tools/land.js LAND_DIR install [--game DIR] [--replace]
+//   ~/.local/opt/node/bin/node tools/land.js LAND_DIR bake --list N,N ... ; LAND_DIR assemble check reinstall --keep N,N|none
 // Land 1 fix pass: a land already installed (the game's last land) is planned and checked as if it weren't (context
 // reads it out of the game), and install --replace swaps the installed land for this bake (removeFromConfig).
 // LAND_DIR: land.json (k, slug, name, lore, count, source, features, eggs, shade, profile, raw, main, map; v6 lane D: quests
@@ -32,6 +33,11 @@
 //   check     every gate (below) -> scratch/report.md and scratch/state.json {ok}
 //   zen       (v6 lane D; after a passing check, never part of the default run) the land as a Zen world, into levels/zen.json
 //             only (land.json zen.k; zenInstall below): the shared levels, gallery, layout and config files are not touched
+//   reinstall (v6 lane D4; after a passing check with --keep, never part of the default run) a records-only re-deal of an
+//             installed land: its main records in levels/levels.json replaced in place (same ids, same order), the --keep
+//             levels' installed records byte for byte; gallery, layout, config, LICENSES.md and the sheets untouched.
+//             --keep N,N (or none) on assemble: those levels' records, every side quest and the map come from the game
+//             as installed (so the check gates what will ship); bake never re-bakes a kept level.
 //   install   (only after a passing check; never part of the default run) appends the land to the game: levels,
 //             gallery, layout, sheets, config (lands.list, map.eggCoins) and LICENSES.md, each file written whole only
 //             after every write is ready. A land already in the game's config is refused.
@@ -75,13 +81,15 @@ function context(dir) {
   // Land 1 fix pass: a land already installed (the game's last; a fix pass re-bakes it) is read out of the game first, so
   // the land is planned against the game without it (its side-quest pictures free again); install --replace puts it back.
   const installed = (LCF.list || []).find((d) => d.k === land.k) || null;
+  const inst = installed ? { levels: levels.levels.filter((l) => l.land === land.k), gallery: gallery.levels.filter((l) => l.land === land.k), layout: layout.sheets.filter((S) => S.land === land.k) } : null; // v6 lane D4: as installed, for reinstall --keep
   if (installed) { if ((LCF.list || []).some((d) => d.k > land.k)) throw new Error("land " + land.k + " is installed and a later land follows it");
     levels.levels = levels.levels.filter((l) => l.land !== land.k); gallery.levels = gallery.levels.filter((l) => l.land !== land.k); layout.sheets = layout.sheets.filter((S) => S.land !== land.k); }
   // Where it goes: the level after the game's last, the sheet after its last, the picture after its last.
   const state = fs.existsSync(path.join(S, "state.json")) ? readJ(path.join(S, "state.json")) : {};
   const from = state.from || levels.levels[levels.levels.length - 1].n + 1, sheet0 = state.sheet0 || layout.sheets.length + 1, gal0 = state.gal0 != null ? state.gal0 : gallery.levels.length;
-  return { LAND, GAME, GAL, S, land, man, CFG, LC, LCF, P, levels, gallery, layout, gman, gcfg, count, from, to: from + count - 1, sheet0, gal0, era: LCF.castleRealms + land.k, state, installed };
+  return { LAND, GAME, GAL, S, land, man, CFG, LC, LCF, P, levels, gallery, layout, gman, gcfg, count, from, to: from + count - 1, sheet0, gal0, era: LCF.castleRealms + land.k, state, installed, inst };
 }
+const keepOf = () => (opt("keep") ? (opt("keep") === "none" ? [] : opt("keep").split(",").map(Number)) : null); // v6 lane D4: reinstall's kept levels (null: not a records-only run)
 const saveState = (X, extra) => { X.state = Object.assign({}, X.state, { from: X.from, to: X.to, sheet0: X.sheet0, gal0: X.gal0 }, extra || {}); writeJ(path.join(X.S, "state.json"), X.state, true); };
 // The land's main pictures in level order, and its side quests: the next Wandering Gallery pictures no land has used.
 function picturesOf(X) {
@@ -135,7 +143,7 @@ async function bake(X) {
   const moat = (X.land.features || []).indexOf("moat") >= 0 ? moatCan(X, b) : null, plan = LP.landPlan(tags, X.land, X.P, X.from, D, moat ? { moat: moat.map((m) => m.ok) } : null), liquids = moat ? (X.P.features.moat || {}).liquids : undefined, moatLo = moat ? ((X.P.features.moat || {}).ways || [0])[0] : 0;
   saveState(X, moat ? { tags, plan, moat } : { tags, plan }); if (moat) console.log("bake: " + moat.filter((m) => m.ok).length + " of " + moat.length + " pictures can carry a moat" + moat.filter((m) => !m.ok).map((m) => "; " + m.n + " can't: " + m.why).join(""));
   const only = opt("only") ? opt("only").split("-").map(Number) : null, list = opt("list") ? opt("list").split(",").map(Number) : null, dir = path.join(X.S, "bake");
-  const inRun = (n) => (list ? list.indexOf(n) >= 0 : !only || (n >= only[0] && n <= (only[1] || only[0]))), want = (f, n) => (flag("force") || only || list ? inRun(n) : !fs.existsSync(f)), jobs = [];
+  const K = keepOf() || [], inRun = (n) => K.indexOf(n) < 0 && (list ? list.indexOf(n) >= 0 : !only || (n >= only[0] && n <= (only[1] || only[0]))), want = (f, n) => (flag("force") || only || list ? inRun(n) : !fs.existsSync(f)), jobs = [];
   b.main.forEach((e, i) => { const f = path.join(dir, "m-" + e.n + ".json"); if (want(f, e.n)) jobs.push({ file: f, job: { n: e.n, tag: tags[i], plan: plan[i], band: X.P.bands[tags[i]], look: X.P.lookahead[tags[i]] != null ? X.P.lookahead[tags[i]] : null, care: (X.P.careful || {})[tags[i]] != null ? X.P.careful[tags[i]] : null, careTune: (X.P.carefulTune || X.P.careful || {})[tags[i]] != null ? (X.P.carefulTune || X.P.careful)[tags[i]] : null, mysRows: (X.P.features.mystery || {}).rows || null, over: X.P.bake || null, obv: (X.P.obvious || {})[tags[i]] != null ? X.P.obvious[tags[i]] : null, pace: X.P.pace, board: e.board, extra: +opt("extra") || 0, liquids, moatLo } }); });
   b.side.forEach((e, i) => { const n = X.gal0 + i + 1, tag = BK.sideCycle[(X.gal0 + i) % BK.sideCycle.length], f = path.join(dir, "s-" + n + ".json"); if (!only && !list && (flag("force") || !fs.existsSync(f))) jobs.push({ file: f, job: { n: 100000 + n, side: true, tag, band: BK.sideBands[tag], look: null, pace: BK.sidePace, board: e.board } }); });
   if (!jobs.length) { console.log("bake: every level kept (scratch/bake)"); return; }
@@ -213,20 +221,22 @@ const creditOf = (p) => (p.artist ? p.artist + (p.date ? ", " + p.date : "") : p
 function assemble(X) {
   const b = readJ(path.join(X.S, "boards.json")), mp = readJ(path.join(X.S, "map.json")), { main, side, quests } = picturesOf(X), out = path.join(X.S, "out"), bad = [];
   const rec = (r) => { if (!r || r.fail) bad.push(r ? r.n + ": " + r.fail : "missing"); return r && !r.fail ? r : null; };
-  const levels = b.main.map((e, i) => { const r = rec(readJ(path.join(X.S, "bake", "m-" + e.n + ".json"))); if (!r) return null; const p = main[i], B = e.board, L = r.level;
+  const K = keepOf(); if (K && !X.inst) throw new Error("assemble --keep: land " + X.land.k + " is not installed");
+  const levels = b.main.map((e, i) => { if (K && K.indexOf(e.n) >= 0) return X.inst.levels.find((L) => L.n === e.n) || (bad.push(e.n + ": not installed"), null); // v6 lane D4: kept as installed
+    const r = rec(readJ(path.join(X.S, "bake", "m-" + e.n + ".json"))); if (!r) return null; const p = main[i], B = e.board, L = r.level;
     return Object.assign({ id: "e" + X.era + "-" + e.n, n: e.n, era: X.era, land: X.land.k, source: "land", title: p.title, kind: p.kind || "painting", src: p.id, credit: creditOf(p), tag: r.tag, band: r.tag, target: X.P.bands[r.tag], seed: r.seed,
       w: L.w, h: L.h, grid: L.grid, pic: true, pal: B.pal }, L.liquid ? { liquid: L.liquid } : {}, B.shade ? { shade: dry(B.shade, L.grid, B.grid) } : {}, L.hidden ? { hidden: L.hidden } : {}, L.hidden && X.LC.plan.hidden.fills ? (({ c, q }) => ({ hideC: c, hideQ: q }))(fillOf(B.pal, X.LC.plan.hidden)) : {}, L.lock ? { lock: L.lock } : {}, { cols: L.cols }, L.links ? { links: L.links } : {},
       { win: L.win, grade: L.grade, inBand: r.inBand, convert: B.stats, feats: r.plan.feats.concat(r.plan.lock ? ["lock"] : []) }, r.plan.cant ? { cant: r.plan.cant } : {}, r.mystery ? { mystery: r.mystery } : {}, r.fallback ? { fallback: r.fallback } : {}); });
-  const pics = b.side.map((e, i) => { const r = rec(readJ(path.join(X.S, "bake", "s-" + (X.gal0 + i + 1) + ".json"))); if (!r) return null; const p = side[i], B = e.board, L = r.level;
+  const pics = K ? X.inst.gallery : b.side.map((e, i) => { const r = rec(readJ(path.join(X.S, "bake", "s-" + (X.gal0 + i + 1) + ".json"))); if (!r) return null; const p = side[i], B = e.board, L = r.level;
     return Object.assign({ id: "g-w-" + p.id, n: X.gal0 + i + 1, gallery: true, wander: true, land: X.land.k, title: p.title }, p.short ? { short: p.short } : {}, { kind: p.kind || "painting", src: p.id, credit: creditOf(p), tag: r.tag, band: r.tag, target: X.LC.bake.sideBands[r.tag], seed: r.seed,
       w: L.w, h: L.h, grid: L.grid, pic: true, cols: L.cols, pal: B.pal }, B.shade ? { shade: B.shade } : {}, { win: L.win, grade: L.grade, inBand: r.inBand, convert: B.stats, quest: quests[i] }, r.fallback ? { fallback: r.fallback } : {}); });
-  const S = mp.entries, entry = { k: X.land.k, slug: X.land.slug, name: X.land.name, lore: X.land.lore, from: X.from, to: X.to, source: X.land.source, features: X.land.features, eggs: X.land.eggs, sheets: [S[0].sheet, S[S.length - 1].sheet], files: X.land.map.files };
+  const S = K ? X.inst.layout : mp.entries, entry = K ? X.installed : { k: X.land.k, slug: X.land.slug, name: X.land.name, lore: X.land.lore, from: X.from, to: X.to, source: X.land.source, features: X.land.features, eggs: X.land.eggs, sheets: [S[0].sheet, S[S.length - 1].sheet], files: X.land.map.files };
   const lic = ["", "### Land " + X.land.k + ": " + X.land.name + " (levels " + X.from + "-" + X.to + ")", "", "| Level | Picture | Artist | Licence | Source |", "|---|---|---|---|---|"]
     .concat(main.map((p, i) => "| " + (X.from + i) + " | " + p.title + " (" + p.id + ") | " + (p.artist || "-") + " | " + p.licence + " | " + p.url + " |"),
       side.map((p, i) => "| side quest " + (X.gal0 + i + 1) + " (Wandering Gallery) | " + p.title + " (" + p.id + ") | " + (p.artist || "-") + " | " + p.licence + " | " + p.url + " |"));
-  writeJ(path.join(out, "levels.json"), levels.filter(Boolean)); writeJ(path.join(out, "gallery.json"), pics.filter(Boolean)); writeJ(path.join(out, "land.json"), { entry, layout: S, eggCoins: mp.eggCoins }, true);
+  writeJ(path.join(out, "levels.json"), levels.filter(Boolean)); writeJ(path.join(out, "gallery.json"), pics.filter(Boolean)); writeJ(path.join(out, "land.json"), { entry, layout: S, eggCoins: K ? X.CFG.map.eggCoins.slice(X.sheet0 - 1, X.sheet0 - 1 + S.length) : mp.eggCoins }, true);
   fs.writeFileSync(path.join(out, "licences.md"), lic.join("\n") + "\n");
-  console.log("assemble: " + levels.filter(Boolean).length + " levels, " + pics.filter(Boolean).length + " side quests" + (bad.length ? "; MISSING " + bad.join("; ") : ""));
+  console.log("assemble: " + levels.filter(Boolean).length + " levels" + (K ? " (" + K.length + " kept as installed)" : "") + ", " + pics.filter(Boolean).length + " side quests" + (K ? " (as installed)" : "") + (bad.length ? "; MISSING " + bad.join("; ") : ""));
   return bad;
 }
 
@@ -322,6 +332,23 @@ function install(X) {
   console.log("install: land " + X.land.k + " (" + X.land.name + ", levels " + X.from + "-" + X.to + ", " + GV.length + " side quests, sheets " + LJ.entry.sheets.join("-") + ") written into " + G);
 }
 
+// v6 lane D4: a records-only re-deal of an installed land (Kitten Forest under the ink-outline rule, Peter's call of
+// 2026-10-07): the land's main records replaced in levels/levels.json in place, nothing else written. Refused unless the
+// check passed on assemble --keep's output, the ids and order are the installed ones, every kept record is byte-identical
+// to the installed one, and the side quests and map in out/ are the installed ones (they are not re-written).
+function reinstall(X) {
+  const K = keepOf(); if (!K) throw new Error("reinstall: --keep N,N (or none) is required"); if (!X.state.ok) throw new Error("reinstall: the land has no passing check (run assemble check with --keep)");
+  if (!X.inst) throw new Error("reinstall: land " + X.land.k + " is not installed (use install)");
+  const out = path.join(X.S, "out"), LV = readJ(path.join(out, "levels.json")), GV = readJ(path.join(out, "gallery.json")), LJ = readJ(path.join(out, "land.json")), I = X.inst, js = JSON.stringify;
+  if (LV.map((L) => L.id).join() !== I.levels.map((L) => L.id).join()) throw new Error("reinstall: out/levels.json's ids are not the installed ones in order");
+  const changed = K.filter((n) => js(LV.find((L) => L.n === n)) !== js(I.levels.find((L) => L.n === n))); if (changed.length) throw new Error("reinstall: kept levels differ from the installed records: " + changed.join(","));
+  if (js(GV) !== js(I.gallery) || js(LJ.layout) !== js(I.layout)) throw new Error("reinstall: out/ side quests or map are not the installed ones (assemble with --keep)");
+  const f = path.join(X.GAME, "levels/levels.json"), raw = readJ(f), by = new Map(LV.map((L) => [L.id, L])); let n = 0;
+  raw.levels = raw.levels.map((L) => (L.land === X.land.k ? (n++, by.get(L.id)) : L)); if (n !== LV.length) throw new Error("reinstall: " + n + " installed records for " + LV.length);
+  fs.writeFileSync(f + ".tmp", JSON.stringify(raw)); fs.renameSync(f + ".tmp", f);
+  console.log("reinstall: land " + X.land.k + " (" + X.land.name + "): " + (LV.length - K.length) + " records re-dealt, " + K.length + " kept, in place in levels/levels.json (nothing else written)");
+}
+
 // v6 lane D: a land installed as a Zen world, into levels/zen.json only (levels.json, gallery.json, layout.json and config.json
 // stay as they are: lane A owns them). land.json zen: {k} (its place on the Zen map). The records keep their numbers (n, so no
 // two worlds share one on the map) with ids z<k>-<i> and world k, no land; the world entry carries its sheets as layout
@@ -343,14 +370,14 @@ function zenInstall(X) {
 // ---- main -------------------------------------------------------------------------------------------------------------------
 if (require.main === module) {
   (async () => {
-    const dir = argv[0]; if (!dir || dir.startsWith("--")) { console.log("usage: node tools/land.js LAND_DIR [prep|convert|sheet|bake|map|assemble|check|install ...] [--game DIR] [--gallery DIR] [--threads N] [--only A-B] [--extra K] [--force]"); process.exitCode = 2; return; }
-    const asked = argv.slice(1).filter((a, i, A) => !a.startsWith("--") && !(i > 0 && A[i - 1].startsWith("--") && ["game", "gallery", "threads", "only", "list", "extra", "shard"].indexOf(A[i - 1].slice(2)) >= 0));
+    const dir = argv[0]; if (!dir || dir.startsWith("--")) { console.log("usage: node tools/land.js LAND_DIR [prep|convert|sheet|bake|map|assemble|check|install|reinstall ...] [--game DIR] [--gallery DIR] [--threads N] [--only A-B] [--extra K] [--keep N,N] [--force]"); process.exitCode = 2; return; }
+    const asked = argv.slice(1).filter((a, i, A) => !a.startsWith("--") && !(i > 0 && A[i - 1].startsWith("--") && ["game", "gallery", "threads", "only", "list", "extra", "shard", "keep"].indexOf(A[i - 1].slice(2)) >= 0));
     const steps = asked.length ? asked : STEPS; let X = context(dir); fs.mkdirSync(X.S, { recursive: true }); saveState(X);
     try {
       for (const s of steps) {
         console.log("== " + s); X = context(dir);
         if (s === "prep") prep(X); else if (s === "convert") convert(X); else if (s === "sheet") sheet(X); else if (s === "bake") await bake(X); else if (s === "map") map(X);
-        else if (s === "assemble") { const bad = assemble(X); if (bad.length) { process.exitCode = 1; break; } } else if (s === "check") { if (!check(X)) process.exitCode = 1; } else if (s === "install") install(X); else if (s === "zen") zenInstall(X);
+        else if (s === "assemble") { const bad = assemble(X); if (bad.length) { process.exitCode = 1; break; } } else if (s === "check") { if (!check(X)) process.exitCode = 1; } else if (s === "install") install(X); else if (s === "zen") zenInstall(X); else if (s === "reinstall") reinstall(X);
         else throw new Error("no step " + s);
       }
     } catch (e) { console.log("land: " + e.message); process.exitCode = 1; }
