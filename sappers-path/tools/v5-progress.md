@@ -472,3 +472,4 @@ the run learned: `tools/land-02-notes.md` (including the one-line page change th
 | E2 | places.json + cq44, cq14, cq27; freeze snapshot re-taken with zen.json; tests for the merged data (50 campaign pictures, merge proofs on the real gallery) | done | (merge commit) |
 | E9 | Checks on the merged tree | see notes §12 and the merge commit message | (merge commit) |
 | S1 | Ship fix pass: World 1 "Picture Garden"; How to play on the home; Campaign quest prize named; no empty side-quest row; cache ?v=54 | done: test.js 701/0; regrades 0 (2,405 / 372 / 324); freeze PASS (no re-snapshot: levels unchanged); critic-v5 0 of 10,527; selfTest 868/870/868, 0 failed; sweep 126/0; harness all passed; 0 console | (this commit) |
+| D6 | Playtest artifact v17 (85a7eec; Jump Z2.1/12/15/29/45/50, Z1.1, 150, 200); smoke OK 375 + 1280 | done, waits for Peter | (this commit) |
