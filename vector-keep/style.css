@@ -58,7 +58,7 @@ body.in-game {
 }
 
 /* Game layout */
-#screen-game { position: relative; z-index: 0; justify-content: flex-start; gap: .5rem; padding-top: max(.8rem, env(safe-area-inset-top)); }
+#screen-game { position: relative; z-index: 0; overflow: hidden; justify-content: flex-start; gap: .5rem; padding-top: max(.8rem, env(safe-area-inset-top)); }
 .hud {
   width: min(96vw, 44rem); display: flex; align-items: center; gap: .8rem;
   font-size: .95rem; letter-spacing: .05em;
