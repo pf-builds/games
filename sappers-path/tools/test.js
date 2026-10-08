@@ -1774,6 +1774,13 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
     eq([Bn.bg > 0, Bn.bg === E.matOf(Bn.grid[1][1]), (Bn.pal[Bn.bg] || {}).c !== Bn.stats.bg, byColour(Bn)[1], Bn.ink === byColour(Bn)[0], fixed[0] > 0, fixed[1], lost[1] > 0, [Bp.ink, Bp.bg].join() === byColour(Bp).join() && Bp.bg === E.matOf(Bp.grid[1][1]), [Bq.ink, Bq.bg].join() === byColour(Bq).join() && Bq.bg === 0],
       [true, true, true, 0, true, true, 0, true, true, true], "lands (dark ground, D3): a navy ground lifted to " + (Bn.pal[Bn.bg] || {}).c + " (stats.bg " + Bn.stats.bg + ") keeps its id " + Bn.bg + " on a " + Bn.w + "x" + Bn.h + " outlined board; mystery blocks at 0.45: " + fixed[0] + ", none on the ground (by colour match " + lost[1] + " of " + lost[0] + " would be); a pale ground and a painting keep the colour match's ink and bg");
   }
+  // v6 lane D5 (the ink critic's should-fix 1: 215 punished thinking ahead): the profile's carefulFloor is a pick target.
+  // Two candidates alike but for the careful player: under the floor is no pick (and says why), at it is; no floor, both are.
+  {
+    const B = LB.configs(false).B, PF = LP.profileOf({ profile: { carefulFloor: { normal: 0.5 } } }, LCF), cand = (cf) => ({ tag: "normal", miss: 0, pairs: 0, win: { normal: "0".repeat(40) }, grade: { normal: { rate: 0.3, greedy: 0.5, careful: cf, pace: { ms: PF.pace.aim }, maxWait: 9000 } } });
+    const T = LB.targetsOf(B, PF.bands.normal, PF.pace, null, { links: 0 }, null, null, PF.carefulFloor.normal), T0 = LB.targetsOf(B, PF.bands.normal, PF.pace, null, { links: 0 }, null, null, null);
+    eq([T.good(cand(0.063)), T.good(cand(0.5)), T0.good(cand(0.063)), T.why(cand(0.063)), T.pen(cand(0.063)) > T.pen(cand(0.5))], [false, true, true, "careful 0.063 under 0.5", true], "lands (careful floor, D5): a Normal candidate whose careful player wins 0.063 is no pick under a 0.5 floor, one at 0.5 is, and with no floor both are");
+  }
   // Organic moats (SPEC-v4 §9, the organic moats entry; tools/moat.js). Hand boards: a framed picture of one background
   // colour with a subject drawn in it. The ring: water only off the subject, at least one cell of bank between (8-way),
   // the bank a path of open ground (off the subject, not joined to the frame before anything is dug), every cell left

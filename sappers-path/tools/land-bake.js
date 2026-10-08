@@ -119,21 +119,22 @@ function gradeLevel(L, rules, B, hint, seed, tag) {
 }
 const fastBad = (g, B) => g.fast != null && (g.fast - g.rate >= B.fast.pts || (g.fast > B.fast.ratio * g.rate && g.fast - g.rate >= B.fast.minPts));
 // The targets (band: [lo, hi]; P: the plan). good(c): every one met; pen(c): the fallback's total miss.
-function targetsOf(B, band, PC, look, P, care, obv) { // PC: {range, aim}; look: the lookahead ceiling (null: none); care: the careful player's ceiling (null: none); obv: the obvious player's (null: none)
+function targetsOf(B, band, PC, look, P, care, obv, careLo) { // PC: {range, aim}; look: the lookahead ceiling (null: none); care: the careful player's ceiling (null: none); obv: the obvious player's (null: none); careLo: the careful player's floor (null: none; v6 lane D5)
   const fell = (c) => (!gt(c).pace || gt(c).pace.fell ? 1 : 0), dmiss = (c) => (fell(c) ? 1e9 : Math.max(0, PC.range[0] - gt(c).pace.ms, gt(c).pace.ms - PC.range[1]));
   const wmiss = (c) => (gt(c).maxWait == null ? 1e9 : Math.max(0, gt(c).maxWait - B.maxWaitMs)), tmiss = (c) => Math.max(0, (wn(c) || "").length - B.maxTaps);
   const fbad = (c) => (fastBad(gt(c), B) ? 1 : 0), pmiss = (c) => (c.pairs < P.links ? 1 : 0), over = (c) => (look != null && gt(c).greedy > look ? gt(c).greedy - look : 0);
   const cover = (c) => (care != null && gt(c).careful > care ? gt(c).careful - care : 0);
+  const cunder = (c) => (careLo != null && gt(c).careful != null && gt(c).careful < careLo ? careLo - gt(c).careful : 0); // v6 lane D5 (critic should-fix 1: 215 punished thinking ahead): a careful player under the floor is no pick
   // Land 1 fix (the functional critic's m2, m3): with a steady replay graded, every thinking replay wins and the steady one
   // never waits longer than maxWaitMs between two taps (the end, every squad working, is reported, not gated).
   const sbad = (c) => (gt(c).steady ? ((gt(c).thinks || []).some((v) => !v) || !!gt(c).steady.lost || gt(c).steady.gap > B.maxWaitMs ? 1 : 0) : 0);
   const obad = (c) => (obv != null && gt(c).obvious != null && gt(c).obvious > obv ? 1 : 0);
-  const good = (c) => !c.miss && !dmiss(c) && !wmiss(c) && !tmiss(c) && !fbad(c) && !pmiss(c) && !over(c) && !cover(c) && !sbad(c) && !obad(c);
+  const good = (c) => !c.miss && !dmiss(c) && !wmiss(c) && !tmiss(c) && !fbad(c) && !pmiss(c) && !over(c) && !cover(c) && !cunder(c) && !sbad(c) && !obad(c);
   const aim = (c) => (fell(c) ? 0 : Math.abs(gt(c).pace.ms - PC.aim) / B.aimWeight);
-  const PN = B.penalty, pen = (c) => PN.band * c.miss + Math.min(dmiss(c), PN.fellMs) / PN.durationMs + wmiss(c) / PN.waitMs + tmiss(c) + PN.fast * fbad(c) + PN.pairs * pmiss(c) + over(c) / PN.lookahead + cover(c) / PN.careful + (PN.steady || 1) * sbad(c) + obad(c);
+  const PN = B.penalty, pen = (c) => PN.band * c.miss + Math.min(dmiss(c), PN.fellMs) / PN.durationMs + wmiss(c) / PN.waitMs + tmiss(c) + PN.fast * fbad(c) + PN.pairs * pmiss(c) + over(c) / PN.lookahead + (cover(c) + cunder(c)) / PN.careful + (PN.steady || 1) * sbad(c) + obad(c);
   const why = (c) => { const w = []; if (c.miss) w.push("out of band: " + (100 * gt(c).rate).toFixed(1) + "% vs " + band.map((x) => (100 * x).toFixed(0)).join("-") + "%"); if (fell(c)) w.push("the real-pace replay lost");
     else if (dmiss(c)) w.push("real pace " + Math.round(gt(c).pace.ms / 1000) + " s outside " + PC.range.map((x) => x / 1000).join("-") + " s"); if (wmiss(c)) w.push("longest tap " + (gt(c).maxWait / 1000).toFixed(1) + " s");
-    if (tmiss(c)) w.push("taps " + wn(c).length); if (fbad(c)) w.push("fast tapper"); if (pmiss(c)) w.push("pairs " + c.pairs + " of " + P.links); if (over(c)) w.push("lookahead " + gt(c).greedy); if (cover(c)) w.push("careful " + gt(c).careful); if (sbad(c)) w.push("steady rhythm " + JSON.stringify([gt(c).thinks, gt(c).steady])); if (obad(c)) w.push("obvious player " + gt(c).obvious); return w.join("; "); };
+    if (tmiss(c)) w.push("taps " + wn(c).length); if (fbad(c)) w.push("fast tapper"); if (pmiss(c)) w.push("pairs " + c.pairs + " of " + P.links); if (over(c)) w.push("lookahead " + gt(c).greedy); if (cover(c)) w.push("careful " + gt(c).careful); if (cunder(c)) w.push("careful " + gt(c).careful + " under " + careLo); if (sbad(c)) w.push("steady rhythm " + JSON.stringify([gt(c).thinks, gt(c).steady])); if (obad(c)) w.push("obvious player " + gt(c).obvious); return w.join("; "); };
   return { good, pen, aim, why };
 }
 
@@ -171,7 +172,7 @@ function bakeOne(job) {
     CFG = require("../config.json"), rules = { easy: E.rulesOf(CFG.v3, "easy"), normal: E.rulesOf(CFG.v3, "normal"), hard: E.rulesOf(CFG.v3, "hard"), extreme: E.rulesOf(CFG.v3, "extreme") };
   const { n, tag, band } = job, PL = LC.plan, P = job.plan || { feats: [], mystery: 0, links: 0, hidden: 0, lock: false };
   for (const f of P.feats.concat(P.lock ? ["lock"] : [])) if (!FEATURES[f]) return { n, fail: "feature " + f + " has no builder" };
-  const TT = targetsOf(B, band, job.pace, job.look, P, job.care, job.obv), out = [], stats = { deals: 0, evals: 0, grades: 0 }, ink = job.board.ink || 0;
+  const TT = targetsOf(B, band, job.pace, job.look, P, job.care, job.obv, job.careLo != null ? job.careLo : null), out = [], stats = { deals: 0, evals: 0, grades: 0 }, ink = job.board.ink || 0;
   const ctx = { PL, board: job.board, liquids: job.liquids, skipIds: [job.board.ink, job.board.bg].filter(Boolean), giltOK: Object.keys(job.board.pal).every((k) => PAL.de00(PAL.lab(job.board.pal[k].c), PAL.lab(CFG.v3.mats[E.GILT].c)) >= PL.keyDE), lock: false };
   const D0 = Object.assign({}, B.deal, B.dealBy[tag] || {}, { maxTaps: B.maxTaps, time: rules.hard.time, maxWaitMs: B.maxWaitMs, lockSpaces: rules.hard.lockSpaces }, ink ? { capOf: { [ink]: B.capOf } } : {});
   if (B.deal.sizeRef) { const k = (job.board.w * job.board.h) / B.deal.sizeRef; D0.size = D0.size.map((v) => Math.max(1, Math.min(B.deal.maxCard, Math.round(v * k)))); } // squads scale with the board

@@ -432,3 +432,13 @@ Fixed: S1-S7, m2, m3, N1, N2 (`tools/v5-r4-notes.md` §10). Parked:
   world or Gallery bake from boards with a lifted ink (the five Campaign v6 quests cq09, cq12, cq14, cq24, cq34) or a
   lifted ground would lose them. Either store the ids in a record (a data change, so with a freeze re-snapshot) or match
   the nearest palette colour within the lift's reach.
+
+## v6 lane D5 (Kitten Forest fix pass, the ink critic's minor items, 2026-10-07)
+
+- World 2 mixes 18 paintings and 32 outlined boards (Peter's call to keep the paintings). Converting the kept 18 to outlined would make the land one style; 207, 236 and 250 would need better outlined sources first (their outlined boards lost the subject).
+- Ink specks off the line that aren't eyes: 201 Teacup a 3-cell piece at (8,30) and 1 cell at (26,30) on the cup; 240 one cell at (31,33). A speck clean-up in convert (or in lane C's clean step) and a re-deal of those two; `tools/land-ink-check.js` could report ink pieces of 3 cells or fewer that touch no line.
+- 217 Strawberry hug: dark-brown cells hug the left of the outline and make it look doubled (a source clean-up).
+- 211 Mushroom house (30x45) is narrow and muddy; 244 Slam dunk's hoop and net are a white blob. Art swaps or re-cleans.
+- 213 (42x29) and 227 (42x31) leave a big empty band above the cards at 375; a short board could sit lower or the frame shrink to it.
+- The Zen win sheet's Coins tile shows a coin with no number (Zen win-sheet code, seen on 215; likely older than lane D).
+- 229's 44 mystery blocks sit as one green lattice on the belly (the only eligible stretch on the outlined board); a looser blob gap there, or the face mask easing on the body, would scatter them.
