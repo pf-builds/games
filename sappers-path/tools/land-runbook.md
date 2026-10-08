@@ -112,6 +112,9 @@ adds the land to `config.json` `lands.list` and a row per new sheet to `map.eggC
   of room round it, touching at most two edges, and no colour close to the water (else the next liquid). One that
   can't is baked without one (`cant` on the level; the bake prints why). Put ring-carrying pictures on the land's
   Extreme spots. About three in four Kitten Forest-style AI pictures carry one; paintings far fewer.
+- Build data lives in `tools/build-data/` (v6 D9): the freeze snapshot (`frozen/`, config `v5.freeze.dir`), the old bake's
+  pools (`pools/`), the teaching source (`teaching.json`). `levels/` holds only what the page reads (config `v5.ship.levels`);
+  the portal build is the folder minus `tools/`, and `tools/test.js` fails past 19 MB or on a stray file in `levels/`.
 - Only one land touches `levels/`, `config.json` and `map/layout.json` at a time. The next land's prep, convert, sheet and
   map can run while this one bakes.
 - Pace follows board area. A 42 x 28 landscape board plays about 120-200 s even with small squads; a portrait or square

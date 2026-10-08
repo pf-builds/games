@@ -91,7 +91,7 @@ zen.json and their frozen copies). Now 106,622 B under 20 MB; this pass did not 
 | `tools/land-config.json` | a sixth mystery-block fill, chocolate `#342410`, added last (§4) |
 | `tools/land-contact.py` | `--world K` (a Zen world's records), water drawn blue, a board-size and moat line on each tile |
 | `tools/lands/02-snack-galaxy/` | land.json, pictures/manifest.json (67 lines: 50 picks + 17 spares), src/ (50), map/ |
-| `levels/frozen/zen.json` | re-snapshot: 36 → 86 records, the 36 byte-identical |
+| `tools/build-data/frozen/zen.json` | re-snapshot: 36 → 86 records, the 36 byte-identical |
 | `index.html`, `style.css` | `?v=57` |
 
 Not touched, per Peter's rule: `levels/levels.json`, `levels/gallery.json`, `map/layout.json`, `config.json` and `places.json`
@@ -201,10 +201,10 @@ Final, as graded (all 50):
 
 - **Tracked files outside tools/: 19,999,953 B** (40e3b39: 18,983,270; +1,016,683). The additions are zen.json
   (+293 KB), the frozen zen.json copy (+293 KB, never loaded), the sheets (418 KB) and main.js.
-- **Portal build ≈ 15,329,117 B (15.33 MB)**, leaving out levels/frozen, the bake pools, gallery-manifest.json and the
+- **Portal build ≈ 15,329,117 B (15.33 MB)**, leaving out tools/build-data/frozen, the bake pools, gallery-manifest.json and the
   *.md docs (was 14.62 MB).
 - The portal build stays under 18 MB, so I did not stop. **But the whole tracked folder now sits 47 bytes under 20.00 MB**,
-  CrazyGames' cap if anyone ships the folder whole. The next world must ship from a portal build, or levels/frozen and
+  CrazyGames' cap if anyone ships the folder whole. The next world must ship from a portal build, or tools/build-data/frozen and
   the pools have to move out of the game folder.
 
 ## 7. Known for the critic

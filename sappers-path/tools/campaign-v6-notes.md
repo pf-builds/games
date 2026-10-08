@@ -756,7 +756,7 @@ reused). cq11 Knitting Dragon stays.
 - `quest-bake.js` gate fix: "26 new ids never used before" read the freeze snapshot, which since a70710c holds the new
   quests; it now means not one of v5's 72 ids (`v5Places`) and not a retired picture, and a new quest already in the
   snapshot must match it (all but n and quest).
-- Freeze snapshot re-taken after the swap (`tools/freeze.js --snapshot`, Peter's OK): only `levels/frozen/gallery.json`
+- Freeze snapshot re-taken after the swap (`tools/freeze.js --snapshot`, Peter's OK): only `tools/build-data/frozen/gallery.json`
   changed (place 4), now byte-identical to `levels/gallery.json`.
 - Checks: test.js 665/0 (its kept-picture and freeze blocks pass); `regrade.js --gallery` 0 of 372; `regrade.js` 0 of 2,405;
   `freeze.js --require` PASS on the new snapshot (2,405 + 372 checks, castles 283); critic-v5 0 mismatching games of

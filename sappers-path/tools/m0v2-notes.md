@@ -38,8 +38,8 @@ The default rule for `bake.js` and the report's example column is `bake-config.j
   - stacks, including the chest column
   - the multi-cell keep, chests, the lever cascade and distance rebuild, stuck, and undo parity (A, B, stacks, levers, chests)
   - the solver counts, frontier, greedy, playouts, the cap, and every baked level's replay
-- `levels/teaching.json` (v3): six hand-authored teaching boards at world size. World 1 has One Wall, Outside In and Closest First (stone first gets stuck). World 2 has Goats and a Chest, World 3 The Frozen Moat, World 4 Iron and a Lever.
-- `levels/names.json`: w1-t3 renamed Closest First, and w1-09 and w2-09 added.
+- `tools/build-data/teaching.json` (v3): six hand-authored teaching boards at world size. World 1 has One Wall, Outside In and Closest First (stone first gets stuck). World 2 has Goats and a Chest, World 3 The Frozen Moat, World 4 Iron and a Lever.
+- `tools/build-data/names.json`: w1-t3 renamed Closest First, and w1-09 and w2-09 added.
 - `levels/levels.json` and `pool-w*.json`: v2 draft bake.
 
 ## Engine decisions (also in SPEC-v2 §8)

@@ -319,7 +319,7 @@ Fixed: S1-S7, m2, m3, N1, N2 (`tools/v5-r4-notes.md` §10). Parked:
 - N5: archer sprites are small (13 x 15 CSS px) and three-tower rings overlap into noise; lesson 125's ring is clipped at the board's left edge. A bigger archer and ring culling by importance.
 - N6: "?" studs are one navy in every realm, close to the realm 7 and 8 skies; a per-realm tint (they keep off the sky now, so it matters less).
 - N7: the grass egg glyph reads as lettering; redraw it.
-- m4: 2.6 MB of `levels/pool-e2..e4.json` sit in the game folder; move bake pools under `tools/` (the portal build already leaves them out).
+- m4: 2.6 MB of `tools/build-data/pools/pool-e2..e4.json` sit in the game folder; move bake pools under `tools/` (the portal build already leaves them out).
 - Families per realm are drawn per seed, so the island hold and the gate approach came up once each; a family quota in the bake's picker would even them out.
 - The desktop next-up card's Play wraps to two lines (every level, the boss too); a smaller label or a wider card.
 - A towers' "ember accent" in their own colour: no further colour fits the gate on 10-12-colour boards; a lit slit drawn by the board (not a block colour) would do it.

@@ -154,7 +154,7 @@ The top edge makes the height forgiving on a real phone; the 42 px retry is the 
 ### 7. Payload (PASS)
 
 - Game files without `tools/` (git-tracked): 17.30 MB (live 16.06 MB), under the 20 MB cap; 13.71 MB without
-  `levels/pool-*`, `levels/frozen/` and the .md files. Land 1 adds 1.24 MB (2 WebP sheets 0.46 MB, levels and pictures).
+  `levels/pool-*`, `tools/build-data/frozen/` and the .md files. Land 1 adds 1.24 MB (2 WebP sheets 0.46 MB, levels and pictures).
 - Bytes to play, fresh phone (375x812@3x, uncached): 2.45 MB to the home, 5.77 MB once level 1 runs (the three music
   loops, 3.3 MB, start after the first tap); a save at 200 to 201 the same; the map adds about 1.1-1.3 MB.
 

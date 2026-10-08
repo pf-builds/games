@@ -110,7 +110,7 @@ Gallery overall: 42 → 27 pairs under 20 (of 2,472 → 2,368), smallest 12.0 �
 Level files (md5):
 - `levels/levels.json` 8c14f6087dc6a4b72fce9057017a8d2a (unchanged)
 - `levels/debug-v4.json` bf16dce84f16a9dac42c35c1f961eb29 (unchanged)
-- `levels/teaching.json` 4d43d838aee040236449a6bf410b562b (unchanged)
+- `tools/build-data/teaching.json` 4d43d838aee040236449a6bf410b562b (unchanged)
 - `levels/gallery.json` 65039b783eb6b25fcef2523e7dee963a → f10582638e7386daaf0df5eba79750f1 (levels 5, 26, 40, 54: `pal` and `convert` only; level 33 replaced)
 - `levels/gallery-manifest.json` 3cbeeb7f3278078c6e47d038cb5ac382 → 390659b5215c80482890d9b6f0d660aa
 

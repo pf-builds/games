@@ -37,7 +37,7 @@ The bake is deterministic: two runs give byte-identical levels.json and pools (c
   - World 3 chunks 200, World 4 300.
   - Bands: `margin` 3, `noSpam`, `lineMats` 2, `slow` false.
   - New blocks: `bake.difficulty`, `bake.stepUp` and `decor`.
-- `levels/teaching.json`: camps are 2 deep (a second row over the first). Each board has a hand-authored `art` with 4 corner towers on the ring corners and a gate rect on the camp-facing wall. The grids are otherwise unchanged, so the teaching tests (mins, Closest First's counts, frontier, greedy, playouts) still pass as they were.
+- `tools/build-data/teaching.json`: camps are 2 deep (a second row over the first). Each board has a hand-authored `art` with 4 corner towers on the ring corners and a gate rect on the camp-facing wall. The grids are otherwise unchanged, so the teaching tests (mins, Closest First's counts, frontier, greedy, playouts) still pass as they were.
 - `levels/*`: rebaked. 38 levels (9/9/10/10), pools 14/60/60/55. `names.json` is unchanged.
 - `tools/test.js`: 14 new checks (120 in total).
   - Parse: a 2-deep camp works, and a camp cell not joined to the edge throws.

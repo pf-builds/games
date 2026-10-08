@@ -115,7 +115,7 @@ The lookahead's 5% is `look()`'s legality check and float scores. No hot loop al
   - The original differential still passes: 450 games, 0 differences.
 - `node tools/regrade.js` (full): **75 levels, 525 checks, 0 differences**, exit 0.
 - `node tools/debug-v4.js --check`: matches a fresh build.
-- `levels/levels.json` md5 `94380893acb6baf798530cae7bac1360` and `levels/teaching.json` md5 `6fc2ec5ed5f411c7e5b06ead49fd5537`, before and after. Not in any M2 diff.
+- `levels/levels.json` md5 `94380893acb6baf798530cae7bac1360` and `tools/build-data/teaching.json` md5 `6fc2ec5ed5f411c7e5b06ead49fd5537`, before and after. Not in any M2 diff.
 - `SP.selfTest()`: **588 pass, 0 fail**, about 0.85 s (555 before). New:
   - every debug level's stored order wins on Easy, Normal and Hard through `playCol` (12/12);
   - mystery tiles, colour-blind off and on: hidden ones show only "?" and their count, nothing of their card in the markup; 42 flips seen;

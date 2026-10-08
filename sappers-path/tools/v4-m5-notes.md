@@ -98,7 +98,7 @@ Smallest CSS px per cell, M4 (`9899207`, served from a git archive) against M5, 
   - `levels/levels.json` 8c14f6087dc6a4b72fce9057017a8d2a
   - `levels/gallery.json` 65039b783eb6b25fcef2523e7dee963a
   - `levels/debug-v4.json` bf16dce84f16a9dac42c35c1f961eb29
-  - `levels/teaching.json` 4d43d838aee040236449a6bf410b562b
+  - `tools/build-data/teaching.json` 4d43d838aee040236449a6bf410b562b
 - Screens: `tools/shots-v4-m5/` (gitignored), 84 PNGs from `tools/shots-v4-m5.mjs` at 375×812, 1280×720, 812×375 and the 400×600 iframe: home new and mid-campaign, the Gallery tab locked and open, settings, the level with the bar, a buy, the Ladder used, the Quartermaster asking and done, Scout before and after, Recall asking and done, a win report, a fail report, the map's era cards, the Gallery's card, lives on and none left (forced on, debug only). Harness screens in `tools/shots-v4-m5/harness/`.
 
 ## 6. Open

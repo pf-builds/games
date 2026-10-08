@@ -1,4 +1,4 @@
-// Sapper's Path teaching levels (SPEC-v4 §9: the M3 entry, re-authored in v4.1). Writes levels/teaching.json: all nine
+// Sapper's Path teaching levels (SPEC-v4 §9: the M3 entry, re-authored in v4.1). Writes tools/build-data/teaching.json: all nine
 // teaching levels are castle pictures (tools/castle.js) at a small size, entered from the bottom, dealt gently, each
 // with its lesson placed where the coach can point at it from the first tap:
 //   1 Open Gate (the tray), 2 The Waiting Line (a squad whose colour is walled in waits on the holding line), 3 Woodpile
@@ -28,7 +28,7 @@
 const fs = require("fs"), path = require("path");
 const E = require("../src/engine.js"), G = require("./gen.js"), R = require("./grade.js"), TG = require("./tags.js");
 const C = JSON.parse(fs.readFileSync(path.join(__dirname, "bake-config.json"), "utf8")), CFG = require("../config.json");
-const FILE = path.join(__dirname, "../levels/teaching.json");
+const FILE = path.join(__dirname, "build-data/teaching.json");
 const OUTI = process.argv.indexOf("--out"), DEST = OUTI > 0 ? path.resolve(process.argv[OUTI + 1], "teaching.json") : FILE;
 const rules = {}; for (const d of TG.TAGS) rules[d] = E.rulesOf(CFG.v3, d);
 const tagOf = (n) => TG.tagOf(n, C.tags, true); // v4.3: the teaching level's fixed tag
@@ -201,7 +201,7 @@ function build(spec) {
 }
 
 const KEEPTRIES = 300; // v4.3 --boards: deal seeds tried on a kept board before new forts are drawn
-// v5 R4 --add N,N: build only those lessons; every other level is kept from levels/teaching.json exactly as it is.
+// v5 R4 --add N,N: build only those lessons; every other level is kept from tools/build-data/teaching.json exactly as it is.
 const ADDI = process.argv.indexOf("--add"), ADD = ADDI > 0 ? process.argv[ADDI + 1].split(",").map(Number) : null;
 const OLD = ADD ? JSON.parse(fs.readFileSync(FILE, "utf8")).levels.filter((l) => ADD.indexOf(l.n) < 0) : [];
 const levels = OLD.map((lv) => ({ lv, v: { orders: lv.win, rate: 0, ms: 0, maxWait: 0 }, s: -1, coach: 0, kept: true, old: true })).concat(SPECS.filter((s) => !ADD || ADD.indexOf(s.n) >= 0).map(build)).sort((a, b) => a.lv.n - b.lv.n);

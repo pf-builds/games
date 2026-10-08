@@ -292,7 +292,7 @@ only act on a re-deal of those slots.
   against their realm's earlier picks (the gate is on the realm median). Palette gates as test.js checks them. Power-ups
   are never needed (every stored order wins without them).
 - `tools/regrade.js` 0 differences (Siege, 555 checks); `--gallery` 0 (360 checks).
-- `tools/freeze.js --snapshot` taken (`levels/frozen/`: levels.json and gallery.json); `--require` PASS, 0 differences.
+- `tools/freeze.js --snapshot` taken (`tools/build-data/frozen/`: levels.json and gallery.json); `--require` PASS, 0 differences.
 - `tools/test.js` 444 passed, 0 failed, nothing deferred (`v5.relaid: true`).
 - `SP.selfTest()` (debug): 509/0 at 375x812, 511/0 at 1280x720; the harness runs it at every viewport.
 - `tools/harness.mjs`: **all passed** at every viewport plus the hidden tab, 0 console errors or warnings (the archer-hit

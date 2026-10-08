@@ -22,12 +22,12 @@ Screens: BEFORE are the visual critic's own captures at `6bbd6e5`, copied to `to
 ```
 MD5 (levels/debug-v4.json) = bf16dce84f16a9dac42c35c1f961eb29
 MD5 (levels/levels.json)   = 8c14f6087dc6a4b72fce9057017a8d2a
-MD5 (levels/names.json)    = d55f5b04c5e819ebbf89a34639bd7e53
-MD5 (levels/pool-e1.json)  = 9aec1be5d491751ef1fbceee92c49637
-MD5 (levels/pool-e2.json)  = d6e6db978f5cfb9d9be4f8929836a1d4
-MD5 (levels/pool-e3.json)  = 464928833209b6294b8909126274460a
-MD5 (levels/pool-e4.json)  = 11c52c1c7265fbb9faf72736def42853
-MD5 (levels/teaching.json) = 4d43d838aee040236449a6bf410b562b
+MD5 (tools/build-data/names.json)    = d55f5b04c5e819ebbf89a34639bd7e53
+MD5 (tools/build-data/pools/pool-e1.json)  = 9aec1be5d491751ef1fbceee92c49637
+MD5 (tools/build-data/pools/pool-e2.json)  = d6e6db978f5cfb9d9be4f8929836a1d4
+MD5 (tools/build-data/pools/pool-e3.json)  = 464928833209b6294b8909126274460a
+MD5 (tools/build-data/pools/pool-e4.json)  = 11c52c1c7265fbb9faf72736def42853
+MD5 (tools/build-data/teaching.json) = 4d43d838aee040236449a6bf410b562b
 ```
 
 New selfTest coverage (runs at every harness viewport): each teaching level's coach box off the board and its arrow off every count and the line head, at load and at every step of the stored order; the jam sheet's chips (one per jammed squad, its colour and count, no crew name in the text) and its aria-label; the fail sheet under the line and the win sheet over the whole line; the rods on v4-linked and v4-all after every tap of the stored order (every rod on its two tiles, never over a third) and no chain tag over any count; B1 (a linked pair leaving and at rest, and a full Easy line of working squads: every count clear of every badge); the queue rows stepping down at full opacity with their faded faces; the victory march label at 3×. Replaced, not deleted: the old opacity check (now faded face and size step), the jam text checks (now the aria-label plus chips), the coach "one line" check (now "fits its box, one line or two").

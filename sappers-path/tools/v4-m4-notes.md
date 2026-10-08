@@ -187,7 +187,7 @@ Normal / Easy / Hard = random-tap win rates (400 games); lookahead = the one-mov
 | `node tools/regrade.js --gallery` | 60 levels, 480 checks, **0 differences** |
 | Critic diff `diff.mjs --patient 6 --rushed 5 && edge.mjs` | 3,744 games, **0 mismatching**, 0 grade mismatches; edge boards agree |
 | `debug-v4.js --check`, `teach-v4.js --check` | match |
-| Siege files | `levels/levels.json` md5 **8c14f6087dc6a4b72fce9057017a8d2a**, `levels/debug-v4.json` md5 **bf16dce84f16a9dac42c35c1f961eb29**, `levels/teaching.json` 4d43d838aee040236449a6bf410b562b: all unchanged |
+| Siege files | `levels/levels.json` md5 **8c14f6087dc6a4b72fce9057017a8d2a**, `levels/debug-v4.json` md5 **bf16dce84f16a9dac42c35c1f961eb29**, `tools/build-data/teaching.json` 4d43d838aee040236449a6bf410b562b: all unchanged |
 | Siege dealer | `gen.deal` without `capOf` is unchanged: a trial bake of levels 4-8 reproduced their entries in `levels.json` exactly |
 | `node tools/palette.js`, `tools/fade.js` | siege unchanged (min pair 25.5; 0 of 312 faded pairs under 20); `fade.js --gallery`: 42 of 2,472 under 20, all paintings |
 | Gallery bake determinism | two bakes from scratch: identical but for the wall-clock seconds |

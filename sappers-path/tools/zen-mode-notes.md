@@ -257,7 +257,7 @@ on Kitten Forest's sheets (the mirrored castle sheets read as the Campaign map).
   `main.js reasonText` (lane A's `short` reason for a killing tower kept, Zen's calm fallback kept); main.js's long-tail
   selfTest block (lane B's version, which already skips the empty tail; lane A's "next node after the win" edit sits
   elsewhere and merged clean); harness.mjs's side-quest pick (lane A's `g-ours-cq` pattern with lane B's fallback); LATER,
-  SPEC-v4 §9 and v5-progress (both sides kept, lane A's first). levels.json, gallery.json, layout.json, levels/frozen,
+  SPEC-v4 §9 and v5-progress (both sides kept, lane A's first). levels.json, gallery.json, layout.json, tools/build-data/frozen,
   config.json and test.js merged clean (lane A's data).
 - **Ids:** places.json appended cq44 (Giant Drumstick, place 4), cq14 (Baby Phoenix, 35), cq27 (Castle Guard, 37); the
   retired cq42, cq36, cq13 and cq30 keep their registry places, never used. 101 places; every gallery id has one.
@@ -277,7 +277,7 @@ on Kitten Forest's sheets (the mirrored castle sheets read as the Campaign map).
   --require PASS on the new snapshot (levels, gallery, zen, 283 castle cases); critic-v5 0 mismatching games of 10,527, tags
   and ladder 0 problems, known answers 0 wrong, real pace 312/312; selfTest 866/0 (375x812@3), 868/0 (1280x720), 866/0
   (360x640@3); sweep-map 126 checks, 0 failures; harness all passed; 0 console messages.
-- **Payload:** every tracked file outside tools/ 18.98 MB (under CrazyGames' 20 MB); of it levels/frozen 1.36 MB, the
+- **Payload:** every tracked file outside tools/ 18.98 MB (under CrazyGames' 20 MB); of it tools/build-data/frozen 1.36 MB, the
   bake pools and gallery manifest 2.70 MB and docs 0.32 MB are never loaded by the page: a portal build can leave them
   out (about 14.6 MB).
 
@@ -286,7 +286,7 @@ on Kitten Forest's sheets (the mirrored castle sheets read as the Campaign map).
 
 - **World 1 is "Picture Garden"** (Peter): zen.json's world name and lore ("A quiet garden at the start of the road ...")
   and world.json; every banner, world card, home card line and label reads it from there. Ids stay z1-*, so saves don't
-  change. levels/frozen/zen.json keeps the old world name: the freeze reads only `levels` (identical), so no re-snapshot.
+  change. tools/build-data/frozen/zen.json keeps the old world name: the freeze reads only `levels` (identical), so no re-snapshot.
   Earlier sections of these notes that say "The Gallery" mean this world.
 - **How to play on the home** (Peter): a "?" in a ring and "How to play" at the right end of the home's top row (icon only,
   44 x 44, under 360 px), opening the intro tour (the same start as Settings > How to play); hidden with no tour and while

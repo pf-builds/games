@@ -141,7 +141,7 @@ Results:
 ### 7. Payload
 - **Bytes to gameplay**, measured: fresh load, no debug, title, a real tap on Play into level 1. **15 files, 1.72 MB.**
   The biggest are levels.json 723 KB, main.js 286 KB and gallery.json 168 KB.
-- **Game folder without tools/:** 12.46 MB tracked, under the 20 MB cap. 9.87 MB without `levels/pool-e2..e4.json`.
+- **Game folder without tools/:** 12.46 MB tracked, under the 20 MB cap. 9.87 MB without `tools/build-data/pools/pool-e2..e4.json`.
   On disk, tools/ is about 726 MB of gitignored shots and never ships.
 
 ## Findings
@@ -174,7 +174,7 @@ so "critic-v5 0 mismatches" doesn't cover them.
 - The map's king beside 200 is the only boss signal. The R4 notes already park "a bigger boss with looser caps" in LATER.
   Peter should decide whether 200 needs a moment of its own (a name or intro card).
 
-**m4 MINOR: about 2.6 MB of bake pools sit in the game folder.** `levels/pool-e2/e3/e4.json` are tracked, never loaded
+**m4 MINOR: about 2.6 MB of bake pools sit in the game folder.** `tools/build-data/pools/pool-e2/e3/e4.json` are tracked, never loaded
 at runtime (absent from the 15 files to play), and 2.56 MB.
 - Repro: `git ls-files levels/pool-*`.
 - They're under the cap either way. The portal build must keep excluding them, as the notes say it does.

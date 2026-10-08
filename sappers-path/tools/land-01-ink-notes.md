@@ -248,12 +248,12 @@ Same ids, so clears survive: a v6.0 player's cleared Kitten Forest levels stay c
 ## 8. Payload
 
 Tracked files of the game folder outside tools/: **18,977,991 bytes** (HEAD before this piece 18,980,695; levels.json
-is 1,351 bytes smaller). Never loaded by the page: levels/frozen 1,361,953 B, the bake pools and gallery manifest
+is 1,351 bytes smaller). Never loaded by the page: tools/build-data/frozen 1,361,953 B, the bake pools and gallery manifest
 2,676,982 B, the docs (*.md) 324,760 B. **Portal build ≈ 14,614,296 B (14.61 MB)**, as at v6.0.
 
 ## 9. Files
 
-- Game data: `levels/levels.json` (land 1's 35 records), `levels/frozen/*` (re-snapshot), `index.html`, `style.css`
+- Game data: `levels/levels.json` (land 1's 35 records), `tools/build-data/frozen/*` (re-snapshot), `index.html`, `style.css`
   (?v=55), `tools/critic-v5/diff-result.json`.
 - Land folder: `tools/lands/01-kitten-forest/pictures/manifest.json`, `src/` (35 sources). Scratch (gitignored):
   boards.json, bake/, cands/, out/, report.md; the v6.0 scratch is backed up in this session's scratchpad only.

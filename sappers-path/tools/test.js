@@ -1948,7 +1948,7 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   // v6 merge: the same proof on lane A's gallery at f4b4a60 (the fixture) and on the merged tree's own gallery.json.
   for (const [where, LA] of [["lane A at f4b4a60", JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/lane-a-gallery.json"), "utf8")).levels], ["the merged gallery.json", require("../levels/gallery.json").levels]]) {
   const LAI = LA.map((g) => g.id), tag = (t) => t + " (" + where + ")";
-  const CUR = require("../levels/gallery.json").levels, CURI = CUR.map((g) => g.id), FROZ = JSON.parse(fs.readFileSync(path.join(__dirname, "../levels/frozen/gallery.json"), "utf8")).levels.map((g) => g.id);
+  const CUR = require("../levels/gallery.json").levels, CURI = CUR.map((g) => g.id), FROZ = JSON.parse(fs.readFileSync(path.join(__dirname, "..", V5.freeze.dir, "gallery.json"), "utf8")).levels.map((g) => g.id);
   const Z = JSON.parse(fs.readFileSync(path.join(__dirname, "../levels/zen.json"), "utf8")), W1 = Z.levels.filter((L) => L.world === 1), LAY = require("../map/layout.json");
   const ALLO = LEVELS_ALL.levels.map((l) => l.id), KF = LEVELS_ALL.levels.filter((l) => l.land === 1).map((l) => l.id);
   eq([PL.v5, v5.length, JSON.stringify(v5) === JSON.stringify(require("./campaign-quests/quests.json").v5Places), new Set(places).size === places.length, CURI.every((id) => places.includes(id)), LAI.every((id) => places.includes(id)), W1.every((L) => v5.includes(L.from))],
@@ -1990,7 +1990,7 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
 {
   const fs = require("fs"), path = require("path"), CFG = require("../config.json"), TU = JSON.parse(fs.readFileSync(path.join(__dirname, "../levels/tutorial.json"), "utf8"));
   const ST = TU.steps, R = E.rulesOf(V3, "normal"), WORDS = ["never", "play", "used", "wait", "lineEmpty", "full", "reveal", "shown", "pick", "power", "canRecall", "clear", "won", "jammed"];
-  const others = new Set(LEVELS_ALL.levels.map((l) => l.id).concat(require("../levels/teaching.json").levels.map((l) => l.id), require("../levels/zen.json").levels.map((l) => l.id), require("../levels/gallery.json").levels.map((l) => l.id)));
+  const others = new Set(LEVELS_ALL.levels.map((l) => l.id).concat(require("./build-data/teaching.json").levels.map((l) => l.id), require("../levels/zen.json").levels.map((l) => l.id), require("../levels/gallery.json").levels.map((l) => l.id)));
   const words = (w) => String(w).split("|").every((a) => a.split("&").every((x) => WORDS.indexOf(x.replace(/^!/, "").split(":")[0]) >= 0));
   eq([ST.length, CFG.tutorial.file, [CFG.save.key, CFG.zen.save.key].indexOf(CFG.tutorial.key)], [8, "levels/tutorial.json", -1], "tour: 8 practice forts (the 9th step is the closing card), its own seen-flag key apart from both saves");
   for (const st of ST) {
@@ -2017,6 +2017,16 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   { const text = JSON.stringify([TU.offer, TU.ui, TU.close, ST.map((s) => [s.name, s.say, s.more, s.jamNote, [].concat(s.coach, s.coach2 || []).map((c) => [c.say, c.short])])]); // the words shown (a when-word's "!" is not one)
     eq([/—|–/.test(text), /!/.test(text), TU.offer.say], [false, false, "Learn in a couple of minutes on a tiny practice fort. Nothing to lose."], "tour: its words have no em or en dash and no exclamation mark; the offer is Peter's line"); }
   }
+}
+
+// v6 lane D9: the shipped folder (the game minus tools/; config v5.ship). Under the cap, and levels/ holds only the files
+// listed there; build-only data goes in tools/build-data/ (the freeze snapshot, the bake pools, the teaching source).
+{ const fs = require("fs"), path = require("path"), SH = V5.ship, G = path.join(__dirname, ".."); let bytes = 0, files = 0;
+  const walk = (d) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { if (e.name[0] === "." || (d === G && e.name === "tools")) continue;
+    const p = path.join(d, e.name); if (e.isDirectory()) walk(p); else { bytes += fs.statSync(p).size; files++; } } };
+  walk(G); const extra = fs.readdirSync(path.join(G, "levels")).filter((f) => f[0] !== "." && SH.levels.indexOf(f) < 0);
+  console.log("  shipped folder (minus tools/): " + files + " files, " + bytes.toLocaleString("en-US") + " B");
+  ok(bytes <= SH.capBytes && !extra.length, "shipped folder: " + bytes.toLocaleString("en-US") + " B (cap " + SH.capBytes.toLocaleString("en-US") + ")" + (extra.length ? "; levels/ holds files the page never reads: " + extra.join(", ") + " (move them to tools/build-data/ or list them in config v5.ship.levels)" : ""));
 }
 
 console.log(pass + " passed, " + fail + " failed");

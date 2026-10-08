@@ -15,7 +15,7 @@ node tools/bake.js     # about 1.2 s → levels/levels.json (draft) + levels/poo
 - `src/solver.js`: `solve` (memoised DFS, cap, never throws), `quickest` (unlimited-crew A*), `greedy`, `playouts`, `mulberry32`.
 - `tools/gen.js`: `generate`, `measure`, `batch`, `accept`. `tools/par.js`: worker-thread runner with results in task order.
 - `tools/bake-config.json`: every generator and band number. The bands are under `proposedBands`, and are not written into SPEC.
-- `levels/teaching.json`: the three hand-authored world-1 boards (min 1, 2, 2; The Wrong Wall's random win is 0.24).
+- `tools/build-data/teaching.json`: the three hand-authored world-1 boards (min 1, 2, 2; The Wrong Wall's random win is 0.24).
 
 ## Decisions (also in SPEC §7)
 - The state is the broken-section set. Undo re-derives from the move list, so parity holds by construction and is tested on the chest, lever and teaching boards.

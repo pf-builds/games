@@ -23,7 +23,7 @@ node tools/bake.js     # about 3 s → levels/levels.json (draft: false) + level
 - `tools/bake-config.json` (v2): `worlds` holds the castle params, `bands` the M0b bands, and `m0` the M0 worlds + bands (archived). `bake.chunks` is per world, `bake.detourShare` is 0.25, `musterTries` caps mixes per k (120, above the 84 maximum).
 - `tools/bake.js`: M0b bands, teaching boards per world, the detour quota, and ordering by min crews then random win. Writes `draft: false`. Its bake block now goes to `m0b-report.md`.
 - `tools/report.js`: rewritten for the before/after report. It now writes `m0b-report.md`, not `m0-report.md`.
-- `levels/teaching.json` (v2): each board carries `world`. It adds w2-t1 Goats and a Chest, w3-t1 The Frozen Moat and w4-t1 Iron and a Lever.
+- `tools/build-data/teaching.json` (v2): each board carries `world`. It adds w2-t1 Goats and a Chest, w3-t1 The Frozen Moat and w4-t1 Iron and a Lever.
 - `levels/levels.json`: 36 levels, 8 / 8 / 10 / 10. Each world opens with its teaching board(s). The format is backward compatible (`metrics` gained fields, nothing removed).
 
 ## Generator design (castle)

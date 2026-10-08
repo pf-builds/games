@@ -1,5 +1,5 @@
-// Sapper's Path bake (SPEC-v3 §5; v4 M3, the Siege to 100): tools/bake-config.json + levels/teaching.json ->
-// levels/levels.json (versioned) and levels/pool-e{1,2,3,4}.json (every graded candidate, kept for rebakes and the app's
+// Sapper's Path bake (SPEC-v3 §5; v4 M3, the Siege to 100): tools/bake-config.json + tools/build-data/teaching.json ->
+// levels/levels.json (versioned) and tools/build-data/pools/pool-e{1,2,3,4}.json (every graded candidate, kept for rebakes and the app's
 // longer curve).
 //   ~/.local/opt/node/bin/node tools/bake.js [--out DIR] [--only A-B] [--boards FILE] [--keep FILE] [--config FILE] [--threads N]
 //   ~/.local/opt/node/bin/node tools/bake.js --merge FULL,FIX1,... [--logs LOG,...] [--out DIR]   (v4.3: fix-up runs in)
@@ -338,7 +338,7 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
     C = JSON.parse(fs.readFileSync(arg("config") ? path.resolve(arg("config")) : path.join(__dirname, "bake-config.json"), "utf8")); C.extra = +arg("extra") || 0; // v4.2: --extra K more candidates a level (a fix-up run)
     if (process.argv.includes("--r4fix")) { Object.assign(C.candidates.perLevelBy, C.r4fix.perLevelBy); Object.assign(C.tune.narrow, C.r4fix.narrow); } // v5 R4: the fix-up's lighter search
     CFG = JSON.parse(fs.readFileSync(path.join(ROOT, "config.json"), "utf8"));
-    TEACH = JSON.parse(fs.readFileSync(arg("teach") ? path.resolve(arg("teach")) : path.join(ROOT, "levels/teaching.json"), "utf8")).levels;
+    TEACH = JSON.parse(fs.readFileSync(arg("teach") ? path.resolve(arg("teach")) : path.join(ROOT, "tools/build-data/teaching.json"), "utf8")).levels;
   } catch (e) { console.log("bake: cannot read config: " + e.message); process.exitCode = 1; return; }
   const rules = { easy: E.rulesOf(CFG.v3, "easy"), normal: E.rulesOf(CFG.v3, "normal"), hard: E.rulesOf(CFG.v3, "hard"), extreme: E.rulesOf(CFG.v3, "extreme") }, deadline = t0 + C.budget.wallSec * 1000;
   const threads = +arg("threads") || C.budget.threads || Math.max(2, os.cpus().length - 2); // v4.3 --threads N
@@ -473,7 +473,7 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
   try {
     if (OUT) fs.mkdirSync(OUT, { recursive: true });
     writeAtomic(outPath("levels/levels.json"), JSON.stringify(out));
-    for (const e of Object.keys(pools)) if (pools[e].length) writeAtomic(outPath("levels/pool-e" + e + ".json"), JSON.stringify({ version: C.version, era: +e, cands: pools[e] })); // v4.2: a partial run leaves the other eras' pools alone (v5 R2: and a realm with none)
+    for (const e of Object.keys(pools)) if (pools[e].length) writeAtomic(outPath("tools/build-data/pools/pool-e" + e + ".json"), JSON.stringify({ version: C.version, era: +e, cands: pools[e] })); // v4.2: a partial run leaves the other eras' pools alone (v5 R2: and a realm with none)
   } catch (e) { say("bake: write failed: " + e.message); process.exitCode = 1; }
   try { writeReport(out, C, log); } catch (e) { say("bake: report tables failed: " + e.message); }
 })();

@@ -22,7 +22,7 @@ Page: http://127.0.0.1:8491/sappers-path/?debug=1. Cache tag `?v=18` everywhere 
 | `tools/grade.js` | `line` reports the longest single tap (`maxWait`); `plan` is the sampling planner (the mystery grade). |
 | `tools/bake.js` | 100 levels, four eras, the boss, the late pattern's run-in (`curve.late.overrides`), the twist schedule (`twistsOf`), `genBy` scaling, the picker's targets (band, time, dead time, fast tapper, pairs, lookahead) with a penalty-ranked fallback, a second pass (order counts, safe taps, the mystery flags and their planner grade), `--only`, `--teach`, the report in `tools/v4-m3-rebake.md`. |
 | `tools/bake-config.json` | Version 8 (see below). |
-| `tools/teach-v4.js` (new) | Builds `levels/teaching.json`: 1-3 redrawn, 26 and 51 kept, 35, 62, 76, 77 built; `--check` rebuilds and diffs. |
+| `tools/teach-v4.js` (new) | Builds `tools/build-data/teaching.json`: 1-3 redrawn, 26 and 51 kept, 35, 62, 76, 77 built; `--check` rebuilds and diffs. |
 | `tools/debug-v4.js` | Re-solves the debug levels' stored orders in place (the v3 levels they were copied from are gone); `--check`, `--rebuild FILE` (M2's build from a v3 levels file), `--out`. |
 | `tools/palette.js` | Exports `lab`, `de00`, `minPair` when required (the bake report's ΔE column); `--levels FILE`. |
 | `tools/regrade.js` | Also checks the Normal line's `maxWait` and the fast tapper; `--levels FILE`. |
@@ -31,7 +31,7 @@ Page: http://127.0.0.1:8491/sappers-path/?debug=1. Cache tag `?v=18` everywhere 
 | `tools/shots-v4-m3.mjs` (new) | The M3 screens. |
 | `src/main.js` | Coach pointers `mystery`, `linked`, `lockSlot`, ring `lockKey`; conditions `reveal`, `pair`, `unlock`, `locked`, `hidden`, `linkedFront`; `landTiles()` (a tile's flip or shake lands when a level starts); selfTest checks for the three twist lessons; the coach follower in selfTest taps only legal columns. |
 | `style.css`, `index.html` | The wide map fits four eras (`auto-fit` columns, the debug row spans them); `?v=18`. |
-| `levels/levels.json`, `levels/pool-e1..e4.json`, `levels/teaching.json`, `levels/debug-v4.json` | The rebake (Era 4's pool is new). `levels/names.json` is a v2 leftover the page never reads; untouched. |
+| `levels/levels.json`, `tools/build-data/pools/pool-e1..e4.json`, `tools/build-data/teaching.json`, `levels/debug-v4.json` | The rebake (Era 4's pool is new). `tools/build-data/names.json` is a v2 leftover the page never reads; untouched. |
 
 ## 1. Timing (`config.json` `v3.time`), fixed before any bake
 
