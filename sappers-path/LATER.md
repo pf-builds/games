@@ -460,3 +460,5 @@ Fixed: S1-S7, m2, m3, N1, N2 (`tools/v5-r4-notes.md` §10). Parked:
 - Snack Galaxy's spares: sg233 Wrong landing (7 colours, ring) doesn't deal on a moat Hard; it would suit a no-moat Hard.
 - land-config's default profile still gives hidden a share (for a Campaign-style land); every Zen land overrides it to 0.
 
+
+- teach-v4.js --check fails on e6-125 coach lines (pre-existing at 793b78b; found in D9, not a ship gate).
