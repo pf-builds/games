@@ -7,6 +7,24 @@ Peter's calls of 2026-10-07 are binding and were followed as written: same 50 pi
 spares; 15 levels keep their live board and record byte for byte; the other 35 take the outlined board and are re-baked
 on the land's casual profile with their slot's tag and features; only land 1's records in levels.json change.
 
+## 0a. D8 (2026-10-08): no mystery blocks in Zen
+
+Peter's rule (land-factory.md, "No mystery blocks in Zen"): Zen worlds never use hidden mystery blocks; ? cards stay. Kitten
+Forest's 11 mystery levels (207 208 210 212 215 217 222 228 229 231 247) lost their blocks and keep the same board, deck,
+? cards and links; the kept boards 208, 210 and 228 keep their pictures and change only in data (Peter's rule overrides
+"byte-identical"; his earlier OK covers land 1's records e9-201..250 in levels.json, and nothing else there changed).
+
+- **How:** `tools/zen-unhide.js tools/lands/01-kitten-forest/land.json levels/levels.json --land 1 --write` (the 11
+  installed records) and the same on the 7 re-dealt bake results in `scratch/bake/`, so `assemble --keep <18> check` gives
+  back exactly the installed 50. The stored order, real pace, longest tap and taps are unchanged on all 11 (the engine never
+  reads hidden). Random-tap rate, careful player and fast tapper came out identical; the lookahead moved on 229 only (0.55 to
+  0.54). **No re-deal.** Pace shift 0; median still 235 s.
+- **Profile:** land.json `features` linked, mystery, lock (hidden out), `hidden` share 0 with every tag 0, D5's
+  `hidden.byLevel` (212, 229) gone. The plan is unchanged for the other features (hidden came after them).
+- **Checks:** land check PASS every gate, including the new "Zen: no mystery blocks"; levels.json vs fdd0aea exactly the 11
+  records (1-200 and the other 39 identical).
+- Contact sheet `tools/land-01-ink/contact.png` re-made (the 18 kept in amber, no mystery blocks drawn).
+
 ## 0. D5 fix pass (2026-10-07): 18 kept, 215/245 re-dealt, 212/229 mystery raised
 
 Inputs: the ink critic's report (`tools/critic-land-01-ink.md`, PASS with should-fix items, 0 blockers; screenshots in

@@ -441,4 +441,22 @@ Fixed: S1-S7, m2, m3, N1, N2 (`tools/v5-r4-notes.md` §10). Parked:
 - 211 Mushroom house (30x45) is narrow and muddy; 244 Slam dunk's hoop and net are a white blob. Art swaps or re-cleans.
 - 213 (42x29) and 227 (42x31) leave a big empty band above the cards at 375; a short board could sit lower or the frame shrink to it.
 - The Zen win sheet's Coins tile shows a coin with no number (Zen win-sheet code, seen on 215; likely older than lane D).
-- 229's 44 mystery blocks sit as one green lattice on the belly (the only eligible stretch on the outlined board); a looser blob gap there, or the face mask easing on the body, would scatter them.
+- (moot since D8: Zen has no mystery blocks) 229's 44 mystery blocks sat as one green lattice on the belly (the only eligible stretch on the outlined board); a looser blob gap there, or the face mask easing on the body, would scatter them.
+
+## v6 lane D8 (no mystery blocks in Zen + the World 3 critic, 2026-10-08)
+
+- World 1's Hards z1-12 and z1-36 grade the careful player at 0 and 0.125 (thinking ahead nearly never wins). World 3 now
+  floors its Hards at 0.5 (land.json carefulFloor.hard); World 1 and Kitten Forest have no Hard floor. A re-deal of those two
+  with the floor would match.
+- World 3 picture readability at 375 (critic minor 7): 253 Chili launch, 273 Pineapple station (the purple blob above it),
+  294 First footprint are small but read; 271 Juice box shuttle reads as "something orange". Swap from the spares if a
+  better one comes.
+- 283 Rocket out of gas reads as a burger (critic minor 8). Left: no spare was clearly better once 262 took the rocket spare.
+- Moat rings on outline-free paintings look like a broken blue outline at phone scale (critic minor 9, 257 262 274 276 287).
+  A 2-cell ring, or water drawn with a ripple, would read as water.
+- The pink ring and star decorations painted on the space sheets look tappable (critic minor 10). A map-art touch-up.
+- Variety soft misses after the swaps: rockets at 259, 262 and 265; 300's saucer has a tiny alien next to 299 Alien bakery.
+- The 250 to 251 road is one screen of empty forest road at 375 (critic minor 6; layout.json, Peter's rule keeps it).
+- Snack Galaxy's spares: sg233 Wrong landing (7 colours, ring) doesn't deal on a moat Hard; it would suit a no-moat Hard.
+- land-config's default profile still gives hidden a share (for a Campaign-style land); every Zen land overrides it to 0.
+

@@ -7,11 +7,10 @@
  "count": 36,
  "features": [
   "linked",
-  "mystery",
-  "hidden"
+  "mystery"
  ],
  "profile": {
-  "note": "World 1, casual: Kitten Forest’s casual profile (tools/land-01-notes.md §10.1) on 36 levels: about 13 Easy, 19 Normal, 4 lone Hards, ending on a Hard; light features (? cards, a few linked pairs and mystery blocks), no locks, no Extreme, generous random-tap bands, no lookahead or careful ceilings. The boards are the Gallery’s own (36 x 41 class, smaller than a land’s max phone board), so the pace aim is the Gallery’s side-quest aim, 200 s.",
+  "note": "World 1, casual: Kitten Forest’s casual profile (tools/land-01-notes.md §10.1) on 36 levels: about 13 Easy, 19 Normal, 4 lone Hards, ending on a Hard; light features (? cards, a few linked pairs and mystery blocks), no locks, no Extreme, generous random-tap bands, no lookahead or careful ceilings. The boards are the Gallery’s own (36 x 41 class, smaller than a land’s max phone board), so the pace aim is the Gallery’s side-quest aim, 200 s. v6 lane D8: no mystery blocks (Peter, 2026-10-08; hidden share 0).",
   "tags": {
    "shares": {
     "easy": 0.36,
@@ -40,16 +39,17 @@
     ]
    },
    "hidden": {
-    "share": 0.22,
+    "share": 0,
     "by": {
      "easy": 0,
-     "normal": 0.3,
-     "hard": 0.5
+     "normal": 0,
+     "hard": 0
     },
     "of": [
-     0.25,
-     0.4
-    ]
+     0,
+     0
+    ],
+    "note": "v6 lane D8 (Peter, 2026-10-08): no mystery blocks in Zen, ever. The whole picture shows from the start; land.js and zen-world.js refuse a Zen land or world with hidden in its features or a hidden share."
    },
    "linked": {
     "share": 0.36,

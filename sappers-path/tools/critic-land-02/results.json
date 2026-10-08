@@ -1,0 +1,739 @@
+{
+ "R": {
+  "phone": {
+   "steps": [
+    [
+     "selfTest",
+     {
+      "pass": 871,
+      "fail": 0,
+      "fails": [],
+      "ms": 12314
+     }
+    ],
+    [
+     "home",
+     {
+      "zen": "0 of 148 pictures",
+      "zenW": "World 1 · Picture Garden",
+      "btn": "ContinueZenWorld 1 · Picture Garden0 of 148 picturesPicture 1",
+      "mode": "campaign"
+     }
+    ],
+    [
+     "after btn-zen",
+     {
+      "screen": "play",
+      "mode": "zen",
+      "id": "z1-1"
+     }
+    ],
+    [
+     "map fresh",
+     {
+      "map": {
+       "sheets": 19,
+       "loaded": 4
+      },
+      "n201": {
+       "cls": "mn open",
+       "dis": false,
+       "aria": "Picture 1",
+       "w": 44,
+       "h": 44
+      },
+      "n250": {
+       "cls": "mn locked",
+       "dis": false,
+       "aria": "Picture 50, Hard, locked",
+       "w": 44,
+       "h": 44
+      },
+      "n251": {
+       "cls": "mn open",
+       "dis": false,
+       "aria": "Picture 1",
+       "w": 44,
+       "h": 44
+      },
+      "n252": {
+       "cls": "mn locked",
+       "dis": false,
+       "aria": "Picture 2, locked",
+       "w": 44,
+       "h": 44
+      },
+      "n300": {
+       "cls": "mn locked",
+       "dis": false,
+       "aria": "Picture 50, Hard, locked",
+       "w": 44,
+       "h": 44
+      },
+      "banners": [
+       "bn:World 1Picture GardenA quiet garden at t",
+       "bt:World 1Picture Garden",
+       ":World 1",
+       "bn:World 2Kitten ForestPast the Gallery the",
+       "bt:World 2Kitten Forest",
+       ":World 2",
+       "bn:World 3Snack GalaxyThe road drifts up in",
+       "bt:World 3Snack Galaxy",
+       ":World 3"
+      ],
+      "eggs": [
+       "z3-1-0:egg k-glowcap east",
+       "z3-1-1:egg k-wisp",
+       "z3-2-0:egg k-glint",
+       "z3-2-1:egg k-ember",
+       "z3-3-0:egg k-bubble west",
+       "z3-3-1:egg k-glowcap",
+       "z3-4-0:egg k-wisp",
+       "z3-4-1:egg k-glint",
+       "z3-5-0:egg k-ember east",
+       "z3-5-1:egg k-bubble",
+       "z3-6-0:egg k-glowcap",
+       "z3-6-1:egg k-wisp"
+      ]
+     }
+    ],
+    [
+     "251 open from map",
+     {
+      "screen": "play",
+      "id": "z3-1",
+      "n": 251,
+      "tag": "normal",
+      "mapPlay": "Play picture 1"
+     }
+    ],
+    [
+     "251 win",
+     {
+      "status": "won",
+      "panel": "win",
+      "title": "Picture done",
+      "line": "Kitten flag, all dug out.",
+      "primary": "Back to map"
+     }
+    ],
+    [
+     "after win primary",
+     {
+      "screen": "map",
+      "n252": {
+       "cls": "mn cur",
+       "dis": false,
+       "aria": "Picture 2, play this one next",
+       "w": 44,
+       "h": 44
+      },
+      "n251": {
+       "cls": "mn done",
+       "dis": false,
+       "aria": "Picture 1, cleared",
+       "w": 44,
+       "h": 44
+      },
+      "inView": true,
+      "play": "Play picture 2"
+     }
+    ],
+    [
+     "map play after 251",
+     {
+      "id": "z3-2",
+      "n": 252,
+      "screen": "play"
+     }
+    ],
+    [
+     "reload",
+     {
+      "keys": [
+       "sappers-path.tour.v1",
+       "sappers-path.zen.v1",
+       "sappers-path.v3"
+      ],
+      "same": true,
+      "zenDone": [
+       "z3-1"
+      ],
+      "home": {
+       "zen": "1 of 148 pictures",
+       "zenW": "World 3 · Snack Galaxy",
+       "btn": "ContinueZenWorld 3 · Snack Galaxy1 of 148 picturesPicture 2"
+      }
+     }
+    ],
+    [
+     "w1/w2 after w3 win",
+     {
+      "n1": {
+       "cls": "mn open",
+       "dis": false,
+       "aria": "Picture 1",
+       "w": 44,
+       "h": 44
+      },
+      "n2": {
+       "cls": "mn locked",
+       "dis": false,
+       "aria": "Picture 2, locked",
+       "w": 44,
+       "h": 44
+      },
+      "n201": {
+       "cls": "mn open",
+       "dis": false,
+       "aria": "Picture 1",
+       "w": 44,
+       "h": 44
+      },
+      "n202": {
+       "cls": "mn locked",
+       "dis": false,
+       "aria": "Picture 2, locked",
+       "w": 44,
+       "h": 44
+      },
+      "n251": {
+       "cls": "mn done",
+       "dis": false,
+       "aria": "Picture 1, cleared",
+       "w": 44,
+       "h": 44
+      },
+      "n252": {
+       "cls": "mn cur",
+       "dis": false,
+       "aria": "Picture 2, play this one next",
+       "w": 44,
+       "h": 44
+      },
+      "n253": {
+       "cls": "mn locked",
+       "dis": false,
+       "aria": "Picture 3, Easy, locked",
+       "w": 44,
+       "h": 44
+      }
+     }
+    ],
+    [
+     "after zenTo w1 5 w2 3 + reload",
+     {
+      "done": [
+       "z3-1",
+       "z1-1",
+       "z1-2",
+       "z1-3",
+       "z1-4",
+       "z1-5",
+       "e9-201",
+       "e9-202",
+       "e9-203"
+      ],
+      "campDoneSame": true
+     }
+    ],
+    [
+     "win z3-6",
+     {
+      "n": 256,
+      "tag": "easy",
+      "w": 42,
+      "h": 42,
+      "cs": 25,
+      "hidden": 0,
+      "links": 0,
+      "cap": 5,
+      "taps": 49,
+      "status": "won",
+      "plays": 49,
+      "panel": "win",
+      "title": "Picture done",
+      "line": "Donut ring, all dug out.",
+      "logs": 0
+     }
+    ],
+    [
+     "win z3-5",
+     {
+      "n": 255,
+      "tag": "normal",
+      "w": 42,
+      "h": 42,
+      "cs": 25,
+      "hidden": 2,
+      "links": 0,
+      "cap": 5,
+      "taps": 53,
+      "status": "won",
+      "plays": 53,
+      "panel": "win",
+      "title": "Picture done",
+      "line": "Space high five, all dug out.",
+      "logs": 0
+     }
+    ],
+    [
+     "win z3-4",
+     {
+      "n": 254,
+      "tag": "normal",
+      "w": 42,
+      "h": 42,
+      "cs": 25,
+      "hidden": 2,
+      "links": 0,
+      "cap": 5,
+      "taps": 54,
+      "status": "won",
+      "plays": 54,
+      "panel": "win",
+      "title": "Picture done",
+      "line": "Milkshake planet, all dug out.",
+      "logs": 0
+     }
+    ],
+    [
+     "win z3-28",
+     {
+      "n": 278,
+      "tag": "normal",
+      "w": 42,
+      "h": 42,
+      "cs": 25,
+      "hidden": 2,
+      "links": 0,
+      "cap": 5,
+      "taps": 54,
+      "status": "won",
+      "plays": 54,
+      "panel": "win",
+      "title": "Picture done",
+      "line": "Planet soccer kick, all dug out.",
+      "logs": 0
+     }
+    ],
+    [
+     "win z3-22",
+     {
+      "n": 272,
+      "tag": "hard",
+      "w": 42,
+      "h": 42,
+      "cs": 25,
+      "hidden": 3,
+      "links": 0,
+      "cap": 5,
+      "taps": 51,
+      "status": "won",
+      "plays": 51,
+      "panel": "win",
+      "title": "Picture done",
+      "line": "Burger planet, all dug out.",
+      "logs": 0
+     }
+    ],
+    [
+     "win z3-36",
+     {
+      "n": 286,
+      "tag": "hard",
+      "w": 42,
+      "h": 42,
+      "cs": 25,
+      "hidden": 3,
+      "links": 0,
+      "cap": 5,
+      "taps": 55,
+      "status": "won",
+      "plays": 55,
+      "panel": "win",
+      "title": "Picture done",
+      "line": "Planet sleepover, all dug out.",
+      "logs": 0
+     }
+    ],
+    [
+     "win z3-50",
+     {
+      "n": 300,
+      "tag": "hard",
+      "w": 31,
+      "h": 45,
+      "cs": 24,
+      "hidden": 3,
+      "links": 2,
+      "cap": 5,
+      "taps": 54,
+      "status": "won",
+      "plays": 54,
+      "panel": "win",
+      "title": "Picture done",
+      "line": "Broccoli mech, all dug out.",
+      "logs": 0
+     }
+    ],
+    [
+     "fail",
+     {
+      "id": "z3-8",
+      "status": "failed",
+      "reason": "jam",
+      "panel": "fail",
+      "title": "A little stuck",
+      "line": "Line jammed: 64124 can't reach a block. Have another look.",
+      "lineAria": "Line jammed: Green and Dark red can't reach a block. Have another look.",
+      "contHidden": false,
+      "cont": "Continue250Every stuck squad finishes on the spot",
+      "primary": "Retry",
+      "secondary": "Back to map",
+      "coins0": 1000,
+      "afterCont": {
+       "status": "playing",
+       "panel": null,
+       "coins": 750
+      },
+      "afterContEnd": "won"
+     }
+    ],
+    [
+     "console",
+     0
+    ]
+   ],
+   "log": []
+  },
+  "desktop": {
+   "steps": [
+    [
+     "selfTest",
+     {
+      "pass": 873,
+      "fail": 0,
+      "fails": [],
+      "ms": 16509
+     }
+    ],
+    [
+     "home",
+     {
+      "zen": "0 of 148 pictures",
+      "zenW": "World 1 · Picture Garden",
+      "btn": "ContinueZenWorld 1 · Picture Garden0 of 148 picturesPicture 1",
+      "mode": "campaign"
+     }
+    ],
+    [
+     "after btn-zen",
+     {
+      "screen": "play",
+      "mode": "zen",
+      "id": "z1-1"
+     }
+    ],
+    [
+     "map fresh",
+     {
+      "map": {
+       "sheets": 19,
+       "loaded": 3
+      },
+      "n201": {
+       "cls": "mn open",
+       "dis": false,
+       "aria": "Picture 1",
+       "w": 44,
+       "h": 44
+      },
+      "n250": {
+       "cls": "mn locked",
+       "dis": false,
+       "aria": "Picture 50, Hard, locked",
+       "w": 44,
+       "h": 44
+      },
+      "n251": {
+       "cls": "mn open",
+       "dis": false,
+       "aria": "Picture 1",
+       "w": 44,
+       "h": 44
+      },
+      "n252": {
+       "cls": "mn locked",
+       "dis": false,
+       "aria": "Picture 2, locked",
+       "w": 44,
+       "h": 44
+      },
+      "n300": {
+       "cls": "mn locked",
+       "dis": false,
+       "aria": "Picture 50, Hard, locked",
+       "w": 44,
+       "h": 44
+      },
+      "banners": [
+       "bn:World 1Picture GardenA quiet garden at t",
+       "bt:World 1Picture Garden",
+       ":World 1",
+       "bn:World 2Kitten ForestPast the Gallery the",
+       "bt:World 2Kitten Forest",
+       ":World 2",
+       "bn:World 3Snack GalaxyThe road drifts up in",
+       "bt:World 3Snack Galaxy",
+       ":World 3"
+      ],
+      "eggs": [
+       "z3-1-0:egg k-glowcap east",
+       "z3-1-1:egg k-wisp",
+       "z3-2-0:egg k-glint",
+       "z3-2-1:egg k-ember",
+       "z3-3-0:egg k-bubble west",
+       "z3-3-1:egg k-glowcap",
+       "z3-4-0:egg k-wisp",
+       "z3-4-1:egg k-glint",
+       "z3-5-0:egg k-ember east",
+       "z3-5-1:egg k-bubble",
+       "z3-6-0:egg k-glowcap",
+       "z3-6-1:egg k-wisp"
+      ]
+     }
+    ],
+    [
+     "251 open from map",
+     {
+      "screen": "play",
+      "id": "z3-1",
+      "n": 251,
+      "tag": "normal",
+      "mapPlay": "Play picture 1"
+     }
+    ],
+    [
+     "251 win",
+     {
+      "status": "won",
+      "panel": "win",
+      "title": "Picture done",
+      "line": "Kitten flag, all dug out.",
+      "primary": "Back to map"
+     }
+    ],
+    [
+     "after win primary",
+     {
+      "screen": "map",
+      "n252": {
+       "cls": "mn cur",
+       "dis": false,
+       "aria": "Picture 2, play this one next",
+       "w": 44,
+       "h": 44
+      },
+      "n251": {
+       "cls": "mn done",
+       "dis": false,
+       "aria": "Picture 1, cleared",
+       "w": 44,
+       "h": 44
+      },
+      "inView": true,
+      "play": "Play picture 2"
+     }
+    ],
+    [
+     "map play after 251",
+     {
+      "id": "z3-2",
+      "n": 252,
+      "screen": "play"
+     }
+    ],
+    [
+     "reload",
+     {
+      "keys": [
+       "sappers-path.tour.v1",
+       "sappers-path.zen.v1",
+       "sappers-path.v3"
+      ],
+      "same": true,
+      "zenDone": [
+       "z3-1"
+      ],
+      "home": {
+       "zen": "1 of 148 pictures",
+       "zenW": "World 3 · Snack Galaxy",
+       "btn": "ContinueZenWorld 3 · Snack Galaxy1 of 148 picturesPicture 2"
+      }
+     }
+    ],
+    [
+     "w1/w2 after w3 win",
+     {
+      "n1": {
+       "cls": "mn open",
+       "dis": false,
+       "aria": "Picture 1",
+       "w": 44,
+       "h": 44
+      },
+      "n2": {
+       "cls": "mn locked",
+       "dis": false,
+       "aria": "Picture 2, locked",
+       "w": 44,
+       "h": 44
+      },
+      "n201": {
+       "cls": "mn open",
+       "dis": false,
+       "aria": "Picture 1",
+       "w": 44,
+       "h": 44
+      },
+      "n202": {
+       "cls": "mn locked",
+       "dis": false,
+       "aria": "Picture 2, locked",
+       "w": 44,
+       "h": 44
+      },
+      "n251": {
+       "cls": "mn done",
+       "dis": false,
+       "aria": "Picture 1, cleared",
+       "w": 44,
+       "h": 44
+      },
+      "n252": {
+       "cls": "mn cur",
+       "dis": false,
+       "aria": "Picture 2, play this one next",
+       "w": 44,
+       "h": 44
+      },
+      "n253": {
+       "cls": "mn locked",
+       "dis": false,
+       "aria": "Picture 3, Easy, locked",
+       "w": 44,
+       "h": 44
+      }
+     }
+    ],
+    [
+     "after zenTo w1 5 w2 3 + reload",
+     {
+      "done": [
+       "z3-1",
+       "z1-1",
+       "z1-2",
+       "z1-3",
+       "z1-4",
+       "z1-5",
+       "e9-201",
+       "e9-202",
+       "e9-203"
+      ],
+      "campDoneSame": true
+     }
+    ],
+    [
+     "win z3-30",
+     {
+      "n": 280,
+      "tag": "easy",
+      "w": 42,
+      "h": 42,
+      "cs": 15,
+      "hidden": 0,
+      "links": 0,
+      "cap": 5,
+      "taps": 54,
+      "status": "won",
+      "plays": 54,
+      "panel": "win",
+      "title": "Picture done",
+      "line": "Sun with sunglasses, all dug out.",
+      "logs": 0
+     }
+    ],
+    [
+     "win z3-4",
+     {
+      "n": 254,
+      "tag": "normal",
+      "w": 42,
+      "h": 42,
+      "cs": 15,
+      "hidden": 2,
+      "links": 0,
+      "cap": 5,
+      "taps": 54,
+      "status": "won",
+      "plays": 54,
+      "panel": "win",
+      "title": "Picture done",
+      "line": "Milkshake planet, all dug out.",
+      "logs": 0
+     }
+    ],
+    [
+     "win z3-50",
+     {
+      "n": 300,
+      "tag": "hard",
+      "w": 31,
+      "h": 45,
+      "cs": 14,
+      "hidden": 3,
+      "links": 2,
+      "cap": 5,
+      "taps": 54,
+      "status": "won",
+      "plays": 54,
+      "panel": "win",
+      "title": "Picture done",
+      "line": "Broccoli mech, all dug out.",
+      "logs": 0
+     }
+    ],
+    [
+     "fail",
+     {
+      "id": "z3-8",
+      "status": "failed",
+      "reason": "jam",
+      "panel": "fail",
+      "title": "A little stuck",
+      "line": "Line jammed: 64124 can't reach a block. Have another look.",
+      "lineAria": "Line jammed: Green and Dark red can't reach a block. Have another look.",
+      "contHidden": false,
+      "cont": "Continue250Every stuck squad finishes on the spot",
+      "primary": "Retry",
+      "secondary": "Back to map",
+      "coins0": 1000,
+      "afterCont": {
+       "status": "playing",
+       "panel": null,
+       "coins": 750
+      },
+      "afterContEnd": "won"
+     }
+    ],
+    [
+     "console",
+     0
+    ]
+   ],
+   "log": []
+  }
+ },
+ "log": []
+}

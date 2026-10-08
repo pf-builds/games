@@ -919,7 +919,7 @@
  },
  {
   "id": "sg238",
-  "title": "Hot dog in a hurry",
+  "title": "Saturn fly-by",
   "artist": "Click it! Studios",
   "date": "2026-10-07",
   "kind": "painting",
@@ -933,7 +933,8 @@
    1024,
    1024
   ],
-  "raw": "raw/sg238-s3238.png"
+  "raw": "raw/sg238-s3238.png",
+  "titleNote": "v6 lane D8: lane C named it Hot dog in a hurry (the prompt asked for a hot dog rocket); the picture reads as a plain rocket passing Saturn, so the title says what shows."
  },
  {
   "id": "sg243",

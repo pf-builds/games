@@ -978,7 +978,9 @@
     $("jr-q-v").textContent = qs.filter((q) => d.gal[q.e.id]).length + " / " + qs.length; $("jr-q-v").parentElement.hidden = !qs.length; // v6 ship fix (m3): no side-quest row where there are none $("jr-e-v").textContent = gs.filter((g) => d.eggs && d.eggs[g.id]).length + " / " + gs.length;
     // v5 R3 fix: past the last level the card names the picture Play starts; with every picture cleared too, "all cleared"
     // and no Play; the side quest under it is the open one nearest the current level (never the one Play starts).
-    const ne = app.byId.get(nextOf(d)), te = mapPic(), end = !te && allDone(); $("jr-n-name").firstChild.textContent = te ? fill(T.picture, { n: num(te) }) : end || !ne ? T.allClear : ne.boss ? ne.boss.card : fill(T.cur, { n: num(ne) }); tagChip($("jr-n-name").querySelector(".tag"), te ? tagOf(te) : end || !ne ? null : tagOf(ne));
+    // v6 lane D8 (the World 3 critic, minor 11): a Zen level is named with its world ("World 1 · Picture 1"), as the home's
+    // Zen card pairs the world with the picture; three worlds each have a picture 1.
+    const ne = app.byId.get(nextOf(d)), te = mapPic(), end = !te && allDone(); $("jr-n-name").firstChild.textContent = te ? fill(T.picture, { n: num(te) }) : end || !ne ? T.allClear : ne.boss ? ne.boss.card : (ne.world ? fill(ZT().eye, { k: ne.world }) + " · " : "") + fill(T.cur, { n: num(ne) }); tagChip($("jr-n-name").querySelector(".tag"), te ? tagOf(te) : end || !ne ? null : tagOf(ne));
     const nx = nearQ(te ? te.id : null), qk = nx && nx.L.quest ? E.POWERS.indexOf(nx.L.quest.prize) : -1, qb = $("jr-quest"); qb.hidden = end;
     qb.querySelector("b").textContent = nx ? fill(T.sideQuest, { n: num(nx) }) : T.questNone; qb.querySelector(".sq-t > span").textContent = nx && qk >= 0 ? fill(T.questLine, { name: pwName(qk) }) : "";
     qb.classList.toggle("none", !nx); qb.setAttribute("aria-disabled", nx ? "false" : "true"); qb.setAttribute("aria-label", nx ? fill(T.sideQuest, { n: num(nx) }) + (qk >= 0 ? ": " + fill(T.questLine, { name: pwName(qk) }) : "") : T.questNone);
@@ -3032,14 +3034,14 @@
       // before the lands keeps the long-tail picture it had open (tailKept), a save with the lands flag does not.
       // v6: the lands are Zen worlds now, so a land level wins and fails in Zen's words (config zen.text).
       { const LA = app.allLevels.filter((x) => x.L.land), LT = zenOn() ? ZT() : landsCfg().text || {}, le = LA.find((x) => x.L.hidden), lf = LA[0];
-        if (LA.length && ok(!!le && !!lf && !!LT.winTitle && !!LT.failTitle, "Land 1 fix: a land level with mystery blocks, and the land's win and fail words")) {
+        if (LA.length && ok(!le && !!lf && !!LT.winTitle && !!LT.failTitle, "Land 1 fix: a land level and the land's win and fail words; v6 lane D8: no land level has mystery blocks (they are Zen's)")) {
           app.save = scratch(); startLevel(lf.id); const won = patient(winOf(lf)); settleNow(); tick(9000); const LD = JN.landOf(landsCfg(), lf.n);
           ok(won && app.panel === "win" && $("p-title").textContent === LT.winTitle && $("p-line").textContent === (zenOn() ? fill(LT.winLine, { title: lf.L.title }) : fill(LT.winLine, { name: LD.name, n: lf.n })), "land win (M2" + (zenOn() ? ", v6 Zen" : "") + "): " + lf.n + "'s sheet reads '" + $("p-title").textContent + "', '" + $("p-line").textContent + "'");
           const jp = jamPlan(lf, tagOf(lf)); startLevel(lf.id); if (jp) { patient(jp.prefix); for (let t = 0; t < ST.tickCapMs && !app.panel; t += 16) step(16); }
           ok(!!jp && app.panel === "fail" && $("p-title").textContent === LT.failTitle, "land fail (M2): " + lf.n + "'s jam sheet reads '" + $("p-title").textContent + "', not the castle's");
           const ce = app.allLevels.find((x) => !x.L.land && !x.boss && x.L.hidden), dE = (a, b) => { const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)); return Math.max(...p(a).map((v, i) => Math.abs(v - p(b)[i]))); };
-          startLevel(le.id); step(16); const fl = app.V.hideInfo(); startLevel(ce.id); step(16); const fc = app.V.hideInfo();
-          ok(fl.c === le.L.hideC && dE(fl.px, le.L.hideC) <= 2 && fc.c === app.cfg.board.hidden.c && dE(fc.px, app.cfg.board.hidden.c) <= 2, "mystery fill (B1): " + le.n + "'s hidden blocks draw in its own " + le.L.hideC + " (" + fl.px + "), castle " + ce.n + "'s in " + app.cfg.board.hidden.c + " (" + fc.px + ")"); }
+          startLevel(ce.id); step(16); const fc = app.V.hideInfo(), zl = (app.modes.zen || { levels: [] }).levels, zh = zl.filter((x) => x.L.hidden || x.L.hideC).length; // v6 lane D8 (Peter 10/8): no mystery blocks in Zen, ever
+          ok(fc.c === app.cfg.board.hidden.c && dE(fc.px, app.cfg.board.hidden.c) <= 2 && zl.length > 0 && !zh, "mystery fill (B1): castle " + ce.n + "'s hidden blocks draw in " + app.cfg.board.hidden.c + " (" + fc.px + "); v6 lane D8: " + zh + " of " + zl.length + " Zen levels have mystery blocks"); }
         const sq = app.allGal.filter((x) => x.L.short), cut = [];
         for (const x of sq) { startLevel(x.id); const nm = $("lvl-name"); if (nm.textContent !== x.L.short || nm.scrollWidth > nm.clientWidth + 1) cut.push(x.n + " '" + nm.textContent + "' " + nm.scrollWidth + "/" + nm.clientWidth); }
         ok(!cut.length, "side quest titles (S5): " + sq.length + " pictures show their short title whole in the play bar at " + innerWidth + " px" + (cut.length ? " (" + cut.join("; ") + ")" : ""));

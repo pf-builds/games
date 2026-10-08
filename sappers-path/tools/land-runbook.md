@@ -141,5 +141,11 @@ every land out of the Campaign and plays it in Zen. To show a newly installed la
   is no longer shown.
 - Checks as §4, plus test.js's and selfTest's Zen sections (they read every world). A world of pictures the game already
   has (World 1) is made with `tools/zen-world.js` and lives in zen.json itself (`map.sheets` reuses existing sheets, e.g. World 1 Kitten Forest's in its own turn and tint, eggs on the spur tips).
+- **No mystery blocks in Zen (Peter, 2026-10-08).** A Zen land's profile lists no `hidden` in `features` and sets
+  `features.hidden` share 0 (every tag 0). `land.js` refuses a Zen land that asks for them (land.json `zen`, or a zen.json
+  world naming its `land`), `zen-world.js` a world, and both checks gate it. "?" cards stay. To strip blocks off levels
+  already baked: `tools/zen-unhide.js PROFILE FILE... --write` (bake results or an installed levels file with `--land K` /
+  `--world K`). To re-bake a few slots of an installed land on its own plan (tags and features unchanged, hidden out, cant
+  read again for a swapped picture): `bake --keep-plan --list N,N`. A fresh plan would move the features after hidden.
 - Any new picture in `levels/gallery.json` (a land's side quests too) must be **appended** to `levels/places.json` (the save
   codes' picture places): never insert or reorder. test.js fails while one is missing.

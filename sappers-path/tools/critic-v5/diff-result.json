@@ -1,5 +1,5 @@
 {
- "ms": 175554,
+ "ms": 168255,
  "levels": 319,
  "cov": {
   "why": {
@@ -54,7 +54,7 @@
     16
    ]
   },
-  "shows": 48135,
+  "shows": 17669,
   "clears": 680689,
   "refusedChecked": 72871,
   "refusedChanged": 0,

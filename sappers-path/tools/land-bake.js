@@ -167,11 +167,13 @@ function mystify(L, want, M, rt, seed) {
 // background's id}), extra}. Returns {n, tag, plan, seed, level (the picked board and deck with win and grade), inBand,
 // fallback, mystery, moat ({set, drop, water, path, edge, cuts, ways, liquid} or null), cands (summary), stats} or {n,
 // fail}. Organic moats: job.liquids, the profile's moat liquids; job.moatLo, the gentlest opening set it allows.
+// v6 lane D8: job.noHidden (a Zen level), a plan with mystery blocks fails.
 function bakeOne(job) {
   const { LC, B: B0 } = configs(job.side), B = job.over ? require("./land-plan.js").merge(B0, job.over) : B0, // Land 1 fix: the land's profile bake, merged over land-config bake
     CFG = require("../config.json"), rules = { easy: E.rulesOf(CFG.v3, "easy"), normal: E.rulesOf(CFG.v3, "normal"), hard: E.rulesOf(CFG.v3, "hard"), extreme: E.rulesOf(CFG.v3, "extreme") };
   const { n, tag, band } = job, PL = LC.plan, P = job.plan || { feats: [], mystery: 0, links: 0, hidden: 0, lock: false };
   for (const f of P.feats.concat(P.lock ? ["lock"] : [])) if (!FEATURES[f]) return { n, fail: "feature " + f + " has no builder" };
+  if (job.noHidden && (P.hidden || P.feats.indexOf("hidden") >= 0)) return { n, fail: "a Zen level takes no mystery blocks (Peter, 2026-10-08)" }; // v6 lane D8
   const TT = targetsOf(B, band, job.pace, job.look, P, job.care, job.obv, job.careLo != null ? job.careLo : null), out = [], stats = { deals: 0, evals: 0, grades: 0 }, ink = job.board.ink || 0;
   const ctx = { PL, board: job.board, liquids: job.liquids, skipIds: [job.board.ink, job.board.bg].filter(Boolean), giltOK: Object.keys(job.board.pal).every((k) => PAL.de00(PAL.lab(job.board.pal[k].c), PAL.lab(CFG.v3.mats[E.GILT].c)) >= PL.keyDE), lock: false };
   const D0 = Object.assign({}, B.deal, B.dealBy[tag] || {}, { maxTaps: B.maxTaps, time: rules.hard.time, maxWaitMs: B.maxWaitMs, lockSpaces: rules.hard.lockSpaces }, ink ? { capOf: { [ink]: B.capOf } } : {});

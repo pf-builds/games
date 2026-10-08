@@ -296,3 +296,21 @@ on Kitten Forest's sheets (the mirrored castle sheets read as the Campaign map).
   +1 Ladder"), as Zen's does.
 - **m3:** a realm or world card with no side quests has no side-quest row (Picture Garden).
 - Left as Peter decided: m2 (Zen's few Hard levels and the paid Continue), m4 (the painted road past 200). Cache `?v=54`.
+
+
+## 14. No mystery blocks in Zen (v6 lane D8, 2026-10-08)
+
+Peter's rule: Zen worlds never use hidden mystery blocks (feature `hidden`); the whole picture shows from the start, because
+in play the blocks read as random clouds of odd colours and Zen is about enjoying the pictures. "?" cards stay. The Campaign
+keeps mystery blocks (levels 1-200 and its side quests untouched).
+
+- 30 levels changed: World 1's 8 (z1-2 5 14 15 17 26 29 36), Kitten Forest's 11 (in levels.json), Snack Galaxy's 11.
+  `tools/zen-unhide.js` takes the blocks off and grades again on each level's seed; same board and deck, and the stored order,
+  pace and longest tap are unchanged (the engine never reads hidden). None needed a re-deal.
+- World 1: `tools/lands/z1-gallery/world.json` features linked and mystery, hidden share 0. Its 36 sources left gallery.json at
+  the v6 merge, so zen-world.js reads a missing source from the world's own zen.json record (same board).
+- Going forward: `land.js` refuses a Zen land (land.json `zen`, or a zen.json world with its `land`) whose features list hidden or
+  whose profile gives it a share; `zen-world.js` refuses the same for a world; `land-bake.js` fails a job marked `noHidden`
+  with mystery blocks planned; both checks gate "Zen: no mystery blocks". test.js fails if any Zen level of any world (land
+  worlds' records in levels.json too) has them, and selfTest counts them (0).
+- Desktop map card: next up names the world in Zen ("World 1 · Picture 1"), since three worlds each have a picture 1.

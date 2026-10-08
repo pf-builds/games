@@ -9,11 +9,9 @@
  "features": [
   "linked",
   "mystery",
-  "hidden",
   "moat"
  ],
  "eggs": [
-  "glowcap",
   "wisp",
   "glint",
   "ember",
@@ -27,7 +25,7 @@
   "note": "v6 lane D7: Snack Galaxy plays as Zen World 3 (tools/land.js ... zen writes levels/zen.json only; levels.json, gallery.json, layout.json and config.json are not touched)."
  },
  "profile": {
-  "note": "Zen World 3, casual (v6 lane D7, 2026-10-08): Kitten Forest's casual profile as it ships (tools/lands/01-kitten-forest/land.json, carefulFloor included): tags E18/N26/H6/X0 ending on a Hard, light deck features, no locks, no archers, generous bands, no lookahead or careful ceilings. Plus organic moats (they arrive at Snack Galaxy), gentle only: a ring on a fifth of the Easy, two fifths of the Normal and two thirds of the Hard levels, always 2 ways in (opening set 0 front+far or 1 left+right), on pictures that can carry one. The 50 are lane C's full story scenes (painting kind, 42x42); the order is lane D's (tools/land-02-notes.md).",
+  "note": "Zen World 3, casual (v6 lane D7, 2026-10-08): Kitten Forest's casual profile as it ships (tools/lands/01-kitten-forest/land.json, carefulFloor included): tags E18/N26/H6/X0 ending on a Hard, light deck features, no locks, no archers, generous bands, no lookahead or careful ceilings. Plus organic moats (they arrive at Snack Galaxy), gentle only: a ring on a fifth of the Easy, two fifths of the Normal and two thirds of the Hard levels, always 2 ways in (opening set 0 front+far or 1 left+right), on pictures that can carry one. The 50 are lane C's full story scenes (painting kind, 42x42); the order is lane D's (tools/land-02-notes.md). v6 lane D8: no mystery blocks (Peter, 2026-10-08; hidden share 0), and bake --keep-plan re-bakes swapped slots on the plan the land was baked with, hidden taken out. v6 lane D8: carefulFloor hard 0.5 (the swapped finale 300 first picked a deal where the careful player never won, 0 of 16; every other Hard here sits at 0.75 or more).",
   "tags": {
    "shares": {
     "easy": 0.36,
@@ -56,16 +54,17 @@
     ]
    },
    "hidden": {
-    "share": 0.22,
+    "share": 0,
     "by": {
      "easy": 0,
-     "normal": 0.3,
-     "hard": 0.5
+     "normal": 0,
+     "hard": 0
     },
     "of": [
-     0.25,
-     0.4
-    ]
+     0,
+     0
+    ],
+    "note": "v6 lane D8 (Peter, 2026-10-08): no mystery blocks in Zen, ever. The whole picture shows from the start; land.js and zen-world.js refuse a Zen land or world with hidden in its features or a hidden share."
    },
    "linked": {
     "share": 0.36,
@@ -121,7 +120,8 @@
   },
   "carefulFloor": {
    "easy": 0.5,
-   "normal": 0.5
+   "normal": 0.5,
+   "hard": 0.5
   },
   "pace": {
    "aim": 225000
@@ -151,7 +151,7 @@
   "sg303",
   "sg248",
   "sg319",
-  "sg330",
+  "sg238",
   "sg295",
   "sg275",
   "sg310",
@@ -176,7 +176,7 @@
   "sg240",
   "sg283",
   "sg277",
-  "sg262",
+  "sg258",
   "sg317",
   "sg241",
   "sg285",
@@ -185,11 +185,11 @@
   "sg231",
   "sg279",
   "sg316",
-  "sg250",
+  "sg264",
   "sg325",
-  "sg339",
+  "sg331",
   "sg307",
-  "sg282"
+  "sg296"
  ],
  "map": {
   "files": [
@@ -202,7 +202,7 @@
   [
    [
     [
-     "glowcap",
+     "ember",
      694,
      748
     ],
@@ -219,7 +219,7 @@
      748
     ],
     [
-     "glowcap",
+     "glint",
      393,
      300
     ]
@@ -276,7 +276,7 @@
    ],
    [
     [
-     "glowcap",
+     "bubble",
      198,
      934
     ],
@@ -288,5 +288,5 @@
    ]
   ]
  ],
- "eggNote": "Eggs on the painted side-quest spurs' tips (World 1's rule, eggsAt quests: the land has no side quests, so no spur leads nowhere): eggTurns puts each sheet's 2 eggs on its template's 2 quest spots, kinds glowcap, wisp, glint, ember, bubble in turn (the map README's donut, alien, star and comet aren't drawn)."
+ "eggNote": "Eggs on the painted side-quest spurs' tips (World 1's rule, eggsAt quests: the land has no side quests, so no spur leads nowhere): eggTurns puts each sheet's 2 eggs on its template's 2 quest spots, kinds glowcap, wisp, glint, ember, bubble in turn (the map README's donut, alien, star and comet aren't drawn). v6 lane D8 (the World 3 critic, minor 5): the glowcap (a forest mushroom) is off the space sheets; its three eggs are ember, glint and bubble now (same spots, same ids)."
 }

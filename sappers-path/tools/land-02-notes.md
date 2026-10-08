@@ -1,10 +1,83 @@
 # Zen World 3 Snack Galaxy installed: v6 lane D, piece D7 (2026-10-08)
 
+## 0. D8 fix pass (2026-10-08): no mystery blocks in Zen + the World 3 critic's should-fix items
+
+Inputs: Peter's rule of 2026-10-08 (`game-research/sappers-path-v4/land-factory.md`, "No mystery blocks in Zen") and the
+critic's report (`tools/critic-land-02.md`, functional PASS, 0 blockers, 4 should-fix, 7 minor; evidence in
+`tools/critic-land-02/`). Sections 1-8 below are D7's record; where D8 changed a level, this section has the new numbers.
+
+**No mystery blocks (11 levels: 251 252 254 260 264 268 272 278 286 297 300).** `tools/zen-unhide.js` takes `hidden`,
+`hideC`, `hideQ` and the "hidden" feature off each bake result in `scratch/bake/` and grades the level again on its own seed
+(land-bake `gradeLevel`, the bake's counts). The engine never reads `hidden` (information only), so the stored order, the real
+pace, the longest tap and the taps are byte for byte the same; the tool refuses a level where they aren't. Every player that
+reads the view was graded again: random-tap rate, careful player and fast tapper came out identical on all 11 (the careful
+player already saw every block); the lookahead moved on two (272 0.51 to 0.53, 278 0.81 to 0.96). All 11 met every bake
+target, so **none needed a re-deal**. Same boards, decks, ? cards, links, moats and fills (the chocolate fill stays in
+land-config for the Campaign; no Zen level draws it now).
+
+**Swaps (lane C's eligible spares, `picks-full.json`, boards identical to `boards-full/`; prep with the local-ai venv's
+Pillow, no image model run).** Each slot kept its tag and its planned features minus hidden (`bake --keep-plan`, below):
+
+| Level | Old | New | Why |
+|---|---|---|---|
+| 300 (Hard, links + ? cards; was + mystery blocks) | sg282 Broccoli mech | sg296 Coffee cup UFO (7 colours) | The finale didn't read. A big red-and-white saucer over an orange moon on a sunset sky reads at once at 375. Hard slot keeps 7+ colours. Picked with a new Hard careful floor (below): 17.0%, careful 1, 242 s, 53 taps |
+| 296 (Easy, links) | sg250 Kitten and the laser | sg264 Comet bowling (4) | The kitten was a 6x5 smudge. A big red cherry rolling at three white pins on a cream hill fills the frame. 79.3%, 212 s |
+| 262 (Hard, links + ? cards + moat) | sg330 Lemonade waterfall | sg238, retitled "Saturn fly-by" (5) | Read as abstract shapes. A big rocket passing a ringed planet, ringed by the moat, reads clearly. 11.0%, careful 1, 209 s, 46 taps |
+| 298 (Easy, none) | sg339 Gravity spill | sg331 Saturn's hula hoop (5) | One of the three cream-crescent-on-navy pictures (264, 281, 298). A smiling planet in a big gold ring on purple. 67.8%, 203 s |
+| 287 (Easy, moat) | sg262 Crater golf | sg258 Asteroid surfing (4) | One of the two full-frame grey moon discs (282, 287). A hot dog surfing a purple wave past a big ringed planet. 58.8%, 153 s |
+| 283 | sg234 Rocket out of gas | kept | No spare was clearly better: the rocket spare (sg238) went to 262, and 283's neighbours are rockets and UFOs |
+
+- **Swap trials.** sg233 Wrong landing (the only 7-colour spare that can carry a ring) failed on 262 twice (34 candidates):
+  the side opening set shuts the subject in (332 cells) and the front+far set never deals. Three trial bakes of 5-colour
+  ring spares on 262 in scratchpad copies of the land: sg238 (11.0%, careful 1), sg284 Sushi space battle (16.8%, careful 1),
+  sg294 Bubble tea saucer (15.0%, careful 0). sg238 reads best by far; its bake file and board are the trial's (board
+  identical to the land's own convert). So 262 is a 5-colour Hard; Kitten Forest's "busiest on the Hards" was a layout
+  preference, not a gate.
+- **sg238's title.** Lane C named it "Hot dog in a hurry" (its prompt asked for a hot dog rocket); the picture is a plain
+  rocket, the same title-picture mismatch the critic flagged on 283. Its manifest line is "Saturn fly-by" now
+  (`titleNote` says why); LICENSES.md follows.
+- **Variety.** Picked to avoid moons, crescents and full-frame moon discs, and kept off the 1-4 group spacing: 296 sport (287
+  surfing 9 back), 298 clever (300 kinds), 287 sport (278 soccer 9 back). Known soft misses: 262's rocket sits between 259
+  Rocket repair and 265 Pizza delivery (both rockets, 3 apart); 300's saucer has a tiny alien next to 299 Alien bakery.
+- **Careful floor on the Hards.** The first 300 bake picked a deal where the careful player never won (0 of 16): the bake
+  has no Hard floor and took the candidate nearest the band's middle. land.json `profile.carefulFloor.hard` 0.5 (data); the
+  re-pick (`--reuse`, same candidates) took k8 at careful 1. Every World 3 Hard now sits at 0.75 or more, and the check gates it.
+- **Plan.** A fresh plan would move moats (the plan gives each tag's features to the levels with the fewest so far, so taking
+  hidden out moves 6 moat slots). `bake --keep-plan` re-bakes on the plan in `scratch/state.json` with hidden taken out and
+  each slot's cant read again. 300's new picture can't carry a ring (subject 62%), so its record says `cant: ["moat"]`; its
+  slot had no moat planned.
+- **Old sources** sg330 sg262 sg250 sg339 sg282 left `src/` (src holds the 50 main pictures; all five are spares in the
+  manifest and `prep` makes them again).
+
+**Minor items.** 5: the glowcap eggs are off the space sheets: land.json `eggs` wisp, glint, ember, bubble, and in `eggTurns`
+the three glowcaps became ember (sheet 1), glint (sheet 3) and bubble (sheet 6), same spots, ids z3-<sheet>-<i> unchanged
+(only `map.layout[].eggs[].kind` moved in zen.json). 11: the desktop map card's next up names the world, "World 1 · Picture
+1" (main.js `mapCards`, Zen's `eye` word plus the picture; config.json untouched), as the home's Zen card pairs world and
+picture. 6 (the 250 to 251 road, layout.json) left as briefed. 7, 8, 9, 10: LATER.md.
+
+**Final, all 50:** random-tap mean Easy 65.9% (18), Normal 38.5% (26), Hard 13.7% (6); careful Easy and Normal min 0.875, every Hard 0.75+;
+real pace median **211 s** (was 215); 18 ringed; 0 levels with mystery blocks. Contact sheet `tools/land-02/contact.png`
+re-made.
+
 Land 2 (the land factory's levels 251-300) plays as Zen World 3, ids z3-1..z3-50. Peter OKed lane C's picks on 2026-10-08.
 Inputs (lane C's, read only): `game-research/sappers-path-v4/lands/02-snack-galaxy/` at workspace cffda1d, README section
 "Full story scenes", `picks-full.json` (50 picks and 17 spares, kind painting, no chroma), `boards-full/`, and the map
 folder (`land-02-a.webp`, `land-02-b.webp`, `templates.json`). The sources come from
 `/Users/peter/local-ai/outputs/lands/02-snack-galaxy/fullsrc/`. No image model was run.
+
+**Checks (D8, the whole pass):** land check PASS for Worlds 2 and 3 (new gates "Zen: no mystery blocks" and, World 3,
+the Hard careful floor), World 1's zen-world check PASS; test.js 705/0 (new: no Zen level of any world has mystery blocks, every
+Zen profile leaves hidden out, land.js refuses one that doesn't); regrade 0 of 2,405, `--gallery` 0 of 372, `--zen` 0 of 774;
+critic-v5 0 mismatching games of 10,527, 0 grade mismatches, known answers 0 wrong, pace 312/312 (diff-result.json's
+counts follow the levels: fewer mystery-block shows); freeze re-snapshot, diff vs fdd0aea's: levels.json exactly the 11
+Kitten Forest records (1-200 identical), zen.json exactly 23 records (W1 8, W3 15) plus World 3's three egg kinds,
+gallery.json, castles.json and frozen.json identical; `--require` PASS. levels.json, zen.json, LICENSES.md (World 3's 5 rows)
+and the cache tag are the only shipped files changed besides main.js; gallery.json, layout.json, config.json and places.json
+untouched. Cache `?v=58`. selfTest 871/0 at 375x812@3, 873/0 at 1280x720, harness all passed, 0 console messages.
+
+**Payload:** tracked files outside tools/ **19,893,378 B** (was 19,999,953; -106,575: the stripped hidden rows in levels.json,
+zen.json and their frozen copies). Now 106,622 B under 20 MB; this pass did not move it over. Portal build ≈ **15,276,031 B**
+(15.28 MB). No files moved out of the game folder.
 
 ## 1. What shipped
 

@@ -36,6 +36,11 @@
 //   reinstall (v6 lane D4; after a passing check with --keep, never part of the default run) a records-only re-deal of an
 //             installed land: its main records in levels/levels.json replaced in place (same ids, same order), the --keep
 //             levels' installed records byte for byte; gallery, layout, config, LICENSES.md and the sheets untouched.
+// v6 lane D8 (Peter, 2026-10-08: no mystery blocks in Zen, ever; the whole picture shows from the start): a Zen land (land.json
+// zen, or a levels/zen.json world with land k) is refused if its features list hidden or its profile gives hidden a share;
+// bake --keep-plan re-bakes a few slots on the plan the land was baked with (scratch/state.json, hidden taken out), so a
+// swapped picture keeps its slot's tag and features (a fresh plan reorders the features after hidden); check fails a Zen
+// land's level with mystery blocks.
 //             --keep N,N (or none) on assemble: those levels' records, every side quest and the map come from the game
 //             as installed (so the check gates what will ship); bake never re-bakes a kept level.
 //   install   (only after a passing check; never part of the default run) appends the land to the game: levels,
@@ -78,6 +83,8 @@ function context(dir) {
   const levels = readJ(path.join(GAME, "levels/levels.json")), gallery = readJ(path.join(GAME, "levels/gallery.json")), layout = readJ(path.join(GAME, "map/layout.json"));
   const gman = fs.existsSync(path.join(GAL, "manifest.json")) ? readJ(path.join(GAL, "manifest.json")) : [], gcfg = fs.existsSync(path.join(GAL, "gallery.json")) ? readJ(path.join(GAL, "gallery.json")) : {};
   const LCF = CFG.lands, P = LP.profileOf(land, LC), count = land.count || LCF.perLand;
+  const zf = path.join(GAME, "levels/zen.json"), zen = !!land.zen || (fs.existsSync(zf) && readJ(zf).worlds.some((w) => w.land === land.k)); // v6 lane D8: a Zen land
+  if (zen) { const H = P.features.hidden || {}; if ((land.features || []).indexOf("hidden") >= 0 || H.share || Object.values(H.by || {}).some((v) => v) || H.byLevel) throw new Error("land " + land.k + " is a Zen world: no mystery blocks (feature hidden off, its profile share 0; Peter 2026-10-08)"); }
   // Land 1 fix pass: a land already installed (the game's last; a fix pass re-bakes it) is read out of the game first, so
   // the land is planned against the game without it (its side-quest pictures free again); install --replace puts it back.
   const installed = (LCF.list || []).find((d) => d.k === land.k) || null;
@@ -87,7 +94,7 @@ function context(dir) {
   // Where it goes: the level after the game's last, the sheet after its last, the picture after its last.
   const state = fs.existsSync(path.join(S, "state.json")) ? readJ(path.join(S, "state.json")) : {};
   const from = state.from || levels.levels[levels.levels.length - 1].n + 1, sheet0 = state.sheet0 || layout.sheets.length + 1, gal0 = state.gal0 != null ? state.gal0 : gallery.levels.length;
-  return { LAND, GAME, GAL, S, land, man, CFG, LC, LCF, P, levels, gallery, layout, gman, gcfg, count, from, to: from + count - 1, sheet0, gal0, era: LCF.castleRealms + land.k, state, installed, inst };
+  return { LAND, GAME, GAL, S, land, man, CFG, LC, LCF, P, levels, gallery, layout, gman, gcfg, count, from, to: from + count - 1, sheet0, gal0, era: LCF.castleRealms + land.k, state, installed, inst, zen };
 }
 const keepOf = () => (opt("keep") ? (opt("keep") === "none" ? [] : opt("keep").split(",").map(Number)) : null); // v6 lane D4: reinstall's kept levels (null: not a records-only run)
 const saveState = (X, extra) => { X.state = Object.assign({}, X.state, { from: X.from, to: X.to, sheet0: X.sheet0, gal0: X.gal0 }, extra || {}); writeJ(path.join(X.S, "state.json"), X.state, true); };
@@ -138,14 +145,25 @@ function moatCan(X, b) {
   const MC = X.LC.plan.moat, F = X.P.features.moat || {}, lo = (F.ways || [0])[0];
   return b.main.map((e) => { const R = MO.ringOf(e.board, MC, MC.ways[lo], 0, null, F.liquids); return { n: e.n, ok: !!R.cells, why: R.cells ? null : R.why }; });
 }
+// v6 lane D8: bake --keep-plan, the plan the land was baked with (scratch/state.json) for the same tags, mystery blocks taken
+// out (a Zen land), each slot's cant read again from its picture now (a swapped picture); refused when a slot planned with a
+// moat now holds a picture that can't carry one.
+function keptPlan(X, tags, moat) {
+  const st = X.state; if (!st.plan || !st.tags || st.tags.join() !== tags.join()) throw new Error("bake --keep-plan: scratch/state.json has no plan for these tags");
+  return st.plan.map((p0, i) => { const p = Object.assign({}, p0, { feats: p0.feats.filter((f) => !(X.zen && f === "hidden")) }); if (X.zen) p.hidden = 0; delete p.cant;
+    if (moat && !moat[i].ok) { if (p.feats.indexOf("moat") >= 0) throw new Error("bake --keep-plan: level " + (X.from + i) + " is planned with a moat and its picture can't carry one (" + moat[i].why + ")"); p.cant = ["moat"]; }
+    return p; });
+}
 async function bake(X) {
   const b = readJ(path.join(X.S, "boards.json")), { quests } = picturesOf(X), tags = LP.landTags(X.count, X.P.tags, X.LCF.perLand), D = X.CFG.v5.density, BK = X.LC.bake;
-  const moat = (X.land.features || []).indexOf("moat") >= 0 ? moatCan(X, b) : null, plan = LP.landPlan(tags, X.land, X.P, X.from, D, moat ? { moat: moat.map((m) => m.ok) } : null), liquids = moat ? (X.P.features.moat || {}).liquids : undefined, moatLo = moat ? ((X.P.features.moat || {}).ways || [0])[0] : 0;
+  const moat = (X.land.features || []).indexOf("moat") >= 0 ? moatCan(X, b) : null, liquids = moat ? (X.P.features.moat || {}).liquids : undefined, moatLo = moat ? ((X.P.features.moat || {}).ways || [0])[0] : 0;
+  const plan = flag("keep-plan") ? keptPlan(X, tags, moat) : LP.landPlan(tags, X.land, X.P, X.from, D, moat ? { moat: moat.map((m) => m.ok) } : null);
   const HB = (X.P.features.hidden || {}).byLevel || {}; plan.forEach((p, i) => { if (p.hidden && HB[X.from + i] != null) p.hidden = HB[X.from + i]; }); // v6 lane D5: a level's own mystery share (profile features.hidden.byLevel), where the outlined board leaves little room
+  if (X.zen && plan.some((p) => p.hidden || p.feats.indexOf("hidden") >= 0)) throw new Error("bake: a Zen land's plan has mystery blocks"); // v6 lane D8
   saveState(X, moat ? { tags, plan, moat } : { tags, plan }); if (moat) console.log("bake: " + moat.filter((m) => m.ok).length + " of " + moat.length + " pictures can carry a moat" + moat.filter((m) => !m.ok).map((m) => "; " + m.n + " can't: " + m.why).join(""));
   const only = opt("only") ? opt("only").split("-").map(Number) : null, list = opt("list") ? opt("list").split(",").map(Number) : null, dir = path.join(X.S, "bake");
   const K = keepOf() || [], inRun = (n) => K.indexOf(n) < 0 && (list ? list.indexOf(n) >= 0 : !only || (n >= only[0] && n <= (only[1] || only[0]))), want = (f, n) => (flag("force") || only || list ? inRun(n) : !fs.existsSync(f)), jobs = [];
-  b.main.forEach((e, i) => { const f = path.join(dir, "m-" + e.n + ".json"); if (want(f, e.n)) jobs.push({ file: f, job: { n: e.n, tag: tags[i], plan: plan[i], band: X.P.bands[tags[i]], look: X.P.lookahead[tags[i]] != null ? X.P.lookahead[tags[i]] : null, care: (X.P.careful || {})[tags[i]] != null ? X.P.careful[tags[i]] : null, careTune: (X.P.carefulTune || X.P.careful || {})[tags[i]] != null ? (X.P.carefulTune || X.P.careful)[tags[i]] : null, mysRows: (X.P.features.mystery || {}).rows || null, over: X.P.bake || null, obv: (X.P.obvious || {})[tags[i]] != null ? X.P.obvious[tags[i]] : null, careLo: (X.P.carefulFloor || {})[tags[i]] != null ? X.P.carefulFloor[tags[i]] : null, pace: X.P.pace, board: e.board, extra: +opt("extra") || 0, liquids, moatLo } }); });
+  b.main.forEach((e, i) => { const f = path.join(dir, "m-" + e.n + ".json"); if (want(f, e.n)) jobs.push({ file: f, job: { n: e.n, tag: tags[i], plan: plan[i], band: X.P.bands[tags[i]], look: X.P.lookahead[tags[i]] != null ? X.P.lookahead[tags[i]] : null, care: (X.P.careful || {})[tags[i]] != null ? X.P.careful[tags[i]] : null, careTune: (X.P.carefulTune || X.P.careful || {})[tags[i]] != null ? (X.P.carefulTune || X.P.careful)[tags[i]] : null, mysRows: (X.P.features.mystery || {}).rows || null, over: X.P.bake || null, obv: (X.P.obvious || {})[tags[i]] != null ? X.P.obvious[tags[i]] : null, careLo: (X.P.carefulFloor || {})[tags[i]] != null ? X.P.carefulFloor[tags[i]] : null, pace: X.P.pace, board: e.board, extra: +opt("extra") || 0, liquids, moatLo, noHidden: X.zen } }); });
   b.side.forEach((e, i) => { const n = X.gal0 + i + 1, tag = BK.sideCycle[(X.gal0 + i) % BK.sideCycle.length], f = path.join(dir, "s-" + n + ".json"); if (!only && !list && (flag("force") || !fs.existsSync(f))) jobs.push({ file: f, job: { n: 100000 + n, side: true, tag, band: BK.sideBands[tag], look: null, pace: BK.sidePace, board: e.board } }); });
   if (!jobs.length) { console.log("bake: every level kept (scratch/bake)"); return; }
   const threads = +opt("threads") || LB.threadsOf(BK), t0 = Date.now(); console.log("bake: " + jobs.length + " levels on " + threads + " threads (" + quests.length + " side quests in the land)");
@@ -258,6 +276,7 @@ function check(X) {
   const CF = X.P.carefulFloor || {}; gate("the careful player (" + BC.grade.careful.depth + " taps ahead) at or over the profile's floor per tag (" + (Object.keys(CF).map((k) => k + " " + CF[k]).join(", ") || "none") + ")", each(LV.filter((L) => CF[L.tag] != null), (L) => (L.grade[L.tag].careful == null || L.grade[L.tag].careful >= CF[L.tag] ? null : "careful " + L.grade[L.tag].careful))); // v6 lane D5
   gate("no fallback picks (band, pace, taps, wait, fast tapper, pairs, lookahead)", LV.concat(GV).filter((L) => L.fallback).map((L) => L.id + ": " + L.fallback));
   gate("the profile: tags, density, runs, the end (land-plan planCheck)", LP.planCheck(LV, X.land, X.P, X.CFG.v5.density, X.LCF.perLand));
+  if (X.zen) gate("Zen: no mystery blocks (Peter, 2026-10-08)", LV.filter((L) => L.hidden || L.hideC || L.feats.indexOf("hidden") >= 0).map((L) => L.id)); // v6 lane D8
   const HF = X.LC.plan.hidden; gate("mystery blocks: each level's fill " + (HF.fillDE ? HF.fillDE[1] : 0) + "+ (CIEDE2000) from every colour and shade of its picture", each(LV.filter((L) => L.hidden), (L) => (!L.hideC ? (HF.fills ? "no fill" : null) : fillGap(L.hideC, L.pal) >= HF.fillDE[1] ? null : "fill " + L.hideC + " " + fillGap(L.hideC, L.pal).toFixed(1))), LV.filter((L) => L.hidden).map((L) => L.n + " " + (L.hideC ? fillGap(L.hideC, L.pal).toFixed(0) : "-")).join(", ")); // Land 1 fix (B1)
   gate("shading: every shade colour on its floors (" + C.shade.floor + " from other squads, " + C.shade.fadedFloor + " from faded cards)", each(LV.concat(GV).filter((L) => L.shade), (L) => { const r = SH.checkLevel(L, C); return r.ok ? null : r.bad.join("; "); }));
   // Organic moats: water and path only off the picture's subject (worked out again from the converted board), every

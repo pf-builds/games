@@ -21,6 +21,9 @@
 //             fallback picks, the profile (land-plan planCheck), no lock anywhere, the mystery fill, a re-grade with 0
 //             differences -> scratch/report.md
 //   install   (after a passing check) writes the world's levels into levels/zen.json (its other worlds' records kept)
+// v6 lane D8 (Peter, 2026-10-08: no mystery blocks in Zen, ever): a world whose features list hidden or whose profile gives
+// hidden a share is refused; check fails a level with mystery blocks. A source picture no longer in from.file (World 1's 36
+// left gallery.json at the v6 merge) is read from this world's own zen.json record (from: its id; the same board).
 "use strict";
 const fs = require("fs");
 const path = require("path");
@@ -40,6 +43,8 @@ const INK = require("./convert.js").config().convert.ink;
 function context(dir) {
   const W = path.resolve(dir), S = path.join(W, "scratch"), world = readJ(path.join(W, "world.json")), LC = require("./land-config.json"), CFG = readJ(path.join(ROOT, "config.json"));
   const src = readJ(path.join(ROOT, world.from.file)).levels, byId = new Map(src.map((L) => [L.id, L])), P = LP.profileOf(world, LC);
+  for (const L of readJ(path.join(ROOT, "levels/zen.json")).levels) if (L.world === world.k && L.from && !byId.has(L.from)) byId.set(L.from, Object.assign({}, L, { id: L.from })); // v6 lane D8
+  const H = P.features.hidden || {}; if ((world.features || []).indexOf("hidden") >= 0 || H.share || Object.values(H.by || {}).some((v) => v)) throw new Error("Zen world " + world.k + ": no mystery blocks (feature hidden off, its profile share 0; Peter 2026-10-08)");
   if (world.pace) P.pace = Object.assign({}, P.pace, world.pace);
   for (const id of world.from.ids) if (!byId.has(id)) throw new Error("source picture " + id + " is not in " + world.from.file);
   const state = fs.existsSync(path.join(S, "state.json")) ? readJ(path.join(S, "state.json")) : {};
@@ -72,7 +77,7 @@ async function bake(X) {
   const list = opt("list") ? opt("list").split(",").map(Number) : null, dir = path.join(X.S, "bake"), jobs = [];
   main.forEach((id, i) => { const n = i + 1, f = path.join(dir, "m-" + n + ".json"); if (list ? list.indexOf(n) < 0 : !flag("force") && fs.existsSync(f)) return;
     const t = tags[i]; jobs.push({ file: f, n, job: { n: 1000 * X.world.k + n, tag: t, plan: pl[i], band: X.P.bands[t], look: X.P.lookahead[t] != null ? X.P.lookahead[t] : null, care: null, careTune: null,
-      mysRows: (X.P.features.mystery || {}).rows || null, over: X.P.bake || null, obv: null, pace: X.P.pace, board: boardOf(X.byId.get(id)), extra: +opt("extra") || 0 } }); });
+      mysRows: (X.P.features.mystery || {}).rows || null, over: X.P.bake || null, obv: null, pace: X.P.pace, board: boardOf(X.byId.get(id)), extra: +opt("extra") || 0, noHidden: true } }); });
   if (!jobs.length) { console.log("bake: every level kept"); return; }
   const threads = +opt("threads") || LB.threadsOf(X.LC.bake), t0 = Date.now(); console.log("bake: " + jobs.length + " levels on " + threads + " threads");
   const res = await LB.runPool(jobs.map((j) => j.job), threads, t0 + X.LC.bake.budget.wallSec * 1000, (d, t) => { if (d % 4 === 0 || d === t) console.log("  " + d + "/" + t + "  " + ((Date.now() - t0) / 1000).toFixed(0) + " s"); });
@@ -105,6 +110,7 @@ function check(X) {
   gate("no fallback picks", LV.filter((L) => L.fallback).map((L) => L.id + ": " + L.fallback));
   gate("the profile: tags, density, runs, the end (land-plan planCheck)", LP.planCheck(LV, X.world, X.P, X.CFG.v5.density, X.CFG.lands.perLand));
   gate("casual: no lock, no Extreme", LV.filter((L) => L.lock || L.tag === "extreme").map((L) => L.id));
+  gate("Zen: no mystery blocks (Peter, 2026-10-08)", LV.filter((L) => L.hidden || L.hideC || L.feats.indexOf("hidden") >= 0).map((L) => L.id)); // v6 lane D8
   const HF = X.LC.plan.hidden; gate("mystery blocks: each level's fill " + HF.fillDE[1] + "+ from its picture", each((L) => (!L.hidden ? null : !L.hideC ? "no fill" : fillGap(L.hideC, L.pal) >= HF.fillDE[1] ? null : "fill " + L.hideC)));
   const rg = regrade(LV, BC, V3, false); gate("re-grade with the grader's own counts: 0 differences (" + rg.checks + " checks)", rg.lines);
   const ok = gates.every((g) => g.ok), sh = LP.sharesOf(LV);
