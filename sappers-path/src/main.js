@@ -228,7 +228,7 @@
     const zl = [], zg = [], sheets = [], eras = [], starts = new Set(), zinfo = [];
     for (const w of Z.worlds) {
       const lv = w.land ? app.allLevels.filter((e) => e.L.land === w.land) : [...recs.values()].filter((e) => e.L.world === w.k), q = w.land ? app.allGal.filter((e) => e.L.land === w.land) : [];
-      if (!lv.length) continue; lv.forEach((e, i) => { e.mode = "zen"; e.world = w.k; e.dn = i + 1; zinfo.push({ id: e.id, w: w.k, n: i + 1 }); }); q.forEach((e, i) => { e.mode = "zen"; e.world = w.k; e.dn = i + 1; }); // fix pass: a Zen side quest by its number in its world
+      if (!lv.length) continue; const b4 = zl.length; lv.forEach((e, i) => { e.mode = "zen"; e.world = w.k; e.dn = zenNum(b4, i); zinfo.push({ id: e.id, w: w.k, n: i + 1 }); }); q.forEach((e, i) => { e.mode = "zen"; e.world = w.k; e.dn = i + 1; }); // D10: a level's number runs on across the worlds (zinfo, for the codes, keeps its place in its world); fix pass: a Zen side quest by its number in its world
       starts.add(lv[0].id); zl.push(...lv); zg.push(...q); eras[w.era - 1] = { era: w.era, name: w.name, note: w.lore, world: w.k };
       const byN = new Map(lv.map((e) => [e.n, e])), rows = (app.cfg.map.eggCoins || []), bridges = (sn) => (app.cfg.map.bridges || []).filter((b) => b[0] === sn).map((b) => b.slice(1));
       const mine = w.land ? (raw ? raw.sheets.filter((S) => S.land === w.land) : []).map((S) => Object.assign({}, S, { eggCoins: rows[S.sheet - 1] || [], castleSheet: S.sheet }))
@@ -283,8 +283,12 @@
   }
   // The node the map centres on (journey.js focus, with Zen's next).
   function focusOf(d) { d = d || app.save.data; if (app.mode !== "zen") return JN.focus(d, app.order); const n = nextOf(d); return n && !d.done[n] ? n : app.order.length ? "tail" : null; }
-  // A level's number as the player reads it (a Zen level's number inside its world) and its place in the mode's order.
+  // A level's number as the player reads it (a Zen level's running number, below) and its place in the mode's order.
   const num = (e) => (e && e.dn) || (e ? e.n : 0), pos = (e) => app.order.indexOf(e.id) + 1;
+  // v6 lane D10 (Peter, 2026-10-08): Zen's numbers count up across the worlds in world order, never from 1 again (World 1
+  // 1-36, World 2 37-86, World 3 87-136, then each world appended): the levels of the worlds before it plus its place in
+  // its own. Display only (e.dn, read by num): ids, the records' n, saves, the codes and the playtest's z<k>:<n> keep the place.
+  const zenNum = (before, i) => before + i + 1;
   function storage() { try { const s = window.localStorage; s.getItem("sappers-path.probe"); return s; } catch (e) { return Save.memoryStore(); } }
   // v4 M5: with the power-ups' uses per level; v5 R1: none for a power-up the campaign hasn't unlocked yet.
   const rulesOf = (d) => { const r = E.rulesOf(app.cfg.v3, d, app.meta); if (r.powers) r.powers = r.powers.map((v, k) => (pwOpen(k) ? v : 0)); return r; };
@@ -932,7 +936,7 @@
     if (b.dataset.st !== st || b.dataset.id !== e.id || b.dataset.drawn !== e.id + st) { b.dataset.st = st; b.dataset.drawn = e.id + st; b.classList.remove("won", "open", "locked"); b.classList.add(st); if (g) g.setAttribute("class", "dt " + st);
       if (st === "won") thumb(b.querySelector("canvas"), e.L, true, 1); if (tail && qk >= 0) b.querySelector(".pi").style.backgroundImage = app.icoURL["p" + qk] || "none"; }
     b.classList.toggle("next", e === nx); b.setAttribute("aria-disabled", st === "locked" ? "true" : "false");
-    const late = q && questAt(e) > app.order.length, base = st === "won" ? e.L.title + ", cleared" : tail ? fill(app.cfg.map.text.tailAria, { n: e.n }) : fill(app.mode === "zen" ? ZT().questAria[e === nx ? "next" : st === "open" ? "tile" : "locked"] : e === nx ? QT.nextAria : st === "open" ? QT.tileAria : late ? QT.quests.waitAria : QT.lockedAria, { n: num(e), after: q ? num(app.byId.get(app.order[questAt(e) - 1])) || q.after : "" }); // v6: a Zen quest's level by its number in its world
+    const late = q && questAt(e) > app.order.length, base = st === "won" ? e.L.title + ", cleared" : tail ? fill(app.cfg.map.text.tailAria, { n: e.n }) : fill(app.mode === "zen" ? ZT().questAria[e === nx ? "next" : st === "open" ? "tile" : "locked"] : e === nx ? QT.nextAria : st === "open" ? QT.tileAria : late ? QT.quests.waitAria : QT.lockedAria, { n: num(e), after: q ? num(app.byId.get(app.order[questAt(e) - 1])) || q.after : "" }); // v6: a Zen quest's level by its number as shown (D10: the running one)
     b.setAttribute("aria-label", base + (tg ? ", " + tg : "") + (qk >= 0 && st !== "won" ? ", " + fill(QT.quests.prizeAria, { name: pwName(qk) }) : ""));
   }
   // An egg's look (drawn again only when it is found or forgotten) and its label.
@@ -1006,7 +1010,7 @@
     const all = C.levels.every((x) => d.done[x.id]); return { e, place, line: fill(all ? Z.campDone : Z.campLine, { n: e ? e.n : 1, t: C.levels.length }), done: all };
   }
   // The lives pill and, with none left, Play's countdown (the text changes once a second; written only then). v6: the
-  // mode cards' labels (Campaign: the next level, or the boss's; Zen: World k and the level's number there).
+  // mode cards' labels (Campaign: the next level, or the boss's; Zen: World k and the level's running number, D10).
   function livesPill() {
     const H = app.meta.home, Z = ZT(), L = Meta.lives(app.save.data, app.meta, app.now()), pill = $("home-lives"), wait = L.on && L.n <= 0, tags = app.cfg.layout.tags;
     const cd = L.nextMs > 0 ? Meta.clock(L.nextMs, true) : "", txt = L.on ? L.n + (cd ? " · " + cd : "") : "", c = zenOn() ? modeCard("campaign") : { e: app.byId.get(nextOf()), line: "" }, z = zenOn() ? modeCard("zen") : null;
@@ -3063,8 +3067,8 @@
         ok(open(w1[0].id) && !open(w1[1].id) && open(w2[0].id) && !open(w2[1].id) && W.every((w) => open(Z.levels.find((e) => e.world === w.k).id)) && nextOf() === w1[0].id, "zen: on a fresh save every world's first level is open (World 1's " + w1[0].id + ", World 2's " + w2[0].id + "), the next ones locked; Play starts World 1");
         Save.record(zd, w2[0].id); zd.last = w2[0].id; ok(open(w2[1].id) && !open(w1[1].id) && nextOf() === w2[1].id, "zen: inside a world they open one by one; after a World 2 win, Play goes on in World 2 (" + nextOf() + ")");
         showScreen("map"); const zn = (e) => e.node && e.node.isConnected, eggIds = app.jr.eggs.map((g) => g.id);
-        ok(app.mapOf === "zen" && zn(w1[0]) && zn(w2[0]) && w1[0].node.classList.contains("open") && w1[1].node.classList.contains("locked") && w2[1].node.classList.contains("cur") && w1[0].node.querySelector("b").textContent === "1" && w2[0].node.querySelector("b").textContent === "1" && !document.querySelector("#jr .kg") && $("map-mode").querySelector('[data-mode="zen"]').getAttribute("aria-pressed") === "true",
-          "zen map: one journey for both worlds (" + app.jr.sheets.length + " sheets), each world's levels numbered from 1, World 2's next level current, no Goblin King, the chip on Zen");
+        ok(app.mapOf === "zen" && zn(w1[0]) && zn(w2[0]) && w1[0].node.classList.contains("open") && w1[1].node.classList.contains("locked") && w2[1].node.classList.contains("cur") && w1[0].node.querySelector("b").textContent === "1" && w2[0].node.querySelector("b").textContent === String(w1.length + 1) && !document.querySelector("#jr .kg") && $("map-mode").querySelector('[data-mode="zen"]').getAttribute("aria-pressed") === "true",
+          "zen map: one journey for both worlds (" + app.jr.sheets.length + " sheets), World 1 numbered from 1 and World 2 on from it (D10: its first '" + w2[0].node.querySelector("b").textContent + "'), World 2's next level current, no Goblin King, the chip on Zen");
         ok(eggIds.length && eggIds.every((k) => /^z\d+-\d+-\d+$/.test(k) && !/^s\d+-\d+$/.test(k)) && new Set(eggIds).size === eggIds.length, "zen eggs: " + eggIds.length + " ids of their own (" + eggIds[0] + " ... " + eggIds[eggIds.length - 1] + "), none a castle s<sheet>-<i>");
         const zText = [$("map-story").textContent, $("map-title").textContent, document.querySelector("#jr .fogl").textContent, $("map-play").textContent].concat([...document.querySelectorAll("#jr .bn")].map((b) => b.textContent + b.getAttribute("aria-label")));
         ok(!zText.some(bad), "zen words: no goblin, fort or assault on the Zen map (story, fog, Play, banners: " + zText.filter(bad).join(" | ") + ")");
@@ -3116,14 +3120,28 @@
         // (land-02 files, two eggs each with ids of its own; the top sheet's two sit past the fog, above the last level), its banner, the fog after its last level; its first level plays and wins.
         { const w3 = Z.levels.filter((e) => e.world === 3), ns = Z.levels.map((e) => e.n), s3 = Z.lay ? Z.lay.sheets.filter((S) => S.world === 3) : [];
           ok(W.length >= 3 && W[2].k === 3 && w3.length === 50 && w3.every((e, i) => e.id === "z3-" + (i + 1) && e.n === 251 + i && !e.L.land) && new Set(ns).size === ns.length && !Z.gal.some((e) => e.world === 3) && !C.levels.some((e) => e.world === 3),
-            "zen World 3 (v6 lane D7): " + (W[2] || {}).name + ", " + w3.length + " levels z3-1..z3-50 numbered 251-300 (" + ns.length + " Zen numbers, none twice), no side quests, none in the Campaign");
+            "zen World 3 (v6 lane D7): " + (W[2] || {}).name + ", " + w3.length + " levels z3-1..z3-50, their records numbered 251-300 (" + ns.length + " Zen record numbers, none twice), no side quests, none in the Campaign");
           app.save = scratch(); useMode("zen"); app.save = scratchZen(); const zd = app.save.data; showScreen("map"); const J = app.jr, e3 = J.eggs.filter((g) => /^z3-/.test(g.id)), si3 = J.sheets.map((s, i) => (s.S.world === 3 ? i : -1)).filter((i) => i >= 0);
           const bn3 = [...document.querySelectorAll("#jr .bn")].some((b) => b.textContent.indexOf(W[2].name) >= 0 || (b.getAttribute("aria-label") || "").indexOf(W[2].name) >= 0);
-          ok(Save.isOpen(zd, Z.order, w3[0].id) && !Save.isOpen(zd, Z.order, w3[1].id) && s3.length === 7 && s3.every((S) => /^land-02-[ab]\.webp$/.test(S.file) && S.eggs.length === 2) && e3.length === 2 * (s3.length - 1) && new Set(e3.map((g) => g.id)).size === e3.length && !e3.some((g) => J.sheets[g.sheet].S === J.sheets[si3[si3.length - 1]].S) && w3.every((e) => e.node && e.node.isConnected) && w3[0].node.querySelector("b").textContent === "1" && w3[0].node.classList.contains("open") && w3[1].node.classList.contains("locked") && bn3 && J.fr.si === si3[si3.length - 1] && shown(document.querySelector("#jr .fogl")),
-            "zen World 3 map: " + s3.length + " sheets (" + s3.map((S) => S.file.replace("land-02-", "").replace(".webp", "") + (S.mirror ? "'" : "")).join(" ") + "), every level a node, the first '1' and open, the next locked, " + e3.length + " eggs (" + e3[0].id + " ... " + e3[e3.length - 1].id + "), its banner, the fog after its last level");
+          ok(Save.isOpen(zd, Z.order, w3[0].id) && !Save.isOpen(zd, Z.order, w3[1].id) && s3.length === 7 && s3.every((S) => /^land-02-[ab]\.webp$/.test(S.file) && S.eggs.length === 2) && e3.length === 2 * (s3.length - 1) && new Set(e3.map((g) => g.id)).size === e3.length && !e3.some((g) => J.sheets[g.sheet].S === J.sheets[si3[si3.length - 1]].S) && w3.every((e) => e.node && e.node.isConnected) && w3[0].node.querySelector("b").textContent === String(w1.length + w2.length + 1) && w3[0].node.classList.contains("open") && w3[1].node.classList.contains("locked") && bn3 && J.fr.si === si3[si3.length - 1] && shown(document.querySelector("#jr .fogl")),
+            "zen World 3 map: " + s3.length + " sheets (" + s3.map((S) => S.file.replace("land-02-", "").replace(".webp", "") + (S.mirror ? "'" : "")).join(" ") + "), every level a node, the first '" + w3[0].node.querySelector("b").textContent + "' (D10) and open, the next locked, " + e3.length + " eggs (" + e3[0].id + " ... " + e3[e3.length - 1].id + "), its banner, the fog after its last level");
           mapCards(w3[0]); const card = $("jr-r-name").textContent === W[2].name && $("jr-q-v").parentElement.hidden; const e = w3[0]; startLevel(e.id); const inZen = app.mode === "zen" && app.screen === "play" && app.entry === e; patient(winOf(e)); settleNow(); tick(9000);
           ok(card && inZen && app.panel === "win" && $("p-title").textContent === ZX.winTitle && $("p-line").textContent === fill(ZX.winLine, { title: e.L.title }) && app.save.data.done[e.id] === 1 && Save.isOpen(app.save.data, Z.order, w3[1].id),
-            "zen World 3 play: its card names " + W[2].name + " with no side-quest row; " + e.L.title + " (picture 1) plays in Zen and wins '" + $("p-title").textContent + "', opening picture 2"); useMode("campaign"); }
+            "zen World 3 play: its card names " + W[2].name + " with no side-quest row; " + e.L.title + " (picture " + num(e) + ") plays in Zen and wins '" + $("p-title").textContent + "', opening picture " + num(w3[1])); useMode("campaign"); }
+        // v6 lane D10 (Peter, 2026-10-08): Zen's numbers count up across the worlds, display only. The shown numbers run 1..N
+        // in world order, no gap or repeat, each world's first one past the worlds before it; the Campaign's are its records'
+        // n (1-200); the codes' places in a world (Z.info) unchanged. A World 3 level shows its running number on its node,
+        // its aria-label, the current label, Play, the next-up card, the home's Zen card and the play bar.
+        { const sh = Z.levels.map(num), runs = sh.every((v, i) => v === i + 1) && new Set(sh).size === sh.length, wi = (e) => W.findIndex((w) => w.k === e.world), ord = Z.levels.every((e, i) => !i || wi(e) >= wi(Z.levels[i - 1]));
+          const size = (w) => Z.levels.filter((e) => e.world === w.k).length, firsts = W.map((w) => num(Z.levels.find((e) => e.world === w.k))), seams = W.every((w, j) => firsts[j] === 1 + W.slice(0, j).reduce((t, v) => t + size(v), 0));
+          const camp = C.levels.every((e, i) => num(e) === e.n && e.n === i + 1) && C.gal.every((e) => num(e) === e.n), info = Z.info.length === Z.levels.length && Z.info.every((x) => { const ls = Z.levels.filter((e) => e.world === x.w); return !!ls[x.n - 1] && ls[x.n - 1].id === x.id; });
+          const w3 = Z.levels.filter((e) => e.world === 3), t = w3[1]; app.save = scratch(); useMode("zen"); app.save = scratchZen(); Save.record(app.save.data, w3[0].id); app.save.data.last = w3[0].id; showScreen("map");
+          const n = String(num(t)), cl = document.querySelector("#jr .jr-cur"), dom = t.node.querySelector("b").textContent === n && t.node.getAttribute("aria-label").indexOf(fill(ZX.map.nodeName, { n })) === 0 && !!cl && [fill(MTX().cur, { n }), fill(MTX().curShort, { n })].indexOf(cl.firstChild.textContent) >= 0 && $("map-play").querySelector(".pl").textContent === fill(ZX.playMap, { n })
+            && $("jr-n-name").firstChild.textContent === fill(ZX.eye, { k: 3 }) + " · " + fill(ZX.map.cur, { n });
+          showScreen("title"); const home = $("zen-lab").textContent === fill(ZX.homePlay, { n }) && $("home-zen-w").textContent === fill(ZX.home, { k: 3, name: W[2].name }); startLevel(t.id); const bar = $("lvl-num").textContent === n;
+          ok(runs && ord && seams && camp && info && n === String(2 + size(W[0]) + size(W[1])) && dom && home && bar,
+            "zen numbers (D10): " + sh.length + " shown 1-" + sh[sh.length - 1] + " with no gap or repeat in world order (worlds start at " + firsts.join(", ") + "); the Campaign's 1-" + C.levels.length + " are their records' n; the codes keep each level's place in its world (" + Z.info.length + "); World 3's second level reads " + n + " on its node, the current label, '" + $("map-play").textContent + "', the next-up card, the home ('" + $("zen-lab").textContent + "') and the play bar (" + +runs + +ord + +seams + +camp + +info + +dom + +home + +bar + ")");
+          useMode("campaign"); }
         // The one-time move (save.js zenMove) on a pre-v6 save: a format-1 save (v3/v4) and a format-2 one; twice is once.
         { const spec = moveSpec(), g0 = w1[0].L.from, g5 = w1[5].L.from, sh = Z.lay.sheets.find((S) => S.castleSheet), eg = "s" + sh.castleSheet + "-0", zeg = sh.eggKey + "-0";
           const raw2 = { v: 2, done: { "e1-01": 1, [LA[0]]: 1, [LA[1]]: 1 }, gal: { [g0]: 1, [g5]: 1, [GA[0]]: 1 }, best: { [LA[0]]: [90000, 40, 30], [g0]: [80000, 33, 20] }, eggs: { [eg]: 1, "s1-0": 1 }, last: LA[1], coins: 777 }, old2 = Save.sanitize(JSON.parse(JSON.stringify(raw2)), app.allOrder, app.allGal.map((e) => e.id), app.meta); // merge pass: the move reads the raw save (the page's rawOf), the Campaign keeps the sanitized one

@@ -1,0 +1,7 @@
+W1/W2 seam, nodes in view: 33 34 35 36 37* 38 39 40 41 42 43
+fit: {"nodes":136,"tightest":{"n":"122","text":22.5,"inside":28,"spare":5.5,"cur":false},"closest":68,"at":"93-94"}
+W2/W3 seam, nodes in view: 85 86 87* 88
+cur: {"n":"87","text":21.7,"inside":36,"label":"Picture 87","play":"Play picture 87"}
+World 3 win: {"num":"91","name":"Space high five","panel":"win","title":"Picture done","line":"Space high five, all dug out."}
+console messages: 0
+

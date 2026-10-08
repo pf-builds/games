@@ -150,5 +150,8 @@ every land out of the Campaign and plays it in Zen. To show a newly installed la
   already baked: `tools/zen-unhide.js PROFILE FILE... --write` (bake results or an installed levels file with `--land K` /
   `--world K`). To re-bake a few slots of an installed land on its own plan (tags and features unchanged, hidden out, cant
   read again for a swapped picture): `bake --keep-plan --list N,N`. A fresh plan would move the features after hidden.
+- **Zen numbers count up across the worlds (Peter, 2026-10-08).** A new world's levels show on from the last world's
+  (World 3 ends at 136, so Dino Valley starts at 137); nothing to set, `main.js modes()` derives it from world order. Ids,
+  records' `n`, saves and codes keep the world's own numbering, so always append a world, never insert one.
 - Any new picture in `levels/gallery.json` (a land's side quests too) must be **appended** to `levels/places.json` (the save
   codes' picture places): never insert or reorder. test.js fails while one is missing.

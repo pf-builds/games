@@ -9,7 +9,7 @@ game at `/sappers-path/`).
 
 - **Home:** the painted home keeps its art. Play is now two cards, Campaign and Zen, side by side (down to 320 px). Each
   card is one button: its name, its progress line ("Fort 38 of 200"; "12 of 98 pictures", side quests included) and Play
-  with the next level ("Level 38" or the boss's line; "World 2 · 5"), its tag chip as Play's. A tap plays that mode's next
+  with the next level ("Level 38" or the boss's line; "Picture 41" under "World 2 · Kitten Forest", §15), its tag chip as Play's. A tap plays that mode's next
   level. The mode played last is lit gold, the other is stone whatever its tag. The realm line above the cards is the lit
   mode's ("Realm 2 · Fenwater Vale", "World 2 · Kitten Forest"). The castle progress pill is hidden (the cards carry it).
   Still exactly two tabs, Map and Home.
@@ -22,8 +22,8 @@ game at `/sappers-path/`).
   ends at the throne (`lands.epilogue.none`): the lands are Zen's.
 - **Zen:** one journey of worlds from the same map code. World 1 The Gallery (36 pictures, no side quests) at the bottom
   on reused sheets (§10), World 2 Kitten Forest (201-250 and its 12 Wandering Gallery side quests) above on its
-  own sheets (fix pass: World 1 now reuses Kitten Forest's two sheets in a turn of its own, see §10). Every world's first level is open from the start; inside a world they open one by one. A world's levels
-  are numbered from 1 on the map, the play bar and Play. Banners say "World k", the realm card "World k of t". No Goblin
+  own sheets (fix pass: World 1 now reuses Kitten Forest's two sheets in a turn of its own, see §10). Every world's first level is open from the start; inside a world they open one by one. Zen's levels
+  are numbered on across the worlds (World 1 1-36, World 2 37-86, ...: §15, Peter 2026-10-08) on the map, the play bar and Play. Banners say "World k", the realm card "World k of t". No Goblin
   King, a calm story line, "More worlds on the way" in the fog. Every Zen level and side quest wins "Picture done" with
   "{title}, all dug out." (the finished picture on the report) and fails "A little stuck", the jam's reason, then "Have
   another look."; the win's beat has its dust and shake but no keep and no goblin (`board.js goblin(on, quiet)`); the
@@ -183,7 +183,9 @@ no id reused), moves the Wandering Gallery (n 61-72) to file places 51-62 and le
 2. Hid the 36 from the campaign on this branch (keyed to zen.json `from`), rather than showing duplicates.
 3. Kept the boss loop in realm 8 under "Campaign carries the map track into its levels".
 4. Power-ups: superseded by the fix pass (§10): one reach for both modes, owned ones always shown.
-5. Zen level numbers count from 1 in each world; World 2 shows 1-50 (ids stay e9-201..).
+5. Superseded (Peter, 2026-10-08, §15): Zen level numbers count up across the worlds in world order, never from 1 again
+   (World 1 1-36, World 2 37-86, World 3 87-136, Dino Valley from 137). Display only: ids (z1-*, e9-201.., z3-*), the
+   records' `n`, saves and codes keep each level's place in its world. Side quests still count in their world ("Side quest 1").
 6. The castle progress pill and the realm banner on the home are hidden when Zen exists; the cards carry both.
 7. World 1's map: superseded by the fix pass (§10): Kitten Forest's sheets, eggs on the spur tips.
 8. SP1 load replaces Zen with what the move derives from the code (a load replaces the device's progress).
@@ -314,3 +316,30 @@ keeps mystery blocks (levels 1-200 and its side quests untouched).
   with mystery blocks planned; both checks gate "Zen: no mystery blocks". test.js fails if any Zen level of any world (land
   worlds' records in levels.json too) has them, and selfTest counts them (0).
 - Desktop map card: next up names the world in Zen ("World 1 · Picture 1"), since three worlds each have a picture 1.
+
+## 15. Zen numbers count up across the worlds (v6 lane D10, 2026-10-08)
+
+Peter: "the zen levels should count up normally from 1, and be cumulative through the levels, not reset with each world."
+Replaces §8 call 5. One running number across Zen in world order: World 1 Picture Garden 1-36, World 2 Kitten Forest 37-86,
+World 3 Snack Galaxy 87-136, and each world appended after them (Dino Valley from 137). Worlds are only ever appended, so an
+earlier world's numbers never move.
+
+- **Display only.** `main.js modes()` sets each Zen level's `e.dn` with `zenNum(before, i)` (the levels of the worlds before it
+  plus its place in its own); `num(e)` (the one display helper, unchanged) reads it everywhere a level number shows: map
+  nodes and their aria-labels, the current label, the map's Play ("Play picture 88"), the desktop next-up card ("World 3 ·
+  Picture 88"), the home's Zen card ("Picture 88" under "World 3 · Snack Galaxy"), the play bar's `#lvl-num`, and a Zen side
+  quest's "opens after picture {after}". The Zen win and fail sheets show no number (title and picture name only).
+- **Unchanged:** level ids (z1-*, e9-201..250, z3-*), the records' `n` (1-36, 201-250, 251-300), saves, SP1/SP2 codes
+  (`Z.info` keeps each level's place in its world), the move, the freeze, every level file, map/layout.json and config.json
+  (no new placeholder: the templates already take `{n}`). The playtest Jump keeps `z<k>:<n>` (world, place in world) and its
+  "Z<k>.<n>" label. Campaign numbers untouched. Side quests still count inside their world ("Side quest 1"): Peter's words
+  were about levels; flipping them is one line in modes() if he wants it.
+- **Fit at 375 px:** the widest three-digit Zen number (122) is 22.5 CSS px in the disc's 28 px inside (5.5 px spare; the
+  current node's bigger disc 36 px); the closest two consecutive nodes on the Zen map are 68 px apart, over the 48 px floor.
+  Same node CSS as the Campaign's 100-200.
+- **Checks:** selfTest "zen numbers (D10)": the shown numbers run 1..136 in world order with no gap or repeat, each world's
+  first one past the worlds before it (1, 37, 87); the Campaign's 1-200 equal their records' n; `Z.info` keeps the place in
+  the world; World 3's second level reads 88 on its node, its aria-label, the current label, Play, the next-up card, the
+  home and the play bar. The two map checks that read World 2's and World 3's first node as "1" now read 37 and 87.
+- Shots: `tools/zen-numbers/` (`tools/shots-zen-numbers.mjs` remakes them and prints the fit): the World 1/2 and World 2/3
+  seams and a World 3 level's play bar with its win sheet, all at 375x812@3. Cache tag `?v=60`.
