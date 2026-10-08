@@ -174,6 +174,7 @@
     if (NS.tutorial) app.tut = NS.tutorial.init({ app, $, v: V_, getJSON, storage, startLevel, showScreen, retry, switchMode, renderCoach, csave, zsave, zenOn, SP }); // v6 lane B part 2: the intro tour (src/tutorial.js)
     requestAnimationFrame(frame);
     if (app.tut && app.tut.ready) await app.tut.ready; // fix pass: the tour's data in before SP (and its selfTest) is handed out
+    $("btn-howto").hidden = !(app.tut && app.tut.loaded); $("btn-howto").addEventListener("click", () => { if (app.tut) app.tut.start(); }); // v6 ship fix: the home's How to play (the tour; hidden with no tour)
     if (DEBUG) window.SP = SP;
   }
   // levels.json: {levels: [...]} in play order. A level that fails to compile is skipped, never fatal.
@@ -973,7 +974,7 @@
     $("jr-r-eye").textContent = realmEye(re, "of"); $("jr-r-name").textContent = er.name; $("jr-r-note").textContent = er.note;
     const ls = app.levels.filter((x) => x.era === re), won = ls.filter((x) => d.done[x.id]).length; reportCard($("jr-rc"), ls); $("jr-r-bar").style.width = (ls.length ? (100 * won) / ls.length : 0) + "%";
     const ss = J.sheets.map((sh, i) => (sh.S.realm === re ? i : -1)).filter((i) => i >= 0), qs = J.quests.filter((q) => ss.indexOf(q.sheet) >= 0), gs = J.eggs.filter((g) => ss.indexOf(g.sheet) >= 0);
-    $("jr-q-v").textContent = qs.filter((q) => d.gal[q.e.id]).length + " / " + qs.length; $("jr-e-v").textContent = gs.filter((g) => d.eggs && d.eggs[g.id]).length + " / " + gs.length;
+    $("jr-q-v").textContent = qs.filter((q) => d.gal[q.e.id]).length + " / " + qs.length; $("jr-q-v").parentElement.hidden = !qs.length; // v6 ship fix (m3): no side-quest row where there are none $("jr-e-v").textContent = gs.filter((g) => d.eggs && d.eggs[g.id]).length + " / " + gs.length;
     // v5 R3 fix: past the last level the card names the picture Play starts; with every picture cleared too, "all cleared"
     // and no Play; the side quest under it is the open one nearest the current level (never the one Play starts).
     const ne = app.byId.get(nextOf(d)), te = mapPic(), end = !te && allDone(); $("jr-n-name").firstChild.textContent = te ? fill(T.picture, { n: num(te) }) : end || !ne ? T.allClear : ne.boss ? ne.boss.card : fill(T.cur, { n: num(ne) }); tagChip($("jr-n-name").querySelector(".tag"), te ? tagOf(te) : end || !ne ? null : tagOf(ne));
@@ -1275,7 +1276,7 @@
     $("p-title").textContent = e.won ? (ZW ? ZW.winTitle : gal ? G.winTitle : BS ? BS.winTitle : LT ? LT.winTitle : "Fort razed!") : ZW ? ZW.failTitle : LT ? LT.failTitle : "Assault failed"; tagChip($("p-tag"), app.diff); // v4.3: the level's tag
     $("p-crown").hidden = !BS; $("panel").classList.toggle("boss", !!BS); if (BS) $("p-crown").setAttribute("aria-label", BS.crownAria);
     if (e.won && ZW) { $("p-line").textContent = fill(e.first ? ZW.winLine : ZW.winLineAgain, { title: app.entry.L.title }) + (e.prize >= 0 ? " " + fill(app.cfg.gallery.quests.prizeText, { name: pwName(e.prize) }) : ""); $("p-line").removeAttribute("aria-label"); } // fix pass: a Zen side quest's prize named on its sheet
-    else if (e.won) { $("p-line").textContent = BS ? (e.first ? BS.win + " " + epilogue() : BS.winAgain) : gal ? fill(e.first ? G.winLine : G.winLineAgain, { title: app.entry.L.title }) : LT ? fill(e.first ? LT.winLine : LT.winLineAgain, { name: LD.name, n: app.entry.n }) : "The goblin king flees. " + (app.entry.debug ? app.entry.L.name : "Level " + app.entry.n) + (e.first ? " cleared." : " cleared again."); $("p-line").removeAttribute("aria-label"); } else sheetLine(e);
+    else if (e.won) { $("p-line").textContent = BS ? (e.first ? BS.win + " " + epilogue() : BS.winAgain) : gal ? fill(e.first ? G.winLine : G.winLineAgain, { title: app.entry.L.title }) + (e.prize >= 0 ? " " + fill(app.cfg.gallery.quests.prizeText, { name: pwName(e.prize) }) : "") : LT ? fill(e.first ? LT.winLine : LT.winLineAgain, { name: LD.name, n: app.entry.n }) : "The goblin king flees. " + (app.entry.debug ? app.entry.L.name : "Level " + app.entry.n) + (e.first ? " cleared." : " cleared again."); $("p-line").removeAttribute("aria-label"); } else sheetLine(e);
     reportPic(e.won && (gal || !!ZW)); // v6: a Zen level is a picture too: its finished picture on the report
     // v5.1 (playtesters, 2026-10-06): every win (a level, a side quest, the boss) goes back to the journey map, where the
     // next node, a side quest just opened and the eggs in reach show (layout.toMap); a fail's main button is Retry.
@@ -2593,7 +2594,7 @@
           out.notes.reportPic = Math.round(pr.width) + "x" + Math.round(pr.height) + " CSS px, " + cell.toFixed(2) + " a cell";
           const sp = $("stage-pic"), onStage = !shown($("p-pic")) && shown(sp), spr = sp.firstElementChild.getBoundingClientRect(), fr = $("frame").getBoundingClientRect(), scol = onStage ? px(sp.firstElementChild) : cols;
           if (onStage) out.notes.reportPic = "over the board, " + Math.round(spr.width) + "x" + Math.round(spr.height) + " CSS px";
-          ok((shown($("p-pic")) ? pr.top >= cr.top && pr.bottom <= cr.bottom : onStage && spr.left >= fr.left && spr.right <= fr.right && spr.top >= fr.top && spr.bottom <= fr.bottom) && $("p-line").textContent === fill(GC.winLine, { title: e0.L.title }) && [...scol].every((c) => pal0.has(c)) && scol.size === pal0.size && cr.top >= -0.5 && cr.bottom <= innerHeight + 0.5 && sc === true && hitOK($("p-primary")) && hitOK($("p-secondary")),
+          ok((shown($("p-pic")) ? pr.top >= cr.top && pr.bottom <= cr.bottom : onStage && spr.left >= fr.left && spr.right <= fr.right && spr.top >= fr.top && spr.bottom <= fr.bottom) && $("p-line").textContent === fill(GC.winLine, { title: e0.L.title }) + " " + fill(GC.quests.prizeText, { name: pwName(E.POWERS.indexOf(e0.L.quest.prize)) }) && [...scol].every((c) => pal0.has(c)) && scol.size === pal0.size && cr.top >= -0.5 && cr.bottom <= innerHeight + 0.5 && sc === true && hitOK($("p-primary")) && hitOK($("p-secondary")),
             "gallery (Critics 2 fix, V2): the win shows the finished picture (" + out.notes.reportPic + ", all " + scol.size + " of its colours) on the sheet (or over the razed board where the sheet has no room), and the sheet fits the screen; '" + $("p-line").textContent + "' (" + sc + ")"); }
         $("p-primary").click(); ok(app.screen === "map" && q0.classList.contains("won") && app.gal[1].node.classList.contains("open"), "v5.1: a side quest's win goes back to the map too (not on to picture 2): picture 1 shows won, picture 2 waits open");
         startLevel(app.gal[1].id); $("btn-map").click(); const col = px(q0.querySelector("canvas"));
@@ -3098,6 +3099,15 @@
           const q0 = q2[0]; for (let i = 0; i < 50; i++) Save.record(zz, w2[i] ? w2[i].id : w1[0].id); startLevel(q0.id); patient(winOf(q0)); settleNow(); tick(9000); const pz = E.POWERS.indexOf(q0.L.quest.prize), pline = $("p-line").textContent;
           app.allPw = true; if (app.tip) hideTip(); app.tipQ = [];
           ok(beforeQ && afterQ && sc && pline.indexOf(fill(app.cfg.gallery.quests.prizeText, { name: pwName(pz) })) > 0 && !shown($("pwtip")), "power-ups (v6 fix pass): the reach both modes share opens the Quartermaster for a Zen-only player at 24 pictures (" + +beforeQ + +afterQ + "); a power-up owned shows its badge (" + +sc + "); a Zen side quest's sheet names its prize ('" + pline + "'), no tip over the sheet"); }
+        // v6 ship fix: How to play on the home (44 px, hittable, not on the map), opening the tour; nothing saved but the seen flag at its end.
+        if (app.tut && app.tut.loaded) { app.save = scratch(); useMode("campaign"); showScreen("title"); const hb = $("btn-howto"), r = hb.getBoundingClientRect(), c0 = JSON.stringify(csave().data), onHome = !hb.hidden && hitOK(hb) && r.width >= 44 && r.height >= 44 && hb.getAttribute("aria-label") === "How to play";
+          const notMap = !$("map").contains(hb) && !$("play") .contains(hb); const tk = app.cfg.tutorial.key, seen0 = (() => { try { return localStorage.getItem(tk); } catch (e) { return null; } })(); // the real seen flag, put back after Skip
+          hb.click(); const started = app.tut.on && app.screen === "play" && !shown(hb); $("tut-skip").click(); const back = !app.tut.on && JSON.stringify(csave().data) === c0;
+          try { if (seen0 == null) localStorage.removeItem(tk); else localStorage.setItem(tk, seen0); } catch (e) { /* no storage */ }
+          showScreen("map"); const mapOff = !document.querySelector("#map .howto") && !shown(hb);
+          ok(onHome && notMap && started && back && mapOff, "home How to play (v6 ship fix): on the home's top row (" + Math.round(r.width) + "x" + Math.round(r.height) + " px, hittable), not on the map or the play bar; a tap starts the tour and hides it; Skip leaves the save as it was (" + +onHome + +notMap + +started + +back + +mapOff + ")");
+          useMode("zen"); app.save = scratchZen(); showScreen("map"); mapCards(w1[0]); const rowOff = $("jr-q-v").parentElement.hidden && $("jr-r-name").textContent === "Picture Garden"; mapCards(w2[0]); const rowOn = !$("jr-q-v").parentElement.hidden;
+          ok(rowOff && rowOn, "world card (v6 ship fix, m3): Picture Garden's card has no side-quest row (it has none); Kitten Forest's keeps it"); useMode("campaign"); }
         // The one-time move (save.js zenMove) on a pre-v6 save: a format-1 save (v3/v4) and a format-2 one; twice is once.
         { const spec = moveSpec(), g0 = w1[0].L.from, g5 = w1[5].L.from, sh = Z.lay.sheets.find((S) => S.castleSheet), eg = "s" + sh.castleSheet + "-0", zeg = sh.eggKey + "-0";
           const raw2 = { v: 2, done: { "e1-01": 1, [LA[0]]: 1, [LA[1]]: 1 }, gal: { [g0]: 1, [g5]: 1, [GA[0]]: 1 }, best: { [LA[0]]: [90000, 40, 30], [g0]: [80000, 33, 20] }, eggs: { [eg]: 1, "s1-0": 1 }, last: LA[1], coins: 777 }, old2 = Save.sanitize(JSON.parse(JSON.stringify(raw2)), app.allOrder, app.allGal.map((e) => e.id), app.meta); // merge pass: the move reads the raw save (the page's rawOf), the Campaign keeps the sanitized one

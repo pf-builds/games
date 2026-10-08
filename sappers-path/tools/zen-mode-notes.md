@@ -281,3 +281,18 @@ on Kitten Forest's sheets (the mirrored castle sheets read as the Campaign map).
   bake pools and gallery manifest 2.70 MB and docs 0.32 MB are never loaded by the page: a portal build can leave them
   out (about 14.6 MB).
 
+
+## 13. Ship fix pass (2026-10-07; tools/critic-v6-ship.md, verdict ship)
+
+- **World 1 is "Picture Garden"** (Peter): zen.json's world name and lore ("A quiet garden at the start of the road ...")
+  and world.json; every banner, world card, home card line and label reads it from there. Ids stay z1-*, so saves don't
+  change. levels/frozen/zen.json keeps the old world name: the freeze reads only `levels` (identical), so no re-snapshot.
+  Earlier sections of these notes that say "The Gallery" mean this world.
+- **How to play on the home** (Peter): a "?" in a ring and "How to play" at the right end of the home's top row (icon only,
+  44 x 44, under 360 px), opening the intro tour (the same start as Settings > How to play); hidden with no tour and while
+  the tour runs (body.tut); not on the map or the play bar. selfTest: 44 px and hittable on the home, absent elsewhere,
+  starts the tour, Skip leaves the save as it was (the real seen flag put back).
+- **m1:** a Campaign side quest's first win names its prize on the sheet too ("... hangs on your map now. Side quest prize:
+  +1 Ladder"), as Zen's does.
+- **m3:** a realm or world card with no side quests has no side-quest row (Picture Garden).
+- Left as Peter decided: m2 (Zen's few Hard levels and the paid Continue), m4 (the painted road past 200). Cache `?v=54`.
