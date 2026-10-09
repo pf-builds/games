@@ -1,5 +1,5 @@
 // Sapper's Path v4 M4, the Gallery bake: levels/gallery-manifest.json (the kept pictures, in the Gallery's order) +
-// tools/gallery-config.json (bake) -> levels/gallery.json (versioned). levels/levels.json is never read or written.
+// tools/gallery-config.json (bake) -> tools/build-data/levels/gallery.json (versioned). tools/build-data/levels/levels.json is never read or written.
 //   ~/.local/opt/node/bin/node tools/gallery-bake.js [--out DIR] [--only A-B] [--threads N] [--extra K]
 //   ~/.local/opt/node/bin/node tools/gallery-bake.js --merge FULL,FIX1,... [--logs LOG,...] [--out DIR]   (v4.3)
 // Per picture: the converter's plan (tools/convert.js: v4.1 a picture board entered from the bottom, its own palette), then `perLevel` candidates, each a
@@ -166,7 +166,7 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
     out.bake.fallbacks = out.levels.filter((l) => l.fallback).map((l) => ({ n: l.n, why: l.fallback })); out.bake.fixups = fixed;
     for (const f of (arg("logs") || "").split(",").filter(Boolean)) for (const line of fs.readFileSync(path.resolve(f), "utf8").split("\n")) if (line && !/^ {2}\d/.test(line)) log.push(line);
     log.push("gallery bake: merged " + fixed.length + " fix-up picture(s) (" + fixed.join(", ") + ") into " + arg("merge").split(",")[0] + "; fallbacks now " + out.bake.fallbacks.length);
-    try { if (OUT) fs.mkdirSync(OUT, { recursive: true }); writeAtomic(outPath("levels/gallery.json"), JSON.stringify(out)); writeReport(out, B, log, kept); } catch (e) { console.log("gallery merge failed: " + e.message); process.exitCode = 1; }
+    try { if (OUT) fs.mkdirSync(OUT, { recursive: true }); writeAtomic(outPath("tools/build-data/levels/gallery.json"), JSON.stringify(out)); writeReport(out, B, log, kept); } catch (e) { console.log("gallery merge failed: " + e.message); process.exitCode = 1; }
     console.log(log.slice(-1)[0]); return;
   }
   const KEEP = arg("keep") ? new Map(JSON.parse(fs.readFileSync(path.resolve(arg("keep")), "utf8")).levels.map((l) => [l.n, { grid: l.grid, cols: l.cols, hint: l.win[l.tag] }])) : null; // v5 R2
@@ -210,7 +210,7 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
   if (ms.length) say("gallery bake: patient play-through on the stored line at 1x: median " + secs(med(ms)) + ", " + secs(Math.min(...ms)) + "-" + secs(Math.max(...ms)) + "; longest single tap max " + secs(Math.max(...w)) + "; taps max " + Math.max(...levels.map((l) => wn(l).length)) + "; tags " + TG.TAGS.map((t) => t + " " + levels.filter((l) => l.tag === t).length).join(", "));
   { const ok = levels.filter((l) => gt(l).pace && !gt(l).pace.fell), rp = ok.map((l) => gt(l).pace.ms); if (rp.length) say("gallery bake: real pace (x " + B.duration.pace.factor + ", on each picture's tag): median " + secs(med(rp)) + ", " + secs(Math.min(...rp)) + "-" + secs(Math.max(...rp)) + "; replays that lost " + levels.filter((l) => gt(l).pace && gt(l).pace.fell).length + "; by tag " + TG.TAGS.map((t) => { const q = ok.filter((l) => l.tag === t).map((l) => gt(l).pace.ms); return t + " " + (q.length ? secs(med(q)) + " (" + q.length + ")" : "-"); }).join(", ")); }
   const out = { version: B.version, bake: { config: B.version, seed: B.seed, time: CFG.v3.time, seconds: +secsAll.toFixed(1), fallbacks }, levels };
-  try { if (OUT) fs.mkdirSync(OUT, { recursive: true }); writeAtomic(outPath("levels/gallery.json"), JSON.stringify(out)); } catch (e) { say("gallery bake: write failed: " + e.message); process.exitCode = 1; }
+  try { if (OUT) fs.mkdirSync(OUT, { recursive: true }); writeAtomic(outPath("tools/build-data/levels/gallery.json"), JSON.stringify(out)); } catch (e) { say("gallery bake: write failed: " + e.message); process.exitCode = 1; }
   try { writeReport(out, B, log, kept); } catch (e) { say("gallery bake: report failed: " + e.message); }
 })();
 

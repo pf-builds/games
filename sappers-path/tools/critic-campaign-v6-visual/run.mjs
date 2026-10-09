@@ -1,8 +1,8 @@
 // Visual critic run (campaign v6 lane A). Read-only on the game; writes screens here.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"; import { dirname, resolve } from "node:path"; import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url)), OUT = here, URL_ = "http://127.0.0.1:8472/sappers-path/";
-const LV = JSON.parse(readFileSync(resolve(here, "../../levels/levels.json"), "utf8")).levels, CFG = JSON.parse(readFileSync(resolve(here, "../../config.json"), "utf8"));
-const GAL = JSON.parse(readFileSync(resolve(here, "../../levels/gallery.json"), "utf8")).levels;
+const LV = JSON.parse(readFileSync(resolve(here, "../../tools/build-data/levels/levels.json"), "utf8")).levels, CFG = JSON.parse(readFileSync(resolve(here, "../../config.json"), "utf8"));
+const GAL = JSON.parse(readFileSync(resolve(here, "../../tools/build-data/levels/gallery.json"), "utf8")).levels;
 const byN = (n) => LV.find((l) => l.n === n), ids = LV.filter((l) => l.n <= 200).map((l) => l.id);
 const require = (await import("node:module")).createRequire(import.meta.url), E = require("../../src/engine.js"), R = require("../grade.js");
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE);

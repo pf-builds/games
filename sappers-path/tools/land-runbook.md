@@ -94,10 +94,13 @@ swap it or crop it taller (a crop is a new picture) in `pictures/manifest.json`,
 
 ## 4. Install and bank
 
-`install` appends to `levels/levels.json`, `levels/gallery.json`, `map/layout.json`, copies the 2 sheets into `map/`,
+`install` appends to the level sources `tools/build-data/levels/levels.json` and `gallery.json` (v7: the plain JSON every
+tool reads and writes; the page reads the packed `levels/*.pk.json`), `map/layout.json`, copies the 2 sheets into `map/`,
 adds the land to `config.json` `lands.list` and a row per new sheet to `map.eggCoins`, and appends the licence table to
 `LICENSES.md`. It refuses a land already there, or a game that moved on since the land was planned. Then:
 
+0. `$N tools/pack.js` (v7 lane T, `tools/space-v7-notes.md`): writes the shipped packed files from the sources. Run it after
+   anything writes a source (install, zen, reinstall, `zen-world.js install`); test.js fails while they are stale.
 1. `$N tools/test.js` (its lands section checks every built land against its own land.json), `$N tools/regrade.js`,
    `$N tools/regrade.js --gallery`, `./tools/critic-v5/run.sh`.
 2. `$N tools/freeze.js --snapshot` (the land joins the frozen set; later lands never change it), then
@@ -113,7 +116,8 @@ adds the land to `config.json` `lands.list` and a row per new sheet to `map.eggC
   can't is baked without one (`cant` on the level; the bake prints why). Put ring-carrying pictures on the land's
   Extreme spots. About three in four Kitten Forest-style AI pictures carry one; paintings far fewer.
 - Build data lives in `tools/build-data/` (v6 D9): the freeze snapshot (`frozen/`, config `v5.freeze.dir`), the old bake's
-  pools (`pools/`), the teaching source (`teaching.json`). `levels/` holds only what the page reads (config `v5.ship.levels`);
+  pools (`pools/`), the teaching source (`teaching.json`) and, from v7, the level sources (`levels/`: levels.json, gallery.json,
+zen.json; `tools/pack.js` packs them into the game's `levels/`). `levels/` holds only what the page reads (config `v5.ship.levels`);
   the portal build is the folder minus `tools/`, and `tools/test.js` fails past 19 MB or on a stray file in `levels/`.
 - Only one land touches `levels/`, `config.json` and `map/layout.json` at a time. The next land's prep, convert, sheet and
   map can run while this one bakes.
@@ -129,7 +133,7 @@ adds the land to `config.json` `lands.list` and a row per new sheet to `map.eggC
 From v6 every land plays in **Zen mode**, not after level 200 of the campaign (`tools/zen-mode-notes.md`). The land is
 still built and installed exactly as above (levels.json, gallery.json, layout.json, config `lands.list`); the page leaves
 every land out of the Campaign and plays it in Zen. To show a newly installed land in Zen, append one world to
-`levels/zen.json` `worlds`:
+`tools/build-data/levels/zen.json` `worlds`, then `$N tools/pack.js`:
 
 ```json
 {"k": 3, "land": 2, "era": 10, "name": "Snack Galaxy", "lore": "One calm line: no goblins, forts or assaults."}
@@ -153,5 +157,5 @@ every land out of the Campaign and plays it in Zen. To show a newly installed la
 - **Zen numbers count up across the worlds (Peter, 2026-10-08).** A new world's levels show on from the last world's
   (World 3 ends at 136, so Dino Valley starts at 137); nothing to set, `main.js modes()` derives it from world order. Ids,
   records' `n`, saves and codes keep the world's own numbering, so always append a world, never insert one.
-- Any new picture in `levels/gallery.json` (a land's side quests too) must be **appended** to `levels/places.json` (the save
+- Any new picture in `tools/build-data/levels/gallery.json` (a land's side quests too) must be **appended** to `levels/places.json` (the save
   codes' picture places): never insert or reorder. test.js fails while one is missing.

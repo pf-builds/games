@@ -2,8 +2,8 @@
 import { readFileSync, mkdirSync } from "node:fs"; import { dirname, resolve } from "node:path"; import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url)), ROOT = resolve(here, "../.."), OUT = resolve(here, "shots"); mkdirSync(OUT, { recursive: true });
 const URL_ = "http://127.0.0.1:8471/";
-const LV = JSON.parse(readFileSync(ROOT + "/levels/levels.json", "utf8")).levels, CFG = JSON.parse(readFileSync(ROOT + "/config.json", "utf8")), LY = CFG.layout;
-const QJ = JSON.parse(readFileSync(ROOT + "/tools/campaign-quests/quests.json", "utf8")), GAL = JSON.parse(readFileSync(ROOT + "/levels/gallery.json", "utf8")).levels;
+const LV = JSON.parse(readFileSync(ROOT + "/tools/build-data/levels/levels.json", "utf8")).levels, CFG = JSON.parse(readFileSync(ROOT + "/config.json", "utf8")), LY = CFG.layout;
+const QJ = JSON.parse(readFileSync(ROOT + "/tools/campaign-quests/quests.json", "utf8")), GAL = JSON.parse(readFileSync(ROOT + "/tools/build-data/levels/gallery.json", "utf8")).levels;
 const byN = (n) => LV.find((l) => l.n === n), ids = LV.filter((l) => l.n <= 200).sort((a, b) => a.n - b.n).map((l) => l.id);
 const ORD = { pinWin: "00034401114320234340040334444133303444002222222111", pinJam: "2030113132444400340", killShort: "224411304240" };
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE);

@@ -4,7 +4,7 @@
 import fs from 'fs'; import path from 'path'; import { fileURLToPath } from 'url';
 const PW = await import(process.env.PLAYWRIGHT_MODULE); const { chromium } = PW.default || PW;
 const here = path.dirname(fileURLToPath(import.meta.url)), root = path.resolve(here, '../..'), SHOTS = path.join(root, 'tools/shots-v4.3-critic/functional'), BASE = 'http://127.0.0.1:8492/sappers-path/';
-const LV = JSON.parse(fs.readFileSync(path.join(root, 'levels/levels.json'))).levels, GAL = JSON.parse(fs.readFileSync(path.join(root, 'levels/gallery.json'))).levels;
+const LV = JSON.parse(fs.readFileSync(path.join(root, 'tools/build-data/levels/levels.json'))).levels, GAL = JSON.parse(fs.readFileSync(path.join(root, 'tools/build-data/levels/gallery.json'))).levels;
 const easy = LV.find((l) => l.tag === 'easy'), hard = LV.find((l) => l.tag === 'hard'), linked = LV.find((l) => l.id === 'e3-62');
 const R = {}, errs = []; const ok = (k, pass, info) => { R[k] = { pass: !!pass, info }; console.log((pass ? 'PASS ' : 'FAIL ') + k + ' :: ' + JSON.stringify(info).slice(0, 1000)); };
 const b = await chromium.launch(); const wait = (ms) => new Promise((r) => setTimeout(r, ms));

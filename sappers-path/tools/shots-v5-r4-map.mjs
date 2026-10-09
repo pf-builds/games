@@ -31,7 +31,7 @@ const wall = setTimeout(() => { console.error("shots: out of time"); process.exi
 const VPS = [{ name: "phone", ctx: { viewport: { width: 375, height: 812 }, deviceScaleFactor: 3, hasTouch: true, isMobile: true } }, { name: "desktop", ctx: { viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 } }];
 
 // The merge's levels, faked: 101-200 cloned from 1-100 (ids f-<n>, their realm by number), and lore for realms 6-8.
-const LV = JSON.parse(readFileSync(resolve(here, "../levels/levels.json"), "utf8")), CFG = JSON.parse(readFileSync(resolve(here, "../config.json"), "utf8"));
+const LV = JSON.parse(readFileSync(resolve(here, "../tools/build-data/levels/levels.json"), "utf8")), CFG = JSON.parse(readFileSync(resolve(here, "../config.json"), "utf8"));
 const realmOf = (n) => (n < 25 ? 1 : Math.min(8, 1 + Math.floor(n / 25)));
 // Only the levels missing up to 200 are cloned (after the merge levels.json holds 1-200 and fake200 is the real file).
 const top = Math.max(...LV.levels.map((L) => +L.n)), FAKE = Object.assign({}, LV, { levels: LV.levels.concat(LV.levels.filter((L) => +L.n + 100 > top && +L.n + 100 <= 200).map((L) => Object.assign({}, L, { id: "f-" + (+L.n + 100), n: +L.n + 100, era: realmOf(+L.n + 100) }))) });

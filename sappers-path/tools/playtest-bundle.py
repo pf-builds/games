@@ -22,7 +22,8 @@ import json, os, re, subprocess, sys
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 GAME = "sappers-path"
-COPY = ["config.json", "levels/levels.json", "levels/gallery.json", "levels/zen.json", "levels/places.json", "levels/tutorial.json", "fonts/Jersey10-Regular.ttf"]  # v6 lane B: zen.json, places.json; part 2: tutorial.json
+COPY = ["config.json", "fonts/Jersey10-Regular.ttf"]
+LEVELS_SKIP = {"debug-v4.json", "gallery-manifest.json"}  # v7 lane T: every levels/ file the page reads at that ref (the packed *.pk.json from v7, the plain ones before), never the ?debug=1 row or the licence record
 
 
 def show(ref, path, binary=False):
@@ -94,7 +95,7 @@ def main(ref, out, new_title=None, jump=None):
         if n:
             print(f"src/{name}: {n} versioned fetch(es) -> plain paths")
 
-    for path in COPY:
+    for path in COPY + ["levels/" + n for n in ls_src(ref, "levels", (".json",)) if n not in LEVELS_SKIP]:
         write(out, path, show(ref, path, binary=True))
     for name in ls_src(ref, "map", (".json", ".jpg", ".webp")):  # v5 R3: the journey map's layout and painted sheets (lands: WebP)
         write(out, "map/" + name, show(ref, "map/" + name, binary=True))

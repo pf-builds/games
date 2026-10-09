@@ -6,7 +6,7 @@
 import fs from 'fs'; import path from 'path'; import { fileURLToPath } from 'url'; import { compile, Game } from '../critic-v4.1/rules.mjs';
 const here = path.dirname(fileURLToPath(import.meta.url)), root = path.resolve(here, '../..'), J = (f) => JSON.parse(fs.readFileSync(path.join(root, f)));
 const cfg = J('config.json'), bake = J('tools/bake-config.json'), factor = bake.duration.pace.factor, args = process.argv.slice(2);
-const all = [...J('levels/levels.json').levels, ...J('levels/gallery.json').levels].filter((l) => l.grade && l.grade.normal && l.grade.normal.pace);
+const all = [...J('tools/build-data/levels/levels.json').levels, ...J('tools/build-data/levels/gallery.json').levels].filter((l) => l.grade && l.grade.normal && l.grade.normal.pace);
 const pick = args.includes('--all') ? all : args.includes('--ids') ? all.filter((l) => args[args.indexOf('--ids') + 1].split(',').includes(l.id)) : ['e2-26', 'e2-31', 'e2-40', 'e3-51', 'e3-62', 'e4-76', 'e4-77', 'e4-88', 'e4-100', 'g-tw-1f355'].map((id) => all.find((l) => l.id === id)).filter(Boolean);
 let same = 0, rows = [];
 for (const L of pick) { const r = cfg.v3.rules.normal, G = new Game(compile(L), { hold: r.hold, archersKill: r.archersKill, lockSpaces: cfg.v3.twists.lockSpaces }, cfg.v3.time);

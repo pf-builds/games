@@ -1,6 +1,6 @@
 "use strict";
 const D = __dirname + "/../..", E = require(D + "/src/engine.js"), R = require(D + "/tools/grade.js"), CFG = require(D + "/config.json");
-const LV = require(D + "/levels/levels.json").levels, want = process.argv[2];
+const LV = require(D + "/tools/build-data/levels/levels.json").levels, want = process.argv[2];
 const L = LV.find((l) => l.n === +process.argv[3]), rt = E.rulesOf(CFG.v3, L.tag), B = E.compile(L), S = E.sim(B, rt), win = L.win[L.tag];
 const buf = new Int32Array(S.M.length), res = {};
 for (let k = 0; k < 4000 && !(res.pinWin && res.pinJam); k++) {

@@ -89,7 +89,7 @@ const mysteryTap = () => { SP.speed(1); SP.load("v4-mystery", "normal"); SP.tick
 const linkedLeave = (ms) => { SP.speed(1); SP.load("v4-linked", "normal"); SP.tick(40); const b = document.querySelector(".tile.card.linked"); const j = b ? +b.dataset.col : -1; const ok = j >= 0 && SP.play(j); SP.tick(ms); return { j, ok, line: SP.state().line }; };
 const unlockNow = (id) => { SP.speed(1); SP.load(id, "normal"); SP.tick(40); const o = SP.winOrder("normal"); for (const ch of o) { SP.play(+ch); for (let t = 0; t < 40000 && SP.state().busy; t += 50) { SP.tick(50); if (SP.state().locked === 0) return { at: t, taps: o.indexOf(ch), locked: 0 }; } if (SP.state().locked === 0) return { locked: 0 }; } return { locked: SP.state().locked }; };
 // Key crops: a CSS-pixel box around a cell (unrotated boards only).
-const cellBox = async (a) => { const [id, x, y, pad] = a; const lv = await (await fetch(id.startsWith("v4-") ? "levels/debug-v4.json" : "levels/levels.json")).json(); const L = lv.levels.find((l) => l.id === id);
+const cellBox = async (a) => { const [id, x, y, pad] = a; const lv = await (await fetch(id.startsWith("v4-") ? "levels/debug-v4.json" : "tools/build-data/levels/levels.json")).json(); const L = lv.levels.find((l) => l.id === id);
   const c = document.getElementById("board"), b = c.getBoundingClientRect(), k = b.width / c.width, cs = SP.state().cs * k; return { x: b.left + (x - pad) * cs, y: b.top + (y - pad) * cs, width: (2 * pad + 1) * cs, height: (2 * pad + 1) * cs, cs, w: L.w, h: L.h }; };
 
 async function viewport(V, full) {
@@ -134,7 +134,7 @@ async function viewport(V, full) {
     const lk = await ev(V, async () => { const lv = await (await fetch("levels/debug-v4.json")).json(); return lv.levels.find((l) => l.id === "v4-locked").lock.key; });
     const bx = await ev(V, cellBox, ["v4-locked", lk[0], lk[1], 4]); notes[V.tag + "-lockkey-box"] = bx;
     await V.page.screenshot({ path: resolve(OUT, V.tag + "-crop-lockkey.png"), clip: { x: bx.x, y: bx.y, width: bx.width, height: bx.height } });
-    const gk = await ev(V, async () => { const lv = await (await fetch("levels/levels.json")).json(); const L = lv.levels.find((l) => l.n === 40); return { gates: L.gates, id: L.id }; });
+    const gk = await ev(V, async () => { const lv = await (await fetch("tools/build-data/levels/levels.json")).json(); const L = lv.levels.find((l) => l.n === 40); return { gates: L.gates, id: L.id }; });
     notes[V.tag + "-l40-gates"] = gk;
     await ev(V, rest, 40);
     const g0 = gk.gates && gk.gates[0]; const key = g0 && (g0.key || g0.k);

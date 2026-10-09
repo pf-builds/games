@@ -7,7 +7,7 @@
 import { mkdirSync, writeFileSync, readFileSync } from "node:fs"; import { dirname, resolve } from "node:path"; import { fileURLToPath } from "node:url"; import { execFileSync } from "node:child_process";
 const arg = (k, d) => { const i = process.argv.indexOf("--" + k); return i > 0 ? process.argv[i + 1] : d; };
 const HERE = dirname(fileURLToPath(import.meta.url)), URL_ = arg("url", "http://127.0.0.1:8494/sappers-path/"), OUT = resolve(HERE, "shots-land-01/fixes"), BD = OUT + "/boards"; mkdirSync(BD, { recursive: true });
-const LV = JSON.parse(readFileSync(resolve(HERE, "../levels/levels.json"), "utf8")).levels.filter((l) => l.land === 1), CFG = JSON.parse(readFileSync(resolve(HERE, "../config.json"), "utf8"));
+const LV = JSON.parse(readFileSync(resolve(HERE, "../tools/build-data/levels/levels.json"), "utf8")).levels.filter((l) => l.land === 1), CFG = JSON.parse(readFileSync(resolve(HERE, "../config.json"), "utf8"));
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE);
 const b = await chromium.launch(), log = [], notes = [];
 const page = async (w, h) => { const ctx = await b.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 3, hasTouch: true, isMobile: true }), p = await ctx.newPage(), tag = w + "x" + h;
@@ -31,7 +31,7 @@ if (jam && jam.prefix) { await p.evaluate((o) => { for (const c of o) { SP.play(
   await p.waitForTimeout(800); await p.screenshot({ path: OUT + "/fail-sheet-" + L0.n + ".png" }); notes.push("fail: " + JSON.stringify(await p.evaluate(() => [document.getElementById("p-title").textContent, document.getElementById("p-line").getAttribute("aria-label")]))); }
 else notes.push("fail: no jam plan from SP.lossPlan");
 // The side quests' play bar (short titles), each picture once.
-const GL = JSON.parse(readFileSync(resolve(HERE, "../levels/gallery.json"), "utf8")).levels.filter((g) => g.land === 1 && g.short);
+const GL = JSON.parse(readFileSync(resolve(HERE, "../tools/build-data/levels/gallery.json"), "utf8")).levels.filter((g) => g.land === 1 && g.short);
 for (const g of GL) { await p.evaluate((id) => SP.load(id), g.id); await p.waitForTimeout(250); await p.locator("#top").screenshot({ path: OUT + "/quest-bar-375-" + g.n + ".png" }); notes.push("quest " + g.n + ": '" + (await p.evaluate(() => document.getElementById("lvl-name").textContent)) + "' (full: " + g.title + ")"); }
 // The eggs of sheets 26-32 (levels 1-250 open, none found yet): a 150 px tile round each.
 await p.evaluate(() => { localStorage.clear(); SP.unlockTo(250); SP.screen("map"); }); await p.waitForTimeout(1500);

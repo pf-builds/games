@@ -6,7 +6,7 @@ const here = path.dirname(fileURLToPath(import.meta.url)), root = path.resolve(h
 const E = require(path.join(root, 'src/engine.js')), cfg = require(path.join(root, 'config.json'));
 const args = process.argv.slice(2), arg = (k, d) => { const i = args.indexOf('--' + k); return i < 0 ? d : args[i + 1]; };
 const NP = +arg('patient', 4), NR = +arg('rushed', 3), only = arg('only', ''), opt = { waryAt: arg('waryAt', 'disp'), backWalk: arg('backWalk', 'yardTile'), discLE: !args.includes('--discLT') };
-const levels = [...require(path.join(root, 'levels/levels.json')).levels, ...require(path.join(root, 'levels/debug-v4.json')).levels].filter((l) => !only || only.split(',').includes(l.id));
+const levels = [...require(path.join(root, 'tools/build-data/levels/levels.json')).levels, ...require(path.join(root, 'levels/debug-v4.json')).levels].filter((l) => !only || only.split(',').includes(l.id));
 const DIFFS = ['easy', 'normal', 'hard'], NAME = {}; for (const k in E.EV) NAME[E.EV[k]] = k;
 const rng = (seed) => () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
 

@@ -9,7 +9,7 @@ async function open(w, h, dpr, touch, iframe) {
   await T.waitForFunction(() => window.SP && document.fonts.status === "loaded"); return { ctx, T };
 }
 const probe = async (ids) => {
-  const lv = (await (await fetch("levels/levels.json")).json()).levels, res = [];
+  const lv = (await (await fetch("tools/build-data/levels/levels.json")).json()).levels, res = [];
   for (const n of ids) {
     SP.load(n, "normal"); SP.tick(40); await new Promise((r) => setTimeout(r, 60));
     const L = lv.find((l) => l.n === n), st = SP.state(), cv = document.getElementById("board"), br = cv.getBoundingClientRect(), k = br.width / cv.width, cs = st.cs * k, co = document.getElementById("coach");

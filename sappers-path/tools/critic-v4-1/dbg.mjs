@@ -2,7 +2,7 @@
 import { createRequire } from 'module'; import path from 'path'; import { fileURLToPath } from 'url'; import { compile, Game } from './rules.mjs';
 const here = path.dirname(fileURLToPath(import.meta.url)), root = path.resolve(here, '../..'), require = createRequire(import.meta.url);
 const E = require(path.join(root, 'src/engine.js')), cfg = require(path.join(root, 'config.json'));
-const [id, d, seq, lo, hi] = process.argv.slice(2); const L = [...require(path.join(root, 'levels/levels.json')).levels, ...require(path.join(root, 'levels/debug-v4.json')).levels].find((l) => l.id === id);
+const [id, d, seq, lo, hi] = process.argv.slice(2); const L = [...require(path.join(root, 'tools/build-data/levels/levels.json')).levels, ...require(path.join(root, 'levels/debug-v4.json')).levels].find((l) => l.id === id);
 const NAME = {}; for (const k in E.EV) NAME[E.EV[k]] = k; const S = E.sim(E.compile(L), E.rulesOf(cfg.v3, d)); S.logOn = true; const ge = [];
 const r = cfg.v3.rules[d], G = new Game(compile(L), { hold: r.hold, archersKill: r.archersKill, lockSpaces: 1 }, cfg.v3.time);
 const drain = () => { for (let i = 0; i + 2 < S.evLen; i += 3) ge.push(`${S.now} ${NAME[S.ev[i]]} ${S.ev[i + 1]} ${S.ev[i + 2]}`); S.clearLog(); };

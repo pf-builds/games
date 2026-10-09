@@ -1,6 +1,6 @@
 // Sapper's Path v6 lane D4: the ink-outline rule (Peter, 2026-10-06: one solid black line round the whole shape, or none;
 // never broken bits of black) on a land's outlined level records, as they ship. For every record of kind "outlined" in
-// levels/levels.json (or --file, e.g. a land's scratch/out/levels.json), with the ink and ground ids its converted board
+// tools/build-data/levels/levels.json (or --file, e.g. a land's scratch/out/levels.json), with the ink and ground ids its converted board
 // carries (scratch/boards.json, land.js boardOf, by id since D3):
 //   ids       the record's palette holds the board's ink and ground at the same ids and colours
 //   solid     the ink has no shades (no pal sh, a 0 shade digit on every ink cell)
@@ -44,7 +44,7 @@ function inkCheck(L, B, inkDE) {
 
 if (require.main === module) {
   const LAND = path.resolve(argv[0] || ""), land = readJ(path.join(LAND, "land.json")), BD = readJ(path.join(LAND, "scratch/boards.json")), inkDE = +(opt("inkDE") || 10);
-  const file = opt("file") ? path.resolve(opt("file")) : path.join(__dirname, "../levels/levels.json"), raw = readJ(file), LV = (Array.isArray(raw) ? raw : raw.levels).filter((L) => L.land === land.k);
+  const file = opt("file") ? path.resolve(opt("file")) : path.join(__dirname, "../tools/build-data/levels/levels.json"), raw = readJ(file), LV = (Array.isArray(raw) ? raw : raw.levels).filter((L) => L.land === land.k);
   const rows = [], fails = [];
   for (const L of LV) { if (L.kind !== "outlined") continue; const e = BD.main.find((m) => m.n === L.n && m.id === L.src); if (!e) { fails.push(L.id + ": no board"); continue; }
     const r = inkCheck(L, e.board, inkDE); rows.push([L.n, L.src, r]); if (r.bad.length) fails.push(L.id + ": " + r.bad.join("; ")); }

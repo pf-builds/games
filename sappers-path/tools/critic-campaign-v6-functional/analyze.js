@@ -3,7 +3,7 @@
 const path = require("path"), D = path.join(__dirname, "../..");
 const E = require(D + "/src/engine.js"), R = require(D + "/tools/grade.js");
 const CFG = require(D + "/config.json"), BC = require(D + "/tools/bake-config.json");
-const LV = require(D + "/levels/levels.json").levels.filter((l) => l.n >= 1 && l.n <= 200).sort((a, b) => a.n - b.n);
+const LV = require(D + "/tools/build-data/levels/levels.json").levels.filter((l) => l.n >= 1 && l.n <= 200).sort((a, b) => a.n - b.n);
 const rules = {}; for (const t of ["easy", "normal", "hard", "extreme"]) rules[t] = E.rulesOf(CFG.v3, t);
 const realm = (n) => n <= 24 ? 1 : n <= 49 ? 2 : n <= 74 ? 3 : n <= 99 ? 4 : n <= 124 ? 5 : n <= 149 ? 6 : n <= 174 ? 7 : n <= 190 ? 8 : n <= 199 ? 9 : 10;
 const out = { orders: [], careful: [], proxy: [], tags: "", sawtooth: [], obviousHigh: [] };

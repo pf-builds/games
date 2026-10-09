@@ -38,7 +38,7 @@ module.exports = { mapOf, match, eraReport };
 
 if (require.main === module) {
   const fs = require("fs"), path = require("path"), i = process.argv.indexOf("--levels");
-  const L = JSON.parse(fs.readFileSync(i > 0 ? path.resolve(process.argv[i + 1]) : path.join(__dirname, "../levels/levels.json"), "utf8")).levels;
+  const L = JSON.parse(fs.readFileSync(i > 0 ? path.resolve(process.argv[i + 1]) : path.join(__dirname, "../tools/build-data/levels/levels.json"), "utf8")).levels;
   const V = (require("./bake-config.json").variety) || { cols: 10, rows: 14 };
   const R = eraReport(L, V, process.argv.includes("--layout"));
   for (const e of Object.keys(R)) console.log("era " + e + ": " + R[e].n + " levels, median match " + R[e].median + ", 10th percentile " + R[e].p10 + ", most alike " + R[e].worst.a + " and " + R[e].worst.b + " " + R[e].worst.m);

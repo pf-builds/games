@@ -1,5 +1,5 @@
 // Sapper's Path re-grade check (v3.1): grade every baked level again with the current engine, with the bake's own seeds
-// and playout counts (tools/bake-config.json grade), and diff against the grades stored in levels/levels.json. Nothing is
+// and playout counts (tools/bake-config.json grade), and diff against the grades stored in tools/build-data/levels/levels.json. Nothing is
 // written. Per level and difficulty: the patient random-tap win rate, and the stored winning order replayed patiently
 // (won, peak spaces, taps, engine ms); on Normal also the one-move-lookahead player's rate. v4 M3: the Normal line's
 // longest single tap (maxWait) and, from bake-config fast.from, the fast tapper's rate, when the file stores them. v4.2:
@@ -13,9 +13,12 @@
 // and a second one, the seeds of tools/campaign-v6-bake.js deepOf), when the level stores them.
 //   ~/.local/opt/node/bin/node tools/regrade.js [--quick] [--levels FILE]   (--quick: rates only, no lookahead player;
 //   --levels: another levels file, e.g. a trial bake's)
-//   ~/.local/opt/node/bin/node tools/regrade.js --gallery [--levels FILE]   v4 M4: levels/gallery.json (or FILE) with the
+//   ~/.local/opt/node/bin/node tools/regrade.js --gallery [--levels FILE]   v4 M4: tools/build-data/levels/gallery.json (or FILE) with the
 //   Gallery bake's own counts (tools/gallery-config.json bake: grade, fast; every level has a fast-tapper grade)
-//   ~/.local/opt/node/bin/node tools/regrade.js --zen     v6 lane B: levels/zen.json (Zen World 1, made by tools/zen-world.js)
+//   ~/.local/opt/node/bin/node tools/regrade.js --zen     v6 lane B: tools/build-data/levels/zen.json (Zen World 1, made by tools/zen-world.js)
+//   ~/.local/opt/node/bin/node tools/regrade.js [--gallery | --zen] --shipped   v7 lane T: the page's own data: each record of the
+//   shipped packed file (levels/*.pk.json) unpacked (src/pack.js), its grade and seed taken from the source record of
+//   the same id, so the boards, decks, palettes and stored orders graded are the ones the page plays
 // Exit 1 when anything differs. v5 R1: require("./regrade.js").regrade(LV, C, V3, quick) is the same run as a function
 // (tools/freeze.js uses it).
 "use strict";
@@ -56,8 +59,11 @@ if (require.main === module) {
   const GAL = process.argv.includes("--gallery");
   const C = GAL ? require("./gallery-config.json").bake : require("./bake-config.json");
   const V3 = require("../config.json").v3;
-  const ZEN = process.argv.includes("--zen"); // v6 lane B: levels/zen.json's own records (Zen World 1), with the main levels' counts
-  const LV = JSON.parse(fs.readFileSync(process.argv.indexOf("--levels") > 0 ? path.resolve(process.argv[process.argv.indexOf("--levels") + 1]) : path.join(__dirname, ZEN ? "../levels/zen.json" : GAL ? "../levels/gallery.json" : "../levels/levels.json"), "utf8")).levels;
+  const ZEN = process.argv.includes("--zen"); // v6 lane B: tools/build-data/levels/zen.json's own records (Zen World 1), with the main levels' counts
+  let LV = JSON.parse(fs.readFileSync(process.argv.indexOf("--levels") > 0 ? path.resolve(process.argv[process.argv.indexOf("--levels") + 1]) : path.join(__dirname, ZEN ? "../tools/build-data/levels/zen.json" : GAL ? "../tools/build-data/levels/gallery.json" : "../tools/build-data/levels/levels.json"), "utf8")).levels;
+  if (process.argv.includes("--shipped")) { const P = require("../src/pack.js"), K = P.unpackFile(JSON.parse(fs.readFileSync(path.join(__dirname, "../levels", ZEN ? "zen.pk.json" : GAL ? "gallery.pk.json" : "levels.pk.json"), "utf8"))).levels, by = new Map(LV.map((L) => [L.id, L]));
+    if (K.length !== LV.length || K.some((L) => !by.has(L.id))) { console.log("shipped: the packed file's ids are not the source's (run tools/pack.js)"); process.exit(1); }
+    LV = K.map((L) => Object.assign({}, by.get(L.id), L)); console.log("shipped: " + LV.length + " records unpacked from levels/" + (ZEN ? "zen" : GAL ? "gallery" : "levels") + ".pk.json (grades and seeds from the source)"); } // v7 lane T
   const t0 = Date.now(), r = regrade(LV, C, V3, process.argv.includes("--quick"));
   for (const l of r.lines) console.log(l);
   console.log(LV.length + " levels, " + r.checks + " checks, " + r.diffs + " differences (" + ((Date.now() - t0) / 1000).toFixed(1) + " s)");

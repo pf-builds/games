@@ -116,7 +116,7 @@
 // Settings' place and goes back to it. After a reset or a load: the home, with a toast over the screens (#toast.over).
 (function () {
   "use strict";
-  const NS = window.SappersPath, E = NS.engine, Save = NS.save, Board = NS.board, Art = NS.art, Audio = NS.audio, Meta = NS.meta;
+  const NS = window.SappersPath, Pk = NS.pack, E = NS.engine, Save = NS.save, Board = NS.board, Art = NS.art, Audio = NS.audio, Meta = NS.meta;
   const V_ = (document.currentScript && new URL(document.currentScript.src).searchParams.get("v")) || "1";
   const DEBUG = new URLSearchParams(location.search).get("debug") === "1";
   const TAGS = ["easy", "normal", "hard", "extreme"], $ = (id) => document.getElementById(id);
@@ -141,13 +141,13 @@
   function getJSON(u) { return fetch(u, { cache: "no-cache" }).then((r) => { if (!r.ok) throw new Error(u + " " + r.status); return r.json(); }); }
   async function boot() {
     try {
-      const [cfg, lv] = await Promise.all([getJSON("config.json?v=" + V_), getJSON("levels/levels.json?v=" + V_)]);
+      const [cfg, lv] = await Promise.all([getJSON("config.json?v=" + V_), getJSON("levels/levels.pk.json?v=" + V_).then(Pk.unpackFile)]); // v7 lane T: packed (src/pack.js)
       app.cfg = cfg; indexLevels(lv);
     } catch (e) { $("load-msg").textContent = "Couldn't load the siege. Reload to try again."; return; }
     if (DEBUG) { try { indexDebug(await getJSON("levels/debug-v4.json?v=" + V_)); } catch (e) { /* no debug row */ } }
-    try { indexGallery(await getJSON("levels/gallery.json?v=" + V_)); } catch (e) { /* no side quests */ }
+    try { indexGallery(Pk.unpackFile(await getJSON("levels/gallery.pk.json?v=" + V_))); } catch (e) { /* no side quests */ }
     let raw = null; try { raw = await getJSON("map/layout.json?v=" + V_); } catch (e) { raw = null; /* no journey map: its Play still works */ }
-    let zen = null; try { zen = await getJSON("levels/zen.json?v=" + V_); } catch (e) { zen = null; /* no Zen mode: the campaign alone */ }
+    let zen = null; try { zen = Pk.unpackFile(await getJSON("levels/zen.pk.json?v=" + V_)); } catch (e) { zen = null; /* no Zen mode: the campaign alone */ }
     try { const P = await getJSON("levels/places.json?v=" + V_); app.places = Array.isArray(P.places) ? P.places.map(String) : null; } catch (e) { app.places = null; /* the save codes fall back to gallery.json's order */ }
     if (!app.levels.length) { $("load-msg").textContent = "No levels found."; return; }
     modes(raw, zen); // v6 lane B: the two modes' levels, pictures and maps

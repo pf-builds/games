@@ -7,7 +7,7 @@
 //   ~/.local/opt/node/bin/node tools/freeze.js                 the snapshot named by config.json v5.freeze.dir
 //   ~/.local/opt/node/bin/node tools/freeze.js --dir DIR        another snapshot (the test runs tools/freeze-fixture)
 //   ~/.local/opt/node/bin/node tools/freeze.js --require        a missing snapshot is a failure (from R2 on)
-//   ~/.local/opt/node/bin/node tools/freeze.js --snapshot       copy levels/levels.json, levels/gallery.json (v6: and levels/zen.json) into the
+//   ~/.local/opt/node/bin/node tools/freeze.js --snapshot       copy tools/build-data/levels/levels.json, tools/build-data/levels/gallery.json (v6: and tools/build-data/levels/zen.json) into the
 //                                                               configured folder (R2 baselines with this, once)
 //   ~/.local/opt/node/bin/node tools/freeze.js --make-fixture   rebuild tools/freeze-fixture from its source.json (three
 //                                                               small hand boards graded with this engine)
@@ -61,7 +61,20 @@ function checkCastles(dir) {
   for (let i = 0; i < Math.max(want.length, now.length); i++) if (want[i] !== now[i]) lines.push("DIFF castle case " + i + " (era " + (cs[i] || [])[0] + ", seed " + (cs[i] || [])[1] + "): stored " + want[i] + ", now " + now[i]);
   return { ok: !lines.length, missing: false, cases: now.length, diffs: lines.length, lines };
 }
-module.exports = { check, checkCastles, castleHashes };
+// v7 lane T: the page's own data against the snapshot. Every frozen record must come out of the shipped packed file
+// (levels/*.pk.json, src/pack.js unpack) byte for byte as the snapshot holds it, less the bake-only fields (pack DROP):
+// the same grid, palette, deck, stored order and the rest. Returns {ok, levels, diffs, lines}.
+function checkShipped(dir) {
+  const P = require("../src/pack.js"), man = path.join(dir, "frozen.json"), lines = []; let levels = 0;
+  if (!fs.existsSync(man)) return { ok: false, levels, diffs: 0, lines: ["no snapshot"] };
+  for (const f of JSON.parse(fs.readFileSync(man, "utf8")).files || []) {
+    const pf = path.join(ROOT, "levels", f.file.replace(/\.json$/, ".pk.json")); if (!fs.existsSync(pf)) { lines.push("DIFF " + f.file + ": no shipped levels/" + path.basename(pf)); continue; }
+    const by = new Map(P.unpackFile(JSON.parse(fs.readFileSync(pf, "utf8"))).levels.map((L) => [L.id, L]));
+    for (const L of JSON.parse(fs.readFileSync(path.join(dir, f.file), "utf8")).levels) { levels++; if (!P.same(by.get(L.id), P.strip(L))) lines.push("DIFF " + f.file + " " + L.id + ": the shipped record unpacks differently"); }
+  }
+  return { ok: !lines.length, levels, diffs: lines.length, lines };
+}
+module.exports = { check, checkCastles, castleHashes, checkShipped };
 
 // The fixture: grade each hand board of source.json as the bake stores grades (on its tag; seed from the file).
 function makeFixture(dir) {
@@ -85,9 +98,9 @@ if (require.main === module) {
   if (process.argv.includes("--castles-snapshot")) { const h = castleHashes(); fs.mkdirSync(dir, { recursive: true }); fs.writeFileSync(path.join(dir, "castles.json"), JSON.stringify({ note: "v5 R4: castle() hashes for eras 1-4 (tools/freeze.js castleCases); never edit by hand.", made: new Date().toISOString().slice(0, 10), hashes: h }, null, 0) + "\n"); console.log("castles: " + h.length + " case hashes written to " + path.relative(ROOT, dir)); process.exit(0); }
   if (process.argv.includes("--snapshot")) {
     fs.mkdirSync(dir, { recursive: true });
-    // v6 (the merge): Zen World 1's own records (levels/zen.json, graded with the main levels' counts) are frozen too.
-    const zen = fs.existsSync(path.join(ROOT, "levels/zen.json")), list = ["levels.json", "gallery.json"].concat(zen ? ["zen.json"] : []);
-    for (const f of list) fs.copyFileSync(path.join(ROOT, "levels", f), path.join(dir, f));
+    // v6 (the merge): Zen World 1's own records (tools/build-data/levels/zen.json, graded with the main levels' counts) are frozen too.
+    const zen = fs.existsSync(path.join(ROOT, "tools/build-data/levels/zen.json")), list = ["levels.json", "gallery.json"].concat(zen ? ["zen.json"] : []);
+    for (const f of list) fs.copyFileSync(path.join(ROOT, "tools/build-data/levels", f), path.join(dir, f)); // v7 lane T: the source (grades and all); the page's packed files are checked against it below
     fs.writeFileSync(path.join(dir, "frozen.json"), JSON.stringify({ note: "Shipped levels frozen by tools/freeze.js --snapshot; never edit by hand.", made: new Date().toISOString().slice(0, 10), files: [{ file: "levels.json", kind: "siege" }, { file: "gallery.json", kind: "gallery" }].concat(zen ? [{ file: "zen.json", kind: "siege" }] : []) }, null, 1) + "\n");
     console.log("snapshot written to " + path.relative(ROOT, dir)); process.exit(0);
   }
@@ -95,9 +108,10 @@ if (require.main === module) {
   if (r.missing) { console.log("freeze: no snapshot at " + path.relative(ROOT, dir) + " (not baselined yet: R2 runs --snapshot once it ships the re-laid levels)"); process.exitCode = process.argv.includes("--require") ? 1 : 0; }
   else {
     for (const f of r.files) { for (const l of f.lines) console.log(f.file + ": " + l); console.log("freeze: " + f.file + " " + f.levels + " levels, " + f.checks + " checks, " + f.diffs + " differences"); }
+    const pk = checkShipped(dir); for (const l of pk.lines) console.log(l); console.log("freeze: shipped (unpacked) " + pk.levels + " frozen records, " + pk.diffs + " differences"); // v7 lane T
     const kc = checkCastles(dir); for (const l of kc.lines) console.log(l); // v5 R4: the castle freeze
     console.log(kc.missing ? "freeze: no castle hashes (castles.json) in the snapshot" : "freeze: castles (eras 1-4) " + kc.cases + " cases, " + kc.diffs + " differences");
-    const ok = r.ok && (kc.ok || (kc.missing && !process.argv.includes("--require")));
+    const ok = r.ok && pk.ok && (kc.ok || (kc.missing && !process.argv.includes("--require")));
     console.log("freeze: " + (ok ? "PASS" : "FAIL") + " (" + ((Date.now() - t0) / 1000).toFixed(1) + " s)"); process.exitCode = ok ? 0 : 1;
   }
 }

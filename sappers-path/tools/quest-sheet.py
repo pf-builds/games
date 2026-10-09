@@ -2,12 +2,12 @@
 # quest: its board as shipped (shades, the moat's water or mire, mystery blocks as their fill), each cell PX image px with
 # a darker 1 px seam, the frame and paths as ground; a caption (quest number, kept or new, title, the main level it
 # follows, its prize, tag and features). Rows of COLS tiles. Kept quests have a grey rim, new ones gold.
-#   python3 tools/quest-sheet.py OUT.jpg [PX] [COLS]   (reads levels/gallery.json and config.json beside it)
+#   python3 tools/quest-sheet.py OUT.jpg [PX] [COLS]   (reads tools/build-data/levels/gallery.json and config.json beside it)
 import json, os, sys
 from PIL import Image, ImageDraw
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 out = sys.argv[1]; PX = int(sys.argv[2]) if len(sys.argv) > 2 else 4; COLS = int(sys.argv[3]) if len(sys.argv) > 3 else 10
-G = json.load(open(os.path.join(ROOT, "levels/gallery.json")))["levels"]; C = json.load(open(os.path.join(ROOT, "config.json")))
+G = json.load(open(os.path.join(ROOT, "tools/build-data/levels/gallery.json")))["levels"]; C = json.load(open(os.path.join(ROOT, "config.json")))
 QL = [l for l in G if not l.get("land")]
 GROUND, BG, INK, OLD, NEW = (110, 97, 80), (34, 28, 36), (243, 234, 216), (140, 136, 150), (217, 168, 38)
 rgb = lambda h: tuple(int(h[i:i + 2], 16) for i in (1, 3, 5))

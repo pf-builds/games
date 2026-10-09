@@ -10,7 +10,7 @@
 import { mkdirSync, readFileSync } from "node:fs"; import { dirname, resolve } from "node:path"; import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url)), arg = (k, d) => { const i = process.argv.indexOf("--" + k); return i > 0 ? process.argv[i + 1] : d; };
 const URL_ = arg("url", "http://127.0.0.1:8499/"), OUT = resolve(here, "shots-campaign-v6-fix"); mkdirSync(OUT, { recursive: true });
-const LV = JSON.parse(readFileSync(resolve(here, "../levels/levels.json"), "utf8")).levels, CFG = JSON.parse(readFileSync(resolve(here, "../config.json"), "utf8")), LY = CFG.layout;
+const LV = JSON.parse(readFileSync(resolve(here, "../tools/build-data/levels/levels.json"), "utf8")).levels, CFG = JSON.parse(readFileSync(resolve(here, "../config.json"), "utf8")), LY = CFG.layout;
 const byN = (n) => LV.find((l) => l.n === n), ids = LV.filter((l) => l.n <= 200).map((l) => l.id);
 const want = { 64: { toast: LY.pinToast, coach: /towers are back/i }, 66: { toast: LY.killToast, coach: /deadly/i }, 125: { coach: /knock sappers back/i }, 157: { toast: LY.killToast, coach: /two spaces are locked/i } }; // what a level must say at its start
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE);

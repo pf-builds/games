@@ -6,7 +6,7 @@
 //        every planned level's candidates, shared out one per thread (scratch/cands/n-<n>.json keeps them; --reuse takes
 //        them back for the same board and plan, so more candidates or a moved gate re-pick without re-making the old),
 //        picked, written to scratch/picks/n-<n>.json
-//   ~/.local/opt/node/bin/node tools/campaign-v6.js install              levels 1-200 of levels/levels.json from the picks
+//   ~/.local/opt/node/bin/node tools/campaign-v6.js install              levels 1-200 of tools/build-data/levels/levels.json from the picks
 //        (201 on untouched, byte for byte), the coach cards that name a lock or tower colour (config.json teach)
 //   ~/.local/opt/node/bin/node tools/campaign-v6.js measure [--before FILE] [--out FILE]   the after table (careful,
 //        obvious, random tap, pace, taps by realm and tag) next to the before baseline, and the coins of a first clear
@@ -162,7 +162,7 @@ async function bake(P) {
 const ORDER = ["id", "n", "era", "source", "name", "teaches", "hint", "seed", "tag", "band", "target", "v6", "from", "edits", "deck", "w", "h", "grid", "pic", "gates", "towers", "pal", "scene", "style", "palette", "liquid", "lock", "locks", "archers", "hidden", "cols", "links", "win", "grade", "exempt", "inBand", "fallback"];
 const ordered = (o) => { const r = {}; for (const k of ORDER) if (o[k] !== undefined) r[k] = o[k]; for (const k of Object.keys(o)) if (r[k] === undefined && o[k] !== undefined) throw new Error("install: unknown field " + k); return r; };
 function install(P) {
-  const file = path.join(ROOT, "levels/levels.json"), J = readJ(file), rules = CB.rulesV6(CFG), out = [], miss = [];
+  const file = path.join(ROOT, "tools/build-data/levels/levels.json"), J = readJ(file), rules = CB.rulesV6(CFG), out = [], miss = [];
   for (let L of J.levels) {
     if (L.n > 200 || L.land) { out.push(L); continue; }
     const p = P.find((q) => q.n === L.n);
@@ -209,7 +209,7 @@ function gateTable(rows, was) {
   return lines.join("\n");
 }
 async function deepStep() {
-  const LV = readJ(opt("levels") || path.join(ROOT, "levels/levels.json")).levels.filter((l) => l.n <= 200 && !l.land), t0 = Date.now(), threads = +opt("threads") || Math.max(2, require("os").cpus().length - 1);
+  const LV = readJ(opt("levels") || path.join(ROOT, "tools/build-data/levels/levels.json")).levels.filter((l) => l.n <= 200 && !l.land), t0 = Date.now(), threads = +opt("threads") || Math.max(2, require("os").cpus().length - 1);
   const salt = +opt("salt") || 0; // --salt K: the runs on fresh seeds (the level's seed xor K), a check that a pick did not ride its seeds
   const res = await CB.runPool(LV.map((L) => ({ op: "deep", n: L.n, tag: L.tag, level: L, seed: seedFor(L) ^ salt })), threads, Infinity);
   const rows = LV.map((L, i) => { const d = res[i].deep; if (!d) throw new Error("deep: level " + L.n + " " + res[i].fail); const best = [Math.max(...d.a), Math.max(...d.b)];
@@ -247,7 +247,7 @@ const bestOf = (g) => CB.bestOf(g);
 
 // ---- measure -------------------------------------------------------------------------------------------------------------
 function measure() {
-  const now = readJ(path.join(ROOT, "levels/levels.json")).levels.filter((l) => l.n <= 200), was = JSON.parse(execSync("git show " + (opt("base") || V.baseCommit) + ":sappers-path/levels/levels.json", { cwd: ROOT, maxBuffer: 1 << 28 }).toString()).levels.filter((l) => l.n <= 200);
+  const now = readJ(path.join(ROOT, "tools/build-data/levels/levels.json")).levels.filter((l) => l.n <= 200), was = JSON.parse(execSync("git show " + (opt("base") || V.baseCommit) + ":sappers-path/levels/levels.json", { cwd: ROOT, maxBuffer: 1 << 28 }).toString()).levels.filter((l) => l.n <= 200);
   const before = fs.readFileSync(path.join(__dirname, "campaign-v6-baseline-before.jsonl"), "utf8").trim().split("\n").map((s) => JSON.parse(s)), bBy = new Map(before.map((b) => [b.n, b]));
   const rows = now.map((L) => { const g = L.grade[L.tag]; return { n: L.n, era: L.era, tag: L.tag, careful: g.careful, obvious: g.obvious, best: bestOf(g), rate: g.rate, pace: g.pace ? g.pace.ms : g.ms, taps: L.win[L.tag].length, archers: L.archers || null, locks: E.locksOf(L).length, towers: (L.towers || []).length }; });
   const outF = opt("out") || path.join(__dirname, "campaign-v6-baseline-after.jsonl"); fs.writeFileSync(outF, rows.map((r) => JSON.stringify(r)).join("\n") + "\n");
