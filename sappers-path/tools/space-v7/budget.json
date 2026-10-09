@@ -27,11 +27,11 @@
   "levels: Gallery (gallery.json)": 79714,
   "levels: places, tutorial, debug row, Gallery manifest": 115631,
   "art": 822506,
-  "code (src/)": 777053,
+  "code (src/)": 778856,
   "fonts": 82127,
   "docs (LICENSES, SPEC, LATER)": 362936,
-  "page (index.html, css, config.json, thumb)": 272325,
-  "total": 13794070
+  "page (index.html, css, config.json, thumb)": 273414,
+  "total": 13796962
  },
  "worldBefore": {
   "data": 257878,

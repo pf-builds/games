@@ -146,7 +146,7 @@ it writes the world's `levels/zen-<k>.pk.json` and the index. test.js fails unti
 | `check.mjs saves` | a save written by a11e9bf's own page (`tools/fixtures/v6.2-save.json`, made by `tools/space-v7/v62-fixture.mjs`: Campaign 1-37 and 5 side quests, coins 777, castle eggs, Music off, Colour-blind on; Zen World 2 (a land world) 1-4, World 1 1-12, World 3 1-7, World 4 1-3, three Zen eggs): both stored keys byte for byte untouched by this build's boot; this build's SP2 code of it equals a11e9bf's; a11e9bf and this build read it the same (code, mode, both home cards, coins, power-ups, unlocks); a11e9bf's SP2 code loaded through Settings reads back identically |
 | `check.mjs sweep` | 16 runs, 0 console messages: fresh load, reload and load again of Campaign level 5, a Zen level in each of the 4 worlds, the Campaign map, the Zen map and Gallery picture 1, at 375x812@3 and 1280x800 |
 
-Cache tag `?v=65` (index.html, style.css).
+Cache tag `?v=65` (index.html, style.css); `?v=66` after the fix pass (§11).
 
 ## 7. Budget
 
@@ -169,16 +169,19 @@ Shipped folder by part (the game minus tools/ and dot files, as test.js counts i
 | fonts | 0.08 MB | 0.08 MB | 0 |
 | docs (LICENSES, SPEC, LATER) | 0.36 MB | 0.36 MB | 0 |
 | page (index.html, css, config.json, thumb) | 0.27 MB | 0.27 MB | 0 |
-| **Total** | **16.53 MB** | **13.79 MB** | **-2.74 MB** |
+| **Total** | **16.53 MB** | **13.80 MB** (13,796,962 B) | **-2.73 MB** |
 
 Bytes the page asks for before the first tap (`check.mjs bytes`: a cold load at 375x812, files on disk, so before any gzip;
 the tour's offer marked seen as the harness does):
 
 | Milestone | a11e9bf | v7 lane T |
 |---|---:|---:|
-| the home interactive | 3,457,047 B | 1,854,286 B |
-| to the first Campaign level (tap on the Campaign card) | 6,938,181 B | 5,335,420 B |
-| to the first Zen level (tap on the Zen card) | 6,938,181 B | 5,390,231 B (+ World 1's file, 54,811 B) |
+| the home interactive | 3,457,047 B | 1,857,289 B |
+| to the first Campaign level (tap on the Campaign card) | 6,938,181 B | 5,338,423 B |
+| to the first Zen level (tap on the Zen card) | 6,938,181 B | 5,393,234 B (World 1's file, 54,811 B, included) |
+
+(Fix pass figures: +2.9 KB of code and CSS since the first measure; a new player still fetches no Zen world before a
+tap on Zen.)
 
 Level data before the home went from 1.96 MB (levels.json, gallery.json, zen.json, places, tutorial) to 0.34 MB. Of the
 5.3 MB to a first level, 3.48 MB is the music (all three loops load on the first level; LATER) and no map sheet loads
@@ -199,39 +202,76 @@ map art). All 16 planned lands and a finale with new art (about 0.5 MB) fit with
 
 ## 8. Merge recipe for lane D
 
-Run at a quiet point (no bake running), in lane D's worktree on `sappers-path`. `N=~/.local/opt/node/bin/node`.
+Run every command **from the repo root** of lane D's worktree (the folder holding `sappers-path/`), at a quiet point (no
+bake running). Every path below starts at that root. Dry-run on a throwaway clone on 2026-10-09 (§8.1).
 
-1. `git merge space-v7`.
-2. **The three level sources.** space-v7 renamed `sappers-path/levels/{levels,gallery,zen}.json` to
-   `sappers-path/tools/build-data/levels/` unchanged; git's rename detection normally carries lane D's edits made after
-   a11e9bf into the new paths by itself. Check, for each of the three files:
-   `git diff --quiet a11e9bf HEAD -- sappers-path/levels/zen.json || echo "lane D changed zen.json"`. For each one lane D
-   changed, make sure the merged source is lane D's version:
-   `git show HEAD:sappers-path/levels/zen.json > sappers-path/tools/build-data/levels/zen.json` (HEAD is sappers-path during the
-   merge; the same for levels.json and gallery.json), then `git rm -q --cached sappers-path/levels/zen.json 2>/dev/null; rm -f
-   sappers-path/levels/zen.json` so no plain level file is left in `levels/`.
-3. **map/layout.json** (25 castle names .jpg to .webp; nothing else): if it conflicts, take lane D's and re-apply
-   `perl -pi -e 's/"file":"sheet-(\d\d)\.jpg"/"file":"sheet-$1.webp"/g' sappers-path/map/layout.json` (exactly 25
-   replacements: `grep -o 'sheet-[0-9]*\.webp' sappers-path/map/layout.json | wc -l`). `map/sheet-*.jpg` are deleted on
-   space-v7; keep them deleted.
-4. **Cache tag:** both lanes bump `?v=` (space-v7 used 65): take max + 1 everywhere (`index.html`, `style.css`).
-5. **config.json:** space-v7 changed `v5.ship.levels` (+ `packNote`) and added `zen.load` and `zen.text.loading` /
-   `loadFail`; keep both sides.
-6. **Tools written on sappers-path after a11e9bf** that read or write `levels/levels.json`, `levels/gallery.json` or
-   `levels/zen.json` must point at `tools/build-data/levels/...`. This must print only `git show` reads of old commits:
-   `grep -rnE "levels/(levels|gallery|zen)\.json" sappers-path/tools --include='*.js' --include='*.mjs' --include='*.py' | grep -v "build-data/levels\|sappers-path/levels/"`
-   (quest-bake.js's LICENSES text line is meant to stay). Fix any other with the same replace: `perl -pi -e
-   's#(?<!sappers-path/)(?<!build-data/)levels/(levels|gallery|zen)\.json#tools/build-data/levels/$1.json#g' FILE`.
-7. **test.js, freeze.js, regrade.js, runbook, LICENSES, SPEC-v4, LATER, v5-progress:** text merges; keep both sides.
-8. `$N sappers-path/tools/pack.js` (writes `levels/levels.pk.json`, `gallery.pk.json`, the index and a `zen-<k>.pk.json` for
-   every world, lane D's new ones too), then `$N tools/pack.js --check`.
-9. Gates: `$N tools/test.js`; `$N tools/freeze.js --require` (a `--snapshot` taken on sappers-path copied the plain files
-   into `tools/build-data/frozen/`, which is still right; from now on `--snapshot` copies from `tools/build-data/levels/`);
-   `$N tools/regrade.js`, `--gallery`, `--zen`, and each with `--shipped`; selfTest (`tools/selftest-lands.mjs --wide 1280x800`),
-   `tools/space-v7/check.mjs NEW OLD lazy saves sweep` (OLD: a server of a11e9bf's sappers-path/, for the save comparison;
-   its lazy checks name worlds 1-4, picture numbers 51/151/154 and "0 of 212 pictures": a new world or a grown one moves
-   those, so update them), the harness last.
-10. Commit the merge with the regenerated `levels/*.pk.json`.
+```sh
+cd "$(git rev-parse --show-toplevel)"       # the repo root; stay here
+N=~/.local/opt/node/bin/node
+
+# 1. Merge without committing, so HEAD stays lane D's tip for step 2.
+git merge --no-commit --no-ff space-v7
+
+# 2. The three level sources. space-v7 only renamed them (sappers-path/levels/X.json -> sappers-path/tools/build-data/
+#    levels/X.json, 100% renames: `git diff a11e9bf space-v7 -M100% --name-status`), so lane D's version is always the
+#    merged one. This says which ones lane D changed, writes lane D's version to the new path whatever rename detection
+#    did, and leaves no plain level file in sappers-path/levels/:
+for f in levels gallery zen; do
+  git diff --quiet a11e9bf HEAD -- sappers-path/levels/$f.json || echo "lane D changed $f.json after a11e9bf"
+  git show HEAD:sappers-path/levels/$f.json > sappers-path/tools/build-data/levels/$f.json
+  git rm -q --cached --ignore-unmatch sappers-path/levels/$f.json; rm -f sappers-path/levels/$f.json
+  git add sappers-path/tools/build-data/levels/$f.json
+done
+for f in levels gallery zen; do git show HEAD:sappers-path/levels/$f.json | cmp -s - sappers-path/tools/build-data/levels/$f.json && echo "$f.json: lane D's, byte for byte" || echo "$f.json: DIFFERENT, stop"; done
+
+# 3. map/layout.json: space-v7 changed only the 25 castle names (.jpg -> .webp). Take lane D's and re-apply them (right
+#    whether or not it conflicted):
+git show HEAD:sappers-path/map/layout.json > sappers-path/map/layout.json
+perl -pi -e 's/"file":"sheet-(\d\d)\.jpg"/"file":"sheet-$1.webp"/g' sappers-path/map/layout.json
+grep -o 'sheet-[0-9]*\.webp' sappers-path/map/layout.json | wc -l          # must print 25
+git add sappers-path/map/layout.json
+#    sappers-path/map/sheet-*.jpg are deleted on space-v7: keep them deleted.
+
+# 4. Cache tag: both lanes bump ?v= (space-v7: 66). Take max + 1 in sappers-path/index.html and sappers-path/style.css.
+# 5. sappers-path/config.json: space-v7 changed v5.ship.levels (+ packNote) and added zen.load and zen.text.loading /
+#    loadFail; keep both sides.
+# 6. Tools written on lane D after a11e9bf that read the old level paths. This must print nothing but `git show` reads of
+#    old commits:
+grep -rnE "levels/(levels|gallery|zen)\.json" sappers-path/tools --include='*.js' --include='*.mjs' --include='*.py' | grep -v "build-data/levels\|sappers-path/levels/\|Campaign v6 side quests\|space-v7/budget.js\|saves/make.js"
+#    (budget.js reads an old export's levels/ on purpose; saves/make.js reads old commits through git show)
+#    Fix any line it prints:
+#    perl -pi -e 's#(?<!sappers-path/)(?<!build-data/)levels/(levels|gallery|zen)\.json#tools/build-data/levels/$1.json#g' FILE
+# 7. Text merges, keep both sides: sappers-path/tools/test.js, freeze.js, regrade.js, land-runbook.md, LICENSES.md,
+#    SPEC-v4.md, LATER.md, v5-progress.md. `git status` must show no unmerged path.
+# 8. The shipped files from the merged sources (every world, lane D's new ones too):
+$N sappers-path/tools/pack.js && $N sappers-path/tools/pack.js --check
+git add sappers-path/levels
+# 9. Gates (all from the root): $N sappers-path/tools/test.js; $N sappers-path/tools/freeze.js --require;
+#    $N sappers-path/tools/regrade.js [--gallery | --zen] [--shipped]; then serve sappers-path/ and run
+#    sappers-path/tools/selftest-lands.mjs --wide 1280x800, sappers-path/tools/space-v7/check.mjs (its lazy checks name worlds
+#    1-4 and fixed numbers: a new or grown world moves them) and sappers-path/tools/harness.mjs last.
+# 10. git commit (the merge, with the regenerated levels/*.pk.json).
+```
+
+### 8.1 Dry run (2026-10-09, fix pass)
+
+A throwaway `git clone` of the local games repo in the scratchpad (no worktree or branch of the real repo touched;
+deleted afterwards). A stand-in lane D branch from a11e9bf: a world's lore edited in zen.json, level 1's hint in
+levels.json, a picture's title in gallery.json, an egg moved in map/layout.json, a new tool reading `../levels/zen.json`,
+the cache tag bumped to 66; then the recipe above, literally, started from the clone's `sappers-path/` (the first line moves
+to the root). Two runs, the clone deleted afterwards:
+- **Run 1, plain merge.** Rename detection carried all three edits; conflicts only in index.html (the cache tag beside
+  pack.js) and layout.json. Step 2 printed "lane D changed" for all three and "lane D's, byte for byte" for all three; step 3
+  printed 25 and kept the moved egg; step 6 listed the new tool (fixed with the perl line, then it ran); `pack.js` wrote the
+  lore into the index, the hint into levels.pk.json and the title into gallery.pk.json, `--check` clean, no plain level
+  file left in `levels/`. test.js 711/2: the two failures were the freeze and World 1 checks, rightly catching my edits to a
+  frozen level's hint and a frozen picture's title (not the recipe).
+- **Run 2, `-Xno-renames`** (rename detection off, the case the step-2 check exists for), with edits that touch no frozen
+  record (zen.json's World 4 lore, a top-level key in levels.json and gallery.json, the egg, the tool, `?v=66`):
+  modify/delete conflicts on the old level paths, all resolved by step 2 (lane D's three files byte for byte at the new
+  paths, the old paths removed); after step 4 (`?v=67`) no unmerged path; test.js **713 passed, 0 failed**.
+- Step 6 also lists `tools/space-v7/budget.js` and `tools/saves/make.js` (both read old copies on purpose); the grep now
+  leaves them out.
 
 ## 9. Calls I made
 
@@ -261,3 +301,30 @@ loadWorld, wantLevel, pendStep, prefetch, startLevel, showScreen, ended, SP), `c
 `zen.text`), `index.html` (pack.js, `?v=65`), `tools/test.js`, `tools/freeze.js`, `tools/regrade.js`,
 `tools/selftest-lands.mjs` (`--wide`), `tools/playtest-bundle.py` (copies whatever levels/ files the page reads at the ref),
 `tools/map-gen/assemble.py`, `tools/land-runbook.md`, `LICENSES.md`, and the path in 52 tool files.
+
+## 11. Fix pass after the critics (2026-10-09; `tools/critic-space-v7-functional.md`, `tools/critic-space-v7-visual.md`)
+
+- **B1 (blocking), a waiting level took over one already started.** `startLevel` (any level that starts, whatever started
+  it: a node, the Play and Continue cards, the next-up card, the win's Next, the Gallery, the tour) and `retry` now cancel a
+  pending world load; `showScreen` already did for every other screen (map, home, the map's mode switch). A repeat tap on the
+  waiting level is ignored. There is no browser-history handling in the page, so Back can't start a level. New check
+  (`check.mjs lazy`): World 3 delayed 2.5 s, tap its first node, then picture 1 mid-load: picture 1 keeps playing after zen-3
+  arrives (id z1-1, no pending load, no busy button).
+- **S1, the merge recipe**: §8 rewritten from the repo root with root paths, `git merge --no-commit` so HEAD is lane D's tip,
+  step 2 writes lane D's three sources whatever rename detection did and checks them byte for byte; dry-run twice (§8.1).
+- **Visual minor 1, busy state**: the button tapped (`app.tapEl`, a capture-phase listener) gets `.busy` (a slow brightness
+  breathe, static under reduced motion) and `aria-busy` after `zen.load.toastMs`, with the toast; nothing before 300 ms.
+  `tools/space-v7/fixpass-busy-card.png`.
+- **Visual minor 2, the fail toast**: "Couldn't open World k. Check your connection." for `zen.load.failMs` (5 s) or until the
+  next tap, in a `.wide` box (an absolute box at left 50% shrank to half the screen): 2 lines at 375 px.
+  `tools/space-v7/fixpass-fail-toast.png`.
+- **M1, prefetch**: also on the home when the Zen save has any progress (even with the Campaign played last), and whenever
+  the Zen map opens; never before the first paint (`app.painted`). A new player's home and first Campaign level fetch no
+  Zen world (bytes above). Checks: the Zen map fetches only the next world; a Zen-progress, Campaign-last save fetches World 4
+  on the home.
+- **M2**: stale names fixed in `tools/map-gen/README.md`, `retouch-25.py`, the config notes, main.js comments and the
+  playtest bundle's docstring.
+- Cache tag `?v=66` (main.js, style.css and config.json changed). Gates: test.js 713/0; freeze --require PASS (2,405 / 372 /
+  1,350 checks, shipped 462, castles 283, all 0); regrade full, --gallery, --zen and each --shipped 0 differences;
+  pack --check clean; selfTest 876/0 (375x812@3), 878/0 (1280x800); harness all passed; check.mjs lazy 15/15, saves 4/4,
+  sweep 16/16, 0 console messages (but the aborted fetch's own network line in the failed-fetch test).
