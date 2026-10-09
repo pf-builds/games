@@ -472,3 +472,11 @@ Fixed: S1-S7, m2, m3, N1, N2 (`tools/v5-r4-notes.md` §10). Parked:
 - ~~Kitten Forest's lore in zen.json still opens "Past the Gallery the road runs on ...".~~ Done in v6 lane D16 ("Past the Garden ...").
 - World 1's 50 mix two looks: the 36 Gallery emoji and museum paintings (36 x 41 class boards, unshaded) and 37-50's full garden scenes (42 x 42 and 32 x 46, shaded). A cold playtest could say whether the step at 37 reads as growth or as a seam; a few garden scenes earlier in the world would need a re-deal of the 36 (out of scope for D15).
 - zen-world.js --add: a world's add block holds one batch; a second growth would want a list of batches (or folding the first into the installed set).
+
+## v7 lane T (the space budget, 2026-10-09)
+
+- All three music loops (3.48 MB) load with the first level, Campaign or Zen; the boss loop only plays in realm 8. Loading a loop when its screen first asks for it would take about 1 MB off the bytes to a first level (2.4 MB for a Zen-only player, who never hears the theme in play).
+- `map/layout.json` (77 KB, loaded with the home) is mostly road points; the index's road packing (`src/pack.js packWorld`) would take it to about 30 KB. It is read and written by the land tools, so it would want the same source/pack split as the level files.
+- The Campaign's records (227 KB) could load by realm as Zen's do by world; the home needs only ids, numbers and tags.
+- `tools/space-v7/check.mjs lazy` names worlds 1-4 and fixed picture numbers (51, 151, 154, "0 of 212 pictures"); a new or grown world moves them. It could read them from the index.
+- land.js and zen-world.js could run `tools/pack.js` themselves after an install (today test.js fails until it's run).

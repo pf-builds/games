@@ -1,0 +1,50 @@
+{
+ "before": {
+  "map: castle sheets (25)": 7225199,
+  "map: land sheets (6)": 1365988,
+  "map: layout.json": 76781,
+  "audio": 3505381,
+  "levels: Campaign (levels.json)": 961649,
+  "levels: Zen index (zen.json / zen.pk.json)": 727627,
+  "levels: Zen world files": 0,
+  "levels: Gallery (gallery.json)": 254602,
+  "levels: places, tutorial, debug row, Gallery manifest": 115631,
+  "art": 822506,
+  "code (src/)": 761633,
+  "fonts": 82127,
+  "docs (LICENSES, SPEC, LATER)": 359871,
+  "page (index.html, css, config.json, thumb)": 271434,
+  "total": 16530429
+ },
+ "after": {
+  "map: castle sheets (25)": 5840706,
+  "map: land sheets (6)": 1365988,
+  "map: layout.json": 76806,
+  "audio": 3505381,
+  "levels: Campaign (levels.json)": 227170,
+  "levels: Zen index (zen.json / zen.pk.json)": 18008,
+  "levels: Zen world files": 247719,
+  "levels: Gallery (gallery.json)": 79714,
+  "levels: places, tutorial, debug row, Gallery manifest": 115631,
+  "art": 822506,
+  "code (src/)": 777053,
+  "fonts": 82127,
+  "docs (LICENSES, SPEC, LATER)": 362936,
+  "page (index.html, css, config.json, thumb)": 272325,
+  "total": 13794070
+ },
+ "worldBefore": {
+  "data": 257878,
+  "entry": 1948,
+  "licences": 12792,
+  "total": 272618,
+  "perLevel": 5158
+ },
+ "worldAfter": {
+  "data": 72893,
+  "entry": 2726,
+  "licences": 12792,
+  "total": 88411,
+  "perLevel": 1458
+ }
+}
