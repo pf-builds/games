@@ -1,0 +1,412 @@
+{
+ "baseWins": [
+  "won",
+  "won",
+  "won",
+  "won",
+  "won"
+ ],
+ "saveLS": {
+  "sappers-path.zen.v1": "{\"v\":1,\"done\":{\"z1-1\":1,\"z1-2\":1,\"z1-3\":1,\"z1-4\":1,\"z1-5\":1,\"z1-6\":1,\"z1-7\":1,\"z1-8\":1,\"z1-9\":1,\"z1-10\":1,\"z1-11\":1,\"z1-12\":1,\"e9-201\":1,\"e9-202\":1,\"e9-203\":1,\"e9-204\":1,\"z3-1\":1,\"z3-2\":1,\"z3-3\":1,\"z3-4\":1,\"z3-5\":1,\"z3-6\":1,\"z3-7\":1,\"z4-1\":1,\"z4-2\":1,\"z4-3\":1,\"z3-8\":1,\"z4-4\":1,\"z1-13\":1},\"gal\":{},\"eggs\":{\"z1-1-0\":1,\"z3-2-1\":1,\"z4-1-0\":1},\"best\":{\"z3-8\":[1,55,30],\"z4-4\":[1,43,30],\"z1-13\":[1,52,15]},\"last\":\"z1-14\",\"moved\":1,\"mode\":\"zen\"}",
+  "sappers-path.v3": "{\"v\":2,\"done\":{\"e1-01\":1,\"e1-02\":1,\"e1-03\":1,\"e1-04\":1,\"e1-05\":1,\"e1-06\":1,\"e1-07\":1,\"e1-08\":1,\"e1-09\":1,\"e1-10\":1,\"e1-11\":1,\"e1-12\":1,\"e1-13\":1,\"e1-14\":1,\"e1-15\":1,\"e1-16\":1,\"e1-17\":1,\"e1-18\":1,\"e1-19\":1,\"e1-20\":1,\"e1-21\":1,\"e1-22\":1,\"e1-23\":1,\"e1-24\":1,\"e2-25\":1,\"e2-26\":1,\"e2-27\":1,\"e2-28\":1,\"e2-29\":1,\"e2-30\":1,\"e2-31\":1,\"e2-32\":1,\"e2-33\":1,\"e2-34\":1,\"e2-35\":1,\"e2-36\":1,\"e2-37\":1,\"e2-38\":1,\"e2-39\":1},\"gal\":{\"g-ours-g01\":1,\"g-ours-cq17\":1,\"g-ours-g12\":1,\"g-ours-cq44\":1,\"g-ours-g21\":1},\"settings\":{\"muted\":false,\"music\":false,\"sfx\":true,\"speed\":1,\"cb\":true},\"last\":\"e2-40\",\"coins\":1002,\"inv\":{\"ladder\":1,\"quartermaster\":1,\"scout\":0,\"recall\":1,\"volley\":0},\"got\":{\"ladder\":1,\"quartermaster\":1,\"recall\":1},\"best\":{\"e2-38\":[1,45,60],\"e2-39\":[1,48,90]},\"lives\":{\"n\":5,\"at\":0},\"eggs\":{\"s1-0\":1,\"s2-1\":1,\"s5-0\":1},\"lands\":1}"
+ },
+ "read375": {
+  "same": true,
+  "a": {
+   "home": [
+    "29/200|29/200 levels won|pill|H",
+    "1002|1002 coins|pill coins|",
+    "||pill|H",
+    "|||",
+    "ContinueCampaignRealm 2 · Fenwater ValeFort 40 of 200Level 40Easy|Campaign, Realm 2 · Fenwater Vale, Fort 40 of 200: Level 40, Easy|primary play mode-card|",
+    "ContinueZenWorld 1 · Picture Garden29 of 212 picturesPicture 14|Zen, Continue, World 1 · Picture Garden, 29 of 212 pictures: Picture 14|primary play mode-card zen last|",
+    "Realm 2 · Fenwater Vale||mc-w|",
+    "Fort 40 of 200||mc-l|",
+    "World 1 · Picture Garden||mc-w|",
+    "29 of 212 pictures||mc-l|",
+    "Level 40|||",
+    "Picture 14|||"
+   ],
+   "tog": [
+    "round tog tog-speed::Speed 1x (tap for 2x)",
+    "round tog tog-cb:true:Colour-blind marks",
+    "round tog tog-mute:mixed:Mute sound",
+    "set-row tog tog-music:false:Music",
+    "set-row tog tog-sfx:true:Sound effects",
+    "set-row tog tog-cb:true:Colour-blind marks"
+   ],
+   "code": "SP2.AuoHBQEBAAEACycBAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQEtPAEBMFoFAgAAAA4AAAAqAAAADwAAABoAAAADAQACAQUAKAUAAR0BAQAAAAECAAAAAQMAAAABBAAAAAEFAAAAAQYAAAABBwAAAAEIAAAAAQkAAAABCgAAAAELAAAAAQwAAAABDQE0DwIBAAAAAgIAAAACAwAAAAIEAAAAAwEAAAADAgAAAAMDAAAAAwQAAAADBQAAAAMGAAAAAwcAAAADCAE3HgQBAAAABAIAAAAEAwAAAAQEASseAAMBAQADAgEEAQABDmPVRnU",
+   "mode": "zen",
+   "maps": {
+    "zen": {
+     "first": {
+      "screen": "play",
+      "id": "z1-14",
+      "n": 14,
+      "num": "14",
+      "name": "Irises",
+      "mode": "zen"
+     },
+     "map": {
+      "sheets": 28,
+      "loaded": 5,
+      "k": 0.4883,
+      "colW": 375,
+      "cards": false,
+      "scrollTop": 15906,
+      "height": 610,
+      "world": 17320,
+      "focus": "z1-14",
+      "eggs": 3,
+      "tail": null
+     },
+     "nodes": 16255,
+     "nodesHash": 955155916,
+     "nodesSample": "mn done/Picture 1, cleared/1//41.5365%,84.2262%\nmn done/Picture 2, cleared/2//28.5156%,73.8839%\nmn done/Picture 3, Easy, cleared/3Easy//47.9167%,66.9643%\nmn done/Picture 4, cleared/4//67.9688%,53.1994"
+    },
+    "campaign": {
+     "first": {
+      "screen": "play",
+      "id": "e2-40",
+      "n": 40,
+      "num": "40",
+      "name": "Fenwater Vale",
+      "mode": "campaign"
+     },
+     "map": {
+      "sheets": 25,
+      "loaded": 6,
+      "k": 0.4883,
+      "colW": 375,
+      "cards": false,
+      "scrollTop": 12135,
+      "height": 610,
+      "world": 15469,
+      "focus": "e2-40",
+      "eggs": 3,
+      "tail": null
+     },
+     "nodes": 22167,
+     "nodesHash": 352819057,
+     "nodesSample": "mn done/Level 1, Easy, cleared/1Easy//35.1562%,84.375%\nmn done/Level 2, Easy, cleared/2Easy//37.7604%,74.5536%\nmn done/Level 3, Easy, cleared/3Easy//55.0781%,68.4524%\nmn done/Level 4, cleared/4//68.35"
+    }
+   }
+  },
+  "n": {
+   "home": [
+    "29/200|29/200 levels won|pill|H",
+    "1002|1002 coins|pill coins|",
+    "||pill|H",
+    "|||",
+    "ContinueCampaignRealm 2 · Fenwater ValeFort 40 of 200Level 40Easy|Campaign, Realm 2 · Fenwater Vale, Fort 40 of 200: Level 40, Easy|primary play mode-card|",
+    "ContinueZenWorld 1 · Picture Garden29 of 212 picturesPicture 14|Zen, Continue, World 1 · Picture Garden, 29 of 212 pictures: Picture 14|primary play mode-card zen last|",
+    "Realm 2 · Fenwater Vale||mc-w|",
+    "Fort 40 of 200||mc-l|",
+    "World 1 · Picture Garden||mc-w|",
+    "29 of 212 pictures||mc-l|",
+    "Level 40|||",
+    "Picture 14|||"
+   ],
+   "tog": [
+    "round tog tog-speed::Speed 1x (tap for 2x)",
+    "round tog tog-cb:true:Colour-blind marks",
+    "round tog tog-mute:mixed:Mute sound",
+    "set-row tog tog-music:false:Music",
+    "set-row tog tog-sfx:true:Sound effects",
+    "set-row tog tog-cb:true:Colour-blind marks"
+   ],
+   "code": "SP2.AuoHBQEBAAEACycBAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQEtPAEBMFoFAgAAAA4AAAAqAAAADwAAABoAAAADAQACAQUAKAUAAR0BAQAAAAECAAAAAQMAAAABBAAAAAEFAAAAAQYAAAABBwAAAAEIAAAAAQkAAAABCgAAAAELAAAAAQwAAAABDQE0DwIBAAAAAgIAAAACAwAAAAIEAAAAAwEAAAADAgAAAAMDAAAAAwQAAAADBQAAAAMGAAAAAwcAAAADCAE3HgQBAAAABAIAAAAEAwAAAAQEASseAAMBAQADAgEEAQABDmPVRnU",
+   "mode": "zen",
+   "maps": {
+    "zen": {
+     "first": {
+      "screen": "play",
+      "id": "z1-14",
+      "n": 14,
+      "num": "14",
+      "name": "Irises",
+      "mode": "zen"
+     },
+     "map": {
+      "sheets": 28,
+      "loaded": 5,
+      "k": 0.4883,
+      "colW": 375,
+      "cards": false,
+      "scrollTop": 15906,
+      "height": 610,
+      "world": 17320,
+      "focus": "z1-14",
+      "eggs": 3,
+      "tail": null
+     },
+     "nodes": 16255,
+     "nodesHash": 955155916,
+     "nodesSample": "mn done/Picture 1, cleared/1//41.5365%,84.2262%\nmn done/Picture 2, cleared/2//28.5156%,73.8839%\nmn done/Picture 3, Easy, cleared/3Easy//47.9167%,66.9643%\nmn done/Picture 4, cleared/4//67.9688%,53.1994"
+    },
+    "campaign": {
+     "first": {
+      "screen": "play",
+      "id": "e2-40",
+      "n": 40,
+      "num": "40",
+      "name": "Fenwater Vale",
+      "mode": "campaign"
+     },
+     "map": {
+      "sheets": 25,
+      "loaded": 6,
+      "k": 0.4883,
+      "colW": 375,
+      "cards": false,
+      "scrollTop": 12135,
+      "height": 610,
+      "world": 15469,
+      "focus": "e2-40",
+      "eggs": 3,
+      "tail": null
+     },
+     "nodes": 22167,
+     "nodesHash": 352819057,
+     "nodesSample": "mn done/Level 1, Easy, cleared/1Easy//35.1562%,84.375%\nmn done/Level 2, Easy, cleared/2Easy//37.7604%,74.5536%\nmn done/Level 3, Easy, cleared/3Easy//55.0781%,68.4524%\nmn done/Level 4, cleared/4//68.35"
+    }
+   }
+  },
+  "lsSame": true,
+  "untouched": false
+ },
+ "read1280": {
+  "same": true,
+  "a": {
+   "home": [
+    "29/200|29/200 levels won|pill|H",
+    "1002|1002 coins|pill coins|",
+    "||pill|H",
+    "|||",
+    "ContinueCampaignRealm 2 · Fenwater ValeFort 40 of 200Level 40Easy|Campaign, Realm 2 · Fenwater Vale, Fort 40 of 200: Level 40, Easy|primary play mode-card|",
+    "ContinueZenWorld 1 · Picture Garden29 of 212 picturesPicture 14|Zen, Continue, World 1 · Picture Garden, 29 of 212 pictures: Picture 14|primary play mode-card zen last|",
+    "Realm 2 · Fenwater Vale||mc-w|",
+    "Fort 40 of 200||mc-l|",
+    "World 1 · Picture Garden||mc-w|",
+    "29 of 212 pictures||mc-l|",
+    "Level 40|||",
+    "Picture 14|||"
+   ],
+   "tog": [
+    "round tog tog-speed::Speed 1x (tap for 2x)",
+    "round tog tog-cb:true:Colour-blind marks",
+    "round tog tog-mute:mixed:Mute sound",
+    "set-row tog tog-music:false:Music",
+    "set-row tog tog-sfx:true:Sound effects",
+    "set-row tog tog-cb:true:Colour-blind marks"
+   ],
+   "code": "SP2.AuoHBQEBAAEACycBAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQEtPAEBMFoFAgAAAA4AAAAqAAAADwAAABoAAAADAQACAQUAKAUAAR0BAQAAAAECAAAAAQMAAAABBAAAAAEFAAAAAQYAAAABBwAAAAEIAAAAAQkAAAABCgAAAAELAAAAAQwAAAABDQE0DwIBAAAAAgIAAAACAwAAAAIEAAAAAwEAAAADAgAAAAMDAAAAAwQAAAADBQAAAAMGAAAAAwcAAAADCAE3HgQBAAAABAIAAAAEAwAAAAQEASseAAMBAQADAgEEAQABDmPVRnU",
+   "mode": "zen",
+   "maps": {
+    "zen": {
+     "first": {
+      "screen": "play",
+      "id": "z1-14",
+      "n": 14,
+      "num": "14",
+      "name": "Irises",
+      "mode": "zen"
+     },
+     "map": {
+      "sheets": 28,
+      "loaded": 5,
+      "k": 0.5599,
+      "colW": 430,
+      "cards": true,
+      "scrollTop": 18246,
+      "height": 687,
+      "world": 19861,
+      "focus": "z1-14",
+      "eggs": 3,
+      "tail": null
+     },
+     "nodes": 16255,
+     "nodesHash": 955155916,
+     "nodesSample": "mn done/Picture 1, cleared/1//41.5365%,84.2262%\nmn done/Picture 2, cleared/2//28.5156%,73.8839%\nmn done/Picture 3, Easy, cleared/3Easy//47.9167%,66.9643%\nmn done/Picture 4, cleared/4//67.9688%,53.1994"
+    },
+    "campaign": {
+     "first": {
+      "screen": "play",
+      "id": "e2-40",
+      "n": 40,
+      "num": "40",
+      "name": "Fenwater Vale",
+      "mode": "campaign"
+     },
+     "map": {
+      "sheets": 25,
+      "loaded": 6,
+      "k": 0.5599,
+      "colW": 430,
+      "cards": true,
+      "scrollTop": 13923,
+      "height": 687,
+      "world": 17738,
+      "focus": "e2-40",
+      "eggs": 3,
+      "tail": null
+     },
+     "nodes": 22167,
+     "nodesHash": 352819057,
+     "nodesSample": "mn done/Level 1, Easy, cleared/1Easy//35.1562%,84.375%\nmn done/Level 2, Easy, cleared/2Easy//37.7604%,74.5536%\nmn done/Level 3, Easy, cleared/3Easy//55.0781%,68.4524%\nmn done/Level 4, cleared/4//68.35"
+    }
+   }
+  },
+  "n": {
+   "home": [
+    "29/200|29/200 levels won|pill|H",
+    "1002|1002 coins|pill coins|",
+    "||pill|H",
+    "|||",
+    "ContinueCampaignRealm 2 · Fenwater ValeFort 40 of 200Level 40Easy|Campaign, Realm 2 · Fenwater Vale, Fort 40 of 200: Level 40, Easy|primary play mode-card|",
+    "ContinueZenWorld 1 · Picture Garden29 of 212 picturesPicture 14|Zen, Continue, World 1 · Picture Garden, 29 of 212 pictures: Picture 14|primary play mode-card zen last|",
+    "Realm 2 · Fenwater Vale||mc-w|",
+    "Fort 40 of 200||mc-l|",
+    "World 1 · Picture Garden||mc-w|",
+    "29 of 212 pictures||mc-l|",
+    "Level 40|||",
+    "Picture 14|||"
+   ],
+   "tog": [
+    "round tog tog-speed::Speed 1x (tap for 2x)",
+    "round tog tog-cb:true:Colour-blind marks",
+    "round tog tog-mute:mixed:Mute sound",
+    "set-row tog tog-music:false:Music",
+    "set-row tog tog-sfx:true:Sound effects",
+    "set-row tog tog-cb:true:Colour-blind marks"
+   ],
+   "code": "SP2.AuoHBQEBAAEACycBAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQEtPAEBMFoFAgAAAA4AAAAqAAAADwAAABoAAAADAQACAQUAKAUAAR0BAQAAAAECAAAAAQMAAAABBAAAAAEFAAAAAQYAAAABBwAAAAEIAAAAAQkAAAABCgAAAAELAAAAAQwAAAABDQE0DwIBAAAAAgIAAAACAwAAAAIEAAAAAwEAAAADAgAAAAMDAAAAAwQAAAADBQAAAAMGAAAAAwcAAAADCAE3HgQBAAAABAIAAAAEAwAAAAQEASseAAMBAQADAgEEAQABDmPVRnU",
+   "mode": "zen",
+   "maps": {
+    "zen": {
+     "first": {
+      "screen": "play",
+      "id": "z1-14",
+      "n": 14,
+      "num": "14",
+      "name": "Irises",
+      "mode": "zen"
+     },
+     "map": {
+      "sheets": 28,
+      "loaded": 5,
+      "k": 0.5599,
+      "colW": 430,
+      "cards": true,
+      "scrollTop": 18246,
+      "height": 687,
+      "world": 19861,
+      "focus": "z1-14",
+      "eggs": 3,
+      "tail": null
+     },
+     "nodes": 16255,
+     "nodesHash": 955155916,
+     "nodesSample": "mn done/Picture 1, cleared/1//41.5365%,84.2262%\nmn done/Picture 2, cleared/2//28.5156%,73.8839%\nmn done/Picture 3, Easy, cleared/3Easy//47.9167%,66.9643%\nmn done/Picture 4, cleared/4//67.9688%,53.1994"
+    },
+    "campaign": {
+     "first": {
+      "screen": "play",
+      "id": "e2-40",
+      "n": 40,
+      "num": "40",
+      "name": "Fenwater Vale",
+      "mode": "campaign"
+     },
+     "map": {
+      "sheets": 25,
+      "loaded": 6,
+      "k": 0.5599,
+      "colW": 430,
+      "cards": true,
+      "scrollTop": 13923,
+      "height": 687,
+      "world": 17738,
+      "focus": "e2-40",
+      "eggs": 3,
+      "tail": null
+     },
+     "nodes": 22167,
+     "nodesHash": 352819057,
+     "nodesSample": "mn done/Level 1, Easy, cleared/1Easy//35.1562%,84.375%\nmn done/Level 2, Easy, cleared/2Easy//37.7604%,74.5536%\nmn done/Level 3, Easy, cleared/3Easy//55.0781%,68.4524%\nmn done/Level 4, cleared/4//68.35"
+    }
+   }
+  },
+  "lsSame": true,
+  "untouched": false
+ },
+ "sp2": {
+  "code": "SP2.AuoHBQEBAAEACycBAAAAAQAAAAEAAAABAAAA...",
+  "len": 487,
+  "same": true,
+  "a": {
+   "msg": "Level 40, 1002 coins, 5 side quests, 3 easter eggs; Zen: 29 of 212 pictures",
+   "dis": false,
+   "code": "SP2.AuoHBQEBAAEACycBAAAAAQAAAA"
+  },
+  "n": {
+   "msg": "Level 40, 1002 coins, 5 side quests, 3 easter eggs; Zen: 29 of 212 pictures",
+   "dis": false,
+   "code": "SP2.AuoHBQEBAAEACycBAAAAAQAAAA"
+  },
+  "readSame": true,
+  "lsSame": true
+ },
+ "sp1": {
+  "code": "SP1.AuoHBQEBAAEACycBAAAAAQAAAAEAAAABAAAA...",
+  "len": 263,
+  "same": true,
+  "a": {
+   "msg": "Level 40, 1002 coins, 3 side quests, 3 easter eggs; Zen: 0 of 212 pictures",
+   "dis": false,
+   "code": "SP2.AuoHBQEBAAEACycBAAAAAQAAAA"
+  },
+  "n": {
+   "msg": "Level 40, 1002 coins, 3 side quests, 3 easter eggs; Zen: 0 of 212 pictures",
+   "dis": false,
+   "code": "SP2.AuoHBQEBAAEACycBAAAAAQAAAA"
+  },
+  "readSame": true,
+  "lsSame": true
+ },
+ "v5": {
+  "same": true,
+  "lsSame": true,
+  "zenFirstA": {
+   "screen": "play",
+   "id": "z1-1",
+   "n": 1,
+   "num": "1",
+   "name": "Red Fuji",
+   "mode": "zen"
+  },
+  "zenFirstN": {
+   "screen": "play",
+   "id": "z1-1",
+   "n": 1,
+   "num": "1",
+   "name": "Red Fuji",
+   "mode": "zen"
+  }
+ },
+ "msgs": [],
+ "scr": [
+  "base:title/",
+  "base:title/",
+  "new:title/",
+  "base:title/",
+  "new:title/",
+  "base:title/",
+  "base:title/",
+  "new:title/",
+  "base:title/",
+  "new:title/",
+  "base:title/",
+  "new:title/"
+ ]
+}

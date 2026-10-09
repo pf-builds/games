@@ -1,0 +1,237 @@
+{
+ "data": {
+  "base": 0,
+  "new": 0,
+  "missing": [],
+  "extra": [],
+  "fieldDiff": [],
+  "compDiff": [],
+  "dropSeen": {},
+  "worlds": true
+ },
+ "ids": {
+  "zenSame": true,
+  "galSame": true,
+  "zen": 212,
+  "gal": 50
+ },
+ "app": {
+  "n": 462,
+  "diff": []
+ },
+ "play": [
+  {
+   "id": 1,
+   "kind": "win",
+   "same": true,
+   "a": {
+    "status": "won",
+    "reason": null,
+    "plays": 8,
+    "line": "The goblin king flees. Level 1 cleared."
+   },
+   "b": {
+    "status": "won",
+    "reason": null,
+    "plays": 8,
+    "line": "The goblin king flees. Level 1 cleared."
+   },
+   "lsA": 498,
+   "lsDiff": null
+  },
+  {
+   "id": 5,
+   "kind": "win",
+   "same": true,
+   "a": {
+    "status": "won",
+    "reason": null,
+    "plays": 10,
+    "line": "The goblin king flees. Level 5 cleared."
+   },
+   "b": {
+    "status": "won",
+    "reason": null,
+    "plays": 10,
+    "line": "The goblin king flees. Level 5 cleared."
+   },
+   "lsA": 530,
+   "lsDiff": null
+  },
+  {
+   "id": 37,
+   "kind": "loss",
+   "same": true,
+   "a": {
+    "status": "failed",
+    "reason": "jam",
+    "plays": 9,
+    "line": "Line jammed: 255640213 can't reach a block."
+   },
+   "b": {
+    "status": "failed",
+    "reason": "jam",
+    "plays": 9,
+    "line": "Line jammed: 255640213 can't reach a block."
+   },
+   "lsA": 530,
+   "lsDiff": null
+  },
+  {
+   "id": 100,
+   "kind": "win",
+   "same": true,
+   "a": {
+    "status": "won",
+    "reason": null,
+    "plays": 26,
+    "line": "The goblin king flees. Level 100 cleared."
+   },
+   "b": {
+    "status": "won",
+    "reason": null,
+    "plays": 26,
+    "line": "The goblin king flees. Level 100 cleared."
+   },
+   "lsA": 564,
+   "lsDiff": null
+  },
+  {
+   "id": 150,
+   "kind": "loss",
+   "same": true,
+   "a": {
+    "status": "playing",
+    "reason": null,
+    "plays": 33,
+    "line": "The goblin king flees. Level 100 cleared."
+   },
+   "b": {
+    "status": "playing",
+    "reason": null,
+    "plays": 33,
+    "line": "The goblin king flees. Level 100 cleared."
+   },
+   "lsA": 565,
+   "lsDiff": null
+  },
+  {
+   "id": 200,
+   "kind": "win",
+   "same": true,
+   "a": {
+    "status": "won",
+    "reason": null,
+    "plays": 49,
+    "line": "The Goblin King is off his throne. His crown is ours! The castle road ends here. Past the throne it fades into the mist, for now."
+   },
+   "b": {
+    "status": "won",
+    "reason": null,
+    "plays": 49,
+    "line": "The Goblin King is off his throne. His crown is ours! The castle road ends here. Past the throne it fades into the mist, for now."
+   },
+   "lsA": 598,
+   "lsDiff": null
+  },
+  {
+   "id": "g-ours-g01",
+   "kind": "win",
+   "same": true,
+   "a": {
+    "status": "won",
+    "reason": null,
+    "plays": 44,
+    "line": "Goblin's Lunch hangs on your map now. Side quest prize: +1 Ladder"
+   },
+   "b": {
+    "status": "won",
+    "reason": null,
+    "plays": 44,
+    "line": "Goblin's Lunch hangs on your map now. Side quest prize: +1 Ladder"
+   },
+   "lsA": 639,
+   "lsDiff": null
+  },
+  {
+   "id": "z1-1",
+   "kind": "win",
+   "same": true,
+   "a": {
+    "status": "won",
+    "reason": null,
+    "plays": 54,
+    "line": "Red Fuji, all dug out."
+   },
+   "b": {
+    "status": "won",
+    "reason": null,
+    "plays": 54,
+    "line": "Red Fuji, all dug out."
+   },
+   "lsA": 666,
+   "lsDiff": null
+  },
+  {
+   "id": "z3-1",
+   "kind": "win",
+   "same": true,
+   "a": {
+    "status": "won",
+    "reason": null,
+    "plays": 48,
+    "line": "Kitten flag, all dug out."
+   },
+   "b": {
+    "status": "won",
+    "reason": null,
+    "plays": 48,
+    "line": "Kitten flag, all dug out."
+   },
+   "lsA": 696,
+   "lsDiff": null
+  },
+  {
+   "id": "z4-1",
+   "kind": "loss",
+   "same": true,
+   "a": {
+    "status": "playing",
+    "reason": null,
+    "plays": 19,
+    "line": "Kitten flag, all dug out."
+   },
+   "b": {
+    "status": "playing",
+    "reason": null,
+    "plays": 19,
+    "line": "Kitten flag, all dug out."
+   },
+   "lsA": 696,
+   "lsDiff": null
+  },
+  {
+   "id": "z4-1",
+   "kind": "win",
+   "same": true,
+   "a": {
+    "status": "won",
+    "reason": null,
+    "plays": 47,
+    "line": "Meteor shower, all dug out."
+   },
+   "b": {
+    "status": "won",
+    "reason": null,
+    "plays": 47,
+    "line": "Meteor shower, all dug out."
+   },
+   "lsA": 726,
+   "lsDiff": null
+  }
+ ],
+ "msgs": {
+  "base": [],
+  "new": []
+ }
+}

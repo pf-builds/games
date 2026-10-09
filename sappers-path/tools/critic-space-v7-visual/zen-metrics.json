@@ -1,0 +1,142 @@
+{
+ "m/home": {
+  "identical": true,
+  "mean": 0.0,
+  "max": 0,
+  "hotPx": 0,
+  "hotBox": null
+ },
+ "m/zenmap-start": {
+  "identical": true,
+  "mean": 0.0,
+  "max": 0,
+  "hotPx": 0,
+  "hotBox": null
+ },
+ "m/zenmap-w1": {
+  "identical": true,
+  "mean": 0.0,
+  "max": 0,
+  "hotPx": 0,
+  "hotBox": null
+ },
+ "m/zenmap-w2": {
+  "identical": true,
+  "mean": 0.0,
+  "max": 0,
+  "hotPx": 0,
+  "hotBox": null
+ },
+ "m/zenmap-w3": {
+  "identical": true,
+  "mean": 0.0,
+  "max": 0,
+  "hotPx": 0,
+  "hotBox": null
+ },
+ "m/zenmap-w4": {
+  "identical": false,
+  "mean": 0.002,
+  "max": 6,
+  "hotPx": 0,
+  "hotBox": null
+ },
+ "m/level-z1-1": {
+  "identical": true,
+  "mean": 0.0,
+  "max": 0,
+  "hotPx": 0,
+  "hotBox": null
+ },
+ "m/level-e9-201": {
+  "identical": true,
+  "mean": 0.0,
+  "max": 0,
+  "hotPx": 0,
+  "hotBox": null
+ },
+ "m/level-z3-1": {
+  "identical": true,
+  "mean": 0.0,
+  "max": 0,
+  "hotPx": 0,
+  "hotBox": null
+ },
+ "m/level-z4-1": {
+  "identical": true,
+  "mean": 0.0,
+  "max": 0,
+  "hotPx": 0,
+  "hotBox": null
+ },
+ "d/home": {
+  "identical": true,
+  "mean": 0.0,
+  "max": 0,
+  "hotPx": 0,
+  "hotBox": null
+ },
+ "d/zenmap-start": {
+  "identical": true,
+  "mean": 0.0,
+  "max": 0,
+  "hotPx": 0,
+  "hotBox": null
+ },
+ "d/zenmap-w1": {
+  "identical": true,
+  "mean": 0.0,
+  "max": 0,
+  "hotPx": 0,
+  "hotBox": null
+ },
+ "d/zenmap-w2": {
+  "identical": true,
+  "mean": 0.0,
+  "max": 0,
+  "hotPx": 0,
+  "hotBox": null
+ },
+ "d/zenmap-w3": {
+  "identical": true,
+  "mean": 0.0,
+  "max": 0,
+  "hotPx": 0,
+  "hotBox": null
+ },
+ "d/zenmap-w4": {
+  "identical": true,
+  "mean": 0.0,
+  "max": 0,
+  "hotPx": 0,
+  "hotBox": null
+ },
+ "d/level-z1-1": {
+  "identical": true,
+  "mean": 0.0,
+  "max": 0,
+  "hotPx": 0,
+  "hotBox": null
+ },
+ "d/level-e9-201": {
+  "identical": true,
+  "mean": 0.0,
+  "max": 0,
+  "hotPx": 0,
+  "hotBox": null
+ },
+ "d/level-z3-1": {
+  "identical": true,
+  "mean": 0.0,
+  "max": 0,
+  "hotPx": 0,
+  "hotBox": null
+ },
+ "d/level-z4-1": {
+  "identical": true,
+  "mean": 0.0,
+  "max": 0,
+  "hotPx": 0,
+  "hotBox": null
+ }
+}

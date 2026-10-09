@@ -1,0 +1,41 @@
+{
+ "base_zenCard": {
+  "home": 23310,
+  "tapToPlay": 178,
+  "num": "1"
+ },
+ "base_campCard": {
+  "home": 23310,
+  "tapToPlay": 40
+ },
+ "base_cross": {
+  "panel": {
+   "prim": "Back to map",
+   "sec": "Retry",
+   "title": "Picture done"
+  },
+  "scr": "map",
+  "tapMs": 8,
+  "num": "51"
+ },
+ "new_zenCard": {
+  "home": 14358,
+  "tapToPlay": 1264,
+  "num": "1"
+ },
+ "new_campCard": {
+  "home": 14360,
+  "tapToPlay": 48
+ },
+ "new_cross": {
+  "panel": {
+   "prim": "Back to map",
+   "sec": "Retry",
+   "title": "Picture done"
+  },
+  "scr": "map",
+  "tapMs": 1759,
+  "num": "51"
+ },
+ "log": []
+}
