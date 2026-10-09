@@ -224,15 +224,15 @@
   "main": [
    "pg08",
    "pg13",
-   "pg07",
+   "pg25",
    "pg02",
    "pg01",
    "pg12",
-   "pg09",
+   "pg29",
    "pg04",
    "pg05",
    "pg11",
-   "pg10",
+   "pg17",
    "pg15",
    "pg14",
    "pg03"
@@ -281,7 +281,7 @@
     "eggsAt": "quests",
     "eggKinds": [
      "owl",
-     "yarn"
+     "glint"
     ],
     "tint": "sepia(.22) hue-rotate(-12deg) saturate(1.08) brightness(1.04)"
    }
@@ -292,6 +292,7 @@
     0.13,
     0.2
    ]
-  }
+  },
+  "fix": "v6 lane D16 (2026-10-09, critic tools/critic-world-01-50.md; lane C's fixes at workspace da107ad and c3c06f9): 39 Acorn stash (pg07) -> pg25 Mud puddle pig and 43 Hummingbird (pg09) -> pg29 Daisy crown lamb (both unreadable at 375; pg18 Lettuce tortoise baked for 43 first and failed the eye check: shell and soil one colour), 47 pg10 -> pg17 (the same scene with a blue and purple butterfly and its ladybug repainted as a leaf; pg10's red butterfly made a Red Cross '+'), 42 pg12 re-converted from lane C's regenerated source (near-black merged), 37 pg08 retitled Watermelon picnic (pictures/manifest.json). The four slots re-baked on the kept plan (scratch/add/state.json; 43 with --extra 12)."
  }
 }

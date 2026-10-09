@@ -162,3 +162,84 @@ Portal build (the folder without tools/): **16,529,295 B (16.53 MB)**, was 16,45
 4. Finale gentle by band: level 50's own band 13-20% (`add.bands`), re-baked once.
 5. Egg kinds for the new sheets changed once after the first shots (grass/butterfly on sheet 7 repeated sheet 5's butterfly
    on the same spur): now mushrooms, grass and owl, yarn.
+
+# D16: Picture Garden fix pass (2026-10-09)
+
+The critic of D15 (`tools/critic-world-01-50.md`, evidence in `tools/critic-world-01-50/`, both committed here) passed it
+functionally with 5 picture-level should-fix items. Lane C's fixes, read only: workspace da107ad (README "Critic fixes",
+picks-full.json `fix10_9`) and c3c06f9 (README "Second fixes", `fix10_9b`). This pass started from a previous builder's
+uncommitted tree (manifest, pg12 source, world.json, 39/42/47 baked) and finished it.
+
+## 1. What changed
+
+| n | Was | Now | Why |
+|---|---|---|---|
+| 37 | Ant picnic (pg08) | Watermelon picnic (pg08), same board | the ants are lost in conversion; the board reads as a watermelon on a cloth |
+| 39 | Acorn stash (pg07) | Mud puddle pig (pg25) | autumn confetti at 375; the squirrel melts into the leaves |
+| 42 | Pumpkin house (pg12) | the same, re-converted from lane C's regenerated source | 29 broken near-black pieces; now 0 (no colour under CIELAB L* 25) |
+| 43 | Hummingbird (pg09) | Daisy crown lamb (pg29) | a red blob at 375 |
+| 47 | Butterfly chase (pg10) | Butterfly chase (pg17) | pg10's red butterfly was a 5-cell red "+", the Red Cross shape; pg17 has a blue and purple butterfly, and its ladybug (a dark-pink "+") repainted as a leaf |
+
+Also: World 1's sheet 7 eggs owl, yarn -> owl, glint (critic minor 11: two yarn eggs on one phone screen at the seam), and
+the one deliberate World 2 change, Kitten Forest's lore "Past the Gallery the road runs on ..." -> "Past the Garden the
+road runs on ..." (LATER item, now struck). LICENSES.md rows for 37, 39, 43 and 47 match the records.
+
+Files: `levels/zen.json`, `LICENSES.md`, `index.html` + `style.css` (`?v=64`), `LATER.md`; tools: `lands/z1-gallery/`
+(world.json `main` and `fix`, pictures/manifest.json = lane C's c3c06f9 landManifest with pg08 titled Watermelon picnic,
+src/ pg12 re-prepped, pg17 re-prepped from `raw/pg17-s9017-noladybug.png`, pg25 and pg29 new; pg06, pg16, pg18 kept as
+spare sources), `build-data/frozen/zen.json`, `world-01-50-swaps.py`, `shots-world-01-50-fix.mjs`, `world-01-50/`.
+
+## 2. Boards and bakes
+
+- `prep convert --add --against <c3c06f9 boards-full>`: **14 of 14 identical**. (prep keeps a source that exists, so
+  src/pg17.png was removed first to re-prep it from the no-ladybug raw.) pg17's biggest colour 74.9% of its 1,600 cells
+  (under the 75% gate); 6 colours.
+- Bakes on the kept plan (`scratch/add/state.json`, seeds 1000 + n), `--list`, logs in `scratch/add/`:
+
+| n | Tag | Features | Random tap (band) | Careful | Real pace | Longest tap | Taps | Log |
+|---|---|---|---|---|---|---|---|---|
+| 39 | normal | 2 ? | 40.5% (20-50) | 0.938 | 208 s | 14.9 s | 54 | bake-d16.log |
+| 42 | normal | 2 ? | 36.8% (20-50) | 1 | 206 s | 14.8 s | 52 | bake-d16.log |
+| 43 | hard | 3 ? | 15.3% (6-20) | 1 | 207 s | 14.9 s | 51 | bake-d16c-43.log (`--extra 12`, 543 s) |
+| 47 | easy | - | 73.5% (45-80) | 1 | 222 s | 14.8 s | 54 | bake-d16c-47.log |
+
+- `assemble check --add`: **PASS, all 18 gates** (no fallback, careful floor min 0.938, whole world of 50 E17 N27 H6,
+  median real pace of all 50 198 s, re-grade 0 of 126).
+- Cross and ink scan of the 14 installed records (one-colour plus shapes; pieces of colours under L* 25): 0 crosses on all
+  14; ink pieces 0 except 46 (6), 49 (14), 50 (7), which are a subject's own small dark features (the puppy's eyes and nose,
+  the owl's eyes, the bees' stripes), the critic's ruling on 50, applied the same way to 46 and 49.
+
+## 3. The 43 slot
+
+pg18 Lettuce tortoise (lane C's first spare) baked fine as a Hard (18.3%, careful 1, `--extra 12`; `bake-d16b.log`) and
+passed the check, but failed the eye check at 375: 4 colours, and the shell and the soil are the same red-brown (557
+cells), so the shell's lower half melts into the dirt and the eye is lost. Not installed. Lane C then offered pg28 Rooster's
+wake-up, pg30 Cherry parrot and pg29 Daisy crown lamb. Flat at phone size (scratch only): **pg29 reads at once** (a white
+lamb with a green crown on a daisy field under a pink sky); pg28 reads (a red rooster on a blue wheelbarrow) but repeats 48
+Wheelbarrow nap 5 levels later; pg30 is the weakest (a blue bird hanging among red cherries, the bird's shape unclear). By
+the brief's order (readability, then variety) pg29 first; it baked in band first time. Soft overlap left: 39 pig and 43
+lamb are both farm animals 4 apart (a pink pig in mud vs a white lamb on grass, nothing alike on the board).
+
+## 4. Eye check (375x812@3, in-level, `tools/shots-world-01-50-fix.mjs`)
+
+`tools/world-01-50/play-{39,42,43,47}-375.png`, 0 console messages. 39: a pink pig lying in a brown puddle, reads. 42: the
+pumpkin house with its door and window, the dark bush noise gone. 43: the lamb, reads at once. 47: the butterfly and the
+grey cat, the leaf where the ladybug was, no cross. `swaps.png`: old | new for 39, 42, 43, 47 at about phone size (two-line
+labels); `contact.png` re-made (35-50 as installed, `tools/land-contact.py --world 1 --zen-from 35` on a 35-50 subset).
+
+## 5. Checks
+
+- test.js **709 passed, 0 failed**; shipped folder 69 files, **16,530,513 B**.
+- regrade 0 of 2,405 (250 levels); `--gallery` 0 of 372; `--zen` 0 of 1,350 (150 records).
+- critic-v5: 0 mismatching games of 10,527, grade mismatches 0, tags 0 problems, known answers 0 wrong, real pace 312/312
+  (diff-result.json's run time reverted).
+- Freeze vs 476d985's snapshot (byte-identical to D15's zen.json): top keys `version`/`note` identical; 150 ids in the same
+  order; changed records only **z1-37 (title)**, **z1-39, z1-42, z1-43, z1-47** (board, grade, win, seed; credit date and
+  src on the swapped ones); worlds: **World 1 only `map.sheets[6].eggKinds`**, **World 2 only `lore`** (the one word);
+  worlds 3-4 identical. `--snapshot` re-taken; `--require` **PASS** (gallery 372, zen 1,350, castles 283, 0 differences).
+- `SP.selfTest()` (tools/selftest-lands.mjs, serve.py): **876/0 at 375x812@3, 878/0 at 1280x720**, 0 console. Harness:
+  all passed, 0 console. Cache `?v=64`.
+
+## 6. Payload
+
+Portal build (the folder without tools/): **16,530,513 B**, was 16,529,295 B (+1,218 B: records and licence rows).

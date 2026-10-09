@@ -1,0 +1,371 @@
+{
+ "homeAfter36": [
+  "World 1 · Picture Garden",
+  "Picture 37"
+ ],
+ "map375": {
+  "count": 200,
+  "first": "1",
+  "last": "200",
+  "gaps": [],
+  "s36": "done [Picture 36, Hard, cleared]",
+  "s37": "cur [Picture 37, Easy, play this one next]",
+  "s38": "locked [Picture 38, locked]",
+  "s50": "locked [Picture 50, Hard, locked]",
+  "s51": "open [Picture 51]",
+  "s101": "open [Picture 101]",
+  "s151": "open [Picture 151]",
+  "banners": [
+   {
+    "t": "World 1Picture GardenA quiet g",
+    "nextNode": 1,
+    "prevNode": null
+   },
+   {
+    "t": "World 2Kitten ForestPast the G",
+    "nextNode": 51,
+    "prevNode": 50
+   },
+   {
+    "t": "World 3Snack GalaxyThe road dr",
+    "nextNode": 101,
+    "prevNode": 100
+   },
+   {
+    "t": "World 4Dino ValleyThe road com",
+    "nextNode": 151,
+    "prevNode": 150
+   }
+  ],
+  "dist": "33-34:89 34-35:97 35-36:87 36-37:262 37-38:87 38-39:72 39-40:86 40-41:119 41-42:172 42-43:70 43-44:231 44-45:84 45-46:86 46-47:118 47-48:89 48-49:97 49-50:87 50-51:244 51-52:87 52-53:72 53-54:86",
+  "eggs": [
+   "z1-6-0 egg k-mushrooms west size 44 nearest node 41 111px",
+   "z1-6-1 egg k-grass size 44 nearest node 43 101px",
+   "z1-7-0 egg k-owl size 44 nearest node 46 110px",
+   "z1-7-1 egg k-yarn size 44 nearest node 49 74px"
+  ],
+  "imgs": [
+   " | sepia(0.22) hue-rotate(-12deg) saturate(1.08) brightness(1.04) | ",
+   " | sepia(0.22) hue-rotate(-12deg) saturate(1.08) brightness(1.04) | ",
+   "land-01-b.webp?v=63 | sepia(0.22) hue-rotate(-12deg) saturate(1.08) brightness(1.04) | ",
+   "land-01-a.webp?v=63 | sepia(0.22) hue-rotate(-12deg) saturate(1.08) brightness(1.04) | ",
+   "land-01-b.webp?v=63 | sepia(0.22) hue-rotate(-12deg) saturate(1.08) brightness(1.04) | ",
+   "land-01-a.webp?v=63 | sepia(0.22) hue-rotate(-12deg) saturate(1.08) brightness(1.04) | ",
+   "land-01-b.webp?v=63 | sepia(0.22) hue-rotate(-12deg) saturate(1.08) brightness(1.04) | ",
+   "land-01-a.webp?v=63 | none | ",
+   "land-01-b.webp?v=63 | none | ",
+   " | none | ",
+   " | none | ",
+   " | none | "
+  ],
+  "nodeSize": 44
+ },
+ "tap37": {
+  "hit": true,
+  "head": [
+   "37",
+   "Ant picnic",
+   "Easy"
+  ],
+  "boardShown": true
+ },
+ "win37": {
+  "head": [
+   "37",
+   "Ant picnic",
+   "Easy"
+  ],
+  "status": "won",
+  "plays": 41,
+  "panel": "win",
+  "refused": 0,
+  "title": "Picture done",
+  "line": "Ant picnic, all dug out."
+ },
+ "after37": {
+  "screen": "map",
+  "cur": "38",
+  "play": "Play picture 38"
+ },
+ "reload": {
+  "same": true,
+  "zdone": 37,
+  "has37": true,
+  "home": [
+   "World 1 · Picture Garden",
+   "Picture 38"
+  ],
+  "s37": "done [Picture 37, Easy, cleared]",
+  "s38": "cur [Picture 38, play this one next]",
+  "s51": "open [Picture 51]",
+  "s101": "open [Picture 101]",
+  "s151": "open [Picture 151]"
+ },
+ "win-z1-44": {
+  "head": [
+   "44",
+   "Ladybug umbrella",
+   "Easy"
+  ],
+  "feats": {
+   "q": 5,
+   "linked": 0
+  },
+  "status": "won",
+  "plays": 47,
+  "panel": "win",
+  "refused": 0,
+  "title": "Picture done",
+  "line": "Ladybug umbrella, all dug out."
+ },
+ "win-z1-39": {
+  "head": [
+   "39",
+   "Acorn stash",
+   ""
+  ],
+  "feats": {
+   "q": 5,
+   "linked": 0
+  },
+  "status": "won",
+  "plays": 54,
+  "panel": "win",
+  "refused": 0,
+  "title": "Picture done",
+  "line": "Acorn stash, all dug out."
+ },
+ "win-z1-43": {
+  "head": [
+   "43",
+   "Hummingbird",
+   "Hard"
+  ],
+  "feats": {
+   "q": 5,
+   "linked": 0
+  },
+  "status": "won",
+  "plays": 52,
+  "panel": "win",
+  "refused": 0,
+  "title": "Picture done",
+  "line": "Hummingbird, all dug out."
+ },
+ "win-z1-50": {
+  "head": [
+   "50",
+   "Sunflower bees",
+   "Hard"
+  ],
+  "feats": {
+   "q": 5,
+   "linked": 0
+  },
+  "status": "won",
+  "plays": 48,
+  "panel": "win",
+  "refused": 0,
+  "title": "Picture done",
+  "line": "Sunflower bees, all dug out."
+ },
+ "win-z1-47": {
+  "head": [
+   "47",
+   "Butterfly chase",
+   "Easy"
+  ],
+  "feats": {
+   "q": 5,
+   "linked": 0
+  },
+  "status": "won",
+  "plays": 47,
+  "panel": "win",
+  "refused": 0,
+  "title": "Picture done",
+  "line": "Butterfly chase, all dug out."
+ },
+ "fail": {
+  "id": "z1-48",
+  "status": "failed",
+  "reason": "jam",
+  "panel": "fail",
+  "f": {
+   "title": "A little stuck",
+   "line": "Line jammed: Orange can't reach a block. Have another look.",
+   "cont": "Continue250",
+   "prim": "Retry",
+   "sec": "Back to map"
+  },
+  "coins": [
+   1000,
+   750
+  ],
+  "after": {
+   "status": "playing",
+   "panel": null
+  },
+  "finish": {
+   "status": "won",
+   "plays": 54,
+   "panel": "win",
+   "refused": 0,
+   "title": "Picture done",
+   "line": "Wheelbarrow nap, all dug out."
+  }
+ },
+ "cells": {
+  "25": "9 25/Lion/Easy",
+  "26": "8.33 26/Frog/",
+  "27": "8.33 27/Honeybee/Easy",
+  "28": "8.33 28/Oleanders/",
+  "29": "9 29/Rainbow/Hard",
+  "30": "8.33 30/Crab/Easy",
+  "31": "8.33 31/Rocket/",
+  "32": "8.33 32/Pig/Easy",
+  "33": "8.33 33/Jack-o'-Lantern/",
+  "34": "9 34/Alien/Easy",
+  "35": "9 35/Sunflower/",
+  "36": "8.33 36/Apples and Primroses/Hard",
+  "37": "8.33 37/Ant picnic/Easy",
+  "38": "8.33 38/Duckling bath/",
+  "39": "8.33 39/Acorn stash/",
+  "40": "8.33 40/Carrot pull/Easy",
+  "41": "8.33 41/Strawberry hedgehog/",
+  "42": "8.33 42/Pumpkin house/",
+  "43": "8 43/Hummingbird/Hard",
+  "44": "8.33 44/Ladybug umbrella/Easy",
+  "45": "8.33 45/Frog's cupcake/",
+  "46": "8.33 46/Flowerbed dig/",
+  "47": "8.33 47/Butterfly chase/Easy",
+  "48": "8.33 48/Wheelbarrow nap/",
+  "49": "8 49/Apple tree owl/",
+  "50": "8 50/Sunflower bees/Hard"
+ },
+ "oldCodes": {
+  "a": "SP2.ApADBQAAAAAAAAwBAAAA…410",
+  "b": 279,
+  "oldZA": 46,
+  "oldCA": 12
+ },
+ "loadA": {
+  "msg": {
+   "m": "Level 13, 400 coins, 0 side quests; Zen: 46 of 212 pictures",
+   "dis": false
+  },
+  "zSame": true,
+  "zOld": 46,
+  "zNew": 46,
+  "cOld": 12,
+  "cNew": 12,
+  "home": [
+   "World 4 · Dino Valley",
+   "Picture 154"
+  ],
+  "s36": "done [Picture 36, Hard, cleared]",
+  "s37": "open [Picture 37, Easy]",
+  "s38": "locked [Picture 38, locked]",
+  "s51": "done [Picture 51, cleared]",
+  "s57": null,
+  "s151": "done [Picture 151, cleared]",
+  "w2": "57:mn done 58:mn open 153:mn done 154:mn cur"
+ },
+ "loadB": {
+  "msg": {
+   "m": "Level 1, 400 coins, 0 side quests; Zen: 36 of 212 pictures",
+   "dis": false
+  },
+  "zSame": true,
+  "zOld": 36,
+  "zNew": 36,
+  "cOld": 0,
+  "cNew": 0,
+  "home": [
+   "World 1 · Picture Garden",
+   "Picture 37"
+  ],
+  "s36": "done [Picture 36, Hard, cleared]",
+  "s37": "cur [Picture 37, Easy, play this one next]",
+  "s38": "locked [Picture 38, locked]",
+  "s51": "open [Picture 51]",
+  "s57": null,
+  "s151": "open [Picture 151]",
+  "w2": "57:mn locked 58:mn locked 153:mn locked 154:mn locked"
+ },
+ "home1280": [
+  "World 1 · Picture Garden",
+  "Picture 37"
+ ],
+ "map1280": {
+  "count": 200,
+  "first": "1",
+  "last": "200",
+  "gaps": [],
+  "s36": "done [Picture 36, Hard, cleared]",
+  "s37": "cur [Picture 37, Easy, play this one next]",
+  "s38": "locked [Picture 38, locked]",
+  "s50": "locked [Picture 50, Hard, locked]",
+  "s51": "open [Picture 51]",
+  "s101": "open [Picture 101]",
+  "s151": "open [Picture 151]",
+  "banners": [
+   {
+    "t": "World 1Picture GardenA quiet g",
+    "nextNode": 1,
+    "prevNode": null
+   },
+   {
+    "t": "World 2Kitten ForestPast the G",
+    "nextNode": 51,
+    "prevNode": 50
+   },
+   {
+    "t": "World 3Snack GalaxyThe road dr",
+    "nextNode": 101,
+    "prevNode": 100
+   },
+   {
+    "t": "World 4Dino ValleyThe road com",
+    "nextNode": 151,
+    "prevNode": 150
+   }
+  ],
+  "dist": "33-34:102 34-35:112 35-36:99 36-37:301 37-38:99 38-39:83 39-40:99 40-41:137 41-42:198 42-43:80 43-44:265 44-45:96 45-46:98 46-47:135 47-48:102 48-49:112 49-50:99 50-51:280 51-52:99 52-53:83 53-54:99",
+  "eggs": [
+   "z1-6-0 egg k-mushrooms west size 44 nearest node 41 128px",
+   "z1-6-1 egg k-grass size 44 nearest node 43 116px",
+   "z1-7-0 egg k-owl size 44 nearest node 46 126px",
+   "z1-7-1 egg k-yarn size 44 nearest node 49 85px"
+  ],
+  "imgs": [
+   " | sepia(0.22) hue-rotate(-12deg) saturate(1.08) brightness(1.04) | ",
+   " | sepia(0.22) hue-rotate(-12deg) saturate(1.08) brightness(1.04) | ",
+   "land-01-b.webp?v=63 | sepia(0.22) hue-rotate(-12deg) saturate(1.08) brightness(1.04) | ",
+   "land-01-a.webp?v=63 | sepia(0.22) hue-rotate(-12deg) saturate(1.08) brightness(1.04) | ",
+   "land-01-b.webp?v=63 | sepia(0.22) hue-rotate(-12deg) saturate(1.08) brightness(1.04) | ",
+   "land-01-a.webp?v=63 | sepia(0.22) hue-rotate(-12deg) saturate(1.08) brightness(1.04) | ",
+   "land-01-b.webp?v=63 | sepia(0.22) hue-rotate(-12deg) saturate(1.08) brightness(1.04) | ",
+   "land-01-a.webp?v=63 | none | ",
+   " | none | ",
+   " | none | ",
+   " | none | ",
+   " | none | "
+  ],
+  "nodeSize": 44
+ },
+ "win1280_41": {
+  "head": [
+   "41",
+   "Strawberry hedgehog",
+   ""
+  ],
+  "status": "won",
+  "plays": 49,
+  "panel": "win",
+  "refused": 0,
+  "title": "Picture done",
+  "line": "Strawberry hedgehog, all dug out."
+ },
+ "console": []
+}

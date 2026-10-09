@@ -304,21 +304,21 @@ The campaign's side quests from v6 (`levels/gallery.json` pictures 1-50; the num
 | 349 | Deal with it (dv204) | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5204; prompt in tools/lands/05-dino-valley/pictures/manifest.json |
 | 350 | Hot-air balloon (dv266) | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5266; prompt in tools/lands/05-dino-valley/pictures/manifest.json |
 
-### Zen World 1: Picture Garden, pictures 37-50 (v6 lane D15, 14 garden scenes)
+### Zen World 1: Picture Garden, pictures 37-50 (v6 lane D15, 14 garden scenes; D16: 39, 43 and 47 swapped or repainted, 37 renamed)
 
 | Level | Picture | Artist | Licence | Source |
 |---|---|---|---|---|
-| z1-37 | Ant picnic (pg08) | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9008; prompt in tools/lands/z1-gallery/pictures/manifest.json |
+| z1-37 | Watermelon picnic (pg08) | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9008; prompt in tools/lands/z1-gallery/pictures/manifest.json |
 | z1-38 | Duckling bath (pg13) | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9013; prompt in tools/lands/z1-gallery/pictures/manifest.json |
-| z1-39 | Acorn stash (pg07) | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9007; prompt in tools/lands/z1-gallery/pictures/manifest.json |
+| z1-39 | Mud puddle pig (pg25) | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9025; prompt in tools/lands/z1-gallery/pictures/manifest.json |
 | z1-40 | Carrot pull (pg02) | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9002; prompt in tools/lands/z1-gallery/pictures/manifest.json |
 | z1-41 | Strawberry hedgehog (pg01) | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9001; prompt in tools/lands/z1-gallery/pictures/manifest.json |
 | z1-42 | Pumpkin house (pg12) | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9012; prompt in tools/lands/z1-gallery/pictures/manifest.json |
-| z1-43 | Hummingbird (pg09) | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9009; prompt in tools/lands/z1-gallery/pictures/manifest.json |
+| z1-43 | Daisy crown lamb (pg29) | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9029; prompt in tools/lands/z1-gallery/pictures/manifest.json |
 | z1-44 | Ladybug umbrella (pg04) | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9004; prompt in tools/lands/z1-gallery/pictures/manifest.json |
 | z1-45 | Frog's cupcake (pg05) | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9005; prompt in tools/lands/z1-gallery/pictures/manifest.json |
 | z1-46 | Flowerbed dig (pg11) | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9111; prompt in tools/lands/z1-gallery/pictures/manifest.json |
-| z1-47 | Butterfly chase (pg10) | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9010; prompt in tools/lands/z1-gallery/pictures/manifest.json |
+| z1-47 | Butterfly chase (pg17) | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9017, its ladybug repainted as a leaf; prompt in tools/lands/z1-gallery/pictures/manifest.json |
 | z1-48 | Wheelbarrow nap (pg15) | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9015; prompt in tools/lands/z1-gallery/pictures/manifest.json |
 | z1-49 | Apple tree owl (pg14) | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9014; prompt in tools/lands/z1-gallery/pictures/manifest.json |
 | z1-50 | Sunflower bees (pg03) | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9003; prompt in tools/lands/z1-gallery/pictures/manifest.json |

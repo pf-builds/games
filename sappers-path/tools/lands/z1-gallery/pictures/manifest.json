@@ -54,26 +54,26 @@
   "raw": "raw/pg02-s9002.png"
  },
  {
-  "id": "pg10",
+  "id": "pg17",
   "title": "Butterfly chase",
   "artist": "Click it! Studios",
-  "date": "2026-10-08",
+  "date": "2026-10-09",
   "kind": "painting",
   "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
   "url": "",
-  "file": "fullsrc/pg10.png",
+  "file": "fullsrc/pg17.png",
   "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
-  "prompt": "a big grey kitten leaping to catch a big orange butterfly, a little ladybug watching from a flower, a garden of tall pink flowers, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
-  "seed": 9010,
+  "prompt": "a big grey kitten leaping to catch a big blue and purple butterfly with round wings, a little ladybug watching from a flower, a garden of tall pink flowers under a pale green sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 9017,
   "size": [
    1024,
    1024
   ],
-  "raw": "raw/pg10-s9010.png"
+  "raw": "raw/pg17-s9017-noladybug.png"
  },
  {
   "id": "pg08",
-  "title": "Ant picnic",
+  "title": "Watermelon picnic",
   "artist": "Click it! Studios",
   "date": "2026-10-08",
   "kind": "painting",
@@ -252,6 +252,60 @@
   "raw": "raw/pg03-s9003.png"
  },
  {
+  "id": "pg28",
+  "title": "Rooster's wake-up",
+  "artist": "Click it! Studios",
+  "date": "2026-10-09",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "",
+  "file": "fullsrc/pg28.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big red rooster with a yellow beak crowing loudly on top of a big blue wheelbarrow, a little brown hen covering her ears, a green garden under a pale yellow morning sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 9028,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pg28-s9028.png"
+ },
+ {
+  "id": "pg30",
+  "title": "Cherry parrot",
+  "artist": "Click it! Studios",
+  "date": "2026-10-09",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "",
+  "file": "fullsrc/pg30.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big blue and yellow parrot hanging upside down from a branch eating big red cherries, a cherry tree with dark green leaves and a pale peach sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 9030,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pg30-s9030.png"
+ },
+ {
+  "id": "pg29",
+  "title": "Daisy crown lamb",
+  "artist": "Click it! Studios",
+  "date": "2026-10-09",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "",
+  "file": "fullsrc/pg29.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big fluffy white lamb wearing a crown of yellow daisies, a little blue bird perched on its head, a deep green meadow under a pink sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 9029,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pg29-s9029.png"
+ },
+ {
   "id": "pg06",
   "title": "Snail race",
   "artist": "Click it! Studios",
@@ -286,5 +340,41 @@
    1024
   ],
   "raw": "raw/pg16-s9016.png"
+ },
+ {
+  "id": "pg18",
+  "title": "Lettuce tortoise",
+  "artist": "Click it! Studios",
+  "date": "2026-10-09",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "",
+  "file": "fullsrc/pg18.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big green and brown tortoise munching a giant lettuce leaf, a little snail sharing the other end, a vegetable patch with brown soil and an orange sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 9018,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pg18-s9018.png"
+ },
+ {
+  "id": "pg25",
+  "title": "Mud puddle pig",
+  "artist": "Click it! Studios",
+  "date": "2026-10-09",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "",
+  "file": "fullsrc/pg25.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big pink pig rolling happily in a brown mud puddle, a little white duck splashing beside it, a green garden with tall daisies, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 9025,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pg25-s9025.png"
  }
 ]
