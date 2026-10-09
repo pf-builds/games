@@ -3,11 +3,11 @@
 // role the scene colours (the archer towers' slate and the roles moved round it), and its palette record (minDE, minFade:
 // tools/castle.js) is measured again. The board, the cards and every stored order are untouched (colours are not rules).
 //   ~/.local/opt/node/bin/node tools/repaint.js --from 125 --to 174 [--levels FILE] [--scene S]   (writes FILE, default
-//   levels/levels.json; --scene: the scene for levels with none of their own, e.g. lesson 125, an Emberwatch board in ember)
+//   tools/build-data/levels/levels.json; --scene: the scene for levels with none of their own, e.g. lesson 125, an Emberwatch board in ember)
 "use strict";
 const fs = require("fs"), path = require("path"), PIC = require("./pic.js"), E = require("../src/engine.js");
 const arg = (k, d) => { const i = process.argv.indexOf("--" + k); return i > 0 ? process.argv[i + 1] : d; };
-const file = path.resolve(arg("levels", path.join(__dirname, "../levels/levels.json"))), lo = +arg("from"), hi = +arg("to"), as = arg("scene");
+const file = path.resolve(arg("levels", path.join(__dirname, "../tools/build-data/levels/levels.json"))), lo = +arg("from"), hi = +arg("to"), as = arg("scene");
 const Q = require("./bake-config.json").picture, gilt = require("../config.json").v3.mats[E.GILT].c, D = JSON.parse(fs.readFileSync(file, "utf8"));
 let n = 0, moved = 0;
 for (const L of D.levels) {

@@ -6,7 +6,7 @@
 import fs from 'fs'; import path from 'path'; import { fileURLToPath } from 'url'; import { compile, Game } from './rules.mjs';
 const here = path.dirname(fileURLToPath(import.meta.url)), root = path.resolve(here, '../..'), J = (f) => JSON.parse(fs.readFileSync(path.join(root, f)));
 const cfg = J('config.json'), factor = J('tools/bake-config.json').duration.pace.factor, args = process.argv.slice(2);
-let all = [...J('levels/levels.json').levels, ...J('levels/gallery.json').levels].filter((l) => l.tag && l.grade[l.tag] && l.grade[l.tag].pace);
+let all = [...J('tools/build-data/levels/levels.json').levels, ...J('tools/build-data/levels/gallery.json').levels].filter((l) => l.tag && l.grade[l.tag] && l.grade[l.tag].pace);
 if (args.includes('--ids')) all = all.filter((l) => args[args.indexOf('--ids') + 1].split(',').includes(l.id));
 function replay(L, think) { const r = cfg.v3.rules[L.tag], G = new Game(compile(L), { hold: r.hold, archersKill: r.archersKill, lockSpaces: cfg.v3.twists.lockSpaces }, cfg.v3.time);
   const order = L.win[L.tag].split('').map(Number); let i = 0, guard = 0, next = 0;

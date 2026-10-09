@@ -14,11 +14,11 @@ const { lab, de00 } = require("./palette.js");
 const C = require("../config.json"), V3 = C.v3, F = C.layout.fade;
 const arg = (k) => { const i = process.argv.indexOf("--" + k); return i > 0 ? process.argv[i + 1] : null; };
 const T = arg("t") ? arg("t").split(",").map(Number) : F.t, TRAY = arg("tray") || F.tray;
-const LV = require("../levels/levels.json").levels.concat(require("../levels/debug-v4.json").levels);
+const LV = require("../tools/build-data/levels/levels.json").levels.concat(require("../levels/debug-v4.json").levels);
 // v4 M4 (the Gallery) and v4.1 (every Siege level is a castle picture with its own palette): per level, its own colours
 // (pal; ids a level's palette leaves out, the gilt keys, take config's).
 if (process.argv.includes("--gallery") || LV.some((L) => L.pal)) {
-  const GAL = process.argv.includes("--gallery"), G = GAL ? require("../levels/gallery.json").levels : LV, mixG = (a, b, t) => { const x = parseInt(a.slice(1), 16), y = parseInt(b.slice(1), 16), ch = (s) => Math.round(((x >> s) & 255) * (1 - t) + ((y >> s) & 255) * t); return "#" + ((1 << 24) | (ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).slice(1); };
+  const GAL = process.argv.includes("--gallery"), G = GAL ? require("../tools/build-data/levels/gallery.json").levels : LV, mixG = (a, b, t) => { const x = parseInt(a.slice(1), 16), y = parseInt(b.slice(1), 16), ch = (s) => Math.round(((x >> s) & 255) * (1 - t) + ((y >> s) & 255) * t); return "#" + ((1 << 24) | (ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).slice(1); };
   const col = (L, m) => (L.pal && L.pal[m] ? L.pal[m] : { c: V3.mats[m].c, n: V3.mats[m].n.toLowerCase() });
   let n = 0, under = 0, worst = { e: 1e9 }; const perLevel = [];
   const paint = [];

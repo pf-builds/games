@@ -13,7 +13,7 @@ const E = require(path.join(root, 'src/engine.js')), cfg = require(path.join(roo
 const args = process.argv.slice(2), arg = (k, d) => { const i = args.indexOf('--' + k); return i < 0 ? d : args[i + 1]; };
 const NP = +arg('patient', 4), NR = +arg('rushed', 3), NW = +arg('power', 6), only = arg('only', ''), set = arg('set', '');
 const tagged = (f, s) => require(path.join(root, f)).levels.map((l) => Object.assign({ set: s }, l));
-const levels = [...tagged('levels/levels.json', 'siege'), ...tagged('levels/debug-v4.json', 'debug'), ...tagged('levels/gallery.json', 'gallery')].filter((l) => (!only || only.split(',').includes(l.id)) && (!set || l.set === set));
+const levels = [...tagged('tools/build-data/levels/levels.json', 'siege'), ...tagged('levels/debug-v4.json', 'debug'), ...tagged('tools/build-data/levels/gallery.json', 'gallery')].filter((l) => (!only || only.split(',').includes(l.id)) && (!set || l.set === set));
 const DIFFS = ['easy', 'normal', 'hard'], NAME = {}; for (const k in E.EV) NAME[E.EV[k]] = k;
 const rng = (seed) => () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
 const KEEP = new Set(['EAT', 'FREE', 'REVEAL', 'POWER', 'UNLOCK', 'KILL', 'GATE', 'TOWER']);

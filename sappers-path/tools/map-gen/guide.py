@@ -18,7 +18,7 @@ STEP = H - OV                                     # sheet-to-sheet offset in the
 SHEETS = [(r, s) for r in P["realms"] for s in r["sheets"]]
 N = len(SHEETS); HT = N * H - (N - 1) * OV        # tall map height
 GUIDES = pathlib.Path(P["out"]["guides"]); GUIDES.mkdir(parents=True, exist_ok=True)
-QUESTS = {g["quest"]["after"]: g for g in json.load(open(GAME / "levels/gallery.json"))["levels"] if g.get("quest")}
+QUESTS = {g["quest"]["after"]: g for g in json.load(open(GAME / "tools/build-data/levels/gallery.json"))["levels"] if g.get("quest")}
 
 def top(i): return HT - i * STEP - H              # tall-map row of sheet i's top edge (i from 0 at the bottom)
 def mix(a, b, t): return tuple(int(a[k] + (b[k] - a[k]) * t) for k in range(3))

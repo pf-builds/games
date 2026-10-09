@@ -8,7 +8,7 @@
 "use strict";
 const E = require("../src/engine.js");
 const { rng, fast } = require("./grade.js");
-const V3 = require("../config.json").v3, LV = require("../levels/levels.json").levels;
+const V3 = require("../config.json").v3, LV = require("../tools/build-data/levels/levels.json").levels;
 const N = +process.argv[2] || 300, ALL = process.argv.includes("--all"), LATE = process.argv.includes("--late"), rules = E.rulesOf(V3, "normal");
 const WAITS = { patient: null, "rush 0-3 s": 3000, "rush 0-1 s": 1000 }, FAST = { "fast": 0, "fast 0.3 s": 300 };
 const pick = ALL ? LV : LATE ? LV.filter((l) => l.n >= 46) : [5, 12, 18, 24, 33, 40, 47, 58, 66, 74].map((n) => LV.find((l) => l.n === n)).filter(Boolean);

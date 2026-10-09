@@ -1,0 +1,1631 @@
+{
+ "url": "http://127.0.0.1:8481/",
+ "runs": {
+  "375x812": {
+   "titleReadyMs": 174,
+   "homeArt": [
+    "home-tall.jpg?v=65"
+   ],
+   "bytesBeforeTap": 1877591,
+   "loadToGameplayMs": 841,
+   "clicksToGameplay": 1,
+   "selfTest": {
+    "pass": 876,
+    "fail": [],
+    "ms": 14075,
+    "notes": {
+     "tourCell": "39.0 CSS px a cell",
+     "tour": "tut-1, tut-2, tut-3, tut-4, tut-5, tut-6, tut-7, Fort razed! / The goblin king flees. Practice fort cleared.",
+     "wins": "200/200",
+     "ticked_e1-01": "45 s",
+     "ticked_e2-26": "482 s",
+     "ticked_e3-51": "673 s",
+     "ticked_e3-65": "586 s",
+     "overlap": "e3-63 cols 014 runners 28",
+     "jam": "e1-11 '014332' (sheet after 368 ms)",
+     "archer_easy": "e6-125 knock '004322'",
+     "archer_normal": "e8-187 knock '0043222'",
+     "archer_hard": "e3-64 pin '00432221231'",
+     "archer_extreme": "e3-66 kill '004322'",
+     "coach_e1-01": "0,1 / 0,1",
+     "coach_e1-02": "0,1,2 / 0,1,2",
+     "coach_e1-03": "0,1 / 0,1",
+     "coach_e2-25": "0,1,2 / 0,1,2",
+     "coach_e3-50": "0,1,2,3 / 0,1,2,3",
+     "coach_e3-53": "0,1 / 0,1",
+     "coach_e3-64": "0 / 0",
+     "coach_e3-66": "0 / 0",
+     "coach_e4-75": "0,1 / 0,1",
+     "coach_e4-87": "0,1,2 / 0,1",
+     "coach_e5-100": "0,1,2 / 0,1,2",
+     "coach_e6-125": "0,1,2 / 0,1,2",
+     "coach_e7-150": "0,1 / 0,1",
+     "coach_e7-157": "0,1 / 0",
+     "coach_e8-200": "0 / 0",
+     "debug": "4/4",
+     "waitpair": "v4-all column 3, partner in column 2",
+     "kill": "v6-kill short '004322'",
+     "pin": "v6-pin pinned '004322', jam '134110334110343'",
+     "gallery": "50/50",
+     "reportPic": "123x151 CSS px, 3.86 a cell",
+     "mapAt": 0.6,
+     "playGear": "42 px",
+     "powerBar": "52 px badges (tiles 52 px), bar 70 px, 3 queue rows",
+     "pickup": "e2-27 at 4048 ms, 13 carrying",
+     "settingsCard": "601 px tall",
+     "zenWins": "200/200"
+    }
+   },
+   "musicSeams": {
+    "theme": {
+     "44100": {
+      "db": -16.2,
+      "off": 0.2,
+      "jump": 0.024,
+      "near": 0.1816,
+      "sr": 44100,
+      "len": 4420608
+     },
+     "48000": {
+      "db": -16.2,
+      "off": -0.5,
+      "jump": 0.024,
+      "near": 0.1825,
+      "sr": 48000,
+      "len": 4811546
+     },
+     "live": {
+      "db": -16.2,
+      "off": -0.5,
+      "jump": 0.024,
+      "near": 0.1825,
+      "sr": 48000,
+      "len": 4811546
+     }
+    },
+    "play": {
+     "44100": {
+      "db": -22.1,
+      "off": 0.4,
+      "jump": 0.0072,
+      "near": 0.014,
+      "sr": 44100,
+      "len": 4569088
+     },
+     "48000": {
+      "db": -22.1,
+      "off": -0.2,
+      "jump": 0.0075,
+      "near": 0.0129,
+      "sr": 48000,
+      "len": 4973157
+     },
+     "live": {
+      "db": -22.1,
+      "off": -0.2,
+      "jump": 0.0075,
+      "near": 0.0129,
+      "sr": 48000,
+      "len": 4973157
+     }
+    },
+    "boss": {
+     "44100": {
+      "db": -15.4,
+      "off": -1.4,
+      "jump": 0.302,
+      "near": 0.5622,
+      "sr": 44100,
+      "len": 3561472
+     },
+     "48000": {
+      "db": -15.4,
+      "off": -1.2,
+      "jump": 0.2796,
+      "near": 0.5314,
+      "sr": 48000,
+      "len": 3876432
+     },
+     "live": {
+      "db": -15.4,
+      "off": -1.2,
+      "jump": 0.2796,
+      "near": 0.5314,
+      "sr": 48000,
+      "len": 3876432
+     }
+    }
+   },
+   "loss": {
+    "n": 46,
+    "prefix": "3434042"
+   },
+   "frames": {
+    "L65 1x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.7,
+     "max": 16.8,
+     "runners": 53,
+     "spaces": 3
+    },
+    "L65 3x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.8,
+     "max": 16.8,
+     "runners": 61,
+     "spaces": 3
+    },
+    "L70 1x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.8,
+     "max": 16.8,
+     "runners": 49,
+     "spaces": 3
+    },
+    "L70 3x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.7,
+     "max": 16.8,
+     "runners": 55,
+     "spaces": 3
+    },
+    "L100 1x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.7,
+     "max": 16.8,
+     "runners": 64,
+     "spaces": 3
+    },
+    "L100 3x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.7,
+     "max": 16.8,
+     "runners": 67,
+     "spaces": 3
+    }
+   },
+   "midShow": {
+    "perf": {
+     "mean": 0.018,
+     "max": 0.1,
+     "runners": 37
+    }
+   },
+   "shots": {
+    "two": {
+     "spaces": 2,
+     "runners": 16
+    },
+    "three": {
+     "spaces": 3,
+     "runners": 37
+    },
+    "strip-overlap": {
+     "w": 4062,
+     "h": 720
+    },
+    "strip-next-round": {
+     "w": 4062,
+     "h": 720
+    }
+   },
+   "minCellCss": {
+    "1": {
+     "n": 17,
+     "px": 15.5,
+     "turned": false
+    },
+    "2": {
+     "n": 26,
+     "px": 8,
+     "turned": false
+    },
+    "3": {
+     "n": 51,
+     "px": 8,
+     "turned": false
+    },
+    "4": {
+     "n": 76,
+     "px": 8,
+     "turned": false
+    },
+    "5": {
+     "n": 100,
+     "px": 8.5,
+     "turned": false
+    }
+   },
+   "pause": {
+    "blurFrozen": true,
+    "resumeDeltaMs": 299
+   },
+   "debug": {
+    "v4-mystery": {
+     "cell": 8,
+     "hidden": 32,
+     "links": 0,
+     "open": 5,
+     "cap": 5
+    },
+    "v4-linked": {
+     "cell": 14,
+     "hidden": 0,
+     "links": 3,
+     "open": 5,
+     "cap": 5
+    },
+    "v4-locked": {
+     "cell": 8,
+     "hidden": 0,
+     "links": 0,
+     "open": 4,
+     "cap": 5
+    },
+    "v4-all": {
+     "cell": 8,
+     "hidden": 37,
+     "links": 2,
+     "open": 4,
+     "cap": 5
+    }
+   },
+   "map": {
+    "sheets": 25,
+    "loaded": 4,
+    "k": 0.4883,
+    "colW": 375,
+    "cards": false,
+    "scrollTop": 14859,
+    "height": 610,
+    "world": 15469,
+    "focus": "e1-02",
+    "eggs": 0,
+    "tail": null
+   },
+   "galleryMinCell": {
+    "id": "g-ours-cq44",
+    "px": 8,
+    "turned": false
+   },
+   "zenMinCell": {
+    "id": "z1-1",
+    "px": 8
+   },
+   "requests": 39,
+   "payloadBytes": 10244933,
+   "external": []
+  },
+  "375x667": {
+   "titleReadyMs": 172,
+   "homeArt": [
+    "home-tall.jpg?v=65"
+   ],
+   "bytesBeforeTap": 1877591,
+   "loadToGameplayMs": 740,
+   "clicksToGameplay": 1,
+   "selfTest": {
+    "pass": 876,
+    "fail": [],
+    "ms": 19167,
+    "notes": {
+     "tourCell": "31.5 CSS px a cell",
+     "tour": "tut-1, tut-2, tut-3, tut-4, tut-5, tut-6, tut-7, Fort razed! / The goblin king flees. Practice fort cleared.",
+     "wins": "200/200",
+     "ticked_e1-01": "45 s",
+     "ticked_e2-26": "482 s",
+     "ticked_e3-51": "673 s",
+     "ticked_e3-65": "586 s",
+     "overlap": "e3-63 cols 014 runners 28",
+     "jam": "e1-11 '014332' (sheet after 368 ms)",
+     "archer_easy": "e6-125 knock '004322'",
+     "archer_normal": "e8-187 knock '0043222'",
+     "archer_hard": "e3-64 pin '00432221231'",
+     "archer_extreme": "e3-66 kill '004322'",
+     "coach_e1-01": "0,1 / 0,1",
+     "coach_e1-02": "0,1,2 / 0,1,2",
+     "coach_e1-03": "0,1 / 0,1",
+     "coach_e2-25": "0,1,2 / 0,1,2",
+     "coach_e3-50": "0,1,2,3 / 0,1,2,3",
+     "coach_e3-53": "0,1 / 0,1",
+     "coach_e3-64": "0 / 0",
+     "coach_e3-66": "0 / 0",
+     "coach_e4-75": "0,1 / 0,1",
+     "coach_e4-87": "0,1,2 / 0,1",
+     "coach_e5-100": "0,1,2 / 0,1,2",
+     "coach_e6-125": "0,1,2 / 0,1,2",
+     "coach_e7-150": "0,1 / 0,1",
+     "coach_e7-157": "0,1 / 0",
+     "coach_e8-200": "0 / 0",
+     "debug": "4/4",
+     "waitpair": "v4-all column 3, partner in column 2",
+     "kill": "v6-kill short '004322'",
+     "pin": "v6-pin pinned '004322', jam '134110334110343'",
+     "gallery": "50/50",
+     "reportPic": "123x151 CSS px, 3.86 a cell",
+     "mapAt": 0.6,
+     "playGear": "42 px",
+     "powerBar": "52 px badges (tiles 46 px), bar 70 px, 3 queue rows",
+     "pickup": "e2-27 at 4048 ms, 13 carrying",
+     "settingsCard": "601 px tall",
+     "zenWins": "200/200"
+    }
+   },
+   "loss": {
+    "n": 46,
+    "prefix": "3434042"
+   },
+   "frames": {
+    "L65 1x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.8,
+     "max": 16.8,
+     "runners": 53,
+     "spaces": 3
+    },
+    "L65 3x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.8,
+     "max": 16.8,
+     "runners": 60,
+     "spaces": 3
+    },
+    "L70 1x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.7,
+     "max": 16.8,
+     "runners": 49,
+     "spaces": 3
+    },
+    "L70 3x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.7,
+     "max": 16.8,
+     "runners": 54,
+     "spaces": 3
+    },
+    "L100 1x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.7,
+     "max": 16.8,
+     "runners": 64,
+     "spaces": 3
+    },
+    "L100 3x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.7,
+     "max": 16.8,
+     "runners": 69,
+     "spaces": 3
+    }
+   },
+   "midShow": {
+    "perf": {
+     "mean": 0.018,
+     "max": 0.1,
+     "runners": 37
+    }
+   },
+   "minCellCss": {
+    "1": {
+     "n": 2,
+     "px": 10.5,
+     "turned": false
+    },
+    "2": {
+     "n": 26,
+     "px": 8,
+     "turned": false
+    },
+    "3": {
+     "n": 51,
+     "px": 8,
+     "turned": false
+    },
+    "4": {
+     "n": 75,
+     "px": 8,
+     "turned": false
+    },
+    "5": {
+     "n": 100,
+     "px": 9,
+     "turned": false
+    }
+   },
+   "pause": {
+    "blurFrozen": true,
+    "resumeDeltaMs": 299
+   },
+   "debug": {
+    "v4-mystery": {
+     "cell": 8,
+     "hidden": 32,
+     "links": 0,
+     "open": 5,
+     "cap": 5
+    },
+    "v4-linked": {
+     "cell": 9.5,
+     "hidden": 0,
+     "links": 3,
+     "open": 5,
+     "cap": 5
+    },
+    "v4-locked": {
+     "cell": 8,
+     "hidden": 0,
+     "links": 0,
+     "open": 4,
+     "cap": 5
+    },
+    "v4-all": {
+     "cell": 8,
+     "hidden": 37,
+     "links": 2,
+     "open": 4,
+     "cap": 5
+    }
+   },
+   "map": {
+    "sheets": 25,
+    "loaded": 4,
+    "k": 0.4883,
+    "colW": 375,
+    "cards": false,
+    "scrollTop": 15004,
+    "height": 465,
+    "world": 15469,
+    "focus": "e1-02",
+    "eggs": 0,
+    "tail": null
+   },
+   "galleryMinCell": {
+    "id": "g-ours-g01",
+    "px": 8,
+    "turned": false
+   },
+   "zenMinCell": {
+    "id": "z1-1",
+    "px": 8
+   },
+   "requests": 35,
+   "payloadBytes": 6535537,
+   "external": []
+  },
+  "414x736": {
+   "titleReadyMs": 156,
+   "homeArt": [
+    "home-tall.jpg?v=65"
+   ],
+   "bytesBeforeTap": 1877591,
+   "loadToGameplayMs": 722,
+   "clicksToGameplay": 1,
+   "selfTest": {
+    "pass": 876,
+    "fail": [],
+    "ms": 19074,
+    "notes": {
+     "tourCell": "35.7 CSS px a cell",
+     "tour": "tut-1, tut-2, tut-3, tut-4, tut-5, tut-6, tut-7, Fort razed! / The goblin king flees. Practice fort cleared.",
+     "wins": "200/200",
+     "ticked_e1-01": "45 s",
+     "ticked_e2-26": "482 s",
+     "ticked_e3-51": "673 s",
+     "ticked_e3-65": "586 s",
+     "overlap": "e3-63 cols 014 runners 28",
+     "jam": "e1-11 '014332' (sheet after 368 ms)",
+     "archer_easy": "e6-125 knock '004322'",
+     "archer_normal": "e8-187 knock '0043222'",
+     "archer_hard": "e3-64 pin '00432221231'",
+     "archer_extreme": "e3-66 kill '004322'",
+     "coach_e1-01": "0,1 / 0,1",
+     "coach_e1-02": "0,1,2 / 0,1,2",
+     "coach_e1-03": "0,1 / 0,1",
+     "coach_e2-25": "0,1,2 / 0,1,2",
+     "coach_e3-50": "0,1,2,3 / 0,1,2,3",
+     "coach_e3-53": "0,1 / 0,1",
+     "coach_e3-64": "0 / 0",
+     "coach_e3-66": "0 / 0",
+     "coach_e4-75": "0,1 / 0,1",
+     "coach_e4-87": "0,1,2 / 0,1",
+     "coach_e5-100": "0,1,2 / 0,1,2",
+     "coach_e6-125": "0,1,2 / 0,1,2",
+     "coach_e7-150": "0,1 / 0,1",
+     "coach_e7-157": "0,1 / 0",
+     "coach_e8-200": "0 / 0",
+     "debug": "4/4",
+     "waitpair": "v4-all column 3, partner in column 2",
+     "kill": "v6-kill short '004322'",
+     "pin": "v6-pin pinned '004322', jam '134110334110343'",
+     "gallery": "50/50",
+     "reportPic": "117x144 CSS px, 3.69 a cell",
+     "mapAt": 0.601,
+     "playGear": "42 px",
+     "powerBar": "58 px badges (tiles 52 px), bar 70 px, 3 queue rows",
+     "pickup": "e2-27 at 4048 ms, 13 carrying",
+     "settingsCard": "601 px tall",
+     "zenWins": "200/200"
+    }
+   },
+   "loss": {
+    "n": 46,
+    "prefix": "3434042"
+   },
+   "frames": {
+    "L65 1x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.7,
+     "max": 16.8,
+     "runners": 53,
+     "spaces": 3
+    },
+    "L65 3x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.7,
+     "max": 16.8,
+     "runners": 59,
+     "spaces": 3
+    },
+    "L70 1x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.7,
+     "max": 16.8,
+     "runners": 49,
+     "spaces": 3
+    },
+    "L70 3x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.7,
+     "max": 16.8,
+     "runners": 54,
+     "spaces": 3
+    },
+    "L100 1x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.7,
+     "max": 16.8,
+     "runners": 64,
+     "spaces": 3
+    },
+    "L100 3x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.8,
+     "max": 16.8,
+     "runners": 69,
+     "spaces": 3
+    }
+   },
+   "midShow": {
+    "perf": {
+     "mean": 0.018,
+     "max": 0.1,
+     "runners": 37
+    }
+   },
+   "minCellCss": {
+    "1": {
+     "n": 2,
+     "px": 12.67,
+     "turned": false
+    },
+    "2": {
+     "n": 25,
+     "px": 8.67,
+     "turned": false
+    },
+    "3": {
+     "n": 50,
+     "px": 8.33,
+     "turned": false
+    },
+    "4": {
+     "n": 76,
+     "px": 9,
+     "turned": false
+    },
+    "5": {
+     "n": 100,
+     "px": 8.67,
+     "turned": false
+    }
+   },
+   "pause": {
+    "blurFrozen": true,
+    "resumeDeltaMs": 300
+   },
+   "debug": {
+    "v4-mystery": {
+     "cell": 9,
+     "hidden": 32,
+     "links": 0,
+     "open": 5,
+     "cap": 5
+    },
+    "v4-linked": {
+     "cell": 11,
+     "hidden": 0,
+     "links": 3,
+     "open": 5,
+     "cap": 5
+    },
+    "v4-locked": {
+     "cell": 9,
+     "hidden": 0,
+     "links": 0,
+     "open": 4,
+     "cap": 5
+    },
+    "v4-all": {
+     "cell": 9,
+     "hidden": 37,
+     "links": 2,
+     "open": 4,
+     "cap": 5
+    }
+   },
+   "map": {
+    "sheets": 25,
+    "loaded": 3,
+    "k": 0.5391,
+    "colW": 414,
+    "cards": false,
+    "scrollTop": 16544,
+    "height": 534,
+    "world": 17078,
+    "focus": "e1-02",
+    "eggs": 0,
+    "tail": null
+   },
+   "galleryMinCell": {
+    "id": "g-ours-cq17",
+    "px": 8,
+    "turned": false
+   },
+   "zenMinCell": {
+    "id": "z1-6",
+    "px": 8
+   },
+   "requests": 35,
+   "payloadBytes": 6535537,
+   "external": []
+  },
+  "360x740": {
+   "titleReadyMs": 172,
+   "homeArt": [
+    "home-tall.jpg?v=65"
+   ],
+   "bytesBeforeTap": 1877591,
+   "loadToGameplayMs": 739,
+   "clicksToGameplay": 1,
+   "selfTest": {
+    "pass": 876,
+    "fail": [],
+    "ms": 13574,
+    "notes": {
+     "tourCell": "36.0 CSS px a cell",
+     "tour": "tut-1, tut-2, tut-3, tut-4, tut-5, tut-6, tut-7, Fort razed! / The goblin king flees. Practice fort cleared.",
+     "wins": "200/200",
+     "ticked_e1-01": "45 s",
+     "ticked_e2-26": "482 s",
+     "ticked_e3-51": "673 s",
+     "ticked_e3-65": "586 s",
+     "overlap": "e3-63 cols 014 runners 28",
+     "jam": "e1-11 '014332' (sheet after 368 ms)",
+     "archer_easy": "e6-125 knock '004322'",
+     "archer_normal": "e8-187 knock '0043222'",
+     "archer_hard": "e3-64 pin '00432221231'",
+     "archer_extreme": "e3-66 kill '004322'",
+     "coach_e1-01": "0,1 / 0,1",
+     "coach_e1-02": "0,1,2 / 0,1,2",
+     "coach_e1-03": "0,1 / 0,1",
+     "coach_e2-25": "0,1,2 / 0,1,2",
+     "coach_e3-50": "0,1,2,3 / 0,1,2,3",
+     "coach_e3-53": "0,1 / 0,1",
+     "coach_e3-64": "0 / 0",
+     "coach_e3-66": "0 / 0",
+     "coach_e4-75": "0,1 / 0,1",
+     "coach_e4-87": "0,1,2 / 0,1",
+     "coach_e5-100": "0,1,2 / 0,1,2",
+     "coach_e6-125": "0,1,2 / 0,1,2",
+     "coach_e7-150": "0,1 / 0,1",
+     "coach_e7-157": "0,1 / 0",
+     "coach_e8-200": "0 / 0",
+     "debug": "4/4",
+     "waitpair": "v4-all column 3, partner in column 2",
+     "kill": "v6-kill short '004322'",
+     "pin": "v6-pin pinned '004322', jam '134110334110343'",
+     "gallery": "50/50",
+     "reportPic": "117x144 CSS px, 3.69 a cell",
+     "mapAt": 0.6,
+     "playGear": "42 px",
+     "powerBar": "49 px badges (tiles 52 px), bar 70 px, 3 queue rows",
+     "pickup": "e2-27 at 4048 ms, 13 carrying",
+     "settingsCard": "601 px tall",
+     "zenWins": "200/200"
+    }
+   },
+   "loss": {
+    "n": 46,
+    "prefix": "3434042"
+   },
+   "frames": {
+    "L65 1x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.7,
+     "max": 16.8,
+     "runners": 53,
+     "spaces": 3
+    },
+    "L65 3x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.7,
+     "max": 16.8,
+     "runners": 60,
+     "spaces": 3
+    },
+    "L70 1x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.7,
+     "max": 16.8,
+     "runners": 49,
+     "spaces": 3
+    },
+    "L70 3x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.7,
+     "max": 16.8,
+     "runners": 54,
+     "spaces": 3
+    },
+    "L100 1x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.7,
+     "max": 16.8,
+     "runners": 64,
+     "spaces": 3
+    },
+    "L100 3x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.7,
+     "max": 16.8,
+     "runners": 69,
+     "spaces": 3
+    }
+   },
+   "midShow": {
+    "perf": {
+     "mean": 0.019,
+     "max": 0.1,
+     "runners": 37
+    }
+   },
+   "minCellCss": {
+    "1": {
+     "n": 2,
+     "px": 12.67,
+     "turned": false
+    },
+    "2": {
+     "n": 26,
+     "px": 8,
+     "turned": false
+    },
+    "3": {
+     "n": 51,
+     "px": 8,
+     "turned": false
+    },
+    "4": {
+     "n": 76,
+     "px": 8,
+     "turned": false
+    },
+    "5": {
+     "n": 100,
+     "px": 8.67,
+     "turned": false
+    }
+   },
+   "pause": {
+    "blurFrozen": true,
+    "resumeDeltaMs": 299
+   },
+   "debug": {
+    "v4-mystery": {
+     "cell": 8,
+     "hidden": 32,
+     "links": 0,
+     "open": 5,
+     "cap": 5
+    },
+    "v4-linked": {
+     "cell": 11.33,
+     "hidden": 0,
+     "links": 3,
+     "open": 5,
+     "cap": 5
+    },
+    "v4-locked": {
+     "cell": 8,
+     "hidden": 0,
+     "links": 0,
+     "open": 4,
+     "cap": 5
+    },
+    "v4-all": {
+     "cell": 8,
+     "hidden": 37,
+     "links": 2,
+     "open": 4,
+     "cap": 5
+    }
+   },
+   "map": {
+    "sheets": 25,
+    "loaded": 4,
+    "k": 0.4688,
+    "colW": 360,
+    "cards": false,
+    "scrollTop": 14312,
+    "height": 538,
+    "world": 14850,
+    "focus": "e1-02",
+    "eggs": 0,
+    "tail": null
+   },
+   "galleryMinCell": {
+    "id": "g-ours-g12",
+    "px": 8,
+    "turned": false
+   },
+   "zenMinCell": {
+    "id": "z1-1",
+    "px": 8
+   },
+   "requests": 35,
+   "payloadBytes": 6535537,
+   "external": []
+  },
+  "812x375": {
+   "titleReadyMs": 172,
+   "homeArt": [
+    "home-wide.jpg?v=65"
+   ],
+   "bytesBeforeTap": 1928857,
+   "loadToGameplayMs": 739,
+   "clicksToGameplay": 1,
+   "selfTest": {
+    "pass": 878,
+    "fail": [],
+    "ms": 20195,
+    "notes": {
+     "tourCell": "36.0 CSS px a cell",
+     "tour": "tut-1, tut-2, tut-3, tut-4, tut-5, tut-6, tut-7, Fort razed! / The goblin king flees. Practice fort cleared.",
+     "wins": "200/200",
+     "ticked_e1-01": "45 s",
+     "ticked_e2-26": "482 s",
+     "ticked_e3-51": "673 s",
+     "ticked_e3-65": "586 s",
+     "overlap": "e3-63 cols 014 runners 28",
+     "jam": "e1-11 '014332' (sheet after 368 ms)",
+     "archer_easy": "e6-125 knock '004322'",
+     "archer_normal": "e8-187 knock '0043222'",
+     "archer_hard": "e3-64 pin '00432221231'",
+     "archer_extreme": "e3-66 kill '004322'",
+     "coach_e1-01": "0,1 / 0,1",
+     "coach_e1-02": "0,1,2 / 0,1,2",
+     "coach_e1-03": "0,1 / 0,1",
+     "coach_e2-25": "0,1,2 / 0,1,2",
+     "coach_e3-50": "0,1,2,3 / 0,1,2,3",
+     "coach_e3-53": "0,1 / 0,1",
+     "coach_e3-64": "0 / 0",
+     "coach_e3-66": "0 / 0",
+     "coach_e4-75": "0,1 / 0,1",
+     "coach_e4-87": "0,1,2 / 0,1",
+     "coach_e5-100": "0,1,2 / 0,1,2",
+     "coach_e6-125": "0,1,2 / 0,1,2",
+     "coach_e7-150": "0,1 / 0,1",
+     "coach_e7-157": "0,1 / 0",
+     "coach_e8-200": "0 / 0",
+     "debug": "4/4",
+     "waitpair": "v4-all column 3, partner in column 2",
+     "kill": "v6-kill short '004322'",
+     "pin": "v6-pin pinned '004322', jam '134110334110343'",
+     "gallery": "50/50",
+     "reportPic": "over the board, 233x289 CSS px",
+     "mapAt": 0.598,
+     "playGear": "38 px",
+     "powerBar": "49 px badges (tiles 46 px), bar 88 px, 2 queue rows",
+     "pickup": "e2-27 at 4048 ms, 13 carrying",
+     "settingsCard": "343 px tall, scrolls 20 px",
+     "zenWins": "200/200"
+    }
+   },
+   "loss": {
+    "n": 46,
+    "prefix": "3434042"
+   },
+   "frames": {
+    "L65 1x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.8,
+     "max": 16.8,
+     "runners": 54,
+     "spaces": 3
+    },
+    "L65 3x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.7,
+     "max": 16.8,
+     "runners": 60,
+     "spaces": 3
+    },
+    "L70 1x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.7,
+     "max": 16.8,
+     "runners": 50,
+     "spaces": 3
+    },
+    "L70 3x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.7,
+     "max": 16.8,
+     "runners": 55,
+     "spaces": 3
+    },
+    "L100 1x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.8,
+     "max": 16.8,
+     "runners": 63,
+     "spaces": 3
+    },
+    "L100 3x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.7,
+     "max": 16.8,
+     "runners": 69,
+     "spaces": 3
+    }
+   },
+   "midShow": {
+    "perf": {
+     "mean": 0.018,
+     "max": 0.1,
+     "runners": 37
+    }
+   },
+   "minCellCss": {
+    "1": {
+     "n": 17,
+     "px": 13.67,
+     "turned": false
+    },
+    "2": {
+     "n": 26,
+     "px": 8,
+     "turned": false
+    },
+    "3": {
+     "n": 51,
+     "px": 8,
+     "turned": false
+    },
+    "4": {
+     "n": 76,
+     "px": 8,
+     "turned": false
+    },
+    "5": {
+     "n": 100,
+     "px": 9,
+     "turned": false
+    }
+   },
+   "pause": {
+    "blurFrozen": true,
+    "resumeDeltaMs": 300
+   },
+   "debug": {
+    "v4-mystery": {
+     "cell": 8,
+     "hidden": 32,
+     "links": 0,
+     "open": 5,
+     "cap": 5
+    },
+    "v4-linked": {
+     "cell": 14.33,
+     "hidden": 0,
+     "links": 3,
+     "open": 5,
+     "cap": 5
+    },
+    "v4-locked": {
+     "cell": 8,
+     "hidden": 0,
+     "links": 0,
+     "open": 4,
+     "cap": 5
+    },
+    "v4-all": {
+     "cell": 8,
+     "hidden": 37,
+     "links": 2,
+     "open": 4,
+     "cap": 5
+    }
+   },
+   "map": {
+    "sheets": 25,
+    "loaded": 3,
+    "k": 0.6771,
+    "colW": 520,
+    "cards": false,
+    "scrollTop": 21105,
+    "height": 189,
+    "world": 21450,
+    "focus": "e1-02",
+    "eggs": 0,
+    "tail": null
+   },
+   "galleryMinCell": {
+    "id": "g-ours-cq17",
+    "px": 7.33,
+    "turned": false
+   },
+   "zenMinCell": {
+    "id": "z1-49",
+    "px": 7.33
+   },
+   "requests": 34,
+   "payloadBytes": 6356783,
+   "external": []
+  },
+  "1280x720": {
+   "titleReadyMs": 172,
+   "homeArt": [
+    "home-wide.jpg?v=65"
+   ],
+   "bytesBeforeTap": 1928857,
+   "loadToGameplayMs": 740,
+   "clicksToGameplay": 1,
+   "selfTest": {
+    "pass": 878,
+    "fail": [],
+    "ms": 21109,
+    "notes": {
+     "tourCell": "56.0 CSS px a cell",
+     "tour": "tut-1, tut-2, tut-3, tut-4, tut-5, tut-6, tut-7, Fort razed! / The goblin king flees. Practice fort cleared.",
+     "wins": "200/200",
+     "ticked_e1-01": "45 s",
+     "ticked_e2-26": "482 s",
+     "ticked_e3-51": "673 s",
+     "ticked_e3-65": "586 s",
+     "overlap": "e3-63 cols 014 runners 28",
+     "jam": "e1-11 '014332' (sheet after 368 ms)",
+     "archer_easy": "e6-125 knock '004322'",
+     "archer_normal": "e8-187 knock '0043222'",
+     "archer_hard": "e3-64 pin '00432221231'",
+     "archer_extreme": "e3-66 kill '004322'",
+     "coach_e1-01": "0,1 / 0,1",
+     "coach_e1-02": "0,1,2 / 0,1,2",
+     "coach_e1-03": "0,1 / 0,1",
+     "coach_e2-25": "0,1,2 / 0,1,2",
+     "coach_e3-50": "0,1,2,3 / 0,1,2,3",
+     "coach_e3-53": "0,1 / 0,1",
+     "coach_e3-64": "0 / 0",
+     "coach_e3-66": "0 / 0",
+     "coach_e4-75": "0,1 / 0,1",
+     "coach_e4-87": "0,1,2 / 0,1",
+     "coach_e5-100": "0,1,2 / 0,1,2",
+     "coach_e6-125": "0,1,2 / 0,1,2",
+     "coach_e7-150": "0,1 / 0,1",
+     "coach_e7-157": "0,1 / 0",
+     "coach_e8-200": "0 / 0",
+     "debug": "4/4",
+     "waitpair": "v4-all column 3, partner in column 2",
+     "kill": "v6-kill short '004322'",
+     "pin": "v6-pin pinned '004322', jam '134110334110343'",
+     "gallery": "50/50",
+     "reportPic": "107x131 CSS px, 3.36 a cell",
+     "mapAt": 0.599,
+     "playGear": "42 px",
+     "powerBar": "84 px badges (tiles 74 px), bar 176 px, 3 queue rows",
+     "powerBarBlank": "1.8% of the side column not covered",
+     "pickup": "e2-27 at 4048 ms, 13 carrying",
+     "settingsCard": "601 px tall",
+     "zenWins": "200/200"
+    }
+   },
+   "loss": {
+    "n": 46,
+    "prefix": "3434042"
+   },
+   "frames": {
+    "L65 1x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.8,
+     "max": 16.8,
+     "runners": 54,
+     "spaces": 3
+    },
+    "L65 3x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.8,
+     "max": 16.8,
+     "runners": 60,
+     "spaces": 3
+    },
+    "L70 1x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.7,
+     "max": 16.8,
+     "runners": 50,
+     "spaces": 3
+    },
+    "L70 3x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.7,
+     "max": 16.8,
+     "runners": 55,
+     "spaces": 3
+    },
+    "L100 1x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.8,
+     "max": 16.8,
+     "runners": 63,
+     "spaces": 3
+    },
+    "L100 3x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.8,
+     "max": 16.8,
+     "runners": 69,
+     "spaces": 3
+    }
+   },
+   "midShow": {
+    "perf": {
+     "mean": 0.017,
+     "max": 0.1,
+     "runners": 37
+    }
+   },
+   "shots": {
+    "two": {
+     "spaces": 2,
+     "runners": 16
+    },
+    "three": {
+     "spaces": 3,
+     "runners": 37
+    }
+   },
+   "minCellCss": {
+    "1": {
+     "n": 1,
+     "px": 22,
+     "turned": false
+    },
+    "2": {
+     "n": 26,
+     "px": 15,
+     "turned": false
+    },
+    "3": {
+     "n": 51,
+     "px": 15,
+     "turned": false
+    },
+    "4": {
+     "n": 76,
+     "px": 15,
+     "turned": false
+    },
+    "5": {
+     "n": 100,
+     "px": 17,
+     "turned": false
+    }
+   },
+   "pause": {
+    "blurFrozen": true,
+    "resumeDeltaMs": 299
+   },
+   "debug": {
+    "v4-mystery": {
+     "cell": 15,
+     "hidden": 32,
+     "links": 0,
+     "open": 5,
+     "cap": 5
+    },
+    "v4-linked": {
+     "cell": 22,
+     "hidden": 0,
+     "links": 3,
+     "open": 5,
+     "cap": 5
+    },
+    "v4-locked": {
+     "cell": 15,
+     "hidden": 0,
+     "links": 0,
+     "open": 4,
+     "cap": 5
+    },
+    "v4-all": {
+     "cell": 15,
+     "hidden": 37,
+     "links": 2,
+     "open": 4,
+     "cap": 5
+    }
+   },
+   "map": {
+    "sheets": 25,
+    "loaded": 3,
+    "k": 0.5599,
+    "colW": 430,
+    "cards": true,
+    "scrollTop": 17131,
+    "height": 607,
+    "world": 17738,
+    "focus": "e1-02",
+    "eggs": 0,
+    "tail": null
+   },
+   "galleryMinCell": {
+    "id": "g-ours-cq17",
+    "px": 14,
+    "turned": false
+   },
+   "zenMinCell": {
+    "id": "z1-49",
+    "px": 14
+   },
+   "requests": 35,
+   "payloadBytes": 6586803,
+   "external": []
+  },
+  "iframe-400x600": {
+   "titleReadyMs": 184,
+   "homeArt": [
+    "home-tall.jpg?v=65"
+   ],
+   "bytesBeforeTap": 1879060,
+   "loadToGameplayMs": 755,
+   "clicksToGameplay": 1,
+   "selfTest": {
+    "pass": 876,
+    "fail": [],
+    "ms": 18103,
+    "notes": {
+     "tourCell": "35.5 CSS px a cell",
+     "tour": "tut-1, tut-2, tut-3, tut-4, tut-5, tut-6, tut-7, Fort razed! / The goblin king flees. Practice fort cleared.",
+     "wins": "200/200",
+     "ticked_e1-01": "45 s",
+     "ticked_e2-26": "482 s",
+     "ticked_e3-51": "673 s",
+     "ticked_e3-65": "586 s",
+     "overlap": "e3-63 cols 014 runners 28",
+     "jam": "e1-11 '014332' (sheet after 368 ms)",
+     "archer_easy": "e6-125 knock '004322'",
+     "archer_normal": "e8-187 knock '0043222'",
+     "archer_hard": "e3-64 pin '00432221231'",
+     "archer_extreme": "e3-66 kill '004322'",
+     "coach_e1-01": "0,1 / 0,1",
+     "coach_e1-02": "0,1,2 / 0,1,2",
+     "coach_e1-03": "0,1 / 0,1",
+     "coach_e2-25": "0,1,2 / 0,1,2",
+     "coach_e3-50": "0,1,2,3 / 0,1,2,3",
+     "coach_e3-53": "0,1 / 0,1",
+     "coach_e3-64": "0 / 0",
+     "coach_e3-66": "0 / 0",
+     "coach_e4-75": "0,1 / 0,1",
+     "coach_e4-87": "0,1,2 / 0,1",
+     "coach_e5-100": "0,1,2 / 0,1,2",
+     "coach_e6-125": "0,1,2 / 0,1,2",
+     "coach_e7-150": "0,1 / 0,1",
+     "coach_e7-157": "0,1 / 0",
+     "coach_e8-200": "0 / 0",
+     "debug": "4/4",
+     "waitpair": "v4-all column 3, partner in column 2",
+     "kill": "v6-kill short '004322'",
+     "pin": "v6-pin pinned '004322', jam '134110334110343'",
+     "gallery": "50/50",
+     "reportPic": "123x151 CSS px, 3.86 a cell",
+     "mapAt": 0.601,
+     "playGear": "36 px",
+     "powerBar": "44 px badges (tiles 38 px), bar 46 px, 2 queue rows",
+     "pickup": "e2-27 at 4048 ms, 13 carrying",
+     "settingsCard": "568 px tall, scrolls 33 px",
+     "zenWins": "200/200"
+    }
+   },
+   "loss": {
+    "n": 46,
+    "prefix": "3434042"
+   },
+   "frames": {
+    "L65 1x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.7,
+     "max": 16.8,
+     "runners": 54,
+     "spaces": 3
+    },
+    "L65 3x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.8,
+     "max": 16.8,
+     "runners": 60,
+     "spaces": 3
+    },
+    "L70 1x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.7,
+     "max": 16.8,
+     "runners": 50,
+     "spaces": 3
+    },
+    "L70 3x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.8,
+     "max": 16.8,
+     "runners": 54,
+     "spaces": 3
+    },
+    "L100 1x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.8,
+     "max": 16.8,
+     "runners": 63,
+     "spaces": 3
+    },
+    "L100 3x": {
+     "n": 120,
+     "p50": 16.7,
+     "p95": 16.8,
+     "max": 16.8,
+     "runners": 69,
+     "spaces": 3
+    }
+   },
+   "midShow": {
+    "perf": {
+     "mean": 0.018,
+     "max": 0.1,
+     "runners": 37
+    }
+   },
+   "minCellCss": {
+    "1": {
+     "n": 17,
+     "px": 13.5,
+     "turned": false
+    },
+    "2": {
+     "n": 27,
+     "px": 7.5,
+     "turned": false
+    },
+    "3": {
+     "n": 51,
+     "px": 7.5,
+     "turned": false
+    },
+    "4": {
+     "n": 76,
+     "px": 7.5,
+     "turned": false
+    },
+    "5": {
+     "n": 100,
+     "px": 8.5,
+     "turned": false
+    }
+   },
+   "pause": {
+    "blurFrozen": true,
+    "resumeDeltaMs": 300
+   },
+   "debug": {
+    "v4-mystery": {
+     "cell": 7.5,
+     "hidden": 32,
+     "links": 0,
+     "open": 5,
+     "cap": 5
+    },
+    "v4-linked": {
+     "cell": 12,
+     "hidden": 0,
+     "links": 3,
+     "open": 5,
+     "cap": 5
+    },
+    "v4-locked": {
+     "cell": 7.5,
+     "hidden": 0,
+     "links": 0,
+     "open": 4,
+     "cap": 5
+    },
+    "v4-all": {
+     "cell": 7.5,
+     "hidden": 37,
+     "links": 2,
+     "open": 4,
+     "cap": 5
+    }
+   },
+   "map": {
+    "sheets": 25,
+    "loaded": 3,
+    "k": 0.5208,
+    "colW": 400,
+    "cards": false,
+    "scrollTop": 16077,
+    "height": 408,
+    "world": 16500,
+    "focus": "e1-02",
+    "eggs": 0,
+    "tail": null
+   },
+   "galleryMinCell": {
+    "id": "g-ours-cq17",
+    "px": 7,
+    "turned": false
+   },
+   "zenMinCell": {
+    "id": "z1-49",
+    "px": 7
+   },
+   "requests": 36,
+   "payloadBytes": 6537006,
+   "external": []
+  }
+ },
+ "hidden": {
+  "selfTest": {
+   "pass": 876,
+   "fail": [],
+   "ms": 14927
+  },
+  "panel": "win",
+  "sprites": []
+ },
+ "fails": [],
+ "console": [],
+ "upright": {
+  "667x375 touch": {
+   "landscape": {
+    "up": true,
+    "paused": true,
+    "still": true
+   },
+   "portrait": {
+    "up": false,
+    "paused": false,
+    "cs": 8,
+    "upright": true
+   }
+  },
+  "740x360 touch": {
+   "landscape": {
+    "up": true,
+    "paused": true,
+    "still": true
+   },
+   "portrait": {
+    "up": false,
+    "paused": false,
+    "cs": 8,
+    "upright": true
+   }
+  },
+  "812x375 touch": {
+   "landscape": {
+    "up": true,
+    "paused": true,
+    "still": true
+   },
+   "portrait": {
+    "up": false,
+    "paused": false,
+    "cs": 8.33,
+    "upright": true
+   }
+  },
+  "900x500 desktop": {
+   "card": false,
+   "turned": []
+  },
+  "1280x720 desktop": {
+   "card": false,
+   "turned": []
+  },
+  "812x375 desktop": {
+   "card": false,
+   "turned": []
+  },
+  "900x500 desktop iframe 400x600": {
+   "card": false,
+   "turned": []
+  }
+ },
+ "homeSweep": [
+  "320x812 tall 0.0%",
+  "375x812 tall 0.0%",
+  "414x812 tall 0.0%",
+  "600x812 tall 0.0%",
+  "768x812 tall 0.0%",
+  "1024x812 wide 0.0%",
+  "1143x812 wide 0.0%",
+  "1280x812 wide 3.2%",
+  "1366x812 wide 6.2%",
+  "1920x812 wide 7.9%",
+  "320x800 tall 0.0%",
+  "375x800 tall 0.0%",
+  "414x800 tall 0.0%",
+  "600x800 tall 0.0%",
+  "768x800 tall 0.0%",
+  "1024x800 wide 0.0%",
+  "1143x800 wide 0.0%",
+  "1280x800 wide 3.9%",
+  "1366x800 wide 6.8%",
+  "1920x800 wide 7.9%",
+  "568x375 wide 1.3%",
+  "667x375 wide 7.9%",
+  "740x375 wide 7.9%",
+  "844x375 wide 7.9%",
+  "896x375 wide 7.9%",
+  "932x375 wide 7.9%"
+ ]
+}

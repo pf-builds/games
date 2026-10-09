@@ -11,7 +11,7 @@
 #      darker edge and a faint wash outside.
 #   4. Blend into the forest: rows 0 to FOREST take the colour of Kitten Forest sheet A's bottom row (each column, blurred
 #      across), fading out downward, so the page's 80 px crossfade lands on matching ground and road.
-# The original is in git history (map/sheet-25.jpg before this commit). Saved with the original's quantization tables and
+# The original is in git history (map/sheet-25.jpg before this commit; v7 lane T: the shipped sheet is map/sheet-25.webp). Saved with the original's quantization tables and
 # subsampling, so rows below the band change only by the JPEG round trip (measured in the notes).
 #   /Users/peter/local-ai/.venv/bin/python tools/map-gen/retouch-25.py ORIG.jpg LAND_A.webp OUT.jpg [PREVIEW.png]
 import sys

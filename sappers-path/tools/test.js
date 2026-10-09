@@ -16,8 +16,8 @@ const Gr = require("./grade.js");
 const V3 = require("../config.json").v3;
 // Lands foundation: LEVELS is the castle campaign (1-200: levels without a land); the lands past it are checked in
 // their own section at the end, and so are the side quests and map sheets they add.
-const LEVELS_ALL = require("../levels/levels.json"), LEVELS = Object.assign({}, LEVELS_ALL, { levels: LEVELS_ALL.levels.filter((l) => !l.land) });
-const castleGal = () => require("../levels/gallery.json").levels.filter((l) => !l.land), castleLay = () => { const L = require("../map/layout.json"); return Object.assign({}, L, { sheets: L.sheets.filter((S) => !S.land) }); };
+const LEVELS_ALL = require("../tools/build-data/levels/levels.json"), LEVELS = Object.assign({}, LEVELS_ALL, { levels: LEVELS_ALL.levels.filter((l) => !l.land) });
+const castleGal = () => require("../tools/build-data/levels/gallery.json").levels.filter((l) => !l.land), castleLay = () => { const L = require("../map/layout.json"); return Object.assign({}, L, { sheets: L.sheets.filter((S) => !S.land) }); };
 
 // Campaign v6 (the on-theme side quests, tools/quest-bake.js): the campaign's 50 side quests all sit by level 200, so the
 // castle has no long tail. The long tail's mechanism (journey.js tail, tailAfter, save tail) is still checked on v5's shape:
@@ -1074,7 +1074,7 @@ const CV = require("./convert.js"), GCFG = require("./gallery-config.json"), PAL
 
 // ---- v4 M4: the Gallery file's invariants ------------------------------------------------------------------------------
 {
-  const GF = require("../levels/gallery.json"), GL = castleGal(), MAN = require("../levels/gallery-manifest.json"), GB = GCFG.bake, LIC = require("fs").readFileSync(require("path").join(__dirname, "../LICENSES.md"), "utf8");
+  const GF = require("../tools/build-data/levels/gallery.json"), GL = castleGal(), MAN = require("../levels/gallery-manifest.json"), GB = GCFG.bake, LIC = require("fs").readFileSync(require("path").join(__dirname, "../LICENSES.md"), "utf8");
   const kept = MAN.order.filter((id) => (MAN.pictures.find((p) => p.id === id) || {}).keep !== false);
   eq([GL.length, GL.map((L) => L.src).join(), GL.every((L, i) => L.n === i + 1 && L.id === "g-" + L.src)], [kept.length, kept.join(), true], "gallery: one level per kept picture, in the manifest's order, ids g-<picture>");
   let bad = [], wins = 0, dead = 0, taps = 0, over = 0, ms = [], dmin = 99, dminFade = 99, band = 0;
@@ -1372,7 +1372,7 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
   eq([Save.isOpen(Save.fresh(), order, order[0]), Save.isOpen(Save.fresh(), order, order[1]), Save.isOpen(Save.fresh(), order, "nope")], [true, false, false], "save v4.3: a new save opens only the first level; unknown ids are never open");
   // The Gallery opens one picture at a time: the first on the gate (Siege gallery.openAt cleared), each next when the one
   // before it is cleared.
-  const gids = require("../levels/gallery.json").levels.map((l) => l.id), g0 = Save.fresh();
+  const gids = require("../tools/build-data/levels/gallery.json").levels.map((l) => l.id), g0 = Save.fresh();
   eq([Save.isOpen(g0, gids, gids[0], "gal", false), Save.isOpen(g0, gids, gids[0], "gal", true), Save.isOpen(g0, gids, gids[1], "gal", true), Save.next(g0, gids, "gal", false), Save.next(g0, gids, "gal", true)],
     [false, true, false, null, gids[0]], "save v4.3: the Gallery's first picture opens on the gate, the second only after the first");
   const g1 = Save.sanitize({ v: 2, gal: { [gids[0]]: 1, [gids[5]]: 1 } }, order, gids);
@@ -1399,7 +1399,7 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
 
 // ---- v4 M5, the meta layer (src/meta.js) and its save fields ----------------------------------------------------------------
 {
-  const Save = require("../src/save.js"), Meta = require("../src/meta.js"), order = LEVELS.levels.map((l) => l.id), gids = require("../levels/gallery.json").levels.map((l) => l.id);
+  const Save = require("../src/save.js"), Meta = require("../src/meta.js"), order = LEVELS.levels.map((l) => l.id), gids = require("../tools/build-data/levels/gallery.json").levels.map((l) => l.id);
   const prices = META.powers.map((p) => p.price), total = prices.slice(0, 4).reduce((a, b) => a + b, 0); // v5 R1: the Volley (rare, costly) is not one of them
   const f = Save.fresh(META);
   eq([f.coins, f.inv, f.best, f.lives], [META.coins.start, { ladder: 0, quartermaster: 0, scout: 0, recall: 0, volley: 0 }, {}, { n: META.livesMax, at: 0 }], "meta save: a new save starts with " + META.coins.start + " coins, no power-ups, no best results, full lives");
@@ -1480,7 +1480,7 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   eq([s0, s1, s2, s3, s4, Save.nextBy(D, gal, "gal", (id) => Save.questOpen(D, order, gal, after, id))], [[false, false, false, false], [true, false, false, false], [true, true, false, false], [true, true, true, false], [true, true, true, true], "p1"],
     "side quests: a picture opens once its main level is cleared (optional, never blocking); past the last level they open once all are cleared, one at a time; nextBy finds the first open one not cleared");
   const G = Save.fresh(META); G.inv.recall = 98; eq([Meta.gift(G, "scout"), G.inv.scout, Meta.gift(G, "recall"), Meta.gift(G, "recall"), G.inv.recall, Meta.gift(G, "nope")], [true, 1, true, false, 99, false], "side quests: a prize adds one use (capped at 99; unknown ids refused)");
-  defer("side quests: every Gallery picture carries its quest", () => { const GL = castleGal(); eq(GL.map((l) => l.quest), q.slice(0, GL.length), "side quests: levels/gallery.json carries each picture's quest {after, prize} as tools/quests.js deals them (campaign v6: " + GL.length + ")"); });
+  defer("side quests: every Gallery picture carries its quest", () => { const GL = castleGal(); eq(GL.map((l) => l.quest), q.slice(0, GL.length), "side quests: tools/build-data/levels/gallery.json carries each picture's quest {after, prize} as tools/quests.js deals them (campaign v6: " + GL.length + ")"); });
   // v5 R4: pictures 26-50 sit after levels 104-200, which now exist; they open off them one by one. 51-60 (after 203-240)
   // are the long tail: they wait until all 200 levels are cleared, then open one at a time.
   const GL4 = tailGal(), ord = LEVELS.levels.map((l) => l.id), gid = GL4.map((l) => l.id), aft = GL4.map((l) => l.quest.after), R4 = Save.fresh(META), qo = (i) => Save.questOpen(R4, ord, gid, aft, gid[i]);
@@ -1523,7 +1523,7 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   // v5 R4c: the layout runs ahead of the levels (spots for 1-200 on 25 sheets while levels.json may hold fewer); every
   // built level has its spot.
   eq([lv.length, lv.every((n, i) => n === i + 1), LEVELS.levels.every((l) => lv.indexOf(+l.n) >= 0), LAY.sheets.length, LAY.step, LAY.overlap], [200, true, true, 25, 1264, 80], "map layout: spots for levels 1-200, in order, on 25 sheets 1264 px apart; each of the " + order.length + " built levels has one");
-  eq(qv.map((q) => [q.q, q.id, q.after, q.prize]), GL.slice(0, qv.length).map((l, i) => [i + 1, l.id, l.quest.after, l.quest.prize]), "map layout: side quests 1-" + qv.length + " match levels/gallery.json (ids, main levels, prizes)");
+  eq(qv.map((q) => [q.q, q.id, q.after, q.prize]), GL.slice(0, qv.length).map((l, i) => [i + 1, l.id, l.quest.after, l.quest.prize]), "map layout: side quests 1-" + qv.length + " match tools/build-data/levels/gallery.json (ids, main levels, prizes)");
   const eggs = LAY.sheets.flatMap((s) => s.eggs.map((e, i) => ({ s: s.sheet, i, kind: e.kind, c: J.eggCoins(MC, s.sheet, i) })));
   ok(LAY.sheets.every((s) => s.eggs.length === 2) && eggs.every((e) => J.EGG_KINDS.indexOf(e.kind) >= 0 && e.c >= 10 && e.c <= 15 && MC.text.eggs[e.kind]), "map eggs: two a sheet (" + eggs.length + "), each a drawn kind with names, paying 10-15 coins (" + eggs.reduce((a, e) => a + e.c, 0) + " in all)");
   const far = MC.bridges.map(([sh, i]) => { const S = LAY.sheets[sh - 1], p = S && S.road[i]; if (!p || i < 2 || i > S.road.length - 3) return -1; return Math.min(...S.levels.concat(S.quests).map((n) => Math.hypot(n.x - p[0], n.y - p[1]))); });
@@ -1624,7 +1624,7 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
 // ---- v5.4: reset and the save code (save.js reset, encode, decode; config reset, saveCode) -------------------------------
 {
   const Save = require("../src/save.js"), CFG = require("../config.json"), zlib = require("zlib"), fs = require("fs"), path = require("path");
-  const order = LEVELS.levels.map((l) => l.id), gids = require("../levels/gallery.json").levels.map((l) => l.id), J = (o) => JSON.stringify(o);
+  const order = LEVELS.levels.map((l) => l.id), gids = require("../tools/build-data/levels/gallery.json").levels.map((l) => l.id), J = (o) => JSON.stringify(o);
   // A mid-game save: levels 1-90 cleared with best rows, 12 side quests, eggs, power-ups, last at 90; preferences off/on.
   let r = 12345; const rnd = (k) => { r = (r * 1103515245 + 12345) % 2147483648; return Math.floor((r / 2147483648) * k); };
   const mid = Save.fresh(META); mid.coins = 218; mid.inv = { ladder: 2, quartermaster: 1, scout: 0, recall: 3, volley: 1 }; mid.got = { ladder: 1, quartermaster: 1, scout: 1, recall: 1 };
@@ -1830,13 +1830,13 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   { const t = fs.readFileSync(path.join(__dirname, "../config.json"), "utf8"), a = LND.addToConfig(t, { k: 9, name: "T" }, [[10, 11], [12, 13]]), c = JSON.parse(a);
     eq([c.lands.list.slice(-1)[0].name, c.map.eggCoins.length - CFG.map.eggCoins.length, a.replace(/,?\n      \{"k":9,"name":"T"\}/, "").replace(", [10,11], [12,13]", "") === t], ["T", 2, true], "lands (install): the land goes into config lands.list and a row per new sheet into map.eggCoins, nothing else changes"); }
   // The freeze: the shipped campaign and pictures are the snapshot's, byte for byte, whatever lands follow them.
-  { const dir = path.join(__dirname, "..", CFG.v5.freeze.dir), FL = JSON.parse(fs.readFileSync(path.join(dir, "levels.json"), "utf8")).levels, FG = JSON.parse(fs.readFileSync(path.join(dir, "gallery.json"), "utf8")).levels, G2 = require("../levels/gallery.json").levels;
+  { const dir = path.join(__dirname, "..", CFG.v5.freeze.dir), FL = JSON.parse(fs.readFileSync(path.join(dir, "levels.json"), "utf8")).levels, FG = JSON.parse(fs.readFileSync(path.join(dir, "gallery.json"), "utf8")).levels, G2 = require("../tools/build-data/levels/gallery.json").levels;
     // Campaign v6: the snapshot was re-taken after the fix-pass merge (2026-10-07; the one-time lift for the re-deal and the
     // side quests is gone), so every level and picture is the snapshot's byte for byte again.
     eq([FL.length >= 250, FL.every((l, i) => JSON.stringify(l) === JSON.stringify(LEVELS_ALL.levels[i])), FG.length, FG.every((l, i) => JSON.stringify(l) === JSON.stringify(G2[i]))], [true, true, 62, true], "freeze: levels 1-" + FL.length + " and pictures 1-" + FG.length + " (the 50 side quests and 12 wander pictures) in the game are the frozen snapshot's, byte for byte"); }
   // Every built land: its levels, side quests and sheets.
   for (const d of LC.list) {
-    const LV = LEVELS_ALL.levels.filter((l) => l.land === d.k), GV = require("../levels/gallery.json").levels.filter((l) => l.land === d.k), lj = JSON.parse(fs.readFileSync(path.join(__dirname, "lands", d.slug, "land.json"), "utf8")), PP = LP.profileOf(lj, LCF), era = LC.castleRealms + d.k;
+    const LV = LEVELS_ALL.levels.filter((l) => l.land === d.k), GV = require("../tools/build-data/levels/gallery.json").levels.filter((l) => l.land === d.k), lj = JSON.parse(fs.readFileSync(path.join(__dirname, "lands", d.slug, "land.json"), "utf8")), PP = LP.profileOf(lj, LCF), era = LC.castleRealms + d.k;
     const SS = require("../map/layout.json").sheets.filter((S) => S.land === d.k), BC = require("./bake-config.json"), GB = require("./gallery-config.json").bake;
     const bad = LV.filter((L, i) => L.n !== d.from + i || L.era !== era || L.id !== "e" + era + "-" + L.n || E.replay(E.compile(L), E.rulesOf(V3, L.tag), L.win[L.tag]).status !== E.WON || L.win[L.tag].length > LCF.bake.maxTaps || L.grade[L.tag].maxWait > LCF.bake.maxWaitMs || (L.shade && !SH.checkLevel(L, CC).ok)).map((L) => L.id);
     const rg = require("./regrade.js").regrade(LV, BC, V3, true), rs = require("./regrade.js").regrade(GV, GB, V3, true), pc = LP.planCheck(LV, lj, PP, D5, LC.perLand);
@@ -1850,13 +1850,13 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   }
 }
 
-// ==== v6 lane B: Zen mode (levels/zen.json; tools/zen-mode-notes.md) ======================================================
+// ==== v6 lane B: Zen mode (tools/build-data/levels/zen.json; tools/zen-mode-notes.md) ======================================================
 // The world list and its data, World 1's records against the land gates (they are re-graded with 0 differences), the
 // openness rule (every world's first level open), the Zen save (sanitize, the wallet accessors, the write), the one-time
 // move on every save shape, SP2 round trips, SP1 still read, egg ids apart from the castle's.
 {
-  const fs = require("fs"), path = require("path"), S = require("../src/save.js"), Z = JSON.parse(fs.readFileSync(path.join(__dirname, "../levels/zen.json"), "utf8")), CFG = require("../config.json");
-  const ALLG = require("../levels/gallery.json").levels, LAY = require("../map/layout.json"), BC = require("./bake-config.json"), LP = require("./land-plan.js");
+  const fs = require("fs"), path = require("path"), S = require("../src/save.js"), Z = JSON.parse(fs.readFileSync(path.join(__dirname, "../tools/build-data/levels/zen.json"), "utf8")), CFG = require("../config.json");
+  const ALLG = require("../tools/build-data/levels/gallery.json").levels, LAY = require("../map/layout.json"), BC = require("./bake-config.json"), LP = require("./land-plan.js");
   const W1all = Z.levels.filter((L) => L.world === 1), W1 = W1all.slice(0, 36), W1add = W1all.slice(36), took = new Set(W1.map((L) => L.from)), wl = JSON.parse(fs.readFileSync(path.join(__dirname, "lands/z1-gallery/world.json"), "utf8"));
   eq([Z.worlds.map((w) => [w.k, w.name, !!w.land]), W1all.length, W1.every((L, i) => L.id === "z1-" + (i + 1) && L.n === i + 1 && L.era === Z.worlds[0].era && require("./campaign-quests/quests.json").v5Places.includes(L.from) && !ALLG.some((g) => g.id === L.from) && !!L.title && !!L.credit), took.size,
     W1add.every((L, i) => L.id === "z1-" + (37 + i) && L.n === 37 + i && L.era === Z.worlds[0].era && !L.from && L.src === wl.add.main[i] && L.kind === "painting" && !!L.title && !!L.credit)],
@@ -1977,10 +1977,10 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   const fs = require("fs"), path = require("path"), S = require("../src/save.js"), JN = require("../src/journey.js"), CFG = require("../config.json");
   const PL = JSON.parse(fs.readFileSync(path.join(__dirname, "../levels/places.json"), "utf8")), places = PL.places, v5 = places.slice(0, PL.v5);
   // v6 merge: the same proof on lane A's gallery at f4b4a60 (the fixture) and on the merged tree's own gallery.json.
-  for (const [where, LA] of [["lane A at f4b4a60", JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/lane-a-gallery.json"), "utf8")).levels], ["the merged gallery.json", require("../levels/gallery.json").levels]]) {
+  for (const [where, LA] of [["lane A at f4b4a60", JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/lane-a-gallery.json"), "utf8")).levels], ["the merged gallery.json", require("../tools/build-data/levels/gallery.json").levels]]) {
   const LAI = LA.map((g) => g.id), tag = (t) => t + " (" + where + ")";
-  const CUR = require("../levels/gallery.json").levels, CURI = CUR.map((g) => g.id), FROZ = JSON.parse(fs.readFileSync(path.join(__dirname, "..", V5.freeze.dir, "gallery.json"), "utf8")).levels.map((g) => g.id);
-  const Z = JSON.parse(fs.readFileSync(path.join(__dirname, "../levels/zen.json"), "utf8")), W1 = Z.levels.filter((L) => L.world === 1 && L.from), LAY = require("../map/layout.json"); // D15: World 1's Gallery 36 (its 14 new pictures have no Gallery source)
+  const CUR = require("../tools/build-data/levels/gallery.json").levels, CURI = CUR.map((g) => g.id), FROZ = JSON.parse(fs.readFileSync(path.join(__dirname, "..", V5.freeze.dir, "gallery.json"), "utf8")).levels.map((g) => g.id);
+  const Z = JSON.parse(fs.readFileSync(path.join(__dirname, "../tools/build-data/levels/zen.json"), "utf8")), W1 = Z.levels.filter((L) => L.world === 1 && L.from), LAY = require("../map/layout.json"); // D15: World 1's Gallery 36 (its 14 new pictures have no Gallery source)
   const ALLO = LEVELS_ALL.levels.map((l) => l.id), KF = LEVELS_ALL.levels.filter((l) => l.land === 1).map((l) => l.id);
   eq([PL.v5, v5.length, JSON.stringify(v5) === JSON.stringify(require("./campaign-quests/quests.json").v5Places), new Set(places).size === places.length, CURI.every((id) => places.includes(id)), LAI.every((id) => places.includes(id)), W1.every((L) => v5.includes(L.from))],
     [72, 72, true, true, true, true, true], "places.json: the first 72 are v5.4's Gallery order (the frozen 60, then the Wandering Gallery), no id twice, every picture of this branch and of lane A's gallery.json has a place, every World 1 source among v5's");
@@ -2021,7 +2021,7 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
 {
   const fs = require("fs"), path = require("path"), CFG = require("../config.json"), TU = JSON.parse(fs.readFileSync(path.join(__dirname, "../levels/tutorial.json"), "utf8"));
   const ST = TU.steps, R = E.rulesOf(V3, "normal"), WORDS = ["never", "play", "used", "wait", "lineEmpty", "full", "reveal", "shown", "pick", "power", "canRecall", "clear", "won", "jammed"];
-  const others = new Set(LEVELS_ALL.levels.map((l) => l.id).concat(require("./build-data/teaching.json").levels.map((l) => l.id), require("../levels/zen.json").levels.map((l) => l.id), require("../levels/gallery.json").levels.map((l) => l.id)));
+  const others = new Set(LEVELS_ALL.levels.map((l) => l.id).concat(require("./build-data/teaching.json").levels.map((l) => l.id), require("../tools/build-data/levels/zen.json").levels.map((l) => l.id), require("../tools/build-data/levels/gallery.json").levels.map((l) => l.id)));
   const words = (w) => String(w).split("|").every((a) => a.split("&").every((x) => WORDS.indexOf(x.replace(/^!/, "").split(":")[0]) >= 0));
   eq([ST.length, CFG.tutorial.file, [CFG.save.key, CFG.zen.save.key].indexOf(CFG.tutorial.key)], [8, "levels/tutorial.json", -1], "tour: 8 practice forts (the 9th step is the closing card), its own seen-flag key apart from both saves");
   for (const st of ST) {
@@ -2050,12 +2050,41 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   }
 }
 
+// v7 lane T (tools/space-v7-notes.md): the packed level files. The source (tools/build-data/levels/) is the truth; the
+// shipped levels/*.pk.json are exactly what tools/pack.js writes from it; every record of every file (Campaign 1-250,
+// the Gallery's pictures, every Zen world) unpacks to its source record less the bake-only fields, and the page reads
+// none of those (no `L.<field>` or `L["<field>"]` in src/ or index.html). Stage 3: each Zen world's records ship in
+// their own file and only there; the index's stand-ins carry each level's id, number, era, world or land, tag, Gallery
+// source and shade flag exactly as its record; the page builds the same level list (Campaign, then land worlds).
+{ const fs = require("fs"), path = require("path"), P = require("../src/pack.js"), PK = require("./pack.js"), S = PK.source(), B = PK.build(S), G = path.join(__dirname, "..");
+  const stale = Object.keys(B).filter((f) => !fs.existsSync(path.join(G, "levels", f)) || fs.readFileSync(path.join(G, "levels", f), "utf8") !== B[f]);
+  const stray = fs.readdirSync(path.join(G, "levels")).filter((f) => /\.pk\.json$/.test(f) && !B[f]);
+  ok(!stale.length && !stray.length, "pack: the shipped levels/*.pk.json are what tools/pack.js writes from tools/build-data/levels/" + (stale.length || stray.length ? " (stale: " + stale.concat(stray).join(", ") + "; run tools/pack.js)" : ""));
+  const SH = PK.shipped(G), all = S.levels.levels.concat(S.gallery.levels, S.zen.levels), rt = [], sh = [], plain = []; let n = 0;
+  for (const L of all) { n++; const want = P.strip(L); if (!P.same(P.unpack(P.pack(L)), want)) rt.push(L.id); if (!P.same(SH.byId.get(L.id), want)) sh.push(L.id); const K = P.pack(L); for (const k of ["grid", "cols", "pal"]) if (typeof K[k] !== "string") plain.push(L.id + "." + k); }
+  eq([n, SH.byId.size, rt, sh, plain], [all.length, all.length, [], [], []], "pack: unpack(pack(x)) equals x less the bake-only fields for every record (" + n + "), the shipped files hold each record once and it unpacks to the source's, every grid, deck and palette packed");
+  const page = ["index.html"].concat(fs.readdirSync(path.join(G, "src")).map((f) => "src/" + f)).map((f) => fs.readFileSync(path.join(G, f), "utf8")).join("\n");
+  eq(P.DROP.filter((k) => new RegExp("\\bL\\s*\\.\\s*" + k + "\\b|\\bL\\s*\\[\\s*[\"']" + k + "[\"']").test(page)), [], "pack: the page reads no dropped field off a level (" + P.DROP.join(", ") + ")");
+  // Stage 3: the index and the world files.
+  const IX = SH.index, lands = new Set(IX.worlds.filter((w) => w.land).map((w) => w.land)), bad = [], camp = JSON.parse(B["levels.pk.json"]).levels.map((L) => L.id);
+  for (const w of IX.worlds) { const src = w.land ? S.levels.levels.filter((L) => L.land === w.land) : S.zen.levels.filter((L) => L.world === w.k), file = JSON.parse(B[w.recs.file]).levels;
+    if (file.map((L) => L.id).join() !== src.map((L) => L.id).join()) bad.push("world " + w.k + ": its file's ids are not its records'");
+    src.forEach((L, i) => { const st = P.stub(w.recs, i), want = { id: L.id, n: L.n, stub: true }; for (const k of ["era", "world", "land", "tag", "from"]) if (L[k] !== undefined && L[k] !== null) want[k] = L[k]; if (L.shade) want.shade = true;
+      if (!P.same(Object.keys(st).sort().map((k) => [k, st[k]]), Object.keys(want).sort().map((k) => [k, want[k]]))) bad.push(L.id + " stand-in " + JSON.stringify(st)); });
+    const wsrc = S.zen.worlds.find((x) => x.k === w.k), back = Object.assign({}, P.unpackWorld(w)); delete back.recs; if (!P.same(back, wsrc)) bad.push("world " + w.k + ": the index entry is not zen.json's"); }
+  const order = camp.concat(IX.worlds.filter((w) => w.land).flatMap((w) => w.recs.ids)), want = S.levels.levels.map((L) => L.id);
+  eq([bad, order.join() === want.join(), camp.some((id) => lands.has((S.levels.levels.find((L) => L.id === id) || {}).land))], [[], true, false], "pack (stage 3): each Zen world's records in its own file only, the index's stand-ins match the records, its worlds unpack to zen.json's, the page's level order (Campaign, then land worlds) is levels.json's");
+  const kb = (f) => (fs.statSync(path.join(G, "levels", f)).size / 1024).toFixed(1), per = (f, k) => Math.round(fs.statSync(path.join(G, "levels", f)).size / k);
+  console.log("  packed: Campaign " + per("levels.pk.json", camp.length) + " B a level, Gallery " + per("gallery.pk.json", S.gallery.levels.length) + ", Zen worlds " + IX.worlds.map((w) => w.k + ": " + per(w.recs.file, w.recs.ids.length)).join(", ") + " (file / records); Zen index " + kb("zen.pk.json") + " KB");
+}
+
 // v6 lane D9: the shipped folder (the game minus tools/; config v5.ship). Under the cap, and levels/ holds only the files
 // listed there; build-only data goes in tools/build-data/ (the freeze snapshot, the bake pools, the teaching source).
 { const fs = require("fs"), path = require("path"), SH = V5.ship, G = path.join(__dirname, ".."); let bytes = 0, files = 0;
   const walk = (d) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { if (e.name[0] === "." || (d === G && e.name === "tools")) continue;
     const p = path.join(d, e.name); if (e.isDirectory()) walk(p); else { bytes += fs.statSync(p).size; files++; } } };
-  walk(G); const extra = fs.readdirSync(path.join(G, "levels")).filter((f) => f[0] !== "." && SH.levels.indexOf(f) < 0);
+  const worlds = JSON.parse(fs.readFileSync(path.join(G, "levels/zen.pk.json"), "utf8")).worlds.map((w) => w.recs.file); // v7 lane T: each Zen world's file, named by the index
+  walk(G); const extra = fs.readdirSync(path.join(G, "levels")).filter((f) => f[0] !== "." && SH.levels.indexOf(f) < 0 && worlds.indexOf(f) < 0);
   console.log("  shipped folder (minus tools/): " + files + " files, " + bytes.toLocaleString("en-US") + " B");
   ok(bytes <= SH.capBytes && !extra.length, "shipped folder: " + bytes.toLocaleString("en-US") + " B (cap " + SH.capBytes.toLocaleString("en-US") + ")" + (extra.length ? "; levels/ holds files the page never reads: " + extra.join(", ") + " (move them to tools/build-data/ or list them in config v5.ship.levels)" : ""));
 }

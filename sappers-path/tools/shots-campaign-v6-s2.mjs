@@ -12,7 +12,7 @@
 import { mkdirSync, readFileSync } from "node:fs"; import { dirname, resolve } from "node:path"; import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url)), arg = (k, d) => { const i = process.argv.indexOf("--" + k); return i > 0 ? process.argv[i + 1] : d; };
 const URL_ = arg("url", "http://127.0.0.1:8498/"), OUT = resolve(here, "shots-campaign-v6-s2"); mkdirSync(OUT, { recursive: true });
-const LV = JSON.parse(readFileSync(resolve(here, "../levels/levels.json"), "utf8")).levels, CFG = JSON.parse(readFileSync(resolve(here, "../config.json"), "utf8")), LY = CFG.layout;
+const LV = JSON.parse(readFileSync(resolve(here, "../tools/build-data/levels/levels.json"), "utf8")).levels, CFG = JSON.parse(readFileSync(resolve(here, "../config.json"), "utf8")), LY = CFG.layout;
 const byN = (n) => LV.find((l) => l.n === n), ids = LV.filter((l) => l.n <= 200).map((l) => l.id);
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE);
 const b = await chromium.launch(), log = [], rows = []; let bad = 0;

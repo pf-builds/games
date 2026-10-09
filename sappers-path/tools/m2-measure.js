@@ -7,7 +7,7 @@
 // known (cheat), which shows what the "?" costs a player who looks two moves ahead.
 //   ~/.local/opt/node/bin/node tools/m2-measure.js [games, default 200] [look2 games, default 60]
 "use strict";
-const E = require("../src/engine.js"), R = require("./grade.js"), V3 = require("../config.json").v3, LV = require("../levels/levels.json").levels;
+const E = require("../src/engine.js"), R = require("./grade.js"), V3 = require("../config.json").v3, LV = require("../tools/build-data/levels/levels.json").levels;
 const G = +process.argv[2] || 200, G2 = +process.argv[3] || 60, rules = E.rulesOf(V3, "normal");
 const SAMPLE = [46, 48, 49, 52, 54, 57, 61, 64, 69, 73];
 const copy = (o) => JSON.parse(JSON.stringify(o));

@@ -2,7 +2,7 @@
 import fs from 'fs'; import path from 'path'; import { fileURLToPath } from 'url';
 const PW = await import(process.env.PLAYWRIGHT_MODULE); const { chromium } = PW.default || PW;
 const here = path.dirname(fileURLToPath(import.meta.url)), root = path.resolve(here, '../..'), SHOTS = path.join(root, 'tools/shots-v4-critic1/functional');
-const BASE = 'http://127.0.0.1:8492/sappers-path/', cfg = JSON.parse(fs.readFileSync(path.join(root, 'config.json'))), LV = JSON.parse(fs.readFileSync(path.join(root, 'levels/levels.json'))).levels;
+const BASE = 'http://127.0.0.1:8492/sappers-path/', cfg = JSON.parse(fs.readFileSync(path.join(root, 'config.json'))), LV = JSON.parse(fs.readFileSync(path.join(root, 'tools/build-data/levels/levels.json'))).levels;
 const DBG = JSON.parse(fs.readFileSync(path.join(root, 'levels/debug-v4.json'))).levels;
 const R = {}, errs = []; const ok = (k, pass, info) => { R[k] = { pass: !!pass, info }; console.log((pass ? 'PASS ' : 'FAIL ') + k + ' :: ' + (typeof info === 'string' ? info : JSON.stringify(info)).slice(0, 600)); };
 const b = await chromium.launch();

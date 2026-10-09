@@ -54,7 +54,7 @@
 // Critics 1 fix 2: rods run between rivets on the tiles' facing rims, never over a face; the rows behind sit on darker
 // tray bands (layout.fade.band); the desktop tray ends at the queue; in the top bar the coach sits beside the level's
 // number, one line (a step's short text).
-// v4 M4, the Gallery (levels/gallery.json, config.gallery): picture levels with their own palettes (ring boards then). The
+// v4 M4, the Gallery (levels/gallery.json, from v7 shipped packed as levels/gallery.pk.json; config.gallery): picture levels with their own palettes (ring boards then). The
 // Gallery screen (a grid of the pictures: dimmed until won, then in colour with its title; the count; a plain-text
 // credits line, no links) opens from the title and the map once siege level gallery.openAt is won; before that both
 // buttons are locked and say so. Every picture is open once the Gallery is; a win goes in the save's gal (per
@@ -116,7 +116,7 @@
 // Settings' place and goes back to it. After a reset or a load: the home, with a toast over the screens (#toast.over).
 (function () {
   "use strict";
-  const NS = window.SappersPath, E = NS.engine, Save = NS.save, Board = NS.board, Art = NS.art, Audio = NS.audio, Meta = NS.meta;
+  const NS = window.SappersPath, Pk = NS.pack, E = NS.engine, Save = NS.save, Board = NS.board, Art = NS.art, Audio = NS.audio, Meta = NS.meta;
   const V_ = (document.currentScript && new URL(document.currentScript.src).searchParams.get("v")) || "1";
   const DEBUG = new URLSearchParams(location.search).get("debug") === "1";
   const TAGS = ["easy", "normal", "hard", "extreme"], $ = (id) => document.getElementById(id);
@@ -134,20 +134,20 @@
     // on app.clock, the win's report, a power-up waiting for its target (pick: {k}), the bar's badges, the icons' URLs.
     lay: null, jr: null, // v5 R3: map/layout.json and the journey map's built parts
     meta: null, now: () => Date.now(), rows: 3, t0: 0, report: null, pick: null, pws: [], icoURL: {}, pwPop: [-1e12, -1e12, -1e12, -1e12], lifeTxt: "", countTxt: "", carry: -1,
-    hold: -1, loadR: null, clipFake: null, held: false }; // lands foundation: held, Settings open over a level // v5.4: the reset hold's start on app.clock (-1: none); a load's decoded code; selfTest's clipboard
+    hold: -1, loadR: null, clipFake: null, held: false, zw: null, wload: {}, pend: null, tapEl: null, painted: false, failUp: false }; // v7 lane T: the Zen worlds by k (the index), their loads, a level waiting on one // lands foundation: held, Settings open over a level // v5.4: the reset hold's start on app.clock (-1: none); a load's decoded code; selfTest's clipboard
   const togMute = Array.from(document.querySelectorAll(".tog-mute")), togMusic = Array.from(document.querySelectorAll(".tog-music")), togSfx = Array.from(document.querySelectorAll(".tog-sfx")), togSpeed = Array.from(document.querySelectorAll(".tog-speed")), togCb = Array.from(document.querySelectorAll(".tog-cb"));
 
   // ---- boot --------------------------------------------------------------------------------------------------------
   function getJSON(u) { return fetch(u, { cache: "no-cache" }).then((r) => { if (!r.ok) throw new Error(u + " " + r.status); return r.json(); }); }
   async function boot() {
     try {
-      const [cfg, lv] = await Promise.all([getJSON("config.json?v=" + V_), getJSON("levels/levels.json?v=" + V_)]);
+      const [cfg, lv] = await Promise.all([getJSON("config.json?v=" + V_), getJSON("levels/levels.pk.json?v=" + V_).then(Pk.unpackFile)]); // v7 lane T: packed (src/pack.js)
       app.cfg = cfg; indexLevels(lv);
     } catch (e) { $("load-msg").textContent = "Couldn't load the siege. Reload to try again."; return; }
     if (DEBUG) { try { indexDebug(await getJSON("levels/debug-v4.json?v=" + V_)); } catch (e) { /* no debug row */ } }
-    try { indexGallery(await getJSON("levels/gallery.json?v=" + V_)); } catch (e) { /* no side quests */ }
+    try { indexGallery(Pk.unpackFile(await getJSON("levels/gallery.pk.json?v=" + V_))); } catch (e) { /* no side quests */ }
     let raw = null; try { raw = await getJSON("map/layout.json?v=" + V_); } catch (e) { raw = null; /* no journey map: its Play still works */ }
-    let zen = null; try { zen = await getJSON("levels/zen.json?v=" + V_); } catch (e) { zen = null; /* no Zen mode: the campaign alone */ }
+    let zen = null; try { zen = zenIndex(await getJSON("levels/zen.pk.json?v=" + V_)); } catch (e) { zen = null; /* no Zen mode: the campaign alone */ } // v7 lane T: the index; each world's records load when it is played (loadWorld)
     try { const P = await getJSON("levels/places.json?v=" + V_); app.places = Array.isArray(P.places) ? P.places.map(String) : null; } catch (e) { app.places = null; /* the save codes fall back to gallery.json's order */ }
     if (!app.levels.length) { $("load-msg").textContent = "No levels found."; return; }
     modes(raw, zen); // v6 lane B: the two modes' levels, pictures and maps
@@ -172,7 +172,8 @@
     { const U = app.cfg.layout.upright, u = $("upright"); u.querySelector(".up-t").textContent = U.text; u.setAttribute("aria-label", U.text); }
     showScreen("title"); layout();
     if (NS.tutorial) app.tut = NS.tutorial.init({ app, $, v: V_, getJSON, storage, startLevel, showScreen, retry, switchMode, renderCoach, csave, zsave, zenOn, SP }); // v6 lane B part 2: the intro tour (src/tutorial.js)
-    requestAnimationFrame(frame);
+    requestAnimationFrame(frame); requestAnimationFrame(() => requestAnimationFrame(() => { app.painted = true; prefetch(false); })); // v7 lane T: after the first paint
+    window.addEventListener("click", (ev) => { app.tapEl = ev.target && ev.target.closest ? ev.target.closest("button") : null; if (app.failUp) { app.failUp = false; hideToast(); } }, true); window.addEventListener("click", () => { app.tapEl = null; }); // v7 fix pass: the button a tap started a level from (its busy state); a tap puts a load-fail toast away
     if (app.tut && app.tut.ready) await app.tut.ready; // fix pass: the tour's data in before SP (and its selfTest) is handed out
     $("btn-howto").hidden = !(app.tut && app.tut.loaded); $("btn-howto").addEventListener("click", () => { if (app.tut) app.tut.start(); }); // v6 ship fix: the home's How to play (the tour; hidden with no tour)
     if (DEBUG) window.SP = SP;
@@ -182,10 +183,57 @@
     const list = lv && Array.isArray(lv.levels) ? lv.levels : [];
     for (const L of list) {
       try { E.compile(L); } catch (e) { continue; }
-      const id = String(L.id); if (app.byId.has(id)) continue;
-      const entry = { L, id, n: L.n | 0, era: L.era | 0, idx: app.levels.length, node: null, boss: (app.cfg.boss || {})[id] || null }; // v5 R4 fix (S4): a boss's name and lines (config boss)
-      app.levels.push(entry); app.byId.set(id, entry); app.order.push(id);
+      addLevel(L);
     }
+  }
+  function addLevel(L) {
+    const id = String(L.id); if (app.byId.has(id)) return;
+    const entry = { L, id, n: L.n | 0, era: L.era | 0, idx: app.levels.length, node: null, boss: (app.cfg.boss || {})[id] || null }; // v5 R4 fix (S4): a boss's name and lines (config boss)
+    app.levels.push(entry); app.byId.set(id, entry); app.order.push(id);
+  }
+  // ---- v7 lane T: Zen worlds on demand (tools/space-v7-notes.md) ----------------------------------------------------------
+  // levels/zen.pk.json holds the worlds (as zen.json has them) and each one's recs: the ids, numbers, tags and the rest of
+  // what the home, the map and the saves read. Until a world's file (levels/zen-<k>.pk.json) loads, its levels hold
+  // stand-ins (src/pack.js stub; L.stub). A land world's stand-ins join the level list where levels.json had its records,
+  // so every order, save and code is built exactly as from the plain files. Returns {worlds, levels} as modes() reads it.
+  function zenIndex(J) {
+    const worlds = (J && Array.isArray(J.worlds) ? J.worlds : []).map(Pk.unpackWorld), levels = [];
+    for (const w of worlds) { const R = w.recs; if (!R || !Array.isArray(R.ids)) continue;
+      for (let i = 0; i < R.ids.length; i++) { const L = Pk.stub(R, i); if (w.land) addLevel(L); else levels.push(L); } }
+    app.zw = new Map(worlds.map((w) => [w.k, w])); return { worlds, levels };
+  }
+  const isStub = (e) => !!(e && e.L && e.L.stub);
+  // A world's records in (once; the same promise for every caller until it settles): each stand-in's entry takes its
+  // record, compiled. Resolves true, or false on a failed fetch (forgotten, so the next tap tries again; never throws).
+  function loadWorld(k) {
+    const w = app.zw && app.zw.get(k); if (!w || !w.recs) return Promise.resolve(true);
+    if (app.wload[k]) return app.wload[k];
+    return (app.wload[k] = getJSON("levels/" + w.recs.file + "?v=" + V_).then((J) => {
+      for (const P of J && Array.isArray(J.levels) ? J.levels : []) { const L = Pk.unpack(P), e = app.byId.get(String(L.id)); if (!isStub(e)) continue; try { E.compile(L); } catch (err) { e.bad = true; continue; } e.L = L; }
+      return true;
+    }).catch(() => { delete app.wload[k]; return false; }));
+  }
+  const allWorlds = () => Promise.all(app.zw ? [...app.zw.keys()].map(loadWorld) : []);
+  // A tap on a Zen level whose world is still loading: nothing changes on screen (no flash); the level starts once its
+  // record is in, unless the player has moved on (another level started, a retry, another screen: startLevel, retry and
+  // showScreen cancel it). A repeat tap on the same level is ignored. Past zen.load.toastMs of the page's clock the
+  // button tapped shows busy (.busy, aria-busy) and a toast says it's opening; a failed load says so for zen.load.failMs
+  // (or until the next tap) and leaves the screen as it is.
+  function wantLevel(e) {
+    if (app.pend && app.pend.id === e.id) return; cancelPend();
+    const Z = ZT(), p = (app.pend = { id: e.id, at: app.clock, toast: false, k: e.world, el: app.tapEl || null });
+    loadWorld(e.world).then((ok) => { if (app.pend !== p) return; cancelPend();
+      if (ok && !isStub(e) && !e.bad) startLevel(e.id); else { toast(fill(Z.loadFail, { k: p.k }), true); $("toast").classList.add("wide"); app.toastT = app.clock + app.cfg.zen.load.failMs; app.failUp = true; } }); // .wide: two lines at 375 px, not half the screen
+  }
+  function pendStep() { const p = app.pend; if (p.toast || app.clock - p.at < app.cfg.zen.load.toastMs) return; p.toast = true; toast(fill(ZT().loading, { k: p.k })); app.toastT = app.clock + 1e9; if (p.el) { p.el.classList.add("busy"); p.el.setAttribute("aria-busy", "true"); } } // held until the load settles
+  function cancelPend() { const p = app.pend; if (!p) return; if (p.toast) hideToast(); if (p.el) { p.el.classList.remove("busy"); p.el.removeAttribute("aria-busy"); } app.pend = null; }
+  // The world the Zen save continues into, fetched ahead (config zen.load.prefetch), never before the first paint:
+  // on the home when Zen is the mode played last or has any progress (a new player fetches nothing until Zen), and
+  // whenever the Zen map opens (map: true).
+  function prefetch(map) {
+    if (!app.painted || !zenOn() || !app.cfg.zen.load.prefetch) return; const z = zsave(); if (!z) return; const d = z.data;
+    if (!map && d.mode !== "zen" && !Object.keys(d.done).length && !Object.keys(d.gal).length) return;
+    const e = app.byId.get(nextOf(d, "zen")); if (isStub(e)) loadWorld(e.world);
   }
   // v4 M2 debug levels (?debug=1 only): reachable by id and from the map's "v4 twists" row, never in the play order, so
   // they never touch the save's progress.
@@ -209,7 +257,7 @@
   // ---- v6 lane B: two modes (tools/zen-mode-notes.md) -------------------------------------------------------------------
   // Campaign: the castle levels 1-200 and the castle Gallery's side quests on the castle sheets (lands' levels, pictures
   // and sheets are left out at run time; so are the pictures Zen World 1 took, the ones its records name as `from`).
-  // Zen (levels/zen.json worlds): each world's levels (its own records, or a land's from levels.json), a land world's side
+  // Zen (zen.json worlds; from v7 the index levels/zen.pk.json, zenIndex): each world's levels (its own records, or a land's from levels.json), a land world's side
   // quests and its sheets; a world of its own reuses castle sheets (map.sheets: from, mirror, levels). Every world's
   // first level is open from the start (the order's starts), one by one inside it. Each mode has its own levels, order,
   // pictures, map layout, realms and built map; useMode swaps them onto app (so the rest of the page reads one mode),
@@ -223,7 +271,7 @@
     for (const e of cl.concat(cg)) e.mode = "campaign";
     if (!Z || !Array.isArray(Z.worlds) || !Z.worlds.length) return;
     // Zen World records (their own ids), then each world in turn.
-    const recs = new Map(); for (const L of zlist) { try { E.compile(L); } catch (e) { continue; } const id = String(L.id); if (app.byId.has(id)) continue;
+    const recs = new Map(); for (const L of zlist) { if (!L.stub) { try { E.compile(L); } catch (e) { continue; } } const id = String(L.id); if (app.byId.has(id)) continue; // v7 lane T: stand-ins compile when their world loads
       const e = { L, id, n: L.n | 0, era: L.era | 0, idx: app.allLevels.length + recs.size, node: null }; recs.set(id, e); app.byId.set(id, e); }
     const zl = [], zg = [], sheets = [], eras = [], starts = new Set(), zinfo = [];
     for (const w of Z.worlds) {
@@ -1116,6 +1164,8 @@
   // ---- screens and levels --------------------------------------------------------------------------------------------
   function showScreen(name) {
     if (name === "gallery") name = "map"; // v5 R3: the Gallery is the journey map now
+    if (name !== "play") cancelPend(); // v7 lane T: the player moved on from a level waiting on its world
+    if (name === "title") prefetch(false); if (name === "map" && app.mode === "zen") prefetch(true); // v7 fix pass (M1): ahead of the tap, before the map's sheets ask
     if (name !== "play") { app.pick = null; document.body.classList.remove("picking"); }
     $("settings").hidden = true; $("tailsheet").hidden = true; holdStop(); for (const k of SUBS) $(k).hidden = true; // v5.4: its sheets too
     app.screen = name; app.held = false; document.body.classList.remove("held"); document.body.dataset.mode = app.mode || "campaign"; music(); // lands foundation: no Settings over a new screen
@@ -1129,6 +1179,8 @@
   }
   function startLevel(id) {
     const e = app.byId.get(id) || app.levels[0];
+    if (isStub(e) || (e && e.bad)) { wantLevel(e); return null; } // v7 lane T: its world's file first
+    cancelPend(); // v7 fix pass (B1): a level started now wins over one still waiting on its world
     if (modeOf(e) && modeOf(e) !== app.mode) useMode(modeOf(e)); // v6: a level plays in its own mode (its save, map and words)
     $("board").setAttribute("aria-label", app.mode === "zen" ? ZT().boardAria || "The picture" : "The fort"); // fix pass (MINOR-1)
     if (!livesLeft()) return null; // v4 M5: lives on and none left: no level starts (the toast says when the next comes)
@@ -1153,7 +1205,7 @@
   // v4 M3: a tile's flip or shake from the last game lands at once when a level starts (a flip left mid-turn has no width).
   function landTiles() { for (const b of app.cards.concat(app.nexts.flat())) if (b.getAnimations) for (const a of b.getAnimations()) if (a.effect && isFinite(a.effect.getComputedTiming().endTime)) a.finish(); }
   function retry() {
-    if (!app.S) return;
+    if (!app.S) return; cancelPend(); // v7 fix pass (B1)
     if (!livesLeft()) { showScreen("title"); return; } // v4 M5: no lives left: home, where the refill time shows
     app.S.reset(); app.et = 0; app.t0 = app.clock; app.report = null; app.pick = null; app.pwPop.fill(-1e12); app.V.reset(); app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.popK = 0; app.used = 0; app.march = false; app.blockT = -1e12; $("panel").hidden = true; $("stage-pic").hidden = true; hideToast();
     app.unlockT = -1e12; app.lockWas.fill(false); app.lockSock.fill(-1); app.slotUnT.fill(-1e12); app.flip.fill(false); app.reveals = 0; app.pairsOut = 0; landTiles(); roundSpeed(); // v5 R1
@@ -1221,6 +1273,7 @@
     if (app.ending.won && app.entry.debug) app.ending.first = false;
     else if (app.ending.won && app.entry.gallery) { app.ending.first = Save.record(app.save.data, app.entry.id, "gal"); app.ending.prize = app.ending.first ? questPrize(app.entry) : -1; writeSave(); }
     else if (app.ending.won) { app.ending.first = Save.record(app.save.data, app.entry.id); app.save.data.last = nextOf(app.save.data); writeSave(); }
+    if (app.ending.won && app.mode === "zen") { const nx = app.byId.get(nextOf()); if (isStub(nx)) loadWorld(nx.world); } // v7 lane T: Next may cross into a world not loaded yet
     // v4 M5: the report. A win of a siege level or a Gallery picture: real play time (app.clock: pauses excluded), taps,
     // coins (by the level's tag, more on its first clear), best time and taps. A fail with lives on costs one.
     const e = app.entry, rewarded = !e.debug && (e.gallery || e.idx >= 0);
@@ -1542,7 +1595,7 @@
     target: app.focusEl ? app.focusEl.id || app.focusEl.className : null, ring: app.V.focus.on, oneLine: !t.classList.contains("two"), fits: t.scrollWidth <= t.clientWidth && t.scrollHeight <= t.clientHeight }; };
 
   // ---- toasts, audio, toggles ----------------------------------------------------------------------------------------
-  function toast(text, bad, board) { const t = $("toast"); t.textContent = text; t.classList.toggle("bad", !!bad); t.hidden = false; app.toastBoard = !!board; placeToast(); app.toastT = app.clock + app.cfg.show.toastMs; }
+  function toast(text, bad, board) { app.failUp = false; const t = $("toast"); t.classList.remove("wide"); t.textContent = text; t.classList.toggle("bad", !!bad); t.hidden = false; app.toastBoard = !!board; placeToast(); app.toastT = app.clock + app.cfg.show.toastMs; }
   // v4.3 fix (m2): on a wide screen a toast in play sits just above the side column's tray (by the cards and the line it is
   // about), as wide as the tray at most; elsewhere at the board's foot, as before. Campaign v6 fix (visual critic S5): a
   // level's start toast (board: the pin and kill warnings, about the board's towers) always sits at the board's foot, so on
@@ -1552,7 +1605,7 @@
     if (!side) { t.style.left = ""; t.style.top = ""; t.style.maxWidth = ""; return; }
     const r = $("tray").getBoundingClientRect(); t.style.left = r.left + r.width / 2 + "px"; t.style.top = r.top - app.cfg.layout.toastGapPx + "px"; t.style.maxWidth = r.width + "px";
   }
-  function hideToast() { $("toast").hidden = true; app.toastT = -1e12; }
+  function hideToast() { $("toast").hidden = true; app.toastT = -1e12; app.failUp = false; }
   function cue(name, arg) { app.cues[name] = (app.cues[name] | 0) + 1; if (app.audio && !app.testing) Audio.cue(app.audio, name, arg, app.clock); }
   // v5.2: the screen's music track (asked for on every showScreen; the same track carries on), and the win's jingle
   // (counted in app.cues like a cue; not played while selfTest runs).
@@ -1831,6 +1884,7 @@
     if (app.tut) app.tut.step(); // v6 lane B part 2: the tour's steps and done cards (src/tutorial.js)
     if (app.screen === "title" && app.meta.lives) livesPill(); // v4 M5: the refill countdown (a DOM write only when it changes)
     if (app.hold >= 0) holdStep(); // v5.4: the reset hold
+    if (app.pend) pendStep(); // v7 lane T: a Zen level waiting on its world
     if (app.held) return; // lands foundation: Settings open over a level holds it still
     if (app.screen !== "play" && app.toastT > 0 && app.clock >= app.toastT) hideToast(); // v5.4: a toast over the home or map goes too
     if (app.screen !== "play" || !app.B) return;
@@ -3214,8 +3268,10 @@
     return out;
   }
   // v4.3: load(id) plays the level on its own tag (a second argument is ignored: no difficulty picker).
-  const SP = { play: playCol, state, load: (id) => { startLevel(resolve(id)); return state(); }, retry: () => { retry(); return state(); }, tick,
-    solve: (nodes) => solveHere(nodes), selfTest, coach: coachState, cues: () => Object.assign({}, app.cues), fx: () => app.V.fxInfo(), hits: () => app.V.hitInfo(), runners: () => app.V.runners(),
+  // v7 lane T: load() of a Zen level whose world isn't in yet waits for it (a promise); selfTest() loads every world
+  // first (its checks play every Zen level); worlds() reports each world's file: loaded, loading or not asked for.
+  const SP = { play: playCol, state, load: (id) => { const r = resolve(id), e = app.byId.get(r); if (isStub(e)) return loadWorld(e.world).then(() => { startLevel(r); return state(); }); startLevel(r); return state(); }, retry: () => { retry(); return state(); }, tick,
+    solve: (nodes) => solveHere(nodes), selfTest: () => allWorlds().then(selfTest), worlds: () => (app.zw ? [...app.zw.values()].map((w) => ({ k: w.k, file: w.recs && w.recs.file, stubs: (app.modes.zen ? app.modes.zen.levels : []).filter((e) => e.world === w.k && isStub(e)).length, asked: !!app.wload[w.k] })) : []), pend: () => (app.pend ? Object.assign({}, app.pend) : null), coach: coachState, cues: () => Object.assign({}, app.cues), fx: () => app.V.fxInfo(), hits: () => app.V.hitInfo(), runners: () => app.V.runners(),
     paused: () => app.paused, held: () => app.held, upright: () => ({ on: app.upright, needed: uprightNeeded(innerWidth, innerHeight, coarse()), coarse: coarse() }), pause: () => { pause(); return app.paused; }, resume: () => { resume(); return app.paused; }, winOrder: () => (app.entry ? winOf(app.entry) : null),
     lossPlan: (id) => { const e = app.byId.get(resolve(id)) || app.entry; return e ? jamPlan(e, tagOf(e)) : null; }, hitPlan: (id) => { const e = app.byId.get(resolve(id)), T = app.cfg.selfTest; return e ? search(e, tagOf(e), (S) => S.hits > 0, T.searchTries, T.searchSeed) : null; }, settle: () => { settleNow(); return state(); }, reachable: (m) => (app.S ? app.S.reachable(m) : 0),
     // Screens for the harness: fill the line with rushed taps; stage k stuck and w working squads on level n (or the first

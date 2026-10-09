@@ -399,7 +399,7 @@ async function run() {
         await ev(() => { SP.play(1); for (let i = 0; i < 400; i++) { SP.tick(16); if (SP.fx().gates[0] === 1) break; } SP.tick(100); });
         await shot("gate-opening");
         // v5 R2: no level has towers until 125 (R4 builds them), so the archer-hit screen waits for those levels.
-        const towerN = (JSON.parse(readFileSync(resolve(here, "../levels/levels.json"), "utf8")).levels.find((l) => l.towers && l.towers.length) || {}).n;
+        const towerN = (JSON.parse(readFileSync(resolve(here, "../tools/build-data/levels/levels.json"), "utf8")).levels.find((l) => l.towers && l.towers.length) || {}).n;
         if (towerN) { await ev((n) => { const o = SP.hitPlan(n) || "2"; SP.load(n); for (let k = 0; k < o.length - 1; k++) { SP.play(+o[k]); SP.settle(); } SP.play(+o[o.length - 1]); for (let i = 0; i < 600; i++) { SP.tick(16); if (SP.hits().struck) break; } SP.tick(120); }, towerN); // v4.1: a patient order whose last tap walks into the ring
         const hh = await ev(() => SP.hits()); ok(hh.struck > 0 && hh.label, tag + " level " + towerN + ": an arrow has struck mid-show");
         await shot("archer-hit"); } else console.log("SKIP " + tag + " archer hit: no level with towers before 125 (v5 R2)");

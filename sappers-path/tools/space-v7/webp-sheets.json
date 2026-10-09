@@ -1,0 +1,182 @@
+{
+ "note": "v7 lane T stage 2: castle sheets JPEG -> WebP (Pillow WEBP method 6, quality 96 down by 2 to fit 250 KB, the land sheets' rule); psnr is the WebP against the JPEG it was made from.",
+ "jpg": 7225199,
+ "webp": 5840706,
+ "sheets": [
+  {
+   "sheet": 1,
+   "q": 94,
+   "jpg": 289781,
+   "webp": 239078,
+   "psnr": 43.31
+  },
+  {
+   "sheet": 2,
+   "q": 94,
+   "jpg": 271715,
+   "webp": 224922,
+   "psnr": 43.82
+  },
+  {
+   "sheet": 3,
+   "q": 94,
+   "jpg": 278654,
+   "webp": 232678,
+   "psnr": 43.99
+  },
+  {
+   "sheet": 4,
+   "q": 94,
+   "jpg": 284022,
+   "webp": 229806,
+   "psnr": 43.23
+  },
+  {
+   "sheet": 5,
+   "q": 94,
+   "jpg": 281830,
+   "webp": 238806,
+   "psnr": 43.57
+  },
+  {
+   "sheet": 6,
+   "q": 96,
+   "jpg": 257169,
+   "webp": 243282,
+   "psnr": 45.2
+  },
+  {
+   "sheet": 7,
+   "q": 92,
+   "jpg": 312240,
+   "webp": 237070,
+   "psnr": 42.31
+  },
+  {
+   "sheet": 8,
+   "q": 92,
+   "jpg": 319658,
+   "webp": 253532,
+   "psnr": 42.24
+  },
+  {
+   "sheet": 9,
+   "q": 92,
+   "jpg": 301081,
+   "webp": 233162,
+   "psnr": 42.33
+  },
+  {
+   "sheet": 10,
+   "q": 92,
+   "jpg": 301839,
+   "webp": 224982,
+   "psnr": 42.3
+  },
+  {
+   "sheet": 11,
+   "q": 92,
+   "jpg": 306744,
+   "webp": 235832,
+   "psnr": 42.23
+  },
+  {
+   "sheet": 12,
+   "q": 94,
+   "jpg": 275214,
+   "webp": 223792,
+   "psnr": 43.87
+  },
+  {
+   "sheet": 13,
+   "q": 94,
+   "jpg": 284647,
+   "webp": 244120,
+   "psnr": 43.58
+  },
+  {
+   "sheet": 14,
+   "q": 92,
+   "jpg": 296899,
+   "webp": 212866,
+   "psnr": 42.02
+  },
+  {
+   "sheet": 15,
+   "q": 94,
+   "jpg": 270875,
+   "webp": 221608,
+   "psnr": 43.64
+  },
+  {
+   "sheet": 16,
+   "q": 96,
+   "jpg": 262601,
+   "webp": 247676,
+   "psnr": 44.7
+  },
+  {
+   "sheet": 17,
+   "q": 94,
+   "jpg": 279276,
+   "webp": 239192,
+   "psnr": 43.65
+  },
+  {
+   "sheet": 18,
+   "q": 94,
+   "jpg": 266178,
+   "webp": 208540,
+   "psnr": 43.48
+  },
+  {
+   "sheet": 19,
+   "q": 92,
+   "jpg": 306367,
+   "webp": 237172,
+   "psnr": 42.16
+  },
+  {
+   "sheet": 20,
+   "q": 92,
+   "jpg": 303272,
+   "webp": 223998,
+   "psnr": 42.05
+  },
+  {
+   "sheet": 21,
+   "q": 92,
+   "jpg": 307618,
+   "webp": 237812,
+   "psnr": 42.25
+  },
+  {
+   "sheet": 22,
+   "q": 94,
+   "jpg": 292953,
+   "webp": 252548,
+   "psnr": 43.66
+  },
+  {
+   "sheet": 23,
+   "q": 92,
+   "jpg": 298745,
+   "webp": 243698,
+   "psnr": 42.7
+  },
+  {
+   "sheet": 24,
+   "q": 92,
+   "jpg": 293023,
+   "webp": 224678,
+   "psnr": 42.77
+  },
+  {
+   "sheet": 25,
+   "q": 94,
+   "jpg": 282798,
+   "webp": 229856,
+   "psnr": 43.78
+  }
+ ]
+}

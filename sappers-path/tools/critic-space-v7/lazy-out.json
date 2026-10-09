@@ -1,0 +1,319 @@
+{
+ "s1_base": {
+  "homeMs": 23310,
+  "reqsBeforeHome": 21,
+  "zenMapMs": 203,
+  "worldFiles": [],
+  "nodes": 200
+ },
+ "s1_new": {
+  "homeMs": 14355,
+  "reqsBeforeHome": 22,
+  "zenMapMs": 123,
+  "worldFiles": [],
+  "nodes": 200
+ },
+ "s2": [
+  {
+   "n": 1,
+   "tap": "ok",
+   "before": [],
+   "at150": {
+    "screen": "map",
+    "num": "",
+    "toast": "",
+    "pend": "{\"id\":\"z1-1\",\"at\":782.6000000000004,\"toast\":false,\"k\":1}"
+   },
+   "at750": {
+    "screen": "map",
+    "num": "",
+    "toast": "Opening World 1...",
+    "pend": "{\"id\":\"z1-1\",\"at\":782.6000000000004,\"toast\":true,\"k\":1}"
+   },
+   "playedMs": 10020,
+   "ok": true,
+   "end": {
+    "screen": "play",
+    "num": "1",
+    "toast": "",
+    "pend": "null"
+   },
+   "files": [
+    "zen-1"
+   ]
+  },
+  {
+   "n": 201,
+   "tap": "ok",
+   "before": [],
+   "at150": {
+    "screen": "map",
+    "num": "",
+    "toast": "",
+    "pend": "{\"id\":\"e9-201\",\"at\":782.5519999999997,\"toast\":false,\"k\":2}"
+   },
+   "at750": {
+    "screen": "map",
+    "num": "",
+    "toast": "Opening World 2...",
+    "pend": "{\"id\":\"e9-201\",\"at\":782.5519999999997,\"toast\":true,\"k\":2}"
+   },
+   "playedMs": 10113,
+   "ok": true,
+   "end": {
+    "screen": "play",
+    "num": "51",
+    "toast": "",
+    "pend": "null"
+   },
+   "files": [
+    "zen-2"
+   ]
+  },
+  {
+   "n": 251,
+   "tap": "ok",
+   "before": [],
+   "at150": {
+    "screen": "map",
+    "num": "",
+    "toast": "",
+    "pend": "{\"id\":\"z3-1\",\"at\":782.5519999999997,\"toast\":false,\"k\":3}"
+   },
+   "at750": {
+    "screen": "map",
+    "num": "",
+    "toast": "Opening World 3...",
+    "pend": "{\"id\":\"z3-1\",\"at\":782.5519999999997,\"toast\":true,\"k\":3}"
+   },
+   "playedMs": 10561,
+   "ok": true,
+   "end": {
+    "screen": "play",
+    "num": "101",
+    "toast": "",
+    "pend": "null"
+   },
+   "files": [
+    "zen-3"
+   ]
+  },
+  {
+   "n": 301,
+   "tap": "ok",
+   "before": [],
+   "at150": {
+    "screen": "map",
+    "num": "",
+    "toast": "",
+    "pend": "{\"id\":\"z4-1\",\"at\":799.2999999999993,\"toast\":false,\"k\":4}"
+   },
+   "at750": {
+    "screen": "map",
+    "num": "",
+    "toast": "Opening World 4...",
+    "pend": "{\"id\":\"z4-1\",\"at\":799.2999999999993,\"toast\":true,\"k\":4}"
+   },
+   "playedMs": 10872,
+   "ok": true,
+   "end": {
+    "screen": "play",
+    "num": "151",
+    "toast": "",
+    "pend": "null"
+   },
+   "files": [
+    "zen-4"
+   ]
+  }
+ ],
+ "s3": {
+  "home": {
+   "screen": "title",
+   "num": "",
+   "toast": "",
+   "pend": "null"
+  },
+  "p1": {
+   "screen": "play",
+   "num": "151",
+   "toast": "",
+   "pend": "null"
+  },
+  "after": {
+   "screen": "play",
+   "num": "151",
+   "toast": "",
+   "pend": "null"
+  },
+  "worlds": [
+   {
+    "k": 1,
+    "file": "zen-1.pk.json",
+    "stubs": 50,
+    "asked": false
+   },
+   {
+    "k": 2,
+    "file": "zen-2.pk.json",
+    "stubs": 50,
+    "asked": false
+   },
+   {
+    "k": 3,
+    "file": "zen-3.pk.json",
+    "stubs": 0,
+    "asked": true
+   },
+   {
+    "k": 4,
+    "file": "zen-4.pk.json",
+    "stubs": 0,
+    "asked": true
+   }
+  ]
+ },
+ "s4": {
+  "mid": {
+   "screen": "map",
+   "num": "1",
+   "toast": "Opening World 3...",
+   "pend": "{\"id\":\"z3-1\",\"at\":10915.552,\"toast\":true,\"k\":3}"
+  },
+  "p1": {
+   "screen": "play",
+   "num": "1",
+   "toast": "",
+   "pend": "{\"id\":\"z3-1\",\"at\":10915.552,\"toast\":true,\"k\":3}"
+  },
+  "after": {
+   "screen": "play",
+   "num": "101",
+   "toast": "",
+   "pend": "null"
+  },
+  "stateId": "z3-1",
+  "statePlays": 0
+ },
+ "s5": {
+  "fail": {
+   "screen": "map",
+   "num": "",
+   "toast": "Couldn't open World 4. Check the connection and try again.",
+   "pend": "null"
+  },
+  "later": {
+   "screen": "map",
+   "num": "",
+   "toast": "",
+   "pend": "null"
+  },
+  "retryOk": true,
+  "end": {
+   "screen": "play",
+   "num": "151",
+   "toast": "",
+   "pend": "null"
+  }
+ },
+ "s6": {
+  "at": {
+   "screen": "play",
+   "num": "50",
+   "toast": "",
+   "pend": "null"
+  },
+  "win": {
+   "s": "won",
+   "prim": "Back to map",
+   "worlds": [
+    {
+     "k": 1,
+     "file": "zen-1.pk.json",
+     "stubs": 0,
+     "asked": true
+    },
+    {
+     "k": 2,
+     "file": "zen-2.pk.json",
+     "stubs": 50,
+     "asked": true
+    },
+    {
+     "k": 3,
+     "file": "zen-3.pk.json",
+     "stubs": 50,
+     "asked": false
+    },
+    {
+     "k": 4,
+     "file": "zen-4.pk.json",
+     "stubs": 50,
+     "asked": false
+    }
+   ]
+  },
+  "mid": {
+   "screen": "map",
+   "num": "50",
+   "toast": "",
+   "pend": "null"
+  },
+  "ms": 60348,
+  "end": {
+   "screen": "map",
+   "num": "50",
+   "toast": "",
+   "pend": "null"
+  },
+  "st": "z1-50"
+ },
+ "s7": {
+  "prefetched": [
+   "zen-3"
+  ],
+  "ms": 42,
+  "end": {
+   "screen": "play",
+   "num": "108",
+   "toast": "",
+   "pend": "null"
+  },
+  "st": "z3-8"
+ },
+ "s8": {
+  "files": []
+ },
+ "bytes": {
+  "base": {
+   "home": 3457047,
+   "campaign": 6938181,
+   "zen": 6938181,
+   "zenList": [
+    "levels/levels.json?v=64",
+    "levels/gallery.json?v=64",
+    "map/layout.json?v=64",
+    "levels/zen.json?v=64",
+    "levels/places.json?v=64",
+    "levels/tutorial.json?v=64"
+   ]
+  },
+  "new": {
+   "home": 1854397,
+   "campaign": 5335531,
+   "zen": 5390342,
+   "zenList": [
+    "levels/levels.pk.json?v=65",
+    "levels/gallery.pk.json?v=65",
+    "map/layout.json?v=65",
+    "levels/zen.pk.json?v=65",
+    "levels/places.json?v=65",
+    "levels/tutorial.json?v=65",
+    "levels/zen-1.pk.json?v=65"
+   ]
+  }
+ },
+ "log": [
+  "new error: Failed to load resource: net::ERR_FAILED"
+ ]
+}

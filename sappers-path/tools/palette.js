@@ -1,12 +1,12 @@
 // Sapper's Path palette check (v4 M1, the look pass): CIEDE2000 between every pair of materials that stand together in a
-// level of levels/levels.json, the smallest pair per level, and the lightness gap (CIELAB L*) behind the grayscale
+// level of tools/build-data/levels/levels.json, the smallest pair per level, and the lightness gap (CIELAB L*) behind the grayscale
 // reading. Also the gap from each material to the muted ground it sits on. Nothing is written.
 //   ~/.local/opt/node/bin/node tools/palette.js                    the palette in config.json (v3.mats[].c)
 //   ~/.local/opt/node/bin/node tools/palette.js --try '["#..", ...]'  a candidate: 14 hex colours, material 1..14
 //   ~/.local/opt/node/bin/node tools/palette.js --opt [rounds]     search for a palette (hue families and lightness bands
 //                                                                  from PLAN below); prints the best one found
 //   --md '["#..", ...]'  a markdown before/after report: the argument is the BEFORE palette, config.json is AFTER
-//   --levels FILE        read the levels from FILE instead of levels/levels.json (v4 M3: a trial bake's output)
+//   --levels FILE        read the levels from FILE instead of tools/build-data/levels/levels.json (v4 M3: a trial bake's output)
 //   --scenes             v4.1 fix: the castle pictures' scenes (tools/bake-config.json picture.scenes): for each scene and
 //                        each era it serves, every pair of roles that can stand together in that era's pictures (must and
 //                        opt, less the scene's drop, with the black outline and the gilt keys), in the scene's colours,
@@ -73,7 +73,7 @@ if (process.argv.includes("--scenes")) {
 }
 
 // ---- which materials stand together ---------------------------------------------------------------------------------
-const LV = require(arg("levels") ? require("path").resolve(arg("levels")) : "../levels/levels.json").levels;
+const LV = require(arg("levels") ? require("path").resolve(arg("levels")) : "../tools/build-data/levels/levels.json").levels;
 const SETS = LV.map((L) => { const s = new Set(); for (const r of L.grid) for (const ch of r) { const k = ch.charCodeAt(0) - 96; if (k >= 1 && k <= 14) s.add(k); } return { n: L.n, id: L.id, mats: [...s].sort((a, b) => a - b) }; });
 const PAIRS = new Map(); // "a-b" -> levels
 for (const S of SETS) for (let i = 0; i < S.mats.length; i++) for (let j = i + 1; j < S.mats.length; j++) { const k = S.mats[i] + "-" + S.mats[j]; if (!PAIRS.has(k)) PAIRS.set(k, 0); PAIRS.set(k, PAIRS.get(k) + 1); }

@@ -1,6 +1,6 @@
 # Sapper's Path v5 map: picked paintings -> game sheets, layout and contact sheets.
 # Usage: /Users/peter/local-ai/.venv/bin/python assemble.py      (reads picks.json, guide-layout.json, plan.json)
-# Writes: ../../map/sheet-NN.jpg, ../../map/layout.json, ./contact.png, ./contact-seams.png, ./fidelity.json
+# Writes: ../../map/sheet-NN.webp (v7 lane T: WebP, the land sheets' rule; JPEG until v6.3), ../../map/layout.json, ./contact.png, ./contact-seams.png, ./fidelity.json
 #  1. edge restore: the coded road is laid back over the painting in the top and bottom bands, so the road meets
 #     every seam at the centre (the painting can drift a few px there)
 #  2. seam crossfade baked into each sheet's bottom `overlap` rows (draw later sheets over earlier ones: no mask needed)
@@ -90,7 +90,7 @@ for i in range(N):
         x, y, ok = nudge(mask, n["x"], n["y"], A["nodeNudge"])
         if not ok: flags.append(f"sheet {i + 1} level {n['n']}: no painted road within {A['nodeNudge']} px, kept the guide spot")
         lv.append({"n": n["n"], "x": round(x), "y": round(y)})
-    rec = {"sheet": i + 1, "file": f"sheet-{i + 1:02d}.jpg", "realm": g["realm"], "realmName": REALMS[g["realm"]]["name"],
+    rec = {"sheet": i + 1, "file": f"sheet-{i + 1:02d}.webp", "realm": g["realm"], "realmName": REALMS[g["realm"]]["name"],
            "levels": lv, "quests": [dict(q) for q in g["quests"]], "entry": g["entry"], "exit": road[-1] if RE else g["exit"], "road": road}
     # eggs: colour masks on the painted sheet
     r_, g_, b_ = img[..., 0], img[..., 1], img[..., 2]; lum = img.mean(2); sat = img.max(2) - img.min(2)
@@ -147,20 +147,21 @@ for i in range(N):
         rec[o["list"]][o["i"]].update({k: v for k, v in o.items() if k not in ("list", "i", "why")})
     layout["sheets"].append(rec)
 
-# ---- JPEGs (quality stepped down until the file fits the size cap)
+# ---- WebP (v7 lane T, tools/space-v7-notes.md: the land sheets' rule, quality 96 down by 2 until the file fits 250 KB,
+# method 6; R4c wrote JPEG, quality jpegMax down to jpegMin under maxKB)
 sizes = {}
 for i in range(N):
     im = Image.fromarray(np.clip(final[i], 0, 255).astype(np.uint8))
-    for q in range(A["jpegMax"], A["jpegMin"] - 1, -2):
-        buf = io.BytesIO(); im.save(buf, "JPEG", quality=q, optimize=True, progressive=True)
-        if buf.tell() <= A["maxKB"] * 1024: break
-    (MAP / f"sheet-{i + 1:02d}.jpg").write_bytes(buf.getvalue()); sizes[i + 1] = (q, buf.tell())
+    for q in range(96, 69, -2):
+        buf = io.BytesIO(); im.save(buf, "WEBP", quality=q, method=6)
+        if buf.tell() <= 250 * 1024: break
+    (MAP / f"sheet-{i + 1:02d}.webp").write_bytes(buf.getvalue()); sizes[i + 1] = (q, buf.tell())
 json.dump(layout, open(MAP / "layout.json", "w"), separators=(",", ":"))
 
 # ---- contact sheets: the whole stack as the game will draw it (from the JPEGs), with nodes, eggs and the Goblin King
 HT = N * H - (N - 1) * OV
 tall = Image.new("RGB", (W, HT))
-for i in range(N): tall.paste(Image.open(MAP / f"sheet-{i + 1:02d}.jpg"), (0, HT - i * STEP - H))
+for i in range(N): tall.paste(Image.open(MAP / f"sheet-{i + 1:02d}.webp"), (0, HT - i * STEP - H))
 def marks(dr, s, ox=0, oy=0):
     for rec in layout["sheets"]:
         t0 = HT - (rec["sheet"] - 1) * STEP - H

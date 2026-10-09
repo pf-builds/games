@@ -8,14 +8,14 @@
 //   ~/.local/opt/node/bin/node tools/debug-v4.js --check    re-solve in memory and diff against the file
 //   ... [--out DIR]                                         write DIR/debug-v4.json instead (a trial)
 //   ~/.local/opt/node/bin/node tools/debug-v4.js --rebuild FILE   M2's build, from a levels file (v4.1: the rebake's
-//                                                           levels/levels.json, so the debug levels are pictures too)
+//                                                           tools/build-data/levels/levels.json, so the debug levels are pictures too)
 // Deterministic: the same seeds give the same file. Each level must win on all three difficulties within the 55-tap
 // cap (bake-config maxTaps), its stored orders must hold no refused tap, and E.check must find nothing to warn about.
 // v4.3: no difficulty picker; every debug level plays on the Normal tag (tag "normal") and stores one order (win.normal),
 // re-solved under the v4.3 rules (a space frees at its squad's last pickup; a linked card goes only with its partner at
 // a front).
 //   ~/.local/opt/node/bin/node tools/debug-v4.js --add-v6   Campaign v6 stage 1: build the two v6 debug levels from the
-//                                                           shipped levels/levels.json and add them (or replace them) at
+//                                                           shipped tools/build-data/levels/levels.json and add them (or replace them) at
 //                                                           the end of the file; the four v4 levels are re-solved as usual.
 //   v6-kill: level 125's board and deck (the archer tower's lesson) with archers: "kill"; v6-pin (stage 1b): the same with
 //   archers: "pin". v6-locks: level 96's board and deck
@@ -104,7 +104,7 @@ function solveAll(L) {
   return Object.assign(L, { tag: TAG, win: L.win }); // v4.3: the tag, then the order (key order: tag before win)
 }
 
-// Campaign v6 stage 1: the two v6 debug levels from the shipped levels (LS: levels/levels.json's levels).
+// Campaign v6 stage 1: the two v6 debug levels from the shipped levels (LS: tools/build-data/levels/levels.json's levels).
 function v6(LS) {
   const by = (n) => LS.find((l) => l.n === n);
   const base = (src, id, name, hint) => Object.assign(copy(Object.assign({ w: src.w, h: src.h, grid: src.grid }, src.pic ? { pic: true } : {}, { gates: src.gates || [], towers: src.towers || [], cols: src.cols }, src.pal ? { pal: src.pal } : {}, src.links ? { links: src.links } : {})), { id, name, hint, from: src.id });
@@ -129,7 +129,7 @@ function all() {
 
 const FILE = JSON.parse(fs.readFileSync(OUT, "utf8")), ADD6 = process.argv.includes("--add-v6");
 let levels = RB > 0 ? all() : FILE.levels.filter((L) => !(ADD6 && /^v6-/.test(L.id))).map((L) => solveAll(copy(L))); // --add-v6 builds the v6 ones afresh
-if (ADD6) { const nu = v6(require("../levels/levels.json").levels); levels = levels.filter((L) => !nu.some((x) => x.id === L.id)).concat(nu); }
+if (ADD6) { const nu = v6(require("../tools/build-data/levels/levels.json").levels); levels = levels.filter((L) => !nu.some((x) => x.id === L.id)).concat(nu); }
 const text = JSON.stringify({ version: 2, note: "Sapper's Path v4 M2 debug levels (tools/debug-v4.js): one per twist and one with all three, copied from the v3 bake's levels (M3 re-solved their stored orders under the v4 timing; v4.3 re-solved them on the Normal tag under the v4.3 rules; campaign v6 stage 1 added v6-kill, v6-pin and v6-locks with --add-v6). Loaded only under ?debug=1; never in the save's progress.", levels }, null, 0).replace(/\{"id"/g, "\n{\"id\"") + "\n";
 if (process.argv.includes("--check")) {
   const same = fs.existsSync(OUT) && fs.readFileSync(OUT, "utf8") === text;

@@ -9,7 +9,7 @@
 // the campaign is complete (src/save.js questOpen).
 //   questsOf(n, Q, powers) -> [{after, prize}] for pictures 1..n
 //   ~/.local/opt/node/bin/node tools/quests.js [--write]   prints the table; --write stores quest {after, prize} on every
-//                                                          picture of levels/gallery.json (nothing else changes)
+//                                                          picture of tools/build-data/levels/gallery.json (nothing else changes)
 "use strict";
 const fs = require("fs"), path = require("path");
 function questsOf(n, Q, powers) {
@@ -37,7 +37,7 @@ function landQuestsOf(land, Q, powers, i0, max) {
 module.exports = { questsOf, landQuestsOf };
 
 if (require.main === module) {
-  const CFG = require("../config.json"), file = path.join(__dirname, "../levels/gallery.json"), F = JSON.parse(fs.readFileSync(file, "utf8"));
+  const CFG = require("../config.json"), file = path.join(__dirname, "../tools/build-data/levels/gallery.json"), F = JSON.parse(fs.readFileSync(file, "utf8"));
   const Q = questsOf(F.levels.length, CFG.gallery.quests, CFG.meta.powers), last = require("./bake-config.json").levels;
   F.levels.forEach((l, i) => console.log(String(l.n).padStart(2) + " after " + String(Q[i].after).padStart(3) + (Q[i].after > last ? " (past " + last + ")" : "") + "  " + Q[i].prize.padEnd(13) + " " + l.title));
   if (process.argv.includes("--write")) { F.levels.forEach((l, i) => { l.quest = Q[i]; }); fs.writeFileSync(file, JSON.stringify(F)); console.log("wrote quest {after, prize} on " + F.levels.length + " pictures"); }

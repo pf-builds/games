@@ -1,5 +1,5 @@
 // Sapper's Path bake (SPEC-v3 §5; v4 M3, the Siege to 100): tools/bake-config.json + tools/build-data/teaching.json ->
-// levels/levels.json (versioned) and tools/build-data/pools/pool-e{1,2,3,4}.json (every graded candidate, kept for rebakes and the app's
+// tools/build-data/levels/levels.json (versioned) and tools/build-data/pools/pool-e{1,2,3,4}.json (every graded candidate, kept for rebakes and the app's
 // longer curve).
 //   ~/.local/opt/node/bin/node tools/bake.js [--out DIR] [--only A-B] [--boards FILE] [--keep FILE] [--config FILE] [--threads N]
 //   ~/.local/opt/node/bin/node tools/bake.js --merge FULL,FIX1,... [--logs LOG,...] [--out DIR]   (v4.3: fix-up runs in)
@@ -356,7 +356,7 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
     if (out.bake.relay) { const dk = {}; for (const l of out.levels) if (l.deck) dk[l.deck] = (dk[l.deck] || 0) + 1; out.bake.relay.decks = dk; } // v5 R2: the decks recounted
     for (const f of (arg("logs") || "").split(",").filter(Boolean)) for (const line of fs.readFileSync(path.resolve(f), "utf8").split("\n")) if (line && !/^ {2}/.test(line)) log.push(line);
     say("bake: merged fix-up level(s) " + fixed.join(", ") + " into " + arg("merge").split(",")[0] + "; fallbacks now " + out.bake.fallbacks.length + (out.bake.fallbacks.length ? " (" + out.bake.fallbacks.map((x) => x.n).join(", ") + ")" : ""));
-    try { if (OUT) fs.mkdirSync(OUT, { recursive: true }); writeAtomic(outPath("levels/levels.json"), JSON.stringify(out)); writeReport(out, C, log); } catch (e) { say("bake merge failed: " + e.message); process.exitCode = 1; }
+    try { if (OUT) fs.mkdirSync(OUT, { recursive: true }); writeAtomic(outPath("tools/build-data/levels/levels.json"), JSON.stringify(out)); writeReport(out, C, log); } catch (e) { say("bake merge failed: " + e.message); process.exitCode = 1; }
     return;
   }
   const BOARDS = arg("boards") ? new Map(JSON.parse(fs.readFileSync(path.resolve(arg("boards")), "utf8")).levels.map((l) => [l.n, boardOf(l)])) : null;
@@ -472,7 +472,7 @@ const med = (a) => { const q = a.slice().sort((x, y) => x - y); return q.length 
   if (RLY) { out.bake.relay = { src: C.relay.src, dropped: C.relay.drop, decks }; say("bake: the re-lay's decks: " + DECKS.map((d) => d + " " + (decks[d] || 0)).join(", ") + " (generated slots)"); }
   try {
     if (OUT) fs.mkdirSync(OUT, { recursive: true });
-    writeAtomic(outPath("levels/levels.json"), JSON.stringify(out));
+    writeAtomic(outPath("tools/build-data/levels/levels.json"), JSON.stringify(out));
     for (const e of Object.keys(pools)) if (pools[e].length) writeAtomic(outPath("tools/build-data/pools/pool-e" + e + ".json"), JSON.stringify({ version: C.version, era: +e, cands: pools[e] })); // v4.2: a partial run leaves the other eras' pools alone (v5 R2: and a realm with none)
   } catch (e) { say("bake: write failed: " + e.message); process.exitCode = 1; }
   try { writeReport(out, C, log); } catch (e) { say("bake: report tables failed: " + e.message); }

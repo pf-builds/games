@@ -3,8 +3,9 @@
 
 Reads every file from a git ref (never the live working tree, which a builder may be editing) and writes
 <out>/: index.html with no doctype/html/head/body wrappers, <title> first and no ?v= tags; style.css with no ?v=;
-src/*.js with the versioned getJSON("x.json?v=" + V_) calls turned into plain paths; config.json, levels/levels.json,
-levels/gallery.json, the font, map/ (layout.json and the painted sheets, v5 R3; a land's sheets are WebP), art/ (the home's painting, v5.3) and
+src/*.js with the versioned getJSON("x.json?v=" + V_) calls turned into plain paths; config.json, the levels/ files the
+page reads at that ref (v7: the packed *.pk.json, the Zen index and one file a world; before v7 levels.json, gallery.json,
+zen.json), the font, map/ (layout.json and the painted sheets, v5 R3; a land's sheets are WebP), art/ (the home's painting, v5.3) and
 audio/ (the music, v5.2: its URLs lose their ?v= with the others). Also writes <out>/wrap.html, an artifact-style wrapper page for the smoke test
 (tools/playtest-smoke.mjs); wrap.html is not published.
 
@@ -22,7 +23,8 @@ import json, os, re, subprocess, sys
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 GAME = "sappers-path"
-COPY = ["config.json", "levels/levels.json", "levels/gallery.json", "levels/zen.json", "levels/places.json", "levels/tutorial.json", "fonts/Jersey10-Regular.ttf"]  # v6 lane B: zen.json, places.json; part 2: tutorial.json
+COPY = ["config.json", "fonts/Jersey10-Regular.ttf"]
+LEVELS_SKIP = {"debug-v4.json", "gallery-manifest.json"}  # v7 lane T: every levels/ file the page reads at that ref (the packed *.pk.json from v7, the plain ones before), never the ?debug=1 row or the licence record
 
 
 def show(ref, path, binary=False):
@@ -94,7 +96,7 @@ def main(ref, out, new_title=None, jump=None):
         if n:
             print(f"src/{name}: {n} versioned fetch(es) -> plain paths")
 
-    for path in COPY:
+    for path in COPY + ["levels/" + n for n in ls_src(ref, "levels", (".json",)) if n not in LEVELS_SKIP]:
         write(out, path, show(ref, path, binary=True))
     for name in ls_src(ref, "map", (".json", ".jpg", ".webp")):  # v5 R3: the journey map's layout and painted sheets (lands: WebP)
         write(out, "map/" + name, show(ref, "map/" + name, binary=True))

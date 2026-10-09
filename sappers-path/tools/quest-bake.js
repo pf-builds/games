@@ -2,7 +2,7 @@
 // "Campaign v6: the on-theme side quests"; notes tools/campaign-v6-notes.md §4). The campaign's 50 side quests become the 24
 // kept castle pictures (their stored levels kept) and 26 new outlined pictures (lane C, game-research/sappers-path-v4/lands/
 // campaign-quests), laid out by tools/campaign-quests/quests.json. The 36 that leave (Zen World 1) and the Wandering
-// Gallery's 12 (Kitten Forest's side quests) are not baked here: the 36 leave levels/gallery.json, the 12 keep their records
+// Gallery's 12 (Kitten Forest's side quests) are not baked here: the 36 leave tools/build-data/levels/gallery.json, the 12 keep their records
 // (n 61-72 too) in places 51-62 behind the 50, and their map spots' q follow the places.
 //   ~/.local/opt/node/bin/node tools/quest-bake.js [STEP ...] [--only cq01,cq02] [--extra K] [--threads N] [--force]
 // Steps (default prep convert bake check; install is never part of the default run):
@@ -12,7 +12,7 @@
 //   bake     each new quest's plan (planOf: its tag and the features its slot allows) and its level (tools/land-bake.js
 //            bakeOne, side quest counts: gallery-config bake's grader, so tools/regrade.js --gallery re-grades it) ->
 //            scratch/bake/<pic>.json
-//   install  writes the 50 into the game: levels/gallery.json (the 50, then the Wandering Gallery renumbered), the map's
+//   install  writes the 50 into the game: tools/build-data/levels/gallery.json (the 50, then the Wandering Gallery renumbered), the map's
 //            quest ids (map/layout.json, quests 1-50; the Wandering Gallery's q renumbered with their pictures), the
 //            manifest (levels/gallery-manifest.json order and the 26 lines) and the LICENSES.md section
 //   check    every gate on the game's files (also run by tools/test.js): below
@@ -100,9 +100,9 @@ function recordOf(X, p, B, r) {
     r.mystery ? { mystery: r.mystery } : {}, r.moat ? { moat: r.moat } : {}, r.fallback ? { fallback: r.fallback } : {});
 }
 function install(X) {
-  const BD = readJ(path.join(S, "boards.json")), GF = readJ(path.join(ROOT, "levels/gallery.json")), was = new Map(GF.levels.map((l) => [l.id, l])), bad = [];
+  const BD = readJ(path.join(S, "boards.json")), GF = readJ(path.join(ROOT, "tools/build-data/levels/gallery.json")), was = new Map(GF.levels.map((l) => [l.id, l])), bad = [];
   const castle = X.QJ.order.map((o, i) => { const s = X.slots[i];
-    if (o.id) { const l = was.get(o.id); if (!l) { bad.push(o.id + " is not in levels/gallery.json"); return null; } return Object.assign({}, l, { n: i + 1, quest: { after: s.after, prize: s.prize } }); }
+    if (o.id) { const l = was.get(o.id); if (!l) { bad.push(o.id + " is not in tools/build-data/levels/gallery.json"); return null; } return Object.assign({}, l, { n: i + 1, quest: { after: s.after, prize: s.prize } }); }
     const p = X.pics.find((q) => q.pos === i + 1), f = path.join(S, "bake", p.pic + ".json"), r = fs.existsSync(f) ? readJ(f) : null;
     if (!r || r.fail) { bad.push(p.pic + ": " + (r ? r.fail : "not baked")); return null; } return recordOf(X, p, BD[p.pic].board, r); });
   if (bad.length) { console.log("install: refused: " + bad.join("; ")); return false; }
@@ -121,7 +121,7 @@ function install(X) {
   const sec = [A, "### Campaign v6 side quests: 26 new pictures (2026-10-06)", "", "The campaign's side quests from v6 (`levels/gallery.json` pictures 1-50; the numbers in the Gallery table above are the v5 places). 24 of the pictures above stay; these 26 are new. Generated on the studio's own Mac with FLUX.1 [schnell] by Black Forest Labs (Apache 2.0; city96's 4-bit GGUF), cleaned of the model's line art and converted with one solid ink outline. Original work, Click it! Studios. Every prompt and seed is in `tools/campaign-quests/pictures/manifest.json` and `levels/gallery-manifest.json`.", "",
     "| # | Picture | Source | Author | License | Date |", "|---|---|---|---|---|---|"].concat(X.pics.map((p) => "| " + p.pos + " | `ours-" + p.pic + "` " + p.m.title + " | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed " + p.m.seed + "; prompt in tools/campaign-quests/pictures/manifest.json | " + p.m.artist + " | " + p.m.licence + " | generated " + p.m.date + " |"), [Z]).join("\n");
   lic = lic.indexOf(A) >= 0 ? lic.slice(0, lic.indexOf(A)) + sec + lic.slice(lic.indexOf(Z) + Z.length) : lic.replace(/\n### Land 1:/, "\n" + sec + "\n\n### Land 1:");
-  writeJ(path.join(ROOT, "levels/gallery.json"), Object.assign({}, GF, { levels }));
+  writeJ(path.join(ROOT, "tools/build-data/levels/gallery.json"), Object.assign({}, GF, { levels }));
   fs.writeFileSync(path.join(ROOT, "map/layout.json"), JSON.stringify(LAY)); writeJ(path.join(ROOT, "levels/gallery-manifest.json"), MAN, true); fs.writeFileSync(LF, lic);
   console.log("install: " + castle.length + " campaign quests (" + X.pics.length + " new) and " + wander.length + " Wandering Gallery pictures (now in places " + (castle.length + 1) + "-" + levels.length + ", records unchanged) written");
   return true;
@@ -130,7 +130,7 @@ function install(X) {
 // ---- check (the game's files) ------------------------------------------------------------------------------------------------
 // gates(X?) -> [{name, ok, bad, info}]; tools/test.js runs it too.
 function gates(X0) {
-  const X = X0 || context(), GL = readJ(path.join(ROOT, "levels/gallery.json")).levels, C = GL.filter((l) => !l.land), out = [], gate = (name, bad, info) => out.push({ name, ok: !bad.length, bad, info: info || "" });
+  const X = X0 || context(), GL = readJ(path.join(ROOT, "tools/build-data/levels/gallery.json")).levels, C = GL.filter((l) => !l.land), out = [], gate = (name, bad, info) => out.push({ name, ok: !bad.length, bad, info: info || "" });
   const V3 = X.CFG.v3, rules = (t) => E.rulesOf(V3, t), GC = require("./gallery-config.json"), GB = GC.bake, each = (ls, f) => ls.map((L) => { try { const w = f(L); return w ? L.id + ": " + w : null; } catch (e) { return L.id + ": " + e.message; } }).filter(Boolean);
   const FZ = path.join(ROOT, X.CFG.v5.freeze.dir, "gallery.json"), old = fs.existsSync(FZ) ? new Map(readJ(FZ).levels.map((l) => [l.id, l])) : new Map(), strip = (l) => JSON.stringify(Object.assign({}, l, { n: 0, quest: 0 }));
   const kept = X.QJ.order.filter((o) => o.id).map((o) => o.id), fresh = C.filter((l) => kept.indexOf(l.id) < 0);

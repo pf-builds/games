@@ -3,7 +3,7 @@
 import fs from 'fs'; import path from 'path'; import { fileURLToPath } from 'url'; import { compile, Game } from './rules.mjs';
 const PW = await import(process.env.PLAYWRIGHT_MODULE); const { chromium } = PW.default || PW;
 const here = path.dirname(fileURLToPath(import.meta.url)), root = path.resolve(here, '../..'), SHOTS = path.join(root, 'tools/shots-v4-critic2/functional'), BASE = 'http://127.0.0.1:8492/sappers-path/';
-const GAL = JSON.parse(fs.readFileSync(path.join(root, 'levels/gallery.json'))).levels, cfg = JSON.parse(fs.readFileSync(path.join(root, 'config.json')));
+const GAL = JSON.parse(fs.readFileSync(path.join(root, 'tools/build-data/levels/gallery.json'))).levels, cfg = JSON.parse(fs.readFileSync(path.join(root, 'config.json')));
 const R = {}, errs = []; const ok = (k, pass, info) => { R[k] = { pass: !!pass, info }; console.log((pass ? 'PASS ' : 'FAIL ') + k + ' :: ' + (typeof info === 'string' ? info : JSON.stringify(info)).slice(0, 1400)); };
 const b = await chromium.launch(); const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 async function newPage(opts, label) { const ctx = await b.newContext(opts); const p = await ctx.newPage(); p.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errs.push(`[${label}] ${m.type()}: ${m.text()}`); }); p.on('pageerror', (e) => errs.push(`[${label}] PAGEERROR ${e.message}`)); return { ctx, p }; }

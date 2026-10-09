@@ -3,7 +3,7 @@
 import { createRequire } from 'module'; import path from 'path'; import { fileURLToPath } from 'url'; import { compile, Game } from './rules.mjs';
 const here = path.dirname(fileURLToPath(import.meta.url)), root = path.resolve(here, '../..'), require = createRequire(import.meta.url);
 const E = require(path.join(root, 'src/engine.js')), cfg = require(path.join(root, 'config.json'));
-const all = [...require(path.join(root, 'levels/levels.json')).levels, ...require(path.join(root, 'levels/debug-v4.json')).levels];
+const all = [...require(path.join(root, 'tools/build-data/levels/levels.json')).levels, ...require(path.join(root, 'levels/debug-v4.json')).levels];
 let bad = 0, hiddenTrue = 0;
 for (const L of all) for (const d of ['easy', 'normal', 'hard']) { const C = E.compile(L), A = E.sim(C, E.rulesOf(cfg.v3, d)), B = E.sim(C, E.rulesOf(cfg.v3, d));
   for (const ch of L.win[d]) { A.play(+ch, A.now); A.quiet(); B.play(+ch, B.now); let g = 0; while (B.busy && g++ < 1e6) B.advanceTo(B.nextAt); for (let i = 0; i < C.ncards; i++) if (A.hidden(i)) hiddenTrue++; }

@@ -14,7 +14,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"; import { dirname, resolve } from "node:path"; import { fileURLToPath } from "node:url"; import { createRequire } from "node:module";
 const here = dirname(fileURLToPath(import.meta.url)), arg = (k, d) => { const i = process.argv.indexOf("--" + k); return i > 0 ? process.argv[i + 1] : d; };
 const PHASE = process.argv[2] === "before" ? "before" : "after", URL_ = arg("url", "http://127.0.0.1:8473/"), ONLY = arg("only", "all"), OUT = resolve(here, "shots-campaign-v6-fix", PHASE); mkdirSync(OUT, { recursive: true });
-const ROOT = resolve(here, ".."), LV = JSON.parse(readFileSync(resolve(ROOT, "levels/levels.json"), "utf8")).levels, CFG = JSON.parse(readFileSync(resolve(ROOT, "config.json"), "utf8"));
+const ROOT = resolve(here, ".."), LV = JSON.parse(readFileSync(resolve(ROOT, "tools/build-data/levels/levels.json"), "utf8")).levels, CFG = JSON.parse(readFileSync(resolve(ROOT, "config.json"), "utf8"));
 const byN = (n) => LV.find((l) => l.n === n), ids = LV.filter((l) => l.n <= 200).map((l) => l.id);
 const require = createRequire(import.meta.url), E = require("../src/engine.js"), R = require("./grade.js");
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE);

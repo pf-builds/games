@@ -31,13 +31,13 @@
 //             scratch/out/ (Land 1 fix: a gallery picture's short, the play bar's title when the full one won't fit;
 //             a level with mystery blocks, its fill hideC and ? colour hideQ, land-config plan.hidden fills)
 //   check     every gate (below) -> scratch/report.md and scratch/state.json {ok}
-//   zen       (v6 lane D; after a passing check, never part of the default run) the land as a Zen world, into levels/zen.json
+//   zen       (v6 lane D; after a passing check, never part of the default run) the land as a Zen world, into tools/build-data/levels/zen.json
 //             only (land.json zen.k; zenInstall below): the shared levels, gallery, layout and config files are not touched
 //   reinstall (v6 lane D4; after a passing check with --keep, never part of the default run) a records-only re-deal of an
-//             installed land: its main records in levels/levels.json replaced in place (same ids, same order), the --keep
+//             installed land: its main records in tools/build-data/levels/levels.json replaced in place (same ids, same order), the --keep
 //             levels' installed records byte for byte; gallery, layout, config, LICENSES.md and the sheets untouched.
 // v6 lane D8 (Peter, 2026-10-08: no mystery blocks in Zen, ever; the whole picture shows from the start): a Zen land (land.json
-// zen, or a levels/zen.json world with land k) is refused if its features list hidden or its profile gives hidden a share;
+// zen, or a tools/build-data/levels/zen.json world with land k) is refused if its features list hidden or its profile gives hidden a share;
 // bake --keep-plan re-bakes a few slots on the plan the land was baked with (scratch/state.json, hidden taken out), so a
 // swapped picture keeps its slot's tag and features (a fresh plan reorders the features after hidden); check fails a Zen
 // land's level with mystery blocks.
@@ -80,10 +80,10 @@ const r1 = (v) => Math.round(v * 10) / 10, med = (a) => { const q = a.slice().so
 function context(dir) {
   const LAND = path.resolve(dir), GAME = path.resolve(opt("game") || ROOT), GAL = path.resolve(opt("gallery") || path.join(ROOT, "tools/lands/_gallery")), S = path.join(LAND, "scratch");
   const land = readJ(path.join(LAND, "land.json")), man = readJ(path.join(LAND, "pictures/manifest.json")), CFG = readJ(path.join(GAME, "config.json")), LC = require("./land-config.json");
-  const levels = readJ(path.join(GAME, "levels/levels.json")), gallery = readJ(path.join(GAME, "levels/gallery.json")), layout = readJ(path.join(GAME, "map/layout.json"));
+  const levels = readJ(path.join(GAME, "tools/build-data/levels/levels.json")), gallery = readJ(path.join(GAME, "tools/build-data/levels/gallery.json")), layout = readJ(path.join(GAME, "map/layout.json"));
   const gman = fs.existsSync(path.join(GAL, "manifest.json")) ? readJ(path.join(GAL, "manifest.json")) : [], gcfg = fs.existsSync(path.join(GAL, "gallery.json")) ? readJ(path.join(GAL, "gallery.json")) : {};
   const LCF = CFG.lands, P = LP.profileOf(land, LC), count = land.count || LCF.perLand;
-  const zf = path.join(GAME, "levels/zen.json"), zen = !!land.zen || (fs.existsSync(zf) && readJ(zf).worlds.some((w) => w.land === land.k)); // v6 lane D8: a Zen land
+  const zf = path.join(GAME, "tools/build-data/levels/zen.json"), zen = !!land.zen || (fs.existsSync(zf) && readJ(zf).worlds.some((w) => w.land === land.k)); // v6 lane D8: a Zen land
   if (zen) { const H = P.features.hidden || {}; if ((land.features || []).indexOf("hidden") >= 0 || H.share || Object.values(H.by || {}).some((v) => v) || H.byLevel) throw new Error("land " + land.k + " is a Zen world: no mystery blocks (feature hidden off, its profile share 0; Peter 2026-10-08)"); }
   // Land 1 fix pass: a land already installed (the game's last; a fix pass re-bakes it) is read out of the game first, so
   // the land is planned against the game without it (its side-quest pictures free again); install --replace puts it back.
@@ -346,7 +346,7 @@ function install(X) {
   const lv = Object.assign({}, X.levels, { levels: X.levels.levels.concat(LV) }), gl = Object.assign({}, X.gallery, { levels: X.gallery.levels.concat(GV) }), lay = Object.assign({}, X.layout, { sheets: X.layout.sheets.concat(LJ.layout) });
   const base = (t) => (X.installed ? removeFromConfig(t, X.land.k, X.sheet0) : t), lics = (t) => (X.installed ? removeLicences(t, X.land.k) : t);
   const cfg = addToConfig(base(fs.readFileSync(path.join(G, "config.json"), "utf8")), LJ.entry, LJ.eggCoins), lic = lics(fs.readFileSync(path.join(G, "LICENSES.md"), "utf8")) + fs.readFileSync(path.join(out, "licences.md"), "utf8");
-  const writes = [["levels/levels.json", JSON.stringify(lv)], ["levels/gallery.json", JSON.stringify(gl)], ["map/layout.json", JSON.stringify(lay)], ["config.json", cfg], ["LICENSES.md", lic]];
+  const writes = [["tools/build-data/levels/levels.json", JSON.stringify(lv)], ["tools/build-data/levels/gallery.json", JSON.stringify(gl)], ["map/layout.json", JSON.stringify(lay)], ["config.json", cfg], ["LICENSES.md", lic]];
   for (const [f, t] of writes) fs.writeFileSync(path.join(G, f + ".tmp"), t);
   for (const f of X.land.map.files) fs.copyFileSync(path.join(X.LAND, "map", f), path.join(G, "map", f));
   for (const [f] of writes) fs.renameSync(path.join(G, f + ".tmp"), path.join(G, f));
@@ -354,7 +354,7 @@ function install(X) {
 }
 
 // v6 lane D4: a records-only re-deal of an installed land (Kitten Forest under the ink-outline rule, Peter's call of
-// 2026-10-07): the land's main records replaced in levels/levels.json in place, nothing else written. Refused unless the
+// 2026-10-07): the land's main records replaced in tools/build-data/levels/levels.json in place, nothing else written. Refused unless the
 // check passed on assemble --keep's output, the ids and order are the installed ones, every kept record is byte-identical
 // to the installed one, and the side quests and map in out/ are the installed ones (they are not re-written).
 function reinstall(X) {
@@ -364,20 +364,20 @@ function reinstall(X) {
   if (LV.map((L) => L.id).join() !== I.levels.map((L) => L.id).join()) throw new Error("reinstall: out/levels.json's ids are not the installed ones in order");
   const changed = K.filter((n) => js(LV.find((L) => L.n === n)) !== js(I.levels.find((L) => L.n === n))); if (changed.length) throw new Error("reinstall: kept levels differ from the installed records: " + changed.join(","));
   if (js(GV) !== js(I.gallery) || js(LJ.layout) !== js(I.layout)) throw new Error("reinstall: out/ side quests or map are not the installed ones (assemble with --keep)");
-  const f = path.join(X.GAME, "levels/levels.json"), raw = readJ(f), by = new Map(LV.map((L) => [L.id, L])); let n = 0;
+  const f = path.join(X.GAME, "tools/build-data/levels/levels.json"), raw = readJ(f), by = new Map(LV.map((L) => [L.id, L])); let n = 0;
   raw.levels = raw.levels.map((L) => (L.land === X.land.k ? (n++, by.get(L.id)) : L)); if (n !== LV.length) throw new Error("reinstall: " + n + " installed records for " + LV.length);
   fs.writeFileSync(f + ".tmp", JSON.stringify(raw)); fs.renameSync(f + ".tmp", f);
-  console.log("reinstall: land " + X.land.k + " (" + X.land.name + "): " + (LV.length - K.length) + " records re-dealt, " + K.length + " kept, in place in levels/levels.json (nothing else written)");
+  console.log("reinstall: land " + X.land.k + " (" + X.land.name + "): " + (LV.length - K.length) + " records re-dealt, " + K.length + " kept, in place in tools/build-data/levels/levels.json (nothing else written)");
 }
 
-// v6 lane D: a land installed as a Zen world, into levels/zen.json only (levels.json, gallery.json, layout.json and config.json
+// v6 lane D: a land installed as a Zen world, into tools/build-data/levels/zen.json only (levels.json, gallery.json, layout.json and config.json
 // stay as they are: lane A owns them). land.json zen: {k} (its place on the Zen map). The records keep their numbers (n, so no
 // two worlds share one on the map) with ids z<k>-<i> and world k, no land; the world entry carries its sheets as layout
 // entries (map.layout, each with its egg coins) and the sheets are copied into map/; the licence table goes into LICENSES.md.
 // A world already there is replaced (its records, entry and licence table).
 function zenInstall(X) {
   const st = X.state; if (!st.ok) throw new Error("zen: the land has no passing check (run the check step)"); const ZK = (X.land.zen || {}).k; if (!ZK) throw new Error("zen: land.json has no zen.k");
-  const out = path.join(X.S, "out"), LV = readJ(path.join(out, "levels.json")), LJ = readJ(path.join(out, "land.json")), G = X.GAME, f = path.join(G, "levels/zen.json"), Z = readJ(f);
+  const out = path.join(X.S, "out"), LV = readJ(path.join(out, "levels.json")), LJ = readJ(path.join(out, "land.json")), G = X.GAME, f = path.join(G, "tools/build-data/levels/zen.json"), Z = readJ(f);
   const recs = LV.map((L, i) => { const o = Object.assign({ id: "z" + ZK + "-" + (i + 1), n: L.n, era: L.era, world: ZK }, L, { id: "z" + ZK + "-" + (i + 1), world: ZK }); delete o.land; return o; });
   const layout = LJ.layout.map((S, e) => { const o = Object.assign({}, S, { eggCoins: LJ.eggCoins[e] }); delete o.sheet; delete o.land; return o; });
   const W = { k: ZK, name: X.land.name, lore: X.land.lore, era: X.era, map: { note: "v6 lane D: Land " + X.land.k + " (" + X.land.slug + ") as Zen World " + ZK + ", its own sheets (tools/land.js zen).", layout } };
@@ -385,7 +385,7 @@ function zenInstall(X) {
   const head = "### Zen World " + ZK + ": " + X.land.name, lic = removeLicences(fs.readFileSync(path.join(G, "LICENSES.md"), "utf8").replace("\n### Zen World " + ZK + ": ", "\n### Land " + X.land.k + ": "), X.land.k).trimEnd() + "\n" + fs.readFileSync(path.join(out, "licences.md"), "utf8").replace(/### Land \d+: [^\n]*/, head + " (Land " + X.land.k + ", levels " + X.from + "-" + X.to + " in the land factory's numbering)");
   for (const fl of X.land.map.files) fs.copyFileSync(path.join(X.LAND, "map", fl), path.join(G, "map", fl));
   fs.writeFileSync(f + ".tmp", JSON.stringify(Z) + "\n"); fs.writeFileSync(path.join(G, "LICENSES.md.tmp"), lic); fs.renameSync(f + ".tmp", f); fs.renameSync(path.join(G, "LICENSES.md.tmp"), path.join(G, "LICENSES.md"));
-  console.log("zen: land " + X.land.k + " (" + X.land.name + ") as Zen World " + ZK + ": " + recs.length + " levels, " + layout.length + " sheets (" + X.land.map.files.join(", ") + ") written into levels/zen.json");
+  console.log("zen: land " + X.land.k + " (" + X.land.name + ") as Zen World " + ZK + ": " + recs.length + " levels, " + layout.length + " sheets (" + X.land.map.files.join(", ") + ") written into tools/build-data/levels/zen.json");
 }
 
 // ---- main -------------------------------------------------------------------------------------------------------------------

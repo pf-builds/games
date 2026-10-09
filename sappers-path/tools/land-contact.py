@@ -1,9 +1,9 @@
-# Sapper's Path v6 lane D4: a contact sheet of a land's main levels as they ship (levels/levels.json records): each board
+# Sapper's Path v6 lane D4: a contact sheet of a land's main levels as they ship (tools/build-data/levels/levels.json records): each board
 # drawn flat from its grid, palette and shade rows (shade digit d draws pal sh[d - 1]), mystery blocks in the level's own
 # fill with a "?" dot, the open frame in dirt. Under each: level, picture id, title, tag, features. Levels named in --keep
 # get an amber frame and "KEPT (live board)". For the critic of a re-deal.
 #   python3 tools/land-contact.py LEVELS.json LAND_K OUT.png [--keep N,N] [--cell 5] [--cols 10] [--world K]
-# v6 lane D7: --world K reads a Zen world's records (levels/zen.json, world K) instead of a land's; water (a moat) is drawn
+# v6 lane D7: --world K reads a Zen world's records (tools/build-data/levels/zen.json, world K) instead of a land's; water (a moat) is drawn
 # in blue, and each tile says its board size and moat yes or no. v6 lane D12: --zen-from N labels each tile with the Zen number
 # the page shows (main.js zenNum: N for the world's first level, then on by one), e.g. --zen-from 137 for World 4.
 import json, sys

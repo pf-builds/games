@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs"; import { dirname, resolve } from "node:path"; import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url)), ROOT = resolve(here, "../.."), URL_ = "http://127.0.0.1:8471/";
-const LV = JSON.parse(readFileSync(ROOT + "/levels/levels.json", "utf8")).levels, CFG = JSON.parse(readFileSync(ROOT + "/config.json", "utf8"));
-const GAL = JSON.parse(readFileSync(ROOT + "/levels/gallery.json", "utf8")).levels, QJ = JSON.parse(readFileSync(ROOT + "/tools/campaign-quests/quests.json", "utf8"));
+const LV = JSON.parse(readFileSync(ROOT + "/tools/build-data/levels/levels.json", "utf8")).levels, CFG = JSON.parse(readFileSync(ROOT + "/config.json", "utf8"));
+const GAL = JSON.parse(readFileSync(ROOT + "/tools/build-data/levels/gallery.json", "utf8")).levels, QJ = JSON.parse(readFileSync(ROOT + "/tools/campaign-quests/quests.json", "utf8"));
 const ids = LV.filter((l) => l.n <= 200).sort((a, b) => a.n - b.n).map((l) => l.id), byN = (n) => LV.find((l) => l.n === n);
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE);
 const b = await chromium.launch(), log = [], rows = []; const check = (c, m) => rows.push((c ? "ok   " : "FAIL ") + m);

@@ -6,7 +6,7 @@ import fs from 'fs'; import path from 'path'; import { fileURLToPath } from 'url
 const PW = await import(process.env.PLAYWRIGHT_MODULE); const { chromium } = PW.default || PW;
 const here = path.dirname(fileURLToPath(import.meta.url)), root = path.resolve(here, '../..'), SHOTS = path.join(root, 'tools/shots-v4.2-critic/functional'), BASE = 'http://127.0.0.1:8492/sappers-path/';
 fs.mkdirSync(SHOTS, { recursive: true });
-const J = (f) => JSON.parse(fs.readFileSync(path.join(root, f))), LV = J('levels/levels.json').levels, GAL = J('levels/gallery.json').levels, cfg = J('config.json');
+const J = (f) => JSON.parse(fs.readFileSync(path.join(root, f))), LV = J('tools/build-data/levels/levels.json').levels, GAL = J('tools/build-data/levels/gallery.json').levels, cfg = J('config.json');
 const moat = LV.find((l) => l.n >= 27 && l.n < 51 && !l.teaches && l.w === 42 && (l.gates || []).length && l.grid.some((r) => r.startsWith('~'))), boss = LV.find((l) => l.n === 100), pic = GAL[3];
 const lossOf = (L) => { for (let seed = 1; seed < 200; seed++) { let s = seed; const rnd = () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); const r = cfg.v3.rules.normal, G = new Game(compile(L), { hold: r.hold, archersKill: r.archersKill, lockSpaces: 1 }, cfg.v3.time), o = [];
   while (G.status === 0 && o.length < 120) { const lg = [0, 1, 2, 3, 4].filter((c) => G.legal(c)); const c = lg[Math.floor(rnd() * lg.length)]; o.push(c); G.play(c); G.quiet(); } if (G.status === -1) return o; } return null; };

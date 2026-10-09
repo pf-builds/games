@@ -1,10 +1,10 @@
 // Sapper's Path v6 lane B, Zen mode: a Zen world made from pictures the game already has (World 1, The Gallery: the 36
 // castle Gallery pictures Peter moved out of the campaign on 2026-10-06; game-research/sappers-path-v4/v6-plan.md, Step 0).
 // Notes: tools/zen-mode-notes.md. A world built from new pictures is a land (tools/land.js, tools/land-runbook.md) and joins
-// Zen through levels/zen.json worlds; this tool is for a world whose boards already exist.
+// Zen through tools/build-data/levels/zen.json worlds; this tool is for a world whose boards already exist.
 //   ~/.local/opt/node/bin/node tools/zen-world.js WORLD_DIR [plan|bake|assemble|check|install ...] [--threads N] [--list N,N] [--extra K] [--force]
 // WORLD_DIR/world.json: {k, slug, name, lore, era, features, profile (land-plan profile, merged over land-config's like a
-// land's), from: {file: "levels/gallery.json", ids: [...]} (the source records, never edited), pace (optional, the level
+// land's), from: {file: "tools/build-data/levels/gallery.json", ids: [...]} (the source records, never edited), pace (optional, the level
 // pace range over the profile's), main (filled by plan: the source ids in level order)}. Scratch in WORLD_DIR/scratch/
 // (gitignored).
 // Steps:
@@ -20,7 +20,7 @@
 //             (every thinking replay wins, no wait between taps over the cap), real pace in range and the median, no
 //             fallback picks, the profile (land-plan planCheck), no lock anywhere, the mystery fill, a re-grade with 0
 //             differences -> scratch/report.md
-//   install   (after a passing check) writes the world's levels into levels/zen.json (its other worlds' records kept)
+//   install   (after a passing check) writes the world's levels into tools/build-data/levels/zen.json (its other worlds' records kept)
 // v6 lane D8 (Peter, 2026-10-08: no mystery blocks in Zen, ever): a world whose features list hidden or whose profile gives
 // hidden a share is refused; check fails a level with mystery blocks. A source picture no longer in from.file (World 1's 36
 // left gallery.json at the v6 merge) is read from this world's own zen.json record (from: its id; the same board).
@@ -58,7 +58,7 @@ function context(dir) {
   const W = path.resolve(dir), world = readJ(path.join(W, "world.json")), A = flag("add") ? world.add : null, S = path.join(W, "scratch", A ? "add" : ""), LC = require("./land-config.json"), CFG = readJ(path.join(ROOT, "config.json"));
   if (flag("add") && !A) throw new Error("--add: world.json has no add");
   const src = readJ(path.join(ROOT, world.from.file)).levels, byId = new Map(src.map((L) => [L.id, L])), P = LP.merge(LP.profileOf(world, LC), (A && A.profile) || {});
-  for (const L of readJ(path.join(ROOT, "levels/zen.json")).levels) if (L.world === world.k && L.from && !byId.has(L.from)) byId.set(L.from, Object.assign({}, L, { id: L.from })); // v6 lane D8
+  for (const L of readJ(path.join(ROOT, "tools/build-data/levels/zen.json")).levels) if (L.world === world.k && L.from && !byId.has(L.from)) byId.set(L.from, Object.assign({}, L, { id: L.from })); // v6 lane D8
   const H = P.features.hidden || {}; if ((world.features || []).indexOf("hidden") >= 0 || H.share || Object.values(H.by || {}).some((v) => v)) throw new Error("Zen world " + world.k + ": no mystery blocks (feature hidden off, its profile share 0; Peter 2026-10-08)");
   if (world.pace) P.pace = Object.assign({}, P.pace, world.pace);
   for (const id of world.from.ids) if (!byId.has(id)) throw new Error("source picture " + id + " is not in " + world.from.file);
@@ -145,7 +145,7 @@ function assemble(X) {
 // --add: the world's installed records before A.first (zen.json), and the whole world against its profile: tags (the
 // installed ones then A.tags), the density rule, features per level never falling with the tag, the longest Hard run,
 // the end on a Hard.
-const installedOf = (X) => readJ(path.join(ROOT, "levels/zen.json")).levels.filter((L) => L.world === X.world.k && L.n < X.first);
+const installedOf = (X) => readJ(path.join(ROOT, "tools/build-data/levels/zen.json")).levels.filter((L) => L.world === X.world.k && L.n < X.first);
 function growCheck(X, IN, LV) {
   const bad = [], all = IN.concat(LV), D = X.CFG.v5.density, feats = X.world.features || [];
   if (IN.length !== X.first - 1 || IN.some((L, i) => L.n !== i + 1)) bad.push("installed records 1-" + (X.first - 1) + " not whole");
@@ -160,7 +160,7 @@ function growCheck(X, IN, LV) {
 // --add: the new sheets after the installed ones in turn (never the same file and mirror twice running, World 2's first
 // after them), their spots the levels in order, and every level spot and egg 48 CSS px apart at 375 px.
 function sheetsCheck(X, LV) {
-  const LAY = readJ(path.join(ROOT, "map/layout.json")), old = readJ(path.join(ROOT, "levels/zen.json")).worlds.find((w) => w.k === X.world.k).map.sheets.filter((m) => m.levels[1] < X.first), ms = old.concat(X.A.sheets), bad = [], k375 = 375 / LAY.w;
+  const LAY = readJ(path.join(ROOT, "map/layout.json")), old = readJ(path.join(ROOT, "tools/build-data/levels/zen.json")).worlds.find((w) => w.k === X.world.k).map.sheets.filter((m) => m.levels[1] < X.first), ms = old.concat(X.A.sheets), bad = [], k375 = 375 / LAY.w;
   const key = (m) => LAY.sheets[m.from - 1].file + (m.mirror ? "'" : ""), w2 = LAY.sheets.find((x) => x.land === 1), seq = ms.map(key).concat(w2 ? [w2.file + (w2.mirror ? "'" : "")] : []);
   seq.forEach((q, i) => { if (i && q === seq[i - 1]) bad.push("sheet " + (i + 1) + " repeats " + q); });
   let n = X.first; for (const m of X.A.sheets) { const S = LAY.sheets[m.from - 1], sp = m.spots ? m.spots.map((i) => S.levels[i]) : S.levels.slice(0, m.levels[1] - m.levels[0] + 1);
@@ -206,18 +206,18 @@ function check(X) {
   console.log("check: " + (ok ? "PASS" : "FAIL") + " (scratch/report.md)"); return ok;
 }
 
-// The world's records into levels/zen.json (one line, like levels.json), replacing any of this world's; the file's other
+// The world's records into tools/build-data/levels/zen.json (one line, like levels.json), replacing any of this world's; the file's other
 // fields (worlds, the note) are kept.
 function install(X) {
   const st = readJ(path.join(X.S, "state.json")); if (!st.ok) throw new Error("install: no passing check");
-  const f = path.join(ROOT, "levels/zen.json"), Z = readJ(f), LV = readJ(path.join(X.S, "out", "levels.json"));
+  const f = path.join(ROOT, "tools/build-data/levels/zen.json"), Z = readJ(f), LV = readJ(path.join(X.S, "out", "levels.json"));
   if (X.A) { const k = X.world.k, w = Z.worlds.find((v) => v.k === k); // D15: appended, the installed records and sheets before A.first kept
     Z.levels = Z.levels.filter((L) => L.world !== k || L.n < X.first).concat(LV).sort((a, b) => a.world - b.world || a.n - b.n);
     w.map.sheets = w.map.sheets.filter((m) => m.levels[1] < X.first).concat(X.A.sheets); if (X.A.mapNote) w.map.note = X.A.mapNote;
-    fs.writeFileSync(f + ".tmp", JSON.stringify(Z) + "\n"); fs.renameSync(f + ".tmp", f); console.log("install --add: world " + k + " pictures " + X.first + "-" + (X.first + LV.length - 1) + " and " + X.A.sheets.length + " sheets written into levels/zen.json"); return; }
+    fs.writeFileSync(f + ".tmp", JSON.stringify(Z) + "\n"); fs.renameSync(f + ".tmp", f); console.log("install --add: world " + k + " pictures " + X.first + "-" + (X.first + LV.length - 1) + " and " + X.A.sheets.length + " sheets written into tools/build-data/levels/zen.json"); return; }
   Z.levels = (Z.levels || []).filter((L) => L.world !== X.world.k).concat(LV).sort((a, b) => a.world - b.world || a.n - b.n);
   fs.writeFileSync(f + ".tmp", JSON.stringify(Z) + "\n"); fs.renameSync(f + ".tmp", f);
-  console.log("install: world " + X.world.k + " (" + LV.length + " levels) written into levels/zen.json");
+  console.log("install: world " + X.world.k + " (" + LV.length + " levels) written into tools/build-data/levels/zen.json");
 }
 
 if (require.main === module) {
