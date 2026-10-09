@@ -1,0 +1,39 @@
+{
+ "v": "v=64 v=64 v=64 v=64 v=64 v=64 v=64 v=64 v=64 v=64 v=64",
+ "z1-43": {
+  "head": [
+   "43",
+   "Daisy crown lamb",
+   "Hard"
+  ],
+  "status": "won",
+  "plays": 51,
+  "refused": 0,
+  "title": "Picture done",
+  "line": "Daisy crown lamb, all dug out."
+ },
+ "z1-47": {
+  "head": [
+   "47",
+   "Butterfly chase",
+   "Easy"
+  ],
+  "status": "won",
+  "plays": 54,
+  "refused": 0,
+  "title": "Picture done",
+  "line": "Butterfly chase, all dug out."
+ },
+ "map": {
+  "eggs": [
+   "z1-6-0 egg k-mushrooms west",
+   "z1-6-1 egg k-grass",
+   "z1-7-0 egg k-owl",
+   "z1-7-1 egg k-glint",
+   "z2-1-0 egg k-kitten",
+   "z2-1-1 egg k-yarn"
+  ],
+  "w2": "World 2Kitten ForestPast the Garden the road runs on into a lantern-lit wood of giant toadstools, where kittens nap, play and make mischief in every glade."
+ },
+ "console": []
+}

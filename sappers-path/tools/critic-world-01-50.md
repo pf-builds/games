@@ -97,3 +97,39 @@ What a reviewer would mark down: 39 is noise, 43 is a red blob, 47 is near-empty
 Clean enough to ship without the owner playtesting? **Functionally yes. Visually not yet.** Do the 5 should-fix items
 (39 and 43 swapped, 47 recoloured, 37 renamed, 42's charcoal merged or excepted), re-bake the touched slots, rerun
 selfTest and the harness, and eyeball the new contact sheet. Short pass.
+
+## Re-check (581cee0)
+
+Scope: the 5 should-fix items and anything the swaps cause. Served on 8474 (killed after), every script/style on `?v=64`.
+Evidence: `tools/critic-world-01-50/recheck-levels-37-50-375.png` (all 14 level starts at 375x812@3),
+`recheck-swaps-375.png` (39, 42, 43, 47 larger), `recheck-results.json`.
+
+**Verdict: ship. 0 blockers, 0 should-fix remaining. 4 minor notes.**
+
+- **Automated:** `SP.selfTest()` **876/0** at 375x812@3, **878/0** at 1280x720, 0 console messages. Real-tap wins at 375
+  (touch), 0 refused taps, 0 console: **43 Daisy crown lamb** (Hard, header "43 … Hard", 51 taps), **47 Butterfly chase**
+  (Easy, 54 taps), both "Picture done / <title>, all dug out."
+- **SF1 39: FIXED.** Mud puddle pig: a pink pig in a brown puddle on light green reads at a glance. (Minor: the white shape
+  on the right, about 128 cells, doesn't say what it is; the pig's face is soft.)
+- **SF2 43: FIXED.** Daisy crown lamb: a big white lamb on bright green under a pink sky, daisies in the grass. Reads at
+  once, the clearest board of the batch after 50. Now 42x42, 5 colours, Hard, won by real taps.
+- **SF3 47: FIXED.** A purple butterfly with a dark slate edge and a small second one, the grey cat leaping under them. All
+  three subjects read. No red/pink plus anywhere.
+- **SF4 37: FIXED.** Header and LICENSES.md say "Watermelon picnic".
+- **SF5 42: FIXED.** Re-converted: no near-black colour at all (darkest is dark green `#435341`). The pumpkin and window
+  read; the base is still a busy mix of dark green, dark red and purple (minor, no longer an ink issue).
+- **Cross shapes:** a plus-shape scan over every colour of all 14 grids (a cell with its 4 neighbours, no diagonals, in a
+  component of 21 cells or fewer) finds only two, both on 42 and neither is an emblem: the brown mouse in the yellow window
+  (11 cells, brown on yellow) and a dark-red bush at the base. Nothing red or pink on white or cream anywhere.
+- **Ink:** near-black (luminance under 0.06) appears only in 46 (dark-brown dirt, 112 cells + 5 small eye/nose flecks),
+  49 (trunk + owl features) and 50 (bee stripes, 15 cells), which the orchestrator's ruling covers. 47's edge colour
+  `#554677` (slate purple, not black) traces the butterflies' wings in 4 main pieces plus 5 single cells: part of the
+  subject, reads as an outline.
+- **Variety:** 39 pig and 43 lamb are 4 apart and both farm animals, but nothing alike on the board (pink-on-brown low
+  scene vs a big white body on saturated green with a pink sky). Fine. The closer repeat is **32 Pig (emoji) and 39 Mud
+  puddle pig, 7 apart**: same animal, different style (a flat outlined face vs a full scene). Minor, keep.
+- **Map:** sheet 7 eggs are now owl and **glint**; World 2's first-sheet eggs kitten and yarn, so the two-yarns-on-one-
+  screen minor (11) is gone. World 2 banner lore reads "Past the Garden the road runs on…".
+
+Remaining minor (carry to LATER, don't block): 39's unexplained white shape; 42's busy base; 32/39 pig repeat; earlier
+minors 6, 8-10, 12-13.
