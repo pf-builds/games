@@ -1,0 +1,389 @@
+{
+ "phone": {
+  "homeFresh": {
+   "zen": "Zen World 1 · Picture Garden 0 of 198 pictures Picture 1",
+   "camp": "Continue Campaign Realm 1 · The Greenmarch Fort 1 of 200 Level 1 EASY"
+  },
+  "freshCount": 186,
+  "freshW4": [
+   "137:open",
+   "138:locked",
+   "139:locked",
+   "140:locked",
+   "185:mn locked",
+   "186:mn locked"
+  ],
+  "freshOpen": [
+   1,
+   37,
+   87,
+   137
+  ],
+  "w4aria": [
+   "Picture 137",
+   "Picture 186, Hard, locked"
+  ],
+  "geom": {
+   "seam23_86_87": 576,
+   "seam34_136_137": 560,
+   "seam12_36_37": 245,
+   "gapMin": 68,
+   "gapMedian": 88,
+   "gapsTop5": [
+    273,
+    273,
+    273,
+    560,
+    576
+   ],
+   "nodeSize": [
+    44,
+    44
+   ],
+   "font137": "21px",
+   "font186": "21px",
+   "mapH": 669
+  },
+  "banners": [
+   "World 1Picture GardenA quiet garden at the start of the road: fruit, sweets, animals and old paintings, each one dug out a block at a time.",
+   "World 2Kitten ForestPast the Gallery the road runs on into a lantern-lit wood of giant toadstools, where kittens nap, play and make mischief in every glade.",
+   "World 3Snack GalaxyThe road drifts up into a starry sky of donut planets and cheese moons, where snacks, kittens and the odd dinosaur float by at their own pace.",
+   "World 4Dino ValleyThe road comes back down to earth in a warm green valley of ferns, rivers and smoking volcanoes, where dinosaurs fish, play music and get up to all sorts of things."
+  ],
+  "hit137": true,
+  "mapPlay": "Play picture 1",
+  "cur": "Picture 1",
+  "afterNodeTap": {
+   "play": true,
+   "mapPlayVis": false,
+   "num": "137",
+   "cls": ""
+  },
+  "lvlHeader": {
+   "num": "137",
+   "name": "Hatching day"
+  },
+  "win301": {
+   "st": "won",
+   "num": "137",
+   "name": "Hatching day",
+   "title": "Picture done",
+   "line": "Hatching day, all dug out.",
+   "id": "z4-1",
+   "tag": "normal",
+   "w": 42,
+   "h": 42,
+   "taps": 54,
+   "refused": 0,
+   "orderLen": 54
+  },
+  "afterWin": {
+   "mapPlay": "Play picture 138",
+   "screen": "map"
+  },
+  "lsKeys": [
+   "sappers-path.tour.v1",
+   "sappers-path.zen.v1",
+   "sappers-path.v3"
+  ],
+  "lsChanged": [
+   "sappers-path.zen.v1",
+   "sappers-path.v3"
+  ],
+  "reloadSame": true,
+  "homeAfter": "Continue Zen World 4 · Dino Valley 1 of 198 pictures Picture 138",
+  "afterReload": [
+   "1:open",
+   "2:locked",
+   "37:open",
+   "87:open",
+   "136:locked",
+   "137:done",
+   "138:cur",
+   "139:locked"
+  ],
+  "cur2": "Picture 138",
+  "mapPlay2": "Play picture 138",
+  "locked139": "mn locked",
+  "wins": [
+   {
+    "st": "won",
+    "num": "145",
+    "name": "Sailboat",
+    "title": "Picture done",
+    "line": "Sailboat, all dug out.",
+    "id": "z4-9",
+    "tag": "easy",
+    "w": 42,
+    "h": 42,
+    "taps": 39,
+    "refused": 0,
+    "orderLen": 39,
+    "hdr": "145"
+   },
+   {
+    "st": "won",
+    "num": "140",
+    "name": "Kitten rider",
+    "title": "Picture done",
+    "line": "Kitten rider, all dug out.",
+    "id": "z4-4",
+    "tag": "normal",
+    "w": 32,
+    "h": 46,
+    "taps": 43,
+    "refused": 0,
+    "orderLen": 43,
+    "hdr": "140"
+   },
+   {
+    "st": "won",
+    "num": "139",
+    "name": "Gone fishing",
+    "title": "Picture done",
+    "line": "Gone fishing, all dug out.",
+    "id": "z4-3",
+    "tag": "easy",
+    "w": 42,
+    "h": 42,
+    "taps": 55,
+    "refused": 0,
+    "orderLen": 55,
+    "hdr": "139"
+   },
+   {
+    "st": "won",
+    "num": "148",
+    "name": "Wizard dino",
+    "title": "Picture done",
+    "line": "Wizard dino, all dug out.",
+    "id": "z4-12",
+    "tag": "hard",
+    "w": 42,
+    "h": 42,
+    "taps": 49,
+    "refused": 0,
+    "orderLen": 49,
+    "hdr": "148"
+   },
+   {
+    "st": "won",
+    "num": "186",
+    "name": "Hot-air balloon",
+    "title": "Picture done",
+    "line": "Hot-air balloon, all dug out.",
+    "id": "z4-50",
+    "tag": "hard",
+    "w": 32,
+    "h": 46,
+    "taps": 55,
+    "refused": 0,
+    "orderLen": 55,
+    "hdr": "186"
+   }
+  ],
+  "fail": {
+   "st": "failed",
+   "reason": "jam",
+   "title": "A little stuck",
+   "line": "Line jammed: 4156123 can't reach a block. Have another look.",
+   "cont": true,
+   "contTxt": "Continue 250",
+   "prim": "Retry",
+   "sec": "Back to map",
+   "coins": 1000
+  },
+  "cont": {
+   "st": "playing",
+   "coins": 750,
+   "panelHidden": true
+  },
+  "solAfterCont": "00000000002222223331111111111111334",
+  "afterCont": {
+   "st": "won",
+   "title": "Picture done"
+  },
+  "zenHidden": {
+   "n": 198
+  }
+ },
+ "desk": {
+  "homeFresh": {
+   "zen": "Zen World 1 · Picture Garden 0 of 198 pictures Picture 1",
+   "camp": "Continue Campaign Realm 1 · The Greenmarch Fort 1 of 200 Level 1 EASY"
+  },
+  "freshCount": 186,
+  "freshW4": [
+   "137:open",
+   "138:locked",
+   "139:locked",
+   "140:locked",
+   "185:mn locked",
+   "186:mn locked"
+  ],
+  "freshOpen": [
+   1,
+   37,
+   87,
+   137
+  ],
+  "w4aria": [
+   "Picture 137",
+   "Picture 186, Hard, locked"
+  ],
+  "geom": {
+   "seam23_86_87": 660,
+   "seam34_136_137": 642,
+   "seam12_36_37": 280,
+   "gapMin": 77,
+   "gapMedian": 101,
+   "gapsTop5": [
+    313,
+    313,
+    313,
+    642,
+    660
+   ],
+   "nodeSize": [
+    44,
+    44
+   ],
+   "font137": "21px",
+   "font186": "21px",
+   "mapH": 660
+  },
+  "banners": [
+   "World 1Picture GardenA quiet garden at the start of the road: fruit, sweets, animals and old paintings, each one dug out a block at a time.",
+   "World 2Kitten ForestPast the Gallery the road runs on into a lantern-lit wood of giant toadstools, where kittens nap, play and make mischief in every glade.",
+   "World 3Snack GalaxyThe road drifts up into a starry sky of donut planets and cheese moons, where snacks, kittens and the odd dinosaur float by at their own pace.",
+   "World 4Dino ValleyThe road comes back down to earth in a warm green valley of ferns, rivers and smoking volcanoes, where dinosaurs fish, play music and get up to all sorts of things."
+  ],
+  "hit137": true,
+  "mapPlay": "Play picture 1",
+  "cur": "Picture 1",
+  "afterNodeTap": {
+   "play": true,
+   "mapPlayVis": false,
+   "num": "137",
+   "cls": ""
+  },
+  "lvlHeader": {
+   "num": "137",
+   "name": "Hatching day"
+  },
+  "win301": {
+   "st": "won",
+   "num": "137",
+   "name": "Hatching day",
+   "title": "Picture done",
+   "line": "Hatching day, all dug out.",
+   "id": "z4-1",
+   "tag": "normal",
+   "w": 42,
+   "h": 42,
+   "taps": 54,
+   "refused": 0,
+   "orderLen": 54
+  },
+  "afterWin": {
+   "mapPlay": "Play picture 138",
+   "screen": "map"
+  },
+  "lsKeys": [
+   "sappers-path.tour.v1",
+   "sappers-path.zen.v1",
+   "sappers-path.v3"
+  ],
+  "lsChanged": [
+   "sappers-path.zen.v1",
+   "sappers-path.v3"
+  ],
+  "reloadSame": true,
+  "homeAfter": "Continue Zen World 4 · Dino Valley 1 of 198 pictures Picture 138",
+  "afterReload": [
+   "1:open",
+   "2:locked",
+   "37:open",
+   "87:open",
+   "136:locked",
+   "137:done",
+   "138:cur",
+   "139:locked"
+  ],
+  "cur2": "Picture 138",
+  "mapPlay2": "Play picture 138",
+  "locked139": "mn locked",
+  "wins": [
+   {
+    "st": "won",
+    "num": "172",
+    "name": "The Great Wave",
+    "title": "Picture done",
+    "line": "The Great Wave, all dug out.",
+    "id": "z4-36",
+    "tag": "hard",
+    "w": 42,
+    "h": 42,
+    "taps": 53,
+    "refused": 0,
+    "orderLen": 53,
+    "hdr": "172"
+   },
+   {
+    "st": "won",
+    "num": "184",
+    "name": "American Gothic",
+    "title": "Picture done",
+    "line": "American Gothic, all dug out.",
+    "id": "z4-48",
+    "tag": "easy",
+    "w": 32,
+    "h": 46,
+    "taps": 55,
+    "refused": 0,
+    "orderLen": 55,
+    "hdr": "184"
+   },
+   {
+    "st": "won",
+    "num": "186",
+    "name": "Hot-air balloon",
+    "title": "Picture done",
+    "line": "Hot-air balloon, all dug out.",
+    "id": "z4-50",
+    "tag": "hard",
+    "w": 32,
+    "h": 46,
+    "taps": 55,
+    "refused": 0,
+    "orderLen": 55,
+    "hdr": "186"
+   }
+  ],
+  "fail": {
+   "st": "failed",
+   "reason": "jam",
+   "title": "A little stuck",
+   "line": "Line jammed: 6421107 can't reach a block. Have another look.",
+   "cont": true,
+   "contTxt": "Continue 250",
+   "prim": "Retry",
+   "sec": "Back to map",
+   "coins": 1000
+  },
+  "cont": {
+   "st": "playing",
+   "coins": 750,
+   "panelHidden": true
+  },
+  "solAfterCont": "00000000000112222233331111111111333333334344",
+  "afterCont": {
+   "st": "won",
+   "title": "Picture done"
+  },
+  "zenHidden": {
+   "n": 198
+  }
+ },
+ "console": []
+}

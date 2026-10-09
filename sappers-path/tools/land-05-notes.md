@@ -1,4 +1,66 @@
-# Zen World 4 Dino Valley installed: v6 lane D, piece D12 (2026-10-08)
+# Zen World 4 Dino Valley installed: v6 lane D, piece D12 (2026-10-08), D13 fix pass (2026-10-09)
+
+## 0. D13 fix pass (2026-10-09): the World 4 critic's should-fix items
+
+Inputs: the critic's report (`tools/critic-land-05.md`, functional PASS, 0 blockers, 5 should-fix, 7 minor; evidence in
+`tools/critic-land-05/`, committed with this pass). Sections 1-8 below are D12's record; where D13 changed a level, this
+section has the new numbers.
+
+**Swaps (lane C's eligible spares, `picks-full.json` `spares`, none from `tradeDress`; boards identical to `boards-full/`;
+prep with the local-ai venv's Pillow, no image model run).** Each slot kept its tag and features (`bake --keep-plan`):
+
+| Level / Zen | Old | New | Why | Hero |
+|---|---|---|---|---|
+| 301 / 137 (normal, links) | dv212 Hatching day | dv321 Meteor shower (4 colours) | Muddy opener (should-fix 1). A tall yellow long-neck under a navy sky with a shooting star: four big flat shapes, reads at once | yellow long-neck |
+| 302 / 138 (normal, links) | dv275 The Scream | dv243 Gardening (7) | Black in 12 broken pieces (should-fix 5; lane C owns conversions, so swapped, not re-converted). A yellow dino by a big pink flower on a pale sky | yellow triceratops |
+| 325 / 161 (easy, moat) | dv255 Surfing | dv240 Ballet stegosaurus (7, 32x46) | The same board as 336 The Great Wave (should-fix 4). A pink stegosaurus in a white tutu on a blue stage; ring 94 cells, 2 ways in, mire | pink stegosaurus |
+| 338 / 174 (normal, links) | dv289 Nailed it | dv270 Rocket launch (7, 32x46) | Didn't read at 375 (should-fix 3). A green triceratops in a space helmet riding a red rocket over grey hills at night | green triceratops |
+| 341 / 177 (easy) | dv220 Karaoke night | dv315 Leaf umbrella (6) | The held-out plain green upright T-rex (should-fix 2). A blue triceratops under a big green leaf in a misty jungle | blue triceratops |
+| 348 / 184 (easy) | dv276 American Gothic | dv304 Hamburger friend (6) | Didn't read at 375 (should-fix 3). A blue triceratops beside a hamburger with a face, in a green jungle | blue triceratops |
+
+- **How they were picked.** All 36 spares drawn at about phone size (8 px a cell) beside their sources; the readable ones
+  were Meteor shower, Submarine, Rocket launch, Gardening, Ballet, Monday mood, Hamburger friend, Leaf umbrella (plus
+  red/orange ones: Stargazing, Skiing, Puppy fetch, Pillow fight, Accordion). Then placed against their neighbours:
+  Submarine (vehicle) had no slot without a vehicle within 3 (309 313 320 338 343 350), Monday mood (a dino at a desk) sat
+  within 2-4 of 323 Big laptop or 345 Video call wherever it went, Meteor shower on 325 would be a yellow dino at night 5
+  from 330 Owl professor, and the blue triceratops slots near 302 crowd 305-307.
+- **325's ring.** Trial bakes on 325 in scratchpad copies of the land (kept plan, 4 candidates x 24): dv304 Hamburger friend
+  and dv264 Swimming race never deal with a ring (96 attempts each); dv240 Ballet (219 s), dv230 Monday mood and dv321
+  Meteor shower deal. Ballet went on 325.
+- **338.** Rocket launch's first bake was a fallback (a 15.1 s tap); 12 more candidates (`--extra 12 --reuse`) gave an ok
+  pick, 262 s, 51 taps.
+- **Ink rule on the six:** no black on any of them. The darkest colours are 301's navy sky (one piece), 338's navy sky plus
+  two dark hill shapes (575, 72, 29 cells; no flecks), and mid foliage tones on 302, 341, 348 (dark green, slate) and the
+  purple curtains on 325. Checked by eye at phone size in the game (z4-1, -2, -25, -38, -41, -48 at 375x812@3; titles fit).
+- **Hero colours (the critic's counts):** red 9 to 8 (325 out), orange 11 to 10 (338 out); the six new heroes are yellow,
+  yellow, pink, green, blue, blue, five species-colour pairs none of which repeats within 4 levels. No near-duplicates
+  within 5 levels on the new contact sheet (the stegosaurus run 324-326 is orange lying down, pink dancing, red with a
+  camera). Soft miss kept: 301 and 302 both have yellow heroes (night sky vs. a garden), in LATER.md.
+- **Old sources** dv212 dv275 dv255 dv289 dv220 dv276 left `src/` (src holds the 50 main pictures; all six are in the
+  manifest and `prep` makes them again).
+
+**Minor items.** 10: LICENSES.md now names the painting for every parody row still in the land (306 The Creation of Adam,
+Michelangelo; 315 the Mona Lisa, Leonardo; 319 The Starry Night, Van Gogh 1889; 336 The Great Wave off Kanagawa, Hokusai
+c. 1831; 342 Girl with a Pearl Earring, Vermeer c. 1665; each "public domain, a new composition, not a copy of any
+reproduction"), from the manifest's `url` field so the land's own licence step writes it; 302 and 348 left the land. 6: 324
+Kitten nap and 346 Piano rex are still in the land, so their stray flecks (and 349 Deal with it's) are listed for lane C in
+LATER.md, sources untouched. 7, 8, 9, 11, 12: LATER.md.
+
+**Final, all 50:** random-tap mean Easy 65.6% (18), Normal 37.2% (26), Hard 11.5% (6); every new slot careful 1; real pace
+median **224 s** (unchanged); 18 ringed; 0 mystery blocks; 7-colour boards Easy 4 (303 313 325 346), Normal 10, Hard 3.
+New slots: 301 36.0% 230 s 47 taps; 302 34.5% 253 s 51; 325 67.8% 224 s 48; 338 40.5% 262 s 51; 341 64.8% 220 s 51; 348 53.8%
+229 s 55. Contact sheet `tools/land-05/contact.png` re-made; `tools/land-05/swaps.png` (each swap, old | new at about phone
+size).
+
+**Checks (D13):** land check PASS every gate; test.js 707/0 (shipped folder 69 files, 16,451,916 B); regrade 0 of 2,405,
+`--gallery` 0 of 372, `--zen` 0 of 1,224; critic-v5 0 mismatches, 0 grade or tag problems, known answers 0 wrong, pace
+312/312 (diff-result.json's only change was the run time, reverted); freeze re-snapshot, diff vs a3194ad's: levels.json,
+gallery.json, castles.json and frozen.json identical, zen.json exactly the six World 4 records (301 302 325 338 341 348),
+worlds and the other 130 records identical; `--require` PASS. zen.json, LICENSES.md (11 World 4 rows) and the cache tag are
+the only shipped files changed; levels.json, gallery.json, layout.json, config.json and places.json untouched. Cache
+`?v=62`. selfTest 875/0 at 375x812@3, 877/0 at 1280x720, harness all passed, 0 console messages.
+
+**Payload:** portal build (the folder without tools/) **16,450,694 B** (16.45 MB, +1,490 B).
 
 Lane C's Dino Valley v2 (full story scenes) plays as Zen World 4: records n 301-350, ids z4-1..z4-50, `world: 4`, era 11,
 shown on the page as Zen pictures 137-186 (main.js `zenNum`, nothing set). Peter OKed the picks on 2026-10-08 (relayed by
