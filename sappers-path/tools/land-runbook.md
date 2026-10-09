@@ -133,7 +133,9 @@ zen.json; `tools/pack.js` packs them into the game's `levels/`). `levels/` holds
 From v6 every land plays in **Zen mode**, not after level 200 of the campaign (`tools/zen-mode-notes.md`). The land is
 still built and installed exactly as above (levels.json, gallery.json, layout.json, config `lands.list`); the page leaves
 every land out of the Campaign and plays it in Zen. To show a newly installed land in Zen, append one world to
-`tools/build-data/levels/zen.json` `worlds`, then `$N tools/pack.js`:
+`tools/build-data/levels/zen.json` `worlds`, then `$N tools/pack.js` (v7 lane T: each world ships as its own file,
+`levels/zen-<k>.pk.json`, loaded when the player first opens one of its levels; the pack writes it and the small index
+`levels/zen.pk.json` the home and the map read; nothing else to do, so a world is still one entry):
 
 ```json
 {"k": 3, "land": 2, "era": 10, "name": "Snack Galaxy", "lore": "One calm line: no goblins, forts or assaults."}

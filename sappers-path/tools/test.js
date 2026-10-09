@@ -2053,18 +2053,29 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
 // v7 lane T (tools/space-v7-notes.md): the packed level files. The source (tools/build-data/levels/) is the truth; the
 // shipped levels/*.pk.json are exactly what tools/pack.js writes from it; every record of every file (Campaign 1-250,
 // the Gallery's pictures, every Zen world) unpacks to its source record less the bake-only fields, and the page reads
-// none of those (no `L.<field>` or `L["<field>"]` in src/ or index.html).
+// none of those (no `L.<field>` or `L["<field>"]` in src/ or index.html). Stage 3: each Zen world's records ship in
+// their own file and only there; the index's stand-ins carry each level's id, number, era, world or land, tag, Gallery
+// source and shade flag exactly as its record; the page builds the same level list (Campaign, then land worlds).
 { const fs = require("fs"), path = require("path"), P = require("../src/pack.js"), PK = require("./pack.js"), S = PK.source(), B = PK.build(S), G = path.join(__dirname, "..");
   const stale = Object.keys(B).filter((f) => !fs.existsSync(path.join(G, "levels", f)) || fs.readFileSync(path.join(G, "levels", f), "utf8") !== B[f]);
-  ok(!stale.length, "pack: the shipped levels/*.pk.json are what tools/pack.js writes from tools/build-data/levels/" + (stale.length ? " (stale: " + stale.join(", ") + "; run tools/pack.js)" : ""));
-  const shipped = (f) => JSON.parse(fs.readFileSync(path.join(G, "levels", f), "utf8")), rt = [], sh = [], plain = []; let n = 0;
-  for (const [src, f] of [[S.levels, "levels.pk.json"], [S.gallery, "gallery.pk.json"], [S.zen, "zen.pk.json"]]) { const K = shipped(f).levels;
-    src.levels.forEach((L, i) => { n++; const want = P.strip(L); if (!P.same(P.unpack(P.pack(L)), want)) rt.push(L.id); if (!K[i] || !P.same(P.unpack(K[i]), want)) sh.push(L.id);
-      for (const k of ["grid", "cols", "pal"]) if (K[i] && typeof K[i][k] !== "string") plain.push(L.id + "." + k); }); }
-  eq([n, rt, sh, plain], [S.levels.levels.length + S.gallery.levels.length + S.zen.levels.length, [], [], []], "pack: unpack(pack(x)) equals x less the bake-only fields for every record (" + n + "), the shipped records unpack to the source's, every grid, deck and palette packed");
+  const stray = fs.readdirSync(path.join(G, "levels")).filter((f) => /\.pk\.json$/.test(f) && !B[f]);
+  ok(!stale.length && !stray.length, "pack: the shipped levels/*.pk.json are what tools/pack.js writes from tools/build-data/levels/" + (stale.length || stray.length ? " (stale: " + stale.concat(stray).join(", ") + "; run tools/pack.js)" : ""));
+  const SH = PK.shipped(G), all = S.levels.levels.concat(S.gallery.levels, S.zen.levels), rt = [], sh = [], plain = []; let n = 0;
+  for (const L of all) { n++; const want = P.strip(L); if (!P.same(P.unpack(P.pack(L)), want)) rt.push(L.id); if (!P.same(SH.byId.get(L.id), want)) sh.push(L.id); const K = P.pack(L); for (const k of ["grid", "cols", "pal"]) if (typeof K[k] !== "string") plain.push(L.id + "." + k); }
+  eq([n, SH.byId.size, rt, sh, plain], [all.length, all.length, [], [], []], "pack: unpack(pack(x)) equals x less the bake-only fields for every record (" + n + "), the shipped files hold each record once and it unpacks to the source's, every grid, deck and palette packed");
   const page = ["index.html"].concat(fs.readdirSync(path.join(G, "src")).map((f) => "src/" + f)).map((f) => fs.readFileSync(path.join(G, f), "utf8")).join("\n");
   eq(P.DROP.filter((k) => new RegExp("\\bL\\s*\\.\\s*" + k + "\\b|\\bL\\s*\\[\\s*[\"']" + k + "[\"']").test(page)), [], "pack: the page reads no dropped field off a level (" + P.DROP.join(", ") + ")");
-  const per = (f, k) => Math.round(fs.statSync(path.join(G, "levels", f)).size / k); console.log("  packed: Campaign " + per("levels.pk.json", S.levels.levels.length) + " B a level, Gallery " + per("gallery.pk.json", S.gallery.levels.length) + ", Zen " + per("zen.pk.json", S.zen.levels.length) + " (file / records)");
+  // Stage 3: the index and the world files.
+  const IX = SH.index, lands = new Set(IX.worlds.filter((w) => w.land).map((w) => w.land)), bad = [], camp = JSON.parse(B["levels.pk.json"]).levels.map((L) => L.id);
+  for (const w of IX.worlds) { const src = w.land ? S.levels.levels.filter((L) => L.land === w.land) : S.zen.levels.filter((L) => L.world === w.k), file = JSON.parse(B[w.recs.file]).levels;
+    if (file.map((L) => L.id).join() !== src.map((L) => L.id).join()) bad.push("world " + w.k + ": its file's ids are not its records'");
+    src.forEach((L, i) => { const st = P.stub(w.recs, i), want = { id: L.id, n: L.n, stub: true }; for (const k of ["era", "world", "land", "tag", "from"]) if (L[k] !== undefined && L[k] !== null) want[k] = L[k]; if (L.shade) want.shade = true;
+      if (!P.same(Object.keys(st).sort().map((k) => [k, st[k]]), Object.keys(want).sort().map((k) => [k, want[k]]))) bad.push(L.id + " stand-in " + JSON.stringify(st)); });
+    const wsrc = S.zen.worlds.find((x) => x.k === w.k), back = Object.assign({}, P.unpackWorld(w)); delete back.recs; if (!P.same(back, wsrc)) bad.push("world " + w.k + ": the index entry is not zen.json's"); }
+  const order = camp.concat(IX.worlds.filter((w) => w.land).flatMap((w) => w.recs.ids)), want = S.levels.levels.map((L) => L.id);
+  eq([bad, order.join() === want.join(), camp.some((id) => lands.has((S.levels.levels.find((L) => L.id === id) || {}).land))], [[], true, false], "pack (stage 3): each Zen world's records in its own file only, the index's stand-ins match the records, its worlds unpack to zen.json's, the page's level order (Campaign, then land worlds) is levels.json's");
+  const kb = (f) => (fs.statSync(path.join(G, "levels", f)).size / 1024).toFixed(1), per = (f, k) => Math.round(fs.statSync(path.join(G, "levels", f)).size / k);
+  console.log("  packed: Campaign " + per("levels.pk.json", camp.length) + " B a level, Gallery " + per("gallery.pk.json", S.gallery.levels.length) + ", Zen worlds " + IX.worlds.map((w) => w.k + ": " + per(w.recs.file, w.recs.ids.length)).join(", ") + " (file / records); Zen index " + kb("zen.pk.json") + " KB");
 }
 
 // v6 lane D9: the shipped folder (the game minus tools/; config v5.ship). Under the cap, and levels/ holds only the files
@@ -2072,7 +2083,8 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
 { const fs = require("fs"), path = require("path"), SH = V5.ship, G = path.join(__dirname, ".."); let bytes = 0, files = 0;
   const walk = (d) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { if (e.name[0] === "." || (d === G && e.name === "tools")) continue;
     const p = path.join(d, e.name); if (e.isDirectory()) walk(p); else { bytes += fs.statSync(p).size; files++; } } };
-  walk(G); const extra = fs.readdirSync(path.join(G, "levels")).filter((f) => f[0] !== "." && SH.levels.indexOf(f) < 0);
+  const worlds = JSON.parse(fs.readFileSync(path.join(G, "levels/zen.pk.json"), "utf8")).worlds.map((w) => w.recs.file); // v7 lane T: each Zen world's file, named by the index
+  walk(G); const extra = fs.readdirSync(path.join(G, "levels")).filter((f) => f[0] !== "." && SH.levels.indexOf(f) < 0 && worlds.indexOf(f) < 0);
   console.log("  shipped folder (minus tools/): " + files + " files, " + bytes.toLocaleString("en-US") + " B");
   ok(bytes <= SH.capBytes && !extra.length, "shipped folder: " + bytes.toLocaleString("en-US") + " B (cap " + SH.capBytes.toLocaleString("en-US") + ")" + (extra.length ? "; levels/ holds files the page never reads: " + extra.join(", ") + " (move them to tools/build-data/ or list them in config v5.ship.levels)" : ""));
 }

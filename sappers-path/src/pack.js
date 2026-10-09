@@ -14,8 +14,9 @@
 //           for none, no "#")
 // pack() checks every field it packs by unpacking it again and keeps the plain value when they differ, so an odd record
 // still ships (larger), never wrong. UMD like engine.js: the page reads SappersPath.pack, the tools require() it.
-// Stage 3 (per-world Zen): stub(w, row) rebuilds a Zen level's stand-in from the index (levels/zen.pk.json), the
-// fields the home, the map and the saves read before its world's file has loaded (see STUB).
+// Stage 3 (per-world Zen): stub(recs, i) rebuilds a Zen level's stand-in from the index (levels/zen.pk.json), the
+// fields the home, the map and the saves read before its world's file has loaded (see STUB); packWorld/unpackWorld
+// shorten a world's own map roads in the index.
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
@@ -87,5 +88,45 @@
   function strip(L) { const o = {}; for (const k of Object.keys(L)) if (!DROPS.has(k)) o[k] = L[k]; return o; }
   // A file {levels: [...]}: every record unpacked (other keys kept).
   const unpackFile = (J) => Object.assign({}, J, { levels: (J && Array.isArray(J.levels) ? J.levels : []).map(unpack) });
-  return { FORMAT, DROP, pack, unpack, strip, unpackFile, same };
+
+  // Stage 3, Zen on demand: a world's records ship in their own file (levels/zen-<k>.pk.json); the index (zen.pk.json)
+  // keeps each world's entry as the source has it plus `recs`, what the page reads off a level before its world loads:
+  // {file, ids, n, tags (a letter a level, TAGC), era/world/land (one value, or one a level), from (World 1's Gallery
+  // ids, when any), shade ("1" for a level with shade rows, when any)}. STUB: the fields a stand-in carries.
+  const STUB = ["id", "n", "era", "world", "land", "tag", "from", "shade"], TAGC = { easy: "e", normal: "n", hard: "h", extreme: "x" }, TAGS = { e: "easy", n: "normal", h: "hard", x: "extreme" };
+  function recsOf(file, list) {
+    const R = { file, ids: list.map((L) => L.id), n: list.map((L) => L.n) }, one = (k) => { const v = list.map((L) => L[k]); return v.every((x) => x === v[0]) ? v[0] : v; };
+    for (const k of ["era", "world", "land"]) { const v = one(k); if (v !== undefined) R[k] = v; }
+    R.tags = list.every((L) => L.tag === undefined || TAGC[L.tag]) ? list.map((L) => TAGC[L.tag] || "-").join("") : list.map((L) => (L.tag === undefined ? null : L.tag));
+    if (list.some((L) => L.from !== undefined)) R.from = list.map((L) => (L.from === undefined ? null : L.from));
+    if (list.some((L) => L.shade)) R.shade = list.map((L) => (L.shade ? "1" : "0")).join("");
+    return R;
+  }
+  // The i-th level's stand-in from a world's recs: {id, n, era, world | land, tag, from, shade: true}, stub: true.
+  function stub(R, i) {
+    const at = (v) => (Array.isArray(v) ? v[i] : v), o = { id: R.ids[i], n: R.n[i], stub: true };
+    for (const k of ["era", "world", "land"]) { const v = at(R[k]); if (v !== undefined && v !== null) o[k] = v; }
+    const t = typeof R.tags === "string" ? TAGS[R.tags[i]] : R.tags[i]; if (t) o.tag = t;
+    if (R.from && R.from[i] != null) o.from = R.from[i];
+    if (R.shade && R.shade[i] === "1") o.shade = true;
+    return o;
+  }
+  // A world's own sheets (map.layout, a land installed as a Zen world) in the index: each road, a list of [x, y] pixel
+  // points about 12 px apart, as "x,y:" and then each step's dx and dy as one character each (B64, -32..31). A road that
+  // doesn't round-trip stays a list.
+  const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+  function roadPack(R) {
+    let o = R[0][0] + "," + R[0][1] + ":";
+    for (let i = 1; i < R.length; i++) for (const d of [R[i][0] - R[i - 1][0], R[i][1] - R[i - 1][1]]) { if (!(d >= -32 && d <= 31) || d !== Math.round(d)) return null; o += B64[d + 32]; }
+    return o;
+  }
+  function roadUnpack(s) {
+    const c = s.indexOf(":"), p = s.slice(0, c).split(",").map(Number), out = [[p[0], p[1]]];
+    for (let i = c + 1; i + 1 < s.length; i += 2) { const q = out[out.length - 1]; out.push([q[0] + B64.indexOf(s[i]) - 32, q[1] + B64.indexOf(s[i + 1]) - 32]); }
+    return out;
+  }
+  const mapRoads = (w, f) => (w && w.map && Array.isArray(w.map.layout) ? Object.assign({}, w, { map: Object.assign({}, w.map, { layout: w.map.layout.map((S) => (S && S.road ? Object.assign({}, S, { road: f(S.road) }) : S)) }) }) : w);
+  const packWorld = (w) => mapRoads(w, (R) => { if (!Array.isArray(R) || !R.length) return R; const s = roadPack(R); return s && same(roadUnpack(s), R) ? s : R; });
+  const unpackWorld = (w) => mapRoads(w, (R) => (typeof R === "string" ? roadUnpack(R) : R));
+  return { FORMAT, DROP, STUB, pack, unpack, strip, unpackFile, same, recsOf, stub, packWorld, unpackWorld };
 });

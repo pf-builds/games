@@ -62,16 +62,14 @@ function checkCastles(dir) {
   return { ok: !lines.length, missing: false, cases: now.length, diffs: lines.length, lines };
 }
 // v7 lane T: the page's own data against the snapshot. Every frozen record must come out of the shipped packed file
-// (levels/*.pk.json, src/pack.js unpack) byte for byte as the snapshot holds it, less the bake-only fields (pack DROP):
+// (levels/*.pk.json, src/pack.js unpack; tools/pack.js shipped) byte for byte as the snapshot holds it, less the bake-only fields (pack DROP):
 // the same grid, palette, deck, stored order and the rest. Returns {ok, levels, diffs, lines}.
 function checkShipped(dir) {
   const P = require("../src/pack.js"), man = path.join(dir, "frozen.json"), lines = []; let levels = 0;
   if (!fs.existsSync(man)) return { ok: false, levels, diffs: 0, lines: ["no snapshot"] };
-  for (const f of JSON.parse(fs.readFileSync(man, "utf8")).files || []) {
-    const pf = path.join(ROOT, "levels", f.file.replace(/\.json$/, ".pk.json")); if (!fs.existsSync(pf)) { lines.push("DIFF " + f.file + ": no shipped levels/" + path.basename(pf)); continue; }
-    const by = new Map(P.unpackFile(JSON.parse(fs.readFileSync(pf, "utf8"))).levels.map((L) => [L.id, L]));
+  const by = require("./pack.js").shipped(ROOT).byId; // every shipped file: levels, gallery, each Zen world's (stage 3)
+  for (const f of JSON.parse(fs.readFileSync(man, "utf8")).files || [])
     for (const L of JSON.parse(fs.readFileSync(path.join(dir, f.file), "utf8")).levels) { levels++; if (!P.same(by.get(L.id), P.strip(L))) lines.push("DIFF " + f.file + " " + L.id + ": the shipped record unpacks differently"); }
-  }
   return { ok: !lines.length, levels, diffs: lines.length, lines };
 }
 module.exports = { check, checkCastles, castleHashes, checkShipped };
