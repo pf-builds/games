@@ -343,3 +343,9 @@ earlier world's numbers never move.
   home and the play bar. The two map checks that read World 2's and World 3's first node as "1" now read 37 and 87.
 - Shots: `tools/zen-numbers/` (`tools/shots-zen-numbers.mjs` remakes them and prints the fit): the World 1/2 and World 2/3
   seams and a World 3 level's play bar with its win sheet, all at 375x812@3. Cache tag `?v=60`.
+
+## 16. World 1 grows to 50 (v6 lane D15, 2026-10-08/09)
+
+Picture Garden now holds 50 (z1-37..z1-50: lane C's 14 garden scenes, appended by `tools/zen-world.js --add`; the 36 byte for
+byte), on 7 reused sheets (+ A' B). The running Zen numbers in §15 shift: World 1 1-50, Kitten Forest 51-100, Snack Galaxy
+101-150, Dino Valley 151-200. Full record: `tools/world-01-50-notes.md`.

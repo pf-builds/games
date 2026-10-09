@@ -1,0 +1,9 @@
+home Zen card: ["World 1 · Picture Garden","Picture 37"]
+36/37 (old top, first new sheet), nodes in view: 33 34 35 36 37* 38 39 40 41 42 43; banners: 
+cur: {"n":"37","label":"Picture 37Easy","play":"Play picture 37Easy"}
+World 1 top, nodes in view: 44 45 46 47 48 49 50 51 52 53 54; banners: World 2Kitten ForestPast the Gallery the road runs on into a lantern-lit wood of giant toadstools, where kittens nap, play and make mischief in every glade.
+World 1/2 seam, nodes in view: 47 48 49 50 51 52 53 54 55 56 57 58; banners: World 2Kitten ForestPast the Gallery the road runs on into a lantern-lit wood of giant toadstools, where kittens nap, play and make mischief in every glade.
+seam gap: {"50 to banner px":122,"banner to 51 px":33,"50 to 51 px":241}
+fit: {"nodes":200,"last":"200","tightest":{"n":"200","text":24.8,"inside":28,"spare":3.3},"closest":68,"at":"107-108","closestNew":69.8,"newAt":"42-43"}
+console messages: 0
+

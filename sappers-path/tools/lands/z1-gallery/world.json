@@ -191,5 +191,107 @@
   "g-noto-1f47d",
   "g-noto-1f33b",
   "g-met-435882"
- ]
+ ],
+ "add": {
+  "note": "v6 lane D15 (2026-10-08; Peter: 'bring picture garden up to an even 50', lane C's 14 AI full garden scenes, picks OKed by Peter): pictures 37-50 appended to World 1 (ids z1-37..z1-50), the 36 kept byte for byte. Sources: lane C's picks-full.json landManifest (pictures/manifest.json, 14 picks + 2 spares), kind painting, shaded, converted by tools/land.js boardOf (identical to lane C's boards-full/). Profile: World 1's, plus the careful floor 0.5 on every tag (v6 lane D5's rule for new Zen levels); no moats (World 1 has none), no mystery blocks, no locks, no Extreme. Tags (lane D's layout, a sawtooth after 36's Hard): E N N E N N H E N N E N N H, the finale 50 a gentle Hard (bands: its band the Hard band's top half, 13-20%). Order: no shared subject within 5 levels of each other or of 31-36 (tools/world-01-50-notes.md). Map: two more Kitten Forest sheets in World 1's turn and tint (A' then B), 7 levels each, eggs at the spurs' tips.",
+  "first": 37,
+  "raw": "/Users/peter/local-ai/outputs/lands/00-picture-garden",
+  "pictures": "pictures/manifest.json",
+  "shade": true,
+  "profile": {
+   "carefulFloor": {
+    "easy": 0.5,
+    "normal": 0.5,
+    "hard": 0.5
+   }
+  },
+  "tags": [
+   "easy",
+   "normal",
+   "normal",
+   "easy",
+   "normal",
+   "normal",
+   "hard",
+   "easy",
+   "normal",
+   "normal",
+   "easy",
+   "normal",
+   "normal",
+   "hard"
+  ],
+  "main": [
+   "pg08",
+   "pg13",
+   "pg07",
+   "pg02",
+   "pg01",
+   "pg12",
+   "pg09",
+   "pg04",
+   "pg05",
+   "pg11",
+   "pg10",
+   "pg15",
+   "pg14",
+   "pg03"
+  ],
+  "sheets": [
+   {
+    "from": 26,
+    "mirror": true,
+    "fade": true,
+    "levels": [
+     37,
+     43
+    ],
+    "spots": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     6,
+     7
+    ],
+    "eggsAt": "quests",
+    "eggKinds": [
+     "mushrooms",
+     "grass"
+    ],
+    "tint": "sepia(.22) hue-rotate(-12deg) saturate(1.08) brightness(1.04)"
+   },
+   {
+    "from": 27,
+    "fade": true,
+    "levels": [
+     44,
+     50
+    ],
+    "spots": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     6,
+     7
+    ],
+    "eggsAt": "quests",
+    "eggKinds": [
+     "owl",
+     "yarn"
+    ],
+    "tint": "sepia(.22) hue-rotate(-12deg) saturate(1.08) brightness(1.04)"
+   }
+  ],
+  "mapNote": "Fix pass (Peter): Kitten Forest’s two sheets (no new image bytes), in a different turn and tint from World 2 so the join never shows one sheet twice: B mirrored, A mirrored, B, A mirrored, B, then (v6 lane D15, 50 levels) A mirrored, B (World 2 starts on A). 50 levels: 8 then 7 a sheet (spot 5 skipped, which leaves no wider gap than a sheet join). Eggs at the painted side-quest spurs’ tips.",
+  "bands": {
+   "50": [
+    0.13,
+    0.2
+   ]
+  }
+ }
 }

@@ -1,0 +1,290 @@
+[
+ {
+  "id": "pg04",
+  "title": "Ladybug umbrella",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "",
+  "file": "fullsrc/pg04.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big red ladybug holding a green leaf like an umbrella in the rain, a little snail sheltering under it, a grey rainy garden with big leaves, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 9004,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pg04-s9004.png"
+ },
+ {
+  "id": "pg14",
+  "title": "Apple tree owl",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "",
+  "file": "fullsrc/pg14.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big brown owl sitting in a tree full of big red apples, a little red apple falling on a sleepy hedgehog below, a dusk sky in orange and pink over a green hill, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 9014,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/pg14-s9014.png"
+ },
+ {
+  "id": "pg02",
+  "title": "Carrot pull",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "",
+  "file": "fullsrc/pg02.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big white bunny pulling a giant orange carrot out of the ground with all its might, a little bird pulling its tail, a vegetable garden with brown soil and green rows, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 9002,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pg02-s9002.png"
+ },
+ {
+  "id": "pg10",
+  "title": "Butterfly chase",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "",
+  "file": "fullsrc/pg10.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big grey kitten leaping to catch a big orange butterfly, a little ladybug watching from a flower, a garden of tall pink flowers, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 9010,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pg10-s9010.png"
+ },
+ {
+  "id": "pg08",
+  "title": "Ant picnic",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "",
+  "file": "fullsrc/pg08.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a line of big red ants carrying a giant slice of watermelon across a checked picnic blanket, a green lawn under a blue sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 9008,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pg08-s9008.png"
+ },
+ {
+  "id": "pg07",
+  "title": "Acorn stash",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "",
+  "file": "fullsrc/pg07.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big orange squirrel hugging a huge pile of acorns, a little blue bird trying to take one, an autumn garden with orange leaves and a brown tree trunk, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 9007,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pg07-s9007.png"
+ },
+ {
+  "id": "pg15",
+  "title": "Wheelbarrow nap",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "",
+  "file": "fullsrc/pg15.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big orange fox curled up asleep in a wooden wheelbarrow full of round pumpkins, a little mouse tiptoeing past, an autumn garden with a green hedge, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 9015,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pg15-s9015.png"
+ },
+ {
+  "id": "pg01",
+  "title": "Strawberry hedgehog",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "",
+  "file": "fullsrc/pg01.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big brown hedgehog with red strawberries stuck all over its spines, a little mouse nibbling one, a strawberry patch with big green leaves under a pale yellow sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 9001,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pg01-s9001.png"
+ },
+ {
+  "id": "pg13",
+  "title": "Duckling bath",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "",
+  "file": "fullsrc/pg13.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big yellow mother duck in a round stone bird bath with three little ducklings splashing, a green garden with roses, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 9013,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pg13-s9013.png"
+ },
+ {
+  "id": "pg12",
+  "title": "Pumpkin house",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "",
+  "file": "fullsrc/pg12.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big orange pumpkin with a round door and window, a little mouse waving from the door, a moonlit purple garden with green vines, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 9012,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pg12-s9012.png"
+ },
+ {
+  "id": "pg11",
+  "title": "Flowerbed dig",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "",
+  "file": "fullsrc/pg11.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big brown puppy digging up a bone in a flowerbed, flowers flying, a little worm peeking out cross, a garden with a white picket fence and blue sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 9111,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pg11-s9111.png"
+ },
+ {
+  "id": "pg09",
+  "title": "Hummingbird",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "",
+  "file": "fullsrc/pg09.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big green and purple hummingbird sipping from a giant red trumpet flower, a lilac sky with big green leaves, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 9009,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/pg09-s9009.png"
+ },
+ {
+  "id": "pg05",
+  "title": "Frog's cupcake",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "",
+  "file": "fullsrc/pg05.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big green frog on a lily pad holding a pink frosted cupcake with a candle, a little dragonfly bringing a present, a blue pond with pink lotus flowers, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 9005,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pg05-s9005.png"
+ },
+ {
+  "id": "pg03",
+  "title": "Sunflower bees",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "",
+  "file": "fullsrc/pg03.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "two big round yellow and black bees dancing around a giant sunflower face, a blue sky over a green garden, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 9003,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/pg03-s9003.png"
+ },
+ {
+  "id": "pg06",
+  "title": "Snail race",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "",
+  "file": "fullsrc/pg06.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "three big snails with bright coloured shells, red, blue and yellow, racing along a garden wall, a little caterpillar waving a flag, a sunny wall covered in green ivy, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 9106,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pg06-s9106.png"
+ },
+ {
+  "id": "pg16",
+  "title": "Watering can rain",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "",
+  "file": "fullsrc/pg16.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big blue watering can tipping over and raining on a big happy green frog holding up its arms, a garden of tall yellow flowers, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 9016,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pg16-s9016.png"
+ }
+]
