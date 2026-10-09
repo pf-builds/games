@@ -108,3 +108,38 @@ and orange T-rexes makes the world feel samey by the middle, and 325/336 look li
 Clean enough to ship without the owner playtesting? **Functionally yes. Visually not yet.** Do the 5 should-fix swaps
 (301 moved, 341, 338, 348, 325 swapped from spares; 302 re-converted or excepted), re-bake those slots, rerun selfTest
 and the harness, and have someone eyeball the new contact sheet. That's a short pass.
+
+## Re-check (fcf1a06)
+
+Scope: the 5 should-fix items and anything the 6 swaps cause. Served on 8473, killed after. Evidence:
+`tools/critic-land-05/recheck-levels-375.png` (16 level starts at 375x812@3: the 6 new boards plus their neighbours),
+`recheck-301-full-375.png`, `recheck-results.json`; the builder's new `tools/land-05/contact.png`.
+
+**Verdict: ship. 0 blockers, 0 should-fix remaining. 3 minor notes.**
+
+- **Automated:** every script/style loads `?v=62`. `SP.selfTest()` **875/0** at 375x812@3, **877/0** at 1280x720,
+  0 console messages. Real-tap wins at 375 (touch), 0 refused taps, 0 console: 301 Meteor shower (header 137, 47 taps),
+  325 Ballet stegosaurus (161, Easy + moat, 48), 338 Rocket launch (174, 51), each "Picture done / <title>, all dug out."
+  zen.json still has no `hidden` key on any of its 136 records.
+- **SF1 opener: FIXED.** 301 Meteor shower: a yellow long-neck under a navy night sky looking up at a meteor streak, 4
+  colours, one big dark sky, the hero and the streak read at a glance. It works as an opener. (Minor: the hero is thin,
+  about 5 cells wide; a few adults may read "meteor + dinosaur" as the extinction joke. Harmless for this audience.)
+- **SF2 trade dress: FIXED.** 341 is now Leaf umbrella: a blue dino under a big green leaf in the rain. Reads, no branded
+  look. The new 338 Rocket launch has a green T-rex, but it is riding a red rocket in space, not standing alone, so it
+  passes lane C's own test.
+- **SF3 unreadable: FIXED.** 338 Rocket launch (green dino on a red rocket, navy sky) reads at once. 348 Hamburger friend:
+  the burger reads clearly, the blue dino is a little soft against the green wood but reads as a dino. Acceptable.
+- **SF4 variety: FIXED (at the minimum asked).** 325 Ballet stegosaurus (pink stego in a white tutu on a curtained stage,
+  moat on the blue backdrop, off the hero) replaces the red wave duplicate; nothing else rides a wave. Red heroes now 8
+  (306 312 314 318 320 326 332 336), orange about 11. Still the land's main palette, but acceptable for a dinosaur world.
+  301/302 both have yellow heroes, but one is a thin long-neck on a navy night sky and the other a chunky dino in a bright
+  garden with a pink flower. Different picture, different palette: not a near-duplicate. No other pair within 5 levels
+  repeats a composition (348 and 350 both have blue heroes, but a forest burger scene vs a balloon).
+- **SF5 The Scream ink: FIXED** by the swap (302 Gardening). Ink scan on the 6 new boards: 302, 325, 341, 348 have no
+  dark colour at all; 301's navy is the sky (1 piece); 338's navy is the sky and two ground blocks (575 / 72 / 29 cells),
+  solid areas, not line fragments. No outlines, no broken black bits.
+- **Licences:** the parody rows now name the painting, artist, year and public domain (checked 315, 319, 336, 342);
+  302 and 348 are no longer parodies. 50 rows still match zen.json.
+
+Remaining minor (carry to LATER, don't block): 312 Wizard dino and 314 Log lift are both red T-rexes in a moat 2 levels
+apart (pre-existing); 301's thin hero; 348's soft blue dino. Plus the earlier minors 6-12.
