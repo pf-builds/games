@@ -13,7 +13,7 @@ Everything tunable is in `plan.json`. The scripts run with `/Users/peter/local-a
 | `paint.py` | ONE SDXL image per run. `base` mode paints the land guide; `road` mode lays the road layer over a picked land painting and paints that. |
 | `run.sh`, `batch.sh` | One run plus a memory check (`memory_pressure`, `vm.swapusage`) into `logs/`; a job list run strictly one at a time. |
 | `picks.json` | The land painting and the road painting picked by eye for each sheet. |
-| `assemble.py` | Picks → `map/sheet-NN.jpg`, `map/layout.json`, `contact.png`, `contact-seams.png`, `fidelity.json`. |
+| `assemble.py` | Picks → `map/sheet-NN.webp` (JPEG until v6.3; v7 lane T re-encoded them to WebP, the land sheets' rule), `map/layout.json`, `contact.png`, `contact-seams.png`, `fidelity.json`. |
 
 Full-size candidates, composites and guides live in `/Users/peter/local-ai/outputs/sapper-v5-map/` (not in git).
 

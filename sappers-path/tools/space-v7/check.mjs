@@ -58,7 +58,7 @@ if (on("lazy")) {
     const txt = await p.evaluate(() => document.getElementById("btn-zen").textContent.replace(/\s+/g, " ").trim());
     ok(/0 of 212 pictures/.test(txt) && /World 1/.test(txt) && /Picture 1/.test(txt), "lazy: the Zen card reads its counts and next picture from the index alone (" + txt + ")");
     await zenMap(p); await p.waitForTimeout(300);
-    ok(worldReqs(W).length === 0 && (await p.evaluate(() => document.querySelectorAll("#jr .mn").length)) === 200, "lazy: the Zen map builds all 200 nodes with no world file (" + worldReqs(W).join(",") + ")");
+    ok(worldReqs(W).join() === "1" && (await p.evaluate(() => document.querySelectorAll("#jr .mn").length)) === 200, "lazy: the Zen map builds all 200 nodes from the index; opening it fetches only the save's next world, 1 (fix pass M1) (" + worldReqs(W).join(",") + ")");
     // Slow World 4: nothing at first, the toast after toastMs, then the level.
     await p.route("**/levels/zen-4.pk.json*", async (r) => { await new Promise((res) => setTimeout(res, 1500)); await r.continue(); });
     await p.click('#jr .mn[data-n="301"]'); await p.waitForTimeout(150);
@@ -73,7 +73,9 @@ if (on("lazy")) {
     await p.unroute("**/levels/zen-3.pk.json*");
     await p.route("**/levels/zen-2.pk.json*", (r) => r.abort()); await zenMap(p); await p.click('#jr .mn[data-n="201"]'); await p.waitForTimeout(800);
     const fail = await toastOf(p), s = await screenOf(p);
-    ok(s === "map" && fail === "Couldn't open World 2. Check the connection and try again.", "lazy: a failed fetch: the map stays, the toast says so ('" + fail + "')");
+    const rows = await p.evaluate(() => { const t = document.getElementById("toast"), r = document.createRange(); r.selectNodeContents(t); const ys = new Set(Array.from(r.getClientRects()).map((q) => Math.round(q.top))); return ys.size; });
+    await p.waitForTimeout(3700); const at45 = await toastOf(p); await p.waitForTimeout(1300); const at58 = await toastOf(p);
+    ok(s === "map" && fail === "Couldn't open World 2. Check your connection." && rows <= 2 && at45 === fail && at58 === "", "lazy: a failed fetch: the map stays, the toast says so on " + rows + " line(s) at 375 px, still up at 4.5 s, gone by 5.8 s ('" + fail + "', fix pass minor 2)");
     await p.unroute("**/levels/zen-2.pk.json*"); await p.click('#jr .mn[data-n="201"]'); await playing(p);
     ok((await p.evaluate(() => document.getElementById("lvl-num").textContent)) === "51", "lazy: the next tap loads World 2 and plays its first picture (51)");
     const other = W.log.filter((l) => !/Failed to load resource|ERR_FAILED/.test(l));
@@ -82,6 +84,25 @@ if (on("lazy")) {
     const got = worldReqs(W); ok(got.join() === "4", "lazy: with Zen played last (the v6.2 save, World 4 next) only World 4's file is fetched, after the first paint (" + got.join(",") + ")");
     await p.click("#btn-zen"); await playing(p); ok((await p.evaluate(() => document.getElementById("lvl-num").textContent)) === "154" && !W.log.length, "lazy: the Zen card's tap plays picture 154 (World 4's fourth) at once, 0 console messages");
     await ctx.close(); }
+
+  // Fix pass B1: a level started while another waits on its world wins; the waiting one never takes over. Plus the busy
+  // state on the node tapped (only after zen.load.toastMs) and a repeat tap ignored.
+  { const ctx = await phone(), p = await ctx.newPage(), W = watch(p); await p.goto(NEW + "?debug=1"); await homeUp(p); await zenMap(p);
+    await p.waitForFunction(() => SP.worlds().find((w) => w.k === 1).stubs === 0, null, { timeout: 10000 });
+    await p.route("**/levels/zen-3.pk.json*", async (r) => { await new Promise((res) => setTimeout(res, 2500)); await r.continue(); });
+    const node = '#jr .mn[data-n="251"]'; await p.click(node); await p.waitForTimeout(120);
+    const b0 = await p.evaluate((q) => document.querySelector(q).classList.contains("busy"), node), at0 = (await p.evaluate(() => SP.pend())).at;
+    await p.click(node); await p.waitForTimeout(400);
+    const b1 = await p.evaluate((q) => { const b = document.querySelector(q); return b.classList.contains("busy") && b.getAttribute("aria-busy") === "true"; }, node), pd = await p.evaluate(() => SP.pend());
+    ok(!b0 && b1 && pd && pd.at === at0 && (await toastOf(p)) === "Opening World 3...", "lazy (fix pass minor 1): the tapped node shows busy only after 300 ms (" + b0 + " at 120 ms, " + b1 + " at 520 ms) and a repeat tap is ignored (same wait)");
+    await p.click('#jr .mn[data-n="1"]'); await playing(p); const n1 = await p.evaluate(() => document.getElementById("lvl-num").textContent);
+    await p.waitForTimeout(3000); const after = await p.evaluate(() => ({ num: document.getElementById("lvl-num").textContent, id: SP.state().id, pend: SP.pend(), busy: document.querySelectorAll(".busy").length }));
+    ok(n1 === "1" && after.num === "1" && after.id === "z1-1" && !after.pend && !after.busy && (await screenOf(p)) === "play", "lazy (fix pass B1): picture 1 started while World 3 loads keeps playing after zen-3 arrives (" + JSON.stringify(after) + ")");
+    ok(!W.log.length, "lazy (B1 run): 0 console messages"); await ctx.close(); }
+  // Fix pass M1: Zen progress but the Campaign played last: the home fetches the save's next Zen world after the first paint.
+  { const fx = Object.assign({}, FX, { zen: JSON.stringify(Object.assign(JSON.parse(FX.zen), { mode: "campaign" })) }), ctx = await phone(); await seed(ctx, fx); const p = await ctx.newPage(), W = watch(p);
+    await p.goto(NEW + "?debug=1"); await homeUp(p); await p.waitForLoadState("networkidle"); await p.waitForTimeout(500);
+    ok(worldReqs(W).join() === "4" && (await p.evaluate(() => SP.mode())) === "campaign" && !W.log.length, "lazy (fix pass M1): Zen progress, Campaign played last: the home fetches World 4 (the Zen card's next) after the first paint (" + worldReqs(W).join(",") + ")"); await ctx.close(); }
 }
 
 // ---- saves ---------------------------------------------------------------------------------------------------------------

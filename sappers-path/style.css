@@ -17,7 +17,7 @@
    the Gallery's next tile (gold frame, Play chip); a buy short of coins (.pw.poor); 44 px badges in small frames; the
    landscape bar's .head and .grid; the home's era chip on the river; era report cards as a band.
    v5.3: the home's painted siege (#title-art, a <picture>) and the realm line over Play. */
-@font-face { font-family: "Jersey 10"; src: url("fonts/Jersey10-Regular.ttf?v=65") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Jersey 10"; src: url("fonts/Jersey10-Regular.ttf?v=66") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
 :root { --bg: #2e2935; --ink: #221a26; --cream: #f3ead8; --cream-soft: #cfc4d6;
   --tray: #ddd3c0; --tray-hi: #ece5d6; --tray-edge: #c4b89e; --tray-ink: #3a3027; --tray-soft: #6b5c47; --socket: #c3b697; --socket-lo: #a99a7b;
   --band1: #d0c6b4; --band2: #c2baa9; /* the rows' tray bands, set from layout.fade.band at boot */
@@ -160,6 +160,11 @@ body.wide.coached #coach-dock { display: block; }
 /* v4.3 fix (m2): on a wide screen a toast in play sits just above the side column's tray (main.js placeToast). */
 #toast.side { position: fixed; bottom: auto; z-index: 6; transform: translate(-50%, -100%); }
 #toast.bad { background: #ffd9cf; }
+/* v7 fix pass: a button whose Zen world is still loading (main.js pendStep, after zen.load.toastMs): it breathes, and
+   repeat taps are ignored in main.js */
+.busy { animation: busybreathe .9s ease-in-out infinite alternate; cursor: progress; }
+@keyframes busybreathe { 100% { filter: brightness(.82) saturate(.8); } }
+@media (prefers-reduced-motion: reduce) { .busy { animation: none; filter: brightness(.85) saturate(.8); } }
 
 /* The rail (Critics 1 fix): the holding line and the queue on one light stone tray, so the colours read in a light
    value key (Food Hunt's lesson) while the board keeps the siege field. The brick stays as the margin around it. */
@@ -560,6 +565,7 @@ textarea.code:focus { outline: 3px solid var(--gold-lo); outline-offset: 1px; }
   #settings .row button { min-height: 44px; } #settings .set-reset { margin-top: 8px; }
 }
 #toast.over { position: fixed; top: calc(max(14px, env(safe-area-inset-top)) + 118px); bottom: auto; z-index: 45; }
+#toast.over.wide { width: max-content; max-width: min(calc(100vw - 32px), 360px); } /* v7 fix pass: the Zen load-fail line (left: 50% would cap it at half the screen) */
 #pause .pz-set { display: flex; gap: 10px; margin-top: 18px; }
 /* The level report on the win sheet: time, taps and coins, each with its best (or "New best!") underneath. */
 /* Critics 2 fix (V2): a Gallery win's finished picture, in its colours on a gilt frame, above the report (main.js sizes it). */
