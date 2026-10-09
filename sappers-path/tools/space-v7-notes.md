@@ -328,3 +328,7 @@ loadWorld, wantLevel, pendStep, prefetch, startLevel, showScreen, ended, SP), `c
   1,350 checks, shipped 462, castles 283, all 0); regrade full, --gallery, --zen and each --shipped 0 differences;
   pack --check clean; selfTest 876/0 (375x812@3), 878/0 (1280x800); harness all passed; check.mjs lazy 15/15, saves 4/4,
   sweep 16/16, 0 console messages (but the aborted fetch's own network line in the failed-fetch test).
+
+## Playtest
+
+- 2026-10-09: Peter played the build at b41e26b: "looks great". Ready for lane D to merge (recipe in §8). Not pushed.
