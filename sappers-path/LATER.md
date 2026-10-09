@@ -462,3 +462,7 @@ Fixed: S1-S7, m2, m3, N1, N2 (`tools/v5-r4-notes.md` §10). Parked:
 
 
 - teach-v4.js --check fails on e6-125 coach lines (pre-existing at 793b78b; found in D9, not a ship gate).
+- Dino Valley's map README eggs (hatchling, raptor, amber, pterosaur) aren't drawn in journey.js EGGS; World 4 uses grass, glint, woodpile, mushrooms and bubble on its quest-spur tips. Drawing them is two SVGs each plus names in config map.text.eggs.
+- land.js takes a land's first level from levels.json's last; a Zen-only land must seed scratch/state.json from past zen.json's records (D12 seeded 301). land.js could take max(levels.json, zen.json) for a Zen land.
+- Dino Valley: 18 of its 38 ring-capable pictures never deal with a ring at the 15 s / 55-tap caps (busy 6-7 colour scenes). A land check (or lane C's pick sheet) could run the deal probe so moat slots only get dealers before the first bake (tools/land-05-notes.md §4).
+- Lane C's Dino Valley README counts colours 4: 4, 5: 14, 6: 20, 7: 12; picks-full.json and the boards say 4: 4, 5: 11, 6: 20, 7: 15. A one-line README fix for lane C.

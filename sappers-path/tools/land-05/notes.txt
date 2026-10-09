@@ -1,0 +1,7 @@
+W3/W4 seam, nodes in view: 135 136 137* 138 139; banners: World 4Dino ValleyThe road comes back down to earth in a warm green valley of ferns, rivers and smoking volcanoes, where dinosaurs fish, play music and get up to all sorts of things.; eggs drawn in view: 2
+cur: {"n":"137","text":27.5,"inside":36,"label":"Picture 137","play":"Play picture 137"}
+fit: {"nodes":186,"last":"186","tightest":{"n":"122","text":22.5,"inside":28,"spare":5.5,"cur":false},"closest":68,"at":"93-94"}
+World 4 top, nodes in view: 183 184 185 186; fog label: More worlds on the way
+World 4 win: {"num":"138","name":"The Scream","panel":"win","title":"Picture done","line":"The Scream, all dug out."}
+console messages: 0
+

@@ -1,6 +1,6 @@
 {
  "note": "Shipped levels frozen by tools/freeze.js --snapshot; never edit by hand.",
- "made": "2026-10-08",
+ "made": "2026-10-09",
  "files": [
   {
    "file": "levels.json",

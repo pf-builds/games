@@ -1,0 +1,1550 @@
+[
+ {
+  "id": "dv307",
+  "title": "Bunny race",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5307; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv307.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big pink raptor racing a little white bunny across a green field, the bunny winning, a green field with a finish line flag, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5307,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv307-s5307.png"
+ },
+ {
+  "id": "dv320",
+  "title": "Sunset watch",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5320; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv320.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big orange triceratops and a little blue baby triceratops sitting together on a cliff watching a huge red sunset, a purple sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5320,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv320-s5320.png"
+ },
+ {
+  "id": "dv269",
+  "title": "Sailboat",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5269; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv269.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big orange stegosaurus whose back plates are the sails of a little wooden boat, a little blue dino steering, a turquoise sea, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5269,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv269-s5269.png"
+ },
+ {
+  "id": "dv302",
+  "title": "Owl professor",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5302; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv302.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big yellow T-rex listening to a little brown owl in glasses teaching from a branch, a dark green night forest with a big moon, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5302,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv302-s5302.png"
+ },
+ {
+  "id": "dv223",
+  "title": "Big laptop",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5223; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv223.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big orange T-rex hunched over one huge silver laptop, typing with its tiny arms stretched, a little green raptor peeking at the screen, a teal jungle with big leaves, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5223,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv223-s5223.png"
+ },
+ {
+  "id": "dv288",
+  "title": "Side eye",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5288; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv288.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big red stegosaurus giving a suspicious side eye to a little green raptor holding a cookie behind its back, a teal cave, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5288,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv288-s5288.png"
+ },
+ {
+  "id": "dv256",
+  "title": "Skateboard trick",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5256; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv256.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big red T-rex doing a big skateboard jump off a rock ramp, a little green dino with its mouth open, a sandy yellow canyon, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5256,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv256-s5256.png"
+ },
+ {
+  "id": "dv277",
+  "title": "Starry Night",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5277; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv277.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big orange long-neck dinosaur looking up at a swirling blue and yellow night sky with a big glowing moon, a tall dark cypress tree beside it, a sleepy village of little houses below, like the famous painting, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5277,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv277-s5277.png"
+ },
+ {
+  "id": "dv308",
+  "title": "Kitten nap",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5308; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "outlined/fullsrc/dv308.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a little grey kitten asleep curled up on the back plates of a big orange stegosaurus, a warm yellow sunset meadow, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5308,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv308-s5308.png"
+ },
+ {
+  "id": "dv255",
+  "title": "Surfing",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5255; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv255.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big orange raptor surfing a huge curling blue wave, a little yellow pterodactyl gliding beside, a sunny sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5255,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv255-s5255.png"
+ },
+ {
+  "id": "dv212",
+  "title": "Hatching day",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5212; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv212.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big mother triceratops watching three baby triceratops hatching from big spotted eggs in a sandy nest, beside a smoking orange volcano under a purple sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 5212,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv212-s5212.png"
+ },
+ {
+  "id": "dv299",
+  "title": "Kitten rider",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5299; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv299.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a little orange kitten riding proudly on the head of a big blue long-neck dinosaur, a green jungle with a big orange sun, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5299,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/dv299-s5299.png"
+ },
+ {
+  "id": "dv293",
+  "title": "Birthday party",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5293; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "outlined/fullsrc/dv293.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big pink stegosaurus blowing out candles on a huge green birthday cake, little dinos in party hats cheering, a yellow jungle party with balloons, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5293,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv293-s5293.png"
+ },
+ {
+  "id": "dv237",
+  "title": "Knight dino",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5237; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv237.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big yellow triceratops in shining silver knight armour holding a big red shield, a little green dino squire holding its lance, a green field with a grey castle, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5237,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv237-s5237.png"
+ },
+ {
+  "id": "dv250",
+  "title": "Bubble bath",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5250; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv250.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big pink long-neck dinosaur in a huge wooden tub full of white bubbles, a little yellow rubber duck floating by, a teal tiled cave bathroom, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5250,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv250-s5250.png"
+ },
+ {
+  "id": "dv281",
+  "title": "Too short to touch",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5281; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv281.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a parody of The Creation of Adam: a big red T-rex reaching out its tiny arm toward a big blue triceratops's outstretched claw, the gap far too wide, a soft pink and blue sky with clouds, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5281,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv281-s5281.png"
+ },
+ {
+  "id": "dv314",
+  "title": "Mud bath",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5314; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "outlined/fullsrc/dv314.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big red ankylosaurus relaxing in a big brown mud pool with cucumbers on its eyes, a little blue dino spraying mud, a teal swamp, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5314,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv314-s5314.png"
+ },
+ {
+  "id": "dv219",
+  "title": "Xylophone back",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5219; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv219.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big teal stegosaurus whose back plates are a rainbow xylophone, a little red raptor playing it with two mallets, a sandy yellow beach with palm trees, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5219,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv219-s5219.png"
+ },
+ {
+  "id": "dv276",
+  "title": "American Gothic",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5276; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv276.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a parody of American Gothic: two serious dinosaurs side by side, a brown T-rex holding a big pitchfork and a green triceratops in an apron, a white farmhouse with a pointed church window behind them, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5276,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/dv276-s5276.png"
+ },
+ {
+  "id": "dv257",
+  "title": "Bowling",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5257; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv257.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big yellow ankylosaurus rolling a huge red bowling ball with its club tail, big white pins flying, a purple cave bowling lane, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5257,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv257-s5257.png"
+ },
+ {
+  "id": "dv275",
+  "title": "The Scream",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5275; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv275.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a parody of The Scream: a cute pale yellow raptor holding its cheeks with both hands, mouth open in a wail, on a long bridge, a swirling orange and red sky over a dark blue fjord, like the famous painting, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5275,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/dv275-s5275.png"
+ },
+ {
+  "id": "dv224",
+  "title": "Video call",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5224; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv224.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big green triceratops waving at a huge computer screen showing a little orange dino waving back, a cosy yellow cave room with a lamp, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5224,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv224-s5224.png"
+ },
+ {
+  "id": "dv236",
+  "title": "Dino president",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5236; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv236.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big orange stegosaurus president giving a speech at a big wooden podium with one giant flag behind, a little blue dino clapping, a pale yellow hall with columns, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5236,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv236-s5236.png"
+ },
+ {
+  "id": "dv280",
+  "title": "Mona Dino",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5280; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv280.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a parody of the Mona Lisa: a cute pink long-neck dinosaur in a dark brown dress with a thin dark veil, front feet folded, a gentle half smile, a misty blue-green landscape with a winding road, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5280,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/dv280-s5280.png"
+ },
+ {
+  "id": "dv204",
+  "title": "Deal with it",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5204; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv204.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big yellow raptor lowering a pair of black pixel sunglasses onto its face with a cool smirk, a little green dino beside it with its mouth wide open in surprise, a big grey jungle rock under a turquoise sky with palm trees, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 5204,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv204-s5204.png"
+ },
+ {
+  "id": "dv295",
+  "title": "Picnic",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5295; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv295.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big red ankylosaurus and a big yellow long-neck sharing a big picnic on a checked blanket with a giant watermelon, a green hill by a lake, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5295,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv295-s5295.png"
+ },
+ {
+  "id": "dv233",
+  "title": "Chef dino",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5233; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv233.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big blue stegosaurus in a tall white chef hat tossing a huge pizza in the air, a little orange raptor waiting with a plate, a red brick kitchen in a cave, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5233,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv233-s5233.png"
+ },
+ {
+  "id": "dv242",
+  "title": "Knitting",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5242; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv242.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big orange ankylosaurus knitting a huge red and white striped scarf, a little blue dino already wrapped in it, a cosy teal cave with a fire, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5242,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv242-s5242.png"
+ },
+ {
+  "id": "dv294",
+  "title": "Big hug",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5294; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv294.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big blue T-rex trying to hug a big orange triceratops with its tiny arms, the triceratops hugging back, a green field of flowers, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5294,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv294-s5294.png"
+ },
+ {
+  "id": "dv213",
+  "title": "Drum solo",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5213; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv213.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big blue triceratops pounding a huge red drum kit with two sticks, a little yellow raptor covering its ears, an orange canyon with tall rock pillars, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5213,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv213-s5213.png"
+ },
+ {
+  "id": "dv245",
+  "title": "Photographer",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5245; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv245.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big red stegosaurus holding a huge camera to take a photo of a little posing yellow pterodactyl, a teal lagoon with palm trees, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5245,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv245-s5245.png"
+ },
+ {
+  "id": "dv201",
+  "title": "Piano rex",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5201; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "outlined/fullsrc/dv201.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big orange T-rex playing a grand piano with its tiny arms stretched as far as they go, a little green pterodactyl conducting on the piano lid, a jungle clearing with big dark green ferns and a pale yellow sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 5201,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv201-s5201.png"
+ },
+ {
+  "id": "dv206",
+  "title": "Log lift",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5206; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv206.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big red T-rex lifting a huge log like a barbell, flexing, a little green long-neck cheering with yellow pom-poms, a sandy riverbank with tall palm trees and a lilac sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 5206,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv206-s5206.png"
+ },
+ {
+  "id": "dv216",
+  "title": "Tuba blast",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5216; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "outlined/fullsrc/dv216.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big yellow ankylosaurus blowing a huge brass tuba, a little blue pterodactyl blown backwards by the sound, a green fern forest under a pink sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5216,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv216-s5216.png"
+ },
+ {
+  "id": "dv291",
+  "title": "Piggyback",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5291; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv291.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big green long-neck dinosaur giving three little colourful baby dinos a ride down its long neck like a slide, a yellow meadow with a blue river, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5291,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/dv291-s5291.png"
+ },
+ {
+  "id": "dv278",
+  "title": "The Great Wave",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5278; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv278.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big orange stegosaurus surfing the famous great blue wave with white claw-shaped foam, a small snowy mountain far behind, like the famous print, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5278,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv278-s5278.png"
+ },
+ {
+  "id": "dv220",
+  "title": "Karaoke night",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5220; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv220.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big green triceratops singing into a big red microphone, a little orange raptor holding up a lighter, a dark purple cave with a big yellow spotlight, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5220,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv220-s5220.png"
+ },
+ {
+  "id": "dv234",
+  "title": "Wizard dino",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5234; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv234.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big red T-rex in a tall blue wizard hat and cape waving a magic wand, sparkles turning a rock into a cake, a little green dino amazed, a dark purple night forest with a big moon, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5234,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv234-s5234.png"
+ },
+ {
+  "id": "dv271",
+  "title": "Tractor",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5271; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv271.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big blue ankylosaurus driving a big red tractor pulling a cart of giant pumpkins, a little yellow dino on top, golden fields, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5271,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv271-s5271.png"
+ },
+ {
+  "id": "dv241",
+  "title": "Painting a masterpiece",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5241; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv241.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big green long-neck dinosaur painting a huge canvas of a volcano with a big brush, a little orange dino posing, a sunny yellow meadow, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5241,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/dv241-s5241.png"
+ },
+ {
+  "id": "dv207",
+  "title": "The save",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5207; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv207.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big orange triceratops goalkeeper diving to save a black and white soccer ball, a little purple raptor striker holding its head in disbelief, a grassy jungle clearing with a goal made of bamboo, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 5207,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv207-s5207.png"
+ },
+ {
+  "id": "dv266",
+  "title": "Hot-air balloon",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5266; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv266.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big blue long-neck dinosaur riding in the basket of a huge striped red and yellow hot-air balloon, a little dino waving, a sky over a green valley, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5266,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/dv266-s5266.png"
+ },
+ {
+  "id": "dv289",
+  "title": "Nailed it",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5289; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv289.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big orange triceratops proudly showing a huge lopsided collapsing cake, a little blue dino laughing, a pink kitchen, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5289,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv289-s5289.png"
+ },
+ {
+  "id": "dv211",
+  "title": "The explorer",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5211; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv211.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big gentle grey long-neck dinosaur lowering its head to meet a little orange kitten explorer in a safari hat holding a map, a lush jungle with huge green leaves and a waterfall, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 5211,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv211-s5211.png"
+ },
+ {
+  "id": "dv267",
+  "title": "Convertible",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5267; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv267.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big red T-rex driving a big yellow convertible car with its tiny arms on the wheel, a little blue dino in the back seat with sunglasses, a coastal road with a teal sea, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5267,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv267-s5267.png"
+ },
+ {
+  "id": "dv311",
+  "title": "Volcano marshmallows",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5311; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv311.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big orange triceratops roasting a giant marshmallow over a small bubbling volcano, a little blue dino waiting with a stick, a purple evening sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5311,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv311-s5311.png"
+ },
+ {
+  "id": "dv205",
+  "title": "Gone fishing",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5205; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "outlined/fullsrc/dv205.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big brown ankylosaurus in a straw hat fishing from a fallen log, a big orange fish leaping out of the water, a little red bird watching from its back, a wide blue river between green fern banks, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 5205,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv205-s5205.png"
+ },
+ {
+  "id": "dv265",
+  "title": "Bike ride",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5265; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv265.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big orange triceratops riding a big red bicycle with a little green dino in the front basket, a winding road through green hills, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5265,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv265-s5265.png"
+ },
+ {
+  "id": "dv279",
+  "title": "Pearl earring",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5279; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv279.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a parody of Girl with a Pearl Earring: a cute orange triceratops looking over its shoulder in a blue and yellow headscarf with a big pearl earring, a plain dark background, like the famous painting, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5279,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/dv279-s5279.png"
+ },
+ {
+  "id": "dv231",
+  "title": "Cool shades",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5231; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv231.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big red long-neck dinosaur wearing big black sunglasses and a gold chain, striking a cool pose, a little blue dino copying it, a teal beach with orange palm trees, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5231,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/dv231-s5231.png"
+ },
+ {
+  "id": "dv202",
+  "title": "Deadline",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5202; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv202.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big green triceratops in a red tie typing fast on a laptop at a wooden desk, a little blue raptor rushing in with a cup of coffee, a rocky ledge with a smoking volcano behind and an orange sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 5202,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv202-s5202.png"
+ },
+ {
+  "id": "dv208",
+  "title": "Bookworm",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5208; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv208.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big green long-neck dinosaur with round glasses reading a huge red book, a little baby dino asleep against its foot, under a giant palm tree on a hill with a pink sunset sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 5208,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/dv208-s5208.png"
+ },
+ {
+  "id": "dv214",
+  "title": "Long-neck harp",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5214; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv214.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big orange long-neck dinosaur playing a giant golden harp with its tail, a little bird singing on top, a blue lagoon with green palm trees, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5214,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/dv214-s5214.png"
+ },
+ {
+  "id": "dv218",
+  "title": "Violin duet",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5218; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv218.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "two big dinosaurs, an orange triceratops and a blue long-neck, playing violins together, music notes floating, a green meadow with a red volcano far behind, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5218,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv218-s5218.png"
+ },
+ {
+  "id": "dv221",
+  "title": "Accordion pterodactyl",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5221; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv221.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big orange pterodactyl squeezing a huge red accordion while flying, a little green dino dancing below, a blue sky over green hills, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5221,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv221-s5221.png"
+ },
+ {
+  "id": "dv222",
+  "title": "Conductor",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5222; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv222.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big brown long-neck dinosaur in a black tailcoat conducting with a baton, three little colourful dinos singing below, a red curtained stage in a jungle, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5222,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/dv222-s5222.png"
+ },
+ {
+  "id": "dv225",
+  "title": "Coffee break",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5225; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv225.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big blue long-neck dinosaur holding a giant red coffee mug with steam, a little yellow pterodactyl sipping from the rim, an orange office with a big window to a jungle, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5225,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/dv225-s5225.png"
+ },
+ {
+  "id": "dv230",
+  "title": "Monday mood",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5230; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv230.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big blue triceratops yawning enormously at a big desk with a huge alarm clock ringing, a little yellow dino laughing, a pale purple bedroom cave with a round window, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5230,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv230-s5230.png"
+ },
+ {
+  "id": "dv232",
+  "title": "Suit and tie",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5232; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv232.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big orange triceratops in a dark blue suit and red tie adjusting its tie in a big mirror, a little green dino holding the jacket, a yellow room with a big window, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5232,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv232-s5232.png"
+ },
+ {
+  "id": "dv239",
+  "title": "Detective",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5239; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv239.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big brown T-rex in a tan detective coat and hat looking through a giant magnifying glass at a huge footprint, a little red dino hiding, a teal jungle path, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5239,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv239-s5239.png"
+ },
+ {
+  "id": "dv240",
+  "title": "Ballet stegosaurus",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5240; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv240.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big pink stegosaurus in a white tutu doing a ballet spin on its toes, a little green dino clapping, a blue stage with a big yellow spotlight, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5240,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/dv240-s5240.png"
+ },
+ {
+  "id": "dv243",
+  "title": "Gardening",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5243; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv243.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big yellow triceratops watering a giant pink flower with a big watering can, a little green dino sitting on a leaf, a green garden with a blue sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5243,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv243-s5243.png"
+ },
+ {
+  "id": "dv247",
+  "title": "Kite flying",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5247; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv247.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big orange long-neck dinosaur flying a big red kite shaped like a pterodactyl, a little green dino holding its tail, a blue sky over green hills, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5247,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/dv247-s5247.png"
+ },
+ {
+  "id": "dv249",
+  "title": "Stargazing",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5249; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv249.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big yellow stegosaurus looking through a big brass telescope at a huge moon, a little blue dino pointing at the stars, a dark purple night sky over a green hill, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5249,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv249-s5249.png"
+ },
+ {
+  "id": "dv252",
+  "title": "Ice cream stand",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5252; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv252.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big orange stegosaurus selling huge ice cream cones from a striped stand, a little blue raptor licking a giant scoop, a pink sunny beach, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5252,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv252-s5252.png"
+ },
+ {
+  "id": "dv253",
+  "title": "Slam dunk",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5253; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv253.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big green long-neck dinosaur dunking a big orange basketball into a hoop with ease, a little red raptor jumping too short, an orange canyon court, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5253,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/dv253-s5253.png"
+ },
+ {
+  "id": "dv260",
+  "title": "Boxing",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5260; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv260.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big orange triceratops in big red boxing gloves punching a punching bag, a little blue dino holding the bag and wobbling, a teal gym cave, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5260,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv260-s5260.png"
+ },
+ {
+  "id": "dv261",
+  "title": "Skiing",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5261; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv261.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big red stegosaurus skiing fast down a snowy white slope, a little blue dino on a sled behind, a blue sky with white mountains, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5261,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv261-s5261.png"
+ },
+ {
+  "id": "dv264",
+  "title": "Swimming race",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5264; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv264.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big green plesiosaur racing a little orange dino in a swim cap across a blue lake, a lake with palm trees, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5264,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv264-s5264.png"
+ },
+ {
+  "id": "dv270",
+  "title": "Rocket launch",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5270; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv270.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big green triceratops in a space helmet riding a big red rocket blasting off, a little orange dino waving goodbye, a dark blue night sky over the valley, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5270,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/dv270-s5270.png"
+ },
+ {
+  "id": "dv274",
+  "title": "Submarine",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5274; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv274.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big yellow submarine with a big green stegosaurus looking out of its round window at a little orange fish, a deep blue sea with green seaweed, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5274,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv274-s5274.png"
+ },
+ {
+  "id": "dv282",
+  "title": "Crossing the river",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5282; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv282.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a parody of Washington Crossing the Delaware: a big orange raptor standing heroically at the front of a wooden rowboat full of little dinos, an icy blue river under a grey sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5282,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv282-s5282.png"
+ },
+ {
+  "id": "dv284",
+  "title": "Liberty leading",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5284; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv284.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big yellow stegosaurus holding up a big striped flag and leading a cheering crowd of little colourful dinos, a smoky orange sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5284,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv284-s5284.png"
+ },
+ {
+  "id": "dv298",
+  "title": "Pillow fight",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5298; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv298.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "two big dinosaurs, a red stegosaurus and a teal triceratops, in a huge pillow fight with feathers flying, a yellow bedroom cave, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5298,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv298-s5298.png"
+ },
+ {
+  "id": "dv303",
+  "title": "Puppy fetch",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5303; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv303.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big red long-neck dinosaur throwing a big bone for a little brown puppy running after it, a green meadow with a blue sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5303,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv303-s5303.png"
+ },
+ {
+  "id": "dv304",
+  "title": "Hamburger friend",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5304; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv304.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big blue triceratops sharing a giant hamburger with a little cute hamburger character with a face, a yellow diner by a jungle, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5304,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv304-s5304.png"
+ },
+ {
+  "id": "dv306",
+  "title": "Frog band",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5306; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv306.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big green ankylosaurus playing a banjo with three little orange frogs singing on its back, a blue swamp with lily pads, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5306,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv306-s5306.png"
+ },
+ {
+  "id": "dv309",
+  "title": "Duckling parade",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5309; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv309.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big blue long-neck dinosaur leading a line of little yellow ducklings across a path, a green park with a pond, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5309,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv309-s5309.png"
+ },
+ {
+  "id": "dv310",
+  "title": "Snowman build",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5310; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv310.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big red T-rex building a big snowman with a little blue penguin putting on its carrot nose, a white snowy valley under a pink sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5310,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv310-s5310.png"
+ },
+ {
+  "id": "dv312",
+  "title": "Waterfall shower",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5312; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv312.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big green long-neck dinosaur taking a shower under a big blue waterfall, a little orange dino holding a towel, a jungle cliff, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5312,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/dv312-s5312.png"
+ },
+ {
+  "id": "dv315",
+  "title": "Leaf umbrella",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5315; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv315.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big blue triceratops sheltering under a giant green leaf in the rain, a little orange dino squeezing under too, a misty grey jungle, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5315,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv315-s5315.png"
+ },
+ {
+  "id": "dv316",
+  "title": "Fruit tree",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5316; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv316.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big orange long-neck dinosaur stretching to pick a giant red apple from a tall tree, a little green dino catching apples below, a blue sky meadow, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5316,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/dv316-s5316.png"
+ },
+ {
+  "id": "dv318",
+  "title": "Lava lamp",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5318; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv318.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big blue stegosaurus reading by the glow of a little bubbling volcano like a lamp, a dark purple night cave, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5318,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv318-s5318.png"
+ },
+ {
+  "id": "dv319",
+  "title": "River crossing",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5319; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv319.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big grey long-neck dinosaur letting little colourful dinos cross a blue river by walking over its long neck like a bridge, a green jungle, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5319,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv319-s5319.png"
+ },
+ {
+  "id": "dv321",
+  "title": "Meteor shower",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5321; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv321.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big yellow long-neck dinosaur making a wish on a big glowing meteor streaking across the sky, a little green dino with eyes closed, a dark blue night sky over the valley, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5321,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/dv321-s5321.png"
+ },
+ {
+  "id": "dv322",
+  "title": "Nest building",
+  "artist": "Click it! Studios",
+  "date": "2026-10-08",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 5322; prompt in tools/lands/05-dino-valley/pictures/manifest.json",
+  "file": "fullsrc/dv322.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big red pterodactyl building a big round twig nest on a tall rock pillar, a little blue chick waiting, an orange canyon sky, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty sky, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 5322,
+  "size": [
+   832,
+   1216
+  ],
+  "raw": "raw/dv322-s5322.png"
+ }
+]
