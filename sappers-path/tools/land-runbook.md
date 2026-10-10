@@ -161,3 +161,16 @@ every land out of the Campaign and plays it in Zen. To show a newly installed la
   records' `n`, saves and codes keep the world's own numbering, so always append a world, never insert one.
 - Any new picture in `tools/build-data/levels/gallery.json` (a land's side quests too) must be **appended** to `levels/places.json` (the save
   codes' picture places): never insert or reorder. test.js fails while one is missing.
+
+## 7. Reused sheets, paintings and painters (v7 lane D, World 5 Masterpiece Gallery)
+
+- **Lever 1, no new image bytes:** land.json `map: {fromLayout: [a, b], files: ["sheet-0a.webp", "sheet-0b.webp"], reuse: true,
+  tint: "<CSS filter>"}`. The map step takes the 2 castle sheets' roads, level spots, quest spurs and bridges from
+  `map/layout.json` (and config `map.bridges`), lays them A, B, A', B', ... as ever and puts `tint` on every entry; the check
+  looks for the files in the game's `map/`; `zen` copies nothing. Eggs go on the castle sheets' quest-spur tips by `eggTurns`.
+- **moatSkip** `{id: why}`: pictures that can carry a ring but never deal with one under the caps (run a deal probe first;
+  the bake otherwise fails those moat slots with "no deal in N attempts"). The plan then leaves them ringless.
+- **byArtist: true** puts `by` (the painter) on each main record; Zen wins say config `zen.text.winLineBy` ("{title} by {by},
+  all dug out."). A manifest line's `short` is the record's title (the full title stays on its licence row); `museum` and
+  `date` join the artist on the row; land.json `credit` is a line under the land's licence heading.
+- **Max-box paintings deal tight:** World 5 needed `profile.bake.deal` `{size: [32, 80], attempts: 400}` (tools/land-06-notes.md §3).

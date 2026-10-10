@@ -56,9 +56,10 @@ if (on("lazy")) {
   { const ctx = await phone(), p = await ctx.newPage(), W = watch(p); await p.goto(NEW + "?debug=1"); await homeUp(p); await p.waitForLoadState("networkidle"); await p.waitForTimeout(500);
     ok(worldReqs(W).length === 0, "lazy: a fresh home (Campaign last) asks for no Zen world file (" + worldReqs(W).join(",") + ")");
     const txt = await p.evaluate(() => document.getElementById("btn-zen").textContent.replace(/\s+/g, " ").trim());
-    ok(/0 of 212 pictures/.test(txt) && /World 1/.test(txt) && /Picture 1/.test(txt), "lazy: the Zen card reads its counts and next picture from the index alone (" + txt + ")");
+    ok(/0 of 262 pictures/.test(txt) && /World 1/.test(txt) && /Picture 1/.test(txt), "lazy: the Zen card reads its counts and next picture from the index alone (" + txt + ")");
     await zenMap(p); await p.waitForTimeout(300);
-    ok(worldReqs(W).join() === "1" && (await p.evaluate(() => document.querySelectorAll("#jr .mn").length)) === 200, "lazy: the Zen map builds all 200 nodes from the index; opening it fetches only the save's next world, 1 (fix pass M1) (" + worldReqs(W).join(",") + ")");
+    const ZN = JSON.parse(fs.readFileSync(path.join(GAME, "levels/zen.pk.json"), "utf8")).worlds.reduce((t, w) => t + ((w.recs || {}).ids || []).length, 0); // v7 lane D: every world the index lists (200 before World 5)
+    ok(worldReqs(W).join() === "1" && (await p.evaluate(() => document.querySelectorAll("#jr .mn").length)) === ZN, "lazy: the Zen map builds all " + ZN + " nodes from the index; opening it fetches only the save's next world, 1 (fix pass M1) (" + worldReqs(W).join(",") + ")");
     // Slow World 4: nothing at first, the toast after toastMs, then the level.
     await p.route("**/levels/zen-4.pk.json*", async (r) => { await new Promise((res) => setTimeout(res, 1500)); await r.continue(); });
     await p.click('#jr .mn[data-n="301"]'); await p.waitForTimeout(150);
@@ -116,7 +117,7 @@ if (on("saves")) {
   const o = OLD ? await readout(OLD, FX) : null, n = await readout(NEW, FX);
   ok(n.stored[0] === FX.campaign && n.stored[1] === FX.zen, "saves: the v6.2 save's two stored keys are byte for byte as a11e9bf wrote them after NEW's boot");
   ok(n.code === FX.code, "saves: NEW's SP2 code of the v6.2 save is the code a11e9bf made (" + n.code.length + " chars)");
-  if (o) { const keys = ["code", "mode", "camp", "zen", "coins", "inv", "got"], diff = keys.filter((k) => JSON.stringify(o[k]) !== JSON.stringify(n[k]));
+  if (o) { const keys = ["code", "mode", "camp", "zen", "coins", "inv", "got"], tot = (k, v) => (k === "zen" ? String(v).replace(/of \d+ pictures/, "of N pictures") : v), diff = keys.filter((k) => JSON.stringify(tot(k, o[k])) !== JSON.stringify(tot(k, n[k]))); // v7 lane D: the Zen card's total grows with each world, so it is left out of the comparison
     ok(!diff.length, "saves: OLD and NEW read the v6.2 save the same: " + keys.join(", ") + (diff.length ? " (differ: " + diff.map((k) => k + " " + JSON.stringify(o[k]) + " vs " + JSON.stringify(n[k])).join("; ") + ")" : "") + "; Zen card '" + n.zen + "', Campaign card '" + n.camp + "'"); }
   // The fixture's SP2 code through Settings > Load save code on a fresh NEW page: it reads back as the same code.
   { const ctx = await phone(), p = await ctx.newPage(), W = watch(p); await p.goto(NEW + "?debug=1"); await homeUp(p); await p.waitForFunction(() => window.SP, null, { timeout: 20000 });
@@ -130,7 +131,7 @@ if (on("saves")) {
 // ---- sweep ---------------------------------------------------------------------------------------------------------------
 if (on("sweep")) {
   const runs = [["Campaign level 5", (p) => p.evaluate(() => SP.load(5))], ["Zen World 1 (z1-3)", (p) => p.evaluate(() => SP.load("z1-3"))], ["Zen World 2 (e9-205)", (p) => p.evaluate(() => SP.load("e9-205"))],
-    ["Zen World 3 (z3-4)", (p) => p.evaluate(() => SP.load("z3-4"))], ["Zen World 4 (z4-6)", (p) => p.evaluate(() => SP.load("z4-6"))], ["the Campaign map", (p) => p.evaluate(() => SP.screen("map"))],
+    ["Zen World 3 (z3-4)", (p) => p.evaluate(() => SP.load("z3-4"))], ["Zen World 4 (z4-6)", (p) => p.evaluate(() => SP.load("z4-6"))], ["Zen World 5 (z5-1)", (p) => p.evaluate(() => SP.load("z5-1"))], ["the Campaign map", (p) => p.evaluate(() => SP.screen("map"))],
     ["the Zen map", (p) => zenMap(p)], ["a Gallery picture (Campaign side quest 1)", (p) => p.evaluate(() => SP.load(SP.gallery()[0]))]];
   for (const vp of [[375, 812, 3, true], [1280, 800, 1, false]]) for (const [name, go] of runs) {
     const ctx = await b.newContext({ viewport: { width: vp[0], height: vp[1] }, deviceScaleFactor: vp[2], hasTouch: vp[3], isMobile: vp[3] }), p = await ctx.newPage(), W = watch(p);

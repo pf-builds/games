@@ -480,3 +480,12 @@ Fixed: S1-S7, m2, m3, N1, N2 (`tools/v5-r4-notes.md` §10). Parked:
 - The Campaign's records (227 KB) could load by realm as Zen's do by world; the home needs only ids, numbers and tags.
 - `tools/space-v7/check.mjs lazy` names worlds 1-4 and fixed picture numbers (51, 151, 154, "0 of 212 pictures"); a new or grown world moves them. It could read them from the index.
 - land.js and zen-world.js could run `tools/pack.js` themselves after an install (today test.js fails until it's run).
+
+## v7 lane D (Zen World 5 Masterpiece Gallery, 2026-10-10)
+
+- Max-box paintings (42 x 45-46, colours in many scattered pieces) don't deal under the 15 s / 55-tap caps at land-config's squad size: World 5's profile deals squads 1.6x ([32, 80]) with 400 attempts. A painting land's default (land-config `profile` by `source`) would save the next art world the trial.
+- Deal probe for moats (again, as Dino Valley): 8 of lane C's 19 ring-capable paintings never deal with a ring; World 5 lists them in land.json `moatSkip`. The probe could be a land.js step that writes moatSkip itself, or lane C's pick sheet could run it.
+- The Zen map's Next up card names the oldest unwon side quest of any world (seen on World 5 with Kitten Forest's side quest 12 open; the same on 6a7d1a5's World 4). It could prefer the current world's side quests or hide the row in a world with none.
+- The realm card's "Secrets found" line is empty when no egg is found yet (World 4 and 5 alike).
+- World 5's finished-picture thumbnail on the win sheet reads soft for the busier paintings (La Grande Jatte's crop is a field of small shapes). A playtest call for Peter and lane C, not a conversion change here.
+- `tools/space-v7/check.mjs` now counts the index's nodes and leaves the Zen card's total out of the old/new save comparison; its other fixed numbers (51, 151, 154) hold while Worlds 1-4 stay as they are.

@@ -322,3 +322,60 @@ The campaign's side quests from v6 (`levels/gallery.json` pictures 1-50; the num
 | z1-48 | Wheelbarrow nap (pg15) | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9015; prompt in tools/lands/z1-gallery/pictures/manifest.json |
 | z1-49 | Apple tree owl (pg14) | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9014; prompt in tools/lands/z1-gallery/pictures/manifest.json |
 | z1-50 | Sunflower bees (pg03) | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9003; prompt in tools/lands/z1-gallery/pictures/manifest.json |
+
+### Zen World 5: Masterpiece Gallery (Land 4, levels 351-400 in the land factory's numbering)
+
+Public domain paintings from the Art Institute of Chicago, National Gallery of Art, The Met and Cleveland Museum of Art open access (CC0). Each level is a crop of the painting (never repainted) at the game's largest board; the full title, artist, date, museum, licence and the museum's own page are on its row.
+
+| Level | Picture | Artist | Licence | Source |
+|---|---|---|---|---|
+| 351 | A Sunday Afternoon on the Island of La Grande Jatte (AIC title: A Sunday on La Grande Jatte, 1884) (mg003) | Georges Seurat, 1884-86 (Art Institute of Chicago) | Public domain (CC0, Art Institute of Chicago open access) | https://www.artic.edu/artworks/27992 |
+| 352 | Little Girl in a Blue Armchair (mg019) | Mary Cassatt, 1878 (National Gallery of Art) | Public domain (CC0, National Gallery of Art open access) | https://www.nga.gov/collection/art-object-page.61368.html |
+| 353 | Storm below Mount Fuji (mg036) | Katsushika Hokusai, ca. 1830-32 (The Met) | Public domain (CC0, The Met Open Access) | https://www.metmuseum.org/art/collection/search/36492 |
+| 354 | Self-Portrait with a Straw Hat (mg029) | Vincent van Gogh, 1887 (The Met) | Public domain (CC0, The Met Open Access) | https://www.metmuseum.org/art/collection/search/436532 |
+| 355 | Poppy Field (Giverny) (mg052) | Claude Monet, 1890-91 (Art Institute of Chicago) | Public domain (CC0, Art Institute of Chicago open access) | https://www.artic.edu/artworks/4783 |
+| 356 | Still Life with Apples and Pears (mg077) | Paul Cezanne, ca. 1891-92 (The Met) | Public domain (CC0, The Met Open Access) | https://www.metmuseum.org/art/collection/search/435883 |
+| 357 | Otani Oniji III as Yakko Edobei (mg006) | Toshusai Sharaku, 1794 (The Met) | Public domain (CC0, The Met Open Access) | https://www.metmuseum.org/art/collection/search/37358 |
+| 358 | Woman with a Parasol, Madame Monet and Her Son (mg001) | Claude Monet, 1875 (National Gallery of Art) | Public domain (CC0, National Gallery of Art open access) | https://www.nga.gov/collection/art-object-page.61379.html |
+| 359 | Arlesiennes (Mistral) (mg073) | Paul Gauguin, 1888 (Art Institute of Chicago) | Public domain (CC0, Art Institute of Chicago open access) | https://www.artic.edu/artworks/19339 |
+| 360 | Chrysanthemum and Horsefly (Large Flowers) (mg061) | Katsushika Hokusai, c. 1831-33 (Art Institute of Chicago) | Public domain (CC0, Art Institute of Chicago open access) | https://www.artic.edu/artworks/25110 |
+| 361 | Two Sisters (On the Terrace) (mg021) | Pierre-Auguste Renoir, 1881 (Art Institute of Chicago) | Public domain (CC0, Art Institute of Chicago open access) | https://www.artic.edu/artworks/14655 |
+| 362 | Woman with Red Hair (mg085) | Amedeo Modigliani, 1917 (National Gallery of Art) | Public domain (CC0, National Gallery of Art open access) | https://www.nga.gov/collection/art-object-page.46651.html |
+| 363 | The Bridge at Argenteuil (mg053) | Claude Monet, 1874 (National Gallery of Art) | Public domain (CC0, National Gallery of Art open access) | https://www.nga.gov/collection/art-object-page.61374.html |
+| 364 | Mannen Bridge, Fukagawa (the turtle) (mg013) | Utagawa Hiroshige, 1857 (Art Institute of Chicago) | Public domain (CC0, Art Institute of Chicago open access) | https://www.artic.edu/artworks/34274 |
+| 365 | L'Arlesienne: Madame Joseph-Michel Ginoux (mg015) | Vincent van Gogh, 1888-89 (The Met) | Public domain (CC0, The Met Open Access) | https://www.metmuseum.org/art/collection/search/436529 |
+| 366 | The Boating Party (mg012) | Mary Cassatt, 1893-94 (National Gallery of Art) | Public domain (CC0, National Gallery of Art open access) | https://www.nga.gov/collection/art-object-page.46569.html |
+| 367 | Hakone: View of the Lake (mg060) | Utagawa Hiroshige, c. 1833/34 (Art Institute of Chicago) | Public domain (CC0, Art Institute of Chicago open access) | https://www.artic.edu/artworks/33884 |
+| 368 | Farmhouse in Provence (mg113) | Vincent van Gogh, 1888 (National Gallery of Art) | Public domain (CC0, National Gallery of Art open access) | https://www.nga.gov/collection/art-object-page.52178.html |
+| 369 | A Girl with a Watering Can (mg004) | Pierre-Auguste Renoir, 1876 (National Gallery of Art) | Public domain (CC0, National Gallery of Art open access) | https://www.nga.gov/collection/art-object-page.46681.html |
+| 370 | Self-Portrait (with halo and snake) (mg016) | Paul Gauguin, 1889 (National Gallery of Art) | Public domain (CC0, National Gallery of Art open access) | https://www.nga.gov/collection/art-object-page.46625.html |
+| 371 | Water Lilies (mg008) | Claude Monet, 1906 (Art Institute of Chicago) | Public domain (CC0, Art Institute of Chicago open access) | https://www.artic.edu/artworks/16568 |
+| 372 | Boy on the Rocks (mg118) | Henri Rousseau, 1895-97 (National Gallery of Art) | Public domain (CC0, National Gallery of Art open access) | https://www.nga.gov/collection/art-object-page.46538.html |
+| 373 | Carp Swimming by Water Weeds (mg063) | Katsushika Hokusai, 1831 (Cleveland Museum of Art) | Public domain (CC0, Cleveland Museum of Art open access) | https://clevelandart.org/art/1943.3 |
+| 374 | Self-Portrait (mg028) | Vincent van Gogh, 1887 (Art Institute of Chicago) | Public domain (CC0, Art Institute of Chicago open access) | https://www.artic.edu/artworks/80607 |
+| 375 | The Gulf of Marseille Seen from L'Estaque (mg078) | Paul Cezanne, ca. 1885 (The Met) | Public domain (CC0, The Met Open Access) | https://www.metmuseum.org/art/collection/search/435872 |
+| 376 | The Railway (mg023) | Edouard Manet, 1873 (National Gallery of Art) | Public domain (CC0, National Gallery of Art open access) | https://www.nga.gov/collection/art-object-page.43624.html |
+| 377 | Lucie Berard (Child in White) (mg128) | Pierre-Auguste Renoir, 1883 (Art Institute of Chicago) | Public domain (CC0, Art Institute of Chicago open access) | https://www.artic.edu/artworks/16600 |
+| 378 | Plum Park in Kameido (One Hundred Famous Views of Edo) (mg005) | Utagawa Hiroshige, 1857 (Art Institute of Chicago) | Public domain (CC0, Art Institute of Chicago open access) | https://www.artic.edu/artworks/26577 |
+| 379 | The Japanese Footbridge (mg032) | Claude Monet, 1899 (National Gallery of Art) | Public domain (CC0, National Gallery of Art open access) | https://www.nga.gov/collection/art-object-page.74796.html |
+| 380 | Girl in a Green Blouse (mg123) | Amedeo Modigliani, 1917 (National Gallery of Art) | Public domain (CC0, National Gallery of Art open access) | https://www.nga.gov/collection/art-object-page.46520.html |
+| 381 | Mahana no atua (Day of the God) (mg072) | Paul Gauguin, 1894 (Art Institute of Chicago) | Public domain (CC0, Art Institute of Chicago open access) | https://www.artic.edu/artworks/27943 |
+| 382 | Children Playing on the Beach (mg056) | Mary Cassatt, 1884 (National Gallery of Art) | Public domain (CC0, National Gallery of Art open access) | https://www.nga.gov/collection/art-object-page.52163.html |
+| 383 | Cypresses (mg039) | Vincent van Gogh, 1889 (The Met) | Public domain (CC0, The Met Open Access) | https://www.metmuseum.org/art/collection/search/437980 |
+| 384 | Ichikawa Ebizo IV as Takemura Sadanoshin (mg027) | Toshusai Sharaku, 1794 (The Met) | Public domain (CC0, The Met Open Access) | https://www.metmuseum.org/art/collection/search/37353 |
+| 385 | Allies Day, May 1917 (mg058) | Childe Hassam, 1917 (National Gallery of Art) | Public domain (CC0, National Gallery of Art open access) | https://www.nga.gov/collection/art-object-page.30115.html |
+| 386 | Boating (mg022) | Edouard Manet, 1874 (The Met) | Public domain (CC0, The Met Open Access) | https://www.metmuseum.org/art/collection/search/436947 |
+| 387 | Maple Trees at Mama (mg059) | Utagawa Hiroshige, 1857 (Art Institute of Chicago) | Public domain (CC0, Art Institute of Chicago open access) | https://www.artic.edu/artworks/26525 |
+| 388 | La Berceuse (Woman Rocking a Cradle) (mg065) | Vincent van Gogh, 1889 (The Met) | Public domain (CC0, The Met Open Access) | https://www.metmuseum.org/art/collection/search/437984 |
+| 389 | Cliff Walk at Pourville (mg051) | Claude Monet, 1882 (Art Institute of Chicago) | Public domain (CC0, Art Institute of Chicago open access) | https://www.artic.edu/artworks/14620 |
+| 390 | Adeline Ravoux (mg070) | Vincent van Gogh, 1890 (Cleveland Museum of Art) | Public domain (CC0, Cleveland Museum of Art open access) | https://clevelandart.org/art/1958.31 |
+| 391 | Kintai Bridge in Suo Province (mg094) | Katsushika Hokusai, 1827-30 (The Met) | Public domain (CC0, The Met Open Access) | https://www.metmuseum.org/art/collection/search/36489 |
+| 392 | Chrysanthemums (mg127) | Pierre-Auguste Renoir, 1881-82 (Art Institute of Chicago) | Public domain (CC0, Art Institute of Chicago open access) | https://www.artic.edu/artworks/16617 |
+| 393 | Study for 'A Sunday on La Grande Jatte' (mg057) | Georges Seurat, 1884 (The Met) | Public domain (CC0, The Met Open Access) | https://www.metmuseum.org/art/collection/search/459117 |
+| 394 | The Basket of Apples (mg031) | Paul Cezanne, c. 1893 (Art Institute of Chicago) | Public domain (CC0, Art Institute of Chicago open access) | https://www.artic.edu/artworks/111436 |
+| 395 | Oiwa (One Hundred Ghost Tales) (mg026) | Katsushika Hokusai, 1831-32 (Art Institute of Chicago) | Public domain (CC0, Art Institute of Chicago open access) | https://www.artic.edu/artworks/47403 |
+| 396 | The Lighthouse at Honfleur (mg109) | Georges Seurat, 1886 (National Gallery of Art) | Public domain (CC0, National Gallery of Art open access) | https://www.nga.gov/collection/art-object-page.61383.html |
+| 397 | Sudden Shower over Shin-Ohashi Bridge and Atake (mg010) | Utagawa Hiroshige, 1857 (Art Institute of Chicago) | Public domain (CC0, Art Institute of Chicago open access) | https://www.artic.edu/artworks/64447 |
+| 398 | Paris Street; Rainy Day (mg007) | Gustave Caillebotte, 1877 (Art Institute of Chicago) | Public domain (CC0, Art Institute of Chicago open access) | https://www.artic.edu/artworks/20684 |
+| 399 | Self-Portrait (mg038) | Vincent van Gogh, 1889 (National Gallery of Art) | Public domain (CC0, National Gallery of Art open access) | https://www.nga.gov/collection/art-object-page.106382.html |
+| 400 | The Bedroom (mg002) | Vincent van Gogh, 1889 (Art Institute of Chicago) | Public domain (CC0, Art Institute of Chicago open access) | https://www.artic.edu/artworks/28560 |

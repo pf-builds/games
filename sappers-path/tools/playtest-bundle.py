@@ -9,12 +9,13 @@ zen.json), the font, map/ (layout.json and the painted sheets, v5 R3; a land's s
 audio/ (the music, v5.2: its URLs lose their ?v= with the others). Also writes <out>/wrap.html, an artifact-style wrapper page for the smoke test
 (tools/playtest-smoke.mjs); wrap.html is not published.
 
-  python3 tools/playtest-bundle.py <git-ref> <out-dir> [title] [--jump 101,125,150,175,200,z1:1,z1:20,z2:1,z2:25]
+  python3 tools/playtest-bundle.py <git-ref> <out-dir> [title] [--jump 101,125,150,175,200,z1:1,z1:20,z2:1,z2:25,z5:1]
 
 --jump (v5 R4, playtest only, never shipped): exposes window.SP without ?debug=1 and adds src/playtest.js, a small
 "Jump" chip that marks every level before the chosen one cleared (SP.unlockTo) and reloads, so a playtest can start
 deep in the campaign. The artifact can't take ?debug=1 and a phone has no console. v6 lane B: a stop "z<k>:<n>" jumps into Zen
 world k at its level n (SP.zenTo: the world's levels before n cleared, Zen the mode played last); its chip reads "Z<k>.<n>".
+v7 lane D: z5:1 starts World 5 Masterpiece Gallery at La Grande Jatte (its world file loads on the tap, as in the game).
 
 Publish: the Artifact tool with url = the playtest artifact, file_path = <out>/index.html, root = <out>, and files for
 every path printed below except index.html and wrap.html (audio/*.m4a: contentType audio/mp4).
