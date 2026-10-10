@@ -12,6 +12,36 @@ Records n 351-400 (Land 4 in the factory's numbering, era 12, ids z5-1..z5-50, w
 
 
 
+
+## 000. Round 4 (2026-10-10, Peter via lane C, workspace 8cdbb58): tighter crops for three
+
+Lane C's handoff here: **62 of 62**. Only three landManifest lines changed (`srcCrop`, and mg012's chroma); those three replaced
+whole in `pictures/manifest.json`, their sources re-made; `convert --force`: 50 of 50 identical to boards-full, exactly
+359, 367 and 381 changed. Re-baked on the kept plan (`bake --keep-plan --drop-moat --list 359,367,381`; no ring planned on
+any of the three, so none dropped):
+
+| Level / Zen | Picture | Board | Tag, features | Rate | Pace | Taps | Longest tap | Careful |
+|---|---|---|---|---|---|---|---|---|
+| 359 / 209 | mg001 Woman with a Parasol (chroma 2.4) | 33x46, 7 colours | Easy, links | 72.0% | 218 s | 42 | 14.96 s | 1.0 |
+| 367 / 217 | mg012 The Boating Party (chroma 2.4) | 42x42, 7 colours | Normal, ? cards | 36.0% | 231 s | 54 | 14.95 s | 1.0 |
+| 381 / 231 | mg048 The Letter (boardOf's chroma) | 42x43, 5 colours | Normal, links | 32.8% | 237 s | 47 | 14.96 s | 1.0 |
+
+381's first pick was a fallback (real pace 315 s, over 300); 16 more candidates (`--extra 16 --reuse`) gave the ok pick.
+
+**The other 47 records byte-identical** to round 3 (land out/ and zen.json both; worlds unchanged; LICENSES.md unchanged: the
+rows carry no crop). World median real pace 220 s; rings 5. Freeze re-taken: only 359, 367, 381 changed in the frozen zen.json,
+the other 197 records and all 5 worlds byte-identical; `--require` PASS (2,405 / 372 / 1,800, shipped 512, castles 283).
+
+**Readability at 375 (my call, `tools/shots-land-06/play-359-parasol-375.png`, `play-367-boating-375.png`,
+`play-381-letter-375.png`):** 359 reads: the green parasol over a standing figure against sky, though the white dress still
+half melts into the clouds. 367 is weak: a pink child against a teal mother on navy water, but no boat and no oarsman, so it
+needs the title. 381 reads: a dark-haired woman in blue against patterned wallpaper with a pale letter, though the face is
+a plain pale shape.
+
+**Gates:** test.js 714/0 (shipped 13,916,708 B); pack --check clean; selfTest 880/0 (375x812@3), 882/0 (1280x720), 880/0
+(360x640); check.mjs 39 ok, 0 FAIL; sweep-map 126/0; regrades and harness in v5-progress D21; 0 console. Cache `?v=70`.
+Contact sheet re-rendered.
+
 ## 00. Round 3 (2026-10-10, Peter via lane C, workspace bf9a4c5): La Grande Jatte as a two-level series
 
 Folded in before round 2 was committed, so the commit carries both. Lane C's round 3 `picks-full.json`: 351 = **mg003c** (the

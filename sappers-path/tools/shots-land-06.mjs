@@ -40,6 +40,8 @@ await session(phone, async ({ p, go, shot, toZen, seen, banners, scrollTo }) => 
   await shot("play-grande-jatte-mid-375");
   const win = await p.evaluate((rest) => { for (const ch of rest) { SP.play(+ch); SP.settle(); } SP.tick(12000); return { panel: SP.state().panel, title: document.getElementById("p-title").textContent, line: document.getElementById("p-line").textContent }; }, o.slice(18));
   notes.push("La Grande Jatte win: " + JSON.stringify(win)); await shot("win-375");
+  for (const [id, k] of [["z5-9", "play-359-parasol-375"], ["z5-17", "play-367-boating-375"], ["z5-31", "play-381-letter-375"]]) { // round 4 (Peter): the three tighter crops in play
+    await go(true); notes.push(k + ": " + JSON.stringify(await p.evaluate(async (id) => { SP.zenTo(5, +id.split("-")[1] - 1); await SP.load(id); return { num: document.getElementById("lvl-num").textContent, name: document.getElementById("lvl-name").textContent }; }, id))); await shot(k); }
   await go(true); notes.push("La Grande Jatte 2 of 2 in play: " + JSON.stringify(await p.evaluate(async () => { SP.zenTo(5, 1); await SP.load("z5-2"); return { num: document.getElementById("lvl-num").textContent, name: document.getElementById("lvl-name").textContent }; }))); await shot("play-grande-jatte-2-375"); // round 3: the series' second picture
 });
 await session(desk, async ({ p, go, shot, toZen, seen, banners, scrollTo }) => {
