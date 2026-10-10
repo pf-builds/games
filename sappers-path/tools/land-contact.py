@@ -6,6 +6,7 @@
 # v6 lane D7: --world K reads a Zen world's records (tools/build-data/levels/zen.json, world K) instead of a land's; water (a moat) is drawn
 # in blue, and each tile says its board size and moat yes or no. v6 lane D12: --zen-from N labels each tile with the Zen number
 # the page shows (main.js zenNum: N for the world's first level, then on by one), e.g. --zen-from 137 for World 4.
+# v7 lane D: a record with a painter (by) gets a fourth line, its credit (artist, date), and a longer title; .jpg out is fine.
 import json, sys
 from PIL import Image, ImageDraw, ImageFont
 
@@ -22,7 +23,8 @@ LV = [L for L in (raw if isinstance(raw, list) else raw["levels"]) if (L.get("wo
 hexrgb = lambda h: tuple(int(h[i:i + 2], 16) for i in (1, 3, 5))
 DIRT, PAGE, INK, AMBER, WATER = (201, 185, 143), (246, 241, 230), (40, 34, 46), (230, 150, 20), (70, 130, 200)
 bw, bh = 42 * cell, 46 * cell
-tw, th = bw + 16, bh + 66
+byl = any(L.get("by") for L in LV)
+tw, th = bw + 16, bh + (81 if byl else 66)
 rows = (len(LV) + cols - 1) // cols
 img = Image.new("RGB", (cols * tw + 16, rows * th + 56), PAGE)
 d = ImageDraw.Draw(img)
@@ -59,9 +61,11 @@ for i, L in enumerate(LV):
                 d.point((x0 + x * cell + m, y0 + y * cell + m), fill=hexrgb(L.get("hideQ", "#f3ead8")))
     hid = sum(r.count("?") for r in L.get("hidden", []))
     feats = ", ".join({"linked": "links", "mystery": "? cards", "hidden": "mystery"}.get(x, x) for x in L.get("feats", [])) or "-"
-    d.text((ox, oy + bh + 6), ("%d/Z%d %s %s" % (L["n"], zen0 + i, L["src"], L["title"][:20])) if zen0 else ("%d %s %s" % (L["n"], L["src"], L["title"][:24])), fill=INK, font=font)
+    d.text((ox, oy + bh + 6), ("%d/Z%d %s %s" % (L["n"], zen0 + i, L["src"], L["title"][:34 if byl else 20])) if zen0 else ("%d %s %s" % (L["n"], L["src"], L["title"][:24])), fill=INK, font=font)
     d.text((ox, oy + bh + 21), "%s | %s%s" % (L["tag"], feats, (" %d" % hid) if hid else ""), fill=INK, font=font)
     moat = any("~" in r for r in L["grid"])
     d.text((ox, oy + bh + 36), "%dx%d %s" % (L["w"], L["h"], L.get("kind", "")) + ("   KEPT (live board)" if kept else "") + (("   moat yes" if moat else "   moat no") if world else ""), fill=AMBER if kept else INK, font=font)
-img.save(out, optimize=True)
+    if L.get("by"):
+        d.text((ox, oy + bh + 51), L.get("credit") or L["by"], fill=INK, font=font)
+img.save(out, optimize=True, **({"quality": 88} if out.lower().endswith(".jpg") else {}))
 print("contact: %d boards -> %s (%dx%d)" % (len(LV), out, img.size[0], img.size[1]))

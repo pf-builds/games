@@ -23,7 +23,8 @@
 //             tools/moat.js) first asks each main picture whether it can carry a ring with the gentlest opening set its
 //             profile allows (state.json moat: [{n, ok, why}]; every level can step down to it); the plan skips those that
 //             can't.
-//   map       the layout entries from the land's 2 sheet templates, alternately mirrored -> scratch/map.json (Land 1 fix:
+//   map       the layout entries from the land's 2 sheet templates, alternately mirrored -> scratch/map.json (v7 lane D: map.reuse with
+//             map.fromLayout, 2 of the game's own sheets reused, never copied, each entry under map.tint; Land 1 fix:
 //             land.json eggTurns [per template [per repeat [[kind, x, y], [kind, x, y]]]], each repeat of a sheet its own
 //             egg kinds and spots in the template's pixels, so a found egg is not the same egg two sheets on; without it
 //             entry e takes kinds eggs[2e], eggs[2e + 1] on the template's spots, as before)
@@ -36,6 +37,9 @@
 //   reinstall (v6 lane D4; after a passing check with --keep, never part of the default run) a records-only re-deal of an
 //             installed land: its main records in tools/build-data/levels/levels.json replaced in place (same ids, same order), the --keep
 //             levels' installed records byte for byte; gallery, layout, config, LICENSES.md and the sheets untouched.
+// v7 lane D (Masterpiece Gallery): land.json map.reuse (2 of the game's own sheets, map.fromLayout, never copied; map.tint on
+// each entry), byArtist (each main record's by: its painter, for the Zen win line), credit (a line under its licence heading);
+// a manifest line's short is the main record's title and its museum and date join the artist on its licence row.
 // v6 lane D8 (Peter, 2026-10-08: no mystery blocks in Zen, ever; the whole picture shows from the start): a Zen land (land.json
 // zen, or a tools/build-data/levels/zen.json world with land k) is refused if its features list hidden or its profile gives hidden a share;
 // bake --keep-plan re-bakes a few slots on the plan the land was baked with (scratch/state.json, hidden taken out), so a
@@ -143,7 +147,8 @@ function sheet(X) {
 // every level down to it when its planned set won't deal)?
 function moatCan(X, b) {
   const MC = X.LC.plan.moat, F = X.P.features.moat || {}, lo = (F.ways || [0])[0];
-  return b.main.map((e) => { const R = MO.ringOf(e.board, MC, MC.ways[lo], 0, null, F.liquids); return { n: e.n, ok: !!R.cells, why: R.cells ? null : R.why }; });
+  const skip = X.land.moatSkip || {}; // v7 lane D: land.json moatSkip {id: why}, pictures that carry a ring but never deal with one under the caps (a deal probe), planned without
+  return b.main.map((e) => { if (skip[e.id]) return { n: e.n, ok: false, why: "moatSkip: " + skip[e.id] }; const R = MO.ringOf(e.board, MC, MC.ways[lo], 0, null, F.liquids); return { n: e.n, ok: !!R.cells, why: R.cells ? null : R.why }; });
 }
 // v6 lane D8: bake --keep-plan, the plan the land was baked with (scratch/state.json) for the same tags, mystery blocks taken
 // out (a Zen land), each slot's cant read again from its picture now (a swapped picture); refused when a slot planned with a
@@ -204,7 +209,7 @@ function map(X) {
     const t = T[e % 2], mirror = Math.floor(e / 2) % 2 === 1, spots = t.levels.slice(0, Math.min((X.land.map || {}).perSheet || t.levels.length, X.to - n + 1));
     const S = { sheet: X.sheet0 + e, file: t.file, realm: X.era, realmName: X.land.name, land: X.land.k, levels: spots.map((p) => ({ n: n++, x: p.x, y: p.y })), quests: [], entry: t.entry, exit: t.exit, road: t.road,
       eggs: ((X.land.eggTurns || [])[e % 2] || [])[Math.floor(e / 2)] ? X.land.eggTurns[e % 2][Math.floor(e / 2)].map(([kind, x, y]) => ({ kind, x, y })) : t.eggs.map((g, i) => ({ kind: X.land.eggs[(2 * e + i) % X.land.eggs.length], x: g.x, y: g.y })), bridges: t.bridges || [] }; // Land 1 fix: eggTurns, each repeat of a sheet its own eggs
-    if (mirror) S.mirror = true; if (MC.fade) S.fade = true;
+    if (mirror) S.mirror = true; if (MC.fade) S.fade = true; if ((X.land.map || {}).tint) S.tint = X.land.map.tint; // v7 lane D: reused sheets under the world's own tint
     if (n > X.to && spots.length < t.levels.length) { const p = t.levels[spots.length]; S.tail = { x: p.x, y: p.y, fog: 0 }; } // the land's frontier: the first spot past its last level
     entries.push(S);
   }
@@ -243,15 +248,15 @@ function assemble(X) {
   const K = keepOf(); if (K && !X.inst) throw new Error("assemble --keep: land " + X.land.k + " is not installed");
   const levels = b.main.map((e, i) => { if (K && K.indexOf(e.n) >= 0) return X.inst.levels.find((L) => L.n === e.n) || (bad.push(e.n + ": not installed"), null); // v6 lane D4: kept as installed
     const r = rec(readJ(path.join(X.S, "bake", "m-" + e.n + ".json"))); if (!r) return null; const p = main[i], B = e.board, L = r.level;
-    return Object.assign({ id: "e" + X.era + "-" + e.n, n: e.n, era: X.era, land: X.land.k, source: "land", title: p.title, kind: p.kind || "painting", src: p.id, credit: creditOf(p), tag: r.tag, band: r.tag, target: X.P.bands[r.tag], seed: r.seed,
+    return Object.assign({ id: "e" + X.era + "-" + e.n, n: e.n, era: X.era, land: X.land.k, source: "land", title: p.short || p.title, kind: p.kind || "painting", src: p.id, credit: creditOf(p) }, X.land.byArtist && p.artist ? { by: p.artist } : {}, { tag: r.tag, band: r.tag, target: X.P.bands[r.tag], seed: r.seed,
       w: L.w, h: L.h, grid: L.grid, pic: true, pal: B.pal }, L.liquid ? { liquid: L.liquid } : {}, B.shade ? { shade: dry(B.shade, L.grid, B.grid) } : {}, L.hidden ? { hidden: L.hidden } : {}, L.hidden && X.LC.plan.hidden.fills ? (({ c, q }) => ({ hideC: c, hideQ: q }))(fillOf(B.pal, X.LC.plan.hidden)) : {}, L.lock ? { lock: L.lock } : {}, { cols: L.cols }, L.links ? { links: L.links } : {},
       { win: L.win, grade: L.grade, inBand: r.inBand, convert: B.stats, feats: r.plan.feats.concat(r.plan.lock ? ["lock"] : []) }, r.plan.cant ? { cant: r.plan.cant } : {}, r.mystery ? { mystery: r.mystery } : {}, r.fallback ? { fallback: r.fallback } : {}); });
   const pics = K ? X.inst.gallery : b.side.map((e, i) => { const r = rec(readJ(path.join(X.S, "bake", "s-" + (X.gal0 + i + 1) + ".json"))); if (!r) return null; const p = side[i], B = e.board, L = r.level;
     return Object.assign({ id: "g-w-" + p.id, n: X.gal0 + i + 1, gallery: true, wander: true, land: X.land.k, title: p.title }, p.short ? { short: p.short } : {}, { kind: p.kind || "painting", src: p.id, credit: creditOf(p), tag: r.tag, band: r.tag, target: X.LC.bake.sideBands[r.tag], seed: r.seed,
       w: L.w, h: L.h, grid: L.grid, pic: true, cols: L.cols, pal: B.pal }, B.shade ? { shade: B.shade } : {}, { win: L.win, grade: L.grade, inBand: r.inBand, convert: B.stats, quest: quests[i] }, r.fallback ? { fallback: r.fallback } : {}); });
   const S = K ? X.inst.layout : mp.entries, entry = K ? X.installed : { k: X.land.k, slug: X.land.slug, name: X.land.name, lore: X.land.lore, from: X.from, to: X.to, source: X.land.source, features: X.land.features, eggs: X.land.eggs, sheets: [S[0].sheet, S[S.length - 1].sheet], files: X.land.map.files };
-  const lic = ["", "### Land " + X.land.k + ": " + X.land.name + " (levels " + X.from + "-" + X.to + ")", "", "| Level | Picture | Artist | Licence | Source |", "|---|---|---|---|---|"]
-    .concat(main.map((p, i) => "| " + (X.from + i) + " | " + p.title + " (" + p.id + ") | " + (p.artist || "-") + " | " + p.licence + " | " + p.url + " |"),
+  const lic = ["", "### Land " + X.land.k + ": " + X.land.name + " (levels " + X.from + "-" + X.to + ")", ""].concat(X.land.credit ? [X.land.credit, ""] : [], ["| Level | Picture | Artist | Licence | Source |", "|---|---|---|---|---|"])
+    .concat(main.map((p, i) => "| " + (X.from + i) + " | " + p.title + " (" + p.id + ") | " + (p.artist || "-") + (p.museum ? (p.date ? ", " + p.date : "") + " (" + p.museum + ")" : "") + " | " + p.licence + " | " + p.url + " |"),
       side.map((p, i) => "| side quest " + (X.gal0 + i + 1) + " (Wandering Gallery) | " + p.title + " (" + p.id + ") | " + (p.artist || "-") + " | " + p.licence + " | " + p.url + " |"));
   writeJ(path.join(out, "levels.json"), levels.filter(Boolean)); writeJ(path.join(out, "gallery.json"), pics.filter(Boolean)); writeJ(path.join(out, "land.json"), { entry, layout: S, eggCoins: K ? X.CFG.map.eggCoins.slice(X.sheet0 - 1, X.sheet0 - 1 + S.length) : mp.eggCoins }, true);
   fs.writeFileSync(path.join(out, "licences.md"), lic.join("\n") + "\n");
@@ -299,7 +304,7 @@ function check(X) {
     const L2 = JN.mirrorSheet(s, X.layout.w), pts = L2.levels.map((p) => [p.x, p.y, "level " + p.n]).concat(L2.quests.map((q) => [q.x, q.y, "quest " + q.q]), L2.eggs.map((g) => [g.x, g.y, "egg"]));
     for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) { const d = Math.hypot(pts[i][0] - pts[j][0], pts[i][1] - pts[j][1]) * k375; if (d < 48) mapBad.push("sheet " + s.sheet + ": " + pts[i][2] + " and " + pts[j][2] + " " + d.toFixed(0) + " px apart"); }
     for (const g of s.eggs) if (JN.EGG_KINDS.indexOf(g.kind) < 0) mapBad.push("egg kind " + g.kind); });
-  for (const f of X.land.map.files) if (!fs.existsSync(path.join(X.LAND, "map", f))) mapBad.push("sheet file map/" + f + " missing");
+  for (const f of X.land.map.files) if (!fs.existsSync(path.join(X.land.map.reuse ? X.GAME : X.LAND, "map", f))) mapBad.push("sheet file map/" + f + " missing" + (X.land.map.reuse ? " from the game (map.reuse)" : ""));
   gate("the map: a spot for every level and side quest, sheets alternating file and mirror, nodes 48 CSS px apart at 375 px", mapBad);
   gate("a licence and a source for every picture", main.concat(side).filter((p) => !p.licence || !p.url).map((p) => p.id));
   const ok = gates.every((g) => g.ok), sh = LP.sharesOf(LV);
@@ -380,10 +385,10 @@ function zenInstall(X) {
   const out = path.join(X.S, "out"), LV = readJ(path.join(out, "levels.json")), LJ = readJ(path.join(out, "land.json")), G = X.GAME, f = path.join(G, "tools/build-data/levels/zen.json"), Z = readJ(f);
   const recs = LV.map((L, i) => { const o = Object.assign({ id: "z" + ZK + "-" + (i + 1), n: L.n, era: L.era, world: ZK }, L, { id: "z" + ZK + "-" + (i + 1), world: ZK }); delete o.land; return o; });
   const layout = LJ.layout.map((S, e) => { const o = Object.assign({}, S, { eggCoins: LJ.eggCoins[e] }); delete o.sheet; delete o.land; return o; });
-  const W = { k: ZK, name: X.land.name, lore: X.land.lore, era: X.era, map: { note: "v6 lane D: Land " + X.land.k + " (" + X.land.slug + ") as Zen World " + ZK + ", its own sheets (tools/land.js zen).", layout } };
+  const W = { k: ZK, name: X.land.name, lore: X.land.lore, era: X.era, map: { note: "v6 lane D: Land " + X.land.k + " (" + X.land.slug + ") as Zen World " + ZK + (X.land.map.reuse ? ", the game's sheets " + X.land.map.files.join(" and ") + " reused" + (X.land.map.tint ? " under its own tint" : "") + " (map.reuse, no new image bytes)" : ", its own sheets") + " (tools/land.js zen).", layout } };
   Z.worlds = Z.worlds.filter((w) => w.k !== ZK).concat(W).sort((a, b) => a.k - b.k); Z.levels = (Z.levels || []).filter((L) => L.world !== ZK).concat(recs).sort((a, b) => a.world - b.world || a.n - b.n);
   const head = "### Zen World " + ZK + ": " + X.land.name, lic = removeLicences(fs.readFileSync(path.join(G, "LICENSES.md"), "utf8").replace("\n### Zen World " + ZK + ": ", "\n### Land " + X.land.k + ": "), X.land.k).trimEnd() + "\n" + fs.readFileSync(path.join(out, "licences.md"), "utf8").replace(/### Land \d+: [^\n]*/, head + " (Land " + X.land.k + ", levels " + X.from + "-" + X.to + " in the land factory's numbering)");
-  for (const fl of X.land.map.files) fs.copyFileSync(path.join(X.LAND, "map", fl), path.join(G, "map", fl));
+  if (!X.land.map.reuse) for (const fl of X.land.map.files) fs.copyFileSync(path.join(X.LAND, "map", fl), path.join(G, "map", fl)); // v7 lane D: map.reuse, the game's own sheets (no new image bytes)
   fs.writeFileSync(f + ".tmp", JSON.stringify(Z) + "\n"); fs.writeFileSync(path.join(G, "LICENSES.md.tmp"), lic); fs.renameSync(f + ".tmp", f); fs.renameSync(path.join(G, "LICENSES.md.tmp"), path.join(G, "LICENSES.md"));
   console.log("zen: land " + X.land.k + " (" + X.land.name + ") as Zen World " + ZK + ": " + recs.length + " levels, " + layout.length + " sheets (" + X.land.map.files.join(", ") + ") written into tools/build-data/levels/zen.json");
 }

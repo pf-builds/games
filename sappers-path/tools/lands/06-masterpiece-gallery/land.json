@@ -1,0 +1,316 @@
+{
+ "k": 4,
+ "slug": "06-masterpiece-gallery",
+ "name": "Masterpiece Gallery",
+ "lore": "The road wanders into a sunny riverside of famous old paintings, from a Sunday on La Grande Jatte to Van Gogh's bedroom, each one waiting to be dug out a block at a time.",
+ "count": 50,
+ "source": "museum",
+ "sourceNote": "Real public-domain paintings, CC0 open access from the Art Institute of Chicago, the National Gallery of Art, The Met and the Cleveland Museum of Art; licence re-read per object by lane C (game-research/sappers-path-v4/lands/06-masterpiece-gallery/README.md, picks-full.json: 50 picks, 12 spares, 3 held). Each file is a crop of the painting, never repainted (srcCrop on its manifest line, information only); converted by land.js boardOf with the whole manifest line (chroma). The folder keeps lane C's slug (06); as installed it is Land 4 in the factory's numbering (levels 351-400, era 12) and Zen World 5.",
+ "features": [
+  "linked",
+  "mystery",
+  "moat"
+ ],
+ "eggs": [
+  "grass",
+  "butterfly",
+  "mushrooms",
+  "reeds"
+ ],
+ "shade": true,
+ "raw": "/Users/peter/local-ai/outputs/lands/06-masterpiece-gallery",
+ "quests": "none",
+ "zen": {
+  "k": 5,
+  "note": "v7 lane D: Masterpiece Gallery plays as Zen World 5 (tools/land.js ... zen writes tools/build-data/levels/zen.json only). Records keep the land factory numbers 351-400 (state.json from 351: Worlds 1-4 hold 1-50, 201-250, 251-300, 301-350); the page shows them on from World 4's last Zen number (main.js zenNum)."
+ },
+ "profile": {
+  "note": "Zen World 5, casual (v7 lane D, 2026-10-10): Dino Valley's profile as it ships (tools/lands/05-dino-valley/land.json): tags E18/N26/H6/X0 ending on a Hard, light deck features (? cards, linked squads), no locks, no archers, no Extreme, no mystery blocks (Peter, 2026-10-08), gentle moats (always 2 ways in) only on paintings that can carry one, careful floor 0.5 every tag. The 50 are lane C's real CC0 paintings (painting kind, shade on, manifest chroma where lane C set one).",
+  "tags": {
+   "shares": {
+    "easy": 0.36,
+    "normal": 0.52,
+    "hard": 0.12,
+    "extreme": 0
+   },
+   "breathers": 5,
+   "run": [
+    1,
+    3
+   ],
+   "end": "hard"
+  },
+  "features": {
+   "mystery": {
+    "share": 0.5,
+    "by": {
+     "easy": 0.2,
+     "normal": 0.5,
+     "hard": 1
+    },
+    "cards": [
+     2,
+     3
+    ]
+   },
+   "hidden": {
+    "share": 0,
+    "by": {
+     "easy": 0,
+     "normal": 0,
+     "hard": 0
+    },
+    "of": [
+     0,
+     0
+    ],
+    "note": "v6 lane D8 (Peter, 2026-10-08): no mystery blocks in Zen, ever. The whole picture shows from the start; land.js and zen-world.js refuse a Zen land or world with hidden in its features or a hidden share."
+   },
+   "linked": {
+    "share": 0.36,
+    "by": {
+     "easy": 0.2,
+     "normal": 0.4,
+     "hard": 0.67
+    },
+    "pairs": [
+     1,
+     2
+    ]
+   },
+   "lock": {
+    "share": 0,
+    "key": 0
+   },
+   "moat": {
+    "share": 0.4,
+    "by": {
+     "easy": 0.2,
+     "normal": 0.4,
+     "hard": 0.67
+    },
+    "ways": [
+     0,
+     1
+    ],
+    "liquids": [
+     null,
+     "mire"
+    ]
+   }
+  },
+  "bands": {
+   "easy": [
+    0.45,
+    0.8
+   ],
+   "normal": [
+    0.2,
+    0.5
+   ],
+   "hard": [
+    0.06,
+    0.2
+   ]
+  },
+  "lookahead": {
+   "normal": null,
+   "hard": null,
+   "extreme": null
+  },
+  "carefulFloor": {
+   "easy": 0.5,
+   "normal": 0.5,
+   "hard": 0.5
+  },
+  "pace": {
+   "aim": 225000
+  },
+  "bake": {
+   "candidates": {
+    "perLevel": 8,
+    "perLevelBy": {
+     "easy": 8,
+     "hard": 10
+    }
+   },
+   "deal": {
+    "size": [
+     32,
+     80
+    ],
+    "attempts": 400,
+    "note": "v7 lane D (trial bake, 2026-10-10): squads 1.6x the land default ([20, 50] at sizeRef 1400, scaled with the board as ever) and 400 deal attempts a candidate (96 before; a deal that lands early stops the loop, so only the hard boards pay). Lane C's paintings are max-box boards (up to 42 x 46, 1,890+ cells) whose colours lie in many scattered pieces: at the default size no deal met both the 55-tap cap and the 15 s longest tap on 25 of 50 boards (12 seeded attempts each, normal rules); at 1.6x on 4 of 50, and La Grande Jatte deals about 1 time in 200. The caps themselves are unchanged."
+   }
+  }
+ },
+ "main": [
+  "mg003",
+  "mg019",
+  "mg036",
+  "mg029",
+  "mg052",
+  "mg077",
+  "mg006",
+  "mg001",
+  "mg073",
+  "mg061",
+  "mg021",
+  "mg085",
+  "mg053",
+  "mg013",
+  "mg015",
+  "mg012",
+  "mg060",
+  "mg113",
+  "mg004",
+  "mg016",
+  "mg008",
+  "mg118",
+  "mg063",
+  "mg028",
+  "mg078",
+  "mg023",
+  "mg128",
+  "mg005",
+  "mg032",
+  "mg123",
+  "mg072",
+  "mg056",
+  "mg039",
+  "mg027",
+  "mg058",
+  "mg022",
+  "mg059",
+  "mg065",
+  "mg051",
+  "mg070",
+  "mg094",
+  "mg127",
+  "mg057",
+  "mg031",
+  "mg026",
+  "mg109",
+  "mg010",
+  "mg007",
+  "mg038",
+  "mg002"
+ ],
+ "map": {
+  "fromLayout": [
+   2,
+   5
+  ],
+  "files": [
+   "sheet-02.webp",
+   "sheet-05.webp"
+  ],
+  "reuse": true,
+  "tint": "sepia(.35) saturate(1.3) hue-rotate(-14deg) brightness(1.06) contrast(1.04)",
+  "note": "v7 lever 1: no new image bytes. The castle's sheets 2 (The Greenmarch: meadows, cottages, a river) and 5 (Fenwater Vale: a river garden) reused through map.fromLayout (their roads, level spots, side-quest spurs and bridges from map/layout.json and config map.bridges), alternately mirrored, under a warm painterly tint (map.tint on every entry) so they never read as the Campaign's own sheets."
+ },
+ "eggTurns": [
+  [
+   [
+    [
+     "grass",
+     483,
+     712
+    ],
+    [
+     "butterfly",
+     341,
+     290
+    ]
+   ],
+   [
+    [
+     "mushrooms",
+     483,
+     712
+    ],
+    [
+     "grass",
+     341,
+     290
+    ]
+   ],
+   [
+    [
+     "butterfly",
+     483,
+     712
+    ],
+    [
+     "mushrooms",
+     341,
+     290
+    ]
+   ],
+   [
+    [
+     "grass",
+     483,
+     712
+    ],
+    [
+     "butterfly",
+     341,
+     290
+    ]
+   ]
+  ],
+  [
+   [
+    [
+     "reeds",
+     541,
+     839
+    ],
+    [
+     "butterfly",
+     429,
+     288
+    ]
+   ],
+   [
+    [
+     "butterfly",
+     541,
+     839
+    ],
+    [
+     "grass",
+     429,
+     288
+    ]
+   ],
+   [
+    [
+     "mushrooms",
+     541,
+     839
+    ],
+    [
+     "reeds",
+     429,
+     288
+    ]
+   ]
+  ]
+ ],
+ "eggNote": "Eggs on the reused sheets' painted side-quest spur tips (World 1's rule; the land has no side quests, so no spur leads nowhere): eggTurns puts each sheet's 2 eggs on its template's 2 quest spots, each repeat its own pair. Kinds that suit a sunny riverside of meadows and gardens: grass, butterfly, mushrooms, reeds (the river garden sheet only).",
+ "byArtist": true,
+ "credit": "Public domain paintings from the Art Institute of Chicago, National Gallery of Art, The Met and Cleveland Museum of Art open access (CC0). Each level is a crop of the painting (never repainted) at the game's largest board; the full title, artist, date, museum, licence and the museum's own page are on its row.",
+ "moatSkip": {
+  "mg053": "carries a ring but no deal with one under the 15 s and 55-tap caps (lane D's probe, 2026-10-10: 0 deals in 120 at every tag; first full bake: no deal in 400 attempts on every candidate)",
+  "mg032": "carries a ring but no deal with one under the 15 s and 55-tap caps (lane D's probe, 2026-10-10: 0 deals in 120 at every tag; first full bake: no deal in 400 attempts on every candidate)",
+  "mg065": "carries a ring but no deal with one under the 15 s and 55-tap caps (lane D's probe, 2026-10-10: 0 deals in 120 at every tag; first full bake: no deal in 400 attempts on every candidate)",
+  "mg057": "carries a ring but no deal with one under the 15 s and 55-tap caps (lane D's probe, 2026-10-10: 0 deals in 120 at every tag; first full bake: no deal in 400 attempts on every candidate)",
+  "mg026": "carries a ring but no deal with one under the 15 s and 55-tap caps (lane D's probe, 2026-10-10: 0 deals in 120 at every tag; first full bake: no deal in 400 attempts on every candidate)",
+  "mg109": "carries a ring but no deal with one under the 15 s and 55-tap caps (lane D's probe, 2026-10-10: 0 deals in 120 at every tag; first full bake: no deal in 400 attempts on every candidate)",
+  "mg077": "carries a ring but no deal with one under the 15 s and 55-tap caps (lane D's probe, 2026-10-10: 0 deals in 120 at every tag)",
+  "mg123": "carries a ring but no deal with one under the 15 s and 55-tap caps (lane D's probe, 2026-10-10: 0 deals in 120 at every tag)"
+ },
+ "moatNote": "moatSkip: lane C found 19 of the 50 can carry a ring; lane D's first full bake failed on 6 moat slots (363 379 388 393 395 396: no deal in 400 attempts on any candidate), and a deal probe (the bake's own moat builder and gen.deal, 6 rings x 20 attempts a tag) found these 8 never deal with a ring at the caps, so the plan leaves them ringless (the same finding as Dino Valley, tools/land-05-notes.md §4)."
+}
