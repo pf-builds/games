@@ -13,6 +13,37 @@ Records n 351-400 (Land 4 in the factory's numbering, era 12, ids z5-1..z5-50, w
 
 
 
+## 0000. Round 5 (2026-10-10, Peter via lane C, workspace f726f92): The Boating Party, mother and baby
+
+After the v6.5 ship (48ee10d) 367 still read weak at 375 (the oarsman's navy lost in the navy water). Peter chose lane C's
+mother-and-baby crop: **mg012 x3** (window x 0.28-0.62, y 0.05-0.7), chroma 2.4, 32x46, 6 colours, no near-black.
+
+- **Hand-off.** Lane C's `scripts/handoff-full.js` (LA_DIR `/Users/peter/local-ai/outputs/lands/06-masterpiece-gallery`, the
+  manifest lines already carry `fullsrc/`): **62 of 62 identical**.
+- **Install.** mg012's landManifest line replaced whole in `pictures/manifest.json` (only `srcCrop` changed; the other 61 lines
+  untouched, mg128's date fill kept); `src/mg012.png` removed and re-made by `prep` (byte-identical to the hand-off's copy);
+  `convert --force`: 50 of 50 identical to boards-full, only mg012 changed against round 4.
+- **Re-bake 367 only** (`bake --keep-plan --drop-moat --list 367`; no ring was planned on the slot, so none dropped; the new crop
+  can't carry one anyway, a picture colour within 20/14 of every water colour): **ok first time**, no extra candidates.
+
+| Level / Zen | Picture | Board | Tag, features | Rate | Pace | Taps | Longest tap | Careful |
+|---|---|---|---|---|---|---|---|---|
+| 367 / 217 | mg012 The Boating Party (x3, chroma 2.4) | 32x46, 6 colours, 1,320 cells | Normal, ? cards (as before) | 33.75% | 226 s | 46 | 14.84 s | 1.0 |
+
+- `assemble check`: **PASS every gate**; world median real pace 220 s; rings 5. Land out/: levels.json changed in record 367
+  only; gallery.json, land.json, licences.md byte-identical. `land.js zen`: zen.json changed in record z5-17 only, the
+  other 199 records, worlds, note and version byte-identical; LICENSES.md unchanged (the row carries no crop).
+- **Freeze re-taken** (`--snapshot`): frozen zen.json differs from 48ee10d's in z5-17 only and equals build-data's; levels.json
+  and gallery.json snapshots untouched. `pack.js`: only `levels/zen-5.pk.json` rewritten (94,569 B; round 4 94,951).
+- **Readability at 375 (`tools/shots-land-06/play-367-boating-375.png`):** reads much better than round 4: a big salmon-pink
+  baby on the mother's lap under her dark red hat, green hull at lower left, navy water behind. The mother's own dress is a
+  grey-teal mottle that half melts into the water, so she reads as a shape around the baby rather than a figure.
+- **Gates:** test.js 714/0 (shipped 13,916,475 B); freeze `--require` PASS (2,405 / 372 / 1,800, shipped 512, castles 283, all 0);
+  regrades 0 of 2,405 / 372 / 1,800, each `--shipped` 0; pack --check clean; selfTest 880/0 (375x812@3), 882/0 (1280x720), 880/0
+  (360x640); check.mjs 39 ok, 0 FAIL (OLD 6a7d1a5 with `OLD_DIR` set; first-tap bytes 1,869,718); sweep-map 126/0; harness
+  all passed (hidden-tab selfTest 880/0); 0 console. Cache `?v=71`. Shots `play-367-boating-375.png` (new crop) and
+  `contact-installed.jpg` re-rendered (`land-contact.py ... --world 5 --zen-from 201`).
+
 ## 000. Round 4 (2026-10-10, Peter via lane C, workspace 8cdbb58): tighter crops for three
 
 Lane C's handoff here: **62 of 62**. Only three landManifest lines changed (`srcCrop`, and mg012's chroma); those three replaced
