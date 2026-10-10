@@ -42,6 +42,7 @@
 // a manifest line's short is the main record's title and its museum and date join the artist on its licence row.
 // v6 lane D8 (Peter, 2026-10-08: no mystery blocks in Zen, ever; the whole picture shows from the start): a Zen land (land.json
 // zen, or a tools/build-data/levels/zen.json world with land k) is refused if its features list hidden or its profile gives hidden a share;
+// (v7 lane D: --drop-moat lets a slot planned with a ring take a picture that can't carry one, ringless, instead of refusing)
 // bake --keep-plan re-bakes a few slots on the plan the land was baked with (scratch/state.json, hidden taken out), so a
 // swapped picture keeps its slot's tag and features (a fresh plan reorders the features after hidden); check fails a Zen
 // land's level with mystery blocks.
@@ -156,7 +157,8 @@ function moatCan(X, b) {
 function keptPlan(X, tags, moat) {
   const st = X.state; if (!st.plan || !st.tags || st.tags.join() !== tags.join()) throw new Error("bake --keep-plan: scratch/state.json has no plan for these tags");
   return st.plan.map((p0, i) => { const p = Object.assign({}, p0, { feats: p0.feats.filter((f) => !(X.zen && f === "hidden")) }); if (X.zen) p.hidden = 0; delete p.cant;
-    if (moat && !moat[i].ok) { if (p.feats.indexOf("moat") >= 0) throw new Error("bake --keep-plan: level " + (X.from + i) + " is planned with a moat and its picture can't carry one (" + moat[i].why + ")"); p.cant = ["moat"]; }
+    if (moat && !moat[i].ok) { if (p.feats.indexOf("moat") >= 0) { if (!flag("drop-moat")) throw new Error("bake --keep-plan: level " + (X.from + i) + " is planned with a moat and its picture can't carry one (" + moat[i].why + "; --drop-moat bakes it ringless)");
+      p.feats = p.feats.filter((f) => f !== "moat"); delete p.moat; console.log("bake --keep-plan --drop-moat: level " + (X.from + i) + " baked without its planned ring (" + moat[i].why + ")"); } p.cant = ["moat"]; } // v7 lane D: --drop-moat, a swapped picture that can't carry its slot's ring keeps the slot's tag and other features
     return p; });
 }
 async function bake(X) {
@@ -385,7 +387,7 @@ function zenInstall(X) {
   const out = path.join(X.S, "out"), LV = readJ(path.join(out, "levels.json")), LJ = readJ(path.join(out, "land.json")), G = X.GAME, f = path.join(G, "tools/build-data/levels/zen.json"), Z = readJ(f);
   const recs = LV.map((L, i) => { const o = Object.assign({ id: "z" + ZK + "-" + (i + 1), n: L.n, era: L.era, world: ZK }, L, { id: "z" + ZK + "-" + (i + 1), world: ZK }); delete o.land; return o; });
   const layout = LJ.layout.map((S, e) => { const o = Object.assign({}, S, { eggCoins: LJ.eggCoins[e] }); delete o.sheet; delete o.land; return o; });
-  const W = { k: ZK, name: X.land.name, lore: X.land.lore, era: X.era, map: { note: "v6 lane D: Land " + X.land.k + " (" + X.land.slug + ") as Zen World " + ZK + (X.land.map.reuse ? ", the game's sheets " + X.land.map.files.join(" and ") + " reused" + (X.land.map.tint ? " under its own tint" : "") + " (map.reuse, no new image bytes)" : ", its own sheets") + " (tools/land.js zen).", layout } };
+  const W = Object.assign({ k: ZK, name: X.land.name, lore: X.land.lore, era: X.era }, X.land.worldCredit ? { credit: X.land.worldCredit } : {}, { map: { note: "v6 lane D: Land " + X.land.k + " (" + X.land.slug + ") as Zen World " + ZK + (X.land.map.reuse ? ", the game's sheets " + X.land.map.files.join(" and ") + " reused" + (X.land.map.tint ? " under its own tint" : "") + " (map.reuse, no new image bytes)" : ", its own sheets") + " (tools/land.js zen).", layout } }); // v7 lane D: land.json worldCredit, the world's credit line on the Zen map (critic B1)
   Z.worlds = Z.worlds.filter((w) => w.k !== ZK).concat(W).sort((a, b) => a.k - b.k); Z.levels = (Z.levels || []).filter((L) => L.world !== ZK).concat(recs).sort((a, b) => a.world - b.world || a.n - b.n);
   const head = "### Zen World " + ZK + ": " + X.land.name, lic = removeLicences(fs.readFileSync(path.join(G, "LICENSES.md"), "utf8").replace("\n### Zen World " + ZK + ": ", "\n### Land " + X.land.k + ": "), X.land.k).trimEnd() + "\n" + fs.readFileSync(path.join(out, "licences.md"), "utf8").replace(/### Land \d+: [^\n]*/, head + " (Land " + X.land.k + ", levels " + X.from + "-" + X.to + " in the land factory's numbering)");
   if (!X.land.map.reuse) for (const fl of X.land.map.files) fs.copyFileSync(path.join(X.LAND, "map", fl), path.join(G, "map", fl)); // v7 lane D: map.reuse, the game's own sheets (no new image bytes)

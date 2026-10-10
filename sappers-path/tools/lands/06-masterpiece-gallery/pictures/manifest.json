@@ -1,15 +1,15 @@
 [
  {
-  "id": "mg003",
+  "id": "mg003c",
   "title": "A Sunday Afternoon on the Island of La Grande Jatte (AIC title: A Sunday on La Grande Jatte, 1884)",
-  "short": "A Sunday on La Grande Jatte",
+  "short": "La Grande Jatte (1 of 2)",
   "artist": "Georges Seurat",
   "date": "1884-86",
   "museum": "Art Institute of Chicago",
   "kind": "painting",
   "licence": "Public domain (CC0, Art Institute of Chicago open access)",
   "url": "https://www.artic.edu/artworks/27992",
-  "file": "fullsrc/mg003.png",
+  "file": "fullsrc/mg003c.png",
   "image": "https://www.artic.edu/iiif/2/2d484387-2509-5e8e-2c43-22f9981972eb/full/843,/0/default.jpg",
   "licenceCheck": "is_public_domain=true",
   "fetched": "2026-10-10",
@@ -21,19 +21,51 @@
     0.9801
    ],
    "window": [
-    0.3153,
     0,
-    0.92,
+    0.2,
+    0.4,
     1
    ],
-   "variant": "x2",
+   "variant": "x10",
+   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
+  }
+ },
+ {
+  "id": "mg003",
+  "title": "A Sunday Afternoon on the Island of La Grande Jatte (AIC title: A Sunday on La Grande Jatte, 1884)",
+  "short": "La Grande Jatte (2 of 2)",
+  "artist": "Georges Seurat",
+  "date": "1884-86",
+  "museum": "Art Institute of Chicago",
+  "kind": "painting",
+  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
+  "url": "https://www.artic.edu/artworks/27992",
+  "file": "fullsrc/mg003.png",
+  "chroma": 1.2,
+  "image": "https://www.artic.edu/iiif/2/2d484387-2509-5e8e-2c43-22f9981972eb/full/843,/0/default.jpg",
+  "licenceCheck": "is_public_domain=true",
+  "fetched": "2026-10-10",
+  "srcCrop": {
+   "trim": [
+    0.015,
+    0.0199,
+    0.985,
+    0.9801
+   ],
+   "window": [
+    0.58,
+    0.08,
+    1,
+    1
+   ],
+   "variant": "x7b",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
  {
   "id": "mg019",
   "title": "Little Girl in a Blue Armchair",
-  "short": "Little Girl in a Blue Armchair",
+  "short": "The Blue Armchair",
   "artist": "Mary Cassatt",
   "date": "1878",
   "museum": "National Gallery of Art",
@@ -64,7 +96,7 @@
  {
   "id": "mg036",
   "title": "Storm below Mount Fuji",
-  "short": "Storm below Mount Fuji",
+  "short": "Storm below Fuji",
   "artist": "Katsushika Hokusai",
   "date": "ca. 1830-32",
   "museum": "The Met",
@@ -95,7 +127,7 @@
  {
   "id": "mg029",
   "title": "Self-Portrait with a Straw Hat",
-  "short": "Self-Portrait with a Straw Hat",
+  "short": "Straw Hat Self-Portrait",
   "artist": "Vincent van Gogh",
   "date": "1887",
   "museum": "The Met",
@@ -159,7 +191,7 @@
  {
   "id": "mg077",
   "title": "Still Life with Apples and Pears",
-  "short": "Still Life with Apples and Pears",
+  "short": "Apples and Pears",
   "artist": "Paul Cezanne",
   "date": "ca. 1891-92",
   "museum": "The Met",
@@ -190,7 +222,7 @@
  {
   "id": "mg006",
   "title": "Otani Oniji III as Yakko Edobei",
-  "short": "Otani Oniji III as Yakko Edobei",
+  "short": "Otani Oniji",
   "artist": "Toshusai Sharaku",
   "date": "1794",
   "museum": "The Met",
@@ -230,6 +262,7 @@
   "licence": "Public domain (CC0, National Gallery of Art open access)",
   "url": "https://www.nga.gov/collection/art-object-page.61379.html",
   "file": "fullsrc/mg001.png",
+  "chroma": 2.4,
   "image": "https://api.nga.gov/iiif/99758d9d-c10b-4d02-a198-7e49afb1f3a6/full/843,/0/default.jpg",
   "licenceCheck": "openaccess=1",
   "fetched": "2026-10-10",
@@ -241,19 +274,19 @@
     0.995
    ],
    "window": [
-    0,
+    0.3,
     0,
     1,
-    1
+    0.65
    ],
-   "variant": "w",
+   "variant": "x1",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
  {
   "id": "mg073",
   "title": "Arlesiennes (Mistral)",
-  "short": "Arlesiennes (Mistral)",
+  "short": "Arlesiennes",
   "artist": "Paul Gauguin",
   "date": "1888",
   "museum": "Art Institute of Chicago",
@@ -261,7 +294,7 @@
   "licence": "Public domain (CC0, Art Institute of Chicago open access)",
   "url": "https://www.artic.edu/artworks/19339",
   "file": "fullsrc/mg073.png",
-  "chroma": 1,
+  "chroma": 2.4,
   "image": "https://www.artic.edu/iiif/2/ae6ac285-6887-dd76-4570-d379c786dfae/full/843,/0/default.jpg",
   "licenceCheck": "is_public_domain=true",
   "fetched": "2026-10-10",
@@ -275,17 +308,17 @@
    "window": [
     0,
     0,
-    0.7204,
-    1
+    0.6,
+    0.85
    ],
-   "variant": "l",
+   "variant": "x1",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
  {
   "id": "mg061",
   "title": "Chrysanthemum and Horsefly (Large Flowers)",
-  "short": "Chrysanthemum and Horsefly",
+  "short": "Chrysanthemums",
   "artist": "Katsushika Hokusai",
   "date": "c. 1831-33",
   "museum": "Art Institute of Chicago",
@@ -317,7 +350,7 @@
  {
   "id": "mg021",
   "title": "Two Sisters (On the Terrace)",
-  "short": "Two Sisters (On the Terrace)",
+  "short": "Two Sisters",
   "artist": "Pierre-Auguste Renoir",
   "date": "1881",
   "museum": "Art Institute of Chicago",
@@ -368,18 +401,18 @@
    ],
    "window": [
     0,
-    0.0883,
+    0,
     1,
-    0.9117
+    0.8234
    ],
-   "variant": "m",
+   "variant": "t",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
  {
   "id": "mg053",
   "title": "The Bridge at Argenteuil",
-  "short": "The Bridge at Argenteuil",
+  "short": "Bridge at Argenteuil",
   "artist": "Claude Monet",
   "date": "1874",
   "museum": "National Gallery of Art",
@@ -411,7 +444,7 @@
  {
   "id": "mg013",
   "title": "Mannen Bridge, Fukagawa (the turtle)",
-  "short": "Mannen Bridge (the turtle)",
+  "short": "The Turtle",
   "artist": "Utagawa Hiroshige",
   "date": "1857",
   "museum": "Art Institute of Chicago",
@@ -482,7 +515,6 @@
   "licence": "Public domain (CC0, National Gallery of Art open access)",
   "url": "https://www.nga.gov/collection/art-object-page.46569.html",
   "file": "fullsrc/mg012.png",
-  "chroma": 2.4,
   "image": "https://api.nga.gov/iiif/f8b6727d-6998-4f2a-9708-8694b9c69f54/full/843,/0/default.jpg",
   "licenceCheck": "openaccess=1",
   "fetched": "2026-10-10",
@@ -494,50 +526,50 @@
     0.995
    ],
    "window": [
-    0.1518,
-    0,
-    0.8482,
-    1
+    0.25,
+    0.05,
+    0.75,
+    0.75
    ],
-   "variant": "c",
+   "variant": "x2",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
  {
-  "id": "mg060",
-  "title": "Hakone: View of the Lake",
-  "short": "Hakone: View of the Lake",
+  "id": "mg024",
+  "title": "Fukagawa Susaki and Jumantsubo (the eagle)",
+  "short": "The Eagle",
   "artist": "Utagawa Hiroshige",
-  "date": "c. 1833/34",
+  "date": "1857",
   "museum": "Art Institute of Chicago",
   "kind": "painting",
   "licence": "Public domain (CC0, Art Institute of Chicago open access)",
-  "url": "https://www.artic.edu/artworks/33884",
-  "file": "fullsrc/mg060.png",
-  "image": "https://www.artic.edu/iiif/2/a35f8799-5d4c-2ec3-5cc1-ee059d41f3f0/full/843,/0/default.jpg",
+  "url": "https://www.artic.edu/artworks/26605",
+  "file": "fullsrc/mg024.png",
+  "image": "https://www.artic.edu/iiif/2/5b88161b-254e-fdf2-5d69-b869fd506ac8/full/843,/0/default.jpg",
   "licenceCheck": "is_public_domain=true",
   "fetched": "2026-10-10",
   "srcCrop": {
    "trim": [
-    0.02,
-    0.0508,
-    0.97,
-    0.995
+    0.0126,
+    0.01,
+    0.9874,
+    0.99
    ],
    "window": [
     0,
     0,
-    0.5919,
-    1
+    0.85,
+    0.6
    ],
-   "variant": "l",
+   "variant": "x1",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
  {
   "id": "mg113",
   "title": "Farmhouse in Provence",
-  "short": "Farmhouse in Provence",
+  "short": "Farmhouse",
   "artist": "Vincent van Gogh",
   "date": "1888",
   "museum": "National Gallery of Art",
@@ -568,7 +600,7 @@
  {
   "id": "mg004",
   "title": "A Girl with a Watering Can",
-  "short": "A Girl with a Watering Can",
+  "short": "The Watering Can",
   "artist": "Pierre-Auguste Renoir",
   "date": "1876",
   "museum": "National Gallery of Art",
@@ -599,7 +631,7 @@
  {
   "id": "mg016",
   "title": "Self-Portrait (with halo and snake)",
-  "short": "Self-Portrait (with halo and snake)",
+  "short": "Self-Portrait (halo)",
   "artist": "Paul Gauguin",
   "date": "1889",
   "museum": "National Gallery of Art",
@@ -625,37 +657,6 @@
     0.8024
    ],
    "variant": "t",
-   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
- },
- {
-  "id": "mg008",
-  "title": "Water Lilies",
-  "short": "Water Lilies",
-  "artist": "Claude Monet",
-  "date": "1906",
-  "museum": "Art Institute of Chicago",
-  "kind": "painting",
-  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
-  "url": "https://www.artic.edu/artworks/16568",
-  "file": "fullsrc/mg008.png",
-  "image": "https://www.artic.edu/iiif/2/3c27b499-af56-f0d5-93b5-a7f2f1ad5813/full/843,/0/default.jpg",
-  "licenceCheck": "is_public_domain=true",
-  "fetched": "2026-10-10",
-  "srcCrop": {
-   "trim": [
-    0.005,
-    0.005,
-    0.995,
-    0.9742
-   ],
-   "window": [
-    0.0728,
-    0,
-    0.9272,
-    1
-   ],
-   "variant": "c",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
@@ -694,7 +695,7 @@
  {
   "id": "mg063",
   "title": "Carp Swimming by Water Weeds",
-  "short": "Carp Swimming by Water Weeds",
+  "short": "Carp in the Weeds",
   "artist": "Katsushika Hokusai",
   "date": "1831",
   "museum": "Cleveland Museum of Art",
@@ -723,42 +724,41 @@
   }
  },
  {
-  "id": "mg028",
-  "title": "Self-Portrait",
-  "short": "Self-Portrait (1887)",
-  "artist": "Vincent van Gogh",
-  "date": "1887",
-  "museum": "Art Institute of Chicago",
+  "id": "mg076",
+  "title": "Madame Cezanne in a Red Dress",
+  "short": "Madame Cezanne",
+  "artist": "Paul Cezanne",
+  "date": "1888-90",
+  "museum": "The Met",
   "kind": "painting",
-  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
-  "url": "https://www.artic.edu/artworks/80607",
-  "file": "fullsrc/mg028.png",
-  "chroma": 2,
-  "image": "https://www.artic.edu/iiif/2/47c5bcb8-62ef-e5d7-55e7-f5121f409a30/full/843,/0/default.jpg",
-  "licenceCheck": "is_public_domain=true",
+  "licence": "Public domain (CC0, The Met Open Access)",
+  "url": "https://www.metmuseum.org/art/collection/search/435876",
+  "file": "fullsrc/mg076.png",
+  "chroma": 1.2,
+  "image": "https://images.metmuseum.org/CRDImages/ep/web-large/DP320128.jpg",
+  "licenceCheck": "isPublicDomain=true",
   "fetched": "2026-10-10",
   "srcCrop": {
    "trim": [
-    0.0814,
-    0.11,
-    0.8995,
+    0.0245,
+    0.005,
+    0.995,
     0.995
    ],
    "window": [
-    0,
-    0.0944,
-    1,
-    1
+    0.15,
+    0.12,
+    0.85,
+    0.7
    ],
-   "variant": "b",
+   "variant": "x1",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  },
-  "shortNote": "lane D: was \"Self-Portrait (AIC)\"; the year reads better on the play bar and the win line"
+  }
  },
  {
   "id": "mg078",
   "title": "The Gulf of Marseille Seen from L'Estaque",
-  "short": "The Gulf of Marseille",
+  "short": "Gulf of Marseille",
   "artist": "Paul Cezanne",
   "date": "ca. 1885",
   "museum": "The Met",
@@ -822,7 +822,7 @@
  {
   "id": "mg128",
   "title": "Lucie Berard (Child in White)",
-  "short": "Lucie Berard (Child in White)",
+  "short": "Lucie Berard",
   "artist": "Pierre-Auguste Renoir",
   "date": "1883",
   "museum": "Art Institute of Chicago",
@@ -855,7 +855,7 @@
  {
   "id": "mg005",
   "title": "Plum Park in Kameido (One Hundred Famous Views of Edo)",
-  "short": "Plum Park in Kameido",
+  "short": "Plum Park",
   "artist": "Utagawa Hiroshige",
   "date": "1857",
   "museum": "Art Institute of Chicago",
@@ -887,7 +887,7 @@
  {
   "id": "mg032",
   "title": "The Japanese Footbridge",
-  "short": "The Japanese Footbridge",
+  "short": "Japanese Footbridge",
   "artist": "Claude Monet",
   "date": "1899",
   "museum": "National Gallery of Art",
@@ -895,7 +895,6 @@
   "licence": "Public domain (CC0, National Gallery of Art open access)",
   "url": "https://www.nga.gov/collection/art-object-page.74796.html",
   "file": "fullsrc/mg032.png",
-  "chroma": 2,
   "image": "https://api.nga.gov/iiif/0b9cefb5-1ee4-401a-8154-8d4039191a28/full/843,/0/default.jpg",
   "licenceCheck": "openaccess=1",
   "fetched": "2026-10-10",
@@ -907,19 +906,19 @@
     0.995
    ],
    "window": [
-    0.1355,
+    0.3,
     0,
-    0.8645,
-    1
+    0.75,
+    0.6
    ],
-   "variant": "c",
+   "variant": "x2",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
  {
   "id": "mg123",
   "title": "Girl in a Green Blouse",
-  "short": "Girl in a Green Blouse",
+  "short": "Girl in Green",
   "artist": "Amedeo Modigliani",
   "date": "1917",
   "museum": "National Gallery of Art",
@@ -927,7 +926,7 @@
   "licence": "Public domain (CC0, National Gallery of Art open access)",
   "url": "https://www.nga.gov/collection/art-object-page.46520.html",
   "file": "fullsrc/mg123.png",
-  "chroma": 1.2,
+  "chroma": 1,
   "image": "https://api.nga.gov/iiif/11de4474-0a05-4aaf-a8a0-827c9190d9bd/full/!843,843/0/default.jpg",
   "licenceCheck": "openaccess=1",
   "fetched": "2026-10-10",
@@ -940,50 +939,49 @@
    ],
    "window": [
     0,
-    0.3084,
+    0,
     1,
-    1
+    0.6916
    ],
-   "variant": "b",
+   "variant": "t",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
  {
-  "id": "mg072",
-  "title": "Mahana no atua (Day of the God)",
-  "short": "Mahana no atua (Day of the God)",
-  "artist": "Paul Gauguin",
-  "date": "1894",
+  "id": "mg048",
+  "title": "The Letter (color print)",
+  "short": "The Letter",
+  "artist": "Mary Cassatt",
+  "date": "1890-91",
   "museum": "Art Institute of Chicago",
   "kind": "painting",
   "licence": "Public domain (CC0, Art Institute of Chicago open access)",
-  "url": "https://www.artic.edu/artworks/27943",
-  "file": "fullsrc/mg072.png",
-  "chroma": 1.7,
-  "image": "https://www.artic.edu/iiif/2/a4bef587-48a4-d186-813d-f297441b1ab3/full/843,/0/default.jpg",
+  "url": "https://www.artic.edu/artworks/13508",
+  "file": "fullsrc/mg048.png",
+  "image": "https://www.artic.edu/iiif/2/1fb50815-11e5-2191-a4ed-8e0e5801cc15/full/843,/0/default.jpg",
   "licenceCheck": "is_public_domain=true",
   "fetched": "2026-10-10",
   "srcCrop": {
    "trim": [
-    0.005,
-    0.005,
-    0.995,
-    0.9883
+    0.1644,
+    0.11,
+    0.8863,
+    0.86
    ],
    "window": [
-    0,
-    0,
-    0.6746,
-    1
+    0.05,
+    0.1,
+    0.95,
+    0.75
    ],
-   "variant": "l",
+   "variant": "x1",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
  {
   "id": "mg056",
   "title": "Children Playing on the Beach",
-  "short": "Children Playing on the Beach",
+  "short": "Children on the Beach",
   "artist": "Mary Cassatt",
   "date": "1884",
   "museum": "National Gallery of Art",
@@ -991,7 +989,6 @@
   "licence": "Public domain (CC0, National Gallery of Art open access)",
   "url": "https://www.nga.gov/collection/art-object-page.52163.html",
   "file": "fullsrc/mg056.png",
-  "chroma": 1.7,
   "image": "https://api.nga.gov/iiif/20818b10-1f66-4186-ac55-af70e3586084/full/843,/0/default.jpg",
   "licenceCheck": "openaccess=1",
   "fetched": "2026-10-10",
@@ -1003,12 +1000,12 @@
     0.84
    ],
    "window": [
-    0.1039,
     0,
-    0.8961,
+    0.05,
+    0.65,
     1
    ],
-   "variant": "c",
+   "variant": "x1",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
@@ -1047,7 +1044,7 @@
  {
   "id": "mg027",
   "title": "Ichikawa Ebizo IV as Takemura Sadanoshin",
-  "short": "Ichikawa Ebizo IV",
+  "short": "Ichikawa Ebizo",
   "artist": "Toshusai Sharaku",
   "date": "1794",
   "museum": "The Met",
@@ -1079,7 +1076,7 @@
  {
   "id": "mg058",
   "title": "Allies Day, May 1917",
-  "short": "Allies Day, May 1917",
+  "short": "Allies Day",
   "artist": "Childe Hassam",
   "date": "1917",
   "museum": "National Gallery of Art",
@@ -1087,7 +1084,6 @@
   "licence": "Public domain (CC0, National Gallery of Art open access)",
   "url": "https://www.nga.gov/collection/art-object-page.30115.html",
   "file": "fullsrc/mg058.png",
-  "chroma": 2,
   "image": "https://api.nga.gov/iiif/15f8bb8b-ad0f-49e1-9948-60e87ede6be6/full/843,/0/default.jpg",
   "licenceCheck": "openaccess=1",
   "fetched": "2026-10-10",
@@ -1100,11 +1096,11 @@
    ],
    "window": [
     0,
-    0,
-    1,
+    0.5,
+    0.6,
     1
    ],
-   "variant": "w",
+   "variant": "x1",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
@@ -1142,7 +1138,7 @@
  {
   "id": "mg059",
   "title": "Maple Trees at Mama",
-  "short": "Maple Trees at Mama",
+  "short": "Maple Trees",
   "artist": "Utagawa Hiroshige",
   "date": "1857",
   "museum": "Art Institute of Chicago",
@@ -1172,41 +1168,40 @@
   }
  },
  {
-  "id": "mg065",
-  "title": "La Berceuse (Woman Rocking a Cradle)",
-  "short": "La Berceuse",
-  "artist": "Vincent van Gogh",
-  "date": "1889",
-  "museum": "The Met",
+  "id": "mg018",
+  "title": "The Child's Bath",
+  "short": "The Child's Bath",
+  "artist": "Mary Cassatt",
+  "date": "1893",
+  "museum": "Art Institute of Chicago",
   "kind": "painting",
-  "licence": "Public domain (CC0, The Met Open Access)",
-  "url": "https://www.metmuseum.org/art/collection/search/437984",
-  "file": "fullsrc/mg065.png",
-  "chroma": 2.4,
-  "image": "https://images.metmuseum.org/CRDImages/ep/web-large/DP-19279-001.jpg",
-  "licenceCheck": "isPublicDomain=true",
+  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
+  "url": "https://www.artic.edu/artworks/111442",
+  "file": "fullsrc/mg018.png",
+  "image": "https://www.artic.edu/iiif/2/3b885ae0-4d46-5fe4-d70a-00474827f02c/full/843,/0/default.jpg",
+  "licenceCheck": "is_public_domain=true",
   "fetched": "2026-10-10",
   "srcCrop": {
    "trim": [
-    0.0176,
-    0.02,
-    0.9824,
-    0.98
+    0.005,
+    0.075,
+    0.995,
+    0.995
    ],
    "window": [
+    0.05,
     0,
-    0,
-    1,
-    0.9958
+    0.95,
+    0.7
    ],
-   "variant": "t",
+   "variant": "x2",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
  {
   "id": "mg051",
   "title": "Cliff Walk at Pourville",
-  "short": "Cliff Walk at Pourville",
+  "short": "Cliff Walk",
   "artist": "Claude Monet",
   "date": "1882",
   "museum": "Art Institute of Chicago",
@@ -1268,105 +1263,104 @@
   }
  },
  {
-  "id": "mg094",
-  "title": "Kintai Bridge in Suo Province",
-  "short": "Kintai Bridge",
-  "artist": "Katsushika Hokusai",
-  "date": "1827-30",
-  "museum": "The Met",
-  "kind": "painting",
-  "licence": "Public domain (CC0, The Met Open Access)",
-  "url": "https://www.metmuseum.org/art/collection/search/36489",
-  "file": "fullsrc/mg094.png",
-  "image": "https://images.metmuseum.org/CRDImages/as/web-large/DP141228.jpg",
-  "licenceCheck": "isPublicDomain=true",
-  "fetched": "2026-10-10",
-  "srcCrop": {
-   "trim": [
-    0.01,
-    0.0122,
-    0.99,
-    0.9805
-   ],
-   "window": [
-    0.1892,
-    0,
-    0.8108,
-    1
-   ],
-   "variant": "c",
-   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
- },
- {
-  "id": "mg127",
-  "title": "Chrysanthemums",
-  "short": "Chrysanthemums",
+  "id": "mg049",
+  "title": "Acrobats at the Cirque Fernando",
+  "short": "The Acrobats",
   "artist": "Pierre-Auguste Renoir",
-  "date": "1881-82",
+  "date": "1879",
   "museum": "Art Institute of Chicago",
   "kind": "painting",
   "licence": "Public domain (CC0, Art Institute of Chicago open access)",
-  "url": "https://www.artic.edu/artworks/16617",
-  "file": "fullsrc/mg127.png",
-  "chroma": 1.2,
-  "image": "https://www.artic.edu/iiif/2/479aff61-784e-e833-fd82-50ba8c819514/full/843,/0/default.jpg",
+  "url": "https://www.artic.edu/artworks/81558",
+  "file": "fullsrc/mg049.png",
+  "chroma": 1.7,
+  "image": "https://www.artic.edu/iiif/2/321c45f5-22a3-84a2-44cc-cf66642d4cf2/full/843,/0/default.jpg",
   "licenceCheck": "is_public_domain=true",
   "fetched": "2026-10-10",
   "srcCrop": {
    "trim": [
     0.005,
-    0.017,
+    0.005,
     0.995,
-    0.995
+    0.99
    ],
    "window": [
-    0.1262,
+    0.05,
     0,
-    0.8738,
-    1
+    0.95,
+    0.8
    ],
-   "variant": "c",
+   "variant": "x1",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  },
-  "dateNote": "lane D, 2026-10-10: date_display from the AIC API (artworks/16617); lane C's line had none"
+  }
  },
  {
-  "id": "mg057",
-  "title": "Study for 'A Sunday on La Grande Jatte'",
-  "short": "Study for La Grande Jatte",
-  "artist": "Georges Seurat",
-  "date": "1884",
-  "museum": "The Met",
+  "id": "mg025",
+  "title": "Asakusa Ricefields and Torinomachi Festival (the cat)",
+  "short": "The Asakusa Cat",
+  "artist": "Utagawa Hiroshige",
+  "date": "1857",
+  "museum": "Art Institute of Chicago",
   "kind": "painting",
-  "licence": "Public domain (CC0, The Met Open Access)",
-  "url": "https://www.metmuseum.org/art/collection/search/459117",
-  "file": "fullsrc/mg057.png",
-  "chroma": 1.7,
-  "image": "https://images.metmuseum.org/CRDImages/rl/web-large/DP-34422-001.jpg",
-  "licenceCheck": "isPublicDomain=true",
+  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
+  "url": "https://www.artic.edu/artworks/13192",
+  "file": "fullsrc/mg025.png",
+  "image": "https://www.artic.edu/iiif/2/72b3d0cf-f10b-3679-cf9f-b7fc211766fa/full/843,/0/default.jpg",
+  "licenceCheck": "is_public_domain=true",
   "fetched": "2026-10-10",
   "srcCrop": {
    "trim": [
-    0.04,
-    0.0593,
-    0.965,
-    0.9407
+    0.0195,
+    0.02,
+    0.9805,
+    0.98
    ],
    "window": [
-    0.4399,
+    0,
+    0.25,
+    0.8,
+    0.85
+   ],
+   "variant": "x1",
+   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
+  }
+ },
+ {
+  "id": "mg093",
+  "title": "Kohada Koheiji (One Hundred Ghost Tales)",
+  "short": "Kohada Koheiji",
+  "artist": "Katsushika Hokusai",
+  "date": "1831-32",
+  "museum": "Art Institute of Chicago",
+  "kind": "painting",
+  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
+  "url": "https://www.artic.edu/artworks/47398",
+  "file": "fullsrc/mg093.png",
+  "chroma": 1.2,
+  "image": "https://www.artic.edu/iiif/2/792d6c6e-1782-dc76-f75a-35e8d1a60357/full/843,/0/default.jpg",
+  "licenceCheck": "is_public_domain=true",
+  "fetched": "2026-10-10",
+  "srcCrop": {
+   "trim": [
+    0.0119,
+    0.015,
+    0.9881,
+    0.985
+   ],
+   "window": [
+    0,
     0,
     1,
-    1
+    0.75
    ],
-   "variant": "r",
+   "variant": "x1",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
  {
   "id": "mg031",
   "title": "The Basket of Apples",
-  "short": "The Basket of Apples",
+  "short": "Basket of Apples",
   "artist": "Paul Cezanne",
   "date": "c. 1893",
   "museum": "Art Institute of Chicago",
@@ -1374,7 +1368,6 @@
   "licence": "Public domain (CC0, Art Institute of Chicago open access)",
   "url": "https://www.artic.edu/artworks/111436",
   "file": "fullsrc/mg031.png",
-  "chroma": 2,
   "image": "https://www.artic.edu/iiif/2/52ac8996-3460-cf71-cb42-5c4d0aa29b74/full/843,/0/default.jpg",
   "licenceCheck": "is_public_domain=true",
   "fetched": "2026-10-10",
@@ -1386,12 +1379,12 @@
     0.995
    ],
    "window": [
-    0.3145,
     0,
-    1,
-    1
+    0,
+    0.55,
+    0.75
    ],
-   "variant": "r",
+   "variant": "x1",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
@@ -1430,7 +1423,7 @@
  {
   "id": "mg109",
   "title": "The Lighthouse at Honfleur",
-  "short": "The Lighthouse at Honfleur",
+  "short": "Lighthouse at Honfleur",
   "artist": "Georges Seurat",
   "date": "1886",
   "museum": "National Gallery of Art",
@@ -1462,7 +1455,7 @@
  {
   "id": "mg010",
   "title": "Sudden Shower over Shin-Ohashi Bridge and Atake",
-  "short": "Sudden Shower over Shin-Ohashi Bridge",
+  "short": "Sudden Shower",
   "artist": "Utagawa Hiroshige",
   "date": "1857",
   "museum": "Art Institute of Chicago",
@@ -1470,6 +1463,7 @@
   "licence": "Public domain (CC0, Art Institute of Chicago open access)",
   "url": "https://www.artic.edu/artworks/64447",
   "file": "fullsrc/mg010.png",
+  "chroma": 1.2,
   "image": "https://www.artic.edu/iiif/2/7e3923a9-e254-8d3f-b377-68d86f6083df/full/843,/0/default.jpg",
   "licenceCheck": "is_public_domain=true",
   "fetched": "2026-10-10",
@@ -1482,18 +1476,18 @@
    ],
    "window": [
     0,
-    0.0744,
-    1,
-    0.9256
+    0.4,
+    0.85,
+    1
    ],
-   "variant": "m",
+   "variant": "x1",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
  {
   "id": "mg007",
   "title": "Paris Street; Rainy Day",
-  "short": "Paris Street; Rainy Day",
+  "short": "Paris Street, Rain",
   "artist": "Gustave Caillebotte",
   "date": "1877",
   "museum": "Art Institute of Chicago",
@@ -1525,7 +1519,7 @@
  {
   "id": "mg038",
   "title": "Self-Portrait",
-  "short": "Self-Portrait (1889)",
+  "short": "Self-Portrait",
   "artist": "Vincent van Gogh",
   "date": "1889",
   "museum": "National Gallery of Art",
@@ -1552,8 +1546,7 @@
    ],
    "variant": "t",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  },
-  "shortNote": "lane D: was \"Self-Portrait (NGA)\"; the year reads better on the play bar and the win line"
+  }
  },
  {
   "id": "mg002",
@@ -1587,33 +1580,98 @@
   }
  },
  {
-  "id": "mg075",
-  "title": "Breton Girls Dancing, Pont-Aven",
-  "short": "Breton Girls Dancing",
-  "artist": "Paul Gauguin",
-  "date": "1888",
-  "museum": "National Gallery of Art",
+  "id": "mg003b",
+  "title": "A Sunday Afternoon on the Island of La Grande Jatte (AIC title: A Sunday on La Grande Jatte, 1884)",
+  "short": "Grande Jatte (group)",
+  "artist": "Georges Seurat",
+  "date": "1884-86",
+  "museum": "Art Institute of Chicago",
   "kind": "painting",
-  "licence": "Public domain (CC0, National Gallery of Art open access)",
-  "url": "https://www.nga.gov/collection/art-object-page.61369.html",
-  "file": "fullsrc/mg075.png",
-  "image": "https://api.nga.gov/iiif/732faae9-f8fe-459b-b86e-1c6039024179/full/!843,843/0/default.jpg",
-  "licenceCheck": "openaccess=1",
+  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
+  "url": "https://www.artic.edu/artworks/27992",
+  "file": "fullsrc/mg003b.png",
+  "chroma": 1.7,
+  "image": "https://www.artic.edu/iiif/2/2d484387-2509-5e8e-2c43-22f9981972eb/full/843,/0/default.jpg",
+  "licenceCheck": "is_public_domain=true",
   "fetched": "2026-10-10",
   "srcCrop": {
    "trim": [
-    0.005,
-    0.005,
-    0.995,
-    0.9058
+    0.015,
+    0.0199,
+    0.985,
+    0.9801
    ],
    "window": [
-    0.3505,
+    0.5,
     0,
     1,
     1
    ],
-   "variant": "r",
+   "variant": "x8b",
+   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
+  }
+ },
+ {
+  "id": "mg003d",
+  "title": "A Sunday Afternoon on the Island of La Grande Jatte (AIC title: A Sunday on La Grande Jatte, 1884)",
+  "short": "Grande Jatte (couple)",
+  "artist": "Georges Seurat",
+  "date": "1884-86",
+  "museum": "Art Institute of Chicago",
+  "kind": "painting",
+  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
+  "url": "https://www.artic.edu/artworks/27992",
+  "file": "fullsrc/mg003d.png",
+  "chroma": 1,
+  "image": "https://www.artic.edu/iiif/2/2d484387-2509-5e8e-2c43-22f9981972eb/full/843,/0/default.jpg",
+  "licenceCheck": "is_public_domain=true",
+  "fetched": "2026-10-10",
+  "srcCrop": {
+   "trim": [
+    0.015,
+    0.0199,
+    0.985,
+    0.9801
+   ],
+   "window": [
+    0.62,
+    0.04,
+    1,
+    0.98
+   ],
+   "variant": "x9a",
+   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
+  }
+ },
+ {
+  "id": "mg028",
+  "title": "Self-Portrait",
+  "short": "Self-Portrait (AIC)",
+  "artist": "Vincent van Gogh",
+  "date": "1887",
+  "museum": "Art Institute of Chicago",
+  "kind": "painting",
+  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
+  "url": "https://www.artic.edu/artworks/80607",
+  "file": "fullsrc/mg028.png",
+  "chroma": 2,
+  "image": "https://www.artic.edu/iiif/2/47c5bcb8-62ef-e5d7-55e7-f5121f409a30/full/843,/0/default.jpg",
+  "licenceCheck": "is_public_domain=true",
+  "fetched": "2026-10-10",
+  "srcCrop": {
+   "trim": [
+    0.0814,
+    0.11,
+    0.8995,
+    0.995
+   ],
+   "window": [
+    0,
+    0.0944,
+    1,
+    1
+   ],
+   "variant": "b",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
@@ -1650,38 +1708,6 @@
   }
  },
  {
-  "id": "mg014",
-  "title": "Suido Bridge and Surugadai (the carp streamer)",
-  "short": "Suido Bridge (the carp streamer)",
-  "artist": "Utagawa Hiroshige",
-  "date": "1857",
-  "museum": "Art Institute of Chicago",
-  "kind": "painting",
-  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
-  "url": "https://www.artic.edu/artworks/34252",
-  "file": "fullsrc/mg014.png",
-  "chroma": 1.2,
-  "image": "https://www.artic.edu/iiif/2/98cec643-d12d-ef62-9de0-df2194d1556f/full/843,/0/default.jpg",
-  "licenceCheck": "is_public_domain=true",
-  "fetched": "2026-10-10",
-  "srcCrop": {
-   "trim": [
-    0.0269,
-    0.045,
-    0.9439,
-    0.98
-   ],
-   "window": [
-    0,
-    0.1612,
-    1,
-    1
-   ],
-   "variant": "b",
-   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
- },
- {
   "id": "mg011",
   "title": "The Card Players",
   "short": "The Card Players",
@@ -1692,7 +1718,7 @@
   "licence": "Public domain (CC0, The Met Open Access)",
   "url": "https://www.metmuseum.org/art/collection/search/435868",
   "file": "fullsrc/mg011.png",
-  "chroma": 1,
+  "chroma": 2.4,
   "image": "https://images.metmuseum.org/CRDImages/ep/web-large/DP231550.jpg",
   "licenceCheck": "isPublicDomain=true",
   "fetched": "2026-10-10",
@@ -1704,83 +1730,19 @@
     0.9824
    ],
    "window": [
-    0.1445,
-    0,
-    0.8555,
+    0.35,
+    0.25,
+    0.95,
     1
    ],
-   "variant": "c",
-   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
- },
- {
-  "id": "mg018",
-  "title": "The Child's Bath",
-  "short": "The Child's Bath",
-  "artist": "Mary Cassatt",
-  "date": "1893",
-  "museum": "Art Institute of Chicago",
-  "kind": "painting",
-  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
-  "url": "https://www.artic.edu/artworks/111442",
-  "file": "fullsrc/mg018.png",
-  "chroma": 1.7,
-  "image": "https://www.artic.edu/iiif/2/3b885ae0-4d46-5fe4-d70a-00474827f02c/full/843,/0/default.jpg",
-  "licenceCheck": "is_public_domain=true",
-  "fetched": "2026-10-10",
-  "srcCrop": {
-   "trim": [
-    0.005,
-    0.075,
-    0.995,
-    0.995
-   ],
-   "window": [
-    0,
-    0,
-    1,
-    0.8868
-   ],
-   "variant": "t",
-   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
- },
- {
-  "id": "mg076",
-  "title": "Madame Cezanne in a Red Dress",
-  "short": "Madame Cezanne in a Red Dress",
-  "artist": "Paul Cezanne",
-  "date": "1888-90",
-  "museum": "The Met",
-  "kind": "painting",
-  "licence": "Public domain (CC0, The Met Open Access)",
-  "url": "https://www.metmuseum.org/art/collection/search/435876",
-  "file": "fullsrc/mg076.png",
-  "chroma": 2.4,
-  "image": "https://images.metmuseum.org/CRDImages/ep/web-large/DP320128.jpg",
-  "licenceCheck": "isPublicDomain=true",
-  "fetched": "2026-10-10",
-  "srcCrop": {
-   "trim": [
-    0.0245,
-    0.005,
-    0.995,
-    0.995
-   ],
-   "window": [
-    0,
-    0.0297,
-    1,
-    0.9703
-   ],
-   "variant": "m",
+   "variant": "x1",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
  {
   "id": "mg066",
   "title": "Madame Roulin and Her Baby",
-  "short": "Madame Roulin and Her Baby",
+  "short": "Madame Roulin",
   "artist": "Vincent van Gogh",
   "date": "1888",
   "museum": "The Met",
@@ -1788,7 +1750,6 @@
   "licence": "Public domain (CC0, The Met Open Access)",
   "url": "https://www.metmuseum.org/art/collection/search/459123",
   "file": "fullsrc/mg066.png",
-  "chroma": 1.2,
   "image": "https://images.metmuseum.org/CRDImages/rl/web-large/DT3154.jpg",
   "licenceCheck": "isPublicDomain=true",
   "fetched": "2026-10-10",
@@ -1801,106 +1762,105 @@
    ],
    "window": [
     0,
-    0,
-    1,
-    1
+    0.1,
+    0.8,
+    0.85
    ],
-   "variant": "w",
+   "variant": "x1",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
  {
-  "id": "mg067",
-  "title": "La Mousme",
-  "short": "La Mousme",
-  "artist": "Vincent van Gogh",
+  "id": "mg075",
+  "title": "Breton Girls Dancing, Pont-Aven",
+  "short": "Breton Girls Dancing",
+  "artist": "Paul Gauguin",
   "date": "1888",
   "museum": "National Gallery of Art",
   "kind": "painting",
   "licence": "Public domain (CC0, National Gallery of Art open access)",
-  "url": "https://www.nga.gov/collection/art-object-page.46626.html",
-  "file": "fullsrc/mg067.png",
-  "chroma": 1.2,
-  "image": "https://api.nga.gov/iiif/a2e6da57-3cd1-4235-b20e-95dcaefed6c8/full/!843,843/0/default.jpg",
+  "url": "https://www.nga.gov/collection/art-object-page.61369.html",
+  "file": "fullsrc/mg075.png",
+  "image": "https://api.nga.gov/iiif/732faae9-f8fe-459b-b86e-1c6039024179/full/!843,843/0/default.jpg",
   "licenceCheck": "openaccess=1",
   "fetched": "2026-10-10",
   "srcCrop": {
    "trim": [
     0.005,
-    0.035,
+    0.005,
     0.995,
-    0.995
+    0.9058
    ],
    "window": [
-    0,
+    0.3505,
     0,
     1,
     1
    ],
-   "variant": "w",
+   "variant": "r",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
  {
-  "id": "mg102",
-  "title": "Jacques and Berthe Lipchitz",
-  "short": "Jacques and Berthe Lipchitz",
-  "artist": "Amedeo Modigliani",
-  "date": "1916",
+  "id": "mg083",
+  "title": "Woman before an Aquarium",
+  "short": "Woman and Aquarium",
+  "artist": "Henri Matisse",
+  "date": "1921-23",
   "museum": "Art Institute of Chicago",
   "kind": "painting",
   "licence": "Public domain (CC0, Art Institute of Chicago open access)",
-  "url": "https://www.artic.edu/artworks/27987",
-  "file": "fullsrc/mg102.png",
-  "chroma": 2,
-  "image": "https://www.artic.edu/iiif/2/7e649536-b186-c3f5-3e6d-0d22d5d798ef/full/843,/0/default.jpg",
-  "licenceCheck": "is_public_domain=true",
-  "fetched": "2026-10-10",
-  "srcCrop": {
-   "trim": [
-    0.0125,
-    0.01,
-    0.995,
-    0.995
-   ],
-   "window": [
-    0,
-    0.0843,
-    1,
-    0.9157
-   ],
-   "variant": "m",
-   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
- },
- {
-  "id": "mg086",
-  "title": "The Millinery Shop",
-  "short": "The Millinery Shop",
-  "artist": "Edgar Degas",
-  "date": "",
-  "museum": "Art Institute of Chicago",
-  "kind": "painting",
-  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
-  "url": "https://www.artic.edu/artworks/14572",
-  "file": "fullsrc/mg086.png",
-  "image": "https://www.artic.edu/iiif/2/6f513908-03cc-b974-633b-adfce56b7936/full/843,/0/default.jpg",
+  "url": "https://www.artic.edu/artworks/27984",
+  "file": "fullsrc/mg083.png",
+  "chroma": 1.7,
+  "image": "https://www.artic.edu/iiif/2/d0e36029-27fc-bf4e-357a-55cfbaf7bdfd/full/843,/0/default.jpg",
   "licenceCheck": "is_public_domain=true",
   "fetched": "2026-10-10",
   "srcCrop": {
    "trim": [
     0.005,
-    0.0105,
+    0.005,
     0.995,
-    0.984
+    0.995
    ],
    "window": [
-    0.094,
-    0,
-    0.906,
+    0.1,
+    0.1,
+    0.85,
     1
    ],
-   "variant": "c",
+   "variant": "x1",
+   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
+  }
+ },
+ {
+  "id": "mg037",
+  "title": "Three Beauties of the Kwansei Period",
+  "short": "Three Beauties",
+  "artist": "Kitagawa Utamaro",
+  "date": "ca. 1791",
+  "museum": "The Met",
+  "kind": "painting",
+  "licence": "Public domain (CC0, The Met Open Access)",
+  "url": "https://www.metmuseum.org/art/collection/search/55639",
+  "file": "fullsrc/mg037.png",
+  "image": "https://images.metmuseum.org/CRDImages/as/web-large/DP135586.jpg",
+  "licenceCheck": "isPublicDomain=true",
+  "fetched": "2026-10-10",
+  "srcCrop": {
+   "trim": [
+    0.0199,
+    0.015,
+    0.9801,
+    0.99
+   ],
+   "window": [
+    0,
+    0,
+    1,
+    0.75
+   ],
+   "variant": "x1",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
@@ -1939,7 +1899,7 @@
  {
   "id": "mg046",
   "title": "Arrival of the Normandy Train, Gare Saint-Lazare",
-  "short": "Arrival of the Normandy Train",
+  "short": "Gare Saint-Lazare",
   "artist": "Claude Monet",
   "date": "1877",
   "museum": "Art Institute of Chicago",
@@ -1964,6 +1924,37 @@
     1
    ],
    "variant": "l",
+   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
+  }
+ },
+ {
+  "id": "mg008",
+  "title": "Water Lilies",
+  "short": "Water Lilies",
+  "artist": "Claude Monet",
+  "date": "1906",
+  "museum": "Art Institute of Chicago",
+  "kind": "painting",
+  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
+  "url": "https://www.artic.edu/artworks/16568",
+  "file": "fullsrc/mg008.png",
+  "image": "https://www.artic.edu/iiif/2/3c27b499-af56-f0d5-93b5-a7f2f1ad5813/full/843,/0/default.jpg",
+  "licenceCheck": "is_public_domain=true",
+  "fetched": "2026-10-10",
+  "srcCrop": {
+   "trim": [
+    0.005,
+    0.005,
+    0.995,
+    0.9742
+   ],
+   "window": [
+    0,
+    0.4,
+    0.6,
+    1
+   ],
+   "variant": "x1",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  }

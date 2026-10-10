@@ -10,6 +10,82 @@ then these notes.
 Records n 351-400 (Land 4 in the factory's numbering, era 12, ids z5-1..z5-50, world 5), shown on the page as Zen pictures
 201-250 (main.js zenNum: Worlds 1-4 hold 1-200).
 
+
+
+## 00. Round 3 (2026-10-10, Peter via lane C, workspace bf9a4c5): La Grande Jatte as a two-level series
+
+Folded in before round 2 was committed, so the commit carries both. Lane C's round 3 `picks-full.json`: 351 = **mg003c** (the
+left bank, 36x46, 5 colours, boardOf's own chroma, "La Grande Jatte (1 of 2)"), 352 = **mg003** (the parasol couple, 32x46,
+chroma 1.2, "La Grande Jatte (2 of 2)"), round 2's 352-370 each one place down (353-371), mg008 Water Lilies out to the spares,
+372-400 unchanged. Their `handoff-full.js` here: **62 of 62**; `convert --force`: **50 of 50 identical to boards-full**, 29 of
+29 boards at 372-400 the same as round 2.
+
+- **Re-baked 351-371** on the kept plan (`bake --keep-plan --drop-moat --list 351..371`): every slot keeps its tag and deck
+  features; 21 ok, 354 (the straw-hat self-portrait on a new slot) out of band first and ok with 16 more candidates
+  (`--extra 16 --reuse`). Two more planned rings dropped for pictures that can't carry one (361 mg061, 365 mg013): **5 rings**
+  (362 372 374 386 390).
+- **The series:** 351 La Grande Jatte (1 of 2) Normal 40.0%, 201 s, 49 taps, longest tap 14.95 s, careful 1.0, ? cards; 352
+  (2 of 2) Normal 40.5%, 165 s, 40 taps, 14.99 s, careful 1.0, ? cards. Both on sheet A's first two spots, consecutive nodes
+  201 and 202 on the same sheet. Win lines "La Grande Jatte (1 of 2) by Georges Seurat, all dug out." and "(2 of 2) ...".
+- **372-400: 29 of 29 records byte-identical to round 2.** Against round 1, 7 records are untouched (372 376 383 386 390 395
+  400); every other World 5 record moved, was re-baked or took a new short title.
+- **Whole world:** E18/N26/H6; Easy mean 67.8%, Normal 39.0%, Hard 14.5%; careful min 1.0 / 0.94 / 0.75; median real pace **218
+  s**, 158-285 s, 38-55 taps; ? cards 23, links 18, rings 5, 0 mystery blocks, 0 locks. land.js check PASS every gate.
+- **LICENSES.md:** World 5's table re-written (351 mg003c and 352 mg003 both rows of the AIC painting; Water Lilies gone).
+- **Freeze** re-taken: the other 150 Zen records and Worlds 1-4 byte-identical; `--require` PASS (2,405 / 372 / 1,800 checks,
+  shipped 512, castles 283, all 0).
+- **Gates:** test.js 714/0 (World 5 block now checks the series: mg003c then mg003, neither Hard, both on the first sheet's
+  first two spots); pack --check clean; selfTest 880/0 (375x812@3), 882/0 (1280x720), 880/0 (360x640); check.mjs bytes 2,
+  lazy 15, saves 4, sweep 18, 0 FAIL; sweep-map 126/0; regrades and harness in v5-progress D20. Shipped folder 13,916,559 B;
+  first-tap bytes 1,869,718. Cache `?v=69`.
+- **Shots:** `contact-installed.jpg` (re-rendered), `play-grande-jatte-375.png` (201, the left bank), `play-grande-jatte-2-375.png`
+  (202, the couple), plus the map and win shots, all from `tools/shots-land-06.mjs`.
+
+## 0. Round 2 fix pass (2026-10-10; critic `tools/critic-land-06.md`, lane C round 2 at workspace 79cade2)
+
+Sections 1-10 below are round 1's record; where round 2 changed a number, this section has the new one.
+
+- **Inputs.** Lane C's round 2 `picks-full.json` (landMain and the 62 landManifest lines, whole, chroma kept). Their
+  `handoff-full.js` run here: **62 of 62 identical**. `prep` + `convert --force`: **50 of 50 identical to boards-full**; against
+  round 1's boards exactly the 19 named slots changed and the other 31 are identical. Dates kept from round 1 where lane C's
+  line had none (mg128).
+- (Round 3 above re-ordered 351-371; the numbers in this section are round 2's.)
+- **Re-baked 19 on the kept plan** (`bake --keep-plan --drop-moat --list ...`: each slot keeps its tag and deck features):
+  351 mg003 (the parasol couple, 32x46), re-crops 358 359 362 366 371 379 380 382 385 394 397, swaps 367 mg060->mg024 The Eagle,
+  374 mg028->mg076 Madame Cezanne, 381 mg072->mg048 The Letter, 388 mg065->mg018 The Child's Bath, 391 mg094->mg049 The
+  Acrobats, 392 mg127->mg025 The Asakusa Cat, 393 mg057->mg093 Kohada Koheiji. 18 ok first time; 388 was a fallback (careful
+  0.125) and passed with 16 more candidates (`--extra 16 --reuse`). No spare used.
+- **Rings 10 -> 7.** New land.js flag `--drop-moat` (keptPlan): a slot planned with a ring whose new picture can't carry one
+  bakes ringless instead of refusing. 367 mg024 carries a ring but dealt 0 of 60 with one (moatSkip), 371 mg008's re-crop and
+  385 mg058's can't carry one. moatSkip also lists mg093 and mg031 (ringless slots; 0 ring deals) for any later fresh plan.
+  Ringed now: 361 362 365 372 374 386 390.
+- **The 19 as baked** (tag, rate, pace, taps; longest tap 14.9-15.0 s, careful 0.94-1.0): 351 La Grande Jatte N 40.0% 197 s 51
+  (was 55 taps at both caps); 358 N 36.0% 205 s 52; 359 E 74.3% 230 s 55; 362 H 16.0% 208 s 55 (ring); 366 E 59.3% 216 s 44;
+  367 N 34.5% 205 s 52; 371 N 41.2% 219 s 55; 374 N 44.8% 169 s 39 (ring); 379 H 11.7% 285 s 54; 380 E 69.0% 237 s 44; 381 N
+  31.2% 219 s 49; 382 E 74.3% 224 s 55; 385 N 32.8% 211 s 55; 388 N 36.0% 234 s 54; 391 E 57.3% 225 s 55; 392 N 35.5% 218 s 50;
+  393 H 13.8% 201 s 44; 394 E 62.5% 226 s 44; 397 N 41.5% 204 s 47.
+- **Whole world:** E18/N26/H6, Easy mean 68.2%, Normal 37.1%, Hard 14.5%; median real pace **218 s**, 158-285 s, 39-55 taps;
+  ? cards 23, links 18, rings 7, 0 mystery blocks, 0 locks. land.js check PASS every gate.
+- **Short titles (data only).** Lane C's new `short` (24 characters or fewer) is each record's title. Against round 1's
+  records: 9 levels byte-identical (355 365 372 376 383 386 390 395 400), 22 differ in `title` only (352 353 354 356 357 360 361
+  363 364 368 369 370 373 375 377 378 384 387 389 396 398 399, exactly the brief's list), 19 re-baked.
+- **B1 credits.** New `zen.json` world field `credit` (land.json `worldCredit`, written by `land.js zen`). The map's credits
+  line (`#map-credits`, the only place the game shows picture credits) is `gallery.credits` plus, on the Zen map, each world's
+  credit: "Masterpiece Gallery: Public domain paintings from the Art Institute of Chicago, National Gallery of Art, The Met
+  and Cleveland Museum of Art open access (CC0)." The Campaign map and Worlds 1-4 are unchanged (`gallery.credits` still names
+  Twemoji, Noto and The Met). Tests: test.js (World 5 alone carries a credit, with the four museums; the Gallery line kept) and
+  selfTest (the Zen map's foot reads the Gallery line then World 5's).
+- **LICENSES.md:** World 5's table re-written by `land.js zen`; the 7 swapped rows name the new paintings.
+- **Left as is:** the map tint (M2, Peter's call) and the Next up side quest (m2, LATER.md).
+- **Freeze:** re-snapshot. Frozen zen.json: the other 150 records and Worlds 1-4 byte-identical; World 5's entry gains
+  `credit`; its records 41 changed (19 re-baked, 22 titles), 9 identical. `--require` PASS (2,405 / 372 / 1,800 checks, shipped
+  512, castles 283, all 0).
+- **Gates:** test.js 714/0 (shipped 13,916,765 B); pack --check clean; selfTest 880/0 (375x812@3), 882/0 (1280x720), 880/0
+  (360x640); check.mjs bytes 2, lazy 15, saves 4, sweep 18, 0 FAIL; sweep-map 126/0; regrades and harness: see v5-progress
+  D20. Cache `?v=69`. First-tap bytes 1,869,718 (round 1 1,868,788; 6a7d1a5 1,857,289). zen-5.pk.json 94,951 B.
+- **Shots:** `tools/shots-land-06/contact-installed.jpg` (re-rendered, numbered, as baked) and `play-grande-jatte-375.png` (the
+  couple in play: the dark silhouette with the parasol on the lawn; "La Grande Jatte by Georges Seurat, all dug out." on the win).
+
 ## 1. Boards
 
 `prep` (local-ai venv Pillow) then `convert` on the 62 landManifest lines copied whole into `pictures/manifest.json` (chroma

@@ -1,0 +1,23 @@
+credits text (zen map): "Pictures: Twemoji by Twitter, Inc and other contributors (CC BY 4.0); Noto Emoji by Google (Apache 2.0); paintings and prints from The Metropolitan Museum of Art Open Access (public domain); the rest are Click it! Studios originals."
+DOM has museum names: {"aic":false,"nga":false,"cle":false,"cc0":true}
+join nodes: "199 200 201*"
+banners: ["World 4Dino ValleyThe road comes back down to earth in a warm green valley of ferns, rivers and smoking volcanoes, where dinosaurs fish, play music and get up to all sorts of things.","World 5Masterpiece GalleryThe road wanders into a sunny riverside of famous old paintings, from a Sunday on La Grande Jatte to Van Gogh's bedroom, each one waiting to be dug out a block at a time."]
+mid nodes: "209 210 211 212 213 214 215 216 217 218 219"
+w5 imgs: ["map/land-05-b.webp [none]","map/land-05-a.webp [none]","map/sheet-02.webp [sepia(0.35) saturate(1.3) hue-rotate(-14deg) brightness(1.06) contrast(1.04)]","map/sheet-05.webp [sepia(0.35) saturate(1.3) hue-rotate(-14deg) brightness(1.06) contrast(1.04)]","map/sheet-02.webp [sepia(0.35) saturate(1.3) hue-rotate(-14deg) brightness(1.06) contrast(1.04)]","map/sheet-05.webp [sepia(0.35) saturate(1.3) hue-rotate(-14deg) brightness(1.06) contrast(1.04)]","map/sheet-02.webp [sepia(0.35) saturate(1.3) hue-rotate(-14deg) brightness(1.06) contrast(1.04)]"," [sepia(0.35) saturate(1.3) hue-rotate(-14deg) brightness(1.06) contrast(1.04)]"," [sepia(0.35) saturate(1.3) hue-rotate(-14deg) brightness(1.06) contrast(1.04)]"]
+eggs in w5: 68
+plain 201 bar: {"num":"201","name":"A Sunday on La Grande Jatte"}
+tray chips: {"h":159,"w":361,"txt":"11 48 ? 19 47 25 ? 31 61 59 52 23 71 43 93 33 56"}
+campaign sheets: ["0:map/sheet-01.webp","1:map/sheet-02.webp","2:map/sheet-03.webp","3:map/sheet-04.webp","4:map/sheet-05.webp","5:map/sheet-06.webp","6:","7:"]
+win easy-353: {"id":"z5-3","tag":"easy","taps":55,"status":"won","now":681,"panel":"win","title":"Picture done","line":"Storm below Mount Fuji by Katsushika Hokusai, all dug out."}
+win hard-400: {"id":"z5-50","tag":"hard","taps":50,"status":"won","now":609,"panel":"win","title":"Picture done","line":"The Bedroom by Vincent van Gogh, all dug out."}
+win moat-361: {"id":"z5-11","tag":"normal","taps":45,"status":"won","now":549,"panel":"win","title":"Picture done","line":"Two Sisters (On the Terrace) by Pierre-Auguste Renoir, all dug out."}
+fail 371: {"plan":16,"status":"failed","reason":"jam","panel":"fail","title":"A little stuck","line":"Line jammed: 51174539 can't reach a block. Have another look."}
+campaign 12: {"id":"e1-12","status":"won","panel":"win","line":"The goblin king flees. Level 12 cleared."}
+zen w3 #10: {"id":"z3-10","status":"won","panel":"win","line":"Kitten vs. alien mouse, all dug out."}
+howto visible: false
+howto state: {"tut":true}
+w1000: {"seen":"209 210 211 212 213* 214 215 216","over":false,"card":null}
+w1150: {"seen":"209 210 211 212 213* 214 215 216","over":false,"card":null}
+w1300: {"seen":"209 210 211 212 213* 214 215 216","over":false,"card":null}
+w1280: {"seen":"209 210 211 212 213* 214 215 216","over":false,"card":null}
+console: []

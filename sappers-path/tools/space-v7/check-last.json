@@ -42,40 +42,40 @@
   },
   "new": {
    "home": {
-    "total": 1868788,
+    "total": 1869718,
     "by": {
      "page": 201459,
      "fonts": 77732,
      "art": 385620,
-     "code": 782833,
+     "code": 783592,
      "levels: other": 319063,
      "map: layout": 76806,
-     "levels: zen": 25275
+     "levels: zen": 25446
     }
    },
    "campaign": {
-    "total": 5349922,
+    "total": 5350852,
     "by": {
      "page": 201459,
      "fonts": 77732,
      "art": 385620,
-     "code": 782833,
+     "code": 783592,
      "levels: other": 319063,
      "map: layout": 76806,
-     "levels: zen": 25275,
+     "levels: zen": 25446,
      "audio": 3481134
     }
    },
    "zen": {
-    "total": 5404733,
+    "total": 5405663,
     "by": {
      "page": 201459,
      "fonts": 77732,
      "art": 385620,
-     "code": 782833,
+     "code": 783592,
      "levels: other": 319063,
      "map: layout": 76806,
-     "levels: zen": 80086,
+     "levels: zen": 80257,
      "audio": 3481134
     }
    }

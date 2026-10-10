@@ -1,7 +1,7 @@
 // Sapper's Path v7 lane D (Zen World 5 Masterpiece Gallery): shots into tools/shots-land-06/ (gitignored). At a 375x812 phone
 // (3x, touch) on a fresh profile: the World 4 / World 5 join (Worlds 1-4 cleared, World 5's first current) on the plain URL
 // after setting the save up under ?debug=1, the middle and the top of World 5, La Grande Jatte in play and its win sheet; at
-// 1280x720 the World 5 map. Plus the fit at 375 (every Zen node's number inside its disc, the closest two nodes), the tint
+// 1280x720 the World 5 map. Round 3: La Grande Jatte is a series, 201 the left bank and 202 the parasol couple (play-grande-jatte-2-375). Plus the fit at 375 (every Zen node's number inside its disc, the closest two nodes), the tint
 // on World 5's sheet images and what each shot shows (notes.txt).
 //   PLAYWRIGHT_MODULE=$(npm root -g)/playwright/index.mjs node tools/shots-land-06.mjs [--url http://127.0.0.1:8506/]
 import { mkdirSync, writeFileSync } from "node:fs"; import { dirname, resolve } from "node:path"; import { fileURLToPath } from "node:url";
@@ -40,6 +40,7 @@ await session(phone, async ({ p, go, shot, toZen, seen, banners, scrollTo }) => 
   await shot("play-grande-jatte-mid-375");
   const win = await p.evaluate((rest) => { for (const ch of rest) { SP.play(+ch); SP.settle(); } SP.tick(12000); return { panel: SP.state().panel, title: document.getElementById("p-title").textContent, line: document.getElementById("p-line").textContent }; }, o.slice(18));
   notes.push("La Grande Jatte win: " + JSON.stringify(win)); await shot("win-375");
+  await go(true); notes.push("La Grande Jatte 2 of 2 in play: " + JSON.stringify(await p.evaluate(async () => { SP.zenTo(5, 1); await SP.load("z5-2"); return { num: document.getElementById("lvl-num").textContent, name: document.getElementById("lvl-name").textContent }; }))); await shot("play-grande-jatte-2-375"); // round 3: the series' second picture
 });
 await session(desk, async ({ p, go, shot, toZen, seen, banners, scrollTo }) => {
   await go(false); await go(true); await p.evaluate(() => { SP.zenTo(1, 50); SP.zenTo(2, 50); SP.zenTo(3, 50); SP.zenTo(4, 50); SP.zenTo(5, 9); }); await go(false); await toZen();
