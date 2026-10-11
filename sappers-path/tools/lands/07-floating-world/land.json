@@ -1,0 +1,207 @@
+{
+ "k": 5,
+ "slug": "07-floating-world",
+ "name": "The Floating World",
+ "lore": "DRAFT (install sets it): The road leaves the gallery for old Edo and the way to Mount Fuji, bridges, waterfalls, festivals and the sea in Hokusai's and Hiroshige's woodblock prints, each one waiting to be dug out a block at a time.",
+ "count": 50,
+ "source": "museum",
+ "sourceNote": "Real public-domain Japanese woodblock prints (ukiyo-e) by Hokusai and Hiroshige, CC0 open access from the Art Institute of Chicago; licence re-read per object by lane C (game-research/sappers-path-v4/lands/07-floating-world/README.md, picks-full.json: 50 picks, 12 spares, landManifest 62 lines; Sharaku dropped, Peter 10/10). Each file is a crop of the print, never repainted (srcCrop on its manifest line, information only); converted by land.js boardOf with the whole manifest line (chroma). The folder keeps lane C's slug (07); as installed it is Land 5 in the factory's numbering (levels 401-450, era 13) and Zen World 6.",
+ "features": [
+  "linked",
+  "mystery",
+  "moat"
+ ],
+ "eggs": [
+  "reeds",
+  "fish",
+  "grass",
+  "butterfly"
+ ],
+ "eggNote": "DRAFT: eggs and eggTurns are set at install, with the map sheets.",
+ "shade": true,
+ "raw": "/Users/peter/local-ai/outputs/lands/07-floating-world",
+ "quests": "none",
+ "zen": {
+  "k": 6,
+  "note": "v7 lane D: The Floating World plays as Zen World 6 (tools/land.js ... zen writes tools/build-data/levels/zen.json only). Records keep the land factory numbers 401-450 (scratch/state.json seeded {from: 401, sheet0: 54, gal0: 62}: Worlds 1-5 hold 1-50, 201-250, 251-300, 301-350, 351-400; World 5's sheets end at 53); the page shows them on from World 5's last Zen number (main.js zenNum)."
+ },
+ "profile": {
+  "note": "Zen World 6, casual (v7 lane D, 2026-10-10, trial): World 5 Masterpiece Gallery's profile as it ships (tools/lands/06-masterpiece-gallery/land.json): tags E18/N26/H6/X0 ending on a Hard, light deck features (? cards, linked squads), no locks, no archers, no Extreme, no mystery blocks (Peter, 2026-10-08), gentle moats (always 2 ways in) only on prints that can carry one, careful floor 0.5 every tag, and World 5's deal setting for max-box boards (squads 1.6x, 400 attempts). The 50 are lane C's real CC0 woodblock prints (painting kind, shade on, manifest chroma where lane C set one).",
+  "tags": {
+   "shares": {
+    "easy": 0.36,
+    "normal": 0.52,
+    "hard": 0.12,
+    "extreme": 0
+   },
+   "breathers": 5,
+   "run": [
+    1,
+    3
+   ],
+   "end": "hard"
+  },
+  "features": {
+   "mystery": {
+    "share": 0.5,
+    "by": {
+     "easy": 0.2,
+     "normal": 0.5,
+     "hard": 1
+    },
+    "cards": [
+     2,
+     3
+    ]
+   },
+   "hidden": {
+    "share": 0,
+    "by": {
+     "easy": 0,
+     "normal": 0,
+     "hard": 0
+    },
+    "of": [
+     0,
+     0
+    ],
+    "note": "v6 lane D8 (Peter, 2026-10-08): no mystery blocks in Zen, ever. The whole picture shows from the start; land.js and zen-world.js refuse a Zen land or world with hidden in its features or a hidden share."
+   },
+   "linked": {
+    "share": 0.36,
+    "by": {
+     "easy": 0.2,
+     "normal": 0.4,
+     "hard": 0.67
+    },
+    "pairs": [
+     1,
+     2
+    ]
+   },
+   "lock": {
+    "share": 0,
+    "key": 0
+   },
+   "moat": {
+    "share": 0.4,
+    "by": {
+     "easy": 0.2,
+     "normal": 0.4,
+     "hard": 0.67
+    },
+    "ways": [
+     0,
+     1
+    ],
+    "liquids": [
+     null,
+     "mire"
+    ]
+   }
+  },
+  "bands": {
+   "easy": [
+    0.45,
+    0.8
+   ],
+   "normal": [
+    0.2,
+    0.5
+   ],
+   "hard": [
+    0.06,
+    0.2
+   ]
+  },
+  "lookahead": {
+   "normal": null,
+   "hard": null,
+   "extreme": null
+  },
+  "carefulFloor": {
+   "easy": 0.5,
+   "normal": 0.5,
+   "hard": 0.5
+  },
+  "pace": {
+   "aim": 225000
+  },
+  "bake": {
+   "candidates": {
+    "perLevel": 8,
+    "perLevelBy": {
+     "easy": 8,
+     "hard": 10
+    }
+   },
+   "deal": {
+    "size": [
+     32,
+     80
+    ],
+    "attempts": 400,
+    "note": "World 5's shipped deal setting (tools/land-06-notes.md §2): squads 1.6x the land default ([20, 50] at sizeRef 1400, scaled with the board as ever) and 400 deal attempts a candidate (96 before). Kept for the woodblock prints, which are max-box boards too; see tools/land-07-notes.md for the trial."
+   }
+  }
+ },
+ "main": [
+  "fw001",
+  "fw050",
+  "fw101",
+  "fw004",
+  "fw021",
+  "fw046",
+  "fw040",
+  "fw006",
+  "fw084",
+  "fw102",
+  "fw034",
+  "fw052",
+  "fw017",
+  "fw048",
+  "fw044",
+  "fw024",
+  "fw049",
+  "fw095",
+  "fw080",
+  "fw065",
+  "fw088",
+  "fw082",
+  "fw029",
+  "fw055",
+  "fw103",
+  "fw025",
+  "fw094",
+  "fw041",
+  "fw027",
+  "fw035",
+  "fw100",
+  "fw012",
+  "fw045",
+  "fw043",
+  "fw071",
+  "fw053",
+  "fw038",
+  "fw013",
+  "fw057",
+  "fw042",
+  "fw030",
+  "fw058",
+  "fw014",
+  "fw054",
+  "fw036",
+  "fw016",
+  "fw068",
+  "fw031",
+  "fw007",
+  "fw002"
+ ],
+ "map": {
+  "note": "DRAFT (trial bake only, 2026-10-10): the map is lane D's call at install (lever 1: two of the game's own sheets reused under the world's own tint, map.fromLayout / files / reuse / tint as World 5). Not set yet; the map step refuses until it is."
+ },
+ "byArtist": true,
+ "credit": "Public domain woodblock prints from the Art Institute of Chicago open access (CC0). Each level is a crop of the print (never repainted) at the game's largest board; the full title, artist, date, museum, licence and the museum's own page are on its row.",
+ "worldCredit": "The Floating World: Public domain woodblock prints from the Art Institute of Chicago open access (CC0).",
+ "moatSkip": {}
+}
