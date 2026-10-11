@@ -489,3 +489,11 @@ Fixed: S1-S7, m2, m3, N1, N2 (`tools/v5-r4-notes.md` §10). Parked:
 - The realm card's "Secrets found" line is empty when no egg is found yet (World 4 and 5 alike).
 - World 5's finished-picture thumbnail on the win sheet reads soft for the busier paintings (La Grande Jatte's crop is a field of small shapes). A playtest call for Peter and lane C, not a conversion change here.
 - `tools/space-v7/check.mjs` now counts the index's nodes and leaves the Zen card's total out of the old/new save comparison; its other fixed numbers (51, 151, 154) hold while Worlds 1-4 stay as they are.
+
+## v7 lane D (Zen World 6 The Floating World, 2026-10-11)
+
+- The moat deal probe was a scratch script again (World 4, 5, 6). It could be a land.js step that writes `moatSkip` itself (6 rings x 20 attempts a tag at the profile's deal setting, about 5 s for 16 boards).
+- A board too easy for any band (World 6's fw021 and fw067: every candidate won 100% of random-tap games at every squad size) only shows up in the full bake. Lane C's pick sheet could run a quick deal-and-grade at Normal and flag a board whose random tapper always wins.
+- World 6's credit line (the brief's exact words) has no "The Floating World:" in front, so on the Zen map's foot it reads as a plain sentence after World 5's "Masterpiece Gallery: ..." line. A world-name prefix (or one line per world) would read better.
+- The woodblock tint is one CSS filter on the whole sheet, so it can lean indigo and paper but not vermilion (a hue turn that warms the land turns the water pink). A second overlay layer could add a warm accent.
+- The Next up card's side quest and the empty "Secrets found" line show on World 6 as on Worlds 4 and 5 (already listed above).

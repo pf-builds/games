@@ -174,3 +174,13 @@ every land out of the Campaign and plays it in Zen. To show a newly installed la
   all dug out."). A manifest line's `short` is the record's title (the full title stays on its licence row); `museum` and
   `date` join the artist on the row; land.json `credit` is a line under the land's licence heading.
 - **Max-box paintings deal tight:** World 5 needed `profile.bake.deal` `{size: [32, 80], attempts: 400}` (tools/land-06-notes.md §3).
+
+## 8. World 6 The Floating World (v7 lane D)
+
+- **profile.bake.byLevel** `{n: bake}`: one level's own bake merged over the land's (land.js `overOf`). World 6's 424 deals the
+  land-config default squads where the land deals 1.6x (its fast tapper beat patient play on every big-squad candidate).
+- A manifest line's **edit** (lane C repainted the source for readability) joins its licence cell on the licence row (land.js
+  `editOf`, lane C's own pointers dropped).
+- A board whose random tapper wins 100% on every candidate at every squad size can't pass any band: ask lane C for a swap
+  (World 6's fw021 and fw067).
+- Run the moat deal probe before the first bake and fill `moatSkip` (tools/land-07-notes.md §2).
