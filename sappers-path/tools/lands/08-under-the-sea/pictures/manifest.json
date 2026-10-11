@@ -1,0 +1,56 @@
+[
+ {
+  "id": "us201",
+  "title": "Octopus drummer",
+  "artist": "Click it! Studios",
+  "date": "2026-10-11",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "",
+  "file": "fullsrc/us201.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big orange octopus playing a red drum kit with all eight arms at once, a little yellow fish covering its fins over its ears, a pink and purple coral reef in teal water, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty water, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 7201,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/us201-s7201.png"
+ },
+ {
+  "id": "us203",
+  "title": "Hot spring spa",
+  "artist": "Click it! Studios",
+  "date": "2026-10-11",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "",
+  "file": "fullsrc/us203.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big orange crab in a towel relaxing in a hot spring beside an underwater volcano, bubbles rising, a little blue fish fanning it with a leaf, an underwater volcano with bright red lava and white heat plumes rising in dark blue water, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty water, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 7203,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/us203-s7203.png"
+ },
+ {
+  "id": "us206",
+  "title": "Night voyage",
+  "artist": "Click it! Studios",
+  "date": "2026-10-11",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "",
+  "file": "fullsrc/us206.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "an old wooden sailing ship with big white sails on a calm sea at night, a big yellow full moon, a big friendly grey whale swimming alongside, a dark navy night sea and sky with a few yellow stars, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character big in the foreground filling a third to half of the picture, two or three big simple shapes covering most of the picture with little empty water, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 7206,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/us206-s7206.png"
+ }
+]
