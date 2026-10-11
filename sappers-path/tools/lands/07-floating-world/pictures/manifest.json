@@ -126,34 +126,34 @@
   }
  },
  {
-  "id": "fw021",
-  "title": "Umezawa Marsh in Sagami Province (Soshu Umezawa hidari), from the series \"Thirty-six Views of Mount Fuji (Fugaku sanjurokkei)\"",
-  "short": "Cranes at Umezawa",
-  "artist": "Katsushika Hokusai",
-  "date": "c. 1830/33",
+  "id": "fw089",
+  "title": "The Paulownia Grove at Akasaka (Akasaka Kiribatake), from the series \"One Hundred Famous Views of Edo (Meisho Edo hyakkei)\"",
+  "short": "The Paulownia Grove",
+  "artist": "Utagawa Hiroshige",
+  "date": "1856",
   "museum": "Art Institute of Chicago",
   "kind": "painting",
   "licence": "Public domain (CC0, Art Institute of Chicago open access)",
-  "url": "https://www.artic.edu/artworks/24601",
-  "file": "fullsrc/fw021.png",
-  "chroma": 2.4,
-  "image": "https://www.artic.edu/iiif/2/59031f75-1a96-8f05-cbbb-2074ac9aa099/full/843,/0/default.jpg",
+  "url": "https://www.artic.edu/artworks/34079",
+  "file": "fullsrc/fw089.png",
+  "chroma": 1.7,
+  "image": "https://www.artic.edu/iiif/2/e2824a83-4d4a-4905-104e-9b48c68cfd51/full/843,/0/default.jpg",
   "licenceCheck": "is_public_domain=true",
   "fetched": "2026-10-10",
   "srcCrop": {
    "trim": [
-    0.01,
-    0.0122,
-    0.985,
-    0.9733
+    0.005,
+    0.025,
+    0.9728,
+    0.98
    ],
    "window": [
-    0.25,
     0,
-    0.85,
-    1
+    0.0714,
+    1,
+    0.9286
    ],
-   "variant": "x1",
+   "variant": "m",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
@@ -1513,34 +1513,33 @@
   "edit": "Adapted for the board by Click it! Studios: busy scene: flatter shapes and stronger colour (pass 2) (ops in edits.json)"
  },
  {
-  "id": "fw067",
-  "title": "Rice Paddies at Ono in Suruga Province (Sunshu Ono shinden), from the series \"Thirty-six Views of Mount Fuji (Fugaku sanjurokkei)\"",
-  "short": "Horses at Ono",
-  "artist": "Katsushika Hokusai",
-  "date": "c. 1830/33",
+  "id": "fw087",
+  "title": "Sanno Festival Procession at Kojimachi Itchome (Kojimachi Itchome Sanno Matsuri nerikomi), from the series \"One Hundred Famous Views of Edo (Meisho Edo hyakkei)\"",
+  "short": "Sanno Festival",
+  "artist": "Utagawa Hiroshige",
+  "date": "1856",
   "museum": "Art Institute of Chicago",
   "kind": "painting",
   "licence": "Public domain (CC0, Art Institute of Chicago open access)",
-  "url": "https://www.artic.edu/artworks/87017",
-  "file": "fullsrc/fw067.png",
-  "chroma": 1.2,
-  "image": "https://www.artic.edu/iiif/2/aa20c0d1-4651-7fc2-3627-a6e3324bc99d/full/843,/0/default.jpg",
+  "url": "https://www.artic.edu/artworks/34269",
+  "file": "fullsrc/fw087.png",
+  "image": "https://www.artic.edu/iiif/2/18756234-9133-213a-88b4-392326487869/full/843,/0/default.jpg",
   "licenceCheck": "is_public_domain=true",
   "fetched": "2026-10-10",
   "srcCrop": {
    "trim": [
-    0.015,
-    0.0122,
-    0.98,
-    0.9443
+    0.0412,
+    0.035,
+    0.9515,
+    0.98
    ],
    "window": [
-    0.1972,
     0,
-    0.8028,
-    1
+    0.085,
+    1,
+    0.915
    ],
-   "variant": "c",
+   "variant": "m",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
@@ -1666,69 +1665,6 @@
     1
    ],
    "variant": "c",
-   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
- },
- {
-  "id": "fw087",
-  "title": "Sanno Festival Procession at Kojimachi Itchome (Kojimachi Itchome Sanno Matsuri nerikomi), from the series \"One Hundred Famous Views of Edo (Meisho Edo hyakkei)\"",
-  "short": "Sanno Festival",
-  "artist": "Utagawa Hiroshige",
-  "date": "1856",
-  "museum": "Art Institute of Chicago",
-  "kind": "painting",
-  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
-  "url": "https://www.artic.edu/artworks/34269",
-  "file": "fullsrc/fw087.png",
-  "image": "https://www.artic.edu/iiif/2/18756234-9133-213a-88b4-392326487869/full/843,/0/default.jpg",
-  "licenceCheck": "is_public_domain=true",
-  "fetched": "2026-10-10",
-  "srcCrop": {
-   "trim": [
-    0.0412,
-    0.035,
-    0.9515,
-    0.98
-   ],
-   "window": [
-    0,
-    0.085,
-    1,
-    0.915
-   ],
-   "variant": "m",
-   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
- },
- {
-  "id": "fw089",
-  "title": "The Paulownia Grove at Akasaka (Akasaka Kiribatake), from the series \"One Hundred Famous Views of Edo (Meisho Edo hyakkei)\"",
-  "short": "The Paulownia Grove",
-  "artist": "Utagawa Hiroshige",
-  "date": "1856",
-  "museum": "Art Institute of Chicago",
-  "kind": "painting",
-  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
-  "url": "https://www.artic.edu/artworks/34079",
-  "file": "fullsrc/fw089.png",
-  "chroma": 1.7,
-  "image": "https://www.artic.edu/iiif/2/e2824a83-4d4a-4905-104e-9b48c68cfd51/full/843,/0/default.jpg",
-  "licenceCheck": "is_public_domain=true",
-  "fetched": "2026-10-10",
-  "srcCrop": {
-   "trim": [
-    0.005,
-    0.025,
-    0.9728,
-    0.98
-   ],
-   "window": [
-    0,
-    0.0714,
-    1,
-    0.9286
-   ],
-   "variant": "m",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
@@ -1948,6 +1884,70 @@
     0.9127
    ],
    "variant": "m",
+   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
+  }
+ },
+ {
+  "id": "fw021",
+  "title": "Umezawa Marsh in Sagami Province (Soshu Umezawa hidari), from the series \"Thirty-six Views of Mount Fuji (Fugaku sanjurokkei)\"",
+  "short": "Cranes at Umezawa",
+  "artist": "Katsushika Hokusai",
+  "date": "c. 1830/33",
+  "museum": "Art Institute of Chicago",
+  "kind": "painting",
+  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
+  "url": "https://www.artic.edu/artworks/24601",
+  "file": "fullsrc/fw021.png",
+  "chroma": 2.4,
+  "image": "https://www.artic.edu/iiif/2/59031f75-1a96-8f05-cbbb-2074ac9aa099/full/843,/0/default.jpg",
+  "licenceCheck": "is_public_domain=true",
+  "fetched": "2026-10-10",
+  "srcCrop": {
+   "trim": [
+    0.01,
+    0.0122,
+    0.985,
+    0.9733
+   ],
+   "window": [
+    0.25,
+    0,
+    0.85,
+    1
+   ],
+   "variant": "x1",
+   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
+  }
+ },
+ {
+  "id": "fw067",
+  "title": "Rice Paddies at Ono in Suruga Province (Sunshu Ono shinden), from the series \"Thirty-six Views of Mount Fuji (Fugaku sanjurokkei)\"",
+  "short": "Horses at Ono",
+  "artist": "Katsushika Hokusai",
+  "date": "c. 1830/33",
+  "museum": "Art Institute of Chicago",
+  "kind": "painting",
+  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
+  "url": "https://www.artic.edu/artworks/87017",
+  "file": "fullsrc/fw067.png",
+  "chroma": 1.2,
+  "image": "https://www.artic.edu/iiif/2/aa20c0d1-4651-7fc2-3627-a6e3324bc99d/full/843,/0/default.jpg",
+  "licenceCheck": "is_public_domain=true",
+  "fetched": "2026-10-10",
+  "srcCrop": {
+   "trim": [
+    0.015,
+    0.0122,
+    0.98,
+    0.9443
+   ],
+   "window": [
+    0.1972,
+    0,
+    0.8028,
+    1
+   ],
+   "variant": "c",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  }
