@@ -39,7 +39,8 @@
 //             levels' installed records byte for byte; gallery, layout, config, LICENSES.md and the sheets untouched.
 // v7 lane D (Masterpiece Gallery): land.json map.reuse (2 of the game's own sheets, map.fromLayout, never copied; map.tint on
 // each entry), byArtist (each main record's by: its painter, for the Zen win line), credit (a line under its licence heading);
-// a manifest line's short is the main record's title and its museum and date join the artist on its licence row.
+// a manifest line's short is the main record's title and its museum and date join the artist on its licence row; v7 lane D
+// (World 6): its edit joins the licence cell (editOf).
 // v6 lane D8 (Peter, 2026-10-08: no mystery blocks in Zen, ever; the whole picture shows from the start): a Zen land (land.json
 // zen, or a tools/build-data/levels/zen.json world with land k) is refused if its features list hidden or its profile gives hidden a share;
 // (v7 lane D: --drop-moat lets a slot planned with a ring take a picture that can't carry one, ringless, instead of refusing)
@@ -161,6 +162,9 @@ function keptPlan(X, tags, moat) {
       p.feats = p.feats.filter((f) => f !== "moat"); delete p.moat; console.log("bake --keep-plan --drop-moat: level " + (X.from + i) + " baked without its planned ring (" + moat[i].why + ")"); } p.cant = ["moat"]; } // v7 lane D: --drop-moat, a swapped picture that can't carry its slot's ring keeps the slot's tag and other features
     return p; });
 }
+// v7 lane D (World 6): profile.bake.byLevel {n: bake settings}, one level's own bake merged over the land's (e.g. a board whose
+// fast tapper beats patient play with the land's big squads deals the land-config default squads); the rest bake as before.
+const overOf = (X, n) => { if (!X.P.bake) return null; const o = Object.assign({}, X.P.bake), BL = o.byLevel || {}; delete o.byLevel; return BL[n] ? LP.merge(o, BL[n]) : o; };
 async function bake(X) {
   const b = readJ(path.join(X.S, "boards.json")), { quests } = picturesOf(X), tags = LP.landTags(X.count, X.P.tags, X.LCF.perLand), D = X.CFG.v5.density, BK = X.LC.bake;
   const moat = (X.land.features || []).indexOf("moat") >= 0 ? moatCan(X, b) : null, liquids = moat ? (X.P.features.moat || {}).liquids : undefined, moatLo = moat ? ((X.P.features.moat || {}).ways || [0])[0] : 0;
@@ -170,7 +174,7 @@ async function bake(X) {
   saveState(X, moat ? { tags, plan, moat } : { tags, plan }); if (moat) console.log("bake: " + moat.filter((m) => m.ok).length + " of " + moat.length + " pictures can carry a moat" + moat.filter((m) => !m.ok).map((m) => "; " + m.n + " can't: " + m.why).join(""));
   const only = opt("only") ? opt("only").split("-").map(Number) : null, list = opt("list") ? opt("list").split(",").map(Number) : null, dir = path.join(X.S, "bake");
   const K = keepOf() || [], inRun = (n) => K.indexOf(n) < 0 && (list ? list.indexOf(n) >= 0 : !only || (n >= only[0] && n <= (only[1] || only[0]))), want = (f, n) => (flag("force") || only || list ? inRun(n) : !fs.existsSync(f)), jobs = [];
-  b.main.forEach((e, i) => { const f = path.join(dir, "m-" + e.n + ".json"); if (want(f, e.n)) jobs.push({ file: f, job: { n: e.n, tag: tags[i], plan: plan[i], band: X.P.bands[tags[i]], look: X.P.lookahead[tags[i]] != null ? X.P.lookahead[tags[i]] : null, care: (X.P.careful || {})[tags[i]] != null ? X.P.careful[tags[i]] : null, careTune: (X.P.carefulTune || X.P.careful || {})[tags[i]] != null ? (X.P.carefulTune || X.P.careful)[tags[i]] : null, mysRows: (X.P.features.mystery || {}).rows || null, over: X.P.bake || null, obv: (X.P.obvious || {})[tags[i]] != null ? X.P.obvious[tags[i]] : null, careLo: (X.P.carefulFloor || {})[tags[i]] != null ? X.P.carefulFloor[tags[i]] : null, pace: X.P.pace, board: e.board, extra: +opt("extra") || 0, liquids, moatLo, noHidden: X.zen } }); });
+  b.main.forEach((e, i) => { const f = path.join(dir, "m-" + e.n + ".json"); if (want(f, e.n)) jobs.push({ file: f, job: { n: e.n, tag: tags[i], plan: plan[i], band: X.P.bands[tags[i]], look: X.P.lookahead[tags[i]] != null ? X.P.lookahead[tags[i]] : null, care: (X.P.careful || {})[tags[i]] != null ? X.P.careful[tags[i]] : null, careTune: (X.P.carefulTune || X.P.careful || {})[tags[i]] != null ? (X.P.carefulTune || X.P.careful)[tags[i]] : null, mysRows: (X.P.features.mystery || {}).rows || null, over: overOf(X, e.n), obv: (X.P.obvious || {})[tags[i]] != null ? X.P.obvious[tags[i]] : null, careLo: (X.P.carefulFloor || {})[tags[i]] != null ? X.P.carefulFloor[tags[i]] : null, pace: X.P.pace, board: e.board, extra: +opt("extra") || 0, liquids, moatLo, noHidden: X.zen } }); });
   b.side.forEach((e, i) => { const n = X.gal0 + i + 1, tag = BK.sideCycle[(X.gal0 + i) % BK.sideCycle.length], f = path.join(dir, "s-" + n + ".json"); if (!only && !list && (flag("force") || !fs.existsSync(f))) jobs.push({ file: f, job: { n: 100000 + n, side: true, tag, band: BK.sideBands[tag], look: null, pace: BK.sidePace, board: e.board } }); });
   if (!jobs.length) { console.log("bake: every level kept (scratch/bake)"); return; }
   const threads = +opt("threads") || LB.threadsOf(BK), t0 = Date.now(); console.log("bake: " + jobs.length + " levels on " + threads + " threads (" + quests.length + " side quests in the land)");
@@ -244,6 +248,9 @@ const PALM = require("./palette.js");
 const fillGap = (c, pal) => { let m = Infinity; const a = PALM.lab(c); for (const k of Object.keys(pal)) for (const h of [pal[k].c].concat(pal[k].sh || [])) if (h) m = Math.min(m, PALM.de00(a, PALM.lab(h))); return m; };
 const fillOf = (pal, H) => { const g = H.fills.map((f) => fillGap(f.c, pal)), i = g.findIndex((v) => v >= H.fillDE[0]); return H.fills[i >= 0 ? i : g.indexOf(Math.max(...g))]; };
 const creditOf = (p) => (p.artist ? p.artist + (p.date ? ", " + p.date : "") : p.credit || "Click it! Studios");
+// v7 lane D (World 6): a manifest line's edit (lane C repainted the source for readability, Peter 2026-10-11) joins its licence
+// cell on the licence row, without lane C's own pointers ("(ops in edits.json)", "(pass 2)").
+const editOf = (p) => p.edit.replace(/\s*\((ops in edits\.json|pass \d+)\)/g, "").trim();
 function assemble(X) {
   const b = readJ(path.join(X.S, "boards.json")), mp = readJ(path.join(X.S, "map.json")), { main, side, quests } = picturesOf(X), out = path.join(X.S, "out"), bad = [];
   const rec = (r) => { if (!r || r.fail) bad.push(r ? r.n + ": " + r.fail : "missing"); return r && !r.fail ? r : null; };
@@ -258,7 +265,7 @@ function assemble(X) {
       w: L.w, h: L.h, grid: L.grid, pic: true, cols: L.cols, pal: B.pal }, B.shade ? { shade: B.shade } : {}, { win: L.win, grade: L.grade, inBand: r.inBand, convert: B.stats, quest: quests[i] }, r.fallback ? { fallback: r.fallback } : {}); });
   const S = K ? X.inst.layout : mp.entries, entry = K ? X.installed : { k: X.land.k, slug: X.land.slug, name: X.land.name, lore: X.land.lore, from: X.from, to: X.to, source: X.land.source, features: X.land.features, eggs: X.land.eggs, sheets: [S[0].sheet, S[S.length - 1].sheet], files: X.land.map.files };
   const lic = ["", "### Land " + X.land.k + ": " + X.land.name + " (levels " + X.from + "-" + X.to + ")", ""].concat(X.land.credit ? [X.land.credit, ""] : [], ["| Level | Picture | Artist | Licence | Source |", "|---|---|---|---|---|"])
-    .concat(main.map((p, i) => "| " + (X.from + i) + " | " + p.title + " (" + p.id + ") | " + (p.artist || "-") + (p.museum ? (p.date ? ", " + p.date : "") + " (" + p.museum + ")" : "") + " | " + p.licence + " | " + p.url + " |"),
+    .concat(main.map((p, i) => "| " + (X.from + i) + " | " + p.title + " (" + p.id + ") | " + (p.artist || "-") + (p.museum ? (p.date ? ", " + p.date : "") + " (" + p.museum + ")" : "") + " | " + p.licence + (p.edit ? ". " + editOf(p) : "") + " | " + p.url + " |"),
       side.map((p, i) => "| side quest " + (X.gal0 + i + 1) + " (Wandering Gallery) | " + p.title + " (" + p.id + ") | " + (p.artist || "-") + " | " + p.licence + " | " + p.url + " |"));
   writeJ(path.join(out, "levels.json"), levels.filter(Boolean)); writeJ(path.join(out, "gallery.json"), pics.filter(Boolean)); writeJ(path.join(out, "land.json"), { entry, layout: S, eggCoins: K ? X.CFG.map.eggCoins.slice(X.sheet0 - 1, X.sheet0 - 1 + S.length) : mp.eggCoins }, true);
   fs.writeFileSync(path.join(out, "licences.md"), lic.join("\n") + "\n");

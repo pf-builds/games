@@ -2,22 +2,24 @@
  "k": 5,
  "slug": "07-floating-world",
  "name": "The Floating World",
- "lore": "DRAFT (install sets it): The road leaves the gallery for old Edo and the way to Mount Fuji, bridges, waterfalls, festivals and the sea in Hokusai's and Hiroshige's woodblock prints, each one waiting to be dug out a block at a time.",
+ "lore": "The road climbs from old Edo toward Mount Fuji, past bridges, waterfalls, boats and snow in Hokusai's and Hiroshige's woodblock prints, each one waiting to be dug out a block at a time.",
  "count": 50,
  "source": "museum",
- "sourceNote": "Real public-domain Japanese woodblock prints (ukiyo-e) by Hokusai and Hiroshige, CC0 open access from the Art Institute of Chicago; licence re-read per object by lane C (game-research/sappers-path-v4/lands/07-floating-world/README.md, picks-full.json: 50 picks, 12 spares, landManifest 62 lines; Sharaku dropped, Peter 10/10). Each file is a crop of the print, never repainted (srcCrop on its manifest line, information only); converted by land.js boardOf with the whole manifest line (chroma). The folder keeps lane C's slug (07); as installed it is Land 5 in the factory's numbering (levels 401-450, era 13) and Zen World 6.",
+ "sourceNote": "Real public-domain Japanese woodblock prints (ukiyo-e) by Hokusai and Hiroshige, CC0 open access from the Art Institute of Chicago; licence re-read per object by lane C (game-research/sappers-path-v4/lands/07-floating-world/README.md, picks-full.json: 50 picks, 12 spares, landManifest 62 lines; Sharaku dropped, Peter 10/10). Each file is a crop of the print (srcCrop on its manifest line, information only); 13 of the 50 repainted for readability by lane C (Peter, 2026-10-11; recipe in lane C's edits.json, an edit note on the manifest line and the licence row); converted by land.js boardOf with the whole manifest line (chroma). The folder keeps lane C's slug (07); as installed it is Land 5 in the factory's numbering (levels 401-450, era 13) and Zen World 6.",
  "features": [
   "linked",
   "mystery",
   "moat"
  ],
  "eggs": [
-  "reeds",
-  "fish",
+  "raven",
   "grass",
+  "mushrooms",
+  "fish",
+  "reeds",
   "butterfly"
  ],
- "eggNote": "DRAFT: eggs and eggTurns are set at install, with the map sheets.",
+ "eggNote": "Eggs on the reused sheets' painted side-quest spur tips (World 1's and World 5's rule; the land has no side quests): eggTurns puts each sheet's 2 eggs on its template's 2 quest spots, each repeat its own pair. Kinds that suit a mountain road and a river: raven, grass, mushrooms on the peaks sheet; fish, reeds, butterfly on the river sheet.",
  "shade": true,
  "raw": "/Users/peter/local-ai/outputs/lands/07-floating-world",
  "quests": "none",
@@ -142,6 +144,17 @@
     ],
     "attempts": 400,
     "note": "World 5's shipped deal setting (tools/land-06-notes.md §2): squads 1.6x the land default ([20, 50] at sizeRef 1400, scaled with the board as ever) and 400 deal attempts a candidate (96 before). Kept for the woodblock prints, which are max-box boards too; see tools/land-07-notes.md for the trial."
+   },
+   "byLevel": {
+    "424": {
+     "deal": {
+      "size": [
+       20,
+       50
+      ]
+     },
+     "note": "fw055 Fudo Falls: at the land's 1.6x squads its fast tapper beats patient play on every candidate (56 tried, --extra 48 --reuse); the land-config default squads [20, 50] (attempts stay 400) pass first time (lane D, 2026-10-11)"
+    }
    }
   }
  },
@@ -159,7 +172,7 @@
   "fw034",
   "fw052",
   "fw017",
-  "fw048",
+  "fw097",
   "fw044",
   "fw024",
   "fw049",
@@ -186,22 +199,118 @@
   "fw013",
   "fw057",
   "fw042",
-  "fw030",
+  "fw106",
   "fw058",
   "fw014",
-  "fw054",
+  "fw105",
   "fw036",
   "fw016",
   "fw068",
-  "fw031",
-  "fw007",
-  "fw002"
+  "fw039",
+  "fw067",
+  "fw107"
  ],
  "map": {
-  "note": "DRAFT (trial bake only, 2026-10-10): the map is lane D's call at install (lever 1: two of the game's own sheets reused under the world's own tint, map.fromLayout / files / reuse / tint as World 5). Not set yet; the map step refuses until it is."
+  "fromLayout": [
+   7,
+   1
+  ],
+  "files": [
+   "sheet-07.webp",
+   "sheet-01.webp"
+  ],
+  "reuse": true,
+  "tint": "hue-rotate(30deg) saturate(.75) sepia(.18) brightness(1.08) contrast(1.1)",
+  "note": "v7 lever 1: no new image bytes. The castle's sheets 7 (The Ironhollows: misty peaks and pines, the road to the mountain) and 1 (The Greenmarch: a river with two bridges and a cottage) reused through map.fromLayout, alternately mirrored, under a woodblock tint (map.tint on every entry: the greens shifted toward Prussian blue and pale paper, the water indigo), clearly apart from World 5's warm sepia. Not 2/5 (World 5's) or 4/6 (earmarked for Water Lily Isle)."
  },
  "byArtist": true,
- "credit": "Public domain woodblock prints from the Art Institute of Chicago open access (CC0). Each level is a crop of the print (never repainted) at the game's largest board; the full title, artist, date, museum, licence and the museum's own page are on its row.",
- "worldCredit": "The Floating World: Public domain woodblock prints from the Art Institute of Chicago open access (CC0).",
- "moatSkip": {}
+ "credit": "Japanese woodblock prints by Katsushika Hokusai and Utagawa Hiroshige from the Art Institute of Chicago open access (CC0); some adapted for the game by Click it! Studios.",
+ "worldCredit": "Japanese woodblock prints by Katsushika Hokusai and Utagawa Hiroshige from the Art Institute of Chicago open access (CC0); some adapted for the game by Click it! Studios.",
+ "moatSkip": {
+  "fw017": "carries a ring but no deal with one under the 15 s and 55-tap caps (lane D's probe, 2026-10-11, the bake's own moat builder and gen.deal at the profile's deal setting, 6 rings x 20 attempts a tag: easy 0, normal 0, hard 0 of 120)",
+  "fw021": "carries a ring but no deal with one under the 15 s and 55-tap caps (lane D's probe, 2026-10-11, the bake's own moat builder and gen.deal at the profile's deal setting, 6 rings x 20 attempts a tag: easy 0, normal 0, hard 0 of 120)",
+  "fw024": "carries a ring but no deal with one under the 15 s and 55-tap caps (lane D's probe, 2026-10-11, the bake's own moat builder and gen.deal at the profile's deal setting, 6 rings x 20 attempts a tag: easy 0, normal 0, hard 0 of 120)",
+  "fw012": "carries a ring but no deal with one under the 15 s and 55-tap caps (lane D's probe, 2026-10-11, the bake's own moat builder and gen.deal at the profile's deal setting, 6 rings x 20 attempts a tag: easy 0, normal 0, hard 0 of 120)",
+  "fw058": "carries a ring but no deal with one under the 15 s and 55-tap caps (lane D's probe, 2026-10-11, the bake's own moat builder and gen.deal at the profile's deal setting, 6 rings x 20 attempts a tag: easy 0, normal 0, hard 0 of 120)",
+  "fw041": "carries a ring but no deal with one under the 15 s and 55-tap caps (lane D's probe, 2026-10-11, the bake's own moat builder and gen.deal at the profile's deal setting, 6 rings x 20 attempts a tag: easy 2, normal 0, hard 0 of 120)"
+ },
+ "moatNote": "moatSkip: land.js finds 16 of the 50 can carry a ring (lane C counted 18 with its own check); a deal probe (the bake's own moat builder and gen.deal at the profile's deal setting, 6 rings x 20 attempts a tag) found 6 that never deal with one at Normal and Hard, so the plan leaves them ringless (World 5's and Dino Valley's finding). The probe's rate for the other 10: fw097 100%, fw040 58-69%, fw038, fw057, fw067 21-25%, fw016 8%, fw043, fw053, fw106 2-4%, fw042 1%.",
+ "eggTurns": [
+  [
+   [
+    [
+     "raven",
+     551,
+     737
+    ],
+    [
+     "grass",
+     624,
+     523
+    ]
+   ],
+   [
+    [
+     "mushrooms",
+     551,
+     737
+    ],
+    [
+     "raven",
+     624,
+     523
+    ]
+   ],
+   [
+    [
+     "grass",
+     551,
+     737
+    ],
+    [
+     "mushrooms",
+     624,
+     523
+    ]
+   ]
+  ],
+  [
+   [
+    [
+     "fish",
+     461,
+     614
+    ],
+    [
+     "reeds",
+     355,
+     294
+    ]
+   ],
+   [
+    [
+     "reeds",
+     461,
+     614
+    ],
+    [
+     "butterfly",
+     355,
+     294
+    ]
+   ],
+   [
+    [
+     "butterfly",
+     461,
+     614
+    ],
+    [
+     "fish",
+     355,
+     294
+    ]
+   ]
+  ]
+ ]
 }

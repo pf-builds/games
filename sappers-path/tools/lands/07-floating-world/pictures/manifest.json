@@ -26,9 +26,10 @@
     0.75,
     1
    ],
-   "variant": "x1",
+   "variant": "x1e",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
+  },
+  "edit": "Adapted for the board by Click it! Studios: the barrel ring was pale on pale paper: a bold wood ring, a blue sky, a small Fuji inside the ring (ops in edits.json)"
  },
  {
   "id": "fw050",
@@ -407,36 +408,37 @@
   }
  },
  {
-  "id": "fw048",
-  "title": "Bikuni Bridge in Snow (Bikunibashi setchu), from the series \"One Hundred Famous Views of Edo (Meisho Edo hyakkei)\"",
-  "short": "Bikuni Bridge in Snow",
+  "id": "fw097",
+  "title": "White heron and iris",
+  "short": "White Heron",
   "artist": "Utagawa Hiroshige",
-  "date": "1858",
+  "date": "c. 1832/34",
   "museum": "Art Institute of Chicago",
   "kind": "painting",
   "licence": "Public domain (CC0, Art Institute of Chicago open access)",
-  "url": "https://www.artic.edu/artworks/26601",
-  "file": "fullsrc/fw048.png",
-  "chroma": 1.2,
-  "image": "https://www.artic.edu/iiif/2/d8609020-1f72-2d0a-9c48-dedbccaa02d2/full/843,/0/default.jpg",
+  "url": "https://www.artic.edu/artworks/25961",
+  "file": "fullsrc/fw097.png",
+  "chroma": 1.7,
+  "image": "https://www.artic.edu/iiif/2/294dcf67-3315-4d12-98b5-d8d66323ef36/full/843,/0/default.jpg",
   "licenceCheck": "is_public_domain=true",
   "fetched": "2026-10-10",
   "srcCrop": {
    "trim": [
-    0.0346,
-    0.035,
-    0.9728,
-    0.925
+    0.0373,
+    0.025,
+    0.9735,
+    0.995
    ],
    "window": [
     0,
-    0.0546,
+    0.02,
     1,
-    0.9454
+    0.44
    ],
-   "variant": "m",
+   "variant": "x1e",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
+  },
+  "edit": "Adapted for the board by Click it! Studios: the white heron melted into the pale ground: calligraphy painted out, the heron outlined, the ground a deeper teal (ops in edits.json)"
  },
  {
   "id": "fw044",
@@ -559,9 +561,10 @@
     0.75,
     1
    ],
-   "variant": "x1",
+   "variant": "x1e",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
+  },
+  "edit": "Adapted for the board by Click it! Studios: the crane was pale on a pale green ground: the ground deep sea-blue, the crane outlined, its red crown made bigger (ops in edits.json)"
  },
  {
   "id": "fw080",
@@ -714,9 +717,10 @@
     0.7,
     1
    ],
-   "variant": "x1",
+   "variant": "x1e",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
+  },
+  "edit": "Adapted for the board by Click it! Studios: the sail vanished into the pale sky: a blue sky, the sail painted cream with its mast (ops in edits.json)"
  },
  {
   "id": "fw055",
@@ -901,9 +905,10 @@
     0.8102,
     1
    ],
-   "variant": "c",
+   "variant": "ce",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
+  },
+  "edit": "Adapted for the board by Click it! Studios: busy scene: flatter shapes and stronger colour (pass 2) (ops in edits.json)"
  },
  {
   "id": "fw035",
@@ -964,9 +969,10 @@
     0.8431,
     1
    ],
-   "variant": "c",
+   "variant": "ce",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
+  },
+  "edit": "Adapted for the board by Click it! Studios: the white rabbit melted into the pale bank: the bank painted green, the faint rabbit painted out and redrawn white with a dark edge (body, head, long ears, red eye); the sky flattened to one blue (8 colours otherwise) (ops in edits.json)"
  },
  {
   "id": "fw012",
@@ -1058,9 +1064,10 @@
     0.6116,
     1
    ],
-   "variant": "l",
+   "variant": "le",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
+  },
+  "edit": "Adapted for the board by Click it! Studios: pale peonies on pale paper: a soft blue ground, stronger colour (ops in edits.json)"
  },
  {
   "id": "fw071",
@@ -1151,9 +1158,10 @@
     0.8013,
     1
    ],
-   "variant": "c",
+   "variant": "ce",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
+  },
+  "edit": "Adapted for the board by Click it! Studios: busy scene: flatter shapes and stronger colour (pass 2) (ops in edits.json)"
  },
  {
   "id": "fw013",
@@ -1182,9 +1190,10 @@
     0.7963,
     1
    ],
-   "variant": "c",
+   "variant": "ce",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
+  },
+  "edit": "Adapted for the board by Click it! Studios: busy scene: flatter shapes and stronger colour (pass 2) (ops in edits.json)"
  },
  {
   "id": "fw057",
@@ -1244,38 +1253,39 @@
     1,
     1
    ],
-   "variant": "r",
+   "variant": "re",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
+  },
+  "edit": "Adapted for the board by Click it! Studios: the morning glories were muted on cream: stronger colour, a pale sky ground (ops in edits.json)"
  },
  {
-  "id": "fw030",
-  "title": "Honganji Temple at Asakusa in Edo (Toto Asakusa Honganji), from the series \"Thirty-six Views of Mount Fuji (Fugaku sanjurokkei)\"",
-  "short": "Temple Roof and Kite",
-  "artist": "Katsushika Hokusai",
-  "date": "c. 1830/33",
+  "id": "fw106",
+  "title": "A Cuckoo Against the Moon",
+  "short": "Cuckoo and Moon",
+  "artist": "Utagawa Hiroshige",
+  "date": "c. 1843/46",
   "museum": "Art Institute of Chicago",
   "kind": "painting",
   "licence": "Public domain (CC0, Art Institute of Chicago open access)",
-  "url": "https://www.artic.edu/artworks/24690",
-  "file": "fullsrc/fw030.png",
-  "image": "https://www.artic.edu/iiif/2/221e30b6-b4ab-d345-5def-2b83e76b3b90/full/843,/0/default.jpg",
+  "url": "https://www.artic.edu/artworks/22820",
+  "file": "fullsrc/fw106.png",
+  "image": "https://www.artic.edu/iiif/2/ce9d0c00-a7fe-c773-bcf5-f069ad2d1e69/full/843,/0/default.jpg",
   "licenceCheck": "is_public_domain=true",
   "fetched": "2026-10-10",
   "srcCrop": {
    "trim": [
-    0.015,
-    0.0196,
-    0.985,
-    0.9804
+    0.01,
+    0.0177,
+    0.99,
+    0.976
    ],
    "window": [
-    0.1898,
+    0.298,
     0,
-    0.8102,
+    1,
     1
    ],
-   "variant": "c",
+   "variant": "r",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
@@ -1306,9 +1316,10 @@
     1,
     0.9182
    ],
-   "variant": "m",
+   "variant": "me",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
+  },
+  "edit": "Adapted for the board by Click it! Studios: busy scene: flatter shapes and stronger colour (pass 2) (ops in edits.json)"
  },
  {
   "id": "fw014",
@@ -1342,31 +1353,31 @@
   }
  },
  {
-  "id": "fw054",
-  "title": "Clear Weather After Snow at Nihon Bridge (Nihonbashi yukibare), from the series \"One Hundred Famous Views of Edo (Meisho Edo hyakkei)\"",
-  "short": "Nihonbashi in Snow",
+  "id": "fw105",
+  "title": "Sparrows and Camellia in Snow",
+  "short": "Sparrows in Snow",
   "artist": "Utagawa Hiroshige",
-  "date": "1856",
+  "date": "c. 1831-33",
   "museum": "Art Institute of Chicago",
   "kind": "painting",
   "licence": "Public domain (CC0, Art Institute of Chicago open access)",
-  "url": "https://www.artic.edu/artworks/13199",
-  "file": "fullsrc/fw054.png",
-  "image": "https://www.artic.edu/iiif/2/13bc40da-028f-943a-bc6a-87c9cd3a9876/full/843,/0/default.jpg",
+  "url": "https://www.artic.edu/artworks/11039",
+  "file": "fullsrc/fw105.png",
+  "image": "https://www.artic.edu/iiif/2/2270b017-fe5a-fe7a-ed50-911fde5bf644/full/843,/0/default.jpg",
   "licenceCheck": "is_public_domain=true",
   "fetched": "2026-10-10",
   "srcCrop": {
    "trim": [
-    0.0271,
-    0.02,
-    0.9656,
+    0.0263,
+    0.015,
+    0.9737,
     0.985
    ],
    "window": [
     0,
-    0.0873,
+    0.2118,
     1,
-    0.9127
+    0.7882
    ],
    "variant": "m",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
@@ -1383,6 +1394,7 @@
   "licence": "Public domain (CC0, Art Institute of Chicago open access)",
   "url": "https://www.artic.edu/artworks/25183",
   "file": "fullsrc/fw036.png",
+  "chroma": 2.4,
   "image": "https://www.artic.edu/iiif/2/6610ddf3-b8d5-a8fa-5a03-a803e7e76042/full/843,/0/default.jpg",
   "licenceCheck": "is_public_domain=true",
   "fetched": "2026-10-10",
@@ -1399,9 +1411,10 @@
     1,
     0.9243
    ],
-   "variant": "m",
+   "variant": "me",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
+  },
+  "edit": "Adapted for the board by Click it! Studios: busy scene: flatter shapes and stronger colour (pass 2) (ops in edits.json)"
  },
  {
   "id": "fw016",
@@ -1468,95 +1481,97 @@
   }
  },
  {
-  "id": "fw031",
-  "title": "Waterwheel at Onden (Onden no suisha), from the series \"Thirty-six Views of Mount Fuji (Fugaku sanjurokkei)\"",
-  "short": "The Waterwheel",
+  "id": "fw039",
+  "title": "Ancient View of the Eight-planked Bridge in Mikawa Province (Mikawa no Yatsuhashi no kozu), from the series \"Unusual Views of Famous Bridges in Various Provinces (Shokoku meikyo kiran)\"",
+  "short": "The Eight-Plank Bridge",
+  "artist": "Katsushika Hokusai",
+  "date": "c. 1833/34",
+  "museum": "Art Institute of Chicago",
+  "kind": "painting",
+  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
+  "url": "https://www.artic.edu/artworks/25178",
+  "file": "fullsrc/fw039.png",
+  "image": "https://www.artic.edu/iiif/2/e85fb4d8-f243-74d9-2364-8b8bc001d9bf/full/843,/0/default.jpg",
+  "licenceCheck": "is_public_domain=true",
+  "fetched": "2026-10-10",
+  "srcCrop": {
+   "trim": [
+    0.01,
+    0.0124,
+    0.985,
+    0.9803
+   ],
+   "window": [
+    0.3,
+    0.2,
+    0.85,
+    1
+   ],
+   "variant": "x1e",
+   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
+  },
+  "edit": "Adapted for the board by Click it! Studios: busy scene: flatter shapes and stronger colour (pass 2) (ops in edits.json)"
+ },
+ {
+  "id": "fw067",
+  "title": "Rice Paddies at Ono in Suruga Province (Sunshu Ono shinden), from the series \"Thirty-six Views of Mount Fuji (Fugaku sanjurokkei)\"",
+  "short": "Horses at Ono",
   "artist": "Katsushika Hokusai",
   "date": "c. 1830/33",
   "museum": "Art Institute of Chicago",
   "kind": "painting",
   "licence": "Public domain (CC0, Art Institute of Chicago open access)",
-  "url": "https://www.artic.edu/artworks/24594",
-  "file": "fullsrc/fw031.png",
-  "image": "https://www.artic.edu/iiif/2/17b65856-e8e7-6898-7fb1-9333c96d8189/full/843,/0/default.jpg",
+  "url": "https://www.artic.edu/artworks/87017",
+  "file": "fullsrc/fw067.png",
+  "chroma": 1.2,
+  "image": "https://www.artic.edu/iiif/2/aa20c0d1-4651-7fc2-3627-a6e3324bc99d/full/843,/0/default.jpg",
   "licenceCheck": "is_public_domain=true",
   "fetched": "2026-10-10",
   "srcCrop": {
    "trim": [
     0.015,
-    0.0195,
-    0.985,
-    0.9733
+    0.0122,
+    0.98,
+    0.9443
    ],
    "window": [
-    0.3841,
+    0.1972,
     0,
+    0.8028,
+    1
+   ],
+   "variant": "c",
+   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
+  }
+ },
+ {
+  "id": "fw107",
+  "title": "Crane and waves",
+  "short": "The Wave",
+  "artist": "Utagawa Hiroshige",
+  "date": "early 1830s",
+  "museum": "Art Institute of Chicago",
+  "kind": "painting",
+  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
+  "url": "https://www.artic.edu/artworks/26199",
+  "file": "fullsrc/fw107.png",
+  "image": "https://www.artic.edu/iiif/2/e47d8daf-8d75-ea1a-4f72-f57f0719dad5/full/843,/0/default.jpg",
+  "licenceCheck": "is_public_domain=true",
+  "fetched": "2026-10-10",
+  "srcCrop": {
+   "trim": [
+    0.005,
+    0.01,
+    0.9842,
+    0.99
+   ],
+   "window": [
+    0,
+    0.55,
     1,
     1
    ],
-   "variant": "r",
-   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
- },
- {
-  "id": "fw007",
-  "title": "Precincts of Kameido Tenjin Shrine (Kameido Tenjin keidai), from the series \"One Hundred Famous Views of Edo (Meisho Edo hyakkei)\"",
-  "short": "Wisteria Bridge",
-  "artist": "Utagawa Hiroshige",
-  "date": "1856",
-  "museum": "Art Institute of Chicago",
-  "kind": "painting",
-  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
-  "url": "https://www.artic.edu/artworks/34103",
-  "file": "fullsrc/fw007.png",
-  "image": "https://www.artic.edu/iiif/2/3e52dac1-bd94-8f52-6ddd-2100b0256270/full/843,/0/default.jpg",
-  "licenceCheck": "is_public_domain=true",
-  "fetched": "2026-10-10",
-  "srcCrop": {
-   "trim": [
-    0.0572,
-    0.05,
-    0.9651,
-    0.975
-   ],
-   "window": [
-    0.1,
-    0.08,
-    0.9,
-    0.72
-   ],
-   "variant": "x1",
-   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
- },
- {
-  "id": "fw002",
-  "title": "In the Mountains of Totomi Province (Totomi sanchu), from the series \"Thirty-six Views of Mount Fuji (Fugaku sanjurokkei)\"",
-  "short": "The Sawyers",
-  "artist": "Katsushika Hokusai",
-  "date": "c. 1830/33",
-  "museum": "Art Institute of Chicago",
-  "kind": "painting",
-  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
-  "url": "https://www.artic.edu/artworks/87016",
-  "file": "fullsrc/fw002.png",
-  "image": "https://www.artic.edu/iiif/2/dbb75076-9778-c9fa-f0cb-e6e8fcdc8b34/full/843,/0/default.jpg",
-  "licenceCheck": "is_public_domain=true",
-  "fetched": "2026-10-10",
-  "srcCrop": {
-   "trim": [
-    0.015,
-    0.0123,
-    0.985,
-    0.9877
-   ],
-   "window": [
-    0.25,
-    0,
-    0.8,
-    1
-   ],
-   "variant": "x1",
+   "variant": "x2",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
@@ -1624,38 +1639,6 @@
   }
  },
  {
-  "id": "fw067",
-  "title": "Rice Paddies at Ono in Suruga Province (Sunshu Ono shinden), from the series \"Thirty-six Views of Mount Fuji (Fugaku sanjurokkei)\"",
-  "short": "Rice Paddies at Ono",
-  "artist": "Katsushika Hokusai",
-  "date": "c. 1830/33",
-  "museum": "Art Institute of Chicago",
-  "kind": "painting",
-  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
-  "url": "https://www.artic.edu/artworks/87017",
-  "file": "fullsrc/fw067.png",
-  "chroma": 1.2,
-  "image": "https://www.artic.edu/iiif/2/aa20c0d1-4651-7fc2-3627-a6e3324bc99d/full/843,/0/default.jpg",
-  "licenceCheck": "is_public_domain=true",
-  "fetched": "2026-10-10",
-  "srcCrop": {
-   "trim": [
-    0.015,
-    0.0122,
-    0.98,
-    0.9443
-   ],
-   "window": [
-    0.1972,
-    0,
-    0.8028,
-    1
-   ],
-   "variant": "c",
-   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
- },
- {
   "id": "fw069",
   "title": "Senju Musashi Province (Bushu Senju), from the series \"Thirty-six Views of Mount Fuji (Fugaku sanjurokkei)\"",
   "short": "Senju",
@@ -1680,99 +1663,6 @@
     0.1911,
     0,
     0.8089,
-    1
-   ],
-   "variant": "c",
-   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
- },
- {
-  "id": "fw070",
-  "title": "Shichirigahama Beach in Sagami Province (Shoshu Shichirigahama), from the series \"Thiry-six Views of Mount Fuji (Fugaku sanjurokkei)\"",
-  "short": "Shichirigahama",
-  "artist": "Katsushika Hokusai",
-  "date": "c. 1830/33",
-  "museum": "Art Institute of Chicago",
-  "kind": "painting",
-  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
-  "url": "https://www.artic.edu/artworks/86991",
-  "file": "fullsrc/fw070.png",
-  "image": "https://www.artic.edu/iiif/2/82364b7e-bb90-cc81-45c2-89b56ed8431e/full/843,/0/default.jpg",
-  "licenceCheck": "is_public_domain=true",
-  "fetched": "2026-10-10",
-  "srcCrop": {
-   "trim": [
-    0.015,
-    0.0122,
-    0.985,
-    0.9878
-   ],
-   "window": [
-    0.1848,
-    0,
-    0.8152,
-    1
-   ],
-   "variant": "c",
-   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
- },
- {
-  "id": "fw073",
-  "title": "Lake Hakone in Sagami Province (Soshu Hakone Kosui), from the series \"Thirty-six Views of Mount Fuji (Fugaku sanjurokkei)\"",
-  "short": "Lake Hakone",
-  "artist": "Katsushika Hokusai",
-  "date": "c. 1830/33",
-  "museum": "Art Institute of Chicago",
-  "kind": "painting",
-  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
-  "url": "https://www.artic.edu/artworks/87013",
-  "file": "fullsrc/fw073.png",
-  "image": "https://www.artic.edu/iiif/2/d91792a7-92b8-4090-78af-9b5156639350/full/843,/0/default.jpg",
-  "licenceCheck": "is_public_domain=true",
-  "fetched": "2026-10-10",
-  "srcCrop": {
-   "trim": [
-    0.01,
-    0.0123,
-    0.99,
-    0.9804
-   ],
-   "window": [
-    0.1924,
-    0,
-    0.8076,
-    1
-   ],
-   "variant": "c",
-   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
- },
- {
-  "id": "fw074",
-  "title": "The Back of Mount Fuji Seen from Minobu River (Minobugawa Urafuji), from the series Thirty-Six Views of Mount Fuji (Fugaku sanjūrokkei)",
-  "short": "Minobu River",
-  "artist": "Katsushika Hokusai",
-  "date": "1830-33",
-  "museum": "Art Institute of Chicago",
-  "kind": "painting",
-  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
-  "url": "https://www.artic.edu/artworks/86735",
-  "file": "fullsrc/fw074.png",
-  "image": "https://www.artic.edu/iiif/2/af1b286d-565e-aaaa-1cc7-d117a217a91d/full/843,/0/default.jpg",
-  "licenceCheck": "is_public_domain=true",
-  "fetched": "2026-10-10",
-  "srcCrop": {
-   "trim": [
-    0.015,
-    0.0196,
-    0.985,
-    0.9804
-   ],
-   "window": [
-    0.1904,
-    0,
-    0.8096,
     1
    ],
    "variant": "c",
@@ -1843,68 +1733,6 @@
   }
  },
  {
-  "id": "fw105",
-  "title": "Sparrows and Camellia in Snow",
-  "short": "Sparrows in Snow",
-  "artist": "Utagawa Hiroshige",
-  "date": "c. 1831-33",
-  "museum": "Art Institute of Chicago",
-  "kind": "painting",
-  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
-  "url": "https://www.artic.edu/artworks/11039",
-  "file": "fullsrc/fw105.png",
-  "image": "https://www.artic.edu/iiif/2/2270b017-fe5a-fe7a-ed50-911fde5bf644/full/843,/0/default.jpg",
-  "licenceCheck": "is_public_domain=true",
-  "fetched": "2026-10-10",
-  "srcCrop": {
-   "trim": [
-    0.0263,
-    0.015,
-    0.9737,
-    0.985
-   ],
-   "window": [
-    0,
-    0.2118,
-    1,
-    0.7882
-   ],
-   "variant": "m",
-   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
- },
- {
-  "id": "fw106",
-  "title": "A Cuckoo Against the Moon",
-  "short": "Cuckoo and Moon",
-  "artist": "Utagawa Hiroshige",
-  "date": "c. 1843/46",
-  "museum": "Art Institute of Chicago",
-  "kind": "painting",
-  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
-  "url": "https://www.artic.edu/artworks/22820",
-  "file": "fullsrc/fw106.png",
-  "image": "https://www.artic.edu/iiif/2/ce9d0c00-a7fe-c773-bcf5-f069ad2d1e69/full/843,/0/default.jpg",
-  "licenceCheck": "is_public_domain=true",
-  "fetched": "2026-10-10",
-  "srcCrop": {
-   "trim": [
-    0.01,
-    0.0177,
-    0.99,
-    0.976
-   ],
-   "window": [
-    0.298,
-    0,
-    1,
-    1
-   ],
-   "variant": "r",
-   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
- },
- {
   "id": "fw003",
   "title": "The Mitsui Shop in Surugacho in Edo (Koto Surugacho Mitsui mise ryakuzu), from the series \"Thirty-six Views of Mount Fuji (Fugaku sanjurokkei)\"",
   "short": "Kite over Edo",
@@ -1933,6 +1761,193 @@
     1
    ],
    "variant": "x2",
+   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
+  }
+ },
+ {
+  "id": "fw048",
+  "title": "Bikuni Bridge in Snow (Bikunibashi setchu), from the series \"One Hundred Famous Views of Edo (Meisho Edo hyakkei)\"",
+  "short": "Bikuni Bridge in Snow",
+  "artist": "Utagawa Hiroshige",
+  "date": "1858",
+  "museum": "Art Institute of Chicago",
+  "kind": "painting",
+  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
+  "url": "https://www.artic.edu/artworks/26601",
+  "file": "fullsrc/fw048.png",
+  "chroma": 1.2,
+  "image": "https://www.artic.edu/iiif/2/d8609020-1f72-2d0a-9c48-dedbccaa02d2/full/843,/0/default.jpg",
+  "licenceCheck": "is_public_domain=true",
+  "fetched": "2026-10-10",
+  "srcCrop": {
+   "trim": [
+    0.0346,
+    0.035,
+    0.9728,
+    0.925
+   ],
+   "window": [
+    0,
+    0.0546,
+    1,
+    0.9454
+   ],
+   "variant": "m",
+   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
+  }
+ },
+ {
+  "id": "fw030",
+  "title": "Honganji Temple at Asakusa in Edo (Toto Asakusa Honganji), from the series \"Thirty-six Views of Mount Fuji (Fugaku sanjurokkei)\"",
+  "short": "Temple Roof and Kite",
+  "artist": "Katsushika Hokusai",
+  "date": "c. 1830/33",
+  "museum": "Art Institute of Chicago",
+  "kind": "painting",
+  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
+  "url": "https://www.artic.edu/artworks/24690",
+  "file": "fullsrc/fw030.png",
+  "image": "https://www.artic.edu/iiif/2/221e30b6-b4ab-d345-5def-2b83e76b3b90/full/843,/0/default.jpg",
+  "licenceCheck": "is_public_domain=true",
+  "fetched": "2026-10-10",
+  "srcCrop": {
+   "trim": [
+    0.015,
+    0.0196,
+    0.985,
+    0.9804
+   ],
+   "window": [
+    0.1898,
+    0,
+    0.8102,
+    1
+   ],
+   "variant": "c",
+   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
+  }
+ },
+ {
+  "id": "fw007",
+  "title": "Precincts of Kameido Tenjin Shrine (Kameido Tenjin keidai), from the series \"One Hundred Famous Views of Edo (Meisho Edo hyakkei)\"",
+  "short": "Wisteria Bridge",
+  "artist": "Utagawa Hiroshige",
+  "date": "1856",
+  "museum": "Art Institute of Chicago",
+  "kind": "painting",
+  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
+  "url": "https://www.artic.edu/artworks/34103",
+  "file": "fullsrc/fw007.png",
+  "image": "https://www.artic.edu/iiif/2/3e52dac1-bd94-8f52-6ddd-2100b0256270/full/843,/0/default.jpg",
+  "licenceCheck": "is_public_domain=true",
+  "fetched": "2026-10-10",
+  "srcCrop": {
+   "trim": [
+    0.0572,
+    0.05,
+    0.9651,
+    0.975
+   ],
+   "window": [
+    0.1,
+    0.08,
+    0.9,
+    0.72
+   ],
+   "variant": "x1",
+   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
+  }
+ },
+ {
+  "id": "fw002",
+  "title": "In the Mountains of Totomi Province (Totomi sanchu), from the series \"Thirty-six Views of Mount Fuji (Fugaku sanjurokkei)\"",
+  "short": "The Sawyers",
+  "artist": "Katsushika Hokusai",
+  "date": "c. 1830/33",
+  "museum": "Art Institute of Chicago",
+  "kind": "painting",
+  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
+  "url": "https://www.artic.edu/artworks/87016",
+  "file": "fullsrc/fw002.png",
+  "image": "https://www.artic.edu/iiif/2/dbb75076-9778-c9fa-f0cb-e6e8fcdc8b34/full/843,/0/default.jpg",
+  "licenceCheck": "is_public_domain=true",
+  "fetched": "2026-10-10",
+  "srcCrop": {
+   "trim": [
+    0.015,
+    0.0123,
+    0.985,
+    0.9877
+   ],
+   "window": [
+    0.25,
+    0,
+    0.8,
+    1
+   ],
+   "variant": "x1",
+   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
+  }
+ },
+ {
+  "id": "fw031",
+  "title": "Waterwheel at Onden (Onden no suisha), from the series \"Thirty-six Views of Mount Fuji (Fugaku sanjurokkei)\"",
+  "short": "The Waterwheel",
+  "artist": "Katsushika Hokusai",
+  "date": "c. 1830/33",
+  "museum": "Art Institute of Chicago",
+  "kind": "painting",
+  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
+  "url": "https://www.artic.edu/artworks/24594",
+  "file": "fullsrc/fw031.png",
+  "image": "https://www.artic.edu/iiif/2/17b65856-e8e7-6898-7fb1-9333c96d8189/full/843,/0/default.jpg",
+  "licenceCheck": "is_public_domain=true",
+  "fetched": "2026-10-10",
+  "srcCrop": {
+   "trim": [
+    0.015,
+    0.0195,
+    0.985,
+    0.9733
+   ],
+   "window": [
+    0.3841,
+    0,
+    1,
+    1
+   ],
+   "variant": "r",
+   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
+  }
+ },
+ {
+  "id": "fw054",
+  "title": "Clear Weather After Snow at Nihon Bridge (Nihonbashi yukibare), from the series \"One Hundred Famous Views of Edo (Meisho Edo hyakkei)\"",
+  "short": "Nihonbashi in Snow",
+  "artist": "Utagawa Hiroshige",
+  "date": "1856",
+  "museum": "Art Institute of Chicago",
+  "kind": "painting",
+  "licence": "Public domain (CC0, Art Institute of Chicago open access)",
+  "url": "https://www.artic.edu/artworks/13199",
+  "file": "fullsrc/fw054.png",
+  "image": "https://www.artic.edu/iiif/2/13bc40da-028f-943a-bc6a-87c9cd3a9876/full/843,/0/default.jpg",
+  "licenceCheck": "is_public_domain=true",
+  "fetched": "2026-10-10",
+  "srcCrop": {
+   "trim": [
+    0.0271,
+    0.02,
+    0.9656,
+    0.985
+   ],
+   "window": [
+    0,
+    0.0873,
+    1,
+    0.9127
+   ],
+   "variant": "m",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  }
