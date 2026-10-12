@@ -1,5 +1,57 @@
 # Zen World 6 The Floating World: v7 lane D
 
+## Round 6 (2026-10-12): the critic re-check's fixes (ship verdict, `critic-land-07.md` "Round 2 re-check", head 11ef420)
+
+Lane C's workspace 064f696. Not pushed; no image model run. Commits: `6b8a0a6` (fix pass), `8d23a95` (freeze), then these notes.
+
+- **429 is now "Fuji from Umezawa"** (critic R2-m1: the board has no cranes). Lane C repainted fw021 with a lilac dusk sky (apart
+  from Fuji above the Pass's gold) and updated its short and edit note. `handoff-full.js`: **41 of 41**. fw021's manifest line
+  replaced whole (the only line that differed from lane C's); its source re-made (prep keeps an existing file, so the old one
+  was removed first); `convert --force`: **29 of 29 identical to boards-full**, only 429 changed (42x40, now 4 colours).
+- **405 and 423 ringless** (critic R2-m3: the ring reads as a stray box on the carp, two stray lines on the flying fish). fw005
+  and fw103 in `moatSkip` (for how the ring reads, not for dealing), re-baked on the kept plan with `--drop-moat`. Rings 4 -> 2
+  (414 Bell-Flowers, 417 The Moon Pine).
+- **Re-bake** (`bake --keep-plan --drop-moat --list 405,423,429 --shard 2`, 143 s): all three **ok first time**, no extras:
+
+| Level / Zen | Picture | Tag, features | Rate (band) | Pace | Taps | Longest tap | Careful | Ring |
+|---|---|---|---|---|---|---|---|---|
+| 405 / 255 | fw005 The Carp Streamer | Normal, 2 ? cards | 36.75% (20-50) | 184 s | 47 | 14.84 s | 1.0 | none (was mire) |
+| 423 / 273 | fw103 Flying Fish | Normal, 1 linked pair | 34.75% (20-50) | 191 s | 35 | 14.95 s | 1.0 | none (was water) |
+| 429 / 279 | fw021 Fuji from Umezawa | Hard, 3 ? cards | 19.0% (6-20) | 201 s | 49 | 14.89 s | 1.0 | none (as before) |
+
+- **The other 26 records byte-identical** (land out/ and zen.json alike). `map assemble check`: PASS every gate.
+- **Lore** (the brief's, exactly): "The road climbs from old Edo to Mount Fuji, with flowers, fish and birds along the way, all
+  from Hokusai's and Hiroshige's woodblock prints and waiting to be dug out a block at a time." test.js word check passes.
+- **LICENSES.md.** Row 279 carries the new edit note ("... on a lilac dusk sky (varied from Fuji above the Pass's gold)"). The
+  rows held only the AIC title, so the new game title had nowhere to show: with `zen.numbered` each World 6 row's picture cell
+  now leads with the title the game shows ("Fuji from Umezawa: Umezawa Marsh in Sagami Province ... (fw021)"), all 29 rows. The
+  file before World 6's heading is byte-identical.
+- **Byte-identity (proven).** zen.json: Worlds 1-5 entries and their 200 records identical; World 6's entry changed in `lore`
+  only; its records changed at 405, 423, 429 only. levels/: only zen.pk.json and zen-6.pk.json changed. Freeze `--snapshot`: the
+  same three records and the lore; levels.json, gallery.json and castles.json snapshots byte-identical.
+- **The world now:** E10/N15/H4; Easy mean 71.0% (63.7-79.8), Normal 39.7% (34.8-46.8), Hard 15.5% (12.8-19.0); careful min
+  0.94 / 0.75 / 1.0; pace 184-284 s, **median 223 s**; ? cards 14, links 11, **rings 2**, 0 mystery blocks, 0 locks, 0 fallbacks.
+- **Cache `?v=73`** (live is ?v=71, ?v=72 never shipped; no test reads the tag).
+
+| Gate | Result |
+|---|---|
+| land.js check | PASS every gate (median 223 s) |
+| test.js | **715 passed, 0 failed** (shipped 13,980,547 B) |
+| freeze --require | PASS after the snapshot (levels.json 2,405 checks, gallery.json 372, zen.json 229 / 2,061, shipped 541 records, castles 283, all 0) |
+| regrade | full 0 of 2,405; `--gallery` 0 of 372; `--zen` 0 of 2,061; `--shipped` 0 of 2,405; `--gallery --shipped` 0 of 372; `--zen --shipped` 0 of 2,061 |
+| pack.js --check | clean |
+| selfTest | 884/0 at 375x812@3, 886/0 at 1280x720, 884/0 at 360x640, 0 console |
+| space-v7/check.mjs | 41 ok, 0 FAIL (OLD 10d77f4) |
+| sweep-map.mjs | 126 checks, 0 fails, 0 console |
+| harness.mjs (last) | all passed, selfTest 884/0 or 886/0 in every viewport, 0 console |
+
+Payload: shipped **13,980,547 B** (+64,072 on 10d77f4's 13,916,475; 5.02 MB under 19 MB); first tap **1,878,954 B**;
+`zen-6.pk.json` **41,167 B**. Shots re-taken: `tools/shots-land-07/play-opener-375.png`, `contact-installed.jpg` (and the rest
+of the set, harness/ too).
+
+Left for later (critic, not in this brief): the 6 weak boards (255, 267, 269, 271, 277, 278) (R2-M1), Fuji's 6
+repeats (R2-m2), 417's boxy ring.
+
 ## Round 5 (2026-10-12): reinstalled fresh as 29 levels (Peter via lane C 2cf16e0)
 
 The critic of the 50-level install (`tools/critic-land-07.md`, games 39b0ddd) found 7 boards that read, 21 weak and 22 mud at

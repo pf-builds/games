@@ -42,7 +42,7 @@
   },
   "new": {
    "home": {
-    "total": 1878955,
+    "total": 1878954,
     "by": {
      "page": 201459,
      "fonts": 77732,
@@ -50,11 +50,11 @@
      "code": 788189,
      "levels: other": 319063,
      "map: layout": 76806,
-     "levels: zen": 30086
+     "levels: zen": 30085
     }
    },
    "campaign": {
-    "total": 4363620,
+    "total": 4363619,
     "by": {
      "page": 201459,
      "fonts": 77732,
@@ -62,12 +62,12 @@
      "code": 788189,
      "levels: other": 319063,
      "map: layout": 76806,
-     "levels: zen": 30086,
+     "levels: zen": 30085,
      "audio": 2484665
     }
    },
    "zen": {
-    "total": 5414900,
+    "total": 5414899,
     "by": {
      "page": 201459,
      "fonts": 77732,
@@ -75,7 +75,7 @@
      "code": 788189,
      "levels: other": 319063,
      "map: layout": 76806,
-     "levels: zen": 84897,
+     "levels: zen": 84896,
      "audio": 3481134
     }
    }
