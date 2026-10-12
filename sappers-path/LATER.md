@@ -497,3 +497,10 @@ Fixed: S1-S7, m2, m3, N1, N2 (`tools/v5-r4-notes.md` §10). Parked:
 - World 6's credit line (the brief's exact words) has no "The Floating World:" in front, so on the Zen map's foot it reads as a plain sentence after World 5's "Masterpiece Gallery: ..." line. A world-name prefix (or one line per world) would read better.
 - The woodblock tint is one CSS filter on the whole sheet, so it can lean indigo and paper but not vermilion (a hue turn that warms the land turns the water pink). A second overlay layer could add a warm accent.
 - The Next up card's side quest and the empty "Secrets found" line show on World 6 as on Worlds 4 and 5 (already listed above).
+
+## v7 lane D (Zen World 7 Under the Sea, 2026-10-12)
+
+- Lane C's edit notes on World 7 read "Painted for readability by lane C: ..." in the public LICENSES.md (World 6's read "Adapted for the board by Click it! Studios: ..."). A wording pass on the 8 manifest lines and `land.js zen` would match them.
+- Lane C's landManifest lines leave `url` empty for AI pictures; lane D fills the source line by hand (Dino Valley, World 7). lane C's build-picks.js could write it.
+- 439 The Great Wave (us210): with a ring it plays 100% and deals rarely, without one 15 of 24 Normal candidates still won 98-100%. A tighter crop or a busier sea would give it more to dig.
+- The moat probe found 18 of 36 ring-capable AI scenes never deal with a ring at Dino Valley's deal setting (World 4 needed fewer). A probe step in land.js (listed above for World 6) would save the scratch script.
