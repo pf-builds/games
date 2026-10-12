@@ -128,3 +128,59 @@ Non-blocking:
 - m2: retitle "The Great Wave 2" (and consider 289's title).
 - m3: when swapping, prefer subjects that aren't octopus, crab, yellow sub or wave.
 - m4 and m5: Peter's call, or known.
+
+---
+
+# Round 2 re-check (fix pass), 2026-10-12
+
+Build: head b45b9a1 (not pushed), served on 127.0.0.1:8527 (Playwright, chromium). Shots in `tools/critic-land-08/r2/` (untracked):
+- `boards/bNN.png`: each board in play at 375x812, at CSS size
+- `sheet-r2.png`: the 3 new boards, the 3 de-ringed boards and the 9 ringed boards, with Zen numbers only
+- `pairs-r2.png`: the new boards next to their sources
+- `win-288-375.png`
+- `notes.txt`
+
+## selfTest
+375x812@3 **888 / 0**; 1280x720 **890 / 0**; 0 console messages. My run (17 boards, the win on 288): **0 console messages, 0 page errors.**
+
+## Counts
+BLOCKER 0 · MAJOR 0 · MINOR 3
+
+## 1. The 3 swaps (judged blind at CSS size, then against the source)
+
+| Zen | Level | Id | Title | Tag | Rating | Reason |
+|---|---|---|---|---|---|---|
+| 288 | 438 | us266 | Glowing jellyfish | E | **reads** | A big pink jellyfish with trailing tentacles on black, with a small blue fish. One of the clearest boards in the world |
+| 318 | 468 | us255 | The Thinker | E | **weak** (not mud) | A green hunched figure on a grey rock on sand. The shell merges into the body, so it reads as "a green thing sitting on a rock". The turtle and the Thinker pose need the title, and the source's crab is gone |
+| 319 | 469 | us246 | Seahorse carriage | N | **reads** (borderline) | A tall orange seahorse with its snout reads. The carriage beside it is a mustard and pink blob |
+
+B1 is closed: there are 0 mud boards. The world now stands at **39 read, 11 weak, 0 mud**. The 9 kept weak boards weren't re-judged, as briefed.
+
+## 2. Rings (9 remain: 280 290 295 299 303 308 317 321 322)
+
+None reads as a stray line across the picture. 290, 295, 299, 303, 308, 321 and 322 trace the hero's outline.
+- **280 (the opener):** the blue line still loops past the octopus into the coral on the right. It reads as a wavy outline round the drum-kit area, not a line through the sky. Acceptable.
+- **317:** it hugs the puffer, with a small loop into the coral at the right. Acceptable.
+
+296, 315 and 320 now carry no ring and are clean. 320 Lighthouse reads much better without the zig-zag.
+
+## 3. Titles in play (375)
+- 289 shows "**Surf's Up**" and 302 shows "**Wave Rider**", both at 20 px with no overflow.
+- The new titles fit: Glowing jellyfish 20 px, The Thinker 20 px, Seahorse carriage 18 px.
+
+## 4. LICENSES.md
+- **"lane C" appears 0 times** in the file.
+- The World 7 section has 50 rows.
+- 318's row reads "The Thinker (us255) ... a parody after The Thinker, Auguste Rodin's sculpture, 1880-1904, public domain (a new composition, not a copy of any reproduction)". Rodin is named.
+- 289 and 302 carry the new titles, and both still credit The Great Wave off Kanagawa (Hokusai, c. 1831) as the parody source. That's fine.
+
+## 5. Win
+288 Glowing jellyfish took 50 real taps on its winOrder and gave "Picture done" and "**Glowing jellyfish, all dug out.**" (`win-288-375.png`). 0 console messages.
+
+## MINORS
+- **R2-m1.** 318 The Thinker is weak: a green blob on a rock. It's a new weak board, but it's an Easy and not mud, so it doesn't block. The art lane could brighten the shell (a darker green dome with a lighter body) if it ever revisits.
+- **R2-m2.** The edit notes no longer say "lane C", but the wording is still process-speak with a double colon, e.g. "Adapted for the board by Click it! Studios: the deep black ocean covered over 75% of the board: a coloured sea floor painted along the bottom" (5 rows) and "...: 8-10 colours: flattened into fewer, bolder shapes" (3 rows). Polish suggestions: "a coloured sea floor added along the bottom" and "simplified to fewer, bolder colours".
+- **R2-m3. Carried over:** the 9 weak boards (lane C is keeping them), the repeated subjects (round 1 m3), the map tint (Peter's call), and the Side quest 12 card at 1280.
+
+## Ship verdict (round 2)
+**Ship.** Nothing blocks. B1 (mud) and M2 (stray rings) are fixed, and the titles and licence rows are right. R2-m2 is an optional text polish before the push.
