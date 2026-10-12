@@ -122,7 +122,7 @@ after. The top sheet holds 7 levels, so one of its eggs shows below the fog (Wor
 | Gate | Result |
 |---|---|
 | land.js check | PASS every gate (430-479 e14, compile, wins, spaces, caps, pace and median 227 s, careful floor, no fallbacks, planCheck, Zen no mystery blocks, shades, 12 rings with reach and 1-2 ways, re-grade 0 of 450, map 48 px at 375, licences) |
-| test.js | **716 passed, 0 failed** (new "zen World 7" block: records, numbering, Octopus drummer first with no painter, caps, careful, shades, moats, profile, re-grade, 6 reused sheets 14/15 in turn under its own tint (not World 5's or 6's), eggs on the spurs, 31 map images, 50 rows keyed Zen 280-329 then 430-479, each an original FLUX.1 work with its seed, the 8 edit notes on exactly the edited scenes, the credit line; World 1's world list and World 5's credit list grown) |
+| test.js | **716 passed, 0 failed** (shipped 14,078,079 B; new "zen World 7" block: records, numbering, Octopus drummer first with no painter, caps, careful, shades, moats, profile, re-grade, 6 reused sheets 14/15 in turn under its own tint (not World 5's or 6's), eggs on the spurs, 31 map images, 50 rows keyed Zen 280-329 then 430-479, each an original FLUX.1 work with its seed, the 8 edit notes on exactly the edited scenes, the credit line; World 1's world list and World 5's credit list grown) |
 | freeze --require | PASS before the snapshot; after it: levels.json 2,405 checks, gallery.json 372, zen.json 279 / 2,511, shipped 591 records, castles 283, all 0 differences |
 | regrade | full 0 of 2,405; `--gallery` 0 of 372; `--zen` 0 of 2,511; `--shipped` 0 of 2,405; `--gallery --shipped` 0 of 372; `--zen --shipped` 0 of 2,511 |
 | pack.js --check | the shipped files match the source (only `zen.pk.json` rewritten and `zen-7.pk.json` new; zen-1..6 byte-identical) |
@@ -137,10 +137,10 @@ Cache tag **`?v=74`** (index.html, style.css).
 
 | | c4ddc88 (v6.6, live) | this build | Change |
 |---|---:|---:|---:|
-| Shipped folder (minus tools/) | 13,980,547 B (76 files) | **14,077,206 B** (77 files) | **+96,659 B** |
+| Shipped folder (minus tools/) | 13,980,547 B (76 files) | **14,078,079 B** (77 files) | **+97,532 B** |
 | levels/zen-7.pk.json (new) | | **70,945 B** | +70,945 |
 | levels/zen.pk.json (the index) | 30,085 | 37,215 | +7,130 |
-| LICENSES.md (World 7 section) / src/main.js (selfTest block) | | | +14,180 / +4,404 |
+| LICENSES.md (World 7 section) / src/main.js (selfTest block) / LATER.md | | | +14,180 / +4,404 / +873 |
 | map/ | | | **0** |
 | Bytes before the first tap (home interactive, 375x812 cold load) | 1,878,954 B | **1,890,488 B** | +11,534 (the index, the code) |
 | to the first Zen level (World 1's file) | 5,414,899 B | 5,426,433 B | +11,534 |
