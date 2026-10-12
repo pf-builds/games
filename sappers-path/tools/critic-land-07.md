@@ -115,3 +115,87 @@ Non-blocking:
 - M3: the map look is Peter's call as a known compromise.
 - m1: add the "The Floating World: " prefix to the credit line.
 - m3-m5: as listed.
+
+---
+
+# Round 2 re-check (round 5 install, 29 levels), 2026-10-12
+
+Build: head 36cb8ea (not pushed), served on 127.0.0.1:8517. Shots in `tools/critic-land-07/r2/` (untracked): `boards/bNN.png` (each board at its CSS size in play at 375x812), `blind-1.png` / `blind-2.png` (Zen numbers only), `zoom-rings.png` (255, 264, 267, 273, 269, 277 at 1.4x), `comp-phone.jpg` (join, top of world, win, loss), `func-notes.txt`.
+
+## selfTest
+**375x812@3 884 / 0; 1280x720 886 / 0; 0 console messages.** My runs (29 boards, play, map at 375 and 1280): 0 console messages, 0 page errors.
+
+## Counts
+BLOCKER 0 · MAJOR 1 · MINOR 5
+
+## Boards at play size (same method: each board loaded with SP.load at 375x812 and captured at its CSS size, judged blind, then against the title)
+
+**23 read, 6 weak, 0 mud.** This is a different world from round 1's 7 / 21 / 22.
+
+| Zen | Level | Id | Title | Rating | Reason |
+|---|---|---|---|---|---|
+| 251 | 401 | fw001 | The Cooper's Barrel | reads | Fuji inside a bold wooden ring |
+| 252 | 402 | fw040 | Hydrangea and Swallow | reads | Blue flower clusters on yellow, with the swallow dark at the top right |
+| 253 | 403 | fw101 | Bonito | reads (borderline) | A big fish spindle on orange. No eye, but the shape is a fish |
+| 254 | 404 | fw025 | Fuji above the Pass | reads | A navy cone with a white cap on a yellow sky |
+| 255 | 405 | fw005 | The Carp Streamer | **weak** | The top half is a blue carp with an eye. The lower half is speckle, and the mire ring is a dark box around grey noise. Without the title it's "a blue shape" |
+| 256 | 406 | fw082 | Lilies | reads | One big orange lily on teal |
+| 257 | 407 | fw004 | Amida Falls | reads | A white waterfall |
+| 258 | 408 | fw095 | Crane over a Wave | reads | A white crane with a red crown on blue |
+| 259 | 409 | fw032 | Fuji Reflected | reads | Fuji with its mirror image. The best board in the world |
+| 260 | 410 | fw052 | Cherry over the River | reads | Pink blossoms on blue over a river bank |
+| 261 | 411 | fw041 | Iris and Grasshopper | reads | Purple irises and green blades (no grasshopper, which is fine) |
+| 262 | 412 | fw102 | Yellowtail and Blowfish | reads | A navy fish with a white eye |
+| 263 | 413 | fw029 | The Big Ship | reads | A sail, a mast and a hull |
+| 264 | 414 | fw083 | Bell-Flowers | reads | Magenta flowers and leaves. The ring hugs the cluster (see below) |
+| 265 | 415 | fw100 | Rabbits in Moonlight | reads | A white rabbit under the moon |
+| 266 | 416 | fw065 | The Cushion Pine | reads | Fuji on a pink sky over a dark hill. It reads as Fuji more than as a pine |
+| 267 | 417 | fw046 | The Moon Pine (Hard) | **weak** | Brown branches and a loop. The ring is a blue rectangle along the bottom. "A tree", but not the pine framing a view |
+| 268 | 418 | fw042 | Morning Glories | reads | Blue flowers on yellow |
+| 269 | 419 | fw099 | Pheasant in Snow | **weak** | A brown bird-or-bear blob with a blue outline on a blue sky. No head shape and no snow |
+| 270 | 420 | fw024 | Tago Bay | reads | Fuji on a blue sky over green fields |
+| 271 | 421 | fw050 | The Festival Banner | **weak** | A red ribbon or figure on beige with red leaves. The banner and the bay don't resolve |
+| 272 | 422 | fw043 | Peonies | reads | A big pink flower mass with leaves. It's busy, but anyone says "pink flowers" |
+| 273 | 423 | fw103 | Flying Fish | reads | A dark fish with a white eye. The ring is a stray line (below) |
+| 274 | 424 | fw071 | Dawn at Isawa (Hard) | reads | Fuji on an orange sky over dark village shapes |
+| 275 | 425 | fw055 | Fudo Falls | reads | A waterfall between dark cliffs |
+| 276 | 426 | fw084 | Cotton Roses | reads | Pink flowers and dark leaves |
+| 277 | 427 | fw044 | Okiku at the Well | **weak** (close to mud) | A black hair mass and a white crescent face on navy. A kid sees a black shape and a moon |
+| 278 | 428 | fw017 | Under Mannen Bridge | **weak** | Tan diagonal beams over blue water. It's a bridge only once you know |
+| 279 | 429 | fw021 | Cranes at Umezawa (Hard) | reads, **title wrong** | It reads as Fuji. There are no cranes on the board (see m1) |
+
+**The coordinator's flags:** confirmed weak: 255, 269, 271, 277, 278. Rejected: 272 Peonies reads. I add 267 The Moon Pine.
+
+## MAJOR
+
+**R2-M1. 6 weak boards** (255/405 fw005, 267/417 fw046, 269/419 fw099, 271/421 fw050, 277/427 fw044, 278/428 fw017). That's 21% of the world, with none mud. This doesn't block shipping. It's clearly visible, though, and 267 is one of the 4 Hards. Art lane: swap them for spares, or simplify further (one subject, a plain ground, no ring on 255 and 267).
+
+## MINORS
+
+- **R2-m1. 279 Cranes at Umezawa has no cranes.** The board is only a Fuji cone on a dawn sky over green. The licence edit note confirms it: "Fuji repainted as one bold navy cone with a white cap on a dawn sky". The world's closing level has a title that doesn't match its picture. Fix: retitle (e.g. "Fuji from Umezawa"), or paint the cranes back into the foreground.
+- **R2-m2. Fuji repeats.** There are **6** Fuji cones, not 4: 254, 259, 266, 270, 274 and 279. None are back to back, but 266, 270, 274 and 279 fall every 4-5 levels in the last 14, and the world ends on its sixth. 254 and 279 are near twins: a centred navy cone with a white cap on a yellow-orange sky. 259 (the reflection) and 266 (pink sky) are distinct enough. Fix: retitle or recolour 279's sky (it closes the world), or move 270 or 274 earlier so the run spreads out.
+- **R2-m3. Rings** (`zoom-rings.png`).
+  - **405 (mire):** reads as a stray dark box around grey speckle in the carp's lower half.
+  - **423:** two parallel blue lines run diagonally across the fish and the sky. Stray.
+  - **417:** a blue rectangle along the bottom. It could pass for a pond edge, but it's boxy.
+  - **414:** hugs the flower cluster's outline, with a short stray arm at the left. Reads as part of the picture.
+  - Fix: moatSkip fw005 and fw103 (and fw046 if it moves off the Hard), then re-bake.
+- **R2-m4. The lore line is stale.** It names "bridges, waterfalls, boats and snow", and the 29 have 1 bridge, 2 falls, 1 ship and 1 snow scene. A plain replacement: "The road climbs from old Edo to Mount Fuji, with flowers, fish and birds along the way, all from Hokusai's and Hiroshige's woodblock prints and waiting to be dug out a block at a time."
+- **R2-m5. Carried over:** the 1280 realm and Next up cards still show "Side quest 12 ... Quartermaster +1" and an empty "Secrets found". The map tint is still a green wash of the Campaign sheets (round 1's M3, Peter's call). fw095 is still "n.d.".
+
+## Checks that passed
+
+- **Win on 251** (plain URL, then real taps in play): the map's Play opened "251 The Cooper's Barrel". 46 taps gave "Picture done" and "The Cooper's Barrel by Katsushika Hokusai, all dug out.".
+- **Loss on 279** (Hard): 25 lossPlan taps gave "A little stuck", "Line jammed: Cream and Mint can't reach a block. Have another look.", with Continue offered. Retry restarted 279. The top-bar retry and the map button both work.
+- **Join and fog with 29 nodes:** 249 and 250 done, then the "World 6 The Floating World" banner, then 251 current. The top of the world shows 277, 278 and 279, then "More worlds on the way". All 29 node numbers fit their discs (the tightest has 1.0 px spare). No horizontal overflow at 375 or 1280. The 1280 realm card reads "26/29 cleared".
+- **Credits:** the Zen map foot now reads "... Masterpiece Gallery: ... (CC0). The Floating World: Japanese woodblock prints by Katsushika Hokusai and Utagawa Hiroshige from the Art Institute of Chicago open access (CC0); most adapted for the game by Click it! Studios." The two worlds are clearly separated now. Round 1's m1 is fixed.
+- **LICENSES.md World 6:** the heading reads 401-429, the credit line matches, and the header is "| Zen picture | Level | Picture | Artist | Licence | Source |". There are **29 rows** keyed "| 251 | 401 |" .. "| 279 | 429 |", with 29 artic.edu URLs and CC0 on every row. **26 rows carry the edit note.** The 3 without one are fw004, fw055 and fw084, the kept prints that were never edited. Round 1's m5 is fixed.
+- **Titles at 375:** none of the 29 overflows. The smallest auto-fit is 14.4 px (252).
+- **Spread:** E10 / N15 / H4. Of the Hards, 259 and 274 read, 279 reads but has the wrong title, and 267 is weak.
+
+## Ship verdict (round 2)
+**Ship.** Nothing blocks.
+
+Worth doing before the push, since they're cheap text and data edits: the 279 title (R2-m1) and the lore line (R2-m4). Dropping the rings on fw005 and fw103 (R2-m3) needs a re-bake of 405 and 423.
+
+For the art lane, when there's time: weak boards fw005, fw046, fw099, fw050, fw044, fw017. Also give 279's Fuji (fw021) a different look from 254's (fw025).
