@@ -3,9 +3,9 @@
  "slug": "07-floating-world",
  "name": "The Floating World",
  "lore": "The road climbs from old Edo toward Mount Fuji, past bridges, waterfalls, boats and snow in Hokusai's and Hiroshige's woodblock prints, each one waiting to be dug out a block at a time.",
- "count": 50,
+ "count": 29,
  "source": "museum",
- "sourceNote": "Real public-domain Japanese woodblock prints (ukiyo-e) by Hokusai and Hiroshige, CC0 open access from the Art Institute of Chicago; licence re-read per object by lane C (game-research/sappers-path-v4/lands/07-floating-world/README.md, picks-full.json: 50 picks, 12 spares, landManifest 62 lines; Sharaku dropped, Peter 10/10). Each file is a crop of the print (srcCrop on its manifest line, information only); 13 of the 50 repainted for readability by lane C (Peter, 2026-10-11; recipe in lane C's edits.json, an edit note on the manifest line and the licence row); converted by land.js boardOf with the whole manifest line (chroma). The folder keeps lane C's slug (07); as installed it is Land 5 in the factory's numbering (levels 401-450, era 13) and Zen World 6.",
+ "sourceNote": "Real public-domain Japanese woodblock prints (ukiyo-e) by Hokusai and Hiroshige, CC0 open access from the Art Institute of Chicago; licence re-read per object by lane C (game-research/sappers-path-v4/lands/07-floating-world/README.md, picks-full.json round 5: 29 picks, 12 spares, landManifest 41 lines; Sharaku dropped, Peter 10/10). Each file is a crop of the print (srcCrop on its manifest line, information only); 26 of the 29 adapted for readability by lane C (Peter, 2026-10-11 and 10-12: bold repaints; recipe in lane C's edits.json, an edit note on the manifest line and the licence row); converted by land.js boardOf with the whole manifest line (chroma). The folder keeps lane C's slug (07); as installed it is Land 5 in the factory's numbering (levels 401-429, era 13) and Zen World 6.",
  "features": [
   "linked",
   "mystery",
@@ -25,15 +25,16 @@
  "quests": "none",
  "zen": {
   "k": 6,
-  "note": "v7 lane D: The Floating World plays as Zen World 6 (tools/land.js ... zen writes tools/build-data/levels/zen.json only). Records keep the land factory numbers 401-450 (scratch/state.json seeded {from: 401, sheet0: 54, gal0: 62}: Worlds 1-5 hold 1-50, 201-250, 251-300, 301-350, 351-400; World 5's sheets end at 53); the page shows them on from World 5's last Zen number (main.js zenNum)."
+  "note": "v7 lane D: The Floating World plays as Zen World 6 (tools/land.js ... zen writes tools/build-data/levels/zen.json only). Records keep the land factory numbers 401-429 (scratch/state.json seeded {from: 401, sheet0: 54, gal0: 62}: Worlds 1-5 hold 1-50, 201-250, 251-300, 301-350, 351-400; World 5's sheets end at 53); the page shows them on from World 5's last Zen number (main.js zenNum). Round 5: 29 levels (401-429, Zen 251-279); zen.numbered puts each licence row's Zen picture number before its level (critic m5).",
+  "numbered": true
  },
  "profile": {
   "note": "Zen World 6, casual (v7 lane D, 2026-10-10, trial): World 5 Masterpiece Gallery's profile as it ships (tools/lands/06-masterpiece-gallery/land.json): tags E18/N26/H6/X0 ending on a Hard, light deck features (? cards, linked squads), no locks, no archers, no Extreme, no mystery blocks (Peter, 2026-10-08), gentle moats (always 2 ways in) only on prints that can carry one, careful floor 0.5 every tag, and World 5's deal setting for max-box boards (squads 1.6x, 400 attempts). The 50 are lane C's real CC0 woodblock prints (painting kind, shade on, manifest chroma where lane C set one).",
   "tags": {
    "shares": {
     "easy": 0.36,
-    "normal": 0.52,
-    "hard": 0.12,
+    "normal": 0.5,
+    "hard": 0.14,
     "extreme": 0
    },
    "breathers": 5,
@@ -41,7 +42,8 @@
     1,
     3
    ],
-   "end": "hard"
+   "end": "hard",
+   "note": "Round 5 (Peter via lane C 2cf16e0, 2026-10-12): a 29-level world. The casual mix kept in proportion: easy 0.36, normal 0.50, hard 0.14 give E10/N15/H4 at 29 (land-plan landTags; the 50-level shares 0.36/0.52/0.12 would give E10/N16/H3), ending on a Hard."
   },
   "features": {
    "mystery": {
@@ -144,71 +146,39 @@
     ],
     "attempts": 400,
     "note": "World 5's shipped deal setting (tools/land-06-notes.md §2): squads 1.6x the land default ([20, 50] at sizeRef 1400, scaled with the board as ever) and 400 deal attempts a candidate (96 before). Kept for the woodblock prints, which are max-box boards too; see tools/land-07-notes.md for the trial."
-   },
-   "byLevel": {
-    "424": {
-     "deal": {
-      "size": [
-       20,
-       50
-      ]
-     },
-     "note": "fw055 Fudo Falls: at the land's 1.6x squads its fast tapper beats patient play on every candidate (56 tried, --extra 48 --reuse); the land-config default squads [20, 50] (attempts stay 400) pass first time (lane D, 2026-10-11)"
-    }
    }
   }
  },
  "main": [
   "fw001",
-  "fw050",
-  "fw101",
-  "fw004",
-  "fw089",
-  "fw046",
   "fw040",
-  "fw006",
-  "fw084",
-  "fw102",
-  "fw034",
-  "fw052",
-  "fw017",
-  "fw097",
-  "fw044",
-  "fw024",
-  "fw049",
-  "fw095",
-  "fw080",
-  "fw065",
-  "fw088",
-  "fw082",
-  "fw029",
-  "fw055",
-  "fw103",
+  "fw101",
   "fw025",
-  "fw094",
+  "fw005",
+  "fw082",
+  "fw004",
+  "fw095",
+  "fw032",
+  "fw052",
   "fw041",
-  "fw027",
-  "fw035",
+  "fw102",
+  "fw029",
+  "fw083",
   "fw100",
-  "fw012",
-  "fw045",
-  "fw043",
-  "fw071",
-  "fw053",
-  "fw038",
-  "fw013",
-  "fw057",
+  "fw065",
+  "fw046",
   "fw042",
-  "fw106",
-  "fw058",
-  "fw014",
-  "fw105",
-  "fw036",
-  "fw016",
-  "fw068",
-  "fw039",
-  "fw087",
-  "fw107"
+  "fw099",
+  "fw024",
+  "fw050",
+  "fw043",
+  "fw103",
+  "fw071",
+  "fw055",
+  "fw084",
+  "fw044",
+  "fw017",
+  "fw021"
  ],
  "map": {
   "fromLayout": [
@@ -224,17 +194,9 @@
   "note": "v7 lever 1: no new image bytes. The castle's sheets 7 (The Ironhollows: misty peaks and pines, the road to the mountain) and 1 (The Greenmarch: a river with two bridges and a cottage) reused through map.fromLayout, alternately mirrored, under a woodblock tint (map.tint on every entry: the greens shifted toward Prussian blue and pale paper, the water indigo), clearly apart from World 5's warm sepia. Not 2/5 (World 5's) or 4/6 (earmarked for Water Lily Isle)."
  },
  "byArtist": true,
- "credit": "Japanese woodblock prints by Katsushika Hokusai and Utagawa Hiroshige from the Art Institute of Chicago open access (CC0); some adapted for the game by Click it! Studios.",
- "worldCredit": "Japanese woodblock prints by Katsushika Hokusai and Utagawa Hiroshige from the Art Institute of Chicago open access (CC0); some adapted for the game by Click it! Studios.",
- "moatSkip": {
-  "fw017": "carries a ring but no deal with one under the 15 s and 55-tap caps (lane D's probe, 2026-10-11, the bake's own moat builder and gen.deal at the profile's deal setting, 6 rings x 20 attempts a tag: easy 0, normal 0, hard 0 of 120)",
-  "fw021": "carries a ring but no deal with one under the 15 s and 55-tap caps (lane D's probe, 2026-10-11, the bake's own moat builder and gen.deal at the profile's deal setting, 6 rings x 20 attempts a tag: easy 0, normal 0, hard 0 of 120)",
-  "fw024": "carries a ring but no deal with one under the 15 s and 55-tap caps (lane D's probe, 2026-10-11, the bake's own moat builder and gen.deal at the profile's deal setting, 6 rings x 20 attempts a tag: easy 0, normal 0, hard 0 of 120)",
-  "fw012": "carries a ring but no deal with one under the 15 s and 55-tap caps (lane D's probe, 2026-10-11, the bake's own moat builder and gen.deal at the profile's deal setting, 6 rings x 20 attempts a tag: easy 0, normal 0, hard 0 of 120)",
-  "fw058": "carries a ring but no deal with one under the 15 s and 55-tap caps (lane D's probe, 2026-10-11, the bake's own moat builder and gen.deal at the profile's deal setting, 6 rings x 20 attempts a tag: easy 0, normal 0, hard 0 of 120)",
-  "fw041": "carries a ring but no deal with one under the 15 s and 55-tap caps (lane D's probe, 2026-10-11, the bake's own moat builder and gen.deal at the profile's deal setting, 6 rings x 20 attempts a tag: easy 2, normal 0, hard 0 of 120)"
- },
- "moatNote": "moatSkip: land.js finds 16 of the 50 can carry a ring (lane C counted 18 with its own check); a deal probe (the bake's own moat builder and gen.deal at the profile's deal setting, 6 rings x 20 attempts a tag) found 6 that never deal with one at Normal and Hard, so the plan leaves them ringless (World 5's and Dino Valley's finding). The probe's rate for the other 10: fw097 100%, fw040 58-69%, fw038, fw057, fw067 21-25%, fw016 8%, fw043, fw053, fw106 2-4%, fw042 1%.",
+ "credit": "The Floating World: Japanese woodblock prints by Katsushika Hokusai and Utagawa Hiroshige from the Art Institute of Chicago open access (CC0); most adapted for the game by Click it! Studios.",
+ "worldCredit": "The Floating World: Japanese woodblock prints by Katsushika Hokusai and Utagawa Hiroshige from the Art Institute of Chicago open access (CC0); most adapted for the game by Click it! Studios.",
+ "moatSkip": {},
  "eggTurns": [
   [
    [
@@ -260,18 +222,6 @@
      624,
      523
     ]
-   ],
-   [
-    [
-     "grass",
-     551,
-     737
-    ],
-    [
-     "mushrooms",
-     624,
-     523
-    ]
    ]
   ],
   [
@@ -298,19 +248,8 @@
      355,
      294
     ]
-   ],
-   [
-    [
-     "butterfly",
-     461,
-     614
-    ],
-    [
-     "fish",
-     355,
-     294
-    ]
    ]
   ]
- ]
+ ],
+ "mainNote": "Lane C's round 5 order (2cf16e0) with one reorder by lane D (approved by the orchestrator, 2026-10-12): 415 fw100 Rabbits in Moonlight and 416 fw065 The Cushion Pine trade places. fw100 could not fit its Normal slot (at every squad size tried nearly every candidate won 100% and the in-band one failed the fast tapper) but bakes as an Easy; fw065 bakes as the Normal with a link."
 }

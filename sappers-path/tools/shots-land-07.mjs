@@ -1,5 +1,5 @@
 // Sapper's Path v7 lane D (Zen World 6 The Floating World): shots into tools/shots-land-07/ (gitignored), tools/shots-land-06.mjs
-// for World 6. At a 375x812 phone (3x, touch) on a fresh profile: the World 5 / World 6 join (Worlds 1-5 cleared, World 6's
+// for World 6 (round 5: 29 levels, 251-279). At a 375x812 phone (3x, touch) on a fresh profile: the World 5 / World 6 join (Worlds 1-5 cleared, World 6's
 // first current) on the plain URL after setting the save up under ?debug=1, the middle and the top of World 6, the opener (The
 // Cooper's Barrel) in play, part dug and its win sheet; at 1280x720 the World 6 map and the opener in play. Plus the fit at 375
 // (every Zen node's number inside its disc, the closest two nodes), the tint on World 6's sheet images and what each shot shows
@@ -32,8 +32,8 @@ await session(phone, async ({ p, go, shot, toZen, seen, banners, scrollTo }) => 
     for (const n of ns) { const bd = n.querySelector(".bd"), t = n.querySelector("b"), room = bd.clientWidth, w = t.getBoundingClientRect().width, s = room - w; if (!worst || s < worst.spare) worst = { n: t.textContent, text: +w.toFixed(1), inside: room, spare: +s.toFixed(1), cur: n.classList.contains("cur") }; }
     for (let i = 1; i < ns.length; i++) { const a = ns[i - 1].getBoundingClientRect(), c = ns[i].getBoundingClientRect(), d = Math.hypot(a.left - c.left, a.top - c.top); if (d < gap) { gap = d; gapAt = ns[i - 1].querySelector("b").textContent + "-" + ns[i].querySelector("b").textContent; } }
     return { nodes: ns.length, last: ns.length ? ns[ns.length - 1].querySelector("b").textContent : null, tightest: worst, closest: +gap.toFixed(1), at: gapAt }; })));
-  await scrollTo(first + 22, 0.5); notes.push("World 6 middle, nodes in view: " + (await seen())); await shot("map-mid-375");
-  await scrollTo(first + 49, 0.6); notes.push("World 6 top, nodes in view: " + (await seen()) + "; fog label: " + (await p.evaluate(() => { const f = document.querySelector("#jr .fogl"); return f ? f.textContent : "none"; }))); await shot("map-top-375");
+  await scrollTo(first + 12, 0.5); notes.push("World 6 middle, nodes in view: " + (await seen())); await shot("map-mid-375");
+  await scrollTo(first + 28, 0.6); notes.push("World 6 top, nodes in view: " + (await seen()) + "; fog label: " + (await p.evaluate(() => { const f = document.querySelector("#jr .fogl"); return f ? f.textContent : "none"; }))); await shot("map-top-375");
   notes.push("credits: " + (await p.evaluate(() => document.getElementById("map-credits").textContent)));
   await go(true);
   const bar = await p.evaluate(async () => { SP.zenTo(6, 0); await SP.load("z6-1"); return { num: document.getElementById("lvl-num").textContent, name: document.getElementById("lvl-name").textContent }; });
