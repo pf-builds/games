@@ -1,4 +1,114 @@
-# Zen World 6 The Floating World installed: v7 lane D (2026-10-11)
+# Zen World 6 The Floating World: v7 lane D
+
+## Round 5 (2026-10-12): reinstalled fresh as 29 levels (Peter via lane C 2cf16e0)
+
+The critic of the 50-level install (`tools/critic-land-07.md`, games 39b0ddd) found 7 boards that read, 21 weak and 22 mud at
+the 375 phone size. Peter chose bold repaints and a shorter world. Lane C's round 5 (`README.md` "Round 5"): 29 picks (7 kept
+from round 1 as they read: fw001 fw004 fw095 fw029 fw100 fw055 fw084; 22 bold repaints, 6 of them Fuji boards), 12 spares, 41
+landManifest lines, 26 of the 29 with an `edit` note. World 6 never shipped, so its 50 records were replaced outright. Not
+pushed. No image model run. Commits: `aae1b54` (reinstall), `4b46e1c` (freeze), then these notes. Sections 1-11 below are the
+50-level install's record (rounds 1-4); where round 5 changed a number, this section has it.
+
+- **Inputs.** `handoff-full.js` on this worktree: **41 of 41 identical**. The 41 lines copied whole into `pictures/manifest.json`;
+  `prep` + `convert --force`: **29 of 29 identical to boards-full**. Old sources removed, the 29 re-made.
+- **Numbering.** land.json `count` 29: records n **401-429**, ids z6-1..z6-29, Zen pictures **251-279**, era 13.
+- **The plan for 29.** land-plan's tags at 29 from the 50-level shares (0.36 / 0.52 / 0.12) would be E10/N16/H3; the profile's
+  shares are now 0.36 / 0.50 / 0.14, so **E10 / N15 / H4**, ending on a Hard (the casual mix in proportion). No Extreme, locks,
+  archers or mystery blocks.
+- **Moat probe** (6 rings x 20 attempts a tag at the profile's deal setting): 5 boards can carry a ring and all 5 deal (fw046
+  95%, fw005 63%, fw043 6-12%, fw103 1-6%, fw083 1-2%), so `moatSkip` is empty. Round 1's moatSkip and 424's byLevel cleared.
+- **Bake** (fresh plan, World 5's shipped profile with the 1.6x/400 deal, `--shard 2`, 342 s): 25 of 29 ok first time.
+  `--keep-plan --extra 16 --reuse` fixed 409 fw032 Fuji Reflected (Hard), 412 fw102 Yellowtail (Normal) and 417 fw046 The Moon
+  Pine (Hard, ringed).
+- **The reorder (orchestrator's OK, 2026-10-12).** 416 fw100 Rabbits in Moonlight could not fit its Normal slot: at the land's
+  1.6x squads 22 of 24 candidates won 100% or near it and the in-band one failed the fast tapper (`--extra 16 --reuse`); at
+  squads [20, 50], [26, 65] and [40, 100] (`profile.bake.byLevel`, tried and removed) it stayed at 73-100%. It is not too easy
+  for every band: in a scratch copy with 415 and 416 traded it baked as an Easy. So lane D traded the two slots in the land's
+  order (lane C's picks note: lane D owns the layout): **415 = fw100 Rabbits in Moonlight (Easy, plain)**, **416 = fw065 The
+  Cushion Pine (Normal, a link)**, both re-baked on the kept plan with `--extra 8`: 415 79.75% (band 45-80), 244 s, 54 taps,
+  15.0 s, careful 1.0; 416 37.5%, 195 s, 45 taps, 14.89 s, careful 1.0. land.json `mainNote` records it.
+- **Too-easy watch:** none of the six Fuji boards (fw025 fw032 fw065 fw024 fw071 fw021) or the 4-colour boards (fw005 fw082 fw102
+  fw044 fw017, and fw101) hit 100% on every candidate or failed every band. fw021 Cranes at Umezawa, too easy as round 1's crop,
+  now closes the world as a Hard (13.5%).
+- **`map assemble check`: PASS every gate.**
+
+### The world as baked (round 5)
+
+- **Tags E10 / N15 / H4 / X0**, ending on a Hard. Hards: 409 Fuji Reflected, 417 The Moon Pine (ringed), 424 Dawn at Isawa, 429
+  Cranes at Umezawa.
+- Random-tap win rate: Easy mean 71.0% (63.7-79.8, band 45-80), Normal 40.6% (35.5-46.8, band 20-50), Hard 14.1% (12.8-16.3,
+  band 6-20). Careful player: Easy min 0.94, Normal 0.75, Hard 0.5 (the floor).
+- Real pace 168-284 s, **median 224 s**. Taps 33-55. Longest tap 15.0 s at most. 0 fallbacks.
+- ? cards on 14 levels, linked squads on 11, **rings on 4** (405 fw005 mire, 414 fw083, 417 fw046, 423 fw103; fw043 at 422 is
+  ring-capable but its Easy slot wasn't planned one), 0 mystery blocks, 0 locks.
+
+### Map, words, credits
+
+- Sheets 7 and 1 as before, now **4 sheets** (A 9, B 8, A' 9, B' 3 levels; the top sheet's 3 like World 5's top 2), the same
+  tint and eggTurns (trimmed to the 2 repeats each). Lore and banner unchanged.
+- **Credit line** (the brief's, exactly): "The Floating World: Japanese woodblock prints by Katsushika Hokusai and Utagawa
+  Hiroshige from the Art Institute of Chicago open access (CC0); most adapted for the game by Click it! Studios." on zen.json
+  World 6 (the Zen map's foot, after World 5's) and under its LICENSES.md heading (critic m1).
+- **LICENSES.md World 6: 29 rows keyed by Zen picture number then level** (critic m5): "| Zen picture | Level | Picture | Artist
+  | Licence | Source |", rows 251/401 .. 279/429. New land.json `zen.numbered` (land.js zenInstall `zenRows`: the Zen number
+  counts every earlier world's levels, a land world's from levels.json, as main.js zenNum does). 26 rows carry their edit note.
+  Worlds 1-5's sections are untouched (the file before World 6's heading is byte-identical).
+
+### Byte-identity (proven)
+
+- zen.json: Worlds 1-5 entries and their 200 records JSON-identical to 39b0ddd's; version and note identical; World 6's 50
+  records replaced by its 29 (250 -> 229 records).
+- levels/: zen-1..zen-5.pk.json and every other packed file byte-identical; only `zen.pk.json` (the index) and `zen-6.pk.json`
+  changed.
+- Frozen set (`--snapshot`): frozen zen.json's Worlds 1-5 and 200 records identical to 39b0ddd's, equal to build-data's;
+  levels.json, gallery.json and castles.json snapshots byte-identical; frozen.json only its date.
+
+### Gates (round 5, final tree)
+
+| Gate | Result |
+|---|---|
+| land.js check | PASS every gate (401-429 e13, median 224 s, careful floor, no fallbacks, planCheck at 29, Zen no mystery blocks, shades, 4 rings, re-grade 0, map, licences) |
+| test.js | **715 passed, 0 failed** (World 6 block for 29: z6-1..z6-29, 401-429, E10/N15/H4 planCheck, 4 sheets 7/1 under the tint, 29 rows keyed Zen 251-279 then 401-429, 26 edit notes on exactly the edited prints, the new credit line) |
+| freeze --require | PASS after the snapshot: levels.json 2,405 checks, gallery.json 372, zen.json 229 / 2,061, shipped 541 records, castles 283, all 0 |
+| regrade | full 0 of 2,405; `--gallery` 0 of 372; `--zen` 0 of 2,061; `--shipped` 0 of 2,405; `--gallery --shipped` 0 of 372; `--zen --shipped` 0 of 2,061 |
+| pack.js --check | the shipped files match the source |
+| selfTest | **884/0 at 375x812@3, 886/0 at 1280x720, 884/0 at 360x640 (--small)**, 0 console (World 6 block for 29) |
+| space-v7/check.mjs | **41 ok, 0 FAIL** (OLD 10d77f4; Zen card "0 of 291 pictures") |
+| sweep-map.mjs | 63 sizes, 126 checks, 0 fails, 0 console |
+| harness.mjs (last) | **all passed**, selfTest 884/0 or 886/0 in every viewport, 0 console |
+
+Cache tag stays `?v=72` (unshipped; no gate needed a bump).
+
+### Payload (round 5)
+
+| | 10d77f4 (live) | round 5 | Change |
+|---|---:|---:|---:|
+| Shipped folder (minus tools/) | 13,916,475 B | **13,979,970 B** (76 files) | **+63,495 B** |
+| levels/zen-6.pk.json / zen.pk.json | - / 25,446 | **41,125** / 30,086 | +41,125 / +4,640 |
+| LICENSES.md / src/main.js / LATER.md | | | +11,998 / +4,597 / +1,135 |
+| map/ | | | 0 |
+| Bytes before the first tap | 1,869,718 B | **1,878,955 B** | +9,237 |
+
+World 6 packs to 1,418 B a level. 19 MB gate: **5.02 MB of room left**.
+
+### Shots (re-taken; tools/shots-land-07/, gitignored)
+
+`map-join-375.png` (249-250 then the World 6 banner and 251), `map-mid-375.png` (258-267), `map-top-375.png` (275-279 and "More
+worlds on the way"), `map-1280.png`, `play-opener-375.png`, `play-opener-mid-375.png`, `play-opener-1280.png`, `win-375.png`
+("The Cooper's Barrel by Katsushika Hokusai, all dug out."), `contact-installed.jpg` (29, `--world 6 --zen-from 251`), `harness/`.
+Fit at 375 with 279 Zen nodes: tightest 222 (1 px spare, World 5's), closest 60.1 px. 0 console messages.
+
+### Known for the critic (round 5)
+
+- The lore still names "bridges, waterfalls, boats and snow"; the 29 have 1 bridge, 2 falls, 1 ship and 1 snow scene and lean
+  on Fuji, flowers and fish. A lore line is one land.json edit, `land.js zen`, pack and a re-snapshot.
+- The contact sheet is larger than a phone board; judge the 29 at play size (the critic's method).
+- Hard 429 fw021 Cranes at Umezawa closes the world; its careful-player rate is at the floor (0.5) on one Hard.
+- fw095's date "n.d." (museum data), the Next up / Secrets found cards and the map tint (M3) as before.
+
+---
+
+# Rounds 1-4: the 50-level install (2026-10-11)
 
 Brief: the orchestrator's lane D install brief of 2026-10-11 (lane C's Japanese woodblock prints, Peter's OK via lane C, as Zen
 World 6; local only, never pushed). Inputs (lane C's, read only): `game-research/sappers-path-v4/lands/07-floating-world/`
