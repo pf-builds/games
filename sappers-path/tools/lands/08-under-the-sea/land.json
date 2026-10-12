@@ -2,10 +2,10 @@
  "k": 6,
  "slug": "08-under-the-sea",
  "name": "Under the Sea",
- "lore": "DRAFT (install sets it).",
+ "lore": "The road dives under the waves, where octopuses play drums, deep-sea fish glow in the dark, volcanoes smoke on the sea floor, aliens drop by and old ships sail at night, with a sunny beach or two on the way.",
  "count": 50,
  "source": "ai",
- "sourceNote": "FLUX.1 [schnell] by Black Forest Labs (Apache-2.0), 4-bit GGUF, run on the studio's Mac; lane C's full story scenes (game-research/sappers-path-v4/lands/08-under-the-sea/README.md). Kind painting, shade on, boardOf's own chroma. The folder keeps lane C's slug (08); as installed it is Land 6 in the factory's numbering (levels 451-500, era 14) and Zen World 7.",
+ "sourceNote": "FLUX.1 [schnell] by Black Forest Labs (Apache-2.0), 4-bit GGUF, run on the studio's Mac; lane C's full story scenes, 50 picks and 12 spares (game-research/sappers-path-v4/lands/08-under-the-sea/README.md, picks-full.json, workspace 04fac5c; 8 of the 50 edited for readability by lane C, each with an edit note on its manifest line and licence row). Kind painting, shade on, converted by land.js boardOf with the whole manifest line (chroma). The 62 manifest lines are lane C's, whole; lane D filled only the empty url with the licence row's source in Dino Valley's words (and, on the four parodies, the painting). The folder keeps lane C's slug (08); as installed it is Land 6 in the factory's numbering (levels 430-479, era 14) and Zen World 7.",
  "features": [
   "linked",
   "mystery",
@@ -14,18 +14,21 @@
  "eggs": [
   "fish",
   "bubble",
-  "reeds"
+  "glint",
+  "reeds",
+  "wisp"
  ],
- "eggNote": "DRAFT: eggs and eggTurns are set at install, with the map.",
+ "eggNote": "Eggs on the reused sheets' painted side-quest spur tips (World 1's, 5's and 6's rule; the land has no side quests): eggTurns puts each sheet's 2 eggs on its template's 2 quest spots, each repeat its own pair. Kinds that suit a sea floor: fish, bubble (a rising air bubble), glint (a sunken gem), reeds (kelp), wisp (a glowing jelly).",
  "shade": true,
  "raw": "/Users/peter/local-ai/outputs/lands/08-under-the-sea",
  "quests": "none",
  "zen": {
   "k": 7,
-  "note": "v7 lane D: Under the Sea plays as Zen World 7 (tools/land.js ... zen writes tools/build-data/levels/zen.json only). Records keep the land factory numbers 451-500 (scratch/state.json seeded {from: 451, sheet0: 60, gal0: 62}: World 6 The Floating World holds 401-450 on sheets 54-59)."
+  "note": "v7 lane D: Under the Sea plays as Zen World 7 (tools/land.js ... zen writes tools/build-data/levels/zen.json only). Records keep the land factory numbers 430-479 (scratch/state.json seeded {from: 430, sheet0: 58, gal0: 62}: Worlds 1-6 hold 1-50, 201-250, 251-300, 301-350, 351-400, 401-429; World 6's sheets end at 57); the page shows them on from World 6's last Zen number (Zen 280-329, main.js zenNum); zen.numbered keys each licence row by its Zen picture number before its level.",
+  "numbered": true
  },
  "profile": {
-  "note": "Zen World 7, casual (v7 lane D, 2026-10-11, trial): Dino Valley's profile as it ships (tools/lands/05-dino-valley/land.json; AI full story scenes): tags E18/N26/H6/X0 ending on a Hard, ? cards, linked squads, gentle moats (2 ways in) on pictures that can carry one, no locks, no archers, no Extreme, no mystery blocks (Peter, 2026-10-08), careful floor 0.5 every tag, deal attempts 96 at the land-config squads. See tools/land-08-notes.md for the trial.",
+  "note": "Zen World 7, casual (v7 lane D, 2026-10-12): Dino Valley's profile as it ships (tools/lands/05-dino-valley/land.json; AI full story scenes): tags E18/N26/H6/X0 ending on a Hard, ? cards, linked squads, gentle moats (2 ways in) on pictures that can carry one, no locks, no archers, no Extreme, no mystery blocks (Peter, 2026-10-08), careful floor 0.5 every tag, deal attempts 96 at the land-config squads. The trial (tools/land-08-notes.md, games b15e9e5) passed on it; World 5's 1.6x/400 deal not needed.",
   "tags": {
    "shares": {
     "easy": 0.36,
@@ -141,58 +144,170 @@
  },
  "main": [
   "us201",
+  "us257",
+  "us265",
+  "us221",
   "us203",
-  "us206",
-  "us201",
-  "us203",
-  "us206",
-  "us201",
-  "us203",
-  "us206",
-  "us201",
-  "us203",
-  "us206",
-  "us201",
-  "us203",
-  "us206",
-  "us201",
-  "us203",
-  "us206",
-  "us201",
-  "us203",
-  "us206",
-  "us201",
-  "us203",
-  "us206",
-  "us201",
-  "us203",
-  "us206",
-  "us201",
-  "us203",
-  "us206",
-  "us201",
-  "us203",
-  "us206",
-  "us201",
-  "us203",
-  "us206",
-  "us201",
-  "us203",
-  "us206",
-  "us201",
-  "us203",
-  "us206",
-  "us201",
-  "us203",
-  "us206",
-  "us201",
-  "us203",
-  "us206",
-  "us201",
-  "us203"
+  "us208",
+  "us205",
+  "us288",
+  "us236",
+  "us210",
+  "us244",
+  "us212",
+  "us305",
+  "us213",
+  "us260",
+  "us267",
+  "us222",
+  "us274",
+  "us229",
+  "us282",
+  "us289",
+  "us302",
+  "us252",
+  "us245",
+  "us296",
+  "us307",
+  "us217",
+  "us262",
+  "us270",
+  "us225",
+  "us275",
+  "us233",
+  "us283",
+  "us290",
+  "us224",
+  "us256",
+  "us250",
+  "us299",
+  "us308",
+  "us309",
+  "us264",
+  "us315",
+  "us312",
+  "us276",
+  "us235",
+  "us285",
+  "us293",
+  "us269",
+  "us277",
+  "us254"
  ],
- "mainNote": "TRIAL ONLY (2026-10-11): lane C's 3 trial scenes repeated in turn (us201, us203, us206) so the plan has 50 slots to bake them in; lane C's full 50 replace it.",
+ "mainNote": "Lane C's order (picks-full.json landMain, workspace 04fac5c).",
  "map": {
-  "note": "DRAFT: the map is set at install (lane C's design brief: a tinted map)."
- }
+  "fromLayout": [
+   14,
+   15
+  ],
+  "files": [
+   "sheet-14.webp",
+   "sheet-15.webp"
+  ],
+  "reuse": true,
+  "tint": "sepia(.2) hue-rotate(150deg) saturate(1.5) brightness(.9) contrast(1.1)",
+  "note": "v7 lever 1: no new image bytes. The castle's sheets 14 and 15 (The Mistmoor: a marsh of pools and channels, the most water of any sheet left) reused through map.fromLayout, alternately mirrored, under a blue underwater tint (Peter, 2026-10-11; map.tint on every entry: the marsh turns a blue sea floor, the pools darker), clearly apart from World 5's sepia and World 6's pale blue-green. Not 2/5 (World 5's), 7/1 (World 6's) or 4/6 (earmarked for Water Lily Isle)."
+ },
+ "eggTurns": [
+  [
+   [
+    [
+     "fish",
+     492,
+     569
+    ],
+    [
+     "bubble",
+     395,
+     307
+    ]
+   ],
+   [
+    [
+     "glint",
+     492,
+     569
+    ],
+    [
+     "fish",
+     395,
+     307
+    ]
+   ],
+   [
+    [
+     "bubble",
+     492,
+     569
+    ],
+    [
+     "wisp",
+     395,
+     307
+    ]
+   ]
+  ],
+  [
+   [
+    [
+     "reeds",
+     141,
+     624
+    ],
+    [
+     "glint",
+     123,
+     450
+    ]
+   ],
+   [
+    [
+     "wisp",
+     141,
+     624
+    ],
+    [
+     "reeds",
+     123,
+     450
+    ]
+   ],
+   [
+    [
+     "fish",
+     141,
+     624
+    ],
+    [
+     "bubble",
+     123,
+     450
+    ]
+   ]
+  ]
+ ],
+ "credit": "Under the Sea: original pictures generated with FLUX.1 [schnell] (Apache 2.0) by Click it! Studios.",
+ "worldCredit": "Under the Sea: original pictures generated with FLUX.1 [schnell] (Apache 2.0) by Click it! Studios.",
+ "moatSkip": {
+  "us257": "deal probe (2026-10-12): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
+  "us265": "deal probe (2026-10-12): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
+  "us221": "deal probe (2026-10-12): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
+  "us208": "deal probe (2026-10-12): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
+  "us288": "deal probe (2026-10-12): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
+  "us212": "deal probe (2026-10-12): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
+  "us260": "deal probe (2026-10-12): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
+  "us289": "deal probe (2026-10-12): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
+  "us302": "deal probe (2026-10-12): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
+  "us296": "deal probe (2026-10-12): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
+  "us225": "deal probe (2026-10-12): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
+  "us233": "deal probe (2026-10-12): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
+  "us283": "deal probe (2026-10-12): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
+  "us224": "deal probe (2026-10-12): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
+  "us250": "deal probe (2026-10-12): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
+  "us276": "deal probe (2026-10-12): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
+  "us277": "deal probe (2026-10-12): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
+  "us290": "deal probe (2026-10-12): 3% / 1% / 0 of 120 ring deals at Easy / Normal / Hard (as World 6 fw041)",
+  "us210": "bake (2026-10-12): with a ring it deals rarely (3% in the probe) and 22 of 24 ringed Normal candidates at 439 won 78.5-100% of random-tap games (the ring walls the wave off), the in-band one none; so it bakes ringless (--drop-moat on its kept plan)"
+ },
+ "moatNote": "36 boards can carry a ring (land.js moatCan, lane C counts 36 too); lane D deal probe (6 rings x 20 attempts a tag at the profile deal setting, a scratch script as World 6 used): 18 never or almost never deal with one (moatSkip); the other 18 dealt 1-100% (us299 100%, us267 88-90%, us312 72-84%, us315 53-58%, us282 50-55%, us245 us308 33-43%, us201 30-32%, us269 19-47%, us252 10-17%, us236 us222 us210 us244 us270 2-6%, us217 us256 us264 1%)."
 }
