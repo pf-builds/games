@@ -151,7 +151,7 @@
   "us208",
   "us205",
   "us288",
-  "us236",
+  "us266",
   "us210",
   "us244",
   "us212",
@@ -181,8 +181,8 @@
   "us256",
   "us250",
   "us299",
-  "us308",
-  "us309",
+  "us255",
+  "us246",
   "us264",
   "us315",
   "us312",
@@ -194,7 +194,7 @@
   "us277",
   "us254"
  ],
- "mainNote": "Lane C's order (picks-full.json landMain, workspace 04fac5c).",
+ "mainNote": "Lane C's order (picks-full.json landMain, workspace 04fac5c); round 2 (critic-land-08, lane C 2d933bf): 438 us266 Glowing jellyfish, 468 us255 The Thinker, 469 us246 Seahorse carriage swapped in for the three mud boards.",
  "map": {
   "fromLayout": [
    14,
@@ -307,7 +307,11 @@
   "us276": "deal probe (2026-10-12): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
   "us277": "deal probe (2026-10-12): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
   "us290": "deal probe (2026-10-12): 3% / 1% / 0 of 120 ring deals at Easy / Normal / Hard (as World 6 fw041)",
-  "us210": "bake (2026-10-12): with a ring it deals rarely (3% in the probe) and 22 of 24 ringed Normal candidates at 439 won 78.5-100% of random-tap games (the ring walls the wave off), the in-band one none; so it bakes ringless (--drop-moat on its kept plan)"
+  "us210": "bake (2026-10-12): with a ring it deals rarely (3% in the probe) and 22 of 24 ringed Normal candidates at 439 won 78.5-100% of random-tap games (the ring walls the wave off), the in-band one none; so it bakes ringless (--drop-moat on its kept plan)",
+  "us264": "round 2 (critic-land-08, 2026-10-12): the ring reads badly on the board (critic), so it bakes ringless",
+  "us222": "round 2 (critic-land-08, 2026-10-12): the ring reads badly on the board (critic), so it bakes ringless",
+  "us256": "round 2 (critic-land-08, 2026-10-12): the ring reads badly on the board (critic), so it bakes ringless",
+  "us246": "round 2 deal probe (2026-10-12): 0 of 120 ring deals at every tag (its slot 469 is planned ringless anyway; for any later fresh plan)"
  },
- "moatNote": "36 boards can carry a ring (land.js moatCan, lane C counts 36 too); lane D deal probe (6 rings x 20 attempts a tag at the profile deal setting, a scratch script as World 6 used): 18 never or almost never deal with one (moatSkip); the other 18 dealt 1-100% (us299 100%, us267 88-90%, us312 72-84%, us315 53-58%, us282 50-55%, us245 us308 33-43%, us201 30-32%, us269 19-47%, us252 10-17%, us236 us222 us210 us244 us270 2-6%, us217 us256 us264 1%)."
+ "moatNote": "36 boards can carry a ring (land.js moatCan, lane C counts 36 too); lane D deal probe (6 rings x 20 attempts a tag at the profile deal setting, a scratch script as World 6 used): 18 never or almost never deal with one (moatSkip); the other 18 dealt 1-100% (us299 100%, us267 88-90%, us312 72-84%, us315 53-58%, us282 50-55%, us245 us308 33-43%, us201 30-32%, us269 19-47%, us252 10-17%, us236 us222 us210 us244 us270 2-6%, us217 us256 us264 1%). Round 2: us264, us222 and us256 left ringless for how the ring reads (critic-land-08), not for dealing."
 }

@@ -52,7 +52,7 @@
    1024
   ],
   "raw": "raw/us265-s7265.png",
-  "edit": "Painted for readability by lane C: the deep black ocean covered over 75% of the board: a coloured sea floor painted along the bottom (ops in edits.json)"
+  "edit": "Adapted for the board by Click it! Studios: the deep black ocean covered over 75% of the board: a coloured sea floor painted along the bottom (ops in edits.json)"
  },
  {
   "id": "us221",
@@ -126,7 +126,7 @@
    1024
   ],
   "raw": "raw/us205-s7205.png",
-  "edit": "Painted for readability by lane C: 8-10 colours: flattened into fewer, bolder shapes (ops in edits.json)"
+  "edit": "Adapted for the board by Click it! Studios: 8-10 colours: flattened into fewer, bolder shapes (ops in edits.json)"
  },
  {
   "id": "us288",
@@ -148,27 +148,27 @@
   "raw": "raw/us288-s7288.png"
  },
  {
-  "id": "us236",
-  "title": "Pufferfish reader",
+  "id": "us266",
+  "title": "Glowing jellyfish",
   "artist": "Click it! Studios",
   "date": "2026-10-11",
   "kind": "painting",
   "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
-  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7236; prompt in tools/lands/08-under-the-sea/pictures/manifest.json",
-  "file": "fullsrc/us236e.png",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7266; prompt in tools/lands/08-under-the-sea/pictures/manifest.json",
+  "file": "fullsrc/us266e.png",
   "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
-  "prompt": "a big yellow pufferfish with round glasses reading a huge red book, a little seahorse peeking over the page, a purple kelp forest with orange coral, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character very big in the foreground filling half of the picture, two or three big simple shapes covering most of the picture with little empty water, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
-  "seed": 7236,
+  "prompt": "one big glowing pink jellyfish with long trailing tentacles, a little blue glowing fish swimming near it, the deep black ocean, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character very big in the foreground filling half of the picture, two or three big simple shapes covering most of the picture with little empty water, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 7266,
   "size": [
-   1024,
-   1024
+   832,
+   1216
   ],
-  "raw": "raw/us236-s7236.png",
-  "edit": "Painted for readability by lane C: 8-10 colours: reduced to 6 colours with bold flat shapes (ops in edits.json)"
+  "raw": "raw/us266-s7266.png",
+  "edit": "Adapted for the board by Click it! Studios: the deep black ocean covered over 75% of the board: a coloured sea floor painted along the bottom (ops in edits.json)"
  },
  {
   "id": "us210",
-  "title": "The Great Wave",
+  "title": "Surf's Up",
   "artist": "Click it! Studios",
   "date": "2026-10-11",
   "kind": "painting",
@@ -293,7 +293,7 @@
    1024
   ],
   "raw": "raw/us267-s7267.png",
-  "edit": "Painted for readability by lane C: the deep black ocean covered over 75% of the board: a coloured sea floor painted along the bottom (ops in edits.json)"
+  "edit": "Adapted for the board by Click it! Studios: the deep black ocean covered over 75% of the board: a coloured sea floor painted along the bottom (ops in edits.json)"
  },
  {
   "id": "us222",
@@ -368,7 +368,7 @@
    1216
   ],
   "raw": "raw/us282-s7282.png",
-  "edit": "Painted for readability by lane C: 8-10 colours: reduced to 6 colours with bold flat shapes (ops in edits.json)"
+  "edit": "Adapted for the board by Click it! Studios: 8-10 colours: reduced to 6 colours with bold flat shapes (ops in edits.json)"
  },
  {
   "id": "us289",
@@ -409,7 +409,7 @@
  },
  {
   "id": "us252",
-  "title": "The Great Wave 2",
+  "title": "Wave Rider",
   "artist": "Click it! Studios",
   "date": "2026-10-11",
   "kind": "painting",
@@ -534,7 +534,7 @@
    1024
   ],
   "raw": "raw/us270-s7270.png",
-  "edit": "Painted for readability by lane C: the deep black ocean covered over 75% of the board: a coloured sea floor painted along the bottom (ops in edits.json)"
+  "edit": "Adapted for the board by Click it! Studios: the deep black ocean covered over 75% of the board: a coloured sea floor painted along the bottom (ops in edits.json)"
  },
  {
   "id": "us225",
@@ -609,7 +609,7 @@
    1024
   ],
   "raw": "raw/us283-s7283.png",
-  "edit": "Painted for readability by lane C: 8-10 colours: flattened into fewer, bolder shapes (ops in edits.json)"
+  "edit": "Adapted for the board by Click it! Studios: 8-10 colours: flattened into fewer, bolder shapes (ops in edits.json)"
  },
  {
   "id": "us290",
@@ -704,41 +704,40 @@
   "raw": "raw/us299-s7299.png"
  },
  {
-  "id": "us308",
-  "title": "Snorkel puppy",
+  "id": "us255",
+  "title": "The Thinker",
   "artist": "Click it! Studios",
   "date": "2026-10-11",
   "kind": "painting",
   "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
-  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7308; prompt in tools/lands/08-under-the-sea/pictures/manifest.json",
-  "file": "fullsrc/us308.png",
-  "chroma": 1.7,
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7255; prompt in tools/lands/08-under-the-sea/pictures/manifest.json; a parody after The Thinker, Auguste Rodin's sculpture, 1880-1904, public domain (a new composition, not a copy of any reproduction)",
+  "file": "fullsrc/us255.png",
   "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
-  "prompt": "a little brown puppy in a yellow snorkel and mask swimming with a big orange sea turtle, a pink coral reef in teal water, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character very big in the foreground filling half of the picture, two or three big simple shapes covering most of the picture with little empty water, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
-  "seed": 7308,
+  "prompt": "a big green sea turtle sitting on a big rock in the pose of the famous Thinker statue, chin on its flipper, a little crab copying, a yellow sandy sea floor, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character very big in the foreground filling half of the picture, two or three big simple shapes covering most of the picture with little empty water, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 7255,
   "size": [
    1024,
    1024
   ],
-  "raw": "raw/us308-s7308.png"
+  "raw": "raw/us255-s7255.png"
  },
  {
-  "id": "us309",
-  "title": "Mermaid band",
+  "id": "us246",
+  "title": "Seahorse carriage",
   "artist": "Click it! Studios",
   "date": "2026-10-11",
   "kind": "painting",
   "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
-  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7309; prompt in tools/lands/08-under-the-sea/pictures/manifest.json",
-  "file": "fullsrc/us309.png",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7246; prompt in tools/lands/08-under-the-sea/pictures/manifest.json",
+  "file": "fullsrc/us246.png",
   "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
-  "prompt": "a mermaid with blue hair and a purple tail playing a golden harp, a big orange octopus playing drums beside her, a pink coral stage on yellow sand, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character very big in the foreground filling half of the picture, two or three big simple shapes covering most of the picture with little empty water, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
-  "seed": 7309,
+  "prompt": "a big orange seahorse pulling a little golden shell carriage, a little pink pufferfish riding inside, a purple coral avenue on yellow sand, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character very big in the foreground filling half of the picture, two or three big simple shapes covering most of the picture with little empty water, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 7246,
   "size": [
-   1024,
-   1024
+   832,
+   1216
   ],
-  "raw": "raw/us309-s7309.png"
+  "raw": "raw/us246-s7246.png"
  },
  {
   "id": "us264",
@@ -775,7 +774,7 @@
    1024
   ],
   "raw": "raw/us315-s7315.png",
-  "edit": "Painted for readability by lane C: the deep black ocean covered over 75% of the board: a coloured sea floor painted along the bottom (ops in edits.json)"
+  "edit": "Adapted for the board by Click it! Studios: the deep black ocean covered over 75% of the board: a coloured sea floor painted along the bottom (ops in edits.json)"
  },
  {
   "id": "us312",
@@ -925,25 +924,6 @@
   "raw": "raw/us254-s7254.png"
  },
  {
-  "id": "us266",
-  "title": "Glowing jellyfish",
-  "artist": "Click it! Studios",
-  "date": "2026-10-11",
-  "kind": "painting",
-  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
-  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7266; prompt in tools/lands/08-under-the-sea/pictures/manifest.json",
-  "file": "fullsrc/us266e.png",
-  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
-  "prompt": "one big glowing pink jellyfish with long trailing tentacles, a little blue glowing fish swimming near it, the deep black ocean, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character very big in the foreground filling half of the picture, two or three big simple shapes covering most of the picture with little empty water, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
-  "seed": 7266,
-  "size": [
-   832,
-   1216
-  ],
-  "raw": "raw/us266-s7266.png",
-  "edit": "Painted for readability by lane C: the deep black ocean covered over 75% of the board: a coloured sea floor painted along the bottom (ops in edits.json)"
- },
- {
   "id": "us273",
   "title": "Hot spring spa",
   "artist": "Click it! Studios",
@@ -1017,42 +997,6 @@
   "raw": "raw/us291-s7291.png"
  },
  {
-  "id": "us255",
-  "title": "The Thinker",
-  "artist": "Click it! Studios",
-  "date": "2026-10-11",
-  "kind": "painting",
-  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
-  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7255; prompt in tools/lands/08-under-the-sea/pictures/manifest.json",
-  "file": "fullsrc/us255.png",
-  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
-  "prompt": "a big green sea turtle sitting on a big rock in the pose of the famous Thinker statue, chin on its flipper, a little crab copying, a yellow sandy sea floor, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character very big in the foreground filling half of the picture, two or three big simple shapes covering most of the picture with little empty water, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
-  "seed": 7255,
-  "size": [
-   1024,
-   1024
-  ],
-  "raw": "raw/us255-s7255.png"
- },
- {
-  "id": "us246",
-  "title": "Seahorse carriage",
-  "artist": "Click it! Studios",
-  "date": "2026-10-11",
-  "kind": "painting",
-  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
-  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7246; prompt in tools/lands/08-under-the-sea/pictures/manifest.json",
-  "file": "fullsrc/us246.png",
-  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
-  "prompt": "a big orange seahorse pulling a little golden shell carriage, a little pink pufferfish riding inside, a purple coral avenue on yellow sand, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character very big in the foreground filling half of the picture, two or three big simple shapes covering most of the picture with little empty water, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
-  "seed": 7246,
-  "size": [
-   832,
-   1216
-  ],
-  "raw": "raw/us246-s7246.png"
- },
- {
   "id": "us238",
   "title": "Crab knitting",
   "artist": "Click it! Studios",
@@ -1105,7 +1049,7 @@
    1024
   ],
   "raw": "raw/us239-s7239.png",
-  "edit": "Painted for readability by lane C: 8-10 colours: reduced to 6 colours with bold flat shapes (ops in edits.json)"
+  "edit": "Adapted for the board by Click it! Studios: 8-10 colours: reduced to 6 colours with bold flat shapes (ops in edits.json)"
  },
  {
   "id": "us314",
@@ -1143,5 +1087,61 @@
    1024
   ],
   "raw": "raw/us220-s7220.png"
+ },
+ {
+  "id": "us236",
+  "title": "Pufferfish reader",
+  "artist": "Click it! Studios",
+  "date": "2026-10-11",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7236; prompt in tools/lands/08-under-the-sea/pictures/manifest.json",
+  "file": "fullsrc/us236e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big yellow pufferfish with round glasses reading a huge red book, a little seahorse peeking over the page, a purple kelp forest with orange coral, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character very big in the foreground filling half of the picture, two or three big simple shapes covering most of the picture with little empty water, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 7236,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/us236-s7236.png",
+  "edit": "Adapted for the board by Click it! Studios: 8-10 colours: reduced to 6 colours with bold flat shapes (ops in edits.json)"
+ },
+ {
+  "id": "us308",
+  "title": "Snorkel puppy",
+  "artist": "Click it! Studios",
+  "date": "2026-10-11",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7308; prompt in tools/lands/08-under-the-sea/pictures/manifest.json",
+  "file": "fullsrc/us308.png",
+  "chroma": 1.7,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a little brown puppy in a yellow snorkel and mask swimming with a big orange sea turtle, a pink coral reef in teal water, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character very big in the foreground filling half of the picture, two or three big simple shapes covering most of the picture with little empty water, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 7308,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/us308-s7308.png"
+ },
+ {
+  "id": "us309",
+  "title": "Mermaid band",
+  "artist": "Click it! Studios",
+  "date": "2026-10-11",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 7309; prompt in tools/lands/08-under-the-sea/pictures/manifest.json",
+  "file": "fullsrc/us309.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a mermaid with blue hair and a purple tail playing a golden harp, a big orange octopus playing drums beside her, a pink coral stage on yellow sand, cute whimsical storybook style, flat vector illustration, a full scene filling the whole canvas edge to edge, telling a little story, the main character very big in the foreground filling half of the picture, two or three big simple shapes covering most of the picture with little empty water, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 7309,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/us309-s7309.png"
  }
 ]
