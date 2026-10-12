@@ -1,5 +1,62 @@
 # Zen World 7 Under the Sea: v7 lane D
 
+## Round 2 (2026-10-12): the critic's fixes (`tools/critic-land-08.md`, "ship after fixes", head 3d68931)
+
+Lane C's workspace 2d933bf. Not pushed; no image model run. Commits: `53cc2a1` (fix pass), `5e15550` (freeze), then these notes.
+Sections below "Install" are round 1's record; where round 2 changed a number, this section has it.
+
+- **Inputs.** `handoff-full.js`: **62 of 62 identical**. Lane C's 62 lines replaced whole; `url` filled as before (The Thinker:
+  "a parody after The Thinker, Auguste Rodin's sculpture, 1880-1904, public domain (a new composition, ...)"). Against round 1's
+  manifest exactly these differ: `edit` on the 10 edited lines (now "Adapted for the board by Click it! Studios: ..."), `title`
+  on us210 (Surf's Up) and us252 (Wave Rider), us255's url (now in the main 50). `main` changed at 438, 468, 469 only.
+  `prep` (3 new sources, byte-identical to the hand-off's; us236 us308 us309 sources removed) + `convert --force`: **50 of 50
+  identical to boards-full**; against round 1 only 438, 468, 469 (new boards) and 439, 452 (title only) changed.
+- **Swaps:** 438 us266 Glowing jellyfish (`us266e.png`, edited, 32x46, 5 colours), 468 us255 The Thinker (42x42, 5), 469 us246
+  Seahorse carriage (32x46, 7). None of the three slots was planned with a ring, so none carries one. Deal probe for the record:
+  us266 30/17/13%, us255 82/75/71%, us246 0 of 120 (into `moatSkip` for any later fresh plan).
+- **Rings dropped** (critic M2): us264, us222, us256 in `moatSkip` (for how the ring reads, not for dealing).
+- **Re-bake** (`bake --keep-plan --drop-moat --list 438,446,465,468,469,470 --shard 2`): **all six ok first time**, no extras:
+
+| Level / Zen | Picture | Tag, features | Rate (band) | Pace | Taps | Longest tap | Careful | Ring |
+|---|---|---|---|---|---|---|---|---|
+| 438 / 288 | us266 Glowing jellyfish | Easy, 1 link | 56.0% (45-80) | 257 s | 50 | 14.99 s | 1.0 | none |
+| 446 / 296 | us222 Crab ping-pong | Normal, 2 ? cards | 38.75% (20-50) | 224 s | 47 | 14.91 s | 1.0 | none (was water) |
+| 465 / 315 | us256 Mona Lisa fish | Hard, link, 3 ? cards | 15.0% (6-20) | 224 s | 53 | 14.63 s | 0.5 | none (was water) |
+| 468 / 318 | us255 The Thinker | Easy, 1 link | 61.75% (45-80) | 214 s | 44 | 14.62 s | 1.0 | none |
+| 469 / 319 | us246 Seahorse carriage | Normal, 2 ? cards | 31.25% (20-50) | 231 s | 55 | 15.00 s | 1.0 | none |
+| 470 / 320 | us264 Lighthouse | Easy, plain | 64.75% (45-80) | 206 s | 48 | 14.98 s | 1.0 | none (was mire) |
+
+- **Only 8 records changed** (the six re-baked; 439 and 452 in `title` only); the other 42 byte-identical (land out/ and zen.json).
+  `map assemble check`: PASS every gate.
+- **LICENSES.md:** the World 7 rows pick up the three new pictures, the two titles and the edit wording; **"lane C" appears
+  nowhere in LICENSES.md** (test.js now checks it). The file before World 7's heading is byte-identical. LATER.md's wording
+  item removed (done).
+- **Byte-identity (proven).** zen.json: Worlds 1-6 entries and 229 records identical, World 7's entry identical, its records
+  changed at 438 439 446 452 465 468 469 470 only. levels/: only zen.pk.json and zen-7.pk.json rewritten (zen.pk.json same size).
+  Freeze `--snapshot`: frozen zen.json the same 8 records; levels.json, gallery.json, castles snapshots byte-identical.
+- **The world now:** E18/N26/H6, ending on a Hard; Easy mean 63.3% (47.3-72.8), Normal 37.4% (26.8-44.8), Hard 13.7% (8.0-19.5);
+  careful min 1.0 / 0.75 / 0.5 (465 on the floor); pace 174-268 s, **median 225 s**; ? cards 23, links 18, **rings 9** (430 440
+  445 449 453 458 467 471 472), 0 mystery blocks, 0 locks, 0 fallbacks.
+- **Cache stays `?v=74`** (unshipped).
+
+| Gate | Result |
+|---|---|
+| land.js check | PASS every gate (median 225 s, 9 rings) |
+| test.js | **716 passed, 0 failed** (shipped 14,076,878 B; World 7 block: edit rows read "Adapted for the board by Click it! Studios", no "lane C" in LICENSES.md) |
+| freeze --require | PASS after the snapshot (levels.json 2,405 checks, gallery.json 372, zen.json 279 / 2,511, shipped 591 records, castles 283, all 0) |
+| regrade | full 0 of 2,405; `--gallery` 0 of 372; `--zen` 0 of 2,511; `--shipped` 0 of 2,405; `--gallery --shipped` 0 of 372; `--zen --shipped` 0 of 2,511 |
+| pack.js --check | the shipped files match the source |
+| selfTest | 888/0 at 375x812@3, 890/0 at 1280x720, 888/0 at 360x640, 0 console |
+| space-v7/check.mjs | 43 ok, 0 FAIL (OLD c4ddc88) |
+| sweep-map.mjs | 126 checks, 0 fails, 0 console |
+| harness.mjs (last) | **all passed**, selfTest 888/0 or 890/0 in every viewport and the hidden tab, 0 console |
+
+Payload: shipped **14,076,878 B** (+96,331 on c4ddc88's 13,980,547; 4.92 MB under 19 MB); first tap **1,890,488 B**
+(unchanged from round 1); `zen-7.pk.json` **69,754 B** (round 1 70,945). Shots re-taken: `tools/shots-land-08/contact-installed.jpg`,
+`play-opener-375.png` (and the rest of the set).
+
+Left for later (critic, not in this brief): the 9 weak boards (M1).
+
 ## Install (2026-10-12)
 
 Brief: the orchestrator's lane D install brief of 2026-10-12 (lane C's Under the Sea full set as Zen World 7; local only,
