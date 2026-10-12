@@ -2,7 +2,7 @@
  "k": 5,
  "slug": "07-floating-world",
  "name": "The Floating World",
- "lore": "The road climbs from old Edo toward Mount Fuji, past bridges, waterfalls, boats and snow in Hokusai's and Hiroshige's woodblock prints, each one waiting to be dug out a block at a time.",
+ "lore": "The road climbs from old Edo to Mount Fuji, with flowers, fish and birds along the way, all from Hokusai's and Hiroshige's woodblock prints and waiting to be dug out a block at a time.",
  "count": 29,
  "source": "museum",
  "sourceNote": "Real public-domain Japanese woodblock prints (ukiyo-e) by Hokusai and Hiroshige, CC0 open access from the Art Institute of Chicago; licence re-read per object by lane C (game-research/sappers-path-v4/lands/07-floating-world/README.md, picks-full.json round 5: 29 picks, 12 spares, landManifest 41 lines; Sharaku dropped, Peter 10/10). Each file is a crop of the print (srcCrop on its manifest line, information only); 26 of the 29 adapted for readability by lane C (Peter, 2026-10-11 and 10-12: bold repaints; recipe in lane C's edits.json, an edit note on the manifest line and the licence row); converted by land.js boardOf with the whole manifest line (chroma). The folder keeps lane C's slug (07); as installed it is Land 5 in the factory's numbering (levels 401-429, era 13) and Zen World 6.",
@@ -196,7 +196,10 @@
  "byArtist": true,
  "credit": "The Floating World: Japanese woodblock prints by Katsushika Hokusai and Utagawa Hiroshige from the Art Institute of Chicago open access (CC0); most adapted for the game by Click it! Studios.",
  "worldCredit": "The Floating World: Japanese woodblock prints by Katsushika Hokusai and Utagawa Hiroshige from the Art Institute of Chicago open access (CC0); most adapted for the game by Click it! Studios.",
- "moatSkip": {},
+ "moatSkip": {
+  "fw005": "round 6 (critic-land-07 re-check R2-m3, 2026-10-12): the ring reads as a stray dark box round the carp's lower half on the board, so it bakes ringless",
+  "fw103": "round 6 (critic-land-07 re-check R2-m3, 2026-10-12): the ring reads as a stray pair of lines across the fish and the sky on the board, so it bakes ringless"
+ },
  "eggTurns": [
   [
    [
@@ -251,5 +254,6 @@
    ]
   ]
  ],
- "mainNote": "Lane C's round 5 order (2cf16e0) with one reorder by lane D (approved by the orchestrator, 2026-10-12): 415 fw100 Rabbits in Moonlight and 416 fw065 The Cushion Pine trade places. fw100 could not fit its Normal slot (at every squad size tried nearly every candidate won 100% and the in-band one failed the fast tapper) but bakes as an Easy; fw065 bakes as the Normal with a link."
+ "mainNote": "Lane C's round 5 order (2cf16e0) with one reorder by lane D (approved by the orchestrator, 2026-10-12): 415 fw100 Rabbits in Moonlight and 416 fw065 The Cushion Pine trade places. fw100 could not fit its Normal slot (at every squad size tried nearly every candidate won 100% and the in-band one failed the fast tapper) but bakes as an Easy; fw065 bakes as the Normal with a link.",
+ "moatNote": "Round 5: all 5 ring-capable boards deal with a ring (lane D's probe). Round 6: fw005 and fw103 left ringless for how the ring reads (critic re-check R2-m3), not for dealing."
 }
