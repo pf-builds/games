@@ -1,5 +1,5 @@
 // Sapper's Path v7 lane D (Zen World 9 Puppy Park): shots into tools/shots-land-11/ (gitignored), tools/shots-land-09.mjs
-// for World 9 (50 levels, Zen 351-400). At a 375x812 phone (3x, touch) on a fresh profile: the World 8 / World 9 join (Worlds 1-8 cleared, World 9's
+// for World 9 (50 levels, Zen 343-392; round 2 renumbered after World 8's 13). At a 375x812 phone (3x, touch) on a fresh profile: the World 8 / World 9 join (Worlds 1-8 cleared, World 9's
 // first current) on the plain URL after setting the save up under ?debug=1, the middle and the top of World 9, the opener (Golden
 // smile) in play, part dug and its win sheet; at 1280x720 the World 9 map and the opener in play. Plus the fit at 375
 // (every Zen node's number inside its disc, the closest two nodes), the tint on World 9's sheet images and what each shot shows
@@ -22,7 +22,7 @@ async function session(vp, run) {
   await run({ p, go, shot, toZen, seen, banners, scrollTo }); await ctx.close();
 }
 const phone = { viewport: { width: 375, height: 812 }, deviceScaleFactor: 3, hasTouch: true, isMobile: true }, desk = { viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 };
-const first = 351, before = () => { for (let k = 1; k <= 5; k++) SP.zenTo(k, 50); SP.zenTo(6, 29); SP.zenTo(7, 50); SP.zenTo(8, 21); }; // World 9's first Zen number (Worlds 1-5: 50 each, World 6 29, World 7 50, World 8 21, then the zen numbers count on: main.js zenNum)
+const first = 343, before = () => { for (let k = 1; k <= 5; k++) SP.zenTo(k, 50); SP.zenTo(6, 29); SP.zenTo(7, 50); SP.zenTo(8, 13); }; // World 9's first Zen number (Worlds 1-5: 50 each, World 6 29, World 7 50, World 8 13, then the zen numbers count on: main.js zenNum)
 await session(phone, async ({ p, go, shot, toZen, seen, banners, scrollTo }) => {
   await go(false); await go(true); await p.evaluate(before); await go(false); await toZen();
   await scrollTo(first - 1, 0.86); notes.push("W8/W9 join, nodes in view: " + (await seen()) + "; banners: " + (await banners())); await shot("map-join-375");
@@ -44,7 +44,7 @@ await session(phone, async ({ p, go, shot, toZen, seen, banners, scrollTo }) => 
   notes.push("The opener win: " + JSON.stringify(win)); await shot("win-375");
 });
 await session(desk, async ({ p, go, shot, toZen, seen, banners, scrollTo }) => {
-  await go(false); await go(true); await p.evaluate(() => { for (let k = 1; k <= 5; k++) SP.zenTo(k, 50); SP.zenTo(6, 29); SP.zenTo(7, 50); SP.zenTo(8, 21); SP.zenTo(9, 9); }); await go(false); await toZen();
+  await go(false); await go(true); await p.evaluate(() => { for (let k = 1; k <= 5; k++) SP.zenTo(k, 50); SP.zenTo(6, 29); SP.zenTo(7, 50); SP.zenTo(8, 13); SP.zenTo(9, 9); }); await go(false); await toZen();
   await scrollTo(first + 9, 0.6); notes.push("desktop World 9, nodes in view: " + (await seen()) + "; banners: " + (await banners())); await shot("map-1280");
   await go(true); await p.evaluate(async () => { await SP.load("z9-1"); }); await shot("play-opener-1280");
 });
