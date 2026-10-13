@@ -2,7 +2,7 @@
  "k": 10,
  "slug": "13-cloud-kingdom",
  "name": "Cloud Kingdom",
- "lore": "The road climbs up above the clouds: hot-air balloons and kites, birds of every kind, rainbows, a dragon kite and a rocket, and a castle sitting right on top of the clouds.",
+ "lore": "The road climbs up above the clouds: hot-air balloons and kites, birds of every kind, rainbows, a dragon kite and a rocket, and a palace sitting right on top of the clouds.",
  "count": 30,
  "source": "ai",
  "sourceNote": "FLUX.1 [schnell] by Black Forest Labs (Apache-2.0), 4-bit GGUF, run on the studio's Mac; lane C's Cloud Kingdom (a sky kingdom: balloons, airships, kites, birds, rainbows; Peter's 10/13 framing rule; the pale cloud scenes left out), 30 picks and 11 spares (game-research/sappers-path-v4/lands/13-cloud-kingdom/README.md, picks-full.json, workspace 540d88d: 9 dropped on lane D's phase-1 bake and pre-read); lane C edited many of them (a tighter crop, the plain sky split into a deep blue top band and a cloud-white ground band; the edit field, ops in edits.json; the file <id>e.png). Kind painting, shade on, converted by land.js boardOf with the whole manifest line (chroma). The 41 manifest lines are lane C's, whole; lane D filled only the empty url with the licence row's source in Dino Valley's words. The folder keeps lane C's slug (13); as installed it is Land 10 in the factory's numbering (era 18) and Zen World 11.",
