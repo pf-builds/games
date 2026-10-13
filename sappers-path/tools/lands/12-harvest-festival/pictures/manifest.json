@@ -1,0 +1,1029 @@
+[
+ {
+  "id": "hf001",
+  "title": "Happy pumpkin",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9001; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf001e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a smiling orange jack-o'-lantern with a friendly face, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat deep purple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9001,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf001-s9001.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "hf003",
+  "title": "Black cat",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9003; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf003.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a black cat with big yellow eyes and a purple bow, one solid black shape, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat bright orange background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9003,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf003-s9003.png"
+ },
+ {
+  "id": "hf041",
+  "title": "Pumpkin patch",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9041; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf041e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big round orange pumpkin in a field with a little mouse on top, a pale blue sky over brown soil, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9041,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf041-s9041.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "hf042",
+  "title": "Trick or treat",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9042; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf042e.png",
+  "chroma": 2.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a little ghost kid knocking at a big red door with a candy bucket, a dark purple night, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9042,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf042-s9042.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "hf005",
+  "title": "Wise owl",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9005; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf005e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a brown owl with big round eyes wearing a little witch hat, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat deep blue background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9005,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf005-s9005.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "hf006",
+  "title": "Candy corn",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9006; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf006e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a giant smiling candy corn, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat purple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9006,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf006-s9006.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "hf007",
+  "title": "Cauldron",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9007; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf007e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a black cauldron bubbling with green bubbles, one solid black pot, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat orange background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9007,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf007-s9007.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "hf045",
+  "title": "Apple picking",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9045; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf045.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a bear picking a big red apple from a tree, a green orchard, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9045,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf045-s9045.png"
+ },
+ {
+  "id": "hf049",
+  "title": "Carving",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9049; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf049.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a raccoon carving a jack-o'-lantern, a purple background, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9049,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf049-s9049.png"
+ },
+ {
+  "id": "hf008",
+  "title": "Witch hat",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9008; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf008e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a tall purple witch hat with an orange band, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat green background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9008,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf008-s9008.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "hf009b",
+  "title": "Pumpkin kid",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9509; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf009be.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a little child in a round orange pumpkin costume smiling, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat purple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9509,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf009b-s9509.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "hf010b",
+  "title": "Sheet ghost kid",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9510; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf010b.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a child in a white sheet ghost costume holding a candy bucket, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat orange background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9510,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf010b-s9510.png"
+ },
+ {
+  "id": "hf038",
+  "title": "Bear with honey",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9038; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf038e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a brown bear holding a pot of honey, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat green background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9038,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf038-s9038.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "hf051",
+  "title": "Haunted house",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9051; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf051.png",
+  "chroma": 2,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute crooked purple house with a big orange moon, a dark blue sky, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9051,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf051-s9051.png"
+ },
+ {
+  "id": "hf011",
+  "title": "Little witch",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9011; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf011.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a little girl in a purple witch costume waving a star wand, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat yellow background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9011,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf011-s9011.png"
+ },
+ {
+  "id": "hf012b",
+  "title": "Dragon costume",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9512; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf012be.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a toddler in a green dragon costume, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat orange background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9512,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf012b-s9512.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "hf013",
+  "title": "Scarecrow",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9013; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf013.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a friendly scarecrow with a straw hat and a big smile, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat sky blue background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9013,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf013-s9013.png"
+ },
+ {
+  "id": "hf036b",
+  "title": "Owl in leaves",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9536; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf036be.png",
+  "chroma": 1.2,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "an orange owl peeking out of red leaves, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat dark blue background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9536,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf036b-s9536.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "hf014b",
+  "title": "Turkey",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9514; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf014b.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a round brown turkey with a big fan of orange and red tail feathers, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat pale yellow background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9514,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf014b-s9514.png"
+ },
+ {
+  "id": "hf015",
+  "title": "Pumpkin pie",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9015; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf015e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a pumpkin pie with whipped cream, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat teal background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9015,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf015-s9015.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "hf056",
+  "title": "Cat and cauldron",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9056; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf056.png",
+  "chroma": 2,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a black cat stirring a bubbling green cauldron, an orange background, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9056,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf056-s9056.png"
+ },
+ {
+  "id": "hf057",
+  "title": "Feast table",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9057; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf057.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a roast turkey on a table with a pie, a warm red background, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9057,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf057-s9057.png"
+ },
+ {
+  "id": "hf017",
+  "title": "Red apple",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9017; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf017.png",
+  "chroma": 1.7,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big shiny red apple with a green leaf, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat yellow background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9017,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf017-s9017.png"
+ },
+ {
+  "id": "hf018",
+  "title": "Corn cob",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9018; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf018e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big yellow corn cob in its green husk, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat red background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9018,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf018-s9018.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "hf019b",
+  "title": "Sunflower",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9519; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf019b.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big sunflower with a brown centre, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat blue background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9519,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf019b-s9519.png"
+ },
+ {
+  "id": "hf040b",
+  "title": "Lantern",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9540; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf040be.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a glowing paper lantern shaped like a pumpkin, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat navy background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9540,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf040b-s9540.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "hf020b",
+  "title": "Squirrel",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9520; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf020b.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a red squirrel holding a big acorn, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat green background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9520,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf020b-s9520.png"
+ },
+ {
+  "id": "hf021",
+  "title": "Hedgehog",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9021; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf021.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a hedgehog with an apple on its spines, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat purple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9021,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf021-s9021.png"
+ },
+ {
+  "id": "hf022",
+  "title": "Fox in a scarf",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9022; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf022e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a red fox wearing a striped green scarf, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat pale blue background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9022,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf022-s9022.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "hf061",
+  "title": "Owl post",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9061; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf061e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "an owl delivering a little orange envelope, a purple night sky, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9061,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf061-s9061.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "hf063",
+  "title": "Sweater weather",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9063; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf063.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a bear in a big knitted sweater holding a mug, an orange background, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9063,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf063-s9063.png"
+ },
+ {
+  "id": "hf023b",
+  "title": "Cider mug",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9523; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf023be.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a steaming mug of hot cider with a cinnamon stick, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat dark red background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9523,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf023b-s9523.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "hf025b",
+  "title": "Pumpkin cat",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9525; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf025be.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a black cat sitting inside a hollow orange pumpkin, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat purple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9525,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf025b-s9525.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "hf026",
+  "title": "Ghost and pumpkin",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9026; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf026e.png",
+  "chroma": 1.7,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a little white ghost hugging a pumpkin, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat navy background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9026,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf026-s9026.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "hf064",
+  "title": "Monster mash dance",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9064; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf064e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a friendly green monster dancing, a purple background, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9064,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf064-s9064.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "hf068",
+  "title": "Candle glow",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9068; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf068e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a jack-o'-lantern glowing on a step, a dark blue night, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9068,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf068-s9068.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "hf027",
+  "title": "Skeleton dog",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9027; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf027.png",
+  "chroma": 2.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute friendly cartoon dog in a skeleton costume, smiling, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat orange background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9027,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf027-s9027.png"
+ },
+ {
+  "id": "hf028",
+  "title": "Candy bucket",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9028; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf028.png",
+  "chroma": 1.7,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "an orange pumpkin candy bucket full of sweets, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat purple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9028,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf028-s9028.png"
+ },
+ {
+  "id": "hf029",
+  "title": "Mummy cat",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9029; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf029.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cat wrapped in white bandages like a mummy with one eye peeking, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat green background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9029,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf029-s9029.png"
+ },
+ {
+  "id": "hf070",
+  "title": "Ghost ship",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9070; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf070e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a friendly little ghost sailing a toy boat, a dark teal pond, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9070,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf070-s9070.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "hf030b",
+  "title": "Spider pal",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9530; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf030b.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute round purple spider with big eyes on a thread, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat yellow background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9530,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf030b-s9530.png"
+ },
+ {
+  "id": "hf031",
+  "title": "Frankie pup",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9031; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf031.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a friendly green monster puppy with bolts on its neck, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat purple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9031,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf031-s9031.png"
+ },
+ {
+  "id": "hf033",
+  "title": "Pie slice",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9033; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf033e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a slice of apple pie with a lattice top, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat sky blue background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9033,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf033-s9033.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "hf034b",
+  "title": "Turkey hat",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9534; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf034b.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a little turkey wearing a pilgrim hat, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat orange background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9534,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf034b-s9534.png"
+ },
+ {
+  "id": "hf035",
+  "title": "Acorn",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9035; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf035e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a giant acorn with a cap, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat teal background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9035,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf035-s9035.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "hf055",
+  "title": "Ghost party",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9055; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf055e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "three little ghosts dancing around a pumpkin, a dark purple night, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9055,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf055-s9055.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "hf016",
+  "title": "Cornucopia",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9016; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf016e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a horn basket overflowing with fruit and corn, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat dark green background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9016,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf016-s9016.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "hf050",
+  "title": "Bobbing apples",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9050; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf050e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a puppy bobbing for apples in a big wooden tub, an orange background, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9050,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf050-s9050.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "hf058",
+  "title": "Squirrel stash",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9058; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf058.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a squirrel stuffing acorns into a tree hole, an orange autumn background, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9058,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf058-s9058.png"
+ },
+ {
+  "id": "hf060",
+  "title": "Bat cave",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9060; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf060.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "three little bats hanging upside down from a branch, a yellow moon, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9060,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf060-s9060.png"
+ },
+ {
+  "id": "hf004",
+  "title": "Friendly bat",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9004; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf004e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cute purple bat with big wings and a smile, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat yellow full moon background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9004,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf004-s9004.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "hf052",
+  "title": "Scarecrow crow",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9052; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf052.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a scarecrow with a friendly crow on its hat, a golden field, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9052,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf052-s9052.png"
+ },
+ {
+  "id": "hf069",
+  "title": "Sunflower field",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9069; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf069.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a fox sitting among big sunflowers, a blue sky, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9069,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf069-s9069.png"
+ },
+ {
+  "id": "hf037b",
+  "title": "Pumpkin stack",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9537; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf037be.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "three stacked smiling pumpkins, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat purple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9537,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf037b-s9537.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "hf039",
+  "title": "Corn kid",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9039; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf039.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a child in a yellow corn costume, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat red background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9039,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf039-s9039.png"
+ }
+]
