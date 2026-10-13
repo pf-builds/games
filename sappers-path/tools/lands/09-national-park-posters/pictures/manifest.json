@@ -10,24 +10,24 @@
   "licence": "Public domain (Library of Congress: no known restrictions on publication)",
   "url": "https://www.loc.gov/item/2007676133/",
   "file": "fullsrc/np001.png",
-  "chroma": 2,
+  "chroma": 2.4,
   "image": "https://tile.loc.gov/storage-services/service/pnp/ppmsca/13300/13399v.jpg",
   "licenceCheck": "LoC rights_advisory: No known restrictions on publication.",
   "fetched": "2026-10-13",
   "srcCrop": {
    "trim": [
-    0.0253,
-    0.025,
-    0.9747,
-    0.975
-   ],
-   "window": [
     0,
-    0.0766,
+    0,
     1,
     1
    ],
-   "variant": "b",
+   "window": [
+    0.03,
+    0.12,
+    0.6,
+    0.8
+   ],
+   "variant": "x3",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
@@ -73,24 +73,24 @@
   "licence": "Public domain (Library of Congress: no known restrictions on publication)",
   "url": "https://www.loc.gov/item/98518597/",
   "file": "fullsrc/np007.png",
-  "chroma": 1,
+  "chroma": 2.4,
   "image": "https://tile.loc.gov/storage-services/service/pnp/ppmsca/23000/23061v.jpg",
   "licenceCheck": "LoC rights_advisory: No known restrictions on publication.",
   "fetched": "2026-10-13",
   "srcCrop": {
    "trim": [
-    0.024,
-    0.02,
-    0.976,
-    0.98
-   ],
-   "window": [
     0,
     0,
     1,
-    0.9782
+    1
    ],
-   "variant": "t",
+   "window": [
+    0.15,
+    0.22,
+    0.95,
+    0.78
+   ],
+   "variant": "x3",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
@@ -105,24 +105,23 @@
   "licence": "Public domain (Library of Congress: no known restrictions on publication)",
   "url": "https://www.loc.gov/item/98517129/",
   "file": "fullsrc/np016.png",
-  "chroma": 1.2,
   "image": "https://tile.loc.gov/storage-services/service/pnp/cph/3b40000/3b48000/3b48800/3b48810v.jpg",
   "licenceCheck": "LoC rights_advisory: No known restrictions on publication.",
   "fetched": "2026-10-13",
   "srcCrop": {
    "trim": [
-    0.0128,
-    0.015,
-    0.9872,
-    0.985
+    0,
+    0,
+    1,
+    1
    ],
    "window": [
     0.05,
-    0.13,
+    0.05,
     0.95,
-    0.78
+    0.65
    ],
-   "variant": "x1",
+   "variant": "x3",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
@@ -137,55 +136,24 @@
   "licence": "Public domain (Library of Congress: no known restrictions on publication)",
   "url": "https://www.loc.gov/item/95514304/",
   "file": "fullsrc/np050.png",
-  "chroma": 1,
+  "chroma": 1.2,
   "image": "https://tile.loc.gov/storage-services/service/pnp/cph/3g00000/3g03000/3g03300/3g03396v.jpg",
   "licenceCheck": "LoC rights_advisory: No known restrictions on publication.",
   "fetched": "2026-10-13",
   "srcCrop": {
    "trim": [
-    0.0114,
-    0.065,
-    0.9759,
-    0.915
-   ],
-   "window": [
-    0.05,
-    0.13,
-    0.95,
-    0.78
-   ],
-   "variant": "x1",
-   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
- },
- {
-  "id": "np013",
-  "title": "See America. Welcome to Montana",
-  "short": "See America: Peaks",
-  "artist": "Weitzman, Martin",
-  "date": "between 1936 and 1939",
-  "museum": "Library of Congress, Prints & Photographs",
-  "kind": "painting",
-  "licence": "Public domain (Library of Congress: no known restrictions on publication)",
-  "url": "https://www.loc.gov/item/96503136/",
-  "file": "fullsrc/np013.png",
-  "image": "https://tile.loc.gov/storage-services/service/pnp/cph/3g00000/3g04000/3g04200/3g04241v.jpg",
-  "licenceCheck": "LoC rights_advisory: No known restrictions on publication.",
-  "fetched": "2026-10-13",
-  "srcCrop": {
-   "trim": [
-    0.0174,
-    0.02,
-    0.9453,
-    0.98
-   ],
-   "window": [
     0,
-    0.0282,
+    0,
     1,
     1
    ],
-   "variant": "b",
+   "window": [
+    0.2,
+    0.15,
+    0.85,
+    0.62
+   ],
+   "variant": "x3",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
@@ -237,50 +205,18 @@
   "fetched": "2026-10-13",
   "srcCrop": {
    "trim": [
-    0.0438,
-    0.02,
-    0.964,
-    0.94
-   ],
-   "window": [
     0,
-    0.1914,
+    0,
     1,
     1
    ],
-   "variant": "b",
-   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
- },
- {
-  "id": "np019",
-  "title": "Visit the zoo",
-  "short": "Zoo Elephant",
-  "artist": "unrecorded",
-  "date": "1936 or 1937",
-  "museum": "Library of Congress, Prints & Photographs",
-  "kind": "painting",
-  "licence": "Public domain (Library of Congress: no known restrictions on publication)",
-  "url": "https://www.loc.gov/item/94502738/",
-  "file": "fullsrc/np019.png",
-  "chroma": 2.4,
-  "image": "https://tile.loc.gov/storage-services/service/pnp/cph/3k00000/3k00000/3k00000/3k00002v.jpg",
-  "licenceCheck": "LoC rights_advisory: No known restrictions on publication.",
-  "fetched": "2026-10-13",
-  "srcCrop": {
-   "trim": [
-    0.005,
-    0.01,
-    0.995,
-    0.99
-   ],
    "window": [
     0.08,
-    0.2,
-    0.92,
-    0.72
+    0.3,
+    0.6,
+    0.8
    ],
-   "variant": "x2",
+   "variant": "x3",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
@@ -300,18 +236,18 @@
   "fetched": "2026-10-13",
   "srcCrop": {
    "trim": [
-    0.0128,
-    0.01,
-    0.995,
-    0.995
+    0,
+    0,
+    1,
+    1
    ],
    "window": [
+    0.02,
     0.05,
-    0.13,
-    0.95,
-    0.78
+    0.98,
+    0.6
    ],
-   "variant": "x1",
+   "variant": "x3",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
@@ -348,69 +284,6 @@
   }
  },
  {
-  "id": "np067",
-  "title": "Who's who in the zoo Illustrated natural history prepared by the WPA Federal Writers Project : On sale at all book stores, zoos, and museums",
-  "short": "Zoo Monkey",
-  "artist": "unrecorded",
-  "date": "1936 or 1937",
-  "museum": "Library of Congress, Prints & Photographs",
-  "kind": "painting",
-  "licence": "Public domain (Library of Congress: no known restrictions on publication)",
-  "url": "https://www.loc.gov/item/98514973/",
-  "file": "fullsrc/np067.png",
-  "image": "https://tile.loc.gov/storage-services/service/pnp/cph/3b40000/3b48000/3b48800/3b48858r.jpg",
-  "licenceCheck": "LoC rights_advisory: No known restrictions on publication.",
-  "fetched": "2026-10-13",
-  "srcCrop": {
-   "trim": [
-    0.0204,
-    0.015,
-    0.9796,
-    0.99
-   ],
-   "window": [
-    0,
-    0.2007,
-    1,
-    1
-   ],
-   "variant": "b",
-   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
- },
- {
-  "id": "np014",
-  "title": "See America",
-  "short": "See America: Caverns",
-  "artist": "Dux, Alexander",
-  "date": "between 1936 and 1939",
-  "museum": "Library of Congress, Prints & Photographs",
-  "kind": "painting",
-  "licence": "Public domain (Library of Congress: no known restrictions on publication)",
-  "url": "https://www.loc.gov/item/96503125/",
-  "file": "fullsrc/np014.png",
-  "chroma": 2,
-  "image": "https://tile.loc.gov/storage-services/service/pnp/cph/3g00000/3g04000/3g04200/3g04243v.jpg",
-  "licenceCheck": "LoC rights_advisory: No known restrictions on publication.",
-  "fetched": "2026-10-13",
-  "srcCrop": {
-   "trim": [
-    0.0173,
-    0.015,
-    0.9456,
-    0.98
-   ],
-   "window": [
-    0,
-    0.0268,
-    1,
-    1
-   ],
-   "variant": "b",
-   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
- },
- {
   "id": "np043",
   "title": "They like winter in New York State The state that has everything",
   "short": "They Like Winter",
@@ -443,101 +316,6 @@
   }
  },
  {
-  "id": "np020",
-  "title": "Visit the zoo - Philadelphia",
-  "short": "Zoo Hippo",
-  "artist": "unrecorded",
-  "date": "between 1936 and 1941",
-  "museum": "Library of Congress, Prints & Photographs",
-  "kind": "painting",
-  "licence": "Public domain (Library of Congress: no known restrictions on publication)",
-  "url": "https://www.loc.gov/item/94502736/",
-  "file": "fullsrc/np020.png",
-  "chroma": 2,
-  "image": "https://tile.loc.gov/storage-services/service/pnp/cph/3k00000/3k00000/3k00000/3k00001v.jpg",
-  "licenceCheck": "LoC rights_advisory: No known restrictions on publication.",
-  "fetched": "2026-10-13",
-  "srcCrop": {
-   "trim": [
-    0.0112,
-    0.01,
-    0.9826,
-    0.99
-   ],
-   "window": [
-    0.08,
-    0.2,
-    0.92,
-    0.72
-   ],
-   "variant": "x2",
-   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
- },
- {
-  "id": "np046",
-  "title": "Hiking--WPA recreation project, Dist. No. 2",
-  "short": "Hiking",
-  "artist": "unrecorded",
-  "date": "1939",
-  "museum": "Library of Congress, Prints & Photographs",
-  "kind": "painting",
-  "licence": "Public domain (Library of Congress: no known restrictions on publication)",
-  "url": "https://www.loc.gov/item/98508957/",
-  "file": "fullsrc/np046.png",
-  "image": "https://tile.loc.gov/storage-services/service/pnp/ds/08000/08071v.jpg",
-  "licenceCheck": "LoC rights_advisory: No known restrictions on publication.",
-  "fetched": "2026-10-13",
-  "srcCrop": {
-   "trim": [
-    0.0128,
-    0.01,
-    0.9795,
-    0.99
-   ],
-   "window": [
-    0,
-    0.2019,
-    1,
-    1
-   ],
-   "variant": "b",
-   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
- },
- {
-  "id": "np073",
-  "title": "Alaska Northern Pacific, North Coast Limited",
-  "short": "Alaska",
-  "artist": "Laurence, Sydney, 1868-1940",
-  "date": "192-?",
-  "museum": "Library of Congress, Prints & Photographs",
-  "kind": "painting",
-  "licence": "Public domain (Library of Congress: no known restrictions on publication)",
-  "url": "https://www.loc.gov/item/2011645308/",
-  "file": "fullsrc/np073.png",
-  "chroma": 1.7,
-  "image": "https://tile.loc.gov/storage-services/service/pnp/cph/3g10000/3g14000/3g14900/3g14977v.jpg",
-  "licenceCheck": "LoC rights_advisory: No known restrictions on publication. Published without copyright notice.",
-  "fetched": "2026-10-13",
-  "srcCrop": {
-   "trim": [
-    0.049,
-    0.085,
-    0.995,
-    0.9
-   ],
-   "window": [
-    0.08,
-    0.2,
-    0.92,
-    0.72
-   ],
-   "variant": "x2",
-   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
- },
- {
   "id": "np038",
   "title": "Please keep the park clean",
   "short": "Keep the Park Clean",
@@ -548,23 +326,24 @@
   "licence": "Public domain (Library of Congress: no known restrictions on publication)",
   "url": "https://www.loc.gov/item/98517123/",
   "file": "fullsrc/np038.png",
+  "chroma": 1.2,
   "image": "https://tile.loc.gov/storage-services/service/pnp/cph/3f00000/3f05000/3f05400/3f05414v.jpg",
   "licenceCheck": "LoC rights_advisory: No known restrictions on publication.",
   "fetched": "2026-10-13",
   "srcCrop": {
    "trim": [
-    0.0284,
-    0.035,
-    0.9716,
-    0.97
-   ],
-   "window": [
     0,
-    0.1928,
+    0,
     1,
     1
    ],
-   "variant": "b",
+   "window": [
+    0.05,
+    0.2,
+    0.95,
+    0.78
+   ],
+   "variant": "x3",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
@@ -579,86 +358,24 @@
   "licence": "Public domain (Library of Congress: no known restrictions on publication)",
   "url": "https://www.loc.gov/item/98517179/",
   "file": "fullsrc/np018.png",
+  "chroma": 1.2,
   "image": "https://tile.loc.gov/storage-services/service/pnp/cph/3b40000/3b48000/3b48800/3b48809v.jpg",
   "licenceCheck": "LoC rights_advisory: No known restrictions on publication.",
   "fetched": "2026-10-13",
   "srcCrop": {
    "trim": [
-    0.0206,
-    0.015,
-    0.9872,
-    0.98
-   ],
-   "window": [
     0,
-    0.1974,
+    0,
     1,
     1
    ],
-   "variant": "b",
-   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
- },
- {
-  "id": "np051",
-  "title": "Visit Brookside Zoo free",
-  "short": "Brookside Panther",
-  "artist": "unrecorded",
-  "date": "1937",
-  "museum": "Library of Congress, Prints & Photographs",
-  "kind": "painting",
-  "licence": "Public domain (Library of Congress: no known restrictions on publication)",
-  "url": "https://www.loc.gov/item/95514298/",
-  "file": "fullsrc/np051.png",
-  "chroma": 1.7,
-  "image": "https://tile.loc.gov/storage-services/service/pnp/cph/3g00000/3g03000/3g03300/3g03395v.jpg",
-  "licenceCheck": "LoC rights_advisory: No known restrictions on publication.",
-  "fetched": "2026-10-13",
-  "srcCrop": {
-   "trim": [
-    0.07,
-    0.0173,
-    0.94,
-    0.9827
-   ],
    "window": [
     0.05,
-    0.13,
+    0.08,
     0.95,
-    0.78
+    0.75
    ],
-   "variant": "x1",
-   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
- },
- {
-  "id": "np063",
-  "title": "Buckingham Fountain on Chicago's lake front, world's largest and most beautiful illuminated fountain",
-  "short": "Buckingham Fountain",
-  "artist": "Buczak, John",
-  "date": "1939",
-  "museum": "Library of Congress, Prints & Photographs",
-  "kind": "painting",
-  "licence": "Public domain (Library of Congress: no known restrictions on publication)",
-  "url": "https://www.loc.gov/item/97502889/",
-  "file": "fullsrc/np063.png",
-  "image": "https://tile.loc.gov/storage-services/service/pnp/cph/3g00000/3g05000/3g05100/3g05158v.jpg",
-  "licenceCheck": "LoC rights_advisory: No known restrictions on publication.",
-  "fetched": "2026-10-13",
-  "srcCrop": {
-   "trim": [
-    0.0114,
-    0.05,
-    0.995,
-    0.965
-   ],
-   "window": [
-    0,
-    0,
-    1,
-    1
-   ],
-   "variant": "w",
+   "variant": "x3",
    "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
   }
  },
@@ -686,37 +403,6 @@
    "window": [
     0,
     0.0803,
-    1,
-    1
-   ],
-   "variant": "b",
-   "note": "fractions of the downloaded image (trim), then of the trimmed image (window); the file is already cropped"
-  }
- },
- {
-  "id": "np035",
-  "title": "Rainier National Park Northern Pacific North Coast Limited",
-  "short": "Rainier",
-  "artist": "Krollmann, Gustav Wilhelm, 1888-1962",
-  "date": "192-",
-  "museum": "Library of Congress, Prints & Photographs",
-  "kind": "painting",
-  "licence": "Public domain (Library of Congress: no known restrictions on publication)",
-  "url": "https://www.loc.gov/item/2010651155/",
-  "file": "fullsrc/np035.png",
-  "image": "https://tile.loc.gov/storage-services/service/pnp/ppmsca/30600/30688v.jpg",
-  "licenceCheck": "LoC rights_advisory: No known restrictions on publication. Published without copyright notice.",
-  "fetched": "2026-10-13",
-  "srcCrop": {
-   "trim": [
-    0.0381,
-    0.025,
-    0.9685,
-    0.975
-   ],
-   "window": [
-    0,
-    0.0728,
     1,
     1
    ],

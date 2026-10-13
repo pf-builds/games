@@ -1,11 +1,11 @@
 {
  "k": 7,
  "slug": "09-national-park-posters",
- "name": "National Park Posters",
- "lore": "The road heads out into the great outdoors on old 1930s park and travel posters: geysers, mountains, forests, ski trails and zoo animals, each one dug out a block at a time.",
- "count": 21,
+ "name": "Poster Parade",
+ "lore": "The road heads out on a parade of old travel and park posters from the 1920s-40s: geysers, peaks and forests, wild animals and zoo animals, ski trails and snowy days, each one dug out a block at a time.",
+ "count": 13,
  "source": "museum",
- "sourceNote": "Real 1930s WPA and travel posters from the Library of Congress, Prints & Photographs (rights advisory 'No known restrictions on publication', re-read per item); lane C's 23 picks less 2 dropped (21 levels) (game-research/sappers-path-v4/lands/09-national-park-posters/README.md, picks-full.json, workspace aa512c7), each a crop of the poster clear of its lettering (srcCrop on its manifest line, information only), unedited; converted by land.js boardOf with the whole manifest line (chroma). The folder keeps lane C's slug (09); as installed it is Land 7 in the factory's numbering (levels 480-500, era 15) and Zen World 8.",
+ "sourceNote": "Real 1920s-40s WPA and travel posters from the Library of Congress, Prints & Photographs (rights advisory 'No known restrictions on publication', re-read per item); lane C's round 2 after the critic (critic-land-09.md): 13 picks, 8 of them re-cropped clear of all lettering (variant x3: np001 np007 np016 np050 np042 np040 np038 np018) and 10 dropped (np013 np014 np067 np051 np063 np035 np073 np046, and np019 np020 in round 1) (game-research/sappers-path-v4/lands/09-national-park-posters/README.md, picks-full.json, workspace 772784d), each a crop of the poster (srcCrop on its manifest line, information only), unedited; converted by land.js boardOf with the whole manifest line (chroma). The folder keeps lane C's slug (09); as installed it is Land 7 in the factory's numbering (levels 480-492, era 15) and Zen World 8.",
  "features": [
   "linked",
   "mystery",
@@ -18,17 +18,17 @@
   "owl",
   "mushrooms"
  ],
- "eggNote": "Eggs on the reused sheets' painted side-quest spur tips (tools/map-plan-v7.md section 5; the land has no side quests): eggTurns puts each sheet's 2 eggs on its template's 2 quest spots, each repeat its own pair, trimmed to the 3 sheets 21 levels use. Kinds for a park: woodpile (a campfire), raven, grass, owl, mushrooms.",
+ "eggNote": "Eggs on the reused sheets' painted side-quest spur tips (tools/map-plan-v7.md section 5; the land has no side quests): eggTurns puts each sheet's 2 eggs on its template's 2 quest spots, each repeat its own pair, trimmed to the 2 sheets 13 levels use. Kinds for a park: woodpile (a campfire), raven, grass, owl, mushrooms.",
  "shade": true,
  "raw": "/Users/peter/local-ai/outputs/lands/09-national-park-posters",
  "quests": "none",
  "zen": {
   "k": 8,
-  "note": "v7 lane D: National Park Posters plays as Zen World 8 (tools/land.js ... zen writes tools/build-data/levels/zen.json only). Records keep the land factory numbers 480-502 (scratch/state.json seeded {from: 480, sheet0: 64, gal0: 62}: Worlds 1-7 hold 1-50, 201-250, 251-300, 301-350, 351-400, 401-429, 430-479; World 7's sheets end at 63); the page shows them on from World 7's last Zen number (Zen 330-350, main.js zenNum); zen.numbered keys each licence row by its Zen picture number before its level.",
+  "note": "v7 lane D: Poster Parade (renamed from National Park Posters, Peter 2026-10-13; the folder keeps its slug) plays as Zen World 8 (tools/land.js ... zen writes tools/build-data/levels/zen.json only). Records keep the land factory numbers 480-492 (scratch/state.json seeded {from: 480, sheet0: 64, gal0: 62}: Worlds 1-7 hold 1-50, 201-250, 251-300, 301-350, 351-400, 401-429, 430-479; World 7's sheets end at 63); the page shows them on from World 7's last Zen number (Zen 330-342, main.js zenNum); zen.numbered keys each licence row by its Zen picture number before its level.",
   "numbered": true
  },
  "profile": {
-  "note": "Zen World 8, casual (v7 lane D, 2026-10-13): World 6 The Floating World's profile as it ships (tools/lands/07-floating-world/land.json; real art, max-box boards): tags in World 6's short-world shares (0.36 / 0.50 / 0.14) for E8/N10/H3 at 21, ending on a Hard; ? cards, linked squads, gentle moats (2 ways in) only on posters that can carry and deal one; no locks, no archers, no Extreme, no mystery blocks (Peter, 2026-10-08); careful floor 0.5 every tag; World 5's deal setting for max-box boards (squads 1.6x, 400 attempts).",
+  "note": "Zen World 8, casual (v7 lane D, 2026-10-13): World 6 The Floating World's profile as it ships (tools/lands/07-floating-world/land.json; real art, max-box boards): tags in World 6's short-world shares (0.36 / 0.50 / 0.14) for E5/N6/H2 at 13 (round 2; E8/N10/H3 at 21 in round 1), ending on a Hard; ? cards, linked squads, gentle moats (2 ways in) only on posters that can carry and deal one; no locks, no archers, no Extreme, no mystery blocks (Peter, 2026-10-08); careful floor 0.5 every tag; World 5's deal setting for max-box boards (squads 1.6x, 400 attempts).",
   "tags": {
    "shares": {
     "easy": 0.36,
@@ -42,7 +42,7 @@
     3
    ],
    "end": "hard",
-   "note": "A 21-level world (lane C aa512c7 less np019 and np020, dropped): World 6's round 5 shares (0.36 / 0.50 / 0.14) give E8/N10/H3 at 21 (land-plan landTags), ending on a Hard."
+   "note": "A 13-level world (round 2, lane C 772784d): World 6's round 5 shares (0.36 / 0.50 / 0.14) give E5/N6/H2 at 13 (land-plan landTags), ending on a Hard."
   },
   "features": {
    "mystery": {
@@ -144,7 +144,7 @@
      80
     ],
     "attempts": 400,
-    "note": "World 5's and 6's shipped deal setting (tools/land-06-notes.md §2): squads 1.6x the land default and 400 deal attempts a candidate; kept for the posters, real-art max-box boards like World 6's."
+    "note": "World 5's and 6's shipped deal setting (tools/land-06-notes.md \u00a72): squads 1.6x the land default and 400 deal attempts a candidate; kept for the posters, real-art max-box boards like World 6's."
    }
   }
  },
@@ -154,24 +154,16 @@
   "np007",
   "np016",
   "np050",
-  "np013",
   "np030",
   "np042",
-  "np015",
   "np040",
-  "np067",
-  "np014",
+  "np015",
   "np043",
-  "np046",
-  "np073",
   "np038",
   "np018",
-  "np051",
-  "np063",
-  "np003",
-  "np035"
+  "np003"
  ],
- "mainNote": "Lane C's order (picks-full.json landMain, workspace aa512c7) less two boards that fit no slot, dropped as lane C pre-agreed (no spares: the world shrinks rather than pads; orchestrator, 2026-10-13): np019 Zoo Elephant (too easy at any band: 96-100% random-tap wins at the land's and the default squads, and 100% in an Easy slot) and np020 Zoo Hippo (too easy and too short: 100% on most candidates, real pace 91-140 s on every one, with or without its ring). Their manifest lines stay. 21 levels. One reorder (lane D, the brief allows two slots): 488 and 489 trade places, so 488 = np015 Protect Your Parks (Normal, a link) and 489 = np040 Fire Wrecks a Forest (Easy, plain): at 488 (Normal) np040 won 100% of random-tap games on 22 of 24 candidates and the in-band two failed the fast tapper; it baked ok as an Easy in the 23-level plan.",
+ "mainNote": "Round 2 (lane C 772784d, after critic-land-09.md): lane C's landMain, 13 levels in their order: np001, np026, np007, np016, np050, np030, np042, np040, np015, np043, np038, np018, np003. Round 1 (aa512c7) had 21 (np019 and np020 dropped as too easy at any band, then a 488/489 reorder); the 10 dropped posters' manifest lines go with lane C's round 2 manifest (13 lines, whole).",
  "map": {
   "fromLayout": [
    9,
@@ -183,7 +175,7 @@
   ],
   "reuse": true,
   "tint": "sepia(.55) saturate(2.1) hue-rotate(-16deg) contrast(1.35) brightness(1.02)",
-  "note": "v7 lever 1: no new image bytes. tools/map-plan-v7.md section 5: the castle sheets 9 (The Ironhollows: cliffs and a meadow) and 8 (the peaks) reused through map.fromLayout, alternately mirrored, under a high-contrast warm ochre with the pines kept dark, the flat sunlit look of a 1930s WPA poster; 8's waterfall goes pale cream. 21 levels on 3 sheets (8 + 8 + 5)."
+  "note": "v7 lever 1: no new image bytes. tools/map-plan-v7.md section 5: the castle sheets 9 (The Ironhollows: cliffs and a meadow) and 8 (the peaks) reused through map.fromLayout, alternately mirrored, under a high-contrast warm ochre with the pines kept dark, the flat sunlit look of a 1930s WPA poster; 8's waterfall goes pale cream. 13 levels on 2 sheets (8 + 5; round 2)."
  },
  "eggTurns": [
   [
@@ -195,18 +187,6 @@
     ],
     [
      "raven",
-     496,
-     552
-    ]
-   ],
-   [
-    [
-     "grass",
-     286,
-     790
-    ],
-    [
-     "woodpile",
      496,
      552
     ]
@@ -227,12 +207,11 @@
    ]
   ]
  ],
- "credit": "National Park Posters: 1930s WPA and travel posters from the Library of Congress (no known restrictions on publication).",
- "worldCredit": "National Park Posters: 1930s WPA and travel posters from the Library of Congress (no known restrictions on publication).",
+ "credit": "Poster Parade: 1920s-40s WPA and travel posters from the Library of Congress (no known restrictions on publication).",
+ "worldCredit": "Poster Parade: 1920s-40s WPA and travel posters from the Library of Congress (no known restrictions on publication).",
  "moatSkip": {
-  "np067": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
-  "np018": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
   "np015": "bake (2026-10-13): ringed at 490 (Normal) its fast tapper beat patient play on all 24 candidates at the land squads and every dealt one at the default squads; ringless it bakes ok"
  },
- "moatNote": "9 of the 23 can carry a ring (land.js moatCan); lane D deal probe (6 rings x 20 attempts a tag at the profile deal setting, the Worlds 4-7 scratch script): np067 and np018 never deal with one (moatSkip); the rest dealt 2-73% (np020 71-73%, np030 22-43%, np042 18-21%, np038 16-21%, np015 8%, np007 3%, np014 2-3%)."
+ "moatNote": "Round 2 (13 boards): 6 can carry a ring (land.js moatCan: np007 np030 np042 np040 np015 np038); lane D deal probe (6 rings x 20 attempts a tag at the profile deal setting, the Worlds 4-9 scratch script): all 6 deal (np007 80%, np038 52-56%, np040 51-53%, np042 38-47%, np030 14-39%, np015 4%); np015 stays in moatSkip for round 1's bake reason. Round 1 (21 boards): np067 and np018 never dealt; np018's re-crop can't carry a ring now (subject 86%).",
+ "nameNote": "Renamed from National Park Posters to Poster Parade (Peter, 2026-10-13, the critic's m1: the world holds zoo animals, a cattle show and travel posters as well as parks). The folder name and the ids stay."
 }
