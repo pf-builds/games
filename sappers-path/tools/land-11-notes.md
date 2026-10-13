@@ -1,5 +1,78 @@
 # Zen World 9 Puppy Park: v7 lane D
 
+## Round 2 (2026-10-13): renumbered after World 8's round 2, the critic's ring drops and lane C's 3 swaps
+
+One rework with World 8's round 2 (`tools/land-09-notes.md`, Round 2), from the orchestrator's rework brief and two follow-ups
+(the Puppy Park critic `tools/critic-land-11.md`: drop the rings on pp073 and pp080; lane C 2c116aa: 3 swaps). Not pushed; no
+image model run. The sections below are round 1's record; where round 2 changed a number, this section has it.
+
+- **Renumbered, not re-baked.** World 8 (now Poster Parade) ends at 492 on sheet 65, so Puppy Park is records **493-542** (Zen **343-392**), ids
+  unchanged z9-1..z9-50. `scratch/state.json` re-seeded `{from: 493, sheet0: 66, gal0: 62}` with round 1's tags and plan kept;
+  each `scratch/bake/m-N.json` moved to `m-(N-8).json` with its `n` (round 1's files in `scratch/bake-r0/`); `convert --force`,
+  `map assemble check` (PASS). Proof: against round 1's installed records, all 50 out/ records were identical in every field but
+  `id` and `n`, and the map layout identical but for `n` and the sheet numbers. A bake's seed comes from `n`, so a re-bake would
+  have dealt new boards; the renumber keeps every board, tag and feature. One thing does move: the egg coin values (10-15 a
+  coin), drawn from a seed of the first level's number in land.js `map`.
+- **The critic's rings** (critic-land-11: they read as stray lines): pp073 Big bone and pp080 Snowman pal into `moatSkip`;
+  re-baked ringless on the kept plan with `--drop-moat`.
+- **Lane C's swaps** (2c116aa; pp031 and pp051 read as bloody, pp104 near mud): `handoff-full.js` **62 of 62 identical**; the 62
+  lines replaced whole (url filled as before; no line changed, only their order); `main` changed at 514 pp031 Chef pup -> **pp028
+  King corgi**, 531 pp051 Mud face -> **pp027 Cool shades**, 542 pp104 Teddy (the Hard closer) -> **pp066 Lab in a scarf**. The 3
+  old sources removed, `prep` + `convert --force`: **50 of 50 identical to boards-full**. All three new boards are 4 colours.
+- **Re-bake of the 5 slots** (`bake --keep-plan --drop-moat --list 504,514,516,531,542 --shard 2`): 4 ok first time; 514 King
+  corgi (Hard, link + 3 ? cards + ring) fell back (8 of 10 candidates lost the real-pace replay or were out of band at 46-68%),
+  then **ok with `--extra 16 --reuse`**. No reorder, no slot dropped (still 50), still ending on a Hard.
+
+| Level / Zen | Picture | Tag, features | Rate (band) | Pace | Taps | Careful | Ring |
+|---|---|---|---|---|---|---|---|
+| 504 / 354 | pp073 Big bone | H, 3 ? | 14.5% | 225 s | 54 | 1.0 | none (was ringed) |
+| 514 / 364 | pp028 King corgi (4 colours) | H, link, 3 ? | 9.25% | 225 s | 48 | 0.81 | ring (extras) |
+| 516 / 366 | pp080 Snowman pal | N | 42.75% | 229 s | 55 | 1.0 | none (was ringed) |
+| 531 / 381 | pp027 Cool shades (4 colours) | E | 66.75% | 201 s | 50 | 1.0 | |
+| 542 / 392 | pp066 Lab in a scarf (4 colours) | H, link, 3 ? | 13.25% | 203 s | 40 | 1.0 | |
+
+- **Too-easy watch on the swaps:** none. No candidate of the 5 slots won 98% or more; the only such board in the world is still
+  501 (was 509) pp007 Husky eyes, 3 of 8 Easy candidates.
+- **The world now:** E18/N26/H6 ending on a Hard (542 Lab in a scarf). Easy mean 64.6% (59.2-73.8), Normal 38.7% (28.7-47.8),
+  Hard 14.0% (9.2-16.2); careful min 1.0 / 0.625 / 0.81. Pace 159-293 s, **median 217 s**. ? cards 23, links 18, **rings 16**,
+  0 mystery blocks, 0 locks, 0 fallbacks. Hards: 504 Big bone, 514 King corgi, 521 Flower crown, 528 Frenchie bat ears, 535
+  Poodle glasses, 542 Lab in a scarf. Only 5 World 9 records changed beyond their number (504 514 516 531 542).
+- **Map:** sheets 66-72 (3 and 11 as before); the eggs on the same spurs.
+- **test.js / selfTest:** World 9's blocks renumbered (493 + i, rows keyed 343-392 then 493-542); `tools/shots-land-11.mjs`
+  moved to Zen 343 (World 8 at 13).
+- **The end state the next world builds on:** last record **542**, last sheet **72**, gal0 **62** (no side quests); Zen numbers
+  end at **392**, 342 records in zen.json. Seed the next land `{from: 543, sheet0: 73, gal0: 62}`.
+
+### Gates (round 2 tree, Worlds 8 and 9 together)
+
+| Gate | Result |
+|---|---|
+| land.js check | World 8 PASS (median 214 s, 4 rings); World 9 PASS (median 217 s, 16 rings) |
+| test.js | **718 passed, 0 failed** (shipped 14,194,320 B) |
+| freeze --require | PASS after the snapshot (taken again after the rename): levels.json 2,405 checks, gallery.json 372, zen.json 342 / 3,078, shipped 654 records, castles 283, all 0 differences |
+| regrade | full 0 of 2,405; `--gallery` 0 of 372; `--zen` 0 of 3,078; `--shipped` 0 of 2,405; `--gallery --shipped` 0 of 372; `--zen --shipped` 0 of 3,078 (run before the rename; the rename changed only World 8's world entry, every record identical to the ones regraded, zen-8/zen-9 packs untouched by it) |
+| pack.js --check | the shipped files match the source (zen.pk.json, zen-8, zen-9 rewritten; zen-1..7 byte-identical) |
+| selfTest (selftest-lands.mjs) | **896/0 at 375x812@3, 898/0 at 1280x720, 896/0 at 360x640 (--small)**, 0 console |
+| space-v7/check.mjs | **47 ok, 0 FAIL** (OLD = e072a9d via `OLD_DIR`): Zen card "0 of 404 pictures", 392 nodes from the index, sweeps z8-1 and z9-1 |
+| sweep-map.mjs | 63 sizes, 126 checks, 0 fails, 0 console |
+| harness.mjs (last) | **all passed**, selfTest 896/0 or 898/0 in every viewport and the hidden tab, 0 console messages (two earlier runs timed out on a 15 s page-load wait while another builder's 16-thread bake held the load average at 11-16; passed on the next run at load 2) |
+
+Cache tag **`?v=77`**.
+
+**Byte-identity (proven).** zen.json: Worlds 1-7 entries and their 279 records identical to b787301's, every other key identical;
+World 8 replaced (21 -> 13 records), World 9 renumbered (5 records re-baked). levels/: zen-1..zen-7.pk.json and every other
+packed file byte-identical; zen.pk.json, zen-8 and zen-9 rewritten. LICENSES.md byte-identical up to World 8's heading
+(107,297 B). Frozen set (`--snapshot`): Worlds 1-7 and their 279 records identical, the whole equal to build-data's;
+levels.json, gallery.json, castles and frozen.json byte-identical.
+
+**Payload.** Shipped **14,194,320 B** (79 files; -17,357 B on b787301's 14,211,677, +117,442 on e072a9d's live 14,076,878; 4.81
+MB under 19 MB). `zen-8.pk.json` 17,833 B (31,349 in round 1), `zen-9.pk.json` 64,009 B, `zen.pk.json` 47,444 B. Bytes before the
+first tap 1,909,674 B (+19,186 on e072a9d). check.mjs's "to the first Campaign level" swings between runs (5,390,779 B on one,
+4,394,339 B on the last): audio still loading when it measures; nothing in the Campaign changed.
+
+Shots re-taken: `tools/shots-land-11/` (join 8 -> 9 at 342/343, mid, top, 1280, opener, win) and `contact-installed.jpg`
+(`--world 9 --zen-from 343`).
+
 ## Install (2026-10-13)
 
 Brief: the orchestrator's lane D brief of 2026-10-13 (lane C's Puppy Park as Zen World 9, in two phases: phase 1 in the land

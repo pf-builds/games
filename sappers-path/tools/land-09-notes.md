@@ -1,4 +1,67 @@
-# Zen World 8 National Park Posters: v7 lane D
+# Zen World 8 Poster Parade (was National Park Posters): v7 lane D
+
+## Round 2 (2026-10-13): the critic's fixes (`tools/critic-land-09.md`, "ship after fixes"; lane C 772784d)
+
+Built by the lane D builder that installed World 9, in one rework with World 9's renumbering (`tools/land-11-notes.md`, Round 2).
+Not pushed; no image model run. The sections below "Install" are round 1's record; where round 2 changed a number, this section
+has it.
+
+- **Inputs.** Lane C re-cropped 8 posters clear of all lettering (variant x3: np001 np007 np016 np050 np042 np040 np038 np018)
+  and dropped 8 more (np013 np014 np067 np051 np063 np035 np073 np046; np019 and np020 went in round 1). `handoff-full.js`:
+  **13 of 13 identical**. `pictures/manifest.json` = lane C's 13 lines **whole** (the 10 dropped posters' lines go with it);
+  `main` = lane C's landMain: np001, np026, np007, np016, np050, np030, np042, np040, np015, np043, np038, np018, np003. The 8
+  dropped sources removed from `src/`, the 8 re-cropped made again (`prep`, LAND_PYTHON = lane C's venv), `convert --force`:
+  **13 of 13 identical to boards-full** (np026's kept round 1 source differs from the hand-off's in bytes, not in board).
+- **Sizes now:** np001 29x46 (the narrowest board in the game's Zen worlds), np042 32x46, np003 38x46, np018 40x46, np016
+  42x44, np038 42x42, np026 np015 42x40, np050 42x39, np007 np040 42x38, np030 np043 42x34. Colours 4-6 (np015, np018 at 4).
+- **Renamed "Poster Parade"** (Peter's decision, 2026-10-13, the critic's m1: the world holds zoo animals, a cattle show and
+  travel posters as well as parks). World name and banner "World 8 · Poster Parade"; the LICENSES.md heading "Zen World 8:
+  Poster Parade (Land 7, levels 480-492 ...)"; test.js and selfTest strings name it. The folder (`09-national-park-posters`),
+  the ids (z8-*, np*) and the land's slug stay. land.json carries a `nameNote`.
+- **Words.** Credit (zen.json world credit and the licence heading) exactly "Poster Parade: 1920s-40s WPA and travel posters
+  from the Library of Congress (no known restrictions on publication)."; lore "The road heads out on a parade of old travel and
+  park posters from the 1920s-40s: geysers, peaks and forests, wild animals and zoo animals, ski trails and snowy days, each one
+  dug out a block at a time." (test.js word check passes). After the rename the World 8 world entry is the only change in
+  zen.json (its records identical to the ones regraded); the LICENSES.md World 8 section re-written, then World 9's re-appended
+  after it so the worlds stay in order.
+- **Moat probe** (13 boards): 6 can carry a ring (np007 np030 np042 np040 np015 np038) and all 6 deal (np007 80%, np038 52-56%,
+  np040 51-53%, np042 38-47%, np030 14-39%, np015 4%). `moatSkip`: np015 kept (round 1's fast-tapper reason); np067 gone with
+  its board; np018 out (its re-crop can't carry a ring: subject 86%).
+- **Re-plan and fresh bake** (round 1's scratch moved to `scratch/round1/`; state re-seeded `{from: 480, sheet0: 64, gal0:
+  62}`): World 6's short-world shares give **E5/N6/H2** at 13, ending on a Hard. `bake --shard 2`: **13 of 13 ok first time**, no
+  extras, no reorder, no fallback, no board dropped.
+
+| Level / Zen | Poster | Tag, features | Rate (band) | Pace | Taps | Careful | Ring |
+|---|---|---|---|---|---|---|---|
+| 480 / 330 | np001 Old Faithful (29x46) | N | 37.0% | 155 s | 37 | 1.0 | |
+| 481 / 331 | np026 Hereford Cow | E | 64.0% | 231 s | 48 | 1.0 | |
+| 482 / 332 | np007 Bighorn Ram | N, link | 44.75% | 202 s | 52 | 1.0 | ring |
+| 483 / 333 | np016 Spare Our Trees | E, 2 ? | 71.25% | 197 s | 53 | 0.94 | |
+| 484 / 334 | np050 Zoo Panda | N, 2 ? | 47.0% | 214 s | 54 | 1.0 | |
+| 485 / 335 | np030 Leaping Deer | H, 3 ? | 10.0% | 225 s | 44 | 1.0 | ring |
+| 486 / 336 | np042 Skiing in the East | E, link | 65.5% | 209 s | 50 | 1.0 | |
+| 487 / 337 | np040 Fire Wrecks a Forest | N, 2 ? | 35.0% | 213 s | 55 | 1.0 | ring |
+| 488 / 338 | np015 Protect Your Parks | E | 76.0% | 227 s | 49 | 1.0 | |
+| 489 / 339 | np043 They Like Winter | N, 2 ? | 31.75% | 156 s | 42 | 1.0 | |
+| 490 / 340 | np038 Keep the Park Clean | E | 72.5% | 226 s | 49 | 1.0 | ring |
+| 491 / 341 | np018 Let Them Grow | N, link | 41.0% | 216 s | 46 | 1.0 | |
+| 492 / 342 | np003 Zion | H, link, 3 ? | 16.25% | 227 s | 49 | 1.0 | |
+
+- **The world now:** 13 levels 480-492, Zen 330-342, ids z8-1..z8-13. Easy mean 69.8% (64.0-76.0), Normal 39.4% (31.8-47.0),
+  Hard 13.1% (10.0-16.3); careful min 0.94 / 1.0 / 1.0. Pace 155-231 s, **median 214 s**. ? cards 6, links 4, **rings 4**
+  (482 485 487 490), 0 mystery blocks, 0 locks, 0 fallbacks. `map assemble check`: PASS every gate.
+- **Too-easy watch.** 480 Old Faithful (the narrow 29x46 opener): 6 of its 8 Normal candidates won 98-100% of random-tap games;
+  the pick is 37.0% and paces 155 s, near the 150 s floor. 482 Bighorn Ram: 5 of 8 at 98-100%, the pick 44.75%. 489 They Like
+  Winter (42x34) paces 156 s. All legal. In the contact sheet, Old Faithful's bottom two rows are a dark navy band with no letter
+  shapes left (lane C's crop stops above the text).
+- **Map:** 2 sheets now (9 then 8: 8 + 5 levels), sheets 64-65 in the factory's numbering; eggTurns trimmed to one repeat each.
+  So World 9 starts at sheet 66.
+- **test.js:** the World 8 block now wants 13 records, 2 sheets, 13 licence rows keyed 330-342 / 480-492, the 1920s-40s credit,
+  the 10 dropped posters out of main; its "mostly Easy and Normal" share check reads `>= 0.84` (11 of 13; sharesOf rounds to
+  0.38 + 0.46). selfTest's World 8 block: 13 levels, 2 sheets, the new credit. check.mjs: "0 of 404 pictures".
+- Contact sheet `tools/shots-land-09/contact-installed.jpg` (13, `--world 8 --zen-from 330`) and the opener `play-opener-375.png`
+  re-taken (the whole `tools/shots-land-09.mjs` set re-run, its middle and top moved for 13 levels).
+- Gates and sizes: as `tools/land-11-notes.md` Round 2 (one build for both worlds).
 
 ## Install (2026-10-13, unattended run; Peter approved the world order, reviews before any push)
 
