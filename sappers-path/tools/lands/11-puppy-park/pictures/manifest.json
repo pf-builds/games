@@ -386,22 +386,22 @@
   "raw": "raw/pp019-s8019.png"
  },
  {
-  "id": "pp031",
-  "title": "Chef pup",
+  "id": "pp028",
+  "title": "King corgi",
   "artist": "Click it! Studios",
   "date": "2026-10-13",
   "kind": "painting",
   "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
-  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8031; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
-  "file": "fullsrc/pp031.png",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8028; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp028.png",
   "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
-  "prompt": "a beagle wearing a white chef hat, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat red background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
-  "seed": 8031,
+  "prompt": "an orange and white corgi wearing a little gold crown, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat royal purple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8028,
   "size": [
    1024,
    1024
   ],
-  "raw": "raw/pp031-s8031.png"
+  "raw": "raw/pp028-s8028.png"
  },
  {
   "id": "pp033",
@@ -696,22 +696,22 @@
   "raw": "raw/pp088-s8088.png"
  },
  {
-  "id": "pp051",
-  "title": "Mud face",
+  "id": "pp027",
+  "title": "Cool shades",
   "artist": "Click it! Studios",
   "date": "2026-10-13",
   "kind": "painting",
   "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
-  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8051; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
-  "file": "fullsrc/pp051.png",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8027; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp027.png",
   "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
-  "prompt": "a white westie with a muddy brown face, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat green background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
-  "seed": 8051,
+  "prompt": "a golden retriever puppy wearing black sunglasses, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat pink background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8027,
   "size": [
    1024,
    1024
   ],
-  "raw": "raw/pp051-s8051.png"
+  "raw": "raw/pp027-s8027.png"
  },
  {
   "id": "pp052",
@@ -896,22 +896,23 @@
   "raw": "raw/pp065-s8065.png"
  },
  {
-  "id": "pp104",
-  "title": "Teddy",
+  "id": "pp066",
+  "title": "Lab in a scarf",
   "artist": "Click it! Studios",
   "date": "2026-10-13",
   "kind": "painting",
   "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
-  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8104; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
-  "file": "fullsrc/pp104.png",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8066; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp066.png",
+  "chroma": 2,
   "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
-  "prompt": "a puppy hugging a big brown teddy bear, a pale blue background, cute storybook style, flat vector illustration, a simple scene, the dog big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
-  "seed": 8104,
+  "prompt": "a yellow labrador wearing a green scarf, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat navy blue background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8066,
   "size": [
    1024,
    1024
   ],
-  "raw": "raw/pp104-s8104.png"
+  "raw": "raw/pp066-s8066.png"
  },
  {
   "id": "pp047",
@@ -986,24 +987,6 @@
    1024
   ],
   "raw": "raw/pp024-s8024.png"
- },
- {
-  "id": "pp028",
-  "title": "King corgi",
-  "artist": "Click it! Studios",
-  "date": "2026-10-13",
-  "kind": "painting",
-  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
-  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8028; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
-  "file": "fullsrc/pp028.png",
-  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
-  "prompt": "an orange and white corgi wearing a little gold crown, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat royal purple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
-  "seed": 8028,
-  "size": [
-   1024,
-   1024
-  ],
-  "raw": "raw/pp028-s8028.png"
  },
  {
   "id": "pp029",
@@ -1098,40 +1081,57 @@
   "raw": "raw/pp062-s8062.png"
  },
  {
-  "id": "pp066",
-  "title": "Lab in a scarf",
+  "id": "pp031",
+  "title": "Chef pup",
   "artist": "Click it! Studios",
   "date": "2026-10-13",
   "kind": "painting",
   "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
-  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8066; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
-  "file": "fullsrc/pp066.png",
-  "chroma": 2,
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8031; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp031.png",
   "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
-  "prompt": "a yellow labrador wearing a green scarf, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat navy blue background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
-  "seed": 8066,
+  "prompt": "a beagle wearing a white chef hat, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat red background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8031,
   "size": [
    1024,
    1024
   ],
-  "raw": "raw/pp066-s8066.png"
+  "raw": "raw/pp031-s8031.png"
  },
  {
-  "id": "pp027",
-  "title": "Cool shades",
+  "id": "pp051",
+  "title": "Mud face",
   "artist": "Click it! Studios",
   "date": "2026-10-13",
   "kind": "painting",
   "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
-  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8027; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
-  "file": "fullsrc/pp027.png",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8051; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp051.png",
   "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
-  "prompt": "a golden retriever puppy wearing black sunglasses, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat pink background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
-  "seed": 8027,
+  "prompt": "a white westie with a muddy brown face, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat green background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8051,
   "size": [
    1024,
    1024
   ],
-  "raw": "raw/pp027-s8027.png"
+  "raw": "raw/pp051-s8051.png"
+ },
+ {
+  "id": "pp104",
+  "title": "Teddy",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8104; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp104.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a puppy hugging a big brown teddy bear, a pale blue background, cute storybook style, flat vector illustration, a simple scene, the dog big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8104,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp104-s8104.png"
  }
 ]

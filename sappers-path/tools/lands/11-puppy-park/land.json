@@ -5,7 +5,7 @@
  "lore": "The road wanders into a sunny park full of happy dogs: goofy grins, floppy ears, party hats and muddy noses, with a bath, a car ride and a stolen picnic on the way.",
  "count": 50,
  "source": "ai",
- "sourceNote": "FLUX.1 [schnell] by Black Forest Labs (Apache-2.0), 4-bit GGUF, run on the studio's Mac; lane C's Puppy Park, 50 picks (36 close portraits on plain backgrounds, 14 simple scenes, Peter's 10/13 framing rule) and 12 spares (game-research/sappers-path-v4/lands/11-puppy-park/README.md, picks-full.json, workspace fb28f37), unedited. Kind painting, shade on, converted by land.js boardOf with the whole manifest line (chroma). The 62 manifest lines are lane C's, whole; lane D filled only the empty url with the licence row's source in Dino Valley's words. The folder keeps lane C's slug (11); as installed it is Land 8 in the factory's numbering (levels 501-550, era 16) and Zen World 9.",
+ "sourceNote": "FLUX.1 [schnell] by Black Forest Labs (Apache-2.0), 4-bit GGUF, run on the studio's Mac; lane C's Puppy Park, 50 picks (36 close portraits on plain backgrounds, 14 simple scenes, Peter's 10/13 framing rule) and 12 spares (game-research/sappers-path-v4/lands/11-puppy-park/README.md, picks-full.json, workspace fb28f37; the critic round's 3 swaps 2c116aa), unedited. Kind painting, shade on, converted by land.js boardOf with the whole manifest line (chroma). The 62 manifest lines are lane C's, whole; lane D filled only the empty url with the licence row's source in Dino Valley's words. The folder keeps lane C's slug (11); as installed it is Land 8 in the factory's numbering (levels 493-542, era 16; 501-550 in round 1) and Zen World 9.",
  "features": [
   "linked",
   "mystery",
@@ -25,7 +25,7 @@
  "quests": "none",
  "zen": {
   "k": 9,
-  "note": "v7 lane D: Puppy Park plays as Zen World 9 (tools/land.js ... zen writes tools/build-data/levels/zen.json only). Records keep the land factory numbers 501-550 (scratch/state.json seeded {from: 501, sheet0: 67, gal0: 62}: Worlds 1-8 hold 1-50, 201-250, 251-300, 301-350, 351-400, 401-429, 430-479, 480-500; World 8's 3 sheets end at 66); the page shows them on from World 8's last Zen number (Zen 351-400, main.js zenNum); zen.numbered keys each licence row by its Zen picture number before its level.",
+  "note": "v7 lane D: Puppy Park plays as Zen World 9 (tools/land.js ... zen writes tools/build-data/levels/zen.json only). Records keep the land factory numbers 493-542 (round 2: scratch/state.json re-seeded {from: 493, sheet0: 66, gal0: 62} after World 8's round 2: Worlds 1-8 hold 1-50, 201-250, 251-300, 301-350, 351-400, 401-429, 430-479, 480-492; World 8's 2 sheets end at 65; round 1 was 501-550); the page shows them on from World 8's last Zen number (Zen 343-392, main.js zenNum); zen.numbered keys each licence row by its Zen picture number before its level.",
   "numbered": true
  },
  "profile": {
@@ -165,7 +165,7 @@
   "pp018",
   "pp078",
   "pp019",
-  "pp031",
+  "pp028",
   "pp033",
   "pp080",
   "pp036",
@@ -182,7 +182,7 @@
   "pp017",
   "pp048",
   "pp088",
-  "pp051",
+  "pp027",
   "pp052",
   "pp091",
   "pp054",
@@ -193,9 +193,9 @@
   "pp099",
   "pp064",
   "pp065",
-  "pp104"
+  "pp066"
  ],
- "mainNote": "Lane C's order (picks-full.json landMain, workspace fb28f37).",
+ "mainNote": "Lane C's order (picks-full.json landMain, workspace fb28f37); critic round (critic-land-11.md, lane C 2c116aa): 514 pp031 Chef pup -> pp028 King corgi, 531 pp051 Mud face -> pp027 Cool shades (both read as bloody), 542 pp104 Teddy (the Hard closer, near mud) -> pp066 Lab in a scarf; re-baked on the kept plan.",
  "map": {
   "fromLayout": [
    3,
@@ -303,7 +303,9 @@
  "worldCredit": "Puppy Park: original pictures generated with FLUX.1 [schnell] (Apache 2.0) by Click it! Studios.",
  "moatSkip": {
   "pp070": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
-  "pp065": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)"
+  "pp065": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
+  "pp073": "critic-land-11 (2026-10-13): the ring reads as stray lines round the picture; baked ringless (bake --keep-plan --drop-moat)",
+  "pp080": "critic-land-11 (2026-10-13): the ring reads as stray lines round the picture; baked ringless (bake --keep-plan --drop-moat)"
  },
  "moatNote": "40 boards can carry a ring (land.js moatCan; lane C counts 40 too); lane D deal probe (6 rings x 20 attempts a tag at the profile deal setting, the Worlds 4-8 scratch script): pp070 Dog house and pp065 Boxer kiss never deal with one (moatSkip); the rest dealt 1-100% (pp010 pp009 pp019 pp037 pp052 98-100%, pp018 pp091 pp014 pp003 pp040 pp045 pp051 88-99%, pp004 pp007 pp048 77-93%, pp001 pp002 pp031 pp042 pp080 pp088 pp006 pp013 pp017 pp036 pp038 pp099 pp104 38-78%, pp054 pp011 pp073 pp078 pp059 pp084 pp064 19-48%, pp075 8-11%, pp005 3-5%, pp085 1-2%)."
 }
