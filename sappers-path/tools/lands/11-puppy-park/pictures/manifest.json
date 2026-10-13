@@ -1,0 +1,1137 @@
+[
+ {
+  "id": "pp001",
+  "title": "Golden smile",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8001; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp001.png",
+  "chroma": 1.7,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a happy golden retriever with its tongue out, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat deep blue background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8001,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp001-s8001.png"
+ },
+ {
+  "id": "pp002",
+  "title": "Corgi grin",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8002; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp002.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a smiling orange and white corgi with big ears, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat teal background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8002,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp002-s8002.png"
+ },
+ {
+  "id": "pp003",
+  "title": "Pug in a party hat",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8003; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp003.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a fawn pug with a black face wearing a pink party hat, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat mint green background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8003,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp003-s8003.png"
+ },
+ {
+  "id": "pp069",
+  "title": "Bath time",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8069; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp069.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a soapy beagle in a big blue bath tub with bubbles, a pale pink bathroom, cute storybook style, flat vector illustration, a simple scene, the dog big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8069,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp069-s8069.png"
+ },
+ {
+  "id": "pp004",
+  "title": "Dachshund bandana",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8004; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp004.png",
+  "chroma": 1,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a brown dachshund wearing a yellow bandana, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat purple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8004,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp004-s8004.png"
+ },
+ {
+  "id": "pp005",
+  "title": "Beagle ears",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8005; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp005.png",
+  "chroma": 2.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a tri-colour beagle puppy with long floppy ears, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat orange background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8005,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp005-s8005.png"
+ },
+ {
+  "id": "pp006",
+  "title": "Spotty",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8006; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp006.png",
+  "chroma": 2,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a white dalmatian puppy with black spots and a green collar, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat deep purple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8006,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp006-s8006.png"
+ },
+ {
+  "id": "pp070",
+  "title": "Dog house",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8070; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp070.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a brown dachshund peeking out of a big yellow dog house, a green garden, cute storybook style, flat vector illustration, a simple scene, the dog big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8070,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp070-s8070.png"
+ },
+ {
+  "id": "pp007",
+  "title": "Husky eyes",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8007; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp007.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a grey and white husky with bright blue eyes, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat warm orange background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8007,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp007-s8007.png"
+ },
+ {
+  "id": "pp009",
+  "title": "Bulldog frown",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8009; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp009.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a grumpy brown and white bulldog with droopy jowls, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat yellow background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8009,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp009-s8009.png"
+ },
+ {
+  "id": "pp010",
+  "title": "Shiba smile",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8010; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp010.png",
+  "chroma": 1,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a smiling orange and cream shiba inu, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat sky blue background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8010,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp010-s8010.png"
+ },
+ {
+  "id": "pp073",
+  "title": "Big bone",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8073; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp073.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a happy bulldog chewing a huge white bone, a green yard, cute storybook style, flat vector illustration, a simple scene, the dog big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8073,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp073-s8073.png"
+ },
+ {
+  "id": "pp011",
+  "title": "Chihuahua ears",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8011; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp011.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a tiny tan chihuahua with huge ears, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat pink background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8011,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp011-s8011.png"
+ },
+ {
+  "id": "pp013",
+  "title": "Border collie",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8013; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp013.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a black and white border collie with one ear up, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat grass green background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8013,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp013-s8013.png"
+ },
+ {
+  "id": "pp014",
+  "title": "Saint Bernard",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8014; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp014.png",
+  "chroma": 1,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big brown and white saint bernard with a little barrel on its collar, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat pale blue background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8014,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp014-s8014.png"
+ },
+ {
+  "id": "pp075",
+  "title": "Skateboard",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8075; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp075.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a bulldog riding a big green skateboard, a grey street, cute storybook style, flat vector illustration, a simple scene, the dog big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8075,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp075-s8075.png"
+ },
+ {
+  "id": "pp015",
+  "title": "Schnauzer beard",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8015; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp015.png",
+  "chroma": 2.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a grey schnauzer with big bushy eyebrows and beard, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat coral orange background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8015,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp015-s8015.png"
+ },
+ {
+  "id": "pp016",
+  "title": "Basset droop",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8016; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp016.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a sad-eyed basset hound with very long ears, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat lime green background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8016,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp016-s8016.png"
+ },
+ {
+  "id": "pp018",
+  "title": "Boxer",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8018; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp018.png",
+  "chroma": 1.2,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a brown boxer dog with a white chest and a happy face, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat lavender background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8018,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp018-s8018.png"
+ },
+ {
+  "id": "pp078",
+  "title": "Car ride",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8078; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp078.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a golden retriever with its head out of a red car window, ears flying, a blue sky, cute storybook style, flat vector illustration, a simple scene, the dog big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8078,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp078-s8078.png"
+ },
+ {
+  "id": "pp019",
+  "title": "Shaggy sheepdog",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8019; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp019.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a fluffy grey and white sheepdog with fur over its eyes, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat red background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8019,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp019-s8019.png"
+ },
+ {
+  "id": "pp031",
+  "title": "Chef pup",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8031; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp031.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a beagle wearing a white chef hat, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat red background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8031,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp031-s8031.png"
+ },
+ {
+  "id": "pp033",
+  "title": "Pirate pup",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8033; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp033.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a black and white border collie wearing a pirate hat and eye patch, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat sky blue background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8033,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp033-s8033.png"
+ },
+ {
+  "id": "pp080",
+  "title": "Snowman pal",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8080; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp080.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a husky puppy next to a big snowman, a blue winter sky, cute storybook style, flat vector illustration, a simple scene, the dog big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8080,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp080-s8080.png"
+ },
+ {
+  "id": "pp036",
+  "title": "Big yawn",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8036; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp036.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a husky puppy yawning wide, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat pink background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8036,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp036-s8036.png"
+ },
+ {
+  "id": "pp037",
+  "title": "Head tilt",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8037; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp037.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a curious corgi puppy tilting its head, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat green background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8037,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp037-s8037.png"
+ },
+ {
+  "id": "pp038",
+  "title": "Surprised pug",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8038; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp038.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a pug with big round surprised eyes, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat teal background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8038,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp038-s8038.png"
+ },
+ {
+  "id": "pp084",
+  "title": "Sunflower field",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8084; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp084.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a corgi sitting among big sunflowers, a blue sky, cute storybook style, flat vector illustration, a simple scene, the dog big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8084,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp084-s8084.png"
+ },
+ {
+  "id": "pp040",
+  "title": "Flower crown",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8040; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp040.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cream poodle puppy wearing a crown of pink flowers, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat blue background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8040,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp040-s8040.png"
+ },
+ {
+  "id": "pp041",
+  "title": "Bow tie",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8041; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp041.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a black french bulldog wearing a red bow tie, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat yellow background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8041,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp041-s8041.png"
+ },
+ {
+  "id": "pp042",
+  "title": "Superhero",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8042; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp042.png",
+  "chroma": 1.7,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a boxer puppy wearing a red superhero cape and mask, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat sky blue background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8042,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp042-s8042.png"
+ },
+ {
+  "id": "pp085",
+  "title": "Picnic thief",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8085; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp085.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a beagle stealing a big sandwich off a red picnic blanket, green grass, cute storybook style, flat vector illustration, a simple scene, the dog big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8085,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp085-s8085.png"
+ },
+ {
+  "id": "pp044",
+  "title": "Wizard pup",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8044; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp044.png",
+  "chroma": 1.2,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a grey schnauzer wearing a blue wizard hat with yellow stars, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat orange background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8044,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp044-s8044.png"
+ },
+ {
+  "id": "pp045",
+  "title": "Cowboy",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8045; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp045.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a brown and white bulldog wearing a cowboy hat and red bandana, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat sky blue background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8045,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp045-s8045.png"
+ },
+ {
+  "id": "pp086",
+  "title": "Umbrella",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8086; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp086.png",
+  "chroma": 2.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a pug sitting under a big yellow umbrella in the rain, a grey rainy street, cute storybook style, flat vector illustration, a simple scene, the dog big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8086,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp086-s8086.png"
+ },
+ {
+  "id": "pp017",
+  "title": "Frenchie bat ears",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8017; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp017.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cream french bulldog with big bat ears, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat deep teal background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8017,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp017-s8017.png"
+ },
+ {
+  "id": "pp048",
+  "title": "Bubble bath",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8048; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp048.png",
+  "chroma": 1.7,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a wet fluffy pomeranian with bubbles on its head, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat pink background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8048,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp048-s8048.png"
+ },
+ {
+  "id": "pp088",
+  "title": "Agility jump",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8088; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp088.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a border collie jumping over a red and white bar, a green field, cute storybook style, flat vector illustration, a simple scene, the dog big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8088,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp088-s8088.png"
+ },
+ {
+  "id": "pp051",
+  "title": "Mud face",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8051; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp051.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a white westie with a muddy brown face, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat green background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8051,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp051-s8051.png"
+ },
+ {
+  "id": "pp052",
+  "title": "Snow nose",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8052; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp052.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a husky with snow on its nose, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat purple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8052,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp052-s8052.png"
+ },
+ {
+  "id": "pp091",
+  "title": "Basket of pups",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8091; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp091.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "three puppies in a big wicker basket, a pale blue background, cute storybook style, flat vector illustration, a simple scene, the dog big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8091,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp091-s8091.png"
+ },
+ {
+  "id": "pp054",
+  "title": "Dog with a ball",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8054; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp054.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a golden retriever with a red ball in its mouth, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat blue background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8054,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp054-s8054.png"
+ },
+ {
+  "id": "pp058",
+  "title": "Poodle glasses",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8058; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp058.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a black poodle wearing round glasses, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat yellow background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8058,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp058-s8058.png"
+ },
+ {
+  "id": "pp097",
+  "title": "Hammock",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8097; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp097.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a bulldog relaxing in a striped hammock, two palm trees and a blue sky, cute storybook style, flat vector illustration, a simple scene, the dog big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8097,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp097-s8097.png"
+ },
+ {
+  "id": "pp059",
+  "title": "Bernese pup",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8059; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp059.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a fluffy bernese mountain dog puppy, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat orange background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8059,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp059-s8059.png"
+ },
+ {
+  "id": "pp061",
+  "title": "Greyhound sweater",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8061; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp061.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a greyhound wearing a striped sweater, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat teal background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8061,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp061-s8061.png"
+ },
+ {
+  "id": "pp099",
+  "title": "Ice cream",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8099; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp099.png",
+  "chroma": 2,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a dalmatian licking a big ice cream cone, a pink background, cute storybook style, flat vector illustration, a simple scene, the dog big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8099,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp099-s8099.png"
+ },
+ {
+  "id": "pp064",
+  "title": "Puppy wink",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8064; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp064.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a shiba inu winking, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat pink background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8064,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp064-s8064.png"
+ },
+ {
+  "id": "pp065",
+  "title": "Boxer kiss",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8065; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp065.png",
+  "chroma": 1.7,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a boxer giving a big lick, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat yellow background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8065,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp065-s8065.png"
+ },
+ {
+  "id": "pp104",
+  "title": "Teddy",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8104; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp104.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a puppy hugging a big brown teddy bear, a pale blue background, cute storybook style, flat vector illustration, a simple scene, the dog big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8104,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp104-s8104.png"
+ },
+ {
+  "id": "pp047",
+  "title": "Headphones",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8047; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp047.png",
+  "chroma": 2.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a dalmatian wearing big yellow headphones, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat purple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8047,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp047-s8047.png"
+ },
+ {
+  "id": "pp020",
+  "title": "Pom puff",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8020; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp020.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a fluffy orange pomeranian like a ball of fur, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat purple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8020,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp020-s8020.png"
+ },
+ {
+  "id": "pp023",
+  "title": "Bernese",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8023; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp023.png",
+  "chroma": 1.2,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a black, white and brown bernese mountain dog, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat sky blue background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8023,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp023-s8023.png"
+ },
+ {
+  "id": "pp024",
+  "title": "Akita",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8024; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp024.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a red and white akita with a curled tail, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat teal background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8024,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp024-s8024.png"
+ },
+ {
+  "id": "pp028",
+  "title": "King corgi",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8028; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp028.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "an orange and white corgi wearing a little gold crown, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat royal purple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8028,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp028-s8028.png"
+ },
+ {
+  "id": "pp029",
+  "title": "Birthday pug",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8029; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp029.png",
+  "chroma": 1.2,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a fawn pug with a party hat blowing a party horn, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat yellow background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8029,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp029-s8029.png"
+ },
+ {
+  "id": "pp035",
+  "title": "Tongue out",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8035; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp035.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a black labrador puppy with its pink tongue hanging out, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat orange background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8035,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp035-s8035.png"
+ },
+ {
+  "id": "pp056",
+  "title": "Akita in a hat",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8056; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp056.png",
+  "chroma": 1.2,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "an akita wearing a striped beanie hat, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat yellow background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8056,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp056-s8056.png"
+ },
+ {
+  "id": "pp060",
+  "title": "Sheepdog bow",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8060; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp060.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a fluffy sheepdog with a blue bow in its fringe, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat yellow background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8060,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp060-s8060.png"
+ },
+ {
+  "id": "pp062",
+  "title": "Corgi bum",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8062; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp062.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a corgi seen from behind with a fluffy heart-shaped bottom, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat sky blue background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8062,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp062-s8062.png"
+ },
+ {
+  "id": "pp066",
+  "title": "Lab in a scarf",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8066; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp066.png",
+  "chroma": 2,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a yellow labrador wearing a green scarf, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat navy blue background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8066,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp066-s8066.png"
+ },
+ {
+  "id": "pp027",
+  "title": "Cool shades",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 8027; prompt in tools/lands/11-puppy-park/pictures/manifest.json",
+  "file": "fullsrc/pp027.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a golden retriever puppy wearing black sunglasses, a plain background, cute storybook style, flat vector illustration, a big close-up portrait, the dog's head and shoulders filling most of the picture, on a plain flat pink background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 8027,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/pp027-s8027.png"
+ }
+]
