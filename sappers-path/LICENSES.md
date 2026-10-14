@@ -46,7 +46,7 @@ Third-party assets: the Jersey 10 font above, unmodified, with its license file 
 
 ## The Gallery's pictures (v4 M4)
 
-Sixty pictures, one per Gallery level (`levels/gallery.json`), converted to boards by `tools/convert.js`. Every line of `levels/gallery-manifest.json` holds the full record (source URL, author, license, date, and for ours the model, prompt and seed); the manifest also lists the 28 candidates that were not kept, with the reason. Critics 2 fix (2026-09-30): Trophy (`noto-1f3c6`, a stored spare) replaced Teapot and Fruit (`met-437999`) at 33; Teapot and Fruit is now a spare. `tools/gallery-src/` holds small downscaled copies of all 88 candidates (the converter's input; the game never fetches them), under the same licenses as below.
+Sixty pictures, one per Gallery level (`levels/gallery.pk.json`, packed from `tools/build-data/levels/gallery.json`), converted to boards by `tools/convert.js`. Every line of `levels/gallery-manifest.json` holds the full record (source URL, author, license, date, and for ours the model, prompt and seed); the manifest also lists the 28 candidates that were not kept, with the reason. Critics 2 fix (2026-09-30): Trophy (`noto-1f3c6`, a stored spare) replaced Teapot and Fruit (`met-437999`) at 33; Teapot and Fruit is now a spare. `tools/gallery-src/` holds small downscaled copies of all 88 candidates (the converter's input; the game never fetches them), under the same licenses as below.
 
 - **Twemoji** by Twitter, Inc and other contributors, licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Source: https://github.com/jdecked/twemoji. Adapted: the images are converted to pixel boards (resized, pixelated, reduced to a few colours so recoloured, outlined): changes made.
 - **Noto Emoji** by Google, image resources licensed under the Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0). Source: https://github.com/googlefonts/noto-emoji (PNGs under `2D/png/128/`). Converted to pixel boards: changes made.
@@ -120,7 +120,7 @@ Sixty pictures, one per Gallery level (`levels/gallery.json`), converted to boar
 <!-- campaign-quests:start -->
 ### Campaign v6 side quests: 26 new pictures (2026-10-06)
 
-The campaign's side quests from v6 (`levels/gallery.json` pictures 1-50; the numbers in the Gallery table above are the v5 places). 24 of the pictures above stay; these 26 are new. Generated on the studio's own Mac with FLUX.1 [schnell] by Black Forest Labs (Apache 2.0; city96's 4-bit GGUF), cleaned of the model's line art and converted with one solid ink outline. Original work, Click it! Studios. Every prompt and seed is in `tools/campaign-quests/pictures/manifest.json` and `levels/gallery-manifest.json`.
+The campaign's side quests from v6 (`levels/gallery.pk.json` pictures 1-50; the numbers in the Gallery table above are the v5 places). 24 of the pictures above stay; these 26 are new. Generated on the studio's own Mac with FLUX.1 [schnell] by Black Forest Labs (Apache 2.0; city96's 4-bit GGUF), cleaned of the model's line art and converted with one solid ink outline. Original work, Click it! Studios. Every prompt and seed is in `tools/campaign-quests/pictures/manifest.json` and `levels/gallery-manifest.json`.
 
 | # | Picture | Source | Author | License | Date |
 |---|---|---|---|---|---|

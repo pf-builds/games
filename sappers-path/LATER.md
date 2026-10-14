@@ -518,3 +518,10 @@ Fixed: S1-S7, m2, m3, N1, N2 (`tools/v5-r4-notes.md` §10). Parked:
   tap that dismisses it is eaten. A placement beside the badge, or showing it at the unlock level's win sheet, would avoid both.
 - tools/shots-tutorial.mjs still waits for the launch offer (#tut-offer) and clicks Show me; point it at How to play.
 - The locked Zen chip on the map has no text hint for touch players beyond the toast on a tap (its aria-label carries it).
+- Stage 3 critic m3 (left as is): the lock hint says "Fort 5" while the home and map say "Level 1" / "Play level 1"; the card's
+  "Fort 1 of 200" bridges the two. One word for a Campaign stop would be tidier.
+- Stage 3 critic m4 (left as is, Peter's decision: no public AI disclosure): the in-game credit's "the rest are Click it! Studios
+  originals" covers the SDXL and FLUX.1 images without naming them; LICENSES.md and LICENSES.txt do name both models.
+- Banked 3x time: with time in the bank the speed button toggles, so a second buy is only possible from the buy sheet (it stays
+  open after a buy) or once the bank is empty. A "buy more" row (Settings, or a long press on the button) would let a player top
+  up mid-bank.
