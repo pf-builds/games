@@ -601,7 +601,7 @@ textarea.code:focus { outline: 3px solid var(--gold-lo); outline-offset: 1px; }
   #btn-play.play { width: auto; flex: 0 1 300px; font-size: 32px; } #home-era { font-size: 18px; }
   .tab { flex-direction: row; gap: 8px; font-size: 18px; }
   body.wide .home-card { max-width: 720px; }
-  .home h1 { position: absolute; left: calc(var(--gut) + 58px); top: max(14px, env(safe-area-inset-top)); margin: 0; font-size: 32px; white-space: nowrap; } /* in the top row beside the gear, clear of the keep */
+  .home h1 { position: absolute; left: 50%; transform: translateX(-50%); top: max(14px, env(safe-area-inset-top)); margin: 0; font-size: 32px; white-space: nowrap; pointer-events: none; } /* in the top row, centred between the pills and How to play (lane P Stage 3: beside the gear it sat on the coins pill at 821x462) */
 }
 body.wide .home-card { max-width: 760px; }
 @media (prefers-reduced-motion: reduce) { .pw.picking, .pw.pop .pw-ic, .tile.next.pickable, .tile.card.pickable, .slot.pickable { animation: none; } }
