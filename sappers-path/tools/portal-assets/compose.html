@@ -21,7 +21,7 @@
 <script src="/game/src/save.js"></script>
 <script src="/game/src/journey.js"></script>
 <script>
-const Q = new URLSearchParams(location.search), OPT = Q.get("opt") || "A", SIZE = Q.get("size") || "land";
+const Q = new URLSearchParams(location.search), OPT = Q.get("opt") || "A", SIZE = Q.get("size") || "land", HI = Q.get("hi") ? "@" + Q.get("hi") : ""; // hi: compose.mjs --scale (D-F take the art cut at that size)
 const DIM = { land: [1920, 1080], port: [800, 1200], square: [800, 800] }[SIZE], [W, H] = DIM;
 const NS = "http://www.w3.org/2000/svg", c = document.getElementById("c");
 c.style.width = W + "px"; c.style.height = H + "px";
@@ -56,6 +56,9 @@ function king(x, y, k, flag) {
 // The board card: the Goblin King's Hall mid-dig (capture.mjs --board, 3x), framed like the game's board.
 function board(x, y, w, h, rot) { const d = el("div", "board", { left: x + "px", top: y + "px", width: w + "px", height: h + "px", transform: `rotate(${rot}deg)` }); const i = document.createElement("img"); i.src = "/art/board.png"; d.append(i); }
 
+// E's squad cards: the game's own front tiles (cover-boards.mjs shot them at 4x: 31, 52, 24; a tile is 92 x 75 CSS px), left
+// to right from x, their feet on y, k times their CSS size (k up to 4: never upscaled), gap px apart.
+function cards(x, y, k, gap) { for (let i = 0; i < 3; i++) img(`/art/boards/coverE_${SIZE}-card${i}.png`, "", { left: x + i * (92 * k + gap) + "px", top: y - 75 * k + "px", width: 92 * k + "px", height: 75 * k + "px", filter: "drop-shadow(0 6px 10px rgba(10,6,14,.45))" }); }
 const L = {
   // A: the painted siege, full bleed; the title low over the charge, on a soft dark fall-off from the foot.
   A: { land: () => { img("/art/paint-land.png", "paint"); shade("linear-gradient(to top, rgba(20,14,22,.78) 0%, rgba(20,14,22,.45) 22%, rgba(20,14,22,0) 42%)"); logo(["Sapper's Path"], 300, W / 2, 890); },
@@ -69,6 +72,21 @@ const L = {
   C: { land: () => { img("/art/paint-land.png", "paint"); shade("linear-gradient(to top, rgba(20,14,22,.7) 0%, rgba(20,14,22,0) 45%)"); board(1080, 150, 700, 620, 3.5); logo(["Sapper's", "Path"], 230, 560, 800); },
        port: () => { img("/art/paint-port.png", "paint"); shade("linear-gradient(to top, rgba(20,14,22,.78) 0%, rgba(20,14,22,0) 45%)"); board(110, 250, 580, 520, -3); logo(["Sapper's", "Path"], 190, W / 2, 1000); },
        square: () => { img("/art/paint-square.png", "paint"); shade("linear-gradient(to top, rgba(20,14,22,.78) 0%, rgba(20,14,22,0) 45%)"); board(330, 70, 420, 380, 3); logo(["Sapper's", "Path"], 160, 290, 620); } },
+  // D-F (Peter, 2026-10-14: the covers move to the game's own pixel look): the art is the game's board drawing a cover
+  // scene (cover-levels.py, cover-boards.mjs, cover-crop.py: /art/art-<opt>-<size>.png, already the cover's exact size).
+  // The title goes in the sky band at the top (F: the foot), heavier outline for the busy board behind it.
+  // D: the breach in the wall, the King alarmed on the battlements.
+  D: { land: () => { img(`/art/art-D-land${HI}.png`, "paint"); logo(["Sapper's Path"], 250, 650, 150, 0.09); },
+       port: () => { img(`/art/art-D-port${HI}.png`, "paint"); logo(["Sapper's", "Path"], 190, W / 2, 175, 0.09); },
+       square: () => { img(`/art/art-D-square${HI}.png`, "paint"); logo(["Sapper's Path"], 138, W / 2, 72, 0.09); } },
+  // E: the big King on the wall, the front squad cards (the game's tiles, at their own 3x pixels) along the bottom.
+  E: { land: () => { img(`/art/art-E-land${HI}.png`, "paint"); logo(["Sapper's", "Path"], 250, 520, 235, 0.09); cards(48, 1050, 3.0, 24); },
+       port: () => { img(`/art/art-E-port${HI}.png`, "paint"); logo(["Sapper's", "Path"], 165, W / 2, 148, 0.09); cards(28, 1180, 2.52, 18); },
+       square: () => { img(`/art/art-E-square${HI}.png`, "paint"); logo(["Sapper's Path"], 138, W / 2, 72, 0.09); cards(40, 785, 2.16, 16); } },
+  // F: the game's before and after on one diagonal; the title along the foot.
+  F: { land: () => { img(`/art/art-F-land${HI}.png`, "paint"); logo(["Sapper's Path"], 235, W / 2, 955, 0.09); },
+       port: () => { img(`/art/art-F-port${HI}.png`, "paint"); logo(["Sapper's", "Path"], 190, W / 2, 1010, 0.09); },
+       square: () => { img(`/art/art-F-square${HI}.png`, "paint"); logo(["Sapper's Path"], 138, W / 2, 722, 0.09); } },
 };
 document.fonts.load('100px "Jersey 10"').then(() => { L[OPT][SIZE](); return Promise.all([...document.images].map((i) => i.decode())); }).then(() => { document.body.dataset.ready = "1"; });
 </script></body></html>

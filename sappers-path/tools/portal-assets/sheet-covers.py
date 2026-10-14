@@ -2,10 +2,11 @@
 """Sapper's Path lane P Stage 5: the covers' 200x112 previews (each landscape cover at the portal's smallest thumbnail size,
 Lanczos) and the contact sheet: one row per option (landscape, portrait, square, then its 200x112 preview at 1:1 and 2x),
 each labelled. Also checks every cover's pixel size against the rules (1920x1080, 800x1200, 800x800).
-  python3 sheet-covers.py <covers dir> [A B C]"""
+  python3 sheet-covers.py <covers dir> [A B C ...] [--out contact-sheet.png]"""
 import os, sys
 from PIL import Image, ImageDraw
-D = sys.argv[1]; OPTS = sys.argv[2:] or ["A", "B", "C"]
+a = sys.argv; NAME = a[a.index("--out") + 1] if "--out" in a else "contact-sheet.png"
+D = a[1]; OPTS = [o for o in a[2:] if o != "--out" and o != NAME] or ["A", "B", "C"]
 SIZE = {"land": (1920, 1080), "port": (800, 1200), "square": (800, 800)}
 RH, GAP, LAB = 450, 24, 30  # row height (each cover scaled to it), gap, label band
 bad = 0
@@ -25,4 +26,4 @@ for r, (o, ims, th) in enumerate(rows):
         w = round(RH * im.size[0] / im.size[1]); S.paste(im.resize((w, RH), Image.LANCZOS), (x, y + LAB)); g.text((x, y + 8), f"{o} {k} {im.size[0]}x{im.size[1]}", fill="#e8e0d0"); x += w + GAP
     S.paste(th, (x, y + LAB)); g.text((x, y + 8), f"{o} 200x112 (1:1)", fill="#e8e0d0"); x += 200 + GAP
     S.paste(th.resize((400, 224), Image.NEAREST), (x, y + LAB)); g.text((x, y + 8), f"{o} 200x112 shown 2x", fill="#e8e0d0")
-S.save(os.path.join(D, "contact-sheet.png")); print("contact-sheet.png", S.size, "size errors:", bad)
+S.save(os.path.join(D, NAME)); print(NAME, S.size, "size errors:", bad)

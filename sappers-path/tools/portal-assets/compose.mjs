@@ -21,7 +21,7 @@ for (const o of OPTS) for (const [sz, [w, h]] of Object.entries(SIZES)) {
     const f = path === "/compose.html" ? join(HERE, "compose.html") : path.startsWith("/game/") ? join(GAME, path.slice(6)) : path.startsWith("/art/") ? join(ART, path.slice(5)) : null;
     if (!f || !existsSync(f)) return r.fulfill({ status: 404, body: "" });
     r.fulfill({ status: 200, body: readFileSync(f), headers: { "content-type": TYPES[extname(f)] || "application/octet-stream" } }); });
-  await p.goto(`http://cover.local/compose.html?opt=${o}&size=${sz}`); await p.waitForSelector("body[data-ready]", { timeout: 15000 });
+  await p.goto(`http://cover.local/compose.html?opt=${o}&size=${sz}${SCALE !== 1 ? `&hi=${Math.round(w * SCALE)}x${Math.round(h * SCALE)}` : ""}`); await p.waitForSelector("body[data-ready]", { timeout: 15000 });
   await p.screenshot({ path: join(OUT, `cover-${o}-${sz}${SCALE !== 1 ? "@" + Math.round(w * SCALE) + "x" + Math.round(h * SCALE) : ""}.png`) }); await ctx.close();
 }
 await b.close(); console.log("covers:", OPTS.join(","), "x", Object.keys(SIZES).join(","), "console errors:", errs.length); for (const e of errs) console.log("  " + e);

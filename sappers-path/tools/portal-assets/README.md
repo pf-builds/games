@@ -10,3 +10,10 @@ and `PLAYWRIGHT_MODULE=$(npm root -g)/playwright/index.mjs`.
 4. `python3 sheet-covers.py <covers dir>`: 200x112 previews and the contact sheet, with a size check.
 5. `node capture.mjs --plan shots.json --orient land|port --out <frames dir>`: real gameplay frames on sim time (the rAF loop held, SP.tick per frame, CSS animations stepped with it; taps refusal-free; no cursor, no debug row). `--preview` samples every 6th frame at 1x for picking segments.
 6. `python3 assemble.py <cover.png> <frames dir> <out.mp4>`: cover held 1 s, 0.4 s crossfade, hard cuts; H.264 High yuv420p 30 fps, no audio; prints the stream facts, blackdetect, frame 0 vs cover PSNR, stills at 0/5/10/15 s. `sheet.py` tiles any frame folder.
+
+Covers D-F (the game's own pixel look, 2026-10-14):
+7. `python3 cover-levels.py <levels.json>`: the cover scenes as picture-board levels (per option and size).
+8. `node cover-boards.mjs --levels <levels.json> --out <boards dir>`: the real board draws and plays them (config routed: the scenes as selfTest fixtures, cover-only sapper scale 1.9 and 24 CSS px cells); canvas pixels read straight off, plus E's squad-card tiles at 4x.
+9. `python3 cover-crop.py <boards dir> <levels.json> <art dir>`: cut to each cover size (downscale only), light colour lift, F's diagonal before/after; also the 1080x1620 portrait video frame.
+10. `compose.mjs --opts D,E,F` as in step 3; `sheet-covers.py <covers dir> A D E F --out contact-sheet-pixel.png`.
+11. `zsh video-cover.sh <option> <stage5 dir>`: once a cover is picked, both videos re-cut with it as the first frame.
