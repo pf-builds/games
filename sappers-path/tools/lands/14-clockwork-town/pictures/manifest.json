@@ -1,0 +1,899 @@
+[
+ {
+  "id": "ct001",
+  "title": "Clockwork owl",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11001; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct001e.png",
+  "chroma": 1.7,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a brass clockwork owl with gear eyes, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat teal background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11001,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct001-s11001.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "ct003b",
+  "title": "Pocket watch",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11503; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct003be.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big gold pocket watch, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat deep red background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11503,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct003b-s11503.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "ct033",
+  "title": "Clock repair",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11033; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct033.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a mouse inventor fixing a big clock, a teal background, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11033,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct033-s11033.png"
+ },
+ {
+  "id": "ct004",
+  "title": "Steam train",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11004; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct004.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a black and red steam locomotive front with a big headlamp, one solid black shape, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat sky blue background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11004,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct004-s11004.png"
+ },
+ {
+  "id": "ct005b",
+  "title": "Gear",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11505; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct005be.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big brass gear wheel, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat navy background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11505,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct005b-s11505.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "ct006",
+  "title": "Robot dog",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11006; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct006e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a copper robot dog, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat pale green background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11006,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct006-s11006.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "ct035",
+  "title": "Robot band",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11035; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct035e.png",
+  "chroma": 1,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a robot playing a big drum, a purple background, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11035,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct035-s11035.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "ct007b",
+  "title": "Clockwork bird",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11507; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct007be.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a brass bird with a wind-up key, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat purple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11507,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct007b-s11507.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "ct008b",
+  "title": "Inventor goggles",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11508; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct008b.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a smiling inventor girl wearing big brass goggles, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat orange background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11508,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct008b-s11508.png"
+ },
+ {
+  "id": "ct009",
+  "title": "Lightbulb",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11009; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct009e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big glowing lightbulb, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat dark blue background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11009,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct009-s11009.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "ct040",
+  "title": "Clock tower owl",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11040; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct040e.png",
+  "chroma": 1.2,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "an owl perched on a big clock, a dark blue night, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11040,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct040-s11040.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "ct010",
+  "title": "Wind-up mouse",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11010; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct010e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a tin wind-up mouse with a key, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat red background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11010,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct010-s11010.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "ct011",
+  "title": "Robot cat",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11011; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct011.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a teal robot cat, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat orange background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11011,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct011-s11011.png"
+ },
+ {
+  "id": "ct012b",
+  "title": "Cuckoo clock",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11512; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct012b.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a wooden cuckoo clock with a bird popping out, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat sky blue background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11512,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct012b-s11512.png"
+ },
+ {
+  "id": "ct043b",
+  "title": "Balloon engine",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11543; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct043b.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a hot air balloon powered by a brass engine, a pink sky, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11543,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct043b-s11543.png"
+ },
+ {
+  "id": "ct013",
+  "title": "Telescope",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11013; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct013e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a brass telescope on a stand, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat deep purple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11013,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct013-s11013.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "ct016b",
+  "title": "Robot owl",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11516; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct016b.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a copper owl robot, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat yellow background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11516,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct016b-s11516.png"
+ },
+ {
+  "id": "ct044",
+  "title": "Robot chef",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11044; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct044.png",
+  "chroma": 1.2,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a robot flipping pancakes, an orange background, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11044,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct044-s11044.png"
+ },
+ {
+  "id": "ct017b",
+  "title": "Clock tower",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11517; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct017b.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a tall clock tower with a big white clock face, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat orange background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11517,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct017b-s11517.png"
+ },
+ {
+  "id": "ct018",
+  "title": "Wind-up fish",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11018; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct018e.png",
+  "chroma": 1.2,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a tin fish with a key, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat navy background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11018,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct018-s11018.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "ct019b",
+  "title": "Robot bear",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11519; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct019b.png",
+  "chroma": 1.7,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big friendly brass robot bear, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat red background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11519,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct019b-s11519.png"
+ },
+ {
+  "id": "ct045",
+  "title": "Submarine",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11045; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct045.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a brass submarine with portholes, a teal sea, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11045,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct045-s11045.png"
+ },
+ {
+  "id": "ct020",
+  "title": "Gramophone",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11020; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct020e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a gramophone with a big gold horn, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat teal background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11020,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct020-s11020.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "ct021",
+  "title": "Brass beetle",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11021; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct021e.png",
+  "chroma": 2.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a clockwork beetle, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat yellow background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11021,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct021-s11021.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "ct022",
+  "title": "Robot face",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11022; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct022.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a square robot head with round lamp eyes, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat purple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11022,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct022-s11022.png"
+ },
+ {
+  "id": "ct049",
+  "title": "Robot reading",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11049; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct049e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a robot reading a big red book to a kitten, a warm background, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11049,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct049-s11049.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "ct024",
+  "title": "Tin rabbit",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11024; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct024.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a tin wind-up rabbit, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat green background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11024,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct024-s11024.png"
+ },
+ {
+  "id": "ct025",
+  "title": "Compass",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11025; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct025.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a brass compass, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat red background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11025,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct025-s11025.png"
+ },
+ {
+  "id": "ct026b",
+  "title": "Copper teapot",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11526; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct026b.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a copper teapot with steam, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat blue background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11526,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct026b-s11526.png"
+ },
+ {
+  "id": "ct027",
+  "title": "Robot chicken",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11027; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct027e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a brass robot hen, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat pale green background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11027,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct027-s11027.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "ct029",
+  "title": "Monocle frog",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11029; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct029.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a frog wearing a monocle and top hat, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat orange background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11029,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct029-s11029.png"
+ },
+ {
+  "id": "ct030",
+  "title": "Zeppelin",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11030; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct030e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a silver zeppelin, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat pink background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11030,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct030-s11030.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "ct001b",
+  "title": "Clockwork owl",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11501; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct001b.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a brass clockwork owl with gear eyes, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat teal background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11501,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct001b-s11501.png"
+ },
+ {
+  "id": "ct002",
+  "title": "Little robot",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11002; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct002e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a round friendly red robot with a antenna, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat yellow background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11002,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct002-s11002.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "ct003",
+  "title": "Pocket watch",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11003; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct003.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big gold pocket watch, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat deep red background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11003,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct003-s11003.png"
+ },
+ {
+  "id": "ct004b",
+  "title": "Steam train",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11504; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct004b.png",
+  "chroma": 2.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a black and red steam locomotive front with a big headlamp, one solid black shape, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat sky blue background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11504,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct004b-s11504.png"
+ },
+ {
+  "id": "ct005",
+  "title": "Gear",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11005; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct005e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big brass gear wheel, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat navy background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11005,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct005-s11005.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "ct006b",
+  "title": "Robot dog",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11506; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct006b.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a copper robot dog, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat pale green background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11506,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct006b-s11506.png"
+ },
+ {
+  "id": "ct007",
+  "title": "Clockwork bird",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11007; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct007e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a brass bird with a wind-up key, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat purple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11007,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct007-s11007.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "ct008",
+  "title": "Inventor goggles",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11008; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct008.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a smiling inventor girl wearing big brass goggles, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat orange background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11008,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct008-s11008.png"
+ },
+ {
+  "id": "ct009b",
+  "title": "Lightbulb",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11509; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct009be.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big glowing lightbulb, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat dark blue background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11509,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct009b-s11509.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "ct011b",
+  "title": "Robot cat",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11511; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct011b.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a teal robot cat, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat orange background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11511,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct011b-s11511.png"
+ },
+ {
+  "id": "ct012",
+  "title": "Cuckoo clock",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11012; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct012e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a wooden cuckoo clock with a bird popping out, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat sky blue background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11012,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct012-s11012.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "ct002b",
+  "title": "Little robot",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11502; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct002b.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a round friendly red robot with a antenna, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat yellow background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11502,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct002b-s11502.png"
+ },
+ {
+  "id": "ct010b",
+  "title": "Wind-up mouse",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11510; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct010b.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a tin wind-up mouse with a key, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat red background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11510,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct010b-s11510.png"
+ },
+ {
+  "id": "ct014",
+  "title": "Tin soldier",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11014; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct014e.png",
+  "chroma": 1.2,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a tin toy soldier with a red coat, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat teal background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11014,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct014-s11014.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "ct023",
+  "title": "Hourglass",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11023; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct023e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "an hourglass with red sand, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat sky blue background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11023,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct023-s11023.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "ct050",
+  "title": "Gear garden",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11050; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct050e.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a snail with a brass gear shell, a green background, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11050,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct050-s11050.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ }
+]
