@@ -1,0 +1,74 @@
+<!doctype html>
+<!-- Sapper's Path lane P Stage 5: one cover, laid out at its exact pixel size (compose.mjs screenshots it at 1x).
+     ?opt=A|B|C&size=land|port|square. Assets come through compose.mjs's routes: /game/ is the game folder (its font,
+     src/save.js and src/journey.js for the map's Goblin King), /art/ the prepared cuts (prep-art.py, the board grab).
+     The only words on any cover are the game's title, in the game's own font and logo colours (style.css .home h1). -->
+<html><head><meta charset="utf-8">
+<style>
+  @font-face { font-family: "Jersey 10"; src: url("/game/fonts/Jersey10-Regular.ttf") format("truetype"); }
+  :root { --ink: #221a26; --gold: #f2c230; --gold-hi: #ffe27a; --gold-lo: #b8860b; }
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #2e2935; }
+  #c { position: relative; overflow: hidden; }
+  #c > * { position: absolute; }
+  .paint { inset: 0; width: 100%; height: 100%; }
+  .shade { inset: 0; }
+  svg.title { overflow: visible; }
+  .board { border-radius: 10px; box-shadow: 0 0 0 7px #3a2a1c, 0 0 0 13px #c9a46a, 0 0 0 16px #3a2a1c, 0 24px 60px rgba(10, 6, 14, .7); overflow: hidden; }
+  .board img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 0; }
+  .king { filter: drop-shadow(0 18px 24px rgba(10, 6, 14, .55)); overflow: visible; }
+</style></head>
+<body><div id="c"></div>
+<script src="/game/src/save.js"></script>
+<script src="/game/src/journey.js"></script>
+<script>
+const Q = new URLSearchParams(location.search), OPT = Q.get("opt") || "A", SIZE = Q.get("size") || "land";
+const DIM = { land: [1920, 1080], port: [800, 1200], square: [800, 800] }[SIZE], [W, H] = DIM;
+const NS = "http://www.w3.org/2000/svg", c = document.getElementById("c");
+c.style.width = W + "px"; c.style.height = H + "px";
+const el = (tag, cls, css) => { const e = document.createElement(tag); if (cls) e.className = cls; Object.assign(e.style, css || {}); c.append(e); return e; };
+const img = (src, cls, css) => { const e = el("img", cls, css); e.src = src; return e; };
+const shade = (bg) => el("div", "shade", { background: bg });
+
+// The logo: the game's title in Jersey 10, gold with a vertical sheen, a thick ink outline and the ink drop under it (as
+// the home's h1 draws it with text-shadow, here as SVG strokes so the outline stays solid at any size). lines: one or two;
+// px: the font size; at [x, y]: the logo box's centre; k: outline = px * k.
+function logo(lines, px, cx, cy, k = 0.075) {
+  const s = document.createElementNS(NS, "svg"); s.setAttribute("class", "title"); c.append(s);
+  const o = Math.round(px * k), drop = Math.round(px * 0.11), lh = px * 0.86;
+  s.innerHTML = `<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--gold-hi)"/><stop offset=".48" stop-color="var(--gold)"/><stop offset="1" stop-color="#e0a417"/></linearGradient></defs>`;
+  const T = (dy, fill, stroke, sw) => lines.map((t, i) => `<text x="0" y="${i * lh + dy}" text-anchor="middle" font-family="'Jersey 10'" font-size="${px}" letter-spacing="${px * 0.02}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="miter" paint-order="stroke">${t}</text>`).join("");
+  s.innerHTML += `<g>${T(drop, "var(--ink)", "var(--ink)", o * 2)}${T(0, "url(#g)", "var(--ink)", o * 2)}</g>`;
+  const b = s.querySelector("g").getBBox(), pad = 4;
+  s.setAttribute("viewBox", `${b.x - pad} ${b.y - pad} ${b.width + pad * 2} ${b.height + pad * 2}`);
+  s.style.width = b.width + pad * 2 + "px"; s.style.height = b.height + pad * 2 + "px";
+  s.style.left = cx - (b.width + pad * 2) / 2 + "px"; s.style.top = cy - (b.height + pad * 2) / 2 + "px";
+  return s;
+}
+// The map's Goblin King (journey.js, ink and wash) with his banner where the map puts it (config map.tail.flagAt over
+// kingScale), his feet at [x, y], k times his sheet size (he is about 34 x 51 at k 1; the box below is in those units).
+function king(x, y, k, flag) {
+  const s = document.createElementNS(NS, "svg"); s.setAttribute("class", "king"); c.append(s);
+  const J = window.SappersPath.journey, vb = flag ? [-46, -60, 66, 64] : [-20, -54, 40, 58];
+  s.setAttribute("viewBox", vb.map((v) => v * k).join(" ")); s.style.width = vb[2] * k + "px"; s.style.height = vb[3] * k + "px";
+  s.innerHTML = (flag ? `<g transform="translate(${-121 / 3 * k} ${-171 / 3 * k}) scale(${k / 3})">${J.flag()}</g>` : "") + J.king(k);
+  s.style.left = x + vb[0] * k + "px"; s.style.top = y + vb[1] * k + "px";
+}
+// The board card: the Goblin King's Hall mid-dig (capture.mjs --board, 3x), framed like the game's board.
+function board(x, y, w, h, rot) { const d = el("div", "board", { left: x + "px", top: y + "px", width: w + "px", height: h + "px", transform: `rotate(${rot}deg)` }); const i = document.createElement("img"); i.src = "/art/board.png"; d.append(i); }
+
+const L = {
+  // A: the painted siege, full bleed; the title low over the charge, on a soft dark fall-off from the foot.
+  A: { land: () => { img("/art/paint-land.png", "paint"); shade("linear-gradient(to top, rgba(20,14,22,.78) 0%, rgba(20,14,22,.45) 22%, rgba(20,14,22,0) 42%)"); logo(["Sapper's Path"], 300, W / 2, 890); },
+       port: () => { img("/art/paint-port.png", "paint"); shade("linear-gradient(to top, rgba(20,14,22,.8) 0%, rgba(20,14,22,.45) 26%, rgba(20,14,22,0) 46%)"); logo(["Sapper's", "Path"], 225, W / 2, 975); },
+       square: () => { img("/art/paint-square.png", "paint"); shade("linear-gradient(to top, rgba(20,14,22,.8) 0%, rgba(20,14,22,.45) 28%, rgba(20,14,22,0) 50%)"); logo(["Sapper's", "Path"], 200, W / 2, 600); } },
+  // B: the Goblin King himself (the map's ink-and-wash art, journey.js) in front of the siege; the title beside him.
+  B: { land: () => { img("/art/paint-land.png", "paint"); shade("linear-gradient(to top, rgba(20,14,22,.75) 0%, rgba(20,14,22,.35) 30%, rgba(20,14,22,0) 50%)"); king(1440, 1050, 12.5); logo(["Sapper's", "Path"], 250, 600, 800); },
+       port: () => { img("/art/paint-port.png", "paint"); shade("linear-gradient(to bottom, rgba(20,14,22,.7) 0%, rgba(20,14,22,0) 26%), linear-gradient(to top, rgba(20,14,22,.6) 0%, rgba(20,14,22,0) 30%)"); king(400, 1190, 11.5); logo(["Sapper's", "Path"], 220, W / 2, 205); },
+       square: () => { img("/art/paint-square.png", "paint"); shade("linear-gradient(to top, rgba(20,14,22,.78) 0%, rgba(20,14,22,.3) 34%, rgba(20,14,22,0) 52%)"); king(610, 790, 8); logo(["Sapper's", "Path"], 150, 255, 615); } },
+  // C: the siege behind, the board card in front (the King's picture being dug out by a stream of sappers); the title over.
+  C: { land: () => { img("/art/paint-land.png", "paint"); shade("linear-gradient(to top, rgba(20,14,22,.7) 0%, rgba(20,14,22,0) 45%)"); board(1080, 150, 700, 620, 3.5); logo(["Sapper's", "Path"], 230, 560, 800); },
+       port: () => { img("/art/paint-port.png", "paint"); shade("linear-gradient(to top, rgba(20,14,22,.78) 0%, rgba(20,14,22,0) 45%)"); board(110, 250, 580, 520, -3); logo(["Sapper's", "Path"], 190, W / 2, 1000); },
+       square: () => { img("/art/paint-square.png", "paint"); shade("linear-gradient(to top, rgba(20,14,22,.78) 0%, rgba(20,14,22,0) 45%)"); board(330, 70, 420, 380, 3); logo(["Sapper's", "Path"], 160, 290, 620); } },
+};
+document.fonts.load('100px "Jersey 10"').then(() => { L[OPT][SIZE](); return Promise.all([...document.images].map((i) => i.decode())); }).then(() => { document.body.dataset.ready = "1"; });
+</script></body></html>

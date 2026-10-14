@@ -1,0 +1,96 @@
+{
+ "fps": 30,
+ "unlockTo": 199,
+ "note": "Stage 5 preview video, siege-led. Segments: [event, from s, to s] against the level's own events from its dry run (t = level start, panel = the win sheet, hitN = the Nth archer hit). Total with the 1 s cover and the 0.4 s crossfade: 18.0 s. unlockTo per shot: the save the camera's page starts from; first: the dry runs play in another context so the camera's win is a first clear (\"Level 95 cleared.\"). The boss keeps its dry run on camera's save on purpose: its first-win line names the first land (Kitten Forest), kept off the video.",
+ "viewports": {
+  "land": {
+   "w": 1280,
+   "h": 720,
+   "dpr": 1.5
+  },
+  "port": {
+   "w": 720,
+   "h": 1080,
+   "dpr": 1.5
+  }
+ },
+ "shots": [
+  {
+   "name": "home",
+   "kind": "screen",
+   "screen": "title",
+   "sec": 1.7
+  },
+  {
+   "name": "e4-95-pour",
+   "kind": "level",
+   "id": "e4-95",
+   "segments": [
+    [
+     "t",
+     66.0,
+     69.5
+    ]
+   ],
+   "unlockTo": 94,
+   "first": true
+  },
+  {
+   "name": "e4-95-win",
+   "kind": "level",
+   "id": "e4-95",
+   "segments": [
+    [
+     "panel",
+     -0.1,
+     1.1
+    ]
+   ],
+   "unlockTo": 94,
+   "first": true
+  },
+  {
+   "name": "e6-129-archers",
+   "kind": "level",
+   "id": "e6-129",
+   "segments": [
+    [
+     "t",
+     79.0,
+     82.5
+    ]
+   ]
+  },
+  {
+   "name": "map",
+   "kind": "map",
+   "from": 700,
+   "to": 0,
+   "sec": 2.0
+  },
+  {
+   "name": "boss-dig",
+   "kind": "level",
+   "id": "e8-200",
+   "segments": [
+    [
+     "t",
+     118.5,
+     122.6
+    ]
+   ]
+  },
+  {
+   "name": "boss-crown",
+   "kind": "level",
+   "id": "e8-200",
+   "segments": [
+    [
+     "panel",
+     -0.1,
+     1.3
+    ]
+   ]
+  }
+ ]
+}

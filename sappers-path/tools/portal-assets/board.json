@@ -1,0 +1,3 @@
+{"fps": 30, "unlockTo": 199, "note": "Cover art: the Goblin King's board mid-dig (one frame each), shot alone at 3x.",
+ "viewports": {"land": {"w": 1280, "h": 900, "dpr": 3}},
+ "shots": [{"name": "boss-board", "kind": "level", "id": "e8-200", "segments": [["t", 117.0, 117.04], ["t", 119.0, 119.04], ["t", 121.0, 121.04], ["t", 124.0, 124.04]]}]}
