@@ -170,7 +170,7 @@
   "hl029",
   "hl030"
  ],
- "mainNote": "Lane C's order (picks-full.json landMain, workspace 2822569: 26 after lane D's phase-1 bake and pre-read; hl021 Owl in snow had first failed every candidate at Normal and, after a two-slot reorder with hl050, at Hard) with one reorder: slots 8 and 9 swapped, so hl007 Candy cane takes the Hard at 658 (hl008 Snowflake failed it on 18 candidates, fast tapper) and hl008 plays Normal at 657.",
+ "mainNote": "Lane C's order (picks-full.json landMain, workspace 2822569: 26 after lane D's phase-1 bake and pre-read; hl021 Owl in snow had first failed every candidate at Normal and, after a two-slot reorder with hl050, at Hard) with one reorder: slots 8 and 9 swapped, so hl007 Candy cane takes the Hard at 651 (hl008 Snowflake failed it on 18 candidates, fast tapper) and hl008 plays Normal at 650 (numbers as installed).",
  "map": {
   "fromLayout": [
    19,
