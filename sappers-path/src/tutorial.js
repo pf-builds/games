@@ -76,7 +76,6 @@
       // Fix pass m2: under a done card the fort holds: no Retry (top bar or R) and no card keys reset or play it.
       window.addEventListener("keydown", (ev) => { if (T.card && /^[rR1-5 ]$/.test(ev.key)) { ev.stopPropagation(); ev.preventDefault(); } }, true);
       window.addEventListener("click", (ev) => { if (T.card && $("btn-retry").contains(ev.target)) { ev.stopPropagation(); ev.preventDefault(); } }, true);
-      document.addEventListener("keydown", (ev) => { if (ev.key !== "Escape") return; if (T.offerOn) { hideOffer(); setSeen(); } else if (T.closing) finish("title"); });
       window.addEventListener("resize", () => { if (T.card) placeCard(); });
     }
 

@@ -1017,7 +1017,7 @@
   // v5 R3 fix: a cleared long-tail picture as a button (cls "th" on the map, "ts-tile" in the sheet); a tap plays it again.
   function tailTile(id, cls) { const e = app.byId.get(id), b = document.createElement("button"); b.className = cls; b.dataset.id = id; b.innerHTML = '<canvas class="pix" aria-hidden="true"></canvas>'; thumb(b.firstChild, e.L, true, 1);
     b.setAttribute("aria-label", fill(app.cfg.map.text.thumbAria, { name: e.L.title })); b.addEventListener("click", () => { openTail(false); startLevel(id); }); return b; }
-  // The sheet of every cleared long-tail picture (the chip opens it; Done, the backdrop, Escape or a tile close it).
+  // The sheet of every cleared long-tail picture (the chip opens it; Done, the backdrop or a tile close it).
   function openTail(on) { const ts = $("tailsheet"); if (on) { const g = $("ts-grid"), won = (app.jr && app.jr.tail && app.jr.tail.won) || []; $("ts-title").textContent = fill(app.cfg.map.text.tailTitle, { n: won.length }); g.textContent = ""; for (const id of won) g.append(tailTile(id, "ts-tile")); }
     ts.hidden = !on; if (on) $("ts-close").focus(); }
   // The desktop cards: the current realm (its lore, cleared and coins, side quests and secrets found there) and next up
@@ -1688,10 +1688,7 @@
     document.addEventListener("keydown", (ev) => {
       if (app.audio) Audio.unlock(app.audio);
       if (app.paused) { if (ev.key === " " || ev.key === "Enter") { ev.preventDefault(); resume(); } return; }
-      if (subOpen()) { if (ev.key === "Escape") openSub(null); return; } // v5.4: back to Settings
-      if (!$("settings").hidden) { if (ev.key === "Escape") openSettings(false); return; }
-      if (!$("tailsheet").hidden) { if (ev.key === "Escape") openTail(false); return; } // v5 R3 fix
-      if (ev.key === "Escape" && app.pick) { cancelPick(); return; }
+      if (subOpen() || !$("settings").hidden || !$("tailsheet").hidden) return; // lane P Stage 3: no Escape binding (portal rule); every sheet has its own close button
       if (app.screen !== "play") return;
       if (ev.key >= "1" && ev.key <= "5") playCol(+ev.key - 1);
       else if (ev.key === "r" || ev.key === "R") retry();
