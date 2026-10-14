@@ -87,7 +87,25 @@
   const hash = (x, y) => { let t = Math.imul(x + 17, 73856093) ^ Math.imul(y + 5, 19349663); t ^= t >>> 13; t = Math.imul(t, 0x5bd1e995); return (t ^ (t >>> 15)) >>> 0; };
 
   // The per-material mark on a block face (grayscale reading). s: block size in device px.
+  // Lane P Stage 3: under board.markCrisp.px a 1-px stroke or dot is all soft edge (at 9 px blocks five materials had no
+  // pixel of their ink: a smudge to a colour-blind eye). There the mark is drawn on a scratch canvas and every pixel at
+  // markCrisp.cover or more becomes solid ink (the most covered one at least): a pixel mark like the rest of the board.
+  // Sprite building only (a level start or a resize), never per frame.
+  let crispC = null;
   function mark(g, m, s, col, K) {
+    const MC = K.markCrisp;
+    if (MC && s < MC.px) {
+      if (!crispC) crispC = mk(s, s); crispC.width = s; crispC.height = s; const x = crispC.getContext("2d", { willReadFrequently: true });
+      markOn(x, m, s, col, K); const im = x.getImageData(0, 0, s, s), d = im.data, cut = Math.round(MC.cover * 255);
+      const rgb = col[0] === "#" ? [parseInt(col.slice(1, 3), 16), parseInt(col.slice(3, 5), 16), parseInt(col.slice(5, 7), 16)] : col.slice(col.indexOf("(") + 1, -1).split(",").map(Number);
+      let top = 0, n = 0; for (let i = 3; i < d.length; i += 4) { if (d[i] > top) top = d[i]; if (d[i] >= cut) n++; }
+      const lim = n ? cut : top; if (!lim) return;
+      for (let i = 0; i < d.length; i += 4) { const on = d[i + 3] >= lim; d[i] = rgb[0]; d[i + 1] = rgb[1]; d[i + 2] = rgb[2]; d[i + 3] = on ? 255 : 0; }
+      x.putImageData(im, 0, 0); g.drawImage(crispC, 0, 0); return;
+    }
+    markOn(g, m, s, col, K);
+  }
+  function markOn(g, m, s, col, K) {
     const t = Math.max(1, Math.round(s * K.markW)), c = s / 2, q = s * 0.26;
     g.fillStyle = col; g.strokeStyle = col; g.lineWidth = t; g.lineCap = "round"; g.lineJoin = "round";
     const R = (x, y, w, h) => g.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.round(w)), Math.max(1, Math.round(h)));

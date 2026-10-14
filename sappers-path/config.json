@@ -64,6 +64,7 @@
     "markW": 0.1,
     "mark": -0.42,
     "markLight": 0.5,
+    "markCrisp": {"note": "Lane P Stage 3 (selfTest's colour-blind check failed at 821x462, 9 px blocks): below px device px a block's mark is snapped to whole pixels: every pixel the mark covers at cover or more is solid ink, the rest clear (src/board.js mark). Above it, the smooth mark as before.", "px": 14, "cover": 0.4},
     "groundSpeck": 0.07,
     "yard": "#4a3f33",
     "yardEdge": "#3a3129",
