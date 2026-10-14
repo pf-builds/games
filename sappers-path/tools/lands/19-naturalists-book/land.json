@@ -5,7 +5,7 @@
  "lore": "The road wanders through an old naturalist's book of hand-coloured plates: flamingos, herons and pelicans by the water, a snowy owl, parrots and a jay, and a few garden flowers, each one dug out a block at a time.",
  "count": 8,
  "source": "museum",
- "sourceNote": "Real natural-history plates (Audubon's Birds of America, Catesby, Lear and Redout\u00e9) from the National Gallery of Art, The Met and Cleveland Museum of Art open access (CC0), the 51 plates downloaded on 10/8 for lands/03-naturalists-book; lane C's short world (game-research/sappers-path-v4/lands/19-naturalists-book/README.md, picks-full.json, workspace b52fa92): each plate cropped to its bird or flower (lane C's scripts/platesrc.py), and where the cream page still covered too much of the board the page split into a sky band and a grass band (the edit field: nb55 nb52 nb04 nb50, and spares nb17 nb22); 11 picks and 7 spares (b52fa92 dropped nb30 Golden Eagle, nb22 Great Horned Owl and nb21 Barn Owl after lane D's phase-1 pre-read: mud, title-only or weak, and two with prey in the talons, now spares). Manifest lines carry the plate's year, the painter alone as artist (the engraver in its own engraver field) and Redout\u00e9 with its accent. Each line's engraver (Robert Havell, W. H. Lizars) joins its licence row (land.js, v7 lane D World 16); the win line names the painter alone (byArtist). Kind painting, shade on, converted by land.js boardOf with the whole manifest line. The 18 manifest lines are lane C's, whole (main order, then spares). The folder keeps lane C's slug (19); as installed it is Land 15 in the factory's numbering (era 23) and Zen World 16.",
+ "sourceNote": "Real natural-history plates (Audubon's Birds of America, Catesby, Lear and Redout\u00e9) from the National Gallery of Art, The Met and Cleveland Museum of Art open access (CC0), the 51 plates downloaded on 10/8 for lands/03-naturalists-book; lane C's short world (game-research/sappers-path-v4/lands/19-naturalists-book/README.md, picks-full.json, workspace b52fa92): each plate cropped to its bird or flower (lane C's scripts/platesrc.py), and where the cream page still covered too much of the board the page split into a sky band and a grass band (the edit field: nb55 nb52 nb04 nb50, and spares nb17 nb22); 11 picks and 7 spares (b52fa92 dropped nb30 Golden Eagle, nb22 Great Horned Owl and nb21 Barn Owl after lane D's phase-1 pre-read: mud, title-only or weak, and two with prey in the talons, now spares). Manifest lines carry the plate's year, the painter alone as artist (the engraver in its own engraver field) and Redout\u00e9 with its accent. Each line's engraver (Robert Havell, W. H. Lizars) joins its licence row (land.js, v7 lane D World 16); the win line names the painter alone (byArtist). Kind painting, shade on, converted by land.js boardOf with the whole manifest line. The 18 manifest lines are lane C's, whole (main order, then spares). The folder keeps lane C's slug (19); as installed it is Land 15 in the factory's numbering (era 23) and Zen World 16. Polish pass (lane C 5ae0c38): 8 played (nb18, nb04, nb09 dropped, now spares); the 18 manifest lines replaced whole in lane C's new order (main, then spares).",
  "features": [
   "linked",
   "mystery",
@@ -17,21 +17,21 @@
   "fish",
   "owl"
  ],
- "eggNote": "Eggs on the reused sheets' painted side-quest spur tips (the land has no side quests): eggTurns puts each sheet's 2 eggs on its template's 2 quest spots (4 at (434,702) (355,296); 6 at (306,971) (120,324), map/layout.json), one repeat each for the 2 sheets 11 levels lay. Kinds for a naturalist's wetland and garden: reeds and a butterfly on the river sheet, a fish and an owl on the marsh sheet.",
+ "eggNote": "Eggs on the reused sheets' painted side-quest spur tips (the land has no side quests): eggTurns puts each sheet's 2 eggs on its template's 2 quest spots (4 at (434,702) (355,296); 6 at (306,971) (120,324), map/layout.json), one repeat each for the 2 sheets 11 levels lay. Kinds for a naturalist's wetland and garden: reeds and a butterfly on the river sheet, a fish and an owl on the marsh sheet. Since the polish pass only the first sheet is laid: its reeds and butterfly.",
  "shade": true,
  "raw": "/Users/peter/local-ai/outputs/lands/19-naturalists-book",
  "quests": "none",
  "zen": {
   "k": 16,
-  "note": "v7 lane D: The Naturalist's Book plays as Zen World 16 (tools/land.js ... zen writes tools/build-data/levels/zen.json only). Records keep the land factory numbers 767-777 (scratch/state.json seeded {from: 767, sheet0: 102, gal0: 62}, the end state Safari's 679204b left: last record 766, its 5 sheets 97-101, gallery 62); the page shows them on from World 15's last Zen number (Zen 617-627, main.js zenNum); zen.numbered keys each licence row by its Zen picture number before its level. Phase 1 baked at {from: 731, sheet0: 98}; the numbering moved with the earlier worlds' refills and finals (771, 770, then 767) and the candidates and picks carried over unchanged.",
+  "note": "v7 lane D: The Naturalist's Book plays as Zen World 16 (tools/land.js ... zen writes tools/build-data/levels/zen.json only). Records keep the land factory numbers 767-777 (scratch/state.json seeded {from: 767, sheet0: 102, gal0: 62}, the end state Safari's 679204b left: last record 766, its 5 sheets 97-101, gallery 62); the page shows them on from World 15's last Zen number (Zen 617-627, main.js zenNum); zen.numbered keys each licence row by its Zen picture number before its level. Phase 1 baked at {from: 731, sheet0: 98}; the numbering moved with the earlier worlds' refills and finals (771, 770, then 767) and the candidates and picks carried over unchanged. Polish pass: cut to 8, records 767-774, Zen 617-624.",
   "numbered": true
  },
  "profile": {
   "note": "Zen World 16, casual (v7 lane D, 2026-10-13): World 8 Poster Parade's profile as it ships (tools/lands/09-national-park-posters/land.json; World 6's short-world shares, real art, max-box boards): tags 0.36 / 0.50 / 0.14 give E4/N5/H2 at 11, ending on a Hard; ? cards, linked squads, gentle moats (2 ways in) only on plates that can carry and deal one; no locks, no archers, no Extreme, no mystery blocks (Peter, 2026-10-08); careful floor 0.5 every tag; World 5's deal setting for max-box boards (squads 1.6x, 400 attempts).",
   "tags": {
    "shares": {
-    "easy": 0.3,
-    "normal": 0.45,
+    "easy": 0.36,
+    "normal": 0.39,
     "hard": 0.25,
     "extreme": 0
    },
@@ -41,7 +41,7 @@
     3
    ],
    "end": "hard",
-   "note": "An 11-level world (lane C b52fa92; 14 in a47ff54): World 6's round 5 shares (0.36 / 0.50 / 0.14) give E4/N5/H2 at 11 (land-plan landTags), ending on a Hard."
+   "note": "An 8-level world since the polish pass (lane C 5ae0c38; 11 in b52fa92, 14 in a47ff54): shares .36 / .39 / .25 give NENHENEH (E3/N3/H2) at 8 (land-plan landTags), ending on a Hard; World 6's round 5 shares (.36 / .50 / .14) gave E4/N5/H2 at 11 and would give NENENENH (one Hard) at 8."
   },
   "features": {
    "mystery": {
@@ -157,7 +157,7 @@
   "nb50",
   "nb53"
  ],
- "mainNote": "Lane C's 11 (picks-full.json landMain, workspace b52fa92: nb01, nb49, nb28, nb55, nb18, nb52, nb06, nb04, nb50, nb09, nb53; the 14 of a47ff54 less nb21 Barn Owl, nb22 Great Horned Owl and nb30 Golden Eagle after lane D's phase-1 pre-read; the 14-level run is in scratch/phase1-14/). Lane D's order: landTags gives NENENHENENH (E4/N5/H2) at 11; the 11 baked E4/N6/H1 in the 14 run, so each tag's pictures fill the pattern in lane C's order (a stable merge, every picture within 1 slot of lane C's place: nb28/nb49, nb06/nb52 and nb50/nb04 trade places) and nb06 Blue Jay (6 colours, the busiest Normal, lane C's 7th) takes the new Hard at slot 6 on nb22's old Hard plan (linked, 3 ? cards); the other 10 keep their tag, plan and 14-run candidates.",
+ "mainNote": "Lane C's 11 (picks-full.json landMain, workspace b52fa92: nb01, nb49, nb28, nb55, nb18, nb52, nb06, nb04, nb50, nb09, nb53; the 14 of a47ff54 less nb21 Barn Owl, nb22 Great Horned Owl and nb30 Golden Eagle after lane D's phase-1 pre-read; the 14-level run is in scratch/phase1-14/). Lane D's order: landTags gives NENENHENENH (E4/N5/H2) at 11; the 11 baked E4/N6/H1 in the 14 run, so each tag's pictures fill the pattern in lane C's order (a stable merge, every picture within 1 slot of lane C's place: nb28/nb49, nb06/nb52 and nb50/nb04 trade places) and nb06 Blue Jay (6 colours, the busiest Normal, lane C's 7th) takes the new Hard at slot 6 on nb22's old Hard plan (linked, 3 ? cards); the other 10 keep their tag, plan and 14-run candidates. Polish pass (2026-10-14, lane C 5ae0c38, critic-land-19): cut to lane C's 8 in lane C's order (nb01 nb49 nb28 nb55 nb52 nb06 nb50 nb53; dropped nb18 Scarlet Ibis, a crimson slash at 1x, nb04 Snowy Owl and nb09 Brown Pelican, weak). Shares .36/.39/.25 give NENHENEH (E3/N3/H2, ending on a Hard, the brief's split): nb01, nb52 and nb53 land on their own tag and keep their plan entry and bake (n moved: 773->771, 777->774); nb49 (N->E, linked), nb28 (E->N, ? cards), nb55 (E->H, linked + 3 ? cards), nb06 (H->N, ? cards) and nb50 (N->E, ? cards) take a fresh land-plan's entries for those slots and were re-baked (scratch/carry8.py, carry8-plan.js); no ring in the 8 (nb52's Easy plan and nb50's fresh Easy entry carry none). A first run at .30/.45/.25 (NNENHENH, 5 bakes kept) came out E2/N4/H2 and was redone (scratch/r-nnenhenh/). The last world, so nothing after it renumbers: records 767-774, Zen 617-624.",
  "map": {
   "fromLayout": [
    4,
@@ -169,7 +169,7 @@
   ],
   "reuse": true,
   "tint": "sepia(.5) saturate(1.15) hue-rotate(-4deg) brightness(1.22) contrast(.9)",
-  "note": "v7 lever 1: no new image bytes. Castle sheets 4 (river channels through green meadow) and 6 (Fenwater's marsh: broad pools and tree islands), earmarked in tools/map-plan-v7.md for the dropped Monet / Water Lily world and free now, reused through map.fromLayout, alternately mirrored: a naturalist's wetland and garden. One pale, warm tint like an old hand-coloured book page: cream paper with soft green, lighter and lower-contrast than every Zen world so far (World 5's varnish is orange, World 6's cooler and darker, World 9's and 14's vivid greens, Safari's gold). Water stays a muted grey-teal (scratch/tint/ previews), not an odd colour. Config bridges already sit on both sheets' painted water (4: 52, 146; 6: 27, 56, 93). 11 levels on 2 sheets (8 + 3)."
+  "note": "v7 lever 1: no new image bytes. Castle sheets 4 (river channels through green meadow) and 6 (Fenwater's marsh: broad pools and tree islands), earmarked in tools/map-plan-v7.md for the dropped Monet / Water Lily world and free now, reused through map.fromLayout, alternately mirrored: a naturalist's wetland and garden. One pale, warm tint like an old hand-coloured book page: cream paper with soft green, lighter and lower-contrast than every Zen world so far (World 5's varnish is orange, World 6's cooler and darker, World 9's and 14's vivid greens, Safari's gold). Water stays a muted grey-teal (scratch/tint/ previews), not an odd colour. Config bridges already sit on both sheets' painted water (4: 52, 146; 6: 27, 56, 93). 11 levels on 2 sheets (8 + 3). Since the polish pass the 8 levels fill sheet 4's 8 spots: 1 sheet (102), sheet 6 lays none."
  },
  "byArtist": true,
  "credit": "The Naturalist's Book: natural-history plates by John James Audubon and others from the National Gallery of Art, The Met and Cleveland Museum of Art open access (CC0); some adapted for the game by Click it! Studios.",

@@ -2196,8 +2196,8 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   // Cleveland Museum of Art, CC0; 3 adapted, each with its edit note), records z16-1..z16-8 numbered 767-774 (no number another
   // world uses), era 23, no land, each with its painter (byArtist: the Zen win line "{title} by {by}", the painter alone),
   // American Flamingo by Audubon first; each wins on its stored order under the caps with the careful floor, its shades on their
-  // floors, every block reachable past its moat; Poster Parade's short-world profile at 8 (polish pass, shares .30/.45/.25:
-  // NNENHENH, E3/N3/H2, ending on nb53 Empress Josephine Rose, a Hard; easy + normal 0.75); re-grade 0 differences. Map lever 1:
+  // floors, every block reachable past its moat; Poster Parade's short-world profile at 8 (polish pass, shares .36/.39/.25:
+  // NENHENEH, E3/N3/H2, ending on nb53 Empress Josephine Rose, a Hard; easy + normal 0.75); re-grade 0 differences. Map lever 1:
   // 1 sheet (the 8 fill sheet 4's 8 spots; sheet 6 laid none since the polish pass), the castle's sheets 4 and 6 (the
   // river meadow and the Fenwater marsh, free since the Monet world was dropped) under the world's own cream book-page tint (not
   // Worlds 5-15's), two eggs each on painted quest spurs, no side quests, no new file in map/; the credit line (zen.json world
