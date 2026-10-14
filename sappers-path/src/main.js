@@ -3293,14 +3293,14 @@
           mapCards(w9[0]); const card = $("jr-r-name").textContent === W9.name && $("jr-q-v").parentElement.hidden; const e = w9[0]; startLevel(e.id); const inZen = app.mode === "zen" && app.screen === "play" && app.entry === e; patient(winOf(e)); settleNow(); tick(9000);
           ok(card && inZen && !e.L.by && app.panel === "win" && $("p-title").textContent === ZX.winTitle && $("p-line").textContent === fill(ZX.winLine, { title: e.L.title }) && app.save.data.done[e.id] === 1 && Save.isOpen(app.save.data, Z.order, w9[1].id),
             "zen World 9 play: its card names " + W9.name + "; " + e.L.title + " (picture " + num(e) + ") plays in Zen and wins '" + $("p-title").textContent + "', '" + $("p-line").textContent + "', opening picture " + num(w9[1])); useMode("campaign"); }
-        // v7 lane D: World 10 (Harvest Festival, Land 9 installed as a Zen world, lane C's 45 AI autumn pictures, FLUX.1 [schnell]).
-        // Its 45 numbered 543-587, no side quests, its first open; its 5 sheets are the castle's sheets 12 and 21 reused (no new
+        // v7 lane D: World 10 (Harvest Festival, Land 9 installed as a Zen world, lane C's 43 AI autumn pictures, FLUX.1 [schnell]).
+        // Its 43 numbered 543-585 (round 2), no side quests, its first open; its 5 sheets are the castle's sheets 12 and 21 reused (no new
         // image), each under the world's own pumpkin tint (not Worlds 5-9's); its banner; the fog after its last level while it is
         // the top world; the Zen map's credits end with its line; its first level (Happy pumpkin) shows the Zen number after World
         // 9's last, plays and wins with the plain Zen line (no painter).
         { const w10 = Z.levels.filter((e) => e.world === 10), s10 = Z.lay ? Z.lay.sheets.filter((S) => S.world === 10) : [], W10 = W.find((w) => w.k === 10) || {}, tOf = (k) => ((Z.lay ? Z.lay.sheets.find((S) => S.world === k) : null) || {}).tint;
-          ok(W.length >= 10 && W[9].k === 10 && w10.length === 45 && w10.every((e, i) => e.id === "z10-" + (i + 1) && e.n === 543 + i && !e.L.land) && !Z.gal.some((e) => e.world === 10) && !C.levels.some((e) => e.world === 10),
-            "zen World 10 (v7 lane D): " + W10.name + ", " + w10.length + " levels z10-1..z10-45, their records numbered 543-587, no side quests, none in the Campaign");
+          ok(W.length >= 10 && W[9].k === 10 && w10.length === 43 && w10.every((e, i) => e.id === "z10-" + (i + 1) && e.n === 543 + i && !e.L.land) && !Z.gal.some((e) => e.world === 10) && !C.levels.some((e) => e.world === 10),
+            "zen World 10 (v7 lane D): " + W10.name + ", " + w10.length + " levels z10-1..z10-43, their records numbered 543-585, no side quests, none in the Campaign");
           app.save = scratch(); useMode("zen"); app.save = scratchZen(); const zd = app.save.data; showScreen("map"); const J = app.jr, e10 = J.eggs.filter((g) => /^z10-/.test(g.id)), si10 = J.sheets.map((s, i) => (s.S.world === 10 ? i : -1)).filter((i) => i >= 0);
           const top10 = W[W.length - 1].k === 10, bn10 = [...document.querySelectorAll("#jr .bn")].some((b) => b.textContent.indexOf(W10.name) >= 0 || (b.getAttribute("aria-label") || "").indexOf(W10.name) >= 0), tint = s10.length && s10[0].tint;
           const castle = (f) => C.lay.sheets.some((S) => S.file === f), imgs = si10.map((i) => J.sheets[i].img).filter(Boolean);
@@ -3311,14 +3311,14 @@
           mapCards(w10[0]); const card = $("jr-r-name").textContent === W10.name && $("jr-q-v").parentElement.hidden; const e = w10[0]; startLevel(e.id); const inZen = app.mode === "zen" && app.screen === "play" && app.entry === e; patient(winOf(e)); settleNow(); tick(9000);
           ok(card && inZen && !e.L.by && app.panel === "win" && $("p-title").textContent === ZX.winTitle && $("p-line").textContent === fill(ZX.winLine, { title: e.L.title }) && app.save.data.done[e.id] === 1 && Save.isOpen(app.save.data, Z.order, w10[1].id),
             "zen World 10 play: its card names " + W10.name + "; " + e.L.title + " (picture " + num(e) + ") plays in Zen and wins '" + $("p-title").textContent + "', '" + $("p-line").textContent + "', opening picture " + num(w10[1])); useMode("campaign"); }
-        // v7 lane D: World 11 (Cloud Kingdom, Land 10 installed as a Zen world, lane C's 30 AI sky pictures, FLUX.1 [schnell]).
-        // Its 30 numbered 588-617, no side quests, its first open; its 4 sheets are the castle's sheets 13 and 10 reused (no new
+        // v7 lane D: World 11 (Cloud Kingdom, Land 10 installed as a Zen world, lane C's 25 AI sky pictures, FLUX.1 [schnell]).
+        // Its 25 numbered 586-610 (round 2), no side quests, its first open; its 4 sheets are the castle's sheets 13 and 10 reused (no new
         // image), each under the world's own pale sky tint (not Worlds 5-10's); its banner; the fog after its last level while it
         // is the top world; the Zen map's credits end with its line; its first level (Hot-air balloon) shows the Zen number after
         // World 10's last, plays and wins with the plain Zen line (no painter).
         { const w11 = Z.levels.filter((e) => e.world === 11), s11 = Z.lay ? Z.lay.sheets.filter((S) => S.world === 11) : [], W11 = W.find((w) => w.k === 11) || {}, tOf = (k) => ((Z.lay ? Z.lay.sheets.find((S) => S.world === k) : null) || {}).tint;
-          ok(W.length >= 11 && W[10].k === 11 && w11.length === 30 && w11.every((e, i) => e.id === "z11-" + (i + 1) && e.n === 588 + i && !e.L.land) && !Z.gal.some((e) => e.world === 11) && !C.levels.some((e) => e.world === 11),
-            "zen World 11 (v7 lane D): " + W11.name + ", " + w11.length + " levels z11-1..z11-30, their records numbered 588-617, no side quests, none in the Campaign");
+          ok(W.length >= 11 && W[10].k === 11 && w11.length === 25 && w11.every((e, i) => e.id === "z11-" + (i + 1) && e.n === 586 + i && !e.L.land) && !Z.gal.some((e) => e.world === 11) && !C.levels.some((e) => e.world === 11),
+            "zen World 11 (v7 lane D): " + W11.name + ", " + w11.length + " levels z11-1..z11-25, their records numbered 586-610, no side quests, none in the Campaign");
           app.save = scratch(); useMode("zen"); app.save = scratchZen(); const zd = app.save.data; showScreen("map"); const J = app.jr, e11 = J.eggs.filter((g) => /^z11-/.test(g.id)), si11 = J.sheets.map((s, i) => (s.S.world === 11 ? i : -1)).filter((i) => i >= 0);
           const top11 = W[W.length - 1].k === 11, bn11 = [...document.querySelectorAll("#jr .bn")].some((b) => b.textContent.indexOf(W11.name) >= 0 || (b.getAttribute("aria-label") || "").indexOf(W11.name) >= 0), tint = s11.length && s11[0].tint;
           const castle = (f) => C.lay.sheets.some((S) => S.file === f), imgs = si11.map((i) => J.sheets[i].img).filter(Boolean);
