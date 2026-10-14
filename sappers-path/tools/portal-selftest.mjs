@@ -127,6 +127,13 @@ try {
     check("1 load", !R.console.length, `${R.name} ?debug=1 selfTest run: ${R.console.length} console errors/warnings` + (R.console.length ? " " + R.console.slice(0, 3).join(" | ") : ""));
     check("2 origin", !R.off.length, `${R.name} ?debug=1 selfTest run: ${R.reqs.length} requests, ${R.off.length} off the game's origin`);
     await ctx.close(); }
+  // 6 (Stage 3, the gate critic): the zip as it ships, the debug-only file absent: selfTest skips what needs a debug level, 0 fails, no throw
+  { const vp = T.viewports[1], { ctx, page, R } = await context(vp);
+    await page.goto(GAME + "?debug=1"); await page.waitForFunction(() => window.SP, null, { timeout: 20000 });
+    const st = await page.evaluate(() => SP.selfTest().catch((e) => ({ pass: 0, fail: ["threw: " + e.message], notes: {} })));
+    check("6 selfTest", !st.fail.length && st.pass > 0 && !!(st.notes && st.notes.debugSkipped), `${R.name}, no debug file: SP.selfTest ${st.pass} passed, ${st.fail.length} failed; skipped as they need a debug level: ${(st.notes && st.notes.debugSkipped) || "none"}` + (st.fail.length ? " " + st.fail.slice(0, 3).join(" | ") : ""));
+    const other = R.console.filter((m) => !/404|Failed to load resource/.test(m)); check("1 load", !other.length, `${R.name} ?debug=1 without the debug file: ${other.length} console errors/warnings besides its own 404` + (other.length ? " " + other.slice(0, 2).join(" | ") : ""));
+    await ctx.close(); }
   // 8: the cross-site frame under the subpath, then a reload of the host page
   { const vp = T.viewports[1], { ctx, page, R } = await context(vp);
     await page.goto(HOST); const fh = await page.waitForSelector("#game"), F = await fh.contentFrame(); await walk(F, page, R, "framed " + R.name, false);
