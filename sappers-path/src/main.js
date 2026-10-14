@@ -1652,8 +1652,8 @@
     if (save) { const S = app.save.data.settings; S.sfx = A.sfx; S.music = A.music; S.muted = A.muted; writeSave(); }
   }
   const quickMute = () => { const q = Audio.quick(app.audio); setSound(q.sfx, q.music, true); };
-  // v5 R1, speed (meta.speed): 1x by default. A player buys 2x for the current attempt (price coins; the sheet asks
-  // first), then the button toggles 1x and 2x free until Retry, a new level or leaving. Under ?debug=1 the button cycles
+  // v5 R1, speed (meta.speed): 1x by default. A player buys meta.speed.x (3x from lane P Stage 3) for the current attempt
+  // (price coins; the sheet asks first), then the button toggles 1x and that free until Retry, a new level or leaving. Under ?debug=1 the button cycles
   // debugSpeeds (1x, 2x, 3x) free. Nothing is saved. Gold above 1x; the settings row (debug only) shows it on the right.
   const speeds = () => (app.debugSpeed ? app.meta.speed.debugSpeeds : app.fastPaid ? [1, app.meta.speed.x] : [1]);
   function setSpeed(k) {
@@ -1672,7 +1672,7 @@
     if (!r.ok) { cue("blocked"); toast(fill(T.short, { price: T.price, have: app.save.data.coins | 0 }), true); return false; }
     writeSave(); app.fastPaid = true; setSpeed(T.x); cue("coin"); toast(fill(T.bought, { price: T.price })); renderPowers(); return true;
   }
-  // A new attempt (a level, Retry): back to 1x unless debugging; a bought 2x is spent.
+  // A new attempt (a level, Retry): back to 1x unless debugging; a bought speed is spent.
   function roundSpeed() { app.fastPaid = false; $("speedbuy").hidden = true; if (!app.debugSpeed) setSpeed(1); else setSpeed(app.speed); }
   // Colour-blind mode (v4 M1): the board's blocks and the queue tiles wear their material's mark. A toggle on the title
   // and the map, kept in the save.
@@ -2403,8 +2403,8 @@
         ok(hit2 && !app.cb && !off2.cb && off2.sum.every((h, m) => h === off.sum[m]) && !gl() && app.save.data.settings.cb === false, "colour-blind off again (the map's gear, the settings sheet): the studs are plain again, byte for byte"); }
       // 17. Speed (v5 R1): under ?debug=1 the top bar's button cycles 1x, 2x, 3x and back through real clicks (nothing
       // saved), and at 3x the engine really runs three times real time. Without debug (forced off here): 1x; a tap asks
-      // to buy 2x for the round; short of coins nothing is spent; bought, 2x and coins - price, then the button toggles
-      // 1x/2x free; Retry and a new level go back to 1x and the next 2x costs again.
+      // to buy meta.speed.x for the round; short of coins nothing is spent; bought, that and coins - price, then the button
+      // toggles 1x and it free; Retry and a new level go back to 1x and the next one costs again.
       { startLevel(app.levels[0].id, "normal"); const b = document.querySelector("#top .tog-speed"), seen = [], hit = hitOK(b), sv0 = app.save.data.settings.speed;
         for (let k = 0; k < SPD.length; k++) { b.click(); seen.push([app.speed, b.textContent, paceNow() / SH.pace].join(":")); }
         const want = SPD.map((_, k) => { const v = SPD[(k + 1) % SPD.length]; return [v, v + "×", v].join(":"); });
