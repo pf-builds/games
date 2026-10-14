@@ -815,3 +815,21 @@ Safari: original pictures generated with FLUX.1 [schnell] (Apache 2.0) by Click 
 | 614 | 764 | Vulture (sf025) | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14025; prompt in tools/lands/18-safari/pictures/manifest.json |
 | 615 | 765 | Giraffe smile (sf218) | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14218; prompt in tools/lands/18-safari/pictures/manifest.json |
 | 616 | 766 | Hot-air balloon (sf050) | Click it! Studios | Original work (generated with FLUX.1 [schnell], Apache 2.0) | Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14050; prompt in tools/lands/18-safari/pictures/manifest.json |
+
+### Zen World 16: The Naturalist's Book (Land 15, levels 767-777 in the land factory's numbering)
+
+The Naturalist's Book: natural-history plates by John James Audubon and others from the National Gallery of Art, The Met and Cleveland Museum of Art open access (CC0); some adapted for the game by Click it! Studios.
+
+| Zen picture | Level | Picture | Artist | Licence | Source |
+|---|---|---|---|---|---|
+| 617 | 767 | American Flamingo (nb01) | John James Audubon, 1838, engraved by Robert Havell (National Gallery of Art) | Public domain (CC0, National Gallery of Art open access) | https://www.nga.gov/collection/art-object-page.32572.html |
+| 618 | 768 | American White Pelican (nb28) | John James Audubon, 1836, engraved by Robert Havell (National Gallery of Art) | Public domain (CC0, National Gallery of Art open access) | https://www.nga.gov/collection/art-object-page.32452.html |
+| 619 | 769 | The Blue Heron (nb49) | Mark Catesby, 1731-43 (National Gallery of Art) | Public domain (CC0, National Gallery of Art open access) | https://www.nga.gov/collection/art-object-page.52364.html |
+| 620 | 770 | Eclectus Parrots (nb55) | Edward Lear, ca. 1830-32 (The Met) | Public domain (CC0, The Met Open Access). Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the cream page split into a sky band and a grass band | https://www.metmuseum.org/art/collection/search/363843 |
+| 621 | 771 | Scarlet Ibis (nb18) | John James Audubon, 1837, engraved by Robert Havell (National Gallery of Art) | Public domain (CC0, National Gallery of Art open access) | https://www.nga.gov/collection/art-object-page.32538.html |
+| 622 | 772 | Blue Jay (nb06) | John James Audubon, 1831, engraved by Robert Havell (National Gallery of Art) | Public domain (CC0, National Gallery of Art open access) | https://www.nga.gov/collection/art-object-page.32243.html |
+| 623 | 773 | Crown Imperial (nb52) | Pierre-Joseph Redouté, 1802-16 (The Met) | Public domain (CC0, The Met Open Access). Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the cream page split into a sky band and a grass band | https://www.metmuseum.org/art/collection/search/762064 |
+| 624 | 774 | Scarlet Lily (nb50) | Pierre-Joseph Redouté, 1802-16 (Cleveland Museum of Art) | Public domain (CC0, Cleveland Museum of Art open access). Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the cream page split into a sky band and a grass band | https://clevelandart.org/art/2020.164 |
+| 625 | 775 | Snowy Owl (nb04) | John James Audubon, 1831, engraved by Robert Havell (National Gallery of Art) | Public domain (CC0, National Gallery of Art open access). Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the cream page split into a sky band and a grass band | https://www.nga.gov/collection/art-object-page.32262.html |
+| 626 | 776 | Brown Pelican (nb09) | John James Audubon, 1835, engraved by Robert Havell (National Gallery of Art) | Public domain (CC0, National Gallery of Art open access) | https://www.nga.gov/collection/art-object-page.32392.html |
+| 627 | 777 | Empress Josephine Rose (nb53) | Pierre-Joseph Redouté, 1817-24 (The Met) | Public domain (CC0, The Met Open Access) | https://www.metmuseum.org/art/collection/search/762055 |
