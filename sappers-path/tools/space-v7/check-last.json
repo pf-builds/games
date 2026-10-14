@@ -42,7 +42,7 @@
   },
   "new": {
    "home": {
-    "total": 1947977,
+    "total": 1949312,
     "by": {
      "page": 201459,
      "fonts": 77732,
@@ -50,11 +50,11 @@
      "code": 819641,
      "levels: other": 319063,
      "map: layout": 76806,
-     "levels: zen": 67656
+     "levels: zen": 68991
     }
    },
    "campaign": {
-    "total": 5429111,
+    "total": 5430446,
     "by": {
      "page": 201459,
      "fonts": 77732,
@@ -62,12 +62,12 @@
      "code": 819641,
      "levels: other": 319063,
      "map: layout": 76806,
-     "levels: zen": 67656,
+     "levels: zen": 68991,
      "audio": 3481134
     }
    },
    "zen": {
-    "total": 5483922,
+    "total": 5485257,
     "by": {
      "page": 201459,
      "fonts": 77732,
@@ -75,7 +75,7 @@
      "code": 819641,
      "levels: other": 319063,
      "map: layout": 76806,
-     "levels: zen": 122467,
+     "levels: zen": 123802,
      "audio": 3481134
     }
    }
@@ -83,7 +83,7 @@
  },
  "saves": {
   "code": 456,
-  "zenCard": "ContinueZenWorld 4 · Dino Valley26 of 530 picturesPicture 154",
+  "zenCard": "ContinueZenWorld 4 · Dino Valley26 of 546 picturesPicture 154",
   "campCard": "ContinueCampaignRealm 2 · Fenwater ValeFort 38 of 200Level 38Hard"
  }
 }

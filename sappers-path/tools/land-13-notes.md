@@ -1,5 +1,81 @@
 # Zen World 11 Cloud Kingdom: v7 lane D
 
+## Round 3 (2026-10-13): lane C's refill, 25 -> 31
+
+**Cloud Kingdom: 31 levels, records 586-616, Zen 436-466, ids z11-1..z11-31.** Handoff **47 of 47 identical**; convert 31 of 31
+identical to boards-full. No drop. Tags `landTags(31)` on the round 2 shares (.34/.52/.14): **E11/N16/H4**, still ending on
+ck015b Parrot (Hard). sheet0 78 unchanged; still 4 sheets (13/10/13'/10', 8+8+8+7).
+
+- Refills (6, placed away from look-alikes): 592 ck209 Puffin flying (N; Puffin ck024 at 611), 596 ck204 Seagull (N), 600 ck206
+  Hot-air balloon (E; ck001 at 586), 601 ck213 Swan (N), 612 ck212 Butterfly (E), 613 ck203 Eagle soaring (N; Eagle ck007 at 590).
+- Moat probe: ck204 and ck206 deal 100%, ck209 35-36%; ck203 ck212 ck213 can't carry a ring. moatSkip unchanged.
+- Bake: 5 ok first time; 592 ck209 (Normal, linked + ring) fell back on pace (318 s), then ok with `--extra 16 --reuse` (276 s).
+- Rates: 592 43.8%, 596 34.2%, 600 73.5%, 601 36.5%, 612 69.5%, 613 38.5%. **Too-easy watch: none failed**; ck204 ck206 ck213 ck203
+  each had 2 of 8 candidates at 100%, ck209 3 of 24.
+- As baked: Easy mean 66.7% (60.2-73.5), Normal 36.2% (28.0-43.8), Hard 11.9% (8.0-14.0); careful min 0.69; pace 165-276 s, median
+  211 s; 7 rings. Hards 594 ck010, 602 ck016, 609 ck023b, 616 ck015b.
+- Pre-read of the refills (9 px a cell): ck203 Eagle soaring reads as a fiery phoenix (red-orange, yellow head); ck206 Hot-air
+  balloon is half off the right edge, mostly sky (weak); ck213 Swan is busy (white swan in a dark lake scene, weak); ck204 Seagull
+  has a stray floating beak shape; ck209 and ck212 read. Duplicate titles: "Hot-air balloon" ck001/ck206.
+- Shots: `tools/shots-land-13/contact-installed.jpg` re-taken (`--world 11 --zen-from 436`).
+
+Brief: the orchestrator's refill rework (2026-10-13, head 7cabc57): lane C's combined refill batch (workspace a0bad2b,
+real-setting portraits, ids x2NN, interleaved through Worlds 11-13), with two follow-ups folded in: critic-land-14's fixes (6
+drops, ct045 ringless) and critic-land-16's (close on a Hard that reads, hl002b ringless). Not pushed; no image model run; the
+untracked 17/18/19 land folders (other builders') left alone. All three worlds were reworked in one pass. Commits on
+`sappers-path`: `182dda2` (the three land folders), `50f3e93` (reinstall), `4a7ea9b` (freeze), then these notes.
+
+**Method (Farm Friends' refill, tools/lands/17-farm-friends/scratch/phase1.md).** `handoff-full.js` on lane C's latest; the
+manifest lines replaced whole (no old line changed, url filled as before); `src/` wiped and re-prepped (pixels equal to the
+hand-off's; 3 old sources whose PNG bytes differed with equal pixels kept at their committed bytes); `prep` + `convert` identical
+to boards-full. The new tags are `landTags(N)` on the unchanged shares. The kept boards' old tag string embeds in them in order
+(scratch embed.py: each kept board on a slot of its own tag, the gaps nearest lane C's suggested places), so every kept board
+keeps its tag, plan entry and bake: its `scratch/bake/m-N.json` and `cands/` moved to its new number with `n` set (seeds are
+stored per record; scratch carry.js; the pre-refill scratch is in `scratch/r-prerefill/`). The refills fill the gaps, placed
+away from same-titled or look-alike boards; their slots take a fresh land-plan's entries (moat can = the ring check with
+moatSkip). Refills moat-probed (`scratch/probe-refill.log`); only the refill slots and the two critic ring fixes baked (`bake
+--keep-plan --list ... --shard 2`). Proof: every kept board's out/ record is identical to its pre-refill record in every field
+but `n` and `id` (Cloud 25 of 25, Clockwork 25 of 26, Holiday 25 of 26; the one each is the ringless re-bake).
+
+**Gates (the shared final tree).**
+
+| Gate | Result |
+|---|---|
+| land.js check (x3) | PASS every gate: Cloud 586-616 median 211 s, 7 rings; Clockwork 617-649 median 211 s, 12 rings; Holiday 650-684 median 216 s, 11 rings |
+| test.js | **722 passed, 0 failed** (shipped 14,452,362 B, 83 files; untracked 17/18/19 land folders present) |
+| freeze --require | before the snapshot: 0 differences everywhere except 77 shipped records of the reworked worlds (z11-7..25, all of z12 and z13; as Worlds 10/11's round 2); after: **PASS**, zen.json 484 / 4,356, shipped 796, all 0 differences |
+| regrade | full 0 of 2,405; `--gallery` 0 of 372; `--zen` 0 of 4,356; `--shipped` 0 of 2,405; `--gallery --shipped` 0 of 372; `--zen --shipped` 0 of 4,356 |
+| pack.js --check | the shipped files match the source |
+| selfTest (selftest-lands.mjs) | **912/0 at 375x812@3, 914/0 at 1280x720, 912/0 at 360x640 (--small)**, 0 console |
+| space-v7/check.mjs | **55 ok, 0 FAIL** (OLD = e072a9d via `OLD_DIR`): "0 of 546 pictures", 534 nodes from the index, sweeps z11-1 z12-1 z13-1 at 375 and 1280. The first run's Campaign byte count read short (audio cut off under 7 parallel node gates); re-run clean |
+| sweep-map.mjs | 63 sizes, 126 checks, 0 fails, 0 console |
+| harness.mjs (last) | **all passed**, selfTest 912/0 or 914/0 in every viewport and the hidden tab, 0 console (`tools/shots-land-16/harness-refill/`) |
+
+**Byte-identity.** zen.json: every top-level key but `worlds`/`levels` identical to 7cabc57's; Worlds 1-10 entries and their 385
+records identical (468 -> 484 records); Worlds 11-13 entries changed only in `map`. levels/: zen-1..zen-10.pk.json and every other
+packed file byte-identical (only zen-11/12/13 and the index changed); the index's Worlds 1-10 entries and other keys identical.
+LICENSES.md byte-identical up to the World 11 heading; the three sections rewritten (31 / 33 / 35 rows, Zen 436-466 / 467-499 /
+500-534). Frozen zen.json: Worlds 1-10 and their 385 records identical, the whole equal to build-data's; frozen.json's `made`
+date rewrite reverted.
+
+**Payload.**
+
+| | 7cabc57 | this build | Change |
+|---|---:|---:|---:|
+| Shipped folder (minus tools/) | 14,423,791 B (83 files) | **14,452,362 B** (83 files) | **+28,571 B** |
+| levels/zen-11 / zen-12 / zen-13.pk.json | 27,740 / 39,260 / 29,960 | 35,432 / 42,726 / 42,730 | +7,692 / +3,466 / +12,770 |
+| levels/zen.pk.json (the index) / LICENSES.md | 67,656 / 166,930 | 68,991 / 170,238 | +1,335 / +3,308 |
+| map/ | | | **0** |
+| Bytes before the first tap (375x812 cold load) | 1,947,977 B | **1,949,312 B** | +1,335 |
+
+Against e072a9d (v6.7, live): shipped +375,484 B, first tap +58,824 B. 19 MB gate: **4.55 MB of room left**. Cache tag `?v=83`.
+
+**End state for the next land (Farm Friends).** Last record **684**, last sheet **90** (Cloud 78-81, Clockwork 82-85, Holiday
+86-90), gal0 **62**; Zen numbers end at **534**, 484 records in zen.json. Seed `{from: 685, sheet0: 91, gal0: 62}` (Farm's
+phase-1 seed had sheet0 90: one more sheet now, from Holiday's fifth).
+
+The sections below are earlier rounds' record; where this round changed a number, this section has it.
+
 ## Round 2 (2026-10-13): renumbered after World 10's round 2, then the critic's 5 drops and 2 rings
 
 One rework with Harvest Festival's (`tools/land-12-notes.md`, Round 2), from the orchestrator's round 2 brief and its follow-up

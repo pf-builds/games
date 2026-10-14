@@ -1,5 +1,86 @@
 # Zen World 13 Holiday Lights: v7 lane D
 
+## Round 2 (2026-10-13): lane C's refill and critic-land-16's fixes, 26 -> 35
+
+**Holiday Lights: 35 levels, records 650-684, Zen 500-534, ids z13-1..z13-35.** Handoff **52 of 52 identical**; convert 35 of 35
+identical to boards-full. No drop. Tags `landTags(35)` on the unchanged shares (.35/.50/.15): **E12/N18/H5**. **5 sheets now**
+(86-90: 19/20/19'/20'/19, 8+8+8+8+3), sheet0 86 unchanged.
+
+- **critic-land-16 fix 1:** the closer is **hl022 Fox in snow** (reads); hl030 Clock midnight (weak lower face) is now a mid-world
+  Hard at 679. Both were Hard slots, so their bake records and plan entries were swapped (n set): no re-bake.
+- **critic-land-16 fix 2:** hl002b Snowman into moatSkip, re-baked ringless on its plan (`--drop-moat`, 651, 42.0%).
+- Refills (9): 659 hl206 Fox in a hat (E), 660 hl209 Santa's cat (N; Santa hat cat hl016 at 676), 661 hl208 Sleigh (N), 663 hl203
+  Penguin pair (N), 668 hl213 Robin (E), 669 hl201 Reindeer in snow (N), **672 hl207 Gingerbread house (H, the new fifth Hard, 7
+  colours)**, 674 hl211 Candy cane (N; hl007 at 658), 675 hl202 Snowman with hat (E).
+- Moat probe: hl206 100%, hl207 21-23%, hl202 15-17%, hl213 hl208 hl211 2-3% (kept: all dealt in the bake); hl201 hl203 hl209 can't.
+- Bake: all 10 slots ok first time. Rates: 659 70.5%, 660 41.8%, 661 43.8%, 663 33.2%, 668 78.5%, 669 36.5%, 672 19.2%, 674 39.5%,
+  675 61.0%, 651 42.0%. **Too-easy watch: none failed; no refill candidate reached 100%.**
+- As baked: Easy mean 66.9% (57.5-78.5), Normal 37.9% (31.2-43.8), Hard 15.2% (8.8-19.2); careful 1.0; pace 153-263 s, median 216
+  s; 11 rings. Hards 658 hl007, 667 hl013b, 672 hl207, 679 hl030, 684 hl022.
+- Pre-read of the refills: **hl213 Robin: red specks scattered over the white ground could read as blood spatter (strongest
+  flag; a robin was on lane C's own left-out list)**; hl201 Reindeer in snow is antlers over dark trees (mild); hl208 Sleigh's Santa
+  is a pale blob; the rest read. Duplicate titles: "Candy cane" hl007/hl211.
+- Shots: `tools/shots-land-16/` re-taken with `tools/shots-land-16.mjs` on the new numbering (12 -> 13 join at 499/500, mid,
+  top 524-534 with the fog, map at 1280, opener and win), `contact-installed.jpg` (`--world 13 --zen-from 500`); 0 console; fit
+  at 375 with 534 nodes unchanged (tightest 222, closest 56.5 px).
+
+Brief: the orchestrator's refill rework (2026-10-13, head 7cabc57): lane C's combined refill batch (workspace a0bad2b,
+real-setting portraits, ids x2NN, interleaved through Worlds 11-13), with two follow-ups folded in: critic-land-14's fixes (6
+drops, ct045 ringless) and critic-land-16's (close on a Hard that reads, hl002b ringless). Not pushed; no image model run; the
+untracked 17/18/19 land folders (other builders') left alone. All three worlds were reworked in one pass. Commits on
+`sappers-path`: `182dda2` (the three land folders), `50f3e93` (reinstall), `4a7ea9b` (freeze), then these notes.
+
+**Method (Farm Friends' refill, tools/lands/17-farm-friends/scratch/phase1.md).** `handoff-full.js` on lane C's latest; the
+manifest lines replaced whole (no old line changed, url filled as before); `src/` wiped and re-prepped (pixels equal to the
+hand-off's; 3 old sources whose PNG bytes differed with equal pixels kept at their committed bytes); `prep` + `convert` identical
+to boards-full. The new tags are `landTags(N)` on the unchanged shares. The kept boards' old tag string embeds in them in order
+(scratch embed.py: each kept board on a slot of its own tag, the gaps nearest lane C's suggested places), so every kept board
+keeps its tag, plan entry and bake: its `scratch/bake/m-N.json` and `cands/` moved to its new number with `n` set (seeds are
+stored per record; scratch carry.js; the pre-refill scratch is in `scratch/r-prerefill/`). The refills fill the gaps, placed
+away from same-titled or look-alike boards; their slots take a fresh land-plan's entries (moat can = the ring check with
+moatSkip). Refills moat-probed (`scratch/probe-refill.log`); only the refill slots and the two critic ring fixes baked (`bake
+--keep-plan --list ... --shard 2`). Proof: every kept board's out/ record is identical to its pre-refill record in every field
+but `n` and `id` (Cloud 25 of 25, Clockwork 25 of 26, Holiday 25 of 26; the one each is the ringless re-bake).
+
+**Gates (the shared final tree).**
+
+| Gate | Result |
+|---|---|
+| land.js check (x3) | PASS every gate: Cloud 586-616 median 211 s, 7 rings; Clockwork 617-649 median 211 s, 12 rings; Holiday 650-684 median 216 s, 11 rings |
+| test.js | **722 passed, 0 failed** (shipped 14,452,362 B, 83 files; untracked 17/18/19 land folders present) |
+| freeze --require | before the snapshot: 0 differences everywhere except 77 shipped records of the reworked worlds (z11-7..25, all of z12 and z13; as Worlds 10/11's round 2); after: **PASS**, zen.json 484 / 4,356, shipped 796, all 0 differences |
+| regrade | full 0 of 2,405; `--gallery` 0 of 372; `--zen` 0 of 4,356; `--shipped` 0 of 2,405; `--gallery --shipped` 0 of 372; `--zen --shipped` 0 of 4,356 |
+| pack.js --check | the shipped files match the source |
+| selfTest (selftest-lands.mjs) | **912/0 at 375x812@3, 914/0 at 1280x720, 912/0 at 360x640 (--small)**, 0 console |
+| space-v7/check.mjs | **55 ok, 0 FAIL** (OLD = e072a9d via `OLD_DIR`): "0 of 546 pictures", 534 nodes from the index, sweeps z11-1 z12-1 z13-1 at 375 and 1280. The first run's Campaign byte count read short (audio cut off under 7 parallel node gates); re-run clean |
+| sweep-map.mjs | 63 sizes, 126 checks, 0 fails, 0 console |
+| harness.mjs (last) | **all passed**, selfTest 912/0 or 914/0 in every viewport and the hidden tab, 0 console (`tools/shots-land-16/harness-refill/`) |
+
+**Byte-identity.** zen.json: every top-level key but `worlds`/`levels` identical to 7cabc57's; Worlds 1-10 entries and their 385
+records identical (468 -> 484 records); Worlds 11-13 entries changed only in `map`. levels/: zen-1..zen-10.pk.json and every other
+packed file byte-identical (only zen-11/12/13 and the index changed); the index's Worlds 1-10 entries and other keys identical.
+LICENSES.md byte-identical up to the World 11 heading; the three sections rewritten (31 / 33 / 35 rows, Zen 436-466 / 467-499 /
+500-534). Frozen zen.json: Worlds 1-10 and their 385 records identical, the whole equal to build-data's; frozen.json's `made`
+date rewrite reverted.
+
+**Payload.**
+
+| | 7cabc57 | this build | Change |
+|---|---:|---:|---:|
+| Shipped folder (minus tools/) | 14,423,791 B (83 files) | **14,452,362 B** (83 files) | **+28,571 B** |
+| levels/zen-11 / zen-12 / zen-13.pk.json | 27,740 / 39,260 / 29,960 | 35,432 / 42,726 / 42,730 | +7,692 / +3,466 / +12,770 |
+| levels/zen.pk.json (the index) / LICENSES.md | 67,656 / 166,930 | 68,991 / 170,238 | +1,335 / +3,308 |
+| map/ | | | **0** |
+| Bytes before the first tap (375x812 cold load) | 1,947,977 B | **1,949,312 B** | +1,335 |
+
+Against e072a9d (v6.7, live): shipped +375,484 B, first tap +58,824 B. 19 MB gate: **4.55 MB of room left**. Cache tag `?v=83`.
+
+**End state for the next land (Farm Friends).** Last record **684**, last sheet **90** (Cloud 78-81, Clockwork 82-85, Holiday
+86-90), gal0 **62**; Zen numbers end at **534**, 484 records in zen.json. Seed `{from: 685, sheet0: 91, gal0: 62}` (Farm's
+phase-1 seed had sheet0 90: one more sheet now, from Holiday's fifth).
+
+The sections below are earlier rounds' record; where this round changed a number, this section has it.
+
 ## Install (2026-10-13)
 
 Brief: the orchestrator's lane D brief of 2026-10-13 (lane C's Holiday Lights as Zen World 13, in two phases: phase 1 in the
