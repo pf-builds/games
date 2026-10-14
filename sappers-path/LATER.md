@@ -510,3 +510,11 @@ Fixed: S1-S7, m2, m3, N1, N2 (`tools/v5-r4-notes.md` §10). Parked:
 - `?debug=1` (window.SP, debug-v4.json) still works in the portal build. A portal switch could turn it off, at the cost of running selfTest on the shipped build.
 - `config.saveCode.portalOn` (false) assumed the SDK's cloud save; at Basic Launch the save code is the only way to move progress, so the portal build keeps it on. Revisit at Full Launch with the Data module.
 - The build's "never asked" list is the map sheets the journey map loads as it scrolls; a selftest step that scrolls the whole map in both modes would ask for every one.
+
+## v7 lane P (Stage 3, 2026-10-14)
+
+- Decided (Peter, A): no tour offer on launch; the Stage 1 entry above is closed. `tutorial.offerOnLaunch` brings it back.
+- An unlock's intro tip now waits for the coach, but once it shows during play it still sits over the tray for tipIntroMs, and the
+  tap that dismisses it is eaten. A placement beside the badge, or showing it at the unlock level's win sheet, would avoid both.
+- tools/shots-tutorial.mjs still waits for the launch offer (#tut-offer) and clicks Show me; point it at How to play.
+- The locked Zen chip on the map has no text hint for touch players beyond the toast on a tap (its aria-label carries it).

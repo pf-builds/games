@@ -149,3 +149,90 @@ twist levels), so the shipped zip stays free of debug data while the shipped cod
   rules doc lists: Stage 3.
 - Escape closes sheets, "Turn your phone upright" on touch Chromebooks, the Ladder tooltip at 821x462, covers, video:
   rules doc fix list items 3-6, not Stage 1.
+
+# Lane P, Stage 3: game fixes before the Basic Launch submission (2026-10-14)
+
+Branch `portal-cg`, from bf8a5ca. Every change is in the game itself (it merges into `sappers-path` later), except the two
+portal tools. One commit per fix, all prefixed "Sapper's Path lane P Stage 3:". Cache tag 87 -> 88 (if lane D bumps too, take
+the higher number).
+
+## 1. Peter's decisions and changes
+
+| | What | Where |
+|---|---|---|
+| A | No "New here?" box on launch. `tutorial.offerOnLaunch` false: the home's Level 1 is the one tap, level 1's coach teaches. The tour stays under How to play (home and Settings); the switch brings the offer back. portal-selftest's one-tap check is stricter: anything over Play fails, the label must read "Level 1", exactly one tap reaches level 1 with the board drawn and the coach's first line up | src/tutorial.js offerMaybe, config tutorial, tools/portal-selftest.mjs walk |
+| B | Zen opens once Campaign level `zen.openAfter` (5) is won; a Zen save with any picture, side quest or egg keeps it open; 0 opens it from the start. Locked: the home's Zen card greys with a padlock and "Opens after Fort 5" (`zen.text.locked`), a tap only toasts it; the map's Zen chip the same; a saved mode of zen never opens as the mode; the tour's closing card offers the Campaign alone | src/main.js zenOpen, zenLocked, livesPill, modeChip, playMode, switchMode, boot; src/tutorial.js closing; style.css `.locked` |
+| C | Level 1's coach: "Goblins hold the gate. Tap a squad to tear it down!" (arrow on the card), then "Its sappers run for their colour. Faded squads move up next." "The Goblin King flees" in the siege's win line, the tour's win line and a config note (it was lowercase) | config teach e1-01, src/main.js showPanel, levels/tutorial.json |
+| D | Nothing (Progress Save is a form answer) | |
+| E | A board tap or Space no longer settles the run (the free speed hack). Both now call `skipShow()`: nothing while any sapper runs; once all are home it still skips the goblin's show and the sheet's wait. `skip()` stays for SP and selfTest (victory march's "skip still lands everything" uses it) | src/main.js skipShow, wire |
+| F | Victory march at 2x (`show.victoryPace` 1.5 -> 2); the line reads "Victory march ×2". The harness reads the pace from config | config show, tools/harness.mjs |
+| G | The bought speed is 3x (`meta.speed.x` 2 -> 3, price 100 unchanged). Final behaviour: every attempt starts at 1x; bought, it plays at 3x and the button toggles 1x/3x free until Retry or a new level; the victory march takes the faster of the button and 2x (so 1x marches at 2x, a bought 3x stays 3x); `?debug=1` still cycles 1x/2x/3x free | config meta.speed |
+
+## 2. The known fix list
+
+1. **Ladder tooltip over level 1's cards** (every size, not just 821x462; Zen picture 1 too). An unlock's intro now waits in the
+   queue: while the level's coach has a line up, until that line points at the power-up's badge (levels 25, 50, 100, 125 do);
+   with no coach line, until `meta.tipAfterPlays` (2) taps. On level 1 the tip comes after the coach's two lines. Screens:
+   `scratchpad/stage3/level1-821x462-*.png` (0.3, 1.5, 3 and 5 s: no tip, the cards clear).
+2. **"Turn your phone upright"** now needs a touch-only phone: `(pointer: coarse)`, no `(any-pointer: fine)` anywhere, and a device
+   screen whose short side is at most `layout.upright.maxScreen` (540 CSS px). A touch laptop or Chromebook in the 821x462 frame,
+   and a tablet, never get it. New selfTest check fakes matchMedia and screen for the three cases.
+3. **Escape**: every binding gone (Settings, its sheets, the long-tail sheet, a power-up pick, the tour's offer and closing card);
+   each keeps its visible button. No Ctrl/Cmd+W anywhere. Key bindings left, all in src/main.js unless noted: Space/Enter resume
+   when paused; 1-5 play a column; R retries; Space skips the goblin's show (E); Space/Enter on the reset's hold button; the tour
+   (src/tutorial.js) swallows R, 1-5 and Space under a done card.
+4. **Credits.** In-game (`gallery.credits`, the map's foot): Twemoji and Noto "adapted (resized, pixelated and recoloured)" with
+   CC BY 4.0 / Apache 2.0 URIs in plain text; paintings and prints from the Met, the Art Institute of Chicago, the National Gallery
+   of Art and the Cleveland Museum of Art with the CC0 URI (it named the Met alone); the URIs wrap at 360 px. LICENSES.md: an
+   at-a-glance table of every asset family (code art and sound; SDXL base 1.0 images with OpenRAIL++-M; FLUX.1 [schnell] images
+   with Apache 2.0; paintings; LoC posters; Twemoji; Noto; music CC0; font OFL) and the licence URIs; the 6 land map sheets had no
+   row (SDXL, added); the local path is gone; the third-party line no longer says "all CC0". `LICENSE-Apache-2.0.txt` (the
+   licence's terms, 10,349 B) ships beside it. The portal's LICENSES.txt names only shipped files (`licences.rewrite` puts the
+   studio's records and scripts in words, `dropRows` drops the thumbnail row) and the build fails on a local path or a file the
+   build does not hold.
+5. **Home title over the coins pill** (short screens): centred in the top row. A sweep of 124 sizes (480-1440 wide x 320-900
+   tall, plus seven phones) finds no overlap with the top row, the mode cards or the tabs.
+6. **selfTest's colour-blind check** (925/1 at d72193a): not flaky and not order-dependent: it fails at 821x462@1 every time and
+   nowhere else of 7 viewports tried. At 9 device-px blocks the thatch, ashlar, roof tile, hedge and warded marks (1-px strokes
+   and dots) antialias to soft edges with no pixel of their ink, so five materials read as a smudge. **The test was right; the art
+   is fixed**: below `board.markCrisp.px` (14) a mark is snapped to whole pixels (`cover` 0.4 or more is solid ink). 821x462: 927/0.
+   Screen: `scratchpad/stage3/cb-marks-821x462.png`.
+7. **`?debug=1` in the portal build** stays (the selftest needs it). Nothing it adds shows without the query string, and the portal
+   frames the game at its own URL, so a player cannot reach it; under it, debug-v4.json is not in the zip and logs one 404.
+
+## 3. Stage 1 critic minors folded in
+
+- **LICENSES.txt** (M1): above (item 4).
+- **portal-build.mjs** (7a, 7b, M2): a game file named in a JSON under a key the trace does not follow fails the build; so does
+  any tracked file of the game folder (git ls-files, minus tools/ and *.md) that is neither traced, a companion nor in the new
+  `leftOut` (with its reason: thumb.jpg, the two spare jingles, the gallery manifest, debug-v4.json). Every shipped source must be
+  tracked at HEAD. Developer notes leave every runtime JSON (80 keys, 39,767 B), all but `keepNotes`: config `eras[].note` and
+  the tour's `steps[].jamNote`, which the page shows.
+- **portal-selftest.mjs** (6a-6d): 5 is a gate (`maxBeforeTapBytes` 2.5 MB, no music before the tap); 7 answers only exact-case
+  zipped names, adds a late-content walk (Campaign 1-5 won, both maps scrolled end to end) and fails on any zipped file never
+  asked for but `neverFetchedOk` (the three licence texts); 8 fails on an untagged request and checks that progress survives a
+  host reload in the cross-site frame.
+
+## 4. Gates (portal-cg head, see the final run below)
+
+| Gate | Result |
+|---|---|
+| test.js | 725 passed, 0 failed (shipped folder 87 files, 14,661,654 B) |
+| freeze.js --require | 886 frozen records, 0 differences; castles 283 cases, 0 differences |
+| regrade.js / --gallery | 250 levels, 2,405 checks, 0 differences / 62 levels, 372 checks, 0 differences |
+| pack.js --check | the shipped files match the source |
+| selftest-lands | 375x812@3 929/0, 1280x720 931/0, 360x640@3 929/0; 0 console messages |
+| SP.selfTest elsewhere | 821x462 931/0 (it was 925/1), 1280x720@2, 1366x768, 1920x1080, 400x600, 375x812@2 all 0 fails |
+| harness.mjs (127.0.0.1:8613) | all passed; hidden-tab selfTest 929/0; 0 console |
+| portal-build.mjs (clean, 63c0512) | PASS: 77 files, 14,131,115 B unzipped, 12,330,310 B zipped |
+| portal-selftest.mjs | 8 of 8 PASS incl. 4 one tap (1 tap, "Level 1", coach up, at 375x812, 1280x720, 821x462 and framed); before the first tap 1,942,338 B (375x812) / 1,993,604 B (1280x720, 821x462) in 22 files; 74 of 77 zipped files fetched, the 3 never fetched are the licence texts |
+
+Screens: `/private/tmp/claude-501/-Users-peter-Documents-Claude/da1759a8-4ddf-49a1-b285-fc1840880945/scratchpad/stage3/`
+(home-fresh-821x462, home-fresh-400x600, level1-821x462-0.3s/1.5s/3s/5s, zen-locked-card, zen-locked-tap-toast,
+zen-locked-map-chip, cb-marks-821x462).
+
+## 5. Left open
+
+- Covers and videos (rules doc fix list 6), the 4.6(a) update process, the cold playtest and the portal account: not code.
+- Once shown mid-play, an unlock's intro still sits over the tray and eats the tap that dismisses it (LATER.md).
+- tools/shots-tutorial.mjs still expects the launch offer (LATER.md).
