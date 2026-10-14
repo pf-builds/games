@@ -1,5 +1,18 @@
 # Zen World 13 Holiday Lights: v7 lane D
 
+## Polish pass (2026-10-14): lane C's same-count swap and retitle
+
+**Holiday Lights stays 35 levels, records 650-684, Zen 500-534.** Lane C d157872. `handoff-full.js` on the workspace at 28508bd:
+**53 of 53 boards identical**; manifest replaced whole (url filled); `prep` + `convert --force`: only 668's board changed (and
+hl211's title).
+
+- 668 hl213 -> **hl025 Robin** (hl213's red specks on the snow read as spatter): an edited source (tighter crop, sky and ground
+  bands; edit note on its row). Easy with 2 ? cards on the kept plan (`--keep-plan --list 668`), 61.8% (was 78.5%), 184 s.
+  hl025 can carry a ring by shape but never deals one (0/120); its slot plans none, so nothing changes.
+- hl211 retitled "Giant candy cane" (hl007 is "Candy cane"); data only.
+- `assemble check` PASS (median 215 s). **Changed records: z13-19 (swap), z13-25 (title).**
+- Contact sheet re-taken (`--world 13 --zen-from 500`). Gates, proof and payload: `tools/land-18-notes.md` "Polish pass".
+
 ## Round 2 (2026-10-13): lane C's refill and critic-land-16's fixes, 26 -> 35
 
 **Holiday Lights: 35 levels, records 650-684, Zen 500-534, ids z13-1..z13-35.** Handoff **52 of 52 identical**; convert 35 of 35

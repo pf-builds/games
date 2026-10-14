@@ -1,5 +1,15 @@
 # Zen World 11 Cloud Kingdom: v7 lane D
 
+## Polish pass (2026-10-14): lane C's retitle, same count
+
+**Cloud Kingdom stays 31 levels, records 586-616, Zen 436-466.** Lane C d157872: ck206 retitled "Balloon over the fields" (it
+shared "Hot-air balloon" with ck001, the opener). `handoff-full.js` on the workspace at 28508bd: **47 of 47 boards identical**;
+`pictures/manifest.json` replaced whole (url filled as before; only ck206's title differs); `prep` + `convert --force`: no board
+changed, only ck206's title in boards.json. No re-bake: `assemble check` PASS (median 211 s, unchanged), `zen`. **Changed
+record: z11-15 (600, title only).** LICENSES.md: that one row's title. Contact sheet re-taken (`tools/shots-land-13/
+contact-installed.jpg`, `--world 11 --zen-from 436`). The shared gates, byte-identity proof and payload of the pass are in
+`tools/land-18-notes.md` "Polish pass".
+
 ## Round 3 (2026-10-13): lane C's refill, 25 -> 31
 
 **Cloud Kingdom: 31 levels, records 586-616, Zen 436-466, ids z11-1..z11-31.** Handoff **47 of 47 identical**; convert 31 of 31

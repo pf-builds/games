@@ -1,5 +1,118 @@
 # Zen World 15 Safari: v7 lane D
 
+## Polish pass (2026-10-14): critic-land-18's same-count fixes (lane C 28508bd), and the pass's shared record
+
+Brief: the orchestrator's lane D polish pass of 2026-10-14 (head 8f2f69b): lane C's same-count fixes for Worlds 11-15 (d157872,
+25683a4, 28508bd), then a follow-up F, World 16 cut to 8 (lane C 5ae0c38). Not pushed; no image model run (lane C made the new
+portraits); Peter approved the unattended run. This section also holds the whole pass's gates, proof and payload; each world's own
+notes have its part (`land-13`, `-14`, `-16`, `-17`, `-19-notes.md`).
+
+**Safari stays 39 levels, records 728-766, Zen 578-616.** `handoff-full.js` on the workspace at 28508bd: **62 of 62 boards
+identical**; manifest replaced whole (url filled; sf016 and sf025 point at their edited `e` sources with edit notes; sf025's line
+gains chroma 1); edited sources re-made, every main source byte-identical to the hand-off's; `prep` + `convert --force`: only the
+named boards changed.
+
+### Swaps, recolours and the ring (kept plan, `bake --keep-plan --drop-moat --list 728,731,754,755,761,764 --shard 2`)
+
+| Level / Zen | Change | Slot | Rate (was) | Pace |
+|---|---|---|---|---|
+| 728 / 578 | sf001 Lion, the opener: moatSkip, ringless (its ring wrapped the acacia, critic m1) | Normal, linked (ring dropped) | 42.5% (37.8%) | 220 s |
+| 731 / 581 | sf202 Elephant calf (mud) -> **sf302 Rhino and bird** | Normal, ring kept (probe 3/120, dealt) | 37.5% (32.8%) | 234 s |
+| 754 / 604 | sf210 Kudu (a maroon mass read as a kill) -> **sf301 Oryx** | Normal, ? cards; **ring dropped** (sf301 can't carry one: 3 openings at the edge) | 38.2% (36.0%) | 237 s |
+| 755 / 605 | sf016 Leopard: maroon branch recoloured brown (edit note) | Easy, linked | 70.8% (62.7%) | 224 s |
+| 764 / 614 | sf025 Vulture: red eyes (and the red sun) recoloured (edit note) | Easy, 2 ? cards | 68.2% (73.5%) | 222 s |
+
+**Did not fit: sf304 Ostrich (lane C's swap for sf022 Hyena at 761).** sf304 (5 colours) can't carry a ring, so slot 761 (Normal,
+ring) went plain: **100% random wins on all 24 candidates** (`--extra 16 --reuse`). Same-tag two-slot reorder with sf203 Giraffe
+pair (734, Normal, ? cards; sf203 can carry 761's ring): sf304 at 734 100% on all 8, and sf203 on 761's ring 49-95%, a fast-tapper
+fallback. A probe on a linked Normal plan: 100% on all 8. No Normal plan fits it and an Easy (45-80%) can't either. **Nothing
+dropped: sf022 Hyena stays at 761 on its own bake (its record byte-identical), sf304's line stays in the manifest unused.** Lane C
+needs a harder ostrich (or another bird-free subject) if the hyena is still to go; the critic called that swap optional.
+
+### Same-subject neighbours (critic-land-18 m4): same-tag two-slot reorders, no re-bake
+
+Each picture carries its plan entry, bake record (n set) and saved candidates (`scratch/reorder-polish.py`); the moved records are
+identical to their old ones in every field but `id` and `n` (checked).
+
+- **Giraffes 734-735:** sf027 Giraffe snack <-> sf007 Cheetah (735 / 739, Normal), the critic's pick.
+- **Gorillas 749-750:** sf209 Gorilla baby <-> **sf045 Hippo yawn** (750 / 760, Easy). Not the critic's sf039 Ostrich race: at 750
+  it would sit beside 751 Toucan, a new bird pair.
+- **Birds 757-758:** sf042b Toucan tree <-> **sf005 Hippo** (738 / 758, Normal), picked while sf304 Ostrich was due at 761 (the
+  critic's sf042b <-> sf022 would then have set a bird beside a bird). With sf022 kept either works.
+- **Elephants 731-732:** gone with sf202's swap (731 is a rhino now).
+- Hippos now 736, 750, 758; gorillas 741, 749, 760; giraffes 730, 734, 739, 752, 765; no same subject side by side.
+
+### The world as baked
+
+- Tags E14 / N20 / H5 unchanged. Random-tap win rate: Easy mean **68.0%** (58.2-79.8), Normal **38.5%** (28.7-47.0), Hard
+  **13.4%** (9.0-17.8). Careful 0.56 or more (728 Lion 0.563; floor 0.5). Pace 177-270 s, **median 217 s**. Taps 44-55.
+- **Rings 13** (731 735 740 741 742 751 756 758 759 760 761 765 766): 728 and 754 dropped; 738/739/750 moved with their pictures.
+  moatSkip 8 (sf001 added). ? cards 19, linked 13, 0 mystery blocks, 0 fallbacks.
+- **Changed records (11): z15-1 z15-4 z15-8 z15-11 z15-12 z15-23 z15-27 z15-28 z15-31 z15-33 z15-37.**
+- Contact sheet re-taken (`tools/shots-land-18/contact-installed.jpg`, `--world 15 --zen-from 578`). Mild: 754 Oryx has a pale
+  blue patch between its horns (lane C's sky).
+
+### The pass: changed records per world
+
+| World | Changed records | What |
+|---|---|---|
+| 1-10 | **none** (385 records, entries and packed files byte-identical) | |
+| 11 Cloud Kingdom | z11-15 | title |
+| 12 Clockwork Town | z12-3 z12-8 z12-25 z12-27; z12-11 z12-17 | titles; swaps |
+| 13 Holiday Lights | z13-19; z13-25 | swap; title |
+| 14 Farm Friends | z14-4 z14-10 z14-16 z14-24 z14-26 | recolour, 3 swaps, ring off |
+| 15 Safari | the 11 above | 2 swaps, 2 recolours, ring off, 3 reorders (6 records) |
+| 16 The Naturalist's Book | 11 -> 8: z16-1 unchanged, z16-2..z16-8 changed, z16-9..z16-11 gone | cut and re-tagged (land-19-notes.md) |
+
+### Byte-identity (proven against 8f2f69b)
+
+- zen.json: every top-level key but `worlds`/`levels` identical; Worlds 1-15 entries identical; Worlds 1-10 and their 385 records
+  JSON-identical; in Worlds 11-15 only the 25 records above differ; World 16's entry changes only in `map` (1 sheet); 577 -> 574
+  records.
+- levels/: only zen-11..zen-16.pk.json and the index `zen.pk.json` changed (git); the index's Worlds 1-15 entries and its other
+  keys identical. levels.json, gallery.json, places.json, map/ untouched.
+- LICENSES.md: byte-identical up to the World 11 heading; in the Worlds 11-16 sections only the rows of the touched records change
+  (titles, swapped pictures with their seeds, the 6 edited rows with edit notes, the 6 reordered Safari rows' Zen/level keys; the
+  World 16 section loses 3 rows and renumbers) plus World 16's heading (767-777 -> 767-774). Every other line identical.
+- Frozen set: `freeze --require` before the snapshot: levels.json 2,405, gallery.json 372, zen.json 577 / 5,193 all 0 differences,
+  **shipped 35 differences, exactly the touched records** (the 25 above, z16-2..z16-11), castles 0. `--snapshot`: frozen zen.json
+  equal to build-data's, Worlds 1-10 and their 385 records and Worlds 1-15 entries identical to the old snapshot, 32 records
+  changed (the 25 and z16-2..z16-8), 3 gone; frozen.json's `made` date rewrite reverted.
+
+### Gates (final tree)
+
+| Gate | Result |
+|---|---|
+| land.js check (x6) | PASS every gate: Cloud median 211 s, Clockwork 209 s, Holiday 215 s, Farm 212 s, Safari 217 s, Naturalist's 214 s; re-grade 0 differences, map 48 px at 375, licences |
+| test.js | **725 passed, 0 failed** (before and after the snapshot; shipped 14,632,166 B, 86 files) |
+| freeze --require | before the snapshot: 0 differences everywhere but **35 shipped records, exactly the touched ones**; after: **PASS**, levels.json 2,405, gallery.json 372, zen.json 574 / 5,166, shipped 886 records, castles 283, all 0 differences |
+| regrade | full 0 of 2,405; `--gallery` 0 of 372; `--zen` 0 of 5,166; `--shipped` 0 of 2,405; `--gallery --shipped` 0 of 372; `--zen --shipped` 0 of 5,166 (the two Zen runs repeated after World 16's re-tag) |
+| pack.js --check | the shipped files match the source |
+| selfTest (selftest-lands.mjs) | **924/0 at 375x812@3, 926/0 at 1280x720, 924/0 at 360x640 (--small)**, 0 console |
+| space-v7/check.mjs | **61 ok, 0 FAIL** (OLD = e072a9d via `OLD_DIR`, a `git archive` served on its own port): "0 of 636 pictures", 624 nodes from the index, sweeps z11-1..z16-1 at 375 and 1280 |
+| sweep-map.mjs | 63 sizes, 126 checks, 0 fails, 0 console |
+| harness.mjs (last) | **all passed**, selfTest 924/0 or 926/0 in every viewport and the hidden tab, 0 console (`tools/shots-polish/harness/`) |
+
+Cache tag **`?v=87`** (index.html, style.css).
+
+### Payload
+
+| | 8f2f69b (World 16 notes) | this build | Change |
+|---|---:|---:|---:|
+| Shipped folder (minus tools/) | 14,639,169 B (86 files) | **14,632,166 B** (86 files) | **-7,003 B** |
+| levels/zen-11 / 12 / 13.pk.json | 35,432 / 42,726 / 42,730 | 35,440 / 42,363 / 42,504 | +8 / -363 / -226 |
+| levels/zen-14 / 15 / 16.pk.json | 55,247 / 62,893 / 16,096 | 54,823 / 62,669 / 11,098 | -424 / -224 / -4,998 |
+| levels/zen.pk.json (the index) | 83,779 | 82,918 | -861 |
+| LICENSES.md / src/main.js | 194,177 / 485,019 | 194,196 / 485,085 | +19 / +66 |
+| map/ | | | **0** |
+| Bytes before the first tap (home interactive, 375x812 cold load) | 1,977,944 B | **1,977,149 B** | -795 |
+| to the first Zen level (World 1's file) | 5,513,889 B | 5,513,094 B | -795 |
+
+Against e072a9d (v6.7, live): first tap +86,661 B (1,890,488 -> 1,977,149). 19 MB gate: about 4.37 MB of room left.
+
+Commits on `sappers-path`: `7c0c591` (land folders), `c094791` (reinstall; it also took the swapped-out sources' removal from
+`src/`), `5f02b89` (World 16 re-tagged E3/N3/H2), `3862022` (freeze), then these notes. Not pushed.
+
 ## Install (2026-10-13/14)
 
 Brief: the orchestrator's lane D brief of 2026-10-13 (lane C's Safari as Zen World 15, in two phases: phase 1 in the land folder

@@ -1,5 +1,28 @@
 # Zen World 14 Farm Friends: v7 lane D
 
+## Polish pass (2026-10-14): critic-land-17's same-count fixes (lane C 25683a4)
+
+**Farm Friends stays 43 levels, records 685-727, Zen 535-577.** `handoff-full.js` on the workspace at 28508bd: **68 of 68 boards
+identical**; manifest replaced whole (url filled; ff003's line now points at the edited `ff003e.png` with its edit note; lane C
+retired the ff003b spare line); `src/` re-prepped for the changed pictures (ff003 re-made from the edited source), every main
+source byte- or pixel-identical to the hand-off's; `prep` + `convert --force`: only the four named boards changed.
+
+| Level / Zen | Change | Slot (kept plan) | Rate (was) | Pace |
+|---|---|---|---|---|
+| 688 / 538 | ff003 Sheep: red eye pixels recoloured near-black (edit note on its row) | Normal, linked | 40.2% (34.2%) | 224 s |
+| 694 / 544 | ff201 Cow by the barn (barn red read as a hurt neck) -> **ff016 Turkey** | Normal, linked + ring (probe 95-99/120) | 32.5% (47.5%) | 162 s |
+| 700 / 550 | ff111 Piglets nap: moatSkip, re-baked ringless (`--drop-moat`; the ring stub sat in the straw) | Easy, ring dropped | 54.5% (68.5%) | 209 s |
+| 708 / 558 | ff019 Pony (weak) -> **ff048b Pumpkin cart** | Normal, ? cards + ring (probe 28-32/120) | 33.2% (34.2%) | 220 s |
+| 710 / 560 | ff205 Duck by the pond (mud) -> **ff208 Bunny in the garden** | Normal, linked (no ring planned) | 39.8% (38.8%) | 210 s |
+
+- One command: `bake --keep-plan --drop-moat --list 688,694,708,710,700 --shard 2`, all ok first time, no extras, no reorder.
+- Every slot keeps its tag and features but 700, which loses its ring (the critic's ask). Rings now 11 (694 697 699 701 706 708
+  711 712 715 724 727). moatSkip 9 (ff111 added).
+- Two turkeys now (694 Turkey, 714 Turkey strut), 20 apart and titled apart.
+- `assemble check` PASS (median 212 s). **Changed records: z14-4 z14-10 z14-16 z14-24 z14-26.** LICENSES.md: those 5 rows.
+- test.js: ff003's edited row expected, ff111 joins the ringless list (ff205 leaves it: out of main), ff201 ff205 ff019 out of main.
+- Contact sheet re-taken (`--world 14 --zen-from 535`). Gates, proof and payload: `tools/land-18-notes.md` "Polish pass".
+
 ## Install (2026-10-13/14)
 
 Brief: the orchestrator's lane D brief of 2026-10-13 (lane C's Farm Friends as Zen World 14, in two phases: phase 1 in the land

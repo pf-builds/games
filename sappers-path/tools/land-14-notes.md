@@ -1,5 +1,23 @@
 # Zen World 12 Clockwork Town: v7 lane D
 
+## Polish pass (2026-10-14): lane C's same-count swaps and retitles
+
+**Clockwork Town stays 33 levels, records 617-649, Zen 467-499.** Lane C d157872. `handoff-full.js` on the workspace at 28508bd:
+**57 of 57 boards identical**; manifest replaced whole (url filled); `prep` + `convert --force`: only the two swapped boards
+changed (and four titles).
+
+- Swaps on the kept plan (`bake --keep-plan --list 627,633 --shard 2`), each slot keeping its tag and features:
+  - 627 ct205 -> **ct032 Robot gardener** (a red blotch on ct205): Normal, linked + ring (probe 36-47/120, it carries one), 35.0%
+    (was 40.2%), 179 s.
+  - 633 ct207 -> **ct015 Hot air engine** (a human face had slipped into ct207 Gear windmill): Easy, plain (its slot plans no
+    ring), 71.8% (was 58.2%), 187 s.
+  - Both are edited sources (lane C: a tighter crop, the plain background split into a sky band and a ground band); their
+    licence rows carry the edit note.
+- Retitles (data only): ct201 "Clock tower at sunset", ct203 "Robot owl at night", ct208 "Robot cat on bricks", ct211 "Robot dog
+  in the park".
+- `assemble check` PASS (median 209 s). **Changed records: z12-3 z12-8 z12-25 z12-27 (titles), z12-11 z12-17 (swaps).**
+- Contact sheet re-taken (`--world 12 --zen-from 467`). Gates, proof and payload: `tools/land-18-notes.md` "Polish pass".
+
 ## Round 2 (2026-10-13): critic-land-14's fixes and lane C's refill, 32 -> 33
 
 **Clockwork Town: 33 levels, records 617-649, Zen 467-499, ids z12-1..z12-33.** Handoff **55 of 55 identical**; convert 33 of 33

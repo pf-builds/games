@@ -1,5 +1,45 @@
 # Zen World 16 The Naturalist's Book: v7 lane D
 
+## Polish pass (2026-10-14): critic-land-19, cut to 8 (lane C 5ae0c38)
+
+**The Naturalist's Book: 8 levels, records 767-774, Zen 617-624, ids z16-1..z16-8** (the last world, so nothing after it
+renumbers). Brief: the orchestrator's follow-up F to the polish pass (the pass is in `tools/land-18-notes.md` "Polish pass", with
+the shared gates, proof and payload). Lane C dropped nb18 Scarlet Ibis (a crimson slash at 1x), nb04 Snowy Owl and nb09 Brown
+Pelican (weak) and set the order nb01, nb49, nb28, nb55, nb52, nb06, nb50, nb53.
+
+- `handoff-full.js` on the workspace (5ae0c38): **18 of 18 boards identical**; the 18 manifest lines replaced whole (lane C's new
+  order, main then spares; no line's content changed; the file keeps its `\u00e9` escapes); `src/` holds the 8.
+- **Re-plan for 8:** shares .36/.39/.25 give `landTags(8)` **NENHENEH, E3/N3/H2, ending on a Hard** (the land's old .36/.50/.14
+  would give NENENENH, one Hard). In lane C's order nb01 (N), nb52 (E) and nb53 (H) land on their own tag and keep plan entry and
+  bake (n 773 -> 771, 777 -> 774); the other 5 change tag and take a fresh land-plan's entries for their slots
+  (`scratch/carry8.py`, `carry8-plan.js`), then `bake --keep-plan --list 768,769,770,772,773 --shard 2`: **all ok first time**.
+  A first run at .30/.45/.25 gave NNENHENH (5 bakes kept) but that is E2/N4/H2, not the brief's split; it was redone and
+  committed as its own correction (`scratch/r-nnenhenh/`).
+
+| Level / Zen | Plate | Tag, features | Rate | Pace | Taps |
+|---|---|---|---|---|---|
+| 767 / 617 | nb01 American Flamingo | N, 2 ? (kept) | 35.3% | 204 s | 52 |
+| 768 / 618 | nb49 The Blue Heron | E, link (was N) | 74.8% | 223 s | 47 |
+| 769 / 619 | nb28 American White Pelican | N, 2 ? (was E) | 41.3% | 203 s | 41 |
+| 770 / 620 | nb55 Eclectus Parrots | H, link, 3 ? (was E) | 13.0% | 214 s | 48 |
+| 771 / 621 | nb52 Crown Imperial | E (kept, was 773) | 53.0% | 220 s | 49 |
+| 772 / 622 | nb06 Blue Jay | N, 2 ? (was H) | 38.8% | 235 s | 44 |
+| 773 / 623 | nb50 Scarlet Lily | E, 2 ? (was N with a ring) | 64.5% | 174 s | 54 |
+| 774 / 624 | nb53 Empress Josephine Rose | H, 3 ? (kept, was 777) | 15.0% | 225 s | 45 |
+
+- Easy mean 64.1%, Normal 38.4%, Hard 14.0%; careful 1.0; median 214 s; **0 rings** now (nb50's fresh Easy entry and nb52's
+  Easy plan carry none; nb04 and nb09, which had rings, are out). byArtist unchanged ("American Flamingo by John James Audubon").
+- **Map: 1 sheet** (102, castle sheet 4; the 8 fill its 8 spots, sheet 6 lays none), its eggs reeds and butterfly; fog after 624.
+- **LICENSES.md** World 16: 8 rows keyed Zen 617-624 then 767-774 (3 Havell rows: nb01 nb06 nb28; 3 edited: nb50 nb52 nb55),
+  heading "levels 767-774". zen.json World 16's entry changes only in `map`.
+- **Changed records:** z16-1 unchanged; z16-2..z16-8 changed (n or bake); z16-9..z16-11 gone. z16-2 nb49, z16-3 nb28 and z16-6 nb06
+  sit where they did but re-baked; z16-5 nb52 and z16-8 nb53 are their old records but id/n.
+- test.js World 16 block: 8 records 767-774, 1 sheet, rows 617-624, Havell rows nb01 nb06 nb28, edited nb50 nb52 nb55, easy +
+  normal >= 0.75, the 6 drops out of main. selfTest: 8 records, 1 sheet. check.mjs: "0 of 636 pictures", 624 nodes.
+- Contact sheet re-taken (`tools/shots-land-19/contact-installed.jpg`, `--world 16 --zen-from 617`).
+- End state for the next land: last record **774**, last sheet **102**, gal0 62; Zen numbers end at **624**, 574 records in
+  zen.json. Seed `{from: 775, sheet0: 103, gal0: 62}`.
+
 ## Install (2026-10-13/14)
 
 Brief: the orchestrator's lane D brief of 2026-10-13 (lane C's Naturalist's Book as Zen World 16, a short real-art world, in two
