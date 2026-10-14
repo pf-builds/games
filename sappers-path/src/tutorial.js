@@ -16,7 +16,8 @@
   const NS = (root.SappersPath = root.SappersPath || {});
   NS.tutorial = { init };
 
-  // P (main.js): app, $, v (cache tag), getJSON, storage, startLevel, showScreen, retry, switchMode, renderCoach, SP.
+  // P (main.js): app, $, v (cache tag), getJSON, storage, startLevel, showScreen, retry, switchMode, renderCoach, csave, zsave,
+  // zenOn, zenOpen (lane P Stage 3: Zen's lock), SP.
   function init(P) {
     const app = P.app, $ = P.$, E = NS.engine, C = app.cfg.tutorial;
     if (!C || !C.file) return null;
@@ -128,7 +129,7 @@
     // The closing card: the tour is finished (the flag, the real save back); the board stays behind it until a choice.
     function closing() {
       hideCard(); $("panel").hidden = true; restore(); setSeen(); T.closing = true;
-      const zb = T.el.close.querySelector(".tut-mode.zen"); zb.hidden = !P.zenOn();
+      const zb = T.el.close.querySelector(".tut-mode.zen"); zb.hidden = !P.zenOpen(); // lane P Stage 3: a new player is offered the Campaign alone
       T.el.close.hidden = false; T.el.close.querySelector(".tut-mode").focus(); return true;
     }
     function restore() {
@@ -265,7 +266,7 @@
               ok(app.S.plays === p0 && app.S.now >= n0 && T.card && cell > 22, "tour: under a done card R and Retry leave the fort alone; the forts draw at " + cell.toFixed(1) + " CSS px a cell (the game's cap is 22)"); } ok(!cd.hidden && hit(nx) && big(nx) && hit(cd.querySelector(".tut-skip2")) && cd.scrollHeight <= cd.clientHeight + 1, "tour: " + st.id + " ends on its done card (Next and Skip tour hittable, the text fits)"); nx.click(); }
         }
         const cl = T.el.close, mb = Array.from(cl.querySelectorAll(".tut-mode")).filter((b) => !b.hidden);
-        ok(!cl.hidden && mb.length === (P.zenOn() ? 2 : 1) && mb.every((b) => hit(b) && big(b)) && mem[C.key] === "1" && !app.save.practice && !document.body.classList.contains("tut"), "tour: finished, the closing card offers " + mb.length + " modes, the flag is set and the real save is back");
+        ok(!cl.hidden && mb.length === (P.zenOpen() ? 2 : 1) && mb.every((b) => hit(b) && big(b)) && mem[C.key] === "1" && !app.save.practice && !document.body.classList.contains("tut"), "tour: finished, the closing card offers " + mb.length + " modes, the flag is set and the real save is back");
         ok(snap() === s0, "tour: the saves are untouched (no coins, inventory, best times, progress, eggs or last)");
         mb[0].click(); ok(app.screen === "map" && app.mode === "campaign" && !app.S && cl.hidden, "tour: Campaign on the closing card opens the Campaign map");
         // Settings > How to play replays it; Skip tour on a step, no confirm: home, the flag, the save untouched.
