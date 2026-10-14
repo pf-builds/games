@@ -1,5 +1,73 @@
 # Zen World 10 Harvest Festival: v7 lane D
 
+## Round 2 (2026-10-13): the critic's fixes (`tools/critic-land-12.md`, "ship after fixes", head 649e0ad), with World 11
+
+One rework with Cloud Kingdom's (`tools/land-13-notes.md`, Round 2), from the orchestrator's round 2 brief and a follow-up. Lane
+C's workspace ee1b129 (critic M1: hf012b Dragon costume, maroon eyes; M2's first: hf057 Feast table, the weak Hard; both
+dropped). Not pushed; no image model run. The sections below "Install" are round 1's record; where round 2 changed a number,
+this section has it. Commits: one round 2 commit for both worlds (land folders, install, freeze), then these notes.
+
+- **Inputs.** `handoff-full.js`: **55 of 55 identical**; the 55 lines replaced whole (no line changed). `main` = lane C's 43
+  (558 hf012b and 564 hf057 out, their sources removed); `convert --force`: **43 of 43 identical to boards-full**.
+- **Kept plan, cut to 43.** The two slots taken out of `scratch/state.json` and their bake files dropped; the rest moved down
+  with their `n` (round 1's in `scratch/r45/`). The profile's 43-level sawtooth (unchanged profile) is **E15/N23/H5**, ending on
+  a Hard; it differs from the cut 45 at 5 slots, re-planned for their new tag. Plus **546 hf042 Trick or treat into `moatSkip`**
+  (critic m1: the ring's stub through the sky band reads as a stray line), re-baked ringless with `--drop-moat` on its slot's
+  other features. `bake --keep-plan --drop-moat --list 546,558,560,561,563,564 --shard 2` (106 s): **6 of 6 ok first time**.
+  The other 37 records are round 1's, identical but `n` and `id`.
+
+| Level / Zen | Picture | Was | Now | Rate | Pace | Taps | Careful |
+|---|---|---|---|---|---|---|---|
+| 546 / 396 | hf042 Trick or treat | N, link, ring | N, link, **no ring** | 33.2% | 171 s | 43 | 1.0 |
+| 558 / 408 | hf013 Scarecrow | N, 2 ?, ring | E, ring | 64.0% | 181 s | 43 | 1.0 |
+| 560 / 410 | hf014b Turkey | E, 2 ? | N, 2 ? | 36.5% | 237 s | 54 | 1.0 |
+| 561 / 411 | hf015 Pumpkin pie | N, link | E, link | 66.0% | 189 s | 44 | 1.0 |
+| 563 / 413 | hf017 Red apple | E | N, 2 ? | 40.5% | 240 s | 52 | 1.0 |
+| 564 / 414 | hf018 Corn cob | N, link | H, 2 links, 3 ? | 11.8% | 235 s | 54 | 1.0 |
+
+- **The world now:** 43 levels **543-585** (Zen **393-435**, ids z10-1..z10-43). **E15/N23/H5**, ending on a Hard (585 Acorn);
+  Hards 554 Sheet ghost kid, 564 Corn cob, 571 Sweater weather, 578 Candy bucket, 585 Acorn. Easy mean 67.3% (60.2-73.5),
+  Normal 39.0% (31.8-49.5), Hard 12.8% (8.8-16.8); careful min 1.0 / 1.0 / 0.75. Pace 153-248 s, **median 219 s**. ? cards 20,
+  links 17, **rings 16** (543 544 549 551 557 558 568 571 574 575 576 577 578 579 582 585; 578 Candle glow's kept, as the
+  critic said), 0 mystery blocks, 0 locks, 0 fallbacks.
+- **Too-easy watch:** 545 Pumpkin patch unchanged (2 of 8 candidates at 100%; the critic: not too easy by the grade). No re-baked
+  slot had a candidate at 98% or more.
+- **Map:** 5 sheets 73-77 as before (9 + 9 + 9 + 9 + 7); the eggs on the same spurs.
+- **Not done (critic, non-blocking, not in this brief):** M2's other weak boards, m2 (hf001's red streak), m4 (Candle glow's
+  title and step lines), m5 sameness, m7 the LICENSES pointer, m8 the desktop tint.
+- **test.js / selfTest / check.mjs:** World 10's blocks at 43 (543 + i, rows keyed 393-435 then 543-585; test.js also checks
+  546 hf042 ringless and in `moatSkip`, and hf012b/hf057 out of `main`); check.mjs's Zen card count 472.
+
+### Gates (round 2 tree, Worlds 10 and 11 together)
+
+| Gate | Result |
+|---|---|
+| land.js check | World 10 PASS (543-585 e17, median 219 s, 16 rings, Zen no mystery blocks); World 11 PASS (586-610 e18, median 211 s, 5 rings) |
+| test.js | **720 passed, 0 failed** (shipped 14,316,130 B, 81 files; re-run with the untracked 14-clockwork-town, 16-holiday-lights, 17-farm-friends and 18-safari present) |
+| freeze --require | PASS after the snapshot: levels.json 2,405 checks, gallery.json 372, zen.json 410 / 3,690, shipped 722 records, castles 283, all 0 differences |
+| regrade | full 0 of 2,405; `--gallery` 0 of 372; `--zen` 0 of 3,690; `--shipped` 0 of 2,405; `--gallery --shipped` 0 of 372; `--zen --shipped` 0 of 3,690 |
+| pack.js --check | the shipped files match the source (zen.pk.json, zen-10 and zen-11 rewritten; zen-1..9 byte-identical) |
+| selfTest (selftest-lands.mjs) | **904/0 at 375x812@3, 906/0 at 1280x720, 904/0 at 360x640 (--small)**, 0 console |
+| space-v7/check.mjs | **51 ok, 0 FAIL** (OLD = e072a9d via `OLD_DIR`): Zen card "0 of 472 pictures" (three earlier runs timed out on the home wait while another builder's 16-thread bake held the load at 12-27; passed on the next) |
+| sweep-map.mjs | 63 sizes, 126 checks, 0 fails, 0 console |
+| harness.mjs (last) | **all passed**, selfTest 904/0 or 906/0 in every viewport and the hidden tab, 0 console messages (three earlier runs timed out on a 15 s page-reload wait at load 15-27; passed at load 3; shots in `tools/shots-land-12/harness-r2/`) |
+
+Cache tag **`?v=80`**.
+
+**Byte-identity (proven).** zen.json: Worlds 1-9 entries and their 342 records identical to 79eed50's, every other key
+identical; World 10 replaced (45 -> 43 records, 6 re-baked), World 11 replaced (Round 2 in land-13-notes). levels/:
+zen-1..zen-9.pk.json and every other packed file byte-identical; zen.pk.json, zen-10 and zen-11 rewritten. LICENSES.md
+byte-identical up to World 10's heading (123,710 B); World 10 then World 11 in order; "lane C" nowhere. Frozen set
+(`--snapshot`): only frozen/zen.json changed, its Worlds 1-9 and 342 records identical, the whole equal to build-data's.
+
+Payload: shipped **14,316,130 B** (81 files; -10,662 B on 79eed50's 14,326,792; +239,252 on e072a9d's live 14,076,878; 4.68 MB
+under 19 MB). `zen-10.pk.json` 50,988 B (53,416), `zen-11.pk.json` 27,740 B (33,654), `zen.pk.json` 57,945 B (58,199). Bytes
+before the first tap 1,929,214 B (-234 on 79eed50, +38,726 on e072a9d).
+
+Contact sheet re-taken: `tools/shots-land-12/contact-installed.jpg` (`--world 10 --zen-from 393`).
+
+**End state:** World 10 ends at 585 on sheet 77; World 11 (Round 2 in `tools/land-13-notes.md`) ends at **610** on sheet **81**.
+
 ## Install (2026-10-13)
 
 Brief: the orchestrator's lane D brief of 2026-10-13 (lane C's Harvest Festival as Zen World 10, in two phases: phase 1 in the

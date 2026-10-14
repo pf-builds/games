@@ -14,7 +14,7 @@
     }
    },
    "campaign": {
-    "total": 5371622,
+    "total": 4375153,
     "by": {
      "page": 201459,
      "fonts": 77732,
@@ -23,7 +23,7 @@
      "levels: other": 319063,
      "map: layout": 76806,
      "levels: zen": 37215,
-     "audio": 3481134
+     "audio": 2484665
     }
    },
    "zen": {
@@ -42,40 +42,40 @@
   },
   "new": {
    "home": {
-    "total": 1929448,
+    "total": 1929214,
     "by": {
      "page": 201459,
      "fonts": 77732,
      "art": 385620,
-     "code": 810569,
+     "code": 810589,
      "levels: other": 319063,
      "map: layout": 76806,
-     "levels: zen": 58199
+     "levels: zen": 57945
     }
    },
    "campaign": {
-    "total": 4414113,
+    "total": 4413879,
     "by": {
      "page": 201459,
      "fonts": 77732,
      "art": 385620,
-     "code": 810569,
+     "code": 810589,
      "levels: other": 319063,
      "map: layout": 76806,
-     "levels: zen": 58199,
+     "levels: zen": 57945,
      "audio": 2484665
     }
    },
    "zen": {
-    "total": 5465393,
+    "total": 5465159,
     "by": {
      "page": 201459,
      "fonts": 77732,
      "art": 385620,
-     "code": 810569,
+     "code": 810589,
      "levels: other": 319063,
      "map: layout": 76806,
-     "levels: zen": 113010,
+     "levels: zen": 112756,
      "audio": 3481134
     }
    }
@@ -83,7 +83,7 @@
  },
  "saves": {
   "code": 456,
-  "zenCard": "ContinueZenWorld 4 · Dino Valley26 of 479 picturesPicture 154",
+  "zenCard": "ContinueZenWorld 4 · Dino Valley26 of 472 picturesPicture 154",
   "campCard": "ContinueCampaignRealm 2 · Fenwater ValeFort 38 of 200Level 38Hard"
  }
 }

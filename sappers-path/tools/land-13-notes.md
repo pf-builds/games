@@ -1,5 +1,64 @@
 # Zen World 11 Cloud Kingdom: v7 lane D
 
+## Round 2 (2026-10-13): renumbered after World 10's round 2, then the critic's 5 drops and 2 rings
+
+One rework with Harvest Festival's (`tools/land-12-notes.md`, Round 2), from the orchestrator's round 2 brief and its follow-up
+(the Cloud Kingdom critic `tools/critic-land-13.md`: 19 read, 10 weak, 1 mud; lane C 40afe29 drops ck018b Flamingo, ck045 Cloud
+castle gate (the old closer), ck035 Rainbow slide, ck031 Balloon ride, ck033 Kite flyer). Not pushed; no image model run. The
+sections below are round 1's record; where round 2 changed a number, this section has it.
+
+- **First, renumbered (not re-baked).** World 10 now ends at 585, its 5 sheets still at 77, so Cloud moved to 586-615 with
+  `scratch/state.json` re-seeded `{from: 586, sheet0: 78, gal0: 62}` (sheet0 unchanged: Harvest's 43 still take 5 sheets) and
+  each `scratch/bake/m-N.json` moved to `m-(N-2).json` with its `n` (round 1's in `scratch/r0/`). Proof: all 30 out/ records
+  identical but `n` and `id`, the map identical but `n`; the egg coin values (drawn from a seed of the first level's number)
+  moved, as World 9's did. That 30-level state was then cut to 25 (next).
+- **Lane C's 25 (40afe29, the corrected commit).** `handoff-full.js` **41 of 41 identical**; the 41 lines replaced whole (no
+  line changed); `convert --force`: **25 of 25 identical to boards-full**. The 5 sources removed.
+- **The closer: ck015b Parrot** (the critic: "a red and blue macaw on yellow. Excellent", already a Hard with a link and 3 ?
+  cards) moved from lane C's slot 14 to the end, keeping its round 1 bake whole. ck029 Rocket (borderline, an Easy) was the other
+  choice.
+- **Tags for 25: E9/N12/H4** (the orchestrator's ask). The profile's shares (.37/.50/.13) give E9/N13/H3 at 25; set to Easy .34,
+  Normal .52, Hard .14 (land.json), whose sawtooth is E9/N12/H4 ending on a Hard. test.js's casual check reads easy + normal >=
+  0.84 for this world (0.36 + 0.48; Worlds 7-10 keep 0.85).
+- **Rings off ck002 and ck020** (critic m1): both into `moatSkip` (the castle's ring draws a mountain; the kite's cuts the wing).
+- **Re-bake:** 15 slots whose tag or ring changed, on the kept plan (`bake --keep-plan --drop-moat --list 587,588,589,591,592,
+  593,598,599,600,602,603,604,605,608,609 --shard 2`, 311 s under another builder's load): **15 of 15 ok first time**. The other
+  10 (586 590 594 595 596 597 601 606 607 610) are round 1's boards, identical but `n` and `id`.
+
+| Level / Zen | Picture | Was | Now | Rate |
+|---|---|---|---|---|
+| 587 / 437 | ck002 Cloud castle | N, link, ring | N, link, **no ring** | 38.2% |
+| 588 / 438 | ck003 Rainbow | N, link | E, link | 68.8% |
+| 589 / 439 | ck006 Kite | E | N, 2 ? | 31.2% |
+| 591 / 441 | ck009 Sun face | H, 3 ? | E, 2 ? | 65.0% |
+| 592 / 442 | ck036b Bird nest | E | N, link | 30.5% |
+| 593 / 443 | ck010 Moon and star | N, link | **H**, 2 links, 3 ? | 14.0% |
+| 598 / 448 | ck016 Storm cloud | E, link | **H**, 2 links, 3 ? | 12.0% |
+| 599 / 449 | ck039 Umbrella float | N, link | E, link | 60.2% |
+| 600 / 450 | ck017b Windmill | E | N, 2 ? | 41.2% |
+| 602 / 452 | ck020 Dragon kite | N, 2 ?, ring | N, 2 ?, **no ring** | 36.5% |
+| 603 / 453 | ck042 Kite tangle | H, link, 3 ?, ring | E, ring | 68.0% |
+| 604 / 454 | ck022 Hummingbird | E, ring | N, ring | 38.2% |
+| 605 / 455 | ck023b Sky lighthouse | N, 2 ? | **H**, 2 links, 3 ? | 13.8% |
+| 608 / 458 | ck027b Swallow | N, link | E, link | 64.5% |
+| 609 / 459 | ck029 Rocket | E | N, 2 ? | 31.5% |
+
+- **The world now:** 25 levels **586-610** (Zen **436-460**, ids z11-1..z11-25). **E9/N12/H4**, ending on a Hard (610 Parrot);
+  Hards 593 Moon and star, 598 Storm cloud, 605 Sky lighthouse, 610 Parrot (all "reads" or "reads (borderline)" in the critic's
+  table). Easy mean 65.6% (60.2-70.2), Normal 35.5% (28.0-42.0), Hard 11.9% (8.0-14.0); careful min 1.0 / 0.88 / 0.69. Pace
+  165-261 s, **median 211 s**. ? cards 15, links 10, **rings 5** (595 Owl pilot, 596 Balloon bunch (mire), 603 Kite tangle,
+  604 Hummingbird, 607 Puffin), 0 mystery blocks, 0 locks, 0 fallbacks. No candidate of a re-baked slot won 98% or more.
+- **Map:** sheets 78-81 (13 and 10 as before), 8 + 8 + 8 + 1; the top sheet holds 610 alone, its eggs in the fog.
+- **Not done (critic, not in this brief):** the other weak boards (ck038 ck017b ck027b ck019b), m3 (the bolt on ck016), m4.
+- **test.js / selfTest / check.mjs:** World 11's blocks at 25 (586 + i, rows keyed 436-460 then 586-610; test.js also checks
+  ck002 and ck020 ringless and in `moatSkip`, the 5 dropped out of `main`, and the closer ck015b a Hard); check.mjs 472 pictures.
+
+Gates, byte-identity and payload: `tools/land-12-notes.md`, Round 2 (one tree for both worlds). Contact sheet re-taken:
+`tools/shots-land-13/contact-installed.jpg` (`--world 11 --zen-from 436`).
+
+- **The end state the next world builds on (Clockwork Town):** last record **610**, last sheet **81**, gal0 **62** (no side
+  quests); Zen numbers end at **460**, 410 records in zen.json. Seed `{from: 611, sheet0: 82, gal0: 62}`.
+
 ## Install (2026-10-13)
 
 Brief: the orchestrator's lane D brief of 2026-10-13 (lane C's Cloud Kingdom as Zen World 11, in two phases: phase 1 in the
