@@ -19,11 +19,11 @@ NAMES = {"a": "sky", "b": "cloud", "c": "gold", "d": "goblin", "e": "ink", "f": 
 STONE, SHADE, BANNER, TIMBER = 6, 7, 9, 11  # material ids of f, g, i, k (the squads' colours)
 # Interior cells per option and size (cover px / cells = the cell on the cover; the board draws 66 px cells).
 SIZES = {"D": {"land": (30, 17), "port": (16, 24), "square": (16, 16)},
-         "E": {"land": (30, 17), "port": (16, 24), "square": (20, 20)},
+         "E": {"land": (36, 20), "port": (16, 24), "square": (20, 20)},
          "F": {"land": (30, 17), "port": (16, 24), "square": (16, 16)}}
 
 # The Goblin King in blocks, as the boss level builds him. Small (9x9, alarmed: wide eyes, an O mouth, hands up) for a
-# wall top; big (13x14) for E.
+# wall top; big (13x14) for E, with a scowl (Peter, 2026-10-14: ink brows slanting down to the centre).
 KING_S = ["..c.c.c..",
           "..ccccc..",
           "d.ddddd.d",
@@ -37,8 +37,8 @@ KING_B = ["...c..c..c...",
           "...c.ccc.c...",
           "...ccchccc...",
           "dd..ddddd..dd",
-          ".ddddddddddd.",
-          "..dllldllld..",
+          ".ddeedddeedd.",
+          "..dlledelld..",
           "..dlledlled..",
           "..ddddddddd..",
           "..dddeeeddd..",
@@ -73,9 +73,10 @@ class Scene:
         for y in range(top, s.h):
             k = half + (1 if (y - top) % 3 == 1 else 0) + (1 if y >= s.h - 2 else 0) - (1 if y == top else 0)
             s.rect(cx - k, y, 2 * k, 1, ",")
-    def level(s, name, cols, camp=4):
+    def level(s, name, cols, camp=4, at=None):
+        """at: the camp's first interior column (default: centred)."""
         W, H = s.w + 2, s.h + 2
-        x0 = (s.w - camp) // 2 + 1
+        x0 = (s.w - camp) // 2 + 1 if at is None else at + 1
         rows = ["," * W] + ["," + "".join(r) + "," for r in s.g] + ["".join("#" if x0 <= x < x0 + camp else "," for x in range(W))]
         used = sorted({ch for r in s.g for ch in r if ch.isalpha()} | {chr(96 + cd[0]) for col in cols for cd in col}, key=ord)  # every card's colour too
         return {"name": name, "w": W, "h": H, "grid": rows, "pic": True, "cols": cols,
@@ -119,22 +120,28 @@ def scene_D(size, w, h):
 
 
 def scene_E(size, w, h):
-    """King on the wall: the big King standing on a fort (timber gate, purple banners) whose foot is being dug away; the
-    front squad cards (31, 52, 24: the game's own DOM tiles, cover-boards.mjs) go along the bottom on the cover."""
+    """King on the wall (Peter's pick, 2026-10-14): the big scowling King standing on a fort whose timber gate is dug
+    through from below, sappers pouring in at it; the front squad cards (31, 52, 24: the game's own DOM tiles,
+    cover-boards.mjs) go bottom left on the cover, the breach sits bottom right under the King, clear of them and of the
+    title. The camp is right under the breach. Returns the scene, its deal and the camp's column."""
     S = Scene(w, h)
-    def fort(top, gx, banners):
-        S.wall(top); S.rect(gx - 2, top + 3, 4, S.h - top - 3, "k"); S.rect(gx - 1, top + 2, 2, 1, "k")
+    def fort(top, gx, half, banners):
+        S.wall(top)
+        S.rect(gx - half - 1, top + 2, 2 * half + 2, S.h - top - 2, "g"); S.rect(gx - half, top + 3, 2 * half, S.h - top - 3, "k")
         for x in banners: S.rect(x, top + 1, 2, min(3, S.h - top - 1), "i")
-    if size == "land":  # title: top left over the sky; the King right of centre; the cards bottom left
-        S.stamp(CLOUD, 2, 9)
-        kx = 16; fort(14, 22, (3, 9, 27)); S.stamp(KING_B, kx, 1)
-    elif size == "port":  # title: top; the King under it; the cards along the bottom
-        S.stamp(CLOUD, 10, 8)
-        kx = 1; fort(20, 8, (1, 13)); S.stamp(KING_B, kx, 8)
+        S.breach(gx, top + 3, half)  # a hole already dug up through the gate, timber left at its sides
+        for x in range(S.w):  # the foot away from the breach is shade stone (no squad digs it): the sappers crowd the hole
+            if abs(x + 0.5 - gx) > half + 4 and S.g[S.h - 1][x] in "fk": S.g[S.h - 1][x] = "g"
+    if size == "land":  # title: top left; the King right of centre; cards bottom left (cols 0-17); breach under the King
+        S.stamp(CLOUD, 3, 11)
+        fort(14, 27, 4, (2, 8, 33)); S.stamp(KING_B, 20, 1); camp = 25
+    elif size == "port":  # title: top; the King left of centre; cards bottom left; the breach bottom right
+        S.stamp(CLOUD, 11, 8)
+        fort(19, 13, 2, (1, 6)); S.stamp(KING_B, 0, 8); camp = 11
     else:
-        S.stamp(CLOUD, 14, 8)
-        kx = 3; fort(17, 10, (1, 17)); S.stamp(KING_B, kx, 6)
-    return S, [[[TIMBER, 31]], [[BANNER, 52]], [[STONE, 24]], [[STONE, 40]], [[TIMBER, 30]]]
+        S.stamp(CLOUD, 14, 4)
+        fort(15, 17, 2, (1, 6)); S.stamp(KING_B, 1, 6); camp = 15
+    return S, [[[TIMBER, 31]], [[BANNER, 52]], [[STONE, 24]], [[STONE, 40]], [[TIMBER, 30]]], camp
 
 
 def scene_F(size, w, h):
@@ -166,8 +173,8 @@ def main(out, show):
     fx = {}
     for o, (fn, name) in SCENES.items():
         for size, (w, h) in SIZES[o].items():
-            S, cols = fn(size, w, h)
-            L = S.level(f"Cover {o} {name} ({size})", cols)
+            S, cols, *at = fn(size, w, h)
+            L = S.level(f"Cover {o} {name} ({size})", cols, at=at[0] if at else None)
             fx[f"cover{o}_{size}"] = L
             if show: print(f"cover{o}_{size} {L['w']}x{L['h']}"); print("\n".join(L["grid"]))
     json.dump(fx, open(out, "w"), indent=0); print(out, len(fx), "scenes")

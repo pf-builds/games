@@ -79,10 +79,11 @@ const L = {
   D: { land: () => { img(`/art/art-D-land${HI}.png`, "paint"); logo(["Sapper's Path"], 250, 650, 150, 0.09); },
        port: () => { img(`/art/art-D-port${HI}.png`, "paint"); logo(["Sapper's", "Path"], 190, W / 2, 175, 0.09); },
        square: () => { img(`/art/art-D-square${HI}.png`, "paint"); logo(["Sapper's Path"], 138, W / 2, 72, 0.09); } },
-  // E: the big King on the wall, the front squad cards (the game's tiles, at their own 3x pixels) along the bottom.
-  E: { land: () => { img(`/art/art-E-land${HI}.png`, "paint"); logo(["Sapper's", "Path"], 250, 520, 235, 0.09); cards(48, 1050, 3.0, 24); },
-       port: () => { img(`/art/art-E-port${HI}.png`, "paint"); logo(["Sapper's", "Path"], 165, W / 2, 148, 0.09); cards(28, 1180, 2.52, 18); },
-       square: () => { img(`/art/art-E-square${HI}.png`, "paint"); logo(["Sapper's Path"], 138, W / 2, 72, 0.09); cards(40, 785, 2.16, 16); } },
+  // E (Peter's pick): the big scowling King on a fort breached under him (bottom right), the front squad cards (the
+  // game's tiles) bottom left, clear of the breach.
+  E: { land: () => { img(`/art/art-E-land${HI}.png`, "paint"); logo(["Sapper's", "Path"], 250, 480, 240, 0.09); cards(48, 1050, 3.0, 24); },
+       port: () => { img(`/art/art-E-port${HI}.png`, "paint"); logo(["Sapper's", "Path"], 165, W / 2, 148, 0.09); cards(20, 1182, 1.75, 12); },
+       square: () => { img(`/art/art-E-square${HI}.png`, "paint"); logo(["Sapper's Path"], 138, W / 2, 72, 0.09); cards(24, 786, 1.75, 12); } },
   // F: the game's before and after on one diagonal; the title along the foot.
   F: { land: () => { img(`/art/art-F-land${HI}.png`, "paint"); logo(["Sapper's Path"], 235, W / 2, 955, 0.09); },
        port: () => { img(`/art/art-F-port${HI}.png`, "paint"); logo(["Sapper's", "Path"], 190, W / 2, 1010, 0.09); },

@@ -10,7 +10,7 @@ import json, os, sys
 from PIL import Image, ImageDraw, ImageEnhance
 
 SIZES = {"land": (1920, 1080), "port": (800, 1200), "square": (800, 800), "port@1080x1620": (1080, 1620)}  # the last: the portrait video's first frame
-PICK = {"D": 1650, "E": 1900, "F": 6000}  # sim ms of the grab used per option (F: its "after")
+PICK = {"D": 1650, "E": 1600, "F": 6000}  # sim ms of the grab used per option (F: its "after")
 COLOR, BRIGHT = 1.12, 1.03
 SEAM = 0.011  # F: the diagonal's ink seam, as a share of the cover's width
 DIAG = (0.62, 0.38)  # F: where the diagonal meets the top and the bottom edge (shares of the width)
