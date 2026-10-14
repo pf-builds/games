@@ -9,3 +9,6 @@ sappers-path/tools/critic-land-01-visual/*.png
 sappers-path/tools/critic-land-01-visual/raw/
 sappers-path/tools/campaign-v6-scratch/
 sappers-path/tools/campaign-quests/scratch/
+
+# Sapper's Path portal build output (tools/portal-build.mjs)
+sappers-path/tools/build-data/portal/

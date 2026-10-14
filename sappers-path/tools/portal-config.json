@@ -1,0 +1,20 @@
+{
+ "version": 1,
+ "note": "Sapper's Path portal build (lane P, tools/portal-build.mjs, tools/portal-selftest.mjs; tools/portal-notes.md). CrazyGames Basic Launch with no SDK: the whole build counts. out: the gitignored folder the build writes (the staged copy, the zip, build.json). maxBytes: the mobile-homepage line read two ways (20 MiB and 20 MB; the build fails past the lower); maxFiles: the portal's file cap. debugOnly: files the code fetches only under ?debug=1, left out of the zip on purpose (portal-selftest serves them from the source tree for its selfTest run only). companions: shipped though never fetched (the font's own licence must travel with it). licences: the plain-text credits generated from LICENSES.md. stripMeta: index.html <meta> lines dropped from the copy (the social-card tags carry the pf-builds URL). banned: words that must not appear in the build's runtime files (case-insensitive; itch as itch.io so 'switch' passes); allowUrls: the one absolute URL runtime files may hold (the SVG namespace inside data: URIs, never fetched).",
+ "out": "tools/build-data/portal",
+ "name": "sappers-path-crazygames",
+ "maxBytes": [20971520, 20000000],
+ "maxFiles": 1500,
+ "debugOnly": ["levels/debug-v4.json"],
+ "companions": ["fonts/OFL.txt"],
+ "licences": {"from": "LICENSES.md", "to": "LICENSES.txt"},
+ "stripMeta": ["property=\"og:", "name=\"twitter:"],
+ "banned": ["https?://", "pf-builds", "github\\.io", "peterfrutchey", "poki", "crazygames", "itch\\.io"],
+ "allowUrls": ["http://www.w3.org/2000/svg"],
+ "selftest": {
+  "hostPort": 8611, "gamePort": 8612,
+  "subpath": "cdn/games/sappers-path/b1/",
+  "viewports": [[375, 812, 3, true], [1280, 720, 1, false], [821, 462, 1, false]],
+  "settleMs": 2500, "selfTestMs": 120000
+ }
+}

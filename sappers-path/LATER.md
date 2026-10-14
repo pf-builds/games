@@ -503,3 +503,10 @@ Fixed: S1-S7, m2, m3, N1, N2 (`tools/v5-r4-notes.md` §10). Parked:
 - Lane C's landManifest lines leave `url` empty for AI pictures; lane D fills the source line by hand (Dino Valley, World 7). lane C's build-picks.js could write it.
 - 439 The Great Wave (us210): with a ring it plays 100% and deals rarely, without one 15 of 24 Normal candidates still won 98-100%. A tighter crop or a busier sea would give it more to dig.
 - The moat probe found 18 of 36 ring-capable AI scenes never deal with a ring at Dino Valley's deal setting (World 4 needed fewer). A probe step in land.js (listed above for World 6) would save the scratch script.
+
+## v7 lane P (portal build, Stage 1, 2026-10-14)
+
+- A fresh profile meets the tour's offer (New here? Show me / Skip) over the home, so Level 1 is two taps (Skip, Play) and Show me is one tap into a practice fort. The portal selftest's "one tap" check fails until this is decided. Options: keep it (the practice fort is gameplay in one tap); in the portal build let Play skip the offer and go straight to Level 1 with How to play still on the home; or offer the tour after level 1 instead. Peter's call (CrazyGames' Basic Launch metrics count players reaching a minute of play).
+- `?debug=1` (window.SP, debug-v4.json) still works in the portal build. A portal switch could turn it off, at the cost of running selfTest on the shipped build.
+- `config.saveCode.portalOn` (false) assumed the SDK's cloud save; at Basic Launch the save code is the only way to move progress, so the portal build keeps it on. Revisit at Full Launch with the Data module.
+- The build's "never asked" list is the map sheets the journey map loads as it scrolls; a selftest step that scrolls the whole map in both modes would ask for every one.
