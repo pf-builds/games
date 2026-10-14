@@ -1,0 +1,1080 @@
+[
+ {
+  "id": "sf001",
+  "title": "Lion",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14001; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf001.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a lion with a big golden mane, savanna with a big acacia tree and an orange sky, cute friendly storybook style, flat vector illustration, a big close-up portrait, the animal's head and shoulders filling half of the picture, in front of a real savanna with a big acacia tree and an orange sky background made of broad simple shapes, the animal's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14001,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf001-s14001.png"
+ },
+ {
+  "id": "sf002",
+  "title": "Elephant",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14002; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf002.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "an elephant with big ears and tusks, savanna with green hills and a blue sky, cute friendly storybook style, flat vector illustration, a big close-up portrait, the animal's head and shoulders filling half of the picture, in front of a real savanna with green hills and a blue sky background made of broad simple shapes, the animal's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14002,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf002-s14002.png"
+ },
+ {
+  "id": "sf003",
+  "title": "Giraffe",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14003; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf003.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a giraffe's head and long spotted neck, acacia trees and a blue sky with white clouds, cute friendly storybook style, flat vector illustration, a big close-up portrait, the animal's head and shoulders filling half of the picture, in front of a real acacia trees and a blue sky with white clouds background made of broad simple shapes, the animal's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14003,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf003-s14003.png"
+ },
+ {
+  "id": "sf202",
+  "title": "Elephant calf",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14202; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf202.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a baby elephant with big ears, a blue river and acacia trees, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real a blue river and acacia trees background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14202,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf202-s14202.png"
+ },
+ {
+  "id": "sf026",
+  "title": "Elephant shower",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14026; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf026.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "an elephant spraying water from its trunk over its back, a watering hole with acacia trees and a blue sky, cute friendly storybook style, flat vector illustration, a scene with something happening, the main character big in the foreground filling at least 40 percent of the picture, a detailed a watering hole with acacia trees and a blue sky background made of broad simple shapes, no tiny figures, the main character's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14026,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf026-s14026.png"
+ },
+ {
+  "id": "sf004",
+  "title": "Zebra",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14004; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf004.png",
+  "chroma": 2,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a zebra with bold black and white stripes, golden grassland and a pink sunset, cute friendly storybook style, flat vector illustration, a big close-up portrait, the animal's head and shoulders filling half of the picture, in front of a real golden grassland and a pink sunset background made of broad simple shapes, the animal's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14004,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf004-s14004.png"
+ },
+ {
+  "id": "sf203",
+  "title": "Giraffe pair",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14203; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf203.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "two giraffes necks crossed, a blue sky and acacias, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real a blue sky and acacias background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14203,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf203-s14203.png"
+ },
+ {
+  "id": "sf027",
+  "title": "Giraffe snack",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14027; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf027.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a giraffe eating leaves from the top of an acacia tree, a golden savanna and a blue sky, cute friendly storybook style, flat vector illustration, a scene with something happening, the main character big in the foreground filling at least 40 percent of the picture, a detailed a golden savanna and a blue sky background made of broad simple shapes, no tiny figures, the main character's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14027,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf027-s14027.png"
+ },
+ {
+  "id": "sf205",
+  "title": "Hippo calf",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14205; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf205.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a baby hippo, a blue river and reeds, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real a blue river and reeds background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14205,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf205-s14205.png"
+ },
+ {
+  "id": "sf204",
+  "title": "Zebra foal",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14204; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf204.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a zebra foal, green grass and blue hills, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real green grass and blue hills background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14204,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf204-s14204.png"
+ },
+ {
+  "id": "sf005",
+  "title": "Hippo",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14005; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf005.png",
+  "chroma": 1.2,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a purple-grey hippo with its mouth open, a blue river with green reeds, cute friendly storybook style, flat vector illustration, a big close-up portrait, the animal's head and shoulders filling half of the picture, in front of a real a blue river with green reeds background made of broad simple shapes, the animal's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14005,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf005-s14005.png"
+ },
+ {
+  "id": "sf007",
+  "title": "Cheetah",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14007; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf007.png",
+  "chroma": 2.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cheetah with spots and tear marks, tall golden grass and a blue sky, cute friendly storybook style, flat vector illustration, a big close-up portrait, the animal's head and shoulders filling half of the picture, in front of a real tall golden grass and a blue sky background made of broad simple shapes, the animal's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14007,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf007-s14007.png"
+ },
+ {
+  "id": "sf034b",
+  "title": "Rhino mud bath",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14534; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf034b.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a rhino rolling in a mud wallow, a dusty savanna with trees, cute friendly storybook style, flat vector illustration, a scene with something happening, the main character big in the foreground filling at least 40 percent of the picture, a detailed a dusty savanna with trees background made of broad simple shapes, no tiny figures, the main character's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14534,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf034b-s14534.png"
+ },
+ {
+  "id": "sf008",
+  "title": "Gorilla",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14008; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf008.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a gorilla with a silver back, a green jungle with big leaves, cute friendly storybook style, flat vector illustration, a big close-up portrait, the animal's head and shoulders filling half of the picture, in front of a real a green jungle with big leaves background made of broad simple shapes, the animal's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14008,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf008-s14008.png"
+ },
+ {
+  "id": "sf206",
+  "title": "Cheetah cub",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14206; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf206.png",
+  "chroma": 2,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a fluffy cheetah cub, golden grass and a blue sky, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real golden grass and a blue sky background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14206,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf206-s14206.png"
+ },
+ {
+  "id": "sf010",
+  "title": "Flamingo",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14010; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf010.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a pink flamingo, a blue lake with mountains, cute friendly storybook style, flat vector illustration, a big close-up portrait, the animal's head and shoulders filling half of the picture, in front of a real a blue lake with mountains background made of broad simple shapes, the animal's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14010,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf010-s14010.png"
+ },
+ {
+  "id": "sf009",
+  "title": "Meerkat",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14009; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf009.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a meerkat standing up, a red desert with a termite mound, cute friendly storybook style, flat vector illustration, a big close-up portrait, the animal's head and shoulders filling half of the picture, in front of a real a red desert with a termite mound background made of broad simple shapes, the animal's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14009,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf009-s14009.png"
+ },
+ {
+  "id": "sf013",
+  "title": "Lion cub",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14013; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf013.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a fluffy lion cub, tall green grass and a sunset, cute friendly storybook style, flat vector illustration, a big close-up portrait, the animal's head and shoulders filling half of the picture, in front of a real tall green grass and a sunset background made of broad simple shapes, the animal's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14013,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf013-s14013.png"
+ },
+ {
+  "id": "sf207",
+  "title": "Rhino calf",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14207; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf207.png",
+  "chroma": 1,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a baby rhino, a dusty orange plain, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real a dusty orange plain background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14207,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf207-s14207.png"
+ },
+ {
+  "id": "sf011",
+  "title": "Crocodile",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14011; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf011.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a green crocodile with a toothy grin, a brown river bank with palms, cute friendly storybook style, flat vector illustration, a big close-up portrait, the animal's head and shoulders filling half of the picture, in front of a real a brown river bank with palms background made of broad simple shapes, the animal's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14011,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf011-s14011.png"
+ },
+ {
+  "id": "sf014",
+  "title": "Baby elephant",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14014; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf014.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a baby elephant, a watering hole and acacia trees, cute friendly storybook style, flat vector illustration, a big close-up portrait, the animal's head and shoulders filling half of the picture, in front of a real a watering hole and acacia trees background made of broad simple shapes, the animal's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14014,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf014-s14014.png"
+ },
+ {
+  "id": "sf038",
+  "title": "Gorilla snack",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14038; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf038.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a gorilla eating a banana, a green jungle with big leaves, cute friendly storybook style, flat vector illustration, a scene with something happening, the main character big in the foreground filling at least 40 percent of the picture, a detailed a green jungle with big leaves background made of broad simple shapes, no tiny figures, the main character's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14038,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf038-s14038.png"
+ },
+ {
+  "id": "sf209",
+  "title": "Gorilla baby",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14209; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf209.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a baby gorilla, green jungle leaves, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real green jungle leaves background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14209,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf209-s14209.png"
+ },
+ {
+  "id": "sf015",
+  "title": "Toucan",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14015; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf015.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a toucan with a big orange beak, green jungle leaves, cute friendly storybook style, flat vector illustration, a big close-up portrait, the animal's head and shoulders filling half of the picture, in front of a real green jungle leaves background made of broad simple shapes, the animal's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14015,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf015-s14015.png"
+ },
+ {
+  "id": "sf040",
+  "title": "Giraffe at sunset",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14040; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf040.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a giraffe walking past a big orange sun, a purple sky and acacia trees, cute friendly storybook style, flat vector illustration, a scene with something happening, the main character big in the foreground filling at least 40 percent of the picture, a detailed a purple sky and acacia trees background made of broad simple shapes, no tiny figures, the main character's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14040,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf040-s14040.png"
+ },
+ {
+  "id": "sf039",
+  "title": "Ostrich race",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14039; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf039.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "an ostrich running fast, a dusty orange plain and a big sun, cute friendly storybook style, flat vector illustration, a scene with something happening, the main character big in the foreground filling at least 40 percent of the picture, a detailed a dusty orange plain and a big sun background made of broad simple shapes, no tiny figures, the main character's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14039,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf039-s14039.png"
+ },
+ {
+  "id": "sf210",
+  "title": "Kudu",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14210; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf210.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a kudu with spiral horns, a golden savanna, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real a golden savanna background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14210,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf210-s14210.png"
+ },
+ {
+  "id": "sf016",
+  "title": "Leopard",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14016; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf016.png",
+  "chroma": 2.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a leopard with rosette spots on a branch, a purple dusk sky, cute friendly storybook style, flat vector illustration, a big close-up portrait, the animal's head and shoulders filling half of the picture, in front of a real a purple dusk sky background made of broad simple shapes, the animal's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14016,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf016-s14016.png"
+ },
+ {
+  "id": "sf018",
+  "title": "Lemur",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14018; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf018.png",
+  "chroma": 2.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a ring-tailed lemur, a green forest, cute friendly storybook style, flat vector illustration, a big close-up portrait, the animal's head and shoulders filling half of the picture, in front of a real a green forest background made of broad simple shapes, the animal's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14018,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf018-s14018.png"
+ },
+ {
+  "id": "sf215",
+  "title": "Hornbill",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14215; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf215.png",
+  "chroma": 1.7,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a hornbill with a big yellow beak, a green forest, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real a green forest background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14215,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf215-s14215.png"
+ },
+ {
+  "id": "sf042b",
+  "title": "Toucan tree",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14542; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf042b.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a toucan on a branch eating a red berry, a green jungle, cute friendly storybook style, flat vector illustration, a scene with something happening, the main character big in the foreground filling at least 40 percent of the picture, a detailed a green jungle background made of broad simple shapes, no tiny figures, the main character's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14542,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf042b-s14542.png"
+ },
+ {
+  "id": "sf023",
+  "title": "Chameleon",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14023; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf023.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a green chameleon on a branch, an orange and pink flower jungle, cute friendly storybook style, flat vector illustration, a big close-up portrait, the animal's head and shoulders filling half of the picture, in front of a real an orange and pink flower jungle background made of broad simple shapes, the animal's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14023,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf023-s14023.png"
+ },
+ {
+  "id": "sf045",
+  "title": "Hippo yawn",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14045; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf045.png",
+  "chroma": 1.2,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a hippo yawning wide in the river, a green riverbank, cute friendly storybook style, flat vector illustration, a scene with something happening, the main character big in the foreground filling at least 40 percent of the picture, a detailed a green riverbank background made of broad simple shapes, no tiny figures, the main character's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14045,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf045-s14045.png"
+ },
+ {
+  "id": "sf022",
+  "title": "Hyena",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14022; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf022.png",
+  "chroma": 1.7,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a laughing spotted hyena, an orange sunset savanna, cute friendly storybook style, flat vector illustration, a big close-up portrait, the animal's head and shoulders filling half of the picture, in front of a real an orange sunset savanna background made of broad simple shapes, the animal's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14022,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf022-s14022.png"
+ },
+ {
+  "id": "sf046b",
+  "title": "Zebra herd",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14546; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf046b.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "two zebras grazing side by side, green grass and acacia trees, cute friendly storybook style, flat vector illustration, a scene with something happening, the main character big in the foreground filling at least 40 percent of the picture, a detailed green grass and acacia trees background made of broad simple shapes, no tiny figures, the main character's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14546,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf046b-s14546.png"
+ },
+ {
+  "id": "sf217",
+  "title": "Elephant trunk up",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14217; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf217.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "an elephant raising its trunk, a big orange sun, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real a big orange sun background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14217,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf217-s14217.png"
+ },
+ {
+  "id": "sf025",
+  "title": "Vulture",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14025; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf025.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a friendly vulture on a dead tree, a big orange sun, cute friendly storybook style, flat vector illustration, a big close-up portrait, the animal's head and shoulders filling half of the picture, in front of a real a big orange sun background made of broad simple shapes, the animal's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14025,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf025-s14025.png"
+ },
+ {
+  "id": "sf218",
+  "title": "Giraffe smile",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14218; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf218.png",
+  "chroma": 1,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a smiling giraffe chewing, acacia trees and a blue sky, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real acacia trees and a blue sky background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14218,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf218-s14218.png"
+ },
+ {
+  "id": "sf050",
+  "title": "Hot-air balloon",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14050; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf050.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a striped hot-air balloon floating over the savanna, acacia trees below and a blue sky, cute friendly storybook style, flat vector illustration, a scene with something happening, the main character big in the foreground filling at least 40 percent of the picture, a detailed acacia trees below and a blue sky background made of broad simple shapes, no tiny figures, the main character's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14050,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf050-s14050.png"
+ },
+ {
+  "id": "sf026b",
+  "title": "Elephant shower",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14526; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf026b.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "an elephant spraying water from its trunk over its back, a watering hole with acacia trees and a blue sky, cute friendly storybook style, flat vector illustration, a scene with something happening, the main character big in the foreground filling at least 40 percent of the picture, a detailed a watering hole with acacia trees and a blue sky background made of broad simple shapes, no tiny figures, the main character's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14526,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf026b-s14526.png"
+ },
+ {
+  "id": "sf027b",
+  "title": "Giraffe snack",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14527; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf027b.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a giraffe eating leaves from the top of an acacia tree, a golden savanna and a blue sky, cute friendly storybook style, flat vector illustration, a scene with something happening, the main character big in the foreground filling at least 40 percent of the picture, a detailed a golden savanna and a blue sky background made of broad simple shapes, no tiny figures, the main character's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14527,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf027b-s14527.png"
+ },
+ {
+  "id": "sf034",
+  "title": "Rhino mud bath",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14034; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf034.png",
+  "chroma": 2,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a rhino rolling in a mud wallow, a dusty savanna with trees, cute friendly storybook style, flat vector illustration, a scene with something happening, the main character big in the foreground filling at least 40 percent of the picture, a detailed a dusty savanna with trees background made of broad simple shapes, no tiny figures, the main character's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14034,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf034-s14034.png"
+ },
+ {
+  "id": "sf038b",
+  "title": "Gorilla snack",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14538; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf038b.png",
+  "chroma": 1.7,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a gorilla eating a banana, a green jungle with big leaves, cute friendly storybook style, flat vector illustration, a scene with something happening, the main character big in the foreground filling at least 40 percent of the picture, a detailed a green jungle with big leaves background made of broad simple shapes, no tiny figures, the main character's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14538,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf038b-s14538.png"
+ },
+ {
+  "id": "sf040b",
+  "title": "Giraffe at sunset",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14540; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf040b.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a giraffe walking past a big orange sun, a purple sky and acacia trees, cute friendly storybook style, flat vector illustration, a scene with something happening, the main character big in the foreground filling at least 40 percent of the picture, a detailed a purple sky and acacia trees background made of broad simple shapes, no tiny figures, the main character's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14540,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf040b-s14540.png"
+ },
+ {
+  "id": "sf045b",
+  "title": "Hippo yawn",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14545; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf045b.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a hippo yawning wide in the river, a green riverbank, cute friendly storybook style, flat vector illustration, a scene with something happening, the main character big in the foreground filling at least 40 percent of the picture, a detailed a green riverbank background made of broad simple shapes, no tiny figures, the main character's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14545,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf045b-s14545.png"
+ },
+ {
+  "id": "sf046",
+  "title": "Zebra herd",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14046; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf046.png",
+  "chroma": 1,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "two zebras grazing side by side, green grass and acacia trees, cute friendly storybook style, flat vector illustration, a scene with something happening, the main character big in the foreground filling at least 40 percent of the picture, a detailed green grass and acacia trees background made of broad simple shapes, no tiny figures, the main character's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14046,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf046-s14046.png"
+ },
+ {
+  "id": "sf029",
+  "title": "Zebra crossing",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14029; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf029.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a zebra splashing across a river, green hills and a blue sky, cute friendly storybook style, flat vector illustration, a scene with something happening, the main character big in the foreground filling at least 40 percent of the picture, a detailed green hills and a blue sky background made of broad simple shapes, no tiny figures, the main character's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14029,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf029-s14029.png"
+ },
+ {
+  "id": "sf035",
+  "title": "Monkey swing",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14035; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf035.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a monkey swinging from a jungle vine, a green jungle with a waterfall, cute friendly storybook style, flat vector illustration, a scene with something happening, the main character big in the foreground filling at least 40 percent of the picture, a detailed a green jungle with a waterfall background made of broad simple shapes, no tiny figures, the main character's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14035,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf035-s14035.png"
+ },
+ {
+  "id": "sf036",
+  "title": "Croc and bird",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14036; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf036.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a crocodile with a little bird standing on its nose, a brown river with palms, cute friendly storybook style, flat vector illustration, a scene with something happening, the main character big in the foreground filling at least 40 percent of the picture, a detailed a brown river with palms background made of broad simple shapes, no tiny figures, the main character's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14036,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf036-s14036.png"
+ },
+ {
+  "id": "sf041b",
+  "title": "Elephant family",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14541; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf041b.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "an elephant mother and baby walking trunk to tail, a savanna with a mountain, cute friendly storybook style, flat vector illustration, a scene with something happening, the main character big in the foreground filling at least 40 percent of the picture, a detailed a savanna with a mountain background made of broad simple shapes, no tiny figures, the main character's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14541,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf041b-s14541.png"
+ },
+ {
+  "id": "sf019",
+  "title": "Okapi",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14019; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf019.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "an okapi with striped legs, a deep green rainforest, cute friendly storybook style, flat vector illustration, a big close-up portrait, the animal's head and shoulders filling half of the picture, in front of a real a deep green rainforest background made of broad simple shapes, the animal's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14019,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf019-s14019.png"
+ },
+ {
+  "id": "sf020",
+  "title": "Pelican",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14020; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf020.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a white pelican, a blue lake at sunset, cute friendly storybook style, flat vector illustration, a big close-up portrait, the animal's head and shoulders filling half of the picture, in front of a real a blue lake at sunset background made of broad simple shapes, the animal's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14020,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf020-s14020.png"
+ },
+ {
+  "id": "sf021",
+  "title": "Buffalo",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14021; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf021.png",
+  "chroma": 1.2,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "an African buffalo with curved horns, a golden plain and a storm sky, cute friendly storybook style, flat vector illustration, a big close-up portrait, the animal's head and shoulders filling half of the picture, in front of a real a golden plain and a storm sky background made of broad simple shapes, the animal's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14021,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf021-s14021.png"
+ },
+ {
+  "id": "sf047b",
+  "title": "Baboon on a rock",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14547; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf047b.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a baboon sitting on a big rock, a dusty valley, cute friendly storybook style, flat vector illustration, a scene with something happening, the main character big in the foreground filling at least 40 percent of the picture, a detailed a dusty valley background made of broad simple shapes, no tiny figures, the main character's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14547,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf047b-s14547.png"
+ },
+ {
+  "id": "sf048",
+  "title": "Pelican catch",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14048; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf048.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a pelican scooping a fish from a lake, a blue lake and mountains, cute friendly storybook style, flat vector illustration, a scene with something happening, the main character big in the foreground filling at least 40 percent of the picture, a detailed a blue lake and mountains background made of broad simple shapes, no tiny figures, the main character's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14048,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf048-s14048.png"
+ },
+ {
+  "id": "sf017",
+  "title": "Warthog",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14017; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf017.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a warthog with tusks, a dusty savanna, cute friendly storybook style, flat vector illustration, a big close-up portrait, the animal's head and shoulders filling half of the picture, in front of a real a dusty savanna background made of broad simple shapes, the animal's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14017,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf017-s14017.png"
+ },
+ {
+  "id": "sf208",
+  "title": "Flamingo pair",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14208; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf208.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "two pink flamingos, a turquoise lake and mountains, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real a turquoise lake and mountains background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14208,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf208-s14208.png"
+ },
+ {
+  "id": "sf216",
+  "title": "Lioness and cub",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14216; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf216.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a lioness nuzzling her cub, a sunset savanna, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real a sunset savanna background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14216,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf216-s14216.png"
+ },
+ {
+  "id": "sf220",
+  "title": "Crowned crane",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 14220; prompt in tools/lands/18-safari/pictures/manifest.json",
+  "file": "fullsrc/sf220.png",
+  "chroma": 1.7,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a crowned crane with a golden crest, a blue lake, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real a blue lake background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 14220,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/sf220-s14220.png"
+ }
+]
