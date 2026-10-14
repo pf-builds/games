@@ -1204,6 +1204,7 @@
     $("board").setAttribute("aria-label", app.mode === "zen" ? ZT().boardAria || "The picture" : "The fort"); // fix pass (MINOR-1)
     if (!livesLeft()) return null; // v4 M5: lives on and none left: no level starts (the toast says when the next comes)
     app.diff = tagOf(e); // v4.3: every level plays on its own tag
+    app.pwHad = E.POWERS.map((id) => (app.save.data.inv[id] | 0) > 0); // fix pass // lane P Stage 3: before the rules are dealt (pwOpen reads it), not after: the last level's owned badges no longer open a power-up here
     app.entry = e; app.B = E.compile(e.L); app.S = E.sim(app.B, rulesOf(app.diff)); app.S.logOn = true; app.et = 0;
     app.V.setLevel(app.B, app.S, e.L.pal, e.L.liquid, e.L.shade, e.L.hideC ? { c: e.L.hideC, q: e.L.hideQ } : null); usePalette(e); // Land 1 fix (B1): a land level's mystery fill // lands foundation: shade, the level's shade rows (none: drawn as before) // v5 R4: liquid (a lava moat) // v4 M4: the level's colours before anything is painted
     app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.popK = 0; app.used = 0; app.march = false; app.blockT = -1e12; $("panel").hidden = true; $("stage-pic").hidden = true; hideToast();
@@ -1211,7 +1212,6 @@
     app.t0 = app.clock; app.report = null; app.pick = null; app.pwPop.fill(-1e12); app.carry = -1; renderPowers();
     roundSpeed(); // v5 R1
     // v5 R1: power-ups the campaign has just unlocked get their free use, and their tips show one by one.
-    app.pwHad = E.POWERS.map((id) => (app.save.data.inv[id] | 0) > 0); // fix pass
     app.tipQ = Meta.grant(app.save.data, app.meta, reach()); if (app.tipQ.length) writeSave(); if (app.tip) hideTip(); app.tipHold = null; app.tipEat = -1;
     app.coached = !!coachSteps(e); // the coach's band is kept for the whole level, so the board never jumps when it goes
     placeSlots();
@@ -2063,6 +2063,9 @@
   function selfTest() {
     const T0 = performance.now(), out = { pass: 0, fail: [], notes: {}, ms: 0 };
     const ok = (c, m) => { if (c) out.pass++; else out.fail.push(m); return !!c; };
+    // Lane P Stage 3: the portal build leaves levels/debug-v4.json out. With no debug level loaded, the checks that need one
+    // are skipped (need() counts them; one pass says so) instead of failing; with the file served, need() is ok().
+    const NODBG = !app.byId.has("v4-all"), dbgSkip = [], need = (c, m) => (NODBG && !c ? (dbgSkip.push(m.split(":")[0]), false) : ok(c, m));
     const was = { save: csave(), mode: app.mode, zsave: zsave(), screen: app.screen, entry: app.entry, diff: app.diff, speed: app.speed, cb: app.cb, meta: app.meta, now: app.now, sfx: app.audio.sfx, music: app.audio.music };
     const key = app.cfg.save.key, snap = (() => { try { return was.save.store.getItem(key); } catch (e) { return "?"; } })(), zkey = zenOn() ? app.cfg.zen.save.key : null, zsnap = (() => { try { return zkey ? was.save.store.getItem(zkey) : null; } catch (e) { return "?"; } })();
     // v4.2 fix: a phone held sideways shows only the upright card, so that is all there is to check here; the game's own
@@ -2491,7 +2494,7 @@
       // 18. v4 M2 debug levels: every stored order wins on its tag (v4.3: Normal), played patiently through playCol; the
       // board matches the rules; none of it reaches the save's progress.
       { let wins = 0, total = 0; const done0 = JSON.stringify(app.save.data.done), last0 = app.save.data.last;
-        for (const id of ST.debugOrder) { const e = app.byId.get(id); if (!ok(!!e, "debug: level " + id + " is loaded")) continue;
+        for (const id of ST.debugOrder) { const e = app.byId.get(id); if (!need(!!e, "debug: level " + id + " is loaded")) continue;
           for (const d of [tagOf(e)]) { total++; startLevel(id); const good = patient(winOf(e)); settleNow();
             if (ok(good && app.S.status === E.WON && dispMatches() && allHome(), id + " " + d + ": stored order wins played patiently through play()")) wins++; } }
         ok(JSON.stringify(app.save.data.done) === done0 && app.save.data.last === last0, "debug: the wins never reach the save's progress");
@@ -2513,12 +2516,12 @@
           for (const id of ["v4-mystery", "v4-all"]) { const e = app.byId.get(id); if (!e) continue; startLevel(id, "normal"); bad = bad || mCheck();
             for (const ch of winOf(e)) { const j = +ch, f0 = app.S.front(j); playCol(j); if (app.S.front(j) >= 0 && app.S.front(j) !== f0 && app.B.cardF[app.S.front(j)] & E.MYSTERY && (app.V.calm || app.cards[j].getAnimations().length > 0)) flips++; bad = bad || mCheck(); settleNow(); bad = bad || mCheck(); } } }
         setCb(false, false);
-        ok(!bad && hiddenSeen > 0 && flips > 0, "mystery: " + tiles + " tiles checked (" + hiddenSeen + " hidden), colour-blind off and on: hidden ones show only ? and their count, the rest their colour; " + flips + " flips at the front" + (bad ? " (" + bad + ")" : "")); }
+        if (NODBG) dbgSkip.push("mystery"); else ok(!bad && hiddenSeen > 0 && flips > 0, "mystery: " + tiles + " tiles checked (" + hiddenSeen + " hidden), colour-blind off and on: hidden ones show only ? and their count, the rest their colour; " + flips + " flips at the front" + (bad ? " (" + bad + ")" : "")); }
       // 20. Linked squads (v4-linked): the rods at load; a pair both of whose colours are in reach leaves together (runners
       // from both spaces); a stub when a partner sits below the visible rows; a linked tap with one space free is refused
       // and changes nothing (engine state, tray, line, board), both tiles shake, the toast says why.
       { const e = app.byId.get("v4-linked"), rodsN = () => app.rods.querySelectorAll("path").length / 3, stubs = () => app.rods.querySelectorAll("circle.dot").length / 2;
-        if (ok(!!e, "linked: v4-linked is loaded")) {
+        if (need(!!e, "linked: v4-linked is loaded")) {
           startLevel(e.id, "normal"); const r0 = rodsN(); let pairN = 0, together = null, stubSeen = 0;
           for (const ch of winOf(e)) { const j = +ch, f = app.S.front(j), p = app.S.partner(f); stubSeen = Math.max(stubSeen, stubs());
             if (p >= 0 && !together && app.S.reachable(app.B.cardM[f]) > 0 && app.S.reachable(app.B.cardM[p]) > 0) { playCol(j); for (let k = 0; k < 20; k++) step(16); const sp = app.S.order(app.ord).slice(-2), R = app.V.runners(); together = sp.length === 2 && sp.every((q) => R.bySpace[q] > 0) && app.slots[sp[0]].classList.contains("linked") && app.slots[sp[1]].classList.contains("linked"); pairN++; settleNow(); }
@@ -2544,7 +2547,7 @@
       // 20b. v4.3: a linked front card whose partner is buried (v4-all at load) wears the waiting look; its tap is refused
       // with layout.linkedBuriedText and changes nothing; once the partner reaches its column's front the pair goes.
       { const e = app.byId.get("v4-all");
-        if (ok(!!e, "linked (v4.3): v4-all is loaded")) {
+        if (need(!!e, "linked (v4.3): v4-all is loaded")) {
           startLevel(e.id); const S = app.S, j = [0, 1, 2, 3, 4].find((k) => S.front(k) >= 0 && S.why(k) === 3);
           if (ok(j !== undefined, "linked (v4.3): v4-all opens with a linked front card whose partner is buried (why 3)")) {
             const p = S.partner(S.front(j)), pj = app.B.cardCol[p], b = app.cards[j], snap = () => Array.from(app.S.save()).join(",") + "|" + app.slots.map((q) => q.className).join("/") + "|" + Array.from(app.V.disp).join("");
@@ -2554,7 +2557,7 @@
       // 21. The locked space (v4-locked): at load the last space is a padlocked socket and the key wears its brackets; on
       // the stored order the key pops, the unlock cue plays once, the padlock pops and the space opens.
       { const e = app.byId.get("v4-locked");
-        if (ok(!!e, "lock: v4-locked is loaded")) {
+        if (need(!!e, "lock: v4-locked is loaded")) {
           startLevel(e.id, "normal"); const S = app.S, last = app.slots[S.cap - 1], u0 = app.cues.unlock | 0;
           ok(S.open === S.cap - 1 && last.classList.contains("locked") && !last.hidden && getComputedStyle(last.querySelector(".pad")).display !== "none" && last.getAttribute("aria-label") === LY.lockedText && app.V.fxInfo().lockKey, "lock: the last space shows a padlock (" + S.open + " of " + S.cap + " open) and the key block wears its brackets");
           let seen = null; const o = winOf(e);
@@ -2605,7 +2608,7 @@
       // colour is short; the sheet names the colour (shortText; its chip, no count), offers no continue, and Retry starts
       // over; the stored order wins with nobody shot.
       { const e = app.byId.get("v6-kill");
-        if (ok(!!e && e.L.archers === "kill", "kill (v6): v6-kill is loaded")) {
+        if (need(!!e && e.L.archers === "kill", "kill (v6): v6-kill is loaded")) {
           startLevel(e.id); ok(!$("toast").hidden && $("toast").textContent === LY.killToast, "kill (v6): the level starts with the warning toast ('" + $("toast").textContent + "')");
           const o = search(e, "normal", (S) => S.status === E.FAILED && S.reason === "short", ST.searchTries, ST.searchSeed);
           if (ok(!!o, "kill (v6): found a game that ends short")) {
@@ -2624,7 +2627,7 @@
       // space says so); from there a winning continuation: the tower falls, the pinned sapper gets up and walks back, the
       // level wins. A jam with a pinned squad names it (its chip, the pin line, jamWhy 8).
       { const e = app.byId.get("v6-pin");
-        if (ok(!!e && e.L.archers === "pin", "pin (v6 1b): v6-pin is loaded")) {
+        if (need(!!e && e.L.archers === "pin", "pin (v6 1b): v6-pin is loaded")) {
           startLevel(e.id); ok(!$("toast").hidden && $("toast").textContent === LY.pinToast && !$("toast").classList.contains("bad"), "pin (v6 1b): the level starts with the calm toast ('" + $("toast").textContent + "')");
           { const t = $("toast").getBoundingClientRect(), lw = $("line-wrap").getBoundingClientRect(), tr = $("tray").getBoundingClientRect(), cut = (a, z) => Math.max(0, Math.min(a.right, z.right) - Math.max(a.left, z.left)) * Math.max(0, Math.min(a.bottom, z.bottom) - Math.max(a.top, z.top));
             ok(!$("toast").classList.contains("side") && cut(t, lw) + cut(t, tr) === 0, "start toast (v6 fix): at the board's foot, clear of the line and the cards (" + Math.round(cut(t, lw) + cut(t, tr)) + " px² over them)"); }
@@ -2653,7 +2656,7 @@
       // colour lock) and the right the key's (lock 1, its key wearing the brackets). Along the stored order each opens on
       // its own: its own socket pops (the other stays shut), one unlock cue each; the level wins.
       { const e = app.byId.get("v6-locks");
-        if (ok(!!e && e.L.locks && e.L.locks.length === 2, "two locks (v6): v6-locks is loaded")) {
+        if (need(!!e && e.L.locks && e.L.locks.length === 2, "two locks (v6): v6-locks is loaded")) {
           startLevel(e.id); const S = app.S, a = app.slots[S.cap - 2], b = app.slots[S.cap - 1], m = e.L.locks[0].colour, u0 = app.cues.unlock | 0, lk = /\blocked\b/;
           ok(S.open === S.cap - 2 && lk.test(a.className) && a.classList.contains("clock") && a.style.getPropertyValue("--lc") === mat(m).c && a.getAttribute("aria-label") === fill(LY.colourLockText, { crew: mat(m).crew }) && lk.test(b.className) && !b.classList.contains("clock") && b.getAttribute("aria-label") === LY.lockedText && app.V.fxInfo().lockKeys === 1,
             "two locks (v6): two padlocked sockets (" + S.open + " of " + S.cap + " open), the colour's on the left and the key's on the right; the key wears its brackets");
@@ -2938,7 +2941,7 @@
         // v5 R1, unlocks and tips: a fresh campaign shows the Ladder only, with its free use and its intro tip; at reach 25
         // the Quartermaster appears with its free use and intro (once); the Gallery and debug levels follow the campaign;
         // the engine allows a hidden power-up nothing; a long press shows a tip and doesn't use the badge.
-        { app.allPw = false; const sv = app.save; app.save = scratch(); app.save.data.got = {}; // a fresh campaign
+        { useMode("campaign"); app.allPw = false; const sv = app.save, zs0 = zenOn() ? app.modes.zen.save : null; app.save = scratch(); app.save.data.got = {}; if (zs0) app.modes.zen.save = scratchZen(); // a fresh campaign and Zen (lane P Stage 3: no Zen pictures from an earlier check count toward the reach)
           const taps = (n) => { const o = winOf(app.entry); for (let i = 0; i < n && i < o.length; i++) { playCol(+o[i]); settleNow(); } step(16); }; // lane P Stage 3: intros wait for the coach
           const clear = () => { const t = $("pwtip").getBoundingClientRect(), q = $("tray").getBoundingClientRect(); return $("pwtip").hidden || t.right <= q.left || t.left >= q.right || t.bottom <= q.top || t.top >= q.bottom; };
           try { startLevel(app.levels[0].id); const vis = () => app.pws.map((b) => (b.hidden ? 0 : 1)).join(""); step(16); step(16);
@@ -2955,7 +2958,7 @@
             startLevel(app.order[24]); const b0 = app.pws[PWK.PULL], ev = (t) => b0.dispatchEvent(new PointerEvent(t, { bubbles: true, pointerType: "touch" }));
             ev("pointerdown"); for (let t = 0; t < MT.tipHoldMs + 48; t += 16) step(16); const held = app.tip && app.tip.k === PWK.PULL && !app.tip.intro; ev("pointerup"); b0.click();
             ok(held && !app.pick && inv().quartermaster === 1 && !app.tip, "tips: a long press shows the Quartermaster's tip; letting go hides it and the badge isn't used"); }
-          finally { app.save = sv; app.allPw = true; if (app.tip) hideTip(); app.tipQ = []; } }
+          finally { app.save = sv; if (zs0) app.modes.zen.save = zs0; app.allPw = true; if (app.tip) hideTip(); app.tipQ = []; } }
         // Recall: a squad waiting stuck goes back to its column's front through a real tap on its space.
         { let got = null; for (const e of app.levels) { if (e.n < 16) continue; startLevel(e.id, "normal"); const tp = stageLine(1, 0); if (tp) { got = { e, tp }; break; } }
           if (ok(!!got, "Recall: found a level whose front can't reach a block (a squad that waits)")) {
@@ -3045,7 +3048,7 @@
           const shownN = got && !got.r.hidden ? +got.r.querySelector("b").textContent : -1; settleNow(); step(16);
           ok(!!got && got.n > 0 && shownN === got.n && $("line-cnt").lastElementChild.hidden, "m1 (v4.3 fix): with the space free and " + (got ? got.n : "?") + " carriers walking home the line head shows ↩" + shownN + "; at rest it goes"); }
         // m2: the toast on a refused linked tap (v4-all at load).
-        { startLevel("v4-all"); const j = app.cards.findIndex((b, k) => app.S.front(k) >= 0 && app.S.why(k) === 3); playCol(j); const t = $("toast").getBoundingClientRect(), c = app.cards[j].getBoundingClientRect(), sd = $("side").getBoundingClientRect(), ty = $("tray").getBoundingClientRect();
+        if (NODBG) dbgSkip.push("m2 (v4.3 fix)"); else { startLevel("v4-all"); const j = app.cards.findIndex((b, k) => app.S.front(k) >= 0 && app.S.why(k) === 3); playCol(j); const t = $("toast").getBoundingClientRect(), c = app.cards[j].getBoundingClientRect(), sd = $("side").getBoundingClientRect(), ty = $("tray").getBoundingClientRect();
           const cx = (t.left + t.right) / 2, near = app.wide ? cx >= sd.left && cx <= sd.right && t.bottom <= ty.top + 1 && t.bottom >= ty.top - 40 : $("toast").classList.contains("side") === false;
           ok(!$("toast").hidden && near && t.left >= -0.5 && t.right <= innerWidth + 0.5 && t.top >= -0.5, "m2 (v4.3 fix): the refusal's toast " + (app.wide ? "sits over the side column's tray, " + Math.round(Math.hypot(cx - (c.left + c.right) / 2, (t.top + t.bottom) / 2 - (c.top + c.bottom) / 2)) + " px from the tapped card" : "stays at the board's foot (not wide)")); hideToast(); }
         // m3: a first clear's ribbon and, as the coins start, the burst (unless reduced motion).
@@ -3551,6 +3554,7 @@
         useMode("campaign"); app.save = scratch(); showScreen("title"); }
       // 14. Opaque sprite caches.
       const bad = app.V.checkSprites(); ok(!bad.length, "sprites: every opaque cache is opaque" + (bad.length ? " (" + bad.join(",") + ")" : ""));
+      if (NODBG) { out.notes.debugSkipped = dbgSkip.join(", "); ok(dbgSkip.length > 0, "debug levels: levels/debug-v4.json not served (a portal build); " + dbgSkip.length + " checks that need a debug level skipped (" + dbgSkip.join(", ") + ")"); }
     } catch (err) { ok(false, "selfTest threw: " + (err && err.message) + " " + (err && err.stack ? err.stack.split("\n")[1] : "")); }
     finally {
       for (const k of Object.keys(ST)) app.byId.delete("fx-" + k); // every fixture registered for the run
