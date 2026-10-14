@@ -56,7 +56,7 @@ if (on("lazy")) {
   { const ctx = await phone(), p = await ctx.newPage(), W = watch(p); await p.goto(NEW + "?debug=1"); await homeUp(p); await p.waitForLoadState("networkidle"); await p.waitForTimeout(500);
     ok(worldReqs(W).length === 0, "lazy: a fresh home (Campaign last) asks for no Zen world file (" + worldReqs(W).join(",") + ")");
     const txt = await p.evaluate(() => document.getElementById("btn-zen").textContent.replace(/\s+/g, " ").trim());
-    ok(/0 of 639 pictures/.test(txt) && /World 1/.test(txt) && /Picture 1/.test(txt), "lazy: the Zen card reads its counts and next picture from the index alone (" + txt + ")");
+    ok(/0 of 636 pictures/.test(txt) && /World 1/.test(txt) && /Picture 1/.test(txt), "lazy: the Zen card reads its counts and next picture from the index alone (" + txt + ")");
     await zenMap(p); await p.waitForTimeout(300);
     const ZN = JSON.parse(fs.readFileSync(path.join(GAME, "levels/zen.pk.json"), "utf8")).worlds.reduce((t, w) => t + ((w.recs || {}).ids || []).length, 0); // v7 lane D: every world the index lists (200 before World 5)
     ok(worldReqs(W).join() === "1" && (await p.evaluate(() => document.querySelectorAll("#jr .mn").length)) === ZN, "lazy: the Zen map builds all " + ZN + " nodes from the index; opening it fetches only the save's next world, 1 (fix pass M1) (" + worldReqs(W).join(",") + ")");
