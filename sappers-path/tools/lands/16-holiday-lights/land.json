@@ -1,0 +1,286 @@
+{
+ "k": 12,
+ "slug": "16-holiday-lights",
+ "name": "Holiday Lights",
+ "lore": "The road winds into a snowy wood lit up for the winter holidays: twinkling trees and wrapped presents, snowmen and snow angels, penguins, foxes and polar bear cubs, cozy mittens and a crackling cabin, and a clock ticking down to a new year that everyone can join.",
+ "count": 26,
+ "source": "ai",
+ "sourceNote": "FLUX.1 [schnell] by Black Forest Labs (Apache-2.0), 4-bit GGUF, run on the studio's Mac; lane C's Holiday Lights (winter, Christmas and New Year, mostly close portraits per Peter's 10/13 rule; small-figure scenes, speckled fireworks, red smears and look-alikes left out), 26 picks and 17 spares (game-research/sappers-path-v4/lands/16-holiday-lights/README.md, picks-full.json, workspace 2822569: 5 dropped on lane D's phase-1 bake and pre-read, hl021 Owl in snow too easy, hl048 Countdown, hl040b Gift wrap and hl020 Lantern unclear, hl026b Sweater dog a maroon patch under the mouth); lane C edited many of them (a tighter crop, the plain background split into a navy sky band and a snow-white ground band; the edit field, ops in edits.json; the file <id>e.png). Kind painting, shade on, converted by land.js boardOf with the whole manifest line (chroma). The 43 manifest lines are lane C's, whole; lane D filled only the empty url with the licence row's source in Dino Valley's words. The folder keeps lane C's slug (16); as installed it is Land 12 in the factory's numbering (era 20) and Zen World 13.",
+ "features": [
+  "linked",
+  "mystery",
+  "moat"
+ ],
+ "eggs": [
+  "owl",
+  "glint",
+  "wisp",
+  "woodpile",
+  "ember"
+ ],
+ "eggNote": "Eggs on the reused sheets' painted side-quest spur tips (tools/map-plan-v7.md section 6; the land has no side quests): eggTurns puts each sheet's 2 eggs on its template's 2 quest spots (19 at (328,694) (98,536); 20 at (541,949) (639,455)), each repeat its own pair, as the plan gives them. Kinds for the snowy wood: owls, glints (ornaments), wisps (lights), a woodpile (a yule fire) and embers.",
+ "shade": true,
+ "raw": "/Users/peter/local-ai/outputs/lands/16-holiday-lights",
+ "quests": "none",
+ "zen": {
+  "k": 13,
+  "note": "v7 lane D: Holiday Lights plays as Zen World 13 (tools/land.js ... zen writes tools/build-data/levels/zen.json only). Records keep the land factory numbers 643-668 (scratch/state.json seeded {from: 643, sheet0: 86, gal0: 62}: Worlds 1-12 hold 1-50, 201-250, 251-300, 301-350, 351-400, 401-429, 430-479, 480-492, 493-542, 543-585, 586-610, 611-642; World 12's 4 sheets end at 85); the page shows them on from World 12's last Zen number (Zen 493-518, main.js zenNum); zen.numbered keys each licence row by its Zen picture number before its level. Phase 1 was baked at 650-675 on an older end state; its bake files were moved down 7 with their n, not re-baked (tools/land-16-notes.md).",
+  "numbered": true
+ },
+ "profile": {
+  "note": "Zen World 13, casual (v7 lane D, 2026-10-13): Clockwork Town's profile (tools/lands/14-clockwork-town/land.json; Cloud Kingdom's, Dino Valley's as it ships), for a world of 26: tags E9/N13/H4/X0 ending on a Hard, ? cards, linked squads, gentle moats (2 ways in) on pictures that can carry and deal one, no locks, no archers, no Extreme, no mystery blocks (Peter, 2026-10-08), careful floor 0.5 every tag, deal attempts 96 at the land-config squads.",
+  "tags": {
+   "shares": {
+    "easy": 0.35,
+    "normal": 0.5,
+    "hard": 0.15,
+    "extreme": 0
+   },
+   "breathers": 5,
+   "run": [
+    1,
+    3
+   ],
+   "end": "hard"
+  },
+  "features": {
+   "mystery": {
+    "share": 0.5,
+    "by": {
+     "easy": 0.2,
+     "normal": 0.5,
+     "hard": 1
+    },
+    "cards": [
+     2,
+     3
+    ]
+   },
+   "hidden": {
+    "share": 0,
+    "by": {
+     "easy": 0,
+     "normal": 0,
+     "hard": 0
+    },
+    "of": [
+     0,
+     0
+    ],
+    "note": "v6 lane D8 (Peter, 2026-10-08): no mystery blocks in Zen, ever. The whole picture shows from the start; land.js and zen-world.js refuse a Zen land or world with hidden in its features or a hidden share."
+   },
+   "linked": {
+    "share": 0.36,
+    "by": {
+     "easy": 0.2,
+     "normal": 0.4,
+     "hard": 0.67
+    },
+    "pairs": [
+     1,
+     2
+    ]
+   },
+   "lock": {
+    "share": 0,
+    "key": 0
+   },
+   "moat": {
+    "share": 0.4,
+    "by": {
+     "easy": 0.2,
+     "normal": 0.4,
+     "hard": 0.67
+    },
+    "ways": [
+     0,
+     1
+    ],
+    "liquids": [
+     null,
+     "mire"
+    ]
+   }
+  },
+  "bands": {
+   "easy": [
+    0.45,
+    0.8
+   ],
+   "normal": [
+    0.2,
+    0.5
+   ],
+   "hard": [
+    0.06,
+    0.2
+   ]
+  },
+  "lookahead": {
+   "normal": null,
+   "hard": null,
+   "extreme": null
+  },
+  "carefulFloor": {
+   "easy": 0.5,
+   "normal": 0.5,
+   "hard": 0.5
+  },
+  "pace": {
+   "aim": 225000
+  },
+  "bake": {
+   "candidates": {
+    "perLevel": 8,
+    "perLevelBy": {
+     "easy": 8,
+     "hard": 10
+    }
+   },
+   "deal": {
+    "attempts": 96
+   }
+  }
+ },
+ "main": [
+  "hl001",
+  "hl002b",
+  "hl003",
+  "hl038",
+  "hl004",
+  "hl005",
+  "hl006",
+  "hl008",
+  "hl007",
+  "hl009",
+  "hl042b",
+  "hl011",
+  "hl012b",
+  "hl013b",
+  "hl045b",
+  "hl014",
+  "hl015",
+  "hl016",
+  "hl017b",
+  "hl050",
+  "hl022",
+  "hl023",
+  "hl024",
+  "hl027",
+  "hl029",
+  "hl030"
+ ],
+ "mainNote": "Lane C's order (picks-full.json landMain, workspace 2822569: 26 after lane D's phase-1 bake and pre-read; hl021 Owl in snow had first failed every candidate at Normal and, after a two-slot reorder with hl050, at Hard) with one reorder: slots 8 and 9 swapped, so hl007 Candy cane takes the Hard at 658 (hl008 Snowflake failed it on 18 candidates, fast tapper) and hl008 plays Normal at 657.",
+ "map": {
+  "fromLayout": [
+   19,
+   20
+  ],
+  "files": [
+   "sheet-19.webp",
+   "sheet-20.webp"
+  ],
+  "reuse": true,
+  "tint": "grayscale(1) brightness(1.75) contrast(1.05) sepia(.3) hue-rotate(165deg) saturate(2)",
+  "note": "v7 lever 1: no new image bytes. tools/map-plan-v7.md section 6: the Shrouded Weald forest sheets 19 and 20 reused through map.fromLayout, alternately mirrored, under one snow tint: full grayscale, lifted and cooled, a snowy wood with blue-grey shadows; the glowing spots become bright snowdrifts and lamp glows. No water (19's pale streams read as snow). brightness 1.75: at 1.85 the painted road clipped to flat white."
+ },
+ "credit": "Holiday Lights: original pictures generated with FLUX.1 [schnell] (Apache 2.0) by Click it! Studios.",
+ "worldCredit": "Holiday Lights: original pictures generated with FLUX.1 [schnell] (Apache 2.0) by Click it! Studios.",
+ "eggTurns": [
+  [
+   [
+    [
+     "owl",
+     328,
+     694
+    ],
+    [
+     "glint",
+     98,
+     536
+    ]
+   ],
+   [
+    [
+     "wisp",
+     328,
+     694
+    ],
+    [
+     "owl",
+     98,
+     536
+    ]
+   ],
+   [
+    [
+     "glint",
+     328,
+     694
+    ],
+    [
+     "wisp",
+     98,
+     536
+    ]
+   ],
+   [
+    [
+     "owl",
+     328,
+     694
+    ],
+    [
+     "glint",
+     98,
+     536
+    ]
+   ]
+  ],
+  [
+   [
+    [
+     "woodpile",
+     541,
+     949
+    ],
+    [
+     "ember",
+     639,
+     455
+    ]
+   ],
+   [
+    [
+     "glint",
+     541,
+     949
+    ],
+    [
+     "owl",
+     639,
+     455
+    ]
+   ],
+   [
+    [
+     "woodpile",
+     541,
+     949
+    ],
+    [
+     "ember",
+     639,
+     455
+    ]
+   ]
+  ]
+ ],
+ "moatSkip": {
+  "hl007": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
+  "hl008": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
+  "hl009": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
+  "hl022": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)"
+ },
+ "moatNote": "20 of the 26 boards can carry a ring (land.js moatCan); lane D deal probe (6 rings x 20 attempts a tag at the profile deal setting, the Worlds 4-12 scratch script, scratch/probe.log, run on the 31): hl007 Candy cane, hl008 Snowflake, hl009 Mitten and hl022 Fox in snow never deal with one (moatSkip); the rest dealt 2-100% (hl005 hl029 hl027 93-100%, hl012b hl045b hl024 hl016 hl011 58-77%, hl015 hl004 hl006 hl013b 30-56%, hl023 24-28%, hl002b 12-14%, hl014 3-7%, hl042b 2-4%)."
+}
