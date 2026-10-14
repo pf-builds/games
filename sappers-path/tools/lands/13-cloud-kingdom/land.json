@@ -3,9 +3,9 @@
  "slug": "13-cloud-kingdom",
  "name": "Cloud Kingdom",
  "lore": "The road climbs up above the clouds: hot-air balloons and kites, birds of every kind, rainbows, a dragon kite and a rocket, and a palace sitting right on top of the clouds.",
- "count": 25,
+ "count": 31,
  "source": "ai",
- "sourceNote": "FLUX.1 [schnell] by Black Forest Labs (Apache-2.0), 4-bit GGUF, run on the studio's Mac; lane C's Cloud Kingdom (a sky kingdom: balloons, airships, kites, birds, rainbows; Peter's 10/13 framing rule; the pale cloud scenes left out), 30 picks and 11 spares (game-research/sappers-path-v4/lands/13-cloud-kingdom/README.md, picks-full.json, workspace 540d88d: 9 dropped on lane D's phase-1 bake and pre-read); lane C edited many of them (a tighter crop, the plain sky split into a deep blue top band and a cloud-white ground band; the edit field, ops in edits.json; the file <id>e.png). Kind painting, shade on, converted by land.js boardOf with the whole manifest line (chroma). The 41 manifest lines are lane C's, whole; lane D filled only the empty url with the licence row's source in Dino Valley's words. The folder keeps lane C's slug (13); as installed it is Land 10 in the factory's numbering (era 18) and Zen World 11.",
+ "sourceNote": "FLUX.1 [schnell] by Black Forest Labs (Apache-2.0), 4-bit GGUF, run on the studio's Mac; lane C's Cloud Kingdom (a sky kingdom: balloons, airships, kites, birds, rainbows; Peter's 10/13 framing rule; the pale cloud scenes left out), 30 picks and 11 spares (game-research/sappers-path-v4/lands/13-cloud-kingdom/README.md, picks-full.json, workspace 540d88d: 9 dropped on lane D's phase-1 bake and pre-read); lane C edited many of them (a tighter crop, the plain sky split into a deep blue top band and a cloud-white ground band; the edit field, ops in edits.json; the file <id>e.png). Kind painting, shade on, converted by land.js boardOf with the whole manifest line (chroma). Refill (lane C a0bad2b): 6 portraits in a real setting added (ids ck2NN, no edit), 31 picks and 16 spares. The 47 manifest lines are lane C's, whole; lane D filled only the empty url with the licence row's source in Dino Valley's words. The folder keeps lane C's slug (13); as installed it is Land 10 in the factory's numbering (era 18) and Zen World 11.",
  "features": [
   "linked",
   "mystery",
@@ -24,11 +24,11 @@
  "quests": "none",
  "zen": {
   "k": 11,
-  "note": "v7 lane D: Cloud Kingdom plays as Zen World 11 (tools/land.js ... zen writes tools/build-data/levels/zen.json only). Records keep the land factory numbers 586-610 (scratch/state.json seeded {from: 586, sheet0: 78, gal0: 62}: Worlds 1-10 hold 1-50, 201-250, 251-300, 301-350, 351-400, 401-429, 430-479, 480-492, 493-542, 543-585; World 10's 5 sheets end at 77); the page shows them on from World 10's last Zen number (Zen 436-460, main.js zenNum); zen.numbered keys each licence row by its Zen picture number before its level. Numbering re-checked at install (World 10 committed at 649e0ad: last record 587, last sheet 77, gal0 62). Round 2 (2026-10-13): 25 levels 586-610 (was 30 at 588-617) after World 10's round 2 (43 levels ending at 585, its 5 sheets still ending at 77) and critic-land-13's 5 drops; bake files moved, 15 slots re-planned and re-baked.",
+  "note": "v7 lane D: Cloud Kingdom plays as Zen World 11 (tools/land.js ... zen writes tools/build-data/levels/zen.json only). Records keep the land factory numbers 586-610 (scratch/state.json seeded {from: 586, sheet0: 78, gal0: 62}: Worlds 1-10 hold 1-50, 201-250, 251-300, 301-350, 351-400, 401-429, 430-479, 480-492, 493-542, 543-585; World 10's 5 sheets end at 77); the page shows them on from World 10's last Zen number (Zen 436-460, main.js zenNum); zen.numbered keys each licence row by its Zen picture number before its level. Numbering re-checked at install (World 10 committed at 649e0ad: last record 587, last sheet 77, gal0 62). Round 2 (2026-10-13): 25 levels 586-610 (was 30 at 588-617) after World 10's round 2 (43 levels ending at 585, its 5 sheets still ending at 77) and critic-land-13's 5 drops; bake files moved, 15 slots re-planned and re-baked. Round 3 (refill, 2026-10-13, lane C a0bad2b): 31 levels 586-616 (Zen 436-466), sheet0 78 unchanged (still 4 sheets, 8+8+8+7); the 25 renamed to their new numbers (bake files moved with n), the 6 refill slots baked.",
   "numbered": true
  },
  "profile": {
-  "note": "Zen World 11, casual (v7 lane D, 2026-10-13): Harvest Festival's profile (tools/lands/12-harvest-festival/land.json), Dino Valley's as it ships, for a shorter world of 30: tags E11/N15/H4/X0 ending on a Hard, ? cards, linked squads, gentle moats (2 ways in) on pictures that can carry and deal one, no locks, no archers, no Extreme, no mystery blocks (Peter, 2026-10-08), careful floor 0.5 every tag, deal attempts 96 at the land-config squads. Round 2 (25 levels): shares Easy .34, Normal .52, Hard .14, so the sawtooth gives E9/N12/H4 (the orchestrator's ask) ending on a Hard.",
+  "note": "Zen World 11, casual (v7 lane D, 2026-10-13): Harvest Festival's profile (tools/lands/12-harvest-festival/land.json), Dino Valley's as it ships, for a shorter world of 30: tags E11/N15/H4/X0 ending on a Hard, ? cards, linked squads, gentle moats (2 ways in) on pictures that can carry and deal one, no locks, no archers, no Extreme, no mystery blocks (Peter, 2026-10-08), careful floor 0.5 every tag, deal attempts 96 at the land-config squads. Round 2 (25 levels): shares Easy .34, Normal .52, Hard .14, so the sawtooth gives E9/N12/H4 (the orchestrator's ask) ending on a Hard. Round 3 (refill, 2026-10-13, lane C a0bad2b): 31 levels, the same shares give E11/N16/H4.",
   "tags": {
    "shares": {
     "easy": 0.34,
@@ -149,12 +149,16 @@
   "ck006",
   "ck007",
   "ck009",
+  "ck209",
   "ck036b",
   "ck010",
   "ck011b",
+  "ck204",
   "ck013",
   "ck014",
   "ck038",
+  "ck206",
+  "ck213",
   "ck016",
   "ck039",
   "ck017b",
@@ -165,11 +169,13 @@
   "ck023b",
   "ck043b",
   "ck024",
+  "ck212",
+  "ck203",
   "ck027b",
   "ck029",
   "ck015b"
  ],
- "mainNote": "Lane C's order (picks-full.json landMain, workspace 40afe29: 25 after critic-land-13's 5 drops) with one move: ck015b Parrot, a Hard that reads strongly (the critic: excellent), moved from slot 14 to the end to close the world on its Hard (the old closer ck045 Cloud castle gate was dropped).",
+ "mainNote": "Lane C's order (picks-full.json landMain, workspace 40afe29: 25 after critic-land-13's 5 drops) with one move: ck015b Parrot, a Hard that reads strongly (the critic: excellent), moved from slot 14 to the end to close the world on its Hard (the old closer ck045 Cloud castle gate was dropped). Round 3 (refill, 2026-10-13, lane C a0bad2b): the 25 keep their order, tags, plan entries and bakes; the 6 refills fill the gaps where the 25's tags sit inside landTags(31) (E11/N16/H4) nearest lane C's suggested places, placed away from their look-alikes: 592 ck209 Puffin flying (Puffin ck024 at 611), 596 ck204 Seagull, 600 ck206 Hot-air balloon (Easy; Hot-air balloon ck001 at 586), 601 ck213 Swan, 612 ck212 Butterfly (Easy), 613 ck203 Eagle soaring (Eagle ck007 at 590). Parrot still closes.",
  "map": {
   "fromLayout": [
    13,
@@ -252,5 +258,5 @@
   "ck002": "critic-land-13 m1 (2026-10-13): its ring runs from the castle's peak down to both board edges as a big triangle and draws a mountain",
   "ck020": "critic-land-13 m1 (2026-10-13): its ring enters from the top edge and cuts diagonally through the teal wing"
  },
- "moatNote": "22 of the 30 boards can carry a ring (land.js moatCan; lane C counts 22); lane D deal probe (6 rings x 20 attempts a tag at the profile deal setting, the Worlds 4-10 scratch script, re-run on the 30): ck001 Hot-air balloon, ck003 Rainbow, ck006 Kite, ck007 Eagle, ck009 Sun face, ck017b Windmill, ck018b Flamingo and ck039 Umbrella float never deal with one (moatSkip); ck023b Sky lighthouse deals (52-55%) but ringed its 24 Normal candidates in phase 1 all played outside 150-300 s, so it goes ringless too; the rest dealt 2-82% (ck010 78-82%, ck031 ck011b 59-68%, ck033 ck022 ck035 52-58%, ck014 ck019b 43-46%, ck002 36-39%, ck013 25-35%, ck024 18-46%, ck020 15-21%, ck042 2-8%)."
+ "moatNote": "22 of the 30 boards can carry a ring (land.js moatCan; lane C counts 22); lane D deal probe (6 rings x 20 attempts a tag at the profile deal setting, the Worlds 4-10 scratch script, re-run on the 30): ck001 Hot-air balloon, ck003 Rainbow, ck006 Kite, ck007 Eagle, ck009 Sun face, ck017b Windmill, ck018b Flamingo and ck039 Umbrella float never deal with one (moatSkip); ck023b Sky lighthouse deals (52-55%) but ringed its 24 Normal candidates in phase 1 all played outside 150-300 s, so it goes ringless too; the rest dealt 2-82% (ck010 78-82%, ck031 ck011b 59-68%, ck033 ck022 ck035 52-58%, ck014 ck019b 43-46%, ck002 36-39%, ck013 25-35%, ck024 18-46%, ck020 15-21%, ck042 2-8%). Round 3 (refill, 2026-10-13, lane C a0bad2b): the 6 refills probed (scratch/probe-refill.log): ck204 and ck206 100%, ck209 35-36%; ck203 ck212 ck213 can't carry a ring. moatSkip unchanged."
 }

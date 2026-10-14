@@ -76,6 +76,24 @@
   "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
  },
  {
+  "id": "ck203",
+  "title": "Eagle soaring",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 10203; prompt in tools/lands/13-cloud-kingdom/pictures/manifest.json",
+  "file": "fullsrc/ck203.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a golden eagle with wide wings, mountain peaks and a blue sky, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real mountain peaks and a blue sky background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 10203,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ck203-s10203.png"
+ },
+ {
   "id": "ck007",
   "title": "Eagle",
   "artist": "Click it! Studios",
@@ -149,6 +167,24 @@
   ],
   "raw": "raw/ck010-s10010.png",
   "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "ck204",
+  "title": "Seagull",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 10204; prompt in tools/lands/13-cloud-kingdom/pictures/manifest.json",
+  "file": "fullsrc/ck204.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a white seagull with an orange beak, a blue sea and sky, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real a blue sea and sky background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 10204,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ck204-s10204.png"
  },
  {
   "id": "ck011b",
@@ -225,6 +261,24 @@
   "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
  },
  {
+  "id": "ck206",
+  "title": "Hot-air balloon",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 10206; prompt in tools/lands/13-cloud-kingdom/pictures/manifest.json",
+  "file": "fullsrc/ck206.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a striped orange and blue hot-air balloon, green fields and a blue sky, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real green fields and a blue sky background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 10206,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ck206-s10206.png"
+ },
+ {
   "id": "ck015b",
   "title": "Parrot",
   "artist": "Click it! Studios",
@@ -296,6 +350,25 @@
    1024
   ],
   "raw": "raw/ck017b-s10517.png"
+ },
+ {
+  "id": "ck209",
+  "title": "Puffin flying",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 10209; prompt in tools/lands/13-cloud-kingdom/pictures/manifest.json",
+  "file": "fullsrc/ck209.png",
+  "chroma": 2,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a puffin flying, a blue sea and white cliffs, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real a blue sea and white cliffs background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 10209,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ck209-s10209.png"
  },
  {
   "id": "ck019b",
@@ -371,6 +444,25 @@
   "raw": "raw/ck022-s10022.png"
  },
  {
+  "id": "ck212",
+  "title": "Butterfly",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 10212; prompt in tools/lands/13-cloud-kingdom/pictures/manifest.json",
+  "file": "fullsrc/ck212.png",
+  "chroma": 1.2,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a big orange monarch butterfly, a blue sky, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real a blue sky background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 10212,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ck212-s10212.png"
+ },
+ {
   "id": "ck023b",
   "title": "Sky lighthouse",
   "artist": "Click it! Studios",
@@ -444,6 +536,25 @@
   ],
   "raw": "raw/ck027b-s10527.png",
   "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "ck213",
+  "title": "Swan",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 10213; prompt in tools/lands/13-cloud-kingdom/pictures/manifest.json",
+  "file": "fullsrc/ck213.png",
+  "chroma": 2.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a white swan with spread wings, a blue lake and green trees, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real a blue lake and green trees background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 10213,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ck213-s10213.png"
  },
  {
   "id": "ck029",

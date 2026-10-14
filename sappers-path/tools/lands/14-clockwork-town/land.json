@@ -3,9 +3,9 @@
  "slug": "14-clockwork-town",
  "name": "Clockwork Town",
  "lore": "A town that runs on gears and steam: clockwork owls and wind-up mice, robot pets, ticking clocks and pocket watches, a steam train, a submarine and a zeppelin, all in brass and copper.",
- "count": 32,
+ "count": 33,
  "source": "ai",
- "sourceNote": "FLUX.1 [schnell] by Black Forest Labs (Apache-2.0), 4-bit GGUF, run on the studio's Mac; lane C's Clockwork Town (steampunk brass and gears: clockwork animals, little robots, clocks, trains; Peter's 10/13 framing rule; busy scenes, AI lettering and a blue engine near Thomas the Tank Engine left out), 32 picks and 16 spares (game-research/sappers-path-v4/lands/14-clockwork-town/README.md, picks-full.json, workspace 7bd77d0: 4 dropped on lane D's phase-1 bake and pre-read, ct010 on its other seed); lane C edited many of them (a tighter crop, the plain background split into an orange sky band and a slate ground band; the edit field, ops in edits.json; the file <id>e.png). Kind painting, shade on, converted by land.js boardOf with the whole manifest line (chroma). The 48 manifest lines are lane C's, whole; lane D filled only the empty url with the licence row's source in Dino Valley's words. The folder keeps lane C's slug (14); as installed it is Land 11 in the factory's numbering (era 19) and Zen World 12.",
+ "sourceNote": "FLUX.1 [schnell] by Black Forest Labs (Apache-2.0), 4-bit GGUF, run on the studio's Mac; lane C's Clockwork Town (steampunk brass and gears: clockwork animals, little robots, clocks, trains; Peter's 10/13 framing rule; busy scenes, AI lettering and a blue engine near Thomas the Tank Engine left out), 32 picks and 16 spares (game-research/sappers-path-v4/lands/14-clockwork-town/README.md, picks-full.json, workspace 7bd77d0: 4 dropped on lane D's phase-1 bake and pre-read, ct010 on its other seed); lane C edited many of them (a tighter crop, the plain background split into an orange sky band and a slate ground band; the edit field, ops in edits.json; the file <id>e.png). Kind painting, shade on, converted by land.js boardOf with the whole manifest line (chroma). Refill (lane C a0bad2b): critic-land-14's drops ct021 ct044 ct013 ct033 ct049 ct035 out, 7 portraits in a real setting added (ids ct2NN, no edit), 33 picks and 22 spares. The 55 manifest lines are lane C's, whole; lane D filled only the empty url with the licence row's source in Dino Valley's words. The folder keeps lane C's slug (14); as installed it is Land 11 in the factory's numbering (era 19) and Zen World 12.",
  "features": [
   "linked",
   "mystery",
@@ -23,11 +23,11 @@
  "quests": "none",
  "zen": {
   "k": 12,
-  "note": "v7 lane D: Clockwork Town plays as Zen World 12 (tools/land.js ... zen writes tools/build-data/levels/zen.json only). Records keep the land factory numbers 611-642 (scratch/state.json seeded {from: 611, sheet0: 82, gal0: 62}: Worlds 1-11 hold 1-50, 201-250, 251-300, 301-350, 351-400, 401-429, 430-479, 480-492, 493-542, 543-585, 586-610; World 11's 4 sheets end at 81); the page shows them on from World 11's last Zen number (Zen 461-492, main.js zenNum); zen.numbered keys each licence row by its Zen picture number before its level. Numbering re-checked at install (Worlds 10/11 round 2 committed at 4248f5c: last record 610, last sheet 81, gal0 62): phase 1 baked at 618-649 on an older end state, so the bake files were moved down 7 with their n (renumbered, not re-baked; boards, seeds and grades kept).",
+  "note": "v7 lane D: Clockwork Town plays as Zen World 12 (tools/land.js ... zen writes tools/build-data/levels/zen.json only). Records keep the land factory numbers 611-642 (scratch/state.json seeded {from: 611, sheet0: 82, gal0: 62}: Worlds 1-11 hold 1-50, 201-250, 251-300, 301-350, 351-400, 401-429, 430-479, 480-492, 493-542, 543-585, 586-610; World 11's 4 sheets end at 81); the page shows them on from World 11's last Zen number (Zen 461-492, main.js zenNum); zen.numbered keys each licence row by its Zen picture number before its level. Numbering re-checked at install (Worlds 10/11 round 2 committed at 4248f5c: last record 610, last sheet 81, gal0 62): phase 1 baked at 618-649 on an older end state, so the bake files were moved down 7 with their n (renumbered, not re-baked; boards, seeds and grades kept). Round 3 (refill, 2026-10-13, lane C a0bad2b): 33 levels 617-649 (Zen 467-499) after World 11's refill to 31 (586-616), sheet0 82 unchanged (4 sheets, 8+9+8+8); the 26 kept renamed (bake files moved with n), the 7 refill slots and ct045 (ringless) baked.",
   "numbered": true
  },
  "profile": {
-  "note": "Zen World 12, casual (v7 lane D, 2026-10-13): Cloud Kingdom's profile (tools/lands/13-cloud-kingdom/land.json), Dino Valley's as it ships, for a world of 32: tags E12/N16/H4/X0 ending on a Hard, ? cards, linked squads, gentle moats (2 ways in) on pictures that can carry and deal one, no locks, no archers, no Extreme, no mystery blocks (Peter, 2026-10-08), careful floor 0.5 every tag, deal attempts 96 at the land-config squads.",
+  "note": "Zen World 12, casual (v7 lane D, 2026-10-13): Cloud Kingdom's profile (tools/lands/13-cloud-kingdom/land.json), Dino Valley's as it ships, for a world of 32: tags E12/N16/H4/X0 ending on a Hard, ? cards, linked squads, gentle moats (2 ways in) on pictures that can carry and deal one, no locks, no archers, no Extreme, no mystery blocks (Peter, 2026-10-08), careful floor 0.5 every tag, deal attempts 96 at the land-config squads. Round 3 (refill, 2026-10-13, lane C a0bad2b): 33 levels, the same shares give E12/N17/H4.",
   "tags": {
    "shares": {
     "easy": 0.375,
@@ -144,30 +144,31 @@
  "main": [
   "ct001",
   "ct003b",
-  "ct033",
+  "ct201",
   "ct004",
   "ct005b",
   "ct006",
-  "ct035",
   "ct007b",
+  "ct203",
   "ct008b",
   "ct009",
+  "ct205",
   "ct040",
   "ct010",
   "ct011",
   "ct012b",
   "ct043b",
-  "ct013",
+  "ct207",
   "ct016b",
-  "ct044",
+  "ct210",
   "ct017b",
   "ct018",
   "ct019b",
   "ct045",
   "ct020",
-  "ct021",
+  "ct208",
   "ct022",
-  "ct049",
+  "ct211",
   "ct024",
   "ct025",
   "ct026b",
@@ -175,7 +176,7 @@
   "ct029",
   "ct030"
  ],
- "mainNote": "Lane C's order (picks-full.json landMain, workspace 7bd77d0: 32 after lane D's phase-1 bake and pre-read; ct010 Wind-up mouse on its other seed in place of ct010b), unchanged.",
+ "mainNote": "Lane C's order (picks-full.json landMain, workspace 7bd77d0: 32 after lane D's phase-1 bake and pre-read; ct010 Wind-up mouse on its other seed in place of ct010b), unchanged. Round 3 (refill, 2026-10-13, lane C a0bad2b): critic-land-14's 6 drops out (ct021 mud; ct044 the weak Hard; ct013 ct033 ct049 ct035 weak); the 26 kept keep their order, tags, plan entries and bakes; the 7 refills fill the gaps where the 26's tags sit inside landTags(33) (E12/N17/H4), placed away from their same-titled boards: 619 ct201 Clock tower (Easy; ct017b at 636), 624 ct203 Robot owl (ct016b at 634), 627 ct205 Robot gardener, 633 ct207 Gear windmill (Easy), 635 ct210 Diving helmet (the Hard ct044 left, a 6-colour board that reads), 641 ct208 Robot cat (ct011 at 630), 643 ct211 Robot dog (Easy; ct006 at 622).",
  "map": {
   "fromLayout": [
    17,
@@ -273,7 +274,8 @@
   "ct001": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
   "ct003b": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
   "ct006": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
-  "ct010": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)"
+  "ct010": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
+  "ct045": "critic-land-14 m1 (2026-10-13): its ring climbs from the hull into a tall peak in the sky and reads as a sail; baked ringless"
  },
- "moatNote": "24 of the 32 boards can carry a ring (land.js moatCan); lane D deal probe (6 rings x 20 attempts a tag at the profile deal setting, the Worlds 4-11 scratch script, scratch/probe.log): ct001 Clockwork owl, ct003b Pocket watch, ct006 Robot dog and ct010 Wind-up mouse never deal with one (moatSkip); the rest dealt 11-100% (ct017b ct022 ct033 ct005b ct016b ct020 95-100%, ct040 ct045 ct043b 83-93%, ct026b ct007b 61-75%, ct004 ct029 ct025 ct012b ct018 38-63%, ct049 ct008b 23-35%, ct019b ct027 11-15%)."
+ "moatNote": "24 of the 32 boards can carry a ring (land.js moatCan); lane D deal probe (6 rings x 20 attempts a tag at the profile deal setting, the Worlds 4-11 scratch script, scratch/probe.log): ct001 Clockwork owl, ct003b Pocket watch, ct006 Robot dog and ct010 Wind-up mouse never deal with one (moatSkip); the rest dealt 11-100% (ct017b ct022 ct033 ct005b ct016b ct020 95-100%, ct040 ct045 ct043b 83-93%, ct026b ct007b 61-75%, ct004 ct029 ct025 ct012b ct018 38-63%, ct049 ct008b 23-35%, ct019b ct027 11-15%). Round 3 (refill, 2026-10-13, lane C a0bad2b): ct045 Submarine into moatSkip (critic-land-14 m1: its ring reads as a sail), re-baked ringless on its plan (--drop-moat). The 7 refills probed (scratch/probe-refill.log): ct201 58-80%, ct203 64-74%, ct205 28-32%, ct208 8-13%; ct207 ct210 ct211 can't carry a ring."
 }

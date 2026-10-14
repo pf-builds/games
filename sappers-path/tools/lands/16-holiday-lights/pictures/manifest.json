@@ -37,6 +37,24 @@
   "raw": "raw/hl002b-s12502.png"
  },
  {
+  "id": "hl201",
+  "title": "Reindeer in snow",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 12201; prompt in tools/lands/16-holiday-lights/pictures/manifest.json",
+  "file": "fullsrc/hl201.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a brown reindeer with antlers, a snowy forest and a pink sky, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real a snowy forest and a pink sky background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 12201,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hl201-s12201.png"
+ },
+ {
   "id": "hl003",
   "title": "Reindeer",
   "artist": "Click it! Studios",
@@ -75,6 +93,24 @@
   "raw": "raw/hl038-s12038.png"
  },
  {
+  "id": "hl202",
+  "title": "Snowman with hat",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 12202; prompt in tools/lands/16-holiday-lights/pictures/manifest.json",
+  "file": "fullsrc/hl202.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a snowman with a black hat and red scarf, snowy pine trees and a blue sky, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real snowy pine trees and a blue sky background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 12202,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hl202-s12202.png"
+ },
+ {
   "id": "hl004",
   "title": "Present",
   "artist": "Click it! Studios",
@@ -110,6 +146,25 @@
   ],
   "raw": "raw/hl005-s12005.png",
   "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "hl203",
+  "title": "Penguin pair",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 12203; prompt in tools/lands/16-holiday-lights/pictures/manifest.json",
+  "file": "fullsrc/hl203.png",
+  "chroma": 2.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "two penguins in red scarves, white icebergs and a blue sky, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real white icebergs and a blue sky background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 12203,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hl203-s12203.png"
  },
  {
   "id": "hl006",
@@ -150,6 +205,24 @@
   "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
  },
  {
+  "id": "hl206",
+  "title": "Fox in a hat",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 12206; prompt in tools/lands/16-holiday-lights/pictures/manifest.json",
+  "file": "fullsrc/hl206.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a red fox in a green knitted hat, a white snowy field, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real a white snowy field background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 12206,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hl206-s12206.png"
+ },
+ {
   "id": "hl008",
   "title": "Snowflake",
   "artist": "Click it! Studios",
@@ -188,6 +261,24 @@
   "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
  },
  {
+  "id": "hl207",
+  "title": "Gingerbread house",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 12207; prompt in tools/lands/16-holiday-lights/pictures/manifest.json",
+  "file": "fullsrc/hl207.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a gingerbread house with icing, a snowy night, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real a snowy night background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 12207,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hl207-s12207.png"
+ },
+ {
   "id": "hl042b",
   "title": "Snowman building",
   "artist": "Click it! Studios",
@@ -222,6 +313,24 @@
    1024
   ],
   "raw": "raw/hl011-s12011.png"
+ },
+ {
+  "id": "hl208",
+  "title": "Sleigh",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 12208; prompt in tools/lands/16-holiday-lights/pictures/manifest.json",
+  "file": "fullsrc/hl208.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a red wooden sleigh full of presents, a snowy hill and a blue sky, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real a snowy hill and a blue sky background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 12208,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hl208-s12208.png"
  },
  {
   "id": "hl012b",
@@ -260,6 +369,24 @@
   "raw": "raw/hl013b-s12513.png"
  },
  {
+  "id": "hl209",
+  "title": "Santa's cat",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 12209; prompt in tools/lands/16-holiday-lights/pictures/manifest.json",
+  "file": "fullsrc/hl209.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a cat in a red Santa hat, a window with falling snow, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real a window with falling snow background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 12209,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hl209-s12209.png"
+ },
+ {
   "id": "hl045b",
   "title": "Tree topper",
   "artist": "Click it! Studios",
@@ -294,6 +421,24 @@
    1024
   ],
   "raw": "raw/hl014-s12014.png"
+ },
+ {
+  "id": "hl211",
+  "title": "Candy cane",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 12211; prompt in tools/lands/16-holiday-lights/pictures/manifest.json",
+  "file": "fullsrc/hl211.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a giant red and white candy cane, a green tree, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real a green tree background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 12211,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hl211-s12211.png"
  },
  {
   "id": "hl015",
@@ -331,6 +476,24 @@
    1024
   ],
   "raw": "raw/hl016-s12016.png"
+ },
+ {
+  "id": "hl213",
+  "title": "Robin",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 12213; prompt in tools/lands/16-holiday-lights/pictures/manifest.json",
+  "file": "fullsrc/hl213.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a robin with a red breast, snowy branches, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real snowy branches background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 12213,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hl213-s12213.png"
  },
  {
   "id": "hl017b",

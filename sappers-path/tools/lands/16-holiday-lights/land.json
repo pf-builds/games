@@ -3,9 +3,9 @@
  "slug": "16-holiday-lights",
  "name": "Holiday Lights",
  "lore": "The road winds into a snowy wood lit up for the winter holidays: twinkling trees and wrapped presents, snowmen and snow angels, penguins, foxes and polar bear cubs, cozy mittens and a crackling cabin, and a clock ticking down to a new year that everyone can join.",
- "count": 26,
+ "count": 35,
  "source": "ai",
- "sourceNote": "FLUX.1 [schnell] by Black Forest Labs (Apache-2.0), 4-bit GGUF, run on the studio's Mac; lane C's Holiday Lights (winter, Christmas and New Year, mostly close portraits per Peter's 10/13 rule; small-figure scenes, speckled fireworks, red smears and look-alikes left out), 26 picks and 17 spares (game-research/sappers-path-v4/lands/16-holiday-lights/README.md, picks-full.json, workspace 2822569: 5 dropped on lane D's phase-1 bake and pre-read, hl021 Owl in snow too easy, hl048 Countdown, hl040b Gift wrap and hl020 Lantern unclear, hl026b Sweater dog a maroon patch under the mouth); lane C edited many of them (a tighter crop, the plain background split into a navy sky band and a snow-white ground band; the edit field, ops in edits.json; the file <id>e.png). Kind painting, shade on, converted by land.js boardOf with the whole manifest line (chroma). The 43 manifest lines are lane C's, whole; lane D filled only the empty url with the licence row's source in Dino Valley's words. The folder keeps lane C's slug (16); as installed it is Land 12 in the factory's numbering (era 20) and Zen World 13.",
+ "sourceNote": "FLUX.1 [schnell] by Black Forest Labs (Apache-2.0), 4-bit GGUF, run on the studio's Mac; lane C's Holiday Lights (winter, Christmas and New Year, mostly close portraits per Peter's 10/13 rule; small-figure scenes, speckled fireworks, red smears and look-alikes left out), 26 picks and 17 spares (game-research/sappers-path-v4/lands/16-holiday-lights/README.md, picks-full.json, workspace 2822569: 5 dropped on lane D's phase-1 bake and pre-read, hl021 Owl in snow too easy, hl048 Countdown, hl040b Gift wrap and hl020 Lantern unclear, hl026b Sweater dog a maroon patch under the mouth); lane C edited many of them (a tighter crop, the plain background split into a navy sky band and a snow-white ground band; the edit field, ops in edits.json; the file <id>e.png). Kind painting, shade on, converted by land.js boardOf with the whole manifest line (chroma). Refill (lane C a0bad2b): 9 portraits in a real setting added (ids hl2NN, no edit), 35 picks and 17 spares. The 52 manifest lines are lane C's, whole; lane D filled only the empty url with the licence row's source in Dino Valley's words. The folder keeps lane C's slug (16); as installed it is Land 12 in the factory's numbering (era 20) and Zen World 13.",
  "features": [
   "linked",
   "mystery",
@@ -24,11 +24,11 @@
  "quests": "none",
  "zen": {
   "k": 13,
-  "note": "v7 lane D: Holiday Lights plays as Zen World 13 (tools/land.js ... zen writes tools/build-data/levels/zen.json only). Records keep the land factory numbers 643-668 (scratch/state.json seeded {from: 643, sheet0: 86, gal0: 62}: Worlds 1-12 hold 1-50, 201-250, 251-300, 301-350, 351-400, 401-429, 430-479, 480-492, 493-542, 543-585, 586-610, 611-642; World 12's 4 sheets end at 85); the page shows them on from World 12's last Zen number (Zen 493-518, main.js zenNum); zen.numbered keys each licence row by its Zen picture number before its level. Phase 1 was baked at 650-675 on an older end state; its bake files were moved down 7 with their n, not re-baked (tools/land-16-notes.md).",
+  "note": "v7 lane D: Holiday Lights plays as Zen World 13 (tools/land.js ... zen writes tools/build-data/levels/zen.json only). Records keep the land factory numbers 643-668 (scratch/state.json seeded {from: 643, sheet0: 86, gal0: 62}: Worlds 1-12 hold 1-50, 201-250, 251-300, 301-350, 351-400, 401-429, 430-479, 480-492, 493-542, 543-585, 586-610, 611-642; World 12's 4 sheets end at 85); the page shows them on from World 12's last Zen number (Zen 493-518, main.js zenNum); zen.numbered keys each licence row by its Zen picture number before its level. Phase 1 was baked at 650-675 on an older end state; its bake files were moved down 7 with their n, not re-baked (tools/land-16-notes.md). Round 2 (refill): 35 levels 650-684 (Zen 500-534) after Worlds 11/12's refills (586-616, 617-649), sheet0 86 unchanged; 5 sheets now (86-90, 8+8+8+8+3); the 26 renamed (bake files moved with n), the 9 refill slots and hl002b (ringless) baked.",
   "numbered": true
  },
  "profile": {
-  "note": "Zen World 13, casual (v7 lane D, 2026-10-13): Clockwork Town's profile (tools/lands/14-clockwork-town/land.json; Cloud Kingdom's, Dino Valley's as it ships), for a world of 26: tags E9/N13/H4/X0 ending on a Hard, ? cards, linked squads, gentle moats (2 ways in) on pictures that can carry and deal one, no locks, no archers, no Extreme, no mystery blocks (Peter, 2026-10-08), careful floor 0.5 every tag, deal attempts 96 at the land-config squads.",
+  "note": "Zen World 13, casual (v7 lane D, 2026-10-13): Clockwork Town's profile (tools/lands/14-clockwork-town/land.json; Cloud Kingdom's, Dino Valley's as it ships), for a world of 26: tags E9/N13/H4/X0 ending on a Hard, ? cards, linked squads, gentle moats (2 ways in) on pictures that can carry and deal one, no locks, no archers, no Extreme, no mystery blocks (Peter, 2026-10-08), careful floor 0.5 every tag, deal attempts 96 at the land-config squads. Round 2 (refill): 35 levels, the same shares give E12/N18/H5 ending on a Hard.",
   "tags": {
    "shares": {
     "easy": 0.35,
@@ -152,25 +152,34 @@
   "hl006",
   "hl008",
   "hl007",
+  "hl206",
+  "hl209",
+  "hl208",
   "hl009",
+  "hl203",
   "hl042b",
   "hl011",
   "hl012b",
   "hl013b",
+  "hl213",
+  "hl201",
   "hl045b",
   "hl014",
+  "hl207",
   "hl015",
+  "hl211",
+  "hl202",
   "hl016",
   "hl017b",
   "hl050",
-  "hl022",
+  "hl030",
   "hl023",
   "hl024",
   "hl027",
   "hl029",
-  "hl030"
+  "hl022"
  ],
- "mainNote": "Lane C's order (picks-full.json landMain, workspace 2822569: 26 after lane D's phase-1 bake and pre-read; hl021 Owl in snow had first failed every candidate at Normal and, after a two-slot reorder with hl050, at Hard) with one reorder: slots 8 and 9 swapped, so hl007 Candy cane takes the Hard at 651 (hl008 Snowflake failed it on 18 candidates, fast tapper) and hl008 plays Normal at 650 (numbers as installed).",
+ "mainNote": "Lane C's order (picks-full.json landMain, workspace 2822569: 26 after lane D's phase-1 bake and pre-read; hl021 Owl in snow had first failed every candidate at Normal and, after a two-slot reorder with hl050, at Hard) with one reorder: slots 8 and 9 swapped, so hl007 Candy cane takes the Hard at 651 (hl008 Snowflake failed it on 18 candidates, fast tapper) and hl008 plays Normal at 650 (numbers as installed). Round 2 (refill, 2026-10-13, lane C a0bad2b, and critic-land-16): the 26 keep their order, tags, plan entries and bakes; the 9 refills fill the gaps where the 26's tags sit inside landTags(35) (E12/N18/H5), placed away from their look-alikes: 659 hl206 Fox in a hat (Easy), 660 hl209 Santa's cat (Santa hat cat hl016 at 676), 661 hl208 Sleigh, 663 hl203 Penguin pair, 668 hl213 Robin (Easy), 669 hl201 Reindeer in snow, 672 hl207 Gingerbread house (the new Hard, 7 colours), 674 hl211 Candy cane (hl007 at 658), 675 hl202 Snowman with hat (Easy). critic-land-16 fix 1: the closer is hl022 Fox in snow (reads), swapped with hl030 Clock midnight (weak lower face), which stays a mid-world Hard at 679; both keep their own bakes (records and plan entries swapped between the two Hard slots, n set).",
  "map": {
   "fromLayout": [
    19,
@@ -280,7 +289,8 @@
   "hl007": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
   "hl008": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
   "hl009": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
-  "hl022": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)"
+  "hl022": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
+  "hl002b": "critic-land-16 m1 (2026-10-13): its ring's stub runs up to the top edge; baked ringless"
  },
- "moatNote": "20 of the 26 boards can carry a ring (land.js moatCan); lane D deal probe (6 rings x 20 attempts a tag at the profile deal setting, the Worlds 4-12 scratch script, scratch/probe.log, run on the 31): hl007 Candy cane, hl008 Snowflake, hl009 Mitten and hl022 Fox in snow never deal with one (moatSkip); the rest dealt 2-100% (hl005 hl029 hl027 93-100%, hl012b hl045b hl024 hl016 hl011 58-77%, hl015 hl004 hl006 hl013b 30-56%, hl023 24-28%, hl002b 12-14%, hl014 3-7%, hl042b 2-4%)."
+ "moatNote": "20 of the 26 boards can carry a ring (land.js moatCan); lane D deal probe (6 rings x 20 attempts a tag at the profile deal setting, the Worlds 4-12 scratch script, scratch/probe.log, run on the 31): hl007 Candy cane, hl008 Snowflake, hl009 Mitten and hl022 Fox in snow never deal with one (moatSkip); the rest dealt 2-100% (hl005 hl029 hl027 93-100%, hl012b hl045b hl024 hl016 hl011 58-77%, hl015 hl004 hl006 hl013b 30-56%, hl023 24-28%, hl002b 12-14%, hl014 3-7%, hl042b 2-4%). Round 2 (refill): hl002b Snowman into moatSkip (critic-land-16 m1: its ring's stub runs to the top edge), re-baked ringless on its plan (--drop-moat). The 9 refills probed (scratch/probe-refill.log): hl206 100%, hl207 21-23%, hl202 15-17%, hl213 hl208 hl211 2-3% (kept; all dealt in the bake); hl201 hl203 hl209 can't carry a ring."
 }
