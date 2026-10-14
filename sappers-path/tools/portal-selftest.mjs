@@ -8,7 +8,8 @@
 //   2 origin:     no request leaves the game's origin (data: and blob: aside), in every run, framed or not;
 //   3 links:      no element points off-origin (a/area/link href, src, srcset, form action, a URL in a meta's content) on the home,
 //                 the level, the map in both modes and Settings;
-//   4 one tap:    a real tap on the home's Play reaches level 1 (the home gone, the level number 1, the board drawn); load-to-play ms;
+//   4 one tap:    on a fresh profile nothing covers the home and ONE real tap on its "Level 1" reaches level 1 (the home gone, the level
+//                 number 1, the board drawn, the coach's first line up); a returning player too; How to play is one tap into the tour;
 //   5 bytes:      what loads before the first tap (response bodies, after selftest.settleMs on the home) and after it (the music);
 //   6 selfTest:   SP.selfTest() under ?debug=1 in the unzipped build passes; levels/debug-v4.json, the one file the build leaves
 //                 out on purpose (config debugOnly), is answered from the source tree for this run only (a Playwright route);
@@ -71,13 +72,15 @@ async function walk(F, page, R, tagName, touch) {
   const t0 = Date.now(); await F.waitForFunction(() => { const b = document.getElementById("btn-play"); return b && !b.hidden && b.getBoundingClientRect().width > 0 && document.querySelector("#title-art.on"); }, null, { timeout: 15000 });
   R.homeMs = Date.now() - t0; await page.waitForTimeout(T.settleMs); R.tapAt = Date.now(); R.preList = R.reqs.slice();
   const links = []; links.push(...(await offLinks(F)).map((s) => "home: " + s));
-  // a fresh profile meets the tour's offer over the home (src/tutorial.js offerMaybe): Skip, then Play, is the way to level 1
-  const press = async (sel) => { const el = await F.$(sel); if (touch) await el.tap(); else await el.click(); };
-  const offer = await visible(F, "#tut-offer"); let taps = 0; if (offer) { await press("#tut-offer .tut-no"); taps++; }
-  await press("#btn-play"); taps++;
-  const inPlay = await F.waitForFunction(() => document.getElementById("title").hidden && document.getElementById("map").hidden && /^\D*1\D*$/.test(document.getElementById("lvl-num").textContent) && document.getElementById("board").width > 0, null, { timeout: 10000 }).then(() => true, () => false);
-  R.toPlayMs = Date.now() - t0; const num = await F.evaluate(() => document.getElementById("lvl-num").textContent);
-  check("4 one tap", inPlay && taps === 1, `${tagName}, fresh profile: ${offer ? "the tour's offer (New here? Show me / Skip) covers the home; " : ""}level ${JSON.stringify(num)} in ${taps} tap${taps > 1 ? "s" : ""}${offer ? " (Skip, Play)" : ""}, board drawn (${R.toPlayMs} ms from load to play)`);
+  // Stage 3: nothing covers the home on a fresh profile (no tour offer, no dialog): exactly one tap on the home's Level 1
+  // reaches level 1, the board drawn and the coach's first line up (level 1 teaches). Anything over the home fails.
+  const press = async (sel) => { const el = await F.$(sel); if (touch) await el.tap({ timeout: 5000 }); else await el.click({ timeout: 5000 }); };
+  const offer = await visible(F, "#tut-offer"), cover = await F.evaluate(() => { const b = document.getElementById("btn-play"), r = b.getBoundingClientRect(), t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return t && !b.contains(t) ? (t.id || t.className || t.tagName) : ""; });
+  const label = await F.evaluate(() => document.getElementById("play-lab").textContent); let taps = 0;
+  if (!offer && !cover) { await press("#btn-play"); taps++; }
+  const inPlay = taps === 1 && await F.waitForFunction(() => document.getElementById("title").hidden && document.getElementById("map").hidden && /^\D*1\D*$/.test(document.getElementById("lvl-num").textContent) && document.getElementById("board").width > 0, null, { timeout: 10000 }).then(() => true, () => false);
+  R.toPlayMs = Date.now() - t0; const num = await F.evaluate(() => document.getElementById("lvl-num").textContent), coach = inPlay ? await F.evaluate(() => { const c = document.getElementById("coach"); return c.hidden ? "" : c.textContent; }) : "";
+  check("4 one tap", inPlay && taps === 1 && !offer && !cover && /^Level 1$/.test(label) && !!coach, `${tagName}, fresh profile: ${offer ? "the tour's offer covers the home; " : cover ? "something covers Play (" + cover + "); " : ""}"${label}" -> level ${JSON.stringify(num)} in ${taps} tap${taps === 1 ? "" : "s"}, board drawn, coach "${coach}" (${R.toPlayMs} ms from load to play)`);
   await page.waitForTimeout(1500); links.push(...(await offLinks(F)).map((s) => "level: " + s));
   await F.click("#btn-map"); await F.waitForFunction(() => !document.getElementById("map").hidden, null, { timeout: 8000 }); await page.waitForTimeout(800); links.push(...(await offLinks(F)).map((s) => "map: " + s));
   if (await visible(F, '#map-mode [data-mode="zen"]')) { await F.click('#map-mode [data-mode="zen"]'); await page.waitForTimeout(1200); links.push(...(await offLinks(F)).map((s) => "zen map: " + s)); await F.click('#map-mode [data-mode="campaign"]'); await page.waitForTimeout(300); }
@@ -94,7 +97,7 @@ try {
     { await page.reload(); await page.waitForFunction(() => { const b = document.getElementById("btn-play"); return b && !b.hidden && b.getBoundingClientRect().width > 0; }, null, { timeout: 15000 }); await page.waitForTimeout(500);
       const offer = await visible(page.mainFrame(), "#tut-offer"), b = await page.$("#btn-play"); if (touch) await b.tap(); else await b.click();
       const ok = await page.waitForFunction(() => document.getElementById("title").hidden && document.getElementById("map").hidden && /^\D*1\D*$/.test(document.getElementById("lvl-num").textContent), null, { timeout: 10000 }).then(() => true, () => false);
-      check("4 one tap", ok && !offer, `${R.name}, returning player (tour offered once): one tap on Play -> level 1 ${ok ? "reached" : "NOT reached"}${offer ? ", the offer showed again" : ""}`); }
+      check("4 one tap", ok && !offer, `${R.name}, returning player: one tap on Play -> level 1 ${ok ? "reached" : "NOT reached"}${offer ? ", the tour's offer showed" : ""}`); }
     const pre = R.preList.map((u) => new URL(u).pathname.replace("/" + T.subpath, "")), music = R.reqs.filter((u) => /\/audio\//.test(u)).length;
     notes[R.name] = { homeMs: R.homeMs, toPlayMs: R.toPlayMs, beforeTap: R.pre, total: R.bytes, beforeTapFiles: pre.length, musicRequests: music };
     check("1 load", !R.console.length, `${R.name}: ${R.console.length} console errors/warnings` + (R.console.length ? " " + R.console.slice(0, 3).join(" | ") : ""));
@@ -102,11 +105,11 @@ try {
     check("5 bytes", R.pre > 0, `${R.name}: ${R.pre} B in ${pre.length} files before the first tap (${pre.filter((p) => /\.(jpg|webp)$/.test(p)).join(", ")}), ${R.bytes} B after the walk (music files ${music})`);
     await ctx.close();
   }
-  // 4: on a fresh profile, Show me is one tap into a playable practice fort (the tour)
-  { const vp = T.viewports[0], { ctx, page, R } = await context(vp); await page.goto(GAME); await page.waitForFunction(() => { const o = document.getElementById("tut-offer"); return o && !o.hidden; }, null, { timeout: 15000 }).catch(() => {});
-    const offer = await visible(page.mainFrame(), "#tut-offer"); if (offer) await (await page.$("#tut-offer .tut-yes")).tap();
+  // 4: on a fresh profile, the home's How to play is one tap into a playable practice fort (the tour, kept off the launch path)
+  { const vp = T.viewports[0], { ctx, page, R } = await context(vp); await page.goto(GAME); await page.waitForFunction(() => { const b = document.getElementById("btn-howto"); return b && !b.hidden && b.getBoundingClientRect().width > 0; }, null, { timeout: 15000 }).catch(() => {});
+    const offer = await visible(page.mainFrame(), "#btn-howto"); if (offer) await (await page.$("#btn-howto")).tap();
     const ok = offer && await page.waitForFunction(() => document.body.classList.contains("tut") && document.getElementById("title").hidden && document.getElementById("board").width > 0 && document.querySelectorAll("#tray .card:not(.empty)").length > 0, null, { timeout: 10000 }).then(() => true, () => false);
-    check("4 one tap", ok, `${R.name}, fresh profile: Show me is one tap into a playable practice fort (the tour, not level 1)` + (R.console.length ? "; console " + R.console.slice(0, 2).join(" | ") : ""));
+    check("4 one tap", ok, `${R.name}, fresh profile: How to play on the home is one tap into a playable practice fort (the tour, not level 1)` + (R.console.length ? "; console " + R.console.slice(0, 2).join(" | ") : ""));
     await ctx.close(); }
   // 6: SP.selfTest under ?debug=1, the debug-only file from the source tree
   { const vp = T.viewports[0], { ctx, page, R } = await context(vp);

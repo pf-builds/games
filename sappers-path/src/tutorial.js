@@ -1,5 +1,7 @@
 // Sapper's Path v6 lane B part 2: the intro tour (tools/tutorial-notes.md; data levels/tutorial.json; config tutorial).
-// Offered once over the home on first launch ("New here?": Show me / Skip) and any time from Settings > How to play.
+// Lane P Stage 3 (Peter): no offer on launch (config tutorial.offerOnLaunch false): level 1's coach teaches and the home's
+// Level 1 is the one tap; the tour is How to play on the home and in Settings. With the switch on, the old offer over the
+// home on first launch ("New here?": Show me / Skip) comes back.
 // Eight practice forts played on the REAL engine, board, tray, line, coach band and arrow, win and fail sheets (main.js
 // startLevel with entries this file registers), then a closing card that routes to the Campaign's or Zen's map.
 // Isolation: while the tour runs, app.save is a practice save (a copy of the Campaign data: progress, coins and lives as
@@ -82,7 +84,7 @@
     // ---- the offer --------------------------------------------------------------------------------------------------
     const doneIn = (sv) => !!sv && !!sv.data && Object.keys(sv.data.done || {}).length > 0;
     function offerMaybe(force) {
-      if (!T.data || T.on || (!force && (T.seen || T.offered))) return false;
+      if (!T.data || T.on || (!force && (T.seen || T.offered || !C.offerOnLaunch))) return false; // lane P Stage 3: off on launch
       if (app.screen !== "title") return false;
       if (!force && !C.offerIfProgress && (doneIn(P.csave()) || (P.zenOn() && doneIn(P.zsave())))) return false; // a player who has cleared a level is not new
       T.offered = true; T.offerOn = true; T.el.offer.hidden = false; T.el.offer.querySelector(".tut-yes").focus(); return true;
@@ -228,8 +230,10 @@
       try {
         T.store = store; T.seen = false; T.offered = false; app.allPw = false; P.showScreen("title");
         const s0 = snap();
-        // The offer: once, over the home, its buttons hittable and big; Skip sets the flag; never again.
-        const o1 = offerMaybe(), oh = hit(T.el.offer.querySelector(".tut-yes")) && hit(T.el.offer.querySelector(".tut-no")) && big(T.el.offer.querySelector(".tut-yes")) && big(T.el.offer.querySelector(".tut-no"));
+        // Lane P Stage 3: no offer on a first launch while tutorial.offerOnLaunch is off (the home is one tap to level 1).
+        if (!C.offerOnLaunch) { const o0 = offerMaybe(); ok(!o0 && T.el.offer.hidden && !T.offerOn && mem[C.key] === undefined, "tour: no offer over the home on a first launch (tutorial.offerOnLaunch off); the seen flag stays unset"); T.offered = false; }
+        // The offer (forced, as with the switch on): once, over the home, its buttons hittable and big; Skip sets the flag; never again.
+        const o1 = offerMaybe(!C.offerOnLaunch), oh = hit(T.el.offer.querySelector(".tut-yes")) && hit(T.el.offer.querySelector(".tut-no")) && big(T.el.offer.querySelector(".tut-yes")) && big(T.el.offer.querySelector(".tut-no"));
         T.el.offer.querySelector(".tut-no").click(); const o2 = offerMaybe();
         ok(o1 && oh && mem[C.key] === "1" && T.el.offer.hidden && !o2, "tour: the first-launch offer shows once over the home (Show me and Skip hittable, 44 px), Skip sets the seen flag, it never shows again");
         // Show me (forced): eight forts on the real engine, a done card after each, the jam's real words and a Retry.
