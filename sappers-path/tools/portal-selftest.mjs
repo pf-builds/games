@@ -10,13 +10,16 @@
 //                 the level, the map in both modes and Settings;
 //   4 one tap:    on a fresh profile nothing covers the home and ONE real tap on its "Level 1" reaches level 1 (the home gone, the level
 //                 number 1, the board drawn, the coach's first line up); a returning player too; How to play is one tap into the tour;
-//   5 bytes:      what loads before the first tap (response bodies, after selftest.settleMs on the home) and after it (the music);
+//   5 bytes:      what loads before the first tap (response bodies, after selftest.settleMs on the home; Stage 3: at most
+//                 selftest.maxBeforeTapBytes and no music) and after it (the music);
 //   6 selfTest:   SP.selfTest() under ?debug=1 in the unzipped build passes; levels/debug-v4.json, the one file the build leaves
 //                 out on purpose (config debugOnly), is answered from the source tree for this run only (a Playwright route);
-//   7 files:      every request answered 200 by the build (nothing the page asks for is missing from the zip), and which zipped
-//                 files no run asked for;
-//   8 framed:     in the cross-site frame under the subpath: Play reaches level 1, every ?v= request carries the page's own cache tag,
-//                 the localStorage keys written are all "sappers-path." ones and survive a reload of the host page.
+//   7 files:      every request answered 200 by the build with the exact case of a zipped name (Stage 3: macOS's disk would forgive
+//                 a wrong case, a CDN would not); a late-content walk scrolls both maps end to end (Campaign 1-5 won, Zen open);
+//                 every zipped file asked for by some run but selftest.neverFetchedOk (the licence texts);
+//   8 framed:     in the cross-site frame under the subpath: Play reaches level 1, every ?v= request carries the page's own cache tag (an
+//                 untagged request fails, Stage 3), the localStorage keys written are all "sappers-path." ones and survive a reload of
+//                 the host page, and so does progress (Stage 3: level 1 won, reloaded, the home reads Level 2).
 // Exit 0 when every check passes. The servers close at the end (no process is left on either port).
 import fs from "node:fs";
 import os from "node:os";
@@ -38,8 +41,11 @@ const tag = (fs.readFileSync(path.join(gameDir, "index.html"), "utf8").match(/sr
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".webp": "image/webp", ".jpg": "image/jpeg", ".png": "image/png",
   ".m4a": "audio/mp4", ".ttf": "font/ttf", ".woff2": "font/woff2", ".txt": "text/plain; charset=utf-8", ".svg": "image/svg+xml" };
 const served = []; // {path, status} for every request the game's server answered
-const game = http.createServer((q, r) => { const u = new URL(q.url, "http://x"), rel = decodeURIComponent(u.pathname).replace(/^\/+/, ""), f = path.join(tmp, rel.endsWith("/") || !rel ? rel + "index.html" : rel);
-  const ok = f.startsWith(tmp) && fs.existsSync(f) && fs.statSync(f).isFile(); served.push({ path: rel, q: u.search, status: ok ? 200 : 404 });
+// Stage 3 (critic 6d): macOS's disk is case-insensitive, a CDN is not: a request is answered only when its path names a zipped file
+// with the exact case (a wrong-case hit is a 404 here and counted in check 7).
+const exact = new Set(zipped.map((f) => T.subpath + f)), caseMiss = [];
+const game = http.createServer((q, r) => { const u = new URL(q.url, "http://x"), rel = decodeURIComponent(u.pathname).replace(/^\/+/, ""), name = rel.endsWith("/") || !rel ? rel + "index.html" : rel, f = path.join(tmp, name);
+  const there = f.startsWith(tmp) && fs.existsSync(f) && fs.statSync(f).isFile(), ok = there && exact.has(name); if (there && !ok) caseMiss.push(name); served.push({ path: rel, q: u.search, status: ok ? 200 : 404 });
   if (!ok) { r.writeHead(404); r.end(); return; } r.writeHead(200, { "Content-Type": TYPES[path.extname(f)] || "application/octet-stream", "Cache-Control": "no-store" }); fs.createReadStream(f).pipe(r); });
 const host = http.createServer((q, r) => { r.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
   r.end(`<!doctype html><meta charset="utf-8"><title>host</title><style>body{margin:0;background:#111}iframe{border:0;width:100vw;height:100vh;display:block}</style><iframe id="game" allow="autoplay" src="${GAME}index.html"></iframe>`); });
@@ -102,7 +108,8 @@ try {
     notes[R.name] = { homeMs: R.homeMs, toPlayMs: R.toPlayMs, beforeTap: R.pre, total: R.bytes, beforeTapFiles: pre.length, musicRequests: music };
     check("1 load", !R.console.length, `${R.name}: ${R.console.length} console errors/warnings` + (R.console.length ? " " + R.console.slice(0, 3).join(" | ") : ""));
     check("2 origin", !R.off.length, `${R.name}: ${R.reqs.length} requests, ${R.off.length} off the game's origin` + (R.off.length ? " " + R.off.slice(0, 3).join(" ") : ""));
-    check("5 bytes", R.pre > 0, `${R.name}: ${R.pre} B in ${pre.length} files before the first tap (${pre.filter((p) => /\.(jpg|webp)$/.test(p)).join(", ")}), ${R.bytes} B after the walk (music files ${music})`);
+    const preMusic = pre.filter((p) => /\/audio\//.test(p)).length; // Stage 3 (critic 6b): a gate, not a print: under maxBeforeTapBytes and no music before the tap
+    check("5 bytes", R.pre > 0 && R.pre <= T.maxBeforeTapBytes && !preMusic, `${R.name}: ${R.pre} B in ${pre.length} files before the first tap (limit ${T.maxBeforeTapBytes}; ${pre.filter((p) => /\.(jpg|webp)$/.test(p)).join(", ")}; music before the tap ${preMusic}), ${R.bytes} B after the walk (music files ${music})`);
     await ctx.close();
   }
   // 4: on a fresh profile, the home's How to play is one tap into a playable practice fort (the tour, kept off the launch path)
@@ -126,17 +133,35 @@ try {
     const keys = await F.evaluate(() => { try { return Object.keys(localStorage); } catch (e) { return ["(storage threw: " + e.message + ")"]; } });
     const tagged = R.reqs.filter((u) => new URL(u).origin === ORIGIN && /\?v=/.test(u)), wrong = tagged.filter((u) => new URL(u).searchParams.get("v") !== tag);
     const untagged = R.reqs.filter((u) => new URL(u).origin === ORIGIN && !/\?v=/.test(u) && !/\/index\.html$|\/$/.test(new URL(u).pathname));
-    check("8 framed", wrong.length === 0 && tagged.length > 0, `cache tag: ${tagged.length} requests carry ?v=${tag} from ${GAME}, ${wrong.length} another tag, ${untagged.length} untagged` + (untagged.length ? " (" + untagged.map((u) => new URL(u).pathname.split("/").pop()).join(", ") + ")" : ""));
+    check("8 framed", wrong.length === 0 && tagged.length > 0 && !untagged.length, `cache tag: ${tagged.length} requests carry ?v=${tag} from ${GAME}, ${wrong.length} another tag, ${untagged.length} untagged` + (untagged.length ? " (" + untagged.map((u) => new URL(u).pathname.split("/").pop()).join(", ") + ")" : ""));
     await page.reload(); const F2 = await (await page.waitForSelector("#game")).contentFrame(); await F2.waitForFunction(() => document.getElementById("btn-play") && !document.getElementById("btn-play").hidden, null, { timeout: 15000 });
     const keys2 = await F2.evaluate(() => { try { return Object.keys(localStorage); } catch (e) { return []; } });
     check("8 framed", keys.length > 0 && keys.every((k) => k.startsWith("sappers-path.")) && keys.every((k) => keys2.includes(k)), `storage in the cross-site frame: keys ${JSON.stringify(keys)}, after a host reload ${JSON.stringify(keys2)}`);
+    // Stage 3 (critic 6c): progress itself survives. Level 1 marked won in the game's own save (format 2), the host reloaded: the
+    // save still holds it and the home's one tap now reads Level 2.
+    const before = await F2.evaluate(() => { const k = "sappers-path.v3", d = JSON.parse(localStorage.getItem(k) || "{}"); d.done = Object.assign({}, d.done, { "e1-01": 1 }); d.last = "e1-02"; localStorage.setItem(k, JSON.stringify(d)); return document.getElementById("play-lab").textContent; });
+    await page.reload(); const F3 = await (await page.waitForSelector("#game")).contentFrame(); await F3.waitForFunction(() => document.getElementById("btn-play") && !document.getElementById("btn-play").hidden, null, { timeout: 15000 });
+    const after = await F3.evaluate(() => ({ lab: document.getElementById("play-lab").textContent, done: (JSON.parse(localStorage.getItem("sappers-path.v3") || "{}").done || {})["e1-01"] }));
+    check("8 framed", after.done === 1 && /^Level 2$/.test(after.lab), `progress in the cross-site frame: level 1 won, host reloaded: the save keeps it (${after.done}) and the home reads "${after.lab}" (was "${before}")`);
     check("1 load", !R.console.length, `framed ${R.name}: ${R.console.length} console errors/warnings` + (R.console.length ? " " + R.console.slice(0, 3).join(" | ") : ""));
     check("2 origin", !R.off.length, `framed ${R.name}: ${R.reqs.length} requests, ${R.off.length} off the game's or the host page's origin` + (R.off.length ? " " + R.off.slice(0, 3).join(" ") : ""));
     await ctx.close(); }
+  // 7 (Stage 3, critic 6a): a returning player who has won Campaign levels 1-5 (so Zen is open) scrolls the Campaign map and the
+  // Zen map end to end, so every lazy sheet is asked for; with the ?debug=1 run (every Zen world's file, the music) nothing in the
+  // zip should go unasked but selftest.neverFetchedOk.
+  { const vp = T.viewports[1], { ctx, page, R } = await context(vp), ids = ["e1-01", "e1-02", "e1-03", "e1-04", "e1-05"];
+    await ctx.addInitScript((d) => { try { if (!localStorage.getItem("sappers-path.v3")) localStorage.setItem("sappers-path.v3", JSON.stringify({ v: 2, done: d })); } catch (e) { /* no storage */ } }, Object.fromEntries(ids.map((i) => [i, 1])));
+    await page.goto(GAME); await page.waitForFunction(() => { const b = document.getElementById("btn-zen"); return b && !b.hidden && !b.classList.contains("locked"); }, null, { timeout: 15000 }).catch(() => {});
+    const scroll = () => page.evaluate(async () => { const j = document.getElementById("jr"); for (let y = 0, g = 0; g < 400; g++, y += j.clientHeight * 0.7) { j.scrollTop = y; await new Promise((r) => setTimeout(r, 60)); if (y > j.scrollHeight) break; } j.scrollTop = 0; await new Promise((r) => setTimeout(r, 200)); return j.scrollHeight; });
+    await page.click("#btn-tomap"); await page.waitForFunction(() => !document.getElementById("map").hidden); const hc = await scroll();
+    await page.click('#map-mode [data-mode="zen"]'); const zenOn = await page.waitForFunction(() => document.getElementById("map-mode").querySelector('[data-mode="zen"]').getAttribute("aria-pressed") === "true", null, { timeout: 5000 }).then(() => true, () => false); const hz = zenOn ? await scroll() : 0;
+    check("7 files", zenOn, `late-content walk (${R.name}, Campaign 1-5 won): Zen opens; Campaign map ${hc} px and Zen map ${hz} px scrolled end to end`);
+    check("1 load", !R.console.length, `late-content walk: ${R.console.length} console errors/warnings` + (R.console.length ? " " + R.console.slice(0, 3).join(" | ") : ""));
+    await ctx.close(); }
   // 7: every request answered by the build; which zipped files nothing asked for
   { const asked = new Set(served.filter((s) => s.status === 200).map((s) => s.path.replace(T.subpath, "").replace(/^$/, "index.html").replace(/\/$/, "/index.html"))), miss = served.filter((s) => s.status !== 200 && !C.debugOnly.some((f) => s.path.endsWith(f)));
-    const never = zipped.filter((f) => !asked.has(f));
-    check("7 files", !miss.length, `${served.length} requests to the build, ${miss.length} not found` + (miss.length ? " " + miss.slice(0, 5).map((s) => s.path).join(", ") : "") + `; ${zipped.length - never.length} of ${zipped.length} zipped files asked for; never asked: ${never.join(", ") || "none"}`); }
+    const never = zipped.filter((f) => !asked.has(f)), unexpected = never.filter((f) => !T.neverFetchedOk.includes(f));
+    check("7 files", !miss.length && !caseMiss.length && !unexpected.length, `${served.length} requests to the build, ${miss.length} not found` + (miss.length ? " " + miss.slice(0, 5).map((s) => s.path).join(", ") : "") + `, ${caseMiss.length} answered only by a case-insensitive disk` + (caseMiss.length ? " (" + caseMiss.slice(0, 3).join(", ") + ")" : "") + `; ${zipped.length - never.length} of ${zipped.length} zipped files asked for; never asked: ${never.join(", ") || "none"}` + (unexpected.length ? " (NOT in neverFetchedOk: " + unexpected.join(", ") + ")" : " (all in neverFetchedOk)")); }
 } finally {
   await browser.close(); game.close(); host.close(); if (!keep) fs.rmSync(tmp, { recursive: true, force: true });
 }
