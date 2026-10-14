@@ -1127,7 +1127,7 @@
   function resetNow() { holdStop(); const m = zenOn() ? app.rsMode : "all", ZR = ZT().reset || {};
     if (m === "zen") Save.resetZen(zsave()); else if (m === "campaign") Save.resetCampaign(csave(), app.meta); else { Save.reset(csave(), app.meta); if (zenOn()) Save.resetZen(zsave()); }
     progressSwapped(); toast(!zenOn() ? RT().toast : m === "zen" ? ZR.zenToast : m === "campaign" ? ZR.campToast : ZR.allToast); }
-  function progressSwapped() { openSettings(false); app.tipQ = []; if (app.tip) hideTip(); app.loadR = null; showScreen("title"); }
+  function progressSwapped() { openSettings(false); app.tipQ = []; if (app.tip) hideTip(); app.loadR = null; if (app.mode === "zen" && !zenOpen()) useMode("campaign"); showScreen("title"); } // lane P Stage 3: a reset or a code that locks Zen again leaves Zen as the mode
   // Copy: the code (save.js encode) in a selectable box with its length, copied at once; where the Clipboard API is
   // missing or refused (an iframe, older Safari), execCommand on the selected box, else the box stays selected to copy by hand.
   function openCopy() {
