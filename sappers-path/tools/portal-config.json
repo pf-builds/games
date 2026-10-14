@@ -7,6 +7,8 @@
  "maxFiles": 1500,
  "debugOnly": ["levels/debug-v4.json"],
  "companions": ["fonts/OFL.txt", "LICENSE-Apache-2.0.txt"],
+ "leftOut": {"thumb.jpg": "the arcade's card image (pf-builds hub), never loaded by the page", "audio/jingle-pizzi15.m4a": "a spare jingle config does not play", "audio/jingle-steel10.m4a": "a spare jingle config does not play", "levels/gallery-manifest.json": "the Gallery's licence record (LICENSES.md cites it); never fetched", "levels/debug-v4.json": "?debug=1 only (debugOnly)"},
+ "keepNotes": ["config.json .eras[].note", "levels/tutorial.json .steps[].jamNote"],
  "licences": {"from": "LICENSES.md", "to": "LICENSES.txt",
   "dropRows": ["`thumb.jpg`"],
   "rewrite": [
@@ -26,6 +28,7 @@
   "hostPort": 8611, "gamePort": 8612,
   "subpath": "cdn/games/sappers-path/b1/",
   "viewports": [[375, 812, 3, true], [1280, 720, 1, false], [821, 462, 1, false]],
-  "settleMs": 2500, "selfTestMs": 120000
+  "settleMs": 2500, "selfTestMs": 120000,
+  "maxBeforeTapBytes": 2500000, "neverFetchedOk": ["LICENSES.txt", "fonts/OFL.txt", "LICENSE-Apache-2.0.txt"]
  }
 }

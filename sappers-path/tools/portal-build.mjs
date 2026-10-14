@@ -10,10 +10,13 @@
 //   the tutorial's file, map/layout.json's sheets, levels/zen.pk.json's world files and their sheets, config lands' sheets),
 //   looked up as written, then under levels/ and map/ (the folders main.js puts in front of them).
 // A traced path that is not in the game folder fails the build, unless it is a ?debug=1-only file (config debugOnly: left out on
-// purpose). Two copies change on the way: index.html loses its social-card <meta> lines (stripMeta: they carry the pf-builds URL),
-// config.json loses its developer notes ("note" and "*Note" keys, all but the realms' lore, eras[].note, which the map shows) and its
-// whitespace. Every other file is copied byte for byte, so the ?v= cache tags and the code are the Pages build's own. Added: LICENSES.txt
-// (plain text from LICENSES.md) and the companions (the font's OFL.txt). Checks: the source tree is clean against HEAD (--dirty skips
+// purpose). Copies that change on the way: index.html loses its social-card <meta> lines (stripMeta: they carry the pf-builds URL);
+// every runtime JSON loses its developer notes ("note", "about" and "*Note" string keys, all but keepNotes, which the page shows) and
+// its whitespace (Stage 3: config.json alone in Stage 1). Every other file is copied byte for byte, so the ?v= cache tags and the code
+// are the Pages build's own. Added: LICENSES.txt (plain text from LICENSES.md, naming only shipped files) and the companions (the font's
+// OFL.txt, the Apache 2.0 text). Stage 3: a file named in a JSON under a key the trace does not follow, or a tracked file of the game
+// folder that is neither traced, a companion nor in leftOut (with its reason), fails the build. Checks: the source tree is clean
+// against HEAD and every shipped source is tracked (git status misses ignored files; --dirty skips
 // it for a trial), every src/href/url() in the copy is relative and present, no runtime file holds a banned word or an absolute URL
 // other than allowUrls (the SVG namespace in data: URIs), the licence texts name no dev site or other portal, the unzipped total is
 // under both maxBytes readings, the file count under maxFiles, no tools/, *.md, pool, frozen or debug file in the zip, and the source
@@ -43,15 +46,28 @@ for (const f of [...files.keys()].filter((f) => f.endsWith(".js"))) for (const m
 const walked = new Set(), at = (v) => [v, "levels/" + v, "map/" + v].map(norm).find(has);
 const walk = (o, why) => { if (Array.isArray(o)) { for (const v of o) walk(v, why); return; } if (!o || typeof o !== "object") return;
   for (const [k, v] of Object.entries(o)) { const vs = k === "file" || k === "files" ? [].concat(v).filter((s) => typeof s === "string" && MEDIA.test(s)) : null;
-    if (vs) for (const s of vs) { const f = at(s); if (f) want(f, why + " ." + k); else fails.push("named but found nowhere: " + s + " (" + why + " ." + k + ")"); } else walk(v, why); } };
+    if (vs) for (const s of vs) { const f = at(s); if (f) want(f, why + " ." + k); else fails.push("named but found nowhere: " + s + " (" + why + " ." + k + ")"); }
+    else if (typeof v === "string" && MEDIA.test(v) && at(v) && !/^(?:note|about)$|Note$/.test(k)) named.push([v, why + " ." + k]); else walk(v, why); } };
+const named = []; // Stage 3: a game file named under a key the trace does not follow (checked once the trace is done)
 for (let pass = 0; pass < 200; pass++) { const next = [...files.keys()].filter((f) => f.endsWith(".json") && !walked.has(f) && !C.debugOnly.includes(f) && has(f)); if (!next.length) break;
   for (const f of next) { walked.add(f); try { walk(JSON.parse(rd(f)), f); } catch (e) { fails.push("JSON did not parse: " + f + " " + e.message); } } }
+
+// Stage 3 (the Stage 1 critic's 7a): nothing the page might load slips past the trace. A file named under any other key fails
+// unless the trace reached it some other way; every tracked file of the game folder (git ls-files, minus tools/ and *.md) is
+// traced, a companion, or in config leftOut with the reason it stays out; anything else fails loudly.
+for (const [v, why] of named) { const f = at(v); if (!files.has(f) && !(f in C.leftOut)) fails.push("a game file named where the trace does not look: " + v + " (" + why + ")"); }
+let tracked = []; try { tracked = execFileSync("git", ["ls-files", "-z", "--", "."], { cwd: root, encoding: "utf8" }).split("\0").filter((f) => f && !f.startsWith("tools/") && !f.endsWith(".md")); } catch (e) { fails.push("git ls-files failed"); }
+for (const f of tracked) if (!files.has(f) && !C.companions.includes(f) && !(f in C.leftOut)) fails.push("tracked but neither traced, a companion nor in leftOut: " + f);
+for (const f of Object.keys(C.leftOut)) if (files.has(f) && !C.debugOnly.includes(f)) fails.push("leftOut names a file the page loads: " + f);
 
 // ---- the clean-tree gate and the source hash ---------------------------------------------------------------------------------
 let commit = "?"; try { commit = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim(); } catch (e) { fails.push("not a git checkout"); }
 const shipSrc = [...files.keys()].filter((f) => !C.debugOnly.includes(f)).concat(C.companions, [C.licences.from, "tools/portal-config.json"]);
 { let st = ""; try { st = execFileSync("git", ["status", "--porcelain", "--", ...shipSrc], { cwd: root, encoding: "utf8" }).trim(); } catch (e) { st = "git status failed"; }
-  if (st) (dirty ? warns : fails).push("source differs from HEAD " + commit.slice(0, 7) + (dirty ? " (--dirty)" : "") + ": " + st.split("\n").join("; ")); }
+  if (st) (dirty ? warns : fails).push("source differs from HEAD " + commit.slice(0, 7) + (dirty ? " (--dirty)" : "") + ": " + st.split("\n").join("; "));
+  // Stage 3 (critic 7b): git status never reports an ignored file, so every shipped source must also be tracked at HEAD
+  const untracked = shipSrc.filter((f) => { try { execFileSync("git", ["ls-files", "--error-unmatch", "--", f], { cwd: root, stdio: "ignore" }); return false; } catch (e) { return true; } });
+  if (untracked.length) (dirty ? warns : fails).push("shipped but not tracked in git (ignored or new): " + untracked.join(", ")); }
 const sourceHash = () => { const h = crypto.createHash("sha256"), go = (d) => { for (const f of fs.readdirSync(d).sort()) { const p = path.join(d, f); if (p === outRoot || f === "node_modules" || f.startsWith(".")) continue; const s = fs.statSync(p); if (s.isDirectory()) go(p); else { h.update(path.relative(root, p)); h.update(fs.readFileSync(p)); } } }; go(root); return h.digest("hex"); };
 const before = sourceHash();
 
@@ -59,13 +75,16 @@ const before = sourceHash();
 fs.rmSync(stage, { recursive: true, force: true }); fs.rmSync(zipPath, { force: true }); fs.mkdirSync(stage, { recursive: true });
 const put = (f, data) => { const d = path.join(stage, f); fs.mkdirSync(path.dirname(d), { recursive: true }); if (data == null) fs.copyFileSync(path.join(root, f), d); else fs.writeFileSync(d, data); };
 const notes = []; // the config keys dropped, by path
-const unNote = (o, p) => { if (Array.isArray(o)) return o.map((v) => unNote(v, p + "[]")); if (!o || typeof o !== "object") return o; const r = {};
-  for (const [k, v] of Object.entries(o)) { const q = p + "." + k; if ((k === "note" || /^[a-z0-9]+Note$/.test(k)) && typeof v === "string" && q !== ".eras[].note") { notes.push(q); continue; } r[k] = unNote(v, q); } return r; };
+// Stage 3 (critic M2): every runtime JSON loses its developer notes ("note", "about", "*Note" string keys), all but keepNotes,
+// the ones the page shows (the realms' lore, config eras[].note; the tour's jam line, tutorial steps[].jamNote).
+const unNote = (o, p, f) => { if (Array.isArray(o)) return o.map((v) => unNote(v, p + "[]", f)); if (!o || typeof o !== "object") return o; const r = {};
+  for (const [k, v] of Object.entries(o)) { const q = p + "." + k; if (/^(?:note|about)$|Note$/.test(k) && typeof v === "string" && !C.keepNotes.includes(f + " " + q)) { notes.push(f + " " + q); notesB += Buffer.byteLength(JSON.stringify(v)); continue; } r[k] = unNote(v, q, f); } return r; };
+let notesB = 0;
 const stripped = [];
 for (const f of [...files.keys()].sort()) {
   if (C.debugOnly.includes(f) || !has(f)) continue;
   if (f === "index.html") put(f, html.split("\n").filter((l) => { const drop = /^<meta\b/.test(l) && C.stripMeta.some((s) => l.includes(s)); if (drop) stripped.push(l.trim()); return !drop; }).join("\n"));
-  else if (f === "config.json") put(f, JSON.stringify(unNote(JSON.parse(rd(f)), "")));
+  else if (f.endsWith(".json")) put(f, JSON.stringify(unNote(JSON.parse(rd(f)), "", f)));
   else put(f);
 }
 for (const f of C.companions) { if (has(f)) put(f); else fails.push("companion missing: " + f); }
@@ -117,7 +136,7 @@ if (zlist.length !== list.length || !zlist.includes("index.html")) fails.push("t
 const after = sourceHash(); if (after !== before) fails.push("the source folder changed during the build");
 const unfetched = [...files.keys()].filter((f) => C.debugOnly.includes(f));
 const report = { commit, dirty, zip: path.relative(root, zipPath), zipBytes, total, files: list.length, gates: { maxBytes: C.maxBytes.map((b) => ({ limit: b, pass: total <= b, zipPass: zipBytes <= b })), maxFiles: { limit: C.maxFiles, pass: list.length <= C.maxFiles } },
-  leftOut: unfetched, metaStripped: stripped, configNotesDropped: notes.length, scan, warns, fails, sizes };
+  leftOut: unfetched, metaStripped: stripped, notesDropped: { count: notes.length, bytes: notesB, where: [...new Set(notes.map((n) => n.replace(/\[\]/g, "").split(" ")[0]))] }, scan, warns, fails, sizes };
 fs.writeFileSync(path.join(outRoot, "build.json"), JSON.stringify(report, null, 1) + "\n");
 const { sizes: _s, ...brief } = report; console.log(JSON.stringify(brief, null, 1));
 console.log((fails.length ? "FAIL" : "PASS") + `: ${list.length} files, ${total} B unzipped, ${zipBytes} B zipped -> ${path.relative(root, zipPath)}`);
