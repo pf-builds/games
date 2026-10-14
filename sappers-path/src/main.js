@@ -1920,8 +1920,10 @@
     if (hh > room) { P.classList.add("tight"); hh = natural(); }
     if (hh <= room) { st.top = px(lw.bottom + gap - A.top); if (app.wide) st.bottom = px(A.bottom - Math.min(foot, Math.max(lw.bottom + gap + hh, rl.bottom))); return; } // v4.3 fix (m5): wide: its content's height (down to the tray's foot, so no queue row peeks out under it)
     // Lane P Stage 3 (the gate critic's B2: at 821x462 the loss and Zen stuck sheets started above the frame): above the line
-    // only if it fits there; else the whole column (wide) or screen, its card scrolling inside if it must.
-    const top0 = app.wide ? sd.top : A.top; if (lw.top - gap - hh < top0) return fitSheet(top0, foot);
+    // only if it fits there; else under the line to the foot, its card scrolling inside (the jammed line stays in view), when
+    // that room is at least layout.sheetMinPx; else the whole column (wide) or screen.
+    const top0 = app.wide ? sd.top : A.top;
+    if (lw.top - gap - hh < top0) { if (room < app.cfg.layout.sheetMinPx) return fitSheet(top0, foot); P.classList.add("fit"); st.top = px(lw.bottom + gap - A.top); st.bottom = px(A.bottom - foot); return; }
     P.classList.add("float"); st.top = "auto"; st.bottom = px(A.bottom - lw.top + gap);
   }
   // The sheet over the whole room from top0 to foot (window px), tight words, the card scrolling inside when still too tall.

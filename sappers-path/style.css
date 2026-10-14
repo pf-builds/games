@@ -355,6 +355,8 @@ body.cb .tile.mys .gl { display: none; }
   padding: 12px 16px max(14px, env(safe-area-inset-bottom)); text-align: center; animation: sheetin .22s cubic-bezier(.3,1.4,.5,1); }
 .sheet.float .sheetcard { min-height: 0; border-bottom: 3px solid var(--ink); border-radius: 12px; padding-bottom: 12px; }
 .sheet.fit .sheetcard { min-height: 0; max-height: 100%; overflow-y: auto; overscroll-behavior: contain; justify-content: flex-start; border-bottom: 3px solid var(--ink); border-radius: 12px; } /* lane P Stage 3: the whole room, scrolling inside */
+#panel.sheet.fit .sheetcard { padding-top: 6px; padding-bottom: 8px; } #panel.sheet.fit .p-title { font-size: 27px; } #panel.sheet.fit #p-tag { font-size: 14px; margin: -2px auto 3px; } #panel.sheet.fit .p-line { font-size: 16px; margin-bottom: 5px; }
+#panel.sheet.fit #p-cont { margin: -2px 0 4px; } #panel.sheet.fit .cont-buy { min-height: 36px; font-size: 20px; } #panel.sheet.fit .cont-say { font-size: 14px; } #panel.sheet.fit .row button { min-height: 42px; font-size: 22px; } /* the tightest words, so Retry shows */
 .sheet.tight .p-title { font-size: 32px; } .sheet.tight .p-line { font-size: 19px; margin-bottom: 7px; } .sheet.tight #p-tag { font-size: 16px; margin: -2px auto 5px; } .sheet.tight #p-ribbon { font-size: 17px; margin-bottom: 5px; }
 .sheet.tight .sheetcard { padding-top: 7px; padding-bottom: max(9px, env(safe-area-inset-bottom)); } .sheet.tight .row button { min-height: 44px; font-size: 24px; }
 /* The jam sheet shows the jammed squads as the player sees them: a chip in the squad's colour with its count (the crew
