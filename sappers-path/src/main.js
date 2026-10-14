@@ -661,10 +661,15 @@
     const b = app.pws[k], t = $("pwtip"), P = Meta.powerOf(app.meta, k), M = app.meta; if (!b || b.hidden) return false;
     t.querySelector(".tt-h").textContent = intro ? fill(M.newTitle, { name: P.name }) : P.name; t.querySelector(".tt-f").hidden = !intro; t.querySelector(".tt-f").textContent = M.free;
     t.querySelector(".tt-b").textContent = tipOf(P); t.hidden = false; t.classList.toggle("intro", !!intro); // v6: Zen's words where the tip says fort
-    const r = b.getBoundingClientRect(), w = t.offsetWidth, h = t.offsetHeight, x = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2)), y = r.top - h - 10 >= 8 ? r.top - h - 10 : Math.min(innerHeight - h - 8, r.bottom + 10);
+    // Lane P Stage 3 (critic m1): an unlock's intro is the short form (title and "One free use"; the long press keeps the
+    // full tip), lets taps through to what is under it (style.css), and never sits on the front row of squad cards: above the
+    // badge but no higher than just under the front row (it may lap the badge's top edge instead).
+    const r = b.getBoundingClientRect(), w = t.offsetWidth, h = t.offsetHeight, x = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2)), fr = intro ? frontBottom() : -1;
+    const y = intro && fr > 0 ? Math.min(innerHeight - h - 8, Math.max(fr + 6, r.top - h - 10)) : r.top - h - 10 >= 8 ? r.top - h - 10 : Math.min(innerHeight - h - 8, r.bottom + 10);
     t.style.left = Math.round(x) + "px"; t.style.top = Math.round(y) + "px"; t.style.setProperty("--ax", Math.round(r.left + r.width / 2 - x) + "px"); t.classList.toggle("below", y > r.top);
     app.tip = { k, intro: !!intro, held: false, until: intro ? app.clock + M.tipIntroMs : Infinity }; return true;
   }
+  const frontBottom = () => { let m = -1; for (const c of app.cards) { const q = c.getBoundingClientRect(); if (q.height > 0 && q.bottom > m) m = q.bottom; } return m; }; // the front row's foot (CSS px)
   const tipOf = (P) => (app.mode === "zen" && (ZT().powerTips || {})[P.id]) || P.tip; // v6: Zen's words where a tip says fort (the tip box and the badge's label)
   function hideTip() { $("pwtip").hidden = true; app.tip = null; } // a queued intro follows from tipStep, when it may
   // Lane P Stage 3: an unlock's intro waits (it sits over the tray, the cards the coach points at): while the level's coach
@@ -2936,7 +2941,8 @@
           const clear = () => { const t = $("pwtip").getBoundingClientRect(), q = $("tray").getBoundingClientRect(); return $("pwtip").hidden || t.right <= q.left || t.left >= q.right || t.bottom <= q.top || t.top >= q.bottom; };
           try { startLevel(app.levels[0].id); const vis = () => app.pws.map((b) => (b.hidden ? 0 : 1)).join(""); step(16); step(16);
             const w0 = !app.tip && $("pwtip").hidden && coachState().on, c0 = clear(); taps(app.meta.tipAfterPlays);
-            ok(w0 && c0 && !!app.tip, "unlocks (lane P Stage 3): on level 1 the Ladder's intro waits while the coach points at the cards (nothing over the tray), and shows once the coach is done (after " + app.S.plays + " taps)");
+            const t = $("pwtip").getBoundingClientRect(), onRow = app.cards.filter((c) => { const q = c.getBoundingClientRect(); return q.height > 0 && t.left < q.right && t.right > q.left && t.top < q.bottom && t.bottom > q.top; }).length, thru = getComputedStyle($("pwtip")).pointerEvents === "none";
+            ok(w0 && c0 && !!app.tip && !onRow && thru, "unlocks (lane P Stage 3): on level 1 the Ladder's intro waits while the coach points at the cards (nothing over the tray), shows once the coach is done (after " + app.S.plays + " taps), sits on none of the front cards (" + onRow + ") and lets taps through");
             const v1 = vis(), t1 = app.tip && app.tip.intro && app.tip.k === PWK.LADDER && !$("pwtip").hidden && $("pwtip").querySelector(".tt-b").textContent === Meta.powerOf(MT, 0).tip, i1 = inv().ladder, lim1 = app.S.limit(PWK.PULL);
             ok(v1 === "10000" && t1 && i1 === 1 && app.save.data.got.ladder === 1 && lim1 === 0 && !app.S.canPower(PWK.VOLLEY, 1), "unlocks: a fresh campaign shows the Ladder only (" + v1 + "), its free use and its intro tip; the engine allows the hidden ones nothing");
             for (let t = 0; t <= MT.tipIntroMs + 32; t += 16) step(16); const gone = !app.tip && $("pwtip").hidden;
