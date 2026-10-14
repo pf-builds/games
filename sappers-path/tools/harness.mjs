@@ -278,12 +278,12 @@ async function run() {
         const nj = await ev(() => { const r = SP.stage(16, 3, 1); SP.tick(300); return r && SP.state(); });
         ok(!!nj && nj.li.near && (await L("#line-lab").textContent()) === "One space left", tag + " near jam: 'One space left' (" + (nj && JSON.stringify(nj.li)) + ")");
         if (vp.shots === "375" && nj) await shot("near-jam"); }
-      // Victory march: level 3's stored line through the cards; once the tray is empty the pace goes to 1.5x.
-      { await ev(() => { SP.speed(1); SP.load(3); });
+      // Victory march: level 3's stored line through the cards; once the tray is empty the pace goes to show.victoryPace (2x from lane P Stage 3).
+      { const VP = JSON.parse(readFileSync(resolve(here, "../config.json"), "utf8")).show.victoryPace; await ev(() => { SP.speed(1); SP.load(3); });
         const o = await ev(() => SP.winOrder());
         for (let i = 0; i < o.length; i++) { await tap(`.card[data-col="${o[i]}"]`); if (i < o.length - 1) await quiet(); }
         s = await ev(() => SP.tick(400));
-        ok(s.march && s.pace === 1.5 && s.busy && (await L("#line-lab").textContent()).startsWith("Victory march"), tag + " victory march: the tray is empty and the line wins: 1.5x (" + s.pace + ")");
+        ok(s.march && s.pace === VP && s.busy && (await L("#line-lab").textContent()).startsWith("Victory march"), tag + " victory march: the tray is empty and the line wins: " + VP + "x (" + s.pace + ")");
         if (vp.shots === "375") await shot("victory-march");
         s = await quiet(); ok(s.status === "won", tag + " victory march ends in the win"); }
 
