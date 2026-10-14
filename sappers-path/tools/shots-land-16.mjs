@@ -1,5 +1,5 @@
 // Sapper's Path v7 lane D (Zen World 13 Holiday Lights): shots into tools/shots-land-16/ (gitignored), tools/shots-land-14.mjs
-// for World 13 (26 levels, Zen 493-518). At a 375x812 phone (3x, touch) on a fresh profile: the World 12 / World 13 join (Worlds 1-12 cleared, World 13's
+// for World 13 (35 levels, Zen 500-534; refill round 2). At a 375x812 phone (3x, touch) on a fresh profile: the World 12 / World 13 join (Worlds 1-12 cleared, World 13's
 // first current) on the plain URL after setting the save up under ?debug=1, the middle and the top of World 13, the opener (Christmas
 // tree) in play, part dug and its win sheet; at 1280x720 the World 13 map and the opener in play. Plus the fit at 375
 // (every Zen node's number inside its disc, the closest two nodes), the tint on World 13's sheet images and what each shot shows
@@ -22,7 +22,7 @@ async function session(vp, run) {
   await run({ p, go, shot, toZen, seen, banners, scrollTo }); await ctx.close();
 }
 const phone = { viewport: { width: 375, height: 812 }, deviceScaleFactor: 3, hasTouch: true, isMobile: true }, desk = { viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 };
-const first = 493, before = () => { for (let k = 1; k <= 5; k++) SP.zenTo(k, 50); SP.zenTo(6, 29); SP.zenTo(7, 50); SP.zenTo(8, 13); SP.zenTo(9, 50); SP.zenTo(10, 43); SP.zenTo(11, 25); SP.zenTo(12, 32); }; // World 13's first Zen number (Worlds 1-5: 50 each, World 6 29, World 7 50, World 8 13, World 9 50, World 10 43, World 11 25, World 12 32, then the zen numbers count on: main.js zenNum)
+const first = 500, before = () => { for (let k = 1; k <= 5; k++) SP.zenTo(k, 50); SP.zenTo(6, 29); SP.zenTo(7, 50); SP.zenTo(8, 13); SP.zenTo(9, 50); SP.zenTo(10, 43); SP.zenTo(11, 31); SP.zenTo(12, 33); }; // World 13's first Zen number (Worlds 1-5: 50 each, World 6 29, World 7 50, World 8 13, World 9 50, World 10 43, World 11 31, World 12 33, then the zen numbers count on: main.js zenNum)
 await session(phone, async ({ p, go, shot, toZen, seen, banners, scrollTo }) => {
   await go(false); await go(true); await p.evaluate(before); await go(false); await toZen();
   await scrollTo(first - 1, 0.86); notes.push("W12/W13 join, nodes in view: " + (await seen()) + "; banners: " + (await banners())); await shot("map-join-375");
@@ -32,8 +32,8 @@ await session(phone, async ({ p, go, shot, toZen, seen, banners, scrollTo }) => 
     for (const n of ns) { const bd = n.querySelector(".bd"), t = n.querySelector("b"), room = bd.clientWidth, w = t.getBoundingClientRect().width, s = room - w; if (!worst || s < worst.spare) worst = { n: t.textContent, text: +w.toFixed(1), inside: room, spare: +s.toFixed(1), cur: n.classList.contains("cur") }; }
     for (let i = 1; i < ns.length; i++) { const a = ns[i - 1].getBoundingClientRect(), c = ns[i].getBoundingClientRect(), d = Math.hypot(a.left - c.left, a.top - c.top); if (d < gap) { gap = d; gapAt = ns[i - 1].querySelector("b").textContent + "-" + ns[i].querySelector("b").textContent; } }
     return { nodes: ns.length, last: ns.length ? ns[ns.length - 1].querySelector("b").textContent : null, tightest: worst, closest: +gap.toFixed(1), at: gapAt }; })));
-  await scrollTo(first + 12, 0.5); notes.push("World 13 middle, nodes in view: " + (await seen())); await shot("map-mid-375");
-  await scrollTo(first + 21, 0.6); notes.push("World 13 top, nodes in view: " + (await seen()) + "; fog label: " + (await p.evaluate(() => { const f = document.querySelector("#jr .fogl"); return f ? f.textContent : "none"; }))); await shot("map-top-375");
+  await scrollTo(first + 16, 0.5); notes.push("World 13 middle, nodes in view: " + (await seen())); await shot("map-mid-375");
+  await scrollTo(first + 30, 0.6); notes.push("World 13 top, nodes in view: " + (await seen()) + "; fog label: " + (await p.evaluate(() => { const f = document.querySelector("#jr .fogl"); return f ? f.textContent : "none"; }))); await shot("map-top-375");
   notes.push("credits: " + (await p.evaluate(() => document.getElementById("map-credits").textContent)));
   await go(true);
   const bar = await p.evaluate(async () => { SP.zenTo(13, 0); await SP.load("z13-1"); return { num: document.getElementById("lvl-num").textContent, name: document.getElementById("lvl-name").textContent }; });
@@ -44,7 +44,7 @@ await session(phone, async ({ p, go, shot, toZen, seen, banners, scrollTo }) => 
   notes.push("The opener win: " + JSON.stringify(win)); await shot("win-375");
 });
 await session(desk, async ({ p, go, shot, toZen, seen, banners, scrollTo }) => {
-  await go(false); await go(true); await p.evaluate(() => { for (let k = 1; k <= 5; k++) SP.zenTo(k, 50); SP.zenTo(6, 29); SP.zenTo(7, 50); SP.zenTo(8, 13); SP.zenTo(9, 50); SP.zenTo(10, 43); SP.zenTo(11, 25); SP.zenTo(12, 32); SP.zenTo(13, 9); }); await go(false); await toZen();
+  await go(false); await go(true); await p.evaluate(() => { for (let k = 1; k <= 5; k++) SP.zenTo(k, 50); SP.zenTo(6, 29); SP.zenTo(7, 50); SP.zenTo(8, 13); SP.zenTo(9, 50); SP.zenTo(10, 43); SP.zenTo(11, 31); SP.zenTo(12, 33); SP.zenTo(13, 9); }); await go(false); await toZen();
   await scrollTo(first + 9, 0.6); notes.push("desktop World 13, nodes in view: " + (await seen()) + "; banners: " + (await banners())); await shot("map-1280");
   await go(true); await p.evaluate(async () => { await SP.load("z13-1"); }); await shot("play-opener-1280");
 });
