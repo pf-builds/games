@@ -42,6 +42,9 @@
 // a manifest line's short is the main record's title and its museum and date join the artist on its licence row; v7 lane D
 // (World 6): its edit joins the licence cell (editOf); with land.json zen.numbered its short (the title the game shows) leads the
 // picture cell, so a player can match the row to the picture.
+// v7 lane D (World 16): a manifest line's engraver (a plate engraved after the painter) joins its licence row after the date,
+// "John James Audubon, 1838, engraved by Robert Havell (National Gallery of Art)"; the record's by stays the painter alone. A short
+// the same as its title isn't said twice on a numbered row.
 // v6 lane D8 (Peter, 2026-10-08: no mystery blocks in Zen, ever; the whole picture shows from the start): a Zen land (land.json
 // zen, or a tools/build-data/levels/zen.json world with land k) is refused if its features list hidden or its profile gives hidden a share;
 // (v7 lane D: --drop-moat lets a slot planned with a ring take a picture that can't carry one, ringless, instead of refusing)
@@ -266,7 +269,7 @@ function assemble(X) {
       w: L.w, h: L.h, grid: L.grid, pic: true, cols: L.cols, pal: B.pal }, B.shade ? { shade: B.shade } : {}, { win: L.win, grade: L.grade, inBand: r.inBand, convert: B.stats, quest: quests[i] }, r.fallback ? { fallback: r.fallback } : {}); });
   const S = K ? X.inst.layout : mp.entries, entry = K ? X.installed : { k: X.land.k, slug: X.land.slug, name: X.land.name, lore: X.land.lore, from: X.from, to: X.to, source: X.land.source, features: X.land.features, eggs: X.land.eggs, sheets: [S[0].sheet, S[S.length - 1].sheet], files: X.land.map.files };
   const lic = ["", "### Land " + X.land.k + ": " + X.land.name + " (levels " + X.from + "-" + X.to + ")", ""].concat(X.land.credit ? [X.land.credit, ""] : [], ["| Level | Picture | Artist | Licence | Source |", "|---|---|---|---|---|"])
-    .concat(main.map((p, i) => "| " + (X.from + i) + " | " + ((X.land.zen || {}).numbered && p.short ? p.short + ": " : "") + p.title + " (" + p.id + ") | " + (p.artist || "-") + (p.museum ? (p.date ? ", " + p.date : "") + " (" + p.museum + ")" : "") + " | " + p.licence + (p.edit ? ". " + editOf(p) : "") + " | " + p.url + " |"),
+    .concat(main.map((p, i) => "| " + (X.from + i) + " | " + ((X.land.zen || {}).numbered && p.short && p.short !== p.title ? p.short + ": " : "") + p.title + " (" + p.id + ") | " + (p.artist || "-") + (p.museum ? (p.date ? ", " + p.date : "") + (p.engraver ? ", engraved by " + p.engraver : "") + " (" + p.museum + ")" : "") + " | " + p.licence + (p.edit ? ". " + editOf(p) : "") + " | " + p.url + " |"),
       side.map((p, i) => "| side quest " + (X.gal0 + i + 1) + " (Wandering Gallery) | " + p.title + " (" + p.id + ") | " + (p.artist || "-") + " | " + p.licence + " | " + p.url + " |"));
   writeJ(path.join(out, "levels.json"), levels.filter(Boolean)); writeJ(path.join(out, "gallery.json"), pics.filter(Boolean)); writeJ(path.join(out, "land.json"), { entry, layout: S, eggCoins: K ? X.CFG.map.eggCoins.slice(X.sheet0 - 1, X.sheet0 - 1 + S.length) : mp.eggCoins }, true);
   fs.writeFileSync(path.join(out, "licences.md"), lic.join("\n") + "\n");
