@@ -666,11 +666,15 @@
     app.tip = { k, intro: !!intro, held: false, until: intro ? app.clock + M.tipIntroMs : Infinity }; return true;
   }
   const tipOf = (P) => (app.mode === "zen" && (ZT().powerTips || {})[P.id]) || P.tip; // v6: Zen's words where a tip says fort (the tip box and the badge's label)
-  function hideTip() { $("pwtip").hidden = true; const was = app.tip; app.tip = null; if (was && was.intro && app.tipQ.length) showTip(app.tipQ.shift(), true); }
-  // Each frame (step): a held press long enough shows its tip; an intro's time runs out.
+  function hideTip() { $("pwtip").hidden = true; app.tip = null; } // a queued intro follows from tipStep, when it may
+  // Lane P Stage 3: an unlock's intro waits (it sits over the tray, the cards the coach points at): while the level's coach
+  // has a line up, until its line points at that power-up's badge; with no coach line, until meta.tipAfterPlays taps.
+  function tipReady(k) { const co = app.coach; if (!livePlay()) return false; if (co && co.i < co.steps.length) return co.steps[co.i].power === E.POWERS[k]; return app.S.plays >= app.meta.tipAfterPlays; }
+  // Each frame (step): a held press long enough shows its tip; an intro's time runs out; a queued intro shows when ready.
   function tipStep() {
     const H = app.tipHold; if (H && !app.tip && app.clock - H.t0 >= app.meta.tipHoldMs) { if (showTip(H.k, false)) { app.tip.held = true; app.tipEat = H.k; } }
     if (app.tip && app.clock >= app.tip.until) hideTip();
+    if (!app.tip && app.tipQ.length && tipReady(app.tipQ[0])) showTip(app.tipQ.shift(), true);
   }
   function onPower(k) {
     if (app.tipEat === k) { app.tipEat = -1; return false; } // the press showed the tip
@@ -1206,7 +1210,7 @@
     placeSlots();
     if (!e.debug && !e.gallery) { app.save.data.last = e.id; writeSave(); }
     renderAll(); fitLine(); showScreen("play"); coachStart(); // the line and tray take their size before the board is fitted to what is left
-    renderPowers(); if (app.tipQ.length) showTip(app.tipQ.shift(), true);
+    renderPowers(); // lane P Stage 3: unlock intros wait in app.tipQ for tipStep (tipReady), never over the coach's first lines
     if (app.B.kill) toast(app.cfg.layout.killToast, true, true); else if (app.B.pin) toast(app.cfg.layout.pinToast, false, true); // v6: a killing (red) or pinning (calm) level says so as it starts
     return e;
   }
@@ -2899,12 +2903,16 @@
         // the Quartermaster appears with its free use and intro (once); the Gallery and debug levels follow the campaign;
         // the engine allows a hidden power-up nothing; a long press shows a tip and doesn't use the badge.
         { app.allPw = false; const sv = app.save; app.save = scratch(); app.save.data.got = {}; // a fresh campaign
-          try { startLevel(app.levels[0].id); const vis = () => app.pws.map((b) => (b.hidden ? 0 : 1)).join("");
+          const taps = (n) => { const o = winOf(app.entry); for (let i = 0; i < n && i < o.length; i++) { playCol(+o[i]); settleNow(); } step(16); }; // lane P Stage 3: intros wait for the coach
+          const clear = () => { const t = $("pwtip").getBoundingClientRect(), q = $("tray").getBoundingClientRect(); return $("pwtip").hidden || t.right <= q.left || t.left >= q.right || t.bottom <= q.top || t.top >= q.bottom; };
+          try { startLevel(app.levels[0].id); const vis = () => app.pws.map((b) => (b.hidden ? 0 : 1)).join(""); step(16); step(16);
+            const w0 = !app.tip && $("pwtip").hidden && coachState().on, c0 = clear(); taps(app.meta.tipAfterPlays);
+            ok(w0 && c0 && !!app.tip, "unlocks (lane P Stage 3): on level 1 the Ladder's intro waits while the coach points at the cards (nothing over the tray), and shows once the coach is done (after " + app.S.plays + " taps)");
             const v1 = vis(), t1 = app.tip && app.tip.intro && app.tip.k === PWK.LADDER && !$("pwtip").hidden && $("pwtip").querySelector(".tt-b").textContent === Meta.powerOf(MT, 0).tip, i1 = inv().ladder, lim1 = app.S.limit(PWK.PULL);
             ok(v1 === "10000" && t1 && i1 === 1 && app.save.data.got.ladder === 1 && lim1 === 0 && !app.S.canPower(PWK.VOLLEY, 1), "unlocks: a fresh campaign shows the Ladder only (" + v1 + "), its free use and its intro tip; the engine allows the hidden ones nothing");
             for (let t = 0; t <= MT.tipIntroMs + 32; t += 16) step(16); const gone = !app.tip && $("pwtip").hidden;
-            for (let i = 0; i < 24; i++) Save.record(app.save.data, app.order[i]); startLevel(app.order[24]);
-            const v2 = vis(), t2 = app.tip && app.tip.intro && app.tip.k === PWK.PULL, i2 = inv().quartermaster; startLevel(app.order[24]); const again = !app.tip && inv().quartermaster === i2;
+            for (let i = 0; i < 24; i++) Save.record(app.save.data, app.order[i]); startLevel(app.order[24]); step(16); const w2 = !app.tip; taps(2); // the coach's moat lines first, then its Quartermaster line
+            const v2 = vis(), t2 = w2 && app.tip && app.tip.intro && app.tip.k === PWK.PULL && app.coach && app.coach.steps[app.coach.i].power === "quartermaster", i2 = inv().quartermaster; startLevel(app.order[24]); const again = !app.tip && inv().quartermaster === i2;
             ok(gone && v2 === "11000" && t2 && i2 === 1 && again, "unlocks: the intro goes after " + MT.tipIntroMs + " ms; at level 25 the Quartermaster appears (" + v2 + ") with one free use and its intro, given once");
             if (app.gal.length) { startLevel(app.gal[0].id); ok(vis() === "11000", "unlocks: a Gallery picture shows what the campaign has unlocked"); }
             startLevel(app.order[24]); const b0 = app.pws[PWK.PULL], ev = (t) => b0.dispatchEvent(new PointerEvent(t, { bubbles: true, pointerType: "touch" }));
