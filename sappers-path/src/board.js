@@ -418,7 +418,7 @@
     }
     // Fit the canvas into (cssW, cssH): whole device pixels per cell, upright. fit() only works it out (the page asks it
     // before it reserves room for the coach); fitCs is its CSS px per cell.
-    function fit(cssW, cssH, dpr) { return Math.max(2, Math.floor(Math.min(K.maxCellCss, cssW / V.w, cssH / (V.h + V.Y)) * dpr)); }
+    function fit(cssW, cssH, dpr) { return Math.max(2, Math.floor(Math.min(K.maxCellCss * (V.cellScale || 1), cssW / V.w, cssH / (V.h + V.Y)) * dpr)); } // lane P Stage 3: cellScale (main.js fitBoard) lets a big screen's board grow
     function fitCs(cssW, cssH, dpr) { if (!V.B) return 0; const d = Math.max(1, Math.min(K.maxDpr, dpr || 1)); return fit(cssW, cssH, d) / d; }
     function layout(cssW, cssH, dpr) {
       if (!V.B) return;

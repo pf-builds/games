@@ -936,7 +936,7 @@
   // Fix pass (Peter's desktop playtest): the side cards only when both fit whole beside the column, worked out from the
   // map's real width (the column, its rims, a gap and a card each side, and an edge margin) and, once drawn, its height
   // (fitCards); else the one column with the Play bar at its foot. No state in between.
-  const cardsRoom = () => { const M = app.cfg.map, w = $("map").clientWidth || window.innerWidth; return !app.cardsShort && w >= M.colWidePx + 6 + 2 * (M.cardGapPx + M.cardPx + (M.cardEdgePx | 0)); };
+  const cardsRoom = () => { const M = app.cfg.map, u = app.uiZ || 1, w = $("map").clientWidth || window.innerWidth; return !app.cardsShort && w >= (M.colWidePx + 6 + 2 * (M.cardGapPx + M.cardPx + (M.cardEdgePx | 0))) * u; }; // lane P Stage 3: u, a big screen's scale
   function fitCards() {
     const mp = $("map"); if (!mp.classList.contains("cards") || app.screen !== "map") return false;
     const b = $("jr-body").getBoundingClientRect(), j = $("jr").getBoundingClientRect(), bad = ["jr-realm", "jr-next"].some((id) => { const r = $(id).getBoundingClientRect(); return r.top < b.top - 0.5 || r.bottom > b.bottom + 0.5 || r.left < 0 || r.right > window.innerWidth || (r.right > j.left + 0.5 && r.left < j.right - 0.5); });
@@ -945,9 +945,9 @@
   function layoutMap() {
     const J = app.jr, M = app.cfg.map, mp = $("map"), cards = cardsRoom(); mp.classList.toggle("cards", cards);
     if (!J) return false;
-    const LAY = app.lay, colW = Math.round(cards ? M.colWidePx : Math.min(window.innerWidth, M.colMaxPx)); if (colW === J.colW) return false;
+    const u = app.uiZ || 1, LAY = app.lay, colW = Math.round(cards ? M.colWidePx * u : Math.min(window.innerWidth, M.colMaxPx)); if (colW === J.colW) return false; // lane P Stage 3: the column and its cards grow with a big screen
     const sc = $("jr"), mid = J.k ? (sc.scrollTop + sc.clientHeight / 2) / J.k : -1, k = colW / LAY.w, n = J.sheets.length; // v5 R4c: the sheets built
-    J.colW = colW; J.k = k; const r = mp.style; r.setProperty("--jr-w", colW + "px"); r.setProperty("--card-w", M.cardPx + "px"); r.setProperty("--card-gap", M.cardGapPx + "px");
+    J.colW = colW; J.k = k; const r = mp.style; r.setProperty("--jr-w", colW + "px"); r.setProperty("--card-w", Math.round(M.cardPx * u) + "px"); r.setProperty("--card-gap", Math.round(M.cardGapPx * u) + "px");
     $("jr-world").style.height = (LAY.step * (n - 1) + LAY.h) * k + "px";
     J.sheets.forEach((sh, i) => { sh.el.style.top = (n - 1 - i) * LAY.step * k + "px"; sh.el.style.height = LAY.h * k + "px"; });
     if (mid >= 0) sc.scrollTop = mid * k - sc.clientHeight / 2;
@@ -1091,7 +1091,7 @@
     bz.querySelector(".mc-n").textContent = Z.zen; $("home-zen").textContent = z.line; $("home-zen-w").textContent = z.place; $("zen-lab").textContent = zl; bz.classList.toggle("wait", wait && !lk); bz.classList.toggle("locked", lk); bz.setAttribute("aria-disabled", lk ? "true" : "false"); playTag(bz, wait || lk ? null : z.e); bz.classList.toggle("last", begun && app.mode === "zen");
     bz.setAttribute("aria-label", Z.zen + (begun && app.mode === "zen" ? ", " + Z.continueChip : "") + ", " + z.place + ", " + z.line + ": " + zl + (z.e && !wait && !lk && tags[tagOf(z.e)] ? ", " + tags[tagOf(z.e)] : ""));
   }
-  function openSettings(on) { holdStop(); for (const k of SUBS) $(k).hidden = true; $("settings").hidden = !on; heldPlay(); if (on) $("set-close").focus(); }
+  function openSettings(on) { holdStop(); for (const k of SUBS) $(k).hidden = true; $("settings").hidden = !on; heldPlay(); if (on) { $("settings").querySelector(".sheetcard").scrollTop = 0; $("set-close").focus({ preventScroll: true }); } } // lane P Stage 3: a short frame shows the sheet's top (its rows), Done a scroll away
   // Lands foundation (Peter, 2026-10-06): the play screen's gear opens Settings over the level; while it (or a sheet it
   // opens) shows, the level holds still (app.held: the engine and the show stop; the app clock runs on, so the reset's
   // press-and-hold still fills), and closing it plays on with no jump. The Paused sheet keeps its own quick toggles.
@@ -1590,7 +1590,7 @@
   // the top bar (the step's short text there, when it has one) the font steps through layout.coachTopFontPx, one line
   // first, then two (Critics 2 fix, V1).
   function fitCoach() {
-    const t = $("coach"), [hi, lo] = app.cfg.layout[app.coachMode === "top" ? "coachTopFontPx" : "coachFontPx"]; if (t.hidden) return;
+    const t = $("coach"), k = app.coachMode === "side" ? app.sideZ || 1 : 1, [hi, lo] = app.cfg.layout[app.coachMode === "top" ? "coachTopFontPx" : "coachFontPx"].map((v) => Math.round(v * k)); if (t.hidden) return; // lane P Stage 3: the side's zoom
     t.classList.remove("two");
     for (let px = hi; px >= lo; px--) { t.style.fontSize = px + "px"; if (t.scrollWidth <= t.clientWidth && t.scrollHeight <= t.clientHeight) return; }
     t.classList.add("two");
@@ -1601,12 +1601,13 @@
   // steps aside. The whole line: over the gap between the head's label and count, or no arrow (the line glows). Else a
   // ring on the board.
   function placeHand(el) {
-    const hand = $("hand"), V = app.V, H = app.cfg.layout.hand; let x, y, rot = 0, sc = 1, kind = "";
+    const hand = $("hand"), V = app.V, H0 = app.cfg.layout.hand, Zh = app.wide ? app.sideZ || 1 : 1; let x, y, rot = 0, sc = 1, kind = "";
+    const H = Zh === 1 ? H0 : { sideScale: H0.sideScale * Zh, sideIn: H0.sideIn * Zh, downIn: H0.downIn * Zh, halfW: H0.halfW * Zh, gap: H0.gap * Zh }; // lane P Stage 3: the arrow takes the side column's zoom
     $("line-cnt").style.removeProperty("--cnt-shift");
     if (el && el.classList.contains("tile")) { const r = el.getBoundingClientRect(), right = el.closest(".col") === $("tray").firstElementChild; x = right ? r.right - H.sideIn : r.left + H.sideIn; y = r.top + r.height / 2; rot = right ? 90 : -90; sc = H.sideScale; kind = "side"; }
     else if (el && el.classList.contains("slot")) {
       const r = el.getBoundingClientRect(), head = $("line-head").getBoundingClientRect(); x = r.left + r.width / 2; y = r.top + H.downIn; kind = "slot";
-      const shift = head.right - (x - H.halfW) + H.gap; if (shift > 0) $("line-cnt").style.setProperty("--cnt-shift", Math.ceil(shift) + "px");
+      const shift = head.right - (x - H.halfW) + H.gap; if (shift > 0) $("line-cnt").style.setProperty("--cnt-shift", Math.ceil(shift / (app.sideZ || 1)) + "px"); // lane P Stage 3: in the zoomed column's px
     } else if (el && el.classList.contains("pw") && app.tut && app.tut.on) { const r = el.getBoundingClientRect(); x = r.left + r.width / 2; y = r.top + H.downIn; kind = "badge"; // v6 lane B part 2: the tour's arrow on a badge, from above
     } else if (el && el.id === "line") {
       const a = $("line-lab").getBoundingClientRect(), b = $("line-cnt").getBoundingClientRect(), r = el.getBoundingClientRect(), right = b.width ? b.left : r.right;
@@ -1615,7 +1616,7 @@
     } else if (V.focus.on) { const r = $("board").getBoundingClientRect(), p = V.cssAt(V.focus.x, V.focus.y, app.pt); x = r.left + p.x; y = r.top + p.y - (V.focus.r * V.cs) / V.dpr; kind = "ring"; }
     else { hand.hidden = true; app.handKind = ""; return; }
     app.handKind = kind; hand.classList.toggle("side", kind === "side");
-    hand.style.transform = "translate(" + Math.round(x) + "px," + Math.round(y) + "px)" + (rot ? " rotate(" + rot + "deg) scale(" + sc + ")" : ""); hand.hidden = false;
+    hand.style.transform = "translate(" + Math.round(x) + "px," + Math.round(y) + "px)" + (rot ? " rotate(" + rot + "deg) scale(" + sc + ")" : kind !== "ring" && Zh !== 1 ? " scale(" + Zh + ")" : ""); hand.hidden = false;
   }
   const coachState = () => { const t = $("coach"); return { on: !!app.coach && !t.hidden, i: app.coach ? app.coach.i : -1, text: t.hidden ? "" : t.textContent, hand: !$("hand").hidden, kind: app.handKind, mode: app.coachMode,
     target: app.focusEl ? app.focusEl.id || app.focusEl.className : null, ring: app.V.focus.on, oneLine: !t.classList.contains("two"), fits: t.scrollWidth <= t.clientWidth && t.scrollHeight <= t.clientHeight }; };
@@ -1793,6 +1794,9 @@
     const L = app.cfg.layout, W = window.innerWidth, H = window.innerHeight;
     setUpright(uprightNeeded(W, H, coarse()));
     app.wide = W >= L.wideMinPx && W / H >= L.wideAspect;
+    // Lane P Stage 3 (gate critic M4): a big screen's scale (layout.scale), for the home's card (CSS zoom, --ui-z) and the map's
+    // column and cards (layoutMap); the play screen works its own out in fitBoard.
+    { const S = L.scale, u = W >= L.wideMinPx && H > L.shortMaxH ? Math.floor(Math.max(1, Math.min(S.max, W / S.refW, H / S.refH)) * 100) / 100 : 1; if (u !== app.uiZ) { app.uiZ = u; document.documentElement.style.setProperty("--ui-z", u); if (app.jr) app.jr.colW = 0; } }
     // Short and wide (a landscape phone): the top bar moves over the rail so the board gets the full height.
     const short = app.wide && H <= L.shortMaxH;
     document.body.classList.toggle("wide", app.wide); document.body.classList.toggle("short", short);
@@ -1810,6 +1814,7 @@
     if (app.S) { renderTop(); renderTray(); placeSlots(); }
     if (app.panel) placeSheet();
     if (!$("toast").hidden) placeToast();
+    if (app.tip && !$("pwtip").hidden) { const t = app.tip; if (showTip(t.k, t.intro)) { app.tip.until = t.until; app.tip.held = t.held; } } // lane P Stage 3 (gate critic minor): a resize places the tip again
   }
   // Where each space's sappers walk onto the board: its slot's centre, relative to the canvas (clamped to its edge there).
   function placeSlots() {
@@ -1824,7 +1829,19 @@
     // Wide: offer the stage every px beside the panel, fit the board, then shrink the stage to it so the board and the
     // panel sit together in the middle (the cell size doesn't change on the second fit).
     const L = app.cfg.layout, r = document.documentElement.style;
-    if (app.wide) r.setProperty("--stage-w", Math.max(200, window.innerWidth - (parseFloat(r.getPropertyValue("--rail-w")) || L.railWidePx) - (app.wide && window.innerHeight <= L.shortMaxH ? L.gapShortPx : L.gapWidePx) - L.sidePadPx) + "px");
+    // Lane P Stage 3 (the gate critic's B1 and M4): wide, the side column is zoomed (CSS zoom, app.sideZ) so it always fits the
+    // height (907x510: its own height at 1x was taller than the frame) and grows with a big screen (layout.scale: up to max
+    // times at refW x refH and above; the board's cell cap grows the same, V.cellScale). Floor layout.scale.min.
+    const SD = $("side"), BD0 = document.body; let z = 1, zUp = 1;
+    if (app.wide) { const S = L.scale, Ap = getComputedStyle($("app")), room0 = window.innerHeight - parseFloat(Ap.paddingTop) - parseFloat(Ap.paddingBottom);
+      zUp = BD0.classList.contains("short") ? 1 : Math.max(1, Math.min(S.max, window.innerWidth / S.refW, window.innerHeight / S.refH));
+      BD0.classList.toggle("coached", !!(app.coached && app.screen === "play")); SD.style.zoom = ""; SD.style.maxHeight = ""; r.setProperty("--blk-h", "0px"); const nat = SD.offsetHeight; // its own height at 1x (min-height: fit-content)
+      z = Math.floor(Math.max(S.min, Math.min(zUp, nat > 0 ? room0 / nat : 1)) * 100) / 100; if (z !== 1) { SD.style.zoom = z; SD.style.maxHeight = "none"; }
+      const rw = parseFloat(r.getPropertyValue("--rail-w")) || L.railWidePx, rc = Math.round(z < 1 ? Math.min(L.railWidePx * z, window.innerWidth / 2) : rw * z); r.setProperty("--rail-col", rc + "px"); // shrunk, its own px are the full desktop column's (railWidePx), so its tiles and names keep their shape; grown, it widens
+      r.setProperty("--round-gap", z < 1 ? Math.ceil(44 / z - 42) + "px" : ""); r.setProperty("--round-tap", z < 1 ? -Math.ceil(3 + 5 / z) + "px" : ""); // shrunk, the top bar's buttons stand apart and reach further, so each keeps a 44 px tap on screen
+      r.setProperty("--stage-w", Math.max(200, window.innerWidth - rc - (window.innerHeight <= L.shortMaxH ? L.gapShortPx : L.gapWidePx) - L.sidePadPx) + "px"); }
+    else { SD.style.zoom = ""; SD.style.maxHeight = ""; }
+    app.sideZ = z; app.V.cellScale = 1 + (zUp - 1) * L.scale.boardGain; // the board grows boardGain times as fast as the column
     // Critics 1 fix: a level with a coach keeps a band for it. Wide: its spot in the side column. Portrait: the band above
     // the board when the board still gets layout.minCellCss CSS px a cell there, else over the level's name.
     const st = $("stage"), dpr = window.devicePixelRatio || 1, BD = document.body, G = L.stageGapPx;
@@ -1848,7 +1865,7 @@
     app.coachMode = mode; BD.classList.toggle("coached", !!mode); BD.classList.toggle("coach-above", mode === "above"); BD.classList.toggle("coach-top", mode === "top");
     const h = h0 - (mode === "above" ? res : 0);
     if (w > 0 && h > 0) app.V.layout(w, h, dpr);
-    if (app.wide) { const cw = parseFloat($("board").style.width) || 0; if (cw > 0) r.setProperty("--stage-w", Math.ceil(cw + 16) + "px"); r.setProperty("--blk-h", $("frame").offsetHeight + "px"); } // the side column is the board's height (M10)
+    if (app.wide) { const cw = parseFloat($("board").style.width) || 0; if (cw > 0) r.setProperty("--stage-w", Math.ceil(cw + 16) + "px"); r.setProperty("--blk-h", $("frame").offsetHeight / z + "px"); } // the side column is the board's height (M10; its zoom's own px, lane P Stage 3)
     sizePowers();
     if (app.coach && !$("coach").hidden) { placeCoach(); fitCoach(); placeHand(app.focusEl); }
     placeSlots();
@@ -1883,24 +1900,32 @@
   function placeSheet() {
     const P = $("panel"), card = P.firstElementChild, st = P.style, A = $("app").getBoundingClientRect(), lw = $("line-wrap").getBoundingClientRect(), rl = $("rail").getBoundingClientRect(), sd = $("side").getBoundingClientRect();
     if (P.hidden) return;
-    P.classList.remove("float", "tight"); st.top = ""; st.bottom = ""; st.left = ""; st.width = ""; st.right = "";
-    if (app.wide) { st.left = sd.left - A.left + "px"; st.width = sd.width + "px"; st.right = "auto"; st.bottom = A.bottom - sd.bottom + "px"; }
-    const foot = app.wide ? sd.bottom : A.bottom, gap = 6, natural = () => { P.classList.add("float"); const k = card.offsetHeight; P.classList.remove("float"); return k; };
+    // Lane P Stage 3: wide, the sheet takes the side column's zoom (app.sideZ): its own px are window px / Z (px below).
+    const Z = app.wide ? app.sideZ || 1 : 1, px = (v) => v / Z + "px"; st.zoom = Z === 1 ? "" : Z;
+    P.classList.remove("float", "tight", "fit"); st.top = ""; st.bottom = ""; st.left = ""; st.width = ""; st.right = "";
+    if (app.wide) { st.left = px(sd.left - A.left); st.width = px(sd.width); st.right = "auto"; st.bottom = px(A.bottom - sd.bottom); }
+    const foot = app.wide ? sd.bottom : A.bottom, gap = 6, natural = () => { P.classList.add("float"); const k = card.offsetHeight * Z; P.classList.remove("float"); return k; };
     if (app.panel === "win") {
       // Critics 2 fix: a Gallery win's picture shrinks to the room (from the screen's or the column's top), or goes.
       let hh = natural(); const top0 = app.wide ? sd.top : A.top;
       const pic = $("p-pic"), pc = pic.firstElementChild;
-      if (pic.dataset.on) { pic.hidden = false; picSize(1e9); hh = natural(); if (hh > foot - top0 && !picSize(parseFloat(pc.style.height) - (hh - (foot - top0)))) pic.hidden = true; hh = natural(); stagePic(pic.hidden); }
+      if (pic.dataset.on) { pic.hidden = false; picSize(1e9); hh = natural(); if (hh > foot - top0 && !picSize(parseFloat(pc.style.height) - (hh - (foot - top0)) / Z)) pic.hidden = true; hh = natural(); stagePic(pic.hidden); }
       // Wide (m8): the sheet is the rail's height, or its content's when that is taller, from the rail's top (the bar
       // under it stays in view); else the whole rail to the foot, as before.
-      if (app.wide) { const want = Math.max(hh, rl.height), t = Math.max(top0, Math.min(rl.top, foot - want)); st.top = t - A.top + "px"; st.bottom = A.bottom - Math.min(foot, t + want) + "px"; return; }
-      st.top = Math.min(rl.top, foot - hh) - A.top + "px"; return;
+      if (hh > foot - top0) return fitSheet(top0, foot); // lane P Stage 3: taller than the room: the whole room, scrolling inside
+      if (app.wide) { const want = Math.max(hh, rl.height), t = Math.max(top0, Math.min(rl.top, foot - want)); st.top = px(t - A.top); st.bottom = px(A.bottom - Math.min(foot, t + want)); return; }
+      st.top = px(Math.min(rl.top, foot - hh) - A.top); return;
     }
     let hh = natural(); const room = foot - lw.bottom - gap;
     if (hh > room) { P.classList.add("tight"); hh = natural(); }
-    if (hh <= room) { st.top = lw.bottom + gap - A.top + "px"; if (app.wide) st.bottom = A.bottom - Math.min(foot, Math.max(lw.bottom + gap + hh, rl.bottom)) + "px"; return; } // v4.3 fix (m5): wide: its content's height (down to the tray's foot, so no queue row peeks out under it)
-    P.classList.add("float"); st.top = "auto"; st.bottom = A.bottom - lw.top + gap + "px";
+    if (hh <= room) { st.top = px(lw.bottom + gap - A.top); if (app.wide) st.bottom = px(A.bottom - Math.min(foot, Math.max(lw.bottom + gap + hh, rl.bottom))); return; } // v4.3 fix (m5): wide: its content's height (down to the tray's foot, so no queue row peeks out under it)
+    // Lane P Stage 3 (the gate critic's B2: at 821x462 the loss and Zen stuck sheets started above the frame): above the line
+    // only if it fits there; else the whole column (wide) or screen, its card scrolling inside if it must.
+    const top0 = app.wide ? sd.top : A.top; if (lw.top - gap - hh < top0) return fitSheet(top0, foot);
+    P.classList.add("float"); st.top = "auto"; st.bottom = px(A.bottom - lw.top + gap);
   }
+  // The sheet over the whole room from top0 to foot (window px), tight words, the card scrolling inside when still too tall.
+  function fitSheet(top0, foot) { const P = $("panel"), st = P.style, A = $("app").getBoundingClientRect(), Z = app.wide ? app.sideZ || 1 : 1; P.classList.remove("float"); P.classList.add("tight", "fit"); st.top = (top0 - A.top) / Z + "px"; st.bottom = (A.bottom - foot) / Z + "px"; }
   // v5.3: the home's painting (index.html's <picture>: art/home-tall.jpg on an upright screen, home-wide.jpg otherwise)
   // covers #title's own box, never the window (the old pixel scene was sized to the window, so on a medium-wide window,
   // where the home is a phone-width column, the castle drifted right and was cut off). --art-x slides the image so the
@@ -2126,14 +2151,14 @@
     // inside one.
     const rodGlyph = () => { landTiles(); const sb = app.rods.getBoundingClientRect(), G = Array.from(document.querySelectorAll("#tray .tile .n")).filter((n) => n.textContent && shown(n.parentElement)).map((n) => [n.textContent, glyph(n)]);
       for (const c of app.rods.querySelectorAll("circle")) { const r = c.getBoundingClientRect(); if (r.width <= 6) continue; for (const [t, g] of G) { const o = over(r, g); if (o) return "a rivet covers '" + t + "' by " + o; } }
-      for (const g0 of app.rods.querySelectorAll("path")) { const L = g0.getTotalLength(); if (L < 4) continue; for (let i = 0; i <= 32; i++) { const q = g0.getPointAtLength((L * i) / 32), x = sb.left + q.x, y = sb.top + q.y;
+      for (const g0 of app.rods.querySelectorAll("path")) { const L = g0.getTotalLength(); if (L < 4) continue; for (let i = 0; i <= 32; i++) { const q = g0.getPointAtLength((L * i) / 32), Zr = app.wide ? app.sideZ || 1 : 1, x = sb.left + q.x * Zr, y = sb.top + q.y * Zr; // lane P Stage 3: the path's own px in the zoomed column
         for (const [t, g] of G) if (x > g.left && x < g.right && y > g.top && y < g.bottom) return "a rod crosses '" + t + "'"; } }
       return true; };
     // M3: every rod's two ends lie on two tiles and no point along it lies inside a third tile (3 px in from its edge).
     const rodClear = () => { landTiles(); const T = []; for (let j = 0; j < E.NCOL; j++) for (let d = 0; d < app.rows; d++) { const el = tileOf(j, d); if (shown(el) && !el.classList.contains("empty")) T.push(el.getBoundingClientRect()); }
       const sb = app.rods.getBoundingClientRect(), inT = (x, y, b, e) => x > b.left + e && x < b.right - e && y > b.top + e && y < b.bottom - e;
       for (const g of app.rods.querySelectorAll("path")) { const L = g.getTotalLength(); if (L < 4) continue;
-        const at = (u) => { const p = g.getPointAtLength(L * u); return [sb.left + p.x, sb.top + p.y]; }, e0 = at(0), e1 = at(1), own = T.filter((b) => inT(e0[0], e0[1], b, -1) || inT(e1[0], e1[1], b, -1));
+        const Zr = app.wide ? app.sideZ || 1 : 1, at = (u) => { const p = g.getPointAtLength(L * u); return [sb.left + p.x * Zr, sb.top + p.y * Zr]; }, e0 = at(0), e1 = at(1), own = T.filter((b) => inT(e0[0], e0[1], b, -Zr) || inT(e1[0], e1[1], b, -Zr)); // the 1 px slack in the column's own px
         if (!own.length) return "a rod starts on no tile";
         for (let i = 1; i < 32; i++) { const [x, y] = at(i / 32); const hit = T.find((b) => own.indexOf(b) < 0 && inT(x, y, b, 3)); if (hit) return "a rod crosses a third tile at " + Math.round(x) + "," + Math.round(y); } }
       return true; };

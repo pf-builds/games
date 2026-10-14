@@ -56,11 +56,11 @@ button.round { width: 42px; height: 42px; min-height: 42px; padding: 0; border-r
 /* Lands foundation: the play bar's buttons answer 4 px round their face, so a 36-38 px button on a short phone still
    takes a 44 px tap (the bar's 6 px gaps share 2 px between neighbours). */
 body.held #pwtip { visibility: hidden; } /* lands foundation: a power-up tip waits while Settings is open over a level */
-#top { position: relative; z-index: 4; } #top button.round { position: relative; } #top button.round::after { content: ""; position: absolute; inset: -7px; } /* 4 px past the 3 px border; #top over the stage's top edge (sheets, modals, the pause and the screens stay above it) */
+#top { position: relative; z-index: 4; } #top button.round { position: relative; } #top button.round::after { content: ""; position: absolute; inset: var(--round-tap, -7px); } /* 4 px past the 3 px border; #top over the stage's top edge (sheets, modals, the pause and the screens stay above it) */
 /* Land 1 fix (the functional critic's m4): neighbouring round buttons sit 8 px apart, so no tap box gives up 2 px to the
    next one; where the bar is 38 px high (short portrait, body.tight) a 36 px button sits 1 px under the screen's top and
    its box reaches 7 px under it instead of 4, so it is still 44 px tall. */
-#top button.round + button.round { margin-left: 2px; }
+#top button.round + button.round { margin-left: var(--round-gap, 2px); } /* lane P Stage 3: wider when the side column is zoomed down */
 @media (max-height: 640px) and (max-width: 700px) { #top button.round::after { bottom: -10px; } }
 body.tight:not(.wide) #top button.round::after { bottom: -10px; }
 button.big { min-height: 58px; font-size: 36px; width: 100%; }
@@ -354,6 +354,7 @@ body.cb .tile.mys .gl { display: none; }
 .sheet .sheetcard { pointer-events: auto; width: 100%; max-width: 560px; min-height: 100%; display: flex; flex-direction: column; justify-content: center; border-bottom: 0; border-radius: 12px 12px 0 0; background: var(--parch); color: var(--parch-ink);
   padding: 12px 16px max(14px, env(safe-area-inset-bottom)); text-align: center; animation: sheetin .22s cubic-bezier(.3,1.4,.5,1); }
 .sheet.float .sheetcard { min-height: 0; border-bottom: 3px solid var(--ink); border-radius: 12px; padding-bottom: 12px; }
+.sheet.fit .sheetcard { min-height: 0; max-height: 100%; overflow-y: auto; overscroll-behavior: contain; justify-content: flex-start; border-bottom: 3px solid var(--ink); border-radius: 12px; } /* lane P Stage 3: the whole room, scrolling inside */
 .sheet.tight .p-title { font-size: 32px; } .sheet.tight .p-line { font-size: 19px; margin-bottom: 7px; } .sheet.tight #p-tag { font-size: 16px; margin: -2px auto 5px; } .sheet.tight #p-ribbon { font-size: 17px; margin-bottom: 5px; }
 .sheet.tight .sheetcard { padding-top: 7px; padding-bottom: max(9px, env(safe-area-inset-bottom)); } .sheet.tight .row button { min-height: 44px; font-size: 24px; }
 /* The jam sheet shows the jammed squads as the player sees them: a chip in the squad's colour with its count (the crew
@@ -439,7 +440,7 @@ body.cb .chip .gl { display: inline-block; }
    (#powers, empty until then). Fix 2: the tray ends at the queue and #powers sits outside it, so the rest of the column
    is brick, not blank tray. The win / fail sheet covers the column below the line (placed by main.js). */
 body.wide #app { max-width: none; display: grid; justify-content: center; align-items: center; column-gap: var(--wide-gap, 28px); padding-top: 8px; padding-bottom: 8px;
-  grid-template-columns: var(--stage-w, 60%) var(--rail-w, 400px); grid-template-rows: minmax(0, 1fr); }
+  grid-template-columns: var(--stage-w, 60%) var(--rail-col, var(--rail-w, 400px)); grid-template-rows: minmax(0, 1fr); } /* lane P Stage 3: --rail-col, the zoomed side column's width on screen */
 body.wide #play { display: contents; }
 body.wide #stage { grid-column: 1; grid-row: 1; height: 100%; min-width: 0; }
 body.wide #side { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; height: var(--blk-h, auto); min-height: fit-content; max-height: 100%; }
@@ -504,6 +505,7 @@ body.tight:not(.wide) #line-head { font-size: 14px; } body.tight:not(.wide) #lvl
    lives when meta.lives is on), the logo, then on the green the next level's era and one dominant Play
    (about 70% wide, --play-h tall), and a tab bar at the foot: Siege map, Home, Gallery (padlocked until it opens). */
 .home-card { position: relative; height: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; padding: max(10px, env(safe-area-inset-top)) var(--gut) 0; }
+.home-card { zoom: var(--ui-z, 1); } /* lane P Stage 3: a big screen's scale (main.js layout) */
 .home-top { display: flex; align-items: center; gap: 7px; flex: none; }
 .home-top #home-prog { margin-left: auto; }
 .home h1 { margin: 16px 0 0; text-align: center; font-family: var(--px); font-weight: 400; font-size: 58px; line-height: 1; letter-spacing: 1px; color: var(--gold);
@@ -560,8 +562,9 @@ textarea.code:focus { outline: 3px solid var(--gold-lo); outline-offset: 1px; }
 .hold .fill { position: absolute; inset: 0; background: var(--danger-fill); transform: scaleX(0); transform-origin: left center; transition: transform .2s ease-out; }
 .hold.on .fill { transition: none; }
 .hold .hl { position: relative; }
-/* A short, wide window (a desktop window 375 tall): Settings' rows go two to a line so the sheet fits without scrolling. */
-@media (max-height: 480px) and (min-width: 600px) {
+/* A short, wide window (a desktop window 375 tall; lane P Stage 3: up to 640 tall, the portal's 907x510 and 1080x607): Settings'
+   rows go two to a line so the sheet fits without scrolling. */
+@media (max-height: 640px) and (min-width: 600px) {
   #settings .sheetcard { max-width: 620px; padding-top: 6px; } #settings .p-title { font-size: 32px; margin: 0; }
   #settings .set-rows { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 8px; margin: 4px 0 8px; } #settings .set-row { min-height: 44px; font-size: 21px; }
   #settings .row button { min-height: 44px; } #settings .set-reset { margin-top: 8px; }
