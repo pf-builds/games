@@ -24,6 +24,9 @@
  "stripMeta": ["property=\"og:", "name=\"twitter:"],
  "banned": ["https?://", "pf-builds", "github\\.io", "peterfrutchey", "poki", "crazygames", "itch\\.io"],
  "allowUrls": ["http://www.w3.org/2000/svg", "https://creativecommons.org/licenses/by/4.0/", "https://www.apache.org/licenses/LICENSE-2.0", "https://creativecommons.org/publicdomain/zero/1.0/"],
+ "sizes": {"note": "tools/portal-sizes.mjs (lane P Stage 3, the gate critic's gate 3): every size CrazyGames lists for its iframe (907x510 to 1920x1080), the small ones it also names (800x450, 821x462, 400x600) and the runbook's phones; each screen's controls and sheet titles wholly inside, text at least minFontPx on screen. out: screenshots and contact.png (gitignored with the build).",
+  "port": 8614, "out": "tools/build-data/portal/sizes", "minFontPx": 10,
+  "list": [[907, 510], [1077, 606], [1080, 607], [1216, 684], [1280, 720], [1366, 768], [1536, 864], [1920, 1080], [800, 450], [821, 462], [400, 600], [375, 812], [360, 640]]},
  "selftest": {
   "hostPort": 8611, "gamePort": 8612,
   "subpath": "cdn/games/sappers-path/b1/",
