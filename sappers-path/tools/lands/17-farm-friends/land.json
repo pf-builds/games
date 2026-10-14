@@ -1,0 +1,296 @@
+{
+ "k": 13,
+ "slug": "17-farm-friends",
+ "name": "Farm Friends",
+ "lore": "The road rolls out to a friendly farm: cows, pigs and sheep, ducks on the pond, a goat on the roof and a pony in the field, a red barn and a tractor, a scarecrow in the corn and sunflowers along the fence.",
+ "count": 43,
+ "source": "ai",
+ "sourceNote": "FLUX.1 [schnell] by Black Forest Labs (Apache-2.0), 4-bit GGUF, run on the studio's Mac; lane C's Farm Friends (barnyard animals: close portraits plus scenes with something happening, many on a real farm background per Peter's 10/13 note), 43 picks and 23 spares (game-research/sappers-path-v4/lands/17-farm-friends/README.md, picks-full.json, workspace b554176: after lane D's phase-1 bake and pre-read of the 41, 6 dropped (ff022b Pig in mud, ff121 Pumpkin patch pig and ff002b Piglet for red that could read as blood; ff114 Chicks and hen, ff119 Cow and calf and ff129 Llama look as muddy) and 4 swapped (ff105 -> ff038b Goat on a roof, ff044b -> ff044 Piglet nap, ff046 Apple tree, which read as a horse, -> ff034b Sheep shearing, ff110 Donkey cart -> ff032b Egg basket); then on lane D's bake of the 35, ff044 Piglet nap dropped (still muddy, a Hard) and two retitles, ff034b Woolly sheep and ff032b Hen on her nest), then lane C's refill of 10 portraits in a real setting (ff201-ff212, ../refill-prompts.py) interleaved, then ff204 Horse by a tree dropped (a fifth horse-like board) and four retitled: ff211 Calf in the meadow, ff207 Donkey in the wheat, ff212 Barn owl at dusk, ff210 Fluffy alpaca); unedited. Kind painting, shade on, converted by land.js boardOf with the whole manifest line (chroma). The 56 manifest lines are lane C's, whole; lane D filled only the empty url with the licence row's source in Dino Valley's words. The folder keeps lane C's slug (17); as installed it is Land 13 in the factory's numbering (era 21) and Zen World 14.",
+ "features": [
+  "linked",
+  "mystery",
+  "moat"
+ ],
+ "eggs": [
+  "kitten",
+  "grass",
+  "butterfly",
+  "woodpile",
+  "mushrooms",
+  "raven"
+ ],
+ "eggNote": "Eggs on the reused sheets' painted side-quest spur tips (tools/map-plan-v7.md section 7; the land has no side quests): eggTurns puts each sheet's 2 eggs on its template's 2 quest spots (22 at (561,791) (623,533); 24 at (380,1070) (150,485)), each repeat its own pair, as the plan gives them, trimmed to the 6 sheets 44 levels lay (A x3, B x3). Kinds for the farm: kittens (the barn cat), grass, butterflies, a woodpile, mushrooms and ravens.",
+ "shade": true,
+ "raw": "/Users/peter/local-ai/outputs/lands/17-farm-friends",
+ "quests": "none",
+ "zen": {
+  "k": 14,
+  "note": "v7 lane D: Farm Friends plays as Zen World 14 (tools/land.js ... zen writes tools/build-data/levels/zen.json only). Records keep the land factory numbers 685-727 (scratch/state.json seeded {from: 685, sheet0: 91, gal0: 62}: Worlds 1-13 hold 1-50, 201-250, 251-300, 301-350, 351-400, 401-429, 430-479, 480-492, 493-542, 543-585, 586-616, 617-649, 650-684; World 13's 5 sheets end at 90); the page shows them on from World 13's last Zen number (Zen 535-577, main.js zenNum); zen.numbered keys each licence row by its Zen picture number before its level.",
+  "numbered": true
+ },
+ "profile": {
+  "note": "Zen World 14, casual (v7 lane D, 2026-10-13): Holiday Lights' profile (tools/lands/16-holiday-lights/land.json; Clockwork Town's, Dino Valley's as it ships), for a world of 43: tags E16/N22/H5/X0 ending on a Hard, ? cards, linked squads, gentle moats (2 ways in) on pictures that can carry and deal one, no locks, no archers, no Extreme, no mystery blocks (Peter, 2026-10-08), careful floor 0.5 every tag, deal attempts 96 at the land-config squads.",
+  "tags": {
+   "shares": {
+    "easy": 0.37,
+    "normal": 0.51,
+    "hard": 0.12,
+    "extreme": 0
+   },
+   "breathers": 5,
+   "run": [
+    1,
+    3
+   ],
+   "end": "hard"
+  },
+  "features": {
+   "mystery": {
+    "share": 0.5,
+    "by": {
+     "easy": 0.2,
+     "normal": 0.5,
+     "hard": 1
+    },
+    "cards": [
+     2,
+     3
+    ]
+   },
+   "hidden": {
+    "share": 0,
+    "by": {
+     "easy": 0,
+     "normal": 0,
+     "hard": 0
+    },
+    "of": [
+     0,
+     0
+    ],
+    "note": "v6 lane D8 (Peter, 2026-10-08): no mystery blocks in Zen, ever. The whole picture shows from the start; land.js and zen-world.js refuse a Zen land or world with hidden in its features or a hidden share."
+   },
+   "linked": {
+    "share": 0.36,
+    "by": {
+     "easy": 0.2,
+     "normal": 0.4,
+     "hard": 0.67
+    },
+    "pairs": [
+     1,
+     2
+    ]
+   },
+   "lock": {
+    "share": 0,
+    "key": 0
+   },
+   "moat": {
+    "share": 0.4,
+    "by": {
+     "easy": 0.2,
+     "normal": 0.4,
+     "hard": 0.67
+    },
+    "ways": [
+     0,
+     1
+    ],
+    "liquids": [
+     null,
+     "mire"
+    ]
+   }
+  },
+  "bands": {
+   "easy": [
+    0.45,
+    0.8
+   ],
+   "normal": [
+    0.2,
+    0.5
+   ],
+   "hard": [
+    0.06,
+    0.2
+   ]
+  },
+  "lookahead": {
+   "normal": null,
+   "hard": null,
+   "extreme": null
+  },
+  "carefulFloor": {
+   "easy": 0.5,
+   "normal": 0.5,
+   "hard": 0.5
+  },
+  "pace": {
+   "aim": 225000
+  },
+  "bake": {
+   "candidates": {
+    "perLevel": 8,
+    "perLevelBy": {
+     "easy": 8,
+     "hard": 10
+    }
+   },
+   "deal": {
+    "attempts": 96
+   }
+  }
+ },
+ "main": [
+  "ff001",
+  "ff101",
+  "ff102",
+  "ff003",
+  "ff103",
+  "ff007b",
+  "ff038b",
+  "ff008",
+  "ff107",
+  "ff201",
+  "ff009",
+  "ff011b",
+  "ff032b",
+  "ff202",
+  "ff012",
+  "ff111",
+  "ff013",
+  "ff014",
+  "ff118",
+  "ff017",
+  "ff210",
+  "ff212",
+  "ff018b",
+  "ff019",
+  "ff211",
+  "ff205",
+  "ff123",
+  "ff020b",
+  "ff206",
+  "ff126",
+  "ff127",
+  "ff024b",
+  "ff025",
+  "ff209",
+  "ff207",
+  "ff106",
+  "ff026b",
+  "ff034b",
+  "ff027",
+  "ff049b",
+  "ff028b",
+  "ff029b",
+  "ff030b"
+ ],
+ "mainNote": "The 34's order (lane D: lane C's landMain, workspace 6e61320, with ff107 Horse in a field on Easy at the 35's slot 9 and ff106 Duck pond on the Hard ff044 Piglet nap left) kept whole, every picture on a slot of its own tag, with lane C's refill portraits (workspace a0bad2b, b554176) in the slots left (scratch/embed44.py: as near lane C's suggested places as the pattern allows): ff201, ff202, ff210, ff212, ff211, ff205, ff206 (the Hard), ff209, ff207. On the drop of ff204 (the 43's pattern is the 44's less one early Normal) ff207 Donkey in the wheat moved to the 44's freed Normal and ff205 Duck by the pond to ff207's (scratch/carry43.py), so every board keeps its tag, plan and bake.",
+ "map": {
+  "fromLayout": [
+   22,
+   24
+  ],
+  "files": [
+   "sheet-22.webp",
+   "sheet-24.webp"
+  ],
+  "reuse": true,
+  "tint": "sepia(.3) hue-rotate(48deg) saturate(1.7) brightness(1.15) contrast(1.04)",
+  "note": "v7 lever 1: no new image bytes. tools/map-plan-v7.md section 7: the Goblin King's Throne sheets 22 and 24 reused through map.fromLayout, alternately mirrored, under one grass-green tint: the bare ground turns to pasture and the thatched huts, sheds and fenced yards to farmsteads; a blue-green strip of water at 22's bottom edge. The road shares the ground's hue on these sheets, so it turns pale mint (a lower hue-rotate keeps it cream but the sheet goes sickly olive, per the plan); the route overlay draws over it. 43 levels: 6 sheets, 8+7+8+7+8+5 (24 holds 7 spots)."
+ },
+ "credit": "Farm Friends: original pictures generated with FLUX.1 [schnell] (Apache 2.0) by Click it! Studios.",
+ "worldCredit": "Farm Friends: original pictures generated with FLUX.1 [schnell] (Apache 2.0) by Click it! Studios.",
+ "eggTurns": [
+  [
+   [
+    [
+     "kitten",
+     561,
+     791
+    ],
+    [
+     "grass",
+     623,
+     533
+    ]
+   ],
+   [
+    [
+     "butterfly",
+     561,
+     791
+    ],
+    [
+     "kitten",
+     623,
+     533
+    ]
+   ],
+   [
+    [
+     "grass",
+     561,
+     791
+    ],
+    [
+     "butterfly",
+     623,
+     533
+    ]
+   ]
+  ],
+  [
+   [
+    [
+     "woodpile",
+     380,
+     1070
+    ],
+    [
+     "mushrooms",
+     150,
+     485
+    ]
+   ],
+   [
+    [
+     "raven",
+     380,
+     1070
+    ],
+    [
+     "kitten",
+     150,
+     485
+    ]
+   ],
+   [
+    [
+     "woodpile",
+     380,
+     1070
+    ],
+    [
+     "mushrooms",
+     150,
+     485
+    ]
+   ]
+  ]
+ ],
+ "moatSkip": {
+  "ff101": "deal probe (2026-10-13): 4 of 120 ring deals at Easy, 0 of 120 at Normal and Hard (6 rings x 20 attempts a tag at the profile deal setting)",
+  "ff038b": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
+  "ff009": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
+  "ff205": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
+  "ff118": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
+  "ff017": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
+  "ff106": "deal probe (2026-10-13): 1 of 120 ring deals at every tag on the 35 (0 of 120 on the 41) (6 rings x 20 attempts a tag at the profile deal setting)",
+  "ff034b": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)"
+ },
+ "moatNote": "On the 44, 36 boards can carry a ring (land.js moatCan); lane D deal probe on the 35, re-run on the 44 for lane C's 10 refill portraits (6 rings x 20 attempts a tag at the profile deal setting, the Worlds 4-13 scratch script on 8 threads, scratch/probe.log): ff038b Goat on a roof, ff009 Donkey, ff118 Horse and foal, ff017 Calf and ff034b Sheep shearing never deal with one, ff101 Pig mud puddle deals only at Easy (4/120) and ff106 Duck pond 1/120 (0/120 on the 41), and of the refill ff205 Duck by the pond never deals with one: moatSkip, 8; the other refill portraits dealt 28-100% (ff212 100%, ff204 79-83%, ff211 68-73%, ff201 63-64%, ff209 35-54%, ff210 28-47%; ff202 ff206 ff207 can't carry a ring); the rest dealt 1-100% (ff107 ff111 ff019 ff024b ff030b ff012 ff014 ff020b ff123 ff032b 83-100%, ff008 ff026b ff049b 46-77%, ff003 ff127 38-53%, ff007b ff018b ff013 19-36%, ff027 15-17%, ff029b 1-8%, ff103 ff126 1-3%)."
+}
