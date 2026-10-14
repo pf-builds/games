@@ -54,23 +54,22 @@
   "raw": "raw/ff102-s13102.png"
  },
  {
-  "id": "ff201",
-  "title": "Cow by the barn",
+  "id": "ff016",
+  "title": "Turkey",
   "artist": "Click it! Studios",
   "date": "2026-10-13",
   "kind": "painting",
   "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
-  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 13201; prompt in tools/lands/17-farm-friends/pictures/manifest.json",
-  "file": "fullsrc/ff201.png",
-  "chroma": 2.4,
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 13016; prompt in tools/lands/17-farm-friends/pictures/manifest.json",
+  "file": "fullsrc/ff016.png",
   "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
-  "prompt": "a black and white cow, a red barn and a blue sky, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real a red barn and a blue sky background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
-  "seed": 13201,
+  "prompt": "a turkey with a big tail fan, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat pale blue background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 13016,
   "size": [
    1024,
    1024
   ],
-  "raw": "raw/ff201-s13201.png"
+  "raw": "raw/ff016-s13016.png"
  },
  {
   "id": "ff003",
@@ -80,7 +79,7 @@
   "kind": "painting",
   "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
   "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 13003; prompt in tools/lands/17-farm-friends/pictures/manifest.json",
-  "file": "fullsrc/ff003.png",
+  "file": "fullsrc/ff003e.png",
   "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
   "prompt": "a fluffy white sheep with a black face, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat orange background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
   "seed": 13003,
@@ -88,7 +87,8 @@
    1024,
    1024
   ],
-  "raw": "raw/ff003-s13003.png"
+  "raw": "raw/ff003-s13003.png",
+  "edit": "Adapted for the board by Click it! Studios: the sheep's red eye pixels recoloured near-black (red eyes read as sore) (ops in edits.json)"
  },
  {
   "id": "ff103",
@@ -253,22 +253,22 @@
   "raw": "raw/ff011b-s13511.png"
  },
  {
-  "id": "ff205",
-  "title": "Duck by the pond",
+  "id": "ff208",
+  "title": "Bunny in the garden",
   "artist": "Click it! Studios",
   "date": "2026-10-13",
   "kind": "painting",
   "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
-  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 13205; prompt in tools/lands/17-farm-friends/pictures/manifest.json",
-  "file": "fullsrc/ff205.png",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 13208; prompt in tools/lands/17-farm-friends/pictures/manifest.json",
+  "file": "fullsrc/ff208.png",
   "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
-  "prompt": "a white duck, a blue pond and reeds, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real a blue pond and reeds background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
-  "seed": 13205,
+  "prompt": "a brown bunny, a vegetable garden, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real a vegetable garden background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 13208,
   "size": [
    1024,
    1024
   ],
-  "raw": "raw/ff205-s13205.png"
+  "raw": "raw/ff208-s13208.png"
  },
  {
   "id": "ff032b",
@@ -451,22 +451,22 @@
   "raw": "raw/ff018b-s13518.png"
  },
  {
-  "id": "ff019",
-  "title": "Pony",
+  "id": "ff048b",
+  "title": "Pumpkin cart",
   "artist": "Click it! Studios",
   "date": "2026-10-13",
   "kind": "painting",
   "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
-  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 13019; prompt in tools/lands/17-farm-friends/pictures/manifest.json",
-  "file": "fullsrc/ff019.png",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 13548; prompt in tools/lands/17-farm-friends/pictures/manifest.json",
+  "file": "fullsrc/ff048b.png",
   "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
-  "prompt": "a little spotted pony, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat pink background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
-  "seed": 13019,
+  "prompt": "a mouse pushing a big pumpkin, a field, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 13548,
   "size": [
    1024,
    1024
   ],
-  "raw": "raw/ff019-s13019.png"
+  "raw": "raw/ff048b-s13548.png"
  },
  {
   "id": "ff209",
@@ -795,24 +795,6 @@
    1024
   ],
   "raw": "raw/ff001b-s13501.png"
- },
- {
-  "id": "ff003b",
-  "title": "Sheep",
-  "artist": "Click it! Studios",
-  "date": "2026-10-13",
-  "kind": "painting",
-  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
-  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 13503; prompt in tools/lands/17-farm-friends/pictures/manifest.json",
-  "file": "fullsrc/ff003b.png",
-  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
-  "prompt": "a fluffy white sheep with a black face, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat orange background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
-  "seed": 13503,
-  "size": [
-   1024,
-   1024
-  ],
-  "raw": "raw/ff003b-s13503.png"
  },
  {
   "id": "ff008b",
@@ -1194,5 +1176,60 @@
    1024
   ],
   "raw": "raw/ff204-s13204.png"
+ },
+ {
+  "id": "ff201",
+  "title": "Cow by the barn",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 13201; prompt in tools/lands/17-farm-friends/pictures/manifest.json",
+  "file": "fullsrc/ff201.png",
+  "chroma": 2.4,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a black and white cow, a red barn and a blue sky, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real a red barn and a blue sky background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 13201,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ff201-s13201.png"
+ },
+ {
+  "id": "ff205",
+  "title": "Duck by the pond",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 13205; prompt in tools/lands/17-farm-friends/pictures/manifest.json",
+  "file": "fullsrc/ff205.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a white duck, a blue pond and reeds, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real a blue pond and reeds background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 13205,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ff205-s13205.png"
+ },
+ {
+  "id": "ff019",
+  "title": "Pony",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 13019; prompt in tools/lands/17-farm-friends/pictures/manifest.json",
+  "file": "fullsrc/ff019.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a little spotted pony, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat pink background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 13019,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ff019-s13019.png"
  }
 ]

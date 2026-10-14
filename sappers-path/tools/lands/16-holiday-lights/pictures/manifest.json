@@ -424,7 +424,7 @@
  },
  {
   "id": "hl211",
-  "title": "Candy cane",
+  "title": "Giant candy cane",
   "artist": "Click it! Studios",
   "date": "2026-10-13",
   "kind": "painting",
@@ -478,22 +478,24 @@
   "raw": "raw/hl016-s12016.png"
  },
  {
-  "id": "hl213",
+  "id": "hl025",
   "title": "Robin",
   "artist": "Click it! Studios",
   "date": "2026-10-13",
   "kind": "painting",
   "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
-  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 12213; prompt in tools/lands/16-holiday-lights/pictures/manifest.json",
-  "file": "fullsrc/hl213.png",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 12025; prompt in tools/lands/16-holiday-lights/pictures/manifest.json",
+  "file": "fullsrc/hl025e.png",
+  "chroma": 1.7,
   "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
-  "prompt": "a robin with a red breast, snowy branches, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real snowy branches background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
-  "seed": 12213,
+  "prompt": "a robin with a red breast on a snowy branch, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat pale blue background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 12025,
   "size": [
    1024,
    1024
   ],
-  "raw": "raw/hl213-s12213.png"
+  "raw": "raw/hl025-s12025.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
  },
  {
   "id": "hl017b",
@@ -964,5 +966,23 @@
    1024
   ],
   "raw": "raw/hl026b-s12526.png"
+ },
+ {
+  "id": "hl213",
+  "title": "Robin",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 12213; prompt in tools/lands/16-holiday-lights/pictures/manifest.json",
+  "file": "fullsrc/hl213.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a robin with a red breast, snowy branches, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real snowy branches background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 12213,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hl213-s12213.png"
  }
 ]

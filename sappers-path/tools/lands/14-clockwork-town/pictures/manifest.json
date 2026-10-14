@@ -58,7 +58,7 @@
  },
  {
   "id": "ct201",
-  "title": "Clock tower",
+  "title": "Clock tower at sunset",
   "artist": "Click it! Studios",
   "date": "2026-10-13",
   "kind": "painting",
@@ -134,7 +134,7 @@
  },
  {
   "id": "ct203",
-  "title": "Robot owl",
+  "title": "Robot owl at night",
   "artist": "Click it! Studios",
   "date": "2026-10-13",
   "kind": "painting",
@@ -208,23 +208,24 @@
   "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
  },
  {
-  "id": "ct205",
+  "id": "ct032",
   "title": "Robot gardener",
   "artist": "Click it! Studios",
   "date": "2026-10-13",
   "kind": "painting",
   "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
-  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11205; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
-  "file": "fullsrc/ct205.png",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11032; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct032e.png",
   "chroma": 1,
   "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
-  "prompt": "a robot holding a big flower, a green garden, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real a green garden background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
-  "seed": 11205,
+  "prompt": "a little robot watering a big flower, a green background, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11032,
   "size": [
    1024,
    1024
   ],
-  "raw": "raw/ct205-s11205.png"
+  "raw": "raw/ct032-s11032.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
  },
  {
   "id": "ct010",
@@ -282,22 +283,24 @@
   "raw": "raw/ct012b-s11512.png"
  },
  {
-  "id": "ct207",
-  "title": "Gear windmill",
+  "id": "ct015",
+  "title": "Hot air engine",
   "artist": "Click it! Studios",
   "date": "2026-10-13",
   "kind": "painting",
   "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
-  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11207; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
-  "file": "fullsrc/ct207.png",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11015; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct015e.png",
+  "chroma": 1.2,
   "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
-  "prompt": "a windmill with gear sails, a blue sky and a field, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real a blue sky and a field background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
-  "seed": 11207,
+  "prompt": "a brass steam engine with a smokestack, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat green background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 11015,
   "size": [
    1024,
    1024
   ],
-  "raw": "raw/ct207-s11207.png"
+  "raw": "raw/ct015-s11015.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
  },
  {
   "id": "ct043b",
@@ -355,7 +358,7 @@
  },
  {
   "id": "ct208",
-  "title": "Robot cat",
+  "title": "Robot cat on bricks",
   "artist": "Click it! Studios",
   "date": "2026-10-13",
   "kind": "painting",
@@ -503,7 +506,7 @@
  },
  {
   "id": "ct211",
-  "title": "Robot dog",
+  "title": "Robot dog in the park",
   "artist": "Click it! Studios",
   "date": "2026-10-13",
   "kind": "painting",
@@ -1023,5 +1026,42 @@
   ],
   "raw": "raw/ct049-s11049.png",
   "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "ct205",
+  "title": "Robot gardener",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11205; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct205.png",
+  "chroma": 1,
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a robot holding a big flower, a green garden, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real a green garden background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 11205,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct205-s11205.png"
+ },
+ {
+  "id": "ct207",
+  "title": "Gear windmill",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 11207; prompt in tools/lands/14-clockwork-town/pictures/manifest.json",
+  "file": "fullsrc/ct207.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a windmill with gear sails, a blue sky and a field, cute friendly storybook style, flat vector illustration, a big close-up portrait, the subject's head and shoulders filling half of the picture, in front of a real a blue sky and a field background made of broad simple shapes, the subject's colour contrasting with the background, bold flat colour shapes with no outlines, limited palette of 6 colours, high contrast, no text",
+  "seed": 11207,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ct207-s11207.png"
  }
 ]

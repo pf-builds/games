@@ -153,7 +153,7 @@
   "ff038b",
   "ff008",
   "ff107",
-  "ff201",
+  "ff016",
   "ff009",
   "ff011b",
   "ff032b",
@@ -167,9 +167,9 @@
   "ff210",
   "ff212",
   "ff018b",
-  "ff019",
+  "ff048b",
   "ff211",
-  "ff205",
+  "ff208",
   "ff123",
   "ff020b",
   "ff206",
@@ -290,7 +290,8 @@
   "ff118": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
   "ff017": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
   "ff106": "deal probe (2026-10-13): 1 of 120 ring deals at every tag on the 35 (0 of 120 on the 41) (6 rings x 20 attempts a tag at the profile deal setting)",
-  "ff034b": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)"
+  "ff034b": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
+  "ff111": "critic-land-17 m1 (2026-10-13): a short ring stub sits in the straw apart from the pig; polish pass re-bakes it ringless (it deals with one: probe 119-120/120)"
  },
  "moatNote": "On the 44, 36 boards can carry a ring (land.js moatCan); lane D deal probe on the 35, re-run on the 44 for lane C's 10 refill portraits (6 rings x 20 attempts a tag at the profile deal setting, the Worlds 4-13 scratch script on 8 threads, scratch/probe.log): ff038b Goat on a roof, ff009 Donkey, ff118 Horse and foal, ff017 Calf and ff034b Sheep shearing never deal with one, ff101 Pig mud puddle deals only at Easy (4/120) and ff106 Duck pond 1/120 (0/120 on the 41), and of the refill ff205 Duck by the pond never deals with one: moatSkip, 8; the other refill portraits dealt 28-100% (ff212 100%, ff204 79-83%, ff211 68-73%, ff201 63-64%, ff209 35-54%, ff210 28-47%; ff202 ff206 ff207 can't carry a ring); the rest dealt 1-100% (ff107 ff111 ff019 ff024b ff030b ff012 ff014 ff020b ff123 ff032b 83-100%, ff008 ff026b ff049b 46-77%, ff003 ff127 38-53%, ff007b ff018b ff013 19-36%, ff027 15-17%, ff029b 1-8%, ff103 ff126 1-3%)."
 }
