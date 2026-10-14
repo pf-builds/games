@@ -1,13 +1,13 @@
 // Sapper's Path page v3 (SPEC-v3 §3, §6, §7): boot, screens (title, era map, play), layout, input (a tap on a front
-// card plays that column; a board tap skips the show), the holding line and tray, the win/fail panel, save, the frame
+// card plays that column; a board tap skips only the goblin's show), the holding line and tray, the win/fail panel, save, the frame
 // loop, and the ?debug=1 facade (window.SP) with selfTest. The rules live in engine.js, the board and the run-and-carry
 // show in board.js, the title scene, wall and goblin sprites in art.js, the synth in audio.js.
 //
 // Playtest 1 (the dispatch model): the engine is a timed simulation. A tap takes a holding space at once (no free space:
 // refused, v3.1); its sappers go out only to pixels they can reach, a round at a time, and the space frees when they are all
 // home. The page plays engine time at show.pace x real time (2x doubles it), reads the engine's log into the board every
-// step, and draws engine state. Cards stay live at any time; a board tap (or Space) skips: the engine runs until nothing
-// moves and the board lands. Win and fail sheets wait for the squads to settle (v4.3: until every sapper is home, no cap).
+// step, and draws engine state. Cards stay live at any time; a board tap (or Space) once nothing runs skips the goblin's
+// show (lane P Stage 3: never the sappers' run; SP.skip and selfTest still settle the engine). Win and fail sheets wait for the squads to settle (v4.3: until every sapper is home, no cap).
 // Clock: app.clock is sim time in ms. The rAF loop advances it by the real frame delta (capped at layout.maxDtMs);
 // SP.tick(ms) advances it by hand, so a hidden tab (no rAF) can still be driven. The engine, the goblin, the panel delay
 // and toasts all run on this clock; nothing here uses setTimeout or setInterval.
@@ -1296,6 +1296,12 @@
     if (app.V.gob.on && !app.V.gob.done) app.V.gob.done = true;
     else if (app.ending && !app.panel) app.endAt = app.clock;
   }
+  // Lane P Stage 3 (Peter): a board tap or Space never hurries the sappers (the bought speed is the way to go faster).
+  // Once nothing runs, it still skips the goblin's show and the wait for the sheet. skip() stays for SP and selfTest.
+  function skipShow() {
+    if (app.screen !== "play" || !app.S || app.S.busy) return;
+    if (app.V.gob.on && !app.V.gob.done) app.V.gob.done = true; else if (app.ending && !app.panel) app.endAt = app.clock;
+  }
   // The jam names the crews that jammed, in line order (up to layout.jamNames, then "and n more"). Critics 1 fix: this
   // text is the sheet's aria-label; what shows is sheetLine's (colour chips, since no tile shows a crew name).
   function reasonText(e) {
@@ -1689,9 +1695,9 @@
       if (app.screen !== "play") return;
       if (ev.key >= "1" && ev.key <= "5") playCol(+ev.key - 1);
       else if (ev.key === "r" || ev.key === "R") retry();
-      else if (ev.key === " ") { ev.preventDefault(); skip(); }
+      else if (ev.key === " ") { ev.preventDefault(); skipShow(); }
     });
-    $("board").addEventListener("pointerdown", skip);
+    $("board").addEventListener("pointerdown", skipShow); // lane P Stage 3: no skip while sappers run
     $("pause").addEventListener("click", resume);
     document.querySelector("#pause .pz-set").addEventListener("click", (ev) => ev.stopPropagation()); // its toggles don't resume
     $("btn-settings").addEventListener("click", () => openSettings(true)); $("btn-pset").addEventListener("click", () => openSettings(true)); $("set-close").addEventListener("click", () => openSettings(false)); // lands foundation: btn-pset, the play screen's gear
@@ -1899,7 +1905,7 @@
     if (app.unlockT > 0 && app.clock - app.unlockT >= app.cfg.show.unlockMs && app.clock - app.unlockT < app.cfg.show.unlockMs + dt) app.lineMoved = true; // the padlock's pop ends
     if (app.lineDirty) { judge(); renderTray(); renderLine(); coachStep(); } else if (app.lineMoved) renderLine(); else retCount();
     app.lineMoved = false;
-    // The sheet waits until every sapper is home (v4.3: no cap; a board tap still skips the show).
+    // The sheet waits until every sapper is home (v4.3: no cap; once all are home a board tap skips the goblin's show).
     if (app.ending && !app.panel && !S.busy) {
       if (app.ending.won) { if (!V.gob.on) { V.goblin(true, app.entry.mode === "zen"); cue("fanfare"); } else if (V.gob.done) showPanel(); } // v6: no goblin in Zen (quiet)
       else if (app.endAt < 0) { app.endAt = app.clock + app.cfg.show.panelMs; V.shake(app.cfg.fx.failShake[0], app.cfg.fx.failShake[1]); }
@@ -2413,6 +2419,10 @@
           b.click(); const t1 = app.speed; b.click(); const t2 = app.speed; retry(); const back = app.speed === 1 && !app.fastPaid; b.click(); const again = !$("speedbuy").hidden; $("sb-no").click();
           ok(r1 === 1 && asked && poor && no && paid && t1 === 1 && t2 === T.x && back && again && (app.save.data.coins | 0) === 3, "speed (v5 R1): 1x; a tap asks to buy " + T.x + "x for " + T.price + "; short of coins nothing changes; Not now spends nothing; bought, " + T.x + "x and the coins drop; then the button toggles free; Retry is 1x again and the next one costs again"); }
         finally { app.debugSpeed = DEBUG; setSpeed(SPD[0]); } }
+      // 17b. Lane P Stage 3 (Peter): a board tap or Space while sappers run changes nothing (no skip to the end of the run).
+      { startLevel(app.levels[0].id); playCol(winOf(app.entry).length ? +winOf(app.entry)[0] : 0); step(48); const n0 = app.S.now, b0 = app.S.busy, et0 = app.et;
+        $("board").dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, pointerId: 1, isPrimary: true })); document.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true }));
+        ok(b0 && app.S.busy && app.S.now === n0 && app.et === et0 && app.S.status === E.PLAYING, "no speed hack (lane P Stage 3): a board tap and Space mid-run leave the sappers running (engine " + n0 + " ms, still busy)"); }
       // 18. v4 M2 debug levels: every stored order wins on its tag (v4.3: Normal), played patiently through playCol; the
       // board matches the rules; none of it reaches the save's progress.
       { let wins = 0, total = 0; const done0 = JSON.stringify(app.save.data.done), last0 = app.save.data.last;
