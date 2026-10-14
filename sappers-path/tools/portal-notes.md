@@ -236,3 +236,91 @@ zen-locked-map-chip, cb-marks-821x462).
 - Covers and videos (rules doc fix list 6), the 4.6(a) update process, the cold playtest and the portal account: not code.
 - Once shown mid-play, an unlock's intro still sits over the tray and eats the tap that dismisses it (LATER.md).
 - tools/shots-tutorial.mjs still expects the launch offer (LATER.md).
+
+## 6. Stage 3, part 2: banked 3x time and the Stage 3 critic minors (2026-10-14)
+
+**Banked 3x time (Peter's design; supersedes G above).** `meta.speed`: price 200, secs 300, x 3, saveEveryMs 5000.
+
+- Each buy adds 5 minutes to `bank {ms, on}` in the Campaign save's wallet (save.js; Zen shares it through the wallet; Reset
+  Campaign keeps it, Everything clears it; the save code does not carry it, and a code load keeps this device's bank).
+- With time banked the button reads "3× 4:12" (or "1× 4:12") and toggles 1x/3x free. Empty, a tap opens the buy sheet ("5 minutes
+  of 3× speed. Unused time is banked for later levels."), which stays open after a buy so a second buy stacks; it closes on "Play
+  at 3×" or "Not now".
+- Drains in real time (main.js bankStep, from step's engine advance) only while a level runs at 3x: status playing or sappers
+  out, no sheet up, not under the buy sheet or Settings, not paused, blurred or hidden (step does not run then), not on the home
+  or map, not at 1x, never in the tour. Written every 5 s of drain, on pause, on leaving a level and on pagehide.
+- Starting speed: the player's last choice while time is banked (`bank.on`: a level or Retry starts at 3x when they last left
+  it on 3x), else 1x. Peter's lean; simpler than always-3x because a player who switched to 1x stays there.
+- Empty mid-level: 1x with the toast "3× time used up: back to 1×"; play goes on. The victory march (2x) never slows a running 3x
+  and drains like play. `?debug=1` keeps its free 1/2/3 cycle and never touches the bank.
+- Coverage: selfTest (buy twice = 10 min and coins drop; label "3× 10:00"; 1 s at 3x drains 1,000 ms; 0 at 1x, paused or on the
+  home; the next level and Retry keep 3x; a reload keeps the bank; empty -> 1x, the toast, the next tap asks again) and test.js
+  (sanitize clamps, on only with time, two buys reloaded = 600,000 ms, Reset Campaign keeps, Everything clears).
+- Measured in a browser: 3.2 s of level play at 3x drained 3.4 s of bank (252,000 -> 248,600 ms); the button fits at 360x640.
+  Screen: `scratchpad/stage3/speed-bank-button-821x462.png`.
+
+**Coin economy** (config meta.coins: start 400; each first clear pays win + first by tag: easy 15, normal 30, hard 60, extreme
+90), Campaign levels only, nothing spent: after level 1 415, level 5 505, level 10 640, level 20 970 (level 30 1,375). Side quests
+(after levels 4, 8, 11, 16, 20) and map eggs (10-15 coins each) add more. So 200 is affordable from the first level (the starting
+400 covers two buys), but a player who also buys power-ups (Ladder 120, Quartermaster 80) spends it fast.
+
+**Stage 3 critic minors.**
+- m1: the Ladder's intro is now the short form ("New: Ladder / One free use"; a long press shows the full tip), placed above the
+  badge but never higher than just under the front card row, and it lets taps through. Real-tap probe at 821x462 (mouse and a touch
+  laptop screen), 375x812, 360x640, 400x600, 1280x720: 0 front cards under it; a tap at its centre reaches the tray and takes it
+  away. selfTest asserts both.
+- m2: no "Continue" chip until something is won.
+- m5: LICENSES.md (and quest-bake.js, which writes that paragraph) cite levels/gallery.pk.json; index.html's comment updated.
+- m3 and m4 left as they are (LATER.md).
+
+| Gate (part 2) | Result |
+|---|---|
+| selftest-lands | 375x812@3 929/0, 1280x720 931/0, 360x640@3 929/0; 0 console |
+| portal-build.mjs (clean) | PASS: 77 files, 14,138,824 B unzipped, 12,332,896 B zipped |
+| portal-selftest.mjs | 8 of 8 PASS; before the first tap 1,950,012 B (375x812) / 2,001,278 B (1280x720, 821x462) |
+
+## 7. Stage 3, part 3: the Stage 2 gate critic's findings (2026-10-14)
+
+Report: scratchpad stage2/gates.md (gate 3 failed).
+
+- **B1, 907x510 (the first official size): the top bar above the frame, the Ladder's name below it.** The wide side column's own
+  height at 1x (big tiles from 481 px tall) was about 600 px. fitBoard now zooms the column (CSS zoom, `app.sideZ`) so it fits the
+  frame's height (`layout.scale.min` 0.78 floor; 907x510 runs at 0.83). Shrunk, its own px are the full desktop column's
+  (`railWidePx`), so tiles and names keep the 1280x720 shape; its top-bar buttons stand apart (`--round-gap`) and reach further
+  (`--round-tap`) so each keeps a 44 px tap on screen. Everything placed from its rects takes the zoom: the coach arrow and the
+  coach line's font, the sheet over the column (`placeSheet`), selfTest's rod checks (the SVG's own px). Settings goes two rows to
+  a line up to 640 px tall and opens at its top.
+- **B2, the loss and Zen stuck sheets at 821x462 and 800x450 started above the frame.** A fail sheet floats above the line only if
+  it fits there; else it takes the whole column (wide) or screen with tight words and scrolls inside if it must (`.sheet.fit`,
+  `fitSheet`). A win sheet taller than its room does the same.
+- **M3, a Play tap before boot was lost (Fast 3G + 4x CPU: Play at 3.3 s, boot at 11.7 s).** An inline script in index.html,
+  before the game's scripts, marks the tap and greys Play (`.loading`); boot plays it as soon as the home is wired. Probe with the
+  three big scripts held 3 s: Play visible at 37 ms, tapped at once, level 1 reached at 3.3 s.
+- **M4, the layout stopped at about 940 px (1920x1080: a 374 px board).** From 1280x720 up the column grows by the smaller of
+  width/1280 and height/720 (max 1.6) and the board's cell cap twice as fast (`layout.scale.boardGain` 2: 22 -> 44 CSS px at
+  1920x1080); the home's card (`--ui-z`) and the map's column and cards scale the same.
+- **Debug:** selfTest under ?debug=1 on the zip failed 13 and threw (no levels/debug-v4.json). Checks that need a debug level now
+  go through `need()`: skipped and counted when no debug level is loaded (12), reported by one check. That run also found an
+  ordering bug: startLevel dealt the power-up limits before refreshing `app.pwHad`, so a power-up owned on the previous level
+  counted as open on this one; fixed.
+- **Minor:** a resize places a power-up tip again; colour-blind marks snap to pixels up to 28 device px (1216x684 had six soft).
+- **New tool:** `tools/portal-sizes.mjs` (config `sizes`): 13 sizes x 6 screens (home, level 1, win, loss with 0 coins, Zen stuck,
+  map), every visible control and sheet title wholly inside, text at least 10 px on screen; screens and `contact.png` in
+  `tools/build-data/portal/sizes/`. Last run: 78 of 78 PASS; smallest text 11.9 px (400x600, 360x640: the tag chip).
+- selfTest 0 fails at every official size: 907x510, 1077x606, 1080x607, 1216x684, 1280x720, 1366x768, 1536x864, 1920x1080,
+  800x450, 821x462, 400x600 (and 375x812, 360x640).
+- A fail sheet that fits neither under nor above the line goes under it and scrolls inside when that room is at least
+  `layout.sheetMinPx` (140): the harness's 812x375 run caught the first B2 fix covering the jammed line. Fitted sheets use the
+  tightest words so Retry shows at 800x450.
+- portal-selftest check 6 also runs selfTest on the zip as it ships (no debug file): 877 passed, 0 failed, 12 skipped, no throw.
+
+| Gate (part 3, head fc85ffa) | Result |
+|---|---|
+| test.js | 726 passed, 0 failed (shipped folder 87 files, 14,679,901 B) |
+| freeze --require / regrades | 886 records 0 differences, castles 283 0; 250 levels 2,405 checks 0; gallery 62 levels 372 checks 0 (run at 13d8cfc; nothing after touches the engine or the levels) |
+| pack --check | the shipped files match the source |
+| selftest-lands | 375x812@3 929/0, 1280x720 931/0, 360x640@3 929/0; 0 console |
+| harness.mjs | all passed (selfTest 929/0 x5, 931/0 x2), 0 console |
+| portal-sizes.mjs | 78 of 78 PASS (13 sizes x 6 screens) |
+| portal-build.mjs | PASS: 77 files, 14,146,967 B unzipped, 12,335,577 B zipped |
+| portal-selftest.mjs | 8 of 8 PASS; before the first tap 1,958,155 B (375x812) / 2,009,421 B (1280x720, 821x462) |
