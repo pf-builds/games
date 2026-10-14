@@ -171,6 +171,7 @@
     paintWall(); chips(); icons(); buildTray(); buildLine(); buildPowers(); buildMap(); progressText(); wire(); wireTitleArt();
     { const U = app.cfg.layout.upright, u = $("upright"); u.querySelector(".up-t").textContent = U.text; u.setAttribute("aria-label", U.text); }
     showScreen("title"); layout();
+    window.SappersPathReady = true; if (window.SappersPathTap) { window.SappersPathTap = 0; $("btn-play").classList.remove("loading"); $("btn-play").click(); } // lane P Stage 3: a Play tap made while loading (index.html) plays now
     if (NS.tutorial) app.tut = NS.tutorial.init({ app, $, v: V_, getJSON, storage, startLevel, showScreen, retry, switchMode, renderCoach, csave, zsave, zenOn, zenOpen, SP }); // v6 lane B part 2: the intro tour (src/tutorial.js)
     requestAnimationFrame(frame); requestAnimationFrame(() => requestAnimationFrame(() => { app.painted = true; prefetch(false); })); // v7 lane T: after the first paint
     window.addEventListener("click", (ev) => { app.tapEl = ev.target && ev.target.closest ? ev.target.closest("button") : null; if (app.failUp) { app.failUp = false; hideToast(); } }, true); window.addEventListener("click", () => { app.tapEl = null; }); // v7 fix pass: the button a tap started a level from (its busy state); a tap puts a load-fail toast away

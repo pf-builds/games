@@ -164,6 +164,8 @@
     </div>
   </section>
 </div>
+<script>/* lane P Stage 3: a tap on Play before the game has booted is kept, and main.js boot plays it (one tap is still one tap) */
+document.addEventListener("click", function (e) { var b = e.target && e.target.closest ? e.target.closest("#btn-play") : null; if (b && !window.SappersPathReady) { window.SappersPathTap = 1; b.classList.add("loading"); } }, true);</script>
 <script src="src/pack.js?v=88"></script>
 <script src="src/engine.js?v=88"></script>
 <script src="src/save.js?v=88"></script>
