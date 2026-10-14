@@ -1364,6 +1364,15 @@ const colsOf = (S) => [0, 1, 2, 3, 4].map((j) => { const o = []; for (let d = 0,
   eq([set({ speed: 3, cb: true }).speed, set({ speed: 3, cb: true }).cb], [3, true], "save: speed 3 and colour-blind on load as saved");
   eq([set({ fast: true }).speed, set({ fast: false }).speed, set({ speed: 2.5 }).speed, set({ speed: 9 }).speed, set({ speed: "3" }).speed], [2, 1, 1, 1, 1], "save: the old 2x flag loads as 2; a bad speed loads as 1");
   eq([set({ cb: "yes" }).cb, set({ cb: 1 }).cb, set({}).cb, "diff" in set({ diff: "hard" })], [false, false, false, false], "save: colour-blind is on only for a strict true; the difficulty setting is dropped");
+  // Lane P Stage 3: banked 3x time (bank {ms, on}) in the shared wallet: whole real-time ms 0-100 h, on only with time banked;
+  // Reset Campaign keeps it, Everything clears it, a JSON round trip (a reload) keeps it; two buys of meta.speed.secs = 10 min.
+  { const bk = (raw) => Save.sanitize({ v: 2, bank: raw }, order).bank, T = require("../config.json").meta.speed, mem = Save.memoryStore(), sv = Save.open(mem, "k", order, [], null);
+    sv.data.bank.ms += T.secs * 1000; sv.data.bank.ms += T.secs * 1000; sv.data.bank.on = 1; sv.write(); const back = Save.open(mem, "k", order, [], null).data.bank;
+    const keep = { key: "k", data: Save.sanitize({ v: 2, done: { [order[0]]: 1 }, bank: { ms: 42000, on: 1 } }, order), write() { return true; } }, all = { key: "k", data: Save.sanitize({ v: 2, bank: { ms: 42000, on: 1 } }, order), write() { return true; } };
+    Save.resetCampaign(keep, null); Save.reset(all, null);
+    eq([Save.fresh().bank, bk({ ms: 125000.7, on: 1 }), bk({ ms: -5, on: 1 }), bk({ ms: 9e15 }).ms, bk("x"), bk({ ms: 1000, on: true }), back, [T.price, T.secs, T.x], keep.data.bank, Object.keys(keep.data.done).length, all.data.bank],
+      [{ ms: 0, on: 0 }, { ms: 125001, on: 1 }, { ms: 0, on: 0 }, 360000000, { ms: 0, on: 0 }, { ms: 1000, on: 0 }, { ms: 600000, on: 1 }, [200, 300, 3], { ms: 42000, on: 1 }, 0, { ms: 0, on: 0 }],
+      "save: banked 3x time (lane P Stage 3) loads as whole ms 0-100 h, on only with time banked and a strict 1; bought twice and reloaded it is 10 min, on; 200 coins buy 300 s of 3x; Reset Campaign keeps it, Everything clears it"); }
   // v4.3: progress by stable level id. A level opens when it is the first, cleared, or the one before it is cleared; a
   // cleared level is kept wherever it sits (a gap no longer drops the wins after it).
   const gap = { v: 2, done: {} }; for (let i = 0; i < 40; i++) if (i !== 20) gap.done[order[i]] = 1; const sg = Save.sanitize(gap, order);

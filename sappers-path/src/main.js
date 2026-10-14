@@ -123,7 +123,7 @@
   // v4.3: a level's fixed tag (Normal when a file has none) and its one stored winning order.
   const tagOf = (e) => (e && e.L && TAGS.indexOf(e.L.tag) >= 0 ? e.L.tag : "normal"), winOf = (e) => (e && e.L && e.L.win && e.L.win[tagOf(e)]) || "";
   const app = { cfg: null, levels: [], byId: new Map(), order: [], eras: [], save: null, entry: null, B: null, S: null, V: null, audio: null, sheets: null, gal: [], mats: null, palKey: "", galTiles: [],
-    clock: 0, lastT: 0, screen: "title", diff: "normal", speed: 1, fastPaid: false, debugSpeed: DEBUG, cb: false, allPw: false, tip: null, tipQ: [], tipHold: null, tipEat: -1, pwN: -1, // diff: the playing level's tag (v4.3) ending: null, endAt: -1, panel: null, panelAt: 0, testing: false,
+    clock: 0, lastT: 0, screen: "title", diff: "normal", speed: 1, bankAt: 0, bankSec: -1, debugSpeed: DEBUG, cb: false, allPw: false, tip: null, tipQ: [], tipHold: null, tipEat: -1, pwN: -1, // diff: the playing level's tag (v4.3) ending: null, endAt: -1, panel: null, panelAt: 0, testing: false,
     toastT: -1e12, toastBoard: false, popK: 0, cards: [], nexts: [], slots: [], wide: false, glURL: [], manURL: [], nodes: [],
     coach: null, used: 0, cues: {}, paused: false, pauses: 0, upright: false, upPause: false, focusEl: null, pt: { x: 0, y: 0 }, T: null, tbuf: null, labFit: new Map(), verdict: [],
     et: 0, endT: -1, lineDirty: false, lineMoved: false, ord: [], slotPts: [], blockT: -1e12, refused: 0, march: false,
@@ -1153,7 +1153,7 @@
     $("ls-warn").textContent = r.ok ? fill(C.replaces, { now: summary(csave().data, zenOn() ? zsave().data : undefined) }) : ""; $("ls-warn").hidden = !r.ok; $("ls-apply").disabled = !r.ok;
     return r;
   }
-  function loadApply() { const r = app.loadR; if (!r || !codeOn()) return false; const sum = summary(r.data, r.zen || undefined); csave().data = r.data;
+  function loadApply() { const r = app.loadR; if (!r || !codeOn()) return false; const sum = summary(r.data, r.zen || undefined); r.data.bank = JSON.parse(JSON.stringify(bank())); csave().data = r.data; // lane P Stage 3: the code has no bank; this device's banked time stays
     if (r.zen && zenOn()) { const z = zsave(); r.zen.mode = z.data.mode; r.zen.moved = 1; z.data = Save.zenView(r.zen, z.wallet); } // v6: both modes from the code (SP1: the Zen part moved from it)
     writeSave(); if (app.testing) { /* scratch saves stay in memory */ } else if (zenOn()) { csave().write(); zsave().write(); } progressSwapped(); toast(fill(CT().toast, { sum })); return true; }
   // v6: the save code of this device: SP2 (both modes and the wallet) when Zen is on, else SP1.
@@ -1176,7 +1176,7 @@
   // ---- screens and levels --------------------------------------------------------------------------------------------
   function showScreen(name) {
     if (name === "gallery") name = "map"; // v5 R3: the Gallery is the journey map now
-    if (name !== "play") cancelPend(); // v7 lane T: the player moved on from a level waiting on its world
+    if (name !== "play") { cancelPend(); bankSave(); } // v7 lane T: the player moved on from a level waiting on its world // lane P Stage 3: the drained bank written
     if (name === "title") prefetch(false); if (name === "map" && app.mode === "zen") prefetch(true); // v7 fix pass (M1): ahead of the tap, before the map's sheets ask
     if (name !== "play") { app.pick = null; document.body.classList.remove("picking"); }
     $("settings").hidden = true; $("tailsheet").hidden = true; holdStop(); for (const k of SUBS) $(k).hidden = true; // v5.4: its sheets too
@@ -1636,7 +1636,7 @@
   // card; on the title and map the game just resumes when focus returns. No timers are involved.
   function pause() {
     if (app.paused || !app.cfg) return;
-    app.paused = true; app.pauses++; if (app.audio) Audio.suspend(app.audio); holdStop(); // v5.4: a blur lets go of the reset hold
+    app.paused = true; app.pauses++; if (app.audio) Audio.suspend(app.audio); holdStop(); bankSave(); // v5.4: a blur lets go of the reset hold // lane P Stage 3: the bank written
     if (app.screen === "play") $("pause").hidden = false;
   }
   function resume() {
@@ -1669,28 +1669,48 @@
     if (save) { const S = app.save.data.settings; S.sfx = A.sfx; S.music = A.music; S.muted = A.muted; writeSave(); }
   }
   const quickMute = () => { const q = Audio.quick(app.audio); setSound(q.sfx, q.music, true); };
-  // v5 R1, speed (meta.speed): 1x by default. A player buys meta.speed.x (3x from lane P Stage 3) for the current attempt
-  // (price coins; the sheet asks first), then the button toggles 1x and that free until Retry, a new level or leaving. Under ?debug=1 the button cycles
-  // debugSpeeds (1x, 2x, 3x) free. Nothing is saved. Gold above 1x; the settings row (debug only) shows it on the right.
-  const speeds = () => (app.debugSpeed ? app.meta.speed.debugSpeeds : app.fastPaid ? [1, app.meta.speed.x] : [1]);
-  function setSpeed(k) {
-    const sp = speeds(); app.speed = sp.indexOf(k) >= 0 ? k : 1;
-    togSpeed.forEach((b) => { const x = b.querySelector(".sv") || b; x.textContent = app.speed + "\u00d7"; b.classList.toggle("on", app.speed > 1); b.setAttribute("aria-label", "Speed " + app.speed + "x" + (sp.length > 1 ? " (tap for " + sp[(sp.indexOf(app.speed) + 1) % sp.length] + "x)" : " (tap to buy " + app.meta.speed.x + "x for this round)")); });
+  // Speed (meta.speed). Lane P Stage 3 (Peter): banked 3x time. price coins buy secs of x speed into the wallet's bank
+  // (csave().data.bank {ms, on}: real-time ms left, and whether the player last left the button on x). With time banked the
+  // button reads "3× 4:12" and toggles 1x/x free; empty, a tap opens the buy sheet, which stays open after a buy so a second
+  // buy stacks. The bank drains in step() only while a level runs at x (bankStep). A level starts at x when bank.on and time
+  // is banked, else 1x. Under ?debug=1 the button cycles debugSpeeds free and never touches the bank. The speed is not saved.
+  const bank = () => csave().data.bank || (csave().data.bank = { ms: 0, on: 0 });
+  const speeds = () => (app.debugSpeed ? app.meta.speed.debugSpeeds : bank().ms > 0 ? [1, app.meta.speed.x] : [1]);
+  function setSpeed(k, pick) {
+    const sp = speeds(), T = app.meta.speed, b = bank(), timed = !app.debugSpeed && b.ms > 0; app.speed = sp.indexOf(k) >= 0 ? k : 1;
+    if (pick && timed) { const on = app.speed === T.x ? 1 : 0; if (b.on !== on) { b.on = on; writeSave(); } } // the player's own choice is remembered while time is banked
+    app.bankSec = timed ? Math.ceil(b.ms / 1000) : -1; const t = timed ? " " + Meta.clock(b.ms, true) : "";
+    togSpeed.forEach((b2) => { const x = b2.querySelector(".sv") || b2; x.textContent = app.speed + "\u00d7" + t; b2.classList.toggle("on", app.speed > 1); b2.classList.toggle("timed", !!t);
+      b2.setAttribute("aria-label", "Speed " + app.speed + "x" + (t ? ", " + fill(T.bank, { t: t.trim() }) : "") + (sp.length > 1 ? " (tap for " + sp[(sp.indexOf(app.speed) + 1) % sp.length] + "x)" : " (tap to buy " + T.x + "x time)")); });
   }
   function nextSpeed() {
-    const sp = speeds(); if (sp.length > 1) { setSpeed(sp[(sp.indexOf(app.speed) + 1) % sp.length]); return true; }
+    const sp = speeds(); if (sp.length > 1) { setSpeed(sp[(sp.indexOf(app.speed) + 1) % sp.length], true); return true; }
     if (app.screen !== "play" || !app.S) return false;
-    const T = app.meta.speed; $("sb-title").textContent = T.say; $("sb-buy").querySelector(".pl").textContent = T.buy; $("sb-buy").querySelector(".cprice b").textContent = T.price; $("sb-no").textContent = T.no;
-    $("speedbuy").hidden = false; $("sb-buy").focus(); return true;
+    speedSheet(); $("speedbuy").hidden = false; $("sb-buy").focus(); return true;
   }
+  // The buy sheet's words: what 5 minutes buy, what is banked, Buy (or Buy more) and Not now (or Play at 3x once banked).
+  function speedSheet() { const T = app.meta.speed, b = bank(); $("sb-title").textContent = T.say + (b.ms > 0 ? " " + fill(T.bank, { t: Meta.clock(b.ms, true) }) : ""); $("sb-buy").querySelector(".pl").textContent = b.ms > 0 ? T.more : T.buy; $("sb-buy").querySelector(".cprice b").textContent = T.price; $("sb-no").textContent = b.ms > 0 ? T.play : T.no; }
+  // Buy: price coins, secs more banked, the sheet stays up (buy again to stack). No: close (at x if anything is banked).
   function buySpeed(yes) {
-    $("speedbuy").hidden = true; if (!yes || app.fastPaid) return false;
-    const T = app.meta.speed, r = Meta.spend(app.save.data, T.price);
-    if (!r.ok) { cue("blocked"); toast(fill(T.short, { price: T.price, have: app.save.data.coins | 0 }), true); return false; }
-    writeSave(); app.fastPaid = true; setSpeed(T.x); cue("coin"); toast(fill(T.bought, { price: T.price })); renderPowers(); return true;
+    const T = app.meta.speed, b = bank();
+    if (!yes) { $("speedbuy").hidden = true; if (b.ms > 0 && app.speed !== T.x) setSpeed(T.x, true); return false; }
+    const r = Meta.spend(app.save.data, T.price);
+    if (!r.ok) { $("speedbuy").hidden = true; cue("blocked"); toast(fill(T.short, { price: T.price, have: app.save.data.coins | 0 }), true); return false; }
+    b.ms = Math.min(b.ms + T.secs * 1000, 360000000); b.on = 1; app.bankAt = 0; writeSave(); setSpeed(T.x, true); cue("coin"); toast(fill(T.bought, { price: T.price })); renderPowers(); speedSheet(); return true;
   }
-  // A new attempt (a level, Retry): back to 1x unless debugging; a bought speed is spent.
-  function roundSpeed() { app.fastPaid = false; $("speedbuy").hidden = true; if (!app.debugSpeed) setSpeed(1); else setSpeed(app.speed); }
+  // Each frame of a level (step): the bank drains by real time while the level runs at x (playing, or its sappers still out),
+  // never under the buy sheet, Settings, a sheet or a pause (step does not run then). Written every saveEveryMs; empty: 1x.
+  function bankStep(dt) {
+    if (app.debugSpeed || app.speed !== app.meta.speed.x || app.panel || !$("speedbuy").hidden || (app.tut && app.tut.on)) return;
+    const b = bank(), S = app.S; if (b.ms <= 0 || !S || !(S.status === E.PLAYING || S.busy)) return;
+    b.ms = Math.max(0, b.ms - dt); app.bankAt += dt;
+    if (b.ms <= 0) { b.on = 0; app.bankAt = 0; writeSave(); setSpeed(1); toast(app.meta.speed.out); return; }
+    if (app.bankAt >= app.meta.speed.saveEveryMs) { app.bankAt = 0; writeSave(); }
+    if (Math.ceil(b.ms / 1000) !== app.bankSec) setSpeed(app.speed); // the label, once a second
+  }
+  const bankSave = () => { if (app.bankAt > 0) { app.bankAt = 0; writeSave(); } }; // a pause or leaving a level keeps what was drained
+  // A new attempt (a level, Retry): the player's last choice while time is banked (debug keeps its own speed); the tour plays at 1x.
+  function roundSpeed() { $("speedbuy").hidden = true; if (app.debugSpeed) setSpeed(app.speed); else setSpeed(bank().on && bank().ms > 0 && !(app.tut && app.tut.on) ? app.meta.speed.x : 1); }
   // Colour-blind mode (v4 M1): the board's blocks and the queue tiles wear their material's mark. A toggle on the title
   // and the map, kept in the save.
   function setCb(on, save) {
@@ -1720,6 +1740,7 @@
     window.addEventListener("blur", pause);
     window.addEventListener("focus", () => { if (app.screen !== "play") resume(); });
     document.addEventListener("visibilitychange", () => { if (document.hidden) pause(); else if (app.screen !== "play") resume(); });
+    window.addEventListener("pagehide", bankSave); // lane P Stage 3: banked 3x time drained since the last write
     $("btn-retry").addEventListener("click", retry);
     $("btn-map").addEventListener("click", () => showScreen("map"));
     $("map-set").addEventListener("click", () => openSettings(true)); // v5 R3: the map's gear
@@ -1913,7 +1934,7 @@
     // The engine plays at show.pace x real time (x the speed button's 1x, 2x or 3x, or the victory march's pace, whichever
     // is faster); its log goes to the board every step.
     const S = app.S, sp = paceNow();
-    app.et += dt * sp; S.advanceTo(app.et); V.t = app.et; V.sync(S, true);
+    app.et += dt * sp; S.advanceTo(app.et); V.t = app.et; V.sync(S, true); bankStep(dt); // lane P Stage 3: banked 3x time drains in real time
     V.update(dt, sp);
     ended();
     if (app.unlockT > 0 && app.clock - app.unlockT >= app.cfg.show.unlockMs && app.clock - app.unlockT < app.cfg.show.unlockMs + dt) app.lineMoved = true; // the padlock's pop ends
@@ -2420,23 +2441,31 @@
         const off2 = app.V.studInfo();
         ok(hit2 && !app.cb && !off2.cb && off2.sum.every((h, m) => h === off.sum[m]) && !gl() && app.save.data.settings.cb === false, "colour-blind off again (the map's gear, the settings sheet): the studs are plain again, byte for byte"); }
       // 17. Speed (v5 R1): under ?debug=1 the top bar's button cycles 1x, 2x, 3x and back through real clicks (nothing
-      // saved), and at 3x the engine really runs three times real time. Without debug (forced off here): 1x; a tap asks
-      // to buy meta.speed.x for the round; short of coins nothing is spent; bought, that and coins - price, then the button
-      // toggles 1x and it free; Retry and a new level go back to 1x and the next one costs again.
+      // saved), and at 3x the engine really runs three times real time. Without debug (forced off here): the banked 3x time
+      // (lane P Stage 3): bought twice stacks, drains only while a level runs at 3x, survives a reload, empty drops to 1x.
       { startLevel(app.levels[0].id, "normal"); const b = document.querySelector("#top .tog-speed"), seen = [], hit = hitOK(b), sv0 = app.save.data.settings.speed;
         for (let k = 0; k < SPD.length; k++) { b.click(); seen.push([app.speed, b.textContent, paceNow() / SH.pace].join(":")); }
         const want = SPD.map((_, k) => { const v = SPD[(k + 1) % SPD.length]; return [v, v + "×", v].join(":"); });
         ok(hit && seen.join(" ") === want.join(" ") && app.save.data.settings.speed === sv0, "speed (debug): the button cycles " + seen.join(" ") + " (speed:label:pace); nothing saved");
         b.click(); b.click(); const et0 = app.et; for (let k = 0; k < 10; k++) step(16);
         ok(app.speed === SPD[2] && Math.abs(app.et - et0 - 160 * SPD[2] * SH.pace) < 1e-6, "speed: at " + app.speed + "x, 160 ms of real time moves the engine " + (app.et - et0) + " ms");
-        const T = app.meta.speed; app.debugSpeed = false;
-        try { startLevel(app.levels[0].id); const r1 = app.speed; app.save.data.coins = T.price - 1; b.click(); const asked = !$("speedbuy").hidden && hitOK($("sb-buy")) && $("sb-buy").querySelector(".cprice b").textContent === String(T.price);
-          $("sb-buy").click(); const poor = app.speed === 1 && (app.save.data.coins | 0) === T.price - 1 && $("speedbuy").hidden && !$("toast").hidden;
-          app.save.data.coins = T.price + 3; b.click(); $("sb-no").click(); const no = app.speed === 1 && (app.save.data.coins | 0) === T.price + 3;
-          b.click(); $("sb-buy").click(); const paid = app.speed === T.x && (app.save.data.coins | 0) === 3 && paceNow() / SH.pace === T.x;
-          b.click(); const t1 = app.speed; b.click(); const t2 = app.speed; retry(); const back = app.speed === 1 && !app.fastPaid; b.click(); const again = !$("speedbuy").hidden; $("sb-no").click();
-          ok(r1 === 1 && asked && poor && no && paid && t1 === 1 && t2 === T.x && back && again && (app.save.data.coins | 0) === 3, "speed (v5 R1): 1x; a tap asks to buy " + T.x + "x for " + T.price + "; short of coins nothing changes; Not now spends nothing; bought, " + T.x + "x and the coins drop; then the button toggles free; Retry is 1x again and the next one costs again"); }
-        finally { app.debugSpeed = DEBUG; setSpeed(SPD[0]); } }
+        const T = app.meta.speed, B0 = () => csave().data.bank, S0 = 2 * T.secs * 1000; app.debugSpeed = false; // lane P Stage 3: banked 3x time
+        try { csave().data.bank = { ms: 0, on: 0 }; startLevel(app.levels[0].id); const r1 = app.speed === 1 && b.textContent === "1×"; app.save.data.coins = T.price - 1; b.click(); const asked = !$("speedbuy").hidden && hitOK($("sb-buy")) && $("sb-buy").querySelector(".cprice b").textContent === String(T.price);
+          $("sb-buy").click(); const poor = app.speed === 1 && (app.save.data.coins | 0) === T.price - 1 && $("speedbuy").hidden && !$("toast").hidden && B0().ms === 0;
+          app.save.data.coins = 2 * T.price + 3; b.click(); $("sb-buy").click(); const one = B0().ms === T.secs * 1000 && !$("speedbuy").hidden && app.speed === T.x;
+          $("sb-buy").click(); const two = B0().ms === S0 && (app.save.data.coins | 0) === 3 && $("sb-buy").querySelector(".pl").textContent === T.more; $("sb-no").click();
+          const lab = b.textContent === T.x + "× " + Meta.clock(S0, true) && b.classList.contains("timed") && hitOK(b) && paceNow() / SH.pace === T.x;
+          for (let k = 0; k < 10; k++) step(100); const d3 = S0 - B0().ms; // 1 s at x: 1 s drained
+          b.click(); const off = app.speed === 1 && B0().on === 0, m1 = B0().ms; for (let k = 0; k < 10; k++) step(100); const d1 = m1 - B0().ms; // 1x: nothing
+          b.click(); pause(); const m2 = B0().ms; advance(1000); advance(2500); const d2 = m2 - B0().ms; resume(); app.lastT = 0; // paused: nothing
+          showScreen("title"); const m4 = B0().ms; for (let k = 0; k < 10; k++) step(100); const d4 = m4 - B0().ms; // the home: nothing
+          startLevel(app.levels[1].id); const kept = app.speed === T.x && B0().on === 1; retry(); const kept2 = app.speed === T.x; // the next level and a Retry: still x (the player's choice)
+          app.save.write(); const re = Save.open(app.save.store, key, app.order, app.gal.map((e) => e.id), app.meta).data.bank, reload = re.ms === B0().ms && re.on === 1; // a reload keeps the bank
+          B0().ms = 250; setSpeed(T.x); for (let k = 0; k < 5; k++) step(100); const out = app.speed === 1 && B0().ms === 0 && $("toast").textContent === T.out && b.textContent === "1×" && app.S.status === E.PLAYING;
+          b.click(); const rebuy = !$("speedbuy").hidden; $("sb-no").click();
+          ok(r1 && asked && poor && one && two && lab && d3 === 1000 && off && d1 === 0 && d2 === 0 && d4 === 0 && kept && kept2 && reload && out && rebuy,
+            "speed bank (lane P Stage 3): 1x; empty, a tap asks " + T.price + " coins for " + T.secs + " s of " + T.x + "x; short of coins nothing changes; bought twice = " + S0 / 60000 + " min banked and the coins drop; the button reads '" + T.x + "× " + Meta.clock(S0, true) + "'; it drains only at " + T.x + "x in a running level (1 s: " + d3 + " ms; at 1x " + d1 + ", paused " + d2 + ", on the home " + d4 + "); the next level and Retry keep " + T.x + "x; a reload keeps the bank; empty mid-level: 1x, the toast, play goes on, the next tap asks again (" + [r1, asked, poor, one, two, lab, off, kept, kept2, reload, out, rebuy].map(Number).join("") + ")"); }
+        finally { app.debugSpeed = DEBUG; csave().data.bank = { ms: 0, on: 0 }; $("speedbuy").hidden = true; setSpeed(SPD[0]); } }
       // 17b. Lane P Stage 3 (Peter): a board tap or Space while sappers run changes nothing (no skip to the end of the run).
       { startLevel(app.levels[0].id); playCol(winOf(app.entry).length ? +winOf(app.entry)[0] : 0); step(48); const n0 = app.S.now, b0 = app.S.busy, et0 = app.et;
         $("board").dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, pointerId: 1, isPrimary: true })); document.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true }));

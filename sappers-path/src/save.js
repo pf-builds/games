@@ -10,6 +10,8 @@
 // three bits; unknown ids and non-numbers are dropped. A save from before M4 loads with an empty gal.
 // v4 M5 (the meta layer, src/meta.js): coins (a whole number 0-9,999,999), inv {ladder, quartermaster, scout, recall, volley (v5 R1)};
 // v5 R1: got {id: 1} for each power-up unlocked (its one free use given; anything but 1 dropped)
+// Lane P Stage 3: bank {ms, on}, banked 3x time in real-time ms (0-100 h) and whether the player last left the button on 3x
+// (kept only with time banked). Part of the shared wallet; not in the save code (a load keeps the device's, main.js).
 // v5 R3: eggs {id: 1}, the journey map's easter eggs found (ids "s<sheet>-<i>"; anything else dropped, at most 256); a
 // save from before R3 loads with none found.
 // (each 0-99), best {id: [ms easy, ms normal, ms hard, taps easy, taps normal, taps hard, coins earned]} (whole numbers,
@@ -77,11 +79,11 @@
   const VERSION = 2, ALL = 7; // format 1's done masks: a bit per difficulty (1 easy, 2 normal, 4 hard)
 
   const MAXSPEED = 3;
-  const MAXCOINS = 9999999, MAXINV = 99, MAXMS = 3600000, MAXTAPS = 999, POWERS = ["ladder", "quartermaster", "scout", "recall", "volley"]; // v5 R1: volley
+  const MAXBANK = 360000000, MAXCOINS = 9999999, MAXINV = 99, MAXMS = 3600000, MAXTAPS = 999, POWERS = ["ladder", "quartermaster", "scout", "recall", "volley"]; // v5 R1: volley
   const whole = (v, hi) => (typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.min(hi, Math.round(v))) : 0);
   const startCoins = (meta) => whole(meta && meta.coins && meta.coins.start, MAXCOINS), maxLives = (meta) => Math.max(1, Math.min(99, (meta && meta.livesMax) | 0 || 5));
   function fresh(meta) { return { v: VERSION, done: {}, gal: {}, settings: { muted: false, music: true, sfx: true, speed: 1, cb: false }, last: null,
-    coins: startCoins(meta), inv: { ladder: 0, quartermaster: 0, scout: 0, recall: 0, volley: 0 }, got: {}, best: {}, lives: { n: maxLives(meta), at: 0 }, eggs: {} }; }
+    coins: startCoins(meta), inv: { ladder: 0, quartermaster: 0, scout: 0, recall: 0, volley: 0 }, got: {}, best: {}, lives: { n: maxLives(meta), at: 0 }, eggs: {}, bank: { ms: 0, on: 0 } }; }
   const EGG = /^s\d{1,3}-\d{1,2}$/, MAXEGGS = 256; // v5 R3: the journey map's easter eggs found, by id (journey.js eggId)
   const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
   const isObj = (o) => !!o && typeof o === "object" && !Array.isArray(o);
@@ -123,6 +125,7 @@
           : [whole(b[0], MAXMS), whole(b[1], MAXTAPS), whole(b[2], MAXCOINS)];
         if (row.some((v) => v > 0)) s.best[id] = row;
       }
+      const bk = isObj(raw.bank) ? raw.bank : {}; s.bank.ms = whole(bk.ms, MAXBANK); s.bank.on = bk.on === 1 && s.bank.ms > 0 ? 1 : 0; // lane P Stage 3: banked 3x time (ms, real time) and the player's last choice
       const lv = isObj(raw.lives) ? raw.lives : null;
       if (lv) { s.lives.n = Math.min(maxLives(meta), whole(lv.n, 99)); s.lives.at = whole(lv.at, 8.64e15); }
       const eg = isObj(raw.eggs) ? raw.eggs : {}; for (const k of Object.keys(eg).slice(0, MAXEGGS)) if (EGG.test(k) && eg[k] === 1) s.eggs[k] = 1; // v5 R3
@@ -274,7 +277,7 @@
   }
 
   // ---- v6 lane B: the Zen save ------------------------------------------------------------------------------------------
-  const ZVERSION = 1, ZEGG = /^z\d{1,2}-\d{1,3}-\d{1,2}$/, CODE2 = "SP2.", WALLET = ["coins", "inv", "got", "lives", "settings"], MODES = ["campaign", "zen"];
+  const ZVERSION = 1, ZEGG = /^z\d{1,2}-\d{1,3}-\d{1,2}$/, CODE2 = "SP2.", WALLET = ["coins", "inv", "got", "lives", "settings", "bank"], MODES = ["campaign", "zen"];
   const zenFresh = () => ({ v: ZVERSION, done: {}, gal: {}, eggs: {}, best: {}, last: null, moved: 0, mode: "campaign" });
   // order: the Zen levels in play order (with starts); gal: its pictures. Unknown ids dropped; never throws.
   function zenSanitize(raw, order, gal) {
@@ -316,7 +319,7 @@
   function rawOf(store, key) { try { const t = store.getItem(key); const o = t ? JSON.parse(t) : null; return isObj(o) ? o : null; } catch (e) { return null; } }
   // v6 fix pass: the Campaign's progress cleared with the SHARED WALLET kept (coins, inv, got, lives) and the preferences;
   // the cloud hook is not told (only a full reset clears a portal's cloud copy). A full reset is reset() plus resetZen().
-  function resetCampaign(sv, meta) { const w = sv.data, s = withPrefs(fresh(meta), w); for (const k of ["coins", "inv", "got", "lives"]) s[k] = JSON.parse(JSON.stringify(w[k])); sv.data = s; return sv.write(); }
+  function resetCampaign(sv, meta) { const w = sv.data, s = withPrefs(fresh(meta), w); for (const k of ["coins", "inv", "got", "lives", "bank"]) s[k] = JSON.parse(JSON.stringify(w[k])); sv.data = s; return sv.write(); }
   // Zen reset: Zen progress cleared (the move's flag and the mode kept), the wallet and the Campaign untouched.
   function resetZen(sv) { const d = zenFresh(); d.moved = 1; d.mode = sv.data.mode; sv.data = zenView(d, sv.wallet); return sv.write(); }
 
