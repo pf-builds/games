@@ -2,6 +2,30 @@
 
 **Concept:** Peter Frutchey's outside-in routing idea (Demo Bench, 2026-08-31), rethemed as a castle siege on 2026-09-27.
 
+## At a glance: every asset family and its licence
+
+Licence texts and deeds, in plain text (no links):
+
+- CC BY 4.0: https://creativecommons.org/licenses/by/4.0/
+- CC0 1.0 (public domain dedication): https://creativecommons.org/publicdomain/zero/1.0/
+- Apache License 2.0: https://www.apache.org/licenses/LICENSE-2.0 (full text shipped as LICENSE-Apache-2.0.txt)
+- SIL Open Font License 1.1: https://openfontlicense.org (full text shipped as fonts/OFL.txt)
+- CreativeML OpenRAIL++-M (Stable Diffusion XL base 1.0): https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/blob/main/LICENSE.md
+
+| Family | What ships | Where it comes from | Licence |
+|---|---|---|---|
+| Code-drawn art and sound | The blocks, sappers, goblins, keep, icons and UI; every sound effect | Drawn and synthesized in code by Click it! Studios | Original work |
+| AI images, Stable Diffusion XL base 1.0 | The home screen painting; the 25 castle map sheets; the 6 land map sheets (Kitten Forest, Snack Galaxy, Dino Valley) | Generated on the studio's own Mac (img2img over coded guides for the maps) | Model: CreativeML OpenRAIL++-M, outputs may be used commercially. AI-generated images may not be copyrightable |
+| AI images, FLUX.1 [schnell] by Black Forest Labs | The original pictures: Campaign side quests, Zen Worlds 1-4, 7 and 9-15 | Generated on the studio's own Mac (city96's 4-bit GGUF of the same weights) | Model: Apache License 2.0. Original work, Click it! Studios |
+| Paintings and prints | Zen World 1 (7 paintings and prints), the Wandering Gallery side quests, Zen Worlds 5, 6 and 16 | Public domain works from the open access collections of The Metropolitan Museum of Art (https://www.metmuseum.org/about-the-met/policies-and-documents/open-access), the Art Institute of Chicago (https://www.artic.edu/open-access/open-access-images), the National Gallery of Art (https://www.nga.gov/open-access-images.html) and the Cleveland Museum of Art (https://www.clevelandart.org/open-access) | Public domain, released under CC0 1.0. Some adapted for the game (cropped, pixelated, recoloured; each change on its row) |
+| Posters | Zen World 8 (13 WPA and travel posters) | Library of Congress, Prints & Photographs (each item's page on its row) | Public domain: no known restrictions on publication |
+| Twemoji | 16 pictures (Zen World 1 and the Campaign's side quests) | Twitter, Inc and other contributors, https://github.com/jdecked/twemoji | CC BY 4.0. Adapted: resized, pixelated, reduced to a few colours (recoloured) and outlined |
+| Noto Emoji | 17 pictures (Zen World 1 and the Campaign's side quests) | Google, https://github.com/googlefonts/noto-emoji | Apache License 2.0. Adapted the same way |
+| Music and jingle | theme, play and boss loops; the win jingle | Juhani Junkala (OpenGameArt) and Kenney (kenney.nl), rows below | CC0 1.0 |
+| Font | Jersey 10 | The Soft Type Project Authors (Google Fonts) | SIL Open Font License 1.1 |
+
+The game shows a short credit on the map (config.json gallery.credits, plain text): Twemoji and Noto as adapted with their licence URIs, the four museums, CC0.
+
 | Asset | Source | License | Date |
 |---|---|---|---|
 | All other art (materials, crews, goblin, keep, banner and map scenes, icons, UI) | Procedural pixel art drawn in code (`src/art.js`, `src/board.js`) | Original work, Peter Frutchey | 2026-09-27 |
@@ -11,21 +35,22 @@
 | Music, Goblin King's Throne loop, levels 175-200 (`audio/boss.m4a`): "Evil4 - Witch's Lair" (JRPG Pack 3 Evil) by Juhani Junkala | https://opengameart.org/content/jrpg-pack-3-evil (re-encoded to AAC, padded for gapless looping) | CC0 1.0 (public domain) | 2026-10-06 |
 | Win jingle (`audio/jingle-pizzi10.m4a`, plays; spares `audio/jingle-pizzi15.m4a`, `audio/jingle-steel10.m4a`): Music Jingles by Kenney (kenney.nl), `jingles_PIZZI10.ogg`, `jingles_PIZZI15.ogg`, `jingles_STEEL10.ogg` | https://kenney.nl/assets/music-jingles (License.txt in the pack; re-encoded to AAC) | CC0 1.0 (public domain) | 2026-10-06 |
 | Arcade thumbnail (`thumb.jpg`) | Cut from the home-screen painting (`art/home-wide.jpg`, SDXL base 1.0, seed 23; see its row), 800x450 | CreativeML OpenRAIL++-M (model); outputs may be used commercially. AI-generated images may not be copyrightable | 2026-10-06 |
-| Home screen art (`art/home-wide.jpg`, `art/home-tall.jpg`) | Painted siege generated locally on the studio Mac with Stable Diffusion XL base 1.0, text-to-image (`/Users/peter/local-ai/sapper_card.py`, variant h, seed 23, 1344x768), upscaled 2x (Lanczos plus a light unsharp mask) and cut to 1920x1097 and a 1080x1920 crop by `tools/home-art.py` | CreativeML OpenRAIL++-M (model); outputs may be used commercially. AI-generated images may not be copyrightable | generated 2026-10-06 |
+| Home screen art (`art/home-wide.jpg`, `art/home-tall.jpg`) | Painted siege generated locally on the studio Mac with Stable Diffusion XL base 1.0, text-to-image (the studio's card script, variant h, seed 23, 1344x768), upscaled 2x (Lanczos plus a light unsharp mask) and cut to 1920x1097 and a 1080x1920 crop by `tools/home-art.py` | CreativeML OpenRAIL++-M (model); outputs may be used commercially. AI-generated images may not be copyrightable | generated 2026-10-06 |
 | Levels | Generated and solver-verified by `tools/`, hand-ordered | Original work, Peter Frutchey | 2026-09-27 |
 | Journey map art (`map/sheet-01.webp` to `sheet-25.webp`; JPEG until v6.3, re-encoded to WebP in v7 with no other change) | Generated locally on the studio Mac with Stable Diffusion XL base 1.0 (stabilityai/stable-diffusion-xl-base-1.0), img2img over layout guides drawn in code (`tools/map-gen/`; prompts, seeds and strengths in its README) | CreativeML OpenRAIL++-M (model); outputs may be used commercially. AI-generated images may not be copyrightable | generated 2026-10-04 |
+| Land map art (`map/land-01-a.webp`, `land-01-b.webp` Kitten Forest; `land-02-a.webp`, `land-02-b.webp` Snack Galaxy; `land-05-a.webp`, `land-05-b.webp` Dino Valley) | Generated locally on the studio Mac with Stable Diffusion XL base 1.0, img2img over layout guides drawn in code, a land pass then a road pass (prompts, seeds and strengths in each land's map README in the studio's research folder) | CreativeML OpenRAIL++-M (model); outputs may be used commercially. AI-generated images may not be copyrightable | generated 2026-10-06 to 2026-10-08 |
 | Display font: Jersey 10 (`fonts/Jersey10-Regular.ttf`, headings, buttons and numbers). Copyright 2023 The Soft Type Project Authors, designer Sarah Cadigan-Fried | https://raw.githubusercontent.com/google/fonts/main/ofl/jersey10/Jersey10-Regular.ttf (license: https://raw.githubusercontent.com/google/fonts/main/ofl/jersey10/OFL.txt, shipped as `fonts/OFL.txt`) | SIL Open Font License 1.1 | 2026-09-27 |
 | Body font | System font stack, no files shipped | n/a | 2026-09-27 |
 
-Third-party assets: the Jersey 10 font above, unmodified, with its license file beside it, (v4 M4) the Gallery's pictures below, and (v5.2) the music and jingle above, all CC0 (credit given anyway). Any asset added later needs a row here before it lands.
+Third-party assets: the Jersey 10 font above, unmodified, with its license file beside it (OFL 1.1); the music and jingle above (CC0); the pictures below: Twemoji (CC BY 4.0, adapted), Noto Emoji (Apache 2.0, adapted, its licence text beside this file) and public domain paintings, prints and posters (CC0 or no known restrictions; credit given anyway). Any asset added later needs a row here before it lands.
 
 ## The Gallery's pictures (v4 M4)
 
 Sixty pictures, one per Gallery level (`levels/gallery.json`), converted to boards by `tools/convert.js`. Every line of `levels/gallery-manifest.json` holds the full record (source URL, author, license, date, and for ours the model, prompt and seed); the manifest also lists the 28 candidates that were not kept, with the reason. Critics 2 fix (2026-09-30): Trophy (`noto-1f3c6`, a stored spare) replaced Teapot and Fruit (`met-437999`) at 33; Teapot and Fruit is now a spare. `tools/gallery-src/` holds small downscaled copies of all 88 candidates (the converter's input; the game never fetches them), under the same licenses as below.
 
-- **Twemoji** by Twitter, Inc and other contributors, licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Source: https://github.com/jdecked/twemoji. The images are converted to pixel boards (resized, reduced to a few colours, outlined): changes made.
+- **Twemoji** by Twitter, Inc and other contributors, licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Source: https://github.com/jdecked/twemoji. Adapted: the images are converted to pixel boards (resized, pixelated, reduced to a few colours so recoloured, outlined): changes made.
 - **Noto Emoji** by Google, image resources licensed under the Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0). Source: https://github.com/googlefonts/noto-emoji (PNGs under `2D/png/128/`). Converted to pixel boards: changes made.
-- **Paintings and prints**: The Metropolitan Museum of Art Open Access, public domain works released under CC0 (https://www.metmuseum.org/about-the-met/policies-and-documents/open-access).
+- **Paintings and prints** in this table: The Metropolitan Museum of Art Open Access, public domain works released under CC0 (https://www.metmuseum.org/about-the-met/policies-and-documents/open-access). The Wandering Gallery side quests and Zen Worlds 5, 6 and 16 add the Art Institute of Chicago, the National Gallery of Art and the Cleveland Museum of Art (each row names its museum).
 - **Ours**: generated on the studio's own Mac with FLUX.1 [schnell] by Black Forest Labs (Apache 2.0; transformer loaded as city96's 4-bit GGUF quantization of the same weights). Original work, Click it! Studios. No real people, no trademarked characters.
 - The Gallery screen credits these in plain text (`config.json` `gallery.credits`; no links, per portal rules).
 

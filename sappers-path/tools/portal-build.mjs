@@ -72,7 +72,7 @@ for (const f of C.companions) { if (has(f)) put(f); else fails.push("companion m
 // LICENSES.txt: LICENSES.md as plain text. Headings become a line and an underline; a table row becomes one line per column
 // ("Header: cell"); ** and backticks go. Stage 3 rewrites the credit content itself; this is only the generation step.
 function plain(md) {
-  const out = [`Sapper's Path: asset licenses and credits (plain text, generated from LICENSES.md at ${commit.slice(0, 7)})`, ""], L = md.split("\n"); let head = null;
+  const out = [`Sapper's Path: asset licenses and credits (plain text, build ${commit.slice(0, 7)})`, ""], L = md.split("\n"); let head = null;
   const clean = (s) => s.replace(/\*\*/g, "").replace(/`/g, "").trim(), cells = (l) => l.trim().replace(/^\||\|$/g, "").split("|").map(clean);
   for (let i = 0; i < L.length; i++) { const l = L[i];
     if (/^#{1,6} /.test(l)) { if (i === 0) continue; const t = clean(l.replace(/^#+ /, "")); out.push("", t, (l.startsWith("## ") ? "=" : "-").repeat(Math.min(t.length, 100))); head = null; continue; }
@@ -80,7 +80,10 @@ function plain(md) {
     head = null; out.push(clean(l)); }
   return out.join("\n").replace(/\n{3,}/g, "\n\n").trim() + "\n";
 }
-put(C.licences.to, plain(rd(C.licences.from)));
+// Stage 3: the plain text names only what ships. licences.rewrite ([regex, words] pairs) puts words in place of the studio's
+// own records and build scripts; licences.dropRows drops table rows about files the build leaves out (the arcade's thumbnail).
+const lic = (md) => { let t = md.split("\n").filter((l) => !(/^\|/.test(l) && C.licences.dropRows.some((r) => l.includes(r)))).join("\n"); for (const [re, to] of C.licences.rewrite) t = t.replace(new RegExp(re, "g"), to); return t; };
+put(C.licences.to, plain(lic(rd(C.licences.from))));
 
 // ---- the checks --------------------------------------------------------------------------------------------------------------
 const list = []; (function ls(d) { for (const f of fs.readdirSync(d).sort()) { const p = path.join(d, f); if (fs.statSync(p).isDirectory()) ls(p); else list.push(path.relative(stage, p).split(path.sep).join("/")); } })(stage);
@@ -98,6 +101,12 @@ for (const f of list) { const lic = LIC.includes(f); if (!TEXT.test(f) && !lic) 
   for (const w of C.banned) { const re = new RegExp(w, "gi"); let n = 0, ok = 0; for (const m of t.matchAll(re)) { if (/^https?:/i.test(m[0]) && (lic || C.allowUrls.some((a) => t.startsWith(a, m.index)))) { ok++; continue; } n++; }
     if (n || ok) (scan[f] = scan[f] || {})[w] = ok ? n + " (+" + ok + " allowed)" : n;
     if (n) (w === "crazygames" ? warns : fails).push(`${f}: ${n} x /${w}/` + (w === "crazygames" ? " (the host portal, in a comment)" : "")); } }
+// Stage 3 (critic M1): the licence text holds no local path and every file it names is in the build.
+{ const t = fs.readFileSync(path.join(stage, C.licences.to), "utf8"), noUrl = t.replace(/https?:\/\/\S+/g, " ");
+  if (/\/Users\/|~\/|[A-Z]:\\/.test(t)) fails.push(C.licences.to + " holds a local path");
+  const named = [...new Set([...noUrl.matchAll(/(?:[\w.-]+\/)*[\w.-]+\.(?:json|js|mjs|py|sh|jpe?g|png|webp|m4a|ogg|ttf|txt|md|css|html)\b/g)].map((m) => m[0]))];
+  const missing = named.filter((n) => !list.includes(n) && !list.some((f) => f.endsWith("/" + n)));
+  if (missing.length) fails.push(C.licences.to + " names files the build does not hold: " + missing.join(", ")); }
 if (total > Math.min(...C.maxBytes)) fails.push(`unzipped total ${total} B over ${Math.min(...C.maxBytes)}`);
 if (list.length > C.maxFiles) fails.push(`${list.length} files over ${C.maxFiles}`);
 if (list.some((f) => f.startsWith("tools/") || f.endsWith(".md") || /(^|\/)(pool-[^/]*\.json|frozen\/|debug-v4\.json|gallery-manifest\.json)/.test(f))) fails.push("an excluded file is in the build");

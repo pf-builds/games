@@ -754,7 +754,7 @@ body.wide .home-card { max-width: 760px; }
 /* The map's foot: the story and the credits, under the first sheet. */
 #jr-start { padding: 12px 12px 16px; background: var(--bg) var(--wall, none) repeat; background-size: var(--wall-size, auto); border-top: 3px solid var(--ink); }
 #jr-start .story { margin: 0; }
-#map-credits { margin: 10px 2px 0; font-size: 13px; line-height: 1.35; color: var(--cream-soft); }
+#map-credits { margin: 10px 2px 0; font-size: 13px; line-height: 1.35; color: var(--cream-soft); overflow-wrap: anywhere; } /* lane P Stage 3: the licence URIs wrap on a phone */
 /* Play: a foot bar on a phone; on a wide screen the next-up card holds it, with the next side quest; the realm card. */
 .jr-card { display: none; }
 #map:not(.cards) #jr-next { display: block; flex: none; padding: 10px var(--gut) max(12px, env(safe-area-inset-bottom)); border-top: 3px solid var(--ink); background: var(--bg) var(--wall, none) repeat; background-size: var(--wall-size, auto); }
