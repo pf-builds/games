@@ -3,9 +3,9 @@
  "slug": "12-harvest-festival",
  "name": "Harvest Festival",
  "lore": "The road rolls into a cozy autumn fair: smiling pumpkins, friendly little ghosts, owls and black cats, kids in costumes, apples, pies and a big harvest feast, with sunflowers and hay bales all along the way.",
- "count": 45,
+ "count": 43,
  "source": "ai",
- "sourceNote": "FLUX.1 [schnell] by Black Forest Labs (Apache-2.0), 4-bit GGUF, run on the studio's Mac; lane C's Harvest Festival (cute Halloween, never scary, and Thanksgiving; close portraits on plain backgrounds and simple scenes, Peter's 10/13 framing rule), 45 picks and 10 spares after lane D's readability pre-read (game-research/sappers-path-v4/lands/12-harvest-festival/README.md, picks-full.json, workspace 931393c: 5 swaps from the spares, 3 dropped, then 2 of the swaps, hf037b Pumpkin stack and hf039 Corn kid, dropped too); lane C edited many of them (a tighter crop, the plain background split into a sky band and a ground band; the edit field, ops in edits.json; the file <id>e.png). Kind painting, shade on, converted by land.js boardOf with the whole manifest line (chroma). The 55 manifest lines are lane C's, whole; lane D filled only the empty url with the licence row's source in Dino Valley's words. The folder keeps lane C's slug (12); as installed it is Land 9 in the factory's numbering (era 17) and Zen World 10.",
+ "sourceNote": "FLUX.1 [schnell] by Black Forest Labs (Apache-2.0), 4-bit GGUF, run on the studio's Mac; lane C's Harvest Festival (cute Halloween, never scary, and Thanksgiving; close portraits on plain backgrounds and simple scenes, Peter's 10/13 framing rule), 43 picks and 12 spares after lane D's readability pre-read (game-research/sappers-path-v4/lands/12-harvest-festival/README.md, picks-full.json, workspace 931393c: 5 swaps from the spares, 3 dropped, then 2 of the swaps, hf037b Pumpkin stack and hf039 Corn kid, dropped too; round 2, workspace ee1b129, after critic-land-12: hf012b Dragon costume (maroon eyes, M1) and hf057 Feast table (the weak Hard, M2) dropped); lane C edited many of them (a tighter crop, the plain background split into a sky band and a ground band; the edit field, ops in edits.json; the file <id>e.png). Kind painting, shade on, converted by land.js boardOf with the whole manifest line (chroma). The 55 manifest lines are lane C's, whole; lane D filled only the empty url with the licence row's source in Dino Valley's words. The folder keeps lane C's slug (12); as installed it is Land 9 in the factory's numbering (era 17) and Zen World 10.",
  "features": [
   "linked",
   "mystery",
@@ -25,11 +25,11 @@
  "quests": "none",
  "zen": {
   "k": 10,
-  "note": "v7 lane D: Harvest Festival plays as Zen World 10 (tools/land.js ... zen writes tools/build-data/levels/zen.json only). Records keep the land factory numbers 543-587 (scratch/state.json seeded {from: 543, sheet0: 73, gal0: 62}: Worlds 1-9 hold 1-50, 201-250, 251-300, 301-350, 351-400, 401-429, 430-479, 480-492, 493-542; World 9's 7 sheets end at 72); the page shows them on from World 9's last Zen number (Zen 393-437, main.js zenNum); zen.numbered keys each licence row by its Zen picture number before its level.",
+  "note": "v7 lane D: Harvest Festival plays as Zen World 10 (tools/land.js ... zen writes tools/build-data/levels/zen.json only). Records keep the land factory numbers 543-585 (scratch/state.json seeded {from: 543, sheet0: 73, gal0: 62}: Worlds 1-9 hold 1-50, 201-250, 251-300, 301-350, 351-400, 401-429, 430-479, 480-492, 493-542; World 9's 7 sheets end at 72); the page shows them on from World 9's last Zen number (Zen 393-435, main.js zenNum); zen.numbered keys each licence row by its Zen picture number before its level.",
   "numbered": true
  },
  "profile": {
-  "note": "Zen World 10, casual (v7 lane D, 2026-10-13): Dino Valley's profile as it ships, as Worlds 7 Under the Sea and 9 Puppy Park (tools/lands/11-puppy-park/land.json; AI pictures): tags E18/N26/H6/X0 at 50 (E16/N24/H5 at this world's 45) ending on a Hard, ? cards, linked squads, gentle moats (2 ways in) on pictures that can carry and deal one, no locks, no archers, no Extreme, no mystery blocks (Peter, 2026-10-08), careful floor 0.5 every tag, deal attempts 96 at the land-config squads.",
+  "note": "Zen World 10, casual (v7 lane D, 2026-10-13): Dino Valley's profile as it ships, as Worlds 7 Under the Sea and 9 Puppy Park (tools/lands/11-puppy-park/land.json; AI pictures): tags E18/N26/H6/X0 at 50 (E15/N23/H5 at this world's 43) ending on a Hard, ? cards, linked squads, gentle moats (2 ways in) on pictures that can carry and deal one, no locks, no archers, no Extreme, no mystery blocks (Peter, 2026-10-08), careful floor 0.5 every tag, deal attempts 96 at the land-config squads.",
   "tags": {
    "shares": {
     "easy": 0.36,
@@ -159,13 +159,11 @@
   "hf038",
   "hf051",
   "hf011",
-  "hf012b",
   "hf013",
   "hf036b",
   "hf014b",
   "hf015",
   "hf056",
-  "hf057",
   "hf017",
   "hf018",
   "hf019b",
@@ -190,7 +188,7 @@
   "hf034b",
   "hf035"
  ],
- "mainNote": "Lane C's order (picks-full.json landMain, workspace 931393c: 45 after the pre-read's 5 swaps and 5 drops).",
+ "mainNote": "Lane C's order (picks-full.json landMain, workspace ee1b129: 43 after the pre-read's 5 swaps and 5 drops and the critic's 2 drops).",
  "map": {
   "fromLayout": [
    12,
@@ -281,7 +279,8 @@
   "hf061": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
   "hf070": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
   "hf023b": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
-  "hf033": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)"
+  "hf033": "deal probe (2026-10-13): 0 of 120 ring deals at every tag (6 rings x 20 attempts a tag at the profile deal setting)",
+  "hf042": "critic-land-12 m1 (2026-10-13): its ring at 546 runs from the top edge down the door's side through the sky band and reads as a stray line"
  },
- "moatNote": "38 of the 45 boards can carry a ring (land.js moatCan; hf036b Owl in leaves can't, as lane C counts); lane D deal probe (6 rings x 20 attempts a tag at the profile deal setting, the Worlds 4-9 scratch script, re-run on the 47 boards of the pre-read's first round): hf005 Wise owl, hf006 Candy corn, hf015 Pumpkin pie, hf018 Corn cob, hf030b Spider pal, hf061 Owl post, hf070 Ghost ship, hf023b Cider mug and hf033 Pie slice never deal with one (moatSkip); the rest dealt 2-100% (hf038 hf026 hf025b hf064 hf021 hf013 hf019b hf063 hf031 96-100%, hf042 hf009b 78-93%, hf040b hf049 hf035 hf051 hf007 hf034b hf029 53-78%, hf001 hf003 hf022 hf068 hf027 hf028 hf012b hf011 23-53%, hf041 hf020b 3-23%, hf045 hf057 2-6%)."
+ "moatNote": "38 of the 45 boards can carry a ring (land.js moatCan; hf036b Owl in leaves can't, as lane C counts); lane D deal probe (6 rings x 20 attempts a tag at the profile deal setting, the Worlds 4-9 scratch script, re-run on the 47 boards of the pre-read's first round): hf005 Wise owl, hf006 Candy corn, hf015 Pumpkin pie, hf018 Corn cob, hf030b Spider pal, hf061 Owl post, hf070 Ghost ship, hf023b Cider mug and hf033 Pie slice never deal with one (moatSkip); the rest dealt 2-100% (hf038 hf026 hf025b hf064 hf021 hf013 hf019b hf063 hf031 96-100%, hf042 hf009b 78-93%, hf040b hf049 hf035 hf051 hf007 hf034b hf029 53-78%, hf001 hf003 hf022 hf068 hf027 hf028 hf012b hf011 23-53%, hf041 hf020b 3-23%, hf045 hf057 2-6%). Round 2 (critic-land-12 m1): hf042 Trick or treat into moatSkip for how its ring reads, not for dealing."
 }

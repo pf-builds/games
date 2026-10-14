@@ -38,24 +38,6 @@
   "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
  },
  {
-  "id": "ck031",
-  "title": "Balloon ride",
-  "artist": "Click it! Studios",
-  "date": "2026-10-13",
-  "kind": "painting",
-  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
-  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 10031; prompt in tools/lands/13-cloud-kingdom/pictures/manifest.json",
-  "file": "fullsrc/ck031.png",
-  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
-  "prompt": "a bear riding in a hot-air balloon basket, a blue sky with white clouds, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
-  "seed": 10031,
-  "size": [
-   1024,
-   1024
-  ],
-  "raw": "raw/ck031-s10031.png"
- },
- {
   "id": "ck003",
   "title": "Rainbow",
   "artist": "Click it! Studios",
@@ -75,24 +57,6 @@
   "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
  },
  {
-  "id": "ck033",
-  "title": "Kite flyer",
-  "artist": "Click it! Studios",
-  "date": "2026-10-13",
-  "kind": "painting",
-  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
-  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 10033; prompt in tools/lands/13-cloud-kingdom/pictures/manifest.json",
-  "file": "fullsrc/ck033.png",
-  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
-  "prompt": "a fox flying a big red kite, a blue sky over green hills, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
-  "seed": 10033,
-  "size": [
-   1024,
-   1024
-  ],
-  "raw": "raw/ck033-s10033.png"
- },
- {
   "id": "ck006",
   "title": "Kite",
   "artist": "Click it! Studios",
@@ -110,24 +74,6 @@
   ],
   "raw": "raw/ck006-s10006.png",
   "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
- },
- {
-  "id": "ck035",
-  "title": "Rainbow slide",
-  "artist": "Click it! Studios",
-  "date": "2026-10-13",
-  "kind": "painting",
-  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
-  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 10035; prompt in tools/lands/13-cloud-kingdom/pictures/manifest.json",
-  "file": "fullsrc/ck035.png",
-  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
-  "prompt": "a bunny sliding down a rainbow, a blue sky, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
-  "seed": 10035,
-  "size": [
-   1024,
-   1024
-  ],
-  "raw": "raw/ck035-s10035.png"
  },
  {
   "id": "ck007",
@@ -352,25 +298,6 @@
   "raw": "raw/ck017b-s10517.png"
  },
  {
-  "id": "ck018b",
-  "title": "Flamingo",
-  "artist": "Click it! Studios",
-  "date": "2026-10-13",
-  "kind": "painting",
-  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
-  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 10518; prompt in tools/lands/13-cloud-kingdom/pictures/manifest.json",
-  "file": "fullsrc/ck018be.png",
-  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
-  "prompt": "a pink flamingo flying, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat teal background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
-  "seed": 10518,
-  "size": [
-   1024,
-   1024
-  ],
-  "raw": "raw/ck018b-s10518.png",
-  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
- },
- {
   "id": "ck019b",
   "title": "Bubble",
   "artist": "Click it! Studios",
@@ -498,24 +425,6 @@
    1024
   ],
   "raw": "raw/ck024-s10024.png"
- },
- {
-  "id": "ck045",
-  "title": "Cloud castle gate",
-  "artist": "Click it! Studios",
-  "date": "2026-10-13",
-  "kind": "painting",
-  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
-  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 10045; prompt in tools/lands/13-cloud-kingdom/pictures/manifest.json",
-  "file": "fullsrc/ck045.png",
-  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
-  "prompt": "a knight at the gate of a white cloud castle, a pink sky, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
-  "seed": 10045,
-  "size": [
-   1024,
-   1024
-  ],
-  "raw": "raw/ck045-s10045.png"
  },
  {
   "id": "ck027b",
@@ -760,5 +669,96 @@
   ],
   "raw": "raw/ck016b-s10516.png",
   "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "ck031",
+  "title": "Balloon ride",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 10031; prompt in tools/lands/13-cloud-kingdom/pictures/manifest.json",
+  "file": "fullsrc/ck031.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a bear riding in a hot-air balloon basket, a blue sky with white clouds, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 10031,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ck031-s10031.png"
+ },
+ {
+  "id": "ck033",
+  "title": "Kite flyer",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 10033; prompt in tools/lands/13-cloud-kingdom/pictures/manifest.json",
+  "file": "fullsrc/ck033.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a fox flying a big red kite, a blue sky over green hills, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 10033,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ck033-s10033.png"
+ },
+ {
+  "id": "ck035",
+  "title": "Rainbow slide",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 10035; prompt in tools/lands/13-cloud-kingdom/pictures/manifest.json",
+  "file": "fullsrc/ck035.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a bunny sliding down a rainbow, a blue sky, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 10035,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ck035-s10035.png"
+ },
+ {
+  "id": "ck018b",
+  "title": "Flamingo",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 10518; prompt in tools/lands/13-cloud-kingdom/pictures/manifest.json",
+  "file": "fullsrc/ck018be.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a pink flamingo flying, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat teal background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 10518,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ck018b-s10518.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "ck045",
+  "title": "Cloud castle gate",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 10045; prompt in tools/lands/13-cloud-kingdom/pictures/manifest.json",
+  "file": "fullsrc/ck045.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a knight at the gate of a white cloud castle, a pink sky, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, no text",
+  "seed": 10045,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/ck045-s10045.png"
  }
 ]

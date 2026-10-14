@@ -281,25 +281,6 @@
   "raw": "raw/hf011-s9011.png"
  },
  {
-  "id": "hf012b",
-  "title": "Dragon costume",
-  "artist": "Click it! Studios",
-  "date": "2026-10-13",
-  "kind": "painting",
-  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
-  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9512; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
-  "file": "fullsrc/hf012be.png",
-  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
-  "prompt": "a toddler in a green dragon costume, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat orange background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
-  "seed": 9512,
-  "size": [
-   1024,
-   1024
-  ],
-  "raw": "raw/hf012b-s9512.png",
-  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
- },
- {
   "id": "hf013",
   "title": "Scarecrow",
   "artist": "Click it! Studios",
@@ -392,24 +373,6 @@
    1024
   ],
   "raw": "raw/hf056-s9056.png"
- },
- {
-  "id": "hf057",
-  "title": "Feast table",
-  "artist": "Click it! Studios",
-  "date": "2026-10-13",
-  "kind": "painting",
-  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
-  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9057; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
-  "file": "fullsrc/hf057.png",
-  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
-  "prompt": "a roast turkey on a table with a pie, a warm red background, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
-  "seed": 9057,
-  "size": [
-   1024,
-   1024
-  ],
-  "raw": "raw/hf057-s9057.png"
  },
  {
   "id": "hf017",
@@ -1025,5 +988,42 @@
    1024
   ],
   "raw": "raw/hf039-s9039.png"
+ },
+ {
+  "id": "hf012b",
+  "title": "Dragon costume",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9512; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf012be.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a toddler in a green dragon costume, a plain background, cute friendly storybook style, flat vector illustration, a big close-up of the subject filling most of the picture, on a plain flat orange background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9512,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf012b-s9512.png",
+  "edit": "Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the background split into a sky band and a ground band (ops in edits.json)"
+ },
+ {
+  "id": "hf057",
+  "title": "Feast table",
+  "artist": "Click it! Studios",
+  "date": "2026-10-13",
+  "kind": "painting",
+  "licence": "Original work (generated with FLUX.1 [schnell], Apache 2.0)",
+  "url": "Generated locally with FLUX.1 [schnell] (4-bit GGUF), seed 9057; prompt in tools/lands/12-harvest-festival/pictures/manifest.json",
+  "file": "fullsrc/hf057.png",
+  "model": "FLUX.1-schnell, 4-bit GGUF city96/FLUX.1-schnell-gguf flux1-schnell-Q4_K_S, 4 steps, guidance 0",
+  "prompt": "a roast turkey on a table with a pie, a warm red background, cute friendly storybook style, flat vector illustration, a simple scene, the main character big in the foreground filling half of the picture, one big prop, a plain simple background, bold flat colour shapes with no outlines, limited palette of 5 colours, high contrast, not scary, no text",
+  "seed": 9057,
+  "size": [
+   1024,
+   1024
+  ],
+  "raw": "raw/hf057-s9057.png"
  }
 ]
