@@ -1631,9 +1631,13 @@
     app.paused = false; app.lastT = 0; $("pause").hidden = true;
     if (app.audio && app.audio.ctx) Audio.unlock(app.audio);
   }
-  // v4.2 fix: the upright card. coarse: a touch screen (CSS pointer: coarse); needed: held sideways under maxH CSS px tall
+  // v4.2 fix: the upright card. coarse: a touch-only phone (below); needed: held sideways under maxH CSS px tall
   // (layout.upright). Showing it pauses as a blur does (unless already paused); hiding it resumes only that pause.
-  const coarse = () => !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
+  // Lane P Stage 3: a phone only. Not when any fine pointer is present (a touch laptop or Chromebook with a trackpad or
+  // mouse, e.g. in a portal's 821x462 frame), nor on a screen whose short side is over layout.upright.maxScreen CSS px (a
+  // tablet in tablet mode). The name stays (SP.upright, selfTest).
+  const coarse = () => { const mm = (q) => !!(window.matchMedia && window.matchMedia(q).matches), sc = window.screen, side = sc ? Math.min(sc.width, sc.height) : 0;
+    return mm("(pointer: coarse)") && !mm("(any-pointer: fine)") && !(side > app.cfg.layout.upright.maxScreen); };
   const uprightNeeded = (w, h, c) => !!c && w > h && h < app.cfg.layout.upright.maxH;
   function setUpright(on) {
     on = !!on; if (on === app.upright) return;
@@ -2285,6 +2289,10 @@
         const bad = cases.filter(([w, h, c, want]) => uprightNeeded(w, h, c) !== want);
         ok(!bad.length, "upright: a touch screen held sideways under " + U.maxH + " px tall asks to be turned upright; a desktop window, a portal's landscape iframe and a tablet never do" + (bad.length ? " (" + JSON.stringify(bad) + ")" : ""));
         ok(!uprightNeeded(innerWidth, innerHeight, coarse()) && $("upright").hidden, "upright: no card here (" + innerWidth + "x" + innerHeight + (coarse() ? ", touch" : "") + ")");
+        { const mm = window.matchMedia, sd = Object.getOwnPropertyDescriptor(window, "screen"), r = []; // lane P Stage 3: phones only
+          const fake = (fine, side) => { window.matchMedia = (q) => ({ matches: q === "(pointer: coarse)" || (q === "(any-pointer: fine)" && fine) }); Object.defineProperty(window, "screen", { configurable: true, get: () => ({ width: side * 2, height: side }) }); return coarse(); };
+          try { r.push(fake(false, 375), fake(true, 375), fake(false, U.maxScreen + 200)); } finally { window.matchMedia = mm; if (sd) Object.defineProperty(window, "screen", sd); else delete window.screen; }
+          ok(r.join() === "true,false,false", "upright: a touch-only phone counts (" + r[0] + "); a touch screen with any fine pointer (touch laptop, Chromebook) never does (" + r[1] + "), nor a tablet-sized screen (" + r[2] + ")"); }
         startLevel(app.levels[0].id, "normal"); setUpright(true); const uc = app.clock; advance(1000); advance(1600);
         const held = app.paused && app.clock === uc && !$("upright").hidden && hitOK($("upright")) && !hitOK(app.cards[0]);
         resume(); $("pause").click(); const stayed = app.paused; // nothing resumes behind the card
