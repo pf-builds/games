@@ -4,10 +4,11 @@
 //   PLAYWRIGHT_MODULE=$(npm root -g)/playwright/index.mjs node tools/portal-sizes.mjs [--only 907x510] [--out DIR]
 // Serves the game folder from this process (sizes.port, 127.0.0.1) and, for every size in sizes.list (CrazyGames' official
 // iframe sizes, the small ones it also names, and the runbook's phones), drives six screens: the home (fresh profile), level
-// 1 (one real tap on Play), its win sheet, a loss sheet (a jam on a Campaign level), a Zen "A little stuck" sheet and the map.
+// 1 (one real tap on Play), the speed buy sheet with 0 coins, its win sheet, a loss sheet (a jam on a Campaign level), a Zen "A little stuck" sheet and the map.
 // A fresh profile with 0 coins, so the loss sheet is its longest (a continue the player cannot afford). The game is set up through window.SP (?debug=1; only to reach the screens: the layout is the shipped one). On each screen
 // every visible control (buttons, squad cards, spaces, power-up badges and their names, pills, the coach line) and every
-// sheet's card and title must sit wholly inside the viewport, and the smallest visible text must be at least sizes.minFontPx
+// sheet's card and title must sit wholly inside the viewport and inside any scrolling ancestor (a button its sheet scrolls
+// out of view fails), and the smallest visible text must be at least sizes.minFontPx
 // on screen (font size times any zoom on the way). Prints PASS/FAIL per size and screen, writes a screenshot of each and a
 // contact sheet (<out>/contact.png, via python3 + Pillow). Exit 0 when every check passes. The server closes at the end.
 import fs from "node:fs";
@@ -31,13 +32,15 @@ const URL_ = `http://127.0.0.1:${Z.port}/`;
 const probe = (sel) => {
   const W = innerWidth, H = innerHeight, bad = [], vis = (el) => { if (el.closest("[hidden]")) return false; const r = el.getBoundingClientRect(); if (!(r.width > 0 && r.height > 0)) return false; for (let e = el; e; e = e.parentElement) { const s = getComputedStyle(e); if (s.display === "none" || s.visibility === "hidden" || +s.opacity === 0) return false; } return true; };
   const name = (el) => (el.id ? "#" + el.id : el.className && typeof el.className === "string" ? "." + el.className.trim().split(/\s+/).slice(0, 2).join(".") : el.tagName.toLowerCase()) + (el.textContent ? " '" + el.textContent.trim().slice(0, 18) + "'" : "");
-  for (const el of document.querySelectorAll(sel)) { if (!vis(el)) continue; const r = el.getBoundingClientRect(); if (r.left < -0.5 || r.top < -0.5 || r.right > W + 0.5 || r.bottom > H + 0.5) bad.push(name(el) + " [" + [r.left, r.top, r.right, r.bottom].map(Math.round).join(",") + "]"); }
+  // the viewport cut down by every scrolling or clipping ancestor (Stage 3 re-check: a button cut by its own sheet's scroll)
+  const clip = (el) => { let c = [0, 0, W, H]; for (let e = el.parentElement; e && e !== document.body; e = e.parentElement) { const s = getComputedStyle(e); if (s.overflowX === "visible" && s.overflowY === "visible") continue; const q = e.getBoundingClientRect(); c = [Math.max(c[0], q.left), Math.max(c[1], q.top), Math.min(c[2], q.right), Math.min(c[3], q.bottom)]; } return c; };
+  for (const el of document.querySelectorAll(sel)) { if (!vis(el)) continue; const r = el.getBoundingClientRect(), c = /sheetcard/.test(el.className) ? [0, 0, W, H] : clip(el); if (r.left < c[0] - 0.5 || r.top < c[1] - 0.5 || r.right > c[2] + 0.5 || r.bottom > c[3] + 0.5) bad.push(name(el) + " [" + [r.left, r.top, r.right, r.bottom].map(Math.round).join(",") + "]" + (c[3] < H || c[1] > 0 ? " clipped to [" + c.map(Math.round).join(",") + "]" : "")); }
   let min = 1e9, at = ""; const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   for (let n = walker.nextNode(); n; n = walker.nextNode()) { const el = n.parentElement; if (!el || !n.textContent.trim() || !vis(el) || el.closest("#jr-world, script, style")) continue; const k = el.offsetWidth > 0 ? el.getBoundingClientRect().width / el.offsetWidth : 1, fs = parseFloat(getComputedStyle(el).fontSize) * k; if (fs < min) { min = fs; at = name(el); } }
   return { bad, min: Math.round(min * 10) / 10, at };
 };
 const scope = (pre, list) => list.split(",").map((x) => pre + " " + x.trim()).join(", ");
-const HOME = scope("#title", "button, .pill, h1, .mode-card, .tab"), PLAY = scope("#play", "button, .card, .slot, .pw, .pw-name, .pill, #lvl-name, #line-head") + ", #coach:not([hidden]), " + scope("#panel", ".sheetcard, .p-title, #p-line, button") + ", #pwtip, #toast, .modal:not([hidden]) .sheetcard";
+const HOME = scope("#title", "button, .pill, h1, .mode-card, .tab"), BUY = "#speedbuy .sheetcard, #speedbuy button, #sb-title, #sb-poor", PLAY = scope("#play", "button, .card, .slot, .pw, .pw-name, .pill, #lvl-name, #line-head") + ", #coach:not([hidden]), " + scope("#panel", ".sheetcard, .p-title, #p-line, button") + ", #pwtip, #toast, .modal:not([hidden]) .sheetcard";
 const MAPSEL = ".map-top button, .map-top .pill, #map-mode, #jr-next button, #map-play, #jr-realm";
 
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE);
@@ -53,9 +56,11 @@ try {
     const sheet = async (screen, setup, want) => { await p.evaluate(setup); for (let i = 0; i < 120 && await p.evaluate(() => document.getElementById("panel").hidden); i++) await p.evaluate(() => SP.tick(100));
       const t = await p.evaluate(() => (document.getElementById("panel").hidden ? "" : document.getElementById("p-title").textContent)); if (!want.test(t)) { fails++; rows.push("FAIL " + tag.padEnd(10) + screen.padEnd(6) + " the sheet did not come up (title '" + t + "')"); } await check(screen, PLAY); };
     await ctx.addInitScript(() => { try { if (!sessionStorage.getItem("sz")) { sessionStorage.setItem("sz", "1"); localStorage.clear(); localStorage.setItem("sappers-path.v3", JSON.stringify({ v: 2, coins: 0 })); } } catch (e) { /* no storage */ } });
-    await p.goto(URL_ + "?debug=1"); await p.waitForFunction(() => window.SP && document.querySelector("#title-art.on"), null, { timeout: 30000 });
+    await p.goto(URL_); await p.waitForFunction(() => document.querySelector("#title-art.on"), null, { timeout: 30000 }); // the game as it ships for these three
     await check("home", HOME);
     await p.click("#btn-play"); await p.waitForTimeout(600); await check("level", PLAY);
+    await p.click("#top .tog-speed"); await check("buy", BUY); // the buy sheet with 0 coins (Buy off, the short line)
+    await p.goto(URL_ + "?debug=1"); await p.waitForFunction(() => window.SP, null, { timeout: 30000 }); // SP, to reach the sheets
     await sheet("win", () => { SP.load(1); for (const c of SP.winOrder()) { SP.play(+c); SP.settle(); } }, /./);
     await sheet("loss", () => { for (let n = 64; n <= 120; n++) { SP.load(n); const q = SP.lossPlan(); if (q) { for (const c of q.prefix) { SP.play(+c); SP.settle(); } return; } } }, /failed/i);
     await sheet("zen", async () => { const ids = SP.zen().filter((id) => /^z1-/.test(id)); for (const id of ids.slice(0, 30)) { await SP.load(id); const q = SP.lossPlan(); if (q) { for (const c of q.prefix) { SP.play(+c); SP.settle(); } return; } } }, /stuck/i);
