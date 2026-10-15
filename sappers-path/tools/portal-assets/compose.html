@@ -75,9 +75,10 @@ const L = {
   // D-F (Peter, 2026-10-14: the covers move to the game's own pixel look): the art is the game's board drawing a cover
   // scene (cover-levels.py, cover-boards.mjs, cover-crop.py: /art/art-<opt>-<size>.png, already the cover's exact size).
   // The title goes in the sky band at the top (F: the foot), heavier outline for the busy board behind it.
-  // D: the breach in the wall, the King alarmed on the battlements.
-  D: { land: () => { img(`/art/art-D-land${HI}.png`, "paint"); logo(["Sapper's Path"], 250, 650, 150, 0.09); },
-       port: () => { img(`/art/art-D-port${HI}.png`, "paint"); logo(["Sapper's", "Path"], 190, W / 2, 175, 0.09); },
+  // D (Peter's final pick): the breach in the wall full of sappers, the King alarmed on the battlements; the landscape
+  // title keeps E's safe margin from the left edge.
+  D: { land: () => { img(`/art/art-D-land${HI}.png`, "paint"); logo(["Sapper's Path"], 230, 680, 150, 0.09); },
+       port: () => { img(`/art/art-D-port${HI}.png`, "paint"); logo(["Sapper's", "Path"], 180, W / 2, 170, 0.09); },
        square: () => { img(`/art/art-D-square${HI}.png`, "paint"); logo(["Sapper's Path"], 138, W / 2, 72, 0.09); } },
   // E (Peter's pick): the big scowling King on a fort breached under him (bottom right), the front squad cards (the
   // game's tiles) bottom left, clear of the breach.

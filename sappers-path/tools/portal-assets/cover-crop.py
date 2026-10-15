@@ -10,15 +10,16 @@ import json, os, sys
 from PIL import Image, ImageDraw, ImageEnhance
 
 SIZES = {"land": (1920, 1080), "port": (800, 1200), "square": (800, 800), "port@1080x1620": (1080, 1620)}  # the last: the portrait video's first frame
-PICK = {"D": 1650, "E": 1600, "F": 6000}  # sim ms of the grab used per option (F: its "after")
+PICK = {"D": 2300, "E": 1600, "F": 6000}
+FOOT = {"D": False, "E": True, "F": True}  # keep the bottom border row (sappers walking in from the camp); D: no, its hole is the whole story  # sim ms of the grab used per option (F: its "after")
 COLOR, BRIGHT = 1.12, 1.03
 SEAM = 0.011  # F: the diagonal's ink seam, as a share of the cover's width
 DIAG = (0.62, 0.38)  # F: where the diagonal meets the top and the bottom edge (shares of the width)
 
 
-def scene(path, L):
+def scene(path, L, foot=True):
     im = Image.open(path).convert("RGB"); cs = im.size[0] // L["w"]
-    return im.crop((cs, cs, (L["w"] - 1) * cs, L["h"] * cs)), cs  # the cells plus the bottom border row
+    return im.crop((cs, cs, (L["w"] - 1) * cs, (L["h"] - (0 if foot else 1)) * cs)), cs  # the cells (plus the bottom border row)
 
 
 def fit(im, W, H, tag):
@@ -47,9 +48,9 @@ def main(boards, levels, out, pick):
     for o in "DEF":
         for size, (W, H) in SIZES.items():
             key = f"cover{o}_{size.split('@')[0]}"; L = LV[key]
-            src, cs = scene(os.path.join(boards, f"{key}-{pick[o]}.png"), L)
+            src, cs = scene(os.path.join(boards, f"{key}-{pick[o]}.png"), L, FOOT[o])
             im, k = fit(src, W, H, key)
-            if o == "F": im = diagonal(fit(scene(os.path.join(boards, f"{key}-t0.png"), L)[0], W, H, key)[0], im)
+            if o == "F": im = diagonal(fit(scene(os.path.join(boards, f"{key}-t0.png"), L, FOOT[o])[0], W, H, key)[0], im)
             lift(im).save(os.path.join(out, f"art-{o}-{size}.png"))
             print(f"art-{o}-{size}.png {W}x{H}: {key} at {pick[o]} ms, {cs} px cells scaled x{k:.3f} ({cs * k:.1f} px a cell on the cover)")
 

@@ -18,7 +18,7 @@ NAMES = {"a": "sky", "b": "cloud", "c": "gold", "d": "goblin", "e": "ink", "f": 
          "k": "timber", "l": "eye", "m": "sun"}
 STONE, SHADE, BANNER, TIMBER = 6, 7, 9, 11  # material ids of f, g, i, k (the squads' colours)
 # Interior cells per option and size (cover px / cells = the cell on the cover; the board draws 66 px cells).
-SIZES = {"D": {"land": (30, 17), "port": (16, 24), "square": (16, 16)},
+SIZES = {"D": {"land": (30, 17), "port": (16, 24), "square": (20, 20)},
          "E": {"land": (36, 20), "port": (16, 24), "square": (20, 20)},
          "F": {"land": (30, 17), "port": (16, 24), "square": (16, 16)}}
 
@@ -87,36 +87,32 @@ DEAL = [[[STONE, 90]], [[SHADE, 60]], [[STONE, 70]], [[SHADE, 50]], [[STONE, 40]
 
 
 def scene_D(size, w, h):
-    """The Breach: a wall across the lower part, its timber gate dug through from the foot, banners either side, the King
-    alarmed on the battlements. The wall's ends are shade stone, a colour no squad digs, so the dig comes up from the foot
-    and through the gate only."""
+    """The Breach (Peter's final pick, 2026-10-14): three things only, so it reads at 200x112: the title in the sky, the
+    alarmed King on the battlements (right; his collar and cloak on the merlons), and a big hole dug up through the wall
+    (centre left) with the sappers in it. The hole's rim is the timber gate's remains and stone; the wall's ends and its
+    foot away from the hole are shade stone, a colour no squad digs, so every sapper is in the hole. The camp is right
+    under it. Returns the scene, its deal and the camp's column."""
     S = Scene(w, h)
-    def gate(cx, top, half):  # an arched timber gate in a shade-stone frame, half wide each side of cx
-        S.rect(cx - half - 1, top - 1, 2 * half + 2, S.h - top + 1, "g"); S.rect(cx - half, top, 2 * half, S.h - top, "k")
-        S.rect(cx - half + 1, top - 1, 2 * half - 2, 1, "k")
-    if size == "land":  # title: top left over the sky; the King top right; the breach centre
-        S.stamp(CLOUD, 12, 5)
-        S.wall(8, slits=[(2, 11), (24, 11), (27, 11)])
-        S.stamp(KING_S, 20, 2)
-        for x in (4, 7): S.rect(x, 10, 2, 4, "i"); S.put(x, 14, "i")
-        gate(14, 11, 3); S.breach(14, 12, 2)
-    elif size == "port":  # title: top; the King under it on the wall; the breach below him
-        S.stamp(CLOUD, 0, 11); S.stamp(CLOUD, 11, 10)
-        S.wall(16, slits=[(1, 19), (14, 19)])
-        S.stamp(KING_S, 3, 8); S.rect(2, 16, 11, 1, "f")
-        for x in (3, 11): S.rect(x, 18, 2, 3, "i"); S.put(x, 21, "i")
-        gate(8, 19, 2); S.breach(8, 20, 2)
-    else:
-        S.stamp(CLOUD, 11, 7)
-        S.wall(12, slits=[(1, 15), (14, 15)])
-        S.stamp(KING_S, 3, 4)
-        for x in (3, 11): S.rect(x, 14, 2, 1, "i")
-        gate(8, 14, 2); S.breach(8, 15, 1)
+    def breach(cx, top, half):  # the timber gate (one cell wider than the hole each side), the hole cut up through it
+        S.rect(cx - half - 1, top, 2 * half + 2, S.h - top, "k")
+        for y in range(top + 1, S.h):  # ragged: wider at the foot, a notch every third row
+            k = half - (1 if y == top + 1 else 0) + (1 if (y - top) % 3 == 0 else 0) - (1 if y < top + 3 else 0)
+            S.rect(cx - k, y, 2 * k, 1, ",")
+    if size == "land":  # title top left (single line); King cols 20-28 on the wall top (row 9); hole cols 7-15
+        top, kx, ky, cx, half, slits = 9, 20, 2, 11, 4, [(2, 12), (25, 13)]
+    elif size == "port":  # title top (two lines); King cols 7-15 on the wall top (row 14); hole cols 2-10
+        top, kx, ky, cx, half, slits = 14, 7, 7, 6, 3, [(13, 18)]
+    else:  # title top (single line); King cols 11-19 on the wall top (row 11); hole cols 2-10
+        top, kx, ky, cx, half, slits = 11, 11, 4, 6, 3, [(16, 15)]
+    S.wall(top, slits=slits)
+    breach(cx, top + 2, half)
+    S.stamp(KING_S, kx, ky)
     for y in range(S.h):
         for x in (0, S.w - 1):
             if S.g[y][x] == "f": S.g[y][x] = "g"
-    # The foot stays diggable: a sapper goes out per block in reach, so a long dig front is what makes a swarm.
-    return S, [[[TIMBER, 40]], [[STONE, 90]], [[TIMBER, 30]], [[STONE, 60]], [[STONE, 50]]]
+    for x in range(S.w):
+        if abs(x + 0.5 - cx) > half + 1 and S.g[S.h - 1][x] in "fk": S.g[S.h - 1][x] = "g"
+    return S, [[[TIMBER, 40]], [[STONE, 90]], [[TIMBER, 30]], [[STONE, 60]], [[STONE, 50]]], cx - 2
 
 
 def scene_E(size, w, h):

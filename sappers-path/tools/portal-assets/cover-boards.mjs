@@ -16,7 +16,8 @@ const every = (a, z, d) => Array.from({ length: Math.floor((z - a) / d) + 1 }, (
 // too, is then a downscale); everything else is the game's config as it is. The page runs at 4x so the DOM card tiles
 // come out big enough for any cover (the canvas stays at the board's own maxDpr).
 const SAPPER_SCALE = 1.9, CELL_CSS = 24;
-const PLAY = { D: { taps: [[0, 0], [1, 150], [2, 300], [3, 450], [4, 600]], shots: every(900, 2700, 150) },
+// D (final): the ground drawn darker (dirt) so the hole reads as a breach, not a cloud; cover-only, like the sapper scale.
+const PLAY = { D: { taps: [[0, 0], [1, 150], [2, 300], [3, 450], [4, 600]], shots: every(900, 3300, 200), dirt: "#2c2420" },
                E: { taps: [[0, 0], [1, 200], [2, 400]], shots: every(1000, 2800, 300), cards: true },
                F: { taps: [[0, 0], [1, 150], [2, 300], [3, 450], [4, 600]], shots: every(4000, 9000, 1000) } };
 const grab = async (p, path) => { const d = await p.evaluate(() => document.getElementById("board").toDataURL("image/png")); writeFileSync(path, Buffer.from(d.split(",")[1], "base64")); };
@@ -29,7 +30,7 @@ for (const [key, L] of Object.entries(LV)) {
   const ctx = await b.newContext({ viewport: { width: 1800, height: 1200 }, deviceScaleFactor: 4 }), p = await ctx.newPage();
   p.on("pageerror", (e) => errs.push(key + ": " + e.message)); p.on("console", (m) => { if (m.type() === "error") errs.push(key + ": " + m.text()); });
   await p.addInitScript(() => { const R = window.requestAnimationFrame.bind(window); window.requestAnimationFrame = (cb) => (cb.name === "frame" ? 0 : R(cb)); });
-  await p.route(/\/config\.json(\?.*)?$/, async (r) => { const res = await r.fetch(), cfg = await res.json(); Object.assign(cfg.selfTest, LV); cfg.board.sapper.scale = SAPPER_SCALE; cfg.board.maxCellCss = CELL_CSS; r.fulfill({ response: res, json: cfg }); });
+  await p.route(/\/config\.json(\?.*)?$/, async (r) => { const res = await r.fetch(), cfg = await res.json(); Object.assign(cfg.selfTest, LV); cfg.board.sapper.scale = SAPPER_SCALE; cfg.board.maxCellCss = CELL_CSS; if (P.dirt) cfg.v3.ground.dirt = P.dirt; r.fulfill({ response: res, json: cfg }); });
   await p.goto(URL_ + "?debug=1"); await p.waitForFunction(() => window.SP && document.fonts.status === "loaded", null, { timeout: 15000 });
   await p.evaluate(() => { SP.unlockTo(199); SP.speed(1); });
   const st = await p.evaluate((k) => SP.fixture(k), key);
