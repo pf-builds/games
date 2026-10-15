@@ -365,3 +365,7 @@ Full Launch (only after CrazyGames invites the game; needs the SDK):
 - Optional: a rewarded ad as a second way to bank 3x time.
 - SDK gameplayStart/Stop around real play, muteAudio hook, Automatic Progress Save (no code, localStorage) or the Data module.
 - Skip real-money purchases (needs CrazyGames' Xsolla, signed-in users only, and it bars Automatic Progress Save).
+
+
+## 10. Update parity (Terms 4.6a), decided 10/14
+Peter chose to freeze pf-builds' Sapper's Path from submission through Basic Launch (7-21 days). Lanes keep committing on branches; no live deploy of sappers-path in that window. After Basic Launch, every update goes to CrazyGames the same day as pf-builds or before it, never after. The merge of portal-cg into sappers-path can still happen locally; it just doesn't deploy until the window ends (or ships to both the same day).
