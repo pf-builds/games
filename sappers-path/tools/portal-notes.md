@@ -352,3 +352,16 @@ Report: scratchpad stage2b/recheck.md.
 | portal-sizes.mjs | 91 of 91 PASS |
 | portal-build.mjs | PASS: 77 files, 14,148,774 B unzipped, 12,336,123 B zipped |
 | portal-selftest.mjs | 8 of 8 PASS; before the first tap 1,959,962 B (375x812) / 2,011,228 B (1280x720, 821x462) |
+
+## 9. Lane P status and what comes next (2026-10-14)
+
+Ready to submit, pending Peter: zip `tools/build-data/portal/sappers-path-crazygames.zip` (rebuild with `node tools/portal-build.mjs`, check with `node tools/portal-selftest.mjs`, `tools/portal-sizes.mjs`, `tools/portal-hz.mjs`). Covers, videos, descriptions, tags and form answers live in the workspace at `business/D-click-it-studios/game-research/sappers-path-crazygames-submission/`; Peter's list is `PETER-TODO.md` there. Rank: C0 until an outside cold playtest; every C2 gate and asset has evidence (`release-readiness.md` row 9).
+
+Merge: portal-cg holds every game fix for the live site too. sappers-path has not moved since d72193a, so it fast-forwards. Do it at a quiet point for lane D, then run the land runbook gates before any live deploy.
+
+Full Launch (only after CrazyGames invites the game; needs the SDK):
+- Rewarded ad for double coins on the win sheet. The best fit: coins and a shop already exist.
+- Midgame ads between levels via the SDK's break call, never mid-level.
+- Optional: a rewarded ad as a second way to bank 3x time.
+- SDK gameplayStart/Stop around real play, muteAudio hook, Automatic Progress Save (no code, localStorage) or the Data module.
+- Skip real-money purchases (needs CrazyGames' Xsolla, signed-in users only, and it bars Automatic Progress Save).
