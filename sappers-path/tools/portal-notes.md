@@ -324,3 +324,31 @@ Report: scratchpad stage2/gates.md (gate 3 failed).
 | portal-sizes.mjs | 78 of 78 PASS (13 sizes x 6 screens) |
 | portal-build.mjs | PASS: 77 files, 14,146,967 B unzipped, 12,335,577 B zipped |
 | portal-selftest.mjs | 8 of 8 PASS; before the first tap 1,958,155 B (375x812) / 2,009,421 B (1280x720, 821x462) |
+
+## 8. Stage 3, part 4: the Stage 2 re-check (READY, one MAJOR) and the 144 Hz gate (2026-10-14)
+
+Report: scratchpad stage2b/recheck.md.
+
+- **MAJOR, 800x450 Zen stuck sheet: Retry and Back to map cut by 13 px, the card scrolling with no sign.** A wide fail sheet may now
+  run past the column to the frame's foot (`layout.sheetPadPx` 4) before it scrolls; the win/loss/stuck sheet's and the buy sheet's
+  button row sticks to the card's foot (only the body scrolls; a soft edge above it when it does). Not on the other modals: the
+  reset sheet's hold sits just above its row (the harness's 812x375 run caught that), and Settings fits everywhere. No toast lingers
+  behind a sheet (showPanel hides it).
+- **Minors:** the +5 min toast hid behind the buy sheet: gone, the sheet itself shows what is banked; short of coins, Buy is disabled
+  and the sheet says "5 minutes of 3× cost 200: you have N coins". Left as notes (LATER.md): 400x600's 36-38 px tap targets; the
+  bank draining while the player thinks (Peter's design).
+- **portal-sizes.mjs:** a control must also sit inside every scrolling or clipping ancestor (unit-checked: a button cut by its
+  scroll box fails); new screen, the buy sheet with 0 coins on the shipped game. 13 sizes x 7 screens, all PASS.
+- **144 Hz (tools/portal-hz.mjs):** the stored winning taps, played patiently with requestAnimationFrame at 30, 60 and 144 Hz. Level 1:
+  won in 8 taps at each, runs 46,483 / 46,556 / 46,578 engine ms, x1.073 / x1.073 / x1.072 engine ms per real ms. Level 64 (first
+  archer towers): won in 50 taps, 0 hits at each, 537,274 / 537,522 / 537,792 ms, x1.010 each. Widest single-run spread 29 ms, under
+  one 30 Hz frame (33). No fix needed. (About 30 minutes: it plays in real time.)
+
+| Gate (part 4, head 96eded2) | Result |
+|---|---|
+| test.js / pack --check | 726 passed, 0 failed / match (no engine or level file touched: freeze and regrades as part 3) |
+| selftest-lands | 375x812@3 929/0, 1280x720 931/0, 360x640@3 929/0; 0 console |
+| harness.mjs | all passed (selfTest 929/0 x5, 931/0 x2) |
+| portal-sizes.mjs | 91 of 91 PASS |
+| portal-build.mjs | PASS: 77 files, 14,148,774 B unzipped, 12,336,123 B zipped |
+| portal-selftest.mjs | 8 of 8 PASS; before the first tap 1,959,962 B (375x812) / 2,011,228 B (1280x720, 821x462) |
