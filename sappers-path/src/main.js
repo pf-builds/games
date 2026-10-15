@@ -1353,7 +1353,7 @@
   function epilogue() { const LC = landsCfg(), P = LC.epilogue || {}, d = zenOn() ? null : (LC.list || [])[0]; return d ? fill(P.first || "", { name: d.name }) : P.none || ""; } // v6: the lands are Zen's now, so the campaign's road ends at the throne
   function showPanel() {
     const e = app.ending; if (!e) return;
-    app.panel = e.won ? "win" : "fail"; app.panelAt = app.clock; renderCoach();
+    app.panel = e.won ? "win" : "fail"; app.panelAt = app.clock; renderCoach(); hideToast(); // lane P Stage 3 (re-check): no toast lingers behind the sheet
     if (app.tip) { app.tipQ = []; hideTip(); } // fix pass (m8): a power-up's tip never covers the win or fail sheet (its free use is already given)
     const G = app.cfg.gallery, gal = !!app.entry.gallery, toMapT = app.cfg.layout.toMap;
     const BS = e.won && !gal && app.entry.boss; // v5 R4 fix (S4): the boss's own win title, line and the crown recovered
@@ -1697,14 +1697,15 @@
     speedSheet(); $("speedbuy").hidden = false; $("sb-buy").focus(); return true;
   }
   // The buy sheet's words: what 5 minutes buy, what is banked, Buy (or Buy more) and Not now (or Play at 3x once banked).
-  function speedSheet() { const T = app.meta.speed, b = bank(); $("sb-title").textContent = T.say + (b.ms > 0 ? " " + fill(T.bank, { t: Meta.clock(b.ms, true) }) : ""); $("sb-buy").querySelector(".pl").textContent = b.ms > 0 ? T.more : T.buy; $("sb-buy").querySelector(".cprice b").textContent = T.price; $("sb-no").textContent = b.ms > 0 ? T.play : T.no; }
+  function speedSheet() { const T = app.meta.speed, b = bank(), have = app.save.data.coins | 0, poor = have < T.price; $("sb-title").textContent = T.say + (b.ms > 0 ? " " + fill(T.bank, { t: Meta.clock(b.ms, true) }) : ""); $("sb-buy").querySelector(".pl").textContent = b.ms > 0 ? T.more : T.buy; $("sb-buy").querySelector(".cprice b").textContent = T.price; $("sb-no").textContent = b.ms > 0 ? T.play : T.no;
+    $("sb-buy").disabled = poor; $("sb-poor").hidden = !poor; $("sb-poor").textContent = poor ? fill(T.short, { price: T.price, have }) : ""; } // lane P Stage 3 (re-check): short of coins, Buy is off and the sheet says why
   // Buy: price coins, secs more banked, the sheet stays up (buy again to stack). No: close (at x if anything is banked).
   function buySpeed(yes) {
     const T = app.meta.speed, b = bank();
     if (!yes) { $("speedbuy").hidden = true; if (b.ms > 0 && app.speed !== T.x) setSpeed(T.x, true); return false; }
     const r = Meta.spend(app.save.data, T.price);
     if (!r.ok) { $("speedbuy").hidden = true; cue("blocked"); toast(fill(T.short, { price: T.price, have: app.save.data.coins | 0 }), true); return false; }
-    b.ms = Math.min(b.ms + T.secs * 1000, 360000000); b.on = 1; app.bankAt = 0; writeSave(); setSpeed(T.x, true); cue("coin"); toast(fill(T.bought, { price: T.price })); renderPowers(); speedSheet(); return true;
+    b.ms = Math.min(b.ms + T.secs * 1000, 360000000); b.on = 1; app.bankAt = 0; writeSave(); setSpeed(T.x, true); cue("coin"); renderPowers(); speedSheet(); return true; // the sheet shows what is banked (a toast would sit behind it)
   }
   // Each frame of a level (step): the bank drains by real time while the level runs at x (playing, or its sappers still out),
   // never under the buy sheet, Settings, a sheet or a pause (step does not run then). Written every saveEveryMs; empty: 1x.
@@ -1916,14 +1917,18 @@
       if (app.wide) { const want = Math.max(hh, rl.height), t = Math.max(top0, Math.min(rl.top, foot - want)); st.top = px(t - A.top); st.bottom = px(A.bottom - Math.min(foot, t + want)); return; }
       st.top = px(Math.min(rl.top, foot - hh) - A.top); return;
     }
-    let hh = natural(); const room = foot - lw.bottom - gap;
+    // Lane P Stage 3 (re-check: at 800x450 the Zen stuck sheet scrolled with 76 px of empty frame under the column): a wide fail
+    // sheet may run past the column's foot to the frame's (app.sheetPadPx short of it) rather than scroll.
+    const footF = app.wide ? Math.max(foot, A.bottom - app.cfg.layout.sheetPadPx) : foot;
+    let hh = natural(); const room = foot - lw.bottom - gap, roomF = footF - lw.bottom - gap;
     if (hh > room) { P.classList.add("tight"); hh = natural(); }
-    if (hh <= room) { st.top = px(lw.bottom + gap - A.top); if (app.wide) st.bottom = px(A.bottom - Math.min(foot, Math.max(lw.bottom + gap + hh, rl.bottom))); return; } // v4.3 fix (m5): wide: its content's height (down to the tray's foot, so no queue row peeks out under it)
+    if (hh <= room) { st.top = px(lw.bottom + gap - A.top); if (app.wide) st.bottom = px(A.bottom - Math.min(foot, Math.max(lw.bottom + gap + hh, rl.bottom))); return; }
+    if (hh <= roomF) { st.top = px(lw.bottom + gap - A.top); st.bottom = px(A.bottom - (lw.bottom + gap + hh)); return; } // v4.3 fix (m5): wide: its content's height (down to the tray's foot, so no queue row peeks out under it)
     // Lane P Stage 3 (the gate critic's B2: at 821x462 the loss and Zen stuck sheets started above the frame): above the line
     // only if it fits there; else under the line to the foot, its card scrolling inside (the jammed line stays in view), when
     // that room is at least layout.sheetMinPx; else the whole column (wide) or screen.
     const top0 = app.wide ? sd.top : A.top;
-    if (lw.top - gap - hh < top0) { if (room < app.cfg.layout.sheetMinPx) return fitSheet(top0, foot); P.classList.add("fit"); st.top = px(lw.bottom + gap - A.top); st.bottom = px(A.bottom - foot); return; }
+    if (lw.top - gap - hh < top0) { if (roomF < app.cfg.layout.sheetMinPx) return fitSheet(top0, footF); P.classList.add("fit"); st.top = px(lw.bottom + gap - A.top); st.bottom = px(A.bottom - footF); return; }
     P.classList.add("float"); st.top = "auto"; st.bottom = px(A.bottom - lw.top + gap);
   }
   // The sheet over the whole room from top0 to foot (window px), tight words, the card scrolling inside when still too tall.
@@ -2488,7 +2493,7 @@
         ok(app.speed === SPD[2] && Math.abs(app.et - et0 - 160 * SPD[2] * SH.pace) < 1e-6, "speed: at " + app.speed + "x, 160 ms of real time moves the engine " + (app.et - et0) + " ms");
         const T = app.meta.speed, B0 = () => csave().data.bank, S0 = 2 * T.secs * 1000; app.debugSpeed = false; // lane P Stage 3: banked 3x time
         try { csave().data.bank = { ms: 0, on: 0 }; startLevel(app.levels[0].id); const r1 = app.speed === 1 && b.textContent === "1×"; app.save.data.coins = T.price - 1; b.click(); const asked = !$("speedbuy").hidden && hitOK($("sb-buy")) && $("sb-buy").querySelector(".cprice b").textContent === String(T.price);
-          $("sb-buy").click(); const poor = app.speed === 1 && (app.save.data.coins | 0) === T.price - 1 && $("speedbuy").hidden && !$("toast").hidden && B0().ms === 0;
+          $("sb-buy").click(); const poor = app.speed === 1 && (app.save.data.coins | 0) === T.price - 1 && $("sb-buy").disabled && !$("sb-poor").hidden && $("sb-poor").textContent === fill(T.short, { price: T.price, have: T.price - 1 }) && B0().ms === 0; $("sb-no").click(); // lane P Stage 3: short, Buy is off and says why
           app.save.data.coins = 2 * T.price + 3; b.click(); $("sb-buy").click(); const one = B0().ms === T.secs * 1000 && !$("speedbuy").hidden && app.speed === T.x;
           $("sb-buy").click(); const two = B0().ms === S0 && (app.save.data.coins | 0) === 3 && $("sb-buy").querySelector(".pl").textContent === T.more; $("sb-no").click();
           const lab = b.textContent === T.x + "× " + Meta.clock(S0, true) && b.classList.contains("timed") && hitOK(b) && paceNow() / SH.pace === T.x;

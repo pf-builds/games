@@ -525,3 +525,6 @@ Fixed: S1-S7, m2, m3, N1, N2 (`tools/v5-r4-notes.md` §10). Parked:
 - Banked 3x time: with time in the bank the speed button toggles, so a second buy is only possible from the buy sheet (it stays
   open after a buy) or once the bank is empty. A "buy more" row (Settings, or a long press on the button) would let a player top
   up mid-bank.
+- Stage 2 re-check (left as they are, the coordinator's call): at 400x600 the top round buttons draw 36x36 (hit area 43x39) and
+  the squad cards 71x38, just under 40 tall; banked 3x time drains while the player only thinks (Peter's design: real time at
+  3x, not just while sappers run).

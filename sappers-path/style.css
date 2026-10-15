@@ -618,6 +618,11 @@ body.wide .home-card { max-width: 760px; }
 @media (max-width: 379px) { #app { padding-left: max(4px, env(safe-area-inset-left)); padding-right: max(4px, env(safe-area-inset-right)); } }
 
 /* v5 R1: the 2x speed sheet's price pill (the continue's style). */
+.sb-poor { margin: -4px 0 8px; font-size: 16px; color: var(--danger-ink, #a3271a); } .sb-poor[hidden] { display: none; } /* lane P Stage 3: short of coins */
+/* Lane P Stage 3 (re-check): a sheet that scrolls keeps its buttons in view (the row sticks to the card's foot; only the body
+   scrolls), with a soft edge above it as the sign there is more. */
+#panel .sheetcard > .row:last-of-type, .modal .sheetcard > .row { position: sticky; bottom: 0; z-index: 1; background: var(--parch); }
+#panel.sheet.fit .sheetcard > .row:last-of-type { box-shadow: 0 -10px 10px -8px rgba(31,27,36,.35); padding-bottom: 2px; }
 #sb-buy .cprice { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 1px 5px; border-radius: 999px; background: #fff3cf; color: var(--parch-ink); font-size: 22px; --ico: 18px; vertical-align: middle; }
 #sb-title { font-size: 24px; margin: 4px 0 12px; }
 /* v5 R1: a power-up's tip, a parchment bubble over its badge (an arrow at --ax); an unlock's intro wears a gold rim. */
