@@ -12,3 +12,6 @@ sappers-path/tools/campaign-quests/scratch/
 
 # Sapper's Path portal build output (tools/portal-build.mjs)
 sappers-path/tools/build-data/portal/
+
+# Partial's Pixels bake scratch (tools/partials-pixels.js)
+sappers-path/tools/build-data/partials-pixels/scratch/

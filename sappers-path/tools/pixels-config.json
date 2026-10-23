@@ -1,0 +1,127 @@
+{
+ "version": 1,
+ "note": "Partial's Pixels (tools/partials-pixels.js; runbook tools/partials-pixels-notes.md): the third play mode, every level one of PartialVoid's original pixel pictures, one art pixel = one board cell, her exact colours, nothing redrawn. paths: the art folder, the manifest, the suggestion folder, the bake scratch (gitignored) and the source record file (tools/pack.js packs it into levels/pixels.pk.json and levels/pixels-<k>.pk.json). limits: maxColours is Peter's cap for her pictures (the engine itself takes up to 12, tools/convert.js IDS: 1-9 and 11-13, iron 10 and gilt 14 never); the board's largest picture is tools/land-config.json box (40 x 44 cells inside the frame), read from there; maxPx the largest PNG side read. world: the mode's one world entry (ids <prefix><k>-<n>, era for the realm card, by on every record and the win line, credit on the map's foot and in LICENSES.md). map: the reused castle sheets (map/layout.json numbers, no new image bytes), first the one then the other, every other pair mirrored, perSheet levels on spots (road order), eggs at the painted side-quest spurs' tips in eggKinds' turn, all under tint (a CSS filter) so the mode reads apart from the Zen worlds. tags: picture n plays tags[(n - 1) % length] unless its manifest line names a tag. plan: each tag's deck features (? cards and linked pairs only: neither changes the picture; no mystery blocks, moats, gates, towers or locks ever). profile: merged over tools/land-config.json profile like a land's (bands, careful floor, pace, bake); seed: picture n's bake seed is seed + n. suggest: a colour merge is flagged as erasing a shape when edgeShare or more of the merged colour's edge touches the colour it would become; previews at previewPx px a cell.",
+ "paths": {
+  "art": "tools/build-data/partials-pixels/art",
+  "manifest": "tools/build-data/partials-pixels/manifest.json",
+  "suggest": "tools/build-data/partials-pixels/suggest",
+  "scratch": "tools/build-data/partials-pixels/scratch",
+  "source": "tools/build-data/levels/pixels.json"
+ },
+ "limits": {
+  "maxColours": 7,
+  "maxPx": 4096
+ },
+ "world": {
+  "k": 1,
+  "prefix": "p",
+  "era": 201,
+  "name": "Partial's Pixels",
+  "lore": "Pixel pictures by PartialVoid, one block for every pixel she drew.",
+  "by": "PartialVoid",
+  "credit": "Pixel art by PartialVoid, used with the artist's permission."
+ },
+ "map": {
+  "sheets": [
+   6,
+   5
+  ],
+  "perSheet": 8,
+  "tint": "hue-rotate(200deg) saturate(.8) brightness(1.08)",
+  "eggKinds": [
+   "butterfly",
+   "glint",
+   "owl",
+   "grass",
+   "mushrooms",
+   "wisp"
+  ]
+ },
+ "tags": [
+  "normal",
+  "easy",
+  "normal",
+  "normal",
+  "easy",
+  "normal",
+  "hard"
+ ],
+ "plan": {
+  "easy": {
+   "mystery": 0,
+   "links": 0
+  },
+  "normal": {
+   "mystery": 2,
+   "links": 0
+  },
+  "hard": {
+   "mystery": 3,
+   "links": 1
+  }
+ },
+ "profile": {
+  "note": "Zen's casual profile (Picture Garden and the land worlds as they ship): generous random-tap bands, no lookahead ceiling, the careful floor 0.5 on every tag (v6 lane D5's rule for new Zen levels), the land pace range with the land aim, 8 candidates (10 on a Hard), 96 deal attempts. Her pictures are solid boards (every cell a block, no open ground inside the frame), so a squad reaches only the dug edge: the land default squads (20-50 at 1,400 cells) needed about 80 taps inside the 15 s longest-tap cap. Bigger squads (40-79 at 1,400 cells, so 50-99 on a 42 x 42 board), shallow burying (deep 0.05; Easy 0.04, Hard 0.08) and 400 deal attempts deal about one try in seven under every cap (measured on the Lighthouse).",
+  "bands": {
+   "easy": [
+    0.45,
+    0.8
+   ],
+   "normal": [
+    0.2,
+    0.5
+   ],
+   "hard": [
+    0.06,
+    0.2
+   ]
+  },
+  "lookahead": {
+   "normal": null,
+   "hard": null,
+   "extreme": null
+  },
+  "carefulFloor": {
+   "easy": 0.5,
+   "normal": 0.5,
+   "hard": 0.5
+  },
+  "pace": {
+   "range": [
+    150000,
+    300000
+   ],
+   "aim": 225000
+  },
+  "bake": {
+   "candidates": {
+    "perLevel": 8,
+    "perLevelBy": {
+     "easy": 8,
+     "hard": 10
+    }
+   },
+   "deal": {
+    "size": [
+     40,
+     79
+    ],
+    "deep": 0.05,
+    "attempts": 400
+   },
+   "dealBy": {
+    "easy": {
+     "deep": 0.04
+    },
+    "hard": {
+     "deep": 0.08
+    }
+   }
+  }
+ },
+ "seed": 50000,
+ "suggest": {
+  "edgeShare": 0.5,
+  "previewPx": 10
+ }
+}

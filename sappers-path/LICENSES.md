@@ -855,3 +855,15 @@ The Naturalist's Book: natural-history plates by John James Audubon and others f
 | 622 | 772 | Blue Jay (nb06) | John James Audubon, 1831, engraved by Robert Havell (National Gallery of Art) | Public domain (CC0, National Gallery of Art open access) | https://www.nga.gov/collection/art-object-page.32243.html |
 | 623 | 773 | Scarlet Lily (nb50) | Pierre-Joseph Redouté, 1802-16 (Cleveland Museum of Art) | Public domain (CC0, Cleveland Museum of Art open access). Adapted for the board by Click it! Studios: the plain background covered too much of the board: a tighter crop, the cream page split into a sky band and a grass band | https://clevelandart.org/art/2020.164 |
 | 624 | 774 | Empress Josephine Rose (nb53) | Pierre-Joseph Redouté, 1817-24 (The Met) | Public domain (CC0, The Met Open Access) | https://www.metmuseum.org/art/collection/search/762055 |
+
+<!-- partials-pixels:start (tools/partials-pixels.js writes this section) -->
+
+### Partial's Pixels: original pixel art by PartialVoid
+
+Every picture in this mode is original pixel art by PartialVoid, used in the game with the artist's permission. All rights reserved by the artist: these pictures are not CC0 and not open licensed, and may not be reused outside the game without the artist's permission. Each is shown exactly as drawn, one pixel to one block, in its own colours (the merge or crop column says where Peter approved a change to fit the board).
+
+| Picture | Title | File | Cells | Colours | Merge or crop |
+|---|---|---|---|---|---|
+| 1 | Lighthouse (pp-001) | pp-001-lighthouse.png | 40x40 | 7 | none: as drawn |
+
+<!-- partials-pixels:end -->

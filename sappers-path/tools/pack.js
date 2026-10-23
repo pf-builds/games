@@ -2,7 +2,8 @@
 // truth is tools/build-data/levels/{levels,gallery,zen}.json (plain JSON: every bake tool reads and writes it); the page
 // reads only the packed files this writes into levels/ (src/pack.js), byte for byte the same on every run.
 //   ~/.local/opt/node/bin/node tools/pack.js           write levels/*.pk.json (levels, gallery, the Zen index zen.pk.json, a
-//                                                      zen-<k>.pk.json per world)
+//                                                      zen-<k>.pk.json per world; Partial's Pixels, from its own source
+//                                                      pixels.json when there is one, pixels.pk.json and pixels-<k>.pk.json)
 //   ~/.local/opt/node/bin/node tools/pack.js --check   write nothing; exit 1 if a shipped file differs from what it would write
 // Run it after anything writes a source file (land.js install / zen / reinstall, zen-world.js install, quest-bake.js
 // install, gallery-bake.js, bake.js, campaign-v6.js install); tools/test.js fails while the shipped files are stale.
@@ -10,7 +11,7 @@
 const fs = require("fs"), path = require("path"), P = require("../src/pack.js");
 const ROOT = path.join(__dirname, ".."), SRC = path.join(__dirname, "build-data/levels");
 const readJ = (f) => JSON.parse(fs.readFileSync(f, "utf8"));
-const source = () => ({ levels: readJ(path.join(SRC, "levels.json")), gallery: readJ(path.join(SRC, "gallery.json")), zen: readJ(path.join(SRC, "zen.json")) });
+const source = () => ({ levels: readJ(path.join(SRC, "levels.json")), gallery: readJ(path.join(SRC, "gallery.json")), zen: readJ(path.join(SRC, "zen.json")), pixels: fs.existsSync(path.join(SRC, "pixels.json")) ? readJ(path.join(SRC, "pixels.json")) : null }); // Partial's Pixels (tools/partials-pixels.js): its own source, when installed
 // A plain file's records packed; the bake's own notes and settings (bake, note) stay in the source.
 const file = (J, extra) => Object.assign({ pack: P.FORMAT, version: J.version }, extra || {}, { levels: J.levels.map(P.pack) });
 // Stage 3 (Zen on demand): each Zen world's records go in levels/zen-<k>.pk.json, loaded when the world is played; the
@@ -39,20 +40,33 @@ function build(S) {
   put("gallery.pk.json", file(S.gallery));
   put("zen.pk.json", { pack: P.FORMAT, version: S.zen.version, worlds: Z.out.map(({ w, list }) => Object.assign({}, P.packWorld(w), { recs: P.recsOf(worldFile(w.k), list) })) });
   for (const { w, list } of Z.out) put(worldFile(w.k), { pack: P.FORMAT, world: w.k, levels: list.map(P.pack) });
+  if (S.pixels) Object.assign(out, pixelsFiles(S.pixels));
+  return out;
+}
+// Partial's Pixels (tools/partials-pixels.js, tools/partials-pixels-notes.md): the third mode's files, in the Zen index's own
+// shape (the page reads both with the same code): levels/pixels.pk.json (its worlds and each one's recs) and a
+// levels/pixels-<k>.pk.json per world. J: the source tools/build-data/levels/pixels.json -> {name: text}.
+const pixelsFile = (k) => "pixels-" + k + ".pk.json";
+function pixelsFiles(J) {
+  const out = {}, put = (f, o) => { out[f] = JSON.stringify(o) + "\n"; }, W = (J.worlds || []).map((w) => ({ w, list: (J.levels || []).filter((L) => L.world === w.k) }));
+  for (const { w, list } of W) { if ("recs" in w || w.land) throw new Error("pack: pixels.json world " + w.k + ": no recs key, no land"); if (!list.length) throw new Error("pack: pixels.json world " + w.k + ": no records"); }
+  put("pixels.pk.json", { pack: P.FORMAT, version: J.version, worlds: W.map(({ w, list }) => Object.assign({}, P.packWorld(w), { recs: P.recsOf(pixelsFile(w.k), list) })) });
+  for (const { w, list } of W) put(pixelsFile(w.k), { pack: P.FORMAT, world: w.k, levels: list.map(P.pack) });
   return out;
 }
 // The page's own data: every record in the shipped files (levels/*.pk.json) unpacked, by id; and the Zen index.
 function shipped(root) {
   const L = path.join(root || ROOT, "levels"), rd = (f) => readJ(path.join(L, f)), byId = new Map(), files = ["levels.pk.json", "gallery.pk.json"], index = rd("zen.pk.json");
   for (const w of index.worlds || []) files.push(w.recs.file);
+  const px = fs.existsSync(path.join(L, "pixels.pk.json")) ? rd("pixels.pk.json") : null; if (px) for (const w of px.worlds || []) files.push(w.recs.file); // Partial's Pixels
   for (const f of files) for (const R of P.unpackFile(rd(f)).levels) byId.set(R.id, R);
-  return { byId, index, files: files.concat("zen.pk.json") };
+  return { byId, index, pixels: px, files: files.concat("zen.pk.json", px ? ["pixels.pk.json"] : []) };
 }
-module.exports = { build, source, shipped, worldFile, SRC };
+module.exports = { build, source, shipped, worldFile, pixelsFiles, pixelsFile, SRC };
 
 if (require.main === module) {
   const B = build(), check = process.argv.includes("--check"), bad = []; let wrote = 0;
-  const stray = fs.readdirSync(path.join(ROOT, "levels")).filter((f) => /^zen-\d+\.pk\.json$/.test(f) && !B[f]); // a world file the index no longer names
+  const stray = fs.readdirSync(path.join(ROOT, "levels")).filter((f) => /^(zen|pixels)(-\d+)?\.pk\.json$/.test(f) && !B[f]); // a world file the index no longer names (Partial's Pixels: its index too, once its source is gone)
   for (const f of stray) { if (check) bad.push(f + " (stray)"); else { fs.unlinkSync(path.join(ROOT, "levels", f)); console.log("pack: removed levels/" + f); wrote++; } }
   for (const [f, t] of Object.entries(B)) { const p = path.join(ROOT, "levels", f), was = fs.existsSync(p) ? fs.readFileSync(p, "utf8") : null;
     if (was === t) continue; if (check) { bad.push(f); continue; } fs.writeFileSync(p + ".tmp", t); fs.renameSync(p + ".tmp", p); wrote++; console.log("pack: wrote levels/" + f + " (" + Buffer.byteLength(t).toLocaleString("en-US") + " B)"); }

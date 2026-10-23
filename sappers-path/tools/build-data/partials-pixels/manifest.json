@@ -1,0 +1,6 @@
+{
+ "note": "Partial's Pixels: PartialVoid's pictures, in level order (picture n is line n; only ever append). One line a picture: id (the PNG in art/ is <id>-<words>.png, or name it in file), title. Optional, and only as Peter approved them from a suggestion (tools/build-data/partials-pixels/suggest/): merge {\"#from\": \"#to\"} (colours combined to fit the board; every other colour stays exact), crop [x, y, w, h] in cells; tag (easy, normal, hard) in place of the config's turn. Then run ~/.local/opt/node/bin/node tools/partials-pixels.js (runbook: tools/partials-pixels-notes.md).",
+ "pictures": [
+  {"id": "pp-001", "title": "Lighthouse"}
+ ]
+}
