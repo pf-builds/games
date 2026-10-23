@@ -154,14 +154,14 @@ function edgeShare(cells, pw, ph, a, b) {
   return all ? hit / all : 0;
 }
 // Too many colours: merge a pair at a time until it fits, each time the closest pair (CIEDE2000, a tenth apart counts the
-// same), the colour with fewer cells into the other, a merge that would erase a drawn shape (edgeShare at or over
-// suggest.edgeShare: it sits inside the colour it would become) only when nothing else is left.
+// same), the colour with fewer cells into the other, a pair that would erase a drawn shape (either colour's edgeShare with
+// the other at or over suggest.edgeShare: one sits inside the other, like an eye in a face) only when nothing else is left.
 function suggestColours(X, cv) {
   let cells = cv.cells.slice(); const steps = [], cap = X.C.limits.maxColours, ES = X.C.suggest.edgeShare;
   for (let guard = 0; guard < 64; guard++) {
     const cnt = countsOf(cells); if (cnt.size <= cap) break;
     const cs = [...cnt.keys()], cand = [];
-    for (const a of cs) for (const b of cs) { if (a === b) continue; const e = edgeShare(cells, cv.pw, cv.ph, a, b); cand.push({ from: a, to: b, cells: cnt.get(a), dE: +de(a, b).toFixed(1), edge: +e.toFixed(2), erase: e >= ES }); }
+    for (const a of cs) for (const b of cs) { if (a === b) continue; const e = Math.max(edgeShare(cells, cv.pw, cv.ph, a, b), edgeShare(cells, cv.pw, cv.ph, b, a)); cand.push({ from: a, to: b, cells: cnt.get(a), dE: +de(a, b).toFixed(1), edge: +e.toFixed(2), erase: e >= ES }); } // either way round: an eye merged into its face or the face into its eye, the eye is gone
     cand.sort((p, q) => p.erase - q.erase || p.dE - q.dE || p.cells - q.cells || (p.from < q.from ? -1 : 1));
     const pk = cand[0]; steps.push(pk); cells = cells.map((c) => (c === pk.from ? pk.to : c));
     for (const st of steps) if (st.to === pk.from) st.to = pk.to; // an earlier merge into the colour just merged away goes straight to the new one
@@ -194,7 +194,7 @@ function writeSuggest(X, cv) {
   const md = ["# " + cv.line.title + " (" + id + "): it doesn't fit as drawn", "", "Not installed. Made by `tools/partials-pixels.js` on " + new Date().toISOString().slice(0, 10) + " from `" + cv.file + "` (" + cv.px.join("x") + " px, " + cv.s + " px a cell, " + cv.pw + "x" + cv.ph + " cells).", ""];
   if (S.kind === "colours") {
     md.push("It has " + S.have + " colours; the game takes " + S.cap + ". Combining these makes it fit (closest colours first by CIEDE2000, the colour with fewer cells into the other; a merge marked *erases a shape* paints over something drawn inside the colour it becomes, so it is used only when nothing else is left). Every other colour stays exactly as drawn and no pixel moves.", "",
-      "| Merge | Into | Cells changed | ΔE00 | Its edge touching the new colour |", "|---|---|---|---|---|");
+      "| Merge | Into | Cells changed | ΔE00 | Edge shared by the pair (the larger share) |", "|---|---|---|---|---|");
     for (const st of S.steps) md.push("| " + st.from + " | " + st.to + " | " + st.cells + " | " + st.dE + " | " + Math.round(100 * st.edge) + "%" + (st.erase ? " (erases a shape)" : "") + " |");
     md.push("", "Preview: `" + id + ".png` (left as drawn, right with the merges). To approve it, add this to the picture's line in the manifest, then run the tool again:", "", "```json", '"merge": ' + JSON.stringify(S.merge), "```");
   } else {
@@ -336,12 +336,13 @@ async function run(o) {
       keep[t.i] = recordOf(X, t.cv, t.board, r); res.baked.push({ id: t.cv.line.id, tag: r.tag, s: +((Date.now() - t0) / 1000).toFixed(1), pace: Math.round(r.level.grade[r.tag].pace.ms / 1000), taps: r.level.win[r.tag].length, rate: r.level.grade[r.tag].rate });
       log("  " + t.cv.line.id + " " + r.tag + ": " + (r.fallback ? "fallback (" + r.fallback + ")" : "ok") + ", real pace " + Math.round(r.level.grade[r.tag].pace.ms / 1000) + " s, " + r.level.win[r.tag].length + " taps, rate " + r.level.grade[r.tag].rate + " (" + ((Date.now() - t0) / 1000).toFixed(0) + " s)"); });
   }
-  const n = keep.findIndex((L) => !L), LV = (n < 0 ? keep : keep.slice(0, n)), C = check(X, LV, CVs.slice(0, LV.length)), sb = sheetsCheck(X, LV.length);
+  const n = keep.findIndex((L) => !L), LV = (n < 0 ? keep : keep.slice(0, n));
+  if (!LV.length) { log("partials-pixels: nothing to install"); return res; }
+  const C = check(X, LV, CVs.slice(0, LV.length)), sb = sheetsCheck(X, LV.length);
   C.gates.push({ name: "the map: a spot for every picture, 48 CSS px between points at 375 px", ok: !sb.length, bad: sb, info: "" }); C.ok = C.ok && !sb.length;
   for (const g of C.gates) log((g.ok ? "  pass  " : "  FAIL  ") + g.name + (g.ok ? (g.info ? " (" + g.info + ")" : "") : ": " + g.bad.slice(0, 3).join("; ")));
   res.gates = C.gates; res.records = LV;
   if (!C.ok) { res.ok = false; log("partials-pixels: a gate failed; nothing installed"); return res; }
-  if (!LV.length) { log("partials-pixels: nothing to install"); return res; }
   const files = install(X, LV); res.installed = LV.map((L) => L.src); res.kept = LV.filter((L, i) => old[i] === L).map((L) => L.src);
   log("install: " + LV.length + " picture" + (LV.length === 1 ? "" : "s") + " (" + res.kept.length + " kept byte for byte) into " + path.relative(X.GAME, X.src) + "; wrote levels/" + files.join(", levels/") + " and the LICENSES.md section");
   return res;

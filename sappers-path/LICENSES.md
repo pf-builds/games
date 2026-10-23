@@ -22,6 +22,7 @@ Licence texts and deeds, in plain text (no links):
 | Twemoji | 16 pictures (Zen World 1 and the Campaign's side quests) | Twitter, Inc and other contributors, https://github.com/jdecked/twemoji | CC BY 4.0. Adapted: resized, pixelated, reduced to a few colours (recoloured) and outlined |
 | Noto Emoji | 17 pictures (Zen World 1 and the Campaign's side quests) | Google, https://github.com/googlefonts/noto-emoji | Apache License 2.0. Adapted the same way |
 | Music and jingle | theme, play and boss loops; the win jingle | Juhani Junkala (OpenGameArt) and Kenney (kenney.nl), rows below | CC0 1.0 |
+| Original pixel art by PartialVoid | Every picture in Partial's Pixels (section at the end) | Drawn by the artist PartialVoid; shown exactly as drawn, one pixel to one block | Used with the artist's permission. All rights reserved by the artist: not CC0, not open licensed |
 | Font | Jersey 10 | The Soft Type Project Authors (Google Fonts) | SIL Open Font License 1.1 |
 
 The game shows a short credit on the map (config.json gallery.credits, plain text): Twemoji and Noto as adapted with their licence URIs, the four museums, CC0.

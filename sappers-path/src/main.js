@@ -1251,6 +1251,7 @@
     app.diff = tagOf(e); // v4.3: every level plays on its own tag
     app.pwHad = E.POWERS.map((id) => (app.save.data.inv[id] | 0) > 0); // fix pass // lane P Stage 3: before the rules are dealt (pwOpen reads it), not after: the last level's owned badges no longer open a power-up here
     app.entry = e; app.B = E.compile(e.L); app.S = E.sim(app.B, rulesOf(app.diff)); app.S.logOn = true; app.et = 0;
+    app.V.setFlat(isPic(e.mode) && !!(app.cfg[e.mode] || {}).flatBlocks); // Partial's Pixels: her picture's blocks flat, in her exact colours
     app.V.setLevel(app.B, app.S, e.L.pal, e.L.liquid, e.L.shade, e.L.hideC ? { c: e.L.hideC, q: e.L.hideQ } : null); usePalette(e); // Land 1 fix (B1): a land level's mystery fill // lands foundation: shade, the level's shade rows (none: drawn as before) // v5 R4: liquid (a lava moat) // v4 M4: the level's colours before anything is painted
     app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.popK = 0; app.used = 0; app.march = false; app.blockT = -1e12; $("panel").hidden = true; $("stage-pic").hidden = true; hideToast();
     app.lockN = app.S.locked; app.unlockT = -1e12; app.lockWas.fill(false); app.lockSock.fill(-1); app.slotUnT.fill(-1e12); app.flip.fill(false); app.reveals = 0; app.pairsOut = 0; landTiles();
@@ -2127,7 +2128,8 @@
   // cells: [hex, row by row], share: [least, mean]} or null. selfTest and tools/pixels-check.mjs hold it to the art.
   function boardCells() {
     const c = $("board"), B = app.B; if (!B || !c.width || app.screen !== "play") return null; app.V.draw();
-    const cs = c.width / B.w, d = c.getContext("2d").getImageData(0, 0, c.width, c.height).data, h2 = (v) => (v < 16 ? "0" : "") + v.toString(16), cells = []; let lo = 1, sum = 0;
+    const k = document.createElement("canvas"); k.width = c.width; k.height = c.height; const kg = k.getContext("2d", { willReadFrequently: true }); kg.drawImage(c, 0, 0); // read a copy, never the board itself (studio lesson 27)
+    const cs = c.width / B.w, d = kg.getImageData(0, 0, c.width, c.height).data, h2 = (v) => (v < 16 ? "0" : "") + v.toString(16), cells = []; let lo = 1, sum = 0;
     for (let y = 1; y < B.h - 1; y++) for (let x = 1; x < B.w - 1; x++) {
       const q = (Math.floor(y * cs + cs / 2) * c.width + Math.floor(x * cs + cs / 2)) * 4, r = d[q], g = d[q + 1], b = d[q + 2]; cells.push("#" + h2(r) + h2(g) + h2(b));
       let k = 0, t = 0; for (let py = Math.round(y * cs); py < Math.round((y + 1) * cs); py++) for (let px = Math.round(x * cs); px < Math.round((x + 1) * cs); px++) { const o = (py * c.width + px) * 4; t++; if (d[o] === r && d[o + 1] === g && d[o + 2] === b) k++; }
@@ -3748,7 +3750,7 @@
     // map (sheets requested, the scroll, the current node, eggs found) for the harness and the screens.
     map: () => { const J = app.jr; if (!J) return null; const sc = $("jr"), f = JN.focus(app.save.data, app.order);
       return { sheets: J.sheets.length, loaded: J.sheets.filter((h) => h.loaded).length, k: +J.k.toFixed(4), colW: J.colW, cards: $("map").classList.contains("cards"), scrollTop: Math.round(sc.scrollTop), height: sc.clientHeight, world: $("jr-world").offsetHeight, focus: f, eggs: Object.keys(app.save.data.eggs || {}).length, tail: J.tail && J.tail.e ? J.tail.e.id : null }; },
-    gallery: () => app.gal.map((e) => e.id), zen: () => (zenOn() ? app.modes.zen.levels.concat(app.modes.zen.gal).map((e) => e.id) : []), pixels: () => (pixOn() ? app.modes.pixels.levels.map((e) => e.id) : []), cells: boardCells, mode: () => app.mode, // Partial's Pixels: its level ids entry: () => app.V.entryInfo(),
+    gallery: () => app.gal.map((e) => e.id), zen: () => (zenOn() ? app.modes.zen.levels.concat(app.modes.zen.gal).map((e) => e.id) : []), pixels: () => (pixOn() ? app.modes.pixels.levels.map((e) => e.id) : []), cells: boardCells, mode: () => app.mode, entry: () => app.V.entryInfo(), // Partial's Pixels: pixels(), its level ids; cells(), the board read back
     // v4 M5: win siege levels 1..n (normal) in the live save (screens for the harness and the critics); a power-up through
     // its badge (k), and for the Quartermaster or Recall a target (the tile [j, d] or the space); the meta state.
     // v4.3: clearPictures(k): clear the Gallery's first k pictures in the live save (the screens' sequential Gallery).

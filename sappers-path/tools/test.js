@@ -1457,7 +1457,7 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   const v3 = JSON.parse(JSON.stringify(V3)); v3.time.tileMs += 1; const r2 = FZ.check(fx, v3);
   ok(!r2.ok && r2.files[0].diffs >= 3, "freeze: a rule change (tileMs + 1) fails on every fixture level (" + r2.files[0].diffs + " differences)");
   eq([FZ.check(path.join(tmp, "none")).missing], [true], "freeze: no snapshot reads as not baselined");
-  fs.rmSync(tmp, { recursive: true, force: true });
+  if (!process.env.PIXELS_KEEP) fs.rmSync(tmp, { recursive: true, force: true }); else console.log("  kept " + tmp);
 }
 // ---- v5 R1: the Extreme tag (data and coins; R2 decides which levels wear it) -----------------------------------------------
 {
@@ -2331,6 +2331,78 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   }
 }
 
+// Partial's Pixels (tools/partials-pixels-notes.md): PartialVoid's pictures exactly as drawn. The Lighthouse's PNG reads as
+// Peter's brief counted it; THE ART: every installed record (source and shipped) is its PNG cell for cell in her colours;
+// the converter's refusals and suggestions (no clean grid, see-through pixels, a bad merge, too many colours, too big),
+// an 8-colour fixture suggested and not installed, then installed once its merge is in the manifest, the art gate holding
+// against the merged colours; the map growing; the save's egg ids, the mode remembered, SP3; the same unlock as Zen.
+{ const fs = require("fs"), path = require("path"), os = require("os"), cp = require("child_process"), T = require("./partials-pixels.js"), VC = require("./convert.js"), S = require("../src/save.js"), P = require("../src/pack.js"), PK = require("./pack.js");
+  const G = path.join(__dirname, ".."), X = T.context(), CFG = require("../config.json"), man = JSON.parse(fs.readFileSync(X.man, "utf8")).pictures, src = JSON.parse(fs.readFileSync(X.src, "utf8"));
+  const lh = T.convert(X, { id: "pp-001", title: "Lighthouse" }, 1);
+  eq([lh.problems, lh.px, lh.s, lh.pw, lh.ph, lh.colours, lh.suggest], [[], [1200, 1200], 30, 40, 40, [["#06d6a0", 690], ["#004e39", 408], ["#028f6a", 367], ["#fffcf9", 52], ["#ffd166", 38], ["#f78c6b", 26], ["#ef476f", 19]], null], "pixels: the Lighthouse PNG is a clean 40x40 grid at 30 px a cell in exactly her 7 colours (the brief's counts)");
+  // THE ART, every installed picture, the source record and the page's own (unpacked from levels/pixels-<k>.pk.json).
+  const SH = PK.shipped(G), art = src.levels.map((L, i) => { const cv = T.convert(X, man[i], i + 1), a = T.artCheck(L, cv), b = T.artCheck(Object.assign({}, SH.byId.get(L.id), { by: L.by }), cv); return [L.id, a.match + "/" + a.total, a.ok, b.ok, L.src === man[i].id]; });
+  eq(art.map((r) => r.slice(2)), art.map(() => [true, true, true]), "pixels art: every installed picture's cells are its PNG's, exactly, in the source and the shipped record (" + art.map((r) => r[0] + " " + r[1]).join(", ") + ")");
+  eq([src.levels.length, src.levels.every((L) => !L.shade && !L.hidden && !L.lock && !L.liquid && L.by === "PartialVoid" && Object.values(L.pal).every((e) => !e.sh)), src.worlds.length, src.worlds[0].name], [man.length, true, 1, "Partial's Pixels"], "pixels: a record per manifest line, by PartialVoid, no shade, mystery blocks, locks or moats; one world");
+  // The converter on hand-made PNGs (convert.js encode, RGB): k px a cell.
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "pixels-test-")), png = (f, cells, k) => { const h = cells.length, w = cells[0].length, rgb = new Uint8Array(w * k * h * k * 3);
+    for (let y = 0; y < h * k; y++) for (let x = 0; x < w * k; x++) { const c = cells[(y / k) | 0][(x / k) | 0], q = (y * w * k + x) * 3; rgb[q] = parseInt(c.slice(1, 3), 16); rgb[q + 1] = parseInt(c.slice(3, 5), 16); rgb[q + 2] = parseInt(c.slice(5, 7), 16); }
+    fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, VC.encode(w * k, h * k, rgb)); };
+  const grid = (w, h, f) => Array.from({ length: h }, (_, y) => Array.from({ length: w }, (_, x) => f(x, y)));
+  // The 8-colour fixture: a green field, a strip of a close green on a brown band (half its edge on each), a face with an eye
+  // of a nearly equal red inside it (the closest pair, but merging it would erase the eye), a sun, a cloud, one blue cell.
+  const FX = { G1: "#208f20", G2: "#2a9a2a", H: "#704020", K: "#5050ff", F: "#cf1a1a", E: "#cc1818", Y: "#ffd800", W: "#f4f4f4" };
+  const fix = grid(12, 12, (x, y) => (y === 11 ? FX.H : y === 10 ? FX.G2 : y === 9 && x === 4 ? FX.K : x === 6 && y === 4 ? FX.E : x >= 5 && x <= 7 && y >= 3 && y <= 5 ? FX.F : x <= 1 && y <= 1 ? FX.Y : x >= 9 && y === 1 ? FX.W : FX.G1));
+  const TX = Object.assign({}, X, { art: path.join(tmp, "art"), sug: path.join(tmp, "suggest") });
+  png(path.join(TX.art, "fx-8.png"), fix, 4);
+  const c8 = T.convert(TX, { id: "fx-8", title: "Eight" }, 1), st = c8.suggest || { steps: [] };
+  eq([c8.problems, c8.s, c8.pw, c8.colours.length, c8.suggest && c8.suggest.kind, st.steps.map((q) => [q.from, q.to, q.cells, q.erase]), st.merge], [[], 4, 12, 8, "colours", [[FX.G2, FX.G1, 12, false]], { [FX.G2]: FX.G1 }],
+    "pixels converter: 8 colours over the cap of 7 suggests one merge, the close green strip into the field (12 cells), not the eye into the face though that pair is closer (it would erase a drawn shape: " + Math.round(100 * T.edgeShare(fix.flat(), 12, 12, FX.E, FX.F)) + "% of its edge)");
+  const c8m = T.convert(TX, { id: "fx-8", title: "Eight", merge: { [FX.G2]: FX.G1 } }, 1), moved = c8m.cells.filter((c, i) => c !== fix.flat()[i]).length;
+  eq([c8m.problems, c8m.suggest, c8m.colours.length, moved, c8m.cells.every((c, i) => c === (fix.flat()[i] === FX.G2 ? FX.G1 : fix.flat()[i]))], [[], null, 7, 12, true], "pixels converter: with the merge written in, 7 colours, exactly the 12 strip cells change, every other cell and colour as drawn");
+  // Refusals and the other suggestion.
+  png(path.join(TX.art, "fx-big.png"), grid(48, 46, (x, y) => ((x * 7 + y * 3) % 5 === 0 ? FX.F : (x + y) % 2 ? FX.G1 : FX.W)), 2);
+  const big = T.convert(TX, { id: "fx-big", title: "Big" }, 1);
+  const blur = grid(60, 60, (x, y) => "#" + [x * 4, y * 4, 128].map((v) => (v < 16 ? "0" : "") + v.toString(16)).join("")); png(path.join(TX.art, "fx-blur.png"), blur, 1);
+  const bl = T.convert(TX, { id: "fx-blur", title: "Blur" }, 1);
+  const bad = T.convert(TX, { id: "fx-8", title: "Eight", merge: { [FX.G2]: "#123456" } }, 1);
+  const rgba = Buffer.from(VC.encode(2, 2, new Uint8Array(12))); // an RGB PNG, then hand-made see-through RGBA below
+  const see = (() => { try { T.gridOf({ w: 2, h: 2, rgba: new Uint8Array([0, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0, 0, 0, 0, 0, 255]) }); return "read"; } catch (e) { return e.message; } })();
+  const notpng = (() => { try { T.readPNG(Buffer.from("not a png at all"), 4096); return "read"; } catch (e) { return e.message; } })();
+  eq([big.suggest && big.suggest.kind, big.suggest && big.suggest.crop[2] + "x" + big.suggest.crop[3], big.pw + "x" + big.ph, bl.problems.length === 1 && /no clean pixel grid/.test(bl.problems[0]), bad.problems.length === 1 && /not in the picture/.test(bad.problems[0]), /see-through/.test(see), notpng, T.readPNG(rgba, 4096).w],
+    ["crop", "40x44", "48x46", true, true, true, "not a PNG file", 2], "pixels converter: too big (48x46) suggests a 40x44 crop window; a smoothed export (no clean grid) is refused, saying why; a merge into a colour not in the picture is refused; see-through pixels and a non-PNG are refused");
+  // End to end in a scratch game: the fixture as drawn is suggested and not installed; with the merge in its manifest line it
+  // installs (a test config: a tiny board's pace and bands opened, 2 candidates) and its record passes the art gate.
+  const TG = path.join(tmp, "game"); for (const f of ["config.json", "map/layout.json"]) { fs.mkdirSync(path.dirname(path.join(TG, f)), { recursive: true }); fs.copyFileSync(path.join(G, f), path.join(TG, f)); }
+  fs.mkdirSync(path.join(TG, "levels"), { recursive: true }); fs.writeFileSync(path.join(TG, "LICENSES.md"), "# Licences\n");
+  png(path.join(TG, "tools/build-data/partials-pixels/art/fx-8-eight.png"), fix, 4);
+  const mf = path.join(TG, "tools/build-data/partials-pixels/manifest.json"), tc = path.join(tmp, "test-config.json");
+  fs.writeFileSync(tc, JSON.stringify({ profile: { bands: { normal: [0, 1], easy: [0, 1], hard: [0, 1] }, carefulFloor: { easy: 0, normal: 0, hard: 0 }, pace: { range: [0, 1e9], aim: 60000 }, bake: { candidates: { perLevel: 2, perLevelBy: { easy: 2, hard: 2 } } } } }));
+  const runIt = () => { try { return cp.execFileSync(process.execPath, [path.join(__dirname, "partials-pixels.js"), "--game", TG, "--config", tc, "--threads", "2"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }); } catch (e) { return String(e.stdout || "") + "EXIT " + e.status; } };
+  fs.writeFileSync(mf, JSON.stringify({ pictures: [{ id: "fx-8", title: "Eight" }] }));
+  const r1 = runIt(), noInstall = !fs.existsSync(path.join(TG, "tools/build-data/levels/pixels.json")) && !fs.existsSync(path.join(TG, "levels/pixels.pk.json")), sug = fs.existsSync(path.join(TG, "tools/build-data/partials-pixels/suggest/fx-8.md")) && fs.existsSync(path.join(TG, "tools/build-data/partials-pixels/suggest/fx-8.png"));
+  const smd = sug ? fs.readFileSync(path.join(TG, "tools/build-data/partials-pixels/suggest/fx-8.md"), "utf8") : "";
+  eq([/EXIT 1/.test(r1), noInstall, sug, smd.indexOf('"merge": {"' + FX.G2 + '":"' + FX.G1 + '"}') >= 0], [true, true, true, true], "pixels pipeline: the 8-colour fixture as drawn is not installed; suggest/fx-8.md (with the exact manifest line) and suggest/fx-8.png are written");
+  fs.writeFileSync(mf, JSON.stringify({ pictures: [{ id: "fx-8", title: "Eight", merge: { [FX.G2]: FX.G1 } }] }));
+  const r2 = runIt(), J = fs.existsSync(path.join(TG, "tools/build-data/levels/pixels.json")) ? JSON.parse(fs.readFileSync(path.join(TG, "tools/build-data/levels/pixels.json"), "utf8")) : { levels: [] }, L8 = J.levels[0];
+  const ac = L8 ? T.artCheck(L8, c8m) : { ok: false, match: 0, total: 144 }, shipped = fs.existsSync(path.join(TG, "levels/pixels-1.pk.json")) ? P.unpackFile(JSON.parse(fs.readFileSync(path.join(TG, "levels/pixels-1.pk.json"), "utf8"))).levels[0] : null;
+  eq([/installed fx-8/.test(r2), !!L8 && L8.id, ac.ok, ac.match + "/" + ac.total, !!shipped && T.artCheck(shipped, c8m).ok, !!L8 && JSON.stringify(L8.convert.merge), /merge #2a9a2a to #208f20/.test(fs.readFileSync(path.join(TG, "LICENSES.md"), "utf8"))], [true, "p1-1", true, "144/144", true, JSON.stringify({ [FX.G2]: FX.G1 }), true],
+    "pixels pipeline: with the merge in the manifest it installs, and the art gate passes against the merged colours (the record and the shipped file); LICENSES.md names the merge" + (L8 ? "" : " (" + r2.split("\n").slice(-4).join(" | ") + ")"));
+  if (!process.env.PIXELS_KEEP) fs.rmSync(tmp, { recursive: true, force: true }); else console.log("  kept " + tmp);
+  // The map grows: sheets in turn (A, B, A', B', ...), a spot a picture, the last part-filled sheet says tail, 48 px spacing.
+  const grow = [1, 8, 9, 17, 40].map((n) => { const sh = T.sheetsOf(X, n), C = X.C.map; return [sh.reduce((a, m) => a + m.levels[1] - m.levels[0] + 1, 0) === n, sh.every((m, e) => m.from === C.sheets[e % C.sheets.length] && !!m.mirror === (Math.floor(e / C.sheets.length) % 2 === 1)), !!sh[sh.length - 1].tail === (n % C.perSheet !== 0)]; });
+  eq(grow, grow.map(() => [true, true, true]), "pixels map: 1, 8, 9, 17 and 40 pictures each lay out on the mode's sheets in turn, a spot each, the last part-filled sheet's fog at its next spot");
+  // Saves: its egg ids, the mode remembered in the Zen save, SP3 round trip, the unlock as Zen's.
+  const ps = S.zenSanitize({ done: { "p1-1": 1, "z1-1": 1 }, eggs: { "p1-1-0": 1, "z1-1-0": 1 }, last: "p1-1", mode: "pixels" }, ["p1-1"], [], S.eggRe("p")), zs = S.zenSanitize({ mode: "pixels", eggs: { "p1-1-0": 1, "z1-1-0": 1 } }, [], []);
+  const cd = S.fresh(CFG.meta), zd = S.zenFresh(), pd = S.zenFresh(); pd.done["p1-1"] = 1; pd.best["p1-1"] = [1000, 30, 12]; pd.eggs["p1-1-1"] = 1; pd.last = "p1-1"; zd.done["z1-1"] = 1;
+  const zl = [{ id: "z1-1", w: 1, n: 1 }], pl = [{ id: "p1-1", w: 1, n: 1 }], c3 = S.encode3(cd, zd, pd, [], zl, pl), r3 = S.decodeAny(c3, [], [], CFG.meta, null, 20000, { order: ["z1-1"], gal: [], zl }, [], { order: ["p1-1"], gal: [], zl: pl });
+  const c2 = S.encode2(cd, zd, [], zl), r2b = S.decodeAny(c2, [], [], CFG.meta, null, 20000, { order: ["z1-1"], gal: [], zl }, [], { order: ["p1-1"], gal: [], zl: pl });
+  eq([JSON.stringify(ps.done), JSON.stringify(ps.eggs), ps.last, ps.mode, JSON.stringify(zs.eggs), zs.mode, r3.ok && r3.code, r3.pixels && JSON.stringify([r3.pixels.done, r3.pixels.best, r3.pixels.eggs, r3.pixels.last]), r3.zen && r3.zen.done["z1-1"], c2.slice(0, 4), r2b.code, r2b.pixels, S.decodeAny(c3, [], [], CFG.meta, null, 20000, { order: [], gal: [], zl }).err],
+    ['{"p1-1":1}', '{"p1-1-0":1}', "p1-1", "pixels", '{"z1-1-0":1}', "pixels", 3, JSON.stringify([{ "p1-1": 1 }, { "p1-1": [1000, 30, 12] }, { "p1-1-1": 1 }, "p1-1"]), 1, "SP2.", 2, null, "newer"],
+    "pixels saves: its own egg ids (p, Zen's stay z), the mode played last may be Partial's Pixels, an SP3 code carries its clears, bests, eggs and last beside Zen's, an SP2 code still reads (no Pixels part), and a page without the mode calls SP3 newer");
+  eq([CFG.pixels.openAfter, CFG.pixels.save.key !== CFG.zen.save.key && CFG.pixels.save.key !== CFG.save.key, CFG.v5.ship.levels.indexOf("pixels.pk.json") >= 0, CFG.audio.music.modes.pixels.play], [CFG.zen.openAfter, true, true, CFG.audio.music.modes.zen.play], "pixels config: opens after the same Campaign level as Zen, its own save key, its index shipped, Zen's calm music");
+}
+
 // v7 lane T (tools/space-v7-notes.md): the packed level files. The source (tools/build-data/levels/) is the truth; the
 // shipped levels/*.pk.json are exactly what tools/pack.js writes from it; every record of every file (Campaign 1-250,
 // the Gallery's pictures, every Zen world) unpacks to its source record less the bake-only fields, and the page reads
@@ -2341,7 +2413,7 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   const stale = Object.keys(B).filter((f) => !fs.existsSync(path.join(G, "levels", f)) || fs.readFileSync(path.join(G, "levels", f), "utf8") !== B[f]);
   const stray = fs.readdirSync(path.join(G, "levels")).filter((f) => /\.pk\.json$/.test(f) && !B[f]);
   ok(!stale.length && !stray.length, "pack: the shipped levels/*.pk.json are what tools/pack.js writes from tools/build-data/levels/" + (stale.length || stray.length ? " (stale: " + stale.concat(stray).join(", ") + "; run tools/pack.js)" : ""));
-  const SH = PK.shipped(G), all = S.levels.levels.concat(S.gallery.levels, S.zen.levels), rt = [], sh = [], plain = []; let n = 0;
+  const SH = PK.shipped(G), all = S.levels.levels.concat(S.gallery.levels, S.zen.levels, S.pixels ? S.pixels.levels : []), rt = [], sh = [], plain = []; let n = 0; // Partial's Pixels: its records too
   for (const L of all) { n++; const want = P.strip(L); if (!P.same(P.unpack(P.pack(L)), want)) rt.push(L.id); if (!P.same(SH.byId.get(L.id), want)) sh.push(L.id); const K = P.pack(L); for (const k of ["grid", "cols", "pal"]) if (typeof K[k] !== "string") plain.push(L.id + "." + k); }
   eq([n, SH.byId.size, rt, sh, plain], [all.length, all.length, [], [], []], "pack: unpack(pack(x)) equals x less the bake-only fields for every record (" + n + "), the shipped files hold each record once and it unpacks to the source's, every grid, deck and palette packed");
   const page = ["index.html"].concat(fs.readdirSync(path.join(G, "src")).map((f) => "src/" + f)).map((f) => fs.readFileSync(path.join(G, f), "utf8")).join("\n");
@@ -2354,6 +2426,10 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
       if (!P.same(Object.keys(st).sort().map((k) => [k, st[k]]), Object.keys(want).sort().map((k) => [k, want[k]]))) bad.push(L.id + " stand-in " + JSON.stringify(st)); });
     const wsrc = S.zen.worlds.find((x) => x.k === w.k), back = Object.assign({}, P.unpackWorld(w)); delete back.recs; if (!P.same(back, wsrc)) bad.push("world " + w.k + ": the index entry is not zen.json's"); }
   const order = camp.concat(IX.worlds.filter((w) => w.land).flatMap((w) => w.recs.ids)), want = S.levels.levels.map((L) => L.id);
+  if (S.pixels) { const PXI = SH.pixels; for (const w of PXI.worlds) { const src = S.pixels.levels.filter((L) => L.world === w.k), file = JSON.parse(B[w.recs.file]).levels; // Partial's Pixels: its index and world files, as Zen's
+      if (file.map((L) => L.id).join() !== src.map((L) => L.id).join()) bad.push("pixels world " + w.k + ": its file's ids are not its records'");
+      src.forEach((L, i) => { const st = P.stub(w.recs, i); if (st.id !== L.id || st.n !== L.n || st.world !== L.world || st.tag !== L.tag) bad.push(L.id + " stand-in " + JSON.stringify(st)); });
+      const back = Object.assign({}, P.unpackWorld(w)); delete back.recs; if (!P.same(back, S.pixels.worlds.find((x) => x.k === w.k))) bad.push("pixels world " + w.k + ": the index entry is not pixels.json's"); } }
   eq([bad, order.join() === want.join(), camp.some((id) => lands.has((S.levels.levels.find((L) => L.id === id) || {}).land))], [[], true, false], "pack (stage 3): each Zen world's records in its own file only, the index's stand-ins match the records, its worlds unpack to zen.json's, the page's level order (Campaign, then land worlds) is levels.json's");
   const kb = (f) => (fs.statSync(path.join(G, "levels", f)).size / 1024).toFixed(1), per = (f, k) => Math.round(fs.statSync(path.join(G, "levels", f)).size / k);
   console.log("  packed: Campaign " + per("levels.pk.json", camp.length) + " B a level, Gallery " + per("gallery.pk.json", S.gallery.levels.length) + ", Zen worlds " + IX.worlds.map((w) => w.k + ": " + per(w.recs.file, w.recs.ids.length)).join(", ") + " (file / records); Zen index " + kb("zen.pk.json") + " KB");
@@ -2364,7 +2440,7 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
 { const fs = require("fs"), path = require("path"), SH = V5.ship, G = path.join(__dirname, ".."); let bytes = 0, files = 0;
   const walk = (d) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { if (e.name[0] === "." || (d === G && e.name === "tools")) continue;
     const p = path.join(d, e.name); if (e.isDirectory()) walk(p); else { bytes += fs.statSync(p).size; files++; } } };
-  const worlds = JSON.parse(fs.readFileSync(path.join(G, "levels/zen.pk.json"), "utf8")).worlds.map((w) => w.recs.file); // v7 lane T: each Zen world's file, named by the index
+  const worlds = JSON.parse(fs.readFileSync(path.join(G, "levels/zen.pk.json"), "utf8")).worlds.map((w) => w.recs.file).concat(fs.existsSync(path.join(G, "levels/pixels.pk.json")) ? JSON.parse(fs.readFileSync(path.join(G, "levels/pixels.pk.json"), "utf8")).worlds.map((w) => w.recs.file) : []); // v7 lane T: each Zen world's file, named by the index (Partial's Pixels: its own index's too)
   walk(G); const extra = fs.readdirSync(path.join(G, "levels")).filter((f) => f[0] !== "." && SH.levels.indexOf(f) < 0 && worlds.indexOf(f) < 0);
   console.log("  shipped folder (minus tools/): " + files + " files, " + bytes.toLocaleString("en-US") + " B");
   ok(bytes <= SH.capBytes && !extra.length, "shipped folder: " + bytes.toLocaleString("en-US") + " B (cap " + SH.capBytes.toLocaleString("en-US") + ")" + (extra.length ? "; levels/ holds files the page never reads: " + extra.join(", ") + " (move them to tools/build-data/ or list them in config v5.ship.levels)" : ""));

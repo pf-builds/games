@@ -68,6 +68,9 @@
 // digit and S.tb[m] holds the base and each shade's stud (same seam, highlight, foot and colour-blind mark as the base);
 // pops fall in the cell's shade. Every other sprite (cards, bins, crumbs, helmets, mystery blocks) keeps the base colour,
 // and the engine never reads shade. A level without shade rows draws exactly as before (the lit/shade tones, off).
+// Partial's Pixels (tools/partials-pixels-notes.md): setFlat(on) draws every block as a flat face in its exact colour on its
+// seam, no highlight band, foot or glint, so an artist's picture shows in her own colours (main.js turns it on for a mode
+// whose config says flatBlocks); off, every block draws exactly as before.
 (function (root, factory) {
   (root.SappersPath = root.SappersPath || {}).board = factory(root.SappersPath.engine);
 })(window, function (E) {
@@ -162,7 +165,7 @@
   function create(canvas, cfg, sheets) {
     const C = cfg.v3, K = cfg.board, SH = cfg.show, FX = cfg.fx, g = canvas.getContext("2d", { alpha: false });
     const V = {
-      canvas, g, cfg, B: null, S: null, w: 0, h: 0, n: 0, cs: 0, dpr: 1, Y: K.yardRows | 0, calm: false, cb: false, mats: [], nextPile: 0,
+      canvas, g, cfg, B: null, S: null, w: 0, h: 0, n: 0, cs: 0, dpr: 1, Y: K.yardRows | 0, calm: false, cb: false, flat: false, mats: [], nextPile: 0,
       disp: null, dist: null, q: null, tone: null, deco: null, shade: null, shPal: [], shK: "", idleC: [], layer: null, lg: null, sprites: null, piles: [], pileOf: new Int16Array(E.NMAT).fill(-1),
       haul: new Int32Array(E.NMAT), total: new Int32Array(E.NMAT), towerLeft: new Int32Array(MAXT), towerOfCell: null,
       clock: 0, speed: 1, fxT: 0, rebuilds: 0, lastPop: -1, pileDirty: true, font: "", seed: 12345,
@@ -211,12 +214,12 @@
       const sw = Math.min(s >> 2, seamPx || Math.max(1, Math.round(V.dpr * T.seamCss))), a = sw >> 1, f = s - sw, r = Math.max(0.5, f * T.radius);
       x.fillStyle = toneHex(base, T.seam); x.fillRect(0, 0, s, s);
       rr(x, a, a, f, f, r); x.fillStyle = base; x.fill();
-      x.save(); rr(x, a, a, f, f, r); x.clip();
+      if (!V.flat) { x.save(); rr(x, a, a, f, f, r); x.clip(); // Partial's Pixels: a flat block has no highlight, foot or glint
       const hh = Math.max(1, Math.round(f * T.hiH)), lh = Math.max(1, Math.round(f * T.loH));
       x.fillStyle = mixHex(base, T.hi); x.fillRect(a, a, f, hh);
       x.fillStyle = mixHex(base, T.lo); x.fillRect(a, a + f - lh, f, lh);
       if (f >= 7) { x.globalAlpha = T.glintAlpha; x.fillStyle = "#ffffff"; rr(x, a + f * T.glint[0], a + f * T.glint[1], Math.max(1, f * T.glint[2]), Math.max(1, f * T.glint[3]), f * T.glint[3] / 2); x.fill(); x.globalAlpha = 1; }
-      x.restore();
+      x.restore(); }
       if (s >= 5 && (V.cb || m === IRON || m === GILT)) mark(x, m, s, m === IRON ? K.gateBar : m === GILT ? K.keyInk : dark ? shade(base, K.markLight) : shade(base, K.mark), K);
       return c;
     }
@@ -973,10 +976,12 @@
 
     // Colour-blind mode (v4 M1): every block wears its material's mark. Rebuilds the caches and repaints (a settings tap).
     function setCb(on) { on = !!on; if (on === V.cb) return; V.cb = on; if (V.sprites) { buildSprites(); paintLayer(); } }
+    function setFlat(on) { on = !!on; if (on === V.flat) return; V.flat = on; V.sprites = null; } // Partial's Pixels: the caches are rebuilt at the next layout
+
     // A material's mark alone (transparent around it, drawn in ink): the queue tiles' glyph in colour-blind mode.
     function glyph(m, px, ink) { const c = mk(px, px); mark(c.getContext("2d"), m, px, ink, K); return c; }
 
-    Object.assign(V, { setLevel, reset, layout, fitCs, hotNow, sync, setSlots, update, goblin, draw, checkSprites, buildSprites, paintLayer, shake, cssAt, hitInfo, fxInfo, runners, entryInfo, setCb, glyph, studInfo, hideInfo,
+    Object.assign(V, { setLevel, reset, layout, fitCs, hotNow, sync, setSlots, update, goblin, draw, checkSprites, buildSprites, paintLayer, shake, cssAt, hitInfo, fxInfo, runners, entryInfo, setCb, setFlat, glyph, studInfo, hideInfo,
       man: (m, px) => sapper(m, px) });
     return V;
   }

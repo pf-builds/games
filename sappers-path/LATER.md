@@ -528,3 +528,12 @@ Fixed: S1-S7, m2, m3, N1, N2 (`tools/v5-r4-notes.md` §10). Parked:
 - Stage 2 re-check (left as they are, the coordinator's call): at 400x600 the top round buttons draw 36x36 (hit area 43x39) and
   the squad cards 71x38, just under 40 tall; banked 3x time drains while the player only thinks (Peter's design: real time at
   3x, not just while sappers run).
+
+## Partial's Pixels (2026-10-22)
+
+- Freeze: add `pixels.json` to the freeze snapshot at ship (`tools/freeze.js --snapshot` copies zen.json; it should copy and re-grade pixels.json the same way once her levels ship).
+- "0 of 1 pictures": Zen's plural template; a one-of form ("1 picture") if Peter wants it while the mode has a single level.
+- An "artist" screen or a one-time intro card for the mode (her name, a line from her) when it opens: not in the brief.
+- Merge suggestions judge a "shape" by shared edge only; a picture where two near colours draw a pattern (dithering) could want a smarter check. Peter approves every merge anyway.
+- Her art in the Campaign/Zen map foot's general credit line: left as is (each map's foot names its own pictures); the Pixels map carries her line.
+- Portal build: the mode ships in the folder as is (2 small files); a portal-specific decision on whether her art goes to CrazyGames is Peter's (her permission covers the game; check it covers portals).
