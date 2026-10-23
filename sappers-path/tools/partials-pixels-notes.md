@@ -146,3 +146,8 @@ selfTest both sizes (13p: lock, every stored order, the art on the canvas, the w
 5. The Lighthouse is Normal; the tag turn starts Normal (as Zen's picture 1).
 6. Partial's Pixels levels are not in the freeze snapshot yet (it's re-taken at ship, as for each new Zen world).
 7. "0 of 1 pictures" uses Zen's plural template as is.
+
+## Peter's decisions (2026-10-22)
+- **Violet tint:** keep it (castle sheets 6 and 5).
+- **Web only for now:** Partial's Pixels ships on pf-builds only. Her permission is for the web game; portal builds (CrazyGames etc.) leave the mode out until Peter says otherwise. Revisit once she has made more art.
+- **Pace:** new pictures will come slowly, over time. The mode has to look right with one or a few pictures for a long stretch, not as a placeholder for a big world.
