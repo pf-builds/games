@@ -110,12 +110,12 @@
   // keep the play loop. entry: the page's level entry ({era, gallery, debug}) or null.
   // v6 lane B (Peter, 2026-10-06): music per mode (music.modes[mode][screen] over music.screens): the Campaign keeps the
   // map's theme on the map and carries it into its levels and side quests (the Goblin King's realm still takes the boss
-  // loop); Zen plays the calm level loop on its map and in its levels. The home keeps music.screens.title. Partial's Pixels
+  // loop); Zen plays the calm level loop on its map and in its levels. The home keeps music.screens.title. the third mode
   // (a picture mode) plays as Zen does (music.modes.pixels); only the Campaign's levels take the boss loop.
   function pick(M, screen, entry, mode) {
     if (!M) return null;
     const S = (mode && M.modes && M.modes[mode]) || {}, t = (S[screen] !== undefined ? S[screen] : M.screens[screen]) || null;
-    if (screen !== "play" || !entry || entry.gallery || entry.debug || (mode && mode !== "campaign") || (!mode && t !== M.screens.play)) return t; // Partial's Pixels: any picture mode as Zen
+    if (screen !== "play" || !entry || entry.gallery || entry.debug || (mode && mode !== "campaign") || (!mode && t !== M.screens.play)) return t; // The third mode: any picture mode as Zen
     return (M.bossRealms || []).indexOf(entry.era | 0) >= 0 ? M.bossTrack : t;
   }
   // Ask for a track (null: silence). Fades the old one out and the new one in when its buffer is ready; else fetches it

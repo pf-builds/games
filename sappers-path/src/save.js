@@ -70,11 +70,11 @@
 //   number in the world, best row), the won pictures (by their place in gallery.json, best row), the eggs (world, sheet,
 //   i), last (world and number, 0 0: none). decodeAny() reads both: an SP1 code loads as the Campaign with zen null (the
 //   page runs the move on it); an SP2 code as both.
-// Partial's Pixels (tools/partials-pixels-notes.md): a third mode, a picture mode like Zen. Its progress lives in its own
+// the third mode (the third mode's notes, in tools/): a third mode, a picture mode like Zen. Its progress lives in its own
 //   key (config pixels.save.key) in the Zen save's shape, through the same openZen (egg: its eggs' id pattern, p<world>-
 //   <sheet>-<i>; the move never runs on it). The mode last played stays in the Zen save's mode ("pixels" now allowed).
 //   The SP3 code: CODE3 ("SP3.") + base64url(SP2's body exactly, then the Pixels part in the Zen part's own format, its
-//   eggs as p ids) + CRC-32; the page writes it only while Partial's Pixels has progress (else SP2, byte for byte as
+//   eggs as p ids) + CRC-32; the page writes it only while the third mode has progress (else SP2, byte for byte as
 //   before, so an older page still reads it), and decodeAny reads SP1, SP2 and SP3 (an SP1 or SP2 code: pixels null).
 (function (root, factory) {
   const api = factory();
@@ -230,7 +230,7 @@
     const w = writer(); campBody(cdata, gal, w.put); partBody(zdata, gal, zl, w.put, "z");
     return seal(w.b, CODE2);
   }
-  // A picture mode's part of a code (Zen's in SP2; Partial's Pixels' too in SP3): format, the cleared levels (world, number in
+  // A picture mode's part of a code (Zen's in SP2; the third mode' too in SP3): format, the cleared levels (world, number in
   // the world, best row), the won pictures (place in gal, best row), the eggs (world, sheet, i of the prefix's ids), last.
   function partBody(zdata, gal, zl, put, prefix) {
     const at = new Map(zl.map((x) => [x.id, x])), row = (id) => { const r = isObj(zdata.best) && Array.isArray(zdata.best[id]) ? zdata.best[id] : []; for (let k = 0; k < 3; k++) put(r[k]); }, ER = eggRe(prefix), EM = new RegExp("^" + prefix + "(\\d+)-(\\d+)-(\\d+)$");
@@ -241,7 +241,7 @@
     const eggs = Object.keys(zdata.eggs || {}).filter((k) => ER.test(k)); put(eggs.length); for (const k of eggs) { const m = EM.exec(k); put(+m[1]); put(+m[2]); put(+m[3]); }
     const l = at.get(zdata.last); put(l ? l.w : 0); put(l ? l.n : 0);
   }
-  // Partial's Pixels: the SP3 code (SP2's body, then the Pixels part; pl its levels [{id, w, n}]).
+  // The third mode: the SP3 code (SP2's body, then the Pixels part; pl its levels [{id, w, n}]).
   function encode3(cdata, zdata, pdata, gal, zl, pl) {
     const w = writer(); campBody(cdata, gal, w.put); partBody(zdata, gal, zl, w.put, "z"); partBody(pdata, [], pl, w.put, "p");
     return seal(w.b, CODE3);
@@ -280,7 +280,7 @@
   // are v5.4's Gallery order, so an SP1 code made on v5.4 credits the right ids whatever gallery.json holds now; SP2: the
   // whole registry); gal stays the current Gallery's ids, what sanitize keeps. The result also carries raw (the Campaign
   // part before sanitize), so the Zen move can read pictures the current Gallery no longer has.
-  // Partial's Pixels: PX ({order, gal, zl} of its mode) also reads an SP3 code; the result's pixels is its data (null otherwise).
+  // The third mode: PX ({order, gal, zl} of its mode) also reads an SP3 code; the result's pixels is its data (null otherwise).
   function decodeAny(text, order, gal, meta, prefs, maxLen, Z, places, PX) {
     const P = places || gal;
     try {
@@ -301,7 +301,7 @@
 
   // ---- v6 lane B: the Zen save ------------------------------------------------------------------------------------------
   const ZVERSION = 1, ZEGG = /^z\d{1,2}-\d{1,3}-\d{1,2}$/, CODE2 = "SP2.", CODE3 = "SP3.", WALLET = ["coins", "inv", "got", "lives", "settings", "bank"], MODES = ["campaign", "zen", "pixels"];
-  const eggRe = (prefix) => (prefix === "z" || !prefix ? ZEGG : new RegExp("^" + prefix + "\\d{1,2}-\\d{1,3}-\\d{1,2}$")); // a picture mode's egg ids (Zen z, Partial's Pixels p)
+  const eggRe = (prefix) => (prefix === "z" || !prefix ? ZEGG : new RegExp("^" + prefix + "\\d{1,2}-\\d{1,3}-\\d{1,2}$")); // a picture mode's egg ids (Zen z, the third mode p)
   const zenFresh = () => ({ v: ZVERSION, done: {}, gal: {}, eggs: {}, best: {}, last: null, moved: 0, mode: "campaign" });
   // order: the Zen levels in play order (with starts); gal: its pictures. Unknown ids dropped; never throws.
   // egg (optional): the mode's egg id pattern (eggRe; Zen's by default).
@@ -350,5 +350,5 @@
 
   return { VERSION, fresh, sanitize, record, next, nextBy, isOpen, questOpen, memoryStore, open, reset, cloud, withPrefs, encode, decode, CODE,
     ZVERSION, CODE2, rawOf, resetCampaign, zenFresh, zenSanitize, zenView, openZen, zenMove, resetZen, encode2, decodeAny, // v6 lane B
-    CODE3, encode3, eggRe }; // Partial's Pixels
+    CODE3, encode3, eggRe }; // the third mode
 });

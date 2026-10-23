@@ -1,6 +1,6 @@
 {
  "version": 1,
- "note": "Partial's Pixels (tools/partials-pixels.js; runbook tools/partials-pixels-notes.md): the third play mode, every level one of PartialVoid's original pixel pictures, one art pixel = one board cell, her exact colours, nothing redrawn. paths: the art folder, the manifest, the suggestion folder, the bake scratch (gitignored) and the source record file (tools/pack.js packs it into levels/pixels.pk.json and levels/pixels-<k>.pk.json). limits: maxColours is Peter's cap for her pictures (the engine itself takes up to 12, tools/convert.js IDS: 1-9 and 11-13, iron 10 and gilt 14 never); the board's largest picture is tools/land-config.json box (40 x 44 cells inside the frame), read from there; maxPx the largest PNG side read. world: the mode's one world entry (ids <prefix><k>-<n>, era for the realm card, by on every record and the win line, credit on the map's foot and in LICENSES.md). map: the reused castle sheets (map/layout.json numbers, no new image bytes), first the one then the other, every other pair mirrored, perSheet levels on spots (road order), eggs at the painted side-quest spurs' tips in eggKinds' turn, all under tint (a CSS filter) so the mode reads apart from the Zen worlds. tags: picture n plays tags[(n - 1) % length] unless its manifest line names a tag. plan: each tag's deck features (? cards and linked pairs only: neither changes the picture; no mystery blocks, moats, gates, towers or locks ever). profile: merged over tools/land-config.json profile like a land's (bands, careful floor, pace, bake); seed: picture n's bake seed is seed + n. suggest: a colour merge is flagged as erasing a shape when edgeShare or more of the merged colour's edge touches the colour it would become; previews at previewPx px a cell.",
+ "note": "Partial's Pixels (tools/partials-pixels.js; runbook tools/partials-pixels-notes.md): the third play mode, every level one of PartialVoid's original pixel pictures, one art pixel = one board cell, her exact colours, nothing redrawn. paths: the art folder, the manifest, the suggestion folder, the bake scratch (gitignored) and the source record file (tools/pack.js packs it into levels/pixels.pk.json and levels/pixels-<k>.pk.json). limits: maxColours is Peter's cap for her pictures (the engine itself takes up to 12, tools/convert.js IDS: 1-9 and 11-13, iron 10 and gilt 14 never); the board's largest picture is tools/land-config.json box (40 x 44 cells inside the frame), read from there; maxPx the largest PNG side read. world: the mode's one world entry (ids <prefix><k>-<n>, era for the realm card, by on every record and the win line, credit on the map's foot and in LICENSES.md). map: the reused castle sheets (map/layout.json numbers, no new image bytes), first the one then the other, every other pair mirrored, perSheet levels on spots (road order), eggs at the painted side-quest spurs' tips in eggKinds' turn, all under tint (a CSS filter) so the mode reads apart from the Zen worlds. tags: picture n plays tags[(n - 1) % length] unless its manifest line names a tag. plan: each tag's deck features (? cards and linked pairs only: neither changes the picture; no mystery blocks, moats, gates, towers or locks ever). profile: merged over tools/land-config.json profile like a land's (bands, careful floor, pace, bake); seed: picture n's bake seed is seed + n. suggest: a colour merge is flagged as erasing a shape when edgeShare or more of the merged colour's edge touches the colour it would become; previews at previewPx px a cell. paceByCells (fix pass, critic S2): a picture's real-pace range and aim scale with its cells against ref (the Lighthouse's 40 x 40), never under floor of the profile's (a 32 x 32 picture plays about two thirds as long, so it is held to 96-300 s, aim 144 s; the upper bound never moves). retry: a picture whose bake falls back (misses a target) is baked again with each of these extra candidates in turn before the tool gives up and prints the next steps. suggest.warnDE: the run warns when a picture's closest two colours are nearer than this (CIEDE2000: a player may not tell them apart); suggest.shapeDE: a pair this near never counts as a drawn shape (twins, not an eye in a face), so the suggester may merge it.",
  "paths": {
   "art": "tools/build-data/partials-pixels/art",
   "manifest": "tools/build-data/partials-pixels/manifest.json",
@@ -122,6 +122,18 @@
  "seed": 50000,
  "suggest": {
   "edgeShare": 0.5,
-  "previewPx": 10
+  "previewPx": 10,
+  "warnDE": 10,
+  "shapeDE": 3
+ },
+ "paceByCells": {
+  "ref": 1600,
+  "floor": 0.55
+ },
+ "retry": {
+  "extra": [
+   4,
+   8
+  ]
  }
 }

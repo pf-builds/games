@@ -3,35 +3,208 @@
  "note": "Sapper's Path portal build (lane P, tools/portal-build.mjs, tools/portal-selftest.mjs; tools/portal-notes.md). CrazyGames Basic Launch with no SDK: the whole build counts. out: the gitignored folder the build writes (the staged copy, the zip, build.json). maxBytes: the mobile-homepage line read two ways (20 MiB and 20 MB; the build fails past the lower); maxFiles: the portal's file cap. debugOnly: files the code fetches only under ?debug=1, left out of the zip on purpose (portal-selftest serves them from the source tree for its selfTest run only). companions: shipped though never fetched (the font's own licence must travel with it). licences: the plain-text credits generated from LICENSES.md. stripMeta: index.html <meta> lines dropped from the copy (the social-card tags carry the pf-builds URL). banned: words that must not appear in the build's runtime files (case-insensitive; itch as itch.io so 'switch' passes); allowUrls: the one absolute URL runtime files may hold (the SVG namespace inside data: URIs, never fetched).",
  "out": "tools/build-data/portal",
  "name": "sappers-path-crazygames",
- "maxBytes": [20971520, 20000000],
+ "maxBytes": [
+  20971520,
+  20000000
+ ],
  "maxFiles": 1500,
- "debugOnly": ["levels/debug-v4.json"],
- "companions": ["fonts/OFL.txt", "LICENSE-Apache-2.0.txt"],
- "leftOut": {"thumb.jpg": "the arcade's card image (pf-builds hub), never loaded by the page", "audio/jingle-pizzi15.m4a": "a spare jingle config does not play", "audio/jingle-steel10.m4a": "a spare jingle config does not play", "levels/gallery-manifest.json": "the Gallery's licence record (LICENSES.md cites it); never fetched", "levels/debug-v4.json": "?debug=1 only (debugOnly)"},
- "keepNotes": ["config.json .eras[].note", "levels/tutorial.json .steps[].jamNote"],
- "licences": {"from": "LICENSES.md", "to": "LICENSES.txt",
-  "dropRows": ["`thumb.jpg`"],
+ "debugOnly": [
+  "levels/debug-v4.json"
+ ],
+ "companions": [
+  "fonts/OFL.txt",
+  "LICENSE-Apache-2.0.txt"
+ ],
+ "leftOut": {
+  "thumb.jpg": "the arcade's card image (pf-builds hub), never loaded by the page",
+  "audio/jingle-pizzi15.m4a": "a spare jingle config does not play",
+  "audio/jingle-steel10.m4a": "a spare jingle config does not play",
+  "levels/gallery-manifest.json": "the Gallery's licence record (LICENSES.md cites it); never fetched",
+  "levels/debug-v4.json": "?debug=1 only (debugOnly)",
+  "levels/pixels.pk.json": "Partial's Pixels is web only (Peter, 2026-10-22): its index stays out of the portal build (webOnly)",
+  "levels/pixels-1.pk.json": "Partial's Pixels is web only (Peter, 2026-10-22): its world file stays out (webOnly)"
+ },
+ "keepNotes": [
+  "config.json .eras[].note",
+  "levels/tutorial.json .steps[].jamNote"
+ ],
+ "licences": {
+  "from": "LICENSES.md",
+  "to": "LICENSES.txt",
+  "dropRows": [
+   "`thumb.jpg`"
+  ],
   "rewrite": [
-   ["; prompt in `?(?:tools|levels)/[\\w./-]*manifest\\.json`?", "; prompt in the studio's records"],
-   ["`?levels/gallery-manifest\\.json`?", "the studio's picture records"],
-   ["`?(?:tools/)?build-data/levels/gallery\\.json`?|`?levels/gallery\\.json`?", "the game's picture data"],
-   ["`?tools/[\\w./-]*`?", "a studio build script"],
-   [", plays; spares `audio/jingle-pizzi15\\.m4a`, `audio/jingle-steel10\\.m4a`", ""],
-   ["`?LICENSES\\.md`?", "this file"],
-   ["License\\.txt in the pack", "the pack's licence file"],
-   [", `jingles_PIZZI10\\.ogg`, `jingles_PIZZI15\\.ogg`, `jingles_STEEL10\\.ogg`", " (jingles_PIZZI10 in the pack)"]
-  ]},
- "stripMeta": ["property=\"og:", "name=\"twitter:"],
- "banned": ["https?://", "pf-builds", "github\\.io", "peterfrutchey", "poki", "crazygames", "itch\\.io"],
- "allowUrls": ["http://www.w3.org/2000/svg", "https://creativecommons.org/licenses/by/4.0/", "https://www.apache.org/licenses/LICENSE-2.0", "https://creativecommons.org/publicdomain/zero/1.0/"],
- "sizes": {"note": "tools/portal-sizes.mjs (lane P Stage 3, the gate critic's gate 3): every size CrazyGames lists for its iframe (907x510 to 1920x1080), the small ones it also names (800x450, 821x462, 400x600) and the runbook's phones; each screen's controls and sheet titles wholly inside, text at least minFontPx on screen. out: screenshots and contact.png (gitignored with the build).",
-  "port": 8614, "out": "tools/build-data/portal/sizes", "minFontPx": 10,
-  "list": [[907, 510], [1077, 606], [1080, 607], [1216, 684], [1280, 720], [1366, 768], [1536, 864], [1920, 1080], [800, 450], [821, 462], [400, 600], [375, 812], [360, 640]]},
+   [
+    "; prompt in `?(?:tools|levels)/[\\w./-]*manifest\\.json`?",
+    "; prompt in the studio's records"
+   ],
+   [
+    "`?levels/gallery-manifest\\.json`?",
+    "the studio's picture records"
+   ],
+   [
+    "`?(?:tools/)?build-data/levels/gallery\\.json`?|`?levels/gallery\\.json`?",
+    "the game's picture data"
+   ],
+   [
+    "`?tools/[\\w./-]*`?",
+    "a studio build script"
+   ],
+   [
+    ", plays; spares `audio/jingle-pizzi15\\.m4a`, `audio/jingle-steel10\\.m4a`",
+    ""
+   ],
+   [
+    "`?LICENSES\\.md`?",
+    "this file"
+   ],
+   [
+    "License\\.txt in the pack",
+    "the pack's licence file"
+   ],
+   [
+    ", `jingles_PIZZI10\\.ogg`, `jingles_PIZZI15\\.ogg`, `jingles_STEEL10\\.ogg`",
+    " (jingles_PIZZI10 in the pack)"
+   ]
+  ]
+ },
+ "stripMeta": [
+  "property=\"og:",
+  "name=\"twitter:"
+ ],
+ "banned": [
+  "https?://",
+  "pf-builds",
+  "github\\.io",
+  "peterfrutchey",
+  "poki",
+  "crazygames",
+  "itch\\.io"
+ ],
+ "allowUrls": [
+  "http://www.w3.org/2000/svg",
+  "https://creativecommons.org/licenses/by/4.0/",
+  "https://www.apache.org/licenses/LICENSE-2.0",
+  "https://creativecommons.org/publicdomain/zero/1.0/"
+ ],
+ "sizes": {
+  "note": "tools/portal-sizes.mjs (lane P Stage 3, the gate critic's gate 3): every size CrazyGames lists for its iframe (907x510 to 1920x1080), the small ones it also names (800x450, 821x462, 400x600) and the runbook's phones; each screen's controls and sheet titles wholly inside, text at least minFontPx on screen. out: screenshots and contact.png (gitignored with the build).",
+  "port": 8614,
+  "out": "tools/build-data/portal/sizes",
+  "minFontPx": 10,
+  "list": [
+   [
+    907,
+    510
+   ],
+   [
+    1077,
+    606
+   ],
+   [
+    1080,
+    607
+   ],
+   [
+    1216,
+    684
+   ],
+   [
+    1280,
+    720
+   ],
+   [
+    1366,
+    768
+   ],
+   [
+    1536,
+    864
+   ],
+   [
+    1920,
+    1080
+   ],
+   [
+    800,
+    450
+   ],
+   [
+    821,
+    462
+   ],
+   [
+    400,
+    600
+   ],
+   [
+    375,
+    812
+   ],
+   [
+    360,
+    640
+   ]
+  ]
+ },
  "selftest": {
-  "hostPort": 8611, "gamePort": 8612,
+  "hostPort": 8611,
+  "gamePort": 8612,
   "subpath": "cdn/games/sappers-path/b1/",
-  "viewports": [[375, 812, 3, true], [1280, 720, 1, false], [821, 462, 1, false]],
-  "settleMs": 2500, "selfTestMs": 120000,
-  "maxBeforeTapBytes": 2500000, "neverFetchedOk": ["LICENSES.txt", "fonts/OFL.txt", "LICENSE-Apache-2.0.txt"]
+  "viewports": [
+   [
+    375,
+    812,
+    3,
+    true
+   ],
+   [
+    1280,
+    720,
+    1,
+    false
+   ],
+   [
+    821,
+    462,
+    1,
+    false
+   ]
+  ],
+  "settleMs": 2500,
+  "selfTestMs": 120000,
+  "maxBeforeTapBytes": 2500000,
+  "neverFetchedOk": [
+   "LICENSES.txt",
+   "fonts/OFL.txt",
+   "LICENSE-Apache-2.0.txt"
+  ]
+ },
+ "webOnly": {
+  "note": "Partial's Pixels ships on pf-builds only (Peter, 2026-10-22: her permission is for the web game; portals leave the mode out until he says otherwise; tools/partials-pixels-notes.md). The build drops configKeys (dotted paths) and arrayValues from config.json (the page then shows no card, chip or reset choice for it), leaves out every file matching files (and needs them in leftOut), cuts the LICENSES rows holding licenceRows and the section between licenceCut's markers, takes the mode's markup out of index.html (html: regexes), and fails if any file in the build matches files or any runtime or licence text matches banned (case-insensitive).",
+  "configKeys": [
+   "pixels",
+   "audio.music.modes.pixels"
+  ],
+  "arrayValues": [
+   "pixels.pk.json"
+  ],
+  "files": "^levels/pixels(?:-\\d+)?\\.pk\\.json$",
+  "licenceRows": [
+   "PartialVoid"
+  ],
+  "licenceCut": [
+   "<!-- partials-pixels:start",
+   "<!-- partials-pixels:end -->"
+  ],
+  "html": [
+   "<button[^>]*data-mode=\"pixels\"[^>]*>[\\s\\S]*?</button>(?:<!--[^>]*-->)?"
+  ],
+  "banned": [
+   "PartialVoid",
+   "Partial['’]?s[ -]?Pixels",
+   "pixels(?:-\\d+)?\\.pk\\.json"
+  ]
  }
 }

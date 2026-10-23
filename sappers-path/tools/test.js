@@ -1457,7 +1457,7 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   const v3 = JSON.parse(JSON.stringify(V3)); v3.time.tileMs += 1; const r2 = FZ.check(fx, v3);
   ok(!r2.ok && r2.files[0].diffs >= 3, "freeze: a rule change (tileMs + 1) fails on every fixture level (" + r2.files[0].diffs + " differences)");
   eq([FZ.check(path.join(tmp, "none")).missing], [true], "freeze: no snapshot reads as not baselined");
-  if (!process.env.PIXELS_KEEP) fs.rmSync(tmp, { recursive: true, force: true }); else console.log("  kept " + tmp);
+  fs.rmSync(tmp, { recursive: true, force: true });
 }
 // ---- v5 R1: the Extreme tag (data and coins; R2 decides which levels wear it) -----------------------------------------------
 {
@@ -2351,7 +2351,7 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   const grid = (w, h, f) => Array.from({ length: h }, (_, y) => Array.from({ length: w }, (_, x) => f(x, y)));
   // The 8-colour fixture: a green field, a strip of a close green on a brown band (half its edge on each), a face with an eye
   // of a nearly equal red inside it (the closest pair, but merging it would erase the eye), a sun, a cloud, one blue cell.
-  const FX = { G1: "#208f20", G2: "#2a9a2a", H: "#704020", K: "#5050ff", F: "#cf1a1a", E: "#cc1818", Y: "#ffd800", W: "#f4f4f4" };
+  const FX = { G1: "#208f20", G2: "#309f30", H: "#704020", K: "#5050ff", F: "#d02020", E: "#c01414", Y: "#ffd800", W: "#f4f4f4" }; // G2-G1 5.5 ΔE00, E-F 4.0 (closer, but the eye sits in the face)
   const fix = grid(12, 12, (x, y) => (y === 11 ? FX.H : y === 10 ? FX.G2 : y === 9 && x === 4 ? FX.K : x === 6 && y === 4 ? FX.E : x >= 5 && x <= 7 && y >= 3 && y <= 5 ? FX.F : x <= 1 && y <= 1 ? FX.Y : x >= 9 && y === 1 ? FX.W : FX.G1));
   const TX = Object.assign({}, X, { art: path.join(tmp, "art"), sug: path.join(tmp, "suggest") });
   png(path.join(TX.art, "fx-8.png"), fix, 4);
@@ -2360,6 +2360,13 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
     "pixels converter: 8 colours over the cap of 7 suggests one merge, the close green strip into the field (12 cells), not the eye into the face though that pair is closer (it would erase a drawn shape: " + Math.round(100 * T.edgeShare(fix.flat(), 12, 12, FX.E, FX.F)) + "% of its edge)");
   const c8m = T.convert(TX, { id: "fx-8", title: "Eight", merge: { [FX.G2]: FX.G1 } }, 1), moved = c8m.cells.filter((c, i) => c !== fix.flat()[i]).length;
   eq([c8m.problems, c8m.suggest, c8m.colours.length, moved, c8m.cells.every((c, i) => c === (fix.flat()[i] === FX.G2 ? FX.G1 : fix.flat()[i]))], [[], null, 7, 12, true], "pixels converter: with the merge written in, 7 colours, exactly the 12 strip cells change, every other cell and colour as drawn");
+  // Fix pass (critic m3): near twins (under suggest.shapeDE) never count as a drawn shape, so the suggester merges them first
+  // even with one inside the other; a picture whose closest pair is under suggest.warnDE gets a warning on its run.
+  const twin = fix.map((r) => r.map((c) => (c === FX.E ? "#cc1818" : c === FX.F ? "#cf1a1a" : c)));
+  png(path.join(TX.art, "fx-twin.png"), twin, 4); const ct = T.convert(TX, { id: "fx-twin", title: "Twins" }, 1), tst = ct.suggest || { steps: [] };
+  const sp = T.paceOf(X, 32 * 32), sp40 = T.paceOf(X, 1600), ns = T.nextSteps(X, { gates: [{ name: "real pace in the picture's range", ok: false, bad: ["p1-2: pace 90 s outside 96-300 s"] }] }, [{ id: "p1-2", src: "pp-002" }]);
+  eq([tst.steps.map((q) => [q.from, q.to, q.erase]), sp.range, sp.aim, sp40.range, /--rebake pp-002 --extra 12/.test(ns[0]) && /tag/.test(ns[0])], [[["#cc1818", "#cf1a1a", false]], [96000, 300000], 144000, [150000, 300000], true],
+    "pixels pipeline (fix pass): near twins (" + (tst.steps[0] || {}).dE + " ΔE00) merge though one sits inside the other; the pace floor scales with the cells (32x32: 96-300 s, aim 144 s; 40x40 the profile's 150-300 s); a pace gate that still fails names the exact next command");
   // Refusals and the other suggestion.
   png(path.join(TX.art, "fx-big.png"), grid(48, 46, (x, y) => ((x * 7 + y * 3) % 5 === 0 ? FX.F : (x + y) % 2 ? FX.G1 : FX.W)), 2);
   const big = T.convert(TX, { id: "fx-big", title: "Big" }, 1);
@@ -2386,9 +2393,13 @@ if (deferred.length) console.log("DEFERRED to R2 (config v5.relaid is false): " 
   fs.writeFileSync(mf, JSON.stringify({ pictures: [{ id: "fx-8", title: "Eight", merge: { [FX.G2]: FX.G1 } }] }));
   const r2 = runIt(), J = fs.existsSync(path.join(TG, "tools/build-data/levels/pixels.json")) ? JSON.parse(fs.readFileSync(path.join(TG, "tools/build-data/levels/pixels.json"), "utf8")) : { levels: [] }, L8 = J.levels[0];
   const ac = L8 ? T.artCheck(L8, c8m) : { ok: false, match: 0, total: 144 }, shipped = fs.existsSync(path.join(TG, "levels/pixels-1.pk.json")) ? P.unpackFile(JSON.parse(fs.readFileSync(path.join(TG, "levels/pixels-1.pk.json"), "utf8"))).levels[0] : null;
-  eq([/installed fx-8/.test(r2), !!L8 && L8.id, ac.ok, ac.match + "/" + ac.total, !!shipped && T.artCheck(shipped, c8m).ok, !!L8 && JSON.stringify(L8.convert.merge), /merge #2a9a2a to #208f20/.test(fs.readFileSync(path.join(TG, "LICENSES.md"), "utf8"))], [true, "p1-1", true, "144/144", true, JSON.stringify({ [FX.G2]: FX.G1 }), true],
+  eq([/installed fx-8/.test(r2), !!L8 && L8.id, ac.ok, ac.match + "/" + ac.total, !!shipped && T.artCheck(shipped, c8m).ok, !!L8 && JSON.stringify(L8.convert.merge), /merge #309f30 to #208f20/.test(fs.readFileSync(path.join(TG, "LICENSES.md"), "utf8"))], [true, "p1-1", true, "144/144", true, JSON.stringify({ [FX.G2]: FX.G1 }), true],
     "pixels pipeline: with the merge in the manifest it installs, and the art gate passes against the merged colours (the record and the shipped file); LICENSES.md names the merge" + (L8 ? "" : " (" + r2.split("\n").slice(-4).join(" | ") + ")"));
-  if (!process.env.PIXELS_KEEP) fs.rmSync(tmp, { recursive: true, force: true }); else console.log("  kept " + tmp);
+  const tc2 = path.join(tmp, "test-config-2.json"), before = fs.readFileSync(path.join(TG, "tools/build-data/levels/pixels.json"), "utf8");
+  fs.writeFileSync(tc2, JSON.stringify({ profile: { bands: { normal: [0, 1], easy: [0, 1], hard: [0, 1] }, carefulFloor: { easy: 0, normal: 0, hard: 0 }, pace: { range: [5e8, 9e8], aim: 6e8 }, bake: { candidates: { perLevel: 1, perLevelBy: { easy: 1, hard: 1 } } } }, retry: { extra: [1] } }));
+  const rs3 = (() => { try { return cp.execFileSync(process.execPath, [path.join(__dirname, "partials-pixels.js"), "--game", TG, "--config", tc2, "--threads", "2", "--rebake", "fx-8"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }); } catch (e) { return String(e.stdout || "") + "EXIT " + e.status; } })();
+  eq([/retry: fx-8/.test(rs3), /Next steps:/.test(rs3), /--rebake fx-8 --extra 12/.test(rs3), /EXIT 1/.test(rs3), fs.readFileSync(path.join(TG, "tools/build-data/levels/pixels.json"), "utf8") === before], [true, true, true, true, true], "pixels pipeline (fix pass, critic S2): a picture whose pace can't be met is retried with more candidates, then the run stops with the exact next steps and leaves the installed files as they were");
+  fs.rmSync(tmp, { recursive: true, force: true });
   // The map grows: sheets in turn (A, B, A', B', ...), a spot a picture, the last part-filled sheet says tail, 48 px spacing.
   const grow = [1, 8, 9, 17, 40].map((n) => { const sh = T.sheetsOf(X, n), C = X.C.map; return [sh.reduce((a, m) => a + m.levels[1] - m.levels[0] + 1, 0) === n, sh.every((m, e) => m.from === C.sheets[e % C.sheets.length] && !!m.mirror === (Math.floor(e / C.sheets.length) % 2 === 1)), !!sh[sh.length - 1].tail === (n % C.perSheet !== 0)]; });
   eq(grow, grow.map(() => [true, true, true]), "pixels map: 1, 8, 9, 17 and 40 pictures each lay out on the mode's sheets in turn, a spot each, the last part-filled sheet's fog at its next spot");

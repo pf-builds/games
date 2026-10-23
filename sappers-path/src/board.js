@@ -68,9 +68,9 @@
 // digit and S.tb[m] holds the base and each shade's stud (same seam, highlight, foot and colour-blind mark as the base);
 // pops fall in the cell's shade. Every other sprite (cards, bins, crumbs, helmets, mystery blocks) keeps the base colour,
 // and the engine never reads shade. A level without shade rows draws exactly as before (the lit/shade tones, off).
-// Partial's Pixels (tools/partials-pixels-notes.md): setFlat(on) draws every block as a flat face in its exact colour on its
-// seam, no highlight band, foot or glint, so an artist's picture shows in her own colours (main.js turns it on for a mode
-// whose config says flatBlocks); off, every block draws exactly as before.
+// The third mode (a picture mode; notes in tools/): setFlat(on) draws every block as one flat square in its exact colour, no
+// seam, rounded corner, highlight band, foot or glint, so an artist's picture shows exactly as drawn (main.js turns it on for
+// a mode whose config says flatBlocks); off, every block draws exactly as before.
 (function (root, factory) {
   (root.SappersPath = root.SappersPath || {}).board = factory(root.SappersPath.engine);
 })(window, function (E) {
@@ -212,9 +212,10 @@
     function block(m, s, k, seamPx, over) { // over (lands foundation): a shade's own colour for the face
       const c = mk(s, s), x = c.getContext("2d"), base = over || (k ? toneHex(V.pal[m], k) : V.pal[m]), dark = lum(V.pal[m]) < 0.3, T = K.stud;
       const sw = Math.min(s >> 2, seamPx || Math.max(1, Math.round(V.dpr * T.seamCss))), a = sw >> 1, f = s - sw, r = Math.max(0.5, f * T.radius);
-      x.fillStyle = toneHex(base, T.seam); x.fillRect(0, 0, s, s);
+      if (V.flat) { x.fillStyle = base; x.fillRect(0, 0, s, s); } // the third mode: a flat block, every pixel its exact colour (no seam, corner, highlight, foot or glint)
+      else { x.fillStyle = toneHex(base, T.seam); x.fillRect(0, 0, s, s);
       rr(x, a, a, f, f, r); x.fillStyle = base; x.fill();
-      if (!V.flat) { x.save(); rr(x, a, a, f, f, r); x.clip(); // Partial's Pixels: a flat block has no highlight, foot or glint
+      x.save(); rr(x, a, a, f, f, r); x.clip();
       const hh = Math.max(1, Math.round(f * T.hiH)), lh = Math.max(1, Math.round(f * T.loH));
       x.fillStyle = mixHex(base, T.hi); x.fillRect(a, a, f, hh);
       x.fillStyle = mixHex(base, T.lo); x.fillRect(a, a + f - lh, f, lh);
@@ -976,7 +977,7 @@
 
     // Colour-blind mode (v4 M1): every block wears its material's mark. Rebuilds the caches and repaints (a settings tap).
     function setCb(on) { on = !!on; if (on === V.cb) return; V.cb = on; if (V.sprites) { buildSprites(); paintLayer(); } }
-    function setFlat(on) { on = !!on; if (on === V.flat) return; V.flat = on; V.sprites = null; } // Partial's Pixels: the caches are rebuilt at the next layout
+    function setFlat(on) { on = !!on; if (on === V.flat) return; V.flat = on; V.sprites = null; } // the caches are rebuilt at the next layout
 
     // A material's mark alone (transparent around it, drawn in ink): the queue tiles' glyph in colour-blind mode.
     function glyph(m, px, ink) { const c = mk(px, px); mark(c.getContext("2d"), m, px, ink, K); return c; }

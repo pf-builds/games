@@ -161,7 +161,7 @@ function suggestColours(X, cv) {
   for (let guard = 0; guard < 64; guard++) {
     const cnt = countsOf(cells); if (cnt.size <= cap) break;
     const cs = [...cnt.keys()], cand = [];
-    for (const a of cs) for (const b of cs) { if (a === b) continue; const e = Math.max(edgeShare(cells, cv.pw, cv.ph, a, b), edgeShare(cells, cv.pw, cv.ph, b, a)); cand.push({ from: a, to: b, cells: cnt.get(a), dE: +de(a, b).toFixed(1), edge: +e.toFixed(2), erase: e >= ES }); } // either way round: an eye merged into its face or the face into its eye, the eye is gone
+    for (const a of cs) for (const b of cs) { if (a === b) continue; const e = Math.max(edgeShare(cells, cv.pw, cv.ph, a, b), edgeShare(cells, cv.pw, cv.ph, b, a)); cand.push({ from: a, to: b, cells: cnt.get(a), dE: +de(a, b).toFixed(1), edge: +e.toFixed(2), erase: e >= ES && de(a, b) >= X.C.suggest.shapeDE }); } // either way round (twins nearer than shapeDE are never a drawn shape): an eye merged into its face or the face into its eye, the eye is gone
     cand.sort((p, q) => p.erase - q.erase || p.dE - q.dE || p.cells - q.cells || (p.from < q.from ? -1 : 1));
     const pk = cand[0]; steps.push(pk); cells = cells.map((c) => (c === pk.from ? pk.to : c));
     for (const st of steps) if (st.to === pk.from) st.to = pk.to; // an earlier merge into the colour just merged away goes straight to the new one
@@ -187,7 +187,8 @@ function writeSuggest(X, cv) {
   const W = cv.pw * k * 2 + gap, H = cv.ph * k, px = new Uint8Array(W * H * 3).fill(255), put = (x, y, h) => { const c = rgb(h), q = (y * W + x) * 3; px[q] = c[0]; px[q + 1] = c[1]; px[q + 2] = c[2]; };
   const paint = (cells, ox) => { for (let y = 0; y < cv.ph; y++) for (let x = 0; x < cv.pw; x++) for (let j = 0; j < k; j++) for (let i = 0; i < k; i++) put(ox + x * k + i, y * k + j, cells[y * cv.pw + x]); };
   paint(cv.cells, 0);
-  if (S.kind === "colours") paint(S.after, cv.pw * k + gap);
+  if (S.kind === "colours") { paint(S.after, cv.pw * k + gap); // each changed cell outlined, so the merge shows (critic m5)
+    for (let y = 0; y < cv.ph; y++) for (let x = 0; x < cv.pw; x++) { if (S.after[y * cv.pw + x] === cv.cells[y * cv.pw + x]) continue; const ox = cv.pw * k + gap + x * k, oy = y * k; for (let i = 0; i < k; i++) { put(ox + i, oy, "#ff00ff"); put(ox + i, oy + k - 1, "#ff00ff"); put(ox, oy + i, "#ff00ff"); put(ox + k - 1, oy + i, "#ff00ff"); } } }
   else { paint(cv.cells.map((c, i) => { const x = i % cv.pw, y = (i / cv.pw) | 0, [x0, y0, w, h] = S.crop; return x >= x0 && y >= y0 && x < x0 + w && y < y0 + h ? c : "#ffffff"; }), cv.pw * k + gap);
     const [x0, y0, w, h] = S.crop, ox = cv.pw * k + gap; for (let i = 0; i < w * k; i++) for (const y of [y0 * k, (y0 + h) * k - 1]) put(ox + x0 * k + i, y, "#ff00ff"); for (let j = 0; j < h * k; j++) for (const x of [x0 * k, (x0 + w) * k - 1]) put(ox + x, y0 * k + j, "#ff00ff"); }
   fs.mkdirSync(X.sug, { recursive: true }); fs.writeFileSync(path.join(X.sug, id + ".png"), V.encode(W, H, px));
@@ -196,7 +197,7 @@ function writeSuggest(X, cv) {
     md.push("It has " + S.have + " colours; the game takes " + S.cap + ". Combining these makes it fit (closest colours first by CIEDE2000, the colour with fewer cells into the other; a merge marked *erases a shape* paints over something drawn inside the colour it becomes, so it is used only when nothing else is left). Every other colour stays exactly as drawn and no pixel moves.", "",
       "| Merge | Into | Cells changed | ΔE00 | Edge shared by the pair (the larger share) |", "|---|---|---|---|---|");
     for (const st of S.steps) md.push("| " + st.from + " | " + st.to + " | " + st.cells + " | " + st.dE + " | " + Math.round(100 * st.edge) + "%" + (st.erase ? " (erases a shape)" : "") + " |");
-    md.push("", "Preview: `" + id + ".png` (left as drawn, right with the merges). To approve it, add this to the picture's line in the manifest, then run the tool again:", "", "```json", '"merge": ' + JSON.stringify(S.merge), "```");
+    md.push("", "Preview: `" + id + ".png` (left as drawn, right with the merges, each changed cell outlined in magenta). To approve it, add this to the picture's line in the manifest, then run the tool again:", "", "```json", '"merge": ' + JSON.stringify(S.merge), "```");
   } else {
     md.push("It is " + S.size.join("x") + " cells; the board takes at most " + S.box.join("x") + " (wide x tall). The window below keeps " + S.keeps + " of its " + S.total + " cells that aren't its background colour " + S.bg + "; nothing is resized or recoloured.", "",
       "Preview: `" + id + ".png` (left as drawn, right the window, outlined). To approve it, add this to the picture's line in the manifest (x, y, width, height in cells), then run the tool again:", "", "```json", '"crop": ' + JSON.stringify(S.crop), "```");
@@ -213,13 +214,16 @@ function boardOf(X, cv) {
   const F = PIC.frame((x, y) => E.chOf(keyOf.get(cv.cells[y * cv.pw + x])), cv.pw, cv.ph, X.CV);
   return { w: F.w, h: F.h, grid: F.grid, pal, ink: 0, bg: 0 };
 }
+// A picture's real-pace range and aim (config paceByCells): the profile's, its floor and aim scaled by the picture's cells
+// against ref, never under floor of them; the upper bound stays.
+const paceOf = (X, cells) => { const P = X.P.pace, B = X.C.paceByCells, k = B ? Math.max(B.floor, Math.min(1, cells / B.ref)) : 1; return { range: [Math.round(P.range[0] * k), P.range[1]], aim: Math.round(P.aim * k) }; };
 const tagOf = (X, cv) => cv.line.tag || X.C.tags[(cv.n - 1) % X.C.tags.length];
 // The deck plan for a tag (config plan): ? cards and linked pairs only.
 function planOf(X, tag) { const q = X.C.plan[tag] || { mystery: 0, links: 0 }, feats = []; if (q.mystery) feats.push("mystery"); if (q.links) feats.push("linked"); return { feats, mystery: q.mystery | 0, links: q.links | 0, hidden: 0, lock: false, tag }; }
 const of = (o, t) => (o && o[t] != null ? o[t] : null);
 function jobOf(X, cv, board) {
   const t = tagOf(X, cv), P = X.P;
-  return { n: X.C.seed + cv.n, tag: t, plan: planOf(X, t), band: P.bands[t], look: of(P.lookahead, t), care: of(P.careful, t), careTune: of(P.carefulTune || P.careful, t), mysRows: (P.features.mystery || {}).rows || null, over: P.bake || null, obv: of(P.obvious, t), careLo: of(P.carefulFloor, t), pace: P.pace, board, extra: +opt("extra") || 0, noHidden: true };
+  return { n: X.C.seed + cv.n, tag: t, plan: planOf(X, t), band: P.bands[t], look: of(P.lookahead, t), care: of(P.careful, t), careTune: of(P.carefulTune || P.careful, t), mysRows: (P.features.mystery || {}).rows || null, over: P.bake || null, obv: of(P.obvious, t), careLo: of(P.carefulFloor, t), pace: paceOf(X, cv.pw * cv.ph), board, extra: +opt("extra") || 0, noHidden: true };
 }
 
 // ---- the record and its checks -------------------------------------------------------------------------------------------
@@ -257,7 +261,7 @@ function check(X, LV, CVs) {
   gate("5 spaces, at most that many in use", each((L) => { const ln = R.line(E.compile(L), rules(L.tag), L.win[L.tag]); return V3.rules.hold === 5 && ln.peak <= 5 ? null : "peak " + ln.peak; }));
   gate("longest tap <= " + BK.maxWaitMs / 1000 + " s, <= " + BK.maxTaps + " taps", each((L) => { const g = L.grade[L.tag]; return g.maxWait <= BK.maxWaitMs && L.win[L.tag].length <= BK.maxTaps ? null : "wait " + g.maxWait + ", taps " + L.win[L.tag].length; }));
   gate("the steady 1 s replay: every thinking replay wins, no wait between taps over " + BK.maxWaitMs / 1000 + " s", each((L) => { const g = L.grade[L.tag]; return g.steady && !g.steady.lost && g.steady.gap <= BK.maxWaitMs && (g.thinks || []).every((v) => v) ? null : "steady " + JSON.stringify([g.thinks, g.steady]); }));
-  const pr = X.P.pace.range; gate("real pace " + pr.map((v) => v / 1000).join("-") + " s", each((L) => { const p = L.grade[L.tag].pace; return p && !p.fell && p.ms >= pr[0] && p.ms <= pr[1] ? null : "pace " + (p ? Math.round(p.ms / 1000) + " s" : "-"); }));
+  gate("real pace in the picture's range (the profile's " + X.P.pace.range.map((v) => v / 1000).join("-") + " s, its floor scaled by the cells: paceByCells)", each((L) => { const p = L.grade[L.tag].pace, pr = paceOf(X, (L.w - 2) * (L.h - 2)).range; return p && !p.fell && p.ms >= pr[0] && p.ms <= pr[1] ? null : "pace " + (p ? Math.round(p.ms / 1000) + " s" : "-") + " outside " + pr.map((v) => Math.round(v / 1000)).join("-") + " s"; }));
   const CF = X.P.carefulFloor || {}; gate("the careful player at or over the floor per tag", each((L) => (CF[L.tag] == null || L.grade[L.tag].careful >= CF[L.tag] ? null : "careful " + L.grade[L.tag].careful)));
   gate("no fallback picks", LV.filter((L) => L.fallback).map((L) => L.id + ": " + L.fallback));
   gate("the density rule (deck features only: ? cards, linked pairs)", each((L) => (TG.landDensityOK(L.tag, L, ["mystery", "linked"], X.CFG.v5.density) ? null : L.tag + " [" + TG.featuresOf(L).join(",") + "]")));
@@ -301,12 +305,27 @@ function licences(X, LV) {
 // The source file (tools/build-data/levels/pixels.json) and the shipped files (tools/pack.js pixelsFiles).
 function install(X, LV) {
   const J = { version: 1, note: "Partial's Pixels (tools/partials-pixels.js; tools/partials-pixels-notes.md): the mode's one world and its records, PartialVoid's pictures exactly as drawn. Written by the tool on every install; tools/pack.js packs it into levels/pixels.pk.json (the index) and levels/pixels-<k>.pk.json.", worlds: [worldOf(X, LV.length)], levels: LV };
-  fs.mkdirSync(path.dirname(X.src), { recursive: true }); fs.writeFileSync(X.src + ".tmp", JSON.stringify(J) + "\n"); fs.renameSync(X.src + ".tmp", X.src);
-  licences(X, LV);
+  const changed = [], put = (p, t, name) => { if (fs.existsSync(p) && fs.readFileSync(p, "utf8") === t) return; fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p + ".tmp", t); fs.renameSync(p + ".tmp", p); changed.push(name); }; // critic m6: only what changed is reported
+  put(X.src, JSON.stringify(J) + "\n", path.relative(X.GAME, X.src));
+  const lf = path.join(X.GAME, "LICENSES.md"), l0 = fs.existsSync(lf) ? fs.readFileSync(lf, "utf8") : null; licences(X, LV); if (l0 !== null && fs.readFileSync(lf, "utf8") !== l0) changed.push("LICENSES.md");
   const PK = require("./pack.js"), files = PK.pixelsFiles(J);
-  for (const [f, t] of Object.entries(files)) { const p = path.join(X.GAME, "levels", f); fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p + ".tmp", t); fs.renameSync(p + ".tmp", p); }
-  for (const f of fs.readdirSync(path.join(X.GAME, "levels"))) if (/^pixels-\d+\.pk\.json$/.test(f) && !files[f]) fs.unlinkSync(path.join(X.GAME, "levels", f));
-  return Object.keys(files);
+  for (const [f, t] of Object.entries(files)) put(path.join(X.GAME, "levels", f), t, "levels/" + f);
+  for (const f of fs.readdirSync(path.join(X.GAME, "levels"))) if (/^pixels-\d+\.pk\.json$/.test(f) && !files[f]) { fs.unlinkSync(path.join(X.GAME, "levels", f)); changed.push("levels/" + f + " (removed)"); }
+  // critic m4: a suggestion that has now been approved (its change is in the manifest) says so at its top.
+  for (const L of LV) { const f = path.join(X.sug, L.src + ".md"); if (!fs.existsSync(f) || !(L.convert.merge || L.convert.crop)) continue; const t = fs.readFileSync(f, "utf8"); if (!/^Approved/.test(t)) fs.writeFileSync(f, "Approved: the change below is in the manifest and the picture is installed as picture " + L.n + " (" + new Date().toISOString().slice(0, 10) + ").\n\n" + t); }
+  return changed;
+}
+
+// When a gate still fails after the retries: what to do next, by gate (runbook step 5).
+function nextSteps(X, C, LV) {
+  const bad = C.gates.filter((g) => !g.ok), out = [], ids = (g) => [...new Set(g.bad.map((b) => b.split(":")[0]))].map((id) => (LV.find((L) => L.id === id) || {}).src || id);
+  for (const g of bad) {
+    if (/real pace|fallback|careful|steady|longest tap/.test(g.name)) out.push("bake " + ids(g).join(", ") + " again with more candidates: node tools/partials-pixels.js --rebake " + ids(g).join(",") + " --extra 12; if it still misses, give its manifest line a tag (\"tag\": \"easy\" or \"normal\"); a picture under about 30 x 30 cells plays short whatever the deal: ask Peter whether to lower paceByCells.floor in tools/pixels-config.json for small pictures");
+    else if (/THE ART/.test(g.name)) out.push("the record does not match the PNG: this is a tool bug, not the picture's; do not install, report it");
+    else if (/map/.test(g.name)) out.push("the map spots: tools/pixels-config.json map (sheets, perSheet)");
+    else out.push(g.name + ": " + g.bad.slice(0, 2).join("; "));
+  }
+  return [...new Set(out)];
 }
 
 // ---- the run -------------------------------------------------------------------------------------------------------------
@@ -322,7 +341,7 @@ async function run(o) {
   lines.forEach((line, i) => { if (stop) return; const cv = convert(X, line, i + 1);
     if (cv.problems.length) { res.refused.push({ id: line.id, problems: cv.problems }); log("  " + line.id + ": REFUSED " + cv.problems.join("; ")); stop = true; return; }
     if (cv.suggest) { writeSuggest(X, cv); res.suggested.push(line.id); log("  " + line.id + ": doesn't fit as drawn (" + (cv.suggest.kind === "colours" ? cv.colours.length + " colours, cap " + X.C.limits.maxColours : cv.pw + "x" + cv.ph + " cells, board " + cv.suggest.box.join("x")) + "): suggestion in " + path.relative(X.GAME, path.join(X.sug, line.id + ".md")) + "; not installed"); stop = true; return; } // a later picture waits too (numbers run in manifest order)
-    log("  " + line.id + ": " + cv.file + ", " + cv.px.join("x") + " px, " + cv.s + " px a cell, " + cv.pw + "x" + cv.ph + " cells, " + cv.colours.length + " colours" + (cv.merge ? " (merge " + JSON.stringify(cv.merge) + ")" : "") + (cv.crop ? " (crop " + cv.crop.join(",") + ")" : "") + ", closest pair " + minDE(cv) + " ΔE00");
+    log("  " + line.id + ": " + cv.file + ", " + cv.px.join("x") + " px, " + cv.s + " px a cell, " + cv.pw + "x" + cv.ph + " cells, " + cv.colours.length + " colours" + (cv.merge ? " (merge " + JSON.stringify(cv.merge) + ")" : "") + (cv.crop ? " (crop " + cv.crop.join(",") + ")" : "") + ", closest pair " + minDE(cv) + " ΔE00" + (minDE(cv) != null && minDE(cv) < X.C.suggest.warnDE ? " (WARNING: under " + X.C.suggest.warnDE + ", a player may not tell those two apart; check with Peter before it ships)" : ""));
     CVs.push(cv); });
   res.ok = res.ok && !res.refused.length && !res.suggested.length;
   // Kept: an installed record whose picture (cells, title, tag) is unchanged. The rest are baked.
@@ -332,6 +351,10 @@ async function run(o) {
   if (todo.length) {
     const threads = +(o.threads || opt("threads")) || LB.threadsOf(X.LC.bake), t0 = Date.now(); log("bake: " + todo.length + " picture" + (todo.length === 1 ? "" : "s") + " on " + threads + " threads");
     const out = await LB.runPool(todo.map((t) => jobOf(X, t.cv, t.board)), threads, t0 + X.LC.bake.budget.wallSec * 1000, null);
+    // Fix pass (critic S2): a pick that missed a target (a fallback) is baked again with more candidates, retry.extra in turn.
+    for (const ex of (X.C.retry && X.C.retry.extra) || []) { const again = out.map((r, j) => (r.fallback || r.fail ? j : -1)).filter((j) => j >= 0); if (!again.length) break;
+      log("  retry: " + again.map((j) => todo[j].cv.line.id + " (" + (out[j].fallback || out[j].fail) + ")").join("; ") + " with " + ex + " more candidates");
+      const re = await LB.runPool(again.map((j) => Object.assign(jobOf(X, todo[j].cv, todo[j].board), { extra: Math.max(ex, +opt("extra") || 0) })), threads, Infinity, null); again.forEach((j, q) => { if (!re[q].fail && (!re[q].fallback || out[j].fail)) out[j] = re[q]; }); }
     out.forEach((r, j) => { const t = todo[j]; if (r.fail) { log("  " + t.cv.line.id + ": bake FAIL " + r.fail); res.ok = false; return; } fs.mkdirSync(X.scr, { recursive: true }); writeJ(path.join(X.scr, t.cv.line.id + ".json"), r);
       keep[t.i] = recordOf(X, t.cv, t.board, r); res.baked.push({ id: t.cv.line.id, tag: r.tag, s: +((Date.now() - t0) / 1000).toFixed(1), pace: Math.round(r.level.grade[r.tag].pace.ms / 1000), taps: r.level.win[r.tag].length, rate: r.level.grade[r.tag].rate });
       log("  " + t.cv.line.id + " " + r.tag + ": " + (r.fallback ? "fallback (" + r.fallback + ")" : "ok") + ", real pace " + Math.round(r.level.grade[r.tag].pace.ms / 1000) + " s, " + r.level.win[r.tag].length + " taps, rate " + r.level.grade[r.tag].rate + " (" + ((Date.now() - t0) / 1000).toFixed(0) + " s)"); });
@@ -342,13 +365,13 @@ async function run(o) {
   C.gates.push({ name: "the map: a spot for every picture, 48 CSS px between points at 375 px", ok: !sb.length, bad: sb, info: "" }); C.ok = C.ok && !sb.length;
   for (const g of C.gates) log((g.ok ? "  pass  " : "  FAIL  ") + g.name + (g.ok ? (g.info ? " (" + g.info + ")" : "") : ": " + g.bad.slice(0, 3).join("; ")));
   res.gates = C.gates; res.records = LV;
-  if (!C.ok) { res.ok = false; log("partials-pixels: a gate failed; nothing installed"); return res; }
+  if (!C.ok) { res.ok = false; log("partials-pixels: a gate failed; nothing installed. Next steps:"); for (const s2 of nextSteps(X, C, LV)) log("  - " + s2); return res; }
   const files = install(X, LV); res.installed = LV.map((L) => L.src); res.kept = LV.filter((L, i) => old[i] === L).map((L) => L.src);
-  log("install: " + LV.length + " picture" + (LV.length === 1 ? "" : "s") + " (" + res.kept.length + " kept byte for byte) into " + path.relative(X.GAME, X.src) + "; wrote levels/" + files.join(", levels/") + " and the LICENSES.md section");
+  log("install: " + LV.length + " picture" + (LV.length === 1 ? "" : "s") + " (" + res.kept.length + " kept byte for byte); " + (files.length ? "wrote " + files.join(", ") : "every file unchanged"));
   return res;
 }
 
-module.exports = { readPNG, gridOf, convert, suggestColours, suggestCrop, edgeShare, boardOf, artCheck, sheetsOf, worldOf, context, run };
+module.exports = { readPNG, gridOf, convert, suggestColours, suggestCrop, edgeShare, boardOf, artCheck, sheetsOf, worldOf, context, run, paceOf, nextSteps };
 
 if (require.main === module) {
   run({ check: argv[0] === "check" }).then((r) => { console.log("partials-pixels: " + (r.ok ? "OK" : "NOT OK") + (r.installed.length ? "; installed " + r.installed.join(", ") : "") + (r.suggested.length ? "; suggestion for " + r.suggested.join(", ") : "") + (r.refused.length ? "; refused " + r.refused.map((x) => x.id).join(", ") : "")); process.exitCode = r.ok ? 0 : 1; })

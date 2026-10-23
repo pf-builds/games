@@ -148,14 +148,14 @@
     try { indexGallery(Pk.unpackFile(await getJSON("levels/gallery.pk.json?v=" + V_))); } catch (e) { /* no side quests */ }
     let raw = null; try { raw = await getJSON("map/layout.json?v=" + V_); } catch (e) { raw = null; /* no journey map: its Play still works */ }
     let zen = null; try { zen = zenIndex(await getJSON("levels/zen.pk.json?v=" + V_)); } catch (e) { zen = null; /* no Zen mode: the campaign alone */ } // v7 lane T: the index; each world's records load when it is played (loadWorld)
-    let pix = null; if (app.cfg.pixels) { try { pix = zenIndex(await getJSON("levels/pixels.pk.json?v=" + V_), "pixels"); } catch (e) { pix = null; /* no Partial's Pixels */ } } // Partial's Pixels: its index, Zen's shape
+    let pix = null; if (app.cfg.pixels) { try { pix = zenIndex(await getJSON(app.cfg.pixels.index + "?v=" + V_), "pixels"); } catch (e) { pix = null; /* no the third mode */ } } // The third mode: its index, Zen's shape
     try { const P = await getJSON("levels/places.json?v=" + V_); app.places = Array.isArray(P.places) ? P.places.map(String) : null; } catch (e) { app.places = null; /* the save codes fall back to gallery.json's order */ }
     if (!app.levels.length) { $("load-msg").textContent = "No levels found."; return; }
-    modes(raw, zen, pix); // v6 lane B: the modes' levels, pictures and maps (Partial's Pixels: the third)
+    modes(raw, zen, pix); // v6 lane B: the modes' levels, pictures and maps (the third mode: the third)
     app.meta = app.cfg.meta; app.mats = app.cfg.v3.mats;
     // v6: the Campaign save holds every level and picture the game has (lands too), so nothing is dropped; the Zen save its own key.
     const store = storage(); app.save = Save.open(store, app.cfg.save.key, app.allOrder, app.allGal.map((e) => e.id), app.meta); keepTail(); // Land 1 fix (m5)
-    app.modes.campaign.save = app.save; openZenSave(store); openPicSaves(store); const lm = zsave() ? zsave().data.mode : "campaign"; useMode(isPic(lm) && app.modes[lm] && modeOpen(lm) ? lm : "campaign"); // lane P Stage 3: a locked Zen never opens as the mode (Partial's Pixels: nor a locked picture mode)
+    app.modes.campaign.save = app.save; openZenSave(store); openPicSaves(store); const lm = zsave() ? zsave().data.mode : "campaign"; useMode(isPic(lm) && app.modes[lm] && modeOpen(lm) ? lm : "campaign"); // lane P Stage 3: a locked Zen never opens as the mode (the third mode: nor a locked picture mode)
     app.sheets = Art.sources(app.cfg.art); fades();
     app.V = Board.create($("board"), app.cfg, app.sheets);
     const H = app.V.hooks;
@@ -198,7 +198,7 @@
   // what the home, the map and the saves read. Until a world's file (levels/zen-<k>.pk.json) loads, its levels hold
   // stand-ins (src/pack.js stub; L.stub). A land world's stand-ins join the level list where levels.json had its records,
   // so every order, save and code is built exactly as from the plain files. Returns {worlds, levels} as modes() reads it.
-  // Partial's Pixels: m, the picture mode the index is (default Zen); its worlds join app.zw under wkey (Zen's keys stay
+  // The third mode: m, the picture mode the index is (default Zen); its worlds join app.zw under wkey (Zen's keys stay
   // the world's k), so one loader serves both.
   function zenIndex(J, m) {
     const worlds = (J && Array.isArray(J.worlds) ? J.worlds : []).map(Pk.unpackWorld), levels = [];
@@ -226,7 +226,7 @@
   // (or until the next tap) and leaves the screen as it is.
   function wantLevel(e) {
     if (app.pend && app.pend.id === e.id) return; cancelPend();
-    const Z = PT(e.mode), p = (app.pend = { id: e.id, at: app.clock, toast: false, k: e.world, m: e.mode, el: app.tapEl || null }); // Partial's Pixels: the level's own mode's words and timings
+    const Z = PT(e.mode), p = (app.pend = { id: e.id, at: app.clock, toast: false, k: e.world, m: e.mode, el: app.tapEl || null }); // The third mode: the level's own mode's words and timings
     loadWorld(e.wk).then((ok) => { if (app.pend !== p) return; cancelPend();
       if (ok && !isStub(e) && !e.bad) startLevel(e.id); else { toast(fill(Z.loadFail, { k: p.k }), true); $("toast").classList.add("wide"); app.toastT = app.clock + app.cfg[p.m].load.failMs; app.failUp = true; } }); // .wide: two lines at 375 px, not half the screen
   }
@@ -234,7 +234,7 @@
   function cancelPend() { const p = app.pend; if (!p) return; if (p.toast) hideToast(); if (p.el) { p.el.classList.remove("busy"); p.el.removeAttribute("aria-busy"); } app.pend = null; }
   // The world the Zen save continues into, fetched ahead (config zen.load.prefetch), never before the first paint:
   // on the home when Zen is the mode played last or has any progress (a new player fetches nothing until Zen), and
-  // whenever the Zen map opens (map: true). Partial's Pixels: each picture mode alike (its own config load.prefetch), the
+  // whenever the Zen map opens (map: true). the third mode: each picture mode alike (its own config load.prefetch), the
   // map only for the mode it shows.
   function prefetch(map) {
     if (!app.painted) return;
@@ -269,7 +269,7 @@
   // first level is open from the start (the order's starts), one by one inside it. Each mode has its own levels, order,
   // pictures, map layout, realms and built map; useMode swaps them onto app (so the rest of the page reads one mode),
   // and its save: app.save is the mode's (the Zen save's data reads and writes the shared wallet in the Campaign save).
-  // Partial's Pixels: PX, its index (zenIndex); picMode builds each picture mode from its index the same way.
+  // The third mode: PX, its index (zenIndex); picMode builds each picture mode from its index the same way.
   function modes(raw, Z, PX) {
     const LC = landsCfg(); app.allOrder = app.order.slice(); app.allLevels = app.levels.slice(); app.allGal = app.gal.slice();
     const zlist = (Z && Array.isArray(Z.levels) ? Z.levels : []), took = new Set(zlist.map((L) => L.from).filter(Boolean));
@@ -280,7 +280,7 @@
     app.picRecs = 0; if (Z && Array.isArray(Z.worlds) && Z.worlds.length) picMode("zen", Z, raw, W);
     if (PX && Array.isArray(PX.worlds) && PX.worlds.length) picMode("pixels", PX, raw, W);
   }
-  // A picture mode m (Zen, Partial's Pixels) from its index Z: its levels, pictures, sheets, realms, order and numbers.
+  // A picture mode m (Zen, the third mode) from its index Z: its levels, pictures, sheets, realms, order and numbers.
   function picMode(m, Z, raw, W) {
     const zlist = (Z && Array.isArray(Z.levels) ? Z.levels : []), EP = (app.cfg[m] || {}).eggPrefix || "z";
     // Zen World records (their own ids), then each world in turn.
@@ -298,8 +298,8 @@
         : ((w.map && w.map.sheets) || []).map((M) => { const S = raw && raw.sheets[M.from - 1]; if (!S) return null; const [a, b] = M.levels || [1, 0], spots = M.spots ? M.spots.map((i) => S.levels[i]).filter(Boolean) : S.levels.slice(0, Math.max(0, b - a + 1));
           // Fix pass: eggs at the painted side-quest spurs' tips (eggsAt "quests", kinds eggKinds), so no spur leads nowhere; spots: which of the sheet's level spots carry levels (road order).
           const eggs = M.eggsAt === "quests" ? S.quests.map((Q, i) => ({ kind: (M.eggKinds || [])[i] || "grass", x: Q.x, y: Q.y })) : S.eggs.filter((g) => g.kind !== "lookout");
-          return Object.assign({ file: S.file, road: S.road, entry: S.entry, exit: S.exit, eggs, levels: spots.map((P, i) => ({ n: a + i, x: P.x, y: P.y })).filter((P) => byN.has(P.n)), quests: [], bridges: S.land ? S.bridges || [] : bridges(M.from), eggCoins: M.eggCoins || rows[M.from - 1] || [], mirror: !!M.mirror, fade: !!M.fade, tint: M.tint || "" }, M.tail && S.levels[(M.spots ? M.spots[M.spots.length - 1] : b - a) + 1] ? { tail: (({ x, y }) => ({ x, y, fog: 0 }))(S.levels[(M.spots ? M.spots[M.spots.length - 1] : b - a) + 1]) } : {}); }).filter(Boolean); // Partial's Pixels: tail (a sheet not full), the frontier's fog at the next spot (journey.js frontier), as a land's last sheet has
-      mine.forEach((S, i) => { sheets.push(Object.assign({}, S, { sheet: sheets.length + 1, realm: w.era, realmName: w.name, world: w.k, eggKey: EP + w.k + "-" + (i + 1) })); }); // Partial's Pixels: each mode its own egg ids (config pixels.eggPrefix; Zen's z)
+          return Object.assign({ file: S.file, road: S.road, entry: S.entry, exit: S.exit, eggs, levels: spots.map((P, i) => ({ n: a + i, x: P.x, y: P.y })).filter((P) => byN.has(P.n)), quests: [], bridges: S.land ? S.bridges || [] : bridges(M.from), eggCoins: M.eggCoins || rows[M.from - 1] || [], mirror: !!M.mirror, fade: !!M.fade, tint: M.tint || "" }, M.tail && S.levels[(M.spots ? M.spots[M.spots.length - 1] : b - a) + 1] ? { tail: (({ x, y }) => ({ x, y, fog: 0 }))(S.levels[(M.spots ? M.spots[M.spots.length - 1] : b - a) + 1]) } : {}); }).filter(Boolean); // The third mode: tail (a sheet not full), the frontier's fog at the next spot (journey.js frontier), as a land's last sheet has
+      mine.forEach((S, i) => { sheets.push(Object.assign({}, S, { sheet: sheets.length + 1, realm: w.era, realmName: w.name, world: w.k, eggKey: EP + w.k + "-" + (i + 1) })); }); // The third mode: each mode its own egg ids (config pixels.eggPrefix; Zen's z)
     }
     if (!zl.length) return;
     const order = zl.map((e) => e.id); order.starts = starts;
@@ -307,14 +307,14 @@
       pos: new Map(zl.map((e, i) => [e.n, i + 1])) };
   }
   // The two saves whatever the mode (app.save is the current mode's; the other is kept on app.modes until useMode swaps).
-  // Partial's Pixels: msave(m), a picture mode's save whatever the mode in use.
+  // The third mode: msave(m), a picture mode's save whatever the mode in use.
   const msave = (m) => (app.mode === m ? app.save : app.modes && app.modes[m] && app.modes[m].save);
   const csave = () => (isPic(app.mode) ? app.modes.campaign.save : app.save), zsave = () => msave("zen");
   const zenOn = () => !!app.modes.zen, ZT = () => (app.cfg.zen || {}).text || {};
-  // Partial's Pixels (tools/partials-pixels-notes.md): the picture modes. Zen and Partial's Pixels play alike (worlds of pictures
+  // the third mode (the third mode's notes, in tools/): the picture modes. Zen and the third mode play alike (worlds of pictures
   // from an index, a save of their own beside the Campaign's shared wallet, calm words, no goblin); where they behave the
   // same the page asks picOn() (the mode in use) or isPic(m), and reads the mode's own config block, app.cfg[m] (save,
-  // openAfter, load, text). PT(m): a picture mode's words (Partial's Pixels: config pixels.text merged over zen.text, so
+  // openAfter, load, text). PT(m): a picture mode's words (the third mode: config pixels.text merged over zen.text, so
   // what it doesn't name reads as Zen's); MT(): the words of the mode in use; lastMode(): the mode played last (the Zen save
   // keeps it).
   const PICM = ["zen", "pixels"], isPic = (m) => PICM.indexOf(m) >= 0, picOn = () => isPic(app.mode), pixOn = () => !!(app.modes && app.modes.pixels);
@@ -325,7 +325,7 @@
   // save with any Zen progress (a picture, a side quest or an egg) keeps it open. selfTest opens it (app.zenFree) except
   // in its own lock checks. Locked, the home's Zen card and the map's Zen chip say when it opens; the tour's last card
   // offers the Campaign alone.
-  // Partial's Pixels: every picture mode by the same rule, its own config openAfter (modeOpen; the Campaign is always open).
+  // The third mode: every picture mode by the same rule, its own config openAfter (modeOpen; the Campaign is always open).
   const modeOpen = (m) => { if (!isPic(m)) return true; if (!app.modes[m]) return false; const n = app.cfg[m].openAfter | 0, id = n > 0 ? app.modes.campaign.order[n - 1] : null; if (app.zenFree || !id || csave().data.done[id]) return true;
     const z = msave(m) && msave(m).data; return !!z && [z.done, z.gal, z.eggs].some((o) => !!o && Object.keys(o).length > 0); };
   const modeLocked = (m) => { toast(fill(PT(m).locked, { n: app.cfg[m].openAfter }), true); cue("blocked"); return false; };
@@ -337,7 +337,7 @@
     if (!zenOn()) return; const Z = app.modes.zen; Z.save = Save.openZen(store, app.cfg.zen.save.key, Z.order, Z.gal.map((e) => e.id), () => csave().data, csave);
     if (!Z.save.data.moved) { const sp = moveSpec(); Save.zenMove(Save.rawOf(store, app.cfg.save.key), Z.save.data, sp); Save.zenMove(csave().data, Z.save.data, sp); try { Z.save.store.setItem(Z.save.key, JSON.stringify(Z.save.data)); } catch (e) { /* written with the next save */ } } // merge pass: the raw stored save first (sanitize drops the 36 once they leave gallery.json), then the sanitized one (renamed slots)
   }
-  // Partial's Pixels: each other picture mode's save (its own key, the Campaign's wallet; no move: it never had old progress).
+  // The third mode: each other picture mode's save (its own key, the Campaign's wallet; no move: it never had old progress).
   function openPicSaves(store) { for (const m of PICM) { if (m === "zen" || !app.modes[m]) continue; const M = app.modes[m]; M.save = Save.openZen(store, app.cfg[m].save.key, M.order, M.gal.map((e) => e.id), () => csave().data, csave, Save.eggRe(app.cfg[m].eggPrefix)); } }
   // What the move carries (save.js zenMove): World 1's pictures by their Gallery source, a land world's levels and side
   // quests by id, its eggs from the castle sheet ids they had.
@@ -384,7 +384,7 @@
   // (a side quest's prize) always shows, so no prize lands in a hidden slot.
   function reach() { const C = app.modes ? app.modes.campaign : app, D = csave().data, id = Save.next(D, C.order), e = app.byId.get(id), r = !e ? 1 : D.done[id] ? e.n + 1 : e.n; return r + picDone(); }
   const doneIn = (m) => { const Z = app.modes && app.modes[m], z = Z && msave(m); return z ? Z.levels.filter((x) => z.data.done[x.id]).length + Z.gal.filter((x) => z.data.gal[x.id]).length : 0; };
-  const zenDone = () => doneIn("zen"), picDone = () => PICM.reduce((a, m) => a + doneIn(m), 0); // Partial's Pixels: its pictures count toward the shared reach as Zen's do
+  const zenDone = () => doneIn("zen"), picDone = () => PICM.reduce((a, m) => a + doneIn(m), 0); // The third mode: its pictures count toward the shared reach as Zen's do
   const pwOpen = (k) => app.allPw || Meta.isOpen(app.meta, k, reach()) || (app.save.data.inv[E.POWERS[k]] | 0) > 0 || !!(app.pwHad && app.pwHad[k]); // pwHad: owned when the level started (the last one used keeps its badge)
   const mat = (m) => (app.mats || app.cfg.v3.mats)[m] || { n: "?", c: "#888888", crew: "?" };
   const writeSave = () => { if (!app.testing) app.save.write(); };
@@ -845,7 +845,7 @@
   // A locked node (or button) shakes and says "blocked" (reduced motion: no shake).
   function lockedTap(b) { if (!app.V.calm && b.animate) b.animate(app.cfg.show.blockedShake.map((x) => ({ transform: "translateX(" + x + "px)" })), { duration: app.cfg.show.blockedShakeMs }); cue("blocked"); }
   function buildMap() {
-    const M = app.cfg.map, T = M.text, LAY = app.lay, zen = picOn(), ZX = MT(); // Partial's Pixels: zen here is any picture mode
+    const M = app.cfg.map, T = M.text, LAY = app.lay, zen = picOn(), ZX = MT(); // The third mode: zen here is any picture mode
     // v6: built for the mode shown (rebuilt when the mode changes: showScreen); the mode chip, the title and the story are the mode's.
     if (app.jr && app.jr.io) app.jr.io.disconnect(); $("jr-world").textContent = ""; app.jr = null; app.mapOf = app.mode; modeChip();
     $("map-title").textContent = zen ? ZX.mapTitle : M.title; $("map-story").textContent = zen ? ZX.story : app.meta.home.story; $("map-credits").textContent = (zen && app.cfg[app.mode].galleryCredits === false ? [] : [app.cfg.gallery.credits]).concat(zen ? ((app.modes[app.mode] || {}).worlds || []).map((w) => w.credit).filter(Boolean) : []).join(" "); // v7 lane D (critic B1): a Zen world's own credit line (zen.json world credit, e.g. World 5's four museums) after the Gallery's
@@ -857,7 +857,8 @@
     if (!LAY || !Array.isArray(LAY.sheets)) return; // no layout: the map is the foot's Play alone
     const R = M.route, W = LAY.w, H = LAY.h, byN = new Map(app.levels.map((e) => [e.n, e])), world = $("jr-world"), F_ = M.tail;
     const last = app.levels.length ? app.levels[app.levels.length - 1].n : 0, fr = JN.frontier(LAY, last, F_.room), nS = fr.n; const ends = !zen && zenOn() && fr.tail; // fix pass (M4): with Zen on, the Campaign's map ends at its last level (no fog, no road on)
-    const fogAt = fr.fog || Math.max(0, fr.y - F_.ramp), fogTo = fr.fog ? fr.fog + F_.tailClear : fr.y + F_.below, fogged = (si, y) => si > fr.si || (si === fr.si && y < fogTo); // in the fog: past the frontier
+    const fogAt = fr.fog || Math.max(0, fr.y - F_.ramp), fogTo = fr.fog ? fr.fog + F_.tailClear : fr.y + F_.below, band = zen ? app.cfg[app.mode].fogBand | 0 : 0; // the third mode: fog only in a band past the frontier (config fogBand), the sheet clear above it
+    const fogged = (si, y) => (band ? si === fr.si && y < fogTo && y > fogTo - band : si > fr.si || (si === fr.si && y < fogTo)); // in the fog: past the frontier
     const kingAt = zen ? { si: -1 } : (() => { const g = LAY.sheets.findIndex((S) => S.goblinKing && S.levels.length && byN.has(S.levels[S.levels.length - 1].n)); return g >= 0 && g < nS ? { si: g, x: LAY.sheets[g].goblinKing.x, y: LAY.sheets[g].goblinKing.y } : { si: fr.top, x: F_.kingAt[0], y: F_.kingAt[1], teaser: true }; })();
     const J = (app.jr = { sheets: [], quests: [], eggs: [], tail: null, k: 0, colW: 0, cut: "", io: null, label: null, fr, king: kingAt });
     const bannerAt = (re) => M.bannerY + ((M.bannerDy || [])[re - 1] | 0); // v5 R3 fix: a realm's banner can sit a little lower or higher (sheet px)
@@ -874,6 +875,7 @@
       if (front || top) { s += '<defs>' + (front ? '<linearGradient id="jr-fade" gradientUnits="userSpaceOnUse" x1="0" y1="' + (fr.y + F_.fadeBelow) + '" x2="0" y2="' + (fr.y - F_.fadeAbove) + '"><stop offset="0" stop-color="#2a1c12" stop-opacity=".55"/><stop offset="1" stop-color="#2a1c12" stop-opacity="0"/></linearGradient>' +
         '<linearGradient id="jr-mist" gradientUnits="userSpaceOnUse" x1="0" y1="' + fogTo + '" x2="0" y2="' + Math.min(fogAt, fogTo - 1) + '"><stop offset="0" stop-color="#e6e8de" stop-opacity="0"/><stop offset="1" stop-color="#e6e8de" stop-opacity="' + F_.mist + '"/></linearGradient>' : "") +
         '<linearGradient id="jr-wash" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1e1620" stop-opacity=".92"/><stop offset=".55" stop-color="#1e1620" stop-opacity=".6"/><stop offset="1" stop-color="#1e1620" stop-opacity="0"/></linearGradient>' +
+        (band ? '<linearGradient id="jr-band" gradientUnits="userSpaceOnUse" x1="0" y1="' + fogTo + '" x2="0" y2="' + (fogTo - band) + '"><stop offset="0" stop-color="#e6e8de" stop-opacity="0"/><stop offset=".45" stop-color="#e6e8de" stop-opacity="' + F_.mist + '"/><stop offset="1" stop-color="#e6e8de" stop-opacity="0"/></linearGradient>' : "") +
         '<radialGradient id="jr-fog"><stop offset="0" stop-color="#e6e8de" stop-opacity=".8"/><stop offset="1" stop-color="#e6e8de" stop-opacity="0"/></radialGradient></defs>'; }
       s += '<path class="rw-u" fill="none" stroke="#fbf5e6" stroke-opacity=".5" stroke-width="' + R.underW + '" stroke-linecap="round" stroke-linejoin="round"/>';
       s += '<path class="rw-a" fill="none" stroke="' + (front && !ends ? "url(#jr-fade)" : "#2a1c12") + '" stroke-opacity="' + (front && !ends ? 1 : 0.55) + '" stroke-width="' + R.aheadW + '" stroke-dasharray="' + R.aheadDash + '" stroke-linecap="round"/>';
@@ -883,10 +885,10 @@
         s += '<g class="dt" data-q="' + Q.q + '"><path d="' + dt.d + '" fill="none" stroke="#2a1c12" stroke-opacity=".7" stroke-width="4" stroke-dasharray="3 9" stroke-linecap="round"/>' + dt.stones.map(JN.stone).join("") + "</g>"; }
       if (front && ends && endP && tailE().length) { const dt = JN.detour([endP.x, endP.y], [fr.x, fr.y], M.stoneGap, M.stoneSkip[0], M.stoneSkip[1]); // fix pass (M4): no mist; the long tail's pictures (if any) are a stepping-stone path off the last level, shown once they open
         s += '<g class="dt tl" style="display:none"><path d="' + dt.d + '" fill="none" stroke="#2a1c12" stroke-opacity=".7" stroke-width="4" stroke-dasharray="3 9" stroke-linecap="round"/>' + dt.stones.map(JN.stone).join("") + "</g>"; }
-      else if (front) { s += '<rect width="' + W + '" height="' + fogTo + '" fill="url(#jr-mist)"/>'; // the mist, with puffs along its edge
+      else if (front) { s += band ? '<rect y="' + (fogTo - band) + '" width="' + W + '" height="' + band + '" fill="url(#jr-band)"/>' : '<rect width="' + W + '" height="' + fogTo + '" fill="url(#jr-mist)"/>'; // the mist (the third mode: a band), with puffs along its edge
         for (const [x, dy, rx, ry] of F_.puffs) s += '<ellipse cx="' + x + '" cy="' + (fogAt + (fogTo - fogAt) * 0.35 + dy) + '" rx="' + rx + '" ry="' + ry + '" fill="url(#jr-fog)"/>'; }
-      else if (si > fr.si) s += '<rect width="' + W + '" height="' + H + '" fill="#e6e8de" fill-opacity="' + F_.mist + '"/>'; // a headroom sheet: all fog
-      if (top) s += '<rect width="' + W + '" height="' + Math.min(F_.washTo, Math.max(F_.washMin, fogAt)) + '" fill="url(#jr-wash)"/>';
+      else if (si > fr.si && !band) s += '<rect width="' + W + '" height="' + H + '" fill="#e6e8de" fill-opacity="' + F_.mist + '"/>'; // a headroom sheet: all fog
+      if (top && !band) s += '<rect width="' + W + '" height="' + Math.min(F_.washTo, Math.max(F_.washMin, fogAt)) + '" fill="url(#jr-wash)"/>';
       if (kingAt.si === si) s += '<g class="kg" transform="translate(' + kingAt.x + " " + kingAt.y + ')">' + JN.king(F_.kingScale) + '</g><g transform="translate(' + (kingAt.x + F_.flagAt[0]) + " " + (kingAt.y + F_.flagAt[1]) + ')">' + JN.flag() + "</g>";
       const svg = document.createElementNS(svgNS, "svg"); svg.setAttribute("class", "jr-ov"); svg.setAttribute("viewBox", "0 0 " + W + " " + H); svg.setAttribute("preserveAspectRatio", "none"); svg.setAttribute("aria-hidden", "true"); svg.innerHTML = s;
       const lay = document.createElement("div"); lay.className = "jr-lay";
@@ -907,7 +909,7 @@
         const g = { id, kind: G.kind, coins: S.eggKey ? JN.eggCoins({ eggCoins: [S.eggCoins] }, 1, i) : JN.eggCoins(M, S.sheet, i), b, sheet: si, found: null }; b.addEventListener("click", () => eggTap(g)); at(b, G.x, G.y); J.eggs.push(g); });
       // A realm's banner on its first sheet (its lore on a tap).
       if ((si === 0 || LAY.sheets[si - 1].realm !== S.realm) && app.levels.some((e) => e.era === S.realm) && !fogged(si, bannerAt(S.realm))) { const er = app.eras[S.realm - 1] || { era: S.realm, name: S.realmName, note: "" }, b = document.createElement("button"); b.className = "bn";
-        b.innerHTML = '<span class="bt"><i></i><b></b></span><span class="lore"></span>'; b.querySelector("i").textContent = realmEye(S.realm, "eye"); b.querySelector("b").textContent = er.name; b.querySelector(".lore").textContent = er.note;
+        b.innerHTML = '<span class="bt"><i></i><b></b>' + (zen && ZX.bannerBy ? '<em class="bby"></em>' : "") + '</span><span class="lore"></span>'; b.querySelector("i").textContent = realmEye(S.realm, "eye"); b.querySelector("b").textContent = er.name; b.querySelector(".lore").textContent = er.note; if (b.querySelector(".bby")) b.querySelector(".bby").textContent = ZX.bannerBy; // the third mode: its credit after the name
         b.setAttribute("aria-label", realmEye(S.realm, "aria", er.name)); b.setAttribute("aria-expanded", "false");
         b.addEventListener("click", () => { const on = !b.classList.contains("open"); b.classList.toggle("open", on); b.setAttribute("aria-expanded", on ? "true" : "false"); });
         at(b, W / 2, bannerAt(S.realm)).classList.remove("east", "west"); }
@@ -1074,7 +1076,8 @@
     $("jr-r-eye").textContent = realmEye(re, "of"); $("jr-r-name").textContent = er.name; $("jr-r-note").textContent = er.note;
     const ls = app.levels.filter((x) => x.era === re), won = ls.filter((x) => d.done[x.id]).length; reportCard($("jr-rc"), ls); $("jr-r-bar").style.width = (ls.length ? (100 * won) / ls.length : 0) + "%";
     const ss = J.sheets.map((sh, i) => (sh.S.realm === re ? i : -1)).filter((i) => i >= 0), qs = J.quests.filter((q) => ss.indexOf(q.sheet) >= 0), gs = J.eggs.filter((g) => ss.indexOf(g.sheet) >= 0);
-    $("jr-q-v").textContent = qs.filter((q) => d.gal[q.e.id]).length + " / " + qs.length; $("jr-q-v").parentElement.hidden = !qs.length; // v6 ship fix (m3): no side-quest row where there are none $("jr-e-v").textContent = gs.filter((g) => d.eggs && d.eggs[g.id]).length + " / " + gs.length;
+    $("jr-q-v").textContent = qs.filter((q) => d.gal[q.e.id]).length + " / " + qs.length; $("jr-q-v").parentElement.hidden = !qs.length; // v6 ship fix (m3): no side-quest row where there are none
+    $("jr-e-v").textContent = gs.filter((g) => d.eggs && d.eggs[g.id]).length + " / " + gs.length; $("jr-e-v").parentElement.hidden = !gs.length; // the third mode's fix pass (critic m2): the secrets row had lost its value to a comment; none in reach, no row
     // v5 R3 fix: past the last level the card names the picture Play starts; with every picture cleared too, "all cleared"
     // and no Play; the side quest under it is the open one nearest the current level (never the one Play starts).
     // v6 lane D8 (the World 3 critic, minor 11): a Zen level is named with its world ("World 1 · Picture 1"), as the home's
@@ -1101,14 +1104,14 @@
   // v6: a mode's card on the home: {e (its next level), line (its progress), done (all of it cleared)}. Campaign: "Fort n of
   // t" (the next level's number); Zen: pictures done (main levels and side quests) of all of them.
   function modeCard(m) {
-    const Z = PT(m), C = app.modes[m], pic = isPic(m), sv = pic ? msave(m) : csave(), d = sv.data, e = app.byId.get(nextOf(d, m)); // Partial's Pixels: any picture mode as Zen
+    const Z = PT(m), C = app.modes[m], pic = isPic(m), sv = pic ? msave(m) : csave(), d = sv.data, e = app.byId.get(nextOf(d, m)); // The third mode: any picture mode as Zen
     const er = e && C.eras[e.era - 1], place = !er ? "" : pic ? fill(Z.home, { k: er.world, name: er.name }) : fill(app.meta.home.era, { e: er.era, name: er.name }); // fix pass: the card's own realm or world
     if (pic) { const t = C.levels.length + C.gal.length, n = C.levels.filter((x) => d.done[x.id]).length + C.gal.filter((x) => d.gal[x.id]).length; return { e, place, line: fill(Z.zenLine, { n, t }), done: n >= t }; }
     const all = C.levels.every((x) => d.done[x.id]); return { e, place, line: fill(all ? Z.campDone : Z.campLine, { n: e ? e.n : 1, t: C.levels.length }), done: all };
   }
   // The lives pill and, with none left, Play's countdown (the text changes once a second; written only then). v6: the
   // mode cards' labels (Campaign: the next level, or the boss's; Zen: World k and the level's running number, D10).
-  // Partial's Pixels: a card per picture mode the game has (#btn-<m>, #home-<m>, #home-<m>-w, #<m>-lab), each as Zen's.
+  // The third mode: a card per picture mode the game has (#btn-<m>, #home-<m>, #home-<m>-w, #<m>-lab), each as Zen's.
   function livesPill() {
     const H = app.meta.home, Z = ZT(), L = Meta.lives(app.save.data, app.meta, app.now()), pill = $("home-lives"), wait = L.on && L.n <= 0, tags = app.cfg.layout.tags;
     const pm = PICM.filter((m) => !!app.modes[m]), cards = pm.map((m) => modeCard(m));
@@ -1145,14 +1148,14 @@
     $("cs-title").textContent = C.copyTitle; $("cs-help").textContent = C.copyHelp; $("cs-copy").textContent = C.copyAgain; $("cs-close").textContent = C.done;
     $("ls-title").textContent = C.loadTitle; $("ls-help").textContent = C.loadHelp; $("ls-code").placeholder = C.placeholder; $("ls-apply").textContent = C.apply; $("ls-cancel").textContent = C.cancel;
     if (zenOn()) { const ZR = ZT().reset; $("rs-mode").hidden = false; $("rs-mode").setAttribute("aria-label", ZR.which); $("ls-code").placeholder = "SP2.…"; // v6: reset asks which mode
-      for (const b of $("rs-mode").children) { const m = b.dataset.mode; b.hidden = isPic(m) && !app.modes[m]; b.textContent = m === "campaign" ? ZT().campaign : m === "all" ? ZR.all : PT(m).chip || PT(m).name; } } // Partial's Pixels: a choice of its own
+      for (const b of $("rs-mode").children) { const m = b.dataset.mode; b.hidden = isPic(m) && !app.modes[m]; b.textContent = m === "campaign" ? ZT().campaign : m === "all" ? ZR.all : PT(m).chip || PT(m).name; } } // The third mode: a choice of its own
   }
   // v6: the reset sheet's mode (the one in use when it opens): its words and what the hold clears.
   function rsMode(m) { app.rsMode = m; if (!zenOn()) return; const R = RT(), ZR = ZT().reset; for (const b of $("rs-mode").children) b.setAttribute("aria-checked", b.dataset.mode === m ? "true" : "false");
-    const k = m === "zen" ? "zen" : m === "all" ? "all" : isPic(m) ? "mode" : "camp", W = k === "mode" ? PT(m).reset : ZR; // Partial's Pixels: its own words (pixels.text.reset mode*)
+    const k = m === "zen" ? "zen" : m === "all" ? "all" : isPic(m) ? "mode" : "camp", W = k === "mode" ? PT(m).reset : k === "all" && pixOn() ? PT("pixels").reset : ZR; // The third mode: its own words (pixels.text.reset mode*)
     $("rs-title").textContent = W[k + "Title"]; $("rs-lose").textContent = W[k + "Lose"]; $("rs-keep").textContent = W[k + "Keep"]; $("rs-hold").setAttribute("aria-label", W[k + "Aria"]); }
   // A save's progress in words: the next level (or every level won), coins, side quests won, eggs found.
-  // Partial's Pixels: pd, its data (its part follows Zen's when the game has the mode).
+  // The third mode: pd, its data (its part follows Zen's when the game has the mode).
   function summary(d, zd, pd) {
     const C = CT(), K = app.modes ? app.modes.campaign : app, e = app.byId.get(Save.next(d, K.order)), all = K.levels.every((x) => d.done[x.id]), q = K.gal.filter((x) => (d.gal || {})[x.id]).length, eg = Object.keys(d.eggs || {}).length; // v6: the Campaign's own (a Zen part follows, zd)
     if (zd !== undefined && zenOn()) return fill(all ? C.summaryEnd : C.summary, { n: e ? e.n : 1, c: plural(C.coins, d.coins | 0), q: plural(C.quests, q), e: eg ? plural(C.eggs, eg) : "" }) + partSum("zen", zd) + (pd !== undefined && pixOn() ? partSum("pixels", pd) : "");
@@ -1173,7 +1176,7 @@
   // v6: the mode chosen on the sheet: Campaign as before (its progress and the wallet; Zen stays), Zen its own progress only.
   // Fix pass (MINOR-2): a single mode's reset never touches the shared wallet; Everything is v5.4's full wipe of both modes.
   function resetNow() { holdStop(); const m = zenOn() ? app.rsMode : "all", ZR = ZT().reset || {};
-    if (isPic(m)) Save.resetZen(msave(m)); else if (m === "campaign") Save.resetCampaign(csave(), app.meta); else { Save.reset(csave(), app.meta); for (const p of PICM) if (app.modes[p]) Save.resetZen(msave(p)); } // Partial's Pixels: its own choice; Everything wipes it too
+    if (isPic(m)) Save.resetZen(msave(m)); else if (m === "campaign") Save.resetCampaign(csave(), app.meta); else { Save.reset(csave(), app.meta); for (const p of PICM) if (app.modes[p]) Save.resetZen(msave(p)); } // The third mode: its own choice; Everything wipes it too
     progressSwapped(); toast(!zenOn() ? RT().toast : m === "zen" ? ZR.zenToast : m === "campaign" ? ZR.campToast : isPic(m) ? PT(m).reset.modeToast : ZR.allToast); }
   function progressSwapped() { openSettings(false); app.tipQ = []; if (app.tip) hideTip(); app.loadR = null; if (picOn() && !modeOpen(app.mode)) useMode("campaign"); showScreen("title"); } // lane P Stage 3: a reset or a code that locks Zen again leaves Zen as the mode
   // Copy: the code (save.js encode) in a selectable box with its length, copied at once; where the Clipboard API is
@@ -1196,7 +1199,7 @@
   function openLoad() { $("ls-code").value = ""; loadCheck(); openSub("loadsheet", $("ls-code")); }
   function loadCheck() {
     const C = CT(), Z = app.modes.zen, PX = app.modes.pixels, r = Save.decodeAny($("ls-code").value, app.allOrder, app.allGal.map((e) => e.id), app.meta, csave().data.settings, app.cfg.saveCode.maxPaste, Z ? { order: Z.order, gal: Z.gal.map((e) => e.id), zl: Z.info } : null, placesNow(), PX ? { order: PX.order, gal: PX.gal.map((e) => e.id), zl: PX.info } : null), m = $("ls-msg");
-    if (r.ok && PX && !r.pixels) r.pixels = Object.assign(Save.zenFresh(), { moved: 1 }); // Partial's Pixels: an SP1 or SP2 code has none of it (the page writes SP3 while it has progress), so a load starts it afresh
+    if (r.ok && PX && !r.pixels) r.pixels = Object.assign(Save.zenFresh(), { moved: 1 }); // The third mode: an SP1 or SP2 code has none of it (the page writes SP3 while it has progress), so a load starts it afresh
     if (r.ok && Z && !r.zen) { const zd = Save.zenFresh(), sp = moveSpec(); Save.zenMove(r.raw, zd, sp); Save.zenMove(r.data, zd, sp); r.zen = zd; } // v6: an SP1 code loads as the Campaign, its Zen-bound progress moved (merge pass: from the code's raw pictures, read through v5.4's places)
     app.loadR = r.ok ? r : null; m.textContent = r.ok ? summary(r.data, r.zen || undefined, r.pixels || undefined) : C.err[r.err] || ""; m.className = "sub-sum" + (r.ok ? " good" : m.textContent ? " bad" : "");
     $("ls-warn").textContent = r.ok ? fill(C.replaces, { now: summary(csave().data, zenOn() ? zsave().data : undefined, pdata()) }) : ""; $("ls-warn").hidden = !r.ok; $("ls-apply").disabled = !r.ok;
@@ -1204,10 +1207,10 @@
   }
   function loadApply() { const r = app.loadR; if (!r || !codeOn()) return false; const sum = summary(r.data, r.zen || undefined, r.pixels || undefined); r.data.bank = JSON.parse(JSON.stringify(bank())); csave().data = r.data; // lane P Stage 3: the code has no bank; this device's banked time stays
     if (r.zen && zenOn()) { const z = zsave(); r.zen.mode = z.data.mode; r.zen.moved = 1; z.data = Save.zenView(r.zen, z.wallet); } // v6: both modes from the code (SP1: the Zen part moved from it)
-    if (r.pixels && pixOn()) { const z = msave("pixels"); r.pixels.mode = z.data.mode; r.pixels.moved = 1; z.data = Save.zenView(r.pixels, z.wallet); } // Partial's Pixels: from the code (SP3), else afresh
+    if (r.pixels && pixOn()) { const z = msave("pixels"); r.pixels.mode = z.data.mode; r.pixels.moved = 1; z.data = Save.zenView(r.pixels, z.wallet); } // The third mode: from the code (SP3), else afresh
     writeSave(); if (app.testing) { /* scratch saves stay in memory */ } else if (zenOn()) { csave().write(); zsave().write(); if (pixOn()) msave("pixels").write(); } progressSwapped(); toast(fill(CT().toast, { sum })); return true; }
   // v6: the save code of this device: SP2 (both modes and the wallet) when Zen is on, else SP1.
-  // Partial's Pixels: SP3 (SP2 then its part) while it has progress, else SP2 exactly as before (an older page reads it).
+  // The third mode: SP3 (SP2 then its part) while it has progress, else SP2 exactly as before (an older page reads it).
   const hasProg = (d) => !!d && (!!d.last || [d.done, d.gal, d.eggs].some((o) => !!o && Object.keys(o).length > 0));
   const codeNow = () => (zenOn() ? (pixOn() && hasProg(pdata()) ? Save.encode3(csave().data, zsave().data, pdata(), placesNow(), app.modes.zen.info, app.modes.pixels.info) : Save.encode2(csave().data, zsave().data, placesNow(), app.modes.zen.info)) : Save.encode(app.save.data, galIds()));
   // Merge pass: the save codes' picture places (levels/places.json, append-only), any picture missing from it appended in
@@ -1251,7 +1254,7 @@
     app.diff = tagOf(e); // v4.3: every level plays on its own tag
     app.pwHad = E.POWERS.map((id) => (app.save.data.inv[id] | 0) > 0); // fix pass // lane P Stage 3: before the rules are dealt (pwOpen reads it), not after: the last level's owned badges no longer open a power-up here
     app.entry = e; app.B = E.compile(e.L); app.S = E.sim(app.B, rulesOf(app.diff)); app.S.logOn = true; app.et = 0;
-    app.V.setFlat(isPic(e.mode) && !!(app.cfg[e.mode] || {}).flatBlocks); // Partial's Pixels: her picture's blocks flat, in her exact colours
+    app.V.setFlat(isPic(e.mode) && !!(app.cfg[e.mode] || {}).flatBlocks); // The third mode: her picture's blocks flat, in her exact colours
     app.V.setLevel(app.B, app.S, e.L.pal, e.L.liquid, e.L.shade, e.L.hideC ? { c: e.L.hideC, q: e.L.hideQ } : null); usePalette(e); // Land 1 fix (B1): a land level's mystery fill // lands foundation: shade, the level's shade rows (none: drawn as before) // v5 R4: liquid (a lava moat) // v4 M4: the level's colours before anything is painted
     app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.popK = 0; app.used = 0; app.march = false; app.blockT = -1e12; $("panel").hidden = true; $("stage-pic").hidden = true; hideToast();
     app.lockN = app.S.locked; app.unlockT = -1e12; app.lockWas.fill(false); app.lockSock.fill(-1); app.slotUnT.fill(-1e12); app.flip.fill(false); app.reveals = 0; app.pairsOut = 0; landTiles();
@@ -1280,8 +1283,8 @@
   // v6: a home card plays its mode's next level (the mode becomes the last played); the map chip switches the map's mode.
   const playMode = (m) => { if (!modeOpen(m)) return modeLocked(m); useMode(m); return startLevel(nextOf()); };
   function switchMode(m) { if (m !== app.mode && !modeOpen(m)) return modeLocked(m); if (!useMode(m)) return false; app.lifeTxt = ""; if (app.screen === "map") showScreen("map"); else modeChip(); return true; }
-  function modeChip() { const c = $("map-mode"); if (!c) return; c.hidden = !zenOn(); c.classList.toggle("three", pixOn()); // Partial's Pixels: three buttons sit tighter on a phone
-    for (const b of c.querySelectorAll("button")) { const m = b.dataset.mode; b.setAttribute("aria-pressed", m === app.mode ? "true" : "false"); if (!isPic(m)) continue; // lane P Stage 3; Partial's Pixels: each picture mode's chip alike
+  function modeChip() { const c = $("map-mode"); if (!c) return; c.hidden = !zenOn(); c.classList.toggle("three", pixOn()); // The third mode: three buttons sit tighter on a phone
+    for (const b of c.querySelectorAll("button")) { const m = b.dataset.mode; b.setAttribute("aria-pressed", m === app.mode ? "true" : "false"); if (!isPic(m)) continue; // lane P Stage 3; the third mode: each picture mode's chip alike
       const T = PT(m), lk = !!app.modes[m] && !modeOpen(m); b.hidden = !app.modes[m]; b.textContent = T.chip || T.name; b.classList.toggle("locked", lk); b.setAttribute("aria-label", lk ? T.name + ", " + fill(T.locked, { n: app.cfg[m].openAfter }) : T.name); } }
   // v4 M5, lives (meta.lives; off on the web): true when a level may start; else a toast says when the next life comes.
   function livesLeft() {
@@ -1803,7 +1806,7 @@
     $("jr-quest").addEventListener("click", () => { const te = mapPic(), nx = nearQ(te ? te.id : null); if (nx) startLevel(nx.id); else lockedTap($("jr-quest")); }); // v5 R3 fix: the card's quest
     for (const b of document.querySelectorAll("#map-mode button")) b.addEventListener("click", () => switchMode(b.dataset.mode)); // v6: the map's mode chip
     $("ts-close").addEventListener("click", () => openTail(false)); $("tailsheet").addEventListener("click", (ev) => { if (ev.target === $("tailsheet")) openTail(false); }); // v5 R3 fix: the long tail's sheet
-    $("btn-play").addEventListener("click", () => (zenOn() ? playMode("campaign") : playNext())); for (const m of PICM) if ($("btn-" + m)) $("btn-" + m).addEventListener("click", () => playMode(m)); // v6: the mode cards (Partial's Pixels: one each)
+    $("btn-play").addEventListener("click", () => (zenOn() ? playMode("campaign") : playNext())); for (const m of PICM) if ($("btn-" + m)) $("btn-" + m).addEventListener("click", () => playMode(m)); // v6: the mode cards (the third mode: one each)
     $("btn-tomap").addEventListener("click", () => showScreen("map"));
     $("btn-home").addEventListener("click", () => showScreen("title"));
     $("map-play").addEventListener("click", () => { const te = mapPic(); if (te) startLevel(te.id); else playNext(); }); // v5 R3: past the last level, the fog's next picture
@@ -2122,7 +2125,7 @@
   const resolve = (id) => (typeof id === "number" ? ((app.modes ? app.modes.campaign.levels : app.levels).find((e) => e.n === id) || {}).id : id); // v6: a number is always a Campaign level
   const hitOK = (el) => { if (!el) return false; const r = el.getBoundingClientRect(); if (!(r.width > 0 && r.height > 0)) return false; const t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!t && (t === el || el.contains(t)); };
   const dispMatches = () => { const S = app.S, V = app.V; for (let c = 0; c < app.B.n; c++) if ((V.disp[c] > 0) !== (S.a[c] > 0)) return false; return true; };
-  // Partial's Pixels (tools/partials-pixels-notes.md): the board as drawn, read back from its canvas. Each picture cell's colour
+  // the third mode (the third mode's notes, in tools/): the board as drawn, read back from its canvas. Each picture cell's colour
   // at the middle of its block (the frame left out), and the share of each block's pixels that are exactly that colour (the
   // rest is the seam, the soft top highlight, the foot and the glint every block wears). -> {w, h, cs (device px a cell),
   // cells: [hex, row by row], share: [least, mean]} or null. selfTest and tools/pixels-check.mjs hold it to the art.
@@ -2161,7 +2164,7 @@
     const NODBG = !app.byId.has("v4-all"), dbgSkip = [], need = (c, m) => (NODBG && !c ? (dbgSkip.push(m.split(":")[0]), false) : ok(c, m));
     const was = { save: csave(), mode: app.mode, zsave: zsave(), psave: msave("pixels"), screen: app.screen, entry: app.entry, diff: app.diff, speed: app.speed, cb: app.cb, meta: app.meta, now: app.now, sfx: app.audio.sfx, music: app.audio.music };
     const key = app.cfg.save.key, snap = (() => { try { return was.save.store.getItem(key); } catch (e) { return "?"; } })(), zkey = zenOn() ? app.cfg.zen.save.key : null, zsnap = (() => { try { return zkey ? was.save.store.getItem(zkey) : null; } catch (e) { return "?"; } })();
-    const pkey = pixOn() ? app.cfg.pixels.save.key : null, psnap = (() => { try { return pkey ? was.save.store.getItem(pkey) : null; } catch (e) { return "?"; } })(); // Partial's Pixels: its real save, compared at the end
+    const pkey = pixOn() ? app.cfg.pixels.save.key : null, psnap = (() => { try { return pkey ? was.save.store.getItem(pkey) : null; } catch (e) { return "?"; } })(); // The third mode: its real save, compared at the end
     // v4.2 fix: a phone held sideways shows only the upright card, so that is all there is to check here; the game's own
     // checks run on an upright screen.
     const wasUp = app.upright;
@@ -2174,7 +2177,7 @@
     const scratch = () => { const sv = Save.open(Save.memoryStore(), key, app.order, app.gal.map((e) => e.id), app.meta); for (const id of E.POWERS) sv.data.got[id] = 1; return sv; };
     // v6: a scratch Zen save too (its wallet the scratch Campaign's); the checks start in the Campaign.
     const scratchZen = () => { const Z = app.modes.zen, z = Save.openZen(Save.memoryStore(), app.cfg.zen.save.key, Z.order, Z.gal.map((e) => e.id), () => csave().data, csave); z.data.moved = 1; return z; };
-    // Partial's Pixels: a scratch save of its own too (its wallet the scratch Campaign's).
+    // The third mode: a scratch save of its own too (its wallet the scratch Campaign's).
     const scratchPix = () => { const P = app.modes.pixels; return Save.openZen(Save.memoryStore(), app.cfg.pixels.save.key, P.order, P.gal.map((e) => e.id), () => csave().data, csave, Save.eggRe(app.cfg.pixels.eggPrefix)); };
     app.testing = true; if (zenOn()) { useMode("campaign"); app.modes.zen.save = scratchZen(); } if (pixOn()) { useMode("campaign"); app.modes.pixels.save = scratchPix(); } Audio.hushed(app.audio, true); app.save = scratch(); setSpeed(SPD[0], false); setCb(false, false); app.allPw = true; app.zenFree = true; // lane P Stage 3: Zen open for the checks (17c checks the lock) // v5 R1: every power-up shown for the checks (the unlock checks use their own save)
     // Patient play: tap, then the engine runs until nothing moves and the board lands (the skip path).
@@ -3196,7 +3199,7 @@
         const RS = app.cfg.reset, RTx = RS.text, CTx = app.cfg.saveCode.text, HT = app.meta.home, card = $("settings").querySelector(".sheetcard"), hb = $("rs-hold"), fl = hb.querySelector(".fill");
         const canon = (o) => (Array.isArray(o) ? "[" + o.map(canon).join() + "]" : o && typeof o === "object" ? "{" + Object.keys(o).sort().map((k) => JSON.stringify(k) + ":" + canon(o[k])).join() + "}" : JSON.stringify(o));
         const allRS = () => { if (zenOn()) rsMode("all"); }; // v6 fix pass: v5.4's full wipe is the reset sheet's Everything
-        const sumZ = (d) => summary(d, zenOn() ? zsave().data : undefined, pdata()); // v6: the code's summary carries Zen's part (Partial's Pixels: and its own)
+        const sumZ = (d) => summary(d, zenOn() ? zsave().data : undefined, pdata()); // v6: the code's summary carries Zen's part (the third mode: and its own)
         const mkProg = () => { app.save = scratch(); const d = app.save.data; for (let i = 0; i < 6; i++) Save.record(d, app.order[i]); d.best[app.order[0]] = [41234, 17, 30]; Save.record(d, app.gal[0].id, "gal"); Save.record(d, app.gal[1].id, "gal");
           d.coins = 999; d.inv.ladder = 4; d.eggs["s1-0"] = 1; d.last = app.order[5]; d.settings.music = false; d.settings.cb = true; return canon(d); };
         const into = (el) => { const r = el.getBoundingClientRect(), q = card.getBoundingClientRect(); if (r.top < q.top) card.scrollTop -= q.top - r.top; else if (r.bottom > q.bottom) card.scrollTop += r.bottom - q.bottom; return el; };
@@ -3638,24 +3641,24 @@
           ok(same && code.indexOf(Save.CODE2) === 0 && l1 && prev.indexOf("Zen") > 0, "save code (v6): SP2 (" + code.length + " characters) carries the Campaign, the wallet and Zen (clears, a side quest, a best, an egg, last) and reads back the same; an SP1 code loads as the Campaign and moves its 201 and its pictures to Zen ('" + prev + "')"); }
         // Reset per mode: Zen's clears Zen only (the wallet and the Campaign stay); the Campaign's keeps Zen.
         { app.save = scratch(); useMode("zen"); app.save = scratchZen(); Save.record(app.save.data, w1[0].id); useMode("campaign"); Save.record(app.save.data, C.order[0]); app.save.data.coins = 555;
-          showScreen("title"); $("btn-settings").click(); $("set-reset").click(); const rs = $("rs-mode"), cOn = !rs.hidden && rs.children[0].getAttribute("aria-checked") === "true" && $("rs-lose").textContent === ZX.reset.campLose; rs.querySelector('[data-mode="zen"]').click(); // Partial's Pixels: each choice by its mode
+          showScreen("title"); $("btn-settings").click(); $("set-reset").click(); const rs = $("rs-mode"), cOn = !rs.hidden && rs.children[0].getAttribute("aria-checked") === "true" && $("rs-lose").textContent === ZX.reset.campLose; rs.querySelector('[data-mode="zen"]').click(); // The third mode: each choice by its mode
           const zSay = $("rs-lose").textContent === ZX.reset.zenLose && $("rs-title").textContent === ZX.reset.zenTitle && !bad($("resetsheet").textContent); const hb = $("rs-hold"); hb.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, pointerId: 1, isPrimary: true })); for (let t = 0; t < app.cfg.reset.holdMs * 2 && app.hold >= 0; t += 16) step(16);
           const zr = !Object.keys(zsave().data.done).length && zsave().data.moved === 1 && csave().data.done[C.order[0]] === 1 && csave().data.coins === 555 && $("toast").textContent === ZX.reset.zenToast;
           Save.record(zsave().data, w1[0].id); $("btn-settings").click(); $("set-reset").click(); hb.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, pointerId: 1, isPrimary: true })); for (let t = 0; t < app.cfg.reset.holdMs * 2 && app.hold >= 0; t += 16) step(16);
           const cr = !Object.keys(csave().data.done).length && csave().data.coins === 555 && zsave().data.done[w1[0].id] === 1 && $("toast").textContent === ZX.reset.campToast;
-          Save.record(csave().data, C.order[0]); $("btn-settings").click(); $("set-reset").click(); rs.querySelector('[data-mode="all"]').click(); const aSay = $("rs-lose").textContent === ZX.reset.allLose && [...rs.children].filter((b) => !b.hidden).length === 3 + (pixOn() ? 1 : 0) && [...rs.children].filter((b) => !b.hidden).every((b) => { b.scrollIntoView({ block: "nearest" }); return hitOK(b) && b.getBoundingClientRect().height >= 44; });
+          Save.record(csave().data, C.order[0]); $("btn-settings").click(); $("set-reset").click(); rs.querySelector('[data-mode="all"]').click(); const aSay = $("rs-lose").textContent === (pixOn() ? PT("pixels") : ZX).reset.allLose && [...rs.children].filter((b) => !b.hidden).length === 3 + (pixOn() ? 1 : 0) && [...rs.children].filter((b) => !b.hidden).every((b) => { b.scrollIntoView({ block: "nearest" }); return hitOK(b) && b.getBoundingClientRect().height >= 44; });
           hb.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, pointerId: 1, isPrimary: true })); for (let t = 0; t < app.cfg.reset.holdMs * 2 && app.hold >= 0; t += 16) step(16);
           const ar = !Object.keys(csave().data.done).length && !Object.keys(zsave().data.done).length && csave().data.coins === app.meta.coins.start && zsave().data.moved === 1 && $("toast").textContent === ZX.reset.allToast;
           ok(cOn && zSay && zr && cr && aSay && ar, "reset (v6 fix pass): the sheet asks Campaign, Zen or Everything (" + +cOn + +zSay + +aSay + "); Zen's clears Zen only, the wallet and the Campaign kept (" + +zr + "); the Campaign's clears the Campaign only, the wallet (555 coins) and Zen kept (" + +cr + "); Everything clears both and the wallet (" + +ar + ")"); }
         useMode("campaign"); app.save = scratch(); showScreen("title"); }
-      // 13p. Partial's Pixels (tools/partials-pixels-notes.md): the third mode, PartialVoid's pictures exactly as drawn. Its
+      // 13p. the third mode (the third mode's notes, in tools/): the third mode, an artist's pictures exactly as drawn. Its
       // levels and numbers; locked like Zen until the Campaign's openAfter, then open (a picture done keeps it open); every
       // level's stored order wins in the mode; THE ART: every picture cell drawn on the board at the level's start is its
       // record's colour (her hex), cell for cell; the win names her; its map (its own credit, no Goblin King); three home
       // cards; its own save beside the shared wallet; SP3 codes while it has progress (else SP2); its own reset.
       if (pixOn()) { const P = app.modes.pixels, PX = PT("pixels"), pl = P.levels, ZY = ZT(), badW = (t) => /goblin|fort|assault|siege|raze|castle|throne/i.test(t || "");
-        ok(pl.length >= 1 && pl.every((e, i) => e.id === "p1-" + (i + 1) && e.mode === "pixels" && num(e) === i + 1 && !isStub(e) && e.L.by === "PartialVoid" && e.L.pic && !e.L.shade && !e.L.hidden && !e.L.lock) && P.worlds.length === 1 && P.worlds[0].name === PX.name,
-          "pixels: " + pl.length + " picture(s) p1-1.., numbered from 1, each by PartialVoid, no shade rows, mystery blocks or locks; one world, " + PX.name);
+        ok(pl.length >= 1 && pl.every((e, i) => e.id === "p1-" + (i + 1) && e.mode === "pixels" && num(e) === i + 1 && !isStub(e) && !!e.L.by && e.L.pic && !e.L.shade && !e.L.hidden && !e.L.lock) && P.worlds.length === 1 && P.worlds[0].name === PX.name,
+          "pixels: " + pl.length + " picture(s) p1-1.., numbered from 1, each naming its artist (by), no shade rows, mystery blocks or locks; one world, " + PX.name);
         // The lock (as Zen's 17c): fresh saves, Zen and Pixels closed until the Campaign's openAfter.
         { useMode("campaign"); const sv = app.save, zs = app.modes.zen ? app.modes.zen.save : null, ps = P.save, n = app.cfg.pixels.openAfter, hint = fill(PX.locked, { n }); app.zenFree = false;
           try { app.save = scratch(); if (zs) app.modes.zen.save = scratchZen(); P.save = scratchPix(); showScreen("title"); const bx = $("btn-pixels");
@@ -3667,22 +3670,22 @@
           finally { app.zenFree = true; app.save = sv; if (zs) app.modes.zen.save = zs; P.save = ps; showScreen("title"); hideToast(); } }
         // Every level's stored order, played patiently through play(), in the mode.
         let pw = 0; for (const e of pl) { startLevel(e.id); const good = patient(winOf(e)); settleNow(); if (good && app.S.status === E.WON && app.mode === "pixels") pw++; }
-        ok(pw === pl.length, "pixels: every level's stored order wins played patiently on its tag, in Partial's Pixels (" + pw + "/" + pl.length + ")"); out.notes.pixelsWins = pw + "/" + pl.length;
+        ok(pw === pl.length, "pixels: every level's stored order wins played patiently on its tag, in the third mode (" + pw + "/" + pl.length + ")"); out.notes.pixelsWins = pw + "/" + pl.length;
         // THE ART: at each level's start, every picture cell on the board is its record's colour.
         { let cells = 0, hit = 0, lo = 1, mean = 0, badAt = ""; for (const e of pl) { startLevel(e.id); const R = boardCells(), L = e.L; if (!R) { badAt = e.id + ": no board"; continue; }
             R.cells.forEach((c, i) => { const x = i % R.w, y = (i / R.w) | 0, k = E.matOf(L.grid[y + 1][x + 1]), want = L.pal[k] && L.pal[k].c; cells++; if (c === want) hit++; else if (!badAt) badAt = e.id + " " + x + "," + y + ": " + c + " for " + want; });
             lo = Math.min(lo, R.share[0]); mean += R.share[1] / pl.length; }
           out.notes.pixelsArt = hit + "/" + cells + ", each block " + Math.round(100 * lo) + "-" + Math.round(100 * mean) + "% (least, mean) its exact colour";
-          ok(cells > 0 && hit === cells && lo >= 0.5, "pixels art: every picture cell on the board at the start is its record's colour, her hex (" + hit + "/" + cells + (badAt ? "; " + badAt : "") + "); the exact colour is the most of every block (least " + Math.round(100 * lo) + "%, mean " + Math.round(100 * mean) + "%)"); }
+          ok(cells > 0 && hit === cells && lo >= 0.999, "pixels art: every picture cell on the board at the start is its record's colour, her hex (" + hit + "/" + cells + (badAt ? "; " + badAt : "") + "); fix pass (critic B2): every pixel of every block is exactly that colour, no seam (least " + (100 * lo).toFixed(1) + "%, mean " + (100 * mean).toFixed(1) + "%)"); }
         // The win: her name on the sheet, the finished picture, the Pixels save (not Zen's), the shared wallet, no goblin.
         { app.save = scratch(); useMode("pixels"); app.save = scratchPix(); const e = pl[0], c0 = csave().data.coins; startLevel(e.id); patient(winOf(e)); settleNow(); tick(9000);
-          const line = $("p-line").textContent, won = app.panel === "win" && $("p-title").textContent === PX.winTitle && line === fill(PX.winLineBy, { title: e.L.title, by: e.L.by }) && line.indexOf("PartialVoid") > 0 && $("p-pic").dataset.on === "1";
+          const line = $("p-line").textContent, won = app.panel === "win" && $("p-title").textContent === PX.winTitle && line === fill(PX.winLineBy, { title: e.L.title, by: e.L.by }) && line.indexOf(e.L.by) > 0 && $("p-pic").dataset.on === "1";
           const saved = app.save.data.done[e.id] === 1 && !(zsave() && zsave().data.done[e.id]) && !csave().data.done[e.id] && csave().data.coins > c0 && !("coins" in JSON.parse(JSON.stringify(app.save.data)));
           ok(won && saved && app.V.gob.quiet === true && $("board").getAttribute("aria-label") === PX.boardAria, "pixels win: '" + $("p-title").textContent + "', '" + line + "' with the finished picture; the clear in the Pixels save, " + (csave().data.coins - c0) + " coins into the shared wallet; no goblin (" + +won + +saved + ")"); }
         // Its map: the mode's own sheets and words, its credit alone at the foot, the chip on Pixels, a node per picture.
         { showScreen("map"); const J = app.jr, cred = $("map-credits").textContent, node = pl[0].node, chip = $("map-mode").querySelector('[data-mode="pixels"]');
           const words = [$("map-story").textContent, $("map-play").textContent].concat([...document.querySelectorAll("#jr .bn, #jr .fogl")].map((x) => x.textContent));
-          ok(app.mapOf === "pixels" && J.sheets.length >= 1 && J.sheets.every((sh) => sh.S.tint) && !!node && node.isConnected && node.querySelector("b").textContent === "1" && cred === P.worlds[0].credit && cred.indexOf("PartialVoid") >= 0 && cred.indexOf(app.cfg.gallery.credits) < 0 && chip.getAttribute("aria-pressed") === "true" && !document.querySelector("#jr .kg") && !words.some(badW) && J.eggs.every((g) => /^p1-\d+-\d+$/.test(g.id)),
+          ok(app.mapOf === "pixels" && J.sheets.length >= 1 && J.sheets.every((sh) => sh.S.tint) && !!node && node.isConnected && node.querySelector("b").textContent === "1" && cred === P.worlds[0].credit && cred.indexOf(app.cfg.gallery.credits) < 0 && chip.getAttribute("aria-pressed") === "true" && !document.querySelector("#jr .kg") && !words.some(badW) && J.eggs.every((g) => /^p1-\d+-\d+$/.test(g.id)),
             "pixels map: " + J.sheets.length + " reused sheet(s) under its tint, picture 1's node, the foot reads '" + cred + "' alone, the chip on Pixels, no Goblin King, no siege words, its eggs p1-<sheet>-<i> (" + J.eggs.map((g) => g.id).join(", ") + ")"); }
         // The home: three cards, each one tap.
         { showScreen("title"); const cs = ["btn-play", "btn-zen", "btn-pixels"].map($), three = cs.every((b) => b && !b.hidden && hitOK(b)), lit = $("btn-pixels").classList.contains("last") && !$("btn-play").classList.contains("last") && !$("btn-zen").classList.contains("last");
@@ -3700,7 +3703,7 @@
           const hold = () => { $("rs-hold").dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, pointerId: 1, isPrimary: true })); for (let t = 0; t < app.cfg.reset.holdMs * 2 && app.hold >= 0; t += 16) step(16); };
           hold(); const pr = !Object.keys(msave("pixels").data.done).length && csave().data.coins === 777 && Object.keys(csave().data.done).length === 1 && (!zsave() || Object.keys(zsave().data.done).length === 1) && $("toast").textContent === PX.reset.modeToast;
           Save.record(msave("pixels").data, pl[0].id); $("btn-settings").click(); $("set-reset").click(); rs.querySelector('[data-mode="all"]').click(); hold(); const all = !Object.keys(msave("pixels").data.done).length && !Object.keys(csave().data.done).length;
-          ok(on && pr && all, "pixels reset: its own choice ('" + PX.reset.modeTitle + "') clears Partial's Pixels only, the wallet, Campaign and Zen kept; Everything clears it too (" + +on + +pr + +all + ")"); }
+          ok(on && pr && all, "pixels reset: its own choice ('" + PX.reset.modeTitle + "') clears the third mode's progress only, the wallet, Campaign and Zen kept; Everything clears it too (" + +on + +pr + +all + ")"); }
         useMode("campaign"); app.save = scratch(); P.save = scratchPix(); showScreen("title"); }
       // 14. Opaque sprite caches.
       const bad = app.V.checkSprites(); ok(!bad.length, "sprites: every opaque cache is opaque" + (bad.length ? " (" + bad.join(",") + ")" : ""));
@@ -3716,7 +3719,7 @@
     let snap2 = "?"; try { snap2 = was.save.store.getItem(key); } catch (e) { /* stays "?" */ }
     ok(snap === snap2, "save: the real save is untouched by selfTest");
     if (zkey) { let z2 = "?"; try { z2 = was.save.store.getItem(zkey); } catch (e) { /* stays "?" */ } ok(zsnap === z2, "save (v6): the real Zen save is untouched by selfTest"); }
-    if (pkey) { let p2 = "?"; try { p2 = was.save.store.getItem(pkey); } catch (e) { /* stays "?" */ } ok(psnap === p2, "save (Partial's Pixels): the real Partial's Pixels save is untouched by selfTest"); }
+    if (pkey) { let p2 = "?"; try { p2 = was.save.store.getItem(pkey); } catch (e) { /* stays "?" */ } ok(psnap === p2, "save (the third mode): the real third-mode save is untouched by selfTest"); }
     out.ms = Math.round(performance.now() - T0);
     return out;
   }
@@ -3750,7 +3753,7 @@
     // map (sheets requested, the scroll, the current node, eggs found) for the harness and the screens.
     map: () => { const J = app.jr; if (!J) return null; const sc = $("jr"), f = JN.focus(app.save.data, app.order);
       return { sheets: J.sheets.length, loaded: J.sheets.filter((h) => h.loaded).length, k: +J.k.toFixed(4), colW: J.colW, cards: $("map").classList.contains("cards"), scrollTop: Math.round(sc.scrollTop), height: sc.clientHeight, world: $("jr-world").offsetHeight, focus: f, eggs: Object.keys(app.save.data.eggs || {}).length, tail: J.tail && J.tail.e ? J.tail.e.id : null }; },
-    gallery: () => app.gal.map((e) => e.id), zen: () => (zenOn() ? app.modes.zen.levels.concat(app.modes.zen.gal).map((e) => e.id) : []), pixels: () => (pixOn() ? app.modes.pixels.levels.map((e) => e.id) : []), cells: boardCells, mode: () => app.mode, entry: () => app.V.entryInfo(), // Partial's Pixels: pixels(), its level ids; cells(), the board read back
+    gallery: () => app.gal.map((e) => e.id), zen: () => (zenOn() ? app.modes.zen.levels.concat(app.modes.zen.gal).map((e) => e.id) : []), pixels: () => (pixOn() ? app.modes.pixels.levels.map((e) => e.id) : []), cells: boardCells, mode: () => app.mode, entry: () => app.V.entryInfo(), // The third mode: pixels(), its level ids; cells(), the board read back
     // v4 M5: win siege levels 1..n (normal) in the live save (screens for the harness and the critics); a power-up through
     // its badge (k), and for the Quartermaster or Recall a target (the tile [j, d] or the space); the meta state.
     // v4.3: clearPictures(k): clear the Gallery's first k pictures in the live save (the screens' sequential Gallery).

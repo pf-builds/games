@@ -35,7 +35,13 @@ const MEDIA = /^(?:[\w-]+\/)*[\w.-]+\.(?:json|webp|jpe?g|png|gif|svg|m4a|ogg|mp3
 
 // ---- the trace ---------------------------------------------------------------------------------------------------------------
 const files = new Map(); // path -> why (the first place that named it)
-const want = (f, why) => { f = norm(f); if (files.has(f)) return; if (C.debugOnly.includes(f)) { files.set(f, "debug-only: " + why); return; } if (!has(f)) fails.push("traced but missing: " + f + " (" + why + ")"); files.set(f, why); };
+// Partial's Pixels is web only (config webOnly; Peter, 2026-10-22): its files are never traced, its config keys, markup and
+// licence rows are dropped from the copy, and a check below fails if any of it is left in the build.
+const WO = C.webOnly || null, woFile = (f) => !!WO && new RegExp(WO.files).test(f);
+const woConfig = (o) => { if (!WO) return o; for (const k of WO.configKeys) { const ks = k.split("."), last = ks.pop(); let t = o; for (const q of ks) t = t && t[q]; if (t && typeof t === "object") delete t[last]; }
+  const drop = (v) => { if (Array.isArray(v)) return v.filter((x) => !WO.arrayValues.includes(x)).map(drop); if (v && typeof v === "object") { for (const q of Object.keys(v)) v[q] = drop(v[q]); } return v; }; return drop(o); };
+const woHtml = (t) => (WO ? WO.html.reduce((a, re) => a.replace(new RegExp(re, "g"), ""), t) : t);
+const want = (f, why) => { f = norm(f); if (files.has(f) || woFile(f)) return; if (C.debugOnly.includes(f)) { files.set(f, "debug-only: " + why); return; } if (!has(f)) fails.push("traced but missing: " + f + " (" + why + ")"); files.set(f, why); };
 const html = rd("index.html");
 want("index.html", "the page");
 for (const m of html.matchAll(/\s(?:src|href)="([^"]+)"/g)) if (!m[1].startsWith("data:")) want(bare(m[1]), "index.html " + m[0].trim().split("=")[0]);
@@ -83,8 +89,8 @@ let notesB = 0;
 const stripped = [];
 for (const f of [...files.keys()].sort()) {
   if (C.debugOnly.includes(f) || !has(f)) continue;
-  if (f === "index.html") put(f, html.split("\n").filter((l) => { const drop = /^<meta\b/.test(l) && C.stripMeta.some((s) => l.includes(s)); if (drop) stripped.push(l.trim()); return !drop; }).join("\n"));
-  else if (f.endsWith(".json")) put(f, JSON.stringify(unNote(JSON.parse(rd(f)), "", f)));
+  if (f === "index.html") put(f, woHtml(html).split("\n").filter((l) => { const drop = /^<meta\b/.test(l) && C.stripMeta.some((s) => l.includes(s)); if (drop) stripped.push(l.trim()); return !drop; }).join("\n"));
+  else if (f.endsWith(".json")) put(f, JSON.stringify(unNote(f === "config.json" ? woConfig(JSON.parse(rd(f))) : JSON.parse(rd(f)), "", f)));
   else put(f);
 }
 for (const f of C.companions) { if (has(f)) put(f); else fails.push("companion missing: " + f); }
@@ -101,7 +107,8 @@ function plain(md) {
 }
 // Stage 3: the plain text names only what ships. licences.rewrite ([regex, words] pairs) puts words in place of the studio's
 // own records and build scripts; licences.dropRows drops table rows about files the build leaves out (the arcade's thumbnail).
-const lic = (md) => { let t = md.split("\n").filter((l) => !(/^\|/.test(l) && C.licences.dropRows.some((r) => l.includes(r)))).join("\n"); for (const [re, to] of C.licences.rewrite) t = t.replace(new RegExp(re, "g"), to); return t; };
+const lic = (md) => { if (WO) { const a = md.indexOf(WO.licenceCut[0]), b = md.indexOf(WO.licenceCut[1]); if (a >= 0 && b > a) md = md.slice(0, a) + md.slice(b + WO.licenceCut[1].length); } // web only: the mode's licence section
+  let t = md.split("\n").filter((l) => !(/^\|/.test(l) && C.licences.dropRows.concat(WO ? WO.licenceRows : []).some((r) => l.includes(r)))).join("\n"); for (const [re, to] of C.licences.rewrite) t = t.replace(new RegExp(re, "g"), to); return t; };
 put(C.licences.to, plain(lic(rd(C.licences.from))));
 
 // ---- the checks --------------------------------------------------------------------------------------------------------------
@@ -120,6 +127,9 @@ for (const f of list) { const lic = LIC.includes(f); if (!TEXT.test(f) && !lic) 
   for (const w of C.banned) { const re = new RegExp(w, "gi"); let n = 0, ok = 0; for (const m of t.matchAll(re)) { if (/^https?:/i.test(m[0]) && (lic || C.allowUrls.some((a) => t.startsWith(a, m.index)))) { ok++; continue; } n++; }
     if (n || ok) (scan[f] = scan[f] || {})[w] = ok ? n + " (+" + ok + " allowed)" : n;
     if (n) (w === "crazygames" ? warns : fails).push(`${f}: ${n} x /${w}/` + (w === "crazygames" ? " (the host portal, in a comment)" : "")); } }
+// Web only (config webOnly): nothing in the build names Partial's Pixels, PartialVoid or the mode's level files, and none of its files ships.
+if (WO) { for (const f of list) { if (woFile(f)) fails.push("web-only file in the build: " + f); if (!TEXT.test(f) && !LIC.includes(f)) continue; const t = fs.readFileSync(path.join(stage, f), "utf8");
+  for (const w of WO.banned) { const n = (t.match(new RegExp(w, "gi")) || []).length; if (n) fails.push(`${f}: ${n} x /${w}/ (Partial's Pixels is web only)`); } } }
 // Stage 3 (critic M1): the licence text holds no local path and every file it names is in the build.
 { const t = fs.readFileSync(path.join(stage, C.licences.to), "utf8"), noUrl = t.replace(/https?:\/\/\S+/g, " ");
   if (/\/Users\/|~\/|[A-Z]:\\/.test(t)) fails.push(C.licences.to + " holds a local path");
