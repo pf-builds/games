@@ -120,7 +120,15 @@ the pack); a picture whose hash (cells, title, tag) is unchanged is kept byte fo
 
 ## 6. Checks
 
-See the report numbers in the commit messages; the gates: `tools/test.js` (Pixels section: the Lighthouse's counts, the art
+Final run (2026-10-22, on 0df3e49 + these notes): test.js **737 passed, 0 failed** (726 before, 11 new); `freeze.js --require`
+**PASS, 0 differences** (Zen's 574 levels, 886 shipped records, 283 castle cases); selfTest **939/0 at 375x812@3, 941/0 at
+1280x800**, 0 console messages; `harness.mjs` **all passed** (its old-save check now expects three cards); `pixels-check.mjs`
+**1600/1600 at both sizes**; `shots-partials-pixels.mjs` 18/18 with real taps, 0 console messages; `pack.js --check` clean;
+shipped folder 14,716,719 B (cap 19,000,000). Home cards all hittable at 320x568, 360x640, 800x450 and 812x375.
+`tools/space-v7/check.mjs lazy` fails at its second check on this branch and on e152988 alike (it predates the Zen lock: it
+expects the Zen card's Play where the card now says "Opens after Fort 5"); not touched.
+
+The gates: `tools/test.js` (Pixels section: the Lighthouse's counts, the art
 gate on every record source and shipped, converter refusals and both suggestions, the 8-colour fixture suggested then
 installed end to end in a scratch game with its merge, the map growing for 1/8/9/17/40, saves, SP3, config), freeze,
 selfTest both sizes (13p: lock, every stored order, the art on the canvas, the win, the map, three cards, SP3, reset),
