@@ -536,4 +536,5 @@ Fixed: S1-S7, m2, m3, N1, N2 (`tools/v5-r4-notes.md` §10). Parked:
 - An "artist" screen or a one-time intro card for the mode (her name, a line from her) when it opens: not in the brief.
 - Merge suggestions judge a "shape" by shared edge only; a picture where two near colours draw a pattern (dithering) could want a smarter check. Peter approves every merge anyway.
 - Her art in the Campaign/Zen map foot's general credit line: left as is (each map's foot names its own pictures); the Pixels map carries her line.
-- Portal build: the mode ships in the folder as is (2 small files); a portal-specific decision on whether her art goes to CrazyGames is Peter's (her permission covers the game; check it covers portals).
+- Portal build: Peter decided web only (2026-10-22); the portal build leaves the mode out (portal-config webOnly). Revisit once she has made more art.
+- Block edges while digging: her blocks have no seam now; if playtests show players lose track of a block, an outline only on blocks being dug (never at rest) is the place to add it.

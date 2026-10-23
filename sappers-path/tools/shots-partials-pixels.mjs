@@ -21,7 +21,7 @@ for (const [w, h, dpr, touch] of [[375, 812, 3, true], [1280, 800, 1, false]]) {
   const c0 = await card(); await shot("home-locked");
   await p.click("#btn-pixels", { force: true }); await p.waitForTimeout(300); const stay = await p.evaluate(() => SP.mode() === "campaign" && SP.state().screen === "title");
   ok(!c0.hidden && c0.locked && stay, tag + " home: three cards, Partial's Pixels locked ('" + c0.text + "'), a tap stays home");
-  const n = await p.evaluate(() => SP.unlockTo(5)); await p.evaluate(() => SP.screen("title")); await p.waitForTimeout(300);
+  const n = await p.evaluate(() => SP.unlockTo(5)); await boot(); // a fresh load, as a player coming back (critic (a): no toast left from the locked tap)
   const c1 = await card(); await shot("home-open"); ok(!c1.locked && /Picture 1/.test(c1.text), tag + " home: after " + n + " Campaign levels won, Partial's Pixels opens ('" + c1.text + "')");
   // Its map, from the map chip.
   await p.click("#btn-tomap"); await p.waitForTimeout(400); await p.click('#map-mode [data-mode="pixels"]'); await p.waitForTimeout(1200);

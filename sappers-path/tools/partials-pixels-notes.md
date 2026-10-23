@@ -24,6 +24,13 @@ PartialVoid's original pixel art, one picture a level, exactly as she drew it. B
    exact; no pixel ever moves.
 5. If it says **REFUSED**: the file can't be read as pixel art (smoothed or resized export, see-through pixels, 16-bit,
    interlaced, a merge naming a colour that isn't there). The message says which; fix the file or the line.
+   If it says **a gate failed; nothing installed. Next steps:** the bake couldn't meet a target even after its automatic
+   retries (config `retry.extra`: 4, then 8 more candidates). Do the first step it prints, usually
+   `node tools/partials-pixels.js --rebake <id> --extra 12`; then give the picture's manifest line a tag (`"tag": "easy"` or
+   `"normal"`); a very small picture (under about 30 x 30 cells) may play short whatever the deal, and lowering
+   `paceByCells.floor` in tools/pixels-config.json is Peter's call. Installed pictures are never touched by a failed run.
+   A **WARNING** that two colours are under 10 ΔE00 apart: the picture installs, but ask Peter whether players can tell them
+   apart (a merge suggestion is his to approve).
 6. Then: `~/.local/opt/node/bin/node tools/test.js`, bump the cache tag (`?v=` in index.html and style.css), selfTest at
    375x812 and 1280x800 (`tools/selftest-lands.mjs --url ... --wide 1280x800`), `tools/pixels-check.mjs` (the art in the real
    page, and the side-by-side images), `tools/harness.mjs` last. Commit.
@@ -39,16 +46,24 @@ Other commands: `tools/partials-pixels.js check` (convert and check only, nothin
   "Opens after Fort 5"; a tap toasts it and stays home. The mode played last wears Continue.
 - **Map:** the mode chip reads Campaign | Zen | Pixels (short label in the chip, full name in its aria-label; the three sit
   tighter under 460 px). The Pixels map reuses castle sheets 6 and 5 (no new image bytes; no Zen world uses sheet 6) under its
-  own violet tint, 8 pictures a sheet, eggs on the painted spurs' tips (ids `p1-<sheet>-<i>`), the banner "By PartialVoid ·
-  Partial's Pixels", fog with "More pictures on the way" right past the last picture (the last sheet's `tail`), no Goblin
-  King. The foot reads only "Pixel art by PartialVoid, used with the artist's permission." (`pixels.galleryCredits` false:
+  own violet tint, 8 pictures a sheet, eggs on the painted spurs' tips (ids `p1-<sheet>-<i>`), the banner "PIXEL ART ·
+  Partial's Pixels · by PartialVoid", "More pictures on the way" in a band of fog just past the last picture (`pixels.fogBand`,
+  260 sheet px: fix pass S1; the painted sheet stays clear above it, so with one picture or a few it reads as a finished place
+  with the road going on; Zen and the Campaign keep fogging everything past their frontier), no Goblin King. The foot reads only "Pixel art by PartialVoid, used with the artist's permission." (`pixels.galleryCredits` false:
   the Gallery's line says the rest are Click it! Studios originals, which would be wrong here).
 - **Levels:** "Picture n" everywhere (numbers run from 1), the title in the play bar, calm music (Zen's loop), no goblin on
   the win. The win says "Picture done" / "Lighthouse by PartialVoid, all dug out." with the finished picture.
-- **Blocks are flat** in this mode (`pixels.flatBlocks`, board.js `setFlat`): her exact colour on the 1 CSS px seam, no
-  highlight band, foot or glint (those lighten and darken about a quarter of every block). Measured at level start: 71% of
-  every block's pixels are exactly her hex at 375x812@3, 78% at 1280x800 (the rest is the seam); with the studs it was 51%
-  and 57%. Colour-blind marks still draw if the player turns them on (an accessibility choice).
+- **Blocks are flat** in this mode (`pixels.flatBlocks`, board.js `setFlat`): fix pass B2, each block is one square of her
+  exact colour, no seam, rounded corner, highlight band, foot or glint, so the board at level start is her drawing (measured:
+  **100.0% of every block's pixels are exactly her hex** at 375x812@3 and 1280x800; with the studs it was 51% and 57%, with the
+  first flat version and its seam 71% and 78%). Players tap squad cards, not blocks, so no block edge is needed; dug blocks
+  leave open ground as on every board. Colour-blind marks still draw if the player turns them on (an accessibility choice).
+- **Web only** (Peter, 2026-10-22; fix pass B1): `tools/portal-build.mjs` (config `webOnly` in tools/portal-config.json) drops
+  `config.pixels` and its music mode, leaves out `levels/pixels*.pk.json`, takes the mode's card, chip and reset choice out of
+  index.html, cuts its LICENSES rows and section, and fails if any file in the zip names Partial's Pixels, PartialVoid or the
+  mode's level files. The page fetches the index only from `config.pixels.index` (no file name in the code). With no
+  `config.pixels` the page shows no trace of the mode (checked by `tools/pixels-check.mjs`'s no-pixels page, selfTest 929/0
+  there, and by the portal selftest). Shipped code comments call it "the third mode" so the scan stays clean.
 - **Settings:** Reset asks Campaign, Zen, Pixels or Everything; Pixels clears only its own progress (wallet, Campaign and Zen
   kept); Everything clears it too. Copy save code writes SP3 while Partial's Pixels has progress, else SP2 byte for byte.
 
@@ -134,10 +149,26 @@ installed end to end in a scratch game with its merge, the map growing for 1/8/9
 selfTest both sizes (13p: lock, every stored order, the art on the canvas, the win, the map, three cards, SP3, reset),
 `tools/pixels-check.mjs`, `tools/shots-partials-pixels.mjs` (real taps), harness.
 
+## 6b. Fix pass (2026-10-22, `tools/critic-partials-pixels.md`)
+
+- B1 web only and B2 seamless blocks: above (§1).
+- S1 the map: the fog band (§1). Shots with 1 picture (`map-375.png`, `map-1280.png`) and 3 (`map-3-pictures-375.png`,
+  `-1280.png`, from a scratch install of two copies of the 32x32 fixture).
+- S2 pace: a picture's pace floor and aim scale with its cells (`paceByCells`: ref 1600, floor 0.55; a 32x32 picture's range
+  is 96-300 s); a pick that falls back is re-baked with 4 then 8 more candidates; a gate that still fails prints the next
+  steps (runbook step 5). The critic's case, a 32x32 6-colour picture (`tools/fixtures/partials-pixels/fx-small-32-beach.png`,
+  build-only): installs first time as picture 2, Easy, real pace 126 s, 33 taps, 14 s; tagged Normal, 139 s, 42 taps.
+- m1 banner: eyebrow "Pixel art", the name, then "by PartialVoid" (`text.bannerBy`). m2: the desktop card's "Secrets found"
+  had lost its value to a code comment in every mode (since lane D8); it now reads "found / in reach" and hides with none.
+  m3: near twins under 3 ΔE00 never count as a drawn shape (merged first); a run warns when a picture's closest pair is under
+  10. m4: an approved suggestion's .md says so at its top on install. m5: the merge preview outlines every changed cell.
+  m6: install reports only files that changed ("every file unchanged" otherwise).
+- The shots script reloads after unlocking (the critic's (a): the old shot caught the locked tap's toast).
+- One fix to my own earlier slip: a sed in the first pass had touched an unrelated test.js cleanup line (line 1460); restored.
+
 ## 7. Calls I made
 
-1. Flat blocks for this mode (beyond the brief's minimum "dominant fill"): the stud's highlight and foot are light/dark
-   variants inside every block, which the brief rules out for her boards. The seam stays.
+1. Flat blocks for this mode: one square of her colour, no seam (fix pass B2, Peter's "as close as possible").
 2. Castle sheets 6 and 5 with a violet tint (6 is the one castle sheet no Zen world reuses), not Picture Garden's sheets: a
    third tint of Kitten Forest's sheets would read as World 1 or 2 again.
 3. The chip says "Pixels" (the full name doesn't fit three across at 375 px); the card, banner, map title and labels say

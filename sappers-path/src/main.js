@@ -148,7 +148,7 @@
     try { indexGallery(Pk.unpackFile(await getJSON("levels/gallery.pk.json?v=" + V_))); } catch (e) { /* no side quests */ }
     let raw = null; try { raw = await getJSON("map/layout.json?v=" + V_); } catch (e) { raw = null; /* no journey map: its Play still works */ }
     let zen = null; try { zen = zenIndex(await getJSON("levels/zen.pk.json?v=" + V_)); } catch (e) { zen = null; /* no Zen mode: the campaign alone */ } // v7 lane T: the index; each world's records load when it is played (loadWorld)
-    let pix = null; if (app.cfg.pixels) { try { pix = zenIndex(await getJSON(app.cfg.pixels.index + "?v=" + V_), "pixels"); } catch (e) { pix = null; /* no the third mode */ } } // The third mode: its index, Zen's shape
+    let pix = null; if (app.cfg.pixels) { try { pix = zenIndex(await getJSON(app.cfg.pixels.index + "?v=" + V_), "pixels"); } catch (e) { pix = null; /* no third mode */ } } // The third mode: its index, Zen's shape
     try { const P = await getJSON("levels/places.json?v=" + V_); app.places = Array.isArray(P.places) ? P.places.map(String) : null; } catch (e) { app.places = null; /* the save codes fall back to gallery.json's order */ }
     if (!app.levels.length) { $("load-msg").textContent = "No levels found."; return; }
     modes(raw, zen, pix); // v6 lane B: the modes' levels, pictures and maps (the third mode: the third)
@@ -3218,7 +3218,7 @@
         out.notes.settingsCard = Math.round(cr.height) + " px tall" + (scrolls ? ", scrolls " + (card.scrollHeight - card.clientHeight) + " px" : "");
         // Reset: Cancel, an early let-go, a full hold by pointer, then by Space.
         card.scrollTop = 0; into($("set-reset")).click(); allRS(); const say = $("resetsheet").textContent;
-        const rsOpen = !$("resetsheet").hidden && $("settings").hidden && document.activeElement === $("rs-cancel") && hitOK(hb) && hitOK($("rs-cancel")) && hb.getBoundingClientRect().height >= ST.minTapPx && [zenOn() ? ZT().reset.allLose : RTx.lose, zenOn() ? ZT().reset.allKeep : RTx.keep, RTx.copyFirst, RTx.hold].every((x) => say.indexOf(x) >= 0); // v6: the Campaign's words (the sheet opens on the mode in use)
+        const rsOpen = !$("resetsheet").hidden && $("settings").hidden && document.activeElement === $("rs-cancel") && hitOK(hb) && hitOK($("rs-cancel")) && hb.getBoundingClientRect().height >= ST.minTapPx && [zenOn() ? (pixOn() ? PT("pixels") : ZT()).reset.allLose : RTx.lose, zenOn() ? ZT().reset.allKeep : RTx.keep, RTx.copyFirst, RTx.hold].every((x) => say.indexOf(x) >= 0); // v6: the Campaign's words (the sheet opens on the mode in use)
         $("rs-cancel").click(); const c1 = $("resetsheet").hidden && !$("settings").hidden && canon(app.save.data) === p0;
         $("set-reset").click(); allRS(); pe(hb, "pointerdown"); holdFor(RS.holdMs * 0.6); const midFill = parseFloat((/scaleX\(([\d.]+)\)/.exec(fl.style.transform) || [0, 0])[1]), midLab = hb.textContent === RTx.holding; pe(hb, "pointerup");
         const c2 = canon(app.save.data) === p0 && app.hold < 0 && fl.style.transform === "" && !$("resetsheet").hidden && hb.textContent === RTx.hold && midFill > 0.5 && midFill < 0.7 && midLab;
@@ -3651,7 +3651,7 @@
           const ar = !Object.keys(csave().data.done).length && !Object.keys(zsave().data.done).length && csave().data.coins === app.meta.coins.start && zsave().data.moved === 1 && $("toast").textContent === ZX.reset.allToast;
           ok(cOn && zSay && zr && cr && aSay && ar, "reset (v6 fix pass): the sheet asks Campaign, Zen or Everything (" + +cOn + +zSay + +aSay + "); Zen's clears Zen only, the wallet and the Campaign kept (" + +zr + "); the Campaign's clears the Campaign only, the wallet (555 coins) and Zen kept (" + +cr + "); Everything clears both and the wallet (" + +ar + ")"); }
         useMode("campaign"); app.save = scratch(); showScreen("title"); }
-      // 13p. the third mode (the third mode's notes, in tools/): the third mode, an artist's pictures exactly as drawn. Its
+      // 13p. The third mode (its notes in tools/): the third mode, an artist's pictures exactly as drawn. Its
       // levels and numbers; locked like Zen until the Campaign's openAfter, then open (a picture done keeps it open); every
       // level's stored order wins in the mode; THE ART: every picture cell drawn on the board at the level's start is its
       // record's colour (her hex), cell for cell; the win names her; its map (its own credit, no Goblin King); three home
