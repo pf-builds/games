@@ -22,8 +22,8 @@ for (const [w, h, dpr, touch] of [[375, 812, 3, true], [1280, 800, 1, false]]) {
   for (const t of want) {
     const R = await p.evaluate(async (id) => { await SP.load(id); return SP.cells(); }, t.id);
     let hit = 0; const miss = []; R.cells.forEach((c, i) => { if (c === t.cv.cells[i]) hit++; else if (miss.length < 5) miss.push((i % R.w) + "," + ((i / R.w) | 0) + " " + c + " for " + t.cv.cells[i]); });
-    const ok = R.w === t.cv.pw && R.h === t.cv.ph && hit === t.cv.cells.length && R.share[0] >= 0.999; if (!ok) bad++; // fix pass (critic B2): every pixel of every block her exact colour
-    console.log(tag + " " + t.id + ": " + hit + "/" + t.cv.cells.length + " cells match the PNG (" + R.w + "x" + R.h + ", " + R.cs + " device px a cell; each block " + (100 * R.share[0]).toFixed(1) + "-" + (100 * R.share[1]).toFixed(1) + "% of its pixels exactly her colour, least-mean)" + (miss.length ? "; first misses " + miss.join("; ") : ""));
+    const ok = R.w === t.cv.pw && R.h === t.cv.ph && hit === t.cv.cells.length; if (!ok) bad++; // each block's face (its base colour) her exact hex; the share of exact pixels is for information (standard blocks, Peter 2026-10-23)
+    console.log(tag + " " + t.id + ": " + hit + "/" + t.cv.cells.length + " cells match the PNG (" + R.w + "x" + R.h + ", " + R.cs + " device px a cell; each block " + (100 * R.share[0]).toFixed(1) + "-" + (100 * R.share[1]).toFixed(1) + "% of its pixels exactly her colour, least-mean, for information: the rest is the game's seam, highlight, foot and glint)" + (miss.length ? "; first misses " + miss.join("; ") : ""));
     // The side-by-side: the PNG (served from the art folder) scaled to the board's cell size with no smoothing | the board canvas's picture area.
     const art = "tools/build-data/partials-pixels/art/" + encodeURIComponent(t.cv.file);
     const url = await p.evaluate(async (a) => { const c = document.getElementById("board"), img = new Image(); img.src = a; await img.decode(); const B = SP.cells(), cs = B.cs, W = Math.round(B.w * cs), H = Math.round(B.h * cs), gap = Math.round(cs * 2);

@@ -53,11 +53,12 @@ Other commands: `tools/partials-pixels.js check` (convert and check only, nothin
   the Gallery's line says the rest are Click it! Studios originals, which would be wrong here).
 - **Levels:** "Picture n" everywhere (numbers run from 1), the title in the play bar, calm music (Zen's loop), no goblin on
   the win. The win says "Picture done" / "Lighthouse by PartialVoid, all dug out." with the finished picture.
-- **Blocks are flat** in this mode (`pixels.flatBlocks`, board.js `setFlat`): fix pass B2, each block is one square of her
-  exact colour, no seam, rounded corner, highlight band, foot or glint, so the board at level start is her drawing (measured:
-  **100.0% of every block's pixels are exactly her hex** at 375x812@3 and 1280x800; with the studs it was 51% and 57%, with the
-  first flat version and its seam 71% and 78%). Players tap squad cards, not blocks, so no block edge is needed; dug blocks
-  leave open ground as on every board. Colour-blind marks still draw if the player turns them on (an accessibility choice).
+- **Blocks in the game's standard grid style** (Peter, 2026-10-23, after his playtest: "we need the grid style of the rest of
+  the game, where each pixel is a different box"; the critic's B2 is overruled): her blocks draw exactly as Zen's picture blocks
+  do (seam, rounded face, highlight band, foot, glint). There is no mode-specific drawing: the flat-block branch is deleted and
+  src/board.js is byte for byte as at e152988. Her art data stays exact: the same cells, her exact hex as each block's base
+  colour, and every block's face (its centre) reads back as her hex, 1600/1600. The share of each block's pixels exactly her
+  hex is recorded for information only: 51% at 375x812@3, 57% at 1280x800 (the rest is the seam, highlight, foot and glint).
 - **Web only** (Peter, 2026-10-22; fix pass B1): `tools/portal-build.mjs` (config `webOnly` in tools/portal-config.json) drops
   `config.pixels` and its music mode, leaves out `levels/pixels*.pk.json`, takes the mode's card, chip and reset choice out of
   index.html, cuts its LICENSES rows and section, and fails if any file in the zip names Partial's Pixels, PartialVoid or the
@@ -119,7 +120,7 @@ the pack); a picture whose hash (cells, title, tag) is unchanged is kept byte fo
 
 - **Picture modes:** `PICM = ["zen", "pixels"]`, `isPic(m)`, `picOn()`; where Zen and Partial's Pixels behave the same the
   page asks these and reads the mode's own config block `app.cfg[m]` (save, openAfter, load, text, eggPrefix,
-  galleryCredits, flatBlocks). `PT(m)`: a picture mode's words, `pixels.text` merged over `zen.text`; `MT()` the mode in use.
+  galleryCredits). `PT(m)`: a picture mode's words, `pixels.text` merged over `zen.text`; `MT()` the mode in use.
   `modes()` builds the Campaign, then `picMode("zen", ...)` and `picMode("pixels", ...)` from each index (the old Zen body,
   generalized; Zen's output is the same). `modeOpen(m)` / `modeLocked(m)`, `msave(m)`, `lastMode()`, `doneIn(m)`.
 - **Loading:** `levels/pixels.pk.json` (index, Zen's shape) at boot, its world file `levels/pixels-1.pk.json` on the first
@@ -131,7 +132,7 @@ the pack); a picture whose hash (cells, title, tag) is unchanged is kept byte fo
   byte for byte the old ones, checked against the old save.js). An SP1 or SP2 code loads with Partial's Pixels afresh.
 - Power-up reach counts Pixels pictures like Zen's (`picDone`). Music: `audio.music.modes.pixels`, audio.js `pick` treats any
   non-Campaign mode as Zen.
-- Cache tag `?v=89`.
+- Cache tag `?v=90` (`?v=89` until the standard-blocks change).
 
 ## 6. Checks
 
@@ -151,7 +152,7 @@ selfTest both sizes (13p: lock, every stored order, the art on the canvas, the w
 
 ## 6b. Fix pass (2026-10-22, `tools/critic-partials-pixels.md`)
 
-- B1 web only and B2 seamless blocks: above (§1).
+- B1 web only: above (§1). B2 seamless blocks: built, then overruled by Peter on 2026-10-23 (standard grid blocks, §1).
 - S1 the map: the fog band (§1). Shots with 1 picture (`map-375.png`, `map-1280.png`) and 3 (`map-3-pictures-375.png`,
   `-1280.png`, from a scratch install of two copies of the 32x32 fixture).
 - S2 pace: a picture's pace floor and aim scale with its cells (`paceByCells`: ref 1600, floor 0.55; a 32x32 picture's range
@@ -168,7 +169,7 @@ selfTest both sizes (13p: lock, every stored order, the art on the canvas, the w
 
 ## 7. Calls I made
 
-1. Flat blocks for this mode: one square of her colour, no seam (fix pass B2, Peter's "as close as possible").
+1. Blocks: Peter's call on 2026-10-23, the game's standard grid blocks (the flat versions are gone).
 2. Castle sheets 6 and 5 with a violet tint (6 is the one castle sheet no Zen world reuses), not Picture Garden's sheets: a
    third tint of Kitten Forest's sheets would read as World 1 or 2 again.
 3. The chip says "Pixels" (the full name doesn't fit three across at 375 px); the card, banner, map title and labels say

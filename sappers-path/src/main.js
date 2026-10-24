@@ -1254,7 +1254,6 @@
     app.diff = tagOf(e); // v4.3: every level plays on its own tag
     app.pwHad = E.POWERS.map((id) => (app.save.data.inv[id] | 0) > 0); // fix pass // lane P Stage 3: before the rules are dealt (pwOpen reads it), not after: the last level's owned badges no longer open a power-up here
     app.entry = e; app.B = E.compile(e.L); app.S = E.sim(app.B, rulesOf(app.diff)); app.S.logOn = true; app.et = 0;
-    app.V.setFlat(isPic(e.mode) && !!(app.cfg[e.mode] || {}).flatBlocks); // The third mode: her picture's blocks flat, in her exact colours
     app.V.setLevel(app.B, app.S, e.L.pal, e.L.liquid, e.L.shade, e.L.hideC ? { c: e.L.hideC, q: e.L.hideQ } : null); usePalette(e); // Land 1 fix (B1): a land level's mystery fill // lands foundation: shade, the level's shade rows (none: drawn as before) // v5 R4: liquid (a lava moat) // v4 M4: the level's colours before anything is painted
     app.ending = null; app.endAt = -1; app.endT = -1; app.panel = null; app.popK = 0; app.used = 0; app.march = false; app.blockT = -1e12; $("panel").hidden = true; $("stage-pic").hidden = true; hideToast();
     app.lockN = app.S.locked; app.unlockT = -1e12; app.lockWas.fill(false); app.lockSock.fill(-1); app.slotUnT.fill(-1e12); app.flip.fill(false); app.reveals = 0; app.pairsOut = 0; landTiles();
@@ -3676,7 +3675,7 @@
             R.cells.forEach((c, i) => { const x = i % R.w, y = (i / R.w) | 0, k = E.matOf(L.grid[y + 1][x + 1]), want = L.pal[k] && L.pal[k].c; cells++; if (c === want) hit++; else if (!badAt) badAt = e.id + " " + x + "," + y + ": " + c + " for " + want; });
             lo = Math.min(lo, R.share[0]); mean += R.share[1] / pl.length; }
           out.notes.pixelsArt = hit + "/" + cells + ", each block " + Math.round(100 * lo) + "-" + Math.round(100 * mean) + "% (least, mean) its exact colour";
-          ok(cells > 0 && hit === cells && lo >= 0.999, "pixels art: every picture cell on the board at the start is its record's colour, her hex (" + hit + "/" + cells + (badAt ? "; " + badAt : "") + "); fix pass (critic B2): every pixel of every block is exactly that colour, no seam (least " + (100 * lo).toFixed(1) + "%, mean " + (100 * mean).toFixed(1) + "%)"); }
+          ok(cells > 0 && hit === cells, "pixels art: every picture cell on the board at the start is its record's colour, her hex, as each block's face (" + hit + "/" + cells + (badAt ? "; " + badAt : "") + "); blocks drawn in the game's standard style (Peter, 2026-10-23), so the exact-colour share is for information (least " + (100 * lo).toFixed(1) + "%, mean " + (100 * mean).toFixed(1) + "%)"); }
         // The win: her name on the sheet, the finished picture, the Pixels save (not Zen's), the shared wallet, no goblin.
         { app.save = scratch(); useMode("pixels"); app.save = scratchPix(); const e = pl[0], c0 = csave().data.coins; startLevel(e.id); patient(winOf(e)); settleNow(); tick(9000);
           const line = $("p-line").textContent, won = app.panel === "win" && $("p-title").textContent === PX.winTitle && line === fill(PX.winLineBy, { title: e.L.title, by: e.L.by }) && line.indexOf(e.L.by) > 0 && $("p-pic").dataset.on === "1";
